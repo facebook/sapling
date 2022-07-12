@@ -29,6 +29,8 @@ using folly::StringPiece;
 using folly::literals::string_piece_literals::operator""_sp;
 using namespace std::chrono_literals;
 
+constexpr auto materializationTimeoutLimit = 1000ms;
+
 std::ostream& operator<<(std::ostream& os, const timespec& ts) {
   return os << fmt::format("{}.{:09d}", ts.tv_sec, ts.tv_nsec);
 }
@@ -161,6 +163,18 @@ class FileInodeTest : public ::testing::Test {
     mount_.initialize(builder);
   }
 
+  /**
+   * Queue used in addNewMaterializationsToInodeTraceBus test to store inode
+   * materializations. Created as an attribute here so that it is destructed
+   * after mount_ is destructed to ensure any materializations in the mount will
+   * have an active queue to be entered into
+   */
+  folly::UnboundedQueue<
+      InodeTraceEvent,
+      /*SingleProducer=*/true,
+      /*SingleConsumer=*/true,
+      /*MayBlock=*/false>
+      queue_;
   TestMount mount_;
 };
 
@@ -395,33 +409,55 @@ TEST_F(FileInodeTest, truncatingMaterializesParent) {
   EXPECT_EQ(true, isInodeMaterialized(parent));
 }
 
-TEST_F(FileInodeTest, addNewMaterializationsToActivityBuffer) {
-  auto& buff = mount_.getEdenMount()->getActivityBuffer();
-  EXPECT_TRUE(buff.has_value());
+TEST_F(FileInodeTest, addNewMaterializationsToInodeTraceBus) {
+  auto& trace_bus = mount_.getEdenMount()->getInodeTraceBus();
 
   auto inode_a = mount_.getFileInode("dir/a.txt");
   auto inode_b = mount_.getFileInode("dir/sub/b.txt");
   auto inode_sub = mount_.getTreeInode("dir/sub");
   auto inode_dir = mount_.getTreeInode("dir");
 
-  // Test writing to a file
+  // Detect inode materialization events and add events to synchronized queue
+  auto handle = trace_bus.subscribeFunction(
+      folly::to<std::string>(
+          "inodetrace-", mount_.getEdenMount()->getPath().basename()),
+      [&](const InodeTraceEvent& event) {
+        if (event.eventType == InodeEventType::MATERIALIZE) {
+          queue_.enqueue(event);
+        }
+      });
+
+  // Wait for any initial materialization events to complete
+  while (queue_.try_dequeue_for(materializationTimeoutLimit).has_value()) {
+  };
+
+  // Test writing a file
   inode_a->write("abcd", 0, ObjectFetchContext::getNullContext()).get();
-  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), inode_a->getNodeId()));
-  EXPECT_TRUE(
-      isInodeMaterializedInBuffer(buff.value(), inode_dir->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue_, InodeEventProgress::START, inode_a->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue_, InodeEventProgress::START, inode_dir->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue_, InodeEventProgress::END, inode_dir->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue_, InodeEventProgress::END, inode_a->getNodeId()));
 
   // Test truncating a file
   DesiredMetadata desired;
   desired.size = 0;
   (void)inode_b->setattr(desired, ObjectFetchContext::getNullContext())
       .get(0ms);
-  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), inode_b->getNodeId()));
-  EXPECT_TRUE(
-      isInodeMaterializedInBuffer(buff.value(), inode_sub->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue_, InodeEventProgress::START, inode_b->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue_, InodeEventProgress::START, inode_sub->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue_, InodeEventProgress::END, inode_sub->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue_, InodeEventProgress::END, inode_b->getNodeId()));
 
-  // Ensure we do not count inode_dir as materialized a second time
-  EXPECT_TRUE(
-      isInodeMaterializedInBuffer(buff.value(), inode_dir->getNodeId()));
+  // Ensure we do not count any other materializations a second time
+  EXPECT_FALSE(queue_.try_dequeue_for(materializationTimeoutLimit).has_value());
 }
 
 #ifdef __linux__

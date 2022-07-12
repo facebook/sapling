@@ -254,6 +254,15 @@ EdenMount::EdenMount(
       inodeTraceBus_{
           TraceBus<InodeTraceEvent>::create("inode", kInodeTraceBusCapacity)},
       clock_{serverState_->getClock()} {
+  inodeTraceHandle_ = std::make_shared<InodeTraceHandle>();
+
+  if (activityBuffer_.has_value()) {
+    inodeTraceHandle_->subHandle = inodeTraceBus_->subscribeFunction(
+        folly::to<std::string>("inodetrace-", getPath().basename()),
+        [this](const InodeTraceEvent& event) {
+          activityBuffer_->addEvent(event);
+        });
+  }
 }
 
 Overlay::OverlayType EdenMount::getOverlayType(
@@ -2353,11 +2362,6 @@ void EdenMount::addInodeMaterializeEvent(
       progress,
       duration};
   inodeTraceBus_->publish(event);
-
-  // Add event to ActivityBuffer
-  if (activityBuffer_.has_value()) {
-    activityBuffer_->addEvent(event);
-  }
 }
 
 namespace {

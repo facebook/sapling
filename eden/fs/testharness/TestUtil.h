@@ -8,7 +8,9 @@
 #pragma once
 
 #include <folly/Range.h>
+#include <folly/concurrency/UnboundedQueue.h>
 #include "eden/fs/inodes/InodeNumber.h"
+#include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/telemetry/ActivityBuffer.h"
 
 namespace facebook::eden {
@@ -28,9 +30,14 @@ Hash20 makeTestHash20(folly::StringPiece value);
 
 /**
  * Helper function for ensuring an inode finished materializing and events
- * to record this are correctly stored in a given ActivityBuffer. Ensures that
- * exactly one START materialization event and one END materialization event is
- * present in the ActivityBuffer. Used in FileInode and TreeInode tests.
+ * to record this are correctly stored in a folly::UnboundedQueue in the right
+ * order. Waits until a timeout of 1000ms to dequeue the next event off the
+ * queue and checks thats its progress (START vs END) and inode number are as
+ * given.
  */
-bool isInodeMaterializedInBuffer(ActivityBuffer& buff, InodeNumber ino);
+bool isInodeMaterializedInQueue(
+    folly::UnboundedQueue<InodeTraceEvent, true, true, false>&
+        materializationQueue,
+    InodeEventProgress progress,
+    InodeNumber ino);
 } // namespace facebook::eden

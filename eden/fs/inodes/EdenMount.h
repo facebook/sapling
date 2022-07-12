@@ -1274,6 +1274,13 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
 
   std::shared_ptr<TraceBus<InodeTraceEvent>> inodeTraceBus_;
 
+  // Handle for inodeTraceBus subscription
+  struct InodeTraceHandle {
+    TraceSubscriptionHandle<InodeTraceEvent> subHandle;
+  };
+
+  std::shared_ptr<InodeTraceHandle> inodeTraceHandle_;
+
 #ifdef _WIN32
   /**
    * This is the channel between ProjectedFS and rest of Eden.

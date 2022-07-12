@@ -35,6 +35,8 @@ using namespace facebook::eden;
 using namespace std::chrono_literals;
 
 namespace {
+constexpr auto materializationTimeoutLimit = 1000ms;
+
 std::string testHashHex{
     "faceb00c"
     "deadbeef"
@@ -471,19 +473,34 @@ TEST(TreeInode, setattr) {
   EXPECT_TRUE(somedir->getContents().rlock()->isMaterialized());
 }
 
-TEST(TreeInode, addNewMaterializationsToActivityBuffer) {
+TEST(TreeInode, addNewMaterializationsToInodeTraceBus) {
+  folly::UnboundedQueue<InodeTraceEvent, true, true, false> queue;
   FakeTreeBuilder builder;
   builder.setFiles(
       {{"somedir/sub/foo.txt", "test\n"}, {"dir2/bar.txt", "test 2\n"}});
   TestMount mount{builder};
-
-  auto& buff = mount.getEdenMount()->getActivityBuffer();
-  EXPECT_TRUE(buff.has_value());
+  auto& trace_bus = mount.getEdenMount()->getInodeTraceBus();
 
   auto somedir = mount.getTreeInode("somedir"_relpath);
+  auto sub = mount.getTreeInode("somedir/sub"_relpath);
   auto dir2 = mount.getTreeInode("dir2"_relpath);
 
-  // Test removing an inode
+  // Detect inode materialization events and add events to synchronized queue
+  auto handle = trace_bus.subscribeFunction(
+      folly::to<std::string>(
+          "inodetrace-", mount.getEdenMount()->getPath().basename()),
+      [&](const InodeTraceEvent& event) {
+        if (event.eventType == InodeEventType::MATERIALIZE) {
+          queue.enqueue(event);
+        }
+      });
+
+  // Wait for any initial materialization events to complete
+  while (queue.try_dequeue_for(materializationTimeoutLimit).has_value()) {
+  };
+
+  // Test removing an inode (in this case a tree inode which also materializes
+  // that tree inode before removing it)
   somedir->getOrLoadChildTree("sub"_pc, ObjectFetchContext::getNullContext())
       .thenValue([somedir](TreeInodePtr&&) {
         return somedir->removeRecursively(
@@ -492,27 +509,53 @@ TEST(TreeInode, addNewMaterializationsToActivityBuffer) {
             ObjectFetchContext::getNullContext());
       })
       .get(0ms);
-  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), somedir->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue, InodeEventProgress::START, sub->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue, InodeEventProgress::START, somedir->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue, InodeEventProgress::END, somedir->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue, InodeEventProgress::END, sub->getNodeId()));
 
-  // Test creating a directory, a file (on both an unmaterialized/materialized
-  // parent), and a symlink
+  // Test creating a directory
   auto newdir =
       somedir->mkdir("newdir"_pc, S_IFREG | 0740, InvalidationRequired::No);
-  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), newdir->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue, InodeEventProgress::START, newdir->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue, InodeEventProgress::END, newdir->getNodeId()));
+
+  // Test creating a file (on an already materialized parent)
   auto newfile = newdir->mknod(
       "newfile.txt"_pc, S_IFREG | 0740, 0, InvalidationRequired::No);
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue, InodeEventProgress::START, newfile->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue, InodeEventProgress::END, newfile->getNodeId()));
+
+  // Test creating a file (on an unmaterialized parent)
   auto newfile2 = dir2->mknod(
       "newfile2.txt"_pc, S_IFREG | 0740, 0, InvalidationRequired::No);
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue, InodeEventProgress::START, dir2->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue, InodeEventProgress::END, dir2->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue, InodeEventProgress::START, newfile2->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue, InodeEventProgress::END, newfile2->getNodeId()));
+
+  // Test creating a symlink
   auto symlink = newdir->symlink(
       "symlink.txt"_pc, "newfile.txt", InvalidationRequired::No);
-  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), newfile->getNodeId()));
-  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), newfile2->getNodeId()));
-  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), dir2->getNodeId()));
-  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), symlink->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue, InodeEventProgress::START, symlink->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInQueue(
+      queue, InodeEventProgress::END, symlink->getNodeId()));
 
-  // Ensure that directories did not get materialized a second time
-  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), somedir->getNodeId()));
-  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), newdir->getNodeId()));
+  // Ensure we do not count any other materializations a second time
+  EXPECT_FALSE(queue.try_dequeue_for(materializationTimeoutLimit).has_value());
 }
 
 TEST(TreeInode, getOrFindChildren) {
