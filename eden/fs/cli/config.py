@@ -825,26 +825,20 @@ Do you want to run `eden mount %s` instead?"""
     def cleanup_mount(self, path: Path, preserve_mount_point: bool = False) -> None:
         if sys.platform != "win32":
             # Delete the mount point
-            #
-            # It should normally just contain the readme file that we put there,
-            # and nothing else. Ideally we'd only delete the readme file, but users
-            # running 'eden rm' are usually looking for a big hammer to fix their
-            # problems, so let's delete everything.
+            # It should normally contain the readme file that we put there, but nothing
+            # else.  We only delete these specific files for now rather than using
+            # shutil.rmtree() to avoid deleting files we did not create.
             #
             # Previous versions of EdenFS made the mount point directory read-only
             # as part of "eden clone".  Make sure it is writable now so we can clean it up.
-            mounts = self.get_mounts()
-            if path not in mounts:
-                path.chmod(0o755)
-                for child in path.iterdir():
-                    if child.is_dir():
-                        shutil.rmtree(child)
-                    else:
-                        child.unlink()
-                if not preserve_mount_point:
-                    path.rmdir()
-            else:
-                raise RuntimeError(f"{path} appears to still be mounted.")
+            path.chmod(0o755)
+            try:
+                (path / NOT_MOUNTED_README_PATH).unlink()
+            except OSError as ex:
+                if ex.errno != errno.ENOENT:
+                    raise
+            if not preserve_mount_point:
+                path.rmdir()
         else:
             # On Windows, the mount point contains ProjectedFS placeholder and
             # files, remove all of them.

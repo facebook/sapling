@@ -1270,7 +1270,6 @@ class RemoveType(enum.Enum):
     ACTIVE_MOUNT = 0
     INACTIVE_MOUNT = 1
     CLEANUP_ONLY = 2
-    NON_EDEN_DIR = 3
 
 
 @subcmd("remove", "Remove an EdenFS checkout", aliases=["rm"])
@@ -1342,7 +1341,8 @@ class RemoveCmd(Subcmd):
                 elif self.is_prjfs_path(path):
                     remove_type = RemoveType.CLEANUP_ONLY
                 else:
-                    remove_type = RemoveType.NON_EDEN_DIR
+                    print(f"error: {ex}")
+                    return 1
             except Exception as ex:
                 print(f"error: cannot determine mount point for {path}: {ex}")
                 return 1
@@ -1357,16 +1357,7 @@ class RemoveCmd(Subcmd):
 
         # Warn the user since this operation permanently destroys data
         if args.prompt and sys.stdin.isatty():
-            mounts_list = "\n  ".join(
-                "%s  %s"
-                % (
-                    path,
-                    "(NOT AN EDEN DIRECTORY BUT WILL BE DELETED)"
-                    if type == RemoveType.NON_EDEN_DIR
-                    else "",
-                )
-                for path, type in mounts
-            )
+            mounts_list = "\n  ".join(path for path, _ in mounts)
             print(
                 f"""\
 Warning: this operation will permanently delete the following checkouts:
@@ -1419,10 +1410,7 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
                     # ahead delete the mount from the config in this case.
 
             try:
-                if (
-                    remove_type != RemoveType.CLEANUP_ONLY
-                    and remove_type != RemoveType.NON_EDEN_DIR
-                ):
+                if remove_type != RemoveType.CLEANUP_ONLY:
                     instance.destroy_mount(mount, args.preserve_mount_point)
             except Exception as ex:
                 print_stderr(f"error deleting configuration for {mount}: {ex}")
