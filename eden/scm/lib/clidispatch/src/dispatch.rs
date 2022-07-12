@@ -331,38 +331,46 @@ impl Dispatcher {
     }
 
     /// Run a command. Return exit code if the command completes.
-    pub fn run_command(&mut self, command_table: &CommandTable, io: &IO) -> Result<u8> {
+    pub fn run_command<'a>(
+        &mut self,
+        command_table: &'a CommandTable,
+        io: &IO,
+    ) -> (Option<&'a CommandDefinition>, Result<u8>) {
         let (handler, parsed) = match self.prepare_command(command_table, io) {
             Ok((name, args)) => (name, args),
-            Err(e) => return Err(e),
+            Err(e) => return (None, Err(e)),
         };
 
-        match handler.func() {
-            CommandFunc::Repo(f) => {
-                match self.optional_repo {
-                    OptionalRepo::Some(ref mut repo) => f(parsed, io, repo),
-                    OptionalRepo::None(_) => {
-                        // FIXME: Try to "infer repo" here.
-                        Err(errors::RepoRequired(
-                            env::current_dir()
-                                .ok()
-                                .map(|p| p.to_string_lossy().to_string())
-                                .unwrap_or_default(),
-                        )
-                        .into())
+        let res = || -> Result<u8> {
+            match handler.func() {
+                CommandFunc::Repo(f) => {
+                    match self.optional_repo {
+                        OptionalRepo::Some(ref mut repo) => f(parsed, io, repo),
+                        OptionalRepo::None(_) => {
+                            // FIXME: Try to "infer repo" here.
+                            Err(errors::RepoRequired(
+                                env::current_dir()
+                                    .ok()
+                                    .map(|p| p.to_string_lossy().to_string())
+                                    .unwrap_or_default(),
+                            )
+                            .into())
+                        }
                     }
                 }
+                CommandFunc::OptionalRepo(f) => f(parsed, io, &mut self.optional_repo),
+                CommandFunc::NoRepo(f) => {
+                    self.convert_to_repoless_config()?;
+                    f(parsed, io, self.optional_repo.config_mut())
+                }
+                CommandFunc::NoRepoGlobalOpts(f) => {
+                    self.convert_to_repoless_config()?;
+                    f(parsed, io, self.optional_repo.config_mut())
+                }
+                CommandFunc::OptionalRepoGlobalOpts(f) => f(parsed, io, &mut self.optional_repo),
             }
-            CommandFunc::OptionalRepo(f) => f(parsed, io, &mut self.optional_repo),
-            CommandFunc::NoRepo(f) => {
-                self.convert_to_repoless_config()?;
-                f(parsed, io, self.optional_repo.config_mut())
-            }
-            CommandFunc::NoRepoGlobalOpts(f) => {
-                self.convert_to_repoless_config()?;
-                f(parsed, io, self.optional_repo.config_mut())
-            }
-            CommandFunc::OptionalRepoGlobalOpts(f) => f(parsed, io, &mut self.optional_repo),
-        }
+        }();
+
+        (Some(handler), res)
     }
 }

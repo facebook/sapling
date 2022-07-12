@@ -13,5 +13,4 @@ pypathmatcher = { path = "../pypathmatcher" }
 pystatus = { path = "../pystatus" }
 pytreestate = { path = "../pytreestate" }
 storemodel = { path = "../../../../lib/storemodel" }
-types = { path = "../../../../lib/types" }
 workingcopy = { path = "../../../../lib/workingcopy" }

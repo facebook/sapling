@@ -22,7 +22,6 @@ use pypathmatcher::extract_matcher;
 use pypathmatcher::extract_option_matcher;
 use pytreestate::treestate;
 use storemodel::ReadFileContents;
-use types::RepoPathBuf;
 use workingcopy::filesystem::ChangeType;
 use workingcopy::filesystem::PendingChangeResult;
 use workingcopy::filesystem::PendingChanges;

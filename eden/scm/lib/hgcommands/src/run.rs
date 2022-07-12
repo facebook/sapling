@@ -203,10 +203,11 @@ fn dispatch_command(
 
     let table = commands::table();
 
-    let dispatch_res = dispatcher
-        .run_command(&table, io)
-        .map_err(|err| errors::triage_error(dispatcher.config(), err));
+    let (command, dispatch_res) = dispatcher.run_command(&table, io);
 
+    let config = dispatcher.config();
+
+    let mut fell_back = false;
     let exit_code = match dispatch_res {
         Ok(exit_code) => exit_code as i32,
         Err(err) => {
@@ -217,12 +218,13 @@ fn dispatch_command(
                 // Ideally the Rust command table has Python command information and
                 // there is no fallback path (ex. all commands are in Rust, and the
                 // Rust implementation might just call into Python cmdutil utilities).
-                    err.is::<errors::UnknownCommand>();
+                err.is::<errors::UnknownCommand>();
             let failed_fallback = err.is::<errors::FailedFallbackToPython>();
 
             if failed_fallback {
                 197
             } else if should_fallback {
+                fell_back = true;
                 // Change the current dir back to the original so it is not surprising to the Python
                 // code.
                 let _ = env::set_current_dir(cwd);
@@ -234,11 +236,30 @@ fn dispatch_command(
                 }
                 interp.run_hg(args, io)
             } else {
+                let err = errors::triage_error(config, err);
                 errors::print_error(&err, io, &args[1..]);
                 255
             }
         }
     };
+
+    if !fell_back {
+        if let Some(command) = command {
+            let mut hooks = config.keys(&["hooks", &format!("pre-{}", command.name())]);
+            if exit_code > 0 {
+                hooks.append(&mut config.keys(&["hooks", &format!("fail-{}", command.name())]));
+            } else {
+                hooks.append(&mut config.keys(&["hooks", &format!("post-{}", command.name())]));
+            }
+
+            if !hooks.is_empty() {
+                let _ = io.write_err(format!(
+                    "WARNING: The following hooks were not run: {:?}\n",
+                    hooks
+                ));
+            }
+        }
+    }
 
     // Clean up progress models.
     Registry::main().remove_orphan_models();
@@ -250,7 +271,7 @@ fn dispatch_command(
         }
     }
 
-    let _ = log_perftrace(io, dispatcher.config(), start_time);
+    let _ = log_perftrace(io, config, start_time);
 
     exit_code
 }
