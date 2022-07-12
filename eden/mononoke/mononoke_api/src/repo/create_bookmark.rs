@@ -11,7 +11,6 @@ use std::sync::Arc;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
 use bytes::Bytes;
-use metaconfig_types::BookmarkAttrs;
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
 use tunables::tunables;
@@ -31,8 +30,6 @@ impl RepoContext {
 
         let bookmark = bookmark.as_ref();
         let bookmark = BookmarkName::new(bookmark)?;
-        let bookmark_attrs =
-            BookmarkAttrs::new(self.ctx().fb, self.config().bookmarks.clone()).await?;
 
         let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.skiplist_index().clone();
 
@@ -55,7 +52,6 @@ impl RepoContext {
             &lca_hint,
             &self.config().infinitepush,
             &self.config().pushrebase,
-            &bookmark_attrs,
             self.hook_manager().as_ref(),
         )
         .await?;

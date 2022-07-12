@@ -32,7 +32,6 @@ use futures_ext::FbStreamExt;
 use hooks::CrossRepoPushSource;
 use hooks::HookManager;
 use hooks::PushAuthoredBy;
-use metaconfig_types::BookmarkAttrs;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::BonsaiChangeset;
@@ -123,7 +122,6 @@ impl AffectedChangesets {
         ctx: &CoreContext,
         repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
-        bookmark_attrs: &BookmarkAttrs,
         bookmark: &BookmarkName,
         additional_changesets: AdditionalChangesets,
     ) -> Result<(), Error> {
@@ -140,7 +138,8 @@ impl AffectedChangesets {
             AdditionalChangesets::Range { head, base } => (head, Some(base)),
         };
 
-        let mut exclude_bookmarks: HashSet<_> = bookmark_attrs
+        let mut exclude_bookmarks: HashSet<_> = repo
+            .repo_bookmark_attrs()
             .select(bookmark)
             .map(|attr| attr.params().hooks_skip_ancestors_of.iter())
             .flatten()
@@ -252,7 +251,6 @@ impl AffectedChangesets {
         repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
         pushrebase_params: &PushrebaseParams,
-        bookmark_attrs: &BookmarkAttrs,
         hook_manager: &HookManager,
         bookmark: &BookmarkName,
         pushvars: Option<&HashMap<String, Bytes>>,
@@ -265,7 +263,6 @@ impl AffectedChangesets {
             ctx,
             repo,
             lca_hint,
-            bookmark_attrs,
             bookmark,
             kind,
             additional_changesets,
@@ -278,7 +275,6 @@ impl AffectedChangesets {
             repo,
             lca_hint,
             pushrebase_params,
-            bookmark_attrs,
             bookmark,
             kind,
             additional_changesets,
@@ -290,7 +286,6 @@ impl AffectedChangesets {
             authz,
             repo,
             lca_hint,
-            bookmark_attrs,
             hook_manager,
             bookmark,
             pushvars,
@@ -301,16 +296,8 @@ impl AffectedChangesets {
         )
         .await?;
 
-        self.check_path_permissions(
-            ctx,
-            authz,
-            repo,
-            lca_hint,
-            bookmark_attrs,
-            bookmark,
-            additional_changesets,
-        )
-        .await?;
+        self.check_path_permissions(ctx, authz, repo, lca_hint, bookmark, additional_changesets)
+            .await?;
 
         Ok(())
     }
@@ -320,7 +307,6 @@ impl AffectedChangesets {
         ctx: &CoreContext,
         repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
-        bookmark_attrs: &BookmarkAttrs,
         bookmark: &BookmarkName,
         kind: BookmarkKind,
         additional_changesets: AdditionalChangesets,
@@ -329,16 +315,9 @@ impl AffectedChangesets {
         if (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
             && !pushrebase_params.allow_change_xrepo_mapping_extra
         {
-            self.load_additional_changesets(
-                ctx,
-                repo,
-                lca_hint,
-                bookmark_attrs,
-                bookmark,
-                additional_changesets,
-            )
-            .await
-            .context("Failed to load additional affected changesets")?;
+            self.load_additional_changesets(ctx, repo, lca_hint, bookmark, additional_changesets)
+                .await
+                .context("Failed to load additional affected changesets")?;
 
             for bcs in self.iter() {
                 if bcs
@@ -370,7 +349,6 @@ impl AffectedChangesets {
         repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
         pushrebase_params: &PushrebaseParams,
-        bookmark_attrs: &BookmarkAttrs,
         bookmark: &BookmarkName,
         kind: BookmarkKind,
         additional_changesets: AdditionalChangesets,
@@ -378,16 +356,9 @@ impl AffectedChangesets {
         if (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
             && pushrebase_params.flags.casefolding_check
         {
-            self.load_additional_changesets(
-                ctx,
-                repo,
-                lca_hint,
-                bookmark_attrs,
-                bookmark,
-                additional_changesets,
-            )
-            .await
-            .context("Failed to load additional affected changesets")?;
+            self.load_additional_changesets(ctx, repo, lca_hint, bookmark, additional_changesets)
+                .await
+                .context("Failed to load additional affected changesets")?;
 
             stream::iter(self.iter().map(Ok))
                 .try_for_each_concurrent(100, |bcs| async move {
@@ -447,7 +418,6 @@ impl AffectedChangesets {
         authz: &AuthorizationContext,
         repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
-        bookmark_attrs: &BookmarkAttrs,
         hook_manager: &HookManager,
         bookmark: &BookmarkName,
         pushvars: Option<&HashMap<String, Bytes>>,
@@ -470,14 +440,14 @@ impl AffectedChangesets {
                     ctx,
                     repo,
                     lca_hint,
-                    bookmark_attrs,
                     bookmark,
                     additional_changesets,
                 )
                 .await
                 .context("Failed to load additional affected changesets")?;
 
-                let skip_running_hooks_if_public: bool = bookmark_attrs
+                let skip_running_hooks_if_public: bool = repo
+                    .repo_bookmark_attrs()
                     .select(bookmark)
                     .map(|attr| attr.params().allow_move_to_public_commits_without_hooks)
                     .any(|x| x);
@@ -532,7 +502,6 @@ impl AffectedChangesets {
         authz: &AuthorizationContext,
         repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
-        bookmark_attrs: &BookmarkAttrs,
         bookmark: &BookmarkName,
         additional_changesets: AdditionalChangesets,
     ) -> Result<(), BookmarkMovementError> {
@@ -542,16 +511,9 @@ impl AffectedChangesets {
         if authz.check_any_path_write(ctx, repo).await?.is_denied() {
             // User is not permitted to write to all paths, check if the paths
             // touched by the changesets are permitted.
-            self.load_additional_changesets(
-                ctx,
-                repo,
-                lca_hint,
-                bookmark_attrs,
-                bookmark,
-                additional_changesets,
-            )
-            .await
-            .context("Failed to load additional affected changesets")?;
+            self.load_additional_changesets(ctx, repo, lca_hint, bookmark, additional_changesets)
+                .await
+                .context("Failed to load additional affected changesets")?;
 
             for cs in self.iter() {
                 authz.require_changeset_paths_write(ctx, repo, cs).await?;

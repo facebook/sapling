@@ -77,6 +77,8 @@ use rand_distr::Distribution;
 use rendezvous::RendezVousOptions;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_blobstore::RepoBlobstore;
+use repo_bookmark_attrs::ArcRepoBookmarkAttrs;
+use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_derived_data::ArcRepoDerivedData;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::ArcRepoIdentity;
@@ -343,6 +345,12 @@ impl BenchmarkRepoFactory {
     pub fn repo_lock(&self) -> Result<ArcRepoLock> {
         let repo_lock = AlwaysUnlockedRepoLock {};
         Ok(Arc::new(repo_lock))
+    }
+
+    pub fn repo_bookmark_attrs(&self, repo_config: &ArcRepoConfig) -> Result<ArcRepoBookmarkAttrs> {
+        Ok(Arc::new(RepoBookmarkAttrs::new_test(
+            repo_config.bookmarks.clone(),
+        )?))
     }
 }
 

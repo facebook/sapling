@@ -17,7 +17,6 @@ use futures::stream;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
-use metaconfig_types::BookmarkAttrs;
 use metaconfig_types::RepoConfigRef;
 use repo_blobstore::RepoBlobstoreRef;
 
@@ -54,12 +53,10 @@ pub async fn pushrebase(
     };
 
     let pushrebase_flags = repo.repo_config().pushrebase.flags;
-    let bookmark_attrs = BookmarkAttrs::new(ctx.fb, repo.repo_config().bookmarks.clone()).await?;
     let pushrebase_hooks = bookmarks_movement::get_pushrebase_hooks(
         ctx,
         repo,
         &pushrebase_args.bookmark,
-        &bookmark_attrs,
         &repo.repo_config().pushrebase,
     )
     .map_err(Error::from)?;

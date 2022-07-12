@@ -14,7 +14,6 @@ use bookmarks::BookmarkUpdateReason;
 use bookmarks_movement::BookmarkUpdatePolicy;
 use bookmarks_movement::BookmarkUpdateTargets;
 use bytes::Bytes;
-use metaconfig_types::BookmarkAttrs;
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
 use tunables::tunables;
@@ -36,8 +35,6 @@ impl RepoContext {
 
         let bookmark = bookmark.as_ref();
         let bookmark = BookmarkName::new(bookmark)?;
-        let bookmark_attrs =
-            BookmarkAttrs::new(self.ctx().fb, self.config().bookmarks.clone()).await?;
 
         // We need to find out where the bookmark currently points to in order
         // to move it.  Make sure to bypass any out-of-date caches.
@@ -83,7 +80,6 @@ impl RepoContext {
             &lca_hint,
             &self.config().infinitepush,
             &self.config().pushrebase,
-            &bookmark_attrs,
             self.hook_manager().as_ref(),
         )
         .await?;

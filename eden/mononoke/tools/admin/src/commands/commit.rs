@@ -32,6 +32,7 @@ use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
 use repo_blobstore::RepoBlobstore;
+use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 
@@ -80,6 +81,9 @@ pub struct Repo {
 
     #[facet]
     bookmarks: dyn Bookmarks,
+
+    #[facet]
+    bookmark_attrs: RepoBookmarkAttrs,
 
     #[facet]
     repo_derived_data: RepoDerivedData,

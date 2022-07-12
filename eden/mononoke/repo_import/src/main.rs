@@ -53,7 +53,6 @@ use maplit::hashset;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::MPath;
-use metaconfig_types::BookmarkAttrs;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::RepoConfig;
@@ -643,12 +642,10 @@ async fn push_merge_commit(
 
     let merged_cs = merged_cs_id.load(ctx, repo.repo_blobstore()).await?;
     let pushrebase_flags = repo_config.pushrebase.flags;
-    let bookmark_attrs = BookmarkAttrs::new(ctx.fb, repo_config.bookmarks.clone()).await?;
     let pushrebase_hooks = bookmarks_movement::get_pushrebase_hooks(
         ctx,
         repo,
         &bookmark_to_merge_into,
-        &bookmark_attrs,
         &repo_config.pushrebase,
     )?;
 

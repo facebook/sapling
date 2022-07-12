@@ -12,7 +12,6 @@ use context::CoreContext;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use metaconfig_types::BookmarkAttrs;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::ChangesetId;
@@ -73,7 +72,6 @@ pub(crate) async fn check_restriction_ensure_ancestor_of(
     ctx: &CoreContext,
     repo: &impl Repo,
     bookmark_to_move: &BookmarkName,
-    bookmark_attrs: &BookmarkAttrs,
     pushrebase_params: &PushrebaseParams,
     lca_hint: &dyn LeastCommonAncestorsHint,
     target: ChangesetId,
@@ -82,7 +80,7 @@ pub(crate) async fn check_restriction_ensure_ancestor_of(
     // doesn't matter.
 
     let mut descendant_bookmarks = vec![];
-    for attr in bookmark_attrs.select(bookmark_to_move) {
+    for attr in repo.repo_bookmark_attrs().select(bookmark_to_move) {
         if let Some(descendant_bookmark) = &attr.params().ensure_ancestor_of {
             descendant_bookmarks.push(descendant_bookmark);
         }

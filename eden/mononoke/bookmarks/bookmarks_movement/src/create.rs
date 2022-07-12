@@ -15,7 +15,6 @@ use bytes::Bytes;
 use context::CoreContext;
 use hooks::CrossRepoPushSource;
 use hooks::HookManager;
-use metaconfig_types::BookmarkAttrs;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::BonsaiChangeset;
@@ -114,7 +113,6 @@ impl<'op> CreateBookmarkOp<'op> {
         lca_hint: &'op Arc<dyn LeastCommonAncestorsHint>,
         infinitepush_params: &'op InfinitepushParams,
         pushrebase_params: &'op PushrebaseParams,
-        bookmark_attrs: &'op BookmarkAttrs,
         hook_manager: &'op HookManager,
     ) -> Result<(), BookmarkMovementError> {
         let kind = self
@@ -137,7 +135,7 @@ impl<'op> CreateBookmarkOp<'op> {
                 .await?;
         }
         authz
-            .require_bookmark_modify(ctx, repo, bookmark_attrs, self.bookmark)
+            .require_bookmark_modify(ctx, repo, self.bookmark)
             .await?;
 
         check_bookmark_sync_config(repo, self.bookmark, kind)?;
@@ -149,7 +147,6 @@ impl<'op> CreateBookmarkOp<'op> {
                 repo,
                 lca_hint,
                 pushrebase_params,
-                bookmark_attrs,
                 hook_manager,
                 self.bookmark,
                 self.pushvars,
@@ -182,7 +179,6 @@ impl<'op> CreateBookmarkOp<'op> {
                     ctx,
                     repo,
                     self.bookmark,
-                    bookmark_attrs,
                     pushrebase_params,
                     lca_hint,
                     self.target,

@@ -82,6 +82,8 @@ use redactedblobstore::RedactedBlobs;
 use rendezvous::RendezVousOptions;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_blobstore::RepoBlobstore;
+use repo_bookmark_attrs::ArcRepoBookmarkAttrs;
+use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_cross_repo::ArcRepoCrossRepo;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::ArcRepoDerivedData;
@@ -620,5 +622,12 @@ impl TestRepoFactory {
     pub fn repo_lock(&self) -> Result<ArcRepoLock> {
         let repo_lock = AlwaysUnlockedRepoLock {};
         Ok(Arc::new(repo_lock))
+    }
+
+    /// Repo bookmark attrs
+    pub fn repo_bookmark_attrs(&self, repo_config: &ArcRepoConfig) -> Result<ArcRepoBookmarkAttrs> {
+        Ok(Arc::new(RepoBookmarkAttrs::new_test(
+            repo_config.bookmarks.clone(),
+        )?))
     }
 }

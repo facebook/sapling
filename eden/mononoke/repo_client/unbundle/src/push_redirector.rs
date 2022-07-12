@@ -162,7 +162,6 @@ impl PushRedirector {
         action: PostResolveAction,
     ) -> Result<UnbundleResponse, BundleResolverError> {
         let large_repo = self.repo.inner_repo();
-        let bookmark_attrs = self.repo.bookmark_attrs();
         let lca_hint = self.repo.lca_hint();
         let infinitepush_params = self.repo.infinitepush().clone();
         let puhsrebase_params = self.repo.pushrebase_params().clone();
@@ -175,7 +174,6 @@ impl PushRedirector {
         let large_repo_response = run_post_resolve_action(
             &ctx,
             large_repo,
-            &bookmark_attrs,
             &lca_hint,
             &infinitepush_params,
             &puhsrebase_params,

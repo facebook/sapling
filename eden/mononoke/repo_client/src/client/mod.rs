@@ -1684,7 +1684,6 @@ impl HgCommands for RepoClient {
             .command_future(ops::UNBUNDLE, UNSAMPLED, move |ctx, command_logger| {
                 async move {
                     let repo = client.repo.inner_repo();
-                    let bookmark_attrs = client.repo.bookmark_attrs();
                     let lca_hint = client.repo.lca_hint().clone();
                     let infinitepush_params = client.repo.infinitepush().clone();
                     let infinitepush_writes_allowed = infinitepush_params.allow_writes;
@@ -1745,7 +1744,6 @@ impl HgCommands for RepoClient {
                                 run_post_resolve_action(
                                     &ctx,
                                     repo,
-                                    &bookmark_attrs,
                                     &lca_hint,
                                     &infinitepush_params,
                                     &pushrebase_params,

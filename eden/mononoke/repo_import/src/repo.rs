@@ -20,6 +20,7 @@ use mutable_counters::MutableCounters;
 use phases::Phases;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
 use repo_blobstore::RepoBlobstore;
+use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
@@ -31,6 +32,7 @@ pub struct Repo {
     #[delegate(
         FilestoreConfig,
         RepoBlobstore,
+        RepoBookmarkAttrs,
         RepoDerivedData,
         RepoIdentity,
         dyn BonsaiGitMapping,

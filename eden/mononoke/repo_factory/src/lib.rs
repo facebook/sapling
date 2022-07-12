@@ -110,6 +110,8 @@ use redactedblobstore::RedactionConfigBlobstore;
 use redactedblobstore::SqlRedactedContentStore;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_blobstore::RepoBlobstore;
+use repo_bookmark_attrs::ArcRepoBookmarkAttrs;
+use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_cross_repo::ArcRepoCrossRepo;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::ArcRepoDerivedData;
@@ -572,6 +574,9 @@ pub enum RepoFactoryError {
 
     #[error("Error creating hook manager")]
     HookManager,
+
+    #[error("Error creating bookmark attributes")]
+    RepoBookmarkAttrs,
 }
 
 #[facet::factory(name: String, config: RepoConfig)]
@@ -1189,6 +1194,17 @@ impl RepoFactory {
                 Ok(Arc::new(MutableRepoLock::new(sql, repo_identity.id())))
             }
         }
+    }
+
+    pub async fn repo_bookmark_attrs(
+        &self,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcRepoBookmarkAttrs> {
+        let repo_bookmark_attrs =
+            RepoBookmarkAttrs::new(self.env.fb, repo_config.bookmarks.clone())
+                .await
+                .context(RepoFactoryError::RepoBookmarkAttrs)?;
+        Ok(Arc::new(repo_bookmark_attrs))
     }
 }
 

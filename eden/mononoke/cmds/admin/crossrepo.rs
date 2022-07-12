@@ -44,7 +44,6 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use maplit::btreemap;
 use maplit::hashmap;
 use maplit::hashset;
-use metaconfig_types::BookmarkAttrs;
 use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommonCommitSyncConfig;
@@ -483,12 +482,10 @@ async fn change_mapping_via_extras<'a>(
     .await?;
 
     let pushrebase_flags = repo_config.pushrebase.flags;
-    let bookmark_attrs = BookmarkAttrs::new(ctx.fb, repo_config.bookmarks.clone()).await?;
     let pushrebase_hooks = bookmarks_movement::get_pushrebase_hooks(
         ctx,
         large_repo,
         &large_bookmark,
-        &bookmark_attrs,
         &repo_config.pushrebase,
     )?;
 

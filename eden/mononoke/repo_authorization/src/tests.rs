@@ -16,12 +16,11 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use maplit::hashmap;
 use maplit::hashset;
-use metaconfig_types::BookmarkAttrs;
 use metaconfig_types::RepoConfig;
-use metaconfig_types::RepoConfigRef;
 use metaconfig_types::ServiceWriteRestrictions;
 use mononoke_types::PrefixTrie;
 use permission_checker::MononokeIdentitySet;
+use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_permission_checker::RepoPermissionChecker;
 
 use crate::AuthorizationContext;
@@ -34,6 +33,9 @@ struct Repo {
 
     #[facet]
     repo_permission_checker: dyn RepoPermissionChecker,
+
+    #[facet]
+    repo_bookmark_attrs: RepoBookmarkAttrs,
 }
 
 #[fbinit::test]
@@ -60,10 +62,8 @@ async fn test_full_access(fb: FacebookInit) -> Result<()> {
             RepoWriteOperation::LandStack(BookmarkKind::Publishing),
         )
         .await?;
-
-    let bookmark_attrs = BookmarkAttrs::new(fb, repo.repo_config().bookmarks.clone()).await?;
     authz
-        .require_bookmark_modify(&ctx, &repo, &bookmark_attrs, &BookmarkName::new("main")?)
+        .require_bookmark_modify(&ctx, &repo, &BookmarkName::new("main")?)
         .await?;
 
     Ok(())
@@ -156,10 +156,8 @@ async fn test_user_access(fb: FacebookInit) -> Result<()> {
             .await
             .is_err()
     );
-
-    let bookmark_attrs = BookmarkAttrs::new(fb, repo.repo_config().bookmarks.clone()).await?;
     authz
-        .require_bookmark_modify(&ctx, &repo, &bookmark_attrs, &BookmarkName::new("main")?)
+        .require_bookmark_modify(&ctx, &repo, &BookmarkName::new("main")?)
         .await?;
 
     Ok(())
@@ -199,16 +197,15 @@ async fn test_service_access(fb: FacebookInit) -> Result<()> {
             .is_err()
     );
 
-    let bookmark_attrs = BookmarkAttrs::new(fb, repo.repo_config().bookmarks.clone()).await?;
     // Test service is permitted to modify main.
     authz_test_service
-        .require_bookmark_modify(&ctx, &repo, &bookmark_attrs, &BookmarkName::new("main")?)
+        .require_bookmark_modify(&ctx, &repo, &BookmarkName::new("main")?)
         .await?;
 
     // Another service is not permitted to modify main.
     assert!(
         authz_other_service
-            .require_bookmark_modify(&ctx, &repo, &bookmark_attrs, &BookmarkName::new("main")?)
+            .require_bookmark_modify(&ctx, &repo, &BookmarkName::new("main")?)
             .await
             .is_err()
     );

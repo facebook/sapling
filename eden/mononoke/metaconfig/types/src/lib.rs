@@ -22,15 +22,12 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use std::str;
 use std::str::FromStr;
-use std::sync::Arc;
 use std::time::Duration;
 
 use ascii::AsciiString;
 use bookmarks_types::BookmarkName;
 use derive_more::From;
 use derive_more::Into;
-use fbinit::FacebookInit;
-use metadata::Metadata;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
@@ -39,8 +36,6 @@ use mononoke_types::RepositoryId;
 use mysql_common::value::convert::ConvIr;
 use mysql_common::value::convert::FromValue;
 use mysql_common::value::convert::ParseIr;
-use permission_checker::BoxMembershipChecker;
-use permission_checker::MembershipCheckerBuilder;
 use regex::Regex;
 use scuba::ScubaValue;
 use serde_derive::Deserialize;
@@ -440,123 +435,6 @@ impl From<BookmarkName> for BookmarkOrRegex {
 impl From<Regex> for BookmarkOrRegex {
     fn from(r: Regex) -> Self {
         BookmarkOrRegex::Regex(ComparableRegex(r))
-    }
-}
-
-/// Attributes for a single bookmark
-pub struct SingleBookmarkAttr {
-    params: BookmarkParams,
-    membership: Option<BoxMembershipChecker>,
-}
-
-impl SingleBookmarkAttr {
-    fn new(params: BookmarkParams, membership: Option<BoxMembershipChecker>) -> Self {
-        Self { params, membership }
-    }
-
-    /// Bookmark parameters from config
-    pub fn params(&self) -> &BookmarkParams {
-        &self.params
-    }
-
-    /// Membership checker
-    pub fn membership(&self) -> &Option<BoxMembershipChecker> {
-        &self.membership
-    }
-}
-
-/// Collection of all bookmark attribtes
-#[derive(Clone)]
-pub struct BookmarkAttrs {
-    bookmark_attrs: Arc<Vec<SingleBookmarkAttr>>,
-}
-
-impl BookmarkAttrs {
-    /// create bookmark attributes from bookmark params vector
-    pub async fn new(
-        fb: FacebookInit,
-        bookmark_params: impl IntoIterator<Item = BookmarkParams>,
-    ) -> Result<Self, Error> {
-        let mut v = vec![];
-        for params in bookmark_params {
-            let membership_checker = match params.allowed_hipster_group {
-                Some(ref hipster_group) => {
-                    Some(MembershipCheckerBuilder::for_group(fb, &hipster_group).await?)
-                }
-                None => None,
-            };
-
-            v.push(SingleBookmarkAttr::new(params, membership_checker));
-        }
-
-        Ok(Self {
-            bookmark_attrs: Arc::new(v),
-        })
-    }
-
-    /// select bookmark params matching provided bookmark
-    pub fn select<'a>(
-        &'a self,
-        bookmark: &'a BookmarkName,
-    ) -> impl Iterator<Item = &'a SingleBookmarkAttr> {
-        self.bookmark_attrs
-            .iter()
-            .filter(move |attr| attr.params().bookmark.matches(bookmark))
-    }
-
-    /// check if provided bookmark is fast-forward only
-    pub fn is_fast_forward_only(&self, bookmark: &BookmarkName) -> bool {
-        self.select(bookmark)
-            .any(|attr| attr.params().only_fast_forward)
-    }
-
-    /// Check if a bookmark config overrides whether date should be rewritten during pushrebase.
-    /// Return None if there are no bookmark config overriding rewrite_dates.
-    pub fn should_rewrite_dates(&self, bookmark: &BookmarkName) -> Option<bool> {
-        for attr in self.select(bookmark) {
-            // NOTE: If there are multiple patterns matching the bookmark, the first match
-            // overrides others. It might not be the most desired behavior, though.
-            if let Some(rewrite_dates) = attr.params().rewrite_dates {
-                return Some(rewrite_dates);
-            }
-        }
-        None
-    }
-
-    /// check if provided unix name is allowed to move specified bookmark
-    pub async fn is_allowed_user(
-        &self,
-        user: &str,
-        metadata: &Metadata,
-        bookmark: &BookmarkName,
-    ) -> Result<bool, Error> {
-        // NOTE: `Iterator::all` combinator returns `true` if selected set is empty
-        //       which is consistent with what we want
-        for attr in self.select(bookmark) {
-            let maybe_allowed_users = attr
-                .params()
-                .allowed_users
-                .as_ref()
-                .map(|re| re.is_match(user));
-
-            let maybe_member = if let Some(membership) = &attr.membership {
-                Some(membership.is_member(&metadata.identities()).await?)
-            } else {
-                None
-            };
-
-            // Check if either is user is allowed to access it
-            // or that they are a member of hipster group.
-            let allowed = match (maybe_allowed_users, maybe_member) {
-                (Some(x), Some(y)) => x || y,
-                (Some(x), None) | (None, Some(x)) => x,
-                (None, None) => true,
-            };
-            if !allowed {
-                return Ok(false);
-            }
-        }
-        Ok(true)
     }
 }
 

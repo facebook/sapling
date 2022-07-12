@@ -14,7 +14,6 @@ use fbinit::FacebookInit;
 use getbundle_response::SessionLfsParams;
 use hooks::HookManager;
 use live_commit_sync_config::LiveCommitSyncConfig;
-use metaconfig_types::BookmarkAttrs;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::PushParams;
@@ -47,7 +46,6 @@ pub struct SqlStreamingCloneConfig {
 #[derive(Clone)]
 pub struct MononokeRepo {
     repo: Arc<Repo>,
-    bookmark_attrs: BookmarkAttrs,
     streaming_clone: SqlStreamingCloneConfig,
 }
 
@@ -69,21 +67,16 @@ impl MononokeRepo {
             readonly_storage.0,
         )?;
 
-        Self::new_from_parts(fb, repo, streaming_clone).await
+        Self::new_from_parts(repo, streaming_clone).await
     }
 
     pub async fn new_from_parts(
-        fb: FacebookInit,
         repo: Arc<Repo>,
         streaming_clone: SqlStreamingCloneConfig,
     ) -> Result<Self, Error> {
-        // TODO: Update Metaconfig so we just have this in config:
-        let bookmark_attrs = BookmarkAttrs::new(fb, repo.config().bookmarks.clone()).await?;
-
         Ok(Self {
             repo,
             streaming_clone,
-            bookmark_attrs,
         })
     }
 
@@ -109,10 +102,6 @@ impl MononokeRepo {
 
     pub fn repo_client_use_warm_bookmarks_cache(&self) -> bool {
         self.repo.config().repo_client_use_warm_bookmarks_cache
-    }
-
-    pub fn bookmark_attrs(&self) -> BookmarkAttrs {
-        self.bookmark_attrs.clone()
     }
 
     pub fn hook_manager(&self) -> Arc<HookManager> {

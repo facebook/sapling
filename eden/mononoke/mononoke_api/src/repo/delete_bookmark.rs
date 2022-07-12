@@ -11,7 +11,6 @@ use anyhow::Context;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
 use bytes::Bytes;
-use metaconfig_types::BookmarkAttrs;
 use mononoke_types::ChangesetId;
 
 use crate::errors::MononokeError;
@@ -29,8 +28,6 @@ impl RepoContext {
 
         let bookmark = bookmark.as_ref();
         let bookmark = BookmarkName::new(bookmark)?;
-        let bookmark_attrs =
-            BookmarkAttrs::new(self.ctx().fb, self.config().bookmarks.clone()).await?;
 
         // We need to find out where the bookmark currently points to in order
         // to delete it.  Make sure to bypass any out-of-date caches.
@@ -60,7 +57,6 @@ impl RepoContext {
             self.authorization_context(),
             self.inner_repo(),
             &self.config().infinitepush,
-            &bookmark_attrs,
         )
         .await?;
 

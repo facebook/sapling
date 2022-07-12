@@ -57,6 +57,7 @@ use pushrebase_mutation_mapping::ArcPushrebaseMutationMapping;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use repo_lock::ArcRepoLock;
@@ -144,6 +145,9 @@ pub struct BlobRepoInner {
 
     #[facet]
     pub repo_lock: dyn RepoLock,
+
+    #[facet]
+    pub repo_bookmark_attrs: RepoBookmarkAttrs,
 }
 
 #[facet::container]
@@ -169,6 +173,7 @@ pub struct BlobRepo {
         dyn MutableCounters,
         dyn RepoPermissionChecker,
         dyn RepoLock,
+        RepoBookmarkAttrs,
     )]
     inner: Arc<BlobRepoInner>,
 }

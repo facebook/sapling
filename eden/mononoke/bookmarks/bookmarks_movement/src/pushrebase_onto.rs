@@ -21,7 +21,6 @@ use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
 use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
 use hooks::CrossRepoPushSource;
 use hooks::HookManager;
-use metaconfig_types::BookmarkAttrs;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::BonsaiChangeset;
@@ -30,6 +29,7 @@ use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_authorization::AuthorizationContext;
 use repo_authorization::RepoWriteOperation;
+use repo_bookmark_attrs::RepoBookmarkAttrsRef;
 use repo_identity::RepoIdentityRef;
 
 use crate::affected_changesets::AdditionalChangesets;
@@ -107,7 +107,6 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         lca_hint: &'op Arc<dyn LeastCommonAncestorsHint>,
         infinitepush_params: &'op InfinitepushParams,
         pushrebase_params: &'op PushrebaseParams,
-        bookmark_attrs: &'op BookmarkAttrs,
         hook_manager: &'op HookManager,
     ) -> Result<pushrebase::PushrebaseOutcome, BookmarkMovementError> {
         let kind = self
@@ -131,7 +130,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
                 .await?;
         }
         authz
-            .require_bookmark_modify(ctx, repo, bookmark_attrs, self.bookmark)
+            .require_bookmark_modify(ctx, repo, self.bookmark)
             .await?;
 
         check_bookmark_sync_config(repo, self.bookmark, kind)?;
@@ -159,7 +158,6 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
                 repo,
                 lca_hint,
                 pushrebase_params,
-                bookmark_attrs,
                 hook_manager,
                 self.bookmark,
                 self.pushvars,
@@ -171,7 +169,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             .await?;
 
         let mut pushrebase_hooks =
-            get_pushrebase_hooks(ctx, repo, &self.bookmark, bookmark_attrs, pushrebase_params)?;
+            get_pushrebase_hooks(ctx, repo, self.bookmark, pushrebase_params)?;
 
         // For pushrebase, we check the repo lock once at the beginning of the
         // pushrebase operation, and then once more as part of the pushrebase
@@ -192,7 +190,10 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         }
 
         let mut flags = pushrebase_params.flags.clone();
-        if let Some(rewritedates) = bookmark_attrs.should_rewrite_dates(self.bookmark) {
+        if let Some(rewritedates) = repo
+            .repo_bookmark_attrs()
+            .should_rewrite_dates(self.bookmark)
+        {
             // Bookmark config overrides repo flags.rewritedates config
             flags.rewritedates = rewritedates;
         }
@@ -236,10 +237,10 @@ pub fn get_pushrebase_hooks(
          impl BonsaiGitMappingArc
          + BonsaiGlobalrevMappingArc
          + PushrebaseMutationMappingRef
+         + RepoBookmarkAttrsRef
          + RepoIdentityRef
      ),
     bookmark: &BookmarkName,
-    bookmark_attrs: &BookmarkAttrs,
     params: &PushrebaseParams,
 ) -> Result<Vec<Box<dyn PushrebaseHook>>, BookmarkMovementError> {
     let mut pushrebase_hooks = Vec::new();
@@ -264,7 +265,7 @@ pub fn get_pushrebase_hooks(
         }
     };
 
-    for attr in bookmark_attrs.select(bookmark) {
+    for attr in repo.repo_bookmark_attrs().select(bookmark) {
         if let Some(descendant_bookmark) = &attr.params().ensure_ancestor_of {
             return Err(
                 BookmarkMovementError::PushrebaseNotAllowedRequiresAncestorsOf {

@@ -9,9 +9,9 @@ use anyhow::Result;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkName;
 use context::CoreContext;
-use metaconfig_types::BookmarkAttrs;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::BonsaiChangeset;
+use repo_bookmark_attrs::RepoBookmarkAttrsRef;
 use repo_permission_checker::RepoPermissionCheckerRef;
 
 use crate::error::AuthorizationError;
@@ -201,16 +201,15 @@ impl AuthorizationContext {
     pub async fn check_bookmark_modify(
         &self,
         ctx: &CoreContext,
-        repo: &impl RepoConfigRef,
-        bookmark_attrs: &BookmarkAttrs,
+        repo: &(impl RepoConfigRef + RepoBookmarkAttrsRef),
         bookmark: &BookmarkName,
     ) -> Result<AuthorizationCheckOutcome> {
         let permitted = match self {
             AuthorizationContext::FullAccess => true,
             AuthorizationContext::Identity => {
                 let user = ctx.metadata().unix_name().unwrap_or("svcscm");
-                bookmark_attrs
-                    .is_allowed_user(user, ctx.metadata(), bookmark)
+                repo.repo_bookmark_attrs()
+                    .is_allowed_user(ctx, user, bookmark)
                     .await?
 
                 // TODO: Check using ctx.identities, and deny if neither are provided.
@@ -230,11 +229,10 @@ impl AuthorizationContext {
     pub async fn require_bookmark_modify(
         &self,
         ctx: &CoreContext,
-        repo: &impl RepoConfigRef,
-        bookmark_attrs: &BookmarkAttrs,
+        repo: &(impl RepoConfigRef + RepoBookmarkAttrsRef),
         bookmark: &BookmarkName,
     ) -> Result<(), AuthorizationError> {
-        self.check_bookmark_modify(ctx, repo, bookmark_attrs, bookmark)
+        self.check_bookmark_modify(ctx, repo, bookmark)
             .await?
             .permitted_or_else(|| {
                 self.permission_denied(ctx, DeniedAction::BookmarkModification(bookmark.clone()))

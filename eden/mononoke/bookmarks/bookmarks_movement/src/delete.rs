@@ -12,7 +12,6 @@ use bookmarks_types::BookmarkKind;
 use bookmarks_types::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
-use metaconfig_types::BookmarkAttrs;
 use metaconfig_types::InfinitepushParams;
 use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
@@ -76,7 +75,6 @@ impl<'op> DeleteBookmarkOp<'op> {
         authz: &'op AuthorizationContext,
         repo: &'op impl Repo,
         infinitepush_params: &'op InfinitepushParams,
-        bookmark_attrs: &'op BookmarkAttrs,
     ) -> Result<(), BookmarkMovementError> {
         let kind = self
             .kind_restrictions
@@ -98,12 +96,15 @@ impl<'op> DeleteBookmarkOp<'op> {
                 .await?;
         }
         authz
-            .require_bookmark_modify(ctx, repo, bookmark_attrs, self.bookmark)
+            .require_bookmark_modify(ctx, repo, self.bookmark)
             .await?;
 
         check_bookmark_sync_config(repo, self.bookmark, kind)?;
 
-        if bookmark_attrs.is_fast_forward_only(self.bookmark) {
+        if repo
+            .repo_bookmark_attrs()
+            .is_fast_forward_only(self.bookmark)
+        {
             // Cannot delete fast-forward-only bookmarks.
             return Err(BookmarkMovementError::DeletionProhibited {
                 bookmark: self.bookmark.clone(),

@@ -32,7 +32,6 @@ use bytes::Bytes;
 use context::CoreContext;
 use hooks::HookManager;
 use mercurial_mutation::HgMutationStoreRef;
-use metaconfig_types::BookmarkAttrs;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::PushParams;
 use metaconfig_types::PushrebaseParams;
@@ -81,7 +80,6 @@ pub trait Repo = bookmarks_movement::Repo + HgMutationStoreRef;
 pub async fn run_post_resolve_action(
     ctx: &CoreContext,
     repo: &impl Repo,
-    bookmark_attrs: &BookmarkAttrs,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
@@ -98,7 +96,6 @@ pub async fn run_post_resolve_action(
         PostResolveAction::Push(action) => run_push(
             ctx,
             repo,
-            bookmark_attrs,
             lca_hint,
             hook_manager,
             infinitepush_params,
@@ -113,7 +110,6 @@ pub async fn run_post_resolve_action(
         PostResolveAction::InfinitePush(action) => run_infinitepush(
             ctx,
             repo,
-            bookmark_attrs,
             lca_hint,
             hook_manager,
             infinitepush_params,
@@ -127,7 +123,6 @@ pub async fn run_post_resolve_action(
         PostResolveAction::PushRebase(action) => run_pushrebase(
             ctx,
             repo,
-            bookmark_attrs,
             lca_hint,
             infinitepush_params,
             pushrebase_params,
@@ -140,7 +135,6 @@ pub async fn run_post_resolve_action(
         PostResolveAction::BookmarkOnlyPushRebase(action) => run_bookmark_only_pushrebase(
             ctx,
             repo,
-            bookmark_attrs,
             lca_hint,
             hook_manager,
             infinitepush_params,
@@ -171,7 +165,6 @@ fn report_unbundle_type(repo: &impl RepoIdentityRef, unbundle_response: &Unbundl
 async fn run_push(
     ctx: &CoreContext,
     repo: &impl Repo,
-    bookmark_attrs: &BookmarkAttrs,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
     infinitepush_params: &InfinitepushParams,
@@ -230,7 +223,6 @@ async fn run_push(
             lca_hint,
             infinitepush_params,
             pushrebase_params,
-            bookmark_attrs,
             hook_manager,
             &bookmark_push,
             new_changesets,
@@ -263,7 +255,6 @@ async fn run_push(
 async fn run_infinitepush(
     ctx: &CoreContext,
     repo: &impl Repo,
-    bookmark_attrs: &BookmarkAttrs,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
     infinitepush_params: &InfinitepushParams,
@@ -295,7 +286,6 @@ async fn run_infinitepush(
                 lca_hint,
                 infinitepush_params,
                 pushrebase_params,
-                bookmark_attrs,
                 hook_manager,
                 &bookmark_push,
                 cross_repo_push_source,
@@ -329,7 +319,6 @@ async fn run_infinitepush(
 async fn run_pushrebase(
     ctx: &CoreContext,
     repo: &impl Repo,
-    bookmark_attrs: &BookmarkAttrs,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
@@ -366,7 +355,6 @@ async fn run_pushrebase(
                 uploaded_bonsais,
                 &onto_bookmark,
                 maybe_pushvars.as_ref(),
-                bookmark_attrs,
                 infinitepush_params,
                 hook_manager,
                 hook_rejection_remapper.as_ref(),
@@ -412,7 +400,6 @@ async fn run_pushrebase(
                 uploaded_bonsais,
                 plain_push,
                 maybe_pushvars.as_ref(),
-                bookmark_attrs,
                 infinitepush_params,
                 hook_rejection_remapper.as_ref(),
                 cross_repo_push_source,
@@ -448,7 +435,6 @@ async fn run_pushrebase(
 async fn run_bookmark_only_pushrebase(
     ctx: &CoreContext,
     repo: &impl Repo,
-    bookmark_attrs: &BookmarkAttrs,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
     infinitepush_params: &InfinitepushParams,
@@ -478,7 +464,6 @@ async fn run_bookmark_only_pushrebase(
         lca_hint,
         infinitepush_params,
         pushrebase_params,
-        bookmark_attrs,
         hook_manager,
         &bookmark_push,
         new_changesets,
@@ -511,7 +496,6 @@ async fn normal_pushrebase<'a>(
     changesets: HashSet<BonsaiChangeset>,
     bookmark: &'a BookmarkName,
     maybe_pushvars: Option<&'a HashMap<String, Bytes>>,
-    bookmark_attrs: &'a BookmarkAttrs,
     infinitepush_params: &'a InfinitepushParams,
     hook_manager: &'a HookManager,
     hook_rejection_remapper: &'a dyn HookRejectionRemapper,
@@ -568,7 +552,6 @@ async fn normal_pushrebase<'a>(
         repo,
         pushrebase_params,
         lca_hint,
-        bookmark_attrs,
         infinitepush_params,
         hook_manager,
     }
@@ -610,7 +593,6 @@ async fn force_pushrebase(
     uploaded_bonsais: HashSet<BonsaiChangeset>,
     bookmark_push: PlainBookmarkPush<ChangesetId>,
     maybe_pushvars: Option<&HashMap<String, Bytes>>,
-    bookmark_attrs: &BookmarkAttrs,
     infinitepush_params: &InfinitepushParams,
     hook_rejection_remapper: &dyn HookRejectionRemapper,
     cross_repo_push_source: CrossRepoPushSource,
@@ -631,7 +613,6 @@ async fn force_pushrebase(
         lca_hint,
         infinitepush_params,
         pushrebase_params,
-        bookmark_attrs,
         hook_manager,
         &bookmark_push,
         new_changesets,
@@ -654,7 +635,6 @@ async fn plain_push_bookmark(
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
-    bookmark_attrs: &BookmarkAttrs,
     hook_manager: &HookManager,
     bookmark_push: &PlainBookmarkPush<ChangesetId>,
     new_changesets: HashMap<ChangesetId, BonsaiChangeset>,
@@ -680,7 +660,6 @@ async fn plain_push_bookmark(
                         lca_hint,
                         infinitepush_params,
                         pushrebase_params,
-                        bookmark_attrs,
                         hook_manager,
                     )
                     .await;
@@ -727,7 +706,6 @@ async fn plain_push_bookmark(
                 lca_hint,
                 infinitepush_params,
                 pushrebase_params,
-                bookmark_attrs,
                 hook_manager,
             )
             .await;
@@ -760,13 +738,7 @@ async fn plain_push_bookmark(
                 .only_if_public()
                 .with_pushvars(maybe_pushvars)
                 .only_log_acl_checks(tunables().get_log_only_wireproto_write_acl())
-                .run(
-                    ctx,
-                    &AuthorizationContext::new(),
-                    repo,
-                    infinitepush_params,
-                    bookmark_attrs,
-                )
+                .run(ctx, &AuthorizationContext::new(), repo, infinitepush_params)
                 .await
                 .context("Failed to delete bookmark")?;
         }
@@ -782,7 +754,6 @@ async fn infinitepush_scratch_bookmark(
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
-    bookmark_attrs: &BookmarkAttrs,
     hook_manager: &HookManager,
     bookmark_push: &InfiniteBookmarkPush<ChangesetId>,
     cross_repo_push_source: CrossRepoPushSource,
@@ -803,7 +774,6 @@ async fn infinitepush_scratch_bookmark(
             lca_hint,
             infinitepush_params,
             pushrebase_params,
-            bookmark_attrs,
             hook_manager,
         )
         .await
@@ -838,7 +808,6 @@ async fn infinitepush_scratch_bookmark(
             lca_hint,
             infinitepush_params,
             pushrebase_params,
-            bookmark_attrs,
             hook_manager,
         )
         .await
