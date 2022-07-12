@@ -22,8 +22,6 @@ use metaconfig_types::BackupRepoConfig;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::CensoredScubaParams;
 use metaconfig_types::CommonConfig;
-use metaconfig_types::HgsqlGlobalrevsName;
-use metaconfig_types::HgsqlName;
 use metaconfig_types::Redaction;
 use metaconfig_types::RedactionConfig;
 use metaconfig_types::RepoConfig;
@@ -836,17 +834,17 @@ mod test {
 
             [sparse_profiles_config]
             sparse_profiles_location = "sparse"
-            
+
             [hg_sync_config]
             hg_repo_ssh_path = "ssh://hg.vip.facebook.com//data/scm/just_some_repo"
             batch_size = 10
             lock_on_failure = true
-            
+
             [backup_hg_sync_config]
             hg_repo_ssh_path = "mononoke://mononoke-backup.internal.tfbnw.net/just_some_repo"
             batch_size = 20
             lock_on_failure = false
-            darkstorm_backup_repo_id = 1001   
+            darkstorm_backup_repo_id = 1001
         "#;
         let fbsource_repo_def = r#"
             repo_id=0
@@ -876,7 +874,7 @@ mod test {
             scuba_censored_table="censored_table"
             scuba_local_path_censored="censored_local_path"
             trusted_parties_hipster_tier="tier1"
-            
+
             [internal_identity]
             identity_type = "SERVICE_IDENTITY"
             identity_data = "internal"
@@ -1459,7 +1457,7 @@ mod test {
         [redaction_config]
         blobstore = "multiplex_store"
         redaction_sets_location = "loc"
-        
+
         [internal_identity]
         identity_type = "SERVICE_IDENTITY"
         identity_data = "internal"
@@ -1573,7 +1571,7 @@ mod test {
         [redaction_config]
         blobstore = "multiplex_store"
         redaction_sets_location = "loc"
-        
+
         [internal_identity]
         identity_type = "SERVICE_IDENTITY"
         identity_data = "internal"
@@ -1685,7 +1683,7 @@ mod test {
         [redaction_config]
         blobstore = "multiplex_store"
         redaction_sets_location = "loc"
-        
+
         [internal_identity]
         identity_type = "SERVICE_IDENTITY"
         identity_data = "internal"

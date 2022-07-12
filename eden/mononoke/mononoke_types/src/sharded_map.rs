@@ -626,9 +626,6 @@ mod test {
     use blobstore::BlobstoreKeyRange;
     use blobstore::BlobstoreKeySource;
     use blobstore::LoadableError;
-    use bytes::Buf;
-    use bytes::BufMut;
-    use bytes::BytesMut;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use futures::TryStreamExt;
