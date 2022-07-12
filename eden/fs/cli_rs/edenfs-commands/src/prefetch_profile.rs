@@ -106,6 +106,10 @@ pub enum PrefetchCmd {
     Disable,
     #[clap(about = "Enables prefetch profiles locally")]
     Enable,
+    #[clap(hide = true)]
+    DisablePredictive,
+    #[clap(hide = true)]
+    EnablePredictive,
 }
 
 impl PrefetchCmd {
@@ -305,6 +309,40 @@ impl PrefetchCmd {
         edenfs_config.save_user(home_dir_path)?;
         Ok(0)
     }
+
+    async fn disable_predictive(&self, instance: EdenFsInstance) -> Result<ExitCode> {
+        let mut loader = EdenFsConfig::loader();
+        let home_dir_path = instance
+            .get_user_home_dir()
+            .ok_or_else(|| {
+                EdenFsError::Other(anyhow!(
+                    "Failed to disable predictive prefetch-profiles, could not determine user's home directory"
+                ))
+            })?
+            .as_path();
+        edenfs_config::load_user(&mut loader, home_dir_path)?;
+        let mut edenfs_config = loader.build().map_err(EdenFsError::ConfigurationError)?;
+        edenfs_config.set_bool("prefetch-profiles", "predictive-prefetching-enabled", false);
+        edenfs_config.save_user(home_dir_path)?;
+        Ok(0)
+    }
+
+    async fn enable_predictive(&self, instance: EdenFsInstance) -> Result<ExitCode> {
+        let mut loader = EdenFsConfig::loader();
+        let home_dir_path = instance
+            .get_user_home_dir()
+            .ok_or_else(|| {
+                EdenFsError::Other(anyhow!(
+                    "Failed to enable predictive prefetch-profiles, could not determine user's home directory"
+                ))
+            })?
+            .as_path();
+        edenfs_config::load_user(&mut loader, home_dir_path)?;
+        let mut edenfs_config = loader.build().map_err(EdenFsError::ConfigurationError)?;
+        edenfs_config.set_bool("prefetch-profiles", "predictive-prefetching-enabled", true);
+        edenfs_config.save_user(home_dir_path)?;
+        Ok(0)
+    }
 }
 
 #[async_trait]
@@ -328,6 +366,8 @@ impl Subcommand for PrefetchCmd {
             } => self.deactivate(instance, common, profile_name).await,
             Self::Disable {} => self.disable(instance).await,
             Self::Enable {} => self.enable(instance).await,
+            Self::DisablePredictive {} => self.disable_predictive(instance).await,
+            Self::EnablePredictive {} => self.enable_predictive(instance).await,
         }
     }
 }
