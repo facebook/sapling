@@ -208,7 +208,7 @@ fn dispatch_command(
     let config = dispatcher.config();
 
     let mut fell_back = false;
-    let exit_code = match dispatch_res {
+    let exit_code = match dispatch_res.map_err(|err| errors::triage_error(config, err)) {
         Ok(exit_code) => exit_code as i32,
         Err(err) => {
             let should_fallback = err.is::<errors::FallbackToPython>() ||
@@ -236,7 +236,6 @@ fn dispatch_command(
                 }
                 interp.run_hg(args, io)
             } else {
-                let err = errors::triage_error(config, err);
                 errors::print_error(&err, io, &args[1..]);
                 255
             }
