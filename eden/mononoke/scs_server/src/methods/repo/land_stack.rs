@@ -10,24 +10,66 @@ use borrowed::borrowed;
 use context::CoreContext;
 use hooks::CrossRepoPushSource;
 use mononoke_api::ChangesetSpecifier;
+use mononoke_api::MononokeError;
 use permission_checker::MononokeIdentity;
 use source_control as thrift;
 
 use crate::commit_id::CommitIdExt;
 use crate::errors;
+use crate::errors::LoggableError;
 use crate::errors::ServiceErrorResultExt;
+use crate::errors::Status;
 use crate::from_request::convert_pushvars;
 use crate::from_request::FromRequest;
 use crate::into_response::AsyncIntoResponseWith;
 use crate::source_control_impl::SourceControlServiceImpl;
+use source_control::services::source_control_service as service;
+
+enum LandStackError {
+    Service(errors::ServiceError),
+}
+
+impl From<errors::ServiceError> for LandStackError {
+    fn from(e: errors::ServiceError) -> Self {
+        Self::Service(e)
+    }
+}
+
+impl From<MononokeError> for LandStackError {
+    fn from(e: MononokeError) -> Self {
+        Self::Service(e.into())
+    }
+}
+
+impl From<thrift::RequestError> for LandStackError {
+    fn from(e: thrift::RequestError) -> Self {
+        Self::Service(e.into())
+    }
+}
+
+impl From<LandStackError> for service::RepoLandStackExn {
+    fn from(e: LandStackError) -> service::RepoLandStackExn {
+        match e {
+            LandStackError::Service(e) => e.into(),
+        }
+    }
+}
+
+impl LoggableError for LandStackError {
+    fn status_and_description(&self) -> (Status, String) {
+        match self {
+            Self::Service(svc) => svc.status_and_description(),
+        }
+    }
+}
 
 impl SourceControlServiceImpl {
-    pub(crate) async fn repo_land_stack(
+    async fn impl_repo_land_stack(
         &self,
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::RepoLandStackParams,
-    ) -> Result<thrift::RepoLandStackResponse, errors::ServiceError> {
+    ) -> Result<thrift::RepoLandStackResponse, LandStackError> {
         let repo = self
             .repo_for_service(ctx, &repo, params.service_identity)
             .await?;
@@ -82,5 +124,15 @@ impl SourceControlServiceImpl {
             pushrebase_outcome,
             ..Default::default()
         })
+    }
+
+    pub(crate) async fn repo_land_stack(
+        &self,
+        ctx: CoreContext,
+        repo: thrift::RepoSpecifier,
+        params: thrift::RepoLandStackParams,
+    ) -> Result<thrift::RepoLandStackResponse, impl Into<service::RepoLandStackExn> + LoggableError>
+    {
+        self.impl_repo_land_stack(ctx, repo, params).await
     }
 }

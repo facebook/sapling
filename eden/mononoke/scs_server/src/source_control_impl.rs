@@ -617,7 +617,7 @@ macro_rules! impl_thrift_methods {
                     log_result(ctx, &stats, &res);
                     let method = stringify!($method_name).to_string();
                     STATS::method_completion_time_ms.add_value(stats.completion_time.as_millis_unchecked() as i64, (method,));
-                    Ok(res?)
+                    res.map_err(Into::into)
                 };
                 Box::pin(handler)
             }
