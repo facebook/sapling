@@ -1776,6 +1776,14 @@ union MegarepoAsynchronousRequestError {
   2: InternalErrorStruct internal_error;
 }
 
+exception PushrebaseConflictsException {
+  1: string reason;
+} (message = "reason")
+
+exception HookRejectionsException {
+  1: string reason;
+} (message = "reason")
+
 /// Service Definition
 
 service SourceControlService extends fb303_core.BaseService {
@@ -1856,7 +1864,12 @@ service SourceControlService extends fb303_core.BaseService {
   RepoLandStackResponse repo_land_stack(
     1: RepoSpecifier repo,
     2: RepoLandStackParams params,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: PushrebaseConflictsException pushrebase_conflicts,
+    4: HookRejectionsException hook_rejections,
+  );
 
   /// Commit methods
   /// ==============

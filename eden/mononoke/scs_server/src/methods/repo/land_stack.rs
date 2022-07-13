@@ -5,13 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use bookmarks_movement::describe_hook_rejections;
 use bookmarks_movement::BookmarkKindRestrictions;
+use bookmarks_movement::HookRejection;
 use borrowed::borrowed;
 use context::CoreContext;
 use hooks::CrossRepoPushSource;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_api::MononokeError;
 use permission_checker::MononokeIdentity;
+use pushrebase::PushrebaseConflict;
 use source_control as thrift;
 
 use crate::commit_id::CommitIdExt;
@@ -23,10 +26,13 @@ use crate::from_request::convert_pushvars;
 use crate::from_request::FromRequest;
 use crate::into_response::AsyncIntoResponseWith;
 use crate::source_control_impl::SourceControlServiceImpl;
+use service::RepoLandStackExn;
 use source_control::services::source_control_service as service;
 
 enum LandStackError {
     Service(errors::ServiceError),
+    PushrebaseConflicts(Vec<PushrebaseConflict>),
+    HookRejections(Vec<HookRejection>),
 }
 
 impl From<errors::ServiceError> for LandStackError {
@@ -37,7 +43,11 @@ impl From<errors::ServiceError> for LandStackError {
 
 impl From<MononokeError> for LandStackError {
     fn from(e: MononokeError) -> Self {
-        Self::Service(e.into())
+        match e {
+            MononokeError::HookFailure(rejections) => Self::HookRejections(rejections),
+            MononokeError::PushrebaseConflicts(conflicts) => Self::PushrebaseConflicts(conflicts),
+            e => Self::Service(e.into()),
+        }
     }
 }
 
@@ -47,10 +57,33 @@ impl From<thrift::RequestError> for LandStackError {
     }
 }
 
-impl From<LandStackError> for service::RepoLandStackExn {
-    fn from(e: LandStackError) -> service::RepoLandStackExn {
+fn reason_rejections(rejections: &Vec<HookRejection>) -> String {
+    format!(
+        "Hooks failed:\n{}",
+        describe_hook_rejections(rejections.as_slice())
+    )
+}
+
+fn reason_conflicts(conflicts: &Vec<PushrebaseConflict>) -> String {
+    format!("Conflicts while pushrebasing: {:?}", conflicts)
+}
+
+impl From<LandStackError> for RepoLandStackExn {
+    fn from(e: LandStackError) -> RepoLandStackExn {
         match e {
             LandStackError::Service(e) => e.into(),
+            LandStackError::HookRejections(rejections) => {
+                RepoLandStackExn::hook_rejections(thrift::HookRejectionsException {
+                    reason: reason_rejections(&rejections),
+                    ..Default::default()
+                })
+            }
+            LandStackError::PushrebaseConflicts(conflicts) => {
+                RepoLandStackExn::pushrebase_conflicts(thrift::PushrebaseConflictsException {
+                    reason: reason_conflicts(&conflicts),
+                    ..Default::default()
+                })
+            }
         }
     }
 }
@@ -59,6 +92,12 @@ impl LoggableError for LandStackError {
     fn status_and_description(&self) -> (Status, String) {
         match self {
             Self::Service(svc) => svc.status_and_description(),
+            Self::HookRejections(rejections) => {
+                (Status::RequestError, reason_rejections(rejections))
+            }
+            Self::PushrebaseConflicts(conflicts) => {
+                (Status::RequestError, reason_conflicts(conflicts))
+            }
         }
     }
 }
