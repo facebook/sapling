@@ -53,19 +53,19 @@ struct continuation_result_impl<void> {
   using type = folly::Unit;
 };
 
-template <
-    typename Func,
-    typename Arg,
-    typename enabled = std::enable_if_t<std::is_invocable_v<Func, Arg>>>
+template <typename enabled, typename Func, typename... Arg>
 struct continuation_result
-    : continuation_result_impl<std::invoke_result_t<Func, Arg>> {};
+    : continuation_result_impl<std::invoke_result_t<Func, Arg...>> {};
 
 /**
  * Returns the actual return type of a continuation callback, removing the
  * Future/Try/ImmediateFuture wrapping.
  */
-template <typename Func, typename Arg>
-using continuation_result_t = typename continuation_result<Func, Arg>::type;
+template <typename Func, typename... Arg>
+using continuation_result_t = typename continuation_result<
+    std::enable_if_t<std::is_invocable_v<Func, Arg...>>,
+    Func,
+    Arg...>::type;
 
 } // namespace detail
 } // namespace facebook::eden

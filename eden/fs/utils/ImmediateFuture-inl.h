@@ -88,6 +88,29 @@ ImmediateFuture<T>& ImmediateFuture<T>::operator=(
   return *this;
 }
 
+namespace detail {
+template <typename Func, typename... Args>
+ImmediateFuture<detail::continuation_result_t<Func, Args...>>
+makeImmediateFutureFromImmediate(Func&& func, Args... args) {
+  using NewType = detail::continuation_result_t<Func, Args...>;
+  using FuncRetType = std::invoke_result_t<Func, Args...>;
+
+  try {
+    // In the case where Func returns void, force the return value to
+    // be folly::unit.
+    if constexpr (std::is_same_v<FuncRetType, void>) {
+      func(std::forward<Args...>(args...));
+      return folly::unit;
+    } else {
+      return func(std::forward<Args...>(args...));
+    }
+  } catch (std::exception& ex) {
+    return folly::Try<NewType>(
+        folly::exception_wrapper(std::current_exception(), ex));
+  }
+}
+} // namespace detail
+
 template <typename T>
 template <typename Func>
 ImmediateFuture<detail::continuation_result_t<Func, T>>
@@ -99,23 +122,32 @@ ImmediateFuture<T>::thenValue(Func&& func) && {
   }
 
   return std::move(*this).thenTry(
-      [func = std::forward<Func>(func)](folly::Try<T>&& try_) mutable {
-        // If try_ doesn't store a value, this will rethrow the exception which
-        // will be caught by the thenTry method below.
-        return func(std::move(try_).value());
+      [func = std::forward<Func>(func)](
+          folly::Try<T>&& try_) mutable -> ImmediateFuture<RetType> {
+        if (try_.hasValue()) {
+          return detail::makeImmediateFutureFromImmediate(
+              std::forward<Func>(func), std::move(try_).value());
+        } else {
+          return folly::Try<RetType>(std::move(try_).exception());
+        }
       });
 }
 
 template <typename T>
 template <typename Func>
 ImmediateFuture<T> ImmediateFuture<T>::thenError(Func&& func) && {
+  if (kind_ == Kind::Immediate && immediate_.hasValue()) {
+    return std::move(*this).immediate_;
+  }
+
   return std::move(*this).thenTry(
       [func = std::forward<Func>(func)](
           folly::Try<T>&& try_) mutable -> ImmediateFuture<T> {
-        if (try_.hasValue()) {
-          return std::move(try_);
+        if (try_.hasException()) {
+          return detail::makeImmediateFutureFromImmediate(
+              std::forward<Func>(func), std::move(try_).exception());
         } else {
-          return func(std::move(try_).exception());
+          return ImmediateFuture{std::move(try_)};
         }
       });
 }
@@ -155,29 +187,16 @@ template <typename T>
 template <typename Func>
 ImmediateFuture<detail::continuation_result_t<Func, folly::Try<T>>>
 ImmediateFuture<T>::thenTry(Func&& func) && {
-  using NewType = detail::continuation_result_t<Func, folly::Try<T>>;
   using FuncRetType = std::invoke_result_t<Func, folly::Try<T>>;
 
   switch (kind_) {
     case Kind::Immediate:
-      try {
-        // In the case where Func returns void, force the return value to
-        // be folly::unit.
-        if constexpr (std::is_same_v<FuncRetType, void>) {
-          func(std::move(immediate_));
-          return folly::unit;
-        } else {
-          return func(std::move(immediate_));
-        }
-      } catch (std::exception& ex) {
-        return folly::Try<NewType>(
-            folly::exception_wrapper(std::current_exception(), ex));
-      }
+      return detail::makeImmediateFutureFromImmediate(
+          std::forward<Func>(func), std::move(immediate_));
     case Kind::SemiFuture: {
       // In the case where Func returns an ImmediateFuture, we need to
       // transform that return value into a SemiFuture so that the return
-      // type is a SemiFuture<NewType> and not a
-      // SemiFuture<ImmediateFuture<NewType>>.
+      // type is a SemiFuture<> and not a SemiFuture<ImmediateFuture<>>.
       auto semiFut = std::move(semi_).defer(std::forward<Func>(func));
       if constexpr (detail::isImmediateFuture<FuncRetType>::value) {
         return std::move(semiFut).deferValue(

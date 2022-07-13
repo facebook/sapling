@@ -546,3 +546,10 @@ TEST(ImmediateFuture, thenError) {
   });
   EXPECT_EQ(std::move(fortyThree).get(), 43);
 }
+
+TEST(ImmediateFuture, thenErrorVoid) {
+  ImmediateFuture<folly::Unit> unitFut{folly::unit};
+  std::move(unitFut).thenError(
+      [](folly::exception_wrapper exc) { exc.throw_exception(); });
+  EXPECT_EQ(std::move(unitFut).get(), folly::unit);
+}
