@@ -26,7 +26,7 @@ bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
 bulkops = { version = "0.1.0", path = "../bulkops" }
 bytes = { version = "1.1", features = ["serde"] }
 changeset_info = { version = "0.1.0", path = "../derived_data/changeset_info" }
-clap = { version = "3.2.8", features = ["derive", "regex", "unicode", "wrap_help"] }
+clap = { version = "3.2.10", features = ["derive", "regex", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 cmdlib_scrubbing = { version = "0.1.0", path = "../cmdlib/scrubbing" }

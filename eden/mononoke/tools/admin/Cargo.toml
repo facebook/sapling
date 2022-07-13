@@ -25,7 +25,7 @@ changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetche
 changesets = { version = "0.1.0", path = "../../changesets" }
 changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
-clap = { version = "3.2.8", features = ["derive", "regex", "unicode", "wrap_help"] }
+clap = { version = "3.2.10", features = ["derive", "regex", "unicode", "wrap_help"] }
 cmdlib_displaying = { version = "0.1.0", path = "../../cmdlib/displaying" }
 cmdlib_scrubbing = { version = "0.1.0", path = "../../cmdlib/scrubbing" }
 context = { version = "0.1.0", path = "../../server/context" }
