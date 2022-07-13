@@ -20,6 +20,8 @@ use futures::future::TryFutureExt;
 use futures::stream::TryStreamExt;
 use hooks::CrossRepoPushSource;
 use mononoke_types::ChangesetId;
+use pushrebase_client::LocalPushrebaseClient;
+use pushrebase_client::PushrebaseClient;
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::RangeNodeStream;
 
@@ -90,23 +92,25 @@ impl RepoContext {
         .try_collect()
         .await?;
 
-        // Pushrebase these commits onto the bookmark.
-        let op = bookmarks_movement::PushrebaseOntoBookmarkOp::new(&bookmark, changesets)
-            .with_pushvars(pushvars)
-            .with_push_source(push_source)
-            .with_bookmark_restrictions(bookmark_restrictions);
-
-        let outcome = op
-            .run(
-                self.ctx(),
-                self.authorization_context(),
-                self.inner_repo(),
-                &lca_hint,
-                &self.config().infinitepush,
-                &self.config().pushrebase,
-                self.hook_manager().as_ref(),
-            )
-            .await?;
+        // We CANNOT do remote pushrebase here otherwise it would result in an infinite
+        // loop, as this code is used for remote pushrebase. Let's use local pushrebase.
+        let outcome = LocalPushrebaseClient {
+            ctx: self.ctx(),
+            authz: self.authorization_context(),
+            repo: self.inner_repo(),
+            pushrebase_params: &self.config().pushrebase,
+            lca_hint: &lca_hint,
+            infinitepush_params: &self.config().infinitepush,
+            hook_manager: self.hook_manager().as_ref(),
+        }
+        .pushrebase(
+            &bookmark,
+            changesets,
+            pushvars,
+            push_source,
+            bookmark_restrictions,
+        )
+        .await?;
 
         Ok(outcome)
     }
