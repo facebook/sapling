@@ -50,6 +50,7 @@ use regex::Regex;
 use scuba::builder::ServerData;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
 use std::hash::Hash;
@@ -662,7 +663,7 @@ impl fmt::Display for HookExecution {
 #[derive(Clone, Debug, PartialEq)]
 pub struct HookRejectionInfo {
     /// A short description for summarizing this failure with similar failures
-    pub description: &'static str,
+    pub description: Cow<'static, str>,
     /// A full explanation of what went wrong, suitable for presenting to the user (should include guidance for fixing this failure, where possible)
     pub long_description: String,
 }
@@ -683,7 +684,7 @@ impl HookRejectionInfo {
             .into()
             .unwrap_or_else(|| description.to_string());
         Self {
-            description,
+            description: Cow::Borrowed(description),
             long_description,
         }
     }
