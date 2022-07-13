@@ -10,9 +10,11 @@ from typing import List, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .repo import Repo
+    from .types import PathLike
 
 
 from .errors import MissingCommitError
+from .file import ScmFile
 from .status import Status
 
 
@@ -46,3 +48,6 @@ class Commit:
 
     def parents(self) -> List[Commit]:
         return self.repo.commits(f"parents({self.hash})", allowempty=True)
+
+    def __getitem__(self, path: PathLike) -> ScmFile:
+        return ScmFile(self, path)

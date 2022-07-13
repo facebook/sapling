@@ -4,10 +4,18 @@
 # GNU General Public License version 2.
 
 # pyre-strict
+from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, IO, Union
+from typing import Any, IO, List, TYPE_CHECKING, Union
+
+from .errors import MissingCommitError
+
+if TYPE_CHECKING:
+    from .commit import Commit
+    from .repo import Repo
+    from .types import PathLike
 
 
 def create_dirs(root: str, path: str) -> None:
@@ -15,6 +23,7 @@ def create_dirs(root: str, path: str) -> None:
     full_path.parent.mkdir(parents=True, exist_ok=True)
 
 
+# Represents a file in the working copy.
 class File:
     root: str
     path: str
@@ -83,3 +92,26 @@ class File:
 
     def exists(self) -> bool:
         return os.path.lexists(self._abspath)
+
+
+# Represents a file at a particular commit in the repository.
+class ScmFile:
+    repo: Repo
+    path: str
+    commit: Commit
+
+    def __init__(self, commit: Commit, path: PathLike) -> None:
+        self.repo = commit.repo
+        self.path = str(path)
+        self.commit = commit
+
+    def history(self) -> List[Commit]:
+        output = self.repo.hg.log(
+            self.path, follow=True, rev=self.commit, template="{node}\n"
+        ).stdout
+        lines = output.split("\n")[:-1]
+        if len(lines) == 0:
+            raise MissingCommitError(f"no history for {self.path} @ {self.commit}")
+        from .commit import Commit
+
+        return [Commit(self.repo, hash) for hash in lines]

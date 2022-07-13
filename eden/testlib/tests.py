@@ -220,6 +220,19 @@ A B
             [],
         )
 
+    @hgtest
+    def test_file_history(self, repo: Repo, wc: WorkingCopy) -> None:
+        fileA = wc.file()
+        first = wc.commit()
+        fileA.append("1")
+        second = wc.commit()
+
+        firstFileA = first[fileA]
+        self.assertEquals(firstFileA.history(), [first])
+
+        secondFileA = second[fileA]
+        self.assertEquals(secondFileA.history(), [second, first])
+
 
 if __name__ == "__main__":
     import unittest
