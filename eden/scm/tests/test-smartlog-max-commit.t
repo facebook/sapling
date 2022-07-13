@@ -28,23 +28,17 @@ With max-commit-threshold and collapse-obsolete:
   $ hg sl -T '{desc}' --config smartlog.collapse-obsolete=true --config smartlog.max-commit-threshold=1
   smartlog: too many (25) commits, not rendering all of them
   (consider running 'hg doctor' to hide unrelated commits)
-  o  C4
-  │
-  ~
-  
-  o  c5
-  │
-  ~
-  
-  o  E4
-  │
-  ~
-  
   o  G
-  │
-  ~
-  
-  o  e5
+  ╷
+  ╷ o  C4
+  ╭─╯
+  ╷ o  c5
+  ╭─╯
+  ╷ o  E4
+  ╭─╯
+  ╷ o  e5
+  ╭─╯
+  o  C
   │
   ~
 
@@ -69,30 +63,26 @@ With a root commit:
   $ hg sl -T '{desc}' --config smartlog.max-commit-threshold=1 --config smartlog.collapse-obsolete=false
   smartlog: too many (15) commits, not rendering all of them
   (consider running 'hg doctor' to hide unrelated commits)
-  o  C4
-  │
-  ~
-  
   o  G
-  │
-  ~
-  
-  o  E4
+  ╷
+  ╷ o  C4
+  ╭─╯
+  ╷ o  E4
+  ╭─╯
+  o  C
   │
   ~
 
   $ hg sl -T '{desc}' --config smartlog.max-commit-threshold=1 --config smartlog.collapse-obsolete=true
   smartlog: too many (15) commits, not rendering all of them
   (consider running 'hg doctor' to hide unrelated commits)
-  o  C4
-  │
-  ~
-  
   o  G
-  │
-  ~
-  
-  o  E4
+  ╷
+  ╷ o  C4
+  ╭─╯
+  ╷ o  E4
+  ╭─╯
+  o  C
   │
   ~
 

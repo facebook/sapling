@@ -412,7 +412,7 @@ def smartlognodes(repo, headnodes, masternodes):
         nodes = nodes.take(limit) + headnodes
 
     # Include the ancestor of above commits to make the graph connected.
-    nodes = repo.dageval(lambda: gcaall(public() & nodes) | nodes)
+    nodes = repo.dageval(lambda: gcaall(nodes) | nodes)
 
     # Collapse long obsoleted stack - only keep their heads and roots.
     # This is incompatible with automation (namely, nuclide-core) yet.
