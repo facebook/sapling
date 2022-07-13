@@ -699,6 +699,34 @@ def _makebackoutmessage(repo, message, node):
     return message + addmessage
 
 
+def _replayrenames(repo, node):
+    """Ensure that any renames from node are replayed in reverse on the current
+    working copy.
+    """
+    origctx = repo[node]
+    wctx = repo[None]
+    status = wctx.p1().status()
+
+    # For each file in the commit that's being backed out..
+    for origfile in origctx.files():
+        # ...if it wasn't a deletion...
+        if origfile in origctx:
+            origfilectx = origctx[origfile]
+            origrenamed = origfilectx.renamed()
+            # ...and it was a rename...
+            if origrenamed: # In the negative case this can be None or False
+                precopypath = origrenamed[0]
+                # ...then if the working copy has the pre-rename file...
+                if precopypath in wctx:
+                    newfilectx = wctx[precopypath]
+                    newrenamed = newfilectx.renamed()
+                    # ...and it's not already marked renamed...
+                    # ...and the post-rename file is marked delete...
+                    if newrenamed is None and origfile in status.removed:
+                        # ...then reverse the rename.
+                        repo.dirstate.copy(origfile, precopypath)
+
+
 def _dobackout(ui, repo, node=None, rev=None, **opts):
     if opts.get("commit") and opts.get("no_commit"):
         raise error.Abort(_("cannot use --commit with --no-commit"))
@@ -750,6 +778,12 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
             ui.setconfig("ui", "forcemerge", opts.get("tool", ""), "backout")
             stats = mergemod.update(repo, parent, True, True, node, False)
             repo.setparents(op1, op2)
+
+            # Ensure reverse-renames are preserved during the backout. In theory
+            # merge.update() should handle this, but it's extremely complex, so
+            # let's just double check it here.
+            _replayrenames(repo, node)
+
             dsguard.close()
             hg._showstats(repo, stats)
             if stats[3]:
@@ -764,6 +798,10 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
         hg.clean(repo, node, show_stats=False)
         repo.dirstate.setbranch(branch)
         cmdutil.revert(ui, repo, rctx, repo.dirstate.parents(), forcecopytracing=True)
+        # Ensure reverse-renames are preserved during the backout. In theory
+        # cmdutil.revert() should handle this, but it's extremely complex, so
+        # let's just double check it here.
+        _replayrenames(repo, node)
 
     if opts.get("no_commit"):
         msg = _("changeset %s backed out, " "don't forget to commit.\n")

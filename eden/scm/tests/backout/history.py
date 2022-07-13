@@ -31,6 +31,5 @@ class TestBackoutHistory(BaseTest):
             self.config.add("experimental", "copytrace", setting)
 
             backout = wc.backout(moved)
-            # BUGBUG: This should be equal
-            self.assertNotEquals(backout.status().copies.get(fileA.path), fileB.path)
+            self.assertEqual(backout.status().copies.get(fileA.path), fileB.path)
             repo.hide(backout)
