@@ -68,6 +68,19 @@ fn reason_conflicts(conflicts: &Vec<PushrebaseConflict>) -> String {
     format!("Conflicts while pushrebasing: {:?}", conflicts)
 }
 
+fn convert_rejection(rejection: HookRejection) -> thrift::HookRejection {
+    thrift::HookRejection {
+        hook_name: rejection.hook_name,
+        cs_id: Vec::from(rejection.cs_id.as_ref()),
+        reason: thrift::HookOutcomeRejected {
+            description: rejection.reason.description.to_string(),
+            long_description: rejection.reason.long_description,
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
 impl From<LandStackError> for RepoLandStackExn {
     fn from(e: LandStackError) -> RepoLandStackExn {
         match e {
@@ -75,6 +88,7 @@ impl From<LandStackError> for RepoLandStackExn {
             LandStackError::HookRejections(rejections) => {
                 RepoLandStackExn::hook_rejections(thrift::HookRejectionsException {
                     reason: reason_rejections(&rejections),
+                    rejections: rejections.into_iter().map(convert_rejection).collect(),
                     ..Default::default()
                 })
             }

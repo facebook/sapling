@@ -1787,8 +1787,19 @@ exception PushrebaseConflictsException {
   2: list<PushrebaseConflict> conflicts;
 } (message = "reason")
 
+struct HookRejection {
+  /// The hook that rejected the output
+  1: string hook_name;
+  /// The changeset that was reject, in bonsai format.
+  2: binary cs_id;
+  /// Why the hook rejected the changeset.
+  3: HookOutcomeRejected reason;
+}
+
 exception HookRejectionsException {
   1: string reason;
+  /// Always non-empty
+  2: list<HookRejection> rejections;
 } (message = "reason")
 
 /// Service Definition
