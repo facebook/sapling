@@ -22,7 +22,7 @@ use std::collections::HashSet;
 #[cfg(fbcode_build)]
 pub use facebook::scs::override_certificate_paths;
 #[cfg(fbcode_build)]
-pub use facebook::scs::SCSPushrebaseClient;
+pub use facebook::scs::ScsPushrebaseClient;
 pub use local::LocalPushrebaseClient;
 
 #[async_trait::async_trait]

@@ -41,7 +41,7 @@ use pushrebase::PushrebaseError;
 use pushrebase_client::LocalPushrebaseClient;
 use pushrebase_client::PushrebaseClient;
 #[cfg(fbcode_build)]
-use pushrebase_client::SCSPushrebaseClient;
+use pushrebase_client::ScsPushrebaseClient;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -507,9 +507,9 @@ async fn normal_pushrebase<'a>(
             #[cfg(fbcode_build)]
             {
                 let result = if let Ok(host_port) = std::env::var("SCS_SERVER_HOST_PORT") {
-                    SCSPushrebaseClient::from_host_port(ctx, host_port, repo)?
+                    ScsPushrebaseClient::from_host_port(ctx, host_port, repo)?
                 } else {
-                    SCSPushrebaseClient::new(ctx, repo)?
+                    ScsPushrebaseClient::new(ctx, repo)?
                 }
                 .pushrebase(
                     bookmark,
