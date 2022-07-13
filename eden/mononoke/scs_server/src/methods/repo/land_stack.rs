@@ -81,6 +81,14 @@ impl From<LandStackError> for RepoLandStackExn {
             LandStackError::PushrebaseConflicts(conflicts) => {
                 RepoLandStackExn::pushrebase_conflicts(thrift::PushrebaseConflictsException {
                     reason: reason_conflicts(&conflicts),
+                    conflicts: conflicts
+                        .into_iter()
+                        .map(|c| thrift::PushrebaseConflict {
+                            left: c.left.to_string(),
+                            right: c.right.to_string(),
+                            ..Default::default()
+                        })
+                        .collect(),
                     ..Default::default()
                 })
             }

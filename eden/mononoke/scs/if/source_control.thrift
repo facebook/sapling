@@ -1776,8 +1776,15 @@ union MegarepoAsynchronousRequestError {
   2: InternalErrorStruct internal_error;
 }
 
+struct PushrebaseConflict {
+  1: Path left;
+  2: Path right;
+}
+
 exception PushrebaseConflictsException {
   1: string reason;
+  /// Always non-empty
+  2: list<PushrebaseConflict> conflicts;
 } (message = "reason")
 
 exception HookRejectionsException {

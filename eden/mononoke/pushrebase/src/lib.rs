@@ -175,8 +175,8 @@ pub enum PushrebaseError {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct PushrebaseConflict {
-    left: MPath,
-    right: MPath,
+    pub left: MPath,
+    pub right: MPath,
 }
 
 impl PushrebaseConflict {
