@@ -60,6 +60,7 @@ use tunables::tunables;
 use crate::commit_id::CommitIdExt;
 use crate::errors;
 use crate::errors::ServiceErrorResultExt;
+use crate::errors::Status;
 use crate::from_request::FromRequest;
 use crate::scuba_params::AddScubaParams;
 use crate::scuba_response::AddScubaResponse;
@@ -519,28 +520,24 @@ impl SourceControlServiceImpl {
 fn log_result<T: AddScubaResponse>(
     ctx: CoreContext,
     stats: &FutureStats,
-    result: &Result<T, errors::ServiceError>,
+    result: &Result<T, impl errors::LoggableError>,
 ) {
-    let mut success = 0;
-    let mut internal_failure = 0;
-    let mut invalid_request = 0;
     let mut scuba = ctx.scuba().clone();
 
-    let (status, error) = match result {
+    let (status, error, invalid_request, internal_failure) = match result {
         Ok(response) => {
             response.add_scuba_response(&mut scuba);
-            success = 1;
-            ("SUCCESS", None)
+            ("SUCCESS", None, 0, 0)
         }
-        Err(errors::ServiceError::Request(e)) => {
-            invalid_request = 1;
-            ("REQUEST_ERROR", Some(format!("{:?}", e)))
-        }
-        Err(errors::ServiceError::Internal(e)) => {
-            internal_failure = 1;
-            ("INTERNAL_ERROR", Some(format!("{:?}", e)))
+        Err(err) => {
+            let (status, desc) = err.status_and_description();
+            match status {
+                Status::RequestError => ("REQUEST_ERROR", Some(desc), 1, 0),
+                Status::InternalError => ("INTERNAL_ERROR", Some(desc), 0, 1),
+            }
         }
     };
+    let success = if error.is_none() { 1 } else { 0 };
 
     STATS::total_request_success.add_value(success);
     STATS::total_request_internal_failure.add_value(internal_failure);

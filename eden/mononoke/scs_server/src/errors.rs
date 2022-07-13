@@ -30,6 +30,26 @@ impl From<thrift::InternalError> for ServiceError {
     }
 }
 
+#[derive(Clone, Copy)]
+pub(crate) enum Status {
+    RequestError,
+    InternalError,
+}
+
+/// Error can be logged to SCS scuba table
+pub(crate) trait LoggableError {
+    fn status_and_description(&self) -> (Status, String);
+}
+
+impl LoggableError for ServiceError {
+    fn status_and_description(&self) -> (Status, String) {
+        match self {
+            Self::Request(err) => (Status::RequestError, format!("{:?}", err)),
+            Self::Internal(err) => (Status::InternalError, format!("{:?}", err)),
+        }
+    }
+}
+
 impl ServiceError {
     pub fn context(self, context: &str) -> Self {
         match self {
