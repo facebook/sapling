@@ -97,6 +97,7 @@ impl MononokeErrorExt for MononokeError {
             ServicePermissionDenied { .. } => HttpError::e403,
             NotAvailable { .. } => HttpError::e503,
             HookFailure(_) => HttpError::e400,
+            PushrebaseConflicts(_) => HttpError::e400,
             AuthorizationError(_) => HttpError::e403,
             InternalError(_) => HttpError::e500,
             MergeConflicts { .. } => HttpError::e400,

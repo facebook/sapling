@@ -12,6 +12,7 @@ use bookmarks_movement::HookRejection;
 use derived_data::DeriveError;
 use itertools::Itertools;
 use megarepo_error::MegarepoError;
+use pushrebase::PushrebaseError;
 use repo_authorization::AuthorizationError;
 use std::backtrace::Backtrace;
 use std::convert::Infallible;
@@ -55,6 +56,8 @@ pub enum MononokeError {
     InvalidRequest(String),
     #[error("unresolved path conflicts in merge:\n {}", .conflict_paths.iter().join("\n"))]
     MergeConflicts { conflict_paths: Vec<MononokePath> },
+    #[error("Conflicts while pushrebasing: {0:?}")]
+    PushrebaseConflicts(Vec<pushrebase::PushrebaseConflict>),
     #[error(
         "permission denied: access to repo {reponame} on behalf of {service_identity} not permitted for {identities}"
     )]
@@ -102,11 +105,17 @@ impl From<DeriveError> for MononokeError {
 
 impl From<BookmarkMovementError> for MononokeError {
     fn from(e: BookmarkMovementError) -> Self {
-        use BookmarkMovementError::*;
         match e {
-            AuthorizationError(e) => MononokeError::AuthorizationError(e.to_string()),
-            HookFailure(rejections) => MononokeError::HookFailure(rejections),
-            Error(e) => MononokeError::InternalError(InternalError::from(e)),
+            BookmarkMovementError::AuthorizationError(e) => {
+                MononokeError::AuthorizationError(e.to_string())
+            }
+            BookmarkMovementError::HookFailure(rejections) => {
+                MononokeError::HookFailure(rejections)
+            }
+            BookmarkMovementError::PushrebaseError(PushrebaseError::Conflicts(conflicts)) => {
+                MononokeError::PushrebaseConflicts(conflicts)
+            }
+            BookmarkMovementError::Error(e) => MononokeError::InternalError(InternalError::from(e)),
             _ => MononokeError::InvalidRequest(e.to_string()),
         }
     }

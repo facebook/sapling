@@ -152,6 +152,11 @@ impl From<MononokeError> for ServiceError {
                 reason: error.to_string(),
                 ..Default::default()
             }),
+            error @ MononokeError::PushrebaseConflicts(_) => Self::Request(thrift::RequestError {
+                kind: thrift::RequestErrorKind::INVALID_REQUEST,
+                reason: error.to_string(),
+                ..Default::default()
+            }),
             MononokeError::InternalError(error) => {
                 let reason = format!("{:#}", error);
                 let backtrace = error
