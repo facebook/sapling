@@ -1706,34 +1706,10 @@ def _docommit(ui, repo, *pats, **opts):
         ("g", "global", None, _("edit global config")),
     ]
     + formatteropts,
-    _("[-u] [NAME]..."),
     optionalrepo=True,
     cmdtype=readonly,
 )
 def config(ui, repo, *values, **opts):
-    """show config settings
-
-    With no arguments, print names and values of all config items.
-
-    With one argument of the form section.name, print just the value
-    of that config item.
-
-    With multiple arguments, print names and values of all config
-    items with matching section names.
-
-    With --edit, start an editor on the user-level config file. With
-    --global, edit the system-wide config file. With --local, edit the
-    repository-level config file.
-
-    With --debug, the source (filename and line number) is printed
-    for each config item.
-
-    See :hg:`help config` for more information about config files.
-
-    Returns 0 on success, 1 if NAME does not exist.
-
-    """
-
     if opts.get("edit") or opts.get("local") or opts.get("global"):
         if opts.get("local") and opts.get("global"):
             raise error.Abort(_("can't use --local and --global together"))
