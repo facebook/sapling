@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(windows)]
+use std::path::Path;
+#[cfg(windows)]
+use std::path::PathBuf;
 use std::process::Command;
 
 use anyhow::anyhow;
@@ -19,6 +23,43 @@ use edenfs_telemetry::cli_usage::CliUsageSample;
 #[cfg(fbcode_build)]
 use edenfs_telemetry::send;
 
+#[cfg(windows)]
+const PYTHON_CANDIDATES: &[&str; 6] = &[
+    r"c:\tools\fb-python\fb-python39",
+    r"c:\tools\fb-python\fb-python38",
+    r"c:\tools\fb-python\fb-python37",
+    r"c:\Python39",
+    r"c:\Python38",
+    r"c:\Python37",
+];
+
+#[cfg(windows)]
+fn find_python() -> Option<PathBuf> {
+    for candidate in PYTHON_CANDIDATES.iter() {
+        let candidate = Path::new(candidate);
+        let python = candidate.join("python.exe");
+
+        if candidate.exists() && python.exists() {
+            tracing::debug!("Found Python runtime at {}", python.display());
+            return Some(python);
+        }
+    }
+    None
+}
+
+#[cfg(windows)]
+fn execute_par(par: PathBuf) -> Result<Command> {
+    let python = find_python().ok_or_else(|| {
+        anyhow!(
+            "Unable to find Python runtime. Paths tried:\n\n - {}",
+            PYTHON_CANDIDATES.join("\n - ")
+        )
+    })?;
+    let mut python = Command::new(python);
+    python.arg(par);
+    Ok(python)
+}
+
 fn python_fallback() -> Result<Command> {
     if let Ok(args) = std::env::var("EDENFSCTL_REAL") {
         // We might get a command starting with python.exe here instead of a simple path.
@@ -28,22 +69,48 @@ fn python_fallback() -> Result<Command> {
             .ok_or_else(|| anyhow!("invalid fallback environment variable: {:?}", args))?;
         let mut cmd = Command::new(binary);
         cmd.args(parts);
-        Ok(cmd)
-    } else {
-        let binary = std::env::current_exe().context("unable to locate Python binary")?;
-        let python_binary = binary
-            .parent()
-            .ok_or_else(|| anyhow!("unable to locate Python binary"))?
-            .join(if cfg!(windows) {
-                "edenfsctl.real.exe"
-            } else {
-                "edenfsctl.real"
-            });
-        Ok(Command::new(python_binary))
+        return Ok(cmd);
     }
+
+    let binary = std::env::current_exe().context("unable to retrieve path to the executable")?;
+    let binary =
+        std::fs::canonicalize(binary).context("unable to canonicalize path to the executable")?;
+    let libexec = binary.parent().ok_or_else(|| {
+        anyhow!(
+            "unable to retrieve parent directory to '{}'",
+            binary.display()
+        )
+    })?;
+
+    let executable = libexec.join(if cfg!(windows) {
+        "edenfsctl.real.exe"
+    } else {
+        "edenfsctl.real"
+    });
+    tracing::debug!("trying {:?}", executable);
+    if executable.exists() {
+        return Ok(Command::new(executable));
+    }
+
+    // On Windows we are shipping the Python edenfsctl as PAR file that is not executable by itself
+    #[cfg(windows)]
+    {
+        let par = libexec.join("edenfsctl.real.par");
+        tracing::debug!("trying {:?}", par);
+
+        if par.exists() {
+            return execute_par(par);
+        }
+    }
+
+    Err(anyhow!("unable to locate fallback binary"))
 }
 
 fn fallback() -> Result<i32> {
+    if std::env::var("EDENFS_LOG").is_ok() {
+        setup_logging();
+    }
+
     let mut cmd = python_fallback()?;
     // skip arg0
     cmd.args(std::env::args().skip(1));
@@ -53,6 +120,8 @@ fn fallback() -> Result<i32> {
     // import modules. So, let's strip the PYTHONHOME and PYTHONPATH variables.
     cmd.env_remove("PYTHONHOME");
     cmd.env_remove("PYTHONPATH");
+
+    tracing::debug!("Falling back to {:?}", cmd);
 
     // Create a subprocess to run Python edenfsctl
     let status = cmd
