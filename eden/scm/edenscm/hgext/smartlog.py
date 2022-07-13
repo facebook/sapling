@@ -409,7 +409,7 @@ def smartlognodes(repo, headnodes, masternodes):
         repo.ui.warn(
             _("(consider running '@prog@ doctor' to hide unrelated commits)\n")
         )
-        nodes = nodes.take(limit)
+        nodes = nodes.take(limit) + headnodes
 
     # Include the ancestor of above commits to make the graph connected.
     nodes = repo.dageval(lambda: gcaall(public() & nodes) | nodes)

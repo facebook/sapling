@@ -72,6 +72,14 @@ With a root commit:
   o  C4
   │
   ~
+  
+  o  G
+  │
+  ~
+  
+  o  E4
+  │
+  ~
 
   $ hg sl -T '{desc}' --config smartlog.max-commit-threshold=1 --config smartlog.collapse-obsolete=true
   smartlog: too many (15) commits, not rendering all of them
