@@ -87,5 +87,8 @@ class Repo:
             bookmarks[name] = Commit(self, entry["node"])
         return bookmarks
 
+    def hide(self, commit: Commit) -> None:
+        self.hg.hide(commit)
+
     def drawdag(self, text: str) -> None:
         self.hg.debugdrawdag(stdin=text)

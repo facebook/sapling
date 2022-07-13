@@ -60,9 +60,26 @@ class CliCmd:
             env.update(self._env)
             env.update(kwargs.pop("env", {}))
 
-            cmd_args = [str(a) for a in args]
+            cmd_args = []
 
-            def process_arg(key: str, value: Any):
+            def process_arg(value: Any):
+                if isinstance(value, str):
+                    cmd_args.append(value)
+                elif isinstance(value, Commit):
+                    cmd_args.append(value.hash)
+                elif isinstance(value, File):
+                    cmd_args.append(value.path)
+                elif isinstance(value, Path):
+                    cmd_args.append(str(value))
+                else:
+                    raise ValueError(
+                        "clicmd does not support type %s ('%s')" % (type(arg), arg)
+                    )
+
+            for arg in args:
+                process_arg(arg)
+
+            def process_kwarg(key: str, value: Any):
                 key = key.replace("_", "-")
                 prefix = "--" if len(key) != 1 else "-"
                 option = "%s%s" % (prefix, key)
@@ -77,7 +94,7 @@ class CliCmd:
                     cmd_args.extend([option, value.path])
                 elif isinstance(value, list):
                     for v in value:
-                        process_arg(key, v)
+                        process_kwarg(key, v)
                 elif value is None:
                     # This allows code to pass Optional[]'s more easily, and we
                     # can just ignore them.
@@ -88,7 +105,7 @@ class CliCmd:
                     )
 
             for key, value in kwargs.items():
-                process_arg(key, value)
+                process_kwarg(key, value)
 
             trace_output = f"$ hg {command}"
             for arg in cmd_args:

@@ -44,7 +44,9 @@ class Commit:
             raise MissingCommitError(f"ancestor with depth {idx} does not exist")
 
     def status(self) -> Status:
-        return Status(self.repo.hg.status(change=self.hash, template="json").stdout)
+        return Status(
+            self.repo.hg.status(change=self.hash, copies=True, template="json").stdout
+        )
 
     def parents(self) -> List[Commit]:
         return self.repo.commits(f"parents({self.hash})", allowempty=True)

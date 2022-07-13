@@ -35,12 +35,10 @@ class WorkingCopy:
         self.hg = hg(self.root)
 
     def checkout(self, destination: Union[str, Commit], clean: bool = False) -> None:
-        if isinstance(destination, Commit):
-            destination = destination.hash
         self.hg.checkout(destination, clean=clean)
 
     def status(self) -> Status:
-        return Status(self.hg.status(template="json").stdout)
+        return Status(self.hg.status(copies=True, template="json").stdout)
 
     def commit(
         self,
@@ -116,6 +114,21 @@ class WorkingCopy:
             self.add(path)
 
         return file
+
+    def move(self, source: PathLike, dest: Optional[PathLike] = None) -> File:
+        if dest is None:
+            dest = str(source) + "_moved"
+
+        self.hg.mv(source, dest)
+        return self[dest]
+
+    def backout(
+        self, commit: Union[Commit, str], message: Optional[str] = None
+    ) -> Commit:
+        if message is None:
+            message = f"Backout {commit}"
+        self.hg.backout(rev=commit, message=message)
+        return self.current_commit()
 
     def __getitem__(self, path: PathLike) -> File:
         return File(self.root, Path(str(path)))

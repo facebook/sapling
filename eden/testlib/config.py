@@ -8,6 +8,8 @@
 import os
 from pathlib import Path
 
+from .util import trace
+
 
 class Config:
     path: Path
@@ -17,6 +19,7 @@ class Config:
         self.path = path
 
     def add(self, section: str, key: str, value: str) -> None:
+        trace(f"set config: {section}.{key}={value}")
         self.append(f"[{section}]\n{key}={value}")
 
     def append(self, text: str) -> None:
@@ -24,4 +27,5 @@ class Config:
             f.write("\n" + text + "\n")
 
     def enable(self, extension: str) -> None:
+        trace(f"enable extension: {extension}")
         self.add("extensions", extension, "")
