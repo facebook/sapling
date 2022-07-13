@@ -12,7 +12,6 @@ use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Error;
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobrepo_override::DangerousOverride;
 use blobstore::Blobstore;
 use blobstore::Loadable;
@@ -67,7 +66,7 @@ async fn regenerate_single_manifest(
     )
     .await?;
 
-    repo.get_filenodes()
+    repo.filenodes()
         .add_or_replace_filenodes(&ctx, toinsert)
         .await?
         .do_not_handle_disabled_filenodes()?;

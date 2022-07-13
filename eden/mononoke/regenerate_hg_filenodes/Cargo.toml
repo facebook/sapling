@@ -10,7 +10,6 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.56"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
-blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobrepo_override = { version = "0.1.0", path = "../blobrepo/override" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }

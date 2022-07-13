@@ -313,8 +313,8 @@ pub async fn subcommand_filenodes<'a>(
                 }
             };
 
-            let filenodes = repo.get_filenodes();
-            let (stats, res) = filenodes
+            let (stats, res) = repo
+                .filenodes()
                 .get_all_filenodes_maybe_stale(&ctx, &path, None)
                 .timed()
                 .await;

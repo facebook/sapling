@@ -291,7 +291,6 @@ mod tests {
     use anyhow::Result;
     use async_trait::async_trait;
     use blobrepo::BlobRepo;
-    use blobrepo_hg::BlobRepoHg;
     use cloned::cloned;
     use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
@@ -723,8 +722,6 @@ mod tests {
         backup_repo: &BlobRepo,
         cs: ChangesetId,
     ) -> Result<()> {
-        let prod_filenodes = repo.get_filenodes();
-        let backup_filenodes = backup_repo.get_filenodes();
         let manifest = repo
             .derive_hg_changeset(ctx, cs)
             .await?
@@ -747,12 +744,12 @@ mod tests {
                             (RepoPath::RootPath, HgFileNodeId::new(id.into_nodehash()))
                         }
                     };
-                    let prod = prod_filenodes
-                        .get_filenode(ctx, &path, node, )
+                    let prod = repo.filenodes()
+                        .get_filenode(ctx, &path, node)
                         .await
                         .with_context(|| format!("while get prod filenode for cs {:?}", cs))?;
-                    let backup = backup_filenodes
-                        .get_filenode(ctx, &path, node, )
+                    let backup = backup_repo.filenodes()
+                        .get_filenode(ctx, &path, node)
                         .await
                         .with_context(|| format!("while get backup filenode for cs {:?}", cs))?;
                     match (prod, backup) {
