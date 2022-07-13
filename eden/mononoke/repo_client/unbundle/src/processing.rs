@@ -32,9 +32,11 @@ use bytes::Bytes;
 use context::CoreContext;
 use hooks::HookManager;
 use mercurial_mutation::HgMutationStoreRef;
+use metaconfig_types::Address;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::PushParams;
 use metaconfig_types::PushrebaseParams;
+use metaconfig_types::PushrebaseRemoteMode;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use pushrebase::PushrebaseError;
@@ -480,12 +482,20 @@ async fn run_bookmark_only_pushrebase(
     })
 }
 
-fn should_use_scs() -> bool {
-    let pct = tunables()
-        .get_pushrebase_redirect_to_scs_pct()
-        .clamp(0, 100) as f64
-        / 100.0;
-    cfg!(fbcode_build) && rand::random::<f64>() < pct
+async fn convert_bookmark_movement_err(
+    err: BookmarkMovementError,
+    hook_rejection_remapper: &dyn HookRejectionRemapper,
+) -> Result<BundleResolverError> {
+    Ok(match err {
+        BookmarkMovementError::PushrebaseError(PushrebaseError::Conflicts(conflicts)) => {
+            BundleResolverError::PushrebaseConflicts(conflicts)
+        }
+        BookmarkMovementError::HookFailure(rejections) => {
+            let rejections = map_hook_rejections(rejections, hook_rejection_remapper).await?;
+            BundleResolverError::HookError(rejections)
+        }
+        _ => BundleResolverError::Error(err.into()),
+    })
 }
 
 async fn normal_pushrebase<'a>(
@@ -502,14 +512,16 @@ async fn normal_pushrebase<'a>(
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
     let bookmark_restriction = BookmarkKindRestrictions::OnlyPublishing;
+    let remote_mode = &pushrebase_params.remote_mode;
     let maybe_fallback_scuba: Option<(MononokeScubaSampleBuilder, BookmarkMovementError)> =
-        if should_use_scs() {
+        if let Some(address) = remote_mode.scs_address() {
             #[cfg(fbcode_build)]
             {
-                let result = if let Ok(host_port) = std::env::var("SCS_SERVER_HOST_PORT") {
-                    ScsPushrebaseClient::from_host_port(ctx, host_port, repo)?
-                } else {
-                    ScsPushrebaseClient::new(ctx, repo)?
+                let result = match address {
+                    Address::Tier(tier) => ScsPushrebaseClient::from_tier(ctx, tier.clone(), repo)?,
+                    Address::HostPort(host_port) => {
+                        ScsPushrebaseClient::from_host_port(ctx, host_port.clone(), repo)?
+                    }
                 }
                 .pushrebase(
                     bookmark,
@@ -519,9 +531,15 @@ async fn normal_pushrebase<'a>(
                     bookmark_restriction,
                 )
                 .await;
-                match result {
-                    Ok(outcome) => return Ok((outcome.head, outcome.rebased_changesets)),
-                    Err(err) => {
+                match (result, remote_mode) {
+                    (Ok(outcome), _) => return Ok((outcome.head, outcome.rebased_changesets)),
+                    // No fallback, propagate error
+                    (Err(err), PushrebaseRemoteMode::RemoteScs(..)) => {
+                        return Err(
+                            convert_bookmark_movement_err(err, hook_rejection_remapper).await?
+                        );
+                    }
+                    (Err(err), _) => {
                         slog::warn!(
                             ctx.logger(),
                             "Failed to pushrebase remotely, falling back to local. Error: {}",
@@ -571,16 +589,7 @@ async fn normal_pushrebase<'a>(
 
     match result {
         Ok(outcome) => Ok((outcome.head, outcome.rebased_changesets)),
-        Err(err) => match err {
-            BookmarkMovementError::PushrebaseError(PushrebaseError::Conflicts(conflicts)) => {
-                Err(BundleResolverError::PushrebaseConflicts(conflicts))
-            }
-            BookmarkMovementError::HookFailure(rejections) => {
-                let rejections = map_hook_rejections(rejections, hook_rejection_remapper).await?;
-                Err(BundleResolverError::HookError(rejections))
-            }
-            _ => Err(BundleResolverError::Error(err.into())),
-        },
+        Err(err) => Err(convert_bookmark_movement_err(err, hook_rejection_remapper).await?),
     }
 }
 

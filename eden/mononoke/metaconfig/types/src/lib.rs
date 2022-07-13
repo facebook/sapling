@@ -634,6 +634,16 @@ pub enum PushrebaseRemoteMode {
     RemoteScsWithLocalFallback(Address),
 }
 
+impl PushrebaseRemoteMode {
+    /// SCS address used for pushrebase, if any
+    pub fn scs_address(&self) -> Option<&Address> {
+        match self {
+            Self::RemoteScs(address) | Self::RemoteScsWithLocalFallback(address) => Some(address),
+            Self::Local => None,
+        }
+    }
+}
+
 /// Pushrebase configuration options
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct PushrebaseParams {
