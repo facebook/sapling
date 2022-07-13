@@ -16,7 +16,7 @@ namespace py3 scm.service.thrift
 struct DateTime {
   /// UNIX timestamp
   1: required i64 timestamp;
-  /// Time zone offsets in minutes
+  /// Time zone offsets in seconds
   2: required i32 tz;
 }
 
