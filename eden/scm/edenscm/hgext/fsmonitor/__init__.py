@@ -939,16 +939,6 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
         if getattr(self._repo, "submodule", None):
             return bail("submodule")
 
-        if self.ui.configbool("workingcopy", "rustpendingchanges"):
-            fsmonitor = workingcopy.watchman(self.opener.join(""))
-            pending_changes = fsmonitor.pendingchanges(
-                self.dirstate._map._tree,
-                self.dirstate._lastnormaltime,
-                self.dirstate._repo[self.dirstate.p1()].manifest(),
-                self.dirstate._repo.fileslog.filescmstore,
-            )
-            return list(pending_changes)
-
         if not self._watchmanclient.available():
             return bail("client unavailable")
 
