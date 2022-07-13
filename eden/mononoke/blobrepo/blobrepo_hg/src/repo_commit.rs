@@ -36,6 +36,7 @@ pub use blobrepo_common::changed_files::compute_changed_files;
 use blobstore::Blobstore;
 use blobstore::ErrorKind as BlobstoreError;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use context::CoreContext;
 use mercurial_types::blobs::fetch_manifest_envelope;
 use mercurial_types::blobs::ChangesetMetadata;
@@ -54,9 +55,9 @@ use mononoke_types;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use repo_blobstore::RepoBlobstoreRef;
 
 use crate::errors::*;
-use crate::BlobRepo;
 use repo_blobstore::RepoBlobstore;
 
 define_stats! {
@@ -104,7 +105,11 @@ impl ChangesetHandle {
         }
     }
 
-    pub fn ready_cs_handle(ctx: CoreContext, repo: BlobRepo, hg_cs: HgChangesetId) -> Self {
+    pub fn ready_cs_handle(
+        ctx: CoreContext,
+        repo: impl RepoBlobstoreRef + BonsaiHgMappingRef + Clone + Send + Sync + 'static,
+        hg_cs: HgChangesetId,
+    ) -> Self {
         let (trigger, can_be_parent) = oneshot::channel();
         let can_be_parent = can_be_parent
             .map_err(|e| format_err!("can_be_parent: {:?}", e))
@@ -119,7 +124,7 @@ impl ChangesetHandle {
                     .get_bonsai_from_hg(&ctx, hg_cs)
                     .await?
                     .ok_or(ErrorKind::BonsaiMappingNotFound(hg_cs))?;
-                let bonsai_cs = csid.load(&ctx, repo.blobstore()).await?;
+                let bonsai_cs = csid.load(&ctx, repo.repo_blobstore()).await?;
                 Ok::<_, Error>(bonsai_cs)
             }
         };
@@ -127,7 +132,7 @@ impl ChangesetHandle {
         let completion_future = async move {
             let (bonsai_cs, hg_cs) = future::try_join(
                 bonsai_cs,
-                hg_cs.load(&ctx, repo.blobstore()).map_err(Error::from),
+                hg_cs.load(&ctx, repo.repo_blobstore()).map_err(Error::from),
             )
             .await?;
             let _ = trigger.send((

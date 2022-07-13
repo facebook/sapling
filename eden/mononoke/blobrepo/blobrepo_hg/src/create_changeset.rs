@@ -43,6 +43,7 @@ use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstoreRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use stats::prelude::*;
 use std::sync::Arc;
@@ -109,7 +110,7 @@ pub fn create_bonsai_changeset_hook(origin_repo: Option<BlobRepo>) -> Arc<Bonsai
                     hg_cs.clone(),
                     parent_manifest_hashes,
                     bonsai_parents,
-                    &repo,
+                    repo.repo_blobstore(),
                 )
                 .await?;
                 verify_bonsai_changeset_with_origin(ctx, bonsai_cs, hg_cs, origin_repo).await
@@ -194,7 +195,7 @@ impl CreateChangeset {
                             hg_cs,
                             parent_manifest_hashes,
                             bonsai_parents,
-                            &repo,
+                            repo.repo_blobstore(),
                         )
                         .await
                     }

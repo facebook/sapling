@@ -26,22 +26,23 @@ pub mod file_history {
 
 use anyhow::Error;
 use async_trait::async_trait;
-use blobrepo::BlobRepo;
 use blobrepo_errors::ErrorKind;
-use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_hg_mapping::BonsaiOrHgChangesetIds;
 use bookmarks::Bookmark;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
+use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
+use changesets::ChangesetsRef;
 use cloned::cloned;
 use context::CoreContext;
-use filenodes::ArcFilenodes;
 use filenodes::FilenodeInfo;
 use filenodes::FilenodeRangeResult;
 use filenodes::FilenodeResult;
+use filenodes::FilenodesRef;
 use futures::future;
 use futures::stream;
 use futures::stream::BoxStream;
@@ -50,89 +51,127 @@ use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
 use mercurial_derived_data::DeriveHgChangeset;
-use mercurial_mutation::ArcHgMutationStore;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepoPath;
+use repo_derived_data::RepoDerivedDataRef;
 use stats::prelude::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-/// `BlobRepoHg` is an extension trait for `BlobRepo` which contains
+/// `BlobRepoHg` is an extension trait for repo facet containers which contains
 /// mercurial specific methods.
 #[async_trait]
-pub trait BlobRepoHg {
-    fn get_filenodes(&self) -> &ArcFilenodes;
-
-    fn hg_mutation_store(&self) -> &ArcHgMutationStore;
-
+pub trait BlobRepoHg: Send + Sync {
     async fn get_hg_bonsai_mapping<'a>(
         &'a self,
         ctx: CoreContext,
         bonsai_or_hg_cs_ids: impl Into<BonsaiOrHgChangesetIds> + 'a + Send,
-    ) -> Result<Vec<(HgChangesetId, ChangesetId)>, Error>;
+    ) -> Result<Vec<(HgChangesetId, ChangesetId)>, Error>
+    where
+        Self: ChangesetsRef + RepoDerivedDataRef + BonsaiHgMappingRef;
 
     fn get_heads_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> BoxStream<'static, Result<HgChangesetId, Error>>;
+    ) -> BoxStream<'_, Result<HgChangesetId, Error>>
+    where
+        Self: BookmarksRef + RepoDerivedDataRef + Send + Sync;
 
     async fn changeset_exists(
         &self,
         ctx: CoreContext,
         changesetid: HgChangesetId,
-    ) -> Result<bool, Error>;
+    ) -> Result<bool, Error>
+    where
+        Self: BonsaiHgMappingRef + ChangesetsRef;
 
     async fn get_changeset_parents(
         &self,
         ctx: CoreContext,
         changesetid: HgChangesetId,
-    ) -> Result<Vec<HgChangesetId>, Error>;
+    ) -> Result<Vec<HgChangesetId>, Error>
+    where
+        Self: BonsaiHgMappingRef + ChangesetsRef + RepoDerivedDataRef;
 
     async fn get_bookmark(
         &self,
         ctx: CoreContext,
         name: &BookmarkName,
-    ) -> Result<Option<HgChangesetId>, Error>;
+    ) -> Result<Option<HgChangesetId>, Error>
+    where
+        Self: BookmarksRef + RepoDerivedDataRef;
 
     fn get_pull_default_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> BoxStream<'static, Result<(Bookmark, HgChangesetId), Error>>;
+    ) -> BoxStream<'_, Result<(Bookmark, HgChangesetId), Error>>
+    where
+        Self: ChangesetsRef
+            + BonsaiHgMappingRef
+            + RepoDerivedDataRef
+            + BlobRepoHg
+            + BookmarksRef
+            + Clone
+            + Send
+            + Sync;
 
     fn get_publishing_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> BoxStream<'static, Result<(Bookmark, HgChangesetId), Error>>;
+    ) -> BoxStream<'_, Result<(Bookmark, HgChangesetId), Error>>
+    where
+        Self: ChangesetsRef
+            + BonsaiHgMappingRef
+            + RepoDerivedDataRef
+            + BookmarksRef
+            + Clone
+            + Send
+            + Sync;
 
     fn get_bookmarks_by_prefix_maybe_stale(
         &self,
         ctx: CoreContext,
         prefix: &BookmarkPrefix,
         max: u64,
-    ) -> BoxStream<'static, Result<(Bookmark, HgChangesetId), Error>>;
+    ) -> BoxStream<'_, Result<(Bookmark, HgChangesetId), Error>>
+    where
+        Self: ChangesetsRef
+            + BonsaiHgMappingRef
+            + RepoDerivedDataRef
+            + BlobRepoHg
+            + BookmarksRef
+            + Clone
+            + Send
+            + Sync;
 
     async fn get_filenode_opt(
         &self,
         ctx: CoreContext,
         path: &RepoPath,
         node: HgFileNodeId,
-    ) -> Result<FilenodeResult<Option<FilenodeInfo>>, Error>;
+    ) -> Result<FilenodeResult<Option<FilenodeInfo>>, Error>
+    where
+        Self: FilenodesRef;
 
     async fn get_filenode(
         &self,
         ctx: CoreContext,
         path: &RepoPath,
         node: HgFileNodeId,
-    ) -> Result<FilenodeResult<FilenodeInfo>, Error>;
+    ) -> Result<FilenodeResult<FilenodeInfo>, Error>
+    where
+        Self: FilenodesRef;
 
     async fn get_all_filenodes_maybe_stale(
         &self,
         ctx: CoreContext,
         path: RepoPath,
         limit: Option<u64>,
-    ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>, Error>;
+    ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>, Error>
+    where
+        Self: FilenodesRef;
 }
 
 define_stats! {
@@ -149,15 +188,7 @@ define_stats! {
 }
 
 #[async_trait]
-impl BlobRepoHg for BlobRepo {
-    fn get_filenodes(&self) -> &ArcFilenodes {
-        self.filenodes()
-    }
-
-    fn hg_mutation_store(&self) -> &ArcHgMutationStore {
-        self.hg_mutation_store()
-    }
-
+impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
     // Returns only the mapping for valid changests that are known to the server.
     // For Bonsai -> Hg conversion, missing Hg changesets will be derived (so all Bonsais will be
     // in the output).
@@ -167,8 +198,12 @@ impl BlobRepoHg for BlobRepo {
         &'a self,
         ctx: CoreContext,
         bonsai_or_hg_cs_ids: impl Into<BonsaiOrHgChangesetIds> + 'a + Send,
-    ) -> Result<Vec<(HgChangesetId, ChangesetId)>, Error> {
+    ) -> Result<Vec<(HgChangesetId, ChangesetId)>, Error>
+    where
+        Self: ChangesetsRef + RepoDerivedDataRef + BonsaiHgMappingRef,
+    {
         STATS::get_hg_bonsai_mapping.add_value(1);
+
         let bonsai_or_hg_cs_ids = bonsai_or_hg_cs_ids.into();
         let hg_bonsai_list = self
             .bonsai_hg_mapping()
@@ -201,7 +236,7 @@ impl BlobRepoHg for BlobRepo {
                 }
 
                 let existing: HashSet<_> = self
-                    .get_changesets_object()
+                    .changesets()
                     .get_many(ctx.clone(), notfound.clone())
                     .await?
                     .into_iter()
@@ -231,16 +266,25 @@ impl BlobRepoHg for BlobRepo {
     }
 
     /// Get Mercurial heads, which we approximate as publishing Bonsai Bookmarks.
-    fn get_heads_maybe_stale(
-        &self,
-        ctx: CoreContext,
-    ) -> BoxStream<'static, Result<HgChangesetId, Error>> {
+    fn get_heads_maybe_stale(&self, ctx: CoreContext) -> BoxStream<'_, Result<HgChangesetId, Error>>
+    where
+        Self: BookmarksRef + RepoDerivedDataRef + Send + Sync,
+    {
         STATS::get_heads_maybe_stale.add_value(1);
-        self.get_bonsai_heads_maybe_stale(ctx.clone())
+
+        self.bookmarks()
+            .list(
+                ctx.clone(),
+                Freshness::MaybeStale,
+                &BookmarkPrefix::empty(),
+                BookmarkKind::ALL_PUBLISHING,
+                &BookmarkPagination::FromStart,
+                std::u64::MAX,
+            )
             .map_ok({
                 let repo = self.clone();
-                move |cs| {
-                    cloned!(ctx, repo);
+                move |(_, cs)| {
+                    cloned!(ctx);
                     async move { repo.derive_hg_changeset(&ctx, cs).await }
                 }
             })
@@ -252,7 +296,10 @@ impl BlobRepoHg for BlobRepo {
         &self,
         ctx: CoreContext,
         changesetid: HgChangesetId,
-    ) -> Result<bool, Error> {
+    ) -> Result<bool, Error>
+    where
+        Self: BonsaiHgMappingRef + ChangesetsRef,
+    {
         STATS::changeset_exists.add_value(1);
         let csid = self
             .bonsai_hg_mapping()
@@ -260,7 +307,7 @@ impl BlobRepoHg for BlobRepo {
             .await?;
         match csid {
             Some(bonsai) => {
-                let res = self.get_changesets_object().get(ctx, bonsai).await?;
+                let res = self.changesets().get(ctx, bonsai).await?;
                 Ok(res.is_some())
             }
             None => Ok(false),
@@ -271,7 +318,10 @@ impl BlobRepoHg for BlobRepo {
         &self,
         ctx: CoreContext,
         changesetid: HgChangesetId,
-    ) -> Result<Vec<HgChangesetId>, Error> {
+    ) -> Result<Vec<HgChangesetId>, Error>
+    where
+        Self: BonsaiHgMappingRef + ChangesetsRef + RepoDerivedDataRef,
+    {
         STATS::get_changeset_parents.add_value(1);
 
         let csid = self
@@ -281,7 +331,7 @@ impl BlobRepoHg for BlobRepo {
             .ok_or(ErrorKind::BonsaiMappingNotFound(changesetid))?;
 
         let parents = self
-            .get_changesets_object()
+            .changesets()
             .get(ctx.clone(), csid)
             .await?
             .ok_or(ErrorKind::BonsaiNotFound(csid))?
@@ -296,7 +346,10 @@ impl BlobRepoHg for BlobRepo {
         &self,
         ctx: CoreContext,
         name: &BookmarkName,
-    ) -> Result<Option<HgChangesetId>, Error> {
+    ) -> Result<Option<HgChangesetId>, Error>
+    where
+        Self: BookmarksRef + RepoDerivedDataRef,
+    {
         STATS::get_bookmark.add_value(1);
         let cs_opt = self.bookmarks().get(ctx.clone(), name).await?;
         match cs_opt {
@@ -313,7 +366,17 @@ impl BlobRepoHg for BlobRepo {
     fn get_pull_default_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> BoxStream<'static, Result<(Bookmark, HgChangesetId), Error>> {
+    ) -> BoxStream<'_, Result<(Bookmark, HgChangesetId), Error>>
+    where
+        Self: ChangesetsRef
+            + BonsaiHgMappingRef
+            + RepoDerivedDataRef
+            + BlobRepoHg
+            + BookmarksRef
+            + Clone
+            + Send
+            + Sync,
+    {
         STATS::get_pull_default_bookmarks_maybe_stale.add_value(1);
         let stream = self.bookmarks().list(
             ctx.clone(),
@@ -323,7 +386,7 @@ impl BlobRepoHg for BlobRepo {
             &BookmarkPagination::FromStart,
             std::u64::MAX,
         );
-        to_hg_bookmark_stream(&self, &ctx, stream)
+        to_hg_bookmark_stream(self, &ctx, stream)
     }
 
     /// Get Publishing (Publishing is a Mercurial concept) bookmarks by prefix, they will be read
@@ -331,7 +394,17 @@ impl BlobRepoHg for BlobRepo {
     fn get_publishing_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> BoxStream<'static, Result<(Bookmark, HgChangesetId), Error>> {
+    ) -> BoxStream<'_, Result<(Bookmark, HgChangesetId), Error>>
+    where
+        Self: ChangesetsRef
+            + BonsaiHgMappingRef
+            + RepoDerivedDataRef
+            + BlobRepoHg
+            + BookmarksRef
+            + Clone
+            + Send
+            + Sync,
+    {
         STATS::get_publishing_bookmarks_maybe_stale.add_value(1);
         let stream = self.bookmarks().list(
             ctx.clone(),
@@ -341,7 +414,7 @@ impl BlobRepoHg for BlobRepo {
             &BookmarkPagination::FromStart,
             std::u64::MAX,
         );
-        to_hg_bookmark_stream(&self, &ctx, stream)
+        to_hg_bookmark_stream(self, &ctx, stream)
     }
 
     /// Get bookmarks by prefix, they will be read from replica, so they might be stale.
@@ -350,7 +423,17 @@ impl BlobRepoHg for BlobRepo {
         ctx: CoreContext,
         prefix: &BookmarkPrefix,
         max: u64,
-    ) -> BoxStream<'static, Result<(Bookmark, HgChangesetId), Error>> {
+    ) -> BoxStream<'_, Result<(Bookmark, HgChangesetId), Error>>
+    where
+        Self: ChangesetsRef
+            + BonsaiHgMappingRef
+            + RepoDerivedDataRef
+            + BlobRepoHg
+            + BookmarksRef
+            + Clone
+            + Send
+            + Sync,
+    {
         STATS::get_bookmarks_by_prefix_maybe_stale.add_value(1);
         let stream = self.bookmarks().list(
             ctx.clone(),
@@ -360,7 +443,7 @@ impl BlobRepoHg for BlobRepo {
             &BookmarkPagination::FromStart,
             max,
         );
-        to_hg_bookmark_stream(&self, &ctx, stream)
+        to_hg_bookmark_stream(self, &ctx, stream)
     }
 
     async fn get_filenode_opt(
@@ -368,8 +451,11 @@ impl BlobRepoHg for BlobRepo {
         ctx: CoreContext,
         path: &RepoPath,
         node: HgFileNodeId,
-    ) -> Result<FilenodeResult<Option<FilenodeInfo>>, Error> {
-        self.get_filenodes().get_filenode(&ctx, path, node).await
+    ) -> Result<FilenodeResult<Option<FilenodeInfo>>, Error>
+    where
+        Self: FilenodesRef,
+    {
+        self.filenodes().get_filenode(&ctx, path, node).await
     }
 
     async fn get_filenode(
@@ -377,7 +463,10 @@ impl BlobRepoHg for BlobRepo {
         ctx: CoreContext,
         path: &RepoPath,
         node: HgFileNodeId,
-    ) -> Result<FilenodeResult<FilenodeInfo>, Error> {
+    ) -> Result<FilenodeResult<FilenodeInfo>, Error>
+    where
+        Self: FilenodesRef,
+    {
         match self.get_filenode_opt(ctx, path, node).await? {
             FilenodeResult::Present(maybe_filenode) => {
                 let filenode = maybe_filenode
@@ -393,19 +482,31 @@ impl BlobRepoHg for BlobRepo {
         ctx: CoreContext,
         path: RepoPath,
         limit: Option<u64>,
-    ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>, Error> {
+    ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>, Error>
+    where
+        Self: FilenodesRef,
+    {
         STATS::get_all_filenodes.add_value(1);
-        self.get_filenodes()
+        self.filenodes()
             .get_all_filenodes_maybe_stale(&ctx, &path, limit)
             .await
     }
 }
 
-pub fn to_hg_bookmark_stream<BookmarkType>(
-    repo: &BlobRepo,
+pub fn to_hg_bookmark_stream<'repo, BookmarkType>(
+    repo: &(
+         impl ChangesetsRef
+         + BonsaiHgMappingRef
+         + RepoDerivedDataRef
+         + BlobRepoHg
+         + Clone
+         + Send
+         + Sync
+         + 'repo
+     ),
     ctx: &CoreContext,
-    stream: impl Stream<Item = Result<(BookmarkType, ChangesetId), Error>> + Send + 'static,
-) -> BoxStream<'static, Result<(BookmarkType, HgChangesetId), Error>>
+    stream: impl Stream<Item = Result<(BookmarkType, ChangesetId), Error>> + Send + 'repo,
+) -> BoxStream<'repo, Result<(BookmarkType, HgChangesetId), Error>>
 where
     BookmarkType: Send,
 {

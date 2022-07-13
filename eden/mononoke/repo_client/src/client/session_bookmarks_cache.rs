@@ -119,7 +119,7 @@ where
     pub fn update_publishing_bookmarks_after_push(
         &self,
         ctx: CoreContext,
-    ) -> impl Future<Item = (), Error = Error> {
+    ) -> impl Future<Item = (), Error = Error> + '_ {
         let cache = self.cached_publishing_bookmarks_maybe_stale.clone();
         // We just updated the bookmark, so go and fetch them from db to return
         // the newer version
@@ -134,7 +134,7 @@ where
         ctx: &CoreContext,
         prefix: &BookmarkPrefix,
         return_max: u64,
-    ) -> Result<impl Stream<Item = Result<(BookmarkName, HgChangesetId), Error>>, Error> {
+    ) -> Result<impl Stream<Item = Result<(BookmarkName, HgChangesetId), Error>> + '_, Error> {
         let mut kinds = vec![BookmarkKind::Scratch];
 
         let mut result = HashMap::new();
@@ -257,7 +257,7 @@ where
     fn get_publishing_maybe_stale_from_db(
         &self,
         ctx: CoreContext,
-    ) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
+    ) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> + '_ {
         self.repo
             .blobrepo()
             .get_publishing_bookmarks_maybe_stale(ctx)

@@ -10,7 +10,6 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.56"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
-blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 changesets = { version = "0.1.0", path = "../changesets" }
 context = { version = "0.1.0", path = "../server/context" }
