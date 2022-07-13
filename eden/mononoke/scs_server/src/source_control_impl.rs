@@ -418,7 +418,7 @@ impl SourceControlServiceImpl {
         repo: &RepoContext,
         id: &thrift::CommitId,
     ) -> Result<ChangesetId, errors::ServiceError> {
-        let changeset_specifier = ChangesetSpecifier::from_request(&id)?;
+        let changeset_specifier = ChangesetSpecifier::from_request(id)?;
         Ok(repo
             .resolve_specifier(changeset_specifier)
             .await?

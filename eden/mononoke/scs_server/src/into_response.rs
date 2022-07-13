@@ -231,8 +231,8 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext {
                 .map(|parent_id| {
                     parent_id_mapping
                         .get(parent_id)
-                        .map(Clone::clone)
-                        .unwrap_or_else(BTreeMap::new)
+                        .cloned()
+                        .unwrap_or_default()
                 })
                 .collect())
         }
@@ -337,10 +337,10 @@ impl AsyncIntoResponseWith<thrift::PushrebaseOutcome> for PushrebaseOutcome {
             old_ids.insert(rebase.id_old);
             new_ids.insert(rebase.id_new);
         }
-        let old_identity_schemes = old_identity_schemes.as_ref().unwrap_or(&identity_schemes);
+        let old_identity_schemes = old_identity_schemes.as_ref().unwrap_or(identity_schemes);
         let (old_id_map, new_id_map) = try_join!(
-            map_commit_identities(&repo, old_ids.into_iter().collect(), old_identity_schemes),
-            map_commit_identities(&repo, new_ids.into_iter().collect(), &identity_schemes),
+            map_commit_identities(repo, old_ids.into_iter().collect(), old_identity_schemes),
+            map_commit_identities(repo, new_ids.into_iter().collect(), identity_schemes),
         )?;
 
         // Map IDs using one of the maps we just fetched.  If we couldn't

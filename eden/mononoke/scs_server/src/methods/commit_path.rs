@@ -137,10 +137,7 @@ impl SourceControlServiceImpl {
                             info: None,
                             ..Default::default()
                         };
-                        return Result::<_, errors::ServiceError>::Ok((
-                            context_path,
-                            not_present_elem,
-                        ));
+                        Result::<_, errors::ServiceError>::Ok((context_path, not_present_elem))
                     }
                     PathEntry::Tree(tree) => {
                         let summary = tree.summary().await?;
@@ -152,7 +149,7 @@ impl SourceControlServiceImpl {
                             )),
                             ..Default::default()
                         };
-                        return Result::<_, errors::ServiceError>::Ok((context_path, tree_elem));
+                        Result::<_, errors::ServiceError>::Ok((context_path, tree_elem))
                     }
                     PathEntry::File(file, file_type) => {
                         let metadata = file.metadata().await?;
@@ -162,9 +159,9 @@ impl SourceControlServiceImpl {
                             info: Some(thrift::EntryInfo::file(metadata.into_response())),
                             ..Default::default()
                         };
-                        return Result::<_, errors::ServiceError>::Ok((context_path, file_elem));
+                        Result::<_, errors::ServiceError>::Ok((context_path, file_elem))
                     }
-                };
+                }
             })
             .map_err(errors::ServiceError::from)
             .try_buffer_unordered(100)
@@ -255,7 +252,7 @@ impl SourceControlServiceImpl {
             .map(|(csid, _)| *csid)
             .collect::<Vec<_>>();
         let mut mapped_commit_ids =
-            map_commit_identities(&repo, csids.clone(), &params.identity_schemes).await?;
+            map_commit_identities(repo, csids.clone(), &params.identity_schemes).await?;
         for (id, num) in csids_and_nums {
             if let Some(mapped_ids) = mapped_commit_ids.remove(&id) {
                 let index = commit_ids.len();
@@ -296,8 +293,7 @@ impl SourceControlServiceImpl {
             let changeset_parents = repo.many_changeset_parents(csids.clone()).await?;
             let all_parent_csids = changeset_parents
                 .iter()
-                .map(|(_, parents)| parents)
-                .flatten()
+                .flat_map(|(_, parents)| parents)
                 .collect::<HashSet<_>>()
                 .into_iter()
                 .copied()
@@ -436,7 +432,7 @@ impl SourceControlServiceImpl {
             async {
                 if let Some(descendants_of) = &params.descendants_of {
                     Ok::<_, errors::ServiceError>(Some(
-                        self.changeset_id(&repo, &descendants_of).await?,
+                        self.changeset_id(&repo, descendants_of).await?,
                     ))
                 } else {
                     Ok(None)
@@ -447,7 +443,7 @@ impl SourceControlServiceImpl {
                     &params.exclude_changeset_and_ancestors
                 {
                     Ok::<_, errors::ServiceError>(Some(
-                        self.changeset_id(&repo, &exclude_changeset_and_ancestors)
+                        self.changeset_id(&repo, exclude_changeset_and_ancestors)
                             .await?,
                     ))
                 } else {

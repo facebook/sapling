@@ -139,7 +139,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         mononoke.clone(),
         megarepo_api,
         logger.clone(),
-        scuba_builder.clone(),
+        scuba_builder,
         args.scribe_logging_args.get_scribe(fb)?,
         security_checker,
         &app.repo_configs().common,
@@ -200,7 +200,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     serve_forever(
         runtime,
         monitoring_forever.map(Result::<(), Error>::Ok),
-        &logger,
+        logger,
         move || will_exit.store(true, Ordering::Relaxed),
         args.shutdown_timeout_args.shutdown_grace_period,
         async {

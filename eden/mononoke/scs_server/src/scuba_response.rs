@@ -119,7 +119,7 @@ fn report_maybe_result<R: AddScubaResponse>(
         }
         Some(resp) => {
             scuba.add("megarepo_ready", true);
-            <R as AddScubaResponse>::add_scuba_response(&resp, scuba);
+            <R as AddScubaResponse>::add_scuba_response(resp, scuba);
         }
     }
 }

@@ -87,10 +87,8 @@ pub(crate) async fn map_commit_identity(
         scheme_identities.push(identity.boxed());
     }
     let scheme_identities = future::try_join_all(scheme_identities).await?;
-    for maybe_identity in scheme_identities {
-        if let Some((scheme, id)) = maybe_identity {
-            ids.insert(scheme, id);
-        }
+    for (scheme, id) in scheme_identities.into_iter().flatten() {
+        ids.insert(scheme, id);
     }
     Ok(ids)
 }
@@ -231,14 +229,14 @@ impl CommitIdExt for thrift::CommitId {
     /// the generated crate.
     fn to_string(&self) -> String {
         match self {
-            thrift::CommitId::bonsai(id) => hex_string(&id),
+            thrift::CommitId::bonsai(id) => hex_string(id),
             thrift::CommitId::ephemeral_bonsai(ephemeral) => format!(
                 "{} (bubble {})",
                 hex_string(&ephemeral.bonsai_id),
                 ephemeral.bubble_id
             ),
-            thrift::CommitId::hg(id) => hex_string(&id),
-            thrift::CommitId::git(id) => hex_string(&id),
+            thrift::CommitId::hg(id) => hex_string(id),
+            thrift::CommitId::git(id) => hex_string(id),
             thrift::CommitId::globalrev(rev) => rev.to_string(),
             thrift::CommitId::svnrev(rev) => rev.to_string(),
             thrift::CommitId::UnknownField(t) => format!("unknown id type ({})", t),

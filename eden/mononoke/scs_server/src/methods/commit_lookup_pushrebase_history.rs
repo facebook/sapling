@@ -241,11 +241,10 @@ impl SourceControlServiceImpl {
         let mut pushrebased = false;
         if history.try_traverse_pushrebase().await? {
             pushrebased = true;
-        } else {
-            if history.try_traverse_commit_sync().await? {
-                pushrebased = history.try_traverse_pushrebase().await?;
-            }
+        } else if history.try_traverse_commit_sync().await? {
+            pushrebased = history.try_traverse_pushrebase().await?;
         }
+
         if pushrebased {
             history.try_traverse_commit_sync().await?;
         }

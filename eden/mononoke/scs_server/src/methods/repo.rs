@@ -6,7 +6,6 @@
  */
 
 use std::collections::BTreeMap;
-use std::convert::identity;
 
 use blobstore::Loadable;
 use bytes::Bytes;
@@ -133,7 +132,7 @@ impl SourceControlServiceImpl {
                 )
                 .into()),
                 Some(cs) => Ok(Response {
-                    ids: Some(map_commit_identity(&cs, &params.identity_schemes).await?),
+                    ids: Some(map_commit_identity(cs, &params.identity_schemes).await?),
                     resolved_type: ResponseType::RESOLVED,
                     ..Default::default()
                 }),
@@ -372,15 +371,13 @@ impl SourceControlServiceImpl {
             .await?;
 
         let author = params.info.author;
-        let author_date = params
-            .info
-            .date
-            .as_ref()
-            .map(<DateTime<FixedOffset>>::from_request)
-            .unwrap_or_else(|| {
+        let author_date = params.info.date.as_ref().map_or_else(
+            || {
                 let now = Local::now();
                 Ok(now.with_timezone(now.offset()))
-            })?;
+            },
+            <DateTime<FixedOffset>>::from_request,
+        )?;
         let committer = params.info.committer;
         let committer_date = params
             .info
@@ -455,6 +452,7 @@ impl SourceControlServiceImpl {
 
         // convert changeset specifiers to bonsai changeset ids
         // missing changesets are skipped
+        #[allow(clippy::filter_map_identity)]
         let heads_ids = try_join_all(
             head_specifiers
                 .into_iter()
@@ -462,7 +460,7 @@ impl SourceControlServiceImpl {
         )
         .await?
         .into_iter()
-        .filter_map(identity)
+        .filter_map(std::convert::identity)
         .collect::<Vec<_>>();
 
         // get stack

@@ -145,7 +145,7 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
                 Ok(ChangesetSpecifier::Bonsai(cs_id))
             }
             thrift::CommitId::hg(id) => {
-                let hg_cs_id = HgChangesetId::from_bytes(&id).map_err(|e| {
+                let hg_cs_id = HgChangesetId::from_bytes(id).map_err(|e| {
                     errors::invalid_request(format!(
                         "invalid commit id (scheme={} {}): {}",
                         commit.scheme(),
@@ -209,11 +209,11 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
 
 impl FromRequest<thrift::CopyInfo> for CopyInfo {
     fn from_request(copy_info: &thrift::CopyInfo) -> Result<Self, thrift::RequestError> {
-        match copy_info {
-            &thrift::CopyInfo::NONE => Ok(CopyInfo::None),
-            &thrift::CopyInfo::COPY => Ok(CopyInfo::Copy),
-            &thrift::CopyInfo::MOVE => Ok(CopyInfo::Move),
-            &val => Err(errors::invalid_request(format!(
+        match *copy_info {
+            thrift::CopyInfo::NONE => Ok(CopyInfo::None),
+            thrift::CopyInfo::COPY => Ok(CopyInfo::Copy),
+            thrift::CopyInfo::MOVE => Ok(CopyInfo::Move),
+            val => Err(errors::invalid_request(format!(
                 "unsupported copy info ({})",
                 val
             ))),
@@ -287,11 +287,11 @@ impl FromRequest<thrift::RepoCreateCommitParamsFileType> for FileType {
     fn from_request(
         file_type: &thrift::RepoCreateCommitParamsFileType,
     ) -> Result<Self, thrift::RequestError> {
-        match file_type {
-            &thrift::RepoCreateCommitParamsFileType::FILE => Ok(FileType::Regular),
-            &thrift::RepoCreateCommitParamsFileType::EXEC => Ok(FileType::Executable),
-            &thrift::RepoCreateCommitParamsFileType::LINK => Ok(FileType::Symlink),
-            &val => Err(errors::invalid_request(format!(
+        match *file_type {
+            thrift::RepoCreateCommitParamsFileType::FILE => Ok(FileType::Regular),
+            thrift::RepoCreateCommitParamsFileType::EXEC => Ok(FileType::Executable),
+            thrift::RepoCreateCommitParamsFileType::LINK => Ok(FileType::Symlink),
+            val => Err(errors::invalid_request(format!(
                 "unsupported file type ({})",
                 val
             ))),

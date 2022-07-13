@@ -68,7 +68,7 @@ impl CommitComparePath {
             CommitComparePath::File(file) => file
                 .base_file
                 .as_ref()
-                .or_else(|| file.other_file.as_ref())
+                .or(file.other_file.as_ref())
                 .map(|file| file.path.as_str())
                 .ok_or_else(|| {
                     errors::internal_error("programming error, file entry has no file").into()
@@ -77,7 +77,7 @@ impl CommitComparePath {
             CommitComparePath::Tree(tree) => tree
                 .base_tree
                 .as_ref()
-                .or_else(|| tree.other_tree.as_ref())
+                .or(tree.other_tree.as_ref())
                 .map(|tree| tree.path.as_str())
                 .ok_or_else(|| {
                     errors::internal_error("programming error, tree entry has no tree").into()
@@ -496,7 +496,7 @@ impl SourceControlServiceImpl {
         let (base_changeset, other_changeset) = match &params.other_commit_id {
             Some(id) => {
                 let (_repo, mut base_changeset, other_changeset) =
-                    self.repo_changeset_pair(ctx, &commit, &id).await?;
+                    self.repo_changeset_pair(ctx, &commit, id).await?;
                 add_mutable_renames(&mut base_changeset, &params).await?;
                 (base_changeset, Some(other_changeset))
             }
@@ -704,7 +704,7 @@ impl SourceControlServiceImpl {
             async {
                 if let Some(descendants_of) = &params.descendants_of {
                     Ok::<_, errors::ServiceError>(Some(
-                        self.changeset_id(&repo, &descendants_of).await?,
+                        self.changeset_id(&repo, descendants_of).await?,
                     ))
                 } else {
                     Ok(None)
@@ -715,7 +715,7 @@ impl SourceControlServiceImpl {
                     &params.exclude_changeset_and_ancestors
                 {
                     Ok::<_, errors::ServiceError>(Some(
-                        self.changeset_id(&repo, &exclude_changeset_and_ancestors)
+                        self.changeset_id(&repo, exclude_changeset_and_ancestors)
                             .await?,
                     ))
                 } else {
