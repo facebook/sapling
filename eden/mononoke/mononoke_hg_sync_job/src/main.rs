@@ -121,7 +121,8 @@ const LOCK_REASON: &str = "Locked due to sync failure, check Source Control @ FB
 const HGSQL_GLOBALREVS_USE_SQLITE: &str = "hgsql-globalrevs-use-sqlite";
 const HGSQL_GLOBALREVS_DB_ADDR: &str = "hgsql-globalrevs-db-addr";
 
-const DEFAULT_RETRY_NUM: usize = 3;
+// High retry count is ok, since the job anyway executes as a background process
+const DEFAULT_RETRY_NUM: usize = 15;
 const DEFAULT_BATCH_SIZE: usize = 10;
 const DEFAULT_SINGLE_BUNDLE_TIMEOUT_MS: u64 = 5 * 60 * 1000;
 
@@ -394,19 +395,39 @@ impl RepoShardedProcessExecutor for HgSyncProcessExecutor {
             self.ctx.logger(),
             "Initiating hg sync command execution for repo {}", &self.repo_name,
         );
-        run(
-            &self.ctx,
-            &self.matches,
-            self.repo_name.clone(),
-            Arc::clone(&self.cancellation_requested),
+        let base_retry_delay_ms = 1000;
+        retry(
+            self.ctx.logger(),
+            |attempt| async move {
+                // Once cancellation is requested, do not retry even if its
+                // a retryable error.
+                if self.cancellation_requested.load(Ordering::Relaxed) {
+                    info!(
+                        self.ctx.logger(),
+                        "sync stopping due to cancellation request at attempt {}", attempt
+                    );
+                    anyhow::Ok(())
+                } else {
+                    run(
+                        &self.ctx,
+                        &self.matches,
+                        self.repo_name.clone(),
+                        Arc::clone(&self.cancellation_requested),
+                    )
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "Error during hg sync command execution for repo {}. Attempt number {}",
+                            &self.repo_name, attempt
+                        )
+                    })?;
+                    anyhow::Ok(())
+                }
+            },
+            base_retry_delay_ms,
+            DEFAULT_RETRY_NUM,
         )
-        .await
-        .with_context(|| {
-            format!(
-                "Error during hg sync command execution for repo {}",
-                &self.repo_name
-            )
-        })?;
+        .await?;
         info!(
             self.ctx.logger(),
             "Finished hg sync command execution for repo {}", &self.repo_name,
