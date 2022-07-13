@@ -83,11 +83,11 @@ use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use mercurial_mutation::ArcHgMutationStore;
 use mercurial_mutation::CachedHgMutationStore;
 use mercurial_mutation::SqlHgMutationStoreBuilder;
-use metaconfig_types::AllowlistIdentity;
 use metaconfig_types::ArcRepoConfig;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::CensoredScubaParams;
 use metaconfig_types::CommonConfig;
+use metaconfig_types::Identity;
 use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::Redaction;
 use metaconfig_types::RedactionConfig;
@@ -206,7 +206,7 @@ pub struct RepoFactory {
     scrub_handler: Arc<dyn ScrubHandler>,
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
     bonsai_hg_mapping_overwrite: bool,
-    global_allowlist: Vec<AllowlistIdentity>,
+    global_allowlist: Vec<Identity>,
 }
 
 impl RepoFactory {

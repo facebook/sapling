@@ -20,6 +20,7 @@ use hyper::Body;
 use hyper::Response;
 use hyper::StatusCode;
 use lazy_static::lazy_static;
+use metaconfig_types::Identity;
 use percent_encoding::percent_decode;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
@@ -112,11 +113,16 @@ impl ClientIdentity {
 pub struct ClientIdentityMiddleware {
     fb: FacebookInit,
     logger: Logger,
+    internal_identity: Identity,
 }
 
 impl ClientIdentityMiddleware {
-    pub fn new(fb: FacebookInit, logger: Logger) -> Self {
-        Self { fb, logger }
+    pub fn new(fb: FacebookInit, logger: Logger, internal_identity: Identity) -> Self {
+        Self {
+            fb,
+            logger,
+            internal_identity,
+        }
     }
 
     fn extract_client_identities(
@@ -163,26 +169,27 @@ impl Middleware for ClientIdentityMiddleware {
             client_identity.client_correlator = request_client_correlator_from_headers(&headers);
 
             client_identity.identities = {
-                let maybe_idents = match try_get_cats_idents(self.fb, headers) {
-                    Err(e) => {
-                        let msg = format!("Error extracting CATs identities: {}.", &e,);
-                        error!(self.logger, "{}", &msg,);
-                        let response = Response::builder()
-                            .status(StatusCode::UNAUTHORIZED)
-                            .body(
-                                format!(
-                                    "{{\"message:\"{}\", \"request_id\":\"{}\"}}",
-                                    msg,
-                                    state.short_request_id()
+                let maybe_idents =
+                    match try_get_cats_idents(self.fb, headers, &self.internal_identity) {
+                        Err(e) => {
+                            let msg = format!("Error extracting CATs identities: {}.", &e,);
+                            error!(self.logger, "{}", &msg,);
+                            let response = Response::builder()
+                                .status(StatusCode::UNAUTHORIZED)
+                                .body(
+                                    format!(
+                                        "{{\"message:\"{}\", \"request_id\":\"{}\"}}",
+                                        msg,
+                                        state.short_request_id()
+                                    )
+                                    .into(),
                                 )
-                                .into(),
-                            )
-                            .expect("Couldn't build http response");
+                                .expect("Couldn't build http response");
 
-                        return Some(response);
-                    }
-                    Ok(maybe_cats) => maybe_cats,
-                };
+                            return Some(response);
+                        }
+                        Ok(maybe_cats) => maybe_cats,
+                    };
                 maybe_idents.or_else(|| {
                     cert_idents.and_then(|x| self.extract_client_identities(x, headers))
                 })

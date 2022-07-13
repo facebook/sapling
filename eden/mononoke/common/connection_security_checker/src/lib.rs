@@ -7,8 +7,8 @@
 
 use anyhow::Result;
 use fbinit::FacebookInit;
-use metaconfig_types::AllowlistIdentity;
 use metaconfig_types::CommonConfig;
+use metaconfig_types::Identity;
 use permission_checker::BoxPermissionChecker;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
@@ -19,7 +19,7 @@ pub struct ConnectionSecurityChecker {
 }
 
 impl ConnectionSecurityChecker {
-    pub async fn new(fb: FacebookInit, common_config: CommonConfig) -> Result<Self> {
+    pub async fn new(fb: FacebookInit, common_config: &CommonConfig) -> Result<Self> {
         let mut builder = PermissionCheckerBuilder::new();
 
         if let Some(tier) = &common_config.trusted_parties_hipster_tier {
@@ -27,7 +27,7 @@ impl ConnectionSecurityChecker {
         }
 
         let mut allowlisted_identities = MononokeIdentitySet::new();
-        for AllowlistIdentity { id_type, id_data } in &common_config.trusted_parties_allowlist {
+        for Identity { id_type, id_data } in &common_config.trusted_parties_allowlist {
             allowlisted_identities.insert(MononokeIdentity::new(id_type, id_data));
         }
         if !allowlisted_identities.is_empty() {

@@ -335,6 +335,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     };
 
     let RepoConfigs { repos, common } = args::load_repo_configs(config_store, &matches)?;
+    let internal_identity = common.internal_identity.clone();
 
     let repo_factory = Arc::new(RepoFactory::new(matches.environment().clone(), &common));
 
@@ -432,7 +433,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
             let handler = MononokeHttpHandler::builder()
                 .add(TlsSessionDataMiddleware::new(tls_session_data_log)?)
-                .add(ClientIdentityMiddleware::new(fb, logger.clone()))
+                .add(ClientIdentityMiddleware::new(
+                    fb,
+                    logger.clone(),
+                    internal_identity,
+                ))
                 .add(PostResponseMiddleware::with_config(config_handle))
                 .add(RequestContextMiddleware::new(fb, logger.clone()))
                 .add(LoadMiddleware::new())

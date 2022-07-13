@@ -9,6 +9,7 @@ use anyhow::bail;
 use anyhow::Error;
 use fbinit::FacebookInit;
 use http::HeaderMap;
+use metaconfig_types::Identity;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 
@@ -18,6 +19,7 @@ pub const HEADER_CRYPTO_AUTH_TOKENS: &str = "x-auth-cats";
 pub fn try_get_cats_idents(
     fb: FacebookInit,
     _headers: &HeaderMap,
+    _verifier_identity: &Identity,
 ) -> Result<Option<MononokeIdentitySet>, Error> {
     Ok(None)
 }
@@ -26,6 +28,7 @@ pub fn try_get_cats_idents(
 pub fn try_get_cats_idents(
     fb: FacebookInit,
     headers: &HeaderMap,
+    verifier_identity: &Identity,
 ) -> Result<Option<MononokeIdentitySet>, Error> {
     let cats = match headers.get(HEADER_CRYPTO_AUTH_TOKENS) {
         Some(cats) => cats,
@@ -35,8 +38,8 @@ pub fn try_get_cats_idents(
     let s_cats = cats.to_str()?;
     let cat_list = cryptocat::deserialize_crypto_auth_tokens(s_cats)?;
     let svc_scm_ident = cryptocat::Identity {
-        id_type: "SERVICE_IDENTITY".to_string(),
-        id_data: "scm_service_identity".to_string(),
+        id_type: verifier_identity.id_type.clone(),
+        id_data: verifier_identity.id_data.clone(),
         ..Default::default()
     };
 

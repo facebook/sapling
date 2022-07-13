@@ -86,9 +86,9 @@ impl PartialEq for ComparableRegex {
 
 impl Eq for ComparableRegex {}
 
-/// Identity in an allowlist.
+/// Structure representing general purpose identity.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct AllowlistIdentity {
+pub struct Identity {
     /// Type of this identity.
     pub id_type: String,
     /// Associated data for this identity.
@@ -112,9 +112,9 @@ pub struct CommonConfig {
     /// Hipster tier that is permitted to act as a trusted proxy.
     pub trusted_parties_hipster_tier: Option<String>,
     /// Identities that act as trusted proxies.
-    pub trusted_parties_allowlist: Vec<AllowlistIdentity>,
+    pub trusted_parties_allowlist: Vec<Identity>,
     /// Identities that are permitted to access all repos.
-    pub global_allowlist: Vec<AllowlistIdentity>,
+    pub global_allowlist: Vec<Identity>,
     /// Parent category to use for load limiting
     pub loadlimiter_category: Option<String>,
     /// Params for logging censored blobstore accesses
@@ -125,7 +125,7 @@ pub struct CommonConfig {
     /// Configuration for redaction of blobs
     pub redaction_config: RedactionConfig,
     /// Service identity for interal Mononoke services.
-    pub internal_identity: AllowlistIdentity,
+    pub internal_identity: Identity,
 }
 
 /// Configuration for logging of censored blobstore accesses

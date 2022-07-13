@@ -446,7 +446,6 @@ mod test {
     use metaconfig_types::AclRegionConfig;
     use metaconfig_types::AclRegionRule;
     use metaconfig_types::Address;
-    use metaconfig_types::AllowlistIdentity;
     use metaconfig_types::BlameVersion;
     use metaconfig_types::BlobConfig;
     use metaconfig_types::BlobstoreId;
@@ -467,6 +466,7 @@ mod test {
     use metaconfig_types::HookConfig;
     use metaconfig_types::HookManagerParams;
     use metaconfig_types::HookParams;
+    use metaconfig_types::Identity;
     use metaconfig_types::InfinitepushNamespace;
     use metaconfig_types::InfinitepushParams;
     use metaconfig_types::LfsParams;
@@ -1285,7 +1285,7 @@ mod test {
             CommonConfig {
                 trusted_parties_hipster_tier: Some("tier1".to_string()),
                 trusted_parties_allowlist: vec![],
-                global_allowlist: vec![AllowlistIdentity {
+                global_allowlist: vec![Identity {
                     id_type: "username".to_string(),
                     id_data: "user".to_string()
                 }],
@@ -1300,7 +1300,7 @@ mod test {
                     darkstorm_blobstore: None,
                     redaction_sets_location: "loc".to_string(),
                 },
-                internal_identity: AllowlistIdentity {
+                internal_identity: Identity {
                     id_type: "SERVICE_IDENTITY".to_string(),
                     id_data: "internal".to_string(),
                 }

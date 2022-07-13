@@ -6,14 +6,14 @@
  */
 
 use anyhow::Result;
-use metaconfig_types::AllowlistIdentity;
+use metaconfig_types::Identity;
 use repos::RawAllowlistIdentity;
 
 use crate::convert::Convert;
 use crate::errors::ConfigurationError;
 
 impl Convert for RawAllowlistIdentity {
-    type Output = AllowlistIdentity;
+    type Output = Identity;
 
     fn convert(self) -> Result<Self::Output> {
         if self.identity_type.is_empty() || self.identity_data.is_empty() {
@@ -22,7 +22,7 @@ impl Convert for RawAllowlistIdentity {
             )
             .into());
         }
-        Ok(AllowlistIdentity {
+        Ok(Identity {
             id_type: self.identity_type,
             id_data: self.identity_data,
         })

@@ -97,6 +97,7 @@ pub async fn create_repo_listeners<'a>(
             false,
             None,
             rate_limiter.clone(),
+            &common_config,
         )
         .context("Error instantiating EdenAPI")?
     };

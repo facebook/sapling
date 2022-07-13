@@ -132,7 +132,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     };
     let security_checker = runtime.block_on(ConnectionSecurityChecker::new(
         fb,
-        app.repo_configs().common.clone(),
+        &app.repo_configs().common,
     ))?;
     let source_control_server = source_control_impl::SourceControlServiceImpl::new(
         fb,

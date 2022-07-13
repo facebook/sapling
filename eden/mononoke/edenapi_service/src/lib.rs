@@ -28,6 +28,7 @@ use gotham_ext::middleware::ServerIdentityMiddleware;
 use gotham_ext::middleware::TimerMiddleware;
 use gotham_ext::middleware::TlsSessionDataMiddleware;
 use http::HeaderValue;
+use metaconfig_types::CommonConfig;
 use mononoke_api::Mononoke;
 use rate_limiting::RateLimitEnvironment;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -54,6 +55,7 @@ pub fn build(
     test_friendly_loging: bool,
     tls_session_data_log_path: Option<&Path>,
     rate_limiter: Option<RateLimitEnvironment>,
+    common_config: &CommonConfig,
 ) -> Result<EdenApi, Error> {
     let ctx = ServerContext::new(mononoke, will_exit.clone());
 
@@ -71,7 +73,11 @@ pub fn build(
 
     let handler = MononokeHttpHandler::builder()
         .add(TlsSessionDataMiddleware::new(tls_session_data_log_path)?)
-        .add(ClientIdentityMiddleware::new(fb, logger.clone()))
+        .add(ClientIdentityMiddleware::new(
+            fb,
+            logger.clone(),
+            common_config.internal_identity.clone(),
+        ))
         .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
             "edenapi_server",
         )))

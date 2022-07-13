@@ -25,6 +25,7 @@ use http::Response;
 use http::Uri;
 use hyper::service::Service;
 use hyper::Body;
+use metaconfig_types::Identity;
 use metadata::Metadata;
 use sha1::Digest;
 use sha1::Sha1;
@@ -226,6 +227,7 @@ where
             self.conn.pending.acceptor.fb.clone(),
             self.conn.is_trusted,
             req.headers(),
+            &self.conn.pending.acceptor.common_config.internal_identity,
         )
         .await
         .context("Invalid metadata")
@@ -487,6 +489,7 @@ mod h2m {
         _fb: FacebookInit,
         _is_trusted: bool,
         _headers: &HeaderMap<HeaderValue>,
+        _internal_identity: &Identity,
     ) -> Result<Option<Metadata>> {
         Ok(None)
     }
@@ -539,11 +542,12 @@ mod h2m {
         fb: FacebookInit,
         is_trusted: bool,
         headers: &HeaderMap<HeaderValue>,
+        internal_identity: &Identity,
     ) -> Result<Option<Metadata>> {
         // CATs are verifiable - we know that only the signer could have
         // generated them. We extract the signer's identity. The connecting
         // party doesn't have to be trusted.
-        if let Some(identities) = try_get_cats_idents(fb, headers)? {
+        if let Some(identities) = try_get_cats_idents(fb, headers, internal_identity)? {
             // If connecting party is trusted it might be proxygen and it might
             // send a legit client ip. Try to get it.
             let ip_addr = match headers.get(HEADER_CLIENT_IP) {

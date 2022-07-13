@@ -13,7 +13,7 @@ use fbinit::FacebookInit;
 use slog::trace;
 use slog::Logger;
 
-use metaconfig_types::AllowlistIdentity;
+use metaconfig_types::Identity;
 use permission_checker::BoxPermissionChecker;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
@@ -72,7 +72,7 @@ impl ProdRepoPermissionChecker {
         repo_hipster_acl: Option<&str>,
         service_hipster_acl: Option<&str>,
         reponame: &str,
-        global_allowlist: &[AllowlistIdentity],
+        global_allowlist: &[Identity],
     ) -> Result<Self> {
         let mut repo_permchecker_builder = PermissionCheckerBuilder::new();
         if let Some(acl_name) = repo_hipster_acl {
@@ -84,7 +84,7 @@ impl ProdRepoPermissionChecker {
         if !global_allowlist.is_empty() {
             let mut allowlisted_identities = MononokeIdentitySet::new();
 
-            for AllowlistIdentity { id_type, id_data } in global_allowlist {
+            for Identity { id_type, id_data } in global_allowlist {
                 allowlisted_identities.insert(MononokeIdentity::new(id_type, id_data));
             }
 

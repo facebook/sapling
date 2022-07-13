@@ -130,7 +130,7 @@ pub async fn connection_acceptor(
 ) -> Result<()> {
     let enable_http_control_api = common_config.enable_http_control_api;
 
-    let security_checker = ConnectionSecurityChecker::new(fb, common_config).await?;
+    let security_checker = ConnectionSecurityChecker::new(fb, &common_config).await?;
     let addr: SocketAddr = sockname
         .parse()
         .with_context(|| format!("could not parse '{}'", sockname))?;
@@ -175,6 +175,7 @@ pub async fn connection_acceptor(
         config_store: config_store.clone(),
         qps,
         wireproto_scuba,
+        common_config,
     });
 
     loop {
@@ -213,6 +214,7 @@ pub struct Acceptor {
     pub config_store: ConfigStore,
     pub qps: Option<Arc<Qps>>,
     pub wireproto_scuba: MononokeScubaSampleBuilder,
+    pub common_config: CommonConfig,
 }
 
 /// Details for a socket we've just opened.
