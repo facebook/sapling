@@ -12,9 +12,11 @@ anyhow = "1.0.56"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bytes = { version = "1.1", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
+changesets = { version = "0.1.0", path = "../../changesets" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data = { version = "0.1.0", path = "../../derived_data" }
@@ -36,6 +38,7 @@ phases = { version = "0.1.0", path = "../../phases" }
 rate_limiting = { version = "0.1.0", path = "../../rate_limiting" }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
+repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 revset = { version = "0.1.0", path = "../../revset" }
 sha-1 = "0.8"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

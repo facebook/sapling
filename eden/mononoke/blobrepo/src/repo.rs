@@ -278,7 +278,7 @@ impl BlobRepo {
         changesetid: ChangesetId,
     ) -> Result<Vec<ChangesetId>, Error> {
         STATS::get_changeset_parents_by_bonsai.add_value(1);
-        let changeset = self.inner.changesets.get(ctx, changesetid).await?;
+        let changeset = self.changesets().get(ctx, changesetid).await?;
         let parents = changeset
             .ok_or_else(|| format_err!("Commit {} does not exist in the repo", changesetid))?
             .parents;
