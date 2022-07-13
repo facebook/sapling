@@ -7,7 +7,6 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -24,15 +23,43 @@ use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
 use types::RepoPathBuf;
 
+use crate::edenfs::EdenFileSystem;
 use crate::filechangedetector::HgModifiedTime;
 use crate::filesystem::ChangeType;
 use crate::filesystem::PendingChangeResult;
+use crate::filesystem::PhysicalFileSystem;
 use crate::watchman::watchman::Watchman;
 
 type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
 
+pub enum FileSystem {
+    Normal(PhysicalFileSystem),
+    Watchman(Watchman),
+    Eden(EdenFileSystem),
+}
+
+impl FileSystem {
+    pub fn pending_changes<M: Matcher + Clone + Send + Sync + 'static>(
+        &self,
+        manifest: Arc<RwLock<TreeManifest>>,
+        store: ArcReadFileContents,
+        treestate: Arc<Mutex<TreeState>>,
+        last_write: HgModifiedTime,
+        matcher: M,
+        _list_unknown: bool,
+    ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
+        match self {
+            Self::Normal(fs) => {
+                fs.pending_changes(manifest, store, treestate, matcher, false, last_write, 8)
+            }
+            Self::Watchman(fs) => fs.pending_changes(treestate, last_write, manifest, store),
+            Self::Eden(fs) => fs.pending_changes(),
+        }
+    }
+}
+
 pub fn status<M: Matcher + Clone + Send + Sync + 'static>(
-    root: PathBuf,
+    filesystem: FileSystem,
     manifest: Arc<RwLock<TreeManifest>>,
     store: ArcReadFileContents,
     treestate: Arc<Mutex<TreeState>>,
@@ -40,10 +67,15 @@ pub fn status<M: Matcher + Clone + Send + Sync + 'static>(
     matcher: M,
     _list_unknown: bool,
 ) -> Result<Status> {
-    let watchmanfs = Watchman::new(root)?;
-
-    let pending_changes = watchmanfs
-        .pending_changes(treestate.clone(), last_write, manifest.clone(), store)?
+    let pending_changes = filesystem
+        .pending_changes(
+            manifest.clone(),
+            store,
+            treestate.clone(),
+            last_write,
+            matcher.clone(),
+            _list_unknown,
+        )?
         .filter_map(|result| match result {
             Ok(PendingChangeResult::File(change_type)) => {
                 match matcher.matches_file(change_type.get_path()) {

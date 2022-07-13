@@ -24,13 +24,10 @@ impl EdenFileSystem {
         Ok(EdenFileSystem { root })
     }
 
-    pub fn pending_changes(&self) -> Result<impl Iterator<Item = Result<PendingChangeResult>>> {
+    pub fn pending_changes(&self) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         let result = edenfs_client::status::get_status(&self.root)?;
-        Ok(result
-            .status
-            .entries
-            .into_iter()
-            .filter_map(|(path, status)| {
+        Ok(Box::new(result.status.entries.into_iter().filter_map(
+            |(path, status)| {
                 {
                     // TODO: Handle non-UTF8 encoded paths from Eden
                     let repo_path = match RepoPathBuf::from_utf8(path) {
@@ -47,6 +44,7 @@ impl EdenFileSystem {
                         )))),
                     }
                 }
-            }))
+            },
+        )))
     }
 }

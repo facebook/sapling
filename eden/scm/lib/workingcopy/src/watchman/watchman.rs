@@ -42,7 +42,7 @@ impl Watchman {
         last_write: HgModifiedTime,
         manifest: Arc<RwLock<TreeManifest>>,
         store: ArcReadFileContents,
-    ) -> Result<impl Iterator<Item = Result<PendingChangeResult>>> {
+    ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         let state = WatchmanState::new(WatchmanTreeState {
             treestate: treestate.lock(),
         })?;
@@ -62,7 +62,7 @@ impl Watchman {
             treestate: treestate.lock(),
         })?;
 
-        Ok(pending_changes.into_iter())
+        Ok(Box::new(pending_changes.into_iter()))
     }
 
     async fn query_result(&self, state: &WatchmanState) -> Result<QueryResult<StatusQuery>> {

@@ -942,15 +942,18 @@ class dirstate(object):
     def _ruststatus(
         self, match: "Callable[[str], bool]", ignored: bool, clean: bool, unknown: bool
     ) -> "scmutil.status":
-        iswatchman = util.safehasattr(self._fs, "_fsmonitorstate")
-        if ignored or clean or not iswatchman:
+        if util.safehasattr(self._fs, "_fsmonitorstate"):
+            filesystem = "watchman"
+        elif "eden" in self._repo.requirements:
+            filesystem = "eden"
+        else:
+            filesystem = "normal"
+
+        # TODO: Fix deadlock in normal filesystem crawler
+        if ignored or clean or filesystem == "normal":
             raise self.FallbackToPythonStatus
 
-        # TODO: Handle the case that a file is ignored but is still tracked
-        # in p1.
-        match = matchmod.differencematcher(match, self._ignore)
-
-        if "eden" in self._repo.requirements:
+        if filesystem == "eden":
             # EdenFS repos still use an old dirstate to track working copy
             # changes. We need a TreeState for Rust status, so if the map
             # doesn't have a tree, we create a temporary read-only one.
@@ -968,6 +971,10 @@ class dirstate(object):
             #  treedirstatemap, treestatemap]` has no attribute `_tree`.
             tree = self._map._tree
 
+        # TODO: Handle the case that a file is ignored but is still tracked
+        # in p1.
+        match = matchmod.differencematcher(match, self._ignore)
+
         return bindings.workingcopy.status.status(
             self._root,
             self._repo[self.p1()].manifest(),
@@ -976,6 +983,7 @@ class dirstate(object):
             self._lastnormaltime,
             match,
             unknown,
+            filesystem,
         )
 
     @perftrace.tracefunc("Status")

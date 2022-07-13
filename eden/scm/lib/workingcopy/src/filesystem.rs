@@ -52,7 +52,7 @@ impl PhysicalFileSystem {
         include_directories: bool,
         last_write: HgModifiedTime,
         num_threads: u8,
-    ) -> Result<PendingChanges<M>> {
+    ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         let walker = Walker::new(
             self.vfs.root().to_path_buf(),
             matcher.clone(),
@@ -77,7 +77,7 @@ impl PhysicalFileSystem {
             lookup_iter: None,
             file_change_detector,
         };
-        Ok(pending_changes)
+        Ok(Box::new(pending_changes))
     }
 }
 

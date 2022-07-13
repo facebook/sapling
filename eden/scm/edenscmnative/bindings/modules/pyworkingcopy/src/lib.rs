@@ -10,6 +10,7 @@
 use std::cell::RefCell;
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use cpython::*;
@@ -77,6 +78,7 @@ py_class!(class status |py| {
         last_write: u32,
         pymatcher: Option<PyObject>,
         listunknown: bool,
+        filesystem: &str,
     ) -> PyResult<PyObject> {
         let root = pyroot.to_path_buf();
         let manifest = pymanifest.get_underlying(py);
@@ -84,14 +86,29 @@ py_class!(class status |py| {
         let treestate = pytreestate.get_state(py);
         let last_write = last_write.into();
         let matcher = extract_option_matcher(py, pymatcher)?;
+        let filesystem = match filesystem {
+            "normal" => {
+                let fs = workingcopy::filesystem::PhysicalFileSystem::new(root).map_pyerr(py)?;
+                workingcopy::status::FileSystem::Normal(fs)
+            },
+            "watchman" => {
+                let fs = workingcopy::watchman::watchman::Watchman::new(root).map_pyerr(py)?;
+                workingcopy::status::FileSystem::Watchman(fs)
+            },
+            "eden" => {
+                let fs = workingcopy::edenfs::EdenFileSystem::new(root).map_pyerr(py)?;
+                workingcopy::status::FileSystem::Eden(fs)
+            },
+            _ => return Err(anyhow!("Unsupported filesystem type: {}", filesystem)).map_pyerr(py),
+        };
         let status = workingcopy::status::status(
-            root,
+            filesystem,
             manifest,
             store,
             treestate,
             last_write,
             matcher,
-            listunknown
+            listunknown,
         ).map_pyerr(py)?;
         pystatus::to_python_status(py, &status)
     }
