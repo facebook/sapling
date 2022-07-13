@@ -550,13 +550,12 @@ std::string TestMount::readFile(folly::StringPiece path) {
 
 bool TestMount::hasFileAt(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
-  mode_t mode;
   try {
     auto child =
         edenMount_
             ->getInodeSlow(relativePath, ObjectFetchContext::getNullContext())
             .get();
-    mode = child->stat(ObjectFetchContext::getNullContext()).get().st_mode;
+    return child->getType() == dtype_t::Regular;
   } catch (const std::system_error& e) {
     if (e.code().value() == ENOENT) {
       return false;
@@ -564,8 +563,6 @@ bool TestMount::hasFileAt(folly::StringPiece path) {
       throw;
     }
   }
-
-  return S_ISREG(mode);
 }
 
 void TestMount::mkdir(folly::StringPiece path) {
