@@ -614,6 +614,26 @@ impl Default for PushrebaseFlags {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+/// Either an SMC tier or a host/port pair
+pub enum Address {
+    /// An SMC tier
+    Tier(String),
+    /// A host:port string
+    HostPort(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+/// How to do pushrebase on Mononoke
+pub enum PushrebaseRemoteMode {
+    /// Do pushrebase in the same process
+    Local,
+    /// Call SCS and do pushrebase remotely, forwarding errors
+    RemoteScs(Address),
+    /// Call SCS and do pushrebase remotely, retrying errors locally
+    RemoteScsWithLocalFallback(Address),
+}
+
 /// Pushrebase configuration options
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct PushrebaseParams {
@@ -635,6 +655,8 @@ pub struct PushrebaseParams {
     /// Normally pushes of a commit like this are not allowed unless
     /// this option is set to false.
     pub allow_change_xrepo_mapping_extra: bool,
+    /// How to do pushrebase on Mononoke
+    pub remote_mode: PushrebaseRemoteMode,
 }
 
 impl Default for PushrebaseParams {
@@ -647,6 +669,7 @@ impl Default for PushrebaseParams {
             globalrevs_publishing_bookmark: None,
             populate_git_mapping: false,
             allow_change_xrepo_mapping_extra: false,
+            remote_mode: PushrebaseRemoteMode::Local,
         }
     }
 }

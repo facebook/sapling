@@ -13,6 +13,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use bookmarks_types::BookmarkName;
+use metaconfig_types::Address;
 use metaconfig_types::BlameVersion;
 use metaconfig_types::BookmarkOrRegex;
 use metaconfig_types::BookmarkParams;
@@ -32,6 +33,7 @@ use metaconfig_types::LfsParams;
 use metaconfig_types::PushParams;
 use metaconfig_types::PushrebaseFlags;
 use metaconfig_types::PushrebaseParams;
+use metaconfig_types::PushrebaseRemoteMode;
 use metaconfig_types::RepoClientKnobs;
 use metaconfig_types::SegmentedChangelogConfig;
 use metaconfig_types::SegmentedChangelogHeadConfig;
@@ -59,6 +61,8 @@ use repos::RawInfinitepushParams;
 use repos::RawLfsParams;
 use repos::RawPushParams;
 use repos::RawPushrebaseParams;
+use repos::RawPushrebaseRemoteMode;
+use repos::RawPushrebaseRemoteModeRemote;
 use repos::RawRepoClientKnobs;
 use repos::RawSegmentedChangelogConfig;
 use repos::RawSegmentedChangelogHeadConfig;
@@ -214,6 +218,33 @@ impl Convert for RawPushParams {
     }
 }
 
+impl Convert for RawPushrebaseRemoteModeRemote {
+    type Output = Address;
+
+    fn convert(self) -> Result<Self::Output> {
+        match self {
+            Self::tier(t) => Ok(Address::Tier(t)),
+            Self::host_port(host) => Ok(Address::HostPort(host)),
+            Self::UnknownField(e) => anyhow::bail!("Unknown field: {}", e),
+        }
+    }
+}
+
+impl Convert for RawPushrebaseRemoteMode {
+    type Output = PushrebaseRemoteMode;
+
+    fn convert(self) -> Result<Self::Output> {
+        match self {
+            Self::local(_) => Ok(PushrebaseRemoteMode::Local),
+            Self::remote_scs(addr) => Ok(PushrebaseRemoteMode::RemoteScs(addr.convert()?)),
+            Self::remote_scs_local_fallback(addr) => Ok(
+                PushrebaseRemoteMode::RemoteScsWithLocalFallback(addr.convert()?),
+            ),
+            Self::UnknownField(e) => anyhow::bail!("Unknown field: {}", e),
+        }
+    }
+}
+
 impl Convert for RawPushrebaseParams {
     type Output = PushrebaseParams;
 
@@ -248,6 +279,9 @@ impl Convert for RawPushrebaseParams {
             allow_change_xrepo_mapping_extra: self
                 .allow_change_xrepo_mapping_extra
                 .unwrap_or(false),
+            remote_mode: self
+                .remote_mode
+                .map_or(Ok(default.remote_mode), Convert::convert)?,
         })
     }
 }

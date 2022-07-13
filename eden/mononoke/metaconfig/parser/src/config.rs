@@ -445,6 +445,7 @@ mod test {
     use metaconfig_types::AclRegion;
     use metaconfig_types::AclRegionConfig;
     use metaconfig_types::AclRegionRule;
+    use metaconfig_types::Address;
     use metaconfig_types::AllowlistIdentity;
     use metaconfig_types::BlameVersion;
     use metaconfig_types::BlobConfig;
@@ -476,6 +477,7 @@ mod test {
     use metaconfig_types::PushParams;
     use metaconfig_types::PushrebaseFlags;
     use metaconfig_types::PushrebaseParams;
+    use metaconfig_types::PushrebaseRemoteMode;
     use metaconfig_types::RemoteDatabaseConfig;
     use metaconfig_types::RemoteMetadataDatabaseConfig;
     use metaconfig_types::RepoClientKnobs;
@@ -790,6 +792,9 @@ mod test {
             casefolding_check = false
             emit_obsmarkers = false
             allow_change_xrepo_mapping_extra = true
+            
+            [pushrebase.remote_mode]
+            remote_scs = { tier = "my-tier" }
 
             [lfs]
             threshold = 1000
@@ -1089,6 +1094,9 @@ mod test {
                     globalrevs_publishing_bookmark: None,
                     populate_git_mapping: false,
                     allow_change_xrepo_mapping_extra: true,
+                    remote_mode: PushrebaseRemoteMode::RemoteScs(Address::Tier(
+                        "my-tier".to_string(),
+                    )),
                 },
                 lfs: LfsParams {
                     threshold: Some(1000),
