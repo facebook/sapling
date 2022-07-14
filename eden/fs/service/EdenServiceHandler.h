@@ -193,13 +193,14 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   apache::thrift::ServerStream<InodeEvent> traceInodeEvents(
       std::unique_ptr<std::string> mountPoint) override;
 
-  folly::Future<std::unique_ptr<GetScmStatusResult>> future_getScmStatusV2(
+  folly::SemiFuture<std::unique_ptr<GetScmStatusResult>>
+  semifuture_getScmStatusV2(
       std::unique_ptr<GetScmStatusParams> params) override;
 
   apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
   streamChangesSince(std::unique_ptr<StreamChangesSinceParams> params) override;
 
-  folly::Future<std::unique_ptr<ScmStatus>> future_getScmStatus(
+  folly::SemiFuture<std::unique_ptr<ScmStatus>> semifuture_getScmStatus(
       std::unique_ptr<std::string> mountPoint,
       bool listIgnored,
       std::unique_ptr<std::string> commitHash) override;

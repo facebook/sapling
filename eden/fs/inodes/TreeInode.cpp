@@ -2283,7 +2283,7 @@ gitignore file exists). We are allowed to pass raw pointers derived from the
 recursive calls and we are sure that the children calls will finish before we
 return from the parent call.
 */
-Future<Unit> TreeInode::diff(
+ImmediateFuture<Unit> TreeInode::diff(
     DiffContext* context,
     RelativePathPiece currentPath,
     std::vector<shared_ptr<const Tree>> trees,
@@ -2292,11 +2292,11 @@ Future<Unit> TreeInode::diff(
   if (context->isCancelled()) {
     XLOG(DBG7) << "diff() on directory " << getLogPath()
                << " cancelled due to client request no longer being active";
-    return makeFuture();
+    return folly::unit;
   }
 
   InodePtr inode;
-  auto gitignoreInodeFuture = Future<InodePtr>::makeEmpty();
+  ImmediateFuture<InodePtr> gitignoreInodeFuture;
   vector<IncompleteInodeLoad> pendingLoads;
   {
     // We have to get a write lock since we may have to load
@@ -2319,7 +2319,7 @@ Future<Unit> TreeInode::diff(
       for (auto& tree : trees) {
         if (contents->treeHash.value() == tree->getHash()) {
           // There are no changes in our tree or any children subtrees.
-          return makeFuture();
+          return folly::unit;
         }
       }
     }
@@ -2335,14 +2335,12 @@ Future<Unit> TreeInode::diff(
       // Since the entire directory is ignored, we don't need to check ignore
       // status for any entries that aren't already tracked in source control.
       return computeDiff(
-                 std::move(contents),
-                 context,
-                 currentPath,
-                 std::move(trees),
-                 nullptr,
-                 isIgnored)
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+          std::move(contents),
+          context,
+          currentPath,
+          std::move(trees),
+          nullptr,
+          isIgnored);
     }
 
     // Load the ignore rules for this directory.
@@ -2365,26 +2363,24 @@ Future<Unit> TreeInode::diff(
 
     if (!gitignoreEntry) {
       return computeDiff(
-                 std::move(contents),
-                 context,
-                 currentPath,
-                 std::move(trees),
-                 make_unique<GitIgnoreStack>(
-                     parentIgnore), // empty with no rules
-                 isIgnored)
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+          std::move(contents),
+          context,
+          currentPath,
+          std::move(trees),
+          make_unique<GitIgnoreStack>(parentIgnore), // empty with no rules
+          isIgnored);
     }
 
     XLOG(DBG7) << "Loading ignore file for " << getLogPath();
     inode = gitignoreEntry->getInodePtr();
     if (!inode) {
       gitignoreInodeFuture = loadChildLocked(
-          contents->entries,
-          kIgnoreFilename,
-          *gitignoreEntry,
-          pendingLoads,
-          context->getFetchContext());
+                                 contents->entries,
+                                 kIgnoreFilename,
+                                 *gitignoreEntry,
+                                 pendingLoads,
+                                 context->getFetchContext())
+                                 .semi();
     }
   }
 
@@ -2421,7 +2417,7 @@ Future<Unit> TreeInode::diff(
   }
 }
 
-Future<Unit> TreeInode::loadGitIgnoreThenDiff(
+ImmediateFuture<Unit> TreeInode::loadGitIgnoreThenDiff(
     InodePtr gitignoreInode,
     DiffContext* context,
     RelativePathPiece currentPath,
@@ -2430,27 +2426,27 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
     bool isIgnored) {
   return getMount()
       ->loadFileContents(context->getFetchContext(), gitignoreInode)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenError([](const folly::exception_wrapper& ex) {
-        XLOG(WARN) << "error reading ignore file: " << folly::exceptionStr(ex);
-        return std::string{};
-      })
-      .thenValue([self = inodePtrFromThis(),
-                  context,
-                  currentPath = RelativePath{currentPath}, // deep copy
-                  trees = std::move(trees),
-                  parentIgnore,
-                  isIgnored](std::string&& ignoreFileContents) mutable {
-        return self
-            ->computeDiff(
-                self->contents_.wlock(),
+      .thenTry([self = inodePtrFromThis(),
                 context,
-                currentPath,
-                std::move(trees),
-                make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents),
-                isIgnored)
-            .semi();
+                currentPath = RelativePath{currentPath}, // deep copy
+                trees = std::move(trees),
+                parentIgnore,
+                isIgnored](
+                   folly::Try<std::string> ignoreFileContentsTry) mutable {
+        std::string ignoreFileContents;
+        if (ignoreFileContentsTry.hasException()) {
+          XLOG(WARN) << "error reading ignore file: "
+                     << folly::exceptionStr(ignoreFileContentsTry.exception());
+        } else {
+          ignoreFileContents = std::move(ignoreFileContentsTry).value();
+        }
+        return self->computeDiff(
+            self->contents_.wlock(),
+            context,
+            currentPath,
+            std::move(trees),
+            make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents),
+            isIgnored);
       });
 }
 

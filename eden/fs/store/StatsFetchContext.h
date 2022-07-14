@@ -48,6 +48,7 @@ class StatsFetchContext : public ObjectFetchContext {
       folly::StringPiece causeDetail,
       const std::unordered_map<std::string, std::string>* requestInfo);
   StatsFetchContext(const StatsFetchContext& other);
+  StatsFetchContext(StatsFetchContext&& other) noexcept;
 
   void didFetch(ObjectType type, const ObjectId& id, Origin origin) override;
 

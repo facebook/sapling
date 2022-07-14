@@ -99,11 +99,15 @@ class DiffTest {
             systemWideIgnoreFileContents, userIgnoreFileContents),
         std::move(loadFileContentsFromPath)};
     auto commitHash = mount_.getEdenMount()->getCheckedOutRootId();
-    auto diffFuture = mount_.getEdenMount()->diff(&diffContext, commitHash);
+    auto diffFuture = mount_.getEdenMount()
+                          ->diff(&diffContext, commitHash)
+                          .semi()
+                          .via(mount_.getServerExecutor().get());
+    mount_.drainServerExecutor();
     EXPECT_FUTURE_RESULT(diffFuture);
     return callback.extractStatus();
   }
-  folly::Future<ScmStatus> diffFuture(bool listIgnored = false) {
+  ImmediateFuture<ScmStatus> diffFuture(bool listIgnored = false) {
     auto commitHash = mount_.getEdenMount()->getWorkingCopyParent();
     auto diffFuture = mount_.getEdenMount()->diff(
         commitHash,
@@ -154,7 +158,8 @@ ScmStatus DiffTest::resetCommitAndDiff(
     mount_.loadAllInodes();
   }
   mount_.resetCommit(builder, /* setReady = */ true);
-  auto df = diffFuture();
+  auto df = diffFuture().semi().via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
   return EXPECT_FUTURE_RESULT(df);
 }
 
@@ -1490,11 +1495,15 @@ TEST(DiffTest, fileNotReady) {
   builder2.getRoot()->setReady();
 
   // Run the diff
-  auto diffFuture = mount.getEdenMount()->diff(
-      commitHash2,
-      folly::CancellationToken{},
-      /*listIgnored=*/false,
-      /*enforceCurrentParent=*/false);
+  auto diffFuture = mount.getEdenMount()
+                        ->diff(
+                            commitHash2,
+                            folly::CancellationToken{},
+                            /*listIgnored=*/false,
+                            /*enforceCurrentParent=*/false)
+                        .semi()
+                        .via(mount.getServerExecutor().get());
+  mount.drainServerExecutor();
 
   // The diff should not be ready yet
   EXPECT_FALSE(diffFuture.isReady());
@@ -1511,6 +1520,8 @@ TEST(DiffTest, fileNotReady) {
   builder2.setReady("src");
   builder1.setReady("doc");
   builder2.setReady("doc");
+
+  mount.drainServerExecutor();
 
   EXPECT_FALSE(diffFuture.isReady());
 
@@ -1544,6 +1555,8 @@ TEST(DiffTest, fileNotReady) {
     u1->trigger();
   }
 
+  mount.drainServerExecutor();
+
   EXPECT_FALSE(diffFuture.isReady());
 
   // Process the modified files under doc/
@@ -1564,6 +1577,8 @@ TEST(DiffTest, fileNotReady) {
   // However explicitly mark all objects as ready just in case.
   builder1.setAllReady();
   builder2.setAllReady();
+
+  mount.drainServerExecutor();
 
   // The diff should be complete now.
   ASSERT_TRUE(diffFuture.isReady());
@@ -1607,19 +1622,26 @@ TEST(DiffTest, cancelledDiff) {
 
   auto cancellationSource = folly::CancellationSource{};
 
-  auto diffFuture = mount.getEdenMount()->diff(
-      commitHash2,
-      cancellationSource.getToken(),
-      /*listIgnored=*/false,
-      /*enforceCurrentParent=*/false);
+  auto diffFuture = mount.getEdenMount()
+                        ->diff(
+                            commitHash2,
+                            cancellationSource.getToken(),
+                            /*listIgnored=*/false,
+                            /*enforceCurrentParent=*/false)
+                        .semi()
+                        .via(mount.getServerExecutor().get());
+  mount.drainServerExecutor();
   EXPECT_FALSE(diffFuture.isReady());
 
   cancellationSource.requestCancellation();
+  mount.drainServerExecutor();
   EXPECT_FALSE(diffFuture.isReady());
 
   builder2.setReady("a.txt");
+  mount.drainServerExecutor();
   EXPECT_FALSE(diffFuture.isReady());
   builder2.setReady("src");
+  mount.drainServerExecutor();
   EXPECT_TRUE(diffFuture.isReady());
 
   auto result = std::move(diffFuture).get(10ms);

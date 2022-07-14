@@ -54,14 +54,12 @@ class UntrackedDiffEntry : public DeferredDiffEntry {
           }
 
           // Recursively diff the untracked directory.
-          return treeInode
-              ->diff(
-                  context_,
-                  getPath(),
-                  std::vector<shared_ptr<const Tree>>{},
-                  ignore_,
-                  isIgnored_)
-              .semi();
+          return treeInode->diff(
+              context_,
+              getPath(),
+              std::vector<shared_ptr<const Tree>>{},
+              ignore_,
+              isIgnored_);
         });
   }
 
@@ -162,9 +160,8 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
     return collectAllSafe(std::move(fetches))
         .thenValue([this, treeInode = std::move(treeInode)](
                        std::vector<shared_ptr<const Tree>> trees) {
-          return treeInode
-              ->diff(context_, getPath(), std::move(trees), ignore_, isIgnored_)
-              .semi();
+          return treeInode->diff(
+              context_, getPath(), std::move(trees), ignore_, isIgnored_);
         });
   }
 
@@ -184,14 +181,12 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       if (isIgnored_ && !context_->listIgnored) {
         return folly::unit;
       }
-      return treeInode
-          ->diff(
-              context_,
-              getPath(),
-              std::vector<shared_ptr<const Tree>>{},
-              ignore_,
-              isIgnored_)
-          .semi();
+      return treeInode->diff(
+          context_,
+          getPath(),
+          std::vector<shared_ptr<const Tree>>{},
+          ignore_,
+          isIgnored_);
     }
 
     auto isSameAsFut = fileInode->isSameAs(

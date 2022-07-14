@@ -21,7 +21,24 @@ StatsFetchContext::StatsFetchContext(
   }
 }
 
-StatsFetchContext::StatsFetchContext(const StatsFetchContext& other) {
+StatsFetchContext::StatsFetchContext(const StatsFetchContext& other)
+    : clientPid_{other.clientPid_},
+      cause_{other.cause_},
+      causeDetail_{other.causeDetail_},
+      requestInfo_{other.requestInfo_} {
+  for (size_t y = 0; y < ObjectFetchContext::kObjectTypeEnumMax; ++y) {
+    for (size_t x = 0; x < ObjectFetchContext::kOriginEnumMax; ++x) {
+      // This could almost certainly use a more relaxed memory ordering.
+      counts_[y][x] = other.counts_[y][x].load();
+    }
+  }
+}
+
+StatsFetchContext::StatsFetchContext(StatsFetchContext&& other) noexcept
+    : clientPid_{other.clientPid_},
+      cause_{other.cause_},
+      causeDetail_{other.causeDetail_},
+      requestInfo_{std::move(other.requestInfo_)} {
   for (size_t y = 0; y < ObjectFetchContext::kObjectTypeEnumMax; ++y) {
     for (size_t x = 0; x < ObjectFetchContext::kOriginEnumMax; ++x) {
       // This could almost certainly use a more relaxed memory ordering.

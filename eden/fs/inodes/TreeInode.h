@@ -312,11 +312,11 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * @param isIgnored  Whether or not the current directory is ignored
    *     according to source control ignore rules.
    *
-   * @return Returns a Future that will be fulfilled when the diff operation
-   *     completes.  The caller must ensure that the DiffCallback parameter
-   *     remains valid until this Future completes.
+   * @return Returns an ImmediateFuture that will be fulfilled when the diff
+   *     operation completes. The caller must ensure that the DiffCallback
+   *     parameter remains valid until this Future completes.
    */
-  folly::Future<folly::Unit> diff(
+  ImmediateFuture<folly::Unit> diff(
       DiffContext* context,
       RelativePathPiece currentPath,
       std::vector<std::shared_ptr<const Tree>> trees,
@@ -699,7 +699,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * Load the .gitignore file for this directory, then call computeDiff() once
    * it is loaded.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> loadGitIgnoreThenDiff(
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> loadGitIgnoreThenDiff(
       InodePtr gitignoreInode,
       DiffContext* context,
       RelativePathPiece currentPath,

@@ -654,7 +654,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    *     operation is complete.  This is marked FOLLY_NODISCARD to
    *     make sure callers do not forget to wait for the operation to complete.
    */
-  FOLLY_NODISCARD folly::Future<std::unique_ptr<ScmStatus>> diff(
+  FOLLY_NODISCARD ImmediateFuture<std::unique_ptr<ScmStatus>> diff(
       const RootId& commitHash,
       folly::CancellationToken cancellation,
       bool listIgnored = false,
@@ -679,7 +679,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * The caller must ensure that the DiffContext object ctsPtr points to
    * exists at least until the returned Future completes.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> diff(
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> diff(
       DiffContext* ctxPtr,
       const RootId& commitHash) const;
 
@@ -1034,7 +1034,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * synchronization (if it is needed). It will be packaged into a DiffContext
    * and passed through the TreeInode diff() codepath
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> diff(
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> diff(
       DiffCallback* callback,
       const RootId& commitHash,
       bool listIgnored,

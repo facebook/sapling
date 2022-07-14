@@ -139,7 +139,7 @@ class EdenMount::JournalDiffCallback : public DiffCallback {
                   << folly::exceptionStr(ew);
   }
 
-  FOLLY_NODISCARD Future<StatsFetchContext> performDiff(
+  FOLLY_NODISCARD ImmediateFuture<StatsFetchContext> performDiff(
       EdenMount* mount,
       TreeInodePtr rootInode,
       std::vector<std::shared_ptr<const Tree>> rootTrees) {
@@ -1489,7 +1489,9 @@ folly::Future<CheckoutResult> EdenMount::checkout(
                            const StatsFetchContext& diffFetchContext) {
               ctx->getFetchContext().merge(diffFetchContext);
               return treeResults;
-            });
+            })
+            .semi()
+            .via(&folly::QueuedImmediateExecutor::instance());
       })
       .thenValue([this, ctx, checkoutTimes, stopWatch, snapshotHash](
                      std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
@@ -1710,16 +1712,15 @@ std::unique_ptr<DiffContext> EdenMount::createDiffContext(
       std::move(loadContents));
 }
 
-Future<Unit> EdenMount::diff(DiffContext* ctxPtr, const RootId& commitHash)
-    const {
+ImmediateFuture<Unit> EdenMount::diff(
+    DiffContext* ctxPtr,
+    const RootId& commitHash) const {
   auto rootInode = getRootInode();
   return objectStore_->getRootTree(commitHash, ctxPtr->getFetchContext())
       .thenValue([this](std::shared_ptr<const Tree> rootTree) {
         return waitForPendingNotifications().thenValue(
             [rootTree = std::move(rootTree)](auto&&) { return rootTree; });
       })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([ctxPtr, rootInode = std::move(rootInode)](
                      std::shared_ptr<const Tree>&& rootTree) {
         return rootInode->diff(
@@ -1731,7 +1732,7 @@ Future<Unit> EdenMount::diff(DiffContext* ctxPtr, const RootId& commitHash)
       });
 }
 
-Future<Unit> EdenMount::diff(
+ImmediateFuture<Unit> EdenMount::diff(
     DiffCallback* callback,
     const RootId& commitHash,
     bool listIgnored,
@@ -1741,7 +1742,7 @@ Future<Unit> EdenMount::diff(
     auto parentInfo = parentState_.rlock();
 
     if (parentInfo->checkoutInProgress) {
-      return makeFuture<Unit>(newEdenError(
+      return makeImmediateFuture<Unit>(newEdenError(
           EdenErrorType::CHECKOUT_IN_PROGRESS,
           "cannot compute status while a checkout is currently in progress"));
     }
@@ -1750,7 +1751,7 @@ Future<Unit> EdenMount::diff(
       // Log this occurrence to Scuba
       getServerState()->getStructuredLogger()->logEvent(ParentMismatch{
           commitHash.value(), parentInfo->workingCopyParentRootId.value()});
-      return makeFuture<Unit>(newEdenError(
+      return makeImmediateFuture<Unit>(newEdenError(
           EdenErrorType::OUT_OF_DATE_PARENT,
           "error computing status: requested parent commit is out-of-date: requested ",
           commitHash,
@@ -1776,7 +1777,7 @@ Future<Unit> EdenMount::diff(
   return diff(ctxPtr, commitHash).ensure(std::move(stateHolder));
 }
 
-folly::Future<std::unique_ptr<ScmStatus>> EdenMount::diff(
+ImmediateFuture<std::unique_ptr<ScmStatus>> EdenMount::diff(
     const RootId& commitHash,
     folly::CancellationToken cancellation,
     bool listIgnored,

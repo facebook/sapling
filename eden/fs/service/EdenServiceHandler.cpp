@@ -2345,8 +2345,8 @@ folly::Future<Unit> EdenServiceHandler::future_chown(
 #endif // !_WIN32
 }
 
-folly::Future<std::unique_ptr<GetScmStatusResult>>
-EdenServiceHandler::future_getScmStatusV2(
+folly::SemiFuture<std::unique_ptr<GetScmStatusResult>>
+EdenServiceHandler::semifuture_getScmStatusV2(
     unique_ptr<GetScmStatusParams> params) {
   auto* context = getRequestContext();
 
@@ -2363,24 +2363,25 @@ EdenServiceHandler::future_getScmStatusV2(
                                    ->getReloadableConfig()
                                    ->getEdenConfig()
                                    ->enforceParents.getValue();
-  return wrapFuture(
-      std::move(helper),
-      mount
-          ->diff(
-              rootId,
-              context->getConnectionContext()->getCancellationToken(),
-              *params->listIgnored_ref(),
-              enforceParents)
-          .thenValue([this, mount](std::unique_ptr<ScmStatus>&& status) {
-            auto result = std::make_unique<GetScmStatusResult>();
-            result->status_ref() = std::move(*status);
-            result->version_ref() = server_->getVersion();
-            return result;
-          }));
+  return wrapImmediateFuture(
+             std::move(helper),
+             mount
+                 ->diff(
+                     rootId,
+                     context->getConnectionContext()->getCancellationToken(),
+                     *params->listIgnored_ref(),
+                     enforceParents)
+                 .thenValue([this, mount](std::unique_ptr<ScmStatus>&& status) {
+                   auto result = std::make_unique<GetScmStatusResult>();
+                   result->status_ref() = std::move(*status);
+                   result->version_ref() = server_->getVersion();
+                   return result;
+                 }))
+      .semi();
 }
 
-folly::Future<std::unique_ptr<ScmStatus>>
-EdenServiceHandler::future_getScmStatus(
+folly::SemiFuture<std::unique_ptr<ScmStatus>>
+EdenServiceHandler::semifuture_getScmStatus(
     unique_ptr<string> mountPoint,
     bool listIgnored,
     unique_ptr<string> commitHash) {
@@ -2398,13 +2399,14 @@ EdenServiceHandler::future_getScmStatus(
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto mount = server_->getMount(mountPath);
   auto hash = mount->getObjectStore()->parseRootId(*commitHash);
-  return wrapFuture(
-      std::move(helper),
-      mount->diff(
-          hash,
-          context->getConnectionContext()->getCancellationToken(),
-          listIgnored,
-          /*enforceCurrentParent=*/false));
+  return wrapImmediateFuture(
+             std::move(helper),
+             mount->diff(
+                 hash,
+                 context->getConnectionContext()->getCancellationToken(),
+                 listIgnored,
+                 /*enforceCurrentParent=*/false))
+      .semi();
 }
 
 folly::SemiFuture<unique_ptr<ScmStatus>>

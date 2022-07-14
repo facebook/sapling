@@ -9,6 +9,7 @@
 
 #include <folly/Portability.h>
 #include <folly/Range.h>
+#include <folly/executors/ManualExecutor.h>
 #include <folly/experimental/TestUtil.h>
 #include <sys/stat.h>
 #include <optional>
