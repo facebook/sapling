@@ -18,6 +18,7 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
+#include <folly/Overload.h>
 #include <folly/String.h>
 #include <folly/gen/Base.h>
 #include <folly/gen/ParallelMap.h>
@@ -131,6 +132,44 @@ class OverlayChecker::RepairState {
     } else {
       fs()->createOverlayFile(number, ByteRange());
     }
+  }
+
+  bool dematerializeDirEntry(InodeNumber parent, PathComponent childName) {
+    auto parentPath = checker_->computePath(parent);
+    auto path = checker_->computePath(parent, childName);
+    auto treeOrTreeEntry = checker_->lookup(path.path).getTry();
+
+    if (treeOrTreeEntry.hasValue()) {
+      ObjectId hash = std::visit(
+          folly::overload(
+              [](std::shared_ptr<const Tree>& tree) { return tree->getHash(); },
+              [](TreeEntry& treeEntry) { return treeEntry.getHash(); }),
+          treeOrTreeEntry.value());
+
+      auto parentDirOpt = fs()->loadOverlayDir(parent);
+      if (parentDirOpt.has_value()) {
+        auto parentDir = parentDirOpt.value();
+        auto entries = parentDir.entries();
+        if (entries.is_set()) {
+          auto result = entries->find(childName.stringPiece().data());
+          if (result != entries->end()) {
+            overlay::OverlayEntry& entry = result->second;
+            entry.hash_ref() = hash.asString();
+            entry.inodeNumber_ref() = 0;
+
+            fs()->saveOverlayDir(parent, parentDir);
+            return true;
+          }
+        }
+      }
+    } else {
+      XLOGF(
+          WARN,
+          "Unable to compare {} with source control: {}",
+          path.path,
+          treeOrTreeEntry.exception().what());
+    }
+    return false;
   }
 
  private:
@@ -356,17 +395,24 @@ class OverlayChecker::MissingMaterializedInode : public OverlayChecker::Error {
     // Create replacement data for this inode in the overlay
     XDCHECK_NE(*childInfo_.inodeNumber_ref(), 0);
     InodeNumber childInodeNumber(*childInfo_.inodeNumber_ref());
-    repair.createInodeReplacement(childInodeNumber, *childInfo_.mode_ref());
 
-    // Add an entry in the OverlayChecker's inodes_ set.
-    // In case the parent directory was part of an orphaned subtree the
-    // OrphanInode code will look for this child in the inodes_ map.
-    auto type =
-        S_ISDIR(*childInfo_.mode_ref()) ? InodeType::Dir : InodeType::File;
-    auto [iter, inserted] = repair.checker()->inodes_.try_emplace(
-        childInodeNumber, childInodeNumber, type);
-    XDCHECK(inserted);
-    iter->second.addParent(parent_, *childInfo_.mode_ref());
+    // If we were unable to fetch the scm state of the file, let's replace it
+    // with an empty tree/file. This could happen if we're offline during fsck
+    // and can't fetch the scm state.
+    if (!repair.dematerializeDirEntry(parent_, childName_)) {
+      repair.createInodeReplacement(childInodeNumber, *childInfo_.mode_ref());
+
+      // Add an entry in the OverlayChecker's inodes_ set.
+      // In case the parent directory was part of an orphaned subtree the
+      // OrphanInode code will look for this child in the inodes_ map.
+      auto type =
+          S_ISDIR(*childInfo_.mode_ref()) ? InodeType::Dir : InodeType::File;
+      auto [iter, inserted] = repair.checker()->inodes_.try_emplace(
+          childInodeNumber, childInodeNumber, type);
+      XDCHECK(inserted);
+      iter->second.addParent(parent_, *childInfo_.mode_ref());
+    }
+
     return true;
   }
 
