@@ -99,10 +99,10 @@ makeImmediateFutureFromImmediate(Func&& func, Args... args) {
     // In the case where Func returns void, force the return value to
     // be folly::unit.
     if constexpr (std::is_same_v<FuncRetType, void>) {
-      func(std::forward<Args...>(args...));
+      func(std::forward<Args>(args)...);
       return folly::unit;
     } else {
-      return func(std::forward<Args...>(args...));
+      return func(std::forward<Args>(args)...);
     }
   } catch (std::exception& ex) {
     return folly::Try<NewType>(
