@@ -13,7 +13,6 @@ use anyhow::anyhow;
 use anyhow::Error;
 use async_trait::async_trait;
 use blame::CompatBlame;
-use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use bytes::Bytes;
@@ -517,7 +516,7 @@ impl ChangesetPathHistoryContext {
             async fn _visit(
                 &self,
                 ctx: &CoreContext,
-                repo: &BlobRepo,
+                repo: &impl history_traversal::Repo,
                 descendant_cs_id: Option<CsAndPath>,
                 mut cs_ids: Vec<CsAndPath>,
             ) -> Result<Vec<CsAndPath>, Error> {
@@ -526,9 +525,9 @@ impl ChangesetPathHistoryContext {
                 if let Some(until_ts) = self.until_timestamp {
                     cs_ids = try_join_all(cs_ids.into_iter().map(|(cs_id, path)| async move {
                         let info = if cs_info_enabled {
-                            ChangesetInfo::derive(ctx, repo, cs_id).await
+                            ChangesetInfo::derive(ctx, repo.as_blob_repo(), cs_id).await
                         } else {
-                            let bonsai = cs_id.load(&ctx, repo.blobstore()).await?;
+                            let bonsai = cs_id.load(&ctx, repo.repo_blobstore()).await?;
                             Ok(ChangesetInfo::new(cs_id, bonsai))
                         }?;
                         let timestamp = info.author_date().as_chrono().timestamp();
@@ -543,7 +542,7 @@ impl ChangesetPathHistoryContext {
                     cs_ids = try_join_all(cs_ids.into_iter().map(|(cs_id, path)| {
                         cloned!(descendant_cs_id, skiplist_index);
                         async move {
-                            let changeset_fetcher = repo.get_changeset_fetcher();
+                            let changeset_fetcher = repo.changeset_fetcher_arc();
                             let cs_gen = changeset_fetcher
                                 .get_generation_number(ctx.clone(), cs_id)
                                 .await?;
@@ -569,7 +568,7 @@ impl ChangesetPathHistoryContext {
                                 is_descendant = skiplist_index
                                     .query_reachability(
                                         ctx,
-                                        &repo.get_changeset_fetcher(),
+                                        &repo.changeset_fetcher_arc(),
                                         cs_id,
                                         descendants_of,
                                     )
@@ -597,7 +596,7 @@ impl ChangesetPathHistoryContext {
                     exclude_changeset_and_ancestors_gen,
                 )) = self.exclude_changeset_and_ancestors
                 {
-                    let changeset_fetcher = &repo.get_changeset_fetcher();
+                    let changeset_fetcher = &repo.changeset_fetcher_arc();
                     let skiplist_index = &skiplist_index;
 
                     let descendant_cs_gen = if let Some((descendant_cs_id, _)) = descendant_cs_id {
@@ -654,7 +653,7 @@ impl ChangesetPathHistoryContext {
             async fn visit(
                 &mut self,
                 ctx: &CoreContext,
-                repo: &BlobRepo,
+                repo: &impl history_traversal::Repo,
                 descendant_cs_id: Option<CsAndPath>,
                 cs_ids: Vec<CsAndPath>,
             ) -> Result<Vec<CsAndPath>, Error> {
@@ -671,7 +670,7 @@ impl ChangesetPathHistoryContext {
             async fn preprocess(
                 &mut self,
                 ctx: &CoreContext,
-                repo: &BlobRepo,
+                repo: &impl history_traversal::Repo,
                 descendant_id_cs_ids: Vec<(Option<CsAndPath>, Vec<CsAndPath>)>,
             ) -> Result<(), Error> {
                 try_join_all(
@@ -700,7 +699,7 @@ impl ChangesetPathHistoryContext {
 
         let history = list_file_history(
             ctx.clone(),
-            self.repo().blob_repo(),
+            self.repo().inner_repo(),
             mpath.cloned(),
             self.changeset.id(),
             FilterVisitor {

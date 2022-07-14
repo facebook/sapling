@@ -33,7 +33,9 @@ use changeset_fetcher::ChangesetFetcherRef;
 use changesets::ChangesetsRef;
 use mutable_renames::MutableRenamesRef;
 use repo_blobstore::RepoBlobstoreArc;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 use skiplist::SkiplistIndexRef;
 use trait_alias::trait_alias;
 
@@ -47,8 +49,10 @@ pub trait Repo = AsBlobRepo
     + ChangesetFetcherRef
     + ChangesetsRef
     + MutableRenamesRef
+    + RepoBlobstoreRef
     + RepoBlobstoreArc
     + RepoDerivedDataRef
+    + RepoIdentityRef
     + SkiplistIndexRef
     + Send
     + Sync;
