@@ -20,6 +20,10 @@ use deleted_manifest::PathState;
 use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data::BonsaiDerived;
 use derived_data::DeriveError;
+use fastlog::fetch_fastlog_batch_by_unode_id;
+use fastlog::fetch_flattened;
+use fastlog::FastlogParent;
+use fastlog::RootFastlog;
 use futures::future;
 use futures::stream;
 use futures::stream::Stream as NewStream;
@@ -45,11 +49,6 @@ use std::sync::Arc;
 use thiserror::Error;
 use time_ext::DurationExt;
 use unodes::RootUnodeManifestId;
-
-use crate::fastlog_impl::fetch_fastlog_batch_by_unode_id;
-use crate::fastlog_impl::fetch_flattened;
-use crate::mapping::FastlogParent;
-use crate::mapping::RootFastlog;
 
 define_stats! {
     prefix = "mononoke.fastlog";
@@ -174,7 +173,7 @@ impl TraversalOrder {
                     // convert it to full-blown gen num ordering
                     let mut heap = BinaryHeap::new();
                     let cs_and_paths =
-                        Self::convert_cs_ids(&ctx, &changeset_fetcher, cs_and_paths).await?;
+                        Self::convert_cs_ids(ctx, changeset_fetcher, cs_and_paths).await?;
                     heap.extend(cs_and_paths);
                     Some(TraversalOrder::GenNumOrder {
                         heap,
@@ -191,7 +190,7 @@ impl TraversalOrder {
                 ..
             } => {
                 let cs_and_paths =
-                    Self::convert_cs_ids(&ctx, &changeset_fetcher, cs_and_paths).await?;
+                    Self::convert_cs_ids(ctx, changeset_fetcher, cs_and_paths).await?;
                 heap.extend(cs_and_paths);
                 None
             }
@@ -303,7 +302,7 @@ async fn resolve_path_state(
 /// ```
 pub async fn list_file_history(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: &BlobRepo,
     path: Option<MPath>,
     changeset_id: ChangesetId,
     mut visitor: impl Visitor,
@@ -311,10 +310,10 @@ pub async fn list_file_history(
     follow_mutable_renames: FollowMutableFileHistory,
     mutable_renames: Arc<MutableRenames>,
     mut order: TraversalOrder,
-) -> Result<impl NewStream<Item = Result<ChangesetId, Error>>, FastlogError> {
+) -> Result<impl NewStream<Item = Result<ChangesetId, Error>> + '_, FastlogError> {
     let path = Arc::new(path);
     // get unode entry
-    let resolved = resolve_path_state(&ctx, &repo, changeset_id, &path).await?;
+    let resolved = resolve_path_state(&ctx, repo, changeset_id, &path).await?;
 
     let mut visited = HashSet::new();
     let mut history_graph = HashMap::new();
@@ -325,12 +324,12 @@ pub async fn list_file_history(
     let last_changesets = match resolved {
         Some(PathState::Deleted(deletion_nodes)) => {
             // we want to show commit, where path was deleted
-            process_deletion_nodes(&ctx, &repo, &mut history_graph, deletion_nodes, path).await?
+            process_deletion_nodes(&ctx, repo, &mut history_graph, deletion_nodes, path).await?
         }
         Some(PathState::Exists(unode_entry)) => {
             fetch_linknodes_and_update_graph(
                 &ctx,
-                &repo,
+                repo,
                 vec![unode_entry],
                 &mut history_graph,
                 path,
@@ -342,7 +341,7 @@ pub async fn list_file_history(
 
     visit(
         &ctx,
-        &repo,
+        repo,
         &mut visitor,
         None,
         last_changesets.clone(),
@@ -468,7 +467,7 @@ async fn process_deletion_nodes(
     }
 
     let last_linknodes =
-        fetch_linknodes_and_update_graph(&ctx, &repo, last_unodes, history_graph, path.clone())
+        fetch_linknodes_and_update_graph(ctx, repo, last_unodes, history_graph, path.clone())
             .await?;
     let mut deleted_to_last_mapping: Vec<_> = deleted_linknodes
         .iter()
@@ -711,15 +710,14 @@ async fn try_continue_traversal_when_no_parents(
     mutable_renames: &MutableRenames,
 ) -> Result<Vec<CsAndPath>, FastlogError> {
     if history_across_deletions == HistoryAcrossDeletions::Track {
-        let (stats, deletion_nodes) = find_where_file_was_deleted(&ctx, &repo, cs_id, &path)
+        let (stats, deletion_nodes) = find_where_file_was_deleted(ctx, repo, cs_id, &path)
             .timed()
             .await;
         STATS::find_where_file_was_deleted_ms
             .add_value(stats.completion_time.as_millis_unchecked() as i64);
         let deletion_nodes = deletion_nodes?;
         let deleted_nodes =
-            process_deletion_nodes(&ctx, &repo, history_graph, deletion_nodes, path.clone())
-                .await?;
+            process_deletion_nodes(ctx, repo, history_graph, deletion_nodes, path.clone()).await?;
         if !deleted_nodes.is_empty() {
             return Ok(deleted_nodes);
         }
@@ -879,9 +877,9 @@ async fn prefetch_fastlog_by_changeset(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::mapping::RootFastlog;
     use changesets::ChangesetsRef;
     use context::CoreContext;
+    use fastlog::RootFastlog;
     use fbinit::FacebookInit;
     use futures::future::FutureExt;
     use futures::future::TryFutureExt;
@@ -1172,7 +1170,7 @@ mod test {
         }
         let history = list_file_history(
             ctx,
-            repo,
+            &repo,
             filepath,
             top,
             SingleBranchOfHistoryVisitor {},
@@ -1771,7 +1769,7 @@ mod test {
 
         let history_stream = list_file_history(
             ctx.clone(),
-            repo.clone(),
+            &repo,
             MPath::new_opt(filename)?,
             merge,
             (),
@@ -1787,7 +1785,7 @@ mod test {
 
         let history_stream = list_file_history(
             ctx.clone(),
-            repo.clone(),
+            &repo,
             MPath::new_opt(filename)?,
             merge,
             (),
@@ -1855,7 +1853,7 @@ mod test {
 
         let history_stream = list_file_history(
             ctx.clone(),
-            repo.clone(),
+            &repo,
             MPath::new_opt(filename)?,
             bcs_id,
             (),
@@ -2011,7 +2009,7 @@ mod test {
     ) -> Result<(), Error> {
         let history = list_file_history(
             ctx.clone(),
-            repo.clone(),
+            &repo,
             path.clone(),
             changeset_id,
             visitor.clone(),
@@ -2027,7 +2025,7 @@ mod test {
         // Now try with gen num order
         let history = list_file_history(
             ctx.clone(),
-            repo.clone(),
+            &repo,
             path,
             changeset_id,
             visitor,

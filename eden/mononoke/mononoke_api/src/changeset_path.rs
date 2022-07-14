@@ -23,13 +23,6 @@ use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::RootDeletedManifestIdCommon;
 use derived_data::BonsaiDerived;
-use fastlog::list_file_history;
-use fastlog::CsAndPath;
-use fastlog::FastlogError;
-use fastlog::FollowMutableFileHistory;
-use fastlog::HistoryAcrossDeletions;
-use fastlog::TraversalOrder;
-use fastlog::Visitor;
 use filestore::FetchKey;
 use futures::future::try_join_all;
 use futures::future::TryFutureExt;
@@ -38,6 +31,13 @@ use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures_lazy_shared::LazyShared;
 use history_traversal;
+use history_traversal::list_file_history;
+use history_traversal::CsAndPath;
+use history_traversal::FastlogError;
+use history_traversal::FollowMutableFileHistory;
+use history_traversal::HistoryAcrossDeletions;
+use history_traversal::TraversalOrder;
+use history_traversal::Visitor;
 use manifest::Entry;
 use manifest::ManifestOps;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
@@ -707,7 +707,7 @@ impl ChangesetPathHistoryContext {
 
         let history = list_file_history(
             ctx,
-            repo,
+            self.repo().blob_repo(),
             mpath.cloned(),
             self.changeset.id(),
             FilterVisitor {

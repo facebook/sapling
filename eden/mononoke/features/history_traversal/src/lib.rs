@@ -14,9 +14,18 @@
 
 mod blame;
 mod common;
+mod log;
 
 pub use crate::blame::blame;
 pub use crate::blame::blame_with_content;
+pub use log::list_file_history;
+pub use log::CsAndPath;
+pub use log::FastlogError;
+pub use log::FollowMutableFileHistory;
+pub use log::HistoryAcrossDeletions;
+pub use log::NextChangeset;
+pub use log::TraversalOrder;
+pub use log::Visitor;
 
 use blobrepo::AsBlobRepo;
 use changeset_fetcher::ChangesetFetcherArc;

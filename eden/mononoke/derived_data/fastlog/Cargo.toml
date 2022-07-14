@@ -13,36 +13,25 @@ path = "lib.rs"
 [dependencies]
 anyhow = "1.0.56"
 async-trait = "0.1.56"
-blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
-changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
-deleted_manifest = { version = "0.1.0", path = "../deleted_manifest" }
 derived_data = { version = "0.1.0", path = ".." }
 derived_data_manager = { version = "0.1.0", path = "../manager" }
 derived_data_service_if = { version = "0.1.0", path = "../remote/if" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-futures-util = "0.3.7"
-futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-itertools = "0.10.3"
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
-mutable_renames = { version = "0.1.0", path = "../../mutable_renames" }
-stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.30"
-time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
-tunables = { version = "0.1.0", path = "../../tunables" }
 unodes = { version = "0.1.0", path = "../unodes" }
 
 [dev-dependencies]
+blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-changesets = { version = "0.1.0", path = "../../changesets" }
-facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
@@ -55,5 +44,3 @@ rand_xorshift = "0.3"
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 revset = { version = "0.1.0", path = "../../revset" }
 simulated_repo = { version = "0.1.0", path = "../../benchmarks/simulated_repo" }
-test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
-tests_utils = { version = "0.1.0", path = "../../tests/utils" }

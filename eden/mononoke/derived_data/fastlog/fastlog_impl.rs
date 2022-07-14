@@ -201,7 +201,7 @@ pub fn unode_entry_to_fastlog_batch_key(
     format!("fastlogbatch.{}", key_part)
 }
 
-pub(crate) async fn fetch_flattened<B: Blobstore>(
+pub async fn fetch_flattened<B: Blobstore>(
     batch: &FastlogBatch,
     ctx: &CoreContext,
     blobstore: &B,
