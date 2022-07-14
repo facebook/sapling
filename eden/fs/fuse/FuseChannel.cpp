@@ -664,22 +664,12 @@ FuseChannel::InvalidationEntry::~InvalidationEntry() {
               << static_cast<uint64_t>(type);
 }
 
-FuseChannel::InvalidationEntry::InvalidationEntry(
-    InvalidationEntry&& other) noexcept
+FuseChannel::InvalidationEntry::
+    InvalidationEntry(InvalidationEntry&& other) noexcept(
+        std::is_nothrow_move_constructible_v<PathComponent>&&
+            std::is_nothrow_move_constructible_v<folly::Promise<folly::Unit>>&&
+                std::is_nothrow_move_constructible_v<DataRange>)
     : type(other.type), inode(other.inode) {
-  // For simplicity we just declare the InvalidationEntry move constructor as
-  // unconditionally noexcept in FuseChannel.h
-  // Assert that this is actually true.
-  static_assert(
-      std::is_nothrow_move_constructible<PathComponent>::value,
-      "All members should be nothrow move constructible");
-  static_assert(
-      std::is_nothrow_move_constructible<Promise<Unit>>::value,
-      "All members should be nothrow move constructible");
-  static_assert(
-      std::is_nothrow_move_constructible<DataRange>::value,
-      "All members should be nothrow move constructible");
-
   switch (type) {
     case InvalidationType::INODE:
       new (&range) DataRange(std::move(other.range));

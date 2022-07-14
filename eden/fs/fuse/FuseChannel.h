@@ -525,7 +525,10 @@ class FuseChannel {
     InvalidationEntry(InodeNumber inode, int64_t offset, int64_t length);
     InvalidationEntry(InodeNumber inode, PathComponentPiece name);
     explicit InvalidationEntry(folly::Promise<folly::Unit> promise);
-    InvalidationEntry(InvalidationEntry&& other) noexcept;
+    InvalidationEntry(InvalidationEntry&& other) noexcept(
+        std::is_nothrow_move_constructible_v<PathComponent>&&
+            std::is_nothrow_move_constructible_v<folly::Promise<folly::Unit>>&&
+                std::is_nothrow_move_constructible_v<DataRange>);
     ~InvalidationEntry();
 
     InvalidationType type;
