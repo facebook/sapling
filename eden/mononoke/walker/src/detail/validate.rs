@@ -296,7 +296,7 @@ fn check_bonsai_phase_is_public(
                         _ => {}
                     }
                 }
-                return None;
+                None
             });
             CheckStatus::Fail(ValidateInfo::new(
                 route.map(|r| r.src_node.clone()),
@@ -332,7 +332,7 @@ fn check_linknode_populated(
                     _ => {}
                 }
             }
-            return None;
+            None
         });
         CheckStatus::Fail(ValidateInfo::new(
             route.map(|r| r.src_node.clone()),
@@ -549,7 +549,7 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ValidateRoute>
 
         // Call inner after checks. otherwise it will prune outgoing edges we wanted to check.
         let ((node, _opt_data, opt_stats), _, outgoing) = self.inner.visit(
-            &ctx,
+            ctx,
             resolved,
             node_data,
             route.as_ref().map(|_| EmptyRoute {}),
@@ -699,10 +699,8 @@ fn scuba_log_node(
         .add(key_key, n.stats_key());
     if let Some(path) = n.stats_path() {
         scuba.add(path_key, MPath::display_opt(path.as_ref()).to_string());
-    } else {
-        if let Some(path) = n_path {
-            scuba.add(path_key, MPath::display_opt(path.as_ref()).to_string());
-        }
+    } else if let Some(path) = n_path {
+        scuba.add(path_key, MPath::display_opt(path.as_ref()).to_string());
     }
 }
 

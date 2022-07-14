@@ -79,19 +79,11 @@ pub async fn set(ctx: &CoreContext, repo: &Repo, set_args: BookmarksSetArgs) -> 
         Some(old_value) => {
             println!(
                 "Updating {} bookmark {} from {} to {}",
-                kind.to_string(),
-                set_args.name,
-                old_value,
-                target
+                kind, set_args.name, old_value, target
             );
         }
         None => {
-            println!(
-                "Creating {} bookmark {} at {}",
-                kind.to_string(),
-                set_args.name,
-                target
-            );
+            println!("Creating {} bookmark {} at {}", kind, set_args.name, target);
         }
     }
 

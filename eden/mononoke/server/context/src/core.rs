@@ -103,7 +103,7 @@ impl CoreContext {
     }
 
     pub fn logger(&self) -> &Logger {
-        &self.logging.logger()
+        self.logging.logger()
     }
 
     pub fn sampling_key(&self) -> Option<&SamplingKey> {
@@ -111,15 +111,15 @@ impl CoreContext {
     }
 
     pub fn scuba(&self) -> &MononokeScubaSampleBuilder {
-        &self.logging.scuba()
+        self.logging.scuba()
     }
 
     pub fn perf_counters(&self) -> &PerfCountersStack {
-        &self.logging.perf_counters()
+        self.logging.perf_counters()
     }
 
     pub fn metadata(&self) -> &Metadata {
-        &self.session.metadata()
+        self.session.metadata()
     }
 
     pub fn session(&self) -> &SessionContainer {

@@ -81,14 +81,14 @@ async fn create_bonsai_changeset_from_test_data(
     let date: Vec<_> = commit_metadata
         .get("author_date")
         .unwrap()
-        .split(" ")
+        .split(' ')
         .map(|s| s.parse::<i64>().unwrap())
         .collect();
 
     let parents = commit_metadata
         .get("parents")
         .unwrap()
-        .split(" ")
+        .split(' ')
         .filter(|s| !s.is_empty())
         .map(|s| HgChangesetId::from_str(s).unwrap())
         .map(|p| {
@@ -1571,7 +1571,7 @@ pub async fn save_diamond_commits(
     let fourth_bcs_id = fourth_bcs.get_changeset_id();
 
     changesets_creation::save_changesets(
-        &ctx,
+        ctx,
         repo,
         vec![first_bcs, second_bcs, third_bcs, fourth_bcs],
     )

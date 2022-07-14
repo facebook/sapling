@@ -280,14 +280,13 @@ impl ProgressStateCountByType<StepStats, ProgressSummary> {
             self.reporting_stats.last_update = now;
         }
 
-        let (delta_s, delta_summary_per_s) = delta_time
-            .map(|delta_time| {
+        let (delta_s, delta_summary_per_s) =
+            delta_time.map_or((0, ProgressSummary::default()), |delta_time| {
                 (
                     delta_time.as_secs(),
                     delta_summary * 1000 / (delta_time.as_millis() as u64),
                 )
-            })
-            .unwrap_or((0, ProgressSummary::default()));
+            });
 
         let total_time = self
             .reporting_stats
@@ -462,7 +461,7 @@ where
     s.map({
         let progress_state = progress_state.clone();
         move |r| {
-            r.and_then(|(key, payload, stats_opt)| {
+            r.map(|(key, payload, stats_opt)| {
                 {
                     let k: &K = &key;
                     let n: &Node = k.into();
@@ -471,7 +470,7 @@ where
                         progress_state.report_throttled();
                     }
                 }
-                Ok((key, payload, stats_opt))
+                (key, payload, stats_opt)
             })
         }
     })
@@ -483,7 +482,7 @@ where
     InStream: Stream<Item = Result<(Node, Option<ND>, Option<SS>), Error>> + 'static + Send,
 {
     let (seen, loaded) = s
-        .try_fold((0 as usize, 0 as usize), {
+        .try_fold((0_usize, 0_usize), {
             async move |(mut seen, mut loaded), (_n, nd, _ss)| {
                 seen += 1;
                 if nd.is_some() {

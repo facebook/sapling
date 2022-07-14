@@ -159,7 +159,7 @@ impl FromStr for AliasKey {
 
 pub fn parse_node(s: &str) -> Result<Node, Error> {
     let parts: Vec<_> = s.split(NODE_SEP).collect();
-    if parts.len() < 1 {
+    if parts.is_empty() {
         return Err(format_err!("parse_node requires at least NodeType"));
     }
     let node_type = NodeType::from_str(parts[0])?;

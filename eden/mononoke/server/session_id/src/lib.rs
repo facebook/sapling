@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use rand;
 use rand::distributions::Alphanumeric;
 use rand::thread_rng;
 use rand::Rng;

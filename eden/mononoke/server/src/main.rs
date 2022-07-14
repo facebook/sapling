@@ -179,7 +179,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     cmdlib::helpers::serve_forever(
         runtime,
         repo_listeners,
-        &root_log,
+        root_log,
         move || will_exit.store(true, Ordering::Relaxed),
         args.shutdown_timeout_args.shutdown_grace_period,
         async {
@@ -187,7 +187,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 Err(err) => error!(root_log, "could not send termination signal: {:?}", err),
                 _ => {}
             }
-            repo_listener::wait_for_connections_closed(&root_log).await;
+            repo_listener::wait_for_connections_closed(root_log).await;
         },
         args.shutdown_timeout_args.shutdown_timeout,
     )

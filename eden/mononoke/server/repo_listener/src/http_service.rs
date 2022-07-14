@@ -426,7 +426,7 @@ where
             let res = this
                 .handle(req)
                 .await
-                .and_then(|mut res| {
+                .map(|mut res| {
                     match HeaderValue::from_str(this.conn.pending.acceptor.server_hostname.as_str())
                     {
                         Ok(header) => {
@@ -441,7 +441,7 @@ where
                             );
                         }
                     };
-                    Ok(res)
+                    res
                 })
                 .or_else(|e| {
                     let res = e.http_response();
@@ -529,7 +529,7 @@ mod h2m {
         let client_info: Option<ClientInfo> = headers
             .get(CLIENT_INFO_HEADER)
             .and_then(|h| h.to_str().ok())
-            .and_then(|ci| serde_json::from_str(&ci).ok());
+            .and_then(|ci| serde_json::from_str(ci).ok());
 
         if let Some(client_info) = client_info {
             metadata.add_client_info(client_info);

@@ -22,7 +22,6 @@ use changesets::Changesets;
 use changesets::ChangesetsRef;
 use changesets_creation::save_changesets;
 use context::CoreContext;
-use filestore;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
 use filestore::FilestoreConfigRef;

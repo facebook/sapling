@@ -752,7 +752,7 @@ async fn evolve_filenode_flag<'a, V: 'a + VisitOne>(
         // We only want to walk to Hg step if filenode is present
         filenode_known_derived = match derived_filenode {
             Some(v) => v,
-            None => FilenodesOnlyPublic::is_derived(&ctx, &repo, &bcs_id)
+            None => FilenodesOnlyPublic::is_derived(ctx, repo, &bcs_id)
                 .await
                 .map_err(Error::from)?,
         };
@@ -856,7 +856,7 @@ async fn hg_changeset_via_bonsai_step<'a, V: VisitOne>(
     input_key: ChangesetKey<HgChangesetId>,
     enable_derive: bool,
 ) -> Result<StepOutput, StepError> {
-    let bcs_id = checker.get_bonsai_from_hg(&ctx, &input_key.inner).await?;
+    let bcs_id = checker.get_bonsai_from_hg(ctx, &input_key.inner).await?;
 
     if !checker.in_chunk(&bcs_id) {
         return Ok(StepOutput::Deferred(bcs_id));
@@ -1189,7 +1189,7 @@ async fn is_derived<Derived: BonsaiDerived>(
         let _ = Derived::derive(ctx, repo, bcs_id).await?;
         Ok(true)
     } else {
-        Ok(Derived::is_derived(&ctx, &repo, &bcs_id).await?)
+        Ok(Derived::is_derived(ctx, repo, &bcs_id).await?)
     }
 }
 
@@ -1672,7 +1672,7 @@ async fn skeleton_manifest_mapping_step<V: VisitOne>(
 
 /// Expand nodes where check for a type is used as a check for other types.
 /// e.g. to make sure metadata looked up/considered for files.
-pub fn expand_checked_nodes(children: &mut Vec<OutgoingEdge>) -> () {
+pub fn expand_checked_nodes(children: &mut Vec<OutgoingEdge>) {
     let mut extra = vec![];
     for n in children.iter() {
         match n {

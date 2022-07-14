@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::errors::ErrorKind;
 use std::collections::HashMap;
+use std::net::IpAddr;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -33,7 +35,6 @@ use rate_limiting::Metric;
 use rate_limiting::RateLimitEnvironment;
 use repo_client::RepoClient;
 use scribe_ext::Scribe;
-use slog;
 use slog::error;
 use slog::o;
 use slog::Drain;
@@ -44,12 +45,9 @@ use slog_kvfilter::KVFilter;
 use sshrelay::SenderBytesWrite;
 use sshrelay::Stdio;
 use stats::prelude::*;
-use std::mem;
-use std::net::IpAddr;
-use std::sync::Arc;
-use std::sync::Mutex;
 use time_ext::DurationExt;
 
+use crate::errors::ErrorKind;
 use crate::repo_handlers::RepoHandler;
 
 define_stats! {
@@ -115,7 +113,7 @@ pub async fn request_handler(
 
     let rate_limiter = rate_limiter.map(|r| r.get_rate_limiter());
     if let Some(ref rate_limiter) = rate_limiter {
-        if let Err(err) = rate_limiter.check_load_shed(&metadata.identities()) {
+        if let Err(err) = rate_limiter.check_load_shed(metadata.identities()) {
             scuba.log_with_msg("Request rejected due to load shedding", format!("{}", err));
             error!(conn_log, "Request rejected due to load shedding: {}", err; "remote" => "true");
 
@@ -192,7 +190,7 @@ pub async fn request_handler(
 
     let wireproto_calls = {
         let mut wireproto_calls = wireproto_calls.lock().expect("lock poisoned");
-        mem::replace(&mut *wireproto_calls, Vec::new())
+        std::mem::take(&mut *wireproto_calls)
     };
 
     STATS::wireproto_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);

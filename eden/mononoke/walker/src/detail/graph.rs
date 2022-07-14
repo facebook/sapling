@@ -618,7 +618,7 @@ impl WrappedPathHash {
     pub fn as_ref(&self) -> Option<&MPathHash> {
         match self {
             Self::Root => None,
-            Self::NonRoot(mpath_hash) => Some(&mpath_hash),
+            Self::NonRoot(mpath_hash) => Some(mpath_hash),
         }
     }
 }
@@ -763,7 +763,7 @@ static PATH_HASHER_FACTORY: OnceCell<RandomState> = OnceCell::new();
 
 impl From<Option<MPath>> for WrappedPath {
     fn from(mpath: Option<MPath>) -> Self {
-        let hasher_fac = PATH_HASHER_FACTORY.get_or_init(|| RandomState::default());
+        let hasher_fac = PATH_HASHER_FACTORY.get_or_init(RandomState::default);
         match mpath {
             Some(mpath) => WrappedPath::NonRoot(ArcIntern::new(EagerHashMemoizer::new(
                 MPathWithHashMemo::new(mpath),
@@ -975,10 +975,10 @@ impl Node {
             Node::HgBonsaiMapping(_) => None,
             Node::HgChangeset(_) => None,
             Node::HgChangesetViaBonsai(_) => None,
-            Node::HgManifest(PathKey { id: _, path }) => Some(&path),
+            Node::HgManifest(PathKey { id: _, path }) => Some(path),
             Node::HgFileEnvelope(_) => None,
-            Node::HgFileNode(PathKey { id: _, path }) => Some(&path),
-            Node::HgManifestFileNode(PathKey { id: _, path }) => Some(&path),
+            Node::HgFileNode(PathKey { id: _, path }) => Some(path),
+            Node::HgManifestFileNode(PathKey { id: _, path }) => Some(path),
             // Content
             Node::FileContent(_) => None,
             Node::FileContentMetadata(_) => None,

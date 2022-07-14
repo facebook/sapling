@@ -73,7 +73,7 @@ impl fmt::Debug for StatsScrubHandler {
 
 pub fn get_repo_id_from_key(key: &str) -> Result<Option<RepositoryId>, Error> {
     REPO_PREFIX_REGEX
-        .captures(&key)
+        .captures(key)
         .and_then(|m| m.get(1).map(|m| RepositoryId::from_str(m.as_str())))
         .transpose()
 }

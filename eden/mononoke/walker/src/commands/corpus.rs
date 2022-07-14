@@ -179,7 +179,7 @@ async fn setup_corpus(
         CORPUS,
         app,
         repos,
-        &common_args,
+        common_args,
         Some(sampler.clone()), // blobstore sampler
         None,                  // blobstore component sampler
         &logger,

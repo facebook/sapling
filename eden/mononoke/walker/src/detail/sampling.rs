@@ -171,7 +171,7 @@ where
     fn evolve(route: Option<Self>, walk_item: &OutgoingEdge, mtime: Option<&DateTime>) -> Self {
         let existing_path = route.as_ref().and_then(|r| r.path.as_ref());
         let existing_mtime = route.as_ref().and_then(|r| r.mtime.as_ref());
-        let new_path = P::evolve_path(existing_path, &walk_item);
+        let new_path = P::evolve_path(existing_path, walk_item);
 
         // reuse same route if possible
         if new_path == existing_path && (mtime.is_none() || mtime == existing_mtime) {
@@ -248,7 +248,7 @@ where
         step: &OutgoingEdge,
     ) -> Option<CoreContext> {
         if self.options.node_types.contains(&step.target.get_type()) {
-            let repo_path = route.and_then(|r| P::evolve_path(r.path.as_ref(), &step));
+            let repo_path = route.and_then(|r| P::evolve_path(r.path.as_ref(), step));
             if self.sample_path_regex.as_ref().map_or_else(
                 || true,
                 |re| match repo_path {

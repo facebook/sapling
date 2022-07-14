@@ -352,9 +352,9 @@ impl WalkState {
             (Node::PhaseMapping(bcs_id), Some(NodeData::PhaseMapping(Some(Phase::Public)))) => {
                 let id = &self.bcs_ids.interned(bcs_id);
                 // Only retain visit if already public, otherwise it could mutate between walks.
-                self.record(&self.visited_bcs_phase, &id);
+                self.record(&self.visited_bcs_phase, id);
                 // Save some memory, no need to keep an entry in public_not_visited now its in visited_bcs_phase
-                self.public_not_visited.remove(&id);
+                self.public_not_visited.remove(id);
             }
             // Hg
             (Node::BonsaiHgMapping(k), Some(_)) => {
@@ -609,7 +609,7 @@ impl WalkState {
             }
             (Node::DeletedManifestV2(_), true) => true,
             (Node::DeletedManifestV2(id), false) => {
-                self.record(&self.visited_deleted_manifest_v2, &id)
+                self.record(&self.visited_deleted_manifest_v2, id)
             }
             (Node::DeletedManifestV2Mapping(bcs_id), _) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
@@ -619,7 +619,7 @@ impl WalkState {
                 }
             }
             (Node::FastlogBatch(_), true) => true,
-            (Node::FastlogBatch(k), false) => self.record(&self.visited_fastlog_batch, &k),
+            (Node::FastlogBatch(k), false) => self.record(&self.visited_fastlog_batch, k),
             (Node::FastlogDir(_), true) => true,
             (Node::FastlogDir(k), false) => self.record(
                 &self.visited_fastlog_dir,
@@ -631,7 +631,7 @@ impl WalkState {
                 &self.unode_file_ids.interned(&k.inner),
             ),
             (Node::Fsnode(_), true) => true,
-            (Node::Fsnode(id), false) => self.record(&self.visited_fsnode, &id),
+            (Node::Fsnode(id), false) => self.record(&self.visited_fsnode, id),
             (Node::FsnodeMapping(bcs_id), _) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_fsnode_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
@@ -640,9 +640,7 @@ impl WalkState {
                 }
             }
             (Node::SkeletonManifest(_), true) => true,
-            (Node::SkeletonManifest(id), false) => {
-                self.record(&self.visited_skeleton_manifest, &id)
-            }
+            (Node::SkeletonManifest(id), false) => self.record(&self.visited_skeleton_manifest, id),
             (Node::SkeletonManifestMapping(bcs_id), _) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_skeleton_manifest_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
@@ -814,7 +812,7 @@ impl TailingWalkVisitor for WalkState {
         // Reset self.chunk_bcs
         let mut chunk_interned = HashSet::new();
         for bcs_id in new_chunk_bcs {
-            let i = self.bcs_ids.interned(&bcs_id);
+            let i = self.bcs_ids.interned(bcs_id);
             chunk_interned.insert(i);
             self.chunk_bcs.insert(i, ());
         }
@@ -823,7 +821,7 @@ impl TailingWalkVisitor for WalkState {
         // Check for items that were outside the chunk now being inside
         let mut in_new_chunk = HashSet::new();
         for e in self.deferred_bcs.iter() {
-            if !chunk_interned.contains(&e.key()) {
+            if !chunk_interned.contains(e.key()) {
                 continue;
             }
             in_new_chunk.extend(e.value().iter().cloned());
@@ -855,8 +853,7 @@ impl TailingWalkVisitor for WalkState {
             let summary: HashMap<EdgeType, usize> = self
                 .deferred_bcs
                 .iter()
-                .map(|e| e.value().clone())
-                .flatten()
+                .flat_map(|e| e.value().clone())
                 .group_by(|e| e.label)
                 .into_iter()
                 .map(|(key, group)| (key, group.count()))
@@ -913,7 +910,7 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
         if route.is_none() // is it a root
             || step.label.incoming_type().is_none() // is it from a root?
             || self.always_emit_edge_types.contains(&step.label) // always emit?
-            || self.needs_visit_impl(&step, true)
+            || self.needs_visit_impl(step, true)
         {
             Some(ctx)
         } else {
@@ -942,12 +939,12 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
             outgoing.retain(|e| {
                 if e.label.incoming_type().is_none() {
                     // Make sure stats are updated for root nodes
-                    self.needs_visit(&e);
+                    self.needs_visit(e);
                     true
                 } else {
                     // Check the always emit edges, outer visitor has now processed them.
                     self.retain_edge(e)
-                        && (!self.always_emit_edge_types.contains(&e.label) || self.needs_visit(&e))
+                        && (!self.always_emit_edge_types.contains(&e.label) || self.needs_visit(e))
                 }
             });
         }
@@ -1002,7 +999,7 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
         let node_data = match self.chunk_direction {
             Some(Direction::NewestFirst) => {
                 let i = self.bcs_ids.interned(bcs_id);
-                self.record_multi(&self.deferred_bcs, i, &walk_item);
+                self.record_multi(&self.deferred_bcs, i, walk_item);
                 None
             }
             // We'll never visit backward looking edges when running OldestFirst, so don't record them.

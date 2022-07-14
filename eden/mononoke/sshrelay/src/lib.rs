@@ -124,12 +124,10 @@ impl Decoder for SshDecoder {
                 0 => Ok(Some(SshMsg(IoStream::Stdin, data.freeze()))),
                 1 => Ok(Some(SshMsg(IoStream::Stdout, data.freeze()))),
                 2 => Ok(Some(SshMsg(IoStream::Stderr, data.freeze()))),
-                _ => {
-                    return Err(io::Error::new(
-                        io::ErrorKind::InvalidInput,
-                        "bad ssh stream",
-                    ));
-                }
+                _ => Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "bad ssh stream",
+                )),
             }
         } else {
             Ok(None)

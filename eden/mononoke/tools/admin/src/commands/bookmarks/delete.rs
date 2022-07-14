@@ -76,9 +76,7 @@ pub async fn delete(
 
     println!(
         "Deleting {} bookmark {} at {}",
-        kind.to_string(),
-        delete_args.name,
-        old_value,
+        kind, delete_args.name, old_value,
     );
 
     if let Err(e) = check_bookmark_sync_config(repo, &delete_args.name, kind) {

@@ -167,7 +167,7 @@ async fn setup_validate(
         VALIDATE,
         app,
         repos,
-        &common_args,
+        common_args,
         None, // blobstore sampler
         None, // blobstore component sampler
         &logger,
