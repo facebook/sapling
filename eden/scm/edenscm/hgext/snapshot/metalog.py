@@ -3,12 +3,13 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from edenscm.mercurial import error
+from edenscm.mercurial import error, perftrace
 
 LATESTBUBBLE = "latestbubble"
 LATESTSNAPSHOT = "latestsnapshot"
 
 
+@perftrace.tracefunc("Fetch latest bubble")
 def fetchlatestbubble(ml):
     data = ml.get(LATESTBUBBLE)
     if data is not None:
@@ -18,11 +19,14 @@ def fetchlatestbubble(ml):
             return None
 
 
+@perftrace.tracefunc("Fetch latest snapshot")
 def fetchlatestsnapshot(ml):
     return ml.get(LATESTSNAPSHOT)
 
 
-def storelatest(ml, snapshot, bubble):
+@perftrace.tracefunc("Snapshot metalog store")
+def storelatest(repo, snapshot, bubble):
+    ml = repo.metalog()
     try:
         if snapshot is not None:
             ml.set(LATESTSNAPSHOT, snapshot)

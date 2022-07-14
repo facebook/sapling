@@ -6,7 +6,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from edenscm.mercurial import error
+from edenscm.mercurial import error, perftrace, util
 from edenscm.mercurial.edenapi_upload import filetypefromfile, uploadhgchangesets
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import nullid
@@ -15,6 +15,7 @@ from edenscm.mercurial.revset import parseage
 from .metalog import fetchlatestbubble, storelatest
 
 
+@util.timefunction("snapshot_backup_parents", 0, "ui")
 def _backupparents(repo, wctx):
     """make sure this commit's ancestors are backed up in commitcloud"""
     parents = (wctx.p1().node(), wctx.p2().node())
@@ -72,6 +73,7 @@ class workingcopy(object):
         return self.untracked + self.removed + self.modified + self.added + self.missing
 
     @staticmethod
+    @perftrace.tracefunc("Create working copy")
     def fromrepo(repo, maxuntrackedsize):
         wctx = repo[None]
 
@@ -111,6 +113,31 @@ class workingcopy(object):
         )
 
 
+@util.timefunction("snapshot_upload", 0, "ui")
+def uploadsnapshot(
+    repo, wctx, wc, time, tz, hgparents, lifetime, previousbubble, reusestorage
+):
+    return repo.edenapi.uploadsnapshot(
+        {
+            "files": {
+                "root": repo.root,
+                "modified": [(f, filetypefromfile(wctx[f])) for f in wc.modified],
+                "added": [(f, filetypefromfile(wctx[f])) for f in wc.added],
+                "untracked": [(f, filetypefromfile(wctx[f])) for f in wc.untracked],
+                "removed": wc.removed,
+                "missing": wc.missing,
+            },
+            "author": wctx.user(),
+            "time": int(time),
+            "tz": tz,
+            "hg_parents": hgparents,
+        },
+        lifetime,
+        previousbubble,
+        previousbubble if reusestorage else None,
+    )
+
+
 def createremote(ui, repo, **opts):
     lifetime = _parselifetime(opts)
     maxuntrackedsize = parsemaxuntracked(opts)
@@ -130,30 +157,14 @@ def createremote(ui, repo, **opts):
         wc = workingcopy.fromrepo(repo, maxuntrackedsize)
         previousbubble = fetchlatestbubble(repo.metalog())
 
-        response = repo.edenapi.uploadsnapshot(
-            {
-                "files": {
-                    "root": repo.root,
-                    "modified": [(f, filetypefromfile(wctx[f])) for f in wc.modified],
-                    "added": [(f, filetypefromfile(wctx[f])) for f in wc.added],
-                    "untracked": [(f, filetypefromfile(wctx[f])) for f in wc.untracked],
-                    "removed": wc.removed,
-                    "missing": wc.missing,
-                },
-                "author": wctx.user(),
-                "time": int(time),
-                "tz": tz,
-                "hg_parents": hgparents,
-            },
-            lifetime,
-            previousbubble,
-            previousbubble if reusestorage else None,
+        response = uploadsnapshot(
+            repo, wctx, wc, time, tz, hgparents, lifetime, previousbubble, reusestorage
         )
 
     csid = bytes(response["changeset_token"]["data"]["id"]["BonsaiChangesetId"])
     bubble = response["bubble_id"]
 
-    storelatest(repo.metalog(), csid, bubble)
+    storelatest(repo, csid, bubble)
     csid = csid.hex()
 
     if ui.plain():
