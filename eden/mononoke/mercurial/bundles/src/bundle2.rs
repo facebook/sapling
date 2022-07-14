@@ -222,7 +222,7 @@ impl Bundle2StreamInner {
                             Err(e) => {
                                 // Can't do much if reading stream level params
                                 // failed -- go to the invalid state.
-                                (Err(e.into()), CurrentStream::Invalid)
+                                (Err(e), CurrentStream::Invalid)
                             }
                             Ok(v) => {
                                 let outer = CurrentStream::Outer(v);

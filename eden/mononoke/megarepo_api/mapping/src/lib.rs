@@ -280,13 +280,9 @@ impl MegarepoMapping {
         connection: &Connection,
     ) -> Result<Option<MegarepoMappingEntry>, Error> {
         ctx.perf_counters().increment_counter(sql_perf_counter);
-        let mut rows = GetMappingEntry::query(
-            &connection,
-            &target.repo_id,
-            &target.bookmark,
-            &target_cs_id,
-        )
-        .await?;
+        let mut rows =
+            GetMappingEntry::query(connection, &target.repo_id, &target.bookmark, &target_cs_id)
+                .await?;
 
         if rows.len() > 1 {
             return Err(anyhow!(
@@ -387,7 +383,7 @@ impl MegarepoMapping {
                 &target.bookmark,
                 &source_cs_id,
                 &target_cs_id,
-                &version,
+                version,
             )],
         )
         .await?;
@@ -395,7 +391,7 @@ impl MegarepoMapping {
             // Becase we insert to mapping before moving bookmark (which is fallible)
             // the mapping might be already inserted at that point. If it's the same
             // as what we wanted to insert we can ignore the failure to insert.
-            if let Ok(Some(entry)) = self.get_mapping_entry(&ctx, &target, target_cs_id).await {
+            if let Ok(Some(entry)) = self.get_mapping_entry(ctx, target, target_cs_id).await {
                 if &entry.source_name != source_name
                     || entry.source_cs_id != source_cs_id
                     || &entry.sync_config_version != version

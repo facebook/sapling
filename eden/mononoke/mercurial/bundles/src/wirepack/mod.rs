@@ -480,7 +480,7 @@ mod test {
 
     #[test]
     fn test_data_verify_basic() {
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let tests = vec![
             (NULL_HASH, vec![Fragment { start: 0, end: 0, content: vec![b'a'] }], true),
             (NULL_HASH, vec![Fragment { start: 0, end: 5, content: vec![b'b'] }], false),

@@ -303,19 +303,17 @@ pub fn diff_sorted_vecs(
                 } else if to_path > from_path {
                     res.push(ChangedEntry::new_deleted(path.clone(), from_entry));
                     to.push_front(to_entry);
-                } else {
-                    if to_entry.get_type().is_tree() == from_entry.get_type().is_tree() {
-                        if to_entry.get_hash() != from_entry.get_hash() {
-                            res.push(ChangedEntry::new_modified(
-                                path.clone(),
-                                to_entry,
-                                from_entry,
-                            ));
-                        }
-                    } else {
-                        res.push(ChangedEntry::new_added(path.clone(), to_entry));
-                        res.push(ChangedEntry::new_deleted(path.clone(), from_entry));
+                } else if to_entry.get_type().is_tree() == from_entry.get_type().is_tree() {
+                    if to_entry.get_hash() != from_entry.get_hash() {
+                        res.push(ChangedEntry::new_modified(
+                            path.clone(),
+                            to_entry,
+                            from_entry,
+                        ));
                     }
+                } else {
+                    res.push(ChangedEntry::new_added(path.clone(), to_entry));
+                    res.push(ChangedEntry::new_deleted(path.clone(), from_entry));
                 }
             }
 

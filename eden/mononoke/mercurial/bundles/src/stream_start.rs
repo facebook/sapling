@@ -91,7 +91,7 @@ fn decode_stream_params(
             ErrorKind::Bundle2Decode("stream level val is invalid UTF-8".into())
         })?;
         if is_mandatory_param(&key_str)
-            .with_context(|| ErrorKind::Bundle2Decode(format!("stream key is invalid")))?
+            .with_context(|| ErrorKind::Bundle2Decode("stream key is invalid".to_string()))?
         {
             m_stream_params.insert(key_str.to_lowercase(), val_str.into_owned());
         } else {

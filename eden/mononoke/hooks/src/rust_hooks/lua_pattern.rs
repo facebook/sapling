@@ -80,14 +80,14 @@ fn pattern_to_regex(other: &str) -> String {
     let mut state = ParseState::Normal;
 
     fn flush_acc(acc: &mut String, output: &mut Vec<TranslationOutput>) {
-        let acc = std::mem::replace(acc, String::new());
+        let acc = std::mem::take(acc);
         if !acc.is_empty() {
             output.push(TranslationOutput::Literal(acc));
         }
     }
 
     fn flush_class(acc: &mut String, output: &mut Vec<TranslationOutput>) {
-        let acc = std::mem::replace(acc, String::new());
+        let acc = std::mem::take(acc);
         output.push(TranslationOutput::CharClass(acc));
     }
 

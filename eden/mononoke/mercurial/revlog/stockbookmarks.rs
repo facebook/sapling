@@ -108,10 +108,7 @@ impl StockBookmarks {
     }
 
     pub fn get(&self, name: &dyn AsRef<[u8]>) -> BoxFuture<Option<HgChangesetId>, Error> {
-        let value = match self.bookmarks.get(name.as_ref()) {
-            Some(hash) => Some(*hash),
-            None => None,
-        };
+        let value = self.bookmarks.get(name.as_ref()).copied();
         Box::new(future::result(Ok(value)))
     }
 

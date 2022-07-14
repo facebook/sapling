@@ -221,7 +221,7 @@ pub fn create_bundle_stream<C: Into<Option<async_compression::CompressorType>>>(
     );
 
     receiver
-        .map(|bytes| Ok(bytes))
+        .map(Ok)
         .chain(result_receiver.into_stream().map_err(|_err| ()))
         .then(|entry| match entry {
             Ok(res) => res,

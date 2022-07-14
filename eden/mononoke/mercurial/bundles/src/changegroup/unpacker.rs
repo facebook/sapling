@@ -303,7 +303,7 @@ impl CgUnpacker {
 
         let delta = delta::decode_delta(buf.split_to(chunk_len - Self::chunk_header_len(version)))?;
 
-        return Ok(Some(CgChunk::Delta(CgDeltaChunk {
+        Ok(Some(CgChunk::Delta(CgDeltaChunk {
             node,
             p1,
             p2,
@@ -311,7 +311,7 @@ impl CgUnpacker {
             linknode,
             delta,
             flags,
-        })));
+        })))
     }
 
     fn decode_filename(buf: &mut BytesMut) -> Result<DecodeRes<MPath>> {

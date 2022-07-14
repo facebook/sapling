@@ -90,14 +90,7 @@ where
     LFut: Future<Output = Result<(Ctx, IntermediateLeafId), Error>> + Send + 'static,
     Ctx: Send + 'static,
 {
-    derive_manifest_inner(
-        ctx.clone(),
-        store,
-        parents,
-        changes,
-        create_tree,
-        create_leaf,
-    )
+    derive_manifest_inner(ctx, store, parents, changes, create_tree, create_leaf)
 }
 
 /// Construct a new manifest from parent manifests and a list of changes from a bonsai commit.
@@ -329,7 +322,7 @@ where
     let (sender, receiver) = mpsc::unbounded();
 
     let derive = derive_manifest_inner(
-        ctx.clone(),
+        ctx,
         store,
         parents,
         changes,
@@ -357,7 +350,7 @@ enum Change<LeafId> {
 
 impl<Leaf> From<Option<Leaf>> for Change<Leaf> {
     fn from(change: Option<Leaf>) -> Self {
-        change.map(Change::Add).unwrap_or(Change::Remove)
+        change.map_or(Change::Remove, Change::Add)
     }
 }
 

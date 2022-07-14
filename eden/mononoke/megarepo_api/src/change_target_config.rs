@@ -147,7 +147,7 @@ pub struct ChangeTargetConfig<'a> {
 
 impl<'a> MegarepoOp for ChangeTargetConfig<'a> {
     fn mononoke(&self) -> &Arc<Mononoke> {
-        &self.mononoke
+        self.mononoke
     }
 }
 
@@ -173,13 +173,13 @@ impl<'a> ChangeTargetConfig<'a> {
         changesets_to_merge: BTreeMap<SourceName, ChangesetId>,
         message: Option<String>,
     ) -> Result<ChangesetId, MegarepoError> {
-        let target_repo = self.find_repo_by_id(&ctx, target.repo_id).await?;
+        let target_repo = self.find_repo_by_id(ctx, target.repo_id).await?;
 
         // Find the target config version and remapping state that was used to
         // create the latest target commit. This config version will be used to
         // as a base for comparing with new config.
         let (target_bookmark, actual_target_location) =
-            find_target_bookmark_and_value(&ctx, &target_repo, &target).await?;
+            find_target_bookmark_and_value(ctx, &target_repo, target).await?;
 
         // target doesn't point to the commit we expect - check
         // if this method has already succeded and just immediately return the
@@ -203,11 +203,11 @@ impl<'a> ChangeTargetConfig<'a> {
                 MegarepoError::internal(anyhow!("programming error - target changeset not found!"))
             })?;
         let (old_remapping_state, old_config) = find_target_sync_config(
-            &ctx,
+            ctx,
             target_repo.blob_repo(),
             target_location,
-            &target,
-            &self.megarepo_configs,
+            target,
+            self.megarepo_configs,
         )
         .await?;
 
@@ -238,7 +238,7 @@ impl<'a> ChangeTargetConfig<'a> {
                 &changesets_to_merge,
                 new_config.version.clone(),
                 message.clone(),
-                &self.mutable_renames,
+                self.mutable_renames,
             )
             .await?;
         let additions_merge = if let Some(additions_merge_cs_id) = additions_merge_cs_id {
@@ -264,7 +264,7 @@ impl<'a> ChangeTargetConfig<'a> {
                 &diff.removed,
                 message,
                 &additions_merge,
-                &old_target_cs,
+                old_target_cs,
                 &new_remapping_state,
                 Some(new_config.version),
             )

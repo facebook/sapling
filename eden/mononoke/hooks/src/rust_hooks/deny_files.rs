@@ -63,14 +63,14 @@ impl DenyFilesBuilder {
         Ok(DenyFiles {
             all_push_sources_deny_patterns: self
                 .all_push_sources_deny_patterns
-                .unwrap_or_else(Vec::new)
+                .unwrap_or_default()
                 .into_iter()
                 .map(LuaPattern::try_from)
                 .collect::<Result<Vec<_>, _>>()
                 .context("Failed to create LuaPattern for all_push_sources_deny_patterns")?,
             native_push_only_deny_patterns: self
                 .native_push_only_deny_patterns
-                .unwrap_or_else(Vec::new)
+                .unwrap_or_default()
                 .into_iter()
                 .map(LuaPattern::try_from)
                 .collect::<Result<Vec<_>, _>>()

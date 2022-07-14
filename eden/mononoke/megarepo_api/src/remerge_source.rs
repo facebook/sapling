@@ -32,7 +32,7 @@ pub struct RemergeSource<'a> {
 
 impl<'a> MegarepoOp for RemergeSource<'a> {
     fn mononoke(&self) -> &Arc<Mononoke> {
-        &self.mononoke
+        self.mononoke
     }
 }
 
@@ -58,12 +58,12 @@ impl<'a> RemergeSource<'a> {
         target: &Target,
         target_location: ChangesetId,
     ) -> Result<ChangesetId, MegarepoError> {
-        let target_repo = self.find_repo_by_id(&ctx, target.repo_id).await?;
+        let target_repo = self.find_repo_by_id(ctx, target.repo_id).await?;
 
         // Find the target config version and remapping state that was used to
         // create the latest target commit.
         let (_, actual_target_location) =
-            find_target_bookmark_and_value(&ctx, &target_repo, &target).await?;
+            find_target_bookmark_and_value(ctx, &target_repo, target).await?;
 
         // target doesn't point to the commit we expect - check
         // if this method has already succeded and just immediately return the
@@ -87,24 +87,24 @@ impl<'a> RemergeSource<'a> {
                 MegarepoError::internal(anyhow!("programming error - target changeset not found!"))
             })?;
         let (old_remapping_state, config) = find_target_sync_config(
-            &ctx,
+            ctx,
             target_repo.blob_repo(),
             target_location,
-            &target,
-            &self.megarepo_configs,
+            target,
+            self.megarepo_configs,
         )
         .await?;
 
         let mut new_remapping_state = old_remapping_state.clone();
         new_remapping_state.set_source_changeset(source_name.clone(), remerge_cs_id);
 
-        let source_config = find_source_config(&source_name, &config)?;
+        let source_config = find_source_config(source_name, &config)?;
 
         let moved_commits = self
             .create_move_commits(
                 ctx,
                 target_repo.blob_repo(),
-                &vec![source_config.clone()],
+                &[source_config.clone()],
                 new_remapping_state.get_all_latest_synced_changesets(),
                 self.mutable_renames,
             )
@@ -125,7 +125,7 @@ impl<'a> RemergeSource<'a> {
             })?;
 
         let current_source_cs = old_remapping_state
-            .get_latest_synced_changeset(&source_name)
+            .get_latest_synced_changeset(source_name)
             .ok_or_else(|| {
                 anyhow!(
                     "Source {} does not exist in target {:?}",
@@ -192,6 +192,6 @@ impl<'a> RemergeSource<'a> {
             )));
         }
 
-        return Ok(actual_target_location);
+        Ok(actual_target_location)
     }
 }

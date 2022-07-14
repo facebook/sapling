@@ -225,11 +225,9 @@ impl MegarepoApi {
         let queue = self
             .queue_cache
             .get_or_try_init(&repo_identity.clone(), || async move {
-                let table = self
-                    .requests_table(ctx, &repo_identity, &repo_config)
-                    .await?;
+                let table = self.requests_table(ctx, repo_identity, repo_config).await?;
                 let blobstore = self
-                    .blobstore(ctx, repo_identity.clone(), &repo_config)
+                    .blobstore(ctx, repo_identity.clone(), repo_config)
                     .await?;
                 Ok(AsyncMethodRequestQueue::new(table, blobstore))
             })
@@ -279,7 +277,7 @@ impl MegarepoApi {
         );
         let table = self
             .repo_factory
-            .long_running_requests_queue(&repo_config)
+            .long_running_requests_queue(repo_config)
             .await?;
         info!(
             ctx.logger(),
@@ -346,7 +344,7 @@ impl MegarepoApi {
         );
         let repo_blobstore = self
             .repo_factory
-            .repo_blobstore(&repo_identity, &repo_config)
+            .repo_blobstore(&repo_identity, repo_config)
             .await?;
         let blobstore = repo_blobstore.boxed();
         info!(
@@ -447,7 +445,7 @@ impl MegarepoApi {
 
         let target = sync_target_config.target.clone();
         let version = sync_target_config.version.clone();
-        let fut = add_sync_target.run(&ctx, sync_target_config, changesets_to_merge, message);
+        let fut = add_sync_target.run(ctx, sync_target_config, changesets_to_merge, message);
 
         self.call_and_log(ctx, &target, Some(&version), fut, "add_sync_target")
             .await
@@ -463,11 +461,11 @@ impl MegarepoApi {
         let add_branching_sync_target =
             AddBranchingSyncTarget::new(&self.megarepo_configs, &self.mononoke);
         let sync_target_config = add_branching_sync_target
-            .fork_new_sync_target_config(&ctx, target.clone(), branching_point, source_target)
+            .fork_new_sync_target_config(ctx, target.clone(), branching_point, source_target)
             .await?;
 
         let version = sync_target_config.version.clone();
-        let fut = add_branching_sync_target.run(&ctx, sync_target_config, branching_point);
+        let fut = add_branching_sync_target.run(ctx, sync_target_config, branching_point);
         self.call_and_log(
             ctx,
             &target,
@@ -543,7 +541,7 @@ impl MegarepoApi {
         target: &Target,
         target_location: ChangesetId,
     ) -> Result<ChangesetId, MegarepoError> {
-        let mutable_renames = self.mutable_renames(ctx, &target).await?;
+        let mutable_renames = self.mutable_renames(ctx, target).await?;
         let remerge_source =
             RemergeSource::new(&self.megarepo_configs, &self.mononoke, &mutable_renames);
 
@@ -558,7 +556,7 @@ impl MegarepoApi {
             target_location,
         );
 
-        self.call_and_log(ctx, &target, None, fut, "remerge_source")
+        self.call_and_log(ctx, target, None, fut, "remerge_source")
             .await
     }
 }

@@ -72,13 +72,13 @@ lazy_static! {
 
 pub fn validate_header(header: PartHeader) -> Result<Option<PartHeader>> {
     match KNOWN_PARAMS.get(header.part_type()) {
-        Some(ref known_params) => {
+        Some(known_params) => {
             // Make sure all the mandatory params are recognized.
             let unknown_params: Vec<_> = header
                 .mparams()
                 .keys()
                 .filter(|param| !known_params.contains(param.as_str()))
-                .map(|param| param.clone())
+                .cloned()
                 .collect();
             if !unknown_params.is_empty() {
                 bail!(ErrorKind::BundleUnknownPartParams(

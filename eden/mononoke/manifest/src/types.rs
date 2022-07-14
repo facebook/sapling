@@ -566,11 +566,11 @@ impl<I: Copy, E> Traced<I, E> {
     }
 }
 
-impl<I, TreeId, LeafId> Into<Entry<TreeId, LeafId>>
-    for Entry<Traced<I, TreeId>, Traced<I, LeafId>>
+impl<I, TreeId, LeafId> From<Entry<Traced<I, TreeId>, Traced<I, LeafId>>>
+    for Entry<TreeId, LeafId>
 {
-    fn into(self: Self) -> Entry<TreeId, LeafId> {
-        match self {
+    fn from(entry: Entry<Traced<I, TreeId>, Traced<I, LeafId>>) -> Self {
+        match entry {
             Entry::Tree(Traced(_, t)) => Entry::Tree(t),
             Entry::Leaf(Traced(_, l)) => Entry::Leaf(l),
         }

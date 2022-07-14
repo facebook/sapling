@@ -74,7 +74,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let ctx = session.new_context(logger.clone(), matches.scuba_sample_builder());
 
     let config_store = matches.config_store();
-    let repo_configs = args::load_repo_configs(&config_store, &matches)?;
+    let repo_configs = args::load_repo_configs(config_store, &matches)?;
     let repo_factory = RepoFactory::new(matches.environment().clone(), &repo_configs.common);
     let env = MononokeApiEnvironment {
         repo_factory: repo_factory.clone(),
@@ -108,7 +108,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let will_exit = Arc::new(AtomicBool::new(false));
     let worker = worker::AsyncMethodRequestWorker::new(megarepo, name);
 
-    start_fb303_server(fb, SERVICE_NAME, &logger, &matches, AliveService)?;
+    start_fb303_server(fb, SERVICE_NAME, logger, &matches, AliveService)?;
     serve_forever(
         runtime,
         {
@@ -119,7 +119,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     .await?)
             }
         }(),
-        &logger,
+        logger,
         move || will_exit.store(true, Ordering::Relaxed),
         args::get_shutdown_grace_period(&matches)?,
         async {

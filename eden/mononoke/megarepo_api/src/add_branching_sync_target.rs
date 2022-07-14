@@ -24,7 +24,7 @@ pub struct AddBranchingSyncTarget<'a> {
 
 impl<'a> MegarepoOp for AddBranchingSyncTarget<'a> {
     fn mononoke(&self) -> &Arc<Mononoke> {
-        &self.mononoke
+        self.mononoke
     }
 }
 

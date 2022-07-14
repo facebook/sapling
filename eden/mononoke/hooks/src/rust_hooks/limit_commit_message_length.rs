@@ -94,7 +94,7 @@ fn extract_title<'a>(message: &'a str, max_length: usize) -> &'a str {
     };
 
     message
-        .split("\n")
+        .split('\n')
         .into_iter()
         .next()
         .unwrap_or("".as_ref())

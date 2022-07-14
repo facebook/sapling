@@ -139,8 +139,8 @@ impl AsyncMethodRequestWorker {
                 for (repo_ids, queue) in &queues_with_repos {
                     Self::cleanup_abandoned_requests(
                         &ctx,
-                        &repo_ids,
-                        &queue,
+                        repo_ids,
+                        queue,
                         abandoned_threshold_secs
                     ).await?;
                     if will_exit.load(Ordering::Relaxed) {
@@ -174,7 +174,7 @@ impl AsyncMethodRequestWorker {
         let abandoned_timestamp =
             Timestamp::from_timestamp_secs(now.timestamp_seconds() - abandoned_threshold_secs);
         let requests = queue
-            .find_abandoned_requests(&ctx, repo_ids, abandoned_timestamp)
+            .find_abandoned_requests(ctx, repo_ids, abandoned_timestamp)
             .await?;
         if !requests.is_empty() {
             ctx.scuba().clone().log_with_msg(
@@ -185,7 +185,7 @@ impl AsyncMethodRequestWorker {
 
         for req_id in requests {
             if queue
-                .mark_abandoned_request_as_new(&ctx, req_id.clone(), abandoned_timestamp)
+                .mark_abandoned_request_as_new(ctx, req_id.clone(), abandoned_timestamp)
                 .await?
             {
                 ctx.scuba()
@@ -303,7 +303,7 @@ impl AsyncMethodRequestWorker {
             let mut scuba = ctx.scuba().clone();
             ctx.perf_counters().insert_perf_counters(&mut scuba);
 
-            let res = queue.update_in_progress_timestamp(&ctx, &req_id).await;
+            let res = queue.update_in_progress_timestamp(ctx, req_id).await;
             match res {
                 Ok(res) => {
                     // Weren't able to update inprogress timestamp - that probably means

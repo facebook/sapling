@@ -83,7 +83,7 @@ pub async fn allow_consistent_routing<B: PopularityBuilder>(
 
     let popularity = time::timeout(
         OBJECT_POPULARITY_TIMEOUT,
-        increment_and_fetch_object_popularity(ctx, obj, &config, builder),
+        increment_and_fetch_object_popularity(ctx, obj, config, builder),
     )
     .await;
 

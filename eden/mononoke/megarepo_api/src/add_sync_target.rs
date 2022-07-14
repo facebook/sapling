@@ -51,7 +51,7 @@ pub struct AddSyncTarget<'a> {
 
 impl<'a> MegarepoOp for AddSyncTarget<'a> {
     fn mononoke(&self) -> &Arc<Mononoke> {
-        &self.mononoke
+        self.mononoke
     }
 }
 
@@ -104,7 +104,7 @@ impl<'a> AddSyncTarget<'a> {
                 repo.blob_repo(),
                 &sync_target_config.sources,
                 &changesets_to_merge,
-                &self.mutable_renames,
+                self.mutable_renames,
             )
             .await?;
         scuba.log_with_msg("Created move commits", None);
@@ -189,8 +189,7 @@ impl<'a> AddSyncTarget<'a> {
         repo: &RepoContext,
     ) -> Result<Option<ChangesetId>, MegarepoError> {
         let bookmark_name = &sync_target_config.target.bookmark;
-        let bookmark =
-            BookmarkName::new(bookmark_name.to_string()).map_err(MegarepoError::request)?;
+        let bookmark = BookmarkName::new(bookmark_name).map_err(MegarepoError::request)?;
 
         let maybe_cs_id = repo
             .blob_repo()
@@ -214,7 +213,7 @@ impl<'a> AddSyncTarget<'a> {
         // our config storage
         self.check_if_new_sync_target_config_is_equivalent_to_already_existing(
             ctx,
-            &self.megarepo_configs,
+            self.megarepo_configs,
             sync_target_config,
         )
         .await?;

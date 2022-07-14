@@ -283,15 +283,13 @@ where
                                 FoldState::CreateTrees(path, name, parent, maybe_file_deletion),
                                 deps,
                             ))
+                        } else if path.is_none() && parent.is_none() {
+                            // This is a weird case - we got an empty commit with no parent.
+                            // In that case  we want to create an empty root tree for this commit
+                            Ok((FoldState::CreateTrees(None, None, None, None), vec![]))
                         } else {
-                            if path.is_none() && parent.is_none() {
-                                // This is a weird case - we got an empty commit with no parent.
-                                // In that case  we want to create an empty root tree for this commit
-                                Ok((FoldState::CreateTrees(None, None, None, None), vec![]))
-                            } else {
-                                // No changes, no subentries - just reuse the entry
-                                Ok((FoldState::Reuse(path, name, parent.map(convert_to_intermediate_entry)), vec![]))
-                            }
+                            // No changes, no subentries - just reuse the entry
+                            Ok((FoldState::Reuse(path, name, parent.map(convert_to_intermediate_entry)), vec![]))
                         }
                     }
                     .boxed()
@@ -437,7 +435,7 @@ where
                         // existing parent tree entry as a parent.
                         // This is strange, but it's worth replicating what we have
                         // derive_manifest()
-                        let parent_mf = tree_id.load(&ctx, &store).await?;
+                        let parent_mf = tree_id.load(ctx, &store).await?;
                         let subentries = parent_mf
                             .list()
                             .map(|(path, entry)| {
@@ -608,27 +606,25 @@ where
                 entry_stack
                     .values
                     .push((*cs_id, Some(ctx), Some(Entry::Tree(tree_id))));
+            } else if path.is_none() {
+                // Everything is deleted in the repo - let's create a new root
+                // object
+                let (ctx, tree_id) = create_tree(
+                    TreeInfo {
+                        path: path.clone(),
+                        parents: parent.clone().into_iter().collect(),
+                        subentries: Default::default(),
+                    },
+                    *cs_id,
+                )
+                .await?;
+                parent = Some(tree_id.clone());
+                entry_stack
+                    .values
+                    .push((*cs_id, Some(ctx), Some(Entry::Tree(tree_id))));
             } else {
-                if path.is_none() {
-                    // Everything is deleted in the repo - let's create a new root
-                    // object
-                    let (ctx, tree_id) = create_tree(
-                        TreeInfo {
-                            path: path.clone(),
-                            parents: parent.clone().into_iter().collect(),
-                            subentries: Default::default(),
-                        },
-                        *cs_id,
-                    )
-                    .await?;
-                    parent = Some(tree_id.clone());
-                    entry_stack
-                        .values
-                        .push((*cs_id, Some(ctx), Some(Entry::Tree(tree_id))));
-                } else {
-                    parent = None;
-                    entry_stack.values.push((*cs_id, None, None));
-                }
+                parent = None;
+                entry_stack.values.push((*cs_id, None, None));
             }
         }
 

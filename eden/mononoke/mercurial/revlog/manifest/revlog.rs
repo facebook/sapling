@@ -131,7 +131,7 @@ impl ManifestContent {
     }
 
     pub fn generate<W: Write>(&self, out: &mut W) -> io::Result<()> {
-        for (ref k, ref v) in &self.files {
+        for (k, v) in &self.files {
             k.generate(out)?;
             out.write(&b"\0"[..])?;
             v.generate(out)?;
@@ -231,7 +231,7 @@ impl Details {
 
         let (hash, flags) = data.split_at(40);
         let hash = str::from_utf8(hash)
-            .map_err(|err| Error::from(err))
+            .map_err(Error::from)
             .and_then(|hash| hash.parse::<HgNodeHash>())
             .with_context(|| format!("malformed hash: {:?}", hash))?;
 
@@ -317,7 +317,7 @@ impl Stream for RevlogListStream {
 
 impl RevlogEntry {
     fn new(repo: RevlogRepo, path: MPath, details: Details) -> Result<Self> {
-        let name = (&path).into_iter().next_back().map(|path| path.clone());
+        let name = (&path).into_iter().next_back().cloned();
         let path = match details.flag() {
             Type::Tree => RepoPath::dir(path)
                 .with_context(|| ErrorKind::Path("error while creating RepoPath".into()))?,
@@ -404,7 +404,7 @@ impl RevlogEntry {
                         let revlog_manifest = RevlogManifest::parse_with_prefix(
                             self.repo.clone(),
                             node.parents(),
-                            &data,
+                            data,
                             self.get_path()
                                 .mpath()
                                 .expect("trees should always have a path"),

@@ -76,8 +76,7 @@ fn prepare_obsmarker_chunk(
 
     let metadata_bytes: Vec<&[u8]> = metadata
         .iter()
-        .map(|entry| vec![entry.key.as_bytes(), entry.value.as_bytes()])
-        .flatten()
+        .flat_map(|entry| vec![entry.key.as_bytes(), entry.value.as_bytes()])
         .collect();
 
     // Metadata sizes, uint8 each

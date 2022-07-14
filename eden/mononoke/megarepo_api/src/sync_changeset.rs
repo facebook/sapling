@@ -58,7 +58,7 @@ pub(crate) struct SyncChangeset<'a> {
 #[async_trait]
 impl<'a> MegarepoOp for SyncChangeset<'a> {
     fn mononoke(&self) -> &Arc<Mononoke> {
-        &self.mononoke
+        self.mononoke
     }
 }
 
@@ -96,12 +96,12 @@ impl<'a> SyncChangeset<'a> {
         target: &Target,
         target_location: ChangesetId,
     ) -> Result<ChangesetId, MegarepoError> {
-        let target_repo = self.find_repo_by_id(&ctx, target.repo_id).await?;
+        let target_repo = self.find_repo_by_id(ctx, target.repo_id).await?;
 
         // Now we need to find the target config version that was used to create the latest
         // target commit. This config version will be used to sync the new changeset
         let (_, actual_target_location) =
-            find_target_bookmark_and_value(&ctx, &target_repo, &target).await?;
+            find_target_bookmark_and_value(ctx, &target_repo, target).await?;
 
         if target_location != actual_target_location {
             // Check if previous call was successful and return result if so
@@ -117,31 +117,31 @@ impl<'a> SyncChangeset<'a> {
         }
 
         let (commit_remapping_state, target_config) = find_target_sync_config(
-            &ctx,
+            ctx,
             target_repo.blob_repo(),
             target_location,
-            &target,
-            &self.megarepo_configs,
+            target,
+            self.megarepo_configs,
         )
         .await?;
 
         // Given the SyncTargetConfig, let's find config for the source
         // we are going to sync from
-        let source_config = find_source_config(&source_name, &target_config)?;
+        let source_config = find_source_config(source_name, &target_config)?;
 
         // Find source repo and changeset that we need to sync
-        let source_repo = self.find_repo_by_id(&ctx, source_config.repo_id).await?;
+        let source_repo = self.find_repo_by_id(ctx, source_config.repo_id).await?;
         let source_cs = source_cs_id
-            .load(&ctx, source_repo.blob_repo().blobstore())
+            .load(ctx, source_repo.blob_repo().blobstore())
             .await?;
 
         validate_can_sync_changeset(
-            &ctx,
-            &target,
+            ctx,
+            target,
             &source_cs,
             &commit_remapping_state,
             &source_repo,
-            &source_config,
+            source_config,
         )
         .await?;
 
@@ -193,14 +193,14 @@ impl<'a> SyncChangeset<'a> {
         // Finally create a commit in the target and update the mapping.
         let source_cs_id = source_cs.get_changeset_id();
         let new_target_cs_id = sync_changeset_to_target(
-            &ctx,
+            ctx,
             &source_config.mapping,
-            &source_name,
+            source_name,
             source_repo.blob_repo(),
             source_cs,
             target_repo.blob_repo(),
             target_location,
-            &target,
+            target,
             commit_remapping_state,
             merge_mode,
         )
@@ -208,9 +208,9 @@ impl<'a> SyncChangeset<'a> {
 
         self.target_megarepo_mapping
             .insert_source_target_cs_mapping(
-                &ctx,
+                ctx,
                 source_name,
-                &target,
+                target,
                 source_cs_id,
                 new_target_cs_id,
                 &target_config.version,
@@ -330,7 +330,7 @@ impl<'a> SyncChangeset<'a> {
         source: &Source,
     ) -> Result<Vec<SourceAndMovedChangesets>, MegarepoError> {
         let latest_synced_cs_id =
-            find_latest_synced_cs_id(commit_remapping_state, &source_name, target)?;
+            find_latest_synced_cs_id(commit_remapping_state, source_name, target)?;
 
         // All parents except the one that's already synced to the target
         let side_parents = source_cs.parents().filter(|p| *p != latest_synced_cs_id);
@@ -347,7 +347,7 @@ impl<'a> SyncChangeset<'a> {
                     &mover,
                     &directory_mover,
                     Default::default(),
-                    &source_name,
+                    source_name,
                 )
             })
             .buffer_unordered(MERGE_COMMIT_MOVES_CONCURRENCY)
@@ -448,7 +448,6 @@ async fn validate_can_sync_changeset(
         SourceRevision::bookmark(_bookmark) => {
             /* If the source is following a git repo branch we can't verify much as the bookmark
             doesn't have to exist in the megarepo */
-            ()
         }
         SourceRevision::UnknownField(_) => {
             return Err(MegarepoError::internal(anyhow!(
@@ -458,7 +457,7 @@ async fn validate_can_sync_changeset(
     };
 
     let latest_synced_cs_id = find_latest_synced_cs_id(
-        &commit_remapping_state,
+        commit_remapping_state,
         &SourceName::new(&source.source_name),
         target,
     )?;
@@ -559,7 +558,7 @@ async fn sync_changeset_to_target(
 
     let rewritten_commit = rewritten_commit.freeze().map_err(MegarepoError::internal)?;
     let target_cs_id = rewritten_commit.get_changeset_id();
-    upload_commits(&ctx, vec![rewritten_commit], source_repo, target_repo)
+    upload_commits(ctx, vec![rewritten_commit], source_repo, target_repo)
         .await
         .map_err(MegarepoError::internal)?;
 
@@ -571,8 +570,7 @@ fn find_latest_synced_cs_id(
     source_name: &SourceName,
     target: &Target,
 ) -> Result<ChangesetId, MegarepoError> {
-    let maybe_latest_synced_cs_id =
-        commit_remapping_state.get_latest_synced_changeset(&source_name);
+    let maybe_latest_synced_cs_id = commit_remapping_state.get_latest_synced_changeset(source_name);
     if let Some(latest_synced_cs_id) = maybe_latest_synced_cs_id {
         Ok(latest_synced_cs_id.clone())
     } else {

@@ -93,9 +93,9 @@ impl Middleware for RequestContextMiddleware {
         let session = SessionContainer::new_with_defaults(self.fb);
         let ctx = session.new_context(logger, MononokeScubaSampleBuilder::with_discard());
 
-        let should_log = ClientIdentity::try_borrow_from(&state)
-            .map(|client_identity| !client_identity.is_proxygen_test_identity())
-            .unwrap_or(true);
+        let should_log = ClientIdentity::try_borrow_from(state).map_or(true, |client_identity| {
+            !client_identity.is_proxygen_test_identity()
+        });
 
         state.put(RequestContext::new(ctx, should_log));
 

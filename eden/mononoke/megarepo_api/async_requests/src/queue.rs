@@ -118,9 +118,9 @@ impl AsyncMethodRequestQueue {
         req_id: &RequestId,
         result: MegarepoAsynchronousRequestResult,
     ) -> Result<bool, MegarepoError> {
-        let result_object_id = result.store(&ctx, &self.blobstore).await?;
+        let result_object_id = result.store(ctx, &self.blobstore).await?;
         let blobstore_key = BlobstoreKey(result_object_id.blobstore_key());
-        Ok(self.table.mark_ready(&ctx, req_id, blobstore_key).await?)
+        Ok(self.table.mark_ready(ctx, req_id, blobstore_key).await?)
     }
 
     async fn poll_once<R: Request>(

@@ -229,7 +229,7 @@ impl RevlogRepo {
         }
 
         Ok(RevlogRepo {
-            basepath: base.into(),
+            basepath: base,
             requirements,
             store_requirements,
             changelog,
@@ -248,7 +248,7 @@ impl RevlogRepo {
     }
 
     pub fn get_bookmarks(&self) -> Result<StockBookmarks> {
-        Ok(StockBookmarks::read(self.basepath.clone())?)
+        StockBookmarks::read(self.basepath.clone())
     }
 
     pub fn get_bookmark_value(
@@ -276,7 +276,7 @@ impl RevlogRepo {
         self.changelog
             .get_idx_by_nodeid(nodeid)
             .and_then(|idx| self.changelog.get_rev(idx))
-            .and_then(|rev| RevlogChangeset::new(rev))
+            .and_then(RevlogChangeset::new)
             .into_future()
             .boxify()
     }

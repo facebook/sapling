@@ -341,7 +341,7 @@ pub async fn rewrite_stack_no_merges<'a>(
                         cs.clone().into_mut(),
                         parents,
                         mover.clone(),
-                        &source_repo,
+                        source_repo,
                     )
                     .await?
                 } else {
@@ -409,7 +409,7 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
                     mover: MultiMover,
                 ) -> Result<Option<(MPath, ChangesetId)>, Error> {
                     let (path, copy_from_commit) = copy_from;
-                    let new_paths = mover(&path)?;
+                    let new_paths = mover(path)?;
                     let copy_from_commit =
                         remapped_parents.get(copy_from_commit).ok_or_else(|| {
                             Error::from(ErrorKind::MissingRemappedCommit(*copy_from_commit))
@@ -466,14 +466,13 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
                         .map(|new_path| (new_path, change.clone()))
                         .collect())
                 }
-                do_rewrite(path, change, &remapped_parents, mover.clone())
+                do_rewrite(path, change, remapped_parents, mover.clone())
             })
             .collect();
 
         let mut path_rewritten_changes: SortedVectorMap<_, _> = path_rewritten_changes?
             .into_iter()
-            .map(|changes| changes.into_iter())
-            .flatten()
+            .flat_map(|changes| changes.into_iter())
             .collect();
 
         path_rewritten_changes.extend(implicit_delete_file_changes.into_iter());
@@ -556,7 +555,7 @@ pub async fn copy_file_contents<'a>(
     stream::iter(content_ids.into_iter().map({
         |content_id| {
             copy_content(
-                &ctx,
+                ctx,
                 &source_blobstore,
                 &target_blobstore,
                 target_filestore_config.clone(),

@@ -119,7 +119,7 @@ named!(pub header<Header>,
 
             Header {
                 version: vers,
-                features: features,
+                features,
             }
         }))
 );
@@ -142,7 +142,7 @@ named!(pub indexng<Entry>,
         hash: take!(32) >>
         ({
             Entry {
-                offset: offset,
+                offset,
                 flags: IdxFlags::from_bits(flags).expect("bad rev idx flags"),
                 compressed_len: compressed_length,
                 len: Some(uncompressed_length),
@@ -218,7 +218,7 @@ named!(pub deltachunk<Vec<Delta> >,
                 do_parse!(tag!(b"4") >> d: apply!(lz4::lz4_decompress, deltas) >> (d))       // compressed w/ lz4
             )
         ),
-        |dv: Vec<_>| dv.into_iter().flat_map(|x| x).collect())
+        |dv: Vec<_>| dv.into_iter().flatten().collect())
 );
 
 fn remains(i: &[u8]) -> IResult<&[u8], &[u8]> {

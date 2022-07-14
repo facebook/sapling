@@ -12,7 +12,6 @@ use blobrepo::BlobRepo;
 use bytes::Bytes;
 use bytes::BytesMut;
 use context::CoreContext;
-use filestore;
 use filestore::Alias;
 use filestore::FetchKey;
 use filestore::StoreRequest;

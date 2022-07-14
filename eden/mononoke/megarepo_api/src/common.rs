@@ -290,9 +290,7 @@ pub trait MegarepoOp {
             Some(new_version) => {
                 format!("deletion commit for {}", new_version)
             }
-            None => {
-                format!("deletion commit")
-            }
+            None => "deletion commit".to_string(),
         };
 
         let old_target_with_removed_files =
@@ -400,7 +398,7 @@ pub trait MegarepoOp {
 
             // Check that path doesn't move to itself - in that case we don't need to
             // delete file
-            if moved.iter().find(|cur_path| cur_path == &&path).is_none() {
+            if !moved.iter().any(|cur_path| cur_path == &path) {
                 file_changes.push((path.clone(), FileChange::Deletion));
             }
 
@@ -619,7 +617,7 @@ pub trait MegarepoOp {
         for (source_name, moved) in &moved_commits {
             add_and_check_all_paths(
                 &mut all_files_in_target,
-                &source_name,
+                source_name,
                 moved
                     .moved
                     .file_changes()
@@ -707,7 +705,6 @@ pub trait MegarepoOp {
             SourceRevision::bookmark(_bookmark) => {
                 /* If the source is following a git repo branch we can't verify much as the bookmark
                 doesn't have to exist in the megarepo */
-                ()
             }
             SourceRevision::UnknownField(_) => {
                 return Err(MegarepoError::internal(anyhow!(
@@ -788,12 +785,8 @@ pub trait MegarepoOp {
         let linkfiles = stream::iter(links.into_iter())
             .map(Ok)
             .map_ok(|(path, content)| async {
-                let ((content_id, size), fut) = filestore::store_bytes(
-                    repo.blobstore(),
-                    repo.filestore_config(),
-                    &ctx,
-                    content,
-                );
+                let ((content_id, size), fut) =
+                    filestore::store_bytes(repo.blobstore(), repo.filestore_config(), ctx, content);
                 fut.await?;
 
                 let fc = FileChange::tracked(content_id, FileType::Symlink, size, None);
@@ -868,7 +861,7 @@ pub trait MegarepoOp {
                     message.clone(),
                     cur_parents,
                     sync_config_version.clone(),
-                    &source_name,
+                    source_name,
                 )?;
                 let merge = bcs.freeze()?;
                 cur_parents = vec![merge.get_changeset_id()];
@@ -879,7 +872,7 @@ pub trait MegarepoOp {
         let (last_source_name, last_moved_commit) = last_moved_commit;
         cur_parents.push(last_moved_commit.moved.get_changeset_id());
         let mut final_merge =
-            self.create_merge_commit(message, cur_parents, sync_config_version, &last_source_name)?;
+            self.create_merge_commit(message, cur_parents, sync_config_version, last_source_name)?;
         if let Some(state) = state {
             state.save_in_changeset(ctx, repo, &mut final_merge).await?;
         }
@@ -1100,7 +1093,7 @@ pub async fn find_bookmark_and_value(
     repo: &RepoContext,
     bookmark_name: &str,
 ) -> Result<(BookmarkName, ChangesetId), MegarepoError> {
-    let bookmark = BookmarkName::new(bookmark_name.to_string()).map_err(MegarepoError::request)?;
+    let bookmark = BookmarkName::new(bookmark_name).map_err(MegarepoError::request)?;
 
     let cs_id = repo
         .blob_repo()

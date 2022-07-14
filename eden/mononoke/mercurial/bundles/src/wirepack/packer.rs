@@ -72,7 +72,7 @@ impl WirePackPartProcessor for PackerProcessor {
 
     fn history_meta(&mut self, path: &RepoPath, entry_count: u32) -> Result<Option<Self::Data>> {
         let mut builder = ChunkBuilder::new(self.kind);
-        builder.encode_filename(&path)?;
+        builder.encode_filename(path)?;
         builder.encode_entry_count(entry_count);
         Ok(Some(builder.build()?))
     }
@@ -91,7 +91,7 @@ impl WirePackPartProcessor for PackerProcessor {
 
     fn data(&mut self, data_entry: &DataEntry) -> Result<Option<Self::Data>> {
         let mut builder = ChunkBuilder::new(self.kind);
-        builder.encode_data(&data_entry)?;
+        builder.encode_data(data_entry)?;
         Ok(Some(builder.build()?))
     }
 

@@ -172,7 +172,7 @@ where
                     } = selector;
 
                     async move {
-                        let manifest = manifest_id.load(ctx, &store).await?;
+                        let manifest = manifest_id.load(ctx, store).await?;
 
                         let mut output = Vec::new();
 

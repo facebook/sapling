@@ -156,7 +156,7 @@ where
 
     let node = async {
         let r = match node {
-            Some(node) => Some(node.load(ctx, &store).await?),
+            Some(node) => Some(node.load(ctx, store).await?),
             None => None,
         };
         Ok(r)
@@ -165,7 +165,7 @@ where
     let parents = try_join_all(
         parents
             .into_iter()
-            .map(|id| async move { id.load(ctx, &store).await }),
+            .map(|id| async move { id.load(ctx, store).await }),
     );
 
     let (node, parents) = try_join!(node, parents)?;

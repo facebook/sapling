@@ -163,7 +163,7 @@ async fn upstream_objects(
     ctx: &RepositoryRequestContext,
     objects: &[RequestObject],
 ) -> Result<UpstreamObjects, ErrorKind> {
-    let objects = objects.iter().map(|o| *o).collect();
+    let objects = objects.to_vec();
 
     let batch = RequestBatch {
         operation: Operation::Download,
@@ -197,10 +197,9 @@ async fn upstream_objects(
                         _ => HashMap::new(),
                     };
 
-                    match actions.remove(&Operation::Download) {
-                        Some(action) => Some((object, action)),
-                        None => None,
-                    }
+                    actions
+                        .remove(&Operation::Download)
+                        .map(|action| (object, action))
                 })
                 .collect()
         }
@@ -314,7 +313,7 @@ async fn internal_objects(
             .map_err(ErrorKind::Error)?;
 
         let allow_consistent_routing = match obj {
-            Some(obj) => allow_consistent_routing(&ctx, obj, GlobalTimeWindowCounterBuilder).await,
+            Some(obj) => allow_consistent_routing(ctx, obj, GlobalTimeWindowCounterBuilder).await,
             None => true,
         };
 
@@ -323,8 +322,7 @@ async fn internal_objects(
 
     let objs = future::try_join_all(futs).await?;
 
-    let ret = objs
-        .into_iter()
+    objs.into_iter()
         .filter_map(|(maybe_obj, allow_consistent_routing)| match maybe_obj {
             // Map the objects we have locally into an action routing to a Mononoke LFS server.
             Some(obj) => {
@@ -340,9 +338,7 @@ async fn internal_objects(
             }
             None => None,
         })
-        .collect::<Result<ServerObjects, ErrorKind>>();
-
-    ret
+        .collect::<Result<ServerObjects, ErrorKind>>()
 }
 
 fn batch_upload_response_objects(
@@ -386,7 +382,7 @@ fn batch_upload_response_objects(
                 _ => {
                     // Object is missing in at least one location. Require uploading it.
                     STATS::upload_redirect.add_value(1);
-                    let uri = uri_builder.upload_uri(&object)?;
+                    let uri = uri_builder.upload_uri(object)?;
                     let action = ObjectAction::new(uri);
 
                     ObjectStatus::Ok {
@@ -487,7 +483,7 @@ fn batch_download_response_objects(
 
                     let status = ObjectStatus::Ok {
                         authenticated: false,
-                        actions: hashmap! { Operation::Download => action.clone() },
+                        actions: hashmap! { Operation::Download => action },
                     };
 
                     ResponseObject {

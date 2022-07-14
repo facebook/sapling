@@ -79,7 +79,7 @@ where
                     } = selector;
 
                     async move {
-                        let manifest = manifest_id.load(ctx, &store).await?;
+                        let manifest = manifest_id.load(ctx, store).await?;
 
                         let mut output = Vec::new();
                         let mut recurse = Vec::new();
@@ -559,7 +559,7 @@ where
         .try_flatten_stream()
         .right_stream(),
         None => mf_id
-            .list_all_entries(ctx.clone(), store.clone())
+            .list_all_entries(ctx, store)
             .map_ok(|(path, entry)| (path, entry, vec![]))
             .left_stream(),
     }

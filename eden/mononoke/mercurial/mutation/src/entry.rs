@@ -74,7 +74,7 @@ impl HgMutationEntry {
     }
 
     pub fn deserialize(r: &mut dyn Read) -> Result<Self> {
-        Ok(HgMutationEntry::try_from(MutationEntry::deserialize(r)?)?)
+        HgMutationEntry::try_from(MutationEntry::deserialize(r)?)
     }
 
     pub fn successor(&self) -> &HgChangesetId {

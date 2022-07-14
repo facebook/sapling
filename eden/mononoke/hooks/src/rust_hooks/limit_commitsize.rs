@@ -53,10 +53,10 @@ impl LimitCommitsizeBuilder {
             self = self.override_limit_path_regexes(v);
         }
         if let Some(v) = config.int_lists.get("override_limits") {
-            self = self.override_limits(v.into_iter().map(|i| *i as u64));
+            self = self.override_limits(v.iter().map(|i| *i as u64));
         }
         if let Some(v) = config.int_64_lists.get("override_limits") {
-            self = self.override_limits(v.into_iter().map(|i| *i as u64));
+            self = self.override_limits(v.iter().map(|i| *i as u64));
         }
         self
     }
@@ -94,7 +94,7 @@ impl LimitCommitsizeBuilder {
     pub fn build(self) -> Result<LimitCommitsize> {
         let regexes = self
             .override_limit_path_regexes
-            .unwrap_or_else(Vec::new)
+            .unwrap_or_default()
             .into_iter()
             .map(|s| Regex::new(&s))
             .collect::<Result<Vec<_>, _>>()
@@ -102,7 +102,7 @@ impl LimitCommitsizeBuilder {
 
         let limits = self
             .override_limits
-            .unwrap_or_else(Vec::new)
+            .unwrap_or_default()
             .into_iter()
             .collect::<Vec<_>>();
 
@@ -122,7 +122,7 @@ impl LimitCommitsizeBuilder {
             override_limit_path_regexes_with_limits: regexes_with_limits,
             ignore_path_regexes: self
                 .ignore_path_regexes
-                .unwrap_or_else(Vec::new)
+                .unwrap_or_default()
                 .into_iter()
                 .map(|s| Regex::new(&s))
                 .collect::<Result<Vec<_>, _>>()

@@ -93,7 +93,7 @@ impl TryFrom<lfs_server_config::LfsServerConfig> for ServerConfig {
         for list in value.disable_compression_identities.iter() {
             let idents = list
                 .iter()
-                .map(|i| FromStr::from_str(&i))
+                .map(|i| FromStr::from_str(i))
                 .collect::<Result<BTreeSet<_>, _>>()?;
             disable_compression_identities.push(idents);
         }

@@ -12,6 +12,9 @@ use std::str::FromStr;
 use anyhow::Context;
 use anyhow::Error;
 use bytes::Bytes;
+use filestore::Alias;
+use filestore::FetchKey;
+use filestore::StoreRequest;
 use futures::channel::mpsc::channel;
 use futures::SinkExt;
 use futures::Stream;
@@ -22,21 +25,14 @@ use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
-use http::header::CONTENT_LENGTH;
-use hyper::Body;
-use hyper::Request;
-use serde::Deserialize;
-use stats::prelude::*;
-
-use filestore;
-use filestore::Alias;
-use filestore::FetchKey;
-use filestore::StoreRequest;
 use gotham_ext::error::HttpError;
 use gotham_ext::middleware::HttpScubaKey;
 use gotham_ext::middleware::ScubaMiddlewareState;
 use gotham_ext::response::EmptyBody;
 use gotham_ext::response::TryIntoResponse;
+use http::header::CONTENT_LENGTH;
+use hyper::Body;
+use hyper::Request;
 use lfs_protocol::ObjectAction;
 use lfs_protocol::ObjectStatus;
 use lfs_protocol::Operation;
@@ -46,6 +42,8 @@ use lfs_protocol::ResponseBatch;
 use lfs_protocol::Sha256 as LfsSha256;
 use lfs_protocol::Transfer;
 use mononoke_types::hash::Sha256;
+use serde::Deserialize;
+use stats::prelude::*;
 
 use crate::errors::ErrorKind;
 use crate::lfs_server_context::RepositoryRequestContext;
@@ -227,7 +225,7 @@ where
         let body = Body::wrap_stream(data);
         let req = Request::put(href)
             .header("Content-Length", &size.to_string())
-            .body(body.into())?;
+            .body(body)?;
 
         // NOTE: We read the response body here, otherwise Hyper will not allow this connection to
         // be reused.
@@ -274,8 +272,8 @@ where
         .map_err(|()| ErrorKind::ClientCancelled)
         .err_into();
 
-    let internal_upload = internal_upload(&ctx, oid, size, internal_recv);
-    let upstream_upload = upstream_upload(&ctx, oid, size, upstream_recv);
+    let internal_upload = internal_upload(ctx, oid, size, internal_recv);
+    let upstream_upload = upstream_upload(ctx, oid, size, upstream_recv);
 
     let mut received: usize = 0;
 
@@ -344,11 +342,11 @@ async fn sync_internal_and_upstream(
                 .upstream_batch(&batch)
                 .await
                 .context(ErrorKind::UpstreamBatchError)?
-                .ok_or_else(|| ErrorKind::ObjectCannotBeSynced(object))?;
+                .ok_or(ErrorKind::ObjectCannotBeSynced(object))?;
 
             let action = find_actions(batch, &object)?
                 .remove(&Operation::Download)
-                .ok_or_else(|| ErrorKind::ObjectCannotBeSynced(object))?;
+                .ok_or(ErrorKind::ObjectCannotBeSynced(object))?;
 
             let req = Request::get(action.href).body(Body::empty())?;
 

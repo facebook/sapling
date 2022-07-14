@@ -9,18 +9,15 @@ use std::str::FromStr;
 
 use anyhow::Context;
 use anyhow::Error;
+use filestore::Alias;
+use filestore::FetchKey;
+use filestore::Range;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
-use serde::Deserialize;
-
-use filestore;
-use filestore::Alias;
-use filestore::FetchKey;
-use filestore::Range;
 use gotham_ext::content_encoding::ContentEncoding;
 use gotham_ext::error::HttpError;
 use gotham_ext::middleware::ClientIdentity;
@@ -36,6 +33,7 @@ use mononoke_types::hash::Sha256;
 use mononoke_types::ContentId;
 use permission_checker::MononokeIdentitySet;
 use redactedblobstore::has_redaction_root_cause;
+use serde::Deserialize;
 use stats::prelude::*;
 
 use crate::config::ServerConfig;
@@ -133,7 +131,7 @@ async fn fetch_by_key(
 
     // Return a 404 if the stream doesn't exist.
     let (stream, size) = fetched
-        .ok_or_else(|| ErrorKind::ObjectDoesNotExist(key))
+        .ok_or(ErrorKind::ObjectDoesNotExist(key))
         .map_err(HttpError::e404)?;
 
     ScubaMiddlewareState::maybe_add(scuba, LfsScubaKey::DownloadContentSize, size);
@@ -172,16 +170,15 @@ async fn download_inner(
 
     let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), method).await?;
 
-    let idents = ClientIdentity::try_borrow_from(&state)
-        .map(|ident| ident.identities().as_ref())
-        .flatten();
+    let idents =
+        ClientIdentity::try_borrow_from(state).and_then(|ident| ident.identities().as_ref());
 
     let disable_compression = should_disable_compression(&ctx.config, idents);
 
     let content_encoding = if disable_compression {
         ContentEncoding::Identity
     } else {
-        ContentEncoding::from_state(&state)
+        ContentEncoding::from_state(state)
     };
 
     let mut scuba = state.try_borrow_mut::<ScubaMiddlewareState>();

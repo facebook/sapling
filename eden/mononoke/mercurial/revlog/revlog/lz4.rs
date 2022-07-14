@@ -25,11 +25,9 @@ where
     let remains: &[u8] = &[];
 
     match lz4_pyframe::decompress(i) {
-        Ok(decompressed) => detach_result(parse(&decompressed[..]), &remains),
-        Err(_err) => {
-            return IResult::Error(nom::Err::Code(nom::ErrorKind::Custom(
-                super::parser::Badness::BadLZ4,
-            )));
-        }
+        Ok(decompressed) => detach_result(parse(&decompressed[..]), remains),
+        Err(_err) => IResult::Error(nom::Err::Code(nom::ErrorKind::Custom(
+            super::parser::Badness::BadLZ4,
+        ))),
     }
 }

@@ -431,7 +431,7 @@ impl RevlogInner {
         let entry = self.get_entry(tgtidx)?;
 
         // if there's no baserev, then use the target as a baserev (it should be literal)
-        let baserev = entry.baserev.map(Into::into).unwrap_or(tgtidx);
+        let baserev = entry.baserev.map_or(tgtidx, Into::into);
 
         // XXX: Fix this to use delta::Delta instead of bdiff::Delta.
 
@@ -486,7 +486,7 @@ impl RevlogInner {
                             break v;
                         }
                         _ => {
-                            Err(ErrorKind::Revlog(format!("expected a literal")))?;
+                            Err(ErrorKind::Revlog("expected a literal".to_string()))?;
                         }
                     }
                 }
@@ -505,9 +505,9 @@ impl RevlogInner {
                         break vec![];
                     }
                     _ => {
-                        Err(ErrorKind::Revlog(format!(
-                            "expected a delta against empty string"
-                        )))?;
+                        Err(ErrorKind::Revlog(
+                            "expected a delta against empty string".to_string(),
+                        ))?;
                     }
                 },
             }
@@ -644,7 +644,7 @@ impl IntoIterator for Revlog {
     type IntoIter = RevlogIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        RevlogIter(self.inner.clone(), RevIdx::zero())
+        RevlogIter(self.inner, RevIdx::zero())
     }
 }
 
