@@ -101,6 +101,7 @@ configitem("tweakdefaults", "amendkeepdate", default=False)
 configitem("tweakdefaults", "graftkeepdate", default=False)
 configitem("tweakdefaults", "histeditkeepdate", default=False)
 configitem("tweakdefaults", "rebasekeepdate", default=False)
+configitem("tweakdefaults", "absorbkeepdate", default=False)
 
 rebasemsg = _(
     "you must use a bookmark with tracking "
@@ -193,6 +194,13 @@ def extsetup(ui):
         wrapcommand(amendmodule.cmdtable, "amend", amendcmd)
     except KeyError:
         pass
+
+    try:
+        amendmodule = extensions.find("absorb")
+        wrapcommand(amendmodule.cmdtable, "absorb", absorbcmd)
+    except KeyError:
+        pass
+
     try:
         histeditmodule = extensions.find("histedit")
         wrapfunction(histeditmodule, "commitfuncfor", histeditcommitfuncfor)
@@ -600,6 +608,9 @@ def _checkobsrebasewrapper(orig, repo, ui, *args):
 
 
 def currentdate():
+    if util.istest():
+        # Use a stub value for test stability.
+        return "1657671627 0"
     return "%d %d" % util.makedate(time.time())
 
 
@@ -607,6 +618,12 @@ def graftcmd(orig, ui, repo, *revs, **opts):
     if not opts.get("date") and not ui.configbool("tweakdefaults", "graftkeepdate"):
         opts["date"] = currentdate()
     return orig(ui, repo, *revs, **opts)
+
+
+def absorbcmd(orig, ui, repo, *pats, **opts):
+    if not opts.get("date") and not ui.configbool("tweakdefaults", "absorbkeepdate"):
+        opts["date"] = currentdate()
+    return orig(ui, repo, *pats, **opts)
 
 
 def amendcmd(orig, ui, repo, *pats, **opts):
