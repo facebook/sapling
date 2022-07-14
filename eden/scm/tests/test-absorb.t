@@ -587,3 +587,13 @@
   d235271 append to a
   apply changes (yn)?  y
   1 of 1 chunk applied
+
+# Can specify date
+
+  $ newrepo
+  $ echo foo > a
+  $ hg ci -m 'a' -A a
+  $ echo bar >> a
+  $ HGPLAIN=1 hg absorb -qa -d 2022-07-12T00:00:00
+  $ hg log -r . -T '{date}\n'
+  1657584000.00

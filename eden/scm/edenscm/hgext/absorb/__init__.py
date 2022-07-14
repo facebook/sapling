@@ -213,13 +213,18 @@ def getfilestack(stack, path, seenfctxs=None):
 
 
 def overlaycontext(
-    memworkingcopy, ctx, parents=None, extra=None, loginfo=None, mutinfo=None
+    memworkingcopy, ctx, parents=None, extra=None, loginfo=None, mutinfo=None, date=None
 ):
     """({path: content}, ctx, (p1node, p2node)?, {}?) -> memctx
     memworkingcopy overrides file contents.
     """
     mctx = context.memctx.mirror(
-        ctx, parents=parents, extra=extra, loginfo=loginfo, mutinfo=mutinfo
+        ctx,
+        parents=parents,
+        extra=extra,
+        loginfo=loginfo,
+        mutinfo=mutinfo,
+        date=date,
     )
     for path, data in memworkingcopy.items():
         fctx = context.overlayfilectx(ctx[path], datafunc=lambda data=data: data)
@@ -818,8 +823,15 @@ class fixupstate(object):
         extra = ctx.extra()
         mutinfo = mutation.record(self.repo, extra, [ctx.node()], "absorb")
         loginfo = {"checkoutidentifier": self.checkoutidentifier}
+
         mctx = overlaycontext(
-            memworkingcopy, ctx, parents, extra=extra, loginfo=loginfo, mutinfo=mutinfo
+            memworkingcopy,
+            ctx,
+            parents,
+            extra=extra,
+            loginfo=loginfo,
+            mutinfo=mutinfo,
+            date=self.opts["date"],
         )
         # preserve phase
         with mctx.repo().ui.configoverride({("phases", "new-commit"): ctx.phase()}):
@@ -897,6 +909,13 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
         pats = ()
     if opts is None:
         opts = {}
+
+    date = opts.get("date")
+    if date:
+        opts["date"] = util.parsedate(date)
+    else:
+        opts["date"] = None
+
     state = fixupstate(stack, ui=ui, opts=opts)
     matcher = scmutil.match(targetctx, pats, opts)
     if opts.get("interactive"):
@@ -971,6 +990,7 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
                 "(EXPERIMENTAL)"
             ),
         ),
+        ("d", "date", "", _("record the specified date as commit date"), _("DATE")),
     ]
     + commands.dryrunopts
     + commands.templateopts
