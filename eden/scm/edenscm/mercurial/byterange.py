@@ -31,6 +31,7 @@ import os
 import re
 import socket
 import stat
+from typing import Optional, Pattern
 
 from . import urllibcompat, util
 
@@ -412,7 +413,7 @@ class ftpwrapper(urlreq.ftpwrapper):
 # Range Tuple Functions
 # XXX: These range tuple functions might go better in a class.
 
-_rangere = None
+_rangere: Optional[Pattern[str]] = None
 
 
 def range_header_to_tuple(range_header):
@@ -443,7 +444,7 @@ def range_header_to_tuple(range_header):
     return ()
 
 
-def range_tuple_to_header(range_tup):
+def range_tuple_to_header(range_tup) -> Optional[str]:
     """Convert a range tuple to a Range header value.
     Return a string of the form "bytes=<firstbyte>-<lastbyte>" or None
     if no range is needed.
