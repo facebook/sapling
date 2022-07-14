@@ -698,15 +698,8 @@ impl ChangesetPathHistoryContext {
             HistoryAcrossDeletions::DontTrack
         };
 
-        let use_gen_num_order = tunables::tunables().get_fastlog_use_gen_num_traversal();
-        let traversal_order = if use_gen_num_order {
-            TraversalOrder::new_gen_num_order(ctx.clone(), repo.get_changeset_fetcher())
-        } else {
-            TraversalOrder::new_bfs_order()
-        };
-
         let history = list_file_history(
-            ctx,
+            ctx.clone(),
             self.repo().blob_repo(),
             mpath.cloned(),
             self.changeset.id(),
@@ -725,7 +718,7 @@ impl ChangesetPathHistoryContext {
                 FollowMutableFileHistory::ImmutableCommitParents
             },
             self.repo().mutable_renames().clone(),
-            traversal_order,
+            TraversalOrder::new_gen_num_order(ctx.clone(), repo.get_changeset_fetcher()),
         )
         .await
         .map_err(|error| match error {

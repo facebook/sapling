@@ -96,7 +96,6 @@ pub enum NextChangeset {
 pub struct ParentOrder(usize);
 
 pub enum TraversalOrder {
-    BfsOrder(VecDeque<NextChangeset>),
     SimpleGenNumOrder {
         next: Option<NextChangeset>,
         ctx: CoreContext,
@@ -113,10 +112,6 @@ pub enum TraversalOrder {
 }
 
 impl TraversalOrder {
-    pub fn new_bfs_order() -> Self {
-        Self::BfsOrder(VecDeque::new())
-    }
-
     pub fn new_gen_num_order(ctx: CoreContext, changeset_fetcher: ArcChangesetFetcher) -> Self {
         Self::SimpleGenNumOrder {
             next: None,
@@ -129,9 +124,6 @@ impl TraversalOrder {
         use TraversalOrder::*;
 
         match self {
-            BfsOrder(q) => {
-                q.push_front(NextChangeset::AlreadyReturned(cs_id));
-            }
             SimpleGenNumOrder { next, .. } => {
                 debug_assert!(next.is_none());
                 *next = Some(NextChangeset::AlreadyReturned(cs_id));
@@ -152,12 +144,6 @@ impl TraversalOrder {
         }
 
         let new_state: Option<TraversalOrder> = match self {
-            BfsOrder(q) => {
-                for cs_and_path in cs_and_paths {
-                    q.push_back(NextChangeset::New(cs_and_path.clone()));
-                }
-                None
-            }
             SimpleGenNumOrder {
                 next,
                 ctx,
@@ -207,7 +193,6 @@ impl TraversalOrder {
         use TraversalOrder::*;
 
         match self {
-            BfsOrder(q) => q.pop_front(),
             SimpleGenNumOrder { next, .. } => next.take(),
             GenNumOrder {
                 front_queue, heap, ..
@@ -225,7 +210,6 @@ impl TraversalOrder {
         use TraversalOrder::*;
 
         match self {
-            BfsOrder(q) => q.is_empty(),
             SimpleGenNumOrder { next, .. } => next.is_none(),
             GenNumOrder {
                 front_queue, heap, ..
@@ -261,7 +245,7 @@ async fn resolve_path_state(
     RootDeletedManifestV2Id::resolve_path_state(ctx, repo, cs_id, path).await
 }
 
-/// Returns a full history of the given path starting from the given unode in BFS order.
+/// Returns a full history of the given path starting from the given unode in generation number order.
 /// ```text
 /// Accepts a `Visitor` object which controls the flow by filtering out the unwanted changesets
 /// before they're added to the queue, see its docs for details. If you don't need to filter the
@@ -1169,7 +1153,7 @@ mod test {
             }
         }
         let history = list_file_history(
-            ctx,
+            ctx.clone(),
             &repo,
             filepath,
             top,
@@ -1177,7 +1161,7 @@ mod test {
             HistoryAcrossDeletions::Track,
             FollowMutableFileHistory::ImmutableCommitParents,
             mutable_renames,
-            TraversalOrder::new_bfs_order(),
+            TraversalOrder::new_gen_num_order(ctx.clone(), repo.get_changeset_fetcher()),
         )
         .await?;
         let history = history.try_collect::<Vec<_>>().await?;
@@ -1752,13 +1736,6 @@ mod test {
             .commit()
             .await?;
 
-        let expected_bfs = vec![
-            merge,
-            second_left_bcs_id,
-            right_bcs_id,
-            first_left_bcs_id,
-            bcs_id,
-        ];
         let expected_gen_num = vec![
             merge,
             second_left_bcs_id,
@@ -1776,23 +1753,7 @@ mod test {
             HistoryAcrossDeletions::Track,
             FollowMutableFileHistory::ImmutableCommitParents,
             mutable_renames.clone(),
-            TraversalOrder::new_bfs_order(),
-        )
-        .await?;
-
-        let actual = history_stream.try_collect::<Vec<_>>().await?;
-        assert_eq!(actual, expected_bfs);
-
-        let history_stream = list_file_history(
-            ctx.clone(),
-            &repo,
-            MPath::new_opt(filename)?,
-            merge,
-            (),
-            HistoryAcrossDeletions::Track,
-            FollowMutableFileHistory::ImmutableCommitParents,
-            mutable_renames.clone(),
-            TraversalOrder::new_gen_num_order(ctx, repo.get_changeset_fetcher()),
+            TraversalOrder::new_gen_num_order(ctx.clone(), repo.get_changeset_fetcher()),
         )
         .await?;
 
@@ -2005,24 +1966,8 @@ mod test {
         visitor: impl Visitor + Clone,
         history_across_deletions: HistoryAcrossDeletions,
         mutable_renames: Arc<MutableRenames>,
-        bfs_order: Vec<ChangesetId>,
+        expected: Vec<ChangesetId>,
     ) -> Result<(), Error> {
-        let history = list_file_history(
-            ctx.clone(),
-            &repo,
-            path.clone(),
-            changeset_id,
-            visitor.clone(),
-            history_across_deletions,
-            FollowMutableFileHistory::ImmutableCommitParents,
-            mutable_renames.clone(),
-            TraversalOrder::new_bfs_order(),
-        )
-        .await?;
-        let history = history.try_collect::<Vec<_>>().await?;
-        assert_eq!(history, bfs_order);
-
-        // Now try with gen num order
         let history = list_file_history(
             ctx.clone(),
             &repo,
@@ -2034,8 +1979,9 @@ mod test {
             mutable_renames,
             TraversalOrder::new_gen_num_order(ctx.clone(), repo.get_changeset_fetcher()),
         )
+        .await?
+        .try_collect::<Vec<_>>()
         .await?;
-        let history = history.try_collect::<Vec<_>>().await?;
 
         let mut prev_gen_num = None;
         for cs_id in &history {
@@ -2051,7 +1997,7 @@ mod test {
 
         assert_eq!(
             history.into_iter().collect::<HashSet<_>>(),
-            bfs_order.into_iter().collect::<HashSet<_>>(),
+            expected.into_iter().collect::<HashSet<_>>(),
         );
 
         Ok(())

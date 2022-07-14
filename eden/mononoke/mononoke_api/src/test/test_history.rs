@@ -266,8 +266,8 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
             changesets["b3"],
             changesets["c1"],
             changesets["m1"],
-            changesets["b2"],
             changesets["a3"],
+            changesets["b2"],
         ]
     );
 
@@ -291,11 +291,11 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
             changesets["b3"],
             changesets["c1"],
             changesets["m1"],
-            changesets["b2"],
             changesets["a3"],
-            changesets["b1"],
             changesets["a2"],
+            changesets["b2"],
             changesets["a1"],
+            changesets["b1"],
         ]
     );
 
