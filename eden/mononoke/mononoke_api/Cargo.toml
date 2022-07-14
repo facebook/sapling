@@ -10,7 +10,6 @@ license = "GPLv2+"
 [dependencies]
 acl_regions = { version = "0.1.0", path = "../acl_regions" }
 anyhow = "1.0.56"
-async-recursion = "0.3.2"
 async-trait = "0.1.56"
 blame = { version = "0.1.0", path = "../derived_data/blame" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
@@ -42,6 +41,7 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures_lazy_shared = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
+history_traversal = { version = "0.1.0", path = "../features/history_traversal" }
 hook_manager_factory = { version = "0.1.0", path = "../hooks/hook_manager_factory" }
 hooks = { version = "0.1.0", path = "../hooks" }
 hooks_content_stores = { version = "0.1.0", path = "../hooks/content-stores" }

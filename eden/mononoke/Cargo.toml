@@ -293,6 +293,7 @@ members = [
   "derived_data/unodes",
   "derived_data/utils",
   "edenapi_service",
+  "features/history_traversal",
   "filenodes",
   "filenodes/if",
   "filestore",

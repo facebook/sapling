@@ -10,14 +10,8 @@ use std::fmt;
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use anyhow::bail;
-use anyhow::Context;
 use anyhow::Error;
-use async_recursion::async_recursion;
 use async_trait::async_trait;
-use blame::fetch_blame_compat;
-use blame::fetch_content_for_blame;
-use blame::BlameError;
 use blame::CompatBlame;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
@@ -39,15 +33,13 @@ use fastlog::Visitor;
 use filestore::FetchKey;
 use futures::future::try_join_all;
 use futures::future::TryFutureExt;
-use futures::stream;
 use futures::stream::Stream;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures_lazy_shared::LazyShared;
+use history_traversal;
 use manifest::Entry;
 use manifest::ManifestOps;
-use mononoke_types::blame_v2::BlameParent;
-use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::ChangesetId;
@@ -60,7 +52,6 @@ use mononoke_types::SkeletonManifestId;
 use reachabilityindex::ReachabilityIndex;
 use skiplist::SkiplistIndex;
 use std::collections::HashMap;
-use std::collections::HashSet;
 use xdiff;
 
 pub use xdiff::CopyInfo;
@@ -450,232 +441,17 @@ impl ChangesetPathHistoryContext {
             .map(|cs_id| ChangesetContext::new(self.repo().clone(), cs_id)))
     }
 
-    #[async_recursion]
-    async fn fetch_mutable_blame(
-        &self,
-        seen: &mut HashSet<ChangesetId>,
-    ) -> Result<(CompatBlame, FileUnodeId), MononokeError> {
-        let ctx = self.changeset.ctx();
-        let repo_ctx = self.changeset.repo();
-        let repo = repo_ctx.blob_repo();
-        let my_csid = self.changeset.id();
-        let mutable_renames = repo_ctx.mutable_renames();
-        let path = self.path.as_mpath().ok_or_else(|| {
-            MononokeError::InvalidRequest("Blame is not available for directory: `/`".to_string())
-        })?;
-
-        if !seen.insert(my_csid) {
-            return Err(anyhow!("Infinite loop in mutable blame").into());
-        }
-
-        // First case. Fix up blame directly if I have a mutable rename attached
-        let my_mutable_rename = mutable_renames
-            .get_rename(ctx, my_csid, Some(path.clone()))
-            .await?;
-        if let Some(rename) = my_mutable_rename {
-            // We have a mutable rename, which replaces our p1 and our path.
-            // Recurse to fetch a fully mutated blame for the new p1 parent
-            // and path.
-            //
-            // This covers the case where we are a in the immutable history:
-            // a
-            // |
-            // b  e
-            // |  |
-            // c  d
-            // and there is a mutable rename saying that a's parent should be e, not b.
-            // After this, because we did the blame a->e, and we fetched a mutant blame
-            // for e, we're guaranteed to be done, even if there are mutations in e's history.
-            let src_path = rename
-                .src_path()
-                .ok_or_else(|| anyhow!("Mutable rename points file to root directory"))?
-                .clone();
-            let mut src_cs_ctx = repo_ctx
-                .changeset(rename.src_cs_id())
-                .await?
-                .ok_or_else(|| anyhow!("Source changeset of a mutable rename is missing"))?;
-            src_cs_ctx.copy_mutable_renames(&self.changeset).await?;
-            let src_ctx = src_cs_ctx.path_with_history(src_path.clone())?;
-            let (compat_blame, src_content) = src_ctx.blame_with_content(true).await?;
-            let src_blame = extract_blame_v2_from_compat(compat_blame)?;
-
-            // Fetch my content, ready to reblame.
-            let unode = self
-                .unode_id()
-                .await?
-                .context("Unode missing")?
-                .into_leaf()
-                .ok_or_else(|| {
-                    MononokeError::InvalidRequest(format!(
-                        "Blame is not available for directory: `{}`",
-                        self.path
-                    ))
-                })?;
-            let my_content = fetch_content_for_blame(ctx, repo, unode)
-                .await?
-                .into_bytes()
-                .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?;
-
-            // And reblame directly against the parent mutable renames gave us.
-            let blame_parent = BlameParent::new(0, src_path, src_content, src_blame);
-            let blame = BlameV2::new(my_csid, path.clone(), my_content, vec![blame_parent])?;
-            return Ok((CompatBlame::V2(blame), unode));
-        }
-
-        // Second case. We don't have a mutable rename attached, so we're going to look
-        // at the set of mutable renames for this path, and if any of those renames are ancestors
-        // of this commit, we'll apply a mutated blame via BlameV2::apply_mutable_blame to
-        // get the final blame result.
-
-        // Check for historic mutable renames - those attached to commits older than us.
-        // Given our history graph:
-        // a
-        // |
-        // b
-        // |
-        // c
-        // |\
-        // d e
-        // where we are b, this looks to see any if c, d, e (etc) has a mutable rename attached to
-        // it that affects our current path.
-        //
-        // We then filter down to remove mutable renames that are ancestors of the currently handled
-        // mutable rename, since recursing to get blame will fix those. We can then apply mutation
-        // for each blame in any order, because the mutated blame will only affect one ancestry path.
-        //
-        // For example, if c has a mutable rename for our path, then we do not want to consider mutable
-        // renames attached to d or e; however, if c does not, but d and e do, then we want to consider
-        // the mutable renames for both d and e.
-        let mutable_csids = mutable_renames
-            .get_cs_ids_with_rename(ctx, Some(path.clone()))
-            .await?;
-        let skiplist_index = repo_ctx.skiplist_index();
-        let mut possible_mutable_ancestors: Vec<(Generation, ChangesetId)> =
-            stream::iter(mutable_csids.into_iter().map(anyhow::Ok))
-                .try_filter_map({
-                    move |mutated_at| async move {
-                        // First, we filter out csids that cannot be reached from here. These
-                        // are attached to mutable renames that are either descendants of us, or
-                        // in a completely unrelated tree of history.
-                        if skiplist_index
-                            .query_reachability(ctx, repo.changeset_fetcher(), my_csid, mutated_at)
-                            .await?
-                        {
-                            // We also want to grab generation here, because we're going to sort
-                            // by generation and consider "most recent" candidate first
-                            let cs_ctx =
-                                repo_ctx.changeset(mutated_at).await?.ok_or_else(|| {
-                                    anyhow!("Source changeset of a mutable rename is missing")
-                                })?;
-
-                            let cs_gen = cs_ctx.generation().await?;
-                            Ok(Some((cs_gen, mutated_at)))
-                        } else {
-                            anyhow::Ok(None)
-                        }
-                    }
-                })
-                .try_collect()
-                .await?;
-
-        // And turn the list of possible mutable ancestors into a stack sorted by generation
-        possible_mutable_ancestors.sort_unstable_by_key(|(gen, _)| *gen);
-        // Fetch the immutable blame, which we're going to mutate
-        let (blame, unode) = self.blame_impl(false).await?;
-        let mut my_blame = extract_blame_v2_from_compat(blame)?;
-
-        // We now have a stack of possible mutable ancestors, sorted so that the highest generation
-        // is last. We now pop the last entry from the stack (highest generation) and apply mutation
-        // based on that entry. Once that's done, we remove all ancestors of the popped entry
-        // from the stack, so that we don't attempt to double-apply a mutation.
-        //
-        // This will mutate our blame to have all appropriate mutations from ancestors applied
-        // If we have mutable blame down two ancestors of a merge, we'd expect that the order
-        // of applying those mutations will not affect the final result
-        while let Some((_, mutated_csid)) = possible_mutable_ancestors.pop() {
-            // Apply mutation for mutated_csid
-            let mut mutated_cs_ctx = repo_ctx
-                .changeset(mutated_csid)
-                .await?
-                .ok_or_else(|| anyhow!("Source changeset of a mutable rename is missing"))?;
-            mutated_cs_ctx.copy_mutable_renames(&self.changeset).await?;
-            let mutated_path_ctx = mutated_cs_ctx.path_with_history(path.clone())?;
-            let ((mutated_blame, _), (original_blame, _)) = try_join!(
-                mutated_path_ctx.fetch_mutable_blame(seen),
-                mutated_path_ctx.blame_impl(false)
-            )?;
-            let original_blame = extract_blame_v2_from_compat(original_blame)?;
-            let mutated_blame = extract_blame_v2_from_compat(mutated_blame)?;
-            my_blame.apply_mutable_change(&original_blame, &mutated_blame)?;
-
-            // Rebuild possible_mutable_ancestors without anything that's an ancestor
-            // of mutated_csid. This must preserve order, so that we deal with the most
-            // recent mutation entries first (which may well remove older mutation entries
-            // from the stack)
-            possible_mutable_ancestors =
-                stream::iter(possible_mutable_ancestors.into_iter().map(anyhow::Ok))
-                    .try_filter_map({
-                        move |(gen, csid)| async move {
-                            if skiplist_index
-                                .query_reachability(
-                                    ctx,
-                                    repo.changeset_fetcher(),
-                                    mutated_csid,
-                                    csid,
-                                )
-                                .await?
-                            {
-                                anyhow::Ok(None)
-                            } else {
-                                Ok(Some((gen, csid)))
-                            }
-                        }
-                    })
-                    .try_collect()
-                    .await?;
-        }
-
-        Ok((CompatBlame::V2(my_blame), unode))
-    }
-
-    async fn fetch_immutable_blame(&self) -> Result<(CompatBlame, FileUnodeId), MononokeError> {
-        let ctx = self.changeset.ctx();
-        let repo = self.changeset.repo().blob_repo();
-        let csid = self.changeset.id();
-        let mpath = self.path.as_mpath().ok_or_else(|| {
-            MononokeError::InvalidRequest("Blame is not available for directory: `/`".to_string())
-        })?;
-
-        let (blame, unode) = fetch_blame_compat(ctx, repo, csid, mpath.clone())
-            .map_err(|error| match error {
-                BlameError::NoSuchPath(_)
-                | BlameError::IsDirectory(_)
-                | BlameError::Rejected(_) => MononokeError::InvalidRequest(error.to_string()),
-                BlameError::DeriveError(e) => MononokeError::from(e),
-                _ => MononokeError::from(Error::from(error)),
-            })
-            .await?;
-
-        Ok((blame, unode))
-    }
-
-    async fn blame_impl(
-        &self,
-        follow_mutable_file_history: bool,
-    ) -> Result<(CompatBlame, FileUnodeId), MononokeError> {
-        if follow_mutable_file_history {
-            self.fetch_mutable_blame(&mut HashSet::new()).await
-        } else {
-            self.fetch_immutable_blame().await
-        }
-    }
-
     /// Blame metadata for this path.
     pub async fn blame(
         &self,
         follow_mutable_file_history: bool,
     ) -> Result<CompatBlame, MononokeError> {
-        let (blame, _) = self.blame_impl(follow_mutable_file_history).await?;
+        let ctx = self.changeset.ctx();
+        let repo = self.changeset.repo().inner_repo();
+        let csid = self.changeset.id();
+        let path = self.path.as_mpath();
+        let (blame, _) =
+            history_traversal::blame(ctx, repo, csid, path, follow_mutable_file_history).await?;
         Ok(blame)
     }
 
@@ -684,14 +460,18 @@ impl ChangesetPathHistoryContext {
         &self,
         follow_mutable_file_history: bool,
     ) -> Result<(CompatBlame, Bytes), MononokeError> {
-        let (blame, file_unode_id) = self.blame_impl(follow_mutable_file_history).await?;
         let ctx = self.changeset.ctx();
-        let repo = self.changeset.repo().blob_repo();
-        let content = fetch_content_for_blame(ctx, repo, file_unode_id)
-            .await?
-            .into_bytes()
-            .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?;
-        Ok((blame, content))
+        let repo = self.changeset.repo().inner_repo();
+        let csid = self.changeset.id();
+        let path = self.path.as_mpath();
+        Ok(history_traversal::blame_with_content(
+            ctx,
+            repo,
+            csid,
+            path,
+            follow_mutable_file_history,
+        )
+        .await?)
     }
 
     /// Returns a list of `ChangesetContext` for the file at this path that represents
@@ -1129,12 +909,4 @@ pub async fn unified_diff(
         raw_diff,
         is_binary,
     })
-}
-
-fn extract_blame_v2_from_compat(blame: CompatBlame) -> Result<BlameV2, Error> {
-    if let CompatBlame::V2(blame) = blame {
-        Ok(blame)
-    } else {
-        bail!("Mutable blame only works with blame V2. Ask Source Control oncall for help")
-    }
 }

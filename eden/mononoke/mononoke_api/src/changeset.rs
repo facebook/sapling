@@ -214,16 +214,6 @@ impl ChangesetContext {
         Ok(())
     }
 
-    /// Copies the mutable renames information from another ChangesetContext
-    pub(crate) async fn copy_mutable_renames(&mut self, other: &Self) -> Result<(), MononokeError> {
-        if let Some(mutable_history) = &other.mutable_history {
-            self.add_mutable_renames(mutable_history.keys().cloned())
-                .await
-        } else {
-            Ok(())
-        }
-    }
-
     /// The `RepoContext` for this query.
     pub fn repo(&self) -> &RepoContext {
         &self.repo

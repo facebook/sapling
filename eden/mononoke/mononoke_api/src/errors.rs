@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use blame::BlameError;
 use blobstore::LoadableError;
 use bookmarks_movement::describe_hook_rejections;
 use bookmarks_movement::BookmarkMovementError;
@@ -128,6 +129,19 @@ impl From<AuthorizationError> for MononokeError {
                 MononokeError::AuthorizationError(e.to_string())
             }
             AuthorizationError::Error(e) => MononokeError::InternalError(InternalError::from(e)),
+        }
+    }
+}
+
+impl From<BlameError> for MononokeError {
+    fn from(e: BlameError) -> Self {
+        use BlameError::*;
+        match e {
+            NoSuchPath(_) | IsDirectory(_) | Rejected(_) => {
+                MononokeError::InvalidRequest(e.to_string())
+            }
+            DeriveError(e) => MononokeError::from(e),
+            _ => MononokeError::from(anyhow::Error::from(e)),
         }
     }
 }
