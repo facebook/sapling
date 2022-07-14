@@ -400,24 +400,12 @@ StoreResult RocksDbLocalStore::get(KeySpace keySpace, ByteRange key) const {
 }
 
 FOLLY_NODISCARD ImmediateFuture<StoreResult>
-RocksDbLocalStore::getImmediateFuture(KeySpace keySpace, folly::ByteRange key)
+RocksDbLocalStore::getImmediateFuture(KeySpace keySpace, const ObjectId& key)
     const {
-  // We're really just passing key through to the get() method, but we need to
-  // make a copy of it on the way through.  It will usually be an eden::Hash
-  // but can potentially be an arbitrary length so we can't just use Hash as
-  // the storage here.  std::string is appropriate, but there's some noise
-  // with the conversion from unsigned/signed and back again.
   return faultInjector_.checkAsync("local store get single", "")
       .via(&ioPool_)
-      .thenValue([keySpace,
-                  key = std::string(
-                      reinterpret_cast<const char*>(key.data()), key.size()),
-                  this](folly::Unit&&) {
-        return get(
-            keySpace,
-            folly::ByteRange(
-                reinterpret_cast<const unsigned char*>(key.data()),
-                key.size()));
+      .thenValue([keySpace, key, self = shared_from_this()](folly::Unit&&) {
+        return self->get(keySpace, key.getBytes());
       })
       .semi();
 }

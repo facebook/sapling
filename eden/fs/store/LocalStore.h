@@ -102,7 +102,7 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
 
   FOLLY_NODISCARD virtual ImmediateFuture<StoreResult> getImmediateFuture(
       KeySpace keySpace,
-      folly::ByteRange key) const;
+      const ObjectId& id) const;
 
   FOLLY_NODISCARD virtual folly::Future<std::vector<StoreResult>> getBatch(
       KeySpace keySpace,

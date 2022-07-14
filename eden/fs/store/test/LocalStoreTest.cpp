@@ -18,12 +18,12 @@ using namespace folly::string_piece_literals;
 using namespace std::chrono_literals;
 
 LocalStoreImplResult makeMemoryLocalStore(FaultInjector*) {
-  return {std::nullopt, std::make_unique<MemoryLocalStore>()};
+  return {std::nullopt, std::make_shared<MemoryLocalStore>()};
 }
 
 LocalStoreImplResult makeSqliteLocalStore(FaultInjector*) {
   auto tempDir = makeTempDir();
-  auto store = std::make_unique<SqliteLocalStore>(
+  auto store = std::make_shared<SqliteLocalStore>(
       AbsolutePathPiece{tempDir.path().string()} + "sqlite"_pc);
   return {std::move(tempDir), std::move(store)};
 }

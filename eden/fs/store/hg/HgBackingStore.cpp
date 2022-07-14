@@ -216,7 +216,7 @@ SemiFuture<unique_ptr<Tree>> HgBackingStore::getRootTree(const RootId& rootId) {
   ObjectId commitId = hashFromRootId(rootId);
 
   return localStore_
-      ->getImmediateFuture(KeySpace::HgCommitToTreeFamily, commitId.getBytes())
+      ->getImmediateFuture(KeySpace::HgCommitToTreeFamily, commitId)
       .thenValue(
           [this, commitId](
               StoreResult result) -> folly::SemiFuture<unique_ptr<Tree>> {
@@ -496,7 +496,7 @@ folly::Future<folly::Unit> HgBackingStore::importTreeManifestForRoot(
     const Hash20& manifestId) {
   auto commitId = hashFromRootId(rootId);
   return localStore_
-      ->getImmediateFuture(KeySpace::HgCommitToTreeFamily, commitId.getBytes())
+      ->getImmediateFuture(KeySpace::HgCommitToTreeFamily, commitId)
       .semi()
       .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue(

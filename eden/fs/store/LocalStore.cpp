@@ -73,9 +73,8 @@ StoreResult LocalStore::get(KeySpace keySpace, const ObjectId& id) const {
 // fetch and wraps it in a future
 ImmediateFuture<StoreResult> LocalStore::getImmediateFuture(
     KeySpace keySpace,
-    folly::ByteRange key) const {
-  return makeImmediateFutureWith(
-      [keySpace, key, this] { return get(keySpace, key); });
+    const ObjectId& id) const {
+  return makeImmediateFutureWith([&] { return get(keySpace, id); });
 }
 
 folly::Future<std::vector<StoreResult>> LocalStore::getBatch(
@@ -92,7 +91,7 @@ folly::Future<std::vector<StoreResult>> LocalStore::getBatch(
 
 ImmediateFuture<std::unique_ptr<Tree>> LocalStore::getTree(
     const ObjectId& id) const {
-  return getImmediateFuture(KeySpace::TreeFamily, id.getBytes())
+  return getImmediateFuture(KeySpace::TreeFamily, id)
       .thenValue([id](StoreResult&& data) {
         if (!data.isValid()) {
           return std::unique_ptr<Tree>(nullptr);
@@ -111,7 +110,7 @@ ImmediateFuture<std::unique_ptr<Blob>> LocalStore::getBlob(
     return std::unique_ptr<Blob>(nullptr);
   }
 
-  return getImmediateFuture(KeySpace::BlobFamily, id.getBytes())
+  return getImmediateFuture(KeySpace::BlobFamily, id)
       .thenValue([id](StoreResult&& data) {
         if (!data.isValid()) {
           return std::unique_ptr<Blob>(nullptr);
@@ -123,7 +122,7 @@ ImmediateFuture<std::unique_ptr<Blob>> LocalStore::getBlob(
 
 ImmediateFuture<optional<BlobMetadata>> LocalStore::getBlobMetadata(
     const ObjectId& id) const {
-  return getImmediateFuture(KeySpace::BlobMetaDataFamily, id.getBytes())
+  return getImmediateFuture(KeySpace::BlobMetaDataFamily, id)
       .thenValue([id](StoreResult&& data) -> optional<BlobMetadata> {
         if (!data.isValid()) {
           return std::nullopt;

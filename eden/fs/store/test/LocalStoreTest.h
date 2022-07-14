@@ -20,7 +20,7 @@ namespace facebook::eden {
 
 using LocalStoreImplResult = std::pair<
     std::optional<folly::test::TemporaryDirectory>,
-    std::unique_ptr<LocalStore>>;
+    std::shared_ptr<LocalStore>>;
 using LocalStoreImpl = LocalStoreImplResult (*)(FaultInjector*);
 
 class LocalStoreTest : public ::testing::TestWithParam<LocalStoreImpl> {
@@ -38,7 +38,7 @@ class LocalStoreTest : public ::testing::TestWithParam<LocalStoreImpl> {
 
   FaultInjector faultInjector_{/*enabled=*/false};
   std::optional<folly::test::TemporaryDirectory> testDir_;
-  std::unique_ptr<LocalStore> store_;
+  std::shared_ptr<LocalStore> store_;
 
   using StringPiece = folly::StringPiece;
 };
