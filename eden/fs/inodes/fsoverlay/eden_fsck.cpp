@@ -49,7 +49,10 @@ int main(int argc, char** argv) {
     XLOG(INFO) << "Overlay was shut down uncleanly";
   }
 
-  OverlayChecker checker(&fsOverlay.value(), nextInodeNumber);
+  OverlayChecker checker(&fsOverlay.value(), nextInodeNumber, [](auto&&) {
+    return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
+        std::runtime_error("no lookup callback"));
+  });
   checker.scanForErrors();
   if (FLAGS_dry_run) {
     checker.logErrors();

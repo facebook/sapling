@@ -145,7 +145,8 @@ struct statfs Overlay::statFs() {
 
 folly::SemiFuture<Unit> Overlay::initialize(
     std::optional<AbsolutePath> mountPath,
-    OverlayChecker::ProgressCallback&& progressCallback) {
+    OverlayChecker::ProgressCallback&& progressCallback,
+    OverlayChecker::LookupCallback&& lookupCallback) {
   // The initOverlay() call is potentially slow, so we want to avoid
   // performing it in the current thread and blocking returning to our caller.
   //
@@ -157,9 +158,11 @@ folly::SemiFuture<Unit> Overlay::initialize(
   gcThread_ = std::thread([this,
                            mountPath = std::move(mountPath),
                            progressCallback = std::move(progressCallback),
+                           lookupCallback = std::move(lookupCallback),
                            promise = std::move(initPromise)]() mutable {
     try {
-      initOverlay(std::move(mountPath), progressCallback);
+      initOverlay(
+          std::move(mountPath), progressCallback, std::move(lookupCallback));
     } catch (std::exception& ex) {
       XLOG(ERR) << "overlay initialization failed for "
                 << backingOverlay_->getLocalDir() << ": " << ex.what();
@@ -176,8 +179,8 @@ folly::SemiFuture<Unit> Overlay::initialize(
 
 void Overlay::initOverlay(
     std::optional<AbsolutePath> mountPath,
-    FOLLY_MAYBE_UNUSED const OverlayChecker::ProgressCallback&
-        progressCallback) {
+    FOLLY_MAYBE_UNUSED const OverlayChecker::ProgressCallback& progressCallback,
+    FOLLY_MAYBE_UNUSED OverlayChecker::LookupCallback&& lookupCallback) {
   IORequest req{this};
   auto optNextInodeNumber = backingOverlay_->initOverlay(true);
   if (!optNextInodeNumber.has_value()) {
@@ -195,7 +198,9 @@ void Overlay::initOverlay(
     // TODO(zeyi): `OverlayCheck` should be associated with the specific
     // Overlay implementation. `reinterpret_cast` is a temporary workaround.
     OverlayChecker checker(
-        reinterpret_cast<FsOverlay*>(backingOverlay_.get()), std::nullopt);
+        reinterpret_cast<FsOverlay*>(backingOverlay_.get()),
+        std::nullopt,
+        std::move(lookupCallback));
     folly::stop_watch<> fsckRuntime;
     checker.scanForErrors(progressCallback);
     auto result = checker.repairErrors();

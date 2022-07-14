@@ -22,6 +22,7 @@
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/DirType.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifndef _WIN32
@@ -114,7 +115,12 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    */
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> initialize(
       std::optional<AbsolutePath> mountPath = std::nullopt,
-      OverlayChecker::ProgressCallback&& progressCallback = [](auto) {});
+      OverlayChecker::ProgressCallback&& progressCallback = [](auto) {},
+      OverlayChecker::LookupCallback&& lookupCallback =
+          [](auto) {
+            return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
+                std::runtime_error("no lookup callback"));
+          });
 
   /**
    * Closes the overlay. It is undefined behavior to access the
@@ -297,7 +303,8 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
   void initOverlay(
       std::optional<AbsolutePath> mountPath,
-      const OverlayChecker::ProgressCallback& progressCallback = [](auto) {});
+      const OverlayChecker::ProgressCallback& progressCallback,
+      OverlayChecker::LookupCallback&& lookupCallback);
   void gcThread() noexcept;
   void handleGCRequest(GCRequest& request);
 

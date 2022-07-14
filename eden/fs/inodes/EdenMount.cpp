@@ -284,6 +284,66 @@ Overlay::OverlayType EdenMount::getOverlayType(
   }
 }
 
+namespace {
+
+class TreeLookupProcessor {
+ public:
+  explicit TreeLookupProcessor(
+      RelativePathPiece path,
+      std::shared_ptr<ObjectStore> objectStore,
+      ObjectFetchContext& context)
+      : path_{path},
+        iterRange_{path_.components()},
+        iter_{iterRange_.begin()},
+        objectStore_{std::move(objectStore)},
+        context_{context} {}
+
+  ImmediateFuture<OverlayChecker::LookupCallbackValue> next(
+      std::shared_ptr<const Tree> tree) {
+    using RetType = OverlayChecker::LookupCallbackValue;
+    auto name = *iter_++;
+    auto it = tree->find(name);
+
+    if (it == tree->cend()) {
+      return makeImmediateFuture<RetType>(
+          std::system_error(ENOENT, std::generic_category()));
+    }
+
+    if (iter_ == iterRange_.end()) {
+      if (it->second.isTree()) {
+        return objectStore_->getTree(it->second.getHash(), context_)
+            .thenValue([](std::shared_ptr<const Tree> tree) -> RetType {
+              return tree;
+            });
+      } else {
+        return ImmediateFuture{RetType{it->second}};
+      }
+    } else {
+      if (!it->second.isTree()) {
+        return makeImmediateFuture<RetType>(
+            std::system_error(ENOTDIR, std::generic_category()));
+      } else {
+        return objectStore_->getTree(it->second.getHash(), context_)
+            .thenValue([this](std::shared_ptr<const Tree> tree) {
+              return next(std::move(tree));
+            });
+      }
+    }
+  }
+
+ private:
+  RelativePath path_;
+  RelativePath::base_type::component_iterator_range iterRange_;
+  RelativePath::base_type::component_iterator iter_;
+  std::shared_ptr<ObjectStore> objectStore_;
+  // The ObjectFetchContext is allocated at the beginning of a request and
+  // released once the request completes. Since the lifetime of
+  // TreeLookupProcessor is strictly less than the one of a request, we can
+  // safely store a reference to the fetch context.
+  ObjectFetchContext& context_;
+};
+} // namespace
+
 FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
     OverlayChecker::ProgressCallback&& progressCallback,
     const std::optional<SerializedInodeMap>& takeover) {
@@ -294,12 +354,12 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
       parentCommit.getLastCheckoutId(ParentCommit::RootIdPreference::To)
           .value();
 
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      "EdenMount::initialize");
   return serverState_->getFaultInjector()
       .checkAsync("mount", getPath().stringPiece())
       .via(getServerThreadPool().get())
       .thenValue([this, parent](auto&&) {
-        static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-            "EdenMount::initialize");
         return objectStore_->getRootTree(parent, *context)
             .semi()
             .via(&folly::QueuedImmediateExecutor::instance());
@@ -338,7 +398,22 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
         // Initialize the overlay.
         // This must be performed before we do any operations that may
         // allocate inode numbers, including creating the root TreeInode.
-        return overlay_->initialize(getPath(), std::move(progressCallback))
+        return overlay_
+            ->initialize(
+                getPath(),
+                std::move(progressCallback),
+                [this](RelativePathPiece path) {
+                  auto lookup = std::make_unique<TreeLookupProcessor>(
+                      path, objectStore_, *context);
+                  // Do the next() and the ensure() on separate lines to make
+                  // the order of 'lookup' accesses explicit, so we don't move
+                  // it before calling next.
+                  auto future = lookup->next(getCheckedOutRootTree());
+                  // The 'ensure' makes sure the lookup lasts until the future
+                  // finishes.
+                  return std::move(future).ensure(
+                      [proc = std::move(lookup)] {});
+                })
             .deferValue([parentTree = std::move(parentTree)](auto&&) mutable {
               return parentTree;
             });
@@ -1040,66 +1115,6 @@ TreeInodePtr EdenMount::getRootInode() const {
 std::shared_ptr<const Tree> EdenMount::getCheckedOutRootTree() const {
   return parentState_.rlock()->checkedOutRootTree;
 }
-
-namespace {
-
-class TreeLookupProcessor {
- public:
-  explicit TreeLookupProcessor(
-      RelativePathPiece path,
-      std::shared_ptr<ObjectStore> objectStore,
-      ObjectFetchContext& context)
-      : path_{path},
-        iterRange_{path_.components()},
-        iter_{iterRange_.begin()},
-        objectStore_{std::move(objectStore)},
-        context_{context} {}
-
-  ImmediateFuture<std::variant<std::shared_ptr<const Tree>, TreeEntry>> next(
-      std::shared_ptr<const Tree> tree) {
-    using RetType = std::variant<std::shared_ptr<const Tree>, TreeEntry>;
-    auto name = *iter_++;
-    auto it = tree->find(name);
-
-    if (it == tree->cend()) {
-      return makeImmediateFuture<RetType>(
-          std::system_error(ENOENT, std::generic_category()));
-    }
-
-    if (iter_ == iterRange_.end()) {
-      if (it->second.isTree()) {
-        return objectStore_->getTree(it->second.getHash(), context_)
-            .thenValue([](std::shared_ptr<const Tree> tree) -> RetType {
-              return tree;
-            });
-      } else {
-        return ImmediateFuture{RetType{it->second}};
-      }
-    } else {
-      if (!it->second.isTree()) {
-        return makeImmediateFuture<RetType>(
-            std::system_error(ENOTDIR, std::generic_category()));
-      } else {
-        return objectStore_->getTree(it->second.getHash(), context_)
-            .thenValue([this](std::shared_ptr<const Tree> tree) {
-              return next(std::move(tree));
-            });
-      }
-    }
-  }
-
- private:
-  RelativePath path_;
-  RelativePath::base_type::component_iterator_range iterRange_;
-  RelativePath::base_type::component_iterator iter_;
-  std::shared_ptr<ObjectStore> objectStore_;
-  // The ObjectFetchContext is allocated at the beginning of a request and
-  // released once the request completes. Since the lifetime of
-  // TreeLookupProcessor is strictly less than the one of a request, we can
-  // safely store a reference to the fetch context.
-  ObjectFetchContext& context_;
-};
-} // namespace
 
 ImmediateFuture<std::variant<std::shared_ptr<const Tree>, TreeEntry>>
 EdenMount::getTreeOrTreeEntry(

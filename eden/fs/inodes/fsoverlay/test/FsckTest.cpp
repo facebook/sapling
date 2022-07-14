@@ -327,7 +327,10 @@ TEST(Fsck, testNoErrors) {
 
   FsOverlay fs(overlay->overlayPath());
   auto nextInode = fs.initOverlay(/*createIfNonExisting=*/false);
-  OverlayChecker checker(&fs, nextInode);
+  OverlayChecker checker(&fs, nextInode, [](auto&&) {
+    return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
+        std::runtime_error("no lookup callback"));
+  });
   checker.scanForErrors();
   EXPECT_EQ(0, checker.getErrors().size());
   EXPECT_THAT(errorMessages(checker), UnorderedElementsAre());
@@ -360,7 +363,10 @@ TEST(Fsck, testMissingNextInodeNumber) {
   auto nextInode = fs.initOverlay(/*createIfNonExisting=*/false);
   // Confirm there is no next inode data
   EXPECT_FALSE(nextInode.has_value());
-  OverlayChecker checker(&fs, nextInode);
+  OverlayChecker checker(&fs, nextInode, [](auto&&) {
+    return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
+        std::runtime_error("no lookup callback"));
+  });
   checker.scanForErrors();
   // OverlayChecker should still report 0 errors in this case.
   // We don't report a missing next inode number as an error: if this is the
@@ -383,7 +389,10 @@ TEST(Fsck, testBadNextInodeNumber) {
   FsOverlay fs(overlay->overlayPath());
   auto nextInode = fs.initOverlay(/*createIfNonExisting=*/false);
   EXPECT_EQ(2, nextInode ? nextInode->get() : 0);
-  OverlayChecker checker(&fs, nextInode);
+  OverlayChecker checker(&fs, nextInode, [](auto&&) {
+    return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
+        std::runtime_error("no lookup callback"));
+  });
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
@@ -403,7 +412,10 @@ TEST(Fsck, testBadFileData) {
   std::string badHeader(FsOverlay::kHeaderLength, 0x55);
   overlay->corruptInodeHeader(layout.src_foo_testTxt.number(), badHeader);
 
-  OverlayChecker checker(&overlay->fs(), std::nullopt);
+  OverlayChecker checker(&overlay->fs(), std::nullopt, [](auto&&) {
+    return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
+        std::runtime_error("no lookup callback"));
+  });
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
@@ -444,7 +456,10 @@ TEST(Fsck, testTruncatedDirData) {
   auto srcDataFile = overlay->fs().openFileNoVerify(layout.src.number());
   folly::checkUnixError(ftruncate(srcDataFile.fd(), 0), "truncate failed");
 
-  OverlayChecker checker(&overlay->fs(), std::nullopt);
+  OverlayChecker checker(&overlay->fs(), std::nullopt, [](auto&&) {
+    return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
+        std::runtime_error("no lookup callback"));
+  });
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
@@ -522,7 +537,10 @@ TEST(Fsck, testMissingDirData) {
   // subtree.
   overlay->fs().removeOverlayData(layout.src_foo_x.number());
 
-  OverlayChecker checker(&overlay->fs(), std::nullopt);
+  OverlayChecker checker(&overlay->fs(), std::nullopt, [](auto&&) {
+    return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
+        std::runtime_error("no lookup callback"));
+  });
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
@@ -599,7 +617,10 @@ TEST(Fsck, testHardLink) {
   layout.src_foo.linkFile(layout.src_foo_x_y_zTxt.number(), "also_z.txt");
   layout.src_foo.save();
 
-  OverlayChecker checker(&overlay->fs(), std::nullopt);
+  OverlayChecker checker(&overlay->fs(), std::nullopt, [](auto&&) {
+    return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
+        std::runtime_error("no lookup callback"));
+  });
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),

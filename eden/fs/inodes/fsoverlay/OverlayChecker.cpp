@@ -655,8 +655,11 @@ class OverlayChecker::BadNextInodeNumber : public OverlayChecker::Error {
 
 OverlayChecker::OverlayChecker(
     FsOverlay* fs,
-    optional<InodeNumber> nextInodeNumber)
-    : fs_(fs), loadedNextInodeNumber_(nextInodeNumber) {}
+    optional<InodeNumber> nextInodeNumber,
+    LookupCallback&& lookupCallback)
+    : fs_(fs),
+      loadedNextInodeNumber_(nextInodeNumber),
+      lookupCallback_(std::move(lookupCallback)) {}
 
 OverlayChecker::~OverlayChecker() {}
 
@@ -781,6 +784,11 @@ OverlayChecker::getInodeInfo(InodeNumber number) {
     return nullptr;
   }
   return &(iter->second);
+}
+
+ImmediateFuture<std::variant<std::shared_ptr<const Tree>, TreeEntry>>
+OverlayChecker::lookup(RelativePathPiece path) {
+  return lookupCallback_(path);
 }
 
 OverlayChecker::PathInfo OverlayChecker::computePath(InodeNumber number) {

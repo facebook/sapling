@@ -15,6 +15,8 @@
 
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
+#include "eden/fs/model/Tree.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -49,6 +51,12 @@ class OverlayChecker {
     uint32_t fixedErrors{0};
   };
 
+  using ProgressCallback = std::function<void(uint16_t)>;
+  using LookupCallbackValue =
+      std::variant<std::shared_ptr<const Tree>, TreeEntry>;
+  using LookupCallback =
+      std::function<ImmediateFuture<LookupCallbackValue>(RelativePathPiece)>;
+
   /**
    * Create a new OverlayChecker.
    *
@@ -56,11 +64,12 @@ class OverlayChecker {
    * of the check operation.  The caller is responsible for ensuring that the
    * FsOverlay object exists for at least as long as the OverlayChecker object.
    */
-  OverlayChecker(FsOverlay* fs, std::optional<InodeNumber> nextInodeNumber);
+  OverlayChecker(
+      FsOverlay* fs,
+      std::optional<InodeNumber> nextInodeNumber,
+      LookupCallback&& lookupCallback);
 
   ~OverlayChecker();
-
-  using ProgressCallback = std::function<void(uint16_t)>;
 
   /**
    * Scan the overlay for problems.
@@ -180,6 +189,9 @@ class OverlayChecker {
   // readInodes() must have been called for inode info to be populated.
   InodeInfo* FOLLY_NULLABLE getInodeInfo(InodeNumber number);
 
+  ImmediateFuture<std::variant<std::shared_ptr<const Tree>, TreeEntry>> lookup(
+      RelativePathPiece path);
+
   PathInfo computePath(const InodeInfo& info);
   PathComponent findChildName(const InodeInfo& parentInfo, InodeNumber child);
   template <typename Fn>
@@ -216,6 +228,7 @@ class OverlayChecker {
 
   FsOverlay* const fs_;
   std::optional<InodeNumber> loadedNextInodeNumber_;
+  LookupCallback lookupCallback_;
   std::unordered_map<InodeNumber, InodeInfo> inodes_;
   std::vector<std::unique_ptr<Error>> errors_;
   uint64_t maxInodeNumber_{kRootNodeId.get()};
