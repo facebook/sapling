@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import bisect
 import os
 import struct
+from typing import Optional
 
 from edenscm.mercurial import error as hgerror, pycompat
 from edenscm.mercurial.node import hex
@@ -243,7 +244,7 @@ class revmap(object):
         return (self.rev2flag(rev) & sidebranchflag) == 0
 
 
-def getlastnode(path):
+def getlastnode(path) -> Optional[bytes]:
     """return the last hash in a revmap, without loading its full content.
     this is equivalent to `m = revmap(path); m.rev2hsh(m.maxrev)`, but faster.
     """
