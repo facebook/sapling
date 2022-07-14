@@ -6,10 +6,11 @@
  */
 
 use crate::CommitsInBundle;
+use crate::Repo;
 use anyhow::format_err;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use cloned::cloned;
 use context::CoreContext;
 use futures::stream;
@@ -28,8 +29,8 @@ pub enum GlobalrevSyncer {
 }
 
 pub struct DarkstormGlobalrevSyncer {
-    orig_repo: BlobRepo,
-    darkstorm_repo: BlobRepo,
+    orig_repo: Repo,
+    darkstorm_repo: Repo,
 }
 
 #[derive(Clone)]
@@ -51,7 +52,7 @@ impl SqlConstruct for HgsqlConnection {
 }
 
 impl GlobalrevSyncer {
-    pub fn darkstorm(orig_repo: &BlobRepo, darkstorm_repo: &BlobRepo) -> Self {
+    pub fn darkstorm(orig_repo: &Repo, darkstorm_repo: &Repo) -> Self {
         Self::Darkstorm(Arc::new(DarkstormGlobalrevSyncer {
             orig_repo: orig_repo.clone(),
             darkstorm_repo: darkstorm_repo.clone(),
@@ -131,10 +132,10 @@ mod test {
     async fn test_sync_darkstorm(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
-        let orig_repo: BlobRepo = TestRepoFactory::new(fb)?
+        let orig_repo: Repo = TestRepoFactory::new(fb)?
             .with_id(RepositoryId::new(0))
             .build()?;
-        let darkstorm_repo: BlobRepo = TestRepoFactory::new(fb)?
+        let darkstorm_repo: Repo = TestRepoFactory::new(fb)?
             .with_id(RepositoryId::new(1))
             .build()?;
 

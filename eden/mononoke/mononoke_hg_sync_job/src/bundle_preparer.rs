@@ -14,13 +14,14 @@ use crate::errors::PipelineError;
 use crate::BookmarkOverlay;
 use crate::CombinedBookmarkUpdateLogEntry;
 use crate::CommitsInBundle;
+use crate::Repo;
 use anyhow::anyhow;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateReason;
 use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::ChangesetFetcherArc;
 use cloned::cloned;
 use context::CoreContext;
 use futures::compat::Future01CompatExt;
@@ -35,7 +36,6 @@ use itertools::Itertools;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::LfsParams;
-use mononoke_api_types::InnerRepo;
 use mononoke_hg_sync_job_helper_lib::save_bytes_to_temp_file;
 use mononoke_hg_sync_job_helper_lib::write_to_named_temp_file;
 use mononoke_types::datetime::Timestamp;
@@ -57,7 +57,7 @@ pub struct PreparedBookmarkUpdateLogEntry {
 }
 
 pub struct BundlePreparer {
-    repo: BlobRepo,
+    repo: Repo,
     base_retry_delay_ms: u64,
     retry_num: usize,
     bundle_info: BundleInfo,
@@ -82,7 +82,7 @@ struct BundleInfo {
 
 impl BundlePreparer {
     pub async fn new_generate_bundles(
-        repo: InnerRepo,
+        repo: Repo,
         base_retry_delay_ms: u64,
         retry_num: usize,
         lfs_params: LfsParams,
@@ -91,9 +91,9 @@ impl BundlePreparer {
         use_hg_server_bookmark_value_if_mismatch: bool,
         push_vars: Option<HashMap<String, bytes::Bytes>>,
     ) -> Result<BundlePreparer, Error> {
-        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = repo.skiplist_index;
+        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = repo.skiplist_index.clone();
         Ok(BundlePreparer {
-            repo: repo.blob_repo,
+            repo,
             base_retry_delay_ms,
             retry_num,
             bundle_info: BundleInfo {
@@ -127,7 +127,7 @@ impl BundlePreparer {
         split_in_batches(
             ctx,
             &self.bundle_info.lca_hint,
-            &self.repo.get_changeset_fetcher(),
+            &self.repo.changeset_fetcher_arc(),
             entries,
         )
         .await
@@ -305,7 +305,7 @@ impl BundlePreparer {
 
     async fn try_prepare_bundle_timestamps_file<'a>(
         ctx: &'a CoreContext,
-        repo: &'a BlobRepo,
+        repo: &'a Repo,
         prepare_info: PrepareInfo,
         hg_server_heads: &'a [ChangesetId],
         bookmark_change: &'a BookmarkChange,
@@ -589,11 +589,12 @@ mod test {
     use mononoke_types::RepositoryId;
     use skiplist::SkiplistIndex;
     use tests_utils::drawdag::create_from_dag;
+    use tests_utils::TestRepo;
 
     #[fbinit::test]
     async fn test_split_in_batches_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
 
         let commits = create_from_dag(
             &ctx,
@@ -615,7 +616,7 @@ mod test {
             Some(commit),
         )];
         let res =
-            split_in_batches(&ctx, &sli, &repo.get_changeset_fetcher(), entries.clone()).await?;
+            split_in_batches(&ctx, &sli, &repo.changeset_fetcher_arc(), entries.clone()).await?;
 
         assert_eq!(res.len(), 1);
         assert_eq!(res[0].entries, entries);
@@ -629,7 +630,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_in_batches_all_in_one_batch(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
 
         let commits = create_from_dag(
             &ctx,
@@ -652,7 +653,7 @@ mod test {
             create_bookmark_log_entry(2, main.clone(), Some(commit_b), Some(commit_c)),
         ];
         let res =
-            split_in_batches(&ctx, &sli, &repo.get_changeset_fetcher(), entries.clone()).await?;
+            split_in_batches(&ctx, &sli, &repo.changeset_fetcher_arc(), entries.clone()).await?;
 
         assert_eq!(res.len(), 1);
         assert_eq!(res[0].entries, entries);
@@ -666,7 +667,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_in_batches_different_bookmarks(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
 
         let commits = create_from_dag(
             &ctx,
@@ -694,7 +695,7 @@ mod test {
             log_entry_3.clone(),
         ];
         let res =
-            split_in_batches(&ctx, &sli, &repo.get_changeset_fetcher(), entries.clone()).await?;
+            split_in_batches(&ctx, &sli, &repo.changeset_fetcher_arc(), entries.clone()).await?;
 
         assert_eq!(res.len(), 3);
         assert_eq!(res[0].entries, vec![log_entry_1]);
@@ -718,7 +719,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_in_batches_non_forward_move(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
 
         let commits = create_from_dag(
             &ctx,
@@ -746,7 +747,7 @@ mod test {
             log_entry_3.clone(),
         ];
         let res =
-            split_in_batches(&ctx, &sli, &repo.get_changeset_fetcher(), entries.clone()).await?;
+            split_in_batches(&ctx, &sli, &repo.changeset_fetcher_arc(), entries.clone()).await?;
 
         assert_eq!(res.len(), 2);
         assert_eq!(res[0].entries, vec![log_entry_1, log_entry_2]);
@@ -765,7 +766,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_in_batches_weird_move(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
 
         let commits = create_from_dag(
             &ctx,
@@ -787,7 +788,7 @@ mod test {
             create_bookmark_log_entry(1, main.clone(), Some(commit_b), Some(commit_c));
         let entries = vec![log_entry_1.clone(), log_entry_2.clone()];
         let res =
-            split_in_batches(&ctx, &sli, &repo.get_changeset_fetcher(), entries.clone()).await?;
+            split_in_batches(&ctx, &sli, &repo.changeset_fetcher_arc(), entries.clone()).await?;
 
         assert_eq!(res.len(), 2);
         assert_eq!(res[0].entries, vec![log_entry_1]);
@@ -806,7 +807,7 @@ mod test {
     #[fbinit::test]
     async fn test_maybe_adjust_batch(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
 
         let commits = create_from_dag(
             &ctx,

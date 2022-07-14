@@ -16,6 +16,8 @@ use bookmarks::Bookmarks;
 use bookmarks::BookmarksRef;
 use bytes::Bytes;
 use bytes::BytesMut;
+use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::ChangesetFetcherArc;
 use changesets::Changesets;
 use changesets::ChangesetsRef;
 use changesets_creation::save_changesets;
@@ -56,6 +58,7 @@ pub mod drawdag;
 pub trait Repo = BonsaiHgMappingRef
     + BookmarksRef
     + ChangesetsRef
+    + ChangesetFetcherArc
     + FilestoreConfigRef
     + RepoBlobstoreArc
     + RepoDerivedDataRef
@@ -70,6 +73,9 @@ pub struct TestRepo {
 
     #[facet]
     pub changesets: dyn Changesets,
+
+    #[facet]
+    pub changeset_fetcher: dyn ChangesetFetcher,
 
     #[facet]
     pub bonsai_hg_mapping: dyn BonsaiHgMapping,

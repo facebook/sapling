@@ -708,7 +708,7 @@ async fn check_dependent_systems(
     }
 
     if !passed_hg_sync_check {
-        wait_for_latest_log_id_to_be_synced(ctx, repo.as_blob_repo(), sleep_time).await?;
+        wait_for_latest_log_id_to_be_synced(ctx, repo, sleep_time).await?;
     }
 
     Ok(())

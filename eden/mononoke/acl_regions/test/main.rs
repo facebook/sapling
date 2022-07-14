@@ -11,6 +11,7 @@ use acl_regions::AssociatedRulesResult;
 use anyhow::Result;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::Bookmarks;
+use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -50,6 +51,9 @@ struct Repo {
 
     #[facet]
     repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    changeset_fetcher: dyn ChangesetFetcher,
 }
 
 fn path(p: &str) -> Option<MPath> {

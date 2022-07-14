@@ -19,7 +19,9 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
-use blobrepo::BlobRepo;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogEntry;
@@ -28,6 +30,8 @@ use borrowed::borrowed;
 use bundle_generator::FilenodeVerifier;
 use bundle_preparer::maybe_adjust_batch;
 use bundle_preparer::BundlePreparer;
+use changeset_fetcher::ChangesetFetcher;
+use changesets::Changesets;
 use clap_old::Arg;
 use clap_old::ArgGroup;
 use clap_old::SubCommand;
@@ -42,6 +46,8 @@ use executor_lib::BackgroundProcessExecutor;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
 use fbinit::FacebookInit;
+use filestore::FilestoreConfig;
+use filestore::FilestoreConfigRef;
 use futures::future;
 use futures::future::try_join;
 use futures::future::try_join3;
@@ -59,12 +65,17 @@ use futures_watchdog::WatchdogExt;
 use http::Uri;
 use lfs_verifier::LfsVerifier;
 use mercurial_types::HgChangesetId;
-use mononoke_api_types::InnerRepo;
 use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 use mutable_counters::ArcMutableCounters;
+use mutable_counters::MutableCounters;
 use mutable_counters::MutableCountersArc;
 use once_cell::sync::OnceCell;
 use regex::Regex;
+use repo_blobstore::RepoBlobstore;
+use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedData;
+use repo_identity::RepoIdentity;
 use repo_lock::MutableRepoLock;
 use repo_lock::RepoLock;
 use repo_lock::RepoLockState;
@@ -72,6 +83,7 @@ use repo_lock::SqlRepoLock;
 use retry::retry;
 use retry::RetryAttemptsCount;
 use scuba_ext::MononokeScubaSampleBuilder;
+use skiplist::SkiplistIndex;
 use slog::error;
 use slog::info;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
@@ -136,6 +148,46 @@ const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 pub struct HgSyncProcess {
     matches: Arc<MononokeMatches<'static>>,
     fb: FacebookInit,
+}
+
+#[facet::container]
+#[derive(Clone)]
+pub struct Repo {
+    #[facet]
+    pub changeset_fetcher: dyn ChangesetFetcher,
+
+    #[facet]
+    pub changesets: dyn Changesets,
+
+    #[facet]
+    pub bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    pub mutable_counters: dyn MutableCounters,
+
+    #[facet]
+    pub bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
+
+    #[facet]
+    pub repo_identity: RepoIdentity,
+
+    #[init(repo_identity.id())]
+    pub repoid: RepositoryId,
+
+    #[init(repo_identity.name().to_string())]
+    pub repo_name: String,
+
+    #[facet]
+    pub repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    pub filestore_config: FilestoreConfig,
+
+    #[facet]
+    pub skiplist_index: SkiplistIndex,
+
+    #[facet]
+    pub repo_derived_data: RepoDerivedData,
 }
 
 impl HgSyncProcess {
@@ -888,10 +940,7 @@ struct LatestReplayedSyncCounter {
 }
 
 impl LatestReplayedSyncCounter {
-    fn new(
-        source_repo: &BlobRepo,
-        darkstorm_backup_repo: Option<&BlobRepo>,
-    ) -> Result<Self, Error> {
+    fn new(source_repo: &Repo, darkstorm_backup_repo: Option<&Repo>) -> Result<Self, Error> {
         if let Some(backup_repo) = darkstorm_backup_repo {
             let mutable_counters = backup_repo.mutable_counters_arc();
             Ok(Self { mutable_counters })
@@ -992,11 +1041,11 @@ async fn run<'a>(
         (_, Some(backup_repo_id)) => {
             let backup_repo_id =
                 args::resolve_repo_by_id(config_store, matches, backup_repo_id)?.id;
-            let backup_repo: BlobRepo =
+            let backup_repo: Repo =
                 args::open_repo_by_id(ctx.fb, ctx.logger(), matches, backup_repo_id).await?;
 
-            scuba_sample.add("repo", backup_repo.get_repoid().id());
-            scuba_sample.add("reponame", backup_repo.name().clone());
+            scuba_sample.add("repo", backup_repo.repoid.id());
+            scuba_sample.add("reponame", backup_repo.repo_name.clone());
             Some(backup_repo)
         }
         (true, _) => {
@@ -1006,11 +1055,11 @@ async fn run<'a>(
                 ARG_DARKSTORM_BACKUP_REPO_ID,
                 ARG_DARKSTORM_BACKUP_REPO_NAME,
             )?;
-            let backup_repo: BlobRepo =
+            let backup_repo: Repo =
                 args::open_repo_by_id(ctx.fb, ctx.logger(), matches, backup_repo_id).await?;
 
-            scuba_sample.add("repo", backup_repo.get_repoid().id());
-            scuba_sample.add("reponame", backup_repo.name().clone());
+            scuba_sample.add("repo", backup_repo.repoid.id());
+            scuba_sample.add("reponame", backup_repo.repo_name.clone());
             Some(backup_repo)
         }
         _ => {
@@ -1025,21 +1074,20 @@ async fn run<'a>(
         // FIXME: this cloned! will go away once HgRepo is asyncified
         cloned!(hg_repo_path);
 
-        let (repo, preparer): (BlobRepo, BoxFuture<Result<Arc<BundlePreparer>, Error>>) = {
-            let repo: InnerRepo =
-                args::open_repo_by_id(ctx.fb, ctx.logger(), matches, repo_id).await?;
+        let (repo, preparer): (Repo, BoxFuture<Result<Arc<BundlePreparer>, Error>>) = {
+            let repo: Repo = args::open_repo_by_id(ctx.fb, ctx.logger(), matches, repo_id).await?;
             let filenode_verifier = match verify_lfs_blob_presence {
                 Some(uri) => {
                     let uri = uri.parse::<Uri>()?;
-                    let verifier = LfsVerifier::new(uri, Arc::new(repo.blob_repo.get_blobstore()))?;
+                    let verifier = LfsVerifier::new(uri, Arc::new(repo.repo_blobstore().clone()))?;
                     FilenodeVerifier::LfsVerifier(verifier)
                 }
                 None => match maybe_darkstorm_backup_repo {
                     Some(ref backup_repo) => {
                         let verifier = DarkstormVerifier::new(
-                            Arc::new(repo.blob_repo.get_blobstore()),
-                            Arc::new(backup_repo.get_blobstore()),
-                            backup_repo.filestore_config(),
+                            Arc::new(repo.repo_blobstore().clone()),
+                            Arc::new(backup_repo.repo_blobstore().clone()),
+                            backup_repo.filestore_config().clone(),
                         );
                         FilenodeVerifier::DarkstormVerifier(verifier)
                     }
@@ -1047,7 +1095,7 @@ async fn run<'a>(
                 },
             };
             (
-                repo.blob_repo.clone(),
+                repo.clone(),
                 BundlePreparer::new_generate_bundles(
                     repo,
                     base_retry_delay_ms,
