@@ -20,6 +20,7 @@ import os
 import smtplib
 import socket
 import time
+from typing import List, Union
 
 from . import encoding, error, sslutil, util
 from .i18n import _
@@ -206,7 +207,7 @@ def validateconfig(ui) -> None:
             )
 
 
-def codec2iana(cs) -> str:
+def codec2iana(cs: str) -> str:
     """ """
     cs = email.charset.Charset(cs).input_charset.lower()
 
@@ -216,7 +217,9 @@ def codec2iana(cs) -> str:
     return cs
 
 
-def mimetextpatch(s, subtype: str = "plain", display: bool = False):
+def mimetextpatch(
+    s, subtype: str = "plain", display: bool = False
+) -> email.message.Message:
     """Return MIME message suitable for a patch.
     Charset will be detected by first trying to decode as us-ascii, then utf-8,
     and finally the global encodings. If all those fail, fall back to
@@ -236,7 +239,9 @@ def mimetextpatch(s, subtype: str = "plain", display: bool = False):
     return mimetextqp(s, subtype, "iso-8859-1")
 
 
-def mimetextqp(body, subtype, charset) -> email.message.Message:
+def mimetextqp(
+    body: Union[List[email.message.Message], bytes, str], subtype, charset
+) -> email.message.Message:
     """Return MIME message.
     Quoted-printable transfer encoding will be used if necessary.
     """
@@ -244,6 +249,8 @@ def mimetextqp(body, subtype, charset) -> email.message.Message:
     msg = email.message.Message()
     msg.set_type("text/" + subtype)
 
+    # pyre-fixme[16]: Item `List` of `Union[List[email.message.Message], bytes,
+    #  str]` has no attribute `splitlines`.
     for line in body.splitlines():
         if len(line) > 950:
             cs.body_encoding = email.charset.QP
@@ -299,7 +306,7 @@ def headencode(ui, s, charsets=None, display: bool = False) -> str:
     return s
 
 
-def _addressencode(ui, name, addr, charsets=None):
+def _addressencode(ui, name: str, addr, charsets=None):
     name = headencode(ui, name, charsets)
     try:
         acc, dom = addr.split("@")
@@ -314,6 +321,7 @@ def _addressencode(ui, name, addr, charsets=None):
             addr = addr.encode("ascii")
         except UnicodeDecodeError:
             raise error.Abort(_("invalid local address: %s") % addr)
+    # pyre-fixme[16]: Module `email` has no attribute `Utils`.
     return email.Utils.formataddr((name, addr))
 
 
@@ -341,7 +349,7 @@ def addrlistencode(ui, addrs, charsets=None, display: bool = False):
     return result
 
 
-def mimeencode(ui, s, charsets=None, display: bool = False):
+def mimeencode(ui, s, charsets=None, display: bool = False) -> email.message.Message:
     """creates mime text object, encodes it if needed, and sets
     charset and transfer-encoding accordingly."""
     cs = "us-ascii"
