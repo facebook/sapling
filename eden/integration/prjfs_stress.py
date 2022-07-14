@@ -137,3 +137,18 @@ class PrjFSStress(testcase.EdenRepoTest):
             self.wait_on_fault_unblock(3)
 
             self.assertMaterialized("foo")
+
+    def test_rename_hierarchy(self) -> None:
+        with self.run_with_fault():
+            self.mkdir("foo")
+            self.touch("foo/bar")
+            self.touch("foo/baz")
+            self.wait_on_fault_unblock(3)
+
+            self.rename("foo", "bar")
+            self.wait_on_fault_unblock(
+                2
+            )  # A rename is a total removal and a total creation
+
+            self.assertMaterialized("bar")
+            self.assertNotMaterialized("foo")

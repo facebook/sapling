@@ -288,6 +288,14 @@ class EdenTestCase(EdenTestCaseBase):
             f.write(contents)
         os.chmod(fullpath, mode)
 
+    def rename(self, from_path: str, to_path: str) -> None:
+        """Rename a file/directory at the specified paths relative to the
+        clone.
+        """
+        full_from = self.get_path(from_path)
+        full_to = self.get_path(to_path)
+        os.rename(full_from, full_to)
+
     def read_file(self, path: str) -> str:
         """Read the file with the specified path inside the eden repository,
         and return its contents.
