@@ -284,7 +284,7 @@ where
             }
             None => {
                 let maybe_mapping_change =
-                    get_mapping_change_version(&ctx, commit_syncer.get_source_repo(), cs_id);
+                    get_mapping_change_version(ctx, commit_syncer.get_source_repo(), cs_id);
                 let parents = source_repo.get_changeset_parents_by_bonsai(ctx.clone(), cs_id);
                 let (maybe_mapping_change, parents) =
                     try_join(maybe_mapping_change, parents).await?;
@@ -356,13 +356,13 @@ impl CommitSyncRepos {
 
         if source_repo.get_repoid() == small_repo_id {
             Ok(CommitSyncRepos::SmallToLarge {
-                large_repo: target_repo.clone(),
-                small_repo: source_repo.clone(),
+                large_repo: target_repo,
+                small_repo: source_repo,
             })
         } else {
             Ok(CommitSyncRepos::LargeToSmall {
-                large_repo: source_repo.clone(),
-                small_repo: target_repo.clone(),
+                large_repo: source_repo,
+                small_repo: target_repo,
             })
         }
     }
@@ -654,7 +654,7 @@ where
         ancestor_selection_hint: CandidateSelectionHint,
     ) -> Result<Option<ChangesetId>, Error> {
         let (unsynced_ancestors, synced_ancestors_versions) =
-            find_toposorted_unsynced_ancestors(&ctx, self, source_cs_id).await?;
+            find_toposorted_unsynced_ancestors(ctx, self, source_cs_id).await?;
 
         let source_repo = self.repos.get_source_repo();
         let target_repo = self.repos.get_target_repo();
@@ -965,7 +965,7 @@ where
                 update_mapping_with_version(
                     ctx,
                     hashmap! { source_cs_id => frozen_cs_id },
-                    &self,
+                    self,
                     sync_config_version,
                 )
                 .await?;
@@ -1205,7 +1205,7 @@ where
                 update_mapping_with_version(
                     ctx,
                     hashmap! { source_cs_id => frozen.get_changeset_id() },
-                    &self,
+                    self,
                     &expected_version,
                 )
                 .await?;
@@ -1303,7 +1303,7 @@ where
                         update_mapping_with_version(
                             ctx,
                             hashmap! { source_cs_id => frozen.get_changeset_id() },
-                            &self,
+                            self,
                             &version,
                         )
                         .await?;
@@ -1523,11 +1523,11 @@ where
         update_mapping_with_version(
             ctx,
             hashmap! { source_cs_id =>  target_cs_id},
-            &self,
+            self,
             &version,
         )
         .await?;
-        return Ok(target_cs_id);
+        Ok(target_cs_id)
     }
 
     // Some of the parents were removed - we need to remove copy-info that's not necessary
@@ -1770,7 +1770,7 @@ where
     let small_to_large_commit_sync_repos =
         CommitSyncRepos::new(small_repo.clone(), large_repo.clone(), &common_config)?;
     let large_to_small_commit_sync_repos =
-        CommitSyncRepos::new(large_repo.clone(), small_repo.clone(), &common_config)?;
+        CommitSyncRepos::new(large_repo, small_repo, &common_config)?;
 
     let large_to_small_commit_syncer = CommitSyncer::new(
         ctx,

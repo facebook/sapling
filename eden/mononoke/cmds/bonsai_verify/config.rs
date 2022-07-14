@@ -12,7 +12,6 @@ use mononoke_types::DateTime;
 use serde_derive::Deserialize;
 use std::fs::File;
 use std::io::Read;
-use toml;
 use toml::value;
 
 /// Configuration for the bonsai verify tool.

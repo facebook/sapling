@@ -327,7 +327,7 @@ pub async fn fill_cache<'a, K, V>(
     fill_caches_by_key(
         &store,
         data.into_iter().map(|(k, v)| {
-            let cachelib_key = CachelibKey(store.get_cache_key(&k));
+            let cachelib_key = CachelibKey(store.get_cache_key(k));
             let memcache_key = MemcacheKey(store.keygen().key(&cachelib_key.0));
             (cachelib_key, memcache_key, v)
         }),

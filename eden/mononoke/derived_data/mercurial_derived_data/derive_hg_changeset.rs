@@ -67,7 +67,7 @@ async fn can_reuse_filenode(
     parent: HgFileNodeId,
     change: &TrackedFileChange,
 ) -> Result<Option<HgFileNodeId>, Error> {
-    let parent_envelope = parent.load(&ctx, blobstore).await?;
+    let parent_envelope = parent.load(ctx, blobstore).await?;
     let parent_copyfrom_path = File::extract_copied_from(parent_envelope.metadata())?.map(|t| t.0);
     let parent_content_id = parent_envelope.content_id();
 
@@ -164,7 +164,7 @@ pub(crate) async fn store_file_change<'a>(
                 p2,
             };
 
-            upload_entry.upload(ctx, blobstore, Some(&path)).await?
+            upload_entry.upload(ctx, blobstore, Some(path)).await?
         }
     };
 
@@ -262,7 +262,7 @@ pub async fn get_manifest_from_bonsai(
 
     let file_changes: Vec<_> = file_changes
         .into_iter()
-        .map(|(path, file_change)| Ok::<_, Error>((path.clone(), file_change.clone())))
+        .map(|(path, file_change)| Ok::<_, Error>((path, file_change)))
         .collect();
     let changes: Vec<_> = stream::iter(file_changes)
         .map_ok({
@@ -402,7 +402,7 @@ pub async fn derive_simple_hg_changeset_stack_without_copy_info(
             )
         })?;
         let (hg_changeset_id, hg_cs) =
-            generate_hg_changeset(&ctx, &blobstore, bonsai, *mf_id, parents, options).await?;
+            generate_hg_changeset(ctx, blobstore, bonsai, *mf_id, parents, options).await?;
         res.insert(cs_id, MappedHgChangesetId::new(hg_changeset_id));
         parents = vec![hg_cs];
     }

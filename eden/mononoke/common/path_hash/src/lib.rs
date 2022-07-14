@@ -40,7 +40,7 @@ impl PathHashBytes {
 
 impl ConvIr<PathHashBytes> for Vec<u8> {
     fn new(v: Value) -> Result<Self, FromValueError> {
-        Ok(Self::from_value_opt(v)?)
+        Self::from_value_opt(v)
     }
 
     fn commit(self) -> PathHashBytes {
@@ -77,7 +77,7 @@ pub struct PathBytes(pub Vec<u8>);
 
 impl ConvIr<PathBytes> for Vec<u8> {
     fn new(v: Value) -> Result<Self, FromValueError> {
-        Ok(Self::from_value_opt(v)?)
+        Self::from_value_opt(v)
     }
 
     fn commit(self) -> PathBytes {

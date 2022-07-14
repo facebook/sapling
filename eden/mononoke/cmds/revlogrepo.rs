@@ -58,14 +58,14 @@ fn main() {
             let changeset = RevlogChangeset::new(raw.clone()).expect("Failed to deserialize CS");
 
             if sub_m.is_present("parsed") {
-                println!("");
+                println!();
                 println!("PAR: {:?}", changeset);
             }
 
             let encoded = changeset.get_node().expect("Failed to serialize CS");
 
             if raw != encoded {
-                println!("");
+                println!();
                 println!("POTENTIAL PROBLEM: {:?}", encoded);
             }
         }

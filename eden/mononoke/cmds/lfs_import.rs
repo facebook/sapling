@@ -83,9 +83,9 @@ fn main(fb: FacebookInit) -> Result<()> {
         let matches = &matches;
         async move {
             let blobrepo: BlobRepo = if matches.is_present(ARG_NO_CREATE) {
-                args::open_repo(fb, logger, &matches).await?
+                args::open_repo(fb, logger, matches).await?
             } else {
-                args::create_repo(fb, logger, &matches).await?
+                args::create_repo(fb, logger, matches).await?
             };
             stream::iter(entries)
                 .try_for_each_concurrent(concurrency, {

@@ -86,7 +86,7 @@ pub async fn fetch_blame_compat(
     let root_unode = match blame_version {
         BlameVersion::V1 => {
             BlameRoot::derive(ctx, repo, csid).await?;
-            RootUnodeManifestId::derive(&ctx, &repo, csid).await?
+            RootUnodeManifestId::derive(ctx, repo, csid).await?
         }
         BlameVersion::V2 => {
             let root_blame = RootBlameV2::derive(ctx, repo, csid).await?;
@@ -101,7 +101,7 @@ pub async fn fetch_blame_compat(
         .await?
         .ok_or_else(|| BlameError::NoSuchPath(path.clone()))?
         .into_leaf()
-        .ok_or_else(|| BlameError::IsDirectory(path))?;
+        .ok_or(BlameError::IsDirectory(path))?;
     match blame_version {
         BlameVersion::V1 => {
             let blame = BlameId::from(file_unode_id).load(ctx, &blobstore).await?;

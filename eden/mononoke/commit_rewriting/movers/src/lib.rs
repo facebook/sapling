@@ -117,7 +117,7 @@ fn get_path_action<'a, I: IntoIterator<Item = &'a MPathElement>>(
         PrefixAction::RemovePrefix => {
             let elements: Vec<_> = source_path_minus_prefix.into_iter().cloned().collect();
             MPath::try_from(elements)
-                .map(|mpath| PathAction::Change(mpath))
+                .map(PathAction::Change)
                 .map_err(|_| {
                     // This case means that we are trying to sync a file
                     // and are also asked to drop the entire path of this
@@ -170,7 +170,7 @@ pub fn mover_factory(
                     candidate_action,
                 )
             })
-            .nth(0);
+            .next();
         match path_and_prefix_action {
             None => Ok(match default_action.clone() {
                 DefaultAction::PrependPrefix(prefix) => Some(prefix.join(source_path.into_iter())),
@@ -179,7 +179,7 @@ pub fn mover_factory(
             }),
             Some((result_path_action, orig_prefix_action)) => result_path_action
                 .map(|path_action| match path_action {
-                    PathAction::Change(path) => Some(path.clone()),
+                    PathAction::Change(path) => Some(path),
                     PathAction::DoNotSync => None,
                 })
                 .with_context(|| {
@@ -239,13 +239,12 @@ pub fn get_large_to_small_mover(
 
     let other_repo_right_sides: Vec<&MPath> = other_repo_configs
         .iter()
-        .map(|small_repo_config| {
+        .flat_map(|small_repo_config| {
             small_repo_config
                 .map
                 .values()
                 .filter(|v| !target_repo_right_sides.contains(v))
         })
-        .flatten()
         .collect();
 
     let other_repo_prepended_prefixes: Vec<&MPath> = other_repo_configs
@@ -317,7 +316,7 @@ pub fn get_large_to_small_mover(
         let moved_large_to_small = default_large_to_small_mover(path)?;
         match moved_large_to_small {
             Some(moved_large_to_small) => {
-                if small_to_large_mover(&moved_large_to_small)?.as_ref() == Some(&path) {
+                if small_to_large_mover(&moved_large_to_small)?.as_ref() == Some(path) {
                     Ok(Some(moved_large_to_small))
                 } else {
                     Ok(None)

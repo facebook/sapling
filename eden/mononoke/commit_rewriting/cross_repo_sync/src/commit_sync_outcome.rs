@@ -533,7 +533,7 @@ impl DesiredRelationship {
                 target_repo_lca_hint
                     .0
                     .is_ancestor(
-                        &ctx,
+                        ctx,
                         &target_repo_fetcher,
                         target_cs_id.0,
                         comparison_cs_id.0,
@@ -545,7 +545,7 @@ impl DesiredRelationship {
                 target_repo_lca_hint
                     .0
                     .is_ancestor(
-                        &ctx,
+                        ctx,
                         &target_repo_fetcher,
                         comparison_cs_id.0,
                         target_cs_id.0,
@@ -585,7 +585,7 @@ fn get_only_or_in_desired_relationship_selector<'a>(
             }))
             .await?;
 
-        let mut candidates = candidates.into_iter().filter_map(|i| i);
+        let mut candidates = candidates.into_iter().flatten();
         match (candidates.next(), candidates.next()) {
             (None, None) => Err(anyhow!(
                 "{}",

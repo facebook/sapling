@@ -32,7 +32,7 @@ where
     pub fn push(&mut self, val: T) {
         if !self.unique_vals.contains(&val) {
             self.unique_vals.insert(val.clone());
-            self.sorted_vals.push(val.clone());
+            self.sorted_vals.push(val);
         }
     }
 

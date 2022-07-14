@@ -143,7 +143,7 @@ pub async fn generate_all_filenodes(
     // stepparents. That means that linknode for these filenodes will point to a stepparent
     let parents = try_join_all(
         derivation_ctx
-            .fetch_parents::<MappedHgChangesetId>(ctx, &bcs)
+            .fetch_parents::<MappedHgChangesetId>(ctx, bcs)
             .await?
             .into_iter()
             .map(|id| async move {

@@ -347,7 +347,7 @@ async fn resolve_conflict(
 
     // If we got here, then that means the file type and content is the same everywhere. In this
     // case, let's reuse a filenode.
-    let (maybe_reuse_filenode, _) = hg_parents(&parents);
+    let (maybe_reuse_filenode, _) = hg_parents(parents);
     match maybe_reuse_filenode {
         Some((_ft, id)) => Ok((file_type, id)),
         None => {

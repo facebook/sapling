@@ -241,13 +241,13 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
             "failed to find source blobstore id: {:?}",
             src_blobstore_id,
         ))
-        .and_then(|args| Ok(args.clone()))?;
+        .map(|args| args.clone())?;
 
     let mysql_options = matches.mysql_options().clone();
     let readonly_storage = matches.readonly_storage();
     Ok(Config {
         repo_id,
-        db_address: db_address.clone(),
+        db_address,
         mysql_options,
         blobstore_args,
         src_blobstore_id,
@@ -270,7 +270,7 @@ async fn get_resume_state(
     let resume_state = match &config.state_key {
         Some(state_key) => {
             blobstore
-                .get(&config.ctx, &state_key)
+                .get(&config.ctx, state_key)
                 .compat()
                 .map(|data| {
                     data.and_then(|data| {
@@ -320,7 +320,7 @@ async fn put_resume_state(
             let started_at = config.started_at;
             cloned!(state_key, blobstore);
             serde_json::to_vec(&StateSerde::from(&state))
-                .map(|state_json| BlobstoreBytes::from_bytes(state_json))
+                .map(BlobstoreBytes::from_bytes)
                 .map_err(Error::from)
                 .into_future()
                 .and_then(move |state_data| {

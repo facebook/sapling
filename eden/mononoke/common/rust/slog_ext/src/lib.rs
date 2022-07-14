@@ -8,7 +8,6 @@
 use anyhow::bail;
 use anyhow::Error;
 use failure_ext::SlogKVErrorKey;
-use slog;
 use slog::Drain;
 use slog::Never;
 use slog::OwnedKVList;
@@ -205,7 +204,7 @@ impl Serializer for ErrorSerializer {
 }
 
 fn non_empty_str_maybe(s: String) -> Option<String> {
-    if s == "" { None } else { Some(s) }
+    if s.is_empty() { None } else { Some(s) }
 }
 
 fn fix_indentation(s: String) -> String {

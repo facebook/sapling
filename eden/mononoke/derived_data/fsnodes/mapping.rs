@@ -85,7 +85,7 @@ impl BonsaiDerivable for RootFsnodeId {
         parents: Vec<Self>,
     ) -> Result<Self, Error> {
         let fsnode_id = derive_fsnode(
-            &ctx,
+            ctx,
             derivation_ctx,
             parents
                 .into_iter()

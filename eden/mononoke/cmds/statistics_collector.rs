@@ -147,7 +147,7 @@ pub async fn number_of_lines(
     bytes_stream
         .map_ok(|bytes| {
             bytes.into_iter().fold(0, |num_lines, byte| {
-                if byte == '\n' as u8 {
+                if byte == b'\n' {
                     num_lines + 1
                 } else {
                     num_lines
@@ -409,7 +409,7 @@ pub async fn generate_statistics_from_file<P: AsRef<Path>>(
                 println!(
                     "{},{},{},{},{},{}",
                     repo_id.id(),
-                    hg_cs_id.to_hex().to_string(),
+                    hg_cs_id.to_hex(),
                     cs_timestamp,
                     statistics.num_files,
                     statistics.total_file_size,
@@ -437,14 +437,14 @@ async fn run_statistics<'a>(
     repo_name: String,
     bookmark: BookmarkName,
 ) -> Result<(), Error> {
-    let repo = args::open_repo(fb, &logger, &matches).await?;
+    let repo = args::open_repo(fb, logger, matches).await?;
 
     if let (SUBCOMMAND_STATISTICS_FROM_FILE, Some(sub_m)) = matches.subcommand() {
         // Both arguments are set to be required
         let in_filename = sub_m
             .value_of(ARG_IN_FILENAME)
             .expect("missing required argument");
-        return Ok(generate_statistics_from_file(&ctx, &repo, &in_filename).await?);
+        return generate_statistics_from_file(&ctx, &repo, &in_filename).await;
     }
 
     let blobstore = Arc::new(repo.get_blobstore());
@@ -541,7 +541,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         Some(name) => name.to_string(),
         None => String::from("master"),
     };
-    let bookmark = BookmarkName::new(bookmark.clone())?;
+    let bookmark = BookmarkName::new(bookmark)?;
     let repo_name = args::get_repo_name(config_store, &matches)?;
     let scuba_logger = if matches.is_present("log-to-scuba") {
         MononokeScubaSampleBuilder::new(fb, SCUBA_DATASET_NAME)

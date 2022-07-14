@@ -62,10 +62,10 @@ impl PushrebaseCommitHook for CrossRepoSyncPushrebaseHook {
         rebased: &RebasedChangesets,
     ) -> Result<Box<dyn PushrebaseTransactionHook>, Error> {
         if rebased.len() > 1 {
-            return Err(format_err!("expected exactly one commit to be rebased").into());
+            return Err(format_err!("expected exactly one commit to be rebased"));
         }
 
-        match rebased.into_iter().next() {
+        match rebased.iter().next() {
             Some((_, (new_cs_id, _))) => {
                 let entry = create_synced_commit_mapping_entry(
                     self.cs_id,
@@ -77,7 +77,7 @@ impl PushrebaseCommitHook for CrossRepoSyncPushrebaseHook {
                     as Box<dyn PushrebaseTransactionHook>)
             }
             None => {
-                return Err(format_err!("expected exactly one commit to be rebased").into());
+                return Err(format_err!("expected exactly one commit to be rebased"));
             }
         }
     }

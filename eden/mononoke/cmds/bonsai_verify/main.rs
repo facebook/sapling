@@ -399,9 +399,9 @@ fn subcommmand_hg_manifest_verify(
             .buffer_unordered(100)
             .try_for_each(|_| async { Ok(()) })
             .map_ok(move |_| {
-                let bad = bad.with(|bad| std::mem::replace(bad, HashSet::new()));
+                let bad = bad.with(|bad| std::mem::take(bad));
                 if bad.is_empty() {
-                    println!("")
+                    println!()
                 } else {
                     println!("\n BAD: {:#?}", bad)
                 }

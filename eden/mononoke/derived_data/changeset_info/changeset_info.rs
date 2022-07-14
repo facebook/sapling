@@ -179,7 +179,7 @@ impl ChangesetInfo {
                 parents: tc
                     .parents
                     .into_iter()
-                    .map(|parent| ChangesetId::from_thrift(parent))
+                    .map(ChangesetId::from_thrift)
                     .collect::<Result<_>>()?,
                 author: tc.author,
                 author_date: DateTime::from_thrift(tc.author_date)?,
@@ -193,9 +193,9 @@ impl ChangesetInfo {
             })
         };
 
-        Ok(catch_block().with_context(|| {
+        catch_block().with_context(|| {
             ErrorKind::InvalidThrift("ChangesetInfo".into(), "Invalid changeset info".into())
-        })?)
+        })
     }
 
     pub fn into_thrift(self) -> thrift::ChangesetInfo {

@@ -212,7 +212,7 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
             interesting_configs
                 .into_iter()
                 .map(|raw_commit_sync_config| {
-                    let commit_sync_config = raw_commit_sync_config.clone().convert()?;
+                    let commit_sync_config = raw_commit_sync_config.convert()?;
                     let version_name = commit_sync_config.version_name.clone();
                     Ok((version_name, commit_sync_config))
                 })
@@ -231,7 +231,7 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
 
         let mut version = None;
         for (_, config_version_set) in large_repo_config_version_sets.iter() {
-            if !Self::related_to_repo(&config_version_set, repo_id) {
+            if !Self::related_to_repo(config_version_set, repo_id) {
                 continue;
             }
             for config in &config_version_set.versions {
@@ -369,7 +369,7 @@ impl TestLiveCommitSyncConfigSource {
 
         Ok(version_to_config
             .into_iter()
-            .filter(|(_, config)| Self::related_to_repo(&config, repo_id))
+            .filter(|(_, config)| Self::related_to_repo(config, repo_id))
             .collect())
     }
 

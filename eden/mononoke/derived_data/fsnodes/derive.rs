@@ -66,14 +66,13 @@ pub(crate) async fn derive_fsnodes_stack(
 
     let content_ids = file_changes
         .iter()
-        .map(|(_cs_id, per_commit_file_changes)| {
+        .flat_map(|(_cs_id, per_commit_file_changes)| {
             per_commit_file_changes
                 .iter()
                 .filter_map(|(_mpath, content_id_and_file_type)| {
                     content_id_and_file_type.map(|(content_id, _file_type)| content_id)
                 })
         })
-        .flatten()
         .collect();
 
     let prefetched_content_metadata =
@@ -174,14 +173,8 @@ pub(crate) async fn derive_fsnode(
                 parents,
                 subentries: Default::default(),
             };
-            let (_, tree_id) = create_fsnode(
-                ctx,
-                &blobstore,
-                None,
-                prefetched_content_metadata,
-                tree_info,
-            )
-            .await?;
+            let (_, tree_id) =
+                create_fsnode(ctx, blobstore, None, prefetched_content_metadata, tree_info).await?;
             Ok(tree_id)
         }
     }
@@ -421,7 +414,7 @@ where
     for (elem, entry) in dir.iter() {
         match entry {
             FsnodeEntry::File(file) => {
-                digest.input(get_file_hash(&file).as_bytes());
+                digest.input(get_file_hash(file).as_bytes());
                 digest.input(match file.file_type() {
                     FileType::Regular => b" file ",
                     FileType::Executable => b" exec ",
@@ -429,7 +422,7 @@ where
                 });
             }
             FsnodeEntry::Directory(dir) => {
-                digest.input(get_dir_hash(&dir).as_bytes());
+                digest.input(get_dir_hash(dir).as_bytes());
                 digest.input(b" tree ");
             }
         }
@@ -458,7 +451,7 @@ async fn check_fsnode_leaf(
             )
             .into());
         }
-        let mut iter = leaf_info.parents.clone().into_iter();
+        let mut iter = leaf_info.parents.into_iter();
         let fsnode_file = iter.next().and_then(|first_elem| {
             if iter.all(|next_elem| next_elem == first_elem) {
                 Some(first_elem)
@@ -467,7 +460,7 @@ async fn check_fsnode_leaf(
             }
         });
         if let Some(fsnode_file) = fsnode_file {
-            Ok((None, fsnode_file.into()))
+            Ok((None, fsnode_file))
         } else {
             Err(FsnodeDerivationError::InvalidBonsai(
                 "no change is provided, but file content or type is different".to_string(),

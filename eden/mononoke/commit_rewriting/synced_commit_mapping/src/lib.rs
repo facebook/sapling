@@ -401,7 +401,7 @@ impl SqlSyncedCommitMapping {
         if let Some(ref version_name) = version_name {
             // TODO(stash): make version non-optional
             self.insert_version_for_large_repo_commit(
-                &ctx,
+                ctx,
                 &self.write_connection,
                 large_repo_id,
                 large_bcs_id,
@@ -478,14 +478,14 @@ impl SqlSyncedCommitMapping {
     ) -> Result<bool, Error> {
         let result = if should_overwrite {
             ReplaceVersionForLargeRepoCommit::query(
-                &write_connection,
-                &[(&large_repo_id, &large_cs_id, &version_name)],
+                write_connection,
+                &[(&large_repo_id, &large_cs_id, version_name)],
             )
             .await?
         } else {
             InsertVersionForLargeRepoCommit::query(
-                &write_connection,
-                &[(&large_repo_id, &large_cs_id, &version_name)],
+                write_connection,
+                &[(&large_repo_id, &large_cs_id, version_name)],
             )
             .await?
         };
@@ -521,7 +521,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
     async fn add(&self, ctx: &CoreContext, entry: SyncedCommitMappingEntry) -> Result<bool, Error> {
         STATS::adds.add_value(1);
 
-        self.add_many(&ctx, vec![entry])
+        self.add_many(ctx, vec![entry])
             .await
             .map(|count| count == 1)
     }
@@ -533,7 +533,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
     ) -> Result<u64, Error> {
         STATS::add_bulks.add_value(1);
 
-        self.add_many(&ctx, entries).await
+        self.add_many(ctx, entries).await
     }
 
     async fn get(

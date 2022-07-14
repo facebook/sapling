@@ -140,7 +140,7 @@ impl CommitSyncDataProvider {
         match self {
             Live(live_commit_sync_config) => {
                 let commit_sync_config = live_commit_sync_config
-                    .get_commit_sync_config_by_version(repo_id, &version)
+                    .get_commit_sync_config_by_version(repo_id, version)
                     .await?;
 
                 Ok(commit_sync_config.small_repos.keys().cloned().collect())
@@ -186,7 +186,7 @@ fn get_movers_from_config(
 ) -> Result<Movers, Error> {
     let (direction, small_repo_id) =
         get_direction_and_small_repo_id(common_config, source_repo_id, target_repo_id)?;
-    get_movers(&commit_sync_config, small_repo_id, direction)
+    get_movers(commit_sync_config, small_repo_id, direction)
 }
 
 fn get_bookmark_renamers_from_config(

@@ -137,7 +137,7 @@ impl DerivationContext {
         Derivable: BonsaiDerivable,
     {
         try_join_all(bonsai.parents().map(|p| async move {
-            self.fetch_unknown_dependency(&ctx, known, p)
+            self.fetch_unknown_dependency(ctx, known, p)
                 .await
                 .with_context(|| {
                     format!(

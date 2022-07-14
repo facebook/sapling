@@ -69,7 +69,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
         if bonsai.is_snapshot() {
             bail!("Can't derive Hg changeset for snapshot")
         }
-        let derivation_opts = get_hg_changeset_derivation_options(&derivation_ctx);
+        let derivation_opts = get_hg_changeset_derivation_options(derivation_ctx);
         crate::derive_hg_changeset::derive_from_parents(
             ctx,
             derivation_ctx.blobstore(),
@@ -102,7 +102,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
         let mut res: HashMap<ChangesetId, Self> = HashMap::new();
         let batch_len = bonsais.len();
 
-        let derivation_opts = get_hg_changeset_derivation_options(&derivation_ctx);
+        let derivation_opts = get_hg_changeset_derivation_options(derivation_ctx);
 
         let mut bonsais = bonsais;
         for stack in linear_stacks {
@@ -110,7 +110,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
                 stack
                     .parents
                     .into_iter()
-                    .map(|p| derivation_ctx.fetch_unknown_dependency::<Self>(&ctx, Some(&res), p)),
+                    .map(|p| derivation_ctx.fetch_unknown_dependency::<Self>(ctx, Some(&res), p)),
             )
             .await?;
             if let Some(item) = stack.stack_items.first() {

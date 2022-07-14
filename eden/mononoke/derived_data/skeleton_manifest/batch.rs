@@ -103,9 +103,9 @@ pub async fn new_batch_derivation(
         // we can't derive stack for a merge commit,
         // so let's derive it without batching
         for item in file_changes {
-            let bonsai = item.cs_id.load(&ctx, derivation_ctx.blobstore()).await?;
+            let bonsai = item.cs_id.load(ctx, derivation_ctx.blobstore()).await?;
             let parents = derivation_ctx
-                .fetch_unknown_parents(ctx, Some(&already_derived), &bonsai)
+                .fetch_unknown_parents(ctx, Some(already_derived), &bonsai)
                 .await?;
             let derived =
                 RootSkeletonManifestId::derive_single(ctx, derivation_ctx, bonsai, parents).await?;
@@ -144,7 +144,7 @@ pub async fn new_batch_derivation(
             ctx,
             derivation_ctx,
             file_changes,
-            parent_skeleton_manifests.get(0).map(|mf_id| *mf_id),
+            parent_skeleton_manifests.get(0).copied(),
         )
         .await
         .with_context(|| format!("failed deriving stack of {:?} to {:?}", first, last,))?;

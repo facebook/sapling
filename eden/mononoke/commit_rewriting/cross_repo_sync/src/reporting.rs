@@ -106,8 +106,8 @@ pub fn get_scuba_sample(
     let mut scuba_sample = MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE);
     scuba_sample
         .add_common_server_data()
-        .add(SOURCE_REPO, format!("{}", source_repo.as_ref()))
-        .add(TARGET_REPO, format!("{}", target_repo.as_ref()));
+        .add(SOURCE_REPO, source_repo.as_ref().to_string())
+        .add(TARGET_REPO, target_repo.as_ref().to_string());
 
     scuba_sample
 }

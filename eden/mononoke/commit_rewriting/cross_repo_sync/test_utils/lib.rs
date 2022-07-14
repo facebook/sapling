@@ -211,11 +211,11 @@ pub async fn init_small_large_repo(
         commit_sync_data_provider,
     );
 
-    let first_bcs_id = CreateCommitContext::new_root(&ctx, &smallrepo)
+    let first_bcs_id = CreateCommitContext::new_root(ctx, &smallrepo)
         .add_file("file", "content")
         .commit()
         .await?;
-    let second_bcs_id = CreateCommitContext::new(&ctx, &smallrepo, vec![first_bcs_id])
+    let second_bcs_id = CreateCommitContext::new(ctx, &smallrepo, vec![first_bcs_id])
         .add_file("file2", "content")
         .commit()
         .await?;
@@ -238,10 +238,10 @@ pub async fn init_small_large_repo(
             CommitSyncContext::Tests,
         )
         .await?;
-    bookmark(&ctx, &smallrepo, "premove")
+    bookmark(ctx, &smallrepo, "premove")
         .set_to(second_bcs_id)
         .await?;
-    bookmark(&ctx, &megarepo, "premove")
+    bookmark(ctx, &megarepo, "premove")
         .set_to(second_bcs_id)
         .await?;
 
@@ -253,7 +253,7 @@ pub async fn init_small_large_repo(
         mark_public: false,
     };
     let move_hg_cs = perform_move(
-        &ctx,
+        ctx,
         &megarepo,
         second_bcs_id,
         Arc::new(prefix_mover),
@@ -267,35 +267,35 @@ pub async fn init_small_large_repo(
         .await?;
     let move_bcs_id = maybe_move_bcs_id.unwrap();
 
-    bookmark(&ctx, &megarepo, "megarepo_start")
+    bookmark(ctx, &megarepo, "megarepo_start")
         .set_to(move_bcs_id)
         .await?;
 
-    bookmark(&ctx, &smallrepo, "megarepo_start")
+    bookmark(ctx, &smallrepo, "megarepo_start")
         .set_to("premove")
         .await?;
 
     // Master commit in the small repo after "big move"
-    let small_master_bcs_id = CreateCommitContext::new(&ctx, &smallrepo, vec![second_bcs_id])
+    let small_master_bcs_id = CreateCommitContext::new(ctx, &smallrepo, vec![second_bcs_id])
         .add_file("file3", "content3")
         .commit()
         .await?;
 
     // Master commit in large repo after "big move"
-    let large_master_bcs_id = CreateCommitContext::new(&ctx, &megarepo, vec![move_bcs_id])
+    let large_master_bcs_id = CreateCommitContext::new(ctx, &megarepo, vec![move_bcs_id])
         .add_file("prefix/file3", "content3")
         .commit()
         .await?;
 
-    bookmark(&ctx, &smallrepo, "master")
+    bookmark(ctx, &smallrepo, "master")
         .set_to(small_master_bcs_id)
         .await?;
-    bookmark(&ctx, &megarepo, "master")
+    bookmark(ctx, &megarepo, "master")
         .set_to(large_master_bcs_id)
         .await?;
 
     update_mapping_with_version(
-        &ctx,
+        ctx,
         hashmap! { small_master_bcs_id => large_master_bcs_id},
         &small_to_large_commit_syncer,
         &version_with_small_repo,
@@ -309,7 +309,7 @@ pub async fn init_small_large_repo(
     println!(
         "{:?}",
         small_to_large_commit_syncer
-            .get_commit_sync_outcome(&ctx, small_master_bcs_id)
+            .get_commit_sync_outcome(ctx, small_master_bcs_id)
             .await?
     );
 
@@ -375,7 +375,7 @@ pub fn get_live_commit_sync_config() -> Arc<dyn LiveCommitSyncConfig> {
         common_pushrebase_bookmarks: vec![],
         small_repos: hashmap! {
             RepositoryId::new(1) => SmallRepoPermanentConfig {
-                bookmark_prefix: bookmark_prefix,
+                bookmark_prefix,
             }
         },
         large_repo_id: RepositoryId::new(0),

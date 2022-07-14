@@ -83,7 +83,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         run(ctx, &matches),
         fb,
         &std::env::var("TW_JOB_NAME").unwrap_or_else(|_| "streaming_clone_warmup".to_string()),
-        &logger,
+        logger,
         &matches,
         cmdlib::monitoring::AliveService,
     )
@@ -161,7 +161,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
 
 fn split_repo_with_tags(s: &str) -> Result<(String, Vec<String>), Error> {
     if let Some((reponame, tags)) = s.split_once('=') {
-        let tags = tags.split(",").map(|s| s.to_string()).collect();
+        let tags = tags.split(',').map(|s| s.to_string()).collect();
 
         Ok((reponame.to_string(), tags))
     } else {

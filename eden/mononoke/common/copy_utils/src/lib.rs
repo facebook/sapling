@@ -56,7 +56,7 @@ pub async fn copy(
     msg: String,
     limits: Limits,
     options: Options,
-    skip_overwrite_warning: Option<&dyn Fn(&CoreContext, &MPath) -> ()>,
+    skip_overwrite_warning: Option<&dyn Fn(&CoreContext, &MPath)>,
 ) -> Result<Vec<ChangesetId>, Error> {
     // These are the file changes that have to be removed first
     let mut remove_file_changes = BTreeMap::new();
@@ -68,8 +68,8 @@ pub async fn copy(
 
     for (from_dir, to_dir) in from_to_dirs {
         let (from_entries, to_entries) = try_join(
-            list_directory(&ctx, &source_repo, source_cs_id, &from_dir),
-            list_directory(&ctx, &target_repo, target_cs_id, &to_dir),
+            list_directory(ctx, source_repo, source_cs_id, &from_dir),
+            list_directory(ctx, target_repo, target_cs_id, &to_dir),
         )
         .await?;
         let from_entries =
@@ -78,7 +78,7 @@ pub async fn copy(
 
         for (from_suffix, fsnode_file) in from_entries {
             if let Some(ref regex) = options.maybe_exclude_file_regex {
-                if from_suffix.matches_regex(&regex) {
+                if from_suffix.matches_regex(regex) {
                     continue;
                 }
             }
@@ -230,8 +230,8 @@ pub async fn remove_excessive_files(
 
     for (from_dir, to_dir) in from_to_dirs {
         let (from_entries, to_entries) = try_join(
-            list_directory(&ctx, &source_repo, source_cs_id, &from_dir),
-            list_directory(&ctx, &target_repo, target_cs_id, &to_dir),
+            list_directory(ctx, source_repo, source_cs_id, &from_dir),
+            list_directory(ctx, target_repo, target_cs_id, &to_dir),
         )
         .await?;
         let from_entries =

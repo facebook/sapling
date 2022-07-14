@@ -67,7 +67,7 @@ pub async fn create_and_save_bonsai(
         mark_public,
     } = changeset_args;
     let bcs = create_bonsai_changeset_only(parents, file_changes, author, message, datetime)?;
-    let bcs_id = save_and_maybe_mark_public(&ctx, &repo, bcs, mark_public).await?;
+    let bcs_id = save_and_maybe_mark_public(ctx, repo, bcs, mark_public).await?;
 
     if let Some(bookmark) = maybe_bookmark {
         create_bookmark(ctx, repo, bookmark, bcs_id).await?;

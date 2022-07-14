@@ -37,7 +37,7 @@ async fn run<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'a>) -> Result<(
     let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let repo: BlobRepo = args::open_repo(fb, ctx.logger(), &matches).await?;
+    let repo: BlobRepo = args::open_repo(fb, ctx.logger(), matches).await?;
     let fetcher;
 
     let csids = {
@@ -67,7 +67,7 @@ async fn run<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'a>) -> Result<(
 
     borrowed!(ctx, repo);
     let commit_stats = csids
-        .map_ok(|cs_id| async move { find_commit_stat(&ctx, &repo, cs_id).await })
+        .map_ok(|cs_id| async move { find_commit_stat(ctx, repo, cs_id).await })
         .try_buffered(100)
         .try_collect::<Vec<_>>()
         .await?;
@@ -102,7 +102,7 @@ async fn find_commit_stat(
         }
     }
 
-    let root_skeleton_id = RootSkeletonManifestId::derive(&ctx, repo, cs_id).await?;
+    let root_skeleton_id = RootSkeletonManifestId::derive(ctx, repo, cs_id).await?;
     let entries = root_skeleton_id
         .skeleton_manifest_id()
         .find_entries(ctx.clone(), repo.get_blobstore(), paths)
@@ -129,8 +129,7 @@ async fn find_commit_stat(
     let (largest_touched_dir_size, largest_touched_dir_name) = entries
         .into_iter()
         .max_by_key(|(_, size)| *size)
-        .map(|(path, size)| (size as u64, path))
-        .unwrap_or_else(|| (0, None));
+        .map_or((0, None), |(path, size)| (size as u64, path));
 
     let largest_touched_dir_name = match largest_touched_dir_name {
         Some(dir_name) => {

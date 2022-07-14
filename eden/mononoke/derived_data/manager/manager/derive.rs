@@ -185,7 +185,7 @@ impl DerivedDataManager {
                 }
             }
         }
-        self.perform_single_derivation_locally(&ctx, &derivation_ctx, csid, discovery_stats)
+        self.perform_single_derivation_locally(ctx, derivation_ctx, csid, discovery_stats)
             .await
     }
 
@@ -728,7 +728,7 @@ impl DerivedDataManager {
                 .map(|bonsai| bonsai.get_changeset_id().to_string())
                 .collect::<Vec<_>>(),
         );
-        self.log_batch_derivation_start::<Derivable>(&ctx, &mut derived_data_scuba, csid_range);
+        self.log_batch_derivation_start::<Derivable>(ctx, &mut derived_data_scuba, csid_range);
         let (overall_stats, result) = async {
             let derivation_ctx_ref = &derivation_ctx;
             let (batch_stats, derived) = match batch_options {
@@ -796,9 +796,7 @@ impl DerivedDataManager {
                 let derivation_ctx_ref = &derivation_ctx;
                 let csids = stream::iter(derived.into_iter())
                     .map(|(csid, derived)| async move {
-                        derived
-                            .store_mapping(ctx, &derivation_ctx_ref, csid)
-                            .await?;
+                        derived.store_mapping(ctx, derivation_ctx_ref, csid).await?;
                         Ok::<_, Error>(csid)
                     })
                     .buffer_unordered(100)
@@ -817,7 +815,7 @@ impl DerivedDataManager {
             .await;
 
             self.log_mapping_insertion::<Derivable>(
-                &ctx,
+                ctx,
                 &mut derived_data_scuba,
                 None,
                 &persist_stats,
@@ -836,7 +834,7 @@ impl DerivedDataManager {
         .await;
 
         self.log_batch_derivation_end::<Derivable>(
-            &ctx,
+            ctx,
             &mut derived_data_scuba,
             csid_range,
             &overall_stats,
@@ -942,7 +940,7 @@ fn emergency_disabled(repo_name: &str, derivable_name: &str) -> bool {
 
     let disabled_for_type = tunables::tunables()
         .get_by_repo_derived_data_types_disabled(repo_name)
-        .unwrap_or(vec![]);
+        .unwrap_or_else(Vec::new);
 
     if disabled_for_type
         .iter()

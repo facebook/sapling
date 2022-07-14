@@ -144,12 +144,12 @@ pub async fn repack_keys<T: BlobstoreUnlinkOps>(
                     .entries()
                     .iter()
                     .map(|e| {
-                        get_entry_compressed_size(&e).map(|compressed_size| {
+                        get_entry_compressed_size(e).map(|compressed_size| {
                             let mut scuba = scuba.clone();
                             scuba.add(BLOBSTORE_KEY, format!("{}{}", repo_prefix, e.key));
                             scuba.add_opt(
                                 UNCOMPRESSED_SIZE,
-                                uncompressed_sizes.get(&e.key).map(|v| *v),
+                                uncompressed_sizes.get(&e.key).copied(),
                             );
                             scuba.add(COMPRESSED_SIZE, compressed_size);
                             scuba

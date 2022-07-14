@@ -57,7 +57,7 @@ pub trait SqlConstruct: Sized + Send + Sync + 'static {
             write_connection: if readonly {
                 read_connection.clone()
             } else {
-                write_connection.clone()
+                write_connection
             },
             read_master_connection: read_connection.clone(),
             read_connection,
