@@ -263,7 +263,7 @@ async fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
 
     borrowed!(ctx, repo);
 
-    delete_all_publishing_bookmarks(&ctx, &repo).await?;
+    delete_all_publishing_bookmarks(ctx, repo).await?;
 
     // resolve bonsai
     let bcss = future::try_join_all(

@@ -629,7 +629,7 @@ mod test {
         let tmp_dir = write_files(&paths);
         let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let RawRepoConfigs { commit_sync, .. } =
-            crate::raw::read_raw_configs(tmp_dir.path().as_ref(), &config_store).unwrap();
+            crate::raw::read_raw_configs(tmp_dir.path(), &config_store).unwrap();
         for (_config_name, commit_sync_config) in commit_sync {
             let res = commit_sync_config.convert();
             let msg = format!("{:#?}", res);
@@ -666,7 +666,7 @@ mod test {
         let tmp_dir = write_files(&paths);
         let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let RawRepoConfigs { commit_sync, .. } =
-            crate::raw::read_raw_configs(tmp_dir.path().as_ref(), &config_store).unwrap();
+            crate::raw::read_raw_configs(tmp_dir.path(), &config_store).unwrap();
         for (_config_name, commit_sync_config) in commit_sync {
             let res = commit_sync_config.convert();
             let msg = format!("{:#?}", res);
@@ -1299,7 +1299,7 @@ mod test {
                     local_path: Some("censored_local_path".to_string()),
                 },
                 redaction_config: RedactionConfig {
-                    blobstore: main_storage_config.blobstore.clone(),
+                    blobstore: main_storage_config.blobstore,
                     darkstorm_blobstore: None,
                     redaction_sets_location: "loc".to_string(),
                 },

@@ -356,7 +356,6 @@ mod test {
     use crate::tests::TestManifestIdStr;
     use crate::tests::TestManifestStr;
     use borrowed::borrowed;
-    use fbinit;
     use fbinit::FacebookInit;
 
     impl<ManifestId, FileId> CompositeEntry<ManifestId, FileId>

@@ -221,7 +221,7 @@ mod test {
         }
         {
             let pid: Option<HgNodeHash> = Some(p.nodeid());
-            let n = HgBlobNode::new(blob.clone(), pid, pid);
+            let n = HgBlobNode::new(blob, pid, pid);
             assert_eq!(n.parents, HgParents::Two(pid.unwrap(), pid.unwrap()));
         }
     }
@@ -262,7 +262,7 @@ mod test {
             let stream = stream::iter_ok::<_, ()>(input.clone());
 
             let bytes = input.iter().fold(BytesMut::new(), |mut bytes, chunk| {
-                bytes.extend_from_slice(&chunk);
+                bytes.extend_from_slice(chunk);
                 bytes
             }).freeze();
 

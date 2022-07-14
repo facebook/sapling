@@ -334,7 +334,6 @@ mod test {
     use assert_matches::assert_matches;
     use maplit::hashmap;
     use quickcheck::quickcheck;
-    use serde_json;
     use serde_json::json;
 
     const ONES_SHA256: &str = "1111111111111111111111111111111111111111111111111111111111111111";

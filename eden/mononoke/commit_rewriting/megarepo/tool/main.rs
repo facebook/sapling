@@ -177,7 +177,7 @@ async fn run_move<'a>(
         args::get_and_parse_opt(sub_m, MAX_NUM_OF_MOVES_IN_COMMIT);
 
     let (repo, resulting_changeset_args) = try_join(
-        args::open_repo::<BlobRepo>(ctx.fb, &ctx.logger().clone(), &matches),
+        args::open_repo::<BlobRepo>(ctx.fb, &ctx.logger().clone(), matches),
         resulting_changeset_args.compat(),
     )
     .await?;
@@ -185,7 +185,7 @@ async fn run_move<'a>(
     let parent_bcs_id = helpers::csid_resolve(&ctx, &repo, move_parent).await?;
 
     if let Some(max_num_of_moves_in_commit) = max_num_of_moves_in_commit {
-        perform_stack_move(
+        let changesets = perform_stack_move(
             &ctx,
             &repo,
             parent_bcs_id,
@@ -198,21 +198,17 @@ async fn run_move<'a>(
                 args
             },
         )
-        .await
-        .map(|changesets| {
-            info!(
-                ctx.logger(),
-                "created {} commits, with the last commit {:?}",
-                changesets.len(),
-                changesets.last()
-            );
-            ()
-        })
+        .await?;
+        info!(
+            ctx.logger(),
+            "created {} commits, with the last commit {:?}",
+            changesets.len(),
+            changesets.last()
+        );
     } else {
-        perform_move(&ctx, &repo, parent_bcs_id, mover, resulting_changeset_args)
-            .await
-            .map(|_| ())
+        perform_move(&ctx, &repo, parent_bcs_id, mover, resulting_changeset_args).await?;
     }
+    Ok(())
 }
 
 async fn run_merge<'a>(
@@ -222,9 +218,9 @@ async fn run_merge<'a>(
 ) -> Result<(), Error> {
     let first_parent = sub_m.value_of(FIRST_PARENT).unwrap().to_owned();
     let second_parent = sub_m.value_of(SECOND_PARENT).unwrap().to_owned();
-    let resulting_changeset_args = cs_args_from_matches(&sub_m);
+    let resulting_changeset_args = cs_args_from_matches(sub_m);
     let (repo, resulting_changeset_args) = try_join(
-        args::open_repo::<BlobRepo>(ctx.fb, &ctx.logger().clone(), &matches),
+        args::open_repo::<BlobRepo>(ctx.fb, &ctx.logger().clone(), matches),
         resulting_changeset_args.compat(),
     )
     .await?;
@@ -255,14 +251,14 @@ async fn run_sync_diamond_merge<'a>(
     let target_repo_id = args::get_target_repo_id(config_store, matches)?;
     let maybe_bookmark = sub_m
         .value_of(cli::COMMIT_BOOKMARK)
-        .map(|bookmark_str| BookmarkName::new(bookmark_str))
+        .map(BookmarkName::new)
         .transpose()?;
 
     let bookmark = maybe_bookmark.ok_or(Error::msg("bookmark must be specified"))?;
 
     let source_repo = args::open_repo_with_repo_id(ctx.fb, ctx.logger(), source_repo_id, matches);
     let target_repo = args::open_repo_with_repo_id(ctx.fb, ctx.logger(), target_repo_id, matches);
-    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(ctx.fb, config_store, &matches)?;
+    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(ctx.fb, config_store, matches)?;
 
     let merge_commit_hash = sub_m.value_of(COMMIT_HASH).unwrap().to_owned();
     let (source_repo, target_repo): (InnerRepo, BlobRepo) =
@@ -272,7 +268,7 @@ async fn run_sync_diamond_merge<'a>(
         helpers::csid_resolve(&ctx, &source_repo.blob_repo, merge_commit_hash).await?;
 
     let config_store = matches.config_store();
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?;
 
     let caching = matches.caching();
     let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
@@ -296,7 +292,7 @@ async fn run_pre_merge_delete<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let repo: BlobRepo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches).await?;
+    let repo: BlobRepo = args::open_repo(ctx.fb, &ctx.logger().clone(), matches).await?;
 
     let delete_cs_args_factory = get_delete_commits_cs_args_factory(sub_m)?;
 
@@ -364,7 +360,7 @@ async fn run_history_fixup_delete<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let repo: BlobRepo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches).await?;
+    let repo: BlobRepo = args::open_repo(ctx.fb, &ctx.logger().clone(), matches).await?;
 
     let delete_cs_args_factory = get_delete_commits_cs_args_factory(sub_m)?;
 
@@ -394,10 +390,7 @@ async fn run_history_fixup_delete<'a>(
     };
     let paths_file = sub_m.value_of(PATHS_FILE).unwrap().to_owned();
     let s = read_to_string(&paths_file).await?;
-    let paths: Vec<MPath> = s
-        .lines()
-        .map(|path| MPath::new(path))
-        .collect::<Result<Vec<MPath>>>()?;
+    let paths: Vec<MPath> = s.lines().map(MPath::new).collect::<Result<Vec<MPath>>>()?;
     let hfd = create_history_fixup_deletes(
         &ctx,
         &repo,
@@ -440,7 +433,7 @@ async fn run_gradual_delete<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let repo: BlobRepo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches).await?;
+    let repo: BlobRepo = args::open_repo(ctx.fb, &ctx.logger().clone(), matches).await?;
 
     let delete_cs_args_factory = get_delete_commits_cs_args_factory(sub_m)?;
 
@@ -498,7 +491,7 @@ async fn run_bonsai_merge<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let repo: BlobRepo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches).await?;
+    let repo: BlobRepo = args::open_repo(ctx.fb, &ctx.logger().clone(), matches).await?;
 
     let (p1, p2) = try_join(
         async {
@@ -528,7 +521,7 @@ async fn run_gradual_merge<'a>(
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let config_store = matches.config_store();
-    let repo: InnerRepo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
+    let repo: InnerRepo = args::open_repo(ctx.fb, ctx.logger(), matches).await?;
 
     let last_deletion_commit = sub_m
         .value_of(LAST_DELETION_COMMIT)
@@ -543,14 +536,14 @@ async fn run_gradual_merge<'a>(
 
     let limit = args::get_usize_opt(sub_m, LIMIT);
     let (_, repo_config) =
-        args::get_config_by_repoid(config_store, &matches, repo.blob_repo.get_repoid())?;
+        args::get_config_by_repoid(config_store, matches, repo.blob_repo.get_repoid())?;
     let last_deletion_commit = helpers::csid_resolve(&ctx, &repo.blob_repo, last_deletion_commit);
     let pre_deletion_commit = helpers::csid_resolve(&ctx, &repo.blob_repo, pre_deletion_commit);
 
     let (last_deletion_commit, pre_deletion_commit) =
         try_join(last_deletion_commit, pre_deletion_commit).await?;
 
-    let merge_changeset_args_factory = get_gradual_merge_commits_cs_args_factory(&sub_m)?;
+    let merge_changeset_args_factory = get_gradual_merge_commits_cs_args_factory(sub_m)?;
     let params = gradual_merge::GradualMergeParams {
         pre_deletion_commit,
         last_deletion_commit,
@@ -569,7 +562,7 @@ async fn run_gradual_merge_progress<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let repo: InnerRepo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
+    let repo: InnerRepo = args::open_repo(ctx.fb, ctx.logger(), matches).await?;
 
     let last_deletion_commit = sub_m
         .value_of(LAST_DELETION_COMMIT)
@@ -704,7 +697,7 @@ async fn run_check_push_redirection_prereqs<'a>(
     );
 
     let config_store = matches.config_store();
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?;
     verify_working_copy_with_version_fast_path(
         &ctx,
         &commit_syncer,
@@ -721,7 +714,7 @@ async fn run_catchup_delete_head<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let repo: BlobRepo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches).await?;
+    let repo: BlobRepo = args::open_repo(ctx.fb, &ctx.logger().clone(), matches).await?;
 
     let head_bookmark = sub_m
         .value_of(HEAD_BOOKMARK)
@@ -742,8 +735,8 @@ async fn run_catchup_delete_head<'a>(
     let deletion_chunk_size = args::get_usize(&sub_m, DELETION_CHUNK_SIZE, 10000);
 
     let config_store = matches.config_store();
-    let cs_args_factory = get_catchup_head_delete_commits_cs_args_factory(&sub_m)?;
-    let (_, repo_config) = args::get_config(config_store, &matches)?;
+    let cs_args_factory = get_catchup_head_delete_commits_cs_args_factory(sub_m)?;
+    let (_, repo_config) = args::get_config(config_store, matches)?;
 
     let wait_secs = args::get_u64(&sub_m, WAIT_SECS, 0);
 
@@ -783,7 +776,7 @@ async fn run_catchup_validate<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let repo: BlobRepo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches).await?;
+    let repo: BlobRepo = args::open_repo(ctx.fb, &ctx.logger().clone(), matches).await?;
 
     let result_commit = sub_m
         .value_of(COMMIT_HASH)
@@ -841,7 +834,7 @@ async fn run_mark_not_synced<'a>(
     let s = tokio_stream::wrappers::LinesStream::new(reader.lines())
         .map_err(Error::from)
         .map_ok(move |line| async move {
-            let cs_id = helpers::csid_resolve(&ctx, large_repo, line).await?;
+            let cs_id = helpers::csid_resolve(ctx, large_repo, line).await?;
 
             let existing_value = mapping
                 .get_equivalent_working_copy(
@@ -856,11 +849,9 @@ async fn run_mark_not_synced<'a>(
                 if let Some(WorkingCopyEquivalence::WorkingCopy(_, _)) = existing_value {
                     return Err(format_err!("unexpected working copy found for {}", cs_id));
                 }
-            } else {
-                if existing_value.is_some() {
-                    info!(ctx.logger(), "{} already have mapping", cs_id);
-                    return Ok(1);
-                }
+            } else if existing_value.is_some() {
+                info!(ctx.logger(), "{} already have mapping", cs_id);
+                return Ok(1);
             }
 
             let wc_entry = EquivalentWorkingCopyEntry {
@@ -891,7 +882,7 @@ async fn run_mark_not_synced<'a>(
         })
         .try_buffer_unordered(100);
 
-    process_stream_and_wait_for_replication(&ctx, matches, &commit_syncer, s).await?;
+    process_stream_and_wait_for_replication(ctx, matches, &commit_syncer, s).await?;
 
     Ok(())
 }
@@ -934,9 +925,9 @@ async fn run_backfill_noop_mapping<'a>(
         .map_ok({
             borrowed!(ctx, commit_syncer, mapping_version_name);
             move |cs_id| async move {
-                let small_cs_id = helpers::csid_resolve(&ctx, small_repo, cs_id.clone());
+                let small_cs_id = helpers::csid_resolve(ctx, small_repo, cs_id.clone());
 
-                let large_cs_id = helpers::csid_resolve(&ctx, large_repo, cs_id);
+                let large_cs_id = helpers::csid_resolve(ctx, large_repo, cs_id);
 
                 let (small_cs_id, large_cs_id) = try_join(small_cs_id, large_cs_id).await?;
 
@@ -977,15 +968,15 @@ async fn run_diff_mapping_versions<'a>(
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let config_store = matches.config_store();
-    let source_repo_id = args::get_source_repo_id(&config_store, matches)?;
-    let target_repo_id = args::get_target_repo_id(&config_store, matches)?;
+    let source_repo_id = args::get_source_repo_id(config_store, matches)?;
+    let target_repo_id = args::get_target_repo_id(config_store, matches)?;
 
     let mapping_version_names = sub_m
         .values_of(MAPPING_VERSION_NAME)
         .ok_or_else(|| format_err!("{} is supposed to be set", MAPPING_VERSION_NAME))?;
 
     let config_store = matches.config_store();
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?;
 
     let mut commit_sync_configs = vec![];
     for version in mapping_version_names {
@@ -1242,7 +1233,7 @@ async fn run_delete_no_longer_bound_files_from_large_repo<'a>(
     let resulting_changeset_args = cs_args_from_matches(sub_m).compat().await?;
     let deletion_cs_id = create_and_save_bonsai(
         &ctx,
-        &large_repo,
+        large_repo,
         vec![cs_id],
         to_delete
             .into_iter()
@@ -1262,7 +1253,7 @@ async fn find_mover_for_commit(
     commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
     cs_id: ChangesetId,
 ) -> Result<Mover, Error> {
-    let maybe_sync_outcome = commit_syncer.get_commit_sync_outcome(&ctx, cs_id).await?;
+    let maybe_sync_outcome = commit_syncer.get_commit_sync_outcome(ctx, cs_id).await?;
 
     let sync_outcome = maybe_sync_outcome.context("source commit was not remapped yet")?;
     use CommitSyncOutcome::*;
@@ -1343,7 +1334,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         subcommand_future,
         fb,
         "megarepotool",
-        &logger,
+        logger,
         &matches,
         cmdlib::monitoring::AliveService,
     )

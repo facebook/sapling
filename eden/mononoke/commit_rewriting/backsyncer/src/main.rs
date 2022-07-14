@@ -372,8 +372,7 @@ where
     let (next_entry, remaining_entries) = try_join!(next_entry, remaining_entries)?;
     let delay_secs = next_entry
         .get(0)
-        .map(|entry| entry.timestamp.since_seconds())
-        .unwrap_or(0);
+        .map_or(0, |entry| entry.timestamp.since_seconds());
 
     Ok(Delay {
         delay_secs,
@@ -487,7 +486,7 @@ async fn run(
     );
 
     let config_store = matches.config_store();
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(&logger, config_store)?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(logger, config_store)?;
 
     match matches.subcommand() {
         (ARG_MODE_BACKSYNC_ALL, _) => {
@@ -597,7 +596,7 @@ async fn run(
                                 // so `CandidateSelectionHint::Only` is a safe choice
                                 commit_syncer
                                     .sync_commit(
-                                        &ctx,
+                                        ctx,
                                         bonsai.clone(),
                                         CandidateSelectionHint::Only,
                                         CommitSyncContext::Backsyncer,
@@ -605,7 +604,7 @@ async fn run(
                                     .await?;
 
                                 let maybe_sync_outcome =
-                                    commit_syncer.get_commit_sync_outcome(&ctx, bonsai).await?;
+                                    commit_syncer.get_commit_sync_outcome(ctx, bonsai).await?;
 
                                 info!(
                                     ctx.logger(),

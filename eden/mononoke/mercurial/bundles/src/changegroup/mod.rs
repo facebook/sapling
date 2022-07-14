@@ -127,7 +127,7 @@ mod test {
 
         let fut = packer
             .forward(sink)
-            .map_err(|e| -> () { panic!("unexpected error: {}", e) })
+            .map_err(|e| panic!("unexpected error: {}", e))
             .and_then(move |(_, sink)| {
                 let mut cursor = sink.into_inner().into_inner();
 
@@ -144,12 +144,12 @@ mod test {
 
                 let parts = Vec::new();
                 part_stream
-                    .map_err(|e| -> () { panic!("unexpected error: {}", e) })
+                    .map_err(|e| panic!("unexpected error: {}", e))
                     .forward(parts)
             })
             .map(move |(_, parts)| {
                 if seq != parts[..] {
-                    return TestResult::failed();
+                    TestResult::failed()
                 } else {
                     TestResult::passed()
                 }

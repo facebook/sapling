@@ -1271,7 +1271,7 @@ mod test {
         fn path_gen(p: MPath) -> bool {
             p.elements
                 .iter()
-                .map(|elem| MPathElement::verify(&elem.as_ref()))
+                .map(|elem| MPathElement::verify(elem.as_ref()))
                 .all(|res| res.is_ok())
         }
 
@@ -1384,10 +1384,7 @@ mod test {
         assert_eq!(foo.common_components(MPath::iter_opt(None)), 0);
 
         assert_eq!(foo_bar1.take_prefix_components(0).unwrap(), None);
-        assert_eq!(
-            foo_bar1.take_prefix_components(1).unwrap(),
-            Some(foo.clone())
-        );
+        assert_eq!(foo_bar1.take_prefix_components(1).unwrap(), Some(foo));
         assert_eq!(
             foo_bar1.take_prefix_components(2).unwrap(),
             Some(foo_bar1.clone())
@@ -1494,10 +1491,7 @@ mod test {
             MPath::new(mpath).unwrap()
         }
 
-        let mut trie: CaseConflictTrie = vec!["a/b/c", "a/d", "c/d/a"]
-            .into_iter()
-            .map(|p| m(p))
-            .collect();
+        let mut trie: CaseConflictTrie = vec!["a/b/c", "a/d", "c/d/a"].into_iter().map(m).collect();
 
         assert!(trie.add(&m("a/b/c")).is_ok());
         assert!(trie.add(&m("a/B/d")).is_err());

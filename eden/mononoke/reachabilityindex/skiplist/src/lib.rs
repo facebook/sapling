@@ -1466,19 +1466,19 @@ mod test {
 
     #[fbinit::test]
     async fn linear_reachability(fb: FacebookInit) {
-        let sli_constructor = || SkiplistIndex::new();
+        let sli_constructor = SkiplistIndex::new;
         test_linear_reachability(fb, sli_constructor).await;
     }
 
     #[fbinit::test]
     async fn merge_uneven_reachability(fb: FacebookInit) {
-        let sli_constructor = || SkiplistIndex::new();
+        let sli_constructor = SkiplistIndex::new;
         test_merge_uneven_reachability(fb, sli_constructor).await;
     }
 
     #[fbinit::test]
     async fn branch_wide_reachability(fb: FacebookInit) {
-        let sli_constructor = || SkiplistIndex::new();
+        let sli_constructor = SkiplistIndex::new;
         test_branch_wide_reachability(fb, sli_constructor).await;
     }
 

@@ -457,7 +457,7 @@ async fn fetch_mfs(
 ) -> Result<Vec<(HgManifestId, Option<MPath>)>, Error> {
     let fetched_mfs = get_changed_manifests_stream(
         ctx.clone(),
-        &repo,
+        repo,
         root_mf_id,
         base_root_mf_id,
         base_path,

@@ -295,7 +295,7 @@ async fn create_rewritten_merge_commit(
     let mut additional_file_changes = generate_additional_file_changes(
         ctx.clone(),
         large_root,
-        &large_repo,
+        large_repo,
         &syncers.large_to_small,
         onto_value,
         &root_version,
@@ -320,7 +320,7 @@ async fn generate_additional_file_changes(
     onto_value: ChangesetId,
     version: &CommitSyncConfigVersion,
 ) -> Result<SortedVectorMap<MPath, FileChange>, Error> {
-    let bonsai_diff = find_bonsai_diff(ctx.clone(), &large_repo, root, onto_value)
+    let bonsai_diff = find_bonsai_diff(ctx.clone(), large_repo, root, onto_value)
         .collect()
         .compat()
         .await?;
@@ -331,15 +331,14 @@ async fn generate_additional_file_changes(
             BonsaiDiffFileChange::Changed(ref path, ..)
             | BonsaiDiffFileChange::ChangedReusedId(ref path, ..)
             | BonsaiDiffFileChange::Deleted(ref path) => {
-                let maybe_new_path = large_to_small.get_mover_by_version(&version).await?(path)?;
+                let maybe_new_path = large_to_small.get_mover_by_version(version).await?(path)?;
                 if maybe_new_path.is_some() {
                     continue;
                 }
             }
         }
 
-        let fc =
-            convert_diff_result_into_file_change_for_diamond_merge(&ctx, &large_repo, diff_res);
+        let fc = convert_diff_result_into_file_change_for_diamond_merge(&ctx, large_repo, diff_res);
         additional_file_changes.push(fc);
     }
 

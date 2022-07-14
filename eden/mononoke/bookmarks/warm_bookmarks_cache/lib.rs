@@ -1413,7 +1413,7 @@ mod tests {
                     } else {
                         cloned!(repo);
                         async move {
-                            RootUnodeManifestId::derive(&ctx, &repo.blob_repo, cs_id).await?;
+                            RootUnodeManifestId::derive(ctx, &repo.blob_repo, cs_id).await?;
                             Ok(())
                         }
                         .boxed()
@@ -1426,7 +1426,7 @@ mod tests {
                     cloned!(repo);
                     async move {
                         let res =
-                            RootUnodeManifestId::is_derived(&ctx, &repo.blob_repo, &cs_id).await?;
+                            RootUnodeManifestId::is_derived(ctx, &repo.blob_repo, &cs_id).await?;
                         Ok(res)
                     }
                     .boxed()
@@ -1521,7 +1521,7 @@ mod tests {
                     cloned!(repo);
                     async move {
                         tokio::time::sleep(Duration::from_millis(derive_sleep_time_ms)).await;
-                        RootUnodeManifestId::derive(&ctx, &repo.blob_repo, cs_id).await?;
+                        RootUnodeManifestId::derive(ctx, &repo.blob_repo, cs_id).await?;
                         Ok(())
                     }
                     .boxed()
@@ -1533,7 +1533,7 @@ mod tests {
                     cloned!(repo);
                     async move {
                         let res =
-                            RootUnodeManifestId::is_derived(&ctx, &repo.blob_repo, &cs_id).await?;
+                            RootUnodeManifestId::is_derived(ctx, &repo.blob_repo, &cs_id).await?;
                         Ok(res)
                     }
                     .boxed()

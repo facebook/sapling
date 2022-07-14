@@ -258,7 +258,7 @@ mod test {
         let test3_ident = MononokeIdentity::new("USER", "baz");
 
         let ident_target = Target::Identity(test_ident.clone());
-        let ident2_target = Target::Identity(test2_ident.clone());
+        let ident2_target = Target::Identity(test2_ident);
         let ident3_target = Target::Identity(test3_ident.clone());
         let empty_idents = Some(MononokeIdentitySet::new());
 
@@ -271,11 +271,11 @@ mod test {
 
         assert!(ident_target.matches_client(idents.as_ref()));
 
-        let and_target = Target::AndTarget(vec![ident_target.clone(), ident3_target.clone()]);
+        let and_target = Target::AndTarget(vec![ident_target.clone(), ident3_target]);
 
         assert!(and_target.matches_client(idents.as_ref()));
 
-        let or_target = Target::OrTarget(vec![ident_target.clone(), ident2_target.clone()]);
+        let or_target = Target::OrTarget(vec![ident_target, ident2_target.clone()]);
 
         assert!(or_target.matches_client(idents.as_ref()));
 

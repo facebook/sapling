@@ -1346,13 +1346,12 @@ mod tests {
     }
 
     fn make_paths(paths: &[&str]) -> Vec<MPath> {
-        let paths: Result<_, _> = paths.into_iter().map(MPath::new).collect();
+        let paths: Result<_, _> = paths.iter().map(MPath::new).collect();
         paths.unwrap()
     }
 
     fn master_bookmark() -> BookmarkName {
-        let book = BookmarkName::new("master").unwrap();
-        book
+        BookmarkName::new("master").unwrap()
     }
 
     async fn push_and_verify(
@@ -1366,7 +1365,7 @@ mod tests {
         let mut commit_ctx = CreateCommitContext::new(ctx, repo, vec![parent]);
 
         for (path, maybe_content) in content.iter() {
-            let path: &str = path.as_ref();
+            let path: &str = path;
             commit_ctx = match maybe_content {
                 Some(content) => commit_ctx.add_file(path, *content),
                 None => commit_ctx.delete_file(path),
@@ -1443,7 +1442,7 @@ mod tests {
                 changesets: &RebasedChangesets,
             ) -> Result<Box<dyn PushrebaseTransactionHook>, Error> {
                 let (_, (cs_id, _)) = changesets
-                    .into_iter()
+                    .iter()
                     .next()
                     .ok_or(Error::msg("No rebased changeset"))?;
                 Ok(Box::new(TransactionHook(self.0, *cs_id)) as Box<dyn PushrebaseTransactionHook>)
@@ -1945,7 +1944,7 @@ mod tests {
                     async move {
                         let file = format!("f{}", index);
                         let content = format!("{}", index);
-                        let bcs = CreateCommitContext::new(&ctx, &repo, vec![head])
+                        let bcs = CreateCommitContext::new(ctx, &repo, vec![head])
                             .add_file(file.as_str(), content)
                             .commit()
                             .await?;

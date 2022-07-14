@@ -303,8 +303,7 @@ async fn loop_forever<M: SyncedCommitMapping + Clone + 'static>(
             .get(&(small_repo_id.id() as i64))
             // We only care about public pushes because draft pushes are not in the bookmark
             // update log at all.
-            .map(|enables| enables.public_push)
-            .unwrap_or(false);
+            .map_or(false, |enables| enables.public_push);
 
         if enabled {
             let res = validate(&ctx, &syncers, large_repo_name, small_repo_name).await;
@@ -360,7 +359,7 @@ async fn validate<M: SyncedCommitMapping + Clone + 'static>(
     small_repo_name: &str,
 ) -> Result<(), ValidationError> {
     let commit_syncer = &syncers.small_to_large;
-    let diffs = validation::find_bookmark_diff(ctx.clone(), &commit_syncer).await?;
+    let diffs = validation::find_bookmark_diff(ctx.clone(), commit_syncer).await?;
 
     info!(ctx.logger(), "got {} bookmark diffs", diffs.len());
     for diff in diffs {
@@ -391,8 +390,8 @@ async fn validate<M: SyncedCommitMapping + Clone + 'static>(
         let max_log_records: u32 = 100;
         let max_delay_secs: u32 = 300;
         let in_history = check_large_bookmark_history(
-            &ctx,
-            &syncers,
+            ctx,
+            syncers,
             &large_bookmark,
             &large_cs_id,
             &small_cs_id,
@@ -469,7 +468,7 @@ async fn check_large_bookmark_history<M: SyncedCommitMapping + Clone + 'static>(
                     let res: Result<_, Error> = match book_val {
                         Some(large_cs_id) => {
                             let maybe_remapped_cs_id =
-                                remap(&ctx, &large_to_small, &large_cs_id).await?;
+                                remap(ctx, large_to_small, large_cs_id).await?;
                             Ok(maybe_remapped_cs_id
                                 .map(|remapped_cs_id| (Some(remapped_cs_id), timestamp)))
                         }
@@ -480,13 +479,14 @@ async fn check_large_bookmark_history<M: SyncedCommitMapping + Clone + 'static>(
 
         let remapped_log_entries = future::try_join_all(remapped_log_entries).await?;
 
-        let maybe_log_entry = remapped_log_entries.into_iter().filter_map(|x| x).find(
-            |(maybe_remapped_cs_id, timestamp)| {
+        let maybe_log_entry = remapped_log_entries
+            .into_iter()
+            .filter_map(std::convert::identity)
+            .find(|(maybe_remapped_cs_id, timestamp)| {
                 // Delay is measured from the latest entry in the large repo bookmark update log
                 let delay = latest_timestamp.timestamp_seconds() - timestamp.timestamp_seconds();
                 (maybe_remapped_cs_id == maybe_small_cs_id) && (delay < max_delay_secs as i64)
-            },
-        );
+            });
 
         if maybe_log_entry.is_some() {
             return Ok(true);

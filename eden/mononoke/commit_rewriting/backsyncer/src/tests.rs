@@ -600,7 +600,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
     let source_repo = commit_syncer.get_source_repo();
 
     let ctx = CoreContext::test_mock(fb);
-    let merge = build_unrelated_branch(ctx.clone(), &source_repo).await;
+    let merge = build_unrelated_branch(ctx.clone(), source_repo).await;
 
     move_bookmark(
         ctx.clone(),
@@ -944,10 +944,12 @@ async fn verify_mapping_and_all_wc(
         let csc = commit_syncer.clone();
         let outcome = csc.get_commit_sync_outcome(&ctx, source_cs_id).await?;
         let source_bcs = source_cs_id.load(&ctx, source_repo.blobstore()).await?;
-        let outcome = outcome.expect(&format!(
-            "commit has not been synced {} {:?}",
-            source_cs_id, source_bcs
-        ));
+        let outcome = outcome.unwrap_or_else(|| {
+            panic!(
+                "commit has not been synced {} {:?}",
+                source_cs_id, source_bcs
+            )
+        });
         use CommitSyncOutcome::*;
 
         let (target_cs_id, mover_to_use) = match outcome {
@@ -1008,12 +1010,12 @@ async fn verify_bookmarks(
     // Check that bookmark point to corresponding working copies
     for (bookmark, source_hg_cs_id) in bookmarks {
         println!("checking bookmark: {}", bookmark.name());
-        match bookmark_renamer(&bookmark.name()) {
+        match bookmark_renamer(bookmark.name()) {
             Some(renamed_book) => {
                 if &renamed_book != bookmark.name() {
                     assert!(
                         target_repo
-                            .get_bookmark(ctx.clone(), &bookmark.name())
+                            .get_bookmark(ctx.clone(), bookmark.name())
                             .await?
                             .is_none()
                     );
@@ -1021,10 +1023,9 @@ async fn verify_bookmarks(
                 let target_hg_cs_id = target_repo
                     .get_bookmark(ctx.clone(), &renamed_book)
                     .await?
-                    .expect(&format!(
-                        "{} bookmark doesn't exist in target repo!",
-                        bookmark.name()
-                    ));
+                    .unwrap_or_else(|| {
+                        panic!("{} bookmark doesn't exist in target repo!", bookmark.name())
+                    });
 
                 let source_bcs_id = source_repo
                     .bonsai_hg_mapping()
@@ -1066,7 +1067,7 @@ async fn verify_bookmarks(
                 // Make sure we don't have this bookmark in target repo
                 assert!(
                     target_repo
-                        .get_bookmark(ctx.clone(), &bookmark.name())
+                        .get_bookmark(ctx.clone(), bookmark.name())
                         .await?
                         .is_none()
                 );
@@ -1159,7 +1160,7 @@ impl BookmarkRenamerType {
                 common_pushrebase_bookmarks: vec![common.clone()],
                 small_repos: hashmap! {
                     small_repo_id => SmallRepoPermanentConfig {
-                        bookmark_prefix: AsciiString::from_str(&bookmark_prefix).unwrap(),
+                        bookmark_prefix: AsciiString::from_str(bookmark_prefix).unwrap(),
                     }
                 },
                 large_repo_id,

@@ -143,10 +143,6 @@ mod tests {
         key: &dyn AsRef<[u8]>,
         expected: Option<HgChangesetId>,
     ) {
-        let expected = match expected {
-            Some(hash) => Some(hash),
-            None => None,
-        };
         assert_eq!(bookmarks.get(key).wait().unwrap(), expected);
     }
 

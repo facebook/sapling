@@ -223,7 +223,7 @@ mod test {
             // a content ID must be present
             content_id: None,
             content_size: 42,
-            metadata: Some(vec![].into()),
+            metadata: Some(vec![]),
         };
 
         HgFileEnvelope::from_thrift(thrift_fe.clone())

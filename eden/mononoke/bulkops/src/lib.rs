@@ -293,7 +293,7 @@ mod tests {
             .unwrap();
         blobrepo
             .phases()
-            .add_reachable_as_public(&ctx, vec![master])
+            .add_reachable_as_public(ctx, vec![master])
             .await?;
 
         Ok(blobrepo)

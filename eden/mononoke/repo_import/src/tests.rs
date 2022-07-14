@@ -87,7 +87,7 @@ mod tests {
     use tokio::time;
 
     fn create_bookmark_name(book: &str) -> BookmarkName {
-        BookmarkName::new(book.to_string()).unwrap()
+        BookmarkName::new(book).unwrap()
     }
 
     fn mp(s: &'static str) -> MPath {
@@ -549,7 +549,7 @@ mod tests {
             common_pushrebase_bookmarks: commit_sync_config.common_pushrebase_bookmarks.clone(),
             small_repos: hashmap! {
                 RepositoryId::new(1) => SmallRepoPermanentConfig {
-                    bookmark_prefix: AsciiString::from_str(&"large_repo_bookmark/")
+                    bookmark_prefix: AsciiString::from_str("large_repo_bookmark/")
                         .unwrap(),
                 },
                 RepositoryId::new(2) => SmallRepoPermanentConfig {
@@ -735,7 +735,7 @@ mod tests {
         let large_repo_cs_a = &shifted_bcs_ids[0]
             .load(&ctx, large_repo.repo_blobstore())
             .await?;
-        let large_repo_cs_a_mpaths = get_file_changes_mpaths(&large_repo_cs_a);
+        let large_repo_cs_a_mpaths = get_file_changes_mpaths(large_repo_cs_a);
         assert_eq!(
             vec![mp("large_repo/dest_path_prefix/A")],
             large_repo_cs_a_mpaths
@@ -744,7 +744,7 @@ mod tests {
         let large_repo_cs_b = &shifted_bcs_ids[1]
             .load(&ctx, large_repo.repo_blobstore())
             .await?;
-        let large_repo_cs_b_mpaths = get_file_changes_mpaths(&large_repo_cs_b);
+        let large_repo_cs_b_mpaths = get_file_changes_mpaths(large_repo_cs_b);
         assert_eq!(vec![mp("random_dir/B")], large_repo_cs_b_mpaths);
 
         let synced_bcs_ids = back_sync_commits_to_small_repo(
@@ -759,13 +759,13 @@ mod tests {
         let small_repo_cs_a = &synced_bcs_ids[0]
             .load(&ctx, small_repo.repo_blobstore())
             .await?;
-        let small_repo_cs_a_mpaths = get_file_changes_mpaths(&small_repo_cs_a);
+        let small_repo_cs_a_mpaths = get_file_changes_mpaths(small_repo_cs_a);
         assert_eq!(vec![mp("dest_path_prefix/A")], small_repo_cs_a_mpaths);
 
         let small_repo_cs_b = &synced_bcs_ids[1]
             .load(&ctx, small_repo.repo_blobstore())
             .await?;
-        let small_repo_cs_b_mpaths = get_file_changes_mpaths(&small_repo_cs_b);
+        let small_repo_cs_b_mpaths = get_file_changes_mpaths(small_repo_cs_b);
         assert_eq!(vec![mp("dest_path_prefix/B")], small_repo_cs_b_mpaths);
 
         Ok(())

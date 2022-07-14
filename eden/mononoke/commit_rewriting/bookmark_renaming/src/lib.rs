@@ -150,8 +150,8 @@ mod test {
         let m1 = BookmarkName::new("m1").unwrap();
         let m2 = BookmarkName::new("m2").unwrap();
 
-        assert_eq!(bookmark_renamer_1(&hello), Some(b1_hello.clone()));
-        assert_eq!(bookmark_renamer_2(&hello), Some(b2_hello.clone()));
+        assert_eq!(bookmark_renamer_1(&hello), Some(b1_hello));
+        assert_eq!(bookmark_renamer_2(&hello), Some(b2_hello));
         assert_eq!(bookmark_renamer_1(&m1), Some(m1.clone()));
         assert_eq!(bookmark_renamer_2(&m1), Some(m1.clone()));
         assert_eq!(bookmark_renamer_1(&m2), Some(m2.clone()));
@@ -182,7 +182,7 @@ mod test {
         assert_eq!(bookmark_renamer_2(&m2), Some(m2.clone()));
         // Correctly prefixed bookmarks are synced with prefixes removed
         assert_eq!(bookmark_renamer_1(&b1_hello), Some(hello.clone()));
-        assert_eq!(bookmark_renamer_2(&b2_hello), Some(hello.clone()));
+        assert_eq!(bookmark_renamer_2(&b2_hello), Some(hello));
         // Bookmarks, prefixed with prefixes, belonging to other small repos are not synced
         assert_eq!(bookmark_renamer_1(&b2_hello), None);
         assert_eq!(bookmark_renamer_2(&b1_hello), None);

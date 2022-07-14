@@ -238,8 +238,7 @@ impl ValidationHelper {
         let moved_fmd: Result<FullManifestDiff, Error> = full_manifest_diff
             .0
             .into_iter()
-            .map(|filenode_diff| filenode_diff.apply_mover(large_to_small_mover).transpose())
-            .filter_map(|maybe_smth| maybe_smth)
+            .flat_map(|filenode_diff| filenode_diff.apply_mover(large_to_small_mover).transpose())
             .collect();
         Ok(Large(moved_fmd?))
     }
@@ -538,7 +537,7 @@ impl ValidationHelpers {
         }))
         .await?
         .into_iter()
-        .filter_map(|maybe_smth| maybe_smth)
+        .filter_map(std::convert::identity)
         .collect();
 
         debug!(
@@ -1256,8 +1255,8 @@ async fn validate_full_manifest_diffs_equivalence<'a>(
     let should_be_equivalent = small_large_to_source_target(should_be_equivalent);
     verify_filenodes_have_same_contents(
         ctx,
-        &target_repo,
-        &source_repo,
+        target_repo,
+        source_repo,
         &source_cs_id,
         should_be_equivalent,
     )
@@ -1422,7 +1421,7 @@ pub async fn validate_entry(
                 log_validation_result_to_scuba(
                     scuba_sample,
                     entry_id.bookmarks_update_log_entry_id,
-                    &large_cs_id,
+                    large_cs_id,
                     &small_cs_id,
                     maybe_error_str,
                     queue_size,
@@ -1463,15 +1462,7 @@ async fn list_all_filenode_ids(
         .list_all_entries(ctx.clone(), repo.get_blobstore())
         .try_filter_map(move |(path, entry)| {
             let res = match entry {
-                Entry::Leaf(leaf_payload) => {
-                    match path {
-                        Some(path) => Some((path, leaf_payload)),
-                        None => {
-                            // Leaf shouldn't normally be None
-                            None
-                        }
-                    }
-                }
+                Entry::Leaf(leaf_payload) => path.map(|path| (path, leaf_payload)),
                 Entry::Tree(_) => None,
             };
             future::ready(Ok(res))
@@ -1566,7 +1557,7 @@ mod tests {
         let mut parent: CommitIdentifier = "master".into();
         let mut commits: Vec<ChangesetId> = vec![];
         for file_changes in spec {
-            let commit = CreateCommitContext::new(&ctx, repo, vec![parent])
+            let commit = CreateCommitContext::new(ctx, repo, vec![parent])
                 .add_files(file_changes)
                 .commit()
                 .await?;
@@ -1601,8 +1592,8 @@ mod tests {
         let large_repo = small_to_large_commit_syncer.get_large_repo();
         let lca_hint: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
 
-        let large_commits = add_commits_to_repo(&ctx, large_repo_commits_spec, &large_repo).await?;
-        let small_commits = add_commits_to_repo(&ctx, small_repo_commits_spec, &small_repo).await?;
+        let large_commits = add_commits_to_repo(&ctx, large_repo_commits_spec, large_repo).await?;
+        let small_commits = add_commits_to_repo(&ctx, small_repo_commits_spec, small_repo).await?;
         let commit_mapping: HashMap<ChangesetId, ChangesetId> = commit_index_mapping
             .into_iter()
             .map(|(large_index, small_index)| {
@@ -1631,7 +1622,7 @@ mod tests {
             Small(small_commits[small_index_to_test].clone()),
             lca_hint,
             &small_to_large_commit_syncer.mapping,
-            &small_to_large_commit_syncer.get_commit_sync_data_provider(),
+            small_to_large_commit_syncer.get_commit_sync_data_provider(),
         )
         .await?;
 

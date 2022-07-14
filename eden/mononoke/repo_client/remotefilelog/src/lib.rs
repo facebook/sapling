@@ -410,8 +410,7 @@ mod test {
             }
         };
 
-        let blob =
-            prepare_blob(&ctx, &repo, filenode, SessionLfsParams { threshold }, true).await?;
+        let blob = prepare_blob(ctx, repo, filenode, SessionLfsParams { threshold }, true).await?;
 
         let RemotefilelogBlob { kind, data } = blob;
         data.await?; // Await the blob data to make sure hash validation passes.

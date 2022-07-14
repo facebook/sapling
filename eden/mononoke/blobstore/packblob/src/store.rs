@@ -441,7 +441,7 @@ mod tests {
             .await?;
 
         assert_eq!(
-            packblob.get(ctx, &key).await?.map(|b| b.into_bytes()),
+            packblob.get(ctx, key).await?.map(|b| b.into_bytes()),
             Some(value)
         );
         Ok(())

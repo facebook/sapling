@@ -117,7 +117,7 @@ async fn new_tailer(
 ) -> Result<SegmentedChangelogTailer> {
     let prefetched = match prefetched {
         None => stream::empty().boxed(),
-        Some(prefetched) => stream::iter(prefetched.into_iter().map(|cs_id| Ok(cs_id))).boxed(),
+        Some(prefetched) => stream::iter(prefetched.into_iter().map(Ok)).boxed(),
     };
 
     let changeset_fetcher = Arc::new(
@@ -294,7 +294,7 @@ async fn validate_build_idmap(
 }
 
 async fn fetch_cs_entry(ctx: &CoreContext, repo: &BlobRepo, cs: &str) -> Result<ChangesetEntry> {
-    let cs = resolve_cs_id(&ctx, &repo, cs).await?;
+    let cs = resolve_cs_id(ctx, &repo, cs).await?;
     repo.changesets()
         .get(ctx.clone(), cs)
         .await?

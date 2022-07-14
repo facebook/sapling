@@ -66,7 +66,7 @@ pub async fn get_single_bonsai_streams(
         let stream = single_changeset_id(
             ctx.clone(),
             string_to_bonsai(ctx.fb, &repo.clone(), hash).await,
-            &repo,
+            repo,
         )
         .boxify();
         ret.push(stream)

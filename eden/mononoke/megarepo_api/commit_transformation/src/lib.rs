@@ -861,11 +861,11 @@ mod test {
         multi_mover: MultiMover,
         force_first_parent: Option<ChangesetId>,
     ) -> Result<ChangesetId, Error> {
-        let bcs = bcs_id.load(&ctx, &repo.get_blobstore()).await?;
+        let bcs = bcs_id.load(ctx, &repo.get_blobstore()).await?;
         let bcs = bcs.into_mut();
 
         let maybe_rewritten = rewrite_commit(
-            &ctx,
+            ctx,
             bcs,
             &parents,
             multi_mover,

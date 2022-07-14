@@ -367,7 +367,7 @@ mod test {
         assert_eq!(maybe_hg_cs_id, Some(hg_cs_id));
 
         let res = session_bookmark_cache
-            .get_bookmarks_by_prefix(&ctx, &BookmarkPrefix::new("prefix")?, 3)
+            .get_bookmarks_by_prefix(ctx, &BookmarkPrefix::new("prefix")?, 3)
             .await?
             .try_collect::<HashMap<_, _>>()
             .await?;
@@ -381,7 +381,7 @@ mod test {
         );
 
         let res = session_bookmark_cache
-            .get_bookmarks_by_prefix(&ctx, &BookmarkPrefix::new("prefix")?, 1)
+            .get_bookmarks_by_prefix(ctx, &BookmarkPrefix::new("prefix")?, 1)
             .await?
             .try_collect::<HashMap<_, _>>()
             .await?;

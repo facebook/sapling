@@ -398,7 +398,7 @@ mod test {
         let expected_bytes = in_chunks
             .iter()
             .fold(BytesMut::new(), |mut bytes, chunk| {
-                bytes.extend_from_slice(&chunk);
+                bytes.extend_from_slice(chunk);
                 bytes
             })
             .freeze();
@@ -406,7 +406,7 @@ mod test {
         let got_bytes = out_chunks
             .iter()
             .fold(BytesMut::new(), |mut bytes, chunk| {
-                bytes.extend_from_slice(&chunk);
+                bytes.extend_from_slice(chunk);
                 bytes
             })
             .freeze();
@@ -450,7 +450,7 @@ mod test {
             let in_stream = stream::iter(in_chunks.clone()).map(Ok);
 
             let expected_bytes = in_chunks.iter().fold(BytesMut::new(), |mut bytes, chunk| {
-                bytes.extend_from_slice(&chunk);
+                bytes.extend_from_slice(chunk);
                 bytes
             }).freeze();
 

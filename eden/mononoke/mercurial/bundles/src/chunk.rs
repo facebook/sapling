@@ -235,7 +235,7 @@ mod test {
             })
             .collect();
         // Make a clone so we can use chunks later.
-        let chunks_res: Vec<Result<Chunk>> = chunks.clone().into_iter().map(|x| Ok(x)).collect();
+        let chunks_res: Vec<Result<Chunk>> = chunks.clone().into_iter().map(Ok).collect();
 
         let cursor = Cursor::new(Vec::with_capacity(32 * 1024));
         let sink = FramedWrite::new(cursor, ChunkEncoder);

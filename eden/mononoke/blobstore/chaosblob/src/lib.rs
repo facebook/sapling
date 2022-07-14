@@ -206,7 +206,7 @@ mod test {
                 BlobstoreBytes::from_bytes("test foobar"),
             )
             .await;
-        assert!(!r.is_ok());
+        assert!(r.is_err());
         let base_present = base
             .is_present(ctx, key)
             .await
@@ -231,7 +231,7 @@ mod test {
                 BlobstoreBytes::from_bytes("test foobar"),
             )
             .await;
-        assert!(!r.is_ok());
+        assert!(r.is_err());
         let base_present = base
             .is_present(ctx, key)
             .await
@@ -264,6 +264,6 @@ mod test {
             .assume_not_found_if_unsure();
         assert!(base_present);
         let r = wrapper.get(ctx, key).await;
-        assert!(!r.is_ok());
+        assert!(r.is_err());
     }
 }

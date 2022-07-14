@@ -23,6 +23,6 @@ pub fn build_shard() -> Result<Connection, Error> {
 
 pub fn build_reader_writer(shards: Vec<Connection>) -> (FilenodesReader, FilenodesWriter) {
     let reader = FilenodesReader::new(shards.clone(), shards.clone());
-    let writer = FilenodesWriter::new(SQLITE_INSERT_CHUNK_SIZE, shards.clone(), shards.clone());
+    let writer = FilenodesWriter::new(SQLITE_INSERT_CHUNK_SIZE, shards.clone(), shards);
     (reader, writer)
 }

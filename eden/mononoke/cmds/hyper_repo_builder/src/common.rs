@@ -54,13 +54,9 @@ pub async fn find_source_repos_and_latest_synced_cs_ids<'a>(
         latest_synced_state
             .into_iter()
             .map(|(name, cs_id)| async move {
-                let repo = args::open_repo_with_repo_name(
-                    ctx.fb,
-                    &ctx.logger(),
-                    name.to_string(),
-                    matches,
-                )
-                .await?;
+                let repo =
+                    args::open_repo_with_repo_name(ctx.fb, ctx.logger(), name.to_string(), matches)
+                        .await?;
                 anyhow::Ok((repo, Source(cs_id)))
             }),
     )
@@ -94,7 +90,7 @@ pub fn decode_latest_synced_state_extras<'a>(
         })
         .map(|(repo_name, value)| {
             let cs_id = ChangesetId::from_str(&String::from_utf8(value.to_vec())?)?;
-            anyhow::Ok((repo_name.to_string(), cs_id))
+            anyhow::Ok((repo_name, cs_id))
         })
         .collect::<Result<HashMap<_, _>, _>>()
         .context("failed to parsed latest synced state extras")

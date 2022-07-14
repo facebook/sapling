@@ -71,7 +71,7 @@ async fn get_unmerged_commits_with_total_count(
     let total_count = commits_to_merge.len();
 
     let unmerged_commits =
-        find_unmerged_commits(ctx, repo, commits_to_merge, &bookmark_to_merge_into).await?;
+        find_unmerged_commits(ctx, repo, commits_to_merge, bookmark_to_merge_into).await?;
 
     Ok((total_count, unmerged_commits))
 }
@@ -159,7 +159,7 @@ pub async fn gradual_merge(
                 ctx,
                 &repo.blob_repo,
                 cs_id,
-                &bookmark_to_merge_into,
+                bookmark_to_merge_into,
                 merge_changeset_args,
                 pushrebase_flags,
             )
@@ -220,7 +220,7 @@ async fn find_unmerged_commits(
     };
 
     let bookmark_value =
-        helpers::csid_resolve(&ctx, &repo.blob_repo, bookmark_to_merge_into).await?;
+        helpers::csid_resolve(ctx, &repo.blob_repo, bookmark_to_merge_into).await?;
 
     // Let's check if any commits has been merged already - to do that it's enough
     // to check if the first commit has been merged or not i.e. check if this commit
@@ -228,7 +228,7 @@ async fn find_unmerged_commits(
     let has_merged_any = repo
         .skiplist_index
         .is_ancestor(
-            &ctx,
+            ctx,
             &repo.blob_repo.get_changeset_fetcher(),
             first.0,
             bookmark_value,
@@ -301,11 +301,11 @@ async fn push_merge_commit(
     pushrebase_flags: &PushrebaseFlags,
 ) -> Result<ChangesetId, Error> {
     info!(ctx.logger(), "Preparing to merge {}", cs_id_to_merge);
-    let bookmark_value = helpers::csid_resolve(&ctx, repo, bookmark_to_merge_into).await?;
+    let bookmark_value = helpers::csid_resolve(ctx, repo, bookmark_to_merge_into).await?;
 
     let merge_cs_id = create_and_save_bonsai(
-        &ctx,
-        &repo,
+        ctx,
+        repo,
         vec![bookmark_value, cs_id_to_merge],
         Default::default(),
         merge_changeset_args,
@@ -321,12 +321,12 @@ async fn push_merge_commit(
     info!(ctx.logger(), "Generated hg changeset {}", merge_hg_cs_id);
     info!(ctx.logger(), "Now running pushrebase...");
 
-    let merge_cs = merge_cs_id.load(&ctx, repo.blobstore()).await?;
+    let merge_cs = merge_cs_id.load(ctx, repo.blobstore()).await?;
     let pushrebase_res = do_pushrebase_bonsai(
-        &ctx,
-        &repo,
-        &pushrebase_flags,
-        &bookmark_to_merge_into,
+        ctx,
+        repo,
+        pushrebase_flags,
+        bookmark_to_merge_into,
         &hashset![merge_cs],
         &[],
     )
@@ -577,7 +577,7 @@ mod test {
         let repo: InnerRepo = test_repo_factory::build_empty(ctx.fb)?;
 
         let dag = create_from_dag(
-            &ctx,
+            ctx,
             &repo.blob_repo,
             r##"
                A-B-C
@@ -601,7 +601,7 @@ mod test {
                 .commit()
                 .await?;
 
-        bookmark(&ctx, &repo.blob_repo, "head")
+        bookmark(ctx, &repo.blob_repo, "head")
             .set_to(*dag.get("C").unwrap())
             .await?;
 
@@ -621,7 +621,7 @@ mod test {
     ) -> Result<(), Error> {
         assert_eq!(gradual_merge_result.len(), 3);
         let working_copy = list_working_copy_utf8(
-            &ctx,
+            ctx,
             &repo,
             *gradual_merge_result.get(&pre_deletion_commit).unwrap(),
         )
@@ -639,7 +639,7 @@ mod test {
         );
 
         let working_copy = list_working_copy_utf8(
-            &ctx,
+            ctx,
             &repo,
             *gradual_merge_result.get(&deletion_commits[0]).unwrap(),
         )
@@ -656,7 +656,7 @@ mod test {
         );
 
         let working_copy = list_working_copy_utf8(
-            &ctx,
+            ctx,
             &repo,
             *gradual_merge_result.get(&deletion_commits[1]).unwrap(),
         )
@@ -673,7 +673,7 @@ mod test {
 
         for merge_cs_id in gradual_merge_result.values() {
             let hg_cs_id = repo.derive_hg_changeset(ctx, *merge_cs_id).await?;
-            let hg_cs = hg_cs_id.load(&ctx, repo.blobstore()).await?;
+            let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
             assert!(hg_cs.files().is_empty());
         }
         Ok(())

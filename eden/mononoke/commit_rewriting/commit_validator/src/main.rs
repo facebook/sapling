@@ -124,7 +124,7 @@ async fn run_in_tailing_mode(
         scuba_sample,
     );
 
-    validate_stream(&ctx, &validation_helpers, stream_of_entries)
+    validate_stream(ctx, &validation_helpers, stream_of_entries)
         .then(
             |validated_entry_id_res: Result<EntryCommitId, Error>| async {
                 let entry_id = validated_entry_id_res?;
@@ -170,7 +170,7 @@ async fn run_in_once_mode(
     }
 
     let stream_of_entries = stream::iter(entries);
-    validate_stream(&ctx, &validation_helpers, stream_of_entries)
+    validate_stream(ctx, &validation_helpers, stream_of_entries)
         .try_for_each(|_| future::ready(Ok(())))
         .await
 }
@@ -181,11 +181,11 @@ async fn run<'a>(
     matches: &'a MononokeMatches<'a>,
 ) -> Result<(), Error> {
     let config_store = matches.config_store();
-    let repo_id = args::get_repo_id(config_store, &matches)?;
-    let (_, repo_config) = args::get_config_by_repoid(config_store, &matches, repo_id)?;
+    let repo_id = args::get_repo_id(config_store, matches)?;
+    let (_, repo_config) = args::get_config_by_repoid(config_store, matches, repo_id)?;
 
     let logger = ctx.logger();
-    let repo: InnerRepo = args::open_repo_with_repo_id(fb, &logger, repo_id, &matches)
+    let repo: InnerRepo = args::open_repo_with_repo_id(fb, logger, repo_id, matches)
         .await
         .with_context(|| format!("While opening the large repo ({})", repo_id))?;
     let mysql_options = matches.mysql_options();

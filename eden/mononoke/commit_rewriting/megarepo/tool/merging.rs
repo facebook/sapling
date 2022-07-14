@@ -32,7 +32,7 @@ async fn fail_on_path_conflicts(
         repo.bonsai_hg_mapping().get_bonsai_from_hg(ctx, hg_cs_id_2)
     )?;
     let collisions =
-        get_colliding_paths_between_commits(&ctx, &repo, bcs_1.unwrap(), bcs_2.unwrap()).await?;
+        get_colliding_paths_between_commits(ctx, repo, bcs_1.unwrap(), bcs_2.unwrap()).await?;
     if !collisions.is_empty() {
         Err(format_err!(
             "There are paths present in both parents: {:?} ...",

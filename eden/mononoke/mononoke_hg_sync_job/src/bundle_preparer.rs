@@ -830,7 +830,7 @@ mod test {
         let log_entry_3 =
             create_bookmark_log_entry(1, main.clone(), Some(commit_b), Some(commit_c));
 
-        let mut batch = BookmarkLogEntryBatch::new(log_entry_1.clone());
+        let mut batch = BookmarkLogEntryBatch::new(log_entry_1);
         batch.push(log_entry_2.clone());
         batch.push(log_entry_3.clone());
 
@@ -872,7 +872,7 @@ mod test {
         // Bookmark is not in the batch at all - in that case just do nothing and
         // return existing bundle
         let overlay = BookmarkOverlay::new(Arc::new(hashmap! {
-          main.clone() => commit_d,
+          main => commit_d,
         }));
         let adjusted = maybe_adjust_batch(&ctx, batch.clone(), &overlay)?;
         assert_eq!(Some(batch), adjusted);

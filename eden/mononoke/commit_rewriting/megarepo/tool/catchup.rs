@@ -68,8 +68,8 @@ pub async fn create_deletion_head_commits<'a>(
             maybe_head_bookmark_val.ok_or(anyhow!("{} not found", head_bookmark))?;
 
         let bcs_id = create_and_save_bonsai(
-            &ctx,
-            &repo,
+            ctx,
+            repo,
             vec![head_bookmark_val],
             files,
             cs_args_factory(StackPosition(num)),
@@ -83,10 +83,10 @@ pub async fn create_deletion_head_commits<'a>(
 
         info!(ctx.logger(), "derived {}, pushrebasing...", hg_cs_id);
 
-        let bcs = bcs_id.load(&ctx, repo.blobstore()).await?;
+        let bcs = bcs_id.load(ctx, repo.blobstore()).await?;
         let pushrebase_res = do_pushrebase_bonsai(
-            &ctx,
-            &repo,
+            ctx,
+            repo,
             pushrebase_flags,
             &head_bookmark,
             &hashset![bcs],
@@ -198,10 +198,8 @@ async fn find_files_that_need_to_be_deleted(
             use Diff::*;
             let maybe_path = match diff {
                 Added(_maybe_path, _entry) => None,
-                Removed(maybe_path, entry) => entry.into_leaf().and_then(|_| maybe_path),
-                Changed(maybe_path, _old_entry, new_entry) => {
-                    new_entry.into_leaf().and_then(|_| maybe_path)
-                }
+                Removed(maybe_path, entry) => entry.into_leaf().and(maybe_path),
+                Changed(maybe_path, _old_entry, new_entry) => new_entry.into_leaf().and(maybe_path),
             };
 
             Ok(maybe_path)
@@ -226,7 +224,7 @@ mod test {
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
 
-    const PATH_REGEX: &'static str = "^(unchanged/.*|changed/.*|toremove/.*)";
+    const PATH_REGEX: &str = "^(unchanged/.*|changed/.*|toremove/.*)";
 
     #[fbinit::test]
     async fn test_find_files_that_needs_to_be_deleted(fb: FacebookInit) -> Result<(), Error> {
@@ -387,8 +385,8 @@ mod test {
             .commit()
             .await?;
 
-        bookmark(&ctx, &repo, "book").set_to(head_commit).await?;
-        bookmark(&ctx, &repo, "commit_to_merge")
+        bookmark(ctx, &repo, "book").set_to(head_commit).await?;
+        bookmark(ctx, &repo, "commit_to_merge")
             .set_to(commit_to_merge)
             .await?;
 

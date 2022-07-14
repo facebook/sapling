@@ -96,7 +96,7 @@ fn always_accepting_changeset_hook() -> Box<dyn ChangesetHook> {
 }
 
 fn always_rejecting_changeset_hook() -> Box<dyn ChangesetHook> {
-    let f: fn() -> HookExecution = || default_rejection();
+    let f: fn() -> HookExecution = default_rejection;
     Box::new(FnChangesetHook::new(f))
 }
 
@@ -159,7 +159,7 @@ impl ChangesetHook for FileChangesChangesetHook {
         let parent = changeset.parents().next();
         let (added, changed, removed) = if let Some(parent) = parent {
             let file_changes = content_manager
-                .file_changes(&ctx, changeset.get_changeset_id(), parent)
+                .file_changes(ctx, changeset.get_changeset_id(), parent)
                 .await?;
 
             let (mut added, mut changed, mut removed) = (0, 0, 0);
@@ -211,7 +211,7 @@ impl ChangesetHook for LatestChangesChangesetHook {
             .await?;
 
         for (path, linknode) in self.0.iter() {
-            let found_linknode = res.get(&path).map(|info| info.changeset_id());
+            let found_linknode = res.get(path).map(|info| info.changeset_id());
             if linknode.as_ref() != found_linknode {
                 return Ok(HookExecution::Rejected(HookRejectionInfo::new(
                     "found linknode doesn't match the expected one",
@@ -254,11 +254,7 @@ impl ChangesetHook for FileContentMatchingChangesetHook {
                         // True only if there is content containing the expected content
                         Ok(match (content, expected_content.as_ref()) {
                             (Some(content), Some(expected_content)) => {
-                                if content.contains(expected_content) {
-                                    true
-                                } else {
-                                    false
-                                }
+                                content.contains(expected_content)
                             }
                             (None, None) => true,
                             _ => false,
@@ -379,7 +375,7 @@ fn always_accepting_file_hook() -> Box<dyn FileHook> {
 }
 
 fn always_rejecting_file_hook() -> Box<dyn FileHook> {
-    let f: fn() -> HookExecution = || default_rejection();
+    let f: fn() -> HookExecution = default_rejection;
     Box::new(FnFileHook::new(f))
 }
 
@@ -399,7 +395,7 @@ impl FileHook for PathMatchingFileHook {
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
-        Ok(if self.paths.contains(&path) {
+        Ok(if self.paths.contains(path) {
             HookExecution::Accepted
         } else {
             default_rejection()
@@ -1400,10 +1396,7 @@ async fn setup_hook_manager(
 }
 
 fn default_rejection() -> HookExecution {
-    HookExecution::Rejected(HookRejectionInfo::new_long(
-        "desc".into(),
-        "long_desc".to_string(),
-    ))
+    HookExecution::Rejected(HookRejectionInfo::new_long("desc", "long_desc".to_string()))
 }
 
 fn default_changeset() -> BonsaiChangeset {

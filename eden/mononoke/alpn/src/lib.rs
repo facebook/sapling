@@ -93,9 +93,9 @@ mod test {
                 [c1, c2, c3].iter().collect()
             }).collect::<Vec<String>>();
 
-            let req = protos.iter().map(|proto| {
+            let req = protos.iter().flat_map(|proto| {
                 alpn_format(proto).unwrap().into_iter()
-            }).flatten().collect::<Vec<_>>();
+            }).collect::<Vec<_>>();
 
             for needle in protos.iter() {
                 let ret = match alpn_select(&req, needle.as_str()) {

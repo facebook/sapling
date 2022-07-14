@@ -49,8 +49,8 @@ pub async fn add_source_repo(
 
     // First list files that needs copying to hyper repo and prepend
     // source repo name to each path.
-    let root_fsnode_id = RootFsnodeId::derive(&ctx, &source_repo, source_bcs_id).await?;
-    let prefix = MPath::new(source_repo.name().to_string())?;
+    let root_fsnode_id = RootFsnodeId::derive(ctx, source_repo, source_bcs_id).await?;
+    let prefix = MPath::new(source_repo.name())?;
     let leaf_entries = root_fsnode_id
         .fsnode_id()
         .list_leaf_entries(ctx.clone(), source_repo.get_blobstore())
@@ -60,10 +60,10 @@ pub async fn add_source_repo(
         .await?;
 
     let parent = hyper_repo
-        .get_bonsai_bookmark(ctx.clone(), &hyper_repo_bookmark)
+        .get_bonsai_bookmark(ctx.clone(), hyper_repo_bookmark)
         .await?;
     if let Some(parent) = parent {
-        ensure_no_file_intersection(&ctx, &hyper_repo, parent, &leaf_entries).await?;
+        ensure_no_file_intersection(ctx, hyper_repo, parent, &leaf_entries).await?;
     }
 
     info!(
@@ -72,9 +72,9 @@ pub async fn add_source_repo(
         leaf_entries.len()
     );
     copy_file_contents(
-        &ctx,
-        &source_repo,
-        &hyper_repo,
+        ctx,
+        source_repo,
+        hyper_repo,
         leaf_entries.iter().map(|(_, fsnode)| *fsnode.content_id()),
         |i| {
             if i % 100 == 0 {
@@ -175,7 +175,7 @@ async fn create_new_bonsai_changeset_for_source_repo(
                 idx,
                 len
             ),
-            file_changes: chunk.into_iter().cloned().collect(),
+            file_changes: chunk.iter().cloned().collect(),
             is_snapshot: false,
             extra: Default::default(),
         };
@@ -219,7 +219,7 @@ async fn ensure_no_file_intersection(
     hyper_repo_cs_id: ChangesetId,
     leaf_entries: &[(MPath, FsnodeFile)],
 ) -> Result<(), Error> {
-    let root_fsnode_id = RootFsnodeId::derive(&ctx, &hyper_repo, hyper_repo_cs_id).await?;
+    let root_fsnode_id = RootFsnodeId::derive(ctx, hyper_repo, hyper_repo_cs_id).await?;
     let hyper_repo_files = root_fsnode_id
         .fsnode_id()
         .list_leaf_entries(ctx.clone(), hyper_repo.get_blobstore())
@@ -227,7 +227,7 @@ async fn ensure_no_file_intersection(
         .await?;
 
     for (path, _) in leaf_entries {
-        if hyper_repo_files.contains_key(&path) {
+        if hyper_repo_files.contains_key(path) {
             return Err(anyhow!("File {} is already present in hyper repo!", path));
         }
     }

@@ -362,7 +362,7 @@ mod tests {
                 if self.bytes[i] == 255 {
                     self.bytes[i] = 0;
                 } else {
-                    self.bytes[i] = self.bytes[i] + 1;
+                    self.bytes[i] += 1;
                     return HgNodeHash::from_bytes(self.bytes.as_slice()).unwrap();
                 }
             }
@@ -410,7 +410,7 @@ mod tests {
     fn filelog_compute_delta(b1: &FilelogData, b2: &FilelogData) -> Delta {
         match (b1, b2) {
             (FilelogData::RawBytes(b1_data), FilelogData::RawBytes(b2_data)) => {
-                compute_delta(&b1_data, &b2_data)
+                compute_delta(b1_data, b2_data)
             }
             _ => panic!("RawBytes FilelogData is only supported in tests"),
         }
@@ -427,7 +427,7 @@ mod tests {
                         frags.push(Fragment {
                             start,
                             end: start + frag.len(),
-                            content: mem::replace(&mut frag, Vec::new()),
+                            content: std::mem::take(&mut frag),
                         });
                     } else if v1 != v2 {
                         if frag.is_empty() {
@@ -449,7 +449,7 @@ mod tests {
             frags.push(Fragment {
                 start,
                 end: min(start + frag.len(), b1.len()),
-                content: mem::replace(&mut frag, Vec::new()),
+                content: std::mem::take(&mut frag),
             });
         }
         if b1.len() > b2.len() {

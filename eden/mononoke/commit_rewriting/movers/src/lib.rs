@@ -395,7 +395,7 @@ mod test {
             mp("path/which/is/longest") => PrefixAction::Change(mp("longest/renamed")),
             mp("path/which/") => PrefixAction::Change(mp("middle/renamed")),
         };
-        let mover = mover_factory(hm.clone(), DefaultAction::DoNotSync).unwrap();
+        let mover = mover_factory(hm, DefaultAction::DoNotSync).unwrap();
         assert_eq!(
             mover(&mp("path/which/is/longest/1.txt")).unwrap(),
             Some(mp("longest/renamed/1.txt"))
@@ -441,7 +441,7 @@ mod test {
         assert_eq!(mover(&mp("wow")).unwrap(), Some(mp("wow")));
 
         let mover = mover_factory(
-            hm.clone(),
+            hm,
             DefaultAction::PrependPrefix(MPath::new("dude").unwrap()),
         )
         .unwrap();

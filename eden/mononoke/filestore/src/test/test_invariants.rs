@@ -40,10 +40,10 @@ async fn check_consistency<B: Blobstore>(
     ctx: &CoreContext,
     bytes: &Bytes,
 ) -> Result<bool, Error> {
-    let content_id = hash_bytes(ContentIdIncrementalHasher::new(), &bytes);
-    let sha1 = hash_bytes(Sha1IncrementalHasher::new(), &bytes);
-    let sha256 = hash_bytes(Sha256IncrementalHasher::new(), &bytes);
-    let git_sha1 = hash_bytes(GitSha1IncrementalHasher::new(*&bytes), &bytes);
+    let content_id = hash_bytes(ContentIdIncrementalHasher::new(), bytes);
+    let sha1 = hash_bytes(Sha1IncrementalHasher::new(), bytes);
+    let sha256 = hash_bytes(Sha256IncrementalHasher::new(), bytes);
+    let git_sha1 = hash_bytes(GitSha1IncrementalHasher::new(bytes), bytes);
 
     let content_id = FetchKey::Canonical(content_id);
     let sha1 = FetchKey::Aliased(Alias::Sha1(sha1));
@@ -78,7 +78,7 @@ async fn check_metadata<B: Blobstore>(
     ctx: &CoreContext,
     bytes: &Bytes,
 ) -> Result<bool, Error> {
-    let content_id = hash_bytes(ContentIdIncrementalHasher::new(), &bytes);
+    let content_id = hash_bytes(ContentIdIncrementalHasher::new(), bytes);
 
     filestore::get_metadata(blobstore, ctx, &FetchKey::Canonical(content_id))
         .await

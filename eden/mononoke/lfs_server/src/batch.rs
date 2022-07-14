@@ -684,7 +684,7 @@ mod test {
     use bytes::Bytes;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use filestore;
+
     use filestore::StoreRequest;
     use futures::stream;
     use hyper::Uri;

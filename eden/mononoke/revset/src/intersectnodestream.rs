@@ -290,7 +290,7 @@ mod test {
         let hash2 = "3c15267ebf11807f3d772eb891272b911ec68759";
         let hash3 = "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157";
 
-        let inputs = get_single_bonsai_streams(ctx.clone(), &repo, &vec![hash1, hash2]).await;
+        let inputs = get_single_bonsai_streams(ctx.clone(), &repo, &[hash1, hash2]).await;
         let nodestream =
             UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 

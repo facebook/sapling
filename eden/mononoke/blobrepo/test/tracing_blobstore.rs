@@ -37,7 +37,7 @@ impl<T> TracingBlobstore<T> {
 impl<T> TracingBlobstore<T> {
     pub fn tracing_gets(&self) -> Vec<String> {
         let mut gets = self.gets.lock().expect("poisoned lock");
-        std::mem::replace(&mut *gets, vec![])
+        std::mem::take(&mut *gets)
     }
 }
 

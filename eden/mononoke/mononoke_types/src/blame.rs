@@ -668,10 +668,10 @@ mod test {
             .collect();
         let reference = vec![
             (ONES_CSID, p0.clone(), 3),
-            (ONES_CSID, p0.clone(), 4),
+            (ONES_CSID, p0, 4),
             (TWOS_CSID, p1.clone(), 2),
             (TWOS_CSID, p1.clone(), 3),
-            (TWOS_CSID, p1.clone(), 4),
+            (TWOS_CSID, p1, 4),
         ];
         assert_eq!(lines, reference);
 
@@ -780,14 +780,14 @@ mod test {
                 offset: 3,
                 length: 2,
                 csid: THREES_CSID,
-                path: p1.clone(),
+                path: p1,
                 origin_offset: 3,
             },
             BlameRange {
                 offset: 5,
                 length: 1,
                 csid: FOURS_CSID,
-                path: p0.clone(),
+                path: p0,
                 origin_offset: 5,
             },
         ])?;
@@ -829,14 +829,14 @@ mod test {
                     offset: 3,
                     length: 2,
                     csid: THREES_CSID,
-                    path: p1.clone(),
+                    path: p1,
                     origin_offset: 15,
                 },
                 BlameRange {
                     offset: 5,
                     length: 1,
                     csid: FOURS_CSID,
-                    path: p0.clone(),
+                    path: p0,
                     origin_offset: 3,
                 },
             ],
@@ -917,7 +917,7 @@ mod test {
                 offset: 4,
                 length: 1,
                 csid: ONES_CSID,
-                path: path.clone(),
+                path,
                 origin_offset: 3,
             },
         ])?;

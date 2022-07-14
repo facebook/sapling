@@ -788,7 +788,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         let entries = get_entries(ms_hash).await.unwrap();
         let new = entries.get("new").expect("new file should be in entries");
         let bytes = entry_content(&ctx, &repo, new).await.unwrap();
-        assert_eq!(bytes.as_ref(), content_expected.as_ref());
+        assert_eq!(bytes.as_ref(), content_expected);
 
         let new_parents = (entry_parents(&ctx, &repo, new)).await.unwrap();
         assert_eq!(new_parents, HgParents::None);

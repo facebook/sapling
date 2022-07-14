@@ -266,7 +266,7 @@ pub(super) async fn run(
         id,
         ..Default::default()
     };
-    let path = get_path(matches).unwrap_or_else(String::new);
+    let path = get_path(matches).unwrap_or_default();
     let tree = thrift::TreeSpecifier::by_commit_path(thrift::CommitPathSpecifier {
         commit,
         path,

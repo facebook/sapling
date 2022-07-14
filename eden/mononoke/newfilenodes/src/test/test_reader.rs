@@ -52,7 +52,7 @@ async fn check_roundtrip(
         async {
             let res = reader
                 .clone()
-                .get_filenode(&ctx, repo_id, &payload.path, payload.info.filenode)
+                .get_filenode(ctx, repo_id, &payload.path, payload.info.filenode)
                 .await?;
             res.do_not_handle_disabled_filenodes()
         }
@@ -61,14 +61,14 @@ async fn check_roundtrip(
     );
 
     writer
-        .insert_filenodes(&ctx, repo_id, vec![payload.clone()], false)
+        .insert_filenodes(ctx, repo_id, vec![payload.clone()], false)
         .await?
         .do_not_handle_disabled_filenodes()?;
 
     assert_eq!(
         async {
             let res = reader
-                .get_filenode(&ctx, repo_id, &payload.path, payload.info.filenode)
+                .get_filenode(ctx, repo_id, &payload.path, payload.info.filenode)
                 .await?;
             res.do_not_handle_disabled_filenodes()
         }
@@ -404,7 +404,7 @@ async fn do_add_filenodes(
     repo_id: RepositoryId,
 ) -> Result<(), Error> {
     writer
-        .insert_filenodes(&ctx, repo_id, to_insert, false)
+        .insert_filenodes(ctx, repo_id, to_insert, false)
         .await?
         .do_not_handle_disabled_filenodes()?;
     Ok(())
@@ -427,7 +427,7 @@ async fn assert_no_filenode(
     hash: HgFileNodeId,
     repo_id: RepositoryId,
 ) -> Result<(), Error> {
-    let res = reader.get_filenode(&ctx, repo_id, path, hash).await?;
+    let res = reader.get_filenode(ctx, repo_id, path, hash).await?;
     let res = res.do_not_handle_disabled_filenodes()?;
     assert!(res.is_none());
     Ok(())
@@ -442,7 +442,7 @@ async fn assert_filenode(
     expected: FilenodeInfo,
 ) -> Result<(), Error> {
     let res = reader
-        .get_filenode(&ctx, repo_id, path, hash)
+        .get_filenode(ctx, repo_id, path, hash)
         .await?
         .do_not_handle_disabled_filenodes()?
         .ok_or(format_err!("not found: {}", hash))?;
@@ -459,7 +459,7 @@ async fn assert_all_filenodes(
     limit: Option<u64>,
 ) -> Result<(), Error> {
     let res = reader
-        .get_all_filenodes_for_path(&ctx, repo_id, &path, limit)
+        .get_all_filenodes_for_path(ctx, repo_id, path, limit)
         .await?;
     let res = res.do_not_handle_disabled_filenodes()?;
     assert_eq!(res.as_ref(), Some(expected));

@@ -427,7 +427,7 @@ mod test {
         let changed_source = SourceName::new("changed_source");
         let version_old = "version_old".to_string();
         let version_new = "version_old".to_string();
-        let config_old = SyncTargetConfigBuilder::new(repo_id, target.clone(), version_old.clone())
+        let config_old = SyncTargetConfigBuilder::new(repo_id, target.clone(), version_old)
             .source_builder(removed_source.clone())
             .set_prefix_bookmark_to_source_name()
             .build_source()?
@@ -440,12 +440,12 @@ mod test {
             .no_storage_build();
 
         let old_changesets = btreemap! {
-            removed_source.clone() => ONES_CSID,
+            removed_source => ONES_CSID,
             changed_source.clone() =>ONES_CSID,
             unchanged_source.clone() =>ONES_CSID,
         };
 
-        let config_new = SyncTargetConfigBuilder::new(repo_id, target.clone(), version_new.clone())
+        let config_new = SyncTargetConfigBuilder::new(repo_id, target, version_new)
             .source_builder(added_source.clone())
             .set_prefix_bookmark_to_source_name()
             .build_source()?
@@ -459,9 +459,9 @@ mod test {
             .no_storage_build();
 
         let new_changesets = btreemap! {
-            added_source.clone() => TWOS_CSID,
-            changed_source.clone() => THREES_CSID,
-            unchanged_source.clone() => ONES_CSID,
+            added_source => TWOS_CSID,
+            changed_source => THREES_CSID,
+            unchanged_source => ONES_CSID,
         };
 
         let diff = diff_configs(&config_old, &old_changesets, &config_new, &new_changesets)?;

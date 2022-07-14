@@ -44,7 +44,7 @@ pub(crate) async fn check_entries(
     indexes: &[usize],
 ) -> Result<()> {
     let mut fetched_entries = store.all_predecessors(ctx, changeset_ids).await?;
-    let mut expected_entries = get_entries(&entries, indexes);
+    let mut expected_entries = get_entries(entries, indexes);
     fetched_entries.sort_unstable_by(compare_entries);
     expected_entries.sort_unstable_by(compare_entries);
     assert_eq!(

@@ -1229,30 +1229,21 @@ mod test {
             )?;
 
             // get
-            let (stats, _) = futures::future::try_join_all(
-                (0..10u64)
-                    .map(|i| {
-                        (0..10u64).map(move |_| {
-                            let key = format!("get{}", i);
-                            async move { blobstore.get(ctx, &key).await }
-                        })
-                    })
-                    .flatten(),
-            )
+            let (stats, _) = futures::future::try_join_all((0..10u64).flat_map(|i| {
+                (0..10u64).map(move |_| {
+                    let key = format!("get{}", i);
+                    async move { blobstore.get(ctx, &key).await }
+                })
+            }))
             .try_timed()
             .await?;
             assert!(stats.completion_time.as_millis_unchecked() <= 100);
 
             // put
             let bytes = &BlobstoreBytes::from_bytes("test foobar");
-            let (stats, _) = futures::future::try_join_all(
-                (0..10u64)
-                    .map(|i| {
-                        (0..10u64)
-                            .map(move |_| blobstore.put(ctx, format!("put{}", i), bytes.clone()))
-                    })
-                    .flatten(),
-            )
+            let (stats, _) = futures::future::try_join_all((0..10u64).flat_map(|i| {
+                (0..10u64).map(move |_| blobstore.put(ctx, format!("put{}", i), bytes.clone()))
+            }))
             .try_timed()
             .await?;
             assert!(stats.completion_time.as_millis_unchecked() <= 100);

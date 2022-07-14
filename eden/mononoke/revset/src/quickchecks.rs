@@ -106,31 +106,30 @@ mod test {
         pub fn as_hashes(&self) -> HashSet<ChangesetId> {
             let mut output: Vec<HashSet<ChangesetId>> = Vec::new();
             for entry in self.rp_entries.iter() {
-                match entry {
-                    &RevsetEntry::SingleNode(None) => panic!("You need to add_hashes first!"),
-                    &RevsetEntry::SingleNode(Some(hash)) => {
+                match *entry {
+                    RevsetEntry::SingleNode(None) => panic!("You need to add_hashes first!"),
+                    RevsetEntry::SingleNode(Some(hash)) => {
                         let mut item = HashSet::new();
                         item.insert(hash);
                         output.push(item)
                     }
-                    &RevsetEntry::SetDifference => {
+                    RevsetEntry::SetDifference => {
                         let keep = output.pop().expect("No keep for setdifference");
                         let remove = output.pop().expect("No remove for setdifference");
-                        output.push(keep.difference(&remove).map(|x| *x).collect())
+                        output.push(keep.difference(&remove).copied().collect())
                     }
-                    &RevsetEntry::Union(size) => {
+                    RevsetEntry::Union(size) => {
                         let idx = output.len() - size;
                         let mut inputs = output.split_off(idx).into_iter();
                         let first = inputs.next().expect("No first element");
-                        output.push(inputs.fold(first, |a, b| a.union(&b).map(|x| *x).collect()))
+                        output.push(inputs.fold(first, |a, b| a.union(&b).copied().collect()))
                     }
-                    &RevsetEntry::Intersect(size) => {
+                    RevsetEntry::Intersect(size) => {
                         let idx = output.len() - size;
                         let mut inputs = output.split_off(idx).into_iter();
                         let first = inputs.next().expect("No first element");
-                        output.push(
-                            inputs.fold(first, |a, b| a.intersection(&b).map(|x| *x).collect()),
-                        )
+                        output
+                            .push(inputs.fold(first, |a, b| a.intersection(&b).copied().collect()))
                     }
                 }
             }
@@ -149,15 +148,12 @@ mod test {
             for entry in self.rp_entries.iter() {
                 let next_node = ValidateNodeStream::new(
                     ctx.clone(),
-                    match entry {
-                        &RevsetEntry::SingleNode(None) => panic!("You need to add_hashes first!"),
-                        &RevsetEntry::SingleNode(Some(hash)) => single_changeset_id(
-                            ctx.clone(),
-                            Some(hash).expect(&format!("unknown {}", hash)),
-                            &repo,
-                        )
-                        .boxify(),
-                        &RevsetEntry::SetDifference => {
+                    match *entry {
+                        RevsetEntry::SingleNode(None) => panic!("You need to add_hashes first!"),
+                        RevsetEntry::SingleNode(Some(hash)) => {
+                            single_changeset_id(ctx.clone(), hash, &repo).boxify()
+                        }
+                        RevsetEntry::SetDifference => {
                             let keep = output.pop().expect("No keep for setdifference");
                             let remove = output.pop().expect("No remove for setdifference");
                             SetDifferenceNodeStream::new(
@@ -168,24 +164,21 @@ mod test {
                             )
                             .boxify()
                         }
-                        &RevsetEntry::Union(size) => {
+                        RevsetEntry::Union(size) => {
                             let idx = output.len() - size;
                             let inputs = output.split_off(idx);
-                            let nodestream =
-                                UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs)
-                                    .boxify();
-                            nodestream
+
+                            UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs).boxify()
                         }
-                        &RevsetEntry::Intersect(size) => {
+                        RevsetEntry::Intersect(size) => {
                             let idx = output.len() - size;
                             let inputs = output.split_off(idx);
-                            let nodestream = IntersectNodeStream::new(
+                            IntersectNodeStream::new(
                                 ctx.clone(),
                                 &repo.get_changeset_fetcher(),
                                 inputs,
                             )
-                            .boxify();
-                            nodestream
+                            .boxify()
                         }
                     },
                     &repo.get_changeset_fetcher().clone(),
@@ -472,7 +465,6 @@ mod test {
                         exclude
                     );
                 }
-                ()
             }
         };
     }

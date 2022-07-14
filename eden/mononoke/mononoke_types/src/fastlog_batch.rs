@@ -350,6 +350,6 @@ mod test {
         raw_list.truncate(max_entries_in_fastlog_batch());
         let actual = batch.fetch_raw_list(ctx, blobstore).await.unwrap();
 
-        TestResult::from_bool(actual == Vec::from(raw_list))
+        TestResult::from_bool(raw_list == actual)
     }
 }

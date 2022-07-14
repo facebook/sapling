@@ -112,7 +112,7 @@ mod test {
                 BlobstoreBytes::from_bytes("test foobar"),
             )
             .await;
-        assert!(!r.is_ok());
+        assert!(r.is_err());
         let base_present = base
             .is_present(ctx, key)
             .await
@@ -136,7 +136,7 @@ mod test {
                 BlobstoreBytes::from_bytes("test foobar"),
             )
             .await;
-        assert!(!r.is_ok());
+        assert!(r.is_err());
         let base_present = base
             .is_present(ctx, key)
             .await

@@ -403,7 +403,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
         .chain(del_file_list.iter())
         .map(Deref::deref)
         .collect::<Vec<_>>();
-    all_file_list.sort();
+    all_file_list.sort_unstable();
 
     let mut commit2 = CreateCommitContext::new(&ctx, &blobrepo, vec![commit]);
     for file in mod_file_list.iter() {
@@ -460,7 +460,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
     // Diff over two commits of trees.
     let diff = commit2_ctx
         .diff(
-            &root_ctx,
+            root_ctx,
             false, /* include_copies_renames */
             None,  /* path_restrictions */
             btreeset! {ChangesetDiffItem::TREES},
@@ -483,7 +483,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
     ]);
     let diff = commit2_ctx
         .diff(
-            &root_ctx,
+            root_ctx,
             false, /* include_copies_renames */
             path_restrictions.clone(),
             btreeset! {ChangesetDiffItem::FILES},
@@ -497,7 +497,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
 
     let diff = commit2_ctx
         .diff(
-            &root_ctx,
+            root_ctx,
             false, /* include_copies_renames */
             path_restrictions,
             btreeset! {ChangesetDiffItem::FILES},

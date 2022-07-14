@@ -251,7 +251,7 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
         TailingArgs::CatchUpOnce(commit_syncer) => {
             let scuba_sample = MononokeScubaSampleBuilder::with_discard();
             tail(
-                &ctx,
+                ctx,
                 &commit_syncer,
                 &target_mutable_counters,
                 scuba_sample,
@@ -285,7 +285,7 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
                 }
 
                 let synced_something = tail(
-                    &ctx,
+                    ctx,
                     &commit_syncer,
                     &target_mutable_counters,
                     scuba_sample.clone(),
@@ -325,7 +325,7 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static>(
 ) -> Result<bool, Error> {
     let source_repo = commit_syncer.get_source_repo();
     let bookmark_update_log = source_repo.bookmark_update_log();
-    let counter = format_counter(&commit_syncer);
+    let counter = format_counter(commit_syncer);
 
     let maybe_start_id = target_mutable_counters.get_counter(ctx, &counter).await?;
     let start_id = maybe_start_id.ok_or(format_err!("counter not found"))?;
@@ -360,24 +360,24 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static>(
 
             if !skip {
                 let (stats, res) = sync_single_bookmark_update_log(
-                    &ctx,
-                    &commit_syncer,
+                    ctx,
+                    commit_syncer,
                     entry,
                     source_skiplist_index,
                     target_skiplist_index,
-                    &common_pushrebase_bookmarks,
+                    common_pushrebase_bookmarks,
                     scuba_sample.clone(),
                 )
                 .timed()
                 .await;
 
-                log_bookmark_update_result(&ctx, entry_id, scuba_sample.clone(), &res, stats);
+                log_bookmark_update_result(ctx, entry_id, scuba_sample.clone(), &res, stats);
                 let maybe_synced_css = res?;
 
                 if let SyncResult::Synced(synced_css) = maybe_synced_css {
                     derive_data_for_csids(
-                        &ctx,
-                        &commit_syncer.get_target_repo(),
+                        ctx,
+                        commit_syncer.get_target_repo(),
                         synced_css,
                         derived_data_types,
                     )?
@@ -488,21 +488,21 @@ async fn run<'a>(
     matches: &'a MononokeMatches<'a>,
 ) -> Result<(), Error> {
     let config_store = matches.config_store();
-    let mut scuba_sample = get_scuba_sample(ctx.clone(), &matches);
+    let mut scuba_sample = get_scuba_sample(ctx.clone(), matches);
 
-    let source_repo_id = args::get_source_repo_id(config_store, &matches)?;
-    let target_repo_id = args::get_target_repo_id(config_store, &matches)?;
+    let source_repo_id = args::get_source_repo_id(config_store, matches)?;
+    let target_repo_id = args::get_target_repo_id(config_store, matches)?;
 
     let logger = ctx.logger();
-    let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, &matches);
-    let target_repo = args::open_repo_with_repo_id(fb, &logger, target_repo_id, &matches);
+    let source_repo = args::open_repo_with_repo_id(fb, logger, source_repo_id, matches);
+    let target_repo = args::open_repo_with_repo_id(fb, logger, target_repo_id, matches);
 
     let (source_repo, target_repo): (InnerRepo, InnerRepo) =
         try_join(source_repo, target_repo).await?;
 
     let commit_syncer = create_commit_syncer_from_matches(&ctx, matches, None).await?;
 
-    let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(&logger, &config_store)?);
+    let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(logger, config_store)?);
     let common_commit_sync_config =
         live_commit_sync_config.get_common_config(source_repo.blob_repo.get_repoid())?;
 
@@ -522,7 +522,7 @@ async fn run<'a>(
                 .value_of(ARG_TARGET_BOOKMARK)
                 .map(BookmarkName::new)
                 .transpose()?;
-            let bcs = get_starting_commit(&ctx, &sub_m, source_repo.blob_repo.clone()).await?;
+            let bcs = get_starting_commit(&ctx, sub_m, source_repo.blob_repo.clone()).await?;
 
             run_in_single_commit_mode(
                 &ctx,
@@ -618,7 +618,7 @@ impl BackpressureParams {
                         ctx.fb,
                         ctx.logger(),
                         RepositoryId::new(repo_id),
-                        &matches,
+                        matches,
                     )
                 })
                 .try_buffer_unordered(100)

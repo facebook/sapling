@@ -1082,7 +1082,7 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
             [entry] => {
                 assert_eq!(entry.blobstore_id, bid0, "Queue bad");
                 queue
-                    .del(&ctx, &vec![entry.clone()])
+                    .del(ctx, &[entry.clone()])
                     .await
                     .expect("Could not delete scrub queue entry");
             }

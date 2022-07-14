@@ -703,7 +703,7 @@ mod tests {
         let m = SqlSyncedCommitMapping::from_sql_connections(SqlConnections::new_single(con));
         for (small_bcs_id, large_bcs_id) in entires {
             m.add(
-                &ctx,
+                ctx,
                 SyncedCommitMappingEntry::new(
                     large_repo_id,
                     large_bcs_id,

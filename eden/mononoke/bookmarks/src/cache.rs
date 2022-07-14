@@ -520,12 +520,12 @@ mod tests {
         bookmarks: &impl Bookmarks,
         ctx: CoreContext,
     ) -> Box<dyn BookmarkTransaction> {
-        let mut transaction = bookmarks.create_transaction(ctx.clone());
+        let mut transaction = bookmarks.create_transaction(ctx);
 
         // Dirty the transaction.
         transaction
             .force_delete(
-                &BookmarkName::new("".to_string()).unwrap(),
+                &BookmarkName::new("").unwrap(),
                 BookmarkUpdateReason::TestMove,
             )
             .unwrap();

@@ -247,7 +247,7 @@ mod test {
             let path = Path::new(&path);
             File::create(&root_path.join(&path))?.write_all(&blob)?;
 
-            index.add_path(&path)?;
+            index.add_path(path)?;
         }
 
         let git_oid = index.write_tree()?;

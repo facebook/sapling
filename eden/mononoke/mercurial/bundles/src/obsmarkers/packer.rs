@@ -170,8 +170,8 @@ mod test {
             && data[17] == 3
             && data[18] == (metadata.len() as u8)
             && HgChangesetId::from_bytes(&data[19..39]).expect("not a changeset") == *predecessor
-            && successors_match(&data[39..], &successors)
-            && metadata_matches(&data[(39 + 20 * successors.len())..], &metadata)
+            && successors_match(&data[39..], successors)
+            && metadata_matches(&data[(39 + 20 * successors.len())..], metadata)
     }
 
     quickcheck! {

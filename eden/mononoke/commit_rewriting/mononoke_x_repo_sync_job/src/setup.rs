@@ -33,7 +33,7 @@ pub async fn get_starting_commit<'a>(
         .value_of(ARG_COMMIT)
         .ok_or_else(|| format_err!("{} argument is required", ARG_COMMIT))
         .map(|s| s.to_owned())?;
-    helpers::csid_resolve(&ctx, &blobrepo, str_value).await
+    helpers::csid_resolve(ctx, &blobrepo, str_value).await
 }
 
 pub fn get_scuba_sample<'a>(

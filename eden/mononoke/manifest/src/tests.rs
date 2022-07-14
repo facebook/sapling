@@ -316,7 +316,7 @@ impl Loadable for Files {
             Some((None, Entry::Tree(self.0))),
             move |(path, entry)| {
                 async move {
-                    let content = Loadable::load(&entry, &ctx, blobstore).await?;
+                    let content = Loadable::load(&entry, ctx, blobstore).await?;
                     Ok(match content {
                         Entry::Leaf(leaf) => (Some((path, leaf)), Vec::new()),
                         Entry::Tree(tree) => {
@@ -1038,7 +1038,7 @@ async fn test_derive_stack_of_manifests(fb: FacebookInit) -> Result<()> {
 
 fn make_paths(paths_str: &[&str]) -> Result<BTreeSet<Option<MPath>>> {
     paths_str
-        .into_iter()
+        .iter()
         .map(|path_str| match path_str {
             &"/" => Ok(None),
             _ => MPath::new(path_str).map(Some),
@@ -1548,7 +1548,7 @@ impl StoreLoadable<ManifestStore> for TestManifestIdStr {
     ) -> Result<Self::Value, LoadableError> {
         store
             .0
-            .get(&self)
+            .get(self)
             .cloned()
             .ok_or_else(|| LoadableError::Missing(format!("missing {}", self.0)))
     }
@@ -1572,7 +1572,7 @@ pub(crate) fn ctx(fb: FacebookInit) -> CoreContext {
 }
 
 pub(crate) fn element(s: &str) -> MPathElement {
-    MPathElement::new(s.as_bytes().iter().cloned().collect()).unwrap()
+    MPathElement::new(s.as_bytes().to_vec()).unwrap()
 }
 
 pub(crate) fn path(s: &str) -> MPath {

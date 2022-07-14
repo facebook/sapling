@@ -945,7 +945,7 @@ mod test {
         excludes: &[String],
         low_gen_num_checker: &LowGenNumChecker,
     ) -> Result<(PartialGetBundle, Params), Error> {
-        let params = generate_params(&ctx, &repo, &commit_map, &heads, &excludes).await?;
+        let params = generate_params(ctx, repo, commit_map, heads, excludes).await?;
 
         let tunables = MononokeTunables::default();
         tunables.update_ints(&values);
@@ -953,7 +953,7 @@ mod test {
             tunables,
             async {
                 let res = compute_partial_getbundle(
-                    &ctx,
+                    ctx,
                     &repo.get_changeset_fetcher(),
                     params.heads.clone(),
                     params.excludes.clone(),

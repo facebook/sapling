@@ -42,11 +42,11 @@ use sql_construct::SqlConstruct;
 use std::collections::HashMap;
 
 fn create_bookmark_name(book: &str) -> BookmarkName {
-    BookmarkName::new(book.to_string()).unwrap()
+    BookmarkName::new(book).unwrap()
 }
 
 fn create_prefix(book: &str) -> BookmarkPrefix {
-    BookmarkPrefix::new(book.to_string()).unwrap()
+    BookmarkPrefix::new(book).unwrap()
 }
 
 fn compare_log_entries(
@@ -305,7 +305,7 @@ async fn test_create_change_same_bookmark(fb: FacebookInit) {
         .is_err()
     );
 
-    let mut txn = bookmarks.create_transaction(ctx.clone());
+    let mut txn = bookmarks.create_transaction(ctx);
     txn.update(
         &name_1,
         TWOS_CSID,
@@ -1449,7 +1449,7 @@ fn bookmark_subscription_quickcheck(fb: FacebookInit) {
                                 match *current_cs_id {
                                     Some(current_cs_id) => {
                                         txn.update(
-                                            &book,
+                                            book,
                                             cs_id,
                                             current_cs_id,
                                             BookmarkUpdateReason::TestMove,
@@ -1457,7 +1457,7 @@ fn bookmark_subscription_quickcheck(fb: FacebookInit) {
                                     }
                                     None => {
                                         txn.create_publishing(
-                                            &book,
+                                            book,
                                             cs_id,
                                             BookmarkUpdateReason::TestMove,
                                         )?;
@@ -1474,7 +1474,7 @@ fn bookmark_subscription_quickcheck(fb: FacebookInit) {
                                 match *current_cs_id {
                                     Some(current_cs_id) => {
                                         txn.delete(
-                                            &book,
+                                            book,
                                             current_cs_id,
                                             BookmarkUpdateReason::TestMove,
                                         )?;

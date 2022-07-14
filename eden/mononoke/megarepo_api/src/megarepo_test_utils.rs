@@ -91,24 +91,24 @@ impl MegarepoTest {
             version.clone(),
         )?;
 
-        let mut init_target_cs = CreateCommitContext::new_root(&ctx, &self.blobrepo);
+        let mut init_target_cs = CreateCommitContext::new_root(ctx, &self.blobrepo);
 
         let mut remapping_state = btreemap! {};
         for source in initial_config.sources {
             let mover = create_source_to_target_multi_mover(source.mapping.clone())?;
             let init_source_cs_id = match source.revision {
                 SourceRevision::bookmark(bookmark) => {
-                    resolve_cs_id(&ctx, &self.blobrepo, bookmark).await?
+                    resolve_cs_id(ctx, &self.blobrepo, bookmark).await?
                 }
                 SourceRevision::hash(hash) => {
                     let cs_id = ChangesetId::from_bytes(hash)?;
-                    resolve_cs_id(&ctx, &self.blobrepo, cs_id).await?
+                    resolve_cs_id(ctx, &self.blobrepo, cs_id).await?
                 }
                 _ => {
                     unimplemented!()
                 }
             };
-            let source_wc = list_working_copy_utf8(&ctx, &self.blobrepo, init_source_cs_id).await?;
+            let source_wc = list_working_copy_utf8(ctx, &self.blobrepo, init_source_cs_id).await?;
 
             for (file, content) in source_wc {
                 let target_files = mover(&file)?;
@@ -129,7 +129,7 @@ impl MegarepoTest {
         let init_target_cs_id = init_target_cs.get_changeset_id();
         blobrepo::save_bonsai_changesets(vec![init_target_cs], ctx.clone(), &self.blobrepo).await?;
 
-        bookmark(&ctx, &self.blobrepo, target.bookmark.clone())
+        bookmark(ctx, &self.blobrepo, target.bookmark.clone())
             .set_to(init_target_cs_id)
             .await?;
         Ok(init_target_cs_id)

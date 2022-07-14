@@ -124,7 +124,7 @@ mod test {
         )
         .unwrap();
 
-        let chunker = path_chunker_from_hint(hint.clone()).unwrap();
+        let chunker = path_chunker_from_hint(hint).unwrap();
         let mpaths: Vec<MPath> = vec!["/d/e/f", "/a", "/a/b/c", "/a/c", "/b/w/z", "/a/d"]
             .into_iter()
             .map(|p| MPath::new(p).unwrap())
@@ -162,7 +162,7 @@ mod test {
         )
         .unwrap();
 
-        let chunker = path_chunker_from_hint(hint.clone()).unwrap();
+        let chunker = path_chunker_from_hint(hint).unwrap();
         let mpaths: Vec<MPath> = vec!["/d/e/f", "/a", "/a/b/c", "/a/c", "/b/w/z", "/a/d"]
             .into_iter()
             .map(|p| MPath::new(p).unwrap())

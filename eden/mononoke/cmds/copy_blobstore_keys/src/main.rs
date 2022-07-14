@@ -135,7 +135,7 @@ async fn run<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'a>) -> Result<(
         ctx.logger(),
         source_repo_id,
         source_inner_blobstore_id,
-        &matches,
+        matches,
     );
 
     let target_repo_id = args::get_target_repo_id(matches.config_store(), matches)?;
@@ -145,7 +145,7 @@ async fn run<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'a>) -> Result<(
         ctx.logger(),
         target_repo_id,
         target_inner_blobstore_id,
-        &matches,
+        matches,
     );
 
     let (source_repo, target_repo) = future::try_join(source_repo, target_repo).await?;
@@ -237,7 +237,7 @@ async fn open_repo<'a>(
     matches: &'a MononokeMatches<'a>,
 ) -> Result<BlobRepo, Error> {
     let config_store = matches.config_store();
-    let common_config = load_common_config(config_store, &matches)?;
+    let common_config = load_common_config(config_store, matches)?;
     let (reponame, mut config) = get_config_by_repoid(config_store, matches, repo_id)?;
     if let Some(inner_id) = maybe_inner_blobstore_id {
         override_blobconfig(&mut config.storage_config.blobstore, inner_id)?;

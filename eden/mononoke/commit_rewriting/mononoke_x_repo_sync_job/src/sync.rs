@@ -132,7 +132,7 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>
     scuba_sample: MononokeScubaSampleBuilder,
 ) -> Result<SyncResult, Error> {
     let (unsynced_ancestors, unsynced_ancestors_versions) =
-        find_toposorted_unsynced_ancestors(&ctx, &commit_syncer, to_cs_id.clone()).await?;
+        find_toposorted_unsynced_ancestors(ctx, commit_syncer, to_cs_id.clone()).await?;
 
     let version = if !unsynced_ancestors_versions.has_ancestor_with_a_known_outcome() {
         return Ok(SyncResult::SkippedNoKnownVersion);
@@ -167,12 +167,12 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>
             }
 
             return sync_commits_via_pushrebase(
-                &ctx,
-                &commit_syncer,
-                &source_skiplist_index,
-                &target_skiplist_index,
+                ctx,
+                commit_syncer,
+                source_skiplist_index,
+                target_skiplist_index,
                 bookmark,
-                &common_pushrebase_bookmarks,
+                common_pushrebase_bookmarks,
                 scuba_sample.clone(),
                 unsynced_ancestors,
                 &version,
@@ -186,12 +186,12 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>
     let mut res = vec![];
     for cs_id in unsynced_ancestors {
         let synced = sync_commit_without_pushrebase(
-            &ctx,
-            &commit_syncer,
-            &target_skiplist_index,
+            ctx,
+            commit_syncer,
+            target_skiplist_index,
             scuba_sample.clone(),
             cs_id,
-            &common_pushrebase_bookmarks,
+            common_pushrebase_bookmarks,
             &version,
         )
         .await?;
@@ -202,8 +202,8 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>
         maybe_remapped_cs_id.ok_or_else(|| format_err!("unknown sync outcome for {}", to_cs_id))?;
     if let Some(bookmark) = maybe_bookmark {
         move_or_create_bookmark(
-            &ctx,
-            &commit_syncer.get_target_repo(),
+            ctx,
+            commit_syncer.get_target_repo(),
             &bookmark,
             remapped_cs_id,
         )
@@ -261,14 +261,8 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
             }
 
             no_pushrebase.extend(
-                validate_if_new_repo_merge(
-                    &ctx,
-                    &source_repo,
-                    source_skiplist_index.clone(),
-                    p1,
-                    p2,
-                )
-                .await?,
+                validate_if_new_repo_merge(ctx, source_repo, source_skiplist_index.clone(), p1, p2)
+                    .await?,
             );
         }
     }
@@ -276,7 +270,7 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
     for cs_id in unsynced_ancestors {
         let maybe_new_cs_id = if no_pushrebase.contains(&cs_id) {
             sync_commit_without_pushrebase(
-                &ctx,
+                ctx,
                 commit_syncer,
                 target_skiplist_index,
                 scuba_sample.clone(),
@@ -290,15 +284,10 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
                 ctx.logger(),
                 "syncing {} via pushrebase for {}", cs_id, bookmark
             );
-            let (stats, result) = pushrebase_commit(
-                ctx,
-                &commit_syncer,
-                &bookmark,
-                cs_id,
-                &target_skiplist_index,
-            )
-            .timed()
-            .await;
+            let (stats, result) =
+                pushrebase_commit(ctx, commit_syncer, bookmark, cs_id, target_skiplist_index)
+                    .timed()
+                    .await;
             log_pushrebase_sync_single_changeset_result(
                 ctx.clone(),
                 scuba_sample.clone(),
@@ -341,18 +330,18 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
         }
 
         let book_values = try_join_all(book_values).await?;
-        let book_values = book_values.into_iter().filter_map(|x| x).collect();
+        let book_values = book_values.into_iter().flatten().collect();
 
         let parents = try_join_all(
             bcs.parents()
-                .map(|p| find_remapped_cs_id(&ctx, &commit_syncer, p)),
+                .map(|p| find_remapped_cs_id(ctx, commit_syncer, p)),
         )
         .await?;
         let maybe_independent_branch = check_if_independent_branch_and_return(
-            &ctx,
-            &target_repo,
+            ctx,
+            target_repo,
             target_skiplist_index.0.clone(),
-            parents.into_iter().filter_map(|x| x).collect(),
+            parents.into_iter().flatten().collect(),
             book_values,
         )
         .await?;
@@ -407,7 +396,7 @@ async fn process_bookmark_deletion<M: SyncedCommitMapping + Clone + 'static>(
     bookmark: &BookmarkName,
     common_pushrebase_bookmarks: &HashSet<BookmarkName>,
 ) -> Result<(), Error> {
-    if common_pushrebase_bookmarks.contains(&bookmark) {
+    if common_pushrebase_bookmarks.contains(bookmark) {
         Err(format_err!(
             "unexpected deletion of a shared bookmark {}",
             bookmark
@@ -415,7 +404,7 @@ async fn process_bookmark_deletion<M: SyncedCommitMapping + Clone + 'static>(
     } else {
         info!(ctx.logger(), "deleting bookmark {}", bookmark);
         let (stats, result) =
-            delete_bookmark(ctx.clone(), &commit_syncer.get_target_repo(), &bookmark)
+            delete_bookmark(ctx.clone(), commit_syncer.get_target_repo(), bookmark)
                 .timed()
                 .await;
         log_bookmark_deletion_result(scuba_sample, &result, stats);
@@ -518,8 +507,8 @@ async fn validate_if_new_repo_merge(
     // Check if this is a diamond merge i.e. check if any of the ancestor of smaller_gen
     // is also ancestor of larger_gen.
     let maybe_independent_branch = check_if_independent_branch_and_return(
-        &ctx,
-        &repo,
+        ctx,
+        repo,
         skiplist_index.0,
         vec![smaller_gen],
         vec![larger_gen],
@@ -629,7 +618,7 @@ async fn move_or_create_bookmark(
     match maybe_bookmark_val {
         Some(old_bookmark_val) => {
             book_txn.update(
-                &bookmark,
+                bookmark,
                 cs_id,
                 old_bookmark_val,
                 BookmarkUpdateReason::XRepoSync,
@@ -1062,7 +1051,7 @@ mod test {
         let smallrepo = commit_syncer.get_source_repo();
         let megarepo = commit_syncer.get_target_repo();
 
-        let counter = crate::format_counter(&commit_syncer);
+        let counter = crate::format_counter(commit_syncer);
         let start_from = megarepo
             .mutable_counters()
             .get_counter(ctx, &counter)
@@ -1094,12 +1083,12 @@ mod test {
         for entry in log_entries {
             let entry_id = entry.id;
             let single_res = sync_single_bookmark_update_log(
-                &ctx,
-                &commit_syncer,
+                ctx,
+                commit_syncer,
                 entry,
                 &source_skiplist_index.clone(),
                 &target_skiplist_index.clone(),
-                &common_pushrebase_bookmarks,
+                common_pushrebase_bookmarks,
                 MononokeScubaSampleBuilder::with_discard(),
             )
             .await?;

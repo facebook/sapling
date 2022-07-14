@@ -498,11 +498,7 @@ async fn get_many_by_prefix<C: Changesets>(fb: FacebookInit, changesets: C) -> R
 
     // found several changesets within the limit by hex string prefix
     let actual = changesets
-        .get_many_by_prefix(
-            ctx.clone(),
-            ChangesetIdPrefix::from_str(&"fff").unwrap(),
-            10,
-        )
+        .get_many_by_prefix(ctx.clone(), ChangesetIdPrefix::from_str("fff").unwrap(), 10)
         .await?;
     assert_eq!(
         actual,

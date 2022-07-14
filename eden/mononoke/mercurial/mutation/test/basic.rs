@@ -338,7 +338,7 @@ async fn check_mutations_are_cut_when_reaching_limit(fb: FacebookInit) -> Result
     store
         .add_entries(
             &ctx,
-            (1..20).map(|x| make_hg_cs_id(x)).collect::<HashSet<_>>(),
+            (1..20).map(make_hg_cs_id).collect::<HashSet<_>>(),
             new_entries.clone(),
         )
         .await?;
@@ -416,7 +416,7 @@ async fn check_mutations_are_cut_when_reaching_limit(fb: FacebookInit) -> Result
     store
         .add_entries(
             &ctx,
-            (20..32).map(|x| make_hg_cs_id(x)).collect::<HashSet<_>>(),
+            (20..32).map(make_hg_cs_id).collect::<HashSet<_>>(),
             new_entries.clone(),
         )
         .await?;
