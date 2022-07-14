@@ -9,13 +9,13 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.56"
-blobrepo = { version = "0.1.0", path = "../blobrepo" }
 bytes = { version = "1.1", features = ["serde"] }
 context = { version = "0.1.0", path = "../server/context" }
 filestore = { version = "0.1.0", path = "../filestore" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.6", features = ["full"] }

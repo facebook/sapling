@@ -25,7 +25,7 @@ MONONOKE_BINS = {
     "MONONOKE_HG_SYNC": "mononoke_hg_sync_job",
     "MONONOKE_HOOK_TAILER": "hook_tailer",
     "MONONOKE_HYPER_REPO_BUILDER": "hyper_repo_builder",
-    "MONONOKE_LFS_IMPORT": "lfs_import",
+    "MONONOKE_IMPORT": "import",
     "MONONOKE_MANUAL_SCRUB": "manual_scrub",
     "MONONOKE_MICROWAVE_BUILDER": "builder",
     "MONONOKE_PACKER": "packer",
