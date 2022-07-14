@@ -72,7 +72,9 @@ void processRemovedSide(
   }
   auto entryPath = currentPath + scmEntry.first;
   auto childFuture =
-      diffRemovedTree(context, entryPath, scmEntry.second.getHash());
+      diffRemovedTree(context, entryPath, scmEntry.second.getHash())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   childFutures.add(std::move(entryPath), std::move(childFuture));
 }
 
@@ -116,7 +118,13 @@ void processAddedSide(
   if (wdEntry.second.isTree()) {
     if (!entryIgnored || context->listIgnored) {
       auto childFuture = diffAddedTree(
-          context, entryPath, wdEntry.second.getHash(), ignore, entryIgnored);
+                             context,
+                             entryPath,
+                             wdEntry.second.getHash(),
+                             ignore,
+                             entryIgnored)
+                             .semi()
+                             .via(&folly::QueuedImmediateExecutor::instance());
       childFutures.add(std::move(entryPath), std::move(childFuture));
     }
   }
@@ -166,12 +174,14 @@ void processBothPresent(
       }
       context->callback->modifiedPath(entryPath, wdEntry.second.getDType());
       auto childFuture = diffTrees(
-          context,
-          entryPath,
-          scmEntry.second.getHash(),
-          wdEntry.second.getHash(),
-          ignore,
-          entryIgnored);
+                             context,
+                             entryPath,
+                             scmEntry.second.getHash(),
+                             wdEntry.second.getHash(),
+                             ignore,
+                             entryIgnored)
+                             .semi()
+                             .via(&folly::QueuedImmediateExecutor::instance());
       childFutures.add(std::move(entryPath), std::move(childFuture));
     } else {
       // tree-to-file
@@ -187,7 +197,9 @@ void processBothPresent(
       // Report everything in scmTree as REMOVED
       context->callback->removedPath(entryPath, scmEntry.second.getDType());
       auto childFuture =
-          diffRemovedTree(context, entryPath, scmEntry.second.getHash());
+          diffRemovedTree(context, entryPath, scmEntry.second.getHash())
+              .semi()
+              .via(&folly::QueuedImmediateExecutor::instance());
       childFutures.add(std::move(entryPath), std::move(childFuture));
     }
   } else {
@@ -199,7 +211,13 @@ void processBothPresent(
       // Report everything in wdEntry as ADDED
       context->callback->addedPath(entryPath, wdEntry.second.getDType());
       auto childFuture = diffAddedTree(
-          context, entryPath, wdEntry.second.getHash(), ignore, entryIgnored);
+                             context,
+                             entryPath,
+                             wdEntry.second.getHash(),
+                             ignore,
+                             entryIgnored)
+                             .semi()
+                             .via(&folly::QueuedImmediateExecutor::instance());
       childFutures.add(std::move(entryPath), std::move(childFuture));
     } else {
       // file-to-file diff
@@ -434,7 +452,7 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
       .via(&folly::QueuedImmediateExecutor::instance());
 }
 
-FOLLY_NODISCARD Future<Unit> diffTrees(
+FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
     DiffContext* context,
     RelativePathPiece currentPath,
     ImmediateFuture<std::shared_ptr<const Tree>> scmFuture,
@@ -448,42 +466,42 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
   auto copiedCurrentPath =
       !treesFuture.isReady() ? std::optional{currentPath.copy()} : std::nullopt;
   return std::move(treesFuture)
-      .thenValue([context,
-                  copiedCurrentPath = std::move(copiedCurrentPath),
-                  currentPath,
-                  ignore,
-                  isIgnored](std::tuple<
-                             std::shared_ptr<const Tree>,
-                             std::shared_ptr<const Tree>> tup) {
-        auto [scmTree, wdTree] = std::move(tup);
+      .thenValue(
+          [context,
+           copiedCurrentPath = std::move(copiedCurrentPath),
+           currentPath,
+           ignore,
+           isIgnored](std::tuple<
+                      std::shared_ptr<const Tree>,
+                      std::shared_ptr<const Tree>> tup)
+              -> ImmediateFuture<folly::Unit> {
+            auto [scmTree, wdTree] = std::move(tup);
 
-        // Shortcut in the case where we're trying to diff the same tree.  This
-        // happens in the case in which the CLI (during eden doctor) calls
-        // getScmStatusBetweenRevisions() with the same hash in order to check
-        // if a commit hash is valid.
-        if (scmTree && wdTree && scmTree->getHash() == wdTree->getHash()) {
-          return folly::makeSemiFuture();
-        }
+            // Shortcut in the case where we're trying to diff the same tree.
+            // This happens in the case in which the CLI (during eden doctor)
+            // calls getScmStatusBetweenRevisions() with the same hash in order
+            // to check if a commit hash is valid.
+            if (scmTree && wdTree && scmTree->getHash() == wdTree->getHash()) {
+              return ImmediateFuture{folly::unit};
+            }
 
-        auto pathPiece = copiedCurrentPath.has_value()
-            ? copiedCurrentPath->piece()
-            : currentPath;
-        return diffTrees(
-                   context,
-                   pathPiece,
-                   std::move(scmTree),
-                   std::move(wdTree),
-                   ignore,
-                   isIgnored)
-            .semi();
-      })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+            auto pathPiece = copiedCurrentPath.has_value()
+                ? copiedCurrentPath->piece()
+                : currentPath;
+            return diffTrees(
+                       context,
+                       pathPiece,
+                       std::move(scmTree),
+                       std::move(wdTree),
+                       ignore,
+                       isIgnored)
+                .semi();
+          });
 }
 
 } // namespace
 
-Future<Unit>
+ImmediateFuture<Unit>
 diffRoots(DiffContext* context, const RootId& root1, const RootId& root2) {
   auto future1 = context->store->getRootTree(root1, context->getFetchContext());
   auto future2 = context->store->getRootTree(root2, context->getFetchContext());
@@ -496,7 +514,7 @@ diffRoots(DiffContext* context, const RootId& root1, const RootId& root2) {
       false);
 }
 
-FOLLY_NODISCARD Future<Unit> diffTrees(
+ImmediateFuture<Unit> diffTrees(
     DiffContext* context,
     RelativePathPiece currentPath,
     ObjectId scmHash,
@@ -512,7 +530,7 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
       isIgnored);
 }
 
-FOLLY_NODISCARD Future<Unit> diffAddedTree(
+ImmediateFuture<Unit> diffAddedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
     ObjectId wdHash,
@@ -527,7 +545,7 @@ FOLLY_NODISCARD Future<Unit> diffAddedTree(
       isIgnored);
 }
 
-FOLLY_NODISCARD Future<Unit> diffRemovedTree(
+ImmediateFuture<Unit> diffRemovedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
     ObjectId scmHash) {

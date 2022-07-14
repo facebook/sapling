@@ -136,7 +136,9 @@ class DiffTest : public ::testing::Test {
         .thenValue([callback = std::move(callback)](auto&&) {
           return callback->extractStatus();
         })
-        .ensure([context = std::move(diffContext)] {});
+        .ensure([context = std::move(diffContext)] {})
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance());
   }
 
   Future<ScmStatus> diffCommits(

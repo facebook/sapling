@@ -9,13 +9,10 @@
 
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace folly {
-template <typename T>
-class Future;
-}
-
 namespace facebook::eden {
 
+template <typename T>
+class ImmediateFuture;
 class ObjectId;
 class Hash20;
 class Tree;
@@ -32,7 +29,7 @@ class RootId;
  * The differences will be recorded using the callback inside the passed
  * DiffContext.
  */
-folly::Future<folly::Unit>
+ImmediateFuture<folly::Unit>
 diffRoots(DiffContext* context, const RootId& root1, const RootId& root2);
 
 /**
@@ -49,7 +46,7 @@ diffRoots(DiffContext* context, const RootId& root1, const RootId& root2);
  * The differences will be recorded using the callback inside the passed
  * DiffContext.
  */
-folly::Future<folly::Unit> diffTrees(
+ImmediateFuture<folly::Unit> diffTrees(
     DiffContext* context,
     RelativePathPiece currentPath,
     ObjectId scmHash,
@@ -71,7 +68,7 @@ folly::Future<folly::Unit> diffTrees(
  * The differences will be recorded using the callback inside the passed
  * DiffContext.
  */
-folly::Future<folly::Unit> diffAddedTree(
+ImmediateFuture<folly::Unit> diffAddedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
     ObjectId wdHash,
@@ -92,7 +89,7 @@ folly::Future<folly::Unit> diffAddedTree(
  * The differences will be recorded using the callback inside the passed
  * DiffContext.
  */
-folly::Future<folly::Unit> diffRemovedTree(
+ImmediateFuture<folly::Unit> diffRemovedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
     ObjectId scmHash);

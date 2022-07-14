@@ -174,7 +174,9 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       // Tree as removed. We can delegate this work to the source control tree
       // differ.
       context_->callback->removedPath(getPath(), scmEntries_[0].getDType());
-      return diffRemovedTree(context_, getPath(), scmEntries_[0].getHash());
+      return diffRemovedTree(context_, getPath(), scmEntries_[0].getHash())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
     }
 
     {
@@ -194,12 +196,14 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
         auto contentsHash = contents->treeHash.value();
         contents.unlock();
         return diffTrees(
-            context_,
-            getPath(),
-            scmEntries_[0].getHash(),
-            contentsHash,
-            ignore_,
-            isIgnored_);
+                   context_,
+                   getPath(),
+                   scmEntries_[0].getHash(),
+                   contentsHash,
+                   ignore_,
+                   isIgnored_)
+            .semi()
+            .via(&folly::QueuedImmediateExecutor::instance());
       }
     }
 
@@ -321,7 +325,9 @@ class ModifiedScmDiffEntry : public DeferredDiffEntry {
 
   folly::Future<folly::Unit> run() override {
     return diffTrees(
-        context_, getPath(), scmHash_, wdHash_, ignore_, isIgnored_);
+               context_, getPath(), scmHash_, wdHash_, ignore_, isIgnored_)
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance());
   }
 
  private:
@@ -345,7 +351,9 @@ class AddedScmDiffEntry : public DeferredDiffEntry {
         wdHash_{wdHash} {}
 
   folly::Future<folly::Unit> run() override {
-    return diffAddedTree(context_, getPath(), wdHash_, ignore_, isIgnored_);
+    return diffAddedTree(context_, getPath(), wdHash_, ignore_, isIgnored_)
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance());
   }
 
  private:
@@ -360,7 +368,9 @@ class RemovedScmDiffEntry : public DeferredDiffEntry {
       : DeferredDiffEntry{context, std::move(path)}, scmHash_{scmHash} {}
 
   folly::Future<folly::Unit> run() override {
-    return diffRemovedTree(context_, getPath(), scmHash_);
+    return diffRemovedTree(context_, getPath(), scmHash_)
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance());
   }
 
  private:

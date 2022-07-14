@@ -1803,8 +1803,7 @@ ImmediateFuture<folly::Unit> EdenMount::diffBetweenRoots(
     folly::CancellationToken cancellation,
     DiffCallback* callback) {
   auto diffContext = createDiffContext(callback, cancellation, true);
-  auto fut =
-      ImmediateFuture{diffRoots(diffContext.get(), fromRoot, toRoot).semi()};
+  auto fut = diffRoots(diffContext.get(), fromRoot, toRoot);
   return std::move(fut).ensure([diffContext = std::move(diffContext)] {});
 }
 
