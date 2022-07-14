@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use crate::Entry;
+use crate::Manifest;
 use anyhow::Error;
+use blobstore::StoreLoadable;
 use cloned::cloned;
 use context::CoreContext;
 use futures::future;
@@ -23,10 +26,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::hash::Hash;
-
-use crate::Entry;
-use crate::Manifest;
-use blobstore::StoreLoadable;
+use tokio::task;
 
 pub(crate) type BonsaiEntry<ManifestId, FileId> = Entry<ManifestId, (FileType, FileId)>;
 
@@ -336,7 +336,13 @@ where
     .map_ok(|seed| {
         bounded_traversal::bounded_traversal_stream(256, seed, move |(path, (node, parents))| {
             cloned!(ctx, store);
-            async move { bonsai_diff_unfold(&ctx, &store, path, node, parents).await }.boxed()
+            async move {
+                task::spawn(
+                    async move { bonsai_diff_unfold(&ctx, &store, path, node, parents).await },
+                )
+                .await?
+            }
+            .boxed()
         })
     })
     .try_flatten_stream()
