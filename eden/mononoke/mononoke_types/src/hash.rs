@@ -72,9 +72,10 @@ impl Blake2 {
     pub fn from_bytes<B: AsRef<[u8]>>(bytes: B) -> Result<Self> {
         let bytes = bytes.as_ref();
         if bytes.len() != BLAKE2_HASH_LENGTH_BYTES {
-            bail!(ErrorKind::InvalidBlake2Input(
-                format!("need exactly {} bytes", BLAKE2_HASH_LENGTH_BYTES).into()
-            ));
+            bail!(ErrorKind::InvalidBlake2Input(format!(
+                "need exactly {} bytes",
+                BLAKE2_HASH_LENGTH_BYTES
+            )));
         } else {
             let mut ret = [0; BLAKE2_HASH_LENGTH_BYTES];
             ret.copy_from_slice(bytes);
@@ -188,9 +189,10 @@ impl FromStr for Blake2 {
 
     fn from_str(s: &str) -> Result<Self> {
         if s.len() != BLAKE2_HASH_LENGTH_HEX {
-            bail!(ErrorKind::InvalidBlake2Input(
-                format!("need exactly {} hex digits", BLAKE2_HASH_LENGTH_HEX).into()
-            ));
+            bail!(ErrorKind::InvalidBlake2Input(format!(
+                "need exactly {} hex digits",
+                BLAKE2_HASH_LENGTH_HEX
+            )));
         }
 
         let mut ret = Blake2([0; BLAKE2_HASH_LENGTH_BYTES]);
@@ -247,13 +249,10 @@ impl Blake2Prefix {
     pub fn from_bytes<B: AsRef<[u8]> + ?Sized>(bytes: &B) -> Result<Self> {
         let bytes = bytes.as_ref();
         if bytes.len() > BLAKE2_HASH_LENGTH_BYTES {
-            bail!(ErrorKind::InvalidBlake2Input(
-                format!(
-                    "prefix needs to be less or equal to {} bytes",
-                    BLAKE2_HASH_LENGTH_BYTES
-                )
-                .into()
-            ))
+            bail!(ErrorKind::InvalidBlake2Input(format!(
+                "prefix needs to be less or equal to {} bytes",
+                BLAKE2_HASH_LENGTH_BYTES
+            )))
         } else {
             let min_tail: Vec<u8> = vec![0x00; BLAKE2_HASH_LENGTH_BYTES - bytes.len()];
             let max_tail: Vec<u8> = vec![0xff; BLAKE2_HASH_LENGTH_BYTES - bytes.len()];
@@ -305,13 +304,10 @@ impl FromStr for Blake2Prefix {
     type Err = Error;
     fn from_str(s: &str) -> Result<Blake2Prefix> {
         if s.len() > BLAKE2_HASH_LENGTH_HEX {
-            bail!(ErrorKind::InvalidBlake2Input(
-                format!(
-                    "prefix needs to be less or equal {} hex digits",
-                    BLAKE2_HASH_LENGTH_HEX
-                )
-                .into()
-            ));
+            bail!(ErrorKind::InvalidBlake2Input(format!(
+                "prefix needs to be less or equal {} hex digits",
+                BLAKE2_HASH_LENGTH_HEX
+            )));
         }
         let min_tail: String = String::from_utf8(vec![b'0'; BLAKE2_HASH_LENGTH_HEX - s.len()])?;
         let max_tail: String = String::from_utf8(vec![b'f'; BLAKE2_HASH_LENGTH_HEX - s.len()])?;
@@ -613,7 +609,7 @@ mod test {
     const NULL: Blake2 = Blake2([0; BLAKE2_HASH_LENGTH_BYTES]);
 
     // This hash is from https://asecuritysite.com/encryption/blake.
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     const NILHASH: Blake2 = Blake2([0x0e, 0x57, 0x51, 0xc0,
                                     0x26, 0xe5, 0x43, 0xb2,
                                     0xe8, 0xab, 0x2e, 0xb0,

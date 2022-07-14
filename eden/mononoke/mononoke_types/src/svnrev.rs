@@ -44,7 +44,7 @@ impl Svnrev {
     pub fn from_bcs(bcs: &BonsaiChangeset) -> Result<Self> {
         match bcs.extra().find(|(key, _)| key == &"convert_revision") {
             Some((_, svnrev)) => {
-                let svnrev = Svnrev::parse_svnrev(str::from_utf8(&svnrev.to_vec())?)?;
+                let svnrev = Svnrev::parse_svnrev(str::from_utf8(svnrev)?)?;
                 Ok(Self::new(svnrev))
             }
             None => bail!("Bonsai cs {:?} without svnrev", bcs),

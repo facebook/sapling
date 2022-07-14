@@ -242,7 +242,7 @@ impl SkeletonManifest {
                             .all(|name| parent.subentries.contains_key(name))
                     });
                     if !conflict_exists_in_parent {
-                        return Some((&name1, &name2));
+                        return Some((name1, name2));
                     }
                 }
                 _ => {}
@@ -285,7 +285,7 @@ impl SkeletonManifest {
                     .iter()
                     .filter_map(|parent| {
                         if let Some(SkeletonManifestEntry::Directory(subdir)) =
-                            parent.subentries.get(&name)
+                            parent.subentries.get(name)
                         {
                             if subdir.has_case_conflicts() {
                                 return Some(subdir.id);

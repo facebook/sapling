@@ -445,11 +445,7 @@ impl MPath {
     }
 
     pub fn from_thrift(mpath: thrift::MPath) -> Result<MPath> {
-        let elements: Result<Vec<_>> = mpath
-            .0
-            .into_iter()
-            .map(|elem| MPathElement::from_thrift(elem))
-            .collect();
+        let elements: Result<Vec<_>> = mpath.0.into_iter().map(MPathElement::from_thrift).collect();
         let elements = elements?;
 
         if elements.is_empty() {
@@ -1008,7 +1004,7 @@ impl PrefixTrie {
                         true
                     }
                     Some(element) => {
-                        if let Some(child) = children.get_mut(&element) {
+                        if let Some(child) = children.get_mut(element) {
                             return child.add(iter);
                         }
                         children
@@ -1031,7 +1027,7 @@ impl PrefixTrie {
                 match iter.next() {
                     None => false,
                     Some(element) => {
-                        if let Some(child) = children.get(&element) {
+                        if let Some(child) = children.get(element) {
                             return child.contains_prefix(iter);
                         }
                         false
@@ -1101,7 +1097,7 @@ impl CaseConflictTrie {
         match iter.next() {
             None => Ok(()),
             Some(element) => {
-                if let Some(child) = self.children.get_mut(&element) {
+                if let Some(child) = self.children.get_mut(element) {
                     return child.add(iter).map_err(|mut e| {
                         e.elements.push(element.clone());
                         e
@@ -1134,12 +1130,12 @@ impl CaseConflictTrie {
         match iter.next() {
             None => true,
             Some(element) => {
-                let (found, remove) = match self.children.get_mut(&element) {
+                let (found, remove) = match self.children.get_mut(element) {
                     None => return false,
                     Some(child) => (child.remove(iter), child.is_empty()),
                 };
                 if remove {
-                    self.children.remove(&element);
+                    self.children.remove(element);
 
                     if let Some(lower) = element.to_lowercase_utf8() {
                         self.lowercase_to_original.remove(&lower);
@@ -1203,7 +1199,7 @@ impl<'a> CaseConflictTrieUpdate for &'a BonsaiChangeset {
                 }
             }
         }
-        return None;
+        None
     }
 }
 

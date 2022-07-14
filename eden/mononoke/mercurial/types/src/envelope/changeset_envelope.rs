@@ -70,12 +70,12 @@ impl HgChangesetEnvelope {
             })
         };
 
-        Ok(catch_block().with_context(|| {
+        catch_block().with_context(|| {
             ErrorKind::InvalidThrift(
                 "HgChangesetEnvelope".into(),
                 "Invalid Changeset envelope".into(),
             )
-        })?)
+        })
     }
 
     pub fn from_blob(blob: HgEnvelopeBlob) -> Result<Self> {

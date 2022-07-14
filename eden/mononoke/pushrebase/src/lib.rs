@@ -255,8 +255,8 @@ pub async fn do_pushrebase_bonsai(
     pushed: &HashSet<BonsaiChangeset>,
     prepushrebase_hooks: &[Box<dyn PushrebaseHook>],
 ) -> Result<PushrebaseOutcome, PushrebaseError> {
-    let head = find_only_head_or_fail(&pushed)?;
-    let roots = find_roots(&pushed);
+    let head = find_only_head_or_fail(pushed)?;
+    let roots = find_roots(pushed);
 
     let root = find_closest_root(ctx, repo, config, onto_bookmark, &roots).await?;
 
@@ -378,7 +378,7 @@ async fn rebase_in_loop(
             root,
             head,
             bookmark_val,
-            &onto_bookmark,
+            onto_bookmark,
             hooks,
             retry_num,
         )
@@ -452,7 +452,7 @@ async fn do_rebase(
     try_move_bookmark(
         ctx.clone(),
         repo,
-        &onto_bookmark,
+        onto_bookmark,
         bookmark_val,
         new_head,
         rebased_changesets,
@@ -791,7 +791,7 @@ async fn find_changed_files(
 
     let mut file_changes_union = file_changes
         .into_iter()
-        .flat_map(|v| v)
+        .flatten()
         .collect::<HashSet<_>>() // compute union
         .into_iter()
         .collect::<Vec<_>>();
@@ -802,7 +802,7 @@ async fn find_changed_files(
 
 fn extract_conflict_files_from_bonsai_changeset(bcs: BonsaiChangeset) -> Vec<MPath> {
     bcs.file_changes()
-        .map(|(path, file_change)| {
+        .flat_map(|(path, file_change)| {
             let mut v = vec![];
             if let Some((copy_from_path, _)) = file_change.copy_from() {
                 v.push(copy_from_path.clone());
@@ -810,7 +810,6 @@ fn extract_conflict_files_from_bonsai_changeset(bcs: BonsaiChangeset) -> Vec<MPa
             v.push(path.clone());
             v.into_iter()
         })
-        .flatten()
         .collect::<Vec<MPath>>()
 }
 

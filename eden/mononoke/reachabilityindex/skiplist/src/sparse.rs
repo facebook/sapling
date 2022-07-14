@@ -164,7 +164,7 @@ async fn index_changeset(
             }
         }
 
-        let parents = fetch_parents_and_generations(&ctx, &cs_fetcher, edge_end.0).await?;
+        let parents = fetch_parents_and_generations(ctx, cs_fetcher, edge_end.0).await?;
         match parents.as_slice() {
             [] => {
                 return Ok(vec![]);
@@ -198,7 +198,7 @@ fn remove_unreachable_nodes(
         let children = match index.get(&cs_id) {
             Some(SingleEdge((cs_id, _))) => vec![*cs_id],
             Some(SkipEdges(edges)) | Some(ParentEdges(edges)) => {
-                edges.into_iter().cloned().map(|(cs_id, _)| cs_id).collect()
+                edges.iter().cloned().map(|(cs_id, _)| cs_id).collect()
             }
             None => vec![],
         };

@@ -91,9 +91,9 @@ impl HgFileEnvelope {
             })
         };
 
-        Ok(catch_block().with_context(|| {
+        catch_block().with_context(|| {
             ErrorKind::InvalidThrift("HgFileEnvelope".into(), "Invalid file envelope".into())
-        })?)
+        })
     }
 
     pub fn from_blob(blob: HgEnvelopeBlob) -> Result<Self> {

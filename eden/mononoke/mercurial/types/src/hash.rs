@@ -47,9 +47,10 @@ impl Sha1 {
     pub fn from_bytes<B: AsRef<[u8]>>(bytes: B) -> Result<Sha1> {
         let bytes = bytes.as_ref();
         if bytes.len() != SHA1_HASH_LENGTH_BYTES {
-            bail!(ErrorKind::InvalidSha1Input(
-                format!("need exactly {} bytes", SHA1_HASH_LENGTH_BYTES).into()
-            ));
+            bail!(ErrorKind::InvalidSha1Input(format!(
+                "need exactly {} bytes",
+                SHA1_HASH_LENGTH_BYTES
+            )));
         } else {
             let mut ret = [0; SHA1_HASH_LENGTH_BYTES];
             ret.copy_from_slice(bytes);
@@ -135,9 +136,10 @@ impl FromStr for Sha1 {
 
     fn from_str(s: &str) -> Result<Sha1> {
         if s.len() != SHA1_HASH_LENGTH_HEX {
-            bail!(ErrorKind::InvalidSha1Input(
-                format!("need exactly {} hex digits", SHA1_HASH_LENGTH_HEX).into()
-            ));
+            bail!(ErrorKind::InvalidSha1Input(format!(
+                "need exactly {} hex digits",
+                SHA1_HASH_LENGTH_HEX
+            )));
         }
 
         let mut ret = Sha1([0; SHA1_HASH_LENGTH_BYTES]);
@@ -165,7 +167,7 @@ impl Arbitrary for Sha1 {
     fn arbitrary(g: &mut Gen) -> Self {
         let mut bytes = [0; SHA1_HASH_LENGTH_BYTES];
         // The null hash is special, so give it a 5% chance of happening
-        if !(usize::arbitrary(g) % SHA1_HASH_LENGTH_BYTES < 1) {
+        if usize::arbitrary(g) % SHA1_HASH_LENGTH_BYTES >= 1 {
             for b in bytes.iter_mut() {
                 *b = u8::arbitrary(g);
             }
@@ -191,13 +193,10 @@ impl Sha1Prefix {
     pub fn from_bytes<B: AsRef<[u8]> + ?Sized>(bytes: &B) -> Result<Self> {
         let bytes = bytes.as_ref();
         if bytes.len() > SHA1_HASH_LENGTH_BYTES {
-            bail!(ErrorKind::InvalidSha1Input(
-                format!(
-                    "prefix needs to be less or equal to {} bytes",
-                    SHA1_HASH_LENGTH_BYTES
-                )
-                .into()
-            ))
+            bail!(ErrorKind::InvalidSha1Input(format!(
+                "prefix needs to be less or equal to {} bytes",
+                SHA1_HASH_LENGTH_BYTES
+            )))
         } else {
             static SHA1_MIN: [u8; SHA1_HASH_LENGTH_BYTES] = [0x00; SHA1_HASH_LENGTH_BYTES];
             static SHA1_MAX: [u8; SHA1_HASH_LENGTH_BYTES] = [0xff; SHA1_HASH_LENGTH_BYTES];
@@ -232,9 +231,9 @@ impl Sha1Prefix {
 
     pub fn to_hex(&self) -> AsciiString {
         let mut v_min_hex = &mut [0; SHA1_HASH_LENGTH_HEX][..];
-        hex_encode(self.0.as_ref(), &mut v_min_hex).expect("failed to hex encode");
-        let mut v_max_hex = &mut [0; SHA1_HASH_LENGTH_HEX][..];
-        hex_encode(self.1.as_ref(), &mut v_max_hex).expect("failed to hex encode");
+        hex_encode(self.0.as_ref(), v_min_hex).expect("failed to hex encode");
+        let v_max_hex = &mut [0; SHA1_HASH_LENGTH_HEX][..];
+        hex_encode(self.1.as_ref(), v_max_hex).expect("failed to hex encode");
         for i in 0..SHA1_HASH_LENGTH_HEX {
             if v_min_hex[i] != v_max_hex[i] {
                 v_min_hex = &mut v_min_hex[..i];
@@ -253,13 +252,10 @@ impl FromStr for Sha1Prefix {
     type Err = Error;
     fn from_str(s: &str) -> Result<Sha1Prefix> {
         if s.len() > SHA1_HASH_LENGTH_HEX {
-            bail!(ErrorKind::InvalidSha1Input(
-                format!(
-                    "prefix needs to be less or equal {} hex digits",
-                    SHA1_HASH_LENGTH_HEX
-                )
-                .into()
-            ));
+            bail!(ErrorKind::InvalidSha1Input(format!(
+                "prefix needs to be less or equal {} hex digits",
+                SHA1_HASH_LENGTH_HEX
+            )));
         }
         let min_tail: String = String::from_utf8(vec![b'0'; SHA1_HASH_LENGTH_HEX - s.len()])?;
         let max_tail: String = String::from_utf8(vec![b'f'; SHA1_HASH_LENGTH_HEX - s.len()])?;
@@ -311,7 +307,7 @@ mod test {
 
     use super::*;
 
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     const NILHASH: Sha1 = Sha1([0xda, 0x39, 0xa3, 0xee,
                                 0x5e, 0x6b, 0x4b, 0x0d,
                                 0x32, 0x55, 0xbf, 0xef,

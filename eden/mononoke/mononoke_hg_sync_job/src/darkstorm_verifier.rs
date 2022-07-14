@@ -9,7 +9,6 @@ use anyhow::Context;
 use anyhow::Error;
 use blobstore::Blobstore;
 use context::CoreContext;
-use filestore;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
 use filestore::StoreRequest;

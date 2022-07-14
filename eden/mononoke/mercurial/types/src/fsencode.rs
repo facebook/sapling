@@ -23,7 +23,7 @@ fn fsencode_dir_impl<'a, Iter>(dotencode: bool, iter: Iter) -> PathBuf
 where
     Iter: Iterator<Item = &'a &'a [u8]>,
 {
-    iter.map(|p| fsencode_filter(direncode(p.as_ref()), dotencode))
+    iter.map(|p| fsencode_filter(direncode(p), dotencode))
         .collect()
 }
 
@@ -39,10 +39,10 @@ pub fn fncache_fsencode(elements: &[&[u8]], dotencode: bool) -> PathBuf {
     let mut ret: PathBuf = fsencode_dir_impl(dotencode, path.clone());
 
     if let Some(basename) = file {
-        ret.push(fsencode_filter(basename.as_ref(), dotencode));
+        ret.push(fsencode_filter(basename, dotencode));
         let os_str: &OsStr = ret.as_ref();
         if os_str.as_bytes().len() > MAXSTOREPATHLEN {
-            hashencode(path.copied().collect(), basename.as_ref(), dotencode)
+            hashencode(path.copied().collect(), basename, dotencode)
         } else {
             ret.clone()
         }
@@ -63,13 +63,13 @@ pub fn simple_fsencode(elements: &[&[u8]]) -> PathBuf {
     if let Some(basename) = file {
         let encoded_directory: PathBuf = directory_elements
             .map(|elem| {
-                let encoded_element = fnencode(direncode(elem.as_ref()), false);
+                let encoded_element = fnencode(direncode(elem), false);
                 String::from_utf8(encoded_element).expect("bad utf8")
             })
             .collect();
 
         let encoded_basename =
-            PathBuf::from(String::from_utf8(fnencode(basename.as_ref(), false)).expect("bad utf8"));
+            PathBuf::from(String::from_utf8(fnencode(basename, false)).expect("bad utf8"));
         encoded_directory.join(encoded_basename)
     } else {
         PathBuf::new()
@@ -110,12 +110,12 @@ fn fnencode<E: AsRef<[u8]>>(elem: E, forfncache: bool) -> Vec<u8> {
         ToUpper,
     }
 
-    fn upper_to_underscore_and_lower(ref mut ret: &mut Vec<u8>, e: u8) -> () {
+    fn upper_to_underscore_and_lower(ret: &mut Vec<u8>, e: u8) {
         ret.push(b'_');
         ret.push(e - b'A' + b'a');
     }
 
-    fn upper_to_upper(ref mut ret: &mut Vec<u8>, e: u8) -> () {
+    fn upper_to_upper(ret: &mut Vec<u8>, e: u8) {
         ret.push(e);
     }
 
@@ -138,7 +138,7 @@ fn fnencode<E: AsRef<[u8]>>(elem: E, forfncache: bool) -> Vec<u8> {
                     UpperEncoding::ToUpper => upper_to_upper(&mut ret, e),
                 },
                 b'_' => match encode_underscore {
-                    UnderscoreEncoding::EncodeTo(slice) => ret.extend_from_slice(&slice),
+                    UnderscoreEncoding::EncodeTo(slice) => ret.extend_from_slice(slice),
                 },
                 _ => ret.push(e),
             }
@@ -265,7 +265,7 @@ fn get_extension(basename: &[u8]) -> &[u8] {
 ///
 /// ```
 fn hashed_file(dirs: &[&[u8]], file: &[u8]) -> Sha1 {
-    let mut elements: Vec<_> = dirs.iter().map(|elem| direncode(&elem)).collect();
+    let mut elements: Vec<_> = dirs.iter().map(|elem| direncode(elem)).collect();
     elements.push(Vec::from(file));
 
     Sha1::from(elements.join(&b'/').as_ref())
@@ -282,7 +282,7 @@ fn hashencode(dirs: Vec<&[u8]>, file: &[u8], dotencode: bool) -> PathBuf {
 
     let mut parts = dirs
         .iter()
-        .map(|elem| direncode(&elem))
+        .map(|elem| direncode(elem))
         .map(|elem| lowerencode(&elem))
         .map(|elem| auxencode(elem, dotencode));
 
@@ -290,7 +290,7 @@ fn hashencode(dirs: Vec<&[u8]>, file: &[u8], dotencode: bool) -> PathBuf {
     // Prefix (which is usually 'data' or 'meta') is replaced with 'dh'.
     // Other directories will be converted.
     let prefix = parts.next();
-    let prefix_len = prefix.map(|elem| elem.len()).unwrap_or(0);
+    let prefix_len = prefix.map_or(0, |elem| elem.len());
     // Each directory is no longer than `dirprefixlen`, and total length is less than
     // `maxshortdirslen`. These constants are copied from core mercurial code.
     let dirprefixlen = 8;

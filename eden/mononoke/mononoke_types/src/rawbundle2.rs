@@ -68,7 +68,7 @@ impl RawBundle2 {
 
     pub fn as_bytes(&self) -> &Bytes {
         match self {
-            RawBundle2::Bytes(bytes) => &bytes,
+            RawBundle2::Bytes(bytes) => bytes,
         }
     }
 

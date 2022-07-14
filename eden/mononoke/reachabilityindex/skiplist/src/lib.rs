@@ -245,10 +245,12 @@ async fn compute_single_skip_edge(
 
     let target_changeset = target_frontier
         .get(&target_gen)
-        .ok_or_else(|| ErrorKind::ProgrammingError("frontier doesn't have target generation"))?
+        .ok_or(ErrorKind::ProgrammingError(
+            "frontier doesn't have target generation",
+        ))?
         .iter()
         .next()
-        .ok_or_else(|| ErrorKind::ProgrammingError("inconsistent frontier state"))?;
+        .ok_or(ErrorKind::ProgrammingError("inconsistent frontier state"))?;
     Ok(*target_changeset)
 }
 
@@ -365,7 +367,7 @@ async fn find_nodes_to_index(
     loop {
         bfs_layer = bfs_layer
             .into_iter()
-            .filter(|(hash, _gen)| !skip_list_edges.mapping.contains_key(&hash))
+            .filter(|(hash, _gen)| !skip_list_edges.mapping.contains_key(hash))
             .collect();
 
         if curr_depth == 0 || bfs_layer.is_empty() {
@@ -662,8 +664,8 @@ impl ReachabilityIndex for SkiplistIndex {
             desc_gen.value() as i64,
         );
         let frontier = process_frontier(
-            &ctx,
-            &changeset_fetcher,
+            ctx,
+            changeset_fetcher,
             &self.skip_list_edges.load(),
             NodeFrontier::new(hashmap! {desc_gen => hashset!{desc_hash}}),
             anc_gen,
@@ -794,8 +796,7 @@ async fn move_nonskippable_nodes(
     }
     Ok(changeset_parent_gen
         .into_iter()
-        .map(|(_cs_id, parent_gens)| parent_gens)
-        .flatten()
+        .flat_map(|(_cs_id, parent_gens)| parent_gens)
         .collect())
 }
 
@@ -827,7 +828,7 @@ async fn process_frontier_single_skip(
 
     let (_, all_cs_ids) = node_frontier
         .remove_max_gen()
-        .ok_or_else(|| ErrorKind::ProgrammingError("frontier can't be empty"))?;
+        .ok_or(ErrorKind::ProgrammingError("frontier can't be empty"))?;
     let (no_skiplist_edges, skipped_frontier) = move_skippable_nodes(
         skip_edges.clone(),
         all_cs_ids.into_iter().collect(),
@@ -861,7 +862,7 @@ async fn process_frontier_single_skip(
     }
     let new_max_gen = node_frontier
         .max_gen()
-        .ok_or_else(|| ErrorKind::ProgrammingError("frontier can't be empty"))?;
+        .ok_or(ErrorKind::ProgrammingError("frontier can't be empty"))?;
     Ok((node_frontier, old_max_gen.value() - new_max_gen.value()))
 }
 
@@ -957,8 +958,8 @@ impl SkiplistIndex {
         gen: Generation,
     ) -> Result<(NodeFrontier, NodeFrontier), Error> {
         try_join!(
-            self.lca_hint(&ctx, &changeset_fetcher, frontier1.clone(), gen,),
-            self.lca_hint(&ctx, &changeset_fetcher, frontier2.clone(), gen,),
+            self.lca_hint(ctx, changeset_fetcher, frontier1.clone(), gen,),
+            self.lca_hint(ctx, changeset_fetcher, frontier2.clone(), gen,),
         )
     }
 
@@ -991,10 +992,10 @@ impl SkiplistIndex {
         let mut gen = min(
             frontier1
                 .max_gen()
-                .ok_or_else(|| ErrorKind::ProgrammingError("frontier can't be empty"))?,
+                .ok_or(ErrorKind::ProgrammingError("frontier can't be empty"))?,
             frontier2
                 .max_gen()
-                .ok_or_else(|| ErrorKind::ProgrammingError("frontier can't be empty"))?,
+                .ok_or(ErrorKind::ProgrammingError("frontier can't be empty"))?,
         )
         .add(1);
         let mut step = 1;
@@ -1040,7 +1041,7 @@ impl SkiplistIndex {
             debug_assert!(frontier1.max_gen() == frontier2.max_gen());
             if frontier1
                 .max_gen()
-                .ok_or_else(|| ErrorKind::ProgrammingError("frontier can't be empty"))?
+                .ok_or(ErrorKind::ProgrammingError("frontier can't be empty"))?
                 == FIRST_GENERATION
             {
                 break;
@@ -1073,7 +1074,7 @@ impl SkiplistIndex {
             } else {
                 frontier1 = candidate_frontier1;
                 frontier2 = candidate_frontier2;
-                gen = gen.checked_sub(1).ok_or_else(|| {
+                gen = gen.checked_sub(1).ok_or({
                     ErrorKind::ProgrammingError("impossible state during LCA computation")
                 })?;
             }
@@ -1096,11 +1097,11 @@ impl SkiplistIndex {
     ) -> Result<Vec<ChangesetId>, Error> {
         let ancestor_gen = fetch_generation(ctx, changeset_fetcher, ancestor).await?;
         let node_frontier =
-            NodeFrontier::new_from_single_node(&ctx, changeset_fetcher.clone(), descendant).await?;
+            NodeFrontier::new_from_single_node(ctx, changeset_fetcher.clone(), descendant).await?;
         let mut trace = SkiplistTraversalTrace::new();
 
         let node_frontier = process_frontier(
-            &ctx,
+            ctx,
             changeset_fetcher,
             &self.skip_list_edges.load(),
             node_frontier,

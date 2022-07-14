@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::identity;
 use std::fmt;
 use std::sync::Arc;
 
@@ -180,7 +179,7 @@ impl ChangesetPathContentContext {
 
     /// The `RepoContext` for this query.
     pub fn repo(&self) -> &RepoContext {
-        &self.changeset.repo()
+        self.changeset.repo()
     }
 
     /// The `ChangesetContext` for this query.
@@ -329,7 +328,7 @@ impl ChangesetPathHistoryContext {
 
     /// The `RepoContext` for this query.
     pub fn repo(&self) -> &RepoContext {
-        &self.changeset.repo()
+        self.changeset.repo()
     }
 
     /// The `ChangesetContext` for this query.
@@ -527,7 +526,7 @@ impl ChangesetPathHistoryContext {
                         let info = if cs_info_enabled {
                             ChangesetInfo::derive(ctx, repo.as_blob_repo(), cs_id).await
                         } else {
-                            let bonsai = cs_id.load(&ctx, repo.repo_blobstore()).await?;
+                            let bonsai = cs_id.load(ctx, repo.repo_blobstore()).await?;
                             Ok(ChangesetInfo::new(cs_id, bonsai))
                         }?;
                         let timestamp = info.author_date().as_chrono().timestamp();
@@ -535,7 +534,7 @@ impl ChangesetPathHistoryContext {
                     }))
                     .await?
                     .into_iter()
-                    .filter_map(identity)
+                    .filter_map(std::convert::identity)
                     .collect();
                 }
                 if let Some((descendants_of, descendants_of_gen)) = self.descendants_of {
@@ -579,7 +578,7 @@ impl ChangesetPathHistoryContext {
                     }))
                     .await?
                     .into_iter()
-                    .filter_map(identity)
+                    .filter_map(std::convert::identity)
                     .collect();
                 }
                 // Excluding changesest and its ancestors needs to terminate the BFS branch that
@@ -642,7 +641,7 @@ impl ChangesetPathHistoryContext {
                     }))
                     .await?
                     .into_iter()
-                    .filter_map(identity)
+                    .filter_map(std::convert::identity)
                     .collect();
                 }
                 Ok(cs_ids)
@@ -756,7 +755,7 @@ impl ChangesetPathContext {
 
     /// The `RepoContext` for this query.
     pub fn repo(&self) -> &RepoContext {
-        &self.changeset.repo()
+        self.changeset.repo()
     }
 
     /// The `ChangesetContext` for this query.

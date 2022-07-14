@@ -37,7 +37,7 @@ impl ContentChunk {
 
     pub(crate) fn from_thrift(fc: thrift::ContentChunk) -> Result<Self> {
         match fc {
-            thrift::ContentChunk::Bytes(bytes) => Ok(ContentChunk(bytes.into())),
+            thrift::ContentChunk::Bytes(bytes) => Ok(ContentChunk(bytes)),
             thrift::ContentChunk::UnknownField(x) => bail!(ErrorKind::InvalidThrift(
                 "ContentChunk".into(),
                 format!("unknown ContentChunk variant: {}", x)

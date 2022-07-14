@@ -147,12 +147,12 @@ impl Mononoke {
         let mut repos = HashMap::new();
         let mut repos_by_ids = HashMap::new();
         for (name, repo) in repos_iter {
-            if !repos.insert(name.clone(), repo.clone()).is_none() {
+            if repos.insert(name.clone(), repo.clone()).is_some() {
                 return Err(anyhow!("repos with duplicate name '{}' found", name));
             }
 
             let repo_id = repo.blob_repo().get_repoid();
-            if !repos_by_ids.insert(repo_id, repo).is_none() {
+            if repos_by_ids.insert(repo_id, repo).is_some() {
                 return Err(anyhow!("repos with duplicate id '{}' found", repo_id));
             }
         }
@@ -208,7 +208,7 @@ impl Mononoke {
     pub fn repo_name_from_id(&self, repo_id: RepositoryId) -> Option<&String> {
         match self.repos_by_ids.get(&repo_id) {
             None => None,
-            Some(repo) => Some(&repo.name()),
+            Some(repo) => Some(repo.name()),
         }
     }
 

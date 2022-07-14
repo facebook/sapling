@@ -40,7 +40,7 @@ impl BlobstoreValue for RedactionKeyList {
         let mut context = RedactionKeyListIdContext::new();
         context.update(&data);
         let id = context.finish();
-        Blob::new(id, data.into())
+        Blob::new(id, data)
     }
 
     fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {

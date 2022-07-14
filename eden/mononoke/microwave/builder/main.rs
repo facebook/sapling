@@ -59,8 +59,8 @@ async fn cache_warmup_target(
     bookmark: &BookmarkName,
 ) -> Result<CacheWarmupTarget, Error> {
     let warmers = vec![
-        create_derived_data_warmer::<MappedHgChangesetId, _>(&ctx, repo),
-        create_derived_data_warmer::<FilenodesOnlyPublic, _>(&ctx, repo),
+        create_derived_data_warmer::<MappedHgChangesetId, _>(ctx, repo),
+        create_derived_data_warmer::<FilenodesOnlyPublic, _>(ctx, repo),
     ];
 
     match find_all_underived_and_latest_derived(ctx, repo, bookmark, &warmers)
@@ -89,7 +89,7 @@ async fn do_main<'a>(
 
     let config_store = matches.config_store();
 
-    let RepoConfigs { repos, common } = args::load_repo_configs(config_store, &matches)?;
+    let RepoConfigs { repos, common } = args::load_repo_configs(config_store, matches)?;
 
     let location = match matches.subcommand() {
         (SUBCOMMAND_LOCAL_PATH, Some(sub)) => {

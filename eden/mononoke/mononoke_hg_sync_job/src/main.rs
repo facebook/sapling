@@ -747,8 +747,8 @@ async fn sync_single_combined_entry(
     }
 
     let (_, attempts) = retry(
-        &ctx.logger(),
-        |attempt| try_sync_single_combined_entry(&ctx, attempt, &combined_entry, &hg_repo),
+        ctx.logger(),
+        |attempt| try_sync_single_combined_entry(ctx, attempt, combined_entry, hg_repo),
         base_retry_delay_ms,
         retry_num,
     )
@@ -1290,7 +1290,7 @@ async fn run<'a>(
                 _ => true,
             };
             let counter = replayed_sync_counter
-                .get_counter(&ctx)
+                .get_counter(ctx)
                 .and_then(move |maybe_counter| {
                     future::ready(maybe_counter.or(start_id).ok_or_else(|| {
                         format_err!(
@@ -1306,7 +1306,7 @@ async fn run<'a>(
             borrowed!(bundle_preparer: &BundlePreparer);
             borrowed!(mut overlay: &BookmarkOverlay);
             let s = loop_over_log_entries(
-                &ctx,
+                ctx,
                 &bookmarks,
                 start_id,
                 loop_forever,
@@ -1328,7 +1328,7 @@ async fn run<'a>(
             .map(|res_entries| async move {
                 let entries = res_entries?;
                 bundle_preparer
-                    .prepare_batches(&ctx, entries)
+                    .prepare_batches(ctx, entries)
                     .watched(ctx.logger())
                     .await
             })
@@ -1347,7 +1347,7 @@ async fn run<'a>(
                         // would result in an error. Let's try to detect this case and
                         // fix the first batch if possible.
                         if let Some(batch) = first {
-                            first = maybe_adjust_batch(&ctx, batch, &overlay)
+                            first = maybe_adjust_batch(ctx, batch, &overlay)
                                 .map_err(|cause| AnonymousError { cause })?;
                             seen_first_batch = true;
                         }
@@ -1385,7 +1385,7 @@ async fn run<'a>(
                 let res = match res {
                     Ok(combined_entry) => {
                         let (stats, res) = sync_single_combined_entry(
-                            &ctx,
+                            ctx,
                             &combined_entry,
                             &hg_repo,
                             base_retry_delay_ms,
@@ -1410,10 +1410,10 @@ async fn run<'a>(
                 let next_id = get_id_to_search_after(&entry);
 
                 retry(
-                    &ctx.logger(),
+                    ctx.logger(),
                     |_| async {
                         let success = replayed_sync_counter
-                            .set_counter(&ctx, next_id)
+                            .set_counter(ctx, next_id)
                             .watched(ctx.logger())
                             .await?;
 

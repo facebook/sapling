@@ -158,8 +158,8 @@ impl From<mercurial_types::HgChangesetIdsResolvedFromPrefix>
         use ChangesetSpecifier::*;
         match resolved {
             Single(id) => Self::Single(Hg(id)),
-            Multiple(ids) => Self::Multiple(ids.into_iter().map(|id| Hg(id)).collect()),
-            TooMany(ids) => Self::TooMany(ids.into_iter().map(|id| Hg(id)).collect()),
+            Multiple(ids) => Self::Multiple(ids.into_iter().map(Hg).collect()),
+            TooMany(ids) => Self::TooMany(ids.into_iter().map(Hg).collect()),
             NoMatch => Self::NoMatch,
         }
     }
@@ -171,8 +171,8 @@ impl From<mononoke_types::ChangesetIdsResolvedFromPrefix> for ChangesetSpecifier
         use ChangesetSpecifier::*;
         match resolved {
             Single(id) => Self::Single(Bonsai(id)),
-            Multiple(ids) => Self::Multiple(ids.into_iter().map(|id| Bonsai(id)).collect()),
-            TooMany(ids) => Self::TooMany(ids.into_iter().map(|id| Bonsai(id)).collect()),
+            Multiple(ids) => Self::Multiple(ids.into_iter().map(Bonsai).collect()),
+            TooMany(ids) => Self::TooMany(ids.into_iter().map(Bonsai).collect()),
             NoMatch => Self::NoMatch,
         }
     }

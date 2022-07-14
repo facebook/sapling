@@ -544,7 +544,7 @@ impl UploadHgFileEntry {
         phase: &str,
         stats: FutureStats,
     ) {
-        let path = path.map(|p| p.to_string()).unwrap_or_else(String::new);
+        let path = path.map_or_else(String::new, |p| p.to_string());
         let nodeid = format!("{}", nodeid);
         trace!(logger, "Upload blob stats";
             "phase" => String::from(phase),

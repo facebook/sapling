@@ -93,7 +93,7 @@ impl HgRepoContext {
 
     /// The `CoreContext` for this query.
     pub fn ctx(&self) -> &CoreContext {
-        &self.repo.ctx()
+        self.repo.ctx()
     }
 
     /// The `RepoContext` for this query.
@@ -103,7 +103,7 @@ impl HgRepoContext {
 
     /// The underlying Mononoke `BlobRepo` backing this repo.
     pub(crate) fn blob_repo(&self) -> &BlobRepo {
-        &self.repo().blob_repo()
+        self.repo().blob_repo()
     }
 
     /// The configuration for the repository.
@@ -129,7 +129,7 @@ impl HgRepoContext {
 
     /// Load bubble from id
     pub async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble, MononokeError> {
-        Ok(self.repo.open_bubble(bubble_id).await?)
+        self.repo.open_bubble(bubble_id).await
     }
 
     /// Get blobstore. If bubble id is present, this is the ephemeral blobstore
@@ -195,7 +195,7 @@ impl HgRepoContext {
             }
             self.bubble_blobstore(bubble_id)
                 .await?
-                .is_present(&ctx, &key)
+                .is_present(&ctx, key)
                 .await
                 .map(|is_present| {
                     // if we can't resolve the presence (some blobstores failed, some returned None)
@@ -266,7 +266,7 @@ impl HgRepoContext {
             self.ctx().clone(),
             &match upload_token.data.id {
                 AnyId::AnyFileContentId(file_id) => file_id.into(),
-                e @ _ => {
+                e => {
                     return Err(MononokeError::from(format_err!(
                         "Id is not of a file: {:?}",
                         e
@@ -294,10 +294,9 @@ impl HgRepoContext {
         changeset_id: ChangesetId,
         storage_location: StorageLocation,
     ) -> Result<bool, MononokeError> {
-        Ok(self
-            .repo
+        self.repo
             .changeset_exists(changeset_id, storage_location)
-            .await?)
+            .await
     }
 
     /// Look up in blobstore by `HgFileNodeId`
@@ -425,7 +424,7 @@ impl HgRepoContext {
         }
         self.blob_repo()
             .hg_mutation_store()
-            .add_entries(&self.ctx(), hg_changesets, mutations)
+            .add_entries(self.ctx(), hg_changesets, mutations)
             .await
             .map_err(MononokeError::from)?;
 
@@ -454,7 +453,7 @@ impl HgRepoContext {
             cs_id,
             parents: bonsai_cs.parents().collect(),
         };
-        match save_bonsai_changeset_object(&self.ctx(), blobstore, bonsai_cs).await {
+        match save_bonsai_changeset_object(self.ctx(), blobstore, bonsai_cs).await {
             Ok(_) => {
                 self.blob_repo()
                     .get_changesets_object()
@@ -702,7 +701,7 @@ impl HgRepoContext {
             .map(|hgid| {
                 hg_to_bonsai
                     .get(&hgid)
-                    .map(|bonsai| bonsai.clone())
+                    .copied()
                     .ok_or_else(|| format_err!("Failed to convert common {} to bonsai", hgid))
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -711,7 +710,7 @@ impl HgRepoContext {
             .map(|hgid| {
                 hg_to_bonsai
                     .get(&hgid)
-                    .map(|bonsai| bonsai.clone())
+                    .copied()
                     .ok_or_else(|| format_err!("Failed to convert missing {} to bonsai", hgid))
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -732,7 +731,7 @@ impl HgRepoContext {
                 .idmap
                 .values()
                 .filter(|csid| !hints.contains_key(csid))
-                .map(|&csid| csid)
+                .copied()
                 .collect();
 
             let mut mapping = hints;
@@ -862,7 +861,7 @@ impl HgRepoContext {
         for (cs_id, cs_parents) in cs_parent_mapping.iter() {
             let hg_id = get_hg_id(cs_id)?;
             let hg_parents = cs_parents
-                .into_iter()
+                .iter()
                 .map(get_hg_id)
                 .collect::<Result<Vec<HgChangesetId>, Error>>()
                 .map_err(MononokeError::from)?;

@@ -198,7 +198,7 @@ impl TryFrom<i32> for SlicePct {
     type Error = Error;
 
     fn try_from(value: i32) -> Result<Self, Self::Error> {
-        if value < 0 || value > 100 {
+        if !(0..=100).contains(&value) {
             return Err(anyhow!("Invalid percentage"));
         }
 

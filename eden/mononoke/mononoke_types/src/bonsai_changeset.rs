@@ -197,9 +197,9 @@ impl BonsaiChangeset {
             Ok(BonsaiChangeset { inner, id })
         };
 
-        Ok(catch_block().with_context(|| {
+        catch_block().with_context(|| {
             ErrorKind::InvalidThrift("BonsaiChangeset".into(), "Invalid changeset".into())
-        })?)
+        })
     }
 
     /// Get the parents for this changeset. The order of parents is significant.
@@ -253,10 +253,7 @@ impl BonsaiChangeset {
 
     /// Get the committer date (time and timezone) for this changeset.
     pub fn committer_date(&self) -> Option<&DateTime> {
-        match self.inner.committer_date {
-            Some(ref dt) => Some(dt),
-            None => None,
-        }
+        self.inner.committer_date.as_ref()
     }
 
     /// Get the commit message.

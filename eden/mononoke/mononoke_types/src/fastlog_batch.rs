@@ -65,7 +65,7 @@ impl FastlogBatch {
             .chunks(MAX_LATEST_LEN);
         let chunks: Vec<_> = chunks.into_iter().map(VecDeque::from_iter).collect();
         let mut chunks = chunks.into_iter();
-        let latest = chunks.next().unwrap_or(VecDeque::new());
+        let latest = chunks.next().unwrap_or_default();
 
         let previous_batches = VecDeque::from(
             try_join_all(chunks.map(move |chunk| {
@@ -92,7 +92,7 @@ impl FastlogBatch {
     ) -> Result<FastlogBatch> {
         let mut new_batch = self.clone();
         if new_batch.latest.len() >= MAX_LATEST_LEN {
-            let previous_latest = std::mem::replace(&mut new_batch.latest, VecDeque::new());
+            let previous_latest = std::mem::take(&mut new_batch.latest);
             let new_previous_batch = FastlogBatch::new(previous_latest, VecDeque::new());
             let new_batch_id = new_previous_batch.into_blob().store(ctx, blobstore).await?;
             if new_batch.previous_batches.len() >= MAX_BATCHES {

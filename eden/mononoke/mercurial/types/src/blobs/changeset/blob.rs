@@ -278,7 +278,7 @@ impl HgBlobChangeset {
 
         if let Some(step_parents) = self.extra().get(STEP_PARENTS_METADATA_KEY.as_bytes()) {
             let step_parents = std::str::from_utf8(step_parents)?;
-            for csid in step_parents.split(",") {
+            for csid in step_parents.split(',') {
                 let csid = csid.parse()?;
                 ret.push(csid);
             }
@@ -310,14 +310,13 @@ impl Display for HgBlobChangeset {
             .iter()
             .enumerate()
             .find(|(_, &c)| c == b'\n')
-            .map(|(i, _)| i)
-            .unwrap_or(message.len());
+            .map_or(message.len(), |(i, _)| i);
 
         write!(
             f,
             "changeset: {}\nauthor: {}\ndate: {}\nsummary: {}\n",
             self.changesetid,
-            String::from_utf8_lossy(&self.user()),
+            String::from_utf8_lossy(self.user()),
             self.time().as_chrono().to_rfc2822(),
             String::from_utf8_lossy(&self.message()[0..title_end])
         )

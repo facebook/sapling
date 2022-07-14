@@ -89,7 +89,7 @@ impl FileContext {
 
     /// The context for this query.
     pub(crate) fn ctx(&self) -> &CoreContext {
-        &self.repo.ctx()
+        self.repo.ctx()
     }
 
     /// The `RepoContext` for this query.

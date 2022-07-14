@@ -601,7 +601,7 @@ impl_typed_hash! {
 
 impl From<ContentId> for ContentMetadataId {
     fn from(content: ContentId) -> Self {
-        Self { 0: content.0 }
+        Self(content.0)
     }
 }
 

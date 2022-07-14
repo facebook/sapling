@@ -1175,7 +1175,7 @@ impl<'a> Iterator for BlameLines<'a> {
         loop {
             match self.data.ranges.get(self.range_index) {
                 None => return None,
-                Some(ref range) if self.range_offset < range.length => {
+                Some(range) if self.range_offset < range.length => {
                     let line = BlameLine::new(self.data, range, self.range_offset);
                     self.range_offset += 1;
                     return Some(line);

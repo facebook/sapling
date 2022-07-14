@@ -251,8 +251,7 @@ impl Repo {
             let mut scuba_sample_builder = env.warm_bookmarks_cache_scuba_sample_builder.clone();
             scuba_sample_builder.add("repo", inner.blob_repo.name().clone());
             let ctx = ctx.with_mutated_scuba(|_| scuba_sample_builder);
-            let mut warm_bookmarks_cache_builder =
-                WarmBookmarksCacheBuilder::new(ctx.clone(), &inner);
+            let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(ctx, &inner);
             match env.warm_bookmarks_cache_derived_data {
                 WarmBookmarksCacheDerivedData::HgOnly => {
                     warm_bookmarks_cache_builder.add_hg_warmers()?;
@@ -517,7 +516,7 @@ impl Repo {
             None => {}
             Some(monitoring_config) => {
                 for bookmark in monitoring_config.bookmarks_to_report_age.iter() {
-                    self.report_bookmark_age_difference(ctx, &bookmark).await?;
+                    self.report_bookmark_age_difference(ctx, bookmark).await?;
                 }
             }
         }
@@ -584,8 +583,8 @@ impl Repo {
     ) -> Result<(), MononokeError> {
         let repo = self.blob_repo();
 
-        let maybe_bcs_id_from_service = self.warm_bookmarks_cache.get(&ctx, bookmark).await?;
-        let maybe_bcs_id_from_blobrepo = repo.get_bonsai_bookmark(ctx.clone(), &bookmark).await?;
+        let maybe_bcs_id_from_service = self.warm_bookmarks_cache.get(ctx, bookmark).await?;
+        let maybe_bcs_id_from_blobrepo = repo.get_bonsai_bookmark(ctx.clone(), bookmark).await?;
 
         if maybe_bcs_id_from_blobrepo.is_none() {
             self.report_bookmark_missing_from_repo(ctx, bookmark);
@@ -639,7 +638,7 @@ impl Repo {
                 let compare_bcs_id = maybe_child.unwrap_or(service_bcs_id);
 
                 let compare_timestamp = compare_bcs_id
-                    .load(&ctx, repo.blobstore())
+                    .load(ctx, repo.blobstore())
                     .await?
                     .author_date()
                     .timestamp_secs();
@@ -767,7 +766,7 @@ impl RepoContext {
 
     /// The name of the underlying repo.
     pub fn name(&self) -> &str {
-        &self.repo.name()
+        self.repo.name()
     }
 
     /// The internal id of the repo. Used for comparing the repo objects with each other.
@@ -831,7 +830,7 @@ impl RepoContext {
     }
 
     pub fn mutable_renames(&self) -> &Arc<MutableRenames> {
-        &self.repo.mutable_renames()
+        self.repo.mutable_renames()
     }
 
     pub fn sparse_profiles(&self) -> &Arc<RepoSparseProfiles> {
@@ -1005,7 +1004,7 @@ impl RepoContext {
     ) -> Result<Option<ChangesetContext>, MononokeError> {
         let specifier = specifier.into();
         let changeset = self
-            .resolve_specifier(specifier.into())
+            .resolve_specifier(specifier)
             .await?
             .map(|cs_id| ChangesetContext::new(self.clone(), cs_id));
         Ok(changeset)
@@ -1257,7 +1256,7 @@ impl RepoContext {
                     self.ctx.clone(),
                     BookmarkFreshness::MaybeStale,
                     &prefix,
-                    &BookmarkKind::ALL,
+                    BookmarkKind::ALL,
                     &pagination,
                     limit.unwrap_or(std::u64::MAX),
                 )
@@ -1323,7 +1322,7 @@ impl RepoContext {
             .partition(|cs_id| public_phases.contains(cs_id));
 
         // initialize the queue
-        let mut queue: Vec<_> = draft.iter().cloned().collect();
+        let mut queue: Vec<_> = draft.to_vec();
 
         while !queue.is_empty() {
             // get the unique parents for all changesets in the queue & skip visited & update visited
@@ -1333,8 +1332,7 @@ impl RepoContext {
                 .get_many(self.ctx.clone(), queue.clone())
                 .await?
                 .into_iter()
-                .map(|cs_entry| cs_entry.parents)
-                .flatten()
+                .flat_map(|cs_entry| cs_entry.parents)
                 .filter(|cs_id| !visited.contains(cs_id))
                 .unique()
                 .collect();
@@ -1508,7 +1506,7 @@ impl RepoContext {
             })?;
 
         let candidate_selection_hint: CandidateSelectionHint = self
-            .build_candidate_selection_hint(maybe_candidate_selection_hint_args, &other)
+            .build_candidate_selection_hint(maybe_candidate_selection_hint_args, other)
             .await?;
 
         let commit_sync_repos = CommitSyncRepos::new(

@@ -63,7 +63,7 @@ impl TryFrom<&[u8]> for SqlPhase {
     type Error = SqlPhasesError;
 
     fn try_from(buf: &[u8]) -> Result<Self, Self::Error> {
-        match std::str::from_utf8(&buf) {
+        match std::str::from_utf8(buf) {
             Ok("Draft") => Ok(SqlPhase(Phase::Draft)),
             Ok("Public") => Ok(SqlPhase(Phase::Public)),
             Ok(s) => Err(SqlPhasesError::ValueError(s.to_string())),
@@ -160,7 +160,7 @@ impl SqlPhases {
         if csids.is_empty() {
             return Ok(Default::default());
         }
-        let public_cold = self.get_public_raw(&ctx, &csids).await?;
+        let public_cold = self.get_public_raw(ctx, &csids).await?;
 
         let mut unknown: Vec<_> = csids
             .into_iter()
@@ -171,8 +171,8 @@ impl SqlPhases {
             return Ok(public_cold);
         }
 
-        let heads = (self.heads_fetcher)(&ctx).await?;
-        let freshly_marked = mark_reachable_as_public(ctx, &self, &heads, ephemeral_derive).await?;
+        let heads = (self.heads_fetcher)(ctx).await?;
+        let freshly_marked = mark_reachable_as_public(ctx, self, &heads, ephemeral_derive).await?;
 
         // Still do the get_public_raw incase someone else marked the changes as public
         // and thus mark_reachable_as_public did not return them as freshly_marked
@@ -267,7 +267,7 @@ pub async fn mark_reachable_as_public(
     ephemeral_derive: bool,
 ) -> Result<Vec<ChangesetId>, Error> {
     let changeset_fetcher = &phases.changeset_fetcher;
-    let public = phases.get_public_raw(&ctx, all_heads).await?;
+    let public = phases.get_public_raw(ctx, all_heads).await?;
 
     let mut input = all_heads
         .iter()
@@ -284,7 +284,7 @@ pub async fn mark_reachable_as_public(
             Some(cs) => cs,
         };
 
-        let phase = phases.get_single_raw(&ctx, cs).await?;
+        let phase = phases.get_single_raw(ctx, cs).await?;
         if let Some(Phase::Public) = phase {
             continue;
         }
@@ -310,7 +310,7 @@ pub async fn mark_reachable_as_public(
     for chunk in unmarked.chunks(100) {
         let chunk = chunk.iter().map(|(cs, _)| *cs).collect::<Vec<_>>();
         if !ephemeral_derive {
-            phases.add_public_raw(&ctx, chunk.clone()).await?;
+            phases.add_public_raw(ctx, chunk.clone()).await?;
         }
         result.extend(chunk)
     }

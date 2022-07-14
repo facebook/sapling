@@ -179,7 +179,7 @@ impl ChangesetContext {
 
     /// The context for this query.
     pub(crate) fn ctx(&self) -> &CoreContext {
-        &self.repo.ctx()
+        self.repo.ctx()
     }
 
     /// Adds copy information from mutable renames as an override to replace
@@ -237,7 +237,7 @@ impl ChangesetContext {
             .blob_repo()
             .get_hg_bonsai_mapping(self.ctx().clone(), self.id)
             .await?;
-        Ok(mapping.iter().next().map(|(hg_cs_id, _)| *hg_cs_id))
+        Ok(mapping.get(0).map(|(hg_cs_id, _)| *hg_cs_id))
     }
 
     /// The Globalrev for the changeset.
@@ -246,7 +246,7 @@ impl ChangesetContext {
             .repo()
             .blob_repo()
             .bonsai_globalrev_mapping()
-            .get_globalrev_from_bonsai(&self.ctx(), self.id)
+            .get_globalrev_from_bonsai(self.ctx(), self.id)
             .await?;
         Ok(mapping.into_iter().next())
     }
@@ -257,7 +257,7 @@ impl ChangesetContext {
             .repo()
             .blob_repo()
             .bonsai_svnrev_mapping()
-            .get_svnrev_from_bonsai(&self.ctx(), self.id)
+            .get_svnrev_from_bonsai(self.ctx(), self.id)
             .await?;
         Ok(mapping)
     }
@@ -637,10 +637,10 @@ impl ChangesetContext {
         if use_segmented_changelog {
             let segmented_changelog = self.repo().segmented_changelog();
             // If we have segmeneted changelog enabled...
-            if !segmented_changelog.disabled(&self.ctx()).await? {
+            if !segmented_changelog.disabled(self.ctx()).await? {
                 // ... and it has the answer for us ...
                 if let Some(result) = segmented_changelog
-                    .is_ancestor(&self.ctx(), self.id, other_commit)
+                    .is_ancestor(self.ctx(), self.id, other_commit)
                     .await?
                 {
                     self.ctx()
@@ -659,7 +659,7 @@ impl ChangesetContext {
             .repo()
             .skiplist_index()
             .query_reachability(
-                &self.ctx(),
+                self.ctx(),
                 &self.repo().blob_repo().get_changeset_fetcher(),
                 other_commit,
                 self.id,
@@ -686,10 +686,7 @@ impl ChangesetContext {
                 other_commit,
             )
             .await?;
-        Ok(lca
-            .iter()
-            .next()
-            .map(|id| Self::new(self.repo.clone(), *id)))
+        Ok(lca.get(0).map(|id| Self::new(self.repo.clone(), *id)))
     }
 
     pub async fn diff_unordered(
@@ -975,7 +972,8 @@ impl ChangesetContext {
                     }
                     ManifestDiff::Removed(path, entry @ ManifestEntry::Leaf(_)) => {
                         let path = MononokePath::new(path);
-                        if let Some(_) = copy_path_map.get(&path) {
+                        #[allow(clippy::if_same_then_else)]
+                        if copy_path_map.get(&path).is_some() {
                             // The file is was moved (not removed), it will be covered by a "Moved" entry.
                             None
                         } else if !diff_files || !within_restrictions(&path, &path_restrictions) {
@@ -1072,7 +1070,7 @@ impl ChangesetContext {
             .take(limit.unwrap_or(usize::MAX))
             .try_collect::<Vec<_>>()
             .await?;
-        return Ok(change_contexts);
+        Ok(change_contexts)
     }
 
     async fn find_entries(

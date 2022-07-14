@@ -55,8 +55,8 @@ impl Globalrev {
             bcs.extra().find(|(key, _)| key == &"convert_revision"),
         ) {
             (Some((_, globalrev)), Some((_, svnrev))) => {
-                let globalrev = str::from_utf8(&globalrev.to_vec())?.parse::<u64>()?;
-                let svnrev = Globalrev::parse_svnrev(str::from_utf8(&svnrev.to_vec())?)?;
+                let globalrev = str::from_utf8(globalrev)?.parse::<u64>()?;
+                let svnrev = Globalrev::parse_svnrev(str::from_utf8(svnrev)?)?;
                 if globalrev >= START_COMMIT_GLOBALREV {
                     Ok(Self::new(globalrev))
                 } else {
@@ -64,7 +64,7 @@ impl Globalrev {
                 }
             }
             (Some((_, globalrev)), None) => {
-                let globalrev = str::from_utf8(&globalrev.to_vec())?.parse::<u64>()?;
+                let globalrev = str::from_utf8(globalrev)?.parse::<u64>()?;
                 if globalrev < START_COMMIT_GLOBALREV {
                     bail!("Bonsai cs {:?} without globalrev", bcs)
                 } else {
@@ -72,7 +72,7 @@ impl Globalrev {
                 }
             }
             (None, Some((_, svnrev))) => {
-                let svnrev = Globalrev::parse_svnrev(str::from_utf8(&svnrev.to_vec())?)?;
+                let svnrev = Globalrev::parse_svnrev(str::from_utf8(svnrev)?)?;
                 Ok(Self::new(svnrev))
             }
             (None, None) => bail!("Bonsai cs {:?} without globalrev", bcs),

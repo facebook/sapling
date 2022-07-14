@@ -257,7 +257,7 @@ impl Blame {
         } = blame_t;
         let paths = paths_t
             .into_iter()
-            .map(|path_t| MPath::from_thrift(path_t))
+            .map(MPath::from_thrift)
             .collect::<Result<Vec<_>, _>>()?;
         let (_length, ranges) =
             ranges_t
@@ -478,9 +478,9 @@ impl Blame {
                     .ok_or_else(|| Error::msg("not enough ranges in a blame"))?;
             }
             result.push_str(&range.csid.to_string()[..12]);
-            result.push_str(&": ");
+            result.push_str(": ");
             result.push_str(line);
-            result.push_str("\n");
+            result.push('\n');
         }
 
         Ok(result)
@@ -507,7 +507,7 @@ fn blame_ranges_split_at(
         }
     }
 
-    return (left, ranges);
+    (left, ranges)
 }
 
 /// Merge multiple blames into a single.
@@ -578,7 +578,7 @@ impl<'a> Iterator for BlameLines<'a> {
         loop {
             match self.ranges.get(self.ranges_index) {
                 None => return None,
-                Some(ref range) if self.index < range.length => {
+                Some(range) if self.index < range.length => {
                     self.index += 1;
                     return Some((
                         range.csid,

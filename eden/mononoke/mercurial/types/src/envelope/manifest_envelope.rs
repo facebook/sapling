@@ -73,12 +73,12 @@ impl HgManifestEnvelope {
             })
         };
 
-        Ok(catch_block().with_context(|| {
+        catch_block().with_context(|| {
             ErrorKind::InvalidThrift(
                 "HgManifestEnvelope".into(),
                 "Invalid manifest envelope".into(),
             )
-        })?)
+        })
     }
 
     pub fn from_blob(blob: HgEnvelopeBlob) -> Result<Self> {

@@ -123,8 +123,7 @@ fn parse_with_repo_definition(
     } = repo_definition;
 
     let named_repo_config_name = repo_config
-        .clone()
-        .ok_or_else(|| ConfigurationError::InvalidConfig(format!("No named_repo_config")))?;
+        .ok_or_else(|| ConfigurationError::InvalidConfig("No named_repo_config".to_string()))?;
 
     let named_repo_config = named_repo_configs
         .get(named_repo_config_name.as_str())
@@ -137,7 +136,7 @@ fn parse_with_repo_definition(
         .clone();
 
     let reponame = repo_name.ok_or_else(|| {
-        ConfigurationError::InvalidConfig(format!("No repo_name in repo_definition"))
+        ConfigurationError::InvalidConfig("No repo_name in repo_definition".to_string())
     })?;
 
     let backup_repo_config = if let Some(backup_source_repo_name) = backup_source_repo_name {

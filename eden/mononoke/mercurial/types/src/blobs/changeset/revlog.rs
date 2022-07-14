@@ -149,7 +149,6 @@ impl Extra {
 }
 
 fn try_get<T>(v: &[T], idx: usize) -> Option<&T> {
-    let v = v.as_ref();
     if idx < v.len() { Some(&v[idx]) } else { None }
 }
 
@@ -436,7 +435,7 @@ pub fn serialize_cs<W: Write>(cs: &RevlogChangeset, out: &mut W) -> Result<()> {
         write!(out, "{}\n", f)?;
     }
     write!(out, "\n")?;
-    out.write_all(&cs.message())?;
+    out.write_all(cs.message())?;
 
     Ok(())
 }

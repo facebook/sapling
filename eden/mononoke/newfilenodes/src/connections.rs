@@ -61,7 +61,7 @@ impl Connections {
             AcquireReason::History => STATS::history_conn_checkout.add_value(1),
             AcquireReason::Paths => STATS::paths_conn_checkout.add_value(1),
         };
-        let connection = &self.connections[shard_id.id];
-        connection
+
+        &self.connections[shard_id.id] as _
     }
 }

@@ -70,7 +70,7 @@ impl HgFileContext {
         match filenode_id.load(ctx, blobstore).await {
             Ok(envelope) => Ok(Some(Self { repo, envelope })),
             Err(LoadableError::Missing(_)) => Ok(None),
-            Err(e) => return Err(e.into()),
+            Err(e) => Err(e.into()),
         }
     }
 
@@ -103,16 +103,14 @@ impl HgFileContext {
         let content_id = self.envelope.content_id();
         let fetch_key = filestore::FetchKey::Canonical(content_id);
         let blobstore = self.repo.blob_repo().blobstore();
-        Ok(
-            filestore::get_metadata(blobstore, self.repo.ctx(), &fetch_key)
-                .await?
-                .ok_or_else(|| {
-                    MononokeError::NotAvailable(format!(
-                        "metadata not found for content id {}",
-                        content_id
-                    ))
-                })?,
-        )
+        filestore::get_metadata(blobstore, self.repo.ctx(), &fetch_key)
+            .await?
+            .ok_or_else(|| {
+                MononokeError::NotAvailable(format!(
+                    "metadata not found for content id {}",
+                    content_id
+                ))
+            })
     }
 
     /// Fetches the metadata that would be present in this file's corresponding FsNode, returning

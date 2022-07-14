@@ -92,8 +92,7 @@ impl File {
                 .enumerate()
                 .tuple_windows()
                 .find(|&((_, a), (_, b))| *a == META_MARKER[0] && *b == META_MARKER[1])
-                .map(|((idx, _), _)| idx + META_SZ * 2)
-                .unwrap_or(META_SZ); // XXX malformed if None - unterminated metadata
+                .map_or(META_SZ, |((idx, _), _)| idx + META_SZ * 2); // XXX malformed if None - unterminated metadata
 
             let metasz = *metasz;
             if metasz >= META_SZ * 2 {
@@ -141,7 +140,7 @@ impl File {
 
     pub fn copied_from(&self) -> Result<Option<(MPath, HgFileNodeId)>> {
         let buf = self.node.as_blob().as_slice();
-        Self::extract_copied_from(&buf)
+        Self::extract_copied_from(buf)
     }
 
     fn get_copied_from_with_keys(
@@ -156,7 +155,7 @@ impl File {
             .and_then(|rev| rev.parse().map(HgFileNodeId::new).ok());
         match (path, nodeid) {
             (Some(Ok(path)), Some(nodeid)) => Ok(Some((path, nodeid))),
-            (Some(Err(e)), _) => Err(e.context("invalid path in copy metadata").into()),
+            (Some(Err(e)), _) => Err(e.context("invalid path in copy metadata")),
             _ => Ok(None),
         }
     }

@@ -327,8 +327,7 @@ impl MutableRenames {
 
                 let res = res
                     .remove(&key)
-                    .map(|r| r.0.map(MutableRenameEntry::try_from))
-                    .flatten()
+                    .and_then(|r| r.0.map(MutableRenameEntry::try_from))
                     .transpose()?;
                 Ok(res)
             }

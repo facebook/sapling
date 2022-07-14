@@ -199,7 +199,7 @@ impl AsyncProcess {
         // all), but it still needs to be in the match clause.
         match future::try_select(fut, watchdog).await {
             Ok(future::Either::Left((res, _))) | Ok(future::Either::Right((res, _))) => Ok(res),
-            Err(future::Either::Left((e, _))) | Err(future::Either::Right((e, _))) => Err(e.into()),
+            Err(future::Either::Left((e, _))) | Err(future::Either::Right((e, _))) => Err(e),
         }
     }
 }

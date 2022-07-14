@@ -268,7 +268,7 @@ fn parse_hg_entry(data: &[u8]) -> Result<Entry<HgManifestId, (FileType, HgFileNo
 
     let (hash, flags) = data.split_at(40);
     let hash = str::from_utf8(hash)
-        .map_err(|err| Error::from(err))
+        .map_err(Error::from)
         .and_then(|hash| hash.parse::<HgNodeHash>())
         .with_context(|| format!("malformed hash: {:?}", hash))?;
     ensure!(flags.len() <= 1, "More than 1 flag: {:?}", flags);

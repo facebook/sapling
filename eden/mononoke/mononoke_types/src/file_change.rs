@@ -122,12 +122,12 @@ impl TrackedFileChange {
             })
         };
 
-        Ok(catch_block().with_context(|| {
+        catch_block().with_context(|| {
             ErrorKind::InvalidThrift(
                 "FileChange".into(),
                 format!("Invalid changed entry for path {}", mpath),
             )
-        })?)
+        })
     }
 }
 

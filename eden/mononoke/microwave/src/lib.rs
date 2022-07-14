@@ -114,7 +114,7 @@ impl Snapshot {
         let serialized = compact_protocol::serialize(&self.snapshot);
 
         match location {
-            SnapshotLocation::SharedLocalPath(ref path) => {
+            SnapshotLocation::SharedLocalPath(path) => {
                 let mut file = File::create(snapshot_path(path, repo.get_repoid())).await?;
                 file.write_all(&serialized).await?;
             }
@@ -144,7 +144,7 @@ async fn load_snapshot(
     location: SnapshotLocation<'_>,
 ) -> Result<thrift::RepoSnapshot, Error> {
     match location {
-        SnapshotLocation::SharedLocalPath(ref path) => {
+        SnapshotLocation::SharedLocalPath(path) => {
             let mut contents = vec![];
             let mut snapshot = File::open(snapshot_path(path, repo.get_repoid())).await?;
             snapshot.read_to_end(&mut contents).await?;

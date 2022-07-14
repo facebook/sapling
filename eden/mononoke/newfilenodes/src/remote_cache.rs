@@ -70,7 +70,7 @@ impl RemoteCache {
                 let now = Instant::now();
 
                 let ret =
-                    get_single_filenode_from_memcache(&memcache.memcache, &memcache.keygen, &key)
+                    get_single_filenode_from_memcache(&memcache.memcache, &memcache.keygen, key)
                         .await;
 
                 let elapsed = now.elapsed().as_micros_unchecked() as i64;
@@ -86,7 +86,7 @@ impl RemoteCache {
     pub fn fill_filenode(&self, key: &CacheKey<CachedFilenode>, filenode: FilenodeInfo) {
         match self {
             Self::Memcache(memcache) => {
-                schedule_fill_filenode(&memcache.memcache, &memcache.keygen, &key, filenode)
+                schedule_fill_filenode(&memcache.memcache, &memcache.keygen, key, filenode)
             }
             Self::Noop => {}
         }
@@ -101,7 +101,7 @@ impl RemoteCache {
                 let now = Instant::now();
 
                 let ret =
-                    get_history_from_memcache(&memcache.memcache, &memcache.keygen, &key).await;
+                    get_history_from_memcache(&memcache.memcache, &memcache.keygen, key).await;
 
                 let elapsed = now.elapsed().as_micros_unchecked() as i64;
                 STATS::get_history.add_value(elapsed);

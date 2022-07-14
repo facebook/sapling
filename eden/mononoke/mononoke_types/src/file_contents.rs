@@ -43,7 +43,7 @@ impl FileContents {
 
     pub(crate) fn from_thrift(fc: thrift::FileContents) -> Result<Self> {
         match fc {
-            thrift::FileContents::Bytes(bytes) => Ok(FileContents::Bytes(bytes.into())),
+            thrift::FileContents::Bytes(bytes) => Ok(FileContents::Bytes(bytes)),
             thrift::FileContents::Chunked(chunked) => {
                 let contents = ChunkedFileContents::from_thrift(chunked)?;
                 Ok(FileContents::Chunked(contents))
@@ -96,7 +96,7 @@ impl BlobstoreValue for FileContents {
 
     fn into_blob(self) -> ContentBlob {
         let id = match &self {
-            Self::Bytes(bytes) => Self::content_id_for_bytes(&bytes),
+            Self::Bytes(bytes) => Self::content_id_for_bytes(bytes),
             Self::Chunked(chunked) => chunked.content_id(),
         };
 
