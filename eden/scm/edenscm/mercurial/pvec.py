@@ -61,15 +61,15 @@ from .pycompat import range
 
 
 _size = 448  # 70 chars b85-encoded
-_bytes = _size / 8
+_bytes: float = _size / 8
 _depthbits = 24
-_depthbytes = _depthbits / 8
-_vecbytes = _bytes - _depthbytes
-_vecbits = _vecbytes * 8
-_radius = (_vecbits - 30) / 2  # high probability vectors are related
+_depthbytes: float = _depthbits / 8
+_vecbytes: float = _bytes - _depthbytes
+_vecbits: float = _vecbytes * 8
+_radius: float = (_vecbits - 30) / 2  # high probability vectors are related
 
 
-def _bin(bs):
+def _bin(bs) -> int:
     """convert a bytestring to a long"""
     v = 0
     for b in bs:
@@ -77,7 +77,7 @@ def _bin(bs):
     return v
 
 
-def _str(v, l):
+def _str(v, l) -> str:
     bs = ""
     for p in range(l):
         bs = chr(v & 255) + bs
@@ -94,7 +94,7 @@ def _join(depth, bitvec):
     return _str(depth, _depthbytes) + _str(bitvec, _vecbytes)
 
 
-def _hweight(x):
+def _hweight(x) -> int:
     c = 0
     while x:
         if x & 1:
@@ -106,7 +106,7 @@ def _hweight(x):
 _htab = [_hweight(x) for x in range(256)]
 
 
-def _hamming(a, b):
+def _hamming(a, b) -> int:
     """find the hamming distance between two longs"""
     d = a ^ b
     c = 0
@@ -160,7 +160,7 @@ def _flipbit(v, node):
     return v ^ (1 << bit)
 
 
-def ctxpvec(ctx):
+def ctxpvec(ctx) -> "pvec":
     """construct a pvec for ctx while filling in the cache"""
     r = ctx.repo()
     if not util.safehasattr(r, "_pveccache"):
