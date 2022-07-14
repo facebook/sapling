@@ -7,7 +7,7 @@
 import os
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Dict, Generator, Optional
+from typing import Dict, Generator, Optional, Set
 
 from eden.fs.cli import util
 from facebook.eden.constants import DIS_REQUIRE_MATERIALIZED
@@ -34,6 +34,7 @@ class PrjFSStress(testcase.EdenRepoTest):
 
     def wait_on_fault_unblock(
         self,
+        numToUnblock: int = 1,
         keyClass: str = "PrjfsDispatcherImpl::fileNotification",
         keyValueRegex: str = ".*",
     ) -> None:
@@ -49,9 +50,12 @@ class PrjFSStress(testcase.EdenRepoTest):
                 return True
             return None
 
-        util.poll_until(unblock, timeout=30)
+        for _ in range(numToUnblock):
+            util.poll_until(unblock, timeout=30)
 
-    def assertNotMaterialized(self, path: str) -> None:
+    def getAllMaterialized(self) -> Set[Path]:
+        res = set()
+
         with self.eden.get_thrift_client_legacy() as client:
             inodes = client.debugInodeStatus(
                 self.mount_path_bytes, b"", DIS_REQUIRE_MATERIALIZED, SyncBehavior(5)
@@ -61,9 +65,17 @@ class PrjFSStress(testcase.EdenRepoTest):
             parent_dir = Path(os.fsdecode(tree_inode.path))
             for dirent in tree_inode.entries:
                 dirent_path = parent_dir / Path(os.fsdecode(dirent.name))
-                self.assertNotEqual(
-                    Path(path), dirent_path, msg=f"{path} is materialized: {dirent}"
-                )
+                res.add(dirent_path)
+
+        return res
+
+    def assertNotMaterialized(self, path: str) -> None:
+        materialized = self.getAllMaterialized()
+        self.assertNotIn(Path(path), materialized, msg=f"{path} is materialized")
+
+    def assertMaterialized(self, path: str) -> None:
+        materialized = self.getAllMaterialized()
+        self.assertIn(Path(path), materialized, msg=f"{path} is not materialized")
 
     @contextmanager
     def run_with_fault(
@@ -103,3 +115,25 @@ class PrjFSStress(testcase.EdenRepoTest):
             self.wait_on_fault_unblock()
 
             self.assertNotMaterialized("foo")
+
+    def test_create_already_removed(self) -> None:
+        with self.run_with_fault():
+            self.touch("foo")
+            # EdenFS will now block due to the fault above, remove the file to
+            # force it down the removal path.
+            self.rm("foo")
+            self.wait_on_fault_unblock(2)
+
+            self.assertNotMaterialized("foo")
+
+    def test_create_file_to_directory(self) -> None:
+        with self.run_with_fault():
+            self.touch("foo")
+            # EdenFS will now block due to the fault above, remove the file to
+            # force it down the removal path.
+            self.rm("foo")
+            # And then create the directory
+            self.mkdir("foo")
+            self.wait_on_fault_unblock(3)
+
+            self.assertMaterialized("foo")
