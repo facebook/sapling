@@ -24,12 +24,12 @@ use mononoke_types::blame_v2::BlameParent;
 use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
-use mononoke_types::Generation;
 use mononoke_types::MPath;
 use reachabilityindex::ReachabilityIndex;
 use std::collections::HashSet;
 use unodes::RootUnodeManifestId;
 
+use crate::common::find_possible_mutable_ancestors;
 use crate::Repo;
 
 #[async_recursion]
@@ -117,38 +117,9 @@ async fn fetch_mutable_blame(
     // For example, if c has a mutable rename for our path, then we do not want to consider mutable
     // renames attached to d or e; however, if c does not, but d and e do, then we want to consider
     // the mutable renames for both d and e.
-    let mutable_csids = mutable_renames
-        .get_cs_ids_with_rename(ctx, Some(path.clone()))
-        .await?;
-    let skiplist_index = repo.skiplist_index();
-    let mut possible_mutable_ancestors: Vec<(Generation, ChangesetId)> =
-        stream::iter(mutable_csids.into_iter().map(anyhow::Ok))
-            .try_filter_map({
-                move |mutated_at| async move {
-                    // First, we filter out csids that cannot be reached from here. These
-                    // are attached to mutable renames that are either descendants of us, or
-                    // in a completely unrelated tree of history.
-                    if skiplist_index
-                        .query_reachability(ctx, &repo.changeset_fetcher_arc(), my_csid, mutated_at)
-                        .await?
-                    {
-                        // We also want to grab generation here, because we're going to sort
-                        // by generation and consider "most recent" candidate first
-                        let cs_gen = repo
-                            .changeset_fetcher()
-                            .get_generation_number(ctx.clone(), mutated_at)
-                            .await?;
-                        Ok(Some((cs_gen, mutated_at)))
-                    } else {
-                        anyhow::Ok(None)
-                    }
-                }
-            })
-            .try_collect()
-            .await?;
+    let mut possible_mutable_ancestors =
+        find_possible_mutable_ancestors(ctx, repo, my_csid, Some(path)).await?;
 
-    // And turn the list of possible mutable ancestors into a stack sorted by generation
-    possible_mutable_ancestors.sort_unstable_by_key(|(gen, _)| *gen);
     // Fetch the immutable blame, which we're going to mutate
     let (blame, unode) = fetch_immutable_blame(ctx, repo, my_csid, path).await?;
     let mut my_blame = extract_blame_v2_from_compat(blame)?;
@@ -161,6 +132,7 @@ async fn fetch_mutable_blame(
     // This will mutate our blame to have all appropriate mutations from ancestors applied
     // If we have mutable blame down two ancestors of a merge, we'd expect that the order
     // of applying those mutations will not affect the final result
+    let skiplist_index = repo.skiplist_index();
     while let Some((_, mutated_csid)) = possible_mutable_ancestors.pop() {
         // Apply mutation for mutated_csid
         let ((mutated_blame, _), (original_blame, _)) = try_join!(

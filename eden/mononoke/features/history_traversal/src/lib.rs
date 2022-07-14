@@ -12,7 +12,8 @@
 //!
 //! This crate procides all the primitives useful for serving log and blame data (mutable and immutable).
 
-pub mod blame;
+mod blame;
+mod common;
 
 pub use crate::blame::blame;
 pub use crate::blame::blame_with_content;
