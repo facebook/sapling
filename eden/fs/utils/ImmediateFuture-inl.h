@@ -46,11 +46,10 @@ ImmediateFuture<T>::~ImmediateFuture() {
 }
 
 template <typename T>
-ImmediateFuture<T>::ImmediateFuture(ImmediateFuture<T>&& other) noexcept
+ImmediateFuture<T>::ImmediateFuture(ImmediateFuture<T>&& other) noexcept(
+    std::is_nothrow_move_constructible_v<folly::Try<T>>&&
+        std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>)
     : kind_(other.kind_) {
-  static_assert(std::is_nothrow_move_constructible_v<folly::Try<T>>);
-  static_assert(std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>);
-
   switch (kind_) {
     case Kind::Immediate:
       new (&immediate_) folly::Try<T>(std::move(other.immediate_));
@@ -65,10 +64,10 @@ ImmediateFuture<T>::ImmediateFuture(ImmediateFuture<T>&& other) noexcept
 }
 
 template <typename T>
-ImmediateFuture<T>& ImmediateFuture<T>::operator=(
-    ImmediateFuture<T>&& other) noexcept {
-  static_assert(std::is_nothrow_move_constructible_v<folly::Try<T>>);
-  static_assert(std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>);
+ImmediateFuture<T>&
+ImmediateFuture<T>::operator=(ImmediateFuture<T>&& other) noexcept(
+    std::is_nothrow_move_constructible_v<folly::Try<T>>&&
+        std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>) {
   if (this == &other) {
     return *this;
   }

@@ -76,8 +76,12 @@ class ImmediateFuture {
   ImmediateFuture(const ImmediateFuture<T>&) = delete;
   ImmediateFuture<T>& operator=(const ImmediateFuture<T>&) = delete;
 
-  ImmediateFuture(ImmediateFuture<T>&&) noexcept;
-  ImmediateFuture<T>& operator=(ImmediateFuture<T>&&) noexcept;
+  ImmediateFuture(ImmediateFuture<T>&&) noexcept(
+      std::is_nothrow_move_constructible_v<folly::Try<T>>&&
+          std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>);
+  ImmediateFuture<T>& operator=(ImmediateFuture<T>&&) noexcept(
+      std::is_nothrow_move_constructible_v<folly::Try<T>>&&
+          std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>);
 
   /**
    * Call the func continuation once this future is ready.
