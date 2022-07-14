@@ -17,6 +17,9 @@ enum class MountProtocol {
   NFS,
 };
 
+constexpr MountProtocol kMountProtocolDefault =
+    folly::kIsWindows ? MountProtocol::PRJFS : MountProtocol::FUSE;
+
 template <>
 class FieldConverter<MountProtocol> {
  public:

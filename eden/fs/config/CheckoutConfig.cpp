@@ -23,9 +23,10 @@ using folly::ByteRange;
 using folly::IOBuf;
 using folly::StringPiece;
 
+namespace facebook::eden {
 namespace {
 // TOML config file for the individual client.
-const facebook::eden::RelativePathPiece kCheckoutConfig{"config.toml"};
+const RelativePathPiece kCheckoutConfig{"config.toml"};
 
 // Keys for the TOML config file.
 constexpr folly::StringPiece kRepoSection{"repository"};
@@ -40,25 +41,25 @@ constexpr folly::StringPiece kUseWriteBackCache{"use-write-back-cache"};
 constexpr folly::StringPiece kRepoGuid{"guid"};
 #endif
 
-#ifdef _WIN32
-constexpr folly::StringPiece kMountProtocolPrjfs{"prjfs"};
-#else
-constexpr folly::StringPiece kMountProtocolFuse{"fuse"};
-#endif
 constexpr folly::StringPiece kMountProtocolNFS{"nfs"};
 
-#ifdef _WIN32
-constexpr folly::StringPiece kMountProtocolDefault{kMountProtocolPrjfs};
-#else
-constexpr folly::StringPiece kMountProtocolDefault{kMountProtocolFuse};
-#endif
+constexpr auto kMountProtocolStr = [] {
+  std::array<folly::StringPiece, 3> protocolMap;
+  protocolMap[folly::to_underlying(MountProtocol::FUSE)] = "fuse";
+  protocolMap[folly::to_underlying(MountProtocol::PRJFS)] = "prjfs";
+  protocolMap[folly::to_underlying(MountProtocol::FUSE)] = kMountProtocolNFS;
+  return protocolMap;
+}();
+
+constexpr folly::StringPiece kMountProtocolStrDefault{
+    kMountProtocolStr[folly::to_underlying(kMountProtocolDefault)]};
 
 // Files of interest in the client directory.
-const facebook::eden::RelativePathPiece kSnapshotFile{"SNAPSHOT"};
-const facebook::eden::RelativePathPiece kOverlayDir{"local"};
+const RelativePathPiece kSnapshotFile{"SNAPSHOT"};
+const RelativePathPiece kOverlayDir{"local"};
 
 // File holding mapping of client directories.
-const facebook::eden::RelativePathPiece kClientDirectoryMap{"config.json"};
+const RelativePathPiece kClientDirectoryMap{"config.json"};
 
 // Constants for use with the SNAPSHOT file
 //
@@ -100,8 +101,6 @@ enum : uint32_t {
   kSnapshotFormatWorkingCopyParentAndCheckedOutRevisionVersion = 4,
 };
 } // namespace
-
-namespace facebook::eden {
 
 CheckoutConfig::CheckoutConfig(
     AbsolutePathPiece mountPath,
@@ -312,7 +311,7 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
   config->repoSource_ = *repository->get_as<std::string>(kRepoSourceKey.str());
 
   auto mountProtocol = repository->get_as<std::string>(kMountProtocol.str())
-                           .value_or(kMountProtocolDefault);
+                           .value_or(kMountProtocolStrDefault);
   config->mountProtocol_ = mountProtocol == kMountProtocolNFS
       ? MountProtocol::NFS
       : (folly::kIsWindows ? MountProtocol::PRJFS : MountProtocol::FUSE);

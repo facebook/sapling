@@ -150,7 +150,7 @@ class CheckoutConfig {
   const AbsolutePath mountPath_;
   std::string repoType_;
   std::string repoSource_;
-  MountProtocol mountProtocol_;
+  MountProtocol mountProtocol_{kMountProtocolDefault};
   CaseSensitivity caseSensitive_{kPathMapDefaultCaseSensitive};
   bool requireUtf8Path_{true};
 
