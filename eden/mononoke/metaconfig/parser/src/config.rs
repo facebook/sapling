@@ -898,6 +898,7 @@ mod test {
         primary = { db_address = "db_address" }
         filenodes = { sharded = { shard_map = "db_address_shards", shard_num = 123 } }
         mutation = { db_address = "mutation_db_address" }
+        sparse_profiles = { db_address = "sparse_profiles_db_address" }
 
         [main.blobstore.multiplexed]
         multiplex_id = 1
@@ -995,6 +996,9 @@ mod test {
                 }),
                 mutation: RemoteDatabaseConfig {
                     db_address: "mutation_db_address".into(),
+                },
+                sparse_profiles: RemoteDatabaseConfig {
+                    db_address: "sparse_profiles_db_address".into(),
                 },
             }),
             ephemeral_blobstore: None,
@@ -1434,6 +1438,7 @@ mod test {
         primary = { db_address = "some_db" }
         filenodes = { sharded = { shard_map = "some-shards", shard_num = 123 } }
         mutation = { db_address = "some_db" }
+        sparse_profiles = { db_address = "some_db" }
 
         [multiplex_store.blobstore.multiplexed]
         multiplex_id = 1
@@ -1515,6 +1520,9 @@ mod test {
                         mutation: RemoteDatabaseConfig {
                             db_address: "some_db".into(),
                         },
+                        sparse_profiles: RemoteDatabaseConfig {
+                            db_address: "some_db".into(),
+                        },
                     }),
                     ephemeral_blobstore: None,
                 },
@@ -1564,6 +1572,7 @@ mod test {
         primary = { db_address = "other_other_db" }
         filenodes = { sharded = { shard_map = "other-other-shards", shard_num = 789 } }
         mutation = { db_address = "other_other_mutation_db" }
+        sparse_profiles = { db_address = "test_db" }
 
         [storage.multiplex_store.blobstore]
         disabled = {}
@@ -1606,6 +1615,7 @@ mod test {
                         primary: RemoteDatabaseConfig { db_address: "other_other_db".into(), },
                         filenodes: ShardableRemoteDatabaseConfig::Sharded(ShardedRemoteDatabaseConfig { shard_map: "other-other-shards".into(), shard_num: NonZeroUsize::new(789).unwrap() }),
                         mutation: RemoteDatabaseConfig { db_address: "other_other_mutation_db".into(), },
+                        sparse_profiles: RemoteDatabaseConfig { db_address: "test_db".into(), }
                     }),
 
                     ephemeral_blobstore: None,

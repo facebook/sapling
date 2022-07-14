@@ -1167,10 +1167,12 @@ impl RepoFactory {
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcRepoSparseProfiles> {
         let sql = self
-            .open::<SqlSparseProfilesSizes>(&repo_config.storage_config.metadata)
-            .await?;
+            .sql_factory(&repo_config.storage_config.metadata)
+            .await?
+            .open::<SqlSparseProfilesSizes>()
+            .ok();
         Ok(Arc::new(RepoSparseProfiles {
-            sql_profile_sizes: Some(sql),
+            sql_profile_sizes: sql,
         }))
     }
 

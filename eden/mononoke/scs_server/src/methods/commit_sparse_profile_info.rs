@@ -9,7 +9,6 @@ use anyhow::Result;
 use context::CoreContext;
 use itertools::Itertools;
 use mononoke_api::sparse_profile::get_profile_delta_size;
-use mononoke_api::sparse_profile::get_profile_size;
 use mononoke_api::sparse_profile::MonitoringProfiles;
 use mononoke_api::sparse_profile::ProfileSizeChange;
 use mononoke_api::sparse_profile::SparseProfileMonitoring;
@@ -51,7 +50,7 @@ impl SourceControlServiceImpl {
             profiles,
         )?;
         let profiles = monitor.get_monitoring_profiles(&changeset).await?;
-        let sizes_hashmap = get_profile_size(&ctx, &changeset, profiles).await?;
+        let sizes_hashmap = monitor.get_profile_size(&ctx, &changeset, profiles).await?;
         let sizes = sizes_hashmap
             .into_iter()
             .map(|(source, size)| {

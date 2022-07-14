@@ -31,9 +31,12 @@ use mononoke_types::MPath;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
 use repo_sparse_profiles::RepoSparseProfiles;
+use slog::debug;
 use types::RepoPath;
 
 use std::collections::HashMap;
+use std::collections::HashSet;
+use std::ops::Not;
 use std::sync::Arc;
 
 // This struct contains matchers which will be consulted in various scenarious
@@ -47,7 +50,6 @@ use std::sync::Arc;
 //     b. If monitored_profiles is None, then profiles would be checked
 //        in configured location with respect of optional excludes.
 pub struct SparseProfileMonitoring {
-    #[allow(unused)]
     sql_sparse_profiles: Arc<RepoSparseProfiles>,
     sparse_config: SparseProfilesConfig,
     exact_profiles_matcher: pathmatcher::TreeMatcher,
@@ -182,6 +184,51 @@ impl SparseProfileMonitoring {
         };
         matcher.matches(path.to_string())
     }
+
+    pub async fn get_profile_size(
+        &self,
+        ctx: &CoreContext,
+        changeset: &ChangesetContext,
+        paths: Vec<MPath>,
+    ) -> Result<Out, MononokeError> {
+        let cs_id = changeset.id();
+        let maybe_sizes = self
+            .sql_sparse_profiles
+            .get_profiles_sizes(cs_id, paths.iter().map(MPath::to_string).collect())
+            .await?;
+        let (paths_to_calculate, mut sizes) = match maybe_sizes {
+            None => (paths, HashMap::new()),
+            Some(sizes) => {
+                let processed_paths = sizes
+                    .iter()
+                    .map(|(path, _)| MPath::try_from(<String as AsRef<str>>::as_ref(path)))
+                    .collect::<Result<HashSet<_>>>()?;
+                (
+                    paths
+                        .into_iter()
+                        .filter(|path| processed_paths.contains(path).not())
+                        .collect(),
+                    sizes.into_iter().collect(),
+                )
+            }
+        };
+        if paths_to_calculate.is_empty().not() {
+            let matchers = create_matchers(changeset, paths_to_calculate).await?;
+            let other_sizes = calculate_size(ctx, changeset, matchers).await?;
+            let res = self
+                .sql_sparse_profiles
+                .insert_profiles_sizes(cs_id, other_sizes.clone())
+                .await?;
+            if let Some(false) = res {
+                debug!(
+                    ctx.logger(),
+                    "Failed to insert sizes into DB for cs_id {}", cs_id
+                );
+            }
+            sizes.extend(other_sizes);
+        }
+        Ok(sizes)
+    }
 }
 
 pub(crate) async fn fetch(path: String, changeset: &ChangesetContext) -> Result<Option<Vec<u8>>> {
@@ -221,15 +268,6 @@ async fn create_matchers(
         .buffer_unordered(100)
         .try_collect()
         .await
-}
-
-pub async fn get_profile_size(
-    ctx: &CoreContext,
-    changeset: &ChangesetContext,
-    paths: Vec<MPath>,
-) -> Result<Out, MononokeError> {
-    let matchers = create_matchers(changeset, paths).await?;
-    calculate_size(ctx, changeset, matchers).await
 }
 
 type Out = HashMap<String, u64>;
@@ -438,7 +476,7 @@ pub async fn calculate_delta_size<'a>(
         .map(|(source, size)| (source.clone(), ProfileSizeChange::Changed(size)))
         .collect();
     let profile_configs_change =
-        calculate_profile_config_change(ctx, current, other, sparse_config_change).await?;
+        calculate_profile_config_change(ctx, monitor, current, other, sparse_config_change).await?;
     sizes.extend(profile_configs_change.into_iter());
     Ok(sizes
         .into_iter()
@@ -452,6 +490,7 @@ pub async fn calculate_delta_size<'a>(
 
 async fn calculate_profile_config_change<'a>(
     ctx: &'a CoreContext,
+    monitor: &'a SparseProfileMonitoring,
     current: &'a ChangesetContext,
     other: &'a ChangesetContext,
     // This should be changes to the sparse profile configs only
@@ -502,8 +541,8 @@ async fn calculate_profile_config_change<'a>(
         .collect();
 
     let (current_sizes, previous_sizes) = try_join!(
-        get_profile_size(ctx, current, current_paths),
-        get_profile_size(ctx, other, previous_paths)
+        monitor.get_profile_size(ctx, current, current_paths),
+        monitor.get_profile_size(ctx, other, previous_paths)
     )?;
     let mut result = HashMap::new();
     for path in raw_increase {

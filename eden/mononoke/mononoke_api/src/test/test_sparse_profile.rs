@@ -7,7 +7,6 @@
 
 use crate::sparse_profile::fetch;
 use crate::sparse_profile::get_profile_delta_size;
-use crate::sparse_profile::get_profile_size;
 use crate::sparse_profile::MonitoringProfiles;
 use crate::sparse_profile::ProfileSizeChange;
 use crate::sparse_profile::SparseProfileMonitoring;
@@ -273,7 +272,10 @@ async fn sparse_profile_size(fb: FacebookInit) -> Result<()> {
 
     let a = init_sparse_profile(&ctx, &repo, hg_cs_id).await?;
     let changeset_a = ChangesetContext::new(repo.clone(), a);
-    let size = get_profile_size(&ctx, &changeset_a, vec![MPath::new("sparse/include")?]).await?;
+    let monitor = mock_default_sparse_monitoring()?;
+    let size = monitor
+        .get_profile_size(&ctx, &changeset_a, vec![MPath::new("sparse/include")?])
+        .await?;
 
     assert_eq!(size, hashmap! {"sparse/include".to_string() => 45});
 
@@ -286,7 +288,9 @@ async fn sparse_profile_size(fb: FacebookInit) -> Result<()> {
     let b = commit_changes(&ctx, &repo, a, changes).await?;
 
     let changeset_b = ChangesetContext::new(repo.clone(), b);
-    let size = get_profile_size(&ctx, &changeset_b, vec![MPath::new("sparse/include")?]).await?;
+    let size = monitor
+        .get_profile_size(&ctx, &changeset_b, vec![MPath::new("sparse/include")?])
+        .await?;
     assert_eq!(size, hashmap! {"sparse/include".to_string() => 37});
 
     // change size of file which is NOT included in sparse profile
@@ -298,7 +302,9 @@ async fn sparse_profile_size(fb: FacebookInit) -> Result<()> {
     let c = commit_changes(&ctx, &repo, b, changes).await?;
 
     let changeset_c = ChangesetContext::new(repo, c);
-    let size = get_profile_size(&ctx, &changeset_c, vec![MPath::new("sparse/include")?]).await?;
+    let size = monitor
+        .get_profile_size(&ctx, &changeset_c, vec![MPath::new("sparse/include")?])
+        .await?;
     assert_eq!(size, hashmap! {"sparse/include".to_string() => 37});
 
     Ok(())
@@ -330,7 +336,10 @@ async fn multiple_sparse_profile_sizes(fb: FacebookInit) -> Result<()> {
         "sparse/empty".to_string() => 427,
     };
     let profiles_names: Result<Vec<MPath>> = profiles_map.keys().map(MPath::new).collect();
-    let sizes = get_profile_size(&ctx, &changeset_a, profiles_names?).await?;
+    let monitor = mock_default_sparse_monitoring()?;
+    let sizes = monitor
+        .get_profile_size(&ctx, &changeset_a, profiles_names?)
+        .await?;
 
     assert_eq!(sizes, profiles_map);
 

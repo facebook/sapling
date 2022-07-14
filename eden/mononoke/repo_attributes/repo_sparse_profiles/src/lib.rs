@@ -6,6 +6,8 @@
  */
 
 use anyhow::Result;
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::ChangesetId;
 use sql::queries;
 use sql::Connection;
@@ -86,7 +88,13 @@ impl SqlConstruct for SqlSparseProfilesSizes {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlSparseProfilesSizes {}
+impl SqlConstructFromMetadataDatabaseConfig for SqlSparseProfilesSizes {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&RemoteDatabaseConfig> {
+        Some(&remote.sparse_profiles)
+    }
+}
 
 impl SqlSparseProfilesSizes {
     pub async fn get_profiles_sizes(

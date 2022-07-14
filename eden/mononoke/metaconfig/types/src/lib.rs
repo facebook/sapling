@@ -988,6 +988,8 @@ pub struct RemoteMetadataDatabaseConfig {
     pub filenodes: ShardableRemoteDatabaseConfig,
     /// Database for commit mutation metadata.
     pub mutation: RemoteDatabaseConfig,
+    /// Database for sparse profiles sizes.
+    pub sparse_profiles: RemoteDatabaseConfig,
 }
 
 /// Configuration for the Metadata database
