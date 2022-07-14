@@ -2087,3 +2087,132 @@ TEST(DiffTest, diffBetweenRoots) {
           std::make_pair("c", ScmFileStatus::REMOVED),
           std::make_pair("d", ScmFileStatus::ADDED)));
 }
+
+TEST(DiffTest, multiTreeDiff) {
+  TestMount testMount;
+
+  auto builder1 = FakeTreeBuilder();
+  builder1.setFile("a", "A in 1\n");
+  builder1.setFile("b", "B in 1\n");
+  builder1.setFile("c", "C in 1\n");
+  auto rootTree1 = builder1.finalize(testMount.getBackingStore(), true);
+  auto commit1 = testMount.getBackingStore()->putCommit("1", builder1);
+  commit1->setReady();
+
+  auto builder2 = builder1.clone();
+  builder2.replaceFile("a", "A in 2\n");
+  builder2.removeFile("c");
+  builder2.setFile("d", "D in 2\n");
+  auto rootTree2 = builder2.finalize(testMount.getBackingStore(), true);
+  auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
+  commit2->setReady();
+
+  // Checkout commit #2
+  testMount.initialize(RootId("2"));
+
+  const auto& edenMount = testMount.getEdenMount();
+
+  auto root = edenMount->getRootInode();
+
+  DiffContext::LoadFileFunction loadFileContentsFromPath =
+      [edenMount](ObjectFetchContext& fetchContext, RelativePathPiece path) {
+        return edenMount
+            ->EdenMount::loadFileContentsFromPath(
+                fetchContext, path, CacheHint::LikelyNeededAgain)
+            .semi()
+            .via(&folly::QueuedImmediateExecutor::instance());
+      };
+
+  ScmStatusDiffCallback callback;
+  DiffContext diffContext{
+      &callback,
+      folly::CancellationToken{},
+      false, // listIgnored
+      kPathMapDefaultCaseSensitive,
+      testMount.getEdenMount()->getObjectStore(),
+      std::make_unique<TopLevelIgnores>("", ""),
+      std::move(loadFileContentsFromPath)};
+
+  // Modify "a" to match commit 1, even though we're on commit 2.
+  testMount.overwriteFile("a", "A in 1\n");
+
+  // Modify "b" to match neither commit 1 nor commit 2.
+  testMount.overwriteFile("b", "B in 3\n");
+
+  // Test diff against no trees
+  std::vector<std::shared_ptr<const Tree>> trees;
+  root->diff(
+          &diffContext,
+          RelativePathPiece{},
+          std::move(trees),
+          diffContext.getToplevelIgnore(),
+          false)
+      .get(0ms);
+
+  auto status = callback.extractStatus();
+  EXPECT_THAT(*status.errors(), UnorderedElementsAre());
+  EXPECT_THAT(
+      *status.entries(),
+      UnorderedElementsAre(
+          std::make_pair("a", ScmFileStatus::ADDED),
+          std::make_pair("b", ScmFileStatus::ADDED),
+          std::make_pair("d", ScmFileStatus::ADDED)));
+
+  // Test diff against commit1
+  callback = ScmStatusDiffCallback();
+  trees = {std::make_shared<const Tree>(rootTree1->get())};
+  root->diff(
+          &diffContext,
+          RelativePathPiece{},
+          std::move(trees),
+          diffContext.getToplevelIgnore(),
+          false)
+      .get(0ms);
+
+  status = callback.extractStatus();
+  EXPECT_THAT(*status.errors(), UnorderedElementsAre());
+  EXPECT_THAT(
+      *status.entries(),
+      UnorderedElementsAre(
+          std::make_pair("b", ScmFileStatus::MODIFIED),
+          std::make_pair("c", ScmFileStatus::REMOVED),
+          std::make_pair("d", ScmFileStatus::ADDED)));
+
+  // Test diff against commit2
+  callback = ScmStatusDiffCallback();
+  trees = {std::make_shared<const Tree>(rootTree2->get())};
+  root->diff(
+          &diffContext,
+          RelativePathPiece{},
+          std::move(trees),
+          diffContext.getToplevelIgnore(),
+          false)
+      .get(0ms);
+
+  status = callback.extractStatus();
+  EXPECT_THAT(*status.errors(), UnorderedElementsAre());
+  EXPECT_THAT(
+      *status.entries(),
+      UnorderedElementsAre(
+          std::make_pair("a", ScmFileStatus::MODIFIED),
+          std::make_pair("b", ScmFileStatus::MODIFIED)));
+
+  // Test diff against commit1 and commit2
+  callback = ScmStatusDiffCallback();
+  trees = {
+      std::make_shared<const Tree>(rootTree1->get()),
+      std::make_shared<const Tree>(rootTree2->get())};
+  root->diff(
+          &diffContext,
+          RelativePathPiece{},
+          std::move(trees),
+          diffContext.getToplevelIgnore(),
+          false)
+      .get(0ms);
+
+  status = callback.extractStatus();
+  EXPECT_THAT(*status.errors(), UnorderedElementsAre());
+  EXPECT_THAT(
+      *status.entries(),
+      UnorderedElementsAre(std::make_pair("b", ScmFileStatus::MODIFIED)));
+}
