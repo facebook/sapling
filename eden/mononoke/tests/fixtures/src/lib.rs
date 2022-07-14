@@ -33,8 +33,8 @@ use sorted_vector_map::SortedVectorMap;
 use std::collections::BTreeMap;
 use std::str::FromStr;
 use test_repo_factory::TestRepoFactory;
+use tests_utils::BasicTestRepo;
 use tests_utils::Repo;
-use tests_utils::TestRepo;
 
 pub async fn store_files(
     ctx: &CoreContext,
@@ -163,8 +163,8 @@ pub trait TestRepoFixture {
 
     async fn initrepo(fb: FacebookInit, blobrepo: &impl Repo);
 
-    async fn get_test_repo(fb: FacebookInit) -> TestRepo {
-        let repo: TestRepo = TestRepoFactory::new(fb)
+    async fn get_test_repo(fb: FacebookInit) -> BasicTestRepo {
+        let repo: BasicTestRepo = TestRepoFactory::new(fb)
             .unwrap()
             .with_id(RepositoryId::new(0))
             .with_name(Self::REPO_NAME.to_string())

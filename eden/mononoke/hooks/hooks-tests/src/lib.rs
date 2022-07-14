@@ -61,8 +61,8 @@ use std::collections::HashSet;
 use tests_utils::bookmark;
 use tests_utils::create_commit;
 use tests_utils::store_files;
+use tests_utils::BasicTestRepo;
 use tests_utils::CreateCommitContext;
-use tests_utils::TestRepo;
 
 #[derive(Clone, Debug)]
 struct FnChangesetHook {
@@ -948,7 +948,7 @@ async fn test_file_hook_length(fb: FacebookInit) {
 #[fbinit::test]
 async fn test_cs_find_content_hook_with_blob_store(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+    let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
     let root_id = CreateCommitContext::new_root(&ctx, &repo)
         .add_file("dir/file", "dir/file")
         .add_file("dir-2/file", "dir-2/file")
@@ -1037,7 +1037,7 @@ async fn test_cs_find_content_hook_with_blob_store(fb: FacebookInit) -> Result<(
 #[fbinit::test]
 async fn test_cs_file_changes_hook_with_blob_store(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+    let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
     let root_id = CreateCommitContext::new_root(&ctx, &repo)
         .add_file("file", "file")
         .add_file("dir/file", "dir/file")
@@ -1093,7 +1093,7 @@ async fn test_cs_file_changes_hook_with_blob_store(fb: FacebookInit) -> Result<(
 #[fbinit::test]
 async fn test_cs_latest_changes_hook_with_blob_store(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+    let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
     let root_id = CreateCommitContext::new_root(&ctx, &repo)
         .add_file("file", "file")
         .commit()
@@ -1161,7 +1161,7 @@ async fn test_file_hooks_with_blob_store(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     // Create an init a repo
     let (repo, bcs_id) = {
-        let repo: TestRepo = test_repo_factory::build_empty(fb).unwrap();
+        let repo: BasicTestRepo = test_repo_factory::build_empty(fb).unwrap();
 
         let parent = create_commit(
             ctx.clone(),
@@ -1289,7 +1289,7 @@ async fn run_changeset_hooks_with_mgr(
 
 enum ContentFetcherType {
     InMemory,
-    Blob(TestRepo),
+    Blob(BasicTestRepo),
 }
 
 async fn run_file_hooks(
@@ -1417,7 +1417,7 @@ fn default_changeset() -> BonsaiChangeset {
     }.freeze().expect("Created changeset")
 }
 
-async fn hook_manager_repo(fb: FacebookInit, repo: &TestRepo) -> HookManager {
+async fn hook_manager_repo(fb: FacebookInit, repo: &BasicTestRepo) -> HookManager {
     let ctx = CoreContext::test_mock(fb);
 
     let content_manager = RepoFileContentManager::new(&repo);

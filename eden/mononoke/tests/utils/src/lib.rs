@@ -66,7 +66,11 @@ pub trait Repo = BonsaiHgMappingRef
 
 #[facet::container]
 #[derive(Clone)]
-pub struct TestRepo {
+/// This BasicTestRepo provides enough functionality for the methods in tests_utils to
+/// be used. Please don't add new facets to this type, instead create your own test repo type
+/// for your tests. You can list out all of the facets individually, or embed BasicTestRepo in your
+/// new struct and use delegate to make its facets accessible.
+pub struct BasicTestRepo {
     #[facet]
     pub repo_blobstore: RepoBlobstore,
 

@@ -224,7 +224,7 @@ mod test {
     use tests_utils::CreateCommitContext;
 
     #[facet::container]
-    struct TestRepo {
+    struct BasicTestRepo {
         #[delegate(
             dyn BonsaiHgMapping,
             dyn BonsaiGitMapping,
@@ -251,7 +251,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_commit_simple(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
 
         let root = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("first", "a")
@@ -343,7 +343,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_commit_with_renames(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
 
         let root = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("first", "a")
@@ -385,7 +385,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_commit_renamed_to_multiple_dest(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
 
         let root = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("first", "a")

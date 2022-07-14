@@ -233,13 +233,13 @@ mod test {
     use hooks_content_stores::RepoFileContentManager;
     use maplit::hashmap;
     use std::collections::HashMap;
+    use tests_utils::BasicTestRepo;
     use tests_utils::CreateCommitContext;
-    use tests_utils::TestRepo;
 
     #[fbinit::test]
     async fn test_limitcommitsize(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
         borrowed!(ctx, repo);
 
         let cs_id = CreateCommitContext::new_root(ctx, repo)
@@ -319,7 +319,7 @@ mod test {
     #[fbinit::test]
     async fn test_limitcommitsize_removed_files(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
         borrowed!(ctx, repo);
 
         let parent_cs_id = CreateCommitContext::new_root(ctx, repo)
@@ -379,7 +379,7 @@ mod test {
     #[fbinit::test]
     async fn test_limitcommitsize_override(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
         borrowed!(ctx, repo);
 
         let cs_id = CreateCommitContext::new_root(ctx, repo)
@@ -423,7 +423,7 @@ mod test {
     #[fbinit::test]
     async fn test_limitcommitsize_override_hits_limit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
         borrowed!(ctx, repo);
 
         let cs_id = CreateCommitContext::new_root(ctx, repo)

@@ -291,12 +291,12 @@ mod test {
     use tests_utils::CreateCommitContext;
     use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
 
-    struct TestRepo {
+    struct BasicTestRepo {
         repo: BlobRepo,
         wbc: Option<Arc<dyn BookmarksCache>>,
     }
 
-    impl BookmarkCacheRepo for TestRepo {
+    impl BookmarkCacheRepo for BasicTestRepo {
         fn blobrepo(&self) -> &BlobRepo {
             &self.repo
         }
@@ -336,7 +336,7 @@ mod test {
 
         // Let's try without WarmBookmarkCache first
         println!("No warm bookmark cache");
-        let session_bookmark_cache = SessionBookmarkCache::new(TestRepo {
+        let session_bookmark_cache = SessionBookmarkCache::new(BasicTestRepo {
             repo: repo.blob_repo.clone(),
             wbc: None,
         });
@@ -347,7 +347,7 @@ mod test {
         let mut builder = WarmBookmarksCacheBuilder::new(ctx.clone(), &repo);
         builder.add_hg_warmers()?;
         let wbc = builder.build().await?;
-        let session_bookmark_cache = SessionBookmarkCache::new(TestRepo {
+        let session_bookmark_cache = SessionBookmarkCache::new(BasicTestRepo {
             repo: repo.blob_repo.clone(),
             wbc: Some(Arc::new(wbc)),
         });
@@ -359,7 +359,7 @@ mod test {
     async fn validate(
         ctx: &CoreContext,
         hg_cs_id: HgChangesetId,
-        session_bookmark_cache: &SessionBookmarkCache<TestRepo>,
+        session_bookmark_cache: &SessionBookmarkCache<BasicTestRepo>,
     ) -> Result<(), Error> {
         let maybe_hg_cs_id = session_bookmark_cache
             .get_bookmark(ctx.clone(), BookmarkName::new("prefix/scratchbook")?)

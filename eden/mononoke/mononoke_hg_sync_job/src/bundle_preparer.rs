@@ -589,12 +589,12 @@ mod test {
     use mononoke_types::RepositoryId;
     use skiplist::SkiplistIndex;
     use tests_utils::drawdag::create_from_dag;
-    use tests_utils::TestRepo;
+    use tests_utils::BasicTestRepo;
 
     #[fbinit::test]
     async fn test_split_in_batches_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
 
         let commits = create_from_dag(
             &ctx,
@@ -630,7 +630,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_in_batches_all_in_one_batch(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
 
         let commits = create_from_dag(
             &ctx,
@@ -667,7 +667,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_in_batches_different_bookmarks(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
 
         let commits = create_from_dag(
             &ctx,
@@ -719,7 +719,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_in_batches_non_forward_move(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
 
         let commits = create_from_dag(
             &ctx,
@@ -766,7 +766,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_in_batches_weird_move(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
 
         let commits = create_from_dag(
             &ctx,
@@ -807,7 +807,7 @@ mod test {
     #[fbinit::test]
     async fn test_maybe_adjust_batch(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
 
         let commits = create_from_dag(
             &ctx,
