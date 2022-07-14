@@ -1164,13 +1164,17 @@ void runTestSetPathObjectId(
   RelativePathPiece path{pathToSet};
 
   auto setPathObjectIdResultAndTimesAndTimes =
-      testMount.getEdenMount()->setPathObjectId(
-          path,
-          RootId{"2"},
-          facebook::eden::ObjectType::TREE,
-          facebook::eden::CheckoutMode::NORMAL,
-          ObjectFetchContext::getNullContext());
+      testMount.getEdenMount()
+          ->setPathObjectId(
+              path,
+              RootId{"2"},
+              facebook::eden::ObjectType::TREE,
+              facebook::eden::CheckoutMode::NORMAL,
+              ObjectFetchContext::getNullContext())
+          .semi()
+          .via(testMount.getServerExecutor().get());
 
+  testMount.drainServerExecutor();
   auto result = std::move(setPathObjectIdResultAndTimesAndTimes).get();
   EXPECT_EQ(0, result.result.conflicts_ref()->size());
 
@@ -1235,12 +1239,17 @@ TEST(Checkout, testSetPathObjectIdConflict) {
   SetPathObjectIdParams params;
   params.type_ref() = facebook::eden::ObjectType::TREE;
   auto setPathObjectIdResultAndTimes =
-      testMount.getEdenMount()->setPathObjectId(
-          path,
-          RootId{"2"},
-          facebook::eden::ObjectType::TREE,
-          facebook::eden::CheckoutMode::NORMAL,
-          ObjectFetchContext::getNullContext());
+      testMount.getEdenMount()
+          ->setPathObjectId(
+              path,
+              RootId{"2"},
+              facebook::eden::ObjectType::TREE,
+              facebook::eden::CheckoutMode::NORMAL,
+              ObjectFetchContext::getNullContext())
+          .semi()
+          .via(testMount.getServerExecutor().get());
+
+  testMount.drainServerExecutor();
 
   auto result = std::move(setPathObjectIdResultAndTimes).get();
   ASSERT_TRUE(result.result.conflicts_ref().has_value());
@@ -1307,12 +1316,17 @@ TEST(Checkout, testSetPathObjectIdLastCheckoutTime) {
   SetPathObjectIdParams params;
   params.type_ref() = facebook::eden::ObjectType::TREE;
   auto setPathObjectIdResultAndTimes =
-      testMount.getEdenMount()->setPathObjectId(
-          path,
-          RootId{"2"},
-          facebook::eden::ObjectType::TREE,
-          facebook::eden::CheckoutMode::NORMAL,
-          ObjectFetchContext::getNullContext());
+      testMount.getEdenMount()
+          ->setPathObjectId(
+              path,
+              RootId{"2"},
+              facebook::eden::ObjectType::TREE,
+              facebook::eden::CheckoutMode::NORMAL,
+              ObjectFetchContext::getNullContext())
+          .semi()
+          .via(testMount.getServerExecutor().get());
+
+  testMount.drainServerExecutor();
 
   auto result = std::move(setPathObjectIdResultAndTimes).get();
   EXPECT_EQ(0, result.result.conflicts_ref()->size());
@@ -1346,12 +1360,17 @@ TEST(Checkout, testSetPathObjectIdCheckoutSingleFile) {
   RelativePathPiece path{"dir/dir2/dir3/file.txt"};
 
   auto setPathObjectIdResultAndTimes =
-      testMount.getEdenMount()->setPathObjectId(
-          path,
-          RootId{"2"},
-          facebook::eden::ObjectType::REGULAR_FILE,
-          facebook::eden::CheckoutMode::NORMAL,
-          ObjectFetchContext::getNullContext());
+      testMount.getEdenMount()
+          ->setPathObjectId(
+              path,
+              RootId{"2"},
+              facebook::eden::ObjectType::REGULAR_FILE,
+              facebook::eden::CheckoutMode::NORMAL,
+              ObjectFetchContext::getNullContext())
+          .semi()
+          .via(testMount.getServerExecutor().get());
+
+  testMount.drainServerExecutor();
 
   auto result = std::move(setPathObjectIdResultAndTimes).get();
   EXPECT_EQ(0, result.result.conflicts_ref()->size());
@@ -1374,12 +1393,17 @@ TEST(Checkout, testSetPathObjectIdCheckoutMultipleFiles) {
   RelativePathPiece path2{"dir/dir2/dir3/file2.txt"};
 
   auto setPathObjectIdResultAndTimes =
-      testMount.getEdenMount()->setPathObjectId(
-          path,
-          RootId{"1"},
-          facebook::eden::ObjectType::REGULAR_FILE,
-          facebook::eden::CheckoutMode::NORMAL,
-          ObjectFetchContext::getNullContext());
+      testMount.getEdenMount()
+          ->setPathObjectId(
+              path,
+              RootId{"1"},
+              facebook::eden::ObjectType::REGULAR_FILE,
+              facebook::eden::CheckoutMode::NORMAL,
+              ObjectFetchContext::getNullContext())
+          .semi()
+          .via(testMount.getServerExecutor().get());
+
+  testMount.drainServerExecutor();
 
   auto result = std::move(setPathObjectIdResultAndTimes).get();
   EXPECT_EQ(0, result.result.conflicts_ref()->size());
@@ -1388,12 +1412,17 @@ TEST(Checkout, testSetPathObjectIdCheckoutMultipleFiles) {
   EXPECT_FILE_INODE(testMount.getFileInode(path), contents, 0644);
 
   auto setPathObjectIdResultAndTimes2 =
-      testMount.getEdenMount()->setPathObjectId(
-          path2,
-          RootId{"2"},
-          facebook::eden::ObjectType::REGULAR_FILE,
-          facebook::eden::CheckoutMode::NORMAL,
-          ObjectFetchContext::getNullContext());
+      testMount.getEdenMount()
+          ->setPathObjectId(
+              path2,
+              RootId{"2"},
+              facebook::eden::ObjectType::REGULAR_FILE,
+              facebook::eden::CheckoutMode::NORMAL,
+              ObjectFetchContext::getNullContext())
+          .semi()
+          .via(testMount.getServerExecutor().get());
+
+  testMount.drainServerExecutor();
 
   auto result2 = std::move(setPathObjectIdResultAndTimes2).get();
   EXPECT_EQ(0, result2.result.conflicts_ref()->size());
