@@ -715,7 +715,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * for the current directory and then invokes computeDiff() to perform the
    * diff once all .gitignore data is loaded.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> computeDiff(
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> computeDiff(
       folly::Synchronized<TreeInodeState>::LockedPtr contentsLock,
       DiffContext* context,
       RelativePathPiece currentPath,

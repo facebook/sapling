@@ -2335,12 +2335,14 @@ Future<Unit> TreeInode::diff(
       // Since the entire directory is ignored, we don't need to check ignore
       // status for any entries that aren't already tracked in source control.
       return computeDiff(
-          std::move(contents),
-          context,
-          currentPath,
-          std::move(trees),
-          nullptr,
-          isIgnored);
+                 std::move(contents),
+                 context,
+                 currentPath,
+                 std::move(trees),
+                 nullptr,
+                 isIgnored)
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
     }
 
     // Load the ignore rules for this directory.
@@ -2363,12 +2365,15 @@ Future<Unit> TreeInode::diff(
 
     if (!gitignoreEntry) {
       return computeDiff(
-          std::move(contents),
-          context,
-          currentPath,
-          std::move(trees),
-          make_unique<GitIgnoreStack>(parentIgnore), // empty with no rules
-          isIgnored);
+                 std::move(contents),
+                 context,
+                 currentPath,
+                 std::move(trees),
+                 make_unique<GitIgnoreStack>(
+                     parentIgnore), // empty with no rules
+                 isIgnored)
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
     }
 
     XLOG(DBG7) << "Loading ignore file for " << getLogPath();
@@ -2437,13 +2442,15 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
                   trees = std::move(trees),
                   parentIgnore,
                   isIgnored](std::string&& ignoreFileContents) mutable {
-        return self->computeDiff(
-            self->contents_.wlock(),
-            context,
-            currentPath,
-            std::move(trees),
-            make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents),
-            isIgnored);
+        return self
+            ->computeDiff(
+                self->contents_.wlock(),
+                context,
+                currentPath,
+                std::move(trees),
+                make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents),
+                isIgnored)
+            .semi();
       });
 }
 
@@ -2472,7 +2479,7 @@ algorithm, but runs purely recursively instead of using `DeferredDiffEntries`
 due to the fact that we do not need to worry about recursive lock holding since
 the only time a lock is held in this path is when we load gitignore files.
 */
-Future<Unit> TreeInode::computeDiff(
+ImmediateFuture<Unit> TreeInode::computeDiff(
     folly::Synchronized<TreeInodeState>::LockedPtr contentsLock,
     DiffContext* context,
     RelativePathPiece currentPath,
@@ -2537,21 +2544,23 @@ Future<Unit> TreeInode::computeDiff(
         if (!entryIgnored || context->listIgnored) {
           if (auto childPtr = inodeEntry->getInodePtr()) {
             deferredEntries.emplace_back(
-                DeferredDiffEntry::createUntrackedEntryFromInodeFuture(
+                DeferredDiffEntry::createUntrackedEntry(
                     context,
                     entryPath,
                     std::move(childPtr),
                     ignore.get(),
                     entryIgnored));
           } else if (inodeEntry->isMaterialized()) {
-            auto inodeFuture = self->loadChildLocked(
-                contents->entries,
-                name,
-                *inodeEntry,
-                pendingLoads,
-                context->getFetchContext());
+            ImmediateFuture<InodePtr> inodeFuture =
+                self->loadChildLocked(
+                        contents->entries,
+                        name,
+                        *inodeEntry,
+                        pendingLoads,
+                        context->getFetchContext())
+                    .semi();
             deferredEntries.emplace_back(
-                DeferredDiffEntry::createUntrackedEntryFromInodeFuture(
+                DeferredDiffEntry::createUntrackedEntry(
                     context,
                     entryPath,
                     std::move(inodeFuture),
@@ -2624,20 +2633,21 @@ Future<Unit> TreeInode::computeDiff(
       } else if (inodeEntry->isMaterialized()) {
         // This inode is not loaded but is materialized.
         // We'll have to load it to confirm if it is the same or different.
-        auto inodeFuture = self->loadChildLocked(
-            contents->entries,
-            componentPath,
-            *inodeEntry,
-            pendingLoads,
-            context->getFetchContext());
-        deferredEntries.emplace_back(
-            DeferredDiffEntry::createModifiedEntryFromInodeFuture(
-                context,
-                entryPath,
-                std::move(scmEntries),
-                std::move(inodeFuture),
-                ignore.get(),
-                entryIgnored));
+        ImmediateFuture<InodePtr> inodeFuture =
+            self->loadChildLocked(
+                    contents->entries,
+                    componentPath,
+                    *inodeEntry,
+                    pendingLoads,
+                    context->getFetchContext())
+                .semi();
+        deferredEntries.emplace_back(DeferredDiffEntry::createModifiedEntry(
+            context,
+            entryPath,
+            std::move(scmEntries),
+            std::move(inodeFuture),
+            ignore.get(),
+            entryIgnored));
       } else {
         // If the inode is neither loaded nor materialized, then the inode
         // points at source control objects. At this point we check to see if
@@ -2828,7 +2838,7 @@ Future<Unit> TreeInode::computeDiff(
   }
 
   // Now process all of the deferred work.
-  vector<Future<Unit>> deferredFutures;
+  std::vector<ImmediateFuture<Unit>> deferredFutures;
   for (auto& entry : deferredEntries) {
     deferredFutures.push_back(entry->run());
   }
@@ -2837,8 +2847,7 @@ Future<Unit> TreeInode::computeDiff(
   // Note that we explicitly move-capture the deferredFutures vector into this
   // callback, to ensure that the DeferredDiffEntry objects do not get
   // destroyed before they complete.
-  return folly::collectAll(deferredFutures)
-      .toUnsafeFuture()
+  return collectAll(std::move(deferredFutures))
       .thenValue([self = std::move(self),
                   currentPath = RelativePath{std::move(currentPath)},
                   context,
@@ -2846,7 +2855,7 @@ Future<Unit> TreeInode::computeDiff(
                   // children's diff operations complete.
                   ignore = std::move(ignore),
                   deferredJobs = std::move(deferredEntries)](
-                     vector<folly::Try<Unit>> results) {
+                     std::vector<folly::Try<Unit>> results) {
         // Call diffError() for any jobs that failed.
         for (size_t n = 0; n < results.size(); ++n) {
           auto& result = results[n];
@@ -2861,7 +2870,7 @@ Future<Unit> TreeInode::computeDiff(
         // Report success here, even if some of our deferred jobs failed.
         // We will have reported those errors to the callback already, and so we
         // don't want our parent to report a new error at our path.
-        return makeFuture();
+        return folly::unit;
       });
 }
 

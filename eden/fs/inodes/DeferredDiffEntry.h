@@ -13,12 +13,13 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
-template <typename T>
-class Future;
 struct Unit;
 } // namespace folly
 
 namespace facebook::eden {
+
+template <typename T>
+class ImmediateFuture;
 
 class DiffContext;
 class GitIgnoreStack;
@@ -48,27 +49,12 @@ class DeferredDiffEntry {
     return path_;
   }
 
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> run() = 0;
+  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> run() = 0;
 
   static std::unique_ptr<DeferredDiffEntry> createUntrackedEntry(
       DiffContext* context,
       RelativePath path,
-      InodePtr inode,
-      const GitIgnoreStack* ignore,
-      bool isIgnored);
-
-  /*
-   * This is named differently from the createUntrackedEntry() function above
-   * just to avoid ambiguous overload calls--folly::Future<X> can unfortunately
-   * be implicitly constructed from X.  We could help the compiler avoid the
-   * ambiguity by making the Future<InodePtr> version of createUntrackedEntry()
-   * be a template method.  However, just using a separate name is easier for
-   * now.
-   */
-  static std::unique_ptr<DeferredDiffEntry> createUntrackedEntryFromInodeFuture(
-      DiffContext* context,
-      RelativePath path,
-      folly::Future<InodePtr>&& inodeFuture,
+      ImmediateFuture<InodePtr>&& inodeFuture,
       const GitIgnoreStack* ignore,
       bool isIgnored);
 
@@ -80,25 +66,17 @@ class DeferredDiffEntry {
   static std::unique_ptr<DeferredDiffEntry> createModifiedEntry(
       DiffContext* context,
       RelativePath path,
-      std::vector<TreeEntry> scmEntries,
-      InodePtr inode,
-      const GitIgnoreStack* ignore,
-      bool isIgnored);
-
-  static std::unique_ptr<DeferredDiffEntry> createModifiedEntryFromInodeFuture(
-      DiffContext* context,
-      RelativePath path,
-      std::vector<TreeEntry> scmEntries,
-      folly::Future<InodePtr>&& inodeFuture,
-      const GitIgnoreStack* ignore,
-      bool isIgnored);
+      const TreeEntry& scmEntry,
+      ObjectId currentBlobHash,
+      dtype_t currentDType);
 
   static std::unique_ptr<DeferredDiffEntry> createModifiedEntry(
       DiffContext* context,
       RelativePath path,
-      const TreeEntry& scmEntry,
-      ObjectId currentBlobHash,
-      dtype_t currentDType);
+      std::vector<TreeEntry> scmEntries,
+      ImmediateFuture<InodePtr>&& inodeFuture,
+      const GitIgnoreStack* ignore,
+      bool isIgnored);
 
   static std::unique_ptr<DeferredDiffEntry> createModifiedScmEntry(
       DiffContext* context,

@@ -36,66 +36,39 @@ class UntrackedDiffEntry : public DeferredDiffEntry {
   UntrackedDiffEntry(
       DiffContext* context,
       RelativePath path,
-      InodePtr inode,
+      ImmediateFuture<InodePtr>&& inodeFuture,
       const GitIgnoreStack* ignore,
       bool isIgnored)
       : DeferredDiffEntry{context, std::move(path)},
         ignore_{ignore},
         isIgnored_{isIgnored},
-        inode_{std::move(inode)} {}
+        inodeFuture_{std::move(inodeFuture)} {}
 
-  /*
-   * This is a template just to avoid ambiguity with the prior constructor,
-   * since folly::Future<X> can unfortunately be implicitly constructed from X.
-   */
-  template <
-      typename InodeFuture,
-      typename X = typename std::enable_if<
-          std::is_same<folly::Future<InodePtr>, InodeFuture>::value,
-          void>>
-  UntrackedDiffEntry(
-      DiffContext* context,
-      RelativePath path,
-      InodeFuture&& inodeFuture,
-      const GitIgnoreStack* ignore,
-      bool isIgnored)
-      : DeferredDiffEntry{context, std::move(path)},
-        ignore_{ignore},
-        isIgnored_{isIgnored},
-        inodeFuture_{std::forward<InodeFuture>(inodeFuture)} {}
+  ImmediateFuture<folly::Unit> run() override {
+    return std::move(inodeFuture_)
+        .thenValue([this](InodePtr inode) -> ImmediateFuture<folly::Unit> {
+          auto treeInode = inode.asTreePtrOrNull();
+          if (!treeInode.get()) {
+            return EDEN_BUG_FUTURE(Unit)
+                << "UntrackedDiffEntry should only used with tree inodes";
+          }
 
-  folly::Future<folly::Unit> run() override {
-    // If we have an inodeFuture_ to wait on, wait for it to finish,
-    // then store the resulting inode_ and invoke run() again.
-    if (inodeFuture_.valid()) {
-      XCHECK(!inode_) << "cannot have both inode_ and inodeFuture_ set";
-      return std::move(inodeFuture_).thenValue([this](InodePtr inode) {
-        inode_ = std::move(inode);
-        inodeFuture_ = folly::Future<InodePtr>::makeEmpty();
-        return run();
-      });
-    }
-
-    auto treeInode = inode_.asTreePtrOrNull();
-    if (!treeInode.get()) {
-      return EDEN_BUG_FUTURE(Unit)
-          << "UntrackedDiffEntry should only used with tree inodes";
-    }
-
-    // Recursively diff the untracked directory.
-    return treeInode->diff(
-        context_,
-        getPath(),
-        std::vector<shared_ptr<const Tree>>{},
-        ignore_,
-        isIgnored_);
+          // Recursively diff the untracked directory.
+          return treeInode
+              ->diff(
+                  context_,
+                  getPath(),
+                  std::vector<shared_ptr<const Tree>>{},
+                  ignore_,
+                  isIgnored_)
+              .semi();
+        });
   }
 
  private:
   const GitIgnoreStack* ignore_{nullptr};
   bool isIgnored_{false};
-  InodePtr inode_;
-  folly::Future<InodePtr> inodeFuture_ = folly::Future<InodePtr>::makeEmpty();
+  ImmediateFuture<InodePtr> inodeFuture_;
 };
 
 class ModifiedDiffEntry : public DeferredDiffEntry {
@@ -104,22 +77,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       DiffContext* context,
       RelativePath path,
       std::vector<TreeEntry> scmEntries,
-      InodePtr inode,
-      const GitIgnoreStack* ignore,
-      bool isIgnored)
-      : DeferredDiffEntry{context, std::move(path)},
-        ignore_{ignore},
-        isIgnored_{isIgnored},
-        scmEntries_{std::move(scmEntries)},
-        inode_{std::move(inode)} {
-    XCHECK_GT(scmEntries_.size(), 0ull) << "scmEntries must have values";
-  }
-
-  ModifiedDiffEntry(
-      DiffContext* context,
-      RelativePath path,
-      std::vector<TreeEntry> scmEntries,
-      folly::Future<InodePtr>&& inodeFuture,
+      ImmediateFuture<InodePtr>&& inodeFuture,
       const GitIgnoreStack* ignore,
       bool isIgnored)
       : DeferredDiffEntry{context, std::move(path)},
@@ -130,31 +88,22 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
     XCHECK_GT(scmEntries_.size(), 0ull) << "scmEntries must have values";
   }
 
-  folly::Future<folly::Unit> run() override {
-    // If we have an inodeFuture_, wait on it to complete.
+  ImmediateFuture<folly::Unit> run() override {
     // TODO: Load the inode in parallel with loading the source control data
     // below.
-    if (inodeFuture_.valid()) {
-      XCHECK(!inode_) << "cannot have both inode_ and inodeFuture_ set";
-      return std::move(inodeFuture_).thenValue([this](InodePtr inode) {
-        inode_ = std::move(inode);
-        inodeFuture_ = Future<InodePtr>::makeEmpty();
-        return run();
-      });
-    }
-
-    XCHECK_GT(scmEntries_.size(), 0ull) << "scmEntries must have values";
-    if (scmEntries_[0].isTree()) {
-      return runForScmTree();
-    } else {
-      return runForScmBlob();
-    }
+    return std::move(inodeFuture_).thenValue([this](InodePtr inode) {
+      if (scmEntries_[0].isTree()) {
+        return runForScmTree(inode);
+      } else {
+        return runForScmBlob(inode);
+      }
+    });
   }
 
  private:
-  folly::Future<folly::Unit> runForScmTree() {
+  ImmediateFuture<folly::Unit> runForScmTree(const InodePtr& inode) {
     XCHECK_GT(scmEntries_.size(), 0ull) << "scmEntries must have values";
-    auto treeInode = inode_.asTreePtrOrNull();
+    auto treeInode = inode.asTreePtrOrNull();
     if (!treeInode) {
       // This is a Tree in the source control state, but a file or symlink
       // in the current filesystem state.
@@ -163,20 +112,18 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       if (isIgnored_) {
         if (context_->listIgnored) {
           XLOG(DBG6) << "directory --> ignored file: " << getPath();
-          context_->callback->ignoredPath(getPath(), inode_->getType());
+          context_->callback->ignoredPath(getPath(), inode->getType());
         }
       } else {
         XLOG(DBG6) << "directory --> untracked file: " << getPath();
-        context_->callback->addedPath(getPath(), inode_->getType());
+        context_->callback->addedPath(getPath(), inode->getType());
       }
       // Since this is a file or symlink in the current filesystem state, but a
       // Tree in the source control state, we have to record the files from the
       // Tree as removed. We can delegate this work to the source control tree
       // differ.
       context_->callback->removedPath(getPath(), scmEntries_[0].getDType());
-      return diffRemovedTree(context_, getPath(), scmEntries_[0].getHash())
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+      return diffRemovedTree(context_, getPath(), scmEntries_[0].getHash());
     }
 
     {
@@ -186,7 +133,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
           if (contents->treeHash.value() == scmEntry.getHash()) {
             // It did not change since it was loaded,
             // and it matches the scmEntry we're diffing against.
-            return makeFuture();
+            return folly::unit;
           }
         }
 
@@ -196,20 +143,18 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
         auto contentsHash = contents->treeHash.value();
         contents.unlock();
         return diffTrees(
-                   context_,
-                   getPath(),
-                   scmEntries_[0].getHash(),
-                   contentsHash,
-                   ignore_,
-                   isIgnored_)
-            .semi()
-            .via(&folly::QueuedImmediateExecutor::instance());
+            context_,
+            getPath(),
+            scmEntries_[0].getHash(),
+            contentsHash,
+            ignore_,
+            isIgnored_);
       }
     }
 
     // Possibly modified directory.  Load the Tree in question.
     std::vector<ImmediateFuture<shared_ptr<const Tree>>> fetches{};
-    fetches.reserve((this->scmEntries_).size());
+    fetches.reserve(scmEntries_.size());
     for (auto& scmEntry : scmEntries_) {
       fetches.push_back(context_->store->getTree(
           scmEntry.getHash(), context_->getFetchContext()));
@@ -220,14 +165,12 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
           return treeInode
               ->diff(context_, getPath(), std::move(trees), ignore_, isIgnored_)
               .semi();
-        })
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance());
+        });
   }
 
-  folly::Future<folly::Unit> runForScmBlob() {
-    auto fileInode = inode_.asFilePtrOrNull();
+  ImmediateFuture<folly::Unit> runForScmBlob(const InodePtr& inode) {
     XCHECK_GT(scmEntries_.size(), 0ull) << "scmEntries must have values";
+    auto fileInode = inode.asFilePtrOrNull();
     if (!fileInode) {
       // This is a file in the source control state, but a directory
       // in the current filesystem state.
@@ -236,39 +179,38 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       auto path = getPath();
       XLOG(DBG5) << "removed file: " << path;
       context_->callback->removedPath(path, scmEntries_[0].getDType());
-      context_->callback->addedPath(path, inode_->getType());
-      auto treeInode = inode_.asTreePtr();
+      context_->callback->addedPath(path, inode->getType());
+      auto treeInode = inode.asTreePtr();
       if (isIgnored_ && !context_->listIgnored) {
-        return makeFuture();
+        return folly::unit;
       }
-      return treeInode->diff(
-          context_,
-          getPath(),
-          std::vector<shared_ptr<const Tree>>{},
-          ignore_,
-          isIgnored_);
+      return treeInode
+          ->diff(
+              context_,
+              getPath(),
+              std::vector<shared_ptr<const Tree>>{},
+              ignore_,
+              isIgnored_)
+          .semi();
     }
 
-    return fileInode
-        ->isSameAs(
-            scmEntries_[0].getHash(),
-            scmEntries_[0].getType(),
-            context_->getFetchContext())
-        .thenValue([this](bool isSame) {
+    auto isSameAsFut = fileInode->isSameAs(
+        scmEntries_[0].getHash(),
+        scmEntries_[0].getType(),
+        context_->getFetchContext());
+    return std::move(isSameAsFut)
+        .thenValue([this, fileInode = std::move(fileInode)](bool isSame) {
           if (!isSame) {
             XLOG(DBG5) << "modified file: " << getPath();
-            context_->callback->modifiedPath(getPath(), inode_->getType());
+            context_->callback->modifiedPath(getPath(), fileInode->getType());
           }
-        })
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance());
+        });
   }
 
   const GitIgnoreStack* ignore_{nullptr};
   bool isIgnored_{false};
   std::vector<TreeEntry> scmEntries_;
-  folly::Future<InodePtr> inodeFuture_ = folly::Future<InodePtr>::makeEmpty();
-  InodePtr inode_;
+  ImmediateFuture<InodePtr> inodeFuture_;
   shared_ptr<const Tree> scmTree_;
 };
 
@@ -285,21 +227,19 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
         currentBlobHash_{std::move(currentBlobHash)},
         currentDType_{currentDType} {}
 
-  folly::Future<folly::Unit> run() override {
+  ImmediateFuture<folly::Unit> run() override {
     auto f1 = context_->store->getBlobSha1(
         scmEntry_.getHash(), context_->getFetchContext());
     auto f2 = context_->store->getBlobSha1(
         currentBlobHash_, context_->getFetchContext());
-    return collectAllSafe(f1, f2)
-        .thenValue([this](const std::tuple<Hash20, Hash20>& info) {
+    return collectAllSafe(f1, f2).thenValue(
+        [this](const std::tuple<Hash20, Hash20>& info) {
           const auto& [info1, info2] = info;
           if (info1 != info2) {
             XLOG(DBG5) << "modified file: " << getPath();
             context_->callback->modifiedPath(getPath(), currentDType_);
           }
-        })
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance());
+        });
   }
 
  private:
@@ -323,11 +263,9 @@ class ModifiedScmDiffEntry : public DeferredDiffEntry {
         scmHash_{scmHash},
         wdHash_{wdHash} {}
 
-  folly::Future<folly::Unit> run() override {
+  ImmediateFuture<folly::Unit> run() override {
     return diffTrees(
-               context_, getPath(), scmHash_, wdHash_, ignore_, isIgnored_)
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance());
+        context_, getPath(), scmHash_, wdHash_, ignore_, isIgnored_);
   }
 
  private:
@@ -350,10 +288,8 @@ class AddedScmDiffEntry : public DeferredDiffEntry {
         isIgnored_{isIgnored},
         wdHash_{wdHash} {}
 
-  folly::Future<folly::Unit> run() override {
-    return diffAddedTree(context_, getPath(), wdHash_, ignore_, isIgnored_)
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance());
+  ImmediateFuture<folly::Unit> run() override {
+    return diffAddedTree(context_, getPath(), wdHash_, ignore_, isIgnored_);
   }
 
  private:
@@ -367,10 +303,8 @@ class RemovedScmDiffEntry : public DeferredDiffEntry {
   RemovedScmDiffEntry(DiffContext* context, RelativePath path, ObjectId scmHash)
       : DeferredDiffEntry{context, std::move(path)}, scmHash_{scmHash} {}
 
-  folly::Future<folly::Unit> run() override {
-    return diffRemovedTree(context_, getPath(), scmHash_)
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance());
+  ImmediateFuture<folly::Unit> run() override {
+    return diffRemovedTree(context_, getPath(), scmHash_);
   }
 
  private:
@@ -382,29 +316,18 @@ class RemovedScmDiffEntry : public DeferredDiffEntry {
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createUntrackedEntry(
     DiffContext* context,
     RelativePath path,
-    InodePtr inode,
+    ImmediateFuture<InodePtr>&& inode,
     const GitIgnoreStack* ignore,
     bool isIgnored) {
   return make_unique<UntrackedDiffEntry>(
       context, std::move(path), std::move(inode), ignore, isIgnored);
 }
 
-unique_ptr<DeferredDiffEntry>
-DeferredDiffEntry::createUntrackedEntryFromInodeFuture(
-    DiffContext* context,
-    RelativePath path,
-    Future<InodePtr>&& inodeFuture,
-    const GitIgnoreStack* ignore,
-    bool isIgnored) {
-  return make_unique<UntrackedDiffEntry>(
-      context, std::move(path), std::move(inodeFuture), ignore, isIgnored);
-}
-
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedEntry(
     DiffContext* context,
     RelativePath path,
     std::vector<TreeEntry> scmEntries,
-    InodePtr inode,
+    ImmediateFuture<InodePtr>&& inode,
     const GitIgnoreStack* ignore,
     bool isIgnored) {
   XCHECK_GT(scmEntries.size(), 0ull);
@@ -413,24 +336,6 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedEntry(
       std::move(path),
       std::move(scmEntries),
       std::move(inode),
-      ignore,
-      isIgnored);
-}
-
-unique_ptr<DeferredDiffEntry>
-DeferredDiffEntry::createModifiedEntryFromInodeFuture(
-    DiffContext* context,
-    RelativePath path,
-    std::vector<TreeEntry> scmEntries,
-    folly::Future<InodePtr>&& inodeFuture,
-    const GitIgnoreStack* ignore,
-    bool isIgnored) {
-  XCHECK_GT(scmEntries.size(), 0ull);
-  return make_unique<ModifiedDiffEntry>(
-      context,
-      std::move(path),
-      std::move(scmEntries),
-      std::move(inodeFuture),
       ignore,
       isIgnored);
 }
