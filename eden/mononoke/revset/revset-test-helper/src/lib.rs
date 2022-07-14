@@ -29,7 +29,7 @@ pub fn single_changeset_id(
     repo: &BlobRepo,
 ) -> impl Stream<Item = ChangesetId, Error = Error> {
     let repo = repo.clone();
-    async move { Ok(repo.changeset_exists_by_bonsai(ctx, cs_id).await?) }
+    async move { repo.changeset_exists_by_bonsai(ctx, cs_id).await }
         .boxed()
         .compat()
         .map(move |exists| if exists { Some(cs_id) } else { None })

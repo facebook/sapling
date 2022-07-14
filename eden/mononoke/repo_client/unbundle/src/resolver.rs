@@ -470,7 +470,7 @@ async fn resolve_push<'r>(
 
     let maybe_bonsai_bookmark_push = match maybe_hg_bookmark_push {
         Some(hg_bookmark_push) => {
-            Some(hg_all_bookmark_pushes_to_bonsai(ctx, &resolver.repo, hg_bookmark_push).await?)
+            Some(hg_all_bookmark_pushes_to_bonsai(ctx, resolver.repo, hg_bookmark_push).await?)
         }
         None => None,
     };
@@ -486,7 +486,7 @@ async fn resolve_push<'r>(
         .map(PostResolveAction::InfinitePush)
     } else {
         let hook_rejection_remapper =
-            make_hook_rejection_remapper(&ctx, resolver.repo.clone()).into();
+            make_hook_rejection_remapper(ctx, resolver.repo.clone()).into();
 
         get_post_resolve_push(
             changegroup_id,
@@ -574,7 +574,7 @@ pub enum PushrebaseBookmarkSpec<T: Copy> {
 impl<T: Copy> PushrebaseBookmarkSpec<T> {
     pub fn get_bookmark_name(&self) -> &BookmarkName {
         match self {
-            PushrebaseBookmarkSpec::NormalPushrebase(onto_bookmark) => &onto_bookmark,
+            PushrebaseBookmarkSpec::NormalPushrebase(onto_bookmark) => onto_bookmark,
             PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => &plain_push.name,
         }
     }
@@ -602,8 +602,8 @@ async fn resolve_pushrebase<'r>(
         Some(onto_bookmark) => {
             let v = Vec::from(onto_bookmark.as_ref());
             let onto_bookmark = String::from_utf8(v).map_err(Error::from)?;
-            let onto_bookmark = BookmarkName::new(onto_bookmark)?;
-            onto_bookmark
+
+            BookmarkName::new(onto_bookmark)?
         }
         None => return Err(format_err!("onto is not specified").into()),
     };
@@ -668,9 +668,9 @@ async fn resolve_pushrebase<'r>(
 
     resolver.ensure_stream_finished(bundle2).await?;
     let bookmark_spec =
-        hg_pushrebase_bookmark_spec_to_bonsai(ctx, &resolver.repo, bookmark_spec).await?;
+        hg_pushrebase_bookmark_spec_to_bonsai(ctx, resolver.repo, bookmark_spec).await?;
 
-    let hook_rejection_remapper = make_hook_rejection_remapper(&ctx, resolver.repo.clone()).into();
+    let hook_rejection_remapper = make_hook_rejection_remapper(ctx, resolver.repo.clone()).into();
 
     Ok(PostResolveAction::PushRebase(PostResolvePushRebase {
         bookmark_push_part_id,
@@ -714,9 +714,8 @@ async fn resolve_bookmark_only_pushrebase<'r>(
 
     let bookmark_push = bookmark_pushes.into_iter().next().unwrap();
     resolver.ensure_stream_finished(bundle2).await?;
-    let bookmark_push =
-        plain_hg_bookmark_push_to_bonsai(ctx, &resolver.repo, bookmark_push).await?;
-    let hook_rejection_remapper = make_hook_rejection_remapper(&ctx, resolver.repo.clone()).into();
+    let bookmark_push = plain_hg_bookmark_push_to_bonsai(ctx, resolver.repo, bookmark_push).await?;
+    let hook_rejection_remapper = make_hook_rejection_remapper(ctx, resolver.repo.clone()).into();
 
     Ok(PostResolveAction::BookmarkOnlyPushRebase(
         PostResolveBookmarkOnlyPushRebase {
@@ -1015,7 +1014,7 @@ impl<'r> Bundle2Resolver<'r> {
                 };
 
                 enforce_file_changes_rate_limits(
-                    &self.ctx,
+                    self.ctx,
                     push_kind,
                     changesets.iter().map(|(_, rc)| rc),
                 )
@@ -1038,7 +1037,7 @@ impl<'r> Bundle2Resolver<'r> {
                 .context("While uploading File Blobs")?;
 
                 let cg_push =
-                    build_changegroup_push(&self.ctx, &self.repo, header, changesets, filelogs)
+                    build_changegroup_push(self.ctx, self.repo, header, changesets, filelogs)
                         .await?;
 
                 Some(cg_push)
@@ -1227,7 +1226,7 @@ impl<'r> Bundle2Resolver<'r> {
                 .map(move |(hg_cs_id, handle): (HgChangesetId, _)| async move {
                     let shared_item_bcs_and_something = handle.get_completed_changeset().await?;
 
-                    let bcs = shared_item_bcs_and_something.0.clone();
+                    let bcs = shared_item_bcs_and_something.0;
                     Result::<_, Error>::Ok((bcs, hg_cs_id))
                 })
                 .buffered(chunk_size)
@@ -1278,7 +1277,7 @@ impl<'r> Bundle2Resolver<'r> {
         let mut result = Vec::new();
         let mut bundle2 = bundle2;
         loop {
-            let (maybe_element, rest_of_bundle2) = maybe_resolve(&self, bundle2).await?;
+            let (maybe_element, rest_of_bundle2) = maybe_resolve(self, bundle2).await?;
             bundle2 = rest_of_bundle2;
             if let Some(element) = maybe_element {
                 result.push(element);
@@ -1494,8 +1493,8 @@ async fn plain_hg_bookmark_push_to_bonsai(
     } = bookmark_push;
 
     let (old, new) = try_join!(
-        bonsai_from_hg_opt(ctx, &repo, old),
-        bonsai_from_hg_opt(ctx, &repo, new),
+        bonsai_from_hg_opt(ctx, repo, old),
+        bonsai_from_hg_opt(ctx, repo, new),
     )?;
 
     Ok(PlainBookmarkPush {
@@ -1520,7 +1519,7 @@ async fn infinite_hg_bookmark_push_to_bonsai(
     } = bookmark_push;
 
     let (old, new) = try_join!(
-        bonsai_from_hg_opt(ctx, &repo, old),
+        bonsai_from_hg_opt(ctx, repo, old),
         repo.bonsai_hg_mapping().get_bonsai_from_hg(ctx, new)
     )?;
     let new = match new {
@@ -1548,7 +1547,7 @@ async fn hg_pushrebase_bookmark_spec_to_bonsai(
         }
         PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => {
             PushrebaseBookmarkSpec::ForcePushrebase(
-                plain_hg_bookmark_push_to_bonsai(ctx, &repo, plain_push).await?,
+                plain_hg_bookmark_push_to_bonsai(ctx, repo, plain_push).await?,
             )
         }
     };
@@ -1562,15 +1561,16 @@ async fn hg_all_bookmark_pushes_to_bonsai(
 ) -> Result<AllBookmarkPushes<ChangesetId>, Error> {
     let abp = match all_bookmark_pushes {
         AllBookmarkPushes::PlainPushes(plain_pushes) => {
-            let r =
-                try_join_all(plain_pushes.into_iter().map({
-                    |plain_push| plain_hg_bookmark_push_to_bonsai(ctx, &repo, plain_push)
-                }))
-                .await?;
+            let r = try_join_all(
+                plain_pushes
+                    .into_iter()
+                    .map({ |plain_push| plain_hg_bookmark_push_to_bonsai(ctx, repo, plain_push) }),
+            )
+            .await?;
             AllBookmarkPushes::PlainPushes(r)
         }
         AllBookmarkPushes::Inifinitepush(infinite_bookmark_push) => {
-            let r = infinite_hg_bookmark_push_to_bonsai(ctx, &repo, infinite_bookmark_push).await?;
+            let r = infinite_hg_bookmark_push_to_bonsai(ctx, repo, infinite_bookmark_push).await?;
             AllBookmarkPushes::Inifinitepush(r)
         }
     };

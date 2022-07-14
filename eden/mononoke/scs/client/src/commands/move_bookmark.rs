@@ -78,7 +78,7 @@ pub(super) async fn run(matches: &ArgMatches<'_>, connection: Connection) -> Res
         _ => bail!("expected 1 or 2 commit_ids (got {})", ids.len()),
     };
     let allow_non_fast_forward_move = matches.is_present(ARG_NON_FAST_FORWARD);
-    let pushvars = get_pushvars(&matches)?;
+    let pushvars = get_pushvars(matches)?;
 
     let params = thrift::RepoMoveBookmarkParams {
         bookmark,

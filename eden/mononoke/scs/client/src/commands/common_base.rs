@@ -92,7 +92,7 @@ pub(super) async fn run(
     };
     let params = thrift::CommitCommonBaseWithParams {
         other_commit_id: ids[1].clone(),
-        identity_schemes: get_request_schemes(&matches),
+        identity_schemes: get_request_schemes(matches),
         ..Default::default()
     };
     let response = connection.commit_common_base_with(&commit, &params).await?;

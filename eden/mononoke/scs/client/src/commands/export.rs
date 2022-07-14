@@ -267,8 +267,8 @@ async fn case_insensitive_path(
 
 fn join_path(path: &str, elem: &str) -> String {
     let mut path = path.to_string();
-    if !path.is_empty() && !path.ends_with("/") {
-        path.push_str("/");
+    if !path.is_empty() && !path.ends_with('/') {
+        path.push('/');
     }
     path.push_str(elem);
     path

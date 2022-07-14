@@ -297,7 +297,7 @@ impl IdMap for SqlIdMap {
         // referenced by a copy mapping.
         // This is not perfect (races, replication lag), but should show bugs in tests
         if let Some(min) = mappings.iter().map(|(id, _cs)| id).min() {
-            self.check_copy_mapping(&self.connections.read_connection, &min)
+            self.check_copy_mapping(&self.connections.read_connection, min)
                 .await?;
         }
 

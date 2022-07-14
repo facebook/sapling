@@ -69,7 +69,7 @@ fn make_pending(
                 }
             })
             .buffered(size)
-            .map(|parents| iter_ok::<_, Error>(parents.into_iter()))
+            .map(iter_ok::<_, Error>)
             .flatten()
             .and_then(move |node_cs| {
                 cloned!(ctx, changeset_fetcher);
@@ -173,7 +173,7 @@ where
         move |node| AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, node).boxify()
     });
 
-    IntersectNodeStream::new(ctx, &Arc::new(changeset_fetcher), nodes_iter.into_iter()).boxify()
+    IntersectNodeStream::new(ctx, &Arc::new(changeset_fetcher), nodes_iter).boxify()
 }
 
 pub fn greatest_common_ancestor<I>(

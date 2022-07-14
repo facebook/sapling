@@ -91,7 +91,7 @@ pub(crate) fn render_commit_summary(
     render_commit_id(
         Some(("Commit", "    ")),
         "\n",
-        &requested,
+        requested,
         &commit.ids,
         schemes,
         w,
@@ -122,7 +122,7 @@ pub(crate) fn render_commit_info(
     render_commit_id(
         Some(("Commit", "    ")),
         "\n",
-        &requested,
+        requested,
         &commit.ids,
         schemes,
         w,
@@ -139,7 +139,7 @@ pub(crate) fn render_commit_info(
             "\n",
             &format!("Parent {} of {}", i, requested),
             parent,
-            &schemes,
+            schemes,
             w,
         )?;
         write!(w, "\n")?;

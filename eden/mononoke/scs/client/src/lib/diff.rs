@@ -53,13 +53,13 @@ async fn make_file_diff_request(
         ..Default::default()
     };
 
-    let response = connection.commit_file_diffs(&commit, &params).await?;
+    let response = connection.commit_file_diffs(commit, &params).await?;
     let diffs: Vec<_> = response
         .path_diffs
         .into_iter()
         .filter_map(|path_diff| {
             if let thrift::Diff::raw_diff(diff) = path_diff.diff {
-                Some(diff.raw_diff.unwrap_or(Vec::new()))
+                Some(diff.raw_diff.unwrap_or_default())
             } else {
                 None
             }

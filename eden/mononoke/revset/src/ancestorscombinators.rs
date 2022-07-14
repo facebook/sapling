@@ -148,10 +148,10 @@ fn make_pending(
                     .boxed()
                     .compat()
                     .map(|parents| parents.into_iter())
-                    .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
+                    .map_err(|err| err.context(ErrorKind::ParentsFetchFailed))
             }
         })
-        .map(|parents| iter_ok::<_, Error>(parents))
+        .map(iter_ok::<_, Error>)
         .flatten_stream()
         .and_then(move |node_hash| {
             cloned!(ctx, new_repo_gennums);
@@ -290,8 +290,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
                     } else if exclude_gen == current_generation {
                         let mut should_exclude: Option<bool> = None;
                         {
-                            if let Some(ref nodes) = curr_exclude_ancestors.get(&current_generation)
-                            {
+                            if let Some(nodes) = curr_exclude_ancestors.get(&current_generation) {
                                 should_exclude = Some(nodes.contains(&node));
                             }
                         }

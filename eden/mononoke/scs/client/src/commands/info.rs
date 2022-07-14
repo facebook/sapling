@@ -181,7 +181,7 @@ async fn commit_info(
         ..Default::default()
     };
     let params = thrift::CommitInfoParams {
-        identity_schemes: get_request_schemes(&matches),
+        identity_schemes: get_request_schemes(matches),
         ..Default::default()
     };
     let response = connection.commit_info(&commit, &params).await?;

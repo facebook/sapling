@@ -49,7 +49,6 @@ use mercurial_bundles::changegroup::CgVersion;
 use mercurial_bundles::part_encode::PartEncodeBuilder;
 use mercurial_bundles::parts;
 use mercurial_bundles::parts::FilenodeEntry;
-use mercurial_revlog;
 use mercurial_revlog::RevlogChangeset;
 use mercurial_types::blobs::fetch_manifest_envelope;
 use mercurial_types::blobs::File;
@@ -147,7 +146,7 @@ pub async fn create_getbundle_response(
         find_new_draft_commits_and_derive_filenodes_for_public_roots(
             ctx, blobrepo, &common, heads, phases
         ),
-        find_commits_to_send(ctx, blobrepo, &common, heads, &lca_hint),
+        find_commits_to_send(ctx, blobrepo, &common, heads, lca_hint),
     )?;
 
     report_draft_commits(ctx, &draft_commits);
@@ -288,8 +287,8 @@ pub async fn find_commits_to_send(
     let changeset_fetcher = blobrepo.get_changeset_fetcher();
 
     let heads = hg_to_bonsai_stream(
-        &ctx,
-        &blobrepo,
+        ctx,
+        blobrepo,
         heads
             .iter()
             .filter(|head| !common.contains(head))
@@ -298,11 +297,11 @@ pub async fn find_commits_to_send(
     );
 
     let excludes = hg_to_bonsai_stream(
-        &ctx,
-        &blobrepo,
+        ctx,
+        blobrepo,
         common
             .iter()
-            .map(|node| node.clone())
+            .copied()
             .filter(|node| node.into_nodehash() != NULL_CSID.into_nodehash())
             .collect(),
     );
@@ -338,10 +337,10 @@ pub async fn find_commits_to_send(
         || !low_gen_num_checker.is_low_gen_num(lowest_head_gen_num)
     {
         call_difference_of_union_of_ancestors_revset(
-            &ctx,
+            ctx,
             &changeset_fetcher,
             params,
-            &lca_hint,
+            lca_hint,
             None,
         )
         .await?
@@ -351,10 +350,10 @@ pub async fn find_commits_to_send(
             .clone()
             .log_with_msg("Using low generation getbundle optimization", None);
         let maybe_result = low_gen_num_optimization(
-            &ctx,
+            ctx,
             &changeset_fetcher,
             params.clone(),
-            &lca_hint,
+            lca_hint,
             &low_gen_num_checker,
         )
         .await?;
@@ -365,10 +364,10 @@ pub async fn find_commits_to_send(
                 .clone()
                 .log_with_msg("Skipped low generation getbundle optimization", None);
             call_difference_of_union_of_ancestors_revset(
-                &ctx,
+                ctx,
                 &changeset_fetcher,
                 params,
-                &lca_hint,
+                lca_hint,
                 None,
             )
             .await?
@@ -470,7 +469,7 @@ async fn call_difference_of_union_of_ancestors_revset(
     match (min_heads_gen_num, max_excludes_gen_num) {
         (Some(min_heads), Some(max_excludes)) => {
             if min_heads.difference_from(*max_excludes).unwrap_or(0) > GETBUNDLE_COMMIT_NUM_WARN {
-                warn_expensive_getbundle(&ctx);
+                warn_expensive_getbundle(ctx);
                 notified_expensive_getbundle = true;
             }
         }
@@ -479,7 +478,7 @@ async fn call_difference_of_union_of_ancestors_revset(
 
     let nodes_to_send = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes_gen_num(
         ctx.clone(),
-        &changeset_fetcher,
+        changeset_fetcher,
         lca_hint.clone(),
         heads,
         excludes,
@@ -492,7 +491,7 @@ async fn call_difference_of_union_of_ancestors_revset(
             i += 1;
             if i > GETBUNDLE_COMMIT_NUM_WARN && !notified_expensive_getbundle {
                 notified_expensive_getbundle = true;
-                warn_expensive_getbundle(&ctx);
+                warn_expensive_getbundle(ctx);
             }
         }
     });
@@ -572,7 +571,7 @@ async fn create_hg_changeset_part(
                 }
             }
         })
-        .map_ok(|res| stream::iter(res))
+        .map_ok(stream::iter)
         .try_flatten()
         .map({
             cloned!(ctx, blobrepo);
@@ -614,12 +613,9 @@ async fn create_hg_changeset_part(
         .boxed()
         .compat();
 
-    let maybe_filenode_entries = match maybe_prepared_filenode_entries {
-        Some(prepared_filenode_entries) => Some(
-            create_filenodes(ctx.clone(), blobrepo.clone(), prepared_filenode_entries).boxify(),
-        ),
-        None => None,
-    };
+    let maybe_filenode_entries = maybe_prepared_filenode_entries.map(|prepared_filenode_entries| {
+        create_filenodes(ctx.clone(), blobrepo.clone(), prepared_filenode_entries).boxify()
+    });
 
     let cg_version = if lfs_params.threshold.is_some() {
         CgVersion::Cg3Version
@@ -823,7 +819,7 @@ async fn traverse_draft_commits(
 
     // Find the initial set of public changesets.
     let bonsai_heads = hg_bonsai_heads.iter().map(|(_, bcs_id)| *bcs_id).collect();
-    let mut public_changesets = phases.get_cached_public(&ctx, bonsai_heads).await?;
+    let mut public_changesets = phases.get_cached_public(ctx, bonsai_heads).await?;
 
     // Call the draft head callback for each of the draft heads.
     let mut seen = HashSet::new();
@@ -875,7 +871,7 @@ async fn traverse_draft_commits(
 
         let (new_next_changesets, new_public_changesets) = try_join!(
             repo.get_hg_bonsai_mapping(ctx.clone(), parents.clone()),
-            phases.get_cached_public(&ctx, parents)
+            phases.get_cached_public(ctx, parents)
         )?;
         next_changesets = new_next_changesets;
         public_changesets = new_public_changesets;
@@ -1060,7 +1056,7 @@ fn generate_lfs_file(
     let mut parents = parents.into_iter();
     let p1 = parents.next();
     let p2 = parents.next();
-    Ok(HgBlobNode::new(Bytes::from(bytes), p1, p2))
+    Ok(HgBlobNode::new(bytes, p1, p2))
 }
 
 pub fn create_manifest_entries_stream(

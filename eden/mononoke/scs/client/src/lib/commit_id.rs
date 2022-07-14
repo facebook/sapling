@@ -48,7 +48,7 @@ pub(crate) fn render_commit_id(
     } else {
         if ids.is_empty() {
             let mut schemes: Vec<_> = schemes.iter().map(AsRef::as_ref).collect();
-            schemes.sort();
+            schemes.sort_unstable();
             bail!(
                 "{} does not have any '{}' ids",
                 requested,

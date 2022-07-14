@@ -141,12 +141,10 @@ fn repo_list_bookmarks(
         let prefix = prefix.clone();
         async move {
             if let Some((after, limit)) = state {
-                let (limit, remaining) = limit
-                    .map(|limit| {
-                        let size = limit.min(source_control::consts::REPO_LIST_BOOKMARKS_MAX_LIMIT);
-                        (size, Some(limit.saturating_sub(size)))
-                    })
-                    .unwrap_or((0, None));
+                let (limit, remaining) = limit.map_or((0, None), |limit| {
+                    let size = limit.min(source_control::consts::REPO_LIST_BOOKMARKS_MAX_LIMIT);
+                    (size, Some(limit.saturating_sub(size)))
+                });
 
                 let params = thrift::RepoListBookmarksParams {
                     include_scratch,
@@ -164,7 +162,7 @@ fn repo_list_bookmarks(
                 let next_state = response
                     .continue_after
                     .map(|after| (Some(after), remaining))
-                    .filter(|_| remaining.map(|r| r > 0).unwrap_or(true));
+                    .filter(|_| remaining.map_or(true, |r| r > 0));
 
                 Ok(Some((stream::iter(bookmarks), next_state)))
             } else {
@@ -241,7 +239,7 @@ pub(super) async fn run(matches: &ArgMatches<'_>, connection: Connection) -> Res
 
     let bookmarks = match get_commit_ids(matches)?.first() {
         Some(commit_id) => {
-            let id = resolve_commit_id(&connection, &repo, &commit_id).await?;
+            let id = resolve_commit_id(&connection, &repo, commit_id).await?;
             let commit = thrift::CommitSpecifier {
                 repo,
                 id,

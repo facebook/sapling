@@ -15,7 +15,6 @@ use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use std::collections::hash_set::IntoIter;
 use std::collections::HashSet;
-use std::mem::replace;
 
 use crate::setcommon::*;
 use crate::BonsaiNodeStream;
@@ -112,7 +111,7 @@ impl Stream for UnionNodeStream {
             // Return any errors
             {
                 if self.inputs.iter().any(|&(_, ref state)| state.is_err()) {
-                    let inputs = replace(&mut self.inputs, Vec::new());
+                    let inputs = std::mem::take(&mut self.inputs);
                     let (_, err) = inputs
                         .into_iter()
                         .find(|&(_, ref state)| state.is_err())
@@ -133,7 +132,7 @@ impl Stream for UnionNodeStream {
                     if self.accumulator.is_empty() {
                         self.update_current_generation();
                     } else {
-                        let full_accumulator = replace(&mut self.accumulator, HashSet::new());
+                        let full_accumulator = std::mem::take(&mut self.accumulator);
                         self.drain = Some(full_accumulator.into_iter());
                     }
                 }

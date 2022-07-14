@@ -68,13 +68,11 @@ use pushrebase::do_pushrebase_bonsai;
 use question::Answer;
 use question::Question;
 use repo_blobstore::RepoBlobstoreRef;
-use segmented_changelog;
 use segmented_changelog::seedheads_from_config;
 use segmented_changelog::SeedHead;
 use segmented_changelog::SegmentedChangelogTailer;
 use serde::Deserialize;
 use serde::Serialize;
-use serde_json;
 use slog::info;
 use sql_ext::facebook::MysqlOptions;
 use std::collections::HashMap;
@@ -226,7 +224,7 @@ async fn rewrite_file_paths(
     for (index, bcs) in gitimport_changesets.iter().enumerate() {
         let bcs_id = bcs.get_changeset_id();
         let rewritten_bcs_opt = rewrite_commit(
-            &ctx,
+            ctx,
             bcs.clone().into_mut(),
             &remapped_parents,
             mover.clone(),
@@ -273,7 +271,7 @@ async fn find_mapping_version(
         .await?
         .ok_or_else(|| format_err!("{} not found", dest_bookmark))?;
 
-    wait_until_backsynced_and_return_version(ctx, &large_to_small_syncer, bookmark_val).await
+    wait_until_backsynced_and_return_version(ctx, large_to_small_syncer, bookmark_val).await
 }
 
 async fn back_sync_commits_to_small_repo(
@@ -294,8 +292,7 @@ async fn back_sync_commits_to_small_repo(
     let mut synced_bcs_ids = vec![];
     for bcs_id in bcs_ids {
         let (unsynced_ancestors, _) =
-            find_toposorted_unsynced_ancestors(&ctx, &large_to_small_syncer, bcs_id.clone())
-                .await?;
+            find_toposorted_unsynced_ancestors(ctx, large_to_small_syncer, bcs_id.clone()).await?;
         for ancestor in unsynced_ancestors {
             // It is always safe to use `CandidateSelectionHint::Only` in
             // the large-to-small direction
@@ -436,11 +433,7 @@ async fn move_bookmark(
 
     let mut transaction = repo.bookmarks().create_transaction(ctx.clone());
     if maybe_old_csid.is_none() {
-        transaction.create(
-            &bookmark,
-            old_csid.clone(),
-            BookmarkUpdateReason::ManualMove,
-        )?;
+        transaction.create(bookmark, old_csid.clone(), BookmarkUpdateReason::ManualMove)?;
         if !transaction.commit().await? {
             return Err(format_err!("Logical failure while creating {:?}", bookmark));
         }
@@ -467,7 +460,7 @@ async fn move_bookmark(
             }
         };
         transaction.update(
-            &bookmark,
+            bookmark,
             curr_csid.clone(),
             old_csid.clone(),
             BookmarkUpdateReason::ManualMove,
@@ -489,12 +482,12 @@ async fn move_bookmark(
                 .derive_hg_changeset(ctx, curr_csid.clone())
                 .await?;
             check_dependent_systems(
-                &ctx,
-                &repo,
-                &checker_flags,
+                ctx,
+                repo,
+                checker_flags,
                 hg_csid,
                 sleep_time,
-                &maybe_call_sign,
+                maybe_call_sign,
             )
             .await?;
             Result::<_, Error>::Ok(())
@@ -534,9 +527,9 @@ async fn move_bookmark(
                 .await?;
 
             check_dependent_systems(
-                &ctx,
+                ctx,
                 &small_repo_back_sync_vars.small_repo,
-                &checker_flags,
+                checker_flags,
                 small_repo_hg_csid,
                 sleep_time,
                 &small_repo_back_sync_vars.maybe_call_sign,
@@ -578,9 +571,9 @@ async fn merge_imported_commit(
             ));
         }
     };
-    let master_leaf_entries = get_leaf_entries(&ctx, &repo, master_cs_id).await?;
+    let master_leaf_entries = get_leaf_entries(ctx, repo, master_cs_id).await?;
 
-    let imported_leaf_entries = get_leaf_entries(&ctx, &repo, imported_cs_id).await?;
+    let imported_leaf_entries = get_leaf_entries(ctx, repo, imported_cs_id).await?;
 
     let intersection: Vec<MPath> = imported_leaf_entries
         .intersection(&master_leaf_entries)
@@ -697,7 +690,7 @@ async fn check_dependent_systems(
 
     while !passed_phab_check {
         let call_sign = maybe_call_sign.as_ref().unwrap();
-        passed_phab_check = phabricator_commit_check(&call_sign, &hg_csid).await?;
+        passed_phab_check = phabricator_commit_check(call_sign, &hg_csid).await?;
         if !passed_phab_check {
             info!(
                 ctx.logger(),
@@ -859,7 +852,7 @@ where
 
     let large_importing_bookmark =
         commit_syncer
-            .rename_bookmark(&importing_bookmark).await?
+            .rename_bookmark(importing_bookmark).await?
             .ok_or_else(|| format_err!(
         "Bookmark {:?} unexpectedly dropped in {:?} when trying to generate large_importing_bookmark",
         importing_bookmark,
@@ -870,7 +863,7 @@ where
         "Set large repo's importing bookmark to {}", large_importing_bookmark
     );
     let large_dest_bookmark = commit_syncer
-        .rename_bookmark(&dest_bookmark).await?
+        .rename_bookmark(dest_bookmark).await?
         .ok_or_else(|| {
             format_err!(
         "Bookmark {:?} unexpectedly dropped in {:?} when trying to generate large_dest_bookmark",
@@ -905,7 +898,7 @@ async fn get_pushredirected_vars(
     let config_store = matches.config_store();
     let large_repo_id = large_repo_config.repoid;
     let large_repo: Repo =
-        args::open_repo_with_repo_id(ctx.fb, &ctx.logger(), large_repo_id, &matches).await?;
+        args::open_repo_with_repo_id(ctx.fb, ctx.logger(), large_repo_id, matches).await?;
     let common_commit_sync_config = live_commit_sync_config.get_common_config(large_repo_id)?;
 
     if common_commit_sync_config.small_repos.len() > 1 {
@@ -915,7 +908,7 @@ async fn get_pushredirected_vars(
             large_repo.name()
         ));
     }
-    let mapping = args::open_sql::<SqlSyncedCommitMapping>(ctx.fb, config_store, &matches)?;
+    let mapping = args::open_sql::<SqlSyncedCommitMapping>(ctx.fb, config_store, matches)?;
     let syncers = create_commit_syncers(
         ctx,
         repo.as_blob_repo().clone(),
@@ -926,7 +919,7 @@ async fn get_pushredirected_vars(
     )?;
 
     let large_repo_import_setting =
-        get_large_repo_setting(&ctx, &repo_import_setting, &syncers.small_to_large).await?;
+        get_large_repo_setting(ctx, repo_import_setting, &syncers.small_to_large).await?;
     Ok((large_repo, large_repo_import_setting, syncers))
 }
 
@@ -998,9 +991,9 @@ async fn repo_import(
         x_repo_check_disabled: recovery_fields.x_repo_check_disabled,
         hg_sync_check_disabled: recovery_fields.hg_sync_check_disabled,
     };
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?;
 
-    let configs = args::load_repo_configs(config_store, &matches)?;
+    let configs = args::load_repo_configs(config_store, matches)?;
     let mysql_options = matches.mysql_options();
     let readonly_storage = matches.readonly_storage();
 
@@ -1019,7 +1012,7 @@ async fn repo_import(
             &repo,
             &repo_import_setting,
             &large_repo_config,
-            &matches,
+            matches,
             live_commit_sync_config,
         )
         .await?;
@@ -1129,7 +1122,7 @@ async fn repo_import(
         recovery_fields.git_merge_bcs_id = Some(git_merge_bcs_id);
         recovery_fields.import_stage = ImportStage::RewritePaths;
         recovery_fields.gitimport_bcs_ids = Some(gitimport_bcs_ids);
-        save_importing_state(&recovery_fields).await?;
+        save_importing_state(recovery_fields).await?;
     }
 
     if recovery_fields.import_stage == ImportStage::RewritePaths {
@@ -1162,7 +1155,7 @@ async fn repo_import(
         recovery_fields.import_stage = ImportStage::DeriveBonsais;
         recovery_fields.imported_cs_id = Some(imported_cs_id.clone());
         recovery_fields.shifted_bcs_ids = Some(shifted_bcs_ids);
-        save_importing_state(&recovery_fields).await?;
+        save_importing_state(recovery_fields).await?;
     }
 
     let shifted_bcs_ids = recovery_fields
@@ -1196,7 +1189,7 @@ async fn repo_import(
                 )
                 .await?;
 
-                derive_bonsais_single_repo(&ctx, &small_repo, &synced_bcs_ids).await?;
+                derive_bonsais_single_repo(ctx, small_repo, &synced_bcs_ids).await?;
                 Ok(())
             }
         };
@@ -1206,7 +1199,7 @@ async fn repo_import(
         info!(ctx.logger(), "Finished deriving data types");
 
         recovery_fields.import_stage = ImportStage::TailSegmentedChangelog;
-        save_importing_state(&recovery_fields).await?;
+        save_importing_state(recovery_fields).await?;
     }
 
     let imported_cs_id = recovery_fields
@@ -1227,7 +1220,7 @@ async fn repo_import(
         info!(ctx.logger(), "Finished tailing segmented changelog");
 
         recovery_fields.import_stage = ImportStage::MoveBookmark;
-        save_importing_state(&recovery_fields).await?;
+        save_importing_state(recovery_fields).await?;
     }
 
     if recovery_fields.import_stage == ImportStage::MoveBookmark {
@@ -1244,7 +1237,7 @@ async fn repo_import(
         .await?;
 
         recovery_fields.import_stage = ImportStage::MergeCommits;
-        save_importing_state(&recovery_fields).await?;
+        save_importing_state(recovery_fields).await?;
     }
 
     if recovery_fields.import_stage == ImportStage::MergeCommits {
@@ -1261,7 +1254,7 @@ async fn repo_import(
 
         recovery_fields.import_stage = ImportStage::PushCommit;
         recovery_fields.merged_cs_id = maybe_merged_cs_id;
-        save_importing_state(&recovery_fields).await?;
+        save_importing_state(recovery_fields).await?;
     }
 
     let merged_cs_id = recovery_fields
@@ -1365,13 +1358,13 @@ async fn check_additional_setup_steps(
             ));
         }
     };
-    if !is_valid_bookmark_suffix(&bookmark_suffix) {
+    if !is_valid_bookmark_suffix(bookmark_suffix) {
         return Err(format_err!(
             "The bookmark suffix contains invalid character(s).
                     You can only use alphanumeric and \"./-_\" characters"
         ));
     }
-    let importing_bookmark = get_importing_bookmark(&bookmark_suffix)?;
+    let importing_bookmark = get_importing_bookmark(bookmark_suffix)?;
     info!(
         ctx.logger(),
         "The importing bookmark name is: {}. \
@@ -1414,7 +1407,7 @@ async fn check_additional_setup_steps(
     }
 
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?;
-    let configs = args::load_repo_configs(config_store, &matches)?;
+    let configs = args::load_repo_configs(config_store, matches)?;
     let maybe_large_repo_config =
         get_large_repo_config_if_pushredirected(&repo, &live_commit_sync_config, &configs.repos)
             .await?;
@@ -1424,7 +1417,7 @@ async fn check_additional_setup_steps(
             &repo,
             &repo_import_setting,
             &large_repo_config,
-            &matches,
+            matches,
             live_commit_sync_config,
         )
         .await?;
@@ -1483,15 +1476,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let repo = repo.await?;
             let mut recovery_fields = match matches.subcommand() {
                 (CHECK_ADDITIONAL_SETUP_STEPS, Some(sub_arg_matches)) => {
-                    check_additional_setup_steps(ctx, repo, &sub_arg_matches, &matches).await?;
+                    check_additional_setup_steps(ctx, repo, sub_arg_matches, &matches).await?;
                     return Ok(());
                 }
                 (RECOVER_PROCESS, Some(sub_arg_matches)) => {
                     let saved_recovery_file_paths =
                         sub_arg_matches.value_of(SAVED_RECOVERY_FILE_PATH).unwrap();
-                    fetch_recovery_state(&ctx, &saved_recovery_file_paths).await?
+                    fetch_recovery_state(&ctx, saved_recovery_file_paths).await?
                 }
-                (IMPORT, Some(sub_arg_matches)) => setup_import_args(&sub_arg_matches)?,
+                (IMPORT, Some(sub_arg_matches)) => setup_import_args(sub_arg_matches)?,
                 _ => return Err(format_err!("Invalid subcommand")),
             };
 

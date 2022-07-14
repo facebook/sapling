@@ -216,7 +216,7 @@ impl SegmentedChangelogTailer {
             STATS::count.add_value(1);
             STATS::count_per_repo.add_value(1, (self.repo_id.id(),));
 
-            let (stats, update_result) = self.once(&ctx, false).timed().await;
+            let (stats, update_result) = self.once(ctx, false).timed().await;
 
             STATS::duration_ms.add_value(stats.completion_time.as_millis() as i64);
             STATS::duration_ms_per_repo.add_value(
@@ -260,7 +260,7 @@ impl SegmentedChangelogTailer {
         );
 
         let (seeding, idmap_version, iddag) = {
-            let sc_version = self.sc_version_store.get(&ctx).await.with_context(|| {
+            let sc_version = self.sc_version_store.get(ctx).await.with_context(|| {
                 format!(
                     "error loading segmented changelog version for repo {}",
                     self.repo_id
@@ -278,7 +278,7 @@ impl SegmentedChangelogTailer {
                     } else {
                         let iddag = self
                             .iddag_save_store
-                            .load(&ctx, sc_version.iddag_version)
+                            .load(ctx, sc_version.iddag_version)
                             .await
                             .with_context(|| {
                                 format!("failed to load iddag for repo {}", self.repo_id)
@@ -302,7 +302,7 @@ impl SegmentedChangelogTailer {
         let mut namedag = server_namedag(ctx.clone(), iddag, idmap)?;
 
         let heads =
-            vertexlist_from_seedheads(&ctx, &self.seed_heads, self.bookmarks.as_ref()).await?;
+            vertexlist_from_seedheads(ctx, &self.seed_heads, self.bookmarks.as_ref()).await?;
 
         let head_commits: Vec<_> = namedag
             .heads(namedag.master_group().await?)
@@ -408,7 +408,7 @@ impl SegmentedChangelogTailer {
         // Save the IdDag
         let iddag_version = self
             .iddag_save_store
-            .save(&ctx, &iddag)
+            .save(ctx, &iddag)
             .await
             .with_context(|| format!("error saving iddag for repo {}", self.repo_id))?;
 
@@ -416,7 +416,7 @@ impl SegmentedChangelogTailer {
         let sc_version = SegmentedChangelogVersion::new(iddag_version, idmap_version);
         if seeding {
             self.sc_version_store
-                .set(&ctx, sc_version)
+                .set(ctx, sc_version)
                 .await
                 .with_context(|| {
                     format!(
@@ -427,7 +427,7 @@ impl SegmentedChangelogTailer {
             info!(ctx.logger(), "successfully seeded segmented changelog",);
         } else {
             self.sc_version_store
-                .update(&ctx, sc_version)
+                .update(ctx, sc_version)
                 .await
                 .with_context(|| {
                     format!(

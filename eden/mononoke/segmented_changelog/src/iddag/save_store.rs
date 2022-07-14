@@ -95,7 +95,7 @@ impl IdDagSaveStore {
             )
             .await
             .context("saving iddag in blobstore")?;
-        log_new_iddag_version(&ctx, self.repo_id, iddag_version);
+        log_new_iddag_version(ctx, self.repo_id, iddag_version);
         Ok(iddag_version)
     }
 

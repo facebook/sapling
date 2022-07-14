@@ -87,6 +87,7 @@ fn add_hint_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     ]))
 }
 
+#[allow(clippy::let_and_return)]
 pub(super) fn make_subcommand<'a, 'b>() -> App<'a, 'b> {
     let cmd = SubCommand::with_name(NAME)
         .about("Sync a commit between repositories")
@@ -108,6 +109,7 @@ pub(super) fn make_subcommand<'a, 'b>() -> App<'a, 'b> {
     let cmd = add_hint_args(cmd);
     let cmd = add_scheme_args(cmd);
     let cmd = add_commit_id_args(cmd);
+
     cmd
 }
 
@@ -190,7 +192,7 @@ pub(super) async fn run(
     };
     let params = thrift::CommitLookupXRepoParams {
         other_repo: target_repo,
-        identity_schemes: get_request_schemes(&matches),
+        identity_schemes: get_request_schemes(matches),
         candidate_selection_hint: hint,
         ..Default::default()
     };

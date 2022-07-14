@@ -126,7 +126,7 @@ pub(super) async fn run(matches: &ArgMatches<'_>, connection: Connection) -> Res
     let ids = resolve_commit_ids(&connection, &repo, &commit_ids).await?;
     let bookmark: String = matches.value_of(ARG_NAME).expect("name is required").into();
     let service_identity = get_service_id(matches).map(String::from);
-    let pushvars = get_pushvars(&matches)?;
+    let pushvars = get_pushvars(matches)?;
 
     let (head, base) = match ids.as_slice() {
         [head_id, base_id] => (head_id.clone(), base_id.clone()),
@@ -137,7 +137,7 @@ pub(super) async fn run(matches: &ArgMatches<'_>, connection: Connection) -> Res
         bookmark: bookmark.clone(),
         head,
         base,
-        identity_schemes: get_request_schemes(&matches),
+        identity_schemes: get_request_schemes(matches),
         old_identity_schemes: Some(btreeset! { thrift::CommitIdentityScheme::BONSAI }),
         service_identity,
         pushvars,

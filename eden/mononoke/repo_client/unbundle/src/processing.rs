@@ -308,7 +308,7 @@ async fn run_infinitepush(
             .map(|bcs| ScribeCommitInfo {
                 changeset_id: bcs.get_changeset_id(),
                 bubble_id: None,
-                changed_files: ChangedFilesInfo::new(&bcs),
+                changed_files: ChangedFilesInfo::new(bcs),
             })
             .collect(),
         infinitepush_params.commit_scribe_category.as_deref(),
@@ -352,7 +352,7 @@ async fn run_pushrebase(
             let (pushrebased_rev, pushrebased_changesets) = normal_pushrebase(
                 ctx,
                 repo,
-                &pushrebase_params,
+                pushrebase_params,
                 lca_hint,
                 uploaded_bonsais,
                 &onto_bookmark,
@@ -389,14 +389,14 @@ async fn run_pushrebase(
                 .map(|bcs| ScribeCommitInfo {
                     changeset_id: bcs.get_changeset_id(),
                     bubble_id: None,
-                    changed_files: ChangedFilesInfo::new(&bcs),
+                    changed_files: ChangedFilesInfo::new(bcs),
                 })
                 .collect();
 
             let (pushrebased_rev, pushrebased_changesets) = force_pushrebase(
                 ctx,
                 repo,
-                &pushrebase_params,
+                pushrebase_params,
                 lca_hint,
                 hook_manager,
                 uploaded_bonsais,

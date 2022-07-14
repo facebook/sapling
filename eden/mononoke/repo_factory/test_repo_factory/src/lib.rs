@@ -524,14 +524,13 @@ impl TestRepoFactory {
 
     /// Construct filestore config based on the config in the factory.
     pub fn filestore_config(&self, repo_config: &ArcRepoConfig) -> ArcFilestoreConfig {
-        let filestore_config = repo_config
-            .filestore
-            .as_ref()
-            .map(|p| FilestoreConfig {
+        let filestore_config = repo_config.filestore.as_ref().map_or_else(
+            FilestoreConfig::no_chunking_filestore,
+            |p| FilestoreConfig {
                 chunk_size: Some(p.chunk_size),
                 concurrency: p.concurrency,
-            })
-            .unwrap_or_else(|| FilestoreConfig::no_chunking_filestore());
+            },
+        );
         Arc::new(filestore_config)
     }
 

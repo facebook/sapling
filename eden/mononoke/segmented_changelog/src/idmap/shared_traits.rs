@@ -243,7 +243,7 @@ impl IdMapWrapper {
         Self {
             verlink: VerLink::new(),
             inner: idmap_memwrites,
-            ctx: ctx.clone(),
+            ctx,
         }
     }
 
@@ -308,7 +308,7 @@ impl IdConvert for IdMapWrapper {
             .await
             .map_err(BackendError::from)?
             .map(|id| vertex_name_from_cs_id(&id))
-            .ok_or_else(|| DagError::IdNotFound(id))
+            .ok_or(DagError::IdNotFound(id))
     }
     async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
         self.vertex_id_with_max_group(name, Group::MASTER)
@@ -336,7 +336,7 @@ impl IdConvert for IdMapWrapper {
             .map_err(BackendError::from)?;
 
         Ok(name
-            .into_iter()
+            .iter()
             .map(|name| found.contains_key(&cs_id_from_vertex_name(name)))
             .collect())
     }
@@ -351,10 +351,10 @@ impl IdConvert for IdMapWrapper {
             .map_err(BackendError::from)?;
 
         Ok(id
-            .into_iter()
+            .iter()
             .map(|id| {
                 found
-                    .get(&id)
+                    .get(id)
                     .map(vertex_name_from_cs_id)
                     .ok_or(DagError::IdNotFound(*id))
             })
@@ -372,7 +372,7 @@ impl IdConvert for IdMapWrapper {
             .map_err(BackendError::from)?;
 
         Ok(names
-            .into_iter()
+            .iter()
             .map(|name| {
                 found
                     .get(&cs_id_from_vertex_name(name))

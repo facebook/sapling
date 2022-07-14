@@ -40,6 +40,7 @@ const CHUNK_SIZE: i64 = source_control::FILE_CONTENT_CHUNK_RECOMMENDED_SIZE;
 /// Number of concurrent fetches for very large files.
 const CONCURRENT_FETCHES: usize = 10;
 
+#[allow(clippy::let_and_return)]
 pub(super) fn make_subcommand<'a, 'b>() -> App<'a, 'b> {
     let cmd = SubCommand::with_name(NAME)
         .about("Fetch the contents of a file")
@@ -47,6 +48,7 @@ pub(super) fn make_subcommand<'a, 'b>() -> App<'a, 'b> {
     let cmd = add_repo_args(cmd);
     let cmd = add_commit_id_args(cmd);
     let cmd = add_path_args(cmd);
+
     cmd
 }
 

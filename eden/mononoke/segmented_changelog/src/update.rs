@@ -95,7 +95,7 @@ pub async fn vertexlist_from_seedheads(
     heads: &[SeedHead],
     bookmarks: &dyn Bookmarks,
 ) -> Result<VertexListWithOptions> {
-    let heads_with_options = stream::iter(heads.into_iter().map(Result::Ok))
+    let heads_with_options = stream::iter(heads.iter().map(Result::Ok))
         .try_fold(VertexListWithOptions::default(), {
             move |acc, head| async move {
                 Ok::<_, Error>(acc.chain(head.into_vertex_list(ctx, bookmarks).await?))

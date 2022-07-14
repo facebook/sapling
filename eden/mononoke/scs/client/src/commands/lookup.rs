@@ -37,6 +37,7 @@ use crate::render::RenderStream;
 
 pub(super) const NAME: &str = "lookup";
 
+#[allow(clippy::let_and_return)]
 pub(super) fn make_subcommand<'a, 'b>() -> App<'a, 'b> {
     let cmd = SubCommand::with_name(NAME)
         .about("Look up a bookmark or commit id")
@@ -44,6 +45,7 @@ pub(super) fn make_subcommand<'a, 'b>() -> App<'a, 'b> {
     let cmd = add_repo_args(cmd);
     let cmd = add_scheme_args(cmd);
     let cmd = add_commit_id_args(cmd);
+
     cmd
 }
 
@@ -85,7 +87,7 @@ pub(super) async fn run(
         ..Default::default()
     };
     let params = thrift::CommitLookupParams {
-        identity_schemes: get_request_schemes(&matches),
+        identity_schemes: get_request_schemes(matches),
         ..Default::default()
     };
     let response = connection.commit_lookup(&commit, &params).await?;

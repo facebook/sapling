@@ -89,7 +89,6 @@ use mercurial_bundles::parts;
 use mercurial_bundles::wirepack;
 use mercurial_bundles::Bundle2Item;
 use mercurial_derived_data::DeriveHgChangeset;
-use mercurial_revlog;
 use mercurial_revlog::RevlogChangeset;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::calculate_hg_node_id;
@@ -115,7 +114,6 @@ use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use nonzero_ext::nonzero;
 use phases::PhasesArc;
-use rand;
 use rand::Rng;
 use rate_limiting::Metric;
 use regex::Regex;
@@ -125,7 +123,6 @@ use remotefilelog::get_unordered_file_history_for_multiple_nodes;
 use remotefilelog::GetpackBlobInfo;
 use revisionstore_types::Metadata;
 use serde::Deserialize;
-use serde_json;
 use serde_json::json;
 use slog::debug;
 use slog::error;
@@ -648,7 +645,7 @@ impl RepoClient {
             // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
             if listkeys.contains(&b"bookmarks".to_vec()) {
                 let items = pull_default_bookmarks
-                    .map(|bookmarks| stream_old::iter_ok(bookmarks))
+                    .map(stream_old::iter_ok)
                     .flatten_stream();
                 bundle2_parts.push(parts::listkey_part("bookmarks", items)?);
             }
@@ -972,7 +969,7 @@ impl RepoClient {
             self.repo.force_lfs_if_threshold_set()
         } else {
             self.repo
-                .lfs_params(self.session.metadata().client_hostname().as_deref())
+                .lfs_params(self.session.metadata().client_hostname())
         }
     }
 
@@ -1521,7 +1518,7 @@ impl HgCommands for RepoClient {
     fn getbundle(&self, args: GetbundleArgs) -> BoxStream<BytesOld, Error> {
         self.command_stream(ops::GETBUNDLE, UNSAMPLED, |ctx, command_logger| {
             let s = self
-                .create_bundle(ctx.clone(), args)
+                .create_bundle(ctx, args)
                 .compat()
                 .whole_stream_timeout(getbundle_timeout())
                 .yield_periodically()
@@ -1610,7 +1607,7 @@ impl HgCommands for RepoClient {
             let queries = patterns.into_iter().map(move |pattern| {
                 cloned!(ctx, session_bookmarks_cache);
                 async move {
-                    if pattern.ends_with("*") {
+                    if pattern.ends_with('*') {
                         // prefix match
                         let prefix = BookmarkPrefix::new(&pattern[..pattern.len() - 1])?;
 
@@ -1927,12 +1924,7 @@ impl HgCommands for RepoClient {
                     } = streaming_clone;
 
                     let changelog = fetcher
-                        .fetch_changelog(
-                            ctx.clone(),
-                            repoid,
-                            tag.as_ref().map(|s| s.as_str()),
-                            blobstore.clone(),
-                        )
+                        .fetch_changelog(ctx.clone(), repoid, tag.as_deref(), blobstore.clone())
                         .await?;
 
                     let data_blobs = changelog
@@ -2219,7 +2211,7 @@ pub fn gettreepack_entries(
     stream_old::iter_ok::<_, Error>(
         mfnodes
             .into_iter()
-            .filter(move |node| !basemfnodes.contains(&node))
+            .filter(move |node| !basemfnodes.contains(node))
             .map(move |mfnode| {
                 let cur_basemfnode = basemfnode.unwrap_or(HgManifestId::new(NULL_HASH));
                 // `basemfnode`s are used to reduce the data we send the client by having us prune
@@ -2391,7 +2383,7 @@ fn validate_manifest_content(
     path: &RepoPath,
     parents: &HgParents,
 ) -> Result<(), Error> {
-    let expected = calculate_hg_node_id(&content, &parents);
+    let expected = calculate_hg_node_id(content, parents);
 
     // Do not do verification for a root node because it might be broken
     // because of migration to tree manifest.
@@ -2653,7 +2645,7 @@ async fn maybe_validate_pushed_bonsais(
             .collect::<HashMap<_, _>>();
 
         for (hg_cs_id, bcs_id) in chunk {
-            match actual_entries.get(&hg_cs_id) {
+            match actual_entries.get(hg_cs_id) {
                 Some(actual_bcs_id) => {
                     if actual_bcs_id != bcs_id {
                         return Err(format_err!(

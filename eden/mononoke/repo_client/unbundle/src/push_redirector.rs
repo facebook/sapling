@@ -168,11 +168,11 @@ impl PushRedirector {
         let push_params = self.repo.push_params().clone();
 
         let large_repo_action = self
-            .convert_post_resolve_action(&ctx, action)
+            .convert_post_resolve_action(ctx, action)
             .await
             .map_err(BundleResolverError::from)?;
         let large_repo_response = run_post_resolve_action(
-            &ctx,
+            ctx,
             large_repo,
             &lca_hint,
             &infinitepush_params,
@@ -183,7 +183,7 @@ impl PushRedirector {
             CrossRepoPushSource::PushRedirected,
         )
         .await?;
-        self.convert_unbundle_response(&ctx, large_repo_response)
+        self.convert_unbundle_response(ctx, large_repo_response)
             .await
             .map_err(BundleResolverError::from)
     }
@@ -314,7 +314,7 @@ impl PushRedirector {
             mutations: Default::default(),
             maybe_pushvars,
             non_fast_forward_policy,
-            uploaded_bonsais: uploaded_bonsais.values().cloned().map(|bcs| bcs).collect(),
+            uploaded_bonsais: uploaded_bonsais.values().cloned().collect(),
             uploaded_hg_changeset_ids: Default::default(),
             hook_rejection_remapper,
         })
@@ -370,7 +370,7 @@ impl PushRedirector {
             bookmark_spec,
             maybe_pushvars,
             commonheads,
-            uploaded_bonsais: uploaded_bonsais.values().cloned().map(|bcs| bcs).collect(),
+            uploaded_bonsais: uploaded_bonsais.values().cloned().collect(),
             hook_rejection_remapper,
         };
 
@@ -408,7 +408,7 @@ impl PushRedirector {
             changegroup_id,
             maybe_bookmark_push,
             mutations: Default::default(),
-            uploaded_bonsais: uploaded_bonsais.values().cloned().map(|bcs| bcs).collect(),
+            uploaded_bonsais: uploaded_bonsais.values().cloned().collect(),
             uploaded_hg_changeset_ids: Default::default(),
         })
     }

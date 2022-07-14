@@ -55,7 +55,7 @@ pub(super) async fn run(matches: &ArgMatches<'_>, connection: Connection) -> Res
     let id = resolve_commit_id(&connection, &repo, &commit_id).await?;
     let bookmark = matches.value_of(ARG_NAME).expect("name is required").into();
     let service_identity = get_service_id(matches).map(String::from);
-    let pushvars = get_pushvars(&matches)?;
+    let pushvars = get_pushvars(matches)?;
 
     let params = thrift::RepoCreateBookmarkParams {
         bookmark,

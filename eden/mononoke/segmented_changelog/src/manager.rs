@@ -157,7 +157,7 @@ impl SegmentedChangelogManager {
         let sc_version = self.latest_version(ctx).await?;
         let iddag = self
             .iddag_save_store
-            .load(&ctx, sc_version.iddag_version)
+            .load(ctx, sc_version.iddag_version)
             .await
             .with_context(|| format!("repo {}: failed to load iddag", self.repo_id))?;
         let idmap = self
@@ -176,8 +176,7 @@ impl SegmentedChangelogManager {
     }
 
     pub async fn latest_version(&self, ctx: &CoreContext) -> Result<SegmentedChangelogVersion> {
-        Ok(self
-            .sc_version_store
+        self.sc_version_store
             .get(ctx)
             .await
             .with_context(|| {
@@ -191,7 +190,7 @@ impl SegmentedChangelogManager {
                     "repo {}: segmented changelog metadata not found, maybe repo is not seeded",
                     self.repo_id
                 )
-            })?)
+            })
     }
 
     /// Checks if given changeset is indexed by given segmented changelog version.

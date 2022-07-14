@@ -156,7 +156,7 @@ impl LsOutput {
 
 impl Render for LsOutput {
     fn render(&self, matches: &ArgMatches, w: &mut dyn Write) -> Result<(), Error> {
-        if !self.name.starts_with(".") || matches.is_present(ARG_ALL) {
+        if !self.name.starts_with('.') || matches.is_present(ARG_ALL) {
             if matches.is_present(ARG_LONG) {
                 self.render_long(w)?;
             } else {
@@ -266,7 +266,7 @@ pub(super) async fn run(
         id,
         ..Default::default()
     };
-    let path = get_path(matches).unwrap_or_else(|| String::new());
+    let path = get_path(matches).unwrap_or_else(String::new);
     let tree = thrift::TreeSpecifier::by_commit_path(thrift::CommitPathSpecifier {
         commit,
         path,

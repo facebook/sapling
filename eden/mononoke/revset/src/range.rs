@@ -171,7 +171,7 @@ impl RangeNodeStream {
             });
         }
         while !nodes_to_handle.is_empty() {
-            let nodes = replace(&mut nodes_to_handle, HashSet::new());
+            let nodes = std::mem::take(&mut nodes_to_handle);
             for hashgen in nodes {
                 output_nodes
                     .entry(hashgen.generation)

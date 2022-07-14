@@ -50,10 +50,7 @@ pub(crate) fn split_changegroup(
                 bad => Err(anyhow!("Expected Changeset chunk, found: {:?}", bad)),
             })
         })
-        .map_err(|err| {
-            err.context("While extracting Changesets from Changegroup")
-                .into()
-        });
+        .map_err(|err| err.context("While extracting Changesets from Changegroup"));
 
     let filelogs = remainder
         .err_into()
@@ -72,7 +69,6 @@ pub(crate) fn split_changegroup(
         })
         .map_err(|err| {
             err.context("While skipping Manifests in Changegroup")
-                .into()
         })
         .try_filter_map({
             let mut seen_path = None;
@@ -127,7 +123,6 @@ pub(crate) fn split_changegroup(
         })
         .map_err(|err| {
             err.context("While extracting Filelogs from Changegroup")
-                .into()
         });
 
     (changesets, filelogs)

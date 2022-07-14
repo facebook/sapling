@@ -44,11 +44,7 @@ impl SetDifferenceNodeStream {
                 changeset_fetcher.clone(),
             ),
             next_keep: Async::NotReady,
-            remove_input: add_generations_by_bonsai(
-                ctx.clone(),
-                remove_input,
-                changeset_fetcher.clone(),
-            ),
+            remove_input: add_generations_by_bonsai(ctx, remove_input, changeset_fetcher.clone()),
             next_remove: Async::NotReady,
             remove_nodes: HashSet::new(),
             remove_generation: None,

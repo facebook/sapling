@@ -145,7 +145,7 @@ pub(crate) async fn compute_partial_getbundle(
     let new_excludes: HashMap<_, _> = HashMap::from_iter(excludes);
 
     if let Some((cs_id, gen_num)) = maybe_max_head {
-        if !new_excludes.contains_key(&cs_id) && gen_num.value() > gen_num_threshold {
+        if !new_excludes.contains_key(cs_id) && gen_num.value() > gen_num_threshold {
             queue.push((*gen_num, *cs_id));
         }
     }
@@ -260,10 +260,10 @@ pub(crate) async fn low_gen_num_optimization(
     };
 
     let nodes_to_send_second_part = call_difference_of_union_of_ancestors_revset(
-        &ctx,
-        &changeset_fetcher,
+        ctx,
+        changeset_fetcher,
         high_gens_params,
-        &lca_hint,
+        lca_hint,
         None,
     )
     .await?
@@ -306,10 +306,10 @@ async fn process_low_gen_params(
         .map(Ok)
         .map_ok(|low_gens_params| {
             call_difference_of_union_of_ancestors_revset(
-                &ctx,
-                &changeset_fetcher,
+                ctx,
+                changeset_fetcher,
                 low_gens_params,
-                &lca_hint,
+                lca_hint,
                 Some(limit),
             )
         })

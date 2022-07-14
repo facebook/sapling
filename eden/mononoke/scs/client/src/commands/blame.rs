@@ -72,8 +72,8 @@ pub(super) fn make_subcommand<'a, 'b>() -> App<'a, 'b> {
     let cmd = add_scheme_args(cmd);
     let cmd = add_commit_id_args(cmd);
     let cmd = add_path_args(cmd);
-    let cmd = add_args(cmd);
-    cmd
+
+    add_args(cmd)
 }
 
 struct BlameOut {
@@ -194,7 +194,7 @@ impl Render for BlameOut {
                         write!(w, "{}{}", separator, blame_date_formatted)?;
                         separator = " ";
                     }
-                    if separator != "" {
+                    if !separator.is_empty() {
                         separator = ":";
                     }
                     if matches.is_present(ARG_TITLE) {
@@ -274,7 +274,7 @@ impl Render for BlameOut {
                         )?;
                         separator = ":";
                     }
-                    if separator != "" {
+                    if !separator.is_empty() {
                         separator = ": ";
                     }
                     write!(
@@ -417,7 +417,7 @@ pub(super) async fn run(
         ..Default::default()
     };
 
-    let identity_schemes = get_request_schemes(&matches);
+    let identity_schemes = get_request_schemes(matches);
 
     let params = thrift::CommitPathBlameParams {
         format: thrift::BlameFormat::COMPACT,

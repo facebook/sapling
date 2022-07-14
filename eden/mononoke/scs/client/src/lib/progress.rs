@@ -72,7 +72,7 @@ where
     }
 
     let render_stream = render_stream
-        .map(|item| ProgressItem::Item(item))
+        .map(ProgressItem::Item)
         .chain(stream::once(async { ProgressItem::Complete }));
 
     let timer = tokio_stream::wrappers::IntervalStream::new(tokio::time::interval(

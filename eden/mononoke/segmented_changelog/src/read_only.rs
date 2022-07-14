@@ -188,7 +188,7 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
 
         let idmap = self
             .idmap
-            .find_many_changeset_ids(&ctx, ids)
+            .find_many_changeset_ids(ctx, ids)
             .await
             .context("error retrieving mappings for parents_head_and_roots")?;
 
@@ -312,7 +312,7 @@ impl<'a> ReadOnlySegmentedChangelog<'a> {
             if !to_fetch.is_empty() {
                 let fetched_idmap = self
                     .idmap
-                    .find_many_changeset_ids(&ctx, to_fetch)
+                    .find_many_changeset_ids(ctx, to_fetch)
                     .await
                     .context("error retrieving mappings for dag universal ids")?;
                 idmap.extend(fetched_idmap);

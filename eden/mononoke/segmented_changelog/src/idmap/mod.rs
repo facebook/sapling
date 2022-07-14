@@ -223,7 +223,7 @@ impl IdMap for OverlayIdMap {
         }
         let to_get_shared = cs_ids
             .into_iter()
-            .filter(|cs_id| !result.contains_key(&cs_id))
+            .filter(|cs_id| !result.contains_key(cs_id))
             .collect();
         let from_shared = self.shared.find_many_dag_ids(ctx, to_get_shared).await?;
         for (cs, v) in from_shared {
@@ -255,7 +255,7 @@ impl IdMap for OverlayIdMap {
         }
         let to_get_shared = cs_ids
             .into_iter()
-            .filter(|cs_id| !result.contains_key(&cs_id))
+            .filter(|cs_id| !result.contains_key(cs_id))
             .collect();
         let from_shared = self
             .shared

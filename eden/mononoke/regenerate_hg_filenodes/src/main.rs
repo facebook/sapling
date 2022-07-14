@@ -33,10 +33,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 fn convert_to_cs(s: &str) -> Option<HgChangesetId> {
-    let nodehash = HgNodeHash::from_str(s).expect(&format!("malformed hash: {}", s));
-    nodehash
-        .into_option()
-        .map(|nodehash| HgChangesetId::new(nodehash))
+    let nodehash = HgNodeHash::from_str(s).unwrap_or_else(|_| panic!("malformed hash: {}", s));
+    nodehash.into_option().map(HgChangesetId::new)
 }
 
 async fn regenerate_single_manifest(
@@ -118,7 +116,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let logger = matches.logger();
     let rt = matches.runtime();
 
-    let repo_fut = args::open_repo(fb, &logger, &matches);
+    let repo_fut = args::open_repo(fb, logger, &matches);
     let repo = rt.block_on(repo_fut).unwrap();
 
     let ctx = CoreContext::test_mock(fb);

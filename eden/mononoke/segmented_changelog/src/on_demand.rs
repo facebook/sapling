@@ -218,7 +218,7 @@ impl OnDemandUpdateSegmentedChangelog {
             let mut tries: i64 = 0;
             loop {
                 tries += 1;
-                if self.try_update(ctx, &list).await? {
+                if self.try_update(ctx, list).await? {
                     return Ok(tries);
                 }
             }
@@ -251,7 +251,7 @@ impl OnDemandUpdateSegmentedChangelog {
     async fn build_up_to_bookmark(&self, ctx: &CoreContext) -> Result<()> {
         let vertex_list =
             vertexlist_from_seedheads(ctx, &self.seed_heads, self.bookmarks.as_ref()).await?;
-        self.build_up_to_vertex_list(&ctx, &vertex_list).await
+        self.build_up_to_vertex_list(ctx, &vertex_list).await
     }
 
     async fn are_descendants_of_known_commtis(
@@ -337,7 +337,7 @@ async fn the_actual_update(
         let mut namedag = namedag.write().await;
         let parent_fetcher = FetchParents::new(ctx.clone(), changeset_fetcher);
 
-        namedag.add_heads(&parent_fetcher, &heads).await?;
+        namedag.add_heads(&parent_fetcher, heads).await?;
         namedag.map().flush_writes().await?;
         Ok(())
     };

@@ -34,8 +34,8 @@ impl<'a> CommandStats<'a> {
         scuba: &'b mut MononokeScubaSampleBuilder,
     ) -> &'b mut MononokeScubaSampleBuilder {
         match self {
-            Self::Future(ref stats) => scuba.add_future_stats(stats),
-            Self::Stream(ref stats) => scuba.add_stream_stats(stats),
+            Self::Future(stats) => scuba.add_future_stats(stats),
+            Self::Stream(stats) => scuba.add_stream_stats(stats),
         }
     }
 }

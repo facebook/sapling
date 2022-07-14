@@ -130,7 +130,7 @@ pub(super) async fn run(
 ) -> Result<RenderStream, Error> {
     let repo = get_repo_specifier(matches).expect("repository is required");
     let commit_ids = get_commit_ids(matches)?;
-    if commit_ids.len() > 2 || commit_ids.len() < 1 {
+    if commit_ids.len() > 2 || commit_ids.is_empty() {
         bail!("expected 1 or 2 commit_ids (got {})", commit_ids.len())
     }
     let paths = get_paths(matches);

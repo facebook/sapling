@@ -34,10 +34,10 @@ const TIME_WINDOW_MIN: u32 = 10;
 const TIME_WINDOW_MAX: u32 = 3600;
 const RATELIM_FETCH_TIMEOUT: Duration = Duration::from_secs(1);
 
-const COMMITS_PER_AUTHOR_KEY: &'static str = "commits_per_author";
-const COMMITS_PER_AUTHOR_LIMIT_NAME: &'static str = "Commits Per Author Rate Limit";
-const TOTAL_FILE_CHANGES_KEY: &'static str = "total_file_changes";
-const TOTAL_FILE_CHANGES_LIMIT_NAME: &'static str = "File Changes Rate Limit";
+const COMMITS_PER_AUTHOR_KEY: &str = "commits_per_author";
+const COMMITS_PER_AUTHOR_LIMIT_NAME: &str = "Commits Per Author Rate Limit";
+const TOTAL_FILE_CHANGES_KEY: &str = "total_file_changes";
+const TOTAL_FILE_CHANGES_LIMIT_NAME: &str = "File Changes Rate Limit";
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub(crate) enum RateLimitedPushKind {
@@ -59,7 +59,6 @@ fn get_file_changes_rate_limit(ctx: &CoreContext) -> Option<(RateLimitBody, &str
         let category = rate_limiter.category();
         rate_limiter
             .total_file_changes_limit()
-            .clone()
             .map(|limit| (limit, category))
     });
 
@@ -104,7 +103,7 @@ pub(crate) async fn enforce_file_changes_rate_limits<
     let counter = GlobalTimeWindowCounterBuilder::build(
         ctx.fb,
         category,
-        TOTAL_FILE_CHANGES_KEY.to_string(),
+        TOTAL_FILE_CHANGES_KEY,
         TIME_WINDOW_MIN,
         TIME_WINDOW_MAX,
     );
@@ -164,7 +163,7 @@ pub(crate) async fn enforce_commit_rate_limits(
     };
 
     match commits {
-        Some(ref commits) => enforce_commit_rate_limits_on_commits(ctx, commits.iter()).await,
+        Some(commits) => enforce_commit_rate_limits_on_commits(ctx, commits.iter()).await,
         None => Ok(()),
     }
 }
@@ -198,7 +197,7 @@ async fn enforce_commit_rate_limits_on_commits<'a, I: Iterator<Item = &'a Bonsai
     };
 
     let mut groups = HashMap::new();
-    for bonsai in bonsais.into_iter() {
+    for bonsai in bonsais {
         *groups.entry(bonsai.author()).or_insert(0) += 1;
     }
 
@@ -363,5 +362,5 @@ fn make_key(prefix: &str, author: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.input(author);
     let key = format!("{}.{}", prefix, hex::encode(hasher.result()));
-    return key;
+    key
 }

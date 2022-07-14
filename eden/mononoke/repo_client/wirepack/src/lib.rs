@@ -159,7 +159,7 @@ impl WirePackPartProcessor for TreemanifestPartProcessor {
 
 fn replace_or_fail_if_exists<T: Debug>(existing: &mut Option<T>, new_value: T) -> Result<()> {
     let existing = mem::replace(existing, Some(new_value));
-    if !existing.is_none() {
+    if existing.is_some() {
         let msg = format!("{:?} was already set", existing);
         Err(ErrorKind::MalformedTreemanifestPart(msg).into())
     } else {

@@ -100,7 +100,7 @@ impl NewBlobs {
             Some((ref manifest_content, ref p1, ref p2, ref manifest_root)) => {
                 let (entries, counters) = Self::walk_helper(
                     &RepoPath::root(),
-                    &manifest_content,
+                    manifest_content,
                     get_manifest_parent_content(manifests, RepoPath::root(), p1.clone()),
                     get_manifest_parent_content(manifests, RepoPath::root(), p2.clone()),
                     manifests,
@@ -293,7 +293,7 @@ pub async fn upload_changeset(
     let NewBlobs {
         root_manifest,
         sub_entries,
-    } = NewBlobs::new(revlog_cs.manifestid(), &manifests, &filelogs)?;
+    } = NewBlobs::new(revlog_cs.manifestid(), manifests, filelogs)?;
 
     let cs_metadata = ChangesetMetadata {
         user: String::from_utf8(revlog_cs.user().into())?,

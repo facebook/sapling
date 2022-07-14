@@ -30,7 +30,6 @@ use mercurial_bundles::PartId;
 use mercurial_derived_data::DeriveHgChangeset;
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::ChangesetId;
-use obsolete;
 use reachabilityindex::LeastCommonAncestorsHint;
 use std::io::Cursor;
 use std::sync::Arc;
@@ -151,7 +150,7 @@ impl UnbundleResponse {
         let obsmarkers_part = match pushrebase_params.emit_obsmarkers {
             true => obsolete::pushrebased_changesets_to_obsmarkers_part(
                 ctx.clone(),
-                &repo,
+                repo,
                 pushrebased_changesets,
             )
             .transpose()?,

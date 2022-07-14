@@ -141,7 +141,7 @@ where
         if let Some(warm_bookmarks_cache) = self.get_warm_bookmark_cache() {
             let warm_bookmarks = warm_bookmarks_cache
                 .list(
-                    &ctx,
+                    ctx,
                     prefix,
                     &BookmarkPagination::FromStart,
                     Some(return_max),
@@ -176,8 +176,8 @@ where
         };
 
         Ok(to_hg_bookmark_stream(
-            &self.repo.blobrepo(),
-            &ctx,
+            self.repo.blobrepo(),
+            ctx,
             futures::stream::iter(result.into_iter())
                 .map(Ok)
                 .chain(new_bookmarks),
@@ -237,7 +237,7 @@ where
             )
             .boxify()
             .compat();
-            return to_hg_bookmark_stream(&self.repo.blobrepo(), &ctx, s)
+            return to_hg_bookmark_stream(self.repo.blobrepo(), &ctx, s)
                 .try_collect()
                 .await;
         }

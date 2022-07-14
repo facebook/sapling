@@ -436,7 +436,7 @@ impl RepoFactory {
         &self,
         config: &BlobConfig,
     ) -> Result<ArcRedactionConfigBlobstore> {
-        let blobstore = self.blobstore(&config).await?;
+        let blobstore = self.blobstore(config).await?;
         Ok(Arc::new(RedactionConfigBlobstore::new(blobstore)))
     }
 
@@ -872,8 +872,8 @@ impl RepoFactory {
         let pool = self.maybe_volatile_pool("segmented_changelog")?;
         let segmented_changelog = new_server_segmented_changelog(
             self.env.fb,
-            &self.ctx(Some(&repo_identity)),
-            &repo_identity,
+            &self.ctx(Some(repo_identity)),
+            repo_identity,
             repo_config.segmented_changelog_config.clone(),
             sql_connections,
             changeset_fetcher.clone(),
@@ -962,7 +962,7 @@ impl RepoFactory {
             )
             .await?;
         SkiplistIndex::from_blobstore(
-            &self.ctx(Some(&repo_identity)),
+            &self.ctx(Some(repo_identity)),
             &repo_config.skiplist_index_blobstore_key,
             &blobstore_without_cache.boxed(),
         )
@@ -984,14 +984,13 @@ impl RepoFactory {
     }
 
     pub fn filestore_config(&self, repo_config: &ArcRepoConfig) -> ArcFilestoreConfig {
-        let filestore_config = repo_config
-            .filestore
-            .as_ref()
-            .map(|p| FilestoreConfig {
+        let filestore_config = repo_config.filestore.as_ref().map_or_else(
+            FilestoreConfig::no_chunking_filestore,
+            |p| FilestoreConfig {
                 chunk_size: Some(p.chunk_size),
                 concurrency: p.concurrency,
-            })
-            .unwrap_or_else(|| FilestoreConfig::no_chunking_filestore());
+            },
+        );
         Arc::new(filestore_config)
     }
 

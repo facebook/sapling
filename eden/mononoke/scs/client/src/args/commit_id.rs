@@ -387,7 +387,7 @@ async fn try_resolve_bookmark(
             .collect(),
         ..Default::default()
     };
-    let response = conn.repo_resolve_bookmark(&repo, &params).await?;
+    let response = conn.repo_resolve_bookmark(repo, &params).await?;
     Ok(response
         .ids
         .and_then(|ids| ids.get(&thrift::CommitIdentityScheme::BONSAI).cloned()))
@@ -593,7 +593,7 @@ pub(crate) async fn resolve_commit_ids(
                         let candidates: Vec<_> = try_join_all(resolvers.into_iter())
                             .await?
                             .into_iter()
-                            .filter_map(|res| res)
+                            .flatten()
                             .collect();
                         match candidates.as_slice() {
                             [] => Err(format_err!("commit not found: {}", commit_id)),
@@ -629,6 +629,6 @@ pub(crate) async fn resolve_commit_id(
     repo: &thrift::RepoSpecifier,
     commit_id: &CommitId,
 ) -> Result<thrift::CommitId, Error> {
-    let commit_ids = resolve_commit_ids(&conn, &repo, Some(commit_id).into_iter()).await?;
+    let commit_ids = resolve_commit_ids(conn, repo, Some(commit_id).into_iter()).await?;
     Ok(commit_ids.into_iter().next().expect("commit id expected"))
 }

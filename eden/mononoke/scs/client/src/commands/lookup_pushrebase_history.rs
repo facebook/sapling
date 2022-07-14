@@ -37,6 +37,7 @@ use crate::render::RenderStream;
 
 pub(super) const NAME: &str = "lookup-pushrebase-history";
 
+#[allow(clippy::let_and_return)]
 pub(super) fn make_subcommand<'a, 'b>() -> App<'a, 'b> {
     let cmd = SubCommand::with_name(NAME)
         .about("Find pushrebase history for a public commit by traversing mappings")
@@ -44,6 +45,7 @@ pub(super) fn make_subcommand<'a, 'b>() -> App<'a, 'b> {
     let cmd = add_repo_args(cmd);
     let cmd = add_scheme_args(cmd);
     let cmd = add_commit_id_args(cmd);
+
     cmd
 }
 
@@ -117,7 +119,7 @@ pub(super) async fn run(matches: &ArgMatches<'_>, connection: Connection) -> Res
         )
         .await?;
     let lookup_params = thrift::CommitLookupParams {
-        identity_schemes: get_request_schemes(&matches),
+        identity_schemes: get_request_schemes(matches),
         ..Default::default()
     };
     let commit_lookups: Vec<_> = stream::iter(pushrebase_history.history.clone())

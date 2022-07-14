@@ -58,12 +58,12 @@ pub(super) async fn run(matches: &ArgMatches<'_>, connection: Connection) -> Res
     let repo = get_repo_specifier(matches).expect("repository is required");
     let commit_ids = get_commit_ids(matches)?;
     let old_target = match commit_ids.first() {
-        Some(commit_id) => Some(resolve_commit_id(&connection, &repo, &commit_id).await?),
+        Some(commit_id) => Some(resolve_commit_id(&connection, &repo, commit_id).await?),
         None => None,
     };
     let bookmark = matches.value_of(ARG_NAME).expect("name is required").into();
     let service_identity = get_service_id(matches).map(String::from);
-    let pushvars = get_pushvars(&matches)?;
+    let pushvars = get_pushvars(matches)?;
 
     let params = thrift::RepoDeleteBookmarkParams {
         bookmark,

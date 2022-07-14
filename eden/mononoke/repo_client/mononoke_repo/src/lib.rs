@@ -81,7 +81,7 @@ impl MononokeRepo {
     }
 
     pub fn blobrepo(&self) -> &BlobRepo {
-        &self.repo.blob_repo()
+        self.repo.blob_repo()
     }
 
     pub fn inner_repo(&self) -> &InnerRepo {
@@ -130,7 +130,7 @@ impl MononokeRepo {
             None => {
                 // Randomize in case source hostname is not set to avoid
                 // sudden jumps in traffic
-                rand::thread_rng().gen_ratio(percentage.into(), 100)
+                rand::thread_rng().gen_ratio(percentage, 100)
             }
         };
 
@@ -144,7 +144,7 @@ impl MononokeRepo {
     }
 
     pub fn reponame(&self) -> &String {
-        &self.repo.name()
+        self.repo.name()
     }
 
     pub fn repoid(&self) -> RepositoryId {
