@@ -2424,8 +2424,25 @@ ImmediateFuture<Unit> TreeInode::loadGitIgnoreThenDiff(
     std::vector<shared_ptr<const Tree>> trees,
     const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
-  return getMount()
-      ->loadFileContents(context->getFetchContext(), gitignoreInode)
+  return makeImmediateFutureWith([gitignoreInode = std::move(gitignoreInode),
+                                  context] {
+           auto fileInode = gitignoreInode.asFileOrNull();
+           if (!fileInode) {
+             XLOG(WARN)
+                 << "loadGitIgnoreThenDiff() invoked with a non-file inode: "
+                 << gitignoreInode->getLogPath();
+             return makeImmediateFuture<std::string>(
+                 InodeError(EISDIR, gitignoreInode));
+           } else {
+#ifndef _WIN32
+             if (fileInode->getType() == dtype_t::Symlink) {
+               return makeImmediateFuture<std::string>(
+                   InodeError(EMLINK, gitignoreInode));
+             }
+#endif
+             return fileInode->readAll(context->getFetchContext());
+           }
+         })
       .thenTry([self = inodePtrFromThis(),
                 context,
                 currentPath = RelativePath{currentPath}, // deep copy

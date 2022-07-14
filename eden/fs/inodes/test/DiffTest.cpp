@@ -84,11 +84,6 @@ class DiffTest {
       folly::StringPiece userIgnoreFileContents = "",
       CaseSensitivity caseSensitive = kPathMapDefaultCaseSensitive) {
     ScmStatusDiffCallback callback;
-    DiffContext::LoadFileFunction loadFileContentsFromPath =
-        [this](ObjectFetchContext& fetchContext, RelativePathPiece path) {
-          return mount_.getEdenMount()->EdenMount::loadFileContentsFromPath(
-              fetchContext, path, CacheHint::LikelyNeededAgain);
-        };
     DiffContext diffContext{
         &callback,
         folly::CancellationToken{},
@@ -96,8 +91,7 @@ class DiffTest {
         caseSensitive,
         mount_.getEdenMount()->getObjectStore(),
         std::make_unique<TopLevelIgnores>(
-            systemWideIgnoreFileContents, userIgnoreFileContents),
-        std::move(loadFileContentsFromPath)};
+            systemWideIgnoreFileContents, userIgnoreFileContents)};
     auto commitHash = mount_.getEdenMount()->getCheckedOutRootId();
     auto diffFuture = mount_.getEdenMount()
                           ->diff(&diffContext, commitHash)
@@ -771,7 +765,7 @@ TEST(DiffTest, ignoreSystemLevelAndUser) {
 }
 
 #ifndef _WIN32
-// Test gitignore file which is a symlink
+// Test gitignore file which is a symlink. Symlinked gitignore are ignored.
 TEST(DiffTest, ignoreSymlink) {
   DiffTest test({
       {"actual", "/1.txt\nignore.txt\njunk/\n!important.txt\n"},
@@ -796,9 +790,11 @@ TEST(DiffTest, ignoreSymlink) {
       *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair(".gitignore", ScmFileStatus::ADDED),
+          std::make_pair("1.txt", ScmFileStatus::ADDED),
           std::make_pair("a/.gitignore", ScmFileStatus::ADDED),
           std::make_pair("a/second", ScmFileStatus::ADDED),
           std::make_pair("b/.gitignore", ScmFileStatus::ADDED),
+          std::make_pair("ignore.txt", ScmFileStatus::ADDED),
           std::make_pair("src/.gitignore", ScmFileStatus::ADDED)));
 
   result = test.diff(true);
@@ -810,8 +806,8 @@ TEST(DiffTest, ignoreSymlink) {
           std::make_pair("a/second", ScmFileStatus::ADDED),
           std::make_pair("b/.gitignore", ScmFileStatus::ADDED),
           std::make_pair("src/.gitignore", ScmFileStatus::ADDED),
-          std::make_pair("1.txt", ScmFileStatus::IGNORED),
-          std::make_pair("ignore.txt", ScmFileStatus::IGNORED)));
+          std::make_pair("1.txt", ScmFileStatus::ADDED),
+          std::make_pair("ignore.txt", ScmFileStatus::ADDED)));
 }
 #endif // !_WIN32
 

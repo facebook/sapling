@@ -89,7 +89,6 @@ class DiffTest : public ::testing::Test {
   std::unique_ptr<DiffContext> makeDiffContext(
       DiffCallback* callback,
       std::unique_ptr<TopLevelIgnores> topLevelIgnores,
-      DiffContext::LoadFileFunction loadFileContentsFromPath,
       bool listIgnored = true,
       CaseSensitivity caseSensitive = kPathMapDefaultCaseSensitive) {
     return std::make_unique<DiffContext>(
@@ -98,14 +97,12 @@ class DiffTest : public ::testing::Test {
         listIgnored,
         caseSensitive,
         store_.get(),
-        std::move(topLevelIgnores),
-        loadFileContentsFromPath);
+        std::move(topLevelIgnores));
   }
 
   Future<ScmStatus> diffCommitsFuture(
       ObjectId hash1,
       ObjectId hash2,
-      std::string gitIgnoreContents = {},
       std::string userIgnoreContents = {},
       std::string systemIgnoreContents = {},
       bool listIgnored = true,
@@ -114,16 +111,8 @@ class DiffTest : public ::testing::Test {
     auto topLevelIgnores = std::make_unique<TopLevelIgnores>(
         std::move(userIgnoreContents), std::move(systemIgnoreContents));
     auto gitIgnoreStack = topLevelIgnores->getStack();
-    auto mockedLoadFile = [gitIgnoreContents](
-                              ObjectFetchContext&, RelativePathPiece /**/) {
-      return ImmediateFuture{gitIgnoreContents};
-    };
     auto diffContext = makeDiffContext(
-        callback.get(),
-        std::move(topLevelIgnores),
-        mockedLoadFile,
-        listIgnored,
-        caseSensitive);
+        callback.get(), std::move(topLevelIgnores), listIgnored, caseSensitive);
 
     auto fut = diffTrees(
         diffContext.get(),
@@ -165,7 +154,6 @@ class DiffTest : public ::testing::Test {
   ScmStatus diffCommitsWithGitIgnore(
       ObjectId hash1,
       ObjectId hash2,
-      std::string gitIgnoreContents = {},
       std::string userIgnoreContents = {},
       std::string systemIgnoreContents = {},
       bool listIgnored = true,
@@ -173,7 +161,6 @@ class DiffTest : public ::testing::Test {
     return diffCommitsFuture(
                hash1,
                hash2,
-               gitIgnoreContents,
                userIgnoreContents,
                systemIgnoreContents,
                listIgnored,
@@ -606,7 +593,7 @@ TEST_F(DiffTest, nonignored_added_files) {
   auto callback2 = std::make_unique<ScmStatusDiffCallback>();
   auto topLevelIgnores = std::make_unique<TopLevelIgnores>("", "");
   auto diffContext2 =
-      makeDiffContext(callback2.get(), std::move(topLevelIgnores), nullptr);
+      makeDiffContext(callback2.get(), std::move(topLevelIgnores));
 
   auto result2 = diffAddedTree(
                      diffContext2.get(),
@@ -661,7 +648,7 @@ TEST_F(DiffTest, nonignored_removed_files) {
   auto callback2 = std::make_unique<ScmStatusDiffCallback>();
   auto topLevelIgnores = std::make_unique<TopLevelIgnores>("", "");
   auto diffContext2 =
-      makeDiffContext(callback2.get(), std::move(topLevelIgnores), nullptr);
+      makeDiffContext(callback2.get(), std::move(topLevelIgnores));
 
   auto result2 = diffRemovedTree(
                      diffContext2.get(),
@@ -687,7 +674,6 @@ TEST_F(DiffTest, nonignored_removed_files) {
 TEST_F(DiffTest, diff_trees_with_tracked_ignored_file_modified) {
   FakeTreeBuilder builder;
 
-  auto gitIgnoreContents = "a.txt\n";
   builder.setFile("src/foo/a.txt", "a");
   builder.setFile("src/foo/a", "regular file");
   builder.setFile("src/bar/d.txt", "d", /* executable */ true);
@@ -708,9 +694,7 @@ TEST_F(DiffTest, diff_trees_with_tracked_ignored_file_modified) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(),
-      builder2.getRoot()->get().getHash(),
-      gitIgnoreContents);
+      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
   EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
   EXPECT_THAT(
       *result.entries_ref(),
@@ -744,9 +728,7 @@ TEST_F(DiffTest, ignored_added_modified_and_removed_files) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(),
-      builder2.getRoot()->get().getHash(),
-      gitIgnoreContents);
+      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
   EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
   EXPECT_THAT(
       *result.entries_ref(),
@@ -778,9 +760,7 @@ TEST_F(DiffTest, ignored_added_files) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(),
-      builder2.getRoot()->get().getHash(),
-      gitIgnoreContents);
+      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
   EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
   EXPECT_THAT(
       *result.entries_ref(),
@@ -791,7 +771,6 @@ TEST_F(DiffTest, ignored_added_files) {
   auto result2 = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(),
       builder2.getRoot()->get().getHash(),
-      gitIgnoreContents,
       "",
       "",
       false);
@@ -827,9 +806,7 @@ TEST_F(DiffTest, ignored_removed_files) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(),
-      builder2.getRoot()->get().getHash(),
-      gitIgnoreContents);
+      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
   EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
   EXPECT_THAT(
       *result.entries_ref(),
@@ -863,9 +840,7 @@ TEST_F(DiffTest, ignoreToplevelOnly) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(),
-      builder2.getRoot()->get().getHash(),
-      gitIgnoreContents);
+      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
 
   EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
   EXPECT_THAT(
@@ -911,9 +886,7 @@ TEST_F(DiffTest, ignored_file_local_and_in_tree) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(),
-      builder2.getRoot()->get().getHash(),
-      gitIgnoreContents);
+      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
   EXPECT_THAT(
       *result.entries_ref(),
       UnorderedElementsAre(
@@ -958,9 +931,7 @@ TEST_F(DiffTest, ignored_file_not_local_but_is_in_tree) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(),
-      builder2.getRoot()->get().getHash(),
-      gitIgnoreContents);
+      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
   EXPECT_THAT(
       *result.entries_ref(),
       UnorderedElementsAre(
@@ -995,7 +966,6 @@ TEST_F(DiffTest, ignoreSystemLevelAndUser) {
   auto result = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(),
       builder2.getRoot()->get().getHash(),
-      gitIgnoreContents,
       "skip_global.txt\n",
       "skip_user.txt\n");
   EXPECT_THAT(
@@ -1027,7 +997,6 @@ TEST_F(DiffTest, ignoreUserLevel) {
   auto result = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(),
       builder2.getRoot()->get().getHash(),
-      gitIgnoreContents,
       "",
       "skip_user.txt\n");
   EXPECT_THAT(
@@ -1059,7 +1028,6 @@ TEST_F(DiffTest, ignoreSystemLevel) {
   auto result = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(),
       builder2.getRoot()->get().getHash(),
-      gitIgnoreContents,
       "skip_global.txt\n",
       "");
   EXPECT_THAT(
@@ -1094,9 +1062,7 @@ TEST_F(DiffTest, directory_to_file_with_directory_ignored) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(),
-      builder2.getRoot()->get().getHash(),
-      gitIgnoreContents);
+      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
   EXPECT_THAT(
       *result.entries_ref(),
       UnorderedElementsAre(
@@ -1131,9 +1097,7 @@ TEST_F(DiffTest, directory_to_file_with_file_ignored) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(),
-      builder2.getRoot()->get().getHash(),
-      gitIgnoreContents);
+      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
   EXPECT_THAT(
       *result.entries_ref(),
       UnorderedElementsAre(
@@ -1168,9 +1132,7 @@ TEST_F(DiffTest, file_to_directory_with_gitignore) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(),
-      builder2.getRoot()->get().getHash(),
-      gitIgnoreContents);
+      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
   EXPECT_THAT(
       *result.entries_ref(),
       UnorderedElementsAre(
@@ -1212,7 +1174,6 @@ TEST_F(DiffTest, addIgnoredDirectory) {
   auto result = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(),
       builder2.getRoot()->get().getHash(),
-      "",
       systemIgnore);
 
   EXPECT_THAT(
@@ -1252,7 +1213,6 @@ TEST_F(DiffTest, nestedGitIgnoreFiles) {
   auto result = diffCommitsWithGitIgnore(
       builder.getRoot()->get().getHash(),
       builder2.getRoot()->get().getHash(),
-      gitIgnoreContents,
       systemIgnore);
   EXPECT_THAT(
       *result.entries_ref(),
@@ -1283,9 +1243,7 @@ TEST_F(DiffTest, hiddenFolder) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommitsWithGitIgnore(
-      builder.getRoot()->get().getHash(),
-      builder2.getRoot()->get().getHash(),
-      "");
+      builder.getRoot()->get().getHash(), builder2.getRoot()->get().getHash());
   EXPECT_THAT(
       *result.entries_ref(),
       UnorderedElementsAre(std::make_pair("a/c.txt", ScmFileStatus::ADDED)));
@@ -1307,7 +1265,6 @@ TEST_F(DiffTest, caseSensitivity) {
       builder2.getRoot()->get().getHash(),
       "",
       "",
-      "",
       true,
       CaseSensitivity::Insensitive);
   EXPECT_THAT(*resultInsensitive.entries_ref(), UnorderedElementsAre());
@@ -1315,7 +1272,6 @@ TEST_F(DiffTest, caseSensitivity) {
   auto resultSensitive = diffCommitsWithGitIgnore(
       builder1.getRoot()->get().getHash(),
       builder2.getRoot()->get().getHash(),
-      "",
       "",
       "",
       true,
@@ -1401,7 +1357,7 @@ TEST_F(DiffTest, directoryDiff) {
   auto topLevelIgnores = std::make_unique<TopLevelIgnores>("", "");
   auto gitIgnoreStack = topLevelIgnores->getStack();
   auto diffContext =
-      makeDiffContext(callback.get(), std::move(topLevelIgnores), nullptr);
+      makeDiffContext(callback.get(), std::move(topLevelIgnores));
 
   diffTrees(
       diffContext.get(),

@@ -36,17 +36,13 @@ class EdenMount;
  */
 class DiffContext {
  public:
-  using LoadFileFunction = std::function<
-      ImmediateFuture<std::string>(ObjectFetchContext&, RelativePathPiece)>;
-
   DiffContext(
       DiffCallback* cb,
       folly::CancellationToken cancellation,
       bool listIgnored,
       CaseSensitivity caseSensitive,
       const ObjectStore* os,
-      std::unique_ptr<TopLevelIgnores> topLevelIgnores,
-      LoadFileFunction loadFileContentsFromPath);
+      std::unique_ptr<TopLevelIgnores> topLevelIgnores);
 
   DiffContext(const DiffContext&) = delete;
   DiffContext& operator=(const DiffContext&) = delete;
@@ -66,7 +62,6 @@ class DiffContext {
 
   const GitIgnoreStack* getToplevelIgnore() const;
   bool isCancelled() const;
-  LoadFileFunction getLoadFileContentsFromPath() const;
   StatsFetchContext& getFetchContext() {
     return fetchContext_;
   }
@@ -78,7 +73,6 @@ class DiffContext {
 
  private:
   std::unique_ptr<TopLevelIgnores> topLevelIgnores_;
-  const LoadFileFunction loadFileContentsFromPath_;
   const folly::CancellationToken cancellation_;
   StatsFetchContext fetchContext_;
   /**

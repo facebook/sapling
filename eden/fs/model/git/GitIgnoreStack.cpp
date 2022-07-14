@@ -54,14 +54,6 @@ GitIgnore::MatchResult GitIgnoreStack::match(
     if (result != GitIgnore::NO_MATCH) {
       return result;
     }
-
-    // We always expect to reach the end of the suffix iteration before
-    // reaching the end of the GitIgnore file stack.
-    //
-    // We should add exactly one GitIgnore entry to the stack for each
-    // directory.  We may also start with a few more GitIgnore entries on the
-    // stack initially for system-wide or personal user ignore rules.
-    XDCHECK(node != nullptr || suffixIter == suffixRange.end());
   }
   return GitIgnore::NO_MATCH;
 }

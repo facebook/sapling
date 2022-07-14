@@ -19,13 +19,11 @@ DiffContext::DiffContext(
     bool listIgnored,
     CaseSensitivity caseSensitive,
     const ObjectStore* os,
-    std::unique_ptr<TopLevelIgnores> topLevelIgnores,
-    LoadFileFunction loadFileContentsFromPath)
+    std::unique_ptr<TopLevelIgnores> topLevelIgnores)
     : callback{cb},
       store{os},
       listIgnored{listIgnored},
       topLevelIgnores_(std::move(topLevelIgnores)),
-      loadFileContentsFromPath_{loadFileContentsFromPath},
       cancellation_{std::move(cancellation)},
       caseSensitive_{caseSensitive} {}
 
@@ -33,10 +31,6 @@ DiffContext::~DiffContext() = default;
 
 const GitIgnoreStack* DiffContext::getToplevelIgnore() const {
   return topLevelIgnores_->getStack();
-}
-
-DiffContext::LoadFileFunction DiffContext::getLoadFileContentsFromPath() const {
-  return loadFileContentsFromPath_;
 }
 
 bool DiffContext::isCancelled() const {

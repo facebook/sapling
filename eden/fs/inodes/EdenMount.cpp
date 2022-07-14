@@ -1679,37 +1679,17 @@ folly::Future<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
 }
 #endif
 
-/*
-During a diff, we have the possiblility of entering a non-mount aware code path.
-Inside the non-mount aware code path, gitignore files still need to be honored.
-In order to load a gitignore entry, a function pointer to
-`EdenMount::loadFileContentsFromPath()` is passed through the `DiffContext` in
-order to allow access the mount without creating a circular dependency. This
-function starts at the root of the tree, and will follow the path and resolve
-symlinks and will load inodes as needed in order to load the contents of the
-file.
-*/
 std::unique_ptr<DiffContext> EdenMount::createDiffContext(
     DiffCallback* callback,
     folly::CancellationToken cancellation,
     bool listIgnored) const {
-  // We hold a reference to the root inode to ensure that
-  // the EdenMount cannot be destroyed while the DiffContext
-  // is still using it.
-  auto loadContents = [this, rootInode = getRootInode()](
-                          ObjectFetchContext& fetchContext,
-                          RelativePathPiece path) {
-    return loadFileContentsFromPath(
-        fetchContext, path, CacheHint::LikelyNeededAgain);
-  };
   return make_unique<DiffContext>(
       callback,
       cancellation,
       listIgnored,
       getCheckoutConfig()->getCaseSensitive(),
       getObjectStore(),
-      serverState_->getTopLevelIgnores(),
-      std::move(loadContents));
+      serverState_->getTopLevelIgnores());
 }
 
 ImmediateFuture<Unit> EdenMount::diff(
@@ -1770,9 +1750,10 @@ ImmediateFuture<Unit> EdenMount::diff(
       createDiffContext(callback, std::move(cancellation), listIgnored);
   DiffContext* ctxPtr = context.get();
 
-  // stateHolder() exists to ensure that the DiffContext and GitIgnoreStack
+  // stateHolder() exists to ensure that the DiffContext and the EdenMount
   // exists until the diff completes.
-  auto stateHolder = [ctx = std::move(context)]() {};
+  auto stateHolder = [ctx = std::move(context), rootInode = getRootInode()]() {
+  };
 
   return diff(ctxPtr, commitHash).ensure(std::move(stateHolder));
 }
@@ -1803,7 +1784,8 @@ ImmediateFuture<folly::Unit> EdenMount::diffBetweenRoots(
     DiffCallback* callback) {
   auto diffContext = createDiffContext(callback, cancellation, true);
   auto fut = diffRoots(diffContext.get(), fromRoot, toRoot);
-  return std::move(fut).ensure([diffContext = std::move(diffContext)] {});
+  return std::move(fut).ensure(
+      [diffContext = std::move(diffContext), rootInode = getRootInode()] {});
 }
 
 void EdenMount::resetParent(const RootId& parent) {

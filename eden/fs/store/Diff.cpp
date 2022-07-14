@@ -13,6 +13,7 @@
 #include <memory>
 #include <vector>
 
+#include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
@@ -332,23 +333,34 @@ FOLLY_NODISCARD ImmediateFuture<Unit> computeTreeDiff(
  */
 ImmediateFuture<std::string> loadGitIgnore(
     DiffContext* context,
+    const TreeEntry& treeEntry,
     RelativePath gitIgnorePath) {
-  // TODO: load file contents directly from context->store if gitIgnoreEntry is
-  // a regular file
-  auto loadFileContentsFromPath = context->getLoadFileContentsFromPath();
-  auto loadFuture =
-      loadFileContentsFromPath(context->getFetchContext(), gitIgnorePath);
-  return std::move(loadFuture)
-      .thenError([entryPath = std::move(gitIgnorePath)](
-                     const folly::exception_wrapper& ex) {
-        // TODO: add an API to DiffCallback to report user
-        // errors like this (errors that do not indicate a
-        // problem with EdenFS itself) that can be returned to
-        // the caller in a thrift response
-        XLOG(WARN) << "error loading gitignore at " << entryPath << ": "
-                   << folly::exceptionStr(ex);
-        return std::string{};
-      });
+  auto type = treeEntry.getType();
+  if (type != TreeEntryType::REGULAR_FILE &&
+      type != TreeEntryType::EXECUTABLE_FILE) {
+    XLOG(WARN) << "error loading gitignore at " << gitIgnorePath
+               << ": not a regular file";
+    return std::string{};
+  } else {
+    const auto& hash = treeEntry.getHash();
+    return context->store->getBlob(hash, context->getFetchContext())
+        .thenTry([entryPath = std::move(gitIgnorePath)](
+                     folly::Try<std::shared_ptr<const Blob>> blobTry) {
+          if (blobTry.hasException()) {
+            // TODO: add an API to DiffCallback to report user
+            // errors like this (errors that do not indicate a
+            // problem with EdenFS itself) that can be returned to
+            // the caller in a thrift response
+            XLOG(WARN) << "error loading gitignore at " << entryPath << ": "
+                       << folly::exceptionStr(blobTry.exception());
+
+            return std::string{};
+          }
+          const auto& contentsBuf = blobTry.value()->getContents();
+          folly::io::Cursor cursor(&contentsBuf);
+          return cursor.readFixedString(contentsBuf.computeChainDataLength());
+        });
+  }
 }
 
 FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
@@ -369,12 +381,7 @@ FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
   //
   // Explicit include rules cannot be used to unignore files inside an ignored
   // directory.
-  //
-  // We check context->getLoadFileContentsFromPath() here as a way to see if
-  // we are processing gitIgnore files or not, since this is only set from
-  // code that enters through eden/fs/inodes/Diff.cpp. Either way, it is
-  // impossible to load file contents without this set.
-  if (isIgnored || !context->getLoadFileContentsFromPath()) {
+  if (isIgnored) {
     // We can pass in a null GitIgnoreStack pointer here.
     // Since the entire directory is ignored, we don't need to check ignore
     // status for any entries that aren't already tracked in source control.
@@ -392,7 +399,7 @@ FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
     // If this directory has a .gitignore file, load it first.
     const auto it = wdTree->find(kIgnoreFilename);
     if (it != wdTree->cend() && !it->second.isTree()) {
-      gitIgnore = loadGitIgnore(context, currentPath + it->first);
+      gitIgnore = loadGitIgnore(context, it->second, currentPath + it->first);
     }
   }
 
@@ -403,9 +410,8 @@ FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
        wdTree = std::move(wdTree),
        parentIgnore,
        isIgnored](std::string gitIgnore) mutable {
-        auto gitIgnoreStack = gitIgnore.empty()
-            ? std::make_unique<GitIgnoreStack>(parentIgnore)
-            : std::make_unique<GitIgnoreStack>(parentIgnore, gitIgnore);
+        auto gitIgnoreStack =
+            std::make_unique<GitIgnoreStack>(parentIgnore, gitIgnore);
         return computeTreeDiff(
             context,
             currentPath,
