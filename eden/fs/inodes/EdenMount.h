@@ -573,51 +573,6 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       ObjectFetchContext& context) const;
 
   /**
-   * Resolves symlinks and loads file contents from the Inode at the given path.
-   * This loads the entire file contents into memory, so this can be expensive
-   * for large files.
-   *
-   * The fetchContext object must remain valid until the future is completed.
-   */
-  ImmediateFuture<std::string> loadFileContentsFromPath(
-      ObjectFetchContext& fetchContext,
-      RelativePathPiece path,
-      CacheHint cacheHint = CacheHint::LikelyNeededAgain) const;
-
-  /**
-   * Resolves symlinks and loads file contents. This loads the entire file
-   * contents into memory, so this can be expensive for large files.
-   *
-   * The fetchContext object must remain valid until the future is completed.
-   *
-   * TODO: add maxSize parameter to cause the command to fail if the file is
-   * over a certain size.
-   */
-  ImmediateFuture<std::string> loadFileContents(
-      ObjectFetchContext& fetchContext,
-      InodePtr fileInodePtr,
-      CacheHint cacheHint = CacheHint::LikelyNeededAgain) const;
-
-  /**
-   * Chases (to bounded depth) and returns the final non-symlink in the
-   * (possibly 0-length) chain of symlinks rooted at pInode.  Specifically:
-   * If pInode is a file or directory, it is immediately returned.
-   * If pInode is a symlink, the chain rooted at it chased down until
-   * one of the following conditions:
-   * 1) an entity outside this mount is encountered => error (EXDEV);
-   * 2) an non-symlink item under this mount is found => this item is returned;
-   * 3) a maximum depth is exceeded => error (ELOOP).
-   * 4) absolute path entity is encountered => error (EPERM).
-   * 5) the input inode refers to an unlinked inode => error (ENOENT).
-   * 6) a symlink points to a non-existing entity => error (ENOENT)
-   * NOTE: a loop in the chain is handled by max depth length logic.
-   */
-  ImmediateFuture<InodePtr> resolveSymlink(
-      ObjectFetchContext& fetchContext,
-      InodePtr pInode,
-      CacheHint cacheHint = CacheHint::LikelyNeededAgain) const;
-
-  /**
    * Check out the specified commit.
    *
    * This updates the checkedOutRootId as well as the workingCopyParentRootId to
@@ -951,16 +906,6 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   friend class RenameLock;
   friend class SharedRenameLock;
   class JournalDiffCallback;
-
-  /**
-   * Recursive method used for resolveSymlink() implementation
-   */
-  ImmediateFuture<InodePtr> resolveSymlinkImpl(
-      ObjectFetchContext& fetchContext,
-      InodePtr pInode,
-      RelativePath&& path,
-      size_t depth,
-      CacheHint cacheHint) const;
 
   /**
    * Attempt to transition from expected -> newState.

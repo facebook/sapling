@@ -716,12 +716,4 @@ std::shared_ptr<const Tree> TestMount::getRootTree() const {
   return edenMount_->getCheckedOutRootTree();
 }
 
-std::string TestMount::loadFileContentsFromPath(std::string path) {
-  return edenMount_
-      ->loadFileContentsFromPath(
-          ObjectFetchContext::getNullContext(),
-          RelativePathPiece{folly::StringPiece{path}})
-      .get(std::chrono::milliseconds(1));
-};
-
 } // namespace facebook::eden
