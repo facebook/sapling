@@ -3265,6 +3265,9 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   auto conflictType = ConflictType::ERROR;
   if (!oldScmEntry) {
     conflictType = ConflictType::UNTRACKED_ADDED;
+  } else if (newScmEntry && entry.getHash() == newScmEntry->second.getHash()) {
+    // The inode already matches the checkout destination. So do nothing.
+    return nullptr;
   } else if (entry.getHash() != oldScmEntry->second.getHash()) {
     if (getMount()
             ->getObjectStore()
