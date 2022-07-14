@@ -141,8 +141,12 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
                             .boxify()
                     });
 
-                let p1 = parents.next().unwrap_or(Ok(None).into_future().boxify());
-                let p2 = parents.next().unwrap_or(Ok(None).into_future().boxify());
+                let p1 = parents
+                    .next()
+                    .unwrap_or_else(|| Ok(None).into_future().boxify());
+                let p2 = parents
+                    .next()
+                    .unwrap_or_else(|| Ok(None).into_future().boxify());
 
                 p1.join(p2)
                     .with_context(move || format!("While reading parents of {:?}", csid))
@@ -153,7 +157,7 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
         .map(|((p1, p2), rootmf_shared)| match *rootmf_shared {
             None => stream::empty().boxify(),
             Some((_, ref rootmf)) => {
-                manifest::new_entry_intersection_stream(&rootmf, p1.as_ref(), p2.as_ref())
+                manifest::new_entry_intersection_stream(rootmf, p1.as_ref(), p2.as_ref())
             }
         })
         .flatten_stream()
@@ -328,8 +332,8 @@ impl UploadChangesets {
 
         let mut scuba_logger = ctx.scuba().clone();
         scuba_logger
-            .add("Repo Id", format!("{}", blobrepo.get_repoid()))
-            .add("Repo name", format!("{}", blobrepo.name()));
+            .add("Repo Id", blobrepo.get_repoid().to_string())
+            .add("Repo name", blobrepo.name().to_string());
 
         let lfs_uploader = Arc::new(try_boxstream!(JobProcessor::new(
             {
@@ -423,7 +427,7 @@ impl UploadChangesets {
                         fixed_parent_order.get(&HgChangesetId::new(csid.clone()))
                     {
                         let actual: HashSet<_> = parents_from_revlog.into_iter().collect();
-                        let expected: HashSet<_> = parent_order.iter().map(|csid| *csid).collect();
+                        let expected: HashSet<_> = parent_order.iter().copied().collect();
                         if actual != expected {
                             bail!(
                                 "Changeset {} has unexpected parents: actual {:?}\nexpected {:?}",
@@ -452,7 +456,8 @@ impl UploadChangesets {
                         let maybe_handle = parent_changeset_handles.get(&p).cloned();
 
                         if is_import_from_beggining {
-                            maybe_handle.expect(&format!("parent {} not found for {}", p, csid))
+                            maybe_handle
+                                .unwrap_or_else(|| panic!("parent {} not found for {}", p, csid))
                         } else {
                             let hg_cs_id = HgChangesetId::new(p);
 
@@ -468,11 +473,11 @@ impl UploadChangesets {
 
                 let cs_metadata = ChangesetMetadata {
                     user: String::from_utf8(Vec::from(cs.user()))
-                        .expect(&format!("non-utf8 username for {}", csid)),
+                        .unwrap_or_else(|_| panic!("non-utf8 username for {}", csid)),
                     time: cs.time().clone(),
                     extra: cs.extra().clone(),
                     message: String::from_utf8(Vec::from(cs.message()))
-                        .expect(&format!("non-utf8 message for {}", csid)),
+                        .unwrap_or_else(|_| panic!("non-utf8 message for {}", csid)),
                 };
                 let create_changeset = CreateChangeset {
                     expected_nodeid: Some(csid),

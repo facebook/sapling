@@ -197,7 +197,7 @@ impl RepoEphemeralStoreInner {
         cs_id: &ChangesetId,
     ) -> Result<Option<BubbleId>> {
         let rows =
-            SelectBubbleFromChangeset::query(&self.connections.read_connection, &repo_id, &cs_id)
+            SelectBubbleFromChangeset::query(&self.connections.read_connection, repo_id, cs_id)
                 .await?;
         Ok(rows.into_iter().next().map(|b| b.0))
     }
@@ -251,7 +251,7 @@ impl RepoEphemeralStoreInner {
         max: u32,
     ) -> Result<Vec<String>> {
         let bubble = self.open_bubble_raw(bubble_id, false).await?;
-        Ok(bubble.keys_in_bubble(ctx, start_from, max).await?)
+        bubble.keys_in_bubble(ctx, start_from, max).await
     }
 
     /// Method responsible for deleting the bubble and all the data contained within.
@@ -364,7 +364,7 @@ impl RepoEphemeralStore {
     fn inner(&self) -> Result<&RepoEphemeralStoreInner, EphemeralBlobstoreError> {
         self.inner
             .as_deref()
-            .ok_or_else(|| EphemeralBlobstoreError::NoEphemeralBlobstore(self.repo_id))
+            .ok_or(EphemeralBlobstoreError::NoEphemeralBlobstore(self.repo_id))
     }
 
     pub async fn create_bubble(&self, custom_duration: Option<Duration>) -> Result<Bubble> {

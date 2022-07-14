@@ -75,7 +75,7 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for PackBlob<T> {
         let inner_get_data = {
             let inner_key = &[key, ENVELOPE_SUFFIX].concat();
             self.inner
-                .get(ctx, &inner_key)
+                .get(ctx, inner_key)
                 .await
                 .with_context(|| format!("While getting inner data for {:?}", key))?
         };

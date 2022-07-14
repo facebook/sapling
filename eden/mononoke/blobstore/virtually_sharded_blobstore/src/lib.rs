@@ -274,7 +274,7 @@ impl Cache {
         // gets will bypass the semaphore, but if the key does turn out to be cacheable, then it'll
         // get cached on the next read.
         if !stored {
-            self.blob_pool.set(key, NOT_STORABLE.clone())?;
+            self.blob_pool.set(key, NOT_STORABLE)?;
         }
 
         Ok(())

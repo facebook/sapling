@@ -198,7 +198,7 @@ impl InnerConfig {
                 .map(|redaction| async move {
                     let keylist: RedactionKeyList = RedactionKeyListId::from_str(&redaction.id)
                         .with_context(|| format!("Invalid keylist id: {}", redaction.id))?
-                        .load(&ctx, &blobstore)
+                        .load(ctx, &blobstore)
                         .await
                         .with_context(|| format!("Keylist with id {} not found", redaction.id))?;
                     let keys_with_metadata = keylist
@@ -270,7 +270,7 @@ impl SqlRedactedContentStore {
     }
 
     pub async fn delete_redacted_blobs(&self, content_keys: &[String]) -> Result<()> {
-        DeleteRedactedBlobs::query(&self.write_connection, &content_keys[..])
+        DeleteRedactedBlobs::query(&self.write_connection, content_keys)
             .await
             .map_err(Error::from)
             .map(|_| ())

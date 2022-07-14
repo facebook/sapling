@@ -140,7 +140,7 @@ pub fn upload_bookmarks(
         .filter_map(|key_cs_id| key_cs_id)
         .chunks(100) // send 100 bookmarks in a single transaction
         .and_then({
-            let blobrepo = blobrepo.clone();
+            let blobrepo = blobrepo;
             let mononoke_bookmarks: HashMap<_, _> = mononoke_bookmarks.into_iter().collect();
             move |vec| {
                 let mut transaction = blobrepo.update_bookmark_transaction(ctx.clone());

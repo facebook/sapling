@@ -153,7 +153,7 @@ where
         if shared.visit_started(changeset_id) {
             return None;
         }
-        if let Err(_) = sender.poll_ready() {
+        if sender.poll_ready().is_err() {
             // The receiver is closed, so there's no point doing anything.
             return None;
         }

@@ -129,11 +129,11 @@ impl BenchmarkRepoFactory {
 }
 
 fn cache_pool(name: &str) -> Result<cachelib::LruCachePool> {
-    Ok(cachelib::get_pool(name).ok_or_else(|| anyhow!("no cache pool: {}", name))?)
+    cachelib::get_pool(name).ok_or_else(|| anyhow!("no cache pool: {}", name))
 }
 
 fn volatile_pool(name: &str) -> Result<cachelib::VolatileLruCachePool> {
-    Ok(cachelib::get_volatile_pool(name)?.ok_or_else(|| anyhow!("no cache pool: {}", name))?)
+    cachelib::get_volatile_pool(name)?.ok_or_else(|| anyhow!("no cache pool: {}", name))
 }
 
 #[facet::factory()]

@@ -307,7 +307,7 @@ pub async fn make_packblob<'a>(
             fb,
             *blobconfig,
             readonly_storage,
-            &blobstore_options,
+            blobstore_options,
             logger,
             config_store,
         )
@@ -578,7 +578,7 @@ fn make_blobstore_put_ops<'a>(
                     *blobconfig,
                     mysql_options,
                     readonly_storage,
-                    &blobstore_options,
+                    blobstore_options,
                     logger,
                     config_store,
                     scrub_handler,

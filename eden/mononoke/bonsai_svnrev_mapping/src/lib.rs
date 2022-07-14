@@ -120,7 +120,7 @@ pub trait BonsaiSvnrevMapping: Send + Sync {
         changesets: &[BonsaiChangeset],
     ) -> anyhow::Result<()> {
         let mut entries = vec![];
-        for bcs in changesets.into_iter() {
+        for bcs in changesets.iter() {
             match Svnrev::from_bcs(bcs) {
                 Ok(svnrev) => {
                     let entry = BonsaiSvnrevMappingEntry::new(bcs.get_changeset_id(), svnrev);

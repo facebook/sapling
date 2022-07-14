@@ -334,7 +334,7 @@ impl SqlBookmarksTransactionPayload {
         for (bookmark, log_entry) in self.force_deletes.iter() {
             log.push_log_entry(bookmark, log_entry);
             let (txn_, _) =
-                DeleteBookmark::query_with_transaction(txn, &self.repo_id, &bookmark).await?;
+                DeleteBookmark::query_with_transaction(txn, &self.repo_id, bookmark).await?;
             txn = txn_;
         }
         Ok(txn)

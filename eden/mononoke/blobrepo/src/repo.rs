@@ -15,7 +15,7 @@ use bonsai_hg_mapping::ArcBonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::ArcBonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
-use bookmarks;
+
 use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
 use bookmarks::Bookmark;
@@ -378,11 +378,11 @@ impl BlobRepo {
     }
 
     pub fn get_derived_data_config(&self) -> &DerivedDataConfig {
-        &self.inner.repo_derived_data.config()
+        self.inner.repo_derived_data.config()
     }
 
     pub fn get_active_derived_data_types_config(&self) -> &DerivedDataTypesConfig {
-        &self.inner.repo_derived_data.manager().config()
+        self.inner.repo_derived_data.manager().config()
     }
 
     pub fn get_derived_data_types_config(&self, name: &str) -> Option<&DerivedDataTypesConfig> {

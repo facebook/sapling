@@ -80,7 +80,7 @@ impl<T: Blobstore> Blobstore for SamplingBlobstore<T> {
         key: String,
         value: BlobstoreBytes,
     ) -> Result<()> {
-        let sample_res = self.handler.sample_put(&ctx, &key, &value);
+        let sample_res = self.handler.sample_put(ctx, &key, &value);
         self.inner.put(ctx, key, value).await?;
         sample_res
     }
@@ -182,7 +182,7 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for SamplingBlobstorePutOps<T> {
         key: String,
         value: BlobstoreBytes,
     ) -> Result<()> {
-        let sample_res = self.handler.sample_put(&ctx, &key, &value, self.inner_id);
+        let sample_res = self.handler.sample_put(ctx, &key, &value, self.inner_id);
         self.inner.put(ctx, key, value).await?;
         sample_res
     }
@@ -210,7 +210,7 @@ impl<T: BlobstorePutOps> BlobstorePutOps for SamplingBlobstorePutOps<T> {
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
     ) -> Result<OverwriteStatus> {
-        self.handler.sample_put(&ctx, &key, &value, self.inner_id)?;
+        self.handler.sample_put(ctx, &key, &value, self.inner_id)?;
         self.inner
             .put_explicit(ctx, key, value, put_behaviour)
             .await
@@ -222,7 +222,7 @@ impl<T: BlobstorePutOps> BlobstorePutOps for SamplingBlobstorePutOps<T> {
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
-        self.handler.sample_put(&ctx, &key, &value, self.inner_id)?;
+        self.handler.sample_put(ctx, &key, &value, self.inner_id)?;
         self.inner.put_with_status(ctx, key, value).await
     }
 }

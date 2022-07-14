@@ -26,7 +26,6 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use stats::prelude::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::mem;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -223,7 +222,7 @@ impl UploadEntries {
 
                 // NOTE: Just fetch the envelope here, because we don't actually need the
                 // deserialized manifest: just the parents will do.
-                let envelope = fetch_manifest_envelope(&ctx, &self.blobstore, manifest_id)
+                let envelope = fetch_manifest_envelope(ctx, &self.blobstore, manifest_id)
                     .await
                     .with_context(|| {
                         format!(
@@ -381,15 +380,15 @@ impl UploadEntries {
 
         {
             let mut inner = this.inner.lock().expect("Lock poisoned");
-            let uploaded_entries = mem::replace(&mut inner.uploaded_entries, HashMap::new());
+            let uploaded_entries = std::mem::take(&mut inner.uploaded_entries);
 
             let uploaded_filenodes_cnt = uploaded_entries
                 .iter()
-                .filter(|&(ref path, _)| path.is_file())
+                .filter(|&(path, _)| path.is_file())
                 .count();
             let uploaded_manifests_cnt = uploaded_entries
                 .iter()
-                .filter(|&(ref path, _)| !path.is_file())
+                .filter(|&(path, _)| !path.is_file())
                 .count();
 
             STATS::finalize_uploaded.add_value(uploaded_entries.len() as i64);

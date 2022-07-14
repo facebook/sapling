@@ -242,7 +242,7 @@ impl Sqlblob {
 
         let futs: FuturesOrdered<_> = (0..shard_count)
             .into_iter()
-            .map(|shard| connection_factory(shard))
+            .map(connection_factory)
             .collect();
 
         let shard_connections = futs.try_collect::<Vec<_>>().await?;
@@ -499,7 +499,7 @@ impl Sqlblob {
     }
 
     async fn get_impl<'a>(&'a self, key: &'a str) -> Result<Option<BlobstoreGetData>> {
-        let chunked = self.data_store.get(&key).await?;
+        let chunked = self.data_store.get(key).await?;
         if let Some(chunked) = chunked {
             let blob = match chunked.chunking_method {
                 ChunkingMethod::InlineBase64 => {
@@ -557,7 +557,7 @@ impl Blobstore for Sqlblob {
         _ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<BlobstoreIsPresent> {
-        let present = self.data_store.is_present(&key).await?;
+        let present = self.data_store.is_present(key).await?;
         Ok(if present {
             BlobstoreIsPresent::Present
         } else {
@@ -750,7 +750,7 @@ impl BlobstoreUnlinkOps for Sqlblob {
                 key
             )
         };
-        self.data_store.unlink(&key).await
+        self.data_store.unlink(key).await
     }
 }
 

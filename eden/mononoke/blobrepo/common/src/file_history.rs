@@ -394,7 +394,7 @@ async fn get_maybe_missing_filenode(
             // filenodes were intentionally disabled.  Attempt
             // to reconstruct the filenode from the envelope.  Use `NULL_CSID`
             // to indicate a draft or missing linknode.
-            get_filenode_from_envelope(repo.get_blobstore(), ctx, &path, node, NULL_CSID).await
+            get_filenode_from_envelope(repo.get_blobstore(), ctx, path, node, NULL_CSID).await
         }
     }
 }
@@ -406,7 +406,7 @@ async fn get_filenode_from_envelope(
     node: HgFileNodeId,
     linknode: HgChangesetId,
 ) -> Result<FilenodeInfo, Error> {
-    let envelope = node.load(&ctx, &blobstore).await.with_context({
+    let envelope = node.load(ctx, &blobstore).await.with_context({
         cloned!(path);
         move || format!("While fetching filenode for {} {}", path, node)
     })?;

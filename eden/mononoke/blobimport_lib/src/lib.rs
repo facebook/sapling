@@ -156,7 +156,7 @@ impl<'a> Blobimport<'a> {
                 if cs_count % log_step == 0 {
                     info!(ctx.logger(), "inserted commits # {}", cs_count);
                 }
-                (revidx, cs.0.clone())
+                (revidx, cs.0)
             }
         })
         .chunks(chunk_size)
@@ -191,9 +191,7 @@ impl<'a> Blobimport<'a> {
         while let Some(chunk_result) = upload_changesets.next().await {
             let chunk = chunk_result?;
             for (rev, cs) in chunk.iter() {
-                let max_rev = max_rev_and_bcs_id
-                    .map(|(revidx, _)| revidx)
-                    .unwrap_or_else(RevIdx::zero);
+                let max_rev = max_rev_and_bcs_id.map_or_else(RevIdx::zero, |(revidx, _)| revidx);
                 if rev >= &max_rev {
                     max_rev_and_bcs_id = Some((*rev, cs.get_changeset_id()))
                 }
@@ -215,7 +213,7 @@ impl<'a> Blobimport<'a> {
                         })
                         .collect();
                     synced_commit_mapping
-                        .add_bulk(&ctx, entries)
+                        .add_bulk(ctx, entries)
                         .await
                         .map(|_| ())
                 } else {
@@ -277,7 +275,7 @@ impl<'a> Blobimport<'a> {
             BookmarkImportPolicy::Prefix(prefix) => {
                 bookmark::upload_bookmarks(
                     ctx.clone(),
-                    &ctx.logger(),
+                    ctx.logger(),
                     revlogrepo,
                     blobrepo.clone(),
                     stale_bookmarks,
@@ -330,7 +328,7 @@ impl<'a> Blobimport<'a> {
                 let public = blobrepo
                     .phases()
                     .get_public(
-                        &ctx,
+                        ctx,
                         hg_to_bcs_ids
                             .clone()
                             .into_iter()
@@ -370,9 +368,7 @@ impl<'a> Blobimport<'a> {
         let mut max_rev_and_bcs_id = None;
         for maybe_rev_cs in imported {
             if let Some((rev, bcs_id)) = maybe_rev_cs {
-                let max_rev = max_rev_and_bcs_id
-                    .map(|(revidx, _)| revidx)
-                    .unwrap_or_else(RevIdx::zero);
+                let max_rev = max_rev_and_bcs_id.map_or_else(RevIdx::zero, |(revidx, _)| revidx);
                 if rev >= max_rev {
                     max_rev_and_bcs_id = Some((rev, bcs_id))
                 }

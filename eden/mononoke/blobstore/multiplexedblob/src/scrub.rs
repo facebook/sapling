@@ -255,7 +255,7 @@ async fn put_and_mark_repaired(
         Some(put_behaviour),
     )
     .await;
-    scrub_handler.on_repair(&ctx, id, key, res.is_ok(), value.as_meta());
+    scrub_handler.on_repair(ctx, id, key, res.is_ok(), value.as_meta());
     res.map(|_status| ())
 }
 
@@ -274,7 +274,7 @@ async fn blobstore_get(
         .scrub_get(ctx, key, scrub_options.scrub_action_on_missing_write_mostly)
         .await
     {
-        Ok(value) => return Ok(value),
+        Ok(value) => Ok(value),
         Err(error) => match error {
             ErrorKind::SomeFailedOthersNone(_) => {
                 // MultiplexedBlobstore returns Ok(None) here if queue is empty for the key
@@ -354,7 +354,7 @@ async fn blobstore_get(
 
                 if scrub_options.scrub_action == ScrubAction::ReportOnly {
                     for id in needs_repair.keys() {
-                        scrub_handler.on_repair(&ctx, *id, key, false, value.as_meta());
+                        scrub_handler.on_repair(ctx, *id, key, false, value.as_meta());
                     }
                 } else {
                     // inner_put to the stores that need it.

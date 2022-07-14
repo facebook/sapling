@@ -166,7 +166,7 @@ impl Blobstore for Memblob {
         let state = self.state.clone();
 
         let inner = state.lock().expect("lock poison");
-        Ok(inner.get(&key).map(|bytes| bytes.clone().into()))
+        Ok(inner.get(key).map(|bytes| bytes.clone().into()))
     }
 
     async fn put<'a>(

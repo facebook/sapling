@@ -562,7 +562,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
         async move {
             let entries = match maybe_exclude_reason {
                 Some(ref r) => {
-                    CountFurtherBookmarkLogEntriesWithoutReason::query(&conn, &id, &repo_id, &r)
+                    CountFurtherBookmarkLogEntriesWithoutReason::query(&conn, &id, &repo_id, r)
                         .await?
                 }
                 None => CountFurtherBookmarkLogEntries::query(&conn, &id, &repo_id).await?,

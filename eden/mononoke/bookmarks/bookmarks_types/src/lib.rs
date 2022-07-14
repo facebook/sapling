@@ -89,7 +89,7 @@ pub struct BookmarkName {
 impl FromStr for BookmarkName {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(BookmarkName::new(s)?)
+        BookmarkName::new(s)
     }
 }
 
@@ -356,9 +356,9 @@ impl RangeBounds<BookmarkName> for BookmarkPrefixRange {
             Range(r) => r.start_bound(),
             RangeFrom(r) => r.start_bound(),
             RangeFull(r) => r.start_bound(),
-            After(a) => Bound::Excluded(&a),
-            Between(s, _) => Bound::Excluded(&s),
-            Empty(n) => Bound::Included(&n),
+            After(a) => Bound::Excluded(a),
+            Between(s, _) => Bound::Excluded(s),
+            Empty(n) => Bound::Included(n),
         }
     }
 
@@ -369,8 +369,8 @@ impl RangeBounds<BookmarkName> for BookmarkPrefixRange {
             RangeFrom(r) => r.end_bound(),
             RangeFull(r) => r.end_bound(),
             After(_) => Bound::Unbounded,
-            Between(_, e) => Bound::Excluded(&e),
-            Empty(n) => Bound::Excluded(&n),
+            Between(_, e) => Bound::Excluded(e),
+            Empty(n) => Bound::Excluded(n),
         }
     }
 }

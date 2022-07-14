@@ -147,7 +147,7 @@ impl<T: Blobstore> RedactedBlobstoreInner<T> {
                             ctx.logger(),
                             "{} operation with redacted blobstore with key {:?}", operation, key
                         );
-                        self.to_scuba_redacted_blob_accessed(&ctx, &key, operation);
+                        self.to_scuba_redacted_blob_accessed(ctx, key, operation);
 
                         if metadata.log_only {
                             Ok(&self.blobstore)

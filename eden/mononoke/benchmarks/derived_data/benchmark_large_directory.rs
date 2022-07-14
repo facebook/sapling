@@ -131,17 +131,17 @@ async fn modify_large_directory(
 
 async fn derive(ctx: &CoreContext, repo: &BlobRepo, data: &str, csid: ChangesetId) -> String {
     match data {
-        MappedHgChangesetId::NAME => MappedHgChangesetId::derive(&ctx, &repo, csid)
+        MappedHgChangesetId::NAME => MappedHgChangesetId::derive(ctx, repo, csid)
             .await
             .unwrap()
             .hg_changeset_id()
             .to_string(),
-        RootSkeletonManifestId::NAME => RootSkeletonManifestId::derive(&ctx, &repo, csid)
+        RootSkeletonManifestId::NAME => RootSkeletonManifestId::derive(ctx, repo, csid)
             .await
             .unwrap()
             .skeleton_manifest_id()
             .to_string(),
-        RootUnodeManifestId::NAME => RootUnodeManifestId::derive(&ctx, &repo, csid)
+        RootUnodeManifestId::NAME => RootUnodeManifestId::derive(ctx, repo, csid)
             .await
             .unwrap()
             .manifest_unode_id()
@@ -151,7 +151,7 @@ async fn derive(ctx: &CoreContext, repo: &BlobRepo, data: &str, csid: ChangesetI
             .unwrap()
             .id()
             .to_string(),
-        RootFsnodeId::NAME => RootFsnodeId::derive(&ctx, &repo, csid)
+        RootFsnodeId::NAME => RootFsnodeId::derive(ctx, repo, csid)
             .await
             .unwrap()
             .fsnode_id()

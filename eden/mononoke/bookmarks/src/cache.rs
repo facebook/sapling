@@ -145,7 +145,7 @@ impl CachedBookmarks {
                 if cache.expires <= now || cache_failed {
                     cache_hit = false;
                     *cache = Cache::new(
-                        ctx.clone(),
+                        ctx,
                         self.bookmarks.clone(),
                         now + ttl,
                         // NOTE: We want freshness to behave as follows:
@@ -236,8 +236,7 @@ impl CachedBookmarks {
                         .filter_map(move |(name, (kind, changeset_id))| {
                             if filter_kinds
                                 .as_ref()
-                                .map(|kinds| kinds.iter().any(|k| k == kind))
-                                .unwrap_or(true)
+                                .map_or(true, |kinds| kinds.iter().any(|k| k == kind))
                             {
                                 let bookmark = Bookmark {
                                     name: name.clone(),

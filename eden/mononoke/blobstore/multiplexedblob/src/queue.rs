@@ -148,7 +148,7 @@ impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
             &pc,
             stats,
             result.as_ref(),
-            &key,
+            key,
             ctx.metadata().session_id().as_str(),
             OperationType::Put,
             Some(blobstore_id),
@@ -201,7 +201,7 @@ impl Blobstore for MultiplexedBlobstore {
                             self.blobstore.get(ctx, key).await
                         }
                     } else {
-                        return Err(error);
+                        Err(error)
                     }
                 }
             }

@@ -518,11 +518,11 @@ async fn select_next_with_timeout<F1: Future, F2: Future>(
         Some(timer) => {
             pin_mut!(select_next_fut);
             match future::select(select_next_fut, timer).await {
-                FutureEither::Left((value, _)) => value.map(|res| Ok(res)),
+                FutureEither::Left((value, _)) => value.map(Ok),
                 FutureEither::Right(((), _)) => Some(Err(Timeout)),
             }
         }
-        None => select_next_fut.await.map(|res| Ok(res)),
+        None => select_next_fut.await.map(Ok),
     }
 }
 
@@ -643,7 +643,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
                                 }
                                 return Ok(BlobstoreIsPresent::Present);
                             }
-                            present_counter = present_counter + 1;
+                            present_counter += 1;
                         }
                         (_, Ok(BlobstoreIsPresent::Absent)) => {
                             needed_not_present = needed_not_present.saturating_sub(1);
@@ -659,9 +659,10 @@ impl Blobstore for MultiplexedBlobstoreBase {
                             errors.insert(blobstore_id, error);
                         }
                         (blobstore_id, Ok(BlobstoreIsPresent::ProbablyNotPresent(err))) => {
-                            let err = err.context(format!(
+                            let err = err.context(
                                 "Received 'ProbablyNotPresent' from the underlying blobstore"
-                            ));
+                                    .to_string(),
+                            );
                             errors.insert(blobstore_id, err);
                         }
                     }
@@ -692,7 +693,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
                     }
                     // some blobstores reported the blob is missing, others failed
                     else {
-                        let write_mostly_err = write_mostly_error(&blobstores, errors);
+                        let write_mostly_err = write_mostly_error(blobstores, errors);
                         if let ErrorKind::SomeFailedOthersNone(errors) = write_mostly_err {
                             let err = Error::from(ErrorKind::SomeFailedOthersNone(errors));
                             Ok(BlobstoreIsPresent::ProbablyNotPresent(err))

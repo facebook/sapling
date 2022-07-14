@@ -87,7 +87,7 @@ pub(crate) async fn check_restriction_ensure_ancestor_of(
     }
 
     if let Some(descendant_bookmark) = &pushrebase_params.globalrevs_publishing_bookmark {
-        descendant_bookmarks.push(&descendant_bookmark);
+        descendant_bookmarks.push(descendant_bookmark);
     }
 
     stream::iter(descendant_bookmarks)
@@ -98,7 +98,7 @@ pub(crate) async fn check_restriction_ensure_ancestor_of(
                 repo,
                 bookmark_to_move,
                 lca_hint,
-                &descendant_bookmark,
+                descendant_bookmark,
                 target,
             )
             .await?;

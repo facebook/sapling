@@ -254,7 +254,7 @@ impl<'op> UpdateBookmarkOp<'op> {
                     repo,
                     pushrebase_params,
                     self.targets.new,
-                    &self.affected_changesets.new_changesets(),
+                    self.affected_changesets.new_changesets(),
                 );
 
                 let to_log = async {

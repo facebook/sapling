@@ -137,7 +137,7 @@ impl GenManifest {
                 }
                 // generate changeset
                 let bonsai = BonsaiChangesetMut {
-                    parents: std::mem::replace(&mut parents, Vec::new()),
+                    parents: std::mem::take(&mut parents),
                     author: "author".to_string(),
                     author_date: DateTime::from_timestamp(0, 0).unwrap(),
                     committer: None,

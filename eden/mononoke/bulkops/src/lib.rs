@@ -220,7 +220,7 @@ impl PublicChangesetBulkFetch {
                 if !ids.is_empty() {
                     let cs_ids = ids.iter().map(|(cs_id, _)| *cs_id).collect();
                     let public = phases.get_cached_public(ctx, cs_ids).await?;
-                    ids.retain(|(id, _)| public.contains(&id));
+                    ids.retain(|(id, _)| public.contains(id));
                 }
                 Ok::<_, Error>(stream::iter(
                     ids.into_iter().map(move |id| Ok((id, completed_bounds))),

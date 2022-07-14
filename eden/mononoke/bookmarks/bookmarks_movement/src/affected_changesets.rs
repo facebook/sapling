@@ -39,7 +39,6 @@ use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_authorization::AuthorizationContext;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
-use scribe_commit_queue;
 use scribe_commit_queue::ChangedFilesInfo;
 use skeleton_manifest::RootSkeletonManifestId;
 use tunables::tunables;
@@ -141,8 +140,7 @@ impl AffectedChangesets {
         let mut exclude_bookmarks: HashSet<_> = repo
             .repo_bookmark_attrs()
             .select(bookmark)
-            .map(|attr| attr.params().hooks_skip_ancestors_of.iter())
-            .flatten()
+            .flat_map(|attr| attr.params().hooks_skip_ancestors_of.iter())
             .cloned()
             .collect();
         exclude_bookmarks.remove(bookmark);
@@ -322,8 +320,7 @@ impl AffectedChangesets {
             for bcs in self.iter() {
                 if bcs
                     .extra()
-                    .find(|(name, _)| name == &CHANGE_XREPO_MAPPING_EXTRA)
-                    .is_some()
+                    .any(|(name, _)| name == CHANGE_XREPO_MAPPING_EXTRA)
                 {
                     // This extra is used in backsyncer, and it changes how commit
                     // is rewritten from a large repo to a small repo. This is dangerous

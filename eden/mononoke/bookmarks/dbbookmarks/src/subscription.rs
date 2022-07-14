@@ -81,7 +81,7 @@ impl SqlBookmarksSubscription {
             &sql_bookmarks.repo_id,
             &std::u64::MAX,
             &tok,
-            &BookmarkKind::ALL_PUBLISHING,
+            BookmarkKind::ALL_PUBLISHING,
         )
         .await
         .context("Failed to query bookmarks")?;

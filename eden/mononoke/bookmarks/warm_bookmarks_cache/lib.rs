@@ -338,11 +338,11 @@ impl WarmBookmarksCache {
         info!(ctx.logger(), "Starting warm bookmark cache updater");
         let sub = repo
             .bookmarks()
-            .create_subscription(&ctx, Freshness::MaybeStale)
+            .create_subscription(ctx, Freshness::MaybeStale)
             .await
             .context("Error creating bookmarks subscription")?;
 
-        let bookmarks = init_bookmarks(&ctx, &*sub, repo, &warmers, init_mode).await?;
+        let bookmarks = init_bookmarks(ctx, &*sub, repo, &warmers, init_mode).await?;
         let bookmarks = Arc::new(RwLock::new(bookmarks));
 
         BookmarksCoordinator::new(bookmarks.clone(), sub, repo, warmers.clone())
@@ -442,7 +442,7 @@ async fn init_bookmarks(
                 match mode {
                     InitMode::Rewind => {
                         let maybe_cs_id =
-                            move_bookmark_back_in_history_until_derived(ctx, repo, &book, &warmers)
+                            move_bookmark_back_in_history_until_derived(ctx, repo, &book, warmers)
                                 .watched(ctx.logger())
                                 .await?;
 
@@ -620,10 +620,8 @@ pub async fn find_all_underived_and_latest_derived(
                 let maybe_cs_ts =
                     maybe_cs_id_ts.map(|(cs_id, id_and_ts)| (cs_id, id_and_ts.map(|(_, ts)| ts)));
                 return Ok((LatestDerivedBookmarkEntry::Found(maybe_cs_ts), res));
-            } else {
-                if let Some(cs_id_ts) = maybe_cs_id_ts {
-                    res.push_front(cs_id_ts);
-                }
+            } else if let Some(cs_id_ts) = maybe_cs_id_ts {
+                res.push_front(cs_id_ts);
             }
         }
 
@@ -681,7 +679,7 @@ impl BookmarksCoordinator {
     async fn update(&mut self, ctx: &CoreContext) -> Result<(), Error> {
         // Report delay and remove finished updaters
         report_delay_and_remove_finished_updaters(
-            &ctx,
+            ctx,
             &self.live_updaters,
             self.repo.repo_identity().name(),
         );
@@ -790,7 +788,7 @@ impl BookmarksCoordinator {
                     };
 
                     live_updaters.with_write(|live_updaters| {
-                        let maybe_state = live_updaters.remove(&book.name());
+                        let maybe_state = live_updaters.remove(book.name());
                         if let Some(state) = maybe_state {
                             live_updaters.insert(book.name().clone(), state.into_finished(&res));
                         }
@@ -942,8 +940,7 @@ async fn single_bookmark_updater(
     mut staleness_reporter: impl FnMut(Timestamp),
 ) -> Result<(), Error> {
     let (latest_derived, underived_history) =
-        find_all_underived_and_latest_derived(ctx, repo, &bookmark.name(), warmers.as_ref())
-            .await?;
+        find_all_underived_and_latest_derived(ctx, repo, bookmark.name(), warmers.as_ref()).await?;
 
     let update_bookmark = |cs_id: ChangesetId| async move {
         bookmarks.with_write(|bookmarks| {
@@ -992,7 +989,7 @@ async fn single_bookmark_updater(
             .clone()
             .add("delay_ms", maybe_ts.map(|ts| ts.since_millis()))
             .log_with_msg("Before warming bookmark", None);
-        let (stats, res) = warm_all(&ctx, underived_cs_id, &warmers).timed().await;
+        let (stats, res) = warm_all(&ctx, underived_cs_id, warmers).timed().await;
         ctx.scuba()
             .clone()
             .add_future_stats(&stats)

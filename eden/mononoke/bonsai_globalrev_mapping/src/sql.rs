@@ -248,10 +248,10 @@ async fn select_mapping(
 
     let rows = match objects {
         BonsaisOrGlobalrevs::Bonsai(bcs_ids) => {
-            SelectMappingByBonsai::query(&connection, &repo_id, &bcs_ids[..]).await?
+            SelectMappingByBonsai::query(connection, &repo_id, &bcs_ids[..]).await?
         }
         BonsaisOrGlobalrevs::Globalrev(globalrevs) => {
-            SelectMappingByGlobalrev::query(&connection, &repo_id, &globalrevs[..]).await?
+            SelectMappingByGlobalrev::query(connection, &repo_id, &globalrevs[..]).await?
         }
     };
 

@@ -74,6 +74,7 @@ impl RepoBlobstore {
         Self::build(new_inner_blobstore, prefix, redacted_blobstore_config)
     }
 
+    #[allow(clippy::let_and_return)]
     fn build<T: Blobstore + 'static>(
         blobstore: T,
         prefix: String,

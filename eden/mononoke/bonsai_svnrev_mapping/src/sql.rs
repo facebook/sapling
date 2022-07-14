@@ -194,10 +194,10 @@ async fn select_mapping(
 
     let rows = match objects {
         BonsaisOrSvnrevs::Bonsai(bcs_ids) => {
-            SelectMappingByBonsai::query(&connection, &repo_id, &bcs_ids[..]).await?
+            SelectMappingByBonsai::query(connection, &repo_id, &bcs_ids[..]).await?
         }
         BonsaisOrSvnrevs::Svnrev(svnrevs) => {
-            SelectMappingBySvnrev::query(&connection, &repo_id, &svnrevs[..]).await?
+            SelectMappingBySvnrev::query(connection, &repo_id, &svnrevs[..]).await?
         }
     };
 

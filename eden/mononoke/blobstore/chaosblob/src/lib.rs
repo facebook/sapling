@@ -66,16 +66,14 @@ impl<T: std::fmt::Display> std::fmt::Display for ChaosBlobstore<T> {
 }
 
 fn derive_threshold(sample_rate: Option<NonZeroU32>) -> f32 {
-    sample_rate
-        .map(|rate| {
-            match rate.get() {
-                // Avoid chance of rng returning 0.0 and threshold being 0.0
-                1 => ALWAYS_CHAOS_THRESHOLD,
-                // If rate 100, then rng must generate over 0.99 to trigger error
-                n => 1.0 - (1.0 / (n as f32)),
-            }
-        })
-        .unwrap_or(NEVER_CHAOS_THRESHOLD)
+    sample_rate.map_or(NEVER_CHAOS_THRESHOLD, |rate| {
+        match rate.get() {
+            // Avoid chance of rng returning 0.0 and threshold being 0.0
+            1 => ALWAYS_CHAOS_THRESHOLD,
+            // If rate 100, then rng must generate over 0.99 to trigger error
+            n => 1.0 - (1.0 / (n as f32)),
+        }
+    })
 }
 
 impl<T> ChaosBlobstore<T> {

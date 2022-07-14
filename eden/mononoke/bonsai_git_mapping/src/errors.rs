@@ -6,7 +6,7 @@
  */
 
 use super::BonsaiGitMappingEntry;
-use anyhow;
+
 use thiserror::Error;
 
 #[derive(Debug, Error)]

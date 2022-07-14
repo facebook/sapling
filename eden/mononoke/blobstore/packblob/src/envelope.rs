@@ -109,10 +109,7 @@ impl TryFrom<BlobstoreBytes> for PackEnvelope {
 
 impl Into<BlobstoreBytes> for PackEnvelope {
     fn into(self) -> BlobstoreBytes {
-        let data = compact_serialize_with_header(
-            HeaderType::PackBlobCompactFormat.into(),
-            &self.0.clone(),
-        );
+        let data = compact_serialize_with_header(HeaderType::PackBlobCompactFormat.into(), &self.0);
         BlobstoreBytes::from_bytes(data)
     }
 }
