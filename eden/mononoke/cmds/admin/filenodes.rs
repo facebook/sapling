@@ -215,7 +215,7 @@ pub async fn subcommand_filenodes<'a>(
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo = args::open_repo(fb, &ctx.logger(), &matches).await?;
+    let repo = args::open_repo(fb, ctx.logger(), matches).await?;
     let log_envelope = sub_m.is_present(ARG_ENVELOPE);
 
     match sub_m.subcommand() {
@@ -236,8 +236,8 @@ pub async fn subcommand_filenodes<'a>(
         (COMMAND_ID, Some(matches)) => {
             let path = matches.value_of(ARG_PATH).unwrap();
             let path = match path.chars().last() {
-                Some('/') => extract_path(&path).map(RepoPath::DirectoryPath),
-                Some(_) => extract_path(&path).map(RepoPath::FilePath),
+                Some('/') => extract_path(path).map(RepoPath::DirectoryPath),
+                Some(_) => extract_path(path).map(RepoPath::FilePath),
                 None => Ok(RepoPath::RootPath),
             }?;
 

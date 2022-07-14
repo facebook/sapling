@@ -410,7 +410,7 @@ where
 
 pub fn get_repo_factory<'a>(matches: &'a MononokeMatches<'a>) -> Result<RepoFactory, Error> {
     let config_store = matches.config_store();
-    let common_config = load_common_config(config_store, &matches)?;
+    let common_config = load_common_config(config_store, matches)?;
     Ok(RepoFactory::new(
         matches.environment().clone(),
         &common_config,
@@ -450,7 +450,7 @@ where
     R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
 {
     let config_store = matches.config_store();
-    let source_repo_id = get_source_repo_id(&config_store, matches)?;
+    let source_repo_id = get_source_repo_id(config_store, matches)?;
     let repo_factory = get_repo_factory(matches)?;
 
     open_repo_internal_with_repo_id(
@@ -473,7 +473,7 @@ where
     R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
 {
     let config_store = matches.config_store();
-    let source_repo_id = get_target_repo_id(&config_store, matches)?;
+    let source_repo_id = get_target_repo_id(config_store, matches)?;
     let repo_factory = get_repo_factory(matches)?;
 
     open_repo_internal_with_repo_id(
@@ -490,7 +490,7 @@ where
 pub fn get_shutdown_grace_period<'a>(matches: &MononokeMatches<'a>) -> Result<Duration> {
     let seconds = matches
         .value_of("shutdown-grace-period")
-        .ok_or(Error::msg("shutdown-grace-period must be specified"))?
+        .ok_or_else(|| Error::msg("shutdown-grace-period must be specified"))?
         .parse()
         .map_err(Error::from)?;
     Ok(Duration::from_secs(seconds))
@@ -499,7 +499,7 @@ pub fn get_shutdown_grace_period<'a>(matches: &MononokeMatches<'a>) -> Result<Du
 pub fn get_shutdown_timeout<'a>(matches: &MononokeMatches<'a>) -> Result<Duration> {
     let seconds = matches
         .value_of("shutdown-timeout")
-        .ok_or(Error::msg("shutdown-timeout must be specified"))?
+        .ok_or_else(|| Error::msg("shutdown-timeout must be specified"))?
         .parse()
         .map_err(Error::from)?;
     Ok(Duration::from_secs(seconds))
@@ -515,7 +515,7 @@ pub fn get_scribe<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) -> Result
 pub fn get_config_path<'a>(matches: &'a MononokeMatches<'a>) -> Result<&'a str> {
     matches
         .value_of(CONFIG_PATH)
-        .ok_or(Error::msg(format!("{} must be specified", CONFIG_PATH)))
+        .ok_or_else(|| Error::msg(format!("{} must be specified", CONFIG_PATH)))
 }
 
 pub fn load_repo_configs<'a>(
@@ -729,7 +729,7 @@ where
 pub fn get_usize_opt<'a>(matches: &impl Borrow<ArgMatches<'a>>, key: &str) -> Option<usize> {
     matches.borrow().value_of(key).map(|val| {
         val.parse::<usize>()
-            .expect(&format!("{} must be integer", key))
+            .unwrap_or_else(|_| panic!("{} must be integer", key))
     })
 }
 
@@ -751,10 +751,10 @@ pub fn get_and_parse_opt<'a, T: ::std::str::FromStr, M: Borrow<ArgMatches<'a>>>(
 where
     <T as std::str::FromStr>::Err: std::fmt::Debug,
 {
-    matches
-        .borrow()
-        .value_of(key)
-        .map(|val| val.parse::<T>().expect(&format!("{} - invalid value", key)))
+    matches.borrow().value_of(key).map(|val| {
+        val.parse::<T>()
+            .unwrap_or_else(|_| panic!("{} - invalid value", key))
+    })
 }
 
 #[inline]
@@ -773,7 +773,7 @@ where
 pub fn get_u64_opt<'a>(matches: &impl Borrow<ArgMatches<'a>>, key: &str) -> Option<u64> {
     matches.borrow().value_of(key).map(|val| {
         val.parse::<u64>()
-            .expect(&format!("{} must be integer", key))
+            .unwrap_or_else(|_| panic!("{} must be integer", key))
     })
 }
 
@@ -781,7 +781,7 @@ pub fn get_u64_opt<'a>(matches: &impl Borrow<ArgMatches<'a>>, key: &str) -> Opti
 pub fn get_i32_opt<'a>(matches: &impl Borrow<ArgMatches<'a>>, key: &str) -> Option<i32> {
     matches.borrow().value_of(key).map(|val| {
         val.parse::<i32>()
-            .expect(&format!("{} must be integer", key))
+            .unwrap_or_else(|_| panic!("{} must be integer", key))
     })
 }
 
@@ -794,7 +794,7 @@ pub fn get_i32<'a>(matches: &impl Borrow<ArgMatches<'a>>, key: &str, default: i3
 pub fn get_i64_opt<'a>(matches: &impl Borrow<ArgMatches<'a>>, key: &str) -> Option<i64> {
     matches.borrow().value_of(key).map(|val| {
         val.parse::<i64>()
-            .expect(&format!("{} must be integer", key))
+            .unwrap_or_else(|_| panic!("{} must be integer", key))
     })
 }
 
@@ -811,8 +811,8 @@ pub fn parse_disabled_hooks_no_repo_prefix<'a>(
 ) -> HashSet<String> {
     let disabled_hooks: HashSet<String> = matches
         .values_of("disabled-hooks")
-        .map(|m| m.collect())
-        .unwrap_or(vec![])
+        .map(Vec::from_iter)
+        .unwrap_or_default()
         .into_iter()
         .map(|s| s.to_string())
         .collect();

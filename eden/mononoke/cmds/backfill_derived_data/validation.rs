@@ -64,7 +64,7 @@ pub async fn validate(
     }
     let repo: BlobRepo =
         args::open_repo_by_name_unredacted(ctx.fb, ctx.logger(), matches, repo_name).await?;
-    let csids = CommitDiscoveryOptions::from_matches(&ctx, &repo, sub_m)
+    let csids = CommitDiscoveryOptions::from_matches(ctx, &repo, sub_m)
         .await?
         .get_commits();
 
@@ -141,7 +141,7 @@ pub async fn validate(
         stream::iter(chunk)
             .map(Ok)
             .try_for_each_concurrent(100, |csid| async move {
-                if !rederived_utils.is_derived(&ctx, csid).await? {
+                if !rederived_utils.is_derived(ctx, csid).await? {
                     return Err(anyhow!("{} unexpectedly not derived", csid));
                 }
 
@@ -213,7 +213,7 @@ async fn validate_fsnodes<'a>(
         real_blobstore,
         fsnode,
         parents,
-        &mem_blob,
+        mem_blob,
         |tree_id| Some(tree_id.blobstore_key()),
         |_| None,
     )
@@ -243,7 +243,7 @@ async fn validate_skeleton_manifests<'a>(
         real_blobstore,
         skeleton_manifest,
         parents,
-        &mem_blob,
+        mem_blob,
         |tree_id| Some(tree_id.blobstore_key()),
         |_| None,
     )
@@ -271,7 +271,7 @@ async fn validate_unodes<'a>(
         real_blobstore,
         unode,
         parents,
-        &mem_blob,
+        mem_blob,
         |tree_id| Some(tree_id.blobstore_key()),
         |leaf_id| Some(leaf_id.blobstore_key()),
     )
@@ -298,7 +298,7 @@ async fn validate_hgchangesets<'a>(
             .await?;
         check_exists(
             ctx,
-            &mem_blob,
+            mem_blob,
             hgchangeset.get_changeset_id().blobstore_key(),
         )
         .await?;
@@ -354,7 +354,7 @@ async fn find_cs_and_parents_derived_data<D: BonsaiDerived>(
         .get_parents(ctx.clone(), cs_id)
         .await?;
 
-    let derived = D::derive(&ctx, repo, cs_id).await?;
+    let derived = D::derive(ctx, repo, cs_id).await?;
     let parents = try_join_all(parents.into_iter().map(|p| async move {
         let derived = D::derive(ctx, repo, p).await?;
         Result::<_, Error>::Ok(derived)

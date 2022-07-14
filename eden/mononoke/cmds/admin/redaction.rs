@@ -285,7 +285,7 @@ async fn get_ctx_blobrepo_cs_id<'a>(
         None => return Err(SubcommandError::InvalidArgs),
     };
 
-    let blobrepo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
+    let blobrepo: BlobRepo = args::open_repo(fb, &logger, matches).await?;
 
     let ctx = CoreContext::new_with_logger(fb, logger);
 
@@ -321,7 +321,7 @@ async fn redaction_create_key_list_impl<'a, 'b>(
     ctx: &'a CoreContext,
     blobstore_keys: Vec<String>,
 ) -> Result<(), SubcommandError> {
-    let common = args::load_common_config(matches.config_store(), &matches)?;
+    let common = args::load_common_config(matches.config_store(), matches)?;
     let factory = RepoFactory::new(matches.environment().clone(), &common);
 
     let blobstore = factory.redaction_config_blobstore().await?;
@@ -340,7 +340,7 @@ async fn redaction_create_key_list_impl<'a, 'b>(
                 keys: blobstore_keys,
             }
             .into_blob()
-            .store(&ctx, &blobstore)
+            .store(ctx, &blobstore)
             .await
         }
     };
@@ -421,7 +421,7 @@ async fn redaction_add<'a, 'b>(
     let (task, paths) = task_and_paths_parser(sub_m)?;
     let (ctx, blobrepo, cs_id) = get_ctx_blobrepo_cs_id(fb, logger.clone(), matches, sub_m).await?;
     let redacted_blobs =
-        args::open_sql::<SqlRedactedContentStore>(fb, matches.config_store(), &matches)
+        args::open_sql::<SqlRedactedContentStore>(fb, matches.config_store(), matches)
             .context("While opening SqlRedactedContentStore")?;
 
     let content_ids =
@@ -464,7 +464,7 @@ async fn redaction_list<'a>(
 ) -> Result<(), SubcommandError> {
     let (ctx, blobrepo, cs_id) = get_ctx_blobrepo_cs_id(fb, logger.clone(), matches, sub_m).await?;
     let redacted_blobs =
-        args::open_sql::<SqlRedactedContentStore>(fb, matches.config_store(), &matches)
+        args::open_sql::<SqlRedactedContentStore>(fb, matches.config_store(), matches)
             .context("While opening SqlRedactedContentStore")?;
     info!(
         logger,
@@ -510,7 +510,7 @@ async fn redaction_remove<'a>(
     let paths = paths_parser(sub_m)?;
     let (ctx, blobrepo, cs_id) = get_ctx_blobrepo_cs_id(fb, logger.clone(), matches, sub_m).await?;
     let redacted_blobs =
-        args::open_sql::<SqlRedactedContentStore>(fb, matches.config_store(), &matches)
+        args::open_sql::<SqlRedactedContentStore>(fb, matches.config_store(), matches)
             .context("While opening SqlRedactedContentStore")?;
     let content_ids = content_ids_for_paths(ctx, logger, blobrepo, cs_id, paths).await?;
     let blobstore_keys: Vec<_> = content_ids
@@ -533,13 +533,13 @@ async fn check_if_content_is_reachable_from_bookmark(
         ctx.logger(),
         "Checking if redacted content exist in '{}' bookmark...", main_bookmark
     );
-    let csid = helpers::csid_resolve(&ctx, blobrepo, main_bookmark).await?;
+    let csid = helpers::csid_resolve(ctx, blobrepo, main_bookmark).await?;
     let hg_cs_id = blobrepo.derive_hg_changeset(ctx, csid).await?;
 
     let hg_cs = hg_cs_id.load(ctx, blobrepo.blobstore()).await?;
 
     let redacted_files =
-        find_files_with_given_content_id_blobstore_keys(&ctx, &blobrepo, hg_cs, keys_to_redact)
+        find_files_with_given_content_id_blobstore_keys(ctx, blobrepo, hg_cs, keys_to_redact)
             .await?;
     let redacted_files_len = redacted_files.len();
     if redacted_files_len > 0 {
@@ -557,8 +557,7 @@ async fn check_if_content_is_reachable_from_bookmark(
             That means that checking it out will be impossible!",
             redacted_files_len,
             main_bookmark,
-        )
-        .into());
+        ));
     }
 
     Ok(())

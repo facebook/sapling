@@ -30,7 +30,6 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::RepoPath;
 use metaconfig_types::CacheWarmupParams;
-use microwave;
 use microwave::SnapshotLocation;
 use mononoke_types::ChangesetId;
 use revset::AncestorsNodeStream;
@@ -199,7 +198,7 @@ async fn do_cache_warmup(
         CacheWarmupTarget::Bookmark(bookmark) => repo
             .get_bonsai_bookmark(ctx.clone(), &bookmark)
             .await?
-            .ok_or_else(|| errors::ErrorKind::BookmarkNotFound(bookmark))?,
+            .ok_or(errors::ErrorKind::BookmarkNotFound(bookmark))?,
         CacheWarmupTarget::Changeset(bcs_id) => bcs_id,
     };
 
@@ -239,7 +238,7 @@ async fn do_cache_warmup(
 
 async fn microwave_preload(ctx: &CoreContext, repo: &BlobRepo, req: &CacheWarmupRequest) {
     if req.microwave_preload {
-        match microwave::prime_cache(&ctx, &repo, SnapshotLocation::Blobstore).await {
+        match microwave::prime_cache(ctx, repo, SnapshotLocation::Blobstore).await {
             Ok(_) => {
                 warn!(ctx.logger(), "microwave: successfully primed cache");
             }

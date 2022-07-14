@@ -78,7 +78,7 @@ pub async fn subcommand_mutable_counters<'a>(
 ) -> Result<(), SubcommandError> {
     let config_store = matches.config_store();
 
-    let repo_id = args::get_repo_id(config_store, &matches)?;
+    let repo_id = args::get_repo_id(config_store, matches)?;
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 

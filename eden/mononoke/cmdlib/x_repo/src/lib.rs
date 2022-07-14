@@ -131,17 +131,17 @@ async fn get_things_from_matches(
     let mapping = SqlSyncedCommitMapping::with_metadata_database_config(
         ctx.fb,
         &source_repo_config.storage_config.metadata,
-        &mysql_options,
+        mysql_options,
         readonly_storage.0,
     )?;
 
-    let source_repo_fut = args::open_repo_with_repo_id(fb, logger, source_repo_id, &matches);
-    let target_repo_fut = args::open_repo_with_repo_id(fb, logger, target_repo_id, &matches);
+    let source_repo_fut = args::open_repo_with_repo_id(fb, logger, source_repo_id, matches);
+    let target_repo_fut = args::open_repo_with_repo_id(fb, logger, target_repo_id, matches);
 
     let (source_repo, target_repo) = try_join!(source_repo_fut, target_repo_fut)?;
 
     let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
-        Arc::new(CfgrLiveCommitSyncConfig::new(&ctx.logger(), config_store)?);
+        Arc::new(CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?);
 
     Ok((
         Source(source_repo),

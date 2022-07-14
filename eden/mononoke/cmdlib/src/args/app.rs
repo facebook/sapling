@@ -693,7 +693,7 @@ impl MononokeAppBuilder {
             static QPS_FORMATTED: OnceCell<String> = OnceCell::new();
             // clap needs &'static str
             read_qps_arg =
-                read_qps_arg.default_value(&QPS_FORMATTED.get_or_init(|| format!("{}", default)));
+                read_qps_arg.default_value(QPS_FORMATTED.get_or_init(|| format!("{}", default)));
         }
 
         let app = app.arg(
@@ -844,8 +844,8 @@ impl MononokeAppBuilder {
                 .help("Number of seconds grace to give for key to arrive in multiple blobstores or the healer queue when scrubbing");
             if let Some(default) = self.scrub_grace_secs_default {
                 static FORMATTED: OnceCell<String> = OnceCell::new(); // Lazy static is nicer to LeakSanitizer than Box::leak
-                scrub_grace_arg = scrub_grace_arg
-                    .default_value(&FORMATTED.get_or_init(|| format!("{}", default)));
+                scrub_grace_arg =
+                    scrub_grace_arg.default_value(FORMATTED.get_or_init(|| format!("{}", default)));
             }
             let mut scrub_queue_peek_bound_arg = Arg::with_name(
                 BLOBSTORE_SCRUB_QUEUE_PEEK_BOUND_ARG,
@@ -858,7 +858,7 @@ impl MononokeAppBuilder {
             if let Some(default) = self.scrub_queue_peek_bound_secs_default {
                 static FORMATTED: OnceCell<String> = OnceCell::new(); // Lazy static is nicer to LeakSanitizer than Box::leak
                 scrub_queue_peek_bound_arg = scrub_queue_peek_bound_arg
-                    .default_value(&FORMATTED.get_or_init(|| format!("{}", default)));
+                    .default_value(FORMATTED.get_or_init(|| format!("{}", default)));
             };
             let mut scrub_action_on_missing_write_mostly_arg =
                 Arg::with_name(BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG)

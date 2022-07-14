@@ -119,7 +119,7 @@ impl Healer {
                 }
                 Err(e) => {
                     // Error, so fall in size fast
-                    fetch_size = fetch_size / 2;
+                    fetch_size /= 2;
                     if fetch_size < 1 {
                         return Err(e);
                     }
@@ -381,7 +381,7 @@ fn heal_blob<'out>(
     }
 
     let heal_future = async move {
-        let fetch_data = fetch_blob(ctx, &blobstores, &key, &seen_blobstores).await?;
+        let fetch_data = fetch_blob(ctx, blobstores, &key, &seen_blobstores).await?;
 
         let FetchData {
             blob,

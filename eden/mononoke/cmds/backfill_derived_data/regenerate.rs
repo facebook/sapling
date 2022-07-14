@@ -132,7 +132,7 @@ pub async fn regenerate_derived_data(
         }
     }
 
-    let csids = topo_sort(&ctx, &repo, csids).await?;
+    let csids = topo_sort(ctx, &repo, csids).await?;
     for utils in &derived_utils {
         utils.regenerate(&csids);
     }

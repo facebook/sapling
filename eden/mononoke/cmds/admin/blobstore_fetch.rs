@@ -166,8 +166,8 @@ pub async fn subcommand_blobstore_fetch<'a>(
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), SubcommandError> {
     let config_store = matches.config_store();
-    let repo_id = args::get_repo_id(config_store, &matches)?;
-    let (_, config) = args::get_config(config_store, &matches)?;
+    let repo_id = args::get_repo_id(config_store, matches)?;
+    let (_, config) = args::get_config(config_store, matches)?;
     let redaction = config.redaction;
     let storage_config = config.storage_config;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, "inner-blobstore-id");
@@ -185,7 +185,7 @@ pub async fn subcommand_blobstore_fetch<'a>(
         config_store,
     );
 
-    let common_config = args::load_common_config(config_store, &matches)?;
+    let common_config = args::load_common_config(config_store, matches)?;
     let censored_scuba_params = common_config.censored_scuba_params;
     let mut scuba_redaction_builder =
         MononokeScubaSampleBuilder::with_opt_table(fb, censored_scuba_params.table);
@@ -352,19 +352,19 @@ where
 
 fn detect_decode(key: &str, logger: &Logger) -> Option<&'static str> {
     // Use a simple heuristic to figure out how to decode this key.
-    if key.find("hgchangeset.").is_some() {
+    if key.contains("hgchangeset.") {
         info!(logger, "Detected changeset key");
         Some("changeset")
-    } else if key.find("hgmanifest.").is_some() {
+    } else if key.contains("hgmanifest.") {
         info!(logger, "Detected manifest key");
         Some("manifest")
-    } else if key.find("hgfilenode.").is_some() {
+    } else if key.contains("hgfilenode.") {
         info!(logger, "Detected file key");
         Some("file")
-    } else if key.find("content.").is_some() {
+    } else if key.contains("content.") {
         info!(logger, "Detected content key");
         Some("contents")
-    } else if key.find("git.tree.").is_some() {
+    } else if key.contains("git.tree.") {
         info!(logger, "Detected git-tree key");
         Some("git-tree")
     } else {

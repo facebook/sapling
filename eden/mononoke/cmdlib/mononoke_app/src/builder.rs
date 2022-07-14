@@ -52,7 +52,6 @@ use sql_ext::facebook::PoolConfig;
 use sql_ext::facebook::ReadConnectionType;
 use sql_ext::facebook::SharedConnectionPool;
 use tokio::runtime::Runtime;
-use tunables;
 
 use crate::app::MononokeApp;
 use crate::args::parse_config_spec_to_path;

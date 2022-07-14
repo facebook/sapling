@@ -659,7 +659,7 @@ async fn run_subcmd<'a>(
 
             let backfill_config_name = sub_m
                 .value_of(ARG_BACKFILL_CONFIG_NAME)
-                .unwrap_or_else(|| DEFAULT_BACKFILLING_CONFIG_NAME);
+                .unwrap_or(DEFAULT_BACKFILLING_CONFIG_NAME);
 
             let derived_data_types = sub_m.values_of(ARG_DERIVED_DATA_TYPE).map_or_else(
                 || {
@@ -764,7 +764,7 @@ async fn run_subcmd<'a>(
 
             let backfill_config_name = sub_m
                 .value_of(ARG_BACKFILL_CONFIG_NAME)
-                .unwrap_or_else(|| DEFAULT_BACKFILLING_CONFIG_NAME);
+                .unwrap_or(DEFAULT_BACKFILLING_CONFIG_NAME);
 
             subcommand_backfill(
                 ctx,
@@ -813,7 +813,7 @@ async fn run_subcmd<'a>(
 
             let backfill_config_name = sub_m
                 .value_of(ARG_BACKFILL_CONFIG_NAME)
-                .unwrap_or_else(|| DEFAULT_BACKFILLING_CONFIG_NAME);
+                .unwrap_or(DEFAULT_BACKFILLING_CONFIG_NAME);
 
             let resolved_repo = args::resolve_repo_by_name(config_store, matches, &repo_name)?;
 
@@ -978,8 +978,7 @@ async fn backfill_heads(
 ) -> Result<()> {
     if let (Some(skiplist_index), Some(slice_size)) = (skiplist_index, slice_size) {
         let (count, slices) =
-            slice::slice_repository(ctx, &repo, skiplist_index, derivers, heads, slice_size)
-                .await?;
+            slice::slice_repository(ctx, repo, skiplist_index, derivers, heads, slice_size).await?;
         for (index, (id, slice_heads)) in slices.enumerate() {
             info!(
                 ctx.logger(),
@@ -1160,7 +1159,7 @@ async fn subcommand_tail(
     let tail_derivers: Vec<Arc<dyn DerivedUtils>> = active_derived_data_config
         .types
         .iter()
-        .map(|name| derived_data_utils(ctx.fb, &repo, name))
+        .map(|name| derived_data_utils(ctx.fb, repo, name))
         .collect::<Result<_>>()?;
     slog::info!(
         ctx.logger(),
@@ -1174,7 +1173,7 @@ async fn subcommand_tail(
 
     let mut bookmarks_subscription = repo
         .bookmarks()
-        .create_subscription(&ctx, Freshness::MostRecent)
+        .create_subscription(ctx, Freshness::MostRecent)
         .await
         .context("Error creating bookmarks subscription")?;
 
@@ -1191,7 +1190,7 @@ async fn subcommand_tail(
                 active_derived_data_config
                     .types
                     .union(&named_derived_data_config.types)
-                    .map(|name| derived_data_utils_for_config(ctx.fb, &repo, name, config_name))
+                    .map(|name| derived_data_utils_for_config(ctx.fb, repo, name, config_name))
                     .collect::<Result<_>>()?
             } else {
                 Vec::new()
@@ -1231,7 +1230,7 @@ async fn subcommand_tail(
                     let heads = match heads_res {
                         Ok(()) => bookmarks_subscription
                             .bookmarks()
-                            .into_iter()
+                            .iter()
                             .map(|(_, (cs_id, _))| *cs_id)
                             .collect::<HashSet<_>>(),
                         Err(e) => return Err::<(), _>(e),
@@ -1303,7 +1302,7 @@ async fn subcommand_tail(
     } else {
         info!(ctx.logger(), "using simple deriver");
         loop {
-            tail_one_iteration(ctx, &repo, &tail_derivers, &mut bookmarks_subscription).await?;
+            tail_one_iteration(ctx, repo, &tail_derivers, &mut bookmarks_subscription).await?;
             // Before initiating next iteration, check if cancellation
             // has been requested
             if cancellation_requested.load(Ordering::Relaxed) {
@@ -1341,7 +1340,7 @@ async fn tail_batch_iteration(
 ) -> Result<()> {
     let derive_graph = derived_data_utils::build_derive_graph(
         ctx,
-        &repo,
+        repo,
         heads,
         derive_utils.to_vec(),
         batch_size,
@@ -1433,7 +1432,7 @@ async fn tail_batch_iteration(
         // Log how long it took to derive all the data for all the commits
         commits.sort_by_key(|(_, gen)| *gen);
         let commits: Vec<_> = commits.into_iter().map(|(cs_id, _)| cs_id).collect();
-        let mut scuba = create_derive_graph_scuba_sample(&ctx, &commits, "all");
+        let mut scuba = create_derive_graph_scuba_sample(ctx, &commits, "all");
         scuba
             .add_future_stats(&stats)
             .log_with_msg("Derived stack", None);
@@ -1484,7 +1483,7 @@ async fn tail_one_iteration(
         .context("failed refreshing bookmarks subscriptions")?;
     let heads = bookmarks_subscription
         .bookmarks()
-        .into_iter()
+        .iter()
         .map(|(_, (cs_id, _))| *cs_id)
         .collect::<Vec<_>>();
 

@@ -187,12 +187,12 @@ async fn parse_common_args<'a>(
 
     let (source_cs_id, target_cs_id) = try_join(
         async {
-            helpers::csid_resolve(&ctx, source_repo, source_cs_id)
+            helpers::csid_resolve(ctx, source_repo, source_cs_id)
                 .await
                 .context("failed resolving source_cs_id")
         },
         async {
-            helpers::csid_resolve(&ctx, target_repo, target_cs_id)
+            helpers::csid_resolve(ctx, target_repo, target_cs_id)
                 .await
                 .context("failed resolving target_cs_id")
         },

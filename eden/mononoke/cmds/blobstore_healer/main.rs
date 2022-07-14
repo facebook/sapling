@@ -319,7 +319,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         buffered_params,
         storage_config.clone(),
         mysql_options,
-        source_blobstore_key.map(|s| s.to_string()),
+        source_blobstore_key,
         readonly_storage,
         blobstore_options,
         iter_limit,

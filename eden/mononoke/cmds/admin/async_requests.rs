@@ -115,7 +115,7 @@ pub async fn subcommand_async_requests<'a>(
 ) -> Result<(), SubcommandError> {
     let config_store = matches.config_store();
     let (repo_name, repo_config) = args::get_config(config_store, matches)?;
-    let common_config = args::load_common_config(config_store, &matches)?;
+    let common_config = args::load_common_config(config_store, matches)?;
     let repo_configs = args::RepoConfigs {
         repos: hashmap! {
             repo_name => repo_config
@@ -223,8 +223,10 @@ async fn handle_show(
         if let Some((_request_id, entry, params, maybe_result)) =
             queue.get_request_by_id(&ctx, &RowId(row_id)).await?
         {
-            // TODO: pretty printing of the request details
-            dbg!(entry, params, maybe_result);
+            println!(
+                "Entry: {:?}\nParams: {:?}\nResult: {:?}",
+                entry, params, maybe_result
+            );
             return Ok(());
         }
     }

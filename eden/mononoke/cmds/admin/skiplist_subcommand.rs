@@ -112,7 +112,7 @@ pub async fn subcommand_skiplist<'a>(
             // completes fully.
             ctx.session_mut()
                 .override_session_class(SessionClass::Background);
-            let repo = args::open_repo(fb, &logger, &matches).await?;
+            let repo = args::open_repo(fb, &logger, matches).await?;
             build_skiplist_index(&ctx, &repo, key, &logger, rebuild, exponent)
                 .await
                 .map_err(SubcommandError::Error)
@@ -124,7 +124,7 @@ pub async fn subcommand_skiplist<'a>(
                 .to_string();
 
             let ctx = CoreContext::test_mock(fb);
-            let repo = args::open_repo(fb, &logger, &matches).await?;
+            let repo = args::open_repo(fb, &logger, matches).await?;
             let maybe_index = read_skiplist_index(ctx.clone(), repo, key, logger.clone()).await?;
             match maybe_index {
                 Some(index) => {
@@ -193,7 +193,7 @@ async fn build_skiplist_index<'a, S: ToString>(
         let mut index = skiplist_index.get_all_skip_edges();
         let max_skip = NonZeroU64::new(2u64.pow(skiplist_depth - 1))
             .ok_or_else(|| anyhow!("invalid skiplist depth"))?;
-        sparse::update_sparse_skiplist(&ctx, heads, &mut index, max_skip, &cs_fetcher).await?;
+        sparse::update_sparse_skiplist(ctx, heads, &mut index, max_skip, &cs_fetcher).await?;
         index
     };
 
@@ -216,7 +216,7 @@ async fn build_skiplist_index<'a, S: ToString>(
 
     debug!(logger, "storing {} bytes", bytes.len());
     blobstore
-        .put(&ctx, key, BlobstoreBytes::from_bytes(bytes))
+        .put(ctx, key, BlobstoreBytes::from_bytes(bytes))
         .await
 }
 
@@ -226,7 +226,7 @@ async fn fetch_all_public_changesets_and_build_changeset_fetcher(
 ) -> Result<ArcChangesetFetcher, Error> {
     let fetcher = PublicChangesetBulkFetch::new(repo.get_changesets_object(), repo.phases_arc());
     let fetched_changesets = fetcher
-        .fetch(&ctx, Direction::OldestFirst)
+        .fetch(ctx, Direction::OldestFirst)
         .try_collect::<Vec<_>>()
         .await?;
 

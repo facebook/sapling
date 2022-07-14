@@ -387,14 +387,13 @@ impl Changesets for SqlChangesets {
         } else {
             let (mut lo, hi) = (rows[0].0, rows[0].1);
             if !known_heads.is_empty() {
-                let rows = SelectChangesets::query(&conn, &self.repo_id, &known_heads).await?;
+                let rows = SelectChangesets::query(conn, &self.repo_id, &known_heads).await?;
                 let max_id = rows
                     .into_iter()
                     .map(|(id, _cs, _gen)| id)
                     .max()
                     // We want to skip the commits we've been given
-                    .map(|i| i + 1)
-                    .unwrap_or(lo);
+                    .map_or(lo, |i| i + 1);
                 lo = lo.max(max_id);
             }
             Ok(Some((lo, hi)))
@@ -417,12 +416,12 @@ impl Changesets for SqlChangesets {
         async move {
             match sort_and_limit {
                 None => {
-                    SelectAllChangesetsIdsInRange::query(&conn, &self.repo_id, &min_id, &max_id)
+                    SelectAllChangesetsIdsInRange::query(conn, &self.repo_id, &min_id, &max_id)
                         .await
                 }
                 Some((SortOrder::Ascending, limit)) => {
                     SelectAllChangesetsIdsInRangeLimitAsc::query(
-                        &conn,
+                        conn,
                         &self.repo_id,
                         &min_id,
                         &max_id,
@@ -432,7 +431,7 @@ impl Changesets for SqlChangesets {
                 }
                 Some((SortOrder::Descending, limit)) => {
                     SelectAllChangesetsIdsInRangeLimitDesc::query(
-                        &conn,
+                        conn,
                         &self.repo_id,
                         &min_id,
                         &max_id,
@@ -458,7 +457,7 @@ async fn fetch_many_by_prefix(
     limit: usize,
 ) -> Result<ChangesetIdsResolvedFromPrefix, Error> {
     let rows = SelectChangesetsRange::query(
-        &connection,
+        connection,
         &repo_id,
         &cs_prefix.min_as_ref(),
         &cs_prefix.max_as_ref(),
@@ -523,7 +522,7 @@ async fn insert_parents(
             // check_missing_rows should have ensured that all the IDs are
             // present.
             let parent_id = parent_map
-                .get(&parent)
+                .get(parent)
                 .expect("check_missing_rows check failed");
 
             (new_cs_id, *parent_id, seq)
@@ -546,7 +545,7 @@ async fn check_changeset_matches(
     repo_id: RepositoryId,
     cs: ChangesetInsert,
 ) -> Result<(), Error> {
-    let stored_parents = select_changeset(&connection, repo_id, cs.cs_id)
+    let stored_parents = select_changeset(connection, repo_id, cs.cs_id)
         .await?
         .map(|cs| cs.parents);
     if Some(&cs.parents) == stored_parents.as_ref() {
@@ -567,7 +566,7 @@ async fn select_changeset(
     cs_id: ChangesetId,
 ) -> Result<Option<ChangesetEntry>, Error> {
     let tok: i32 = rand::thread_rng().gen();
-    let rows = SelectChangeset::query(&connection, &repo_id, &cs_id, &tok).await?;
+    let rows = SelectChangeset::query(connection, &repo_id, &cs_id, &tok).await?;
     let result = if rows.is_empty() {
         None
     } else {

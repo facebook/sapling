@@ -51,7 +51,7 @@ pub async fn subcommand_content_fetch<'a>(
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let repo = args::open_repo(fb, &logger, &matches).await?;
+    let repo = args::open_repo(fb, &logger, matches).await?;
     let entry = fetch_entry(&ctx, &repo, &rev, &path).await?;
 
     match entry {
@@ -124,7 +124,7 @@ async fn fetch_entry(
 ) -> Result<Entry<HgManifestId, (FileType, HgFileNodeId)>, Error> {
     let mpath = MPath::new(path)?;
 
-    let bcs_id = helpers::csid_resolve(&ctx, repo.clone(), rev.to_string()).await?;
+    let bcs_id = helpers::csid_resolve(ctx, repo.clone(), rev.to_string()).await?;
     let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
     let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
 

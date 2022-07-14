@@ -13,7 +13,6 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use ascii::AsciiString;
-use blobimport_lib;
 use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMappingBuilder;
 use clap_old::Arg;
@@ -157,11 +156,11 @@ fn parse_fixed_parent_order<P: AsRef<Path>>(
     let content = read(p)?;
     let mut res = HashMap::new();
 
-    for line in String::from_utf8(content).map_err(Error::from)?.split("\n") {
+    for line in String::from_utf8(content).map_err(Error::from)?.split('\n') {
         if line.is_empty() {
             continue;
         }
-        let mut iter = line.split(" ").map(HgChangesetId::from_str).fuse();
+        let mut iter = line.split(' ').map(HgChangesetId::from_str).fuse();
         let maybe_hg_cs_id = iter.next();
         let hg_cs_id = match maybe_hg_cs_id {
             Some(hg_cs_id) => hg_cs_id?,
@@ -337,7 +336,7 @@ async fn run_blobimport<'a>(
     let concurrent_lfs_imports = args::get_usize(matches, "concurrent-lfs-imports", 10);
 
     let fixed_parent_order = if let Some(path) = matches.value_of("fix-parent-order") {
-        parse_fixed_parent_order(&logger, path)
+        parse_fixed_parent_order(logger, path)
             .context("while parsing file with fixed parent order")?
     } else {
         HashMap::new()
@@ -345,8 +344,7 @@ async fn run_blobimport<'a>(
 
     let mut derived_data_types = matches
         .values_of(ARG_DERIVED_DATA_TYPE)
-        .map(|v| v.map(|d| d.to_string()).collect())
-        .unwrap_or(vec![]);
+        .map_or(vec![], |v| v.map(|d| d.to_string()).collect());
 
     let excluded_derived_data_types = matches
         .values_of(ARG_EXCLUDE_DERIVED_DATA_TYPE)
@@ -379,9 +377,9 @@ async fn run_blobimport<'a>(
         args::open_sql::<SqlSyncedCommitMapping>(fb, config_store, matches)?;
 
     let blobrepo: BlobRepo = if matches.is_present("no-create") {
-        args::open_repo_unredacted(fb, &ctx.logger(), matches).await?
+        args::open_repo_unredacted(fb, ctx.logger(), matches).await?
     } else {
-        args::create_repo_unredacted(fb, &ctx.logger(), matches).await?
+        args::create_repo_unredacted(fb, ctx.logger(), matches).await?
     };
 
     let origin_repo =
@@ -392,7 +390,7 @@ async fn run_blobimport<'a>(
                 BACKUP_FROM_REPO_ID,
                 BACKUP_FROM_REPO_NAME,
             )?;
-            Some(args::open_repo_with_repo_id(fb, &logger, repo_id, matches).await?)
+            Some(args::open_repo_with_repo_id(fb, logger, repo_id, matches).await?)
         } else {
             None
         };
@@ -458,7 +456,7 @@ async fn run_blobimport<'a>(
                 }
 
                 maybe_update_highest_imported_generation_number(
-                    &ctx,
+                    ctx,
                     &blobrepo,
                     latest_imported_cs_id,
                 )

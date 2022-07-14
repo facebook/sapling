@@ -205,12 +205,12 @@ async fn prefetch_content(
 
     let bonsai = csid.load(ctx, repo.blobstore()).await?;
 
-    let root_manifest_fut = RootUnodeManifestId::derive(ctx, &repo, csid.clone())
+    let root_manifest_fut = RootUnodeManifestId::derive(ctx, repo, csid.clone())
         .map_ok(|mf| mf.manifest_unode_id().clone())
         .map_err(Error::from);
     let parents_manifest_futs = bonsai.parents().collect::<Vec<_>>().into_iter().map({
         move |csid| {
-            RootUnodeManifestId::derive(ctx, &repo, csid)
+            RootUnodeManifestId::derive(ctx, repo, csid)
                 .map_ok(|mf| mf.manifest_unode_id().clone())
                 .map_err(Error::from)
         }

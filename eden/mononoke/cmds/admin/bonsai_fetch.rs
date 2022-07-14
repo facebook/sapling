@@ -74,7 +74,7 @@ pub async fn subcommand_bonsai_fetch<'a>(
         #[facet]
         ephemeral_blobstore: RepoEphemeralStore,
     }
-    let container: BonsaiFetchContainer = args::open_repo(fb, &logger, &matches).await?;
+    let container: BonsaiFetchContainer = args::open_repo(fb, &logger, matches).await?;
     let blobstore = if let Some(bubble_id) = bubble {
         let bubble = container.ephemeral_blobstore.open_bubble(bubble_id).await?;
         bubble.wrap_repo_blobstore((*container.blobstore).clone())

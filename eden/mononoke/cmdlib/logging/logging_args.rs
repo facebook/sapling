@@ -14,7 +14,6 @@ use clap::ArgEnum;
 use clap::Args;
 use fbinit::FacebookInit;
 use observability::ObservabilityContext;
-use panichandler;
 use panichandler::Fate;
 use slog::debug;
 use slog::o;

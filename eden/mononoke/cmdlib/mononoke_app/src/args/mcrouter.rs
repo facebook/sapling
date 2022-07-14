@@ -31,7 +31,7 @@ impl AppExtension for McrouterAppExtension {
         #[cfg(fbcode_build)]
         {
             ::ratelim::use_proxy_if_available(env.fb);
-            return Ok(());
+            Ok(())
         }
 
         #[cfg(not(fbcode_build))]

@@ -184,7 +184,7 @@ pub async fn subcommand_blame<'a>(
                     println!("{}", p);
                 }
             }
-            return Ok(());
+            Ok(())
         }
         _ => Err(SubcommandError::InvalidArgs),
     }

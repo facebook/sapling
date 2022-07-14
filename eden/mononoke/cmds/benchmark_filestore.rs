@@ -22,7 +22,6 @@ use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use filestore;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
 use filestore::StoreRequest;
@@ -230,7 +229,7 @@ async fn get_blob<'a>(
                 fb,
                 shardmap_or_tier,
                 shard_count,
-                &blobstore_options,
+                blobstore_options,
                 *readonly_storage,
                 blobstore_options.put_behaviour,
                 config_store,

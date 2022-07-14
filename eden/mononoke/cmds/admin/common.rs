@@ -129,7 +129,7 @@ pub async fn get_file_nodes(
     let mut existing_hg_nodes = Vec::new();
     let mut non_existing_paths = Vec::new();
     for path in paths.iter() {
-        match manifest_entries.get(&path) {
+        match manifest_entries.get(path) {
             Some(hg_node) => existing_hg_nodes.push(*hg_node),
             None => non_existing_paths.push(path.clone()),
         };
@@ -162,7 +162,7 @@ pub async fn get_source_target_repos_and_mapping<'a>(
     // It'll be nice to verify it
     let (source_repo, target_repo) = try_join!(source_repo, target_repo)?;
 
-    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(fb, config_store, &matches)?;
+    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(fb, config_store, matches)?;
 
     Ok((source_repo, target_repo, mapping))
 }

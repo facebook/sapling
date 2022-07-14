@@ -48,12 +48,12 @@ impl CommitDiscoveryOptions {
         matches: &ArgMatches<'_>,
     ) -> Result<CommitDiscoveryOptions, Error> {
         if let Some(hash_or_bookmark) = matches.value_of(ARG_CHANGESET) {
-            let csid = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
+            let csid = helpers::csid_resolve(ctx, repo.clone(), hash_or_bookmark).await?;
             return Ok(CommitDiscoveryOptions::Changesets(vec![csid]));
         }
 
         if let Some(input_file) = matches.value_of(ARG_INPUT_FILE) {
-            let csids = helpers::csids_resolve_from_file(&ctx, repo, input_file).await?;
+            let csids = helpers::csids_resolve_from_file(ctx, repo, input_file).await?;
             return Ok(CommitDiscoveryOptions::Changesets(csids));
         }
 

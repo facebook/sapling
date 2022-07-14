@@ -63,7 +63,7 @@ pub async fn subcommand_truncate_segmented_changelog<'a>(
         #[facet]
         bookmarks: dyn Bookmarks,
     }
-    let container: CopySegmentedChangelogContainer = args::open_repo(fb, &logger, &matches).await?;
+    let container: CopySegmentedChangelogContainer = args::open_repo(fb, &logger, matches).await?;
 
     let config_store = matches.config_store();
     let mysql_options = matches.mysql_options();

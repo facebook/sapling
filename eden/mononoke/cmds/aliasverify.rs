@@ -33,7 +33,6 @@ use cmdlib::args::MononokeClapApp;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
-use filestore;
 use filestore::Alias;
 use filestore::AliasBlob;
 use filestore::FetchKey;
@@ -96,7 +95,7 @@ impl AliasVerification {
             info!(self.logger, "Commit processed {:?}", cs_cnt);
         }
 
-        let bcs = bcs_id.load(&ctx, self.blobrepo.blobstore()).await?;
+        let bcs = bcs_id.load(ctx, self.blobrepo.blobstore()).await?;
         let file_changes: Vec<_> = bcs
             .file_changes_map()
             .iter()
@@ -142,7 +141,7 @@ impl AliasVerification {
                 let blobstore = self.blobrepo.get_blobstore();
 
                 let maybe_meta =
-                    filestore::get_metadata(&blobstore, &ctx, &FetchKey::Canonical(content_id))
+                    filestore::get_metadata(&blobstore, ctx, &FetchKey::Canonical(content_id))
                         .await?;
 
                 let meta = maybe_meta.ok_or(format_err!("Missing content {:?}", content_id))?;
@@ -152,7 +151,7 @@ impl AliasVerification {
                         Alias::Sha256(meta.sha256),
                         ContentAlias::from_content_id(content_id),
                     )
-                    .store(&ctx, &blobstore)
+                    .store(ctx, &blobstore)
                     .await
                 } else {
                     Err(format_err!(
@@ -317,7 +316,7 @@ async fn run_aliasverify<'a>(
     matches: &'a MononokeMatches<'a>,
     mode: Mode,
 ) -> Result<(), Error> {
-    let blobrepo = args::open_repo(fb, &logger, matches).await?;
+    let blobrepo = args::open_repo(fb, logger, matches).await?;
     AliasVerification::new(logger.clone(), blobrepo, repoid, mode)
         .verify_all(&ctx, step, min_cs_db_id)
         .await

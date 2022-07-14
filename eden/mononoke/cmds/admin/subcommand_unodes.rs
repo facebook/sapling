@@ -89,7 +89,7 @@ pub async fn subcommand_unodes<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let repo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
+    let repo: BlobRepo = args::open_repo(fb, &logger, matches).await?;
     let ctx = CoreContext::new_with_logger(fb, logger);
 
     let res = match sub_matches.subcommand() {
@@ -157,7 +157,7 @@ async fn subcommand_verify(
     AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), csid)
         .compat()
         .take(limit as usize)
-        .try_for_each(|csid| single_verify(&ctx, &repo, csid))
+        .try_for_each(|csid| single_verify(ctx, &repo, csid))
         .await
 }
 

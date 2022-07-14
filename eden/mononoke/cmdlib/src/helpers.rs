@@ -67,6 +67,7 @@ pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: CreateStorage) -> Res
     }
 
     // Validate directory layout
+    #[allow(clippy::single_element_loop)]
     for subdir in &["blobs"] {
         let subdir = data_dir.join(subdir);
 
@@ -113,7 +114,7 @@ pub async fn csids_resolve_from_file(
     }
 
     stream::iter(csids)
-        .map(|csid| csid_resolve_impl(&ctx, &container, csid))
+        .map(|csid| csid_resolve_impl(ctx, &container, csid))
         .buffered(100)
         .try_collect::<Vec<_>>()
         .await
