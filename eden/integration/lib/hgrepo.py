@@ -357,14 +357,14 @@ class HgRepository(repobase.Repository):
 
         return status
 
-    def update(self, rev: str, clean: bool = False, merge: bool = False) -> None:
+    def update(self, rev: str, clean: bool = False, merge: bool = False) -> str:
         args = ["update"]
         if clean:
             args.append("--clean")
         if merge:
             args.append("--merge")
         args.append(rev)
-        self.hg(*args)
+        return self.hg(*args)
 
     def reset(self, rev: str, keep: bool = True) -> None:
         if keep:

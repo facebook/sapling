@@ -135,23 +135,8 @@ class EdenTestCase(EdenTestCaseBase):
         os.mkdir(self.mounts_dir)
         self.report_time("temporary directory creation done")
 
-        logging_settings = self.edenfs_logging_settings()
-        extra_args = self.edenfs_extra_args()
-        if self.enable_fault_injection:
-            extra_args.append("--enable_fault_injection")
+        self.eden = self.init_eden_client()
 
-        if _build_flavor == "facebook" and not self.enable_logview:
-            # add option to disable logview
-            # we set `EDENFS_SUFFIX` when running our tests with OSS build
-            extra_args.append("--eden_logview=false")
-
-        storage_engine = self.select_storage_engine()
-        self.eden = edenclient.EdenFS(
-            base_dir=pathlib.Path(self.tmp_dir),
-            logging_settings=logging_settings,
-            extra_args=extra_args,
-            storage_engine=storage_engine,
-        )
         # Just to better reflect normal user environments, update $HOME
         # to point to our test home directory for the duration of the test.
         self.setenv("HOME", str(self.eden.home_dir))
@@ -165,10 +150,30 @@ class EdenTestCase(EdenTestCaseBase):
                         edenfsrc.write(f"{setting}\n")
 
         self.eden.start()
-        self.addCleanup(self.eden.cleanup)
+        # Store a lambda in case self.eden is replaced during the test.
+        self.addCleanup(lambda: self.eden.cleanup)
         self.report_time("eden daemon started")
 
         self.mount = os.path.join(self.mounts_dir, "main")
+
+    def init_eden_client(self):
+        logging_settings = self.edenfs_logging_settings()
+        extra_args = self.edenfs_extra_args()
+        if self.enable_fault_injection:
+            extra_args.append("--enable_fault_injection")
+
+        if _build_flavor == "facebook" and not self.enable_logview:
+            # add option to disable logview
+            # we set `EDENFS_SUFFIX` when running our tests with OSS build
+            extra_args.append("--eden_logview=false")
+
+        storage_engine = self.select_storage_engine()
+        return edenclient.EdenFS(
+            base_dir=pathlib.Path(self.tmp_dir),
+            logging_settings=logging_settings,
+            extra_args=extra_args,
+            storage_engine=storage_engine,
+        )
 
     @property
     def eden_dir(self) -> str:

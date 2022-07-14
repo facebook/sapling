@@ -2918,9 +2918,19 @@ Future<Unit> TreeInode::checkout(
   for (const auto& action : actions) {
     actionFutures.emplace_back(action->run(ctx, getStore()));
   }
+
+  folly::SemiFuture<Unit> faultFuture =
+      getMount()->getServerState()->getFaultInjector().checkAsync(
+          "TreeInode::checkout", getLogPath(), ctx->isDryRun());
+  folly::SemiFuture<vector<folly::Try<facebook::eden::InvalidationRequired>>>
+      collectFuture = folly::collectAll(actionFutures);
+
   // Wait for all of the actions, and record any errors.
-  return folly::collectAll(actionFutures)
+  return std::move(faultFuture)
       .toUnsafeFuture()
+      .thenValue([collectFuture = std::move(collectFuture)](auto&&) mutable {
+        return std::move(collectFuture);
+      })
       .thenValue(
           [ctx,
            self = inodePtrFromThis(),
