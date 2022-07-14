@@ -1698,9 +1698,7 @@ std::unique_ptr<DiffContext> EdenMount::createDiffContext(
                           ObjectFetchContext& fetchContext,
                           RelativePathPiece path) {
     return loadFileContentsFromPath(
-               fetchContext, path, CacheHint::LikelyNeededAgain)
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance());
+        fetchContext, path, CacheHint::LikelyNeededAgain);
   };
   return make_unique<DiffContext>(
       callback,

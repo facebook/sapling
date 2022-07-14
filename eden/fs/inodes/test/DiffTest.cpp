@@ -86,11 +86,8 @@ class DiffTest {
     ScmStatusDiffCallback callback;
     DiffContext::LoadFileFunction loadFileContentsFromPath =
         [this](ObjectFetchContext& fetchContext, RelativePathPiece path) {
-          return mount_.getEdenMount()
-              ->EdenMount::loadFileContentsFromPath(
-                  fetchContext, path, CacheHint::LikelyNeededAgain)
-              .semi()
-              .via(&folly::QueuedImmediateExecutor::instance());
+          return mount_.getEdenMount()->EdenMount::loadFileContentsFromPath(
+              fetchContext, path, CacheHint::LikelyNeededAgain);
         };
     DiffContext diffContext{
         &callback,

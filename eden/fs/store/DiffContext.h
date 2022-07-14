@@ -9,18 +9,14 @@
 
 #include <folly/CancellationToken.h>
 #include <folly/Range.h>
-#include <folly/futures/Future.h>
 
 #include "eden/fs/store/StatsFetchContext.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace folly {
-template <typename T>
-class Future;
-} // namespace folly
-
 namespace facebook::eden {
 
+template <typename T>
+class ImmediateFuture;
 class DiffCallback;
 class GitIgnoreStack;
 class ObjectFetchContext;
@@ -41,7 +37,7 @@ class EdenMount;
 class DiffContext {
  public:
   using LoadFileFunction = std::function<
-      folly::Future<std::string>(ObjectFetchContext&, RelativePathPiece)>;
+      ImmediateFuture<std::string>(ObjectFetchContext&, RelativePathPiece)>;
 
   DiffContext(
       DiffCallback* cb,

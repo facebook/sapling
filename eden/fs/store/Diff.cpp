@@ -9,7 +9,6 @@
 
 #include <folly/Portability.h>
 #include <folly/Synchronized.h>
-#include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include <memory>
 #include <vector>
@@ -20,12 +19,9 @@
 #include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
-#include "eden/fs/utils/Future.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-using folly::Future;
-using folly::makeFuture;
 using folly::Try;
 using folly::Unit;
 using std::make_unique;
@@ -42,13 +38,13 @@ namespace facebook::eden {
 namespace {
 
 struct ChildFutures {
-  void add(RelativePath&& path, Future<Unit>&& future) {
+  void add(RelativePath&& path, ImmediateFuture<Unit>&& future) {
     paths.emplace_back(std::move(path));
     futures.emplace_back(std::move(future));
   }
 
   vector<RelativePath> paths;
-  vector<Future<Unit>> futures;
+  vector<ImmediateFuture<Unit>> futures;
 };
 
 static constexpr PathComponentPiece kIgnoreFilename{".gitignore"};
@@ -72,9 +68,7 @@ void processRemovedSide(
   }
   auto entryPath = currentPath + scmEntry.first;
   auto childFuture =
-      diffRemovedTree(context, entryPath, scmEntry.second.getHash())
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+      diffRemovedTree(context, entryPath, scmEntry.second.getHash());
   childFutures.add(std::move(entryPath), std::move(childFuture));
 }
 
@@ -118,13 +112,7 @@ void processAddedSide(
   if (wdEntry.second.isTree()) {
     if (!entryIgnored || context->listIgnored) {
       auto childFuture = diffAddedTree(
-                             context,
-                             entryPath,
-                             wdEntry.second.getHash(),
-                             ignore,
-                             entryIgnored)
-                             .semi()
-                             .via(&folly::QueuedImmediateExecutor::instance());
+          context, entryPath, wdEntry.second.getHash(), ignore, entryIgnored);
       childFutures.add(std::move(entryPath), std::move(childFuture));
     }
   }
@@ -174,14 +162,12 @@ void processBothPresent(
       }
       context->callback->modifiedPath(entryPath, wdEntry.second.getDType());
       auto childFuture = diffTrees(
-                             context,
-                             entryPath,
-                             scmEntry.second.getHash(),
-                             wdEntry.second.getHash(),
-                             ignore,
-                             entryIgnored)
-                             .semi()
-                             .via(&folly::QueuedImmediateExecutor::instance());
+          context,
+          entryPath,
+          scmEntry.second.getHash(),
+          wdEntry.second.getHash(),
+          ignore,
+          entryIgnored);
       childFutures.add(std::move(entryPath), std::move(childFuture));
     } else {
       // tree-to-file
@@ -197,9 +183,7 @@ void processBothPresent(
       // Report everything in scmTree as REMOVED
       context->callback->removedPath(entryPath, scmEntry.second.getDType());
       auto childFuture =
-          diffRemovedTree(context, entryPath, scmEntry.second.getHash())
-              .semi()
-              .via(&folly::QueuedImmediateExecutor::instance());
+          diffRemovedTree(context, entryPath, scmEntry.second.getHash());
       childFutures.add(std::move(entryPath), std::move(childFuture));
     }
   } else {
@@ -211,13 +195,7 @@ void processBothPresent(
       // Report everything in wdEntry as ADDED
       context->callback->addedPath(entryPath, wdEntry.second.getDType());
       auto childFuture = diffAddedTree(
-                             context,
-                             entryPath,
-                             wdEntry.second.getHash(),
-                             ignore,
-                             entryIgnored)
-                             .semi()
-                             .via(&folly::QueuedImmediateExecutor::instance());
+          context, entryPath, wdEntry.second.getHash(), ignore, entryIgnored);
       childFutures.add(std::move(entryPath), std::move(childFuture));
     } else {
       // file-to-file diff
@@ -233,44 +211,33 @@ void processBothPresent(
         // based on the file contents (as opposed to file contents + history)
         // then we could drop this extra load of the blob SHA-1, and rely only
         // on the blob ID comparison instead.
-        auto compareEntryContents =
-            folly::makeFutureWith([context,
-                                   entryPath = currentPath + scmEntry.first,
-                                   &scmEntry,
-                                   &wdEntry] {
-              auto scmFuture = context->store->getBlobSha1(
-                  scmEntry.second.getHash(), context->getFetchContext());
-              auto wdFuture = context->store->getBlobSha1(
-                  wdEntry.second.getHash(), context->getFetchContext());
-              return collectAllSafe(scmFuture, wdFuture)
-                  .thenValue([entryPath = entryPath.copy(),
-                              context,
-                              dtype = scmEntry.second.getDType()](
-                                 const std::tuple<Hash20, Hash20>& info) {
-                    const auto& [scmHash, wdHash] = info;
-                    if (scmHash != wdHash) {
-                      context->callback->modifiedPath(entryPath, dtype);
-                    }
-                  })
-                  .semi()
-                  .via(&folly::QueuedImmediateExecutor::instance());
-            });
+        auto compareEntryContents = makeImmediateFutureWith([&] {
+          auto scmFuture = context->store->getBlobSha1(
+              scmEntry.second.getHash(), context->getFetchContext());
+          auto wdFuture = context->store->getBlobSha1(
+              wdEntry.second.getHash(), context->getFetchContext());
+          return collectAllSafe(scmFuture, wdFuture)
+              .thenValue([entryPath = entryPath.copy(),
+                          context,
+                          dtype = scmEntry.second.getDType()](
+                             const std::tuple<Hash20, Hash20>& info) {
+                const auto& [scmHash, wdHash] = info;
+                if (scmHash != wdHash) {
+                  context->callback->modifiedPath(entryPath, dtype);
+                }
+              });
+        });
         childFutures.add(std::move(entryPath), std::move(compareEntryContents));
       }
     }
   }
 }
 
-FOLLY_NODISCARD Future<Unit> waitOnResults(
+FOLLY_NODISCARD ImmediateFuture<Unit> waitOnResults(
     DiffContext* context,
     ChildFutures&& childFutures) {
   XDCHECK_EQ(childFutures.paths.size(), childFutures.futures.size());
-  if (childFutures.futures.empty()) {
-    return makeFuture();
-  }
-
-  return folly::collectAll(std::move(childFutures.futures))
-      .toUnsafeFuture()
+  return collectAll(std::move(childFutures.futures))
       .thenValue([context, paths = std::move(childFutures.paths)](
                      vector<Try<Unit>>&& results) {
         XDCHECK_EQ(paths.size(), results.size());
@@ -293,7 +260,7 @@ FOLLY_NODISCARD Future<Unit> waitOnResults(
  *
  * The differences will be recorded using a callback provided by the caller.
  */
-FOLLY_NODISCARD Future<Unit> computeTreeDiff(
+FOLLY_NODISCARD ImmediateFuture<Unit> computeTreeDiff(
     DiffContext* context,
     RelativePathPiece currentPath,
     std::shared_ptr<const Tree> scmTree,
@@ -374,17 +341,17 @@ ImmediateFuture<std::string> loadGitIgnore(
   return std::move(loadFuture)
       .thenError([entryPath = std::move(gitIgnorePath)](
                      const folly::exception_wrapper& ex) {
-        // TODO: add an API to DiffCallback to report user errors like this
-        // (errors that do not indicate a problem with EdenFS itself) that
-        // can be returned to the caller in a thrift response
+        // TODO: add an API to DiffCallback to report user
+        // errors like this (errors that do not indicate a
+        // problem with EdenFS itself) that can be returned to
+        // the caller in a thrift response
         XLOG(WARN) << "error loading gitignore at " << entryPath << ": "
                    << folly::exceptionStr(ex);
         return std::string{};
-      })
-      .semi();
+      });
 }
 
-FOLLY_NODISCARD Future<Unit> diffTrees(
+FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
     DiffContext* context,
     RelativePathPiece currentPath,
     std::shared_ptr<const Tree> scmTree,
@@ -394,7 +361,7 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
   if (context->isCancelled()) {
     XLOG(DBG7) << "diff() on directory " << currentPath
                << " cancelled due to client request no longer being active";
-    return makeFuture();
+    return folly::unit;
   }
   // If this directory is already ignored, we don't need to bother loading its
   // .gitignore file.  Everything inside this directory must also be ignored,
@@ -403,9 +370,9 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
   // Explicit include rules cannot be used to unignore files inside an ignored
   // directory.
   //
-  // We check context->getLoadFileContentsFromPath() here as a way to see if we
-  // are processing gitIgnore files or not, since this is only set from code
-  // that enters through eden/fs/inodes/Diff.cpp. Either way, it is
+  // We check context->getLoadFileContentsFromPath() here as a way to see if
+  // we are processing gitIgnore files or not, since this is only set from
+  // code that enters through eden/fs/inodes/Diff.cpp. Either way, it is
   // impossible to load file contents without this set.
   if (isIgnored || !context->getLoadFileContentsFromPath()) {
     // We can pass in a null GitIgnoreStack pointer here.
@@ -429,27 +396,24 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
     }
   }
 
-  return std::move(gitIgnore)
-      .thenValue([context,
-                  currentPath = currentPath.copy(),
-                  scmTree = std::move(scmTree),
-                  wdTree = std::move(wdTree),
-                  parentIgnore,
-                  isIgnored](std::string gitIgnore) mutable {
+  return std::move(gitIgnore).thenValue(
+      [context,
+       currentPath = currentPath.copy(),
+       scmTree = std::move(scmTree),
+       wdTree = std::move(wdTree),
+       parentIgnore,
+       isIgnored](std::string gitIgnore) mutable {
         auto gitIgnoreStack = gitIgnore.empty()
             ? std::make_unique<GitIgnoreStack>(parentIgnore)
             : std::make_unique<GitIgnoreStack>(parentIgnore, gitIgnore);
         return computeTreeDiff(
-                   context,
-                   currentPath,
-                   std::move(scmTree),
-                   std::move(wdTree),
-                   std::move(gitIgnoreStack),
-                   isIgnored)
-            .semi();
-      })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+            context,
+            currentPath,
+            std::move(scmTree),
+            std::move(wdTree),
+            std::move(gitIgnoreStack),
+            isIgnored);
+      });
 }
 
 FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
@@ -479,8 +443,8 @@ FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
 
             // Shortcut in the case where we're trying to diff the same tree.
             // This happens in the case in which the CLI (during eden doctor)
-            // calls getScmStatusBetweenRevisions() with the same hash in order
-            // to check if a commit hash is valid.
+            // calls getScmStatusBetweenRevisions() with the same hash in
+            // order to check if a commit hash is valid.
             if (scmTree && wdTree && scmTree->getHash() == wdTree->getHash()) {
               return ImmediateFuture{folly::unit};
             }
@@ -489,13 +453,12 @@ FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
                 ? copiedCurrentPath->piece()
                 : currentPath;
             return diffTrees(
-                       context,
-                       pathPiece,
-                       std::move(scmTree),
-                       std::move(wdTree),
-                       ignore,
-                       isIgnored)
-                .semi();
+                context,
+                pathPiece,
+                std::move(scmTree),
+                std::move(wdTree),
+                ignore,
+                isIgnored);
           });
 }
 
@@ -508,8 +471,8 @@ diffRoots(DiffContext* context, const RootId& root1, const RootId& root2) {
   return diffTrees(
       context,
       RelativePathPiece{},
-      std::move(future1).semi(),
-      std::move(future2).semi(),
+      std::move(future1),
+      std::move(future2),
       nullptr,
       false);
 }

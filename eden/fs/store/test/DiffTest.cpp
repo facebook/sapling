@@ -116,7 +116,7 @@ class DiffTest : public ::testing::Test {
     auto gitIgnoreStack = topLevelIgnores->getStack();
     auto mockedLoadFile = [gitIgnoreContents](
                               ObjectFetchContext&, RelativePathPiece /**/) {
-      return folly::makeFuture(gitIgnoreContents);
+      return ImmediateFuture{gitIgnoreContents};
     };
     auto diffContext = makeDiffContext(
         callback.get(),
