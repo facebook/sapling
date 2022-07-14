@@ -2114,15 +2114,6 @@ TEST(DiffTest, multiTreeDiff) {
 
   auto root = edenMount->getRootInode();
 
-  DiffContext::LoadFileFunction loadFileContentsFromPath =
-      [edenMount](ObjectFetchContext& fetchContext, RelativePathPiece path) {
-        return edenMount
-            ->EdenMount::loadFileContentsFromPath(
-                fetchContext, path, CacheHint::LikelyNeededAgain)
-            .semi()
-            .via(&folly::QueuedImmediateExecutor::instance());
-      };
-
   ScmStatusDiffCallback callback;
   DiffContext diffContext{
       &callback,
@@ -2130,8 +2121,7 @@ TEST(DiffTest, multiTreeDiff) {
       false, // listIgnored
       kPathMapDefaultCaseSensitive,
       testMount.getEdenMount()->getObjectStore(),
-      std::make_unique<TopLevelIgnores>("", ""),
-      std::move(loadFileContentsFromPath)};
+      std::make_unique<TopLevelIgnores>("", "")};
 
   // Modify "a" to match commit 1, even though we're on commit 2.
   testMount.overwriteFile("a", "A in 1\n");
