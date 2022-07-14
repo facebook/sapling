@@ -791,7 +791,7 @@ class fetchbuilddeps(Command):
     pyassets += (
         [
             edenpythrift(
-                name="eden-rust-deps-feaebb9a88abc3af8dc071709ce7c691a7d3c709.zip"
+                name="eden-rust-deps-2f6da57cdd616a6f0e5d1b9fcd7f0349f4edcf47.zip"
             )
         ]
         if havefb
