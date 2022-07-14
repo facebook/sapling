@@ -11,6 +11,7 @@
 #include <optional>
 #include "eden/fs/eden-config.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
+#include "eden/fs/telemetry/TraceBus.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -35,9 +36,34 @@ class ImmediateFuture;
 
 extern const char* const kServiceName;
 
-struct OutstandingThriftRequest {
-  uint64_t requestId;
+struct ThriftRequestTraceEvent : TraceEventBase {
+  enum Type : unsigned char {
+    START,
+    FINISH,
+  };
 
+  ThriftRequestTraceEvent() = delete;
+
+  static ThriftRequestTraceEvent start(
+      uint64_t requestId,
+      folly::StringPiece method) {
+    return ThriftRequestTraceEvent{Type::START, requestId, method};
+  }
+
+  static ThriftRequestTraceEvent finish(
+      uint64_t requestId,
+      folly::StringPiece method) {
+    return ThriftRequestTraceEvent{Type::FINISH, requestId, method};
+  }
+
+  ThriftRequestTraceEvent(
+      Type type,
+      uint64_t requestId,
+      folly::StringPiece method)
+      : type(type), requestId(requestId), method(method) {}
+
+  Type type;
+  uint64_t requestId;
   // Safe to use StringPiece because method names are string literals.
   folly::StringPiece method;
 };
@@ -343,14 +369,19 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       RelativePath path,
       ObjectFetchContext& fetchContext);
 
-  folly::Synchronized<std::unordered_map<uint64_t, OutstandingThriftRequest>>
+  folly::Synchronized<std::unordered_map<uint64_t, ThriftRequestTraceEvent>>
       outstandingThriftRequests_;
 #ifdef EDEN_HAVE_USAGE_SERVICE
-  // an endpoint for the edenfs/edenfs_service smartservice used for predictive
-  // prefetch profiles
+  // an endpoint for the edenfs/edenfs_service smartservice used for
+  // predictive prefetch profiles
   std::unique_ptr<EdenFSSmartPlatformServiceEndpoint> spServiceEndpoint_;
 #endif
   const std::vector<std::string> originalCommandLine_;
   EdenServer* const server_;
+
+  std::vector<TraceSubscriptionHandle<ThriftRequestTraceEvent>>
+      thriftRequestTraceSubscriptionHandles_;
+
+  std::shared_ptr<TraceBus<ThriftRequestTraceEvent>> thriftRequestTraceBus_;
 };
 } // namespace facebook::eden

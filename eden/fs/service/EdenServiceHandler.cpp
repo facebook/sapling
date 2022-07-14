@@ -224,6 +224,8 @@ class PrefetchFetchContext : public ObjectFetchContext {
   folly::StringPiece endpoint_;
 };
 
+constexpr size_t kTraceBusCapacity = 25000;
+
 // Helper class to log where the request completes in Future
 class ThriftLogHelper {
  public:
@@ -232,9 +234,7 @@ class ThriftLogHelper {
 
   template <typename... Args>
   ThriftLogHelper(
-      folly::Synchronized<
-          std::unordered_map<uint64_t, OutstandingThriftRequest>>&
-          outstandingThriftRequests,
+      std::shared_ptr<TraceBus<ThriftRequestTraceEvent>> traceBus,
       const folly::Logger& logger,
       folly::LogLevel level,
       folly::StringPiece itcFunctionName,
@@ -243,7 +243,7 @@ class ThriftLogHelper {
       std::shared_ptr<EdenStats> edenStats,
       ThriftThreadStats::StatPtr statPtr,
       std::optional<pid_t> pid)
-      : outstandingThriftRequests_(outstandingThriftRequests),
+      : traceBus_{std::move(traceBus)},
         requestId_(generateUniqueID()),
         itcFunctionName_(itcFunctionName),
         itcFileName_(itcFileName),
@@ -254,16 +254,13 @@ class ThriftLogHelper {
         itcLogger_(logger),
         fetchContext_{pid, itcFunctionName},
         prefetchFetchContext_{pid, itcFunctionName} {
-    outstandingThriftRequests_.wlock()->emplace(
-        requestId_,
-        OutstandingThriftRequest{
-            requestId_,
-            itcFunctionName_,
-        });
+    traceBus_->publish(
+        ThriftRequestTraceEvent::start(requestId_, itcFunctionName_));
   }
 
   ~ThriftLogHelper() {
-    outstandingThriftRequests_.wlock()->erase(requestId_);
+    traceBus_->publish(
+        ThriftRequestTraceEvent::finish(requestId_, itcFunctionName_));
     // Logging completion time for the request
     // The line number points to where the object was originally created
     auto elapsed = itcTimer_.elapsed();
@@ -294,8 +291,7 @@ class ThriftLogHelper {
   }
 
  private:
-  folly::Synchronized<std::unordered_map<uint64_t, OutstandingThriftRequest>>&
-      outstandingThriftRequests_;
+  std::shared_ptr<TraceBus<ThriftRequestTraceEvent>> traceBus_;
   uint64_t requestId_;
   folly::StringPiece itcFunctionName_;
   folly::StringPiece itcFileName_;
@@ -358,7 +354,7 @@ facebook::eden::InodePtr inodeFromUserPath(
     TLOG(logger, folly::LogLevel::level, fileName, lineNumber)        \
         << functionName << "(" << toDelimWrapper(__VA_ARGS__) << ")"; \
     return std::make_unique<ThriftLogHelper>(                         \
-        this->outstandingThriftRequests_,                             \
+        this->thriftRequestTraceBus_,                                 \
         logger,                                                       \
         folly::LogLevel::level,                                       \
         functionName,                                                 \
@@ -384,7 +380,7 @@ facebook::eden::InodePtr inodeFromUserPath(
     TLOG(logger, folly::LogLevel::level, fileName, lineNumber)        \
         << functionName << "(" << toDelimWrapper(__VA_ARGS__) << ")"; \
     return std::make_unique<ThriftLogHelper>(                         \
-        this->outstandingThriftRequests_,                             \
+        this->thriftRequestTraceBus_,                                 \
         logger,                                                       \
         folly::LogLevel::level,                                       \
         functionName,                                                 \
@@ -403,7 +399,7 @@ facebook::eden::InodePtr inodeFromUserPath(
     TLOG(logger, folly::LogLevel::level, fileName, lineNumber)        \
         << functionName << "(" << toDelimWrapper(__VA_ARGS__) << ")"; \
     return std::make_unique<ThriftLogHelper>(                         \
-        this->outstandingThriftRequests_,                             \
+        this->thriftRequestTraceBus_,                                 \
         logger,                                                       \
         folly::LogLevel::level,                                       \
         functionName,                                                 \
@@ -423,7 +419,10 @@ EdenServiceHandler::EdenServiceHandler(
     EdenServer* server)
     : BaseService{kServiceName},
       originalCommandLine_{std::move(originalCommandLine)},
-      server_{server} {
+      server_{server},
+      thriftRequestTraceBus_(TraceBus<ThriftRequestTraceEvent>::create(
+          "ThriftRequestTrace",
+          kTraceBusCapacity)) {
   struct HistConfig {
     int64_t bucketSize{250};
     int64_t min{0};
@@ -466,6 +465,21 @@ EdenServiceHandler::EdenServiceHandler(
       server_->getServerState()->getThreadPool(),
       server_->getServerState()->getEdenConfig());
 #endif
+
+  thriftRequestTraceSubscriptionHandles_.push_back(
+      thriftRequestTraceBus_->subscribeFunction(
+          "Outstanding Thrift request tracing",
+          [this](const ThriftRequestTraceEvent& event) {
+            switch (event.type) {
+              case ThriftRequestTraceEvent::START:
+                outstandingThriftRequests_.wlock()->emplace(
+                    event.requestId, event);
+                break;
+              case ThriftRequestTraceEvent::FINISH:
+                outstandingThriftRequests_.wlock()->erase(event.requestId);
+                break;
+            }
+          }));
 }
 
 EdenServiceHandler::~EdenServiceHandler() = default;
@@ -1009,7 +1023,7 @@ PrjfsCall populatePrjfsCall(const PrjfsTraceEvent& event) {
 #endif
 
 ThriftRequestMetadata populateThriftRequestMetadata(
-    OutstandingThriftRequest request) {
+    const ThriftRequestTraceEvent& request) {
   ThriftRequestMetadata thriftRequestMetadata;
   thriftRequestMetadata.requestId() = request.requestId;
   thriftRequestMetadata.method() = request.method;
