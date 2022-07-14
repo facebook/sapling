@@ -58,6 +58,10 @@ SemiFuture<Unit> FaultInjector::checkAsyncImpl(
           [&](const folly::exception_wrapper& error) {
             XLOG(DBG1) << "error fault hit: " << keyClass << ", " << keyValue;
             return folly::makeSemiFuture<Unit>(error);
+          },
+          [&](const FaultInjector::Kill&) -> SemiFuture<Unit> {
+            XLOG(DBG1) << "kill fault hit: " << keyClass << ", " << keyValue;
+            abort();
           }),
       behavior);
 }
@@ -81,6 +85,10 @@ void FaultInjector::checkImpl(StringPiece keyClass, StringPiece keyValue) {
           [&](const folly::exception_wrapper& error) {
             XLOG(DBG1) << "error fault hit: " << keyClass << ", " << keyValue;
             error.throw_exception();
+          },
+          [&](const FaultInjector::Kill&) {
+            XLOG(DBG1) << "kill fault hit: " << keyClass << ", " << keyValue;
+            abort();
           }),
       behavior);
 }
@@ -112,6 +120,15 @@ void FaultInjector::injectDelay(
   XLOG(INFO) << "injectDelay(" << keyClass << ", " << keyValueRegex
              << ", count=" << count << ")";
   injectFault(keyClass, keyValueRegex, Delay{duration}, count);
+}
+
+void FaultInjector::injectKill(
+    StringPiece keyClass,
+    StringPiece keyValueRegex,
+    size_t count) {
+  XLOG(INFO) << "injectKill(" << keyClass << ", " << keyValueRegex
+             << ", count=" << count << ")";
+  injectFault(keyClass, keyValueRegex, Kill{}, count);
 }
 
 void FaultInjector::injectDelayedError(

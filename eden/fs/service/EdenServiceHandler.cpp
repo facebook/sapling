@@ -3296,6 +3296,11 @@ void EdenServiceHandler::injectFault(unique_ptr<FaultDefinition> fault) {
         *fault->count_ref());
     return;
   }
+  if (*fault->kill()) {
+    injector.injectKill(
+        *fault->keyClass(), *fault->keyValueRegex(), *fault->count());
+    return;
+  }
 
   auto error = getFaultError(fault->errorType_ref(), fault->errorMessage_ref());
   std::chrono::milliseconds delay(*fault->delayMilliseconds_ref());

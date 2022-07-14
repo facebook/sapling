@@ -171,6 +171,14 @@ class FaultInjector {
       size_t count = 0);
 
   /**
+   * Inject a fault that causes the process to exit without cleanup.
+   */
+  void injectKill(
+      folly::StringPiece keyClass,
+      folly::StringPiece keyValueRegex,
+      size_t count = 0);
+
+  /**
    * Inject a dummy fault that does not trigger any error.
    *
    * One use for this would be inserting a higher-priority no-op before some
@@ -226,12 +234,14 @@ class FaultInjector {
     std::chrono::milliseconds duration;
     std::optional<folly::exception_wrapper> error;
   };
+  struct Kill {};
 
   using FaultBehavior = std::variant<
       folly::Unit, // no fault
       Block, // block until explicitly unblocked at a later point
       Delay, // delay for a specified amount of time
-      folly::exception_wrapper // throw an exception
+      folly::exception_wrapper, // throw an exception
+      Kill // exit the process ungracefully
       >;
   struct Fault {
     Fault(folly::StringPiece regex, FaultBehavior&& behavior, size_t count);
