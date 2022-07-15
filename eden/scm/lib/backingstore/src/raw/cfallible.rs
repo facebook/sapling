@@ -45,8 +45,8 @@ impl<T> CFallible<T> {
     /// Creates a `CFallible` with an error message but no value.
     ///
     /// This function will remove any '\0' in the error message.
-    pub fn err<P: ToString>(err: P) -> Self {
-        let mut err = err.to_string().into_bytes();
+    pub fn err<P: std::fmt::Debug>(err: P) -> Self {
+        let mut err = format!("{:?}", err).into_bytes();
         // `CString::new` will return error only when there is a '\0' in the string. So we manually
         // remove any \0 in the error string to ensure it is safe to call `.expect`.
         err.retain(|&x| x != 0u8);

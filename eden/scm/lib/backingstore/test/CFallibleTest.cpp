@@ -33,5 +33,5 @@ TEST(CFallible, returns_err) {
 
   EXPECT_EQ(result.get(), nullptr);
   EXPECT_EQ(result.isError(), true);
-  EXPECT_STREQ(result.getError(), "failure!");
+  EXPECT_STREQ(result.getError(), "context\n\nCaused by:\n    failure!");
 }
