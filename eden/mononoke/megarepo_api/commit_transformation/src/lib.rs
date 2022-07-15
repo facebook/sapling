@@ -42,6 +42,13 @@ pub type MultiMover = Arc<dyn Fn(&MPath) -> Result<Vec<MPath>, Error> + Send + S
 pub type DirectoryMultiMover =
     Arc<dyn Fn(&Option<MPath>) -> Result<Vec<Option<MPath>>, Error> + Send + Sync + 'static>;
 
+const SQUASH_DELIMITER_MESSAGE: &str = r#"
+
+============================
+
+This commit created by squashing the following git commits:
+"#;
+
 #[derive(Debug, Error)]
 pub enum ErrorKind {
     #[error("Remapped commit {0} expected in target repo, but not present")]
@@ -269,45 +276,45 @@ pub async fn rewrite_as_squashed_commit<'a>(
     (source_parent_cs_id, target_parent_cs_id): (ChangesetId, ChangesetId),
     mut cs: BonsaiChangesetMut,
     mover: MultiMover,
+    side_commits_info: Vec<String>,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
-    if !cs.file_changes.is_empty() {
-        let diff_stream =
-            find_bonsai_diff(ctx, source_repo, source_parent_cs_id, source_cs_id).await?;
-
-        let diff_changes: Vec<_> = diff_stream
-            .map_ok(|diff_result| async move {
-                convert_diff_result_into_file_change_for_diamond_merge(
-                    ctx,
-                    source_repo,
-                    diff_result,
-                )
+    let diff_stream = find_bonsai_diff(ctx, source_repo, source_parent_cs_id, source_cs_id).await?;
+    let diff_changes: Vec<_> = diff_stream
+        .map_ok(|diff_result| async move {
+            convert_diff_result_into_file_change_for_diamond_merge(ctx, source_repo, diff_result)
                 .await
-            })
-            .try_buffered(100)
-            .try_collect()
-            .await?;
+        })
+        .try_buffered(100)
+        .try_collect()
+        .await?;
 
-        let rewritten_changes = diff_changes
-            .into_iter()
-            .map(|(path, change)| {
-                let new_paths = mover(&path)?;
-                Ok(new_paths
-                    .into_iter()
-                    .map(|new_path| (new_path, change.clone()))
-                    .collect())
-            })
-            .collect::<Result<Vec<Vec<_>>, Error>>()?;
+    let rewritten_changes = diff_changes
+        .into_iter()
+        .map(|(path, change)| {
+            let new_paths = mover(&path)?;
+            Ok(new_paths
+                .into_iter()
+                .map(|new_path| (new_path, change.clone()))
+                .collect())
+        })
+        .collect::<Result<Vec<Vec<_>>, Error>>()?;
 
-        let rewritten_changes: SortedVectorMap<_, _> = rewritten_changes
-            .into_iter()
-            .flat_map(|changes| changes.into_iter())
-            .collect();
+    let rewritten_changes: SortedVectorMap<_, _> = rewritten_changes
+        .into_iter()
+        .flat_map(|changes| changes.into_iter())
+        .collect();
 
-        cs.file_changes = rewritten_changes;
-        // `validate_can_sync_changeset` already ensures
-        // that target_parent_cs_id is one of the existing parents
-        cs.parents = vec![target_parent_cs_id];
-    }
+    cs.file_changes = rewritten_changes;
+    // `validate_can_sync_changeset` already ensures
+    // that target_parent_cs_id is one of the existing parents
+    cs.parents = vec![target_parent_cs_id];
+    let old_message = cs.message;
+    cs.message = format!(
+        "{}{}{}",
+        old_message,
+        SQUASH_DELIMITER_MESSAGE,
+        side_commits_info.join("\n")
+    );
     Ok(Some(cs))
 }
 

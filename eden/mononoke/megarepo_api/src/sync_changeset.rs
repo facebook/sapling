@@ -64,7 +64,7 @@ impl<'a> MegarepoOp for SyncChangeset<'a> {
 
 pub enum MergeMode {
     Squashed {
-        commits_limit: u64,
+        side_commits: Vec<ChangesetContext>,
     },
     ExtraMoveCommits {
         side_parents_move_commits: Vec<SourceAndMovedChangesets>,
@@ -148,8 +148,8 @@ impl<'a> SyncChangeset<'a> {
         // In case of merge commits we need to add move commits on top of the
         // merged-in commits or squash side-branch.
         let merge_mode = match &source_config.merge_mode {
-            Some(megarepo_config::MergeMode::squashed(sq))
-                if self
+            Some(megarepo_config::MergeMode::squashed(sq)) => {
+                let (is_squashable, side_commits) = self
                     .is_commit_squashable(
                         ctx,
                         target,
@@ -161,30 +161,40 @@ impl<'a> SyncChangeset<'a> {
                             .try_into()
                             .context("couldn't convert squash commits limit")?,
                     )
-                    .await? =>
-            {
-                MergeMode::Squashed {
-                    commits_limit: sq
-                        .squash_limit
-                        .try_into()
-                        .context("couldn't convert squash commits limit")?,
+                    .await?;
+                if is_squashable {
+                    MergeMode::Squashed { side_commits }
+                } else {
+                    MergeMode::ExtraMoveCommits {
+                        side_parents_move_commits: self
+                            .create_move_commits(
+                                ctx,
+                                target,
+                                &source_cs,
+                                &commit_remapping_state,
+                                &source_repo,
+                                source_name,
+                                source_config,
+                            )
+                            .await?,
+                    }
                 }
             }
-            None
-            | Some(megarepo_config::MergeMode::with_move_commit(_))
-            | Some(megarepo_config::MergeMode::squashed(_)) => MergeMode::ExtraMoveCommits {
-                side_parents_move_commits: self
-                    .create_move_commits(
-                        ctx,
-                        target,
-                        &source_cs,
-                        &commit_remapping_state,
-                        &source_repo,
-                        source_name,
-                        source_config,
-                    )
-                    .await?,
-            },
+            None | Some(megarepo_config::MergeMode::with_move_commit(_)) => {
+                MergeMode::ExtraMoveCommits {
+                    side_parents_move_commits: self
+                        .create_move_commits(
+                            ctx,
+                            target,
+                            &source_cs,
+                            &commit_remapping_state,
+                            &source_repo,
+                            source_name,
+                            source_config,
+                        )
+                        .await?,
+                }
+            }
             Some(megarepo_config::MergeMode::UnknownField(_)) => {
                 return Err(anyhow!("Unknown MergeMode").into());
             }
@@ -238,9 +248,9 @@ impl<'a> SyncChangeset<'a> {
         source_name: &SourceName,
         source_repo: &RepoContext,
         limit: u64,
-    ) -> Result<bool> {
+    ) -> Result<(bool, Vec<ChangesetContext>)> {
         if limit == 0 {
-            return Ok(false);
+            return Ok((false, vec![]));
         }
 
         let latest_synced_cs_id =
@@ -259,10 +269,10 @@ impl<'a> SyncChangeset<'a> {
         let author = match side_parents.front() {
             Some(p) => p.author().await?,
             None => {
-                return Ok(false);
+                return Ok((false, vec![]));
             }
         };
-        Ok(stream::try_unfold(
+        let res = stream::try_unfold(
             (0, side_parents),
             |(local_limit, mut queue): (u64, VecDeque<ChangesetContext>)| {
                 let author = author.clone();
@@ -277,17 +287,17 @@ impl<'a> SyncChangeset<'a> {
                         // if commit is in the target's mapping,
                         // then we should not check further
                         if is_commit_synced {
-                            return anyhow::Ok(Some((Some(true), (local_limit, queue))));
+                            return anyhow::Ok(Some(((true, cs), (local_limit, queue))));
                         }
                         // if we traversed more than a limit commits
                         if local_limit >= limit {
                             // We reached out maximum and commit is not in the targets mapping
                             // return false indicating that branch isn't squashable
-                            return anyhow::Ok(Some((Some(false), (local_limit, queue))));
+                            return anyhow::Ok(Some(((false, cs), (local_limit, queue))));
                         }
                         // if author is different branch isn't squashable
                         if author != cs.author().await? {
-                            return anyhow::Ok(Some((Some(false), (local_limit, queue))));
+                            return anyhow::Ok(Some(((false, cs), (local_limit, queue))));
                         }
                         // still need to check parents
                         let parents: Result<VecDeque<_>> =
@@ -302,7 +312,7 @@ impl<'a> SyncChangeset<'a> {
                                 .try_collect()
                                 .await;
                         queue.extend(parents?);
-                        anyhow::Ok(Some((Some(true), (local_limit + 1, queue))))
+                        anyhow::Ok(Some(((true, cs), (local_limit + 1, queue))))
                     } else {
                         anyhow::Ok(None)
                     }
@@ -310,9 +320,11 @@ impl<'a> SyncChangeset<'a> {
             },
         )
         .try_collect::<Vec<_>>()
-        .await?
-        .into_iter()
-        .all(|x| matches!(x, Some(a) if a)))
+        .await?;
+        let (maybe_squashable, mut side_commits): (Vec<_>, Vec<_>) = res.into_iter().unzip();
+        let is_squashable = maybe_squashable.into_iter().all(|x| x);
+        side_commits.pop();
+        Ok((is_squashable, side_commits))
     }
 
     // Creates move commits on top of the merge parents in the source that
@@ -526,11 +538,21 @@ async fn sync_changeset_to_target(
                 ))
             })
         }
-        MergeMode::Squashed { commits_limit: _ } => {
-            println!(
-                "rewrite as squashed source_cs: {:#?}, target_cs {:?}",
-                source_cs_mut, target_cs_id
-            );
+        MergeMode::Squashed { side_commits } => {
+            let side_commits_info = stream::iter(side_commits.into_iter())
+                .map(|cs_ctx| async move {
+                    let hash = match cs_ctx.git_sha1().await? {
+                        None => format!("HG hash: {}", cs_ctx.id()),
+                        Some(hash) => format!("Git hash: {}", hash),
+                    };
+                    let author_date = cs_ctx.author_date().await?;
+                    let message = cs_ctx.message().await?;
+                    let title = message.trim_start().lines().next().unwrap_or("");
+                    Ok::<_, MegarepoError>(format!(" * {}\t{}\t{}", hash, author_date, title))
+                })
+                .buffer_unordered(100)
+                .try_collect()
+                .await?;
             rewrite_as_squashed_commit(
                 ctx,
                 source_repo,
@@ -538,6 +560,7 @@ async fn sync_changeset_to_target(
                 (latest_synced_cs_id, target_cs_id),
                 source_cs_mut,
                 mover,
+                side_commits_info,
             )
             .await
             .map_err(MegarepoError::internal)?
