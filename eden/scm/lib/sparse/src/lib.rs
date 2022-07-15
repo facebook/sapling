@@ -126,9 +126,16 @@ impl Root {
                 let mut origins = Vec::new();
 
                 for (pat, src) in rules {
-                    for expanded_rule in sparse_pat_to_matcher_rule(pat)? {
-                        matcher_rules.push(expanded_rule);
-                        origins.push(src.clone());
+                    match sparse_pat_to_matcher_rule(&pat) {
+                        Err(err) => {
+                            tracing::error!(%err, ?pat, %src, "ignoring unsupported sparse pattern");
+                        }
+                        Ok(rules) => {
+                            for expanded_rule in rules {
+                                matcher_rules.push(expanded_rule);
+                                origins.push(src.clone());
+                            }
+                        }
                     }
                 }
 
@@ -450,7 +457,7 @@ static ALL_PATTERN_KINDS: &[&str] = &[
 
 // Convert a sparse profile pattern into what the tree matcher
 // expects. We only support "glob" and "path" pattern types.
-fn sparse_pat_to_matcher_rule(pat: Pattern) -> Result<Vec<String>, Error> {
+fn sparse_pat_to_matcher_rule(pat: &Pattern) -> Result<Vec<String>, Error> {
     static DEFAULT_TYPE: &str = "glob";
 
     let (pat_type, pat_text) = match pat.as_str().split_once(':') {
@@ -667,33 +674,33 @@ title = grand_child
     #[test]
     fn test_sparse_pat_to_matcher_rule() {
         assert_eq!(
-            sparse_pat_to_matcher_rule(Pattern::Include("path:/foo/bar".to_string())).unwrap(),
+            sparse_pat_to_matcher_rule(&Pattern::Include("path:/foo/bar".to_string())).unwrap(),
             vec!["/foo/bar/**"]
         );
 
         assert_eq!(
-            sparse_pat_to_matcher_rule(Pattern::Include("path:/foo//bar".to_string())).unwrap(),
+            sparse_pat_to_matcher_rule(&Pattern::Include("path:/foo//bar".to_string())).unwrap(),
             vec!["/foo/bar/**"]
         );
 
         assert_eq!(
-            sparse_pat_to_matcher_rule(Pattern::Include("/foo/*/bar{1,{2,3}}/".to_string()))
+            sparse_pat_to_matcher_rule(&Pattern::Include("/foo/*/bar{1,{2,3}}/".to_string()))
                 .unwrap(),
             vec!["/foo/*/bar1/**", "/foo/*/bar2/**", "/foo/*/bar3/**"],
         );
 
         assert_eq!(
-            sparse_pat_to_matcher_rule(Pattern::Include("path:/foo/*/bar{1,{2,3}}/".to_string()))
+            sparse_pat_to_matcher_rule(&Pattern::Include("path:/foo/*/bar{1,{2,3}}/".to_string()))
                 .unwrap(),
             vec!["/foo/\\*/bar\\{1,\\{2,3\\}\\}/**"],
         );
 
         assert_eq!(
-            sparse_pat_to_matcher_rule(Pattern::Exclude("glob:**".to_string())).unwrap(),
+            sparse_pat_to_matcher_rule(&Pattern::Exclude("glob:**".to_string())).unwrap(),
             vec!["!**/**"],
         );
 
-        assert!(sparse_pat_to_matcher_rule(Pattern::Include("re:.*".to_string())).is_err());
+        assert!(sparse_pat_to_matcher_rule(&Pattern::Include("re:.*".to_string())).is_err());
     }
 
     #[tokio::test]
@@ -822,6 +829,25 @@ foo
         // break if someone accidentally deletes an in-use sparse
         // profile.
         assert!(matcher.matches("foo".try_into()?)?);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_matcher_unsupported_patterns() -> anyhow::Result<()> {
+        let config = b"
+re:.*
+listfile0:/tmp/oops
+foo
+";
+
+        let prof = Root::from_bytes(config, "test".to_string()).unwrap();
+
+        // Can still get a matcher, skipping unsupported patterns.
+        let matcher = prof.matcher(|_| async { Ok(None) }).await?;
+
+        assert!(matcher.matches("foo".try_into()?)?);
+        assert!(!matcher.matches("bar".try_into()?)?);
 
         Ok(())
     }
