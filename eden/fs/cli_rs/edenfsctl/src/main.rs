@@ -24,13 +24,11 @@ use edenfs_telemetry::cli_usage::CliUsageSample;
 use edenfs_telemetry::send;
 
 #[cfg(windows)]
-const PYTHON_CANDIDATES: &[&str; 6] = &[
+const PYTHON_CANDIDATES: &[&str] = &[
     r"c:\tools\fb-python\fb-python39",
     r"c:\tools\fb-python\fb-python38",
-    r"c:\tools\fb-python\fb-python37",
     r"c:\Python39",
     r"c:\Python38",
-    r"c:\Python37",
 ];
 
 #[cfg(windows)]
