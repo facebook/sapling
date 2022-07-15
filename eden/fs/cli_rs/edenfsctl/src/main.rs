@@ -46,6 +46,14 @@ fn find_python() -> Option<PathBuf> {
 }
 
 #[cfg(windows)]
+fn strip_unc_prefix(path: PathBuf) -> PathBuf {
+    path.to_string_lossy()
+        .strip_prefix(r"\\?\")
+        .map(From::from)
+        .unwrap_or(path)
+}
+
+#[cfg(windows)]
 fn execute_par(par: PathBuf) -> Result<Command> {
     let python = find_python().ok_or_else(|| {
         anyhow!(
@@ -73,6 +81,8 @@ fn python_fallback() -> Result<Command> {
     let binary = std::env::current_exe().context("unable to retrieve path to the executable")?;
     let binary =
         std::fs::canonicalize(binary).context("unable to canonicalize path to the executable")?;
+    #[cfg(windows)]
+    let binary = strip_unc_prefix(binary);
     let libexec = binary.parent().ok_or_else(|| {
         anyhow!(
             "unable to retrieve parent directory to '{}'",
