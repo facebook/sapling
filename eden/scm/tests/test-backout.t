@@ -130,3 +130,33 @@ Test backing out a mv keeps the blame history even if copytracing is off
   $ hg blame -c foo
   3e92d79f743a: a
   998f4c3a2bdf: b
+
+  $ cd ..
+
+Make sure editor sees proper message
+  $ hg init backout-msg
+  $ cd backout-msg
+  $ echo a > foo
+  $ hg commit -Aqm a
+  $ echo b > bar
+  $ hg commit -Aqm b
+No output means editor was not invoked
+  $ HGEDITOR=cat hg backout .
+  removing bar
+  changeset 4dc95485382f backs out changeset 20b005551096
+Now we see the default commit message
+  $ hg up -qC 'desc(b)'
+  $ HGEDITOR=cat hg backout . --edit
+  adding bar
+  Back out "Back out "b""
+  
+  Original commit changeset: 4dc95485382f
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: added bar
+  changeset 9b702c98cd4b backs out changeset 4dc95485382f

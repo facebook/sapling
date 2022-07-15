@@ -714,7 +714,7 @@ def _replayrenames(repo, node):
             origfilectx = origctx[origfile]
             origrenamed = origfilectx.renamed()
             # ...and it was a rename...
-            if origrenamed: # In the negative case this can be None or False
+            if origrenamed:  # In the negative case this can be None or False
                 precopypath = origrenamed[0]
                 # ...then if the working copy has the pre-rename file...
                 if precopypath in wctx:
@@ -809,18 +809,12 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
         return 0
 
     def commitfunc(ui, repo, message, match, opts):
-        editform = "backout"
-        e = cmdutil.getcommiteditor(editform=editform, **opts)
-        if not message:
-            e = cmdutil.getcommiteditor(edit=True, editform=editform)
-
-        message = _makebackoutmessage(repo, message, node)
         return repo.commit(
-            message,
+            _makebackoutmessage(repo, message, node),
             opts.get("user"),
             opts.get("date"),
             match,
-            editor=e,
+            editor=cmdutil.getcommiteditor(editform="backout", **opts),
         )
 
     newnode = cmdutil.commit(ui, repo, commitfunc, [], opts)
