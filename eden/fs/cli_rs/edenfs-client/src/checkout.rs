@@ -678,7 +678,7 @@ impl EdenFsCheckout {
                     .make_prefetch_request(
                         instance,
                         profile_set,
-                        enable_prefetch,
+                        false, // don't pass enablePrefetch here since we just want to evaluate the **/* glob which will indirectly fetch all of the trees
                         silent,
                         revisions.clone(),
                         predict_revisions,
