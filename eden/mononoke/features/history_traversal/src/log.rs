@@ -1722,6 +1722,149 @@ mod test {
     }
 
     #[fbinit::test]
+    async fn test_list_history_with_mutable_renames_attached_to_unrelated_commits(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
+        let mutable_renames = repo.mutable_renames_arc();
+        let ctx = CoreContext::test_mock(fb);
+
+        let first_src_filename = "dir/1";
+        let first_dst_filename = "dir2/2";
+
+        let second_src_filename = "file";
+        let second_dst_filename = "moved_file";
+
+        let unrelated_filename = "unrelated";
+
+        let first_bcs_id = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file(first_src_filename, "content1")
+            .add_file(second_src_filename, "content1")
+            .commit()
+            .await?;
+        let second_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![first_bcs_id])
+            .add_file(first_src_filename, "content2")
+            .add_file(second_dst_filename, "content2")
+            .commit()
+            .await?;
+
+        let third_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![second_bcs_id])
+            .add_file(unrelated_filename, "unrelated content3")
+            .commit()
+            .await?;
+
+        let fourth_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![third_bcs_id])
+            .delete_file(first_src_filename)
+            .delete_file(second_src_filename)
+            .add_file(first_dst_filename, "content4")
+            .add_file(second_dst_filename, "content4")
+            .commit()
+            .await?;
+
+        let fifth_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![fourth_bcs_id])
+            .add_file(unrelated_filename, "unrelated content5")
+            .commit()
+            .await?;
+
+        let sixth_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![fifth_bcs_id])
+            .add_file(unrelated_filename, "unrelated content6")
+            .commit()
+            .await?;
+
+        //    0 <- modifies "unrelated"
+        //    |
+        //    0 <- modifies "unrelated"
+        //    |
+        //    0 <- removes "dir/1", "file"; adds "moved_file", "dir2/2"
+        //    |
+        //    0 <- modifies "unrelated"
+        //    |
+        //    0  <- modifies "dir/1"
+        //    |
+        //    0  <- creates "dir/1", "file"
+
+        // Set mutable renames
+        let first_src_unode = derive_unode_entry(
+            &ctx,
+            &repo,
+            first_bcs_id,
+            &MPath::new_opt(first_src_filename)?,
+        )
+        .await?
+        .ok_or_else(|| format_err!("not found source unode id"))?;
+
+        let second_src_unode = derive_unode_entry(
+            &ctx,
+            &repo,
+            second_bcs_id,
+            &MPath::new_opt(second_src_filename)?,
+        )
+        .await?
+        .ok_or_else(|| format_err!("not found source unode id"))?;
+
+        mutable_renames
+            .add_or_overwrite_renames(
+                &ctx,
+                repo.changesets(),
+                vec![
+                    MutableRenameEntry::new(
+                        third_bcs_id,
+                        MPath::new_opt(first_dst_filename)?,
+                        first_bcs_id,
+                        MPath::new_opt(first_src_filename)?,
+                        first_src_unode,
+                    )?,
+                    MutableRenameEntry::new(
+                        fifth_bcs_id,
+                        MPath::new_opt(second_dst_filename)?,
+                        second_bcs_id,
+                        MPath::new_opt(second_src_filename)?,
+                        second_src_unode,
+                    )?,
+                ],
+            )
+            .await?;
+
+        let tunables = tunables::MononokeTunables::default();
+        tunables.update_by_repo_bools(&hashmap! {
+            repo.repo_identity().name().to_string() => hashmap! {
+                "fastlog_use_mutable_renames".to_string() => true,
+            },
+        });
+
+        let tunables = Arc::new(tunables);
+
+        // The log with mutable renames attached to unrealated commits
+        // is currently broken and behaves like "normal" log.
+        let actual = check_history(
+            ctx.clone(),
+            &repo,
+            MPath::new_opt(first_dst_filename)?,
+            sixth_bcs_id,
+            (),
+            HistoryAcrossDeletions::Track,
+            mutable_renames.clone(),
+            vec![fourth_bcs_id],
+        );
+
+        with_tunables_async_arc(tunables.clone(), actual.boxed()).await?;
+
+        let actual = check_history(
+            ctx.clone(),
+            &repo,
+            MPath::new_opt(second_dst_filename)?,
+            sixth_bcs_id,
+            (),
+            HistoryAcrossDeletions::Track,
+            mutable_renames,
+            vec![fourth_bcs_id, second_bcs_id],
+        );
+        with_tunables_async_arc(tunables, actual.boxed()).await?;
+
+        Ok(())
+    }
+
+    #[fbinit::test]
     async fn test_different_order(fb: FacebookInit) -> Result<(), Error> {
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames_arc();
