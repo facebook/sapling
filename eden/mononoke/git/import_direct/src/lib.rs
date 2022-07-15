@@ -64,8 +64,7 @@ pub async fn missing_for_commit(
     let mut visited = HashSet::new();
     let mut q = vec![commit];
     while let Some(id) = q.pop() {
-        if !visited.contains(&id) {
-            visited.insert(id);
+        if visited.insert(id) {
             if let Some(changeset) = commit_in_mononoke(ctx, repo, &id).await? {
                 known.insert(id, changeset);
             } else {
