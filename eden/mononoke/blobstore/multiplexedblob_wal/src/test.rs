@@ -46,18 +46,7 @@ async fn test_quorum_is_valid(_fb: FacebookInit) -> Result<()> {
     // Check the quorum cannot be zero
     {
         // no main-stores, no write-mostly
-        let quorum = 0;
-        let result = WalMultiplexedBlobstore::new(
-            MultiplexId::new(0),
-            wal.clone(),
-            vec![],
-            vec![],
-            quorum,
-            None,
-            scuba.clone(),
-        );
-
-        assert!(result.is_err());
+        assert!(setup_multiplex(0, 0, None).is_err());
     }
 
     // Check creating multiplex fails if there are no enough main blobstores
@@ -95,27 +84,7 @@ async fn test_quorum_is_valid(_fb: FacebookInit) -> Result<()> {
 
     // Check creating multiplex succeeds with the same amount of stores as the quorum
     {
-        let stores = (0..3)
-            .map(|id| {
-                (
-                    BlobstoreId::new(id),
-                    Arc::new(Tickable::new()) as Arc<dyn BlobstorePutOps>,
-                )
-            })
-            .collect();
-        // no write-mostly
-        let quorum = 3;
-        let result = WalMultiplexedBlobstore::new(
-            MultiplexId::new(0),
-            wal,
-            stores,
-            vec![],
-            quorum,
-            None,
-            scuba,
-        );
-
-        assert!(result.is_ok());
+        assert!(setup_multiplex(3, 3, None).is_ok());
     }
 
     Ok(())
@@ -146,21 +115,7 @@ impl<'a, F: Future + Unpin> Future for PollOnce<'a, F> {
 #[fbinit::test]
 async fn test_put_wal_fails(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let scuba = Scuba::new(MononokeScubaSampleBuilder::with_discard(), 1u64)?;
-
-    let (tickable_queue, wal_queue) = setup_queue();
-    let (tickable_blobstores, blobstores) = setup_blobstores(3);
-
-    let quorum = 2;
-    let multiplex = WalMultiplexedBlobstore::new(
-        MultiplexId::new(1),
-        wal_queue,
-        blobstores,
-        vec![],
-        quorum,
-        None,
-        scuba,
-    )?;
+    let (tickable_queue, tickable_blobstores, multiplex) = setup_multiplex(3, 2, None)?;
 
     let v = make_value("v");
     let k = "k";
@@ -192,21 +147,7 @@ async fn test_put_wal_fails(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_put_fails(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let scuba = Scuba::new(MononokeScubaSampleBuilder::with_discard(), 1u64)?;
-
-    let (tickable_queue, wal_queue) = setup_queue();
-    let (tickable_blobstores, blobstores) = setup_blobstores(3);
-
-    let quorum = 2;
-    let multiplex = WalMultiplexedBlobstore::new(
-        MultiplexId::new(1),
-        wal_queue,
-        blobstores,
-        vec![],
-        quorum,
-        None,
-        scuba,
-    )?;
+    let (tickable_queue, tickable_blobstores, multiplex) = setup_multiplex(3, 2, None)?;
 
     // All puts fail, the multiplex put should fail: [x] [x] [x]
     {
@@ -314,21 +255,9 @@ async fn test_put_fails(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_put_succeeds(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let scuba = Scuba::new(MononokeScubaSampleBuilder::with_discard(), 1u64)?;
-
-    let (tickable_queue, wal_queue) = setup_queue();
-    let (tickable_blobstores, blobstores) = setup_blobstores(3);
 
     let quorum = 2;
-    let multiplex = WalMultiplexedBlobstore::new(
-        MultiplexId::new(1),
-        wal_queue,
-        blobstores,
-        vec![],
-        quorum,
-        None,
-        scuba,
-    )?;
+    let (tickable_queue, tickable_blobstores, multiplex) = setup_multiplex(3, quorum, None)?;
 
     // Quorum puts succeed, the multiplex put succeeds: [ ] [x] [ ]
     // Should wait for the third put to complete.
@@ -434,21 +363,7 @@ async fn test_put_succeeds(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_get_on_missing(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let scuba = Scuba::new(MononokeScubaSampleBuilder::with_discard(), 1u64)?;
-
-    let (_tickable_queue, wal_queue) = setup_queue();
-    let (tickable_blobstores, blobstores) = setup_blobstores(3);
-
-    let quorum = 2;
-    let multiplex = WalMultiplexedBlobstore::new(
-        MultiplexId::new(1),
-        wal_queue,
-        blobstores,
-        vec![],
-        quorum,
-        None,
-        scuba,
-    )?;
+    let (_tickable_queue, tickable_blobstores, multiplex) = setup_multiplex(3, 2, None)?;
 
     // No blobstores have the key
     let k = "k1";
@@ -503,21 +418,7 @@ async fn test_get_on_missing(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_get_on_existing(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let scuba = Scuba::new(MononokeScubaSampleBuilder::with_discard(), 1u64)?;
-
-    let (tickable_queue, wal_queue) = setup_queue();
-    let (tickable_blobstores, blobstores) = setup_blobstores(3);
-
-    let quorum = 2;
-    let multiplex = WalMultiplexedBlobstore::new(
-        MultiplexId::new(1),
-        wal_queue,
-        blobstores,
-        vec![],
-        quorum,
-        None,
-        scuba,
-    )?;
+    let (tickable_queue, tickable_blobstores, multiplex) = setup_multiplex(3, 2, None)?;
 
     // Two blobstores have the key, one failed to write: [ ] [x] [ ]
 
@@ -626,21 +527,7 @@ async fn test_get_on_existing(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_is_present_missing(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let scuba = Scuba::new(MononokeScubaSampleBuilder::with_discard(), 1u64)?;
-
-    let (_tickable_queue, wal_queue) = setup_queue();
-    let (tickable_blobstores, blobstores) = setup_blobstores(3);
-
-    let quorum = 2;
-    let multiplex = WalMultiplexedBlobstore::new(
-        MultiplexId::new(1),
-        wal_queue,
-        blobstores,
-        vec![],
-        quorum,
-        None,
-        scuba,
-    )?;
+    let (_tickable_queue, tickable_blobstores, multiplex) = setup_multiplex(3, 2, None)?;
 
     // No blobstores have the key
     let k = "k1";
@@ -708,21 +595,7 @@ async fn test_is_present_missing(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_is_present_existing(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let scuba = Scuba::new(MononokeScubaSampleBuilder::with_discard(), 1u64)?;
-
-    let (tickable_queue, wal_queue) = setup_queue();
-    let (tickable_blobstores, blobstores) = setup_blobstores(3);
-
-    let quorum = 2;
-    let multiplex = WalMultiplexedBlobstore::new(
-        MultiplexId::new(1),
-        wal_queue,
-        blobstores,
-        vec![],
-        quorum,
-        None,
-        scuba,
-    )?;
+    let (tickable_queue, tickable_blobstores, multiplex) = setup_multiplex(3, 2, None)?;
 
     // Two blobstores have the key, one failed to write: [ ] [x] [ ]
     {
@@ -843,28 +716,6 @@ async fn test_is_present_existing(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_timeout_on_request(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let scuba = Scuba::new(MononokeScubaSampleBuilder::with_discard(), 1u64)?;
-
-    let quorum = 2;
-    let setup_bs = |timeout| -> Result<(
-        Arc<Tickable<OperationKey>>,
-        Vec<(BlobstoreId, Arc<Tickable<(BlobstoreBytes, u64)>>)>,
-        WalMultiplexedBlobstore,
-    )> {
-        let (tickable_queue, wal_queue) = setup_queue();
-        let (tickable_blobstores, blobstores) = setup_blobstores(3);
-        let multiplex = WalMultiplexedBlobstore::new(
-            MultiplexId::new(1),
-            wal_queue.clone(),
-            blobstores.clone(),
-            vec![],
-            quorum,
-            timeout,
-            scuba.clone(),
-        )?;
-
-        Ok((tickable_queue, tickable_blobstores, multiplex))
-    };
 
     // Ensure that even if the quorum writes succeeded, the rest of the writes are not
     // being dropped.
@@ -875,7 +726,8 @@ async fn test_timeout_on_request(fb: FacebookInit) -> Result<()> {
             // and reads to fail because of timeout
             read: Duration::from_millis(5),
         };
-        let (tickable_queue, tickable_blobstores, multiplex) = setup_bs(Some(timeout))?;
+        let (tickable_queue, tickable_blobstores, multiplex) =
+            setup_multiplex(3, 2, Some(timeout))?;
 
         let v = make_value("v1");
         let k = "k1";
@@ -918,7 +770,8 @@ async fn test_timeout_on_request(fb: FacebookInit) -> Result<()> {
             None,                           /* read */
             Some(Duration::from_millis(5)), /* write */
         );
-        let (tickable_queue, tickable_blobstores, multiplex) = setup_bs(Some(timeout))?;
+        let (tickable_queue, tickable_blobstores, multiplex) =
+            setup_multiplex(3, 2, Some(timeout))?;
 
         let v = make_value("v2");
         let k = "k2";
@@ -956,6 +809,31 @@ async fn assert_pending<T: Debug>(fut: &mut (impl Future<Output = T> + Unpin)) {
             panic!("future must be pending, received: {:?}", state);
         }
     }
+}
+
+fn setup_multiplex(
+    num: u64,
+    quorum: usize,
+    timeout: Option<MultiplexTimeout>,
+) -> Result<(
+    Arc<Tickable<OperationKey>>,
+    Vec<(BlobstoreId, Arc<Tickable<(BlobstoreBytes, u64)>>)>,
+    WalMultiplexedBlobstore,
+)> {
+    let (tickable_queue, wal_queue) = setup_queue();
+    let (tickable_blobstores, blobstores) = setup_blobstores(num);
+    let scuba = Scuba::new(MononokeScubaSampleBuilder::with_discard(), 1u64)?;
+    let multiplex = WalMultiplexedBlobstore::new(
+        MultiplexId::new(1),
+        wal_queue,
+        blobstores,
+        vec![],
+        quorum,
+        timeout,
+        scuba,
+    )?;
+
+    Ok((tickable_queue, tickable_blobstores, multiplex))
 }
 
 type TickableBytes = Tickable<(BlobstoreBytes, u64)>;
