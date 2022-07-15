@@ -334,9 +334,9 @@ def buildtree(template, placeholder, *repls):
     ...     return buildtree(template, _, *repls)
     >>> f((b'func', (b'symbol', b'only'), (b'list', _, _)),
     ...   ('symbol', '1'), ('symbol', '2'))
-    ('func', ('symbol', 'only'), ('list', ('symbol', '1'), ('symbol', '2')))
+    (b'func', (b'symbol', b'only'), (b'list', ('symbol', '1'), ('symbol', '2')))
     >>> f((b'and', _, (b'not', _)), (b'symbol', b'1'), (b'symbol', b'2'))
-    ('and', ('symbol', '1'), ('not', ('symbol', '2')))
+    (b'and', (b'symbol', b'1'), (b'not', (b'symbol', b'2')))
     """
     if not isinstance(placeholder, tuple):
         raise error.ProgrammingError("placeholder must be a node tuple")
@@ -375,14 +375,14 @@ def matchtree(pattern, tree, placeholder=None, incompletenodes=()):
     >>> _ = (b'symbol', b'_')
     >>> f((b'func', (b'symbol', b'ancestors'), _),
     ...   (b'func', (b'symbol', b'ancestors'), (b'symbol', b'1')))
-    [('symbol', '1')]
+    [(b'symbol', b'1')]
     >>> f((b'func', (b'symbol', b'ancestors'), _),
     ...   (b'func', (b'symbol', b'ancestors'), None))
     >>> f((b'range', (b'dagrange', _, _), _),
     ...   (b'range',
     ...     (b'dagrange', (b'symbol', b'1'), (b'symbol', b'2')),
     ...     (b'symbol', b'3')))
-    [('symbol', '1'), ('symbol', '2'), ('symbol', '3')]
+    [(b'symbol', b'1'), (b'symbol', b'2'), (b'symbol', b'3')]
 
     The placeholder does not match the specified incomplete nodes because
     an incomplete node (e.g. argument list) cannot construct an expression.

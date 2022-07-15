@@ -578,10 +578,10 @@ class sortdict(collections.OrderedDict):
     >>> d1 = sortdict([(b'a', 0), (b'b', 1)])
     >>> d2 = d1.copy()
     >>> d2
-    sortdict([('a', 0), ('b', 1)])
+    sortdict([(b'a', 0), (b'b', 1)])
     >>> d2.update([(b'a', 2), (b'c', 3)])
     >>> list(d2.keys())
-    ['a', 'b', 'c']
+    [b'a', b'b', b'c']
     """
 
     if pycompat.ispypy:
@@ -602,7 +602,7 @@ class altsortdict(sortdict):
     >>> d2 = d1.copy()
     >>> d2.update([(b'a', 2)])
     >>> list(d2.keys()) # should still be in last-set order
-    ['b', 'a']
+    [b'b', b'a']
     """
 
     def __setitem__(self, key, value):
@@ -2954,7 +2954,7 @@ class url(object):
     Query strings and fragments:
 
     >>> url('http://host/a?b#c')
-    <url scheme: 'http', host: 'host', path: 'a', query: '', fragment: 'c'>
+    <url scheme: 'http', host: 'host', path: 'a', query: 'b', fragment: 'c'>
     >>> url('http://host/a?b#c', parsequery=False, parsefragment=False)
     <url scheme: 'http', host: 'host', path: 'a?b#c'>
 

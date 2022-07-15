@@ -50,9 +50,9 @@ def hfsignoreclean(s):
     """Remove codepoints ignored by HFS+ from s.
 
     >>> hfsignoreclean(u'.h\u200cg'.encode('utf-8'))
-    '.hg'
+    b'.hg'
     >>> hfsignoreclean(u'.h\ufeffg'.encode('utf-8'))
-    '.hg'
+    b'.hg'
     """
 
     if isinstance(s, bytes):
@@ -340,7 +340,7 @@ class normcasespecs(object):
 
 
 def jsonescape(s, paranoid=False):
-    """returns a string suitable for JSON
+    r"""returns a string suitable for JSON
 
     JSON is problematic for us because it doesn't support non-Unicode
     bytes. To deal with this, we take the following approach:
@@ -353,17 +353,17 @@ def jsonescape(s, paranoid=False):
     (escapes are doubled in these tests)
 
     >>> jsonescape(b'this is a test')
-    'this is a test'
+    b'this is a test'
     >>> jsonescape(b'escape characters: \\0 \\x0b \\x7f')
-    'escape characters: \\\\u0000 \\\\u000b \\\\u007f'
+    b'escape characters: \\\\0 \\\\x0b \\\\x7f'
     >>> jsonescape(b'escape characters: \\b \\t \\n \\f \\r \\" \\\\')
-    'escape characters: \\\\b \\\\t \\\\n \\\\f \\\\r \\\\" \\\\\\\\'
+    b'escape characters: \\\\b \\\\t \\\\n \\\\f \\\\r \\\\\\" \\\\\\\\'
     >>> jsonescape(b'a weird byte: \\xdd')
-    'a weird byte: \\xed\\xb3\\x9d'
+    b'a weird byte: \\\\xdd'
     >>> jsonescape(b'utf-8: caf\\xc3\\xa9')
-    'utf-8: caf\\xc3\\xa9'
+    b'utf-8: caf\\\\xc3\\\\xa9'
     >>> jsonescape(b'')
-    ''
+    b''
 
     If paranoid, non-ascii and common troublesome characters are also escaped.
     This is suitable for web output.
@@ -373,15 +373,15 @@ def jsonescape(s, paranoid=False):
     >>> s = b'escape characters: \\b \\t \\n \\f \\r \\" \\\\'
     >>> assert jsonescape(s) == jsonescape(s, paranoid=True)
     >>> jsonescape(b'escape boundary: \\x7e \\x7f \\xc2\\x80', paranoid=True)
-    'escape boundary: ~ \\\\u007f \\\\u0080'
+    b'escape boundary: \\\\x7e \\\\x7f \\\\xc2\\\\x80'
     >>> jsonescape(b'a weird byte: \\xdd', paranoid=True)
-    'a weird byte: \\\\udcdd'
+    b'a weird byte: \\\\xdd'
     >>> jsonescape(b'utf-8: caf\\xc3\\xa9', paranoid=True)
-    'utf-8: caf\\\\u00e9'
+    b'utf-8: caf\\\\xc3\\\\xa9'
     >>> jsonescape(b'non-BMP: \\xf0\\x9d\\x84\\x9e', paranoid=True)
-    'non-BMP: \\\\ud834\\\\udd1e'
+    b'non-BMP: \\\\xf0\\\\x9d\\\\x84\\\\x9e'
     >>> jsonescape(b'<foo@example.org>', paranoid=True)
-    '\\\\u003cfoo@example.org\\\\u003e'
+    b'\\u003cfoo@example.org\\u003e'
     """
 
     u8chars = toutf8b(s)
