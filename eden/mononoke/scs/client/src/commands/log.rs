@@ -48,6 +48,7 @@ const ARG_AFTER: &str = "AFTER";
 const ARG_BEFORE: &str = "BEFORE";
 const ARG_VERBOSE: &str = "VERBOSE";
 const ARG_HISTORY_ACROSS_DELETIONS: &str = "HISTORY_ACROSS_DELETIONS";
+const ARG_FOLOW_MUTABLE_HISTORY: &str = "FOLLOW_MUTABLE_HISTORY";
 
 const ARG_LIMIT_DEFAULT: &str = "10";
 
@@ -105,6 +106,11 @@ pub(super) fn make_subcommand<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name(ARG_HISTORY_ACROSS_DELETIONS)
                 .long("history-across-deletions")
                 .help("Track history across deletion i.e. if a path was deleted then added back"),
+        )
+        .arg(
+            Arg::with_name(ARG_FOLOW_MUTABLE_HISTORY)
+                .long("follow-mutable-history")
+                .help("Follow mutable overrides to the history that make it more user friendly and 'correct'"),
         );
     cmd
 }
@@ -188,6 +194,7 @@ pub(super) async fn run(
     let before_timestamp = convert_to_ts(matches, ARG_BEFORE)?;
     let after_timestamp = convert_to_ts(matches, ARG_AFTER)?;
     let follow_history_across_deletions = matches.is_present(ARG_HISTORY_ACROSS_DELETIONS);
+    let follow_mutable_file_history = Some(matches.is_present(ARG_FOLOW_MUTABLE_HISTORY));
 
     let response = match path {
         Some(path) => {
@@ -206,6 +213,7 @@ pub(super) async fn run(
                 follow_history_across_deletions,
                 descendants_of,
                 exclude_changeset_and_ancestors: None,
+                follow_mutable_file_history,
                 ..Default::default()
             };
             connection
