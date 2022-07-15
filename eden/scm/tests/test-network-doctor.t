@@ -55,7 +55,7 @@ Works for native rust commands as well.
   
   Original error:
   
-  Network Error
+  Network Error: [6] Couldn't resolve host name (Could not resolve host: test_fail)
   
   Caused by:
       [6] Couldn't resolve host name (Could not resolve host: test_fail)

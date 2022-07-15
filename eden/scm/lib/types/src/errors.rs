@@ -21,7 +21,7 @@ impl KeyError {
 /// NeworkError is a wrapper/tagging error meant for libraries to use
 /// to mark errors that may imply a network problem.
 #[derive(Debug, Error)]
-#[error("Network Error")]
+#[error("Network Error: {0:?}")]
 pub struct NetworkError(#[source] pub Error);
 
 impl NetworkError {
@@ -58,6 +58,8 @@ mod tests {
         assert!(network.is::<NetworkError>());
         assert!(network.source().unwrap().is::<io::Error>());
         assert!(is_network_error(&network));
+
+        assert_eq!(format!("{}", network), "Network Error: other error");
 
         let with_context = network.context("hello");
         assert!(is_network_error(&with_context));
