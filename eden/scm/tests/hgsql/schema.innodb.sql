@@ -30,10 +30,3 @@ CREATE TABLE `revision_references` (
   PRIMARY KEY (`autoid`),
   UNIQUE KEY `bookmarkindex` (`repo`,`namespace`,`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
-CREATE TABLE `repo_lock` (
-  `repo` varbinary(64) NOT NULL,
-  `state` tinyint(4) NOT NULL,
-  `reason` varbinary(255) DEFAULT NULL,
-  PRIMARY KEY (`repo`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1

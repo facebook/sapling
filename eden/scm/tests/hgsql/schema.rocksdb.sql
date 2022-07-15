@@ -30,9 +30,3 @@ CREATE TABLE `revision_references` (
   PRIMARY KEY (`autoid`),
   UNIQUE KEY `bookmarkindex` (`repo`,`namespace`,`name`)
 ) ENGINE=RocksDB DEFAULT CHARSET=latin1;
-
-CREATE TABLE `repo_lock` (
-  `repo` varbinary(64) PRIMARY KEY,
-  `state` tinyint NOT NULL,
-  `reason` varbinary(255)
-) ENGINE=RocksDB DEFAULT CHARSET=latin1;
