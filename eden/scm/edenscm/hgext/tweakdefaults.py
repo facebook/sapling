@@ -608,9 +608,6 @@ def _checkobsrebasewrapper(orig, repo, ui, *args):
 
 
 def currentdate():
-    if util.istest():
-        # Use a stub value for test stability.
-        return "1657671627 0"
     return "%d %d" % util.makedate(time.time())
 
 

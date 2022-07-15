@@ -4,14 +4,14 @@
   $ enable tweakdefaults
   $ enable absorb
 
-Commit date defaults based on tweakdefaults
+Commit date defaults to "now" based on tweakdefaults
   $ newrepo
   $ echo foo > a
   $ hg ci -m 'a' -A a
   $ echo bar >> a
   $ hg absorb -qa
-  $ hg log -r . -T '{date}\n'
-  1657671627.00
+  $ hg log -r . -T '{desc}\n' -d "yesterday to today"
+  a
 
 Don't default when absorbkeepdate is set
   $ newrepo
@@ -19,6 +19,6 @@ Don't default when absorbkeepdate is set
   $ hg ci -m 'a' -A a
   $ echo bar >> a
   $ hg absorb -qa --config tweakdefaults.absorbkeepdate=true
-  $ hg log -r . -T '{date}\n'
-  0.00
+  $ hg log -r . -T '{desc} {date}\n'
+  a 0.00
 
