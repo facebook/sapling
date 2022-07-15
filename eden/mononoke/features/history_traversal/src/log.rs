@@ -6,6 +6,7 @@
  */
 
 use crate::Repo;
+use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -24,6 +25,7 @@ use fastlog::fetch_fastlog_batch_by_unode_id;
 use fastlog::fetch_flattened;
 use fastlog::FastlogParent;
 use fastlog::RootFastlog;
+use futures::future::try_join;
 use futures::future::try_join_all;
 use futures::stream;
 use futures::stream::Stream as NewStream;
@@ -39,12 +41,14 @@ use mononoke_types::Generation;
 use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
 use mutable_renames::MutableRenames;
+use reachabilityindex::LeastCommonAncestorsHint;
 use stats::prelude::*;
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
+use std::default::Default;
 use std::sync::Arc;
 use thiserror::Error;
 use time_ext::DurationExt;
@@ -291,24 +295,33 @@ pub async fn list_file_history(
     changeset_id: ChangesetId,
     mut visitor: impl Visitor,
     history_across_deletions: HistoryAcrossDeletions,
-    follow_mutable_renames: FollowMutableFileHistory,
+    mut follow_mutable_renames: FollowMutableFileHistory,
     mutable_renames: Arc<MutableRenames>,
     mut order: TraversalOrder,
 ) -> Result<impl NewStream<Item = Result<ChangesetId, Error>> + '_, FastlogError> {
+    if tunables::tunables()
+        .get_by_repo_fastlog_use_mutable_renames(repo.repo_identity().name())
+        .unwrap_or(false)
+    {
+        follow_mutable_renames = FollowMutableFileHistory::MutableFileParents;
+    }
     let path = Arc::new(path);
-    // get unode entry
-    let resolved = resolve_path_state(&ctx, repo, changeset_id, &path).await?;
 
     let mut visited = HashSet::new();
     let mut history_graph = HashMap::new();
+    let mut possible_mutable_ancestors_cache = Default::default();
 
+    // The first step to find the last changeset that affected the given path.
+    // get unode entry
+    let resolved = resolve_path_state(&ctx, repo, changeset_id, &path).await?;
     // there might be more than one unode entry: if the given path was
     // deleted in several different branches, we have to gather history
     // from all of them
     let last_changesets = match resolved {
         Some(PathState::Deleted(deletion_nodes)) => {
             // we want to show commit, where path was deleted
-            process_deletion_nodes(&ctx, repo, &mut history_graph, deletion_nodes, path).await?
+            process_deletion_nodes(&ctx, repo, &mut history_graph, deletion_nodes, path.clone())
+                .await?
         }
         Some(PathState::Exists(unode_entry)) => {
             fetch_linknodes_and_update_graph(
@@ -316,11 +329,39 @@ pub async fn list_file_history(
                 repo,
                 vec![unode_entry],
                 &mut history_graph,
-                path,
+                path.clone(),
             )
             .await?
         }
         None => return Ok(stream::iter(vec![]).boxed()),
+    };
+    // Find out if there's mutable rename between the current changeset and last
+    // changeset that touched the path. (There's no such if the current
+    // changeset and last changeset are the same commit.)
+    let last_changesets = if follow_mutable_renames == FollowMutableFileHistory::MutableFileParents
+        && !last_changesets
+            .iter()
+            .any(|x| x == &(changeset_id, path.clone()))
+    {
+        let possible_mutable_ancestors_for_path = find_possible_mutable_ancestors(
+            &ctx,
+            repo,
+            path.as_ref(),
+            &mut possible_mutable_ancestors_cache,
+        )
+        .await?;
+        let (replacements, insertions) = replace_ancestors_with_mutable_ancestors(
+            &ctx,
+            repo,
+            &(changeset_id, path),
+            last_changesets,
+            possible_mutable_ancestors_for_path,
+        )
+        .await?;
+        history_graph.extend(insertions);
+        replacements
+    } else {
+        last_changesets
     };
 
     visit(
@@ -343,6 +384,7 @@ pub async fn list_file_history(
             order,
             prefetch: None,
             visitor,
+            possible_mutable_ancestors_cache,
         },
         // unfold
         move |state| {
@@ -526,6 +568,7 @@ async fn derive_unode_entry(
 }
 
 type CommitGraph = HashMap<CsAndPath, Option<Vec<CsAndPath>>>;
+type PossibleMutableAncestorsCache = HashMap<Option<MPath>, Vec<(Generation, ChangesetId)>>;
 
 struct TraversalState<V: Visitor> {
     history_graph: CommitGraph,
@@ -533,6 +576,7 @@ struct TraversalState<V: Visitor> {
     order: TraversalOrder,
     prefetch: Option<CsAndPath>,
     visitor: V,
+    possible_mutable_ancestors_cache: PossibleMutableAncestorsCache,
 }
 
 async fn do_history_unfold<V>(
@@ -552,6 +596,7 @@ where
         mut order,
         prefetch,
         mut visitor,
+        mut possible_mutable_ancestors_cache,
     } = state;
 
     if let Some(ref prefetch) = prefetch {
@@ -561,6 +606,8 @@ where
             &mut visitor,
             prefetch.clone(),
             &mut history_graph,
+            follow_mutable_renames,
+            &mut possible_mutable_ancestors_cache,
         )
         .await?;
     }
@@ -579,23 +626,9 @@ where
         match history_graph.get(&cs_and_path) {
             Some(Some(parents)) => {
                 // parents are fetched, ready to process
-                let parents = parents.clone();
-                let mutable_ancestors =
-                    if follow_mutable_renames == FollowMutableFileHistory::MutableFileParents {
-                        find_mutable_renames(
-                            &ctx,
-                            repo,
-                            cs_and_path.clone(),
-                            &mut history_graph,
-                            mutable_renames,
-                        )
-                        .await?
-                    } else {
-                        vec![]
-                    };
-                let ancestors = if !mutable_ancestors.is_empty() {
-                    mutable_ancestors
-                } else if parents.is_empty() {
+                let ancestors = if !parents.is_empty() {
+                    parents.clone()
+                } else {
                     try_continue_traversal_when_no_parents(
                         &ctx,
                         repo,
@@ -606,8 +639,6 @@ where
                         mutable_renames,
                     )
                     .await?
-                } else {
-                    parents
                 };
 
                 visit(
@@ -621,13 +652,13 @@ where
                 )
                 .await?;
             }
-            Some(None) => {
+            Some(None) | None => {
                 // parents haven't been fetched yet
                 // we want to proceed to next iteration to fetch the parents
                 if Some(&cs_and_path) == prefetch.as_ref() {
                     return Err(format_err!(
                         "internal error: infinite loop while traversing history for {:?}",
-                        cs_and_path.1
+                        cs_and_path
                     ));
                 }
                 next_to_fetch = Some(cs_and_path.clone());
@@ -635,10 +666,6 @@ where
                 order.push_front(cs_and_path).await?;
                 break;
             }
-            // this should never happen as the [cs -> parents] mapping is fetched
-            // from the fastlog batch. and if some cs id is mentioned as a parent
-            // in the batch, the same batch has to have a record for this cs id.
-            None => {}
         }
     }
 
@@ -654,6 +681,7 @@ where
             order,
             prefetch: next_to_fetch,
             visitor,
+            possible_mutable_ancestors_cache,
         },
     )))
 }
@@ -682,6 +710,304 @@ async fn find_mutable_renames(
     } else {
         Ok(vec![])
     }
+}
+
+// Caches the list of possible mutable ancestors in memory - this shouldn't be a
+// problem as long as the number of distinct paths in history is reasonable.
+pub(crate) async fn find_possible_mutable_ancestors<'a>(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    path: &Option<MPath>,
+    possible_mutable_ancestors_cache: &'a mut PossibleMutableAncestorsCache,
+) -> Result<&'a Vec<(Generation, ChangesetId)>, Error> {
+    if !possible_mutable_ancestors_cache.contains_key(path) {
+        let ancestors = _find_possible_mutable_ancestors(ctx, repo, path).await?;
+        possible_mutable_ancestors_cache.insert(path.clone(), ancestors);
+    }
+    possible_mutable_ancestors_cache
+        .get(path)
+        .ok_or_else(|| anyhow!("programming error, mutable_ancestors_cache is missing a key"))
+}
+
+// Fetched the list of changeset with mutable renames for for path.
+// Results are sorted by genration number.
+pub(crate) async fn _find_possible_mutable_ancestors(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    path: &Option<MPath>,
+) -> Result<Vec<(Generation, ChangesetId)>, Error> {
+    let mutable_renames = repo.mutable_renames();
+    let mutable_csids = mutable_renames
+        .get_cs_ids_with_rename(ctx, path.clone())
+        .await?;
+    let mut possible_mutable_ancestors: Vec<(Generation, ChangesetId)> =
+        stream::iter(mutable_csids.into_iter())
+            .then({
+                move |mutated_at| async move {
+                    // We also want to grab generation here, because we're going to sort
+                    // by generation and consider "most recent" candidate first
+                    let cs_gen = repo
+                        .changeset_fetcher()
+                        .get_generation_number(ctx.clone(), mutated_at)
+                        .await?;
+                    Ok::<_, Error>((cs_gen, mutated_at))
+                }
+            })
+            .try_collect()
+            .await?;
+    // And turn the list of possible mutable ancestors into a stack sorted by generation
+    possible_mutable_ancestors.sort_unstable_by_key(|(gen, _)| *gen);
+
+    Ok(possible_mutable_ancestors)
+}
+
+/// Given list of new nodes to be inserted into the commit graph
+/// augments and replaces them with mutable history data.
+async fn augment_history_graph_insertions_with_mutable_ancestry(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    mut graph_insertions: Vec<(CsAndPath, Option<Vec<CsAndPath>>)>,
+    possible_mutable_ancestors_cache: &mut PossibleMutableAncestorsCache,
+) -> Result<Vec<(CsAndPath, Option<Vec<CsAndPath>>)>, FastlogError> {
+    // Start from splitting the insertions by path they are affecting.
+    //
+    // Usually we will only deal with a single path (unless the file was moved
+    // in immutable history) but we have to handle the case of having multiple
+    // paths.
+    let mut new_insertions = vec![];
+    graph_insertions.sort_unstable_by_key(|((_, path), _)| path.clone());
+    let graph_insertions_by_path = graph_insertions
+        .into_iter()
+        .group_by(|((_, path), _)| path.clone());
+    let graph_insertions_by_path = graph_insertions_by_path
+        .into_iter()
+        .map(|(k, v)| (k, v.collect::<Vec<_>>()))
+        .collect::<Vec<_>>();
+
+    for (path, graph_insertions) in graph_insertions_by_path.into_iter() {
+        // Fetch all the points where the history was changed for the path.
+        let possible_mutable_ancestors_for_path = find_possible_mutable_ancestors(
+            ctx,
+            repo,
+            path.as_ref(),
+            possible_mutable_ancestors_cache,
+        )
+        .await?;
+        if !possible_mutable_ancestors_for_path.is_empty() {
+            // If there are any, the for each node to-be-inserted into the graph
+            // we try to find a mutable replacement.
+            let replaced_insertions = try_join_all(graph_insertions.into_iter().map(
+                |(cs_and_path, maybe_ancestors)| {
+                    augment_single_history_graph_insertion_with_mutable_ancestry(
+                        ctx,
+                        repo,
+                        cs_and_path,
+                        maybe_ancestors,
+                        possible_mutable_ancestors_for_path,
+                    )
+                },
+            ))
+            .await?;
+            new_insertions.extend(replaced_insertions.into_iter().flatten());
+        } else {
+            // If there are none we do nothing.
+            new_insertions.extend(graph_insertions);
+        }
+    }
+    Ok(new_insertions)
+}
+
+/// Augments a single changeset->parents node with the information
+/// from mutable renames.
+///
+/// Returns the resulting graph nodes to be inserted:
+///  * when there is a mutable rename directly attached to the commit
+//     present in immutable path history. We replace graph node with
+//     one. For example:
+//
+//
+//            C                      C
+//            |                        \
+//            B  D         =>        B  D
+//            |                      |
+//            A                      A
+//
+//
+//    Mutable rename is redirecting the history from C to D) so we replace C->B
+//    edge with C->D.
+//
+///  * when there is a mutable rename attached to the commit
+//     not present in immutable path history (a commit where path was not
+//     modified):
+//
+//
+//            C                      C
+//            ╷                      |
+//           (X)                     X
+//            ╷                        \
+//            B  D         =>        B  D
+//            |                      |
+//            A                      A
+//
+//
+//    Mutable rename is redirecting the history from X to D) but X is not present
+//    in the path history so we replace C->B edge with C->X and X->D edges.
+async fn augment_single_history_graph_insertion_with_mutable_ancestry(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    cs_and_path: CsAndPath,
+    immutable_ancestors: Option<Vec<CsAndPath>>,
+    possible_mutable_ancestors_for_path: &Vec<(Generation, ChangesetId)>,
+) -> Result<Vec<(CsAndPath, Option<Vec<CsAndPath>>)>, FastlogError> {
+    if let Some(immutable_ancestors) = immutable_ancestors {
+        let (res, mut insertions) = replace_ancestors_with_mutable_ancestors(
+            ctx,
+            repo,
+            &cs_and_path,
+            immutable_ancestors,
+            possible_mutable_ancestors_for_path,
+        )
+        .await?;
+
+        insertions.push((cs_and_path, Some(res)));
+        Ok(insertions)
+    } else {
+        Ok(vec![(cs_and_path, None)])
+    }
+}
+
+/// Given changeset path ancestors finds replacements in mutable ancestors
+/// database.
+///
+/// Returns replacement and maybe extra history edges to be injected.
+async fn replace_ancestors_with_mutable_ancestors(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    cs_and_path: &CsAndPath,
+    immutable_ancestors: Vec<CsAndPath>,
+    possible_mutable_ancestors_for_path: &Vec<(Generation, ChangesetId)>,
+) -> Result<(Vec<CsAndPath>, Vec<(CsAndPath, Option<Vec<CsAndPath>>)>), FastlogError> {
+    let cs_id = cs_and_path.0;
+    let path = &cs_and_path.1;
+    if let Some((_, possible_ancestor_cs_id)) = possible_mutable_ancestors_for_path
+        .iter()
+        .find(|(_, possible_ancestor_cs_id)| cs_id == *possible_ancestor_cs_id)
+    {
+        // If the current commit is mutable rename destination. In that
+        // case we need to redirect the history to the mutable source.
+        let mutable_renames = repo.mutable_renames();
+        if let Some(rename) = mutable_renames
+            .get_rename(ctx, *possible_ancestor_cs_id, path.as_ref().clone())
+            .await?
+        {
+            let src_unode = rename.src_unode().load(ctx, repo.repo_blobstore()).await?;
+            let linknode = match src_unode {
+                Entry::Tree(tree_unode) => *tree_unode.linknode(),
+                Entry::Leaf(leaf_unode) => *leaf_unode.linknode(),
+            };
+            Ok((
+                vec![(linknode, Arc::new(rename.src_path().cloned()))],
+                vec![],
+            ))
+        } else {
+            Err(anyhow!("inconsistency in mutable renames").into())
+        }
+    } else {
+        let (replacements, graph_insertions): (
+            _,
+            Vec<Option<(CsAndPath, Option<Vec<CsAndPath>>)>>,
+        ) = try_join_all(immutable_ancestors.iter().map(|immutable_ancestor| {
+            replace_ancestor_with_mutable_ancestor(
+                ctx,
+                repo,
+                cs_and_path,
+                immutable_ancestor,
+                possible_mutable_ancestors_for_path,
+            )
+        }))
+        .await?
+        .into_iter()
+        .unzip();
+
+        Ok((
+            replacements,
+            graph_insertions.into_iter().flatten().collect(),
+        ))
+    }
+}
+
+/// Given changeset patr ancestry relation find a replacement
+/// in mutable ancestors database.
+///
+/// Returns replacement and maybe extra history edge to be injected.
+async fn replace_ancestor_with_mutable_ancestor<'a>(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    (cs_id, path): &CsAndPath,
+    immutable_ancestor: &'a CsAndPath,
+    possible_mutable_ancestors_for_path: &Vec<(Generation, ChangesetId)>,
+) -> Result<(CsAndPath, Option<(CsAndPath, Option<Vec<CsAndPath>>)>), FastlogError> {
+    let (immutable_ancestor_cs_id, immutable_ancestor_path) = immutable_ancestor;
+    let skiplist_index = repo.skiplist_index();
+    let mutable_renames = repo.mutable_renames();
+    let changeset_fetcher = repo.changeset_fetcher();
+    let (current_gen, immutable_ancestor_gen) = try_join(
+        changeset_fetcher.get_generation_number(ctx.clone(), *cs_id),
+        changeset_fetcher.get_generation_number(ctx.clone(), *immutable_ancestor_cs_id),
+    )
+    .await?;
+    // For each possible mutable rename destination we have to check:
+    for (possible_ancestor_gen, possible_ancestor_cs_id) in possible_mutable_ancestors_for_path {
+        if *possible_ancestor_gen < current_gen && *possible_ancestor_gen > immutable_ancestor_gen {
+            // If it's on the path between current commit and next immutable
+            // ancestor.  We start from cheap generation number test to exclude
+            // the most cases.  Then we do a real ancestry check.
+            let res = try_join(
+                skiplist_index.is_ancestor(
+                    ctx,
+                    &repo.changeset_fetcher_arc(),
+                    *possible_ancestor_cs_id,
+                    *cs_id,
+                ),
+                skiplist_index.is_ancestor(
+                    ctx,
+                    &repo.changeset_fetcher_arc(),
+                    *immutable_ancestor_cs_id,
+                    *possible_ancestor_cs_id,
+                ),
+            )
+            .await?;
+            if res.0 && res.1 {
+                if let Some(rename) = mutable_renames
+                    .get_rename(ctx, *possible_ancestor_cs_id, path.as_ref().clone())
+                    .await?
+                {
+                    let src_unode = rename.src_unode().load(ctx, repo.repo_blobstore()).await?;
+                    // The next node in path history doesn't have to be the src
+                    // changeset. It needs to be the last commit that modified
+                    // the path as of src changeset.
+                    let linknode = match src_unode {
+                        Entry::Tree(tree_unode) => *tree_unode.linknode(),
+                        Entry::Leaf(leaf_unode) => *leaf_unode.linknode(),
+                    };
+                    return Ok((
+                        // The extra node in ancestry path where the mutable rename is attached
+                        (*possible_ancestor_cs_id, path.clone()),
+                        // We also inject a link between that node and rename src we won't reach
+                        // this node during the unode graph traversal.
+                        Some((
+                            (*possible_ancestor_cs_id, path.clone()),
+                            Some(vec![(linknode, Arc::new(rename.src_path().cloned()))]),
+                        )),
+                    ));
+                }
+            }
+        }
+    }
+    Ok((
+        (*immutable_ancestor_cs_id, immutable_ancestor_path.clone()),
+        None,
+    ))
 }
 
 async fn try_continue_traversal_when_no_parents(
@@ -763,17 +1089,32 @@ async fn find_where_file_was_deleted(
     Ok(all_deletion_nodes)
 }
 
-/// prefetches and processes fastlog batch for the given changeset id
+/// Prefetches and processes fastlog batch for the given changeset id.
+/// Handles the replacement of the history from fastlog batch with mutable
+/// history when applicable.
 async fn prefetch_and_process_history(
     ctx: &CoreContext,
     repo: &impl Repo,
     visitor: &mut impl Visitor,
     (changeset_id, path): (ChangesetId, Arc<Option<MPath>>),
     history_graph: &mut CommitGraph,
+    follow_mutable_renames: FollowMutableFileHistory,
+    possible_mutable_ancestors_cache: &mut PossibleMutableAncestorsCache,
 ) -> Result<(), Error> {
     let fastlog_batch = prefetch_fastlog_by_changeset(ctx, repo, changeset_id, &path).await?;
     let affected_changesets: Vec<_> = fastlog_batch.iter().map(|(cs_id, _)| *cs_id).collect();
-    process_unode_batch(fastlog_batch, history_graph, path.clone());
+    let mut graph_insertions = process_unode_batch(fastlog_batch, history_graph, path.clone());
+
+    if follow_mutable_renames == FollowMutableFileHistory::MutableFileParents {
+        graph_insertions = augment_history_graph_insertions_with_mutable_ancestry(
+            ctx,
+            repo,
+            graph_insertions,
+            possible_mutable_ancestors_cache,
+        )
+        .await?;
+    }
+    history_graph.extend(graph_insertions);
 
     visitor
         .preprocess(
@@ -796,9 +1137,10 @@ async fn prefetch_and_process_history(
 
 fn process_unode_batch(
     unode_batch: Vec<(ChangesetId, Vec<FastlogParent>)>,
-    graph: &mut CommitGraph,
+    graph: &CommitGraph,
     path: Arc<Option<MPath>>,
-) {
+) -> Vec<(CsAndPath, Option<Vec<CsAndPath>>)> {
+    let mut graph_insertions = Vec::new();
     for (cs_id, parents) in unode_batch {
         let has_unknown_parent = parents.iter().any(|parent| match parent {
             FastlogParent::Unknown => true,
@@ -817,7 +1159,7 @@ fn process_unode_batch(
             if maybe_parents.is_none() && !has_unknown_parent {
                 // the node was visited but had unknown parents
                 // let's update the graph
-                graph.insert((cs_id, path.clone()), Some(known_parents.clone()));
+                graph_insertions.push(((cs_id, path.clone()), Some(known_parents.clone())));
             }
         } else {
             // we haven't seen this changeset before
@@ -827,12 +1169,13 @@ fn process_unode_batch(
                 //
                 // let's add to the graph with None parents, this way we mark the
                 // changeset as visited for other traversal branches
-                graph.insert((cs_id, path.clone()), None);
+                graph_insertions.push(((cs_id, path.clone()), None));
             } else {
-                graph.insert((cs_id, path.clone()), Some(known_parents.clone()));
+                graph_insertions.push(((cs_id, path.clone()), Some(known_parents.clone())));
             }
         }
     }
+    graph_insertions
 }
 
 async fn prefetch_fastlog_by_changeset(
@@ -1744,7 +2087,7 @@ mod test {
             .await?;
         let second_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![first_bcs_id])
             .add_file(first_src_filename, "content2")
-            .add_file(second_dst_filename, "content2")
+            .add_file(first_dst_filename, "content2")
             .commit()
             .await?;
 
@@ -1771,17 +2114,21 @@ mod test {
             .commit()
             .await?;
 
-        //    0 <- modifies "unrelated"
+        //    6 <- modifies "unrelated"
         //    |
-        //    0 <- modifies "unrelated"
+        //    5 <- modifies "unrelated"
         //    |
-        //    0 <- removes "dir/1", "file"; adds "moved_file", "dir2/2"
+        //    4 <- removes "dir/1", "file"; adds "moved_file"; modifies "dir2/2"
         //    |
-        //    0 <- modifies "unrelated"
+        //    3 <- modifies "unrelated"
         //    |
-        //    0  <- modifies "dir/1"
+        //    2  <- modifies "dir/1", adds "dir2/2"
         //    |
-        //    0  <- creates "dir/1", "file"
+        //    1  <- creates "dir/1", "file"
+        //
+        // mutable renames:
+        //  * dir/1 from 1st changeset -> dir2/2 from 3rd changeset
+        //  * file from 2nd changeset -> moved_file from 5th changeset
 
         // Set mutable renames
         let first_src_unode = derive_unode_entry(
@@ -1834,8 +2181,6 @@ mod test {
 
         let tunables = Arc::new(tunables);
 
-        // The log with mutable renames attached to unrealated commits
-        // is currently broken and behaves like "normal" log.
         let actual = check_history(
             ctx.clone(),
             &repo,
@@ -1844,7 +2189,7 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
-            vec![fourth_bcs_id],
+            vec![fourth_bcs_id, third_bcs_id, first_bcs_id],
         );
 
         with_tunables_async_arc(tunables.clone(), actual.boxed()).await?;
@@ -1857,7 +2202,7 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames,
-            vec![fourth_bcs_id, second_bcs_id],
+            vec![fifth_bcs_id, first_bcs_id],
         );
         with_tunables_async_arc(tunables, actual.boxed()).await?;
 
