@@ -13,10 +13,16 @@ use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstorePutOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
+use blobstore_stats::record_get_stats;
+use blobstore_stats::record_is_present_stats;
+use blobstore_stats::record_put_stats;
+use blobstore_stats::OperationType;
 use context::CoreContext;
 use futures::Future;
+use futures_stats::TimedFutureExt;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::BlobstoreBytes;
+use scuba_ext::MononokeScubaSampleBuilder;
 use std::fmt;
 use std::sync::Arc;
 use std::time::Duration;
@@ -87,34 +93,84 @@ impl TimedStore {
         key: String,
         value: BlobstoreBytes,
         put_behaviour: Option<PutBehaviour>,
+        mut scuba: MononokeScubaSampleBuilder,
     ) -> Result<OverwriteStatus, (BlobstoreId, Error)> {
+        let size = value.len();
         let put_fut = if let Some(put_behaviour) = put_behaviour {
-            self.inner.put_explicit(ctx, key, value, put_behaviour)
+            self.inner
+                .put_explicit(ctx, key.clone(), value, put_behaviour)
         } else {
-            self.inner.put_with_status(ctx, key, value)
+            self.inner.put_with_status(ctx, key.clone(), value)
         };
 
-        with_timeout(put_fut, self.timeout.write)
-            .await
-            .map_err(|er| (self.id.clone(), er))
+        let pc = ctx.clone().fork_perf_counters();
+        let (stats, result) = with_timeout(put_fut, self.timeout.write).timed().await;
+
+        record_put_stats(
+            &mut scuba,
+            &pc,
+            stats,
+            result.as_ref(),
+            &key,
+            ctx.metadata().session_id().as_str(),
+            size,
+            Some(self.id.clone()),
+            self.inner.clone(),
+            None,
+        );
+
+        result.map_err(|er| (self.id.clone(), er))
     }
 
     pub(crate) async fn get(
         &self,
         ctx: &CoreContext,
         key: &str,
+        operation: OperationType,
+        mut scuba: MononokeScubaSampleBuilder,
     ) -> Result<Option<BlobstoreGetData>, (BlobstoreId, Error)> {
-        with_timeout(self.inner.get(ctx, key), self.timeout.read)
-            .await
-            .map_err(|er| (self.id.clone(), er))
+        let pc = ctx.clone().fork_perf_counters();
+        let (stats, result) = with_timeout(self.inner.get(ctx, key), self.timeout.read)
+            .timed()
+            .await;
+
+        record_get_stats(
+            &mut scuba,
+            &pc,
+            stats,
+            result.as_ref(),
+            key,
+            ctx.metadata().session_id().as_str(),
+            operation,
+            Some(self.id.clone()),
+            self.inner.clone(),
+        );
+
+        result.map_err(|er| (self.id.clone(), er))
     }
 
     pub(crate) async fn is_present(
         &self,
         ctx: &CoreContext,
         key: &str,
+        mut scuba: MononokeScubaSampleBuilder,
     ) -> (BlobstoreId, Result<BlobstoreIsPresent>) {
-        let result = with_timeout(self.inner.is_present(ctx, key), self.timeout.read).await;
+        let pc = ctx.clone().fork_perf_counters();
+        let (stats, result) = with_timeout(self.inner.is_present(ctx, key), self.timeout.read)
+            .timed()
+            .await;
+
+        record_is_present_stats(
+            &mut scuba,
+            &pc,
+            stats,
+            result.as_ref(),
+            key,
+            ctx.metadata().session_id().as_str(),
+            Some(self.id.clone()),
+            self.inner.clone(),
+        );
+
         (self.id.clone(), result)
     }
 }

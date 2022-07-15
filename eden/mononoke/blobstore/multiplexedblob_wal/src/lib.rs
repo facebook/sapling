@@ -11,5 +11,6 @@ mod test;
 mod timed;
 
 pub use multiplex::MultiplexQuorum;
+pub use multiplex::Scuba;
 pub use multiplex::WalMultiplexedBlobstore;
 pub use timed::MultiplexTimeout;

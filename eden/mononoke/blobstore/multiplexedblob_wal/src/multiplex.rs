@@ -16,6 +16,7 @@ use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstorePutOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
+use blobstore_stats::OperationType;
 use blobstore_sync_queue::BlobstoreWal;
 use blobstore_sync_queue::BlobstoreWalEntry;
 use blobstore_sync_queue::OperationKey;
@@ -28,8 +29,10 @@ use metaconfig_types::BlobstoreId;
 use metaconfig_types::MultiplexId;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::Timestamp;
+use scuba_ext::MononokeScubaSampleBuilder;
 use std::collections::HashMap;
 use std::fmt;
+use std::num::NonZeroU64;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 use thiserror::Error;
@@ -75,8 +78,27 @@ impl MultiplexQuorum {
     }
 }
 
+#[derive(Clone)]
+pub struct Scuba {
+    scuba: MononokeScubaSampleBuilder,
+    sample_rate: NonZeroU64,
+}
+
+impl Scuba {
+    pub fn new(mut scuba: MononokeScubaSampleBuilder, sample_rate: u64) -> Result<Self> {
+        scuba.add_common_server_data();
+
+        let sample_rate =
+            NonZeroU64::new(sample_rate).ok_or_else(|| anyhow!("Scuba sample rate cannot be 0"))?;
+        Ok(Self { scuba, sample_rate })
+    }
+
+    pub fn sampled(&mut self) {
+        self.scuba.sampled(self.sample_rate);
+    }
+}
+
 // TODO(aida):
-// - Add scuba logging for the multiplexed operations
 // - Add perf counters
 #[derive(Clone)]
 pub struct WalMultiplexedBlobstore {
@@ -92,6 +114,9 @@ pub struct WalMultiplexedBlobstore {
     /// Write-mostly blobstores are not normally read from on `get`, but take part in writes
     /// like a normal blobstore.
     write_mostly_blobstores: Arc<[TimedStore]>,
+
+    /// Scuba table to log status of the underlying single blobstore queries.
+    scuba: Scuba,
 }
 
 impl std::fmt::Display for WalMultiplexedBlobstore {
@@ -125,6 +150,7 @@ impl WalMultiplexedBlobstore {
         write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
         write_quorum: usize,
         timeout: Option<MultiplexTimeout>,
+        scuba: Scuba,
     ) -> Result<Self> {
         let quorum = MultiplexQuorum::new(blobstores.len(), write_quorum)?;
 
@@ -138,6 +164,7 @@ impl WalMultiplexedBlobstore {
             blobstores,
             write_mostly_blobstores,
             quorum,
+            scuba,
         })
     }
 
@@ -175,6 +202,7 @@ impl WalMultiplexedBlobstore {
             key.clone(),
             value.clone(),
             put_behaviour,
+            &self.scuba,
         );
 
         // Wait for the quorum successful writes
@@ -196,6 +224,7 @@ impl WalMultiplexedBlobstore {
                             key,
                             value,
                             put_behaviour,
+                            &self.scuba,
                         );
                         spawn_stream_completion(write_mostly_puts);
 
@@ -226,7 +255,12 @@ impl WalMultiplexedBlobstore {
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
-        let mut get_futs = inner_multi_get(ctx, self.blobstores.clone(), key);
+        let mut scuba = self.scuba.clone();
+        // the read requests are sampled unless they fail
+        scuba.sampled();
+
+        let mut get_futs =
+            inner_multi_get(ctx, self.blobstores.clone(), key, OperationType::Get, scuba);
 
         // Wait for the quorum successful "Not Found" reads before
         // returning Ok(None).
@@ -275,7 +309,11 @@ impl WalMultiplexedBlobstore {
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<BlobstoreIsPresent> {
-        let mut futs = inner_multi_is_present(ctx, self.blobstores.clone(), key);
+        let mut scuba = self.scuba.clone();
+        // the read requests are sampled unless they fail
+        scuba.sampled();
+
+        let mut futs = inner_multi_is_present(ctx, self.blobstores.clone(), key, scuba);
 
         // Wait for the quorum successful "Not Found" reads before
         // returning Ok(None).
@@ -386,12 +424,13 @@ fn inner_multi_put(
     key: String,
     value: BlobstoreBytes,
     put_behaviour: Option<PutBehaviour>,
+    scuba: &Scuba,
 ) -> FuturesUnordered<impl Future<Output = Result<OverwriteStatus, (BlobstoreId, Error)>>> {
     let put_futs: FuturesUnordered<_> = blobstores
         .iter()
         .map(|bs| {
-            cloned!(bs, ctx, key, value, put_behaviour);
-            async move { bs.put(&ctx, key, value, put_behaviour).await }
+            cloned!(bs, ctx, key, value, put_behaviour, scuba.scuba);
+            async move { bs.put(&ctx, key, value, put_behaviour, scuba).await }
         })
         .collect();
     put_futs
@@ -401,14 +440,16 @@ fn inner_multi_get<'a>(
     ctx: &'a CoreContext,
     blobstores: Arc<[TimedStore]>,
     key: &'a str,
+    operation: OperationType,
+    scuba: Scuba,
 ) -> FuturesUnordered<
     impl Future<Output = Result<Option<BlobstoreGetData>, (BlobstoreId, Error)>> + 'a,
 > {
     let get_futs: FuturesUnordered<_> = blobstores
         .iter()
         .map(|bs| {
-            cloned!(bs);
-            async move { bs.get(ctx, key).await }
+            cloned!(bs, scuba.scuba);
+            async move { bs.get(ctx, key, operation, scuba).await }
         })
         .collect();
     get_futs
@@ -418,12 +459,13 @@ fn inner_multi_is_present<'a>(
     ctx: &'a CoreContext,
     blobstores: Arc<[TimedStore]>,
     key: &'a str,
+    scuba: Scuba,
 ) -> FuturesUnordered<impl Future<Output = (BlobstoreId, Result<BlobstoreIsPresent, Error>)> + 'a> {
     let futs: FuturesUnordered<_> = blobstores
         .iter()
         .map(|bs| {
-            cloned!(bs);
-            async move { bs.is_present(ctx, key).await }
+            cloned!(bs, scuba.scuba);
+            async move { bs.is_present(ctx, key, scuba).await }
         })
         .collect();
     futs
