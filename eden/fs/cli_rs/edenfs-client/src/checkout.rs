@@ -709,9 +709,7 @@ impl EdenFsCheckout {
         predictive: bool,
         predictive_num_dirs: u32,
     ) -> Result<Vec<Glob>> {
-        let client_name = instance.client_name(&self.path)?;
-        let config_dir = instance.config_directory(&client_name);
-        let mut checkout_config = CheckoutConfig::parse_config(config_dir.clone())?;
+        let mut profiles_to_fetch = profiles.clone();
 
         if predictive && !instance.should_prefetch_predictive_profiles() {
             if !silent {
@@ -742,8 +740,8 @@ impl EdenFsCheckout {
             // special trees prefetch profile which fetches all of the trees in the repo, kick this
             // off before activating the rest of the prefetch profiles
             let tree_profile = "trees";
-            if checkout_config.contains_prefetch_profile(tree_profile) {
-                checkout_config.remove_prefetch_profile(tree_profile, config_dir)?;
+            if profiles_to_fetch.iter().any(|x| x == tree_profile) {
+                profiles_to_fetch.retain(|x| *x != *tree_profile);
                 let mut profile_set = HashSet::new();
                 profile_set.insert("**/*".to_owned());
 
@@ -761,12 +759,12 @@ impl EdenFsCheckout {
                     )
                     .await?;
                 glob_results.push(blob_res);
-                if profiles.is_empty() {
+                if profiles_to_fetch.is_empty() {
                     return Ok(glob_results);
                 }
             }
 
-            for profile in profiles {
+            for profile in profiles_to_fetch {
                 let res = self.get_contents_for_profile(&profile, silent)?;
                 profile_contents.extend(res);
             }
