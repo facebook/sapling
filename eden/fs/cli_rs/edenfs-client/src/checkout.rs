@@ -220,6 +220,17 @@ impl CheckoutConfig {
         }
     }
 
+    pub fn get_prefetch_profiles(&self) -> Result<&Vec<String>> {
+        if let Some(profiles) = &self.profiles {
+            Ok(&profiles.active)
+        } else {
+            Err(EdenFsError::Other(anyhow!(
+                "Cannot get active prefetch profiles for {}",
+                self.repository.path.display()
+            )))
+        }
+    }
+
     pub fn contains_prefetch_profile(&self, profile: &str) -> bool {
         if let Some(profiles) = &self.profiles {
             profiles.active.iter().any(|x| x == profile)
@@ -542,7 +553,7 @@ impl EdenFsCheckout {
         all_profile_contents: HashSet<String>,
         enable_prefetch: bool,
         silent: bool,
-        revisions: Option<Vec<String>>,
+        revisions: Option<&Vec<String>>,
         predict_revisions: bool,
         background: bool,
         predictive: bool,
@@ -673,11 +684,11 @@ impl EdenFsCheckout {
     pub async fn prefetch_profiles(
         &self,
         instance: &EdenFsInstance,
-        profiles: Vec<String>,
+        profiles: &Vec<String>,
         background: bool,
         enable_prefetch: bool,
         silent: bool,
-        revisions: Option<Vec<String>>,
+        revisions: Option<&Vec<String>>,
         predict_revisions: bool,
         predictive: bool,
         predictive_num_dirs: u32,

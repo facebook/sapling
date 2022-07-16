@@ -67,6 +67,31 @@ pub struct ActivationOptions {
 }
 
 #[derive(Parser, Debug)]
+pub struct FetchOptions {
+    #[clap(flatten)]
+    options: ActivationOptions,
+    #[clap(
+        long,
+        multiple_values = true,
+        help = "Commit hashes of the commits for which globs should be \
+        evaluated. Note that the current commit in the checkout is used \
+        if this is not specified. Note that the prefetch profiles are \
+        always read from the current commit, not the commits specified \
+        here."
+    )]
+    commits: Vec<String>,
+    #[clap(
+        long,
+        help = "Predict the commits a user is likely to checkout. Evaluate \
+        the active prefetch profiles against those commits and fetch the \
+        resulting files in those commits. Note that the prefetch profiles \
+        are always read from the current commit, not the commits \
+        predicted here. This is intended to be used post pull."
+    )]
+    predict_commits: bool,
+}
+
+#[derive(Parser, Debug)]
 #[clap(name = "prefetch-profile")]
 #[clap(about = "Create, manage, and use Prefetch Profiles. This command is \
     primarily for use in automation.")]
@@ -89,7 +114,7 @@ pub enum PrefetchCmd {
         immediately, when checking out a new commit, and for some pulls).")]
     Activate {
         #[clap(flatten)]
-        common: ActivationOptions,
+        options: ActivationOptions,
         #[clap(help = "Profile to activate.")]
         profile_name: String,
         #[clap(
@@ -101,7 +126,7 @@ pub enum PrefetchCmd {
     #[clap(hide = true)]
     ActivatePredictive {
         #[clap(flatten)]
-        common: ActivationOptions,
+        options: ActivationOptions,
         #[clap(
             default_value = "0",
             help = "Optionally set the number of top accessed directories to \
@@ -114,14 +139,14 @@ pub enum PrefetchCmd {
     )]
     Deactivate {
         #[clap(flatten)]
-        common: ActivationOptions,
+        options: ActivationOptions,
         #[clap(help = "Profile to deactivate.")]
         profile_name: String,
     },
     #[clap(hide = true)]
     DeactivatePredictive {
         #[clap(flatten)]
-        common: ActivationOptions,
+        options: ActivationOptions,
     },
     #[clap(about = "Disables prefetch profiles locally")]
     Disable,
@@ -131,6 +156,17 @@ pub enum PrefetchCmd {
     Enable,
     #[clap(hide = true)]
     EnablePredictive,
+    #[clap(about = "Prefetch all the active prefetch profiles or specified \
+        prefetch profiles. This is intended for use in after checkout and pull.")]
+    Fetch {
+        #[clap(flatten)]
+        options: FetchOptions,
+        #[clap(
+            required = false,
+            help = "Fetch only these named profiles instead of the active set of profiles."
+        )]
+        profile_names: Vec<String>,
+    },
 }
 
 impl PrefetchCmd {
@@ -230,7 +266,7 @@ impl PrefetchCmd {
             let result_globs = checkout
                 .prefetch_profiles(
                     &instance,
-                    vec![profile_name.to_string()],
+                    &vec![profile_name.to_string()],
                     !options.foreground,
                     true,
                     !options.verbose,
@@ -301,7 +337,7 @@ impl PrefetchCmd {
             let result_globs = checkout
                 .prefetch_profiles(
                     &instance,
-                    vec![],
+                    &vec![],
                     !options.foreground,
                     true,
                     !options.verbose,
@@ -466,6 +502,60 @@ impl PrefetchCmd {
         edenfs_config.save_user(home_dir_path)?;
         Ok(0)
     }
+
+    async fn fetch(
+        &self,
+        instance: EdenFsInstance,
+        profile_names: &Vec<String>,
+        options: &FetchOptions,
+    ) -> Result<ExitCode> {
+        let checkout_path = match &options.options.checkout {
+            Some(p) => p.clone(),
+            None => env::current_dir().context("Unable to retrieve current working dir")?,
+        };
+        let client_name = instance.client_name(&checkout_path)?;
+        let config_dir = instance.config_directory(&client_name);
+        let checkout_config = CheckoutConfig::parse_config(config_dir.clone())?;
+        let profiles_to_prefetch = if profile_names.is_empty() {
+            checkout_config.get_prefetch_profiles()?
+        } else {
+            profile_names
+        };
+
+        if profiles_to_prefetch.is_empty() {
+            if options.options.verbose {
+                println!("No profiles to fetch")
+            }
+            return Ok(0);
+        }
+
+        let checkout = find_checkout(&instance, &checkout_path)?;
+        let result_globs = checkout
+            .prefetch_profiles(
+                &instance,
+                profiles_to_prefetch,
+                !options.options.foreground,
+                !options.options.skip_prefetch,
+                !options.options.verbose,
+                Some(&options.commits),
+                options.predict_commits,
+                false,
+                0,
+            )
+            .await?;
+        // there will only every be one commit used to query globFiles here,
+        // so no need to list which commit a file is fetched for, it will
+        // be the current commit.
+        if options.options.verbose {
+            for result in result_globs {
+                for name in result.matchingFiles {
+                    println!("{}", String::from_utf8_lossy(&name));
+                }
+            }
+        }
+
+        Ok(0)
+    }
 }
 
 #[async_trait]
@@ -476,27 +566,31 @@ impl Subcommand for PrefetchCmd {
             Self::Record {} => self.record(instance).await,
             Self::List { checkout } => self.list(instance, checkout).await,
             Self::Activate {
-                common,
+                options,
                 profile_name,
                 force_fetch,
             } => {
-                self.activate(instance, common, profile_name, force_fetch)
+                self.activate(instance, options, profile_name, force_fetch)
                     .await
             }
-            Self::ActivatePredictive { common, num_dirs } => {
-                self.activate_predictive(instance, common, *num_dirs).await
+            Self::ActivatePredictive { options, num_dirs } => {
+                self.activate_predictive(instance, options, *num_dirs).await
             }
             Self::Deactivate {
-                common,
+                options,
                 profile_name,
-            } => self.deactivate(instance, common, profile_name).await,
-            Self::DeactivatePredictive { common } => {
-                self.deactivate_predictive(instance, common).await
+            } => self.deactivate(instance, options, profile_name).await,
+            Self::DeactivatePredictive { options } => {
+                self.deactivate_predictive(instance, options).await
             }
             Self::Disable {} => self.disable(instance).await,
             Self::DisablePredictive {} => self.disable_predictive(instance).await,
             Self::Enable {} => self.enable(instance).await,
             Self::EnablePredictive {} => self.enable_predictive(instance).await,
+            Self::Fetch {
+                profile_names,
+                options,
+            } => self.fetch(instance, profile_names, options).await,
         }
     }
 }
