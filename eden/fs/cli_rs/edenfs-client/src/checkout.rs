@@ -239,6 +239,22 @@ impl CheckoutConfig {
         }
     }
 
+    pub fn predictive_prefetch_is_active(&self) -> bool {
+        if let Some(config) = &self.predictive_prefetch {
+            config.predictive_prefetch_active
+        } else {
+            false
+        }
+    }
+
+    pub fn get_predictive_num_dirs(&self) -> u32 {
+        if let Some(config) = &self.predictive_prefetch {
+            config.predictive_prefetch_num_dirs
+        } else {
+            0
+        }
+    }
+
     pub fn remove_prefetch_profile(&mut self, profile: &str, config_dir: PathBuf) -> Result<()> {
         if let Some(profiles) = &mut self.profiles {
             if profiles.active.iter().any(|x| x == profile) {

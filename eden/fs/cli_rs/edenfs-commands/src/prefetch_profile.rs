@@ -167,6 +167,23 @@ pub enum PrefetchCmd {
         )]
         profile_names: Vec<String>,
     },
+    #[clap(hide = true)]
+    FetchPredictive {
+        #[clap(flatten)]
+        options: FetchOptions,
+        #[clap(
+            default_value = "0",
+            help = "Optionally set the number of top accessed directories to \
+                prefetch, overriding the default."
+        )]
+        num_dirs: u32,
+        #[clap(
+            long,
+            help = "Only run the fetch if activate-predictive has been run. \
+                Uses num_dirs set by activate-predictive, or the default."
+        )]
+        if_active: bool,
+    },
 }
 
 impl PrefetchCmd {
@@ -556,6 +573,70 @@ impl PrefetchCmd {
 
         Ok(0)
     }
+
+    async fn fetch_predictive(
+        &self,
+        instance: EdenFsInstance,
+        options: &FetchOptions,
+        num_dirs: u32,
+        if_active: bool,
+    ) -> Result<ExitCode> {
+        let checkout_path = match &options.options.checkout {
+            Some(p) => p.clone(),
+            None => env::current_dir().context("Unable to retrieve current working dir")?,
+        };
+        let client_name = instance.client_name(&checkout_path)?;
+        let config_dir = instance.config_directory(&client_name);
+        let checkout_config = CheckoutConfig::parse_config(config_dir.clone())?;
+
+        if if_active && !checkout_config.predictive_prefetch_is_active() {
+            if options.options.verbose {
+                println!(
+                    "Predictive prefetch profiles have not been activated and \
+                    --if-active was specified. Skipping fetch."
+                );
+            }
+            return Ok(0);
+        }
+
+        // If num_dirs is given, use the specified num_dirs. If num_dirs is
+        // not given (args.num_dirs == 0), predictive fetch with default num
+        // dirs unless there is an active num dirs saved in the checkout config
+        let predictive_num_dirs = if num_dirs == 0 && checkout_config.get_predictive_num_dirs() != 0
+        {
+            checkout_config.get_predictive_num_dirs()
+        } else {
+            0
+        };
+
+        let checkout = find_checkout(&instance, &checkout_path)?;
+        let result_globs = checkout
+            .prefetch_profiles(
+                &instance,
+                &vec![],
+                !options.options.foreground,
+                !options.options.skip_prefetch,
+                !options.options.verbose,
+                Some(&options.commits),
+                options.predict_commits,
+                true,
+                predictive_num_dirs,
+            )
+            .await?;
+
+        // there will only every be one commit used to query globFiles here,
+        // so no need to list which commit a file is fetched for, it will
+        // be the current commit.
+        if options.options.verbose {
+            for result in result_globs {
+                for name in result.matchingFiles {
+                    println!("{}", String::from_utf8_lossy(&name));
+                }
+            }
+        }
+
+        Ok(0)
+    }
 }
 
 #[async_trait]
@@ -591,6 +672,14 @@ impl Subcommand for PrefetchCmd {
                 profile_names,
                 options,
             } => self.fetch(instance, profile_names, options).await,
+            Self::FetchPredictive {
+                options,
+                num_dirs,
+                if_active,
+            } => {
+                self.fetch_predictive(instance, options, *num_dirs, *if_active)
+                    .await
+            }
         }
     }
 }
