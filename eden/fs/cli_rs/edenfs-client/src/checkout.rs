@@ -536,11 +536,11 @@ impl EdenFsCheckout {
 
         if !profile_path.exists() {
             if !silent {
-                return Err(EdenFsError::Other(anyhow!(
+                eprintln!(
                     "Profile '{}' not found for checkout {}.",
                     profile,
                     self.path().display()
-                )));
+                );
             }
             return Ok(HashSet::new());
         }
