@@ -38,7 +38,6 @@ use crate::Subcommand;
 
 #[derive(Parser, Debug)]
 pub struct CommonOptions {
-    // Need default value = False and Store_true
     #[clap(
         short,
         long,
@@ -85,6 +84,9 @@ pub enum PrefetchCmd {
         #[clap(long, parse(from_str = expand_path), help = "The checkout for which you want to see all the profiles")]
         checkout: Option<PathBuf>,
     },
+    #[clap(about = "Tell EdenFS to smart prefetch the files specified by the \
+        prefetch profile. (EdenFS will prefetch the files in this profile \
+        immediately, when checking out a new commit, and for some pulls).")]
     Activate {
         #[clap(flatten)]
         common: CommonOptions,
@@ -96,18 +98,37 @@ pub enum PrefetchCmd {
         )]
         force_fetch: bool,
     },
+    #[clap(hide = true)]
+    ActivatePredictive {
+        #[clap(flatten)]
+        common: CommonOptions,
+        #[clap(
+            default_value = "0",
+            help = "Optionally set the number of top accessed directories to \
+                prefetch, overriding the default."
+        )]
+        num_dirs: u32,
+    },
+    #[clap(
+        about = "Tell EdenFS to STOP smart prefetching the files specified by the prefetch profile."
+    )]
     Deactivate {
         #[clap(flatten)]
         common: CommonOptions,
         #[clap(help = "Profile to deactivate.")]
         profile_name: String,
     },
+    #[clap(hide = true)]
+    DeactivatePredictive {
+        #[clap(flatten)]
+        common: CommonOptions,
+    },
     #[clap(about = "Disables prefetch profiles locally")]
     Disable,
-    #[clap(about = "Enables prefetch profiles locally")]
-    Enable,
     #[clap(hide = true)]
     DisablePredictive,
+    #[clap(about = "Enables prefetch profiles locally")]
+    Enable,
     #[clap(hide = true)]
     EnablePredictive,
 }
@@ -191,20 +212,18 @@ impl PrefetchCmd {
 
         let config_dir = instance.config_directory(&client_name);
         let checkout_config = CheckoutConfig::parse_config(config_dir.clone());
-        match checkout_config {
-            Ok(mut checkout_config) => {
-                checkout_config.activate_profile(profile_name, config_dir, force_fetch)?;
-                #[cfg(fbcode_build)]
-                send(sample.builder);
-            }
+        let result = checkout_config
+            .and_then(|mut config| config.activate_profile(profile_name, config_dir, force_fetch));
+        if let Err(e) = result {
             #[cfg(fbcode_build)]
-            Err(e) => {
+            {
                 sample.fail(&e.to_string());
                 send(sample.builder);
             }
-            #[cfg(not(fbcode_build))]
-            Err(_) => (),
+            return Err(e);
         }
+        #[cfg(fbcode_build)]
+        send(sample.builder);
 
         if !options.skip_prefetch {
             let checkout = find_checkout(&instance, &checkout_path)?;
@@ -219,6 +238,77 @@ impl PrefetchCmd {
                     false,
                     false,
                     0,
+                )
+                .await?;
+            // there will only every be one commit used to query globFiles here,
+            // so no need to list which commit a file is fetched for, it will
+            // be the current commit.
+            if options.verbose {
+                for result in result_globs {
+                    for name in result.matchingFiles {
+                        println!("{}", String::from_utf8_lossy(&name));
+                    }
+                }
+            }
+        }
+
+        Ok(0)
+    }
+
+    async fn activate_predictive(
+        &self,
+        instance: EdenFsInstance,
+        options: &CommonOptions,
+        num_dirs: u32,
+    ) -> Result<ExitCode> {
+        let checkout_path = match &options.checkout {
+            Some(p) => p.clone(),
+            None => env::current_dir().context("Unable to retrieve current working dir")?,
+        };
+
+        let client_name = instance.client_name(&checkout_path)?;
+
+        #[cfg(fbcode_build)]
+        let mut sample = {
+            let _fb = expect_init();
+            let mut sample = PrefetchProfileSample::build(_fb);
+            sample.set_activate_predictive_event(
+                client_name.as_str(),
+                options.skip_prefetch,
+                num_dirs,
+            );
+            sample
+        };
+
+        let config_dir = instance.config_directory(&client_name);
+        let checkout_config = CheckoutConfig::parse_config(config_dir.clone());
+
+        let result = checkout_config
+            .and_then(|mut config| config.activate_predictive_profile(config_dir, num_dirs));
+        if let Err(e) = result {
+            #[cfg(fbcode_build)]
+            {
+                sample.fail(&e.to_string());
+                send(sample.builder);
+            }
+            return Err(e);
+        }
+        #[cfg(fbcode_build)]
+        send(sample.builder);
+
+        if !options.skip_prefetch {
+            let checkout = find_checkout(&instance, &checkout_path)?;
+            let result_globs = checkout
+                .prefetch_profiles(
+                    &instance,
+                    vec![],
+                    !options.foreground,
+                    true,
+                    !options.verbose,
+                    None,
+                    false,
+                    true,
+                    num_dirs,
                 )
                 .await?;
             // there will only every be one commit used to query globFiles here,
@@ -258,22 +348,55 @@ impl PrefetchCmd {
 
         let config_dir = instance.config_directory(&client_name);
         let checkout_config = CheckoutConfig::parse_config(config_dir.clone());
-        match checkout_config {
-            Ok(mut checkout_config) => {
-                checkout_config.deactivate_profile(profile_name, config_dir)?;
-                #[cfg(fbcode_build)]
+        let result = checkout_config
+            .and_then(|mut config| config.deactivate_profile(profile_name, config_dir));
+        if let Err(e) = result {
+            #[cfg(fbcode_build)]
+            {
+                sample.fail(&e.to_string());
                 send(sample.builder);
-                Ok(0)
             }
-            Err(e) => {
-                #[cfg(fbcode_build)]
-                {
-                    sample.fail(&e.to_string());
-                    send(sample.builder);
-                }
-                Err(e)
-            }
+            return Err(e);
         }
+        #[cfg(fbcode_build)]
+        send(sample.builder);
+        Ok(0)
+    }
+
+    async fn deactivate_predictive(
+        &self,
+        instance: EdenFsInstance,
+        options: &CommonOptions,
+    ) -> Result<ExitCode> {
+        let checkout_path = match &options.checkout {
+            Some(p) => p.clone(),
+            None => env::current_dir().context("Unable to retrieve current working dir")?,
+        };
+        let client_name = instance.client_name(&checkout_path)?;
+
+        #[cfg(fbcode_build)]
+        let mut sample = {
+            let _fb = expect_init();
+            let mut sample = PrefetchProfileSample::build(_fb);
+            sample.set_deactivate_predictive_event(client_name.as_str());
+            sample
+        };
+
+        let config_dir = instance.config_directory(&client_name);
+        let checkout_config = CheckoutConfig::parse_config(config_dir.clone());
+        let result =
+            checkout_config.and_then(|mut config| config.deactivate_predictive_profile(config_dir));
+        if let Err(e) = result {
+            #[cfg(fbcode_build)]
+            {
+                sample.fail(&e.to_string());
+                send(sample.builder);
+            }
+            return Err(e);
+        }
+        #[cfg(fbcode_build)]
+        send(sample.builder);
+        Ok(0)
     }
 
     async fn disable(&self, instance: EdenFsInstance) -> Result<ExitCode> {
@@ -293,23 +416,6 @@ impl PrefetchCmd {
         Ok(0)
     }
 
-    async fn enable(&self, instance: EdenFsInstance) -> Result<ExitCode> {
-        let mut loader = EdenFsConfig::loader();
-        let home_dir_path = instance
-            .get_user_home_dir()
-            .ok_or_else(|| {
-                EdenFsError::Other(anyhow!(
-                    "Failed to enable prefetch-profiles, could not determine user's home directory"
-                ))
-            })?
-            .as_path();
-        edenfs_config::load_user(&mut loader, home_dir_path)?;
-        let mut edenfs_config = loader.build().map_err(EdenFsError::ConfigurationError)?;
-        edenfs_config.set_bool("prefetch-profiles", "prefetching-enabled", true);
-        edenfs_config.save_user(home_dir_path)?;
-        Ok(0)
-    }
-
     async fn disable_predictive(&self, instance: EdenFsInstance) -> Result<ExitCode> {
         let mut loader = EdenFsConfig::loader();
         let home_dir_path = instance
@@ -323,6 +429,23 @@ impl PrefetchCmd {
         edenfs_config::load_user(&mut loader, home_dir_path)?;
         let mut edenfs_config = loader.build().map_err(EdenFsError::ConfigurationError)?;
         edenfs_config.set_bool("prefetch-profiles", "predictive-prefetching-enabled", false);
+        edenfs_config.save_user(home_dir_path)?;
+        Ok(0)
+    }
+
+    async fn enable(&self, instance: EdenFsInstance) -> Result<ExitCode> {
+        let mut loader = EdenFsConfig::loader();
+        let home_dir_path = instance
+            .get_user_home_dir()
+            .ok_or_else(|| {
+                EdenFsError::Other(anyhow!(
+                    "Failed to enable prefetch-profiles, could not determine user's home directory"
+                ))
+            })?
+            .as_path();
+        edenfs_config::load_user(&mut loader, home_dir_path)?;
+        let mut edenfs_config = loader.build().map_err(EdenFsError::ConfigurationError)?;
+        edenfs_config.set_bool("prefetch-profiles", "prefetching-enabled", true);
         edenfs_config.save_user(home_dir_path)?;
         Ok(0)
     }
@@ -360,13 +483,19 @@ impl Subcommand for PrefetchCmd {
                 self.activate(instance, common, profile_name, force_fetch)
                     .await
             }
+            Self::ActivatePredictive { common, num_dirs } => {
+                self.activate_predictive(instance, common, *num_dirs).await
+            }
             Self::Deactivate {
                 common,
                 profile_name,
             } => self.deactivate(instance, common, profile_name).await,
+            Self::DeactivatePredictive { common } => {
+                self.deactivate_predictive(instance, common).await
+            }
             Self::Disable {} => self.disable(instance).await,
-            Self::Enable {} => self.enable(instance).await,
             Self::DisablePredictive {} => self.disable_predictive(instance).await,
+            Self::Enable {} => self.enable(instance).await,
             Self::EnablePredictive {} => self.enable_predictive(instance).await,
         }
     }

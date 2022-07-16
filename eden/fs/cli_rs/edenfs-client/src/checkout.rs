@@ -265,7 +265,7 @@ impl CheckoutConfig {
     }
 
     /// Add a profile to the config (read the config file and write it back
-    /// with profile added). Returns 0 on sucess and EdenFsError on failure
+    /// with profile added).
     pub fn activate_profile(
         &mut self,
         profile: &str,
@@ -290,9 +290,34 @@ impl CheckoutConfig {
         Ok(())
     }
 
+    /// Switch on predictive prefetch profiles (read the config file and write
+    /// it back with predictive_prefetch_profiles_active set to True, set or
+    /// update predictive_prefetch_num_dirs if specified).
+    pub fn activate_predictive_profile(
+        &mut self,
+        config_dir: PathBuf,
+        num_dirs: u32,
+    ) -> Result<()> {
+        if let Some(profiles) = &mut self.predictive_prefetch {
+            if profiles.predictive_prefetch_active
+                && num_dirs == profiles.predictive_prefetch_num_dirs
+            {
+                return Err(EdenFsError::Other(anyhow!(
+                    "Predictive prefetch profiles are already activated \
+                            with {} directories configured.",
+                    num_dirs
+                )));
+            }
+            profiles.predictive_prefetch_active = true;
+            profiles.predictive_prefetch_num_dirs = num_dirs;
+            self.save_config(config_dir)?;
+        }
+        Ok(())
+    }
+
     /// Remove a profile to the config (read the config file and write it back
-    /// with profile added). Returns 0 on sucess and EdenFsError on failure
-    pub fn deactivate_profile(&mut self, profile: &str, config_dir: PathBuf) -> Result<i32> {
+    /// with profile added).
+    pub fn deactivate_profile(&mut self, profile: &str, config_dir: PathBuf) -> Result<()> {
         if let Some(profiles) = &mut self.profiles {
             if !profiles.active.iter().any(|x| x == profile) {
                 return Err(EdenFsError::Other(anyhow!(
@@ -303,7 +328,25 @@ impl CheckoutConfig {
             profiles.active.retain(|x| *x != *profile);
             self.save_config(config_dir)?;
         };
-        Ok(0)
+        Ok(())
+    }
+
+    /// Switch off predictive prefetch profiles (read the config file and write
+    /// it back with predictive_profile_profiles_active set to false. Also
+    /// set predictive_prefetch_num_dirs to 0).
+    pub fn deactivate_predictive_profile(&mut self, config_dir: PathBuf) -> Result<()> {
+        if let Some(profiles) = &mut self.predictive_prefetch {
+            if !profiles.predictive_prefetch_active {
+                return Err(EdenFsError::Other(anyhow!(
+                    "Predictive prefetch profile was not deactivated since it \
+                    wasn't active."
+                )));
+            }
+            profiles.predictive_prefetch_active = false;
+            profiles.predictive_prefetch_num_dirs = 0;
+            self.save_config(config_dir)?;
+        };
+        Ok(())
     }
 }
 
@@ -503,7 +546,7 @@ impl EdenFsCheckout {
         predict_revisions: bool,
         background: bool,
         predictive: bool,
-        predictive_num_dirs: i32,
+        predictive_num_dirs: u32,
     ) -> Result<Glob> {
         let mut commit_vec = vec![];
         if predict_revisions {
@@ -591,8 +634,11 @@ impl EdenFsCheckout {
             .as_bytes()
             .to_vec();
         if predictive {
+            let num_dirs = predictive_num_dirs.try_into().with_context(|| {
+                anyhow!("could not convert u32 ({}) to i32", predictive_num_dirs)
+            })?;
             let predictive_params = PredictiveFetch {
-                numTopDirectories: Some(predictive_num_dirs),
+                numTopDirectories: Some(num_dirs),
                 ..Default::default()
             };
             let glob_params = GlobParams {
@@ -634,7 +680,7 @@ impl EdenFsCheckout {
         revisions: Option<Vec<String>>,
         predict_revisions: bool,
         predictive: bool,
-        predictive_num_dirs: i32,
+        predictive_num_dirs: u32,
     ) -> Result<Vec<Glob>> {
         let client_name = instance.client_name(&self.path)?;
         let config_dir = instance.config_directory(&client_name);
