@@ -58,6 +58,54 @@ where
     Ok(())
 }
 
+fn add_global_flag_derived_configs(repo: &mut OptionalRepo, global_opts: HgGlobalOpts) {
+    if let OptionalRepo::Some(_) = repo {
+        if global_opts.hidden {
+            let config = repo.config_mut();
+            config.set("visibility", "all-heads", Some("true"), &"--hidden".into());
+        }
+    }
+
+    let config = repo.config_mut();
+    if global_opts.trace || global_opts.traceback {
+        config.set("ui", "traceback", Some("on"), &"--traceback".into());
+    }
+    if global_opts.profile {
+        config.set("profiling", "enabled", Some("true"), &"--profile".into());
+    }
+    if !global_opts.color.is_empty() {
+        config.set(
+            "ui",
+            "color",
+            Some(global_opts.color.as_str()),
+            &"--color".into(),
+        );
+    }
+    if global_opts.verbose || global_opts.debug || global_opts.quiet {
+        config.set(
+            "ui",
+            "verbose",
+            Some(global_opts.verbose.to_string().as_str()),
+            &"--verbose".into(),
+        );
+        config.set(
+            "ui",
+            "debug",
+            Some(global_opts.debug.to_string().as_str()),
+            &"--debug".into(),
+        );
+        config.set(
+            "ui",
+            "quiet",
+            Some(global_opts.quiet.to_string().as_str()),
+            &"--quiet".into(),
+        );
+    }
+    if global_opts.noninteractive {
+        config.set("ui", "interactive", Some("off"), &"-y".into());
+    }
+}
+
 fn last_chance_to_abort(opts: &HgGlobalOpts) -> Result<()> {
     if opts.profile {
         return Err(errors::Abort("--profile does not support Rust commands (yet)".into()).into());
@@ -342,6 +390,7 @@ impl Dispatcher {
         };
 
         let res = || -> Result<u8> {
+            add_global_flag_derived_configs(&mut self.optional_repo, parsed.clone().try_into()?);
             match handler.func() {
                 CommandFunc::Repo(f) => {
                     match self.optional_repo {
