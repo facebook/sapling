@@ -42,8 +42,6 @@ Issue1199: Can't use '%' in hgrc (eg url encoded username)
   default = test:foo%EF%BF%BDr_server
   $ hg showconfig paths
   paths.default=test:foo%bar_server
-  $ hg showconfig bundle
-  bundle.mainreporoot=$TESTTMP/foobar
   $ cd ..
 
 issue1829: wrong indentation
@@ -77,15 +75,15 @@ issue1829: wrong indentation
 make sure global options given on the cmdline take precedence
 
   $ hg showconfig --config ui.verbose=True --quiet ui
-  ui.timeout=600
-  ui.slash=True
+  ui.debug=false
   ui.interactive=False
   ui.mergemarkers=detailed
   ui.promptecho=True
+  ui.quiet=true
+  ui.slash=True
   ui.ssh=* (glob)
-  ui.verbose=False
-  ui.debug=False
-  ui.quiet=True
+  ui.timeout=600
+  ui.verbose=false
 
   $ touch foobar/untracked
   $ cat >> foobar/.hg/hgrc <<EOF

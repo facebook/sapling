@@ -2,6 +2,7 @@
 
 #if no-windows no-osx
 
+  $ setconfig config.use-rust=true
   $ mkdir -p xdgconf/hg
   $ echo '[ui]' > xdgconf/hg/hgrc
   $ echo 'username = foobar' >> xdgconf/hg/hgrc

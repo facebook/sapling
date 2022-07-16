@@ -7,27 +7,28 @@ Create a repository:
   $ setconfig format.use-segmented-changelog=1
 
   $ hg config
+  config.use-rust=true
   devel.all-warnings=true
   devel.collapse-traceback=true
   devel.default-date=0 0
-  experimental.metalog=true (?)
-  extensions.patchrmdir= (?)
+  experimental.metalog=true
   extensions.fsmonitor= (fsmonitor !)
+  extensions.patchrmdir= (?)
   extensions.treemanifest=!
   format.use-segmented-changelog=1
   fsmonitor.detectrace=1 (fsmonitor !)
   mutation.record=False
-  remotefilelog.reponame=reponame-default
-  remotefilelog.localdatarepack=True
   remotefilelog.cachepath=$TESTTMP/default-hgcache
+  remotefilelog.localdatarepack=True
+  remotefilelog.reponame=reponame-default
+  treemanifest.rustmanifest=True
   treemanifest.sendtrees=False
   treemanifest.treeonly=False
-  treemanifest.rustmanifest=True
   treemanifest.useruststore=True
-  ui.slash=True
   ui.interactive=False
   ui.mergemarkers=detailed
   ui.promptecho=True
+  ui.slash=True
   web.address=localhost
   web\.ipv6=(?:True|False) (re)
   workingcopy.enablerustwalker=True

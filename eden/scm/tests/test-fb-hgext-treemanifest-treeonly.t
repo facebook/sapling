@@ -1,5 +1,6 @@
 #chg-compatible
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig config.use-rust=true
 
   $ . "$TESTDIR/library.sh"
 
@@ -421,11 +422,11 @@ Test pulling to a treeonly client from a treeonly server
 
 Test pushing from a treeonly client to a treeonly server
   $ hg config treemanifest
+  treemanifest.demanddownload=True
+  treemanifest.rustmanifest=True
   treemanifest.sendtrees=True
   treemanifest.treeonly=True
-  treemanifest.rustmanifest=True
   treemanifest.useruststore=True
-  treemanifest.demanddownload=True
   $ echo 'pushable' >> subdir/x
   $ hg commit -Aqm 'pushable treeonly commit'
 

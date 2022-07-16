@@ -1,6 +1,7 @@
 #chg-compatible
 
   $ enable grpcheck
+  $ setconfig config.use-rust=false
 
 mock os.getgroups and grp.getgrnam
 
