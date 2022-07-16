@@ -37,7 +37,7 @@ use crate::ExitCode;
 use crate::Subcommand;
 
 #[derive(Parser, Debug)]
-pub struct CommonOptions {
+pub struct ActivationOptions {
     #[clap(
         short,
         long,
@@ -89,7 +89,7 @@ pub enum PrefetchCmd {
         immediately, when checking out a new commit, and for some pulls).")]
     Activate {
         #[clap(flatten)]
-        common: CommonOptions,
+        common: ActivationOptions,
         #[clap(help = "Profile to activate.")]
         profile_name: String,
         #[clap(
@@ -101,7 +101,7 @@ pub enum PrefetchCmd {
     #[clap(hide = true)]
     ActivatePredictive {
         #[clap(flatten)]
-        common: CommonOptions,
+        common: ActivationOptions,
         #[clap(
             default_value = "0",
             help = "Optionally set the number of top accessed directories to \
@@ -114,14 +114,14 @@ pub enum PrefetchCmd {
     )]
     Deactivate {
         #[clap(flatten)]
-        common: CommonOptions,
+        common: ActivationOptions,
         #[clap(help = "Profile to deactivate.")]
         profile_name: String,
     },
     #[clap(hide = true)]
     DeactivatePredictive {
         #[clap(flatten)]
-        common: CommonOptions,
+        common: ActivationOptions,
     },
     #[clap(about = "Disables prefetch profiles locally")]
     Disable,
@@ -191,7 +191,7 @@ impl PrefetchCmd {
     async fn activate(
         &self,
         instance: EdenFsInstance,
-        options: &CommonOptions,
+        options: &ActivationOptions,
         profile_name: &str,
         force_fetch: &bool,
     ) -> Result<ExitCode> {
@@ -258,7 +258,7 @@ impl PrefetchCmd {
     async fn activate_predictive(
         &self,
         instance: EdenFsInstance,
-        options: &CommonOptions,
+        options: &ActivationOptions,
         num_dirs: u32,
     ) -> Result<ExitCode> {
         let checkout_path = match &options.checkout {
@@ -329,7 +329,7 @@ impl PrefetchCmd {
     async fn deactivate(
         &self,
         instance: EdenFsInstance,
-        options: &CommonOptions,
+        options: &ActivationOptions,
         profile_name: &str,
     ) -> Result<ExitCode> {
         let checkout_path = match &options.checkout {
@@ -366,7 +366,7 @@ impl PrefetchCmd {
     async fn deactivate_predictive(
         &self,
         instance: EdenFsInstance,
-        options: &CommonOptions,
+        options: &ActivationOptions,
     ) -> Result<ExitCode> {
         let checkout_path = match &options.checkout {
             Some(p) => p.clone(),
