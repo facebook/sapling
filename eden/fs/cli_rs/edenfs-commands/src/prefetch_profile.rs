@@ -257,9 +257,12 @@ impl PrefetchCmd {
 
         #[cfg(fbcode_build)]
         let mut sample = {
-            let _fb = expect_init();
-            let mut sample = PrefetchProfileSample::build(_fb);
-            sample.set_activate_event(profile_name, client_name.as_str(), options.skip_prefetch);
+            let sample = PrefetchProfileSample::activate_event(
+                expect_init(),
+                profile_name,
+                client_name.as_str(),
+                options.skip_prefetch,
+            );
             sample
         };
 
@@ -323,9 +326,8 @@ impl PrefetchCmd {
 
         #[cfg(fbcode_build)]
         let mut sample = {
-            let _fb = expect_init();
-            let mut sample = PrefetchProfileSample::build(_fb);
-            sample.set_activate_predictive_event(
+            let sample = PrefetchProfileSample::activate_predictive_event(
+                expect_init(),
                 client_name.as_str(),
                 options.skip_prefetch,
                 num_dirs,
@@ -393,9 +395,11 @@ impl PrefetchCmd {
 
         #[cfg(fbcode_build)]
         let mut sample = {
-            let _fb = expect_init();
-            let mut sample = PrefetchProfileSample::build(_fb);
-            sample.set_deactivate_event(profile_name, client_name.as_str());
+            let sample = PrefetchProfileSample::deactivate_event(
+                expect_init(),
+                profile_name,
+                client_name.as_str(),
+            );
             sample
         };
 
@@ -429,9 +433,10 @@ impl PrefetchCmd {
 
         #[cfg(fbcode_build)]
         let mut sample = {
-            let _fb = expect_init();
-            let mut sample = PrefetchProfileSample::build(_fb);
-            sample.set_deactivate_predictive_event(client_name.as_str());
+            let sample = PrefetchProfileSample::deactivate_predictive_event(
+                expect_init(),
+                client_name.as_str(),
+            );
             sample
         };
 
