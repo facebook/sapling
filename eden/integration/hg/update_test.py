@@ -712,6 +712,7 @@ class UpdateTest(EdenHgTestCase):
         self.repo.update(commit4)
 
     if sys.platform != "win32":
+
         def test_resume_interrupted_update(self) -> None:
             """
             Test resuming a hg checkout after Eden was killed mid-checkout
@@ -768,7 +769,8 @@ class UpdateTest(EdenHgTestCase):
                 self.repo.update(middle)
             except hgrepo.HgError as ex:
                 self.assertTrue(
-                    "a previous checkout was interrupted - please 'hg checkout" in str(ex)
+                    "a previous checkout was interrupted - please 'hg checkout"
+                    in str(ex)
                 )
             else:
                 self.fail(
