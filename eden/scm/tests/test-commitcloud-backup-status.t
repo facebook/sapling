@@ -136,13 +136,13 @@ Check smartlog summary with multiple unbacked up changesets
   $ hg smartlog -T '{desc}\n' --config infinitepushbackup.autobackup=yes
   o  Public changeset 2
   │
-  │ @  Not backed up changeset 2
+  │ o  Backup pending changeset
   │ │
-  │ │ o  Backup pending changeset
-  │ │ │
-  │ │ o  Not backed up changeset
-  │ │ │
-  │ │ o  Backed up changeset 2
+  │ o  Not backed up changeset
+  │ │
+  │ o  Backed up changeset 2
+  │ │
+  │ │ @  Not backed up changeset 2
   │ ├─╯
   │ o  Backed up changeset
   ├─╯
@@ -191,13 +191,13 @@ Test sl when infinitepushbackup is disabled but disabling has been expired / not
   │
   o  Public changeset 2
   │
-  │ o  Not backed up changeset 2
+  │ o  Backup pending changeset
   │ │
-  │ │ o  Backup pending changeset
-  │ │ │
-  │ │ o  Not backed up changeset
-  │ │ │
-  │ │ o  Backed up changeset 2
+  │ o  Not backed up changeset
+  │ │
+  │ o  Backed up changeset 2
+  │ │
+  │ │ o  Not backed up changeset 2
   │ ├─╯
   │ o  Backed up changeset
   ├─╯
@@ -216,13 +216,13 @@ Advance time so that the disable has expired
   │
   o  Public changeset 2
   │
-  │ o  Not backed up changeset 2
+  │ o  Backup pending changeset
   │ │
-  │ │ o  Backup pending changeset
-  │ │ │
-  │ │ o  Not backed up changeset
-  │ │ │
-  │ │ o  Backed up changeset 2
+  │ o  Not backed up changeset
+  │ │
+  │ o  Backed up changeset 2
+  │ │
+  │ │ o  Not backed up changeset 2
   │ ├─╯
   │ o  Backed up changeset
   ├─╯
@@ -278,13 +278,13 @@ show as backed up if '--hidden' is passed.
   ├─╯
   o  Public changeset 2
   │
-  │ o  Not backed up changeset 2
+  │ o  Backup pending changeset
   │ │
-  │ │ o  Backup pending changeset
-  │ │ │
-  │ │ o  Not backed up changeset
-  │ │ │
-  │ │ o  Backed up changeset 2
+  │ o  Not backed up changeset
+  │ │
+  │ o  Backed up changeset 2
+  │ │
+  │ │ o  Not backed up changeset 2
   │ ├─╯
   │ o  Backed up changeset
   ├─╯

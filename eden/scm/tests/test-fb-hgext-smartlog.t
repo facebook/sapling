@@ -87,12 +87,12 @@ As a revset
 With --master
 
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' --master 'desc(a2)'
-  o  49cdb4091aca feature1 b
+  @  05d10250273e feature2 d
   │
-  │ @  05d10250273e feature2 d
-  │ │
-  │ o  38d85b506754 master c2
-  ├─╯
+  o  38d85b506754 master c2
+  ╷
+  ╷ o  49cdb4091aca feature1 b
+  ╭─╯
   o  b68836a6e2ca  a2
   │
   ~
@@ -234,6 +234,10 @@ Test with two unrelated histories
   $ touch u2 && hg add u2 && hg ci -mu2
 
   $ hg smartlog  -T '{node|short} {bookmarks} {desc}'
+  @  806aaef35296  u2
+  │
+  o  8749dc393678  u1
+  
   o  05d10250273e feature2 d
   │
   o  38d85b506754 master c2
@@ -245,11 +249,6 @@ Test with two unrelated histories
   o  b68836a6e2ca  a2
   │
   ~
-  
-  @  806aaef35296  u2
-  │
-  o  8749dc393678  u1
-  
 
 
 A draft stack at the top
@@ -306,15 +305,15 @@ Add other draft stacks
   $ echo 2 > b
   $ hg ci -A b -m b -q
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' --all --config smartlog.indentnonpublic=1
-    o  a60fccdcd9e9  a
+    @  401cd6213b51  b
     │
-    o  8d92afe5abfd  a
+    │ o  2dc09a01254d  r3
+    ├─╯
+    o  01241442b3c2  r2
   ╭─╯
-  │ @  401cd6213b51  b
+  │ o  a60fccdcd9e9  a
   │ │
-  │ │ o  2dc09a01254d  r3
-  │ ├─╯
-  │ o  01241442b3c2  r2
+  │ o  8d92afe5abfd  a
   ├─╯
   o  66f7d451a68b master r1
   │
