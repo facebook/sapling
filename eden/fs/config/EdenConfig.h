@@ -651,7 +651,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> enableActivityBuffer{
       "telemetry:enable-activitybuffer",
-      false,
+      true,
       this};
 
   /**
