@@ -558,7 +558,7 @@ TEST(TreeInode, addNewMaterializationsToInodeTraceBus) {
   EXPECT_FALSE(queue.try_dequeue_for(materializationTimeoutLimit).has_value());
 }
 
-TEST(TreeInode, getOrFindChildren) {
+TEST(TreeInode, getOrFindChildrenSimple) {
   FakeTreeBuilder builder;
   builder.setFile("somedir/foo.txt", "test\n");
   TestMount mount{builder};
@@ -566,18 +566,31 @@ TEST(TreeInode, getOrFindChildren) {
 
   auto result =
       somedir->getChildren(ObjectFetchContext::getNullContext(), false);
-
   EXPECT_EQ(1, result.size());
   EXPECT_THAT(result, testing::Contains(testing::Key("foo.txt"_pc)));
+}
 
+TEST(TreeInode, getOrFindChildrenMaterializedLoadedChild) {
+  FakeTreeBuilder builder;
+  builder.setFile("somedir/foo.txt", "test\n");
+  TestMount mount{builder};
+  auto somedir = mount.getTreeInode("somedir"_relpath);
   somedir->mknod("newfile.txt"_pc, S_IFREG | 0740, 0, InvalidationRequired::No);
 
-  auto result2 =
+  auto result =
       somedir->getChildren(ObjectFetchContext::getNullContext(), false);
 
-  EXPECT_EQ(2, result2.size());
-  EXPECT_THAT(result2, testing::Contains(testing::Key("foo.txt"_pc)));
-  EXPECT_THAT(result2, testing::Contains(testing::Key("newfile.txt"_pc)));
+  EXPECT_EQ(2, result.size());
+  EXPECT_THAT(result, testing::Contains(testing::Key("foo.txt"_pc)));
+  EXPECT_THAT(result, testing::Contains(testing::Key("newfile.txt"_pc)));
+}
+
+TEST(TreeInode, getOrFindChildrenRemovedChild) {
+  FakeTreeBuilder builder;
+  builder.setFile("somedir/foo.txt", "test\n");
+  TestMount mount{builder};
+  auto somedir = mount.getTreeInode("somedir"_relpath);
+  somedir->mknod("newfile.txt"_pc, S_IFREG | 0740, 0, InvalidationRequired::No);
 
   somedir
       ->unlink(
@@ -586,13 +599,13 @@ TEST(TreeInode, getOrFindChildren) {
           ObjectFetchContext::getNullContext())
       .get();
 
-  auto result3 =
+  auto result =
       somedir->getChildren(ObjectFetchContext::getNullContext(), false);
 
-  EXPECT_EQ(1, result3.size());
+  EXPECT_EQ(1, result.size());
   EXPECT_THAT(
-      result3, testing::Not(testing::Contains(testing::Key("foo.txt"_pc))));
-  EXPECT_THAT(result3, testing::Contains(testing::Key("newfile.txt"_pc)));
+      result, testing::Not(testing::Contains(testing::Key("foo.txt"_pc))));
+  EXPECT_THAT(result, testing::Contains(testing::Key("newfile.txt"_pc)));
 }
 
 #endif

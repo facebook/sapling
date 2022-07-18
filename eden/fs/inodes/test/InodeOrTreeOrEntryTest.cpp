@@ -582,41 +582,55 @@ TEST(InodeOrTreeOrEntryTest, findDoesNotChangeState) {
   VERIFY_TREE(flags);
 }
 
-TEST(InodeOrTreeOrEntryTest, getChildren) {
+void testRootDirAChildren(TestMount& mount) {
+  auto inodeOr = mount.getInodeOrTreeOrEntry(RelativePathPiece{"root_dirA"});
+  EXPECT_TRUE(inodeOr.isDirectory());
+
+  auto children = inodeOr.getChildren(
+      RelativePathPiece{"root_dirA"},
+      mount.getEdenMount()->getObjectStore(),
+      ObjectFetchContext::getNullContext());
+  EXPECT_EQ(2, children.value().size());
+  EXPECT_THAT(
+      children.value(), testing::Contains(testing::Key("child1_fileA1"_pc)));
+  EXPECT_THAT(
+      children.value(), testing::Contains(testing::Key("child1_fileA2"_pc)));
+}
+
+TEST(InodeOrTreeOrEntryTest, getChildrenSimple) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
   auto mount = TestMount{MakeTestTreeBuilder(files)};
   VERIFY_TREE(flags);
 
-  auto test_root_dir_a_children = [&mount]() {
-    auto inodeOr = mount.getInodeOrTreeOrEntry(RelativePathPiece{"root_dirA"});
-    EXPECT_TRUE(inodeOr.isDirectory());
+  testRootDirAChildren(mount);
+  VERIFY_TREE_DEFAULT();
+}
 
-    auto children = inodeOr.getChildren(
-        RelativePathPiece{"root_dirA"},
-        mount.getEdenMount()->getObjectStore(),
-        ObjectFetchContext::getNullContext());
-    EXPECT_EQ(2, children.value().size());
-    EXPECT_THAT(
-        children.value(), testing::Contains(testing::Key("child1_fileA1"_pc)));
-    EXPECT_THAT(
-        children.value(), testing::Contains(testing::Key("child1_fileA2"_pc)));
-  };
-
-  test_root_dir_a_children();
-
+TEST(InodeOrTreeOrEntryTest, getLoaded) {
+  TestFileDatabase files;
+  auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
+  auto mount = TestMount{MakeTestTreeBuilder(files)};
+  VERIFY_TREE(flags);
   // load inode
   mount.getInode(RelativePathPiece{"root_dirA"});
-  test_root_dir_a_children();
+  files.setFlags(RelativePathPiece{"root_dirA"}, FLAG_L);
+  testRootDirAChildren(mount);
+  VERIFY_TREE_DEFAULT();
+}
 
+TEST(InodeOrTreeOrEntryTest, getChildrenMaterialized) {
+  TestFileDatabase files;
+  auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
+  auto mount = TestMount{MakeTestTreeBuilder(files)};
+  VERIFY_TREE(flags);
   // materialize inode
   std::string path = "root_dirA/child1_fileA1";
   std::string newContents = path + "~newContent";
   mount.overwriteFile(folly::StringPiece{path}, newContents);
   files.setContents(RelativePathPiece{path}, newContents);
 
-  test_root_dir_a_children();
-
+  testRootDirAChildren(mount);
   VERIFY_TREE_DEFAULT();
 }
 
