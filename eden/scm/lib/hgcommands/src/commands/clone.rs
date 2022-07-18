@@ -9,6 +9,7 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
+use anyhow::Context;
 use async_runtime::block_unless_interrupted as block_on;
 use clidispatch::abort;
 use clidispatch::abort_if;
@@ -22,6 +23,7 @@ use repo::constants::HG_PATH;
 use repo::repo::Repo;
 use tracing::instrument;
 use types::HgId;
+use util::path::absolute;
 
 use super::ConfigSet;
 use super::Result;
@@ -193,7 +195,7 @@ pub fn run(
     };
 
     let destination = match clone_opts.args.pop() {
-        Some(dest) => PathBuf::from(dest),
+        Some(dest) => absolute(dest).with_context(|| "Cannot get absolute destination path")?,
         None => {
             abort_if!(
                 configparser::hg::is_plain(Some("default_clone_dir")),

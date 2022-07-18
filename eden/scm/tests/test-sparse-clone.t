@@ -27,7 +27,7 @@ Verify local clone with a sparse profile works
 
   $ cd $TESTTMP
   $ hg clone --enable-profile webpage.sparse test:e1 clone1
-  Cloning * into clone1 (glob)
+  Cloning * into $TESTTMP/clone1 (glob)
   Checking out 'master'
   1 files updated
   $ cd clone1
@@ -38,7 +38,7 @@ Verify local clone with a sparse profile works
 Verify sparse clone with a non-existing sparse profile warns
 
   $ hg clone --enable-profile nonexisting.sparse test:e1 clone5
-  Cloning reponame-default into clone5
+  Cloning * into $TESTTMP/clone5 (glob)
   Checking out 'master'
   The profile 'nonexisting.sparse' does not exist. Check out a commit where it exists, or remove it with 'hg sparse disableprofile'.
   5 files updated
