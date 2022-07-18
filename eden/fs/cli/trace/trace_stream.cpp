@@ -34,6 +34,7 @@ DEFINE_bool(
 
 namespace {
 constexpr auto kTimeout = std::chrono::seconds{1};
+constexpr int kStartingInodeWidth = 5;
 static const auto kTreeEmoji = reinterpret_cast<const char*>(u8"\U0001F332");
 static const auto kBlobEmoji = reinterpret_cast<const char*>(u8"\U0001F954");
 static const auto kDashedArrowEmoji = reinterpret_cast<const char*>(u8"\u21E3");
@@ -456,7 +457,9 @@ int trace_thrift(
   return 0;
 }
 
-void format_trace_inode_event(facebook::eden::InodeEvent& event) {
+void format_trace_inode_event(
+    facebook::eden::InodeEvent& event,
+    int inode_width) {
   // Convert from ns to seconds
   time_t seconds = (*event.times()->timestamp()) / 1000000000;
   struct tm time_buffer;
@@ -472,16 +475,22 @@ void format_trace_inode_event(facebook::eden::InodeEvent& event) {
   }
   auto milliseconds = *event.times()->timestamp() / 1000 % 1000000;
   fmt::print(
-      "{} {}.{:0>6}  {:<5} {}    {}      {}\n",
+      "{} {}.{:0>6}  {:<{}} {}    {}      {}\n",
       kInodeProgresses.at(*event.progress()),
       formattedTime,
       milliseconds,
       *event.ino(),
+      inode_width,
       *event.inodeType() == InodeType::TREE ? kTreeEmoji : kBlobEmoji,
       kInodeEventTypes.at(*event.eventType()),
       *event.progress() == InodeEventProgress::END
           ? formatMicrosecondTime(*event.duration())
           : "");
+}
+
+int getNumberOfDigits(int i) {
+  // casting a double to an int is equivalent to floor() for positive numbers
+  return i > 0 ? log10((double)i) + 1 : 1;
 }
 
 int trace_inode(
@@ -495,14 +504,16 @@ int trace_inode(
           .via(evbThread.getEventBase())
           .get();
 
+  int inode_width = kStartingInodeWidth;
+
   std::move(traceInodeStream)
       .subscribeInline([&](folly::Try<InodeEvent>&& event) {
         if (event.hasException()) {
           fmt::print("Error: {}\n", folly::exceptionStr(event.exception()));
           return;
         }
-
-        format_trace_inode_event(event.value());
+        inode_width = std::max(inode_width, getNumberOfDigits(*event->ino()));
+        format_trace_inode_event(event.value(), inode_width);
       });
   return 0;
 }
@@ -527,11 +538,23 @@ int trace_inode_retroactive(
             });
 
         fmt::print("Last {} inode events\n", events.size());
-        std::string_view header =
-            "  Timestamp                   Ino   Type  Event  Duration "sv;
+
+        int max_inode =
+            *std::max_element(
+                 events.begin(),
+                 events.end(),
+                 [](const auto& a, const auto& b) { return a.ino() < b.ino(); })
+                 ->ino();
+        int inode_width =
+            std::max(kStartingInodeWidth, getNumberOfDigits(max_inode));
+
+        std::string header = fmt::format(
+            "  Timestamp                   {:<{}} Type  Event  Duration ",
+            "Ino",
+            inode_width);
         fmt::print("{}\n{}\n", header, std::string(header.size(), '-'));
         for (auto& event : events) {
-          format_trace_inode_event(event);
+          format_trace_inode_event(event, inode_width);
         }
         fmt::print("{}\n", std::string(header.size(), '-'));
       })
