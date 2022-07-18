@@ -154,6 +154,12 @@ py_class!(pub class dagalgo |py| {
         Self::from_dag(py, dag)
     }
 
+    /// Extract a subdag from the graph.
+    def subdag(&self, set: Names) -> PyResult<Self> {
+        let dag = block_on(self.dag(py).subdag(set.0)).map_pyerr(py)?;
+        Self::from_dag(py, dag)
+    }
+
     /// Render the graph into an ASCII string.
     def render(&self, getmessage: Option<PyObject> = None) -> PyResult<Str> {
         let get_message = move |vertex: &Vertex| -> Option<String> {
