@@ -151,7 +151,7 @@ class EdenTestCase(EdenTestCaseBase):
 
         self.eden.start()
         # Store a lambda in case self.eden is replaced during the test.
-        self.addCleanup(lambda: self.eden.cleanup)
+        self.addCleanup(lambda: self.eden.cleanup())
         self.report_time("eden daemon started")
 
         self.mount = os.path.join(self.mounts_dir, "main")
