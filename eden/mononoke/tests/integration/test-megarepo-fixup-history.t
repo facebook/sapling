@@ -106,11 +106,19 @@ Start mononoke server
   $ hg log -f fbcode/file_with_correct_history -T "{node} {desc}\n"
   835251f7cda8fd1adddf414ce67d58090897e93a master commit 1
 
-  $ hg log -G -T "{desc} [{phase};{node|short}] {remotenames}" -r 'desc("master commit 1")::.' | sed '$d'
+  $ hg debugchangelog --migrate fullsegments
+  $ hg log -G -T "{desc} [{phase};{node|short}] {remotenames}" -r 'sort(::.,-topo,topo.firstbranch=desc("master commit"))' | sed '$d'
   @    history fixup [public;dcacf3dd28f1] default/master
   ├─╮
+  │ o  [MEGAREPO DELETE] history fixup (1) [public;d3b2dfc1d7dc]
   │ │
-  │ ~
+  │ o  [MEGAREPO DELETE] history fixup (0) [public;c2a5523610c4]
+  │ │
+  │ o  small repo commit 3 [public;ea8595b036ed]
+  │ │
+  │ o  small repo commit 2 [corrected history] [public;6c017a8ba0a6]
+  │ │
+  │ o  small repo commit 1 [public;11fbaaa53e1b]
   │
   o  [MEGAREPO DELETE] history fixup (0) [public;94932f105be0]
   │
@@ -119,19 +127,3 @@ Start mononoke server
   o  commit commit 2 [incorrect history] [public;4f27e05b6e2a]
   │
   o  master commit 1 [public;835251f7cda8]
-
-  $ hg log -G -T "{desc} [{phase};{node|short}] {remotenames}" -r 'desc("small repo commit 1")::.' | sed '$d'
-  @    history fixup [public;dcacf3dd28f1] default/master
-  ├─╮
-  │ │
-  │ ~
-  │
-  o  [MEGAREPO DELETE] history fixup (1) [public;d3b2dfc1d7dc]
-  │
-  o  [MEGAREPO DELETE] history fixup (0) [public;c2a5523610c4]
-  │
-  o  small repo commit 3 [public;ea8595b036ed]
-  │
-  o  small repo commit 2 [corrected history] [public;6c017a8ba0a6]
-  │
-  o  small repo commit 1 [public;11fbaaa53e1b]
