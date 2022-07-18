@@ -256,13 +256,13 @@ Tests for hg cloud sl
   o  e0a850 (public)  2018-06-05 16:31 +0000
   ╷  some commit
   ╷
-  ╷ o  786c1d  Test User 2018-05-23 18:02 +0000
+  ╷ o  d78d6e  Test User 2018-05-23 18:02 +0000
   ╭─╯  some commit
   │
   │ o  834264  Test User 2018-05-23 18:02 +0000
   ├─╯  some commit
   │
-  │ o  d78d6e  Test User 2018-05-23 18:02 +0000
+  │ o  786c1d  Test User 2018-05-23 18:02 +0000
   ├─╯  some commit
   │
   o  7e1ae2 (public)  2018-05-23 16:51 +0000
@@ -715,10 +715,10 @@ Tests for hg cloud sl
   o  944f52 (public)  2018-06-27 21:05 +0000
   ╷  some commit
   ╷
-  ╷ o  20917a  Test User 2018-06-27 23:47 +0000
+  ╷ o  39dbb5  Test User 2018-06-28 00:03 +0000
   ╭─╯  some commit
   │
-  │ o  39dbb5  Test User 2018-06-28 00:03 +0000
+  │ o  20917a  Test User 2018-06-27 23:47 +0000
   ├─╯  some commit
   │
   o  c64f72 (public)  2018-06-26 20:45 +0000
@@ -1190,10 +1190,10 @@ Tests for hg cloud sl
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
-    o  2711a3  Test User 2018-07-24 20:53 +0000
+    o  8acf52  Test User 2018-07-24 20:53 +0000
   ╭─╯  some commit
   │
-  │ o  8acf52  Test User 2018-07-24 20:53 +0000
+  │ o  2711a3  Test User 2018-07-24 20:53 +0000
   ├─╯  some commit
   │
   o  3bfb42 (public)  2018-07-24 15:19 +0000
@@ -1214,10 +1214,10 @@ Tests for hg cloud sl
   o  91514f (public)  2018-07-19 15:13 +0000
   ╷  some commit
   ╷
-  ╷ o  737b4b  Test User 2018-06-19 22:20 +0000
+  ╷ o  9a3e9e  Test User 2018-06-19 21:25 +0000
   ╭─╯  some commit
   │
-  │ o  9a3e9e  Test User 2018-06-19 21:25 +0000
+  │ o  737b4b  Test User 2018-06-19 22:20 +0000
   ├─╯  some commit
   │
   o  f7b43d (public)  2018-06-18 23:35 +0000

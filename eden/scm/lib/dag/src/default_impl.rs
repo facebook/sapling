@@ -7,11 +7,8 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::future::Future;
 use std::sync::Arc;
 
-use futures::future::BoxFuture;
-use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
 
@@ -21,6 +18,7 @@ use crate::ops::DagAddHeads;
 use crate::ops::IdConvert;
 use crate::ops::IdDagAlgorithm;
 use crate::ops::Parents;
+use crate::utils;
 use crate::DagAlgorithm;
 use crate::Id;
 use crate::IdSet;
@@ -29,6 +27,8 @@ use crate::Result;
 use crate::VertexName;
 
 /// Re-create the graph so it looks better when rendered.
+///
+/// See `utils::beautify_graph` for details.
 ///
 /// For example, the left-side graph will be rewritten to the right-side:
 ///
@@ -78,110 +78,49 @@ use crate::VertexName;
 /// ```
 ///
 /// `main_branch` optionally defines how to sort the heads. A head `x` will
-/// be emitted first during iteration, if `ancestors(x) & main_branch`
-/// contains larger vertexes. For example, if `main_branch` is `[C, D, E]`,
-/// then `C` will be emitted first, and the returned DAG will have `all()`
-/// output `[C, D, A, B, E]`. Practically, `main_branch` usually contains
-/// "public" commits.
+/// be emitted first during iteration, if `x` is in `main_branch`.
 ///
 /// This function is expensive. Only run on small graphs.
-///
-/// This function is currently more optimized for "forking" cases. It is
-/// not yet optimized for graphs with many merges.
 pub(crate) async fn beautify(
     this: &(impl DagAlgorithm + ?Sized),
     main_branch: Option<NameSet>,
 ) -> Result<MemNameDag> {
-    // Find the "largest" branch.
-    async fn find_main_branch<F, O>(get_ancestors: &F, heads: &[VertexName]) -> Result<NameSet>
-    where
-        F: Fn(&VertexName) -> O,
-        F: Send,
-        O: Future<Output = Result<NameSet>>,
-        O: Send,
-    {
-        let mut best_branch = NameSet::empty();
-        let mut best_count = best_branch.count().await?;
-        for head in heads {
-            let branch = get_ancestors(head).await?;
-            let count = branch.count().await?;
-            if count > best_count {
-                best_count = count;
-                best_branch = branch;
-            }
-        }
-        Ok(best_branch)
-    }
-
-    // Sort heads recursively.
-    // Cannot use "async fn" due to rustc limitation on async recursion.
-    fn sort<'a: 't, 'b: 't, 't, F, O>(
-        get_ancestors: &'a F,
-        heads: &'b mut [VertexName],
-        main_branch: NameSet,
-    ) -> BoxFuture<'t, Result<()>>
-    where
-        F: Fn(&VertexName) -> O,
-        F: Send + Sync,
-        O: Future<Output = Result<NameSet>>,
-        O: Send,
-    {
-        let fut = async move {
-            if heads.len() <= 1 {
-                return Ok(());
-            }
-
-            // Sort heads by "branching point" on the main branch.
-            let mut branching_points: HashMap<VertexName, usize> =
-                HashMap::with_capacity(heads.len());
-
-            for head in heads.iter() {
-                let count = (get_ancestors(head).await? & main_branch.clone())
-                    .count()
-                    .await?;
-                branching_points.insert(head.clone(), count);
-            }
-            heads.sort_by_key(|v| branching_points.get(v));
-
-            // For heads with a same branching point, sort them recursively
-            // using a different "main branch".
-            let mut start = 0;
-            let mut start_branching_point: Option<usize> = None;
-            for end in 0..=heads.len() {
-                let branching_point = heads
-                    .get(end)
-                    .and_then(|h| branching_points.get(&h).cloned());
-                if branching_point != start_branching_point {
-                    if start + 1 < end {
-                        let heads = &mut heads[start..end];
-                        let main_branch = find_main_branch(get_ancestors, heads).await?;
-                        // "boxed" is used to workaround async recursion.
-                        sort(get_ancestors, heads, main_branch).boxed().await?;
-                    }
-                    start = end;
-                    start_branching_point = branching_point;
-                }
-            }
-
-            Ok(())
-        };
-        Box::pin(fut)
-    }
-
-    let main_branch = main_branch.unwrap_or_else(NameSet::empty);
-    let heads = this
-        .heads_ancestors(this.all().await?)
-        .await?
+    // Prepare input for utils::beautify_graph.
+    // Maintain usize <-> Vertex map. Also fetch the Vertex <-> Id mapping (via all.iter).
+    let all = this.all().await?;
+    let usize_to_vertex: Vec<VertexName> = all.iter_rev().await?.try_collect().await?;
+    let vertex_to_usize: HashMap<VertexName, usize> = usize_to_vertex
         .iter()
-        .await?;
-    let mut heads: Vec<_> = heads.try_collect().await?;
-    let get_ancestors = |head: &VertexName| this.ancestors(head.into());
-    // Stabilize output if the sort key conflicts.
-    heads.sort();
-    sort(&get_ancestors, &mut heads[..], main_branch).await?;
+        .enumerate()
+        .map(|(i, v)| (v.clone(), i))
+        .collect();
+    let mut priorities = Vec::new();
+    let main_branch = main_branch.unwrap_or_else(NameSet::empty);
 
+    let mut parents_vec = Vec::with_capacity(usize_to_vertex.len());
+    for (i, vertex) in usize_to_vertex.iter().enumerate() {
+        if main_branch.contains(&vertex).await? {
+            priorities.push(i);
+        }
+        let parent_vertexes = this.parent_names(vertex.clone()).await?;
+        let parent_usizes: Vec<usize> = parent_vertexes
+            .iter()
+            .filter_map(|p| vertex_to_usize.get(p))
+            .copied()
+            .collect();
+        parents_vec.push(parent_usizes);
+    }
+
+    // Call utils::beautify_graph.
+    let sorted = utils::beautify_graph(&parents_vec, &priorities);
+
+    // Recreate the graph using the given order.
     let mut dag = MemNameDag::new();
-    dag.add_heads(&this.dag_snapshot()?, &heads.into()).await?;
+    let snapshot = this.dag_snapshot()?;
+    for i in sorted.into_iter().rev() {
+        let heads: Vec<VertexName> = vec![usize_to_vertex[i].clone()];
+        dag.add_heads(&snapshot, &heads.into()).await?;
+    }
     Ok(dag)
 }
 
