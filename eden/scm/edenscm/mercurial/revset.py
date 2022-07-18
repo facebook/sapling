@@ -2286,8 +2286,17 @@ def sort(repo, subset, x, order):
         firstbranch = ()
         if "topo.firstbranch" in opts:
             firstbranch = getset(repo, subset, opts["topo.firstbranch"])
+        cl = repo.changelog
+        # XXX: Some tests are not using segments backend
+        if cl.algorithmbackend == "segments":
+            dag = cl.dag
+            subdag = dag.subdag(cl.tonodes(revs))
+            subdag = subdag.beautify(dag.ancestors(cl.tonodes(firstbranch)))
+            revlist = list(map(cl.rev, subdag.all().iter()))
+        else:
+            revlist = dagop.toposort(revs, cl.parentrevs, firstbranch)
         revs = baseset(
-            dagop.toposort(revs, repo.changelog.parentrevs, firstbranch),
+            revlist,
             istopo=True,
             repo=repo,
         )
