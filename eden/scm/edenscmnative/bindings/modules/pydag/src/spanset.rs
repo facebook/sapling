@@ -152,25 +152,21 @@ impl<'a> FromPyObject<'a> for Spans {
             return Ok(Spans(pyset.inner(py).clone()));
         }
 
-        // Try to call `sort(reverse=True)` on the object.
-        // - Python smartset.baseset has sort(reverse=False) API.
-        // - The Rust IdSet is always sorted in reverse order internally.
-        // - Most Python lazy smartsets (smartset.generatorset) are sorted in reverse order.
-        if let Ok(sort) = obj.getattr(py, "sort") {
-            let args = PyDict::new(py);
-            args.set_item(py, "reverse", true)?;
-            sort.call(py, NoArgs, Some(&args))?;
-        }
-
         // Then iterate through obj and collect all ids.
         // Collecting ids to a Vec first to preserve error handling.
         let ids: PyResult<Vec<Id>> = obj
             .iter(py)?
-            .map(|o| Ok(o?.extract::<i64>(py)?))
+            .map(|o| Ok(o?.extract::<Option<i64>>(py)?))
             .filter_map(|o| match o {
-                Ok(i) => {
+                // Skip "None" (wdir?) automatically.
+                Ok(None) => None,
+                Ok(Some(i)) => {
                     // Skip "nullrev" automatically.
-                    if i >= 0 { Some(Ok(Id(i as u64))) } else { None }
+                    if i >= 0 {
+                        Some(Ok(Id(i as u64)))
+                    } else {
+                        None
+                    }
                 }
                 Err(e) => Some(Err(e)),
             })

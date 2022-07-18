@@ -35,11 +35,11 @@ Continue repo setup
   $ hg log -G -T "{node|short} {bookmarks} {desc}" -r 'sort(:, topo)'
   @  db92053d5c83 feature2 d
   │
+  o  38d85b506754 master c2
+  │
+  o  ec7553f7b382  c1
+  │
   │ o  49cdb4091aca feature1 b
-  │ │
-  o │  38d85b506754 master c2
-  │ │
-  o │  ec7553f7b382  c1
   ├─╯
   o  b68836a6e2ca  a2
   │

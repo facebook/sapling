@@ -111,12 +111,15 @@ should fail
   ? a.orig
 
 wdir doesn't cause a crash, and can be dynamically selected if dirty
-XXX: This does not work with Rust revset backend. Planned fix is to add virtual
-nodes to the Rust commit graph in a different way.
+XXX: Rust revset backend drops "wdir()". Planned fix is to add virtual
+nodes to the Rust commit graph on the fly.
 
   $ hg log -r "heads(. or wdir() & file('**'))"
-  abort: 2147483647 cannot be found!
-  [255]
+  commit:      * (glob)
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
 
 should fail
 

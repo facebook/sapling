@@ -1459,7 +1459,7 @@ def _matchfiles(repo, subset, x):
     wdirrev = node.wdirrev
 
     def matches(x):
-        if x == wdirrev:
+        if x == wdirrev or x is None:
             files = repo[x].files()
         else:
             files = getfiles(x)
