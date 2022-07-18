@@ -114,8 +114,7 @@ pub fn parse(text: &str) -> BTreeMap<String, BTreeSet<String>> {
         let mut parents = Vec::new();
         let mut visited = HashSet::new();
         let mut visit = |state: State, to_visit: &mut Vec<State>| {
-            if !visited.contains(&state) {
-                visited.insert(state);
+            if visited.insert(state) {
                 let y = state.y;
                 let x = state.x;
                 let expected = state.expected;

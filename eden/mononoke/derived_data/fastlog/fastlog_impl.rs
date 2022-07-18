@@ -112,8 +112,7 @@ fn create_merged_list(
         for p in parents {
             if let FastlogParent::Known(p) = p {
                 if let Some(parents) = cs_id_to_parents.get(&p) {
-                    if !used.contains(&p) {
-                        used.insert(p);
+                    if used.insert(p) {
                         q.push_back((p, parents.clone()));
                     }
                 }
