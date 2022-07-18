@@ -60,6 +60,7 @@ const ARG_TITLE: &str = "TITLE";
 const ARG_TITLE_WIDTH: &str = "TITLE_WIDTH";
 const ARG_COMMIT_NUMBER: &str = "COMMIT_NUMBER";
 const ARG_NO_COMMIT_ID: &str = "NO_COMMIT_ID";
+const ARG_FOLLOW_MUTABLE_HISTORY: &str = "FOLLOW_MUTABLE_HISTORY";
 
 const DEFAULT_TITLE_WIDTH: usize = 32;
 const DEFAULT_TITLE_WIDTH_STR: &str = "32";
@@ -428,6 +429,7 @@ pub(super) async fn run(
             thrift::BlameFormatOption::INCLUDE_PARENT,
             thrift::BlameFormatOption::INCLUDE_COMMIT_NUMBERS,
         }),
+        follow_mutable_file_history: Some(matches.is_present(ARG_FOLLOW_MUTABLE_HISTORY)),
         ..Default::default()
     };
     let response = connection
@@ -517,5 +519,11 @@ fn add_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
         Arg::with_name(ARG_NO_COMMIT_ID)
             .long("no-commit-id")
             .help("Do not show commit ids"),
+    )
+    .arg(
+        Arg::with_name(ARG_FOLLOW_MUTABLE_HISTORY)
+            .short("M")
+            .long("follow-mutable-history")
+            .help("Follow mutable history when blaming the input path"),
     )
 }
