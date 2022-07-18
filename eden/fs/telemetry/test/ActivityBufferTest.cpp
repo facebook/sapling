@@ -8,8 +8,10 @@
 #include "eden/fs/telemetry/ActivityBuffer.h"
 #include <folly/portability/GTest.h>
 
-constexpr uint32_t kMaxBufLength = 10;
 using namespace facebook::eden;
+namespace {
+
+constexpr uint32_t kMaxBufLength = 10;
 
 bool buffer_contains_event_with_ino(ActivityBuffer& buff, InodeNumber ino) {
   auto events = buff.getAllEvents();
@@ -27,6 +29,8 @@ InodeTraceEvent create_inode_trace_event(InodeNumber ino) {
       InodeEventProgress::END,
       std::chrono::microseconds(1000)};
 }
+
+} // namespace
 
 TEST(ActivityBufferTest, initialize_buffer) {
   ActivityBuffer buff(kMaxBufLength);
