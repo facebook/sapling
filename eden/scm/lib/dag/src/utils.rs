@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::collections::VecDeque;
 use std::sync::Mutex;
 
 use futures::future::BoxFuture;
@@ -176,6 +177,106 @@ pub async fn filter_known<'a>(
     Ok(known)
 }
 
+/// Produce an order of "nodes" in a graph for cleaner graph output.
+/// For example, turn:
+///
+/// ```plain,ignore
+/// 0-1---3---5---7---9---11--12
+///             / \
+///    2---4---6   8---10
+/// # [12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+/// ```
+///
+/// into:
+///
+/// ```plain,ignore
+/// 0-1-3-5-------7------9-11-12
+///              / \
+///         2-4-6   8-10
+/// # [12, 11, 9, 10, 8, 7, 6, 4, 2, 5, 3, 1, 0]
+/// ```
+///
+/// This function takes a slice of integers as graph "nodes". The callsite
+/// should maintain mapping between the integers and real graph "nodes"
+/// (vertexes, ids, etc.).
+///
+/// The algorithm works by DFSing from roots to heads following the
+/// parent->child edges. It was originally implemented in `smartlog.py`.
+///
+/// By default, longer branches get output first (for a fork), or last (for a
+/// merge). This makes a typical vertical graph rendering algorithm more
+/// likely put longer branches in the first column, result in less indentation
+/// overall. This can be overridden by `priorities`. `priorities` and their
+/// ancestors are more likely outputted in the first column. For a typical
+/// vertical graph rendering algorithm, `priorities` is usually set to the
+/// head of the main branch.
+pub fn beautify_graph(parents: &[Vec<usize>], priorities: &[usize]) -> Vec<usize> {
+    let n = parents.len();
+    let mut children_list: Vec<Vec<usize>> = (0..n).map(|_| Vec::new()).collect();
+    let mut weight: Vec<isize> = vec![1; n];
+    let mut roots: Vec<usize> = Vec::new();
+
+    // Consider user-provided additional_weight.
+    for &i in priorities {
+        if i < n {
+            weight[i] = n as isize;
+        }
+    }
+
+    // Populate children_list.
+    for (i, ps) in parents.iter().enumerate().rev() {
+        for &p in ps {
+            // i has parent p
+            if p < n {
+                children_list[p].push(i);
+                weight[p] = weight[p].saturating_add(weight[i]);
+            }
+        }
+        if ps.is_empty() {
+            roots.push(i);
+        }
+    }
+
+    // Sort children by weight.
+    for children in children_list.iter_mut() {
+        children.sort_unstable_by_key(|&c| (weight[c], c));
+    }
+    roots.sort_unstable_by_key(|&c| (-weight[c], c));
+    drop(weight);
+
+    // DFS from roots to heads.
+    let mut remaining: Vec<usize> = parents.iter().map(|ps| ps.len()).collect();
+    let mut output: Vec<usize> = Vec::with_capacity(n);
+    let mut outputted: Vec<bool> = vec![false; n];
+    let mut to_visit: VecDeque<usize> = roots.into();
+    while let Some(id) = to_visit.pop_front() {
+        // Already outputted?
+        if outputted[id] {
+            continue;
+        }
+
+        // Need to wait for visiting other parents first?
+        if remaining[id] > 0 {
+            // Visit it later.
+            to_visit.push_back(id);
+            continue;
+        }
+
+        // Output this id.
+        output.push(id);
+        outputted[id] = true;
+
+        // Visit children next.
+        for &c in children_list[id].iter().rev() {
+            remaining[c] -= 1;
+            to_visit.push_front(c);
+        }
+    }
+
+    output.reverse();
+    output
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -217,5 +318,119 @@ mod tests {
     /// Quickly create a Vertex.
     fn v(name: impl ToString) -> Vertex {
         Vertex::copy_from(name.to_string().as_bytes())
+    }
+
+    #[test]
+    fn test_beautify_graph() {
+        let t = |text: &str| -> Vec<usize> {
+            let split: Vec<&str> = text.split("#").chain(std::iter::once("")).take(2).collect();
+            let parents = parents_from_drawdag(split[0]);
+            let priorities: Vec<usize> = split[1]
+                .split_whitespace()
+                .map(|s| s.parse::<usize>().unwrap())
+                .collect();
+            beautify_graph(&parents, &priorities)
+        };
+        assert_eq!(
+            t(r#"
+              0-2-4-5
+                   /
+                1-3"#),
+            [5, 3, 1, 4, 2, 0]
+        );
+        assert_eq!(
+            t(r#"
+              0-2-4-5
+               \   /
+                1-3"#),
+            [5, 4, 2, 3, 1, 0]
+        );
+        assert_eq!(
+            t(r#"
+              0-2-4-5
+               \
+                1-3"#),
+            [5, 4, 2, 3, 1, 0]
+        );
+        assert_eq!(
+            t(r#"
+                 0-1-3-5-7-9-11-12
+                        / \
+                   2-4-6   8-10"#),
+            [12, 11, 9, 10, 8, 7, 6, 4, 2, 5, 3, 1, 0]
+        );
+        assert_eq!(
+            t(r#"
+                   0-3-5-7-9-12
+                        / \
+                 1-2-4-6   8-10-11"#),
+            [11, 10, 8, 12, 9, 7, 5, 3, 0, 6, 4, 2, 1]
+        );
+
+        // Preserve (reversed) order for same-length branches.
+        // [0, 1, 2], 2 is before 1.
+        assert_eq!(
+            t(r#"
+                  0-1
+                   \
+                    2"#),
+            [2,1,0]);
+        // [0, 1, 2], 1 is before 0.
+        assert_eq!(
+            t(r#"
+                  0-2
+                   /
+                  1"#),
+            [2,1,0]);
+
+        // With manual 'priorities'
+        assert_eq!(
+            t(r#"
+              0-2-4-5
+                   /
+                1-3   # 4"#),
+            [5, 3, 1, 4, 2, 0]
+        );
+        assert_eq!(
+            t(r#"
+              0-2-4-5
+                   /
+                1-3   # 3"#),
+            [5, 4, 2, 0, 3, 1],
+        );
+
+        assert_eq!(
+            t(r#"
+              0-2-4-5
+               \
+                1-3   # 3"#),
+            [3, 1, 5, 4, 2, 0]
+        );
+        assert_eq!(
+            t(r#"
+              0-2-4-5
+               \
+                1-3   # 5"#),
+            [5, 4, 2, 3, 1, 0]
+        );
+    }
+
+    /// Convert drawdag ASCII to an integer parents array.
+    fn parents_from_drawdag(ascii: &str) -> Vec<Vec<usize>> {
+        let parents_map = drawdag::parse(ascii);
+        let mut parents_vec = Vec::new();
+        for i in 0usize.. {
+            let s = i.to_string();
+            let parents = match parents_map.get(&s) {
+                Some(parents) => parents,
+                None => break,
+            };
+            let parents: Vec<usize> = parents
+                .into_iter()
+                .map(|p| p.parse::<usize>().unwrap())
+                .collect();
+            parents_vec.push(parents);
+        }
+        parents_vec
     }
 }
