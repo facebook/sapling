@@ -35,6 +35,8 @@ using namespace facebook::eden;
 using namespace std::chrono_literals;
 
 namespace {
+constexpr auto kFutureTimeout = 10s;
+
 using ContainedType = InodeOrTreeOrEntry::ContainedType;
 std::string to_string(const ContainedType& ctype) {
   switch (ctype) {
@@ -595,6 +597,9 @@ void testRootDirAChildren(TestMount& mount) {
       children.value(), testing::Contains(testing::Key("child1_fileA1"_pc)));
   EXPECT_THAT(
       children.value(), testing::Contains(testing::Key("child1_fileA2"_pc)));
+  for (auto& child : children.value()) {
+    std::move(child.second).get(kFutureTimeout);
+  }
 }
 
 TEST(InodeOrTreeOrEntryTest, getChildrenSimple) {

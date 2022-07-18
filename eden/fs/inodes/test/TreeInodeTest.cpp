@@ -35,6 +35,7 @@ using namespace facebook::eden;
 using namespace std::chrono_literals;
 
 namespace {
+constexpr auto kFutureTimeout = 10s;
 constexpr auto materializationTimeoutLimit = 1000ms;
 
 std::string testHashHex{
@@ -558,6 +559,14 @@ TEST(TreeInode, addNewMaterializationsToInodeTraceBus) {
   EXPECT_FALSE(queue.try_dequeue_for(materializationTimeoutLimit).has_value());
 }
 
+void collectResults(
+    std::vector<std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>
+        results) {
+  for (auto& result : results) {
+    std::move(result.second).get(kFutureTimeout);
+  }
+}
+
 TEST(TreeInode, getOrFindChildrenSimple) {
   FakeTreeBuilder builder;
   builder.setFile("somedir/foo.txt", "test\n");
@@ -568,6 +577,7 @@ TEST(TreeInode, getOrFindChildrenSimple) {
       somedir->getChildren(ObjectFetchContext::getNullContext(), false);
   EXPECT_EQ(1, result.size());
   EXPECT_THAT(result, testing::Contains(testing::Key("foo.txt"_pc)));
+  collectResults(std::move(result));
 }
 
 TEST(TreeInode, getOrFindChildrenMaterializedLoadedChild) {
@@ -583,6 +593,7 @@ TEST(TreeInode, getOrFindChildrenMaterializedLoadedChild) {
   EXPECT_EQ(2, result.size());
   EXPECT_THAT(result, testing::Contains(testing::Key("foo.txt"_pc)));
   EXPECT_THAT(result, testing::Contains(testing::Key("newfile.txt"_pc)));
+  collectResults(std::move(result));
 }
 
 TEST(TreeInode, getOrFindChildrenRemovedChild) {
@@ -606,6 +617,7 @@ TEST(TreeInode, getOrFindChildrenRemovedChild) {
   EXPECT_THAT(
       result, testing::Not(testing::Contains(testing::Key("foo.txt"_pc))));
   EXPECT_THAT(result, testing::Contains(testing::Key("newfile.txt"_pc)));
+  collectResults(std::move(result));
 }
 
 #endif
