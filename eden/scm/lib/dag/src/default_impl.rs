@@ -12,6 +12,7 @@ use std::sync::Arc;
 use futures::StreamExt;
 use futures::TryStreamExt;
 
+use crate::errors::programming;
 use crate::namedag::MemNameDag;
 use crate::nameset::hints::Hints;
 use crate::ops::DagAddHeads;
@@ -20,10 +21,12 @@ use crate::ops::IdDagAlgorithm;
 use crate::ops::Parents;
 use crate::utils;
 use crate::DagAlgorithm;
+use crate::Group;
 use crate::Id;
 use crate::IdSet;
 use crate::NameSet;
 use crate::Result;
+use crate::VertexListWithOptions;
 use crate::VertexName;
 
 /// Re-create the graph so it looks better when rendered.
@@ -121,6 +124,27 @@ pub(crate) async fn beautify(
         let heads: Vec<VertexName> = vec![usize_to_vertex[i].clone()];
         dag.add_heads(&snapshot, &heads.into()).await?;
     }
+    Ok(dag)
+}
+
+/// Provide a sub-graph containing only the specified set.
+pub(crate) async fn subdag(
+    this: &(impl DagAlgorithm + ?Sized),
+    set: NameSet,
+) -> Result<MemNameDag> {
+    let set = this.sort(&set).await?;
+    let parents = match set.to_parents().await? {
+        Some(p) => p,
+        None => return programming("Set returned by dag.sort() should support to_parents()"),
+    };
+    let mut dag = MemNameDag::new();
+    let heads = this.heads_ancestors(set).await?;
+    // "heads" is in DESC order. Use reversed order for insertion so the
+    // resulting subdag might preserve the same order with the original dag.
+    let heads: Vec<VertexName> = heads.iter_rev().await?.try_collect().await?;
+    // MASTER group enables the ONLY_HEAD segment flag. It improves graph query performance.
+    let heads = VertexListWithOptions::from(heads).with_highest_group(Group::MASTER);
+    dag.add_heads(&parents, &heads.into()).await?;
     Ok(dag)
 }
 

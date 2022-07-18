@@ -39,6 +39,11 @@ pub trait DagAlgorithm: Send + Sync {
         default_impl::beautify(self, main_branch).await
     }
 
+    /// Extract a sub graph containing only specified vertexes.
+    async fn subdag(&self, set: NameSet) -> Result<MemNameDag> {
+        default_impl::subdag(self, set).await
+    }
+
     /// Get ordered parent vertexes.
     async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>>;
 
