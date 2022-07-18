@@ -759,7 +759,8 @@ std::vector<PrjfsChannelInner::OutstandingRequest>
 PrjfsChannelInner::getOutstandingRequests() {
   std::vector<PrjfsChannelInner::OutstandingRequest> outstandingCalls;
 
-  for (const auto& entry : telemetryState_.rlock()->requests) {
+  auto telemetryStateLockedPtr = telemetryState_.rlock();
+  for (const auto& entry : telemetryStateLockedPtr->requests) {
     outstandingCalls.push_back(entry.second);
   }
   return outstandingCalls;

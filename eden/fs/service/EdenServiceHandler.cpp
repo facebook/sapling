@@ -2941,7 +2941,8 @@ void EdenServiceHandler::getAccessCounts(
       ma.accessCountsByPid_ref()[pid] = accessCounts;
     }
 
-    for (auto& [pid, fetchCount] : *pidFetches.rlock()) {
+    auto pidFetchesLockedPtr = pidFetches.rlock();
+    for (auto& [pid, fetchCount] : *pidFetchesLockedPtr) {
       ma.fetchCountsByPid_ref()[pid] = fetchCount;
     }
   }
