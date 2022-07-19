@@ -133,8 +133,10 @@ const LOCK_REASON: &str = "Locked due to sync failure, check Source Control @ FB
 const HGSQL_GLOBALREVS_USE_SQLITE: &str = "hgsql-globalrevs-use-sqlite";
 const HGSQL_GLOBALREVS_DB_ADDR: &str = "hgsql-globalrevs-db-addr";
 
-// High retry count is ok, since the job anyway executes as a background process
-const DEFAULT_RETRY_NUM: usize = 15;
+// Since the job is sharded with shard-level health check, keep the app
+// level retries to a minimum. The manager will auto-restart the failing
+// repo.
+const DEFAULT_RETRY_NUM: usize = 1;
 const DEFAULT_BATCH_SIZE: usize = 10;
 const DEFAULT_SINGLE_BUNDLE_TIMEOUT_MS: u64 = 5 * 60 * 1000;
 
