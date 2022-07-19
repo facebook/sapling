@@ -108,7 +108,7 @@ simply allocates inode numbers using a monotonically increasing 64-bit ID.
 Note that EdenFS does need to remember the inode numbers that have been
 assigned.  This information is stored in the directory state in the overlay.
 Note that this means that simply listing a directory does cause it to be
-materialized in the overlay, since we have to record the inode numbers that
+written to the overlay, since we have to record the inode numbers that
 have been assigned to its children.  In this case we will store the directory
 in the overlay, but as long as the child contents are still the same as the
 original source control tree we will record the source control tree ID in the
