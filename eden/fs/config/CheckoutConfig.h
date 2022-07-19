@@ -14,11 +14,8 @@
 #include "eden/fs/config/ParentCommit.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/utils/CaseSensitivity.h"
-#include "eden/fs/utils/PathFuncs.h"
-
-#ifdef _WIN32
 #include "eden/fs/utils/Guid.h"
-#endif
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 

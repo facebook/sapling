@@ -5,9 +5,4 @@
  * GNU General Public License version 2.
  */
 
-#ifndef _WIN32
 #include "eden/fs/nfs/NfsDispatcher.h"
-
-namespace facebook::eden {}
-
-#endif

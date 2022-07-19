@@ -5,11 +5,13 @@
  * GNU General Public License version 2.
  */
 
-#ifdef _WIN32
 #include <folly/portability/GTest.h>
 #include <iostream>
 #include <string>
 #include "eden/common/utils/WinError.h"
+
+#ifdef _WIN32
+
 using namespace facebook::eden;
 
 // Test Win32 error
@@ -165,4 +167,5 @@ TEST(WinErrorTest, testexceptionToHResult_EACCES) {
         exceptionToHResult(ex), HRESULT_FROM_WIN32(ERROR_ERRORS_ENCOUNTERED));
   }
 }
+
 #endif

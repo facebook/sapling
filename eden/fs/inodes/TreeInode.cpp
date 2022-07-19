@@ -8,6 +8,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 
 #include <boost/polymorphic_cast.hpp>
+#include <folly/FileUtil.h>
 #include <folly/chrono/Conv.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
@@ -16,6 +17,8 @@
 
 #include "eden/common/utils/Synchronized.h"
 #include "eden/fs/config/CheckoutConfig.h"
+#include "eden/fs/fuse/DirList.h"
+#include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/DeferredDiffEntry.h"
@@ -23,6 +26,7 @@
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/ServerState.h"
@@ -32,6 +36,7 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
 #include "eden/fs/nfs/NfsdRpc.h"
+#include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BackingStore.h"
@@ -47,16 +52,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/TimeUtil.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
-
-#ifdef _WIN32
-#include "eden/fs/prjfs/Enumerator.h"
-#else
-#include <folly/FileUtil.h>
-#include "eden/fs/fuse/DirList.h"
-#include "eden/fs/fuse/FuseChannel.h"
-#include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/utils/XAttr.h"
-#endif // _WIN32
 
 using folly::ByteRange;
 using folly::Future;

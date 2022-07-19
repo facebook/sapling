@@ -21,16 +21,13 @@
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
+#include "eden/fs/inodes/InodeTable.h"
+#include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
 #include "eden/fs/sqlite/SqliteDatabase.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/PathFuncs.h"
-
-#ifndef _WIN32
-#include "eden/fs/inodes/InodeTable.h"
-#include "eden/fs/inodes/OverlayFile.h"
-#endif // !_WIN32
 
 namespace facebook::eden {
 

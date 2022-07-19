@@ -6,11 +6,17 @@
  */
 
 #pragma once
+
 #include <errno.h>
 #include <folly/String.h>
+
+#ifndef _WIN32
 #include <sys/xattr.h>
+#endif
 
 namespace facebook::eden {
+
+#ifndef _WIN32
 
 constexpr int kENOATTR =
 #ifndef ENOATTR
@@ -32,5 +38,7 @@ std::string getxattr(folly::StringPiece path, folly::StringPiece name);
 /// like listxattr(2), but more easily consumable from C++.
 // This is primarily to facilitate our integration tests.
 std::vector<std::string> listxattr(folly::StringPiece path);
+
+#endif
 
 } // namespace facebook::eden

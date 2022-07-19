@@ -6,11 +6,16 @@
  */
 
 #pragma once
-#include "folly/portability/Windows.h"
 
-#include <combaseapi.h> // @manual
 #include <fmt/format.h>
+#include <folly/portability/Windows.h>
 #include "eden/common/utils/WinError.h"
+
+#ifdef _WIN32
+#include <combaseapi.h> // @manual
+#endif
+
+#ifdef _WIN32
 
 namespace facebook::eden {
 
@@ -106,3 +111,5 @@ struct formatter<facebook::eden::Guid> : formatter<string_view> {
   }
 };
 } // namespace fmt
+
+#endif

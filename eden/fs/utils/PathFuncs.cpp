@@ -13,12 +13,9 @@
 #include <folly/Exception.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/Stdlib.h>
+#include <folly/portability/Unistd.h>
+
 #include <optional>
-#ifdef _WIN32
-#include <folly/portability/Unistd.h>
-#else
-#include <folly/portability/Unistd.h>
-#endif
 
 #ifdef __APPLE__
 #include <mach-o/dyld.h> // @manual

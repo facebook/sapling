@@ -14,11 +14,14 @@
 #include <optional>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeError.h"
+#include "eden/fs/inodes/InodeTable.h"
+#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/BackingStore.h"
+#include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/utils/Bug.h"
@@ -30,13 +33,7 @@
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
-
-#ifndef _WIN32
-#include "eden/fs/inodes/InodeTable.h"
-#include "eden/fs/inodes/Overlay.h"
-#include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/utils/XAttr.h"
-#endif
 
 using folly::StringPiece;
 using std::string;

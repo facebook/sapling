@@ -9,7 +9,6 @@
 
 #include "folly/portability/Windows.h"
 
-#include <ProjectedFSLib.h> // @manual
 #include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/PathFuncs.h"

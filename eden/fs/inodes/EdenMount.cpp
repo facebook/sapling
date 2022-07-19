@@ -10,24 +10,26 @@
 #include <boost/filesystem.hpp>
 #include <folly/ExceptionWrapper.h>
 #include <folly/FBString.h>
-#include <folly/stop_watch.h>
-
+#include <folly/File.h>
 #include <folly/chrono/Conv.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/logging/Logger.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
+#include <folly/stop_watch.h>
 #include <folly/system/ThreadName.h>
 
-#include <eden/fs/config/MountProtocol.h>
-#include <chrono>
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/MountProtocol.h"
+#include "eden/fs/fuse/FuseChannel.h"
+#include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/EdenDispatcherFactory.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/inodes/TreePrefetchLease.h"
@@ -36,6 +38,7 @@
 #include "eden/fs/model/git/GitIgnoreStack.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
 #include "eden/fs/nfs/NfsServer.h"
+#include "eden/fs/prjfs/PrjfsChannel.h"
 #include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BlobAccess.h"
@@ -58,14 +61,7 @@
 #include "eden/fs/utils/SpawnedProcess.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
-#ifdef _WIN32
-#include "eden/fs/prjfs/PrjfsChannel.h"
-#else
-#include <folly/File.h>
-#include "eden/fs/fuse/FuseChannel.h"
-#include "eden/fs/fuse/privhelper/PrivHelper.h"
-#include "eden/fs/inodes/InodeTable.h"
-#endif
+#include <chrono>
 
 using folly::Future;
 using folly::makeFuture;

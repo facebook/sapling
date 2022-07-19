@@ -27,26 +27,16 @@
 #include <folly/system/Shell.h>
 #include <thrift/lib/cpp/util/EnumUtils.h>
 
-#ifndef _WIN32
-#include "eden/fs/fuse/FuseChannel.h"
-#include "eden/fs/inodes/InodeTable.h"
-#include "eden/fs/inodes/Overlay.h"
-#include "eden/fs/nfs/Nfsd3.h"
-#else
-#include "eden/fs/prjfs/PrjfsChannel.h" // @manual
-#endif // !_WIN32
-
-#ifdef EDEN_HAVE_USAGE_SERVICE
-#include "eden/fs/service/facebook/EdenFSSmartPlatformServiceEndpoint.h" // @manual
-#endif
-
 #include "eden/common/utils/ProcessNameCache.h"
 #include "eden/fs/config/CheckoutConfig.h"
+#include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/GlobNode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/InodeTable.h"
+#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/Traverse.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/inodes/VirtualInodeLoader.h"
@@ -55,6 +45,8 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/nfs/Nfsd3.h"
+#include "eden/fs/prjfs/PrjfsChannel.h"
 #include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/ThriftGlobImpl.h"
 #include "eden/fs/service/ThriftPermissionChecker.h"
@@ -81,6 +73,10 @@
 #include "eden/fs/utils/ProcUtil.h"
 #include "eden/fs/utils/StatTimes.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
+
+#ifdef EDEN_HAVE_USAGE_SERVICE
+#include "eden/fs/service/facebook/EdenFSSmartPlatformServiceEndpoint.h" // @manual
+#endif
 
 using folly::Future;
 using folly::makeFuture;

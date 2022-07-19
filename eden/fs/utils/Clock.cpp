@@ -5,13 +5,12 @@
  * GNU General Public License version 2.
  */
 
-#ifdef _WIN32
-#include "folly/portability/Time.h"
-#endif
+#include "eden/fs/utils/Clock.h"
+
+#include <folly/portability/Time.h>
 
 #include <chrono>
 #include <system_error>
-#include "Clock.h"
 
 namespace facebook::eden {
 

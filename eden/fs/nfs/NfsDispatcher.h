@@ -9,20 +9,21 @@
 
 #ifndef _WIN32
 
-#include <sys/stat.h>
-#ifdef __APPLE__
-#include <sys/mount.h>
-#include <sys/param.h>
-#else
-#include <sys/vfs.h>
-#endif
-
 #include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/nfs/DirList.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
+
+#include <sys/stat.h>
+
+#ifdef __APPLE__
+#include <sys/mount.h>
+#include <sys/param.h>
+#else
+#include <sys/vfs.h>
+#endif
 
 namespace folly {
 template <class T>

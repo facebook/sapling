@@ -15,14 +15,11 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 #include <optional>
-#ifdef _WIN32
-#include "eden/fs/prjfs/Enumerator.h"
-#else
 #include "eden/fs/fuse/DirList.h"
-#endif // _WIN32
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"

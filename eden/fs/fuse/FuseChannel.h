@@ -14,7 +14,6 @@
 #include <folly/futures/Promise.h>
 #include <folly/synchronization/CallOnce.h>
 #include <stdlib.h>
-#include <sys/uio.h>
 #include <condition_variable>
 #include <iosfwd>
 #include <memory>
@@ -34,6 +33,10 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 
+#ifndef _WIN32
+#include <sys/uio.h>
+#endif
+
 namespace folly {
 struct Unit;
 } // namespace folly
@@ -43,6 +46,8 @@ namespace facebook::eden {
 class Notifier;
 class FsEventLogger;
 class FuseRequestContext;
+
+#ifndef _WIN32
 
 using TraceDetailedArgumentsHandle = std::shared_ptr<void>;
 
@@ -850,5 +855,7 @@ class FuseDeviceUnmountedDuringInitialization : public std::runtime_error {
  public:
   explicit FuseDeviceUnmountedDuringInitialization(AbsolutePathPiece mountPath);
 };
+
+#endif
 
 } // namespace facebook::eden

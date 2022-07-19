@@ -5,11 +5,11 @@
  * GNU General Public License version 2.
  */
 
-#ifndef _WIN32
-
-#include "XAttr.h"
+#include "eden/fs/utils/XAttr.h"
 #include <folly/Exception.h>
 #include <folly/File.h>
+
+#ifndef _WIN32
 
 namespace facebook::eden {
 

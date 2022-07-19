@@ -7,12 +7,10 @@
 
 #pragma once
 
-#include <folly/portability/Windows.h>
-
 #include <folly/experimental/AtomicReadMostlyMainPtr.h>
+#include <folly/portability/Windows.h>
 #include <thrift/lib/cpp/util/EnumUtils.h>
 
-#include <ProjectedFSLib.h> // @manual
 #include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
@@ -21,7 +19,14 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 
+#ifdef _WIN32
+#include <ProjectedFSLib.h> // @manual
+#endif
+
 namespace facebook::eden {
+
+#ifdef _WIN32
+
 class EdenMount;
 class Notifier;
 class ReloadableConfig;
@@ -541,5 +546,7 @@ class PrjfsChannel {
   // Internal ProjectedFS channel used to communicate with ProjectedFS.
   PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT mountChannel_{nullptr};
 };
+
+#endif
 
 } // namespace facebook::eden
