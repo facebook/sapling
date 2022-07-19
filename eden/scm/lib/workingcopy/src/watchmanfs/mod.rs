@@ -7,4 +7,6 @@
 
 mod state;
 mod treestate;
-pub mod watchman;
+mod watchmanfs;
+
+pub use watchmanfs::WatchmanFileSystem;

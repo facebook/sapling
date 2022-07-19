@@ -25,13 +25,13 @@ use super::state::StatusQuery;
 use super::state::WatchmanState;
 use super::treestate::WatchmanTreeState;
 
-pub struct Watchman {
+pub struct WatchmanFileSystem {
     vfs: VFS,
 }
 
-impl Watchman {
+impl WatchmanFileSystem {
     pub fn new(root: PathBuf) -> Result<Self> {
-        Ok(Watchman {
+        Ok(WatchmanFileSystem {
             vfs: VFS::new(root)?,
         })
     }

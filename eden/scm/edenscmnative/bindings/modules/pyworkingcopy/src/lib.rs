@@ -92,7 +92,7 @@ py_class!(class status |py| {
                 workingcopy::status::FileSystem::Normal(fs)
             },
             "watchman" => {
-                let fs = workingcopy::watchman::watchman::Watchman::new(root).map_pyerr(py)?;
+                let fs = workingcopy::watchmanfs::WatchmanFileSystem::new(root).map_pyerr(py)?;
                 workingcopy::status::FileSystem::Watchman(fs)
             },
             "eden" => {

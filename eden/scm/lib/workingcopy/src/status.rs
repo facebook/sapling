@@ -28,13 +28,13 @@ use crate::filechangedetector::HgModifiedTime;
 use crate::filesystem::ChangeType;
 use crate::filesystem::PendingChangeResult;
 use crate::filesystem::PhysicalFileSystem;
-use crate::watchman::watchman::Watchman;
+use crate::watchmanfs::WatchmanFileSystem;
 
 type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
 
 pub enum FileSystem {
     Normal(PhysicalFileSystem),
-    Watchman(Watchman),
+    Watchman(WatchmanFileSystem),
     Eden(EdenFileSystem),
 }
 

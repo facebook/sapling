@@ -178,10 +178,11 @@ mod tests {
     use crate::filechangedetector::ResolvedFileChangeResult;
     use crate::filesystem::ChangeType;
     use crate::filesystem::PendingChangeResult;
-    use crate::watchman::state::StatusQuery;
-    use crate::watchman::state::WatchmanState;
-    use crate::watchman::treestate::WatchmanTreeStateRead;
-    use crate::watchman::treestate::WatchmanTreeStateWrite;
+
+    use super::super::state::StatusQuery;
+    use super::super::state::WatchmanState;
+    use super::super::treestate::WatchmanTreeStateRead;
+    use super::super::treestate::WatchmanTreeStateWrite;
 
     #[derive(Clone)]
     enum Event {
