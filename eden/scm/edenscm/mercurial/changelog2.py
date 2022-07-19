@@ -693,6 +693,10 @@ class nodemap(object):
 
 
 def migrateto(repo, name):
+    """Migrate from the current format to the destination format `name`."""
+    if backendname(repo) == name:
+        # Already in desired format.
+        return
     if "hgsql" in repo.requirements:
         raise error.Abort(_("cannot migrate hgsql repo"))
     if "lazytextchangelog" in repo.storerequirements and name not in {
@@ -775,13 +779,9 @@ def migratetolazytext(repo):
 
     The migration can only be done from hybrid or doublewrite.
     """
-    if not any(
-        s in repo.storerequirements
-        for s in ("lazytextchangelog", "hybridchangelog", "doublewritechangelog")
-    ) and not _isempty(repo):
-        raise error.Abort(
-            _("lazytext backend can only be migrated from hybrid or doublewrite")
-        )
+    # Migrate revlog to segments on demand.
+    if repo.changelog.algorithmbackend == "revlog":
+        migratetodoublewrite(repo)
 
     # Migration from doublewrite or hybrid backends is a no-op.
     with repo.lock():

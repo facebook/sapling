@@ -45,6 +45,7 @@
   o  G
   
   $ cp -R . $TESTTMP/revlogrepo
+  $ cp -R . $TESTTMP/revlogrepo2
 
 Migration
 =========
@@ -199,10 +200,6 @@ The revlog backend does not need segmented data.
   
 To doublewrite:
 
-  $ hg debugchangelog --migrate lazytext
-  abort: lazytext backend can only be migrated from hybrid or doublewrite
-  [255]
-
   $ hg debugchangelog --migrate lazytext --unless doublewrite --unless revlog
 
   $ hg debugchangelog --migrate doublewrite
@@ -330,3 +327,11 @@ Verify lazy changelog:
   $ hg verify --dag
   commit graph passed quick local checks
   commit graph looks okay compared with the server
+
+Revlog -> LazyText:
+
+  $ cd $TESTTMP/revlogrepo2
+  $ setconfig paths.default=test:server1
+
+  $ hg debugchangelog --migrate lazytext
+  $ hg debugchangelog --migrate lazytext
