@@ -255,7 +255,8 @@ std::optional<ImmediateFuture<VirtualInode>> TreeInode::rlockGetOrFindChild(
       VirtualInode{UnmaterializedUnloadedBlobDirEntry(entry)}};
 }
 
-ImmediateFuture<VirtualInode> TreeInode::wlockGetOrFindChild(
+std::pair<folly::SemiFuture<InodePtr>, TreeInode::LoadChildCleanUp>
+TreeInode::loadChild(
     folly::Synchronized<TreeInodeState>::LockedPtr& contents,
     PathComponentPiece name,
     ObjectFetchContext& context) {
@@ -292,17 +293,26 @@ ImmediateFuture<VirtualInode> TreeInode::wlockGetOrFindChild(
       inodeLoadFuture = std::move(loadFuture);
     }
   }
-  contents.unlock();
-  if (inodeLoadFuture.valid()) {
-    registerInodeLoadComplete(inodeLoadFuture, name, childNumber);
+  return std::make_pair(
+      std::move(returnFuture),
+      LoadChildCleanUp{
+          std::move(inodeLoadFuture),
+          std::move(promises),
+          std::move(childNumber),
+          std::move(childInodePtr),
+      });
+}
+
+void TreeInode::loadChildCleanUp(
+    PathComponentPiece name,
+    TreeInode::LoadChildCleanUp result) {
+  if (result.inodeLoadFuture.valid()) {
+    registerInodeLoadComplete(result.inodeLoadFuture, name, result.childNumber);
   } else {
-    for (auto& promise : promises) {
-      promise.setValue(childInodePtr);
+    for (auto& promise : result.promises) {
+      promise.setValue(result.childInodePtr);
     }
   }
-
-  return ImmediateFuture<InodePtr>{std::move(returnFuture)}.thenValue(
-      [](auto&& inode) { return VirtualInode{inode}; });
 }
 
 ImmediateFuture<VirtualInode> TreeInode::getOrFindChild(
@@ -333,7 +343,14 @@ ImmediateFuture<VirtualInode> TreeInode::getOrFindChild(
                return rlockGetOrFindChild(contents, name, context, loadInodes);
              },
              [&](auto& contents) -> ImmediateFuture<VirtualInode> {
-               return wlockGetOrFindChild(contents, name, context);
+               auto result = loadChild(contents, name, context);
+               // it's important the code between loadChild and loadChildCleanUp
+               // is no throw. We need to perform the loadChildCleanUp now
+               // regardless of exception.
+               contents.unlock();
+               loadChildCleanUp(name, std::move(result.second));
+               return ImmediateFuture<InodePtr>{std::move(result.first)}
+                   .thenValue([](auto&& inode) { return VirtualInode{inode}; });
              })
       .ensure([b = std::move(block)]() mutable { b.close(); });
 }
@@ -346,18 +363,43 @@ TreeInode::getChildren(ObjectFetchContext& context, bool loadInodes) {
   // complexity and can make non concurrent requests more expensive. We should
   //  perf in production before making this change: T125563920
 
-  auto contents = contents_.wlock();
   std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>> result;
-  result.reserve(contents->entries.size());
-  for (const auto& entry : contents->entries) {
-    auto virtualInode =
-        rlockGetOrFindChild(*contents, entry.first, context, loadInodes);
-    if (virtualInode) {
-      result.push_back(
-          std::make_pair(entry.first, std::move(virtualInode.value())));
-    } else {
-      result.push_back(std::make_pair(
-          entry.first, wlockGetOrFindChild(contents, entry.first, context)));
+  std::vector<std::pair<PathComponent, TreeInode::LoadChildCleanUp>>
+      inodeLoadCleanUps;
+
+  {
+    // we always want to clean up the loads for as many of these inodes as we
+    // can once the contents lock is dropped. This ensures even on exception
+    // inode loads are completed. Note: the wlock must be taken after this scope
+    // exit declaration, so the scope exit will be performed after the lock is
+    // released.
+    SCOPE_EXIT {
+      for (auto& cleanUp : inodeLoadCleanUps) {
+        loadChildCleanUp(cleanUp.first, std::move(cleanUp.second));
+      }
+    };
+    auto contents = contents_.wlock();
+    result.reserve(contents->entries.size());
+    inodeLoadCleanUps.reserve(contents->entries.size());
+    for (const auto& entry : contents->entries) {
+      auto virtualInode =
+          rlockGetOrFindChild(*contents, entry.first, context, loadInodes);
+      if (virtualInode) {
+        result.push_back(
+            std::make_pair(entry.first, std::move(virtualInode.value())));
+      } else {
+        auto childResult = loadChild(contents, entry.first, context);
+        // inodeLoadCleanUps.push_back must be no-except to guarantee
+        // the cleanup will run if result.push_back below throws.
+        XCHECK_LT(inodeLoadCleanUps.size(), inodeLoadCleanUps.capacity());
+        inodeLoadCleanUps.push_back(
+            std::make_pair(entry.first, std::move(childResult.second)));
+
+        result.push_back(std::make_pair(
+            entry.first,
+            ImmediateFuture<InodePtr>{std::move(childResult.first)}.thenValue(
+                [](auto&& inode) { return VirtualInode{inode}; })));
+      }
     }
   }
   return result;

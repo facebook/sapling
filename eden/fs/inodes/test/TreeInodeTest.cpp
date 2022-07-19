@@ -577,6 +577,23 @@ TEST(TreeInode, getOrFindChildrenSimple) {
   collectResults(std::move(result));
 }
 
+TEST(TreeInode, getOrFindChildrenLoadInodes) {
+  FakeTreeBuilder builder;
+  builder.setFile("somedir/bar.txt", "test\n");
+  builder.setFile("somedir/foo.txt", "test\n");
+  TestMount mount{builder};
+  auto somedir = mount.getTreeInode("somedir"_relpath);
+
+  somedir->unloadChildrenNow();
+  auto result =
+      somedir->getChildren(ObjectFetchContext::getNullContext(), true);
+
+  EXPECT_EQ(2, result.size());
+  EXPECT_THAT(result, testing::Contains(testing::Key("bar.txt"_pc)));
+  EXPECT_THAT(result, testing::Contains(testing::Key("foo.txt"_pc)));
+  collectResults(std::move(result));
+}
+
 TEST(TreeInode, getOrFindChildrenMaterializedLoadedChild) {
   FakeTreeBuilder builder;
   builder.setFile("somedir/foo.txt", "test\n");
@@ -590,6 +607,28 @@ TEST(TreeInode, getOrFindChildrenMaterializedLoadedChild) {
   EXPECT_EQ(2, result.size());
   EXPECT_THAT(result, testing::Contains(testing::Key("foo.txt"_pc)));
   EXPECT_THAT(result, testing::Contains(testing::Key("newfile.txt"_pc)));
+  collectResults(std::move(result));
+}
+
+TEST(TreeInode, getOrFindChildrenMaterializedUnloadedChild) {
+  FakeTreeBuilder builder;
+  builder.setFile("somedir/foo.txt", "test\n");
+  builder.setFile("somedir/zoo.txt", "test\n");
+  TestMount mount{builder};
+  auto somedir = mount.getTreeInode("somedir"_relpath);
+  {
+    somedir->mknod(
+        "newfile.txt"_pc, S_IFREG | 0740, 0, InvalidationRequired::No);
+  }
+
+  somedir->unloadChildrenNow();
+  auto result =
+      somedir->getChildren(ObjectFetchContext::getNullContext(), false);
+
+  EXPECT_EQ(3, result.size());
+  EXPECT_THAT(result, testing::Contains(testing::Key("foo.txt"_pc)));
+  EXPECT_THAT(result, testing::Contains(testing::Key("newfile.txt"_pc)));
+  EXPECT_THAT(result, testing::Contains(testing::Key("zoo.txt"_pc)));
   collectResults(std::move(result));
 }
 

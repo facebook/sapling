@@ -646,6 +646,26 @@ TEST(VirtualInodeTest, getChildrenMaterialized) {
   VERIFY_TREE_DEFAULT();
 }
 
+TEST(VirtualInodeTest, getChildrenMaterializedUnloaded) {
+  TestFileDatabase files;
+  auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
+  auto mount = TestMount{MakeTestTreeBuilder(files)};
+  VERIFY_TREE(flags);
+  // materialize inode
+  std::string path = "root_dirA/child1_fileA1";
+  std::string newContents = path + "~newContent";
+  mount.overwriteFile(folly::StringPiece{path}, newContents);
+  files.setContents(RelativePathPiece{path}, newContents);
+
+  {
+    auto directoryInode =
+        mount.getInode(RelativePathPiece{"root_dirA"}).asTree();
+    directoryInode->unloadChildrenNow();
+  }
+
+  testRootDirAChildren(mount);
+}
+
 TEST(VirtualInodeTest, getChildrenDoesNotChangeState) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);

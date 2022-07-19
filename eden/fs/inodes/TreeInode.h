@@ -822,13 +822,43 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       ObjectFetchContext& context,
       bool loadInodes);
 
+  // We need to do some cleanup outside of the lock. So we return some promises
+  // and futures and things to fulfil after the lock is released.
+  struct LoadChildCleanUp {
+    // If we are responsible for loading the inode, but the load is not complete
+    // yet, then we need to register the inode load, so that someone will take
+    // care of the cleanup after loading the inode. This future will be valid if
+    // we are the ones responsible for the inode load.
+    folly::Future<std::unique_ptr<InodeBase>> inodeLoadFuture;
+
+    // If we are the ones responsible for the inode load and the load is
+    // complete, then these are the promises we need to notify.
+    std::vector<folly::Promise<InodePtr>> promises;
+
+    // The inode number of the child we are getting.
+    InodeNumber childNumber;
+
+    // If we are the ones responsible for the load and the load already
+    // completed here is the InodePointer.
+    InodePtr childInodePtr;
+  };
+
   /**
-   * Loads and returns the inode for this child.
+   * Loads and returns the inode for this child. Note this does not perform
+   * inode load cleanup. loadChildCleanup must be called after the lock has been
+   * released, any code between calling this and loadChildCleanUp should be no
+   * throw or call loadChildCleanUp despite exceptions.
    */
-  ImmediateFuture<VirtualInode> wlockGetOrFindChild(
+  std::pair<folly::SemiFuture<InodePtr>, LoadChildCleanUp> loadChild(
       folly::Synchronized<TreeInodeState>::LockedPtr& contents,
       PathComponentPiece name,
       ObjectFetchContext& context);
+
+  /**
+   * Handles the inode loading related clean up for a wlockGetOrFindChild call.
+   * This should be called without the contents lock held!
+   */
+  void loadChildCleanUp(PathComponentPiece name, LoadChildCleanUp result);
 
   folly::Synchronized<TreeInodeState> contents_;
 
