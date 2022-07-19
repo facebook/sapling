@@ -11,6 +11,7 @@
 #include <folly/init/Init.h>
 #include <folly/io/async/AsyncSocket.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
+#include <folly/lang/ToAscii.h>
 #include <thrift/lib/cpp/util/EnumUtils.h>
 #include <thrift/lib/cpp2/async/RocketClientChannel.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
@@ -34,7 +35,7 @@ DEFINE_bool(
 
 namespace {
 constexpr auto kTimeout = std::chrono::seconds{1};
-constexpr int kStartingInodeWidth = 5;
+constexpr size_t kStartingInodeWidth = 5;
 static const auto kTreeEmoji = reinterpret_cast<const char*>(u8"\U0001F332");
 static const auto kBlobEmoji = reinterpret_cast<const char*>(u8"\U0001F954");
 static const auto kDashedArrowEmoji = reinterpret_cast<const char*>(u8"\u21E3");
@@ -459,7 +460,7 @@ int trace_thrift(
 
 void format_trace_inode_event(
     facebook::eden::InodeEvent& event,
-    int inode_width) {
+    size_t inode_width) {
   // Convert from ns to seconds
   time_t seconds = (*event.times()->timestamp()) / 1000000000;
   struct tm time_buffer;
@@ -488,11 +489,6 @@ void format_trace_inode_event(
           : "");
 }
 
-int getNumberOfDigits(int i) {
-  // casting a double to an int is equivalent to floor() for positive numbers
-  return i > 0 ? log10((double)i) + 1 : 1;
-}
-
 int trace_inode(
     folly::ScopedEventBaseThread& evbThread,
     const AbsolutePath& mountRoot,
@@ -504,7 +500,7 @@ int trace_inode(
           .via(evbThread.getEventBase())
           .get();
 
-  int inode_width = kStartingInodeWidth;
+  size_t inode_width = kStartingInodeWidth;
 
   std::move(traceInodeStream)
       .subscribeInline([&](folly::Try<InodeEvent>&& event) {
@@ -512,7 +508,8 @@ int trace_inode(
           fmt::print("Error: {}\n", folly::exceptionStr(event.exception()));
           return;
         }
-        inode_width = std::max(inode_width, getNumberOfDigits(*event->ino()));
+        inode_width =
+            std::max(inode_width, folly::to_ascii_size_decimal(*event->ino()));
         format_trace_inode_event(event.value(), inode_width);
       });
   return 0;
@@ -545,8 +542,8 @@ int trace_inode_retroactive(
                  events.end(),
                  [](const auto& a, const auto& b) { return a.ino() < b.ino(); })
                  ->ino();
-        int inode_width =
-            std::max(kStartingInodeWidth, getNumberOfDigits(max_inode));
+        size_t inode_width = std::max(
+            kStartingInodeWidth, folly::to_ascii_size_decimal(max_inode));
 
         std::string header = fmt::format(
             "  Timestamp                   {:<{}} Type  Event  Duration ",
