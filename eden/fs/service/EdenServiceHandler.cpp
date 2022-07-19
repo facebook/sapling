@@ -365,32 +365,6 @@ facebook::eden::InodePtr inodeFromUserPath(
         getAndRegisterClientPid());                                   \
   }(__func__, __FILE__, __LINE__))
 
-// INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME_AND_PID works in the same way
-// as INSTRUMENT_THRIFT_CALL but takes the function name and pid
-// as a parameter in case of using inside of a lambda (in which case
-// __func__ is "()"). Also, the pid passed to this function must be
-// obtained from a Thrift worker thread because the calling pid is
-// stored in a thread local variable.
-
-#define INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME_AND_PID(            \
-    level, functionName, pid, ...)                                    \
-  ([&](folly::StringPiece fileName, uint32_t lineNumber) {            \
-    static folly::Logger logger(                                      \
-        "eden.thrift." + folly::to<string>(functionName));            \
-    TLOG(logger, folly::LogLevel::level, fileName, lineNumber)        \
-        << functionName << "(" << toDelimWrapper(__VA_ARGS__) << ")"; \
-    return std::make_unique<ThriftLogHelper>(                         \
-        this->thriftRequestTraceBus_,                                 \
-        logger,                                                       \
-        folly::LogLevel::level,                                       \
-        functionName,                                                 \
-        fileName,                                                     \
-        lineNumber,                                                   \
-        nullptr,                                                      \
-        nullptr,                                                      \
-        pid);                                                         \
-  }(__FILE__, __LINE__))
-
 #define INSTRUMENT_THRIFT_CALL_WITH_STAT(level, stat, ...)            \
   ([&](folly::StringPiece functionName,                               \
        folly::StringPiece fileName,                                   \
@@ -2268,12 +2242,8 @@ EdenServiceHandler::semifuture_predictiveGlobFiles(
     std::unique_ptr<GlobParams> params) {
 #ifdef EDEN_HAVE_USAGE_SERVICE
   ThriftGlobImpl globber{*params};
-  auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME_AND_PID(
-      DBG3,
-      __func__,
-      getAndRegisterClientPid(),
-      *params->mountPoint_ref(),
-      globber.logString());
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG3, *params->mountPoint_ref(), globber.logString());
 
   auto& mountPoint = *params->mountPoint_ref();
   /* set predictive glob fetch parameters */
@@ -2367,10 +2337,8 @@ EdenServiceHandler::semifuture_predictiveGlobFiles(
 folly::SemiFuture<std::unique_ptr<Glob>>
 EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
   ThriftGlobImpl globber{*params};
-  auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME_AND_PID(
+  auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3,
-      __func__,
-      getAndRegisterClientPid(),
       *params->mountPoint_ref(),
       toLogArg(*params->globs_ref()),
       globber.logString());
