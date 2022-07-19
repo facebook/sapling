@@ -13,7 +13,7 @@
 from __future__ import absolute_import
 
 import re
-from typing import Union
+from typing import Dict, List, Optional, Pattern, Union
 
 from . import encoding, pycompat, util
 from .i18n import _
@@ -52,7 +52,7 @@ _defaulteffects = {
     "cyan_background": 46,
     "white_background": 47,
 }
-_effects = {}
+_effects: Dict[str, int] = {}
 
 _defaultstyles = {
     "grep.match": "red bold",
@@ -147,11 +147,11 @@ _defaultstyles = {
 }
 
 
-def loadcolortable(ui, extname, colortable):
+def loadcolortable(ui, extname, colortable) -> None:
     _defaultstyles.update(colortable)
 
 
-def setup(ui):
+def setup(ui) -> None:
     """configure color on a ui
 
     That function both set the colormode for the ui object and read
@@ -162,7 +162,7 @@ def setup(ui):
         configstyles(ui)
 
 
-def _modesetup(ui):
+def _modesetup(ui) -> Optional[str]:
     if ui.plain("color"):
         return None
     config = ui.config("ui", "color")
@@ -236,7 +236,7 @@ class truecoloreffects(dict):
             return super(truecoloreffects, self).__getitem__(key)
 
 
-def _extendcolors(colors):
+def _extendcolors(colors) -> None:
     # see https://en.wikipedia.org/wiki/ANSI_escape_code
     global _effects
     _effects = _defaulteffects.copy()
@@ -255,13 +255,15 @@ def _extendcolors(colors):
         )
     if colors >= 256:
         for i in range(256):
+            # pyre-fixme[6]: For 2nd param expected `int` but got `str`.
             _effects["color%s" % i] = "38;5;%s" % i
+            # pyre-fixme[6]: For 2nd param expected `int` but got `str`.
             _effects["color%s_background" % i] = "48;5;%s" % i
     if colors >= 16777216:
         _effects = truecoloreffects(_effects)
 
 
-def configstyles(ui):
+def configstyles(ui) -> None:
     if ui._colormode == "ansi":
         _extendcolors(supportedcolors(ui))
     ui._styles.update(_defaultstyles)
@@ -293,7 +295,7 @@ def _activeeffects(ui):
     return {}
 
 
-def valideffect(ui, effect):
+def valideffect(ui, effect) -> bool:
     "Determine if the effect is valid or not."
     return all(
         (isinstance(_activeeffects(ui), truecoloreffects) and _truecolorre.match(e))
@@ -331,11 +333,12 @@ def _mergeeffects(
         return "".join(parts)
 
 
-def _render_effects(ui, text, effects, usebytes=False):
+def _render_effects(ui, text, effects: List[str], usebytes: bool = False):
     "Wrap text in commands to turn on each effect."
     if not text:
         return text
     activeeffects = _activeeffects(ui)
+    # pyre-fixme[16]: `List` has no attribute `split`.
     effects = ["none"] + [e for effect in effects.split() for e in effect.split("+")]
     start = [pycompat.bytestr(activeeffects[e]) for e in effects]
     start = "\033[" + ";".join(start) + "m"
@@ -343,8 +346,8 @@ def _render_effects(ui, text, effects, usebytes=False):
     return _mergeeffects(text, start, stop, usebytes=usebytes)
 
 
-_ansieffectre = re.compile(r"\x1b\[[0-9;]*m")
-_truecolorre = re.compile(r"#([0-9A-Fa-f]{3}){1,2}(_background)?")
+_ansieffectre: Pattern[str] = re.compile(r"\x1b\[[0-9;]*m")
+_truecolorre: Pattern[str] = re.compile(r"#([0-9A-Fa-f]{3}){1,2}(_background)?")
 
 
 def stripeffects(text):
@@ -352,7 +355,7 @@ def stripeffects(text):
     return _ansieffectre.sub("", text)
 
 
-def colorlabel(ui, msg, label, usebytes=False):
+def colorlabel(ui, msg, label, usebytes: bool = False) -> Union[bytes, str]:
     """add color control code according to the mode"""
     if ui._colormode == "debug":
         if label and msg:
@@ -381,12 +384,15 @@ def colorlabel(ui, msg, label, usebytes=False):
             if usebytes:
                 msg = b"\n".join(
                     [
+                        # pyre-fixme[6]: For 3rd param expected `List[str]` but got
+                        #  `str`.
                         _render_effects(ui, line, effects, usebytes=True)
                         for line in msg.split(b"\n")
                     ]
                 )
             else:
                 msg = "\n".join(
+                    # pyre-fixme[6]: For 3rd param expected `List[str]` but got `str`.
                     [_render_effects(ui, line, effects) for line in msg.split("\n")]
                 )
     return msg
