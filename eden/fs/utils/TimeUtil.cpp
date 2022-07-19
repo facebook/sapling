@@ -99,6 +99,9 @@ std::string formatMicrosecondTime(long microseconds) {
   if (microseconds < 1000) {
     return fmt::format("{} μs", microseconds);
   }
-  return fmt::format("{:.3f} ms", microseconds / 1000.0);
+  if (microseconds < 1000000) {
+    return fmt::format("{:.3f} ms", microseconds / 1000.0);
+  }
+  return fmt::format("{:.3f} s", microseconds / 1000000.0);
 }
 } // namespace facebook::eden

@@ -476,7 +476,7 @@ void format_trace_inode_event(
   }
   auto milliseconds = *event.times()->timestamp() / 1000 % 1000000;
   fmt::print(
-      "{} {}.{:0>6}  {:<{}} {}    {}      {}\n",
+      "{} {}.{:0>6}  {:<{}} {}    {}      {:<10}  {}\n",
       kInodeProgresses.at(*event.progress()),
       formattedTime,
       milliseconds,
@@ -486,7 +486,8 @@ void format_trace_inode_event(
       kInodeEventTypes.at(*event.eventType()),
       *event.progress() == InodeEventProgress::END
           ? formatMicrosecondTime(*event.duration())
-          : "");
+          : "",
+      *event.path());
 }
 
 int trace_inode(
@@ -546,10 +547,10 @@ int trace_inode_retroactive(
             kStartingInodeWidth, folly::to_ascii_size_decimal(max_inode));
 
         std::string header = fmt::format(
-            "  Timestamp                   {:<{}} Type  Event  Duration ",
+            "  Timestamp                   {:<{}} Type  Event  Duration    Path",
             "Ino",
             inode_width);
-        fmt::print("{}\n{}\n", header, std::string(header.size(), '-'));
+        fmt::print("{}\n{}\n", header, std::string(header.size() + 2, '-'));
         for (auto& event : events) {
           format_trace_inode_event(event, inode_width);
         }

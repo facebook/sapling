@@ -48,8 +48,8 @@ std::string formatNsTimeToMs(uint64_t ns);
 
 /**
  * Get a human readable string for a time duration of microseconds in either
- * microsecond or millisecond time. Returns an empty string for negative
- * durations
+ * microsecond, millisecond, or second time. Returns an empty string for
+ * negative durations
  */
 std::string formatMicrosecondTime(long microseconds);
 } // namespace facebook::eden
