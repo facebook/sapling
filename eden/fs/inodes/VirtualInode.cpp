@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/inodes/InodeOrTreeOrEntry.h"
+#include "eden/fs/inodes/VirtualInode.h"
 
 #include "eden/common/utils/Synchronized.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -22,7 +22,7 @@ namespace facebook::eden {
 
 using detail::TreePtr;
 
-InodePtr InodeOrTreeOrEntry::asInodePtr() const {
+InodePtr VirtualInode::asInodePtr() const {
   return std::get<InodePtr>(variant_);
 }
 
@@ -30,7 +30,7 @@ InodePtr InodeOrTreeOrEntry::asInodePtr() const {
 template <class>
 inline constexpr bool always_false_v = false;
 
-dtype_t InodeOrTreeOrEntry::getDtype() const {
+dtype_t VirtualInode::getDtype() const {
   return std::visit(
       [](auto&& arg) {
         using T = std::decay_t<decltype(arg)>;
@@ -51,12 +51,11 @@ dtype_t InodeOrTreeOrEntry::getDtype() const {
       variant_);
 }
 
-bool InodeOrTreeOrEntry::isDirectory() const {
+bool VirtualInode::isDirectory() const {
   return getDtype() == dtype_t::Dir;
 }
 
-InodeOrTreeOrEntry::ContainedType InodeOrTreeOrEntry::testGetContainedType()
-    const {
+VirtualInode::ContainedType VirtualInode::testGetContainedType() const {
   return std::visit(
       [](auto&& arg) {
         using T = std::decay_t<decltype(arg)>;
@@ -77,7 +76,7 @@ InodeOrTreeOrEntry::ContainedType InodeOrTreeOrEntry::testGetContainedType()
       variant_);
 }
 
-ImmediateFuture<Hash20> InodeOrTreeOrEntry::getSHA1(
+ImmediateFuture<Hash20> VirtualInode::getSHA1(
     RelativePathPiece path,
     ObjectStore* objectStore,
     ObjectFetchContext& fetchContext) const {
@@ -126,7 +125,7 @@ ImmediateFuture<Hash20> InodeOrTreeOrEntry::getSHA1(
       variant_);
 }
 
-ImmediateFuture<TreeEntryType> InodeOrTreeOrEntry::getTreeEntryType(
+ImmediateFuture<TreeEntryType> VirtualInode::getTreeEntryType(
     RelativePathPiece path,
     ObjectFetchContext& fetchContext) const {
   return std::visit(
@@ -170,7 +169,7 @@ ImmediateFuture<TreeEntryType> InodeOrTreeOrEntry::getTreeEntryType(
       variant_);
 }
 
-ImmediateFuture<BlobMetadata> InodeOrTreeOrEntry::getBlobMetadata(
+ImmediateFuture<BlobMetadata> VirtualInode::getBlobMetadata(
     RelativePathPiece path,
     ObjectStore* objectStore,
     ObjectFetchContext& fetchContext) const {
@@ -193,7 +192,7 @@ ImmediateFuture<BlobMetadata> InodeOrTreeOrEntry::getBlobMetadata(
       variant_);
 }
 
-ImmediateFuture<EntryAttributes> InodeOrTreeOrEntry::getEntryAttributes(
+ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
     uint64_t requestedAttributes, // bit combined FileAttributes
     RelativePathPiece path,
     ObjectStore* objectStore,
@@ -282,10 +281,10 @@ ImmediateFuture<EntryAttributes> InodeOrTreeOrEntry::getEntryAttributes(
 
 // Returns a subset of `struct stat` required by
 // EdenServiceHandler::semifuture_getFileInformation()
-ImmediateFuture<struct stat> InodeOrTreeOrEntry::stat(
+ImmediateFuture<struct stat> VirtualInode::stat(
     // TODO: can lastCheckoutTime be fetched from some global edenMount()?
     //
-    // InodeOrTreeOrEntry is used to traverse the tree. However, the global
+    // VirtualInode is used to traverse the tree. However, the global
     // renameLock is NOT held during these traversals, so we're not protected
     // from nodes/trees being moved around during the traversal.
     //
@@ -367,13 +366,12 @@ namespace {
 /**
  * Helper function for getChildren when the current node is a Tree.
  */
-std::vector<std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>
+std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>
 getChildrenHelper(
     const TreePtr& tree,
     ObjectStore* objectStore,
     ObjectFetchContext& fetchContext) {
-  std::vector<std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>
-      result{};
+  std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>> result{};
   result.reserve(tree->size());
 
   for (auto& child : *tree) {
@@ -384,12 +382,12 @@ getChildrenHelper(
           objectStore->getTree(treeEntry->getHash(), fetchContext)
               .thenValue([mode = modeFromTreeEntryType(treeEntry->getType())](
                              TreePtr tree) {
-                return InodeOrTreeOrEntry{std::move(tree), mode};
+                return VirtualInode{std::move(tree), mode};
               })));
     } else {
       // This is a file, return the TreeEntry for it
       result.push_back(std::make_pair(
-          child.first, ImmediateFuture{InodeOrTreeOrEntry{*treeEntry}}));
+          child.first, ImmediateFuture{VirtualInode{*treeEntry}}));
     }
   }
 
@@ -397,37 +395,36 @@ getChildrenHelper(
 }
 } // namespace
 
-folly::Try<
-    std::vector<std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>>
-InodeOrTreeOrEntry::getChildren(
+folly::Try<std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>
+VirtualInode::getChildren(
     RelativePathPiece path,
     ObjectStore* objectStore,
     ObjectFetchContext& fetchContext) {
   if (!isDirectory()) {
-    return folly::Try<std::vector<
-        std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>>(
+    return folly::Try<
+        std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>(
         PathError(ENOTDIR, path));
   }
   return std::visit(
       [&](auto&& arg)
           -> folly::Try<std::vector<
-              std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>> {
+              std::pair<PathComponent, ImmediateFuture<VirtualInode>>>> {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, InodePtr>) {
           return folly::Try<std::vector<
-              std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>>{
+              std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>{
               arg.asTreePtr()->getChildren(fetchContext, false)};
         } else if constexpr (std::is_same_v<T, TreePtr>) {
           return folly::Try<std::vector<
-              std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>>{
+              std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>{
               getChildrenHelper(arg, objectStore, fetchContext)};
         } else if constexpr (
             std::is_same_v<T, UnmaterializedUnloadedBlobDirEntry> ||
             std::is_same_v<T, TreeEntry>) {
-          // These represent files in InodeOrTreeOrEntry, and can't be
+          // These represent files in VirtualInode, and can't be
           // descended
           return folly::Try<std::vector<
-              std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>>{
+              std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>{
               PathError(ENOTDIR, path, "variant is of unhandled type")};
         } else {
           static_assert(always_false_v<T>, "non-exhaustive visitor!");
@@ -438,7 +435,7 @@ InodeOrTreeOrEntry::getChildren(
 
 ImmediateFuture<
     std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
-InodeOrTreeOrEntry::getChildrenAttributes(
+VirtualInode::getChildrenAttributes(
     uint64_t requestedAttributes, // bit combined FileAttributes
     RelativePath path,
     ObjectStore* objectStore,
@@ -457,15 +454,15 @@ InodeOrTreeOrEntry::getChildrenAttributes(
   names.reserve(children.value().size());
   attributesFutures.reserve(children.value().size());
 
-  for (auto& nameAndinodeOr : children.value()) {
-    names.push_back(nameAndinodeOr.first);
+  for (auto& nameAndvirtualInode : children.value()) {
+    names.push_back(nameAndvirtualInode.first);
     attributesFutures.push_back(
-        std::move(nameAndinodeOr.second)
+        std::move(nameAndvirtualInode.second)
             .thenValue([requestedAttributes,
-                        subPath = path + nameAndinodeOr.first,
+                        subPath = path + nameAndvirtualInode.first,
                         objectStore,
-                        &fetchContext](InodeOrTreeOrEntry inodeOr) {
-              return inodeOr.getEntryAttributes(
+                        &fetchContext](VirtualInode virtualInode) {
+              return virtualInode.getEntryAttributes(
                   requestedAttributes, subPath, objectStore, fetchContext);
             }));
   }
@@ -486,17 +483,17 @@ InodeOrTreeOrEntry::getChildrenAttributes(
           });
 }
 
-ImmediateFuture<InodeOrTreeOrEntry> InodeOrTreeOrEntry::getOrFindChild(
+ImmediateFuture<VirtualInode> VirtualInode::getOrFindChild(
     PathComponentPiece childName,
     RelativePathPiece path,
     ObjectStore* objectStore,
     ObjectFetchContext& fetchContext) const {
   if (!isDirectory()) {
-    return makeImmediateFuture<InodeOrTreeOrEntry>(PathError(ENOTDIR, path));
+    return makeImmediateFuture<VirtualInode>(PathError(ENOTDIR, path));
   }
   return std::visit(
       [childName, path, objectStore, &fetchContext](
-          auto&& arg) -> ImmediateFuture<InodeOrTreeOrEntry> {
+          auto&& arg) -> ImmediateFuture<VirtualInode> {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, InodePtr>) {
           return arg.asTreePtr()->getOrFindChild(
@@ -507,8 +504,8 @@ ImmediateFuture<InodeOrTreeOrEntry> InodeOrTreeOrEntry::getOrFindChild(
         } else if constexpr (
             std::is_same_v<T, UnmaterializedUnloadedBlobDirEntry> ||
             std::is_same_v<T, TreeEntry>) {
-          // These represent files in InodeOrTreeOrEntry, and can't be descended
-          return makeImmediateFuture<InodeOrTreeOrEntry>(
+          // These represent files in VirtualInode, and can't be descended
+          return makeImmediateFuture<VirtualInode>(
               PathError(ENOTDIR, path, "variant is of unhandled type"));
         } else {
           static_assert(always_false_v<T>, "non-exhaustive visitor!");
@@ -517,7 +514,7 @@ ImmediateFuture<InodeOrTreeOrEntry> InodeOrTreeOrEntry::getOrFindChild(
       variant_);
 }
 
-ImmediateFuture<InodeOrTreeOrEntry> InodeOrTreeOrEntry::getOrFindChild(
+ImmediateFuture<VirtualInode> VirtualInode::getOrFindChild(
     TreePtr tree,
     PathComponentPiece childName,
     RelativePathPiece path,
@@ -530,7 +527,7 @@ ImmediateFuture<InodeOrTreeOrEntry> InodeOrTreeOrEntry::getOrFindChild(
     // walked, childName may appear anywhere in the path.
     XLOG(DBG7) << "attempted to find non-existent TreeEntry \"" << childName
                << "\" in " << path;
-    return makeImmediateFuture<InodeOrTreeOrEntry>(
+    return makeImmediateFuture<VirtualInode>(
         std::system_error(ENOENT, std::generic_category()));
   }
 
@@ -540,11 +537,11 @@ ImmediateFuture<InodeOrTreeOrEntry> InodeOrTreeOrEntry::getOrFindChild(
     return objectStore->getTree(treeEntry->getHash(), fetchContext)
         .thenValue(
             [mode = modeFromTreeEntryType(treeEntry->getType())](TreePtr tree) {
-              return InodeOrTreeOrEntry{std::move(tree), mode};
+              return VirtualInode{std::move(tree), mode};
             });
   } else {
     // This is a file, return the TreeEntry for it
-    return ImmediateFuture{InodeOrTreeOrEntry{*treeEntry}};
+    return ImmediateFuture{VirtualInode{*treeEntry}};
   }
 }
 

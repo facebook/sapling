@@ -38,7 +38,7 @@ using namespace std::chrono_literals;
 namespace {
 constexpr auto kFutureTimeout = 10s;
 
-using ContainedType = InodeOrTreeOrEntry::ContainedType;
+using ContainedType = VirtualInode::ContainedType;
 std::string to_string(const ContainedType& ctype) {
   switch (ctype) {
     case ContainedType::Inode:
@@ -152,7 +152,7 @@ struct TestFileInfo {
 };
 
 #ifdef _WIN32
-// TODO: figure out how to share this among here, InodeOrTreeOrEntry, and
+// TODO: figure out how to share this among here, VirtualInode, and
 // FileInode/TreeInode
 #define DEFAULT_MODE_DIR (0)
 #define DEFAULT_MODE_REG (0)
@@ -448,18 +448,18 @@ void verifyTreeState(
     // TODO: the code below is equivalent to EXPECT_INODE_OR(), perhaps it
     // should be broken out so test failures appear within the line#/function
     // they are occuring in?
-    auto inodeOrTry = mount.getEdenMount()
-                          ->getInodeOrTreeOrEntry(
-                              RelativePathPiece{expected.path},
-                              ObjectFetchContext::getNullContext())
-                          .getTry();
-    if (inodeOrTry.hasValue()) {
-      auto inodeOr = inodeOrTry.value();
-      EXPECT_EQ(inodeOr.getDtype(), expected.dtype) << dbgMsg;
+    auto virtualInodeTry = mount.getEdenMount()
+                               ->getVirtualInode(
+                                   RelativePathPiece{expected.path},
+                                   ObjectFetchContext::getNullContext())
+                               .getTry();
+    if (virtualInodeTry.hasValue()) {
+      auto virtualInode = virtualInodeTry.value();
+      EXPECT_EQ(virtualInode.getDtype(), expected.dtype) << dbgMsg;
       bool isLoaded = false;
       bool isMaterialized = false;
-      if (inodeOr.testGetContainedType() == ContainedType::Inode) {
-        auto inode = inodeOr.asInodePtr();
+      if (virtualInode.testGetContainedType() == ContainedType::Inode) {
+        auto inode = virtualInode.asInodePtr();
         EXPECT_TRUE(!!inode);
         isLoaded = true;
 
@@ -491,13 +491,13 @@ void verifyTreeState(
       EXPECT_EQ(isMaterialized, expected.isMaterialized()) << dbgMsg;
 
       EXPECT_EQ(
-          to_string(inodeOr.testGetContainedType()),
+          to_string(virtualInode.testGetContainedType()),
           to_string(expected.containedType))
           << dbgMsg;
       // SHA1s are only computed for files
       if ((verify_flags & VERIFY_SHA1) &&
-          inodeOr.getDtype() == dtype_t::Regular) {
-        auto sha1 = inodeOr
+          virtualInode.getDtype() == dtype_t::Regular) {
+        auto sha1 = virtualInode
                         .getSHA1(
                             expected.path,
                             mount.getEdenMount()->getObjectStore(),
@@ -508,9 +508,9 @@ void verifyTreeState(
       }
 
       if ((verify_flags & VERIFY_BLOB_METADATA) &&
-          inodeOr.getDtype() == dtype_t::Regular) {
+          virtualInode.getDtype() == dtype_t::Regular) {
         auto metadata =
-            inodeOr
+            virtualInode
                 .getEntryAttributes(
                     folly::to_underlying(FileAttributes::FILE_SIZE) |
                         folly::to_underlying(FileAttributes::SHA1_HASH) |
@@ -531,7 +531,7 @@ void verifyTreeState(
         // TODO: choose random?
         auto lastCheckoutTime =
             mount.getEdenMount()->getLastCheckoutTime().toTimespec();
-        auto st = inodeOr
+        auto st = virtualInode
                       .stat(
                           lastCheckoutTime,
                           mount.getEdenMount()->getObjectStore(),
@@ -571,13 +571,13 @@ void verifyTreeState(
   verifyTreeState(__FILE__, __LINE__, mount, files, VERIFY_DEFAULT)
 
 // TODO: flesh this out, including deleted stuff, etc
-#define EXPECT_INODE_OR(_inodeOr, _info)             \
-  do {                                               \
-    EXPECT_EQ((_inodeOr).getDtype(), (_info).dtype); \
+#define EXPECT_INODE_OR(_virtualInode, _info)             \
+  do {                                                    \
+    EXPECT_EQ((_virtualInode).getDtype(), (_info).dtype); \
   } while (0)
 } // namespace
 
-TEST(InodeOrTreeOrEntryTest, findDoesNotChangeState) {
+TEST(VirtualInodeTest, findDoesNotChangeState) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
   auto mount = TestMount{MakeTestTreeBuilder(files)};
@@ -585,17 +585,17 @@ TEST(InodeOrTreeOrEntryTest, findDoesNotChangeState) {
 
   for (auto info : files.getOriginalItems()) {
     VERIFY_TREE(flags);
-    auto inodeOr = mount.getInodeOrTreeOrEntry(info->path);
-    EXPECT_INODE_OR(inodeOr, *info.get());
+    auto virtualInode = mount.getVirtualInode(info->path);
+    EXPECT_INODE_OR(virtualInode, *info.get());
   }
   VERIFY_TREE(flags);
 }
 
 void testRootDirAChildren(TestMount& mount) {
-  auto inodeOr = mount.getInodeOrTreeOrEntry(RelativePathPiece{"root_dirA"});
-  EXPECT_TRUE(inodeOr.isDirectory());
+  auto virtualInode = mount.getVirtualInode(RelativePathPiece{"root_dirA"});
+  EXPECT_TRUE(virtualInode.isDirectory());
 
-  auto children = inodeOr.getChildren(
+  auto children = virtualInode.getChildren(
       RelativePathPiece{"root_dirA"},
       mount.getEdenMount()->getObjectStore(),
       ObjectFetchContext::getNullContext());
@@ -609,7 +609,7 @@ void testRootDirAChildren(TestMount& mount) {
   }
 }
 
-TEST(InodeOrTreeOrEntryTest, getChildrenSimple) {
+TEST(VirtualInodeTest, getChildrenSimple) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
   auto mount = TestMount{MakeTestTreeBuilder(files)};
@@ -619,7 +619,7 @@ TEST(InodeOrTreeOrEntryTest, getChildrenSimple) {
   VERIFY_TREE_DEFAULT();
 }
 
-TEST(InodeOrTreeOrEntryTest, getLoaded) {
+TEST(VirtualInodeTest, getLoaded) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
   auto mount = TestMount{MakeTestTreeBuilder(files)};
@@ -631,7 +631,7 @@ TEST(InodeOrTreeOrEntryTest, getLoaded) {
   VERIFY_TREE_DEFAULT();
 }
 
-TEST(InodeOrTreeOrEntryTest, getChildrenMaterialized) {
+TEST(VirtualInodeTest, getChildrenMaterialized) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
   auto mount = TestMount{MakeTestTreeBuilder(files)};
@@ -646,7 +646,7 @@ TEST(InodeOrTreeOrEntryTest, getChildrenMaterialized) {
   VERIFY_TREE_DEFAULT();
 }
 
-TEST(InodeOrTreeOrEntryTest, getChildrenDoesNotChangeState) {
+TEST(VirtualInodeTest, getChildrenDoesNotChangeState) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
   auto mount = TestMount{MakeTestTreeBuilder(files)};
@@ -654,10 +654,10 @@ TEST(InodeOrTreeOrEntryTest, getChildrenDoesNotChangeState) {
 
   for (auto info : files.getOriginalItems()) {
     VERIFY_TREE(flags);
-    auto inodeOr = mount.getInodeOrTreeOrEntry(info->path);
-    EXPECT_INODE_OR(inodeOr, *info.get());
-    if (inodeOr.isDirectory()) {
-      inodeOr.getChildren(
+    auto virtualInode = mount.getVirtualInode(info->path);
+    EXPECT_INODE_OR(virtualInode, *info.get());
+    if (virtualInode.isDirectory()) {
+      virtualInode.getChildren(
           info->path,
           mount.getEdenMount()->getObjectStore(),
           ObjectFetchContext::getNullContext());
@@ -666,7 +666,7 @@ TEST(InodeOrTreeOrEntryTest, getChildrenDoesNotChangeState) {
   VERIFY_TREE(flags);
 }
 
-TEST(InodeOrTreeOrEntryTest, getChildrenAttributes) {
+TEST(VirtualInodeTest, getChildrenAttributes) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
   auto mount = TestMount{MakeTestTreeBuilder(files)};
@@ -683,11 +683,11 @@ TEST(InodeOrTreeOrEntryTest, getChildrenAttributes) {
 
   for (auto info : files.getOriginalItems()) {
     VERIFY_TREE(flags);
-    auto inodeOr = mount.getInodeOrTreeOrEntry(info->path);
-    EXPECT_INODE_OR(inodeOr, *info.get());
-    if (inodeOr.isDirectory()) {
+    auto virtualInode = mount.getVirtualInode(info->path);
+    EXPECT_INODE_OR(virtualInode, *info.get());
+    if (virtualInode.isDirectory()) {
       for (auto& attribute_request : attribute_requests) {
-        auto result = inodeOr
+        auto result = virtualInode
                           .getChildrenAttributes(
                               attribute_request,
                               info->path,
@@ -696,13 +696,13 @@ TEST(InodeOrTreeOrEntryTest, getChildrenAttributes) {
                           .get();
 
         for (auto child : files.getChildren(RelativePathPiece{info->path})) {
-          auto childInodeOr = mount.getInodeOrTreeOrEntry(child->path);
+          auto childVirtualInode = mount.getVirtualInode(child->path);
           auto entryName = basename(child->path.stringPiece());
           EXPECT_THAT(
               result,
               testing::Contains(testing::Pair(
                   entryName,
-                  childInodeOr
+                  childVirtualInode
                       .getEntryAttributes(
                           attribute_request,
                           child->path,
@@ -716,7 +716,7 @@ TEST(InodeOrTreeOrEntryTest, getChildrenAttributes) {
   VERIFY_TREE(flags);
 }
 
-TEST(InodeOrTreeOrEntryTest, statDoesNotChangeState) {
+TEST(VirtualInodeTest, statDoesNotChangeState) {
   TestFileDatabase files;
   auto flags = VERIFY_DEFAULT | VERIFY_STAT;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
@@ -724,21 +724,21 @@ TEST(InodeOrTreeOrEntryTest, statDoesNotChangeState) {
 
   for (auto info : files.getOriginalItems()) {
     VERIFY_TREE(flags);
-    auto inodeOr = mount.getInodeOrTreeOrEntry(info->path);
-    EXPECT_INODE_OR(inodeOr, *info.get());
+    auto virtualInode = mount.getVirtualInode(info->path);
+    EXPECT_INODE_OR(virtualInode, *info.get());
   }
   VERIFY_TREE(flags);
 }
 
-TEST(InodeOrTreeOrEntryTest, fileOpsOnCorrectObjectsOnly) {
+TEST(VirtualInodeTest, fileOpsOnCorrectObjectsOnly) {
   TestFileDatabase files;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
 
   VERIFY_TREE(VERIFY_INITIAL);
   for (auto info_ : files.getOriginalItems()) {
     auto& info = *info_;
-    auto inodeOr = mount.getInodeOrTreeOrEntry(info.path);
-    auto hashTry = inodeOr
+    auto virtualInode = mount.getVirtualInode(info.path);
+    auto hashTry = virtualInode
                        .getSHA1(
                            info.path,
                            mount.getEdenMount()->getObjectStore(),
@@ -754,7 +754,7 @@ TEST(InodeOrTreeOrEntryTest, fileOpsOnCorrectObjectsOnly) {
     }
 
     auto metadataTry =
-        inodeOr
+        virtualInode
             .getEntryAttributes(
                 folly::to_underlying(FileAttributes::FILE_SIZE) |
                     folly::to_underlying(FileAttributes::SHA1_HASH) |
@@ -788,7 +788,7 @@ TEST(InodeOrTreeOrEntryTest, fileOpsOnCorrectObjectsOnly) {
     }
 
     metadataTry =
-        inodeOr
+        virtualInode
             .getEntryAttributes(
                 folly::to_underlying(FileAttributes::FILE_SIZE) |
                     folly::to_underlying(FileAttributes::SOURCE_CONTROL_TYPE),
@@ -823,19 +823,19 @@ TEST(InodeOrTreeOrEntryTest, fileOpsOnCorrectObjectsOnly) {
   }
 }
 
-TEST(InodeOrTreeOrEntryTest, getEntryAttributesDoesNotChangeState) {
+TEST(VirtualInodeTest, getEntryAttributesDoesNotChangeState) {
   TestFileDatabase files;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
 
   for (auto info : files.getOriginalItems()) {
     VERIFY_TREE(VERIFY_DEFAULT & (~VERIFY_SHA1));
-    auto inodeOr = mount.getInodeOrTreeOrEntry(info->path);
-    EXPECT_INODE_OR(inodeOr, *info.get());
+    auto virtualInode = mount.getVirtualInode(info->path);
+    EXPECT_INODE_OR(virtualInode, *info.get());
   }
   VERIFY_TREE(VERIFY_DEFAULT & (~VERIFY_SHA1));
 }
 
-TEST(InodeOrTreeOrEntryTest, getEntryAttributesAttributeError) {
+TEST(VirtualInodeTest, getEntryAttributesAttributeError) {
   TestFileDatabase files;
   FakeTreeBuilder builder;
   files.build(builder);
@@ -844,9 +844,9 @@ TEST(InodeOrTreeOrEntryTest, getEntryAttributesAttributeError) {
   builder.setReady("root_dirA");
   builder.setReady("root_dirA/child1_fileA2");
 
-  auto inodeOr = mount.getInodeOrTreeOrEntry("root_dirA");
+  auto virtualInode = mount.getVirtualInode("root_dirA");
 
-  auto attributesFuture = inodeOr.getEntryAttributes(
+  auto attributesFuture = virtualInode.getEntryAttributes(
       folly::to_underlying(FileAttributes::FILE_SIZE) |
           folly::to_underlying(FileAttributes::SHA1_HASH) |
           folly::to_underlying(FileAttributes::SOURCE_CONTROL_TYPE),
@@ -863,7 +863,7 @@ TEST(InodeOrTreeOrEntryTest, getEntryAttributesAttributeError) {
   EXPECT_FALSE(attributes.type.value().hasException());
 }
 
-TEST(InodeOrTreeOrEntryTest, sha1DoesNotChangeState) {
+TEST(VirtualInodeTest, sha1DoesNotChangeState) {
   TestFileDatabase files;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
 
@@ -875,11 +875,11 @@ TEST(InodeOrTreeOrEntryTest, sha1DoesNotChangeState) {
     VERIFY_TREE(verify_flags);
     for (auto info_ : files.getOriginalItems()) {
       auto& info = *info_;
-      auto inodeOr = mount.getInodeOrTreeOrEntry(info.path);
-      EXPECT_INODE_OR(inodeOr, info);
+      auto virtualInode = mount.getVirtualInode(info.path);
+      EXPECT_INODE_OR(virtualInode, info);
 
       if (info.isRegularFile()) {
-        inodeOr
+        virtualInode
             .getSHA1(
                 info.path,
                 mount.getEdenMount()->getObjectStore(),
@@ -887,7 +887,7 @@ TEST(InodeOrTreeOrEntryTest, sha1DoesNotChangeState) {
             .get();
       } else {
         EXPECT_THROW_ERRNO(
-            inodeOr
+            virtualInode
                 .getSHA1(
                     info.path,
                     mount.getEdenMount()->getObjectStore(),
@@ -902,7 +902,7 @@ TEST(InodeOrTreeOrEntryTest, sha1DoesNotChangeState) {
   }
 }
 
-TEST(InodeOrTreeOrEntryTest, unlinkMaterializesParents) {
+TEST(VirtualInodeTest, unlinkMaterializesParents) {
   TestFileDatabase files;
   auto builder = MakeTestTreeBuilder(files);
   auto mount = TestMount(builder, true);
@@ -920,7 +920,7 @@ TEST(InodeOrTreeOrEntryTest, unlinkMaterializesParents) {
 }
 
 // Materialization is different on Windows vs other platforms...
-TEST(InodeOrTreeOrEntryTest, materializationPropagation) {
+TEST(VirtualInodeTest, materializationPropagation) {
   // One by one, start with something fresh, load the one, and check the state
   TestFileDatabase files;
   for (auto info_ : files.getOriginalItems()) {
@@ -977,7 +977,7 @@ TEST(InodeOrTreeOrEntryTest, materializationPropagation) {
   }
 }
 
-TEST(InodeOrTreeOrEntryTest, loadPropagation) {
+TEST(VirtualInodeTest, loadPropagation) {
   // One by one, start with something fresh, load the one, and check the state
   TestFileDatabase files;
   auto builder = MakeTestTreeBuilder(files);

@@ -11,8 +11,8 @@
 #include <folly/MapUtil.h>
 #include <folly/functional/Invoke.h>
 #include <folly/futures/Future.h>
-#include "eden/fs/inodes/InodeOrTreeOrEntry.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/inodes/VirtualInode.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/PathMap.h"
@@ -25,15 +25,15 @@ namespace detail {
  * of inode load calls that we need to emit when loading a list
  * of paths.
  */
-class InodeOrTreeOrEntryLoader {
+class VirtualInodeLoader {
  public:
-  InodeOrTreeOrEntryLoader() = default;
+  VirtualInodeLoader() = default;
 
   // Arrange to load the inode for the input path
-  folly::Future<InodeOrTreeOrEntry> load(RelativePathPiece path) {
-    InodeOrTreeOrEntryLoader* parent = this;
+  folly::Future<VirtualInode> load(RelativePathPiece path) {
+    VirtualInodeLoader* parent = this;
 
-    // Build out the tree if InodeOrTreeOrEntryLoaders to match the input path
+    // Build out the tree if VirtualInodeLoaders to match the input path
     for (auto name : path.components()) {
       auto child = parent->getOrCreateChild(name);
       parent = child;
@@ -52,7 +52,7 @@ class InodeOrTreeOrEntryLoader {
   // Arrange to load the inode for the input path, given
   // a stringy input.  If the path is not well formed then
   // the error is recorded in the returned future.
-  folly::Future<InodeOrTreeOrEntry> load(folly::StringPiece path) {
+  folly::Future<VirtualInode> load(folly::StringPiece path) {
     return folly::makeFutureWith([&] { return load(RelativePathPiece(path)); });
   }
 
@@ -62,7 +62,7 @@ class InodeOrTreeOrEntryLoader {
   // In the failure case this will propagate the failure to
   // any children of this node, too.
   void loaded(
-      folly::Try<InodeOrTreeOrEntry> inodeTreeTry,
+      folly::Try<VirtualInode> inodeTreeTry,
       RelativePathPiece path,
       ObjectStore* store,
       ObjectFetchContext& fetchContext) {
@@ -84,7 +84,7 @@ class InodeOrTreeOrEntryLoader {
         // This inode is not a tree but we're trying to load
         // children; generate failures for these
         childLoader->loaded(
-            folly::Try<InodeOrTreeOrEntry>(
+            folly::Try<VirtualInode>(
                 folly::make_exception_wrapper<std::system_error>(
                     ENOENT, std::generic_category())),
             childPath,
@@ -104,7 +104,7 @@ class InodeOrTreeOrEntryLoader {
                       childPath,
                       store,
                       &fetchContext](
-                         folly::Try<InodeOrTreeOrEntry>&& childInodeTreeTry) {
+                         folly::Try<VirtualInode>&& childInodeTreeTry) {
               loader->loaded(childInodeTreeTry, childPath, store, fetchContext);
             })
             .semi()
@@ -117,20 +117,19 @@ class InodeOrTreeOrEntryLoader {
   // Any child nodes that we need to load.  We have to use a unique_ptr
   // for this to avoid creating a self-referential type and fail to
   // compile.  This happens to have the nice property of maintaining
-  // a stable address for the contents of the InodeOrTreeOrEntryLoader.
-  PathMap<std::unique_ptr<InodeOrTreeOrEntryLoader>> children_{
+  // a stable address for the contents of the VirtualInodeLoader.
+  PathMap<std::unique_ptr<VirtualInodeLoader>> children_{
       CaseSensitivity::Sensitive};
   // promises for the inode load attempts
-  std::vector<folly::Promise<InodeOrTreeOrEntry>> promises_;
+  std::vector<folly::Promise<VirtualInode>> promises_;
 
   // Helper for building out the plan during parsing
-  InodeOrTreeOrEntryLoader* getOrCreateChild(PathComponentPiece name) {
+  VirtualInodeLoader* getOrCreateChild(PathComponentPiece name) {
     auto child = folly::get_ptr(children_, name);
     if (child) {
       return child->get();
     }
-    auto ret =
-        children_.emplace(name, std::make_unique<InodeOrTreeOrEntryLoader>());
+    auto ret = children_.emplace(name, std::make_unique<VirtualInodeLoader>());
     return ret.first->second.get();
   }
 };
@@ -138,7 +137,7 @@ class InodeOrTreeOrEntryLoader {
 } // namespace detail
 
 /** Given a `rootInode` and a list of `paths` relative to that root,
- * attempt to load the InodeOrTreeOrEntry for each.
+ * attempt to load the VirtualInode for each.
  *
  * The load attempt builds a tree-shaped load plan to avoid repeatedly
  * loading the same objects over and over again.  In other words, the
@@ -156,26 +155,26 @@ class InodeOrTreeOrEntryLoader {
  * entry for that path, as the caller expects 1:1 numbers of records in/out.
  */
 template <typename Func>
-auto applyToInodeOrTreeOrEntry(
+auto applyToVirtualInode(
     InodePtr rootInode,
     const std::vector<std::string>& paths,
     Func func,
     ObjectStore* store,
     ObjectFetchContext& fetchContext) {
-  using FuncRet = folly::invoke_result_t<Func&, InodeOrTreeOrEntry&>;
+  using FuncRet = folly::invoke_result_t<Func&, VirtualInode&>;
   using Result = typename folly::isFutureOrSemiFuture<FuncRet>::Inner;
 
-  detail::InodeOrTreeOrEntryLoader loader;
+  detail::VirtualInodeLoader loader;
 
   std::vector<folly::SemiFuture<Result>> results;
   results.reserve(paths.size());
   for (const auto& path : paths) {
     results.emplace_back(loader.load(path).thenValue(
-        [func, path](InodeOrTreeOrEntry&& inode) { return func(inode); }));
+        [func, path](VirtualInode&& inode) { return func(inode); }));
   }
 
   loader.loaded(
-      folly::Try<InodeOrTreeOrEntry>(InodeOrTreeOrEntry{std::move(rootInode)}),
+      folly::Try<VirtualInode>(VirtualInode{std::move(rootInode)}),
       RelativePath(),
       store,
       fetchContext);

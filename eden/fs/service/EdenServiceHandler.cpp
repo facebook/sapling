@@ -47,9 +47,9 @@
 #include "eden/fs/inodes/GlobNode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
-#include "eden/fs/inodes/InodeOrTreeOrEntryLoader.h"
 #include "eden/fs/inodes/Traverse.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/inodes/VirtualInodeLoader.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/model/Hash.h"
@@ -707,11 +707,11 @@ ImmediateFuture<Hash20> EdenServiceHandler::getSHA1ForPath(
   }
 
   auto* objectStore = edenMount.getObjectStore();
-  auto inodeFut = edenMount.getInodeOrTreeOrEntry(path, fetchContext);
+  auto inodeFut = edenMount.getVirtualInode(path, fetchContext);
   return std::move(inodeFut).thenValue(
       [path = std::move(path), objectStore, &fetchContext](
-          const InodeOrTreeOrEntry& inodeOrTree) {
-        return inodeOrTree.getSHA1(path, objectStore, fetchContext);
+          const VirtualInode& virtualInode) {
+        return virtualInode.getSHA1(path, objectStore, fetchContext);
       });
 }
 
@@ -732,10 +732,10 @@ ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
     auto objectStore = edenMount->getObjectStore();
     auto relativePath = RelativePathPiece{path};
 
-    return edenMount->getInodeOrTreeOrEntry(relativePath, fetchContext)
+    return edenMount->getVirtualInode(relativePath, fetchContext)
         .thenValue([reqBitmask, relativePath, objectStore, &fetchContext](
-                       const InodeOrTreeOrEntry& inodeOrTree) {
-          return inodeOrTree.getEntryAttributes(
+                       const VirtualInode& virtualInode) {
+          return virtualInode.getEntryAttributes(
               reqBitmask, relativePath, objectStore, fetchContext);
         });
   } catch (const std::exception& e) {
@@ -1692,10 +1692,10 @@ EdenServiceHandler::semifuture_getEntryInformation(
                              paths = std::move(paths),
                              objectStore,
                              &fetchContext](auto&&) {
-                   return collectAll(applyToInodeOrTreeOrEntry(
+                   return collectAll(applyToVirtualInode(
                                          rootInode,
                                          *paths,
-                                         [](const InodeOrTreeOrEntry& inode) {
+                                         [](const VirtualInode& inode) {
                                            return inode.getDtype();
                                          },
                                          objectStore,
@@ -1746,13 +1746,12 @@ EdenServiceHandler::semifuture_getFileInformation(
                              objectStore,
                              &fetchContext](auto&&) {
                    return collectAll(
-                              applyToInodeOrTreeOrEntry(
+                              applyToVirtualInode(
                                   rootInode,
                                   *paths,
                                   [lastCheckoutTime,
                                    objectStore,
-                                   &fetchContext](
-                                      const InodeOrTreeOrEntry& inode) {
+                                   &fetchContext](const VirtualInode& inode) {
                                     return inode
                                         .stat(
                                             lastCheckoutTime,
@@ -1821,24 +1820,24 @@ getAllEntryAttributes(
     const EdenMount& edenMount,
     std::string path,
     ObjectFetchContext& fetchContext) {
-  auto inodeOr =
-      edenMount.getInodeOrTreeOrEntry(RelativePathPiece{path}, fetchContext);
-  return std::move(inodeOr).thenValue([path = std::move(path),
-                                       requestedAttributes,
-                                       objectStore = edenMount.getObjectStore(),
-                                       &fetchContext](
-                                          InodeOrTreeOrEntry tree) mutable {
-    if (!tree.isDirectory()) {
-      return ImmediateFuture<
-          std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>(
-          newEdenError(
-              EINVAL,
-              EdenErrorType::ARGUMENT_ERROR,
-              fmt::format("{}: path must be a directory", path)));
-    }
-    return tree.getChildrenAttributes(
-        requestedAttributes, RelativePath{path}, objectStore, fetchContext);
-  });
+  auto virtualInode =
+      edenMount.getVirtualInode(RelativePathPiece{path}, fetchContext);
+  return std::move(virtualInode)
+      .thenValue([path = std::move(path),
+                  requestedAttributes,
+                  objectStore = edenMount.getObjectStore(),
+                  &fetchContext](VirtualInode tree) mutable {
+        if (!tree.isDirectory()) {
+          return ImmediateFuture<std::vector<
+              std::pair<PathComponent, folly::Try<EntryAttributes>>>>(
+              newEdenError(
+                  EINVAL,
+                  EdenErrorType::ARGUMENT_ERROR,
+                  fmt::format("{}: path must be a directory", path)));
+        }
+        return tree.getChildrenAttributes(
+            requestedAttributes, RelativePath{path}, objectStore, fetchContext);
+      });
 }
 
 template <typename SerializedT, typename T>

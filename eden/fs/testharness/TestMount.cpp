@@ -655,17 +655,15 @@ FileInodePtr TestMount::getFileInode(folly::StringPiece path) const {
   return getFileInode(RelativePathPiece{path});
 }
 
-InodeOrTreeOrEntry TestMount::getInodeOrTreeOrEntry(
-    RelativePathPiece path) const {
+VirtualInode TestMount::getVirtualInode(RelativePathPiece path) const {
   return edenMount_
-      ->getInodeOrTreeOrEntry(
+      ->getVirtualInode(
           RelativePathPiece{path}, ObjectFetchContext::getNullContext())
       .get();
 }
 
-InodeOrTreeOrEntry TestMount::getInodeOrTreeOrEntry(
-    folly::StringPiece path) const {
-  return getInodeOrTreeOrEntry(RelativePathPiece{path});
+VirtualInode TestMount::getVirtualInode(folly::StringPiece path) const {
+  return getVirtualInode(RelativePathPiece{path});
 }
 
 void TestMount::loadAllInodes() {

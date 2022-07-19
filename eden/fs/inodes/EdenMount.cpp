@@ -1217,9 +1217,9 @@ ImmediateFuture<InodePtr> EdenMount::getInodeSlow(
 
 namespace {
 
-class InodeOrTreeLookupProcessor {
+class VirtualInodeLookupProcessor {
  public:
-  explicit InodeOrTreeLookupProcessor(
+  explicit VirtualInodeLookupProcessor(
       RelativePathPiece path,
       ObjectStore* objectStore,
       ObjectFetchContext& context)
@@ -1229,7 +1229,7 @@ class InodeOrTreeLookupProcessor {
         objectStore_(objectStore),
         context_{context} {}
 
-  ImmediateFuture<InodeOrTreeOrEntry> next(InodeOrTreeOrEntry inodeTreeEntry) {
+  ImmediateFuture<VirtualInode> next(VirtualInode inodeTreeEntry) {
     if (iter_ == iterRange_.end()) {
       // Lookup terminated, return the existing entry
       return ImmediateFuture{std::move(inodeTreeEntry)};
@@ -1239,9 +1239,8 @@ class InodeOrTreeLookupProcessor {
     auto childName = *iter_++;
     return inodeTreeEntry
         .getOrFindChild(childName, path_, objectStore_, context_)
-        .thenValue([this](InodeOrTreeOrEntry entry) {
-          return next(std::move(entry));
-        });
+        .thenValue(
+            [this](VirtualInode entry) { return next(std::move(entry)); });
   }
 
  private:
@@ -1249,28 +1248,28 @@ class InodeOrTreeLookupProcessor {
   RelativePath::base_type::component_iterator_range iterRange_;
   RelativePath::base_type::component_iterator iter_;
   // The ObjectStore is guaranteed to be valid for the lifetime of the
-  // EdenMount. Since the lifetime of InodeOrTreeLookupProcessor is strictly
+  // EdenMount. Since the lifetime of VirtualInodeLookupProcessor is strictly
   // less than the one of a request (and hence, the lifetime of the mount the
   // request is against), we can safely store a pointer to the store, rather
   // than a shared_ptr.
   ObjectStore* objectStore_;
   // The ObjectFetchContext is allocated at the beginning of a request and
   // released once the request completes. Since the lifetime of
-  // InodeOrTreeLookupProcessor is strictly less than the one of a request, we
+  // VirtualInodeLookupProcessor is strictly less than the one of a request, we
   // can safely store a reference to the fetch context.
   ObjectFetchContext& context_;
 };
 
 } // namespace
 
-ImmediateFuture<InodeOrTreeOrEntry> EdenMount::getInodeOrTreeOrEntry(
+ImmediateFuture<VirtualInode> EdenMount::getVirtualInode(
     RelativePathPiece path,
     ObjectFetchContext& context) const {
   auto rootInode = static_cast<InodePtr>(getRootInode());
 
-  auto processor = std::make_unique<InodeOrTreeLookupProcessor>(
+  auto processor = std::make_unique<VirtualInodeLookupProcessor>(
       path, getObjectStore(), context);
-  auto future = processor->next(InodeOrTreeOrEntry(std::move(rootInode)));
+  auto future = processor->next(VirtualInode(std::move(rootInode)));
   return std::move(future).ensure(
       [p = std::move(processor)]() mutable { p.reset(); });
 }

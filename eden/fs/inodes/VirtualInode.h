@@ -28,32 +28,44 @@ class ObjectFetchContext;
 namespace detail {
 using TreePtr = std::shared_ptr<const Tree>;
 
-using VariantInodeOrTreeOrEntry = std::
+using VariantVirtualInode = std::
     variant<InodePtr, UnmaterializedUnloadedBlobDirEntry, TreePtr, TreeEntry>;
 } // namespace detail
 
-class InodeOrTreeOrEntry {
+/**
+ * Allows operating on an inode in whatever state it's currently in.
+ * VirtualInode allows operating on an Inode object, Tree object or DirEntry
+ * object all the same.
+ *
+ * This prevents needed to load inodes to perform operations on them, which
+ * improves performance of SourceControl operations.
+ *
+ * note that the "virtual" in VirtualInodes means that they are representing
+ * Inodes but may not actually hold an inode under the hood. VirtualInodes are
+ * different from vnodes (macOS/freebsd data structure for inodes).
+ */
+class VirtualInode {
  public:
-  explicit InodeOrTreeOrEntry(InodePtr& value) : variant_(value) {}
-  explicit InodeOrTreeOrEntry(InodePtr&& value) : variant_(std::move(value)) {}
+  explicit VirtualInode(InodePtr& value) : variant_(value) {}
+  explicit VirtualInode(InodePtr&& value) : variant_(std::move(value)) {}
 
-  explicit InodeOrTreeOrEntry(UnmaterializedUnloadedBlobDirEntry&& value)
+  explicit VirtualInode(UnmaterializedUnloadedBlobDirEntry&& value)
       : variant_(std::move(value)) {}
 
-  explicit InodeOrTreeOrEntry(const detail::TreePtr& value, mode_t mode)
+  explicit VirtualInode(const detail::TreePtr& value, mode_t mode)
       : variant_(value), treeMode_(mode) {}
-  explicit InodeOrTreeOrEntry(detail::TreePtr&& value, mode_t mode)
+  explicit VirtualInode(detail::TreePtr&& value, mode_t mode)
       : variant_(std::move(value)), treeMode_(mode) {}
 
-  explicit InodeOrTreeOrEntry(const TreeEntry& value) : variant_(value) {
+  explicit VirtualInode(const TreeEntry& value) : variant_(value) {
     XCHECK(!value.isTree())
         << "TreeEntries which represent a tree should be resolved to a tree "
-        << "before being constructed into InodeOrTreeOrEntry";
+        << "before being constructed into VirtualInode";
   }
-  explicit InodeOrTreeOrEntry(TreeEntry&& value) : variant_(std::move(value)) {
+  explicit VirtualInode(TreeEntry&& value) : variant_(std::move(value)) {
     XCHECK(!value.isTree())
         << "TreeEntries which represent a tree should be resolved to a tree "
-        << "before being constructed into InodeOrTreeOrEntry";
+        << "before being constructed into VirtualInode";
   }
 
   /**
@@ -71,7 +83,7 @@ class InodeOrTreeOrEntry {
    * Discover the contained data type.
    *
    * These functions should not be used outside of unit tests.
-   * InodeOrTreeOrEntry should "transparently" look like a file or directory to
+   * VirtualInode should "transparently" look like a file or directory to
    * most users.
    */
   enum class ContainedType {
@@ -87,13 +99,13 @@ class InodeOrTreeOrEntry {
       ObjectFetchContext& fetchContext) const;
 
   /**
-   * Get the InodeOrTreeOrEntry object for a child of this directory.
+   * Get the VirtualInode object for a child of this directory.
    *
    * Unlike TreeInode::getOrLoadChild, this method avoids loading the child's
    * inode if it is not already loaded, instead falling back to looking up the
    * object in the ObjectStore.
    */
-  ImmediateFuture<InodeOrTreeOrEntry> getOrFindChild(
+  ImmediateFuture<VirtualInode> getOrFindChild(
       PathComponentPiece childName,
       RelativePathPiece path,
       ObjectStore* objectStore,
@@ -134,14 +146,14 @@ class InodeOrTreeOrEntry {
       ObjectFetchContext& fetchContext) const;
 
   /**
-   * Retrieves InodeOrTreeOrEntry for each of the children of this
+   * Retrieves VirtualInode for each of the children of this
    * directory.
    *
    * fetchContext is used in the returned ImmediateFutures, it must have a
    * lifetime longer than these futures.
    */
-  folly::Try<std::vector<
-      std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>>
+  folly::Try<
+      std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>
   getChildren(
       RelativePathPiece path,
       ObjectStore* objectStore,
@@ -168,7 +180,7 @@ class InodeOrTreeOrEntry {
   /**
    * Helper function for getOrFindChild when the current node is a Tree.
    */
-  static ImmediateFuture<InodeOrTreeOrEntry> getOrFindChild(
+  static ImmediateFuture<VirtualInode> getOrFindChild(
       detail::TreePtr tree,
       PathComponentPiece childName,
       RelativePathPiece path,
@@ -186,7 +198,7 @@ class InodeOrTreeOrEntry {
   /**
    * The main object this encapsulates
    */
-  detail::VariantInodeOrTreeOrEntry variant_;
+  detail::VariantVirtualInode variant_;
 
   /**
    * The mode_t iff this contains a Tree

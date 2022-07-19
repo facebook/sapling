@@ -25,10 +25,10 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/InodeNumber.h"
-#include "eden/fs/inodes/InodeOrTreeOrEntry.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/inodes/VirtualInode.h"
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
@@ -546,7 +546,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * This function is marked slow due to forcing to load inodes that may not
    * have been loaded previously. Loading an Inode is unfortunately both
    * expensive to load (due to writing to the overlay), and may slow down
-   * future checkout operations. The method getInodeOrTreeOrEntry below should
+   * future checkout operations. The method getVirtualInode below should
    * instead be preferred as it doesn't suffer from these pathological cases.
    */
   ImmediateFuture<InodePtr> getInodeSlow(
@@ -568,7 +568,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * besides the path being invalid (for instance, an error loading data from
    * the ObjectStore).
    */
-  ImmediateFuture<InodeOrTreeOrEntry> getInodeOrTreeOrEntry(
+  ImmediateFuture<VirtualInode> getVirtualInode(
       RelativePathPiece path,
       ObjectFetchContext& context) const;
 

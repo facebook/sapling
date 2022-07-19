@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/inodes/InodeOrTreeOrEntryLoader.h"
+#include "eden/fs/inodes/VirtualInodeLoader.h"
 #include <folly/Exception.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/portability/GTest.h>
@@ -18,7 +18,7 @@
 
 using namespace facebook::eden;
 
-// InodeOrTreeOrEntry objects don't currently know or can compute their paths,
+// VirtualInode objects don't currently know or can compute their paths,
 // as once you switch from the Inode objects to => DirEntry/Tree/TreeEntry, you
 // lose track of the parent object (unlike inodes, which always know their
 // parent). Rather than keep paths around just to report them for this test,
@@ -45,11 +45,11 @@ TEST(InodeLoader, load) {
   {
     auto results =
         collectAll(
-            applyToInodeOrTreeOrEntry(
+            applyToVirtualInode(
                 rootInode,
                 std::vector<std::string>{
                     "dir/a.txt", "not/exist/a", "not/exist/b", "dir/sub/b.txt"},
-                [&](InodeOrTreeOrEntry inode) -> Hash20 {
+                [&](VirtualInode inode) -> Hash20 {
                   return inode
                       .getSHA1("INVALIDPATH"_relpath, objectStore, fetchContext)
                       .get();
@@ -67,7 +67,7 @@ TEST(InodeLoader, load) {
   {
     auto results =
         collectAll(
-            applyToInodeOrTreeOrEntry(
+            applyToVirtualInode(
                 rootInode,
                 std::vector<std::string>{
                     "dir/sub/b.txt",
@@ -75,7 +75,7 @@ TEST(InodeLoader, load) {
                     "not/exist/a",
                     "not/exist/b",
                     "dir/sub/b.txt"},
-                [&](InodeOrTreeOrEntry inode) {
+                [&](VirtualInode inode) {
                   return inode
                       .getSHA1("INVALIDPATH"_relpath, objectStore, fetchContext)
                       .get();
@@ -95,10 +95,10 @@ TEST(InodeLoader, load) {
   {
     auto results =
         collectAll(
-            applyToInodeOrTreeOrEntry(
+            applyToVirtualInode(
                 rootInode,
                 std::vector<std::string>{"dir/a.txt", "/invalid///exist/a"},
-                [&](InodeOrTreeOrEntry inode) {
+                [&](VirtualInode inode) {
                   return inode
                       .getSHA1("INVALIDPATH"_relpath, objectStore, fetchContext)
                       .get();
@@ -123,11 +123,11 @@ TEST(InodeLoader, notReady) {
   // auto executor = mount.getServerExecutor().get();
 
   {
-    auto future = collectAll(applyToInodeOrTreeOrEntry(
+    auto future = collectAll(applyToVirtualInode(
         rootInode,
         std::vector<std::string>{
             "dir/a.txt", "not/exist/a", "not/exist/b", "dir/sub/b.txt"},
-        [&](InodeOrTreeOrEntry inode) -> folly::SemiFuture<Hash20> {
+        [&](VirtualInode inode) -> folly::SemiFuture<Hash20> {
           return inode.getSHA1("INVALIDPATH"_relpath, objectStore, fetchContext)
               .semi();
         },

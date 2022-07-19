@@ -560,7 +560,7 @@ TEST(TreeInode, addNewMaterializationsToInodeTraceBus) {
 }
 
 void collectResults(
-    std::vector<std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>
+    std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>
         results) {
   for (auto& result : results) {
     std::move(result.second).get(kFutureTimeout);

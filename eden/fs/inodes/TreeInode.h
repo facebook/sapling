@@ -14,7 +14,7 @@
 #include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
-#include "eden/fs/inodes/InodeOrTreeOrEntry.h"
+#include "eden/fs/inodes/VirtualInode.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -132,16 +132,16 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    *
    * Implements getOrLoadChild if loadInodes is true. If loadInodes is false and
    * the Inode load is already-in-progress, this may NOT return the loading
-   * inode. Otherwise, the returned InodeOrTreeOrEntry may contain a ObjectStore
+   * inode. Otherwise, the returned VirtualInode may contain a ObjectStore
    * Tree or a DirEntry/TreeEntry representing the entry.
    */
-  ImmediateFuture<InodeOrTreeOrEntry> getOrFindChild(
+  ImmediateFuture<VirtualInode> getOrFindChild(
       PathComponentPiece name,
       ObjectFetchContext& context,
       bool loadInodes);
 
   /**
-   * Retrieves InodeOrTreeOrEntry for each of entry in this Tree, like
+   * Retrieves VirtualInode for each of entry in this Tree, like
    * getOrFindChild, but for all the children of a directory.
    *
    * Note that this is separated out from the readdir logic below. There are
@@ -154,10 +154,10 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    *
    * Implements getOrLoadChild if loadInodes is true. If loadInodes is false and
    * the inode load is already-in-progress, this may NOT return the loading
-   * inode. Otherwise, the returned InodeOrTreeOrEntry may contain a ObjectStore
+   * inode. Otherwise, the returned VirtualInode may contain a ObjectStore
    * Tree or a DirEntry/TreeEntry representing the entry.
    */
-  std::vector<std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>
+  std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>
   getChildren(ObjectFetchContext& context, bool loadInodes);
 
   /**
@@ -816,7 +816,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * If we fall into none of the above cases the TreeOrEntry representing the
    * data for that inode will be returned.
    */
-  std::optional<ImmediateFuture<InodeOrTreeOrEntry>> rlockGetOrFindChild(
+  std::optional<ImmediateFuture<VirtualInode>> rlockGetOrFindChild(
       const TreeInodeState& contents,
       PathComponentPiece name,
       ObjectFetchContext& context,
@@ -825,7 +825,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   /**
    * Loads and returns the inode for this child.
    */
-  ImmediateFuture<InodeOrTreeOrEntry> wlockGetOrFindChild(
+  ImmediateFuture<VirtualInode> wlockGetOrFindChild(
       folly::Synchronized<TreeInodeState>::LockedPtr& contents,
       PathComponentPiece name,
       ObjectFetchContext& context);

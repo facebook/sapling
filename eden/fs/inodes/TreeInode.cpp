@@ -206,8 +206,7 @@ ImmediateFuture<struct stat> TreeInode::stat(ObjectFetchContext& /*context*/) {
   return st;
 }
 
-std::optional<ImmediateFuture<InodeOrTreeOrEntry>>
-TreeInode::rlockGetOrFindChild(
+std::optional<ImmediateFuture<VirtualInode>> TreeInode::rlockGetOrFindChild(
     const TreeInodeState& contents,
     PathComponentPiece name,
     ObjectFetchContext& context,
@@ -219,14 +218,14 @@ TreeInode::rlockGetOrFindChild(
     XLOG(DBG7) << "attempted to load non-existent entry \"" << name << "\" in "
                << getLogPath();
     return std::make_optional(
-        ImmediateFuture<InodeOrTreeOrEntry>{folly::Try<InodeOrTreeOrEntry>{
+        ImmediateFuture<VirtualInode>{folly::Try<VirtualInode>{
             InodeError(ENOENT, inodePtrFromThis(), name)}});
   }
 
   // Check to see if the entry is already loaded
   auto& entry = iter->second;
   if (auto inodePtr = entry.getInodePtr()) {
-    return ImmediateFuture{InodeOrTreeOrEntry{std::move(inodePtr)}};
+    return ImmediateFuture{VirtualInode{std::move(inodePtr)}};
   }
 
   // The node is not loaded. If the caller requires that we load
@@ -248,7 +247,7 @@ TreeInode::rlockGetOrFindChild(
     return objectStore->getTree(hash, context)
         .thenValue([mode = entry.getInitialMode()](
                        std::shared_ptr<const Tree>&& tree) {
-          return InodeOrTreeOrEntry(std::move(tree), mode);
+          return VirtualInode(std::move(tree), mode);
         });
   }
   // This is a file, return the DirEntry if this was the last
@@ -257,10 +256,10 @@ TreeInode::rlockGetOrFindChild(
   // the constructor of UnmaterializedUnloadedBlobDirEntry can be
   // called safely.
   return ImmediateFuture{
-      InodeOrTreeOrEntry{UnmaterializedUnloadedBlobDirEntry(entry)}};
+      VirtualInode{UnmaterializedUnloadedBlobDirEntry(entry)}};
 }
 
-ImmediateFuture<InodeOrTreeOrEntry> TreeInode::wlockGetOrFindChild(
+ImmediateFuture<VirtualInode> TreeInode::wlockGetOrFindChild(
     folly::Synchronized<TreeInodeState>::LockedPtr& contents,
     PathComponentPiece name,
     ObjectFetchContext& context) {
@@ -307,10 +306,10 @@ ImmediateFuture<InodeOrTreeOrEntry> TreeInode::wlockGetOrFindChild(
   }
 
   return ImmediateFuture<InodePtr>{std::move(returnFuture)}.thenValue(
-      [](auto&& inode) { return InodeOrTreeOrEntry{inode}; });
+      [](auto&& inode) { return VirtualInode{inode}; });
 }
 
-ImmediateFuture<InodeOrTreeOrEntry> TreeInode::getOrFindChild(
+ImmediateFuture<VirtualInode> TreeInode::getOrFindChild(
     PathComponentPiece name,
     ObjectFetchContext& context,
     bool loadInodes) {
@@ -327,40 +326,39 @@ ImmediateFuture<InodeOrTreeOrEntry> TreeInode::getOrFindChild(
     // separately.
     return mount->getInodeSlow(".eden/this-dir"_relpath, context)
         .thenValue([](auto&& inode) {
-          return ImmediateFuture{InodeOrTreeOrEntry{std::move(inode)}};
+          return ImmediateFuture{VirtualInode{std::move(inode)}};
         });
   }
 #endif // !_WIN32
-  return tryRlockCheckBeforeUpdate<ImmediateFuture<InodeOrTreeOrEntry>>(
+  return tryRlockCheckBeforeUpdate<ImmediateFuture<VirtualInode>>(
              contents_,
              [&](const auto& contents)
-                 -> std::optional<ImmediateFuture<InodeOrTreeOrEntry>> {
+                 -> std::optional<ImmediateFuture<VirtualInode>> {
                return rlockGetOrFindChild(contents, name, context, loadInodes);
              },
-             [&](auto& contents) -> ImmediateFuture<InodeOrTreeOrEntry> {
+             [&](auto& contents) -> ImmediateFuture<VirtualInode> {
                return wlockGetOrFindChild(contents, name, context);
              })
       .ensure([b = std::move(block)]() mutable { b.close(); });
 }
 
-std::vector<std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>
+std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>
 TreeInode::getChildren(ObjectFetchContext& context, bool loadInodes) {
   // We could optimize this to take the rlock first and try to get all the
-  // InodeOrTreeOrEntry with out loading inodes. This would allow for higher
+  // VirtualInode with out loading inodes. This would allow for higher
   // concurrency. However, this will significantly increase code
   // complexity and can make non concurrent requests more expensive. We should
   //  perf in production before making this change: T125563920
 
   auto contents = contents_.wlock();
-  std::vector<std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>
-      result;
+  std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>> result;
   result.reserve(contents->entries.size());
   for (const auto& entry : contents->entries) {
-    auto inodeOrTreeOrEntry =
+    auto virtualInode =
         rlockGetOrFindChild(*contents, entry.first, context, loadInodes);
-    if (inodeOrTreeOrEntry) {
+    if (virtualInode) {
       result.push_back(
-          std::make_pair(entry.first, std::move(inodeOrTreeOrEntry.value())));
+          std::make_pair(entry.first, std::move(virtualInode.value())));
     } else {
       result.push_back(std::make_pair(
           entry.first, wlockGetOrFindChild(contents, entry.first, context)));
@@ -372,8 +370,8 @@ TreeInode::getChildren(ObjectFetchContext& context, bool loadInodes) {
 ImmediateFuture<InodePtr> TreeInode::getOrLoadChild(
     PathComponentPiece name,
     ObjectFetchContext& context) {
-  return getOrFindChild(name, context, true).thenValue([](auto&& inodeOrEntry) {
-    return inodeOrEntry.asInodePtr();
+  return getOrFindChild(name, context, true).thenValue([](auto&& virtualInode) {
+    return virtualInode.asInodePtr();
   });
 }
 
