@@ -374,14 +374,16 @@ mod tests {
                   0-1
                    \
                     2"#),
-            [2,1,0]);
+            [2, 1, 0]
+        );
         // [0, 1, 2], 1 is before 0.
         assert_eq!(
             t(r#"
                   0-2
                    /
                   1"#),
-            [2,1,0]);
+            [2, 1, 0]
+        );
 
         // With manual 'priorities'
         assert_eq!(

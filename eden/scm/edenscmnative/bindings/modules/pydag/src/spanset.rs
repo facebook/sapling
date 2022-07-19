@@ -162,11 +162,7 @@ impl<'a> FromPyObject<'a> for Spans {
                 Ok(None) => None,
                 Ok(Some(i)) => {
                     // Skip "nullrev" automatically.
-                    if i >= 0 {
-                        Some(Ok(Id(i as u64)))
-                    } else {
-                        None
-                    }
+                    if i >= 0 { Some(Ok(Id(i as u64))) } else { None }
                 }
                 Err(e) => Some(Err(e)),
             })
