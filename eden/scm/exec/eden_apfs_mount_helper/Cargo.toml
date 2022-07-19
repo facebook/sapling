@@ -11,7 +11,7 @@ anyhow = "1.0.56"
 libc = "0.2.121"
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"], optional = true }
-sha2 = "0.8"
+sha2 = "0.10"
 structopt = "0.3.23"
 
 [dev-dependencies]

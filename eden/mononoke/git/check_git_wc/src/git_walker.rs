@@ -56,8 +56,8 @@ fn get_sha256(git_lfs: bool, contents: &[u8]) -> hash::Sha256 {
     use sha2::Digest;
     use sha2::Sha256;
     let mut hasher = Sha256::new();
-    hasher.input(contents);
-    hash::Sha256::from_byte_array(hasher.result().into())
+    hasher.update(contents);
+    hash::Sha256::from_byte_array(hasher.finalize().into())
 }
 
 fn process_entry(git_lfs: bool, repo: &Repository, entry: TreeEntry<'_>) -> Result<CheckEntry> {

@@ -25,5 +25,5 @@ filestore = { version = "0.1.0", path = "../filestore" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-sha2 = "0.8"
+sha2 = "0.10"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

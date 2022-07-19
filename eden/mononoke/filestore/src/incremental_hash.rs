@@ -66,11 +66,11 @@ impl Sha1IncrementalHasher {
 
 impl Hasher<hash::Sha1> for Sha1IncrementalHasher {
     fn update<T: AsRef<[u8]>>(&mut self, bytes: T) {
-        self.0.input(bytes.as_ref())
+        self.0.update(bytes.as_ref())
     }
 
     fn finish(self) -> hash::Sha1 {
-        let hash = self.0.result().into();
+        let hash = self.0.finalize().into();
         hash::Sha1::from_byte_array(hash)
     }
 }
@@ -85,11 +85,11 @@ impl Sha256IncrementalHasher {
 
 impl Hasher<hash::Sha256> for Sha256IncrementalHasher {
     fn update<T: AsRef<[u8]>>(&mut self, bytes: T) {
-        self.0.input(bytes.as_ref())
+        self.0.update(bytes.as_ref())
     }
 
     fn finish(self) -> hash::Sha256 {
-        let hash = self.0.result().into();
+        let hash = self.0.finalize().into();
         hash::Sha256::from_byte_array(hash)
     }
 }
@@ -101,18 +101,18 @@ impl GitSha1IncrementalHasher {
         let size = size.advise();
         let mut sha1 = Sha1::new();
         let prototype = hash::RichGitSha1::from_byte_array([0; 20], "blob", size);
-        sha1.input(&prototype.prefix());
+        sha1.update(&prototype.prefix());
         Self(sha1, size)
     }
 }
 
 impl Hasher<hash::RichGitSha1> for GitSha1IncrementalHasher {
     fn update<T: AsRef<[u8]>>(&mut self, bytes: T) {
-        self.0.input(bytes.as_ref())
+        self.0.update(bytes.as_ref())
     }
 
     fn finish(self) -> hash::RichGitSha1 {
-        let hash = self.0.result().into();
+        let hash = self.0.finalize().into();
         hash::RichGitSha1::from_byte_array(hash, "blob", self.1)
     }
 }

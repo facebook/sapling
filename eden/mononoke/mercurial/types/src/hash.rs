@@ -118,9 +118,9 @@ pub struct Context(sha1::Sha1);
 impl<'a> From<&'a [u8]> for Sha1 {
     fn from(data: &[u8]) -> Sha1 {
         let mut sha1 = sha1::Sha1::new();
-        sha1.input(data);
+        sha1.update(data);
 
-        Sha1(sha1.result().into())
+        Sha1(sha1.finalize().into())
     }
 }
 
@@ -291,11 +291,11 @@ impl Context {
     where
         T: AsRef<[u8]>,
     {
-        self.0.input(data.as_ref())
+        self.0.update(data.as_ref())
     }
 
     pub fn finish(self) -> Sha1 {
-        Sha1(self.0.result().into())
+        Sha1(self.0.finalize().into())
     }
 }
 

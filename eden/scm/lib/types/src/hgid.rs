@@ -97,10 +97,10 @@ impl HgId {
         };
 
         let mut hasher = Sha1::new();
-        hasher.input(p1.as_ref());
-        hasher.input(p2.as_ref());
-        hasher.input(data);
-        let hash: [u8; 20] = hasher.result().into();
+        hasher.update(p1.as_ref());
+        hasher.update(p2.as_ref());
+        hasher.update(data);
+        let hash: [u8; 20] = hasher.finalize().into();
 
         HgId::from_byte_array(hash)
     }

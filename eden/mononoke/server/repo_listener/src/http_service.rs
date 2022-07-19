@@ -474,10 +474,10 @@ fn calculate_websocket_accept(headers: &HeaderMap<HeaderValue>) -> String {
     // no Proxygen in between, this header will be missing and the result
     // ignored.
     if let Some(header) = headers.get(HEADER_WEBSOCKET_KEY) {
-        sha1.input(header.as_ref());
+        sha1.update(header.as_ref());
     }
-    sha1.input(WEBSOCKET_MAGIC_KEY.as_bytes());
-    let hash: [u8; 20] = sha1.result().into();
+    sha1.update(WEBSOCKET_MAGIC_KEY.as_bytes());
+    let hash: [u8; 20] = sha1.finalize().into();
     base64::encode(&hash)
 }
 

@@ -342,7 +342,7 @@ async fn create_fsnode(
             |fsnode_file| fsnode_file.content_sha1().to_hex(),
             |fsnode_dir| fsnode_dir.summary().simple_format_sha1.to_hex(),
         );
-        let bytes = digest.result().into();
+        let bytes = digest.finalize().into();
         Sha1::from_byte_array(bytes)
     };
     let simple_format_sha256 = {
@@ -352,7 +352,7 @@ async fn create_fsnode(
             |fsnode_file| fsnode_file.content_sha256().to_hex(),
             |fsnode_dir| fsnode_dir.summary().simple_format_sha256.to_hex(),
         );
-        let bytes = digest.result().into();
+        let bytes = digest.finalize().into();
         Sha256::from_byte_array(bytes)
     };
     let mut summary = FsnodeSummary {
@@ -414,20 +414,20 @@ where
     for (elem, entry) in dir.iter() {
         match entry {
             FsnodeEntry::File(file) => {
-                digest.input(get_file_hash(file).as_bytes());
-                digest.input(match file.file_type() {
+                digest.update(get_file_hash(file).as_bytes());
+                digest.update(match file.file_type() {
                     FileType::Regular => b" file ",
                     FileType::Executable => b" exec ",
                     FileType::Symlink => b" link ",
                 });
             }
             FsnodeEntry::Directory(dir) => {
-                digest.input(get_dir_hash(dir).as_bytes());
-                digest.input(b" tree ");
+                digest.update(get_dir_hash(dir).as_bytes());
+                digest.update(b" tree ");
             }
         }
-        digest.input(elem.as_ref());
-        digest.input(b"\0");
+        digest.update(elem.as_ref());
+        digest.update(b"\0");
     }
     digest
 }
@@ -688,8 +688,8 @@ mod test {
                     "ad02b5a5f778d9ad6afd42fcc8e0b889254b5215 tree dir2\0",
                 );
                 let mut digest = sha1::Sha1::new();
-                digest.input(&text);
-                let bytes = digest.result().into();
+                digest.update(&text);
+                let bytes = digest.finalize().into();
                 Sha1::from_byte_array(bytes)
             };
             let simple_format_sha256 = {
@@ -700,8 +700,8 @@ mod test {
                     "583c3d388efb78eb9dec46626662d6657bb53706c1ee10770c0fb3e859bd36e1 tree dir2\0",
                 );
                 let mut digest = sha2::Sha256::new();
-                digest.input(&text);
-                let bytes = digest.result().into();
+                digest.update(&text);
+                let bytes = digest.finalize().into();
                 Sha256::from_byte_array(bytes)
             };
 

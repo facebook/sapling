@@ -14,15 +14,15 @@ blobstore = { version = "0.1.0", path = "../blobstore" }
 bytes = { version = "1.1", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
-digest = "0.8"
+digest = "0.10"
 edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 itertools = "0.10.3"
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 pin-project = "0.4.29"
-sha-1 = "0.8"
-sha2 = "0.8"
+sha-1 = "0.10"
+sha2 = "0.10"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 thiserror = "1.0.30"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }

@@ -441,9 +441,9 @@ impl Params {
         csids.sort();
         let mut hasher = Sha1::new();
         for csid in csids {
-            hasher.input(csid.blake2().as_ref());
+            hasher.update(csid.blake2().as_ref());
         }
-        let res = faster_hex::hex_string(&hasher.result());
+        let res = faster_hex::hex_string(&hasher.finalize());
         Ok(res)
     }
 }

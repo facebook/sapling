@@ -88,7 +88,7 @@ impl MutableDataPackInner {
         let mut hasher = Sha1::new();
         let version_u8: u8 = version.into();
         data_file.write_u8(version_u8)?;
-        hasher.input(&[version_u8]);
+        hasher.update(&[version_u8]);
 
         Ok(Self {
             dir: dir.to_path_buf(),
@@ -158,7 +158,7 @@ impl MutableDataPackInner {
         metadata.write(&mut buf)?;
 
         self.data_file.write_all(&buf)?;
-        self.hasher.input(&buf);
+        self.hasher.update(&buf);
 
         let delta_location = DeltaLocation {
             delta_base: delta.base.as_ref().map(|k| k.hgid.clone()),
@@ -258,7 +258,7 @@ impl MutablePack for MutableDataPackInner {
         Ok((
             self.data_file.into_inner()?,
             index_file.into_inner()?,
-            self.dir.join(&hex::encode(self.hasher.result())),
+            self.dir.join(&hex::encode(self.hasher.finalize())),
         ))
     }
 
@@ -392,8 +392,8 @@ mod tests {
         let mut file = File::open(datapackpath).expect("file");
         let mut buf = vec![];
         file.read_to_end(&mut buf).expect("read to end");
-        hasher.input(&buf);
-        let hash = hex::encode(hasher.result());
+        hasher.update(&buf);
+        let hash = hex::encode(hasher.finalize());
         assert!(hash == filename_hash);
     }
 

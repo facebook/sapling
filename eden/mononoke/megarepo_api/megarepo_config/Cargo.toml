@@ -21,7 +21,7 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 maplit = "1.0"
 megarepo_configs = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/megarepo" }
 megarepo_error = { version = "0.1.0", path = "../megarepo_error" }
-sha-1 = "0.8"
+sha-1 = "0.10"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 version_cconf_index = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/megarepo/version_cconf_index" }

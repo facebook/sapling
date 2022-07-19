@@ -397,7 +397,7 @@ struct DirstateReader {
 impl DirstateReader {
     fn hashing_read(&mut self, buf: &mut [u8]) -> Result<(), io::Error> {
         self.reader.read_exact(buf)?;
-        self.sha256.input(&buf);
+        self.sha256.update(&buf);
         Ok(())
     }
 
@@ -424,7 +424,7 @@ impl DirstateReader {
 
         let mut buf = vec![0; path_length as usize];
         self.reader.read_exact(&mut buf)?;
-        self.sha256.input(&buf);
+        self.sha256.update(&buf);
 
         Ok(RepoPathBuf::from_utf8(buf)?)
     }
@@ -433,7 +433,7 @@ impl DirstateReader {
         let mut binary_checksum = [0; 32];
         self.reader.read_exact(&mut binary_checksum)?;
 
-        let observed_digest: [u8; 32] = self.sha256.clone().result().into();
+        let observed_digest: [u8; 32] = self.sha256.clone().finalize().into();
 
         if binary_checksum != observed_digest {
             return Err(io::Error::new(

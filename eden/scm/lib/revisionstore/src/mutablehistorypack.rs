@@ -195,7 +195,7 @@ impl MutablePack for MutableHistoryPackInner {
         // Write the header
         let version_u8: u8 = self.version.clone().into();
         data_file.write_u8(version_u8)?;
-        hasher.input(&[version_u8]);
+        hasher.update(&[version_u8]);
 
         // Store data for the index
         let mut file_sections: Vec<(&RepoPath, FileSectionLocation)> = Default::default();
@@ -216,7 +216,7 @@ impl MutablePack for MutableHistoryPackInner {
                 section_offset as usize,
                 &mut nodes,
             )?;
-            hasher.input(&section_buf);
+            hasher.update(&section_buf);
             data_file.write_all(&section_buf)?;
 
             let section_location = FileSectionLocation {
@@ -236,7 +236,7 @@ impl MutablePack for MutableHistoryPackInner {
         Ok((
             data_file.into_inner()?,
             index_file.into_inner()?,
-            self.dir.join(hex::encode(hasher.result())),
+            self.dir.join(hex::encode(hasher.finalize())),
         ))
     }
 

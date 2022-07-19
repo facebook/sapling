@@ -51,8 +51,8 @@ pub fn get_sha256(contents: &Bytes) -> hash::Sha256 {
     use sha2::Digest;
     use sha2::Sha256;
     let mut hasher = Sha256::new();
-    hasher.input(contents);
-    hash::Sha256::from_byte_array(hasher.result().into())
+    hasher.update(contents);
+    hash::Sha256::from_byte_array(hasher.finalize().into())
 }
 
 #[derive(Debug, Clone)]

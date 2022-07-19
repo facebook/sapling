@@ -77,8 +77,8 @@ impl Entry {
     fn key_to_index_key(key: &Key) -> Vec<u8> {
         let mut hasher = Sha1::new();
         let path_buf: &[u8] = key.path.as_ref();
-        hasher.input(path_buf);
-        let buf: [u8; 20] = hasher.result().into();
+        hasher.update(path_buf);
+        let buf: [u8; 20] = hasher.finalize().into();
 
         let mut index_key = Vec::with_capacity(HgId::len() * 2);
         index_key.extend_from_slice(key.hgid.as_ref());

@@ -411,8 +411,8 @@ impl HistoryIndex {
 
 fn sha1(value: &[u8]) -> HgId {
     let mut hasher = Sha1::new();
-    hasher.input(value);
-    let buf: [u8; 20] = hasher.result().into();
+    hasher.update(value);
+    let buf: [u8; 20] = hasher.finalize().into();
     (&buf).into()
 }
 

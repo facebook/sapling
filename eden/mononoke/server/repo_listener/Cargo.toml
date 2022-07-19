@@ -56,7 +56,7 @@ scribe_ext = { version = "0.1.0", path = "../../common/scribe_ext" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 session_id = { version = "0.1.0", path = "../session_id" }
-sha-1 = "0.8"
+sha-1 = "0.10"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 slog-kvfilter = "0.7"
 slog-term = "2.8"

@@ -41,11 +41,11 @@ impl ObjectKind {
             .expect("Object size must fit in a u64");
 
         let mut sha1 = Sha1::new();
-        sha1.input(&format!("{} {}", self.as_str(), size));
-        sha1.input(&[0]);
-        sha1.input(object_buff.as_ref());
+        sha1.update(&format!("{} {}", self.as_str(), size));
+        sha1.update(&[0]);
+        sha1.update(object_buff.as_ref());
 
-        let hash: [u8; 20] = sha1.result().into();
+        let hash: [u8; 20] = sha1.finalize().into();
 
         RichGitSha1::from_byte_array(hash, self.as_str(), size)
     }

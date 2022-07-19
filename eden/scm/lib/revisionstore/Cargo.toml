@@ -44,8 +44,8 @@ revisionstore_types = { version = "0.1.0", path = "types" }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_derive = "1.0"
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
-sha-1 = "0.8"
-sha2 = "0.8"
+sha-1 = "0.10"
+sha2 = "0.10"
 storemodel = { version = "0.1.0", path = "../storemodel" }
 tempfile = "3.3"
 thiserror = "1.0.30"

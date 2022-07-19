@@ -49,9 +49,9 @@ impl ContentHash {
         use sha2::Digest;
 
         let mut hash = sha2::Sha256::new();
-        hash.input(data);
+        hash.update(data);
 
-        let bytes: [u8; Sha256::len()] = hash.result().into();
+        let bytes: [u8; Sha256::len()] = hash.finalize().into();
         ContentHash::Sha256(Sha256::from(bytes))
     }
 
@@ -81,9 +81,9 @@ impl ContentHash {
         use sha1::Digest;
 
         let mut hash = sha1::Sha1::new();
-        hash.input(data);
+        hash.update(data);
 
-        let bytes: [u8; Sha1::len()] = hash.result().into();
+        let bytes: [u8; Sha1::len()] = hash.finalize().into();
         Sha1::from(bytes)
     }
 

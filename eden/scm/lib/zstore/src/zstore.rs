@@ -444,8 +444,8 @@ impl fmt::Debug for DebugDeltaTree {
 pub fn sha1(data: &[u8]) -> Id20 {
     trace_span!("sha1", data_len = data.len()).in_scope(|| {
         let mut hasher = Sha1::new();
-        hasher.input(data);
-        let id: [u8; 20] = hasher.result().into();
+        hasher.update(data);
+        let id: [u8; 20] = hasher.finalize().into();
         Id20::from_byte_array(id)
     })
 }

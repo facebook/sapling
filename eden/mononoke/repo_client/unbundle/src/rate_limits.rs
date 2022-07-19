@@ -360,7 +360,7 @@ async fn counter_check_and_bump<'a>(
 
 fn make_key(prefix: &str, author: &str) -> String {
     let mut hasher = Sha256::new();
-    hasher.input(author);
-    let key = format!("{}.{}", prefix, hex::encode(hasher.result()));
+    hasher.update(author);
+    let key = format!("{}.{}", prefix, hex::encode(hasher.finalize()));
     key
 }
