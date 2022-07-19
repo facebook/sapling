@@ -543,18 +543,21 @@ def debugchangelog(ui, repo, migrate=None, unless=[], remove_backup=False):
       - Commit text won't be migrated. Revlog is still used to get commit text.
       - Cheap to migrate back to revlog backend.
       - Migration can take a few minutes for a large repo.
+      - Can migrate back to revlog.
 
     - hybrid
 
-      - Similar to 'doublewrite'.
+      - Similar to 'doublewrite'. On-disk file formats are the same.
       - Revlog is not used for fallback commit text reading. Instead, edenapi
         client is used.
+      - Can migrate back to revlog.
 
     - fullsegments
 
       - Segments backend for everything.
       - Commit text will be fully migrated. Revlog is no longer necessary.
       - Migration can take tens of minutes for a large repo.
+      - Usually used in tests.
 
     - lazytext
 
@@ -562,7 +565,9 @@ def debugchangelog(ui, repo, migrate=None, unless=[], remove_backup=False):
       - IdMap (commit hash) is not lazy.
       - Commit text is lazy.
       - Revlog is not used.
-      - Can only migrate to lazy backend.
+      - Can only migrate to lazy backend. Cannot migrate back to revlog.
+      - Usually used in repos without segmented-changelog capability provided
+        by the server.
 
     - lazy
 
@@ -573,6 +578,8 @@ def debugchangelog(ui, repo, migrate=None, unless=[], remove_backup=False):
       - Cannot migrate away to any other backends.
       - Migrating to this backend rebuilds the commit graph and invisible
         commits will be lost.
+      - Usually used in repos with segmented-changelog capability provided
+        by the server.
 
     Migration does not delete old data for easier rolling back or manual
     investigation.
