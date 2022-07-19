@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::bail;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
@@ -140,6 +141,14 @@ async fn do_busy_work(
             // The manager doesn't expect us to give up the current repo at the
             // moment. Continue executing future iterations.
             iteration += 1;
+        }
+        // Fail at every 10th iteration and let the framework reassign this task
+        if iteration % 10 == 0 {
+            bail!(
+                "Sample transient error for repo {} after {} iterations",
+                repo_name,
+                iteration
+            )
         }
     }
 }
