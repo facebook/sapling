@@ -713,22 +713,22 @@ impl EdenFsCheckout {
 
         if predictive && !instance.should_prefetch_predictive_profiles() {
             if !silent {
-                return Err(EdenFsError::Other(anyhow!(
+                eprintln!(
                     "Skipping Predictive Prefetch Profiles fetch due to global kill switch. \
                     This means prefetch-profiles.predictive-prefetching-enabled is not set in \
                     the EdenFS configs.",
-                )));
+                );
             } else {
                 return Ok(vec![Glob::default()]);
             }
         }
         if !instance.should_prefetch_profiles() && !predictive {
             if !silent {
-                return Err(EdenFsError::Other(anyhow!(
+                eprintln!(
                     "Skipping Prefetch Profiles fetch due to global kill switch. \
-                This means prefetch-profiles.prefetching-enabled is not set in \
-                the EdenFS configs."
-                )));
+                    This means prefetch-profiles.prefetching-enabled is not set in \
+                    the EdenFS configs."
+                );
             }
             return Ok(vec![Glob::default()]);
         }
