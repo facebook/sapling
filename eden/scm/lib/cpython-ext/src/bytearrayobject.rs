@@ -40,6 +40,7 @@ struct PyByteArrayObject {
 }
 
 #[cfg(feature = "python3")]
+#[cfg(Py_38)]
 #[repr(C)]
 struct PyByteArrayObject {
     pub ob_base: PyVarObject,
@@ -47,6 +48,17 @@ struct PyByteArrayObject {
     pub ob_bytes: *mut u8,
     pub ob_start: *mut u8,
     pub ob_exports: c_int,
+}
+
+#[cfg(feature = "python3")]
+#[cfg(Py_39)]
+#[repr(C)]
+struct PyByteArrayObject {
+    pub ob_base: PyVarObject,
+    pub ob_alloc: Py_ssize_t,
+    pub ob_bytes: *mut u8,
+    pub ob_start: *mut u8,
+    pub ob_exports: Py_ssize_t,
 }
 
 /// Consume a `Vec<u8>`. Create a Python `bytearray` object.

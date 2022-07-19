@@ -63,12 +63,13 @@ class RustExtension(object):
     'manifest' is the path to the Cargo.toml file for the Rust project.
     """
 
-    def __init__(self, name, package=None, manifest=None, features=None):
+    def __init__(self, name, package=None, manifest=None, features=None, cfgs=None):
         self.name = name
         self.package = package
         self.manifest = manifest or "Cargo.toml"
         self.type = "library"
         self.features = features
+        self.cfgs = cfgs
 
     @property
     def dstnametmp(self):
@@ -101,12 +102,15 @@ class RustBinary(object):
     'manifest' is the path to the Cargo.toml file for the Rust project.
     """
 
-    def __init__(self, name, package=None, manifest=None, rename=None, features=None):
+    def __init__(
+        self, name, package=None, manifest=None, rename=None, features=None, cfgs=None
+    ):
         self.name = name
         self.manifest = manifest or "Cargo.toml"
         self.type = "binary"
         self.final_name = rename or name
         self.features = features
+        self.cfgs = cfgs
 
     @property
     def dstnametmp(self):
@@ -159,6 +163,7 @@ class BuildRustExt(distutils.core.Command):
         self.inplace = None
         self.long_paths_support = False
         self.features = None
+        self.cfgs = None
 
     def finalize_options(self):
         self.set_undefined_options(
@@ -287,6 +292,13 @@ replace-with = "vendored-sources"
 
         env = os.environ.copy()
         env["LIB_DIRS"] = os.path.abspath(self.build_temp)
+
+        if target.cfgs:
+            env["RUSTFLAGS"] = (
+                env.get("RUSTFLAGS", "")
+                + " "
+                + " ".join("--cfg %s" % c for c in target.cfgs)
+            )
 
         rc = _callretry(cmd, env=env)
         if rc:

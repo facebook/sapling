@@ -1789,6 +1789,7 @@ rustextbinaries = [
         manifest="exec/hgmain/Cargo.toml",
         rename=hgname,
         features=hgmainfeatures,
+        cfgs=["Py_%s" % PY_VERSION],
     ),
     RustBinary("mkscratch", manifest="exec/scratch/Cargo.toml"),
     RustBinary("scm_daemon", manifest="exec/scm_daemon/Cargo.toml"),
