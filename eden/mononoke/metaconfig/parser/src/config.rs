@@ -114,7 +114,6 @@ fn parse_with_repo_definition(
         repo_name,
         repo_config,
         hipster_acl,
-        write_lock_db_address: _,
         enabled,
         readonly,
         needs_backup: _,
