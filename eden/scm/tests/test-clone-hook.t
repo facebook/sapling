@@ -15,7 +15,7 @@ Get a warning about unrun hook with new clone.
 
 Repo already exists - test fail hook warning.
   $ hg clone -Uq test:e1 repo repo2 --config hooks.post-clone.foo=_ --config hooks.pre-clone.bar=_ --config hooks.fail-clone.baz=_ --config clone.use-rust=true
-  abort: .hg directory already exists at clone destination repo2
+  abort: .hg directory already exists at clone destination * (glob)
   WARNING: The following hooks were not run: ["pre-clone.bar", "fail-clone.baz"]
   [255]
 
