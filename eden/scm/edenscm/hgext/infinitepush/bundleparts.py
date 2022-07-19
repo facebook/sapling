@@ -19,12 +19,13 @@ from edenscm.mercurial import (
     revsetlang,
     util,
 )
+from edenscm.mercurial.bundle2 import bundlepart
 from edenscm.mercurial.i18n import _
 
 from . import bookmarks, constants, server
 
 
-def uisetup(ui):
+def uisetup(ui) -> None:
     bundle2.capabilities[constants.scratchbranchparttype] = ()
     bundle2.capabilities[constants.scratchbookmarksparttype] = ()
     bundle2.capabilities[constants.scratchmutationparttype] = ()
@@ -32,7 +33,7 @@ def uisetup(ui):
     _bundlesetup()
 
 
-def _exchangesetup():
+def _exchangesetup() -> None:
     @exchange.b2partsgenerator(constants.scratchbranchparttype)
     @perftrace.tracefunc("scratchbranchpart")
     def partgen(pushop, bundler):
@@ -176,7 +177,7 @@ def _getscratchbranchpartsimpl(
     return parts
 
 
-def getscratchbookmarkspart(peer, scratchbookmarks):
+def getscratchbookmarkspart(peer, scratchbookmarks) -> bundlepart:
     if constants.scratchbookmarksparttype not in bundle2.bundle2caps(peer):
         raise error.Abort(
             _("no server support for %r") % constants.scratchbookmarksparttype
@@ -188,7 +189,7 @@ def getscratchbookmarkspart(peer, scratchbookmarks):
     )
 
 
-def _validaterevset(repo, revset, bookmark):
+def _validaterevset(repo, revset, bookmark) -> None:
     """Abort if the revs to be pushed aren't valid for a scratch branch."""
     if not bookmark and not repo.revs(revset):
         raise error.Abort(_("nothing to push"))
@@ -199,7 +200,7 @@ def _validaterevset(repo, revset, bookmark):
             raise error.Abort(_("cannot push more than one head to a scratch branch"))
 
 
-def _handlelfs(repo, missing):
+def _handlelfs(repo, missing) -> None:
     """Special case if lfs is enabled
 
     If lfs is enabled then we need to call prepush hook
@@ -226,7 +227,7 @@ def _handlelfs(repo, missing):
                 remotefilelog.uploadblobs(repo, missing)
 
 
-def _bundlesetup():
+def _bundlesetup() -> None:
     @bundle2.b2streamparamhandler("infinitepush")
     def processinfinitepush(unbundler, param, value):
         """process the bundle2 stream level parameter containing whether this push
