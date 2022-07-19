@@ -55,6 +55,8 @@ Uses:
 
 from __future__ import absolute_import
 
+from typing import List, Tuple
+
 from . import util
 from .node import nullrev
 from .pycompat import range
@@ -85,12 +87,12 @@ def _str(v, l) -> str:
     return bs
 
 
-def _split(b):
+def _split(b) -> Tuple[int, int]:
     """depth and bitvec"""
     return _bin(b[:_depthbytes]), _bin(b[_depthbytes:])
 
 
-def _join(depth, bitvec):
+def _join(depth, bitvec) -> str:
     return _str(depth, _depthbytes) + _str(bitvec, _vecbytes)
 
 
@@ -103,7 +105,7 @@ def _hweight(x) -> int:
     return c
 
 
-_htab = [_hweight(x) for x in range(256)]
+_htab: List[int] = [_hweight(x) for x in range(256)]
 
 
 def _hamming(a, b) -> int:
@@ -181,6 +183,7 @@ def ctxpvec(ctx) -> "pvec":
                 else:
                     pvc[n] = _mergevec(pvc[p1], pvc[p2], node)
     bs = _join(*pvc[ctx.rev()])
+    # pyre-fixme[6]: For 1st param expected `bytes` but got `str`.
     return pvec(util.b85encode(bs))
 
 
