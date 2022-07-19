@@ -366,6 +366,12 @@ function mononoke_newadmin {
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 }
 
+function mononoke_import {
+  GLOG_minloglevel=5 "$MONONOKE_IMPORT" \
+    "${COMMON_ARGS[@]}" \
+    --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
+}
+
 function mononoke_testtool {
   GLOG_minloglevel=5 "$MONONOKE_TESTTOOL" \
     "${COMMON_ARGS[@]}" \
@@ -685,7 +691,7 @@ CONFIG
 
     local i
     for ((i=0; i<=MULTIPLEXED; i++)); do
-      mkdir -p "$blobstorepath/$i"
+      mkdir -p "$blobstorepath/$i/blobs"
       if [[ -n "${PACK_BLOB:-}" && $i -le "$PACK_BLOB" ]]; then
         echo "  { blobstore_id = $i, blobstore = { pack = { blobstore = { $underlyingstorage = { path = \"$blobstorepath/$i\" } } } } }," >> common/storage.toml
       else
@@ -694,7 +700,7 @@ CONFIG
     done
     echo ']' >> common/storage.toml
   else
-    mkdir -p "$blobstorepath"
+    mkdir -p "$blobstorepath/blobs"
     # Using FileBlob instead of SqlBlob as the backing blobstore for ephemeral
     # store since SqlBlob current doesn't support enumeration.
     cat >> common/storage.toml <<CONFIG
@@ -1183,11 +1189,6 @@ function blobimport {
 function bonsai_verify {
   GLOG_minloglevel=5 "$MONONOKE_BONSAI_VERIFY" --repo-id "$REPOID" \
     --mononoke-config-path "$TESTTMP/mononoke-config" "${COMMON_ARGS[@]}" "$@"
-}
-
-function lfs_import {
-  GLOG_minloglevel=5 "$MONONOKE_LFS_IMPORT" --repo-id "$REPOID" \
-  --mononoke-config-path "$TESTTMP/mononoke-config" "${COMMON_ARGS[@]}" "$@"
 }
 
 function manual_scrub {
