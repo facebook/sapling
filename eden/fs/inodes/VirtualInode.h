@@ -178,16 +178,6 @@ class VirtualInode {
 
  private:
   /**
-   * Helper function for getOrFindChild when the current node is a Tree.
-   */
-  static ImmediateFuture<VirtualInode> getOrFindChild(
-      detail::TreePtr tree,
-      PathComponentPiece childName,
-      RelativePathPiece path,
-      ObjectStore* objectStore,
-      ObjectFetchContext& fetchContext);
-
-  /**
    * Helper function for getChildrenAttributes
    */
   ImmediateFuture<BlobMetadata> getBlobMetadata(

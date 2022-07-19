@@ -483,38 +483,11 @@ VirtualInode::getChildrenAttributes(
           });
 }
 
-ImmediateFuture<VirtualInode> VirtualInode::getOrFindChild(
-    PathComponentPiece childName,
-    RelativePathPiece path,
-    ObjectStore* objectStore,
-    ObjectFetchContext& fetchContext) const {
-  if (!isDirectory()) {
-    return makeImmediateFuture<VirtualInode>(PathError(ENOTDIR, path));
-  }
-  return std::visit(
-      [childName, path, objectStore, &fetchContext](
-          auto&& arg) -> ImmediateFuture<VirtualInode> {
-        using T = std::decay_t<decltype(arg)>;
-        if constexpr (std::is_same_v<T, InodePtr>) {
-          return arg.asTreePtr()->getOrFindChild(
-              childName, fetchContext, false);
-        } else if constexpr (std::is_same_v<T, TreePtr>) {
-          return getOrFindChild(
-              arg, childName, path, objectStore, fetchContext);
-        } else if constexpr (
-            std::is_same_v<T, UnmaterializedUnloadedBlobDirEntry> ||
-            std::is_same_v<T, TreeEntry>) {
-          // These represent files in VirtualInode, and can't be descended
-          return makeImmediateFuture<VirtualInode>(
-              PathError(ENOTDIR, path, "variant is of unhandled type"));
-        } else {
-          static_assert(always_false_v<T>, "non-exhaustive visitor!");
-        }
-      },
-      variant_);
-}
-
-ImmediateFuture<VirtualInode> VirtualInode::getOrFindChild(
+namespace {
+/**
+ * Helper function for getOrFindChild when the current node is a Tree.
+ */
+ImmediateFuture<VirtualInode> getOrFindChildHelper(
     TreePtr tree,
     PathComponentPiece childName,
     RelativePathPiece path,
@@ -543,6 +516,38 @@ ImmediateFuture<VirtualInode> VirtualInode::getOrFindChild(
     // This is a file, return the TreeEntry for it
     return ImmediateFuture{VirtualInode{*treeEntry}};
   }
+}
+} // namespace
+
+ImmediateFuture<VirtualInode> VirtualInode::getOrFindChild(
+    PathComponentPiece childName,
+    RelativePathPiece path,
+    ObjectStore* objectStore,
+    ObjectFetchContext& fetchContext) const {
+  if (!isDirectory()) {
+    return makeImmediateFuture<VirtualInode>(PathError(ENOTDIR, path));
+  }
+  return std::visit(
+      [childName, path, objectStore, &fetchContext](
+          auto&& arg) -> ImmediateFuture<VirtualInode> {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, InodePtr>) {
+          return arg.asTreePtr()->getOrFindChild(
+              childName, fetchContext, false);
+        } else if constexpr (std::is_same_v<T, TreePtr>) {
+          return getOrFindChildHelper(
+              arg, childName, path, objectStore, fetchContext);
+        } else if constexpr (
+            std::is_same_v<T, UnmaterializedUnloadedBlobDirEntry> ||
+            std::is_same_v<T, TreeEntry>) {
+          // These represent files in VirtualInode, and can't be descended
+          return makeImmediateFuture<VirtualInode>(
+              PathError(ENOTDIR, path, "variant is of unhandled type"));
+        } else {
+          static_assert(always_false_v<T>, "non-exhaustive visitor!");
+        }
+      },
+      variant_);
 }
 
 } // namespace facebook::eden
