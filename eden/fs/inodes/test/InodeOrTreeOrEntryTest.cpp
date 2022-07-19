@@ -22,6 +22,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/InodeUnloader.h"
@@ -508,16 +509,22 @@ void verifyTreeState(
 
       if ((verify_flags & VERIFY_BLOB_METADATA) &&
           inodeOr.getDtype() == dtype_t::Regular) {
-        auto metadata = inodeOr
-                            .getEntryAttributes(
-                                expected.path,
-                                mount.getEdenMount()->getObjectStore(),
-                                ObjectFetchContext::getNullContext())
-                            .get();
-        EXPECT_EQ(metadata.sha1.value(), expected.getSHA1()) << dbgMsg;
-        EXPECT_EQ(metadata.size.value(), expected.getContents().size())
+        auto metadata =
+            inodeOr
+                .getEntryAttributes(
+                    folly::to_underlying(FileAttributes::FILE_SIZE) |
+                        folly::to_underlying(FileAttributes::SHA1_HASH) |
+                        folly::to_underlying(
+                            FileAttributes::SOURCE_CONTROL_TYPE),
+                    expected.path,
+                    mount.getEdenMount()->getObjectStore(),
+                    ObjectFetchContext::getNullContext())
+                .get();
+        EXPECT_EQ(metadata.sha1.value().value(), expected.getSHA1()) << dbgMsg;
+        EXPECT_EQ(metadata.size.value().value(), expected.getContents().size())
             << dbgMsg;
-        EXPECT_EQ(metadata.type.value(), expected.getTreeEntryType()) << dbgMsg;
+        EXPECT_EQ(metadata.type.value().value(), expected.getTreeEntryType())
+            << dbgMsg;
       }
 
       if ((verify_flags & VERIFY_STAT)) {
@@ -664,32 +671,45 @@ TEST(InodeOrTreeOrEntryTest, getChildrenAttributes) {
   auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
   auto mount = TestMount{MakeTestTreeBuilder(files)};
   VERIFY_TREE(flags);
+  auto file_size = folly::to_underlying(FileAttributes::FILE_SIZE);
+  auto sha1_hash = folly::to_underlying(FileAttributes::SHA1_HASH);
+  auto source_control_type =
+      folly::to_underlying(FileAttributes::SOURCE_CONTROL_TYPE);
+  std::vector<uint64_t> attribute_requests{
+      file_size | sha1_hash | source_control_type,
+      sha1_hash,
+      source_control_type | file_size,
+      0};
 
   for (auto info : files.getOriginalItems()) {
     VERIFY_TREE(flags);
     auto inodeOr = mount.getInodeOrTreeOrEntry(info->path);
     EXPECT_INODE_OR(inodeOr, *info.get());
     if (inodeOr.isDirectory()) {
-      auto result = inodeOr
-                        .getChildrenAttributes(
-                            info->path,
-                            mount.getEdenMount()->getObjectStore(),
-                            ObjectFetchContext::getNullContext())
-                        .get();
+      for (auto& attribute_request : attribute_requests) {
+        auto result = inodeOr
+                          .getChildrenAttributes(
+                              attribute_request,
+                              info->path,
+                              mount.getEdenMount()->getObjectStore(),
+                              ObjectFetchContext::getNullContext())
+                          .get();
 
-      for (auto child : files.getChildren(RelativePathPiece{info->path})) {
-        auto childInodeOr = mount.getInodeOrTreeOrEntry(child->path);
-        auto entryName = basename(child->path.stringPiece());
-        EXPECT_THAT(
-            result,
-            testing::Contains(testing::Pair(
-                entryName,
-                childInodeOr
-                    .getEntryAttributes(
-                        child->path,
-                        mount.getEdenMount()->getObjectStore(),
-                        ObjectFetchContext::getNullContext())
-                    .getTry())));
+        for (auto child : files.getChildren(RelativePathPiece{info->path})) {
+          auto childInodeOr = mount.getInodeOrTreeOrEntry(child->path);
+          auto entryName = basename(child->path.stringPiece());
+          EXPECT_THAT(
+              result,
+              testing::Contains(testing::Pair(
+                  entryName,
+                  childInodeOr
+                      .getEntryAttributes(
+                          attribute_request,
+                          child->path,
+                          mount.getEdenMount()->getObjectStore(),
+                          ObjectFetchContext::getNullContext())
+                      .getTry())));
+        }
       }
     }
   }
@@ -733,22 +753,26 @@ TEST(InodeOrTreeOrEntryTest, fileOpsOnCorrectObjectsOnly) {
           << " on path " << info.getLogPath();
     }
 
-    auto metadataTry = inodeOr
-                           .getEntryAttributes(
-                               info.path,
-                               mount.getEdenMount()->getObjectStore(),
-                               ObjectFetchContext::getNullContext())
-                           .getTry();
+    auto metadataTry =
+        inodeOr
+            .getEntryAttributes(
+                folly::to_underlying(FileAttributes::FILE_SIZE) |
+                    folly::to_underlying(FileAttributes::SHA1_HASH) |
+                    folly::to_underlying(FileAttributes::SOURCE_CONTROL_TYPE),
+                info.path,
+                mount.getEdenMount()->getObjectStore(),
+                ObjectFetchContext::getNullContext())
+            .getTry();
     if (info.isRegularFile()) {
       EXPECT_EQ(true, metadataTry.hasValue())
           << " on path " << info.getLogPath();
       if (metadataTry.hasValue()) {
         auto& metadata = metadataTry.value();
-        EXPECT_EQ(metadata.sha1.value(), info.getSHA1())
+        EXPECT_EQ(metadata.sha1.value().value(), info.getSHA1())
             << " on path " << info.getLogPath();
-        EXPECT_EQ(metadata.size.value(), info.getContents().size())
+        EXPECT_EQ(metadata.size.value().value(), info.getContents().size())
             << " on path " << info.getLogPath();
-        EXPECT_EQ(metadata.type.value(), info.getTreeEntryType())
+        EXPECT_EQ(metadata.type.value().value(), info.getTreeEntryType())
             << " on path " << info.getLogPath();
       }
     } else {
@@ -756,9 +780,42 @@ TEST(InodeOrTreeOrEntryTest, fileOpsOnCorrectObjectsOnly) {
           << " on path " << info.getLogPath();
       if (metadataTry.hasValue()) {
         auto& metadata = metadataTry.value();
-        EXPECT_TRUE(metadata.sha1.hasException());
-        EXPECT_TRUE(metadata.size.hasException());
-        EXPECT_EQ(metadata.type.value(), info.getTreeEntryType())
+        EXPECT_TRUE(metadata.sha1.value().hasException());
+        EXPECT_TRUE(metadata.size.value().hasException());
+        EXPECT_EQ(metadata.type.value().value(), info.getTreeEntryType())
+            << " on path " << info.getLogPath();
+      }
+    }
+
+    metadataTry =
+        inodeOr
+            .getEntryAttributes(
+                folly::to_underlying(FileAttributes::FILE_SIZE) |
+                    folly::to_underlying(FileAttributes::SOURCE_CONTROL_TYPE),
+                info.path,
+                mount.getEdenMount()->getObjectStore(),
+                ObjectFetchContext::getNullContext())
+            .getTry();
+    if (info.isRegularFile()) {
+      EXPECT_EQ(true, metadataTry.hasValue())
+          << " on path " << info.getLogPath();
+      if (metadataTry.hasValue()) {
+        auto& metadata = metadataTry.value();
+        EXPECT_FALSE(metadata.sha1.has_value())
+            << " on path " << info.getLogPath();
+        EXPECT_EQ(metadata.size.value().value(), info.getContents().size())
+            << " on path " << info.getLogPath();
+        EXPECT_EQ(metadata.type.value().value(), info.getTreeEntryType())
+            << " on path " << info.getLogPath();
+      }
+    } else {
+      EXPECT_EQ(true, metadataTry.hasValue())
+          << " on path " << info.getLogPath();
+      if (metadataTry.hasValue()) {
+        auto& metadata = metadataTry.value();
+        EXPECT_FALSE(metadata.sha1.has_value());
+        EXPECT_TRUE(metadata.size.value().hasException());
+        EXPECT_EQ(metadata.type.value().value(), info.getTreeEntryType())
             << " on path " << info.getLogPath();
       }
     }
@@ -790,6 +847,9 @@ TEST(InodeOrTreeOrEntryTest, getEntryAttributesAttributeError) {
   auto inodeOr = mount.getInodeOrTreeOrEntry("root_dirA");
 
   auto attributesFuture = inodeOr.getEntryAttributes(
+      folly::to_underlying(FileAttributes::FILE_SIZE) |
+          folly::to_underlying(FileAttributes::SHA1_HASH) |
+          folly::to_underlying(FileAttributes::SOURCE_CONTROL_TYPE),
       RelativePathPiece{"root_dirA"},
       mount.getEdenMount()->getObjectStore(),
       ObjectFetchContext::getNullContext());
@@ -798,9 +858,9 @@ TEST(InodeOrTreeOrEntryTest, getEntryAttributesAttributeError) {
       "root_dirA/child1_fileA1", std::domain_error("fake error for testing"));
 
   auto attributes = std::move(attributesFuture).get();
-  EXPECT_TRUE(attributes.sha1.hasException());
-  EXPECT_TRUE(attributes.size.hasException());
-  EXPECT_FALSE(attributes.type.hasException());
+  EXPECT_TRUE(attributes.sha1.value().hasException());
+  EXPECT_TRUE(attributes.size.value().hasException());
+  EXPECT_FALSE(attributes.type.value().hasException());
 }
 
 TEST(InodeOrTreeOrEntryTest, sha1DoesNotChangeState) {

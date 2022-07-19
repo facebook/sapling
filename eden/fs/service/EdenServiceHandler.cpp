@@ -716,6 +716,7 @@ ImmediateFuture<Hash20> EdenServiceHandler::getSHA1ForPath(
 }
 
 ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
+    uint64_t reqBitmask,
     AbsolutePathPiece mountPoint,
     StringPiece path,
     ObjectFetchContext& fetchContext) {
@@ -732,10 +733,10 @@ ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
     auto relativePath = RelativePathPiece{path};
 
     return edenMount->getInodeOrTreeOrEntry(relativePath, fetchContext)
-        .thenValue([relativePath, objectStore, &fetchContext](
+        .thenValue([reqBitmask, relativePath, objectStore, &fetchContext](
                        const InodeOrTreeOrEntry& inodeOrTree) {
           return inodeOrTree.getEntryAttributes(
-              relativePath, objectStore, fetchContext);
+              reqBitmask, relativePath, objectStore, fetchContext);
         });
   } catch (const std::exception& e) {
     return ImmediateFuture<EntryAttributes>(
@@ -1797,9 +1798,6 @@ EdenServiceHandler::semifuture_getFileInformation(
       .semi();
 }
 
-#define ATTR_BITMASK(req, attr) \
-  ((req) & static_cast<uint64_t>((FileAttributes::attr)))
-
 namespace {
 SourceControlType entryTypeToThriftType(TreeEntryType type) {
   switch (type) {
@@ -1819,12 +1817,14 @@ SourceControlType entryTypeToThriftType(TreeEntryType type) {
 ImmediateFuture<
     std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
 getAllEntryAttributes(
+    uint64_t requestedAttributes, // bit combined FileAttributes
     const EdenMount& edenMount,
     std::string path,
     ObjectFetchContext& fetchContext) {
   auto inodeOr =
       edenMount.getInodeOrTreeOrEntry(RelativePathPiece{path}, fetchContext);
   return std::move(inodeOr).thenValue([path = std::move(path),
+                                       requestedAttributes,
                                        objectStore = edenMount.getObjectStore(),
                                        &fetchContext](
                                           InodeOrTreeOrEntry tree) mutable {
@@ -1837,14 +1837,38 @@ getAllEntryAttributes(
               fmt::format("{}: path must be a directory", path)));
     }
     return tree.getChildrenAttributes(
-        RelativePath{path}, objectStore, fetchContext);
+        requestedAttributes, RelativePath{path}, objectStore, fetchContext);
   });
+}
+
+template <typename SerializedT, typename T>
+bool fillErrorRef(
+    SerializedT& result,
+    std::optional<folly::Try<T>> rawResult,
+    PathComponentPiece path,
+    folly::StringPiece attributeName) {
+  if (!rawResult.has_value()) {
+    result.error_ref() = newEdenError(
+        EdenErrorType::GENERIC_ERROR,
+        fmt::format(
+            "{}: {} requested, but no {} available",
+            path,
+            attributeName,
+            attributeName));
+    return true;
+  }
+  if (rawResult.value().hasException()) {
+    result.error_ref() = newEdenError(rawResult.value().exception());
+    return true;
+  }
+  return false;
 }
 
 DirListAttributeDataOrError serializeEntryAttributes(
     const folly::Try<std::vector<
         std::pair<PathComponent, folly::Try<EntryAttributes>>>>& entries,
-    uint64_t requestedAttributes) {
+    uint64_t requestedAttributes // bit combined FileAttributes
+) {
   DirListAttributeDataOrError result;
   if (entries.hasException()) {
     result.error_ref() = newEdenError(*entries.exception().get_exception());
@@ -1860,31 +1884,28 @@ DirListAttributeDataOrError serializeEntryAttributes(
       FileAttributeDataV2 fileData;
       if (ATTR_BITMASK(requestedAttributes, SHA1_HASH)) {
         Sha1OrError sha1;
-        if (entry.second->sha1.hasException()) {
-          sha1.error_ref() = newEdenError(entry.second->sha1.exception());
-        } else {
-          sha1.sha1_ref() = thriftHash20(entry.second->sha1.value());
+        if (!fillErrorRef<Sha1OrError, Hash20>(
+                sha1, entry.second->sha1, entry.first.piece(), "sha1")) {
+          sha1.sha1_ref() = thriftHash20(entry.second->sha1.value().value());
         }
         fileData.sha1() = std::move(sha1);
       }
 
       if (ATTR_BITMASK(requestedAttributes, FILE_SIZE)) {
         SizeOrError size;
-        if (entry.second->size.hasException()) {
-          size.error_ref() = newEdenError(entry.second->size.exception());
-        } else {
-          size.size_ref() = entry.second->size.value();
+        if (!fillErrorRef<SizeOrError, uint64_t>(
+                size, entry.second->size, entry.first.piece(), "size")) {
+          size.size_ref() = entry.second->size.value().value();
         }
         fileData.size() = std::move(size);
       }
 
       if (ATTR_BITMASK(requestedAttributes, SOURCE_CONTROL_TYPE)) {
         SourceControlTypeOrError type;
-        if (entry.second->type.hasException()) {
-          type.error_ref() = newEdenError(entry.second->type.exception());
-        } else {
+        if (!fillErrorRef<SourceControlTypeOrError, TreeEntryType>(
+                type, entry.second->type, entry.first, "type")) {
           type.sourceControlType_ref() =
-              entryTypeToThriftType(entry.second->type.value());
+              entryTypeToThriftType(entry.second->type.value().value());
         }
         fileData.sourceControlType() = std::move(type);
       }
@@ -1930,7 +1951,10 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
                        for (auto& path : paths) {
                          futures.emplace_back(
                              getAllEntryAttributes(
-                                 *edenMount, std::move(path), fetchContext)
+                                 requestedAttributes,
+                                 *edenMount,
+                                 std::move(path),
+                                 fetchContext)
                                  .thenTry([requestedAttributes](
                                               folly::Try<std::vector<std::pair<
                                                   PathComponent,
@@ -1957,6 +1981,14 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
       .semi();
 }
 
+// TODO(kmancini): we shouldn't need this for the long term, but needs to be
+// updated if attributes are added.
+
+constexpr uint64_t kAllEntryAttributes =
+    static_cast<uint64_t>(FileAttributes::FILE_SIZE) |
+    static_cast<uint64_t>(FileAttributes::SHA1_HASH) |
+    static_cast<uint64_t>(FileAttributes::SOURCE_CONTROL_TYPE);
+
 folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResult>>
 EdenServiceHandler::semifuture_getAttributesFromFiles(
     std::unique_ptr<GetAttributesFromFilesParams> params) {
@@ -1980,8 +2012,14 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
                              reqBitmask](auto&&) mutable {
                    vector<ImmediateFuture<EntryAttributes>> futures;
                    for (const auto& p : paths) {
-                     futures.emplace_back(
-                         getEntryAttributesForPath(mountPath, p, fetchContext));
+                     // Buck2 relies on getAttributesFromFiles returning certain
+                     // specific errors. So we need to preserve behavior of all
+                     // ways fetching sll attributes.
+                     // TODO(kmancini): When Buck2 migrates to our
+                     // explicit type information, we can get shape up
+                     // this API better.
+                     futures.emplace_back(getEntryAttributesForPath(
+                         kAllEntryAttributes, mountPath, p, fetchContext));
                    }
 
                    // Collect all futures into a single tuple
@@ -2015,28 +2053,49 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
                              // TODO(kmancini): When Buck2 migrates to our
                              // explicit type information, we can get shape up
                              // this API better.
-                             if (attributes.sha1.hasException()) {
-                               file_res.error_ref() =
-                                   newEdenError(attributes.sha1.exception());
-                             } else if (attributes.size.hasException()) {
-                               file_res.error_ref() =
-                                   newEdenError(attributes.size.exception());
-                             } else if (attributes.type.hasException()) {
-                               file_res.error_ref() =
-                                   newEdenError(attributes.type.exception());
+                             if (!attributes.sha1.has_value()) {
+                               file_res.error_ref() = newEdenError(
+                                   EdenErrorType::GENERIC_ERROR,
+                                   fmt::format(
+                                       "{}: sha1 requested, but no type available",
+                                       paths.at(index)));
+                             } else if (attributes.sha1.value()
+                                            .hasException()) {
+                               file_res.error_ref() = newEdenError(
+                                   attributes.sha1.value().exception());
+                             } else if (!attributes.size.has_value()) {
+                               file_res.error_ref() = newEdenError(
+                                   EdenErrorType::GENERIC_ERROR,
+                                   fmt::format(
+                                       "{}: size requested, but no type available",
+                                       paths.at(index)));
+                             } else if (attributes.size.value()
+                                            .hasException()) {
+                               file_res.error_ref() = newEdenError(
+                                   attributes.size.value().exception());
+                             } else if (!attributes.type.has_value()) {
+                               file_res.error_ref() = newEdenError(
+                                   EdenErrorType::GENERIC_ERROR,
+                                   fmt::format(
+                                       "{}: type requested, but no type available",
+                                       paths.at(index)));
+                             } else if (attributes.type.value()
+                                            .hasException()) {
+                               file_res.error_ref() = newEdenError(
+                                   attributes.type.value().exception());
                              } else {
                                // Only fill in requested fields
                                if (sha1Requested) {
-                                 file_data.sha1_ref() =
-                                     thriftHash20(attributes.sha1.value());
+                                 file_data.sha1_ref() = thriftHash20(
+                                     attributes.sha1.value().value());
                                }
                                if (sizeRequested) {
                                  file_data.fileSize_ref() =
-                                     attributes.size.value();
+                                     attributes.size.value().value();
                                }
                                if (typeRequested) {
                                  file_data.type_ref() = entryTypeToThriftType(
-                                     attributes.type.value());
+                                     attributes.type.value().value());
                                }
                                file_res.data_ref() = file_data;
                              }

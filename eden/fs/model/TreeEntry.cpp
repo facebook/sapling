@@ -24,25 +24,34 @@ using namespace folly;
 using namespace folly::io;
 
 EntryAttributes::EntryAttributes(
-    folly::Try<Hash20> contentsHash,
-    folly::Try<uint64_t> fileLength,
-    folly::Try<TreeEntryType> fileType)
+    std::optional<folly::Try<Hash20>> contentsHash,
+    std::optional<folly::Try<uint64_t>> fileLength,
+    std::optional<folly::Try<TreeEntryType>> fileType)
     : sha1(std::move(contentsHash)),
       size(std::move(fileLength)),
       type(std::move(fileType)) {}
 
 template <typename T>
-bool checkValueEqual(const folly::Try<T>& lhs, const folly::Try<T>& rhs) {
-  if (lhs.hasException() || rhs.hasException()) {
-    return lhs.hasException() == rhs.hasException();
+bool checkValueEqual(
+    const std::optional<folly::Try<T>>& lhs,
+    const std::optional<folly::Try<T>>& rhs) {
+  if (!lhs.has_value() || !rhs.has_value()) {
+    return lhs.has_value() == rhs.has_value();
   }
-  return lhs.value() == rhs.value();
+  if (lhs.value().hasException() || rhs.value().hasException()) {
+    return lhs.value().hasException() == rhs.value().hasException();
+  }
+  return lhs.value().value() == rhs.value().value();
 }
 
 bool operator==(const EntryAttributes& lhs, const EntryAttributes& rhs) {
   return checkValueEqual(lhs.sha1, rhs.sha1) &&
       checkValueEqual(lhs.size, rhs.size) &&
       checkValueEqual(lhs.type, rhs.type);
+}
+
+bool operator!=(const EntryAttributes& lhs, const EntryAttributes& rhs) {
+  return !(lhs == rhs);
 }
 
 bool operator==(

@@ -115,6 +115,7 @@ class InodeOrTreeOrEntry {
    * symlinks.
    */
   ImmediateFuture<EntryAttributes> getEntryAttributes(
+      uint64_t requestedAttributes, // bit combined FileAttributes
       RelativePathPiece path,
       ObjectStore* objectStore,
       ObjectFetchContext& fetchContext) const;
@@ -158,6 +159,7 @@ class InodeOrTreeOrEntry {
   ImmediateFuture<
       std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
   getChildrenAttributes(
+      uint64_t requestedAttributes, // bit combined FileAttributes
       RelativePath path,
       ObjectStore* objectStore,
       ObjectFetchContext& fetchContext);

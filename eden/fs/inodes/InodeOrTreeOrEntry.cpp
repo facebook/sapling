@@ -12,6 +12,7 @@
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/Tracing.h"
 #include "eden/fs/utils/ImmediateFuture.h"
@@ -193,22 +194,39 @@ ImmediateFuture<BlobMetadata> InodeOrTreeOrEntry::getBlobMetadata(
 }
 
 ImmediateFuture<EntryAttributes> InodeOrTreeOrEntry::getEntryAttributes(
+    uint64_t requestedAttributes, // bit combined FileAttributes
     RelativePathPiece path,
     ObjectStore* objectStore,
     ObjectFetchContext& fetchContext) const {
+  std::optional<folly::Try<Hash20>> sha1;
+  std::optional<folly::Try<uint64_t>> size;
+  std::optional<folly::Try<TreeEntryType>> type;
   // For non regular files we return errors for hashes and sizes.
   // We intentionally want to refuse to compute the SHA1 of symlinks.
   switch (getDtype()) {
     case dtype_t::Dir:
-      return EntryAttributes{
-          folly::Try<Hash20>{PathError{EISDIR, path}},
-          folly::Try<uint64_t>{PathError{EISDIR, path}},
-          folly::Try<TreeEntryType>{TreeEntryType::TREE}};
+      if (ATTR_BITMASK(requestedAttributes, SHA1_HASH)) {
+        sha1 = folly::Try<Hash20>{PathError{EISDIR, path}};
+      }
+      if (ATTR_BITMASK(requestedAttributes, FILE_SIZE)) {
+        size = folly::Try<uint64_t>{PathError{EISDIR, path}};
+      }
+      if (ATTR_BITMASK(requestedAttributes, SOURCE_CONTROL_TYPE)) {
+        type = folly::Try<TreeEntryType>{TreeEntryType::TREE};
+      }
+      return EntryAttributes{std::move(sha1), std::move(size), std::move(type)};
     case dtype_t::Symlink:
-      return EntryAttributes{
-          folly::Try<Hash20>{PathError(EINVAL, path, "file is a symlink")},
-          folly::Try<uint64_t>{PathError(EINVAL, path, "file is a symlink")},
-          folly::Try<TreeEntryType>{TreeEntryType::SYMLINK}};
+      if (ATTR_BITMASK(requestedAttributes, SHA1_HASH)) {
+        sha1 = folly::Try<Hash20>{PathError(EINVAL, path, "file is a symlink")};
+      }
+      if (ATTR_BITMASK(requestedAttributes, FILE_SIZE)) {
+        size =
+            folly::Try<uint64_t>{PathError(EINVAL, path, "file is a symlink")};
+      }
+      if (ATTR_BITMASK(requestedAttributes, SOURCE_CONTROL_TYPE)) {
+        type = folly::Try<TreeEntryType>{TreeEntryType::SYMLINK};
+      }
+      return EntryAttributes{std::move(sha1), std::move(size), std::move(type)};
     case dtype_t::Regular:
       break;
     default:
@@ -219,23 +237,46 @@ ImmediateFuture<EntryAttributes> InodeOrTreeOrEntry::getEntryAttributes(
   // means there's no need for a Tree case, as Trees are always
   // directories. It's included to check that the visitor here is
   // exhaustive.
-  auto entryTypeFuture = getTreeEntryType(path, fetchContext);
-  auto blobMetadataFuture = getBlobMetadata(path, objectStore, fetchContext);
+  auto entryTypeFuture = ImmediateFuture<TreeEntryType>{
+      PathError{EINVAL, path, "type not requested"}};
+  if (ATTR_BITMASK(requestedAttributes, SOURCE_CONTROL_TYPE)) {
+    entryTypeFuture = getTreeEntryType(path, fetchContext);
+  }
+  auto blobMetadataFuture = ImmediateFuture<BlobMetadata>{
+      PathError{EINVAL, path, "neither sha1 nor size requested"}};
+  // sha1 and size come together so, there isn't much point of splitting them up
+  if (ATTR_BITMASK(requestedAttributes, FILE_SIZE) ||
+      ATTR_BITMASK(requestedAttributes, SHA1_HASH)) {
+    blobMetadataFuture = getBlobMetadata(path, objectStore, fetchContext);
+  }
 
   return collectAll(std::move(entryTypeFuture), std::move(blobMetadataFuture))
       .thenValue(
-          [](std::tuple<folly::Try<TreeEntryType>, folly::Try<BlobMetadata>>
-                 rawAttributeData) mutable -> ImmediateFuture<EntryAttributes> {
+          [requestedAttributes](
+              std::tuple<folly::Try<TreeEntryType>, folly::Try<BlobMetadata>>
+                  rawAttributeData) mutable -> EntryAttributes {
+            std::optional<folly::Try<Hash20>> sha1;
+            std::optional<folly::Try<uint64_t>> size;
+            std::optional<folly::Try<TreeEntryType>> type;
+            if (ATTR_BITMASK(requestedAttributes, SOURCE_CONTROL_TYPE)) {
+              type = std::move(
+                  std::get<folly::Try<TreeEntryType>>(rawAttributeData));
+            }
             auto& blobMetadata =
                 std::get<folly::Try<BlobMetadata>>(rawAttributeData);
+
+            if (ATTR_BITMASK(requestedAttributes, SHA1_HASH)) {
+              sha1 = blobMetadata.hasException()
+                  ? folly::Try<Hash20>(blobMetadata.exception())
+                  : folly::Try<Hash20>(blobMetadata.value().sha1);
+            }
+            if (ATTR_BITMASK(requestedAttributes, FILE_SIZE)) {
+              size = blobMetadata.hasException()
+                  ? folly::Try<uint64_t>(blobMetadata.exception())
+                  : folly::Try<uint64_t>(blobMetadata.value().size);
+            }
             return EntryAttributes{
-                blobMetadata.hasException()
-                    ? folly::Try<Hash20>(blobMetadata.exception())
-                    : folly::Try<Hash20>(blobMetadata.value().sha1),
-                blobMetadata.hasException()
-                    ? folly::Try<uint64_t>(blobMetadata.exception())
-                    : folly::Try<uint64_t>(blobMetadata.value().size),
-                std::get<folly::Try<TreeEntryType>>(rawAttributeData)};
+                std::move(sha1), std::move(size), std::move(type)};
           });
 }
 
@@ -398,6 +439,7 @@ InodeOrTreeOrEntry::getChildren(
 ImmediateFuture<
     std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
 InodeOrTreeOrEntry::getChildrenAttributes(
+    uint64_t requestedAttributes, // bit combined FileAttributes
     RelativePath path,
     ObjectStore* objectStore,
     ObjectFetchContext& fetchContext) {
@@ -419,11 +461,12 @@ InodeOrTreeOrEntry::getChildrenAttributes(
     names.push_back(nameAndinodeOr.first);
     attributesFutures.push_back(
         std::move(nameAndinodeOr.second)
-            .thenValue([subPath = path + nameAndinodeOr.first,
+            .thenValue([requestedAttributes,
+                        subPath = path + nameAndinodeOr.first,
                         objectStore,
                         &fetchContext](InodeOrTreeOrEntry inodeOr) {
               return inodeOr.getEntryAttributes(
-                  subPath, objectStore, fetchContext);
+                  requestedAttributes, subPath, objectStore, fetchContext);
             }));
   }
   return collectAll(std::move(attributesFutures))

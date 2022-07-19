@@ -9,6 +9,7 @@
 
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/testharness/TestUtil.h"
+#include "eden/fs/utils/EdenError.h"
 
 using namespace facebook::eden;
 
@@ -59,4 +60,28 @@ TEST(TreeEntry, testEntrySize) {
   auto totalSize = sizeofSize;
 
   EXPECT_LE(Hash20::RAW_SIZE + sizeof(TreeEntryType), totalSize);
+}
+
+TEST(TreeEntry, testEntryAttributesEqual) {
+  EntryAttributes nullAttributes{std::nullopt, std::nullopt, std::nullopt};
+  EntryAttributes error1Attributes{
+      std::nullopt,
+      folly::Try<uint64_t>{newEdenError(std::exception{})},
+      std::nullopt};
+  EntryAttributes error2Attributes{
+      std::nullopt,
+      folly::Try<uint64_t>{
+          newEdenError(std::runtime_error{"some other error"})},
+      std::nullopt};
+  EntryAttributes real1Attributes{
+      std::nullopt, folly::Try<uint64_t>{1}, std::nullopt};
+  EntryAttributes real2Attributes{
+      std::nullopt, folly::Try<uint64_t>{2}, std::nullopt};
+
+  EXPECT_EQ(nullAttributes, nullAttributes);
+  EXPECT_NE(nullAttributes, error1Attributes);
+  EXPECT_EQ(error1Attributes, error2Attributes);
+  EXPECT_NE(nullAttributes, real1Attributes);
+  EXPECT_NE(real1Attributes, real2Attributes);
+  EXPECT_EQ(real1Attributes, real1Attributes);
 }

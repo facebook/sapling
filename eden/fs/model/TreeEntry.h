@@ -22,6 +22,9 @@
 namespace facebook::eden {
 class BlobMetadata;
 
+#define ATTR_BITMASK(req, attr) \
+  ((req) & static_cast<uint64_t>((FileAttributes::attr)))
+
 /**
  * Represents the allowed types of entries in version control trees.
  *
@@ -37,13 +40,13 @@ enum class TreeEntryType : uint8_t {
 class EntryAttributes {
  public:
   EntryAttributes(
-      folly::Try<Hash20> contentsHash,
-      folly::Try<uint64_t> fileLength,
-      folly::Try<TreeEntryType> fileType);
+      std::optional<folly::Try<Hash20>> contentsHash,
+      std::optional<folly::Try<uint64_t>> fileLength,
+      std::optional<folly::Try<TreeEntryType>> fileType);
 
-  folly::Try<Hash20> sha1;
-  folly::Try<uint64_t> size;
-  folly::Try<TreeEntryType> type;
+  std::optional<folly::Try<Hash20>> sha1;
+  std::optional<folly::Try<uint64_t>> size;
+  std::optional<folly::Try<TreeEntryType>> type;
 };
 
 /**
@@ -51,6 +54,7 @@ class EntryAttributes {
  * kind are considered equal for simplicity.
  */
 bool operator==(const EntryAttributes& lhs, const EntryAttributes& rhs);
+bool operator!=(const EntryAttributes& lhs, const EntryAttributes& rhs);
 bool operator==(
     const folly::Try<EntryAttributes>& lhs,
     const folly::Try<EntryAttributes>& rhs);

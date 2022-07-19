@@ -124,6 +124,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<SyncBehavior> sync) override;
 
   ImmediateFuture<EntryAttributes> getEntryAttributesForPath(
+      uint64_t reqBitmask,
       AbsolutePathPiece mountPoint,
       folly::StringPiece path,
       ObjectFetchContext& fetchContext);
