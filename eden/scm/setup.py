@@ -43,8 +43,10 @@ import zipfile
 if sys.version_info.major == 2:
     raise RuntimeError("This setup.py is Python 3 only!")
 
-
-PY_VERSION = "38"
+if os.name == "nt":
+    PY_VERSION = "39"
+else:
+    PY_VERSION = "38"
 
 
 def ensureenv():

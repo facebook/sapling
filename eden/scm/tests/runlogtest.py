@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 import os.path
+import sys
 import time
 
 from edenscm.mercurial import progress, registrar
@@ -30,7 +31,7 @@ command = registrar.command(cmdtable)
 )
 def basiccommandtest(ui, exit_code, **opts):
     waitforfile(opts.get("waitfile"))
-    exit(int(exit_code))
+    sys.exit(int(exit_code))
 
 
 @command(
