@@ -89,8 +89,8 @@ pub enum TopLevelSubcommand {
     Minitop(crate::minitop::MinitopCmd),
     Du(crate::du::DiskUsageCmd),
     List(crate::list::ListCmd),
-    #[clap(subcommand, alias = "pp")]
-    PrefetchProfile(crate::prefetch_profile::PrefetchCmd),
+    //#[clap(subcommand, alias = "pp")]
+    //PrefetchProfile(crate::prefetch_profile::PrefetchCmd),
 }
 
 #[async_trait]
@@ -108,7 +108,7 @@ impl Subcommand for TopLevelSubcommand {
             Minitop(cmd) => cmd,
             Du(cmd) => cmd,
             List(cmd) => cmd,
-            PrefetchProfile(cmd) => cmd,
+            //PrefetchProfile(cmd) => cmd,
         };
         sc.run(instance).await
     }
