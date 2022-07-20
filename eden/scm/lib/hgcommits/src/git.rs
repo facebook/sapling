@@ -181,8 +181,18 @@ impl GitSegmentedCommits {
                     None => continue,
                 };
                 handled_ref_names.insert(name.to_string());
-                // Only care about refs/* names. Skip HEAD or FETCH_HEAD.
-                if !name.starts_with("refs/") {
+                // Only care about managed ref names. Skip HEAD or FETCH_HEAD
+                // or refs/something_else/*. See git_references_to_metalog
+                // for managed refs.
+                let names: Vec<&str> = name.splitn(3, '/').collect();
+                let managed: bool = match &names[..] {
+                    ["refs", "remotes", _] => true,
+                    ["refs", "heads", _] => true,
+                    ["refs", "tags", _] => true,
+                    ["refs", "visibleheads", _] => true,
+                    _ => false,
+                };
+                if !managed {
                     continue;
                 }
                 let expected_oid = expected_refs.get(name);
