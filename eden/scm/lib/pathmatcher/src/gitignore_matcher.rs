@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::Component;
 use std::path::Path;
@@ -16,6 +15,7 @@ use ignore::gitignore::Glob;
 use ignore::gitignore::{self};
 use ignore::Match;
 use ignore::{self};
+use parking_lot::RwLock;
 use types::RepoPath;
 
 use crate::DirectoryMatch;
@@ -28,7 +28,7 @@ pub struct GitignoreMatcher {
     // PERF: Each Gitignore object stores "root" as "PathBuf" to support
     // matching against an absolute path. Since we enforce relative path
     // in the API, removing that "PathBuf" could reduce memory footprint.
-    submatchers: RefCell<HashMap<PathBuf, Box<GitignoreMatcher>>>,
+    submatchers: RwLock<HashMap<PathBuf, Box<GitignoreMatcher>>>,
 
     // Whether this directory is ignored or not.
     ignored: bool,
@@ -88,7 +88,7 @@ impl GitignoreMatcher {
             .build()
             .unwrap_or_else(|_| gitignore::Gitignore::empty());
 
-        let submatchers = RefCell::new(HashMap::new());
+        let submatchers = RwLock::new(HashMap::new());
         GitignoreMatcher {
             ignore,
             submatchers,
@@ -100,7 +100,7 @@ impl GitignoreMatcher {
     /// Used internally by `match_subdir_path`.
     fn new_with_rootmatcher(dir: &Path, root: &GitignoreMatcher) -> Self {
         let dir_root_relative = dir.strip_prefix(root.ignore.path()).unwrap();
-        let submatchers = RefCell::new(HashMap::new());
+        let submatchers = RwLock::new(HashMap::new());
         let (ignored, ignore) = if root.match_relative(dir_root_relative, true) {
             (true, gitignore::Gitignore::empty())
         } else {
@@ -174,7 +174,7 @@ impl GitignoreMatcher {
         explain: &mut Option<&mut Explain>,
     ) -> MatchResult {
         {
-            let submatchers = self.submatchers.borrow();
+            let submatchers = self.submatchers.read();
             if let Some(m) = submatchers.get(name) {
                 return m.as_ref().match_path(rest, is_dir, root, explain);
             }
@@ -184,7 +184,7 @@ impl GitignoreMatcher {
             if dir.is_dir() {
                 let m = GitignoreMatcher::new_with_rootmatcher(&dir, root);
                 let result = m.match_path(rest, is_dir, root, explain);
-                let mut submatchers = self.submatchers.borrow_mut();
+                let mut submatchers = self.submatchers.write();
                 submatchers.insert(name.to_path_buf(), Box::new(m));
                 result
             } else {

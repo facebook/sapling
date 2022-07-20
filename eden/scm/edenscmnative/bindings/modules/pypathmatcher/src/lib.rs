@@ -45,12 +45,12 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 py_class!(class gitignorematcher |py| {
-    data matcher: GitignoreMatcher;
+    data matcher: Arc<GitignoreMatcher>;
 
     def __new__(_cls, root: &PyPath, global_paths: Vec<PyPathBuf>) -> PyResult<gitignorematcher> {
         let global_paths: Vec<&Path> = global_paths.iter().map(PyPathBuf::as_path).collect();
         let matcher = GitignoreMatcher::new(root, global_paths);
-        gitignorematcher::create_instance(py, matcher)
+        Self::create_instance(py, Arc::new(matcher))
     }
 
     def match_relative(&self, path: &PyPath, is_dir: bool) -> PyResult<bool> {
@@ -61,6 +61,14 @@ py_class!(class gitignorematcher |py| {
         Ok(self.matcher(py).explain(path, is_dir).into())
     }
 });
+
+impl ExtractInnerRef for gitignorematcher {
+    type Inner = Arc<GitignoreMatcher>;
+
+    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
+        self.matcher(py)
+    }
+}
 
 py_class!(pub class treematcher |py| {
     data matcher: Arc<TreeMatcher>;
@@ -192,9 +200,15 @@ pub fn extract_matcher(py: Python, matcher: PyObject) -> PyResult<Arc<dyn Matche
     if let Ok(matcher) = treematcher::downcast_from(py, matcher.clone_ref(py)) {
         return Ok(matcher.extract_inner(py));
     }
+    if let Ok(matcher) = gitignorematcher::downcast_from(py, matcher.clone_ref(py)) {
+        return Ok(matcher.extract_inner(py));
+    }
     let py_type = matcher.get_type(py);
     let type_name = py_type.name(py);
     if type_name.as_ref() == "treematcher" {
+        return extract_matcher(py, matcher.getattr(py, "_matcher")?);
+    }
+    if type_name.as_ref() == "gitignorematcher" {
         return extract_matcher(py, matcher.getattr(py, "_matcher")?);
     }
     if type_name.as_ref() == "unionmatcher" {
