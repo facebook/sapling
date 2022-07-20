@@ -634,7 +634,7 @@ async fn push_merge_commit(
     info!(ctx.logger(), "Running pushrebase");
 
     let merged_cs = merged_cs_id.load(ctx, repo.repo_blobstore()).await?;
-    let pushrebase_flags = repo_config.pushrebase.flags;
+    let pushrebase_flags = &repo_config.pushrebase.flags;
     let pushrebase_hooks = bookmarks_movement::get_pushrebase_hooks(
         ctx,
         repo,
@@ -645,7 +645,7 @@ async fn push_merge_commit(
     let pushrebase_res = do_pushrebase_bonsai(
         ctx,
         repo.as_blob_repo(),
-        &pushrebase_flags,
+        pushrebase_flags,
         bookmark_to_merge_into,
         &hashset![merged_cs],
         &pushrebase_hooks,

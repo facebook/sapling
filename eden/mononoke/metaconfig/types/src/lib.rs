@@ -588,7 +588,7 @@ impl Default for PushParams {
 }
 
 /// Flags for the pushrebase inner loop
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct PushrebaseFlags {
     /// Update dates of rebased commits
     pub rewritedates: bool,
@@ -600,6 +600,8 @@ pub struct PushrebaseFlags {
     pub casefolding_check: bool,
     /// How many commits are allowed to not have filenodes generated.
     pub not_generated_filenodes_limit: u64,
+    /// Which bookmark to track in ODS
+    pub monitoring_bookmark: Option<String>,
 }
 
 impl Default for PushrebaseFlags {
@@ -610,6 +612,7 @@ impl Default for PushrebaseFlags {
             forbid_p2_root_rebases: true,
             casefolding_check: true,
             not_generated_filenodes_limit: 500,
+            monitoring_bookmark: None,
         }
     }
 }

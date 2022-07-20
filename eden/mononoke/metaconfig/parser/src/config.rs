@@ -1089,6 +1089,7 @@ mod test {
                         forbid_p2_root_rebases: false,
                         casefolding_check: false,
                         not_generated_filenodes_limit: 500,
+                        monitoring_bookmark: None,
                     },
                     block_merges: false,
                     emit_obsmarkers: false,

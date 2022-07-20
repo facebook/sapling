@@ -480,7 +480,7 @@ async fn change_mapping_via_extras<'a>(
     )
     .await?;
 
-    let pushrebase_flags = repo_config.pushrebase.flags;
+    let pushrebase_flags = &repo_config.pushrebase.flags;
     let pushrebase_hooks = bookmarks_movement::get_pushrebase_hooks(
         ctx,
         large_repo,
@@ -495,7 +495,7 @@ async fn change_mapping_via_extras<'a>(
     let pushrebase_res = do_pushrebase_bonsai(
         ctx,
         large_repo,
-        &pushrebase_flags,
+        pushrebase_flags,
         &large_bookmark,
         &hashset![bcs],
         &pushrebase_hooks,

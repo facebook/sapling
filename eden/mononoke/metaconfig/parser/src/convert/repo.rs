@@ -265,6 +265,7 @@ impl Convert for RawPushrebaseParams {
                     .casefolding_check
                     .unwrap_or(default.flags.casefolding_check),
                 not_generated_filenodes_limit: 500,
+                monitoring_bookmark: self.monitoring_bookmark,
             },
             commit_scribe_category: self.commit_scribe_category,
             block_merges: self.block_merges.unwrap_or(default.block_merges),

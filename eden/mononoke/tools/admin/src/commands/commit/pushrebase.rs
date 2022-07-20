@@ -52,7 +52,7 @@ pub async fn pushrebase(
         vec![source]
     };
 
-    let pushrebase_flags = repo.repo_config().pushrebase.flags;
+    let pushrebase_flags = &repo.repo_config().pushrebase.flags;
     let pushrebase_hooks = bookmarks_movement::get_pushrebase_hooks(
         ctx,
         repo,
@@ -74,7 +74,7 @@ pub async fn pushrebase(
     let result = pushrebase::do_pushrebase_bonsai(
         ctx,
         repo,
-        &pushrebase_flags,
+        pushrebase_flags,
         &pushrebase_args.bookmark,
         &bonsais,
         &pushrebase_hooks,
