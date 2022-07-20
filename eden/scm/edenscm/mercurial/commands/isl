@@ -1,8 +1,8 @@
 #!/usr/bin/env dotslash
 
-// @generated SignedSource<<05c39a0c0d0c5faead5fa7b64f5a61aa>>
+// @generated SignedSource<<61ead99d214345887b3d86a93f671275>>
 // MSDK schedule URL: https://our.intern.facebook.com/intern/msdk/bump/?action=view&schedule_fbid=413790530659489
-// sandcastle build trigger URL: https://our.intern.facebook.com/intern/sandcastle/job/31525198119768923/
+// sandcastle build trigger URL: https://our.intern.facebook.com/intern/sandcastle/job/31525198121638577/
 
 {
     "name": "isl",
@@ -10,18 +10,18 @@
     "build_info": {
         "config_script": "xplat/scm/oss-smartlog/release/dotslash_build.spec",
         "commit_repo": "fbsource",
-        "commit_hash": "e3ab832b39dd11c357dced1767fd4348e9edbb03",
-        "commit_date": "2022-07-19 08:03:38 PDT",
-        "commit_timestamp": 1658243018,
-        "msdk_package_fbid": "543071037564438"
+        "commit_hash": "b75e98b424df72d43ac6f151edfcb2838718a107",
+        "commit_date": "2022-07-20 12:39:31 PDT",
+        "commit_timestamp": 1658345971,
+        "msdk_package_fbid": "609374227165267"
     },
     "signatures": {
-        "msdk": "<<crypto.managed_sdk.mac:AeVm9QNxUgzTGdpXJlps4A--EAEyuLP0U2C1PE0a-bjO_Phb>>"
+        "msdk": "<<crypto.managed_sdk.mac:AeUZ4_jgSv_gvLmCt7qgJJWSbiUnE727vYtBKBODcUkuOfvT>>"
     },
     "platforms": {
         "linux": {
             "scheme": "everstore",
-            "handle": "GN-7jhEbO09YjIADAHF6bPZzKIhkblMqAAAA",
+            "handle": "GPgyYRF7MesjHh0CAF4pzUT-6kJXblMqAAAA",
             "extract": {
                 "path": "isl",
                 "decompress": "tar.gz"
@@ -29,7 +29,7 @@
         },
         "macos": {
             "scheme": "everstore",
-            "handle": "GN-7jhEbO09YjIADAHF6bPZzKIhkblMqAAAA",
+            "handle": "GPgyYRF7MesjHh0CAF4pzUT-6kJXblMqAAAA",
             "extract": {
                 "path": "isl",
                 "decompress": "tar.gz"
@@ -37,7 +37,7 @@
         },
         "windows": {
             "scheme": "everstore",
-            "handle": "GN-7jhEbO09YjIADAHF6bPZzKIhkblMqAAAA",
+            "handle": "GPgyYRF7MesjHh0CAF4pzUT-6kJXblMqAAAA",
             "extract": {
                 "path": "isl.bat",
                 "decompress": "tar.gz"
