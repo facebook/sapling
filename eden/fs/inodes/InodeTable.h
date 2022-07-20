@@ -7,6 +7,8 @@
 
 #pragma once
 
+#ifndef _WIN32
+
 #include <optional>
 #include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/inodes/InodeNumber.h"
@@ -339,3 +341,5 @@ static_assert(
 using InodeMetadataTable = InodeTable<InodeMetadata>;
 
 } // namespace facebook::eden
+
+#endif
