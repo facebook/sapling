@@ -47,7 +47,7 @@ constexpr auto kMountProtocolStr = [] {
   std::array<folly::StringPiece, 3> protocolMap;
   protocolMap[folly::to_underlying(MountProtocol::FUSE)] = "fuse";
   protocolMap[folly::to_underlying(MountProtocol::PRJFS)] = "prjfs";
-  protocolMap[folly::to_underlying(MountProtocol::FUSE)] = kMountProtocolNFS;
+  protocolMap[folly::to_underlying(MountProtocol::NFS)] = kMountProtocolNFS;
   return protocolMap;
 }();
 
