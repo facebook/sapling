@@ -294,10 +294,12 @@ pub struct MononokeTunables {
     // enable them again.
     enable_sql_lag_monitoring: AtomicBool,
 
-    // If this is set, the hook won't be created at all
+    // If set, the hook won't be created at all
     disable_check_write_permissions_hook: AtomicBool,
-    // If this is set, the check result will be discarded
-    log_only_check_write_permissions_hook: AtomicBool,
+    // If set, the check result will be discarded for user identities
+    log_only_for_users_in_cwp_hook: AtomicBool,
+    // If set, the check result will be discarded for service identities
+    log_only_for_services_in_cwp_hook: AtomicBool,
 
     // If set, the wireproto implementation will only log the repo write ACL
     // check result.
