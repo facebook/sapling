@@ -3,7 +3,17 @@ Quick Start
 
 Build
 -----
-Run ``make local``. Then ``hg`` from the project root can be executed.
+Run the following::
+
+  ~/fbsource/fbcode/eden/scm$ make local
+
+The locally built ``hg`` will be available at ``~/fbsource/fbcode/eden/scm/hg``.
+
+You may want to create a script like ``~/bin/lhg`` on your ``$PATH``
+(``lhg`` == "local ``hg``") to facilitate running the dev version::
+
+  #!/bin/bash
+  CHGDISABLE=1 ~/fbsource/fbcode/eden/scm/hg "$@"
 
 
 Test
