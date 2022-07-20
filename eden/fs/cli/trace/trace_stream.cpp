@@ -425,8 +425,49 @@ int trace_fs(
   return 0;
 }
 
+char thriftRequestEventTypeSymbol(const ThriftRequestEvent& event) {
+  switch (*event.eventType()) {
+    case ThriftRequestEventType::START:
+      return '+';
+    case ThriftRequestEventType::FINISH:
+      return '-';
+    case ThriftRequestEventType::UNKNOWN:
+      break;
+  }
+  return ' ';
+}
+
+// Thrift async C++ method name prefixes to omit from output.
+//
+// For p1, p2 in this vector: If p1 is a prefix of p2, it must be located
+// *after* p2 in the vector.
+const std::string_view kAsyncThriftMethodPrefixes[] = {
+    "semifuture_",
+    "future_",
+    "async_tm_",
+    "async_",
+    "co_",
+};
+
+std::string stripAsyncThriftMethodPrefix(const std::string& method) {
+  for (const auto& prefix : kAsyncThriftMethodPrefixes) {
+    if (method.find(prefix) == 0) {
+      return method.substr(prefix.length());
+    }
+  }
+  return method;
+}
+
 std::string formatThriftRequestMetadata(const ThriftRequestMetadata& request) {
-  return fmt::format("{}: {}", request.get_requestId(), request.get_method());
+  std::string clientPidString;
+  if (request.get_clientPid()) {
+    clientPidString = fmt::format(" from {}", request.get_clientPid());
+  }
+  return fmt::format(
+      "{}{}: {}",
+      request.get_requestId(),
+      clientPidString,
+      stripAsyncThriftMethodPrefix(request.get_method()));
 }
 
 int trace_thrift(
@@ -436,24 +477,71 @@ int trace_thrift(
 
   auto future = client.semifuture_debugOutstandingThriftRequests().via(
       evbThread.getEventBase());
+  apache::thrift::ClientBufferedStream<ThriftRequestEvent> traceThriftStream =
+      client.semifuture_traceThriftRequestEvents()
+          .via(evbThread.getEventBase())
+          .get();
 
   std::move(future)
-      .thenValue(
+      .thenValue([](std::vector<ThriftRequestMetadata> outstandingRequests) {
+        if (outstandingRequests.empty()) {
+          return;
+        }
+        std::string_view header = "Outstanding Thrift requests"sv;
+        fmt::print("{}\n{}\n", header, std::string(header.size(), '-'));
+        for (const auto& request : outstandingRequests) {
+          fmt::print("  {}\n", formatThriftRequestMetadata(request));
+        }
+        fmt::print("\n");
+      })
+      .get();
+
+  std::string_view header = "Ongoing Thrift requests"sv;
+  fmt::print("{}\n{}\n", header, std::string(header.size(), '-'));
+
+  std::unordered_map<int64_t, int64_t> requestStartMonoTimesNs;
+
+  std::move(traceThriftStream)
+      .subscribeInline(
           // Move the client into the callback so that it will be destroyed on
           // an EventBase thread.
-          [c = std::move(client)](
-              std::vector<ThriftRequestMetadata> outstandingRequests) {
-            if (outstandingRequests.empty()) {
+          [c = std::move(client),
+           startTimesNs = std::move(requestStartMonoTimesNs)](
+              folly::Try<ThriftRequestEvent>&& maybeEvent) mutable {
+            if (maybeEvent.hasException()) {
+              fmt::print(
+                  "Error: {}\n", folly::exceptionStr(maybeEvent.exception()));
               return;
             }
-            std::string_view header = "Outstanding Thrift requests"sv;
-            fmt::print("{}\n{}\n", header, std::string(header.size(), '-'));
-            for (const auto& request : outstandingRequests) {
-              fmt::print("+ {}\n", formatThriftRequestMetadata(request));
+
+            const auto& event = maybeEvent.value();
+            const auto requestId = event.get_requestMetadata().get_requestId();
+            const int64_t eventNs = event.get_times().get_monotonic_time_ns();
+
+            std::string latencyString;
+            switch (*event.eventType()) {
+              case ThriftRequestEventType::START:
+                startTimesNs[requestId] = eventNs;
+                break;
+              case ThriftRequestEventType::FINISH: {
+                auto kv = startTimesNs.find(requestId);
+                if (kv != startTimesNs.end()) {
+                  int64_t startNs = kv->second;
+                  int64_t latencyNs = eventNs - startNs;
+                  latencyString = fmt::format(" in {} μs", latencyNs / 1000);
+                  startTimesNs.erase(kv);
+                }
+              } break;
+              case ThriftRequestEventType::UNKNOWN:
+                break;
             }
-            fmt::print("{}\n", std::string(header.size(), '-'));
-          })
-      .get();
+
+            fmt::print(
+                "{} {}{}\n",
+                thriftRequestEventTypeSymbol(event),
+                formatThriftRequestMetadata(*event.requestMetadata()),
+                latencyString);
+          });
 
   return 0;
 }

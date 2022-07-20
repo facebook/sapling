@@ -19,6 +19,10 @@ template <typename T>
 class Future;
 }
 
+namespace {
+class PrefetchFetchContext;
+} // namespace
+
 namespace facebook::eden {
 
 class Hash20;
@@ -46,26 +50,29 @@ struct ThriftRequestTraceEvent : TraceEventBase {
 
   static ThriftRequestTraceEvent start(
       uint64_t requestId,
-      folly::StringPiece method) {
-    return ThriftRequestTraceEvent{Type::START, requestId, method};
-  }
+      folly::StringPiece method,
+      std::optional<pid_t> clientPid);
 
   static ThriftRequestTraceEvent finish(
       uint64_t requestId,
-      folly::StringPiece method) {
-    return ThriftRequestTraceEvent{Type::FINISH, requestId, method};
-  }
+      folly::StringPiece method,
+      std::optional<pid_t> clientPid);
 
   ThriftRequestTraceEvent(
       Type type,
       uint64_t requestId,
-      folly::StringPiece method)
-      : type(type), requestId(requestId), method(method) {}
+      folly::StringPiece method,
+      std::optional<pid_t> clientPid)
+      : type(type),
+        requestId(requestId),
+        method(method),
+        clientPid(clientPid) {}
 
   Type type;
   uint64_t requestId;
   // Safe to use StringPiece because method names are string literals.
   folly::StringPiece method;
+  std::optional<pid_t> clientPid;
 };
 
 /*
@@ -187,6 +194,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   apache::thrift::ServerStream<FsEvent> traceFsEvents(
       std::unique_ptr<std::string> mountPoint,
       int64_t eventCategoryMask) override;
+
+  apache::thrift::ServerStream<ThriftRequestEvent> traceThriftRequestEvents()
+      override;
 
   apache::thrift::ServerStream<HgEvent> traceHgEvents(
       std::unique_ptr<std::string> mountPoint) override;

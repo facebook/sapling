@@ -251,12 +251,10 @@ class ThriftLogHelper {
         fetchContext_{pid, itcFunctionName},
         prefetchFetchContext_{pid, itcFunctionName} {
     traceBus_->publish(
-        ThriftRequestTraceEvent::start(requestId_, itcFunctionName_));
+        ThriftRequestTraceEvent::start(requestId_, itcFunctionName_, pid));
   }
 
   ~ThriftLogHelper() {
-    traceBus_->publish(
-        ThriftRequestTraceEvent::finish(requestId_, itcFunctionName_));
     // Logging completion time for the request
     // The line number points to where the object was originally created
     auto elapsed = itcTimer_.elapsed();
@@ -272,6 +270,8 @@ class ThriftLogHelper {
       auto thriftStats = edenStats_->getThriftStatsForCurrentThread();
       thriftStats.recordLatency(statPtr_, elapsed);
     }
+    traceBus_->publish(ThriftRequestTraceEvent::finish(
+        requestId_, itcFunctionName_, fetchContext_.getClientPid()));
   }
 
   PrefetchFetchContext& getPrefetchFetchContext() {
@@ -379,6 +379,22 @@ facebook::eden::InodePtr inodeFromUserPath(
         stat,                                                         \
         getAndRegisterClientPid());                                   \
   }(__func__, __FILE__, __LINE__))
+
+ThriftRequestTraceEvent ThriftRequestTraceEvent::start(
+    uint64_t requestId,
+    folly::StringPiece method,
+    std::optional<pid_t> clientPid) {
+  return ThriftRequestTraceEvent{
+      ThriftRequestTraceEvent::START, requestId, method, clientPid};
+}
+
+ThriftRequestTraceEvent ThriftRequestTraceEvent::finish(
+    uint64_t requestId,
+    folly::StringPiece method,
+    std::optional<pid_t> clientPid) {
+  return ThriftRequestTraceEvent{
+      ThriftRequestTraceEvent::START, requestId, method, clientPid};
+}
 
 namespace facebook::eden {
 
@@ -998,7 +1014,46 @@ ThriftRequestMetadata populateThriftRequestMetadata(
   ThriftRequestMetadata thriftRequestMetadata;
   thriftRequestMetadata.requestId() = request.requestId;
   thriftRequestMetadata.method() = request.method;
+  if (request.clientPid.has_value()) {
+    thriftRequestMetadata.clientPid() = request.clientPid.value();
+  }
   return thriftRequestMetadata;
+}
+
+apache::thrift::ServerStream<ThriftRequestEvent>
+EdenServiceHandler::traceThriftRequestEvents() {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
+
+  struct SubscriptionHandleOwner {
+    TraceBus<ThriftRequestTraceEvent>::SubscriptionHandle handle;
+  };
+
+  auto h = std::make_shared<SubscriptionHandleOwner>();
+
+  auto [serverStream, publisher] =
+      apache::thrift::ServerStream<ThriftRequestEvent>::createPublisher([h] {
+        // on disconnect, release subscription handle
+      });
+
+  h->handle = thriftRequestTraceBus_->subscribeFunction(
+      "Live Thrift request tracing",
+      [publisher = ThriftStreamPublisherOwner{std::move(publisher)}](
+          const ThriftRequestTraceEvent& traceEvent) mutable {
+        ThriftRequestEvent event;
+        event.times_ref() = thriftTraceEventTimes(traceEvent);
+        switch (traceEvent.type) {
+          case ThriftRequestTraceEvent::START:
+            event.eventType() = ThriftRequestEventType::START;
+            break;
+          case ThriftRequestTraceEvent::FINISH:
+            event.eventType() = ThriftRequestEventType::FINISH;
+            break;
+        }
+        event.requestMetadata_ref() = populateThriftRequestMetadata(traceEvent);
+        publisher.next(event);
+      });
+
+  return std::move(serverStream);
 }
 
 apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
@@ -2811,7 +2866,8 @@ void EdenServiceHandler::debugOutstandingThriftRequests(
         outstandingRequests) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
 
-  for (const auto& item : *outstandingThriftRequests_.rlock()) {
+  const auto requestsLockedPtr = outstandingThriftRequests_.rlock();
+  for (const auto& item : *requestsLockedPtr) {
     outstandingRequests.push_back(populateThriftRequestMetadata(item.second));
   }
 }
