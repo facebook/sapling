@@ -10,7 +10,7 @@ Test
 ----
 To test native components: ``cd lib && cargo test``.
 
-To run integration tests (the main test suite): Build. Then run ``cd tests && ./run-tests.py``. 
+To run integration tests (the main test suite): Build. Then run ``cd tests && ./run-tests.py``.
 
 
 Directory Layout
