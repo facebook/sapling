@@ -4147,6 +4147,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             (unknown, actions["unknown"], discard),
         )
 
+        quiet = ui.quiet
         for abs, (rel, exact) in sorted(names.items()):
             # target file to be touch on disk (relative to cwd)
             target = repo.wjoin(abs)
@@ -4184,7 +4185,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                         if not isinstance(msg, str):
                             msg = msg(abs)
                         ui.status(msg % rel)
-                elif exact:
+                elif exact and not quiet:
                     ui.warn(msg % rel)
                 break
 

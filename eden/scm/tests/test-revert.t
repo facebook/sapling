@@ -130,6 +130,8 @@
   $ hg revert a
   no changes needed to a
 
+  $ hg revert -q a
+
 # revert on an untracked file
 # ---------------------------
 
