@@ -965,6 +965,10 @@ fn create_config_store<'a>(
                 "scm/mononoke/redaction/.*".to_string(),
                 CRYPTO_PROJECT.to_string(),
             ),
+            (
+                "scm/mononoke/lfs_server/.*".to_string(),
+                CRYPTO_PROJECT.to_string(),
+            ),
         ],
         |it| {
             it.map(|regex| (regex.to_string(), CRYPTO_PROJECT.to_string()))
