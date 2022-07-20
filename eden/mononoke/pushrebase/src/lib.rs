@@ -111,6 +111,7 @@ use pushrebase_hook::RebasedChangesets;
 
 define_stats! {
     prefix = "mononoke.pushrebase";
+    // Clowntown: This is actually nanoseconds (ns), not microseconds (us)
     critical_section_success_duration_us: dynamic_timeseries("{}.critical_section_success_duration_us", (reponame: String); Average, Sum, Count),
     critical_section_failure_duration_us: dynamic_timeseries("{}.critical_section_failure_duration_us", (reponame: String); Average, Sum, Count),
     critical_section_retries_failed: dynamic_timeseries("{}.critical_section_retries_failed", (reponame: String); Average, Sum),
@@ -320,6 +321,7 @@ async fn rebase_in_loop(
     client_bcs: &Vec<BonsaiChangeset>,
     prepushrebase_hooks: &[Box<dyn PushrebaseHook>],
 ) -> Result<PushrebaseOutcome, PushrebaseError> {
+    let should_log = config.monitoring_bookmark.as_deref() == Some(onto_bookmark.as_str());
     let mut latest_rebase_attempt = root;
     let mut pushrebase_distance = PushrebaseDistance(0);
 
@@ -390,9 +392,12 @@ async fn rebase_in_loop(
             .try_into()
             .unwrap_or(i64::MAX);
         if let Some((head, rebased_changesets)) = rebase_outcome {
-            STATS::critical_section_success_duration_us
-                .add_value(critical_section_duration_us, repo_args.clone());
-            STATS::critical_section_retries_failed.add_value(retry_num.0 as i64, repo_args.clone());
+            if should_log {
+                STATS::critical_section_success_duration_us
+                    .add_value(critical_section_duration_us, repo_args.clone());
+                STATS::critical_section_retries_failed
+                    .add_value(retry_num.0 as i64, repo_args.clone());
+            }
             let res = PushrebaseOutcome {
                 head,
                 retry_num,
@@ -400,14 +405,16 @@ async fn rebase_in_loop(
                 pushrebase_distance,
             };
             return Ok(res);
-        } else {
+        } else if should_log {
             STATS::critical_section_failure_duration_us
                 .add_value(critical_section_duration_us, repo_args.clone());
         }
 
         latest_rebase_attempt = bookmark_val.unwrap_or(root);
     }
-    STATS::critical_section_retries_failed.add_value(MAX_REBASE_ATTEMPTS as i64, repo_args);
+    if should_log {
+        STATS::critical_section_retries_failed.add_value(MAX_REBASE_ATTEMPTS as i64, repo_args);
+    }
 
     Err(PushrebaseInternalError::TooManyRebaseAttempts.into())
 }
