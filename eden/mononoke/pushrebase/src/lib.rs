@@ -115,6 +115,7 @@ define_stats! {
     critical_section_success_duration_us: dynamic_timeseries("{}.critical_section_success_duration_us", (reponame: String); Average, Sum, Count),
     critical_section_failure_duration_us: dynamic_timeseries("{}.critical_section_failure_duration_us", (reponame: String); Average, Sum, Count),
     critical_section_retries_failed: dynamic_timeseries("{}.critical_section_retries_failed", (reponame: String); Average, Sum),
+    commits_rebased: dynamic_timeseries("{}.commits_rebased", (reponame: String); Average, Sum, Count),
 }
 
 const MAX_REBASE_ATTEMPTS: usize = 100;
@@ -397,6 +398,8 @@ async fn rebase_in_loop(
                     .add_value(critical_section_duration_us, repo_args.clone());
                 STATS::critical_section_retries_failed
                     .add_value(retry_num.0 as i64, repo_args.clone());
+                STATS::commits_rebased
+                    .add_value(rebased_changesets.len() as i64, repo_args.clone());
             }
             let res = PushrebaseOutcome {
                 head,
