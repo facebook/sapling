@@ -23,6 +23,7 @@ use std::time::Instant;
 mod uploader;
 
 pub use uploader::DirectUploader;
+pub use uploader::ReuploadCommits;
 
 /// Import starting at from (known to be in Mononoke) and ending with to
 pub async fn range(

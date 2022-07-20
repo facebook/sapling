@@ -368,6 +368,15 @@ pub trait GitUploader: Clone + Send + Sync + 'static {
     /// Returns a change representing a deletion
     fn deleted() -> Self::Change;
 
+    /// Looks to see if we can elide importing a commit
+    /// If you can give us the ChangesetId for a given git object,
+    /// then we assume that it's already imported and skip it
+    async fn check_commit_uploaded(
+        &self,
+        ctx: &CoreContext,
+        oid: &git_hash::oid,
+    ) -> Result<Option<ChangesetId>, Error>;
+
     /// Upload a single file to the repo
     async fn upload_file(
         &self,

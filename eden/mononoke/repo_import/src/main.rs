@@ -1086,7 +1086,10 @@ async fn repo_import(
         let prefs = GitimportPreferences::default();
         let target = GitimportTarget::full();
         info!(ctx.logger(), "Started importing git commits to Mononoke");
-        let uploader = import_direct::DirectUploader::new(repo.as_blob_repo().clone());
+        let uploader = import_direct::DirectUploader::new(
+            repo.as_blob_repo().clone(),
+            import_direct::ReuploadCommits::Never,
+        );
         let import_map = import_tools::gitimport(&ctx, path, uploader, &target, &prefs).await?;
         info!(ctx.logger(), "Added commits to Mononoke");
 

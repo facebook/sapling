@@ -37,15 +37,32 @@ use slog::info;
 use sorted_vector_map::SortedVectorMap;
 use std::sync::Arc;
 
+#[derive(Clone, Copy, Debug)]
+pub enum ReuploadCommits {
+    Never,
+    Always,
+}
+
+impl ReuploadCommits {
+    fn reupload_commit(&self) -> bool {
+        match self {
+            ReuploadCommits::Never => false,
+            ReuploadCommits::Always => true,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct DirectUploader {
     inner: Arc<BlobRepo>,
+    reupload_commits: ReuploadCommits,
 }
 
 impl DirectUploader {
-    pub fn new(repo: BlobRepo) -> Self {
+    pub fn new(repo: BlobRepo, reupload_commits: ReuploadCommits) -> Self {
         Self {
             inner: Arc::new(repo),
+            reupload_commits,
         }
     }
 }
@@ -57,6 +74,21 @@ impl GitUploader for DirectUploader {
 
     fn deleted() -> Self::Change {
         FileChange::Deletion
+    }
+
+    async fn check_commit_uploaded(
+        &self,
+        ctx: &CoreContext,
+        oid: &git_hash::oid,
+    ) -> Result<Option<ChangesetId>, Error> {
+        if self.reupload_commits.reupload_commit() {
+            return Ok(None);
+        }
+
+        self.inner
+            .bonsai_git_mapping()
+            .get_bonsai_from_git_sha1(ctx, hash::GitSha1::from_bytes(oid.as_bytes())?)
+            .await
     }
 
     async fn upload_file(

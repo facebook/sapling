@@ -60,6 +60,8 @@ const ARG_GIT_TO: &str = "git-to";
 
 const ARG_GIT_COMMIT: &str = "git-commit";
 
+const ARG_REUPLOAD_COMMITS: &str = "reupload-commits";
+
 async fn derive_hg(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -129,6 +131,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .takes_value(true),
         )
         .arg(Arg::with_name(ARG_GIT_REPOSITORY_PATH).help("Path to a git repository to import"))
+        .arg(
+            Arg::with_name(ARG_REUPLOAD_COMMITS)
+                .long(ARG_REUPLOAD_COMMITS)
+                .help("Reupload git commits, even if they already exist in Mononoke")
+                .required(false)
+                .takes_value(false)
+        )
         .subcommand(SubCommand::with_name(SUBCOMMAND_FULL_REPO))
         .subcommand(
             SubCommand::with_name(SUBCOMMAND_GIT_RANGE)
@@ -174,6 +183,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
+    let reupload = if matches.is_present(ARG_REUPLOAD_COMMITS) {
+        import_direct::ReuploadCommits::Always
+    } else {
+        import_direct::ReuploadCommits::Never
+    };
+
     let repo = args::create_repo(fb, logger, &matches);
     block_execute(
         async {
@@ -194,7 +209,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 repo
             };
 
-            let uploader = import_direct::DirectUploader::new(repo.clone());
+            let uploader = import_direct::DirectUploader::new(repo.clone(), reupload);
 
             let target = match matches.subcommand() {
                 (SUBCOMMAND_FULL_REPO, Some(..)) => GitimportTarget::full(),

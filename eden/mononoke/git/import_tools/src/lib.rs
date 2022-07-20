@@ -171,6 +171,29 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator, Uploader: GitUploader>(
     target
         .list_commits(&prefs.git_command_path, path)
         .await?
+        .try_filter_map({
+            let acc = &acc;
+            let uploader = &uploader;
+            let repo_name = &repo_name;
+            move |oid| async move {
+                if let Some(bcs_id) = uploader.check_commit_uploaded(ctx, &oid).await? {
+                    acc.write().expect("lock poisoned").insert(oid, bcs_id);
+                    let git_sha1 = oid_to_sha1(&oid)?;
+                    info!(
+                        ctx.logger(),
+                        "GitRepo:{} commit {} of {} - Oid:{} => Bid:{} (already exists)",
+                        repo_name,
+                        acc.read().expect("lock poisoned").len(),
+                        nb_commits_to_import,
+                        git_sha1.to_brief(),
+                        bcs_id.to_brief()
+                    );
+                    Ok(None)
+                } else {
+                    Ok(Some(oid))
+                }
+            }
+        })
         .map_ok(|oid| {
             cloned!(ctx, reader, uploader, prefs.lfs);
             async move {
