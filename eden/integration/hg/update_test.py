@@ -711,83 +711,78 @@ class UpdateTest(EdenHgTestCase):
         self.read_dir("foo/subdir")
         self.repo.update(commit4)
 
-    if sys.platform != "win32":
+    def test_resume_interrupted_update(self) -> None:
+        """
+        Test resuming a hg checkout after Eden was killed mid-checkout
+        previously.
+        """
+        self.backing_repo.write_file("dir1/foo.txt", "Content 1")
+        self.backing_repo.write_file("dir2/bar.txt", "Content 1")
+        self.backing_repo.write_file("dir3/dog.txt", "Content 1")
+        bottom = self.backing_repo.commit("Add")
+        self.backing_repo.write_file("dir1/foo.txt", "Content 2")
+        self.backing_repo.write_file("dir2/bar.txt", "Content 2")
+        self.backing_repo.write_file("dir3/dog.txt", "Content 2")
+        middle = self.backing_repo.commit("Edit")
+        self.backing_repo.write_file("dir1/foo.txt", "Content 3")
+        self.backing_repo.write_file("dir2/bar.txt", "Content 3")
+        self.backing_repo.write_file("dir3/dog.txt", "Content 3")
+        top = self.backing_repo.commit("Edit again")
+        self.repo.update(top)
 
-        def test_resume_interrupted_update(self) -> None:
-            """
-            Test resuming a hg checkout after Eden was killed mid-checkout
-            previously.
-            """
-            self.backing_repo.write_file("dir1/foo.txt", "Content 1")
-            self.backing_repo.write_file("dir2/bar.txt", "Content 1")
-            self.backing_repo.write_file("dir3/dog.txt", "Content 1")
-            bottom = self.backing_repo.commit("Add")
-            self.repo.update(bottom)
-            self.backing_repo.write_file("dir1/foo.txt", "Content 2")
-            self.backing_repo.write_file("dir2/bar.txt", "Content 2")
-            self.backing_repo.write_file("dir3/dog.txt", "Content 2")
-            middle = self.backing_repo.commit("Edit")
-            self.repo.update(middle)
-            self.backing_repo.write_file("dir1/foo.txt", "Content 3")
-            self.backing_repo.write_file("dir2/bar.txt", "Content 3")
-            self.backing_repo.write_file("dir3/dog.txt", "Content 3")
-            top = self.backing_repo.commit("Edit again")
-            self.repo.update(top)
+        # Do no-op write to trigger materialization of dir2. This will force the
+        # checkout to process that inode, allowing us to hit the kill fault.
+        # At that point, dir1 will have been processed and be pointing to
+        # `bottom` while dir2 and dir3 won't have been processed, and be
+        # pointing at top still. After we recover, we'll verify that dir2 and
+        # dir3 were not materialized during the resumed checkout.
+        self.repo.write_file("dir2/bar.txt", "Content 3")
 
-            # Do no-op write to trigger materialization of dir2. This will force the
-            # checkout to process that inode, allowing us to hit the kill fault.
-            # At that point, dir1 will have been processed and be pointing to
-            # `bottom` while dir2 and dir3 won't have been processed, and be
-            # pointing at top still. After we recover, we'll verify that dir2 and
-            # dir3 were not materialized during the resumed checkout.
-            self.repo.write_file("dir2/bar.txt", "Content 3")
-
-            self.maxDiff = None
-            with self.eden.get_thrift_client_legacy() as client:
-                client.injectFault(
-                    FaultDefinition(
-                        keyClass="TreeInode::checkout",
-                        keyValueRegex="dir2, 0",
-                        kill=True,
-                    )
+        self.maxDiff = None
+        with self.eden.get_thrift_client_legacy() as client:
+            client.injectFault(
+                FaultDefinition(
+                    keyClass="TreeInode::checkout",
+                    keyValueRegex="dir2, 0",
+                    kill=True,
                 )
-
-                try:
-                    self.repo.update(bottom)
-                except Exception:
-                    pass
-                else:
-                    self.fail("'hg update' should've failed if eden crashes")
-
-            # Restart eden
-            if self.eden._process is not None:
-                self.eden._process.wait()
-            self.eden = self.init_eden_client()
-            self.eden.start()
+            )
 
             try:
-                self.repo.update(middle)
-            except hgrepo.HgError as ex:
-                self.assertTrue(
-                    "a previous checkout was interrupted - please 'hg checkout"
-                    in str(ex)
-                )
+                self.repo.update(bottom)
+            except Exception:
+                pass
             else:
-                self.fail(
-                    "'hg update' should've failed if eden previously crashed during checkout"
-                )
+                self.fail("'hg update' should've failed if eden crashes")
 
-            output = self.repo.update(bottom)
-            self.assertEqual("update complete\n", output)
+        # Restart eden
+        if self.eden._process is not None:
+            self.eden._process.wait()
+        self.eden = self.init_eden_client()
+        self.eden.start()
 
-            with self.eden.get_thrift_client_legacy() as client:
-                inode_status = client.debugInodeStatus(
-                    self.repo.path.encode("utf8"),
-                    b"dir2",
-                    flags=DIS_REQUIRE_MATERIALIZED,
-                    sync=SyncBehavior(),
-                )
-                self.assertFalse(inode_status[0].materialized)
+        try:
+            self.repo.update(middle)
+        except hgrepo.HgError as ex:
+            self.assertIn(
+                "a previous checkout was interrupted - please 'hg checkout", str(ex)
+            )
+        else:
+            self.fail(
+                "'hg update' should've failed if eden previously crashed during checkout"
+            )
+
+        output = self.repo.update(bottom, clean=True)
+        self.assertEqual("update complete\n", output)
+
+        with self.eden.get_thrift_client_legacy() as client:
+            inode_status = client.debugInodeStatus(
+                self.repo.path.encode("utf8"),
+                b"dir2",
+                flags=DIS_REQUIRE_MATERIALIZED,
+                sync=SyncBehavior(),
+            )
+            self.assertFalse(inode_status[0].materialized)
 
 
 @hg_test
