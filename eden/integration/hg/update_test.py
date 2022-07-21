@@ -16,7 +16,7 @@ from typing import Dict, List, Optional, Set
 from eden.fs.cli import util
 from eden.integration.hg.lib.hg_extension_test_base import EdenHgTestCase, hg_test
 from eden.integration.lib import hgrepo
-from facebook.eden.constants import DIS_REQUIRE_MATERIALIZED
+from facebook.eden.constants import DIS_ENABLE_FLAGS
 from facebook.eden.ttypes import (
     EdenError,
     EdenErrorType,
@@ -778,11 +778,14 @@ class UpdateTest(EdenHgTestCase):
         with self.eden.get_thrift_client_legacy() as client:
             inode_status = client.debugInodeStatus(
                 self.repo.path.encode("utf8"),
-                b"dir2",
-                flags=DIS_REQUIRE_MATERIALIZED,
+                b"",
+                flags=DIS_ENABLE_FLAGS,
                 sync=SyncBehavior(),
             )
-            self.assertFalse(inode_status[0].materialized)
+            inodes = dict((i.path.decode("utf8"), i) for i in inode_status)
+            self.assertNotIn("dir1", inodes)
+            self.assertFalse(inodes["dir2"].materialized)
+            self.assertNotIn("dir3", inodes)
 
 
 @hg_test
