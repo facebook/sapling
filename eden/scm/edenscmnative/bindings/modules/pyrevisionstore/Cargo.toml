@@ -5,11 +5,13 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.20"
+async-trait = "0.1.56"
 async-runtime = { path = "../../../../lib/async-runtime" }
 configparser = { path = "../../../../lib/configparser" }
 cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.7", default-features = false }
 io = { path = "../../../../lib/io" }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 minibytes = { path = "../../../../lib/minibytes" }
 parking_lot = "0.11.2"
 pyconfigparser = { path = "../pyconfigparser" }
