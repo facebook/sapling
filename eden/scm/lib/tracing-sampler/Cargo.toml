@@ -12,8 +12,8 @@ parking_lot = { version = "0.11.2", features = ["send_guard"] }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 tracing = "0.1.35"
-tracing-serde = "0.1.2"
-tracing-subscriber = { version = "0.3.11", features = ["ansi", "env-filter", "fmt", "json", "local-time", "parking_lot", "registry"] }
+tracing-serde = "0.1.3"
+tracing-subscriber = { version = "0.3.14", features = ["ansi", "env-filter", "fmt", "json", "local-time", "parking_lot", "registry"] }
 
 [dev-dependencies]
 tempfile = "3.3"
