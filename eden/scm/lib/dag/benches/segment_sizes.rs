@@ -11,6 +11,7 @@ use dag::ops::Persist;
 use dag::Group;
 use dag::Id;
 use dag::IdDag;
+use dag::IdSet;
 use dag::VertexName;
 use minibench::bench;
 use minibench::elapsed;
@@ -36,10 +37,14 @@ fn main() {
 
     let id_map_dir = tempdir().unwrap();
     let mut id_map = IdMap::open(id_map_dir.path()).unwrap();
+    let mut covered_ids = IdSet::empty();
+    let reserved_ids = IdSet::empty();
     let prepared_segments = nbr(id_map.assign_head(
         head_name,
         &(Box::new(parents_by_name) as ParentsFunc),
         Group::MASTER,
+        &mut covered_ids,
+        &reserved_ids,
     ))
     .unwrap();
 
@@ -49,11 +54,13 @@ fn main() {
         let dag_dir = tempdir().unwrap();
         let mut dag = IdDag::open(&dag_dir.path()).unwrap();
         dag.set_new_segment_size(segment_size);
-        let mut syncable = dag.prepare_filesystem_sync().unwrap();
-        let segment_len = syncable
+        let segment_len = dag
             .build_segments_from_prepared_flat_segments(&prepared_segments)
             .unwrap();
-        syncable.sync().unwrap();
+        {
+            let locked = dag.lock().unwrap();
+            dag.persist(&locked).unwrap();
+        }
 
         let log_len = dag_dir.path().join("log").metadata().unwrap().len();
         eprintln!("segments: {}  log len: {}", segment_len, log_len);

@@ -9,6 +9,7 @@ use dag::idmap::IdMap;
 use dag::idmap::IdMapAssignHead;
 use dag::Group;
 use dag::IdDag;
+use dag::IdSet;
 use dag::InProcessIdDag;
 use dag::VertexName;
 use minibench::bench;
@@ -40,8 +41,16 @@ fn main() {
 
     let id_map_dir = tempdir().unwrap();
     let mut id_map = IdMap::open(id_map_dir.path()).unwrap();
-    let outcome =
-        nbr(id_map.assign_head(head_name.clone(), &parents_by_name, Group::MASTER)).unwrap();
+    let mut covered_ids = IdSet::empty();
+    let reserved_ids = IdSet::empty();
+    let outcome = nbr(id_map.assign_head(
+        head_name.clone(),
+        &parents_by_name,
+        Group::MASTER,
+        &mut covered_ids,
+        &reserved_ids,
+    ))
+    .unwrap();
     let mut iddag = IdDag::new_in_process();
     iddag
         .build_segments_from_prepared_flat_segments(&outcome)

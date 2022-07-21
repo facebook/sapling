@@ -17,6 +17,7 @@ use dag::Id;
 use dag::IdDag;
 use dag::IdSet;
 use dag::Set;
+use dag::VertexListWithOptions;
 use dag::VertexName;
 use minibench::bench;
 use minibench::elapsed;
@@ -53,8 +54,16 @@ fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag
 
     let id_map_dir = tempdir().unwrap();
     let mut id_map = IdMap::open(id_map_dir.path()).unwrap();
-    let outcome =
-        nbr(id_map.assign_head(head_name.clone(), &parents_by_name, Group::MASTER)).unwrap();
+    let mut covered_ids = IdSet::empty();
+    let reserved_ids = IdSet::empty();
+    let outcome = nbr(id_map.assign_head(
+        head_name.clone(),
+        &parents_by_name,
+        Group::MASTER,
+        &mut covered_ids,
+        &reserved_ids,
+    ))
+    .unwrap();
 
     bench("building segments", || {
         let mut dag = get_empty_iddag();
@@ -66,11 +75,12 @@ fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag
 
     // Write segments to filesystem.
     let mut dag = get_empty_iddag();
-    let mut syncable = dag.prepare_filesystem_sync().unwrap();
-    syncable
-        .build_segments_from_prepared_flat_segments(&outcome)
-        .unwrap();
-    syncable.sync().unwrap();
+    {
+        dag.build_segments_from_prepared_flat_segments(&outcome)
+            .unwrap();
+        let locked = dag.lock().unwrap();
+        dag.persist(&locked).unwrap();
+    }
 
     let sample_two_ids: Vec<IdSet> = (0..parents.len() as u64)
         .step_by(10079)
@@ -268,9 +278,12 @@ fn bench_many_heads_namedag() {
         .collect::<Vec<_>>();
     let master_heads: Vec<VertexName> =
         vec![VertexName::copy_from(format!("{}", M - 1).as_bytes())];
+    let heads = VertexListWithOptions::from(master_heads)
+        .with_highest_group(Group::MASTER)
+        .chain(non_master_heads);
     let dag_dir = tempdir().unwrap();
     let mut dag = NameDag::open(&dag_dir.path()).unwrap();
-    nbr(dag.add_heads_and_flush(&parent_func, &master_heads, &non_master_heads)).unwrap();
+    nbr(dag.add_heads_and_flush(&parent_func, &heads)).unwrap();
 
     let to_set = |v: &str| -> Set {
         nbr(dag.sort(&Set::from_static_names(vec![VertexName::copy_from(
