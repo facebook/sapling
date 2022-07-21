@@ -496,6 +496,10 @@ async fn calculate_profile_config_change<'a>(
     // This should be changes to the sparse profile configs only
     changes: Vec<BonsaiSizeChange>,
 ) -> Result<HashMap<String, ProfileSizeChange>, MononokeError> {
+    let mut result = HashMap::new();
+    if changes.is_empty() {
+        return Ok(result);
+    }
     let mut changed = vec![];
     let mut raw_increase = vec![];
     let mut raw_decrease = vec![];
@@ -544,7 +548,6 @@ async fn calculate_profile_config_change<'a>(
         monitor.get_profile_size(ctx, current, current_paths),
         monitor.get_profile_size(ctx, other, previous_paths)
     )?;
-    let mut result = HashMap::new();
     for path in raw_increase {
         let size = current_sizes.get(&path.to_string()).ok_or_else(|| {
             anyhow!(
