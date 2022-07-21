@@ -40,7 +40,7 @@ pub trait BodyExt<E>: Stream<Item = Result<Bytes, E>> + Sized {
         headers: Option<&HeaderMap>,
     ) -> Result<BodyFuture<Self, E>, Error> {
         match headers {
-            Some(ref headers) => self.try_concat_body(headers),
+            Some(headers) => self.try_concat_body(headers),
             None => {
                 let headers = HeaderMap::default();
                 self.try_concat_body(&headers)

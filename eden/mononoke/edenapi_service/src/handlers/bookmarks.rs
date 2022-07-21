@@ -89,7 +89,7 @@ impl EdenApiHandler for SetBookmarkHandler {
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         Ok(stream::once(set_bookmark(
-            repo.clone(),
+            repo,
             request.bookmark,
             request.to,
             request.from,
@@ -126,7 +126,7 @@ async fn set_bookmark(
                 .changeset(to)
                 .await
                 .context("failed to resolve 'to' hgid")?
-                .ok_or_else(|| ErrorKind::HgIdNotFound(to_hgid))?
+                .ok_or(ErrorKind::HgIdNotFound(to_hgid))?
                 .id();
 
             let from = HgChangesetId::new(HgNodeHash::from(from_hgid));
@@ -134,7 +134,7 @@ async fn set_bookmark(
                 .changeset(from)
                 .await
                 .context("failed to resolve 'from' hgid")?
-                .ok_or_else(|| ErrorKind::HgIdNotFound(from_hgid))?
+                .ok_or(ErrorKind::HgIdNotFound(from_hgid))?
                 .id();
 
             repo.move_bookmark(bookmark, to, Some(from), true, pushvars)
@@ -147,7 +147,7 @@ async fn set_bookmark(
                 .changeset(to)
                 .await
                 .context("failed to resolve 'to' hgid")?
-                .ok_or_else(|| ErrorKind::HgIdNotFound(to_hgid))?
+                .ok_or(ErrorKind::HgIdNotFound(to_hgid))?
                 .id();
 
             repo.create_bookmark(bookmark, to, pushvars).await?
@@ -159,7 +159,7 @@ async fn set_bookmark(
                 .changeset(from)
                 .await
                 .context("failed to resolve 'from' hgid")?
-                .ok_or_else(|| ErrorKind::HgIdNotFound(from_hgid))?
+                .ok_or(ErrorKind::HgIdNotFound(from_hgid))?
                 .id();
 
             repo.delete_bookmark(bookmark, Some(from), pushvars).await?

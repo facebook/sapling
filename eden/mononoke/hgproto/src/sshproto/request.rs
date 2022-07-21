@@ -593,7 +593,7 @@ pub fn parse_request(buf: &mut BytesMut) -> Result<Option<Request>> {
 
 /// Common parser, generalized over how to parse parameters (either unbatched or
 /// batched syntax.)
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn parse_with_params(
     inp: &[u8],
     parse_params: fn(&[u8], usize)

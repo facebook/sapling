@@ -44,8 +44,7 @@ impl PostResponseInfo {
     pub fn error_count(&self) -> u64 {
         self.meta
             .as_ref()
-            .map(|m| m.body().error_meta.error_count())
-            .unwrap_or(0)
+            .map_or(0, |m| m.body().error_meta.error_count())
     }
 }
 
@@ -96,8 +95,8 @@ impl<C: PostResponseConfig> Middleware for PostResponseMiddleware<C> {
 
     async fn outbound(&self, state: &mut State, _response: &mut Response<Body>) {
         let config = self.config.clone();
-        let start_time = RequestStartTime::try_borrow_from(&state).map(|t| t.0);
-        let hostname_future = ClientIdentity::try_borrow_from(&state).map(|id| id.hostname());
+        let start_time = RequestStartTime::try_borrow_from(state).map(|t| t.0);
+        let hostname_future = ClientIdentity::try_borrow_from(state).map(|id| id.hostname());
         let meta = PendingResponseMeta::try_take_from(state);
 
         if let Some(callbacks) = state.try_take::<PostResponseCallbacks>() {

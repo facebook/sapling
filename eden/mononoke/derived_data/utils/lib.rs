@@ -317,7 +317,7 @@ where
             .manager
             .fetch_derived_batch::<Derivable>(&ctx, csids.clone(), Some(utils))
             .await?;
-        csids.retain(|csid| !derived.contains_key(&csid));
+        csids.retain(|csid| !derived.contains_key(csid));
         Ok(csids)
     }
 
@@ -538,7 +538,7 @@ impl DeriveGraph {
         let mut visited = HashSet::new();
         let mut res = HashSet::new();
         while let Some(node) = stack.pop() {
-            res.extend(node.csids.iter().map(|cs_id| *cs_id));
+            res.extend(node.csids.iter().copied());
             for dep in node.dependencies.iter() {
                 if visited.insert(dep.id) {
                     stack.push(dep);
@@ -906,7 +906,7 @@ pub fn find_underived_many(
                     let derivers = try_join_all(derivers)
                         .await?
                         .into_iter()
-                        .filter_map(|v| v)
+                        .filter_map(std::convert::identity)
                         .collect::<Vec<_>>();
                     Arc::new(derivers)
                 } else {

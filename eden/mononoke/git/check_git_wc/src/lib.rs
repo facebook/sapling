@@ -112,7 +112,7 @@ async fn check_receiver(
     let root_fsnode = RootFsnodeId::derive(ctx, blobrepo, cs)
         .await?
         .into_fsnode_id()
-        .load(&ctx, blobrepo.blobstore())
+        .load(ctx, blobrepo.blobstore())
         .await?;
 
     let path_to_fsnode = Mutex::new(HashMap::new());

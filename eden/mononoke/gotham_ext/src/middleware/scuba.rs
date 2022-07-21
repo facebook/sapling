@@ -181,18 +181,18 @@ fn log_stats<H: ScubaHandler>(state: &mut State, status_code: &StatusCode) -> Op
 
     scuba.add(HttpScubaKey::HttpStatus, status_code.as_u16());
 
-    if let Some(uri) = Uri::try_borrow_from(&state) {
+    if let Some(uri) = Uri::try_borrow_from(state) {
         scuba.add(HttpScubaKey::HttpPath, uri.path());
         if let Some(query) = uri.query() {
             scuba.add(HttpScubaKey::HttpQuery, query);
         }
     }
 
-    if let Some(method) = Method::try_borrow_from(&state) {
+    if let Some(method) = Method::try_borrow_from(state) {
         scuba.add(HttpScubaKey::HttpMethod, method.to_string());
     }
 
-    if let Some(headers) = HeaderMap::try_borrow_from(&state) {
+    if let Some(headers) = HeaderMap::try_borrow_from(state) {
         add_header(
             &mut scuba,
             headers,
@@ -218,7 +218,7 @@ fn log_stats<H: ScubaHandler>(state: &mut State, status_code: &StatusCode) -> Op
         );
     }
 
-    if let Some(identity) = ClientIdentity::try_borrow_from(&state) {
+    if let Some(identity) = ClientIdentity::try_borrow_from(state) {
         if let Some(ref address) = identity.address() {
             scuba.add(HttpScubaKey::ClientIp, address.to_string());
         }
@@ -232,18 +232,18 @@ fn log_stats<H: ScubaHandler>(state: &mut State, status_code: &StatusCode) -> Op
 
         if let Some(ref identities) = identity.identities() {
             scuba.sample_for_identities(identities);
-            let identities: Vec<_> = identities.into_iter().map(|i| i.to_string()).collect();
+            let identities: Vec<_> = identities.iter().map(|i| i.to_string()).collect();
             scuba.add(HttpScubaKey::ClientIdentities, identities);
         }
     }
 
-    if let Some(request_load) = RequestLoad::try_borrow_from(&state) {
+    if let Some(request_load) = RequestLoad::try_borrow_from(state) {
         scuba.add(HttpScubaKey::RequestLoad, request_load.0);
     }
 
     scuba.add(HttpScubaKey::RequestId, state.short_request_id());
 
-    if let Some(HeadersDuration(duration)) = HeadersDuration::try_borrow_from(&state) {
+    if let Some(HeadersDuration(duration)) = HeadersDuration::try_borrow_from(state) {
         scuba.add(
             HttpScubaKey::HeadersDurationMs,
             duration.as_millis_unchecked(),
@@ -344,7 +344,7 @@ impl<H: ScubaHandler> Middleware for ScubaMiddleware<H> {
     }
 
     async fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
-        if let Some(uri) = Uri::try_borrow_from(&state) {
+        if let Some(uri) = Uri::try_borrow_from(state) {
             if uri.path() == "/health_check" {
                 return;
             }

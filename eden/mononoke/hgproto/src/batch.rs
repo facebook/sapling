@@ -22,7 +22,7 @@ pub fn unescape(bs: &[u8]) -> Result<Vec<u8>> {
             // "::" or ":<end of string>" are both illegal.
             if slice.is_empty() {
                 bail!(ErrorKind::BatchInvalid(
-                    String::from_utf8_lossy(bs.as_ref()).into_owned(),
+                    String::from_utf8_lossy(bs).into_owned(),
                 ));
             }
             out.push(match slice[0] {

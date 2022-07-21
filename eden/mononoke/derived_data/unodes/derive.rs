@@ -255,7 +255,7 @@ async fn create_unode_file(
     ) -> Result<FileUnodeId, Error> {
         if can_reuse(unode_version) && parents.len() > 1 {
             if let Some(parent) =
-                reuse_file_parent(&ctx, blobstore, &parents, &content_id, file_type).await?
+                reuse_file_parent(ctx, blobstore, &parents, &content_id, file_type).await?
             {
                 return Ok(parent);
             }

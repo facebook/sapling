@@ -428,7 +428,7 @@ pub async fn store<B: Blobstore + Clone + 'static>(
         }
     };
 
-    finalize::finalize(blobstore, ctx, Some(&req), prepared).await
+    finalize::finalize(blobstore, ctx, Some(req), prepared).await
 }
 
 /// Store a set of bytes, and immediately return their Contentid and size. This function is

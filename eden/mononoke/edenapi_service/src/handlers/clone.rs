@@ -39,7 +39,7 @@ pub async fn clone_data(state: &mut State) -> Result<BytesBody<Bytes>, HttpError
 
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state).clone();
-    let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo, None).await?;
+    let hg_repo_ctx = get_repo(sctx, &rctx, &params.repo, None).await?;
     // Note that we have CloneData<HgChangesetId> which doesn't have a direct to wire conversion.
     // This means that we need to manually construct WireCloneData for all the WireHgId entries.
     let clone_data = hg_repo_ctx

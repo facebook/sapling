@@ -10,21 +10,19 @@ use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
-use cloned::cloned;
-use context::CoreContext;
-use futures::future::ready;
-use futures::stream::FuturesUnordered;
-use futures::stream::TryStreamExt;
-use manifest::derive_manifest;
-
 use blobstore::Blobstore;
 use blobstore::Storable;
+use cloned::cloned;
+use context::CoreContext;
 use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
-use filestore;
 use filestore::FetchKey;
+use futures::future::ready;
+use futures::stream::FuturesUnordered;
+use futures::stream::TryStreamExt;
+use manifest::derive_manifest;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
@@ -59,7 +57,7 @@ impl BonsaiDerivable for TreeHandle {
             bail!("Can't derive TreeHandle for snapshot")
         }
         let blobstore = derivation_ctx.blobstore().clone();
-        let changes = get_file_changes(&blobstore, &ctx, bonsai).await?;
+        let changes = get_file_changes(&blobstore, ctx, bonsai).await?;
         derive_git_manifest(ctx, blobstore, parents, changes).await
     }
 
@@ -158,7 +156,7 @@ async fn derive_git_manifest<B: Blobstore + Clone + 'static>(
         Some(handle) => Ok(handle),
         None => {
             let tree: Tree = TreeBuilder::default().into();
-            tree.store(&ctx, &blobstore).await
+            tree.store(ctx, &blobstore).await
         }
     }
 }

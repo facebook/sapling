@@ -15,7 +15,6 @@ use std::collections::HashSet;
 use std::io;
 use std::io::BufRead;
 use std::io::Cursor;
-use std::mem;
 use std::sync::Arc;
 
 use anyhow::bail;
@@ -42,6 +41,13 @@ use futures_ext::BytesStream;
 use futures_ext::FutureExt;
 use futures_ext::StreamExt;
 use limited_async_read::LimitedAsyncRead;
+use mercurial_bundles::bundle2;
+use mercurial_bundles::bundle2::Bundle2Stream;
+use mercurial_bundles::bundle2::StreamEvent;
+use mercurial_bundles::Bundle2Item;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::MPath;
 use qps::Qps;
 use slog::Logger;
 use tokio_io::codec::Decoder;
@@ -53,13 +59,6 @@ use crate::GetbundleArgs;
 use crate::GettreepackArgs;
 use crate::SingleRequest;
 use crate::SingleResponse;
-use mercurial_bundles::bundle2;
-use mercurial_bundles::bundle2::Bundle2Stream;
-use mercurial_bundles::bundle2::StreamEvent;
-use mercurial_bundles::Bundle2Item;
-use mercurial_types::HgChangesetId;
-use mercurial_types::HgFileNodeId;
-use mercurial_types::MPath;
 
 pub struct HgCommandHandler<H> {
     logger: Logger,
@@ -100,7 +99,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
         let hgcmds = &self.commands;
 
         if let (Some(qps), Some(src_region)) = (self.qps.as_ref(), self.src_region.as_ref()) {
-            let _res = qps.bump(&src_region);
+            let _res = qps.bump(src_region);
         }
 
         match req {
@@ -375,7 +374,7 @@ where
         stream::unfold(input, move |input| {
             let fut_decode = input.into_future_decode(create_decoder());
             let fut = fut_decode
-                .map_err(|err| Err(err)) // Real error happened, wrap it in result
+                .map_err(Err) // Real error happened, wrap it in result
                 .and_then(|(maybe_item, instream)| match maybe_item {
                     None => {
                         // None here means we hit EOF, but that shouldn't happen
@@ -405,7 +404,7 @@ where
 
     let try_send_instream =
         |wrapped_send: &mut Option<oneshot::Sender<_>>, instream: BytesStream<S>| -> Result<()> {
-            let send = mem::replace(wrapped_send, None);
+            let send = wrapped_send.take();
             let send = send.ok_or(Error::msg(
                 "internal error: tried to send input stream twice",
             ))?;
@@ -437,10 +436,7 @@ where
 
     // Finally, filter out last None value
     let entry_stream = entry_stream.filter_map(|val| val);
-    (
-        entry_stream.boxify(),
-        recv.map_err(|err| Error::from(err)).boxify(),
-    )
+    (entry_stream.boxify(), recv.map_err(Error::from).boxify())
 }
 
 #[derive(Clone)]
@@ -586,8 +582,8 @@ where
 #[inline]
 fn get_or_none<'a>(map: &'a HashMap<Vec<u8>, Vec<u8>>, key: &'a [u8]) -> &'a [u8] {
     match map.get(key) {
-        Some(ref val) => val,
-        None => &NONE,
+        Some(val) => val,
+        None => NONE,
     }
 }
 

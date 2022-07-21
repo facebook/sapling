@@ -278,7 +278,7 @@ fn git_path_cmp(
     e2: &TreeMember,
 ) -> Ordering {
     const NULL: u8 = 0;
-    const SLASH: u8 = '/' as u8;
+    const SLASH: u8 = b'/';
 
     let p1 = p1.as_ref();
     let p2 = p2.as_ref();

@@ -49,7 +49,7 @@ pub async fn pull_lazy(state: &mut State) -> Result<BytesBody<Bytes>, HttpError>
 
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state).clone();
-    let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo, None).await?;
+    let hg_repo_ctx = get_repo(sctx, &rctx, &params.repo, None).await?;
 
     let common: Vec<HgChangesetId> = request.common.into_iter().map(Into::into).collect();
     let missing: Vec<HgChangesetId> = request.missing.into_iter().map(Into::into).collect();
@@ -93,7 +93,7 @@ pub async fn pull_fast_forward_master(state: &mut State) -> Result<BytesBody<Byt
 
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state).clone();
-    let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo, None).await?;
+    let hg_repo_ctx = get_repo(sctx, &rctx, &params.repo, None).await?;
 
     let old_master: HgChangesetId = request.old_master.into();
     let new_master: HgChangesetId = request.new_master.into();

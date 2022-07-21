@@ -56,7 +56,7 @@ pub async fn capabilities_handler(state: &mut State) -> Result<BytesBody<Bytes>,
 
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state).clone();
-    let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo, None).await?;
+    let hg_repo_ctx = get_repo(sctx, &rctx, &params.repo, None).await?;
     let caps = get_capabilities_vec(&hg_repo_ctx)
         .await
         .map_err(|e| e.into_http_error("error getting capabilities"))?;

@@ -98,7 +98,7 @@ fn parse_lfs_metafile(gitblob: &[u8], gitid: ObjectId) -> Option<LfsMetaData> {
         .ok()?;
     let size = lines.next()?.strip_prefix("size ")?.parse::<u64>().ok()?;
     // As a precaution. If we have an additional line after this, then we assume its not a valid file.
-    if let Some(_) = lines.next() {
+    if lines.next().is_some() {
         return None;
     }
     Some(LfsMetaData {

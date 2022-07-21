@@ -192,7 +192,7 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state).clone();
 
-    let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo, None).await?;
+    let hg_repo_ctx = get_repo(sctx, &rctx, &params.repo, None).await?;
 
     let batch = parse_wire_request::<WireCommitHashToLocationRequestBatch>(state).await?;
     let master_heads = batch
@@ -225,7 +225,7 @@ pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, Http
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state).clone();
 
-    let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo, None).await?;
+    let hg_repo_ctx = get_repo(sctx, &rctx, &params.repo, None).await?;
 
     let request: CommitRevlogDataRequest = parse_cbor_request(state).await?;
     let revlog_commits = request
@@ -245,7 +245,7 @@ async fn commit_revlog_data(
         .revlog_commit_data(hg_id.into())
         .await
         .context(ErrorKind::CommitRevlogDataRequestFailed)?
-        .ok_or_else(|| ErrorKind::HgIdNotFound(hg_id))?;
+        .ok_or(ErrorKind::HgIdNotFound(hg_id))?;
     let answer = CommitRevlogData::new(hg_id, bytes);
     Ok(answer)
 }
@@ -335,7 +335,7 @@ impl EdenApiHandler for UploadHgChangesetsHandler {
                 .map_err(Error::from)
             });
 
-        Ok(stream::iter(results.into_iter()).boxed())
+        Ok(stream::iter(results).boxed())
     }
 }
 
@@ -453,14 +453,13 @@ impl EdenApiHandler for FetchSnapshotHandler {
                 .await?
                 .into_iter()
                 .map(|id| id.into()),
-            )
-            .into(),
+            ),
             file_changes: cs
                 .file_changes
                 .into_iter()
                 .map(|(path, fc)| {
                     Ok((
-                        to_hg_path(&path.clone().into())?,
+                        to_hg_path(&path.into())?,
                         match fc {
                             FileChange::Deletion => BonsaiFileChange::Deletion,
                             FileChange::UntrackedDeletion => BonsaiFileChange::UntrackedDeletion,

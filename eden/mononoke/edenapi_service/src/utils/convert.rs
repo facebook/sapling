@@ -93,12 +93,8 @@ pub fn to_revlog_changeset(cs: HgChangesetContent) -> Result<RevlogChangeset> {
 
 pub fn to_create_change(fc: BonsaiFileChange, bubble_id: Option<BubbleId>) -> Result<CreateChange> {
     fn extract_size(metadata: Option<UploadTokenMetadata>) -> Option<u64> {
-        match metadata {
-            Some(UploadTokenMetadata::FileContentTokenMetadata(metadata)) => {
-                Some(metadata.content_size)
-            }
-            None => None,
-        }
+        metadata
+            .map(|UploadTokenMetadata::FileContentTokenMetadata(metadata)| metadata.content_size)
     }
     let verify = move |token: &UploadToken| -> Result<()> {
         // TODO: Verify signature on upload token

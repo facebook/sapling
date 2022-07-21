@@ -172,7 +172,7 @@ impl LinearStack {
 
         // The next commit should be stacked on top of the previous one
         let prev_cs_id = prev.get_changeset_id();
-        if next.parents().find(|p| *p == prev_cs_id).is_none() {
+        if !next.parents().any(|p| p == prev_cs_id) {
             return false;
         }
 
@@ -217,7 +217,7 @@ fn has_copy_info(cs: &BonsaiChangeset) -> bool {
         }
     }
 
-    return false;
+    false
 }
 
 /// Returns true if:
@@ -233,51 +233,52 @@ fn has_file_conflict(
     let mut state = (left.next(), right.next());
     loop {
         state = match state {
-            (Some((l_path, l_content)), Some((r_path, r_file_change))) => match l_path.cmp(&r_path)
-            {
-                CmpOrdering::Equal => {
-                    match file_conflicts {
-                        FileConflicts::ChangeDelete => {
-                            if l_content.is_some() != r_file_change.is_changed() {
-                                // File is deleted and modified in two
-                                // different commits - this is a conflict,
-                                // they can't be in the same stack
+            (Some((l_path, l_content)), Some((r_path, r_file_change))) => {
+                match l_path.cmp(r_path) {
+                    CmpOrdering::Equal => {
+                        match file_conflicts {
+                            FileConflicts::ChangeDelete => {
+                                if l_content.is_some() != r_file_change.is_changed() {
+                                    // File is deleted and modified in two
+                                    // different commits - this is a conflict,
+                                    // they can't be in the same stack
+                                    return true;
+                                }
+                            }
+                            FileConflicts::AnyChange => {
                                 return true;
                             }
                         }
-                        FileConflicts::AnyChange => {
-                            return true;
-                        }
-                    }
 
-                    // It's possible for a single conflict to have a path
-                    // conflict (usually it happens when a file is replaced
-                    // with a directory). The code below checks if we have
-                    // a conflict like that and exists early if we do.
-                    if let Some((next_l_path, _)) = left.peek() {
-                        if r_path.is_prefix_of(*next_l_path) {
+                        // It's possible for a single conflict to have a path
+                        // conflict (usually it happens when a file is replaced
+                        // with a directory). The code below checks if we have
+                        // a conflict like that and exists early if we do.
+                        if let Some((next_l_path, _)) = left.peek() {
+                            if r_path.is_prefix_of(*next_l_path) {
+                                return true;
+                            }
+                        } else if let Some((next_r_path, _)) = right.peek() {
+                            if l_path.is_prefix_of(*next_r_path) {
+                                return true;
+                            }
+                        }
+                        (left.next(), right.next())
+                    }
+                    CmpOrdering::Less => {
+                        if l_path.is_prefix_of(r_path) {
                             return true;
                         }
-                    } else if let Some((next_r_path, _)) = right.peek() {
-                        if l_path.is_prefix_of(*next_r_path) {
+                        (left.next(), Some((r_path, r_file_change)))
+                    }
+                    CmpOrdering::Greater => {
+                        if r_path.is_prefix_of(l_path) {
                             return true;
                         }
+                        (Some((l_path, l_content)), right.next())
                     }
-                    (left.next(), right.next())
                 }
-                CmpOrdering::Less => {
-                    if l_path.is_prefix_of(r_path) {
-                        return true;
-                    }
-                    (left.next(), Some((r_path, r_file_change)))
-                }
-                CmpOrdering::Greater => {
-                    if r_path.is_prefix_of(l_path) {
-                        return true;
-                    }
-                    (Some((l_path, l_content)), right.next())
-                }
-            },
+            }
             _ => break,
         };
     }

@@ -81,5 +81,5 @@ where
         .await
         .map_err(|e| -> Error { e.into() })?;
 
-    Ok(aliases.await?)
+    aliases.await
 }

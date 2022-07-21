@@ -13,7 +13,6 @@ use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use filestore;
 use filestore::StoreRequest;
 use futures::stream;
 use futures::stream::Stream;

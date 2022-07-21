@@ -179,9 +179,8 @@ impl EdenApiHandler for Files2Handler {
             .chain(request.reqs.into_iter());
         ctx.perf_counters()
             .add_to_counter(PerfCounterType::EdenapiFiles, len as i64);
-        let fetches = reqs.map(move |FileSpec { key, attrs }| {
-            fetch_file_response(repo.clone(), key.clone(), attrs)
-        });
+        let fetches =
+            reqs.map(move |FileSpec { key, attrs }| fetch_file_response(repo.clone(), key, attrs));
 
         Ok(stream::iter(fetches)
             .buffer_unordered(MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST)
@@ -292,7 +291,7 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, Http
     let rctx = RequestContext::borrow_from(state).clone();
     let sctx = ServerContext::borrow_from(state);
 
-    let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
+    let repo = get_repo(sctx, &rctx, &params.repo, None).await?;
 
     let id = AnyFileContentId::from_str(&format!("{}/{}", &params.idtype, &params.id))
         .map_err(HttpError::e400)?;

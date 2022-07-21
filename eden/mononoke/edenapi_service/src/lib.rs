@@ -57,7 +57,7 @@ pub fn build(
     rate_limiter: Option<RateLimitEnvironment>,
     common_config: &CommonConfig,
 ) -> Result<EdenApi, Error> {
-    let ctx = ServerContext::new(mononoke, will_exit.clone());
+    let ctx = ServerContext::new(mononoke, will_exit);
 
     let log_middleware = if test_friendly_loging {
         LogMiddleware::test_friendly()

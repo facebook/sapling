@@ -47,7 +47,7 @@ impl EdenApiHandler for LandStackHandler {
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         Ok(stream::once(land_stack(
-            repo.clone(),
+            repo,
             request.bookmark,
             request.head,
             request.base,
@@ -75,7 +75,7 @@ async fn land_stack(
         .changeset(head)
         .await
         .context("failed to resolve head")?
-        .ok_or_else(|| ErrorKind::HgIdNotFound(head_hgid))?
+        .ok_or(ErrorKind::HgIdNotFound(head_hgid))?
         .id();
 
     let base = HgChangesetId::new(HgNodeHash::from(base_hgid));
@@ -83,7 +83,7 @@ async fn land_stack(
         .changeset(base)
         .await
         .context("failed to resolve base")?
-        .ok_or_else(|| ErrorKind::HgIdNotFound(base_hgid))?
+        .ok_or(ErrorKind::HgIdNotFound(base_hgid))?
         .id();
 
     let pushrebase_outcome = repo
@@ -120,7 +120,7 @@ async fn land_stack(
 
     let new_head_hgid = all_hgids
         .get(&new_head)
-        .ok_or_else(|| ErrorKind::BonsaiChangesetToHgIdError(new_head))
+        .ok_or(ErrorKind::BonsaiChangesetToHgIdError(new_head))
         .context("failed to fetch hgid for new head")?
         .into_nodehash()
         .into();
@@ -130,7 +130,7 @@ async fn land_stack(
         .map(|id| {
             all_hgids
                 .get(id)
-                .ok_or_else(|| ErrorKind::BonsaiChangesetToHgIdError(*id))
+                .ok_or(ErrorKind::BonsaiChangesetToHgIdError(*id))
                 .context("failed to fetch hgids for old ids")
                 .map(|id| id.into_nodehash().into())
         })
@@ -141,7 +141,7 @@ async fn land_stack(
         .map(|id| {
             all_hgids
                 .get(id)
-                .ok_or_else(|| ErrorKind::BonsaiChangesetToHgIdError(*id))
+                .ok_or(ErrorKind::BonsaiChangesetToHgIdError(*id))
                 .context("failed to fetch hgids for new ids")
                 .map(|id| id.into_nodehash().into())
         })

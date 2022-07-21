@@ -149,12 +149,12 @@ impl Debug for GetbundleArgs {
         let bcaps: HashSet<_> = self
             .bundlecaps
             .iter()
-            .map(|s| String::from_utf8_lossy(&s))
+            .map(|s| String::from_utf8_lossy(s))
             .collect();
         let listkeys: Vec<_> = self
             .listkeys
             .iter()
-            .map(|s| String::from_utf8_lossy(&s))
+            .map(|s| String::from_utf8_lossy(s))
             .collect();
         let heads: Vec<_> = self.heads.iter().take(MAX_NODES_TO_LOG).collect();
         let common: Vec<_> = self.common.iter().take(MAX_NODES_TO_LOG).collect();

@@ -89,19 +89,18 @@ impl LogMiddleware {
 }
 
 fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Option<()> {
-    let uri = Uri::try_borrow_from(&state)?;
+    let uri = Uri::try_borrow_from(state)?;
     if uri.path() == "/health_check" {
         return None;
     }
     let uri = uri.to_string();
 
-    let load = *RequestLoad::borrow_from(&state);
-    let method = Method::borrow_from(&state).clone();
-    let version = *Version::borrow_from(&state);
+    let load = *RequestLoad::borrow_from(state);
+    let method = Method::borrow_from(state).clone();
+    let version = *Version::borrow_from(state);
     let request_id = state.short_request_id().to_string();
-    let address = ClientIdentity::try_borrow_from(&state)
-        .map(|client_identity| *client_identity.address())
-        .flatten()
+    let address = ClientIdentity::try_borrow_from(state)
+        .and_then(|client_identity| *client_identity.address())
         .map(|addr| addr.to_string());
 
     let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;
@@ -113,7 +112,7 @@ fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Opti
                 &logger,
                 SLOG_FORMAT!(),
                 DIRECTION_REQUEST_IN,
-                address.as_ref().map(String::as_ref).unwrap_or("-"),
+                address.as_ref().map_or("-", String::as_ref),
                 "-",
                 method,
                 uri,
@@ -130,13 +129,13 @@ fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Opti
                     &logger,
                     SLOG_FORMAT!(),
                     DIRECTION_RESPONSE_OUT,
-                    address.as_ref().map(String::as_ref).unwrap_or("-"),
+                    address.as_ref().map_or("-", String::as_ref),
                     info.client_hostname.as_ref().map_or("-", String::as_ref),
                     method,
                     uri,
                     version,
                     status.as_u16(),
-                    info.meta.as_ref().map(|m| m.body().bytes_sent).unwrap_or(0),
+                    info.meta.as_ref().map_or(0, |m| m.body().bytes_sent),
                     DurationForDisplay::from(info.duration),
                     load,
                 );
@@ -148,8 +147,8 @@ fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Opti
 }
 
 fn log_request_test_friendly(state: &mut State, entry: LogEntry) -> Option<()> {
-    let method = Method::try_borrow_from(&state)?;
-    let uri = Uri::try_borrow_from(&state)?;
+    let method = Method::try_borrow_from(state)?;
+    let uri = Uri::try_borrow_from(state)?;
 
     match entry {
         LogEntry::RequestIn => {
@@ -176,7 +175,7 @@ impl LogMiddleware {
                 log_request_test_friendly(state, entry);
             }
             Self::Slog(ref logger) => {
-                log_request_slog(&logger, state, entry);
+                log_request_slog(logger, state, entry);
             }
         }
     }

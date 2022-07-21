@@ -65,8 +65,7 @@ impl ClientIdentity {
         if let Some(client_hostname) = self
             .identities
             .as_ref()
-            .map(|id| id.hostname().map(|h| h.to_string()))
-            .flatten()
+            .and_then(|id| id.hostname().map(|h| h.to_string()))
         {
             return future::ready(Some(client_hostname)).left_future();
         }
@@ -131,7 +130,7 @@ impl ClientIdentityMiddleware {
         headers: &HeaderMap,
     ) -> Option<MononokeIdentitySet> {
         match tls_certificate_identities {
-            TlsCertificateIdentities::TrustedProxy => request_identities_from_headers(&headers),
+            TlsCertificateIdentities::TrustedProxy => request_identities_from_headers(headers),
             TlsCertificateIdentities::Authenticated(idents) => Some(idents),
         }
     }
@@ -164,9 +163,9 @@ impl Middleware for ClientIdentityMiddleware {
         let mut client_identity = ClientIdentity::default();
         let cert_idents = TlsCertificateIdentities::try_take_from(state);
 
-        if let Some(headers) = HeaderMap::try_borrow_from(&state) {
-            client_identity.address = request_ip_from_headers(&headers);
-            client_identity.client_correlator = request_client_correlator_from_headers(&headers);
+        if let Some(headers) = HeaderMap::try_borrow_from(state) {
+            client_identity.address = request_ip_from_headers(headers);
+            client_identity.client_correlator = request_client_correlator_from_headers(headers);
 
             client_identity.identities = {
                 let maybe_idents =
@@ -198,7 +197,7 @@ impl Middleware for ClientIdentityMiddleware {
 
         // For the IP, we can fallback to the peer IP
         if client_identity.address.is_none() {
-            client_identity.address = client_addr(&state).as_ref().map(SocketAddr::ip);
+            client_identity.address = client_addr(state).as_ref().map(SocketAddr::ip);
         }
 
         state.put(client_identity);

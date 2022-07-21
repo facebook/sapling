@@ -134,7 +134,7 @@ impl BonsaiDerivable for RootUnodeManifestId {
                 stack
                     .parents
                     .into_iter()
-                    .map(|p| derivation_ctx.fetch_unknown_dependency::<Self>(&ctx, Some(&res), p)),
+                    .map(|p| derivation_ctx.fetch_unknown_dependency::<Self>(ctx, Some(&res), p)),
             )
             .await?;
             if let Some(item) = stack.stack_items.first() {
@@ -151,7 +151,7 @@ impl BonsaiDerivable for RootUnodeManifestId {
                 // we can't derive stack for a merge commit,
                 // so let's derive it without batching
                 for item in stack.stack_items {
-                    let bonsai = item.cs_id.load(&ctx, derivation_ctx.blobstore()).await?;
+                    let bonsai = item.cs_id.load(ctx, derivation_ctx.blobstore()).await?;
                     let parents = derivation_ctx
                         .fetch_unknown_parents(ctx, Some(&res), &bonsai)
                         .await?;

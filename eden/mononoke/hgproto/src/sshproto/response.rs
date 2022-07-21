@@ -153,7 +153,7 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
                 bytes.extend_from_slice(&name);
                 bytes.extend_from_slice("\t".as_bytes());
                 bytes.extend_from_slice(key.as_ref());
-                bytes.extend_from_slice(&"\n".as_bytes());
+                bytes.extend_from_slice("\n".as_bytes());
             }
             bytes.freeze()
         }
