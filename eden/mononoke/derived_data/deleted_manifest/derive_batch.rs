@@ -11,6 +11,7 @@ use blobstore::Blobstore;
 use blobstore::Loadable;
 use borrowed::borrowed;
 use bounded_traversal::bounded_traversal;
+use cloned::cloned;
 use context::CoreContext;
 use futures::future::FutureExt;
 use futures::stream;
@@ -76,6 +77,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
             (path_tree, commit_stack)
         };
 
+        cloned!(ctx, blobstore);
         let FoldOutput(name, mfid_by_cs) = bounded_traversal(
             256,
             UnfoldNode {
@@ -83,14 +85,28 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 all_changes: path_tree,
                 parent,
             },
-            |unfold_node| Self::unfold_batch(ctx, blobstore, unfold_node).boxed(),
-            |fold_node, subentries| {
-                Self::fold_batch(ctx, blobstore, &commit_stack, fold_node, subentries).boxed()
+            {
+                cloned!(ctx, blobstore);
+                move |unfold_node| {
+                    cloned!(ctx, blobstore);
+                    async move { Self::unfold_batch(&ctx, &blobstore, unfold_node).await }.boxed()
+                }
+            },
+            {
+                cloned!(ctx, blobstore, commit_stack);
+                move |fold_node, subentries| {
+                    cloned!(ctx, blobstore, commit_stack);
+                    async move {
+                        Self::fold_batch(&ctx, &blobstore, &commit_stack, fold_node, subentries)
+                            .await
+                    }
+                    .boxed()
+                }
             },
         )
         .await?;
         assert!(name.is_none());
-        Self::finalize_stack(ctx, blobstore, commit_stack, parent, mfid_by_cs).await
+        Self::finalize_stack(&ctx, &blobstore, commit_stack, parent, mfid_by_cs).await
     }
 
     /// Given a stack of commits and a manifest ids for some of those, create

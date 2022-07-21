@@ -150,6 +150,7 @@ pub async fn regenerate_derived_data(
     let build_derive_graph_duration = stats.completion_time;
 
     let start = Instant::now();
+    cloned!(ctx, repo);
     match opts.derivation_type {
         DerivationType::Simple => {
             bounded_traversal::bounded_traversal_dag(
@@ -163,7 +164,7 @@ pub async fn regenerate_derived_data(
                     .boxed()
                 },
                 {
-                    cloned!(repo);
+                    cloned!(ctx, repo);
                     move |node: DeriveGraph, _| {
                         cloned!(ctx, repo);
                         async move {

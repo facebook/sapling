@@ -193,6 +193,10 @@ impl DerivedDataManager {
         self.inner.changesets.as_ref()
     }
 
+    fn changesets_arc(&self) -> Arc<dyn Changesets> {
+        self.inner.changesets.clone()
+    }
+
     pub fn repo_blobstore(&self) -> &RepoBlobstore {
         &self.inner.repo_blobstore
     }

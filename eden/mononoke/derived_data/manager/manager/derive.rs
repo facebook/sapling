@@ -314,11 +314,13 @@ impl DerivedDataManager {
         Derivable: BonsaiDerivable,
     {
         // Ensure we don't visit the same commit multiple times in mergy repos
-        let visited: Mutex<HashSet<ChangesetId>> = Default::default();
-        borrowed!(visited);
+        let visited: Arc<Mutex<HashSet<ChangesetId>>> = Default::default();
+        cloned!(ctx, derivation_ctx);
+        let changesets = self.changesets_arc();
         let underived_commits_parents: HashMap<ChangesetId, Vec<ChangesetId>> =
             bounded_traversal::bounded_traversal_stream(100, Some(csid).into_iter(), {
                 move |csid| {
+                    cloned!(ctx, derivation_ctx, visited, changesets);
                     async move {
                         if let Some(limit) = limit {
                             let visited = visited.lock().unwrap();
@@ -327,14 +329,13 @@ impl DerivedDataManager {
                             }
                         }
                         if derivation_ctx
-                            .fetch_derived::<Derivable>(ctx, csid)
+                            .fetch_derived::<Derivable>(&ctx, csid)
                             .await?
                             .is_some()
                         {
                             Ok((None, Vec::new()))
                         } else {
-                            let parents = self
-                                .changesets()
+                            let parents = changesets
                                 .get(ctx.clone(), csid)
                                 .await?
                                 .ok_or_else(|| anyhow!("changeset not found: {}", csid))?

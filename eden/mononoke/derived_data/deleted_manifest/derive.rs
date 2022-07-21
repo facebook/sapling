@@ -132,7 +132,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
         let created = Arc::new(Mutex::new(HashSet::new()));
         cloned!(blobstore, ctx);
         let f = async move {
-            borrowed!(ctx, blobstore);
+            cloned!(ctx, blobstore);
             let manifest_opt = bounded_traversal(
                 256,
                 DeletedManifestUnfoldNode {
@@ -142,15 +142,17 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 },
                 // unfold
                 {
+                    cloned!(ctx, blobstore);
                     move |DeletedManifestUnfoldNode {
                               path_element,
                               changes,
                               parents,
                           }| {
                         // -> ((Option<MPathElement>, DeletedManifestChange), Vec<UnfoldNode>)
+                        cloned!(ctx, blobstore);
                         async move {
                             let (mf_change, next_states) =
-                                Self::do_unfold(ctx, blobstore, changes, parents).await?;
+                                Self::do_unfold(&ctx, &blobstore, changes, parents).await?;
                             Ok(((path_element, mf_change), next_states))
                         }
                         .boxed()
@@ -158,7 +160,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 },
                 // fold
                 {
-                    cloned!(sender, created);
+                    cloned!(ctx, blobstore, sender, created);
                     move |
                         (path, manifest_change): (
                             Option<MPathElement>,
@@ -170,7 +172,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                         // (_, None) means a leaf node was deleted because the file was recreated.
                         // (None, _) means the path is empty and should only happen on the root.
                     | {
-                        cloned!(cs_id, sender, created);
+                        cloned!(ctx, blobstore, cs_id, sender, created);
                         async move {
                             let mut subentries_to_update = BTreeMap::new();
                             for entry in subentries_iter {
@@ -188,8 +190,8 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                             }
 
                             let maybe_mf_id = Self::do_create(
-                                ctx,
-                                blobstore,
+                                &ctx,
+                                &blobstore,
                                 cs_id.clone(),
                                 manifest_change,
                                 subentries_to_update,
@@ -212,8 +214,8 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 (_, None) => {
                     // there are no deleted files, need to create an empty root manifest
                     match Manifest::copy_and_update_subentries(
-                        ctx,
-                        blobstore,
+                        &ctx,
+                        &blobstore,
                         None,
                         None,
                         BTreeMap::new(),
@@ -221,8 +223,14 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                     .await
                     {
                         Ok(mf) => {
-                            Self::save_manifest(mf, ctx, blobstore, sender.clone(), created.clone())
-                                .await
+                            Self::save_manifest(
+                                mf,
+                                &ctx,
+                                &blobstore,
+                                sender.clone(),
+                                created.clone(),
+                            )
+                            .await
                         }
                         Err(err) => Err(err),
                     }

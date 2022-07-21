@@ -11,6 +11,7 @@ use anyhow::Result;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bounded_traversal::bounded_traversal_stream;
+use cloned::cloned;
 use context::CoreContext;
 use futures::future::FutureExt;
 use futures::stream;
@@ -42,18 +43,20 @@ pub fn iterate_all_manifest_entries<'a, MfId, LId>(
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,
     entry: Entry<MfId, LId>,
-) -> impl Stream<Item = Result<(Option<MPath>, Entry<MfId, LId>)>> + 'a
+) -> impl Stream<Item = Result<(Option<MPath>, Entry<MfId, LId>)>> + 'static
 where
-    MfId: Loadable + Send + Sync + Clone + 'a,
+    MfId: Loadable + Send + Sync + Clone + 'static,
     LId: Send + Clone + 'static,
     <MfId as Loadable>::Value: Manifest<TreeId = MfId, LeafId = LId>,
 {
+    cloned!(ctx, repo);
     bounded_traversal_stream(256, Some((None, entry)), move |(path, entry)| {
+        cloned!(ctx, repo);
         async move {
             match entry {
                 Entry::Leaf(_) => Ok((vec![(path, entry.clone())], vec![])),
                 Entry::Tree(tree) => {
-                    let mf = tree.load(ctx, repo.blobstore()).await?;
+                    let mf = tree.load(&ctx, repo.blobstore()).await?;
                     let recurse = mf
                         .list()
                         .map(|(basename, new_entry)| {
