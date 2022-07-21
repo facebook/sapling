@@ -67,8 +67,6 @@ where
 
         let init = Some((self.clone(), selector, None, false));
         (async_stream::stream! {
-            let store = &store;
-            borrowed!(ctx, store);
             let s = bounded_traversal::bounded_traversal_stream(
                 256,
                 init,
@@ -78,15 +76,16 @@ where
                         value: select,
                     } = selector;
 
+                    cloned!(ctx, store);
                     async move {
-                        let manifest = manifest_id.load(ctx, store).await?;
+                        let manifest = manifest_id.load(&ctx, &store).await?;
 
                         let mut output = Vec::new();
                         let mut recurse = Vec::new();
 
                         if recursive || select.is_recursive() {
                             output.push((path.clone(), Entry::Tree(manifest_id)));
-                            let mut stream = manifest.list(ctx, store).await?;
+                            let mut stream = manifest.list(&ctx, &store).await?;
                             while let Some((name, entry)) = stream.try_next().await? {
                                 let path = Some(MPath::join_opt_element(path.as_ref(), &name));
                                 match entry {
@@ -103,7 +102,7 @@ where
                                 output.push((path.clone(), Entry::Tree(manifest_id)));
                             }
                             for (name, selector) in subentries {
-                                if let Some(entry) = manifest.lookup(ctx, store, &name).await? {
+                                if let Some(entry) = manifest.lookup(&ctx, &store, &name).await? {
                                     let path = Some(MPath::join_opt_element(path.as_ref(), &name));
                                     match entry {
                                         Entry::Leaf(_) => {
