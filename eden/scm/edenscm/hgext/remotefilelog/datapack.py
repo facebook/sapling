@@ -67,7 +67,7 @@ class datapackstore(basepack.basepackstore):
         raise RuntimeError("cannot add to datapackstore")
 
 
-def makedatapackstore(ui, path, shared, deletecorruptpacks=False):
+def makedatapackstore(ui, path, shared, deletecorruptpacks: bool = False):
     if ui.configbool("remotefilelog", "userustpackstore", False):
         return revisionstore.datapackstore(path, deletecorruptpacks)
     else:
