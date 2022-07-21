@@ -32,6 +32,7 @@ class EdenServer;
 class TreeInode;
 class ObjectFetchContext;
 class EntryAttributes;
+struct EntryAttributeFlags;
 #ifdef EDEN_HAVE_USAGE_SERVICE
 class EdenFSSmartPlatformServiceEndpoint;
 #endif
@@ -131,7 +132,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<SyncBehavior> sync) override;
 
   ImmediateFuture<EntryAttributes> getEntryAttributesForPath(
-      uint64_t reqBitmask,
+      EntryAttributeFlags reqBitmask,
       AbsolutePathPiece mountPoint,
       folly::StringPiece path,
       ObjectFetchContext& fetchContext);

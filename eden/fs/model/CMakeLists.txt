@@ -13,6 +13,7 @@ target_link_libraries(
   PUBLIC
     eden_utils
     Folly::folly
+    edencommon::utils
 )
 
 add_subdirectory(git)

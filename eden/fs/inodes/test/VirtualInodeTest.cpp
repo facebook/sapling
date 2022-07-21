@@ -509,17 +509,14 @@ void verifyTreeState(
 
       if ((verify_flags & VERIFY_BLOB_METADATA) &&
           virtualInode.getDtype() == dtype_t::Regular) {
-        auto metadata =
-            virtualInode
-                .getEntryAttributes(
-                    folly::to_underlying(FileAttributes::FILE_SIZE) |
-                        folly::to_underlying(FileAttributes::SHA1_HASH) |
-                        folly::to_underlying(
-                            FileAttributes::SOURCE_CONTROL_TYPE),
-                    expected.path,
-                    mount.getEdenMount()->getObjectStore(),
-                    ObjectFetchContext::getNullContext())
-                .get();
+        auto metadata = virtualInode
+                            .getEntryAttributes(
+                                ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
+                                    ENTRY_ATTRIBUTE_TYPE,
+                                expected.path,
+                                mount.getEdenMount()->getObjectStore(),
+                                ObjectFetchContext::getNullContext())
+                            .get();
         EXPECT_EQ(metadata.sha1.value().value(), expected.getSHA1()) << dbgMsg;
         EXPECT_EQ(metadata.size.value().value(), expected.getContents().size())
             << dbgMsg;
@@ -691,15 +688,11 @@ TEST(VirtualInodeTest, getChildrenAttributes) {
   auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
   auto mount = TestMount{MakeTestTreeBuilder(files)};
   VERIFY_TREE(flags);
-  auto file_size = folly::to_underlying(FileAttributes::FILE_SIZE);
-  auto sha1_hash = folly::to_underlying(FileAttributes::SHA1_HASH);
-  auto source_control_type =
-      folly::to_underlying(FileAttributes::SOURCE_CONTROL_TYPE);
-  std::vector<uint64_t> attribute_requests{
-      file_size | sha1_hash | source_control_type,
-      sha1_hash,
-      source_control_type | file_size,
-      0};
+  std::vector<EntryAttributeFlags> attribute_requests{
+      ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 | ENTRY_ATTRIBUTE_TYPE,
+      ENTRY_ATTRIBUTE_SHA1,
+      ENTRY_ATTRIBUTE_TYPE | ENTRY_ATTRIBUTE_SIZE,
+      EntryAttributeFlags{0}};
 
   for (auto info : files.getOriginalItems()) {
     VERIFY_TREE(flags);
@@ -773,16 +766,14 @@ TEST(VirtualInodeTest, fileOpsOnCorrectObjectsOnly) {
           << " on path " << info.getLogPath();
     }
 
-    auto metadataTry =
-        virtualInode
-            .getEntryAttributes(
-                folly::to_underlying(FileAttributes::FILE_SIZE) |
-                    folly::to_underlying(FileAttributes::SHA1_HASH) |
-                    folly::to_underlying(FileAttributes::SOURCE_CONTROL_TYPE),
-                info.path,
-                mount.getEdenMount()->getObjectStore(),
-                ObjectFetchContext::getNullContext())
-            .getTry();
+    auto metadataTry = virtualInode
+                           .getEntryAttributes(
+                               ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
+                                   ENTRY_ATTRIBUTE_TYPE,
+                               info.path,
+                               mount.getEdenMount()->getObjectStore(),
+                               ObjectFetchContext::getNullContext())
+                           .getTry();
     if (info.isRegularFile()) {
       EXPECT_EQ(true, metadataTry.hasValue())
           << " on path " << info.getLogPath();
@@ -807,15 +798,13 @@ TEST(VirtualInodeTest, fileOpsOnCorrectObjectsOnly) {
       }
     }
 
-    metadataTry =
-        virtualInode
-            .getEntryAttributes(
-                folly::to_underlying(FileAttributes::FILE_SIZE) |
-                    folly::to_underlying(FileAttributes::SOURCE_CONTROL_TYPE),
-                info.path,
-                mount.getEdenMount()->getObjectStore(),
-                ObjectFetchContext::getNullContext())
-            .getTry();
+    metadataTry = virtualInode
+                      .getEntryAttributes(
+                          ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_TYPE,
+                          info.path,
+                          mount.getEdenMount()->getObjectStore(),
+                          ObjectFetchContext::getNullContext())
+                      .getTry();
     if (info.isRegularFile()) {
       EXPECT_EQ(true, metadataTry.hasValue())
           << " on path " << info.getLogPath();
@@ -867,9 +856,7 @@ TEST(VirtualInodeTest, getEntryAttributesAttributeError) {
   auto virtualInode = mount.getVirtualInode("root_dirA");
 
   auto attributesFuture = virtualInode.getEntryAttributes(
-      folly::to_underlying(FileAttributes::FILE_SIZE) |
-          folly::to_underlying(FileAttributes::SHA1_HASH) |
-          folly::to_underlying(FileAttributes::SOURCE_CONTROL_TYPE),
+      ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 | ENTRY_ATTRIBUTE_TYPE,
       RelativePathPiece{"root_dirA"},
       mount.getEdenMount()->getObjectStore(),
       ObjectFetchContext::getNullContext());

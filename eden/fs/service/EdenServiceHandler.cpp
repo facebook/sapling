@@ -702,7 +702,7 @@ ImmediateFuture<Hash20> EdenServiceHandler::getSHA1ForPath(
 }
 
 ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
-    uint64_t reqBitmask,
+    EntryAttributeFlags reqBitmask,
     AbsolutePathPiece mountPoint,
     StringPiece path,
     ObjectFetchContext& fetchContext) {
@@ -1855,7 +1855,7 @@ SourceControlType entryTypeToThriftType(TreeEntryType type) {
 ImmediateFuture<
     std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
 getAllEntryAttributes(
-    uint64_t requestedAttributes, // bit combined FileAttributes
+    EntryAttributeFlags requestedAttributes,
     const EdenMount& edenMount,
     std::string path,
     ObjectFetchContext& fetchContext) {
@@ -1905,8 +1905,7 @@ bool fillErrorRef(
 DirListAttributeDataOrError serializeEntryAttributes(
     const folly::Try<std::vector<
         std::pair<PathComponent, folly::Try<EntryAttributes>>>>& entries,
-    uint64_t requestedAttributes // bit combined FileAttributes
-) {
+    EntryAttributeFlags requestedAttributes) {
   DirListAttributeDataOrError result;
   if (entries.hasException()) {
     result.error_ref() = newEdenError(*entries.exception().get_exception());
@@ -1920,7 +1919,7 @@ DirListAttributeDataOrError serializeEntryAttributes(
       fileResult.error_ref() = newEdenError(entry.second.exception());
     } else {
       FileAttributeDataV2 fileData;
-      if (ATTR_BITMASK(requestedAttributes, SHA1_HASH)) {
+      if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
         Sha1OrError sha1;
         if (!fillErrorRef<Sha1OrError, Hash20>(
                 sha1, entry.second->sha1, entry.first.piece(), "sha1")) {
@@ -1929,7 +1928,7 @@ DirListAttributeDataOrError serializeEntryAttributes(
         fileData.sha1() = std::move(sha1);
       }
 
-      if (ATTR_BITMASK(requestedAttributes, FILE_SIZE)) {
+      if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
         SizeOrError size;
         if (!fillErrorRef<SizeOrError, uint64_t>(
                 size, entry.second->size, entry.first.piece(), "size")) {
@@ -1938,7 +1937,7 @@ DirListAttributeDataOrError serializeEntryAttributes(
         fileData.size() = std::move(size);
       }
 
-      if (ATTR_BITMASK(requestedAttributes, SOURCE_CONTROL_TYPE)) {
+      if (requestedAttributes.contains(ENTRY_ATTRIBUTE_TYPE)) {
         SourceControlTypeOrError type;
         if (!fillErrorRef<SourceControlTypeOrError, TreeEntryType>(
                 type, entry.second->type, entry.first, "type")) {
@@ -1969,7 +1968,8 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3, mountPoint, getSyncTimeout(*params->sync()), toLogArg(paths));
   auto& fetchContext = helper->getFetchContext();
-  auto requestedAttributes = params->get_requestedAttributes();
+  auto requestedAttributes =
+      EntryAttributeFlags::raw(params->get_requestedAttributes());
   return wrapImmediateFuture(
              std::move(helper),
              waitForPendingNotifications(
@@ -2021,11 +2021,8 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
 
 // TODO(kmancini): we shouldn't need this for the long term, but needs to be
 // updated if attributes are added.
-
-constexpr uint64_t kAllEntryAttributes =
-    static_cast<uint64_t>(FileAttributes::FILE_SIZE) |
-    static_cast<uint64_t>(FileAttributes::SHA1_HASH) |
-    static_cast<uint64_t>(FileAttributes::SOURCE_CONTROL_TYPE);
+constexpr EntryAttributeFlags kAllEntryAttributes =
+    ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 | ENTRY_ATTRIBUTE_TYPE;
 
 folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResult>>
 EdenServiceHandler::semifuture_getAttributesFromFiles(
@@ -2033,7 +2030,7 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
   auto mountPoint = params->get_mountPoint();
   auto mountPath = AbsolutePathPiece{mountPoint};
   auto paths = params->get_paths();
-  auto reqBitmask = params->get_requestedAttributes();
+  auto reqBitmask = EntryAttributeFlags::raw(params->get_requestedAttributes());
   // Get requested attributes for each path
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3, mountPoint, getSyncTimeout(*params->sync()), toLogArg(paths));
@@ -2067,12 +2064,6 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
                                           allRes) {
                          auto res =
                              std::make_unique<GetAttributesFromFilesResult>();
-                         auto sizeRequested =
-                             ATTR_BITMASK(reqBitmask, FILE_SIZE);
-                         auto sha1Requested =
-                             ATTR_BITMASK(reqBitmask, SHA1_HASH);
-                         auto typeRequested =
-                             ATTR_BITMASK(reqBitmask, SOURCE_CONTROL_TYPE);
 
                          size_t index = 0;
                          for (const auto& tryAttributes : allRes) {
@@ -2123,15 +2114,15 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
                                    attributes.type.value().exception());
                              } else {
                                // Only fill in requested fields
-                               if (sha1Requested) {
+                               if (reqBitmask.contains(ENTRY_ATTRIBUTE_SHA1)) {
                                  file_data.sha1_ref() = thriftHash20(
                                      attributes.sha1.value().value());
                                }
-                               if (sizeRequested) {
+                               if (reqBitmask.contains(ENTRY_ATTRIBUTE_SIZE)) {
                                  file_data.fileSize_ref() =
                                      attributes.size.value().value();
                                }
-                               if (typeRequested) {
+                               if (reqBitmask.contains(ENTRY_ATTRIBUTE_TYPE)) {
                                  file_data.type_ref() = entryTypeToThriftType(
                                      attributes.type.value().value());
                                }

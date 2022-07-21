@@ -193,7 +193,7 @@ ImmediateFuture<BlobMetadata> VirtualInode::getBlobMetadata(
 }
 
 ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
-    uint64_t requestedAttributes, // bit combined FileAttributes
+    EntryAttributeFlags requestedAttributes,
     RelativePathPiece path,
     ObjectStore* objectStore,
     ObjectFetchContext& fetchContext) const {
@@ -204,25 +204,25 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
   // We intentionally want to refuse to compute the SHA1 of symlinks.
   switch (getDtype()) {
     case dtype_t::Dir:
-      if (ATTR_BITMASK(requestedAttributes, SHA1_HASH)) {
+      if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
         sha1 = folly::Try<Hash20>{PathError{EISDIR, path}};
       }
-      if (ATTR_BITMASK(requestedAttributes, FILE_SIZE)) {
+      if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
         size = folly::Try<uint64_t>{PathError{EISDIR, path}};
       }
-      if (ATTR_BITMASK(requestedAttributes, SOURCE_CONTROL_TYPE)) {
+      if (requestedAttributes.contains(ENTRY_ATTRIBUTE_TYPE)) {
         type = folly::Try<TreeEntryType>{TreeEntryType::TREE};
       }
       return EntryAttributes{std::move(sha1), std::move(size), std::move(type)};
     case dtype_t::Symlink:
-      if (ATTR_BITMASK(requestedAttributes, SHA1_HASH)) {
+      if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
         sha1 = folly::Try<Hash20>{PathError(EINVAL, path, "file is a symlink")};
       }
-      if (ATTR_BITMASK(requestedAttributes, FILE_SIZE)) {
+      if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
         size =
             folly::Try<uint64_t>{PathError(EINVAL, path, "file is a symlink")};
       }
-      if (ATTR_BITMASK(requestedAttributes, SOURCE_CONTROL_TYPE)) {
+      if (requestedAttributes.contains(ENTRY_ATTRIBUTE_TYPE)) {
         type = folly::Try<TreeEntryType>{TreeEntryType::SYMLINK};
       }
       return EntryAttributes{std::move(sha1), std::move(size), std::move(type)};
@@ -238,14 +238,14 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
   // exhaustive.
   auto entryTypeFuture = ImmediateFuture<TreeEntryType>{
       PathError{EINVAL, path, "type not requested"}};
-  if (ATTR_BITMASK(requestedAttributes, SOURCE_CONTROL_TYPE)) {
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_TYPE)) {
     entryTypeFuture = getTreeEntryType(path, fetchContext);
   }
   auto blobMetadataFuture = ImmediateFuture<BlobMetadata>{
       PathError{EINVAL, path, "neither sha1 nor size requested"}};
   // sha1 and size come together so, there isn't much point of splitting them up
-  if (ATTR_BITMASK(requestedAttributes, FILE_SIZE) ||
-      ATTR_BITMASK(requestedAttributes, SHA1_HASH)) {
+  if (requestedAttributes.containsAnyOf(
+          ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1)) {
     blobMetadataFuture = getBlobMetadata(path, objectStore, fetchContext);
   }
 
@@ -257,19 +257,19 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
             std::optional<folly::Try<Hash20>> sha1;
             std::optional<folly::Try<uint64_t>> size;
             std::optional<folly::Try<TreeEntryType>> type;
-            if (ATTR_BITMASK(requestedAttributes, SOURCE_CONTROL_TYPE)) {
+            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_TYPE)) {
               type = std::move(
                   std::get<folly::Try<TreeEntryType>>(rawAttributeData));
             }
             auto& blobMetadata =
                 std::get<folly::Try<BlobMetadata>>(rawAttributeData);
 
-            if (ATTR_BITMASK(requestedAttributes, SHA1_HASH)) {
+            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
               sha1 = blobMetadata.hasException()
                   ? folly::Try<Hash20>(blobMetadata.exception())
                   : folly::Try<Hash20>(blobMetadata.value().sha1);
             }
-            if (ATTR_BITMASK(requestedAttributes, FILE_SIZE)) {
+            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
               size = blobMetadata.hasException()
                   ? folly::Try<uint64_t>(blobMetadata.exception())
                   : folly::Try<uint64_t>(blobMetadata.value().size);
@@ -436,7 +436,7 @@ VirtualInode::getChildren(
 ImmediateFuture<
     std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
 VirtualInode::getChildrenAttributes(
-    uint64_t requestedAttributes, // bit combined FileAttributes
+    EntryAttributeFlags requestedAttributes,
     RelativePath path,
     ObjectStore* objectStore,
     ObjectFetchContext& fetchContext) {

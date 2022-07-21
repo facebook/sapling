@@ -127,7 +127,7 @@ class VirtualInode {
    * symlinks.
    */
   ImmediateFuture<EntryAttributes> getEntryAttributes(
-      uint64_t requestedAttributes, // bit combined FileAttributes
+      EntryAttributeFlags requestedAttributes,
       RelativePathPiece path,
       ObjectStore* objectStore,
       ObjectFetchContext& fetchContext) const;
@@ -171,7 +171,7 @@ class VirtualInode {
   ImmediateFuture<
       std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
   getChildrenAttributes(
-      uint64_t requestedAttributes, // bit combined FileAttributes
+      EntryAttributeFlags requestedAttributes,
       RelativePath path,
       ObjectStore* objectStore,
       ObjectFetchContext& fetchContext);
