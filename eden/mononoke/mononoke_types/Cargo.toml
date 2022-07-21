@@ -24,6 +24,7 @@ bufsize = "1.0"
 bytes = { version = "1.1", features = ["serde"] }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 chrono-english = { git = "https://github.com/tiamunley/chrono-english.git", rev = "19f055d9290ab39032951f5ccd213d616cd8af85" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
 derivative = "2.2"
 edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }

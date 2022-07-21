@@ -19,6 +19,7 @@ use blobstore::Storable;
 use bounded_traversal::bounded_traversal_ordered_stream;
 use bounded_traversal::OrderedTraversal;
 use bytes::Bytes;
+use cloned::cloned;
 use context::CoreContext;
 use derivative::Derivative;
 use futures::stream;
@@ -278,7 +279,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
     pub async fn update(
         self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &(impl Blobstore + Clone + 'static),
         replacements: BTreeMap<Bytes, Option<Value>>,
     ) -> Result<Self> {
         let shard_size = Self::shard_size()?;
@@ -467,11 +468,12 @@ impl<Value: MapValue> ShardedMapNode<Value> {
     /// Iterates through all values in the map, asynchronously and only loading
     /// blobs as needed.
     // See the detailed description of the logic in docs/sharded_map.md
-    pub fn into_entries<'a>(
+    pub fn into_entries(
         self,
-        ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
-    ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
+        ctx: &CoreContext,
+        blobstore: &(impl Blobstore + Clone + 'static),
+    ) -> impl Stream<Item = Result<(SmallBinary, Value)>> {
+        cloned!(ctx, blobstore);
         bounded_traversal_ordered_stream(
             nonzero!(256usize),
             nonzero!(256usize),
@@ -480,8 +482,9 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                 (SmallBinary::new(), ShardedMapChild::Inlined(self)),
             )],
             move |(mut cur_prefix, child): (SmallBinary, ShardedMapChild<Value>)| {
+                cloned!(ctx, blobstore);
                 async move {
-                    Ok(match child.load(ctx, blobstore).await? {
+                    Ok(match child.load(&ctx, &blobstore).await? {
                         // Case 1. Prepend all keys with cur_prefix and output elements
                         Self::Terminal { values } => values
                             .into_iter()
