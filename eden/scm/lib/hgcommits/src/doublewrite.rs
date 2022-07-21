@@ -74,7 +74,7 @@ impl ReadCommitText for DoubleWriteCommits {
     }
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
-        self.commits.to_dyn_read_commit_text()
+        self.revlog.to_dyn_read_commit_text()
     }
 }
 
