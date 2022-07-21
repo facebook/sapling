@@ -408,7 +408,7 @@ fn can_reuse(unode_version: UnodeVersion) -> bool {
 async fn reuse_manifest_parent(
     ctx: &CoreContext,
     blobstore: &Arc<dyn Blobstore>,
-    parents: &Vec<ManifestUnodeId>,
+    parents: &[ManifestUnodeId],
     subentries: &SortedVectorMap<MPathElement, UnodeEntry>,
 ) -> Result<Option<ManifestUnodeId>, Error> {
     let parents = new_future::try_join_all(
@@ -428,7 +428,7 @@ async fn reuse_manifest_parent(
 async fn reuse_file_parent(
     ctx: &CoreContext,
     blobstore: &Arc<dyn Blobstore>,
-    parents: &Vec<FileUnodeId>,
+    parents: &[FileUnodeId],
     content_id: &ContentId,
     file_type: FileType,
 ) -> Result<Option<FileUnodeId>, Error> {
@@ -450,7 +450,7 @@ async fn reuse_file_parent(
 }
 
 // If all elements in `unodes` are the same than this element is returned, otherwise None is returned
-fn return_if_unique_filenode(unodes: &Vec<FileUnode>) -> Option<(&ContentId, &FileType)> {
+fn return_if_unique_filenode(unodes: &[FileUnode]) -> Option<(&ContentId, &FileType)> {
     let mut iter = unodes
         .iter()
         .map(|elem| (elem.content_id(), elem.file_type()));

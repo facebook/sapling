@@ -284,7 +284,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .storage_configs()
         .storage
         .get(&storage_id)
-        .ok_or(format_err!("Storage id `{}` not found", storage_id))?;
+        .ok_or_else(|| format_err!("Storage id `{}` not found", storage_id))?;
     let source_blobstore_key = args.blobstore_key_like;
     let blobstore_sync_queue_limit = args.sync_queue_limit;
     let heal_concurrency = args.heal_concurrency;

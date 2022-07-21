@@ -96,8 +96,7 @@ fn create_merged_list(
 
     let mut cs_id_to_parents: HashMap<_, _> = parents_lists
         .into_iter()
-        .map(|list| list.into_iter())
-        .flatten()
+        .flat_map(|list| list.into_iter())
         .collect();
     cs_id_to_parents.insert(merge_cs_id, parents_of_merge_commit.clone());
 
@@ -365,7 +364,7 @@ mod test {
             (THREES_CSID, vec![]),
         ];
 
-        let raw_list = Vec::from(convert_to_raw_list(list.clone()));
+        let raw_list = convert_to_raw_list(list.clone());
         let expected = vec![
             (ONES_CSID, vec![ParentOffset::new(1), ParentOffset::new(2)]),
             (TWOS_CSID, vec![]),
@@ -380,7 +379,7 @@ mod test {
             (THREES_CSID, vec![]),
         ];
 
-        let raw_list = Vec::from(convert_to_raw_list(list.clone()));
+        let raw_list = convert_to_raw_list(list.clone());
         let expected = vec![
             (ONES_CSID, vec![ParentOffset::new(1)]),
             (TWOS_CSID, vec![ParentOffset::new(1)]),

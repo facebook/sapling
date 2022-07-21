@@ -60,12 +60,12 @@ impl<T: Clone> MockStore<T> {
         value
     }
 
-    pub fn set(&self, key: &String, value: T) {
+    pub fn set(&self, key: &str, value: T) {
         self.set_count.fetch_add(1, Ordering::SeqCst);
         self.data
             .lock()
             .expect("poisoned lock")
-            .insert(key.clone(), value);
+            .insert(key.to_owned(), value);
     }
 
     #[cfg(test)]
@@ -91,7 +91,7 @@ mod test {
             }
         );
 
-        store.set(&"foo".to_string(), &());
+        store.set("foo", &());
         assert_eq!(
             store.stats(),
             MockStoreStats {

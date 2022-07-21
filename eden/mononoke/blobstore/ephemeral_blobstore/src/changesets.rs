@@ -95,7 +95,7 @@ impl EphemeralChangesets {
         cs_ids: &[ChangesetId],
         connection: &Connection,
     ) -> Result<Vec<(ChangesetId, u64)>> {
-        Ok(SelectChangesets::query(connection, &self.repo_id, &self.bubble_id, &cs_ids).await?)
+        SelectChangesets::query(connection, &self.repo_id, &self.bubble_id, cs_ids).await
     }
 
     pub async fn fetch_gens(
@@ -131,12 +131,12 @@ impl EphemeralChangesets {
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
     ) -> Result<Vec<ChangesetEntry>> {
-        let gens = self.fetch_gens(&cs_ids).await?;
+        let gens = self.fetch_gens(cs_ids).await?;
         let changesets: Vec<_> = stream::iter(
             cs_ids
                 .iter()
                 .filter(|id| gens.get(id).is_some())
-                .map(|id| id.load(&ctx, &self.repo_blobstore))
+                .map(|id| id.load(ctx, &self.repo_blobstore))
                 .collect::<Vec<_>>(), // without this we get compile errors
         )
         .buffered(100)

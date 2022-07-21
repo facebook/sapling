@@ -321,8 +321,8 @@ pub async fn subcommand_filenodes<'a>(
 
             debug!(ctx.logger(), "took {:?}", stats.completion_time);
             let maybe_filenodes = res?.do_not_handle_disabled_filenodes()?;
-            let filenodes =
-                maybe_filenodes.ok_or(anyhow!("unexpected failure: history is too long?"))?;
+            let filenodes = maybe_filenodes
+                .ok_or_else(|| anyhow!("unexpected failure: history is too long?"))?;
             for filenode in filenodes {
                 log_filenode(ctx.logger(), &path, &filenode, None);
             }

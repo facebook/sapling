@@ -313,7 +313,7 @@ mod test {
 
         assert_matches!(
             res.expect_err("the key should be redacted").downcast::<ErrorKind>(),
-            Ok(ErrorKind::Censored(_, ref task)) if task == &redacted_task
+            Ok(ErrorKind::Censored(_, ref task)) if task == redacted_task
         );
 
         //Test key added to the blob

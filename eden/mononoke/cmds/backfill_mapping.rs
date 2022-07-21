@@ -74,7 +74,7 @@ pub async fn backfill<P: AsRef<Path>>(
                     .bonsai_hg_mapping()
                     .get_bonsai_from_hg(&ctx, hg_cs_id)
                     .await?
-                    .ok_or(anyhow!("hg commit {} is missing", hg_cs_id))?;
+                    .ok_or_else(|| anyhow!("hg commit {} is missing", hg_cs_id))?;
                 Ok(id)
             }
         })

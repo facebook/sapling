@@ -1564,7 +1564,7 @@ async fn subcommand_single(
     let mut derived_utils = vec![];
     for ty in derived_data_types {
         let utils = derived_data_utils(ctx.fb, &repo, ty)?;
-        utils.regenerate(&vec![csid]);
+        utils.regenerate(&[csid]);
         derived_utils.push(utils);
     }
     stream::iter(derived_utils)
@@ -1825,7 +1825,7 @@ mod tests {
             key: String,
             value: BlobstoreBytes,
         ) -> Result<()> {
-            if key.find(&self.bad_key_substring).is_some() {
+            if key.contains(&self.bad_key_substring) {
                 tokio::time::sleep(Duration::from_millis(250)).await;
                 Err(format_err!("failed"))
             } else {

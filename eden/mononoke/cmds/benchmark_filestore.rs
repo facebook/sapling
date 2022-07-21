@@ -91,7 +91,7 @@ async fn read<B: Blobstore>(
 
     let stream = filestore::fetch(blob, ctx.clone(), &key)
         .await?
-        .ok_or(format_err!("Fetch failed: no stream"))?;
+        .ok_or_else(|| format_err!("Fetch failed: no stream"))?;
 
     let (stats, res) = stream.try_for_each(|_| async { Ok(()) }).timed().await;
     log_perf(stats, &res, content_metadata.total_size);

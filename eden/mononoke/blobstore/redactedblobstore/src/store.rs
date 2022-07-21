@@ -252,7 +252,7 @@ impl SqlRedactedContentStore {
 
     pub async fn insert_redacted_blobs(
         &self,
-        content_keys: &Vec<String>,
+        content_keys: &[String],
         task: &String,
         add_timestamp: &Timestamp,
         log_only: bool,
@@ -327,8 +327,8 @@ mod test {
         let all = store.get_all_redacted_blobs().await.expect("select failed");
         let res = all.redacted();
 
-        assert_eq!(res.contains_key(&key_c), true);
-        assert_eq!(res.contains_key(&key_d), true);
+        assert!(res.contains_key(&key_c));
+        assert!(res.contains_key(&key_d));
         assert_eq!(res.len(), 2);
     }
 }

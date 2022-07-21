@@ -99,13 +99,12 @@ pub fn cs_args_from_matches<'a>(sub_m: &ArgMatches<'a>) -> BoxFuture<ChangesetAr
     let datetime = try_boxfuture!(
         sub_m
             .value_of(COMMIT_DATE_RFC3339)
-            .map(|datetime_str| DateTime::from_rfc3339(datetime_str))
-            .unwrap_or_else(|| Ok(DateTime::now()))
+            .map_or_else(|| Ok(DateTime::now()), DateTime::from_rfc3339)
     );
     let bookmark = try_boxfuture!(
         sub_m
             .value_of(COMMIT_BOOKMARK)
-            .map(|bookmark_str| BookmarkName::new(bookmark_str))
+            .map(BookmarkName::new)
             .transpose()
     );
     let mark_public = sub_m.is_present(MARK_PUBLIC);
@@ -166,9 +165,9 @@ fn get_commit_factory<'a>(
 
     let datetime = sub_m
         .value_of(COMMIT_DATE_RFC3339)
-        .map(|datetime_str| DateTime::from_rfc3339(datetime_str))
+        .map(DateTime::from_rfc3339)
         .transpose()?
-        .unwrap_or_else(|| DateTime::now());
+        .unwrap_or_else(DateTime::now);
 
     Ok(Box::new(move |num: StackPosition| ChangesetArgs {
         author: author.clone(),

@@ -58,21 +58,11 @@ pub struct GenManifest {
     files: BTreeMap<MPathElement, String>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Size {
     pub width: usize,
     pub depth: usize,
     pub files: usize,
-}
-
-impl Default for Size {
-    fn default() -> Self {
-        Self {
-            width: 0,
-            depth: 0,
-            files: 0,
-        }
-    }
 }
 
 impl GenManifest {

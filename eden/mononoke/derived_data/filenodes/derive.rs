@@ -323,7 +323,7 @@ mod tests {
     ) -> Result<()> {
         let bonsai = cs_id.load(ctx, repo.blobstore()).await?;
         let filenodes = generate_all_filenodes(
-            &ctx,
+            ctx,
             &repo.repo_derived_data().manager().derivation_context(None),
             &bonsai,
         )
@@ -331,12 +331,7 @@ mod tests {
 
         assert_eq!(filenodes.len(), expected_paths.len());
         for path in expected_paths {
-            assert!(
-                filenodes
-                    .iter()
-                    .find(|filenode| filenode.path == path)
-                    .is_some()
-            );
+            assert!(filenodes.iter().any(|filenode| filenode.path == path));
         }
 
         let linknode = repo.derive_hg_changeset(ctx, cs_id).await?;

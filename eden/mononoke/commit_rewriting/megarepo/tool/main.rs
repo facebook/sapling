@@ -254,7 +254,7 @@ async fn run_sync_diamond_merge<'a>(
         .map(BookmarkName::new)
         .transpose()?;
 
-    let bookmark = maybe_bookmark.ok_or(Error::msg("bookmark must be specified"))?;
+    let bookmark = maybe_bookmark.ok_or_else(|| Error::msg("bookmark must be specified"))?;
 
     let source_repo = args::open_repo_with_repo_id(ctx.fb, ctx.logger(), source_repo_id, matches);
     let target_repo = args::open_repo_with_repo_id(ctx.fb, ctx.logger(), target_repo_id, matches);
@@ -525,13 +525,13 @@ async fn run_gradual_merge<'a>(
 
     let last_deletion_commit = sub_m
         .value_of(LAST_DELETION_COMMIT)
-        .ok_or(format_err!("last deletion commit is not specified"))?;
+        .ok_or_else(|| format_err!("last deletion commit is not specified"))?;
     let pre_deletion_commit = sub_m
         .value_of(PRE_DELETION_COMMIT)
-        .ok_or(format_err!("pre deletion commit is not specified"))?;
+        .ok_or_else(|| format_err!("pre deletion commit is not specified"))?;
     let bookmark = sub_m
         .value_of(COMMIT_BOOKMARK)
-        .ok_or(format_err!("bookmark where to merge is not specified"))?;
+        .ok_or_else(|| format_err!("bookmark where to merge is not specified"))?;
     let dry_run = sub_m.is_present(DRY_RUN);
 
     let limit = args::get_usize_opt(sub_m, LIMIT);
@@ -566,13 +566,13 @@ async fn run_gradual_merge_progress<'a>(
 
     let last_deletion_commit = sub_m
         .value_of(LAST_DELETION_COMMIT)
-        .ok_or(format_err!("last deletion commit is not specified"))?;
+        .ok_or_else(|| format_err!("last deletion commit is not specified"))?;
     let pre_deletion_commit = sub_m
         .value_of(PRE_DELETION_COMMIT)
-        .ok_or(format_err!("pre deletion commit is not specified"))?;
+        .ok_or_else(|| format_err!("pre deletion commit is not specified"))?;
     let bookmark = sub_m
         .value_of(COMMIT_BOOKMARK)
-        .ok_or(format_err!("bookmark where to merge is not specified"))?;
+        .ok_or_else(|| format_err!("bookmark where to merge is not specified"))?;
 
     let last_deletion_commit = helpers::csid_resolve(&ctx, &repo.blob_repo, last_deletion_commit);
     let pre_deletion_commit = helpers::csid_resolve(&ctx, &repo.blob_repo, pre_deletion_commit);

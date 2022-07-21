@@ -71,11 +71,11 @@ pub async fn subcommand_hg_changeset<'a>(
         (HG_CHANGESET_DIFF, Some(sub_m)) => {
             let left_cs = sub_m
                 .value_of("LEFT_CS")
-                .ok_or(format_err!("LEFT_CS argument expected"))
+                .ok_or_else(|| format_err!("LEFT_CS argument expected"))
                 .and_then(HgChangesetId::from_str)?;
             let right_cs = sub_m
                 .value_of("RIGHT_CS")
-                .ok_or(format_err!("RIGHT_CS argument expected"))
+                .ok_or_else(|| format_err!("RIGHT_CS argument expected"))
                 .and_then(HgChangesetId::from_str)?;
 
             let repo = args::open_repo(fb, &logger, matches).await?;
@@ -86,11 +86,11 @@ pub async fn subcommand_hg_changeset<'a>(
         (HG_CHANGESET_RANGE, Some(sub_m)) => {
             let start_cs = sub_m
                 .value_of("START_CS")
-                .ok_or(format_err!("START_CS argument expected"))
+                .ok_or_else(|| format_err!("START_CS argument expected"))
                 .and_then(HgChangesetId::from_str)?;
             let stop_cs = sub_m
                 .value_of("STOP_CS")
-                .ok_or(format_err!("STOP_CS argument expected"))
+                .ok_or_else(|| format_err!("STOP_CS argument expected"))
                 .and_then(HgChangesetId::from_str)?;
 
             let repo: BlobRepo = args::open_repo(fb, &logger, matches).await?;

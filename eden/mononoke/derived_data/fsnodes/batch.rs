@@ -336,7 +336,7 @@ mod test {
         gap_size: usize,
     ) -> Result<HashMap<ChangesetId, RootFsnodeId>, Error> {
         let repo = Linear::getrepo(fb).await;
-        let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+        let master_cs_id = resolve_cs_id(ctx, &repo, "master").await?;
 
         let mut cs_ids =
             AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), master_cs_id)
@@ -347,7 +347,7 @@ mod test {
         let manager = repo.repo_derived_data().manager();
         manager
             .backfill_batch::<RootFsnodeId>(
-                &ctx,
+                ctx,
                 cs_ids.clone(),
                 BatchDeriveOptions::Parallel {
                     gap_size: Some(gap_size),
@@ -362,13 +362,13 @@ mod test {
             .collect();
 
         let derived = manager
-            .fetch_derived_batch::<RootFsnodeId>(&ctx, derived, None)
+            .fetch_derived_batch::<RootFsnodeId>(ctx, derived, None)
             .await?;
         for cs_id in cs_ids {
             if !derived.contains_key(&cs_id) {
                 assert_eq!(
                     manager
-                        .fetch_derived::<RootFsnodeId>(&ctx, cs_id, None)
+                        .fetch_derived::<RootFsnodeId>(ctx, cs_id, None)
                         .await?,
                     None
                 );

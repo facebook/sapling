@@ -189,7 +189,7 @@ fn parse_fixed_parent_order<P: AsRef<Path>>(
             }
             (None, Some(_)) => unreachable!(),
         };
-        if let Some(_) = iter.next() {
+        if iter.next().is_some() {
             bail!("got 3 parents, but mercurial supports at most 2!");
         }
 
@@ -501,7 +501,7 @@ async fn maybe_update_highest_imported_generation_number(
     let (maybe_highest_imported_gen_num, new_gen_num) =
         try_join(maybe_highest_imported_gen_num, new_gen_num).await?;
 
-    let new_gen_num = new_gen_num.ok_or(format_err!("generation number is not set"))?;
+    let new_gen_num = new_gen_num.ok_or_else(|| format_err!("generation number is not set"))?;
     let new_gen_num = match maybe_highest_imported_gen_num {
         Some(highest_imported_gen_num) => {
             if new_gen_num.value() as i64 > highest_imported_gen_num {

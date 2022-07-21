@@ -280,7 +280,7 @@ pub fn log_statistics(
     ctx: &CoreContext,
     mut scuba_logger: MononokeScubaSampleBuilder,
     cs_timestamp: i64,
-    repo_name: &String,
+    repo_name: &str,
     hg_cs_id: &HgChangesetId,
     statistics: &RepoStatistics,
 ) {
@@ -294,7 +294,7 @@ pub fn log_statistics(
         statistics.num_lines
     );
     scuba_logger
-        .add("repo_name", repo_name.clone())
+        .add("repo_name", repo_name.to_owned())
         .add("num_files", statistics.num_files)
         .add("total_file_size", statistics.total_file_size)
         .add("num_lines", statistics.num_lines)
@@ -451,7 +451,7 @@ async fn run_statistics<'a>(
     let mut changeset = repo
         .get_bookmark(ctx.clone(), &bookmark)
         .await?
-        .ok_or(Error::msg("cannot load bookmark"))?;
+        .ok_or_else(|| Error::msg("cannot load bookmark"))?;
 
     // initialize the loop
 
@@ -476,7 +476,7 @@ async fn run_statistics<'a>(
         changeset = repo
             .get_bookmark(ctx.clone(), &bookmark)
             .await?
-            .ok_or(Error::msg("cannot load bookmark"))?;
+            .ok_or_else(|| Error::msg("cannot load bookmark"))?;
 
         if prev_changeset == changeset {
             let duration = Duration::from_millis(1000);

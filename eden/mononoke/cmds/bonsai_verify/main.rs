@@ -316,7 +316,7 @@ fn subcommmand_hg_manifest_verify(
             .bonsai_hg_mapping()
             .get_bonsai_from_hg(ctx, hg_csid)
             .await?
-            .ok_or(format_err!("failed to fetch bonsai changeset"))?;
+            .ok_or_else(|| format_err!("failed to fetch bonsai changeset"))?;
 
         AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), csid)
             .compat()

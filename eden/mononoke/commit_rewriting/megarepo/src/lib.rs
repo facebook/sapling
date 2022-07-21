@@ -216,7 +216,7 @@ where
             .bonsai_hg_mapping()
             .get_bonsai_from_hg(ctx, hg_cs_id)
             .await?
-            .ok_or(anyhow!("not found bonsai commit for {}", hg_cs_id))?;
+            .ok_or_else(|| anyhow!("not found bonsai commit for {}", hg_cs_id))?;
         res.push(hg_cs_id)
     }
 

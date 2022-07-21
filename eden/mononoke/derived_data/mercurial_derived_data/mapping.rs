@@ -315,10 +315,10 @@ mod test {
         let manager = repo.repo_derived_data().manager();
 
         manager
-            .backfill_batch::<MappedHgChangesetId>(&ctx, csids.clone(), options, None)
+            .backfill_batch::<MappedHgChangesetId>(ctx, csids.clone(), options, None)
             .await?;
         let batch_derived = manager
-            .fetch_derived_batch::<MappedHgChangesetId>(&ctx, csids, None)
+            .fetch_derived_batch::<MappedHgChangesetId>(ctx, csids, None)
             .await?;
 
         for (cs_id, hg_cs_id) in commits_desc_to_anc.into_iter().rev() {

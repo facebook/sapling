@@ -271,7 +271,7 @@ async fn test_blame_size_rejected_version(
     borrowed!(ctx, repo);
     let file1 = "file1";
     let content = "content";
-    let c1 = CreateCommitContext::new_root(&ctx, &repo)
+    let c1 = CreateCommitContext::new_root(ctx, &repo)
         .add_file(file1, content)
         .commit()
         .await?;
@@ -329,7 +329,7 @@ async fn test_blame_copy_source(fb: FacebookInit) -> Result<(), Error> {
         .build()?;
     borrowed!(ctx, repo);
 
-    let c1 = CreateCommitContext::new_root(&ctx, &repo)
+    let c1 = CreateCommitContext::new_root(ctx, &repo)
         .add_file("file1", "one\ntwo\nthree\n")
         .add_file("file2", "zero\none\ntwo\nfour\n")
         .commit()
@@ -382,9 +382,9 @@ fn annotate(
             .get(&range.csid)
             .ok_or_else(|| Error::msg("unresolved csid"))?;
         result.push_str(name);
-        result.push_str(&": ");
+        result.push_str(": ");
         result.push_str(line);
-        result.push_str("\n");
+        result.push('\n');
     }
     Ok(result)
 }

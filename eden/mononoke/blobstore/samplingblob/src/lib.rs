@@ -246,11 +246,11 @@ mod test {
     }
     impl TestSamplingHandler {
         fn check_sample(&self, ctx: &CoreContext) -> Result<()> {
-            ctx.sampling_key().map(|sampling_key| {
+            if let Some(sampling_key) = ctx.sampling_key() {
                 if sampling_key == &self.looking_for {
                     self.sampled.store(true, Ordering::Relaxed);
                 }
-            });
+            }
             Ok(())
         }
     }

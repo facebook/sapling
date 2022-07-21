@@ -144,7 +144,7 @@ async fn derive_git_manifest<B: Blobstore + Clone + 'static>(
             |leaf_info| {
                 let leaf = leaf_info
                     .leaf
-                    .ok_or(ErrorKind::TreeDerivationFailed.into())
+                    .ok_or_else(|| ErrorKind::TreeDerivationFailed.into())
                     .map(|l| ((), l));
                 ready(leaf)
             }

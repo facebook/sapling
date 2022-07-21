@@ -121,10 +121,9 @@ fn get_blobconfig(blob_config: BlobConfig, inner_blobstore_id: Option<u64>) -> R
                             None
                         }
                     })
-                    .ok_or(format_err!(
-                        "could not find a blobstore with id {}",
-                        inner_blobstore_id
-                    ))
+                    .ok_or_else(|| {
+                        format_err!("could not find a blobstore with id {}", inner_blobstore_id)
+                    })
             }
             _ => Err(format_err!(
                 "inner-blobstore-id supplied but blobstore is not multiplexed"

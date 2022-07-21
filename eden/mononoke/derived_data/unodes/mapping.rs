@@ -357,7 +357,7 @@ mod test {
 
         let commits_desc_to_anc = all_commits_descendants_to_ancestors(ctx.clone(), repo.clone())
             .and_then(move |(bcs_id, hg_cs_id)| async move {
-                let unode_id = verify_unode(&ctx, &repo, bcs_id, hg_cs_id).await?;
+                let unode_id = verify_unode(ctx, repo, bcs_id, hg_cs_id).await?;
                 Ok((bcs_id, hg_cs_id, unode_id))
             })
             .try_collect::<Vec<_>>()
@@ -376,11 +376,11 @@ mod test {
         let manager = repo.repo_derived_data().manager();
 
         manager
-            .backfill_batch::<RootUnodeManifestId>(&ctx, csids.clone(), options, None)
+            .backfill_batch::<RootUnodeManifestId>(ctx, csids.clone(), options, None)
             .await
             .unwrap();
         let batch_derived = manager
-            .fetch_derived_batch::<RootUnodeManifestId>(&ctx, csids, None)
+            .fetch_derived_batch::<RootUnodeManifestId>(ctx, csids, None)
             .await
             .unwrap();
 

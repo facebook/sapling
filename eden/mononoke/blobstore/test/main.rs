@@ -332,9 +332,7 @@ async fn cache_blob_tests(fb: FacebookInit, expect_zstd: bool) -> Result<(), Err
     let large_key = "large_key";
     let size = 5 * 1024 * 1024;
     let mut large_value = Vec::with_capacity(size);
-    for _ in 0..size {
-        large_value.push(b'a');
-    }
+    large_value.resize(size, b'a');
     let large_value = BlobstoreBytes::from_bytes(large_value);
 
     cache_blob

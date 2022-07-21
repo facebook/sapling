@@ -103,16 +103,12 @@ pub async fn subcommand_phases<'a>(
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), SubcommandError> {
-    let repo = args::open_repo(fb, &logger, &matches).await?;
+    let repo = args::open_repo(fb, &logger, matches).await?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     match sub_m.subcommand() {
         (FETCH_PHASE, Some(sub_m)) => {
-            let ty = sub_m
-                .value_of("changeset-type")
-                .map(|s| s)
-                .unwrap_or("hg")
-                .to_string();
+            let ty = sub_m.value_of("changeset-type").unwrap_or("hg").to_string();
             let hash = sub_m
                 .value_of("hash")
                 .map(|s| s.to_string())
@@ -134,11 +130,7 @@ pub async fn subcommand_phases<'a>(
                 .map_err(SubcommandError::Error)
         }
         (LIST_PUBLIC, Some(sub_m)) => {
-            let ty = sub_m
-                .value_of("changeset-type")
-                .map(|s| s)
-                .unwrap_or("hg")
-                .to_string();
+            let ty = sub_m.value_of("changeset-type").unwrap_or("hg").to_string();
 
             subcommand_list_public_impl(ctx, ty, repo)
                 .await
@@ -198,7 +190,7 @@ async fn subcommand_list_public_impl(
         }
     } else {
         for chunk in public.chunks(1000) {
-            let bonsais: Vec<_> = chunk.iter().cloned().collect();
+            let bonsais: Vec<_> = chunk.to_vec();
             let hg_bonsais = repo.get_hg_bonsai_mapping(ctx.clone(), bonsais).await?;
             let hg_css: Vec<HgChangesetId> = hg_bonsais
                 .clone()

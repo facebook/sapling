@@ -184,7 +184,7 @@ pub trait DerivedUtils: Send + Sync + 'static {
     ) -> Result<u64, Error>;
 
     /// Regenerate derived data for specified set of commits
-    fn regenerate(&self, csids: &Vec<ChangesetId>);
+    fn regenerate(&self, csids: &[ChangesetId]);
 
     /// Remove all previously set regenerations
     fn clear_regenerate(&self);
@@ -334,7 +334,7 @@ where
             .await?)
     }
 
-    fn regenerate(&self, csids: &Vec<ChangesetId>) {
+    fn regenerate(&self, csids: &[ChangesetId]) {
         self.rederive
             .with(|rederive| rederive.extend(csids.iter().copied()));
     }
@@ -1137,7 +1137,7 @@ mod tests {
             unimplemented!()
         }
 
-        fn regenerate(&self, _csids: &Vec<ChangesetId>) {
+        fn regenerate(&self, _csids: &[ChangesetId]) {
             unimplemented!()
         }
 

@@ -81,7 +81,7 @@ where
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
 
-    let bookmark_val = maybe_bookmark_val.ok_or(format_err!("master not found"))?;
+    let bookmark_val = maybe_bookmark_val.ok_or_else(|| format_err!("master not found"))?;
     let source_bcs_mut = source_bcs.into_mut();
     let maybe_rewritten = {
         let map = HashMap::new();

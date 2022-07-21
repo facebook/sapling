@@ -177,7 +177,7 @@ async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static>(
             .get_commit_sync_outcome_with_hint(ctx, Source(*commit), hint.clone())
             .await?;
         let sync_outcome: Result<_, Error> =
-            maybe_sync_outcome.ok_or(ErrorKind::ParentNotRemapped(*commit).into());
+            maybe_sync_outcome.ok_or_else(|| ErrorKind::ParentNotRemapped(*commit).into());
         let sync_outcome = sync_outcome?;
 
         use CommitSyncOutcome::*;
@@ -739,10 +739,7 @@ where
         let commit_sync_outcome = self
             .get_commit_sync_outcome(ctx, source_cs_id)
             .await?
-            .ok_or(format_err!(
-                "was not able to remap a commit {}",
-                source_cs_id
-            ))?;
+            .ok_or_else(|| format_err!("was not able to remap a commit {}", source_cs_id))?;
         use CommitSyncOutcome::*;
         let res = match commit_sync_outcome {
             NotSyncCandidate(_) => None,
@@ -1236,7 +1233,7 @@ where
             .await?;
 
         let parent_sync_outcome = maybe_parent_sync_outcome
-            .ok_or(format_err!("Parent commit {} is not synced yet", p))?;
+            .ok_or_else(|| format_err!("Parent commit {} is not synced yet", p))?;
 
         use CommitSyncOutcome::*;
         match parent_sync_outcome {
@@ -1466,7 +1463,7 @@ where
                     let parent_cs_id = new_parents
                         .values()
                         .next()
-                        .ok_or(Error::msg("logic merge: cannot find merge parent"))?;
+                        .ok_or_else(|| Error::msg("logic merge: cannot find merge parent"))?;
                     self.update_wc_equivalence_with_version(
                         ctx,
                         source_cs_id,

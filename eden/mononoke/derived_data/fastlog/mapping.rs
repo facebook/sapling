@@ -715,7 +715,7 @@ mod tests {
             .await?
             .unwrap();
         let root_unode = manager
-            .derive::<RootUnodeManifestId>(&ctx, bcs_id, None)
+            .derive::<RootUnodeManifestId>(ctx, bcs_id, None)
             .await?;
         Ok(root_unode.manifest_unode_id().clone())
     }
@@ -727,12 +727,12 @@ mod tests {
     ) -> ManifestUnodeId {
         let manager = repo.repo_derived_data().manager();
         manager
-            .derive::<RootFastlog>(&ctx, bcs_id, None)
+            .derive::<RootFastlog>(ctx, bcs_id, None)
             .await
             .unwrap();
 
         let root_unode = manager
-            .derive::<RootUnodeManifestId>(&ctx, bcs_id, None)
+            .derive::<RootUnodeManifestId>(ctx, bcs_id, None)
             .await
             .unwrap();
         root_unode.manifest_unode_id().clone()
@@ -756,7 +756,7 @@ mod tests {
         entry: Entry<ManifestUnodeId, FileUnodeId>,
     ) -> Vec<(ChangesetId, Vec<FastlogParent>)> {
         let blobstore = repo.blobstore();
-        let batch = fetch_fastlog_batch_by_unode_id(&ctx, blobstore, &entry)
+        let batch = fetch_fastlog_batch_by_unode_id(ctx, blobstore, &entry)
             .await
             .unwrap()
             .expect("batch hasn't been generated yet");
@@ -792,12 +792,12 @@ mod tests {
                     break;
                 }
             };
-            let linknode = unode_entry.get_linknode(&ctx, &repo).await.unwrap();
+            let linknode = unode_entry.get_linknode(&ctx, repo).await.unwrap();
             history.push(linknode);
             if history.len() >= max_entries_in_fastlog_batch() {
                 break;
             }
-            let parents = unode_entry.get_parents(&ctx, &repo).await.unwrap();
+            let parents = unode_entry.get_parents(&ctx, repo).await.unwrap();
             q.extend(parents.into_iter().filter(|x| visited.insert(x.clone())));
         }
 

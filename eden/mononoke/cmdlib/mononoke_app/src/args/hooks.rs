@@ -6,7 +6,7 @@
  */
 
 use crate::AppExtension;
-use anyhow::format_err;
+use anyhow::Context;
 use anyhow::Result;
 use clap::Args;
 use environment::MononokeEnvironment;
@@ -34,11 +34,9 @@ impl AppExtension for HooksAppExtension {
             let repo = repohook.get(0);
             let hook = repohook.get(1);
 
-            let (repo, hook) =
-                repo.and_then(|repo| hook.map(|hook| (repo, hook)))
-                    .ok_or(format_err!(
-                        "invalid format of disabled hook, should be 'REPONAME:HOOKNAME'"
-                    ))?;
+            let (repo, hook) = repo
+                .and_then(|repo| hook.map(|hook| (repo, hook)))
+                .context("invalid format of disabled hook, should be 'REPONAME:HOOKNAME'")?;
             res.entry(repo.to_string())
                 .or_insert_with(HashSet::new)
                 .insert(hook.to_string());

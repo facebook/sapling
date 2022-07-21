@@ -248,7 +248,7 @@ impl From<ChangesetInfo> for BlobstoreBytes {
 /// Given a commit message returns the commit title: either the first line of the
 /// message or the message itself, cropped by the DEFAULT_TITLE_LENGTH number of
 /// characters.
-fn get_title(message: &String) -> &str {
+fn get_title(message: &str) -> &str {
     // either first line or the whole message
     let title = message.trim_start().lines().next().unwrap_or("");
     match title.grapheme_indices(true).nth(DEFAULT_TITLE_LENGTH) {

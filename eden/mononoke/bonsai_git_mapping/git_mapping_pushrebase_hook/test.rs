@@ -72,7 +72,7 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
     let cs2_rebased = rebased
         .iter()
         .find(|e| e.id_old == cs2.get_changeset_id())
-        .ok_or(Error::msg("missing cs2"))?
+        .ok_or_else(|| Error::msg("missing cs2"))?
         .id_new
         .load(ctx, repo.blobstore())
         .await?;
@@ -113,7 +113,7 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
     let cs3_rebased = rebased
         .iter()
         .find(|e| e.id_old == cs3.get_changeset_id())
-        .ok_or(Error::msg("missing cs3"))?
+        .ok_or_else(|| Error::msg("missing cs3"))?
         .id_new
         .load(ctx, repo.blobstore())
         .await?;
@@ -121,7 +121,7 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
     let cs4_rebased = rebased
         .iter()
         .find(|e| e.id_old == cs4.get_changeset_id())
-        .ok_or(Error::msg("missing cs4"))?
+        .ok_or_else(|| Error::msg("missing cs4"))?
         .id_new
         .load(ctx, repo.blobstore())
         .await?;

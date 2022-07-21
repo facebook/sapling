@@ -65,7 +65,7 @@ pub async fn create_deletion_head_commits<'a>(
             .get_bonsai_bookmark(ctx.clone(), &head_bookmark)
             .await?;
         let head_bookmark_val =
-            maybe_head_bookmark_val.ok_or(anyhow!("{} not found", head_bookmark))?;
+            maybe_head_bookmark_val.ok_or_else(|| anyhow!("{} not found", head_bookmark))?;
 
         let bcs_id = create_and_save_bonsai(
             ctx,
@@ -179,7 +179,7 @@ async fn find_files_that_need_to_be_deleted(
     let maybe_head_bookmark_val = repo.get_bonsai_bookmark(ctx.clone(), head_bookmark).await?;
 
     let head_bookmark_val =
-        maybe_head_bookmark_val.ok_or(anyhow!("{} not found", head_bookmark))?;
+        maybe_head_bookmark_val.ok_or_else(|| anyhow!("{} not found", head_bookmark))?;
 
     let head_root_unode = RootUnodeManifestId::derive(ctx, repo, head_bookmark_val);
     let commit_to_merge_root_unode = RootUnodeManifestId::derive(ctx, repo, commit_to_merge);

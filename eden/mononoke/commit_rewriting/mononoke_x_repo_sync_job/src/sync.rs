@@ -80,7 +80,7 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
 ) -> Result<SyncResult, Error> {
     info!(ctx.logger(), "processing log entry #{}", entry.id);
     let bookmark = commit_syncer.get_bookmark_renamer().await?(&entry.bookmark_name)
-        .ok_or(format_err!("unexpected empty bookmark rename"))?;
+        .ok_or_else(|| format_err!("unexpected empty bookmark rename"))?;
     scuba_sample
         .add("source_bookmark_name", format!("{}", entry.bookmark_name))
         .add("target_bookmark_name", format!("{}", bookmark));

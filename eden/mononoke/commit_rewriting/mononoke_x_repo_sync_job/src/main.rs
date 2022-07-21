@@ -328,7 +328,7 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static>(
     let counter = format_counter(commit_syncer);
 
     let maybe_start_id = target_mutable_counters.get_counter(ctx, &counter).await?;
-    let start_id = maybe_start_id.ok_or(format_err!("counter not found"))?;
+    let start_id = maybe_start_id.ok_or_else(|| format_err!("counter not found"))?;
     let limit = 10;
     let log_entries = bookmark_update_log
         .read_next_bookmark_log_entries(ctx.clone(), start_id as u64, limit, Freshness::MaybeStale)

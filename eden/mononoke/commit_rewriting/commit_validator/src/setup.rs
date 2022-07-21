@@ -118,7 +118,7 @@ pub async fn get_start_id<'a>(
             repo.mutable_counters()
                 .get_counter(ctx, &counter)
                 .await?
-                .ok_or(format_err!("mutable counter {} is missing", counter))
+                .ok_or_else(|| format_err!("mutable counter {} is missing", counter))
                 .map(|val| val as u64)
         }
     }
@@ -127,7 +127,7 @@ pub async fn get_start_id<'a>(
 pub fn get_entry_id<'a>(matches: &'a ArgMatches<'a>) -> Result<u64, Error> {
     matches
         .value_of(ARG_ENTRY_ID)
-        .ok_or(format_err!("Entry id argument missing"))?
+        .ok_or_else(|| format_err!("Entry id argument missing"))?
         .parse::<u64>()
         .map_err(|_| format_err!("{} must be a valid u64", ARG_ENTRY_ID))
 }
@@ -135,6 +135,6 @@ pub fn get_entry_id<'a>(matches: &'a ArgMatches<'a>) -> Result<u64, Error> {
 fn get_master_bookmark<'a, 'b>(matches: &'a MononokeMatches<'b>) -> Result<BookmarkName, Error> {
     let name = matches
         .value_of(ARG_MASTER_BOOKMARK)
-        .ok_or(format_err!("Argument {} is required", ARG_MASTER_BOOKMARK))?;
+        .ok_or_else(|| format_err!("Argument {} is required", ARG_MASTER_BOOKMARK))?;
     BookmarkName::new(name)
 }

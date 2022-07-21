@@ -504,10 +504,9 @@ impl ValidationHelpers {
     }
 
     fn get_helper(&self, repo_id: &Small<RepositoryId>) -> Result<&ValidationHelper, Error> {
-        self.helpers.get(repo_id).ok_or(format_err!(
-            "Repo {} is not present in ValidationHelpers",
-            repo_id
-        ))
+        self.helpers
+            .get(repo_id)
+            .ok_or_else(|| format_err!("Repo {} is not present in ValidationHelpers", repo_id))
     }
 
     fn get_small_repo(&self, repo_id: &Small<RepositoryId>) -> Result<&Small<BlobRepo>, Error> {
@@ -662,7 +661,7 @@ impl ValidationHelpers {
             .blob_repo
             .get_bonsai_bookmark(ctx, &self.large_repo_master_bookmark)
             .await?;
-        maybe_cs_id.ok_or(format_err!("No master in the large repo"))
+        maybe_cs_id.ok_or_else(|| format_err!("No master in the large repo"))
     }
 
     // First returned mover is small to large, second is large to small
@@ -960,12 +959,14 @@ async fn validate_topological_order<'a>(
                 )
                 .await?;
 
-                let commit_sync_outcome = maybe_commit_sync_outcome.ok_or(format_err!(
-                    "Unexpectedly missing CommitSyncOutcome for {} in {}->{}",
-                    small_parent,
-                    small_repo_id,
-                    large_repo_id,
-                ))?;
+                let commit_sync_outcome = maybe_commit_sync_outcome.ok_or_else(|| {
+                    format_err!(
+                        "Unexpectedly missing CommitSyncOutcome for {} in {}->{}",
+                        small_parent,
+                        small_repo_id,
+                        large_repo_id,
+                    )
+                })?;
 
                 use CommitSyncOutcome::*;
                 let remapping_of_small_parent = match commit_sync_outcome {
@@ -1373,7 +1374,7 @@ pub async fn validate_entry(
                 let validation_helper = validation_helpers
                     .helpers
                     .get(&repo_id)
-                    .ok_or(format_err!("small repo {} not found", repo_id))?
+                    .ok_or_else(|| format_err!("small repo {} not found", repo_id))?
                     .clone();
                 let scuba_sample = validation_helper.scuba_sample.clone();
                 let mapping = &validation_helpers.mapping;

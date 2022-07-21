@@ -53,7 +53,11 @@ fn run() -> Result<()> {
     // (`enumerate()` takes an iterator returning T and turns it into an iterator returning
     // `(usize, T)` tuples)
     for (idx, entry) in iter.enumerate() {
-        println!("{:?}: {:?}", revidx.unwrap_or(RevIdx::zero()) + idx, entry)
+        println!(
+            "{:?}: {:?}",
+            revidx.unwrap_or_else(RevIdx::zero) + idx,
+            entry
+        )
     }
 
     Ok(())

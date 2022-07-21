@@ -1140,10 +1140,9 @@ async fn update_large_repo_bookmarks(
                     ctx.logger(),
                     "large repo bookmark (renames to {}) not found in small repo", target_bookmark,
                 );
-                let large_bookmark = bookmark_renamer(target_bookmark).ok_or(format_err!(
-                    "small bookmark {} remaps to nothing",
-                    target_bookmark
-                ))?;
+                let large_bookmark = bookmark_renamer(target_bookmark).ok_or_else(|| {
+                    format_err!("small bookmark {} remaps to nothing", target_bookmark)
+                })?;
                 let reason = BookmarkUpdateReason::XRepoSync;
                 info!(ctx.logger(), "deleting {}", large_bookmark);
                 book_txn.force_delete(&large_bookmark, reason)?;

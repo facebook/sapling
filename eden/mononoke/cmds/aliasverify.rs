@@ -144,7 +144,8 @@ impl AliasVerification {
                     filestore::get_metadata(&blobstore, ctx, &FetchKey::Canonical(content_id))
                         .await?;
 
-                let meta = maybe_meta.ok_or(format_err!("Missing content {:?}", content_id))?;
+                let meta =
+                    maybe_meta.ok_or_else(|| format_err!("Missing content {:?}", content_id))?;
 
                 if meta.sha256 == *alias {
                     AliasBlob(

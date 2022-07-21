@@ -241,9 +241,9 @@ impl ConvIr<BookmarkKind> for BookmarkKind {
         use BookmarkKind::*;
 
         match v {
-            Value::Bytes(ref b) if b == &SCRATCH_KIND => Ok(Scratch),
-            Value::Bytes(ref b) if b == &PUBLISHING_KIND => Ok(Publishing),
-            Value::Bytes(ref b) if b == &PULL_DEFAULT_KIND => Ok(PullDefaultPublishing),
+            Value::Bytes(ref b) if b == SCRATCH_KIND => Ok(Scratch),
+            Value::Bytes(ref b) if b == PUBLISHING_KIND => Ok(Publishing),
+            Value::Bytes(ref b) if b == PULL_DEFAULT_KIND => Ok(PullDefaultPublishing),
             v => Err(FromValueError(v)),
         }
     }

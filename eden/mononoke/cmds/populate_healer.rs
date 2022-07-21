@@ -192,23 +192,21 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
 
     let storage_id = matches
         .value_of("storage-id")
-        .ok_or(Error::msg("`storage-id` argument required"))?;
+        .ok_or_else(|| Error::msg("`storage-id` argument required"))?;
 
     let storage_config = args::load_storage_configs(config_store, &matches)?
         .storage
         .remove(storage_id)
-        .ok_or(Error::msg("Unknown `storage-id`"))?;
+        .ok_or_else(|| Error::msg("Unknown `storage-id`"))?;
 
     let src_blobstore_id = matches
         .value_of("source-blobstore-id")
-        .ok_or(Error::msg("`source-blobstore-id` argument is required"))
+        .ok_or_else(|| Error::msg("`source-blobstore-id` argument is required"))
         .and_then(|src| src.parse::<u64>().map_err(Error::from))
         .map(BlobstoreId::new)?;
     let dst_blobstore_id = matches
         .value_of("destination-blobstore-id")
-        .ok_or(Error::msg(
-            "`destination-blobstore-id` argument is required",
-        ))
+        .ok_or_else(|| Error::msg("`destination-blobstore-id` argument is required"))
         .and_then(|dst| dst.parse::<u64>().map_err(Error::from))
         .map(BlobstoreId::new)?;
     if src_blobstore_id == dst_blobstore_id {
@@ -237,10 +235,7 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
         .filter(|(id, ..)| src_blobstore_id == *id)
         .map(|(.., args)| args)
         .next()
-        .ok_or(format_err!(
-            "failed to find source blobstore id: {:?}",
-            src_blobstore_id,
-        ))
+        .ok_or_else(|| format_err!("failed to find source blobstore id: {:?}", src_blobstore_id,))
         .map(|args| args.clone())?;
 
     let mysql_options = matches.mysql_options().clone();

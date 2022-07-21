@@ -95,6 +95,11 @@ impl BlobstoreGetData {
     }
 
     #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.bytes.is_empty()
+    }
+
+    #[inline]
     pub fn into_raw_bytes(self) -> Bytes {
         self.into_bytes().into_bytes()
     }
@@ -196,6 +201,11 @@ impl BlobstoreBytes {
     #[inline]
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 
     /// This should only be used by blobstore and From/Into<BlobstoreBytes> implementations.

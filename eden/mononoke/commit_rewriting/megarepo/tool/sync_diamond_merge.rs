@@ -188,7 +188,7 @@ pub async fn do_sync_diamond_merge(
         .await?;
 
     let onto_value =
-        maybe_onto_value.ok_or(format_err!("cannot find bookmark {}", onto_bookmark))?;
+        maybe_onto_value.ok_or_else(|| format_err!("cannot find bookmark {}", onto_bookmark))?;
 
     let (rewritten, version_for_merge) = create_rewritten_merge_commit(
         ctx.clone(),
@@ -290,7 +290,7 @@ async fn create_rewritten_merge_commit(
     )
     .await?;
     let mut rewritten =
-        maybe_rewritten.ok_or(Error::msg("merge commit was unexpectedly rewritten out"))?;
+        maybe_rewritten.ok_or_else(|| Error::msg("merge commit was unexpectedly rewritten out"))?;
 
     let mut additional_file_changes = generate_additional_file_changes(
         ctx.clone(),
@@ -356,10 +356,12 @@ async fn remap_commit(
         .get_commit_sync_outcome(&ctx, cs_id)
         .await?;
 
-    let sync_outcome = maybe_sync_outcome.ok_or(format_err!(
-        "{} from small repo hasn't been remapped in large repo",
-        cs_id
-    ))?;
+    let sync_outcome = maybe_sync_outcome.ok_or_else(|| {
+        format_err!(
+            "{} from small repo hasn't been remapped in large repo",
+            cs_id
+        )
+    })?;
 
     use CommitSyncOutcome::*;
     match sync_outcome {
@@ -430,8 +432,12 @@ fn validate_parents(parents: Vec<ChangesetId>) -> Result<(ChangesetId, Changeset
             parents
         ));
     }
-    let p1 = parents.get(0).ok_or(Error::msg("not a merge commit"))?;
-    let p2 = parents.get(1).ok_or(Error::msg("not a merge commit"))?;
+    let p1 = parents
+        .get(0)
+        .ok_or_else(|| Error::msg("not a merge commit"))?;
+    let p2 = parents
+        .get(1)
+        .ok_or_else(|| Error::msg("not a merge commit"))?;
 
     Ok((*p1, *p2))
 }
@@ -444,7 +450,7 @@ fn validate_roots(roots: Vec<&ChangesetId>) -> Result<&ChangesetId, Error> {
     roots
         .get(0)
         .cloned()
-        .ok_or(Error::msg("no roots found, this is not a diamond merge"))
+        .ok_or_else(|| Error::msg("no roots found, this is not a diamond merge"))
 }
 
 fn find_bonsai_diff(

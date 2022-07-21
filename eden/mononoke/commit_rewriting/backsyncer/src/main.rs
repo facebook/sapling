@@ -361,7 +361,7 @@ where
 
     let counter_name = format_counter(&source_repo_id);
     let maybe_counter = counters.get_counter(ctx, &counter_name).await?;
-    let counter = maybe_counter.ok_or(format_err!("{} counter not found", counter_name))?;
+    let counter = maybe_counter.ok_or_else(|| format_err!("{} counter not found", counter_name))?;
     let source_repo = commit_syncer.get_source_repo();
     let next_entry = source_repo
         .read_next_bookmark_log_entries(ctx.clone(), counter as u64, 1, Freshness::MostRecent)
@@ -380,21 +380,16 @@ where
     })
 }
 
-fn log_delay(
-    ctx: &CoreContext,
-    delay: &Delay,
-    source_repo_name: &String,
-    target_repo_name: &String,
-) {
+fn log_delay(ctx: &CoreContext, delay: &Delay, source_repo_name: &str, target_repo_name: &str) {
     STATS::remaining_entries.set_value(
         ctx.fb,
         delay.remaining_entries as i64,
-        (source_repo_name.clone(), target_repo_name.clone()),
+        (source_repo_name.to_owned(), target_repo_name.to_owned()),
     );
     STATS::delay_secs.set_value(
         ctx.fb,
         delay.delay_secs,
-        (source_repo_name.clone(), target_repo_name.clone()),
+        (source_repo_name.to_owned(), target_repo_name.to_owned()),
     );
 }
 
