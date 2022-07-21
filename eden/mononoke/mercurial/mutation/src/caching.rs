@@ -29,7 +29,6 @@ use memcache::MemcacheClient;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::RepositoryId;
-use stats::prelude::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -40,14 +39,6 @@ use crate::HgMutationEntry;
 use crate::HgMutationStore;
 
 const DEFAULT_TTL_SECS: u64 = 3600;
-
-define_stats! {
-    prefix = "mononoke.hg_mutation_store";
-    memcache_hit: timeseries("memcache.hit"; Rate, Sum),
-    memcache_miss: timeseries("memcache.miss"; Rate, Sum),
-    memcache_internal_err: timeseries("memcache.internal_err"; Rate, Sum),
-    memcache_deserialize_err: timeseries("memcache.deserialize_err"; Rate, Sum),
-}
 
 /// Struct representing the cache entry for
 /// (repo_id, cs_id) -> Vec<HgMutationEntry> mapping
