@@ -22,6 +22,9 @@ use futures::ready;
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
 
+use super::common::delay_spawn;
+use super::common::handle_join_error;
+use super::common::DelayedSpawn;
 use super::common::Either2;
 use super::Iter;
 
@@ -46,24 +49,24 @@ use super::Iter;
 /// ## return value `impl Future<Output = Result<Out, Err>>`
 /// Result of running fold operation on the root of the tree.
 ///
-pub fn bounded_traversal<'caller, Err, In, Ins, Out, OutCtx, Unfold, Fold>(
+pub fn bounded_traversal<Err, In, Ins, Out, OutCtx, Unfold, Fold>(
     scheduled_max: usize,
     init: In,
     unfold: Unfold,
     fold: Fold,
-) -> impl Future<Output = Result<Out, Err>> + 'caller
+) -> impl Future<Output = Result<Out, Err>> + 'static
 where
-    Err: 'caller,
-    Ins: 'caller,
-    Out: 'caller,
-    OutCtx: 'caller,
+    Err: Send + 'static,
+    Ins: Send + 'static,
+    Out: Send + 'static,
+    OutCtx: Send + 'static,
     // We use BoxFuture here because the `Unfold` future can be very large.
     // As a result, it's more efficient to keep it in one place (the heap)
     // than to move it around on the stack all the time.
     // https://fburl.com/m3cdcdko
-    Unfold: FnMut(In) -> BoxFuture<'caller, Result<(OutCtx, Ins), Err>> + 'caller,
-    Ins: IntoIterator<Item = In> + 'caller,
-    Fold: FnMut(OutCtx, Iter<Out>) -> BoxFuture<'caller, Result<Out, Err>> + 'caller,
+    Unfold: FnMut(In) -> BoxFuture<'static, Result<(OutCtx, Ins), Err>> + 'static,
+    Ins: IntoIterator<Item = In> + 'static,
+    Fold: FnMut(OutCtx, Iter<Out>) -> BoxFuture<'static, Result<Out, Err>> + 'static,
 {
     BoundedTraversal::new(scheduled_max, init, unfold, fold)
 }
@@ -83,13 +86,15 @@ type NodeLocation = super::common::NodeLocation<NodeIndex>;
 #[must_use = "futures do nothing unless polled"]
 struct BoundedTraversal<Out, OutCtx, Unfold, UFut, Fold, FFut>
 where
-    UFut: Future,
-    FFut: Future,
+    UFut: Future + Send + 'static,
+    UFut::Output: Send + 'static,
+    FFut: Future + Send + 'static,
+    FFut::Output: Send + 'static,
 {
     unfold: Unfold,
     fold: Fold,
     scheduled_max: usize,
-    scheduled: FuturesUnordered<Join<Ready<NodeLocation>, Either2<UFut, FFut>>>, // jobs being executed
+    scheduled: FuturesUnordered<DelayedSpawn<Join<Ready<NodeLocation>, Either2<UFut, FFut>>>>, // jobs being executed
     unscheduled: VecDeque<Join<Ready<NodeLocation>, Either2<UFut, FFut>>>, // as of yet unscheduled jobs
     execution_tree: HashMap<NodeIndex, Node<Out, OutCtx>>, // tree tracking execution process
     execution_tree_index: NodeIndex,                       // last allocated node index
@@ -99,10 +104,13 @@ impl<Err, In, Ins, Out, OutCtx, Unfold, UFut, Fold, FFut>
     BoundedTraversal<Out, OutCtx, Unfold, UFut, Fold, FFut>
 where
     Unfold: FnMut(In) -> UFut,
-    UFut: Future<Output = Result<(OutCtx, Ins), Err>>,
-    Ins: IntoIterator<Item = In>,
+    UFut: Future<Output = Result<(OutCtx, Ins), Err>> + Send + 'static,
+    Ins: IntoIterator<Item = In> + Send + 'static,
     Fold: FnMut(OutCtx, Iter<Out>) -> FFut,
-    FFut: Future<Output = Result<Out, Err>>,
+    FFut: Future<Output = Result<Out, Err>> + Send + 'static,
+    Out: Send + 'static,
+    OutCtx: Send + 'static,
+    Err: Send + 'static,
 {
     fn new(scheduled_max: usize, init: In, unfold: Unfold, fold: Fold) -> Self {
         let mut this = Self {
@@ -203,10 +211,13 @@ impl<Err, In, Ins, Out, OutCtx, Unfold, UFut, Fold, FFut> Future
     for BoundedTraversal<Out, OutCtx, Unfold, UFut, Fold, FFut>
 where
     Unfold: FnMut(In) -> UFut,
-    UFut: Future<Output = Result<(OutCtx, Ins), Err>>,
-    Ins: IntoIterator<Item = In>,
+    UFut: Future<Output = Result<(OutCtx, Ins), Err>> + Send + 'static,
+    Ins: IntoIterator<Item = In> + Send + 'static,
     Fold: FnMut(OutCtx, Iter<Out>) -> FFut,
-    FFut: Future<Output = Result<Out, Err>>,
+    FFut: Future<Output = Result<Out, Err>> + Send + 'static,
+    Out: Send + 'static,
+    OutCtx: Send + 'static,
+    Err: Send + 'static,
 {
     type Output = Result<Out, Err>;
 
@@ -220,11 +231,13 @@ where
                     this.scheduled_max - this.scheduled.len(),
                 ),
             ) {
-                this.scheduled.push(job);
+                this.scheduled.push(delay_spawn(job));
             }
 
             // execute scheduled until it is blocked or done
-            if let Some(job_result) = ready!(this.scheduled.poll_next_unpin(cx)) {
+            if let Some(job_result) =
+                ready!(this.scheduled.poll_next_unpin(cx)).map(handle_join_error)
+            {
                 match job_result {
                     (value, Either::Left(result)) => this.process_unfold(value, result?),
                     (value, Either::Right(result)) => {
