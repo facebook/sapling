@@ -192,11 +192,13 @@ TEST_F(TreeOverlayStoreTest, testRemoveChild) {
   overlay_->saveTree(inode, dir);
   EXPECT_EQ(overlay_->loadTree(inode).entries_ref()->size(), 2);
 
+  EXPECT_TRUE(overlay_->hasChild(inode, "hello"_pc));
   overlay_->removeChild(inode, "hello"_pc);
   auto loaded = overlay_->loadTree(inode);
   auto entries = loaded.entries_ref();
   EXPECT_EQ(entries->size(), 1);
   EXPECT_EQ(entries->begin()->first, "world");
+  EXPECT_FALSE(overlay_->hasChild(inode, "hello"_pc));
 }
 
 TEST_F(TreeOverlayStoreTest, testRenameChild) {

@@ -164,6 +164,12 @@ class IOverlay {
     EDEN_BUG() << "UNIMPLEMENTED";
   }
 
+  virtual bool hasChild(
+      InodeNumber /* parent */,
+      PathComponentPiece /* childName */) {
+    EDEN_BUG() << "UNIMPLEMENTED";
+  }
+
   virtual void renameChild(
       InodeNumber /* src */,
       InodeNumber /* dst */,

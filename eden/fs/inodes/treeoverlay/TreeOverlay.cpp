@@ -101,6 +101,10 @@ void TreeOverlay::removeChild(
   return store_.removeChild(parent, childName);
 }
 
+bool TreeOverlay::hasChild(InodeNumber parent, PathComponentPiece childName) {
+  return store_.hasChild(parent, childName);
+}
+
 void TreeOverlay::renameChild(
     InodeNumber src,
     InodeNumber dst,

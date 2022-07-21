@@ -124,6 +124,11 @@ class TreeOverlayStore {
   void removeChild(InodeNumber parent, PathComponentPiece childName);
 
   /**
+   * Has the child for the given parent
+   */
+  bool hasChild(InodeNumber parent, PathComponentPiece childName);
+
+  /**
    * Remove a child from the given parent
    *
    * @throws if renaming a tree and destination is non-empty

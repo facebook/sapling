@@ -94,6 +94,8 @@ class TreeOverlay : public IOverlay {
 
   void removeChild(InodeNumber parent, PathComponentPiece childName) override;
 
+  bool hasChild(InodeNumber parent, PathComponentPiece childName) override;
+
   void renameChild(
       InodeNumber src,
       InodeNumber dst,
