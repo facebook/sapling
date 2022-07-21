@@ -19,7 +19,7 @@ use tempfile::tempdir;
 
 type ParentsFunc<'a> = Box<dyn Fn(VertexName) -> dag::Result<Vec<VertexName>> + Send + Sync + 'a>;
 
-fn main() {
+pub fn main() {
     println!(
         "benchmarking {} serde",
         std::any::type_name::<InProcessIdDag>()

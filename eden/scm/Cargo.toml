@@ -46,6 +46,7 @@ members = [
   "lib/cpython-async",
   "lib/cpython-ext",
   "lib/dag",
+  "lib/dag/benches",
   "lib/dag/bindag",
   "lib/dag/dag-types",
   "lib/dag/gitdag",

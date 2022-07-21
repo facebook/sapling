@@ -26,7 +26,7 @@ use tempfile::tempdir;
 
 type ParentsFunc<'a> = Box<dyn Fn(VertexName) -> dag::Result<Vec<VertexName>> + Send + Sync + 'a>;
 
-fn main() {
+pub fn main() {
     let dag_dir = tempdir().unwrap();
 
     bench_with_iddag(|| IdDag::open(&dag_dir.path()).unwrap());

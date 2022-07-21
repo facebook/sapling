@@ -5,22 +5,6 @@ name = "dag"
 version = "0.1.0"
 edition = "2021"
 
-[[bench]]
-name = "dag_ops"
-harness = false
-
-[[bench]]
-name = "inprocess_iddag_serde"
-harness = false
-
-[[bench]]
-name = "segment_sizes"
-harness = false
-
-[[bench]]
-name = "spanset"
-harness = false
-
 [dependencies]
 anyhow = "1.0.56"
 async-trait = "0.1.56"
@@ -47,12 +31,10 @@ tracing = "0.1.35"
 vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 
 [dev-dependencies]
-bindag = { version = "0.1.0", path = "bindag" }
 dag-types = { version = "0.1.0", path = "dag-types", features = ["for-tests"] }
 dev-logger = { version = "0.1.0", path = "../dev-logger" }
 fs2 = "0.4"
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
-minibench = { version = "0.1.0", path = "../minibench" }
 once_cell = "1.12"
 quickcheck = "1.0"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }

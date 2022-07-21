@@ -20,7 +20,7 @@ use tempfile::tempdir;
 
 type ParentsFunc<'a> = Box<dyn Fn(VertexName) -> dag::Result<Vec<VertexName>> + Send + Sync + 'a>;
 
-fn main() {
+pub fn main() {
     let parents = bindag::parse_bindag(bindag::MOZILLA);
 
     let head_name = VertexName::copy_from(format!("{}", parents.len() - 1).as_bytes());

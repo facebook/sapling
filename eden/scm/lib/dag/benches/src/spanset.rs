@@ -10,7 +10,7 @@ use dag::IdSet;
 use minibench::bench;
 use minibench::elapsed;
 
-fn main() {
+pub fn main() {
     // Ruby code to generate random IdSet:
     // 119.times.map{rand(8)+1}.reduce([0]){|a,b|a+[b+a[-1]]}.each_slice(2).map{|x|"#{x*'..='}"}*', '
     #[cfg_attr(rustfmt, rustfmt_skip)]
