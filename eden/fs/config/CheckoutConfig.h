@@ -94,7 +94,14 @@ class CheckoutConfig {
   /**
    * Get the channel type that this mount should be using.
    */
-  MountProtocol getMountProtocol() const {
+  MountProtocol getMountProtocol() const;
+
+  /**
+   * Get the raw MountProtocol stored in the config.
+   *
+   * This should generally not be used except in tests.
+   */
+  MountProtocol getRawMountProtocol() const {
     return mountProtocol_;
   }
 

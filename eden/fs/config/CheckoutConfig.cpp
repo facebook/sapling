@@ -41,19 +41,6 @@ constexpr folly::StringPiece kUseWriteBackCache{"use-write-back-cache"};
 constexpr folly::StringPiece kRepoGuid{"guid"};
 #endif
 
-constexpr folly::StringPiece kMountProtocolNFS{"nfs"};
-
-constexpr auto kMountProtocolStr = [] {
-  std::array<folly::StringPiece, 3> protocolMap;
-  protocolMap[folly::to_underlying(MountProtocol::FUSE)] = "fuse";
-  protocolMap[folly::to_underlying(MountProtocol::PRJFS)] = "prjfs";
-  protocolMap[folly::to_underlying(MountProtocol::NFS)] = kMountProtocolNFS;
-  return protocolMap;
-}();
-
-constexpr folly::StringPiece kMountProtocolStrDefault{
-    kMountProtocolStr[folly::to_underlying(kMountProtocolDefault)]};
-
 // Files of interest in the client directory.
 const RelativePathPiece kSnapshotFile{"SNAPSHOT"};
 const RelativePathPiece kOverlayDir{"local"};
@@ -310,11 +297,14 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
   config->repoType_ = *repository->get_as<std::string>(kRepoTypeKey.str());
   config->repoSource_ = *repository->get_as<std::string>(kRepoSourceKey.str());
 
-  auto mountProtocol = repository->get_as<std::string>(kMountProtocol.str())
-                           .value_or(kMountProtocolStrDefault);
-  config->mountProtocol_ = mountProtocol == kMountProtocolNFS
-      ? MountProtocol::NFS
-      : (folly::kIsWindows ? MountProtocol::PRJFS : MountProtocol::FUSE);
+  FieldConverter<MountProtocol> converter;
+  MountProtocol mountProtocol = kMountProtocolDefault;
+  auto mountProtocolStr = repository->get_as<std::string>(kMountProtocol.str());
+  if (mountProtocolStr) {
+    mountProtocol = converter.fromString(*mountProtocolStr, {})
+                        .value_or(kMountProtocolDefault);
+  }
+  config->mountProtocol_ = mountProtocol;
 
   // Read optional case-sensitivity.
   auto caseSensitive = repository->get_as<bool>(kRepoCaseSensitiveKey.str());
@@ -360,6 +350,13 @@ folly::dynamic CheckoutConfig::loadClientDirectoryMap(
   folly::json::serialization_opts options;
   options.allow_trailing_comma = true;
   return folly::parseJson(jsonWithoutComments, options);
+}
+
+MountProtocol CheckoutConfig::getMountProtocol() const {
+  // NFS is the only mount protocol that we allow to be switched from the
+  // default.
+  return mountProtocol_ == MountProtocol::NFS ? MountProtocol::NFS
+                                              : kMountProtocolDefault;
 }
 
 } // namespace facebook::eden
