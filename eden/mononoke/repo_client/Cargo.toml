@@ -30,7 +30,7 @@ hgproto = { version = "0.1.0", path = "../hgproto" }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 iterhelpers = { version = "0.1.0", path = "../common/iterhelpers" }
 itertools = "0.10.3"
-lazy_static = "1.0"
+lazy_static = "1.4"
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
 mercurial_bundles = { version = "0.1.0", path = "../mercurial/bundles" }

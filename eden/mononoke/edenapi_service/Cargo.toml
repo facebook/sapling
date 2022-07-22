@@ -27,7 +27,7 @@ gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
 hooks = { version = "0.1.0", path = "../hooks" }
 http = "0.2"
 hyper = { version = "0.14.7", features = ["client", "http1", "http2"] }
-lazy_static = "1.0"
+lazy_static = "1.4"
 manifest = { version = "0.1.0", path = "../manifest" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }

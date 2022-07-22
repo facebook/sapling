@@ -12,7 +12,7 @@ anyhow = "1.0.56"
 ascii = "1.0"
 bookmarks_types = { version = "0.1.0", path = "../../bookmarks/bookmarks_types" }
 clap = { version = "3.2.10", features = ["derive", "regex", "unicode", "wrap_help"] }
-derive_more = "0.99.3"
+derive_more = "0.99.17"
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mysql_common = "0.26.0"

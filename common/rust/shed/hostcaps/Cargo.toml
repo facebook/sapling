@@ -14,7 +14,7 @@ name = "test_hostcaps"
 path = "src/bin/test.rs"
 
 [dependencies]
-lazy_static = "1.0"
+lazy_static = "1.4"
 
 [features]
 default = []

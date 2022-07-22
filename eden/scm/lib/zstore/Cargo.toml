@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
-lazy_static = "1.0"
+lazy_static = "1.4"
 lru-cache = "0.1.2"
 mincode = { version = "0.1.0", path = "../mincode" }
 minibytes = { version = "0.1.0", path = "../minibytes", features = ["frombytes"] }

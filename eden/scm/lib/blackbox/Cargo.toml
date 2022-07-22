@@ -13,7 +13,7 @@ harness = false
 anyhow = "1.0.56"
 byteorder = "1.3"
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
-lazy_static = "1.0"
+lazy_static = "1.4"
 libc = "0.2.121"
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 serde = { version = "1.0.136", features = ["derive", "rc"] }

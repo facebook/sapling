@@ -59,7 +59,7 @@ version = { version = "0.1.0", path = "../version" }
 vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 
 [dev-dependencies]
-lazy_static = "1.0"
+lazy_static = "1.4"
 maplit = "1.0"
 mockito = "0.25"
 rand_chacha = "0.3"

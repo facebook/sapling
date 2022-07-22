@@ -32,7 +32,7 @@ fsnodes = { version = "0.1.0", path = "../fsnodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
-lazy_static = "1.0"
+lazy_static = "1.4"
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mercurial_derived_data = { version = "0.1.0", path = "../mercurial_derived_data" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }

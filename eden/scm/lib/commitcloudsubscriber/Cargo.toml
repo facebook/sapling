@@ -22,10 +22,10 @@ anyhow = "1.0.56"
 eventsource = "0.5"
 filetime = "0.2.9"
 hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-lazy_static = "1.0"
+lazy_static = "1.4"
 log = { version = "0.4.14", features = ["kv_unstable", "kv_unstable_std"] }
 regex = "1.5.4"
-reqwest = { version = "0.11.10", features = ["blocking", "json", "rustls-tls", "rustls-tls-native-roots", "stream", "trust-dns-optional"] }
+reqwest = { version = "0.11.11", features = ["blocking", "json", "rustls-tls", "rustls-tls-native-roots", "stream", "trust-dns-optional"] }
 rust-ini = { version = "0.17", features = ["inline-comment"] }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }

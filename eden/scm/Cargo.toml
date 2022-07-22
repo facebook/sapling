@@ -1,6 +1,7 @@
 [patch.crates-io]
 aes-gcm-siv = { git = "https://github.com/lei2022/AEADs", rev = "d9d03399fbc1347a1c2941801c0743e847980757" }
 async-compression = { git = "https://github.com/lei2022/async-compression", rev = "08331f1421eee9d662d172ca7d670347054f8664" }
+bundlr-sdk = { git = "https://github.com/kaustavha/rust-sdk", rev = "beab2a990edfb71eeeffa7f42e93ff121b08286e" }
 curve25519-dalek = { git = "https://github.com/hariria/curve25519-dalek", rev = "1f39e7b369dc70f432370c9703229a45bfa9664e" }
 daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a70e43bb37b5f4ff4d664992edca" }
 git-config = { git = "https://github.com/mzr/gitoxide", rev = "28c51a1d99af3f4e5ea8f6bb2319e0a5d812c891" }
@@ -8,7 +9,7 @@ graphql-parser = { git = "https://github.com/vmagro/graphql-parser", rev = "1d15
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "fdbf843d174c6796d736b2b61dab0297670390f8" }
 mysql_async = { git = "https://github.com/mzr/mysql_async", rev = "76b6fa05d7bb3408402033e6f94042a756ab55ab" }
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
-reqwest = { git = "https://github.com/vmagro/reqwest", rev = "9b5781af416c942260ebbda970795c5414cbf694" }
+reqwest = { git = "https://github.com/vmagro/reqwest", rev = "f9490c06756a9d35ab874c44657db790a87af80b" }
 rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee562ee8daffb2ddeca3d1f0d36e5" }
 shellexpand = { git = "https://github.com/fanzeyi/shellexpand.git", rev = "179447a3f8fccd765acfd2eed15a54c716c49cfe" }
 spl-token = { git = "https://github.com/omertxyz/solana-program-library.git", rev = "4230d3ddf8e52d99919e44b8097a01a03f029fbb" }

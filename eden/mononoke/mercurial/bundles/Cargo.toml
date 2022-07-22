@@ -21,7 +21,7 @@ futures-old = { package = "futures", version = "0.1.31" }
 futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 itertools = "0.10.3"
-lazy_static = "1.0"
+lazy_static = "1.4"
 limited_async_read = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 maplit = "1.0"
 mercurial_mutation = { version = "0.1.0", path = "../mutation" }

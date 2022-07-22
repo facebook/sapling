@@ -28,7 +28,7 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 getbundle_response = { version = "0.1.0", path = "../getbundle_response" }
 hex = "0.4.3"
 hooks = { version = "0.1.0", path = "../../hooks" }
-lazy_static = "1.0"
+lazy_static = "1.4"
 live_commit_sync_config = { version = "0.1.0", path = "../../commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"

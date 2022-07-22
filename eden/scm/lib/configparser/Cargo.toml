@@ -38,7 +38,7 @@ version = { version = "0.1.0", path = "../version" }
 zstd = { version = "0.11.1+zstd.1.5.2", optional = true }
 
 [dev-dependencies]
-lazy_static = "1.0"
+lazy_static = "1.4"
 minibench = { version = "0.1.0", path = "../minibench" }
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 tempdir = "0.3"

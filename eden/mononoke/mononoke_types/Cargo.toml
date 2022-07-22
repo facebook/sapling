@@ -32,7 +32,7 @@ faster-hex = "0.6.1"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 itertools = "0.10.3"
-lazy_static = "1.0"
+lazy_static = "1.4"
 lfs_protocol = { version = "0.1.0", path = "../lfs_protocol" }
 mononoke_types_thrift = { version = "0.1.0", path = "if" }
 nonzero_ext = "0.2"
