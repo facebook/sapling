@@ -244,9 +244,8 @@ pub struct MononokeTunables {
     // Usually filenode lookup is used while generating hg changesets
     filenode_lookup_timeout_ms: AtomicI64,
 
-    // Sampling ratio for warm boomark cache.
-    // Only tw_task_id % warm_bookmark_cache_loggin_tw_task_sampling == 0 will have sampling enabled
-    warm_bookmark_cache_loggin_tw_task_sampling: AtomicI64,
+    // Sampling ratio percentage for warm boomark cache.
+    warm_bookmark_cache_logging_sampling_pct: AtomicI64,
 
     // Setting this tunable to a new non-zero value and restarting
     // mononoke hosts will invalidate the cache

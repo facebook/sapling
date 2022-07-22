@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Context;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::Hash;
+use std::hash::Hasher;
+
 use anyhow::Error;
 use anyhow::Result;
 use clap::Args;
@@ -68,18 +71,9 @@ impl ScubaLoggingArgs {
     ) -> Result<MononokeScubaSampleBuilder, Error> {
         let maybe_scuba = match self.warm_bookmark_cache_scuba_dataset.clone() {
             Some(scuba) => {
-                let tw_task_id =
-                    std::env::var("TW_TASK_ID").context("failed to get TW_TASK_ID env var")?;
-                let tw_task_id: u32 = tw_task_id
-                    .parse()
-                    .context("failed to parse TW_TASK_ID env var")?;
-                let mut sampling =
-                    tunables().get_warm_bookmark_cache_loggin_tw_task_sampling() as u32;
-                if sampling == 0 {
-                    sampling = 10;
-                }
-
-                if tw_task_id % sampling == 0 {
+                let hostname = hostname::get_hostname()?;
+                let sampling_pct = tunables().get_warm_bookmark_cache_logging_sampling_pct() as u64;
+                if in_throttled_slice(&hostname, sampling_pct) {
                     Some(scuba)
                 } else {
                     None
@@ -90,4 +84,11 @@ impl ScubaLoggingArgs {
 
         Ok(MononokeScubaSampleBuilder::with_opt_table(fb, maybe_scuba))
     }
+}
+
+fn in_throttled_slice(hostname: &str, slice_pct: u64) -> bool {
+    let mut hasher = DefaultHasher::new();
+    hostname.hash(&mut hasher);
+
+    hasher.finish() % 100 < slice_pct
 }

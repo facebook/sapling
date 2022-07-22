@@ -24,6 +24,7 @@ environment = { version = "0.1.0", path = "environment" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
+hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 libc = "0.2.121"
 maybe-owned = "0.3.4"
 megarepo_config = { version = "0.1.0", path = "../megarepo_api/megarepo_config" }
