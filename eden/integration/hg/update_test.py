@@ -470,11 +470,6 @@ class UpdateTest(EdenHgTestCase):
             p1.join()
             p2.join()
 
-    @unittest.skipIf(
-        "SANDCASTLE" in os.environ,
-        "This test seems to leave behind unkillable processes "
-        "on sandcastle.  Disable it for now.",
-    )
     def test_dir_locking(self) -> None:
         """
         Test performing checkouts that modify the directory foo/ while other

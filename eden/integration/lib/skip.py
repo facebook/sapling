@@ -26,6 +26,10 @@ if sys.platform == "win32":
         #
         # Test classes from the main integration test binary
         #
+        "basic_test.BasicTest": [
+            "test_symlinks",
+        ],
+        "basic_test.PosixTest": True,
         "chown_test.ChownTest": True,
         "clone_test.CloneFakeEdenFSTestAdHoc": True,
         "clone_test.CloneFakeEdenFSTestManaged": True,
@@ -44,7 +48,6 @@ if sys.platform == "win32":
         "facebook.buck.buck_test.BuckTestHg": True,
         "fsck_test.FsckTestDefault": True,
         "fsck_test.FsckTestNoEdenfs": True,
-        "fsck.basic_snapshot_tests.Basic20190313Test": True,
         "fsck.basic_snapshot_tests.Basic20210712Test": True,
         "health_test.HealthOfFakeEdenFSTestAdHoc": True,
         "health_test.HealthOfFakeEdenFSTestManaged": True,
@@ -151,7 +154,12 @@ elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-releas
 
 # Windows specific tests
 if sys.platform != "win32":
-    TEST_DISABLED["windows_fsck_test.WindowsFsckTest"] = True
+    TEST_DISABLED.update(
+        {
+            "windows_fsck_test.WindowsFsckTest": True,
+            "prjfs_stress.PrjFSStress": True,
+        }
+    )
 
 # We only run tests on linux currently, so we only need to disable them there.
 if sys.platform.startswith("linux"):
@@ -209,6 +217,11 @@ if sys.platform.startswith("linux"):
         }
     )
 
+if "SANDCASTLE" in os.environ:
+    # This test seems to leave behind unkillable processes on sandcastle.
+    # Disable it for now.
+    TEST_DISABLED["hg.update_test.UpdateTest"] = ["test_dir_locking"]
+
 try:
     from eden.integration.facebook.lib.skip import add_fb_specific_skips
 
@@ -217,24 +230,7 @@ except ImportError:
     pass
 
 
-def skip_if_disabled(test_case: unittest.TestCase) -> None:
-    if _is_disabled(test_case):
-        raise unittest.SkipTest("this test is currently unsupported on this platform")
-
-
-def _is_disabled(test_case: unittest.TestCase) -> bool:
-    if not TEST_DISABLED:
-        return False
-    if os.environ.get("EDEN_RUN_DISABLED_TESTS", "") == "1":
-        return False
-
-    class_name = f"{type(test_case).__module__}.{type(test_case).__name__}"
-    # Strip off the leading "eden.integration." prefix from the module name just
-    # to make our skipped names shorter and easier to read/maintain.
-    strip_prefix = "eden.integration."
-    if class_name.startswith(strip_prefix):
-        class_name = class_name[len(strip_prefix) :]
-
+def is_class_disabled(class_name: str) -> bool:
     class_skipped = TEST_DISABLED.get(class_name)
     if class_skipped is None:
         return False
@@ -242,5 +238,12 @@ def _is_disabled(test_case: unittest.TestCase) -> bool:
         assert class_skipped is True
         # All classes in the test are skipped
         return True
-    else:
-        return test_case._testMethodName in class_skipped
+    return False
+
+
+def is_method_disabled(class_name: str, method_name: str) -> bool:
+    method_skipped = TEST_DISABLED.get(class_name)
+    if method_skipped is None:
+        return False
+    assert isinstance(method_skipped, list)
+    return method_name in method_skipped

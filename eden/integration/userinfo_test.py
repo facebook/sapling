@@ -12,6 +12,7 @@ from .lib import edenclient, testcase
 from .lib.find_executables import FindExe
 
 
+@testcase.eden_test
 class UserInfoTest(testcase.IntegrationTestCase):
     @unittest.skipIf(not edenclient.can_run_sudo(), "unable to run sudo")
     def test_drop_privs(self) -> None:

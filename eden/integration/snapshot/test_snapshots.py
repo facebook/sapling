@@ -8,13 +8,37 @@ import os
 import stat
 import unittest
 from pathlib import Path
-from typing import Callable
+from typing import Iterable, Tuple, Type
 
-from eden.integration.lib import edenclient, skip
+from eden.integration.lib import edenclient, testcase
 
 from . import snapshot as snapshot_mod, verify as verify_mod
 
 
+def _replicate_snapshot_test(
+    test_class: Type[unittest.TestCase],
+) -> Iterable[Tuple[str, Type[unittest.TestCase]]]:
+    variants = []
+
+    snapshot_dir = snapshot_mod.get_snapshots_root()
+    for snapshot_path in snapshot_dir.iterdir():
+
+        class EdenSnapshot(test_class):
+            def _getSnapshotPath(self) -> Path:
+                return snapshot_path
+
+        # We don't use Path.stem here since it only strips off the very last suffix,
+        # so foo.tar.bz2 becomes foo.tar rather than foo.
+        stem = snapshot_path.name.split(".", 1)[0]
+        variants += [(stem, EdenSnapshot)]
+
+    return variants
+
+
+snapshot_test = testcase.test_replicator(_replicate_snapshot_test)
+
+
+@snapshot_test
 @unittest.skipIf(not edenclient.can_run_eden(), "unable to run edenfs")
 class Test(unittest.TestCase):
     """Tests to verify the contents of various saved snapshots.
@@ -22,13 +46,13 @@ class Test(unittest.TestCase):
     All of the test functions in this class are dynamically added by register_tests()
     """
 
-    def setUp(self) -> None:
-        skip.skip_if_disabled(self)
-        super().setUp()
+    def _getSnapshotPath(self) -> Path:
+        # This is usually implemented by the @snapshot_tests decorator
+        raise NotImplementedError("Subclass must implement getSnapshotPath()")
 
-    def _test_snapshot(self, snapshot_path: Path) -> None:
+    def test_snapshot(self) -> None:
         with snapshot_mod.create_tmp_dir() as tmp_dir:
-            snapshot = snapshot_mod.unpack_into(snapshot_path, tmp_dir)
+            snapshot = snapshot_mod.unpack_into(self._getSnapshotPath(), tmp_dir)
             self._run_test(snapshot)
 
     def _run_test(self, snapshot: snapshot_mod.BaseSnapshot) -> None:
@@ -42,19 +66,9 @@ class Test(unittest.TestCase):
             self.fail(f"found {len(verifier.errors)} errors")
 
 
+@testcase.eden_test
 class InfraTests(unittest.TestCase):
     """Tests for the snapshot generation/verification code itself."""
-
-    NUM_SNAPSHOTS = 0
-
-    def setUp(self) -> None:
-        skip.skip_if_disabled(self)
-        super().setUp()
-
-    def test_snapshot_list(self) -> None:
-        # Ensure that at least one snapshot file was found, so that the tests will
-        # fail if we somehow can't find the snapshot data directory correctly.
-        self.assertGreater(self.NUM_SNAPSHOTS, 0)
 
     def test_verify_directory(self) -> None:
         expected = verify_mod.ExpectedFileSet()
@@ -109,24 +123,3 @@ class InfraTests(unittest.TestCase):
             "a/b/wrong_perms.txt: expected permissions to be 0o644, found 0o755",
         ]
         self.assertEqual(sorted(verifier.errors), sorted(expected_errors))
-
-
-def register_tests() -> None:
-    # Create one test function for each snapshot
-    snapshot_dir = snapshot_mod.get_snapshots_root()
-    for snapshot in snapshot_dir.iterdir():
-        # We don't use Path.stem here since it only strips off the very last suffix,
-        # so foo.tar.bz2 becomes foo.tar rather than foo.
-        stem = snapshot.name.split(".", 1)[0]
-        setattr(Test, f"test_{stem}", _create_test_fn(snapshot))
-        InfraTests.NUM_SNAPSHOTS += 1
-
-
-def _create_test_fn(snapshot: Path) -> Callable[[Test], None]:
-    def test_fn(self: Test) -> None:
-        self._test_snapshot(snapshot)
-
-    return test_fn
-
-
-register_tests()

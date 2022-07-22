@@ -115,9 +115,6 @@ class BasicTest(BasicTestBase):
             self.assertTrue(stat.S_ISLNK(st.st_mode))
 
     def test_symlinks(self) -> None:
-        if not self.created_symlink:
-            raise unittest.SkipTest("failed to create symlink on Windows")
-
         slink = os.path.join(self.mount, "slink")
         self.assertEqual(os.readlink(slink), "hello")
 
@@ -333,12 +330,3 @@ class PosixTest(BasicTestBase):
         self.assertGreaterEqual(os.pathconf(hello_path, "PC_REC_XFER_ALIGN"), 4096)
         self.assertGreaterEqual(os.pathconf(hello_path, "PC_ALLOC_SIZE_MIN"), 4096)
         self.assertGreaterEqual(os.pathconf(hello_path, "PC_REC_MIN_XFER_SIZE"), 4096)
-
-
-if sys.platform == "win32":
-    # Disable all of the tests in PosixTest on Windows by simply replacing
-    # the test classes so that test discovery will not find them.
-    # The @testcase.eden_repo_test decorator will have created two classes for testing
-    # with Git and with Hg, so disable both.
-    PosixTestHg = None
-    PosixTestGit = None

@@ -53,9 +53,7 @@ else:
 
 
 class IntegrationTestCase(EdenTestCaseBase):
-    def setUp(self) -> None:
-        skip.skip_if_disabled(self)
-        super().setUp()
+    pass
 
 
 @unittest.skipIf(not edenclient.can_run_eden(), "unable to run edenfs")
@@ -93,8 +91,6 @@ class EdenTestCase(EdenTestCaseBase):
         self.last_event = now
 
     def setUp(self) -> None:
-        skip.skip_if_disabled(self)
-
         self.start = time.time()
         self.last_event = self.start
         self.system_hgrc: Optional[str] = None
@@ -467,6 +463,36 @@ def _replicate_test(
         new_class.__qualname__ = name
         new_class.__module__ = test_class.__module__
 
+        def strip_eden_integration_prefix(name: str) -> str:
+            prefix = "eden.integration."
+            if name.startswith(prefix):
+                name = name[len(prefix) :]
+            return name
+
+        module = strip_eden_integration_prefix(f"{new_class.__module__}")
+
+        # Allow skipping individual replicated classes, or whole classes.
+        class_names = [f"{module}.{name}", f"{module}.{test_class.__name__}"]
+
+        skippedClass = False
+        for class_name in class_names:
+            if skip.is_class_disabled(class_name):
+                skippedClass = True
+                break
+
+        if skippedClass:
+            # Do not register this class
+            continue
+
+        # We also want to be able to skip methods pre replication
+        for class_name in class_names:
+            for method in dir(new_class):
+                if method.startswith("test_"):
+                    if skip.is_method_disabled(class_name, method):
+                        # A None method will not be listed by unittest causing
+                        # the test to never be executed.
+                        setattr(new_class, method, None)
+
         # Add the class to our caller's scope
         caller_scope[name] = new_class
 
@@ -593,3 +619,15 @@ class GitRepoTestMixin:
 class NFSTestMixin:
     def use_nfs(self) -> bool:
         return True
+
+
+def _replicate_eden_test(
+    test_class: Type[unittest.TestCase],
+) -> Iterable[Tuple[str, Type[unittest.TestCase]]]:
+    class EdenTest(test_class):
+        pass
+
+    return [("Default", typing.cast(Type[unittest.TestCase], EdenTest))]
+
+
+eden_test = test_replicator(_replicate_eden_test)

@@ -10,7 +10,7 @@ import pathlib
 import platform
 import unittest
 
-from .lib.testcase import IntegrationTestCase
+from .lib.testcase import eden_test, IntegrationTestCase
 
 if platform.system() != "Windows":
     from .lib.linux import is_cgroup_v2_mounted, LinuxCgroup
@@ -20,6 +20,7 @@ else:
         return False
 
 
+@eden_test
 class LinuxCgroupTest(IntegrationTestCase):
     def test_parse_proc_file(self) -> None:
         proc_file_content = (

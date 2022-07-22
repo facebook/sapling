@@ -7,6 +7,7 @@
 from .lib import edenclient, testcase
 
 
+@testcase.eden_test
 class HelpTest(testcase.IntegrationTestCase):
     """
     This test verifies the Eden CLI can at least load its Python code.

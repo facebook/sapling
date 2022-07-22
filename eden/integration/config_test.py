@@ -18,6 +18,7 @@ from facebook.eden.ttypes import GetConfigParams
 from .lib import testcase
 
 
+@testcase.eden_test
 class ConfigTest(testcase.EdenTestCase):
     enable_logview: bool = False
 

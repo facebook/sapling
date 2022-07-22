@@ -17,6 +17,7 @@ from .lib.pexpect import pexpect_spawn, PexpectAssertionMixin, PexpectSpawnType
 from .lib.service_test_case import service_test, ServiceTestCaseBase
 
 
+@testcase.eden_test
 class HealthTest(testcase.EdenTestCase):
     def test_is_healthy(self) -> None:
         self.assertTrue(self.eden.is_healthy())

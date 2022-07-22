@@ -150,6 +150,7 @@ class FsckTest(testcase.EdenRepoTest):
         self.assertEqual(FSCK_RETCODE_OK, returncode)
 
 
+@testcase.eden_test
 class FsckTestNoEdenfs(testcase.IntegrationTestCase, TemporaryDirectoryMixin):
     def test_fsck_no_checkouts(self) -> None:
         tmp_dir = self.make_temporary_directory()

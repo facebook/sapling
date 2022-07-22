@@ -20,6 +20,7 @@ from .lib.find_executables import FindExe
 from .lib.service_test_case import service_test, ServiceTestCaseBase
 
 
+@testcase.eden_test
 class StartTest(testcase.EdenTestCase):
     def test_start_if_necessary(self) -> None:
         # Confirm there are no checkouts configured, then stop edenfs
@@ -167,6 +168,7 @@ class StartWithRepoTest(testcase.EdenRepoTest):
         return "rocksdb"
 
 
+@testcase.eden_test
 class DirectInvokeTest(testcase.IntegrationTestCase):
     def test_eden_cmd_arg(self) -> None:
         """Directly invoking EdenFS with an edenfsctl subcommand should fail."""

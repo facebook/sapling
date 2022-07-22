@@ -14,7 +14,6 @@ from .lib import testcase
 
 
 @testcase.eden_repo_test
-@unittest.skipIf(sys.platform != "win32", "Windows FSCK test is Windows only")
 class WindowsFsckTest(testcase.EdenRepoTest):
     """Windows fsck integration tests"""
 

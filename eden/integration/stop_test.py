@@ -24,7 +24,7 @@ from .lib.pexpect import (
     wait_for_pexpect_process,
 )
 from .lib.service_test_case import service_test, ServiceTestCaseBase
-from .lib.testcase import EdenTestCase
+from .lib.testcase import eden_test, EdenTestCase
 
 
 SHUTDOWN_EXIT_CODE_NORMAL = 0
@@ -167,6 +167,7 @@ class StopTest(StopTestBase, PexpectAssertionMixin):
             self.assert_process_exit_code(stop_process, SHUTDOWN_EXIT_CODE_NORMAL)
 
 
+@eden_test
 class AutoStopTest(EdenTestCase):
     def update_validity_interval(self, interval: str) -> None:
         config_text = f"""

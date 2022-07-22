@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
 
 from eden.fs.cli import fsck as fsck_mod
-from eden.integration.lib import edenclient, skip
+from eden.integration.lib import edenclient, testcase
 from eden.integration.snapshot import snapshot as snapshot_mod, verify as verify_mod
 from eden.integration.snapshot.types.basic import BasicSnapshot
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
@@ -207,7 +207,6 @@ class SnapshotTestBase(
         raise NotImplementedError()
 
     def setUp(self) -> None:
-        skip.skip_if_disabled(self)
         self.tmp_dir = Path(self.make_temporary_directory())
         snapshot = snapshot_mod.unpack_into(self.get_snapshot_path(), self.tmp_dir)
         self.snapshot = typing.cast(BasicSnapshot, snapshot)
@@ -341,6 +340,7 @@ class SnapshotTestBase(
             self.fail("\n".join(errors))
 
 
+@testcase.eden_test
 class Basic20210712Test(SnapshotTestBase):
     def get_snapshot_path(self) -> Path:
         return snapshot_mod.get_snapshots_root() / "basic-20210712.tar.xz"
