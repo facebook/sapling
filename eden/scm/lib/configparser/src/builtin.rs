@@ -38,6 +38,9 @@ repos=remote/
 [experimental]
 copytrace=off
 
+[tweakdefaults]
+defaultdest=
+
 %include /etc/mercurial/git_overrides.rc
 %include %PROGRAMDATA%/Facebook/Mercurial/git_overrides.rc
 "#;

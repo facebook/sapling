@@ -201,6 +201,15 @@ Test pull:
   $ hg log -r . -T '{remotenames}\n'
   origin/foo
 
+- pull with -B and --update with wrong tweakdefaults dynamicconfig configuration
+  $ cat > "$TESTTMP/buggy.rc" << EOF
+  > [tweakdefaults]
+  > defaultdest=nonexisted
+  > EOF
+  $ HG_TEST_DYNAMICCONFIG="$TESTTMP/buggy.rc" hg pull origin -B master --update --config extensions.tweakdefaults=
+  pulling from file:/*/$TESTTMP/gitrepo/.git (glob)
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
 - pull without arguments
   $ hg paths -a default "file://$TESTTMP/gitrepo/.git"
   $ hg pull
