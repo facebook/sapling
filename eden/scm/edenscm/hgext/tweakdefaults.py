@@ -316,23 +316,25 @@ def pull(orig, ui, repo, *args, **opts):
         raise error.Abort(mess)
 
     if (isrebase or update) and not dest:
+        mess = None
         if isrebase and repo._activebookmark:
             mess = ui.config("tweakdefaults", "bmnodestmsg")
             hint = ui.config("tweakdefaults", "bmnodesthint")
         elif isrebase:
             mess = ui.config("tweakdefaults", "nodestmsg")
             hint = ui.config("tweakdefaults", "nodesthint")
-        else:  # update
+        elif not opts.get("bookmark") and not opts.get("rev"):  # update
             mess = _("you must specify a destination for the update")
             hint = _("use `hg pull --update --dest <destination>`")
-        raise error.Abort(mess, hint=hint)
+        if mess is not None:
+            raise error.Abort(mess, hint=hint)
 
     if "rebase" in opts:
         del opts["rebase"]
         tool = opts.pop("tool", "")
-    if "update" in opts:
+    if "update" in opts and dest:
         del opts["update"]
-    if "dest" in opts:
+    if "dest" in opts and dest:
         del opts["dest"]
 
     ret = orig(ui, repo, *args, **opts)
