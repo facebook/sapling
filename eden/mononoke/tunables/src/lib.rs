@@ -64,6 +64,7 @@ pub fn tunables() -> TunablesReference {
 
 // This type exists to simplify code generation in tunables-derive
 pub type TunableString = ArcSwap<String>;
+pub type TunableVecOfStrings = ArcSwap<Vec<String>>;
 
 pub type TunableBoolByRepo = ArcSwap<HashMap<String, bool>>;
 pub type TunableStringByRepo = ArcSwap<HashMap<String, String>>;
@@ -401,6 +402,7 @@ fn update_tunables(new_tunables: Arc<TunablesStruct>) -> Result<()> {
     tunables.update_bools(&new_tunables.killswitches);
     tunables.update_ints(&new_tunables.ints);
     tunables.update_strings(&new_tunables.strings);
+    tunables.update_vec_of_strings(&new_tunables.vec_of_strings);
 
     if let Some(killswitches_by_repo) = &new_tunables.killswitches_by_repo {
         tunables.update_by_repo_bools(killswitches_by_repo);
@@ -466,6 +468,7 @@ mod test {
         boolean: AtomicBool,
         num: AtomicI64,
         string: TunableString,
+        vecofstrings: TunableVecOfStrings,
 
         repobool: TunableBoolByRepo,
         repobool2: TunableBoolByRepo,
@@ -511,6 +514,7 @@ mod test {
         empty.update_bools(&bools);
         empty.update_ints(&ints);
         empty.update_strings(&HashMap::new());
+        empty.update_vec_of_strings(&HashMap::new());
     }
 
     #[test]
@@ -605,6 +609,20 @@ mod test {
         assert_eq!(test.get_string().as_str(), "");
         test.update_strings(&d);
         assert_eq!(test.get_string().as_str(), "value");
+    }
+
+    #[test]
+    fn update_vec_of_strings() {
+        let mut d = HashMap::new();
+        d.insert(s("vecofstrings"), vec![s("value"), s("value2")]);
+
+        let test = TestTunables::default();
+        assert!(&test.get_vecofstrings().is_empty());
+        test.update_vec_of_strings(&d);
+        assert_eq!(
+            &test.get_vecofstrings().as_slice(),
+            &[s("value"), s("value2")]
+        );
     }
 
     #[test]

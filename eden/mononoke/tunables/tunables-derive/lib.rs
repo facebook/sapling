@@ -24,6 +24,7 @@ enum TunableType {
     Bool,
     I64,
     String,
+    VecOfStrings,
     ByRepoBool,
     ByRepoString,
     ByRepoI64,
@@ -60,6 +61,7 @@ impl TunableType {
             Self::Bool => quote! { bool },
             Self::I64 => quote! { i64 },
             Self::String => quote! { Arc<String> },
+            Self::VecOfStrings => quote! { Arc<Vec<String>> },
             Self::ByRepoBool => quote! { Option<bool> },
             Self::ByRepoString => quote! { Option<String> },
             Self::ByRepoI64 => quote! { Option<i64> },
@@ -69,7 +71,9 @@ impl TunableType {
 
     fn by_repo_value_type(&self) -> TokenStream {
         match self {
-            Self::Bool | Self::I64 | Self::String => panic!("Expected ByRepo flavor of tunable"),
+            Self::Bool | Self::I64 | Self::String | Self::VecOfStrings => {
+                panic!("Expected ByRepo flavor of tunable")
+            }
             Self::ByRepoBool => quote! { bool },
             Self::ByRepoI64 => quote! { i64 },
             Self::ByRepoString => quote! { String },
@@ -82,6 +86,7 @@ impl TunableType {
             Self::Bool => quote! { HashMap<String, bool> },
             Self::I64 => quote! { HashMap<String, i64> },
             Self::String => quote! { HashMap<String, String> },
+            Self::VecOfStrings => quote! { HashMap<String, Vec<String>> },
             Self::ByRepoBool => quote! { HashMap<String, HashMap<String, bool>> },
             Self::ByRepoString => quote! { HashMap<String, HashMap<String, String>> },
             Self::ByRepoI64 => quote! { HashMap<String, HashMap<String, i64>> },
@@ -103,7 +108,7 @@ impl TunableType {
                     }
                 }
             }
-            Self::String => {
+            Self::String | Self::VecOfStrings => {
                 quote! {
                     pub fn #method(&self) -> #external_type {
                         self.#name.load_full()
@@ -160,6 +165,12 @@ where
 
     methods.extend(generate_updater_method(
         names_and_types.clone(),
+        TunableType::VecOfStrings,
+        quote::format_ident!("update_vec_of_strings"),
+    ));
+
+    methods.extend(generate_updater_method(
+        names_and_types.clone(),
         TunableType::ByRepoBool,
         quote::format_ident!("update_by_repo_bools"),
     ));
@@ -208,7 +219,7 @@ where
                     );)*
                 });
             }
-            TunableType::String => {
+            TunableType::String | TunableType::VecOfStrings => {
                 body.extend(quote! {
                     #(self.#names.swap(
                       Arc::new(tunables.get(stringify!(#names)).cloned().unwrap_or_default())
@@ -270,6 +281,7 @@ fn resolve_type(ty: Type) -> TunableType {
             match &ident.to_string()[..] {
                 "AtomicBool" => return TunableType::Bool,
                 "AtomicI64" => return TunableType::I64,
+                "TunableVecOfStrings" => return TunableType::VecOfStrings,
                 // TunableString is a type alias of ArcSwap<String>.
                 // p.path.get_ident() returns None for ArcSwap<String>
                 // and it makes it harder to parse it.
