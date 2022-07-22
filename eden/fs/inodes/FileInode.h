@@ -442,11 +442,6 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       const Hash20& expectedBlobSha1,
       ObjectFetchContext& fetchContext);
 
-  /**
-   * Get the ObjectStore used by this FileInode to load non-materialized data.
-   */
-  ObjectStore* getObjectStore() const;
-
 #ifndef _WIN32
   /**
    * Returns the OverlayFileAccess used to mediate access to an overlay file.

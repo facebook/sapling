@@ -207,7 +207,6 @@ std::optional<ImmediateFuture<VirtualInode>> TreeInode::rlockGetOrFindChild(
     PathComponentPiece name,
     ObjectFetchContext& context,
     bool loadInodes) {
-  auto objectStore = getMount()->getObjectStore();
   // Check if the child is already loaded and return it if so
   auto iter = contents.entries.find(name);
   if (iter == contents.entries.end()) {
@@ -240,7 +239,8 @@ std::optional<ImmediateFuture<VirtualInode>> TreeInode::rlockGetOrFindChild(
   if (entry.isDirectory()) {
     // This is a directory, always get the tree corresponding to
     // the hash
-    return objectStore->getTree(hash, context)
+    return getObjectStore()
+        .getTree(hash, context)
         .thenValue([mode = entry.getInitialMode()](
                        std::shared_ptr<const Tree>&& tree) {
           return VirtualInode(std::move(tree), mode);
@@ -749,8 +749,8 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
   }
 
   if (!entry.isMaterialized()) {
-    return getStore()
-        ->getTree(entry.getHash(), fetchContext)
+    return getObjectStore()
+        .getTree(entry.getHash(), fetchContext)
         .semi()
         .via(&folly::QueuedImmediateExecutor::instance())
         .thenValue(
@@ -2302,10 +2302,6 @@ InodeMap* TreeInode::getInodeMap() const {
   return getMount()->getInodeMap();
 }
 
-ObjectStore* TreeInode::getStore() const {
-  return getMount()->getObjectStore();
-}
-
 /*
 On each level of the level order traversal, we search for a gitignore file, and
 if it exists, we load it. This gitignore file is owned by a `std::<unique_ptr>`
@@ -2952,7 +2948,7 @@ Future<Unit> TreeInode::checkout(
   // Now start all of the checkout actions
   vector<Future<InvalidationRequired>> actionFutures;
   for (const auto& action : actions) {
-    actionFutures.emplace_back(action->run(ctx, getStore()));
+    actionFutures.emplace_back(action->run(ctx, &getObjectStore()));
   }
 
   folly::SemiFuture<Unit> faultFuture =
@@ -3315,10 +3311,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     // The inode already matches the checkout destination. So do nothing.
     return nullptr;
   } else if (entry.getHash() != oldScmEntry->second.getHash()) {
-    if (getMount()
-            ->getObjectStore()
-            ->getBackingStore()
-            ->hasBijectiveBlobIds()) {
+    if (getObjectStore().getBackingStore()->hasBijectiveBlobIds()) {
       // Identical contents imply identical IDs, so we know this is a conflict.
       conflictType = ConflictType::MODIFIED_MODIFIED;
     } else {

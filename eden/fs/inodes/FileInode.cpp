@@ -630,7 +630,7 @@ ImmediateFuture<bool> FileInode::isSameAs(
   }
 
   auto f1 = getSha1(fetchContext);
-  auto f2 = getMount()->getObjectStore()->getBlobSha1(blobID, fetchContext);
+  auto f2 = getObjectStore().getBlobSha1(blobID, fetchContext);
   return collectAllSafe(f1, f2).thenTry(
       [](folly::Try<std::tuple<Hash20, Hash20>>&& try_) {
         if (try_.hasException()) {
@@ -730,7 +730,7 @@ ImmediateFuture<Hash20> FileInode::getSha1(ObjectFetchContext& fetchContext) {
     case State::BLOB_NOT_LOADING:
     case State::BLOB_LOADING:
       // If a file is not materialized, it should have a hash value.
-      return getObjectStore()->getBlobSha1(
+      return getObjectStore().getBlobSha1(
           state->nonMaterializedState->hash, fetchContext);
     case State::MATERIALIZED_IN_OVERLAY:
 #ifdef _WIN32
@@ -753,7 +753,7 @@ ImmediateFuture<BlobMetadata> FileInode::getBlobMetadata(
     case State::BLOB_NOT_LOADING:
     case State::BLOB_LOADING:
       // If a file is not materialized, it should have a hash value.
-      return getObjectStore()->getBlobMetadata(
+      return getObjectStore().getBlobMetadata(
           state->nonMaterializedState->hash, fetchContext);
     case State::MATERIALIZED_IN_OVERLAY:
 #ifdef _WIN32
@@ -809,7 +809,7 @@ ImmediateFuture<struct stat> FileInode::stat(ObjectFetchContext& context) {
     // size, if it's already known, return the cached size. This is especially
     // a win after restarting Eden - size can be loaded from the local cache
     // more cheaply than deserializing an entire blob.
-    auto sizeFut = getObjectStore()->getBlobSize(
+    auto sizeFut = getObjectStore().getBlobSize(
         state->nonMaterializedState->hash, context);
     state.unlock();
 
@@ -1191,8 +1191,8 @@ void FileInode::materializeNow(
   // value in the overlay for this file.
   // Since this uses state->nonMaterializedState->hash we perform this before
   // calling state.setMaterialized().
-  auto blobSha1Future = getObjectStore()->getBlobSha1(
-      state->nonMaterializedState->hash, *context);
+  auto blobSha1Future =
+      getObjectStore().getBlobSha1(state->nonMaterializedState->hash, *context);
   std::optional<Hash20> blobSha1;
   if (blobSha1Future.isReady()) {
     blobSha1 = std::move(blobSha1Future).get();
@@ -1220,10 +1220,6 @@ OverlayFileAccess* FileInode::getOverlayFileAccess(LockedState&) const {
   return getMount()->getOverlayFileAccess();
 }
 #endif // !_WIN32
-
-ObjectStore* FileInode::getObjectStore() const {
-  return getMount()->getObjectStore();
-}
 
 void FileInode::logAccess(ObjectFetchContext& fetchContext) {
   auto ino = getNodeId();

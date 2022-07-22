@@ -506,12 +506,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   InodeMap* getInodeMap() const;
 
-  /**
-   * The ObjectStore is guaranteed to remain valid for at least the lifetime of
-   * the TreeInode object.  (The ObjectStore is owned by the EdenMount.)
-   */
-  ObjectStore* getStore() const;
-
   void registerInodeLoadComplete(
       folly::Future<std::unique_ptr<InodeBase>>& future,
       PathComponentPiece name,

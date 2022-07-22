@@ -365,6 +365,10 @@ const Clock& InodeBase::getClock() const {
   return getMount()->getClock();
 }
 
+ObjectStore& InodeBase::getObjectStore() const {
+  return *getMount()->getObjectStore();
+}
+
 // Helper function to update Journal used by FileInode and TreeInode.
 void InodeBase::updateJournal() {
   auto path = getPath();

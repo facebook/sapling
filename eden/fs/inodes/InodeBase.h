@@ -28,6 +28,7 @@ namespace facebook::eden {
 
 class EdenMount;
 class ObjectFetchContext;
+class ObjectStore;
 class ParentInodeInfo;
 class RenameLock;
 class SharedRenameLock;
@@ -429,6 +430,14 @@ class InodeBase {
    * Convenience method to return the mount point's Clock.
    */
   const Clock& getClock() const;
+
+  /**
+   * Convenience method to return the mount point's ObjectStore.
+   *
+   * The ObjectStore is owned by the EdenMount. and is guaranteed to remain
+   * valid for at least the lifetime of the InodeBase object.
+   */
+  ObjectStore& getObjectStore() const;
 
   /**
    * Helper function to update Journal in FileInode and TreeInode.
