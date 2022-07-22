@@ -12,6 +12,7 @@ import hashlib
 import os
 import shutil
 import subprocess
+import textwrap
 import weakref
 from dataclasses import dataclass
 
@@ -32,6 +33,20 @@ GIT_STORE_REQUIREMENT = "git-store"
 # Whether the repo should use git format when creating new objects.
 # Should be set if git-store is set.
 GIT_FORMAT_REQUIREMENT = "git"
+
+
+class GitCommandError(error.Abort):
+    def __init__(self, git_command, git_exitcode, git_output, **kwargs):
+        self.git_command = git_command
+        self.git_exitcode = git_exitcode
+        self.git_output = git_output
+        message = _("git command failed with exit code %d\n  %s") % (
+            git_exitcode,
+            git_command,
+        )
+        if git_output:
+            message += _("\n%s") % textwrap.indent(git_output.rstrip(), "    ")
+        super().__init__(message, **kwargs)
 
 
 def cached(func):
@@ -697,9 +712,16 @@ def callgit(repo, args, checkreturncode=True):
     ret = callgitnorepo(repo.ui, args, gitdir=gitdir)
     if checkreturncode and ret.returncode != 0:
         cmdstr = " ".join(util.shellquote(c) for c in ret.args)
-        raise error.Abort(
-            _("git command (%s) failed with exit code %s:\n%s%s")
-            % (cmdstr, ret.returncode, ret.stdout, ret.stderr)
+        outputs = []
+        if ret.stdout:
+            outputs.append(ret.stdout.decode(errors="ignore"))
+        if ret.stderr:
+            outputs.append(ret.stderr.decode(errors="ignore"))
+        output = "".join(outputs)
+        raise GitCommandError(
+            git_command=cmdstr,
+            git_exitcode=ret.returncode,
+            git_output=output,
         )
     return ret.stdout
 

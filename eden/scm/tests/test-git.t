@@ -210,6 +210,20 @@ Test pull:
   $ hg pull --config extensions.infinitepush=
   pulling from file:/*/$TESTTMP/gitrepo/.git (glob)
 
+Test error message display:
+
+  $ mkdir $TESTTMP/errortest
+  $ cd $TESTTMP/errortest
+  $ hg clone --git "$TESTTMP/nonexisted"
+  abort: git command failed with exit code 128
+    git * (glob)
+      fatal: '$TESTTMP/nonexisted' does not appear to be a git repository
+      fatal: Could not read from remote repository.
+  
+      Please make sure you have the correct access rights
+      and the repository exists.
+  [255]
+
 Test clone with flags (--noupdate, --updaterev):
 
   $ mkdir $TESTTMP/clonetest
