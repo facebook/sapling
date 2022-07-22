@@ -162,6 +162,19 @@ def _start_edenfs_service(
     )
 
 
+def get_edenfsctl_cmd() -> str:
+    env = os.environ.get("EDENFS_CLI_PATH", None)
+    if env:
+        return env
+
+    edenfsctl_real = os.path.abspath(sys.argv[0])
+    if sys.platform == "win32":
+        edenfsctl = os.path.join(edenfsctl_real, "../edenfsctl.exe")
+    else:
+        edenfsctl = os.path.join(edenfsctl_real, "../edenfsctl")
+    return os.path.normpath(edenfsctl)
+
+
 def get_edenfs_cmd(instance: EdenInstance, daemon_binary: str) -> List[str]:
     """Get the command line arguments to use to start the edenfs daemon."""
 
@@ -173,7 +186,7 @@ def get_edenfs_cmd(instance: EdenInstance, daemon_binary: str) -> List[str]:
         daemon_binary,
         "--edenfs",
         "--edenfsctlPath",
-        os.environ.get("EDENFS_CLI_PATH", os.path.abspath(sys.argv[0])),
+        get_edenfsctl_cmd(),
         "--edenDir",
         str(instance.state_dir),
         "--etcEdenDir",
