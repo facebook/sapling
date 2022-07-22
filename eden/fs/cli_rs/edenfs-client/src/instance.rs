@@ -73,17 +73,13 @@ impl EdenFsInstance {
     pub fn should_prefetch_profiles(&self) -> bool {
         self.get_config()
             .ok()
-            .and_then(|config| config.get_bool("prefetch-profiles", "prefetching-enabled"))
-            .unwrap_or(false)
+            .map_or(false, |config| config.prefetch_profiles.prefetching_enabled)
     }
 
     pub fn should_prefetch_predictive_profiles(&self) -> bool {
-        self.get_config()
-            .ok()
-            .and_then(|config| {
-                config.get_bool("prefetch-profiles", "predictive-prefetching-enabled")
-            })
-            .unwrap_or(false)
+        self.get_config().ok().map_or(false, |config| {
+            config.prefetch_profiles.predictive_prefetching_enabled
+        })
     }
 
     async fn _connect(&self, socket_path: &PathBuf) -> Result<EdenFsClient> {

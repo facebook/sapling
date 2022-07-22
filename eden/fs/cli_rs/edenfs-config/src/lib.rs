@@ -28,25 +28,37 @@ pub struct Core {
 }
 
 #[derive(Serialize, Deserialize, StackConfig, Debug)]
-pub struct EdenFsConfig {
-    #[stack(nested)]
-    #[serde(skip_serializing_if = "skip_core_serialization")]
-    pub core: Core,
+#[serde(rename_all = "kebab-case")]
+pub struct PrefetchProfiles {
+    #[stack(default)]
+    pub prefetching_enabled: bool,
+
+    #[stack(default)]
+    pub predictive_prefetching_enabled: bool,
 
     #[stack(merge = "merge_table")]
     #[serde(flatten)]
     pub other: toml::value::Table,
 }
 
-impl EdenFsConfig {
-    pub fn get_bool(&self, section: &str, entry: &str) -> Option<bool> {
-        self.other
-            .get(section)
-            .and_then(|x| x.as_table())
-            .and_then(|x| x.get(entry))
-            .and_then(|x| x.as_bool())
-    }
+#[derive(Serialize, Deserialize, StackConfig, Debug)]
+pub struct EdenFsConfig {
+    #[stack(nested)]
+    #[serde(skip_serializing_if = "skip_core_serialization")]
+    pub core: Core,
 
+    #[serde(rename = "prefetch-profiles")]
+    pub prefetch_profiles: PrefetchProfiles,
+
+    #[stack(merge = "merge_table")]
+    #[serde(flatten)]
+    /// A catch-all field for unused configuration fields. If you need
+    /// to use any configurations, define them above instead of reading from
+    /// this field.
+    pub other: toml::value::Table,
+}
+
+impl EdenFsConfig {
     pub fn set_bool(&mut self, section: &str, entry: &str, value: bool) {
         let config_items = self.other.get_mut(section).and_then(|x| x.as_table_mut());
         if let Some(item) = config_items {
