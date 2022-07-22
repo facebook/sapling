@@ -139,6 +139,7 @@ struct FinishedCheckout {
   bool success = false;
   int64_t fetchedTrees = 0;
   int64_t fetchedBlobs = 0;
+  int64_t numConflicts = 0;
 
   void populate(DynamicEvent& event) const {
     event.addString("mode", mode);
@@ -146,6 +147,7 @@ struct FinishedCheckout {
     event.addBool("success", success);
     event.addInt("fetched_trees", fetchedTrees);
     event.addInt("fetched_blobs", fetchedBlobs);
+    event.addInt("num_conflicts", numConflicts);
   }
 };
 

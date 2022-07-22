@@ -1523,6 +1523,26 @@ folly::Future<CheckoutResult> EdenMount::checkout(
         event.success = result.hasValue();
         event.fetchedTrees = fetchStats.tree.fetchCount;
         event.fetchedBlobs = fetchStats.blob.fetchCount;
+        if (result.hasValue()) {
+          auto& conflicts = result.value().conflicts;
+          event.numConflicts = conflicts.size();
+
+          if (!ctx->isDryRun()) {
+            const auto maxConflictsToPrint =
+                getEdenConfig()->numConflictsToLog.getValue();
+            uint64_t printedConflicts = 0ull;
+            for (const auto& conflict : conflicts) {
+              if (printedConflicts == maxConflictsToPrint) {
+                XLOG(DBG2) << "And " << (event.numConflicts - printedConflicts)
+                           << " more checkout conflicts";
+                break;
+              }
+              XLOG(DBG2) << "Checkout conflict on: " << conflict;
+              printedConflicts++;
+            }
+          }
+        }
+
         // Don't log metadata fetches, because our backends don't yet support
         // fetching metadata directly. We expect tree fetches to eventually
         // return metadata for their entries.

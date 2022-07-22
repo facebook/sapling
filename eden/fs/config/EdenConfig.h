@@ -262,6 +262,17 @@ class EdenConfig : private ConfigSettingManager {
 
   ConfigSetting<bool> useMononoke{"mononoke:use-mononoke", false, this};
 
+  // [mount]
+
+  /**
+   * After checkout completes with conflicts, how many conflicts should be
+   * printed in the edenfs.log?
+   */
+  ConfigSetting<uint64_t> numConflictsToLog{
+      "mount:num-conflicts-to-log",
+      10,
+      this};
+
   // [store]
 
   /**
