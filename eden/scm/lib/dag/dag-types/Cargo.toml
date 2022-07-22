@@ -4,6 +4,7 @@
 name = "dag-types"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
 
 [dependencies]
 abomonation = "0.7"

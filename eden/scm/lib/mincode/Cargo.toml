@@ -6,7 +6,7 @@ version = "0.1.0"
 authors = ["David Tolnay <dtolnay@gmail.com>", "Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 edition = "2021"
 description = "Minimal serialization format"
-license = "GPL-2.0-only"
+license = "MIT"
 include = ["Cargo.toml", "src/**/*.rs"]
 
 [dependencies]
