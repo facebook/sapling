@@ -265,6 +265,18 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    */
   void maintenance();
 
+  /*
+   * Returns a raw pointer to the backing overlay. This method should only be
+   * used for testing.
+   */
+  IOverlay* getRawBackingOverlay() {
+    return backingOverlay_.get();
+  }
+
+  overlay::OverlayDir serializeOverlayDir(
+      InodeNumber inodeNumber,
+      const DirContents& dir);
+
  private:
   explicit Overlay(
       AbsolutePathPiece localDir,
@@ -310,10 +322,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
   // Serialize EdenFS overlay data structure into Thrift data structure
   overlay::OverlayEntry serializeOverlayEntry(const DirEntry& entry);
-
-  overlay::OverlayDir serializeOverlayDir(
-      InodeNumber inodeNumber,
-      const DirContents& dir);
 
   bool tryIncOutstandingIORequests();
   void decOutstandingIORequests();
