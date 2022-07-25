@@ -47,10 +47,6 @@ def launch_server(ui, *, cwd, port=DEFAULT_PORT):
         raise error.Abort(_("isl is not currently supported on Windows"))
 
     isl_bin = os.path.join(os.path.dirname(__file__), "isl")
-    env = dict(os.environ)
-    env["PORT"] = str(port)
 
     ui.status(_("launching web server for Interactive Smartlog...\n"))
-    # We might want to add an option to isl_bin to /usr/bin/open (macOS) or
-    # xdg-open (Linux) the web page once the server starts up?
-    subprocess.call(["dotslash", isl_bin], cwd=cwd, env=env)
+    subprocess.call(["dotslash", isl_bin, "--port", str(port)], cwd=cwd)
