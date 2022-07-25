@@ -292,7 +292,7 @@ pub struct MononokeTunables {
     // The replication_status call is problematic for SQL so we're experimenting
     // with removing it, but this tunable can be used as a quick killswitch to
     // enable them again.
-    enable_sql_lag_monitoring: AtomicBool,
+    sql_lag_monitoring_blocklist: TunableVecOfStrings,
 
     // If set, the hook won't be created at all
     disable_check_write_permissions_hook: AtomicBool,

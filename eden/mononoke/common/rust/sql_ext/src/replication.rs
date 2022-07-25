@@ -12,7 +12,6 @@ use slog::Logger;
 use std::fmt;
 use std::time::Duration;
 use tokio::time;
-use tunables::tunables;
 
 const MAX_ALLOWED_REPLICATION_LAG_SECS: u64 = 5;
 const REPLICATION_LAG_POLL_INTERVAL_SECS: u64 = 2;
@@ -44,12 +43,6 @@ pub trait ReplicaLagMonitor: Send + Sync {
     /// Will poll periodically until the all replicas are below the given threshold of delay from
     /// the primary instance.
     async fn wait_for_replication(&self, config: &WaitForReplicationConfig<'_>) -> Result<()> {
-        if !tunables().get_enable_sql_lag_monitoring() {
-            if let Some(logger) = config.logger {
-                info!(logger, "Lag monitoring disabled, see D37001468.");
-            }
-            return Ok(());
-        }
         loop {
             let max_lag = self.get_max_replica_lag().await?;
             if let Some(logger) = config.logger {
