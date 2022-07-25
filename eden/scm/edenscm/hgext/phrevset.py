@@ -86,6 +86,7 @@ def graphqlgetdiff(repo, diffid):
                         }
                     ]
                 },
+                "commits": {},
             }
     timeout = repo.ui.configint("ssl", "timeout", 10)
     ca_certs = repo.ui.configpath("web", "cacerts")
@@ -232,11 +233,19 @@ def diffidtonode(repo, diffid):
     vcs = resp.get("source_control_system")
     localreponame = repo.ui.config("remotefilelog", "reponame")
     diffreponame = None
-    repository = resp.get("repository")
-    if repository is not None:
-        diffreponame = repository.get("scm_name")
-    if diffreponame in repo.ui.configlist("phrevset", "aliases"):
+
+    # If already committed, prefer the commit that went to our local
+    # repo to better handle the case when a diff was committed to
+    # multiple repos.
+    rev = resp["commits"].get(localreponame, None)
+    if rev:
         diffreponame = localreponame
+    else:
+        repository = resp.get("repository")
+        if repository is not None:
+            diffreponame = repository.get("scm_name")
+        if diffreponame in repo.ui.configlist("phrevset", "aliases"):
+            diffreponame = localreponame
 
     if not util.istest() and (diffreponame != localreponame):
         raise error.Abort(
@@ -247,12 +256,14 @@ def diffidtonode(repo, diffid):
     repo.ui.debug("[diffrev] VCS is %s\n" % vcs)
 
     if vcs == "git":
-        gitrev = parsedesc(repo, resp, ignoreparsefailure=False)
-        repo.ui.debug("[diffrev] GIT rev is %s\n" % gitrev)
+        if not rev:
+            rev = parsedesc(repo, resp, ignoreparsefailure=False)
+
+        repo.ui.debug("[diffrev] GIT rev is %s\n" % rev)
 
         peerpath = repo.ui.expandpath("default")
         remoterepo = hg.peer(repo, {}, peerpath)
-        remoterev = remoterepo.lookup("_gitlookup_git_%s" % gitrev)
+        remoterev = remoterepo.lookup("_gitlookup_git_%s" % rev)
 
         repo.ui.debug("[diffrev] HG rev is %s\n" % hex(remoterev))
         if not remoterev:
@@ -266,7 +277,9 @@ def diffidtonode(repo, diffid):
         return remoterev
 
     elif vcs == "hg":
-        rev = parsedesc(repo, resp, ignoreparsefailure=True)
+        if not rev:
+            rev = parsedesc(repo, resp, ignoreparsefailure=True)
+
         if rev:
             # The response from phabricator contains a changeset ID.
             # Convert it back to a node.

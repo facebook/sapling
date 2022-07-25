@@ -158,6 +158,14 @@ class Client(object):
                         }
                       }
                     }
+                    phabricator_diff_commit {
+                      nodes {
+                        repository {
+                          scm_name
+                        }
+                        commit_identifier
+                      }
+                    }
                   }
                 }
               }
@@ -165,9 +173,21 @@ class Client(object):
         """
         params = {"diffid": diffid}
         ret = self._client.query(timeout, query, params)
-        return ret["data"]["phabricator_diff_query"][0]["results"]["nodes"][0][
+
+        latest = ret["data"]["phabricator_diff_query"][0]["results"]["nodes"][0][
             "latest_associated_phabricator_version_regardless_of_viewer"
         ]
+
+        # Massage commits into {repo_name => commit_hash}
+        commits = ret["data"]["phabricator_diff_query"][0]["results"]["nodes"][0][
+            "phabricator_diff_commit"
+        ]["nodes"]
+        latest["commits"] = {
+            commit["repository"]["scm_name"]: commit["commit_identifier"]
+            for commit in commits
+        }
+
+        return latest
 
     def getlandednodes(self, repo, diffids, timeout=10):
         """Get landed nodes for diffids. Return {diffid: node}, {diffid: set(node)}"""
