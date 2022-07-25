@@ -859,6 +859,12 @@ class EdenConfig : private ConfigSettingManager {
       std::chrono::minutes(1),
       this};
 
+  /**
+   * Determines if EdenFS should enable the option to buffer overlay writes.
+   * This only works with tree overlays.
+   */
+  ConfigSetting<bool> overlayBuffered{"overlay:buffered", false, this};
+
   // [clone]
 
   /**

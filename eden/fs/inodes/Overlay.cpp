@@ -24,6 +24,7 @@
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/inodes/treeoverlay/BufferedTreeOverlay.h"
 #include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
 #include "eden/fs/sqlite/SqliteDatabase.h"
 #include "eden/fs/utils/Bug.h"
@@ -47,6 +48,9 @@ std::unique_ptr<IOverlay> makeOverlay(
   } else if (overlayType == Overlay::OverlayType::TreeSynchronousOff) {
     return std::make_unique<TreeOverlay>(
         localDir, TreeOverlayStore::SynchronousMode::Off);
+  } else if (overlayType == Overlay::OverlayType::TreeBuffered) {
+    XLOG(DBG4) << "Buffered tree overlay being used";
+    return std::make_unique<BufferedTreeOverlay>(localDir);
   }
 #ifdef _WIN32
   if (overlayType == Overlay::OverlayType::Legacy) {
