@@ -9,6 +9,8 @@
 #include <folly/portability/GFlags.h>
 #include <folly/stop_watch.h>
 #include <stdlib.h>
+
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
@@ -32,7 +34,8 @@ void benchmarkOverlayTreeWrites(AbsolutePathPiece overlayPath) {
       overlayPath,
       kPathMapDefaultCaseSensitive,
       kDefaultOverlayType,
-      std::make_shared<NullStructuredLogger>());
+      std::make_shared<NullStructuredLogger>(),
+      *EdenConfig::createTestEdenConfig());
   printf("Initalizing Overlay...\n");
 
   overlay->initialize().get();

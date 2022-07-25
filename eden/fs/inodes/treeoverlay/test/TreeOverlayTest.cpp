@@ -13,6 +13,7 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeNumber.h"
@@ -27,11 +28,13 @@
 
 namespace facebook::eden {
 
-constexpr Overlay::OverlayType kOverlayType = Overlay::OverlayType::Tree;
-
 #ifdef _WIN32
-class TreeOverlayTest : public ::testing::Test {
+class TreeOverlayTest : public ::testing::TestWithParam<Overlay::OverlayType> {
  protected:
+  Overlay::OverlayType overlayType() const {
+    return GetParam();
+  }
+
   void SetUp() override {
     // Set up a directory structure that we will use for most
     // of the tests below
@@ -39,13 +42,13 @@ class TreeOverlayTest : public ::testing::Test {
     builder.mkdir("dir");
     builder.mkdir("foo");
     builder.mkdir("foo/bar");
-    mount_.initialize(builder, kOverlayType);
+    mount_.initialize(builder, overlayType());
   }
 
   TestMount mount_;
 };
 
-TEST_F(TreeOverlayTest, roundTripThroughSaveAndLoad) {
+TEST_P(TreeOverlayTest, roundTripThroughSaveAndLoad) {
   auto hash = ObjectId::fromHex("0123456789012345678901234567890123456789");
 
   auto overlay = mount_.getEdenMount()->getOverlay();
@@ -72,6 +75,13 @@ TEST_F(TreeOverlayTest, roundTripThroughSaveAndLoad) {
   EXPECT_TRUE(two.isMaterialized());
 }
 
+INSTANTIATE_TEST_SUITE_P(
+    TreeOverlayTest,
+    TreeOverlayTest,
+    ::testing::Values(
+        Overlay::OverlayType::Tree,
+        Overlay::OverlayType::TreeBuffered));
+
 #endif
 
 TEST(PlainTreeOverlayTest, new_overlay_is_clean) {
@@ -79,8 +89,21 @@ TEST(PlainTreeOverlayTest, new_overlay_is_clean) {
   auto overlay = Overlay::create(
       AbsolutePath{testDir.path().string()},
       kPathMapDefaultCaseSensitive,
-      kOverlayType,
-      std::make_shared<NullStructuredLogger>());
+      Overlay::OverlayType::Tree,
+      std::make_shared<NullStructuredLogger>(),
+      *EdenConfig::createTestEdenConfig());
+  overlay->initialize().get();
+  EXPECT_TRUE(overlay->hadCleanStartup());
+}
+
+TEST(PlainTreeOverlayTest, new_overlay_is_clean_buffered) {
+  folly::test::TemporaryDirectory testDir;
+  auto overlay = Overlay::create(
+      AbsolutePath{testDir.path().string()},
+      kPathMapDefaultCaseSensitive,
+      Overlay::OverlayType::TreeBuffered,
+      std::make_shared<NullStructuredLogger>(),
+      *EdenConfig::createTestEdenConfig());
   overlay->initialize().get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
@@ -91,23 +114,66 @@ TEST(PlainTreeOverlayTest, reopened_overlay_is_clean) {
     auto overlay = Overlay::create(
         AbsolutePath{testDir.path().string()},
         kPathMapDefaultCaseSensitive,
-        kOverlayType,
-        std::make_shared<NullStructuredLogger>());
+        Overlay::OverlayType::Tree,
+        std::make_shared<NullStructuredLogger>(),
+        *EdenConfig::createTestEdenConfig());
     overlay->initialize().get();
   }
   auto overlay = Overlay::create(
       AbsolutePath{testDir.path().string()},
       kPathMapDefaultCaseSensitive,
-      kOverlayType,
-      std::make_shared<NullStructuredLogger>());
+      Overlay::OverlayType::Tree,
+      std::make_shared<NullStructuredLogger>(),
+      *EdenConfig::createTestEdenConfig());
   overlay->initialize().get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
-class RawTreeOverlayTest : public ::testing::Test {
+TEST(PlainTreeOverlayTest, reopened_overlay_is_clean_buffered) {
+  folly::test::TemporaryDirectory testDir;
+  {
+    auto overlay = Overlay::create(
+        AbsolutePath{testDir.path().string()},
+        kPathMapDefaultCaseSensitive,
+        Overlay::OverlayType::TreeBuffered,
+        std::make_shared<NullStructuredLogger>(),
+        *EdenConfig::createTestEdenConfig());
+    overlay->initialize().get();
+  }
+  auto overlay = Overlay::create(
+      AbsolutePath{testDir.path().string()},
+      kPathMapDefaultCaseSensitive,
+      Overlay::OverlayType::TreeBuffered,
+      std::make_shared<NullStructuredLogger>(),
+      *EdenConfig::createTestEdenConfig());
+  overlay->initialize().get();
+  EXPECT_TRUE(overlay->hadCleanStartup());
+}
+
+TEST(PlainTreeOverlayTest, close_overlay_with_no_capacity_buffered) {
+  auto config = EdenConfig::createTestEdenConfig();
+  config->overlayBufferSize.setValue(0, ConfigSource::Default, true);
+  folly::test::TemporaryDirectory testDir;
+  auto overlay = Overlay::create(
+      AbsolutePath{testDir.path().string()},
+      kPathMapDefaultCaseSensitive,
+      Overlay::OverlayType::TreeBuffered,
+      std::make_shared<NullStructuredLogger>(),
+      *config);
+  overlay->initialize().get();
+  overlay->close();
+  EXPECT_TRUE(overlay->isClosed());
+}
+
+class RawTreeOverlayTest
+    : public ::testing::TestWithParam<Overlay::OverlayType> {
  public:
   RawTreeOverlayTest() : testDir_{makeTempDir("eden_raw_overlay_test_")} {
     loadOverlay();
+  }
+
+  Overlay::OverlayType overlayType() const {
+    return GetParam();
   }
 
   void recreate() {
@@ -124,8 +190,9 @@ class RawTreeOverlayTest : public ::testing::Test {
     overlay = Overlay::create(
         getLocalDir(),
         kPathMapDefaultCaseSensitive,
-        kOverlayType,
-        std::make_shared<NullStructuredLogger>());
+        overlayType(),
+        std::make_shared<NullStructuredLogger>(),
+        *EdenConfig::createTestEdenConfig());
     overlay->initialize().get();
   }
 
@@ -137,7 +204,7 @@ class RawTreeOverlayTest : public ::testing::Test {
   std::shared_ptr<Overlay> overlay;
 };
 
-TEST_F(RawTreeOverlayTest, cannot_save_overlay_dir_when_closed) {
+TEST_P(RawTreeOverlayTest, cannot_save_overlay_dir_when_closed) {
   overlay->close();
   auto ino2 = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, ino2);
@@ -149,7 +216,7 @@ TEST_F(RawTreeOverlayTest, cannot_save_overlay_dir_when_closed) {
       "cannot access overlay after it is closed");
 }
 
-TEST_F(RawTreeOverlayTest, max_inode_number_is_1_if_overlay_is_empty) {
+TEST_P(RawTreeOverlayTest, max_inode_number_is_1_if_overlay_is_empty) {
   EXPECT_EQ(kRootNodeId, overlay->getMaxInodeNumber());
   auto ino2 = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, ino2);
@@ -168,7 +235,7 @@ TEST_F(RawTreeOverlayTest, max_inode_number_is_1_if_overlay_is_empty) {
   EXPECT_EQ(kRootNodeId, overlay->getMaxInodeNumber());
 }
 
-TEST_F(RawTreeOverlayTest, remembers_max_inode_number_of_tree_entries) {
+TEST_P(RawTreeOverlayTest, remembers_max_inode_number_of_tree_entries) {
   auto ino2 = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, ino2);
   auto ino3 = overlay->allocateInodeNumber();
@@ -185,7 +252,7 @@ TEST_F(RawTreeOverlayTest, remembers_max_inode_number_of_tree_entries) {
   EXPECT_EQ(4_ino, overlay->getMaxInodeNumber());
 }
 
-TEST_F(RawTreeOverlayTest, inode_numbers_after_takeover) {
+TEST_P(RawTreeOverlayTest, inode_numbers_after_takeover) {
   auto ino2 = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, ino2);
   auto ino3 = overlay->allocateInodeNumber();
@@ -219,15 +286,28 @@ TEST_F(RawTreeOverlayTest, inode_numbers_after_takeover) {
   EXPECT_EQ(5_ino, overlay->getMaxInodeNumber());
 }
 
-class DebugDumpTreeOverlayInodesTest : public ::testing::Test {
+INSTANTIATE_TEST_SUITE_P(
+    RawTreeOverlayTest,
+    RawTreeOverlayTest,
+    ::testing::Values(
+        Overlay::OverlayType::Tree,
+        Overlay::OverlayType::TreeBuffered));
+
+class DebugDumpTreeOverlayInodesTest
+    : public ::testing::TestWithParam<Overlay::OverlayType> {
  public:
+  Overlay::OverlayType overlayType() const {
+    return GetParam();
+  }
+
   DebugDumpTreeOverlayInodesTest()
       : testDir_{makeTempDir("eden_DebugDumpTreeOverlayInodesTest")} {
     overlay = Overlay::create(
         AbsolutePathPiece{testDir_.path().string()},
         kPathMapDefaultCaseSensitive,
-        kOverlayType,
-        std::make_shared<NullStructuredLogger>());
+        overlayType(),
+        std::make_shared<NullStructuredLogger>(),
+        *EdenConfig::createTestEdenConfig());
     overlay->initialize().get();
   }
 
@@ -235,7 +315,7 @@ class DebugDumpTreeOverlayInodesTest : public ::testing::Test {
   std::shared_ptr<Overlay> overlay;
 };
 
-TEST_F(DebugDumpTreeOverlayInodesTest, dump_empty_directory) {
+TEST_P(DebugDumpTreeOverlayInodesTest, dump_empty_directory) {
   auto ino = kRootNodeId;
   EXPECT_EQ(1_ino, ino);
 
@@ -247,7 +327,7 @@ TEST_F(DebugDumpTreeOverlayInodesTest, dump_empty_directory) {
       debugDumpOverlayInodes(*overlay, ino));
 }
 
-TEST_F(
+TEST_P(
     DebugDumpTreeOverlayInodesTest,
     dump_directory_with_an_empty_subdirectory) {
   auto rootIno = kRootNodeId;
@@ -274,7 +354,7 @@ TEST_F(
       debugDumpOverlayInodes(*overlay, rootIno));
 }
 
-TEST_F(
+TEST_P(
     DebugDumpTreeOverlayInodesTest,
     dump_directory_with_unsaved_subdirectory) {
   auto rootIno = kRootNodeId;
@@ -300,7 +380,7 @@ TEST_F(
       debugDumpOverlayInodes(*overlay, rootIno));
 }
 
-TEST_F(
+TEST_P(
     DebugDumpTreeOverlayInodesTest,
     dump_directory_with_unsaved_regular_file) {
   auto rootIno = kRootNodeId;
@@ -324,5 +404,12 @@ TEST_F(
       "            2 f    0 regular_file_does_not_exist\n",
       debugDumpOverlayInodes(*overlay, rootIno));
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    DebugDumpTreeOverlayInodesTest,
+    DebugDumpTreeOverlayInodesTest,
+    ::testing::Values(
+        Overlay::OverlayType::Tree,
+        Overlay::OverlayType::TreeBuffered));
 
 } // namespace facebook::eden

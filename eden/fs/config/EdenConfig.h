@@ -865,6 +865,16 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> overlayBuffered{"overlay:buffered", false, this};
 
+  /**
+   * Number of bytes worth of Overlay data to keep in memory before pausing
+   * enqueues to the BufferedTreeOverlay's worker thread. This is a per overlay
+   * setting.
+   */
+  ConfigSetting<size_t> overlayBufferSize{
+      "overlay:buffer-size",
+      64 * 1024 * 1024,
+      this};
+
   // [clone]
 
   /**

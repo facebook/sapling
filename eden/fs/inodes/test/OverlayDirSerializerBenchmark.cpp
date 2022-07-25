@@ -14,6 +14,7 @@
 #include <functional>
 #include <random>
 
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/IOverlay.h"
 #include "eden/fs/inodes/Overlay.h"
@@ -139,7 +140,8 @@ void benchmarkOverlayDirSerialization(AbsolutePathPiece overlayPath) {
       overlayPath,
       kPathMapDefaultCaseSensitive,
       kDefaultOverlayType,
-      std::make_shared<NullStructuredLogger>());
+      std::make_shared<NullStructuredLogger>(),
+      *EdenConfig::createTestEdenConfig());
   printf("Initalizing Overlay...\n");
 
   overlay->initialize().get();

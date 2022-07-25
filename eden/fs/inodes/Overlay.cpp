@@ -19,6 +19,7 @@
 #include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeTable.h"
@@ -38,7 +39,8 @@ constexpr uint64_t ioClosedMask = 1ull << 63;
 
 std::unique_ptr<IOverlay> makeOverlay(
     AbsolutePathPiece localDir,
-    Overlay::OverlayType overlayType) {
+    Overlay::OverlayType overlayType,
+    const EdenConfig& config) {
   if (overlayType == Overlay::OverlayType::Tree) {
     return std::make_unique<TreeOverlay>(localDir);
   } else if (overlayType == Overlay::OverlayType::TreeInMemory) {
@@ -50,7 +52,7 @@ std::unique_ptr<IOverlay> makeOverlay(
         localDir, TreeOverlayStore::SynchronousMode::Off);
   } else if (overlayType == Overlay::OverlayType::TreeBuffered) {
     XLOG(DBG4) << "Buffered tree overlay being used";
-    return std::make_unique<BufferedTreeOverlay>(localDir);
+    return std::make_unique<BufferedTreeOverlay>(localDir, config);
   }
 #ifdef _WIN32
   if (overlayType == Overlay::OverlayType::Legacy) {
@@ -71,26 +73,29 @@ std::shared_ptr<Overlay> Overlay::create(
     AbsolutePathPiece localDir,
     CaseSensitivity caseSensitive,
     OverlayType overlayType,
-    std::shared_ptr<StructuredLogger> logger) {
+    std::shared_ptr<StructuredLogger> logger,
+    const EdenConfig& config) {
   // This allows us to access the private constructor.
   struct MakeSharedEnabler : public Overlay {
     explicit MakeSharedEnabler(
         AbsolutePathPiece localDir,
         CaseSensitivity caseSensitive,
         OverlayType overlayType,
-        std::shared_ptr<StructuredLogger> logger)
-        : Overlay(localDir, caseSensitive, overlayType, logger) {}
+        std::shared_ptr<StructuredLogger> logger,
+        const EdenConfig& config)
+        : Overlay(localDir, caseSensitive, overlayType, logger, config) {}
   };
   return std::make_shared<MakeSharedEnabler>(
-      localDir, caseSensitive, overlayType, logger);
+      localDir, caseSensitive, overlayType, logger, config);
 }
 
 Overlay::Overlay(
     AbsolutePathPiece localDir,
     CaseSensitivity caseSensitive,
     OverlayType overlayType,
-    std::shared_ptr<StructuredLogger> logger)
-    : backingOverlay_{makeOverlay(localDir, overlayType)},
+    std::shared_ptr<StructuredLogger> logger,
+    const EdenConfig& config)
+    : backingOverlay_{makeOverlay(localDir, overlayType, config)},
       supportsSemanticOperations_{
           backingOverlay_->supportsSemanticOperations()},
       caseSensitive_{caseSensitive},

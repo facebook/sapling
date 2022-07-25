@@ -67,7 +67,8 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
       realpath(tmpdir.path().string()) + "overlay-v2"_pc,
       kPathMapDefaultCaseSensitive,
       kOverlayType,
-      std::make_shared<NullStructuredLogger>());
+      std::make_shared<NullStructuredLogger>(),
+      *EdenConfig::createTestEdenConfig());
   overlay->initialize().get();
 
   ObjectId hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
@@ -244,7 +245,8 @@ TEST(PlainOverlayTest, new_overlay_is_clean) {
       AbsolutePath{testDir.path().string()},
       kPathMapDefaultCaseSensitive,
       kOverlayType,
-      std::make_shared<NullStructuredLogger>());
+      std::make_shared<NullStructuredLogger>(),
+      *EdenConfig::createTestEdenConfig());
   overlay->initialize().get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
@@ -256,7 +258,8 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
         AbsolutePath{testDir.path().string()},
         kPathMapDefaultCaseSensitive,
         kOverlayType,
-        std::make_shared<NullStructuredLogger>());
+        std::make_shared<NullStructuredLogger>(),
+        *EdenConfig::createTestEdenConfig());
     overlay->initialize().get();
   }
 
@@ -264,7 +267,8 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
       AbsolutePath{testDir.path().string()},
       kPathMapDefaultCaseSensitive,
       kOverlayType,
-      std::make_shared<NullStructuredLogger>());
+      std::make_shared<NullStructuredLogger>(),
+      *EdenConfig::createTestEdenConfig());
   overlay->initialize().get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
@@ -278,7 +282,8 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
         AbsolutePath{testDir.path().string()},
         kPathMapDefaultCaseSensitive,
         kOverlayType,
-        std::make_shared<NullStructuredLogger>());
+        std::make_shared<NullStructuredLogger>(),
+        *EdenConfig::createTestEdenConfig());
     overlay->initialize().get();
   }
 
@@ -290,7 +295,8 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
       AbsolutePath{testDir.path().string()},
       kPathMapDefaultCaseSensitive,
       kOverlayType,
-      std::make_shared<NullStructuredLogger>());
+      std::make_shared<NullStructuredLogger>(),
+      *EdenConfig::createTestEdenConfig());
   overlay->initialize().get();
   EXPECT_FALSE(overlay->hadCleanStartup());
 }
@@ -331,7 +337,8 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
         getLocalDir(),
         kPathMapDefaultCaseSensitive,
         kOverlayType,
-        std::make_shared<NullStructuredLogger>());
+        std::make_shared<NullStructuredLogger>(),
+        *EdenConfig::createTestEdenConfig());
     overlay->initialize().get();
   }
 
@@ -740,7 +747,8 @@ class DebugDumpOverlayInodesTest : public ::testing::Test {
             AbsolutePathPiece{testDir_.path().string()},
             kPathMapDefaultCaseSensitive,
             kOverlayType,
-            std::make_shared<NullStructuredLogger>())} {
+            std::make_shared<NullStructuredLogger>(),
+            *EdenConfig::createTestEdenConfig())} {
     overlay->initialize().get();
   }
 

@@ -7,6 +7,7 @@
 
 #pragma once
 #include <folly/FBString.h>
+#include <map>
 #include <string>
 
 namespace facebook::eden {
@@ -37,6 +38,39 @@ size_t estimateIndirectMemoryUsage(const StringType& s) {
   } else {
     return folly::goodMallocSize(s.capacity());
   }
+}
+
+template <typename KeyType, typename ValueType>
+size_t estimateIndirectMemoryUsage(
+    const std::map<KeyType, ValueType>& entries) {
+  // std::map is implemented using a red-black tree.
+
+  // Accumulate the estimated usage of the base nodes of the tree
+#if defined(_STL_TREE_H)
+  size_t usage = folly::goodMallocSize(sizeof(
+                     std::_Rb_tree_node<std::pair<const KeyType, ValueType>>)) *
+      entries.size();
+#elif defined(_XTREE_)
+  size_t usage =
+      folly::goodMallocSize(
+          sizeof(std::_Tree_node<std::pair<const KeyType, ValueType>, void*>)) *
+      entries.size();
+#elif defined(_LIBCPP___TREE)
+  size_t usage =
+      folly::goodMallocSize(sizeof(
+          std::__tree_node<std::pair<const KeyType, ValueType>, void*>)) *
+      entries.size();
+#endif
+
+  // Accumulate any indirect usage from the nodes
+  for (const auto& pair : entries) {
+    usage += estimateIndirectMemoryUsage(std::get<0>(pair));
+    if (auto entryHash = std::get<1>(pair).get_hash()) {
+      usage += estimateIndirectMemoryUsage(*entryHash);
+    }
+  }
+
+  return usage;
 }
 
 } // namespace facebook::eden

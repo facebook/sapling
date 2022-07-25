@@ -40,6 +40,7 @@ class InodeMap;
 class SerializedInodeMap;
 class IOverlay;
 class DirEntry;
+class EdenConfig;
 
 #ifndef _WIN32
 struct InodeMetadata;
@@ -87,7 +88,8 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       AbsolutePathPiece localDir,
       CaseSensitivity caseSensitive,
       OverlayType overlayType,
-      std::shared_ptr<StructuredLogger> logger);
+      std::shared_ptr<StructuredLogger> logger,
+      const EdenConfig& config);
 
   ~Overlay();
 
@@ -283,7 +285,8 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       AbsolutePathPiece localDir,
       CaseSensitivity caseSensitive,
       OverlayType overlayType,
-      std::shared_ptr<StructuredLogger> logger);
+      std::shared_ptr<StructuredLogger> logger,
+      const EdenConfig& config);
 
   /**
    * A request for the background GC thread.  There are three types of

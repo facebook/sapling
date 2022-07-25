@@ -10,21 +10,29 @@
 #include <folly/Function.h>
 #include <folly/Synchronized.h>
 #include <folly/synchronization/LifoSem.h>
+#include <condition_variable>
 #include <optional>
 #include <vector>
 
+#include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
 
 namespace facebook::eden {
+
+struct InodeNumber;
+class EdenConfig;
 
 class BufferedTreeOverlay : public TreeOverlay {
  public:
   explicit BufferedTreeOverlay(
       AbsolutePathPiece path,
+      const EdenConfig& config,
       TreeOverlayStore::SynchronousMode mode =
           TreeOverlayStore::SynchronousMode::Normal);
 
-  explicit BufferedTreeOverlay(std::unique_ptr<SqliteDatabase> store);
+  explicit BufferedTreeOverlay(
+      std::unique_ptr<SqliteDatabase> store,
+      const EdenConfig& config);
 
   ~BufferedTreeOverlay() override;
 
@@ -41,24 +49,49 @@ class BufferedTreeOverlay : public TreeOverlay {
    * The function should return a bool indicating whether or not the worker
    * thread should stop
    */
-  void process(folly::Function<bool()>&& fn);
+  void process(folly::Function<bool()> fn, size_t captureSize);
+
+  std::optional<overlay::OverlayDir> loadOverlayDir(
+      InodeNumber inodeNumber) override;
+
+  std::optional<overlay::OverlayDir> loadAndRemoveOverlayDir(
+      InodeNumber inodeNumber) override;
+
+  void saveOverlayDir(InodeNumber inodeNumber, overlay::OverlayDir&& odir)
+      override;
+
+  void removeOverlayData(InodeNumber inodeNumber) override;
+
+  bool hasOverlayData(InodeNumber inodeNumber) override;
+
+  void addChild(
+      InodeNumber parent,
+      PathComponentPiece name,
+      overlay::OverlayEntry entry) override;
+
+  void removeChild(InodeNumber parent, PathComponentPiece childName) override;
+
+  void renameChild(
+      InodeNumber src,
+      InodeNumber dst,
+      PathComponentPiece srcName,
+      PathComponentPiece dstName) override;
 
  private:
+  // Maximum size of the buffer in bytes
+  size_t bufferSize_;
   struct State {
     bool workerThreadStopRequested = false;
-    std::vector<folly::Function<bool()>> work;
+    std::vector<std::pair<folly::Function<bool()>, size_t>> work;
+    size_t totalSize = 0;
   };
 
-  // We use a LifoSem here due to the fact that it is faster than a std::mutex
-  // condition vairable combination. It in general should be used in a case
-  // in which performance is more important than fairness, and since this is
-  // a single threaded worker, we don't care about fairness. See the header
-  // file for this object for more information about its performance benefits.
-  // Also, in general we use a semaphore here so the worker thread is not
-  // spinning while the work queue is empty.
-  folly::LifoSem sem_;
   std::thread workerThread_;
   folly::Synchronized<State, std::mutex> state_;
+  // Encodes the condition !state_.work.empty()
+  std::condition_variable workCV_;
+  // Encodes the condition state_.totalSize < bufferSize_
+  std::condition_variable fullCV_;
 
   /**
    * Uses the workerThread_ to process writes to the TreeOverlay
@@ -66,5 +99,7 @@ class BufferedTreeOverlay : public TreeOverlay {
   void processOnWorkerThread();
 
   void stopWorkerThread();
+
+  void flush();
 };
 } // namespace facebook::eden

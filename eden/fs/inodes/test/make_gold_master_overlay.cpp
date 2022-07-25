@@ -8,6 +8,8 @@
 #include <folly/init/Init.h>
 #include <folly/portability/GFlags.h>
 #include <stdlib.h>
+
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/OverlayFile.h"
@@ -43,7 +45,8 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
       overlayPath,
       CaseSensitivity::Sensitive,
       Overlay::OverlayType::Legacy,
-      std::make_shared<NullStructuredLogger>());
+      std::make_shared<NullStructuredLogger>(),
+      *EdenConfig::createTestEdenConfig());
 
   auto fileInode = overlay->allocateInodeNumber();
   XCHECK_EQ(2_ino, fileInode);

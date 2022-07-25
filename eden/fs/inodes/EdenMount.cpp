@@ -236,7 +236,8 @@ EdenMount::EdenMount(
           checkoutConfig_->getOverlayPath(),
           checkoutConfig_->getCaseSensitive(),
           getOverlayType(overlayType),
-          serverState_->getStructuredLogger())},
+          serverState_->getStructuredLogger(),
+          *serverState_->getEdenConfig())},
 #ifndef _WIN32
       overlayFileAccess_{overlay_.get()},
 #endif
