@@ -486,7 +486,6 @@ mod h2m {
 
         Ok(Metadata::new(
             Some(&generate_session_id().to_string()),
-            conn.is_trusted,
             (*conn.identities).clone(),
             debug,
             Some(conn.pending.addr.ip()),
@@ -569,14 +568,8 @@ mod h2m {
                     .parse::<IpAddr>()
                     .context("Invalid IP Address")?;
 
-                // In the case of HTTP proxied/trusted requests we only have the
-                // guarantee that we can trust the forwarded credentials. Beyond
-                // this point we can't trust anything else, ACL checks have not
-                // been performed, so set 'is_trusted' to 'false' here to enforce
-                // further checks.
                 let mut metadata = Metadata::new(
                     Some(&generate_session_id().to_string()),
-                    false,
                     cats_identities.unwrap_or(identities),
                     debug,
                     Some(ip_addr),
@@ -589,10 +582,9 @@ mod h2m {
             }
         }
 
-        // generic fallback
+        // Generic fallback
         Ok(Metadata::new(
             Some(&generate_session_id().to_string()),
-            is_trusted,
             cats_identities.unwrap_or_else(|| (*conn.identities).clone()),
             debug,
             Some(conn.pending.addr.ip()),

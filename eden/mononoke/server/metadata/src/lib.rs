@@ -23,7 +23,6 @@ use trust_dns_resolver::TokioAsyncResolver;
 #[derive(Clone, Debug, Default)]
 pub struct Metadata {
     session_id: SessionId,
-    is_trusted_client: bool,
     identities: MononokeIdentitySet,
     /// If the identities were proxied, this is the true and original
     /// identities from the request.
@@ -39,7 +38,6 @@ pub struct Metadata {
 impl Metadata {
     pub async fn new(
         session_id: Option<&String>,
-        is_trusted_client: bool,
         identities: MononokeIdentitySet,
         client_debug: bool,
         client_ip: Option<IpAddr>,
@@ -67,7 +65,6 @@ impl Metadata {
 
         Self {
             session_id,
-            is_trusted_client,
             identities,
             original_identities: None,
             client_debug,
@@ -132,10 +129,6 @@ impl Metadata {
 
     pub fn raw_encoded_cats(&self) -> &Option<String> {
         &self.raw_encoded_cats
-    }
-
-    pub fn is_trusted_client(&self) -> bool {
-        self.is_trusted_client
     }
 
     pub fn set_identities(mut self, identities: MononokeIdentitySet) -> Self {

@@ -265,7 +265,7 @@ impl SourceControlServiceImpl {
             client_debug = header(FORWARDED_CLIENT_DEBUG_HEADER)?.is_some();
         }
 
-        let mut metadata = Metadata::new(None, false, identities, client_debug, client_ip).await;
+        let mut metadata = Metadata::new(None, identities, client_debug, client_ip).await;
         if let Some(original_identities) = original_identities {
             metadata.add_original_identities(original_identities);
         }
