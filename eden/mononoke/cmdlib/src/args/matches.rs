@@ -500,7 +500,11 @@ fn create_warm_bookmark_cache_scuba_sample_builder(
         Some(scuba) => {
             let hostname = hostname::get_hostname()?;
             let sampling_pct = tunables().get_warm_bookmark_cache_logging_sampling_pct() as u64;
-            if in_throttled_slice(&hostname, sampling_pct) {
+
+            let mut hasher = DefaultHasher::new();
+            hostname.hash(&mut hasher);
+
+            if hasher.finish() % 100 < sampling_pct {
                 Some(scuba)
             } else {
                 None
@@ -1024,11 +1028,4 @@ fn parse_remote_derivation_options(
         derive_remotely,
         smc_tier,
     })
-}
-
-fn in_throttled_slice(hostname: &str, slice_pct: u64) -> bool {
-    let mut hasher = DefaultHasher::new();
-    hostname.hash(&mut hasher);
-
-    hasher.finish() % 100 < slice_pct
 }

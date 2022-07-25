@@ -73,7 +73,10 @@ impl ScubaLoggingArgs {
             Some(scuba) => {
                 let hostname = hostname::get_hostname()?;
                 let sampling_pct = tunables().get_warm_bookmark_cache_logging_sampling_pct() as u64;
-                if in_throttled_slice(&hostname, sampling_pct) {
+                let mut hasher = DefaultHasher::new();
+                hostname.hash(&mut hasher);
+
+                if hasher.finish() % 100 < sampling_pct {
                     Some(scuba)
                 } else {
                     None
@@ -84,11 +87,4 @@ impl ScubaLoggingArgs {
 
         Ok(MononokeScubaSampleBuilder::with_opt_table(fb, maybe_scuba))
     }
-}
-
-fn in_throttled_slice(hostname: &str, slice_pct: u64) -> bool {
-    let mut hasher = DefaultHasher::new();
-    hostname.hash(&mut hasher);
-
-    hasher.finish() % 100 < slice_pct
 }
