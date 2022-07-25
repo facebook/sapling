@@ -7,7 +7,6 @@
 
 use hostname::get_hostname;
 use hyper::server::conn::Http;
-use session_id::generate_session_id;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io;
@@ -318,28 +317,12 @@ pub async fn handle_wireproto<R, W>(
     conn: AcceptedConnection,
     framed: FramedConn<R, W>,
     reponame: String,
-    metadata: Option<Metadata>,
-    client_debug: bool,
+    metadata: Metadata,
 ) -> Result<()>
 where
     R: AsyncRead + Send + std::marker::Unpin + 'static,
     W: AsyncWrite + Send + std::marker::Unpin + 'static,
 {
-    let metadata = if let Some(metadata) = metadata {
-        metadata
-    } else {
-        // Most likely client is not trusted. Use TLS connection
-        // cert as identity.
-        Metadata::new(
-            Some(&generate_session_id().to_string()),
-            conn.is_trusted,
-            (*conn.identities).clone(),
-            client_debug,
-            Some(conn.pending.addr.ip()),
-        )
-        .await
-    };
-
     let metadata = Arc::new(metadata);
 
     let ChannelConn {
