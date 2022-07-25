@@ -86,7 +86,7 @@ class TreeOverlayStore {
   /**
    * Save tree into storage
    */
-  void saveTree(InodeNumber inodeNumber, const overlay::OverlayDir& odir);
+  void saveTree(InodeNumber inodeNumber, overlay::OverlayDir&& odir);
 
   /**
    * Load tree from storage

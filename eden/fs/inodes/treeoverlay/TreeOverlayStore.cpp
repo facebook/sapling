@@ -268,7 +268,7 @@ InodeNumber TreeOverlayStore::nextInodeNumber() {
 
 void TreeOverlayStore::saveTree(
     InodeNumber inodeNumber,
-    const overlay::OverlayDir& odir) {
+    overlay::OverlayDir&& odir) {
   db_->transaction([&](auto& txn) {
     // When `saveTree` gets called, caller is expected to rewrite the tree
     // content. So we need to remove the previously stored version.

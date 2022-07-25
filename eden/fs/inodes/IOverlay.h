@@ -94,7 +94,7 @@ class IOverlay {
    */
   virtual void saveOverlayDir(
       InodeNumber inodeNumber,
-      const overlay::OverlayDir& odir) = 0;
+      overlay::OverlayDir&& odir) = 0;
 
   /**
    * Remove the overlay record associated with the passed InodeNumber.

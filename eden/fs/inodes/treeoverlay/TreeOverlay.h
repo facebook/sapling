@@ -61,7 +61,7 @@ class TreeOverlay : public IOverlay {
   std::optional<overlay::OverlayDir> loadAndRemoveOverlayDir(
       InodeNumber inodeNumber) override;
 
-  void saveOverlayDir(InodeNumber inodeNumber, const overlay::OverlayDir& odir)
+  void saveOverlayDir(InodeNumber inodeNumber, overlay::OverlayDir&& odir)
       override;
 
 #ifndef _WIN32

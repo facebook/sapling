@@ -90,7 +90,7 @@ TEST_F(TreeOverlayStoreTest, testSaveLoadTree) {
   dir.entries_ref()->emplace(std::make_pair("foo", makeEntry()));
   dir.entries_ref()->emplace(std::make_pair("bar", makeEntry()));
 
-  overlay_->saveTree(kRootNodeId, dir);
+  overlay_->saveTree(kRootNodeId, overlay::OverlayDir{dir});
   auto restored = overlay_->loadTree(kRootNodeId);
   ASSERT_EQ(dir.entries_ref()->size(), restored.entries_ref()->size());
   expect_entries(*dir.entries_ref(), *restored.entries_ref());
@@ -103,7 +103,7 @@ TEST_F(TreeOverlayStoreTest, testRecoverInodeEntryNumber) {
   dir.entries_ref()->emplace(std::make_pair("foo", makeEntry()));
   dir.entries_ref()->emplace(std::make_pair("bar", makeEntry()));
 
-  overlay_->saveTree(kRootNodeId, dir);
+  overlay_->saveTree(kRootNodeId, overlay::OverlayDir{dir});
 
   auto db = overlay_->takeDatabase();
   overlay_.reset();
@@ -122,7 +122,7 @@ TEST_F(TreeOverlayStoreTest, testRecoverInodeEntryNumber) {
 TEST_F(TreeOverlayStoreTest, testSavingEmptyTree) {
   auto inode = InodeNumber{overlay_->nextInodeNumber()};
   overlay::OverlayDir dir;
-  overlay_->saveTree(inode, dir);
+  overlay_->saveTree(inode, overlay::OverlayDir{dir});
 
   auto loaded = overlay_->loadTree(inode);
   EXPECT_EQ(loaded.entries_ref()->size(), 0);
@@ -132,11 +132,11 @@ TEST_F(TreeOverlayStoreTest, testSavingTreeOverwrite) {
   auto inode = InodeNumber{overlay_->nextInodeNumber()};
   overlay::OverlayDir dir;
   dir.entries_ref()->emplace(std::make_pair("hello", makeEntry()));
-  overlay_->saveTree(inode, dir);
+  overlay_->saveTree(inode, overlay::OverlayDir{dir});
 
   overlay::OverlayDir newDir;
   newDir.entries_ref()->emplace(std::make_pair("world", makeEntry()));
-  overlay_->saveTree(inode, newDir);
+  overlay_->saveTree(inode, overlay::OverlayDir{newDir});
 
   auto loaded = overlay_->loadTree(inode);
   expect_entries(*newDir.entries_ref(), *loaded.entries_ref());
@@ -148,7 +148,7 @@ TEST_F(TreeOverlayStoreTest, testHasTree) {
 
   overlay::OverlayDir dir;
   dir.entries_ref()->emplace(std::make_pair("hello", makeEntry()));
-  overlay_->saveTree(inode, dir);
+  overlay_->saveTree(inode, overlay::OverlayDir{dir});
 
   EXPECT_TRUE(overlay_->hasTree(inode));
   EXPECT_FALSE(overlay_->hasTree(InodeNumber{overlay_->nextInodeNumber()}));
@@ -159,7 +159,7 @@ TEST_F(TreeOverlayStoreTest, testRemoveTree) {
   overlay::OverlayDir dir;
   dir.entries_ref()->emplace(std::make_pair("hello", makeEntry()));
 
-  overlay_->saveTree(inode, dir);
+  overlay_->saveTree(inode, overlay::OverlayDir{dir});
   EXPECT_EQ(overlay_->loadTree(inode).entries_ref()->size(), 1);
 
   EXPECT_THROW(overlay_->removeTree(inode), TreeOverlayNonEmptyError);
@@ -171,7 +171,7 @@ TEST_F(TreeOverlayStoreTest, testRemoveTree) {
 TEST_F(TreeOverlayStoreTest, testAddChild) {
   auto inode = InodeNumber{overlay_->nextInodeNumber()};
   overlay::OverlayDir dir;
-  overlay_->saveTree(inode, dir);
+  overlay_->saveTree(inode, overlay::OverlayDir{dir});
   EXPECT_EQ(overlay_->loadTree(inode).entries_ref()->size(), 0);
 
   overlay_->addChild(inode, "hello"_pc, makeEntry());
@@ -189,7 +189,7 @@ TEST_F(TreeOverlayStoreTest, testRemoveChild) {
   overlay::OverlayDir dir;
   dir.entries_ref()->emplace(std::make_pair("hello", makeEntry()));
   dir.entries_ref()->emplace(std::make_pair("world", makeEntry()));
-  overlay_->saveTree(inode, dir);
+  overlay_->saveTree(inode, overlay::OverlayDir{dir});
   EXPECT_EQ(overlay_->loadTree(inode).entries_ref()->size(), 2);
 
   EXPECT_TRUE(overlay_->hasChild(inode, "hello"_pc));
@@ -209,7 +209,7 @@ TEST_F(TreeOverlayStoreTest, testRenameChild) {
     overlay::OverlayDir dir;
     auto entry = makeEntry();
     dir.entries_ref()->emplace(std::make_pair("subdir_child", entry));
-    overlay_->saveTree(subdirInode, dir);
+    overlay_->saveTree(subdirInode, overlay::OverlayDir{dir});
   }
 
   auto inode = InodeNumber{overlay_->nextInodeNumber()};
@@ -219,7 +219,7 @@ TEST_F(TreeOverlayStoreTest, testRenameChild) {
   dir.entries_ref()->emplace(std::make_pair("hello", entry));
   dir.entries_ref()->emplace(std::make_pair("world", makeEntry()));
   dir.entries_ref()->emplace(std::make_pair("subdir", subdir));
-  overlay_->saveTree(inode, dir);
+  overlay_->saveTree(inode, overlay::OverlayDir{dir});
   EXPECT_EQ(
       overlay_->loadTree(inode).entries_ref()->size(), 3); // hello world subdir
 
@@ -255,7 +255,7 @@ TEST_F(TreeOverlayStoreTest, testRenameChild) {
 
   overlay::OverlayDir anotherDir;
   auto anotherInode = InodeNumber{overlay_->nextInodeNumber()};
-  overlay_->saveTree(anotherInode, anotherDir);
+  overlay_->saveTree(anotherInode, overlay::OverlayDir{anotherDir});
   // No entires in the new directory yet
   EXPECT_EQ(overlay_->loadTree(anotherInode).entries_ref()->size(), 0);
 

@@ -148,7 +148,7 @@ class TestDir {
   }
 
   void save() {
-    overlay_->fs().saveOverlayDir(number_, contents_);
+    overlay_->fs().saveOverlayDir(number_, overlay::OverlayDir{contents_});
   }
 
  private:

@@ -123,8 +123,7 @@ class OverlayChecker::RepairState {
     // control state.  If the files can be recovered from source control, users
     // can always recover it themselves afterwards with `hg revert`
     if (S_ISDIR(mode)) {
-      overlay::OverlayDir contents;
-      fs()->saveOverlayDir(number, contents);
+      fs()->saveOverlayDir(number, overlay::OverlayDir{});
     } else if (S_ISLNK(mode)) {
       // symbolic links generally can't be empty in normal circumstances,
       // so put some dummy data in the link.
@@ -157,7 +156,7 @@ class OverlayChecker::RepairState {
             entry.hash_ref() = hash.asString();
             entry.inodeNumber_ref() = 0;
 
-            fs()->saveOverlayDir(parent, parentDir);
+            fs()->saveOverlayDir(parent, std::move(parentDir));
             return true;
           }
         }

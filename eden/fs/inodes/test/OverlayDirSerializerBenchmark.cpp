@@ -46,12 +46,13 @@ void copyOverlayDirectory(
 
   for (uint64_t i = 1; i <= kIterations; i++) {
     auto inodeNumber = overlay->allocateInodeNumber();
-    overlay::OverlayDir odir =
-        overlay->serializeOverlayDir(inodeNumber, contents);
 
-    fns.emplace_back([backingOverlay, inodeNumber, odir = odir]() {
-      backingOverlay->saveOverlayDir(inodeNumber, odir);
-    });
+    fns.emplace_back(
+        [backingOverlay,
+         inodeNumber,
+         odir = overlay->serializeOverlayDir(inodeNumber, contents)]() mutable {
+          backingOverlay->saveOverlayDir(inodeNumber, std::move(odir));
+        });
   }
 
   for (auto& fn : fns) {
@@ -99,8 +100,9 @@ void serializeOverlayDirectory(
                           std::move(serializedOverlayDir)]() mutable {
       auto deserializedOverlayDir =
           apache::thrift::CompactSerializer::deserialize<overlay::OverlayDir>(
-              std::move(serializedOverlayDir));
-      backingOverlay->saveOverlayDir(inodeNumber, deserializedOverlayDir);
+              serializedOverlayDir);
+      backingOverlay->saveOverlayDir(
+          inodeNumber, std::move(deserializedOverlayDir));
     });
   }
 

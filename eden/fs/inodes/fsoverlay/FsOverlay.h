@@ -113,7 +113,7 @@ class FsOverlay : public IOverlay {
 
   void initNewOverlay();
 
-  void saveOverlayDir(InodeNumber inodeNumber, const overlay::OverlayDir& odir)
+  void saveOverlayDir(InodeNumber inodeNumber, overlay::OverlayDir&& odir)
       override;
 
   std::optional<overlay::OverlayDir> loadOverlayDir(
