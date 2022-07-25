@@ -708,23 +708,6 @@ void EdenMount::transitionToFuseInitializationErrorState() {
   }
 }
 
-static void logStats(
-    bool success,
-    AbsolutePath path,
-    const RootId& fromRootId,
-    const RootId& toRootId,
-    const FetchStatistics& fetchStats,
-    std::string_view methodName) {
-  XLOG(DBG1) << (success ? "" : "failed ") << methodName << " for " << path
-             << " from " << fromRootId << " to " << toRootId << " accessed "
-             << fetchStats.tree.accessCount << " trees ("
-             << fetchStats.tree.cacheHitRate << "% chr), "
-             << fetchStats.blob.accessCount << " blobs ("
-             << fetchStats.blob.cacheHitRate << "% chr), and "
-             << fetchStats.metadata.accessCount << " metadata ("
-             << fetchStats.metadata.cacheHitRate << "% chr).";
-}
-
 static folly::StringPiece getCheckoutModeString(CheckoutMode checkoutMode) {
   switch (checkoutMode) {
     case CheckoutMode::DRY_RUN:
@@ -774,9 +757,8 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
    * So we use read lock instead assuming the contents of loaded rootId
    * objects are not weaving too much
    */
-  auto oldParent = getWorkingCopyParent();
   XLOG(DBG3) << "adding " << rootId << " to Eden mount " << this->getPath()
-             << " at path " << path << " on top of " << oldParent;
+             << " at path " << path;
 
   auto ctx = std::make_shared<CheckoutContext>(
       this,
@@ -839,16 +821,19 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
         resultAndTimes.result = std::move(result);
         return resultAndTimes;
       })
-      .thenTry([this, ctx, oldParent, rootId](
+      .thenTry([this, ctx, rootId](
                    Try<SetPathObjectIdResultAndTimes>&& resultAndTimes) {
         auto fetchStats = ctx->getFetchContext().computeStatistics();
-        logStats(
-            resultAndTimes.hasValue(),
-            this->getPath(),
-            oldParent,
-            rootId,
-            fetchStats,
-            "setPathObjectId");
+
+        XLOG(DBG1) << (resultAndTimes.hasValue() ? "" : "failed ")
+                   << "setPathObjectId for " << this->getPath() << " to "
+                   << rootId << " accessed " << fetchStats.tree.accessCount
+                   << " trees (" << fetchStats.tree.cacheHitRate << "% chr), "
+                   << fetchStats.blob.accessCount << " blobs ("
+                   << fetchStats.blob.cacheHitRate << "% chr), and "
+                   << fetchStats.metadata.accessCount << " metadata ("
+                   << fetchStats.metadata.cacheHitRate << "% chr).";
+
         return std::move(resultAndTimes);
       });
 }
@@ -1507,13 +1492,16 @@ folly::Future<CheckoutResult> EdenMount::checkout(
       .thenTry([this, ctx, stopWatch, oldParent, snapshotHash, checkoutMode](
                    Try<CheckoutResult>&& result) {
         auto fetchStats = ctx->getFetchContext().computeStatistics();
-        logStats(
-            result.hasValue(),
-            this->getPath(),
-            oldParent,
-            snapshotHash,
-            fetchStats,
-            "checkout");
+
+        XLOG(DBG1) << (result.hasValue() ? "" : "failed ") << "checkout for "
+                   << this->getPath() << " from " << oldParent << " to "
+                   << snapshotHash << " accessed "
+                   << fetchStats.tree.accessCount << " trees ("
+                   << fetchStats.tree.cacheHitRate << "% chr), "
+                   << fetchStats.blob.accessCount << " blobs ("
+                   << fetchStats.blob.cacheHitRate << "% chr), and "
+                   << fetchStats.metadata.accessCount << " metadata ("
+                   << fetchStats.metadata.cacheHitRate << "% chr).";
 
         auto checkoutTimeInSeconds =
             std::chrono::duration<double>{stopWatch.elapsed()};
