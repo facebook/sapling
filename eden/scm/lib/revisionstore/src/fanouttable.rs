@@ -7,7 +7,6 @@
 
 use std::io::Cursor;
 use std::io::Write;
-use std::option::Option;
 
 use anyhow::Result;
 use byteorder::BigEndian;
