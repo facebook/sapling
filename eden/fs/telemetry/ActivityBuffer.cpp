@@ -17,7 +17,7 @@ InodeTraceEvent::InodeTraceEvent(
     InodeEventType eventType,
     InodeEventProgress progress,
     std::chrono::microseconds duration,
-    folly::StringPiece stringName)
+    folly::StringPiece stringPath)
     : ino{ino},
       inodeType{inodeType},
       eventType{eventType},
@@ -25,9 +25,13 @@ InodeTraceEvent::InodeTraceEvent(
       duration{duration} {
   systemTime = times.systemTime;
   monotonicTime = times.monotonicTime;
-  name.reset(new char[stringName.size() + 1]);
-  memcpy(name.get(), stringName.data(), stringName.size());
-  name[stringName.size()] = 0;
+  setPath(stringPath);
+}
+
+void InodeTraceEvent::setPath(folly::StringPiece stringPath) {
+  path.reset(new char[stringPath.size() + 1]);
+  memcpy(path.get(), stringPath.data(), stringPath.size());
+  path[stringPath.size()] = 0;
 }
 
 ActivityBuffer::ActivityBuffer(uint32_t maxEvents) : maxEvents_(maxEvents) {}

@@ -792,14 +792,24 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   std::optional<ActivityBuffer> initActivityBuffer();
 
   /**
+   * Subscribes activityBuffer_ to the inodeTraceBus_ in order to read and store
+   * InodeTraceEvents into the ActivityBuffer as they occur. In addition, path
+   * names for the inodes are calculated here outside of the critical path of
+   * the inode event in order to be displayed in the eden inode tracing CLI.
+   */
+  void subscribeActivityBuffer();
+
+  /**
    * Helper function to update ActivityBuffer in FileInode and TreeInode when a
-   * new InodeMaterializeEvent occurs.
+   * new InodeMaterializeEvent occurs. Note, path could be the full path (in the
+   * case of inode creations), or, more commonly, just base filenames depending
+   * on how much is easily available during the inode event.
    */
   void addInodeMaterializeEvent(
       std::chrono::system_clock::time_point watch,
       InodeType type,
       InodeNumber ino,
-      folly::StringPiece name,
+      folly::StringPiece path,
       InodeEventProgress progress);
 
   /**

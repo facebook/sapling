@@ -254,15 +254,7 @@ EdenMount::EdenMount(
       inodeTraceBus_{
           TraceBus<InodeTraceEvent>::create("inode", kInodeTraceBusCapacity)},
       clock_{serverState_->getClock()} {
-  inodeTraceHandle_ = std::make_shared<InodeTraceHandle>();
-
-  if (activityBuffer_.has_value()) {
-    inodeTraceHandle_->subHandle = inodeTraceBus_->subscribeFunction(
-        folly::to<std::string>("inodetrace-", getPath().basename()),
-        [this](const InodeTraceEvent& event) {
-          activityBuffer_->addEvent(event);
-        });
-  }
+  subscribeActivityBuffer();
 }
 
 Overlay::OverlayType EdenMount::getOverlayType(
@@ -2239,11 +2231,35 @@ std::optional<ActivityBuffer> EdenMount::initActivityBuffer() {
   return std::nullopt;
 }
 
+void EdenMount::subscribeActivityBuffer() {
+  inodeTraceHandle_ = std::make_shared<InodeTraceHandle>();
+
+  if (activityBuffer_.has_value()) {
+    inodeTraceHandle_->subHandle = inodeTraceBus_->subscribeFunction(
+        folly::to<std::string>("inodetrace-", getPath().basename()),
+        [this](const InodeTraceEvent& event) {
+          // Use full path name for the inode event if available, otherwise
+          // default to the filename already stored
+          try {
+            auto relativePath = inodeMap_->getPathForInode(event.ino);
+            if (relativePath.has_value()) {
+              InodeTraceEvent newTraceEvent = event;
+              newTraceEvent.setPath(relativePath->stringPiece());
+              activityBuffer_->addEvent(std::move(newTraceEvent));
+              return;
+            }
+          } catch (const std::system_error& /* e */) {
+          }
+          activityBuffer_->addEvent(event);
+        });
+  }
+}
+
 void EdenMount::addInodeMaterializeEvent(
     std::chrono::system_clock::time_point startTime,
     InodeType type,
     InodeNumber ino,
-    folly::StringPiece name,
+    folly::StringPiece path,
     InodeEventProgress progress) {
   // Measure timestamps and duration
   auto eventSystemTime = (progress == InodeEventProgress::START)
@@ -2261,7 +2277,7 @@ void EdenMount::addInodeMaterializeEvent(
       InodeEventType::MATERIALIZE,
       progress,
       duration,
-      name));
+      path));
 }
 
 namespace {

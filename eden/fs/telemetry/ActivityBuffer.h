@@ -36,14 +36,19 @@ struct InodeTraceEvent : TraceEventBase {
       InodeEventType eventType,
       InodeEventProgress progress,
       std::chrono::microseconds duration,
-      folly::StringPiece name);
+      folly::StringPiece path);
 
   // Simple accessor that hides the internal memory representation of the trace
-  // event's name. Note this could be just the filename or it could be the full
-  // path depending on how much was available.
-  std::string getName() const {
-    return name.get();
+  // event's path. Note this could be just the base filename or it could be the
+  // full path depending on how much was available and if the event has already
+  // been added into the ActivityBuffer.
+  std::string getPath() const {
+    return path.get();
   }
+
+  // Setter that allocates new memory on the heap and memcpy's a StringPiece's
+  // data into the InodeTraceEvent's path attribute
+  void setPath(folly::StringPiece stringPath);
 
   InodeNumber ino;
   InodeType inodeType;
@@ -51,7 +56,7 @@ struct InodeTraceEvent : TraceEventBase {
   InodeEventProgress progress;
   std::chrono::microseconds duration;
   // Always null-terminated, and saves space in the trace event structure.
-  std::shared_ptr<char[]> name;
+  std::shared_ptr<char[]> path;
 };
 
 /**

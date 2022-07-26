@@ -1339,23 +1339,23 @@ apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
   return std::move(serverStream);
 }
 
+/**
+ * Helper function to convert an InodeTraceEvent to a thrift InodeEvent type.
+ * Used in EdenServiceHandler::traceInodeEvents and
+ * EdenServiceHandler::getRetroactiveInodeEvents. Note paths are not set here
+ * and are set by the calling functions. For traceInodeEvents full paths may
+ * need to be computed whereas for getRetroactiveInodeEvents full paths would
+ * have already been computed when the event gets added to the ActivityBuffer.
+ */
 void ConvertInodeTraceEventToThriftInodeEvent(
     InodeTraceEvent traceEvent,
-    InodeEvent& thriftEvent,
-    InodeMap* inodeMap) {
+    InodeEvent& thriftEvent) {
   thriftEvent.times() = thriftTraceEventTimes(traceEvent);
   thriftEvent.ino() = traceEvent.ino.getRawValue();
   thriftEvent.inodeType() = traceEvent.inodeType;
   thriftEvent.eventType() = traceEvent.eventType;
   thriftEvent.progress() = traceEvent.progress;
   thriftEvent.duration() = traceEvent.duration.count();
-  try {
-    auto relativePath = inodeMap->getPathForInode(traceEvent.ino);
-    thriftEvent.path() =
-        relativePath ? relativePath->stringPiece().str() : traceEvent.getName();
-  } catch (const std::system_error& /* e */) {
-    thriftEvent.path() = traceEvent.getName();
-  }
   // TODO: trace requesting pid
   // thriftEvent.requestInfo() = thriftRequestInfo(pid);
 }
@@ -1383,7 +1383,14 @@ apache::thrift::ServerStream<InodeEvent> EdenServiceHandler::traceInodeEvents(
       [publisher = ThriftStreamPublisherOwner{std::move(publisher)},
        inodeMap](const InodeTraceEvent& event) {
         InodeEvent thriftEvent;
-        ConvertInodeTraceEventToThriftInodeEvent(event, thriftEvent, inodeMap);
+        ConvertInodeTraceEventToThriftInodeEvent(event, thriftEvent);
+        try {
+          auto relativePath = inodeMap->getPathForInode(event.ino);
+          thriftEvent.path() = relativePath ? relativePath->stringPiece().str()
+                                            : event.getPath();
+        } catch (const std::system_error& /* e */) {
+          thriftEvent.path() = event.getPath();
+        }
         publisher.next(thriftEvent);
       });
 
@@ -3318,7 +3325,6 @@ void EdenServiceHandler::getRetroactiveInodeEvents(
   auto mountPoint = params->get_mountPoint();
   auto mountPath = AbsolutePathPiece{mountPoint};
   auto edenMount = server_->getMount(mountPath);
-  auto inodeMap = edenMount->getInodeMap();
 
   if (!edenMount->getActivityBuffer().has_value()) {
     throw newEdenError(
@@ -3332,7 +3338,8 @@ void EdenServiceHandler::getRetroactiveInodeEvents(
   thriftEvents.reserve(bufferEvents.size());
   for (auto const& event : bufferEvents) {
     InodeEvent thriftEvent{};
-    ConvertInodeTraceEventToThriftInodeEvent(event, thriftEvent, inodeMap);
+    ConvertInodeTraceEventToThriftInodeEvent(event, thriftEvent);
+    thriftEvent.path() = event.getPath();
     thriftEvents.push_back(std::move(thriftEvent));
   }
 
