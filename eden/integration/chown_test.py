@@ -9,6 +9,7 @@ import os
 from .lib import repobase, testcase
 
 
+@testcase.eden_test
 # pyre-ignore[13]: T62487924
 class ChownTest(testcase.EdenRepoTest):
     nobody_uid: int

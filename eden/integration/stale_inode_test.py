@@ -13,8 +13,12 @@ from typing import Dict, List, Optional
 from eden.integration.hg.lib.hg_extension_test_base import EdenHgTestCase
 from eden.integration.lib import hgrepo
 
+from .lib import testcase
+
 POST_CHECKOUT_UNLOADING_DELAY_S = 2
 
+
+@testcase.eden_test
 # pyre-ignore[13]: T62487924
 class StaleInodeTestHgNFS(EdenHgTestCase):
     commit0: str

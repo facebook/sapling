@@ -26,6 +26,7 @@ Counters = typing.Mapping[str, float]
 logger = logging.getLogger(__name__)
 
 
+@testcase.eden_test
 class FUSEStatsTest(testcase.EdenRepoTest):
     def test_reading_committed_file_bumps_read_counter(self) -> None:
         counters_before = self.get_counters()
