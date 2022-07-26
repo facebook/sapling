@@ -106,7 +106,7 @@ if sys.version_info[0] >= 3:
 
     # urllib.parse.urlencode() returns str. We use this function to make
     # sure we return bytes.
-    def urlencode(query, doseq=False):
+    def urlencode(query, doseq: bool = False):
         s = pycompat.encodeutf8(urllib.parse.urlencode(query, doseq=doseq))
         return s
 
@@ -125,7 +125,7 @@ if sys.version_info[0] >= 3:
     def getdata(req):
         return req.data
 
-    def hasdata(req):
+    def hasdata(req) -> bool:
         return req.data is not None
 
 else:
@@ -192,7 +192,7 @@ else:
     def getdata(req):
         return req.get_data()
 
-    def hasdata(req):
+    def hasdata(req) -> bool:
         return req.has_data()
 
     quote = urllib.quote
