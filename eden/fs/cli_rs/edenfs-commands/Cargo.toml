@@ -16,7 +16,6 @@ comfy-table = "4.0.1"
 crossterm = { version = "0.23.1", features = ["event-stream"] }
 dirs = "2.0"
 edenfs-client = { version = "0.1.0", path = "../edenfs-client" }
-edenfs-config = { version = "0.1.0", path = "../edenfs-config" }
 edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
 edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
