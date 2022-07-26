@@ -21,7 +21,6 @@ use util::path::expand_path;
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::checkout::CheckoutConfig;
 use edenfs_client::EdenFsInstance;
-use edenfs_config::EdenFsConfig;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
@@ -148,16 +147,6 @@ pub enum PrefetchCmd {
         #[clap(flatten)]
         options: ActivationOptions,
     },
-    #[clap(about = "Disables prefetch profiles locally")]
-    Disable,
-    #[clap(hide = true)]
-    DisablePredictive,
-    #[clap(about = "Enables prefetch profiles locally")]
-    Enable,
-    #[clap(hide = true)]
-    EnablePredictive,
-    #[clap(about = "Prefetch all the active prefetch profiles or specified \
-        prefetch profiles. This is intended for use in after checkout and pull.")]
     Fetch {
         #[clap(flatten)]
         options: FetchOptions,
@@ -457,74 +446,6 @@ impl PrefetchCmd {
         Ok(0)
     }
 
-    async fn disable(&self, instance: EdenFsInstance) -> Result<ExitCode> {
-        let mut loader = EdenFsConfig::loader();
-        let home_dir_path = instance
-            .get_user_home_dir()
-            .ok_or_else(|| {
-                EdenFsError::Other(anyhow!(
-                    "Failed to disable prefetch-profiles, could not determine user's home directory"
-                ))
-            })?
-            .as_path();
-        edenfs_config::load_user(&mut loader, home_dir_path)?;
-        let mut edenfs_config = loader.build().map_err(EdenFsError::ConfigurationError)?;
-        edenfs_config.set_bool("prefetch-profiles", "prefetching-enabled", false);
-        edenfs_config.save_user(home_dir_path)?;
-        Ok(0)
-    }
-
-    async fn disable_predictive(&self, instance: EdenFsInstance) -> Result<ExitCode> {
-        let mut loader = EdenFsConfig::loader();
-        let home_dir_path = instance
-            .get_user_home_dir()
-            .ok_or_else(|| {
-                EdenFsError::Other(anyhow!(
-                    "Failed to disable predictive prefetch-profiles, could not determine user's home directory"
-                ))
-            })?
-            .as_path();
-        edenfs_config::load_user(&mut loader, home_dir_path)?;
-        let mut edenfs_config = loader.build().map_err(EdenFsError::ConfigurationError)?;
-        edenfs_config.set_bool("prefetch-profiles", "predictive-prefetching-enabled", false);
-        edenfs_config.save_user(home_dir_path)?;
-        Ok(0)
-    }
-
-    async fn enable(&self, instance: EdenFsInstance) -> Result<ExitCode> {
-        let mut loader = EdenFsConfig::loader();
-        let home_dir_path = instance
-            .get_user_home_dir()
-            .ok_or_else(|| {
-                EdenFsError::Other(anyhow!(
-                    "Failed to enable prefetch-profiles, could not determine user's home directory"
-                ))
-            })?
-            .as_path();
-        edenfs_config::load_user(&mut loader, home_dir_path)?;
-        let mut edenfs_config = loader.build().map_err(EdenFsError::ConfigurationError)?;
-        edenfs_config.set_bool("prefetch-profiles", "prefetching-enabled", true);
-        edenfs_config.save_user(home_dir_path)?;
-        Ok(0)
-    }
-
-    async fn enable_predictive(&self, instance: EdenFsInstance) -> Result<ExitCode> {
-        let mut loader = EdenFsConfig::loader();
-        let home_dir_path = instance
-            .get_user_home_dir()
-            .ok_or_else(|| {
-                EdenFsError::Other(anyhow!(
-                    "Failed to enable predictive prefetch-profiles, could not determine user's home directory"
-                ))
-            })?
-            .as_path();
-        edenfs_config::load_user(&mut loader, home_dir_path)?;
-        let mut edenfs_config = loader.build().map_err(EdenFsError::ConfigurationError)?;
-        edenfs_config.set_bool("prefetch-profiles", "predictive-prefetching-enabled", true);
-        edenfs_config.save_user(home_dir_path)?;
-        Ok(0)
-    }
-
     async fn fetch(
         &self,
         instance: EdenFsInstance,
@@ -669,10 +590,6 @@ impl Subcommand for PrefetchCmd {
             Self::DeactivatePredictive { options } => {
                 self.deactivate_predictive(instance, options).await
             }
-            Self::Disable {} => self.disable(instance).await,
-            Self::DisablePredictive {} => self.disable_predictive(instance).await,
-            Self::Enable {} => self.enable(instance).await,
-            Self::EnablePredictive {} => self.enable_predictive(instance).await,
             Self::Fetch {
                 profile_names,
                 options,

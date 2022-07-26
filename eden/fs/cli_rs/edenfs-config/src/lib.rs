@@ -7,13 +7,11 @@
 
 use std::path::Path;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use serde::Deserialize;
 use serde::Serialize;
 use stack_config::StackConfig;
-use std::fs::write;
 use tracing::event;
 use tracing::trace;
 use tracing::Level;
@@ -56,24 +54,6 @@ pub struct EdenFsConfig {
     /// to use any configurations, define them above instead of reading from
     /// this field.
     pub other: toml::value::Table,
-}
-
-impl EdenFsConfig {
-    pub fn set_bool(&mut self, section: &str, entry: &str, value: bool) {
-        let config_items = self.other.get_mut(section).and_then(|x| x.as_table_mut());
-        if let Some(item) = config_items {
-            item.insert(entry.to_owned(), toml::Value::Boolean(value));
-        }
-    }
-
-    /// Store information in the local config file.
-    pub fn save_user(&mut self, home_dir: &Path) -> Result<()> {
-        let toml_out = &toml::to_string(&self).expect("Could not toml-ize config");
-        let home_rc = home_dir.join(".edenrc");
-        write(home_rc.clone(), toml_out)
-            .with_context(|| anyhow!("Could not write to config file! {:?}", home_rc))?;
-        Ok(())
-    }
 }
 
 fn skip_core_serialization(core: &Core) -> bool {
