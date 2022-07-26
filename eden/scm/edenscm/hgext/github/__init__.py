@@ -6,13 +6,16 @@
 """utilities for interacting with GitHub (EXPERIMENTAL)
 """
 
+from typing import Optional
+
 from edenscm.mercurial import registrar
 from edenscm.mercurial.i18n import _
 
-from . import link, submit
+from . import link, submit, templates
 
 cmdtable = {}
 command = registrar.command(cmdtable)
+templatekeyword = registrar.templatekeyword()
 
 
 @command(
@@ -48,3 +51,39 @@ def link_cmd(ui, repo, *args, **opts):
         if specified; otherwise, falls back to 'paths.default'.
     """
     return link.link(ui, repo, *args, **opts)
+
+
+@templatekeyword("github_pull_request_url")
+def github_pull_request_url(repo, ctx, templ, **args) -> Optional[str]:
+    """If the commit is associated with a GitHub pull request, returns the URL
+    for the pull request.
+    """
+    descr = ctx.description()
+    return templates.github_pull_request_url(descr)
+
+
+@templatekeyword("github_pull_request_repo_owner")
+def github_pull_request_repo_owner(repo, ctx, templ, **args) -> Optional[str]:
+    """If the commit is associated with a GitHub pull request, returns the
+    repository owner for the pull request.
+    """
+    descr = ctx.description()
+    return templates.github_pull_request_repo_owner(descr)
+
+
+@templatekeyword("github_pull_request_repo_name")
+def github_pull_request_repo_name(repo, ctx, templ, **args) -> Optional[str]:
+    """If the commit is associated with a GitHub pull request, returns the
+    repository name for the pull request.
+    """
+    descr = ctx.description()
+    return templates.github_pull_request_repo_name(descr)
+
+
+@templatekeyword("github_pull_request_number")
+def github_pull_request_number(repo, ctx, templ, **args) -> Optional[int]:
+    """If the commit is associated with a GitHub pull request, returns the
+    number for the pull request.
+    """
+    descr = ctx.description()
+    return templates.github_pull_request_number(descr)

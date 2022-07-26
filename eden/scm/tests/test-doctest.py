@@ -34,6 +34,7 @@ def testmod(name, optionflags=0, testtarget=None):
     runner.summarize()
 
 
+testmod("edenscm.hgext.github.templates")
 testmod("edenscm.mercurial.changegroup")
 testmod("edenscm.mercurial.changelog")
 testmod("edenscm.mercurial.cmdutil")
