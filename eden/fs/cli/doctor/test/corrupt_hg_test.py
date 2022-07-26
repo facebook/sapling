@@ -6,6 +6,7 @@
 
 # pyre-unsafe
 
+import errno
 import os
 import shutil
 import sys
@@ -31,7 +32,6 @@ class CorruptHgTest(DoctorTestBase):
             FakeEdenInstance, self.checkout.instance
         ).default_backing_repo
 
-    @unittest.skipIf(bool(sys.platform == "darwin"), "does not pass on macOS")
     def test_unreadable_hg_shared_path_is_a_problem(self) -> None:
         sharedpath_path = self.checkout.path / ".hg" / "sharedpath"
         sharedpath_path.unlink()
@@ -40,7 +40,7 @@ class CorruptHgTest(DoctorTestBase):
         out = self.cure_what_ails_you(dry_run=True)
         self.assertIn(
             "Failed to read .hg/sharedpath: "
-            "[Errno 40] Too many levels of symbolic links",
+            f"[Errno {errno.ELOOP}] Too many levels of symbolic links",
             out.getvalue(),
         )
 
