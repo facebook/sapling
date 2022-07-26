@@ -168,7 +168,7 @@ impl Middleware for ClientIdentityMiddleware {
             client_identity.client_correlator = request_client_correlator_from_headers(headers);
 
             client_identity.identities = {
-                let maybe_idents =
+                let maybe_cat_idents =
                     match try_get_cats_idents(self.fb, headers, &self.internal_identity) {
                         Err(e) => {
                             let msg = format!("Error extracting CATs identities: {}.", &e,);
@@ -189,9 +189,18 @@ impl Middleware for ClientIdentityMiddleware {
                         }
                         Ok(maybe_cats) => maybe_cats,
                     };
-                maybe_idents.or_else(|| {
-                    cert_idents.and_then(|x| self.extract_client_identities(x, headers))
-                })
+
+                let maybe_tls_or_proxied_idents: Option<MononokeIdentitySet> =
+                    cert_idents.and_then(|x| self.extract_client_identities(x, headers));
+
+                match (maybe_cat_idents, maybe_tls_or_proxied_idents) {
+                    (None, None) => None,
+                    (Some(cat_idents), Some(tls_or_proxied_idents)) => {
+                        Some(cat_idents.union(&tls_or_proxied_idents).cloned().collect())
+                    }
+                    (Some(cat_idents), None) => Some(cat_idents),
+                    (None, Some(tls_or_proxied_idents)) => Some(tls_or_proxied_idents),
+                }
             };
         }
 

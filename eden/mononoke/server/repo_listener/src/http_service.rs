@@ -561,16 +561,19 @@ mod h2m {
                 let json_identities = percent_decode(encoded_identities.as_ref())
                     .decode_utf8()
                     .context("Invalid encoded identities")?;
-                let identities = MononokeIdentity::try_from_json_encoded(&json_identities)
+
+                let mut identities = MononokeIdentity::try_from_json_encoded(&json_identities)
                     .context("Invalid identities")?;
                 let ip_addr = client_address
                     .to_str()?
                     .parse::<IpAddr>()
                     .context("Invalid IP Address")?;
 
+                identities.extend(cats_identities.unwrap_or_default().into_iter());
+
                 let mut metadata = Metadata::new(
                     Some(&generate_session_id().to_string()),
-                    cats_identities.unwrap_or(identities),
+                    identities,
                     debug,
                     Some(ip_addr),
                 )
@@ -582,10 +585,13 @@ mod h2m {
             }
         }
 
+        let mut identities = cats_identities.unwrap_or_default();
+        identities.extend(conn.identities.iter().cloned());
+
         // Generic fallback
         Ok(Metadata::new(
             Some(&generate_session_id().to_string()),
-            cats_identities.unwrap_or_else(|| (*conn.identities).clone()),
+            identities,
             debug,
             Some(conn.pending.addr.ip()),
         )
