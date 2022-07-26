@@ -16,7 +16,7 @@ import re
 import struct
 import zlib
 from hashlib import sha1
-from typing import Iterator, List, Optional, Tuple, TYPE_CHECKING
+from typing import Iterator, List, Optional, Pattern, Sized, Tuple, TYPE_CHECKING
 
 from edenscmnative import bdiff, mpatch, xdiff
 
@@ -37,7 +37,9 @@ patches = mpatch.patches
 patchedsize = mpatch.patchedsize
 textdiff = bdiff.bdiff
 
-wordsplitter = re.compile(rb"(\t+| +|[a-zA-Z0-9_\x80-\xff]+|[^ \ta-zA-Z0-9_\x80-\xff])")
+wordsplitter: Pattern[bytes] = re.compile(
+    rb"(\t+| +|[a-zA-Z0-9_\x80-\xff]+|[^ \ta-zA-Z0-9_\x80-\xff])"
+)
 
 # called by dispatch.py
 def init(ui: "UI") -> None:
@@ -123,15 +125,24 @@ class diffopts(object):
 defaultopts = diffopts()
 
 
-def wsclean(opts, text, blank=True):
+def wsclean(opts, text: str, blank: bool = True) -> bytes:
     if opts.ignorews:
+        # pyre-fixme[9]: text has type `str`; used as `bytes`.
+        # pyre-fixme[6]: For 2nd param expected `bool` but got `int`.
         text = bdiff.fixws(text, 1)
     elif opts.ignorewsamount:
+        # pyre-fixme[9]: text has type `str`; used as `bytes`.
+        # pyre-fixme[6]: For 2nd param expected `bool` but got `int`.
         text = bdiff.fixws(text, 0)
     if blank and opts.ignoreblanklines:
+        # pyre-fixme[9]: text has type `str`; used as `bytes`.
+        # pyre-fixme[6]: For 3rd param expected `AnyStr` but got `str`.
         text = re.sub(b"\n+", b"\n", text).strip(b"\n")
     if opts.ignorewseol:
+        # pyre-fixme[9]: text has type `str`; used as `bytes`.
+        # pyre-fixme[6]: For 3rd param expected `AnyStr` but got `str`.
         text = re.sub(b"[ \t\r\f]+\n", b"\n", text)
+    # pyre-fixme[7]: Expected `bytes` but got `str`.
     return text
 
 
@@ -227,7 +238,13 @@ def blocksinrange(blocks, rangeb):
     return filteredblocks, (lba, uba)
 
 
-def allblocks(text1, text2, opts=None, lines1=None, lines2=None):
+def allblocks(
+    text1: str,
+    text2: str,
+    opts: Optional[diffopts] = None,
+    lines1: Optional[List[bytes]] = None,
+    lines2: Optional[List[bytes]] = None,
+):
     """Return (block, type) tuples, where block is an mdiff.blocks
     line entry. type is '=' for blocks matching exactly one another
     (bdiff blocks), '!' for non-matching blocks and '~' for blocks
@@ -237,8 +254,13 @@ def allblocks(text1, text2, opts=None, lines1=None, lines2=None):
     """
     if opts is None:
         opts = defaultopts
+    # pyre-fixme[16]: `diffopts` has no attribute `ignorews`.
+    # pyre-fixme[16]: `diffopts` has no attribute `ignorewsamount`.
+    # pyre-fixme[16]: `diffopts` has no attribute `ignorewseol`.
     if opts.ignorews or opts.ignorewsamount or opts.ignorewseol:
+        # pyre-fixme[9]: text1 has type `str`; used as `bytes`.
         text1 = wsclean(opts, text1, False)
+        # pyre-fixme[9]: text2 has type `str`; used as `bytes`.
         text2 = wsclean(opts, text2, False)
     diff = blocks(text1, text2)
     for i, s1 in enumerate(diff):
@@ -256,12 +278,17 @@ def allblocks(text1, text2, opts=None, lines1=None, lines2=None):
         # and deals with the special first match case described above
         if s[0] != s[1] or s[2] != s[3]:
             type = "!"
+            # pyre-fixme[16]: `diffopts` has no attribute `ignoreblanklines`.
             if opts.ignoreblanklines:
                 if lines1 is None:
+                    # pyre-fixme[6]: For 1st param expected `bytes` but got `str`.
                     lines1 = splitnewlines(text1)
                 if lines2 is None:
+                    # pyre-fixme[6]: For 1st param expected `bytes` but got `str`.
                     lines2 = splitnewlines(text2)
+                # pyre-fixme[6]: For 2nd param expected `str` but got `bytes`.
                 old = wsclean(opts, b"".join(lines1[s[0] : s[1]]))
+                # pyre-fixme[6]: For 2nd param expected `str` but got `bytes`.
                 new = wsclean(opts, b"".join(lines2[s[2] : s[3]]))
                 if old == new:
                     type = "~"
@@ -269,7 +296,16 @@ def allblocks(text1, text2, opts=None, lines1=None, lines2=None):
         yield s1, "="
 
 
-def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
+def unidiff(
+    a: Sized,
+    ad: str,
+    b,
+    bd: str,
+    fn1,
+    fn2,
+    opts: diffopts = defaultopts,
+    check_binary: bool = True,
+):
     """Return a unified diff as a (headers, hunks) tuple.
 
     If the diff is not null, `headers` is a list with unified diff header
@@ -282,6 +318,8 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
     """
 
     def datetag(date: str, fn: "Optional[str]" = None) -> bytes:
+        # pyre-fixme[16]: `diffopts` has no attribute `git`.
+        # pyre-fixme[16]: `diffopts` has no attribute `nodates`.
         if not opts.git and not opts.nodates:
             return b"\t%s" % encodeutf8(date)
         if fn and " " in fn:
@@ -292,6 +330,7 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
     if not a and not b:
         return sentinel
 
+    # pyre-fixme[16]: `diffopts` has no attribute `noprefix`.
     if opts.noprefix:
         aprefix = bprefix = b""
     else:
@@ -303,10 +342,12 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
     fn1 = util.pconvert(fn1)
     fn2 = util.pconvert(fn2)
 
+    # pyre-fixme[16]: `diffopts` has no attribute `text`.
     if not opts.text and check_binary and (util.binary(a) or util.binary(b)):
         if a and b and len(a) == len(b) and a == b:
             return sentinel
         headerlines = []
+        # pyre-fixme[16]: `diffopts` has no attribute `hashbinary`.
         if opts.hashbinary and b:
             message = b"Binary file %s has changed to %s\n" % (
                 encodeutf8(fn1),
@@ -332,7 +373,9 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
             hunklines.append(_missing_newline_marker)
         hunks = iter([(hunkrange, hunklines)])
     elif not b:
+        # pyre-fixme[16]: `Sized` has no attribute `__getitem__`.
         without_newline = a[-1:] != b"\n"
+        # pyre-fixme[6]: For 1st param expected `bytes` but got `Sized`.
         al = splitnewlines(a)
         l1 = b"--- %s%s%s" % (aprefix, encodeutf8(fn1), datetag(ad, fn1))
         if b is None:
@@ -348,6 +391,7 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
             hunklines.append(_missing_newline_marker)
         hunks = iter([(hunkrange, hunklines)])
     else:
+        # pyre-fixme[6]: For 1st param expected `bytes` but got `Sized`.
         hunks = _unidiff(a, b, opts=opts)
         if not next(hunks):
             return sentinel
@@ -453,6 +497,8 @@ def _unidiff(
     hunk = None
     ignoredlines = 0
     has_hunks = False
+    # pyre-fixme[6]: For 1st param expected `str` but got `bytes`.
+    # pyre-fixme[6]: For 2nd param expected `str` but got `bytes`.
     for s, stype in allblocks(t1, t2, opts, l1, l2):
         a1, a2, b1, b2 = s
         if stype != "!":
@@ -515,7 +561,7 @@ def _unidiff(
         yield False
 
 
-def b85diff(to, tn):
+def b85diff(to: bytes, tn: bytes) -> bytes:
     """print base85-encoded binary diff"""
 
     def fmtline(line):
@@ -563,15 +609,16 @@ def patchtext(bin: bytes) -> bytes:
     return b"".join(t)
 
 
-def patch(a, bin):
+def patch(a: Sized, bin):
     if len(a) == 0:
         # skip over trivial delta header
         return util.buffer(bin, 12)
+    # pyre-fixme[6]: For 1st param expected `bytes` but got `Sized`.
     return mpatch.patches(a, [bin])
 
 
 # similar to difflib.SequenceMatcher.get_matching_blocks
-def get_matching_blocks(a, b):
+def get_matching_blocks(a: str, b: str) -> List[Tuple[int, ...]]:
     return [(d[0], d[2], d[1] - d[0]) for d in blocks(a, b)]
 
 
