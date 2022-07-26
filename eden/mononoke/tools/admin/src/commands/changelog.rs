@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+mod graph;
 mod list_ancestors;
 
 use anyhow::Context;
@@ -20,8 +21,10 @@ use clap::Subcommand;
 use metaconfig_types::RepoConfig;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
+use repo_blobstore::RepoBlobstore;
 use repo_identity::RepoIdentity;
 
+use self::graph::ChangelogGraphArgs;
 use self::list_ancestors::ChangelogListAncestorsArgs;
 
 /// Manipulate changelogs
@@ -38,6 +41,9 @@ pub struct CommandArgs {
 pub struct Repo {
     #[facet]
     repo_identity: RepoIdentity,
+
+    #[facet]
+    repo_blobstore: RepoBlobstore,
 
     #[facet]
     repo_config: RepoConfig,
@@ -63,6 +69,9 @@ pub struct Repo {
 
 #[derive(Subcommand)]
 pub enum ChangelogSubcommand {
+    /// Display parts of the commit DAG
+    Graph(ChangelogGraphArgs),
+
     /// List ancestors of a commit
     ListAncestors(ChangelogListAncestorsArgs),
 }
@@ -76,6 +85,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         .context("Failed to open repo")?;
 
     match args.subcommand {
+        ChangelogSubcommand::Graph(graph_args) => graph::graph(&ctx, &repo, graph_args).await?,
         ChangelogSubcommand::ListAncestors(list_ancestors_args) => {
             list_ancestors::list_ancestors(&ctx, &repo, list_ancestors_args).await?
         }

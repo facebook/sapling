@@ -29,6 +29,7 @@ clap = { version = "3.2.10", features = ["derive", "regex", "unicode", "wrap_hel
 cmdlib_displaying = { version = "0.1.0", path = "../../cmdlib/displaying" }
 cmdlib_scrubbing = { version = "0.1.0", path = "../../cmdlib/scrubbing" }
 context = { version = "0.1.0", path = "../../server/context" }
+dag = { version = "0.1.0", path = "../../../scm/lib/dag", features = ["for-tests"] }
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
