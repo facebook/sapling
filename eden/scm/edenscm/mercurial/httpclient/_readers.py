@@ -50,7 +50,7 @@ except ImportError:
     import http.client as httplib
 
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class ReadNotReady(Exception):
