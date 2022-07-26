@@ -22,6 +22,8 @@ use tracing_subscriber::filter::EnvFilter;
 use edenfs_telemetry::cli_usage::CliUsageSample;
 #[cfg(fbcode_build)]
 use edenfs_telemetry::send;
+#[cfg(windows)]
+use edenfs_utils::strip_unc_prefix;
 
 #[cfg(windows)]
 const PYTHON_CANDIDATES: &[&str] = &[
@@ -43,14 +45,6 @@ fn find_python() -> Option<PathBuf> {
         }
     }
     None
-}
-
-#[cfg(windows)]
-fn strip_unc_prefix(path: PathBuf) -> PathBuf {
-    path.to_string_lossy()
-        .strip_prefix(r"\\?\")
-        .map(From::from)
-        .unwrap_or(path)
 }
 
 #[cfg(windows)]

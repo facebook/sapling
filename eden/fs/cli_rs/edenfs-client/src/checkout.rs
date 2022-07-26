@@ -14,6 +14,8 @@ use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
 use edenfs_utils::path_from_bytes;
+#[cfg(windows)]
+use edenfs_utils::strip_unc_prefix;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
@@ -926,6 +928,8 @@ fn get_checkout_root_state(path: &Path) -> Result<(Option<PathBuf>, Option<PathB
 pub fn find_checkout(instance: &EdenFsInstance, path: &Path) -> Result<EdenFsCheckout> {
     // Resolve symlinks and get absolute path
     let path = path.canonicalize().from_err()?;
+    #[cfg(windows)]
+    let path = strip_unc_prefix(path);
 
     // Check if it is a mounted checkout
     let (checkout_root, checkout_state_dir) = get_checkout_root_state(&path)?;

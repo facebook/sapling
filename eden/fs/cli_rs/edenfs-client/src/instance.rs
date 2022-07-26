@@ -20,6 +20,8 @@ use edenfs_config::EdenFsConfig;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
+#[cfg(windows)]
+use edenfs_utils::strip_unc_prefix;
 use fbthrift_socket::SocketTransport;
 use thrift_types::edenfs::client::EdenService;
 use thrift_types::edenfs::types::DaemonInfo;
@@ -209,6 +211,9 @@ impl EdenFsInstance {
     pub fn client_name(&self, path: &Path) -> Result<String> {
         // Resolve symlinks and get absolute path
         let path = path.canonicalize().from_err()?;
+        #[cfg(windows)]
+        let path = strip_unc_prefix(path);
+
         // Find `checkout_path` that `path` is a sub path of
         let all_checkouts = self.get_configured_mounts_map()?;
         if let Some(item) = all_checkouts

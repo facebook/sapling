@@ -17,3 +17,6 @@ tracing-subscriber = { version = "0.3.14", features = ["ansi", "env-filter", "fm
 
 [target.'cfg(target_os = "linux")'.dependencies]
 hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }

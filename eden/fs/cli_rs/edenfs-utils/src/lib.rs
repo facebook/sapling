@@ -112,3 +112,11 @@ pub fn get_env_with_buck_version(path: &Path) -> Result<Vec<(OsString, OsString)
     }
     Ok(env)
 }
+
+#[cfg(windows)]
+pub fn strip_unc_prefix(path: PathBuf) -> PathBuf {
+    path.to_string_lossy()
+        .strip_prefix(r"\\?\")
+        .map(From::from)
+        .unwrap_or(path)
+}
