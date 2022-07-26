@@ -22,7 +22,6 @@ use futures_ext::FbFutureExt;
 use futures_stats::FutureStats;
 use futures_stats::TimedFutureExt;
 use identity::Identity;
-use itertools::Itertools;
 use login_objects_thrift::EnvironmentType;
 use maplit::hashset;
 use megarepo_api::MegarepoApi;
@@ -142,19 +141,9 @@ impl SourceControlServiceImpl {
         specifier: Option<&dyn SpecifierExt>,
         params: &dyn AddScubaParams,
     ) -> Result<CoreContext, errors::ServiceError> {
-        let identities: MononokeIdentitySet = req_ctxt
-            .identities_including_cats(
-                &self.identity,
-                &[EnvironmentType::PROD, EnvironmentType::CORP],
-            )
-            .map_err(errors::internal_error)?
-            .entries()
-            .into_iter()
-            .map(MononokeIdentity::from_identity_ref)
-            .collect();
-
+        let session = self.create_session(req_ctxt).await?;
+        let identities = session.metadata().identities();
         let mut scuba = self.create_scuba(name, req_ctxt, specifier, params, &identities)?;
-        let session = self.create_session(req_ctxt, identities).await?;
         scuba.add("session_uuid", session.metadata().session_id().to_string());
 
         let ctx = session.new_context_with_scribe(self.logger.clone(), scuba, self.scribe.clone());
@@ -222,53 +211,78 @@ impl SourceControlServiceImpl {
         Ok(scuba)
     }
 
+    async fn create_metadata(
+        &self,
+        req_ctxt: &RequestContext,
+    ) -> Result<Metadata, errors::ServiceError> {
+        let header = |h: &str| req_ctxt.header(h).map_err(errors::invalid_request);
+
+        let tls_identities: MononokeIdentitySet = req_ctxt
+            .identities()
+            .map_err(errors::internal_error)?
+            .entries()
+            .into_iter()
+            .map(MononokeIdentity::from_identity_ref)
+            .collect();
+
+        // Get any valid CAT identieies.
+        let cats_identities: MononokeIdentitySet = req_ctxt
+            .identities_cats(
+                &self.identity,
+                &[EnvironmentType::PROD, EnvironmentType::CORP],
+            )
+            .map_err(errors::internal_error)?
+            .entries()
+            .into_iter()
+            .map(MononokeIdentity::from_identity_ref)
+            .collect();
+
+        let is_trusted = self
+            .identity_proxy_checker
+            .check_if_trusted(&tls_identities)
+            .await
+            .map_err(errors::invalid_request)?;
+
+        if is_trusted {
+            if let (Some(forwarded_identities), Some(forwarded_ip)) = (
+                header(FORWARDED_IDENTITIES_HEADER)?,
+                header(FORWARDED_CLIENT_IP_HEADER)?,
+            ) {
+                let mut header_identities: MononokeIdentitySet =
+                    serde_json::from_str(forwarded_identities.as_str())
+                        .map_err(errors::invalid_request)?;
+                let client_ip = Some(
+                    forwarded_ip
+                        .parse::<IpAddr>()
+                        .map_err(errors::invalid_request)?,
+                );
+                let client_debug = header(FORWARDED_CLIENT_DEBUG_HEADER)?.is_some();
+
+                header_identities.extend(cats_identities.into_iter());
+                let mut metadata =
+                    Metadata::new(None, header_identities, client_debug, client_ip).await;
+
+                metadata.add_original_identities(tls_identities);
+
+                return Ok(metadata);
+            }
+        }
+
+        Ok(Metadata::new(
+            None,
+            tls_identities.union(&cats_identities).cloned().collect(),
+            false,
+            None,
+        )
+        .await)
+    }
+
     /// Create and configure the session container for a request.
     async fn create_session(
         &self,
         req_ctxt: &RequestContext,
-        mut identities: MononokeIdentitySet,
     ) -> Result<SessionContainer, errors::ServiceError> {
-        let mut client_ip = None;
-        let mut client_debug = false;
-        let mut original_identities = None;
-
-        let header = |h: &str| req_ctxt.header(h).map_err(errors::invalid_request);
-
-        // Trusted requests can forward identities from the original request
-        // In this case we validate the source is trusted, and then trust the identities
-        if let (Some(forwarded_identities), Some(forwarded_ip)) = (
-            header(FORWARDED_IDENTITIES_HEADER)?,
-            header(FORWARDED_CLIENT_IP_HEADER)?,
-        ) {
-            if !self
-                .identity_proxy_checker
-                .check_if_trusted(&identities)
-                .await
-                .map_err(errors::invalid_request)?
-            {
-                return Err(errors::invalid_request(format!(
-                    "Untrusted identity for forwarding identities, found {}",
-                    identities.iter().map(ToString::to_string).join(",")
-                ))
-                .into());
-            }
-            let new_identities: MononokeIdentitySet =
-                serde_json::from_str(forwarded_identities.as_str())
-                    .map_err(errors::invalid_request)?;
-            // Fully replace the identities with the forwarded identities
-            original_identities = Some(std::mem::replace(&mut identities, new_identities));
-            client_ip = Some(
-                forwarded_ip
-                    .parse::<IpAddr>()
-                    .map_err(errors::invalid_request)?,
-            );
-            client_debug = header(FORWARDED_CLIENT_DEBUG_HEADER)?.is_some();
-        }
-
-        let mut metadata = Metadata::new(None, identities, client_debug, client_ip).await;
-        if let Some(original_identities) = original_identities {
-            metadata.add_original_identities(original_identities);
-        }
+        let metadata = self.create_metadata(req_ctxt).await?;
         let session = SessionContainer::builder(self.fb)
             .metadata(Arc::new(metadata))
             .blobstore_maybe_read_qps_limiter(tunables().get_scs_request_read_qps())
