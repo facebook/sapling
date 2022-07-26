@@ -648,16 +648,10 @@ EdenServiceHandler::semifuture_getSHA1(
                    std::vector<ImmediateFuture<Hash20>> futures;
                    futures.reserve(paths->size());
                    for (auto& path : *paths) {
-                     futures.push_back(
-                         makeImmediateFutureWith([path = std::move(path),
-                                                  &mount = *mount,
-                                                  &fetchContext,
-                                                  this]() mutable {
-                           return getSHA1ForPath(
-                               mount,
-                               RelativePath{std::move(path)},
-                               fetchContext);
-                         }));
+                     futures.push_back(makeImmediateFutureWith([&]() mutable {
+                       return getSHA1ForPath(
+                           *mount, RelativePath{std::move(path)}, fetchContext);
+                     }));
                    }
 
                    return collectAll(std::move(futures))
