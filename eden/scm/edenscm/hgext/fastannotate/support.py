@@ -61,7 +61,7 @@ def _getmaster(fctx):
     return fctx._repo.ui.config("fastannotate", "mainbranch") or "default"
 
 
-def _doannotate(fctx, follow=True, diffopts=None):
+def _doannotate(fctx, follow: bool = True, diffopts=None):
     """like the vanilla fctx.annotate, but do it via fastannotate, and make
     the output format compatible with the vanilla fctx.annotate.
     may raise Exception, and always return line numbers.
@@ -98,7 +98,12 @@ def _hgwebannotate(orig, fctx, ui):
 
 
 def _fctxannotate(
-    orig, self, follow=False, linenumber=False, skiprevs=None, diffopts=None
+    orig,
+    self,
+    follow: bool = False,
+    linenumber: bool = False,
+    skiprevs=None,
+    diffopts=None,
 ):
     if skiprevs:
         # skiprevs is not supported yet
@@ -115,7 +120,7 @@ def _fctxannotate(
 def _remotefctxannotate(
     orig,
     self,
-    follow=False,
+    follow: bool = False,
     linenumber=None,
     skiprevs=None,
     diffopts=None,
@@ -135,15 +140,15 @@ def _remotefctxannotate(
     )
 
 
-def replacehgwebannotate():
+def replacehgwebannotate() -> None:
     extensions.wrapfunction(hgweb.webutil, "annotate", _hgwebannotate)
 
 
-def replacefctxannotate():
+def replacefctxannotate() -> None:
     extensions.wrapfunction(hgcontext.basefilectx, "annotate", _fctxannotate)
 
 
-def replaceremotefctxannotate():
+def replaceremotefctxannotate() -> None:
     try:
         r = extensions.find("remotefilelog")
     except KeyError:
