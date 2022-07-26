@@ -11,11 +11,10 @@ import unittest
 
 import silenttestrunner
 from bindings import configparser
-from edenscm.mercurial.uiconfig import localrcfg
 
 
 def createConfig():
-    return localrcfg(configparser.config())
+    return configparser.config()
 
 
 def normalizeSources(cfg, section, name):

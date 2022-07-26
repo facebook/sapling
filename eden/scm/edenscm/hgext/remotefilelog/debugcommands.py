@@ -361,7 +361,7 @@ def debugdatapack(ui, *paths, **opts):
 def debugindexedlogdatastore(ui, *paths, **opts):
     for path in paths:
         ui.write("%s:\n" % path)
-        store = revisionstore.indexedlogdatastore(path, ui._uiconfig._rcfg._rcfg)
+        store = revisionstore.indexedlogdatastore(path, ui._uiconfig._rcfg)
         debugdatastore(ui, store, verifynoduplicate=False, **opts)
 
 
@@ -485,7 +485,7 @@ def debughistorypack(ui, paths, **opts):
 
 def debugindexedloghistorystore(ui, paths, **opts):
     for path in paths:
-        store = revisionstore.indexedloghistorystore(path, ui._uiconfig._rcfg._rcfg)
+        store = revisionstore.indexedloghistorystore(path, ui._uiconfig._rcfg)
         debughistorystore(ui, store, **opts)
 
 

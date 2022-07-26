@@ -45,7 +45,7 @@ def _runrustrepack(ui, packpath, stores, incremental, shared):
         return
 
     try:
-        revisionstore.repack(packpath, stores, not incremental, shared, ui._rcfg._rcfg)
+        revisionstore.repack(packpath, stores, not incremental, shared, ui._rcfg)
     except Exception as e:
         ui.log("repack_failure", msg=str(e), traceback=traceback.format_exc())
         if "Repack successful but with errors" not in str(e):

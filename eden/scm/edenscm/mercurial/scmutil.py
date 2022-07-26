@@ -171,7 +171,7 @@ def callcatch(ui, req, func):
             error.TlsError,
         ) as inst:
             if ui.configbool("experimental", "network-doctor"):
-                problem = bindings.doctor.diagnose_network(ui._rcfg._rcfg)
+                problem = bindings.doctor.diagnose_network(ui._rcfg)
                 if problem:
                     fd, path = tempfile.mkstemp(prefix="hg-error-details-")
                     with util.fdopen(fd, "wb") as tmp:

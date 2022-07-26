@@ -400,7 +400,7 @@ class localrepository(object):
 
     def __init__(self, baseui, path, create=False):
         if create and baseui.configbool("init", "use-rust"):
-            bindings.repo.repo.initialize(path, baseui._rcfg._rcfg)
+            bindings.repo.repo.initialize(path, baseui._rcfg)
             create = False
         self._containscount = 0
         self.requirements = set()
@@ -463,7 +463,7 @@ class localrepository(object):
         self.ui.reloadconfigs(self.root)
 
         # Setting the inner Rust repo should only be done when the filesystem actually exists
-        self._rsrepo = bindings.repo.repo(self.root, self.ui._rcfg._rcfg)
+        self._rsrepo = bindings.repo.repo(self.root, self.ui._rcfg)
 
         self._loadextensions()
 

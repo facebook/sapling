@@ -993,7 +993,7 @@ class basetreemanifestlog(object):
             # Of the normal contentstore fallback path?
             self.treescmstore = revisionstore.treescmstore(
                 self._repo.svfs.vfs.base,
-                self.ui._rcfg._rcfg,
+                self.ui._rcfg,
                 remotestore,
                 None,
                 edenapistore,
@@ -1003,7 +1003,7 @@ class basetreemanifestlog(object):
             self.datastore = self.treescmstore.get_contentstore()
             self.historystore = revisionstore.metadatastore(
                 self._repo.svfs.vfs.base,
-                self.ui._rcfg._rcfg,
+                self.ui._rcfg,
                 remotestore,
                 None,
                 None,

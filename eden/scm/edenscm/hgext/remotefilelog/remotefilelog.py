@@ -545,7 +545,7 @@ class remotefileslog(filelog.fileslog):
     def memcachestore(self, repo):
         if self._memcachestore is None:
             if repo.ui.config("remotefilelog", "cachekey"):
-                self._memcachestore = revisionstore.memcachestore(repo.ui._rcfg._rcfg)
+                self._memcachestore = revisionstore.memcachestore(repo.ui._rcfg)
 
         return self._memcachestore
 
@@ -583,7 +583,7 @@ class remotefileslog(filelog.fileslog):
             if repo.ui.configbool("scmstore", "enableshim"):
                 sharedonlycontentstore = revisionstore.filescmstore(
                     None,
-                    repo.ui._rcfg._rcfg,
+                    repo.ui._rcfg,
                     sharedonlyremotestore,
                     memcachestore,
                     edenapistore,
@@ -592,7 +592,7 @@ class remotefileslog(filelog.fileslog):
             else:
                 sharedonlycontentstore = revisionstore.contentstore(
                     None,
-                    repo.ui._rcfg._rcfg,
+                    repo.ui._rcfg,
                     sharedonlyremotestore,
                     memcachestore,
                     edenapistore,
@@ -600,7 +600,7 @@ class remotefileslog(filelog.fileslog):
                 )
             sharedonlymetadatastore = revisionstore.metadatastore(
                 None,
-                repo.ui._rcfg._rcfg,
+                repo.ui._rcfg,
                 sharedonlyremotestore,
                 memcachestore,
                 edenapistore,
@@ -622,7 +622,7 @@ class remotefileslog(filelog.fileslog):
         try:
             self.filescmstore = revisionstore.filescmstore(
                 repo.svfs.vfs.base,
-                repo.ui._rcfg._rcfg,
+                repo.ui._rcfg,
                 remotestore,
                 memcachestore,
                 edenapistore,
@@ -634,7 +634,7 @@ class remotefileslog(filelog.fileslog):
                 self.contentstore = self.filescmstore.get_contentstore()
             self.metadatastore = revisionstore.metadatastore(
                 repo.svfs.vfs.base,
-                repo.ui._rcfg._rcfg,
+                repo.ui._rcfg,
                 remotestore,
                 memcachestore,
                 edenapistore,

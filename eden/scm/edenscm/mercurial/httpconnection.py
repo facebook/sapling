@@ -66,7 +66,7 @@ class httpsendfile(object):
 
 # moved here from url.py to avoid a cycle
 def readauthforuri(ui, uri, user):
-    return rustauth.getauth(ui._rcfg._rcfg, uri, user=user, raise_if_missing=False)
+    return rustauth.getauth(ui._rcfg, uri, user=user, raise_if_missing=False)
 
 
 # Mercurial (at least until we can remove the old codepath) requires

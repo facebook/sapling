@@ -2718,7 +2718,7 @@ def makenativecheckoutplan(repo, p1, p2, matcher=None, updateprogresspath=None):
         matcher = None
 
     return nativecheckout.checkoutplan(
-        repo.ui._rcfg._rcfg,
+        repo.ui._rcfg,
         repo.wvfs.base,
         p1.manifest(),
         p2.manifest(),

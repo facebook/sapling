@@ -30,7 +30,7 @@ class mutabledatastore(mutablebasestore):
     def makestore(repo, path):
         shallowutil.mkstickygroupdir(repo.ui, path)
         return revisionstore.mutabledeltastore(
-            packfilepath=path, config=repo.ui._uiconfig._rcfg._rcfg
+            packfilepath=path, config=repo.ui._uiconfig._rcfg
         )
 
     def __init__(self, repo, path):
