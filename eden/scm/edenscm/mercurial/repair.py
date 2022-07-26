@@ -14,6 +14,7 @@
 from __future__ import absolute_import
 
 import hashlib
+from typing import List, Sized
 
 from . import bundle2, changegroup, discovery, error, progress, scmutil, util
 from .i18n import _
@@ -21,7 +22,7 @@ from .node import hex, short
 from .pycompat import encodeutf8, range
 
 
-def _bundle(repo, bases, heads, node, suffix, compress=True):
+def _bundle(repo, bases, heads, node, suffix, compress: bool = True) -> str:
     """create a bundle with the specified revisions as a backup"""
 
     backupdir = "strip-backup"
@@ -94,7 +95,7 @@ def _collectbrokencsets(repo, files, striprev):
     return s
 
 
-def stripgeneric(repo, nodelist, backup=True, topic="backup"):
+def stripgeneric(repo, nodelist, backup: bool = True, topic: str = "backup") -> None:
     """Strip that does not depend on revlog details, namely:
 
     - Do not use non-DAG span "rev:".
@@ -130,7 +131,7 @@ def stripgeneric(repo, nodelist, backup=True, topic="backup"):
         # to strip them.
 
 
-def strip(ui, repo, nodelist, backup=True, topic="backup"):
+def strip(ui, repo, nodelist: List[str], backup: bool = True, topic: str = "backup"):
     # This function requires the caller to lock the repo, but it operates
     # within a transaction of its own, and thus requires there to be no current
     # transaction when it is called.
@@ -209,13 +210,13 @@ def delayedstrip(ui, repo, nodelist, topic=None):
     callback.addnodes(nodelist)
 
 
-def stripmanifest(repo, striprev, tr, files):
+def stripmanifest(repo, striprev, tr, files) -> None:
     revlog = repo.manifestlog._revlog
     revlog.strip(striprev, tr)
     striptrees(repo, tr, striprev, files)
 
 
-def striptrees(repo, tr, striprev, files):
+def striptrees(repo, tr, striprev, files) -> None:
     if "treemanifest" in repo.requirements:  # safe but unnecessary
         # otherwise
         for unencoded, encoded, size in repo.store.datafiles():
@@ -224,12 +225,13 @@ def striptrees(repo, tr, striprev, files):
                 repo.manifestlog._revlog.dirlog(dir).strip(striprev, tr)
 
 
-def rebuildfncache(ui, repo):
+def rebuildfncache(ui, repo: Sized) -> None:
     """Rebuilds the fncache file from repo history.
 
     Missing entries will be added. Extra entries will be removed.
     """
 
+    # pyre-fixme[16]: `Sized` has no attribute `requirements`.
     if "fncache" not in repo.requirements:
         ui.warn(
             _(
@@ -239,7 +241,9 @@ def rebuildfncache(ui, repo):
         )
         return
 
+    # pyre-fixme[16]: `Sized` has no attribute `lock`.
     with repo.lock():
+        # pyre-fixme[16]: `Sized` has no attribute `store`.
         fnc = repo.store.fncache
         # Trigger load of fncache.
         if "irrelevant" in fnc:
@@ -251,8 +255,10 @@ def rebuildfncache(ui, repo):
 
         repolen = len(repo)
         with progress.bar(ui, _("rebuilding"), _("changesets"), repolen) as prog:
+            # pyre-fixme[16]: `Sized` has no attribute `__iter__`.
             for rev in repo:
                 prog.value = rev
+                # pyre-fixme[16]: `Sized` has no attribute `__getitem__`.
                 ctx = repo[rev]
                 for f in ctx.files():
                     # This is to minimize I/O.
@@ -292,6 +298,7 @@ def rebuildfncache(ui, repo):
             fnc.entries = newentries
             fnc._dirty = True
 
+            # pyre-fixme[16]: `Sized` has no attribute `transaction`.
             with repo.transaction("fncache") as tr:
                 fnc.write(tr)
         else:
