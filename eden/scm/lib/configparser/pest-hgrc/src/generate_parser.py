@@ -50,11 +50,11 @@ pub(crate) struct ConfigParser;
         expanded = expanded.decode("utf-8")
 
         # Keep only interesting parts
-        rule_struct = re.search("^pub enum Rule [^}]*^\}", expanded, re.S + re.M).group(
-            0
-        )
+        rule_struct = re.search(
+            r"^pub enum Rule [^}]*^\}", expanded, re.S + re.M
+        ).group(0)
         parser_impl = re.search(
-            "^impl ::pest::Parser<Rule> for ConfigParser .*^\}", expanded, re.S + re.M
+            r"^impl ::pest::Parser<Rule> for ConfigParser .*^\}", expanded, re.S + re.M
         ).group(0)
 
         code = f"""

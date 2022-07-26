@@ -16,17 +16,12 @@ use std::sync::Arc;
 
 use indexmap::IndexMap;
 use minibytes::Text;
-use pest::Parser;
-use pest::Span;
-use pest::{self};
+use pest_hgrc::parse;
+use pest_hgrc::Instruction;
 use util::path::expand_path;
 
 use crate::convert::FromConfigValue;
 use crate::error::Error;
-use crate::parser::ConfigParser;
-use crate::parser::Rule;
-
-type Pair<'a> = pest::iterators::Pair<'a, Rule>;
 
 /// Collection of config sections loaded from various sources.
 #[derive(Clone, Default, Debug)]
@@ -347,142 +342,64 @@ impl ConfigSet {
             buf.len()
         );
 
-        let mut section = Text::new();
         let shared_path = Arc::new(path.to_path_buf()); // use Arc to do shallow copy
         let skip_include = path.parent().is_none(); // skip handling %include if path is empty
 
-        // Utilities to avoid too much indentation.
-        let handle_value = |this: &mut ConfigSet,
-                            pair: Pair,
-                            section: Text,
-                            name: Text,
-                            location: ValueLocation| {
-            let pairs = pair.into_inner();
-            let mut lines = Vec::with_capacity(1);
-            for pair in pairs {
-                if Rule::line == pair.as_rule() {
-                    lines.push(extract(&buf, pair.as_span()));
-                }
-            }
-
-            let value = match lines.len() {
-                1 => lines[0].clone(),
-                _ => Text::from(lines.join("\n")),
-            };
-
-            let value = strip_whitespace(&value, 0, value.len());
-            this.set_internal(section, name, value.into(), location.into(), opts)
-        };
-
-        let handle_config_item = |this: &mut ConfigSet, pair: Pair, section: Text| {
-            let pairs = pair.into_inner();
-            let mut name = Text::new();
-            for pair in pairs {
-                match pair.as_rule() {
-                    Rule::config_name => name = extract(&buf, pair.as_span()),
-                    Rule::value => {
-                        let span = pair.as_span();
-                        let location = ValueLocation {
-                            path: shared_path.clone(),
-                            content: buf.clone(),
-                            location: span.start()..span.end(),
-                        };
-                        return handle_value(this, pair, section, name, location);
-                    }
-                    _ => {}
-                }
-            }
-            unreachable!();
-        };
-
-        let handle_section = |pair: Pair, section: &mut Text| {
-            let pairs = pair.into_inner();
-            for pair in pairs {
-                if let Rule::section_name = pair.as_rule() {
-                    *section = extract(&buf, pair.as_span());
-                    return;
-                }
-            }
-            unreachable!();
-        };
-
-        let mut handle_include = |this: &mut ConfigSet, pair: Pair, errors: &mut Vec<Error>| {
-            let pairs = pair.into_inner();
-            for pair in pairs {
-                if let Rule::line = pair.as_rule() {
-                    if !skip_include {
-                        let include_path = pair.as_str();
-                        if let Some(content) = crate::builtin::get(include_path) {
-                            let text = Text::from(content);
-                            let path = Path::new(include_path);
-                            this.load_file_content(path, text, opts, visited, errors);
-                        } else {
-                            let full_include_path =
-                                path.parent().unwrap().join(expand_path(include_path));
-                            this.load_file(&full_include_path, opts, visited, errors);
-                        }
-                    }
-                }
-            }
-        };
-
-        let handle_unset = |this: &mut ConfigSet, pair: Pair, section: &Text| {
-            let unset_span = pair.as_span();
-            let pairs = pair.into_inner();
-            for pair in pairs {
-                if let Rule::config_name = pair.as_rule() {
-                    let name = extract(&buf, pair.as_span());
-                    let location = ValueLocation {
-                        path: shared_path.clone(),
-                        content: buf.clone(),
-                        location: unset_span.start()..unset_span.end(),
-                    };
-                    return this.set_internal(section.clone(), name, None, location.into(), opts);
-                }
-            }
-            unreachable!();
-        };
-
-        let mut handle_directive =
-            |this: &mut ConfigSet, pair: Pair, section: &Text, errors: &mut Vec<Error>| {
-                let pairs = pair.into_inner();
-                for pair in pairs {
-                    match pair.as_rule() {
-                        Rule::include => handle_include(this, pair, errors),
-                        Rule::unset => handle_unset(this, pair, section),
-                        _ => {}
-                    }
-                }
-            };
-
-        let text = &buf;
-        let pairs = match ConfigParser::parse(Rule::file, &text) {
-            Ok(pairs) => pairs,
+        let insts = match parse(&buf) {
+            Ok(insts) => insts,
             Err(error) => {
                 return errors.push(Error::ParseFile(path.to_path_buf(), format!("{}", error)));
             }
         };
 
-        for pair in pairs {
-            match pair.as_rule() {
-                Rule::config_item => handle_config_item(self, pair, section.clone()),
-                Rule::section => handle_section(pair, &mut section),
-                Rule::directive => handle_directive(self, pair, &section, errors),
-                Rule::blank_line | Rule::comment_line | Rule::new_line | Rule::EOI => {}
-
-                Rule::comment_start
-                | Rule::compound
-                | Rule::config_name
-                | Rule::equal_sign
-                | Rule::file
-                | Rule::include
-                | Rule::left_bracket
-                | Rule::line
-                | Rule::right_bracket
-                | Rule::section_name
-                | Rule::space
-                | Rule::unset
-                | Rule::value => unreachable!(),
+        for inst in insts {
+            match inst {
+                Instruction::SetConfig {
+                    section,
+                    name,
+                    value,
+                    span,
+                } => {
+                    let section = buf.slice_to_bytes(section);
+                    let name = buf.slice_to_bytes(name);
+                    let value = Some(buf.slice_to_bytes(&value));
+                    let location = ValueLocation {
+                        path: shared_path.clone(),
+                        content: buf.clone(),
+                        location: span,
+                    };
+                    self.set_internal(section, name, value, location.into(), opts);
+                }
+                Instruction::UnsetConfig {
+                    section,
+                    name,
+                    span,
+                } => {
+                    let section = buf.slice_to_bytes(section);
+                    let name = buf.slice_to_bytes(name);
+                    let location = ValueLocation {
+                        path: shared_path.clone(),
+                        content: buf.clone(),
+                        location: span,
+                    };
+                    self.set_internal(section.clone(), name, None, location.into(), opts);
+                }
+                Instruction::Include {
+                    path: include_path,
+                    span: _,
+                } => {
+                    if !skip_include {
+                        if let Some(content) = crate::builtin::get(include_path) {
+                            let text = Text::from(content);
+                            let path = Path::new(include_path);
+                            self.load_file_content(path, text, opts, visited, errors);
+                        } else {
+                            let full_include_path =
+                                path.parent().unwrap().join(expand_path(include_path));
+                            self.load_file(&full_include_path, opts, visited, errors);
+                        }
+                    }
+                }
             }
         }
     }
@@ -734,23 +651,6 @@ impl<S: Into<Text>> From<S> for Options {
     fn from(source: S) -> Options {
         Options::new().source(source.into())
     }
-}
-
-/// Remove space characters from both ends. Remove newline characters from the end.
-/// `start` position is inclusive, `end` is exclusive.
-/// Return the stripped `Text`.
-#[inline]
-fn strip_whitespace(buf: &Text, start: usize, end: usize) -> Text {
-    let slice: &str = &buf.as_ref()[start..end];
-    let trimmed = slice
-        .trim_start_matches(|c| c == '\t' || c == ' ')
-        .trim_end_matches(|c| " \t\r\n".contains(c));
-    buf.slice_to_bytes(trimmed)
-}
-
-#[inline]
-fn extract<'a>(buf: &Text, span: Span<'a>) -> Text {
-    strip_whitespace(buf, span.start(), span.end())
 }
 
 pub struct SupersetVerification {

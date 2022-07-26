@@ -70,7 +70,6 @@ pub(crate) mod builtin;
 pub mod c_api;
 pub mod config;
 pub mod hg;
-pub mod parser;
 
 pub use configmodel;
 pub use configmodel::convert;

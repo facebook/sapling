@@ -44,6 +44,7 @@ members = [
   "lib/commitcloudsubscriber",
   "lib/configmodel",
   "lib/configparser",
+  "lib/configparser/pest-hgrc",
   "lib/cpython-async",
   "lib/cpython-ext",
   "lib/dag",

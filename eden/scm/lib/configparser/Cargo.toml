@@ -23,7 +23,7 @@ hostname = "0.3"
 http-client = { version = "0.1.0", path = "../http-client", optional = true }
 indexmap = { version = "1.8.0", features = ["rayon", "serde-1"] }
 minibytes = { version = "0.1.0", path = "../minibytes" }
-pest = "2.1"
+pest-hgrc = { version = "0.1.0", path = "pest-hgrc" }
 regex = { version = "1.5.4", optional = true }
 serde = { version = "1.0.136", features = ["derive", "rc"], optional = true }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"], optional = true }
