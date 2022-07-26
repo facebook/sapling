@@ -394,6 +394,18 @@ class InodeBase {
     auto loc = location_.rlock();
     return *loc;
   }
+
+  /**
+   * Returns this inode's name at this exact point in time.  Note that, unless
+   * the rename lock is held, the name can change between the call and the
+   * return value being used.  If the rename lock is held, call
+   * getLocationInfo()->name instead.
+   *
+   * Used in FileInode.cpp when getting filenames for telemetry
+   */
+  PathComponent getNameRacy() {
+    return location_.rlock()->name;
+  }
 #ifndef _WIN32
   /**
    * Acquire this inode's contents lock and return its metadata.

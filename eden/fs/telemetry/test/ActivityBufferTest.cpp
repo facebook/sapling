@@ -21,13 +21,14 @@ bool buffer_contains_event_with_ino(ActivityBuffer& buff, InodeNumber ino) {
 }
 
 InodeTraceEvent create_inode_trace_event(InodeNumber ino) {
-  return InodeTraceEvent{
+  return InodeTraceEvent(
       {std::chrono::system_clock::now(), std::chrono::steady_clock::now()},
       ino,
       InodeType::FILE,
       InodeEventType::MATERIALIZE,
       InodeEventProgress::END,
-      std::chrono::microseconds(1000)};
+      std::chrono::microseconds(1000),
+      "Test/File.txt");
 }
 
 } // namespace

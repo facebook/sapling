@@ -11,6 +11,7 @@
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/telemetry/TraceBus.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 
@@ -28,11 +29,29 @@ namespace facebook::eden {
  * writing the data to EdenFS's overlay, and materializing any parent inodes.
  */
 struct InodeTraceEvent : TraceEventBase {
+  InodeTraceEvent(
+      TraceEventBase times,
+      InodeNumber ino,
+      InodeType inodeType,
+      InodeEventType eventType,
+      InodeEventProgress progress,
+      std::chrono::microseconds duration,
+      folly::StringPiece name);
+
+  // Simple accessor that hides the internal memory representation of the trace
+  // event's name. Note this could be just the filename or it could be the full
+  // path depending on how much was available.
+  std::string getName() const {
+    return name.get();
+  }
+
   InodeNumber ino;
   InodeType inodeType;
   InodeEventType eventType;
   InodeEventProgress progress;
   std::chrono::microseconds duration;
+  // Always null-terminated, and saves space in the trace event structure.
+  std::shared_ptr<char[]> name;
 };
 
 /**

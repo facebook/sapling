@@ -799,6 +799,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       std::chrono::system_clock::time_point watch,
       InodeType type,
       InodeNumber ino,
+      folly::StringPiece name,
       InodeEventProgress progress);
 
   /**

@@ -83,7 +83,7 @@ struct HgImportTraceEvent : TraceEventBase {
       ImportPriorityKind priority,
       ObjectFetchContext::Cause cause);
 
-  /// Simple accessor that hides the internal memory representation of paths.
+  // Simple accessor that hides the internal memory representation of paths.
   std::string getPath() const {
     return path.get();
   }

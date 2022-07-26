@@ -10,6 +10,26 @@
 
 namespace facebook::eden {
 
+InodeTraceEvent::InodeTraceEvent(
+    TraceEventBase times,
+    InodeNumber ino,
+    InodeType inodeType,
+    InodeEventType eventType,
+    InodeEventProgress progress,
+    std::chrono::microseconds duration,
+    folly::StringPiece stringName)
+    : ino{ino},
+      inodeType{inodeType},
+      eventType{eventType},
+      progress{progress},
+      duration{duration} {
+  systemTime = times.systemTime;
+  monotonicTime = times.monotonicTime;
+  name.reset(new char[stringName.size() + 1]);
+  memcpy(name.get(), stringName.data(), stringName.size());
+  name[stringName.size()] = 0;
+}
+
 ActivityBuffer::ActivityBuffer(uint32_t maxEvents) : maxEvents_(maxEvents) {}
 
 void ActivityBuffer::addEvent(InodeTraceEvent event) {

@@ -244,6 +244,7 @@ FileInode::runWhileMaterialized(
         startTime.value(),
         InodeType::FILE,
         getNodeId(),
+        getNameRacy().stringPiece(),
         InodeEventProgress::START);
   }
 
@@ -275,6 +276,7 @@ FileInode::runWhileMaterialized(
               startTime.value(),
               InodeType::FILE,
               getNodeId(),
+              getNameRacy().stringPiece(),
               InodeEventProgress::END);
         };
         logAccess(fetchContext);
@@ -347,7 +349,11 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
       //   BLOB_LOADING state, fulfill the blobLoadingPromise.
       auto startTime = std::chrono::system_clock::now();
       getMount()->addInodeMaterializeEvent(
-          startTime, InodeType::FILE, getNodeId(), InodeEventProgress::START);
+          startTime,
+          InodeType::FILE,
+          getNodeId(),
+          getNameRacy().stringPiece(),
+          InodeEventProgress::START);
 
       std::unique_ptr<folly::SharedPromise<std::shared_ptr<const Blob>>>
           loadingPromise;
@@ -374,7 +380,11 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
         materializeInParent();
         // Publish to TraceBus after parent finishes its materialization
         getMount()->addInodeMaterializeEvent(
-            startTime, InodeType::FILE, getNodeId(), InodeEventProgress::END);
+            startTime,
+            InodeType::FILE,
+            getNodeId(),
+            getNameRacy().stringPiece(),
+            InodeEventProgress::END);
       };
 
       // Now invoke the input function.

@@ -865,7 +865,11 @@ void TreeInode::materialize(const RenameLock* renameLock) {
         return;
       }
       getMount()->addInodeMaterializeEvent(
-          startTime, InodeType::TREE, getNodeId(), InodeEventProgress::START);
+          startTime,
+          InodeType::TREE,
+          getNodeId(),
+          getLocationInfo(*renameLock).name.stringPiece(),
+          InodeEventProgress::START);
       contents->setMaterialized();
       saveOverlayDir(contents->entries);
     }
@@ -878,7 +882,11 @@ void TreeInode::materialize(const RenameLock* renameLock) {
 
     // Finished materializing so publish event to TraceBus
     getMount()->addInodeMaterializeEvent(
-        startTime, InodeType::TREE, getNodeId(), InodeEventProgress::END);
+        startTime,
+        InodeType::TREE,
+        getNodeId(),
+        loc.name.stringPiece(),
+        InodeEventProgress::END);
   }
 }
 
@@ -895,7 +903,11 @@ void TreeInode::childMaterialized(
     wasAlreadyMaterialized = contents->isMaterialized();
     if (!wasAlreadyMaterialized) {
       getMount()->addInodeMaterializeEvent(
-          startTime, InodeType::TREE, getNodeId(), InodeEventProgress::START);
+          startTime,
+          InodeType::TREE,
+          getNodeId(),
+          getLocationInfo(renameLock).name.stringPiece(),
+          InodeEventProgress::START);
     }
 
     auto iter = contents->entries.find(childName);
@@ -928,7 +940,11 @@ void TreeInode::childMaterialized(
     }
 
     getMount()->addInodeMaterializeEvent(
-        startTime, InodeType::TREE, getNodeId(), InodeEventProgress::END);
+        startTime,
+        InodeType::TREE,
+        getNodeId(),
+        location.name.stringPiece(),
+        InodeEventProgress::END);
   }
 }
 
@@ -943,7 +959,11 @@ void TreeInode::childDematerialized(
     wasAlreadyMaterialized = contents->isMaterialized();
     if (!wasAlreadyMaterialized) {
       getMount()->addInodeMaterializeEvent(
-          startTime, InodeType::TREE, getNodeId(), InodeEventProgress::START);
+          startTime,
+          InodeType::TREE,
+          getNodeId(),
+          getLocationInfo(renameLock).name.stringPiece(),
+          InodeEventProgress::START);
     }
 
     auto iter = contents->entries.find(childName);
@@ -986,7 +1006,11 @@ void TreeInode::childDematerialized(
       location.parent->childMaterialized(renameLock, location.name);
     }
     getMount()->addInodeMaterializeEvent(
-        startTime, InodeType::TREE, getNodeId(), InodeEventProgress::END);
+        startTime,
+        InodeType::TREE,
+        getNodeId(),
+        location.name.stringPiece(),
+        InodeEventProgress::END);
   }
 }
 
@@ -1100,7 +1124,11 @@ FileInodePtr TreeInode::createImpl(
     // Generate an inode number for this new entry.
     auto childNumber = getOverlay()->allocateInodeNumber();
     getMount()->addInodeMaterializeEvent(
-        startTime, InodeType::FILE, childNumber, InodeEventProgress::START);
+        startTime,
+        InodeType::FILE,
+        childNumber,
+        targetName.stringPiece(),
+        InodeEventProgress::START);
 
 #ifndef _WIN32
     // Create the overlay file before we insert the file into our entries map.
@@ -1133,7 +1161,11 @@ FileInodePtr TreeInode::createImpl(
     // Once the overlay is fully updated, the inode is materialized so we can
     // publish this to TraceBus
     getMount()->addInodeMaterializeEvent(
-        startTime, InodeType::FILE, childNumber, InodeEventProgress::END);
+        startTime,
+        InodeType::FILE,
+        childNumber,
+        targetName.stringPiece(),
+        InodeEventProgress::END);
   }
 
   if (InvalidationRequired::Yes == invalidate) {
@@ -1267,7 +1299,11 @@ TreeInodePtr TreeInode::mkdir(
     // Allocate an inode number
     auto childNumber = getOverlay()->allocateInodeNumber();
     getMount()->addInodeMaterializeEvent(
-        startTime, InodeType::TREE, childNumber, InodeEventProgress::START);
+        startTime,
+        InodeType::TREE,
+        childNumber,
+        targetName.stringPiece(),
+        InodeEventProgress::START);
 
     // The mode passed in by the caller may not have the file type bits set.
     // Ensure that we mark this as a directory.
@@ -1304,7 +1340,11 @@ TreeInodePtr TreeInode::mkdir(
     // Once the overlay is fully updated, the inode is materialized so we can
     // publish this to TraceBus
     getMount()->addInodeMaterializeEvent(
-        startTime, InodeType::TREE, childNumber, InodeEventProgress::END);
+        startTime,
+        InodeType::TREE,
+        childNumber,
+        targetName.stringPiece(),
+        InodeEventProgress::END);
   }
 
   getMount()->getJournal().recordCreated(targetName);

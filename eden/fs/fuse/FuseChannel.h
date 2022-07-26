@@ -137,7 +137,7 @@ struct FuseTraceEvent : TraceEventBase {
     /**
      * If set, a response code was sent to the kernel.
      *
-     * Negative values indicate errors, and non-negative success.  Errors map to
+     * Negative values indicate errors, and non-negative success. Errors map to
      * the fuse_out_header::error value, negated.
      *
      * For requests where the kernel will maintain a reference to the returned

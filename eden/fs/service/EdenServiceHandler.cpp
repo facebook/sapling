@@ -1352,9 +1352,9 @@ void ConvertInodeTraceEventToThriftInodeEvent(
   try {
     auto relativePath = inodeMap->getPathForInode(traceEvent.ino);
     thriftEvent.path() =
-        relativePath ? relativePath->stringPiece().str() : "[Unavailable]";
+        relativePath ? relativePath->stringPiece().str() : traceEvent.getName();
   } catch (const std::system_error& /* e */) {
-    thriftEvent.path() = "[Unavailable]";
+    thriftEvent.path() = traceEvent.getName();
   }
   // TODO: trace requesting pid
   // thriftEvent.requestInfo() = thriftRequestInfo(pid);

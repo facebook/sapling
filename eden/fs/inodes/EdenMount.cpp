@@ -80,11 +80,14 @@ namespace facebook::eden {
 
 // These static asserts exist to make explicit the memory usage of the per-mount
 // InodeTraceBus. TraceBus uses 2 * capacity * sizeof(TraceEvent) memory usage,
-// so limit total memory usage to around 0.5 MB per åmount.
+// so limit total memory usage to around 0.67 MB per mount. Note
+// InodeTraceEvents do include pointers to path info that is saved on the heap,
+// and there is memory usage of this data outside of the mount (by the
+// EdenServiceHandler during eden trace inode calls)
 constexpr size_t kInodeTraceBusCapacity = 5000;
-static_assert(CheckSize<InodeTraceEvent, 48>());
+static_assert(CheckSize<InodeTraceEvent, 64>());
 static_assert(
-    CheckEqual<240000, kInodeTraceBusCapacity * sizeof(InodeTraceEvent)>());
+    CheckEqual<320000, kInodeTraceBusCapacity * sizeof(InodeTraceEvent)>());
 
 #ifndef _WIN32
 namespace {
@@ -2240,6 +2243,7 @@ void EdenMount::addInodeMaterializeEvent(
     std::chrono::system_clock::time_point startTime,
     InodeType type,
     InodeNumber ino,
+    folly::StringPiece name,
     InodeEventProgress progress) {
   // Measure timestamps and duration
   auto eventSystemTime = (progress == InodeEventProgress::START)
@@ -2250,14 +2254,14 @@ void EdenMount::addInodeMaterializeEvent(
   auto steadyTime = std::chrono::steady_clock::now();
 
   // Publish event to inodeTraceBus
-  InodeTraceEvent event{
+  inodeTraceBus_->publish(InodeTraceEvent(
       {eventSystemTime, steadyTime},
       ino,
       type,
       InodeEventType::MATERIALIZE,
       progress,
-      duration};
-  inodeTraceBus_->publish(event);
+      duration,
+      name));
 }
 
 namespace {
