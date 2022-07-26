@@ -15,7 +15,6 @@ use blackbox::serde_json;
 use blackbox::BlackboxOptions;
 use blackbox::SessionId;
 use blackbox::ToValue;
-use blackbox::{self};
 use cpython::*;
 use cpython_ext::de::from_object;
 use cpython_ext::PyNone;

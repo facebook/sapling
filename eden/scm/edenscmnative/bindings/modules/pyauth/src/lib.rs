@@ -10,7 +10,6 @@
 use anyhow::anyhow;
 use anyhow::Context;
 use auth::AuthSection;
-use auth::{self};
 use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;

@@ -137,8 +137,8 @@ impl Iterator for ParentIter {
 
 #[cfg(test)]
 mod tests {
+    use serde_json;
     use serde_json::json;
-    use serde_json::{self};
 
     use super::*;
 

@@ -21,9 +21,9 @@ mod singleton;
 
 pub use match_pattern::capture_pattern;
 pub use match_pattern::match_pattern;
+pub use serde_json;
 pub use serde_json::json;
 pub use serde_json::Value;
-pub use serde_json::{self};
 
 pub use self::blackbox::Blackbox;
 pub use self::blackbox::BlackboxOptions;

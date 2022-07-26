@@ -14,7 +14,6 @@ use curl::easy::Easy2;
 use curl::multi::Easy2Handle;
 use curl::multi::Message;
 use curl::multi::Multi;
-use curl::{self};
 
 use crate::errors::Abort;
 use crate::errors::HttpClientError;
