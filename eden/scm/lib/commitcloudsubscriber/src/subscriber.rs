@@ -27,10 +27,10 @@ use serde::Deserialize;
 use crate::action::CloudSyncTrigger;
 use crate::config::CommitCloudConfig;
 use crate::error::*;
+use crate::receiver::CommandName;
 use crate::receiver::CommandName::CommitCloudCancelSubscriptions;
 use crate::receiver::CommandName::CommitCloudRestartSubscriptions;
 use crate::receiver::CommandName::CommitCloudStartSubscriptions;
-use crate::receiver::CommandName::{self};
 use crate::util;
 
 #[allow(unused_macros)]

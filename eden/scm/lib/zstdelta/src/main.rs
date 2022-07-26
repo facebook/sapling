@@ -9,9 +9,9 @@ mod zstdelta;
 
 use std::env::args;
 use std::fs::File;
+use std::io;
 use std::io::Read;
 use std::io::Write;
-use std::io::{self};
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::exit;

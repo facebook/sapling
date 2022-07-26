@@ -295,8 +295,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::super::test_fixtures;
     use super::super::test_fixtures::TestFixture;
-    use super::super::test_fixtures::{self};
     use super::super::test_utils::render_string;
     use super::super::test_utils::render_string_with_order;
     use crate::render::GraphRowRenderer;

@@ -6,8 +6,8 @@
  */
 
 use std::fs::File;
+use std::io;
 use std::io::prelude::*;
-use std::io::{self};
 use std::path::Path;
 use std::path::PathBuf;
 

@@ -9,9 +9,9 @@ use std::ops::Range;
 use std::path::Path;
 
 use anyhow::Result;
+use indexedlog::log;
 use indexedlog::log::IndexOutput;
 use indexedlog::log::Log;
-use indexedlog::log::{self};
 use indexedlog::DefaultOpenOptions;
 use indexedlog::OpenWithRepair;
 use thiserror::Error;

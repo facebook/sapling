@@ -9,14 +9,14 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use indexedlog::log;
 use indexedlog::log::IndexDef;
 use indexedlog::log::IndexOutput;
 use indexedlog::log::Log;
 use indexedlog::log::LogLookupIter;
-use indexedlog::log::{self};
+use indexedlog::rotate;
 use indexedlog::rotate::RotateLog;
 use indexedlog::rotate::RotateLogLookupIter;
-use indexedlog::rotate::{self};
 use indexedlog::OpenWithRepair;
 use indexedlog::Result as IndexedlogResult;
 use minibytes::Bytes;

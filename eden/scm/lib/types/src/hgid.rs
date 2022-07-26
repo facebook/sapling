@@ -7,9 +7,9 @@
 
 #[cfg(any(test, feature = "for-tests"))]
 use std::collections::HashSet;
+use std::io;
 use std::io::Read;
 use std::io::Write;
-use std::io::{self};
 
 #[cfg(any(test, feature = "for-tests"))]
 use rand::RngCore;

@@ -6,10 +6,10 @@
  */
 
 use std::collections::BTreeMap;
+use std::io;
 use std::io::Cursor;
 use std::io::Read;
 use std::io::Write;
-use std::io::{self};
 use std::path::Path;
 
 use byteorder::LittleEndian;
@@ -19,10 +19,10 @@ use vlqencoding::VLQDecode;
 use vlqencoding::VLQEncode;
 
 use crate::errors::IoResultExt;
+use crate::utils;
 use crate::utils::atomic_read;
 use crate::utils::atomic_write;
 use crate::utils::xxhash;
-use crate::utils::{self};
 
 /// Metadata about index names, logical [`Log`] and [`Index`] file lengths.
 #[derive(PartialEq, Eq, Debug, Clone)]

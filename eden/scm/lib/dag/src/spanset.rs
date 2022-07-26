@@ -9,15 +9,15 @@
 //!
 //! See [`SpanSet`] for the main structure.
 
+use std::cmp::Ordering;
 use std::cmp::Ordering::Equal;
 use std::cmp::Ordering::Greater;
 use std::cmp::Ordering::Less;
-use std::cmp::Ordering::{self};
 use std::cmp::PartialOrd;
 use std::collections::BinaryHeap;
 use std::collections::VecDeque;
+use std::fmt;
 use std::fmt::Debug;
-use std::fmt::{self};
 use std::iter::Rev;
 use std::ops::Bound;
 use std::ops::RangeBounds;

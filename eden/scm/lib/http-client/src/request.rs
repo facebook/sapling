@@ -20,7 +20,6 @@ use std::time::SystemTime;
 use curl::easy::Easy2;
 use curl::easy::HttpVersion;
 use curl::easy::List;
-use curl::{self};
 use http::header;
 use lru_cache::LruCache;
 use maplit::hashmap;
@@ -889,9 +888,9 @@ mod tests {
 
     use anyhow::Result;
     use futures::TryStreamExt;
+    use http::header;
     use http::header::HeaderName;
     use http::header::HeaderValue;
-    use http::header::{self};
     use http::StatusCode;
     use mockito::mock;
     use mockito::Matcher;

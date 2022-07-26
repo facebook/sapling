@@ -6,8 +6,8 @@
  */
 
 use std::any::Any;
+use std::fs;
 use std::fs::File;
-use std::fs::{self};
 use std::io;
 use std::io::Cursor;
 use std::path::Path;

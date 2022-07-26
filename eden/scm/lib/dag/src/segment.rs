@@ -9,9 +9,9 @@
 //!
 //! Segmented DAG. See [`IdDag`] for the main structure.
 
+use std::fmt;
 use std::fmt::Debug;
 use std::fmt::Formatter;
-use std::fmt::{self};
 use std::io::Cursor;
 
 use bitflags::bitflags;

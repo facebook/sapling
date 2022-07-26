@@ -8,8 +8,8 @@
 use std::collections::HashSet;
 use std::ops::Deref;
 use std::path::PathBuf;
+use std::str;
 use std::str::FromStr;
-use std::str::{self};
 use std::sync::Arc;
 
 use anyhow::bail;

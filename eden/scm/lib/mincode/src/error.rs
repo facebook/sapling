@@ -6,12 +6,11 @@
  */
 
 use std::error;
+use std::fmt;
 use std::fmt::Display;
-use std::fmt::{self};
 use std::io;
 use std::str;
 use std::string;
-use std::{self};
 
 use serde::de;
 use serde::ser;

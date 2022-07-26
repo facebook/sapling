@@ -7,9 +7,9 @@
 
 //! VLQ (Variable-length quantity) encoding.
 
+use std::io;
 use std::io::Read;
 use std::io::Write;
-use std::io::{self};
 use std::mem::size_of;
 
 pub trait VLQEncode<T> {
@@ -236,10 +236,10 @@ impl_signed_primitive!(i8, u8);
 
 #[cfg(test)]
 mod tests {
+    use std::io;
     use std::io::Cursor;
     use std::io::Seek;
     use std::io::SeekFrom;
-    use std::io::{self};
 
     use quickcheck::quickcheck;
 

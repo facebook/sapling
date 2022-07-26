@@ -9,9 +9,9 @@ use std::thread;
 use std::thread::JoinHandle;
 
 use anyhow::Result;
+use crossbeam::channel;
 use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
-use crossbeam::channel::{self};
 use minibytes::Bytes;
 use tokio::sync::oneshot;
 use types::RepoPathBuf;

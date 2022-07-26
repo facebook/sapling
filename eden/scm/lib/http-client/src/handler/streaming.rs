@@ -149,9 +149,9 @@ impl<R: Receiver> HandlerExt for Streaming<R> {
 #[cfg(test)]
 mod tests {
     use assert_matches::assert_matches;
+    use http::header;
     use http::header::HeaderName;
     use http::header::HeaderValue;
-    use http::header::{self};
 
     use super::*;
     use crate::progress::ProgressReporter;

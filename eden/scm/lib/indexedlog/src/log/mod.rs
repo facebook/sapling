@@ -34,15 +34,15 @@
 // LittleEndian encoding.
 
 use std::borrow::Cow;
+use std::fmt;
 use std::fmt::Debug;
 use std::fmt::Formatter;
-use std::fmt::{self};
+use std::fs;
 use std::fs::File;
-use std::fs::{self};
+use std::io;
 use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
-use std::io::{self};
 use std::ops::RangeBounds;
 use std::path::Path;
 use std::pin::Pin;
@@ -59,19 +59,19 @@ use vlqencoding::VLQEncode;
 
 use crate::errors::IoResultExt;
 use crate::errors::ResultExt;
+use crate::index;
 use crate::index::Index;
 use crate::index::InsertKey;
 use crate::index::InsertValue;
 use crate::index::LeafValueIter;
 use crate::index::RangeIter;
 use crate::index::ReadonlyBuffer;
-use crate::index::{self};
 use crate::lock::ScopedDirLock;
 use crate::lock::READER_LOCK_OPTS;
+use crate::utils;
 use crate::utils::mmap_path;
 use crate::utils::xxhash;
 use crate::utils::xxhash32;
-use crate::utils::{self};
 
 mod fold;
 mod meta;

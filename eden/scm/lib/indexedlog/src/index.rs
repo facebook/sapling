@@ -59,22 +59,22 @@ use std::borrow::Cow;
 use std::cmp::Ordering::Equal;
 use std::cmp::Ordering::Greater;
 use std::cmp::Ordering::Less;
+use std::fmt;
 use std::fmt::Debug;
 use std::fmt::Formatter;
-use std::fmt::{self};
+use std::fs;
 use std::fs::File;
-use std::fs::{self};
 use std::hash::Hasher;
+use std::io;
 use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
-use std::io::{self};
 use std::mem::size_of;
+use std::ops::Bound;
 use std::ops::Bound::Excluded;
 use std::ops::Bound::Included;
 use std::ops::Bound::Unbounded;
-use std::ops::Bound::{self};
 use std::ops::Deref;
 use std::ops::RangeBounds;
 use std::path::Path;
@@ -102,10 +102,10 @@ use crate::base16::Base16Iter;
 use crate::errors::IoResultExt;
 use crate::errors::ResultExt;
 use crate::lock::ScopedFileLock;
+use crate::utils;
 use crate::utils::mmap_bytes;
 use crate::utils::xxhash;
 use crate::utils::xxhash32;
-use crate::utils::{self};
 
 //// Structures and serialization
 

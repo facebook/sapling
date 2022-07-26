@@ -13,8 +13,8 @@ use std::io;
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::rc::Rc;
+use std::sync::atomic;
 use std::sync::atomic::AtomicU64;
-use std::sync::atomic::{self};
 
 pub use indexmap::IndexMap;
 pub use indexmap::IndexSet;

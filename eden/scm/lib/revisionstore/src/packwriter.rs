@@ -8,9 +8,9 @@
 use std::cell::RefCell;
 use std::cell::RefMut;
 use std::fmt::Debug;
+use std::io;
 use std::io::BufWriter;
 use std::io::Write;
-use std::io::{self};
 
 use anyhow::Result;
 

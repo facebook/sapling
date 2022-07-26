@@ -353,8 +353,8 @@ impl LocalStore for MutableDataPack {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
     use std::fs::File;
-    use std::fs::{self};
     use std::io::Read;
 
     use minibytes::Bytes;

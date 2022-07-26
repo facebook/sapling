@@ -6,8 +6,8 @@
  */
 
 use std::fmt;
+use std::fs;
 use std::fs::File;
-use std::fs::{self};
 use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;

@@ -6,8 +6,8 @@
  */
 
 use std::borrow::Cow;
+use std::fmt;
 use std::fmt::Debug;
-use std::fmt::{self};
 use std::ops::Range;
 
 use tracing::debug_span;

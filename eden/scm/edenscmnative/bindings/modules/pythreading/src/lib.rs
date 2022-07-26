@@ -10,8 +10,8 @@
 use std::cell::Cell;
 use std::sync::Condvar;
 use std::sync::Mutex;
+use std::thread;
 use std::thread::ThreadId;
-use std::thread::{self};
 use std::time::Duration;
 
 use cpython::*;

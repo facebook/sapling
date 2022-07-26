@@ -11,10 +11,9 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use ignore::gitignore;
 use ignore::gitignore::Glob;
-use ignore::gitignore::{self};
 use ignore::Match;
-use ignore::{self};
 use parking_lot::RwLock;
 use types::RepoPath;
 

@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::io;
 use std::io::Read;
 use std::io::Write;
-use std::io::{self};
 
 use crate::hgid::HgId;
 use crate::hgid::ReadHgIdExt;

@@ -6,15 +6,15 @@
  */
 
 use std::cell::RefCell;
+use std::fs;
 use std::fs::File;
-use std::fs::{self};
 use std::hash::Hasher;
+use std::io;
 use std::io::Read;
 use std::io::Write;
-use std::io::{self};
 use std::path::Path;
+use std::sync::atomic;
 use std::sync::atomic::AtomicI64;
-use std::sync::atomic::{self};
 
 use memmap::MmapOptions;
 use minibytes::Bytes;

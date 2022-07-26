@@ -9,9 +9,9 @@
 use std::io::Write;
 
 use anyhow::Result;
+use futures::stream;
 use futures::stream::Stream;
 use futures::stream::TryStreamExt;
-use futures::stream::{self};
 
 /// A renderable item.  This trait should be implemented by anything that can
 /// be output from a command.

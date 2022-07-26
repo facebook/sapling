@@ -701,8 +701,8 @@ impl HgIdMutableHistoryStore for MutableHistoryPackStore {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
     use std::fs::OpenOptions;
-    use std::fs::{self};
 
     use minibytes::Bytes;
     use rand::SeedableRng;

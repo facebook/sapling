@@ -9,9 +9,9 @@ use std::collections::BTreeSet;
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
 use std::collections::VecDeque;
+use std::fmt;
 use std::fmt::Debug;
 use std::fmt::Formatter;
-use std::fmt::{self};
 use std::ops::Deref;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use std::path::Path;

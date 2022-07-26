@@ -9,6 +9,7 @@ use std::str;
 
 use byteorder::NetworkEndian;
 use byteorder::ReadBytesExt;
+use serde::de;
 use serde::de::Deserialize;
 use serde::de::DeserializeSeed;
 use serde::de::EnumAccess;
@@ -16,7 +17,6 @@ use serde::de::IntoDeserializer;
 use serde::de::SeqAccess;
 use serde::de::VariantAccess;
 use serde::de::Visitor;
-use serde::de::{self};
 use vlqencoding::VLQDecode;
 
 use crate::Error;

@@ -12,8 +12,8 @@ use std::mem;
 use std::path::PathBuf;
 use std::str;
 use std::sync::Arc;
+use std::thread;
 use std::thread::JoinHandle;
-use std::thread::{self};
 
 use anyhow::bail;
 use anyhow::format_err;

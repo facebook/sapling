@@ -10,9 +10,9 @@ use anyhow::Result;
 use bufsize::SizeCounter;
 use bytes::Bytes;
 use bytes::BytesMut;
+use fbthrift::compact_protocol;
 use fbthrift::compact_protocol::CompactProtocolDeserializer;
 use fbthrift::compact_protocol::CompactProtocolSerializer;
-use fbthrift::compact_protocol::{self};
 use fbthrift::Deserialize;
 use fbthrift::Serialize;
 
