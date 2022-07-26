@@ -240,8 +240,9 @@ FileInode::runWhileMaterialized(
   // from a recursive call waiting for/timing how long it takes to load the blob
   if (!startTime.has_value() && state->tag != State::MATERIALIZED_IN_OVERLAY) {
     startTime = std::chrono::system_clock::now();
-    getMount()->addInodeMaterializeEvent(
+    getMount()->addInodeTraceEvent(
         startTime.value(),
+        InodeEventType::MATERIALIZE,
         InodeType::FILE,
         getNodeId(),
         getNameRacy().stringPiece(),
@@ -272,8 +273,9 @@ FileInode::runWhileMaterialized(
           XCHECK(state.isNull());
           materializeInParent();
           // Add materialize event after parent finishes its materialization
-          getMount()->addInodeMaterializeEvent(
+          getMount()->addInodeTraceEvent(
               startTime.value(),
+              InodeEventType::MATERIALIZE,
               InodeType::FILE,
               getNodeId(),
               getNameRacy().stringPiece(),
@@ -348,8 +350,9 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
       // - If we successfully materialized the file and were in the
       //   BLOB_LOADING state, fulfill the blobLoadingPromise.
       auto startTime = std::chrono::system_clock::now();
-      getMount()->addInodeMaterializeEvent(
+      getMount()->addInodeTraceEvent(
           startTime,
+          InodeEventType::MATERIALIZE,
           InodeType::FILE,
           getNodeId(),
           getNameRacy().stringPiece(),
@@ -379,8 +382,9 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
         XCHECK(state.isNull());
         materializeInParent();
         // Publish to TraceBus after parent finishes its materialization
-        getMount()->addInodeMaterializeEvent(
+        getMount()->addInodeTraceEvent(
             startTime,
+            InodeEventType::MATERIALIZE,
             InodeType::FILE,
             getNodeId(),
             getNameRacy().stringPiece(),

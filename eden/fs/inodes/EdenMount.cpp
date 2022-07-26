@@ -2255,8 +2255,9 @@ void EdenMount::subscribeActivityBuffer() {
   }
 }
 
-void EdenMount::addInodeMaterializeEvent(
+void EdenMount::addInodeTraceEvent(
     std::chrono::system_clock::time_point startTime,
+    InodeEventType eventType,
     InodeType type,
     InodeNumber ino,
     folly::StringPiece path,
@@ -2274,7 +2275,7 @@ void EdenMount::addInodeMaterializeEvent(
       {eventSystemTime, steadyTime},
       ino,
       type,
-      InodeEventType::MATERIALIZE,
+      eventType,
       progress,
       duration,
       path));

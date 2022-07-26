@@ -40,6 +40,7 @@ static const auto kTreeEmoji = reinterpret_cast<const char*>(u8"\U0001F332");
 static const auto kBlobEmoji = reinterpret_cast<const char*>(u8"\U0001F954");
 static const auto kDashedArrowEmoji = reinterpret_cast<const char*>(u8"\u21E3");
 static const auto kSolidArrowEmoji = reinterpret_cast<const char*>(u8"\u2193");
+static const auto kWarningSignEmoji = reinterpret_cast<const char*>(u8"\u26A0");
 static const auto kRedSquareEmoji =
     reinterpret_cast<const char*>(u8"\U0001F7E5");
 static const auto kOrangeDiamondEmoji =
@@ -63,12 +64,14 @@ static const std::unordered_map<InodeEventType, const char*> kInodeEventTypes =
     {
         {InodeEventType::UNKNOWN, "?"},
         {InodeEventType::MATERIALIZE, "M"},
+        {InodeEventType::LOAD, "L"},
 };
 
 static const std::unordered_map<InodeEventProgress, const char*>
     kInodeProgresses = {
         {InodeEventProgress::START, kDashedArrowEmoji},
         {InodeEventProgress::END, kSolidArrowEmoji},
+        {InodeEventProgress::FAIL, kWarningSignEmoji},
 };
 
 static const std::unordered_map<HgResourceType, const char*> kResourceTypes = {
@@ -642,7 +645,7 @@ int trace_inode_retroactive(
         for (auto& event : events) {
           format_trace_inode_event(event, inode_width);
         }
-        fmt::print("{}\n", std::string(header.size(), '-'));
+        fmt::print("{}\n", std::string(header.size() + 2, '-'));
       })
       .thenError([](const folly::exception_wrapper& ex) {
         fmt::print("{}\n", ex.what());

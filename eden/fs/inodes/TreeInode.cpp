@@ -864,8 +864,9 @@ void TreeInode::materialize(const RenameLock* renameLock) {
       if (contents->isMaterialized()) {
         return;
       }
-      getMount()->addInodeMaterializeEvent(
+      getMount()->addInodeTraceEvent(
           startTime,
+          InodeEventType::MATERIALIZE,
           InodeType::TREE,
           getNodeId(),
           getLocationInfo(*renameLock).name.stringPiece(),
@@ -881,8 +882,9 @@ void TreeInode::materialize(const RenameLock* renameLock) {
     }
 
     // Finished materializing so publish event to TraceBus
-    getMount()->addInodeMaterializeEvent(
+    getMount()->addInodeTraceEvent(
         startTime,
+        InodeEventType::MATERIALIZE,
         InodeType::TREE,
         getNodeId(),
         loc.name.stringPiece(),
@@ -902,8 +904,9 @@ void TreeInode::childMaterialized(
     auto contents = contents_.wlock();
     wasAlreadyMaterialized = contents->isMaterialized();
     if (!wasAlreadyMaterialized) {
-      getMount()->addInodeMaterializeEvent(
+      getMount()->addInodeTraceEvent(
           startTime,
+          InodeEventType::MATERIALIZE,
           InodeType::TREE,
           getNodeId(),
           getLocationInfo(renameLock).name.stringPiece(),
@@ -939,8 +942,9 @@ void TreeInode::childMaterialized(
       location.parent->childMaterialized(renameLock, location.name);
     }
 
-    getMount()->addInodeMaterializeEvent(
+    getMount()->addInodeTraceEvent(
         startTime,
+        InodeEventType::MATERIALIZE,
         InodeType::TREE,
         getNodeId(),
         location.name.stringPiece(),
@@ -958,8 +962,9 @@ void TreeInode::childDematerialized(
     auto contents = contents_.wlock();
     wasAlreadyMaterialized = contents->isMaterialized();
     if (!wasAlreadyMaterialized) {
-      getMount()->addInodeMaterializeEvent(
+      getMount()->addInodeTraceEvent(
           startTime,
+          InodeEventType::MATERIALIZE,
           InodeType::TREE,
           getNodeId(),
           getLocationInfo(renameLock).name.stringPiece(),
@@ -1005,8 +1010,9 @@ void TreeInode::childDematerialized(
     if (location.parent && !location.unlinked) {
       location.parent->childMaterialized(renameLock, location.name);
     }
-    getMount()->addInodeMaterializeEvent(
+    getMount()->addInodeTraceEvent(
         startTime,
+        InodeEventType::MATERIALIZE,
         InodeType::TREE,
         getNodeId(),
         location.name.stringPiece(),
@@ -1123,8 +1129,9 @@ FileInodePtr TreeInode::createImpl(
 
     // Generate an inode number for this new entry.
     auto childNumber = getOverlay()->allocateInodeNumber();
-    getMount()->addInodeMaterializeEvent(
+    getMount()->addInodeTraceEvent(
         startTime,
+        InodeEventType::MATERIALIZE,
         InodeType::FILE,
         childNumber,
         targetName.stringPiece(),
@@ -1160,8 +1167,9 @@ FileInodePtr TreeInode::createImpl(
 
     // Once the overlay is fully updated, the inode is materialized so we can
     // publish this to TraceBus
-    getMount()->addInodeMaterializeEvent(
+    getMount()->addInodeTraceEvent(
         startTime,
+        InodeEventType::MATERIALIZE,
         InodeType::FILE,
         childNumber,
         targetName.stringPiece(),
@@ -1298,8 +1306,9 @@ TreeInodePtr TreeInode::mkdir(
 
     // Allocate an inode number
     auto childNumber = getOverlay()->allocateInodeNumber();
-    getMount()->addInodeMaterializeEvent(
+    getMount()->addInodeTraceEvent(
         startTime,
+        InodeEventType::MATERIALIZE,
         InodeType::TREE,
         childNumber,
         targetName.stringPiece(),
@@ -1339,8 +1348,9 @@ TreeInodePtr TreeInode::mkdir(
 
     // Once the overlay is fully updated, the inode is materialized so we can
     // publish this to TraceBus
-    getMount()->addInodeMaterializeEvent(
+    getMount()->addInodeTraceEvent(
         startTime,
+        InodeEventType::MATERIALIZE,
         InodeType::TREE,
         childNumber,
         targetName.stringPiece(),
