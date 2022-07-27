@@ -583,5 +583,14 @@ impl<'a> TreeStoreBuilder<'a> {
 }
 
 fn use_edenapi_via_config(config: &dyn Config) -> Result<bool> {
-    Ok(config.get_or_default("remotefilelog", "http")?)
+    let mut use_edenapi: bool = config.get_or_default("remotefilelog", "http")?;
+    if use_edenapi {
+        // If paths.default is not set, there is no server repo. Therefore, do
+        // not use edenapi.
+        let path: Option<String> = config.get_opt("paths", "default")?;
+        if path.is_none() {
+            use_edenapi = false;
+        }
+    }
+    Ok(use_edenapi)
 }
