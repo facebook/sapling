@@ -101,7 +101,6 @@ use mutable_renames::SqlMutableRenamesStore;
 use newfilenodes::NewFilenodesBuilder;
 use parking_lot::Mutex;
 use permission_checker::AclProvider;
-use permission_checker::DefaultAclProvider;
 use phases::ArcPhases;
 use pushrebase_mutation_mapping::ArcPushrebaseMutationMapping;
 use pushrebase_mutation_mapping::SqlPushrebaseMutationMappingConnection;
@@ -208,7 +207,6 @@ pub struct RepoFactory {
     scrub_handler: Arc<dyn ScrubHandler>,
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
     bonsai_hg_mapping_overwrite: bool,
-    acl_provider: Arc<dyn AclProvider>,
     global_allowlist: Vec<Identity>,
 }
 
@@ -225,7 +223,6 @@ impl RepoFactory {
             blobstore_component_sampler: None,
             redaction_config: common.redaction_config.clone(),
             global_allowlist: common.global_allowlist.clone(),
-            acl_provider: Arc::new(DefaultAclProvider::new(env.fb)),
             bonsai_hg_mapping_overwrite: false,
             env,
         }
@@ -476,7 +473,7 @@ impl RepoFactory {
     }
 
     pub fn acl_provider(&self) -> &dyn AclProvider {
-        self.acl_provider.as_ref()
+        self.env.acl_provider.as_ref()
     }
 }
 
@@ -792,7 +789,7 @@ impl RepoFactory {
         let repo_name = repo_identity.name();
         let permission_checker = ProdRepoPermissionChecker::new(
             &self.env.logger,
-            self.acl_provider.as_ref(),
+            self.env.acl_provider.as_ref(),
             repo_config.hipster_acl.as_deref(),
             repo_config
                 .source_control_service
@@ -1157,7 +1154,7 @@ impl RepoFactory {
 
         let hook_manager = make_hook_manager(
             self.env.fb,
-            self.acl_provider.as_ref(),
+            self.env.acl_provider.as_ref(),
             content_store,
             repo_config,
             repo_identity.name().to_string(),
@@ -1210,10 +1207,12 @@ impl RepoFactory {
         &self,
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcRepoBookmarkAttrs> {
-        let repo_bookmark_attrs =
-            RepoBookmarkAttrs::new(self.acl_provider.as_ref(), repo_config.bookmarks.clone())
-                .await
-                .context(RepoFactoryError::RepoBookmarkAttrs)?;
+        let repo_bookmark_attrs = RepoBookmarkAttrs::new(
+            self.env.acl_provider.as_ref(),
+            repo_config.bookmarks.clone(),
+        )
+        .await
+        .context(RepoFactoryError::RepoBookmarkAttrs)?;
         Ok(Arc::new(repo_bookmark_attrs))
     }
 }

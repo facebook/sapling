@@ -75,8 +75,8 @@ impl MononokeIdentitySetExt for MononokeIdentitySet {
 pub struct DummyAclProvider;
 
 impl DummyAclProvider {
-    pub fn new(_fb: FacebookInit) -> DummyAclProvider {
-        DummyAclProvider
+    pub fn new(_fb: FacebookInit) -> Box<dyn AclProvider> {
+        Box::new(DummyAclProvider)
     }
 }
 

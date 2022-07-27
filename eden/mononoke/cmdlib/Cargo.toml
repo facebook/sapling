@@ -37,6 +37,7 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 observability = { version = "0.1.0", path = "../observability" }
 once_cell = "1.12"
 panichandler = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+permission_checker = { version = "0.1.0", path = "../permission_checker" }
 rand_distr = "0.4"
 rendezvous = { version = "0.1.0", path = "../common/rendezvous" }
 repo_factory = { version = "0.1.0", path = "../repo_factory" }

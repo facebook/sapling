@@ -31,6 +31,7 @@ metaconfig_parser = { version = "0.1.0", path = "../../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 observability = { version = "0.1.0", path = "../../observability" }
+permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 prefixblob = { version = "0.1.0", path = "../../blobstore/prefixblob" }
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }

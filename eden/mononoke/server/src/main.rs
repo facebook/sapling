@@ -167,6 +167,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 will_exit,
                 cslb_config,
                 bound_addr_file,
+                env.acl_provider.as_ref(),
             )
             .await
         }

@@ -15,6 +15,7 @@ use derived_data_remote::RemoteDerivationOptions;
 use fbinit::FacebookInit;
 use megarepo_config::MononokeMegarepoConfigsOptions;
 use observability::ObservabilityContext;
+use permission_checker::AclProvider;
 use rendezvous::RendezVousOptions;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
@@ -51,4 +52,5 @@ pub struct MononokeEnvironment {
     pub megarepo_configs_options: MononokeMegarepoConfigsOptions,
     pub remote_derivation_options: RemoteDerivationOptions,
     pub disabled_hooks: HashMap<String, HashSet<String>>,
+    pub acl_provider: Box<dyn AclProvider>,
 }

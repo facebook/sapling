@@ -17,6 +17,7 @@ derived_data_remote = { version = "0.1.0", path = "../../derived_data/remote" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 megarepo_config = { version = "0.1.0", path = "../../megarepo_api/megarepo_config" }
 observability = { version = "0.1.0", path = "../../observability" }
+permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

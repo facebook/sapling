@@ -31,6 +31,7 @@ use futures::channel::oneshot;
 use metaconfig_types::CommonConfig;
 use mononoke_api::Mononoke;
 use openssl::ssl::SslAcceptor;
+use permission_checker::AclProvider;
 use rate_limiting::RateLimitEnvironment;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -60,6 +61,7 @@ pub async fn create_repo_listeners<'a>(
     will_exit: Arc<AtomicBool>,
     cslb_config: Option<String>,
     bound_addr_file: Option<PathBuf>,
+    acl_provider: &dyn AclProvider,
 ) -> Result<()> {
     let rate_limiter = {
         let handle = config_store
@@ -123,6 +125,7 @@ pub async fn create_repo_listeners<'a>(
             scuba
         },
         bound_addr_file,
+        acl_provider,
     )
     .await
 }

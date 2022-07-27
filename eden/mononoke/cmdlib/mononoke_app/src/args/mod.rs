@@ -8,6 +8,7 @@
 use anyhow::format_err;
 use anyhow::Result;
 
+mod acl;
 mod changeset;
 mod config;
 mod hooks;
@@ -21,6 +22,7 @@ mod tunables;
 
 pub use self::tunables::TunablesArgs;
 pub use crate::fb303::Fb303Args;
+pub use acl::AclArgs;
 pub use changeset::ChangesetArgs;
 pub use config::ConfigArgs;
 pub use config::ConfigMode;

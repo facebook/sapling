@@ -41,6 +41,9 @@ use fbinit::FacebookInit;
 use megarepo_config::MegarepoConfigsArgs;
 use megarepo_config::MononokeMegarepoConfigsOptions;
 use observability::DynamicLevelDrain;
+use permission_checker::AclProvider;
+use permission_checker::DefaultAclProvider;
+use permission_checker::InternalAclProvider;
 use rendezvous::RendezVousArgs;
 use slog::debug;
 use slog::o;
@@ -55,6 +58,7 @@ use tokio::runtime::Runtime;
 
 use crate::app::MononokeApp;
 use crate::args::parse_config_spec_to_path;
+use crate::args::AclArgs;
 use crate::args::ConfigArgs;
 use crate::args::MysqlArgs;
 use crate::args::RuntimeArgs;
@@ -102,6 +106,9 @@ pub struct EnvironmentArgs {
     #[cfg(fbcode_build)]
     #[clap(flatten, next_help_heading = "MANIFOLD OPTIONS")]
     manifold_args: ManifoldArgs,
+
+    #[clap(flatten, next_help_heading = "ACL OPTIONS")]
+    acl_args: AclArgs,
 
     #[clap(flatten, next_help_heading = "REMOTE DERIVATION OPTIONS")]
     remote_derivation_args: RemoteDerivationArgs,
@@ -253,6 +260,7 @@ impl MononokeAppBuilder {
             megarepo_configs_args,
             mysql_args,
             readonly_storage_args,
+            acl_args,
             remote_derivation_args,
             rendezvous_args,
             tunables_args,
@@ -324,6 +332,9 @@ impl MononokeAppBuilder {
 
         let remote_derivation_options = remote_derivation_args.into();
 
+        let acl_provider =
+            create_acl_provider(self.fb, &acl_args).context("Failed to create ACL provider")?;
+
         init_tunables_worker(&tunables_args, &config_store, logger.clone())?;
 
         Ok(MononokeEnvironment {
@@ -338,6 +349,7 @@ impl MononokeAppBuilder {
             mysql_options,
             blobstore_options,
             readonly_storage,
+            acl_provider,
             rendezvous_options,
             megarepo_configs_options,
             remote_derivation_options,
@@ -507,4 +519,14 @@ fn init_tunables_worker(
         config_store.get_config_handle(parse_config_spec_to_path(&tunables_config)?)?;
 
     tunables::init_tunables_worker(logger, config_handle)
+}
+
+fn create_acl_provider(fb: FacebookInit, acl_args: &AclArgs) -> Result<Box<dyn AclProvider>> {
+    let acl_provider = match &acl_args.acl_file {
+        Some(acl_file) => InternalAclProvider::from_file(acl_file).with_context(|| {
+            format!("Failed to load ACLs from '{}'", acl_file.to_string_lossy())
+        })?,
+        None => DefaultAclProvider::new(fb),
+    };
+    Ok(acl_provider)
 }

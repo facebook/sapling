@@ -45,7 +45,7 @@ use lazy_static::lazy_static;
 use metaconfig_types::CommonConfig;
 use openssl::ssl::Ssl;
 use openssl::ssl::SslAcceptor;
-use permission_checker::DefaultAclProvider;
+use permission_checker::AclProvider;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 use rate_limiting::RateLimitEnvironment;
@@ -127,10 +127,10 @@ pub async fn connection_acceptor(
     cslb_config: Option<String>,
     wireproto_scuba: MononokeScubaSampleBuilder,
     bound_addr_path: Option<PathBuf>,
+    acl_provider: &dyn AclProvider,
 ) -> Result<()> {
     let enable_http_control_api = common_config.enable_http_control_api;
 
-    let acl_provider = DefaultAclProvider::new(fb);
     let security_checker = ConnectionSecurityChecker::new(acl_provider, &common_config).await?;
     let addr: SocketAddr = sockname
         .parse()

@@ -68,6 +68,9 @@ use environment::MononokeEnvironment;
 use metaconfig_types::PackFormat;
 use observability::DynamicLevelDrain;
 use observability::ObservabilityContext;
+use permission_checker::AclProvider;
+use permission_checker::DefaultAclProvider;
+use permission_checker::InternalAclProvider;
 use repo_factory::ReadOnlyStorage;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog_ext::make_tag_filter_drain;
@@ -81,6 +84,7 @@ use crate::helpers::create_runtime;
 
 use super::app::ArgType;
 use super::app::MononokeAppData;
+use super::app::ACL_FILE;
 use super::app::BLOBSTORE_BYTES_MIN_THROTTLE_ARG;
 use super::app::BLOBSTORE_PUT_BEHAVIOUR_ARG;
 use super::app::BLOBSTORE_SCRUB_ACTION_ARG;
@@ -203,6 +207,7 @@ impl<'a> MononokeMatches<'a> {
             parse_rendezvous_options(&matches).context("Failed to parse rendezvous options")?;
         let megarepo_configs_options = parse_mononoke_megarepo_configs_options(&matches)?;
         let remote_derivation_options = parse_remote_derivation_options(&matches)?;
+        let acl_provider = create_acl_provider(fb, &matches)?;
 
         maybe_enable_mcrouter(fb, &matches, &arg_types);
 
@@ -220,6 +225,7 @@ impl<'a> MononokeMatches<'a> {
                 mysql_options,
                 blobstore_options,
                 readonly_storage,
+                acl_provider,
                 rendezvous_options,
                 megarepo_configs_options,
                 remote_derivation_options,
@@ -1028,4 +1034,14 @@ fn parse_remote_derivation_options(
         derive_remotely,
         smc_tier,
     })
+}
+
+fn create_acl_provider(
+    fb: FacebookInit,
+    matches: &ArgMatches<'_>,
+) -> Result<Box<dyn AclProvider>, Error> {
+    match matches.value_of(ACL_FILE) {
+        Some(file) => InternalAclProvider::from_file(file),
+        None => Ok(DefaultAclProvider::new(fb)),
+    }
 }
