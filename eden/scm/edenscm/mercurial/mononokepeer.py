@@ -205,7 +205,7 @@ class mononokepipe(object):
         return self._pipe.flush()
 
 
-def maybestripsquarebrackets(hostname):
+def maybestripsquarebrackets(hostname: str):
     """Strips the square braces from host name (if-present)
 
     socket.createconnection used for mononoke connections can't deal with ipv6
