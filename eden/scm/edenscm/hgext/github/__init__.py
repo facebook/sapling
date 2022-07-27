@@ -11,7 +11,7 @@ from typing import Optional
 from edenscm.mercurial import registrar
 from edenscm.mercurial.i18n import _
 
-from . import link, submit, templates
+from . import github_repo as gh_repo, link, submit, templates
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -51,6 +51,11 @@ def link_cmd(ui, repo, *args, **opts):
         if specified; otherwise, falls back to 'paths.default'.
     """
     return link.link(ui, repo, *args, **opts)
+
+
+@templatekeyword("github_repo")
+def github_repo(repo, ctx, templ, **args) -> bool:
+    return gh_repo.is_github_repo(repo)
 
 
 @templatekeyword("github_pull_request_url")

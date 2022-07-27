@@ -3,24 +3,16 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from edenscm.mercurial import error, git
+from edenscm.mercurial import error
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid
 
-from . import pullrequeststore
+from . import github_repo, pullrequeststore
 
 
 def submit(ui, repo, *args, **opts):
     """Create or update GitHub pull requests."""
-    if not git.isgitpeer(repo):
-        raise error.Abort(_("not a Git repo"))
-
-    try:
-        is_github = ui.paths.get("default", "default-push").url.host == "github.com"
-    except AttributeError:  # ex. paths.default is not set
-        is_github = False
-
-    if not is_github:
+    if not github_repo.is_github_repo(repo):
         raise error.Abort(_("not a Git repo"))
 
     find_commits_on_branch(ui, repo)
