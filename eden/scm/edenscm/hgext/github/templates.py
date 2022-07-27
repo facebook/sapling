@@ -19,13 +19,12 @@ class GitHubPullRequest:
     repo_name: str
     number: int
 
-    def __str__(self):
-        return (
-            f"https://github.com/{self.repo_owner}/{self.repo_name}/pull/{self.number}"
-        )
+    def as_url(self, domain=None) -> str:
+        domain = domain or "github.com"
+        return f"https://{domain}/{self.repo_owner}/{self.repo_name}/pull/{self.number}"
 
 
-def github_pull_request_url(descr: str) -> Optional[str]:
+def github_pull_request_url(descr: str, domain=None) -> Optional[str]:
     r"""Returns the pull request associated with a commit based on the contents
     of the commit message, if appropriate.
 
@@ -34,7 +33,7 @@ def github_pull_request_url(descr: str) -> Optional[str]:
     'https://github.com/bolinfest/ghstack-testing/pull/71'
     """
     pull_request = parse_github_pull_request_url(descr)
-    return str(pull_request) if pull_request else None
+    return pull_request.as_url(domain) if pull_request else None
 
 
 def github_pull_request_repo_owner(descr: str) -> Optional[str]:

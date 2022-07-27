@@ -64,7 +64,8 @@ def github_pull_request_url(repo, ctx, templ, **args) -> Optional[str]:
     for the pull request.
     """
     descr = ctx.description()
-    return templates.github_pull_request_url(descr)
+    pull_request_domain = repo.ui.config("github", "pull_request_domain")
+    return templates.github_pull_request_url(descr, pull_request_domain)
 
 
 @templatekeyword("github_pull_request_repo_owner")
