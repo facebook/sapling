@@ -10,6 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.56"
 async-trait = "0.1.56"
+async_requests = { version = "0.1.0", path = "../../megarepo_api/async_requests" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
@@ -40,13 +41,19 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 itertools = "0.10.3"
 manifest = { version = "0.1.0", path = "../../manifest" }
+maplit = "1.0"
+megarepo_api = { version = "0.1.0", path = "../../megarepo_api" }
+megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
+metaconfig_parser = { version = "0.1.0", path = "../../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
+mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
 mutable_renames = { version = "0.1.0", path = "../../mutable_renames" }
 phases = { version = "0.1.0", path = "../../phases" }
+prettytable-rs = "0.8"
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }
 regex = "1.5.4"
@@ -56,9 +63,11 @@ repo_cross_repo = { version = "0.1.0", path = "../../repo_attributes/repo_cross_
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 revset = { version = "0.1.0", path = "../../revset" }
+scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+source_control = { version = "0.1.0", path = "../../scs/if" }
 strum_macros = "0.21"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.6", features = ["full"] }
@@ -67,6 +76,5 @@ unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 
 [dev-dependencies]
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-maplit = "1.0"
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

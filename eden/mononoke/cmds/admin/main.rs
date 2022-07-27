@@ -18,7 +18,6 @@ use cmdlib::args::MononokeClapApp;
 use context::CoreContext;
 use slog::error;
 
-use crate::async_requests::subcommand_async_requests;
 use crate::blobstore_fetch::subcommand_blobstore_fetch;
 use crate::blobstore_unlink::subcommand_blobstore_unlink;
 use crate::blobstore_upload::subcommand_blobstore_upload;
@@ -33,7 +32,6 @@ use crate::mutable_counters::subcommand_mutable_counters;
 use crate::redaction::subcommand_redaction;
 use crate::skiplist_subcommand::subcommand_skiplist;
 
-mod async_requests;
 mod blobstore_fetch;
 mod blobstore_unlink;
 mod blobstore_upload;
@@ -67,7 +65,6 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .with_special_put_behaviour(PutBehaviour::Overwrite)
         .build()
         .about("Poke at mononoke internals for debugging and investigating data structures.")
-        .subcommand(async_requests::build_subcommand())
         .subcommand(blobstore_fetch::build_subcommand())
         .subcommand(blobstore_unlink::build_subcommand())
         .subcommand(blobstore_upload::build_subcommand())
@@ -106,9 +103,6 @@ fn main(fb: FacebookInit) -> ExitCode {
     let runtime = matches.runtime();
     let res = runtime.block_on(async {
         match matches.subcommand() {
-            (async_requests::ASYNC_REQUESTS, Some(sub_m)) => {
-                subcommand_async_requests(fb, logger, &matches, sub_m).await
-            }
             (blobstore_fetch::BLOBSTORE_FETCH, Some(sub_m)) => {
                 subcommand_blobstore_fetch(fb, logger, &matches, sub_m).await
             }

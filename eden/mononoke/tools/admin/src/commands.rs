@@ -22,4 +22,5 @@ mononoke_app::subcommands! {
     mod skiplist;
     mod ephemeral_store;
     mod dump_changesets;
+    mod async_requests;
 }

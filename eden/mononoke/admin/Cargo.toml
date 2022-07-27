@@ -14,7 +14,6 @@ path = "../cmds/admin/main.rs"
 [dependencies]
 anyhow = "1.0.56"
 async-trait = "0.1.56"
-async_requests = { version = "0.1.0", path = "../megarepo_api/async_requests" }
 backsyncer = { version = "0.1.0", path = "../commit_rewriting/backsyncer" }
 blame = { version = "0.1.0", path = "../derived_data/blame" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
@@ -58,17 +57,13 @@ itertools = "0.10.3"
 live_commit_sync_config = { version = "0.1.0", path = "../commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
-megarepo_api = { version = "0.1.0", path = "../megarepo_api" }
-megarepo_error = { version = "0.1.0", path = "../megarepo_api/megarepo_error" }
 mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
-mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 phases = { version = "0.1.0", path = "../phases" }
 prefixblob = { version = "0.1.0", path = "../blobstore/prefixblob" }
-prettytable-rs = "0.8"
 pushrebase = { version = "0.1.0", path = "../pushrebase" }
 redactedblobstore = { version = "0.1.0", path = "../blobstore/redactedblobstore" }
 regex = "1.5.4"
@@ -85,7 +80,6 @@ skeleton_manifest = { version = "0.1.0", path = "../derived_data/skeleton_manife
 skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-source_control = { version = "0.1.0", path = "../scs/if" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
 thiserror = "1.0.30"
