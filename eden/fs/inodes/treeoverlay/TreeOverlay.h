@@ -85,8 +85,6 @@ class TreeOverlay : public IOverlay {
 
   bool hasOverlayData(InodeNumber inodeNumber) override;
 
-  void updateUsedInodeNumber(uint64_t) override {}
-
   void addChild(
       InodeNumber parent,
       PathComponentPiece name,

@@ -141,16 +141,6 @@ class IOverlay {
   virtual struct statfs statFs() const = 0;
 #endif
 
-  /**
-   * TODO(zeyi): delete this.
-   *
-   * This is required in current SQLite implementation due to the lack of fsck.
-   * We can remove this once we can reliable get inode number.
-   */
-  virtual void updateUsedInodeNumber(uint64_t /* usedInodeNumber */) {
-    EDEN_BUG() << "UNIMPLEMENTED";
-  }
-
   virtual void addChild(
       InodeNumber /* parent */,
       PathComponentPiece /* name */,

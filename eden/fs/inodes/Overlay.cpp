@@ -274,9 +274,6 @@ InodeNumber Overlay::allocateInodeNumber() {
   // This could be a relaxed atomic operation.  It doesn't matter on x86 but
   // might on ARM.
   auto previous = nextInodeNumber_++;
-#ifdef _WIN32
-  backingOverlay_->updateUsedInodeNumber(previous);
-#endif
   XDCHECK_NE(0u, previous) << "allocateInodeNumber called before initialize";
   return InodeNumber{previous};
 }
