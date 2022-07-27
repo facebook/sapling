@@ -7,6 +7,9 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::fs;
+use std::io;
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -126,10 +129,22 @@ impl EagerRepo {
     /// Open an [`EagerRepo`] at the given directory. Create an empty repo on demand.
     pub fn open(dir: &Path) -> Result<Self> {
         // Attempt to match directory layout of a real client repo.
-        let dir = dir.join(".hg/store");
-        let dag = Dag::open(dir.join("segments/v1"))?;
-        let store = EagerRepoStore::open(&dir.join("hgcommits/v1"))?;
-        let metalog = MetaLog::open(dir.join("metalog"), None)?;
+        let hg_dir = dir.join(".hg");
+        let store_dir = hg_dir.join("store");
+        let dag = Dag::open(store_dir.join("segments/v1"))?;
+        let store = EagerRepoStore::open(&store_dir.join("hgcommits/v1"))?;
+        let metalog = MetaLog::open(store_dir.join("metalog"), None)?;
+        // Write "requires" files.
+        write_requires(&hg_dir, &["store", "treestate"])?;
+        write_requires(
+            &store_dir,
+            &[
+                "narrowheads",
+                "visibleheads",
+                "segmentedchangelog",
+                "eagerepo",
+            ],
+        )?;
         let repo = Self {
             dag,
             store,
@@ -301,6 +316,24 @@ fn hg_sha1_text(parents: &[Vertex], raw_text: &[u8]) -> Vec<u8> {
     }
     result.extend_from_slice(&raw_text);
     result
+}
+
+/// Write "requires" in the given directory, if it does not exist already.
+fn write_requires(dir: &Path, requires: &[&'static str]) -> io::Result<()> {
+    match fs::OpenOptions::new()
+        .create_new(true)
+        .write(true)
+        .open(dir.join("requires"))
+    {
+        Ok(mut f) => {
+            let mut requires: String = requires.join("\n");
+            requires.push('\n');
+            f.write_all(requires.as_bytes())?;
+            Ok(())
+        }
+        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => Ok(()),
+        Err(e) => Err(e),
+    }
 }
 
 #[cfg(test)]
