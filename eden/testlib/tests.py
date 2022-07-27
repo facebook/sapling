@@ -228,10 +228,10 @@ A B
         second = wc.commit()
 
         firstFileA = first[fileA]
-        self.assertEquals(firstFileA.history(), [first])
+        self.assertEqual(firstFileA.history(), [first])
 
         secondFileA = second[fileA]
-        self.assertEquals(secondFileA.history(), [second, first])
+        self.assertEqual(secondFileA.history(), [second, first])
 
 
 if __name__ == "__main__":
