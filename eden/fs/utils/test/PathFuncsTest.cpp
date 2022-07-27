@@ -1063,21 +1063,45 @@ TEST(PathFuncs, noThrow) {
   // if std::string is nothrow move constructible and assignable, the
   // path types should be as well.
   if (std::is_nothrow_move_constructible<std::string>::value) {
-    ASSERT_TRUE(std::is_nothrow_move_constructible<AbsolutePath>::value);
-    ASSERT_TRUE(std::is_nothrow_move_constructible<AbsolutePathPiece>::value);
-    ASSERT_TRUE(std::is_nothrow_move_constructible<RelativePath>::value);
-    ASSERT_TRUE(std::is_nothrow_move_constructible<RelativePathPiece>::value);
-    ASSERT_TRUE(std::is_nothrow_move_constructible<PathComponent>::value);
-    ASSERT_TRUE(std::is_nothrow_move_constructible<PathComponentPiece>::value);
+    ASSERT_TRUE(
+        detail::kPathsAreCopiedOnMove ||
+        std::is_nothrow_move_constructible<AbsolutePath>::value);
+    ASSERT_TRUE(
+        detail::kPathsAreCopiedOnMove ||
+        std::is_nothrow_move_constructible<AbsolutePathPiece>::value);
+    ASSERT_TRUE(
+        detail::kPathsAreCopiedOnMove ||
+        std::is_nothrow_move_constructible<RelativePath>::value);
+    ASSERT_TRUE(
+        detail::kPathsAreCopiedOnMove ||
+        std::is_nothrow_move_constructible<RelativePathPiece>::value);
+    ASSERT_TRUE(
+        detail::kPathsAreCopiedOnMove ||
+        std::is_nothrow_move_constructible<PathComponent>::value);
+    ASSERT_TRUE(
+        detail::kPathsAreCopiedOnMove ||
+        std::is_nothrow_move_constructible<PathComponentPiece>::value);
   }
 
   if (std::is_nothrow_move_assignable<std::string>::value) {
-    ASSERT_TRUE(std::is_nothrow_move_assignable<AbsolutePath>::value);
-    ASSERT_TRUE(std::is_nothrow_move_assignable<AbsolutePathPiece>::value);
-    ASSERT_TRUE(std::is_nothrow_move_assignable<RelativePath>::value);
-    ASSERT_TRUE(std::is_nothrow_move_assignable<RelativePathPiece>::value);
-    ASSERT_TRUE(std::is_nothrow_move_assignable<PathComponent>::value);
-    ASSERT_TRUE(std::is_nothrow_move_assignable<PathComponentPiece>::value);
+    ASSERT_TRUE(
+        detail::kPathsAreCopiedOnMove ||
+        std::is_nothrow_move_assignable<AbsolutePath>::value);
+    ASSERT_TRUE(
+        detail::kPathsAreCopiedOnMove ||
+        std::is_nothrow_move_assignable<AbsolutePathPiece>::value);
+    ASSERT_TRUE(
+        detail::kPathsAreCopiedOnMove ||
+        std::is_nothrow_move_assignable<RelativePath>::value);
+    ASSERT_TRUE(
+        detail::kPathsAreCopiedOnMove ||
+        std::is_nothrow_move_assignable<RelativePathPiece>::value);
+    ASSERT_TRUE(
+        detail::kPathsAreCopiedOnMove ||
+        std::is_nothrow_move_assignable<PathComponent>::value);
+    ASSERT_TRUE(
+        detail::kPathsAreCopiedOnMove ||
+        std::is_nothrow_move_assignable<PathComponentPiece>::value);
   }
 }
 
@@ -1166,6 +1190,48 @@ TEST(PathFuncs, HashEquality) {
   if (folly::kIsWindows) {
     AbsolutePathPiece winAbs{"/foo\\bar/baz"};
     EXPECT_EQ(absHasher(abs1), absHasher(winAbs));
+  }
+}
+
+TEST(PathFuncs, move_or_copy) {
+  class T {
+   public:
+    T(uint32_t* copied, uint32_t* moved) : copied{copied}, moved{moved} {}
+    T(const T& other) : copied{other.copied}, moved{other.moved} {
+      *copied += 1;
+    }
+    T(T&& other) noexcept : copied{other.copied}, moved{other.moved} {
+      *moved += 1;
+    }
+    T& operator=(const T& other) {
+      copied = other.copied;
+      moved = other.moved;
+      *copied += 1;
+      return *this;
+    }
+    T& operator=(T&& other) {
+      copied = other.copied;
+      moved = other.moved;
+      *moved += 1;
+      return *this;
+    }
+
+   private:
+    uint32_t* copied;
+    uint32_t* moved;
+  };
+
+  uint32_t copied = 0;
+  uint32_t moved = 0;
+
+  T t1{&copied, &moved};
+  [[maybe_unused]] auto t2 = detail::move_or_copy(t1);
+  if (detail::kPathsAreCopiedOnMove) {
+    EXPECT_EQ(copied, 1);
+    EXPECT_EQ(moved, 1);
+  } else {
+    EXPECT_EQ(copied, 0);
+    EXPECT_EQ(moved, 1);
   }
 }
 

@@ -92,6 +92,33 @@ inline size_t rfindPathSeparator(folly::StringPiece str) {
   return index;
 }
 
+/**
+ * Moving Paths can lead to subtle bugs due to SSO (see below), to reduce the
+ * chance of introducing these bugs, the various move constructor/operator of
+ * Paths will perform a copy in debug/sanitized builds as a way for SSO Paths
+ * to have the same behavior as non-SSO Paths when moved.
+ *
+ * Note that even the passed in object will always be left in a moved-from
+ * state. This is to avoid hiding use-after-move issues that wouldn't show up
+ * in debug/sanitized builds.
+ */
+constexpr bool kPathsAreCopiedOnMove = folly::kIsDebug || folly::kIsSanitize;
+
+/**
+ * Make a copy when kPathsAreCopiedOnMove is set or move otherwise
+ */
+template <typename T>
+T move_or_copy(T& t) {
+  if (kPathsAreCopiedOnMove) {
+    auto copied = t;
+    // Make sure that t is also destroyed by moving it into a local variable.
+    [[maybe_unused]] auto moved = std::move(t);
+    return copied;
+  } else {
+    return std::move(t);
+  }
+}
+
 } // namespace detail
 
 /**
@@ -519,7 +546,8 @@ class PathBase :
       typename StorageAlias = Storage,
       typename = typename std::enable_if<
           std::is_same<StorageAlias, std::string>::value>::type>
-  explicit PathBase(Stored&& other) : path_(std::move(other.path_)) {}
+  explicit PathBase(Stored&& other)
+      : path_(detail::move_or_copy(other.path_)) {}
 
   /** Move construct from an std::string value.
    * Applies sanity checks.
@@ -532,7 +560,7 @@ class PathBase :
       typename StorageAlias = Storage,
       typename = typename std::enable_if<
           std::is_same<StorageAlias, std::string>::value>::type>
-  explicit PathBase(std::string&& str) : path_(std::move(str)) {
+  explicit PathBase(std::string&& str) : path_(detail::move_or_copy(str)) {
     SanityChecker()(path_);
   }
 
@@ -548,7 +576,35 @@ class PathBase :
       typename = typename std::enable_if<
           std::is_same<StorageAlias, std::string>::value>::type>
   explicit PathBase(std::string&& str, SkipPathSanityCheck)
-      : path_(std::move(str)) {}
+      : path_(detail::move_or_copy(str)) {}
+
+  /**
+   * Move constructor
+   *
+   * This is roughly equal to the default move constructor, but with
+   * extra debugging in debug/sanitized builds.
+   */
+  PathBase(PathBase&& other) noexcept(!kPathsAreCopiedOnMove)
+      : path_(detail::move_or_copy(other.path_)) {}
+
+  /**
+   * Move assignment operator
+   *
+   * This is roughly equal to the default move assignment operator, but with
+   * extra debugging in debug/sanitized builds.
+   */
+  PathBase& operator=(PathBase&& other) noexcept(!kPathsAreCopiedOnMove) {
+    path_ = detail::move_or_copy(other.path_);
+    return *this;
+  }
+
+  /**
+   * Default assignment operator and copy and move constructor.
+   *
+   * This is needed due to the non-default move assignment operator above.
+   */
+  PathBase& operator=(const PathBase&) = default;
+  PathBase(const PathBase&) = default;
 
   /// Return the path as a StringPiece
   folly::StringPiece stringPiece() const {
