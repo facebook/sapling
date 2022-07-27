@@ -3742,6 +3742,8 @@ def init(ui, dest=".", **opts):
     destpath = ui.expandpath(dest)
     if opts.get("git"):
         git.clone(ui, "", destpath)
+    elif ui.configbool("format", "use-eager-repo"):
+        bindings.eagerepo.EagerRepo.open(destpath)
     else:
         if util.url(destpath).scheme == "bundle":
             hg.repository(ui, destpath, create=True)
