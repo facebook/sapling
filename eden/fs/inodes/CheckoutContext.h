@@ -113,6 +113,13 @@ class CheckoutContext {
       const folly::exception_wrapper& ew);
 
   /**
+   * Return this EdenMount's ObjectStore.
+   */
+  ObjectStore* getObjectStore() const {
+    return mount_->getObjectStore();
+  }
+
+  /**
    * Get a reference to the rename lock.
    *
    * This is mostly used for APIs that require proof that we are currently

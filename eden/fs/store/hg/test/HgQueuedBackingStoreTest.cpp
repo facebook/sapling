@@ -12,6 +12,7 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
+#include "eden/fs/model/TestOps.h"
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/hg/HgImporter.h"

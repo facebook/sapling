@@ -40,14 +40,6 @@ size_t ObjectId::getHashCode() const noexcept {
   return std::hash<folly::fbstring>{}(bytes_);
 }
 
-bool ObjectId::operator==(const ObjectId& otherHash) const {
-  return bytes_ == otherHash.bytes_;
-}
-
-bool ObjectId::operator<(const ObjectId& otherHash) const {
-  return bytes_ < otherHash.bytes_;
-}
-
 ObjectId ObjectId::sha1(const folly::IOBuf& buf) {
   Hash20::Storage hashBytes;
   OpenSSLHash::sha1(range(hashBytes), buf);

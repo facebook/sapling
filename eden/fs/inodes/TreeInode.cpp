@@ -980,7 +980,11 @@ void TreeInode::childDematerialized(
     }
 
     auto& childEntry = iter->second;
-    if (!childEntry.isMaterialized() && childEntry.getHash() == childScmHash) {
+    // Should this call ObjectStore::areObjectsKnownIdentical? No, even if IDs
+    // are compatible, we want to migrate our inode to the new ID scheme, which
+    // requires writing it to the overlay.
+    if (!childEntry.isMaterialized() &&
+        childEntry.getHash().bytesEqual(childScmHash)) {
       // Nothing to do.  Our child's state and our own are both unchanged.
       return;
     }
@@ -2399,7 +2403,8 @@ ImmediateFuture<Unit> TreeInode::diff(
     // same hash as the tree we are being compared to.
     if (!contents->isMaterialized()) {
       for (auto& tree : trees) {
-        if (contents->treeHash.value() == tree->getHash()) {
+        if (getObjectStore().areObjectsKnownIdentical(
+                contents->treeHash.value(), tree->getHash())) {
           // There are no changes in our tree or any children subtrees.
           return folly::unit;
         }
@@ -2757,7 +2762,8 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
               // be materialized, and the previous path will be taken.
               treeEntryTypeFromMode(inodeEntry->getInitialMode()) ==
                   scmEntry.getType() &&
-              inodeEntry->getHash() == scmEntry.getHash()) {
+              getObjectStore().areObjectsKnownIdentical(
+                  inodeEntry->getHash(), scmEntry.getHash())) {
             exactMatch = true;
             break;
           }
@@ -2840,8 +2846,8 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
     //
     // This code relies on the fact that the source control entries and our
     // inode entries are both sorted in the same order.
-    std::vector<Tree::const_iterator> scEnds{};
-    std::vector<Tree::const_iterator> scIters{};
+    std::vector<Tree::const_iterator> scEnds;
+    std::vector<Tree::const_iterator> scIters;
     scEnds.reserve(trees.size());
     scIters.reserve(trees.size());
 
@@ -2856,7 +2862,8 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
           inodeIter != inodeEntries.end() ? &inodeIter->first : nullptr;
       DirContents::iterator* matchingInodeIter =
           inodeIter != inodeEntries.end() ? &inodeIter : nullptr;
-      std::vector<Tree::const_iterator*> matchingScIters{};
+
+      std::vector<Tree::const_iterator*> matchingScIters;
 
       // Find the earliest path in all the iterators, and record which iterators
       // have that path.
@@ -3092,18 +3099,25 @@ bool TreeInode::canShortCircuitCheckout(
     // with the fromTree state.  Since we aren't actually performing any
     // updates we can bail out early as long as there are no conflicts.
     if (fromTree) {
-      return treeHash == fromTree->getHash();
+      return ctx->getObjectStore()->areObjectsKnownIdentical(
+          treeHash, fromTree->getHash());
     } else {
       // There is no fromTree.  If we are already in the desired destination
       // state we don't have conflicts.  Otherwise we have to continue and
       // check for conflicts.
-      return !toTree || treeHash == toTree->getHash();
+      return !toTree ||
+          ctx->getObjectStore()->areObjectsKnownIdentical(
+              treeHash, toTree->getHash());
     }
   }
 
   // For non-dry-run updates we definitely have to keep going if we aren't in
   // the desired destination state.
-  if (!toTree || treeHash != toTree->getHash()) {
+  if (!toTree ||
+      !ctx->getObjectStore()->areObjectsKnownIdentical(
+          treeHash, toTree->getHash())) {
+    // If the objects are known different or not known identical, we must take
+    // the slow path.
     return false;
   }
 
@@ -3124,7 +3138,8 @@ bool TreeInode::canShortCircuitCheckout(
   // return conflict information for force update operations.
 
   // Allow short circuiting if we are also the same as the fromTree state.
-  return treeHash == fromTree->getHash();
+  return ctx->getObjectStore()->areObjectsKnownIdentical(
+      treeHash, fromTree->getHash());
 }
 
 void TreeInode::computeCheckoutActions(
@@ -3256,7 +3271,8 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   // filesystem.
   if (!ctx->forceUpdate() && oldScmEntry && newScmEntry &&
       oldScmEntry->second.getType() == newScmEntry->second.getType() &&
-      oldScmEntry->second.getHash() == newScmEntry->second.getHash()) {
+      getObjectStore().areObjectsKnownIdentical(
+          oldScmEntry->second.getHash(), newScmEntry->second.getHash())) {
     // TODO: Should we perhaps fall through anyway to report conflicts for
     // locally modified files?
     return nullptr;
@@ -3357,24 +3373,34 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   auto conflictType = ConflictType::ERROR;
   if (!oldScmEntry) {
     conflictType = ConflictType::UNTRACKED_ADDED;
-  } else if (newScmEntry && entry.getHash() == newScmEntry->second.getHash()) {
+  } else if (
+      newScmEntry &&
+      getObjectStore().areObjectsKnownIdentical(
+          entry.getHash(), newScmEntry->second.getHash())) {
     // The inode already matches the checkout destination. So do nothing.
     return nullptr;
-  } else if (entry.getHash() != oldScmEntry->second.getHash()) {
-    if (getObjectStore().getBackingStore()->hasBijectiveBlobIds()) {
-      // Identical contents imply identical IDs, so we know this is a conflict.
-      conflictType = ConflictType::MODIFIED_MODIFIED;
-    } else {
-      // If the object IDs differ, it does not mean the files are different.
-      // Perhaps the hash scheme has changed, as with the hg:object-id-format
-      // ConfigSettiing.
-      // Unfortunately, the only way to know for sure is to load the inode.
-      auto inodeFuture = loadChildLocked(
-          contents, name, entry, pendingLoads, ctx->getFetchContext());
-      return make_unique<CheckoutAction>(
-          ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
+  } else {
+    switch (getObjectStore().compareObjectsById(
+        entry.getHash(), oldScmEntry->second.getHash())) {
+      case ObjectComparison::Unknown: {
+        // We don't know if the files are different or not. The only way to know
+        // for sure is to load the inode.
+        auto inodeFuture = loadChildLocked(
+            contents, name, entry, pendingLoads, ctx->getFetchContext());
+        return make_unique<CheckoutAction>(
+            ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
+      }
+      case ObjectComparison::Identical:
+        // We know the objects are identical, so there are no conflicts.
+        // Now fall through and possibly recurse.
+        break;
+      case ObjectComparison::Different:
+        // We know the objects are different, so report a conflict.
+        conflictType = ConflictType::MODIFIED_MODIFIED;
+        break;
     }
   }
+
   if (conflictType != ConflictType::ERROR) {
     // If this is a directory we unfortunately have to load it and recurse into
     // it just so we can accurately report the list of files with conflicts.
@@ -3810,8 +3836,19 @@ void TreeInode::saveOverlayPostCheckout(
         // If the child is not materialized, it is the same as some source
         // control object.  However, if it isn't the same as the object in our
         // Tree, we have to materialize ourself.
-        if (inodeIter->second.getHash() != scmIter->second.getHash()) {
-          return std::nullopt;
+        switch (getObjectStore().compareObjectsById(
+            inodeIter->second.getHash(), scmIter->second.getHash())) {
+          case ObjectComparison::Unknown:
+            // Assume the child is different, and leave materialized.
+            return std::nullopt;
+          case ObjectComparison::Identical:
+            // The IDs refer to the same object, so we can dematerialize. Even
+            // if the IDs don't match exactly, we'll silently migrate to the
+            // new ID scheme here.
+            break;
+          case ObjectComparison::Different:
+            // The objects differ, so we can't dematerialize.
+            return std::nullopt;
         }
       }
 
@@ -3835,9 +3872,19 @@ void TreeInode::saveOverlayPostCheckout(
     };
 
     auto oldHash = contents->treeHash;
-    contents->treeHash = tryToDematerialize();
+    auto newHash = tryToDematerialize();
+    contents->treeHash = newHash;
     isMaterialized = contents->isMaterialized();
-    stateChanged = (oldHash != contents->treeHash);
+    // If our tree hash changed, even if it references the same contents, we
+    // must tell the parent so it can update its hash. Therefore, don't use
+    // BackingStore::areObjectsKnownIdentical here.
+    if (oldHash.has_value() && newHash.has_value()) {
+      stateChanged = !oldHash->bytesEqual(*newHash);
+    } else if (!oldHash.has_value() && !contents->treeHash.has_value()) {
+      stateChanged = false;
+    } else {
+      stateChanged = true;
+    }
 
     XLOG(DBG4) << "saveOverlayPostCheckout(" << getLogPath() << ", " << tree
                << "): oldHash="

@@ -108,7 +108,4 @@ class Tree {
   static constexpr uint32_t V1_VERSION = 1u;
 };
 
-bool operator==(const Tree& tree1, const Tree& tree2);
-bool operator!=(const Tree& tree1, const Tree& tree2);
-
 } // namespace facebook::eden

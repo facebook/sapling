@@ -31,6 +31,7 @@ class BackingStore;
 class Blob;
 class LocalStore;
 class Tree;
+enum class ObjectComparison : uint8_t;
 
 struct PidFetchCounts {
   folly::Synchronized<std::unordered_map<pid_t, uint64_t>> map_;
@@ -226,6 +227,25 @@ class ObjectStore : public IObjectStore,
   const std::shared_ptr<BackingStore>& getBackingStore() const {
     return backingStore_;
   }
+
+  /**
+   * Convenience wrapper around BackingStore::compareObjectsById.  See
+   * `BackingStorecompareObjectsById`'s documentation for more details.
+   */
+  ObjectComparison compareObjectsById(const ObjectId& one, const ObjectId& two)
+      const;
+
+  /**
+   * Convenience wrapper around compareObjectsById for the common case that the
+   * caller wants to know if two IDs refer to the same object.
+   *
+   * Returns true only if the objects are known identical. If they are known
+   * different or if the BackingStore can't determine if they're identical,
+   * returns false.
+   *
+   * This function is used to short-circuit deep comparisons of objects.
+   */
+  bool areObjectsKnownIdentical(const ObjectId& one, const ObjectId& two) const;
 
   folly::Synchronized<std::unordered_map<pid_t, uint64_t>>& getPidFetches() {
     return pidFetchCounts_->map_;

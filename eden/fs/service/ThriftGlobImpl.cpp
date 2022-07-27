@@ -157,10 +157,12 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
               auto fileBlobsToPrefetchLocked = fileBlobsToPrefetch->wlock();
               std::sort(
                   fileBlobsToPrefetchLocked->begin(),
-                  fileBlobsToPrefetchLocked->end());
+                  fileBlobsToPrefetchLocked->end(),
+                  std::less<ObjectId>{});
               auto fileBlobsToPrefetchNewEnd = std::unique(
                   fileBlobsToPrefetchLocked->begin(),
-                  fileBlobsToPrefetchLocked->end());
+                  fileBlobsToPrefetchLocked->end(),
+                  std::equal_to<ObjectId>());
               fileBlobsToPrefetchLocked->erase(
                   fileBlobsToPrefetchNewEnd, fileBlobsToPrefetchLocked->end());
             }

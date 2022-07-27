@@ -40,7 +40,7 @@ TEST_P(LocalStoreTest, testReadAndWriteBlob) {
   store_->putBlob(hash, &inBlob);
 
   auto outBlob = store_->getBlob(hash).get(10s);
-  EXPECT_EQ(hash, outBlob->getHash());
+  EXPECT_EQ(hash.asHexString(), outBlob->getHash().asHexString());
   EXPECT_EQ(
       contents, outBlob->getContents().clone()->moveToFbString().toStdString());
 
@@ -113,14 +113,14 @@ TEST_P(LocalStoreTest, testReadsAndWriteTree) {
       KeySpace::TreeFamily, hash.getBytes(), StringPiece{gitTreeObject});
   auto tree = store_->getTree(hash).get(10s);
   EXPECT_EQ(
-      ObjectId::fromHex("8e073e366ed82de6465d1209d3f07da7eebabb93"),
-      tree->getHash());
+      "8e073e366ed82de6465d1209d3f07da7eebabb93",
+      tree->getHash().asHexString());
   EXPECT_EQ(11, tree->size());
 
   auto readmeEntry = tree->find("README.md"_pc);
   EXPECT_EQ(
-      ObjectId::fromHex("c5f15617ed29cd35964dc197a7960aeaedf2c2d5"),
-      readmeEntry->second.getHash());
+      "c5f15617ed29cd35964dc197a7960aeaedf2c2d5",
+      readmeEntry->second.getHash().asHexString());
   EXPECT_EQ("README.md", readmeEntry->first);
   EXPECT_EQ(false, readmeEntry->second.isTree());
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, readmeEntry->second.getType());

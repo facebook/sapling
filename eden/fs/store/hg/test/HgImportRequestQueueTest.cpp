@@ -13,6 +13,7 @@
 
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/model/TestOps.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"

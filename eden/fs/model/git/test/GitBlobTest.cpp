@@ -14,6 +14,7 @@
 
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/model/TestOps.h"
 
 using namespace facebook::eden;
 using folly::IOBuf;

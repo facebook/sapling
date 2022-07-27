@@ -10,6 +10,7 @@
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/model/TestOps.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 
 #include <folly/portability/GTest.h>

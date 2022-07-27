@@ -34,7 +34,8 @@ class LocalStoreCachedBackingStore : public BackingStore {
       std::shared_ptr<EdenStats> stats);
   ~LocalStoreCachedBackingStore() override;
 
-  bool hasBijectiveBlobIds() override;
+  ObjectComparison compareObjectsById(const ObjectId& one, const ObjectId& two)
+      override;
 
   folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(
       const RootId& rootId,

@@ -27,6 +27,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/journal/JournalDelta.h"
+#include "eden/fs/model/TestOps.h"
 #include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeFuse.h"

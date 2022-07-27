@@ -11,6 +11,7 @@
 #include <memory>
 
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/model/TestOps.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/utils/IDGen.h"

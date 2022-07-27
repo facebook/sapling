@@ -8,6 +8,7 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
+#include "eden/fs/model/TestOps.h"
 #include "eden/fs/store/LocalStoreCachedBackingStore.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"

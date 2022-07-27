@@ -142,15 +142,6 @@ std::ostream& operator<<(std::ostream& os, TreeEntryType type) {
   return os << "TreeEntryType::" << int(type);
 }
 
-bool operator==(const TreeEntry& entry1, const TreeEntry& entry2) {
-  return (entry1.getHash() == entry2.getHash()) &&
-      (entry1.getType() == entry2.getType());
-}
-
-bool operator!=(const TreeEntry& entry1, const TreeEntry& entry2) {
-  return !(entry1 == entry2);
-}
-
 size_t TreeEntry::serializedSize(PathComponentPiece name) const {
   return sizeof(uint8_t) + sizeof(uint16_t) + hash_.size() + sizeof(uint16_t) +
       name.stringPiece().size() + sizeof(uint64_t) + Hash20::RAW_SIZE;

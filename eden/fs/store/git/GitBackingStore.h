@@ -21,7 +21,7 @@ namespace facebook::eden {
 /**
  * A BackingStore implementation that loads data out of a git repository.
  */
-class GitBackingStore final : public BackingStore {
+class GitBackingStore final : public BijectiveBackingStore {
  public:
   /**
    * Create a new GitBackingStore.
@@ -39,10 +39,6 @@ class GitBackingStore final : public BackingStore {
    * This returns the path to the .git directory itself.
    */
   const char* getPath() const;
-
-  bool hasBijectiveBlobIds() override {
-    return true;
-  }
 
   RootId parseRootId(folly::StringPiece rootId) override;
   std::string renderRootId(const RootId& rootId) override;

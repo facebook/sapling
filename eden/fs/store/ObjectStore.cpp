@@ -370,6 +370,13 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
       .semi();
 }
 
+ImmediateFuture<uint64_t> ObjectStore::getBlobSize(
+    const ObjectId& id,
+    ObjectFetchContext& context) const {
+  return getBlobMetadata(id, context)
+      .thenValue([](const BlobMetadata& metadata) { return metadata.size; });
+}
+
 ImmediateFuture<Hash20> ObjectStore::getBlobSha1(
     const ObjectId& id,
     ObjectFetchContext& context) const {
@@ -377,11 +384,17 @@ ImmediateFuture<Hash20> ObjectStore::getBlobSha1(
       .thenValue([](const BlobMetadata& metadata) { return metadata.sha1; });
 }
 
-ImmediateFuture<uint64_t> ObjectStore::getBlobSize(
-    const ObjectId& id,
-    ObjectFetchContext& context) const {
-  return getBlobMetadata(id, context)
-      .thenValue([](const BlobMetadata& metadata) { return metadata.size; });
+ObjectComparison ObjectStore::compareObjectsById(
+    const ObjectId& one,
+    const ObjectId& two) const {
+  return backingStore_->compareObjectsById(one, two);
+}
+
+bool ObjectStore::areObjectsKnownIdentical(
+    const ObjectId& one,
+    const ObjectId& two) const {
+  return backingStore_->compareObjectsById(one, two) ==
+      ObjectComparison::Identical;
 }
 
 } // namespace facebook::eden

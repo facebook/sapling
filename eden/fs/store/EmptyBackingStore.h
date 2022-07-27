@@ -17,14 +17,10 @@ namespace facebook::eden {
  * A dummy BackingStore implementation, that always throws std::domain_error
  * for any ID that is looked up.
  */
-class EmptyBackingStore final : public BackingStore {
+class EmptyBackingStore final : public BijectiveBackingStore {
  public:
   EmptyBackingStore();
   ~EmptyBackingStore() override;
-
-  bool hasBijectiveBlobIds() override {
-    return true;
-  }
 
   RootId parseRootId(folly::StringPiece rootId) override;
   std::string renderRootId(const RootId& rootId) override;

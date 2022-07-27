@@ -239,8 +239,37 @@ void HgQueuedBackingStore::processRequest() {
   }
 }
 
-bool HgQueuedBackingStore::hasBijectiveBlobIds() {
-  return config_->getEdenConfig()->hgBijectiveBlobIds.getValue();
+ObjectComparison HgQueuedBackingStore::compareObjectsById(
+    const ObjectId& one,
+    const ObjectId& two) {
+  // This is by far the common case, so check it first:
+  if (one.bytesEqual(two)) {
+    return ObjectComparison::Identical;
+  }
+
+  if (config_->getEdenConfig()->hgBijectiveBlobIds.getValue()) {
+    // If one and two differ, and hg bijective blob IDs is enabled, then we know
+    // the blob contents differ.
+    return ObjectComparison::Different;
+  }
+
+  // Now parse the object IDs and read their rev hashes.
+  auto oneProxy =
+      HgProxyHash::load(localStore_.get(), one, "areObjectIdsEquivalent");
+  auto twoProxy =
+      HgProxyHash::load(localStore_.get(), two, "areObjectIdsEquivalent");
+
+  // If the rev hashes are the same, we know the contents are the same.
+  if (oneProxy.revHash() == twoProxy.revHash()) {
+    return ObjectComparison::Identical;
+  }
+
+  // If rev hashes differ, and hg IDs aren't bijective, then we don't know
+  // whether the IDs refer to the same contents or not.
+  //
+  // Mercurial's blob hashes also include history metadata, so there may be
+  // multiple different blob hashes for the same file contents.
+  return ObjectComparison::Unknown;
 }
 
 RootId HgQueuedBackingStore::parseRootId(folly::StringPiece rootId) {

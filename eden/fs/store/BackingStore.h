@@ -32,6 +32,16 @@ enum class TreeEntryType : uint8_t;
 
 enum BackingStoreType : uint8_t { EMPTY, GIT, HG, RECAS };
 
+enum class ObjectComparison : uint8_t {
+  /// Given the IDs alone, it's not possible to know whether the contents are
+  /// the same or different, and they must be fetched to compare.
+  Unknown,
+  /// The IDs are known to point to the same objects.
+  Identical,
+  /// The IDs are known to point to different objects.
+  Different,
+};
+
 /**
  * Abstract interface for a BackingStore.
  *
@@ -47,10 +57,17 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   virtual ~BackingStore() {}
 
   /**
-   * Returns true iff the contents of a blob and its ID are exactly 1:1. This is
-   * true for purely content-addressed schemes.
+   * A BackingStore may support multiple object ID encodings. To help EdenFS
+   * short-circuit recursive comparisons when IDs aren't identical but identify
+   * the same contents, this function allows querying whether two IDs refer to
+   * the same contents.
+   *
+   * Returns ObjectComparison::Unknown if they must be fetched and compared to
+   * know.
    */
-  virtual bool hasBijectiveBlobIds() = 0;
+  virtual ObjectComparison compareObjectsById(
+      const ObjectId& one,
+      const ObjectId& two) = 0;
 
   /**
    * Return the root Tree corresponding to the passed in RootId.
@@ -182,6 +199,20 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   // Forbidden copy constructor and assignment operator
   BackingStore(BackingStore const&) = delete;
   BackingStore& operator=(BackingStore const&) = delete;
+};
+
+/**
+ * For the common case that a BackingStore has a one-to-one relationship between
+ * its IDs and objects -- such as when objects are identified by a cryptograph
+ * hash -- this base class provides an implementation of compareObjectsById.
+ */
+class BijectiveBackingStore : public BackingStore {
+ public:
+  ObjectComparison compareObjectsById(const ObjectId& one, const ObjectId& two)
+      override {
+    return one.bytesEqual(two) ? ObjectComparison::Identical
+                               : ObjectComparison::Different;
+  }
 };
 
 } // namespace facebook::eden

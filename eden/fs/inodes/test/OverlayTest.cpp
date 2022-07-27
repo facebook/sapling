@@ -27,6 +27,7 @@
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/model/TestOps.h"
 #include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"

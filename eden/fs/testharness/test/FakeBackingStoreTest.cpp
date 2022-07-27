@@ -14,6 +14,7 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
+#include "eden/fs/model/TestOps.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/PathFuncs.h"
 

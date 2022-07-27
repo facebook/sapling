@@ -17,6 +17,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
+#include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
@@ -158,7 +159,8 @@ void processBothPresent(
     if (isTreeWD) {
       // tree-to-tree diff
       XDCHECK_EQ(scmEntry.second.getType(), wdEntry.second.getType());
-      if (scmEntry.second.getHash() == wdEntry.second.getHash()) {
+      if (context->store->areObjectsKnownIdentical(
+              scmEntry.second.getHash(), wdEntry.second.getHash())) {
         return;
       }
       context->callback->modifiedPath(entryPath, wdEntry.second.getDType());
@@ -451,8 +453,10 @@ FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
             // This happens in the case in which the CLI (during eden doctor)
             // calls getScmStatusBetweenRevisions() with the same hash in
             // order to check if a commit hash is valid.
-            if (scmTree && wdTree && scmTree->getHash() == wdTree->getHash()) {
-              return ImmediateFuture{folly::unit};
+            if (scmTree && wdTree &&
+                context->store->areObjectsKnownIdentical(
+                    scmTree->getHash(), wdTree->getHash())) {
+              return folly::unit;
             }
 
             auto pathPiece = copiedCurrentPath.has_value()

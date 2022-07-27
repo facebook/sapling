@@ -36,8 +36,14 @@ class FakeBackingStore final : public BackingStore {
    * BackingStore APIs
    */
 
-  bool hasBijectiveBlobIds() override {
-    return false;
+  ObjectComparison compareObjectsById(const ObjectId& one, const ObjectId& two)
+      override {
+    // FakeBackingStore does not provide any particular ID scheme requirements.
+    // If IDs match, contents must, but not the other way around.
+    if (one.bytesEqual(two)) {
+      return ObjectComparison::Identical;
+    }
+    return ObjectComparison::Unknown;
   }
 
   RootId parseRootId(folly::StringPiece rootId) override;

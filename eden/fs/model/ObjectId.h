@@ -22,9 +22,9 @@ class IOBuf;
 namespace facebook::eden {
 
 /**
-   Identifier of objects in local store.
-   This identifier is a variable length string.
-*/
+ * Identifies tree and blob objects.
+ * This identifier is a variable length string.
+ */
 class ObjectId : boost::totally_ordered<ObjectId> {
  public:
   // fbstring has more SSO space (23 bytes!) than std::string and thus can hold
@@ -81,6 +81,10 @@ class ObjectId : boost::totally_ordered<ObjectId> {
     return asHexString();
   }
 
+  /**
+   * Returns the ObjectId with its uninterpreted bytes encoded in hexadecimal.
+   * Primarily used in tests and toLogString().
+   */
   std::string asHexString() const;
 
   /** @return bytes of this ObjectId. */
@@ -88,8 +92,27 @@ class ObjectId : boost::totally_ordered<ObjectId> {
 
   size_t getHashCode() const noexcept;
 
-  bool operator==(const ObjectId&) const;
-  bool operator<(const ObjectId&) const;
+  /**
+   * Returns true if the two ObjectIds are equal, compared byte-by-byte. If
+   * interested in whether two objects have the same contents, consider
+   * ObjectStore::areObjectsKnownIdentical or BackingStore::compareObjectsById
+   * instead.
+   *
+   * Note: operator== is not provided so call sites must be explicit about how
+   * object IDs are compared.
+   */
+  bool bytesEqual(const ObjectId& that) const noexcept {
+    return bytes_ == that.bytes_;
+  }
+
+  /**
+   * Returns true if getBytes() < that.getBytes().
+   *
+   * Primarily intended for use by the std::less specialization.
+   */
+  bool bytesLess(const ObjectId& that) const noexcept {
+    return bytes_ < that.bytes_;
+  }
 
   static ObjectId fromHex(folly::StringPiece hex) {
     return ObjectId{constructFromHex(hex)};
@@ -163,12 +186,32 @@ class ObjectIdCodec {
 } // namespace facebook::eden
 
 namespace std {
+
+template <>
+struct equal_to<facebook::eden::ObjectId> {
+  bool operator()(
+      const facebook::eden::ObjectId& lhs,
+      const facebook::eden::ObjectId& rhs) const noexcept {
+    return lhs.bytesEqual(rhs);
+  }
+};
+
+template <>
+struct less<facebook::eden::ObjectId> {
+  bool operator()(
+      const facebook::eden::ObjectId& lhs,
+      const facebook::eden::ObjectId& rhs) const noexcept {
+    return lhs.bytesLess(rhs);
+  }
+};
+
 template <>
 struct hash<facebook::eden::ObjectId> {
   size_t operator()(const facebook::eden::ObjectId& hash) const noexcept {
     return hash.getHashCode();
   }
 };
+
 } // namespace std
 
 namespace fmt {

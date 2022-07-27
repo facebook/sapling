@@ -9,17 +9,9 @@
 #include <folly/io/IOBuf.h>
 
 namespace facebook::eden {
+
 using namespace folly;
 using namespace folly::io;
-
-bool operator==(const Tree& tree1, const Tree& tree2) {
-  return (tree1.getHash() == tree2.getHash()) &&
-      (tree1.entries_ == tree2.entries_);
-}
-
-bool operator!=(const Tree& tree1, const Tree& tree2) {
-  return !(tree1 == tree2);
-}
 
 size_t Tree::getSizeBytes() const {
   // TODO: we should consider using a standard memory framework across

@@ -24,8 +24,10 @@ LocalStoreCachedBackingStore::LocalStoreCachedBackingStore(
 
 LocalStoreCachedBackingStore::~LocalStoreCachedBackingStore() {}
 
-bool LocalStoreCachedBackingStore::hasBijectiveBlobIds() {
-  return backingStore_->hasBijectiveBlobIds();
+ObjectComparison LocalStoreCachedBackingStore::compareObjectsById(
+    const ObjectId& one,
+    const ObjectId& two) {
+  return backingStore_->compareObjectsById(one, two);
 }
 
 folly::SemiFuture<std::unique_ptr<Tree>>

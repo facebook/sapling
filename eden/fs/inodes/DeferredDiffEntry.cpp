@@ -14,6 +14,7 @@
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/BlobMetadata.h"
+#include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/Diff.h"
 #include "eden/fs/store/DiffCallback.h"
 #include "eden/fs/store/DiffContext.h"
@@ -128,7 +129,8 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       auto contents = treeInode->getContents().wlock();
       if (!contents->isMaterialized()) {
         for (auto& scmEntry : scmEntries_) {
-          if (contents->treeHash.value() == scmEntry.getHash()) {
+          if (context_->store->areObjectsKnownIdentical(
+                  contents->treeHash.value(), scmEntry.getHash())) {
             // It did not change since it was loaded,
             // and it matches the scmEntry we're diffing against.
             return folly::unit;

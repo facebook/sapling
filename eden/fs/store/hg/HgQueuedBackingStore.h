@@ -123,7 +123,8 @@ class HgQueuedBackingStore final : public BackingStore {
     return *traceBus_;
   }
 
-  bool hasBijectiveBlobIds() override;
+  ObjectComparison compareObjectsById(const ObjectId& one, const ObjectId& two)
+      override;
 
   RootId parseRootId(folly::StringPiece rootId) override;
   std::string renderRootId(const RootId& rootId) override;

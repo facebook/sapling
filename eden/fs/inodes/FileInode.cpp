@@ -573,24 +573,17 @@ std::optional<bool> FileInode::isSameAsFast(
 #endif // !_WIN32
 
   if (state->nonMaterializedState.has_value()) {
-    if (state->nonMaterializedState->hash == blobID) {
-      // If the hashes are the same, then the contents are the same.
-      return true;
-    } else if (getMount()
-                   ->getObjectStore()
-                   ->getBackingStore()
-                   ->hasBijectiveBlobIds()) {
-      // If the hashes are not the same, and there's a 1:1 id-to-blob
-      // relationship, we know the blobs are not the same without further
-      // processing.
-      return false;
+    switch (getObjectStore().compareObjectsById(
+        state->nonMaterializedState->hash, blobID)) {
+      case ObjectComparison::Unknown:
+        return std::nullopt;
+      case ObjectComparison::Identical:
+        return true;
+      case ObjectComparison::Different:
+        return false;
     }
-
-    // Otherwise, unfortunately, we cannot assume that the file contents are
-    // different if the hashes are different: Mercurial's blob hashes also
-    // include history metadata, so there may be multiple different blob hashes
-    // for the same file contents.
   }
+  // Materialized files must be manually compared with the blob contents.
   return std::nullopt;
 }
 

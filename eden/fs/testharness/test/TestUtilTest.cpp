@@ -11,6 +11,7 @@
 #include <folly/test/TestUtils.h>
 
 #include "eden/fs/model/ObjectId.h"
+#include "eden/fs/model/TestOps.h"
 
 using namespace facebook::eden;
 

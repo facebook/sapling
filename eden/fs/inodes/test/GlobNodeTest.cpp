@@ -18,6 +18,7 @@
 #include <folly/test/TestUtils.h>
 
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/model/TestOps.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
