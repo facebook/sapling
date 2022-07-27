@@ -57,6 +57,7 @@ mod into_response;
 mod metadata;
 mod methods;
 mod monitoring;
+mod repo_filter;
 mod scuba_common;
 mod scuba_params;
 mod scuba_response;
@@ -72,6 +73,8 @@ struct ScsServerArgs {
     shutdown_timeout_args: ShutdownTimeoutArgs,
     #[clap(flatten)]
     scribe_logging_args: ScribeLoggingArgs,
+    #[clap(flatten)]
+    repo_filter_args: repo_filter::RepoFilterArgs,
     /// Thrift host
     #[clap(long, short = 'H', default_value = "::")]
     host: String,
@@ -111,6 +114,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         warm_bookmarks_cache_enabled: true,
         warm_bookmarks_cache_scuba_sample_builder,
         skiplist_enabled: true,
+        repo_filter: args.repo_filter_args.filter_repos,
     };
 
     let mononoke = Arc::new(runtime.block_on(Mononoke::new(&api_env, app.repo_configs().clone()))?);

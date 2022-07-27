@@ -82,6 +82,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         warm_bookmarks_cache_enabled: true,
         warm_bookmarks_cache_scuba_sample_builder: MononokeScubaSampleBuilder::with_discard(),
         skiplist_enabled: true,
+        //TODO: add a command line arg for filtering
+        repo_filter: None,
     };
     let mononoke = Arc::new(runtime.block_on(Mononoke::new(&env, repo_configs.clone()))?);
     let megarepo = Arc::new(runtime.block_on(MegarepoApi::new(

@@ -129,6 +129,8 @@ pub async fn subcommand_async_requests<'a>(
         skiplist_enabled: false,
         warm_bookmarks_cache_enabled: false,
         warm_bookmarks_cache_scuba_sample_builder: MononokeScubaSampleBuilder::with_discard(),
+        //TODO: add a command line arg for filtering
+        repo_filter: None,
     };
     let mononoke = Arc::new(
         Mononoke::new(&env, repo_configs.clone())

@@ -144,6 +144,8 @@ fn main(fb: FacebookInit) -> Result<()> {
                 warm_bookmarks_cache_enabled: true,
                 warm_bookmarks_cache_scuba_sample_builder: warm_bookmarks_cache_scuba,
                 skiplist_enabled: true,
+                //TODO: add a command line arg for filtering
+                repo_filter: None,
             };
 
             let common = configs.common.clone();

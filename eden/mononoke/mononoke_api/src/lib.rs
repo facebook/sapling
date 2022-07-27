@@ -93,6 +93,8 @@ pub use context::CoreContext;
 pub use context::LoggingContainer;
 pub use context::SessionContainer;
 
+use regex::Regex;
+
 /// An instance of Mononoke, which may manage multiple repositories.
 pub struct Mononoke {
     repos: HashMap<String, Arc<Repo>>,
@@ -103,12 +105,16 @@ impl Mononoke {
     /// Create a Mononoke instance.
     pub async fn new(env: &MononokeApiEnvironment, configs: RepoConfigs) -> Result<Self, Error> {
         let start = Instant::now();
-        let repos = stream::iter(
-            configs
-                .repos
-                .into_iter()
-                .filter(move |&(_, ref config)| config.enabled),
-        )
+
+        let repos = stream::iter(configs.repos.into_iter().filter(
+            move |&(ref name, ref config)| {
+                let is_matching_filter = env
+                    .repo_filter
+                    .as_ref()
+                    .map_or(true, |re| re.is_match(name.as_str()));
+                config.enabled && is_matching_filter
+            },
+        ))
         .map({
             move |(name, config)| async move {
                 let logger = &env.repo_factory.env.logger;
@@ -228,6 +234,7 @@ pub struct MononokeApiEnvironment {
     pub warm_bookmarks_cache_enabled: bool,
     pub warm_bookmarks_cache_scuba_sample_builder: MononokeScubaSampleBuilder,
     pub skiplist_enabled: bool,
+    pub repo_filter: Option<Regex>,
 }
 
 #[derive(Copy, Clone, Debug)]
