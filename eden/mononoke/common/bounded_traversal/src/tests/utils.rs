@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::cmp::Ord;
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::collections::BinaryHeap;

@@ -17,10 +17,6 @@ use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
 use std::borrow::Borrow;
 use std::borrow::Cow;
-use std::cmp::Eq;
-use std::cmp::Ord;
-use std::cmp::PartialEq;
-use std::cmp::PartialOrd;
 use std::hash::Hash;
 #[derive(Abomonation, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[derive(mysql::OptTryFromRowField)]

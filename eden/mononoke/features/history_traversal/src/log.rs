@@ -48,7 +48,6 @@ use std::collections::BinaryHeap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
-use std::default::Default;
 use std::sync::Arc;
 use thiserror::Error;
 use time_ext::DurationExt;

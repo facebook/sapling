@@ -86,7 +86,6 @@ use std::fs::File;
 use std::io::Cursor;
 use std::io::Read;
 use std::io::Write;
-use std::mem::drop;
 use std::mem::take;
 use std::path::Path;
 use std::path::PathBuf;

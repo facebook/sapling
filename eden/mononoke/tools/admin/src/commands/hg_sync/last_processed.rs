@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryInto;
-
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;

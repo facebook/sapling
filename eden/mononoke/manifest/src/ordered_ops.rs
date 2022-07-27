@@ -7,7 +7,6 @@
 
 use std::cmp::Ordering;
 use std::iter::Peekable;
-use std::marker::Unpin;
 
 use anyhow::Error;
 use bounded_traversal::OrderedTraversal;

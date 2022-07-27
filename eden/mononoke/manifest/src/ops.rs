@@ -28,7 +28,6 @@ use futures::TryStreamExt;
 use mononoke_types::MPath;
 use std::collections::HashMap;
 use std::marker::PhantomData;
-use std::marker::Unpin;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Diff<Entry> {

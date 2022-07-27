@@ -103,8 +103,6 @@ use slog::Logger;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Debug;
-use std::iter::IntoIterator;
-use std::iter::Iterator;
 use std::sync::Arc;
 use thiserror::Error;
 use unodes::RootUnodeManifestId;

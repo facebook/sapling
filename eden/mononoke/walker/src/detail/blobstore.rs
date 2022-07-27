@@ -27,7 +27,6 @@ use scuba::value::ScubaValue;
 use scuba_ext::MononokeScubaSampleBuilder;
 use stats::prelude::*;
 use std::collections::HashMap;
-use std::convert::From;
 use std::fmt;
 use std::str::FromStr;
 

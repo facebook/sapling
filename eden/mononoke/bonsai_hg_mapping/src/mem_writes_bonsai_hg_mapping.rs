@@ -16,7 +16,6 @@ use lock_ext::LockExt;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
-use std::cmp::Eq;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::atomic::AtomicBool;

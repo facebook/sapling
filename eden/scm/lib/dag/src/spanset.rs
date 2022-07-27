@@ -13,7 +13,6 @@ use std::cmp::Ordering;
 use std::cmp::Ordering::Equal;
 use std::cmp::Ordering::Greater;
 use std::cmp::Ordering::Less;
-use std::cmp::PartialOrd;
 use std::collections::BinaryHeap;
 use std::collections::VecDeque;
 use std::fmt;

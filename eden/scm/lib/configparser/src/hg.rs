@@ -7,7 +7,6 @@
 
 //! Mercurial-specific config postprocessing
 
-use std::cmp::Eq;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::env;

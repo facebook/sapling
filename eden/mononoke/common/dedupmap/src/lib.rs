@@ -11,7 +11,6 @@
 
 use std::borrow::Borrow;
 use std::borrow::Cow;
-use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::hash::Hash;
 

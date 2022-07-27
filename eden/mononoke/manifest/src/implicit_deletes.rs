@@ -19,7 +19,6 @@ use mononoke_types::FileType;
 use mononoke_types::MPath;
 use std::collections::HashSet;
 use std::hash::Hash;
-use std::marker::Unpin;
 
 use crate::Entry;
 use crate::Manifest;

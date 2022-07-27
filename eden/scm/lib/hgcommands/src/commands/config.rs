@@ -6,7 +6,6 @@
  */
 
 use std::collections::BTreeSet;
-use std::iter::FromIterator;
 
 use anyhow::bail;
 use clidispatch::abort;

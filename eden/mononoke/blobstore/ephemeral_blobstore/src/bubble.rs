@@ -7,7 +7,6 @@
 
 //! Ephemeral Blobstore Bubbles
 
-use std::convert::TryFrom;
 use std::fmt;
 use std::num::NonZeroU64;
 use std::str::FromStr;

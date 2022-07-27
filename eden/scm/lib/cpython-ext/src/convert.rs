@@ -8,9 +8,7 @@
 use std::any;
 use std::any::Any;
 use std::any::TypeId;
-use std::cmp::Ord;
 use std::cmp::Ordering;
-use std::cmp::PartialOrd;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::hash::Hasher;

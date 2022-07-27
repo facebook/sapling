@@ -6,7 +6,6 @@
  */
 
 use std::collections::BTreeMap;
-use std::iter::Extend;
 
 #[derive(Debug)]
 pub(crate) enum PathItem {
