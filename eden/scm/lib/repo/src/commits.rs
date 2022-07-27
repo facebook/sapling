@@ -5,12 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use crate::repo::Repo;
 use edenapi::EdenApi;
 use hgcommits::DagCommits;
 use hgcommits::DoubleWriteCommits;
@@ -20,8 +20,6 @@ use hgcommits::HybridCommits;
 use hgcommits::RevlogCommits;
 use metalog::MetaLog;
 use parking_lot::RwLock;
-
-static REQUIREMENTS_PATH: &str = "requires";
 
 static HG_COMMITS_PATH: &str = "hgcommits/v1";
 static LAZY_HASH_PATH: &str = "lazyhashdir";
@@ -38,30 +36,25 @@ static RUST_BACKEND_LOG: &str = "rustrevlog";
 
 static GIT_FILE: &str = "gitdir";
 
-pub fn open_dag_commits(
-    store_path: &Path,
-    metalog: Arc<RwLock<MetaLog>>,
-    eden_api: Arc<dyn EdenApi>,
-) -> Result<Box<dyn DagCommits + Send + 'static>, CommitError> {
-    let store_requirements = get_store_requirements(store_path)
-        .map_err(|err| CommitError::FileReadError("requirements file", err))?;
-    if store_requirements.contains(&GIT_STORE_REQUIREMENT.to_string()) {
+pub(crate) fn open_dag_commits(
+    repo: &mut Repo,
+) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
+    let commits = if repo.store_requirements.contains(&GIT_STORE_REQUIREMENT) {
+        let metalog = repo.metalog()?;
         log_backend(GIT_BACKEND_LOG);
-        return open_git(store_path, metalog);
-    } else if store_requirements.contains(&LAZY_STORE_REQUIREMENT.to_string()) {
+        open_git(repo.store_path(), metalog)?
+    } else if repo.store_requirements.contains(&LAZY_STORE_REQUIREMENT) {
+        let eden_api = repo.eden_api()?;
         log_backend(LAZY_BACKEND_LOG);
-        return open_hybrid(store_path, eden_api);
-    } else if store_requirements.contains(&DOUBLE_WRITE_REQUIREMENT.to_string()) {
+        open_hybrid(repo.store_path(), eden_api)?
+    } else if repo.store_requirements.contains(&DOUBLE_WRITE_REQUIREMENT) {
         log_backend(DOUBLE_WRITE_BACKEND_LOG);
-        return open_double(store_path);
-    }
-    log_backend(RUST_BACKEND_LOG);
-    Ok(Box::new(RevlogCommits::new(store_path)?))
-}
-
-fn get_store_requirements(store_path: &Path) -> Result<HashSet<String>, std::io::Error> {
-    let store_requirements = fs::read_to_string(store_path.join(REQUIREMENTS_PATH))?;
-    Ok(store_requirements.split('\n').map(String::from).collect())
+        open_double(repo.store_path())?
+    } else {
+        log_backend(RUST_BACKEND_LOG);
+        Box::new(RevlogCommits::new(repo.store_path())?)
+    };
+    Ok(commits)
 }
 
 fn log_backend(backend: &str) {

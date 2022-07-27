@@ -270,6 +270,10 @@ impl Repo {
         self.store_path.join("metalog")
     }
 
+    /// Constructs the EdenAPI client.
+    ///
+    /// This requires configs like `paths.default`. Avoid calling this function for
+    /// local-only operations.
     pub fn eden_api(&mut self) -> Result<Arc<dyn EdenApi>, EdenApiError> {
         match &self.eden_api {
             Some(eden_api) => Ok(eden_api.clone()),
@@ -288,9 +292,7 @@ impl Repo {
         match &self.dag_commits {
             Some(commits) => Ok(commits.clone()),
             None => {
-                let metalog = self.metalog()?;
-                let eden_api = self.eden_api()?;
-                let commits = open_dag_commits(&self.store_path, metalog, eden_api)?;
+                let commits = open_dag_commits(self)?;
                 let commits = Arc::new(RwLock::new(commits));
                 self.dag_commits = Some(commits.clone());
                 Ok(commits)

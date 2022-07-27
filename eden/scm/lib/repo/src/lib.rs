@@ -13,5 +13,3 @@ pub mod errors;
 mod init;
 pub mod repo;
 mod requirements;
-
-pub use commits::open_dag_commits;
