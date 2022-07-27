@@ -19,7 +19,6 @@ use std::fmt;
 use std::sync::Arc;
 
 use anyhow::Result;
-use bytes::Bytes;
 use manifest::DiffEntry;
 use manifest::DirDiffEntry;
 use manifest::Directory;
@@ -28,6 +27,7 @@ use manifest::FileMetadata;
 use manifest::FsNodeMetadata;
 use manifest::List;
 pub use manifest::Manifest;
+use minibytes::Bytes;
 use once_cell::sync::OnceCell;
 use pathmatcher::Matcher;
 use sha1::Digest;
@@ -1062,7 +1062,7 @@ mod tests {
         // depends on the implementation but it is valid for finalize to query the store
         // for the values returned in the previous finalize call
 
-        use bytes::Bytes;
+        use minibytes::Bytes;
         for (path, hgid, raw, _, _) in tree_changed.iter() {
             store
                 .insert(&path, *hgid, Bytes::copy_from_slice(&raw[..]))

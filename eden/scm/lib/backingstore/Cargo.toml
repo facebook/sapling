@@ -11,7 +11,6 @@ crate-type = ["lib", "staticlib"]
 
 [dependencies]
 anyhow = "1.0.56"
-bytes = { version = "1.1", features = ["serde"] }
 configparser = { version = "0.1.0", path = "../configparser" }
 eagerepo = { version = "0.1.0", path = "../eagerepo" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
@@ -20,6 +19,7 @@ libc = "0.2.121"
 log = { version = "0.4.14", features = ["kv_unstable", "kv_unstable_std"] }
 manifest = { version = "0.1.0", path = "../manifest" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
+minibytes = { version = "0.1.0", path = "../minibytes" }
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 revisionstore = { version = "0.1.0", path = "../revisionstore" }
 tracing = "0.1.35"

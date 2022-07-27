@@ -37,12 +37,12 @@ impl ReadFileContents for GitStore {
 }
 
 impl TreeStore for GitStore {
-    fn get(&self, _path: &RepoPath, hgid: HgId) -> anyhow::Result<bytes::Bytes> {
+    fn get(&self, _path: &RepoPath, hgid: HgId) -> anyhow::Result<minibytes::Bytes> {
         let data = self.read_obj(hgid, git2::ObjectType::Tree)?;
         Ok(data.into())
     }
 
-    fn insert(&self, _path: &RepoPath, hgid: HgId, data: bytes::Bytes) -> anyhow::Result<()> {
+    fn insert(&self, _path: &RepoPath, hgid: HgId, data: minibytes::Bytes) -> anyhow::Result<()> {
         let id = self.write_obj(git2::ObjectType::Tree, data.as_ref())?;
         if id != hgid {
             anyhow::bail!("tree id mismatch: {} (written) != {} (expected)", id, hgid);

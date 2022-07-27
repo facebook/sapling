@@ -10,9 +10,9 @@ use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Result;
-use bytes::Bytes;
 use manifest::testutil::*;
 use manifest::Manifest;
+use minibytes::Bytes;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use storemodel::TreeFormat;

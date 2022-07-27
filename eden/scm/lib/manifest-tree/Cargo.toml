@@ -14,10 +14,10 @@ required-features = ["for-tests"]
 [dependencies]
 anyhow = "1.0.56"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
-bytes = { version = "1.1", features = ["serde"] }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-batch = "0.6"
 manifest = { version = "0.1.0", path = "../manifest" }
+minibytes = { version = "0.1.0", path = "../minibytes" }
 once_cell = "1.12"
 parking_lot = { version = "0.11.2", features = ["send_guard"], optional = true }
 pathmatcher = { version = "0.1.0", path = "../pathmatcher" }

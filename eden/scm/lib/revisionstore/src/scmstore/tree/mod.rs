@@ -578,20 +578,14 @@ impl ContentDataStore for TreeStore {
 }
 
 impl storemodel::TreeStore for TreeStore {
-    fn get(&self, path: &RepoPath, node: Node) -> Result<storemodel::bytes::Bytes> {
+    fn get(&self, path: &RepoPath, node: Node) -> Result<minibytes::Bytes> {
         if node.is_null() {
             return Ok(Default::default());
         }
 
         let key = Key::new(path.to_owned(), node);
         match self.fetch_batch(std::iter::once(key.clone()))?.single()? {
-            Some(entry) => Ok(storemodel::bytes::Bytes::from(
-                entry
-                    .content
-                    .expect("no tree content")
-                    .hg_content()?
-                    .into_vec(),
-            )),
+            Some(entry) => Ok(entry.content.expect("no tree content").hg_content()?),
             None => Err(anyhow!("key {:?} not found in manifest", key)),
         }
     }
@@ -601,7 +595,7 @@ impl storemodel::TreeStore for TreeStore {
         Ok(())
     }
 
-    fn insert(&self, _path: &RepoPath, _node: Node, _data: storemodel::bytes::Bytes) -> Result<()> {
+    fn insert(&self, _path: &RepoPath, _node: Node, _data: Bytes) -> Result<()> {
         unimplemented!("not needed yet");
     }
 }

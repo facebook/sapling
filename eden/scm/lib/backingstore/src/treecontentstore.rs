@@ -7,8 +7,8 @@
 
 use anyhow::format_err;
 use anyhow::Result;
-use bytes::Bytes;
 use manifest_tree::TreeStore;
+use minibytes::Bytes;
 use revisionstore::ContentStore;
 use revisionstore::HgIdDataStore;
 use revisionstore::StoreKey;

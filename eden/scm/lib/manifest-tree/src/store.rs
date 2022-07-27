@@ -10,11 +10,10 @@ use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Result;
-use bytes::Bytes;
-use bytes::BytesMut;
 use manifest::FileMetadata;
 use manifest::FileType;
 use manifest::FsNodeMetadata;
+use minibytes::Bytes;
 use storemodel::TreeFormat;
 pub use storemodel::TreeStore;
 use types::HgId;
@@ -93,9 +92,9 @@ impl InnerStore {
 /// representation. For this serialization format it is important that they don't contain
 /// `\0` or `\n`.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Entry(pub Bytes, pub TreeFormat);
+pub struct Entry(pub minibytes::Bytes, pub TreeFormat);
 
-pub struct EntryMut(BytesMut, TreeFormat);
+pub struct EntryMut(Vec<u8>, TreeFormat);
 
 /// The `Element` is a parsed element of a directory. Directory elements are either files either
 /// direcotries. The type of element is signaled by `Flag`.
@@ -124,7 +123,7 @@ impl Entry {
     pub fn from_elements(mut elements: Vec<Element>, format: TreeFormat) -> Entry {
         let cmp = crate::namecmp::get_namecmp_func(format);
         elements.sort_unstable_by(|a, b| cmp(&a.component, a.flag, &b.component, b.flag));
-        let mut underlying = BytesMut::new();
+        let mut underlying = Vec::new();
         match format {
             TreeFormat::Hg => {
                 for element in elements.into_iter() {
@@ -138,7 +137,7 @@ impl Entry {
                 }
             }
         }
-        Entry(underlying.freeze(), format)
+        Entry(underlying.into(), format)
     }
 
     // used in tests, finalize and subtree_diff
@@ -150,7 +149,7 @@ impl Entry {
 impl EntryMut {
     /// Constructs an empty `Entry`. It is not valid to save an empty `Entry`.
     pub fn new(format: TreeFormat) -> Self {
-        EntryMut(BytesMut::new(), format)
+        EntryMut(Vec::new(), format)
     }
 
     /// Adds an element to the list of elements represented by this `Entry`.
@@ -161,7 +160,7 @@ impl EntryMut {
     }
 
     pub fn freeze(self) -> Entry {
-        Entry(self.0.freeze(), self.1)
+        Entry(self.0.into(), self.1)
     }
 }
 

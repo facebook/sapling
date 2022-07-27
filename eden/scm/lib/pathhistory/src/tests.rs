@@ -23,7 +23,7 @@ use manifest::FileMetadata;
 use manifest::FileType;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
-use storemodel::bytes::Bytes;
+use storemodel::minibytes::Bytes;
 use storemodel::ReadRootTreeIds;
 use storemodel::TreeFormat;
 use storemodel::TreeStore;

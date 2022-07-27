@@ -21,7 +21,7 @@ use revisionstore::LegacyStore;
 use revisionstore::RemoteDataStore;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
-use storemodel::bytes;
+use storemodel::minibytes::Bytes;
 use storemodel::ReadFileContents;
 use storemodel::TreeStore;
 use types::Key;
@@ -105,18 +105,18 @@ impl<T> ManifestStore<T> {
 }
 
 impl<T: HgIdDataStore + RemoteDataStore> TreeStore for ManifestStore<T> {
-    fn get(&self, path: &RepoPath, node: Node) -> Result<bytes::Bytes> {
+    fn get(&self, path: &RepoPath, node: Node) -> Result<Bytes> {
         if node.is_null() {
             return Ok(Default::default());
         }
         let key = Key::new(path.to_owned(), node);
         match self.underlying.get(StoreKey::hgid(key))? {
             StoreResult::NotFound(key) => Err(format_err!("Key {:?} not found in manifest", key)),
-            StoreResult::Found(data) => Ok(bytes::Bytes::from(data)),
+            StoreResult::Found(data) => Ok(data.into()),
         }
     }
 
-    fn insert(&self, _path: &RepoPath, _node: Node, _data: bytes::Bytes) -> Result<()> {
+    fn insert(&self, _path: &RepoPath, _node: Node, _data: Bytes) -> Result<()> {
         unimplemented!(
             "At this time we don't expect to ever write manifest in rust using python stores."
         );
