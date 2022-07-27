@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1"
 async-runtime = { path = "../../../../lib/async-runtime" }
 cpython = { version = "0.7", default-features = false }
 cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
@@ -12,6 +13,7 @@ eagerepo = { path = "../../../../lib/eagerepo" }
 edenapi_types = { path = "../../../../lib/edenapi/types" }
 pydag = { path = "../pydag" }
 pyedenapi = { path = "../pyedenapi" }
+storemodel = { path = "../../../../lib/storemodel" }
 
 [features]
 default = []

@@ -11,19 +11,25 @@ use std::sync::Arc;
 
 use async_runtime::block_on;
 use cpython::*;
+use cpython_ext::convert::Serde;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
 use dag::ops::DagAlgorithm;
 use eagerepo::EagerRepo as RustEagerRepo;
+use eagerepo::EagerRepoStore as RustEagerRepoStore;
 use edenapi_types::HgId;
 use pydag::dagalgo::dagalgo as PyDag;
 use pyedenapi::PyClient;
+
+mod impl_into;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "eagerepo"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<EagerRepo>(py)?;
+    m.add_class::<EagerRepoStore>(py)?;
+    impl_into::register(py);
     Ok(m)
 }
 
@@ -107,5 +113,62 @@ py_class!(class EagerRepo |py| {
         let inner = self.inner(py).borrow();
         let dag = inner.dag().dag_snapshot().map_pyerr(py)?;
         PyDag::from_arc_dag(py, dag)
+    }
+
+    /// Obtain a store object.
+    def store(&self) -> PyResult<EagerRepoStore> {
+        let store = self.inner(py).borrow().store();
+        EagerRepoStore::create_instance(py, store)
+    }
+});
+
+py_class!(pub(crate) class EagerRepoStore |py| {
+    data inner: RustEagerRepoStore;
+
+    /// Construct `EagerRepoStore` from a directory.
+    @staticmethod
+    def open(dir: &PyPath) -> PyResult<Self> {
+        let path = dir.as_path().to_path_buf();
+        let inner = RustEagerRepoStore::open(&path).map_pyerr(py)?;
+        Self::create_instance(py, inner)
+    }
+
+    def flush(&self) -> PyResult<PyNone> {
+        self.inner(py).flush().map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    /// (data, bases=[]) -> bytes
+    ///
+    /// `data` should match hg's SHA1 format: min(p1, p2) + max(p1, p2) + raw_text.
+    /// For file content with renames, `raw_text` should include the rename filelog header.
+    /// Returns sha1(data).
+    ///
+    /// Changes are buffered in memory until flush().
+    def add_sha1_blob(&self, data: PyBytes, bases: Option<Serde<Vec<HgId>>> = None) -> PyResult<PyBytes> {
+        let inner = self.inner(py);
+        let bases = match bases {
+            Some(bases) => bases.0,
+            None => Vec::new(),
+        };
+        let id = inner.add_sha1_blob(data.data(py), &bases).map_pyerr(py)?;
+        Ok(PyBytes::new(py, id.as_ref()))
+    }
+
+    /// (node) -> Optional[bytes].
+    ///
+    /// Get the raw text with p1, p2 prefix.
+    def get_sha1_blob(&self, node: Serde<HgId>) -> PyResult<Option<PyBytes>> {
+        let inner = self.inner(py);
+        inner.get_sha1_blob(node.0).map_pyerr(py).map(|d| d.map(|d| PyBytes::new(py, d.as_ref())))
+    }
+
+    /// (node) -> Optional[bytes].
+    ///
+    /// Get the raw text without the p1, p2 prefix.
+    /// The raw text includes filelog header for file content.
+    def get_content(&self, node: Serde<HgId>) -> PyResult<Option<PyBytes>> {
+        let inner = self.inner(py);
+        inner.get_content(node.0).map_pyerr(py).map(|d| d.map(|d| PyBytes::new(py, d.as_ref())))
     }
 });
