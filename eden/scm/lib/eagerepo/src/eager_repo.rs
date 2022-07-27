@@ -54,7 +54,7 @@ use crate::Result;
 /// Currently backed by [`metalog::MetaLog`]. It's a lightweight source control
 /// for atomic metadata changes.
 pub struct EagerRepo {
-    dag: Dag,
+    pub(crate) dag: Dag,
     store: EagerRepoStore,
     metalog: MetaLog,
 }
@@ -109,6 +109,16 @@ impl EagerRepoStore {
     pub fn get_sha1_blob(&self, id: Id20) -> Result<Option<Bytes>> {
         let inner = self.inner.read();
         Ok(inner.get(id)?)
+    }
+
+    /// Read the blob with its p1, p2 prefix removed.
+    pub fn get_content(&self, id: Id20) -> Result<Option<Bytes>> {
+        // Prefix in bytes of the hg SHA1s in the eagerepo data.
+        const HG_SHA1_PREFIX: usize = Id20::len() * 2;
+        match self.get_sha1_blob(id)? {
+            None => Ok(None),
+            Some(data) => Ok(Some(data.slice(HG_SHA1_PREFIX..))),
+        }
     }
 }
 
