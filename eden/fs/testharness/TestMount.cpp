@@ -488,7 +488,7 @@ void TestMount::addSymlink(
 }
 #endif
 
-void TestMount::overwriteFile(
+FileInodePtr TestMount::overwriteFile(
     folly::StringPiece path,
     folly::StringPiece contents) {
   RelativePathPiece relativePath(path);
@@ -517,6 +517,8 @@ void TestMount::overwriteFile(
   file->write(contents, offset, ObjectFetchContext::getNullContext()).get(0ms);
   file->fsync(/*datasync*/ true);
 #endif
+
+  return file;
 }
 
 void TestMount::move(folly::StringPiece src, folly::StringPiece dest) {

@@ -228,6 +228,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 #endif // !_WIN32
 
   void forceMetadataUpdate() override;
+
   /**
    * If this file is backed by a source control Blob, return the hash of the
    * Blob, or return std::nullopt if this file is materialized in the overlay.

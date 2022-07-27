@@ -3833,6 +3833,8 @@ void TreeInode::saveOverlayPostCheckout(
           return std::nullopt;
         }
 
+        // TODO: This needs to compare filenames too.
+
         // If the child is not materialized, it is the same as some source
         // control object.  However, if it isn't the same as the object in our
         // Tree, we have to materialize ourself.

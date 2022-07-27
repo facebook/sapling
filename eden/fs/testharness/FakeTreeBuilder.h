@@ -78,8 +78,9 @@ class FakeTreeBuilder {
   void setFile(
       RelativePathPiece path,
       folly::StringPiece contents,
-      bool executable = false) {
-    setFile(path, folly::ByteRange{contents}, executable);
+      bool executable = false,
+      std::optional<ObjectId> objectId = std::nullopt) {
+    setFile(path, folly::ByteRange{contents}, executable, objectId);
   }
   void setFile(
       RelativePathPiece path,

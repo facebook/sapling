@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <boost/operators.hpp>
 #include <fmt/format.h>
 #include <folly/FBString.h>
 #include <folly/Range.h>
@@ -25,7 +24,7 @@ namespace facebook::eden {
  * Identifies tree and blob objects.
  * This identifier is a variable length string.
  */
-class ObjectId : boost::totally_ordered<ObjectId> {
+class ObjectId {
  public:
   // fbstring has more SSO space (23 bytes!) than std::string and thus can hold
   // 20-byte hashes inline.

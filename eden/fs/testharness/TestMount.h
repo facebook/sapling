@@ -238,7 +238,9 @@ class TestMount {
   void mkdir(folly::StringPiece path);
 
   /** Overwrites the contents of an existing file. */
-  void overwriteFile(folly::StringPiece path, folly::StringPiece contents);
+  FileInodePtr overwriteFile(
+      folly::StringPiece path,
+      folly::StringPiece contents);
 
   /** Does the equivalent of mv(1). */
   void move(folly::StringPiece src, folly::StringPiece dest);
