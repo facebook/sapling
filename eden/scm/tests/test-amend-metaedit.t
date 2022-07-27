@@ -613,3 +613,10 @@ Test reusing commit message from another commit
   │
   o  A
   
+Test commit template.
+
+  $ setconfig committemplate.changeset='HG: ParentCount={parents|count}\n'
+  $ HGEDITOR=cat hg metaedit -r 'max(all())'
+  HG: ParentCount=1
+  abort: empty commit message
+  [255]

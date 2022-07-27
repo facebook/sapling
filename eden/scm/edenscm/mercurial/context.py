@@ -3037,10 +3037,11 @@ class metadataonlyctx(committablectx):
             parents = originalctx.parents()
         else:
             parents = [repo[p] for p in parents if p is not None]
+        self._parents = [p for p in parents if p.node() != nullid]
         parents = parents[:]
         while len(parents) < 2:
             parents.append(repo[nullid])
-        p1, p2 = self._parents = parents
+        p1, p2 = parents
 
         # sanity check to ensure that our parent's manifest has not changed
         # from our original parent's manifest to ensure the caller is not
@@ -3091,11 +3092,8 @@ class metadataonlyctx(committablectx):
         and parents manifests.
         """
         man1 = self.p1().manifest()
-        p2 = self._parents[1]
-        # "1 < len(self._parents)" can't be used for checking
-        # existence of the 2nd parent, because "metadataonlyctx._parents" is
-        # explicitly initialized by the list, of which length is 2.
-        if p2.node() != nullid:
+        if len(self._parents) > 1:
+            p2 = self._parents[1]
             man2 = p2.manifest()
             managing = lambda f: f in man1 or f in man2
         else:
