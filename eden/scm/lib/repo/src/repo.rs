@@ -7,7 +7,6 @@
 
 use std::collections::BTreeMap;
 use std::fs;
-use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -35,6 +34,7 @@ use util::path::absolute;
 use crate::commits::open_dag_commits;
 use crate::errors;
 use crate::init;
+use crate::requirements::Requirements;
 
 pub struct Repo {
     path: PathBuf,
@@ -44,6 +44,8 @@ pub struct Repo {
     store_path: PathBuf,
     dot_hg_path: PathBuf,
     shared_dot_hg_path: PathBuf,
+    pub requirements: Requirements,
+    pub store_requirements: Requirements,
     repo_name: Option<String>,
     metalog: Option<Arc<RwLock<MetaLog>>>,
     eden_api: Option<Arc<dyn EdenApi>>,
@@ -185,6 +187,9 @@ impl Repo {
                     .map(|v| v.to_string())
             });
 
+        let requirements = Requirements::open(&dot_hg_path.join("requires"))?;
+        let store_requirements = Requirements::open(&store_path.join("requires"))?;
+
         Ok(Repo {
             path,
             config,
@@ -193,6 +198,8 @@ impl Repo {
             store_path,
             dot_hg_path,
             shared_dot_hg_path,
+            requirements,
+            store_requirements,
             repo_name,
             metalog: None,
             eden_api: None,
@@ -302,21 +309,15 @@ impl Repo {
         }
     }
 
-    pub fn add_requirement(&self, requirement: &str) -> Result<()> {
-        fs::OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open(self.shared_dot_hg_path().join("requires"))?
-            .write_all(requirement.as_bytes())?;
+    pub fn add_requirement(&mut self, requirement: &str) -> Result<()> {
+        self.requirements.add(requirement);
+        self.requirements.flush()?;
         Ok(())
     }
 
-    pub fn add_store_requirement(&self, requirement: &str) -> Result<()> {
-        fs::OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open(self.store_path().join("requires"))?
-            .write_all(requirement.as_bytes())?;
+    pub fn add_store_requirement(&mut self, requirement: &str) -> Result<()> {
+        self.store_requirements.add(requirement);
+        self.store_requirements.flush()?;
         Ok(())
     }
 
