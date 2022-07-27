@@ -4,5 +4,11 @@
  * Run the following command to update certificates:
 
 ```
-./gencerts.sh localhost proxy client0
+./gencerts.sh localhost proxy client0 client1 client2
+```
+
+ * To add new certificates using the existing root keys:
+
+```
+./gencerts.sh --keep-root newcert ...
 ```

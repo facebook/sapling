@@ -11,10 +11,15 @@ if [[ -z "$1" ]]; then
     exit 1
 fi
 
-# Generate private key for root certificate
-openssl genrsa -out root-ca.key 2048
-# Generate root certificate
-openssl req -x509 -new -nodes -key root-ca.key -subj "/C=US/ST=CA/O=TestRoot/CN=mononoke.test" -sha256 -days 3650 -out root-ca.crt
+if [[ "$1" = "--keep-root" ]]; then
+  echo "Using existing root certificate"
+  shift
+else
+  # Generate private key for root certificate
+  openssl genrsa -out root-ca.key 2048
+  # Generate root certificate
+  openssl req -x509 -new -nodes -key root-ca.key -subj "/C=US/ST=CA/O=TestRoot/CN=mononoke.test" -sha256 -days 3650 -out root-ca.crt
+fi
 
 # For each certificate name:
 for name in "$@"; do
