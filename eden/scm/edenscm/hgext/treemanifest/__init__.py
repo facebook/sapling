@@ -74,6 +74,7 @@ from edenscm.mercurial import (
     changegroup,
     changelog2,
     commands,
+    eagerepo,
     error,
     exchange,
     extensions,
@@ -415,9 +416,15 @@ def _prunesharedpacks(repo, packpath):
 def setuptreestores(repo, mfl):
     if git.isgitstore(repo):
         mfl._isgit = True
+        mfl._iseager = False
         mfl.datastore = git.openstore(repo)
+    elif eagerepo.iseagerepo(repo):
+        mfl._isgit = False
+        mfl._iseager = True
+        mfl.datastore = repo.fileslog.contentstore
     else:
         mfl._isgit = False
+        mfl._iseager = False
         mfl.makeruststore()
 
 
@@ -480,9 +487,22 @@ class basetreemanifestlog(object):
         linknode,
         linkrev=None,
     ):
-        dpack, hpack = self._getmutablelocalpacks()
-
         newtreeiter = _finalize(self, newtree, p1node, p2node)
+
+        if self._iseager:
+            # eagerepo does not have history pack but requires p1node and
+            # p2node to be part of the sha1 blob.
+            store = self.datastore
+            rootnode = None
+            for nname, nnode, ntext, _np1text, np1, np2 in newtreeiter:
+                rawtext = revlog.textwithheader(ntext, np1, np2)
+                node = store.add_sha1_blob(rawtext)
+                assert node == nnode, f"{node} == {nnode}"
+                if rootnode is None and nname == "":
+                    rootnode = node
+            return rootnode
+
+        dpack, hpack = self._getmutablelocalpacks()
 
         node = None
         for nname, nnode, ntext, _np1text, np1, np2 in newtreeiter:
@@ -496,7 +516,7 @@ class basetreemanifestlog(object):
 
     def commitsharedpacks(self):
         """Persist the dirty trees written to the shared packs."""
-        if self._isgit:
+        if self._isgit or self._iseager:
             return
 
         self.datastore.markforrefresh()
@@ -526,7 +546,8 @@ class basetreemanifestlog(object):
             )
         # git store does not have the Python `.get(path, node)` method.
         # it can only be accessed via the Rust treemanifest.
-        if node == nullid or self._isgit:
+        # eager store does not require remote lookup.
+        if node == nullid or self._isgit or self._iseager:
             return treemanifestctx(self, dir, node)
         if node in self._treemanifestcache:
             return self._treemanifestcache[node]
@@ -549,6 +570,7 @@ class basetreemanifestlog(object):
         return None
 
     def makeruststore(self):
+        assert not self._iseager
         remotestore = revisionstore.pyremotestore(remotetreestore(self._repo))
         correlator = clienttelemetry.correlator(self._repo.ui)
         edenapistore = self.edenapistore(self._repo)
@@ -1148,7 +1170,7 @@ def pull(orig, ui, repo, *pats, **opts):
 def _postpullprefetch(ui, repo):
     if "default" not in repo.ui.paths:
         return
-    if git.isgitstore(repo):
+    if git.isgitstore(repo) or eagerepo.iseagerepo(repo):
         return
 
     ctxs = []

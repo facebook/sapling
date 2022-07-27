@@ -36,6 +36,7 @@ from . import (
     dirstate,
     dirstateguard,
     discovery,
+    eagerepo,
     edenfs,
     encoding,
     error as errormod,
@@ -359,6 +360,9 @@ class localrepository(object):
         # commit graph is truncated for emergency use-case. The first commit
         # has wrong parents.
         "emergencychangelog",
+        # backed by Rust eagerepo::EagerRepo. Mainly used in tests or
+        # fully local repos.
+        eagerepo.EAGEREPO_REQUIREMENT,
     }
     openerreqs = {"revlogv1", "generaldelta", "treemanifest"}
 
@@ -1614,6 +1618,8 @@ class localrepository(object):
             f = f[1:]
         if git.isgitstore(self):
             return git.gitfilelog(self)
+        elif eagerepo.iseagerepo(self):
+            return eagerepo.eagerfilelog(self, f)
         return filelog.filelog(self.svfs, f)
 
     def changectx(self, changeid):
