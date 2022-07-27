@@ -9,6 +9,7 @@ mod checker;
 #[cfg(fbcode_build)]
 mod facebook;
 mod identity;
+mod internal;
 mod membership;
 #[cfg(not(fbcode_build))]
 mod oss;
@@ -22,6 +23,7 @@ pub use identity::pretty_print;
 pub use identity::MononokeIdentity;
 pub use identity::MononokeIdentitySet;
 pub use identity::MononokeIdentitySetExt;
+pub use internal::InternalAclProvider;
 pub use membership::AlwaysMember;
 pub use membership::ArcMembershipChecker;
 pub use membership::BoxMembershipChecker;
