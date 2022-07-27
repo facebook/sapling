@@ -638,7 +638,7 @@ async fn push_merge_commit(
     let pushrebase_hooks = bookmarks_movement::get_pushrebase_hooks(
         ctx,
         repo,
-        &bookmark_to_merge_into,
+        bookmark_to_merge_into,
         &repo_config.pushrebase,
     )?;
 

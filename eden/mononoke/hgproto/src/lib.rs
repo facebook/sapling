@@ -41,9 +41,9 @@ pub enum Request {
 impl Request {
     pub fn record_request(&self, record: &Mutex<Vec<String>>) {
         let mut record = record.lock().expect("lock poisoned");
-        match self {
-            &Request::Batch(ref batch) => record.extend(batch.iter().map(|s| s.name().into())),
-            &Request::Single(ref req) => record.push(req.name().into()),
+        match *self {
+            Request::Batch(ref batch) => record.extend(batch.iter().map(|s| s.name().into())),
+            Request::Single(ref req) => record.push(req.name().into()),
         }
     }
 }
@@ -103,27 +103,27 @@ pub enum SingleRequest {
 
 impl SingleRequest {
     pub fn name(&self) -> &'static str {
-        match self {
-            &SingleRequest::Between { .. } => "between",
-            &SingleRequest::Branchmap => "branchmap",
-            &SingleRequest::Capabilities => "capabilities",
-            &SingleRequest::ClientTelemetry { .. } => "clienttelemetry",
-            &SingleRequest::Debugwireargs { .. } => "debugwireargs",
-            &SingleRequest::Getbundle(_) => "getbundle",
-            &SingleRequest::Heads => "heads",
-            &SingleRequest::Hello => "hello",
-            &SingleRequest::Listkeys { .. } => "listkeys",
-            &SingleRequest::Lookup { .. } => "lookup",
-            &SingleRequest::Known { .. } => "known",
-            &SingleRequest::Knownnodes { .. } => "knownnodes",
-            &SingleRequest::Unbundle { .. } => "unbundle",
-            &SingleRequest::UnbundleReplay { .. } => "unbundlereplay",
-            &SingleRequest::Gettreepack(_) => "gettreepack",
-            &SingleRequest::StreamOutShallow { .. } => "stream_out_shallow",
-            &SingleRequest::GetpackV1 => "getpackv1",
-            &SingleRequest::GetpackV2 => "getpackv2",
-            &SingleRequest::ListKeysPatterns { .. } => "listkeyspatterns",
-            &SingleRequest::GetCommitData { .. } => "getcommitdata",
+        match *self {
+            SingleRequest::Between { .. } => "between",
+            SingleRequest::Branchmap => "branchmap",
+            SingleRequest::Capabilities => "capabilities",
+            SingleRequest::ClientTelemetry { .. } => "clienttelemetry",
+            SingleRequest::Debugwireargs { .. } => "debugwireargs",
+            SingleRequest::Getbundle(_) => "getbundle",
+            SingleRequest::Heads => "heads",
+            SingleRequest::Hello => "hello",
+            SingleRequest::Listkeys { .. } => "listkeys",
+            SingleRequest::Lookup { .. } => "lookup",
+            SingleRequest::Known { .. } => "known",
+            SingleRequest::Knownnodes { .. } => "knownnodes",
+            SingleRequest::Unbundle { .. } => "unbundle",
+            SingleRequest::UnbundleReplay { .. } => "unbundlereplay",
+            SingleRequest::Gettreepack(_) => "gettreepack",
+            SingleRequest::StreamOutShallow { .. } => "stream_out_shallow",
+            SingleRequest::GetpackV1 => "getpackv1",
+            SingleRequest::GetpackV2 => "getpackv2",
+            SingleRequest::ListKeysPatterns { .. } => "listkeyspatterns",
+            SingleRequest::GetCommitData { .. } => "getcommitdata",
         }
     }
 }

@@ -94,33 +94,33 @@ impl<'a> Bundle2Item<'a> {
 impl<'a> fmt::Debug for Bundle2Item<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use crate::Bundle2Item::*;
-        match self {
-            &Start(ref header) => write!(f, "Bundle2Item::Start({:?})", header),
-            &Changegroup(ref header, _) => write!(f, "Bundle2Item::Changegroup({:?}, ...)", header),
-            &B2xCommonHeads(ref header, _) => {
+        match *self {
+            Start(ref header) => write!(f, "Bundle2Item::Start({:?})", header),
+            Changegroup(ref header, _) => write!(f, "Bundle2Item::Changegroup({:?}, ...)", header),
+            B2xCommonHeads(ref header, _) => {
                 write!(f, "Bundle2Item::B2xCommonHeads({:?}, ...)", header)
             }
-            &B2xInfinitepush(ref header, _) => {
+            B2xInfinitepush(ref header, _) => {
                 write!(f, "Bundle2Item::B2xInfinitepush({:?}, ...)", header)
             }
-            &B2xInfinitepushBookmarks(ref header, _) => write!(
+            B2xInfinitepushBookmarks(ref header, _) => write!(
                 f,
                 "Bundle2Item::B2xInfinitepushBookmarks({:?}, ...)",
                 header
             ),
-            &B2xInfinitepushMutation(ref header, _) => {
+            B2xInfinitepushMutation(ref header, _) => {
                 write!(f, "Bundle2Item::B2xInfinitepushMutation({:?}, ...)", header)
             }
-            &B2xTreegroup2(ref header, _) => {
+            B2xTreegroup2(ref header, _) => {
                 write!(f, "Bundle2Item::B2xTreegroup2({:?}, ...)", header)
             }
-            &B2xRebasePack(ref header, _) => {
+            B2xRebasePack(ref header, _) => {
                 write!(f, "Bundle2Item::B2xRebasePack({:?}, ...)", header)
             }
-            &B2xRebase(ref header, _) => write!(f, "Bundle2Item::B2xRebase({:?}, ...)", header),
-            &Replycaps(ref header, _) => write!(f, "Bundle2Item::Replycaps({:?}, ...)", header),
-            &Pushkey(ref header, _) => write!(f, "Bundle2Item::Pushkey({:?}, ...)", header),
-            &Pushvars(ref header, _) => write!(f, "Bundle2Item::Pushvars({:?}, ...)", header),
+            B2xRebase(ref header, _) => write!(f, "Bundle2Item::B2xRebase({:?}, ...)", header),
+            Replycaps(ref header, _) => write!(f, "Bundle2Item::Replycaps({:?}, ...)", header),
+            Pushkey(ref header, _) => write!(f, "Bundle2Item::Pushkey({:?}, ...)", header),
+            Pushvars(ref header, _) => write!(f, "Bundle2Item::Pushvars({:?}, ...)", header),
         }
     }
 }

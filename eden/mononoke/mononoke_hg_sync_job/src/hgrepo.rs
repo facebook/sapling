@@ -55,7 +55,7 @@ pub async fn list_hg_server_bookmarks(
     let file_path = extension_file
         .path()
         .to_str()
-        .ok_or(Error::msg("Temp file path contains non-unicode chars"))?;
+        .ok_or_else(|| Error::msg("Temp file path contains non-unicode chars"))?;
     fs::write(file_path, LIST_SERVER_BOOKMARKS_EXTENSION)?;
     let ext = format!("extensions.listserverbookmarks={}", file_path);
 
@@ -143,7 +143,7 @@ impl AsyncProcess {
         let stdin = child
             .stdin
             .take()
-            .ok_or(Error::msg("ChildStdin unexpectedly not captured"))?;
+            .ok_or_else(|| Error::msg("ChildStdin unexpectedly not captured"))?;
         Ok(Self { child, stdin })
     }
 
@@ -226,7 +226,7 @@ impl HgPeer {
         let file_path = reports_file
             .path()
             .to_str()
-            .ok_or(Error::msg("Temp file path contains non-unicode chars"))?;
+            .ok_or_else(|| Error::msg("Temp file path contains non-unicode chars"))?;
 
         let extension_file = NamedTempFile::new().context("Error in creating extension file")?;
         // Persisting the file so it does not get deleted before its contents are read.

@@ -833,12 +833,12 @@ impl ChangesetContext {
             // Build the inverse copy map (from to_path to from_path),
             // which includes the manifest entry for the from_path.
             for (from_path, to_paths) in copy_path_map.iter() {
-                let mf_entry = from_path_to_mf_entry
-                    .get(from_path)
-                    .ok_or(MononokeError::from(anyhow!(
+                let mf_entry = from_path_to_mf_entry.get(from_path).ok_or_else(|| {
+                    MononokeError::from(anyhow!(
                         "internal error: cannot find {:?} in parent commit",
                         from_path
-                    )))?;
+                    ))
+                })?;
                 for to_path in to_paths {
                     inv_copy_path_map.insert(to_path, (from_path, mf_entry.clone()));
                 }

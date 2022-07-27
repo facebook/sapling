@@ -21,10 +21,10 @@ impl Cacheable for PathBytes {
 }
 
 fn convert_from_repo_path(path: &RepoPath) -> (Vec<u8>, bool) {
-    match path {
-        &RepoPath::RootPath => (vec![], true),
-        &RepoPath::DirectoryPath(ref dir) => (dir.to_vec(), true),
-        &RepoPath::FilePath(ref file) => (file.to_vec(), false),
+    match *path {
+        RepoPath::RootPath => (vec![], true),
+        RepoPath::DirectoryPath(ref dir) => (dir.to_vec(), true),
+        RepoPath::FilePath(ref file) => (file.to_vec(), false),
     }
 }
 

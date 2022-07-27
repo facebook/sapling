@@ -177,9 +177,9 @@ pub(super) async fn run(
     connection: Connection,
 ) -> Result<RenderStream, Error> {
     let source_repo = get_repo_specifier(matches, ARG_SOURCE_REPO)
-        .ok_or(format_err!("repository is required"))?;
+        .ok_or_else(|| format_err!("repository is required"))?;
     let target_repo = get_repo_specifier(matches, ARG_TARGET_REPO)
-        .ok_or(format_err!("repository is required"))?;
+        .ok_or_else(|| format_err!("repository is required"))?;
 
     let commit_id = get_commit_id(matches)?;
     let id = resolve_commit_id(&connection, &source_repo, &commit_id).await?;

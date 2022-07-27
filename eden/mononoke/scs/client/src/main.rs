@@ -56,7 +56,7 @@ async fn main(fb: FacebookInit) -> ExitCode {
     app = connection::add_args(app);
     app = commands::add_args(app);
     if let Err(e) = commands::dispatch(fb, app.get_matches()).await {
-        let prog_name = env::args().next().unwrap_or("scsc".to_string());
+        let prog_name = env::args().next().unwrap_or_else(|| "scsc".to_string());
         if atty::is(Stream::Stderr) {
             eprintln!(
                 "{}: {} {}",

@@ -59,9 +59,9 @@ impl Datafile {
     }
 
     fn as_slice(&self) -> &[u8] {
-        match self {
-            &Datafile::Loaded(ref data) => data.as_ref(),
-            &Datafile::Mmap(ref mmap) => mmap.as_ref(),
+        match *self {
+            Datafile::Loaded(ref data) => data.as_ref(),
+            Datafile::Mmap(ref mmap) => mmap.as_ref(),
         }
     }
 }

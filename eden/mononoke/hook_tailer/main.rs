@@ -52,8 +52,9 @@ async fn get_changesets<'a>(
 ) -> Result<HashSet<ChangesetId>> {
     let mut ids = matches
         .values_of(inline_arg)
-        .map(|matches| matches.map(|cs| cs.to_string()).collect())
-        .unwrap_or_else(|| vec![]);
+        .map_or_else(Vec::new, |matches| {
+            matches.map(|cs| cs.to_string()).collect()
+        });
 
     if let Some(path) = matches.value_of(file_arg) {
         let file = File::open(path).await?;
@@ -65,7 +66,7 @@ async fn get_changesets<'a>(
 
     let ret = ids
         .into_iter()
-        .map(|cs| csid_resolve(&ctx, repo, cs))
+        .map(|cs| csid_resolve(ctx, repo, cs))
         .collect::<FuturesUnordered<_>>()
         .try_collect()
         .await?;
@@ -84,10 +85,10 @@ fn main(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     block_execute(
-        run_hook_tailer(&ctx, config, repo_name, &matches, &logger),
+        run_hook_tailer(&ctx, config, repo_name, &matches, logger),
         fb,
         "hook_tailer",
-        &logger,
+        logger,
         &matches,
         cmdlib::monitoring::AliveService,
     )
@@ -103,7 +104,7 @@ async fn run_hook_tailer<'a>(
     let config_store = matches.config_store();
     let bookmark_name = matches.value_of("bookmark").unwrap();
     let bookmark = BookmarkName::new(bookmark_name)?;
-    let common_config = cmdlib::args::load_common_config(config_store, &matches)?;
+    let common_config = cmdlib::args::load_common_config(config_store, matches)?;
     let limit = cmdlib::args::get_usize(matches, "limit", 1000);
     let concurrency = cmdlib::args::get_usize(matches, "concurrency", 20);
     let log_interval = cmdlib::args::get_usize(matches, "log_interval", 500);
@@ -137,15 +138,15 @@ async fn run_hook_tailer<'a>(
         None => None,
     };
 
-    let disabled_hooks = cmdlib::args::parse_disabled_hooks_no_repo_prefix(&matches, &logger);
+    let disabled_hooks = cmdlib::args::parse_disabled_hooks_no_repo_prefix(matches, logger);
 
     let repo_factory = RepoFactory::new(matches.environment().clone(), &common_config);
 
     let blobrepo = repo_factory.build(repo_name, config.clone()).await?;
 
     let (exclusions, inclusions) = future::try_join(
-        get_changesets(matches, "exclude", "exclude_file", &ctx, &blobrepo),
-        get_changesets(matches, "changeset", "changeset_file", &ctx, &blobrepo),
+        get_changesets(matches, "exclude", "exclude_file", ctx, &blobrepo),
+        get_changesets(matches, "changeset", "changeset_file", ctx, &blobrepo),
     )
     .await?;
 
@@ -190,7 +191,7 @@ async fn run_hook_tailer<'a>(
             stats_file.write_all(line.as_ref()).await?;
         }
 
-        summary.add_instance(&instance, &logger);
+        summary.add_instance(&instance, logger);
     }
 
     info!(logger, "==== Hooks stats ====");

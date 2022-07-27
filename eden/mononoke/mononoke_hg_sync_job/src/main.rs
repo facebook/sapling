@@ -834,7 +834,7 @@ fn get_path(f: &NamedTempFile) -> Result<String> {
     f.path()
         .to_str()
         .map(|s| s.to_string())
-        .ok_or(Error::msg("non-utf8 file"))
+        .ok_or_else(|| Error::msg("non-utf8 file"))
 }
 
 fn loop_over_log_entries<'a, B>(
@@ -1180,7 +1180,7 @@ async fn run<'a>(
         args::open_sql_with_config::<SqlBookmarksBuilder>(ctx.fb, matches, &resolved_repo.config)?;
 
     let bookmarks = bookmarks.with_repo_id(repo_id);
-    let reporting_handler = build_reporting_handler(&ctx, &scuba_sample, retry_num, &bookmarks);
+    let reporting_handler = build_reporting_handler(ctx, &scuba_sample, retry_num, &bookmarks);
     let lock_on_failure = match job_config.as_ref().map(|c| c.lock_on_failure) {
         Some(lock_on_failure) => lock_on_failure,
         None => matches.is_present("lock-on-failure"),
@@ -1231,7 +1231,7 @@ async fn run<'a>(
             if let Some(log_entry) = maybe_log_entry {
                 let (stats, res) = async {
                     let batches = bundle_preparer
-                        .prepare_batches(&ctx, vec![log_entry.clone()])
+                        .prepare_batches(ctx, vec![log_entry.clone()])
                         .await?;
                     let mut combined_entries = bundle_preparer
                         .prepare_bundles(ctx.clone(), batches, &mut overlay)
@@ -1239,7 +1239,7 @@ async fn run<'a>(
 
                     let combined_entry = combined_entries.remove(0);
                     sync_single_combined_entry(
-                        &ctx,
+                        ctx,
                         &combined_entry,
                         &hg_repo,
                         base_retry_delay_ms,
@@ -1349,7 +1349,7 @@ async fn run<'a>(
                         // would result in an error. Let's try to detect this case and
                         // fix the first batch if possible.
                         if let Some(batch) = first {
-                            first = maybe_adjust_batch(ctx, batch, &overlay)
+                            first = maybe_adjust_batch(ctx, batch, overlay)
                                 .map_err(|cause| AnonymousError { cause })?;
                             seen_first_batch = true;
                         }

@@ -84,8 +84,8 @@ impl OuterState {
     }
 
     pub fn payload_frame(&self, data: BytesMut) -> OuterFrame {
-        match self {
-            &OuterState::Payload {
+        match *self {
+            OuterState::Payload {
                 ref part_type,
                 ref part_id,
             } => OuterFrame::Payload {
@@ -93,7 +93,7 @@ impl OuterState {
                 part_id: *part_id,
                 payload: data.freeze(),
             },
-            &OuterState::DiscardPayload => OuterFrame::Discard,
+            OuterState::DiscardPayload => OuterFrame::Discard,
             _ => panic!("payload_frame called for state without payloads"),
         }
     }

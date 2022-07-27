@@ -211,9 +211,9 @@ async fn acl_check(
         .map_err(LfsServerContextErrorKind::PermissionCheckFailed)?;
 
     if !acl_check && enforce_authorization {
-        return Err(LfsServerContextErrorKind::Forbidden.into());
+        Err(LfsServerContextErrorKind::Forbidden)
     } else {
-        return Ok(());
+        Ok(())
     }
 }
 
@@ -312,7 +312,7 @@ impl RepositoryRequestContext {
         let headers = HeaderMap::try_borrow_from(state);
         let host = get_host_header(&headers)?;
 
-        let lfs_ctx = LfsServerContext::borrow_from(&state);
+        let lfs_ctx = LfsServerContext::borrow_from(state);
         lfs_ctx.request(ctx, repository, identities, host).await
     }
 
@@ -420,12 +420,11 @@ pub struct UriBuilder {
 
 impl UriBuilder {
     fn pick_uri(&self) -> Result<&BaseUri, ErrorKind> {
-        Ok(self
-            .server
+        self.server
             .self_uris
             .iter()
             .find(|&x| x.authority.host() == self.host)
-            .ok_or_else(|| ErrorKind::HostNotAllowlisted(self.host.clone()))?)
+            .ok_or_else(|| ErrorKind::HostNotAllowlisted(self.host.clone()))
     }
 
     pub fn upload_uri(&self, object: &RequestObject) -> Result<Uri, ErrorKind> {
@@ -520,8 +519,8 @@ impl BaseUri {
         let mut p = String::new();
         if let Some(ref path_and_query) = self.path_and_query {
             write!(&mut p, "{}", path_and_query)?;
-            if !path_and_query.path().ends_with("/") {
-                write!(&mut p, "{}", "/")?;
+            if !path_and_query.path().ends_with('/') {
+                write!(&mut p, "/")?;
             }
         }
         p.write_fmt(args)?;
@@ -646,7 +645,7 @@ mod test {
     }
 
     fn content_id() -> Result<ContentId, Error> {
-        Ok(ContentId::from_str(ONES_HASH)?)
+        ContentId::from_str(ONES_HASH)
     }
 
     fn oid() -> Result<Sha256, Error> {
@@ -792,7 +791,7 @@ mod test {
         )?;
         assert_eq!(
             b.upstream_batch_uri()?.map(|uri| uri.to_string()),
-            Some(format!("http://bar.com/objects/batch")),
+            Some("http://bar.com/objects/batch".to_string()),
         );
         Ok(())
     }
@@ -806,7 +805,7 @@ mod test {
         )?;
         assert_eq!(
             b.upstream_batch_uri()?.map(|uri| uri.to_string()),
-            Some(format!("http://bar.com/objects/batch")),
+            Some("http://bar.com/objects/batch".to_string()),
         );
         Ok(())
     }
@@ -820,7 +819,7 @@ mod test {
         )?;
         assert_eq!(
             b.upstream_batch_uri()?.map(|uri| uri.to_string()),
-            Some(format!("http://bar.com/foo/objects/batch")),
+            Some("http://bar.com/foo/objects/batch".to_string()),
         );
         Ok(())
     }
@@ -834,7 +833,7 @@ mod test {
         )?;
         assert_eq!(
             b.upstream_batch_uri()?.map(|uri| uri.to_string()),
-            Some(format!("http://bar.com/foo/objects/batch")),
+            Some("http://bar.com/foo/objects/batch".to_string()),
         );
         Ok(())
     }

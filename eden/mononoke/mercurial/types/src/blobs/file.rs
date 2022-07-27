@@ -229,9 +229,11 @@ impl File {
             .get(VERSION)
             .and_then(|s| str::from_utf8(*s).ok())
             .map(|s| s.to_string())
-            .ok_or(ErrorKind::IncorrectLfsFileContent(
-                "VERSION mandatory field parsing failed in Lfs file content".to_string(),
-            ))?;
+            .ok_or_else(|| {
+                ErrorKind::IncorrectLfsFileContent(
+                    "VERSION mandatory field parsing failed in Lfs file content".to_string(),
+                )
+            })?;
 
         let oid = contents
             .get(OID)
@@ -239,7 +241,7 @@ impl File {
             .and_then(|s| {
                 let prefix_len = SHA256_PREFIX.len();
 
-                let check = prefix_len <= s.len() && &s[..prefix_len].as_bytes() == &SHA256_PREFIX;
+                let check = prefix_len <= s.len() && s[..prefix_len].as_bytes() == SHA256_PREFIX;
                 if check {
                     Some(s[prefix_len..].to_string())
                 } else {
@@ -247,16 +249,20 @@ impl File {
                 }
             })
             .and_then(|s| Sha256::from_str(&s).ok())
-            .ok_or(ErrorKind::IncorrectLfsFileContent(
-                "OID mandatory field parsing failed in Lfs file content".to_string(),
-            ))?;
+            .ok_or_else(|| {
+                ErrorKind::IncorrectLfsFileContent(
+                    "OID mandatory field parsing failed in Lfs file content".to_string(),
+                )
+            })?;
         let size = contents
             .get(SIZE)
             .and_then(|s| str::from_utf8(*s).ok())
             .and_then(|s| s.parse::<u64>().ok())
-            .ok_or(ErrorKind::IncorrectLfsFileContent(
-                "SIZE mandatory field parsing failed in Lfs file content".to_string(),
-            ))?;
+            .ok_or_else(|| {
+                ErrorKind::IncorrectLfsFileContent(
+                    "SIZE mandatory field parsing failed in Lfs file content".to_string(),
+                )
+            })?;
         Ok((version, oid, size))
     }
 

@@ -405,9 +405,8 @@ where
     let try_send_instream =
         |wrapped_send: &mut Option<oneshot::Sender<_>>, instream: BytesStream<S>| -> Result<()> {
             let send = wrapped_send.take();
-            let send = send.ok_or(Error::msg(
-                "internal error: tried to send input stream twice",
-            ))?;
+            let send =
+                send.ok_or_else(|| Error::msg("internal error: tried to send input stream twice"))?;
             match send.send(instream) {
                 Ok(_) => Ok(()), // Finished
                 Err(_) => bail!("internal error while sending input stream back"),
@@ -557,9 +556,9 @@ where
             match res_stream_event {
                 Ok(StreamEvent::Next(bundle2item)) => Ok(Some(bundle2item)),
                 Ok(StreamEvent::Done(remainder)) => {
-                    let send = send.take().ok_or(ErrorKind::Bundle2Invalid(
-                        "stream remainder was sent twice".into(),
-                    ))?;
+                    let send = send.take().ok_or_else(|| {
+                        ErrorKind::Bundle2Invalid("stream remainder was sent twice".into())
+                    })?;
                     // Receiving end will deal with failures
                     let _ = send.send(remainder);
                     Ok(None)

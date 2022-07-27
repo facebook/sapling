@@ -77,23 +77,23 @@ impl Display for Required {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::Required::*;
 
-        let s = match self {
-            &Store => "store",
-            &Fncache => "fncache",
-            &Dotencode => "dotencode",
-            &Generaldelta => "generaldelta",
-            &Treemanifest => "treemanifest",
-            &Manifestv2 => "manifestv2",
-            &Usefncache => "usefncache",
-            &Revlogv1 => "revlogv1",
-            &Largefiles => "largefiles",
-            &Lz4revlog => "lz4revlog",
-            &StoreRequirements => "storerequirements",
-            &SqlDirstate => "sqldirstate",
-            &HgSql => "hgsql",
-            &TreeDirstate => "treedirstate",
-            &TreeState => "treestate",
-            &LFS => "lfs",
+        let s = match *self {
+            Store => "store",
+            Fncache => "fncache",
+            Dotencode => "dotencode",
+            Generaldelta => "generaldelta",
+            Treemanifest => "treemanifest",
+            Manifestv2 => "manifestv2",
+            Usefncache => "usefncache",
+            Revlogv1 => "revlogv1",
+            Largefiles => "largefiles",
+            Lz4revlog => "lz4revlog",
+            StoreRequirements => "storerequirements",
+            SqlDirstate => "sqldirstate",
+            HgSql => "hgsql",
+            TreeDirstate => "treedirstate",
+            TreeState => "treestate",
+            LFS => "lfs",
         };
         write!(fmt, "{}", s)
     }
@@ -141,9 +141,8 @@ impl FromStr for StoreRequired {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<StoreRequired> {
-        match s {
-            unk => Err(ErrorKind::UnknownReq(unk.into()).into()),
-        }
+        let unk = s;
+        Err(ErrorKind::UnknownReq(unk.into()).into())
     }
 }
 

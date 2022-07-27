@@ -392,15 +392,15 @@ pub enum ChangegroupApplyResult {
 
 impl fmt::Display for ChangegroupApplyResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            &ChangegroupApplyResult::Success { heads_num_diff } => {
+        match *self {
+            ChangegroupApplyResult::Success { heads_num_diff } => {
                 if heads_num_diff >= 0 {
                     write!(f, "{}", 1 + heads_num_diff)
                 } else {
                     write!(f, "{}", -1 + heads_num_diff)
                 }
             }
-            &ChangegroupApplyResult::Error => write!(f, "0"),
+            ChangegroupApplyResult::Error => write!(f, "0"),
         }
     }
 }

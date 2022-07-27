@@ -141,10 +141,10 @@ where
 {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.advance_parsing_int()?;
-        let chunk_size = match &self.state {
-            &ParsingInt(_) => panic!("expected to get pass parsing int state"),
-            &ReadingChunk(ref chunk_size) => *chunk_size,
-            &Done => return Ok(0),
+        let chunk_size = match self.state {
+            ParsingInt(_) => panic!("expected to get pass parsing int state"),
+            ReadingChunk(ref chunk_size) => *chunk_size,
+            Done => return Ok(0),
         };
 
         let buf_size = if buf.len() > chunk_size {
@@ -167,10 +167,10 @@ where
 {
     fn fill_buf(&mut self) -> io::Result<&[u8]> {
         self.advance_parsing_int()?;
-        let chunk_size = match &self.state {
-            &ParsingInt(_) => panic!("expected to get pass parsing int state"),
-            &ReadingChunk(ref chunk_size) => *chunk_size,
-            &Done => return Ok(&[]),
+        let chunk_size = match self.state {
+            ParsingInt(_) => panic!("expected to get pass parsing int state"),
+            ReadingChunk(ref chunk_size) => *chunk_size,
+            Done => return Ok(&[]),
         };
 
         let buf = self.bufread.fill_buf()?;

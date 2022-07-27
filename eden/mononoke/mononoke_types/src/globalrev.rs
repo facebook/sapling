@@ -44,7 +44,7 @@ impl Globalrev {
     pub fn parse_svnrev(svnrev: &str) -> Result<u64> {
         let at_pos = svnrev
             .rfind('@')
-            .ok_or(Error::msg("Wrong convert_revision value"))?;
+            .ok_or_else(|| Error::msg("Wrong convert_revision value"))?;
         let result = svnrev[1 + at_pos..].parse::<u64>()?;
         Ok(result)
     }

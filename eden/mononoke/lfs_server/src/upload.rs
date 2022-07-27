@@ -142,7 +142,7 @@ fn find_actions(
         Transfer::Basic => objects
             .into_iter()
             .find(|o| o.object == *object)
-            .ok_or(ErrorKind::UpstreamMissingObject(*object).into())
+            .ok_or_else(|| ErrorKind::UpstreamMissingObject(*object).into())
             .and_then(|o| match o.status {
                 ObjectStatus::Ok {
                     authenticated: false,

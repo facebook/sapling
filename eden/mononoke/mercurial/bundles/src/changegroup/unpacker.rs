@@ -86,9 +86,9 @@ impl Part {
     ///
     /// When self does not contain a Section.
     pub fn section(&self) -> &Section {
-        match self {
-            &Part::CgChunk(ref section, _) => section,
-            &Part::SectionEnd(ref section) => section,
+        match *self {
+            Part::CgChunk(ref section, _) => section,
+            Part::SectionEnd(ref section) => section,
             _ => panic!("this Part does not contain a Section"),
         }
     }
@@ -296,7 +296,7 @@ impl CgUnpacker {
             CgVersion::Cg3Version => {
                 let bits = buf.drain_u16();
                 let flags = RevFlags::from_bits(bits)
-                    .ok_or(format_err!("unknown revlog flags: {}", bits))?;
+                    .ok_or_else(|| format_err!("unknown revlog flags: {}", bits))?;
                 Some(flags)
             }
         };

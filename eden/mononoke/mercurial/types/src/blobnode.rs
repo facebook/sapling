@@ -40,10 +40,10 @@ impl HgParents {
     }
 
     pub fn get_nodes(&self) -> (Option<HgNodeHash>, Option<HgNodeHash>) {
-        match self {
-            &HgParents::None => (None, None),
-            &HgParents::One(p1) => (Some(p1), None),
-            &HgParents::Two(p1, p2) => (Some(p1), Some(p2)),
+        match *self {
+            HgParents::None => (None, None),
+            HgParents::One(p1) => (Some(p1), None),
+            HgParents::Two(p1, p2) => (Some(p1), Some(p2)),
         }
     }
 }
@@ -148,11 +148,11 @@ impl HgBlobNode {
 fn hg_node_id_hash_context(parents: &HgParents) -> Context {
     let null = hash::NULL;
 
-    let (h1, h2) = match &parents {
-        &HgParents::None => (&null, &null),
-        &HgParents::One(ref p1) => (&null, &p1.0),
-        &HgParents::Two(ref p1, ref p2) if p1 > p2 => (&p2.0, &p1.0),
-        &HgParents::Two(ref p1, ref p2) => (&p1.0, &p2.0),
+    let (h1, h2) = match parents {
+        HgParents::None => (&null, &null),
+        HgParents::One(ref p1) => (&null, &p1.0),
+        HgParents::Two(ref p1, ref p2) if p1 > p2 => (&p2.0, &p1.0),
+        HgParents::Two(ref p1, ref p2) => (&p1.0, &p2.0),
     };
 
     let mut ctxt = Context::new();

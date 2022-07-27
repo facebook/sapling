@@ -385,7 +385,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .to_socket_addrs()
                 .context(Error::msg("Invalid Listener Address"))?
                 .next()
-                .ok_or(Error::msg("Invalid Socket Address"))?;
+                .ok_or_else(|| Error::msg("Invalid Socket Address"))?;
 
             let listener = TcpListener::bind(&addr)
                 .await

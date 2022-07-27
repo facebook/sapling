@@ -720,7 +720,7 @@ impl Repo {
             .blob_repo()
             .get_generation_number(ctx.clone(), *cs_id)
             .await?;
-        maybe_gen_num.ok_or(format_err!("gen num for {} not found", cs_id))
+        maybe_gen_num.ok_or_else(|| format_err!("gen num for {} not found", cs_id))
     }
 }
 
@@ -1526,13 +1526,9 @@ impl RepoContext {
         )?;
 
         let specifier = specifier.into();
-        let changeset =
-            self.resolve_specifier(specifier)
-                .await?
-                .ok_or(MononokeError::InvalidRequest(format!(
-                    "unknown commit specifier {}",
-                    specifier
-                )))?;
+        let changeset = self.resolve_specifier(specifier).await?.ok_or_else(|| {
+            MononokeError::InvalidRequest(format!("unknown commit specifier {}", specifier))
+        })?;
 
         let commit_syncer = CommitSyncer::new(
             &self.ctx,

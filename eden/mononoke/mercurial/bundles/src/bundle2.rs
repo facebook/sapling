@@ -56,9 +56,9 @@ impl<I, S> StreamEvent<I, S> {
 
 impl<I, S> Debug for StreamEvent<I, S> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            &StreamEvent::Next(_) => write!(f, "Next(...)"),
-            &StreamEvent::Done(_) => write!(f, "Done(...)"),
+        match *self {
+            StreamEvent::Next(_) => write!(f, "Next(...)"),
+            StreamEvent::Done(_) => write!(f, "Done(...)"),
         }
     }
 }
@@ -107,12 +107,12 @@ where
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::CurrentStream::*;
 
-        let s = match self {
-            &Start(_) => "start",
-            &Outer(_) => "outer",
-            &Inner(_) => "inner",
-            &Invalid => "invalid",
-            &End => "end",
+        let s = match *self {
+            Start(_) => "start",
+            Outer(_) => "outer",
+            Inner(_) => "inner",
+            Invalid => "invalid",
+            End => "end",
         };
         write!(fmt, "{}", s)
     }
@@ -123,14 +123,14 @@ where
     R: AsyncRead + BufRead + Debug + 'static + Send,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            &CurrentStream::Start(ref framed_stream) => write!(f, "Start({:?})", framed_stream),
-            &CurrentStream::Outer(ref outer_stream) => write!(f, "Outer({:?})", outer_stream),
+        match *self {
+            CurrentStream::Start(ref framed_stream) => write!(f, "Start({:?})", framed_stream),
+            CurrentStream::Outer(ref outer_stream) => write!(f, "Outer({:?})", outer_stream),
             // InnerStream currently doesn't implement Debug because
             // part_inner::BoolFuture doesn't implement Debug.
-            &CurrentStream::Inner(_) => write!(f, "Inner(inner_stream)"),
-            &CurrentStream::Invalid => write!(f, "Invalid"),
-            &CurrentStream::End => write!(f, "End"),
+            CurrentStream::Inner(_) => write!(f, "Inner(inner_stream)"),
+            CurrentStream::Invalid => write!(f, "Invalid"),
+            CurrentStream::End => write!(f, "End"),
         }
     }
 }

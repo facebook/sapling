@@ -1116,7 +1116,7 @@ impl CaseConflictTrie {
 
                 self.children
                     .entry(element.clone())
-                    .or_insert(CaseConflictTrie::new())
+                    .or_insert_with(CaseConflictTrie::new)
                     .add(iter)
             }
         }

@@ -49,23 +49,17 @@ impl FileNodeIdPointer {
         p1: &Option<HgFileNodeId>,
         p2: &Option<HgFileNodeId>,
     ) -> Self {
-        let p1 = p1
-            .as_ref()
-            .map(HgFileNodeId::to_hex)
-            .unwrap_or(AsciiString::new());
+        let p1 = p1.as_ref().map(HgFileNodeId::to_hex).unwrap_or_default();
 
-        let p2 = p2
-            .as_ref()
-            .map(HgFileNodeId::to_hex)
-            .unwrap_or(AsciiString::new());
+        let p2 = p2.as_ref().map(HgFileNodeId::to_hex).unwrap_or_default();
 
-        let (copy_from_path, copy_from_filenode) = copy_from
-            .as_ref()
-            .map(|(mpath, fnid)| {
-                let path_hash = mpath.get_path_hash();
-                (path_hash.to_hex(), fnid.to_hex())
-            })
-            .unwrap_or((AsciiString::new(), AsciiString::new()));
+        let (copy_from_path, copy_from_filenode) =
+            copy_from
+                .as_ref()
+                .map_or((AsciiString::new(), AsciiString::new()), |(mpath, fnid)| {
+                    let path_hash = mpath.get_path_hash();
+                    (path_hash.to_hex(), fnid.to_hex())
+                });
 
         // Put all the deterministic parts together with a separator that cannot show up in them
         // (those are all hex digests or empty strings), then hash them. We'd like to use those

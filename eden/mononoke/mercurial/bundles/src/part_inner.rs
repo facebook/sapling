@@ -98,7 +98,10 @@ pub fn validate_header(header: PartHeader) -> Result<Option<PartHeader>> {
 }
 
 pub fn get_cg_version(header: PartHeader, field: &str) -> Result<changegroup::unpacker::CgVersion> {
-    let version = header.mparams().get(field).or(header.aparams().get(field));
+    let version = header
+        .mparams()
+        .get(field)
+        .or_else(|| header.aparams().get(field));
     let err = ErrorKind::CgDecode(format!(
         "No changegroup version in Part Header in field {}",
         field
@@ -145,8 +148,8 @@ pub(crate) fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
         .map(OuterFrame::get_payload as fn(OuterFrame) -> Bytes);
     let (wrapped_stream, remainder) = wrapped_stream.return_remainder();
 
-    let bundle2item = match header.part_type() {
-        &PartHeaderType::Changegroup => {
+    let bundle2item = match *header.part_type() {
+        PartHeaderType::Changegroup => {
             let cg2_stream = wrapped_stream.decode(get_cg_unpacker(
                 logger.new(o!("stream" => "changegroup")),
                 header.clone(),
@@ -154,11 +157,11 @@ pub(crate) fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
             ));
             OldBundle2Item::Changegroup(header, cg2_stream.boxify())
         }
-        &PartHeaderType::B2xCommonHeads => {
+        PartHeaderType::B2xCommonHeads => {
             let heads_stream = wrapped_stream.decode(pushrebase::CommonHeadsUnpacker::new());
             OldBundle2Item::B2xCommonHeads(header, heads_stream.boxify())
         }
-        &PartHeaderType::B2xInfinitepush => {
+        PartHeaderType::B2xInfinitepush => {
             let cg2_stream = wrapped_stream.decode(get_cg_unpacker(
                 logger.new(o!("stream" => "b2xinfinitepush")),
                 header.clone(),
@@ -166,17 +169,17 @@ pub(crate) fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
             ));
             OldBundle2Item::B2xInfinitepush(header, cg2_stream.boxify())
         }
-        &PartHeaderType::B2xInfinitepushBookmarks => {
+        PartHeaderType::B2xInfinitepushBookmarks => {
             let bookmarks_stream =
                 wrapped_stream.decode(infinitepush::InfinitepushBookmarksUnpacker::new());
             OldBundle2Item::B2xInfinitepushBookmarks(header, bookmarks_stream.boxify())
         }
-        &PartHeaderType::B2xInfinitepushMutation => {
+        PartHeaderType::B2xInfinitepushMutation => {
             let mutation_stream =
                 wrapped_stream.decode(infinitepush::InfinitepushMutationUnpacker::new());
             OldBundle2Item::B2xInfinitepushMutation(header, mutation_stream.boxify())
         }
-        &PartHeaderType::B2xTreegroup2 => {
+        PartHeaderType::B2xTreegroup2 => {
             let wirepack_stream = wrapped_stream.decode(wirepack::unpacker::new(
                 logger.new(o!("stream" => "wirepack")),
                 // Mercurial only knows how to send trees at the moment.
@@ -185,7 +188,7 @@ pub(crate) fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
             ));
             OldBundle2Item::B2xTreegroup2(header, wirepack_stream.boxify())
         }
-        &PartHeaderType::Replycaps => {
+        PartHeaderType::Replycaps => {
             let caps = wrapped_stream
                 .decode(capabilities::CapabilitiesUnpacker)
                 .collect()
@@ -195,7 +198,7 @@ pub(crate) fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
                 });
             OldBundle2Item::Replycaps(header, caps.boxify())
         }
-        &PartHeaderType::B2xRebasePack => {
+        PartHeaderType::B2xRebasePack => {
             let wirepack_stream = wrapped_stream.decode(wirepack::unpacker::new(
                 logger.new(o!("stream" => "wirepack")),
                 // Mercurial only knows how to send trees at the moment.
@@ -204,7 +207,7 @@ pub(crate) fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
             ));
             OldBundle2Item::B2xRebasePack(header, wirepack_stream.boxify())
         }
-        &PartHeaderType::B2xRebase => {
+        PartHeaderType::B2xRebase => {
             let cg2_stream = wrapped_stream.decode(get_cg_unpacker(
                 logger.new(o!("stream" => "bx2rebase")),
                 header.clone(),
@@ -212,13 +215,13 @@ pub(crate) fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
             ));
             OldBundle2Item::B2xRebase(header, cg2_stream.boxify())
         }
-        &PartHeaderType::Pushkey => {
+        PartHeaderType::Pushkey => {
             // Pushkey part has an empty part payload, but we still need to "parse" it
             // Otherwise polling remainder stream may fail.
             let empty = wrapped_stream.decode(EmptyUnpacker).for_each(|_| Ok(()));
             OldBundle2Item::Pushkey(header, Box::new(empty))
         }
-        &PartHeaderType::Pushvars => {
+        PartHeaderType::Pushvars => {
             // Pushvars part has an empty part payload, but we still need to "parse" it
             // Otherwise polling remainder stream may fail.
             let empty = wrapped_stream.decode(EmptyUnpacker).for_each(|_| Ok(()));

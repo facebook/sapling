@@ -78,10 +78,10 @@ fn decode_stream_params(
         let mut key_val = header.splitn(2, |c| *c == b'=');
         let key = key_val
             .next()
-            .ok_or(ErrorKind::Bundle2Decode("bad stream level key".into()))?;
+            .ok_or_else(|| ErrorKind::Bundle2Decode("bad stream level key".into()))?;
         let val = key_val
             .next()
-            .ok_or(ErrorKind::Bundle2Decode("bad stream level val".into()))?;
+            .ok_or_else(|| ErrorKind::Bundle2Decode("bad stream level val".into()))?;
         let key_decoded = percent_encoding::percent_decode(key);
         let val_decoded = percent_encoding::percent_decode(val);
         let key_str = key_decoded.decode_utf8().with_context(|| {

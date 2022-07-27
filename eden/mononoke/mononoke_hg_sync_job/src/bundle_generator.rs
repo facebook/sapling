@@ -206,8 +206,7 @@ impl FilenodeVerifier {
     ) -> impl NewFuture<Output = Result<(), Error>> {
         let lfs_blobs: Vec<(Sha256, u64)> = filenode_entries
             .values()
-            .map(|entries| entries.iter())
-            .flatten()
+            .flat_map(|entries| entries.iter())
             .filter_map(|entry| {
                 entry
                     .maybe_get_lfs_pointer()
@@ -351,14 +350,8 @@ fn create_bundle_impl(
 
                 bundle2_parts.push(try_boxfuture!(parts::bookmark_pushkey_part(
                     bookmark.to_string(),
-                    format!(
-                        "{}",
-                        maybe_from.map(|x| x.to_string()).unwrap_or(String::new())
-                    ),
-                    format!(
-                        "{}",
-                        maybe_to.map(|x| x.to_string()).unwrap_or(String::new())
-                    ),
+                    maybe_from.map(|x| x.to_string()).unwrap_or_default(),
+                    maybe_to.map(|x| x.to_string()).unwrap_or_default(),
                 )));
 
                 let compression = None;

@@ -161,7 +161,7 @@ pub trait MegarepoOp {
             None
         };
 
-        let p1 = maybe_deletion_commit.unwrap_or(old_target_cs.id());
+        let p1 = maybe_deletion_commit.unwrap_or_else(|| old_target_cs.id());
 
         let mut parents = vec![p1];
         // Verify that none of the files that will be merged in collides
@@ -177,7 +177,7 @@ pub trait MegarepoOp {
             parents,
             message
                 .clone()
-                .unwrap_or("target config change".to_string()),
+                .unwrap_or_else(|| "target config change".to_string()),
             Default::default(),
         );
         state
@@ -263,7 +263,7 @@ pub trait MegarepoOp {
             author_date: DateTime::now(),
             committer: None,
             committer_date: None,
-            message: message.unwrap_or("target config change".to_string()),
+            message: message.unwrap_or_else(|| "target config change".to_string()),
             extra: SortedVectorMap::new(),
             file_changes: file_changes.into_iter().collect(),
             is_snapshot: false,

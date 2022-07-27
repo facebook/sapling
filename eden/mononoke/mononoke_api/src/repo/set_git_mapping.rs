@@ -35,7 +35,7 @@ impl RepoContext {
         // If there's a hggit extra, and it matches the derived commit, accept even if you
         // don't have permission
 
-        if extras.get(HGGIT_MARKER_EXTRA).map(Vec::as_slice) == Some(&HGGIT_MARKER_VALUE) {
+        if extras.get(HGGIT_MARKER_EXTRA).map(Vec::as_slice) == Some(HGGIT_MARKER_VALUE) {
             if let Some(hggit_sha1) = extras.remove(HGGIT_COMMIT_ID_EXTRA) {
                 // We can't derive right now, so always do the permission check for
                 // overriding in the case of mismatch.

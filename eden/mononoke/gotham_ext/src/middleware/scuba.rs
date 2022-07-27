@@ -168,7 +168,9 @@ where
 {
     if let Some(header_val) = headers.get(header) {
         if let Ok(header_val) = header_val.to_str() {
-            scuba.entry(scuba_key).or_insert(convert(header_val).into());
+            scuba
+                .entry(scuba_key)
+                .or_insert_with(|| convert(header_val).into());
             return Some(header_val);
         }
     }
