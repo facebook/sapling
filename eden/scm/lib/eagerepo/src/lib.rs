@@ -27,5 +27,6 @@ mod errors;
 
 pub use api::edenapi_from_config;
 pub use eager_repo::EagerRepo;
+pub use eager_repo::EagerRepoStore;
 pub use errors::Error;
 pub type Result<T> = std::result::Result<T, Error>;

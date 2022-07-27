@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use dag::ops::DagAddHeads;
 use dag::ops::DagPersistent;
@@ -19,6 +20,7 @@ use dag::VertexListWithOptions;
 use metalog::CommitOptions;
 use metalog::MetaLog;
 use minibytes::Bytes;
+use parking_lot::RwLock;
 use zstore::Id20;
 use zstore::Zstore;
 
@@ -33,22 +35,7 @@ use crate::Result;
 ///
 /// ## SHA1 Key/Value Content Store
 ///
-/// File, tree, commit contents.
-///
-/// SHA1 is verifiable. For HG this means `sorted([p1, p2])` and filelog rename
-/// metadata is included in values.
-///
-/// This is meant to be mainly a content store. We currently "abuse" it to
-/// answer filelog history. The filelog (filenode) and linknodes are
-/// considered tech-debt and we hope to replace them with fastlog APIs which
-/// serve sub-graph with `(commit, path)` as graph nodes.
-///
-/// We don't use `(p1, p2)` for commit parents because it loses the parent
-/// order. The DAG storage is used to answer commit parents instead.
-///
-/// Currently backed by [`zstore::Zstore`]. For simplicity, we don't use the
-/// zstore delta-compress features, and don't store different types separately.
-///
+/// See [`EagerRepoStore`].
 ///
 /// ## Commit Graph
 ///
@@ -68,8 +55,61 @@ use crate::Result;
 /// for atomic metadata changes.
 pub struct EagerRepo {
     dag: Dag,
-    store: Zstore,
+    store: EagerRepoStore,
     metalog: MetaLog,
+}
+
+/// Storage used by `EagerRepo`. Wrapped by `Arc<RwLock>` for easier sharing.
+///
+/// File, tree, commit contents.
+///
+/// SHA1 is verifiable. For HG this means `sorted([p1, p2])` and filelog rename
+/// metadata is included in values.
+///
+/// This is meant to be mainly a content store. We currently "abuse" it to
+/// answer filelog history. The filelog (filenode) and linknodes are
+/// considered tech-debt and we hope to replace them with fastlog APIs which
+/// serve sub-graph with `(commit, path)` as graph nodes.
+///
+/// We don't use `(p1, p2)` for commit parents because it loses the parent
+/// order. The DAG storage is used to answer commit parents instead.
+///
+/// Currently backed by [`zstore::Zstore`]. For simplicity, we don't use the
+/// zstore delta-compress features, and don't store different types separately.
+#[derive(Clone)]
+pub struct EagerRepoStore {
+    inner: Arc<RwLock<Zstore>>,
+}
+
+impl EagerRepoStore {
+    /// Open an [`EagerRepoStore`] at the given directory.
+    /// Create an empty store on demand.
+    pub fn open(dir: &Path) -> Result<Self> {
+        let inner = Zstore::open(dir)?;
+        Ok(Self {
+            inner: Arc::new(RwLock::new(inner)),
+        })
+    }
+
+    /// Flush changes to disk.
+    pub fn flush(&self) -> Result<()> {
+        let mut inner = self.inner.write();
+        inner.flush()?;
+        Ok(())
+    }
+
+    /// Insert SHA1 blob to zstore.
+    /// In hg's case, the `data` is `min(p1, p2) + max(p1, p2) + text`.
+    pub fn add_sha1_blob(&self, data: &[u8], bases: &[Id20]) -> Result<Id20> {
+        let mut inner = self.inner.write();
+        Ok(inner.insert(data, bases)?)
+    }
+
+    /// Read SHA1 blob from zstore.
+    pub fn get_sha1_blob(&self, id: Id20) -> Result<Option<Bytes>> {
+        let inner = self.inner.read();
+        Ok(inner.get(id)?)
+    }
 }
 
 impl EagerRepo {
@@ -78,7 +118,7 @@ impl EagerRepo {
         // Attempt to match directory layout of a real client repo.
         let dir = dir.join(".hg/store");
         let dag = Dag::open(dir.join("segments/v1"))?;
-        let store = Zstore::open(dir.join("hgcommits/v1"))?;
+        let store = EagerRepoStore::open(&dir.join("hgcommits/v1"))?;
         let metalog = MetaLog::open(dir.join("metalog"), None)?;
         let repo = Self {
             dag,
@@ -143,12 +183,12 @@ impl EagerRepo {
     /// In hg's case, the `data` is `min(p1, p2) + max(p1, p2) + text`.
     pub fn add_sha1_blob(&mut self, data: &[u8]) -> Result<Id20> {
         // SPACE: This does not utilize zstore's delta features to save space.
-        Ok(self.store.insert(data, &[])?)
+        self.store.add_sha1_blob(data, &[])
     }
 
     /// Read SHA1 blob from zstore.
     pub fn get_sha1_blob(&self, id: Id20) -> Result<Option<Bytes>> {
-        Ok(self.store.get(id)?)
+        self.store.get_sha1_blob(id)
     }
 
     /// Insert a commit. Return the commit hash.
@@ -224,6 +264,11 @@ impl EagerRepo {
     /// Obtain a reference to the metalog.
     pub fn metalog(&self) -> &MetaLog {
         &self.metalog
+    }
+
+    /// Obtain an instance to the store.
+    pub fn store(&self) -> EagerRepoStore {
+        self.store.clone()
     }
 }
 
