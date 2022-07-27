@@ -5,27 +5,24 @@ test rust clone
   $ configure modern
   $ setconfig clone.use-rust=True
   $ setconfig remotefilelog.reponame=test-repo
+  $ setconfig format.use-eager-repo=True
   $ export LOG=hgcommands::commands::clone
 
 
  Prepare Source:
 
-  $ newremoterepo repo1
-  $ setconfig paths.default=test:e1
+  $ newrepo e1
   $ drawdag << 'EOS'
-  > E
+  > E  # bookmark master = E
   > |
   > D
   > |
-  > C
+  > C  # bookmark stable = C
   > |
   > B
   > |
   > A
   > EOS
-
-  $ hg push -r $E --to master --create -q
-  $ hg push -r $C --to stable --create -q
 
 Test that nonsupported options fallback to python:
 
