@@ -14,6 +14,7 @@ use crate::HookManager;
 use anyhow::Error;
 use fbinit::FacebookInit;
 use metaconfig_types::RepoConfig;
+use permission_checker::AclProvider;
 use std::collections::HashSet;
 
 #[cfg(fbcode_build)]
@@ -32,6 +33,7 @@ enum LoadedRustHook {
 
 pub async fn load_hooks(
     fb: FacebookInit,
+    acl_provider: &dyn AclProvider,
     hook_manager: &mut HookManager,
     config: &RepoConfig,
     disabled_hooks: &HashSet<String>,
@@ -52,6 +54,7 @@ pub async fn load_hooks(
                 fb,
                 &hook.name,
                 &hook.config,
+                acl_provider,
                 hook_manager.get_reviewers_perm_checker(),
                 hook_manager.repo_name(),
             )

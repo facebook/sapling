@@ -29,6 +29,7 @@ use hooks::PushAuthoredBy;
 use hooks_content_stores::repo_text_only_fetcher;
 use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
+use permission_checker::AclProvider;
 use revset::AncestorsNodeStream;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
@@ -61,6 +62,7 @@ pub struct Tailer {
 impl Tailer {
     pub async fn new(
         ctx: CoreContext,
+        acl_provider: &dyn AclProvider,
         repo: BlobRepo,
         config: RepoConfig,
         bookmark: BookmarkName,
@@ -76,6 +78,7 @@ impl Tailer {
 
         let mut hook_manager = HookManager::new(
             ctx.fb,
+            acl_provider,
             content_fetcher,
             config.hook_manager_params.clone().unwrap_or_default(),
             MononokeScubaSampleBuilder::with_discard(),
@@ -83,7 +86,14 @@ impl Tailer {
         )
         .await?;
 
-        load_hooks(ctx.fb, &mut hook_manager, &config, disabled_hooks).await?;
+        load_hooks(
+            ctx.fb,
+            acl_provider,
+            &mut hook_manager,
+            &config,
+            disabled_hooks,
+        )
+        .await?;
 
         Ok(Tailer {
             ctx,

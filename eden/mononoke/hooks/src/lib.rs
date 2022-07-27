@@ -44,8 +44,9 @@ use mononoke_types::BasicFileChange;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
+use permission_checker::AclProvider;
 use permission_checker::ArcMembershipChecker;
-use permission_checker::MembershipCheckerBuilder;
+use permission_checker::NeverMember;
 use regex::Regex;
 use scuba::builder::ServerData;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -76,6 +77,7 @@ pub struct HookManager {
 impl HookManager {
     pub async fn new(
         fb: FacebookInit,
+        acl_provider: impl AclProvider,
         content_manager: Box<dyn FileContentManager>,
         hook_manager_params: HookManagerParams,
         mut scuba: MononokeScubaSampleBuilder,
@@ -92,15 +94,9 @@ impl HookManager {
             });
 
         let (reviewers_membership, admin_membership) = if hook_manager_params.disable_acl_checker {
-            (
-                MembershipCheckerBuilder::never_member(),
-                MembershipCheckerBuilder::never_member(),
-            )
+            (NeverMember::new(), NeverMember::new())
         } else {
-            try_join!(
-                MembershipCheckerBuilder::for_reviewers_group(fb),
-                MembershipCheckerBuilder::for_admin_group(fb),
-            )?
+            try_join!(acl_provider.reviewers_group(), acl_provider.admin_group())?
         };
 
         let scuba_bypassed_commits: MononokeScubaSampleBuilder =
@@ -131,8 +127,8 @@ impl HookManager {
             bookmark_hooks: HashMap::new(),
             regex_hooks: Vec::new(),
             content_manager,
-            reviewers_membership: MembershipCheckerBuilder::never_member().into(),
-            admin_membership: MembershipCheckerBuilder::never_member().into(),
+            reviewers_membership: NeverMember::new().into(),
+            admin_membership: NeverMember::new().into(),
             scuba: MononokeScubaSampleBuilder::with_discard(),
             all_hooks_bypassed: false,
             scuba_bypassed_commits: MononokeScubaSampleBuilder::with_discard(),

@@ -13,10 +13,9 @@ use anyhow::bail;
 use anyhow::Result;
 use bookmarks_types::BookmarkName;
 use context::CoreContext;
-use fbinit::FacebookInit;
 use metaconfig_types::BookmarkParams;
+use permission_checker::AclProvider;
 use permission_checker::BoxMembershipChecker;
-use permission_checker::MembershipCheckerBuilder;
 
 /// Repository bookmark attributes.
 #[facet::facet]
@@ -27,12 +26,12 @@ pub struct RepoBookmarkAttrs {
 impl RepoBookmarkAttrs {
     /// Construct a new RepoBookmarkAttrs.
     pub async fn new(
-        fb: FacebookInit,
+        acl_provider: &dyn AclProvider,
         bookmark_params: impl IntoIterator<Item = BookmarkParams>,
     ) -> Result<RepoBookmarkAttrs> {
         let mut bookmark_attrs = Vec::new();
         for params in bookmark_params {
-            let attr = BookmarkAttr::new(fb, params).await?;
+            let attr = BookmarkAttr::new(acl_provider, params).await?;
             bookmark_attrs.push(attr);
         }
         Ok(RepoBookmarkAttrs { bookmark_attrs })
@@ -124,11 +123,9 @@ pub struct BookmarkAttr {
 }
 
 impl BookmarkAttr {
-    async fn new(fb: FacebookInit, params: BookmarkParams) -> Result<BookmarkAttr> {
+    async fn new(acl_provider: &dyn AclProvider, params: BookmarkParams) -> Result<BookmarkAttr> {
         let membership = match &params.allowed_hipster_group {
-            Some(hipster_group) => {
-                Some(MembershipCheckerBuilder::for_group(fb, hipster_group).await?)
-            }
+            Some(hipster_group) => Some(acl_provider.group(hipster_group).await?),
             None => None,
         };
         Ok(BookmarkAttr { params, membership })

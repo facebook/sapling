@@ -46,6 +46,7 @@ mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 mutable_renames = { version = "0.1.0", path = "../mutable_renames" }
 newfilenodes = { version = "0.1.0", path = "../newfilenodes" }
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
+permission_checker = { version = "0.1.0", path = "../permission_checker" }
 phases = { version = "0.1.0", path = "../phases" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../pushrebase_mutation_mapping" }
 readonlyblob = { version = "0.1.0", path = "../blobstore/readonlyblob" }

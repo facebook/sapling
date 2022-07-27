@@ -360,8 +360,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                                     "{}: Actions will be checked against {} ACL", name, acl
                                 );
                                 PermissionCheckerBuilder::new()
-                                    .allow_repo_acl(fb, &acl)
-                                    .await?
+                                    .allow(repo_factory.acl_provider().repo_acl(&acl).await?)
                                     .build()
                             }
                         })

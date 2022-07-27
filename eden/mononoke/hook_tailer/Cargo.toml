@@ -27,6 +27,7 @@ hooks = { version = "0.1.0", path = "../hooks" }
 hooks_content_stores = { version = "0.1.0", path = "../hooks/content-stores" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+permission_checker = { version = "0.1.0", path = "../permission_checker" }
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 revset = { version = "0.1.0", path = "../revset" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }

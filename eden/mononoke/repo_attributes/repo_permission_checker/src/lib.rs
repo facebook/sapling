@@ -9,15 +9,14 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use fbinit::FacebookInit;
-use slog::trace;
-use slog::Logger;
-
 use metaconfig_types::Identity;
+use permission_checker::AclProvider;
 use permission_checker::BoxPermissionChecker;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 use permission_checker::PermissionCheckerBuilder;
+use slog::trace;
+use slog::Logger;
 
 /// Repository permissions checks
 ///
@@ -67,8 +66,8 @@ pub struct ProdRepoPermissionChecker {
 
 impl ProdRepoPermissionChecker {
     pub async fn new(
-        fb: FacebookInit,
         logger: &Logger,
+        acl_provider: impl AclProvider,
         repo_hipster_acl: Option<&str>,
         service_hipster_acl: Option<&str>,
         reponame: &str,
@@ -76,10 +75,11 @@ impl ProdRepoPermissionChecker {
     ) -> Result<Self> {
         let mut repo_permchecker_builder = PermissionCheckerBuilder::new();
         if let Some(acl_name) = repo_hipster_acl {
-            repo_permchecker_builder = repo_permchecker_builder
-                .allow_repo_acl(fb, acl_name)
-                .await
-                .with_context(|| format!("Failed to create PermissionChecker for {}", acl_name))?;
+            repo_permchecker_builder = repo_permchecker_builder.allow(
+                acl_provider.repo_acl(acl_name).await.with_context(|| {
+                    format!("Failed to create repo PermissionChecker for {}", acl_name)
+                })?,
+            );
         }
         if !global_allowlist.is_empty() {
             let mut allowlisted_identities = MononokeIdentitySet::new();
@@ -95,9 +95,9 @@ impl ProdRepoPermissionChecker {
         let repo_permchecker = repo_permchecker_builder.build();
         let service_permchecker = if let Some(acl_name) = service_hipster_acl {
             PermissionCheckerBuilder::new()
-                .allow_tier_acl(fb, acl_name)
-                .await
-                .with_context(|| format!("Failed to create PermissionChecker for {}", acl_name))?
+                .allow(acl_provider.tier_acl(acl_name).await.with_context(|| {
+                    format!("Failed to create PermissionChecker for {}", acl_name)
+                })?)
                 .build()
         } else {
             // If no service tier is set we allow anyone to act as a service

@@ -100,6 +100,8 @@ use mutable_renames::MutableRenames;
 use mutable_renames::SqlMutableRenamesStore;
 use newfilenodes::NewFilenodesBuilder;
 use parking_lot::Mutex;
+use permission_checker::AclProvider;
+use permission_checker::DefaultAclProvider;
 use phases::ArcPhases;
 use pushrebase_mutation_mapping::ArcPushrebaseMutationMapping;
 use pushrebase_mutation_mapping::SqlPushrebaseMutationMappingConnection;
@@ -206,13 +208,13 @@ pub struct RepoFactory {
     scrub_handler: Arc<dyn ScrubHandler>,
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
     bonsai_hg_mapping_overwrite: bool,
+    acl_provider: Arc<dyn AclProvider>,
     global_allowlist: Vec<Identity>,
 }
 
 impl RepoFactory {
     pub fn new(env: Arc<MononokeEnvironment>, common: &CommonConfig) -> RepoFactory {
         RepoFactory {
-            env,
             censored_scuba_params: common.censored_scuba_params.clone(),
             sql_factories: RepoFactoryCache::new(),
             sql_connections: RepoFactoryCache::new(),
@@ -223,7 +225,9 @@ impl RepoFactory {
             blobstore_component_sampler: None,
             redaction_config: common.redaction_config.clone(),
             global_allowlist: common.global_allowlist.clone(),
+            acl_provider: Arc::new(DefaultAclProvider::new(env.fb)),
             bonsai_hg_mapping_overwrite: false,
+            env,
         }
     }
 
@@ -469,6 +473,10 @@ impl RepoFactory {
             builder = builder.with_log_file(scuba_log_file)?;
         }
         Ok(builder)
+    }
+
+    pub fn acl_provider(&self) -> &dyn AclProvider {
+        self.acl_provider.as_ref()
     }
 }
 
@@ -783,8 +791,8 @@ impl RepoFactory {
     ) -> Result<ArcRepoPermissionChecker> {
         let repo_name = repo_identity.name();
         let permission_checker = ProdRepoPermissionChecker::new(
-            self.env.fb,
             &self.env.logger,
+            self.acl_provider.as_ref(),
             repo_config.hipster_acl.as_deref(),
             repo_config
                 .source_control_service
@@ -1149,6 +1157,7 @@ impl RepoFactory {
 
         let hook_manager = make_hook_manager(
             self.env.fb,
+            self.acl_provider.as_ref(),
             content_store,
             repo_config,
             repo_identity.name().to_string(),
@@ -1202,7 +1211,7 @@ impl RepoFactory {
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcRepoBookmarkAttrs> {
         let repo_bookmark_attrs =
-            RepoBookmarkAttrs::new(self.env.fb, repo_config.bookmarks.clone())
+            RepoBookmarkAttrs::new(self.acl_provider.as_ref(), repo_config.bookmarks.clone())
                 .await
                 .context(RepoFactoryError::RepoBookmarkAttrs)?;
         Ok(Arc::new(repo_bookmark_attrs))

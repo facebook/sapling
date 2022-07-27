@@ -14,10 +14,12 @@ use hooks::HookManager;
 use hooks_content_stores::RepoFileContentManager;
 use hooks_content_stores::TextOnlyFileContentManager;
 use metaconfig_types::RepoConfig;
+use permission_checker::AclProvider;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 pub async fn make_hook_manager(
     fb: FacebookInit,
+    acl_provider: &dyn AclProvider,
     hook_file_content_store: RepoFileContentManager,
     config: &RepoConfig,
     name: String,
@@ -40,6 +42,7 @@ pub async fn make_hook_manager(
 
     let mut hook_manager = HookManager::new(
         fb,
+        acl_provider,
         fetcher,
         hook_manager_params.unwrap_or_default(),
         hooks_scuba,
@@ -47,7 +50,7 @@ pub async fn make_hook_manager(
     )
     .await?;
 
-    load_hooks(fb, &mut hook_manager, config, disabled_hooks).await?;
+    load_hooks(fb, acl_provider, &mut hook_manager, config, disabled_hooks).await?;
 
     Ok(hook_manager)
 }

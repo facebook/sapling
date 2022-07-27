@@ -57,6 +57,7 @@ mononoke_api_types = { version = "0.1.0", path = "types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_renames = { version = "0.1.0", path = "../mutable_renames" }
 pathmatcher = { version = "0.1.0", path = "../../scm/lib/pathmatcher" }
+permission_checker = { version = "0.1.0", path = "../permission_checker" }
 phases = { version = "0.1.0", path = "../phases" }
 pushrebase = { version = "0.1.0", path = "../pushrebase" }
 pushrebase_client = { version = "0.1.0", path = "../pushrebase/client" }

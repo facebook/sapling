@@ -33,6 +33,11 @@ impl PermissionCheckerBuilder {
         }
     }
 
+    pub fn allow(mut self, acl: BoxPermissionChecker) -> PermissionCheckerBuilder {
+        self.checkers.push(acl);
+        self
+    }
+
     pub fn allow_all(mut self) -> PermissionCheckerBuilder {
         self.checkers.push(Box::new(AlwaysAllow));
         self
@@ -57,7 +62,7 @@ impl PermissionCheckerBuilder {
     }
 }
 
-struct AlwaysAllow;
+pub(crate) struct AlwaysAllow;
 
 #[async_trait]
 impl PermissionChecker for AlwaysAllow {
@@ -66,7 +71,7 @@ impl PermissionChecker for AlwaysAllow {
     }
 }
 
-struct AlwaysReject;
+pub(crate) struct AlwaysReject;
 
 #[async_trait]
 impl PermissionChecker for AlwaysReject {
@@ -75,7 +80,7 @@ impl PermissionChecker for AlwaysReject {
     }
 }
 
-struct AllowlistChecker {
+pub(crate) struct AllowlistChecker {
     allowlist: MononokeIdentitySet,
 }
 

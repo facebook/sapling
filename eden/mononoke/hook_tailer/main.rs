@@ -151,6 +151,7 @@ async fn run_hook_tailer<'a>(
 
     let tail = &Tailer::new(
         ctx.clone(),
+        repo_factory.acl_provider(),
         blobrepo.clone(),
         config,
         bookmark,

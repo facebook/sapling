@@ -45,6 +45,7 @@ use lazy_static::lazy_static;
 use metaconfig_types::CommonConfig;
 use openssl::ssl::Ssl;
 use openssl::ssl::SslAcceptor;
+use permission_checker::DefaultAclProvider;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 use rate_limiting::RateLimitEnvironment;
@@ -129,7 +130,8 @@ pub async fn connection_acceptor(
 ) -> Result<()> {
     let enable_http_control_api = common_config.enable_http_control_api;
 
-    let security_checker = ConnectionSecurityChecker::new(fb, &common_config).await?;
+    let acl_provider = DefaultAclProvider::new(fb);
+    let security_checker = ConnectionSecurityChecker::new(acl_provider, &common_config).await?;
     let addr: SocketAddr = sockname
         .parse()
         .with_context(|| format!("could not parse '{}'", sockname))?;

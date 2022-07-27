@@ -81,6 +81,7 @@ use mononoke_types::Svnrev;
 use mononoke_types::Timestamp;
 use mutable_renames::MutableRenames;
 use mutable_renames::SqlMutableRenamesStore;
+use permission_checker::DefaultAclProvider;
 use phases::PhasesRef;
 use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
@@ -287,8 +288,14 @@ impl Repo {
             .cloned()
             .unwrap_or_default();
 
-        let hook_manager =
-            make_hook_manager(fb, content_store, &config, name.clone(), &disabled_hooks);
+        let hook_manager = make_hook_manager(
+            fb,
+            env.repo_factory.acl_provider(),
+            content_store,
+            &config,
+            name.clone(),
+            &disabled_hooks,
+        );
 
         let (warm_bookmarks_cache, hook_manager): (Arc<dyn BookmarksCache>, _) = try_join!(
             warm_bookmarks_cache.watched(&logger),
@@ -422,6 +429,8 @@ impl Repo {
         warm_bookmarks_cache_builder.wait_until_warmed();
         let warm_bookmarks_cache = warm_bookmarks_cache_builder.build().await?;
 
+        let acl_provider = DefaultAclProvider::new(ctx.fb);
+
         Ok(Self {
             name: name.clone(),
             inner,
@@ -429,6 +438,7 @@ impl Repo {
             hook_manager: Arc::new(
                 make_hook_manager(
                     ctx.fb,
+                    &acl_provider,
                     content_store,
                     &config,
                     name.clone(),

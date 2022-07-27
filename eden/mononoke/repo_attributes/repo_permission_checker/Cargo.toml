@@ -12,7 +12,6 @@ anyhow = "1.0.56"
 async-trait = "0.1.56"
 auto_impl = "0.4"
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

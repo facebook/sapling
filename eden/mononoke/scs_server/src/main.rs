@@ -35,6 +35,7 @@ use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::MononokeAppBuilder;
 use panichandler::Fate;
+use permission_checker::DefaultAclProvider;
 use slog::info;
 use source_control::server::make_SourceControlService_server;
 use srserver::service_framework::BuildModule;
@@ -130,8 +131,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             make_BaseService_server(proto, facebook::BaseServiceImpl::new(will_exit.clone()))
         }
     };
+    let acl_provider = DefaultAclProvider::new(fb);
     let security_checker = runtime.block_on(ConnectionSecurityChecker::new(
-        fb,
+        acl_provider,
         &app.repo_configs().common,
     ))?;
     let source_control_server = source_control_impl::SourceControlServiceImpl::new(

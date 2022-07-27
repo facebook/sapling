@@ -7,16 +7,19 @@
 
 use anyhow::bail;
 use anyhow::Result;
+use async_trait::async_trait;
 use fbinit::FacebookInit;
 use openssl::x509::X509;
 
+use crate::checker::AlwaysAllow;
 use crate::checker::BoxPermissionChecker;
-use crate::checker::PermissionCheckerBuilder;
 use crate::identity::MononokeIdentity;
 use crate::identity::MononokeIdentitySet;
 use crate::identity::MononokeIdentitySetExt;
+use crate::membership::AlwaysMember;
 use crate::membership::BoxMembershipChecker;
-use crate::membership::MembershipCheckerBuilder;
+use crate::membership::NeverMember;
+use crate::provider::AclProvider;
 
 impl MononokeIdentity {
     pub fn reviewer_identities(_username: &str) -> MononokeIdentitySet {
@@ -69,42 +72,37 @@ impl MononokeIdentitySetExt for MononokeIdentitySet {
     }
 }
 
-impl PermissionCheckerBuilder {
-    pub async fn allow_repo_acl(
-        self,
-        _fb: FacebookInit,
-        _name: &str,
-    ) -> Result<PermissionCheckerBuilder> {
-        Ok(self.allow_all())
-    }
+pub struct DummyAclProvider;
 
-    pub async fn allow_repo_region_acl(
-        self,
-        _fb: FacebookInit,
-        _name: &str,
-    ) -> Result<PermissionCheckerBuilder> {
-        Ok(self.allow_all())
-    }
-
-    pub async fn allow_tier_acl(
-        self,
-        _fb: FacebookInit,
-        _name: &str,
-    ) -> Result<PermissionCheckerBuilder> {
-        Ok(self.allow_all())
+impl DummyAclProvider {
+    pub fn new(_fb: FacebookInit) -> DummyAclProvider {
+        DummyAclProvider
     }
 }
 
-impl MembershipCheckerBuilder {
-    pub async fn for_reviewers_group(_fb: FacebookInit) -> Result<BoxMembershipChecker> {
-        Ok(Self::always_member())
+#[async_trait]
+impl AclProvider for DummyAclProvider {
+    async fn repo_acl(&self, _name: &str) -> Result<BoxPermissionChecker> {
+        Ok(Box::new(AlwaysAllow))
     }
 
-    pub async fn for_admin_group(_fb: FacebookInit) -> Result<BoxMembershipChecker> {
-        Ok(Self::never_member())
+    async fn repo_region_acl(&self, _name: &str) -> Result<BoxPermissionChecker> {
+        Ok(Box::new(AlwaysAllow))
     }
 
-    pub async fn for_group(_fb: FacebookInit, _group_name: &str) -> Result<BoxMembershipChecker> {
-        Ok(Self::never_member())
+    async fn tier_acl(&self, name: &str) -> Result<BoxPermissionChecker> {
+        Ok(Box::new(AlwaysAllow))
+    }
+
+    async fn group(&self, name: &str) -> Result<BoxMembershipChecker> {
+        Ok(Box::new(NeverMember))
+    }
+
+    async fn admin_group(&self) -> Result<BoxMembershipChecker> {
+        Ok(Box::new(NeverMember))
+    }
+
+    async fn reviewers_group(&self) -> Result<BoxMembershipChecker> {
+        Ok(Box::new(AlwaysMember))
     }
 }
