@@ -349,6 +349,7 @@ class ThriftTest(testcase.EdenRepoTest):
                 expected_sha1, expected_size, expected_type
             )
             expected_result = FileAttributeDataOrError(expected_data)
+            self.assertEqual(expected_result, results)
 
     def test_get_attributes_no_files(self) -> None:
         results = self.get_all_attributes([])
