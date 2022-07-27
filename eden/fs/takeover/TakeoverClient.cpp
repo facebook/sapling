@@ -34,7 +34,8 @@ namespace facebook::eden {
 TakeoverData takeoverMounts(
     AbsolutePathPiece socketPath,
     bool shouldPing,
-    const std::set<int32_t>& supportedVersions) {
+    const std::set<int32_t>& supportedVersions,
+    const uint64_t supportedTakeoverCapabilities) {
   folly::EventBase evb;
   folly::Expected<UnixSocket::Message, folly::exception_wrapper>
       expectedMessage;
@@ -42,16 +43,18 @@ TakeoverData takeoverMounts(
   auto connectTimeout = std::chrono::seconds(1);
   FutureUnixSocket socket;
   socket.connect(&evb, socketPath.stringPiece(), connectTimeout)
-      .thenValue([&socket, supportedVersions](auto&&) {
-        // Send our protocol version so that the server knows
-        // whether we're capable of handshaking successfully
+      .thenValue(
+          [&socket, supportedVersions, supportedTakeoverCapabilities](auto&&) {
+            // Send our protocol version so that the server knows
+            // whether we're capable of handshaking successfully
 
-        TakeoverVersionQuery query;
-        *query.versions_ref() = supportedVersions;
+            TakeoverVersionQuery query;
+            query.versions_ref() = supportedVersions;
+            query.capabilities_ref() = supportedTakeoverCapabilities;
 
-        return socket.send(
-            CompactSerializer::serialize<folly::IOBufQueue>(query).move());
-      })
+            return socket.send(
+                CompactSerializer::serialize<folly::IOBufQueue>(query).move());
+          })
       .thenValue([&socket](auto&&) {
         // Wait for a response. this will either be a "ready" ping or the
         // takeover data depending on the server protocol

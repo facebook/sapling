@@ -23,6 +23,7 @@ TakeoverData takeoverMounts(
     // normally be used in the production build.
     bool shouldPing = true,
     const std::set<int32_t>& supportedTakeoverVersions =
-        kSupportedTakeoverVersions);
+        kSupportedTakeoverVersions,
+    const uint64_t supportedTakeoverCapabilities = kSupportedCapabilities);
 
 } // namespace facebook::eden

@@ -14,9 +14,9 @@
 #include <variant>
 
 #include <folly/Format.h>
-#include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
+#include "folly/Likely.h"
 
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
@@ -54,7 +54,16 @@ const std::set<int32_t> kSupportedTakeoverVersions{
     TakeoverData::kTakeoverProtocolVersionThree,
     TakeoverData::kTakeoverProtocolVersionFour,
     TakeoverData::kTakeoverProtocolVersionFive,
-    TakeoverData::kTakeoverProtocolVersionSix};
+    TakeoverData::kTakeoverProtocolVersionSix,
+    TakeoverData::kTakeoverProtocolVersionSeven};
+
+const uint64_t kSupportedCapabilities = TakeoverCapabilities::FUSE |
+    TakeoverCapabilities::MOUNT_TYPES | TakeoverCapabilities::PING |
+    TakeoverCapabilities::THRIFT_SERIALIZATION | TakeoverCapabilities::NFS |
+    TakeoverCapabilities::RESULT_TYPE_SERIALIZATION |
+    TakeoverCapabilities::ORDERED_FDS | TakeoverCapabilities::OPTIONAL_MOUNTD |
+    TakeoverCapabilities::CAPABILITY_MATCHING |
+    TakeoverCapabilities::INCLUDE_HEADER_SIZE;
 
 std::optional<int32_t> TakeoverData::computeCompatibleVersion(
     const std::set<int32_t>& versions,
@@ -74,6 +83,27 @@ std::optional<int32_t> TakeoverData::computeCompatibleVersion(
     best = version;
   }
   return best;
+}
+
+uint64_t TakeoverData::computeCompatibleCapabilities(
+    const uint64_t capabilities,
+    const uint64_t supported) {
+  auto compatible = supported & capabilities;
+  // assert that the server and client are in some way compatible.
+  // The basics are that they share some serialization method so that they can
+  // converse. These days we only support thrift serialization.
+  if ((compatible & TakeoverCapabilities::THRIFT_SERIALIZATION) == 0) {
+    throw std::runtime_error{
+        "The client and the server do not share a common takeover protocol "
+        "implementation."};
+  }
+  if ((compatible & TakeoverCapabilities::OPTIONAL_MOUNTD) &&
+      ((compatible & TakeoverCapabilities::ORDERED_FDS) == 0)) {
+    throw std::runtime_error{
+        "Optional mountd can not be used without ordered file descriptors"};
+  }
+
+  return compatible;
 }
 
 uint64_t TakeoverData::versionToCapabilites(int32_t version) {
@@ -103,6 +133,16 @@ uint64_t TakeoverData::versionToCapabilites(int32_t version) {
           TakeoverCapabilities::RESULT_TYPE_SERIALIZATION |
           TakeoverCapabilities::ORDERED_FDS |
           TakeoverCapabilities::OPTIONAL_MOUNTD;
+    case kTakeoverProtocolVersionSeven:
+      return TakeoverCapabilities::FUSE | TakeoverCapabilities::MOUNT_TYPES |
+          TakeoverCapabilities::PING |
+          TakeoverCapabilities::THRIFT_SERIALIZATION |
+          TakeoverCapabilities::NFS |
+          TakeoverCapabilities::RESULT_TYPE_SERIALIZATION |
+          TakeoverCapabilities::ORDERED_FDS |
+          TakeoverCapabilities::OPTIONAL_MOUNTD |
+          TakeoverCapabilities::CAPABILITY_MATCHING |
+          TakeoverCapabilities::INCLUDE_HEADER_SIZE;
   }
   throwf<std::runtime_error>("Unsupported version: {}", version);
 }
@@ -142,6 +182,18 @@ int32_t TakeoverData::capabilitesToVersion(uint64_t capabilities) {
        TakeoverCapabilities::ORDERED_FDS |
        TakeoverCapabilities::OPTIONAL_MOUNTD)) {
     return kTakeoverProtocolVersionSix;
+  }
+
+  if (capabilities ==
+      (TakeoverCapabilities::FUSE | TakeoverCapabilities::MOUNT_TYPES |
+       TakeoverCapabilities::PING | TakeoverCapabilities::THRIFT_SERIALIZATION |
+       TakeoverCapabilities::NFS |
+       TakeoverCapabilities::RESULT_TYPE_SERIALIZATION |
+       TakeoverCapabilities::ORDERED_FDS |
+       TakeoverCapabilities::OPTIONAL_MOUNTD |
+       TakeoverCapabilities::CAPABILITY_MATCHING |
+       TakeoverCapabilities::INCLUDE_HEADER_SIZE)) {
+    return kTakeoverProtocolVersionSeven;
   }
 
   throwf<std::runtime_error>(
@@ -286,8 +338,7 @@ folly::IOBuf TakeoverData::serializePing() {
 }
 
 TakeoverData TakeoverData::deserialize(UnixSocket::Message& msg) {
-  auto protocolVersion = TakeoverData::getProtocolVersion(&msg.data);
-  auto capabilities = TakeoverData::versionToCapabilites(protocolVersion);
+  auto capabilities = TakeoverData::getProtocolCapabilities(&msg.data);
 
   auto data = TakeoverData::deserialize(capabilities, &msg.data);
   // when we serialize the mountd socket we have three general files instead
@@ -336,25 +387,62 @@ TakeoverData TakeoverData::deserialize(UnixSocket::Message& msg) {
   return data;
 }
 
-int32_t TakeoverData::getProtocolVersion(IOBuf* buf) {
+uint64_t TakeoverData::getProtocolCapabilities(IOBuf* buf) {
   // We need to probe the data to see which version we have
   folly::io::Cursor cursor(buf);
 
-  auto messageType = cursor.readBE<uint32_t>();
-  switch (messageType) {
+  auto version = cursor.readBE<uint32_t>();
+
+  switch (version) {
+    case kTakeoverProtocolVersionNeverSupported:
+      // we put this here so that we can test incompatible versions and the
+      // error can be deserialized
     case kTakeoverProtocolVersionThree:
     case kTakeoverProtocolVersionFour:
     case kTakeoverProtocolVersionFive:
     case kTakeoverProtocolVersionSix:
-      // Version 3 (there was no 2 because of how Version 1 used word values
-      // 1 and 2) doesn't care about this version byte, so we skip past it
-      // and let the underlying code decode the data
       buf->trimStart(sizeof(uint32_t));
-      return messageType;
+      return versionToCapabilites(version);
+    case kTakeoverProtocolVersionSeven: {
+      // version 7 and above should support INCLUDE_HEADER_SIZE and
+      // CAPABILITY_MATCHING but we check those assumptions to make this more
+      // clear.
+      auto versionBasedCapabilities = versionToCapabilites(version);
+      auto expected_capabilities = TakeoverCapabilities::INCLUDE_HEADER_SIZE |
+          TakeoverCapabilities::CAPABILITY_MATCHING;
+      if ((versionBasedCapabilities & expected_capabilities) !=
+          expected_capabilities) {
+        throw std::runtime_error(fmt::format(
+            "Expected version {:x} to support capability matching and "
+            "including header size, but it doesn't: {:x}",
+            version,
+            versionBasedCapabilities));
+      }
+
+      // for now the size of the header should just be 8 because it only
+      // includes the size of the capabilities.
+      std::uint32_t header_size = cursor.readBE<uint32_t>();
+      if (header_size != sizeof(uint64_t)) {
+        throw std::runtime_error(fmt::format(
+            "Invalid takeover header size {:x}, expected {:x}. version: {:x}",
+            header_size,
+            sizeof(uint64_t),
+            version));
+      }
+
+      uint64_t capabilities = cursor.readBE<uint64_t>();
+
+      // We move the buffer forwards past the header, so that the caller
+      // can begin parsing the real message data at the start of this buffer.
+      // The header contains the version, header size and header size
+      // bytes (currently header size bytes equals 8 and only contain the
+      // capabilities).
+      buf->trimStart(sizeof(uint32_t) + sizeof(uint32_t) + header_size);
+      return capabilities;
+    }
     default:
       throw std::runtime_error(fmt::format(
-          "Unrecognized TakeoverData response starting with {:x}",
-          messageType));
+          "Unrecognized TakeoverData response starting with {:x}", version));
   }
 }
 
@@ -401,23 +489,31 @@ void checkCanSerDeMountType(
   }
 }
 
+void TakeoverData::serializeHeader(
+    uint64_t protocolCapabilities,
+    folly::IOBufQueue& buf) {
+  folly::io::QueueAppender appender(&buf, 0);
+  int32_t versionToAdvertize = capabilitesToVersion(protocolCapabilities);
+  // first word is the protocol version. previous versions of EdenFS do not
+  // know how to deserialize version 4 because they assume that protocol 4
+  // uses protocol 3 serialization. We need to do this funkiness for rollback
+  // safety.
+  if (versionToAdvertize == kTakeoverProtocolVersionFour) {
+    versionToAdvertize = kTakeoverProtocolVersionThree;
+  }
+  appender.writeBE<uint32_t>(versionToAdvertize);
+  if (protocolCapabilities & TakeoverCapabilities::INCLUDE_HEADER_SIZE) {
+    appender.writeBE<uint32_t>(sizeof(uint64_t));
+  }
+  if (protocolCapabilities & TakeoverCapabilities::CAPABILITY_MATCHING) {
+    appender.writeBE<uint64_t>(protocolCapabilities);
+  }
+}
+
 IOBuf TakeoverData::serializeThrift(uint64_t protocolCapabilities) {
   folly::IOBufQueue bufQ;
-  folly::io::QueueAppender app(&bufQ, 0);
 
-  { // we scope this to avoid using the version any further in the code.
-    // Ideally we would only use capabilities, but we need to send version
-    // numbers to be compatible with older version.
-    int32_t versionToAdvertize = capabilitesToVersion(protocolCapabilities);
-    // first word is the protocol version. previous versions of EdenFS do not
-    // know how to deserialize version 4 because they assume that protocol 4
-    // uses protocol 3 serialization. We need to do this funkiness for rollback
-    // safety.
-    if (versionToAdvertize == kTakeoverProtocolVersionFour) {
-      versionToAdvertize = kTakeoverProtocolVersionThree;
-    }
-    app.writeBE<uint32_t>(versionToAdvertize);
-  }
+  serializeHeader(protocolCapabilities, bufQ);
 
   std::vector<SerializedMountInfo> serializedMounts;
   for (const auto& mount : mountPoints) {
@@ -483,13 +579,11 @@ folly::IOBuf TakeoverData::serializeErrorThrift(
     uint64_t protocolCapabilities,
     const folly::exception_wrapper& ew) {
   folly::IOBufQueue bufQ;
-  folly::io::QueueAppender app(&bufQ, 0);
+
+  serializeHeader(protocolCapabilities, bufQ);
 
   auto exceptionClassName = ew.class_name();
   folly::StringPiece what = ew ? ew.get_exception()->what() : "";
-
-  // First word is the protocol version
-  app.writeBE<uint32_t>(kTakeoverProtocolVersionThree);
 
   if (protocolCapabilities & TakeoverCapabilities::RESULT_TYPE_SERIALIZATION) {
     // depending on if RESULT_TYPE_SERIALIZATION is set we might use either of

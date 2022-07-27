@@ -50,9 +50,11 @@ class TakeoverServer::ConnHandler {
   ConnHandler(
       TakeoverServer* server,
       folly::File socket,
-      const std::set<int32_t>& supportedVersions)
+      const std::set<int32_t>& supportedVersions,
+      const uint64_t supportedCapabilities)
       : server_{server},
         socket_{server_->getEventBase(), std::move(socket)},
+        supportedCapabilities_{supportedCapabilities},
         supportedVersions_{supportedVersions} {}
 
   /**
@@ -83,6 +85,7 @@ class TakeoverServer::ConnHandler {
   bool shouldPing_{false};
   TakeoverServer* const server_{nullptr};
   FutureUnixSocket socket_;
+  const uint64_t supportedCapabilities_;
   const std::set<int32_t>& supportedVersions_;
   int32_t protocolVersion_{
       TakeoverData::kTakeoverProtocolVersionNeverSupported};
@@ -154,8 +157,16 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
           }
           // Initiate the takeover shutdown.
           protocolVersion_ = supported.value();
-          protocolCapabilities_ =
+          auto protocolCapabilities =
               TakeoverData::versionToCapabilites(protocolVersion_);
+          if (protocolCapabilities &
+              TakeoverCapabilities::CAPABILITY_MATCHING) {
+            protocolCapabilities_ = TakeoverData::computeCompatibleCapabilities(
+                *query.capabilities_ref(), supportedCapabilities_);
+          } else {
+            protocolCapabilities_ = protocolCapabilities;
+          }
+
           XLOG(DBG7) << "Protocol version: " << protocolVersion_
                      << "; Protocol Capabilities: " << protocolCapabilities_;
 
@@ -276,11 +287,13 @@ TakeoverServer::TakeoverServer(
     AbsolutePathPiece socketPath,
     TakeoverHandler* handler,
     FaultInjector* faultInjector,
-    const std::set<int32_t>& supportedVersions)
+    const std::set<int32_t>& supportedVersions,
+    const uint64_t supportedCapabilities)
     : eventBase_{eventBase},
       handler_{handler},
       socketPath_{socketPath},
       faultInjector_(*faultInjector),
+      supportedCapabilities_{supportedCapabilities},
       supportedVersions_{supportedVersions} {
   start();
 }
@@ -314,7 +327,8 @@ void TakeoverServer::connectionAccepted(
   folly::File socket(fd, /* ownsFd */ true);
   std::unique_ptr<ConnHandler> handler;
   try {
-    handler.reset(new ConnHandler{this, std::move(socket), supportedVersions_});
+    handler.reset(new ConnHandler{
+        this, std::move(socket), supportedVersions_, supportedCapabilities_});
   } catch (const std::exception& ex) {
     XLOG(ERR) << "error allocating connection handler for new takeover "
                  "connection: "

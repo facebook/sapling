@@ -13,6 +13,7 @@
 
 #include <folly/File.h>
 #include <folly/futures/Promise.h>
+#include <folly/io/Cursor.h>
 
 #include "eden/fs/takeover/gen-cpp2/takeover_types.h"
 #include "eden/fs/utils/FsChannelTypes.h"
@@ -28,22 +29,23 @@ class exception_wrapper;
 namespace facebook::eden {
 
 // Holds the versions supported by this build.
-// TODO(T104382350): The code is being migrated to use capabilities bits instead
-// of versions numbers as the former makes it less error prone to check for
+// TODO(T104382350): The code is being migrated to use capability bits instead
+// of version numbers as the former makes it less error prone to check for
 // supported features by both the client and server. Currently, the protocol
-// works by agreeing on a mutually supported version which is then
-// deterministically mapped to a set of capabilities. We would like to instead
-// agree on a shared set of capabilities. To completely migrate to capabilities
-// this we need to bump the version number and introduce
-// kSupportedTakeoverCapabilities (Should use a lower overhead representation
-// than std::set, probably a uint). We also need to teach the server and client
-// to find the common supported capabilities of the client and server. After
-// this capability matching version of takeover has made it into a stable build,
-// we can delete the version related code (and all code for early versions).
-// Note "stable build" means we should never need to rollback before the change,
-// so the capability matching build should be out for at least a month before we
-// delete all the version code.
+// works by agreeing on a mutually supported version and then
+// agreeing on a shared set of capabilities. We agree on a version first so
+// that we can gracefully transition to a protocol that supports capability
+// matching.
+
+// Eventually we want to completely migrate to capability matching and stop
+// checking the versions. But first, we need to capability matching to make it
+// into a stable EdenFS build. Note "stable build" means we should never need to
+// rollback before the change, so the capability matching build should be out
+// for at least a month before we delete all the version code. If you are
+// reading this comment after Sept 2022, this has reached stable.
 extern const std::set<int32_t> kSupportedTakeoverVersions;
+
+extern const uint64_t kSupportedCapabilities;
 
 // TODO (T104724681): use a nicer representation for a bit set to combine these
 // flags like watchman's OptionSet.
@@ -96,6 +98,17 @@ class TakeoverCapabilities {
     // does the mountd socket need to be sent.
     // Note this capability can not be used with out ORDERED_FDS.
     OPTIONAL_MOUNTD = 1 << 8,
+
+    // Indicates that we will match capabilities of the server and client
+    // to decide on a protocol. While we are switching over from versions to
+    // capabilities, this means we match versions then match capabilities.
+    // But eventually we will skip matching versions and just go straight to
+    // matching capabilities.
+    CAPABILITY_MATCHING = 1 << 9,
+
+    // Indicates that we include the size of the header in the header itself.
+    // This will allow us to more safely evolve the header in the future.
+    INCLUDE_HEADER_SIZE = 1 << 10,
   };
 };
 
@@ -152,9 +165,13 @@ class TakeoverData {
 
     // This version introduced a more generic thrift struct for serialization
     // and allows us to only pass some of the file descriptors.
-    kTakeoverProtocolVersionSix = 6
-    // version 6 should be the last real version, we should bump to version 7
-    // and from then on only match capabilities
+    kTakeoverProtocolVersionSix = 6,
+
+    // This should be the last version. This version matches capabilities with
+    // the takeover server and client. This ends needing to create any more
+    // versions because you can just introduce new cababilities.
+    kTakeoverProtocolVersionSeven = 7
+    // there should be no more versions after this.
   };
 
   /**
@@ -182,6 +199,16 @@ class TakeoverData {
   static std::optional<int32_t> computeCompatibleVersion(
       const std::set<int32_t>& versions,
       const std::set<int32_t>& supported = kSupportedTakeoverVersions);
+
+  /**
+   * Finds the set of capabilities supported by both the server and client.
+   * also checks that that set of capabilities is a valid combination (some
+   * capabilities are required these days and some capabilities have
+   * dependencies between them.)
+   */
+  static uint64_t computeCompatibleCapabilities(
+      uint64_t capabilities,
+      uint64_t supported);
 
   struct MountInfo {
     /**
@@ -241,6 +268,27 @@ class TakeoverData {
 
   /**
    * Serialize the TakeoverData into a unix socket message.
+   *
+   * The current serialization format is a follows:
+   * <32 bit version><32 bit header size><64 bit capabilities>
+   * <variable length serialized state that we need to send for takeover>
+   * The version, header size, and capabilities are considered the "header".
+   * - the version at this point is included for legacy reasons. We use to
+   * version our protocol everytime we made a change. but that led to a bunch
+   * of confusing version checks in the code. So we moved to capabilities.
+   * - the size of the header is the size of the header in bytes excluding the
+   * version and the size value itself. For now the capabilities are the only
+   * object included here, but having a size in the header makes it more safe to
+   * evolve.
+   * - the capabilities are the features available in the protocol that we are
+   * using for takeover. These are an intersection of the server and clients
+   * capabilities.
+   * - the state we serialize is serialied in thrift structs as defined in
+   * takeover.thrift.
+   *
+   * Note that we keep the capabilities outside of the serialized thrift data on
+   * purpose. This allows us to migrate to a different serialization method as
+   * we please.
    */
   void serialize(uint64_t protocolCapabilities, UnixSocket::Message& msg);
 
@@ -260,10 +308,10 @@ class TakeoverData {
    * Determine the protocol version of the serialized message in buf.
    *
    * Note this should only be called once. This will advance the buffer past
-   * the version byte so that the data to deserialize is at the beginning of the
+   * the header so that the data to deserialize is at the beginning of the
    * buffer.
    */
-  static int32_t getProtocolVersion(folly::IOBuf* buf);
+  static uint64_t getProtocolCapabilities(folly::IOBuf* buf);
 
   /**
    * Deserialize the TakeoverData from a UnixSocket msg.
@@ -324,6 +372,15 @@ class TakeoverData {
    * separately.
    */
   folly::IOBuf serialize(uint64_t protocolCapabilities);
+
+  /**
+   * Serialize the <version|size|capability> header into the buffer.
+   * The size of the header excludes the version and size field itself. For
+   * now this only includes capabilities which are 8 bytes.
+   */
+  static void serializeHeader(
+      uint64_t protocolCapabilities,
+      folly::IOBufQueue& buf);
 
   /**
    * Serialize data for any version that uses thrift serialization. This is

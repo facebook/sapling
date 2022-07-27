@@ -68,14 +68,20 @@ class ErrorHandler : public TakeoverHandler {
 Future<TakeoverData> takeoverViaEventBase(
     EventBase* evb,
     AbsolutePathPiece socketPath,
-    const std::set<int32_t>& supportedVersions) {
+    const std::set<int32_t>& supportedVersions,
+    const uint64_t supportedCapabilities) {
   Promise<TakeoverData> promise;
   auto future = promise.getFuture();
   std::thread thread([path = AbsolutePath{socketPath},
                       supportedVersions,
+                      supportedCapabilities,
                       promise = std::move(promise)]() mutable {
     promise.setWith([&] {
-      return takeoverMounts(path, /*shouldPing=*/true, supportedVersions);
+      return takeoverMounts(
+          path,
+          /*shouldPing=*/true,
+          supportedVersions,
+          supportedCapabilities);
     });
   });
 
@@ -118,9 +124,12 @@ void loopWithTimeout(EventBase* evb, std::chrono::milliseconds timeout = 300s) {
 folly::Try<TakeoverData> runTakeover(
     const TemporaryDirectory& tmpDir,
     TakeoverHandler* handler,
-    const std::set<int32_t>& supportedVersions = kSupportedTakeoverVersions,
+    const std::set<int32_t>& clientSupportedVersions =
+        kSupportedTakeoverVersions,
     const std::set<int32_t>& serverSupportedVersions =
-        kSupportedTakeoverVersions) {
+        kSupportedTakeoverVersions,
+    const uint64_t clientSupportedCapabilities = kSupportedCapabilities,
+    const uint64_t serverSupportedCapabilties = kSupportedCapabilities) {
   // Ignore SIGPIPE so that sendmsg() will fail with an error code instead
   // of terminating the program if the remote side has closed the connection.
   signal(SIGPIPE, SIG_IGN);
@@ -131,12 +140,19 @@ folly::Try<TakeoverData> runTakeover(
 
   FaultInjector faultInjector{/*enabled=*/false};
   TakeoverServer server(
-      &evb, socketPath, handler, &faultInjector, serverSupportedVersions);
+      &evb,
+      socketPath,
+      handler,
+      &faultInjector,
+      serverSupportedVersions,
+      serverSupportedCapabilties);
 
-  auto future =
-      takeoverViaEventBase(&evb, socketPath, supportedVersions).ensure([&] {
-        evb.terminateLoopSoon();
-      });
+  auto future = takeoverViaEventBase(
+                    &evb,
+                    socketPath,
+                    clientSupportedVersions,
+                    clientSupportedCapabilities)
+                    .ensure([&] { evb.terminateLoopSoon(); });
   loopWithTimeout(&evb);
   if (!future.isReady()) {
     // This should generally only happen if we timed out.
@@ -184,7 +200,52 @@ TEST(Takeover, invalidComboCapabilites) {
       std::runtime_error);
 }
 
-TEST(Takeover, simple) {
+TEST(Takeover, matchCapabilites) {
+  auto threeCapabilities = TakeoverData::versionToCapabilites(
+      TakeoverData::kTakeoverProtocolVersionThree);
+  auto fourCapabilities = TakeoverData::versionToCapabilites(
+      TakeoverData::kTakeoverProtocolVersionFour);
+  auto fiveCapabilities = TakeoverData::versionToCapabilites(
+      TakeoverData::kTakeoverProtocolVersionFive);
+  auto sixCapabilities = TakeoverData::versionToCapabilites(
+      TakeoverData::kTakeoverProtocolVersionSix);
+  auto sevenCapabilities = TakeoverData::versionToCapabilites(
+      TakeoverData::kTakeoverProtocolVersionSeven);
+
+  EXPECT_EQ(
+      TakeoverData::computeCompatibleCapabilities(
+          threeCapabilities, fourCapabilities),
+      threeCapabilities);
+  EXPECT_EQ(
+      TakeoverData::computeCompatibleCapabilities(
+          fiveCapabilities, sevenCapabilities),
+      fiveCapabilities);
+  EXPECT_EQ(
+      TakeoverData::computeCompatibleCapabilities(
+          sixCapabilities, sevenCapabilities),
+      sixCapabilities);
+  EXPECT_EQ(
+      TakeoverData::computeCompatibleCapabilities(
+          sevenCapabilities, sevenCapabilities),
+      sevenCapabilities);
+}
+
+/**
+ * In older versions of the protocol, we did not know how to pass the mountd
+ * socket, so there is no need to check that we correctly passed the mountd
+ * socket in simpleTestImpl. This enum is used in simpleTestImpl to decide
+ * wather we should check the mountd socket.
+ */
+enum class CheckMountdSocket { YES = 0, NO = 1 };
+
+void simpleTestImpl(
+    CheckMountdSocket checkMountdSocket = CheckMountdSocket::NO,
+    const std::set<int32_t>& clientSupportedVersions =
+        kSupportedTakeoverVersions,
+    const std::set<int32_t>& serverSupportedVersions =
+        kSupportedTakeoverVersions,
+    uint64_t clientCapabilities = kSupportedCapabilities,
+    uint64_t serverCapabilites = kSupportedCapabilities) {
   TemporaryDirectory tmpDir("eden_takeover_test");
   AbsolutePathPiece tmpDirPath{tmpDir.path().string()};
 
@@ -235,7 +296,13 @@ TEST(Takeover, simple) {
   // Perform the takeover
   auto serverSendFuture = serverData.takeoverComplete.getFuture();
   TestHandler handler{std::move(serverData)};
-  auto result = runTakeover(tmpDir, &handler);
+  auto result = runTakeover(
+      tmpDir,
+      &handler,
+      clientSupportedVersions,
+      serverSupportedVersions,
+      clientCapabilities,
+      serverCapabilites);
   ASSERT_TRUE(serverSendFuture.hasValue());
   EXPECT_TRUE(result.hasValue());
   const auto& clientData = result.value();
@@ -244,7 +311,9 @@ TEST(Takeover, simple) {
   checkExpectedFile(clientData.lockFile.fd(), lockFilePath);
   // And the thrift socket FD
   checkExpectedFile(clientData.thriftSocket.fd(), thriftSocketPath);
-  checkExpectedFile(clientData.mountdServerSocket->fd(), mountdSocketPath);
+  if (checkMountdSocket == CheckMountdSocket::YES) {
+    checkExpectedFile(clientData.mountdServerSocket->fd(), mountdSocketPath);
+  }
 
   // Make sure the received mount information is correct
   ASSERT_EQ(2, clientData.mountPoints.size());
@@ -263,6 +332,135 @@ TEST(Takeover, simple) {
   auto& fuseChannelData1 =
       std::get<FuseChannelData>(clientData.mountPoints.at(1).channelInfo);
   checkExpectedFile(fuseChannelData1.fd.fd(), mount2FusePath);
+}
+
+TEST(Takeover, simple) {
+  simpleTestImpl(CheckMountdSocket::YES);
+}
+
+TEST(Takeover, fourToSeven) {
+  // in both these tests we will settle on version 4 of the protocol
+  // which does not know how to transfer the mountd socket, so no need
+  // to check the mountd socket.
+  simpleTestImpl(
+      CheckMountdSocket::NO,
+      {TakeoverData::kTakeoverProtocolVersionFour},
+      {TakeoverData::kTakeoverProtocolVersionFour,
+       TakeoverData::kTakeoverProtocolVersionFive,
+       TakeoverData::kTakeoverProtocolVersionSix,
+       TakeoverData::kTakeoverProtocolVersionSeven},
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionFour),
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionSeven));
+
+  simpleTestImpl(
+      CheckMountdSocket::NO,
+      {TakeoverData::kTakeoverProtocolVersionFour,
+       TakeoverData::kTakeoverProtocolVersionFive,
+       TakeoverData::kTakeoverProtocolVersionSix,
+       TakeoverData::kTakeoverProtocolVersionSeven},
+      {TakeoverData::kTakeoverProtocolVersionFour},
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionSeven),
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionFour));
+}
+
+TEST(Takeover, fiveToSeven) {
+  simpleTestImpl(
+      CheckMountdSocket::YES,
+      {TakeoverData::kTakeoverProtocolVersionFour,
+       TakeoverData::kTakeoverProtocolVersionFive},
+      {TakeoverData::kTakeoverProtocolVersionFour,
+       TakeoverData::kTakeoverProtocolVersionFive,
+       TakeoverData::kTakeoverProtocolVersionSix,
+       TakeoverData::kTakeoverProtocolVersionSeven},
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionFive),
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionSeven));
+
+  simpleTestImpl(
+      CheckMountdSocket::YES,
+      {TakeoverData::kTakeoverProtocolVersionFour,
+       TakeoverData::kTakeoverProtocolVersionFive,
+       TakeoverData::kTakeoverProtocolVersionSix,
+       TakeoverData::kTakeoverProtocolVersionSeven},
+      {TakeoverData::kTakeoverProtocolVersionFour,
+       TakeoverData::kTakeoverProtocolVersionFive},
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionSeven),
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionFive));
+}
+
+TEST(Takeover, sixToSeven) {
+  simpleTestImpl(
+      CheckMountdSocket::YES,
+      {TakeoverData::kTakeoverProtocolVersionFour,
+       TakeoverData::kTakeoverProtocolVersionFive,
+       TakeoverData::kTakeoverProtocolVersionSix},
+      {TakeoverData::kTakeoverProtocolVersionFour,
+       TakeoverData::kTakeoverProtocolVersionFive,
+       TakeoverData::kTakeoverProtocolVersionSix,
+       TakeoverData::kTakeoverProtocolVersionSeven},
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionSix),
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionSeven));
+
+  simpleTestImpl(
+      CheckMountdSocket::YES,
+      {TakeoverData::kTakeoverProtocolVersionFour,
+       TakeoverData::kTakeoverProtocolVersionFive,
+       TakeoverData::kTakeoverProtocolVersionSix,
+       TakeoverData::kTakeoverProtocolVersionSeven},
+      {TakeoverData::kTakeoverProtocolVersionFour,
+       TakeoverData::kTakeoverProtocolVersionFive,
+       TakeoverData::kTakeoverProtocolVersionSix},
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionSeven),
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionSix));
+}
+
+TEST(Takeover, atypicalVersionCapability) {
+  simpleTestImpl(
+      CheckMountdSocket::YES,
+      kSupportedTakeoverVersions,
+      kSupportedTakeoverVersions,
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionSix),
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionSeven));
+
+  simpleTestImpl(
+      CheckMountdSocket::YES,
+      kSupportedTakeoverVersions,
+      kSupportedTakeoverVersions,
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionSeven),
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionSix));
+
+  simpleTestImpl(
+      CheckMountdSocket::YES,
+      kSupportedTakeoverVersions,
+      kSupportedTakeoverVersions,
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionFive),
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionSeven));
+
+  simpleTestImpl(
+      CheckMountdSocket::YES,
+      kSupportedTakeoverVersions,
+      kSupportedTakeoverVersions,
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionSeven),
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionFive));
 }
 
 TEST(Takeover, noMounts) {
@@ -449,7 +647,10 @@ TEST(Takeover, errorVersionMismatch) {
   auto result = runTakeover(
       tmpDir,
       &handler,
-      std::set<int32_t>{TakeoverData::kTakeoverProtocolVersionNeverSupported});
+      std::set<int32_t>{TakeoverData::kTakeoverProtocolVersionNeverSupported},
+      kSupportedTakeoverVersions,
+      0,
+      kSupportedCapabilities);
   EXPECT_THROW_RE(
       result.value(),
       std::runtime_error,
@@ -507,15 +708,7 @@ TEST(Takeover, nfs) {
   // Perform the takeover
   auto serverSendFuture = serverData.takeoverComplete.getFuture();
   TestHandler handler{std::move(serverData)};
-  auto result = runTakeover(
-      tmpDir,
-      &handler,
-      std::set<int32_t>{
-          TakeoverData::kTakeoverProtocolVersionFour,
-          TakeoverData::kTakeoverProtocolVersionFive},
-      std::set<int32_t>{
-          TakeoverData::kTakeoverProtocolVersionFour,
-          TakeoverData::kTakeoverProtocolVersionFive});
+  auto result = runTakeover(tmpDir, &handler);
   ASSERT_TRUE(serverSendFuture.hasValue());
   EXPECT_TRUE(result.hasValue());
   const auto& clientData = result.value();
@@ -543,56 +736,6 @@ TEST(Takeover, nfs) {
   auto& nfsChannelData =
       std::get<NfsChannelData>(clientData.mountPoints.at(1).channelInfo);
   checkExpectedFile(nfsChannelData.nfsdSocketFd.fd(), mount2NfsPath);
-}
-
-TEST(Takeover, nfsOldVersion) {
-  TemporaryDirectory tmpDir("eden_takeover_test");
-  AbsolutePathPiece tmpDirPath{tmpDir.path().string()};
-
-  // Build the TakeoverData object to send
-  TakeoverData serverData;
-
-  auto lockFilePath = tmpDirPath + "lock"_pc;
-  serverData.lockFile =
-      folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
-
-  auto thriftSocketPath = tmpDirPath + "thrift"_pc;
-  serverData.thriftSocket =
-      folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
-
-  auto mountdSocketPath = tmpDirPath + "mountd"_pc;
-  serverData.mountdServerSocket =
-      folly::File{mountdSocketPath.stringPiece(), O_RDWR | O_CREAT};
-
-  auto mountPath = tmpDirPath + "mount2"_pc;
-  auto clientPath = tmpDirPath + "client2"_pc;
-  auto mountNfsPath = tmpDirPath + "nfs"_pc;
-  std::vector<AbsolutePath> mountBindMounts = {
-      mountPath + "test/test2"_relpath,
-      AbsolutePath{"/foo/bar"},
-      mountPath + "a/b/c/d/e/f"_relpath,
-  };
-  serverData.mountPoints.emplace_back(
-      mountPath,
-      clientPath,
-      mountBindMounts,
-      NfsChannelData{folly::File{mountNfsPath.stringPiece(), O_RDWR | O_CREAT}},
-      SerializedInodeMap{});
-
-  // Perform the takeover
-  auto serverSendFuture = serverData.takeoverComplete.getFuture();
-  TestHandler handler{std::move(serverData)};
-  auto result = runTakeover(
-      tmpDir,
-      &handler,
-      std::set<int32_t>{TakeoverData::kTakeoverProtocolVersionFour});
-  EXPECT_TRUE(result.hasException());
-  EXPECT_THROW_RE(
-      result.exception().throw_exception(),
-      std::runtime_error,
-      "protocol does not support serializing/deserializing this type of "
-      "mounts. protocol capabilities: 14. problem mount: .*mount2. mount "
-      "protocol: 2");
 }
 
 TEST(Takeover, mixedupFdOrder) {

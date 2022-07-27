@@ -30,7 +30,8 @@ class TakeoverServer : private folly::AsyncServerSocket::AcceptCallback {
       AbsolutePathPiece socketPath,
       TakeoverHandler* handler,
       FaultInjector* FOLLY_NONNULL faultInjector,
-      const std::set<int32_t>& supportedVersions = kSupportedTakeoverVersions);
+      const std::set<int32_t>& supportedVersions = kSupportedTakeoverVersions,
+      const uint64_t supportedCapabilities = kSupportedCapabilities);
   virtual ~TakeoverServer() override;
 
   void start();
@@ -60,9 +61,11 @@ class TakeoverServer : private folly::AsyncServerSocket::AcceptCallback {
   AbsolutePath socketPath_;
   folly::AsyncServerSocket::UniquePtr socket_;
   FaultInjector& faultInjector_;
-  // generally this should be kSupportedTakeoverVersions, but we allow setting
-  // it differently, mostly for tests so that you can test a version that might
-  // not be ready for production yet
+  // generally this should be kSupportedCapabilities, but we allow setting
+  // it differently, mostly for tests so that you can test capabilities that
+  // might not be ready for production yet.
+  const uint64_t supportedCapabilities_;
+  // same goes for versions even though they are on the way out.
   const std::set<int32_t>& supportedVersions_;
 };
 } // namespace facebook::eden
