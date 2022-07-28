@@ -342,11 +342,10 @@ async fn subcommand_compute_blame(
         256,
         (None, path.clone(), file_unode_id),
         {
-            cloned!(ctx, repo, blobstore);
             // unfold operator traverses all parents of a given unode, accounting for
             // renames and treating them as another parent.
             //
-            move |(parent_index, path, file_unode_id)| {
+            |(parent_index, path, file_unode_id)| {
                 cloned!(ctx, repo, blobstore);
                 async move {
                     let file_unode = file_unode_id.load(&ctx, &blobstore).await?;
@@ -410,9 +409,8 @@ async fn subcommand_compute_blame(
             }
         },
         {
-            cloned!(ctx, repo);
-            move |(csid, parent_index, path, file_unode_id),
-                  parents: Iter<
+            |(csid, parent_index, path, file_unode_id),
+             parents: Iter<
                 Result<(Option<usize>, MPath, bytes::Bytes, EitherBlame), BlameRejected>,
             >| {
                 cloned!(ctx, repo);

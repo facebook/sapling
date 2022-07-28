@@ -5,13 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use super::common::delay_spawn;
-use super::common::handle_join_error;
 use futures::future::BoxFuture;
-use futures::future::TryFutureExt;
 use futures::ready;
 use futures::stream;
-use futures::stream::BoxStream;
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
 use futures::Stream;
@@ -38,22 +34,22 @@ use std::task::Poll;
 /// ## return value `impl Stream<Item = Result<Out, UErr>>`
 /// Stream of all `Out` values
 ///
-pub fn bounded_traversal_stream<In, InsInit, Ins, Out, Unfold, UErr>(
+pub fn bounded_traversal_stream<'caller, In, InsInit, Ins, Out, Unfold, UErr>(
     scheduled_max: usize,
     init: InsInit,
     mut unfold: Unfold,
-) -> impl Stream<Item = Result<Out, UErr>> + 'static
+) -> impl Stream<Item = Result<Out, UErr>> + 'caller
 where
-    In: 'static,
-    Out: Send + 'static,
-    UErr: Send + 'static,
+    In: 'caller,
+    Out: 'caller,
+    UErr: 'caller,
     // We use BoxFuture here because the `Unfold` future can be very large.
     // As a result, it's more efficient to keep it in one place (the heap)
     // than to move it around on the stack all the time.
     // https://fburl.com/m3cdcdko
-    Unfold: FnMut(In) -> BoxFuture<'static, Result<(Out, Ins), UErr>> + 'static,
-    InsInit: IntoIterator<Item = In>,
-    Ins: IntoIterator<Item = In> + 'static + Send,
+    Unfold: FnMut(In) -> BoxFuture<'caller, Result<(Out, Ins), UErr>> + 'caller,
+    InsInit: IntoIterator<Item = In> + 'caller,
+    Ins: IntoIterator<Item = In> + 'caller,
 {
     let mut unscheduled = VecDeque::from_iter(init);
     let mut scheduled = FuturesUnordered::new();
@@ -66,14 +62,10 @@ where
             for item in unscheduled
                 .drain(..std::cmp::min(unscheduled.len(), scheduled_max - scheduled.len()))
             {
-                let fut = unfold(item);
-                scheduled.push(async move { tokio::spawn(fut).await })
+                scheduled.push(unfold(item))
             }
 
-            if let Some((out, children)) = ready!(scheduled.poll_next_unpin(cx))
-                .map(handle_join_error)
-                .transpose()?
-            {
+            if let Some((out, children)) = ready!(scheduled.poll_next_unpin(cx)).transpose()? {
                 for child in children {
                     unscheduled.push_front(child);
                 }
@@ -95,15 +87,12 @@ pub fn limited_by_key_shardable<In, InsInit, Ins, Out, Unfold, UFut, UErr, Key, 
 ) -> impl Stream<Item = Result<Out, UErr>>
 where
     Unfold: FnMut(In) -> UFut,
-    UFut:
-        Future<Output = (Key, Option<ShardKey>, Result<Option<(Out, Ins)>, UErr>)> + Send + 'static,
+    UFut: Future<Output = (Key, Option<ShardKey>, Result<Option<(Out, Ins)>, UErr>)>,
     InsInit: IntoIterator<Item = In>,
-    Ins: IntoIterator<Item = In> + Send + 'static,
-    Key: Clone + Eq + Hash + Send + 'static,
+    Ins: IntoIterator<Item = In>,
+    Key: Clone + Eq + Hash,
     KeyFn: Fn(&In) -> (&Key, Option<(ShardKey, usize)>),
-    ShardKey: Clone + Eq + Hash + Send + 'static,
-    Out: Send + 'static,
-    UErr: Send + 'static,
+    ShardKey: Clone + Eq + Hash,
 {
     let mut unscheduled = VecDeque::from_iter(init);
     let mut scheduled = FuturesUnordered::new();
@@ -139,17 +128,15 @@ where
                     }
 
                     waiting_for_key.insert(key.clone(), VecDeque::new());
-                    scheduled.push(delay_spawn(unfold(item)));
+                    scheduled.push(unfold(item));
                 }
             }
 
-            if let Some((key, shard_key, unfolded)) =
-                ready!(scheduled.poll_next_unpin(cx)).map(handle_join_error)
-            {
+            if let Some((key, shard_key, unfolded)) = ready!(scheduled.poll_next_unpin(cx)) {
                 if let Some((key, mut queue)) = waiting_for_key.remove_entry(&key) {
                     if let Some(item) = queue.pop_front() {
                         let unfolded = unfold(item);
-                        scheduled.push(delay_spawn(unfolded));
+                        scheduled.push(unfolded);
                     }
                     if !queue.is_empty() {
                         waiting_for_key.insert(key, queue);

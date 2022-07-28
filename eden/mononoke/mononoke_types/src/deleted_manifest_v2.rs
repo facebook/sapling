@@ -115,7 +115,7 @@ impl DeletedManifestCommon for DeletedManifestV2 {
 
     async fn copy_and_update_subentries(
         ctx: &CoreContext,
-        blobstore: &(impl Blobstore + Clone + 'static),
+        blobstore: &impl Blobstore,
         current: Option<Self>,
         linknode: Option<ChangesetId>,
         subentries_to_update: BTreeMap<MPathElement, Option<Self::Id>>,
@@ -157,11 +157,11 @@ impl DeletedManifestCommon for DeletedManifestV2 {
             .await
     }
 
-    fn into_subentries(
+    fn into_subentries<'a>(
         self,
-        ctx: &CoreContext,
-        blobstore: &(impl Blobstore + Clone + 'static),
-    ) -> BoxStream<'static, Result<(MPathElement, Self::Id)>> {
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+    ) -> BoxStream<'a, Result<(MPathElement, Self::Id)>> {
         self.subentries
             .into_entries(ctx, blobstore)
             .and_then(|(k, v)| async move { anyhow::Ok((MPathElement::from_smallvec(k)?, v)) })

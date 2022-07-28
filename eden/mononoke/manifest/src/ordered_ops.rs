@@ -9,8 +9,8 @@ use std::cmp::Ordering;
 use std::iter::Peekable;
 
 use anyhow::Error;
+use borrowed::borrowed;
 use bounded_traversal::OrderedTraversal;
-use cloned::cloned;
 use context::CoreContext;
 use futures::future;
 use futures::future::FutureExt;
@@ -159,6 +159,7 @@ where
             (self.clone(), selector, None, false, after),
         ));
         (async_stream::stream! {
+            borrowed!(ctx, store);
             let s = bounded_traversal::bounded_traversal_ordered_stream(
                 schedule_max,
                 queue_max,
@@ -168,10 +169,9 @@ where
                         subentries,
                         value: select,
                     } = selector;
-                    cloned!(ctx, store);
 
                     async move {
-                        let manifest = manifest_id.load(&ctx, &store).await?;
+                        let manifest = manifest_id.load(ctx, store).await?;
 
                         let mut output = Vec::new();
 
@@ -182,7 +182,7 @@ where
                                     Entry::Tree(manifest_id),
                                 )));
                             }
-                            let mut stream = manifest.list_weighted(&ctx, &store).await?;
+                            let mut stream = manifest.list_weighted(ctx, store).await?;
                             while let Some((name, entry)) = stream.try_next().await? {
                                 if after.skip(&name) {
                                     continue;
@@ -222,7 +222,7 @@ where
                                 if after.skip(&name) {
                                     continue;
                                 }
-                                if let Some(entry) = manifest.lookup_weighted(&ctx, &store, &name).await? {
+                                if let Some(entry) = manifest.lookup_weighted(ctx, store, &name).await? {
                                     let path = Some(MPath::join_opt_element(path.as_ref(), &name));
                                     match entry {
                                         Entry::Leaf(leaf) => {
@@ -306,11 +306,10 @@ where
                     Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId>,
                 >,
             ) -> Option<Out>
-            + Clone
             + Send
             + Sync
             + 'static,
-        RecursePruner: Fn(&Diff<Self>) -> bool + Clone + Send + Sync + 'static,
+        RecursePruner: Fn(&Diff<Self>) -> bool + Send + Sync + 'static,
         Out: Send + Unpin + 'static,
     {
         if self == &other {
@@ -344,12 +343,13 @@ where
         ));
 
         (async_stream::stream! {
+            borrowed!(ctx, store, other_store, output_filter, recurse_pruner);
+
             let s = bounded_traversal::bounded_traversal_ordered_stream(
                 schedule_max,
                 queue_max,
                 init,
                 move |(input, after)| {
-                    cloned!(ctx, store, other_store, output_filter, recurse_pruner);
                     async move {
                         let mut output = Vec::new();
 
@@ -368,8 +368,8 @@ where
                         match input {
                             Diff::Changed(path, left, right) => {
                                 let (left_mf, right_mf) = future::try_join(
-                                    left.load(&ctx, &store),
-                                    right.load(&ctx, &other_store),
+                                    left.load(ctx, store),
+                                    right.load(ctx, other_store),
                                 )
                                 .await?;
 
@@ -385,8 +385,8 @@ where
                                 }
 
                                 let iter = EntryDiffIterator::new(
-                                    left_mf.list_weighted(&ctx, &store).await?.try_collect::<Vec<_>>().await?.into_iter(),
-                                    right_mf.list_weighted(&ctx, &other_store).await?.try_collect::<Vec<_>>().await?.into_iter(),
+                                    left_mf.list_weighted(ctx, store).await?.try_collect::<Vec<_>>().await?.into_iter(),
+                                    right_mf.list_weighted(ctx, other_store).await?.try_collect::<Vec<_>>().await?.into_iter(),
                                 );
                                 for (name, left, right) in iter {
                                     if after.skip(&name) || left == right {
@@ -505,8 +505,8 @@ where
                                         Diff::Added(path.clone(), Entry::Tree(tree.clone())),
                                     );
                                 }
-                                let manifest = tree.load(&ctx, &other_store).await?;
-                            let mut stream = manifest.list_weighted(&ctx, &store).await?;
+                                let manifest = tree.load(ctx, other_store).await?;
+                            let mut stream = manifest.list_weighted(ctx, store).await?;
                             while let Some((name, entry)) = stream.try_next().await? {
                                     if after.skip(&name) {
                                         continue;
@@ -539,8 +539,8 @@ where
                                         Diff::Removed(path.clone(), Entry::Tree(tree.clone())),
                                     );
                                 }
-                                let manifest = tree.load(&ctx, &store).await?;
-                            let mut stream = manifest.list_weighted(&ctx, &store).await?;
+                                let manifest = tree.load(ctx, store).await?;
+                            let mut stream = manifest.list_weighted(ctx, store).await?;
                             while let Some((name, entry)) = stream.try_next().await? {
                                     if after.skip(&name) {
                                         continue;

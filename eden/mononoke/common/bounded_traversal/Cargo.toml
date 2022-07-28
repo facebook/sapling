@@ -12,7 +12,6 @@ either = "1.5"
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 thiserror = "1.0.30"
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 anyhow = "1.0.56"
@@ -22,3 +21,4 @@ maplit = "1.0"
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 quickcheck = "1.0"
 quickcheck_async = "0.1.1"
+tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }

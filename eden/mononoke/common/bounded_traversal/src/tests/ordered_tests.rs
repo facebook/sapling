@@ -326,7 +326,6 @@ async fn test_bounded_traversal_limited_ordered_stream() -> Result<(), Error> {
 
     tick.tick().await;
     reference.unfold(131, 5);
-    reference.unfold(132, 5);
     // Unfolding and yielding stops here as we have reached the limit.
     assert_eq!(log, reference);
 
@@ -419,8 +418,7 @@ async fn test_bounded_traversal_limited_ordered_stream_partial() -> Result<(), E
 
     tick.tick().await;
     reference.unfold(151, 5);
-    reference.unfold(152, 5);
-    // Node 153 is not unfolded as we have reached the limit.
+    // Nodes 152 and 153 are not unfolded as we have reached the limit.
     assert_eq!(log, reference);
 
     assert_eq!(handle.await??, vec![0, 4, 6, 12, 13]);

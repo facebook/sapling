@@ -23,7 +23,6 @@ use blobstore::Blobstore;
 use blobstore::StoreLoadable;
 use borrowed::borrowed;
 use bounded_traversal::bounded_traversal;
-use cloned::cloned;
 use context::CoreContext;
 use fbthrift::compact_protocol;
 use futures::future::try_join;
@@ -147,18 +146,16 @@ impl SkeletonManifest {
 
     /// Returns the first case conflict that wasn't present in any of the
     /// parents.
-    pub async fn first_new_case_conflict(
+    pub async fn first_new_case_conflict<'a>(
         self,
-        ctx: &CoreContext,
-        blobstore: &(impl Blobstore + Clone + 'static),
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
         parents: Vec<SkeletonManifest>,
     ) -> Result<Option<(MPath, MPath)>> {
-        cloned!(ctx, blobstore);
         bounded_traversal(
             256,
             (None, self, parents),
-            move |(path, sk_mf, parents)| {
-                cloned!(ctx, blobstore);
+            |(path, sk_mf, parents)| {
                 async move {
                     if sk_mf.summary.child_case_conflicts {
                         if let Some((name1, name2)) = sk_mf.first_new_child_case_conflict(&parents)
@@ -175,7 +172,7 @@ impl SkeletonManifest {
                         return Ok((None, Vec::new()));
                     }
 
-                    borrowed!(ctx, blobstore, path);
+                    borrowed!(path);
                     let recurse_ids = sk_mf
                         .recurse_new_descendant_case_conflicts(&parents)
                         .map(|(name, recurse_id, recurse_parent_ids)| async move {

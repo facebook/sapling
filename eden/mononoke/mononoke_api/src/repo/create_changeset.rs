@@ -8,14 +8,12 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashSet;
-use std::sync::Arc;
 
 use blobstore::Loadable;
 use bytes::Bytes;
 use changesets::ChangesetsRef;
 use chrono::DateTime;
 use chrono::FixedOffset;
-use cloned::cloned;
 use context::CoreContext;
 use ephemeral_blobstore::Bubble;
 use filestore::FetchKey;
@@ -308,9 +306,9 @@ async fn verify_prefix_files_deleted(
 
 async fn check_addless_union_conflicts(
     ctx: &CoreContext,
-    store: RepoBlobstore,
+    repo_blobstore: RepoBlobstore,
     changesets: &[ChangesetContext],
-    fix_paths: Arc<PathTree<CreateChangeType>>,
+    fix_paths: &PathTree<CreateChangeType>,
 ) -> Result<(), MononokeError> {
     if changesets.len() < 2 {
         return Ok(());
@@ -326,74 +324,72 @@ async fn check_addless_union_conflicts(
             .await?
     };
 
+    let store = &repo_blobstore;
+
     let conflict_paths = bounded_traversal::bounded_traversal_stream(
         256,
         Some((root_fsnodes, MononokePath::new(None))),
-        {
-            cloned!(ctx, store, fix_paths);
-            move |(fsnodes_to_check, current_path)| {
-                cloned!(ctx, store, fix_paths);
-                Box::pin(async move {
-                    let mut leaf_content: BTreeMap<MPathElement, HashSet<_>> = BTreeMap::new();
-                    let mut trees: BTreeMap<MPathElement, BTreeSet<_>> = BTreeMap::new();
+        move |(fsnodes_to_check, current_path)| {
+            Box::pin(async move {
+                let mut leaf_content: BTreeMap<MPathElement, HashSet<_>> = BTreeMap::new();
+                let mut trees: BTreeMap<MPathElement, BTreeSet<_>> = BTreeMap::new();
 
-                    for fsnode in fsnodes_to_check {
-                        let fsnode = fsnode.load(&ctx, &store).await?;
-                        for (path_element, entry) in fsnode.list() {
-                            match entry {
-                                FsnodeEntry::Directory(directory) => trees
-                                    .entry(path_element.clone())
-                                    .or_default()
-                                    .insert(*directory.id()),
-                                FsnodeEntry::File(file) => leaf_content
-                                    .entry(path_element.clone())
-                                    .or_default()
-                                    .insert(*file),
-                            };
-                        }
+                for fsnode in fsnodes_to_check {
+                    let fsnode = fsnode.load(ctx, store).await?;
+                    for (path_element, entry) in fsnode.list() {
+                        match entry {
+                            FsnodeEntry::Directory(directory) => trees
+                                .entry(path_element.clone())
+                                .or_default()
+                                .insert(*directory.id()),
+                            FsnodeEntry::File(file) => leaf_content
+                                .entry(path_element.clone())
+                                .or_default()
+                                .insert(*file),
+                        };
                     }
+                }
 
-                    // Conflict rules only apply to leaves. A path in `fix_paths` means no conflict
-                    //
-                    // Two rules:
-                    // 1. If there are multiple choices for content, then there's a conflict
-                    // 2. If there's a tree and a leaf for this path, then there's a conflict
-                    let conflicts: Vec<_> = leaf_content
-                        .into_iter()
-                        .filter_map(|(path_element, contents)| {
-                            let path = current_path.append(&path_element);
-                            let fix_exists = fix_paths
-                                .get(path.as_mpath())
-                                .map_or(false, CreateChangeType::is_modification);
-                            let conflict_exists =
-                                contents.len() > 1 || trees.contains_key(&path_element);
-                            if !fix_exists && conflict_exists {
-                                Some(path)
-                            } else {
-                                None
-                            }
-                        })
-                        .collect();
-                    // Recurse into trees that might reveal more conflicts.
-                    // If we already have new content for a path, then we don't recurse into it
-                    let recurse: Vec<_> = trees
-                        .into_iter()
-                        .filter_map(|(path_element, fsnodes)| {
-                            let path = current_path.append(&path_element);
-                            let fix_exists = fix_paths
-                                .get(path.as_mpath())
-                                .map_or(false, CreateChangeType::is_modification);
+                // Conflict rules only apply to leaves. A path in `fix_paths` means no conflict
+                //
+                // Two rules:
+                // 1. If there are multiple choices for content, then there's a conflict
+                // 2. If there's a tree and a leaf for this path, then there's a conflict
+                let conflicts: Vec<_> = leaf_content
+                    .into_iter()
+                    .filter_map(|(path_element, contents)| {
+                        let path = current_path.append(&path_element);
+                        let fix_exists = fix_paths
+                            .get(path.as_mpath())
+                            .map_or(false, CreateChangeType::is_modification);
+                        let conflict_exists =
+                            contents.len() > 1 || trees.contains_key(&path_element);
+                        if !fix_exists && conflict_exists {
+                            Some(path)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                // Recurse into trees that might reveal more conflicts.
+                // If we already have new content for a path, then we don't recurse into it
+                let recurse: Vec<_> = trees
+                    .into_iter()
+                    .filter_map(|(path_element, fsnodes)| {
+                        let path = current_path.append(&path_element);
+                        let fix_exists = fix_paths
+                            .get(path.as_mpath())
+                            .map_or(false, CreateChangeType::is_modification);
 
-                            if !fix_exists && fsnodes.len() > 1 {
-                                Some((fsnodes.into_iter().collect(), path))
-                            } else {
-                                None
-                            }
-                        })
-                        .collect();
-                    anyhow::Ok((conflicts, recurse))
-                })
-            }
+                        if !fix_exists && fsnodes.len() > 1 {
+                            Some((fsnodes.into_iter().collect(), path))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                anyhow::Ok((conflicts, recurse))
+            })
         },
     )
     .try_concat()
@@ -533,10 +529,11 @@ impl RepoContext {
         };
 
         // Build a path tree recording each path that has been created or deleted.
-        let path_changes =
-            Arc::new(PathTree::from_iter(changes.iter().map(|(path, change)| {
-                (path.as_mpath().cloned(), change.change_type())
-            })));
+        let path_changes = PathTree::from_iter(
+            changes
+                .iter()
+                .map(|(path, change)| (path.as_mpath().cloned(), change.change_type())),
+        );
 
         // Determine the prefixes of all changed files.
         let prefix_paths: BTreeSet<_> = changes
@@ -574,7 +571,7 @@ impl RepoContext {
                     None => self.blob_repo().blobstore().clone(),
                 },
                 parent_ctxs.as_slice(),
-                path_changes.clone(),
+                &path_changes,
             )
             .timed()
             .await;

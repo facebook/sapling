@@ -43,7 +43,6 @@ use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use derived_data_utils::create_derive_graph_scuba_sample;
 use derived_data_utils::derived_data_utils;
 use derived_data_utils::derived_data_utils_for_config;
-use derived_data_utils::DeriveGraph;
 use derived_data_utils::DerivedUtils;
 use derived_data_utils::ThinOut;
 use derived_data_utils::DEFAULT_BACKFILLING_CONFIG_NAME;
@@ -1382,54 +1381,48 @@ async fn tail_batch_iteration(
                 }
                 .boxed()
             },
-            {
+            move |node, _| {
                 cloned!(ctx, repo);
-                move |node: DeriveGraph, _| {
-                    cloned!(ctx, repo);
-                    async move {
-                        if let Some(deriver) = &node.deriver {
-                            let mut scuba =
-                                create_derive_graph_scuba_sample(&ctx, &node.csids, deriver.name());
-                            let (stats, _) =
-                                warmup::warmup(&ctx, &repo, deriver.name(), &node.csids)
-                                    .try_timed()
-                                    .await?;
-                            scuba.add_future_stats(&stats).log_with_msg("Warmup", None);
-                            let timestamp = Instant::now();
+                async move {
+                    if let Some(deriver) = &node.deriver {
+                        let mut scuba =
+                            create_derive_graph_scuba_sample(&ctx, &node.csids, deriver.name());
+                        let (stats, _) = warmup::warmup(&ctx, &repo, deriver.name(), &node.csids)
+                            .try_timed()
+                            .await?;
+                        scuba.add_future_stats(&stats).log_with_msg("Warmup", None);
+                        let timestamp = Instant::now();
 
-                            let job = deriver
-                                .backfill_batch_dangerous(
-                                    get_batch_ctx(&ctx, parallel || gap_size.is_some()).await,
-                                    repo.clone(),
-                                    node.csids.clone(),
-                                    parallel,
-                                    gap_size,
-                                )
-                                .try_timed();
-                            let (stats, _) = tokio::spawn(job).await??;
+                        let job = deriver
+                            .backfill_batch_dangerous(
+                                get_batch_ctx(&ctx, parallel || gap_size.is_some()).await,
+                                repo.clone(),
+                                node.csids.clone(),
+                                parallel,
+                                gap_size,
+                            )
+                            .try_timed();
+                        let (stats, _) = tokio::spawn(job).await??;
 
-                            if let (Some(first), Some(last)) =
-                                (node.csids.first(), node.csids.last())
-                            {
-                                slog::info!(
-                                    ctx.logger(),
-                                    "[{}:{}] count:{} time:{:.2?} start:{} end:{}",
-                                    deriver.name(),
-                                    node.id,
-                                    node.csids.len(),
-                                    timestamp.elapsed(),
-                                    first,
-                                    last
-                                );
-                                scuba
-                                    .add_future_stats(&stats)
-                                    .log_with_msg("Derived stack", None);
-                            }
+                        if let (Some(first), Some(last)) = (node.csids.first(), node.csids.last()) {
+                            slog::info!(
+                                ctx.logger(),
+                                "[{}:{}] count:{} time:{:.2?} start:{} end:{}",
+                                deriver.name(),
+                                node.id,
+                                node.csids.len(),
+                                timestamp.elapsed(),
+                                first,
+                                last
+                            );
+                            scuba
+                                .add_future_stats(&stats)
+                                .log_with_msg("Derived stack", None);
                         }
-                        Result::<_>::Ok(())
                     }
-                    .boxed()
+                    Result::<_>::Ok(())
                 }
+                .boxed()
             },
         )
         .try_timed()

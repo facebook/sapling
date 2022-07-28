@@ -300,24 +300,23 @@ async fn derive_test_stack_of_manifests(
     Ok(res)
 }
 
-#[derive(Clone)]
 struct Files(TestManifestIdU64);
 
-impl Files {
-    async fn load<B: Blobstore + Clone + 'static>(
-        &self,
-        ctx: &CoreContext,
-        blobstore: &B,
-    ) -> Result<BTreeMap<MPath, String>, LoadableError> {
-        cloned!(ctx, blobstore);
-        let this = self.clone();
+#[async_trait]
+impl Loadable for Files {
+    type Value = BTreeMap<MPath, String>;
+
+    async fn load<'a, B: Blobstore>(
+        &'a self,
+        ctx: &'a CoreContext,
+        blobstore: &'a B,
+    ) -> Result<Self::Value, LoadableError> {
         bounded_traversal_stream(
             256,
-            Some((None, Entry::Tree(this.0))),
+            Some((None, Entry::Tree(self.0))),
             move |(path, entry)| {
-                cloned!(ctx, blobstore);
                 async move {
-                    let content = Loadable::load(&entry, &ctx, &blobstore).await?;
+                    let content = Loadable::load(&entry, ctx, blobstore).await?;
                     Ok(match content {
                         Entry::Leaf(leaf) => (Some((path, leaf)), Vec::new()),
                         Entry::Tree(tree) => {
@@ -413,7 +412,9 @@ async fn test_derive_manifest(fb: FacebookInit) -> Result<()> {
     };
 
     // load all files for specified manifest
-    let files = { move |manifest_id| async move { Files(manifest_id).load(ctx, blobstore).await } };
+    let files = {
+        move |manifest_id| async move { Loadable::load(&Files(manifest_id), ctx, blobstore).await }
+    };
 
     // clean merge of two directories
     {
@@ -675,7 +676,7 @@ async fn test_derive_stack_of_manifests(fb: FacebookInit) -> Result<()> {
     // load all files for specified manifest
     let files = {
         move |manifest_id: TestManifestIdU64| async move {
-            Files(manifest_id).load(ctx, blobstore).await
+            Loadable::load(&Files(manifest_id), ctx, blobstore).await
         }
     };
 

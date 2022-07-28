@@ -34,7 +34,6 @@ use bounded_traversal::bounded_traversal_stream;
 use changesets::ChangesetEntry;
 use changesets::Changesets;
 use changesets::SortOrder;
-use cloned::cloned;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use phases::Phases;
@@ -157,81 +156,75 @@ impl PublicChangesetBulkFetch {
         let step = self.step;
         let read_from_master = self.read_from_master;
 
-        cloned!(ctx, self.changesets);
         async move {
             let s = bounded_traversal_stream(
                 1,
                 Some(repo_bounds.await?),
                 // Returns ids plus next bounds to query, if any
-                {
-                    cloned!(ctx, changesets);
-                    move |(lower, upper): (u64, u64)| {
-                        cloned!(ctx, changesets);
-                        async move {
-                            let next = {
-                                async move {
-                                    let results: Vec<_> = changesets
-                                        .list_enumeration_range(
-                                            &ctx,
-                                            lower,
-                                            upper,
-                                            Some((d.sort_order(), step)),
-                                            read_from_master,
-                                        )
-                                        .try_collect()
-                                        .await?;
+                move |(lower, upper): (u64, u64)| {
+                    async move {
+                        let next = {
+                            let ctx = ctx.clone();
+                            let changesets = self.changesets.clone();
+                            async move {
+                                let results: Vec<_> = changesets
+                                    .list_enumeration_range(
+                                        &ctx,
+                                        lower,
+                                        upper,
+                                        Some((d.sort_order(), step)),
+                                        read_from_master,
+                                    )
+                                    .try_collect()
+                                    .await?;
 
-                                    let count = results.len() as u64;
-                                    let mut max_id = lower;
-                                    let mut min_id = upper - 1;
-                                    let cs_id_ids: Vec<(ChangesetId, u64)> = results
-                                        .into_iter()
-                                        .map(|(cs_id, id)| {
-                                            max_id = max(max_id, id);
-                                            min_id = min(min_id, id);
-                                            (cs_id, id)
-                                        })
-                                        .collect();
+                                let count = results.len() as u64;
+                                let mut max_id = lower;
+                                let mut min_id = upper - 1;
+                                let cs_id_ids: Vec<(ChangesetId, u64)> = results
+                                    .into_iter()
+                                    .map(|(cs_id, id)| {
+                                        max_id = max(max_id, id);
+                                        min_id = min(min_id, id);
+                                        (cs_id, id)
+                                    })
+                                    .collect();
 
-                                    let (completed, new_bounds) = if d == Direction::OldestFirst {
-                                        ((lower, max_id + 1), (max_id + 1, upper))
+                                let (completed, new_bounds) = if d == Direction::OldestFirst {
+                                    ((lower, max_id + 1), (max_id + 1, upper))
+                                } else {
+                                    ((min_id, upper), (lower, min_id))
+                                };
+
+                                let (completed, new_bounds) =
+                                    if count < step || new_bounds.0 == new_bounds.1 {
+                                        ((lower, upper), None)
+                                    } else if new_bounds.0 >= new_bounds.1 {
+                                        bail!("Logic error, bad bounds {:?}", new_bounds)
                                     } else {
-                                        ((min_id, upper), (lower, min_id))
+                                        // We have more to load
+                                        (completed, Some(new_bounds))
                                     };
 
-                                    let (completed, new_bounds) =
-                                        if count < step || new_bounds.0 == new_bounds.1 {
-                                            ((lower, upper), None)
-                                        } else if new_bounds.0 >= new_bounds.1 {
-                                            bail!("Logic error, bad bounds {:?}", new_bounds)
-                                        } else {
-                                            // We have more to load
-                                            (completed, Some(new_bounds))
-                                        };
-
-                                    Ok::<_, Error>(((cs_id_ids, completed), new_bounds))
-                                }
+                                Ok::<_, Error>(((cs_id_ids, completed), new_bounds))
                             }
-                            .boxed();
-                            let handle = tokio::task::spawn(next);
-                            handle.await?
                         }
-                        .boxed()
+                        .boxed();
+                        let handle = tokio::task::spawn(next);
+                        handle.await?
                     }
+                    .boxed()
                 },
             )
-            .and_then(move |(mut ids, completed_bounds)| {
-                cloned!(ctx);
-                async move {
-                    if !ids.is_empty() {
-                        let cs_ids = ids.iter().map(|(cs_id, _)| *cs_id).collect();
-                        let public = phases.get_cached_public(&ctx, cs_ids).await?;
-                        ids.retain(|(id, _)| public.contains(id));
-                    }
-                    Ok::<_, Error>(stream::iter(
-                        ids.into_iter().map(move |id| Ok((id, completed_bounds))),
-                    ))
+            .and_then(move |(mut ids, completed_bounds)| async move {
+                if !ids.is_empty() {
+                    let cs_ids = ids.iter().map(|(cs_id, _)| *cs_id).collect();
+                    let public = phases.get_cached_public(ctx, cs_ids).await?;
+                    ids.retain(|(id, _)| public.contains(id));
                 }
+                Ok::<_, Error>(stream::iter(
+                    ids.into_iter().map(move |id| Ok((id, completed_bounds))),
+                ))
             })
             .try_flatten();
             Ok(s)

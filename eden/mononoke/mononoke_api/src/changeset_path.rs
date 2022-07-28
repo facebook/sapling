@@ -370,7 +370,7 @@ impl ChangesetPathHistoryContext {
 
     async fn linknode_from_id(
         ctx: &CoreContext,
-        blobstore: &(impl Blobstore + Clone + 'static),
+        blobstore: &impl Blobstore,
         root: impl RootDeletedManifestIdCommon + 'static,
         path: MononokePath,
     ) -> Result<Option<ChangesetId>, MononokeError> {

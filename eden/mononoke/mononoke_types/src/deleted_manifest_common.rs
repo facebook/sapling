@@ -30,7 +30,7 @@ pub trait DeletedManifestCommon:
     /// adding the subentries from `subentries_to_add` (where `None` means "remove")
     async fn copy_and_update_subentries(
         ctx: &CoreContext,
-        blobstore: &(impl Blobstore + Clone + 'static),
+        blobstore: &impl Blobstore,
         current: Option<Self>,
         linknode: Option<ChangesetId>,
         subentries_to_add: BTreeMap<MPathElement, Option<Self::Id>>,
@@ -46,11 +46,11 @@ pub trait DeletedManifestCommon:
 
     /// List all subentries on this manifest. Use with care, some manifests can
     /// have hundreds of thousands of subentries.
-    fn into_subentries(
+    fn into_subentries<'a>(
         self,
-        ctx: &CoreContext,
-        blobstore: &(impl Blobstore + Clone + 'static),
-    ) -> BoxStream<'static, Result<(MPathElement, Self::Id)>>;
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+    ) -> BoxStream<'a, Result<(MPathElement, Self::Id)>>;
 
     /// Returns whether this node has no subentries.
     fn is_empty(&self) -> bool;

@@ -9,8 +9,6 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::Context;
 use std::task::Poll;
-use tokio::task::JoinError;
-use tokio::task::JoinHandle;
 
 use either::Either;
 use futures::ready;
@@ -67,89 +65,5 @@ where
             };
             Poll::Ready(result)
         }
-    }
-}
-
-/// Handle the `JoinError` you can get by awaiting a spawned task
-/// Panics if the task was cancelled (should not happen in this crate)
-/// Forwards panics back out if the task panicked
-/// Or returns the contained result directly
-pub(crate) fn handle_join_error<T>(res: Result<T, JoinError>) -> T {
-    res.unwrap_or_else(|join_err| {
-        if join_err.is_cancelled() {
-            panic!("Unexpected use of JoinHandle::abort in bounded_traversal crate");
-        }
-        if !join_err.is_panic() {
-            panic!("Cannot handle join error for a failure that's neither a panic nor a cancellation (tokio API has changed?)");
-        }
-        std::panic::resume_unwind(join_err.into_panic());
-    })
-}
-
-pub(crate) struct DelayedSpawn<F>
-where
-    F: Future + Send + 'static,
-    F::Output: Send + 'static,
-{
-    inner: DelayedSpawnInner<F>,
-}
-
-enum DelayedSpawnInner<F>
-where
-    F: Future + Send + 'static,
-    F::Output: Send + 'static,
-{
-    Waiting(F),
-    Spawning,
-    Running(JoinHandle<F::Output>),
-}
-
-impl<F> DelayedSpawnInner<F>
-where
-    F: Future + Send + 'static,
-    F::Output: Send + 'static,
-{
-    fn is_waiting(&self) -> bool {
-        match self {
-            Self::Waiting(_) => true,
-            _ => false,
-        }
-    }
-}
-
-impl<F> Future for DelayedSpawn<F>
-where
-    F: Future + Send + 'static,
-    F::Output: Send + 'static,
-{
-    type Output = Result<F::Output, JoinError>;
-
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let inner = unsafe { &mut self.get_unchecked_mut().inner };
-        if inner.is_waiting() {
-            if let DelayedSpawnInner::Waiting(f) =
-                std::mem::replace(inner, DelayedSpawnInner::Spawning)
-            {
-                *inner = DelayedSpawnInner::Running(tokio::spawn(f));
-            }
-        }
-
-        if let DelayedSpawnInner::Running(h) = inner {
-            Pin::new(h).poll(cx)
-        } else {
-            // SAFETY: Should never occur, as value should have been set to `Running`
-            // above in all cases.
-            panic!("DelayedSpawn in invalid state: not running and not waiting");
-        }
-    }
-}
-
-pub(crate) fn delay_spawn<F>(f: F) -> DelayedSpawn<F>
-where
-    F: Future + Send + 'static,
-    F::Output: Send + 'static,
-{
-    DelayedSpawn {
-        inner: DelayedSpawnInner::Waiting(f),
     }
 }

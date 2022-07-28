@@ -388,7 +388,6 @@ where
     }
 }
 
-#[derive(Clone)]
 pub struct PathTree<V> {
     pub value: V,
     pub subentries: BTreeMap<MPathElement, Self>,

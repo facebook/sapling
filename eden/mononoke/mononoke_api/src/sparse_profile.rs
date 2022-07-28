@@ -279,17 +279,16 @@ async fn calculate_size<'a>(
 ) -> Result<Out, MononokeError> {
     let root_fsnode_id = changeset.root_fsnode_id().await?;
     let root: Option<MPath> = None;
-    cloned!(ctx);
-    let blobstore = changeset.repo().blob_repo().blobstore().clone();
     bounded_traversal::bounded_traversal(
         256,
         (root, *root_fsnode_id.fsnode_id(), matchers),
-        move |(path, fsnode_id, matchers)| {
-            cloned!(ctx, matchers, blobstore);
+        |(path, fsnode_id, matchers)| {
+            cloned!(ctx, matchers);
+            let blobstore = changeset.repo().blob_repo().blobstore();
             async move {
                 let mut sizes: Out = HashMap::new();
                 let mut next: HashMap<_, HashMap<_, _>> = HashMap::new();
-                let fsnode = fsnode_id.load(&ctx, &blobstore).await?;
+                let fsnode = fsnode_id.load(&ctx, blobstore).await?;
                 for (base_name, entry) in fsnode.list() {
                     let path = MPath::join_opt_element(path.as_ref(), base_name);
                     let path_vec = path.to_vec();

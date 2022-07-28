@@ -25,9 +25,6 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use smallvec::SmallVec;
 
-use super::common::delay_spawn;
-use super::common::handle_join_error;
-use super::common::DelayedSpawn;
 use super::common::OrderedTraversal;
 use super::error::BoundedTraversalError;
 
@@ -407,15 +404,14 @@ impl NodeSchedule {
 /// budget in the parent node then the newly unfolded node will be scheduled.
 struct BoundedTraversalOrderedStream<Out, In, Unfold, UFut>
 where
-    UFut: Future + Send + 'static,
-    UFut::Output: Send + 'static,
+    UFut: Future,
 {
     unfold: Unfold,
     scheduled_max: usize,
     total_budget: usize,
     limit: Option<usize>,
     schedule_queue: VecDeque<Join<Ready<NodeLocation>, UFut>>,
-    scheduled: FuturesUnordered<DelayedSpawn<Join<Ready<NodeLocation>, UFut>>>,
+    scheduled: FuturesUnordered<Join<Ready<NodeLocation>, UFut>>,
     execution_tree: HashMap<NodeIndex, Node<Out, In>>,
     execution_tree_index: NodeIndex,
     yield_next_location: Option<NodeLocation>,
@@ -424,9 +420,9 @@ where
 impl<Out, In, Unfold, UFut, Unfolded, TErr> BoundedTraversalOrderedStream<Out, In, Unfold, UFut>
 where
     Unfold: FnMut(In) -> UFut,
-    UFut: Future<Output = Result<Unfolded, TErr>> + Send + 'static,
-    Unfolded: IntoIterator<Item = OrderedTraversal<Out, In>> + Send + 'static,
-    TErr: From<BoundedTraversalError> + Send + 'static,
+    UFut: Future<Output = Result<Unfolded, TErr>>,
+    Unfolded: IntoIterator<Item = OrderedTraversal<Out, In>>,
+    TErr: From<BoundedTraversalError>,
 {
     /// Construct a new `BoundedTraversalOrderedStream`.
     ///
@@ -565,7 +561,7 @@ where
                         if self.scheduled.len() >= self.scheduled_max {
                             self.schedule_queue.push_back(unfold_fut);
                         } else {
-                            self.scheduled.push(delay_spawn(unfold_fut));
+                            self.scheduled.push(unfold_fut);
                         }
                     }
                     NodeAction::Recurse {
@@ -811,9 +807,9 @@ impl<Out, In, Unfold, UFut, Unfolded, TErr> Stream
     for BoundedTraversalOrderedStream<Out, In, Unfold, UFut>
 where
     Unfold: FnMut(In) -> UFut,
-    UFut: Future<Output = Result<Unfolded, TErr>> + Send + 'static,
-    Unfolded: IntoIterator<Item = OrderedTraversal<Out, In>> + Send + 'static,
-    TErr: From<BoundedTraversalError> + Send + 'static,
+    UFut: Future<Output = Result<Unfolded, TErr>>,
+    Unfolded: IntoIterator<Item = OrderedTraversal<Out, In>>,
+    TErr: From<BoundedTraversalError>,
 {
     type Item = Result<Out, TErr>;
 
@@ -842,11 +838,9 @@ where
 
             // There is nothing left to yield.  Wait for a scheduled unfold to
             // complete.
-            if let Some((location, result)) =
-                ready!(this.scheduled.poll_next_unpin(cx)).map(handle_join_error)
-            {
+            if let Some((location, result)) = ready!(this.scheduled.poll_next_unpin(cx)) {
                 if let Some(next_job) = this.schedule_queue.pop_front() {
-                    this.scheduled.push(delay_spawn(next_job));
+                    this.scheduled.push(next_job);
                 }
                 this.process_unfold(location, result?)?;
             }
@@ -915,10 +909,10 @@ where
     // As a result, it's more efficient to keep it in one place (the heap)
     // than to move it around on the stack all the time.
     // https://fburl.com/m3cdcdko
-    Unfold: FnMut(In) -> BoxFuture<'static, Result<Unfolded, TErr>> + 'caller,
+    Unfold: FnMut(In) -> BoxFuture<'caller, Result<Unfolded, TErr>> + 'caller,
     InsInit: IntoIterator<Item = (usize, In)> + 'caller,
-    Unfolded: IntoIterator<Item = OrderedTraversal<Out, In>> + 'static + Send,
-    TErr: From<BoundedTraversalError> + 'static + Send,
+    Unfolded: IntoIterator<Item = OrderedTraversal<Out, In>> + 'caller,
+    TErr: From<BoundedTraversalError> + 'caller,
 {
     BoundedTraversalOrderedStream::new(scheduled_max, queued_max, None, init, unfold)
 }
@@ -951,10 +945,10 @@ where
     // As a result, it's more efficient to keep it in one place (the heap)
     // than to move it around on the stack all the time.
     // https://fburl.com/m3cdcdko
-    Unfold: FnMut(In) -> BoxFuture<'static, Result<Unfolded, TErr>> + 'static,
+    Unfold: FnMut(In) -> BoxFuture<'caller, Result<Unfolded, TErr>> + 'caller,
     InsInit: IntoIterator<Item = (usize, In)> + 'caller,
-    Unfolded: IntoIterator<Item = OrderedTraversal<Out, In>> + Send + 'static,
-    TErr: From<BoundedTraversalError> + Send + 'static,
+    Unfolded: IntoIterator<Item = OrderedTraversal<Out, In>> + 'caller,
+    TErr: From<BoundedTraversalError> + 'caller,
 {
     BoundedTraversalOrderedStream::new(scheduled_max, queued_max, Some(limit), init, unfold)
 }

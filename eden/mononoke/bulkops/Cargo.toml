@@ -11,7 +11,6 @@ license = "GPLv2+"
 anyhow = "1.0.56"
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
 changesets = { version = "0.1.0", path = "../changesets" }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }

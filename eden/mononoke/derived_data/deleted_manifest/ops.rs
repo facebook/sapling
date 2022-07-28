@@ -15,6 +15,7 @@ use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use maplit::hashset;
+use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 
@@ -220,7 +221,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
     fn find_entries<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a (impl Blobstore + Clone + 'static),
+        blobstore: &'a impl Blobstore,
         paths_or_prefixes: impl IntoIterator<Item = impl Into<PathOrPrefix>>,
     ) -> BoxStream<'a, Result<(Option<MPath>, Self::Id), Error>> {
         let root_id = self.id().clone();
@@ -241,16 +242,16 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
             }
         }));
 
-        cloned!(ctx, blobstore);
         (async_stream::stream! {
+            let ctx = ctx.borrow();
+            let blobstore = &blobstore;
             let s: BoxStream<'_, Result<(Option<MPath>, Self::Id), Error>> = bounded_traversal_stream(
                 256,
                 // starting point
                 Some((None, Selector::Selector(path_tree), root_id)),
                 move |(path, selector, manifest_id)| {
-                    cloned!(ctx, blobstore);
                     async move {
-                        let mf = manifest_id.load(&ctx, &blobstore).await?;
+                        let mf = manifest_id.load(ctx, blobstore).await?;
                         let return_entry = if mf.is_deleted() {
                             vec![(path.clone(), manifest_id)]
                         } else {
@@ -260,7 +261,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
                         match selector {
                             Selector::Recursive => {
                                 // collect subentries to recurse into
-                                let recurse = mf.into_subentries(&ctx, &blobstore).map_ok(|(name, mf_id)| {
+                                let recurse = mf.into_subentries(ctx, blobstore).map_ok(|(name, mf_id)| {
                                     let next_path = MPath::join_opt_element(path.as_ref(), &name);
                                     (Some(next_path), Selector::Recursive, mf_id)
                                 }).try_collect::<Vec<_>>().await?;
@@ -273,19 +274,22 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
                                 match value {
                                     Some(Pattern::Prefix) => {
                                         // collect subentries to recurse into
-                                        let recurse = mf.into_subentries(&ctx, &blobstore).map_ok(|(name, mf_id)| {
+                                        let recurse = mf.into_subentries(ctx, blobstore).map_ok(|(name, mf_id)| {
                                             let next_path = MPath::join_opt_element(path.as_ref(), &name);
                                             (Some(next_path), Selector::Recursive, mf_id)
                                         }).try_collect::<Vec<_>>().await?;
 
                                         Ok((return_entry, recurse))
                                     }
+                                    // Rustc bug: 1.50.0 considers the None pattern wrongly unreachable.
+                                    // https://github.com/rust-lang/rust/issues/82012
+                                    #[allow(unreachable_patterns)]
                                     None | Some(Pattern::Path) => {
                                         // need to recurse
                                         let mut recurse = vec![];
                                         // add path tree selectors
                                         for (name, tree) in subentries {
-                                            if let Some(mf_id) = mf.lookup(&ctx, &blobstore, &name).await? {
+                                            if let Some(mf_id) = mf.lookup(ctx, blobstore, &name).await? {
                                                 let next_path =
                                                     MPath::join_opt_element(path.as_ref(), &name);
                                                 recurse.push((
@@ -325,7 +329,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
     async fn find_entry(
         &self,
         ctx: &CoreContext,
-        blobstore: &(impl Blobstore + Clone + 'static),
+        blobstore: &impl Blobstore,
         path: Option<MPath>,
     ) -> Result<Option<Self::Id>, Error> {
         let s = self.find_entries(ctx, blobstore, vec![PathOrPrefix::Path(path)]);
@@ -338,25 +342,25 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
 
     /// List all Deleted manifest entries recursively, that represent deleted paths.
     ///
-    fn list_all_entries(
+    fn list_all_entries<'a>(
         &self,
-        ctx: &CoreContext,
-        blobstore: &(impl Blobstore + Clone + 'static),
-    ) -> BoxStream<'static, Result<(Option<MPath>, Self::Id), Error>> {
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+    ) -> BoxStream<'a, Result<(Option<MPath>, Self::Id), Error>> {
         let root_id = self.id().clone();
-        cloned!(ctx, blobstore);
         (async_stream::stream! {
+            let ctx = ctx.borrow();
+            let blobstore = &blobstore;
             let s = bounded_traversal_stream(256, Some((None, root_id)), move |(path, manifest_id)| {
-                cloned!(ctx, blobstore);
                 async move {
-                    let manifest = manifest_id.load(&ctx, &blobstore).await?;
+                    let manifest = manifest_id.load(ctx, blobstore).await?;
                     let entry = if manifest.is_deleted() {
                         vec![(path.clone(), manifest_id)]
                     } else {
                         vec![]
                     };
                     let recurse_subentries = manifest
-                        .into_subentries(&ctx, &blobstore)
+                        .into_subentries(ctx, blobstore)
                         .map_ok(|(name, mf_id)| {
                             let full_path = MPath::join_opt_element(path.as_ref(), &name);
                             (Some(full_path), mf_id)
