@@ -34,6 +34,12 @@ namespace {
 constexpr folly::Duration kSmallTimeout =
     std::chrono::duration_cast<folly::Duration>(1s);
 
+/**
+ * Issue a glob request.
+ *
+ * Note: This future executes on the server executor which thus needs to be
+ * manually drained for the returned Future to be ready.
+ */
 folly::Future<std::vector<GlobResult>> evaluateGlob(
     TestMount& mount,
     GlobNode& globRoot,
@@ -58,8 +64,7 @@ folly::Future<std::vector<GlobResult>> evaluateGlob(
         return result;
       })
       .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
-  ;
+      .via(mount.getServerExecutor().get());
 }
 
 const RootId kZeroRootId{};
@@ -110,7 +115,8 @@ class GlobNodeTest : public ::testing::TestWithParam<
     if (!GetParam().first) {
       builder_.setAllReady();
     }
-    return std::move(future).get();
+    mount_.drainServerExecutor();
+    return std::move(future).get(kSmallTimeout);
   }
 
   std::vector<GlobResult> doGlobIncludeDotFiles(
@@ -340,9 +346,10 @@ TEST(GlobNodeTest, matchingDirectoryDoesNotLoadTree) {
 
     auto matches = std::vector<GlobResult>{};
     try {
-      matches =
-          evaluateGlob(mount, globRoot, /*prefetchHashes=*/nullptr, kZeroRootId)
-              .get(kSmallTimeout);
+      auto fut = evaluateGlob(
+          mount, globRoot, /*prefetchHashes=*/nullptr, kZeroRootId);
+      mount.drainServerExecutor();
+      matches = std::move(fut).get(kSmallTimeout);
     } catch (const folly::FutureTimeout&) {
       FAIL() << "Matching dir/subdir should not load dir/subdir";
     }
@@ -385,11 +392,13 @@ TEST(GlobNodeTest, treeLoadError) {
 
     auto globFuture =
         evaluateGlob(mount, globRoot, /*prefetchHashes=*/nullptr, kZeroRootId);
+    mount.drainServerExecutor();
     EXPECT_FALSE(globFuture.isReady())
         << "glob should not finish when some subtrees are not read";
 
     // Cause dir/a/b to fail to load
     builder.triggerError("dir/a/b", std::runtime_error("cosmic radiation"));
+    mount.drainServerExecutor();
 
     // We still haven't allowed the rest of the trees to finish loading,
     // so the glob shouldn't be finished yet.
@@ -407,6 +416,7 @@ TEST(GlobNodeTest, treeLoadError) {
     // Mark all of the remaining trees ready, which should allow the glob
     // evaluation to complete.
     builder.setAllReady();
+    mount.drainServerExecutor();
     try {
       auto result = std::move(globFuture).get(kSmallTimeout);
       FAIL() << "glob should have succeeded";

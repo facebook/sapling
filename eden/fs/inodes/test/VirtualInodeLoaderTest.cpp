@@ -17,6 +17,7 @@
 #include "eden/fs/testharness/TestMount.h"
 
 using namespace facebook::eden;
+using namespace std::literals::chrono_literals;
 
 // VirtualInode objects don't currently know or can compute their paths,
 // as once you switch from the Inode objects to => DirEntry/Tree/TreeEntry, you
@@ -49,14 +50,14 @@ TEST(InodeLoader, load) {
                 rootInode,
                 std::vector<std::string>{
                     "dir/a.txt", "not/exist/a", "not/exist/b", "dir/sub/b.txt"},
-                [&](VirtualInode inode) -> Hash20 {
+                [&](VirtualInode inode) -> folly::SemiFuture<Hash20> {
                   return inode
                       .getSHA1("INVALIDPATH"_relpath, objectStore, fetchContext)
-                      .get();
+                      .semi();
                 },
                 objectStore,
                 fetchContext))
-            .get();
+            .get(0ms);
 
     EXPECT_EQ(Hash20::sha1("dir/a.txt"), results[0].value());
     EXPECT_THROW_ERRNO(results[1].value(), ENOENT);
@@ -78,11 +79,11 @@ TEST(InodeLoader, load) {
                 [&](VirtualInode inode) {
                   return inode
                       .getSHA1("INVALIDPATH"_relpath, objectStore, fetchContext)
-                      .get();
+                      .semi();
                 },
                 objectStore,
                 ObjectFetchContext::getNullContext()))
-            .get();
+            .get(0ms);
 
     EXPECT_EQ(Hash20::sha1("dir/sub/b.txt"), results[0].value());
     EXPECT_EQ(Hash20::sha1("dir/a.txt"), results[1].value());
@@ -101,11 +102,11 @@ TEST(InodeLoader, load) {
                 [&](VirtualInode inode) {
                   return inode
                       .getSHA1("INVALIDPATH"_relpath, objectStore, fetchContext)
-                      .get();
+                      .semi();
                 },
                 objectStore,
                 ObjectFetchContext::getNullContext()))
-            .get();
+            .get(0ms);
 
     EXPECT_EQ(Hash20::sha1("dir/a.txt"), results[0].value());
     EXPECT_THROW_RE(results[1].value(), std::domain_error, "absolute path");

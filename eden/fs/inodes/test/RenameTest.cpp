@@ -92,14 +92,18 @@ void RenameTest::renameFile(
   // Do the rename
   auto srcDir = mount_->getTreeInode(srcPath.dirname());
   auto destDir = mount_->getTreeInode(destPath.dirname());
-  auto renameFuture = srcDir->rename(
-      srcBase,
-      destDir,
-      destBase,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = srcDir
+                          ->rename(
+                              srcBase,
+                              destDir,
+                              destBase,
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
   ASSERT_TRUE(renameFuture.isReady());
-  std::move(renameFuture).get();
+  std::move(renameFuture).get(0ms);
 
   // Now get the file post-rename
   // Make sure it is the same inode, but the path is updated
@@ -175,14 +179,18 @@ TEST_F(RenameTest, renameFileToSamePath) {
 
   // Do the rename
   auto parentDir = mount_->getTreeInode(path.dirname());
-  auto renameFuture = parentDir->rename(
-      path.basename(),
-      parentDir,
-      path.basename(),
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = parentDir
+                          ->rename(
+                              path.basename(),
+                              parentDir,
+                              path.basename(),
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
   ASSERT_TRUE(renameFuture.isReady());
-  std::move(renameFuture).get();
+  std::move(renameFuture).get(0ms);
 
   // Just to be thorough, make sure looking up the path still returns the
   // original inode.
@@ -221,14 +229,18 @@ void RenameTest::renameDir(
   // Do the rename
   auto srcDir = mount_->getTreeInode(srcPath.dirname());
   auto destDir = mount_->getTreeInode(destPath.dirname());
-  auto renameFuture = srcDir->rename(
-      srcBase,
-      destDir,
-      destBase,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = srcDir
+                          ->rename(
+                              srcBase,
+                              destDir,
+                              destBase,
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
   ASSERT_TRUE(renameFuture.isReady());
-  std::move(renameFuture).get();
+  std::move(renameFuture).get(0ms);
 
   // Now get the file post-rename
   // Make sure it is the same inode, but the path is updated
@@ -304,14 +316,18 @@ TEST_F(RenameTest, renameDirToSamePath) {
 
   // Do the rename
   auto parentDir = mount_->getTreeInode(path.dirname());
-  auto renameFuture = parentDir->rename(
-      path.basename(),
-      parentDir,
-      path.basename(),
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = parentDir
+                          ->rename(
+                              path.basename(),
+                              parentDir,
+                              path.basename(),
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
   ASSERT_TRUE(renameFuture.isReady());
-  std::move(renameFuture).get();
+  std::move(renameFuture).get(0ms);
 
   // Just to be thorough, make sure looking up the path still returns the
   // original inode.
@@ -338,16 +354,20 @@ void RenameTest::renameError(
   // Do the rename
   auto srcDir = mount_->getTreeInode(srcPath.dirname());
   auto destDir = mount_->getTreeInode(destPath.dirname());
-  auto renameFuture = srcDir->rename(
-      srcBase,
-      destDir,
-      destBase,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = srcDir
+                          ->rename(
+                              srcBase,
+                              destDir,
+                              destBase,
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
 
   // The rename should fail with the expected error
   ASSERT_TRUE(renameFuture.isReady());
-  EXPECT_THROW_ERRNO(std::move(renameFuture).get(), expectedError);
+  EXPECT_THROW_ERRNO(std::move(renameFuture).get(0ms), expectedError);
 }
 
 TEST_F(RenameTest, renameNonexistentFile) {
@@ -405,25 +425,33 @@ TEST_F(RenameTest, renameIntoUnlinkedDir) {
 
   // Now unlink the destination directory
   auto destDirParent = mount_->getTreeInode(destDirPath.dirname());
-  auto rmdirFuture = destDirParent->rmdir(
-      destDirPath.basename(),
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto rmdirFuture = destDirParent
+                         ->rmdir(
+                             destDirPath.basename(),
+                             InvalidationRequired::No,
+                             ObjectFetchContext::getNullContext())
+                         .semi()
+                         .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
   ASSERT_TRUE(rmdirFuture.isReady());
-  std::move(rmdirFuture).get();
+  std::move(rmdirFuture).get(0ms);
 
   // Do the rename
-  auto renameFuture = srcDir->rename(
-      srcPath.basename(),
-      destDir,
-      "test.txt"_pc,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = srcDir
+                          ->rename(
+                              srcPath.basename(),
+                              destDir,
+                              "test.txt"_pc,
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
 
   // The rename should fail with ENOENT since the destination directory no
   // longer exists
   ASSERT_TRUE(renameFuture.isReady());
-  EXPECT_THROW_ERRNO(std::move(renameFuture).get(), ENOENT);
+  EXPECT_THROW_ERRNO(std::move(renameFuture).get(0ms), ENOENT);
 }
 
 TEST_F(RenameTest, renameOverEmptyDir) {
@@ -489,12 +517,16 @@ TEST_F(RenameTest, renameUpdatesMtime) {
 
   mount_->getClock().advance(1s);
 
-  auto renameFuture = cInode->rename(
-      PathComponentPiece{"doc.txt"},
-      bInode,
-      PathComponentPiece{"doc.txt"},
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = cInode
+                          ->rename(
+                              PathComponentPiece{"doc.txt"},
+                              bInode,
+                              PathComponentPiece{"doc.txt"},
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
   EXPECT_TRUE(renameFuture.isReady());
 
   EXPECT_EQ(
@@ -536,17 +568,22 @@ TEST_F(RenameLoadingTest, renameDirSameDirectory) {
   // parent inode is ready).  File inodes do not wait to load the blob data
   // from the backing store before creating the FileInode object.
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture = bInode->rename(
-      "c"_pc,
-      bInode,
-      "x"_pc,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = bInode
+                          ->rename(
+                              "c"_pc,
+                              bInode,
+                              "x"_pc,
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
   // The rename will not complete until a/b/c becomes ready
   EXPECT_FALSE(renameFuture.isReady());
 
   // Now make a/b/c ready
   builder_.setReady("a/b/c");
+  mount_->drainServerExecutor();
   std::move(renameFuture).get(1ms);
 }
 
@@ -559,22 +596,28 @@ TEST_F(RenameLoadingTest, renameWithLoadPending) {
       mount_->getEdenMount()
           ->getInodeSlow("a/b/c"_relpath, ObjectFetchContext::getNullContext())
           .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
   EXPECT_FALSE(inodeFuture.isReady());
 
   // Perform a rename on a/b/c before that inode is ready.
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture = bInode->rename(
-      "c"_pc,
-      bInode,
-      "x"_pc,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = bInode
+                          ->rename(
+                              "c"_pc,
+                              bInode,
+                              "x"_pc,
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
   // The rename will not complete until a/b/c becomes ready
   EXPECT_FALSE(renameFuture.isReady());
 
   // Now make a/b/c ready
   builder_.setReady("a/b/c");
+  mount_->drainServerExecutor();
 
   // Both the load and the rename should have completed
   ASSERT_TRUE(inodeFuture.isReady());
@@ -602,12 +645,16 @@ TEST_F(RenameLoadingTest, loadWithRenamePending) {
 
   // Perform a rename on a/b/c before that inode is ready.
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture = bInode->rename(
-      "c"_pc,
-      bInode,
-      "x"_pc,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = bInode
+                          ->rename(
+                              "c"_pc,
+                              bInode,
+                              "x"_pc,
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
   // The rename will not complete until a/b/c becomes ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -616,11 +663,13 @@ TEST_F(RenameLoadingTest, loadWithRenamePending) {
       mount_->getEdenMount()
           ->getInodeSlow("a/b/c"_relpath, ObjectFetchContext::getNullContext())
           .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
   EXPECT_FALSE(inodeFuture.isReady());
 
   // Now make a/b/c ready
   builder_.setReady("a/b/c");
+  mount_->drainServerExecutor();
 
   // Both the load and the rename should have completed
   ASSERT_TRUE(inodeFuture.isReady());
@@ -648,17 +697,22 @@ TEST_F(RenameLoadingTest, renameLoadFailure) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture = bInode->rename(
-      "c"_pc,
-      bInode,
-      "x"_pc,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = bInode
+                          ->rename(
+                              "c"_pc,
+                              bInode,
+                              "x"_pc,
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
   // The rename will not complete until a/b/c becomes ready
   EXPECT_FALSE(renameFuture.isReady());
 
   // Fail the load of a/b/c
   builder_.triggerError("a/b/c", std::domain_error("fake error for testing"));
+  mount_->drainServerExecutor();
   EXPECT_THROW_RE(
       std::move(renameFuture).get(1ms),
       std::domain_error,
@@ -673,20 +727,26 @@ TEST_F(RenameLoadingTest, renameLoadDest) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture = bInode->rename(
-      "c"_pc,
-      bInode,
-      "empty"_pc,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = bInode
+                          ->rename(
+                              "c"_pc,
+                              bInode,
+                              "empty"_pc,
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
   // Make a/b/c ready first
   builder_.setReady("a/b/c");
+  mount_->drainServerExecutor();
   EXPECT_FALSE(renameFuture.isReady());
   // Now make a/b/empty ready
   builder_.setReady("a/b/empty");
+  mount_->drainServerExecutor();
 
   // Both the load and the rename should have completed
   std::move(renameFuture).get(1ms);
@@ -698,20 +758,26 @@ TEST_F(RenameLoadingTest, renameLoadDestOtherOrder) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture = bInode->rename(
-      "c"_pc,
-      bInode,
-      "empty"_pc,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = bInode
+                          ->rename(
+                              "c"_pc,
+                              bInode,
+                              "empty"_pc,
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
   // Make a/b/empty ready first
   builder_.setReady("a/b/empty");
+  mount_->drainServerExecutor();
   EXPECT_FALSE(renameFuture.isReady());
   // Now make a/b/c ready
   builder_.setReady("a/b/c");
+  mount_->drainServerExecutor();
 
   // Both the load and the rename should have completed
   std::move(renameFuture).get(1ms);
@@ -725,20 +791,26 @@ TEST_F(RenameLoadingTest, renameLoadDestNonempty) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture = bInode->rename(
-      "c"_pc,
-      bInode,
-      "testdir"_pc,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = bInode
+                          ->rename(
+                              "c"_pc,
+                              bInode,
+                              "testdir"_pc,
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
   // Make a/b/c ready first
   builder_.setReady("a/b/c");
+  mount_->drainServerExecutor();
   EXPECT_FALSE(renameFuture.isReady());
   // Now make a/b/testdir ready
   builder_.setReady("a/b/testdir");
+  mount_->drainServerExecutor();
 
   // The load should fail with ENOTEMPTY
   EXPECT_THROW_ERRNO(std::move(renameFuture).get(1ms), ENOTEMPTY);
@@ -752,22 +824,28 @@ TEST_F(RenameLoadingTest, renameLoadDestNonemptyOtherOrder) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture = bInode->rename(
-      "c"_pc,
-      bInode,
-      "testdir"_pc,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = bInode
+                          ->rename(
+                              "c"_pc,
+                              bInode,
+                              "testdir"_pc,
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
   // Make a/b/testdir ready first.
   builder_.setReady("a/b/testdir");
+  mount_->drainServerExecutor();
   // The rename could potentially fail now, but it is also be fine for it to
   // wait for the source directory to be ready too before it performs
   // validation.  Therefore go ahead and make the source directory ready too
   // without checking renameFuture.isReady()
   builder_.setReady("a/b/c");
+  mount_->drainServerExecutor();
 
   // The load should fail with ENOTEMPTY
   EXPECT_THROW_ERRNO(std::move(renameFuture).get(1ms), ENOTEMPTY);
@@ -779,21 +857,27 @@ TEST_F(RenameLoadingTest, renameLoadDestFailure) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture = bInode->rename(
-      "c"_pc,
-      bInode,
-      "empty"_pc,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = bInode
+                          ->rename(
+                              "c"_pc,
+                              bInode,
+                              "empty"_pc,
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
   // Make a/b/c ready first
   builder_.setReady("a/b/c");
+  mount_->drainServerExecutor();
   EXPECT_FALSE(renameFuture.isReady());
   // Now fail the load on a/b/empty
   builder_.triggerError(
       "a/b/empty", std::domain_error("fake error for testing"));
+  mount_->drainServerExecutor();
 
   // Verify the rename failure
   EXPECT_THROW_RE(
@@ -808,12 +892,16 @@ TEST_F(RenameLoadingTest, renameLoadDestFailureOtherOrder) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture = bInode->rename(
-      "c"_pc,
-      bInode,
-      "empty"_pc,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = bInode
+                          ->rename(
+                              "c"_pc,
+                              bInode,
+                              "empty"_pc,
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -824,6 +912,7 @@ TEST_F(RenameLoadingTest, renameLoadDestFailureOtherOrder) {
   // for the source load to finish too.  Therefore go ahead and finish the load
   // on a/b/c without checking renameFuture.isReady()
   builder_.setReady("a/b/c");
+  mount_->drainServerExecutor();
 
   // Verify the rename failure
   EXPECT_THROW_RE(
@@ -838,12 +927,16 @@ TEST_F(RenameLoadingTest, renameLoadBothFailure) {
 
   // Perform a rename on "a/b/c" before it is ready
   auto bInode = mount_->getTreeInode("a/b");
-  auto renameFuture = bInode->rename(
-      "c"_pc,
-      bInode,
-      "empty"_pc,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = bInode
+                          ->rename(
+                              "c"_pc,
+                              bInode,
+                              "empty"_pc,
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_->getServerExecutor().get());
+  mount_->drainServerExecutor();
   // The rename will not complete until both a/b/c and a/b/empty become ready
   EXPECT_FALSE(renameFuture.isReady());
 
@@ -852,6 +945,7 @@ TEST_F(RenameLoadingTest, renameLoadBothFailure) {
       "a/b/c", std::domain_error("fake error for testing: src"));
   builder_.triggerError(
       "a/b/empty", std::domain_error("fake error for testing: dest"));
+  mount_->drainServerExecutor();
 
   // Verify the rename failure.
   // It doesn't matter which error we got, as long as one of

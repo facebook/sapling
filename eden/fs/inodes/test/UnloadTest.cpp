@@ -100,12 +100,14 @@ TYPED_TEST(UnloadTest, inodesCanBeUnloadedDuringLoad) {
   auto srcFuture =
       rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext())
           .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
   EXPECT_FALSE(srcFuture.isReady());
 
   rootInode->unloadChildrenNow();
 
   builder.setReady("src");
+  testMount.drainServerExecutor();
   ASSERT_TRUE(srcFuture.isReady());
   auto srcTree = std::move(srcFuture).get(1s).asTreePtr();
   EXPECT_NE(kRootNodeId, srcTree->getNodeId());
@@ -113,12 +115,14 @@ TYPED_TEST(UnloadTest, inodesCanBeUnloadedDuringLoad) {
   auto subFuture =
       srcTree->getOrLoadChild("sub"_pc, ObjectFetchContext::getNullContext())
           .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
   srcTree.reset();
   EXPECT_FALSE(subFuture.isReady());
 
   rootInode->unloadChildrenNow();
   builder.setReady("src/sub");
+  testMount.drainServerExecutor();
   ASSERT_TRUE(subFuture.isReady());
 
   auto sub = std::move(subFuture).get(1s);

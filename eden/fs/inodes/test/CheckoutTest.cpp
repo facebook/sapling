@@ -920,7 +920,8 @@ TEST(Checkout, checkoutModifiesDirectoryDuringLoad) {
           ->getInodeSlow(
               "dir/sub"_relpath, ObjectFetchContext::getNullContext())
           .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
   EXPECT_FALSE(inodeFuture.isReady());
 
   // Checkout to a revision where the contents of "dir/sub" have changed.
@@ -932,6 +933,7 @@ TEST(Checkout, checkoutModifiesDirectoryDuringLoad) {
 
   // Finish loading.
   builder1.setReady("dir/sub");
+  testMount.drainServerExecutor();
   EXPECT_TRUE(inodeFuture.isReady());
 
   auto executor = testMount.getServerExecutor().get();

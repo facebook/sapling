@@ -15,6 +15,7 @@
 #include "eden/fs/testharness/TestMount.h"
 
 using namespace facebook::eden;
+using namespace std::literals::chrono_literals;
 using folly::StringPiece;
 
 class UnlinkTest : public ::testing::Test {
@@ -38,11 +39,14 @@ class UnlinkTest : public ::testing::Test {
 TEST_F(UnlinkTest, enoent) {
   auto dir = mount_.getTreeInode("dir");
   auto unlinkFuture = dir->unlink(
-      "notpresent.txt"_pc,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+                             "notpresent.txt"_pc,
+                             InvalidationRequired::No,
+                             ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
   ASSERT_TRUE(unlinkFuture.isReady());
-  EXPECT_THROW_ERRNO(std::move(unlinkFuture).get(), ENOENT);
+  EXPECT_THROW_ERRNO(std::move(unlinkFuture).get(0ms), ENOENT);
 }
 
 TEST_F(UnlinkTest, notLoaded) {
@@ -51,11 +55,14 @@ TEST_F(UnlinkTest, notLoaded) {
 
   // Remove the child when it has not been loaded yet.
   auto unlinkFuture = dir->unlink(
-      childPath,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+                             childPath,
+                             InvalidationRequired::No,
+                             ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
   ASSERT_TRUE(unlinkFuture.isReady());
-  std::move(unlinkFuture).get();
+  std::move(unlinkFuture).get(0ms);
 
   EXPECT_THROW_ERRNO(dir->getChildInodeNumber(childPath), ENOENT);
 }
@@ -67,11 +74,14 @@ TEST_F(UnlinkTest, inodeAssigned) {
   // Assign an inode number to the child without loading it.
   dir->getChildInodeNumber(childPath);
   auto unlinkFuture = dir->unlink(
-      childPath,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+                             childPath,
+                             InvalidationRequired::No,
+                             ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
   ASSERT_TRUE(unlinkFuture.isReady());
-  std::move(unlinkFuture).get();
+  std::move(unlinkFuture).get(0ms);
 
   EXPECT_THROW_ERRNO(dir->getChildInodeNumber(childPath), ENOENT);
 }
@@ -84,11 +94,14 @@ TEST_F(UnlinkTest, loaded) {
   auto file = mount_.getFileInode("dir/a.txt");
   EXPECT_EQ(file->getNodeId(), dir->getChildInodeNumber(childPath));
   auto unlinkFuture = dir->unlink(
-      childPath,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+                             childPath,
+                             InvalidationRequired::No,
+                             ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
   ASSERT_TRUE(unlinkFuture.isReady());
-  std::move(unlinkFuture).get();
+  std::move(unlinkFuture).get(0ms);
 
   EXPECT_THROW_ERRNO(dir->getChildInodeNumber(childPath), ENOENT);
   // We should still be able to read from the FileInode
@@ -111,11 +124,14 @@ TEST_F(UnlinkTest, modified) {
 
   // Now remove the child
   auto unlinkFuture = dir->unlink(
-      childPath,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+                             childPath,
+                             InvalidationRequired::No,
+                             ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
   ASSERT_TRUE(unlinkFuture.isReady());
-  std::move(unlinkFuture).get();
+  std::move(unlinkFuture).get(0ms);
 
   EXPECT_THROW_ERRNO(dir->getChildInodeNumber(childPath), ENOENT);
 #ifndef _WIN32
@@ -134,11 +150,14 @@ TEST_F(UnlinkTest, created) {
 
   // Now remove the child
   auto unlinkFuture = dir->unlink(
-      childPath,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+                             childPath,
+                             InvalidationRequired::No,
+                             ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
   ASSERT_TRUE(unlinkFuture.isReady());
-  std::move(unlinkFuture).get();
+  std::move(unlinkFuture).get(0ms);
 
   EXPECT_THROW_ERRNO(dir->getChildInodeNumber(childPath), ENOENT);
 #ifndef _WIN32

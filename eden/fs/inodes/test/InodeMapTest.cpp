@@ -103,18 +103,21 @@ TEST(InodeMap, asyncLookup) {
   auto srcFuture =
       rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext())
           .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
   EXPECT_FALSE(srcFuture.isReady());
 
   // Start a second lookup before the first is ready
   auto srcFuture2 =
       rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext())
           .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
   EXPECT_FALSE(srcFuture2.isReady());
 
   // Now make the tree ready
   builder.setReady("src");
+  testMount.drainServerExecutor();
   ASSERT_TRUE(srcFuture.isReady());
   ASSERT_TRUE(srcFuture2.isReady());
   auto srcTree = std::move(srcFuture).get(std::chrono::seconds(1));
@@ -135,19 +138,22 @@ TEST(InodeMap, asyncError) {
   auto srcFuture =
       rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext())
           .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
   EXPECT_FALSE(srcFuture.isReady());
 
   // Start a second lookup before the first is ready
   auto srcFuture2 =
       rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext())
           .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
   EXPECT_FALSE(srcFuture2.isReady());
 
   // Now fail the tree lookup
   builder.triggerError(
       "src", std::domain_error("rejecting lookup for src tree"));
+  testMount.drainServerExecutor();
   ASSERT_TRUE(srcFuture.isReady());
   ASSERT_TRUE(srcFuture2.isReady());
   EXPECT_THROW(std::move(srcFuture).get(), std::domain_error);
@@ -166,18 +172,24 @@ TEST(InodeMap, recursiveLookup) {
           ->getInodeSlow(
               "a/b/c/d/file.txt"_relpath, ObjectFetchContext::getNullContext())
           .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
   EXPECT_FALSE(fileFuture.isReady());
 
   builder.setReady("a/b/c");
+  testMount.drainServerExecutor();
   EXPECT_FALSE(fileFuture.isReady());
   builder.setReady("a");
+  testMount.drainServerExecutor();
   EXPECT_FALSE(fileFuture.isReady());
   builder.setReady("a/b");
+  testMount.drainServerExecutor();
   EXPECT_FALSE(fileFuture.isReady());
   builder.setReady("a/b/c/d/file.txt");
+  testMount.drainServerExecutor();
   EXPECT_FALSE(fileFuture.isReady());
   builder.setReady("a/b/c/d");
+  testMount.drainServerExecutor();
   ASSERT_TRUE(fileFuture.isReady());
   auto fileInode = std::move(fileFuture).get();
   EXPECT_EQ("a/b/c/d/file.txt"_relpath, fileInode->getPath().value());
@@ -195,19 +207,25 @@ TEST(InodeMap, recursiveLookupError) {
           ->getInodeSlow(
               "a/b/c/d/file.txt"_relpath, ObjectFetchContext::getNullContext())
           .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
   EXPECT_FALSE(fileFuture.isReady());
 
   builder.setReady("a");
+  testMount.drainServerExecutor();
   EXPECT_FALSE(fileFuture.isReady());
   builder.setReady("a/b/c");
+  testMount.drainServerExecutor();
   EXPECT_FALSE(fileFuture.isReady());
   builder.setReady("a/b");
+  testMount.drainServerExecutor();
   EXPECT_FALSE(fileFuture.isReady());
   builder.setReady("a/b/c/d/file.txt");
+  testMount.drainServerExecutor();
   EXPECT_FALSE(fileFuture.isReady());
   builder.triggerError(
       "a/b/c/d", std::domain_error("error for testing purposes"));
+  testMount.drainServerExecutor();
   ASSERT_TRUE(fileFuture.isReady());
   EXPECT_THROW_RE(
       std::move(fileFuture).get(),
@@ -227,26 +245,34 @@ TEST(InodeMap, renameDuringRecursiveLookup) {
           ->getInodeSlow(
               "a/b/c/d/file.txt"_relpath, ObjectFetchContext::getNullContext())
           .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
   EXPECT_FALSE(fileFuture.isReady());
 
   builder.setReady("a/b/c");
+  testMount.drainServerExecutor();
   EXPECT_FALSE(fileFuture.isReady());
   builder.setReady("a");
+  testMount.drainServerExecutor();
   EXPECT_FALSE(fileFuture.isReady());
   builder.setReady("a/b");
+  testMount.drainServerExecutor();
   EXPECT_FALSE(fileFuture.isReady());
 
   auto bInode = testMount.getTreeInode("a/b"_relpath);
 
   // Rename c to x after the recursive resolution should have
   // already looked it up
-  auto renameFuture = bInode->rename(
-      "c"_pc,
-      bInode,
-      "x"_pc,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = bInode
+                          ->rename(
+                              "c"_pc,
+                              bInode,
+                              "x"_pc,
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_FALSE(fileFuture.isReady());
 
@@ -254,6 +280,7 @@ TEST(InodeMap, renameDuringRecursiveLookup) {
   // Note that we don't actually have to mark the file itself ready.
   // The Inode lookup itself doesn't need the blob data yet.
   builder.setReady("a/b/c/d");
+  testMount.drainServerExecutor();
   ASSERT_TRUE(fileFuture.isReady());
   auto fileInode = std::move(fileFuture).get();
   // We should have successfully looked up the inode, but it will report it
@@ -273,36 +300,45 @@ TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
           ->getInodeSlow(
               "a/b/c/d/file.txt"_relpath, ObjectFetchContext::getNullContext())
           .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
   EXPECT_FALSE(fileFuture.isReady());
 
   builder.setReady("a");
+  testMount.drainServerExecutor();
   EXPECT_FALSE(fileFuture.isReady());
   builder.setReady("a/b");
+  testMount.drainServerExecutor();
   EXPECT_FALSE(fileFuture.isReady());
 
   auto bInode = testMount.getTreeInode("a/b"_relpath);
 
   // Rename c to x while the recursive resolution is still trying
   // to look it up.
-  auto renameFuture = bInode->rename(
-      "c"_pc,
-      bInode,
-      "x"_pc,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto renameFuture = bInode
+                          ->rename(
+                              "c"_pc,
+                              bInode,
+                              "x"_pc,
+                              InvalidationRequired::No,
+                              ObjectFetchContext::getNullContext())
+                          .semi()
+                          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
   // The rename will not complete until C becomes ready
   EXPECT_FALSE(renameFuture.isReady());
   EXPECT_FALSE(fileFuture.isReady());
 
   builder.setReady("a/b/c");
-  std::move(renameFuture).get(1ms);
+  testMount.drainServerExecutor();
+  EXPECT_TRUE(renameFuture.isReady());
   EXPECT_FALSE(fileFuture.isReady());
 
   // Now mark the rest of the tree ready
   // Note that we don't actually have to mark the file itself ready.
   // The Inode lookup itself doesn't need the blob data yet.
   builder.setReady("a/b/c/d");
+  testMount.drainServerExecutor();
   ASSERT_TRUE(fileFuture.isReady());
   auto fileInode = std::move(fileFuture).get();
   // We should have successfully looked up the inode, but it will report it

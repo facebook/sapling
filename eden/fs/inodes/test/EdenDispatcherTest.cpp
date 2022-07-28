@@ -151,9 +151,10 @@ TEST(RawEdenDispatcherTest, lookup_returns_valid_inode_for_bad_file) {
           ->lookup(
               0, kRootNodeId, "bad"_pc, ObjectFetchContext::getNullContext())
           .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+          .via(mount.getServerExecutor().get());
   builder.getStoredBlob("bad"_relpath)
       ->triggerError(std::runtime_error("failed to load"));
+  mount.drainServerExecutor();
   auto entry = std::move(entryFuture).get(0ms);
   EXPECT_NE(0, entry.nodeid);
   EXPECT_NE(0, entry.attr.ino);

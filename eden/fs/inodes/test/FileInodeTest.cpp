@@ -73,8 +73,11 @@ bool operator==(const timespec& ts, std::chrono::system_clock::time_point tp) {
 
 namespace {
 
-struct stat getFileAttr(const FileInodePtr& inode) {
-  auto attrFuture = inode->stat(ObjectFetchContext::getNullContext()).semi();
+struct stat getFileAttr(TestMount& mount, const FileInodePtr& inode) {
+  auto attrFuture = inode->stat(ObjectFetchContext::getNullContext())
+                        .semi()
+                        .via(mount.getServerExecutor().get());
+  mount.drainServerExecutor();
   // We unfortunately can't use an ASSERT_* check here, since it tries
   // to return from the function normally, rather than throwing.
   if (!attrFuture.isReady()) {
@@ -83,19 +86,24 @@ struct stat getFileAttr(const FileInodePtr& inode) {
     ADD_FAILURE() << "getattr() future is not ready";
     throw std::runtime_error("getattr future is not ready");
   }
-  return std::move(attrFuture).get();
+
+  return std::move(attrFuture).get(0ms);
 }
 
 struct stat setFileAttr(
+    TestMount& mount,
     const FileInodePtr& inode,
     const DesiredMetadata& desired) {
   auto attrFuture =
-      inode->setattr(desired, ObjectFetchContext::getNullContext());
+      inode->setattr(desired, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(mount.getServerExecutor().get());
+  mount.drainServerExecutor();
   if (!attrFuture.isReady()) {
     ADD_FAILURE() << "setattr() future is not ready";
     throw std::runtime_error("setattr future is not ready");
   }
-  return std::move(attrFuture).get();
+  return std::move(attrFuture).get(0ms);
 }
 
 /**
@@ -187,7 +195,7 @@ TEST_F(FileInodeTest, getType) {
 
 TEST_F(FileInodeTest, getattrFromBlob) {
   auto inode = mount_.getFileInode("dir/a.txt");
-  auto attr = getFileAttr(inode);
+  auto attr = getFileAttr(mount_, inode);
 
   BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0644), attr.st_mode);
@@ -201,7 +209,7 @@ TEST_F(FileInodeTest, getattrFromOverlay) {
   mount_.addFile("dir/new_file.c", "hello\nworld\n");
   auto inode = mount_.getFileInode("dir/new_file.c");
 
-  auto attr = getFileAttr(inode);
+  auto attr = getFileAttr(mount_, inode);
   BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0644), attr.st_mode);
   EXPECT_EQ(12, attr.st_size);
@@ -215,7 +223,7 @@ void testSetattrTruncateAll(TestMount& mount) {
   auto inode = mount.getFileInode("dir/a.txt");
   DesiredMetadata desired;
   desired.size = 0;
-  auto attr = setFileAttr(inode, desired);
+  auto attr = setFileAttr(mount, inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0644), attr.st_mode);
@@ -243,7 +251,7 @@ TEST_F(FileInodeTest, setattrTruncatePartial) {
   auto inode = mount_.getFileInode("dir/a.txt");
   DesiredMetadata desired;
   desired.size = 4;
-  auto attr = setFileAttr(inode, desired);
+  auto attr = setFileAttr(mount_, inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0644), attr.st_mode);
@@ -256,7 +264,7 @@ TEST_F(FileInodeTest, setattrBiggerSize) {
   auto inode = mount_.getFileInode("dir/a.txt");
   DesiredMetadata desired;
   desired.size = 30;
-  auto attr = setFileAttr(inode, desired);
+  auto attr = setFileAttr(mount_, inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0644), attr.st_mode);
@@ -275,7 +283,7 @@ TEST_F(FileInodeTest, setattrPermissions) {
 
   for (int n = 0; n <= 0777; ++n) {
     desired.mode = n;
-    auto attr = setFileAttr(inode, desired);
+    auto attr = setFileAttr(mount_, inode, desired);
 
     BASIC_ATTR_XCHECKS(inode, attr);
     EXPECT_EQ((S_IFREG | n), attr.st_mode);
@@ -290,7 +298,7 @@ TEST_F(FileInodeTest, setattrFileType) {
 
   // File type bits in the mode should be ignored.
   desired.mode = S_IFLNK | 0755;
-  auto attr = setFileAttr(inode, desired);
+  auto attr = setFileAttr(mount_, inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0755), attr.st_mode)
@@ -309,7 +317,7 @@ TEST_F(FileInodeTest, setattrAtime) {
   atime.tv_nsec = 5678;
   desired.atime = atime;
 
-  auto attr = setFileAttr(inode, desired);
+  auto attr = setFileAttr(mount_, inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ(1234, attr.st_atime);
@@ -321,7 +329,7 @@ TEST_F(FileInodeTest, setattrAtime) {
   // Ask to set the atime to the current time
   desired.atime = mount_.getClock().getRealtime();
 
-  attr = setFileAttr(inode, desired);
+  attr = setFileAttr(mount_, inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ(
@@ -339,7 +347,7 @@ void testSetattrMtime(TestMount& mount) {
   mtime.tv_nsec = 5678;
   desired.mtime = mtime;
 
-  auto attr = setFileAttr(inode, desired);
+  auto attr = setFileAttr(mount, inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ(1234, attr.st_mtime);
@@ -351,7 +359,7 @@ void testSetattrMtime(TestMount& mount) {
   auto start = mount.getClock().getTimePoint();
   desired.mtime = mount.getClock().getRealtime();
 
-  attr = setFileAttr(inode, desired);
+  attr = setFileAttr(mount, inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ(start, folly::to<FakeClock::time_point>(stMtime(attr)));
@@ -466,7 +474,7 @@ TEST_F(FileInodeTest, fallocate) {
   auto inode = mount_.getFileInode("dir/fallocate_file");
   inode->fallocate(0, 42, ObjectFetchContext::getNullContext()).get(0ms);
 
-  auto attr = getFileAttr(inode);
+  auto attr = getFileAttr(mount_, inode);
   BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ(42, attr.st_size);
 }
@@ -570,7 +578,10 @@ TEST(FileInode, truncateDuringLoad) {
                           auto [data, isEof] = std::move(readRes);
                           EXPECT_EQ(true, isEof);
                           return data->moveToFbString();
-                        });
+                        })
+                        .semi()
+                        .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
   EXPECT_FALSE(dataFuture.isReady());
 
   // Truncate the file while the initial read is in progress. This should
@@ -581,6 +592,7 @@ TEST(FileInode, truncateDuringLoad) {
   (void)inode->setattr(desired, ObjectFetchContext::getNullContext()).get(0ms);
 
   // The read should complete now too.
+  mount_.drainServerExecutor();
   EXPECT_EQ("", std::move(dataFuture).get(0ms));
 
   // For good measure, test reading and writing some more.
@@ -591,9 +603,12 @@ TEST(FileInode, truncateDuringLoad) {
                      auto [data, isEof] = std::move(readRes);
                      EXPECT_EQ(false, isEof);
                      return data->moveToFbString();
-                   });
+                   })
+                   .semi()
+                   .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
   ASSERT_TRUE(dataFuture.isReady());
-  EXPECT_EQ("\0\0\0\0\0foobar\n"_sp, std::move(dataFuture).get());
+  EXPECT_EQ("\0\0\0\0\0foobar\n"_sp, std::move(dataFuture).get(0ms));
 
   EXPECT_FILE_INODE(inode, "\0\0\0\0\0foobar\n"_sp, 0644);
 }
