@@ -86,10 +86,7 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
         .perf_counters()
         .add_to_counter(PerfCounterType::EdenapiTrees, request.keys.len() as i64);
 
-    // Sample trivial requests
-    if request.keys.len() == 1 && !request.attributes.child_metadata {
-        ScubaMiddlewareState::try_set_sampling_rate(state, nonzero_ext::nonzero!(100_u64));
-    }
+    ScubaMiddlewareState::try_set_sampling_rate(state, nonzero_ext::nonzero!(256_u64));
 
     Ok(custom_cbor_stream(
         fetch_all_trees(repo, request),

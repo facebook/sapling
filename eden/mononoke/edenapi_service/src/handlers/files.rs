@@ -149,12 +149,7 @@ impl EdenApiHandler for Files2Handler {
     const ENDPOINT: &'static str = "/files2";
 
     fn sampling_rate(request: &Self::Request) -> NonZeroU64 {
-        // Sample trivial requests
-        if request.keys.len() + request.reqs.len() == 1 {
-            nonzero_ext::nonzero!(100u64)
-        } else {
-            nonzero_ext::nonzero!(1u64)
-        }
+        nonzero_ext::nonzero!(256u64)
     }
 
     async fn handler(

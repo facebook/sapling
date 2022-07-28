@@ -187,7 +187,7 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
         EdenApiMethod::CommitHashToLocation,
     ));
 
-    ScubaMiddlewareState::try_set_sampling_rate(state, nonzero_ext::nonzero!(100_u64));
+    ScubaMiddlewareState::try_set_sampling_rate(state, nonzero_ext::nonzero!(256_u64));
 
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state).clone();
