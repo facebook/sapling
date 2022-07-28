@@ -18,48 +18,6 @@
 
 namespace facebook::eden {
 
-// namespace detail {
-
-// static inline size_t estimateIndirectMemoryUsage(
-//     const std::map<overlay::PathComponent, overlay::OverlayEntry>& entries) {
-//   // std::map is implemented using a red-black tree.
-
-//   // Accumulate the estimated usage of the base nodes of the tree
-// #if defined(_STL_TREE_H)
-//   size_t usage = folly::goodMallocSize(sizeof(std::_Rb_tree_node<std::pair<
-//                                                   const
-//                                                   overlay::PathComponent,
-//                                                   overlay::OverlayEntry>>)) *
-//       entries.size();
-// #elif defined(_XTREE_)
-//   size_t usage =
-//       folly::goodMallocSize(
-//           sizeof(std::_Tree_node<
-//                  std::pair<const overlay::PathComponent,
-//                  overlay::OverlayEntry>, void*>)) *
-//       entries.size();
-// #elif defined(_LIBCPP___TREE)
-//   size_t usage =
-//       folly::goodMallocSize(
-//           sizeof(std::__tree_node<
-//                  std::pair<const overlay::PathComponent,
-//                  overlay::OverlayEntry>, void*>)) *
-//       entries.size();
-// #endif
-
-//   // Accumulate any indirect usage from the nodes
-//   for (const auto& pair : entries) {
-//     usage += facebook::eden::estimateIndirectMemoryUsage(std::get<0>(pair));
-//     if (auto entryHash = std::get<1>(pair).get_hash()) {
-//       usage += facebook::eden::estimateIndirectMemoryUsage(*entryHash);
-//     }
-//   }
-
-//   return usage;
-// }
-
-// } // namespace detail
-
 BufferedTreeOverlay::BufferedTreeOverlay(
     AbsolutePathPiece path,
     const EdenConfig& config,
@@ -239,23 +197,30 @@ void BufferedTreeOverlay::addChild(
     InodeNumber parent,
     PathComponentPiece name,
     overlay::OverlayEntry entry) {
+  PathComponent name_copy = name.copy();
+  size_t captureSize = estimateIndirectMemoryUsage(name_copy.value());
+  if (auto entryHash = entry.get_hash()) {
+    captureSize += estimateIndirectMemoryUsage(*entryHash);
+  }
   process(
-      [this, parent, name = name.copy(), entry = std::move(entry)]() {
+      [this, parent, name = std::move(name_copy), entry = std::move(entry)]() {
         TreeOverlay::addChild(parent, name, entry);
         return false;
       },
-      0);
+      captureSize);
 }
 
 void BufferedTreeOverlay::removeChild(
     InodeNumber parent,
     PathComponentPiece childName) {
+  PathComponent childName_copy = childName.copy();
+  size_t captureSize = estimateIndirectMemoryUsage(childName_copy.value());
   process(
-      [this, parent, childName = childName.copy()]() {
+      [this, parent, childName = std::move(childName_copy)]() {
         TreeOverlay::removeChild(parent, childName);
         return false;
       },
-      0);
+      captureSize);
 }
 
 void BufferedTreeOverlay::renameChild(
@@ -263,11 +228,19 @@ void BufferedTreeOverlay::renameChild(
     InodeNumber dst,
     PathComponentPiece srcName,
     PathComponentPiece dstName) {
+  PathComponent srcName_copy = srcName.copy();
+  PathComponent dstName_copy = dstName.copy();
+  size_t captureSize = estimateIndirectMemoryUsage(srcName_copy.value()) +
+      estimateIndirectMemoryUsage(dstName_copy.value());
   process(
-      [this, src, dst, srcName = srcName.copy(), dstName = dstName.copy()]() {
+      [this,
+       src,
+       dst,
+       srcName = std::move(srcName_copy),
+       dstName = std::move(dstName_copy)]() {
         TreeOverlay::renameChild(src, dst, srcName, dstName);
         return false;
       },
-      0);
+      captureSize);
 }
 } // namespace facebook::eden
