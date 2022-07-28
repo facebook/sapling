@@ -23,12 +23,12 @@ C -> C2 relation is copied with singletransaction.
   rebasing 26805aba1e60 "C"
   rebasing f585351a92f8 "D"
   rebasing 039c3379aaa9 "C2"
-  $ hg log -G -T '{node|short} {desc}'
+  $ hg log -G -T '{node|short} {desc} {mutations%"{operation} to {successors}"}'
   o  b97425e89b0c C2
   │
   │ o  f7f4f5b9173a D
   │ │
-  │ x  e709467ba6ed C
+  │ x  e709467ba6ed C amend-copy to b97425e89b0c
   ├─╯
   o  d74d19e598c8 B
   │
