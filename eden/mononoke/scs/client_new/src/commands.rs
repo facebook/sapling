@@ -14,8 +14,9 @@ base_app::subcommands! {
     mod common_base;
     mod diff;
     mod export;
+    mod find_files;
     mod info;
     mod is_ancestor;
-    mod find_files;
+    mod list_bookmarks;
     app = ScscApp
 }

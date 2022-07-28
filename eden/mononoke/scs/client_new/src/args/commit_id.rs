@@ -327,6 +327,7 @@ impl clap::Args for CommitIdArgs {
 }
 
 #[derive(Clone)]
+/// 0 or more commit ids
 pub(crate) struct CommitIdsArgs {
     commit_ids: Vec<CommitId>,
 }
@@ -345,11 +346,11 @@ impl clap::FromArgMatches for CommitIdsArgs {
 
 impl clap::Args for CommitIdsArgs {
     fn augment_args(cmd: clap::Command<'_>) -> clap::Command<'_> {
-        add_commit_id_args_impl(cmd, true, true)
+        add_commit_id_args_impl(cmd, false, true)
     }
 
     fn augment_args_for_update(cmd: clap::Command<'_>) -> clap::Command<'_> {
-        add_commit_id_args_impl(cmd, true, true)
+        add_commit_id_args_impl(cmd, false, true)
     }
 }
 
