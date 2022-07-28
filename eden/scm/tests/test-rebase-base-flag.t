@@ -218,48 +218,48 @@ Multiple branching points with multiple merges:
   >   A   A   A
   > EOS
   rebasing dc0947a82db8 "C" (C)
-  rebasing 03ca77807e91 "E" (E)
   rebasing afc707c82df0 "F" (F)
-  rebasing 690dfff91e9e "G" (G)
   rebasing 4e4f9194f9f1 "D" (D)
+  rebasing 03ca77807e91 "E" (E)
+  rebasing 690dfff91e9e "G" (G)
   rebasing 2893b886bb10 "H" (H)
-  rebasing 83780307a7e8 "K" (K)
-  rebasing e131637a1cb6 "L" (L)
-  rebasing 7aaec6f81888 "N" (N)
   rebasing 08ebfeb61bac "I" (I)
   rebasing a0a5005cec67 "J" (J)
   rebasing d1f6d0c3c7e4 "M" (M)
+  rebasing e131637a1cb6 "L" (L)
+  rebasing 83780307a7e8 "K" (K)
+  rebasing 7aaec6f81888 "N" (N)
   rebasing 325bc8f1760d "P" (P)
   o    6ef6a0ea3b18 'P'
   ├─╮
-  │ o    cd4f6c06d2ab 'M'
+  │ o    20ba3610a7e5 'N'
   │ ├─╮
-  │ │ o  de0cbffe893e 'J'
+  │ │ o  7bbb6c8a6ad7 'K'
   │ │ │
-  │ o │  0e710f176a88 'I'
+  │ o │  bca872041455 'L'
   │ ├─╯
-  o │    20ba3610a7e5 'N'
+  o │    cd4f6c06d2ab 'M'
   ├───╮
-  │ │ o  bca872041455 'L'
+  │ │ o  de0cbffe893e 'J'
   │ ├─╯
-  o │  7bbb6c8a6ad7 'K'
+  o │  0e710f176a88 'I'
   ├─╯
   │ o    52507bab39ca 'H'
   │ ├─╮
-  │ │ o    8d09fcdb5594 'D'
-  │ │ ├─╮
-  │ │ │ │ o  bb5fe4652f0d 'G'
-  │ ╭─────┤
-  │ │ │ │ o  f4ad4b31daf4 'F'
-  │ │ │ ├─╯
-  │ o │ │  b168f85f2e78 'E'
-  │ ├───╯
-  │ o │  ab70b4c5a9c9 'C'
-  ├─╯ │
-  o   │  262e37e34f63 'Z'
-  │   │
-  │   o  112478962961 'B'
+  │ │ │ o  bb5fe4652f0d 'G'
+  │ │ ╭─┤
+  │ │ o │  b168f85f2e78 'E'
+  │ │ │ │
+  │ o │ │  8d09fcdb5594 'D'
+  │ ├─╮ │
+  │ │ │ o  f4ad4b31daf4 'F'
+  │ │ ├─╯
+  │ │ o  ab70b4c5a9c9 'C'
   ├───╯
+  o │  262e37e34f63 'Z'
+  │ │
+  │ o  112478962961 'B'
+  ├─╯
   o  426bada5c675 'A'
   
 Slightly more complex merge case (mentioned in https://www.mercurial-scm.org/pipermail/mercurial-devel/2016-November/091074.html):
@@ -279,22 +279,22 @@ Slightly more complex merge case (mentioned in https://www.mercurial-scm.org/pip
   rebasing 73508237b032 "C1" (C1)
   rebasing fdb955e2faed "A2" (A2)
   rebasing 4e449bd1a643 "A3" (A3)
-  rebasing 06ca5dfe3b5b "B2" (B2)
   rebasing 0a33b0519128 "B1" (B1)
+  rebasing 06ca5dfe3b5b "B2" (B2)
   rebasing 209327807c3a "B3" (B3)
   o    ceb984566332 'B3'
   ├─╮
-  │ o  19d93caac497 'B1'
+  │ o  74275896650e 'B2'
   │ │
-  o │  74275896650e 'B2'
+  o │  19d93caac497 'B1'
   │ │
   │ │ o    058e73d3916b 'A3'
   │ │ ├─╮
   │ │ │ o  0ba13ad72234 'A2'
-  │ ├───╯
-  │ o │  c122c2af10c6 'C1'
+  ├─────╯
+  o │ │  c122c2af10c6 'C1'
   │ │ │
-  │ o │  455ba9bd3ea2 'C0'
+  o │ │  455ba9bd3ea2 'C0'
   ├─╯ │
   o   │  b3d7d2fda53b 'Z'
   │   │

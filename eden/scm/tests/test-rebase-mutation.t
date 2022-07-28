@@ -504,15 +504,15 @@ Test multiple root handling
 ------------------------------------
 
   $ hg rebase --dest 'desc(E)' --rev 'desc(H)+11+9'
-  rebasing 15ed2d917603 "H"
   rebasing b9a00f7e0244 "D"
+  rebasing 15ed2d917603 "H"
   rebasing fb16c8a4d41d "C"
   $ hg log -G
   o  7af31ae01a50 C
   │
+  @  0ecbffe392a3 H
+  │
   │ o  519f68ee3858 D
-  │ │
-  @ │  0ecbffe392a3 H
   ├─╯
   │ o  6513e8468c61 B
   │ │
@@ -1280,8 +1280,8 @@ Rebase merge where successor of one parent is ancestor of destination
   > EOF
 
   $ hg rebase -d "desc(C)" -b "desc(F)"
-  note: not rebasing 7fb047a69f22 "E", already in destination as 112478962961 "B"
   rebasing b18e25de2cf5 "D"
+  note: not rebasing 7fb047a69f22 "E", already in destination as 112478962961 "B"
   rebasing 66f1a38021c9 "F"
   note: rebase of 66f1a38021c9 created no changes to commit
   $ hg log -G
@@ -1309,8 +1309,8 @@ Rebase merge where successor of other parent is ancestor of destination
   > EOF
 
   $ hg rebase -d "desc(C)" -b "desc(F)"
-  rebasing 7fb047a69f22 "E"
   note: not rebasing b18e25de2cf5 "D", already in destination as 112478962961 "B"
+  rebasing 7fb047a69f22 "E"
   rebasing 66f1a38021c9 "F"
   note: rebase of 66f1a38021c9 created no changes to commit
 

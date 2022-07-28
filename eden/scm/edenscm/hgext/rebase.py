@@ -181,7 +181,6 @@ class rebaseruntime(object):
         self.state = {}
         self.activebookmark = None
         self.destmap = {}
-        self.predmap = {}
         self.skipped = set()
 
         self.collapsef = opts.get("collapse", False)
@@ -301,8 +300,6 @@ class rebaseruntime(object):
             raise error.Abort(_(".hg/rebasestate is incomplete"))
 
         # recompute the predecessor map
-        predmap = _definepredmap(repo, destmap.keys())
-
         skipped = set()
         # recompute the set of skipped revs
         if not collapse:
@@ -319,7 +316,6 @@ class rebaseruntime(object):
 
         self.originalwd = originalwd
         self.destmap = destmap
-        self.predmap = predmap
         self.state = state
         self.skipped = skipped
         self.collapsef = collapse
@@ -388,8 +384,6 @@ class rebaseruntime(object):
                 _("can't remove original changesets with" " unrebased descendants"),
                 hint=_("use --keep to keep original changesets"),
             )
-
-        self.predmap = _definepredmap(self.repo, rebaseset)
 
         result = buildstate(self.repo, destmap, self.collapsef)
 
@@ -493,13 +487,7 @@ class rebaseruntime(object):
 
     def _performrebasesubset(self, tr, subset, pos, prog):
         repo, ui = self.repo, self.ui
-        if mutation.enabled(repo):
-            # We must traverse mutation edges, too - topo sort is not enough.
-            sortedrevs = smartset.baseset(
-                mutation.toposortrevs(repo, subset, self.predmap), repo=repo
-            )
-        else:
-            sortedrevs = repo.revs("sort(%ld, -topo)", subset)
+        sortedrevs = repo.revs("sort(%ld, -topo)", subset)
         allowdivergence = self.ui.configbool(
             "experimental", "evolution.allowdivergence"
         )
@@ -1426,31 +1414,6 @@ def _definedestmap(
         return None
 
     return destmap
-
-
-def _definepredmap(repo, rebaseset):
-    """defines the predecessor map
-
-    Returns a map of {rev: [preds]}, where preds are the predecessors of the
-    rebased node that are also being rebased.
-    """
-    clnode = repo.changelog.node
-    clrev = repo.changelog.rev
-    if mutation.enabled(repo):
-        predmap = {
-            r: [
-                p
-                for p in map(
-                    clrev, mutation.predecessorsset(repo, clnode(r), closest=True)
-                )
-                if p in rebaseset and p != r
-            ]
-            for r in rebaseset
-        }
-    else:
-        # Mutation is not enabled - ignore predecessor information.
-        predmap = {r: [] for r in rebaseset}
-    return predmap
 
 
 def externalparent(repo, state, destancestors):

@@ -264,22 +264,22 @@ Move to a previous parent:
   >   |/
   >   A
   > EOS
-  rebasing 33441538d4aa "F" (F)
   rebasing cf43ad9da869 "G" (G)
   rebasing eef94f3b5f03 "H" (H)
-  o  b3d84c6666cf 'H'
+  rebasing 33441538d4aa "F" (F)
+  o  02aa697facf7 'F'
   │
-  │ o  f7c28a1a15e2 'G'
+  │ o  b3d84c6666cf 'H'
   │ │
-  │ │ o  02aa697facf7 'F'
+  │ │ o  f7c28a1a15e2 'G'
   │ │ │
   │ │ │ o  f585351a92f8 'D'
-  ├─────╯
-  o │ │  26805aba1e60 'C'
-  ├─╯ │
-  │ o │  7fb047a69f22 'E'
+  │ ├───╯
+  │ o │  26805aba1e60 'C'
   │ ├─╯
-  o │  112478962961 'B'
+  │ │ o  7fb047a69f22 'E'
+  ├───╯
+  │ o  112478962961 'B'
   ├─╯
   o  426bada5c675 'A'
   

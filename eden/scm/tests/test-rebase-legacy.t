@@ -56,9 +56,9 @@
   > EOF
 
   $ hg rebase --continue
-  rebasing de008c61a447 "E" (E)
   rebasing c1e6b162678d "B" (B)
   rebasing 6f7a236de685 "D" (D)
+  rebasing de008c61a447 "E" (E)
   rebasing d2fa1c02b240 "G" (G)
   rebasing 6582e6951a9c "H" (H)
 
@@ -67,11 +67,11 @@
   │
   o  13:9d65695ec3c2 G
   │
-  │ o  12:fc52970345e8 D
+  o  12:21c8397a5d68 E
+  │
+  │ o  11:fc52970345e8 D
   │ │
-  │ o  11:eac96551b107 B
-  │ │
-  o │  10:21c8397a5d68 E
+  │ o  10:eac96551b107 B
   ├─╯
   │ o  6:bd5548558fcf C
   │ │
