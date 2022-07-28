@@ -8,6 +8,7 @@
 import contextlib
 import os
 import sys
+from typing import Dict, Sized
 
 from edenscm.mercurial import (
     error,
@@ -19,6 +20,7 @@ from edenscm.mercurial import (
     wireproto,
 )
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.localrepo import localrepository
 from edenscm.mercurial.node import bin, hex
 
 from . import context
@@ -55,7 +57,7 @@ def _capabilities(orig, repo, proto):
     return result
 
 
-def _getannotate(repo, proto, path, lastnode):
+def _getannotate(repo, proto, path, lastnode: Sized) -> bytes:
     # Older fastannotte sent binary nodes. Newer fastannotate sends hex.
     if len(lastnode) == 40:
         lastnode = bin(lastnode)
@@ -105,13 +107,13 @@ def _getannotate(repo, proto, path, lastnode):
     return result
 
 
-def _registerwireprotocommand():
+def _registerwireprotocommand() -> None:
     if "getannotate" in wireproto.commands:
         return
     wireproto.wireprotocommand("getannotate", "path lastnode")(_getannotate)
 
 
-def serveruisetup(ui):
+def serveruisetup(ui) -> None:
     _registerwireprotocommand()
     extensions.wrapfunction(wireproto, "_capabilities", _capabilities)
 
@@ -119,17 +121,20 @@ def serveruisetup(ui):
 # client-side
 
 
-def _parseresponse(payload):
+def _parseresponse(payload: Sized) -> Dict[str, memoryview]:
     result = {}
     i = 0
     l = len(payload) - 1
     state = 0  # 0: vfspath, 1: size
     vfspath = size = b""
     while i < l:
+        # pyre-fixme[16]: `Sized` has no attribute `__getitem__`.
         ch = payload[i : i + 1]
         if ch == b"\0":
             if state == 1:
                 sizeint = int(pycompat.decodeutf8(size))
+                # pyre-fixme[6]: For 1st param expected `Union[array[typing.Any],
+                #  bytearray, bytes, _CData, memoryview, mmap]` but got `Sized`.
                 buf = buffer(payload)[i + 1 : i + 1 + sizeint]
                 result[pycompat.decodeutf8(vfspath)] = buf
                 i += sizeint
@@ -197,7 +202,7 @@ def annotatepeer(repo):
             conn.__exit__(None, None, None)
 
 
-def clientfetch(repo, paths, lastnodemap=None, peer=None):
+def clientfetch(repo, paths: Sized, lastnodemap=None, peer=None):
     """download annotate cache from the server for paths"""
     if not paths:
         return
@@ -212,6 +217,7 @@ def clientfetch(repo, paths, lastnodemap=None, peer=None):
     ui = repo.ui
     batcher = peer.iterbatch()
     ui.debug("fastannotate: requesting %d files\n" % len(paths))
+    # pyre-fixme[16]: `Sized` has no attribute `__iter__`.
     for p in paths:
         batcher.getannotate(p, lastnodemap.get(p))
     # Note: This is the only place that fastannotate sends a request via SSH.
@@ -262,7 +268,7 @@ def _filterfetchpaths(repo, paths):
     return result
 
 
-def localreposetup(ui, repo):
+def localreposetup(ui, repo) -> None:
     class fastannotaterepo(repo.__class__):
         def prefetchfastannotate(self, paths, peer=None):
             master = _getmaster(self.ui)
@@ -283,7 +289,7 @@ def localreposetup(ui, repo):
     repo.__class__ = fastannotaterepo
 
 
-def clientreposetup(ui, repo):
+def clientreposetup(ui, repo: localrepository) -> None:
     _registerwireprotocommand()
     if isinstance(repo, localrepo.localrepository):
         localreposetup(ui, repo)
