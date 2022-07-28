@@ -14,8 +14,6 @@
 #include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
-#include "eden/fs/inodes/VirtualInode.h"
-#include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
@@ -37,6 +35,7 @@ class Tree;
 class TreeEntry;
 class TreeInodeDebugInfo;
 class PrjfsDirEntry;
+class VirtualInode;
 
 constexpr folly::StringPiece kDotEdenName{".eden"};
 

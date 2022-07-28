@@ -40,11 +40,43 @@ using std::chrono::seconds;
 
 namespace facebook::eden {
 
+struct OverlayChecker::InodeInfo {
+  InodeInfo(InodeNumber num, InodeType t) : number(num), type(t) {}
+  InodeInfo(InodeNumber num, overlay::OverlayDir&& c)
+      : number(num), type(InodeType::Dir), children(std::move(c)) {}
+
+  void addParent(InodeNumber parent, mode_t mode) {
+    parents.push_back(parent);
+    modeFromParent = mode;
+  }
+
+  InodeNumber number;
+  InodeType type{InodeType::Error};
+  mode_t modeFromParent{0};
+  overlay::OverlayDir children;
+  folly::small_vector<InodeNumber, 1> parents;
+};
+
+struct OverlayChecker::Impl {
+  FsOverlay* const fs;
+  std::optional<InodeNumber> loadedNextInodeNumber;
+  LookupCallback lookupCallback;
+  std::unordered_map<InodeNumber, InodeInfo> inodes;
+
+  Impl(
+      FsOverlay* fs,
+      std::optional<InodeNumber> nextInodeNumber,
+      LookupCallback&& lookupCallback)
+      : fs{fs},
+        loadedNextInodeNumber{nextInodeNumber},
+        lookupCallback{std::move(lookupCallback)} {}
+};
+
 class OverlayChecker::RepairState {
  public:
   explicit RepairState(OverlayChecker* checker)
       : checker_(checker),
-        dir_(createRepairDir(checker_->fs_->getLocalDir())),
+        dir_(createRepairDir(checker_->impl_->fs->getLocalDir())),
         logFile_(
             (dir_ + PathComponentPiece("fsck.log")).c_str(),
             O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC,
@@ -64,7 +96,7 @@ class OverlayChecker::RepairState {
   void warn(Arg1&& arg1, Args&&... args) {
     auto msg = folly::to<string>(
         std::forward<Arg1>(arg1), std::forward<Args>(args)...);
-    XLOG(WARN) << "fsck:" << checker_->fs_->getLocalDir() << ":" << msg;
+    XLOG(WARN) << "fsck:" << checker_->impl_->fs->getLocalDir() << ":" << msg;
     logLine(msg);
   }
 
@@ -76,7 +108,7 @@ class OverlayChecker::RepairState {
     return checker_;
   }
   FsOverlay* fs() {
-    return checker_->fs_;
+    return checker_->impl_->fs;
   }
 
   AbsolutePath getLostAndFoundPath() {
@@ -95,6 +127,7 @@ class OverlayChecker::RepairState {
     return getLostAndFoundPath() +
         PathComponent(folly::to<string>(number, suffix));
   }
+
   AbsolutePath getLostAndFoundPath(const OverlayChecker::PathInfo& pathInfo) {
     // Note that we intentionally include pathInfo.parent in the path here,
     // even when it is kRootNodeId.  This helps avoid possible path collisions
@@ -352,7 +385,7 @@ class OverlayChecker::InodeDataError : public OverlayChecker::Error {
         ret, "failed to rename inode data ", srcPath, " to ", outputPath);
 
     // Create replacement data for this inode in the overlay.
-    const auto& inodes = repair.checker()->inodes_;
+    const auto& inodes = repair.checker()->impl_->inodes;
     auto iter = inodes.find(number_);
     mode_t mode = (iter == inodes.end()) ? 0 : iter->second.modeFromParent;
     if (mode == 0) {
@@ -406,7 +439,7 @@ class OverlayChecker::MissingMaterializedInode : public OverlayChecker::Error {
       // OrphanInode code will look for this child in the inodes_ map.
       auto type =
           S_ISDIR(*childInfo_.mode_ref()) ? InodeType::Dir : InodeType::File;
-      auto [iter, inserted] = repair.checker()->inodes_.try_emplace(
+      auto [iter, inserted] = repair.checker()->impl_->inodes.try_emplace(
           childInodeNumber, childInodeNumber, type);
       XDCHECK(inserted);
       iter->second.addParent(parent_, *childInfo_.mode_ref());
@@ -443,8 +476,8 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
       }
       case InodeType::Dir: {
         // Look up the previously loaded children data
-        auto iter = repair.checker()->inodes_.find(number_);
-        if (iter == repair.checker()->inodes_.end()) {
+        auto iter = repair.checker()->impl_->inodes.find(number_);
+        if (iter == repair.checker()->impl_->inodes.end()) {
           XLOG(DFATAL) << "failed to look up previously-loaded children for "
                        << "orphan directory inode " << number_;
           return false;
@@ -702,14 +735,15 @@ OverlayChecker::OverlayChecker(
     FsOverlay* fs,
     optional<InodeNumber> nextInodeNumber,
     LookupCallback&& lookupCallback)
-    : fs_(fs),
-      loadedNextInodeNumber_(nextInodeNumber),
-      lookupCallback_(std::move(lookupCallback)) {}
+    : impl_{std::make_unique<Impl>(
+          fs,
+          nextInodeNumber,
+          std::move(lookupCallback))} {}
 
 OverlayChecker::~OverlayChecker() {}
 
 void OverlayChecker::scanForErrors(const ProgressCallback& progressCallback) {
-  XLOG(INFO) << "Starting fsck scan on overlay " << fs_->getLocalDir();
+  XLOG(INFO) << "Starting fsck scan on overlay " << impl_->fs->getLocalDir();
   if (auto callback = progressCallback) {
     callback(0);
   }
@@ -719,10 +753,10 @@ void OverlayChecker::scanForErrors(const ProgressCallback& progressCallback) {
   checkNextInodeNumber();
 
   if (errors_.empty()) {
-    XLOG(INFO) << "fsck:" << fs_->getLocalDir()
+    XLOG(INFO) << "fsck:" << impl_->fs->getLocalDir()
                << ": completed checking for errors, no problems found";
   } else {
-    XLOG(ERR) << "fsck:" << fs_->getLocalDir()
+    XLOG(ERR) << "fsck:" << impl_->fs->getLocalDir()
               << ": completed checking for errors, found " << errors_.size()
               << " problems";
   }
@@ -739,7 +773,7 @@ optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors() {
   RepairResult result;
   result.repairDir = repair.getRepairDir();
   result.totalErrors = errors_.size();
-  repair.log("Beginning fsck repair for ", fs_->getLocalDir());
+  repair.log("Beginning fsck repair for ", impl_->fs->getLocalDir());
   repair.log(errors_.size(), " problems detected");
 
   constexpr size_t maxPrintedErrors = 50;
@@ -749,7 +783,8 @@ optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors() {
     ++errnum;
     auto description = error->getMessage(this);
     if (errnum < maxPrintedErrors) {
-      XLOG(ERR) << "fsck:" << fs_->getLocalDir() << ": error: " << description;
+      XLOG(ERR) << "fsck:" << impl_->fs->getLocalDir()
+                << ": error: " << description;
     }
     repair.log("error ", errnum, ": ", description);
     try {
@@ -761,7 +796,7 @@ optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors() {
         repair.log("  ! unable to repair error ", errnum);
       }
     } catch (const std::exception& ex) {
-      XLOG(ERR) << "fsck:" << fs_->getLocalDir()
+      XLOG(ERR) << "fsck:" << impl_->fs->getLocalDir()
                 << ": unexpected error occurred while attempting repair: "
                 << folly::exceptionStr(ex);
       repair.log(
@@ -786,14 +821,14 @@ optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors() {
         "successfully repaired all ", result.fixedErrors, " problems");
   }
   repair.log(finalMsg);
-  XLOG(INFO) << "fsck:" << fs_->getLocalDir() << ": " << finalMsg;
+  XLOG(INFO) << "fsck:" << impl_->fs->getLocalDir() << ": " << finalMsg;
 
   return result;
 }
 
 void OverlayChecker::logErrors() {
   for (const auto& error : errors_) {
-    XLOG(ERR) << "fsck:" << fs_->getLocalDir()
+    XLOG(ERR) << "fsck:" << impl_->fs->getLocalDir()
               << ": error: " << error->getMessage(this);
   }
 }
@@ -824,8 +859,8 @@ OverlayChecker::PathInfo OverlayChecker::cachedPathComputation(
 
 OverlayChecker::InodeInfo* FOLLY_NULLABLE
 OverlayChecker::getInodeInfo(InodeNumber number) {
-  auto iter = inodes_.find(number);
-  if (iter == inodes_.end()) {
+  auto iter = impl_->inodes.find(number);
+  if (iter == impl_->inodes.end()) {
     return nullptr;
   }
   return &(iter->second);
@@ -833,7 +868,7 @@ OverlayChecker::getInodeInfo(InodeNumber number) {
 
 ImmediateFuture<std::variant<std::shared_ptr<const Tree>, TreeEntry>>
 OverlayChecker::lookup(RelativePathPiece path) {
-  return lookupCallback_(path);
+  return impl_->lookupCallback(path);
 }
 
 OverlayChecker::PathInfo OverlayChecker::computePath(InodeNumber number) {
@@ -931,9 +966,9 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
             std::array<char, 2> subdirBuffer;
             MutableStringPiece subdir{subdirBuffer.data(), subdirBuffer.size()};
             FsOverlay::formatSubdirShardPath(shardID, subdir);
-            auto path = fs_->getLocalDir() + PathComponentPiece{subdir};
+            auto path = impl_->fs->getLocalDir() + PathComponentPiece{subdir};
 
-            XLOG(DBG5) << "fsck:" << fs_->getLocalDir() << ": scanning "
+            XLOG(DBG5) << "fsck:" << impl_->fs->getLocalDir() << ": scanning "
                        << path;
 
             std::vector<std::tuple<uint64_t, uint32_t>> inodes;
@@ -988,8 +1023,8 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
           ShardID shardID = static_cast<ShardID>(inodeInfo.number.get() & 0xff);
           uint32_t progress = (10 * shardID) / FsOverlay::kNumShards;
           if (progress > progress10pct) {
-            XLOG(INFO) << "fsck:" << fs_->getLocalDir() << ": scan " << progress
-                       << "0% complete: " << inodes_.size()
+            XLOG(INFO) << "fsck:" << impl_->fs->getLocalDir() << ": scan "
+                       << progress << "0% complete: " << impl_->inodes.size()
                        << " inodes scanned";
             if (auto callback = progressCallback) {
               callback(progress);
@@ -998,10 +1033,10 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
           }
 
           updateMaxInodeNumber(inodeInfo.number);
-          inodes_.emplace(inodeInfo.number, inodeInfo);
-          if (inodes_.size() % 10000 == 0) {
-            XLOG(DBG5) << "fsck: " << fs_->getLocalDir() << ": scanned "
-                       << inodes_.size() << " inodes";
+          impl_->inodes.emplace(inodeInfo.number, inodeInfo);
+          if (impl_->inodes.size() % 10000 == 0) {
+            XLOG(DBG5) << "fsck: " << impl_->fs->getLocalDir() << ": scanned "
+                       << impl_->inodes.size() << " inodes";
           }
         }
         return true;
@@ -1014,8 +1049,8 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
     errorsLock->pop_back();
   }
 
-  XLOG(INFO) << "fsck:" << fs_->getLocalDir() << ": scanned " << inodes_.size()
-             << " inodes";
+  XLOG(INFO) << "fsck:" << impl_->fs->getLocalDir() << ": scanned "
+             << impl_->inodes.size() << " inodes";
 }
 
 overlay::OverlayDir loadDirectoryChildren(folly::File& file) {
@@ -1057,7 +1092,7 @@ std::optional<OverlayChecker::InodeInfo> OverlayChecker::loadInodeInfo(
   // Open the inode file
   folly::File file;
   try {
-    file = this->fs_->openFileNoVerify(number);
+    file = this->impl_->fs->openFileNoVerify(number);
   } catch (const std::exception& ex) {
     return inodeError("error opening file: ", folly::exceptionStr(ex));
   }
@@ -1121,7 +1156,7 @@ std::optional<OverlayChecker::InodeInfo> OverlayChecker::loadInodeInfo(
 }
 
 void OverlayChecker::linkInodeChildren() {
-  for (const auto& [parentInodeNumber, parent] : inodes_) {
+  for (const auto& [parentInodeNumber, parent] : impl_->inodes) {
     for (const auto& [childName, child] : *parent.children.entries_ref()) {
       auto childRawInode = *child.inodeNumber_ref();
       if (childRawInode == 0) {
@@ -1158,7 +1193,7 @@ void OverlayChecker::linkInodeChildren() {
 }
 
 void OverlayChecker::scanForParentErrors() {
-  for (const auto& [inodeNumber, inodeInfo] : inodes_) {
+  for (const auto& [inodeNumber, inodeInfo] : impl_->inodes) {
     if (inodeInfo.parents.empty()) {
       if (inodeNumber != kRootNodeId) {
         addError<OrphanInode>(inodeInfo);
@@ -1179,12 +1214,13 @@ void OverlayChecker::checkNextInodeNumber() {
   // file when we close the overlay next.
   //
   // We only report an error here if there was a next inode number file but it
-  // contains incorrect data.  (This will probably only happen if someone forced
-  // an fsck run even if it looks like the mount was shut down cleanly.)
-  if (loadedNextInodeNumber_.has_value() &&
-      *loadedNextInodeNumber_ < expectedNextInodeNumber) {
+  if (impl_->loadedNextInodeNumber.has_value() &&
+      *impl_->loadedNextInodeNumber < expectedNextInodeNumber) {
+    // contains incorrect data.  (This will probably only happen if someone
+    // forced an fsck run even if it looks like the mount was shut down
+    // cleanly.)
     addError<BadNextInodeNumber>(
-        *loadedNextInodeNumber_, expectedNextInodeNumber);
+        *impl_->loadedNextInodeNumber, expectedNextInodeNumber);
   }
 }
 
@@ -1196,8 +1232,8 @@ void OverlayChecker::addError(unique_ptr<Error> error) {
   // When addError() is called we often haven't fully computed the inode
   // relationships yet, so computePath() won't return correct results for any
   // error messages that want to include path names.
-  XLOG(DBG7) << "fsck: addError() called for " << fs_->getLocalDir() << ": "
-             << error->getMessage(this);
+  XLOG(DBG7) << "fsck: addError() called for " << impl_->fs->getLocalDir()
+             << ": " << error->getMessage(this);
   errors_.push_back(std::move(error));
 }
 

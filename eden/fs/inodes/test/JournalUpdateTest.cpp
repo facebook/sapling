@@ -9,6 +9,7 @@
 
 #include <folly/portability/GTest.h>
 
+#include "eden/fs/journal/Journal.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 

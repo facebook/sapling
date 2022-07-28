@@ -11,10 +11,8 @@
 #include <optional>
 
 #include <folly/CppAttributes.h>
-#include <folly/small_vector.h>
 
 #include "eden/fs/inodes/InodeNumber.h"
-#include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -164,22 +162,7 @@ class OverlayChecker {
     Dir,
     Error,
   };
-  struct InodeInfo {
-    InodeInfo(InodeNumber num, InodeType t) : number(num), type(t) {}
-    InodeInfo(InodeNumber num, overlay::OverlayDir&& c)
-        : number(num), type(InodeType::Dir), children(std::move(c)) {}
-
-    void addParent(InodeNumber parent, mode_t mode) {
-      parents.push_back(parent);
-      modeFromParent = mode;
-    }
-
-    InodeNumber number;
-    InodeType type{InodeType::Error};
-    mode_t modeFromParent{0};
-    overlay::OverlayDir children;
-    folly::small_vector<InodeNumber, 1> parents;
-  };
+  struct InodeInfo;
 
   OverlayChecker(OverlayChecker const&) = delete;
   OverlayChecker& operator=(OverlayChecker const&) = delete;
@@ -226,10 +209,9 @@ class OverlayChecker {
     }
   }
 
-  FsOverlay* const fs_;
-  std::optional<InodeNumber> loadedNextInodeNumber_;
-  LookupCallback lookupCallback_;
-  std::unordered_map<InodeNumber, InodeInfo> inodes_;
+  struct Impl;
+
+  std::unique_ptr<Impl> impl_;
   std::vector<std::unique_ptr<Error>> errors_;
   uint64_t maxInodeNumber_{kRootNodeId.get()};
 

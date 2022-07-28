@@ -13,39 +13,14 @@
 #include <folly/String.h>
 #include <folly/Try.h>
 #include <folly/io/Cursor.h>
-#include <folly/io/IOBuf.h>
 
-#include "eden/common/utils/OptionSet.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/ObjectId.h"
-#include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 class BlobMetadata;
-
-struct EntryAttributeFlags
-    : OptionSet<EntryAttributeFlags, std::underlying_type_t<FileAttributes>> {
-  constexpr static EntryAttributeFlags raw(FileAttributes raw) {
-    return OptionSet<
-        EntryAttributeFlags,
-        std::underlying_type_t<FileAttributes>>::raw(folly::to_underlying(raw));
-  }
-  constexpr static EntryAttributeFlags raw(
-      std::underlying_type_t<FileAttributes> raw) {
-    return OptionSet<
-        EntryAttributeFlags,
-        std::underlying_type_t<FileAttributes>>::raw(raw);
-  }
-};
-
-inline constexpr auto ENTRY_ATTRIBUTE_TYPE =
-    EntryAttributeFlags::raw(FileAttributes::SOURCE_CONTROL_TYPE);
-inline constexpr auto ENTRY_ATTRIBUTE_SIZE =
-    EntryAttributeFlags::raw(FileAttributes::FILE_SIZE);
-inline constexpr auto ENTRY_ATTRIBUTE_SHA1 =
-    EntryAttributeFlags::raw(FileAttributes::SHA1_HASH);
 
 /**
  * Represents the allowed types of entries in version control trees.

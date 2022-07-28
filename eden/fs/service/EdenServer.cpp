@@ -43,6 +43,7 @@
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/journal/Journal.h"
 #include "eden/fs/nfs/NfsServer.h"
 #include "eden/fs/notifications/NullNotifier.h"
 #include "eden/fs/service/EdenCPUThreadPool.h"

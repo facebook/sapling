@@ -24,6 +24,7 @@
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/journal/Journal.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -276,7 +277,7 @@ void TestMount::createMountWithoutInitializing(
 
 void TestMount::initTestDirectory() {
   // Create the temporary directory
-  testDir_ = makeTempDir();
+  testDir_ = std::make_unique<folly::test::TemporaryDirectory>(makeTempDir());
 
   // Make the mount point and the eden client storage directories
   // inside the test directory.

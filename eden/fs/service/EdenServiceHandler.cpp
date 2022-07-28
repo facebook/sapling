@@ -40,6 +40,7 @@
 #include "eden/fs/inodes/Traverse.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/inodes/VirtualInodeLoader.h"
+#include "eden/fs/journal/Journal.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/model/Hash.h"

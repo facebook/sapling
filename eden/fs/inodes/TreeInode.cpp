@@ -31,7 +31,7 @@
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreePrefetchLease.h"
-#include "eden/fs/journal/JournalDelta.h"
+#include "eden/fs/journal/Journal.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"

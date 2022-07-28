@@ -8,6 +8,7 @@
 #include "eden/fs/inodes/CheckoutContext.h"
 
 #include <folly/logging/xlog.h>
+#include <folly/system/Pid.h>
 #include <optional>
 
 #include "eden/fs/config/CheckoutConfig.h"

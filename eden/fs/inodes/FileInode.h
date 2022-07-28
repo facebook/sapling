@@ -6,6 +6,7 @@
  */
 
 #pragma once
+
 #include <folly/Synchronized.h>
 #include <folly/futures/SharedPromise.h>
 #include <chrono>
@@ -14,14 +15,11 @@
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/utils/BufVec.h"
-#ifndef _WIN32
 #include "eden/fs/utils/CoverageSet.h"
-#endif
 
 namespace folly {
 class File;

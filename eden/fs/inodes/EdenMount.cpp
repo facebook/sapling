@@ -18,6 +18,7 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
 #include <folly/stop_watch.h>
+#include <folly/system/Pid.h>
 #include <folly/system/ThreadName.h>
 
 #include "eden/fs/config/EdenConfig.h"
@@ -33,6 +34,7 @@
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/inodes/TreePrefetchLease.h"
+#include "eden/fs/journal/Journal.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"

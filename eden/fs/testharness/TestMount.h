@@ -10,7 +10,6 @@
 #include <folly/Portability.h>
 #include <folly/Range.h>
 #include <folly/executors/ManualExecutor.h>
-#include <folly/experimental/TestUtil.h>
 #include <sys/stat.h>
 #include <optional>
 #include <vector>
@@ -28,6 +27,10 @@ template <typename T>
 class Future;
 struct Unit;
 class ManualExecutor;
+
+namespace test {
+class TemporaryDirectory;
+}
 } // namespace folly
 
 namespace facebook::eden {
@@ -369,7 +372,7 @@ class TestMount {
    * first, and destroyed (and deleted from disk) after the EdenMount is
    * destroyed.
    */
-  std::optional<folly::test::TemporaryDirectory> testDir_;
+  std::unique_ptr<folly::test::TemporaryDirectory> testDir_;
 
   std::shared_ptr<EdenMount> edenMount_;
 #ifndef _WIN32

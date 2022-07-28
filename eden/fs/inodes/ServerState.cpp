@@ -13,6 +13,7 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
 #include "eden/fs/nfs/NfsServer.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/FsEventLogger.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
@@ -46,6 +47,7 @@ ServerState::ServerState(
     std::shared_ptr<Notifier> notifier,
     bool enableFaultDetection)
     : userInfo_{std::move(userInfo)},
+      edenStats_{std::make_unique<EdenStats>()},
       privHelper_{std::move(privHelper)},
       threadPool_{std::move(threadPool)},
       clock_{std::move(clock)},

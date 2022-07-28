@@ -10,7 +10,6 @@
 #include "eden/fs/utils/Memory.h"
 
 #include <boost/operators.hpp>
-#include <boost/system/error_code.hpp>
 #include <fmt/format.h>
 #include <folly/Expected.h>
 #include <folly/FBString.h>
@@ -2113,15 +2112,6 @@ void validatePathComponentLength(PathComponentPiece name);
  * directories is a file rather than a directory.
  */
 bool ensureDirectoryExists(AbsolutePathPiece path);
-
-/**
- * Ensure that the specified path exists as a directory.
- *
- * Sets error code instead of throwing on error.
- */
-bool ensureDirectoryExists(
-    AbsolutePathPiece path,
-    boost::system::error_code& error) noexcept;
 
 /**
  * Recursively remove a directory tree.

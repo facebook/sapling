@@ -16,7 +16,6 @@
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/model/git/GitIgnoreFileParser.h"
 #include "eden/fs/notifications/Notifier.h"
-#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UserInfo.h"
 
@@ -24,6 +23,7 @@ namespace facebook::eden {
 
 class Clock;
 class EdenConfig;
+class EdenStats;
 class FaultInjector;
 class IHiveLogger;
 class FsEventLogger;
@@ -79,7 +79,7 @@ class ServerState {
    * statistics.
    */
   EdenStats& getStats() {
-    return edenStats_;
+    return *edenStats_;
   }
 
   const std::shared_ptr<ReloadableConfig>& getReloadableConfig() const {
@@ -186,7 +186,7 @@ class ServerState {
  private:
   AbsolutePath socketPath_;
   UserInfo userInfo_;
-  EdenStats edenStats_;
+  std::unique_ptr<EdenStats> edenStats_;
   std::shared_ptr<PrivHelper> privHelper_;
   std::shared_ptr<UnboundedQueueExecutor> threadPool_;
   std::shared_ptr<Clock> clock_;

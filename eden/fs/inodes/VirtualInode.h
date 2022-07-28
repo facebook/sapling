@@ -15,6 +15,7 @@
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/UnmaterializedUnloadedBlobDirEntry.h"
 #include "eden/fs/model/BlobMetadata.h"
+#include "eden/fs/model/EntryAttributeFlags.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"

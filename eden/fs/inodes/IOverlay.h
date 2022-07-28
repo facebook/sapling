@@ -9,17 +9,17 @@
 
 #include <optional>
 
+#include "eden/fs/inodes/InodeNumber.h"
+#include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
+#include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/PathFuncs.h"
+
 #ifdef __APPLE__
 #include <sys/mount.h>
 #include <sys/param.h>
 #elif !defined(_WIN32)
 #include <sys/vfs.h>
 #endif
-
-#include "eden/fs/inodes/InodeNumber.h"
-#include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
-#include "eden/fs/utils/Bug.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 class File;

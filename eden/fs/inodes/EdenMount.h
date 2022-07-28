@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/CancellationToken.h>
 #include <folly/Portability.h>
 #include <folly/SharedMutex.h>
 #include <folly/Synchronized.h>
@@ -15,6 +16,7 @@
 #include <folly/futures/Promise.h>
 #include <folly/futures/SharedPromise.h>
 #include <folly/logging/Logger.h>
+#include <folly/portability/GFlags.h>
 #include <chrono>
 #include <memory>
 #include <mutex>
@@ -29,7 +31,6 @@
 #include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/VirtualInode.h"
-#include "eden/fs/journal/Journal.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BlobAccess.h"
@@ -74,6 +75,7 @@ struct InodeMetadata;
 template <typename T>
 class InodeTable;
 using InodeMetadataTable = InodeTable<InodeMetadata>;
+class Journal;
 class ObjectStore;
 class Overlay;
 class OverlayFileAccess;
