@@ -309,6 +309,7 @@ class basectx(object):
         default="glob",
         badfn=None,
         emptyalways=True,
+        warn=None,
     ):
         r = self._repo
         return matchmod.match(
@@ -322,6 +323,7 @@ class basectx(object):
             ctx=self,
             badfn=badfn,
             emptyalways=emptyalways,
+            warn=warn,
         )
 
     def diff(self, ctx2=None, match=None, **opts):
@@ -1765,6 +1767,7 @@ class workingctx(committablectx):
         default="glob",
         badfn=None,
         emptyalways=True,
+        warn=None,
     ):
         r = self._repo
 
@@ -1783,6 +1786,7 @@ class workingctx(committablectx):
             badfn=badfn,
             icasefs=icasefs,
             emptyalways=emptyalways,
+            warn=warn,
         )
 
     def _filtersuspectsymlink(self, files):

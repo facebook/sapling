@@ -251,6 +251,9 @@ def _donormalize(patterns, default, root, cwd, auditor, warn):
     normalized and rooted patterns and with listfiles expanded."""
     kindpats = []
     for kind, pat in [_patsplit(p, default) for p in patterns]:
+        if warn and kind in {"path", "relpath", "rootfilesin"} and "*" in pat:
+            warn(_("possible glob in non-glob pattern: {}\n".format(pat)))
+
         if kind in cwdrelativepatternkinds:
             pat = pathutil.canonpath(root, cwd, pat, auditor)
         elif kind in ("relglob", "path", "rootfilesin"):

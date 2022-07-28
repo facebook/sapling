@@ -717,6 +717,7 @@ def matchandpats(
         default,
         badfn=badfn,
         emptyalways=emptyalways,
+        warn=ctx.repo().ui.warn,
     )
 
     if m.always():

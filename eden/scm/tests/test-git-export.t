@@ -166,6 +166,7 @@ Cross and same-directory copies with a relative root:
   $ hg diff --git --root . -r 1:tip ../dir2
   warning: ../dir2 not inside relative root .
   $ hg diff --git --root . -r 1:tip '../dir2/*'
+  possible glob in non-glob pattern: ../dir2/*
   warning: ../dir2/* not inside relative root . (glob)
   $ cd ..
 
