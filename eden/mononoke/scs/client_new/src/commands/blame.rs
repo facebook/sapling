@@ -371,7 +371,7 @@ impl Render for BlameOut {
 
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
-    let commit_id = args.commit_id_args.clone().into_commit_id()?;
+    let commit_id = args.commit_id_args.clone().into_commit_id();
     let id = resolve_commit_id(&app.connection, &repo, &commit_id).await?;
 
     let mut commit = thrift::CommitSpecifier {

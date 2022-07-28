@@ -197,7 +197,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let prefix = args.prefix.clone();
     let include_scratch = args.include_scratch;
 
-    let bookmarks = match args.commit_ids_args.clone().into_commit_ids()?.as_slice() {
+    let bookmarks = match args.commit_ids_args.clone().into_commit_ids().as_slice() {
         [ref commit_id] => {
             let id = resolve_commit_id(&app.connection, &repo, commit_id).await?;
             let commit = thrift::CommitSpecifier {

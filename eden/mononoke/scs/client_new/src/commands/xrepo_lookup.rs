@@ -117,7 +117,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let source_repo = get_repo_specifier(args.source_repo.clone());
     let target_repo = get_repo_specifier(args.target_repo.clone());
 
-    let commit_id = args.commit_id_args.clone().into_commit_id()?;
+    let commit_id = args.commit_id_args.clone().into_commit_id();
     let id = resolve_commit_id(&app.connection, &source_repo, &commit_id).await?;
     let hint = build_hint(&args, &app.connection, &target_repo).await?;
 

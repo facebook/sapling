@@ -160,7 +160,7 @@ impl Render for FileInfoOutput {
 }
 
 async fn commit_info(app: ScscApp, args: CommandArgs, repo: thrift::RepoSpecifier) -> Result<()> {
-    let commit_id = args.commit_id_args.clone().into_commit_id()?;
+    let commit_id = args.commit_id_args.clone().into_commit_id();
     let id = resolve_commit_id(&app.connection, &repo, &commit_id).await?;
     let commit = thrift::CommitSpecifier {
         repo,
@@ -186,7 +186,7 @@ async fn bookmark_info(app: ScscApp, args: CommandArgs, repo: thrift::RepoSpecif
     let bookmark_name = args
         .commit_id_args
         .clone()
-        .into_commit_id()?
+        .into_commit_id()
         .into_bookmark_name()?;
     let params = thrift::RepoBookmarkInfoParams {
         bookmark_name: bookmark_name.clone(),
@@ -213,7 +213,7 @@ async fn path_info(
     repo: thrift::RepoSpecifier,
     path: String,
 ) -> Result<()> {
-    let commit_id = args.commit_id_args.clone().into_commit_id()?;
+    let commit_id = args.commit_id_args.clone().into_commit_id();
     let id = resolve_commit_id(&app.connection, &repo, &commit_id).await?;
     let commit = thrift::CommitSpecifier {
         repo,
@@ -259,7 +259,7 @@ async fn multiple_path_info(
     repo: thrift::RepoSpecifier,
     paths: Vec<String>,
 ) -> Result<()> {
-    let commit_id = args.commit_id_args.clone().into_commit_id()?;
+    let commit_id = args.commit_id_args.clone().into_commit_id();
     let id = resolve_commit_id(&app.connection, &repo, &commit_id).await?;
     let commit = thrift::CommitSpecifier {
         repo,

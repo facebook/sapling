@@ -285,8 +285,8 @@ pub(crate) struct CommitIdArgs {
 }
 
 impl CommitIdArgs {
-    pub fn into_commit_id(self) -> Result<CommitId, Error> {
-        Ok(self.commit_id)
+    pub fn into_commit_id(self) -> CommitId {
+        self.commit_id
     }
 }
 
@@ -369,6 +369,12 @@ pub(crate) struct CommitIdsArgs {
     commit_ids: Vec<CommitId>,
 }
 
+impl CommitIdsArgs {
+    pub fn into_commit_ids(self) -> Vec<CommitId> {
+        self.commit_ids
+    }
+}
+
 impl clap::FromArgMatches for CommitIdsArgs {
     fn from_arg_matches(matches: &ArgMatches) -> Result<Self, clap::Error> {
         let commit_ids = get_commit_ids(matches)?;
@@ -388,12 +394,6 @@ impl clap::Args for CommitIdsArgs {
 
     fn augment_args_for_update(cmd: clap::Command<'_>) -> clap::Command<'_> {
         add_commit_id_args_impl(cmd, false, true)
-    }
-}
-
-impl CommitIdsArgs {
-    pub fn into_commit_ids(self) -> Result<Vec<CommitId>, Error> {
-        Ok(self.commit_ids)
     }
 }
 
