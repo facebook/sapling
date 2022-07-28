@@ -11,9 +11,10 @@ license = "GPLv2+"
 anyhow = "1.0.56"
 async-stream = "0.3"
 async_requests = { version = "0.1.0", path = "../async_requests" }
-clap = "2.33"
+clap = { version = "3.2.10", features = ["derive", "regex", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }
+cmdlib_logging = { version = "0.1.0", path = "../../cmdlib/log" }
 context = { version = "0.1.0", path = "../../server/context" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
@@ -23,8 +24,8 @@ megarepo_config = { version = "0.1.0", path = "../megarepo_config" }
 megarepo_error = { version = "0.1.0", path = "../megarepo_error" }
 megarepo_types_thrift = { version = "0.1.0", path = "../if" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
+mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-repo_factory = { version = "0.1.0", path = "../../repo_factory" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 source_control = { version = "0.1.0", path = "../../scs/if" }

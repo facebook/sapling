@@ -17,66 +17,60 @@ use std::sync::Arc;
 use fbinit::FacebookInit;
 
 use anyhow::Error;
-use clap::value_t;
-use clap::Arg;
-use cmdlib::args;
+use clap::Parser;
 use cmdlib::helpers::serve_forever;
-use cmdlib::monitoring::start_fb303_server;
 use cmdlib::monitoring::AliveService;
+use cmdlib_logging::ScribeLoggingArgs;
 use context::SessionContainer;
 use hostname::get_hostname;
 use megarepo_api::MegarepoApi;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeApiEnvironment;
 use mononoke_api::WarmBookmarksCacheDerivedData;
-use repo_factory::RepoFactory;
+use mononoke_app::args::HooksAppExtension;
+use mononoke_app::args::ShutdownTimeoutArgs;
+use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::MononokeAppBuilder;
 use scuba_ext::MononokeScubaSampleBuilder;
 
-const ARG_REQUEST_LIMIT: &str = "request-limit";
-const ARG_CONCURRENT_JOBS_LIMIT: &str = "jobs-limit";
 const SERVICE_NAME: &str = "megarepo_async_requests_worker";
+
+/// Processes the megarepo async requests
+#[derive(Parser)]
+struct AsyncRequestsWorkerArgs {
+    #[clap(flatten)]
+    shutdown_timeout_args: ShutdownTimeoutArgs,
+    #[clap(flatten)]
+    scribe_logging_args: ScribeLoggingArgs,
+    /// The number of requests to process before exiting
+    #[clap(long)]
+    request_limit: Option<usize>,
+    /// The number of requests / jobs to be processed concurrently
+    #[clap(long, short = 'j', default_value = "1")]
+    jobs: usize,
+}
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app = args::MononokeAppBuilder::new("Processes the megarepo async requests.")
-        .with_advanced_args_hidden()
-        .with_all_repos()
-        .with_shutdown_timeout_args()
-        .with_scuba_logging_args()
-        .with_scribe_args()
-        .with_fb303_args()
-        .build()
-        .arg(
-            Arg::with_name(ARG_REQUEST_LIMIT)
-                .long("request-limit")
-                .value_name("LIMIT")
-                .help("Process LIMIT requests and exit."),
-        )
-        .arg(
-            Arg::with_name(ARG_CONCURRENT_JOBS_LIMIT)
-                .short("j")
-                .long("jobs")
-                .value_name("JOBS")
-                .default_value("1")
-                .help("Process at most JOBS requests concurrently."),
-        );
+    let app = MononokeAppBuilder::new(fb)
+        .with_app_extension(HooksAppExtension {})
+        .with_app_extension(Fb303AppExtension {})
+        .build::<AsyncRequestsWorkerArgs>()?;
+    let args: AsyncRequestsWorkerArgs = app.args()?;
+    let request_limit = args.request_limit;
+    let jobs_limit = args.jobs;
+    let (env, logger, runtime, repo_configs, repo_factory) = (
+        app.environment(),
+        app.logger(),
+        app.runtime(),
+        app.repo_configs(),
+        app.repo_factory(),
+    );
 
-    let matches = app.get_matches(fb)?;
+    let session = SessionContainer::new_with_defaults(env.fb);
+    let ctx = session.new_context(logger.clone(), env.scuba_sample_builder.clone());
 
-    let request_limit = matches
-        .value_of(ARG_REQUEST_LIMIT)
-        .map(|_limit| value_t!(matches, ARG_REQUEST_LIMIT, usize).unwrap_or_else(|e| e.exit()));
-    let jobs_limit = value_t!(matches, ARG_CONCURRENT_JOBS_LIMIT, usize)?;
-    let runtime = matches.runtime();
-    let logger = matches.logger();
-
-    let session = SessionContainer::new_with_defaults(fb);
-    let ctx = session.new_context(logger.clone(), matches.scuba_sample_builder());
-
-    let config_store = matches.config_store();
-    let repo_configs = args::load_repo_configs(config_store, &matches)?;
-    let repo_factory = RepoFactory::new(matches.environment().clone(), &repo_configs.common);
-    let env = MononokeApiEnvironment {
+    let api_env = MononokeApiEnvironment {
         repo_factory: repo_factory.clone(),
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::None,
         warm_bookmarks_cache_enabled: true,
@@ -85,10 +79,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         //TODO: add a command line arg for filtering
         repo_filter: None,
     };
-    let mononoke = Arc::new(runtime.block_on(Mononoke::new(&env, repo_configs.clone()))?);
+    let mononoke = Arc::new(runtime.block_on(Mononoke::new(&api_env, repo_configs.clone()))?);
     let megarepo = Arc::new(runtime.block_on(MegarepoApi::new(
-        matches.environment(),
-        repo_configs,
+        env,
+        repo_configs.clone(),
         repo_factory,
         mononoke,
     ))?);
@@ -110,7 +104,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let will_exit = Arc::new(AtomicBool::new(false));
     let worker = worker::AsyncMethodRequestWorker::new(megarepo, name);
 
-    start_fb303_server(fb, SERVICE_NAME, logger, &matches, AliveService)?;
+    // Thread with a thrift service is now detached
+    let fb303_args = app.extension_args::<Fb303AppExtension>()?;
+    fb303_args.start_fb303_server(fb, SERVICE_NAME, logger, AliveService)?;
+
     serve_forever(
         runtime,
         {
@@ -123,11 +120,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         }(),
         logger,
         move || will_exit.store(true, Ordering::Relaxed),
-        args::get_shutdown_grace_period(&matches)?,
+        args.shutdown_timeout_args.shutdown_grace_period,
         async {
             // the code to gracefully stop things goes here
         },
-        args::get_shutdown_timeout(&matches)?,
+        args.shutdown_timeout_args.shutdown_timeout,
     )?;
 
     Ok(())
