@@ -21,4 +21,5 @@ base_app::subcommands! {
     mod list_bookmarks;
     mod log;
     mod lookup;
+    mod pushrebase_history;
 }
