@@ -822,8 +822,10 @@ class localrepository(object):
             # through transaction, which does not silent errors.
             try:
                 self.changelog.inner.flushcommitdata()
-            except Exception:
-                pass
+            except Exception as e:
+                self.ui.log(
+                    "features", feature="cannot-flush-commitdata", message=str(e)
+                )
 
     def _loadextensions(self):
         extensions.loadall(self.ui)
