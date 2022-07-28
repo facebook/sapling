@@ -1670,6 +1670,10 @@ class Test(unittest.TestCase):
             hgrc.write("localdatarepack=True\n")
             hgrc.write("cachepath=%s/default-hgcache\n" % self._testtmp)
 
+            # pre-ack new hints to avoid test fallout from new hints
+            hgrc.write("[hint]\n")
+            hgrc.write("ack-match-full-traversal=true\n")
+
             for opt in self._extraconfigopts:
                 section, key = opt.split(".", 1)
                 assert "=" in key, (

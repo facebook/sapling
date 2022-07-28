@@ -17,6 +17,7 @@ Create a repository:
   extensions.treemanifest=!
   format.use-segmented-changelog=1
   fsmonitor.detectrace=1 (fsmonitor !)
+  hint.ack-match-full-traversal=true
   mutation.record=False
   remotefilelog.cachepath=$TESTTMP/default-hgcache
   remotefilelog.localdatarepack=True

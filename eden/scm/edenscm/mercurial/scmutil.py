@@ -26,6 +26,7 @@ import bindings
 from . import (
     encoding,
     error,
+    hintutil,
     match as matchmod,
     pathutil,
     phases,
@@ -733,9 +734,21 @@ def match(
     emptyalways=True,
 ):
     """Return a matcher that will warn about bad matches."""
-    return matchandpats(
+    m = matchandpats(
         ctx, pats, opts, globbed, default, badfn=badfn, emptyalways=emptyalways
     )[0]
+
+    # Test some rare dirs that probably wouldn't match unless the
+    # matcher matches everything. Test for "visitdir is True" which
+    # indicates the lack of a traversal fast path.
+    if all(m.visitdir(d) is True for d in (".hg/foo", "a/a/a", "z/z/z")):
+        hintutil.triggershow(
+            ctx.repo().ui,
+            "match-full-traversal",
+            ", ".join([*pats, *opts.get("include", ())]),
+        )
+
+    return m
 
 
 def matchall(repo):

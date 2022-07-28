@@ -6,7 +6,7 @@
 
 # Copyright (c) Mercurial Contributors.
 
-  $ setconfig 'extensions.treemanifest=!'
+  $ setconfig 'extensions.treemanifest=!' hint.ack-match-full-traversal=true
   $ hg init repo
   $ cd repo
   $ echo 0 > a

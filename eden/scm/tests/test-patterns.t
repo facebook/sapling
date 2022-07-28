@@ -52,3 +52,18 @@ Explore the semi-mysterious matchmod.match API
 
   $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(m.match.match(repo.root, "", include=["a*/*"], default="path")))))'
   ['a*1/a', 'a*2/b']
+
+Give a hint if a pattern will traverse the entire repo.
+  $ hg files 'glob:**/*.cpp' --config hint.ack-match-full-traversal=false
+  hint[match-full-traversal]: the patterns "glob:**/*.cpp" may be slow since they traverse the entire repo (see "hg help patterns")
+  [1]
+
+No hint since the prefix avoids the full traversal.
+  $ hg files 'glob:foo/**/*.cpp' --config hint.ack-match-full-traversal=false
+  [1]
+
+No hint when run from a sub-directory since it won't traverse the entire repo.
+  $ mkdir foo
+  $ cd foo
+  $ hg files 'glob:**/*.cpp' --config hint.ack-match-full-traversal=false
+  [1]

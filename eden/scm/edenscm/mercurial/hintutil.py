@@ -39,6 +39,10 @@ hinttable = {
         'date("%s") performs a slow scan. Consider bsearch(date(">%s"),%s) instead.'
     )
     % (ds, ds, top),
+    "match-full-traversal": lambda pats: _(
+        'the patterns "%s" may be slow since they traverse the entire repo (see "@prog@ help patterns")',
+    )
+    % (pats),
 }
 messages = []
 triggered = set()
