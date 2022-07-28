@@ -26,39 +26,40 @@ static LAZY_HASH_PATH: &str = "lazyhashdir";
 static SEGMENTS_PATH: &str = "segments/v1";
 
 static DOUBLE_WRITE_REQUIREMENT: &str = "doublewritechangelog";
+static HYBRID_REQUIREMENT: &str = "hybridchangelog";
+static LAZY_TEXT_REQUIREMENT: &str = "lazytextchangelog";
 static GIT_STORE_REQUIREMENT: &str = "git-store";
 static LAZY_STORE_REQUIREMENT: &str = "lazychangelog";
-
-static GIT_BACKEND_LOG: &str = "git";
-static LAZY_BACKEND_LOG: &str = "lazy";
-static DOUBLE_WRITE_BACKEND_LOG: &str = "doublewrite";
-static RUST_BACKEND_LOG: &str = "rustrevlog";
 
 static GIT_FILE: &str = "gitdir";
 
 pub(crate) fn open_dag_commits(
     repo: &mut Repo,
 ) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
-    let commits = if repo.store_requirements.contains(&GIT_STORE_REQUIREMENT) {
+    let commits = if repo.store_requirements.contains(GIT_STORE_REQUIREMENT) {
         let metalog = repo.metalog()?;
-        log_backend(GIT_BACKEND_LOG);
+        tracing::info!(target: "changelog_info", changelog_backend="git");
         open_git(repo.store_path(), metalog)?
-    } else if repo.store_requirements.contains(&LAZY_STORE_REQUIREMENT) {
+    } else if repo.store_requirements.contains(LAZY_STORE_REQUIREMENT) {
         let eden_api = repo.eden_api()?;
-        log_backend(LAZY_BACKEND_LOG);
-        open_hybrid(repo.store_path(), eden_api)?
-    } else if repo.store_requirements.contains(&DOUBLE_WRITE_REQUIREMENT) {
-        log_backend(DOUBLE_WRITE_BACKEND_LOG);
+        tracing::info!(target: "changelog_info", changelog_backend="lazy");
+        open_hybrid(repo.store_path(), eden_api, true, false)?
+    } else if repo.store_requirements.contains(DOUBLE_WRITE_REQUIREMENT) {
+        tracing::info!(target: "changelog_info", changelog_backend="doublewrite");
         open_double(repo.store_path())?
+    } else if repo.store_requirements.contains(HYBRID_REQUIREMENT) {
+        let eden_api = repo.eden_api()?;
+        tracing::info!(target: "changelog_info", changelog_backend="hybrid");
+        open_hybrid(repo.store_path(), eden_api, false, true)?
+    } else if repo.store_requirements.contains(LAZY_TEXT_REQUIREMENT) {
+        let eden_api = repo.eden_api()?;
+        tracing::info!(target: "changelog_info", changelog_backend="lazytext");
+        open_hybrid(repo.store_path(), eden_api, false, false)?
     } else {
-        log_backend(RUST_BACKEND_LOG);
+        tracing::info!(target: "changelog_info", changelog_backend="rustrevlog");
         Box::new(RevlogCommits::new(repo.store_path())?)
     };
     Ok(commits)
-}
-
-fn log_backend(backend: &str) {
-    tracing::info!(target: "changelog_info", changelog_backend=AsRef::<str>::as_ref(&backend));
 }
 
 fn open_git(
@@ -87,19 +88,21 @@ fn open_double(store_path: &Path) -> Result<Box<dyn DagCommits + Send + 'static>
 fn open_hybrid(
     store_path: &Path,
     eden_api: Arc<dyn EdenApi>,
+    lazy_hash: bool,
+    use_revlog: bool,
 ) -> Result<Box<dyn DagCommits + Send + 'static>, CommitError> {
     let segments_path = calculate_segments_path(store_path);
     let hg_commits_path = store_path.join(HG_COMMITS_PATH);
     let lazy_hash_path = get_path_from_file(store_path, LAZY_HASH_PATH);
     let mut hybrid_commits = HybridCommits::new(
-        None,
+        if use_revlog { Some(store_path) } else { None },
         segments_path.as_path(),
         hg_commits_path.as_path(),
         eden_api,
     )?;
     if let Ok(lazy_path) = lazy_hash_path {
         hybrid_commits.enable_lazy_commit_hashes_from_local_segments(lazy_path.as_path())?;
-    } else {
+    } else if lazy_hash {
         hybrid_commits.enable_lazy_commit_hashes();
     }
     Ok(Box::new(hybrid_commits))
