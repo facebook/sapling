@@ -33,6 +33,7 @@ use mononoke_types::hash::Sha256;
 use mononoke_types::ContentId;
 use permission_checker::MononokeIdentitySet;
 use redactedblobstore::has_redaction_root_cause;
+use repo_blobstore::RepoBlobstoreRef;
 use serde::Deserialize;
 use stats::prelude::*;
 
@@ -115,7 +116,7 @@ async fn fetch_by_key(
 ) -> Result<impl TryIntoResponse, HttpError> {
     // Query a stream out of the Filestore
     let fetched = filestore::fetch_range_with_size(
-        ctx.repo.get_blobstore(),
+        ctx.repo.repo_blobstore().clone(),
         ctx.ctx.clone(),
         &key,
         range.unwrap_or_else(Range::all),

@@ -41,7 +41,6 @@ use permission_checker::MononokeIdentitySet;
 use slog::Logger;
 use tokio::runtime::Handle;
 
-use blobrepo::BlobRepo;
 use context::CoreContext;
 use hyper::client::HttpConnector;
 use hyper::Client;
@@ -57,6 +56,7 @@ use crate::errors::ErrorKind;
 use crate::errors::LfsServerContextErrorKind;
 use crate::middleware::LfsMethod;
 use crate::middleware::RequestContext;
+use crate::Repo;
 
 pub type HttpsHyperClient = Client<HttpsConnector<HttpConnector>>;
 
@@ -66,7 +66,7 @@ const ACL_CHECK_ACTION: &str = "read";
 const CLIENT_USER_AGENT: &str = "mononoke-lfs-server/0.1.0 git/2.15.1";
 
 struct LfsServerContextInner {
-    repositories: HashMap<String, (BlobRepo, ArcPermissionChecker, RepoConfig)>,
+    repositories: HashMap<String, (Repo, ArcPermissionChecker, RepoConfig)>,
     client: Arc<HttpsHyperClient>,
     server: Arc<ServerUris>,
     always_wait_for_upstream: bool,
@@ -82,7 +82,7 @@ pub struct LfsServerContext {
 
 impl LfsServerContext {
     pub fn new(
-        repositories: HashMap<String, (BlobRepo, ArcPermissionChecker, RepoConfig)>,
+        repositories: HashMap<String, (Repo, ArcPermissionChecker, RepoConfig)>,
         server: ServerUris,
         always_wait_for_upstream: bool,
         max_upload_size: Option<u64>,
@@ -227,7 +227,7 @@ enum HttpClient {
 #[derive(Clone)]
 pub struct RepositoryRequestContext {
     pub ctx: CoreContext,
-    pub repo: BlobRepo,
+    pub repo: Repo,
     pub uri_builder: UriBuilder,
     pub config: Arc<ServerConfig>,
     always_wait_for_upstream: bool,
@@ -568,7 +568,7 @@ mod test {
 
     pub struct TestContextBuilder<'a> {
         fb: FacebookInit,
-        repo: BlobRepo,
+        repo: Repo,
         self_uris: Vec<&'a str>,
         upstream_uri: Option<String>,
         config: ServerConfig,
@@ -576,7 +576,7 @@ mod test {
     }
 
     impl TestContextBuilder<'_> {
-        pub fn repo(mut self, repo: BlobRepo) -> Self {
+        pub fn repo(mut self, repo: Repo) -> Self {
             self.repo = repo;
             self
         }
@@ -624,7 +624,7 @@ mod test {
 
         pub fn test_builder_with_repo(
             fb: FacebookInit,
-            repo: BlobRepo,
+            repo: Repo,
         ) -> Result<TestContextBuilder<'static>, Error> {
             Ok(TestContextBuilder {
                 fb,

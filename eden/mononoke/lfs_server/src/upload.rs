@@ -14,6 +14,7 @@ use anyhow::Error;
 use bytes::Bytes;
 use filestore::Alias;
 use filestore::FetchKey;
+use filestore::FilestoreConfigRef;
 use filestore::StoreRequest;
 use futures::channel::mpsc::channel;
 use futures::SinkExt;
@@ -42,6 +43,7 @@ use lfs_protocol::ResponseBatch;
 use lfs_protocol::Sha256 as LfsSha256;
 use lfs_protocol::Transfer;
 use mononoke_types::hash::Sha256;
+use repo_blobstore::RepoBlobstoreRef;
 use serde::Deserialize;
 use stats::prelude::*;
 
@@ -166,8 +168,8 @@ where
     STATS::internal_uploads.add_value(1);
 
     filestore::store(
-        ctx.repo.blobstore(),
-        ctx.repo.filestore_config(),
+        ctx.repo.repo_blobstore(),
+        *ctx.repo.filestore_config(),
         &ctx.ctx,
         &StoreRequest::with_sha256(size, oid),
         data,
@@ -315,7 +317,7 @@ async fn sync_internal_and_upstream(
 ) -> Result<(), Error> {
     let key = FetchKey::Aliased(Alias::Sha256(oid));
 
-    let res = filestore::fetch(ctx.repo.get_blobstore(), ctx.ctx.clone(), &key).await?;
+    let res = filestore::fetch(ctx.repo.repo_blobstore().clone(), ctx.ctx.clone(), &key).await?;
 
     match res {
         Some(stream) => {

@@ -8,6 +8,7 @@
 use anyhow::Context;
 use anyhow::Error;
 use bytes::Bytes;
+use filestore::FilestoreConfigRef;
 use filestore::StoreRequest;
 use futures::Stream;
 use futures::TryStreamExt;
@@ -24,6 +25,7 @@ use http::header::CONTENT_LENGTH;
 use hyper::Body;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
+use repo_blobstore::RepoBlobstoreRef;
 use serde::Deserialize;
 use stats::prelude::*;
 use std::str::FromStr;
@@ -61,8 +63,8 @@ where
     STATS::total_uploads.add_value(1);
 
     filestore::store(
-        ctx.repo.blobstore(),
-        ctx.repo.filestore_config(),
+        ctx.repo.repo_blobstore(),
+        *ctx.repo.filestore_config(),
         &ctx.ctx,
         &StoreRequest::with_git_sha1(size, oid),
         body.map_err(|()| ErrorKind::ClientCancelled).err_into(),

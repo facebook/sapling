@@ -53,6 +53,7 @@ use lfs_protocol::Transfer;
 use mononoke_types::hash::Sha256;
 use mononoke_types::typed_hash::ContentId;
 use mononoke_types::BlobstoreKey;
+use repo_blobstore::RepoBlobstoreRef;
 
 use crate::errors::ErrorKind;
 use crate::lfs_server_context::RepositoryRequestContext;
@@ -235,7 +236,7 @@ async fn resolve_internal_object(
     ctx: &RepositoryRequestContext,
     oid: Sha256,
 ) -> Result<Option<InternalObject>, Error> {
-    let blobstore = ctx.repo.blobstore();
+    let blobstore = ctx.repo.repo_blobstore();
 
     let content_id = Alias::Sha256(oid).load(&ctx.ctx, blobstore).await;
 
@@ -678,13 +679,13 @@ mod test {
     use super::*;
 
     use async_trait::async_trait;
-    use blobrepo::BlobRepo;
     use blobstore::BlobstoreBytes;
     use blobstore::BlobstoreGetData;
     use bytes::Bytes;
     use context::CoreContext;
     use fbinit::FacebookInit;
 
+    use filestore::FilestoreConfigRef;
     use filestore::StoreRequest;
     use futures::stream;
     use hyper::Uri;
@@ -705,6 +706,7 @@ mod test {
     use pretty_assertions::assert_eq;
 
     use crate::lfs_server_context::ServerUris;
+    use crate::Repo;
 
     fn obj(oid: Sha256, size: u64) -> RequestObject {
         RequestObject {
@@ -980,8 +982,8 @@ mod test {
         let ctx = RepositoryRequestContext::test_builder(fb)?.build()?;
 
         let meta = filestore::store(
-            ctx.repo.blobstore(),
-            ctx.repo.filestore_config(),
+            ctx.repo.repo_blobstore(),
+            *ctx.repo.filestore_config(),
             &ctx.ctx,
             &StoreRequest::new(6),
             stream::once(async move { Ok(Bytes::from("foobar")) }),
@@ -1043,11 +1045,11 @@ mod test {
 
         // First, have the filestore tell us what the hash for this blob would be, so we can create
         // a new repo and redact it.
-        let stub: BlobRepo = factory.build()?;
+        let stub: Repo = factory.build()?;
 
         let meta = filestore::store(
-            stub.blobstore(),
-            stub.filestore_config(),
+            stub.repo_blobstore(),
+            *stub.filestore_config(),
             &CoreContext::test_mock(fb),
             &StoreRequest::new(6),
             stream::once(async move { Ok(Bytes::from("foobar")) }),
@@ -1112,11 +1114,11 @@ mod test {
 
     #[fbinit::test]
     async fn test_resolve_size(fb: FacebookInit) -> Result<(), Error> {
-        let repo = TestRepoFactory::new(fb)?.build::<BlobRepo>()?;
+        let repo: Repo = test_repo_factory::build_empty(fb)?;
 
         let meta = filestore::store(
-            repo.blobstore(),
-            repo.filestore_config(),
+            repo.repo_blobstore(),
+            *repo.filestore_config(),
             &CoreContext::test_mock(fb),
             &StoreRequest::new(6),
             stream::once(async move { Ok(Bytes::from("foobar")) }),

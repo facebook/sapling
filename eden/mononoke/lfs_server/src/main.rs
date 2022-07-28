@@ -48,16 +48,18 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 
-use blobrepo::BlobRepo;
 use cmdlib::args;
 use cmdlib::args::CachelibSettings;
 use cmdlib::helpers::serve_forever;
 use cmdlib::monitoring::start_fb303_server;
 use cmdlib::monitoring::AliveService;
+use filestore::FilestoreConfig;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::RepoConfig;
 use mononoke_app::args::parse_config_spec_to_path;
+use repo_blobstore::RepoBlobstore;
 use repo_factory::RepoFactory;
+use repo_identity::RepoIdentity;
 
 use crate::lfs_server_context::LfsServerContext;
 use crate::lfs_server_context::ServerUris;
@@ -105,6 +107,22 @@ const SERVICE_NAME: &str = "mononoke_lfs_server";
 // object size results in more entries and possibly higher idle memory usage.
 // More info: https://fburl.com/wiki/i78i3uzk
 const CACHE_OBJECT_SIZE: usize = 256 * 1024;
+
+#[facet::container]
+#[derive(Clone)]
+pub struct Repo {
+    #[facet]
+    repo_identity: RepoIdentity,
+
+    #[init(repo_identity.name().to_string())]
+    name: String,
+
+    #[facet]
+    filestore_config: FilestoreConfig,
+
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+}
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
@@ -368,7 +386,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
                     let repo = repo_factory.build(name.clone(), config.clone()).await?;
 
-                    Result::<(String, (BlobRepo, ArcPermissionChecker, RepoConfig)), Error>::Ok((
+                    Result::<(String, (Repo, ArcPermissionChecker, RepoConfig)), Error>::Ok((
                         name,
                         (repo, aclchecker, config),
                     ))

@@ -56,7 +56,7 @@ async fn increment_and_fetch_object_popularity<B: PopularityBuilder>(
     config: &ObjectPopularity,
     builder: B,
 ) -> Result<u64, Error> {
-    let key = format!("{}/{}", ctx.repo.name(), obj.id());
+    let key = format!("{}/{}", &ctx.repo.name, obj.id());
     let ctr = builder.build(
         ctx.ctx.fb,
         &config.category,
