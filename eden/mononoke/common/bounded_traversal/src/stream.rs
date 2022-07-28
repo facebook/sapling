@@ -8,7 +8,6 @@
 use super::common::delay_spawn;
 use super::common::handle_join_error;
 use futures::future::BoxFuture;
-use futures::future::FutureExt;
 use futures::future::TryFutureExt;
 use futures::ready;
 use futures::stream;
@@ -177,93 +176,4 @@ where
             }
         }
     })
-}
-
-/// This function is similar to `bouned_traversal_stream`:
-///   - but instead of iterator over children unfold returns a stream over children
-///   - this stream must be `Unpin`
-///   - if unscheduled queue is too large it will suspend iteration over children stream
-pub fn bounded_traversal_stream2<'caller, In, Ins, Out, Unfold, UErr>(
-    scheduled_max: usize,
-    init: Ins,
-    mut unfold: Unfold,
-) -> impl Stream<Item = Result<Out, UErr>> + 'caller
-where
-    In: 'static + Send,
-    Out: 'static + Send,
-    UErr: 'static + Send,
-    Ins: IntoIterator<Item = In> + 'caller,
-    // We use BoxFuture here because the `Unfold` future can be very large.
-    // As a result, it's more efficient to keep it in one place (the heap)
-    // than to move it around on the stack all the time.
-    // https://fburl.com/m3cdcdko
-    Unfold: FnMut(In) -> BoxFuture<'static, Result<(Out, BoxStream<'static, Result<In, UErr>>), UErr>>
-        + 'static,
-{
-    enum Op<U, C> {
-        Unfold(U),
-        Child(C),
-    }
-
-    let init = init
-        .into_iter()
-        .map(|child| unfold(child).map_ok(Op::Unfold).right_future());
-    let mut unscheduled = VecDeque::from_iter(init);
-    let mut scheduled = FuturesUnordered::new();
-    stream::poll_fn(move |cx| {
-        loop {
-            if scheduled.is_empty() && unscheduled.is_empty() {
-                return Poll::Ready(None);
-            }
-
-            while scheduled.len() < scheduled_max {
-                match unscheduled.pop_front() {
-                    Some(op) => scheduled.push(delay_spawn(op)),
-                    None => break,
-                }
-            }
-
-            if let Some(op) = ready!(scheduled.poll_next_unpin(cx))
-                .map(handle_join_error)
-                .transpose()?
-            {
-                match op {
-                    Op::Unfold((out, children)) => {
-                        let children = stream_into_try_future(children)
-                            .map_ok(Op::Child)
-                            .left_future();
-                        unscheduled.push_back(children);
-                        return Poll::Ready(Some(Ok(out)));
-                    }
-                    Op::Child((Some(child), children)) => {
-                        unscheduled.push_back(unfold(child).map_ok(Op::Unfold).right_future());
-                        let children = stream_into_try_future(children)
-                            .map_ok(Op::Child)
-                            .left_future();
-                        // this will result in something like BFS (constraints to order of completion
-                        // of scheduled tasks) traversal if unscheduled queue is small enough, otherwise
-                        // it will suspend iteration over children and will put them in the unscheduled
-                        // queue.
-                        if unscheduled.len() > scheduled_max {
-                            // we have too many unscheduled elements pause this children stream
-                            unscheduled.push_back(children);
-                        } else {
-                            // continue polling for more children
-                            scheduled.push(delay_spawn(children));
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        }
-    })
-}
-
-fn stream_into_try_future<S, O, E>(stream: S) -> impl Future<Output = Result<(Option<O>, S), E>>
-where
-    S: Stream<Item = Result<O, E>> + Unpin,
-{
-    stream
-        .into_future()
-        .map(|(c, cs)| c.transpose().map(move |c| (c, cs)))
 }

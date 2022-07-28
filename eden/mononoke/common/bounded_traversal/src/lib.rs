@@ -21,7 +21,6 @@ pub use dag::bounded_traversal_dag;
 
 mod stream;
 pub use stream::bounded_traversal_stream;
-pub use stream::bounded_traversal_stream2;
 pub use stream::limited_by_key_shardable;
 
 mod ordered_stream;
