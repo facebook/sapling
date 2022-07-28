@@ -328,6 +328,42 @@ impl clap::Args for CommitIdArgs {
 }
 
 #[derive(Clone)]
+pub(crate) struct OptionalCommitIdArgs {
+    commit_id: Option<CommitId>,
+}
+
+impl OptionalCommitIdArgs {
+    pub fn into_commit_id(self) -> Option<CommitId> {
+        self.commit_id
+    }
+}
+
+impl clap::FromArgMatches for OptionalCommitIdArgs {
+    fn from_arg_matches(matches: &ArgMatches) -> Result<Self, clap::Error> {
+        let commit_ids = get_commit_ids(matches)?;
+        Ok(Self {
+            commit_id: commit_ids.into_iter().next(),
+        })
+    }
+
+    fn update_from_arg_matches(&mut self, matches: &ArgMatches) -> Result<(), clap::Error> {
+        let commit_ids = get_commit_ids(matches)?;
+        self.commit_id = commit_ids.into_iter().next();
+        Ok(())
+    }
+}
+
+impl clap::Args for OptionalCommitIdArgs {
+    fn augment_args(cmd: clap::Command<'_>) -> clap::Command<'_> {
+        add_commit_id_args_impl(cmd, false, false)
+    }
+
+    fn augment_args_for_update(cmd: clap::Command<'_>) -> clap::Command<'_> {
+        add_commit_id_args_impl(cmd, false, false)
+    }
+}
+
+#[derive(Clone)]
 /// 0 or more commit ids
 pub(crate) struct CommitIdsArgs {
     commit_ids: Vec<CommitId>,
