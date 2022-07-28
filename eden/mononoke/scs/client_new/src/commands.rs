@@ -20,4 +20,5 @@ base_app::subcommands! {
     mod is_ancestor;
     mod list_bookmarks;
     mod log;
+    mod lookup;
 }

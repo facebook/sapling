@@ -13,7 +13,6 @@ use clap::Parser;
 use maplit::btreeset;
 use serde_json::json;
 use source_control::types as thrift;
-use std::collections::HashSet;
 use std::fmt::Write as _;
 use std::io::Write;
 use unicode_truncate::Alignment;
@@ -94,12 +93,7 @@ impl Render for BlameOut {
     type Args = CommandArgs;
 
     fn render(&self, args: &Self::Args, w: &mut dyn Write) -> Result<()> {
-        let schemes: HashSet<_> = args
-            .scheme_args
-            .schemes()
-            .iter()
-            .map(ToString::to_string)
-            .collect();
+        let schemes = args.scheme_args.scheme_string_set();
         let path = args.path_args.path.clone();
         let title_width = args.title_width;
         let number_width = |n| ((n + 1) as f32).log10().ceil() as usize;

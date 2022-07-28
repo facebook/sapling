@@ -9,6 +9,7 @@
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
+use std::collections::HashSet;
 use std::fmt;
 use std::num::NonZeroU64;
 
@@ -79,8 +80,8 @@ impl SchemeArgs {
         self.schemes.into_iter().map(Scheme::into_thrift).collect()
     }
 
-    pub(crate) fn schemes(&self) -> &Vec<Scheme> {
-        &self.schemes
+    pub(crate) fn scheme_string_set(&self) -> HashSet<String> {
+        self.schemes.iter().map(ToString::to_string).collect()
     }
 }
 

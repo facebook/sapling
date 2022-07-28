@@ -177,12 +177,7 @@ async fn commit_info(app: ScscApp, args: CommandArgs, repo: thrift::RepoSpecifie
     let output = CommitInfoOutput {
         commit: commit_info,
         requested: commit_id.to_string(),
-        schemes: args
-            .scheme_args
-            .schemes()
-            .iter()
-            .map(ToString::to_string)
-            .collect(),
+        schemes: args.scheme_args.scheme_string_set(),
     };
     app.target.render_one(&args, output).await
 }
@@ -207,12 +202,7 @@ async fn bookmark_info(app: ScscApp, args: CommandArgs, repo: thrift::RepoSpecif
     let output = BookmarkInfoOutput {
         bookmark_info: info,
         requested: bookmark_name,
-        schemes: args
-            .scheme_args
-            .schemes()
-            .iter()
-            .map(ToString::to_string)
-            .collect(),
+        schemes: args.scheme_args.scheme_string_set(),
     };
     app.target.render_one(&args, output).await
 }

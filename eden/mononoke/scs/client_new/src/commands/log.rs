@@ -193,12 +193,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             let output = LogOutput {
                 history,
                 requested: commit_ids[0].to_string(),
-                schemes: args
-                    .scheme_args
-                    .schemes()
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect(),
+                schemes: args.scheme_args.scheme_string_set(),
             };
             app.target.render_one(&args, output).await
         }
