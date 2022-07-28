@@ -194,7 +194,7 @@ async fn test_too_big_caching(fb: FacebookInit) -> Result<(), Error> {
     let res = reader
         .local_cache
         .get(&key)
-        .ok_or(anyhow!("key not found"))?;
+        .ok_or_else(|| anyhow!("key not found"))?;
 
     assert!(res.is_none());
 

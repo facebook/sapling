@@ -666,11 +666,11 @@ pub async fn resolve_cs_id(
                 .bonsai_hg_mapping()
                 .get_bonsai_from_hg(ctx, hg_cs_id)
                 .await?;
-            maybe_cs_id.ok_or(format_err!("{} not found", hg_cs_id))
+            maybe_cs_id.ok_or_else(|| format_err!("{} not found", hg_cs_id))
         }
         Bookmark(bookmark) => {
             let maybe_cs_id = repo.bookmarks().get(ctx.clone(), &bookmark).await?;
-            maybe_cs_id.ok_or(format_err!("{} not found", bookmark))
+            maybe_cs_id.ok_or_else(|| format_err!("{} not found", bookmark))
         }
         String(hash_or_bookmark) => {
             if let Ok(name) = BookmarkName::new(hash_or_bookmark.clone()) {

@@ -445,7 +445,7 @@ async fn assert_filenode(
         .get_filenode(ctx, repo_id, path, hash)
         .await?
         .do_not_handle_disabled_filenodes()?
-        .ok_or(format_err!("not found: {}", hash))?;
+        .ok_or_else(|| format_err!("not found: {}", hash))?;
     assert_eq!(res, expected);
     Ok(())
 }

@@ -1133,7 +1133,7 @@ mod test {
         let master = BookmarkName::new("master")?;
         let maybe_master_val = small_repo.get_bonsai_bookmark(ctx.clone(), &master).await?;
 
-        let master_val = maybe_master_val.ok_or(Error::msg("master not found"))?;
+        let master_val = maybe_master_val.ok_or_else(|| Error::msg("master not found"))?;
         let changesets =
             AncestorsNodeStream::new(ctx.clone(), &small_repo.get_changeset_fetcher(), master_val)
                 .collect()

@@ -131,7 +131,7 @@ async fn index_changeset(
                 let difference = edge_start
                     .1
                     .difference_from(next_gen)
-                    .ok_or(anyhow!(internal_err_msg))?;
+                    .ok_or_else(|| anyhow!(internal_err_msg))?;
                 if difference <= max_skip.get() {
                     // ...not too far! Let's instead point edge_start to edge_end
                     new_edge_end = Some((next_cs, next_gen));
@@ -155,7 +155,7 @@ async fn index_changeset(
             let difference = edge_start
                 .1
                 .difference_from(edge_end.1)
-                .ok_or(anyhow!(internal_err_msg))?;
+                .ok_or_else(|| anyhow!(internal_err_msg))?;
 
             if difference >= max_skip.get() {
                 let edge = SkiplistNodeType::SingleEdge(edge_end);

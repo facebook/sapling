@@ -138,7 +138,7 @@ mod test {
         )
         .await?;
 
-        let synced_commit = maybe_synced_commit.ok_or(anyhow!("commit was not synced"))?;
+        let synced_commit = maybe_synced_commit.ok_or_else(|| anyhow!("commit was not synced"))?;
         let wc = list_working_copy_utf8(&ctx, &large_repo, synced_commit).await?;
 
         assert_eq!(
@@ -200,7 +200,7 @@ mod test {
         )
         .await?;
 
-        let synced_cs_id = maybe_synced_commit.ok_or(anyhow!("commit was not synced"))?;
+        let synced_cs_id = maybe_synced_commit.ok_or_else(|| anyhow!("commit was not synced"))?;
         // Check that parents were correctly selected
 
         let small_repo_master = resolve_cs_id(&ctx, &small_repo, "master").await?;

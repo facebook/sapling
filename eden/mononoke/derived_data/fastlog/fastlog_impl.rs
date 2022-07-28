@@ -33,7 +33,7 @@ pub(crate) async fn create_new_batch(
     let parent_batches = try_join_all(unode_parents.clone().into_iter().map({
         move |entry| async move {
             let maybe_batch = fetch_fastlog_batch_by_unode_id(ctx, blobstore, &entry).await?;
-            maybe_batch.ok_or(Error::from(ErrorKind::NotFound(entry)))
+            maybe_batch.ok_or_else(|| Error::from(ErrorKind::NotFound(entry)))
         }
     }))
     .await?;

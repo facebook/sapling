@@ -377,7 +377,7 @@ impl IdConvert for IdMapWrapper {
                 found
                     .get(&cs_id_from_vertex_name(name))
                     .copied()
-                    .ok_or(DagError::VertexNotFound(name.clone()))
+                    .ok_or_else(|| DagError::VertexNotFound(name.clone()))
             })
             .collect())
     }

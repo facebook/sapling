@@ -54,7 +54,7 @@ async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
     let commit_with_move_ctx = repo
         .changeset(commit_with_move)
         .await?
-        .ok_or(anyhow!("commit not found"))?;
+        .ok_or_else(|| anyhow!("commit not found"))?;
     let diff = commit_with_move_ctx
         .diff_unordered(
             &repo.changeset(root).await?.context("commit not found")?,
@@ -104,7 +104,7 @@ async fn test_diff_with_multiple_copies(fb: FacebookInit) -> Result<(), Error> {
     let commit_with_copies_ctx = repo
         .changeset(commit_with_copies)
         .await?
-        .ok_or(anyhow!("commit not found"))?;
+        .ok_or_else(|| anyhow!("commit not found"))?;
     let diff = commit_with_copies_ctx
         .diff_unordered(
             &repo.changeset(root).await?.context("commit not found")?,
@@ -161,7 +161,7 @@ async fn test_diff_with_multiple_moves(fb: FacebookInit) -> Result<(), Error> {
     let commit_with_moves_ctx = repo
         .changeset(commit_with_moves)
         .await?
-        .ok_or(anyhow!("commit not found"))?;
+        .ok_or_else(|| anyhow!("commit not found"))?;
     let diff = commit_with_moves_ctx
         .diff_unordered(
             &repo.changeset(root).await?.context("commit not found")?,
@@ -339,7 +339,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
     let commit_ctx = repo
         .changeset(commit)
         .await?
-        .ok_or(anyhow!("commit not found"))?;
+        .ok_or_else(|| anyhow!("commit not found"))?;
     let root_ctx = &repo.changeset(root).await?.context("commit not found")?;
     let diff = commit_ctx
         .diff(
@@ -420,7 +420,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
     let commit2_ctx = repo
         .changeset(commit2)
         .await?
-        .ok_or(anyhow!("commit not found"))?;
+        .ok_or_else(|| anyhow!("commit not found"))?;
     let diff = commit2_ctx
         .diff(
             &commit_ctx,
@@ -544,7 +544,7 @@ async fn test_ordered_root_diff(fb: FacebookInit) -> Result<(), Error> {
     let commit_ctx = repo
         .changeset(commit)
         .await?
-        .ok_or(anyhow!("commit not found"))?;
+        .ok_or_else(|| anyhow!("commit not found"))?;
 
     let diff = commit_ctx
         .diff_root(
@@ -650,7 +650,7 @@ async fn test_ordered_root_diff(fb: FacebookInit) -> Result<(), Error> {
     let commit2_ctx = repo
         .changeset(commit2)
         .await?
-        .ok_or(anyhow!("commit not found"))?;
+        .ok_or_else(|| anyhow!("commit not found"))?;
 
     let diff = commit2_ctx
         .diff_root(

@@ -1687,7 +1687,7 @@ mod tests {
         )?;
 
         let maybe_child = repo.try_find_child(&ctx, ancestor, descendant, 100).await?;
-        let child = maybe_child.ok_or(format_err!("didn't find child"))?;
+        let child = maybe_child.ok_or_else(|| format_err!("didn't find child"))?;
         assert_eq!(
             child,
             ChangesetId::from_str(
@@ -1714,7 +1714,7 @@ mod tests {
         )?;
 
         let maybe_child = repo.try_find_child(&ctx, ancestor, descendant, 100).await?;
-        let child = maybe_child.ok_or(format_err!("didn't find child"))?;
+        let child = maybe_child.ok_or_else(|| format_err!("didn't find child"))?;
         assert_eq!(child, descendant);
         Ok(())
     }

@@ -112,7 +112,7 @@ pub async fn subcommand_phases<'a>(
             let hash = sub_m
                 .value_of("hash")
                 .map(|s| s.to_string())
-                .ok_or(Error::msg("changeset hash is not specified"));
+                .ok_or_else(|| Error::msg("changeset hash is not specified"));
 
             subcommand_fetch_phase_impl(fb, repo, hash, ty)
                 .await
@@ -223,7 +223,7 @@ pub async fn subcommand_fetch_phase_impl<'a>(
             .bonsai_hg_mapping()
             .get_bonsai_from_hg(&ctx, HgChangesetId::from_str(&hash)?)
             .await?;
-        maybe_bonsai.ok_or(format_err!("bonsai not found for {}", hash))?
+        maybe_bonsai.ok_or_else(|| format_err!("bonsai not found for {}", hash))?
     } else {
         bail!("unknown hash type: {}", ty);
     };

@@ -54,7 +54,7 @@ async fn regenerate_single_manifest(
         .bonsai_hg_mapping()
         .get_bonsai_from_hg(&ctx, hg_cs)
         .await?;
-    let cs_id = maybe_cs_id.ok_or(format_err!("changeset not found {}", hg_cs))?;
+    let cs_id = maybe_cs_id.ok_or_else(|| format_err!("changeset not found {}", hg_cs))?;
     let bonsai = cs_id.load(&ctx, repo.blobstore()).await?;
 
     let toinsert = generate_all_filenodes(

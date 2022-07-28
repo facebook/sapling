@@ -401,7 +401,7 @@ mod test {
 
         let entry = hg_manifest
             .lookup(&MPathElement::new(filename.as_bytes().to_vec())?)
-            .ok_or(Error::msg("file is missing"))?;
+            .ok_or_else(|| Error::msg("file is missing"))?;
 
         let filenode = match entry {
             Entry::Leaf((_, filenode)) => filenode,

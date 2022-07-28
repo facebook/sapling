@@ -715,7 +715,7 @@ mod test {
             let commit_sync_outcome = commit_syncer
                 .get_commit_sync_outcome(&ctx, premove)
                 .await?
-                .ok_or(format_err!("commit sync outcome not set"))?;
+                .ok_or_else(|| format_err!("commit sync outcome not set"))?;
             match commit_sync_outcome {
                 CommitSyncOutcome::RewrittenAs(cs_id, version) => {
                     assert_eq!(version, CommitSyncConfigVersion("noop".to_string()));

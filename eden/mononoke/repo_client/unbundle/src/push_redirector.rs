@@ -525,11 +525,13 @@ impl PushRedirector {
             .large_to_small_commit_syncer
             .rename_bookmark(&onto)
             .await?
-            .ok_or(format_err!(
-                "bookmark_renamer unexpectedly dropped {} in {:?}",
-                onto,
-                self.large_to_small_commit_syncer
-            ))?;
+            .ok_or_else(|| {
+                format_err!(
+                    "bookmark_renamer unexpectedly dropped {} in {:?}",
+                    onto,
+                    self.large_to_small_commit_syncer
+                )
+            })?;
 
         Ok(UnbundlePushRebaseResponse {
             commonheads,
@@ -635,11 +637,13 @@ impl PushRedirector {
     ) -> Result<ChangesetId, Error> {
         let maybe_commit_sync_outcome = syncer.get_commit_sync_outcome(ctx, cs_id).await?;
         maybe_commit_sync_outcome
-            .ok_or(format_err!(
-                "Unexpected absence of CommitSyncOutcome for {} in {:?}",
-                cs_id,
-                syncer
-            ))
+            .ok_or_else(|| {
+                format_err!(
+                    "Unexpected absence of CommitSyncOutcome for {} in {:?}",
+                    cs_id,
+                    syncer
+                )
+            })
             .and_then(|commit_sync_outcome| match commit_sync_outcome {
                 CommitSyncOutcome::RewrittenAs(rewritten, _) => Ok(rewritten),
                 cso => Err(format_err!(
@@ -730,11 +734,13 @@ impl PushRedirector {
             .small_to_large_commit_syncer
             .rename_bookmark(&name)
             .await?
-            .ok_or(format_err!(
-                "Bookmark {} unexpectedly dropped in {:?}",
-                name,
-                self.small_to_large_commit_syncer
-            ))?;
+            .ok_or_else(|| {
+                format_err!(
+                    "Bookmark {} unexpectedly dropped in {:?}",
+                    name,
+                    self.small_to_large_commit_syncer
+                )
+            })?;
 
         Ok(PlainBookmarkPush {
             part_id,
@@ -756,11 +762,13 @@ impl PushRedirector {
                     .small_to_large_commit_syncer
                     .rename_bookmark(&bookmark)
                     .await?
-                    .ok_or(format_err!(
-                        "Bookmark {} unexpectedly dropped in {:?}",
-                        bookmark,
-                        self.small_to_large_commit_syncer
-                    ))?;
+                    .ok_or_else(|| {
+                        format_err!(
+                            "Bookmark {} unexpectedly dropped in {:?}",
+                            bookmark,
+                            self.small_to_large_commit_syncer
+                        )
+                    })?;
 
                 Ok(PushrebaseBookmarkSpec::NormalPushrebase(bookmark))
             }
@@ -839,7 +847,7 @@ impl PushRedirector {
             .collect();
 
         let to_sync: Vec<ChangesetId> = sort_topological(&to_sync)
-            .ok_or(format_err!("Cycle in the uploaded changeset DAG!"))?
+            .ok_or_else(|| format_err!("Cycle in the uploaded changeset DAG!"))?
             .into_iter()
             .collect();
 
@@ -867,10 +875,12 @@ impl PushRedirector {
                     CommitSyncContext::PushRedirector,
                 )
                 .await?
-                .ok_or(format_err!(
-                    "{} was rewritten into nothingness during uploaded changesets sync",
-                    bcs_id
-                ))?;
+                .ok_or_else(|| {
+                    format_err!(
+                        "{} was rewritten into nothingness during uploaded changesets sync",
+                        bcs_id
+                    )
+                })?;
             synced_ids.push((bcs_id, synced_bcs_id));
         }
 

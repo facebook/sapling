@@ -587,7 +587,7 @@ async fn find_closest_root(
     let (cs_id, _) = roots
         .into_iter()
         .max_by_key(|(_, gen_num)| gen_num.clone())
-        .ok_or(PushrebaseError::from(PushrebaseInternalError::NoRoots))?;
+        .ok_or_else(|| PushrebaseError::from(PushrebaseInternalError::NoRoots))?;
 
     Ok(cs_id)
 }
@@ -1305,9 +1305,11 @@ mod tests {
                     .bonsai_hg_mapping()
                     .get_bonsai_from_hg(ctx, hg_cs_id)
                     .await?
-                    .ok_or(Error::from(
-                        PushrebaseInternalError::BonsaiNotFoundForHgChangeset(hg_cs_id),
-                    ))?;
+                    .ok_or_else(|| {
+                        Error::from(PushrebaseInternalError::BonsaiNotFoundForHgChangeset(
+                            hg_cs_id,
+                        ))
+                    })?;
 
                 let bcs = bcs_id
                     .load(ctx, repo.repo_blobstore())
@@ -1347,7 +1349,7 @@ mod tests {
             .bonsai_hg_mapping()
             .get_bonsai_from_hg(&ctx, head)
             .await?
-            .ok_or(Error::msg(format_err!("Head not found: {:?}", cs_id)))?;
+            .ok_or_else(|| Error::msg(format_err!("Head not found: {:?}", cs_id)))?;
 
         let mut txn = repo.update_bookmark_transaction(ctx);
         txn.force_set(book, head, BookmarkUpdateReason::TestMove)?;
@@ -1454,7 +1456,7 @@ mod tests {
                 let (_, (cs_id, _)) = changesets
                     .iter()
                     .next()
-                    .ok_or(Error::msg("No rebased changeset"))?;
+                    .ok_or_else(|| Error::msg("No rebased changeset"))?;
                 Ok(Box::new(TransactionHook(self.0, *cs_id)) as Box<dyn PushrebaseTransactionHook>)
             }
         }
@@ -1558,7 +1560,7 @@ mod tests {
                 .bonsai_hg_mapping()
                 .get_bonsai_from_hg(&ctx, root)
                 .await?
-                .ok_or(Error::msg("Root is missing"))?;
+                .ok_or_else(|| Error::msg("Root is missing"))?;
             let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![p])
                 .add_file("file", "content")
                 .commit()
@@ -1609,7 +1611,7 @@ mod tests {
                 .bonsai_hg_mapping()
                 .get_bonsai_from_hg(&ctx, root)
                 .await?
-                .ok_or(Error::msg("p is missing"))?;
+                .ok_or_else(|| Error::msg("p is missing"))?;
             let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![p])
                 .add_file("file", "content")
                 .commit()
@@ -1678,7 +1680,7 @@ mod tests {
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
                 .await?
-                .ok_or(Error::msg("root0 is missing"))?;
+                .ok_or_else(|| Error::msg("root0 is missing"))?;
 
             let root1 = repo
                 .bonsai_hg_mapping()
@@ -1687,7 +1689,7 @@ mod tests {
                     HgChangesetId::from_str("607314ef579bd2407752361ba1b0c1729d08b281")?,
                 )
                 .await?
-                .ok_or(Error::msg("root0 is missing"))?;
+                .ok_or_else(|| Error::msg("root0 is missing"))?;
 
             let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![root0])
                 .add_file("f0", "f0")
@@ -1718,7 +1720,7 @@ mod tests {
                     HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")?,
                 )
                 .await?
-                .ok_or(Error::msg("bcs_id_master is missing"))?;
+                .ok_or_else(|| Error::msg("bcs_id_master is missing"))?;
 
             let root = root1;
             assert_eq!(
@@ -1785,7 +1787,7 @@ mod tests {
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
                 .await?
-                .ok_or(Error::msg("Root is missing"))?;
+                .ok_or_else(|| Error::msg("Root is missing"))?;
 
             let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![root])
                 .add_file("f0", "f0")
@@ -1849,7 +1851,7 @@ mod tests {
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
                 .await?
-                .ok_or(Error::msg("Root is missing"))?;
+                .ok_or_else(|| Error::msg("Root is missing"))?;
 
             let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![root])
                 .add_file("FILE", "file")
@@ -1898,7 +1900,7 @@ mod tests {
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
                 .await?
-                .ok_or(Error::msg("Root is missing"))?;
+                .ok_or_else(|| Error::msg("Root is missing"))?;
 
             let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![root])
                 .add_file("DIR/a", "a")
@@ -1944,7 +1946,7 @@ mod tests {
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
                 .await?
-                .ok_or(Error::msg("Root is missing"))?;
+                .ok_or_else(|| Error::msg("Root is missing"))?;
 
             // create a lot of commits
             let (_, bcss) = stream::iter((0..128usize).map(Ok))
@@ -2024,7 +2026,7 @@ mod tests {
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
                 .await?
-                .ok_or(Error::msg("Root is missing"))?;
+                .ok_or_else(|| Error::msg("Root is missing"))?;
             let book = master_bookmark();
             let bcs = CreateCommitContext::new(&ctx, &repo, vec![root])
                 .add_file("file", "data")
@@ -2085,7 +2087,7 @@ mod tests {
                     HgChangesetId::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8")?,
                 )
                 .await?
-                .ok_or(Error::msg("Root is missing"))?;
+                .ok_or_else(|| Error::msg("Root is missing"))?;
 
             let bcs = CreateCommitContext::new(&ctx, &repo, vec![root])
                 .add_file("Dir1/file_1_in_dir1", "data")
@@ -2177,19 +2179,19 @@ mod tests {
                 )
                 .await?
                 .and_then(|entry| Some(entry.into_leaf()?.1))
-                .ok_or(Error::msg("path_1 missing in manifest"))?;
+                .ok_or_else(|| Error::msg("path_1 missing in manifest"))?;
 
             // crate filechange with with same content as "1" but set executable bit
             let root = repo
                 .bonsai_hg_mapping()
                 .get_bonsai_from_hg(&ctx, root_hg)
                 .await?
-                .ok_or(Error::msg("Root missing"))?;
+                .ok_or_else(|| Error::msg("Root missing"))?;
             let root_bcs = root.load(&ctx, repo.repo_blobstore()).await?;
             let file_1 = match root_bcs
                 .file_changes()
                 .find(|(path, _)| path == &&path_1)
-                .ok_or(Error::msg("path_1 missing in file_changes"))?
+                .ok_or_else(|| Error::msg("path_1 missing in file_changes"))?
                 .1
             {
                 FileChange::Change(tc) => tc.clone(),
@@ -2224,7 +2226,7 @@ mod tests {
             let file_1_result = match result_bcs
                 .file_changes()
                 .find(|(path, _)| path == &&path_1)
-                .ok_or(Error::msg("path_1 missing in file_changes"))?
+                .ok_or_else(|| Error::msg("path_1 missing in file_changes"))?
                 .1
             {
                 FileChange::Change(tc) => tc.clone(),
@@ -2243,7 +2245,7 @@ mod tests {
                 )
                 .await?
                 .and_then(|entry| Some(entry.into_leaf()?.1))
-                .ok_or(Error::msg("path_1 missing in manifest"))?;
+                .ok_or_else(|| Error::msg("path_1 missing in manifest"))?;
 
             // `result_1_id` should be equal to `root_1_id`, because executable flag
             // is not a part of file envelope
@@ -2263,18 +2265,18 @@ mod tests {
             .bonsai_hg_mapping()
             .get_bonsai_from_hg(&ctx, ancestor)
             .await?
-            .ok_or(Error::msg("ancestor not found"))?;
+            .ok_or_else(|| Error::msg("ancestor not found"))?;
 
         let descendant = repo
             .get_bookmark(ctx.clone(), &descendant)
             .await?
-            .ok_or(Error::msg("bookmark not found"))?;
+            .ok_or_else(|| Error::msg("bookmark not found"))?;
 
         let descendant = repo
             .bonsai_hg_mapping()
             .get_bonsai_from_hg(&ctx, descendant)
             .await?
-            .ok_or(Error::msg("bonsai not found"))?;
+            .ok_or_else(|| Error::msg("bonsai not found"))?;
 
         let n = RangeNodeStream::new(ctx, repo.changeset_fetcher_arc(), ancestor, descendant)
             .compat()
@@ -2340,7 +2342,7 @@ mod tests {
                 .bonsai_hg_mapping()
                 .get_bonsai_from_hg(&ctx, root)
                 .await?
-                .ok_or(Error::msg("Root is missing"))?;
+                .ok_or_else(|| Error::msg("Root is missing"))?;
             let parents = vec![p];
 
             let book = master_bookmark();
@@ -2415,7 +2417,7 @@ mod tests {
                 .bonsai_hg_mapping()
                 .get_bonsai_from_hg(&ctx, root)
                 .await?
-                .ok_or(Error::msg("Root is missing"))?;
+                .ok_or_else(|| Error::msg("Root is missing"))?;
             let parents = vec![p];
 
             let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
@@ -2443,7 +2445,7 @@ mod tests {
                 .bonsai_hg_mapping()
                 .get_bonsai_from_hg(&ctx, root)
                 .await?
-                .ok_or(Error::msg("Root is missing"))?;
+                .ok_or_else(|| Error::msg("Root is missing"))?;
             let parents = vec![p];
 
             let book = BookmarkName::new("newbook")?;
@@ -2508,7 +2510,7 @@ mod tests {
                 .bonsai_hg_mapping()
                 .get_bonsai_from_hg(&ctx, root)
                 .await?
-                .ok_or(Error::msg("Root is missing"))?;
+                .ok_or_else(|| Error::msg("Root is missing"))?;
             let parents = vec![p];
 
             let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
@@ -2546,7 +2548,7 @@ mod tests {
                 .bonsai_hg_mapping()
                 .get_bonsai_from_hg(&ctx, root)
                 .await?
-                .ok_or(Error::msg("Root is missing"))?;
+                .ok_or_else(|| Error::msg("Root is missing"))?;
             let parents = vec![p];
 
             let tz_offset_secs = 100;
@@ -2601,7 +2603,7 @@ mod tests {
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
                 .await?
-                .ok_or(Error::msg("Root is missing"))?;
+                .ok_or_else(|| Error::msg("Root is missing"))?;
 
             let bcs_id_0 = CreateCommitContext::new_root(&ctx, &repo)
                 .add_file("merge_file", "merge content")
@@ -2743,7 +2745,7 @@ mod tests {
                     HgChangesetId::from_str("3cda5c78aa35f0f5b09780d971197b51cad4613a")?,
                 )
                 .await?
-                .ok_or(Error::msg("Root is missing"))?;
+                .ok_or_else(|| Error::msg("Root is missing"))?;
 
             // Modifies the same file "branch" - pushrebase should fail because of conflicts
             let bcs_id_should_fail = CreateCommitContext::new(&ctx, &repo, vec![root])
@@ -2835,7 +2837,7 @@ mod tests {
 
             let new_master = get_bookmark_value(&ctx, &repo, &BookmarkName::new("master")?)
                 .await?
-                .ok_or(Error::msg("master not set"))?;
+                .ok_or_else(|| Error::msg("master not set"))?;
 
             let master_hg = repo.derive_hg_changeset(&ctx, new_master).await?;
 
@@ -2909,7 +2911,7 @@ mod tests {
 
             let new_master = get_bookmark_value(&ctx, &repo, &BookmarkName::new("master")?)
                 .await?
-                .ok_or(Error::msg("master not set"))?;
+                .ok_or_else(|| Error::msg("master not set"))?;
 
             let master_hg = repo.derive_hg_changeset(&ctx, new_master).await?;
 
@@ -2993,7 +2995,7 @@ mod tests {
 
             let new_master = get_bookmark_value(&ctx, &repo.clone(), &BookmarkName::new("master")?)
                 .await?
-                .ok_or(Error::msg("master is not set"))?;
+                .ok_or_else(|| Error::msg("master is not set"))?;
 
             let master_hg = repo.derive_hg_changeset(&ctx, new_master).await?;
 

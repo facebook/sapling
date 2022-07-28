@@ -424,15 +424,15 @@ fn test_hashes_are_unique() -> Result<(), Error> {
             for p2 in [Some(THREES_FNID), Some(FOURS_FNID), None] {
                 let path1 = RepoPath::file("path")?
                     .into_mpath()
-                    .ok_or(Error::msg("path1"))?;
+                    .ok_or_else(|| Error::msg("path1"))?;
 
                 let path2 = RepoPath::file("path/2")?
                     .into_mpath()
-                    .ok_or(Error::msg("path2"))?;
+                    .ok_or_else(|| Error::msg("path2"))?;
 
                 let path3 = RepoPath::file("path2")?
                     .into_mpath()
-                    .ok_or(Error::msg("path3"))?;
+                    .ok_or_else(|| Error::msg("path3"))?;
 
                 for copy_path in [path1, path2, path3] {
                     for copy_parent in [ONES_FNID, TWOS_FNID, THREES_FNID] {

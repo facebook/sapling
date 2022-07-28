@@ -597,7 +597,7 @@ async fn resolve_pushrebase<'r>(
         .maybe_resolve_changegroup(bundle2, changegroup_acceptable)
         .await
         .context("While resolving Changegroup")?;
-    let cg_push = maybe_cg_push.ok_or(Error::msg("Empty pushrebase"))?;
+    let cg_push = maybe_cg_push.ok_or_else(|| Error::msg("Empty pushrebase"))?;
     let onto_bookmark = match cg_push.mparams.get("onto") {
         Some(onto_bookmark) => {
             let v = Vec::from(onto_bookmark.as_ref());
@@ -1063,7 +1063,7 @@ impl<'r> Bundle2Resolver<'r> {
                 let namespace = header
                     .mparams()
                     .get("namespace")
-                    .ok_or(format_err!("pushkey: `namespace` parameter is not set"))?;
+                    .ok_or_else(|| format_err!("pushkey: `namespace` parameter is not set"))?;
 
                 let pushkey = match &namespace[..] {
                     b"phases" => Pushkey::Phases,
@@ -1450,8 +1450,8 @@ fn toposort_changesets(
             (*cs_id, parents)
         })
         .collect();
-    let sorted_css =
-        sort_topological(&cs_id_to_parents).ok_or(Error::msg("cycle in the pushed changesets!"))?;
+    let sorted_css = sort_topological(&cs_id_to_parents)
+        .ok_or_else(|| Error::msg("cycle in the pushed changesets!"))?;
 
     Ok(sorted_css
         .into_iter()

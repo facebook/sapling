@@ -83,7 +83,7 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
     let cs2_rebased = rebased
         .iter()
         .find(|e| e.id_old == cs2.get_changeset_id())
-        .ok_or(Error::msg("missing cs2"))?
+        .ok_or_else(|| Error::msg("missing cs2"))?
         .id_new
         .load(ctx, repo.blobstore())
         .await?;
@@ -114,7 +114,7 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
     let cs3_rebased = rebased
         .iter()
         .find(|e| e.id_old == cs3.get_changeset_id())
-        .ok_or(Error::msg("missing cs3"))?
+        .ok_or_else(|| Error::msg("missing cs3"))?
         .id_new
         .load(ctx, repo.blobstore())
         .await?;
@@ -122,7 +122,7 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
     let cs4_rebased = rebased
         .iter()
         .find(|e| e.id_old == cs4.get_changeset_id())
-        .ok_or(Error::msg("missing cs4"))?
+        .ok_or_else(|| Error::msg("missing cs4"))?
         .id_new
         .load(ctx, repo.blobstore())
         .await?;
@@ -244,7 +244,10 @@ async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Resul
 
         assert_eq!(Globalrev::new(next_globalrev), Globalrev::from_bcs(&cs)?);
 
-        next_cs_id = cs.parents().next().ok_or(Error::msg("no parent found"))?;
+        next_cs_id = cs
+            .parents()
+            .next()
+            .ok_or_else(|| Error::msg("no parent found"))?;
         next_globalrev -= 1;
     }
 

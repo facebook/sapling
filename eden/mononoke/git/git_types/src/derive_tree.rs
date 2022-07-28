@@ -219,7 +219,7 @@ mod test {
         let bcs_id = repo
             .get_bonsai_bookmark(ctx.clone(), &("master".try_into()?))
             .await?
-            .ok_or(format_err!("no master"))?;
+            .ok_or_else(|| format_err!("no master"))?;
 
         let tree = TreeHandle::derive(&ctx, &repo, bcs_id).await?;
 
