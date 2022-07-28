@@ -8,6 +8,7 @@
 use crate::ScscApp;
 
 base_app::subcommands! {
+    type App = ScscApp;
     mod cat;
     mod repos;
     mod blame;
@@ -18,5 +19,4 @@ base_app::subcommands! {
     mod info;
     mod is_ancestor;
     mod list_bookmarks;
-    app = ScscApp
 }

@@ -59,6 +59,6 @@ pub mod macro_export {
 #[macro_export]
 macro_rules! subcommands {
     ( $( mod $command:ident; )* ) => {
-        $crate::macro_export::base_app::subcommands!{ $( mod $command; )* app = $crate::MononokeApp }
+        $crate::macro_export::base_app::subcommands!{ type App = $crate::MononokeApp; $( mod $command; )* }
     }
 }

@@ -24,7 +24,7 @@ pub trait BaseApp {
 /// Lower level version of mononoke_app::subcommands that allows changing the app
 #[macro_export]
 macro_rules! subcommands {
-     ( $( mod $command:ident; )* app = $app:ty ) => {
+     ( type App = $app:ty; $( mod $command:ident; )* ) => {
          $( mod $command; )*
 
          $crate::macro_export::assert_impl_all!($app: $crate::BaseApp);
