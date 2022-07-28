@@ -522,7 +522,7 @@ mod test {
         d.insert(s("boolean"), true);
 
         let test = TestTunables::default();
-        assert_eq!(test.get_boolean(), false);
+        assert!(!test.get_boolean());
         test.update_bools(&d);
         assert!(test.get_boolean());
     }
@@ -534,12 +534,12 @@ mod test {
         d.insert(s("boolean"), true);
 
         let test = TestTunables::default();
-        assert_eq!(test.get_boolean(), false);
+        assert!(!test.get_boolean());
         test.update_bools(&d);
         assert!(test.get_boolean());
 
         test.update_bools(&hashmap! {});
-        assert_eq!(test.get_boolean(), false);
+        assert!(!test.get_boolean());
 
         // ints
         let test = TestTunables::default();

@@ -553,7 +553,7 @@ mod test {
             .id()
             .load(&ctx, repo.blobstore())
             .await?;
-        assert_eq!(c_sk_dir1.summary().child_case_conflicts, false);
+        assert!(!c_sk_dir1.summary().child_case_conflicts);
         assert!(c_sk_dir1.summary().descendant_case_conflicts);
 
         let c_sk_subdir1 = skeleton_dir(&c_sk_dir1, b"subdir1")?
@@ -565,19 +565,19 @@ mod test {
 
         let c_sk_subsubdir1 = skeleton_dir(&c_sk_subdir1, b"subsubdir1")?;
         assert!(c_sk_subsubdir1.summary().child_case_conflicts);
-        assert_eq!(c_sk_subsubdir1.summary().descendant_case_conflicts, false);
+        assert!(!c_sk_subsubdir1.summary().descendant_case_conflicts);
 
         let c_sk_subsubdir2 = skeleton_dir(&c_sk_subdir1, b"subsubdir2")?;
-        assert_eq!(c_sk_subsubdir2.summary().child_case_conflicts, false);
-        assert_eq!(c_sk_subsubdir2.summary().descendant_case_conflicts, false);
+        assert!(!c_sk_subsubdir2.summary().child_case_conflicts);
+        assert!(!c_sk_subsubdir2.summary().descendant_case_conflicts);
 
         let c_sk_subdir2 = skeleton_dir(&c_sk_dir1, b"subdir2")?;
         assert!(c_sk_subdir2.summary().child_case_conflicts);
-        assert_eq!(c_sk_subdir2.summary().descendant_case_conflicts, false);
+        assert!(!c_sk_subdir2.summary().descendant_case_conflicts);
 
         let c_sk_dir2 = skeleton_dir(&c_skeleton, b"dir2")?;
-        assert_eq!(c_sk_dir2.summary().child_case_conflicts, false);
-        assert_eq!(c_sk_dir2.summary().descendant_case_conflicts, false);
+        assert!(!c_sk_dir2.summary().child_case_conflicts);
+        assert!(!c_sk_dir2.summary().descendant_case_conflicts);
 
         // Changeset D removes some of the conflicts
         let d_bcs = changesets["D"].load(&ctx, repo.blobstore()).await?;
@@ -589,7 +589,7 @@ mod test {
         )
         .await?;
         let d_skeleton = d_skeleton_id.load(&ctx, repo.blobstore()).await?;
-        assert_eq!(d_skeleton.summary().child_case_conflicts, false);
+        assert!(!d_skeleton.summary().child_case_conflicts);
         assert!(d_skeleton.summary().descendant_case_conflicts);
         assert_eq!(
             d_skeleton
@@ -612,14 +612,14 @@ mod test {
             .id()
             .load(&ctx, repo.blobstore())
             .await?;
-        assert_eq!(d_sk_dir1.summary().child_case_conflicts, false);
+        assert!(!d_sk_dir1.summary().child_case_conflicts);
         assert!(d_sk_dir1.summary().descendant_case_conflicts);
 
         let d_sk_subdir1 = skeleton_dir(&d_sk_dir1, b"subdir1")?
             .id()
             .load(&ctx, repo.blobstore())
             .await?;
-        assert_eq!(d_sk_subdir1.summary().child_case_conflicts, false);
+        assert!(!d_sk_subdir1.summary().child_case_conflicts);
         assert!(d_sk_subdir1.summary().descendant_case_conflicts);
 
         // Changeset E removes them all

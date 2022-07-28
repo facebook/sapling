@@ -770,12 +770,12 @@ async fn commit_path_exists_and_type(fb: FacebookInit) -> Result<(), Error> {
 
     let file1_path = cs.path_with_content("dir1/file_1_in_dir1")?;
     assert!(file1_path.exists().await?);
-    assert_eq!(file1_path.is_tree().await?, false);
+    assert!(!file1_path.is_tree().await?);
     assert_eq!(file1_path.file_type().await?, Some(FileType::Regular));
 
     let nonexistent_path = cs.path_with_content("nonexistent")?;
-    assert_eq!(nonexistent_path.exists().await?, false);
-    assert_eq!(nonexistent_path.is_tree().await?, false);
+    assert!(!nonexistent_path.exists().await?);
+    assert!(!nonexistent_path.is_tree().await?);
     assert_eq!(nonexistent_path.file_type().await?, None);
 
     Ok(())

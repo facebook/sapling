@@ -441,7 +441,7 @@ async fn test_update_non_existent_bookmark(fb: FacebookInit) {
         BookmarkUpdateReason::TestMove,
     )
     .unwrap();
-    assert_eq!(txn.commit().await.unwrap(), false);
+    assert!(!txn.commit().await.unwrap());
 }
 
 #[fbinit::test]
@@ -465,7 +465,7 @@ async fn test_update_existing_bookmark_with_incorrect_commit(fb: FacebookInit) {
         BookmarkUpdateReason::TestMove,
     )
     .unwrap();
-    assert_eq!(txn.commit().await.unwrap(), false);
+    assert!(!txn.commit().await.unwrap());
 }
 
 #[fbinit::test]
@@ -528,7 +528,7 @@ async fn test_delete(fb: FacebookInit) {
     let mut txn = bookmarks.create_transaction(ctx.clone());
     txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
-    assert_eq!(txn.commit().await.unwrap(), false);
+    assert!(!txn.commit().await.unwrap());
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
     txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
@@ -582,7 +582,7 @@ async fn test_delete_incorrect_hash(fb: FacebookInit) {
     let mut txn = bookmarks.create_transaction(ctx.clone());
     txn.delete(&name_1, TWOS_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
-    assert_eq!(txn.commit().await.unwrap(), false);
+    assert!(!txn.commit().await.unwrap());
 }
 
 #[fbinit::test]
@@ -685,7 +685,7 @@ async fn test_create_different_repos(fb: FacebookInit) {
         BookmarkUpdateReason::TestMove,
     )
     .unwrap();
-    assert_eq!(txn.commit().await.unwrap(), false);
+    assert!(!txn.commit().await.unwrap());
 
     // Creating value should succeed
     let mut txn = bookmarks_1.create_transaction(ctx.clone());
@@ -716,7 +716,7 @@ async fn test_create_different_repos(fb: FacebookInit) {
     let mut txn = bookmarks_1.create_transaction(ctx.clone());
     txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
-    assert_eq!(txn.commit().await.unwrap(), false);
+    assert!(!txn.commit().await.unwrap());
 }
 
 async fn fetch_single(

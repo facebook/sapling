@@ -159,7 +159,7 @@ async fn equivalent_working_copy<M: SyncedCommitMapping>(fb: FacebookInit, mappi
         .insert_equivalent_working_copy(&ctx, entry)
         .await
         .expect("Failed to insert working copy");
-    assert_eq!(result, false);
+    assert!(!result);
 
     let res = mapping
         .get_equivalent_working_copy(&ctx, REPO_ZERO, bonsai::ONES_CSID, REPO_ONE)

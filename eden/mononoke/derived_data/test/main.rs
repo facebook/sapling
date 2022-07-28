@@ -210,7 +210,7 @@ async fn test_leases(fb: FacebookInit) -> Result<(), Error> {
 
     // take lease
     assert!(lease.try_add_put_lease(&lease_key).await?);
-    assert_eq!(lease.try_add_put_lease(&lease_key).await?, false);
+    assert!(!lease.try_add_put_lease(&lease_key).await?);
 
     let output = Arc::new(Mutex::new(None));
     tokio::spawn({
