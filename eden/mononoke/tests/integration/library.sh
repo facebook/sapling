@@ -1245,7 +1245,7 @@ function wait_for_scs {
   export SCS_PORT
   wait_for_server "SCS server" SCS_PORT "$TESTTMP/scs_server.out" \
     "${MONONOKE_SCS_START_TIMEOUT:-"$MONONOKE_SCS_DEFAULT_START_TIMEOUT"}" "$TESTTMP/scs_server_addr.txt" \
-    scsc_new repos
+    scsc repos
 }
 
 function start_and_wait_for_scs_server {
@@ -1269,14 +1269,6 @@ function scsc {
     THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/client0.key" \
     THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
     "$SCS_CLIENT" --host "$LOCALIP:$SCS_PORT" "$@"
-}
-
-function scsc_new {
-  GLOG_minloglevel=5 \
-    THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/client0.crt" \
-    THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/client0.key" \
-    THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
-    "$SCS_CLIENT_NEW" --host "$LOCALIP:$SCS_PORT" "$@"
 }
 
 function lfs_health {
