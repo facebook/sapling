@@ -26,3 +26,8 @@ struct BinaryAddress {
   2: optional i64 port = 0;
   3: optional string ifName;
 }
+
+struct IPPrefix {
+  1: required BinaryAddress prefixAddress;
+  2: required i16 prefixLength;
+}
