@@ -14,7 +14,9 @@ use std::num::NonZeroU64;
 
 use anyhow::format_err;
 use anyhow::Error;
+use clap::Arg;
 use clap::ArgGroup;
+use clap::ArgMatches;
 use clap::Args;
 use faster_hex::hex_decode;
 use faster_hex::hex_string;
@@ -25,6 +27,16 @@ use futures_util::stream::TryStreamExt;
 use source_control::types as thrift;
 
 use crate::connection::Connection;
+
+pub(crate) const ARG_COMMIT_ID: &str = "commit-id";
+pub(crate) const ARG_BOOKMARK: &str = "bookmark";
+pub(crate) const ARG_HG_COMMIT_ID: &str = "hg-commit-id";
+pub(crate) const ARG_BONSAI_ID: &str = "bonsai-id";
+pub(crate) const ARG_GIT_SHA1: &str = "git-sha1";
+pub(crate) const ARG_GLOBALREV: &str = "globalrev";
+pub(crate) const ARG_SVNREV: &str = "svnrev";
+pub(crate) const ARG_BUBBLE_ID: &str = "bubble-id";
+pub(crate) const ARG_SNAPSHOT_ID: &str = "snapshot-id";
 
 #[derive(
     strum_macros::EnumString,
@@ -72,78 +84,283 @@ impl SchemeArgs {
     }
 }
 
-#[derive(Args, Clone)]
-#[clap(group(
-    ArgGroup::new("commit")
-    .required(true)
-    .args(&["commit-id", "bookmark", "hg-commit-id", "bonsai-id",
-        "snapshot-id", "git", "globalrev", "svnrev"]),
-))]
-pub(crate) struct CommitIdArgs {
-    #[clap(long, short = 'i')]
-    /// Commit ID to query (bonsai or Hg)
-    commit_id: Option<String>,
-    #[clap(long, short = 'B')]
-    /// Bookmark to query
-    bookmark: Option<String>,
-    #[clap(long)]
-    /// Hg commit ID to query
-    hg_commit_id: Option<String>,
-    #[clap(long)]
-    /// Bonsai ID to query
-    bonsai_id: Option<String>,
-    #[clap(long)]
-    /// Snapshot ID to query
-    snapshot_id: Option<String>,
-    #[clap(long)]
-    /// Git SHA-1 to query
-    git: Option<String>,
-    #[clap(long)]
-    /// Globalrev to query
-    globalrev: Option<u64>,
-    #[clap(long)]
-    /// SVN revision to query
-    svnrev: Option<u64>,
+/// Add arguments for specifying commit_ids.
+///
+/// The user can specify commit_ids by bookmark, hg commit ID, bonsai changeset ID, or
+/// a generic "commit_id", for which we will try to work out which kind of identifier
+/// the user has provided.
+fn add_commit_id_args_impl(
+    cmd: clap::Command<'_>,
+    required: bool,
+    multiple: bool,
+) -> clap::Command<'_> {
+    cmd.arg(
+        Arg::with_name(ARG_COMMIT_ID)
+            .short('i')
+            .long("commit-id")
+            .takes_value(true)
+            .multiple(multiple)
+            .number_of_values(1)
+            .help("Commit ID to query (bonsai or Hg)"),
+    )
+    .arg(
+        Arg::with_name(ARG_BOOKMARK)
+            .short('B')
+            .long("bookmark")
+            .takes_value(true)
+            .multiple(multiple)
+            .number_of_values(1)
+            .help("Bookmark to query"),
+    )
+    .arg(
+        Arg::with_name(ARG_HG_COMMIT_ID)
+            .long("hg-commit-id")
+            .takes_value(true)
+            .multiple(multiple)
+            .number_of_values(1)
+            .help("Hg commit ID to query"),
+    )
+    .arg(
+        Arg::with_name(ARG_BONSAI_ID)
+            .long("bonsai-id")
+            .takes_value(true)
+            .multiple(multiple)
+            .number_of_values(1)
+            .help("Bonsai ID to query"),
+    )
+    .arg(
+        Arg::with_name(ARG_SNAPSHOT_ID)
+            .long("snapshot-id")
+            .takes_value(true)
+            .multiple(multiple)
+            .number_of_values(1)
+            .help("Snapshot ID to query"),
+    )
+    .arg(
+        Arg::with_name(ARG_GIT_SHA1)
+            .long("git")
+            .takes_value(true)
+            .multiple(multiple)
+            .number_of_values(1)
+            .help("Git SHA-1 to query"),
+    )
+    .arg(
+        Arg::with_name(ARG_GLOBALREV)
+            .long("globalrev")
+            .takes_value(true)
+            .multiple(multiple)
+            .number_of_values(1)
+            .help("Globalrev to query"),
+    )
+    .arg(
+        Arg::with_name(ARG_SVNREV)
+            .long("svnrev")
+            .takes_value(true)
+            .multiple(multiple)
+            .number_of_values(1)
+            .help("SVN revision to query"),
+    )
+    .arg(
+        Arg::with_name(ARG_BUBBLE_ID)
+            .long("bubble-id")
+            .takes_value(true)
+            .multiple(false)
+            .number_of_values(1)
+            .help("Bubble id on which to check the bonsai commits"),
+    )
+    .group(
+        ArgGroup::with_name("commit")
+            .args(&[
+                ARG_COMMIT_ID,
+                ARG_BOOKMARK,
+                ARG_HG_COMMIT_ID,
+                ARG_BONSAI_ID,
+                ARG_SNAPSHOT_ID,
+                ARG_GIT_SHA1,
+                ARG_GLOBALREV,
+                ARG_SVNREV,
+            ])
+            .multiple(multiple)
+            .required(required),
+    )
+}
 
-    #[clap(long, requires = "snapshot-id")]
-    /// Bubble id on which to check the bonsai commits.
-    bubble_id: Option<u64>,
+fn get_commit_ids(matches: &ArgMatches) -> Result<Vec<CommitId>, clap::Error> {
+    get_commit_ids_impl(matches)
+        .map_err(|err| clap::Error::raw(clap::error::ErrorKind::ValueValidation, err))
+}
+
+/// Get the commit ids specified by the user.  They are returned in the order specified.
+fn get_commit_ids_impl(matches: &ArgMatches) -> Result<Vec<CommitId>, Error> {
+    let bubble_id = matches
+        .value_of(ARG_BUBBLE_ID)
+        .map(|id| id.parse::<NonZeroU64>())
+        .transpose()?;
+    let mut commit_ids = BTreeMap::new();
+    if let (Some(indices), Some(values)) = (
+        matches.indices_of(ARG_BOOKMARK),
+        matches.values_of(ARG_BOOKMARK),
+    ) {
+        for (index, value) in indices.zip(values) {
+            commit_ids.insert(index, CommitId::Bookmark(value.to_string()));
+        }
+    }
+    if let (Some(indices), Some(values)) = (
+        matches.indices_of(ARG_HG_COMMIT_ID),
+        matches.values_of(ARG_HG_COMMIT_ID),
+    ) {
+        for (index, value) in indices.zip(values) {
+            let mut id = [0; 20];
+            hex_decode(value.as_bytes(), &mut id)?;
+            commit_ids.insert(index, CommitId::HgId(id));
+        }
+    }
+    if let (Some(indices), Some(values)) = (
+        matches.indices_of(ARG_BONSAI_ID),
+        matches.values_of(ARG_BONSAI_ID),
+    ) {
+        for (index, value) in indices.zip(values) {
+            let mut id = [0; 32];
+            hex_decode(value.as_bytes(), &mut id)?;
+            commit_ids.insert(index, CommitId::BonsaiId(id));
+        }
+    }
+    if let (Some(indices), Some(values)) = (
+        matches.indices_of(ARG_SNAPSHOT_ID),
+        matches.values_of(ARG_SNAPSHOT_ID),
+    ) {
+        for (index, value) in indices.zip(values) {
+            let mut id = [0; 32];
+            hex_decode(value.as_bytes(), &mut id)?;
+            commit_ids.insert(index, CommitId::EphemeralBonsai(id, bubble_id));
+        }
+    }
+    if let (Some(indices), Some(values)) = (
+        matches.indices_of(ARG_GIT_SHA1),
+        matches.values_of(ARG_GIT_SHA1),
+    ) {
+        for (index, value) in indices.zip(values) {
+            let mut hash = [0; 20];
+            hex_decode(value.as_bytes(), &mut hash)?;
+            commit_ids.insert(index, CommitId::GitSha1(hash));
+        }
+    }
+    if let (Some(indices), Some(values)) = (
+        matches.indices_of(ARG_GLOBALREV),
+        matches.values_of(ARG_GLOBALREV),
+    ) {
+        for (index, value) in indices.zip(values) {
+            commit_ids.insert(index, CommitId::Globalrev(value.parse::<u64>()?));
+        }
+    }
+    if let (Some(indices), Some(values)) = (
+        matches.indices_of(ARG_SVNREV),
+        matches.values_of(ARG_SVNREV),
+    ) {
+        for (index, value) in indices.zip(values) {
+            commit_ids.insert(index, CommitId::Svnrev(value.parse::<u64>()?));
+        }
+    }
+    if let (Some(indices), Some(values)) = (
+        matches.indices_of(ARG_COMMIT_ID),
+        matches.values_of(ARG_COMMIT_ID),
+    ) {
+        for (index, value) in indices.zip(values) {
+            commit_ids.insert(index, CommitId::Resolve(value.to_string()));
+        }
+    }
+    Ok(commit_ids
+        .into_iter()
+        .map(|(_index, commit_id)| commit_id)
+        .collect())
+}
+
+// Unfortunately we can't use clap derive API here directly because we care about
+// the order of arguments, but we still implement proper clap traits so that it
+// can be used in conjunction with derive API in other parts of the code.
+#[derive(Clone)]
+pub(crate) struct CommitIdArgs {
+    commit_id: CommitId,
 }
 
 impl CommitIdArgs {
     pub fn into_commit_id(self) -> Result<CommitId, Error> {
-        let bubble_id = self.bubble_id.and_then(NonZeroU64::new);
-        Ok(if let Some(bookmark) = self.bookmark {
-            CommitId::Bookmark(bookmark)
-        } else if let Some(id_str) = self.hg_commit_id {
-            let mut id = [0; 20];
-            hex_decode(id_str.as_bytes(), &mut id)?;
-            CommitId::HgId(id)
-        } else if let Some(id_str) = self.bonsai_id {
-            let mut id = [0; 32];
-            hex_decode(id_str.as_bytes(), &mut id)?;
-            CommitId::BonsaiId(id)
-        } else if let Some(id_str) = self.snapshot_id {
-            let mut id = [0; 32];
-            hex_decode(id_str.as_bytes(), &mut id)?;
-            CommitId::EphemeralBonsai(id, bubble_id)
-        } else if let Some(id_str) = self.git {
-            let mut id = [0; 20];
-            hex_decode(id_str.as_bytes(), &mut id)?;
-            CommitId::GitSha1(id)
-        } else if let Some(id) = self.globalrev {
-            CommitId::Globalrev(id)
-        } else if let Some(id) = self.svnrev {
-            CommitId::Svnrev(id)
-        } else if let Some(id) = self.commit_id {
-            CommitId::Resolve(id)
+        Ok(self.commit_id)
+    }
+}
+
+impl clap::FromArgMatches for CommitIdArgs {
+    fn from_arg_matches(matches: &ArgMatches) -> Result<Self, clap::Error> {
+        let mut commit_ids = get_commit_ids(matches)?;
+        if commit_ids.len() == 1 {
+            Ok(CommitIdArgs {
+                commit_id: commit_ids.pop().unwrap(),
+            })
         } else {
-            anyhow::bail!("Missing commit id")
-        })
+            panic!("expected single commit id")
+        }
+    }
+
+    fn update_from_arg_matches(&mut self, matches: &ArgMatches) -> Result<(), clap::Error> {
+        let mut commit_ids = get_commit_ids(matches)?;
+        use std::cmp::Ordering;
+        match commit_ids.len().cmp(&1) {
+            Ordering::Equal => {
+                self.commit_id = commit_ids.pop().unwrap();
+            }
+            Ordering::Less => {}
+            Ordering::Greater => panic!("expected single commit id"),
+        }
+
+        Ok(())
+    }
+}
+
+impl clap::Args for CommitIdArgs {
+    fn augment_args(cmd: clap::Command<'_>) -> clap::Command<'_> {
+        add_commit_id_args_impl(cmd, true, false)
+    }
+
+    fn augment_args_for_update(cmd: clap::Command<'_>) -> clap::Command<'_> {
+        add_commit_id_args_impl(cmd, true, false)
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct CommitIdsArgs {
+    commit_ids: Vec<CommitId>,
+}
+
+impl clap::FromArgMatches for CommitIdsArgs {
+    fn from_arg_matches(matches: &ArgMatches) -> Result<Self, clap::Error> {
+        let commit_ids = get_commit_ids(matches)?;
+        Ok(CommitIdsArgs { commit_ids })
+    }
+
+    fn update_from_arg_matches(&mut self, matches: &ArgMatches) -> Result<(), clap::Error> {
+        self.commit_ids = get_commit_ids(matches)?;
+        Ok(())
+    }
+}
+
+impl clap::Args for CommitIdsArgs {
+    fn augment_args(cmd: clap::Command<'_>) -> clap::Command<'_> {
+        add_commit_id_args_impl(cmd, true, true)
+    }
+
+    fn augment_args_for_update(cmd: clap::Command<'_>) -> clap::Command<'_> {
+        add_commit_id_args_impl(cmd, true, true)
+    }
+}
+
+impl CommitIdsArgs {
+    pub fn into_commit_ids(self) -> Result<Vec<CommitId>, Error> {
+        Ok(self.commit_ids)
     }
 }
 
 /// A `CommitId` is any of the ways a user can specify a commit.
+#[derive(Clone)]
 pub(crate) enum CommitId {
     /// Commit ID is of an unknown type that must be resolved.
     Resolve(String),
@@ -157,13 +374,13 @@ pub(crate) enum CommitId {
     /// Hg commit ID.
     HgId([u8; 20]),
 
-    // Git SHA-1.
+    /// Git SHA-1.
     GitSha1([u8; 20]),
 
-    // Globalrev.
+    /// Globalrev.
     Globalrev(u64),
 
-    // SVN revision.
+    /// SVN revision.
     Svnrev(u64),
 
     /// A bookmark name.
