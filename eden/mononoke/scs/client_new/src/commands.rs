@@ -12,6 +12,7 @@ base_app::subcommands! {
     mod cat;
     mod blame;
     mod common_base;
+    mod create_bookmark if "SCSC_WRITES_ENABLED";
     mod diff;
     mod export;
     mod find_files;

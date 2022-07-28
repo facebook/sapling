@@ -10,3 +10,4 @@ pub(crate) mod path;
 pub(crate) mod progress;
 pub(crate) mod pushvars;
 pub(crate) mod repo;
+pub(crate) mod service_id;

@@ -24,7 +24,7 @@ pub trait BaseApp {
 /// Lower level version of mononoke_app::subcommands that allows changing the app
 #[macro_export]
 macro_rules! subcommands {
-     ( type App = $app:ty; $( mod $command:ident; )* ) => {
+     ( type App = $app:ty; $( mod $command:ident $(if $env:literal)? ; )* ) => {
          $( mod $command; )*
 
          $crate::macro_export::assert_impl_all!($app: $crate::BaseApp);
@@ -33,12 +33,16 @@ macro_rules! subcommands {
          pub(crate) fn subcommands<'help>() -> Vec<$crate::macro_export::clap::Command<'help>> {
              use $crate::macro_export::clap::IntoApp;
              use $crate::macro_export::heck::KebabCase;
-             vec![
-                 $(
-                     $command::CommandArgs::command()
-                         .name(stringify!($command).to_kebab_case()),
-                 )*
-             ]
+             let mut apps = vec![];
+            $(
+                $( if std::env::var($env).is_ok() )?
+                {
+                    apps.push($command::CommandArgs::command()
+                        .name(stringify!($command).to_kebab_case()));
+                }
+            )*
+
+            apps
          }
 
          /// Dispatch a command invocation.
