@@ -1218,41 +1218,12 @@ class localrepository(object):
 
     @storecache("00changelog.i", "visibleheads", "remotenames")
     def changelog(self):
-        def loadchangelog(self):
-            # Remove left-over ".tmp" files created by Rust revlogindex,
-            # or by the truncation logic on 00changelog.i.
-            names = [
-                n
-                for n in self.svfs.listdir("")
-                if n.startswith(".tmp") or n.startswith("00changelog.i-")
-            ]
-            now = time.time()
-            deleted = 0
-            for name in names:
-                # svfs might escape "." to "~2e". Bypass that using
-                # os.path.join.
-                path = os.path.join(self.svfs.join(""), name)
-                try:
-                    # Avoid deleting files that are being written.
-                    # If we do delete files written by revlogindex, it's
-                    # okay because revlogindex won't error out.
-                    if now - os.stat(path).st_mtime > 10:
-                        util.unlink(path)
-                        deleted += 1
-                except (OSError, IOError):
-                    pass
-            # Log it so we know when to get rid of this bandaid fix.
-            if deleted:
-                self.ui.log("features", feature="remove-svfs-dottmp")
-
-            return _openchangelog(self)
-
         # Trigger loading of the metalog, before loading changelog.
         # This avoids potential races such as metalog refers to
         # unknown commits.
         self.metalog()
 
-        cl = loadchangelog(self)
+        cl = _openchangelog(self)
 
         return cl
 
