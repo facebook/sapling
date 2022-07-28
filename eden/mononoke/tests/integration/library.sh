@@ -11,10 +11,19 @@ if [ -n "$FB_TEST_FIXTURES" ] && [ -f "$FB_TEST_FIXTURES/fb_library.sh" ]; then
   . "$FB_TEST_FIXTURES/fb_library.sh"
 fi
 
-PROXY_IDENTITY_TYPE="${FB_PROXY_IDENTITY_TYPE:-X509_SUBJECT_NAME}"
-PROXY_IDENTITY_DATA="${FB_PROXY_IDENTITY_DATA:-CN=proxy,O=Mononoke,C=US,ST=CA}"
-ALLOWED_IDENTITY_TYPE="${FB_ALLOWED_IDENTITY_TYPE:-X509_SUBJECT_NAME}"
-ALLOWED_IDENTITY_DATA="${FB_ALLOWED_IDENTITY_DATA:-CN=client0,O=Mononoke,C=US,ST=CA}"
+PROXY_ID_TYPE="${FB_PROXY_ID_TYPE:-X509_SUBJECT_NAME}"
+PROXY_ID_DATA="${FB_PROXY_ID_DATA:-CN=proxy,O=Mononoke,C=US,ST=CA}"
+CLIENT0_ID_TYPE="${FB_CLIENT0_ID_TYPE:-X509_SUBJECT_NAME}"
+CLIENT0_ID_DATA="${FB_CLIENT0_ID_DATA:-CN=client0,O=Mononoke,C=US,ST=CA}"
+# shellcheck disable=SC2034
+CLIENT1_ID_TYPE="${FB_CLIENT1_ID_TYPE:-X509_SUBJECT_NAME}"
+# shellcheck disable=SC2034
+CLIENT1_ID_DATA="${FB_CLIENT1_ID_DATA:-CN=client1,O=Mononoke,C=US,ST=CA}"
+# shellcheck disable=SC2034
+CLIENT2_ID_TYPE="${FB_CLIENT2_ID_TYPE:-X509_SUBJECT_NAME}"
+# shellcheck disable=SC2034
+CLIENT2_ID_DATA="${FB_CLIENT2_ID_DATA:-CN=client2,O=Mononoke,C=US,ST=CA}"
+# shellcheck disable=SC2034
 JSON_CLIENT_ID="${FB_JSON_CLIENT_ID:-[\"X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA\"]}"
 
 if [[ -n "$DB_SHARD_NAME" ]]; then
@@ -39,6 +48,8 @@ MONONOKE_SERVER_ADDR_FILE="$TESTTMP/mononoke_server_addr.txt"
 export LOCAL_CONFIGERATOR_PATH="$TESTTMP/configerator"
 mkdir -p "${LOCAL_CONFIGERATOR_PATH}"
 
+export ACL_FILE="$TESTTMP/acls.json"
+
 # The path for tunables. Do not write directly to this! Use merge_tunables instead.
 export MONONOKE_TUNABLES_PATH="${LOCAL_CONFIGERATOR_PATH}/mononoke_tunables.json"
 
@@ -53,6 +64,7 @@ COMMON_ARGS=(
   --local-configerator-path "${LOCAL_CONFIGERATOR_PATH}"
   --log-exclude-tag "futures_watchdog"
   --with-test-megarepo-configs-client=true
+  --acl-file "${ACL_FILE}"
 )
 
 export TEST_CERTDIR
@@ -605,17 +617,9 @@ darkstorm_blobstore = "$blobstorename"
 redaction_sets_location = "scm/mononoke/redaction/redaction_sets"
 
 [[trusted_parties_allowlist]]
-identity_type = "$PROXY_IDENTITY_TYPE"
-identity_data = "${OVERRIDE_PROXY_IDDATA:-$PROXY_IDENTITY_DATA}"
+identity_type = "$PROXY_ID_TYPE"
+identity_data = "$PROXY_ID_DATA"
 CONFIG
-
-  if [[ -z "$DISABLE_GLOBAL_ALLOWLIST" ]]; then
-  cat >> common/common.toml <<CONFIG
-[[global_allowlist]]
-identity_type = "$ALLOWED_IDENTITY_TYPE"
-identity_data = "${OVERRIDE_ALLOWED_IDDATA:-$ALLOWED_IDENTITY_DATA}"
-CONFIG
-  fi
 
   cat >> common/common.toml <<CONFIG
 ${ADDITIONAL_MONONOKE_COMMON_CONFIG}
@@ -625,6 +629,25 @@ CONFIG
   setup_mononoke_storage_config "$REPOTYPE" "$blobstorename"
 
   setup_mononoke_repo_config "$REPONAME" "$blobstorename"
+
+  setup_acls
+}
+
+function setup_acls() {
+  if [[ ! -f "$ACL_FILE" ]]; then
+    cat > "$ACL_FILE" <<ACLS
+{
+  "repos": {
+    "default": {
+      "actions": {
+        "read": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"],
+        "write": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"]
+      }
+    }
+  }
+}
+ACLS
+  fi
 }
 
 function db_config() {
@@ -850,14 +873,9 @@ repo_id=$REPOID
 repo_name="$reponame"
 repo_config="$reponame"
 enabled=${ENABLED:-true}
+hipster_acl="${ACL_NAME:-default}"
 CONFIG
 
-
-if [[ -n "${ACL_NAME:-}" ]]; then
-  cat >> "repo_definitions/$reponame/server.toml" <<CONFIG
-hipster_acl = "$ACL_NAME"
-CONFIG
-fi
 
 if [[ -n "${READ_ONLY_REPO:-}" ]]; then
   cat >> "repo_definitions/$reponame/server.toml" <<CONFIG

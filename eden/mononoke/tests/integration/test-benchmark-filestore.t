@@ -8,6 +8,7 @@
 
 # Basic smoke test
 
+  $ echo "{}" > "$ACL_FILE"
   $ echo "foobar" > "${TESTTMP}/foo"
 
   $ "$MONONOKE_BENCHMARK_FILESTORE" "${COMMON_ARGS[@]}" "${TESTTMP}/foo" memory
