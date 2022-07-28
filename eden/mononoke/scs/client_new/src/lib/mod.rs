@@ -7,6 +7,8 @@
 
 //! Library contating code shared between commands.
 
+pub(crate) mod bookmark;
+pub(crate) mod commit;
 pub(crate) mod commit_id;
 pub(crate) mod diff;
 pub(crate) mod path_tree;

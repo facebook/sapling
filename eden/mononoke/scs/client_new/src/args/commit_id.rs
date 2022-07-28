@@ -69,7 +69,7 @@ impl Scheme {
 
 #[derive(Args, Clone)]
 pub(crate) struct SchemeArgs {
-    #[clap(long, short('S'), default_value = "hg")]
+    #[clap(long, short('S'), default_value = "hg", value_delimiter = ',')]
     /// Commit identity schemes to display
     schemes: Vec<Scheme>,
 }
@@ -385,6 +385,15 @@ pub(crate) enum CommitId {
 
     /// A bookmark name.
     Bookmark(String),
+}
+
+impl CommitId {
+    pub(crate) fn into_bookmark_name(self) -> Result<String, Error> {
+        match self {
+            Self::Bookmark(name) => Ok(name),
+            _ => anyhow::bail!("expected bookmark name (got {})", self),
+        }
+    }
 }
 
 impl fmt::Display for CommitId {

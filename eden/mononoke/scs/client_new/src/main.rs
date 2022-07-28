@@ -28,6 +28,7 @@ mod commands;
 mod connection;
 pub(crate) mod lib;
 mod render;
+pub(crate) mod util;
 
 lazy_static::lazy_static! {
     static ref SHORT_VERSION: String = {

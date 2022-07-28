@@ -10,9 +10,11 @@ use std::io::Write;
 
 use anyhow::Result;
 use futures::stream;
+use auto_impl::auto_impl;
 use futures::stream::Stream;
 use futures::stream::TryStreamExt;
 
+#[auto_impl(Box)]
 /// A renderable item.  This trait should be implemented by anything that can
 /// be output from a command.
 pub(crate) trait Render: Send {
