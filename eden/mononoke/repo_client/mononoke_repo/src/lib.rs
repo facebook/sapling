@@ -5,17 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Context;
 use anyhow::Error;
 use blobrepo::BlobRepo;
-use blobstore_factory::ReadOnlyStorage;
 use cacheblob::LeaseOps;
-use fbinit::FacebookInit;
 use getbundle_response::SessionLfsParams;
 use hooks::HookManager;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::InfinitepushParams;
-use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::PushParams;
 use metaconfig_types::PushrebaseParams;
 use mononoke_api::Repo;
@@ -23,61 +19,25 @@ use mononoke_api_types::InnerRepo;
 use mononoke_types::RepositoryId;
 use rand::Rng;
 use reachabilityindex::LeastCommonAncestorsHint;
-use repo_blobstore::RepoBlobstore;
 use repo_lock::RepoLock;
-use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::facebook::MysqlOptions;
 use std::collections::hash_map::DefaultHasher;
 use std::fmt;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::sync::Arc;
-use streaming_clone::SqlStreamingChunksFetcher;
+use streaming_clone::StreamingClone;
+use streaming_clone::StreamingCloneRef;
 use warm_bookmarks_cache::BookmarksCache;
-
-#[derive(Clone)]
-pub struct SqlStreamingCloneConfig {
-    pub blobstore: RepoBlobstore,
-    pub fetcher: SqlStreamingChunksFetcher,
-    pub repoid: RepositoryId,
-}
 
 #[derive(Clone)]
 pub struct MononokeRepo {
     repo: Arc<Repo>,
-    streaming_clone: SqlStreamingCloneConfig,
 }
 
 impl MononokeRepo {
-    pub async fn new(
-        fb: FacebookInit,
-        repo: Arc<Repo>,
-        mysql_options: &MysqlOptions,
-        readonly_storage: ReadOnlyStorage,
-    ) -> Result<Self, Error> {
-        let storage_config = &repo.config().storage_config;
-
-        let streaming_clone = streaming_clone(
-            fb,
-            repo.blob_repo(),
-            &storage_config.metadata,
-            mysql_options,
-            repo.repoid(),
-            readonly_storage.0,
-        )?;
-
-        Self::new_from_parts(repo, streaming_clone).await
-    }
-
-    pub async fn new_from_parts(
-        repo: Arc<Repo>,
-        streaming_clone: SqlStreamingCloneConfig,
-    ) -> Result<Self, Error> {
-        Ok(Self {
-            repo,
-            streaming_clone,
-        })
+    pub async fn new(repo: Arc<Repo>) -> Result<Self, Error> {
+        Ok(Self { repo })
     }
 
     pub fn blobrepo(&self) -> &BlobRepo {
@@ -108,8 +68,8 @@ impl MononokeRepo {
         self.repo.hook_manager().clone()
     }
 
-    pub fn streaming_clone(&self) -> &SqlStreamingCloneConfig {
-        &self.streaming_clone
+    pub fn streaming_clone(&self) -> &StreamingClone {
+        self.repo.inner_repo().streaming_clone()
     }
 
     pub fn force_lfs_if_threshold_set(&self) -> SessionLfsParams {
@@ -178,29 +138,6 @@ impl MononokeRepo {
     pub fn x_repo_sync_lease(&self) -> &Arc<dyn LeaseOps> {
         self.repo.x_repo_sync_lease()
     }
-}
-
-fn streaming_clone(
-    fb: FacebookInit,
-    blobrepo: &BlobRepo,
-    metadata_db_config: &MetadataDatabaseConfig,
-    mysql_options: &MysqlOptions,
-    repoid: RepositoryId,
-    readonly_storage: bool,
-) -> Result<SqlStreamingCloneConfig, Error> {
-    let fetcher = SqlStreamingChunksFetcher::with_metadata_database_config(
-        fb,
-        metadata_db_config,
-        mysql_options,
-        readonly_storage,
-    )
-    .context("Failed to open SqlStreamingChunksFetcher")?;
-
-    Ok(SqlStreamingCloneConfig {
-        fetcher,
-        blobstore: blobrepo.get_blobstore(),
-        repoid,
-    })
 }
 
 impl Debug for MononokeRepo {

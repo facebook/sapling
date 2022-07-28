@@ -32,6 +32,7 @@ use repo_permission_checker::RepoPermissionChecker;
 use repo_sparse_profiles::RepoSparseProfiles;
 use segmented_changelog_types::SegmentedChangelog;
 use skiplist::SkiplistIndex;
+use streaming_clone::StreamingClone;
 
 // Eventually everything inside Repo should really be here
 // The fields of BlobRepo that are not used in e.g. LFS server should also be moved here
@@ -83,6 +84,9 @@ pub struct InnerRepo {
 
     #[facet]
     pub sparse_profiles: RepoSparseProfiles,
+
+    #[facet]
+    pub streaming_clone: StreamingClone,
 }
 
 impl AsBlobRepo for InnerRepo {

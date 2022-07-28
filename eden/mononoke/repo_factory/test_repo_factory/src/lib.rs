@@ -111,6 +111,8 @@ use sql::Connection;
 use sql::SqlConnectionsWithSchema;
 use sql_construct::SqlConstruct;
 use sqlphases::SqlPhasesBuilder;
+use streaming_clone::ArcStreamingClone;
+use streaming_clone::StreamingCloneBuilder;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use unodes::RootUnodeManifestId;
 
@@ -221,6 +223,7 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SegmentedChangelogSqlConnections::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlRepoLock::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlSparseProfilesSizes::CREATION_QUERY)?;
+        metadata_con.execute_batch(StreamingCloneBuilder::CREATION_QUERY)?;
         let metadata_db =
             SqlConnectionsWithSchema::new_single(Connection::with_sqlite(metadata_con));
 
@@ -628,5 +631,17 @@ impl TestRepoFactory {
         Ok(Arc::new(RepoBookmarkAttrs::new_test(
             repo_config.bookmarks.clone(),
         )?))
+    }
+
+    /// Streaming clone
+    pub fn streaming_clone(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_blobstore: &ArcRepoBlobstore,
+    ) -> ArcStreamingClone {
+        Arc::new(
+            StreamingCloneBuilder::from_sql_connections(self.metadata_db.clone().into())
+                .build(repo_identity.id(), repo_blobstore.clone()),
+        )
     }
 }

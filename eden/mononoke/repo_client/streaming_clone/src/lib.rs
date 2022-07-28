@@ -6,20 +6,30 @@
  */
 
 use anyhow::Error;
+use blobstore::Blobstore;
 use bytes::Bytes;
+use context::CoreContext;
+use context::PerfCounterType;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
+use mononoke_types::RepositoryId;
+use repo_blobstore::ArcRepoBlobstore;
 use sql::queries;
-use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 use thiserror::Error;
 
-use blobstore::Blobstore;
-use context::CoreContext;
-use context::PerfCounterType;
-use mononoke_types::RepositoryId;
+#[facet::facet]
+pub struct StreamingClone {
+    connections: SqlConnections,
+    repo_id: RepositoryId,
+    repo_blobstore: ArcRepoBlobstore,
+}
+
+pub struct StreamingCloneBuilder {
+    connections: SqlConnections,
+}
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -45,12 +55,6 @@ impl RevlogStreamingChunks {
             index_blobs: Vec::new(),
         }
     }
-}
-
-#[derive(Clone)]
-pub struct SqlStreamingChunksFetcher {
-    read_connection: Connection,
-    write_connection: Connection,
 }
 
 queries! {
@@ -96,7 +100,7 @@ queries! {
     }
 }
 
-impl SqlConstruct for SqlStreamingChunksFetcher {
+impl SqlConstruct for StreamingCloneBuilder {
     const LABEL: &'static str = "streaming-chunks";
 
     const CREATION_QUERY: &'static str = "
@@ -113,14 +117,21 @@ impl SqlConstruct for SqlStreamingChunksFetcher {
     ";
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
-        Self {
-            read_connection: connections.read_connection,
-            write_connection: connections.write_connection,
-        }
+        Self { connections }
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlStreamingChunksFetcher {}
+impl SqlConstructFromMetadataDatabaseConfig for StreamingCloneBuilder {}
+
+impl StreamingCloneBuilder {
+    pub fn build(self, repo_id: RepositoryId, repo_blobstore: ArcRepoBlobstore) -> StreamingClone {
+        StreamingClone {
+            connections: self.connections,
+            repo_id,
+            repo_blobstore,
+        }
+    }
+}
 
 fn fetch_blob(
     ctx: CoreContext,
@@ -147,33 +158,28 @@ fn fetch_blob(
     .boxed()
 }
 
-impl SqlStreamingChunksFetcher {
-    pub async fn count_chunks(
-        &self,
-        ctx: &CoreContext,
-        repo_id: RepositoryId,
-        tag: Option<&str>,
-    ) -> Result<u64, Error> {
+impl StreamingClone {
+    pub async fn count_chunks(&self, ctx: &CoreContext, tag: Option<&str>) -> Result<u64, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
         let tag = tag.unwrap_or("");
-        let res = CountChunks::query(&self.read_connection, &repo_id, &tag).await?;
+        let res =
+            CountChunks::query(&self.connections.read_connection, &self.repo_id, &tag).await?;
         Ok(res.get(0).map_or(0, |x| x.0))
     }
 
     pub async fn fetch_changelog(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
         tag: Option<&str>,
-        blobstore: impl Blobstore + Clone + 'static,
     ) -> Result<RevlogStreamingChunks, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
         let tag = tag.unwrap_or("");
-        let rows = SelectChunks::query(&self.read_connection, &repo_id, &tag).await?;
+        let rows =
+            SelectChunks::query(&self.connections.read_connection, &self.repo_id, &tag).await?;
 
         let res = rows.into_iter().fold(
             RevlogStreamingChunks::new(),
@@ -184,13 +190,13 @@ impl SqlStreamingChunksFetcher {
                 res.index_size += idx_size;
                 res.data_blobs.push(fetch_blob(
                     ctx.clone(),
-                    blobstore.clone(),
+                    self.repo_blobstore.clone(),
                     &data_blob_name,
                     data_size,
                 ));
                 res.index_blobs.push(fetch_blob(
                     ctx.clone(),
-                    blobstore.clone(),
+                    self.repo_blobstore.clone(),
                     &idx_blob_name,
                     idx_size,
                 ));
@@ -204,7 +210,6 @@ impl SqlStreamingChunksFetcher {
     pub async fn insert_chunks(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         tag: Option<&str>,
         chunks: Vec<(u32, &str, u32, &str, u32)>,
     ) -> Result<(), Error> {
@@ -215,10 +220,10 @@ impl SqlStreamingChunksFetcher {
 
         let ref_chunks: Vec<_> = chunks
             .iter()
-            .map(|row| (&repo_id, &tag, &row.0, &row.1, &row.2, &row.3, &row.4))
+            .map(|row| (&self.repo_id, &tag, &row.0, &row.1, &row.2, &row.3, &row.4))
             .collect();
 
-        InsertChunks::query(&self.write_connection, &ref_chunks[..]).await?;
+        InsertChunks::query(&self.connections.write_connection, &ref_chunks[..]).await?;
 
         Ok(())
     }
@@ -226,7 +231,6 @@ impl SqlStreamingChunksFetcher {
     pub async fn select_index_and_data_sizes(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         tag: Option<&str>,
     ) -> Result<Option<(u64, u64)>, Error> {
         ctx.perf_counters()
@@ -234,7 +238,8 @@ impl SqlStreamingChunksFetcher {
 
         let tag = tag.unwrap_or("");
 
-        let res = SelectSizes::query(&self.read_connection, &repo_id, &tag).await?;
+        let res =
+            SelectSizes::query(&self.connections.read_connection, &self.repo_id, &tag).await?;
         let (idx, data) = match res.get(0) {
             Some((Some(idx), Some(data))) => (idx, data),
             _ => {
@@ -245,15 +250,12 @@ impl SqlStreamingChunksFetcher {
         Ok(Some((*idx, *data)))
     }
 
-    pub async fn select_max_chunk_num(
-        &self,
-        ctx: &CoreContext,
-        repo_id: RepositoryId,
-    ) -> Result<Option<u32>, Error> {
+    pub async fn select_max_chunk_num(&self, ctx: &CoreContext) -> Result<Option<u32>, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let res = SelectMaxChunkNum::query(&self.read_connection, &repo_id).await?;
+        let res =
+            SelectMaxChunkNum::query(&self.connections.read_connection, &self.repo_id).await?;
         Ok(res.get(0).and_then(|x| x.0))
     }
 }

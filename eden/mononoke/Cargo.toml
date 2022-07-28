@@ -116,8 +116,8 @@ mononoke_app = { version = "0.1.0", path = "cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "mononoke_types" }
 packblob = { version = "0.1.0", path = "blobstore/packblob" }
 phases = { version = "0.1.0", path = "phases" }
-prefixblob = { version = "0.1.0", path = "blobstore/prefixblob" }
 rand = { version = "0.8", features = ["small_rng"] }
+repo_blobstore = { version = "0.1.0", path = "blobrepo/repo_blobstore" }
 repo_factory = { version = "0.1.0", path = "repo_factory" }
 retry = { version = "0.1.0", path = "common/retry" }
 revset = { version = "0.1.0", path = "revset" }

@@ -217,8 +217,7 @@ pub async fn repo_handlers<'a>(
                 WarmBookmarksCache"
         );
 
-        let mononoke_repo =
-            MononokeRepo::new(ctx.fb, repo.clone(), mysql_options, readonly_storage);
+        let mononoke_repo = MononokeRepo::new(repo.clone());
 
         let (mononoke_repo, backsyncer_dbs) =
             futures::future::try_join(mononoke_repo, backsyncer_dbs).await?;

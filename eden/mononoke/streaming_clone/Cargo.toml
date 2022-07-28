@@ -10,17 +10,17 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.56"
 blake2 = "0.9"
-blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 clap = "2.33"
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 mercurial_revlog = { version = "0.1.0", path = "../mercurial/revlog" }
-mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
+repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 streaming_clone = { version = "0.1.0", path = "../repo_client/streaming_clone" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }

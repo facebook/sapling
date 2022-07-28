@@ -7,7 +7,6 @@
 
 use anyhow::anyhow;
 use anyhow::Error;
-use blobstore::Blobstore;
 use blobstore_factory::make_blobstore;
 use blobstore_factory::BlobstoreOptions;
 use blobstore_factory::ReadOnlyStorage;
@@ -27,8 +26,8 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use metaconfig_types::RepoConfig;
-use mononoke_types::RepositoryId;
-use prefixblob::PrefixBlobstore;
+use repo_blobstore::RepoBlobstore;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::error;
 use slog::info;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
@@ -37,7 +36,9 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
 use streaming_clone::RevlogStreamingChunks;
-use streaming_clone::SqlStreamingChunksFetcher;
+use streaming_clone::StreamingClone;
+use streaming_clone::StreamingCloneBuilder;
+
 use tokio::time;
 
 const REPO_ARG: &str = "repo";
@@ -170,9 +171,7 @@ fn split_repo_with_tags(s: &str) -> Result<(String, Vec<String>), Error> {
 }
 
 struct StreamingCloneWarmup {
-    fetcher: SqlStreamingChunksFetcher,
-    blobstore: Arc<dyn Blobstore>,
-    repoid: RepositoryId,
+    streaming_clone: StreamingClone,
     reponame: String,
     tag: Option<String>,
 }
@@ -203,19 +202,25 @@ impl StreamingCloneWarmup {
         )
         .await?;
         let blobstore = new_memcache_blobstore(ctx.fb, blobstore, "multiplexed", "")?;
-        let blobstore = PrefixBlobstore::new(blobstore, config.repoid.prefix());
+        let repo_blobstore = Arc::new(RepoBlobstore::new(
+            blobstore,
+            None,
+            config.repoid,
+            MononokeScubaSampleBuilder::with_discard(),
+        ));
 
-        let fetcher = SqlStreamingChunksFetcher::with_metadata_database_config(
+        // Because we want to use our custom blobstore, we must construct the
+        // streaming clone attribute directly.
+        let streaming_clone = StreamingCloneBuilder::with_metadata_database_config(
             ctx.fb,
             &config.storage_config.metadata,
             mysql_options,
             true, /*read-only*/
-        )?;
+        )?
+        .build(config.repoid, repo_blobstore);
 
         Ok(Self {
-            fetcher,
-            blobstore: Arc::new(blobstore),
-            repoid: config.repoid,
+            streaming_clone,
             reponame,
             tag,
         })
@@ -233,8 +238,8 @@ impl StreamingCloneWarmup {
             let tag = None;
             let start = Instant::now();
             let chunks = self
-                .fetcher
-                .fetch_changelog(ctx.clone(), self.repoid, tag, self.blobstore.clone())
+                .streaming_clone
+                .fetch_changelog(ctx.clone(), tag)
                 .await?;
             info!(
                 ctx.logger(),

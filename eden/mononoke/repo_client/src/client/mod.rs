@@ -109,7 +109,6 @@ use mercurial_types::NULL_CSID;
 use mercurial_types::NULL_HASH;
 use metaconfig_types::RepoClientKnobs;
 use mononoke_repo::MononokeRepo;
-use mononoke_repo::SqlStreamingCloneConfig;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use nonzero_ext::nonzero;
@@ -143,6 +142,7 @@ use std::sync::Mutex;
 use std::time::Duration;
 use std::time::Instant;
 use streaming_clone::RevlogStreamingChunks;
+use streaming_clone::StreamingCloneArc;
 use time_ext::DurationExt;
 use tunables::tunables;
 
@@ -1912,19 +1912,13 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('stream_out_shallow')
     fn stream_out_shallow(&self, tag: Option<String>) -> BoxStream<BytesOld, Error> {
         self.command_stream(ops::STREAMOUTSHALLOW, UNSAMPLED, |ctx, command_logger| {
-            let streaming_clone = self.repo.streaming_clone().clone();
+            let streaming_clone = self.repo.inner_repo().streaming_clone_arc();
 
             let stream = {
                 cloned!(ctx);
                 async move {
-                    let SqlStreamingCloneConfig {
-                        blobstore,
-                        fetcher,
-                        repoid,
-                    } = streaming_clone;
-
-                    let changelog = fetcher
-                        .fetch_changelog(ctx.clone(), repoid, tag.as_deref(), blobstore.clone())
+                    let changelog = streaming_clone
+                        .fetch_changelog(ctx.clone(), tag.as_deref())
                         .await?;
 
                     let data_blobs = changelog

@@ -86,6 +86,7 @@ use phases::PhasesRef;
 use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use repo_authorization::AuthorizationContext;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_cross_repo::RepoCrossRepo;
 use repo_sparse_profiles::RepoSparseProfiles;
 use revset::AncestorsNodeStream;
@@ -103,6 +104,7 @@ use stats::prelude::*;
 use std::collections::HashSet;
 use std::hash::Hash;
 use std::hash::Hasher;
+use streaming_clone::StreamingCloneBuilder;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
 use warm_bookmarks_cache::BookmarksCache;
@@ -401,6 +403,7 @@ impl Repo {
 
         let content_store = RepoFileContentManager::new(&blob_repo);
         let name = blob_repo.name().clone();
+        let repo_blobstore = blob_repo.repo_blobstore_arc();
 
         let inner = InnerRepo {
             blob_repo,
@@ -420,6 +423,9 @@ impl Repo {
             )),
             acl_regions: build_disabled_acl_regions(),
             sparse_profiles: Arc::new(RepoSparseProfiles::new(None)),
+            streaming_clone: Arc::new(
+                StreamingCloneBuilder::with_sqlite_in_memory()?.build(repo_id, repo_blobstore),
+            ),
         };
 
         let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(ctx.clone(), &inner);

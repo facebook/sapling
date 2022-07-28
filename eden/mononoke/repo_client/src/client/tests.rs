@@ -24,8 +24,6 @@ use mononoke_repo::MononokeRepo;
 use mononoke_types_mocks::changesetid::ONES_CSID;
 use scuba_ext::MononokeScubaSampleBuilder;
 use serde_json::json;
-use sql_construct::SqlConstruct;
-use streaming_clone::SqlStreamingChunksFetcher;
 use tests_utils::CreateCommitContext;
 
 #[test]
@@ -408,16 +406,7 @@ async fn run_and_check_if_lfs(
 ) -> Result<bool, Error> {
     let repo = Repo::new_test_lfs(ctx.clone(), repo.clone(), lfs_params).await?;
 
-    let blob_repo = repo.blob_repo().clone();
-    let mononoke_repo = MononokeRepo::new_from_parts(
-        Arc::new(repo),
-        SqlStreamingCloneConfig {
-            blobstore: blob_repo.get_blobstore(),
-            fetcher: SqlStreamingChunksFetcher::with_sqlite_in_memory()?,
-            repoid: blob_repo.get_repoid(),
-        },
-    )
-    .await?;
+    let mononoke_repo = MononokeRepo::new(Arc::new(repo)).await?;
 
     let logging = LoggingContainer::new(
         ctx.fb,

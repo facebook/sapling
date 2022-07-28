@@ -34,3 +34,4 @@ repo_permission_checker = { version = "0.1.0", path = "../../repo_attributes/rep
 repo_sparse_profiles = { version = "0.1.0", path = "../../repo_attributes/repo_sparse_profiles" }
 segmented_changelog_types = { version = "0.1.0", path = "../../segmented_changelog/types" }
 skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
+streaming_clone = { version = "0.1.0", path = "../../repo_client/streaming_clone" }

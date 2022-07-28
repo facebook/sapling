@@ -144,6 +144,8 @@ use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sqlphases::SqlPhasesBuilder;
+use streaming_clone::ArcStreamingClone;
+use streaming_clone::StreamingCloneBuilder;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use thiserror::Error;
 use tunables::tunables;
@@ -582,6 +584,9 @@ pub enum RepoFactoryError {
 
     #[error("Error creating bookmark attributes")]
     RepoBookmarkAttrs,
+
+    #[error("Error creating streaming clone")]
+    StreamingClone,
 }
 
 #[facet::factory(name: String, config: RepoConfig)]
@@ -1214,6 +1219,20 @@ impl RepoFactory {
         .await
         .context(RepoFactoryError::RepoBookmarkAttrs)?;
         Ok(Arc::new(repo_bookmark_attrs))
+    }
+
+    pub async fn streaming_clone(
+        &self,
+        repo_config: &ArcRepoConfig,
+        repo_identity: &ArcRepoIdentity,
+        repo_blobstore: &ArcRepoBlobstore,
+    ) -> Result<ArcStreamingClone> {
+        let streaming_clone = self
+            .open::<StreamingCloneBuilder>(&repo_config.storage_config.metadata)
+            .await
+            .context(RepoFactoryError::StreamingClone)?
+            .build(repo_identity.id(), repo_blobstore.clone());
+        Ok(Arc::new(streaming_clone))
     }
 }
 
