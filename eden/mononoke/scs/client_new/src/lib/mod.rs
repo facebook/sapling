@@ -8,6 +8,7 @@
 //! Library contating code shared between commands.
 
 pub(crate) mod commit_id;
+pub(crate) mod diff;
 
 use chrono::DateTime;
 use chrono::FixedOffset;

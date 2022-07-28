@@ -13,8 +13,8 @@ use anyhow::Result;
 use clap::Parser;
 use futures::future;
 use futures::stream;
+use futures::stream::StreamExt;
 use futures::TryFutureExt;
-use futures_util::stream::StreamExt;
 use serde_json::json;
 use source_control::types as thrift;
 

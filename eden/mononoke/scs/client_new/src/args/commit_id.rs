@@ -20,10 +20,10 @@ use clap::ArgMatches;
 use clap::Args;
 use faster_hex::hex_decode;
 use faster_hex::hex_string;
-use futures_util::future::try_join_all;
-use futures_util::future::FutureExt;
-use futures_util::stream::FuturesOrdered;
-use futures_util::stream::TryStreamExt;
+use futures::future::try_join_all;
+use futures::future::FutureExt;
+use futures::stream::FuturesOrdered;
+use futures::stream::TryStreamExt;
 use source_control::types as thrift;
 
 use crate::connection::Connection;
