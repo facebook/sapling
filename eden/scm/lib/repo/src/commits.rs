@@ -16,6 +16,7 @@ use hgcommits::DagCommits;
 use hgcommits::DoubleWriteCommits;
 use hgcommits::Error as CommitError;
 use hgcommits::GitSegmentedCommits;
+use hgcommits::HgCommits;
 use hgcommits::HybridCommits;
 use hgcommits::RevlogCommits;
 use metalog::MetaLog;
@@ -30,6 +31,7 @@ static HYBRID_REQUIREMENT: &str = "hybridchangelog";
 static LAZY_TEXT_REQUIREMENT: &str = "lazytextchangelog";
 static GIT_STORE_REQUIREMENT: &str = "git-store";
 static LAZY_STORE_REQUIREMENT: &str = "lazychangelog";
+static SEGMENTS_REQUIREMENT: &str = "segmentedchangelog";
 
 static GIT_FILE: &str = "gitdir";
 
@@ -55,6 +57,9 @@ pub(crate) fn open_dag_commits(
         let eden_api = repo.eden_api()?;
         tracing::info!(target: "changelog_info", changelog_backend="lazytext");
         open_hybrid(repo.store_path(), eden_api, false, false)?
+    } else if repo.store_requirements.contains(SEGMENTS_REQUIREMENT) {
+        tracing::info!(target: "changelog_info", changelog_backend="segments");
+        open_segments(repo.store_path())?
     } else {
         tracing::info!(target: "changelog_info", changelog_backend="rustrevlog");
         Box::new(RevlogCommits::new(repo.store_path())?)
@@ -124,4 +129,12 @@ fn calculate_segments_path(store_path: &Path) -> PathBuf {
 fn get_path_from_file(store_path: &Path, target_file: &str) -> Result<PathBuf, std::io::Error> {
     let path_file = store_path.join(target_file);
     fs::read_to_string(path_file).map(PathBuf::from)
+}
+
+fn open_segments(store_path: &Path) -> Result<Box<dyn DagCommits + Send + 'static>, CommitError> {
+    let commits = HgCommits::new(
+        &calculate_segments_path(store_path),
+        &store_path.join(HG_COMMITS_PATH),
+    )?;
+    Ok(Box::new(commits))
 }

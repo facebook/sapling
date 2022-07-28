@@ -3288,18 +3288,6 @@ def _remotenodes(repo):
 
 
 def _openchangelog(repo):
-    pythonrequirements = [
-        "emergencychangelog",
-        "lazytextchangelog",
-        "hybridchangelog",
-        "segmentedchangelog",
-    ]
-    if repo.ui.configbool("experimental", "use-rust-changelog") and not any(
-        set(repo.storerequirements) & set(pythonrequirements)
-    ):
-        inner = repo._rsrepo.changelog()
-        return changelog2.changelog(repo, inner, repo.ui.uiconfig())
-
     if "emergencychangelog" in repo.storerequirements:
         repo.ui.warn(
             _(
@@ -3307,6 +3295,11 @@ def _openchangelog(repo):
                 "accessing older commits is broken!\n"
             )
         )
+
+    if repo.ui.configbool("experimental", "use-rust-changelog"):
+        inner = repo._rsrepo.changelog()
+        return changelog2.changelog(repo, inner, repo.ui.uiconfig())
+
     if git.isgitstore(repo):
         repo.ui.log("changelog_info", changelog_backend="git")
         return changelog2.changelog.opengitsegments(repo, repo.ui.uiconfig())
