@@ -36,7 +36,7 @@ pub(super) struct CommandArgs {
 }
 
 #[derive(Serialize)]
-struct LookupOutput {
+pub(crate) struct LookupOutput {
     #[serde(skip)]
     pub requested: String,
     pub exists: bool,
@@ -44,11 +44,11 @@ struct LookupOutput {
 }
 
 impl Render for LookupOutput {
-    type Args = CommandArgs;
+    type Args = SchemeArgs;
 
     fn render(&self, args: &Self::Args, w: &mut dyn Write) -> Result<()> {
         if self.exists {
-            let schemes = args.scheme_args.scheme_string_set();
+            let schemes = args.scheme_string_set();
             render_commit_id(None, "\n", &self.requested, &self.ids, &schemes, w)?;
             write!(w, "\n")?;
         } else {
@@ -85,5 +85,5 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         exists: response.exists,
         ids,
     };
-    app.target.render_one(&args, output).await
+    app.target.render_one(&args.scheme_args, output).await
 }

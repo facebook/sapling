@@ -24,4 +24,5 @@ base_app::subcommands! {
     mod pushrebase_history;
     mod repos;
     mod run_hooks;
+    mod xrepo_lookup;
 }
