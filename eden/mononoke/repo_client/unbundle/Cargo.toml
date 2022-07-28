@@ -38,7 +38,7 @@ mercurial_mutation = { version = "0.1.0", path = "../../mercurial/mutation" }
 mercurial_revlog = { version = "0.1.0", path = "../../mercurial/revlog" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
-mononoke_repo = { version = "0.1.0", path = "../mononoke_repo" }
+mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 obsolete = { version = "0.1.0", path = "../obsolete" }
 pin-project = "0.4.29"
@@ -53,6 +53,7 @@ repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity
 scribe_commit_queue = { version = "0.1.0", path = "../scribe_commit_queue" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 sha2 = "0.10"
+skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }

@@ -20,7 +20,6 @@ use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgFileNodeId;
 use metaconfig_types::LfsParams;
 use mononoke_api::Repo;
-use mononoke_repo::MononokeRepo;
 use mononoke_types_mocks::changesetid::ONES_CSID;
 use scuba_ext::MononokeScubaSampleBuilder;
 use serde_json::json;
@@ -404,9 +403,7 @@ async fn run_and_check_if_lfs(
     filenode_id: &HgFileNodeId,
     lfs_params: LfsParams,
 ) -> Result<bool, Error> {
-    let repo = Repo::new_test_lfs(ctx.clone(), repo.clone(), lfs_params).await?;
-
-    let mononoke_repo = MononokeRepo::new(Arc::new(repo)).await?;
+    let repo = Arc::new(Repo::new_test_lfs(ctx.clone(), repo.clone(), lfs_params).await?);
 
     let logging = LoggingContainer::new(
         ctx.fb,
@@ -415,7 +412,7 @@ async fn run_and_check_if_lfs(
     );
 
     let repo_client = RepoClient::new(
-        mononoke_repo,
+        repo,
         ctx.session().clone(),
         logging,
         None, // No PushRedirectorArgs

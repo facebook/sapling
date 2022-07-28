@@ -30,7 +30,7 @@ use futures_ext::FbTryFutureExt;
 use futures_old::Future;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
-use mononoke_repo::MononokeRepo;
+use mononoke_api::Repo;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -40,7 +40,7 @@ use warm_bookmarks_cache::BookmarksCache;
 
 // We'd like to give user a consistent view of thier bookmarks for the duration of the
 // whole Mononoke session. SessionBookmarkCache is used for that.
-pub struct SessionBookmarkCache<R = MononokeRepo> {
+pub struct SessionBookmarkCache<R = Arc<Repo>> {
     cached_publishing_bookmarks_maybe_stale: Arc<Mutex<Option<HashMap<Bookmark, HgChangesetId>>>>,
     repo: R,
 }
@@ -53,17 +53,17 @@ pub trait BookmarkCacheRepo {
     fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache>;
 }
 
-impl BookmarkCacheRepo for MononokeRepo {
+impl BookmarkCacheRepo for Arc<Repo> {
     fn blobrepo(&self) -> &BlobRepo {
-        MononokeRepo::blobrepo(self)
+        Repo::blob_repo(self)
     }
 
     fn repo_client_use_warm_bookmarks_cache(&self) -> bool {
-        MononokeRepo::repo_client_use_warm_bookmarks_cache(self)
+        Repo::config(self).repo_client_use_warm_bookmarks_cache
     }
 
     fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache> {
-        MononokeRepo::warm_bookmarks_cache(self)
+        Repo::warm_bookmarks_cache(self)
     }
 }
 

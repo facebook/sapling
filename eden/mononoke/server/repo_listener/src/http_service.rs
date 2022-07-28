@@ -327,7 +327,7 @@ where
 
         if path == "/drop_bookmarks_cache" {
             for handler in self.acceptor().repo_handlers.values() {
-                handler.repo.blobrepo().bookmarks().drop_caches();
+                handler.repo.blob_repo().bookmarks().drop_caches();
             }
 
             return Ok(ok);

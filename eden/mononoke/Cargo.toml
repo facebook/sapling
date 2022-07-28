@@ -374,7 +374,6 @@ members = [
   "repo_authorization",
   "repo_client",
   "repo_client/getbundle_response",
-  "repo_client/mononoke_repo",
   "repo_client/obsolete",
   "repo_client/remotefilelog",
   "repo_client/scribe_commit_queue",

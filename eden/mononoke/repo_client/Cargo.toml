@@ -38,19 +38,22 @@ mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_
 mercurial_revlog = { version = "0.1.0", path = "../mercurial/revlog" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
-mononoke_repo = { version = "0.1.0", path = "mononoke_repo" }
+mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 nonzero_ext = "0.2"
 percent-encoding = "2.1"
 phases = { version = "0.1.0", path = "../phases" }
 rand = { version = "0.8", features = ["small_rng"] }
 rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
+reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
 regex = "1.5.4"
 remotefilelog = { version = "0.1.0", path = "remotefilelog" }
+repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 revisionstore_types = { version = "0.1.0", path = "../../scm/lib/revisionstore/types" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
+skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 streaming_clone = { version = "0.1.0", path = "streaming_clone" }
@@ -65,7 +68,6 @@ warm_bookmarks_cache = { version = "0.1.0", path = "../bookmarks/warm_bookmarks_
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
-mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_api_types = { version = "0.1.0", path = "../mononoke_api/types" }
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }

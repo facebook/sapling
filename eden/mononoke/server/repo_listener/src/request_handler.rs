@@ -34,6 +34,7 @@ use qps::Qps;
 use rate_limiting::Metric;
 use rate_limiting::RateLimitEnvironment;
 use repo_client::RepoClient;
+use repo_identity::RepoIdentityRef;
 use scribe_ext::Scribe;
 use slog::error;
 use slog::o;
@@ -109,7 +110,7 @@ pub async fn request_handler(
     scuba.add_metadata(&metadata);
     scuba.sample_for_identities(metadata.identities());
 
-    let reponame = repo.reponame();
+    let reponame = repo.inner_repo().repo_identity().name();
 
     let rate_limiter = rate_limiter.map(|r| r.get_rate_limiter());
     if let Some(ref rate_limiter) = rate_limiter {
@@ -121,7 +122,7 @@ pub async fn request_handler(
         }
     }
 
-    let is_allowed_to_repo = repo.blobrepo().permission_checker()
+    let is_allowed_to_repo = repo.blob_repo().permission_checker()
         .check_if_read_access_allowed(metadata.identities())
         .await
         .with_context(|| {

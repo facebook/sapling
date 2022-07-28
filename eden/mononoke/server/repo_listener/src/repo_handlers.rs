@@ -20,8 +20,8 @@ use metaconfig_types::BackupRepoConfig;
 use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::RepoClientKnobs;
 use mononoke_api::Mononoke;
+use mononoke_api::Repo;
 use mononoke_types::RepositoryId;
-use repo_client::MononokeRepo;
 use repo_client::PushRedirectorArgs;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
@@ -31,6 +31,7 @@ use slog::Logger;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
@@ -46,7 +47,7 @@ use crate::errors::ErrorKind;
 struct IncompleteRepoHandler {
     logger: Logger,
     scuba: MononokeScubaSampleBuilder,
-    repo: MononokeRepo,
+    repo: Arc<Repo>,
     maybe_incomplete_push_redirector_args: Option<IncompletePushRedirectorArgs>,
     repo_client_knobs: RepoClientKnobs,
     /// This is used for repositories that are backups of another prod repository
@@ -74,7 +75,7 @@ impl IncompletePushRedirectorArgs {
         } = self;
 
         let large_repo_id = common_commit_sync_config.large_repo_id;
-        let target_repo: MononokeRepo = repo_lookup_table
+        let target_repo: Arc<Repo> = repo_lookup_table
             .get(&large_repo_id)
             .ok_or(ErrorKind::LargeRepoNotFound(large_repo_id))?
             .repo
@@ -137,7 +138,7 @@ fn try_find_repo_by_name<'a>(
     iter: impl Iterator<Item = &'a IncompleteRepoHandler>,
 ) -> Result<BlobRepo, Error> {
     for handler in iter {
-        let blobrepo = handler.repo.blobrepo();
+        let blobrepo = handler.repo.blob_repo();
         if blobrepo.name() == name {
             return Ok(blobrepo.clone());
         }
@@ -150,7 +151,7 @@ fn try_find_repo_by_name<'a>(
 pub struct RepoHandler {
     pub logger: Logger,
     pub scuba: MononokeScubaSampleBuilder,
-    pub repo: MononokeRepo,
+    pub repo: Arc<Repo>,
     pub maybe_push_redirector_args: Option<PushRedirectorArgs>,
     pub repo_client_knobs: RepoClientKnobs,
     pub maybe_backup_repo_source: Option<BlobRepo>,
@@ -203,24 +204,19 @@ pub async fn repo_handlers<'a>(
             readonly_storage.0,
         )?;
 
+        info!(
+            logger,
+            "Creating CommitSyncMapping, TargetRepoDbs, WarmBookmarksCache"
+        );
+
         let backsyncer_dbs = open_backsyncer_dbs(
             ctx.clone(),
             blobrepo.clone(),
             db_config.clone(),
             mysql_options.clone(),
             readonly_storage,
-        );
-
-        info!(
-            logger,
-            "Creating MononokeRepo, CommitSyncMapping, TargetRepoDbs, \
-                WarmBookmarksCache"
-        );
-
-        let mononoke_repo = MononokeRepo::new(repo.clone());
-
-        let (mononoke_repo, backsyncer_dbs) =
-            futures::future::try_join(mononoke_repo, backsyncer_dbs).await?;
+        )
+        .await?;
 
         let maybe_incomplete_push_redirector_args = common_commit_sync_config.and_then({
             cloned!(logger);
@@ -256,7 +252,7 @@ pub async fn repo_handlers<'a>(
             IncompleteRepoHandler {
                 logger,
                 scuba: scuba.clone(),
-                repo: mononoke_repo,
+                repo: repo.clone(),
                 maybe_incomplete_push_redirector_args,
                 repo_client_knobs,
                 backup_repo_config,

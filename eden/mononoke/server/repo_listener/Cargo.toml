@@ -52,6 +52,7 @@ qps = { version = "0.1.0", path = "../qps" }
 quiet_stream = { version = "0.1.0", path = "../../quiet_stream" }
 rate_limiting = { version = "0.1.0", path = "../../rate_limiting" }
 repo_client = { version = "0.1.0", path = "../../repo_client" }
+repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 scribe_ext = { version = "0.1.0", path = "../../common/scribe_ext" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }

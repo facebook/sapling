@@ -49,10 +49,13 @@ use hooks::CrossRepoPushSource;
 use hooks::HookRejection;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use mercurial_derived_data::DeriveHgChangeset;
-use mononoke_repo::MononokeRepo;
+use metaconfig_types::RepoConfigRef;
+use mononoke_api::Repo;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use pushrebase::PushrebaseChangesetPair;
+use reachabilityindex::LeastCommonAncestorsHint;
+use skiplist::SkiplistIndexArc;
 use slog::debug;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -69,7 +72,7 @@ use topo_sort::sort_topological;
 /// request.
 #[derive(Clone)]
 pub struct PushRedirectorArgs {
-    target_repo: MononokeRepo,
+    target_repo: Arc<Repo>,
     source_blobrepo: BlobRepo,
     synced_commit_mapping: SqlSyncedCommitMapping,
     target_repo_dbs: TargetRepoDbs,
@@ -77,7 +80,7 @@ pub struct PushRedirectorArgs {
 
 impl PushRedirectorArgs {
     pub fn new(
-        target_repo: MononokeRepo,
+        target_repo: Arc<Repo>,
         source_blobrepo: BlobRepo,
         synced_commit_mapping: SqlSyncedCommitMapping,
         target_repo_dbs: TargetRepoDbs,
@@ -109,7 +112,7 @@ impl PushRedirectorArgs {
         } = self;
 
         let small_repo = source_blobrepo;
-        let large_repo = target_repo.blobrepo().clone();
+        let large_repo = target_repo.blob_repo().clone();
         let mapping: Arc<dyn SyncedCommitMapping> = Arc::new(synced_commit_mapping);
         let syncers = create_commit_syncers(
             ctx,
@@ -139,7 +142,7 @@ impl PushRedirectorArgs {
 /// to be presented as if the pushes were processed by the small repo
 pub struct PushRedirector {
     // target (large) repo to sync into
-    pub repo: MononokeRepo,
+    pub repo: Arc<Repo>,
     // `CommitSyncer` struct to do push redirecion
     pub small_to_large_commit_syncer: CommitSyncer<Arc<dyn SyncedCommitMapping>>,
     // `CommitSyncer` struct for the backsyncer
@@ -162,10 +165,10 @@ impl PushRedirector {
         action: PostResolveAction,
     ) -> Result<UnbundleResponse, BundleResolverError> {
         let large_repo = self.repo.inner_repo();
-        let lca_hint = self.repo.lca_hint();
-        let infinitepush_params = self.repo.infinitepush().clone();
-        let puhsrebase_params = self.repo.pushrebase_params().clone();
-        let push_params = self.repo.push_params().clone();
+        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = large_repo.skiplist_index_arc();
+        let infinitepush_params = large_repo.repo_config().infinitepush.clone();
+        let pushrebase_params = large_repo.repo_config().pushrebase.clone();
+        let push_params = large_repo.repo_config().push.clone();
 
         let large_repo_action = self
             .convert_post_resolve_action(ctx, action)
@@ -176,7 +179,7 @@ impl PushRedirector {
             large_repo,
             &lca_hint,
             &infinitepush_params,
-            &puhsrebase_params,
+            &pushrebase_params,
             &push_params,
             self.repo.hook_manager().as_ref(),
             large_repo_action,
@@ -849,7 +852,7 @@ impl PushRedirector {
             Some(bookmark) => CandidateSelectionHint::OnlyOrAncestorOfBookmark(
                 Target(bookmark.clone()),
                 Target(self.small_to_large_commit_syncer.get_target_repo().clone()),
-                Target(self.repo.lca_hint().clone()),
+                Target(self.repo.inner_repo().skiplist_index_arc()),
             ),
             None => CandidateSelectionHint::Only,
         };

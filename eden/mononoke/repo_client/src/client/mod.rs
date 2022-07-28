@@ -108,30 +108,37 @@ use mercurial_types::RepoPath;
 use mercurial_types::NULL_CSID;
 use mercurial_types::NULL_HASH;
 use metaconfig_types::RepoClientKnobs;
-use mononoke_repo::MononokeRepo;
+use metaconfig_types::RepoConfigRef;
+use mononoke_api::Repo;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use nonzero_ext::nonzero;
 use phases::PhasesArc;
 use rand::Rng;
 use rate_limiting::Metric;
+use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use remotefilelog::create_getpack_v1_blob;
 use remotefilelog::create_getpack_v2_blob;
 use remotefilelog::get_unordered_file_history_for_multiple_nodes;
 use remotefilelog::GetpackBlobInfo;
+use repo_identity::RepoIdentityRef;
 use revisionstore_types::Metadata;
 use serde::Deserialize;
 use serde_json::json;
+use skiplist::SkiplistIndexArc;
 use slog::debug;
 use slog::error;
 use slog::info;
 use slog::o;
 use stats::prelude::*;
+use std::collections::hash_map::DefaultHasher;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Write;
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::mem;
 use std::num::NonZeroU64;
 use std::str::FromStr;
@@ -440,7 +447,7 @@ impl UndesiredPathLogger {
 
 #[derive(Clone)]
 pub struct RepoClient {
-    repo: MononokeRepo,
+    repo: Arc<Repo>,
     // The session for this repo access.
     session: SessionContainer,
     // A base logging container. This will be combined with the Session container for each command
@@ -465,7 +472,7 @@ pub struct RepoClient {
 
 impl RepoClient {
     pub fn new(
-        repo: MononokeRepo,
+        repo: Arc<Repo>,
         session: SessionContainer,
         logging: LoggingContainer,
         maybe_push_redirector_args: Option<PushRedirectorArgs>,
@@ -579,8 +586,8 @@ impl RepoClient {
 
     fn create_bundle(&self, ctx: CoreContext, args: GetbundleArgs) -> BoxStream<BytesOld, Error> {
         let lfs_params = self.lfs_params();
-        let blobrepo = self.repo.blobrepo().clone();
-        let reponame = self.repo.reponame().clone();
+        let blobrepo = self.repo.blob_repo().clone();
+        let reponame = self.repo.inner_repo().repo_identity().name().to_string();
         let mut bundle2_parts = vec![];
 
         let GetbundleArgs {
@@ -606,9 +613,15 @@ impl RepoClient {
             }
         }
         let pull_default_bookmarks = self.get_pull_default_bookmarks_maybe_stale(ctx.clone());
-        let lca_hint = self.repo.lca_hint().clone();
+        let lca_hint: Arc<dyn LeastCommonAncestorsHint> =
+            self.repo.inner_repo().skiplist_index_arc();
 
-        let drafts_in_bundles_policy = if self.repo.infinitepush().hydrate_getbundle_response
+        let drafts_in_bundles_policy = if self
+            .repo
+            .inner_repo()
+            .repo_config()
+            .infinitepush
+            .hydrate_getbundle_response
             && !self.unhydrated_commits_requested()
         {
             DraftsInBundlesPolicy::WithTreesAndFiles
@@ -667,16 +680,16 @@ impl RepoClient {
         let validate_hash = ((rand::random::<usize>() % 100) as i64) < hash_validation_percentage;
 
         let undesired_path_logger =
-            try_boxstream!(UndesiredPathLogger::new(ctx.clone(), self.repo.blobrepo()));
+            try_boxstream!(UndesiredPathLogger::new(ctx.clone(), self.repo.blob_repo()));
 
-        let changed_entries = gettreepack_entries(ctx.clone(), self.repo.blobrepo(), params)
+        let changed_entries = gettreepack_entries(ctx.clone(), self.repo.blob_repo(), params)
             .filter({
                 let mut used_hashes = HashSet::new();
                 move |(hg_mf_id, _)| used_hashes.insert(hg_mf_id.clone())
             })
             .map({
                 cloned!(ctx);
-                let blobrepo = self.repo.blobrepo().clone();
+                let blobrepo = self.repo.blob_repo().clone();
                 move |(hg_mf_id, path)| {
                     undesired_path_logger.maybe_log_tree(path.as_ref());
 
@@ -720,12 +733,12 @@ impl RepoClient {
         let allow_short_getpack_history = self.knobs.allow_short_getpack_history;
         self.command_stream(name, UNSAMPLED, |ctx, command_logger| {
             let undesired_path_logger =
-                try_boxstream!(UndesiredPathLogger::new(ctx.clone(), self.repo.blobrepo()));
+                try_boxstream!(UndesiredPathLogger::new(ctx.clone(), self.repo.blob_repo()));
             let undesired_path_logger = Arc::new(undesired_path_logger);
             // We buffer all parameters in memory so that we can log them.
             // That shouldn't be a problem because requests are quite small
             let getpack_params = Arc::new(Mutex::new(vec![]));
-            let repo = self.repo.blobrepo().clone();
+            let repo = self.repo.blob_repo().clone();
 
             let lfs_params = self.lfs_params();
 
@@ -966,10 +979,33 @@ impl RepoClient {
 
     fn lfs_params(&self) -> SessionLfsParams {
         if self.force_lfs.load(Ordering::Relaxed) {
-            self.repo.force_lfs_if_threshold_set()
+            SessionLfsParams {
+                threshold: self.repo.inner_repo().repo_config().lfs.threshold,
+            }
         } else {
-            self.repo
-                .lfs_params(self.session.metadata().client_hostname())
+            let client_hostname = self.session.metadata().client_hostname();
+            let percentage = self.repo.inner_repo().repo_config().lfs.rollout_percentage;
+
+            let allowed = match client_hostname {
+                Some(client_hostname) => {
+                    let mut hasher = DefaultHasher::new();
+                    client_hostname.hash(&mut hasher);
+                    hasher.finish() % 100 < percentage.into()
+                }
+                None => {
+                    // Randomize in case source hostname is not set to avoid
+                    // sudden jumps in traffic
+                    rand::thread_rng().gen_ratio(percentage, 100)
+                }
+            };
+
+            if allowed {
+                SessionLfsParams {
+                    threshold: self.repo.inner_repo().repo_config().lfs.threshold,
+                }
+            } else {
+                SessionLfsParams { threshold: None }
+            }
         }
     }
 
@@ -997,7 +1033,7 @@ impl RepoClient {
 
         let live_commit_sync_config = self.repo.live_commit_sync_config();
 
-        let repo_id = self.repo.blobrepo().get_repoid();
+        let repo_id = self.repo.blob_repo().get_repoid();
         let redirect = match action {
             InfinitePush(_) => live_commit_sync_config.push_redirector_enabled_for_draft(repo_id),
             Push(_) | PushRebase(_) | BookmarkOnlyPushRebase(_) => {
@@ -1037,7 +1073,7 @@ impl RepoClient {
         Fut: future::Future<Output = Result<Vec<bool>, Error>> + Send + 'static,
     {
         self.command_future(command, UNSAMPLED, |ctx, mut command_logger| {
-            let blobrepo = self.repo.blobrepo().clone();
+            let blobrepo = self.repo.blob_repo().clone();
 
             let nodes_len = nodes.len();
             ctx.perf_counters()
@@ -1125,7 +1161,7 @@ impl HgCommands for RepoClient {
     ) -> HgCommandRes<Vec<Vec<HgChangesetId>>> {
         struct ParentStream<CS> {
             ctx: CoreContext,
-            repo: MononokeRepo,
+            repo: Arc<Repo>,
             n: HgChangesetId,
             bottom: HgChangesetId,
             wait_cs: Option<CS>,
@@ -1134,7 +1170,7 @@ impl HgCommands for RepoClient {
         impl<CS> ParentStream<CS> {
             fn new(
                 ctx: CoreContext,
-                repo: &MononokeRepo,
+                repo: &Arc<Repo>,
                 top: HgChangesetId,
                 bottom: HgChangesetId,
             ) -> Self {
@@ -1161,7 +1197,7 @@ impl HgCommands for RepoClient {
                     Some(
                         {
                             cloned!(self.n, self.ctx, self.repo);
-                            async move { n.load(&ctx, repo.blobrepo().blobstore()).await }
+                            async move { n.load(&ctx, repo.blob_repo().blobstore()).await }
                         }
                         .boxed()
                         .compat()
@@ -1333,7 +1369,7 @@ impl HgCommands for RepoClient {
 
         let maybe_git_lookup = parse_git_lookup(&key);
         self.command_future(ops::LOOKUP, UNSAMPLED, |ctx, command_logger| {
-            let repo = self.repo.blobrepo().clone();
+            let repo = self.repo.blob_repo().clone();
 
             // Resolves changeset or set of suggestions from the key (full hex hash or a prefix) if exist.
             // Note: `get_many_hg_by_prefix` works for the full hex hashes well but
@@ -1465,7 +1501,7 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('known', 'nodes *'), but the '*' is ignored
     fn known(&self, nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
-        let phases_hint = self.repo.blobrepo().phases_arc();
+        let phases_hint = self.repo.inner_repo().phases_arc();
         self.known_impl(
             nodes,
             ops::KNOWN,
@@ -1601,7 +1637,7 @@ impl HgCommands for RepoClient {
         }
 
         self.command_future(ops::LISTKEYSPATTERNS, UNSAMPLED, |ctx, command_logger| {
-            let max = self.repo.list_keys_patterns_max();
+            let max = self.repo.inner_repo().repo_config().list_keys_patterns_max;
             let session_bookmarks_cache = self.session_bookmarks_cache.clone();
 
             let queries = patterns.into_iter().map(move |pattern| {
@@ -1665,10 +1701,10 @@ impl HgCommands for RepoClient {
         respondlightly: Option<bool>,
         maybereplaydata: Option<String>,
     ) -> HgCommandRes<BytesOld> {
-        let reponame = self.repo.reponame().clone();
+        let reponame = self.repo.inner_repo().repo_identity().name().to_string();
         cloned!(self.session_bookmarks_cache, self as repoclient);
 
-        let hook_manager = self.repo.hook_manager();
+        let hook_manager = self.repo.hook_manager().clone();
 
         // Kill the saved set of bookmarks here - the unbundle may change them, and the next
         // command in sequence will need to fetch a new set
@@ -1681,13 +1717,13 @@ impl HgCommands for RepoClient {
             .command_future(ops::UNBUNDLE, UNSAMPLED, move |ctx, command_logger| {
                 async move {
                     let repo = client.repo.inner_repo();
-                    let lca_hint = client.repo.lca_hint().clone();
-                    let infinitepush_params = client.repo.infinitepush().clone();
+                    let lca_hint: Arc<dyn LeastCommonAncestorsHint> = repo.skiplist_index_arc();
+                    let infinitepush_params = repo.repo_config().infinitepush.clone();
                     let infinitepush_writes_allowed = infinitepush_params.allow_writes;
-                    let pushrebase_params = client.repo.pushrebase_params().clone();
-                    let push_params = client.repo.push_params().clone();
+                    let pushrebase_params = repo.repo_config().pushrebase.clone();
+                    let push_params = repo.repo_config().push.clone();
                     let pure_push_allowed = push_params.pure_push_allowed;
-                    let reponame = client.repo.reponame().clone();
+                    let reponame = repo.repo_identity().name().to_string();
                     let maybe_backup_repo_source = client.maybe_backup_repo_source.clone();
 
                     let pushrebase_flags = pushrebase_params.flags.clone();
@@ -1724,10 +1760,12 @@ impl HgCommands for RepoClient {
                                 let ctx = ctx.with_mutated_scuba(|mut sample| {
                                     sample.add(
                                         "target_repo_name",
-                                        push_redirector.repo.reponame().as_ref(),
+                                        push_redirector.repo.inner_repo().repo_identity().name(),
                                     );
-                                    sample
-                                        .add("target_repo_id", push_redirector.repo.repoid().id());
+                                    sample.add(
+                                        "target_repo_id",
+                                        push_redirector.repo.inner_repo().repo_identity().id().id(),
+                                    );
                                     sample
                                 });
                                 ctx.scuba()
@@ -2076,7 +2114,7 @@ impl HgCommands for RepoClient {
     fn getcommitdata(&self, nodes: Vec<HgChangesetId>) -> BoxStream<BytesOld, Error> {
         self.command_stream(ops::GETCOMMITDATA, UNSAMPLED, |ctx, mut command_logger| {
             let args = json!(nodes);
-            let blobrepo = self.repo.blobrepo().clone();
+            let blobrepo = self.repo.blob_repo().clone();
             ctx.scuba()
                 .clone()
                 .add("getcommitdata_nodes", nodes.len())
