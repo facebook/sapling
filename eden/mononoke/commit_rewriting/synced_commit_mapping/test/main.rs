@@ -153,7 +153,7 @@ async fn equivalent_working_copy<M: SyncedCommitMapping>(fb: FacebookInit, mappi
         .insert_equivalent_working_copy(&ctx, entry.clone())
         .await
         .expect("Failed to insert working copy");
-    assert_eq!(result, true);
+    assert!(result);
 
     let result = mapping
         .insert_equivalent_working_copy(&ctx, entry)
@@ -186,7 +186,7 @@ async fn equivalent_working_copy<M: SyncedCommitMapping>(fb: FacebookInit, mappi
         .insert_equivalent_working_copy(&ctx, null_entry)
         .await
         .expect("Failed to insert working copy");
-    assert_eq!(result, true);
+    assert!(result);
 
     let should_fail = EquivalentWorkingCopyEntry {
         large_repo_id: REPO_ZERO,

@@ -209,7 +209,7 @@ async fn test_leases(fb: FacebookInit) -> Result<(), Error> {
     );
 
     // take lease
-    assert_eq!(lease.try_add_put_lease(&lease_key).await?, true);
+    assert!(lease.try_add_put_lease(&lease_key).await?);
     assert_eq!(lease.try_add_put_lease(&lease_key).await?, false);
 
     let output = Arc::new(Mutex::new(None));
@@ -253,7 +253,7 @@ async fn test_leases(fb: FacebookInit) -> Result<(), Error> {
     assert_eq!(expected, result.generation,);
 
     // Take the lease again.
-    assert_eq!(lease.try_add_put_lease(&lease_key).await?, true);
+    assert!(lease.try_add_put_lease(&lease_key).await?);
 
     // This time it should succeed, as the lease won't be necessary.
     let result = repo

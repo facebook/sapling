@@ -289,6 +289,6 @@ mod test {
         let header_builder = PartHeaderBuilder::new(PartHeaderType::Changegroup, false).unwrap();
         let h = header_builder.build(1);
 
-        assert_eq!(get_cg_version(h, "version").is_err(), true);
+        assert!(get_cg_version(h, "version").is_err());
     }
 }

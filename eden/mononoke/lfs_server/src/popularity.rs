@@ -212,7 +212,7 @@ mod test {
         let ctx = RepositoryRequestContext::test_builder(fb)?.build()?;
         let ctr = DummyCounter::default();
 
-        assert_eq!(allow_consistent_routing(&ctx, dummy(None), ctr).await, true);
+        assert!(allow_consistent_routing(&ctx, dummy(None), ctr).await);
 
         Ok(())
     }

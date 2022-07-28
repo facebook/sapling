@@ -332,7 +332,7 @@ fn test_get_lfs_struct_wrong_small_sha256() {
     kv.insert(b"size".as_ref(), b"17".as_ref());
     let lfs = File::get_lfs_struct(&kv);
 
-    assert_eq!(lfs.is_err(), true)
+    assert!(lfs.is_err())
 }
 
 #[test]
@@ -349,7 +349,7 @@ fn test_get_lfs_struct_wrong_size() {
     kv.insert(b"size".as_ref(), b"wrong_size_length".as_ref());
     let lfs = File::get_lfs_struct(&kv);
 
-    assert_eq!(lfs.is_err(), true)
+    assert!(lfs.is_err())
 }
 
 #[test]
@@ -361,7 +361,7 @@ fn test_get_lfs_struct_non_all_mandatory_fields() {
     );
     let lfs = File::get_lfs_struct(&kv);
 
-    assert_eq!(lfs.is_err(), true)
+    assert!(lfs.is_err())
 }
 
 #[test]

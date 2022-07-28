@@ -524,7 +524,7 @@ mod test {
         let test = TestTunables::default();
         assert_eq!(test.get_boolean(), false);
         test.update_bools(&d);
-        assert_eq!(test.get_boolean(), true);
+        assert!(test.get_boolean());
     }
 
     #[test]
@@ -536,7 +536,7 @@ mod test {
         let test = TestTunables::default();
         assert_eq!(test.get_boolean(), false);
         test.update_bools(&d);
-        assert_eq!(test.get_boolean(), true);
+        assert!(test.get_boolean());
 
         test.update_bools(&hashmap! {});
         assert_eq!(test.get_boolean(), false);

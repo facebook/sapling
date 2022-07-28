@@ -760,16 +760,16 @@ async fn commit_path_exists_and_type(fb: FacebookInit) -> Result<(), Error> {
     let cs = repo.changeset(cs_id).await?.expect("changeset exists");
 
     let root_path = cs.root();
-    assert_eq!(root_path.exists().await?, true);
-    assert_eq!(root_path.is_tree().await?, true);
+    assert!(root_path.exists().await?);
+    assert!(root_path.is_tree().await?);
 
     let dir1_path = cs.path_with_content("dir1")?;
-    assert_eq!(dir1_path.exists().await?, true);
-    assert_eq!(dir1_path.is_tree().await?, true);
+    assert!(dir1_path.exists().await?);
+    assert!(dir1_path.is_tree().await?);
     assert_eq!(dir1_path.file_type().await?, None);
 
     let file1_path = cs.path_with_content("dir1/file_1_in_dir1")?;
-    assert_eq!(file1_path.exists().await?, true);
+    assert!(file1_path.exists().await?);
     assert_eq!(file1_path.is_tree().await?, false);
     assert_eq!(file1_path.file_type().await?, Some(FileType::Regular));
 
