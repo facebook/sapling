@@ -19,6 +19,7 @@ base_app::subcommands! {
     mod find_files;
     mod info;
     mod is_ancestor;
+    mod land_stack if "SCSC_WRITES_ENABLED";
     mod list_bookmarks;
     mod log;
     mod lookup;
