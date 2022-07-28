@@ -10,7 +10,6 @@ use crate::ScscApp;
 base_app::subcommands! {
     type App = ScscApp;
     mod cat;
-    mod repos;
     mod blame;
     mod common_base;
     mod diff;
@@ -23,4 +22,6 @@ base_app::subcommands! {
     mod lookup;
     mod ls;
     mod pushrebase_history;
+    mod repos;
+    mod run_hooks;
 }
