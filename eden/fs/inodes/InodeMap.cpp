@@ -836,10 +836,10 @@ Future<SerializedInodeMap> InodeMap::shutdown(
         << data->loadedInodes_.size()
         << " unloadedCount=" << data->unloadedInodes_.size();
 
-    if (data->loadedInodes_.size() != 1) {
+    if (!data->loadedInodes_.empty()) {
       EDEN_BUG() << "After InodeMap::shutdown() finished, "
                  << data->loadedInodes_.size()
-                 << " inodes still loaded; they must all (except the root) "
+                 << " inodes still loaded; they must all "
                  << "have been unloaded for this to succeed!";
     }
 
@@ -859,7 +859,7 @@ Future<SerializedInodeMap> InodeMap::shutdown(
       if (entry.hash.has_value()) {
         serializedEntry.hash_ref() = entry.hash.value().asString();
       }
-      // If entry.hash is empty, the inode is not materialized.
+      // If entry.hash is empty, the inode is materialized.
       serializedEntry.mode_ref() = entry.mode;
 
       result.unloadedInodes_ref()->emplace_back(std::move(serializedEntry));
@@ -873,9 +873,15 @@ Future<SerializedInodeMap> InodeMap::shutdown(
 void InodeMap::shutdownComplete(
     folly::Synchronized<Members>::LockedPtr&& data) {
   // We manually dropped our reference count to the root inode in
-  // beginShutdown().  Destroy it now, and call resetNoDecRef() on our pointer
-  // to make sure it doesn't try to decrement the reference count again when
-  // the pointer is destroyed.
+  // shutdown().  Destroy it now, remove it from the loadedInodes, and call
+  // resetNoDecRef() on our pointer to make sure it doesn't try to decrement the
+  // reference count again when the pointer is destroyed. Note: we don't add
+  // the root to unloadedInodes here as it has been freed and we don't want to
+  // serialize the freed root during graceful shutdown for takeover.
+  auto numErased = data->loadedInodes_.erase(kRootNodeId);
+  XCHECK_EQ(numErased, 1u) << "inconsistent loaded inodes data: "
+                           << kRootNodeId;
+  --data->numTreeInodes_;
   delete root_.get();
   root_.resetNoDecRef();
 
