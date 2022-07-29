@@ -23,7 +23,6 @@ debugtop = { version = "0.1.0", path = "../debugtop" }
 eagerepo = { version = "0.1.0", path = "../eagerepo" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
 edenfs_client = { version = "0.1.0", path = "../edenfs-client" }
-encoding = { version = "0.1.0", path = "../encoding" }
 exchange = { version = "0.1.0", path = "../exchange" }
 fail = { version = "0.4", features = ["failpoints"] }
 flate2 = { version = "1.0", features = ["rust_backend", "tokio"], default-features = false }

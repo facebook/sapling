@@ -35,25 +35,28 @@ type PyChar = c_char;
 type PyChar = wchar_t;
 
 #[cfg(feature = "python2")]
-fn to_py_str(s: CString) -> *mut PyChar {
-    s.into_raw()
+fn to_py_str(s: &str) -> *mut PyChar {
+    unimplemented!()
 }
 
 #[cfg(feature = "python3")]
-fn to_py_str(s: CString) -> *mut PyChar {
+fn to_py_str(s: &str) -> *mut PyChar {
+    let c_str = CString::new(s).unwrap();
+
     unsafe {
-        let pyobj = PyUnicode_FromString(s.as_ptr());
-        PyUnicode_AsWideCharString(pyobj, std::ptr::null_mut())
+        let unicode_obj = PyUnicode_FromString(c_str.as_ptr());
+        assert!(!unicode_obj.is_null());
+        PyUnicode_AsWideCharString(unicode_obj, std::ptr::null_mut())
     }
 }
 
-fn to_py_argv(args: Vec<CString>) -> Vec<*mut PyChar> {
-    let mut argv: Vec<_> = args.into_iter().map(|x| to_py_str(x)).collect();
+fn to_py_argv(args: &[String]) -> Vec<*mut PyChar> {
+    let mut argv: Vec<_> = args.iter().map(|x| to_py_str(x)).collect();
     argv.push(std::ptr::null_mut());
     argv
 }
 
-pub fn py_set_argv(args: Vec<CString>) {
+pub fn py_set_argv(args: &[String]) {
     let mut argv = to_py_argv(args);
     unsafe {
         // This inserts argv[0] path to sys.path, useful for running local builds.
@@ -62,7 +65,7 @@ pub fn py_set_argv(args: Vec<CString>) {
     std::mem::forget(argv);
 }
 
-pub fn py_main(args: Vec<CString>) -> u8 {
+pub fn py_main(args: &[String]) -> u8 {
     let mut argv = to_py_argv(args);
     let result = unsafe {
         let argc = (argv.len() - 1) as c_int;
@@ -73,7 +76,7 @@ pub fn py_main(args: Vec<CString>) -> u8 {
     result as u8
 }
 
-pub fn py_set_program_name(name: CString) {
+pub fn py_set_program_name(name: &str) {
     unsafe {
         Py_SetProgramName(to_py_str(name));
     }

@@ -6,8 +6,6 @@
  */
 
 use std::env;
-use std::ffi::CString;
-use std::ffi::OsString;
 
 use clidispatch::io::IO;
 use cpython::*;
@@ -17,7 +15,6 @@ use cpython_ext::Bytes;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
 use cpython_ext::WrappedIO;
-use encoding::osstring_to_local_cstring;
 use tracing::debug_span;
 use tracing::info_span;
 
@@ -49,11 +46,11 @@ impl HgPython {
     fn setup_python(args: &[String]) {
         let span = info_span!("Initialize Python");
         let _guard = span.enter();
-        let args = Self::args_to_local_cstrings(&args);
-        let executable_name = args[0].clone();
+        let args = Self::prepare_args(args);
+        let executable_name = &args[0];
         py_set_program_name(executable_name);
         py_initialize();
-        py_set_argv(args);
+        py_set_argv(&args);
         py_init_threads();
 
         let gil = Python::acquire_gil();
@@ -69,7 +66,7 @@ impl HgPython {
         sys_modules.set_item(py, name, bindings_module).unwrap();
     }
 
-    fn args_to_local_cstrings(args: &[String]) -> Vec<CString> {
+    fn prepare_args(args: &[String]) -> Vec<String> {
         // Replace args[0] with the absolute current_exe path. This workarounds
         // an issue in libpython sys.path handling.
         //
@@ -84,15 +81,16 @@ impl HgPython {
         // if argv[0] is a relative path, and it's not in the current workdir
         // (in other words, libpython seems to ignore PATH). Therefore, give
         // it some hint by passing the absolute path resolved by the Rust stdlib.
-        Some(env::current_exe().unwrap().into_os_string())
-            .into_iter()
-            .chain(args.iter().skip(1).map(|arg| {
-                let mut s = OsString::new();
-                s.push(arg);
-                s
-            }))
-            .map(|x| osstring_to_local_cstring(&x))
-            .collect()
+        Some(
+            env::current_exe()
+                .unwrap()
+                .into_os_string()
+                .into_string()
+                .unwrap(),
+        )
+        .into_iter()
+        .chain(args.iter().skip(1).cloned())
+        .collect()
     }
 
     fn run_hg_py(
@@ -169,11 +167,11 @@ impl HgPython {
 
     /// Run the Python interpreter.
     pub fn run_python(&mut self, args: &[String], io: &clidispatch::io::IO) -> u8 {
-        let args = Self::args_to_local_cstrings(&args);
+        let args = Self::prepare_args(args);
         if self.py_initialized_by_us {
             // Py_Main will call Py_Finalize. Therefore skip Py_Finalize here.
             self.py_initialized_by_us = false;
-            py_main(args)
+            py_main(&args)
         } else {
             // If Python is not initialized by us, it's expected that this
             // function does not call Py_Finalize.
