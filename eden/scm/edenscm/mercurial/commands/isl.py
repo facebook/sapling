@@ -27,6 +27,7 @@ DEFAULT_PORT = 3011
             DEFAULT_PORT,
             _("port for ISL web server"),
         ),
+        ("", "open", True, _("open ISL in a local browser")),
     ],
 )
 def isl_cmd(ui, repo, *args, **opts):
@@ -38,10 +39,11 @@ def isl_cmd(ui, repo, *args, **opts):
     web interface.
     """
     port = opts.get("port")
-    return launch_server(ui, cwd=repo.root, port=port)
+    open_isl = opts.get("open")
+    return launch_server(ui, cwd=repo.root, port=port, open_isl=open_isl)
 
 
-def launch_server(ui, *, cwd, port=DEFAULT_PORT):
+def launch_server(ui, *, cwd, port=DEFAULT_PORT, open_isl=True):
     if iswindows:
         # TODO: Fix packaging issue so isl works on Windows.
         raise error.Abort(_("isl is not currently supported on Windows"))
@@ -49,4 +51,7 @@ def launch_server(ui, *, cwd, port=DEFAULT_PORT):
     isl_bin = os.path.join(os.path.dirname(__file__), "isl")
 
     ui.status(_("launching web server for Interactive Smartlog...\n"))
-    subprocess.call(["dotslash", isl_bin, "--port", str(port)], cwd=cwd)
+    args = ["dotslash", isl_bin, "--port", str(port)]
+    if not open_isl:
+        args.append("--no-open")
+    subprocess.call(args, cwd=cwd)
