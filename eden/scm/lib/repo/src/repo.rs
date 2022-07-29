@@ -39,7 +39,6 @@ use crate::requirements::Requirements;
 pub struct Repo {
     path: PathBuf,
     config: ConfigSet,
-    bundle_path: Option<PathBuf>,
     shared_path: PathBuf,
     store_path: PathBuf,
     dot_hg_path: PathBuf,
@@ -52,85 +51,6 @@ pub struct Repo {
     dag_commits: Option<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
     file_store: Option<Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>>,
     tree_store: Option<Arc<dyn TreeStore + Send + Sync>>,
-}
-
-/// Either an optional [`Repo`] which owns a [`ConfigSet`], or a [`ConfigSet`]
-/// without a repo.
-pub enum OptionalRepo {
-    Some(Repo),
-    None(ConfigSet),
-}
-
-impl OptionalRepo {
-    /// Optionally load a repo from the specified "current directory".
-    ///
-    /// Return None if there is no repo found from the current directory or its
-    /// parent directories.
-    pub fn from_cwd(cwd: impl AsRef<Path>) -> Result<OptionalRepo> {
-        if let Some(path) = find_hg_repo_root(&util::path::absolute(cwd)?) {
-            let repo = Repo::load(path)?;
-            Ok(OptionalRepo::Some(repo))
-        } else {
-            Ok(OptionalRepo::None(configparser::hg::load(None, &[], &[])?))
-        }
-    }
-
-    /// Load the repo from a --repository (or --repo, -R) flag.
-    ///
-    /// The path can be either a directory or a bundle file.
-    pub fn from_repository_path_and_cwd(
-        repository_path: impl AsRef<Path>,
-        cwd: impl AsRef<Path>,
-    ) -> Result<OptionalRepo> {
-        let repository_path = repository_path.as_ref();
-        if repository_path.as_os_str().is_empty() {
-            // --repo is not specified, only use cwd.
-            return Self::from_cwd(cwd);
-        }
-
-        let cwd = cwd.as_ref();
-        let full_repository_path =
-            if repository_path == Path::new(".") || repository_path == Path::new("") {
-                cwd.to_path_buf()
-            } else {
-                cwd.join(repository_path)
-            };
-        if let Ok(path) = util::path::absolute(&full_repository_path) {
-            if path.join(".hg").is_dir() {
-                // `path` is a directory with `.hg`.
-                let repo = Repo::load(path)?;
-                return Ok(OptionalRepo::Some(repo));
-            } else if path.is_file() {
-                // 'path' is a bundle path
-                if let OptionalRepo::Some(mut repo) = Self::from_cwd(cwd)? {
-                    repo.bundle_path = Some(path);
-                    return Ok(OptionalRepo::Some(repo));
-                }
-            }
-        }
-        Err(errors::RepoNotFound(repository_path.display().to_string()).into())
-    }
-
-    pub fn config_mut(&mut self) -> &mut ConfigSet {
-        match self {
-            OptionalRepo::Some(ref mut repo) => &mut repo.config,
-            OptionalRepo::None(ref mut config) => config,
-        }
-    }
-
-    pub fn config(&self) -> &ConfigSet {
-        match self {
-            OptionalRepo::Some(ref repo) => &repo.config,
-            OptionalRepo::None(ref config) => config,
-        }
-    }
-
-    pub fn take_config(self) -> ConfigSet {
-        match self {
-            OptionalRepo::Some(repo) => repo.config,
-            OptionalRepo::None(config) => config,
-        }
-    }
 }
 
 impl Repo {
@@ -191,7 +111,6 @@ impl Repo {
         Ok(Repo {
             path,
             config,
-            bundle_path: None,
             shared_path,
             store_path,
             dot_hg_path,
@@ -366,17 +285,6 @@ impl Repo {
         let ts = Arc::new(tree_builder.build()?);
         self.tree_store = Some(ts.clone());
         Ok(ts)
-    }
-}
-
-fn find_hg_repo_root(current_path: &Path) -> Option<PathBuf> {
-    assert!(current_path.is_absolute());
-    if current_path.join(".hg").is_dir() {
-        Some(current_path.to_path_buf())
-    } else if let Some(parent) = current_path.parent() {
-        find_hg_repo_root(parent)
-    } else {
-        None
     }
 }
 

@@ -11,7 +11,10 @@ pub mod command;
 pub mod dispatch;
 pub mod errors;
 pub mod global_flags;
+pub mod optional_repo;
 pub mod output;
 pub mod util;
 
 pub use io;
+
+pub use optional_repo::OptionalRepo;

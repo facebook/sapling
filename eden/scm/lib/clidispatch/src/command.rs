@@ -13,11 +13,11 @@ use cliparser::parser::Flag;
 use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
 use configparser::config::ConfigSet;
-use repo::repo::OptionalRepo;
 use repo::repo::Repo;
 
 use crate::global_flags::HgGlobalOpts;
 use crate::io::IO;
+use crate::OptionalRepo;
 
 pub enum CommandFunc {
     NoRepo(Box<dyn Fn(ParseOutput, &IO, &mut ConfigSet) -> Result<u8>>),

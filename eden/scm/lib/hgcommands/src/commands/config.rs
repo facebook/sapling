@@ -13,10 +13,10 @@ use clidispatch::abort_if;
 use clidispatch::errors;
 use clidispatch::global_flags::HgGlobalOpts;
 use clidispatch::io::IsTty;
+use clidispatch::OptionalRepo;
 use cliparser::define_flags;
 use configparser::Config;
 use minibytes::Text;
-use repo::repo::OptionalRepo;
 
 use super::ConfigSet;
 use super::Result;

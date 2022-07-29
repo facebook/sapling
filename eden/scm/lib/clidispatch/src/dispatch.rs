@@ -9,6 +9,7 @@ use std::env;
 use std::path::Path;
 use std::sync::atomic::Ordering::SeqCst;
 
+use crate::OptionalRepo;
 use anyhow::Error;
 use cliparser::alias::expand_aliases;
 use cliparser::alias::find_command_name;
@@ -17,7 +18,6 @@ use cliparser::parser::ParseOptions;
 use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
 use configparser::config::ConfigSet;
-use repo::repo::OptionalRepo;
 use repo::repo::Repo;
 
 use crate::command::CommandDefinition;

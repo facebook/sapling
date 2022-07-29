@@ -7,8 +7,8 @@
 
 use std::io::Write;
 
+use clidispatch::OptionalRepo;
 use configparser::config::Options;
-use repo::repo::OptionalRepo;
 
 use super::define_flags;
 use super::Result;
