@@ -136,6 +136,32 @@ Test that 'hg doctor' can fix them:
     Index "split" passed integrity check
   
   
+  segments/v1:
+    Repairing MultiMeta Log:
+      Processing IndexedLog: * (glob)
+      Verified 5 entries, * bytes in log (glob)
+      Index "reverse" passed integrity check
+    Repairing Log idmap2
+      Processing IndexedLog: * (glob)
+      Verified 3 entries, * bytes in log (glob)
+      Index "id" passed integrity check
+      Index "group-name" passed integrity check
+    Log idmap2 has valid length * after repair (glob)
+    Repairing Log iddag
+      Processing IndexedLog: * (glob)
+      Verified 2 entries, * bytes in log (glob)
+      Index "level-head" passed integrity check
+      Index "group-parent-child" passed integrity check
+    Log iddag has valid length * after repair (glob)
+    MultiMeta is valid
+  
+  
+  hgcommits/v1:
+    Processing IndexedLog: * (glob)
+    Verified 3 entries, 506 bytes in log
+    Index "id" passed integrity check
+  
+  
   allheads:
     Processing IndexedLog: * (glob)
     Verified 0 entries, 12 bytes in log
@@ -212,36 +238,6 @@ Test that 'hg doctor' can fix them:
   
   checking commit references
 
-Check changelog repiar:
-
-  $ newrepo
-  $ drawdag << 'EOS'
-  > C
-  > |
-  > B
-  > |
-  > A
-  > EOS
-  >>> with open(".hg/store/00changelog.i", "rb+") as f:
-  ...     filelen = len(f.read())
-  ...     x = f.seek(filelen - 64)
-  ...     x = f.write(b"x" * 64)
-  $ hg doctor
-  checking internal storage
-  changelog: corrupted at rev 2 (linkrev=2021161080)
-  truncating 00changelog.i from 192 to 128 bytes
-  truncating 00changelog.d from 165 to 110 bytes
-  changelog: repaired
-  visibleheads: removed 1 heads, added tip
-  checking commit references
-  $ hg log -Gr 'all()' -T '{desc}'
-  o  B
-  │
-  o  A
-  
-
-  $ hg status
-
 Check unknown visibleheads format:
 
   $ newrepo
@@ -252,101 +248,58 @@ Check unknown visibleheads format:
   > EOS
   $ hg doctor
   checking internal storage
+  segments/v1: repaired (?)
   visibleheads: removed 0 heads, added tip
   checking commit references
 
 Check dirstate pointing to a stripped commit:
 
-  $ newrepo
-  $ drawdag << 'EOS'
-  > C
-  > |
-  > B
-  > |   # A/A2=2
-  > A   # A/A1=1
-  > EOS
+  $ newrepo abc
+  $ echo 'A-B-C' | drawdag
 
-  $ hg up -q 'desc(A)'
-  $ hg st
-  $ hg mv A A0
-  $ hg rm A1
-  $ echo 3 > A2
-  $ echo 1 > X
-  $ hg add X
   $ hg up -q 'desc(B)'
-  $ echo 4 > B
-  $ echo 2 > Y
-  $ hg add Y
   $ hg up -q 'desc(C)'
-  $ echo 3 > Z
-  $ hg add Z
 
-  $ hg status -C
-  M A2
-  M B
-  A A0
-    A
-  A X
-  A Y
-  A Z
-  R A
-  R A1
+  $ newrepo ab
+  $ echo 'A-B' | drawdag 
 
- (strip 2 commits while preserving the treestate)
-  >>> with open(".hg/store/00changelog.i", "rb+") as f:
-  ...     x = f.truncate(64)  # only keep 1 commit: "A"
+ (replace dirstate with A-B-C repo pointing to C to break it)
+  $ cp ~/abc/.hg/dirstate .hg/dirstate
+  $ rm -rf .hg/treestate
+  $ cp -R ~/abc/.hg/treestate .hg/treestate
 
-XXX: The error message should be improved to indicate it is revlog and hg doctor might fix it.
-
-  $ hg status
-  abort: mmap length 192 is greater than file size 64
+ (cannot resolve . since C does not exist)
+  $ hg log -r . -T '{desc}\n'
+  warning: failed to inspect working copy parent
+  abort: 00changelog.i@26805aba1e60: no node!
   [255]
 
  (hg doctor can fix dirstate/treestate)
   $ hg doctor
   checking internal storage
-  visibleheads: removed 1 heads, added tip
   treestate: repaired
   checking commit references
 
+ (repaired to the previous checkout "B")
   $ hg log -r . -T '{desc}\n'
-  A
-
- (dirstate reverted to a previous state: B, C, X, Y, Z become unknown)
- (X might be unknown too)
-  $ hg status -C
-  M A2
-  A A0
-    A
-  A X (?)
-  R A
-  R A1
-  ? B
-  ? C
-  ? X (?)
-  ? Y
-  ? Z
+  B
 
 Try other kinds of dirstate corruptions:
 
   >>> with open(".hg/dirstate", "rb+") as f:
   ...     x = f.seek(0)
   ...     x = f.write(b"x" * 1024)
+  $ hg log -r . -T '{desc}\n'
+  warning: failed to inspect working copy parent
+  abort: working directory state appears damaged!
+  [255]
+
   $ hg doctor
   checking internal storage
   treestate: repaired
   checking commit references
-  $ hg status
-  M A2
-  A A0
-  A X (?)
-  R A
-  R A1
-  ? B
-  ? C
-  ? X (?)
-  ? Y
-  ? Z
+  $ hg log -r . -T '{desc}\n'
+  B
 
 Prepare new server repos
 

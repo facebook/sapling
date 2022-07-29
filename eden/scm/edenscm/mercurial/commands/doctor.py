@@ -82,7 +82,6 @@ def doctor(ui, **opts) -> typing.Optional[int]:
     if svfs.exists("hgcommits/v1"):
         repairsvfs(ui, svfs, "hgcommits/v1", zstore.zstore)
 
-    repairrevlogchangelog(ui, svfs)
     cl = openchangelog(ui, svfs)
     if cl is None:
         # Lots of fixes depend on changelog.
@@ -237,35 +236,6 @@ def truncate(ui, svfs, path, size, dryrun=True, backupprefix=""):
         ) as bkf:
             bkf.write(backuppart)
         f.truncate(size)
-
-
-def repairrevlogchangelog(ui, svfs):
-    """Attempt to fix revlog-based chagnelog
-
-    This function only fixes the common corruption issues where bad data is at
-    the end of the revlog. It cannot fix or detect other non-trivial issues.
-    """
-    clname = "00changelog.i"
-    try:
-        cl = revlog.revlog(svfs, clname)
-    except Exception:
-        return None
-
-    # Those two files are not necessary. Removing them forces rebuilding them.
-    svfs.tryunlink("00changelog.len")
-    svfs.tryunlink("00changelog.nodemap")
-
-    rev, linkrev = quickchecklog(ui, cl, "changelog", set())
-    if rev is None:
-        return cl
-    if rev >= len(cl) or rev <= 0:
-        return None
-
-    datastart = cl.length(rev - 1) + cl.start(rev - 1)
-    dryrun = False
-    truncate(ui, svfs, clname, rev * 64, dryrun)
-    truncate(ui, svfs, clname.replace(".i", ".d"), datastart, dryrun)
-    ui.write_err(_("changelog: repaired\n"))
 
 
 def openchangelog(ui, svfs):

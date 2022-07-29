@@ -560,6 +560,7 @@ segmentedchangelogcompatiblelist = """
     test-commitcloud-sync-remote-bookmarks.t
 
     test-debugrebuildchangelog.t
+    test-doctor.t
 """
 
 ignorerevnumincompatiblelist = """
