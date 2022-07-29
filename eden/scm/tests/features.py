@@ -558,6 +558,8 @@ segmentedchangelogcompatiblelist = """
     test-commitcloud-sync-bookmarks.t
     test-commitcloud-sync-omission.t
     test-commitcloud-sync-remote-bookmarks.t
+
+    test-debugrebuildchangelog.t
 """
 
 ignorerevnumincompatiblelist = """

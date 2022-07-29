@@ -18,10 +18,12 @@ Clone:
   $ cd $TESTTMP
   $ hg clone --no-shallow --stream ssh://user@dummy/server client
   streaming all changes
-  6 files to transfer, 901 bytes of data
-  transferred 901 bytes in 0.0 seconds (880 KB/sec)
-  searching for changes
-  no changes found
+  4 files to transfer, * bytes of data (glob)
+  transferred * bytes in 0.0 seconds (* KB/sec) (glob)
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -35,31 +37,6 @@ Add drafts:
   > |          |
   > master   desc(B)
   > EOS
-
-Rebuild using revlog:
-
-  $ hg debugrebuildchangelog --revlog
-  backed up 3 commits to commits-3-0000.bak
-  fetching changelog
-  6 files to transfer, 901 bytes of data
-  transferred 901 bytes in 0.0 seconds (880 KB/sec)
-  fetching selected remote bookmarks
-  recreated 3 local commits
-  changelog rebuilt
-
-  $ hg log -r 'all()' --git -T '{desc} {remotenames}' -G
-  o  E
-  │
-  │ o  F
-  │ │
-  o │  D
-  │ │
-  @ │  C remote/master
-  ├─╯
-  o  B
-  │
-  o  A
-  
 
 Prepare another test case backed by a server repo that speaks EdenAPI
 
