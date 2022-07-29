@@ -563,6 +563,8 @@ segmentedchangelogcompatiblelist = """
     test-doctor.t
 
     test-fb-hgext-pull-createmarkers-hide-later.t
+
+    test-fb-hgext-remotefilelog-blame.t
 """
 
 ignorerevnumincompatiblelist = """

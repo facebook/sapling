@@ -28,8 +28,8 @@
 
 Test blame
 
-  $ hg blame x
-  0: x
-  1: y
-  2: z
+  $ hg blame -c x
+  b292c1e3311f: x
+  66ee28d0328c: y
+  16db62c5946f: z
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over 0.00s (?)
