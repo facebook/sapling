@@ -152,14 +152,30 @@ std::string computeEdenFsKextPath() {
 }
 
 // Returns true if the system already knows about the fuse filesystem stuff
-bool isOSXFuseKextLoaded() {
+bool shouldLoadOSXFuseKext() {
   struct vfsconf vfc;
-  return getvfsbyname("osxfuse", &vfc) == 0;
+  return getvfsbyname("osxfuse", &vfc) != 0;
 }
 
-bool isEdenFsKextLoaded() {
+bool shouldLoadEdenFsKext() {
   struct vfsconf vfc;
-  return getvfsbyname("edenfs", &vfc) == 0;
+  return getvfsbyname("edenfs", &vfc) != 0;
+}
+
+constexpr folly::StringPiece kNfsExtensionPath =
+    "/System/Library/Extensions/nfs.kext";
+
+bool shouldLoadNfsKext() {
+  if (access(kNfsExtensionPath.str().c_str(), F_OK) != 0) {
+    XLOGF(
+        DBG3,
+        "Kernel extension does not exist at '{}', skipping",
+        kNfsExtensionPath);
+    return false;
+  }
+
+  struct vfsconf vfc;
+  return getvfsbyname("nfs", &vfc) != 0;
 }
 
 bool tryLoadKext(const std::string& kextPathString) {
@@ -183,6 +199,10 @@ bool tryLoadKext(const std::string& kextPathString) {
     return false;
   }
 
+  return true;
+}
+
+void updateOSXFuseAdminGroup() {
   // libfuse uses a sysctl to update the kext's idea of the admin group,
   // so we do too!
   auto adminGroup = getgrnam(MACOSX_ADMIN_GROUP_NAME);
@@ -190,8 +210,10 @@ bool tryLoadKext(const std::string& kextPathString) {
     int gid = adminGroup->gr_gid;
     sysctlbyname(OSXFUSE_SYSCTL_TUNABLES_ADMIN, NULL, NULL, &gid, sizeof(gid));
   }
+}
 
-  return true;
+bool loadNfsKext() {
+  return tryLoadKext(kNfsExtensionPath.str());
 }
 
 // The osxfuse kernel doesn't automatically assign a device, so we have
@@ -200,11 +222,13 @@ bool tryLoadKext(const std::string& kextPathString) {
 // an exception on error.
 std::pair<folly::File, int> allocateFuseDevice(bool useDevEdenFs) {
   if (useDevEdenFs) {
-    if (!isEdenFsKextLoaded()) {
+    if (shouldLoadEdenFsKext()) {
       tryLoadKext(computeEdenFsKextPath());
+      updateOSXFuseAdminGroup();
     }
-  } else if (!isOSXFuseKextLoaded()) {
+  } else if (shouldLoadOSXFuseKext()) {
     tryLoadKext(computeOSXFuseKextPath());
+    updateOSXFuseAdminGroup();
   }
 
   int fd = -1;
@@ -568,6 +592,11 @@ void PrivHelperServer::nfsMount(
     uint32_t iosize,
     bool useReaddirplus) {
 #ifdef __APPLE__
+  if (shouldLoadNfsKext()) {
+    XLOG(DBG3) << "Apple nfs.kext is not loaded. Attempting to load.";
+    loadNfsKext();
+  }
+
   // Hold the attribute list set below.
   auto attrsBuf = folly::IOBufQueue{folly::IOBufQueue::cacheChainLength()};
   folly::io::QueueAppender attrSer{&attrsBuf, 1024};
