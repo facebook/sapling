@@ -271,7 +271,7 @@ def _donormalize(patterns, default, root, cwd, auditor, warn):
 
             if not files:
                 if warn:
-                    warn(_("empty %s %s matches nothing") % (kind, pat))
+                    warn(_("empty %s %s matches nothing\n") % (kind, pat))
 
             for k, p, source in _donormalize(files, default, root, cwd, auditor, warn):
                 kindpats.append((k, p, pat))
