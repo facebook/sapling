@@ -11,12 +11,6 @@ But for now it's easier than changing configs at the top of individual
 tests.
 """
 
-narrowheadsincompatiblelist = """
-    test-bookmarks.t
-
-    test-revset.t
-"""
-
 segmentedchangelogcompatiblelist = """
     test-abort-checkin.t
     test-absorb-edit-lines.t
@@ -769,10 +763,6 @@ def setup(testname, hgrcpath):
     # Disable mutation.record to maintain commit hashes.
     with open(hgrcpath, "a") as f:
         f.write("\n[mutation]\nrecord=False\n")
-    # Disable narrow-heads if incompatible.
-    if testname in narrowheadsincompatiblelist:
-        with open(hgrcpath, "a") as f:
-            f.write("\n[experimental]\nnarrow-heads=False\n")
     # Enable segmented changelog if compatible.
     if testname in segmentedchangelogcompatiblelist:
         with open(hgrcpath, "a") as f:
