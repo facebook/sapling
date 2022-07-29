@@ -25,6 +25,7 @@ LEVEL_INFO = _tracing.LEVEL_INFO
 LEVEL_WARN = _tracing.LEVEL_WARN
 LEVEL_ERROR = _tracing.LEVEL_ERROR
 
+disabletracing = False
 
 # ---- instrument ----
 
@@ -40,12 +41,19 @@ Example::
     def f(x, y):
         # skip: do not log specified args
 """
-instrument = _tracing.instrument
 
 if os.getenv("EDENSCM_NO_PYTHON_INSTRUMENT"):
 
     def instrument(func=None, **kwargs):
         return func or instrument
+
+else:
+
+    def instrument(func=None, **kwargs):
+        if disabletracing:
+            return func or instrument
+
+        return _tracing.instrument(func, **kwargs)
 
 
 # ---- event ----
@@ -67,6 +75,9 @@ def event(message, name=None, target=None, level=LEVEL_INFO, depth=0, **meta):
         info(f"{n} files downloaded in {t} seconds", request_id=reqid)
 
     """
+    if disabletracing:
+        return
+
     frame = sys._getframe(1 + depth)
     ident = (id(frame.f_code), frame.f_lineno)
     callsite = _callsites.get(ident)
@@ -104,6 +115,25 @@ error = partial(event, level=LEVEL_ERROR)
 # ---- span ----
 
 
+class _stubspan(object):
+    """Stub for a real span for when Python tracing is disabled."""
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def record(self, _name, _value):
+        pass
+
+    def is_disabled(self):
+        return True
+
+    def id(self):
+        return None
+
+
 def span(name, target=None, level=LEVEL_INFO, depth=0, **meta):
     """Open a span in the Rust tracing eco-system.
 
@@ -125,6 +155,10 @@ def span(name, target=None, level=LEVEL_INFO, depth=0, **meta):
             ...
             span.record("tx", txbytes)
     """
+
+    if disabletracing:
+        return _stubspan()
+
     frame = sys._getframe(1 + depth)
     ident = (id(frame.f_code), frame.f_lineno)
     callsite = _callsites.get(ident)
@@ -158,6 +192,9 @@ error_span = partial(span, level=LEVEL_ERROR)
 
 def isenabled(level, name=None, target=None, depth=0):
     """Test if a callsite is enabled."""
+    if disabletracing:
+        return False
+
     frame = sys._getframe(1 + depth)
     ident = (id(frame.f_code), frame.f_lineno)
     callsite = _callsites.get(ident)

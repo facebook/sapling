@@ -74,6 +74,12 @@ def run(args=None, fin=None, fout=None, ferr=None):
     if args[1:4] == ["serve", "--cmdserver", "chgunix2"]:
         # chgserver code path
 
+        # Disable tracing as early as possible. Any use of Rust
+        # tracing pre-fork messes things up post-fork.
+        from . import tracing
+
+        tracing.disabletracing = True
+
         # no demandimport, since chgserver wants to preimport everything.
         from .mercurial import dispatch
 

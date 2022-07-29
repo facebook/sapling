@@ -52,6 +52,7 @@ import time
 from typing import BinaryIO, Callable, Dict, List, Optional
 
 from bindings import commands, hgtime
+from edenscm import tracing
 
 from . import commandserver, encoding, error, pycompat, ui as uimod, util
 from .i18n import _
@@ -237,6 +238,10 @@ class chgcmdserver(commandserver.server):
     def runcommand(self):
         # type () -> None
         # Environment variables might change, reload env.
+
+        # Re-enable tracing after forking.
+        tracing.disabletracing = False
+
         util._reloadenv()
         args = self._readlist()
         pycompat.sysargv[1:] = args
