@@ -275,8 +275,8 @@ TreeInode::loadChild(
   folly::Promise<InodePtr> promise;
   auto returnFuture = promise.getSemiFuture();
   auto childNumber = entry.getInodeNumber();
-  bool startLoad = getInodeMap()->shouldLoadChild(
-      this, name, childNumber, std::move(promise));
+  bool startLoad = getInodeMap()->startLoadingChildIfNotLoading(
+      this, name, childNumber, entry.getInitialMode(), std::move(promise));
   if (startLoad) {
     // The inode is not already being loaded.  We have to start
     // loading it now.
@@ -3942,8 +3942,8 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
   folly::Promise<InodePtr> promise;
   auto future = promise.getFuture();
   auto childNumber = entry.getInodeNumber();
-  bool startLoad = getInodeMap()->shouldLoadChild(
-      this, name, childNumber, std::move(promise));
+  bool startLoad = getInodeMap()->startLoadingChildIfNotLoading(
+      this, name, childNumber, entry.getInitialMode(), std::move(promise));
   if (startLoad) {
     auto loadFuture = startLoadingInodeNoThrow(entry, name, fetchContext);
     pendingLoads.emplace_back(

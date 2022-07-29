@@ -326,15 +326,17 @@ class InodeMap {
   /////////////////////////////////////////////////////////////////////////
 
   /**
-   * shouldLoadChild() should only be called by TreeInode.
+   * startLoadingChildIfNotLoading() should only be called by TreeInode.
    *
-   * shouldLoadChild() will be called when TreeInode wants to load one of
-   * its child entries that already has an allocated inode number.  It returns
-   * true if the TreeInode should start loading the inode now, or false if the
-   * inode is already being loaded.
+   * startLoadingChildIfNotLoading() will be called when TreeInode wants to load
+   * one of its child entries that already has an allocated inode number.  It
+   * returns true if the TreeInode should start loading the inode now, or false
+   * if the inode is already being loaded. If it will return true, the function
+   * publishes an event to tracebus marking the start of the inode load and
+   * attaches an initial promise to the inode to resolve when the load ends.
    *
-   * If shouldLoadChild() returns true, the TreeInode will then start
-   * loading the child inode.  It must then call inodeLoadComplete() or
+   * If startLoadingChildIfNotLoading() returns true, the TreeInode will then
+   * continue loading the child inode.  It must then call inodeLoadComplete() or
    * inodeLoadFailed() when it finishes loading the inode.
    *
    * The TreeInode must be holding its contents lock when calling this method.
@@ -343,16 +345,18 @@ class InodeMap {
    *   load a child.
    * @param name The name of the child inode.
    * @param childInode The inode number of the child.
+   * @param mode The st_mode of the child.
    * @param promise A promise to fulfill when this inode is finished loading.
    *   The InodeMap is responsible for fulfilling this promise.
    *
-   * @return Returns true if the TreeInode should start loading this child
-   *   inode, or false if this child is already being loaded.
+   * @return Returns true if the TreeInode should continue loading this child
+   *   inode, or false if this child was already being loaded.
    */
-  bool shouldLoadChild(
+  bool startLoadingChildIfNotLoading(
       const TreeInode* parent,
       PathComponentPiece name,
       InodeNumber childInode,
+      mode_t mode,
       folly::Promise<InodePtr> promise);
 
   /**
@@ -409,7 +413,20 @@ class InodeMap {
    * Data about an unloaded inode.
    */
   struct UnloadedInode {
-    UnloadedInode(InodeNumber parentNum, PathComponentPiece entryName);
+    /**
+     * Constructor only using parentNum, entryName, and mode. Only used by
+     * InodeMap::startLoadingChildIfNotLoading. Note, when this is used, the
+     * hash (which gets set to a default empty string) may not be accurate for
+     * unmaterialized inodes. Also, the mode, which is based off of the
+     * initial_mode retrieved from a Directory Entry, should have correct
+     * file/directory bits. However, it may not have fully accurate permision
+     * bits as these might have changed from the Directory Entry's initial_mode.
+     */
+    UnloadedInode(
+        InodeNumber parentNum,
+        PathComponentPiece entryName,
+        mode_t mode);
+
     UnloadedInode(
         InodeNumber parentNum,
         PathComponentPiece entryName,
@@ -438,8 +455,17 @@ class InodeMap {
      */
     bool const isUnlinked{false};
 
-    /** The complete st_mode value for this entry */
+    /**
+     * The complete st_mode value for this entry. Note, while the file/directory
+     * bits should be correct, the permission bits might be wrong as they may
+     * have been changed from when the mode was first created.
+     */
     mode_t const mode{0};
+
+    /**
+     * Helper function to get an InodeType from the inode's mode attribute
+     */
+    InodeType getInodeType() const;
 
     /**
      * If the entry is not materialized, this contains the hash
@@ -461,6 +487,15 @@ class InodeMap {
      * are already protected by the data_ lock.)
      */
     PromiseVector promises;
+
+    /**
+     * Contains the timestamp for when an unloaded inode started loading. If the
+     * promises list is non-empty, this time will be the timestamp for when the
+     * first promise was added. Used for telemetry by the inode tracing CLI and
+     * ActivityBuffer.
+     */
+    std::chrono::system_clock::time_point loadStartTime;
+
     /**
      * The number of times we have returned this inode number to FUSE via
      * lookup() calls that have not yet been released with a corresponding
@@ -574,6 +609,24 @@ class InodeMap {
       InodeNumber childInodeNumber,
       std::optional<ObjectId> hash,
       mode_t mode);
+
+  /**
+   * Publish an inode load start event to the eden mount's inodeTraceBus
+   * for telemetry. Additionally sets the unloaded inode's loadStartTime
+   * timestamp for when the start event began. This function should be called
+   * while holding the data_ write lock
+   */
+  void publishInodeLoadStartEvent(
+      InodeNumber number,
+      UnloadedInode& unloadedData,
+      const folly::Synchronized<Members>::WLockedPtr& data) noexcept;
+
+  /**
+   * Publish an inode load failure event to the eden mount's inodeTraceBus
+   * for telemetry. This method acquires a read lock on data_. It should never
+   * be called while already holding the lock.
+   */
+  void publishInodeLoadFailEvent(InodeNumber number) noexcept;
 
   /**
    * Extract the list of promises waiting on the specified inode number to be

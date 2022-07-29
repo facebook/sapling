@@ -802,10 +802,13 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   void subscribeActivityBuffer();
 
   /**
-   * Helper function to update ActivityBuffer in FileInode and TreeInode when a
-   * new InodeTraceEvent occurs. Note, path could be the full path (in the
-   * case of inode creations), or, more commonly, just base filenames depending
-   * on how much is easily available during the inode event.
+   * Helper function to publish a new InodeTraceEvent to the mount's
+   * inodeTraceBus for telemetry. Used in FileInode, TreeInode, and InodeMap.
+   * Note, path could be the full path (in the case of inode creations), or,
+   * more commonly, just base filenames depending on how much is easily
+   * available during the inode event. This function is marked noexcept and is
+   * guaranteed to never throw an exception. If tracebus fails (i.e. due to
+   * being out of memory), then this exception is caught and telemetry is lost.
    */
   void addInodeTraceEvent(
       std::chrono::system_clock::time_point startTime,
@@ -813,7 +816,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       InodeType type,
       InodeNumber ino,
       folly::StringPiece path,
-      InodeEventProgress progress);
+      InodeEventProgress progress) noexcept;
 
   /**
    * mount any configured bind mounts.
