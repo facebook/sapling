@@ -671,7 +671,6 @@ class cg1packer(object):
         self,
         commonrevs: "Sequence[int]",
         clnodes: "Sequence[bytes]",
-        fastpathlinkrev: bool,
         source: "Any",
     ) -> "Iterable[bytes]":
         """yield a sequence of changegroup chunks (strings)"""
@@ -707,52 +706,16 @@ class cg1packer(object):
                 yield chunk
         self._verbosenote(_("%8.i (changelog)\n") % size)
 
-        # We need to make sure that the linkrev in the changegroup refers to
-        # the first changeset that introduced the manifest or file revision.
-        # The fastpath is usually safer than the slowpath, because the filelogs
-        # are walked in revlog order.
-        #
-        # When taking the slowpath with reorder=None and the manifest revlog
-        # uses generaldelta, the manifest may be walked in the "wrong" order.
-        # Without 'clrevorder', we would get an incorrect linkrev (see fix in
-        # cc0ff93d0c0c).
-        #
-        # When taking the fastpath, we are only vulnerable to reordering
-        # of the changelog itself. The changelog never uses generaldelta, so
-        # it is only reordered when reorder=True. To handle this case, we
-        # simply take the slowpath, which already has the 'clrevorder' logic.
-        # This was also fixed in cc0ff93d0c0c.
-        fastpathlinkrev = (
-            fastpathlinkrev
-            and not self._reorder
-            and ("invalidatelinkrev" not in repo.storerequirements)
-        )
-        # Treemanifests don't work correctly with fastpathlinkrev
-        # either, because we don't discover which directory nodes to
-        # send along with files. This could probably be fixed.
-        fastpathlinkrev = fastpathlinkrev and ("treemanifest" not in repo.requirements)
-
         for chunk in self.generatemanifests(
-            commonrevs, clrevorder, fastpathlinkrev, mfs, fnodes, source
+            commonrevs, clrevorder, mfs, fnodes, source
         ):
             assert isinstance(chunk, bytes)
             yield chunk
         mfs.clear()
         clrevs = set(cl.rev(x) for x in clnodes)
 
-        if not fastpathlinkrev:
-
-            def linknodes(unused, fname):
-                return fnodes.get(fname, {})
-
-        else:
-            cln = cl.node
-
-            def linknodes(filerevlog, fname):
-                llr = filerevlog.linkrev
-                fln = filerevlog.node
-                revs = ((r, llr(r)) for r in filerevlog)
-                return dict((fln(r), cln(lr)) for r, lr in revs if lr in clrevs)
+        def linknodes(unused, fname):
+            return fnodes.get(fname, {})
 
         for chunk in self.generatefiles(changedfiles, linknodes, commonrevs, source):
             assert isinstance(chunk, bytes)
@@ -767,7 +730,6 @@ class cg1packer(object):
         self,
         commonrevs: "Sequence[int]",
         clrevorder: "Mapping[bytes, int]",
-        fastpathlinkrev: bool,
         mfs: "Any",
         fnodes: "MutableMapping[str, Any]",
         source: "Any",
@@ -786,10 +748,6 @@ class cg1packer(object):
         # revisions.
         # Returns the linkrev node (collected in lookupcl).
         def makelookupmflinknode(dir, nodes):
-            if fastpathlinkrev:
-                assert not dir
-                return mfs.__getitem__
-
             def lookupmflinknode(x):
                 """Callback for looking up the linknode for manifests.
 
@@ -798,7 +756,7 @@ class cg1packer(object):
                 SIDE EFFECT:
 
                 1) fclnodes gets populated with the list of relevant
-                   file nodes if we're not using fastpathlinkrev
+                   file nodes
                 2) When treemanifests are in use, collects treemanifest nodes
                    to send
 
@@ -1146,24 +1104,9 @@ def makestream(
     commonrevs = outgoing.common
     csets = outgoing.missing
 
-    if repo.ui.configbool("experimental", "narrow-heads"):
-        # repo.heads() can no longer provide accurate hints about whether
-        # 'fastpathlinkrev' should be used or not.
-        # If 'fastpathlinkrev' gets accidentally set to True, tests like
-        # like test-visibility-cloudsync.t will fail due to missing files
-        # in bundles.
-        fastpathlinkrev = False
-    else:
-        heads = list(outgoing.missingheads)
-        # We go through the fast path if we get told to, or if all (unfiltered
-        # heads have been requested (since we then know there all linkrevs will
-        # be pulled by the client).
-        heads.sort()
-        fastpathlinkrev = fastpath or heads == sorted(repo.heads())
-
     repo.hook("preoutgoing", throw=True, source=source)
     _changegroupinfo(repo, csets, source)
-    return bundler.generate(commonrevs, csets, fastpathlinkrev, source)
+    return bundler.generate(commonrevs, csets, source)
 
 
 def _addchangegroupfiles(repo, source, revmap, trp, needfiles):

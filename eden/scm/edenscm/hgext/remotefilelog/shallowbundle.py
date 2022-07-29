@@ -67,20 +67,6 @@ def shallowgroup(cls, self, nodelist, rlog, lookup, prog=None, reorder=None):
 
 @shallowutil.interposeclass(changegroup, "cg1packer")
 class shallowcg1packer(changegroup.cg1packer):
-    def generate(
-        self,
-        commonrevs: "Sequence[int]",
-        clnodes: "Sequence[bytes]",
-        fastpathlinkrev: bool,
-        source: "Any",
-    ) -> "Iterable[bytes]":
-        if "remotefilelog" in self._repo.requirements:
-            fastpathlinkrev = False
-
-        return super(shallowcg1packer, self).generate(
-            commonrevs, clnodes, fastpathlinkrev, source
-        )
-
     def group(self, nodelist, revlog, lookup, prog=None, reorder=None):
         return shallowgroup(shallowcg1packer, self, nodelist, revlog, lookup, prog=prog)
 
@@ -115,7 +101,6 @@ class shallowcg1packer(changegroup.cg1packer):
         self,
         commonrevs: "Sequence[int]",
         clrevorder: "Mapping[bytes, int]",
-        fastpathlinkrev: bool,
         mfs: "Any",
         fnodes: "MutableMapping[str, Any]",
         source: "Any",
@@ -128,8 +113,7 @@ class shallowcg1packer(changegroup.cg1packer):
                 with maps to their linknodes
                 { manifest root node -> link node }
         - `fnodes` is a mapping of { filepath -> { node -> clnode } }
-                If fastpathlinkrev is false, we are responsible for populating
-                fnodes.
+                we are responsible for populating fnodes.
         - `args` and `kwargs` are extra arguments that will be passed to the
                 core generatemanifests method, whose length depends on the
                 version of core Hg.
@@ -143,50 +127,48 @@ class shallowcg1packer(changegroup.cg1packer):
             # In this code path, generating the manifests populates fnodes for
             # us.
             chunks = super(shallowcg1packer, self).generatemanifests(
-                commonrevs, clrevorder, fastpathlinkrev, mfs, fnodes, source
+                commonrevs, clrevorder, mfs, fnodes, source
             )
             for chunk in chunks:
                 yield chunk
         else:
-            # If not using the fast path, we need to discover what files to send
-            if not fastpathlinkrev:
-                # If we're sending files, we need to process the manifests
-                filestosend = self.shouldaddfilegroups(source)
-                if filestosend is not NoFiles:
-                    cl = repo.changelog
-                    clparents = cl.parents
-                    clrevision = cl.changelogrevision
-                    mflog = repo.manifestlog
-                    with progress.bar(repo.ui, _("manifests"), total=len(mfs)) as prog:
-                        for mfnode, clnode in pycompat.iteritems(mfs):
-                            prog.value += 1
-                            if (
-                                filestosend == LocalFiles
-                                and repo[clnode].phase() == phases.public
-                            ):
-                                continue
-                            try:
-                                mfctx = mflog[mfnode]
-                                clp1node = clparents(clnode)[0]
-                                p1node = clrevision(clp1node).manifest
-                                p1ctx = mflog[p1node]
-                            except LookupError:
-                                if not repo.svfs.treemanifestserver or treeonly(repo):
-                                    raise
-                                # If we can't find the flat version, look for trees
-                                tmfl = mflog.treemanifestlog
-                                mfctx = tmfl[mfnode]
-                                clp1node = clparents(clnode)[0]
-                                p1node = clrevision(clp1node).manifest
-                                p1ctx = tmfl[p1node]
+            # If we're sending files, we need to process the manifests
+            filestosend = self.shouldaddfilegroups(source)
+            if filestosend is not NoFiles:
+                cl = repo.changelog
+                clparents = cl.parents
+                clrevision = cl.changelogrevision
+                mflog = repo.manifestlog
+                with progress.bar(repo.ui, _("manifests"), total=len(mfs)) as prog:
+                    for mfnode, clnode in pycompat.iteritems(mfs):
+                        prog.value += 1
+                        if (
+                            filestosend == LocalFiles
+                            and repo[clnode].phase() == phases.public
+                        ):
+                            continue
+                        try:
+                            mfctx = mflog[mfnode]
+                            clp1node = clparents(clnode)[0]
+                            p1node = clrevision(clp1node).manifest
+                            p1ctx = mflog[p1node]
+                        except LookupError:
+                            if not repo.svfs.treemanifestserver or treeonly(repo):
+                                raise
+                            # If we can't find the flat version, look for trees
+                            tmfl = mflog.treemanifestlog
+                            mfctx = tmfl[mfnode]
+                            clp1node = clparents(clnode)[0]
+                            p1node = clrevision(clp1node).manifest
+                            p1ctx = tmfl[p1node]
 
-                            diff = pycompat.iteritems(p1ctx.read().diff(mfctx.read()))
-                            for filename, ((anode, aflag), (bnode, bflag)) in diff:
-                                if bnode is not None:
-                                    fclnodes = fnodes.setdefault(filename, {})
-                                    fclnode = fclnodes.setdefault(bnode, clnode)
-                                    if clrevorder[clnode] < clrevorder[fclnode]:
-                                        fclnodes[bnode] = clnode
+                        diff = pycompat.iteritems(p1ctx.read().diff(mfctx.read()))
+                        for filename, ((anode, aflag), (bnode, bflag)) in diff:
+                            if bnode is not None:
+                                fclnodes = fnodes.setdefault(filename, {})
+                                fclnode = fclnodes.setdefault(bnode, clnode)
+                                if clrevorder[clnode] < clrevorder[fclnode]:
+                                    fclnodes[bnode] = clnode
 
             yield self.close()
 
@@ -383,10 +365,10 @@ if util.safehasattr(changegroup, "cg3packer"):
     @shallowutil.interposeclass(changegroup, "cg3packer")
     class shallowcg3packer(changegroup.cg3packer, shallowcg1packer):
         def generatemanifests(
-            self, commonrevs, clrevorder, fastpathlinkrev, mfs, fnodes, *args, **kwargs
+            self, commonrevs, clrevorder, mfs, fnodes, *args, **kwargs
         ):
             chunks = super(shallowcg3packer, self).generatemanifests(
-                commonrevs, clrevorder, fastpathlinkrev, mfs, fnodes, *args, **kwargs
+                commonrevs, clrevorder, mfs, fnodes, *args, **kwargs
             )
             for chunk in chunks:
                 yield chunk
