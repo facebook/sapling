@@ -9,8 +9,8 @@
 use std::io::Write;
 
 use anyhow::Result;
-use futures::stream;
 use auto_impl::auto_impl;
+use futures::stream;
 use futures::stream::Stream;
 use futures::stream::TryStreamExt;
 
