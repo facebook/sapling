@@ -1180,8 +1180,7 @@ def _postpullprefetch(ui, repo):
     prefetchcount = ui.configint("treemanifest", "pullprefetchcount", None)
     if prefetchcount:
         # Calculate what recent manifests are we missing
-        firstrev = max(0, repo["tip"].rev() - prefetchcount + 1)
-        ctxs.extend(repo.set("%s: & public()", firstrev))
+        ctxs.extend(repo.set("limit(sort(::tip,-rev),%s) & public()", prefetchcount))
 
     # Prefetch specific commits
     prefetchrevs = ui.config("treemanifest", "pullprefetchrevs", None)
