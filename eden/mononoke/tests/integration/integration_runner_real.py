@@ -110,8 +110,6 @@ class TestFlags(NamedTuple):
             else:
                 r["disable_all_network_access"] = True
 
-        r["chg"] = not self.debug
-
         return r
 
 

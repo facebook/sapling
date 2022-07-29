@@ -169,7 +169,7 @@ def has_bzr_range(v):
 
 @check("chg", "running with chg")
 def has_chg():
-    return "CHGHG" in os.environ
+    return os.environ.get("CHGDISABLE", "0") == "never"
 
 
 _zlibsamples = {

@@ -74,18 +74,18 @@ fn file_decision(path: Option<impl AsRef<Path>>) -> Option<bool> {
 /// TODO: implement command-based filtering logic
 ///       which would provide us with command names
 ///       to always skip
-fn should_call_chg(args: &Vec<String>) -> bool {
+fn should_call_chg(args: &[String]) -> (bool, &'static str) {
     if cfg!(target_os = "windows") {
-        return false;
+        return (false, "windows");
     }
     // This means we're already inside the chg call chain
     if std::env::var_os("CHGINTERNALMARK").is_some() {
-        return false;
+        return (false, "CHGINTERNALMARK");
     }
 
     // debugpython is incompatible with chg.
     if args.get(1).map_or(false, |x| x == "debugpython") {
-        return false;
+        return (false, "debugpython");
     }
 
     // Bash might translate `<(...)` to `/dev/fd/x` instead of using a real fifo. That
@@ -95,41 +95,53 @@ fn should_call_chg(args: &Vec<String>) -> bool {
             .iter()
             .any(|a| a.starts_with("/dev/fd/") || a.starts_with("/proc/self/"))
     {
-        return false;
+        return (false, "arg starts with /dev/fd|/proc/self/");
     }
 
     // stdin is not a tty but stdout is a tty. Interactive pager is used
     // but lack of ctty makes it impossible to control the interactive
     // pager via keys.
     if cfg!(unix) && !std::io::stdin().is_tty() && std::io::stdout().is_tty() {
-        return false;
+        return (false, "!stdin.is_tty() && stdout.is_tty()");
     }
 
     // CHGDISABLE=1 means that we want to disable it
     // regardless of the other conditions, but CHGDISABLE=0
-    // does not guarantee that we want to enable it
-    if std::env::var_os("CHGDISABLE").map_or(false, |x| x == "1") {
-        return false;
+    // does not guarantee that we want to enable it. CHGDISABLE=never
+    // means we want to enable it, overriding the below file decisions.
+    if let Some(val) = std::env::var_os("CHGDISABLE") {
+        if val == "never" {
+            return (true, "CHGDISABLE=never");
+        } else if val == "1" {
+            return (false, "CHGDISABLE=1");
+        }
     }
 
     if let Some(home_decision) = file_decision(dirs::home_dir().map(|d| d.join(".usechg"))) {
-        return home_decision;
+        return (home_decision, "~/.usechg");
     }
 
     if let Some(etc_decision) = file_decision(Some("/etc/mercurial/usechg")) {
-        return etc_decision;
+        return (etc_decision, "/etc/mercurial/usechg");
     }
 
-    return false;
+    (false, "(default fallthrough)")
 }
 
 /// Perform needed checks and maybe pass control to chg
 /// Note that this function terminates the process
 /// if it decides to pass control to chg
-pub fn maybe_call_chg(args: &Vec<String>) {
-    if !should_call_chg(args) {
+pub fn maybe_call_chg(args: &[String]) {
+    let (should_use, reason) = should_call_chg(args);
+
+    if std::env::var_os("CHGDEBUG").map_or(false, |x| x == "1") {
+        eprintln!("using chg: {}, because {}", should_use, reason);
+    }
+
+    if !should_use {
         return;
     }
+
     let rc = chg_main_wrapper(args_to_local_cstrings(), env_to_local_cstrings());
     std::process::exit(rc);
 }

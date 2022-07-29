@@ -1554,7 +1554,7 @@ class Test(unittest.TestCase):
         env["HOME"] = self._testtmp  # Unix
         env["USERPROFILE"] = self._testtmp  # Windows
         if self._usechg:
-            env["CHGDISABLE"] = "0"
+            env["CHGDISABLE"] = "never"
         else:
             env["CHGDISABLE"] = "1"
         # This number should match portneeded in _getport

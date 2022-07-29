@@ -97,7 +97,7 @@ def testsetup(t: TestTmp):
         header = f.read(256)
         usechg = b"#chg-compatible" in header
     if usechg:
-        environ["CHGDISABLE"] = "0"
+        environ["CHGDISABLE"] = "never"
         environ["CHGSOCKNAME"] = str(t.path / "chgserver")
     else:
         environ["CHGDISABLE"] = "1"
