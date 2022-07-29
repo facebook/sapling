@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import re
 import string
+from typing import Sized
 
 from bindings import vlq
 
@@ -283,13 +284,13 @@ def parsedag(desc):
 
 def dagtextlines(
     events,
-    addspaces=True,
-    wraplabels=False,
-    wrapannotations=False,
-    wrapcommands=False,
-    wrapnonlinear=False,
-    usedots=False,
-    maxlinewidth=70,
+    addspaces: bool = True,
+    wraplabels: bool = False,
+    wrapannotations: bool = False,
+    wrapcommands: bool = False,
+    wrapnonlinear: bool = False,
+    usedots: bool = False,
+    maxlinewidth: int = 70,
 ):
     """generates single lines for dagtext()"""
 
@@ -405,14 +406,14 @@ def dagtextlines(
 
 def dagtext(
     dag,
-    addspaces=True,
-    wraplabels=False,
-    wrapannotations=False,
-    wrapcommands=False,
-    wrapnonlinear=False,
-    usedots=False,
-    maxlinewidth=70,
-):
+    addspaces: bool = True,
+    wraplabels: bool = False,
+    wrapannotations: bool = False,
+    wrapcommands: bool = False,
+    wrapnonlinear: bool = False,
+    usedots: bool = False,
+    maxlinewidth: int = 70,
+) -> str:
     """generates lines of a textual representation for a dag event stream
 
     events should generate what parsedag() does, so:
@@ -504,7 +505,7 @@ def dagtext(
     )
 
 
-def bindag(revs, parentrevs):
+def bindag(revs, parentrevs) -> bytes:
     """Generate binary representation for a dag
 
     revs is a list of commit identities. It must be topo-sorted from the oldest
@@ -590,7 +591,7 @@ def bindag(revs, parentrevs):
     return buf.getvalue()
 
 
-def parsebindag(data):
+def parsebindag(data: Sized):
     """Reverse of `bindag`. Translated binary DAG to revs and parentrevs.
 
     The returned revs use integer commit identities starting from 0.
