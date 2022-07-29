@@ -1,6 +1,6 @@
 #chg-compatible
   $ setconfig experimental.allowfilepeer=True
-
+  $ setconfig devel.segmented-changelog-rev-compat=True
 
   $ configure mutation-norecord dummyssh
   $ enable rebase amend remotenames
@@ -813,7 +813,7 @@ XXX: rev 3 should remain hidden. (debugstrip is rarely used so this might be oka
   │
   o  4a2df7238c3b A
   
-  $ hg rebase -d 'max(desc(D))' -r "ff2c4d47b71d942eb1f1914b2cb5fe3a328f1ba9+8"
+  $ hg rebase -d 'max(desc(D))' -r "ff2c4d47b71d942eb1f1914b2cb5fe3a328f1ba9+8d47583e023f"
   rebasing ff2c4d47b71d "C"
   rebasing 8d47583e023f "P"
   $ hg hide 'desc(O)' --config extensions.amend=

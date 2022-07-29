@@ -97,15 +97,15 @@ Push in from the client.
   $ log
   @    merge alpha and beta [public:8c1abab9fd04]
   ├─╮
-  │ o    merge beta [public:f71e1c3a925c]
+  │ o    merge alpha [public:a9138cc95bb3]
   │ ├─╮
-  o │ │  merge alpha [public:a9138cc95bb3]
+  o │ │  merge beta [public:f71e1c3a925c]
   ├───╮
   │ │ o  other [public:7fd651906bb3]
   │ │ │
-  │ o │  beta [public:4f90fdc3a1aa]
-  │   │
-  o   │  alpha [public:c85f9ce7b342]
+  o │ │  beta [public:4f90fdc3a1aa]
+    │ │
+    o │  alpha [public:c85f9ce7b342]
       │
       o  base [public:d20a80d4def3]
   

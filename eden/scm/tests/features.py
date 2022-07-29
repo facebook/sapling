@@ -575,6 +575,9 @@ segmentedchangelogcompatiblelist = """
     test-fb-hgext-treemanifest-treeonly.t
     test-fb-hgext-treemanifest.t
 
+    test-pushrebase-withmerges.t
+    test-rebase-mutation.t
+    test-rebase-scenario-global.t
 """
 
 ignorerevnumincompatiblelist = """

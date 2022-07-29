@@ -1,5 +1,6 @@
 #chg-compatible
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig devel.segmented-changelog-rev-compat=True
 
   $ configure dummyssh
   $ enable rebase amend
