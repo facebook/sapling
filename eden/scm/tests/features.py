@@ -568,6 +568,13 @@ segmentedchangelogcompatiblelist = """
     test-fb-hgext-remotefilelog-push-pull.t
     test-fb-hgext-remotefilelog-sparse.t
     test-fb-hgext-remotefilelog-treemanifest-lfs.t
+
+    test-fb-hgext-treemanifest-autoconvert.t
+    test-fb-hgext-treemanifest-prefetch.t
+    test-fb-hgext-treemanifest-pullpublic.t
+    test-fb-hgext-treemanifest-treeonly.t
+    test-fb-hgext-treemanifest.t
+
 """
 
 ignorerevnumincompatiblelist = """

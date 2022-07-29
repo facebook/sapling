@@ -102,13 +102,11 @@ TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and ad
   $ echo t >> subdir/x
   $ hg commit -qm "tree only commit"
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
-  $ hg debugdata -c 3
+  $ hg log -T '{manifest}\n{author}\n{date}\n{files}\n' -r 'max(all())'
   0b096b20288404c17aa355fdeca48decf58d745d
   test
-  0 0
+  0.00
   subdir/x
-  
-  tree only commit (no-eol)
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
 Tree-only amend
@@ -455,18 +453,6 @@ Test pushing from a treeonly client to a treeonly server *without* pushrebase
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  $ hg --cwd ../master debugindex .hg/store/00manifesttree.i | tail -4
-       4       218      61      2       3 e249b5cd4abe 9bd1ef658bef 000000000000
-       5       279      61      3       5 5f15f80c2b54 14bce01d0d73 000000000000
-       6       340      93     -1       6 13c9facfa409 5f15f80c2b54 000000000000
-       7       433      61      6       7 c760d8ba4646 13c9facfa409 000000000000
-  $ hg --cwd ../master debugindex .hg/store/meta/subdir/00manifest.i
-     rev    offset  length  delta linkrev nodeid       p1           p2
-       0         0      44     -1       0 bc0c2c938b92 000000000000 000000000000
-       1        44      44     -1       1 a18d21674e76 bc0c2c938b92 000000000000
-       2        88      44     -1       3 986e3ffada22 bc0c2c938b92 000000000000
-       3       132      44     -1       5 f4c373af9a41 a18d21674e76 000000000000
-       4       176      44     -1       7 d20854ad7783 f4c373af9a41 000000000000
   $ hg -R ../master log -r tip --stat
   commit:      5f0bc1aaff22
   user:        test
@@ -621,10 +607,12 @@ with pullprefetchrevs configured.
   $ hg pull
   pulling from ssh://user@dummy/master
   streaming all changes
-  7 files to transfer, 2.46 KB of data
-  transferred 2.46 KB in 0.0 seconds (2.41 MB/sec)
-  searching for changes
-  no changes found
+  5 files to transfer, 2.05 KB of data
+  transferred 2.05 KB in 0.0 seconds (2.01 MB/sec)
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
   prefetching tree for dad1be784127
   fetching tree '' 9bd1ef658bef2ded12bd295198d1abbe1cf4115b
   1 trees fetched over 0.00s

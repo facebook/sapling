@@ -29,7 +29,7 @@ Clone it
                                                      getmeta : { calls : 2},
                                                      getmissing : { calls : 1,
                                                                     keys : 2},
-                                                     prefetch : { calls : 1,
+                                                     prefetch : { calls : 2,
                                                                   keys : 2}}},
                                       fetch : { indexedlog : { cache : { hits : 8,
                                                                          keys : 8,
@@ -39,8 +39,8 @@ Clone it
                         gettreepack : { basemfnodes : 0,
                                         calls : 1,
                                         mfnodes : 1},
-                        read : { bytes : 2382},
-                        write : { bytes : 990}}}}
+                        read : { bytes : 2520},
+                        write : { bytes : 909}}}}
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
   > [extensions]

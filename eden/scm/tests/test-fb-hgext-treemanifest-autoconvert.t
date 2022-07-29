@@ -27,8 +27,8 @@
                         gettreepack : { basemfnodes : 0,
                                         calls : 1,
                                         mfnodes : 1},
-                        read : { bytes : 1980},
-                        write : { bytes : 963}}}}
+                        read : { bytes : 2067},
+                        write : { bytes : 882}}}}
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [treemanifest]
@@ -69,8 +69,8 @@ Test auto creating trees for merge commit
   
   
   Node          P1 Node       P2 Node       Link Node     Copy From
-  13532a598745  bc0c2c938b92  ddb35f099a64  92f4ca0e667c  
+  13532a598745  bc0c2c938b92  ddb35f099a64  000000000000  
   
   
   Node          P1 Node       P2 Node       Link Node     Copy From
-  bc0c2c938b92  000000000000  000000000000  085784c01c08  
+  bc0c2c938b92  000000000000  000000000000  000000000000  

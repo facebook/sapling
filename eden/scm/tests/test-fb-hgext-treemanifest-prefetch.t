@@ -41,10 +41,12 @@
   $ hgcloneshallow ssh://user@dummy/master client
   streaming all changes
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
-  3 files to transfer, 752 bytes of data
-  transferred 752 bytes in 0.0 seconds (734 KB/sec)
-  searching for changes
-  no changes found
+  1 files to transfer, 358 bytes of data
+  transferred 358 bytes in 0.0 seconds (350 KB/sec)
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
   updating to branch default
   fetching tree '' 22febde2554a1c6f8e4d8052a0501e3d895d73d9
   1 trees fetched over 0.00s
@@ -62,7 +64,7 @@
   > EOF
 
 Test prefetch
-  $ hg prefetch -r '0 + 1 + 2'
+  $ hg prefetch -r 'desc("add x")' -r 'desc("add subdir/z")' -r 'desc("modify x")'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   2 trees fetched over 0.00s
   fetching tree 'dir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
@@ -116,14 +118,14 @@ Test prefetching when a draft commit is marked public
 - Attempt to download the latest server commit. Verify there's no error about a
 - missing manifest from the server.
   $ clearcache
-  $ hg status --change 2 --config extensions.remotenames=
+  $ hg status --change 'desc("modify x")' --config extensions.remotenames=
   fetching tree '' e445299a39f9006c2aec78dcc04dceeb102252b2
   1 trees fetched over 0.00s
   fetching tree '' 22febde2554a1c6f8e4d8052a0501e3d895d73d9
   1 trees fetched over 0.00s
   2 trees fetched over 0.00s
   M dir/x
-  $ hg debugstrip -r 3
+  $ hg debugstrip -r 'desc("add foo")'
   fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd (?)
   1 trees fetched over 0.00s (?)
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved

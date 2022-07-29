@@ -55,8 +55,8 @@ TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and ad
 
 
 Test that manifest matchers work
-  $ hg status --rev 1 --rev 2 -I subdir/a
-  $ hg status --rev 1 --rev 2 -I subdir/z
+  $ hg status --rev 'desc("add subdir/z")' --rev 'desc("modify subdir/z")' -I subdir/a
+  $ hg status --rev 'desc("add subdir/z")' --rev 'desc("modify subdir/z")' -I subdir/z
   M subdir/z
 
 Test rebasing a stack of commits results in a pack with all the trees
