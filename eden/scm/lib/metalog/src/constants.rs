@@ -5,5 +5,11 @@
  * GNU General Public License version 2.
  */
 
-pub static METALOG_TRACKED: [&str; 5] =
-    ["bookmarks", "config", "remotenames", "tip", "visibleheads"];
+pub static METALOG_TRACKED: [&str; 6] = [
+    "bookmarks",
+    "cloudsyncstate",
+    "config",
+    "remotenames",
+    "tip",
+    "visibleheads",
+];

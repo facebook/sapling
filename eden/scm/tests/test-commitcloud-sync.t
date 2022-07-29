@@ -348,7 +348,10 @@ Sync the amended commit to the other client
 
 Test recovery from broken state (example: invalid json)
   $ cd client1
-  $ echo '}}}' >> .hg/store/cloudsyncstate
+  $ hg debugshell << 'EOF'
+  > ml['cloudsyncstate'] = ml['cloudsyncstate'] + b'}}}'
+  > ml.commit('break cloudsyncstate')
+  > EOF
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   abort: commitcloud: invalid workspace data: 'failed to parse commitcloudstate.usertestdefault.b6eca'
