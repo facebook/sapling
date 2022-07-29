@@ -11,8 +11,5 @@
 
 // @dep=//common/rust/shed/hostcaps:hostcaps
 
-extern "C" unsigned int fb_get_env();
 extern "C" bool fb_is_prod();
-extern "C" bool fb_is_corp();
-extern "C" bool fb_is_lab();
 extern "C" bool fb_has_servicerouter();

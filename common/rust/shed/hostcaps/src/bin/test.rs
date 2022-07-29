@@ -10,12 +10,6 @@
 fn main() {
     println!(
         "This host is {}",
-        if hostcaps::is_prod() {
-            "prod"
-        } else if hostcaps::is_corp() {
-            "corp"
-        } else {
-            "lab"
-        }
+        if hostcaps::is_prod() { "prod" } else { "corp" }
     );
 }
