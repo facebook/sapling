@@ -13,7 +13,6 @@ Create a repository:
   devel.default-date=0 0
   experimental.metalog=true
   extensions.fsmonitor= (fsmonitor !)
-  extensions.patchrmdir= (?)
   extensions.treemanifest=!
   format.use-segmented-changelog=1
   fsmonitor.detectrace=1 (fsmonitor !)

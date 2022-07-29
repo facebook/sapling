@@ -64,6 +64,7 @@ _ignoreextensions = {
     "perftweaks",
     "purge",
     "obsshelve",
+    "patchrmdir",
     "parentrevspec",
     "progress",
     "releasenotes",

@@ -271,7 +271,6 @@ Test extension help:
        githelp       try mapping git commands to Mercurial commands
        lz4revlog     store revlog deltas using lz4 compression
        mergedriver   custom merge drivers for autoresolved files
-       patchrmdir    patch rmdir
        progressfile  allows users to have JSON progress bar information written
                      to a path
        rebase        command to move sets of revisions to a different ancestor

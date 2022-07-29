@@ -285,7 +285,6 @@ def _preimportmodules():
         "mergedriver",
         "morestatus",
         "myparent",
-        "patchrmdir",
         "phabdiff",
         "phabstatus",
         "phrevset",

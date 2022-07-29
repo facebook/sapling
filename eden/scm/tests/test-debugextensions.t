@@ -4,7 +4,6 @@
 
   $ disable treemanifest
   $ hg debugextensions --excludedefault
-  patchrmdir (untested!)
 
   $ enable histedit rebase
   $ newext ext1 <<EOF
@@ -18,7 +17,6 @@
   ext1 (untested!)
   ext2 (3.2.1!)
   histedit
-  patchrmdir (untested!)
   rebase
 
   $ hg debugextensions -v --excludedefault
@@ -33,9 +31,6 @@
   histedit
     location: */hgext/histedit.py* (glob)
     bundled: yes
-  patchrmdir
-    location: */hgext/patchrmdir.py* (glob)
-    bundled: no
   rebase
     location: */hgext/rebase.py* (glob)
     bundled: yes
@@ -61,13 +56,6 @@
     "bundled": true,
     "name": "histedit",
     "source": "*/hgext/histedit.py*", (glob)
-    "testedwith": []
-   },
-   {
-    "buglink": "",
-    "bundled": false,
-    "name": "patchrmdir",
-    "source": "*/hgext/patchrmdir.py*", (glob)
     "testedwith": []
    },
    {

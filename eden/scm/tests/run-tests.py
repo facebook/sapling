@@ -1645,7 +1645,6 @@ class Test(unittest.TestCase):
             hgrc.write("[experimental]\n")
             hgrc.write("metalog = true\n")
             hgrc.write("[lfs]\n")
-            hgrc.write("[extensions]\npatchrmdir=\n")
             if self._watchman:
                 hgrc.write("[extensions]\nfsmonitor=\n")
                 hgrc.write("[fsmonitor]\ndetectrace=1\n")

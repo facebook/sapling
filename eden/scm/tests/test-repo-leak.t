@@ -128,7 +128,6 @@ Somehow problematic: With many extensions
   > mergedriver=
   > morestatus=
   > myparent=
-  > patchrmdir=
   > phabdiff=
   > phabstatus=
   > phrevset=
