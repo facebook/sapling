@@ -1789,6 +1789,29 @@ class localrepository(object):
 
         def _flushchangelog(repo):
             cl = repo.changelog
+
+            if (
+                repo.ui.configbool("devel", "segmented-changelog-rev-compat")
+                and "lazychangelog" not in self.storerequirements
+            ):
+                # Preserve the revlog revision number compatibility.  This can
+                # cause fragmentation in the master group, hurt performance.
+                # However, it produces the same revision numbers as if the
+                # backend is revlog. This helps with test compatibility for
+                # older tests using revision numbers directly. Due to the
+                # performance penalty, this should only be used in tests.
+                #
+                # Implemented by flushing dirty nodes in insertion order to the
+                # master group. It is incompatible with "lazychangelog", since
+                # "lazychangelog" assumes commits in the master group are lazy
+                # and resolvable by the server, which is no longer true if we
+                # force local "hg commit" commits in the master group.
+                assert (
+                    util.istest()
+                ), "devel.segmented-changelog-rev-compat should not be used outside tests"
+                cl.inner.flush(list(cl.dag.dirty().iterrev()))
+                return
+
             # Flush changelog. At this time remotenames should be up-to-date.
             # We need to write out changelog before remotenames so remotenames
             # do not have dangling pointers.
