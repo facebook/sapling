@@ -565,6 +565,9 @@ segmentedchangelogcompatiblelist = """
     test-fb-hgext-pull-createmarkers-hide-later.t
 
     test-fb-hgext-remotefilelog-blame.t
+    test-fb-hgext-remotefilelog-push-pull.t
+    test-fb-hgext-remotefilelog-sparse.t
+    test-fb-hgext-remotefilelog-treemanifest-lfs.t
 """
 
 ignorerevnumincompatiblelist = """

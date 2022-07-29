@@ -18,13 +18,15 @@
 
   $ hgcloneshallow ssh://user@dummy/master shallow
   streaming all changes
-  2 files to transfer, * of data (glob)
-  transferred 124 bytes in * seconds (*) (glob)
-  searching for changes
-  no changes found
+  0 files to transfer, 0 bytes of data
+  transferred 0 bytes in 0.0 seconds (0 bytes/sec)
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
   updating to branch default
-  fetching tree '' 287ee6e53d4fbc5fab2157eb0383fdff1c3277c8
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' 287ee6e53d4fbc5fab2157eb0383fdff1c3277c8
   1 trees fetched over 0.00s
   fetching tree 'dir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
   1 trees fetched over 0.00s

@@ -20,12 +20,12 @@
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   { metrics : { ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 1},
-                        read : { bytes : 1484},
-                        write : { bytes : 778}}}}
+                        read : { bytes : 1732},
+                        write : { bytes : 697}}}}
   $ hgcloneshallow ssh://user@dummy/master shallow2 -q
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 859},
-                        write : { bytes : 631}}}}
+                        read : { bytes : 1107},
+                        write : { bytes : 550}}}}
 
 We should see the remotefilelog capability here, which advertises that
 the server supports our custom getfiles method.
