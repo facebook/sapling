@@ -192,6 +192,7 @@ def loadsource(source, name):
     mod = modtype(name)
     env = mod.__dict__
     exec(code, env, env)
+    mod.__file__ = f"<{name}>"
     return mod
 
 

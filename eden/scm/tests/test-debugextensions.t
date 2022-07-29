@@ -13,10 +13,13 @@
   > buglink = 'https://example.org/bts'
   > EOF
 
+  $ setconfig extensions.hotfix1=python-base64:Cgo=
+
   $ hg debugextensions --excludedefault
   ext1 (untested!)
   ext2 (3.2.1!)
   histedit
+  hotfix1 (untested!)
   rebase
 
   $ hg debugextensions -v --excludedefault
@@ -31,6 +34,9 @@
   histedit
     location: */hgext/histedit.py* (glob)
     bundled: yes
+  hotfix1
+    location: <edenscm_hgext_hotfix1>
+    bundled: no
   rebase
     location: */hgext/rebase.py* (glob)
     bundled: yes
@@ -56,6 +62,13 @@
     "bundled": true,
     "name": "histedit",
     "source": "*/hgext/histedit.py*", (glob)
+    "testedwith": []
+   },
+   {
+    "buglink": "",
+    "bundled": false,
+    "name": "hotfix1",
+    "source": "<edenscm_hgext_hotfix1>",
     "testedwith": []
    },
    {
