@@ -348,7 +348,7 @@ Sync the amended commit to the other client
 
 Test recovery from broken state (example: invalid json)
   $ cd client1
-  $ echo '}}}' >> .hg/store/commitcloudstate.usertestdefault.b6eca
+  $ echo '}}}' >> .hg/store/cloudsyncstate
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   abort: commitcloud: invalid workspace data: 'failed to parse commitcloudstate.usertestdefault.b6eca'
@@ -685,7 +685,6 @@ Let them both run together
 
 Wait for them to complete and then do another cloud sync
   $ wait
-  $ hg debugwaitbackup
   $ hg cloud sync -q
   $ grep rebasing $TESTTMP/racerebase.out
   rebasing f2ccc2716735 "stack commit 2" (testbookmark)

@@ -5,6 +5,7 @@
 
 from __future__ import absolute_import
 
+import hashlib
 import itertools
 import re
 import socket
@@ -117,6 +118,23 @@ def sync(repo, *args, **kwargs):
         return rc
 
 
+def _hashrepostate(repo) -> bytes:
+    """hash repo states that affect commit cloud sync
+
+    Those states are bookmarks, remotenames, visibleheads, as they are synced
+    by commit cloud. Other states like tip, config, commit cloud sync states
+    are not included, as they do not affect cloud sync - changes in these states
+    do not trigger a cloud sync.
+
+    The hash is used to detect repo changes.
+    """
+    buf = []
+    ml = repo.metalog()
+    for key in ["bookmarks", "remotenames", "visibleheads"]:
+        buf.append(ml.get(key) or b"")
+    return hashlib.sha1(b"".join(buf)).digest()
+
+
 def _sync(
     repo,
     cloudrefs=None,
@@ -201,7 +219,7 @@ def _sync(
         # The line below makes sure that working copy is updated.
         return _maybeupdateworkingcopy(repo, startnode), None
 
-    origmlroot = repo.metalog().root()
+    origrepostate = _hashrepostate(repo)
 
     remotepath = ccutil.getremotepath(ui)
 
@@ -258,7 +276,7 @@ def _sync(
 
             with repo.transaction("cloudsync") as tr:
 
-                if repo.metalog().root() != origmlroot:
+                if _hashrepostate(repo) != origrepostate:
                     # Another transaction changed the repository while we were backing
                     # up commits. This may have introduced new commits that also need
                     # backing up.  That transaction should have started its own sync

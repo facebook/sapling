@@ -24,61 +24,111 @@ class SyncState(object):
     last sync.
     """
 
-    prefix = "commitcloudstate."
+    # Version 2: a single JSON file "cloudsyncstate" for all workspaces.
+    # format: {workspacename: state}. More compatible with metalog which works
+    # best with fixed filenames.
+    v2filename = "cloudsyncstate"
+
+    # Version 1: a JSON file "commitcloudstate.<workspace>.<hash>" per
+    # workspace.
+    v1prefix = "commitcloudstate."
 
     @classmethod
-    def _filename(cls, workspacename):
+    def _v1filename(cls, workspacename):
+        """filename for workspace, only for compatibility"""
         # make a unique valid filename
         return (
-            cls.prefix
+            cls.v1prefix
             + "".join(x for x in workspacename if x.isalnum())
             + ".%s" % (hashlib.sha256(encodeutf8(workspacename)).hexdigest()[0:5])
         )
 
     @classmethod
     def erasestate(cls, repo, workspacename):
-        filename = cls._filename(workspacename)
+        # update v2 states
+        with repo.lock(), repo.transaction("cloudstate"):
+            states = cls.loadv2states(repo.svfs)
+            if workspacename in states:
+                del states[workspacename]
+                cls.savev2states(repo.svfs, states)
+        # update v1 states
+        filename = cls._v1filename(workspacename)
         # clean up the current state in force recover mode
         repo.svfs.tryunlink(filename)
 
     @classmethod
     def movestate(cls, repo, workspacename, new_workspacename):
-        src = cls._filename(workspacename)
-        dst = cls._filename(new_workspacename)
+        # update v2 states
+        with repo.lock(), repo.transaction("cloudstate"):
+            states = cls.loadv2states(repo.svfs)
+            if workspacename in states:
+                states[new_workspacename] = states[workspacename]
+                cls.savev2states(repo.svfs, states)
+        # update v1 states
+        src = cls._v1filename(workspacename)
+        dst = cls._v1filename(new_workspacename)
         repo.svfs.rename(src, dst)
+
+    @classmethod
+    def loadv2states(cls, svfs):
+        """load states for all workspaces, return {workspacename: state}"""
+        content = svfs.tryread(cls.v2filename) or "{}"
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError:
+            return {}
+
+    @classmethod
+    def savev2states(cls, svfs, states):
+        data = json.dumps(states)
+        with svfs.open(cls.v2filename, "wb", atomictemp=True) as f:
+            f.write(data.encode())
 
     def __init__(self, repo, workspacename):
         self.workspacename = workspacename
-        self.filename = self._filename(workspacename)
+        self.v1filename = self._v1filename(workspacename)
         self.repo = repo
         self.prevstate = None
-        if repo.svfs.exists(self.filename):
-            with repo.svfs.open(self.filename, "r") as f:
-                try:
-                    data = json.load(f)
-                except Exception:
-                    raise ccerror.InvalidWorkspaceDataError(
-                        repo.ui, _("failed to parse %s") % self.filename
-                    )
 
-                self.version = data["version"]
-                self.heads = [ensurestr(h) for h in data["heads"]]
-                self.bookmarks = {
-                    ensurestr(n): ensurestr(v) for n, v in data["bookmarks"].items()
-                }
-                self.remotebookmarks = {
-                    ensurestr(n): ensurestr(v)
-                    for n, v in data.get("remotebookmarks", {}).items()
-                }
-                self.maxage = data.get("maxage", None)
-                self.omittedheads = [ensurestr(h) for h in data.get("omittedheads", ())]
-                self.omittedbookmarks = [
-                    ensurestr(n) for n in data.get("omittedbookmarks", ())
-                ]
-                self.omittedremotebookmarks = [
-                    ensurestr(n) for n in data.get("omittedremotebookmarks", ())
-                ]
-                self.lastupdatetime = data.get("lastupdatetime", None)
+        # Try v2 state first.
+        states = self.loadv2states(repo.svfs)
+        data = states.get(workspacename)
+
+        # If v2 state is missing, try load from v1 state.
+        if data is None and repo.svfs.exists(self.v1filename):
+            # Migra v1 state to v2 so v2 state gets used going forward.
+            with repo.lock(), repo.transaction("cloudstate"):
+                # Reload since v2 states might have changed.
+                states = self.loadv2states(repo.svfs)
+                with repo.svfs.open(self.v1filename, "r") as f:
+                    try:
+                        data = json.load(f)
+                    except Exception:
+                        raise ccerror.InvalidWorkspaceDataError(
+                            repo.ui, _("failed to parse %s") % self.v1filename
+                        )
+                    states[workspacename] = data
+                self.savev2states(repo.svfs, states)
+
+        if data is not None:
+            self.version = data["version"]
+            self.heads = [ensurestr(h) for h in data["heads"]]
+            self.bookmarks = {
+                ensurestr(n): ensurestr(v) for n, v in data["bookmarks"].items()
+            }
+            self.remotebookmarks = {
+                ensurestr(n): ensurestr(v)
+                for n, v in data.get("remotebookmarks", {}).items()
+            }
+            self.maxage = data.get("maxage", None)
+            self.omittedheads = [ensurestr(h) for h in data.get("omittedheads", ())]
+            self.omittedbookmarks = [
+                ensurestr(n) for n in data.get("omittedbookmarks", ())
+            ]
+            self.omittedremotebookmarks = [
+                ensurestr(n) for n in data.get("omittedremotebookmarks", ())
+            ]
+            self.lastupdatetime = data.get("lastupdatetime", None)
         else:
             self.version = 0
             self.heads = []
@@ -127,9 +177,17 @@ class SyncState(object):
             "lastupdatetime": time.time(),
         }
         tr.addfilegenerator(
-            self.filename,
-            [self.filename],
-            lambda f: f.write(encodeutf8(json.dumps(data))),
+            self.v1filename,
+            [self.v1filename],
+            lambda f, data=data: f.write(encodeutf8(json.dumps(data))),
+        )
+        svfs = tr._vfsmap[""]
+        states = self.loadv2states(svfs)
+        states[self.workspacename] = data
+        tr.addfilegenerator(
+            self.v2filename,
+            [self.v2filename],
+            lambda f, states=states: f.write(encodeutf8(json.dumps(states))),
         )
         self.prevstate = (self.version, self.heads, self.bookmarks)
         self.version = version

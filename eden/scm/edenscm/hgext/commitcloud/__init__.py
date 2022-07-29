@@ -182,7 +182,7 @@ def extsetup(ui):
     localrepo.localrepository._wlockfreeprefix.add(backuplock.progressfilename)
     localrepo.localrepository._wlockfreeprefix.add(backupstate.BackupState.directory)
     localrepo.localrepository._wlockfreeprefix.add(background._autobackupstatefile)
-    localrepo.localrepository._lockfreeprefix.add(syncstate.SyncState.prefix)
+    localrepo.localrepository._lockfreeprefix.add(syncstate.SyncState.v1prefix)
     localrepo.localrepository._lockfreeprefix.add(sync._syncstatusfile)
 
     def wrapsmartlog(loaded):
