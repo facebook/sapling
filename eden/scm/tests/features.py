@@ -561,6 +561,8 @@ segmentedchangelogcompatiblelist = """
 
     test-debugrebuildchangelog.t
     test-doctor.t
+
+    test-fb-hgext-pull-createmarkers-hide-later.t
 """
 
 ignorerevnumincompatiblelist = """

@@ -104,23 +104,23 @@ hide them since there is a non-hidden successor.
   adding file changes
   marked 2 commits as landed
   $ hg log -G -T '"{desc}" {remotebookmarks}' -r 'all()'
-  o  "add c
+  o  "add d
   │
-  │  Differential Revision: https://phabricator.fb.com/D124
-  │  Reviewed By: someone" default/master
-  o  "add b
+  │  Differential Revision: https://phabricator.fb.com/D131"
+  x  "add c
   │
-  │  Differential Revision: https://phabricator.fb.com/D123
-  │  Reviewed By: someone"
-  │ o  "add d
+  │  Differential Revision: https://phabricator.fb.com/D124"
+  x  "add b
+  │
+  │  Differential Revision: https://phabricator.fb.com/D123"
+  │ o  "add c
   │ │
-  │ │  Differential Revision: https://phabricator.fb.com/D131"
-  │ x  "add c
-  │ │
-  │ │  Differential Revision: https://phabricator.fb.com/D124"
-  │ x  "add b
+  │ │  Differential Revision: https://phabricator.fb.com/D124
+  │ │  Reviewed By: someone" default/master
+  │ o  "add b
   ├─╯
-  │    Differential Revision: https://phabricator.fb.com/D123"
+  │    Differential Revision: https://phabricator.fb.com/D123
+  │    Reviewed By: someone"
   @  "add secondcommit"
   │
   o  "add initial"
@@ -132,7 +132,7 @@ hide them since there is a non-hidden successor.
 
 Now land the last diff.
 
-  $ hg update -r 'max(desc(add))'
+  $ hg update -r 'max(desc("add c")-obsolete())'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg graft -r e4b5974890c0ceff0317ecbc08ec357613fd01dd
   grafting e4b5974890c0 "add d"
@@ -152,7 +152,7 @@ And strip the commit we just landed.
 
   $ hg update -r cc68f5e5f8d6a0aa5683ff6fb1afd15aa95a08b8
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg debugstrip -r 'max(desc(add))'
+  $ hg debugstrip -r 'max(desc("add d")-obsolete())'
 
 Here pull should now detect commit 4 has been landed.  It should hide this
 commit, and should also hide 3 and 2, which were previously landed, but up
@@ -161,9 +161,7 @@ until now had non-hidden successors.
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg pull
   pulling from ssh://user@dummy/server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  no changes found
   marked 1 commit as landed
   $ hg log -G -T '"{desc}" {remotebookmarks}' -r 'all()'
   o  "add d
