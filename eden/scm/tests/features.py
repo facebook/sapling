@@ -578,6 +578,9 @@ segmentedchangelogcompatiblelist = """
     test-pushrebase-withmerges.t
     test-rebase-mutation.t
     test-rebase-scenario-global.t
+
+    test-context.py
+    test-rustmanifest.t
 """
 
 ignorerevnumincompatiblelist = """

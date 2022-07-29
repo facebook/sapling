@@ -17,6 +17,7 @@
   ...     return list(tuple(line.split()) for line in sheval(cmd).splitlines())
 
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig devel.segmented-changelog-rev-compat=True
   $ . "$TESTDIR/library.sh"
 
   $ configure dummyssh
@@ -150,13 +151,17 @@
   updating bookmark master
   remote: pushing 5 changesets:
   remote:     *  B (glob)
-  remote:     *  C (glob)
   remote:     *  D (glob)
+  remote:     *  C (glob)
   remote:     *  E (glob)
   remote:     *  F (glob)
   remote: 5 new changesets from the server will be downloaded
 
   $ hg files -r master
+  fetching tree '' 2d97a52179228b1897e02a1f2005e8913fbe284e
+  1 trees fetched over 0.00s
+  fetching tree 'y' c92bb8214e072555389f3fa53b9bb25df5a7c35a
+  1 trees fetched over 0.00s
   x/a
   x/b
   y/c
@@ -164,18 +169,17 @@
 # Check that a secondary client will pull a consistent view of the repository
 
   $ hg clone 'ssh://user@dummy/serverpushrebasemerge' $TESTTMP/pullingclient -q
-  fetching tree '' c8a3f0d6d065d07e6ee7cee3edf15712a7d15d46
+  fetching tree 'x' 34f8d0715188dfecc32838d1d23a93453e0cebd9
   1 trees fetched over 0.00s
-  2 trees fetched over 0.00s
   $ cd $TESTTMP/pullingclient
 
   >>> pprint.pprint(listcommitandmanifesthashes("$A::"))
   [('A', '8080f180998f', '47968cf0bfa76dd552b0c468487e0b2e58dd067a'),
    ('B', 'f3631cd323b7', '2e67f334fe3b408e0657bd93b6b0799d8e4bffbf'),
-   ('C', 'ab6f17cbfcbc', '9f7dac017ac942faf4c03e81b078194f95a4e042'),
    ('D', 'd55de8a18953', 'e6e729a4a441b3c48a20a19e6696a33428e8824b'),
-   ('E', 'ce93848c2534', 'c618b8195031a0c6874a557ee7445f6567af4dd7'),
-   ('F', '2ce21aadf6a7', 'c8a3f0d6d065d07e6ee7cee3edf15712a7d15d46')]
+   ('C', 'ab6f17cbfcbc', '9f7dac017ac942faf4c03e81b078194f95a4e042'),
+   ('E', '0f8253472fd7', '049ce323291d05719ed7194daffe12ef8b7814b2'),
+   ('F', '9b380bc27039', '2d97a52179228b1897e02a1f2005e8913fbe284e')]
 
 
 # Check pushrebase with a branch
@@ -196,6 +200,10 @@
   > |
   > desc(E)
   > EOS
+  fetching tree '' 049ce323291d05719ed7194daffe12ef8b7814b2
+  1 trees fetched over 0.00s
+  fetching tree 'y' bfa15c41434329031f15c569d46b9680cf0f791c
+  1 trees fetched over 0.00s
   $ hg push --to=master -r $J
   pushing rev * to destination ssh://user@dummy/serverpushrebasemerge bookmark master (glob)
   searching for changes
@@ -226,18 +234,18 @@
   │
   o    E
   ├─╮
-  │ o  D
+  │ o  C
   │ │
-  o │  C
+  o │  D
   ├─╯
   o  B
   │
   o  A
 
   >>> pprint.pprint(listcommitandmanifesthashes("'desc(F)::'"))
-  [('F', '2ce21aadf6a7', 'c8a3f0d6d065d07e6ee7cee3edf15712a7d15d46'),
-   ('G', 'f90743172206', '5d26e08806c5cdc3e7f3fba1d7fcf50cd224960e'),
-   ('H', '3c5d22b367fc', '41a7c2a088eb3a436987339e5e73f08afa7da8e8'),
-   ('I', 'ae1644484ec9', 'b151de3f04de862dfdbaa23c68a297f225951044'),
-   ('J', 'ec18dc54c59a', 'ae0f3f86d8bf6dfb032cfc903794783ca8752437')]
+  [('F', '9b380bc27039', '2d97a52179228b1897e02a1f2005e8913fbe284e'),
+   ('G', '8895c7a37a32', '466431794675a5fba98f3ccccdd773bcd8ec0f6b'),
+   ('H', 'b2b96a821661', 'c1171beb064769767daf0ab34e6fa3424bbc4944'),
+   ('I', '597fc1dd8fc9', '14fbfd17f887975a8d7e8250304c52b015e1c5f7'),
+   ('J', 'fc81ac1bdb86', '2b28bec49298b3e0e716c99a8c329db5d8ab22e2')]
 
