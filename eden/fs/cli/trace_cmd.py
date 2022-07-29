@@ -134,8 +134,51 @@ class TraceFsCommand(Subcmd):
         )
 
 
-@trace_cmd("inode", "Monitor Inode Changes.")
+@trace_cmd("inode", "Monitor inode state changes (loads and materializations).")
 class TraceInodeCommand(Subcmd):
+    DESCRIPTION = """Trace EdenFS inode state changes including inode loads and materializations.
+
+With the --retroactive flag, this will print a list of the past N inode changes.
+By default, it will print up to N=100 events, but this can be configured with the
+following config option:
+[telemetry]
+activitybuffer-max-events = 100
+
+Loading an inode refers to fetching state for the inode to store into memory.
+While loading can some times cause fetching data contents for an inode, this is
+not always the case, and fetching can sometimes happen in other cases. Content
+data fetches from hg servers can be traced with the eden trace hg command. Note:
+loading an inode will cause its parent inode to be loaded if it isn't already.
+
+Materializing an inode refers to modifying the inode's data such that no source
+control object ID can be used to refer to the inode's data. This causes the
+inode's data to be saved locally in EdenFS's overlay and causes further
+materializations of the inode's parent. Note: this means one materialization
+will cause materializations in parent inodes until a previously materialized
+parent inode is reached (this may materialize inodes all the way to the root).
+
+Further definitions regarding inodes state changes can be found at
+https://github.com/facebookexperimental/eden/blob/main/eden/fs/docs/Glossary.md
+
+Events for this command are encoded using the following emojis/letters:
+
+Event Progress:
+\u21E3 START
+\u2193 FINISH
+\u26A0 FAILURE
+
+Resource Type:
+\U0001F954 BLOB/FILE
+\U0001F332 TREE/DIRECTORY
+
+Event Type
+L LOAD
+M MATERIALIZE
+"""
+    # pyre-fixme[15]: Type typing.Type[argparse.RawDescriptionHelpFormatter] is not a
+    # subtype of the overridden attribute typing.Optional[argparse.HelpFormatter]
+    FORMATTER = argparse.RawDescriptionHelpFormatter
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "checkout", default=None, nargs="?", help="Path to the checkout"
