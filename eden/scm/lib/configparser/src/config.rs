@@ -261,7 +261,7 @@ impl ConfigSet {
     }
 
     /// override config values from a list of --config overrides
-    pub fn set_overrides(&mut self, overrides: &[String]) -> crate::Result<()> {
+    pub(crate) fn set_overrides(&mut self, overrides: &[String]) -> crate::Result<()> {
         for config_override in overrides {
             let equals_pos = config_override
                 .find('=')

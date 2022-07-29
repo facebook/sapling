@@ -248,9 +248,7 @@ pub fn run(
                 &backing_path,
             )?
         } else {
-            let mut repo = Repo::load(&backing_path)?;
-            repo.config_mut().set_overrides(&global_opts.config)?;
-            repo
+            Repo::load(&backing_path, &global_opts.config, &global_opts.configfile)?
         };
         let target_rev =
             get_update_target(&mut logger, &mut backing_repo, &clone_opts)?.map(|(rev, _)| rev);
@@ -361,9 +359,7 @@ fn clone_metadata(
         .collect::<String>();
     hgrc_content.push_str(format!("\n[paths]\ndefault = {}\n", clone_opts.source).as_str());
 
-    let mut repo = Repo::init(destination, config, Some(hgrc_content))?;
-
-    repo.config_mut().set_overrides(&global_opts.config)?;
+    let mut repo = Repo::init(destination, config, Some(hgrc_content), &global_opts.config)?;
     repo.add_requirement("remotefilelog")?;
 
     let edenapi = repo.eden_api()?;
@@ -393,8 +389,7 @@ fn clone_metadata(
         revlog_clone(logger, io, global_opts, &clone_opts.source, destination)?;
         // reload the repo to pick up any changes written out by the revlog clone
         // such as metalog remotenames writes
-        repo = Repo::load(destination)?;
-        repo.config_mut().set_overrides(&global_opts.config)?;
+        repo = Repo::load(destination, &global_opts.config, &global_opts.configfile)?;
     }
 
     ::fail::fail_point!("run::clone", |_| {

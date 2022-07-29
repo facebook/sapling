@@ -39,25 +39,6 @@ pub fn args() -> Result<Vec<String>> {
         .collect()
 }
 
-/// Apply config override flags.
-fn override_config<P>(
-    config: &mut ConfigSet,
-    config_paths: &[P],
-    config_overrides: &[String],
-) -> Result<()>
-where
-    P: AsRef<Path>,
-{
-    let mut errors = Vec::new();
-
-    for config_path in config_paths {
-        errors.extend(config.load_path(config_path, &"--configfile".into()));
-    }
-    config.set_overrides(config_overrides)?;
-
-    Ok(())
-}
-
 fn add_global_flag_derived_configs(repo: &mut OptionalRepo, global_opts: HgGlobalOpts) {
     if let OptionalRepo::Some(_) = repo {
         if global_opts.hidden {
@@ -222,26 +203,19 @@ impl Dispatcher {
         let cwd = util::path::absolute(cwd)?;
 
         // Load repo and configuration.
-        match OptionalRepo::from_repository_path_and_cwd(&global_opts.repository, &cwd) {
-            Ok(mut optional_repo) => {
-                override_config(
-                    optional_repo.config_mut(),
-                    &global_opts.configfile,
-                    &global_opts.config,
-                )?;
-
-                Ok(Self {
-                    args,
-                    early_result,
-                    global_opts,
-                    optional_repo,
-                })
-            }
+        match OptionalRepo::from_global_opts(&global_opts, &cwd) {
+            Ok(optional_repo) => Ok(Self {
+                args,
+                early_result,
+                global_opts,
+                optional_repo,
+            }),
             Err(err) => {
                 // If we failed to load the repo, make one last ditch effort to load a repo-less config.
                 // This might allow us to run the network doctor even if this repo's dynamic config is not loadable.
-                if let Ok(mut config) = configparser::hg::load(None, &[], &[]) {
-                    override_config(&mut config, &global_opts.configfile, &global_opts.config)?;
+                if let Ok(config) =
+                    configparser::hg::load(None, &global_opts.config, &global_opts.configfile)
+                {
                     Err(errors::triage_error(&config, err))
                 } else {
                     Err(err)
@@ -278,13 +252,7 @@ impl Dispatcher {
     }
 
     fn load_repoless_config(&self) -> Result<ConfigSet> {
-        let mut config = configparser::hg::load(None, &[], &[])?;
-        override_config(
-            &mut config,
-            &self.global_opts.configfile,
-            &self.global_opts.config,
-        )?;
-        Ok(config)
+        configparser::hg::load(None, &self.global_opts.config, &self.global_opts.configfile)
     }
 
     fn prepare_command<'a>(

@@ -58,10 +58,11 @@ impl Repo {
         root_path: &Path,
         config: &ConfigSet,
         hgrc_contents: Option<String>,
+        extra_config_values: &[String],
     ) -> Result<Repo> {
         let root_path = absolute(root_path)?;
         init::init_hg_repo(&root_path, config, hgrc_contents)?;
-        let mut repo = Self::load(&root_path)?;
+        let mut repo = Self::load(&root_path, extra_config_values, &[])?;
         repo.metalog()?.write().init_tracked()?;
         Ok(repo)
     }
@@ -69,7 +70,11 @@ impl Repo {
     /// Load the repo from explicit path.
     ///
     /// Load repo configurations.
-    pub fn load<P>(path: P) -> Result<Self>
+    pub fn load<P>(
+        path: P,
+        extra_config_values: &[String],
+        extra_config_files: &[String],
+    ) -> Result<Self>
     where
         P: Into<PathBuf>,
     {
@@ -77,7 +82,8 @@ impl Repo {
         assert!(path.is_absolute());
 
         let dot_hg_path = path.join(".hg");
-        let config = configparser::hg::load(Some(&dot_hg_path), &[], &[])?;
+        let config =
+            configparser::hg::load(Some(&dot_hg_path), extra_config_values, extra_config_files)?;
         Self::load_with_config(path, config)
     }
 

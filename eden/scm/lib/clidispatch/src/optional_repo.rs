@@ -13,6 +13,8 @@ use configparser::config::ConfigSet;
 use repo::errors;
 use repo::repo::Repo;
 
+use crate::global_flags::HgGlobalOpts;
+
 /// Either an optional [`Repo`] which owns a [`ConfigSet`], or a [`ConfigSet`]
 /// without a repo.
 pub enum OptionalRepo {
@@ -25,26 +27,27 @@ impl OptionalRepo {
     ///
     /// Return None if there is no repo found from the current directory or its
     /// parent directories.
-    pub fn from_cwd(cwd: impl AsRef<Path>) -> Result<OptionalRepo> {
+    pub fn from_cwd(opts: &HgGlobalOpts, cwd: impl AsRef<Path>) -> Result<OptionalRepo> {
         if let Some(path) = find_hg_repo_root(&util::path::absolute(cwd)?) {
-            let repo = Repo::load(path)?;
+            let repo = Repo::load(path, &opts.config, &opts.configfile)?;
             Ok(OptionalRepo::Some(repo))
         } else {
-            Ok(OptionalRepo::None(configparser::hg::load(None, &[], &[])?))
+            Ok(OptionalRepo::None(configparser::hg::load(
+                None,
+                &opts.config,
+                &opts.configfile,
+            )?))
         }
     }
 
-    /// Load the repo from a --repository (or --repo, -R) flag.
+    /// Load the repo from the global --repository (or --repo, -R) flag.
     ///
-    /// The path can be either a directory or a bundle file.
-    pub fn from_repository_path_and_cwd(
-        repository_path: impl AsRef<Path>,
-        cwd: impl AsRef<Path>,
-    ) -> Result<OptionalRepo> {
-        let repository_path = repository_path.as_ref();
+    /// -R can be either a directory or a bundle file.
+    pub fn from_global_opts(opts: &HgGlobalOpts, cwd: impl AsRef<Path>) -> Result<OptionalRepo> {
+        let repository_path: &Path = opts.repository.as_ref();
         if repository_path.as_os_str().is_empty() {
             // --repo is not specified, only use cwd.
-            return Self::from_cwd(cwd);
+            return Self::from_cwd(opts, cwd);
         }
 
         let cwd = cwd.as_ref();
@@ -57,11 +60,11 @@ impl OptionalRepo {
         if let Ok(path) = util::path::absolute(&full_repository_path) {
             if path.join(".hg").is_dir() {
                 // `path` is a directory with `.hg`.
-                let repo = Repo::load(path)?;
+                let repo = Repo::load(path, &opts.config, &opts.configfile)?;
                 return Ok(OptionalRepo::Some(repo));
             } else if path.is_file() {
                 // 'path' is a bundle path
-                return Self::from_cwd(cwd);
+                return Self::from_cwd(opts, cwd);
             }
         }
         Err(errors::RepoNotFound(repository_path.display().to_string()).into())

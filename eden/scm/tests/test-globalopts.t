@@ -185,13 +185,16 @@ Testing --config:
   $ hg --cwd c --config paths.quuxfoo=bar paths | grep quuxfoo > /dev/null && echo quuxfoo
   quuxfoo
   $ hg --cwd c --config '' tip -q
-  hg: parse error: malformed --config option: '' (use --config section.name=value)
+  hg: parse errors: malformed --config option: '' (use --config section.name=value)
+  
   [255]
   $ hg --cwd c --config a.b tip -q
-  hg: parse error: malformed --config option: 'a.b' (use --config section.name=value)
+  hg: parse errors: malformed --config option: 'a.b' (use --config section.name=value)
+  
   [255]
   $ hg --cwd c --config a tip -q
-  hg: parse error: malformed --config option: 'a' (use --config section.name=value)
+  hg: parse errors: malformed --config option: 'a' (use --config section.name=value)
+  
   [255]
   $ hg --cwd c --config a.= tip -q
   abort: malformed --config option: 'a.=' (use --config section.name=value)
