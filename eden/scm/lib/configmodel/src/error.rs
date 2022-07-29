@@ -47,6 +47,9 @@ pub enum Error {
 
     #[error("{0}")]
     General(String),
+
+    #[error("{0}")]
+    Other(#[source] anyhow::Error),
 }
 
 impl From<String> for Error {

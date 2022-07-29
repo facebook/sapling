@@ -307,6 +307,7 @@ hgrc.dynamic write errors.
   $ rm -f .hg/hgrc.dynamic
   $ chmod u-w .hg/
   $ hg log -r tip
-  abort: required config not found at "$TESTTMP/client2/.hg/hgrc.dynamic"
+  hg: parse errors: required config not found at "$TESTTMP/client2/.hg/hgrc.dynamic"
+  
   [255]
 #endif

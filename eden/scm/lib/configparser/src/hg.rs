@@ -20,8 +20,6 @@ use std::io::ErrorKind;
 use std::path::Path;
 use std::path::PathBuf;
 
-#[cfg(feature = "fb")]
-use anyhow::anyhow;
 use anyhow::Result;
 use minibytes::Text;
 use url::Url;
@@ -62,7 +60,7 @@ pub trait ConfigSetHgExt {
         &mut self,
         repo_path: Option<&Path>,
         readonly_items: Option<Vec<(S, N)>>,
-    ) -> Result<SupersetVerification>;
+    ) -> Result<SupersetVerification, Errors>;
 
     /// Load system config files if `$HGRCPATH` is not set.
     /// Return errors parsing files.
@@ -85,7 +83,7 @@ pub trait ConfigSetHgExt {
     /// Return errors parsing files.
     fn load_hgrc(&mut self, path: impl AsRef<Path>, source: &'static str) -> Vec<Error>;
 
-    fn validate_dynamic(&mut self) -> Result<SupersetVerification>;
+    fn validate_dynamic(&mut self) -> Result<SupersetVerification, Error>;
 }
 
 pub fn load<S: Into<Text>, N: Into<Text>>(
@@ -226,7 +224,7 @@ impl ConfigSetHgExt for ConfigSet {
         &mut self,
         repo_path: Option<&Path>,
         readonly_items: Option<Vec<(S, N)>>,
-    ) -> Result<SupersetVerification> {
+    ) -> Result<SupersetVerification, Errors> {
         let mut errors = vec![];
 
         let mut opts = Options::new();
@@ -243,7 +241,11 @@ impl ConfigSetHgExt for ConfigSet {
             );
         }
         #[cfg(feature = "fb")]
-        errors.append(&mut self.load_dynamic(repo_path, opts.clone())?);
+        errors.append(
+            &mut self
+                .load_dynamic(repo_path, opts.clone())
+                .map_err(|e| Errors(vec![Error::Other(e)]))?,
+        );
         errors.append(&mut self.load_system(opts.clone()));
         errors.append(&mut self.load_user(opts.clone()));
 
@@ -255,10 +257,10 @@ impl ConfigSetHgExt for ConfigSet {
         }
 
         if !errors.is_empty() {
-            return Err(Errors(errors).into());
+            return Err(Errors(errors));
         }
 
-        self.validate_dynamic()
+        self.validate_dynamic().map_err(|err| Errors(vec![err]))
     }
 
     fn load_system(&mut self, opts: Options) -> Vec<Error> {
@@ -471,7 +473,7 @@ impl ConfigSetHgExt for ConfigSet {
         self.load_path(path, &opts)
     }
 
-    fn validate_dynamic(&mut self) -> Result<SupersetVerification> {
+    fn validate_dynamic(&mut self) -> Result<SupersetVerification, Error> {
         let superset_location: String = "hgrc.dynamic".to_string();
         let subset_locations: Vec<String> =
             self.get_or("configs", "validationsubset", || vec![])?;
@@ -659,12 +661,12 @@ pub fn repo_name_from_url(s: &str) -> Option<String> {
 }
 
 #[cfg(feature = "fb")]
-fn get_config_dir(repo_path: Option<&Path>) -> Result<PathBuf> {
+fn get_config_dir(repo_path: Option<&Path>) -> Result<PathBuf, Error> {
     Ok(match repo_path {
         Some(repo_path) => {
             let shared_path = repo_path.join("sharedpath");
             if shared_path.exists() {
-                let raw = read_to_string(shared_path)?;
+                let raw = read_to_string(&shared_path).map_err(|e| Error::Io(shared_path, e))?;
                 let trimmed = raw.trim_end_matches("\n");
                 // sharedpath can be relative, so join it with repo_path.
                 repo_path.join(trimmed)
@@ -695,7 +697,10 @@ fn get_config_dir(repo_path: Option<&Path>) -> Result<PathBuf> {
                 }
             }
 
-            return Err(anyhow!("couldn't find config cache dir: {:?}", errs));
+            return Err(Error::General(format!(
+                "couldn't find config cache dir: {:?}",
+                errs
+            )));
         }
     })
 }
