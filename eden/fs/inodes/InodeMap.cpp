@@ -869,17 +869,7 @@ Future<SerializedInodeMap> InodeMap::shutdown(
   // we know that all inodes have been destroyed and we can complete shutdown.
   root_.manualDecRef();
 
-  return std::move(future).thenValue([
-#ifndef _WIN32
-                                         this,
-                                         doTakeover
-#endif
-  ](auto&&) {
-#ifdef _WIN32
-    // On Windows we don't have the takeover implemented yet, so we will return
-    // from here.
-    return SerializedInodeMap{};
-#else
+  return std::move(future).thenValue([this, doTakeover](auto&&) {
     // TODO: This check could occur after the loadedInodes_ assertion below to
     // maximize coverage of any invariants that are broken during shutdown.
     if (!doTakeover) {
@@ -922,7 +912,6 @@ Future<SerializedInodeMap> InodeMap::shutdown(
     }
 
     return result;
-#endif
   });
 }
 
