@@ -71,9 +71,7 @@ impl OptionalRepo {
             let repo = Repo::load(path)?;
             Ok(OptionalRepo::Some(repo))
         } else {
-            Ok(OptionalRepo::None(
-                configparser::hg::load::<String, String>(None, None)?,
-            ))
+            Ok(OptionalRepo::None(configparser::hg::load(None, &[], &[])?))
         }
     }
 
@@ -159,7 +157,7 @@ impl Repo {
         assert!(path.is_absolute());
 
         let dot_hg_path = path.join(".hg");
-        let config = configparser::hg::load::<String, String>(Some(&dot_hg_path), None)?;
+        let config = configparser::hg::load(Some(&dot_hg_path), &[], &[])?;
         Self::load_with_config(path, config)
     }
 

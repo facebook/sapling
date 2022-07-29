@@ -86,12 +86,46 @@ pub trait ConfigSetHgExt {
     fn validate_dynamic(&mut self) -> Result<SupersetVerification, Error>;
 }
 
-pub fn load<S: Into<Text>, N: Into<Text>>(
+/// Load config from specified repo .hg path, or global config if no path specified.
+/// `extra_values` contains config overrides (i.e. "--config" CLI values).
+/// `extra_files` contains additional config files (i.e. "--configfile" CLI values).
+pub fn load(
     repo_path: Option<&Path>,
-    readonly_items: Option<Vec<(S, N)>>,
+    extra_values: &[String],
+    extra_files: &[String],
 ) -> Result<ConfigSet> {
     let mut cfg = ConfigSet::new();
-    cfg.load(repo_path, readonly_items)?;
+
+    let mut errors = Vec::new();
+    for path in extra_files {
+        errors.extend(cfg.load_path(&path, &"--configfile".into()));
+    }
+
+    if let Err(err) = cfg.set_overrides(extra_values) {
+        errors.push(err);
+    }
+
+    match cfg.load::<Text, Text>(repo_path, None) {
+        Ok(_) => {
+            if !errors.is_empty() {
+                return Err(Errors(errors).into());
+            }
+        }
+        Err(mut err) => {
+            err.0.extend(errors);
+            return Err(err.into());
+        }
+    }
+
+    // Load the CLI configs again to make sure they take precedence.
+    // The "readonly" facility can't be used to pin the configs
+    // because it doesn't interact with the config verification properly.
+    for path in extra_files {
+        cfg.load_path(&path, &"--configfile".into());
+    }
+
+    let _ = cfg.set_overrides(extra_values);
+
     Ok(cfg)
 }
 
@@ -765,6 +799,7 @@ pub fn generate_dynamicconfig(
 
     let hgrc_path = config_dir.join("hgrc.dynamic");
     let global_config_dir = get_config_dir(None)?;
+
     let config = calculate_dynamicconfig(global_config_dir, repo_name, canary, user_name)?;
     let config_str = format!("{}{}", header, config.to_string());
 
@@ -1070,6 +1105,33 @@ mod tests {
         let mut cfg = ConfigSet::new();
         cfg.load::<String, String>(None, None).unwrap();
         assert_eq!(cfg.get("treestate", "repackfactor").unwrap(), "3");
+    }
+
+    #[test]
+    fn test_load_cli_args() {
+        let mut env = lock_env();
+
+        // Skip real dynamic config.
+        env.set("TESTTMP", Some("1"));
+
+        let dir = TempDir::new("test_load").unwrap();
+
+        let repo_rc = dir.path().join("hgrc");
+        write_file(repo_rc, "[s]\na=orig\nb=orig\nc=orig");
+
+        let other_rc = dir.path().join("other.rc");
+        write_file(other_rc.clone(), "[s]\na=other\nb=other");
+
+        let cfg = load(
+            Some(dir.path()),
+            &["s.b=flag".to_string()],
+            &[format!("{}", other_rc.display())],
+        )
+        .unwrap();
+
+        assert_eq!(cfg.get("s", "a"), Some("other".into()));
+        assert_eq!(cfg.get("s", "b"), Some("flag".into()));
+        assert_eq!(cfg.get("s", "c"), Some("orig".into()));
     }
 }
 

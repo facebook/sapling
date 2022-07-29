@@ -240,7 +240,7 @@ impl Dispatcher {
             Err(err) => {
                 // If we failed to load the repo, make one last ditch effort to load a repo-less config.
                 // This might allow us to run the network doctor even if this repo's dynamic config is not loadable.
-                if let Ok(mut config) = configparser::hg::load::<String, String>(None, None) {
+                if let Ok(mut config) = configparser::hg::load(None, &[], &[]) {
                     override_config(&mut config, &global_opts.configfile, &global_opts.config)?;
                     Err(errors::triage_error(&config, err))
                 } else {
@@ -278,7 +278,7 @@ impl Dispatcher {
     }
 
     fn load_repoless_config(&self) -> Result<ConfigSet> {
-        let mut config = configparser::hg::load::<String, String>(None, None)?;
+        let mut config = configparser::hg::load(None, &[], &[])?;
         override_config(
             &mut config,
             &self.global_opts.configfile,

@@ -34,7 +34,7 @@ impl BackingStore {
         allow_retries: bool,
     ) -> Result<Self> {
         let hg = repository.as_ref().join(".hg");
-        let mut config = configparser::hg::load::<String, String>(Some(&hg), None)?;
+        let mut config = configparser::hg::load(Some(&hg), &[], &[])?;
 
         if !allow_retries {
             let source = configparser::config::Options::new().source("backingstore");
