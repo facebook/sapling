@@ -124,8 +124,6 @@ class FsOverlay : public IOverlay {
 
   void saveNextInodeNumber(InodeNumber nextInodeNumber);
 
-  void writeNextInodeNumber(InodeNumber nextInodeNumber);
-
   /**
    * Return the next inode number from the kNextInodeNumberFile.  If the file
    * exists and contains a valid InodeNumber, that value is returned. If the

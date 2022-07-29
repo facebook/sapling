@@ -634,18 +634,6 @@ void FsOverlay::removeOverlayData(InodeNumber inodeNumber) {
   }
 }
 
-void FsOverlay::writeNextInodeNumber(InodeNumber nextInodeNumber) {
-  auto nextInodeNumberPath =
-      localDir_ + PathComponentPiece{kNextInodeNumberFile};
-
-  writeFileAtomic(
-      nextInodeNumberPath,
-      ByteRange(
-          reinterpret_cast<const uint8_t*>(&nextInodeNumber),
-          reinterpret_cast<const uint8_t*>(&nextInodeNumber + 1)))
-      .throwUnlessValue();
-}
-
 bool FsOverlay::hasOverlayData(InodeNumber inodeNumber) {
   // TODO: It might be worth maintaining a memory-mapped set to rapidly
   // query whether the overlay has an entry for a particular inode.  As it is,
