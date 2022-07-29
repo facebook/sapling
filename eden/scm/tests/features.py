@@ -554,6 +554,10 @@ segmentedchangelogcompatiblelist = """
 
     test-clone-resume.t
     test-clone-uncompressed.t
+
+    test-commitcloud-sync-bookmarks.t
+    test-commitcloud-sync-omission.t
+    test-commitcloud-sync-remote-bookmarks.t
 """
 
 ignorerevnumincompatiblelist = """

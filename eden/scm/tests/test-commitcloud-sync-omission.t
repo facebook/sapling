@@ -1,5 +1,6 @@
 #chg-compatible
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig devel.segmented-changelog-rev-compat=true
 
 #require jq
   $ configure mutation-norecord dummyssh
@@ -452,13 +453,13 @@ Connect to commit cloud
   │
   o  1f9ebd6d1390 oldstack-feb1 oldbook
   │
-  │ o  ff52de2f760c client2-feb28
-  ├─╯
   │ o  46f8775ee5d4 newstack-feb28
   │ │
   │ o  7f958333fe84 newstack-feb15
   │ │
   │ o  56a352317b67 newstack-feb13 newbook
+  ├─╯
+  │ o  ff52de2f760c client2-feb28
   ├─╯
   @  df4f53cec30a base
   

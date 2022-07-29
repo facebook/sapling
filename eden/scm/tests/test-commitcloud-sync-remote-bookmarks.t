@@ -6,6 +6,7 @@
   $ setconfig remotenames.autopullhoistpattern=re:.*
   $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=server
+  $ setconfig devel.segmented-changelog-rev-compat=true
 
   $ mkcommit() {
   >    echo $1 > $1

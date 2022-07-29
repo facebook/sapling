@@ -8,6 +8,7 @@
   $ setconfig pullcreatemarkers.use-graphql=false
   $ setconfig pullcreatemarkers.hook-pull=true
   $ setconfig extensions.arcconfig="$TESTDIR/../edenscm/hgext/extlib/phabricator/arcconfig.py"
+  $ setconfig devel.segmented-changelog-rev-compat=true
 
   $ hg init server --config extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   $ cd server
