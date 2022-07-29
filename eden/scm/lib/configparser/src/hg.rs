@@ -828,13 +828,14 @@ mod tests {
 
     use super::*;
     use crate::config::tests::write_file;
-    use crate::ENV_LOCK;
+    use crate::lock_env;
 
     #[test]
     fn test_basic_hgplain() {
-        let _guard = ENV_LOCK.lock();
-        env::set_var(HGPLAIN, "1");
-        env::remove_var(HGPLAINEXCEPT);
+        let mut env = lock_env();
+
+        env.set(HGPLAIN, Some("1"));
+        env.set(HGPLAINEXCEPT, None);
 
         let opts = Options::new().process_hgplain();
         let mut cfg = ConfigSet::new();
@@ -857,9 +858,10 @@ mod tests {
 
     #[test]
     fn test_hgplainexcept() {
-        let _guard = ENV_LOCK.lock();
-        env::remove_var(HGPLAIN);
-        env::set_var(HGPLAINEXCEPT, "alias,revsetalias");
+        let mut env = lock_env();
+
+        env.set(HGPLAIN, None);
+        env.set(HGPLAINEXCEPT, Some("alias,revsetalias"));
 
         let opts = Options::new().process_hgplain();
         let mut cfg = ConfigSet::new();
@@ -883,26 +885,26 @@ mod tests {
 
     #[test]
     fn test_is_plain() {
-        let _guard = ENV_LOCK.lock();
+        let mut env = lock_env();
 
-        env::remove_var(HGPLAIN);
-        env::remove_var(HGPLAINEXCEPT);
+        env.set(HGPLAIN, None);
+        env.set(HGPLAINEXCEPT, None);
         assert!(!is_plain(None));
 
-        env::set_var(HGPLAIN, "1");
+        env.set(HGPLAIN, Some("1"));
         assert!(is_plain(None));
         assert!(is_plain(Some("banana")));
 
-        env::set_var(HGPLAINEXCEPT, "dog,banana,tree");
+        env.set(HGPLAINEXCEPT, Some("dog,banana,tree"));
         assert!(!is_plain(Some("banana")));
 
-        env::remove_var(HGPLAIN);
+        env.set(HGPLAIN, None);
         assert!(!is_plain(Some("banana")));
     }
 
     #[test]
     fn test_hgrcpath() {
-        let _guard = crate::ENV_LOCK.lock();
+        let mut env = crate::lock_env();
 
         let dir = TempDir::new("test_hgrcpath").unwrap();
 
@@ -914,11 +916,12 @@ mod tests {
         #[cfg(windows)]
         let hgrcpath = "$T/1.rc;%T%/2.rc";
 
-        env::remove_var("EDITOR");
-        env::remove_var("VISUAL");
-        env::remove_var("HGPROF");
-        env::set_var("T", dir.path());
-        env::set_var(HGRCPATH, hgrcpath);
+        env.set("EDITOR", None);
+        env.set("VISUAL", None);
+        env.set("HGPROF", None);
+
+        env.set("T", Some(dir.path().to_str().unwrap()));
+        env.set(HGRCPATH, Some(hgrcpath));
 
         let mut cfg = ConfigSet::new();
 
@@ -936,7 +939,8 @@ mod tests {
 
     #[test]
     fn test_load_user() {
-        let _guard = ENV_LOCK.lock();
+        let _env = lock_env();
+
         let dir = TempDir::new("test_hgrcpath").unwrap();
         let path = dir.path().join("1.rc");
 
@@ -983,9 +987,10 @@ mod tests {
 
         write_file(path.clone(), "[x]\na=1\n[alias]\nb=c\n");
 
-        let _guard = ENV_LOCK.lock();
-        env::set_var(HGPLAIN, "1");
-        env::remove_var(HGPLAINEXCEPT);
+        let mut env = lock_env();
+
+        env.set(HGPLAIN, Some("1"));
+        env.set(HGPLAINEXCEPT, None);
 
         let mut cfg = ConfigSet::new();
         cfg.load_hgrc(&path, "hgrc");
@@ -994,7 +999,7 @@ mod tests {
         assert!(cfg.get("alias", "b").is_none());
         assert_eq!(cfg.get("x", "a").unwrap(), "1");
 
-        env::remove_var(HGPLAIN);
+        env.set(HGPLAIN, None);
         cfg.load_hgrc(&path, "hgrc");
 
         assert_eq!(cfg.get("alias", "b").unwrap(), "c");

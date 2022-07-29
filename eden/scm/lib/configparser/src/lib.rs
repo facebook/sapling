@@ -85,13 +85,23 @@ pub use minibytes::Text;
 mod fb;
 
 #[cfg(test)]
+mod test_util;
+
+#[cfg(test)]
 use lazy_static::lazy_static;
 #[cfg(test)]
 use parking_lot::Mutex;
 
 #[cfg(test)]
 lazy_static! {
-    /// Lock for the environment.  This should be acquired by tests that rely on particular
-    /// environment variable values that might be overwritten by other tests.
-    pub static ref ENV_LOCK: Mutex<()> = Mutex::new(());
+    static ref ENV_LOCK: Mutex<()> = Mutex::new(());
+}
+
+#[cfg(test)]
+/// Lock the environment and return an object that allows setting env
+/// vars, undoing env changes when the object goes out of scope. This
+/// should be used by tests that rely on particular environment
+/// variable values that might be overwritten by other tests.
+pub(crate) fn lock_env() -> test_util::EnvLock<'static> {
+    test_util::EnvLock::new(ENV_LOCK.lock())
 }
