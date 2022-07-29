@@ -1590,14 +1590,10 @@ Test repo.anyrevs with customized revset overrides
 
   $ cd ..
 
-Test obsstore related revsets
+Test mutation related revsets
 
   $ hg init repo1
   $ cd repo1
-  $ cat <<EOF >> .hg/hgrc
-  > [experimental]
-  > evolution.createmarkers=True
-  > EOF
 
   $ drawdag <<'EOS'
   > H      F G
@@ -1607,18 +1603,15 @@ Test obsstore related revsets
   >   A    A  Z  # amend: A -> Z
   > EOS
 
+ (all() revset does not show hidden (obsoleted) commits)
   $ hg log -G -r "all()" -T '{desc}\n'
   o  G
   │
-  │ x  F
-  ├─╯
   │ o  D
   │ │
   │ │ o  H
   │ │ │
   o │ │  E
-  ├─╯ │
-  │ x │  C
   ├─╯ │
   │ o │  Z
   │   │
@@ -1642,14 +1635,14 @@ Test obsstore related revsets
   $ hg log -r "predecessors($A)" -T '{desc}\n'
   A
 
+ (hidden commits like C and F are not shown)
   $ hg log -r "successors($B)" -T '{desc}\n'
   B
-  C
   E
   D
-  F
   G
 
+ (hidden commits like C and F are shown with --hidden)
   $ hg log -r "successors($B)" -T '{desc}\n' --hidden
   B
   C
@@ -1691,42 +1684,16 @@ Test `draft() & ::x` is not optimized to _phaseandancestors:
   $ hg init $TESTTMP/repo2
   $ cd $TESTTMP/repo2
   $ hg debugdrawdag <<'EOS'
-  >   P5 S1
+  >   P5 D2
   >    |  |
-  > S2 | D3
-  >   \|/
-  >   P4
-  >    |
-  >   P3 D2
-  >    |  |
-  >   P2 D1
+  >    : D1
   >    |/
   >   P1
   >    |
   >   P0
   > EOS
   $ hg debugmakepublic -r P5
-  $ hg phase --force --secret -r S1+S2
-  $ hg log -G -T '{desc} {phase}' -r 'sort(all(), topo, topo.firstbranch=P5)'
-  o  P5 public
-  │
-  │ o  D3 draft
-  ├─╯
-  o  P4 public
-  │
-  o  P3 public
-  │
-  o  P2 public
-  │
-  │ o  D2 draft
-  │ │
-  │ o  D1 draft
-  ├─╯
-  o  P1 public
-  │
-  o  P0 public
-  
-  $ hg debugrevspec --verify -p analyzed -p optimized 'draft() & ::(((S1+D1+P5)-D3)+S2)'
+  $ hg debugrevspec --verify -p analyzed -p optimized 'draft() & ::(D1+P5)'
   * analyzed:
   (and
     (func
@@ -1736,15 +1703,8 @@ Test `draft() & ::x` is not optimized to _phaseandancestors:
       (symbol 'ancestors')
       (or
         (list
-          (and
-            (or
-              (list
-                (symbol 'S1')
-                (symbol 'D1')
-                (symbol 'P5')))
-            (not
-              (symbol 'D3')))
-          (symbol 'S2')))))
+          (symbol 'D1')
+          (symbol 'P5')))))
   * optimized:
   (and
     (func
@@ -1752,56 +1712,6 @@ Test `draft() & ::x` is not optimized to _phaseandancestors:
       None)
     (func
       (symbol 'ancestors')
-      (or
-        (list
-          (difference
-            (func
-              (symbol '_list')
-              (string 'S1\x00D1\x00P5'))
-            (symbol 'D3'))
-          (symbol 'S2')))))
-  $ hg debugrevspec --verify -p analyzed -p optimized 'secret() & ::9'
-  * analyzed:
-  (and
-    (func
-      (symbol 'secret')
-      None)
-    (func
-      (symbol 'ancestors')
-      (symbol '9')))
-  * optimized:
-  (and
-    (func
-      (symbol 'secret')
-      None)
-    (func
-      (symbol 'ancestors')
-      (symbol '9')))
-  $ hg debugrevspec --verify -p optimized '(not public()) & ancestors(S1+D2+P5, 1)'
-  * optimized:
-  (and
-    (func
-      (symbol '_notpublic')
-      None)
-    (func
-      (symbol 'ancestors')
-      (list
-        (func
-          (symbol '_list')
-          (string 'S1\x00D2\x00P5'))
-        (symbol '1'))))
-  $ hg debugrevspec --verify -p optimized '(not public()) & ancestors(S1+D2+P5, depth=1)'
-  * optimized:
-  (and
-    (func
-      (symbol '_notpublic')
-      None)
-    (func
-      (symbol 'ancestors')
-      (list
-        (func
-          (symbol '_list')
-          (string 'S1\x00D2\x00P5'))
-        (keyvalue
-          (symbol 'depth')
-          (symbol '1')))))
+      (func
+        (symbol '_list')
+        (string 'D1\x00P5'))))

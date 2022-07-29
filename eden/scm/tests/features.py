@@ -13,7 +13,6 @@ tests.
 
 narrowheadsincompatiblelist = """
     test-bookmarks.t
-    test-revset2.t
 
     test-revset.t
 """
