@@ -45,7 +45,7 @@ def isl_cmd(ui, repo, *args, **opts):
 
 def launch_server(ui, *, cwd, port=DEFAULT_PORT, open_isl=True):
     if iswindows:
-        # TODO: Fix packaging issue so isl works on Windows.
+        # TODO(T125822314): Fix packaging issue so isl works on Windows.
         raise error.Abort(_("isl is not currently supported on Windows"))
 
     isl_bin = os.path.join(os.path.dirname(__file__), "isl")
