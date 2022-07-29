@@ -37,6 +37,7 @@ use cmdlib_logging::LoggingArgs;
 use cmdlib_logging::ScubaLoggingArgs;
 use derived_data_remote::RemoteDerivationArgs;
 use environment::MononokeEnvironment;
+use environment::WarmBookmarksCacheDerivedData;
 use fbinit::FacebookInit;
 use megarepo_config::MegarepoConfigsArgs;
 use megarepo_config::MononokeMegarepoConfigsOptions;
@@ -75,6 +76,8 @@ pub struct MononokeAppBuilder {
     cachelib_settings: CachelibSettings,
     default_scuba_dataset: Option<String>,
     defaults: HashMap<&'static str, String>,
+    warm_bookmarks_cache_derived_data: Option<WarmBookmarksCacheDerivedData>,
+    skiplist_enabled: bool,
 }
 
 #[derive(Args, Debug)]
@@ -132,6 +135,8 @@ impl MononokeAppBuilder {
             cachelib_settings: CachelibSettings::default(),
             default_scuba_dataset: None,
             defaults: HashMap::new(),
+            skiplist_enabled: true,
+            warm_bookmarks_cache_derived_data: None,
         }
     }
 
@@ -142,6 +147,19 @@ impl MononokeAppBuilder {
 
     pub fn with_default_scuba_dataset(mut self, default: impl Into<String>) -> Self {
         self.default_scuba_dataset = Some(default.into());
+        self
+    }
+
+    pub fn with_warm_bookmarks_cache(
+        mut self,
+        warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData,
+    ) -> Self {
+        self.warm_bookmarks_cache_derived_data = Some(warm_bookmarks_cache_derived_data);
+        self
+    }
+
+    pub fn with_skiplist_disabled(mut self) -> Self {
+        self.skiplist_enabled = false;
         self
     }
 
@@ -354,6 +372,9 @@ impl MononokeAppBuilder {
             megarepo_configs_options,
             remote_derivation_options,
             disabled_hooks: HashMap::new(),
+            skiplist_enabled: self.skiplist_enabled,
+            warm_bookmarks_cache_derived_data: self.warm_bookmarks_cache_derived_data,
+            filter_repos: None,
         })
     }
 }

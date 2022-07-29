@@ -16,6 +16,7 @@ mod mcrouter;
 mod mysql;
 mod repo;
 mod repo_blobstore;
+mod repo_filter;
 mod runtime;
 mod shutdown_timeout;
 mod tunables;
@@ -34,6 +35,7 @@ pub use repo::MultiRepoArgs;
 pub use repo::RepoArg;
 pub use repo::RepoArgs;
 pub use repo_blobstore::RepoBlobstoreArgs;
+pub use repo_filter::RepoFilterAppExtension;
 pub use runtime::RuntimeArgs;
 pub use shutdown_timeout::ShutdownTimeoutArgs;
 

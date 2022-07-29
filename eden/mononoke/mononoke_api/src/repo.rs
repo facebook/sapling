@@ -72,6 +72,7 @@ use metaconfig_types::LfsParams;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::SourceControlServiceParams;
 use mononoke_api_types::InnerRepo;
+use mononoke_app::MononokeApp;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
@@ -123,7 +124,6 @@ use crate::specifiers::HgChangesetId;
 use crate::tree::TreeContext;
 use crate::tree::TreeId;
 use crate::xrepo::CandidateSelectionHintArgs;
-use crate::MononokeApiEnvironment;
 use crate::WarmBookmarksCacheDerivedData;
 
 pub mod create_bookmark;
@@ -231,68 +231,62 @@ pub async fn open_synced_commit_mapping(
 
 impl Repo {
     pub async fn new(
-        env: &MononokeApiEnvironment,
+        app: Arc<MononokeApp>,
         name: String,
         mut config: RepoConfig,
     ) -> Result<Self, Error> {
-        let fb = env.repo_factory.env.fb;
+        let env = app.environment();
+        let fb = env.fb;
 
         if !env.skiplist_enabled {
             config.skiplist_index_blobstore_key = None;
         }
-        let logger = env.repo_factory.env.logger.new(o!("repo" => name.clone()));
+        let logger = app.logger().new(o!("repo" => name.clone()));
 
-        let inner: InnerRepo = env
-            .repo_factory
+        let inner: InnerRepo = app
+            .repo_factory()
             .build(name.clone(), config.clone())
             .watched(&logger)
             .await?;
 
         let ctx = CoreContext::new_with_logger(fb, logger.clone());
-
-        let warm_bookmarks_cache = if env.warm_bookmarks_cache_enabled {
-            let mut scuba_sample_builder = env.warm_bookmarks_cache_scuba_sample_builder.clone();
-            scuba_sample_builder.add("repo", inner.blob_repo.name().clone());
-            let ctx = ctx.with_mutated_scuba(|_| scuba_sample_builder);
-            let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(ctx, &inner);
-            match env.warm_bookmarks_cache_derived_data {
-                WarmBookmarksCacheDerivedData::HgOnly => {
-                    warm_bookmarks_cache_builder.add_hg_warmers()?;
+        let warm_bookmarks_cache = match env.warm_bookmarks_cache_derived_data {
+            Some(warm_bookmarks_cache_derived_data) => {
+                let mut scuba_sample_builder =
+                    env.warm_bookmarks_cache_scuba_sample_builder.clone();
+                scuba_sample_builder.add("repo", inner.blob_repo.name().clone());
+                let ctx = ctx.with_mutated_scuba(|_| scuba_sample_builder);
+                let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(ctx, &inner);
+                match warm_bookmarks_cache_derived_data {
+                    WarmBookmarksCacheDerivedData::HgOnly => {
+                        warm_bookmarks_cache_builder.add_hg_warmers()?;
+                    }
+                    WarmBookmarksCacheDerivedData::AllKinds => {
+                        warm_bookmarks_cache_builder.add_all_warmers()?;
+                    }
+                    WarmBookmarksCacheDerivedData::None => {}
                 }
-                WarmBookmarksCacheDerivedData::AllKinds => {
-                    warm_bookmarks_cache_builder.add_all_warmers()?;
+                async {
+                    Ok(Arc::new(warm_bookmarks_cache_builder.build().await?)
+                        as Arc<dyn BookmarksCache>)
                 }
-                WarmBookmarksCacheDerivedData::None => {}
+                .boxed()
             }
-
-            async {
-                Ok(Arc::new(warm_bookmarks_cache_builder.build().await?)
-                    as Arc<dyn BookmarksCache>)
-            }
-            .boxed()
-        } else {
-            async {
+            None => async {
                 Ok(
                     Arc::new(NoopBookmarksCache::new(inner.blob_repo.bookmarks().clone()))
                         as Arc<dyn BookmarksCache>,
                 )
             }
-            .boxed()
+            .boxed(),
         };
-
         let content_store = RepoFileContentManager::new(&inner.blob_repo);
 
-        let disabled_hooks = env
-            .repo_factory
-            .env
-            .disabled_hooks
-            .get(&name)
-            .cloned()
-            .unwrap_or_default();
-
+        let disabled_hooks = env.disabled_hooks.get(&name).cloned().unwrap_or_default();
+        let factory = app.repo_factory();
         let hook_manager = make_hook_manager(
             fb,
-            env.repo_factory.acl_provider(),
+            factory.acl_provider(),
             content_store,
             &config,
             name.clone(),

@@ -19,11 +19,8 @@ use megarepo_api::MegarepoApi;
 
 use metaconfig_parser::RepoConfigs;
 use mononoke_api::Mononoke;
-use mononoke_api::MononokeApiEnvironment;
-use mononoke_api::WarmBookmarksCacheDerivedData;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
-use scuba_ext::MononokeScubaSampleBuilder;
 use std::sync::Arc;
 
 use clap::Parser;
@@ -61,6 +58,7 @@ pub enum AsyncRequestsSubcommand {
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
+    let app = Arc::new(app);
     let (repo_name, repo_config) = app.repo_config(args.repo.id_or_name()?)?;
     let repo_configs = RepoConfigs {
         repos: hashmap! {
@@ -69,17 +67,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         common: app.repo_configs().common.clone(),
     };
     let repo_factory = app.repo_factory();
-    let env = MononokeApiEnvironment {
-        repo_factory: repo_factory.clone(),
-        warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::None,
-        skiplist_enabled: false,
-        warm_bookmarks_cache_enabled: false,
-        warm_bookmarks_cache_scuba_sample_builder: MononokeScubaSampleBuilder::with_discard(),
-        //TODO: add a command line arg for filtering
-        repo_filter: None,
-    };
     let mononoke = Arc::new(
-        Mononoke::new(&env, repo_configs.clone())
+        Mononoke::new(Arc::clone(&app))
             .await
             .context("Failed to initialize Mononoke API")?,
     );

@@ -22,16 +22,15 @@ use cmdlib::helpers::serve_forever;
 use cmdlib::monitoring::AliveService;
 use cmdlib_logging::ScribeLoggingArgs;
 use context::SessionContainer;
+use environment::WarmBookmarksCacheDerivedData;
 use hostname::get_hostname;
 use megarepo_api::MegarepoApi;
 use mononoke_api::Mononoke;
-use mononoke_api::MononokeApiEnvironment;
-use mononoke_api::WarmBookmarksCacheDerivedData;
 use mononoke_app::args::HooksAppExtension;
+use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeAppBuilder;
-use scuba_ext::MononokeScubaSampleBuilder;
 
 const SERVICE_NAME: &str = "megarepo_async_requests_worker";
 
@@ -52,10 +51,14 @@ struct AsyncRequestsWorkerArgs {
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app = MononokeAppBuilder::new(fb)
-        .with_app_extension(HooksAppExtension {})
-        .with_app_extension(Fb303AppExtension {})
-        .build::<AsyncRequestsWorkerArgs>()?;
+    let app = Arc::new(
+        MononokeAppBuilder::new(fb)
+            .with_warm_bookmarks_cache(WarmBookmarksCacheDerivedData::None)
+            .with_app_extension(HooksAppExtension {})
+            .with_app_extension(Fb303AppExtension {})
+            .with_app_extension(RepoFilterAppExtension {})
+            .build::<AsyncRequestsWorkerArgs>()?,
+    );
     let args: AsyncRequestsWorkerArgs = app.args()?;
     let request_limit = args.request_limit;
     let jobs_limit = args.jobs;
@@ -70,16 +73,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let session = SessionContainer::new_with_defaults(env.fb);
     let ctx = session.new_context(logger.clone(), env.scuba_sample_builder.clone());
 
-    let api_env = MononokeApiEnvironment {
-        repo_factory: repo_factory.clone(),
-        warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::None,
-        warm_bookmarks_cache_enabled: true,
-        warm_bookmarks_cache_scuba_sample_builder: MononokeScubaSampleBuilder::with_discard(),
-        skiplist_enabled: true,
-        //TODO: add a command line arg for filtering
-        repo_filter: None,
-    };
-    let mononoke = Arc::new(runtime.block_on(Mononoke::new(&api_env, repo_configs.clone()))?);
+    let mononoke = Arc::new(runtime.block_on(Mononoke::new(Arc::clone(&app)))?);
     let megarepo = Arc::new(runtime.block_on(MegarepoApi::new(
         env,
         repo_configs.clone(),

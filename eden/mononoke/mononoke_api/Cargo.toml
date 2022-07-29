@@ -32,6 +32,7 @@ deleted_manifest = { version = "0.1.0", path = "../derived_data/deleted_manifest
 derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
 edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
+environment = { version = "0.1.0", path = "../cmdlib/environment" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../filestore" }
@@ -51,9 +52,9 @@ maplit = "1.0"
 megarepo_error = { version = "0.1.0", path = "../megarepo_api/megarepo_error" }
 mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
-metaconfig_parser = { version = "0.1.0", path = "../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_api_types = { version = "0.1.0", path = "types" }
+mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_renames = { version = "0.1.0", path = "../mutable_renames" }
 pathmatcher = { version = "0.1.0", path = "../../scm/lib/pathmatcher" }
@@ -68,11 +69,9 @@ repo_authorization = { version = "0.1.0", path = "../repo_authorization" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_cross_repo = { version = "0.1.0", path = "../repo_attributes/repo_cross_repo" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
-repo_factory = { version = "0.1.0", path = "../repo_factory" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 repo_sparse_profiles = { version = "0.1.0", path = "../repo_attributes/repo_sparse_profiles" }
 revset = { version = "0.1.0", path = "../revset" }
-scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }
 skeleton_manifest = { version = "0.1.0", path = "../derived_data/skeleton_manifest" }
 skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }

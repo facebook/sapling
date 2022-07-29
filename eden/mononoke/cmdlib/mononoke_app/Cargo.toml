@@ -34,6 +34,7 @@ observability = { version = "0.1.0", path = "../../observability" }
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 prefixblob = { version = "0.1.0", path = "../../blobstore/prefixblob" }
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
+regex = "1.5.4"
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
 repo_factory = { version = "0.1.0", path = "../../repo_factory" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }

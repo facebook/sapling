@@ -12,14 +12,14 @@ use anyhow::Result;
 use clap::Parser;
 use cloned::cloned;
 use cmdlib_logging::ScribeLoggingArgs;
+use environment::WarmBookmarksCacheDerivedData;
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
 use futures_watchdog::WatchdogExt;
 use mononoke_api::Mononoke;
-use mononoke_api::MononokeApiEnvironment;
-use mononoke_api::WarmBookmarksCacheDerivedData;
 use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::McrouterAppExtension;
+use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::fb303::ReadyFlagService;
@@ -73,12 +73,16 @@ struct MononokeServerArgs {
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let app = MononokeAppBuilder::new(fb)
-        .with_default_scuba_dataset("mononoke_test_perf")
-        .with_app_extension(McrouterAppExtension {})
-        .with_app_extension(Fb303AppExtension {})
-        .with_app_extension(HooksAppExtension {})
-        .build::<MononokeServerArgs>()?;
+    let app = Arc::new(
+        MononokeAppBuilder::new(fb)
+            .with_default_scuba_dataset("mononoke_test_perf")
+            .with_warm_bookmarks_cache(WarmBookmarksCacheDerivedData::HgOnly)
+            .with_app_extension(McrouterAppExtension {})
+            .with_app_extension(Fb303AppExtension {})
+            .with_app_extension(HooksAppExtension {})
+            .with_app_extension(RepoFilterAppExtension {})
+            .build::<MononokeServerArgs>()?,
+    );
     let args: MononokeServerArgs = app.args()?;
 
     let root_log = app.logger();
@@ -130,26 +134,15 @@ fn main(fb: FacebookInit) -> Result<()> {
     let readonly_storage = env.readonly_storage.clone();
 
     let scuba = env.scuba_sample_builder.clone();
-    let warm_bookmarks_cache_scuba = env.warm_bookmarks_cache_scuba_sample_builder.clone();
 
     let will_exit = Arc::new(AtomicBool::new(false));
 
     let repo_listeners = {
         cloned!(root_log, service, will_exit, env);
-        let repo_factory = app.repo_factory();
+        let app = Arc::clone(&app);
         async move {
-            let api_env = MononokeApiEnvironment {
-                repo_factory,
-                warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,
-                warm_bookmarks_cache_enabled: true,
-                warm_bookmarks_cache_scuba_sample_builder: warm_bookmarks_cache_scuba,
-                skiplist_enabled: true,
-                //TODO: add a command line arg for filtering
-                repo_filter: None,
-            };
-
             let common = configs.common.clone();
-            let mononoke = Mononoke::new(&api_env, configs).watched(&root_log).await?;
+            let mononoke = Mononoke::new(Arc::clone(&app)).watched(&root_log).await?;
             info!(&root_log, "Built Mononoke");
 
             repo_listener::create_repo_listeners(

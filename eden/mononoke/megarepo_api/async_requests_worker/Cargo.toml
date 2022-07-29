@@ -16,6 +16,7 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }
 cmdlib_logging = { version = "0.1.0", path = "../../cmdlib/log" }
 context = { version = "0.1.0", path = "../../server/context" }
+environment = { version = "0.1.0", path = "../../cmdlib/environment" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -26,7 +27,6 @@ megarepo_types_thrift = { version = "0.1.0", path = "../if" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 source_control = { version = "0.1.0", path = "../../scs/if" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }

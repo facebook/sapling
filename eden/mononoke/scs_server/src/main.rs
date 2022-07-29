@@ -23,15 +23,15 @@ use cloned::cloned;
 use cmdlib::helpers::serve_forever;
 use cmdlib_logging::ScribeLoggingArgs;
 use connection_security_checker::ConnectionSecurityChecker;
+use environment::WarmBookmarksCacheDerivedData;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
 use futures::future::FutureExt;
 use megarepo_api::MegarepoApi;
 use mononoke_api::CoreContext;
 use mononoke_api::Mononoke;
-use mononoke_api::MononokeApiEnvironment;
-use mononoke_api::WarmBookmarksCacheDerivedData;
 use mononoke_app::args::HooksAppExtension;
+use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::MononokeAppBuilder;
 use panichandler::Fate;
@@ -57,7 +57,6 @@ mod into_response;
 mod metadata;
 mod methods;
 mod monitoring;
-mod repo_filter;
 mod scuba_common;
 mod scuba_params;
 mod scuba_response;
@@ -73,8 +72,6 @@ struct ScsServerArgs {
     shutdown_timeout_args: ShutdownTimeoutArgs,
     #[clap(flatten)]
     scribe_logging_args: ScribeLoggingArgs,
-    #[clap(flatten)]
-    repo_filter_args: repo_filter::RepoFilterArgs,
     /// Thrift host
     #[clap(long, short = 'H', default_value = "::")]
     host: String,
@@ -90,9 +87,13 @@ struct ScsServerArgs {
 fn main(fb: FacebookInit) -> Result<(), Error> {
     panichandler::set_panichandler(Fate::Abort);
 
-    let app = MononokeAppBuilder::new(fb)
-        .with_app_extension(HooksAppExtension {})
-        .build::<ScsServerArgs>()?;
+    let app = Arc::new(
+        MononokeAppBuilder::new(fb)
+            .with_warm_bookmarks_cache(WarmBookmarksCacheDerivedData::AllKinds)
+            .with_app_extension(HooksAppExtension {})
+            .with_app_extension(RepoFilterAppExtension {})
+            .build::<ScsServerArgs>()?,
+    );
 
     let args: ScsServerArgs = app.args()?;
 
@@ -103,21 +104,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let env = app.environment();
 
     let scuba_builder = env.scuba_sample_builder.clone();
-    let warm_bookmarks_cache_scuba_sample_builder =
-        env.warm_bookmarks_cache_scuba_sample_builder.clone();
-
     let repo_factory = app.repo_factory();
 
-    let api_env = MononokeApiEnvironment {
-        repo_factory: repo_factory.clone(),
-        warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::AllKinds,
-        warm_bookmarks_cache_enabled: true,
-        warm_bookmarks_cache_scuba_sample_builder,
-        skiplist_enabled: true,
-        repo_filter: args.repo_filter_args.filter_repos,
-    };
-
-    let mononoke = Arc::new(runtime.block_on(Mononoke::new(&api_env, app.repo_configs().clone()))?);
+    let mononoke = Arc::new(runtime.block_on(Mononoke::new(Arc::clone(&app)))?);
     let megarepo_api = Arc::new(runtime.block_on(MegarepoApi::new(
         env,
         app.repo_configs().clone(),

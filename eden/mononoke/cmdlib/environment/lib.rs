@@ -16,6 +16,7 @@ use fbinit::FacebookInit;
 use megarepo_config::MononokeMegarepoConfigsOptions;
 use observability::ObservabilityContext;
 use permission_checker::AclProvider;
+use regex::Regex;
 use rendezvous::RendezVousOptions;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
@@ -35,7 +36,15 @@ pub enum Caching {
     Disabled,
 }
 
-/// One instance of a Mononoke program. This is primarily useful to pass into a RepoFactory.
+#[derive(Copy, Clone, Debug)]
+pub enum WarmBookmarksCacheDerivedData {
+    HgOnly,
+    AllKinds,
+    None,
+}
+
+/// Struct representing the configuration associated with a MononokeApp instance which
+/// is immutable post the point of app construction.
 pub struct MononokeEnvironment {
     pub fb: FacebookInit,
     pub logger: Logger,
@@ -53,4 +62,7 @@ pub struct MononokeEnvironment {
     pub remote_derivation_options: RemoteDerivationOptions,
     pub disabled_hooks: HashMap<String, HashSet<String>>,
     pub acl_provider: Box<dyn AclProvider>,
+    pub skiplist_enabled: bool,
+    pub warm_bookmarks_cache_derived_data: Option<WarmBookmarksCacheDerivedData>,
+    pub filter_repos: Option<Regex>,
 }

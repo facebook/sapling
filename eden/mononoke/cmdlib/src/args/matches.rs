@@ -230,6 +230,9 @@ impl<'a> MononokeMatches<'a> {
                 megarepo_configs_options,
                 remote_derivation_options,
                 disabled_hooks: HashMap::new(),
+                skiplist_enabled: true,
+                warm_bookmarks_cache_derived_data: None,
+                filter_repos: None,
             }),
             app_data,
         })

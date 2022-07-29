@@ -16,13 +16,12 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 pub use bookmarks::BookmarkName;
+use environment::WarmBookmarksCacheDerivedData;
 use futures::stream;
 use futures::StreamExt;
 use futures_watchdog::WatchdogExt;
-use metaconfig_parser::RepoConfigs;
+use mononoke_app::MononokeApp;
 use mononoke_types::RepositoryId;
-use repo_factory::RepoFactory;
-use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use slog::info;
 use slog::o;
@@ -93,8 +92,6 @@ pub use context::CoreContext;
 pub use context::LoggingContainer;
 pub use context::SessionContainer;
 
-use regex::Regex;
-
 /// An instance of Mononoke, which may manage multiple repositories.
 pub struct Mononoke {
     repos: HashMap<String, Arc<Repo>>,
@@ -103,29 +100,33 @@ pub struct Mononoke {
 
 impl Mononoke {
     /// Create a Mononoke instance.
-    pub async fn new(env: &MononokeApiEnvironment, configs: RepoConfigs) -> Result<Self, Error> {
+    pub async fn new(app: Arc<MononokeApp>) -> Result<Self, Error> {
+        let configs = app.repo_configs().clone();
+        let logger = app.logger().clone();
         let start = Instant::now();
-
+        let repo_filter = app.environment().filter_repos.clone();
         let repos = stream::iter(configs.repos.into_iter().filter(
             move |&(ref name, ref config)| {
-                let is_matching_filter = env
-                    .repo_filter
+                let is_matching_filter = repo_filter
                     .as_ref()
                     .map_or(true, |re| re.is_match(name.as_str()));
                 config.enabled && is_matching_filter
             },
         ))
         .map({
-            move |(name, config)| async move {
-                let logger = &env.repo_factory.env.logger;
-                info!(logger, "Initializing repo: {}", &name);
+            move |(name, config)| {
+                let app = app.clone();
+                async move {
+                    let logger = app.logger();
+                    info!(logger, "Initializing repo: {}", &name);
 
-                let repo = Repo::new(env, name.clone(), config)
-                    .watched(logger.new(o!("repo" => name.clone())))
-                    .await
-                    .with_context(|| format!("could not initialize repo '{}'", &name))?;
-                debug!(logger, "Initialized {}", &name);
-                Ok::<_, Error>((name, Arc::new(repo)))
+                    let repo = Repo::new(Arc::clone(&app), name.clone(), config)
+                        .watched(logger.new(o!("repo" => name.clone())))
+                        .await
+                        .with_context(|| format!("could not initialize repo '{}'", &name))?;
+                    debug!(logger, "Initialized {}", &name);
+                    Ok::<_, Error>((name, Arc::new(repo)))
+                }
             }
         })
         .buffer_unordered(30)
@@ -139,7 +140,7 @@ impl Mononoke {
             .collect::<Result<Vec<_>, _>>()?;
 
         info!(
-            &env.repo_factory.env.logger,
+            &logger,
             "All repos initialized. It took: {} seconds",
             start.elapsed().as_secs()
         );
@@ -226,22 +227,6 @@ impl Mononoke {
 
         Ok(())
     }
-}
-
-pub struct MononokeApiEnvironment {
-    pub repo_factory: RepoFactory,
-    pub warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData,
-    pub warm_bookmarks_cache_enabled: bool,
-    pub warm_bookmarks_cache_scuba_sample_builder: MononokeScubaSampleBuilder,
-    pub skiplist_enabled: bool,
-    pub repo_filter: Option<Regex>,
-}
-
-#[derive(Copy, Clone, Debug)]
-pub enum WarmBookmarksCacheDerivedData {
-    HgOnly,
-    AllKinds,
-    None,
 }
 
 pub mod test_impl {
