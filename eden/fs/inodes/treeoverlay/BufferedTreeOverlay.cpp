@@ -199,7 +199,7 @@ void BufferedTreeOverlay::addChild(
     overlay::OverlayEntry entry) {
   PathComponent name_copy = name.copy();
   size_t captureSize = estimateIndirectMemoryUsage(name_copy.value());
-  if (auto entryHash = entry.get_hash()) {
+  if (auto* entryHash = entry.get_hash()) {
     captureSize += estimateIndirectMemoryUsage(*entryHash);
   }
   process(

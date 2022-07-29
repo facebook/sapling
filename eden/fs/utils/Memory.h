@@ -65,7 +65,7 @@ size_t estimateIndirectMemoryUsage(
   // Accumulate any indirect usage from the nodes
   for (const auto& pair : entries) {
     usage += estimateIndirectMemoryUsage(std::get<0>(pair));
-    if (auto entryHash = std::get<1>(pair).get_hash()) {
+    if (auto* entryHash = std::get<1>(pair).get_hash()) {
       usage += estimateIndirectMemoryUsage(*entryHash);
     }
   }
