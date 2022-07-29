@@ -14,6 +14,7 @@ use ffi::PySys_SetArgv;
 use ffi::PyUnicode_AsWideCharString;
 #[cfg(feature = "python3")]
 use ffi::PyUnicode_FromString;
+use ffi::Py_DECREF;
 use ffi::Py_Finalize;
 use ffi::Py_Initialize;
 use ffi::Py_IsInitialized;
@@ -46,7 +47,12 @@ fn to_py_str(s: &str) -> *mut PyChar {
     unsafe {
         let unicode_obj = PyUnicode_FromString(c_str.as_ptr());
         assert!(!unicode_obj.is_null());
-        PyUnicode_AsWideCharString(unicode_obj, std::ptr::null_mut())
+
+        let py_str = PyUnicode_AsWideCharString(unicode_obj, std::ptr::null_mut());
+
+        Py_DECREF(unicode_obj);
+
+        py_str
     }
 }
 
@@ -62,18 +68,15 @@ pub fn py_set_argv(args: &[String]) {
         // This inserts argv[0] path to sys.path, useful for running local builds.
         PySys_SetArgv((argv.len() - 1) as c_int, argv.as_mut_ptr());
     }
-    std::mem::forget(argv);
 }
 
 pub fn py_main(args: &[String]) -> u8 {
     let mut argv = to_py_argv(args);
-    let result = unsafe {
+    unsafe {
         let argc = (argv.len() - 1) as c_int;
         // Py_Main may not return.
-        Py_Main(argc, argv.as_mut_ptr())
-    };
-    std::mem::forget(argv);
-    result as u8
+        Py_Main(argc, argv.as_mut_ptr()) as u8
+    }
 }
 
 pub fn py_set_program_name(name: &str) {
