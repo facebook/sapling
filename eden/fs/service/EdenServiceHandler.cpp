@@ -394,7 +394,7 @@ ThriftRequestTraceEvent ThriftRequestTraceEvent::finish(
     folly::StringPiece method,
     std::optional<pid_t> clientPid) {
   return ThriftRequestTraceEvent{
-      ThriftRequestTraceEvent::START, requestId, method, clientPid};
+      ThriftRequestTraceEvent::FINISH, requestId, method, clientPid};
 }
 
 namespace facebook::eden {
