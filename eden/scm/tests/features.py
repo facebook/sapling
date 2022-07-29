@@ -551,6 +551,9 @@ segmentedchangelogcompatiblelist = """
     test-rebase-brute-force.t
     test-rebase-check-restore.t
     test-rebase-emptycommit.t
+
+    test-clone-resume.t
+    test-clone-uncompressed.t
 """
 
 ignorerevnumincompatiblelist = """

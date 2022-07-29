@@ -21,10 +21,12 @@ Basic clone
 
   $ hg clone --stream -U ssh://user@dummy/server clone1
   streaming all changes
-  1027 files to transfer, * of data (glob)
+  1025 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)
-  searching for changes
-  no changes found
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
 
 Clone with background file closing enabled
 
@@ -37,18 +39,19 @@ Clone with background file closing enabled
   remote: 1
   streaming all changes
   sending stream_out_option command
-  1027 files to transfer, * of data (glob)
+  1025 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)
   query 1; heads
   sending batch command
-  searching for changes
-  local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
-  all local heads known remotely
-  no changes found
+  requesting all changes
   sending getbundle command
   bundle2-input-bundle: with-transaction
+  bundle2-input-part: "changegroup" (params: 1 mandatory 1 advisory) supported
+  bundle2-input-part: total payload size 137448
   bundle2-input-part: "listkeys" (params: 1 mandatory) supported
-  bundle2-input-bundle: 0 parts total
+  bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
+  bundle2-input-part: total payload size 46374
+  bundle2-input-bundle: 2 parts total
   checking for updated bookmarks
 
 Stream clone while repo is changing:
