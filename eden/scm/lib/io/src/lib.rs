@@ -386,6 +386,9 @@ impl IO {
         inner.pager_handle.is_some()
     }
 
+    /// Starts a pager.
+    ///
+    /// It is recommended to run [`IO::flush`] and [`IO::wait_pager`] before exiting.
     pub fn start_pager(&self, config: &dyn Config) -> io::Result<()> {
         let mut inner = self.inner.lock();
         if inner.pager_handle.is_some() {

@@ -243,6 +243,9 @@ fn dispatch_command(
     };
 
     if !fell_back {
+        if io.flush().is_err() || io.wait_pager().is_err() {
+            return 255;
+        }
         if let Some(command) = command {
             let mut hooks = config.keys(&["hooks", &format!("pre-{}", command.name())]);
             if exit_code > 0 {
