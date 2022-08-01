@@ -9,6 +9,7 @@ use crate::git_hub_repo::GitHubRepo;
 use crate::make_request::make_request;
 use anyhow::Result;
 use graphql_client::GraphQLQuery;
+use serde::Serialize;
 
 // See https://github.com/graphql-rust/graphql-client#custom-scalars
 type GitObjectID = String;
@@ -23,7 +24,7 @@ type URI = String;
 )]
 struct PullRequestQuery;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct PullRequest {
     pub url: String,
     pub title: String,
@@ -37,14 +38,14 @@ pub struct PullRequest {
     pub head: PullRequestRef,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct PullRequestRef {
     pub ref_oid: String,
     pub ref_name: String,
     pub repo: GitHubRepo,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum PullRequestState {
     Closed,
     Merged,
@@ -64,7 +65,7 @@ impl From<pull_request_query::PullRequestState> for PullRequestState {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum PullRequestReviewDecision {
     Approved,
     ChangesRequested,

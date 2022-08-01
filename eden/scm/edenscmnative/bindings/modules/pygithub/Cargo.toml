@@ -1,0 +1,9 @@
+[package]
+name = "pygithub"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+github = { path = "../../../../lib/github" }
+cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython = { version = "0.7", default-features = false }

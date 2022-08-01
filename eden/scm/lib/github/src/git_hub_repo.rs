@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-#[derive(Debug)]
+use serde::Serialize;
+
+#[derive(Debug, Serialize)]
 pub struct GitHubRepo {
     pub owner: String,
     pub name: String,

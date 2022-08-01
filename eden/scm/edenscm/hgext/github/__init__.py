@@ -58,14 +58,23 @@ def github_repo(repo, ctx, templ, **args) -> bool:
     return gh_repo.is_github_repo(repo)
 
 
+@templatekeyword("github_pull_request_state")
+def github_pull_request_state(repo, ctx, templ, **args) -> Optional[str]:
+    pull_request_data = templates.get_pull_request_data_for_rev(ctx, **args)
+    return pull_request_data["state"] if pull_request_data else None
+
+
 @templatekeyword("github_pull_request_url")
 def github_pull_request_url(repo, ctx, templ, **args) -> Optional[str]:
     """If the commit is associated with a GitHub pull request, returns the URL
     for the pull request.
     """
-    descr = ctx.description()
-    pull_request_domain = repo.ui.config("github", "pull_request_domain")
-    return templates.github_pull_request_url(descr, pull_request_domain)
+    pull_request = templates.get_pull_request_url_for_rev(ctx, **args)
+    if pull_request:
+        pull_request_domain = repo.ui.config("github", "pull_request_domain")
+        return pull_request.as_url(domain=pull_request_domain)
+    else:
+        return None
 
 
 @templatekeyword("github_pull_request_repo_owner")
@@ -73,8 +82,7 @@ def github_pull_request_repo_owner(repo, ctx, templ, **args) -> Optional[str]:
     """If the commit is associated with a GitHub pull request, returns the
     repository owner for the pull request.
     """
-    descr = ctx.description()
-    return templates.github_pull_request_repo_owner(descr)
+    return templates.github_pull_request_repo_owner(repo, ctx, **args)
 
 
 @templatekeyword("github_pull_request_repo_name")
@@ -82,8 +90,7 @@ def github_pull_request_repo_name(repo, ctx, templ, **args) -> Optional[str]:
     """If the commit is associated with a GitHub pull request, returns the
     repository name for the pull request.
     """
-    descr = ctx.description()
-    return templates.github_pull_request_repo_name(descr)
+    return templates.github_pull_request_repo_name(repo, ctx, **args)
 
 
 @templatekeyword("github_pull_request_number")
@@ -91,5 +98,4 @@ def github_pull_request_number(repo, ctx, templ, **args) -> Optional[int]:
     """If the commit is associated with a GitHub pull request, returns the
     number for the pull request.
     """
-    descr = ctx.description()
-    return templates.github_pull_request_number(descr)
+    return templates.github_pull_request_number(repo, ctx, **args)
