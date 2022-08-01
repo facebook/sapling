@@ -11,7 +11,6 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
@@ -34,7 +33,6 @@ use ephemeral_blobstore::Bubble;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
 use ephemeral_blobstore::StorageLocation;
-use filestore;
 use filestore::FetchKey;
 use filestore::StoreRequest;
 use futures::compat::Future01CompatExt;

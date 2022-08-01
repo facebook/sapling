@@ -12,7 +12,6 @@ use bytes::Bytes;
 use bytes::BytesMut;
 use cloned::cloned;
 use context::CoreContext;
-use filestore;
 use filestore::get_metadata;
 use filestore::FetchKey;
 use futures::stream::TryStreamExt;

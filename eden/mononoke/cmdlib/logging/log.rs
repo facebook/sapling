@@ -8,7 +8,6 @@
 use anyhow::Error;
 use env_logger::filter::Builder;
 use env_logger::filter::Filter;
-use log;
 use slog::BorrowedKV;
 use slog::Level;
 use slog::Logger;

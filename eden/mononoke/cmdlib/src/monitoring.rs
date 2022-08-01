@@ -12,7 +12,6 @@ use std::thread;
 use anyhow::Error;
 use fbinit::FacebookInit;
 pub use mononoke_app::fb303::ReadyFlagService;
-use services;
 use services::Fb303Service;
 use slog::info;
 use slog::Logger;

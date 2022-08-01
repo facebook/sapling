@@ -12,7 +12,6 @@ use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
-use bookmarks;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;

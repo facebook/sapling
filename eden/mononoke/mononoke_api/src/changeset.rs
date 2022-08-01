@@ -55,7 +55,6 @@ use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::SkeletonManifestId;
 use mononoke_types::Svnrev;
-use rand;
 use reachabilityindex::ReachabilityIndex;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataArc;

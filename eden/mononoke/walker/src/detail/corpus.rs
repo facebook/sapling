@@ -38,7 +38,6 @@ use cloned::cloned;
 use context::CoreContext;
 use context::SamplingKey;
 use fbinit::FacebookInit;
-use filetime;
 use filetime::FileTime;
 use futures::future;
 use futures::future::try_join_all;

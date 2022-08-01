@@ -59,7 +59,6 @@ use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fastlog::fetch_fastlog_batch_by_unode_id;
 use fastlog::RootFastlog;
 use filenodes::FilenodeInfo;
-use filestore;
 use filestore::Alias;
 use fsnodes::RootFsnodeId;
 use futures::future;

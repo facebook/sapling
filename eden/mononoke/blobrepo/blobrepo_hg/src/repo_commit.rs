@@ -50,7 +50,6 @@ use mercurial_types::HgParents;
 use mercurial_types::MPath;
 use mercurial_types::RepoPath;
 use mercurial_types::NULL_HASH;
-use mononoke_types;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;

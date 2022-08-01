@@ -28,7 +28,6 @@ use futures::stream::Stream;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures_lazy_shared::LazyShared;
-use history_traversal;
 use history_traversal::list_file_history;
 use history_traversal::CsAndPath;
 use history_traversal::FastlogError;
@@ -50,7 +49,6 @@ use mononoke_types::SkeletonManifestId;
 use reachabilityindex::ReachabilityIndex;
 use skiplist::SkiplistIndex;
 use std::collections::HashMap;
-use xdiff;
 
 pub use xdiff::CopyInfo;
 

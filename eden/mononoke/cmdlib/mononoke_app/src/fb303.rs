@@ -10,7 +10,6 @@ use anyhow::Error;
 use anyhow::Result;
 use clap::Args;
 use fbinit::FacebookInit;
-use services;
 use services::Fb303Service;
 use services::FbStatus;
 use slog::info;

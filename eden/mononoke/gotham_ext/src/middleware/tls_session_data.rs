@@ -8,7 +8,6 @@
 use anyhow::Error;
 use gotham::state::FromState;
 use gotham::state::State;
-use hex;
 use hyper::Body;
 use hyper::Response;
 use std::fs::File;

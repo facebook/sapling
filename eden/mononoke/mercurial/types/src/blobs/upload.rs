@@ -30,7 +30,6 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
-use filestore;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
 use futures::compat::Future01CompatExt;
