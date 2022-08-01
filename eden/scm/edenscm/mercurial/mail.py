@@ -218,7 +218,9 @@ def codec2iana(cs: str) -> str:
 
 
 def mimetextpatch(
-    s, subtype: str = "plain", display: bool = False
+    s: Union[List[email.message.Message], bytes, str],
+    subtype: str = "plain",
+    display: bool = False,
 ) -> email.message.Message:
     """Return MIME message suitable for a patch.
     Charset will be detected by first trying to decode as us-ascii, then utf-8,
@@ -231,6 +233,8 @@ def mimetextpatch(
         return mimetextqp(s, subtype, "us-ascii")
     for charset in cs:
         try:
+            # pyre-fixme[16]: Item `List` of `Union[List[email.message.Message],
+            #  bytes, str]` has no attribute `decode`.
             s.decode(charset)
             return mimetextqp(s, subtype, codec2iana(charset))
         except UnicodeDecodeError:
@@ -349,7 +353,12 @@ def addrlistencode(ui, addrs, charsets=None, display: bool = False):
     return result
 
 
-def mimeencode(ui, s, charsets=None, display: bool = False) -> email.message.Message:
+def mimeencode(
+    ui,
+    s: Union[List[email.message.Message], bytes, str],
+    charsets=None,
+    display: bool = False,
+) -> email.message.Message:
     """creates mime text object, encodes it if needed, and sets
     charset and transfer-encoding accordingly."""
     cs = "us-ascii"
