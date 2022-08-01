@@ -148,7 +148,7 @@ impl EdenApiHandler for Files2Handler {
     const API_METHOD: EdenApiMethod = EdenApiMethod::Files2;
     const ENDPOINT: &'static str = "/files2";
 
-    fn sampling_rate(request: &Self::Request) -> NonZeroU64 {
+    fn sampling_rate(_request: &Self::Request) -> NonZeroU64 {
         nonzero_ext::nonzero!(256u64)
     }
 
