@@ -346,26 +346,6 @@ Sync the amended commit to the other client
   
   $ cd ..
 
-Test recovery from broken state (example: invalid json)
-  $ cd client1
-  $ hg debugshell << 'EOF'
-  > ml['cloudsyncstate'] = ml['cloudsyncstate'] + b'}}}'
-  > ml.commit('break cloudsyncstate')
-  > EOF
-  $ hg cloud sync
-  commitcloud: synchronizing 'server' with 'user/test/default'
-  abort: commitcloud: invalid workspace data: 'failed to parse commitcloudstate.usertestdefault.b6eca'
-  (please run 'hg cloud recover')
-  [255]
-  $ hg cloud recover
-  commitcloud: clearing local commit cloud cache
-  commitcloud: synchronizing 'server' with 'user/test/default'
-  commitcloud: commits synchronized
-  finished in * (glob)
-
-  $ cd ..
-  $ fullsync client1 client2
-
 Note: before running this test repos should be synced
 Test goal: test message that the revision has been moved
 Description:
