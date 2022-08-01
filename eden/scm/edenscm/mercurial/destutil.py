@@ -12,6 +12,8 @@
 
 from __future__ import absolute_import
 
+from typing import Dict, Optional, Tuple, Union
+
 from . import bookmarks, error, mutation, scmutil
 from .i18n import _
 
@@ -124,7 +126,7 @@ destupdatestepmap = {
 }
 
 
-def destupdate(repo, clean=False):
+def destupdate(repo, clean: bool = False):
     """destination for bare update operation
 
     return (rev, movemark, activemark)
@@ -145,7 +147,14 @@ def destupdate(repo, clean=False):
     return rev, movemark, activemark
 
 
-msgdestmerge = {
+msgdestmerge: Dict[
+    str,
+    Union[
+        Dict[str, Tuple[str, None]],
+        Dict[str, Tuple[str, str]],
+        Dict[str, Tuple[str, Optional[str]]],
+    ],
+] = {
     # too many matching divergent bookmark
     "toomanybookmarks": {
         "merge": (
@@ -248,7 +257,7 @@ msgdestmerge = {
 }
 
 
-def _destmergebook(repo, action="merge", sourceset=None, destspace=None):
+def _destmergebook(repo, action: str = "merge", sourceset=None, destspace=None):
     """find merge destination in the active bookmark case"""
     node = None
     bmheads = bookmarks.headsforactive(repo)
@@ -269,7 +278,11 @@ def _destmergebook(repo, action="merge", sourceset=None, destspace=None):
 
 
 def _destmergebranch(
-    repo, action="merge", sourceset=None, onheadcheck=True, destspace=None
+    repo,
+    action: str = "merge",
+    sourceset=None,
+    onheadcheck: bool = True,
+    destspace=None,
 ):
     """find merge destination based on branch heads"""
     node = None
@@ -341,7 +354,13 @@ def _destmergebranch(
     return node
 
 
-def destmerge(repo, action="merge", sourceset=None, onheadcheck=True, destspace=None):
+def destmerge(
+    repo,
+    action: str = "merge",
+    sourceset=None,
+    onheadcheck: bool = True,
+    destspace=None,
+):
     """return the default destination for a merge
 
     (or raise exception about why it can't pick one)
@@ -389,7 +408,7 @@ def stackbase(ui, repo):
     return revs.last() if revs else None
 
 
-def _statusotherbook(ui, repo):
+def _statusotherbook(ui, repo) -> None:
     bmheads = bookmarks.headsforactive(repo)
     curhead = repo[repo._activebookmark].node()
     if repo.revs("%n and parents()", curhead):
@@ -400,7 +419,7 @@ def _statusotherbook(ui, repo):
             ui.status(msg % (len(bmheads), repo._activebookmark))
 
 
-def _statusotherbranchheads(ui, repo):
+def _statusotherbranchheads(ui, repo) -> None:
     currentbranch = repo.dirstate.branch()
     allheads = repo.branchheads(currentbranch, closed=True)
     heads = repo.branchheads(currentbranch)
@@ -444,7 +463,7 @@ def _statusotherbranchheads(ui, repo):
             )
 
 
-def statusotherdests(ui, repo):
+def statusotherdests(ui, repo) -> None:
     """Print message about other head"""
     # XXX we should probably include a hint:
     # - about what to do
