@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 import re
 import struct
-from typing import Dict
+from typing import Dict, Pattern
 
 import bindings
 
@@ -23,7 +23,7 @@ from .node import bin
 from .pycompat import decodeutf8, encodeutf8
 
 
-_mdre = re.compile(b"\1\n")
+_mdre: Pattern[bytes] = re.compile(b"\1\n")
 
 
 def parsemeta(text):
