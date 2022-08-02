@@ -29,6 +29,7 @@ use fbinit::FacebookInit;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use futures_util::try_join;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_parser::StorageConfigs;
 use metaconfig_types::BlobConfig;
@@ -54,6 +55,8 @@ use crate::args::MultiRepoArgs;
 use crate::args::RepoArg;
 use crate::args::RepoArgs;
 use crate::args::RepoBlobstoreArgs;
+use crate::args::SourceAndTargetRepoArg;
+use crate::args::SourceAndTargetRepoArgs;
 use crate::extension::AppExtension;
 use crate::extension::AppExtensionArgsBox;
 use crate::extension::BoxedAppExtensionArgs;
@@ -244,6 +247,17 @@ impl MononokeApp {
         Ok(repos)
     }
 
+    /// Get source and target repo configs based on user-provided arguments.
+    pub fn source_and_target_repo_config(
+        &self,
+        repo_arg: SourceAndTargetRepoArg,
+    ) -> Result<((String, RepoConfig), (String, RepoConfig))> {
+        Ok((
+            self.repo_config(repo_arg.source_repo)?,
+            self.repo_config(repo_arg.target_repo)?,
+        ))
+    }
+
     /// Open repositories based on user-provided arguments.
     pub async fn open_repos<Repo>(&self, repos_args: &MultiRepoArgs) -> Result<Vec<Repo>>
     where
@@ -277,6 +291,30 @@ impl MononokeApp {
         let (repo_name, repo_config) = self.repo_config(repo_arg)?;
         let repo = self.repo_factory.build(repo_name, repo_config).await?;
         Ok(repo)
+    }
+
+    /// Open a source and target repos based on user-provided arguments.
+    pub async fn open_source_and_target_repos<Repo>(
+        &self,
+        repo_args: &SourceAndTargetRepoArgs,
+    ) -> Result<(Repo, Repo)>
+    where
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        let repos = repo_args.source_and_target_id_or_name()?;
+        let source_repo_arg = repos.source_repo;
+        let target_repo_arg = repos.target_repo;
+        let (source_repo_name, source_repo_config) = self.repo_config(source_repo_arg)?;
+        let (target_repo_name, target_repo_config) = self.repo_config(target_repo_arg)?;
+        let source_repo_fut = self
+            .repo_factory
+            .build(source_repo_name, source_repo_config);
+        let target_repo_fut = self
+            .repo_factory
+            .build(target_repo_name, target_repo_config);
+
+        let (source_repo, target_repo) = try_join!(source_repo_fut, target_repo_fut)?;
+        Ok((source_repo, target_repo))
     }
 
     /// Open just the blobstore based on user-provided arguments.
