@@ -50,7 +50,7 @@ pub trait BookmarkCacheRepo {
 
     fn repo_client_use_warm_bookmarks_cache(&self) -> bool;
 
-    fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache>;
+    fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache + Send + Sync>;
 }
 
 impl BookmarkCacheRepo for Arc<Repo> {
@@ -62,7 +62,7 @@ impl BookmarkCacheRepo for Arc<Repo> {
         Repo::config(self).repo_client_use_warm_bookmarks_cache
     }
 
-    fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache> {
+    fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache + Send + Sync> {
         Repo::warm_bookmarks_cache(self)
     }
 }
@@ -244,7 +244,7 @@ where
         self.get_publishing_maybe_stale_from_db(ctx).compat().await
     }
 
-    fn get_warm_bookmark_cache(&self) -> Option<&Arc<dyn BookmarksCache>> {
+    fn get_warm_bookmark_cache(&self) -> Option<&Arc<dyn BookmarksCache + Send + Sync>> {
         if self.repo.repo_client_use_warm_bookmarks_cache() {
             if !tunables().get_disable_repo_client_warm_bookmarks_cache() {
                 return Some(self.repo.warm_bookmarks_cache());
@@ -298,7 +298,7 @@ mod test {
 
     struct BasicTestRepo {
         repo: BlobRepo,
-        wbc: Option<Arc<dyn BookmarksCache>>,
+        wbc: Option<Arc<dyn BookmarksCache + Send + Sync>>,
     }
 
     impl BookmarkCacheRepo for BasicTestRepo {
@@ -310,7 +310,7 @@ mod test {
             self.wbc.is_some()
         }
 
-        fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache> {
+        fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache + Send + Sync> {
             self.wbc.as_ref().unwrap()
         }
     }

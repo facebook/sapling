@@ -17,11 +17,14 @@ blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }
 bonsai_git_mapping = { version = "0.1.0", path = "../bonsai_git_mapping" }
+bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapping" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movement" }
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
 bytes = { version = "1.1", features = ["serde"] }
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
+changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }
 changeset_info = { version = "0.1.0", path = "../derived_data/changeset_info" }
 changesets = { version = "0.1.0", path = "../changesets" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
@@ -33,13 +36,13 @@ derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
 edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../filestore" }
 fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures_lazy_shared = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
 history_traversal = { version = "0.1.0", path = "../features/history_traversal" }
 hook_manager_factory = { version = "0.1.0", path = "../hooks/hook_manager_factory" }
 hooks = { version = "0.1.0", path = "../hooks" }
@@ -50,25 +53,31 @@ manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
 megarepo_error = { version = "0.1.0", path = "../megarepo_api/megarepo_error" }
 mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
+mercurial_mutation = { version = "0.1.0", path = "../mercurial/mutation" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_api_types = { version = "0.1.0", path = "types" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 mutable_renames = { version = "0.1.0", path = "../mutable_renames" }
 pathmatcher = { version = "0.1.0", path = "../../scm/lib/pathmatcher" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 phases = { version = "0.1.0", path = "../phases" }
 pushrebase = { version = "0.1.0", path = "../pushrebase" }
 pushrebase_client = { version = "0.1.0", path = "../pushrebase/client" }
+pushrebase_mutation_mapping = { version = "0.1.0", path = "../pushrebase_mutation_mapping" }
 rand = { version = "0.8", features = ["small_rng"] }
 reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
 regex = "1.5.4"
 repo_authorization = { version = "0.1.0", path = "../repo_authorization" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
+repo_bookmark_attrs = { version = "0.1.0", path = "../repo_attributes/repo_bookmark_attrs" }
 repo_cross_repo = { version = "0.1.0", path = "../repo_attributes/repo_cross_repo" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
+repo_lock = { version = "0.1.0", path = "../repo_attributes/repo_lock/repo_lock" }
+repo_permission_checker = { version = "0.1.0", path = "../repo_attributes/repo_permission_checker" }
 repo_sparse_profiles = { version = "0.1.0", path = "../repo_attributes/repo_sparse_profiles" }
 revset = { version = "0.1.0", path = "../revset" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }

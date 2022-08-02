@@ -18,12 +18,10 @@ use anyhow::Error;
 pub use bookmarks::BookmarkName;
 use futures::stream;
 use futures::StreamExt;
-use futures_watchdog::WatchdogExt;
 use mononoke_app::MononokeApp;
 use mononoke_types::RepositoryId;
 use slog::debug;
 use slog::info;
-use slog::o;
 
 use crate::repo::RepoContextBuilder;
 
@@ -119,10 +117,12 @@ impl Mononoke {
                     let logger = app.logger();
                     info!(logger, "Initializing repo: {}", &name);
 
-                    let repo = Repo::new(Arc::clone(&app), name.clone(), config)
-                        .watched(logger.new(o!("repo" => name.clone())))
+                    let repo: Repo = app
+                        .repo_factory()
+                        .build(name.clone(), config)
                         .await
                         .with_context(|| format!("could not initialize repo '{}'", &name))?;
+
                     debug!(logger, "Initialized {}", &name);
                     Ok::<_, Error>((name, Arc::new(repo)))
                 }

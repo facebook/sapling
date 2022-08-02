@@ -12,6 +12,7 @@ use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
 use acl_regions::build_disabled_acl_regions;
+use acl_regions::AclRegions;
 use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Error;
@@ -21,16 +22,22 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use blobstore_factory::make_metadata_sql_factory;
 use blobstore_factory::ReadOnlyStorage;
+use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
+use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogArc;
+use bookmarks::Bookmarks;
 use bookmarks::BookmarksArc;
 pub use bookmarks::Freshness as BookmarkFreshness;
 use bookmarks::Freshness;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
+use changeset_fetcher::ChangesetFetcher;
 use changeset_info::ChangesetInfo;
 use changesets::Changesets;
 use changesets::ChangesetsArc;
@@ -56,15 +63,14 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures::Future;
-use futures_watchdog::WatchdogExt;
 use hook_manager_factory::make_hook_manager;
-use hooks::ArcHookManager;
 use hooks::HookManager;
 use hooks_content_stores::RepoFileContentManager;
 use itertools::Itertools;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
 use mercurial_derived_data::MappedHgChangesetId;
+use mercurial_mutation::HgMutationStore;
 use mercurial_types::Globalrev;
 use metaconfig_types::HookManagerParams;
 use metaconfig_types::InfinitepushNamespace;
@@ -73,7 +79,6 @@ use metaconfig_types::LfsParams;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::SourceControlServiceParams;
 use mononoke_api_types::InnerRepo;
-use mononoke_app::MononokeApp;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
@@ -81,18 +86,28 @@ use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use mononoke_types::Svnrev;
 use mononoke_types::Timestamp;
+use mutable_counters::MutableCounters;
 use mutable_renames::MutableRenames;
 use mutable_renames::SqlMutableRenamesStore;
 use permission_checker::DefaultAclProvider;
+use phases::Phases;
 use phases::PhasesArc;
 use phases::PhasesRef;
+use pushrebase_mutation_mapping::PushrebaseMutationMapping;
 use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use repo_authorization::AuthorizationContext;
+use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
+use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_cross_repo::RepoCrossRepo;
+use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataArc;
+use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityArc;
+use repo_identity::RepoIdentityRef;
+use repo_lock::RepoLock;
+use repo_permission_checker::RepoPermissionChecker;
 use repo_sparse_profiles::RepoSparseProfiles;
 use revset::AncestorsNodeStream;
 use segmented_changelog::CloneData;
@@ -102,13 +117,13 @@ use segmented_changelog::SegmentedChangelog;
 use skiplist::SkiplistIndex;
 use slog::debug;
 use slog::error;
-use slog::o;
 use sql_construct::SqlConstruct;
 use sql_ext::facebook::MysqlOptions;
 use stats::prelude::*;
 use std::collections::HashSet;
 use std::hash::Hash;
 use std::hash::Hasher;
+use streaming_clone::StreamingClone;
 use streaming_clone::StreamingCloneBuilder;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
@@ -151,11 +166,46 @@ define_stats! {
     ),
 }
 
+#[facet::container]
 pub struct Repo {
-    pub(crate) inner: InnerRepo,
-    pub(crate) name: String,
-    pub(crate) warm_bookmarks_cache: Arc<dyn BookmarksCache>,
-    pub(crate) hook_manager: ArcHookManager,
+    #[delegate(
+        RepoBlobstore,
+        RepoBookmarkAttrs,
+        RepoDerivedData,
+        RepoIdentity,
+        dyn BonsaiGitMapping,
+        dyn BonsaiGlobalrevMapping,
+        dyn BonsaiHgMapping,
+        dyn BookmarkUpdateLog,
+        dyn Bookmarks,
+        dyn ChangesetFetcher,
+        dyn Changesets,
+        dyn Phases,
+        dyn PushrebaseMutationMapping,
+        dyn HgMutationStore,
+        dyn MutableCounters,
+        dyn RepoPermissionChecker,
+        dyn RepoLock,
+        RepoConfig,
+        SkiplistIndex,
+        dyn SegmentedChangelog,
+        RepoEphemeralStore,
+        MutableRenames,
+        RepoCrossRepo,
+        dyn AclRegions,
+        RepoSparseProfiles,
+        StreamingClone,
+    )]
+    pub inner: InnerRepo,
+
+    #[init(inner.repo_identity().name().to_string())]
+    pub name: String,
+
+    #[facet]
+    pub warm_bookmarks_cache: dyn BookmarksCache,
+
+    #[facet]
+    pub hook_manager: HookManager,
 }
 
 impl AsBlobRepo for Repo {
@@ -232,57 +282,6 @@ pub async fn open_synced_commit_mapping(
 }
 
 impl Repo {
-    pub async fn new(
-        app: Arc<MononokeApp>,
-        name: String,
-        mut config: RepoConfig,
-    ) -> Result<Self, Error> {
-        let env = app.environment();
-        let fb = env.fb;
-        let factory = app.repo_factory();
-
-        if !env.skiplist_enabled {
-            config.skiplist_index_blobstore_key = None;
-        }
-        let logger = app.logger().new(o!("repo" => name.clone()));
-
-        let inner: InnerRepo = factory
-            .build(name.clone(), config.clone())
-            .watched(&logger)
-            .await?;
-
-        let warm_bookmarks_cache = factory
-            .warm_bookmarks_cache(
-                &inner.bookmarks_arc(),
-                &inner.bookmark_update_log_arc(),
-                &inner.repo_identity_arc(),
-                &inner.repo_derived_data_arc(),
-                &inner.phases_arc(),
-            )
-            .await?;
-
-        let content_store = RepoFileContentManager::new(&inner.blob_repo);
-
-        let disabled_hooks = env.disabled_hooks.get(&name).cloned().unwrap_or_default();
-        let hook_manager = make_hook_manager(
-            fb,
-            factory.acl_provider(),
-            content_store,
-            &config,
-            name.clone(),
-            &disabled_hooks,
-        )
-        .watched(&logger)
-        .await?;
-
-        Ok(Self {
-            name,
-            inner,
-            warm_bookmarks_cache,
-            hook_manager: Arc::new(hook_manager),
-        })
-    }
-
     /// Construct a new Repo based on an existing one with a bubble opened.
     pub fn with_bubble(&self, bubble: Bubble) -> Self {
         let blob_repo = self.inner.blob_repo.with_bubble(bubble);
@@ -482,7 +481,7 @@ impl Repo {
     }
 
     /// The warm bookmarks cache for the referenced repository.
-    pub fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache> {
+    pub fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache + Send + Sync> {
         &self.warm_bookmarks_cache
     }
 
@@ -808,7 +807,7 @@ impl RepoContext {
     }
 
     /// The warm bookmarks cache for the referenced repository.
-    pub fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache> {
+    pub fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache + Send + Sync> {
         self.repo.warm_bookmarks_cache()
     }
 
