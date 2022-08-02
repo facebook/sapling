@@ -68,6 +68,7 @@ use crate::specifiers::SpecifierExt;
 const FORWARDED_IDENTITIES_HEADER: &str = "scm_forwarded_identities";
 const FORWARDED_CLIENT_IP_HEADER: &str = "scm_forwarded_client_ip";
 const FORWARDED_CLIENT_DEBUG_HEADER: &str = "scm_forwarded_client_debug";
+const FORWARDED_OTHER_CATS_HEADER: &str = "scm_forwarded_other_cats";
 
 define_stats! {
     prefix = "mononoke.scs_server";
@@ -263,6 +264,10 @@ impl SourceControlServiceImpl {
                     Metadata::new(None, header_identities, client_debug, client_ip).await;
 
                 metadata.add_original_identities(tls_identities);
+
+                if let Some(other_cats) = header(FORWARDED_OTHER_CATS_HEADER)? {
+                    metadata.add_raw_encoded_cats(other_cats);
+                }
 
                 return Ok(metadata);
             }

@@ -30,7 +30,6 @@ use anyhow::Error;
 use backsyncer::backsync_latest;
 use backsyncer::BacksyncLimit;
 use backsyncer::TargetRepoDbs;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cacheblob::LeaseOps;

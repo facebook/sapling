@@ -10,7 +10,6 @@ use anyhow::Context;
 use anyhow::Error;
 use backsyncer::open_backsyncer_dbs;
 use backsyncer::TargetRepoDbs;
-use blobrepo::BlobRepo;
 use blobstore_factory::ReadOnlyStorage;
 use cache_warmup::cache_warmup;
 use cloned::cloned;
