@@ -7,7 +7,7 @@
 
 #include "GitBlob.h"
 
-#include <folly/Format.h>
+#include <folly/Conv.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include "eden/fs/model/Blob.h"
