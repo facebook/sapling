@@ -286,6 +286,7 @@ impl WarmBookmarksCacheBuilder {
 }
 
 #[async_trait]
+#[facet::facet]
 pub trait BookmarksCache: Send + Sync {
     async fn get(
         &self,

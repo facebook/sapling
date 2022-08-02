@@ -68,6 +68,7 @@ use derived_data_remote::DerivationClient;
 use derived_data_remote::RemoteDerivationOptions;
 use environment::Caching;
 use environment::MononokeEnvironment;
+use environment::WarmBookmarksCacheDerivedData;
 use ephemeral_blobstore::ArcRepoEphemeralStore;
 use ephemeral_blobstore::RepoEphemeralStore;
 use ephemeral_blobstore::RepoEphemeralStoreBuilder;
@@ -150,6 +151,9 @@ use synced_commit_mapping::SqlSyncedCommitMapping;
 use thiserror::Error;
 use tunables::tunables;
 use virtually_sharded_blobstore::VirtuallyShardedBlobstore;
+use warm_bookmarks_cache::ArcBookmarksCache;
+use warm_bookmarks_cache::NoopBookmarksCache;
+use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
 
 pub use blobstore_factory::BlobstoreOptions;
 pub use blobstore_factory::ReadOnlyStorage;
@@ -1233,6 +1237,44 @@ impl RepoFactory {
             .context(RepoFactoryError::StreamingClone)?
             .build(repo_identity.id(), repo_blobstore.clone());
         Ok(Arc::new(streaming_clone))
+    }
+
+    pub async fn warm_bookmarks_cache(
+        &self,
+        bookmarks: &ArcBookmarks,
+        bookmark_update_log: &ArcBookmarkUpdateLog,
+        repo_identity: &ArcRepoIdentity,
+        repo_derived_data: &ArcRepoDerivedData,
+        phases: &ArcPhases,
+    ) -> Result<ArcBookmarksCache> {
+        match self.env.warm_bookmarks_cache_derived_data {
+            Some(derived_data) => {
+                let mut scuba = self.env.warm_bookmarks_cache_scuba_sample_builder.clone();
+                scuba.add("repo", repo_identity.name());
+
+                let mut wbc_builder = WarmBookmarksCacheBuilder::new(
+                    self.ctx(Some(repo_identity)),
+                    bookmarks.clone(),
+                    bookmark_update_log.clone(),
+                    repo_identity.clone(),
+                );
+
+                match derived_data {
+                    WarmBookmarksCacheDerivedData::HgOnly => {
+                        wbc_builder.add_hg_warmers(repo_derived_data, phases)?;
+                    }
+                    WarmBookmarksCacheDerivedData::AllKinds => {
+                        wbc_builder.add_all_warmers(repo_derived_data, phases)?;
+                    }
+                    WarmBookmarksCacheDerivedData::None => {}
+                }
+
+                Ok(Arc::new(
+                    wbc_builder.build().watched(&self.env.logger).await?,
+                ))
+            }
+            None => Ok(Arc::new(NoopBookmarksCache::new(bookmarks.clone()))),
+        }
     }
 }
 

@@ -56,7 +56,6 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures::Future;
-use futures::FutureExt;
 use futures_watchdog::WatchdogExt;
 use hook_manager_factory::make_hook_manager;
 use hooks::ArcHookManager;
@@ -114,7 +113,6 @@ use streaming_clone::StreamingCloneBuilder;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
 use warm_bookmarks_cache::BookmarksCache;
-use warm_bookmarks_cache::NoopBookmarksCache;
 use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
 
 use crate::changeset::ChangesetContext;
@@ -129,7 +127,6 @@ use crate::specifiers::HgChangesetId;
 use crate::tree::TreeContext;
 use crate::tree::TreeId;
 use crate::xrepo::CandidateSelectionHintArgs;
-use crate::WarmBookmarksCacheDerivedData;
 
 pub mod create_bookmark;
 pub mod create_changeset;
@@ -242,61 +239,31 @@ impl Repo {
     ) -> Result<Self, Error> {
         let env = app.environment();
         let fb = env.fb;
+        let factory = app.repo_factory();
 
         if !env.skiplist_enabled {
             config.skiplist_index_blobstore_key = None;
         }
         let logger = app.logger().new(o!("repo" => name.clone()));
 
-        let inner: InnerRepo = app
-            .repo_factory()
+        let inner: InnerRepo = factory
             .build(name.clone(), config.clone())
             .watched(&logger)
             .await?;
 
-        let ctx = CoreContext::new_with_logger(fb, logger.clone());
-        let warm_bookmarks_cache = match env.warm_bookmarks_cache_derived_data {
-            Some(warm_bookmarks_cache_derived_data) => {
-                let mut scuba_sample_builder =
-                    env.warm_bookmarks_cache_scuba_sample_builder.clone();
-                scuba_sample_builder.add("repo", inner.blob_repo.name().clone());
-                let ctx = ctx.with_mutated_scuba(|_| scuba_sample_builder);
-                let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(
-                    ctx,
-                    inner.bookmarks_arc(),
-                    inner.bookmark_update_log_arc(),
-                    inner.repo_identity_arc(),
-                );
+        let warm_bookmarks_cache = factory
+            .warm_bookmarks_cache(
+                &inner.bookmarks_arc(),
+                &inner.bookmark_update_log_arc(),
+                &inner.repo_identity_arc(),
+                &inner.repo_derived_data_arc(),
+                &inner.phases_arc(),
+            )
+            .await?;
 
-                match warm_bookmarks_cache_derived_data {
-                    WarmBookmarksCacheDerivedData::HgOnly => {
-                        warm_bookmarks_cache_builder
-                            .add_hg_warmers(&inner.repo_derived_data_arc(), &inner.phases_arc())?;
-                    }
-                    WarmBookmarksCacheDerivedData::AllKinds => {
-                        warm_bookmarks_cache_builder
-                            .add_all_warmers(&inner.repo_derived_data_arc(), &inner.phases_arc())?;
-                    }
-                    WarmBookmarksCacheDerivedData::None => {}
-                }
-                async {
-                    Ok(Arc::new(warm_bookmarks_cache_builder.build().await?)
-                        as Arc<dyn BookmarksCache>)
-                }
-                .boxed()
-            }
-            None => async {
-                Ok(
-                    Arc::new(NoopBookmarksCache::new(inner.blob_repo.bookmarks().clone()))
-                        as Arc<dyn BookmarksCache>,
-                )
-            }
-            .boxed(),
-        };
         let content_store = RepoFileContentManager::new(&inner.blob_repo);
 
         let disabled_hooks = env.disabled_hooks.get(&name).cloned().unwrap_or_default();
-        let factory = app.repo_factory();
         let hook_manager = make_hook_manager(
             fb,
             factory.acl_provider(),
@@ -304,12 +271,9 @@ impl Repo {
             &config,
             name.clone(),
             &disabled_hooks,
-        );
-
-        let (warm_bookmarks_cache, hook_manager): (Arc<dyn BookmarksCache>, _) = try_join!(
-            warm_bookmarks_cache.watched(&logger),
-            hook_manager.watched(&logger),
-        )?;
+        )
+        .watched(&logger)
+        .await?;
 
         Ok(Self {
             name,

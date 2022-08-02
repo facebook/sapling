@@ -32,7 +32,6 @@ deleted_manifest = { version = "0.1.0", path = "../derived_data/deleted_manifest
 derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
 edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
-environment = { version = "0.1.0", path = "../cmdlib/environment" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../filestore" }

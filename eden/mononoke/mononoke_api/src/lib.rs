@@ -16,7 +16,6 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 pub use bookmarks::BookmarkName;
-use environment::WarmBookmarksCacheDerivedData;
 use futures::stream;
 use futures::StreamExt;
 use futures_watchdog::WatchdogExt;
