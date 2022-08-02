@@ -284,9 +284,14 @@ fn update_publishing_bookmarks_maybe_stale_cache_raw(
 mod test {
     use super::*;
     use bookmarks::BookmarkName;
+    use bookmarks::BookmarkUpdateLogArc;
+    use bookmarks::BookmarksArc;
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use mononoke_api_types::InnerRepo;
+    use phases::PhasesArc;
+    use repo_derived_data::RepoDerivedDataArc;
+    use repo_identity::RepoIdentityArc;
     use tests_utils::bookmark;
     use tests_utils::CreateCommitContext;
     use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
@@ -344,8 +349,13 @@ mod test {
 
         // Let's try with WarmBookmarkCache next
         println!("With warm bookmark cache");
-        let mut builder = WarmBookmarksCacheBuilder::new(ctx.clone(), &repo);
-        builder.add_hg_warmers()?;
+        let mut builder = WarmBookmarksCacheBuilder::new(
+            ctx.clone(),
+            repo.bookmarks_arc(),
+            repo.bookmark_update_log_arc(),
+            repo.repo_identity_arc(),
+        );
+        builder.add_hg_warmers(&repo.repo_derived_data_arc(), &repo.phases_arc())?;
         let wbc = builder.build().await?;
         let session_bookmark_cache = SessionBookmarkCache::new(BasicTestRepo {
             repo: repo.blob_repo.clone(),

@@ -15,6 +15,8 @@ use anyhow::Error;
 use blobrepo_override::DangerousOverride;
 use blobstore_factory::PutBehaviour;
 use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateLogRef;
+use bookmarks::BookmarksRef;
 use cache_warmup::CacheWarmupRequest;
 use cache_warmup::CacheWarmupTarget;
 use clap::Arg;
@@ -35,6 +37,7 @@ use metaconfig_types::CacheWarmupParams;
 use microwave::Snapshot;
 use microwave::SnapshotLocation;
 use mononoke_api_types::InnerRepo;
+use repo_derived_data::RepoDerivedDataArc;
 use repo_factory::RepoFactory;
 use slog::info;
 use slog::o;
@@ -59,13 +62,19 @@ async fn cache_warmup_target(
     bookmark: &BookmarkName,
 ) -> Result<CacheWarmupTarget, Error> {
     let warmers = vec![
-        create_derived_data_warmer::<MappedHgChangesetId, _>(ctx, repo),
-        create_derived_data_warmer::<FilenodesOnlyPublic, _>(ctx, repo),
+        create_derived_data_warmer::<MappedHgChangesetId>(ctx, repo.repo_derived_data_arc()),
+        create_derived_data_warmer::<FilenodesOnlyPublic>(ctx, repo.repo_derived_data_arc()),
     ];
 
-    match find_all_underived_and_latest_derived(ctx, repo, bookmark, &warmers)
-        .await?
-        .0
+    match find_all_underived_and_latest_derived(
+        ctx,
+        repo.bookmarks(),
+        repo.bookmark_update_log(),
+        bookmark,
+        &warmers,
+    )
+    .await?
+    .0
     {
         LatestDerivedBookmarkEntry::Found(Some((cs_id, _))) => {
             Ok(CacheWarmupTarget::Changeset(cs_id))

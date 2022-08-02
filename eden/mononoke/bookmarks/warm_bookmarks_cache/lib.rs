@@ -20,13 +20,12 @@ use anyhow::Error;
 use async_trait::async_trait;
 use blame::BlameRoot;
 use blame::RootBlameV2;
+use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateLog;
-use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Bookmarks;
-use bookmarks::BookmarksArc;
 use bookmarks::BookmarksRef;
 use bookmarks::BookmarksSubscription;
 use bookmarks::Freshness;
@@ -60,10 +59,10 @@ use mercurial_derived_data::MappedHgChangesetId;
 use metaconfig_types::BlameVersion;
 use mononoke_types::ChangesetId;
 use mononoke_types::Timestamp;
-use phases::PhasesArc;
-use repo_derived_data::RepoDerivedDataArc;
+use phases::ArcPhases;
+use repo_derived_data::ArcRepoDerivedData;
+use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
-use repo_identity::RepoIdentityArc;
 use repo_identity::RepoIdentityRef;
 use skeleton_manifest::RootSkeletonManifestId;
 use slog::debug;
@@ -112,142 +111,156 @@ pub enum InitMode {
     Warm,
 }
 
-pub struct WarmBookmarksCacheBuilder<'a, Repo> {
+pub struct WarmBookmarksCacheBuilder {
     ctx: CoreContext,
-    repo: &'a Repo,
+    bookmarks: ArcBookmarks,
+    bookmark_update_log: ArcBookmarkUpdateLog,
+    repo_identity: ArcRepoIdentity,
     warmers: Vec<Warmer>,
     init_mode: InitMode,
 }
 
-impl<'a, Repo> WarmBookmarksCacheBuilder<'a, Repo>
-where
-    Repo: BookmarksArc + BookmarkUpdateLogArc + RepoIdentityArc,
-{
-    pub fn new(mut ctx: CoreContext, repo: &'a Repo) -> Self {
+impl WarmBookmarksCacheBuilder {
+    pub fn new(
+        mut ctx: CoreContext,
+        bookmarks: ArcBookmarks,
+        bookmark_update_log: ArcBookmarkUpdateLog,
+        repo_identity: ArcRepoIdentity,
+    ) -> Self {
         ctx.session_mut()
             .override_session_class(SessionClass::WarmBookmarksCache);
         let ctx = ctx.with_mutated_scuba(|mut scuba_sample_builder| {
-            scuba_sample_builder.add("repo", repo.repo_identity().name().clone());
+            scuba_sample_builder.add("repo", repo_identity.name());
             scuba_sample_builder.add_common_server_data();
             scuba_sample_builder
         });
 
         Self {
             ctx,
-            repo,
+            bookmarks,
+            bookmark_update_log,
+            repo_identity,
             warmers: vec![],
             init_mode: InitMode::Rewind,
         }
     }
 
-    pub fn add_all_warmers(&mut self) -> Result<(), Error>
-    where
-        Repo: RepoDerivedDataArc + PhasesArc,
-    {
-        self.add_derived_data_warmers(&self.repo.repo_derived_data().active_config().types)?;
-        self.add_public_phase_warmer();
+    pub fn add_all_warmers(
+        &mut self,
+        repo_derived_data: &ArcRepoDerivedData,
+        phases: &ArcPhases,
+    ) -> Result<(), Error> {
+        self.add_derived_data_warmers(&repo_derived_data.active_config().types, repo_derived_data)?;
+        self.add_public_phase_warmer(phases);
         Ok(())
     }
 
-    pub fn add_hg_warmers(&mut self) -> Result<(), Error>
-    where
-        Repo: RepoDerivedDataArc + PhasesArc,
-    {
-        self.add_derived_data_warmers(vec![MappedHgChangesetId::NAME, FilenodesOnlyPublic::NAME])?;
-        self.add_public_phase_warmer();
+    pub fn add_hg_warmers(
+        &mut self,
+        repo_derived_data: &ArcRepoDerivedData,
+        phases: &ArcPhases,
+    ) -> Result<(), Error> {
+        self.add_derived_data_warmers(
+            vec![MappedHgChangesetId::NAME, FilenodesOnlyPublic::NAME],
+            repo_derived_data,
+        )?;
+        self.add_public_phase_warmer(phases);
         Ok(())
     }
 
     fn add_derived_data_warmers<'name, Name>(
         &mut self,
         types: impl IntoIterator<Item = &'name Name>,
+        repo_derived_data: &ArcRepoDerivedData,
     ) -> Result<(), Error>
     where
         Name: 'name + AsRef<str> + ?Sized,
-        Repo: RepoDerivedDataArc,
     {
         let types = types.into_iter().map(AsRef::as_ref).collect::<HashSet<_>>();
 
-        let config = self.repo.repo_derived_data().config();
+        let config = repo_derived_data.config();
         for ty in types.iter() {
             if !config.is_enabled(ty) {
                 return Err(anyhow!(
                     "{} is not enabled for {}",
                     ty,
-                    self.repo.repo_identity().name()
+                    self.repo_identity.name()
                 ));
             }
         }
 
         if types.contains(MappedHgChangesetId::NAME) {
             self.warmers
-                .push(create_derived_data_warmer::<MappedHgChangesetId, _>(
-                    &self.ctx, self.repo,
+                .push(create_derived_data_warmer::<MappedHgChangesetId>(
+                    &self.ctx,
+                    repo_derived_data.clone(),
                 ));
         }
 
         if types.contains(RootUnodeManifestId::NAME) {
             self.warmers
-                .push(create_derived_data_warmer::<RootUnodeManifestId, _>(
-                    &self.ctx, self.repo,
+                .push(create_derived_data_warmer::<RootUnodeManifestId>(
+                    &self.ctx,
+                    repo_derived_data.clone(),
                 ));
         }
         if types.contains(RootFsnodeId::NAME) {
             self.warmers
-                .push(create_derived_data_warmer::<RootFsnodeId, _>(
-                    &self.ctx, self.repo,
+                .push(create_derived_data_warmer::<RootFsnodeId>(
+                    &self.ctx,
+                    repo_derived_data.clone(),
                 ));
         }
         if types.contains(RootSkeletonManifestId::NAME) {
             self.warmers
-                .push(create_derived_data_warmer::<RootSkeletonManifestId, _>(
-                    &self.ctx, self.repo,
+                .push(create_derived_data_warmer::<RootSkeletonManifestId>(
+                    &self.ctx,
+                    repo_derived_data.clone(),
                 ));
         }
         if types.contains(BlameRoot::NAME) {
-            match self.repo.repo_derived_data().active_config().blame_version {
+            match repo_derived_data.active_config().blame_version {
                 BlameVersion::V1 => {
-                    self.warmers
-                        .push(create_derived_data_warmer::<BlameRoot, _>(
-                            &self.ctx, self.repo,
-                        ));
+                    self.warmers.push(create_derived_data_warmer::<BlameRoot>(
+                        &self.ctx,
+                        repo_derived_data.clone(),
+                    ));
                 }
                 BlameVersion::V2 => {
-                    self.warmers
-                        .push(create_derived_data_warmer::<RootBlameV2, _>(
-                            &self.ctx, self.repo,
-                        ));
+                    self.warmers.push(create_derived_data_warmer::<RootBlameV2>(
+                        &self.ctx,
+                        repo_derived_data.clone(),
+                    ));
                 }
             }
         }
         if types.contains(ChangesetInfo::NAME) {
             self.warmers
-                .push(create_derived_data_warmer::<ChangesetInfo, _>(
-                    &self.ctx, self.repo,
+                .push(create_derived_data_warmer::<ChangesetInfo>(
+                    &self.ctx,
+                    repo_derived_data.clone(),
                 ));
         }
         // deleted manifest share the same name
         if types.contains(RootDeletedManifestV2Id::NAME) {
             self.warmers
-                .push(create_derived_data_warmer::<RootDeletedManifestV2Id, _>(
-                    &self.ctx, self.repo,
+                .push(create_derived_data_warmer::<RootDeletedManifestV2Id>(
+                    &self.ctx,
+                    repo_derived_data.clone(),
                 ));
         }
         if types.contains(RootFastlog::NAME) {
-            self.warmers
-                .push(create_derived_data_warmer::<RootFastlog, _>(
-                    &self.ctx, self.repo,
-                ));
+            self.warmers.push(create_derived_data_warmer::<RootFastlog>(
+                &self.ctx,
+                repo_derived_data.clone(),
+            ));
         }
 
         Ok(())
     }
 
-    fn add_public_phase_warmer(&mut self)
-    where
-        Repo: PhasesArc,
-    {
-        let warmer = create_public_phase_warmer(&self.ctx, self.repo);
+    fn add_public_phase_warmer(&mut self, phases: &ArcPhases) {
+        let warmer = create_public_phase_warmer(&self.ctx, phases.clone());
         self.warmers.push(warmer);
     }
 
@@ -260,7 +273,15 @@ where
     }
 
     pub async fn build(self) -> Result<WarmBookmarksCache, Error> {
-        WarmBookmarksCache::new(&self.ctx, self.repo, self.warmers, self.init_mode).await
+        WarmBookmarksCache::new(
+            &self.ctx,
+            &self.bookmarks,
+            &self.bookmark_update_log,
+            &self.repo_identity,
+            self.warmers,
+            self.init_mode,
+        )
+        .await
     }
 }
 
@@ -328,7 +349,9 @@ impl BookmarksCache for NoopBookmarksCache {
 impl WarmBookmarksCache {
     pub async fn new(
         ctx: &CoreContext,
-        repo: &(impl BookmarksArc + BookmarkUpdateLogArc + RepoIdentityArc),
+        bookmarks: &ArcBookmarks,
+        bookmark_update_log: &ArcBookmarkUpdateLog,
+        repo_identity: &ArcRepoIdentity,
         warmers: Vec<Warmer>,
         init_mode: InitMode,
     ) -> Result<Self, Error> {
@@ -336,20 +359,35 @@ impl WarmBookmarksCache {
         let (sender, receiver) = oneshot::channel();
 
         info!(ctx.logger(), "Starting warm bookmark cache updater");
-        let sub = repo
-            .bookmarks()
+        let sub = bookmarks
             .create_subscription(ctx, Freshness::MaybeStale)
             .await
             .context("Error creating bookmarks subscription")?;
 
-        let bookmarks = init_bookmarks(ctx, &*sub, repo, &warmers, init_mode).await?;
-        let bookmarks = Arc::new(RwLock::new(bookmarks));
+        let bookmarks_to_watch = init_bookmarks(
+            ctx,
+            &*sub,
+            bookmarks.as_ref(),
+            bookmark_update_log.as_ref(),
+            &warmers,
+            init_mode,
+        )
+        .await?;
 
-        BookmarksCoordinator::new(bookmarks.clone(), sub, repo, warmers.clone())
-            .spawn(ctx.clone(), receiver);
+        let bookmarks_to_watch = Arc::new(RwLock::new(bookmarks_to_watch));
+
+        BookmarksCoordinator::new(
+            bookmarks_to_watch.clone(),
+            sub,
+            bookmarks.clone(),
+            bookmark_update_log.clone(),
+            repo_identity.clone(),
+            warmers.clone(),
+        )
+        .spawn(ctx.clone(), receiver);
 
         Ok(Self {
-            bookmarks,
+            bookmarks: bookmarks_to_watch,
             terminate: Some(sender),
         })
     }
@@ -419,7 +457,8 @@ impl Drop for WarmBookmarksCache {
 async fn init_bookmarks(
     ctx: &CoreContext,
     sub: &dyn BookmarksSubscription,
-    repo: &(impl BookmarksRef + BookmarkUpdateLogRef),
+    bookmarks: &dyn Bookmarks,
+    bookmark_update_log: &dyn BookmarkUpdateLog,
     warmers: &Arc<Vec<Warmer>>,
     mode: InitMode,
 ) -> Result<HashMap<BookmarkName, (ChangesetId, BookmarkKind)>, Error> {
@@ -441,10 +480,15 @@ async fn init_bookmarks(
             if !is_warm(ctx, cs_id, warmers).watched(ctx.logger()).await {
                 match mode {
                     InitMode::Rewind => {
-                        let maybe_cs_id =
-                            move_bookmark_back_in_history_until_derived(ctx, repo, &book, warmers)
-                                .watched(ctx.logger())
-                                .await?;
+                        let maybe_cs_id = move_bookmark_back_in_history_until_derived(
+                            ctx,
+                            bookmarks,
+                            bookmark_update_log,
+                            &book,
+                            warmers,
+                        )
+                        .watched(ctx.logger())
+                        .await?;
 
                         info!(
                             ctx.logger(),
@@ -516,21 +560,23 @@ async fn warm_all(ctx: &CoreContext, cs_id: ChangesetId, warmers: &[Warmer]) -> 
 
 async fn move_bookmark_back_in_history_until_derived(
     ctx: &CoreContext,
-    repo: &(impl BookmarksRef + BookmarkUpdateLogRef),
+    bookmarks: &dyn Bookmarks,
+    bookmark_update_log: &dyn BookmarkUpdateLog,
     book: &BookmarkName,
     warmers: &Arc<Vec<Warmer>>,
 ) -> Result<Option<ChangesetId>, Error> {
     info!(ctx.logger(), "moving {} bookmark back in history...", book);
 
     let (latest_derived_entry, _) =
-        find_all_underived_and_latest_derived(ctx, repo, book, warmers).await?;
+        find_all_underived_and_latest_derived(ctx, bookmarks, bookmark_update_log, book, warmers)
+            .await?;
 
     match latest_derived_entry {
         LatestDerivedBookmarkEntry::Found(maybe_cs_id_and_ts) => {
             Ok(maybe_cs_id_and_ts.map(|(cs_id, _)| cs_id))
         }
         LatestDerivedBookmarkEntry::NotFound => {
-            let cur_bookmark_value = repo.bookmarks().get(ctx.clone(), book).await?;
+            let cur_bookmark_value = bookmarks.get(ctx.clone(), book).await?;
             warn!(
                 ctx.logger(),
                 "cannot find previous derived version of {}, returning current version {:?}",
@@ -556,7 +602,8 @@ pub struct BookmarkUpdateLogId(pub u64);
 /// OLDEST ENTRIES FIRST.
 pub async fn find_all_underived_and_latest_derived(
     ctx: &CoreContext,
-    repo: &(impl BookmarksRef + BookmarkUpdateLogRef),
+    bookmarks: &dyn Bookmarks,
+    bookmark_update_log: &dyn BookmarkUpdateLog,
     book: &BookmarkName,
     warmers: &[Warmer],
 ) -> Result<
@@ -575,8 +622,7 @@ pub async fn find_all_underived_and_latest_derived(
         // the next call to `list_bookmark_log_entries(...)` might return
         // entries that were already returned on the previous call `list_bookmark_log_entries(...)`.
         // That means that the same entry might be rechecked, but that shouldn't be a big problem.
-        let mut log_entries = repo
-            .bookmark_update_log()
+        let mut log_entries = bookmark_update_log
             .list_bookmark_log_entries(
                 ctx.clone(),
                 book.clone(),
@@ -593,7 +639,7 @@ pub async fn find_all_underived_and_latest_derived(
 
         if log_entries.is_empty() {
             debug!(ctx.logger(), "bookmark {} has no history in the log", book);
-            let maybe_cs_id = repo.bookmarks().get(ctx.clone(), book).await?;
+            let maybe_cs_id = bookmarks.get(ctx.clone(), book).await?;
             // If a bookmark has no history then we add a fake entry saying that
             // timestamp is unknown.
             log_entries.push((maybe_cs_id, None));
@@ -659,14 +705,17 @@ impl BookmarksCoordinator {
     fn new(
         bookmarks: Arc<RwLock<HashMap<BookmarkName, (ChangesetId, BookmarkKind)>>>,
         sub: Box<dyn BookmarksSubscription>,
-        repo: &(impl BookmarksArc + BookmarkUpdateLogArc + RepoIdentityArc),
+        bookmarks_fetcher: ArcBookmarks,
+        bookmark_update_log: ArcBookmarkUpdateLog,
+        repo_identity: ArcRepoIdentity,
         warmers: Arc<Vec<Warmer>>,
     ) -> Self {
         let repo = BookmarksCoordinatorRepo {
-            bookmarks: repo.bookmarks_arc(),
-            bookmark_update_log: repo.bookmark_update_log_arc(),
-            repo_identity: repo.repo_identity_arc(),
+            bookmarks: bookmarks_fetcher,
+            bookmark_update_log,
+            repo_identity,
         };
+
         Self {
             bookmarks,
             sub,
@@ -939,8 +988,14 @@ async fn single_bookmark_updater(
     warmers: &Arc<Vec<Warmer>>,
     mut staleness_reporter: impl FnMut(Timestamp),
 ) -> Result<(), Error> {
-    let (latest_derived, underived_history) =
-        find_all_underived_and_latest_derived(ctx, repo, bookmark.name(), warmers.as_ref()).await?;
+    let (latest_derived, underived_history) = find_all_underived_and_latest_derived(
+        ctx,
+        repo.bookmarks(),
+        repo.bookmark_update_log(),
+        bookmark.name(),
+        warmers.as_ref(),
+    )
+    .await?;
 
     let update_bookmark = |cs_id: ChangesetId| async move {
         bookmarks.with_write(|bookmarks| {
@@ -1019,6 +1074,8 @@ async fn single_bookmark_updater(
 mod tests {
     use super::*;
     use anyhow::anyhow;
+    use bookmarks::BookmarkUpdateLogArc;
+    use bookmarks::BookmarksArc;
     use cloned::cloned;
     use delayblob::DelayedBlobstore;
     use derived_data::BonsaiDerived;
@@ -1029,6 +1086,8 @@ mod tests {
     use memblob::Memblob;
     use mononoke_api_types::InnerRepo;
     use mononoke_types::RepositoryId;
+    use repo_derived_data::RepoDerivedDataArc;
+    use repo_identity::RepoIdentityArc;
     use sql::queries;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::bookmark;
@@ -1048,19 +1107,36 @@ mod tests {
             .await?;
 
         let mut warmers: Vec<Warmer> = Vec::new();
-        warmers.push(create_derived_data_warmer::<RootUnodeManifestId, _>(
-            &ctx, &repo,
+        warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(
+            &ctx,
+            repo.repo_derived_data_arc(),
         ));
         let warmers = Arc::new(warmers);
 
         // Unodes haven't been derived at all - so we should get an empty set of bookmarks
-        let bookmarks = init_bookmarks(&ctx, &*sub, &repo, &warmers, InitMode::Rewind).await?;
+        let bookmarks = init_bookmarks(
+            &ctx,
+            &*sub,
+            repo.bookmarks(),
+            repo.bookmark_update_log(),
+            &warmers,
+            InitMode::Rewind,
+        )
+        .await?;
         assert_eq!(bookmarks, HashMap::new());
 
         let master_cs_id = resolve_cs_id(&ctx, &repo.blob_repo, "master").await?;
         RootUnodeManifestId::derive(&ctx, &repo.blob_repo, master_cs_id).await?;
 
-        let bookmarks = init_bookmarks(&ctx, &*sub, &repo, &warmers, InitMode::Rewind).await?;
+        let bookmarks = init_bookmarks(
+            &ctx,
+            &*sub,
+            repo.bookmarks(),
+            repo.bookmark_update_log(),
+            &warmers,
+            InitMode::Rewind,
+        )
+        .await?;
         assert_eq!(
             bookmarks,
             hashmap! {BookmarkName::new("master")? => (master_cs_id, BookmarkKind::PullDefaultPublishing)}
@@ -1084,8 +1160,9 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
 
         let mut warmers: Vec<Warmer> = Vec::new();
-        warmers.push(create_derived_data_warmer::<RootUnodeManifestId, _>(
-            &ctx, &repo,
+        warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(
+            &ctx,
+            repo.repo_derived_data_arc(),
         ));
         let warmers = Arc::new(warmers);
 
@@ -1121,14 +1198,30 @@ mod tests {
             .create_subscription(&ctx, Freshness::MostRecent)
             .await?;
 
-        let bookmarks = init_bookmarks(&ctx, &*sub, &repo, &warmers, InitMode::Rewind).await?;
+        let bookmarks = init_bookmarks(
+            &ctx,
+            &*sub,
+            repo.bookmarks(),
+            repo.bookmark_update_log(),
+            &warmers,
+            InitMode::Rewind,
+        )
+        .await?;
         assert_eq!(
             bookmarks,
             hashmap! {BookmarkName::new("master")? => (derived_master, BookmarkKind::PullDefaultPublishing)}
         );
 
         RootUnodeManifestId::derive(&ctx, &repo.blob_repo, master).await?;
-        let bookmarks = init_bookmarks(&ctx, &*sub, &repo, &warmers, InitMode::Rewind).await?;
+        let bookmarks = init_bookmarks(
+            &ctx,
+            &*sub,
+            repo.bookmarks(),
+            repo.bookmark_update_log(),
+            &warmers,
+            InitMode::Rewind,
+        )
+        .await?;
         assert_eq!(
             bookmarks,
             hashmap! {BookmarkName::new("master")? => (master, BookmarkKind::PullDefaultPublishing)}
@@ -1143,8 +1236,9 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
 
         let mut warmers: Vec<Warmer> = Vec::new();
-        warmers.push(create_derived_data_warmer::<RootUnodeManifestId, _>(
-            &ctx, &repo,
+        warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(
+            &ctx,
+            repo.repo_derived_data_arc(),
         ));
         let warmers = Arc::new(warmers);
 
@@ -1168,7 +1262,15 @@ mod tests {
             .create_subscription(&ctx, Freshness::MostRecent)
             .await?;
 
-        let bookmarks = init_bookmarks(&ctx, &*sub, &repo, &warmers, InitMode::Rewind).await?;
+        let bookmarks = init_bookmarks(
+            &ctx,
+            &*sub,
+            repo.bookmarks(),
+            repo.bookmark_update_log(),
+            &warmers,
+            InitMode::Rewind,
+        )
+        .await?;
         assert_eq!(
             bookmarks,
             hashmap! {BookmarkName::new("master")? => (derived_master, BookmarkKind::PullDefaultPublishing)}
@@ -1183,8 +1285,9 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
 
         let mut warmers: Vec<Warmer> = Vec::new();
-        warmers.push(create_derived_data_warmer::<RootUnodeManifestId, _>(
-            &ctx, &repo,
+        warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(
+            &ctx,
+            repo.repo_derived_data_arc(),
         ));
         let warmers = Arc::new(warmers);
 
@@ -1215,7 +1318,15 @@ mod tests {
             .create_subscription(&ctx, Freshness::MostRecent)
             .await?;
 
-        let bookmarks = init_bookmarks(&ctx, &*sub, &repo, &warmers, InitMode::Rewind).await?;
+        let bookmarks = init_bookmarks(
+            &ctx,
+            &*sub,
+            repo.bookmarks(),
+            repo.bookmark_update_log(),
+            &warmers,
+            InitMode::Rewind,
+        )
+        .await?;
         assert_eq!(
             bookmarks,
             hashmap! {BookmarkName::new("master")? => (derived_master, BookmarkKind::PullDefaultPublishing)}
@@ -1241,8 +1352,9 @@ mod tests {
         let bookmarks = Arc::new(RwLock::new(bookmarks));
 
         let mut warmers: Vec<Warmer> = Vec::new();
-        warmers.push(create_derived_data_warmer::<RootUnodeManifestId, _>(
-            &ctx, &repo,
+        warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(
+            &ctx,
+            repo.repo_derived_data_arc(),
         ));
         let warmers = Arc::new(warmers);
 
@@ -1260,7 +1372,9 @@ mod tests {
                 .bookmarks()
                 .create_subscription(&ctx, Freshness::MostRecent)
                 .await?,
-            &repo,
+            repo.bookmarks_arc(),
+            repo.bookmark_update_log_arc(),
+            repo.repo_identity_arc(),
             warmers,
         );
 
@@ -1296,8 +1410,9 @@ mod tests {
         let bookmarks = Arc::new(RwLock::new(bookmarks));
 
         let mut warmers: Vec<Warmer> = Vec::new();
-        warmers.push(create_derived_data_warmer::<RootUnodeManifestId, _>(
-            &ctx, &repo,
+        warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(
+            &ctx,
+            repo.repo_derived_data_arc(),
         ));
         let warmers = Arc::new(warmers);
 
@@ -1444,7 +1559,9 @@ mod tests {
                 .bookmarks()
                 .create_subscription(&ctx, Freshness::MostRecent)
                 .await?,
-            &repo,
+            repo.bookmarks_arc(),
+            repo.bookmark_update_log_arc(),
+            repo.repo_identity_arc(),
             warmers,
         );
 
@@ -1466,8 +1583,9 @@ mod tests {
 
         // Now change the warmer and make sure it derives successfully
         let mut warmers: Vec<Warmer> = Vec::new();
-        warmers.push(create_derived_data_warmer::<RootUnodeManifestId, _>(
-            &ctx, &repo,
+        warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(
+            &ctx,
+            repo.repo_derived_data_arc(),
         ));
         let warmers = Arc::new(warmers);
 
@@ -1477,7 +1595,9 @@ mod tests {
                 .bookmarks()
                 .create_subscription(&ctx, Freshness::MostRecent)
                 .await?,
-            &repo,
+            repo.bookmarks_arc(),
+            repo.bookmark_update_log_arc(),
+            repo.repo_identity_arc(),
             warmers,
         );
 
@@ -1570,7 +1690,9 @@ mod tests {
                 .bookmarks()
                 .create_subscription(&ctx, Freshness::MostRecent)
                 .await?,
-            &repo,
+            repo.bookmarks_arc(),
+            repo.bookmark_update_log_arc(),
+            repo.repo_identity_arc(),
             warmers.clone(),
         );
         coordinator.update(&ctx).await?;
@@ -1614,8 +1736,9 @@ mod tests {
         let bookmarks = Arc::new(RwLock::new(bookmarks));
 
         let mut warmers: Vec<Warmer> = Vec::new();
-        warmers.push(create_derived_data_warmer::<RootUnodeManifestId, _>(
-            &ctx, &repo,
+        warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(
+            &ctx,
+            repo.repo_derived_data_arc(),
         ));
         let warmers = Arc::new(warmers);
 
@@ -1633,7 +1756,9 @@ mod tests {
                 .bookmarks()
                 .create_subscription(&ctx, Freshness::MostRecent)
                 .await?,
-            &repo,
+            repo.bookmarks_arc(),
+            repo.bookmark_update_log_arc(),
+            repo.repo_identity_arc(),
             warmers,
         );
 
@@ -1682,8 +1807,9 @@ mod tests {
         let bookmarks = Arc::new(RwLock::new(HashMap::new()));
 
         let mut warmers: Vec<Warmer> = Vec::new();
-        warmers.push(create_derived_data_warmer::<RootUnodeManifestId, _>(
-            &ctx, &repo,
+        warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(
+            &ctx,
+            repo.repo_derived_data_arc(),
         ));
         let warmers = Arc::new(warmers);
 

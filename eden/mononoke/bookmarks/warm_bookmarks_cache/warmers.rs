@@ -14,19 +14,19 @@ use derived_data_manager::BonsaiDerivable;
 use futures::future::FutureExt;
 use futures_watchdog::WatchdogExt;
 use mononoke_types::ChangesetId;
-use phases::PhasesArc;
-use repo_derived_data::RepoDerivedDataArc;
+use phases::ArcPhases;
+use repo_derived_data::ArcRepoDerivedData;
 use slog::info;
 use slog::o;
 
-pub fn create_derived_data_warmer<Derivable, Repo>(ctx: &CoreContext, repo: &Repo) -> Warmer
+pub fn create_derived_data_warmer<Derivable>(
+    ctx: &CoreContext,
+    repo_derived_data: ArcRepoDerivedData,
+) -> Warmer
 where
     Derivable: BonsaiDerivable,
-    Repo: RepoDerivedDataArc,
 {
     info!(ctx.logger(), "Warming {}", Derivable::NAME);
-    let repo_derived_data = repo.repo_derived_data_arc();
-
     let warmer: Box<WarmerFn> = Box::new({
         cloned!(repo_derived_data);
         move |ctx: &CoreContext, cs_id: ChangesetId| {
@@ -61,9 +61,8 @@ where
     }
 }
 
-pub fn create_public_phase_warmer(ctx: &CoreContext, repo: &impl PhasesArc) -> Warmer {
+pub fn create_public_phase_warmer(ctx: &CoreContext, phases: ArcPhases) -> Warmer {
     info!(ctx.logger(), "Warming public phases");
-    let phases = repo.phases_arc();
     let warmer: Box<WarmerFn> = Box::new({
         cloned!(phases);
         move |ctx: &CoreContext, cs_id: ChangesetId| {

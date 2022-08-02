@@ -25,6 +25,8 @@ use bookmarks::BookmarkKind;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
+use bookmarks::BookmarkUpdateLogArc;
+use bookmarks::BookmarksArc;
 pub use bookmarks::Freshness as BookmarkFreshness;
 use bookmarks::Freshness;
 use cacheblob::InProcessLease;
@@ -83,12 +85,15 @@ use mononoke_types::Timestamp;
 use mutable_renames::MutableRenames;
 use mutable_renames::SqlMutableRenamesStore;
 use permission_checker::DefaultAclProvider;
+use phases::PhasesArc;
 use phases::PhasesRef;
 use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use repo_authorization::AuthorizationContext;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_cross_repo::RepoCrossRepo;
+use repo_derived_data::RepoDerivedDataArc;
+use repo_identity::RepoIdentityArc;
 use repo_sparse_profiles::RepoSparseProfiles;
 use revset::AncestorsNodeStream;
 use segmented_changelog::CloneData;
@@ -256,13 +261,21 @@ impl Repo {
                     env.warm_bookmarks_cache_scuba_sample_builder.clone();
                 scuba_sample_builder.add("repo", inner.blob_repo.name().clone());
                 let ctx = ctx.with_mutated_scuba(|_| scuba_sample_builder);
-                let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(ctx, &inner);
+                let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(
+                    ctx,
+                    inner.bookmarks_arc(),
+                    inner.bookmark_update_log_arc(),
+                    inner.repo_identity_arc(),
+                );
+
                 match warm_bookmarks_cache_derived_data {
                     WarmBookmarksCacheDerivedData::HgOnly => {
-                        warm_bookmarks_cache_builder.add_hg_warmers()?;
+                        warm_bookmarks_cache_builder
+                            .add_hg_warmers(&inner.repo_derived_data_arc(), &inner.phases_arc())?;
                     }
                     WarmBookmarksCacheDerivedData::AllKinds => {
-                        warm_bookmarks_cache_builder.add_all_warmers()?;
+                        warm_bookmarks_cache_builder
+                            .add_all_warmers(&inner.repo_derived_data_arc(), &inner.phases_arc())?;
                     }
                     WarmBookmarksCacheDerivedData::None => {}
                 }
@@ -422,8 +435,14 @@ impl Repo {
             ),
         };
 
-        let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(ctx.clone(), &inner);
-        warm_bookmarks_cache_builder.add_all_warmers()?;
+        let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(
+            ctx.clone(),
+            inner.bookmarks_arc(),
+            inner.bookmark_update_log_arc(),
+            inner.repo_identity_arc(),
+        );
+        warm_bookmarks_cache_builder
+            .add_all_warmers(&inner.repo_derived_data_arc(), &inner.phases_arc())?;
         // We are constructing a test repo, so ensure the warm bookmark cache
         // is fully warmed, so that tests see up-to-date bookmarks.
         warm_bookmarks_cache_builder.wait_until_warmed();
