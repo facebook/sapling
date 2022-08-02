@@ -7,7 +7,6 @@
 
 #include "SerializedBlobMetadata.h"
 
-#include <folly/Format.h>
 #include <folly/Range.h>
 #include <folly/lang/Bits.h>
 
