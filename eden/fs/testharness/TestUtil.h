@@ -9,9 +9,9 @@
 
 #include <folly/Range.h>
 #include <folly/concurrency/UnboundedQueue.h>
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
-#include "eden/fs/telemetry/ActivityBuffer.h"
 
 namespace facebook::eden {
 

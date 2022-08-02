@@ -80,6 +80,30 @@ DEFINE_string(
 
 namespace facebook::eden {
 
+InodeTraceEvent::InodeTraceEvent(
+    TraceEventBase times,
+    InodeNumber ino,
+    InodeType inodeType,
+    InodeEventType eventType,
+    InodeEventProgress progress,
+    std::chrono::microseconds duration,
+    folly::StringPiece stringPath)
+    : ino{ino},
+      inodeType{inodeType},
+      eventType{eventType},
+      progress{progress},
+      duration{duration} {
+  systemTime = times.systemTime;
+  monotonicTime = times.monotonicTime;
+  setPath(stringPath);
+}
+
+void InodeTraceEvent::setPath(folly::StringPiece stringPath) {
+  path.reset(new char[stringPath.size() + 1]);
+  memcpy(path.get(), stringPath.data(), stringPath.size());
+  path[stringPath.size()] = 0;
+}
+
 // These static asserts exist to make explicit the memory usage of the per-mount
 // InodeTraceBus. TraceBus uses 2 * capacity * sizeof(TraceEvent) memory usage,
 // so limit total memory usage to around 0.67 MB per mount. Note
@@ -252,11 +276,11 @@ EdenMount::EdenMount(
           kEdenStracePrefix.str() + checkoutConfig_->getMountPath().value()},
       lastCheckoutTime_{EdenTimestamp{serverState_->getClock()->getRealtime()}},
       owner_{Owner{getuid(), getgid()}},
-      activityBuffer_{initActivityBuffer()},
+      inodeActivityBuffer_{initInodeActivityBuffer()},
       inodeTraceBus_{
           TraceBus<InodeTraceEvent>::create("inode", kInodeTraceBusCapacity)},
       clock_{serverState_->getClock()} {
-  subscribeActivityBuffer();
+  subscribeInodeActivityBuffer();
 }
 
 Overlay::OverlayType EdenMount::getOverlayType(
@@ -2225,18 +2249,19 @@ struct stat EdenMount::initStatData() const {
   return st;
 }
 
-std::optional<ActivityBuffer> EdenMount::initActivityBuffer() {
+std::optional<ActivityBuffer<InodeTraceEvent>>
+EdenMount::initInodeActivityBuffer() {
   if (serverState_->getEdenConfig()->enableActivityBuffer.getValue()) {
-    return std::make_optional<ActivityBuffer>(
+    return std::make_optional<ActivityBuffer<InodeTraceEvent>>(
         serverState_->getEdenConfig()->ActivityBufferMaxEvents.getValue());
   }
   return std::nullopt;
 }
 
-void EdenMount::subscribeActivityBuffer() {
+void EdenMount::subscribeInodeActivityBuffer() {
   inodeTraceHandle_ = std::make_shared<InodeTraceHandle>();
 
-  if (activityBuffer_.has_value()) {
+  if (inodeActivityBuffer_.has_value()) {
     inodeTraceHandle_->subHandle = inodeTraceBus_->subscribeFunction(
         folly::to<std::string>("inodetrace-", getPath().basename()),
         [this](const InodeTraceEvent& event) {
@@ -2247,12 +2272,12 @@ void EdenMount::subscribeActivityBuffer() {
             if (relativePath.has_value()) {
               InodeTraceEvent newTraceEvent = event;
               newTraceEvent.setPath(relativePath->stringPiece());
-              activityBuffer_->addEvent(std::move(newTraceEvent));
+              inodeActivityBuffer_->addEvent(std::move(newTraceEvent));
               return;
             }
           } catch (const std::system_error& /* e */) {
           }
-          activityBuffer_->addEvent(event);
+          inodeActivityBuffer_->addEvent(event);
         });
   }
 }

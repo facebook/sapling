@@ -91,6 +91,53 @@ class RenameLock;
 class SharedRenameLock;
 
 /**
+ * Represents an inode state transition and the duration it took for the event
+ * to occur. Currently this tracks inode loads and inode materializations. This
+ * type extends the TraceEventBase class so that events can be added to a
+ * tracebus for which an ActivityBuffer subscribes to and stores events from.
+ *
+ * An inode materialization specifically refers to when a new version of
+ * an inode's contents are saved in the overlay while before they referred
+ * directly to a source control object. The duration we count for an inode
+ * materialization consists of any time spent preparing/collecting file data,
+ * writing the data to EdenFS's overlay, and materializing any parent inodes.
+ *
+ * An inode load refers to fetching state for the inode to store into memory.
+ * Note: this is not the same as fetching data content for the inode. Fetching
+ * data content from an hg BackingStore in particular is an HgImportTraceEvent.
+ */
+struct InodeTraceEvent : TraceEventBase {
+  InodeTraceEvent(
+      TraceEventBase times,
+      InodeNumber ino,
+      InodeType inodeType,
+      InodeEventType eventType,
+      InodeEventProgress progress,
+      std::chrono::microseconds duration,
+      folly::StringPiece path);
+
+  // Simple accessor that hides the internal memory representation of the trace
+  // event's path. Note this could be just the base filename or it could be the
+  // full path depending on how much was available and if the event has already
+  // been added into the ActivityBuffer.
+  std::string getPath() const {
+    return path.get();
+  }
+
+  // Setter that allocates new memory on the heap and memcpy's a StringPiece's
+  // data into the InodeTraceEvent's path attribute
+  void setPath(folly::StringPiece stringPath);
+
+  InodeNumber ino;
+  InodeType inodeType;
+  InodeEventType eventType;
+  InodeEventProgress progress;
+  std::chrono::microseconds duration;
+  // Always null-terminated, and saves space in the trace event structure.
+  std::shared_ptr<char[]> path;
+};
+
+/**
  * Represents types of keys for some fb303 counters.
  */
 enum class CounterName {
@@ -673,8 +720,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
     return serverState_;
   }
 
-  std::optional<ActivityBuffer>& getActivityBuffer() {
-    return activityBuffer_;
+  std::optional<ActivityBuffer<InodeTraceEvent>>& getActivityBuffer() {
+    return inodeActivityBuffer_;
   }
 
   TraceBus<InodeTraceEvent>& getInodeTraceBus() const {
@@ -788,18 +835,18 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   struct InodeMetadata getInitialInodeMetadata(mode_t mode) const;
 
   /**
-   * Return a newly initialized ActivityBuffer for the mount if using
-   * ActivityBuffers is enabled and return std::nullopt otherwise.
+   * Return a newly initialized ActivityBuffer<InodeTraceEvent> for the mount if
+   * using ActivityBuffers is enabled and return std::nullopt otherwise.
    */
-  std::optional<ActivityBuffer> initActivityBuffer();
+  std::optional<ActivityBuffer<InodeTraceEvent>> initInodeActivityBuffer();
 
   /**
-   * Subscribes activityBuffer_ to the inodeTraceBus_ in order to read and store
-   * InodeTraceEvents into the ActivityBuffer as they occur. In addition, path
-   * names for the inodes are calculated here outside of the critical path of
-   * the inode event in order to be displayed in the eden inode tracing CLI.
+   * Subscribes inodeActivityBuffer_ to the inodeTraceBus_ in order to read and
+   * store InodeTraceEvents into the ActivityBuffer as they occur. In addition,
+   * path names for the inodes are calculated here outside of the critical path
+   * of the inode event in order to be displayed in the eden inode tracing CLI.
    */
-  void subscribeActivityBuffer();
+  void subscribeInodeActivityBuffer();
 
   /**
    * Helper function to publish a new InodeTraceEvent to the mount's
@@ -1225,14 +1272,16 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   std::atomic<uint64_t> numPrefetchesInProgress_{0};
 
   /**
-   * Fixed sized buffer containing recent events that have occured within
-   * EdenFS. Used in retroactive versions of the Eden tracing CLI. Note,
-   * currently events are limited to InodeMaterializeEvents though we plan to
-   * add more types of events later. Also the initialization of this buffer
-   * depends on serverState_ being intitialized to get eden config information,
-   * so activityBuffer_ is ordered after serverState_ in this header file
+   * Fixed sized buffer containing recent inode events that have occured within
+   * EdenFS. Used in the retroactive version of the eden inode trace command.
+   *
+   * The initialization of this buffer depends on serverState_ being
+   * intitialized to get eden config information, so inodeActivityBuffer_ is
+   * ordered after serverState_ in this header file. Also, inodeTraceBus_
+   * subscriptions publish to inodeActivityBuffer_ so inodeActivityBuffer_ is
+   * ordered before inodeTraceBus_.
    */
-  std::optional<ActivityBuffer> activityBuffer_;
+  std::optional<ActivityBuffer<InodeTraceEvent>> inodeActivityBuffer_;
 
   std::shared_ptr<TraceBus<InodeTraceEvent>> inodeTraceBus_;
 
@@ -1314,3 +1363,28 @@ class EdenMountCancelled : public std::runtime_error {
 };
 
 } // namespace facebook::eden
+
+namespace fmt {
+template <>
+struct formatter<facebook::eden::InodeTraceEvent> : formatter<std::string> {
+  auto format(
+      const facebook::eden::InodeTraceEvent& event,
+      format_context& ctx) {
+    std::string eventInfo = fmt::format(
+        "Inode Trace Event: {} {} {} {} {} {} {}",
+        event.systemTime.time_since_epoch().count(),
+        event.eventType == facebook::eden::InodeEventType::MATERIALIZE ? "M"
+                                                                       : "L",
+        event.progress == facebook::eden::InodeEventProgress::START
+            ? "Start"
+            : (event.progress == facebook::eden::InodeEventProgress::END
+                   ? "End"
+                   : "Fail"),
+        event.duration.count(),
+        event.ino.getRawValue(),
+        event.inodeType == facebook::eden::InodeType::TREE ? "Tree" : "File",
+        event.getPath());
+    return formatter<std::string>::format(eventInfo, ctx);
+  }
+};
+} // namespace fmt
