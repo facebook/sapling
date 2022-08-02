@@ -7,7 +7,6 @@
 
 #include "eden/fs/utils/TimeUtil.h"
 
-#include <folly/Format.h>
 #include <folly/logging/xlog.h>
 
 namespace facebook::eden {
