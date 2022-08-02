@@ -467,7 +467,7 @@ pub struct RepoClient {
     request_perf_counters: Arc<PerfCounters>,
     // In case `repo` is a backup of another repository `maybe_backup_repo_source` points to
     // a source for this repository.
-    maybe_backup_repo_source: Option<BlobRepo>,
+    maybe_backup_repo_source: Option<Arc<Repo>>,
 }
 
 impl RepoClient {
@@ -477,7 +477,7 @@ impl RepoClient {
         logging: LoggingContainer,
         maybe_push_redirector_args: Option<PushRedirectorArgs>,
         knobs: RepoClientKnobs,
-        maybe_backup_repo_source: Option<BlobRepo>,
+        maybe_backup_repo_source: Option<Arc<Repo>>,
     ) -> Self {
         let session_bookmarks_cache = Arc::new(SessionBookmarkCache::new(repo.clone()));
 
@@ -1734,7 +1734,7 @@ impl HgCommands for RepoClient {
                         stream.compat().boxed(),
                         pure_push_allowed,
                         pushrebase_flags,
-                        maybe_backup_repo_source,
+                        maybe_backup_repo_source.map(|repo| repo.as_blob_repo().clone()),
                     )
                     .await?;
 

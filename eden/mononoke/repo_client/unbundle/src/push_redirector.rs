@@ -73,7 +73,7 @@ use topo_sort::sort_topological;
 #[derive(Clone)]
 pub struct PushRedirectorArgs {
     target_repo: Arc<Repo>,
-    source_blobrepo: BlobRepo,
+    source_repo: Arc<Repo>,
     synced_commit_mapping: SqlSyncedCommitMapping,
     target_repo_dbs: TargetRepoDbs,
 }
@@ -81,13 +81,13 @@ pub struct PushRedirectorArgs {
 impl PushRedirectorArgs {
     pub fn new(
         target_repo: Arc<Repo>,
-        source_blobrepo: BlobRepo,
+        source_repo: Arc<Repo>,
         synced_commit_mapping: SqlSyncedCommitMapping,
         target_repo_dbs: TargetRepoDbs,
     ) -> Self {
         Self {
             target_repo,
-            source_blobrepo,
+            source_repo,
             synced_commit_mapping,
             target_repo_dbs,
         }
@@ -105,13 +105,13 @@ impl PushRedirectorArgs {
         //       value of `commit_sync_config`
         let PushRedirectorArgs {
             target_repo,
-            source_blobrepo,
+            source_repo,
             synced_commit_mapping,
             target_repo_dbs,
             ..
         } = self;
 
-        let small_repo = source_blobrepo;
+        let small_repo = source_repo.blob_repo().clone();
         let large_repo = target_repo.blob_repo().clone();
         let mapping: Arc<dyn SyncedCommitMapping> = Arc::new(synced_commit_mapping);
         let syncers = create_commit_syncers(

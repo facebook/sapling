@@ -59,7 +59,7 @@ struct IncompletePushRedirectorArgs {
     common_commit_sync_config: CommonCommitSyncConfig,
     synced_commit_mapping: SqlSyncedCommitMapping,
     target_repo_dbs: TargetRepoDbs,
-    source_blobrepo: BlobRepo,
+    source_repo: Arc<Repo>,
 }
 
 impl IncompletePushRedirectorArgs {
@@ -71,7 +71,7 @@ impl IncompletePushRedirectorArgs {
             common_commit_sync_config,
             synced_commit_mapping,
             target_repo_dbs,
-            source_blobrepo,
+            source_repo,
         } = self;
 
         let large_repo_id = common_commit_sync_config.large_repo_id;
@@ -83,7 +83,7 @@ impl IncompletePushRedirectorArgs {
 
         Ok(PushRedirectorArgs::new(
             target_repo,
-            source_blobrepo,
+            source_repo,
             synced_commit_mapping,
             target_repo_dbs,
         ))
@@ -136,11 +136,11 @@ impl IncompleteRepoHandler {
 fn try_find_repo_by_name<'a>(
     name: &str,
     iter: impl Iterator<Item = &'a IncompleteRepoHandler>,
-) -> Result<BlobRepo, Error> {
+) -> Result<Arc<Repo>, Error> {
     for handler in iter {
         let blobrepo = handler.repo.blob_repo();
         if blobrepo.name() == name {
-            return Ok(blobrepo.clone());
+            return Ok(Arc::clone(&handler.repo));
         }
     }
 
@@ -154,7 +154,7 @@ pub struct RepoHandler {
     pub repo: Arc<Repo>,
     pub maybe_push_redirector_args: Option<PushRedirectorArgs>,
     pub repo_client_knobs: RepoClientKnobs,
-    pub maybe_backup_repo_source: Option<BlobRepo>,
+    pub maybe_backup_repo_source: Option<Arc<Repo>>,
 }
 
 pub async fn repo_handlers<'a>(
@@ -238,7 +238,7 @@ pub async fn repo_handlers<'a>(
                         common_commit_sync_config,
                         synced_commit_mapping: sql_commit_sync_mapping,
                         target_repo_dbs: backsyncer_dbs,
-                        source_blobrepo: blobrepo,
+                        source_repo: Arc::clone(repo),
                     })
                 }
             }
@@ -252,7 +252,7 @@ pub async fn repo_handlers<'a>(
             IncompleteRepoHandler {
                 logger,
                 scuba: scuba.clone(),
-                repo: repo.clone(),
+                repo: Arc::clone(repo),
                 maybe_incomplete_push_redirector_args,
                 repo_client_knobs,
                 backup_repo_config,
