@@ -699,27 +699,6 @@ TEST(PathFuncs, findParent) {
   EXPECT_TRUE(it == path.allPaths().end());
 }
 
-TEST(PathFuncs, format) {
-  // Test using folly::format with all of the various path types
-  PathComponentPiece comp("foo");
-  EXPECT_EQ("x(foo)", folly::sformat("x({})", comp));
-
-  PathComponentPiece compPiece("bar");
-  EXPECT_EQ("x(bar)", folly::sformat("x({})", compPiece));
-
-  AbsolutePath abs("/home/johndoe");
-  EXPECT_EQ("x(/home/johndoe)", folly::sformat("x({})", abs));
-
-  AbsolutePathPiece absPiece("/var/log/clowntown");
-  EXPECT_EQ("x(/var/log/clowntown)", folly::sformat("x({})", absPiece));
-
-  RelativePath rel("src/ping.c");
-  EXPECT_EQ("x(src/ping.c)", folly::sformat("x({})", rel));
-
-  RelativePathPiece relPiece("src/abc.def");
-  EXPECT_EQ("x(src/abc.def)", folly::sformat("x({})", relPiece));
-}
-
 TEST(PathFuncs, fmt) {
   // Test using fmt::format with all of the various path types
   PathComponentPiece comp("foo");

@@ -7,6 +7,7 @@
 
 #include "eden/fs/utils/Pipe.h"
 #include <fcntl.h>
+#include <folly/Exception.h>
 #include <folly/String.h>
 #ifndef _WIN32
 #include <folly/portability/Sockets.h>

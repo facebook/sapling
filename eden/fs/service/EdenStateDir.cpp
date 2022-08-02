@@ -7,6 +7,7 @@
 
 #include "eden/fs/service/EdenStateDir.h"
 
+#include <folly/Exception.h>
 #include <folly/FileUtil.h>
 #include <folly/logging/xlog.h>
 

@@ -13,6 +13,7 @@
 #include <chrono>
 #include <queue>
 
+#include <folly/Exception.h>
 #include <folly/Range.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/SysStat.h>

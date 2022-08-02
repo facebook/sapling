@@ -7,6 +7,8 @@
 
 #include "eden/fs/utils/NfsSocket.h"
 
+#include <folly/Exception.h>
+
 namespace facebook::eden {
 
 folly::SocketAddress makeNfsSocket(std::optional<AbsolutePath> unixSocketPath) {
