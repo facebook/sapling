@@ -33,28 +33,6 @@ class InodeError : public PathErrorBase {
       TreeInodePtr inode,
       PathComponentPiece child,
       std::string&& message);
-  template <typename... Args>
-  InodeError(
-      int errnum,
-      InodePtr inode,
-      folly::StringPiece format,
-      Args&&... args)
-      : InodeError(
-            errnum,
-            inode,
-            folly::sformat(format, std::forward<Args>(args)...)) {}
-  template <typename... Args>
-  InodeError(
-      int errnum,
-      TreeInodePtr inode,
-      PathComponentPiece child,
-      folly::StringPiece format,
-      Args&&... args)
-      : InodeError(
-            errnum,
-            inode,
-            child,
-            folly::sformat(format, std::forward<Args>(args)...)) {}
   ~InodeError() override = default;
 
   InodeError(InodeError const&) = default;

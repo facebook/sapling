@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <folly/Format.h>
 #include <folly/Synchronized.h>
 #include <memory>
 #include <optional>
@@ -66,17 +65,6 @@ class PathError : public PathErrorBase {
   explicit PathError(int errnum, RelativePathPiece path)
       : PathErrorBase(errnum), path_(path.copy()) {}
   ~PathError() override = default;
-
-  template <typename... Args>
-  PathError(
-      int errnum,
-      const folly::StringPiece path,
-      folly::StringPiece format,
-      Args&&... args)
-      : PathError(
-            errnum,
-            path,
-            folly::sformat(format, std::forward<Args>(args)...)) {}
 
   PathError(PathError const&) = default;
   PathError& operator=(PathError const&) = default;

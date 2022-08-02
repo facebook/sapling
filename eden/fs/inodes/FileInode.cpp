@@ -7,11 +7,14 @@
 
 #include "eden/fs/inodes/FileInode.h"
 
+#include <fmt/format.h>
+#include <optional>
+
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/logging/xlog.h>
-#include <optional>
+
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeTable.h"
@@ -722,7 +725,9 @@ AbsolutePath FileInode::getMaterializedFilePath() {
   auto filePath = getPath();
   if (!filePath.has_value()) {
     throw InodeError(
-        EINVAL, inodePtrFromThis(), "File is unlinked", getLogPath());
+        EINVAL,
+        inodePtrFromThis(),
+        fmt::format("{}: File is unlinked", getLogPath()));
   }
   return getMount()->getPath() + filePath.value();
 }
