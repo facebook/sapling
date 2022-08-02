@@ -77,9 +77,11 @@ use filenodes::ArcFilenodes;
 use filestore::ArcFilestoreConfig;
 use filestore::FilestoreConfig;
 use futures_watchdog::WatchdogExt;
-use hook_manager_factory::make_hook_manager;
+use hooks::hook_loader::load_hooks;
 use hooks::ArcHookManager;
+use hooks::HookManager;
 use hooks_content_stores::RepoFileContentManager;
+use hooks_content_stores::TextOnlyFileContentManager;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use mercurial_mutation::ArcHgMutationStore;
 use mercurial_mutation::CachedHgMutationStore;
@@ -1155,6 +1157,8 @@ impl RepoFactory {
         bookmarks: &ArcBookmarks,
         repo_blobstore: &ArcRepoBlobstore,
     ) -> Result<ArcHookManager> {
+        let name = repo_identity.name();
+
         let content_store = RepoFileContentManager::from_parts(
             bookmarks.clone(),
             repo_blobstore.clone(),
@@ -1164,18 +1168,50 @@ impl RepoFactory {
         let disabled_hooks = self
             .env
             .disabled_hooks
-            .get(repo_identity.name())
+            .get(name)
             .cloned()
             .unwrap_or_default();
 
-        let hook_manager = make_hook_manager(
+        let hooks_scuba_local_path = repo_config.scuba_local_path_hooks.clone();
+
+        let mut hooks_scuba = MononokeScubaSampleBuilder::with_opt_table(
             self.env.fb,
-            self.env.acl_provider.as_ref(),
-            content_store,
-            repo_config,
-            repo_identity.name().to_string(),
-            &disabled_hooks,
-        )
+            repo_config.scuba_table_hooks.clone(),
+        );
+
+        hooks_scuba.add("repo", name);
+
+        if let Some(hooks_scuba_local_path) = hooks_scuba_local_path {
+            hooks_scuba = hooks_scuba.with_log_file(hooks_scuba_local_path)?;
+        }
+
+        let hook_manager = async {
+            let fetcher = Box::new(TextOnlyFileContentManager::new(
+                content_store,
+                repo_config.hook_max_file_size,
+            ));
+
+            let mut hook_manager = HookManager::new(
+                self.env.fb,
+                self.env.acl_provider.as_ref(),
+                fetcher,
+                repo_config.hook_manager_params.clone().unwrap_or_default(),
+                hooks_scuba,
+                name.to_string(),
+            )
+            .await?;
+
+            load_hooks(
+                self.env.fb,
+                self.env.acl_provider.as_ref(),
+                &mut hook_manager,
+                repo_config,
+                &disabled_hooks,
+            )
+            .await?;
+
+            <Result<_, anyhow::Error>>::Ok(hook_manager)
+        }
         .watched(&self.env.logger)
         .await
         .context(RepoFactoryError::HookManager)?;

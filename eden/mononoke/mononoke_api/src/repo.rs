@@ -63,9 +63,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures::Future;
-use hook_manager_factory::make_hook_manager;
 use hooks::HookManager;
-use hooks_content_stores::RepoFileContentManager;
 use itertools::Itertools;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
@@ -89,7 +87,6 @@ use mononoke_types::Timestamp;
 use mutable_counters::MutableCounters;
 use mutable_renames::MutableRenames;
 use mutable_renames::SqlMutableRenamesStore;
-use permission_checker::DefaultAclProvider;
 use phases::Phases;
 use phases::PhasesArc;
 use phases::PhasesRef;
@@ -127,6 +124,7 @@ use streaming_clone::StreamingClone;
 use streaming_clone::StreamingCloneBuilder;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
+use test_repo_factory::TestRepoFactory;
 use warm_bookmarks_cache::BookmarksCache;
 use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
 
@@ -350,6 +348,10 @@ impl Repo {
         synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
         lfs: LfsParams,
     ) -> Result<Self, Error> {
+        // TODO: Migrate more of this code to use the TestRepoFactory so that we can eventually
+        // replace these test methods.
+        let repo_factory: TestRepoFactory = TestRepoFactory::new(ctx.fb)?;
+
         let repo_id = blob_repo.get_repoid();
 
         let config = RepoConfig {
@@ -371,9 +373,14 @@ impl Repo {
             ..Default::default()
         };
 
-        let content_store = RepoFileContentManager::new(&blob_repo);
         let name = blob_repo.name().clone();
         let repo_blobstore = blob_repo.repo_blobstore_arc();
+        let hook_manager = repo_factory.hook_manager(
+            &blob_repo.repo_identity_arc(),
+            &blob_repo.repo_derived_data_arc(),
+            &blob_repo.bookmarks_arc(),
+            &blob_repo.repo_blobstore_arc(),
+        );
 
         let inner = InnerRepo {
             blob_repo,
@@ -411,23 +418,11 @@ impl Repo {
         warm_bookmarks_cache_builder.wait_until_warmed();
         let warm_bookmarks_cache = warm_bookmarks_cache_builder.build().await?;
 
-        let acl_provider = DefaultAclProvider::new(ctx.fb);
-
         Ok(Self {
             name: name.clone(),
             inner,
             warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
-            hook_manager: Arc::new(
-                make_hook_manager(
-                    ctx.fb,
-                    &acl_provider,
-                    content_store,
-                    &config,
-                    name.clone(),
-                    &HashSet::new(),
-                )
-                .await?,
-            ),
+            hook_manager,
         })
     }
 

@@ -44,9 +44,7 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures_lazy_shared = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 history_traversal = { version = "0.1.0", path = "../features/history_traversal" }
-hook_manager_factory = { version = "0.1.0", path = "../hooks/hook_manager_factory" }
 hooks = { version = "0.1.0", path = "../hooks" }
-hooks_content_stores = { version = "0.1.0", path = "../hooks/content-stores" }
 itertools = "0.10.3"
 live_commit_sync_config = { version = "0.1.0", path = "../commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../manifest" }
@@ -62,7 +60,6 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 mutable_renames = { version = "0.1.0", path = "../mutable_renames" }
 pathmatcher = { version = "0.1.0", path = "../../scm/lib/pathmatcher" }
-permission_checker = { version = "0.1.0", path = "../permission_checker" }
 phases = { version = "0.1.0", path = "../phases" }
 pushrebase = { version = "0.1.0", path = "../pushrebase" }
 pushrebase_client = { version = "0.1.0", path = "../pushrebase/client" }
@@ -91,6 +88,7 @@ sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 streaming_clone = { version = "0.1.0", path = "../repo_client/streaming_clone" }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
+test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
 thiserror = "1.0.30"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../tunables" }
@@ -106,5 +104,4 @@ derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
-test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }
