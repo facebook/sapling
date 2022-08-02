@@ -232,6 +232,7 @@ members = [
   "cmdlib",
   "cmdlib/base_app",
   "cmdlib/caching",
+  "cmdlib/cross_repo",
   "cmdlib/displaying",
   "cmdlib/environment",
   "cmdlib/extensions",
