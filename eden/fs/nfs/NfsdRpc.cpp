@@ -12,6 +12,7 @@
 #include <fmt/format.h>
 
 #include <folly/Range.h>
+#include <folly/String.h>
 
 namespace facebook::eden {
 EDEN_XDR_SERDE_IMPL(specdata3, specdata1, specdata2);

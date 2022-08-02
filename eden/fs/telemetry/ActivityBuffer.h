@@ -7,7 +7,10 @@
 
 #pragma once
 
+#include <deque>
+
 #include <folly/Synchronized.h>
+
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/telemetry/TraceBus.h"

@@ -9,7 +9,6 @@
 
 #include <assert.h>
 #include <fmt/format.h>
-#include <folly/Format.h>
 #include <folly/logging/xlog.h>
 #include <stdint.h>
 
@@ -127,22 +126,6 @@ struct hash<facebook::eden::InodeNumber> {
   }
 };
 } // namespace std
-
-namespace folly {
-template <>
-class FormatValue<facebook::eden::InodeNumber> {
- public:
-  explicit FormatValue(facebook::eden::InodeNumber ino) : ino_(ino) {}
-
-  template <class FormatCallback>
-  void format(FormatArg& arg, FormatCallback& cb) const {
-    FormatValue<uint64_t>{ino_.getRawValue()}.format(arg, cb);
-  }
-
- private:
-  const facebook::eden::InodeNumber ino_;
-};
-} // namespace folly
 
 namespace fmt {
 template <>
