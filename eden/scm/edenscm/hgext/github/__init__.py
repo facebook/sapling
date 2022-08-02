@@ -58,10 +58,44 @@ def github_repo(repo, ctx, templ, **args) -> bool:
     return gh_repo.is_github_repo(repo)
 
 
+def _get_pull_request_field(field_name: str, ctx, **args):
+    pull_request_data = templates.get_pull_request_data_for_rev(ctx, **args)
+    return pull_request_data[field_name] if pull_request_data else None
+
+
 @templatekeyword("github_pull_request_state")
 def github_pull_request_state(repo, ctx, templ, **args) -> Optional[str]:
-    pull_request_data = templates.get_pull_request_data_for_rev(ctx, **args)
-    return pull_request_data["state"] if pull_request_data else None
+    return _get_pull_request_field("state", ctx, **args)
+
+
+@templatekeyword("github_pull_request_closed")
+def github_pull_request_closed(repo, ctx, templ, **args) -> Optional[bool]:
+    return _get_pull_request_field("closed", ctx, **args)
+
+
+@templatekeyword("github_pull_request_merged")
+def github_pull_request_merged(repo, ctx, templ, **args) -> Optional[bool]:
+    return _get_pull_request_field("merged", ctx, **args)
+
+
+@templatekeyword("github_pull_request_review_decision")
+def github_pull_request_review_decision(repo, ctx, templ, **args) -> Optional[str]:
+    return _get_pull_request_field("review_decision", ctx, **args)
+
+
+@templatekeyword("github_pull_request_is_draft")
+def github_pull_request_is_draft(repo, ctx, templ, **args) -> Optional[bool]:
+    return _get_pull_request_field("is_draft", ctx, **args)
+
+
+@templatekeyword("github_pull_request_title")
+def github_pull_request_title(repo, ctx, templ, **args) -> Optional[str]:
+    return _get_pull_request_field("title", ctx, **args)
+
+
+@templatekeyword("github_pull_request_body")
+def github_pull_request_body(repo, ctx, templ, **args) -> Optional[str]:
+    return _get_pull_request_field("body", ctx, **args)
 
 
 @templatekeyword("github_pull_request_url")
