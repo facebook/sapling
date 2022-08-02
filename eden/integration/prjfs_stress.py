@@ -262,3 +262,31 @@ class PrjFSStress(testcase.EdenRepoTest):
                     ("hello", stat.S_IFREG),
                 }
             )
+
+    def test_rename_twice(self) -> None:
+        with self.run_with_fault():
+            self.mkdir("first")
+            self.touch("first/a")
+            self.mkdir("first/b")
+
+            self.mkdir("second")
+            self.touch("second/c")
+            self.touch("second/d")
+
+            self.rename("first", "third")
+            self.rename("second", "first")
+            self.rename("third", "second")
+
+            self.wait_on_fault_unblock(12)
+
+            self.assertAllMaterialized(
+                {
+                    ("first", stat.S_IFDIR),
+                    ("first/c", stat.S_IFREG),
+                    ("first/d", stat.S_IFREG),
+                    ("second", stat.S_IFDIR),
+                    ("second/a", stat.S_IFREG),
+                    ("second/b", stat.S_IFDIR),
+                    ("hello", stat.S_IFREG),
+                }
+            )
