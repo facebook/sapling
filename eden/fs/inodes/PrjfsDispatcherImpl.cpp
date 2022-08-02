@@ -348,10 +348,9 @@ ImmediateFuture<OnDiskState> getOnDiskState(
   }
 }
 
-ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
-    EdenMount& mount,
+ImmediateFuture<folly::Unit> fileNotificationImpl(
+    const EdenMount& mount,
     RelativePath path,
-    InodeType inodeType,
     std::chrono::steady_clock::time_point receivedAt,
     ObjectFetchContext& context);
 
@@ -361,26 +360,25 @@ ImmediateFuture<folly::Unit> handleNotPresentFileNotification(
     std::chrono::steady_clock::time_point receivedAt,
     ObjectFetchContext& context) {
   /**
-   * Allows finding the first directory that is present on disk. This must be
-   * heap allocated and kept alive until compute returns.
+   * Allows finding the first directory that is not present on disk. This must
+   * be heap allocated and kept alive until compute returns.
    */
-  class GetFirstPresent {
+  class GetFirstDirectoryNotPresent {
    public:
-    explicit GetFirstPresent(RelativePath path)
+    explicit GetFirstDirectoryNotPresent(RelativePath path)
         : fullPath_{std::move(path)}, currentPrefix_{fullPath_} {}
 
-    GetFirstPresent(GetFirstPresent&&) = delete;
-    GetFirstPresent(const GetFirstPresent&) = delete;
+    GetFirstDirectoryNotPresent(GetFirstDirectoryNotPresent&&) = delete;
+    GetFirstDirectoryNotPresent(const GetFirstDirectoryNotPresent&) = delete;
 
     ImmediateFuture<RelativePath> compute(
         const EdenMount& mount,
         std::chrono::steady_clock::time_point receivedAt) {
-      auto dirname = currentPrefix_.dirname();
-      return getOnDiskState(mount, dirname, receivedAt)
+      return getOnDiskState(mount, currentPrefix_.dirname(), receivedAt)
           .thenValue(
               [this, &mount, receivedAt](
                   OnDiskState state) mutable -> ImmediateFuture<RelativePath> {
-                if (state != OnDiskState::NotPresent) {
+                if (state == OnDiskState::MaterializedDirectory) {
                   return currentPrefix_.copy();
                 }
 
@@ -397,11 +395,12 @@ ImmediateFuture<folly::Unit> handleNotPresentFileNotification(
   };
 
   // First, we need to figure out how far down this path has been removed.
-  auto getFirstPresent = std::make_unique<GetFirstPresent>(std::move(path));
-  auto fut = getFirstPresent->compute(mount, receivedAt);
+  auto getFirstNotPresent =
+      std::make_unique<GetFirstDirectoryNotPresent>(std::move(path));
+  auto fut = getFirstNotPresent->compute(mount, receivedAt);
   return std::move(fut)
-      .ensure([getFirstPresent = std::move(getFirstPresent)] {})
-      .thenValue([&mount, &context](RelativePath path) {
+      .ensure([getFirstNotPresent = std::move(getFirstNotPresent)] {})
+      .thenValue([&mount, &context, receivedAt](RelativePath path) {
         auto basename = path.basename();
         auto dirname = path.dirname();
 
@@ -411,6 +410,17 @@ ImmediateFuture<folly::Unit> handleNotPresentFileNotification(
                         &context](const TreeInodePtr treeInode) {
               return treeInode->removeRecursively(
                   basename, InvalidationRequired::No, context);
+            })
+            .thenValue([&mount, &context, path = std::move(path), receivedAt](
+                           auto&&) mutable {
+              // Now that the mismatch has been removed, make sure to also
+              // trigger a notification on that path. A file might have been
+              // created. Note that this may trigger a recursion into
+              // handleNotPresentFileNotification, which will be caught by the
+              // thenTry below due to the file/directory no longer being
+              // present in the TreeInode.
+              return fileNotificationImpl(
+                  mount, std::move(path), receivedAt, context);
             })
             .thenTry([](folly::Try<folly::Unit> try_) {
               if (auto* exc = try_.tryGetExceptionObject<std::system_error>()) {
@@ -427,30 +437,8 @@ ImmediateFuture<folly::Unit> handleNotPresentFileNotification(
       });
 }
 
-ImmediateFuture<folly::Unit> fileNotificationImpl(
-    EdenMount& mount,
-    RelativePath path,
-    std::chrono::steady_clock::time_point receivedAt,
-    ObjectFetchContext& context) {
-  return getOnDiskState(mount, path, receivedAt)
-      .thenValue([&mount, path = std::move(path), receivedAt, &context](
-                     OnDiskState state) mutable {
-        switch (state) {
-          case OnDiskState::MaterializedFile:
-            return handleMaterializedFileNotification(
-                mount, std::move(path), InodeType::FILE, receivedAt, context);
-          case OnDiskState::MaterializedDirectory:
-            return handleMaterializedFileNotification(
-                mount, std::move(path), InodeType::TREE, receivedAt, context);
-          case OnDiskState::NotPresent:
-            return handleNotPresentFileNotification(
-                mount, std::move(path), receivedAt, context);
-        }
-      });
-}
-
 ImmediateFuture<folly::Unit> recursivelyUpdateChildrens(
-    EdenMount& mount,
+    const EdenMount& mount,
     TreeInodePtr tree,
     RelativePath path,
     std::chrono::steady_clock::time_point receivedAt,
@@ -500,7 +488,7 @@ ImmediateFuture<folly::Unit> recursivelyUpdateChildrens(
 }
 
 ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
-    EdenMount& mount,
+    const EdenMount& mount,
     RelativePath path,
     InodeType inodeType,
     std::chrono::steady_clock::time_point receivedAt,
@@ -553,13 +541,13 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
                       if (auto inodePtr = inode.asTreePtrOrNull()) {
                         // In the case where this is already a directory, we
                         // still need to recursively add all the childrens.
-                        // Consider the case where a directory is renamed and a
-                        // file is added in it after it. If EdenFS handles the
-                        // file creation prior to the renaming the directory
-                        // will be created above in createDirInode, but we also
-                        // need to make sure that all the files in the renamed
-                        // directory are added too, hence the call to
-                        // recursivelyAddAllChildrens.
+                        // Consider the case where a directory is renamed and
+                        // a file is added in it after it. If EdenFS handles
+                        // the file creation prior to the renaming the
+                        // directory will be created above in createDirInode,
+                        // but we also need to make sure that all the files in
+                        // the renamed directory are added too, hence the call
+                        // to recursivelyAddAllChildrens.
                         return recursivelyUpdateChildrens(
                             mount,
                             std::move(inodePtr),
@@ -629,6 +617,28 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
 
                   return folly::unit;
                 });
+      });
+}
+
+ImmediateFuture<folly::Unit> fileNotificationImpl(
+    const EdenMount& mount,
+    RelativePath path,
+    std::chrono::steady_clock::time_point receivedAt,
+    ObjectFetchContext& context) {
+  return getOnDiskState(mount, path, receivedAt)
+      .thenValue([&mount, path = std::move(path), receivedAt, &context](
+                     OnDiskState state) mutable {
+        switch (state) {
+          case OnDiskState::MaterializedFile:
+            return handleMaterializedFileNotification(
+                mount, std::move(path), InodeType::FILE, receivedAt, context);
+          case OnDiskState::MaterializedDirectory:
+            return handleMaterializedFileNotification(
+                mount, std::move(path), InodeType::TREE, receivedAt, context);
+          case OnDiskState::NotPresent:
+            return handleNotPresentFileNotification(
+                mount, std::move(path), receivedAt, context);
+        }
       });
 }
 

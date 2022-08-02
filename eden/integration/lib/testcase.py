@@ -350,6 +350,10 @@ class EdenTestCase(EdenTestCaseBase):
         """Unlink the file at the specified path relative to the clone."""
         os.unlink(self.get_path(path))
 
+    def rmdir(self, path: str) -> None:
+        """Unlink the directory at the specified path relative to the clone."""
+        os.rmdir(self.get_path(path))
+
     def select_storage_engine(self) -> str:
         """
         Prefer to use memory in the integration tests, but allow
