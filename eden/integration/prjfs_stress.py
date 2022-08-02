@@ -54,6 +54,7 @@ class PrjFSStress(testcase.EdenRepoTest):
             util.poll_until(unblock, timeout=30)
 
     def getAllMaterialized(self) -> Set[Path]:
+        """Return all the materialized files/directories minus .hg and .eden"""
         res = set()
 
         with self.eden.get_thrift_client_legacy() as client:
@@ -65,7 +66,9 @@ class PrjFSStress(testcase.EdenRepoTest):
             parent_dir = Path(os.fsdecode(tree_inode.path))
             for dirent in tree_inode.entries:
                 dirent_path = parent_dir / Path(os.fsdecode(dirent.name))
-                res.add(dirent_path)
+                top_level_parent = dirent_path.parts[0]
+                if top_level_parent != ".hg" and top_level_parent != ".eden":
+                    res.add(dirent_path)
 
         return res
 
@@ -76,6 +79,10 @@ class PrjFSStress(testcase.EdenRepoTest):
     def assertMaterialized(self, path: str) -> None:
         materialized = self.getAllMaterialized()
         self.assertIn(Path(path), materialized, msg=f"{path} is not materialized")
+
+    def assertAllMaterialized(self, paths: Set[str]) -> None:
+        materialized = self.getAllMaterialized()
+        self.assertSetEqual(materialized, {Path(path) for path in paths})
 
     @contextmanager
     def run_with_fault(
@@ -152,3 +159,20 @@ class PrjFSStress(testcase.EdenRepoTest):
 
             self.assertMaterialized("bar")
             self.assertNotMaterialized("foo")
+
+    def test_rename_and_replace(self) -> None:
+        with self.run_with_fault():
+            self.mkdir("foo")
+            self.touch("foo/bar")
+            self.touch("foo/baz")
+            self.wait_on_fault_unblock(3)
+
+            self.rename("foo", "bar")
+            self.mkdir("foo")
+            self.mkdir("foo/hello")
+
+            self.wait_on_fault_unblock(4)
+
+            self.assertAllMaterialized(
+                {"bar", "bar/bar", "bar/baz", "foo", "foo/hello", "hello"}
+            )

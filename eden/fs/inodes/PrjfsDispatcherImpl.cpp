@@ -449,8 +449,9 @@ ImmediateFuture<folly::Unit> fileNotificationImpl(
       });
 }
 
-ImmediateFuture<folly::Unit> recursivelyAddAllChildrens(
+ImmediateFuture<folly::Unit> recursivelyUpdateChildrens(
     EdenMount& mount,
+    TreeInodePtr tree,
     RelativePath path,
     std::chrono::steady_clock::time_point receivedAt,
     ObjectFetchContext& context) {
@@ -469,10 +470,26 @@ ImmediateFuture<folly::Unit> recursivelyAddAllChildrens(
   }
   const auto& direntNames = direntNamesTry.value();
 
-  std::vector<ImmediateFuture<folly::Unit>> futures;
-  futures.reserve(direntNames.size());
+  // To reduce the amount of disk activity, merge the filenames found on disk
+  // with the ones in the inode.
+  PathMap<folly::Unit> map{CaseSensitivity::Insensitive};
+  {
+    auto content = tree->getContents().rlock();
+    map.reserve(direntNames.size() + content->entries.size());
+    for (const auto& entry : content->entries) {
+      map.emplace(entry.first, folly::unit);
+    }
+  }
+  for (const auto& entry : direntNames) {
+    map.emplace(entry, folly::unit);
+  }
 
-  for (const auto& entryName : direntNames) {
+  std::vector<ImmediateFuture<folly::Unit>> futures;
+  futures.reserve(map.size());
+
+  // Now, trigger the recursive file notification to add/remove all the
+  // files/directories to the inode.
+  for (const auto& [entryName, unit] : map) {
     auto entryPath = path + entryName;
     futures.emplace_back(
         fileNotificationImpl(mount, std::move(entryPath), receivedAt, context));
@@ -513,8 +530,12 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
                           auto child = treeInode->mkdir(
                               basename, _S_IFDIR, InvalidationRequired::No);
                           child->incFsRefcount();
-                          return recursivelyAddAllChildrens(
-                              mount, std::move(path), receivedAt, context);
+                          return recursivelyUpdateChildrens(
+                              mount,
+                              std::move(child),
+                              std::move(path),
+                              receivedAt,
+                              context);
                         } else {
                           auto child = treeInode->mknod(
                               basename, _S_IFREG, 0, InvalidationRequired::No);
@@ -529,7 +550,7 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
                   auto inode = std::move(try_).value();
                   switch (inodeType) {
                     case InodeType::TREE: {
-                      if (inode.asTreePtrOrNull()) {
+                      if (auto inodePtr = inode.asTreePtrOrNull()) {
                         // In the case where this is already a directory, we
                         // still need to recursively add all the childrens.
                         // Consider the case where a directory is renamed and a
@@ -539,8 +560,12 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
                         // need to make sure that all the files in the renamed
                         // directory are added too, hence the call to
                         // recursivelyAddAllChildrens.
-                        return recursivelyAddAllChildrens(
-                            mount, std::move(path), receivedAt, context);
+                        return recursivelyUpdateChildrens(
+                            mount,
+                            std::move(inodePtr),
+                            std::move(path),
+                            receivedAt,
+                            context);
                       }
                       // Somehow this is a file, but there is a directory on
                       // disk, let's remove it and create the directory.
@@ -564,8 +589,12 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
                                 _S_IFDIR,
                                 InvalidationRequired::No);
                             child->incFsRefcount();
-                            return recursivelyAddAllChildrens(
-                                mount, std::move(path), receivedAt, context);
+                            return recursivelyUpdateChildrens(
+                                mount,
+                                std::move(child),
+                                std::move(path),
+                                receivedAt,
+                                context);
                           });
                     }
                     case InodeType::FILE: {
