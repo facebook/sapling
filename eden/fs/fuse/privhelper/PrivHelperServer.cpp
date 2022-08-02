@@ -15,7 +15,6 @@
 #include <folly/Expected.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
-#include <folly/Format.h>
 #include <folly/SocketAddress.h>
 #include <folly/String.h>
 #include <folly/init/Init.h>
@@ -261,28 +260,14 @@ std::pair<folly::File, int> allocateFuseDevice(bool useDevEdenFs) {
 }
 
 template <typename T, std::size_t Size>
-void checkedSnprintf(
-    T (&buf)[Size],
-    FOLLY_PRINTF_FORMAT const char* format,
-    ...) FOLLY_PRINTF_FORMAT_ATTR(2, 3);
-
-template <typename T, std::size_t Size>
-void checkedSnprintf(
-    T (&buf)[Size],
-    FOLLY_PRINTF_FORMAT const char* format,
-    ...) {
-  va_list ap;
-  va_start(ap, format);
-  SCOPE_EXIT {
-    va_end(ap);
-  };
-
-  auto rc = vsnprintf(buf, Size, format, ap);
-
-  if (rc <= 0 || static_cast<size_t>(rc) >= Size) {
-    throw_<std::runtime_error>(
-        "string exceeds buffer size in snprintf.  Format string was ", format);
+void checkThenPlaceInBuffer(T (&buf)[Size], folly::StringPiece data) {
+  if (data.size() >= Size) {
+    throw_<std::runtime_error>(fmt::format(
+        "string exceeds buffer size in snprintf.  result was {}", data));
   }
+
+  memcpy(buf, data.data(), data.size());
+  buf[data.size()] = '\0';
 }
 
 // Mount osxfuse (3.x)
@@ -321,22 +306,19 @@ folly::File mountOSXFuse(
       "failed negotiation with ioctl FUSEDEVIOCGETRANDOM");
 
   // We get to set some metadata for for mounted volume
-  checkedSnprintf(
+  checkThenPlaceInBuffer(
       args.fsname,
-      "eden@%s%d",
-      useDevEdenFs ? "edenfs" : OSXFUSE_DEVICE_BASENAME,
-      dindex);
+      fmt::format(
+          "eden@{}{}",
+          useDevEdenFs ? "edenfs" : OSXFUSE_DEVICE_BASENAME,
+          dindex));
   args.altflags |= FUSE_MOPT_FSNAME;
 
   auto mountPathBaseName = basename(canonicalPath);
-  checkedSnprintf(
-      args.volname,
-      "%.*s",
-      int(mountPathBaseName.size()),
-      mountPathBaseName.data());
+  checkThenPlaceInBuffer(args.volname, mountPathBaseName);
   args.altflags |= FUSE_MOPT_VOLNAME;
 
-  checkedSnprintf(args.fstypename, "%s", "eden");
+  checkThenPlaceInBuffer(args.fstypename, "eden");
   args.altflags |= FUSE_MOPT_FSTYPENAME;
 
   // And some misc other options...
