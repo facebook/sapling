@@ -13,7 +13,7 @@
 #include <stdexcept>
 #include <variant>
 
-#include <folly/Format.h>
+#include <fmt/format.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
 #include "folly/Likely.h"
