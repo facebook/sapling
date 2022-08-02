@@ -263,6 +263,54 @@ class PrjFSStress(testcase.EdenRepoTest):
                 }
             )
 
+    def test_out_of_order_file_removal_to_renamed(self) -> None:
+        with self.run_with_fault():
+            self.mkdir("a/b")
+            self.touch("a/b/c")
+            self.mkdir("z")
+            self.touch("z/y")
+            self.touch("z/x")
+            self.wait_on_fault_unblock(6)
+
+            self.rm("a/b/c")
+            # A wait_on_fault_unblock(1) below will just wait for the rm to be
+            # unblocked, not for it to terminate. This is usually not an issue
+            # due to Thrift APIs waiting on all IO when a positive SyncBehavior
+            # is used, but since we'll need to pass a SyncBehavior of 0
+            # seconds, the only way to guarantee the rm above would have
+            # completed is by forcing some IO and unblocking these.
+            self.touch("foo")
+            self.rm("foo")
+
+            self.rmdir("a/b")
+            self.rename("z", "a/b")
+
+            # Unblock rm("a/b/c") touch("foo") and rm("foo")
+            self.wait_on_fault_unblock(3)
+
+            self.assertAllMaterialized(
+                {
+                    ("a/b", stat.S_IFDIR),
+                    ("a", stat.S_IFDIR),
+                    ("hello", stat.S_IFREG),
+                    ("z", stat.S_IFDIR),
+                    ("z/x", stat.S_IFREG),
+                    ("z/y", stat.S_IFREG),
+                },
+                waitTime=0,
+            )
+
+            self.wait_on_fault_unblock(3)
+            self.assertAllMaterialized(
+                {
+                    ("a/b/x", stat.S_IFREG),
+                    ("a/b/y", stat.S_IFREG),
+                    ("a/b", stat.S_IFDIR),
+                    ("a", stat.S_IFDIR),
+                    ("hello", stat.S_IFREG),
+                }
+            )
+
     def test_rename_twice(self) -> None:
         with self.run_with_fault():
             self.mkdir("first")
