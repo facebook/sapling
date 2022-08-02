@@ -55,8 +55,8 @@ pub struct MemberAllowlist {
 }
 
 impl MemberAllowlist {
-    pub fn new(allowlist: MononokeIdentitySet) -> MemberAllowlist {
-        MemberAllowlist { allowlist }
+    pub fn new(allowlist: MononokeIdentitySet) -> BoxMembershipChecker {
+        Box::new(MemberAllowlist { allowlist })
     }
 }
 
