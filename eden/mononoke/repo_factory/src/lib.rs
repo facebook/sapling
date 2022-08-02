@@ -975,9 +975,16 @@ impl RepoFactory {
                     .await?,
             )
             .await?;
+
+        let skiplist_key = if self.env.skiplist_enabled {
+            repo_config.skiplist_index_blobstore_key.clone()
+        } else {
+            None
+        };
+
         SkiplistIndex::from_blobstore(
             &self.ctx(Some(repo_identity)),
-            &repo_config.skiplist_index_blobstore_key,
+            &skiplist_key,
             &blobstore_without_cache.boxed(),
         )
         .await
