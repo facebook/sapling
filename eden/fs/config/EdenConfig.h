@@ -16,6 +16,7 @@
 #include <folly/portability/SysStat.h>
 #include <folly/portability/SysTypes.h>
 #include <folly/portability/Unistd.h>
+#include <thrift/lib/cpp/concurrency/ThreadManager.h>
 
 #include "common/rust/shed/hostcaps/hostcaps.h"
 #include "eden/fs/config/ConfigSetting.h"
@@ -247,6 +248,30 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> thriftUseCustomPermissionChecking{
       "thrift:use-custom-permission-checking",
       true,
+      this};
+
+  /**
+   * The number of Thrift worker threads.
+   */
+  ConfigSetting<size_t> thriftNumWorkers{
+      "thrift:num-workers",
+      std::thread::hardware_concurrency(),
+      this};
+
+  /**
+   * Maximum number of active Thrift requests.
+   */
+  ConfigSetting<uint32_t> thriftMaxRequests{
+      "thrift:max-requests",
+      apache::thrift::concurrency::ThreadManager::DEFAULT_MAX_QUEUE_SIZE,
+      this};
+
+  /**
+   * Request queue timeout (rounded down to the nearest millisecond).
+   */
+  ConfigSetting<std::chrono::nanoseconds> thriftQueueTimeout{
+      "thrift:queue-timeout",
+      std::chrono::seconds(30),
       this};
 
   // [ssl]

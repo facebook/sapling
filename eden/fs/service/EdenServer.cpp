@@ -119,16 +119,6 @@ DEFINE_string(
     "memory is currently very dangerous as you will "
     "lose state across restarts and graceful restarts! "
     "This flag will only be used on the first invocation");
-DEFINE_int32(
-    thrift_num_workers,
-    std::thread::hardware_concurrency(),
-    "The number of thrift worker threads");
-DEFINE_int32(
-    thrift_max_requests,
-    apache::thrift::concurrency::ThreadManager::DEFAULT_MAX_QUEUE_SIZE,
-    "Maximum number of active thrift requests");
-DEFINE_bool(thrift_enable_codel, false, "Enable Codel queuing timeout");
-DEFINE_int32(thrift_queue_timeout, 30000, "Request queue timeout in ms");
 
 DEFINE_int64(
     unload_interval_minutes,
@@ -1873,12 +1863,12 @@ std::vector<size_t> EdenServer::collectHgQueuedBackingStoreCounters(
 }
 
 Future<Unit> EdenServer::createThriftServer() {
+  auto edenConfig = config_->getEdenConfig();
   server_ = make_shared<ThriftServer>();
-  server_->setMaxRequests(FLAGS_thrift_max_requests);
-  server_->setNumIOWorkerThreads(FLAGS_thrift_num_workers);
-  server_->setEnableCodel(FLAGS_thrift_enable_codel);
-  server_->setQueueTimeout(
-      std::chrono::milliseconds{FLAGS_thrift_queue_timeout});
+  server_->setMaxRequests(edenConfig->thriftMaxRequests.getValue());
+  server_->setNumIOWorkerThreads(edenConfig->thriftNumWorkers.getValue());
+  server_->setQueueTimeout(std::chrono::floor<std::chrono::milliseconds>(
+      edenConfig->thriftQueueTimeout.getValue()));
   server_->setAllowCheckUnimplementedExtraInterfaces(false);
 
   // Setting this allows us to to only do stopListening() on the stop() call
