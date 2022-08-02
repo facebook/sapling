@@ -21,10 +21,7 @@ use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use borrowed::borrowed;
-use clap::ArgMatches;
-use cmdlib::args;
-use cmdlib::args::MononokeMatches;
-use cmdlib::helpers::block_execute;
+
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncer_lease;
 use cross_repo_sync::create_commit_syncers;
@@ -37,6 +34,7 @@ use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Syncers;
 use derived_data_utils::derived_data_utils;
+use environment::MononokeEnvironment;
 use fbinit::FacebookInit;
 use futures::future;
 use futures::future::TryFutureExt;
@@ -53,15 +51,21 @@ use maplit::hashset;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::MPath;
+use metaconfig_parser::RepoConfigs;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::SegmentedChangelogConfig;
+use mononoke_app::args::RepoArgs;
+use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::MononokeApp;
+use mononoke_app::MononokeAppBuilder;
 use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
+use mononoke_types::RepositoryId;
 use movers::DefaultAction;
 use movers::Mover;
 use pushrebase::do_pushrebase_bonsai;
@@ -73,7 +77,9 @@ use segmented_changelog::SeedHead;
 use segmented_changelog::SegmentedChangelogTailer;
 use serde::Deserialize;
 use serde::Serialize;
+use slog::error;
 use slog::info;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -93,19 +99,20 @@ use tokio::process;
 use tokio::time;
 use topo_sort::sort_topological;
 
+#[cfg(not(test))]
+use stats::schedule_stats_aggregation_preview;
+
 mod cli;
 mod repo;
 mod tests;
 
-use crate::cli::setup_app;
 use crate::cli::setup_import_args;
-use crate::cli::ARG_BOOKMARK_SUFFIX;
-use crate::cli::ARG_DEST_BOOKMARK;
-use crate::cli::ARG_PHAB_CHECK_DISABLED;
-use crate::cli::CHECK_ADDITIONAL_SETUP_STEPS;
-use crate::cli::IMPORT;
-use crate::cli::RECOVER_PROCESS;
-use crate::cli::SAVED_RECOVERY_FILE_PATH;
+use crate::cli::CheckAdditionalSetupStepsArgs;
+use crate::cli::Commands::CheckAdditionalSetupSteps;
+use crate::cli::Commands::Import;
+use crate::cli::Commands::RecoverProcess;
+use crate::cli::MononokeRepoImportArgs;
+
 use crate::repo::Repo;
 
 #[derive(Deserialize, Clone, Debug)]
@@ -884,21 +891,51 @@ where
     Ok(large_repo_setting)
 }
 
+fn get_config_by_repoid(
+    configs: &RepoConfigs,
+    repo_id: RepositoryId,
+) -> Result<(String, RepoConfig), Error> {
+    configs
+        .get_repo_config(repo_id)
+        .ok_or_else(|| format_err!("unknown repoid {:?}", repo_id))
+        .map(|(name, config)| (name.clone(), config.clone()))
+}
+
+fn open_sql<T>(
+    fb: FacebookInit,
+    repo_id: RepositoryId,
+    configs: &RepoConfigs,
+    env: &MononokeEnvironment,
+) -> Result<T, Error>
+where
+    T: SqlConstructFromMetadataDatabaseConfig,
+{
+    let (_, config) = get_config_by_repoid(configs, repo_id)?;
+    T::with_metadata_database_config(
+        fb,
+        &config.storage_config.metadata,
+        &env.mysql_options.clone(),
+        env.readonly_storage.clone().0,
+    )
+}
+
 async fn get_pushredirected_vars(
+    app: &MononokeApp,
     ctx: &CoreContext,
     repo: &Repo,
     repo_import_setting: &RepoImportSetting,
     large_repo_config: &RepoConfig,
-    matches: &MononokeMatches<'_>,
+    configs: &RepoConfigs,
+    env: &MononokeEnvironment,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
 ) -> Result<(Repo, RepoImportSetting, Syncers<SqlSyncedCommitMapping>), Error> {
-    let caching = matches.caching();
-    let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
+    let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, env.caching)?;
 
-    let config_store = matches.config_store();
     let large_repo_id = large_repo_config.repoid;
-    let large_repo: Repo =
-        args::open_repo_with_repo_id(ctx.fb, ctx.logger(), large_repo_id, matches).await?;
+
+    let repo_args = RepoArgs::from_repo_id(large_repo_id.id());
+    let large_repo: Repo = app.open_repo(&repo_args).await?;
+
     let common_commit_sync_config = live_commit_sync_config.get_common_config(large_repo_id)?;
 
     if common_commit_sync_config.small_repos.len() > 1 {
@@ -908,7 +945,7 @@ async fn get_pushredirected_vars(
             large_repo.name()
         ));
     }
-    let mapping = args::open_sql::<SqlSyncedCommitMapping>(ctx.fb, config_store, matches)?;
+    let mapping = open_sql::<SqlSyncedCommitMapping>(ctx.fb, repo.repo_id(), configs, env)?;
     let syncers = create_commit_syncers(
         ctx,
         repo.as_blob_repo().clone(),
@@ -950,10 +987,12 @@ async fn fetch_recovery_state(
 }
 
 async fn repo_import(
+    app: &MononokeApp,
     ctx: CoreContext,
     mut repo: Repo,
     recovery_fields: &mut RecoveryFields,
-    matches: &MononokeMatches<'_>,
+    configs: &RepoConfigs,
+    env: &MononokeEnvironment,
 ) -> Result<(), Error> {
     let arg_git_repo_path = recovery_fields.git_repo_path.clone();
     let path = Path::new(&arg_git_repo_path);
@@ -965,7 +1004,7 @@ async fn repo_import(
                     You can only use alphanumeric and \"./-_\" characters"
         ));
     }
-    let config_store = matches.config_store();
+
     let dest_bookmark = BookmarkName::new(&recovery_fields.dest_bookmark_name)?;
     let changeset_args = ChangesetArgs {
         author: recovery_fields.commit_author.clone(),
@@ -976,7 +1015,9 @@ async fn repo_import(
         importing_bookmark,
         dest_bookmark,
     };
-    let (_, mut repo_config) = args::get_config_by_repoid(config_store, matches, repo.repo_id())?;
+
+    let (_, mut repo_config) = get_config_by_repoid(configs, repo.repo_id())?;
+
     let mut call_sign = repo_config.phabricator_callsign.clone();
     if !recovery_fields.phab_check_disabled && call_sign.is_none() {
         return Err(format_err!(
@@ -991,11 +1032,7 @@ async fn repo_import(
         x_repo_check_disabled: recovery_fields.x_repo_check_disabled,
         hg_sync_check_disabled: recovery_fields.hg_sync_check_disabled,
     };
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?;
-
-    let configs = args::load_repo_configs(config_store, matches)?;
-    let mysql_options = matches.mysql_options();
-    let readonly_storage = matches.readonly_storage();
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &env.config_store)?;
 
     let maybe_large_repo_config =
         get_large_repo_config_if_pushredirected(&repo, &live_commit_sync_config, &configs.repos)
@@ -1008,20 +1045,23 @@ async fn repo_import(
 
     if let Some(large_repo_config) = maybe_large_repo_config {
         let (large_repo, large_repo_import_setting, syncers) = get_pushredirected_vars(
+            app,
             &ctx,
             &repo,
             &repo_import_setting,
             &large_repo_config,
-            matches,
+            configs,
+            env,
             live_commit_sync_config,
         )
         .await?;
+
         let target_repo_dbs = open_backsyncer_dbs(
             ctx.clone(),
             repo.as_blob_repo().clone(),
             repo_config.storage_config.metadata,
-            mysql_options.clone(),
-            *readonly_storage,
+            env.mysql_options.clone(),
+            env.readonly_storage.clone(),
         )
         .await?;
 
@@ -1216,7 +1256,7 @@ async fn repo_import(
             &repo,
             &imported_cs_id,
             &repo_config.storage_config.metadata,
-            mysql_options,
+            &env.mysql_options,
             &repo_config.segmented_changelog_config,
         )
         .await?;
@@ -1348,19 +1388,14 @@ async fn tail_segmented_changelog(
 }
 
 async fn check_additional_setup_steps(
+    app: &MononokeApp,
     ctx: CoreContext,
     repo: Repo,
-    sub_arg_matches: &ArgMatches<'_>,
-    matches: &MononokeMatches<'_>,
+    check_additional_setup_steps_args: &CheckAdditionalSetupStepsArgs,
+    configs: &RepoConfigs,
+    env: &MononokeEnvironment,
 ) -> Result<(), Error> {
-    let bookmark_suffix = match sub_arg_matches.value_of(ARG_BOOKMARK_SUFFIX) {
-        Some(suffix) => suffix,
-        None => {
-            return Err(format_err!(
-                "Expected a bookmark suffix for checking additional setup steps"
-            ));
-        }
-    };
+    let bookmark_suffix = check_additional_setup_steps_args.bookmark_suffix.as_str();
     if !is_valid_bookmark_suffix(bookmark_suffix) {
         return Err(format_err!(
             "The bookmark suffix contains invalid character(s).
@@ -1374,14 +1409,7 @@ async fn check_additional_setup_steps(
         Make sure to notify Phabricator oncall to track this bookmark!",
         importing_bookmark
     );
-    let dest_bookmark_name = match sub_arg_matches.value_of(ARG_DEST_BOOKMARK) {
-        Some(name) => name,
-        None => {
-            return Err(format_err!(
-                "Expected a destination bookmark name for checking additional setup steps"
-            ));
-        }
-    };
+    let dest_bookmark_name = check_additional_setup_steps_args.dest_bookmark.as_str();
     let dest_bookmark = BookmarkName::new(dest_bookmark_name)?;
     info!(
         ctx.logger(),
@@ -1390,16 +1418,15 @@ async fn check_additional_setup_steps(
         dest_bookmark
     );
 
-    let config_store = matches.config_store();
-
     let repo_import_setting = RepoImportSetting {
         importing_bookmark,
         dest_bookmark,
     };
-    let (_, repo_config) = args::get_config_by_repoid(config_store, matches, repo.repo_id())?;
+
+    let (_, repo_config) = get_config_by_repoid(configs, repo.repo_id())?;
 
     let call_sign = repo_config.phabricator_callsign;
-    let phab_check_disabled = sub_arg_matches.is_present(ARG_PHAB_CHECK_DISABLED);
+    let phab_check_disabled = check_additional_setup_steps_args.disable_phabricator_check;
     if !phab_check_disabled && call_sign.is_none() {
         return Err(format_err!(
             "The repo ({}) we import to doesn't have a callsign for checking the commits on Phabricator. \
@@ -1409,18 +1436,20 @@ async fn check_additional_setup_steps(
         ));
     }
 
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?;
-    let configs = args::load_repo_configs(config_store, matches)?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &env.config_store)?;
+
     let maybe_large_repo_config =
         get_large_repo_config_if_pushredirected(&repo, &live_commit_sync_config, &configs.repos)
             .await?;
     if let Some(large_repo_config) = maybe_large_repo_config {
         let (large_repo, large_repo_import_setting, _syncers) = get_pushredirected_vars(
+            app,
             &ctx,
             &repo,
             &repo_import_setting,
             &large_repo_config,
-            matches,
+            configs,
+            env,
             live_commit_sync_config,
         )
         .await?;
@@ -1453,10 +1482,14 @@ async fn check_additional_setup_steps(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app = setup_app();
-    let matches = app.get_matches(fb)?;
+    let app = MononokeAppBuilder::new(fb)
+        .with_app_extension(Fb303AppExtension {})
+        .build::<MononokeRepoImportArgs>()?;
+    let args: MononokeRepoImportArgs = app.args()?;
+    let env = app.environment();
+    let logger = app.logger();
+    let configs = app.repo_configs();
 
-    let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let answer = Question::new("Does the git repo you're about to merge has multiple heads (unmerged branches)? It's unsafe to use this tool when it does.")
@@ -1472,37 +1505,66 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         ),
     };
 
-    let repo = args::create_repo(fb, logger, &matches);
+    let repo = app.open_repo(&args.repo);
 
-    block_execute(
-        async {
-            let repo = repo.await?;
-            let mut recovery_fields = match matches.subcommand() {
-                (CHECK_ADDITIONAL_SETUP_STEPS, Some(sub_arg_matches)) => {
-                    check_additional_setup_steps(ctx, repo, sub_arg_matches, &matches).await?;
-                    return Ok(());
-                }
-                (RECOVER_PROCESS, Some(sub_arg_matches)) => {
-                    let saved_recovery_file_paths =
-                        sub_arg_matches.value_of(SAVED_RECOVERY_FILE_PATH).unwrap();
-                    fetch_recovery_state(&ctx, saved_recovery_file_paths).await?
-                }
-                (IMPORT, Some(sub_arg_matches)) => setup_import_args(sub_arg_matches)?,
-                _ => return Err(format_err!("Invalid subcommand")),
-            };
+    let fb303_args = app.extension_args::<Fb303AppExtension>()?;
+    fb303_args.start_fb303_server(fb, "repo_import", logger, cmdlib::monitoring::AliveService)?;
 
-            match repo_import(ctx, repo, &mut recovery_fields, &matches).await {
-                Ok(()) => Ok(()),
-                Err(e) => {
-                    save_importing_state(&recovery_fields).await?;
-                    Err(e)
-                }
+    let import_task = async {
+        let repo: Repo = repo.await?;
+        info!(
+            logger,
+            "using repo \"{}\" repoid {:?}",
+            repo.name(),
+            repo.repo_id()
+        );
+        let mut recovery_fields = match args.command {
+            Some(CheckAdditionalSetupSteps(check_additional_setup_steps_args)) => {
+                check_additional_setup_steps(
+                    &app,
+                    ctx,
+                    repo,
+                    &check_additional_setup_steps_args,
+                    configs,
+                    env,
+                )
+                .await?;
+                return Ok(());
             }
-        },
-        fb,
-        "repo_import",
-        logger,
-        &matches,
-        cmdlib::monitoring::AliveService,
-    )
+            Some(RecoverProcess(recover_process_args)) => {
+                fetch_recovery_state(&ctx, recover_process_args.saved_recovery_file_path.as_str())
+                    .await?
+            }
+            Some(Import(import_args)) => setup_import_args(import_args),
+            _ => return Err(format_err!("Invalid subcommand")),
+        };
+
+        match repo_import(&app, ctx, repo, &mut recovery_fields, configs, env).await {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                save_importing_state(&recovery_fields).await?;
+                Err(e)
+            }
+        }
+    };
+
+    let result = app.runtime().block_on(async {
+        #[cfg(not(test))]
+        {
+            let stats_agg = schedule_stats_aggregation_preview()
+                .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?;
+            // Note: this returns a JoinHandle, which we drop, thus detaching the task
+            // It thus does not count towards shutdown_on_idle below
+            tokio::task::spawn(stats_agg);
+        }
+
+        import_task.await
+    });
+
+    // Log error in glog format (main will log, but not with glog)
+    result.map_err(move |e| {
+        error!(logger, "Execution error: {:?}", e);
+        // Shorten the error that main will print, given that already printed in glog form
+        format_err!("Execution failed")
+    })
 }

@@ -28,6 +28,13 @@ pub struct RepoArgs {
 }
 
 impl RepoArgs {
+    pub fn from_repo_id(repo_id: i32) -> Self {
+        RepoArgs {
+            repo_id: Some(repo_id),
+            repo_name: None,
+        }
+    }
+
     pub fn id_or_name(&self) -> Result<RepoArg> {
         match self {
             RepoArgs {
