@@ -11,7 +11,6 @@
 #include <atomic>
 
 #include <fb303/ServiceData.h>
-#include <folly/Format.h>
 #include <folly/String.h>
 #include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
