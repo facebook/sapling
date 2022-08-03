@@ -2,6 +2,7 @@ packages:
   fb-hgcache_size_logger:
     summary: A tool to track size of hgcache
     packager: source_control
+    build_architectures: [x86_64, aarch64]
     rules:
       buck:eden/scm/hgcache_size_logger:hgcache_size_logger:
         eden/scm/hgcache_size_logger/hgcache_size_logger.par:
