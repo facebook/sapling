@@ -752,7 +752,7 @@ class UpdateTest(EdenHgTestCase):
 
         # Restart eden
         if self.eden._process is not None:
-            self.eden._process.wait()
+            util.poll_until(self.eden._process.poll, timeout=30)
         self.eden = self.init_eden_client()
         self.eden.start()
 
