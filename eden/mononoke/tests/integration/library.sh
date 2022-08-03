@@ -1263,12 +1263,18 @@ function megarepo_async_worker {
   echo "$MEGAREPO_ASYNC_WORKER_PID" >> "$DAEMON_PIDS"
 }
 
-function scsc {
+function scsc_as {
+  local name="$1"
+  shift
   GLOG_minloglevel=5 \
-    THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/client0.crt" \
-    THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/client0.key" \
+    THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/$name.crt" \
+    THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/$name.key" \
     THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
     "$SCS_CLIENT" --host "$LOCALIP:$SCS_PORT" "$@"
+}
+
+function scsc {
+  scsc_as client0 "$@"
 }
 
 function lfs_health {
