@@ -42,6 +42,8 @@ create a rule for the subdirectory and prefix it with "exclude":
 
 from __future__ import absolute_import
 
+from typing import Sized
+
 import bindings
 from edenscm import tracing
 from edenscm.mercurial import (
@@ -56,6 +58,8 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin
+from edenscm.mercurial.scmutil import status
+from edenscm.mercurial.util import sortdict
 
 
 testedwith = "ships-with-fb-hgext"
@@ -65,7 +69,7 @@ _disabled = [False]
 _nodemirrored = {}  # {node: {path}}, for syncing from commit to wvfs
 
 
-def extsetup(ui):
+def extsetup(ui) -> None:
     extensions.wrapfunction(localrepo.localrepository, "commitctx", _commitctx)
 
     def wrapshelve(loaded=False):
@@ -79,7 +83,7 @@ def extsetup(ui):
     extensions.afterloaded("shelve", wrapshelve)
 
 
-def reposetup(ui, repo):
+def reposetup(ui, repo) -> None:
     if not repo.local() or not util.safehasattr(repo, "dirstate"):
         return
 
@@ -132,7 +136,7 @@ def _bypassdirsync(orig, ui, repo, *args, **kwargs):
         _disabled[0] = False
 
 
-def getconfigs(wctx):
+def getconfigs(wctx) -> sortdict:
     """returns {name: [path]}.
     [path] under a same name are synced. name is not useful.
     """
@@ -402,7 +406,7 @@ def dirsyncctx(ctx, matcher=None):
     return resultctx, resultmirrored
 
 
-def _mirrorpath(srcdir, dstdir, src):
+def _mirrorpath(srcdir: Sized, dstdir, src):
     """Mirror src path from srcdir to dstdir. Return None if src is not in srcdir."""
     if src + "/" == srcdir:
         # special case: src is a file to mirror
@@ -414,7 +418,7 @@ def _mirrorpath(srcdir, dstdir, src):
         return None
 
 
-def _adjuststatus(status, ctx1, ctx2):
+def _adjuststatus(status, ctx1, ctx2) -> status:
     """Adjusts the status result to remove item that don't differ between ctx1
     and ctx2
 
