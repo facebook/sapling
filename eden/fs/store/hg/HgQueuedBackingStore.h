@@ -20,6 +20,7 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgImportRequestQueue.h"
+#include "eden/fs/telemetry/ActivityBuffer.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/telemetry/TraceBus.h"
 
@@ -92,7 +93,7 @@ struct HgImportTraceEvent : TraceEventBase {
   // queue, start, and finish. Used to correlate events to a request.
   uint64_t unique;
   // Always null-terminated, and saves space in the trace event structure.
-  std::unique_ptr<char[]> path;
+  std::shared_ptr<char[]> path;
   // The HG manifest node ID.
   Hash20 manifestNodeId;
   EventType eventType;
@@ -118,6 +119,22 @@ class HgQueuedBackingStore final : public BackingStore {
       std::unique_ptr<BackingStoreLogger> logger);
 
   ~HgQueuedBackingStore() override;
+
+  /**
+   * Return a newly initialized ActivityBuffer<HgImportTraceEvent> if
+   * using ActivityBuffers is enabled and return std::nullopt otherwise.
+   */
+  std::optional<ActivityBuffer<HgImportTraceEvent>> initActivityBuffer();
+
+  /**
+   * Subscribes activityBuffer_ to traceBus_ in order to read and
+   * store HgImportTraceEvents into the ActivityBuffer as they occur.
+   */
+  void subscribeActivityBuffer();
+
+  std::optional<ActivityBuffer<HgImportTraceEvent>>& getActivityBuffer() {
+    return activityBuffer_;
+  }
 
   TraceBus<HgImportTraceEvent>& getTraceBus() const {
     return *traceBus_;
@@ -320,8 +337,18 @@ class HgQueuedBackingStore final : public BackingStore {
   mutable RequestMetricsScope::LockedRequestWatchList
       pendingImportPrefetchWatches_;
 
-  // This field should be last so any internal subscribers can capture [this].
+  std::optional<ActivityBuffer<HgImportTraceEvent>> activityBuffer_;
+
+  // The traceBus_ and hgTraceHandle_ should be last so any internal subscribers
+  // can capture [this].
   std::shared_ptr<TraceBus<HgImportTraceEvent>> traceBus_;
+
+  // Handle for traceBus subscription
+  struct HgTraceHandle {
+    TraceSubscriptionHandle<HgImportTraceEvent> subHandle;
+  };
+
+  std::shared_ptr<HgTraceHandle> hgTraceHandle_;
 };
 
 } // namespace facebook::eden
