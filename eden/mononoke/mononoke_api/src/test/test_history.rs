@@ -204,7 +204,7 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
         .expect("changeset exists");
 
     // History of file "a" includes commits that modified "a".
-    let a_path = cs.path_with_history("a")?;
+    let a_path = cs.path_with_history("a").await?;
     let a_history: Vec<_> = a_path
         .history(ChangesetPathHistoryOptions {
             follow_history_across_deletions: true,
@@ -226,7 +226,7 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
     );
 
     // History of directory "dir2" includes commits that modified "dir2/b".
-    let dir2_path = cs.path_with_history("dir2")?;
+    let dir2_path = cs.path_with_history("dir2").await?;
     let dir2_history: Vec<_> = dir2_path
         .history(ChangesetPathHistoryOptions {
             follow_history_across_deletions: true,
@@ -247,7 +247,7 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
     );
 
     // History of directory "dir3" includes some commits on all branches.
-    let dir3_path = cs.path_with_history("dir3")?;
+    let dir3_path = cs.path_with_history("dir3").await?;
     let dir3_history: Vec<_> = dir3_path
         .history(ChangesetPathHistoryOptions {
             follow_history_across_deletions: true,
@@ -272,7 +272,7 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
     );
 
     // Root path history includes all commits except the empty ones.
-    let root_path = cs.path_with_history("")?;
+    let root_path = cs.path_with_history("").await?;
     let root_history: Vec<_> = root_path
         .history(ChangesetPathHistoryOptions {
             follow_history_across_deletions: true,

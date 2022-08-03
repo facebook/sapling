@@ -139,7 +139,7 @@ async fn test_immutable_blame(fb: FacebookInit) -> Result<()> {
             .changeset(changesets["m1"])
             .await?
             .expect("changeset exists");
-        let b_m1_with_history = cs_m1.path_with_history(MPath::new(b"b")?)?;
+        let b_m1_with_history = cs_m1.path_with_history("b").await?;
         let b_m1_blame = b_m1_with_history.blame(false).await?;
         let b_m1_blame_by_lines: Vec<_> = b_m1_blame
             .lines()?
@@ -161,7 +161,7 @@ async fn test_immutable_blame(fb: FacebookInit) -> Result<()> {
             .changeset(changesets["m1"])
             .await?
             .expect("changeset exists");
-        let a_m1_with_history = cs_m1.path_with_history(MPath::new(b"a")?)?;
+        let a_m1_with_history = cs_m1.path_with_history("a").await?;
         let a_m1_blame = a_m1_with_history.blame(true).await?;
         let a_m1_blame_by_lines: Vec<_> = a_m1_blame
             .lines()?
@@ -217,13 +217,13 @@ async fn test_linear_mutable_blame(fb: FacebookInit) -> Result<()> {
             .changeset(changesets["b3"])
             .await?
             .expect("changeset exists");
-        let b_b3_with_history = cs_b3.path_with_history(MPath::new(b"b")?)?;
+        let b_b3_with_history = cs_b3.path_with_history("b").await?;
 
         let cs_b1 = repo
             .changeset(changesets["b1"])
             .await?
             .expect("changeset exists");
-        let b_b1_with_history = cs_b1.path_with_history(MPath::new(b"b")?)?;
+        let b_b1_with_history = cs_b1.path_with_history("b").await?;
         add_mutable_rename(&b_b1_with_history, &b_b3_with_history).await?;
     }
 
@@ -233,7 +233,7 @@ async fn test_linear_mutable_blame(fb: FacebookInit) -> Result<()> {
             .changeset(changesets["m1"])
             .await?
             .expect("changeset exists");
-        let b_m1_with_history = cs_m1.path_with_history(MPath::new(b"b")?)?;
+        let b_m1_with_history = cs_m1.path_with_history("b").await?;
         let b_m1_blame = b_m1_with_history.blame(false).await?;
         let b_m1_blame_by_lines: Vec<_> = b_m1_blame
             .lines()?
@@ -259,7 +259,7 @@ async fn test_linear_mutable_blame(fb: FacebookInit) -> Result<()> {
         cs_b3
             .add_mutable_renames(vec![MPath::new(b"b")?.into()].into_iter())
             .await?;
-        let b_b3_with_history = cs_b3.path_with_history(MPath::new(b"b")?)?;
+        let b_b3_with_history = cs_b3.path_with_history("b").await?;
         let b_b3_blame = b_b3_with_history.blame(true).await?;
         let b_b3_blame_by_lines: Vec<_> = b_b3_blame
             .lines()?
@@ -285,7 +285,7 @@ async fn test_linear_mutable_blame(fb: FacebookInit) -> Result<()> {
         cs_m1
             .add_mutable_renames(vec![MPath::new(b"b")?.into()].into_iter())
             .await?;
-        let b_m1_with_history = cs_m1.path_with_history("b")?;
+        let b_m1_with_history = cs_m1.path_with_history("b").await?;
         let b_m1_blame = b_m1_with_history.blame(true).await?;
         let b_m1_blame_by_lines: Vec<_> = b_m1_blame
             .lines()?
@@ -339,13 +339,13 @@ async fn test_merge_commit_mutable_blame(fb: FacebookInit) -> Result<()> {
             .changeset(changesets["b3"])
             .await?
             .expect("changeset exists");
-        let b_b3_with_history = cs_b3.path_with_history(MPath::new(b"b")?)?;
+        let b_b3_with_history = cs_b3.path_with_history("b").await?;
 
         let cs_a2 = repo
             .changeset(changesets["a2"])
             .await?
             .expect("changeset exists");
-        let a_a2_with_history = cs_a2.path_with_history(MPath::new(b"a")?)?;
+        let a_a2_with_history = cs_a2.path_with_history("a").await?;
         add_mutable_rename(&a_a2_with_history, &b_b3_with_history).await?;
     }
     {
@@ -353,12 +353,12 @@ async fn test_merge_commit_mutable_blame(fb: FacebookInit) -> Result<()> {
             .changeset(changesets["a3"])
             .await?
             .expect("changeset exists");
-        let a_a3_with_history = cs_a3.path_with_history(MPath::new(b"a")?)?;
+        let a_a3_with_history = cs_a3.path_with_history("a").await?;
         let cs_b2 = repo
             .changeset(changesets["b2"])
             .await?
             .expect("changeset exists");
-        let b_b2_with_history = cs_b2.path_with_history(MPath::new(b"b")?)?;
+        let b_b2_with_history = cs_b2.path_with_history("b").await?;
         add_mutable_rename(&b_b2_with_history, &a_a3_with_history).await?;
     }
 
@@ -368,7 +368,7 @@ async fn test_merge_commit_mutable_blame(fb: FacebookInit) -> Result<()> {
             .changeset(changesets["m1"])
             .await?
             .expect("changeset exists");
-        let b_m1_with_history = cs_m1.path_with_history(MPath::new(b"b")?)?;
+        let b_m1_with_history = cs_m1.path_with_history("b").await?;
         let b_m1_blame = b_m1_with_history.blame(false).await?;
         let b_m1_blame_by_lines: Vec<_> = b_m1_blame
             .lines()?
@@ -389,7 +389,7 @@ async fn test_merge_commit_mutable_blame(fb: FacebookInit) -> Result<()> {
             .changeset(changesets["m1"])
             .await?
             .expect("changeset exists");
-        let a_m1_with_history = cs_m1.path_with_history(MPath::new(b"a")?)?;
+        let a_m1_with_history = cs_m1.path_with_history("a").await?;
         let a_m1_blame = a_m1_with_history.blame(false).await?;
         let a_m1_blame_by_lines: Vec<_> = a_m1_blame
             .lines()?
@@ -415,7 +415,7 @@ async fn test_merge_commit_mutable_blame(fb: FacebookInit) -> Result<()> {
         cs_b3
             .add_mutable_renames(vec![MPath::new(b"b")?.into()].into_iter())
             .await?;
-        let b_b3_with_history = cs_b3.path_with_history(MPath::new(b"b")?)?;
+        let b_b3_with_history = cs_b3.path_with_history("b").await?;
         let b_b3_blame = b_b3_with_history.blame(true).await?;
         let b_b3_blame_by_lines: Vec<_> = b_b3_blame
             .lines()?
@@ -441,7 +441,7 @@ async fn test_merge_commit_mutable_blame(fb: FacebookInit) -> Result<()> {
         cs_m1
             .add_mutable_renames(vec![MPath::new(b"b")?.into()].into_iter())
             .await?;
-        let b_m1_with_history = cs_m1.path_with_history("b")?;
+        let b_m1_with_history = cs_m1.path_with_history("b").await?;
         let b_m1_blame = b_m1_with_history.blame(true).await?;
         let b_m1_blame_by_lines: Vec<_> = b_m1_blame
             .lines()?
@@ -473,25 +473,25 @@ async fn test_two_entry_mutable_blame(fb: FacebookInit) -> Result<()> {
             .changeset(changesets["b3"])
             .await?
             .expect("changeset exists");
-        let b_b3_with_history = cs_b3.path_with_history(MPath::new(b"b")?)?;
+        let b_b3_with_history = cs_b3.path_with_history("b").await?;
 
         let cs_b1 = repo
             .changeset(changesets["b1"])
             .await?
             .expect("changeset exists");
-        let b_b1_with_history = cs_b1.path_with_history(MPath::new(b"b")?)?;
+        let b_b1_with_history = cs_b1.path_with_history("b").await?;
         add_mutable_rename(&b_b1_with_history, &b_b3_with_history).await?;
 
         let cs_b2 = repo
             .changeset(changesets["b2"])
             .await?
             .expect("changeset exists");
-        let b_b2_with_history = cs_b2.path_with_history(MPath::new(b"b")?)?;
+        let b_b2_with_history = cs_b2.path_with_history("b").await?;
         let cs_a1 = repo
             .changeset(changesets["a1"])
             .await?
             .expect("changeset exists");
-        let a_a1_with_history = cs_a1.path_with_history(MPath::new(b"a")?)?;
+        let a_a1_with_history = cs_a1.path_with_history("a").await?;
         add_mutable_rename(&a_a1_with_history, &b_b2_with_history).await?;
     }
 
@@ -501,7 +501,7 @@ async fn test_two_entry_mutable_blame(fb: FacebookInit) -> Result<()> {
             .changeset(changesets["m1"])
             .await?
             .expect("changeset exists");
-        let b_m1_with_history = cs_m1.path_with_history(MPath::new(b"b")?)?;
+        let b_m1_with_history = cs_m1.path_with_history("b").await?;
         let b_m1_blame = b_m1_with_history.blame(false).await?;
         let b_m1_blame_by_lines: Vec<_> = b_m1_blame
             .lines()?
@@ -527,7 +527,7 @@ async fn test_two_entry_mutable_blame(fb: FacebookInit) -> Result<()> {
         cs_b3
             .add_mutable_renames(vec![MPath::new(b"b")?.into()].into_iter())
             .await?;
-        let b_b3_with_history = cs_b3.path_with_history(MPath::new(b"b")?)?;
+        let b_b3_with_history = cs_b3.path_with_history("b").await?;
         let b_b3_blame = b_b3_with_history.blame(true).await?;
         let b_b3_blame_by_lines: Vec<_> = b_b3_blame
             .lines()?
@@ -553,7 +553,7 @@ async fn test_two_entry_mutable_blame(fb: FacebookInit) -> Result<()> {
         cs_m1
             .add_mutable_renames(vec![MPath::new(b"b")?.into()].into_iter())
             .await?;
-        let b_m1_with_history = cs_m1.path_with_history("b")?;
+        let b_m1_with_history = cs_m1.path_with_history("b").await?;
         let b_m1_blame = b_m1_with_history.blame(true).await?;
         let b_m1_blame_by_lines: Vec<_> = b_m1_blame
             .lines()?

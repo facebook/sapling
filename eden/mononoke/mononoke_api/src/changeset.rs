@@ -318,8 +318,8 @@ impl ChangesetContext {
     }
 
     /// Query the root directory in the repository at this changeset revision.
-    pub fn root(&self) -> ChangesetPathContentContext {
-        ChangesetPathContentContext::new(self.clone(), None)
+    pub async fn root(&self) -> Result<ChangesetPathContentContext, MononokeError> {
+        ChangesetPathContentContext::new(self.clone(), None).await
     }
 
     /// Query a path within the respository. This could be a file or a
@@ -327,7 +327,7 @@ impl ChangesetContext {
     ///
     /// Returns a path content context, which is a context suitable for
     /// queries about the content at this path.
-    pub fn path_with_content<P>(
+    pub async fn path_with_content<P>(
         &self,
         path: P,
     ) -> Result<ChangesetPathContentContext, MononokeError>
@@ -335,10 +335,7 @@ impl ChangesetContext {
         P: TryInto<MononokePath>,
         MononokeError: From<P::Error>,
     {
-        Ok(ChangesetPathContentContext::new(
-            self.clone(),
-            path.try_into()?,
-        ))
+        ChangesetPathContentContext::new(self.clone(), path.try_into()?).await
     }
 
     /// Query a path within the respository. This could be a file or a
@@ -346,7 +343,7 @@ impl ChangesetContext {
     ///
     /// Returns a path history context, which is a context suitable for
     /// queries about the history of this path.
-    pub fn path_with_history<P>(
+    pub async fn path_with_history<P>(
         &self,
         path: P,
     ) -> Result<ChangesetPathHistoryContext, MononokeError>
@@ -354,10 +351,7 @@ impl ChangesetContext {
         P: TryInto<MononokePath>,
         MononokeError: From<P::Error>,
     {
-        Ok(ChangesetPathHistoryContext::new(
-            self.clone(),
-            path.try_into()?,
-        ))
+        ChangesetPathHistoryContext::new(self.clone(), path.try_into()?).await
     }
 
     /// Query a path within the respository. This could be a file or a
@@ -368,12 +362,12 @@ impl ChangesetContext {
     ///
     /// If you need to query the content or history of a path, use
     /// `path_with_content` or `path_with_history` instead.
-    pub fn path<P>(&self, path: P) -> Result<ChangesetPathContext, MononokeError>
+    pub async fn path<P>(&self, path: P) -> Result<ChangesetPathContext, MononokeError>
     where
         P: TryInto<MononokePath>,
         MononokeError: From<P::Error>,
     {
-        Ok(ChangesetPathContext::new(self.clone(), path.try_into()?))
+        ChangesetPathContext::new(self.clone(), path.try_into()?).await
     }
 
     /// Returns a stream of path history contexts for a set of paths.
@@ -394,7 +388,8 @@ impl ChangesetContext {
                 self.repo().blob_repo().get_blobstore(),
                 paths.map(|path| path.into_mpath()),
             )
-            .map_ok({
+            .map_err(MononokeError::from)
+            .and_then({
                 let changeset = self.clone();
                 move |(mpath, entry)| {
                     ChangesetPathHistoryContext::new_with_unode_entry(
@@ -403,8 +398,7 @@ impl ChangesetContext {
                         entry,
                     )
                 }
-            })
-            .map_err(MononokeError::from))
+            }))
     }
 
     /// Returns a stream of path content contexts for a set of paths.
@@ -425,17 +419,21 @@ impl ChangesetContext {
                 self.repo().blob_repo().get_blobstore(),
                 paths.map(|path| path.into_mpath()),
             )
-            .map_ok({
+            .map_err(MononokeError::from)
+            .and_then({
                 let changeset = self.clone();
                 move |(mpath, entry)| {
-                    ChangesetPathContentContext::new_with_fsnode_entry(
-                        changeset.clone(),
-                        MononokePath::new(mpath),
-                        entry,
-                    )
+                    cloned!(changeset);
+                    async move {
+                        ChangesetPathContentContext::new_with_fsnode_entry(
+                            changeset.clone(),
+                            MononokePath::new(mpath),
+                            entry,
+                        )
+                        .await
+                    }
                 }
-            })
-            .map_err(MononokeError::from))
+            }))
     }
 
     /// Returns a stream of path contexts for a set of paths.
@@ -456,7 +454,8 @@ impl ChangesetContext {
                 self.repo().blob_repo().get_blobstore(),
                 paths.map(|path| path.into_mpath()),
             )
-            .map_ok({
+            .map_err(MononokeError::from)
+            .and_then({
                 let changeset = self.clone();
                 move |(mpath, entry)| {
                     ChangesetPathContext::new_with_skeleton_manifest_entry(
@@ -465,8 +464,7 @@ impl ChangesetContext {
                         entry,
                     )
                 }
-            })
-            .map_err(MononokeError::from))
+            }))
     }
 
     fn deleted_paths_impl<Root: RootDeletedManifestIdCommon>(
@@ -479,7 +477,8 @@ impl ChangesetContext {
             self.repo().blob_repo().blobstore(),
             paths.map(|path| path.into_mpath()),
         )
-        .map_ok({
+        .map_err(MononokeError::from)
+        .and_then({
             let changeset = self.clone();
             move |(mpath, entry)| {
                 ChangesetPathHistoryContext::new_with_deleted_manifest::<Root::Manifest>(
@@ -489,7 +488,6 @@ impl ChangesetContext {
                 )
             }
         })
-        .map_err(MononokeError::from)
     }
 
     /// Returns a stream of path history contexts for a set of paths.
@@ -913,158 +911,176 @@ impl ChangesetContext {
 
         let change_contexts = diff
             .try_filter_map(|diff_entry| {
-                future::ok(match diff_entry {
-                    ManifestDiff::Added(path, entry @ ManifestEntry::Leaf(_)) => {
-                        let path = MononokePath::new(path);
-                        if !diff_files || !within_restrictions(&path, &path_restrictions) {
-                            None
-                        } else if let Some((from_path, from_entry)) = inv_copy_path_map.get(&path) {
-                            // There's copy information that we can use.
-                            if copied_paths.contains(from_path)
-                                || copy_path_map
-                                    .get(*from_path)
-                                    .and_then(|to_paths| to_paths.first())
-                                    != Some(&path)
+                async {
+                    let entry = match diff_entry {
+                        ManifestDiff::Added(path, entry @ ManifestEntry::Leaf(_)) => {
+                            let path = MononokePath::new(path);
+                            if !diff_files || !within_restrictions(&path, &path_restrictions) {
+                                None
+                            } else if let Some((from_path, from_entry)) =
+                                inv_copy_path_map.get(&path)
                             {
-                                // If the source still exists in the current
-                                // commit, or this isn't the first place it
-                                // was copied to, it was a copy.
-                                let from = ChangesetPathContentContext::new_with_fsnode_entry(
-                                    other.clone(),
-                                    (**from_path).clone(),
-                                    *from_entry,
-                                );
-                                Some(ChangesetPathDiffContext::Copied(
-                                    ChangesetPathContentContext::new_with_fsnode_entry(
-                                        self.clone(),
-                                        path,
-                                        entry,
-                                    ),
-                                    from,
-                                ))
+                                // There's copy information that we can use.
+                                if copied_paths.contains(from_path)
+                                    || copy_path_map
+                                        .get(*from_path)
+                                        .and_then(|to_paths| to_paths.first())
+                                        != Some(&path)
+                                {
+                                    // If the source still exists in the current
+                                    // commit, or this isn't the first place it
+                                    // was copied to, it was a copy.
+                                    let from = ChangesetPathContentContext::new_with_fsnode_entry(
+                                        other.clone(),
+                                        (**from_path).clone(),
+                                        *from_entry,
+                                    )
+                                    .await?;
+                                    Some(ChangesetPathDiffContext::Copied(
+                                        ChangesetPathContentContext::new_with_fsnode_entry(
+                                            self.clone(),
+                                            path,
+                                            entry,
+                                        )
+                                        .await?,
+                                        from,
+                                    ))
+                                } else {
+                                    // If it doesn't, and this is the first place
+                                    // it was copied to, it was a move.
+                                    let from = ChangesetPathContentContext::new_with_fsnode_entry(
+                                        other.clone(),
+                                        (**from_path).clone(),
+                                        *from_entry,
+                                    )
+                                    .await?;
+                                    Some(ChangesetPathDiffContext::Moved(
+                                        ChangesetPathContentContext::new_with_fsnode_entry(
+                                            self.clone(),
+                                            path,
+                                            entry,
+                                        )
+                                        .await?,
+                                        from,
+                                    ))
+                                }
                             } else {
-                                // If it doesn't, and this is the first place
-                                // it was copied to, it was a move.
-                                let from = ChangesetPathContentContext::new_with_fsnode_entry(
-                                    other.clone(),
-                                    (**from_path).clone(),
-                                    *from_entry,
-                                );
-                                Some(ChangesetPathDiffContext::Moved(
+                                Some(ChangesetPathDiffContext::Added(
                                     ChangesetPathContentContext::new_with_fsnode_entry(
                                         self.clone(),
                                         path,
                                         entry,
-                                    ),
-                                    from,
+                                    )
+                                    .await?,
                                 ))
                             }
-                        } else {
-                            Some(ChangesetPathDiffContext::Added(
-                                ChangesetPathContentContext::new_with_fsnode_entry(
-                                    self.clone(),
-                                    path,
-                                    entry,
-                                ),
-                            ))
                         }
-                    }
-                    ManifestDiff::Removed(path, entry @ ManifestEntry::Leaf(_)) => {
-                        let path = MononokePath::new(path);
-                        #[allow(clippy::if_same_then_else)]
-                        if copy_path_map.get(&path).is_some() {
-                            // The file is was moved (not removed), it will be covered by a "Moved" entry.
-                            None
-                        } else if !diff_files || !within_restrictions(&path, &path_restrictions) {
-                            None
-                        } else {
-                            Some(ChangesetPathDiffContext::Removed(
-                                ChangesetPathContentContext::new_with_fsnode_entry(
-                                    other.clone(),
-                                    path,
-                                    entry,
-                                ),
-                            ))
+                        ManifestDiff::Removed(path, entry @ ManifestEntry::Leaf(_)) => {
+                            let path = MononokePath::new(path);
+                            #[allow(clippy::if_same_then_else)]
+                            if copy_path_map.get(&path).is_some() {
+                                // The file is was moved (not removed), it will be covered by a "Moved" entry.
+                                None
+                            } else if !diff_files || !within_restrictions(&path, &path_restrictions)
+                            {
+                                None
+                            } else {
+                                Some(ChangesetPathDiffContext::Removed(
+                                    ChangesetPathContentContext::new_with_fsnode_entry(
+                                        other.clone(),
+                                        path,
+                                        entry,
+                                    )
+                                    .await?,
+                                ))
+                            }
                         }
-                    }
-                    ManifestDiff::Changed(
-                        path,
-                        from_entry @ ManifestEntry::Leaf(_),
-                        to_entry @ ManifestEntry::Leaf(_),
-                    ) => {
-                        let path = MononokePath::new(path);
-                        if !diff_files || !within_restrictions(&path, &path_restrictions) {
-                            None
-                        } else {
-                            Some(ChangesetPathDiffContext::Changed(
-                                ChangesetPathContentContext::new_with_fsnode_entry(
-                                    self.clone(),
-                                    path.clone(),
-                                    to_entry,
-                                ),
-                                ChangesetPathContentContext::new_with_fsnode_entry(
-                                    other.clone(),
-                                    path,
-                                    from_entry,
-                                ),
-                            ))
+                        ManifestDiff::Changed(
+                            path,
+                            from_entry @ ManifestEntry::Leaf(_),
+                            to_entry @ ManifestEntry::Leaf(_),
+                        ) => {
+                            let path = MononokePath::new(path);
+                            if !diff_files || !within_restrictions(&path, &path_restrictions) {
+                                None
+                            } else {
+                                Some(ChangesetPathDiffContext::Changed(
+                                    ChangesetPathContentContext::new_with_fsnode_entry(
+                                        self.clone(),
+                                        path.clone(),
+                                        to_entry,
+                                    )
+                                    .await?,
+                                    ChangesetPathContentContext::new_with_fsnode_entry(
+                                        other.clone(),
+                                        path,
+                                        from_entry,
+                                    )
+                                    .await?,
+                                ))
+                            }
                         }
-                    }
-                    ManifestDiff::Added(path, entry @ ManifestEntry::Tree(_)) => {
-                        let path = MononokePath::new(path);
-                        if !diff_trees || !within_restrictions(&path, &path_restrictions) {
-                            None
-                        } else {
-                            Some(ChangesetPathDiffContext::Added(
-                                ChangesetPathContentContext::new_with_fsnode_entry(
-                                    self.clone(),
-                                    path,
-                                    entry,
-                                ),
-                            ))
+                        ManifestDiff::Added(path, entry @ ManifestEntry::Tree(_)) => {
+                            let path = MononokePath::new(path);
+                            if !diff_trees || !within_restrictions(&path, &path_restrictions) {
+                                None
+                            } else {
+                                Some(ChangesetPathDiffContext::Added(
+                                    ChangesetPathContentContext::new_with_fsnode_entry(
+                                        self.clone(),
+                                        path,
+                                        entry,
+                                    )
+                                    .await?,
+                                ))
+                            }
                         }
-                    }
-                    ManifestDiff::Removed(path, entry @ ManifestEntry::Tree(_)) => {
-                        let path = MononokePath::new(path);
-                        if !diff_trees || !within_restrictions(&path, &path_restrictions) {
-                            None
-                        } else {
-                            Some(ChangesetPathDiffContext::Removed(
-                                ChangesetPathContentContext::new_with_fsnode_entry(
-                                    self.clone(),
-                                    path,
-                                    entry,
-                                ),
-                            ))
+                        ManifestDiff::Removed(path, entry @ ManifestEntry::Tree(_)) => {
+                            let path = MononokePath::new(path);
+                            if !diff_trees || !within_restrictions(&path, &path_restrictions) {
+                                None
+                            } else {
+                                Some(ChangesetPathDiffContext::Removed(
+                                    ChangesetPathContentContext::new_with_fsnode_entry(
+                                        self.clone(),
+                                        path,
+                                        entry,
+                                    )
+                                    .await?,
+                                ))
+                            }
                         }
-                    }
-                    ManifestDiff::Changed(
-                        path,
-                        from_entry @ ManifestEntry::Tree(_),
-                        to_entry @ ManifestEntry::Tree(_),
-                    ) => {
-                        let path = MononokePath::new(path);
-                        if !diff_trees || !within_restrictions(&path, &path_restrictions) {
-                            None
-                        } else {
-                            Some(ChangesetPathDiffContext::Changed(
-                                ChangesetPathContentContext::new_with_fsnode_entry(
-                                    self.clone(),
-                                    path.clone(),
-                                    to_entry,
-                                ),
-                                ChangesetPathContentContext::new_with_fsnode_entry(
-                                    other.clone(),
-                                    path,
-                                    from_entry,
-                                ),
-                            ))
+                        ManifestDiff::Changed(
+                            path,
+                            from_entry @ ManifestEntry::Tree(_),
+                            to_entry @ ManifestEntry::Tree(_),
+                        ) => {
+                            let path = MononokePath::new(path);
+                            if !diff_trees || !within_restrictions(&path, &path_restrictions) {
+                                None
+                            } else {
+                                Some(ChangesetPathDiffContext::Changed(
+                                    ChangesetPathContentContext::new_with_fsnode_entry(
+                                        self.clone(),
+                                        path.clone(),
+                                        to_entry,
+                                    )
+                                    .await?,
+                                    ChangesetPathContentContext::new_with_fsnode_entry(
+                                        other.clone(),
+                                        path,
+                                        from_entry,
+                                    )
+                                    .await?,
+                                ))
+                            }
                         }
-                    }
-                    // We've already covered all practical possiblities as there are no "changed"
-                    // between from trees and files as such are represented as removal+addition
-                    _ => None,
-                })
+                        // We've already covered all practical possiblities as there are no "changed"
+                        // between from trees and files as such are represented as removal+addition
+                        _ => None,
+                    };
+                    Ok(entry)
+                }
             })
             .take(limit.unwrap_or(usize::MAX))
             .try_collect::<Vec<_>>()
@@ -1367,27 +1383,25 @@ impl ChangesetContext {
         let diff_files = diff_items.contains(&ChangesetDiffItem::FILES);
         let diff_trees = diff_items.contains(&ChangesetDiffItem::TREES);
 
-        let entries = self.find_entries(path_restrictions, ordering).await?;
-        let mpaths = entries.try_filter_map(|(path, entry)| async move {
-            match (path, entry) {
-                (Some(mpath), ManifestEntry::Leaf(_)) if diff_files => Ok(Some(mpath)),
-                (Some(mpath), ManifestEntry::Tree(_)) if diff_trees => Ok(Some(mpath)),
-                _ => Ok(None),
-            }
-        });
-        let stream = mpaths
-            .map_ok(|mpath| MononokePath::new(Some(mpath)))
-            .map_err(MononokeError::from);
-
-        return Ok(stream
-            .take(limit.unwrap_or(usize::MAX))
-            .try_collect::<Vec<_>>()
+        self.find_entries(path_restrictions, ordering)
             .await?
-            .into_iter()
-            .map(|mp| {
-                ChangesetPathDiffContext::Added(ChangesetPathContentContext::new(self.clone(), mp))
+            .try_filter_map(|(path, entry)| async move {
+                match (path, entry) {
+                    (Some(mpath), ManifestEntry::Leaf(_)) if diff_files => Ok(Some(mpath)),
+                    (Some(mpath), ManifestEntry::Tree(_)) if diff_trees => Ok(Some(mpath)),
+                    _ => Ok(None),
+                }
             })
-            .collect());
+            .map_ok(|mpath| MononokePath::new(Some(mpath)))
+            .map_err(MononokeError::from)
+            .take(limit.unwrap_or(usize::MAX))
+            .and_then(|mp| async move {
+                Ok(ChangesetPathDiffContext::Added(
+                    ChangesetPathContentContext::new(self.clone(), mp).await?,
+                ))
+            })
+            .try_collect::<Vec<_>>()
+            .await
     }
 
     pub async fn run_hooks(

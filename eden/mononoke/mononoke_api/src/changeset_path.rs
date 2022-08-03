@@ -155,24 +155,27 @@ impl fmt::Debug for ChangesetPathContext {
 }
 
 impl ChangesetPathContentContext {
-    pub(crate) fn new(changeset: ChangesetContext, path: impl Into<MononokePath>) -> Self {
-        Self {
+    pub(crate) async fn new(
+        changeset: ChangesetContext,
+        path: impl Into<MononokePath>,
+    ) -> Result<Self, MononokeError> {
+        Ok(Self {
             changeset,
             path: path.into(),
             fsnode_id: LazyShared::new_empty(),
-        }
+        })
     }
 
-    pub(crate) fn new_with_fsnode_entry(
+    pub(crate) async fn new_with_fsnode_entry(
         changeset: ChangesetContext,
         path: impl Into<MononokePath>,
         fsnode_entry: Entry<FsnodeId, FsnodeFile>,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, MononokeError> {
+        Ok(Self {
             changeset,
             path: path.into(),
             fsnode_id: LazyShared::new_ready(Ok(Some(fsnode_entry))),
-        }
+        })
     }
 
     /// The `RepoContext` for this query.
@@ -284,36 +287,39 @@ impl ChangesetPathContentContext {
 }
 
 impl ChangesetPathHistoryContext {
-    pub(crate) fn new(changeset: ChangesetContext, path: impl Into<MononokePath>) -> Self {
-        Self {
+    pub(crate) async fn new(
+        changeset: ChangesetContext,
+        path: impl Into<MononokePath>,
+    ) -> Result<Self, MononokeError> {
+        Ok(Self {
             changeset,
             path: path.into(),
             unode_id: LazyShared::new_empty(),
             linknode: LazyShared::new_empty(),
-        }
+        })
     }
 
-    pub(crate) fn new_with_unode_entry(
+    pub(crate) async fn new_with_unode_entry(
         changeset: ChangesetContext,
         path: impl Into<MononokePath>,
         unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, MononokeError> {
+        Ok(Self {
             changeset,
             path: path.into(),
             unode_id: LazyShared::new_ready(Ok(Some(unode_entry))),
             linknode: LazyShared::new_empty(),
-        }
+        })
     }
 
-    pub(crate) fn new_with_deleted_manifest<Manifest: DeletedManifestCommon>(
+    pub(crate) async fn new_with_deleted_manifest<Manifest: DeletedManifestCommon>(
         changeset: ChangesetContext,
         path: MononokePath,
         deleted_manifest_id: Manifest::Id,
-    ) -> Self {
+    ) -> Result<Self, MononokeError> {
         let ctx = changeset.ctx().clone();
         let blobstore = changeset.repo().blob_repo().blobstore().clone();
-        Self {
+        Ok(Self {
             changeset,
             path,
             unode_id: LazyShared::new_empty(),
@@ -321,7 +327,7 @@ impl ChangesetPathHistoryContext {
                 let deleted_manifest = deleted_manifest_id.load(&ctx, &blobstore).await?;
                 Ok(deleted_manifest.linknode().cloned())
             }),
-        }
+        })
     }
 
     /// The `RepoContext` for this query.
@@ -731,24 +737,27 @@ impl ChangesetPathHistoryContext {
 }
 
 impl ChangesetPathContext {
-    pub(crate) fn new(changeset: ChangesetContext, path: impl Into<MononokePath>) -> Self {
-        Self {
+    pub(crate) async fn new(
+        changeset: ChangesetContext,
+        path: impl Into<MononokePath>,
+    ) -> Result<Self, MononokeError> {
+        Ok(Self {
             changeset,
             path: path.into(),
             skeleton_manifest_id: LazyShared::new_empty(),
-        }
+        })
     }
 
-    pub(crate) fn new_with_skeleton_manifest_entry(
+    pub(crate) async fn new_with_skeleton_manifest_entry(
         changeset: ChangesetContext,
         path: impl Into<MononokePath>,
         skeleton_manifest_entry: Entry<SkeletonManifestId, ()>,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, MononokeError> {
+        Ok(Self {
             changeset,
             path: path.into(),
             skeleton_manifest_id: LazyShared::new_ready(Ok(Some(skeleton_manifest_entry))),
-        }
+        })
     }
 
     /// The `RepoContext` for this query.

@@ -128,7 +128,8 @@ async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result
     assert_eq!(cs.id(), ChangesetId::from_str(expected_hash)?);
 
     let content = cs
-        .path_with_content("TEST_CREATE")?
+        .path_with_content("TEST_CREATE")
+        .await?
         .file()
         .await?
         .expect("file should exist")
@@ -137,7 +138,8 @@ async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result
     assert_eq!(content, Bytes::from("TEST CREATE\n"));
 
     let content = second_cs
-        .path_with_content("TEST_CREATE")?
+        .path_with_content("TEST_CREATE")
+        .await?
         .file()
         .await?
         .expect("file should exist")

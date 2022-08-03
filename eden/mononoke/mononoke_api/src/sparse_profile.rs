@@ -234,7 +234,7 @@ impl SparseProfileMonitoring {
 pub(crate) async fn fetch(path: String, changeset: &ChangesetContext) -> Result<Option<Vec<u8>>> {
     let path: &str = &path;
     let path = MPath::try_from(path)?;
-    let path_with_content = changeset.path_with_content(path.clone())?;
+    let path_with_content = changeset.path_with_content(path.clone()).await?;
     let file_ctx = path_with_content
         .file()
         .await?

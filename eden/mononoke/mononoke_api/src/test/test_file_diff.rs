@@ -56,12 +56,14 @@ async fn file_diff(fb: FacebookInit) -> Result<(), Error> {
 
     // Compare two regular files
     let b_file = b
-        .path_with_content("file")?
+        .path_with_content("file")
+        .await?
         .file()
         .await?
         .expect("should be a file");
     let c_file = c
-        .path_with_content("file")?
+        .path_with_content("file")
+        .await?
         .file()
         .await?
         .expect("should be a file");
@@ -80,12 +82,14 @@ async fn file_diff(fb: FacebookInit) -> Result<(), Error> {
 
     // Compare two binary files
     let b_bin = b
-        .path_with_content("bin")?
+        .path_with_content("bin")
+        .await?
         .file()
         .await?
         .expect("should be a file");
     let c_bin = c
-        .path_with_content("bin")?
+        .path_with_content("bin")
+        .await?
         .file()
         .await?
         .expect("should be a file");

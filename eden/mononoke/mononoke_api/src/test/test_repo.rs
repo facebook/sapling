@@ -759,21 +759,21 @@ async fn commit_path_exists_and_type(fb: FacebookInit) -> Result<(), Error> {
     let cs_id = ChangesetId::from_str(hash)?;
     let cs = repo.changeset(cs_id).await?.expect("changeset exists");
 
-    let root_path = cs.root();
+    let root_path = cs.root().await?;
     assert!(root_path.exists().await?);
     assert!(root_path.is_tree().await?);
 
-    let dir1_path = cs.path_with_content("dir1")?;
+    let dir1_path = cs.path_with_content("dir1").await?;
     assert!(dir1_path.exists().await?);
     assert!(dir1_path.is_tree().await?);
     assert_eq!(dir1_path.file_type().await?, None);
 
-    let file1_path = cs.path_with_content("dir1/file_1_in_dir1")?;
+    let file1_path = cs.path_with_content("dir1/file_1_in_dir1").await?;
     assert!(file1_path.exists().await?);
     assert!(!file1_path.is_tree().await?);
     assert_eq!(file1_path.file_type().await?, Some(FileType::Regular));
 
-    let nonexistent_path = cs.path_with_content("nonexistent")?;
+    let nonexistent_path = cs.path_with_content("nonexistent").await?;
     assert!(!nonexistent_path.exists().await?);
     assert!(!nonexistent_path.is_tree().await?);
     assert_eq!(nonexistent_path.file_type().await?, None);
@@ -800,7 +800,7 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
     let cs = repo.changeset(cs_id).await?.expect("changeset exists");
     assert_eq!(
         {
-            let path = cs.root();
+            let path = cs.root().await?;
             let tree = path.tree().await?.unwrap();
             tree.list()
                 .await?
@@ -817,7 +817,7 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
     );
     assert_eq!(
         {
-            let path = cs.path_with_content("dir1")?;
+            let path = cs.path_with_content("dir1").await?;
             let tree = path.tree().await?.unwrap();
             tree.list()
                 .await?
@@ -833,7 +833,7 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
     );
     let subsubdir2_id = {
         // List `dir1/subdir1`, but also capture a subtree id.
-        let path = cs.path_with_content("dir1/subdir1")?;
+        let path = cs.path_with_content("dir1/subdir1").await?;
         let tree = path.tree().await?.unwrap();
         assert_eq!(
             {
@@ -863,7 +863,7 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
     };
     assert_eq!(
         {
-            let path = cs.path_with_content("dir1/subdir1/subsubdir1")?;
+            let path = cs.path_with_content("dir1/subdir1/subsubdir1").await?;
             let tree = path.tree().await?.unwrap();
             tree.list()
                 .await?
@@ -902,7 +902,7 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
     );
     // Get tree by non-existent path returns None.
     {
-        let path = cs.path_with_content("nonexistent")?;
+        let path = cs.path_with_content("nonexistent").await?;
         assert!(path.tree().await?.is_none());
     }
 
@@ -945,7 +945,7 @@ async fn file_metadata(fb: FacebookInit) -> Result<(), Error> {
     let cs_id = ChangesetId::from_str(hash)?;
     let cs = repo.changeset(cs_id).await?.expect("changeset exists");
 
-    let path = cs.path_with_content("dir1/file_1_in_dir1")?;
+    let path = cs.path_with_content("dir1/file_1_in_dir1").await?;
     let file = path.file().await?.unwrap();
     let metadata = file.metadata().await?;
     assert_eq!(metadata, expected_metadata);
@@ -1000,7 +1000,7 @@ async fn file_contents(fb: FacebookInit) -> Result<(), Error> {
     let cs_id = ChangesetId::from_str(hash)?;
     let cs = repo.changeset(cs_id).await?.expect("changeset exists");
 
-    let path = cs.path_with_content("dir1/file_1_in_dir1")?;
+    let path = cs.path_with_content("dir1/file_1_in_dir1").await?;
     let file = path.file().await?.unwrap();
     let content = file.content_concat().await?;
     assert_eq!(content, Bytes::from("content1\n"));

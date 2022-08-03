@@ -126,7 +126,8 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
 
     // With everything landed, all files should be present
     let files: HashSet<_> = trunk_f
-        .path_with_content("")?
+        .path_with_content("")
+        .await?
         .tree()
         .await?
         .expect("root must be a tree")

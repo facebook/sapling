@@ -44,7 +44,7 @@ impl SourceControlServiceImpl {
         _params: thrift::CommitPathExistsParams,
     ) -> Result<thrift::CommitPathExistsResponse, errors::ServiceError> {
         let (_repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
-        let path = changeset.path(&commit_path.path)?;
+        let path = changeset.path(&commit_path.path).await?;
         Ok(thrift::CommitPathExistsResponse {
             exists: path.exists().await?,
             file_exists: path.is_file().await?,
@@ -61,7 +61,7 @@ impl SourceControlServiceImpl {
         _params: thrift::CommitPathInfoParams,
     ) -> Result<thrift::CommitPathInfoResponse, errors::ServiceError> {
         let (_repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
-        let path = changeset.path_with_content(&commit_path.path)?;
+        let path = changeset.path_with_content(&commit_path.path).await?;
         let response = match path.entry().await? {
             PathEntry::NotPresent => thrift::CommitPathInfoResponse {
                 exists: false,
@@ -201,7 +201,7 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::CommitPathBlameResponse, errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
         borrowed!(repo);
-        let path = changeset.path_with_history(&commit_path.path)?;
+        let path = changeset.path_with_history(&commit_path.path).await?;
 
         let options = params.format_options.unwrap_or_else(|| {
             btreeset! { thrift::BlameFormatOption::INCLUDE_CONTENTS }
@@ -427,7 +427,7 @@ impl SourceControlServiceImpl {
         params: thrift::CommitPathHistoryParams,
     ) -> Result<thrift::CommitPathHistoryResponse, errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
-        let path = changeset.path_with_history(&commit_path.path)?;
+        let path = changeset.path_with_history(&commit_path.path).await?;
         let (descendants_of, exclude_changeset_and_ancestors) = try_join!(
             async {
                 if let Some(descendants_of) = &params.descendants_of {
@@ -510,7 +510,7 @@ impl SourceControlServiceImpl {
         params: thrift::CommitPathLastChangedParams,
     ) -> Result<thrift::CommitPathLastChangedResponse, errors::ServiceError> {
         let (_repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
-        let path = changeset.path_with_history(&commit_path.path)?;
+        let path = changeset.path_with_history(&commit_path.path).await?;
         match path.last_modified().await? {
             Some(last_modified) => {
                 let last_modified =

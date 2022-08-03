@@ -73,7 +73,8 @@ impl CreateCopyInfo {
             ))
         })?;
         if !parent_ctx
-            .path_with_content(self.path.clone())?
+            .path_with_content(self.path.clone())
+            .await?
             .is_file()
             .await?
         {
