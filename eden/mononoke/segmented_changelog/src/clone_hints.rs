@@ -203,26 +203,29 @@ impl CloneHints {
 
         debug!(ctx.logger(), "Uploading {} hint entries", new_hints.len());
 
-        let hint_blob_keys: Vec<_> = stream::iter(new_hints.chunks_exact(HINTS_PER_CHUNK).map(
-            |chunk| async move {
+        let chunks = new_hints
+            .chunks_exact(HINTS_PER_CHUNK)
+            .map(|chunk| {
                 let chunk: Vec<_> = chunk.iter().collect();
-                let chunk = mincode::serialize(&chunk)?;
-                let chunk_hash = {
-                    let mut context = hash::Context::new(b"segmented_clone");
-                    context.update(&chunk);
-                    context.finish()
-                };
-                let chunk_key =
-                    format!("segmented_clone_v1_idmapv{}.{}", idmap_version, chunk_hash);
-                let blob = BlobstoreBytes::from_bytes(chunk);
-                self.inner
-                    .blobstore
-                    .put(ctx, chunk_key.clone(), blob)
-                    .await?;
-                debug!(ctx.logger(), "Uploaded hint entry {}", &chunk_key);
-                Ok::<_, Error>(chunk_key)
-            },
-        ))
+                mincode::serialize(&chunk)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let hint_blob_keys: Vec<_> = stream::iter(chunks.into_iter().map(|chunk| async move {
+            let chunk_hash = {
+                let mut context = hash::Context::new(b"segmented_clone");
+                context.update(&chunk);
+                context.finish()
+            };
+            let chunk_key = format!("segmented_clone_v1_idmapv{}.{}", idmap_version, chunk_hash);
+            let blob = BlobstoreBytes::from_bytes(chunk);
+            self.inner
+                .blobstore
+                .put(ctx, chunk_key.clone(), blob)
+                .await?;
+            debug!(ctx.logger(), "Uploaded hint entry {}", &chunk_key);
+            Ok::<_, Error>(chunk_key)
+        }))
         .buffer_unordered(100)
         .try_collect()
         .await?;
