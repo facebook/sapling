@@ -26,6 +26,10 @@ class BaseTest(unittest.TestCase):
         self.config = Config(Path(test_globals.env["HGRCPATH"]))
         self._add_production_configs()
         self.repo = self.server.clone()
+        test_globals.watchman.start()
+
+    def tearDown(self) -> None:
+        test_globals.watchman.stop()
 
     def _add_production_configs(self) -> None:
         # Most production configs should be loaded via dynamicconfig. The ones

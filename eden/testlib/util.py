@@ -12,6 +12,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Dict, Generator, Optional
 
+from eden.scm.tests.watchman import Watchman
 from eden.test_support.temporary_directory import TempFileManager
 
 from .generators import RepoGenerator
@@ -23,6 +24,7 @@ class GlobalTestState(threading.local):
     test_tmp: Path
     env: Dict[str, str]
     debug: bool
+    watchman: Watchman
 
     def __init__(self) -> None:
         # These are needed to satisfy pyre, but should never be used.
@@ -31,17 +33,21 @@ class GlobalTestState(threading.local):
         self.test_tmp = Path("")
         self.env = {}
         self.debug = os.environ.get("HGTEST_DEBUG") is not None
+        self.watchman = Watchman(Path("watchman"), self.test_tmp)
 
     def setup(self) -> None:
         self.temp_mgr = TempFileManager()
         self.repo_gen = RepoGenerator()
         self.test_tmp = self.temp_mgr.make_temp_dir()
+        self.watchman = Watchman(Path("watchman"), self.test_tmp)
 
         hgrc_path = os.path.join(new_dir(), "global_hgrc")
         self.env = {
             "HGRCPATH": hgrc_path,
             "TESTTMP": str(self.test_tmp),
             "TEST_PROD_CONFIGS": "true",
+            "WATCHMAN_CONFIG_FILE": str(self.watchman.config),
+            "WATCHMAN_SOCK": str(self.watchman.socket),
         }
 
     def cleanup(self) -> None:

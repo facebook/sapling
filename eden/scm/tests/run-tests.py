@@ -107,6 +107,8 @@ try:
 except ImportError:
     buckpath = buckruletype = None
 
+from watchman import Watchman, WatchmanTimeout
+
 if os.environ.get("RTUNICODEPEDANTRY", False):
     try:
         reload(sys)
@@ -1180,69 +1182,10 @@ class Test(unittest.TestCase):
             shortname = hashlib.sha1(_bytespath("%s" % name)).hexdigest()[:6]
             self._watchmandir = os.path.join(self._threadtmp, "%s.watchman" % shortname)
             os.mkdir(self._watchmandir)
-            cfgfile = os.path.join(self._watchmandir, "config.json")
-
-            if os.name == "nt":
-                sockfile = "\\\\.\\pipe\\watchman-test-%s" % uuid.uuid4().hex
-                closefd = False
-            else:
-                sockfile = os.path.join(self._watchmandir, "sock")
-                closefd = True
-
-            self._watchmansock = sockfile
-
-            clilogfile = os.path.join(self._watchmandir, "cli-log")
-            logfile = os.path.join(self._watchmandir, "log")
-            pidfile = os.path.join(self._watchmandir, "pid")
-            statefile = os.path.join(self._watchmandir, "state")
-
-            with open(cfgfile, "w", encoding="utf8") as f:
-                f.write(json.dumps({}))
-
-            env = os.environ.copy()
-            env["WATCHMAN_CONFIG_FILE"] = cfgfile
-            env["WATCHMAN_SOCK"] = sockfile
-
-            argv = [
-                self._watchman,
-                "--sockname",
-                sockfile,
-                "--logfile",
-                logfile,
-                "--pidfile",
-                pidfile,
-                "--statefile",
-                statefile,
-                "--foreground",
-                "--log-level=2",  # debug logging for watchman
-            ]
-
-            with open(clilogfile, "wb") as f:
-                self._watchmanproc = subprocess.Popen(
-                    argv, env=env, stdin=None, stdout=f, stderr=f, close_fds=closefd
-                )
-
-            # Wait for watchman socket to become available
-            argv = [
-                self._watchman,
-                "--no-spawn",
-                "--no-local",
-                "--sockname",
-                sockfile,
-                "version",
-            ]
-            deadline = time.time() + 30
-            watchmanavailable = False
-            while not watchmanavailable and time.time() < deadline:
-                try:
-                    # The watchman CLI can wait for a short time if sockfile
-                    # is not ready.
-                    subprocess.check_output(argv, env=env, close_fds=closefd)
-                    watchmanavailable = True
-                except Exception:
-                    time.sleep(0.1)
-            if not watchmanavailable:
-                # tearDown needs to be manually called in this case.
+            self._watchmanproc = Watchman(self._watchman, self._watchmandir)
+            try:
+                self._watchmanproc.start()
+            except WatchmanTimeout:
                 self.tearDown()
                 raise RuntimeError("timed out waiting for watchman")
 
@@ -1398,8 +1341,7 @@ class Test(unittest.TestCase):
 
         if self._watchman:
             try:
-                self._watchmanproc.terminate()
-                self._watchmanproc.kill()
+                self._watchmanproc.stop()
                 if self._keeptmpdir:
                     log(
                         "Keeping watchman dir: %s\n" % self._watchmandir.decode("utf-8")
@@ -1624,7 +1566,7 @@ class Test(unittest.TestCase):
         env["CHGSOCKNAME"] = self._chgsockpath
 
         if self._watchman:
-            env["WATCHMAN_SOCK"] = self._watchmansock
+            env["WATCHMAN_SOCK"] = self._watchmanproc.socket
             env["HGFSMONITOR_TESTS"] = "1"
 
         return env
