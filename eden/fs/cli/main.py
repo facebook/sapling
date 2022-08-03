@@ -718,7 +718,7 @@ class CloneCmd(Subcmd):
 
         parser.add_argument(
             "--backing-store",
-            help="Clone path as backing store instead of a source control repository. Currently only support 'recas' (Linux only).",
+            help="Clone path as backing store instead of a source control repository. Currently only support 'recas' (Linux and MacOs only).",
         )
 
     def run(self, args: argparse.Namespace) -> int:
@@ -828,9 +828,9 @@ want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n.""
                     return 1
 
         elif args.backing_store == "recas":
-            if sys.platform != "linux":
+            if sys.platform == "win32":
                 print_stderr(
-                    "error: recas backing store was passed but this feature is only available on Linux"
+                    "error: recas backing store was passed but this feature is not available on Windows"
                 )
                 return 1
             if args.rev is not None:
