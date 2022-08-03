@@ -728,7 +728,7 @@ impl RepoContext {
         });
 
         // Check the user is permitted to access this repo.
-        authz.require_full_repo_read(&ctx, &repo.inner).await?;
+        authz.require_repo_metadata_read(&ctx, &repo.inner).await?;
 
         // Open the bubble if necessary.
         let repo = if let Some(bubble_id) = bubble_id {

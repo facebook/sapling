@@ -8,6 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
+acl_regions = { version = "0.1.0", path = "../acl_regions" }
 anyhow = "1.0.56"
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 context = { version = "0.1.0", path = "../server/context" }

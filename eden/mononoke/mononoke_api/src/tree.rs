@@ -46,11 +46,12 @@ impl fmt::Debug for TreeContext {
 
 impl TreeContext {
     /// Create a new TreeContext. The tree must exist in the repo and have
-    /// had its derived data generated.
+    /// had its derived data generated, and the user must be known to have
+    /// permission to access the file.
     ///
     /// To construct a `TreeContext` for a tree that might not exist, use
     /// `new_check_exists`.
-    pub(crate) fn new(repo: RepoContext, id: TreeId) -> Self {
+    pub(crate) fn new_authorized(repo: RepoContext, id: TreeId) -> Self {
         Self {
             repo,
             id,
@@ -64,6 +65,11 @@ impl TreeContext {
         repo: RepoContext,
         id: TreeId,
     ) -> Result<Option<Self>, MononokeError> {
+        // Access to an arbitrary tree requires full access to the repo,
+        // as we do not know which path it corresponds to.
+        repo.authorization_context()
+            .require_full_repo_read(repo.ctx(), repo.inner_repo())
+            .await?;
         // Try to load the fsnode immediately to see if it exists. Unlike
         // `new`, if the fsnode is missing, we simply return `Ok(None)`.
         match id.load(repo.ctx(), repo.blob_repo().blobstore()).await {

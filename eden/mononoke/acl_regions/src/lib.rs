@@ -36,6 +36,17 @@ pub enum AssociatedRulesResult {
     Rules(Vec<AclRegionRuleDescriptor>),
 }
 
+impl AssociatedRulesResult {
+    pub fn hipster_acls(&self) -> Vec<&str> {
+        match self {
+            AssociatedRulesResult::AclRegionsDisabled => Vec::new(),
+            AssociatedRulesResult::Rules(rules) => {
+                rules.iter().map(|rule| rule.hipster_acl.as_str()).collect()
+            }
+        }
+    }
+}
+
 #[async_trait]
 #[facet::facet]
 pub trait AclRegions: Send + Sync {

@@ -159,9 +159,20 @@ impl ChangesetPathContentContext {
         changeset: ChangesetContext,
         path: impl Into<MononokePath>,
     ) -> Result<Self, MononokeError> {
+        let path = path.into();
+        changeset
+            .repo()
+            .authorization_context()
+            .require_path_read(
+                changeset.ctx(),
+                changeset.repo().inner_repo(),
+                changeset.id(),
+                path.as_mpath(),
+            )
+            .await?;
         Ok(Self {
             changeset,
-            path: path.into(),
+            path,
             fsnode_id: LazyShared::new_empty(),
         })
     }
@@ -171,9 +182,20 @@ impl ChangesetPathContentContext {
         path: impl Into<MononokePath>,
         fsnode_entry: Entry<FsnodeId, FsnodeFile>,
     ) -> Result<Self, MononokeError> {
+        let path = path.into();
+        changeset
+            .repo()
+            .authorization_context()
+            .require_path_read(
+                changeset.ctx(),
+                changeset.repo().inner_repo(),
+                changeset.id(),
+                path.as_mpath(),
+            )
+            .await?;
         Ok(Self {
             changeset,
-            path: path.into(),
+            path,
             fsnode_id: LazyShared::new_ready(Ok(Some(fsnode_entry))),
         })
     }
@@ -249,7 +271,9 @@ impl ChangesetPathContentContext {
     /// is not a directory in this commit.
     pub async fn tree(&self) -> Result<Option<TreeContext>, MononokeError> {
         let tree = match self.fsnode_id().await? {
-            Some(Entry::Tree(fsnode_id)) => Some(TreeContext::new(self.repo().clone(), fsnode_id)),
+            Some(Entry::Tree(fsnode_id)) => {
+                Some(TreeContext::new_authorized(self.repo().clone(), fsnode_id))
+            }
             _ => None,
         };
         Ok(tree)
@@ -259,7 +283,7 @@ impl ChangesetPathContentContext {
     /// is not a file in this commit.
     pub async fn file(&self) -> Result<Option<FileContext>, MononokeError> {
         let file = match self.fsnode_id().await? {
-            Some(Entry::Leaf(file)) => Some(FileContext::new(
+            Some(Entry::Leaf(file)) => Some(FileContext::new_authorized(
                 self.repo().clone(),
                 FetchKey::Canonical(*file.content_id()),
             )),
@@ -274,10 +298,13 @@ impl ChangesetPathContentContext {
     pub async fn entry(&self) -> Result<PathEntry, MononokeError> {
         let entry = match self.fsnode_id().await? {
             Some(Entry::Tree(fsnode_id)) => {
-                PathEntry::Tree(TreeContext::new(self.repo().clone(), fsnode_id))
+                PathEntry::Tree(TreeContext::new_authorized(self.repo().clone(), fsnode_id))
             }
             Some(Entry::Leaf(file)) => PathEntry::File(
-                FileContext::new(self.repo().clone(), FetchKey::Canonical(*file.content_id())),
+                FileContext::new_authorized(
+                    self.repo().clone(),
+                    FetchKey::Canonical(*file.content_id()),
+                ),
                 *file.file_type(),
             ),
             _ => PathEntry::NotPresent,
@@ -291,9 +318,20 @@ impl ChangesetPathHistoryContext {
         changeset: ChangesetContext,
         path: impl Into<MononokePath>,
     ) -> Result<Self, MononokeError> {
+        let path = path.into();
+        changeset
+            .repo()
+            .authorization_context()
+            .require_path_read(
+                changeset.ctx(),
+                changeset.repo().inner_repo(),
+                changeset.id(),
+                path.as_mpath(),
+            )
+            .await?;
         Ok(Self {
             changeset,
-            path: path.into(),
+            path,
             unode_id: LazyShared::new_empty(),
             linknode: LazyShared::new_empty(),
         })
@@ -304,9 +342,20 @@ impl ChangesetPathHistoryContext {
         path: impl Into<MononokePath>,
         unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
     ) -> Result<Self, MononokeError> {
+        let path = path.into();
+        changeset
+            .repo()
+            .authorization_context()
+            .require_path_read(
+                changeset.ctx(),
+                changeset.repo().inner_repo(),
+                changeset.id(),
+                path.as_mpath(),
+            )
+            .await?;
         Ok(Self {
             changeset,
-            path: path.into(),
+            path,
             unode_id: LazyShared::new_ready(Ok(Some(unode_entry))),
             linknode: LazyShared::new_empty(),
         })
@@ -317,6 +366,16 @@ impl ChangesetPathHistoryContext {
         path: MononokePath,
         deleted_manifest_id: Manifest::Id,
     ) -> Result<Self, MononokeError> {
+        changeset
+            .repo()
+            .authorization_context()
+            .require_path_read(
+                changeset.ctx(),
+                changeset.repo().inner_repo(),
+                changeset.id(),
+                path.as_mpath(),
+            )
+            .await?;
         let ctx = changeset.ctx().clone();
         let blobstore = changeset.repo().blob_repo().blobstore().clone();
         Ok(Self {
@@ -741,9 +800,20 @@ impl ChangesetPathContext {
         changeset: ChangesetContext,
         path: impl Into<MononokePath>,
     ) -> Result<Self, MononokeError> {
+        let path = path.into();
+        changeset
+            .repo()
+            .authorization_context()
+            .require_path_read(
+                changeset.ctx(),
+                changeset.repo().inner_repo(),
+                changeset.id(),
+                path.as_mpath(),
+            )
+            .await?;
         Ok(Self {
             changeset,
-            path: path.into(),
+            path,
             skeleton_manifest_id: LazyShared::new_empty(),
         })
     }
@@ -753,9 +823,20 @@ impl ChangesetPathContext {
         path: impl Into<MononokePath>,
         skeleton_manifest_entry: Entry<SkeletonManifestId, ()>,
     ) -> Result<Self, MononokeError> {
+        let path = path.into();
+        changeset
+            .repo()
+            .authorization_context()
+            .require_path_read(
+                changeset.ctx(),
+                changeset.repo().inner_repo(),
+                changeset.id(),
+                path.as_mpath(),
+            )
+            .await?;
         Ok(Self {
             changeset,
-            path: path.into(),
+            path,
             skeleton_manifest_id: LazyShared::new_ready(Ok(Some(skeleton_manifest_entry))),
         })
     }

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -29,6 +31,19 @@ pub trait RepoPermissionChecker: Send + Sync + 'static {
     /// Check whether the given identities are permitted to **read** the
     /// repository.
     async fn check_if_read_access_allowed(&self, identities: &MononokeIdentitySet) -> Result<bool>;
+
+    /// Check whether the given identities are premitted to **read** any of
+    /// the regions of the repository.
+    async fn check_if_any_region_read_access_allowed(
+        &self,
+        identities: &MononokeIdentitySet,
+    ) -> Result<bool>;
+
+    async fn check_if_region_read_access_allowed(
+        &self,
+        region_hipster_acls: &[&str],
+        identities: &MononokeIdentitySet,
+    ) -> Result<bool>;
 
     /// Check whether the given identities are permitted to make **draft**
     /// changes to the repository.  This means creating commit cloud commits
@@ -62,6 +77,7 @@ pub trait RepoPermissionChecker: Send + Sync + 'static {
 pub struct ProdRepoPermissionChecker {
     repo_permchecker: BoxPermissionChecker,
     service_permchecker: BoxPermissionChecker,
+    repo_region_permcheckers: HashMap<String, BoxPermissionChecker>,
 }
 
 impl ProdRepoPermissionChecker {
@@ -70,6 +86,7 @@ impl ProdRepoPermissionChecker {
         acl_provider: impl AclProvider,
         repo_hipster_acl: Option<&str>,
         service_hipster_acl: Option<&str>,
+        repo_region_hipster_acls: Vec<&str>,
         reponame: &str,
         global_allowlist: &[Identity],
     ) -> Result<Self> {
@@ -104,10 +121,30 @@ impl ProdRepoPermissionChecker {
             // (this happens in integration tests).
             PermissionCheckerBuilder::new().allow_all().build()
         };
+        let mut repo_region_permcheckers = HashMap::new();
+        for acl_name in repo_region_hipster_acls {
+            if !repo_region_permcheckers.contains_key(acl_name) {
+                let permchecker = PermissionCheckerBuilder::new()
+                    .allow(
+                        acl_provider
+                            .repo_region_acl(acl_name)
+                            .await
+                            .with_context(|| {
+                                format!(
+                                    "Failed to create repo region PermissionChecker for {}",
+                                    acl_name
+                                )
+                            })?,
+                    )
+                    .build();
+                repo_region_permcheckers.insert(acl_name.to_string(), permchecker);
+            }
+        }
 
         Ok(Self {
             repo_permchecker,
             service_permchecker,
+            repo_region_permcheckers,
         })
     }
 }
@@ -119,6 +156,33 @@ impl RepoPermissionChecker for ProdRepoPermissionChecker {
             .repo_permchecker
             .check_set(identities, &["read"])
             .await?)
+    }
+
+    async fn check_if_any_region_read_access_allowed(
+        &self,
+        identities: &MononokeIdentitySet,
+    ) -> Result<bool> {
+        for checker in self.repo_region_permcheckers.values() {
+            if checker.check_set(identities, &["read"]).await? {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
+    async fn check_if_region_read_access_allowed(
+        &self,
+        region_hipster_acls: &[&str],
+        identities: &MononokeIdentitySet,
+    ) -> Result<bool> {
+        for acl in region_hipster_acls {
+            if let Some(checker) = self.repo_region_permcheckers.get(*acl) {
+                if checker.check_set(identities, &["read"]).await? {
+                    return Ok(true);
+                }
+            }
+        }
+        Ok(false)
     }
 
     async fn check_if_draft_access_allowed(
@@ -177,6 +241,21 @@ impl AlwaysAllowMockRepoPermissionChecker {
 impl RepoPermissionChecker for AlwaysAllowMockRepoPermissionChecker {
     async fn check_if_read_access_allowed(
         &self,
+        _identities: &MononokeIdentitySet,
+    ) -> Result<bool> {
+        Ok(true)
+    }
+
+    async fn check_if_any_region_read_access_allowed(
+        &self,
+        _identities: &MononokeIdentitySet,
+    ) -> Result<bool> {
+        Ok(true)
+    }
+
+    async fn check_if_region_read_access_allowed(
+        &self,
+        _region_hipster_acls: &[&str],
         _identities: &MononokeIdentitySet,
     ) -> Result<bool> {
         Ok(true)

@@ -806,6 +806,17 @@ impl RepoFactory {
                 .source_control_service
                 .service_write_hipster_acl
                 .as_deref(),
+            repo_config
+                .acl_region_config
+                .as_ref()
+                .map(|config| {
+                    config
+                        .allow_rules
+                        .iter()
+                        .map(|rule| rule.hipster_acl.as_str())
+                        .collect()
+                })
+                .unwrap_or_default(),
             repo_name,
             &self.global_allowlist,
         )

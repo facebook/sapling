@@ -5,12 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use acl_regions::AclRegionsRef;
 use anyhow::Result;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkName;
 use context::CoreContext;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
 use repo_bookmark_attrs::RepoBookmarkAttrsRef;
 use repo_permission_checker::RepoPermissionCheckerRef;
 
@@ -104,6 +107,86 @@ impl AuthorizationContext {
         self.check_full_repo_read(ctx, repo)
             .await?
             .permitted_or_else(|| self.permission_denied(ctx, DeniedAction::FullRepoRead))
+    }
+
+    /// Check if user has read access to the repo metadata.
+    ///
+    /// The repo metadata is the bookmarks and changesets, but not the
+    /// manifests or file contents.
+    pub async fn check_repo_metadata_read(
+        &self,
+        ctx: &CoreContext,
+        repo: &impl RepoPermissionCheckerRef,
+    ) -> Result<AuthorizationCheckOutcome> {
+        let permitted = match self {
+            AuthorizationContext::FullAccess => true,
+            AuthorizationContext::Identity | AuthorizationContext::Service(_) => {
+                // Check the caller's identity permits read access.  Acting as
+                // a service does not change read access, so we check the
+                // identity in this case also.
+                repo.repo_permission_checker()
+                    .check_if_read_access_allowed(ctx.metadata().identities())
+                    .await? ||
+                // Check if the caller can access via path ACLs.
+                repo.repo_permission_checker()
+                    .check_if_any_region_read_access_allowed(ctx.metadata().identities())
+                    .await?
+            }
+        };
+        Ok(AuthorizationCheckOutcome::from_permitted(permitted))
+    }
+
+    /// Require that the user has read access to the repo metadata.
+    pub async fn require_repo_metadata_read(
+        &self,
+        ctx: &CoreContext,
+        repo: &impl RepoPermissionCheckerRef,
+    ) -> Result<(), AuthorizationError> {
+        self.check_repo_metadata_read(ctx, repo)
+            .await?
+            .permitted_or_else(|| self.permission_denied(ctx, DeniedAction::RepoMetadataRead))
+    }
+
+    pub async fn check_path_read(
+        &self,
+        ctx: &CoreContext,
+        repo: &(impl RepoPermissionCheckerRef + AclRegionsRef),
+        csid: ChangesetId,
+        path: Option<&MPath>,
+    ) -> Result<AuthorizationCheckOutcome> {
+        let permitted = match self {
+            AuthorizationContext::FullAccess => true,
+            AuthorizationContext::Identity | AuthorizationContext::Service(_) => {
+                // Check the caller's identity permits read access.  Acting as
+                // a service does not change read access, so we check the
+                // identity in this case also.
+                repo.repo_permission_checker()
+                    .check_if_read_access_allowed(ctx.metadata().identities())
+                    .await?
+                    || {
+                        let rules = repo.acl_regions().associated_rules(ctx, csid, path).await?;
+                        let acls = rules.hipster_acls();
+                        repo.repo_permission_checker()
+                            .check_if_region_read_access_allowed(&acls, ctx.metadata().identities())
+                            .await?
+                    }
+            }
+        };
+        Ok(AuthorizationCheckOutcome::from_permitted(permitted))
+    }
+
+    pub async fn require_path_read(
+        &self,
+        ctx: &CoreContext,
+        repo: &(impl RepoPermissionCheckerRef + AclRegionsRef),
+        csid: ChangesetId,
+        path: Option<&MPath>,
+    ) -> Result<(), AuthorizationError> {
+        self.check_path_read(ctx, repo, csid, path)
+            .await?
+            .permitted_or_else(|| {
+                self.permission_denied(ctx, DeniedAction::PathRead(csid, path.cloned()))
+            })
     }
 
     /// Check whether the user has general write access to the repo.

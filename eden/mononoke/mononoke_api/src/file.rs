@@ -57,11 +57,13 @@ impl fmt::Debug for FileContext {
 /// See `ChangesetPathContentContext` if you need to refer to a specific file in a
 /// specific commit.
 impl FileContext {
-    /// Create a new FileContext.  The file must exist in the repository.
+    /// Create a new FileContext.  The file must exist in the repository,
+    /// and the user must be known to have permission to access the path
+    /// the file exists at.
     ///
     /// To construct a `FileContext` for a file that might not exist, use
     /// `new_check_exists`.
-    pub(crate) fn new(repo: RepoContext, fetch_key: FetchKey) -> Self {
+    pub(crate) fn new_authorized(repo: RepoContext, fetch_key: FetchKey) -> Self {
         Self {
             repo,
             fetch_key,
@@ -75,6 +77,11 @@ impl FileContext {
         repo: RepoContext,
         fetch_key: FetchKey,
     ) -> Result<Option<Self>, MononokeError> {
+        // Access to an arbitrary file requires full access to the repo,
+        // as we do not know which path it corresponds to.
+        repo.authorization_context()
+            .require_full_repo_read(repo.ctx(), repo.inner_repo())
+            .await?;
         // Try to get the file metadata immediately to see if it exists.
         let file = get_metadata(repo.blob_repo().blobstore(), repo.ctx(), &fetch_key)
             .await?

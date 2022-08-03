@@ -9,6 +9,7 @@ use std::fmt;
 
 use anyhow::Error;
 use bookmarks::BookmarkName;
+use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use permission_checker::MononokeIdentitySet;
 use thiserror::Error;
@@ -19,6 +20,8 @@ use crate::context::RepoWriteOperation;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum DeniedAction {
     FullRepoRead,
+    RepoMetadataRead,
+    PathRead(ChangesetId, Option<MPath>),
     RepoWrite(RepoWriteOperation),
     PathWrite(MPath),
     BookmarkModification(BookmarkName),
@@ -29,6 +32,15 @@ impl fmt::Display for DeniedAction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             DeniedAction::FullRepoRead => f.write_str("Full repo read access"),
+            DeniedAction::RepoMetadataRead => f.write_str("Repo metadata read access"),
+            DeniedAction::PathRead(csid, None) => {
+                write!(f, "Repo read access for root of changeset {}", csid)
+            }
+            DeniedAction::PathRead(csid, Some(path)) => write!(
+                f,
+                "Repo read access for path '{}' in changeset {}",
+                path, csid
+            ),
             DeniedAction::RepoWrite(op) => write!(f, "Repo write access for {:?}", op),
             DeniedAction::PathWrite(path) => write!(f, "Repo write access to path '{}'", path),
             DeniedAction::BookmarkModification(bookmark) => {
