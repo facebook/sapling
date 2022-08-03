@@ -2,6 +2,7 @@
 
 #require execbit
 
+  $ setconfig workingcopy.ruststatus=False
   $ configure modernclient
 
 Create extension that can disable exec checks:

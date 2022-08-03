@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
 Set up repo
 
   $ setconfig ui.origbackuppath=.hg/origbackups merge.checkunknown=warn

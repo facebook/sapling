@@ -1,3 +1,4 @@
+  $ setconfig workingcopy.ruststatus=False
   $ disable treemanifest
   $ setconfig ui.interactive=yes format.usegeneraldelta=yes
 

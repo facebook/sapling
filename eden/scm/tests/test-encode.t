@@ -2,6 +2,7 @@
 
 #require gzip gunzip tr
 
+  $ setconfig workingcopy.ruststatus=False
 Test encode/decode filters
 
   $ hg init repo

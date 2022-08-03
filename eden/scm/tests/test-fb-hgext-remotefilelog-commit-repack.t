@@ -7,6 +7,7 @@
   $ . $TESTDIR/library.sh
 
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig workingcopy.ruststatus=False
   $ hginit master
   $ cd master
   $ setconfig 'remotefilelog.server=True'

@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
   $ disable treemanifest
 (this file is backported from core hg tests/test-annotate.t)
 

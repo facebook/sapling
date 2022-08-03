@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
   $ disable treemanifest
   $ newrepo repo
   $ echo 0 > a

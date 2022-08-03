@@ -2,6 +2,7 @@
 
 #require execbit
 
+  $ setconfig workingcopy.ruststatus=False
   $ hg init repo
   $ cd repo
   $ echo foo > foo

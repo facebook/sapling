@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
   $ disable treemanifest
   $ configure dummyssh
 This test is dedicated to test the bundle2 container format

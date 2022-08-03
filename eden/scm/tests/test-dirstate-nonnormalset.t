@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
   $ readconfig <<EOF
   > [ui]
   > logtemplate="{node|short} ({phase}) [{tags} {bookmarks}] {desc|firstline}\n"

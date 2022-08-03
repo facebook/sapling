@@ -10,6 +10,7 @@ from hghave import require
 u = uimod.ui.load()
 u.setconfig("extensions", "treemanifest", "!")
 u.setconfig("devel", "segmented-changelog-rev-compat", "true")
+u.setconfig("workingcopy", "ruststatus", False)
 
 repo = hg.repository(u, "test1", create=1)
 os.chdir("test1")

@@ -22,6 +22,7 @@
 #  |                  |
 #  0 <- known good - -
 
+  $ setconfig workingcopy.ruststatus=False
 test bisect-sparse
   $ enable sparse
   $ hg init myrepo

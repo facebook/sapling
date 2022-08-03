@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
   $ disable treemanifest
 
 test merge-tools configuration - mostly exercising filemerge.py

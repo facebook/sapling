@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
   $ setconfig devel.segmented-changelog-rev-compat=True
 

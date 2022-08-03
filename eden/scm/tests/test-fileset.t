@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
   $ fileset() {
   >   hg debugfileset "$@"
   > }

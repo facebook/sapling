@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
   $ enable mergedriver
 
 basic merge driver: just lists out files and contents, doesn't resolve any files

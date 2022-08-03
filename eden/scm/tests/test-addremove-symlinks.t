@@ -1,6 +1,7 @@
 #chg-compatible
 #require symlink
 
+  $ setconfig workingcopy.ruststatus=False
   $ hg init repo
   $ cd repo
   $ mkdir foo

@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
   $ newserver server
   $ newremoterepo
   $ setconfig scmstore.auxindexedlog=true

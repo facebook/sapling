@@ -1,5 +1,6 @@
 #require fsmonitor
 
+  $ setconfig workingcopy.ruststatus=False
   $ setconfig format.dirstate=2
   $ newrepo
   $ touch x

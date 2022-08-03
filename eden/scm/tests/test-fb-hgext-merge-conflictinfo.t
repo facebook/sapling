@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
   $ configure mutation-norecord
   $ enable conflictinfo rebase
 

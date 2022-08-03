@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
   $ disable treemanifest
 
 Create a repository:
@@ -32,6 +33,7 @@ Create a repository:
   web.address=localhost
   web\.ipv6=(?:True|False) (re)
   workingcopy.enablerustwalker=True
+  workingcopy.ruststatus=False
   $ hg init t
   $ cd t
 

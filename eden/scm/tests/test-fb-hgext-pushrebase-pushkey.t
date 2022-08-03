@@ -1,3 +1,4 @@
+  $ setconfig workingcopy.ruststatus=False
   $ setconfig devel.legacy.exchange=bookmarks
   $ setconfig experimental.allowfilepeer=True
 

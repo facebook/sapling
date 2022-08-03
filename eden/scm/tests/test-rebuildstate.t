@@ -1,6 +1,7 @@
 #chg-compatible
 
 
+  $ setconfig workingcopy.ruststatus=False
   $ newext adddrop <<EOF
   > from edenscm.mercurial import registrar
   > cmdtable = {}

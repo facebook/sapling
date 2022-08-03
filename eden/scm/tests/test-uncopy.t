@@ -1,3 +1,4 @@
+  $ setconfig workingcopy.ruststatus=False
 set up test repo
 
   $ hg init uncopytest

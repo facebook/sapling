@@ -1,5 +1,6 @@
 #chg-compatible
 #require bash
+  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
   $ disable treemanifest

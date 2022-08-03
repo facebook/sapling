@@ -3,6 +3,7 @@
 
 #require symlink execbit
 
+  $ setconfig workingcopy.ruststatus=False
   $ tellmeabout() {
   >   f -Dxt "$@"
   > }

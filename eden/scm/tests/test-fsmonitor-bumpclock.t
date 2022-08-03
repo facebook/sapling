@@ -1,5 +1,6 @@
 #require fsmonitor
 
+  $ setconfig workingcopy.ruststatus=False
   $ newrepo
   $ enable fsmonitor
   $ touch a b c d e f

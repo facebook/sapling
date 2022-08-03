@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
 Quote from test-revert.t but this version is stronger - mtime was changed
 manually.
 

@@ -2,6 +2,7 @@
 
 #require no-icasefs
 
+  $ setconfig workingcopy.ruststatus=False
 test file addition with colliding case
 
   $ hg init repo1

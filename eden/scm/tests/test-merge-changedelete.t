@@ -1,6 +1,7 @@
 #chg-compatible
 
 
+  $ setconfig workingcopy.ruststatus=False
 Tests for change/delete conflicts, including:
 b5605d88dc27: Make ui.prompt repeat on "unrecognized response" again
  (issue897)

@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
   $ setconfig format.dirstate=2
 
 ------ Test dirstate._dirs refcounting

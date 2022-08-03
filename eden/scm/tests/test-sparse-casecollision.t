@@ -2,6 +2,7 @@
 
 #require no-icasefs
 
+  $ setconfig workingcopy.ruststatus=False
 Test sparse profiles in combination with case-collisions outside of the
 profile.
 

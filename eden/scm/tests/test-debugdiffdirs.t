@@ -1,3 +1,4 @@
+  $ setconfig workingcopy.ruststatus=False
   $ configure modernclient
 
   $ newclientrepo

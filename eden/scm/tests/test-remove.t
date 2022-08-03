@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
   $ remove() {
   >     hg rm $@
   >     echo "exit code: $?"

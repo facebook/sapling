@@ -1,3 +1,4 @@
+  $ setconfig workingcopy.ruststatus=False
   $ . "$TESTDIR/library.sh"
   $ setconfig experimental.allowfilepeer=True
   $ setconfig devel.print-metrics=1 devel.skip-metrics=watchman

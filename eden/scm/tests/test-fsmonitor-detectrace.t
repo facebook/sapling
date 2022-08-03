@@ -1,5 +1,6 @@
 #require fsmonitor
 
+  $ setconfig workingcopy.ruststatus=False
   $ setconfig fsmonitor.detectrace=1
   $ newrepo
 

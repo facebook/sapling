@@ -1,5 +1,6 @@
 #require fsmonitor
 
+  $ setconfig workingcopy.ruststatus=False
   $ . "$TESTDIR/histedit-helpers.sh"
   $ enable histedit fsmonitor rebase hgevents sparse
   $ setconfig fsmonitor.warn-fresh-instance=true

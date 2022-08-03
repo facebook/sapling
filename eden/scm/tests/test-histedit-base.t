@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable histedit
