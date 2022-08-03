@@ -682,6 +682,14 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Controls whether EdenFS logs inode state changes to Tracebus or not.
+   */
+  ConfigSetting<bool> enableInodeTraceBus{
+      "telemetry:enable-inodetracebus",
+      true,
+      this};
+
+  /**
    * Controls whether EdenFS makes use of ActivityBuffers to store past
    * events in memory.
    */

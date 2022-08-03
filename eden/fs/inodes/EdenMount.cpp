@@ -110,10 +110,10 @@ void InodeTraceEvent::setPath(folly::StringPiece stringPath) {
 // InodeTraceEvents do include pointers to path info that is saved on the heap,
 // and there is memory usage of this data outside of the mount (by the
 // EdenServiceHandler during eden trace inode calls)
-constexpr size_t kInodeTraceBusCapacity = 5000;
+constexpr size_t kInodeTraceBusCapacity = 25000;
 static_assert(CheckSize<InodeTraceEvent, 64>());
 static_assert(
-    CheckEqual<320000, kInodeTraceBusCapacity * sizeof(InodeTraceEvent)>());
+    CheckEqual<1600000, kInodeTraceBusCapacity * sizeof(InodeTraceEvent)>());
 
 #ifndef _WIN32
 namespace {
@@ -2289,6 +2289,9 @@ void EdenMount::addInodeTraceEvent(
     InodeNumber ino,
     folly::StringPiece path,
     InodeEventProgress progress) noexcept {
+  if (!getEdenConfig()->enableInodeTraceBus.getValue()) {
+    return;
+  }
   // Measure timestamps and duration
   auto eventSystemTime = (progress == InodeEventProgress::START)
       ? startTime
