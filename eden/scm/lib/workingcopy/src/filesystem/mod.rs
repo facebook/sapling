@@ -5,11 +5,7 @@
  * GNU General Public License version 2.
  */
 
-pub mod edenfs;
-mod filechangedetector;
-pub mod filesystem;
-pub mod physicalfs;
-pub mod sparse;
-pub mod status;
-pub mod walker;
-pub mod watchmanfs;
+mod pendingchanges;
+
+pub use pendingchanges::ChangeType;
+pub use pendingchanges::PendingChangeResult;

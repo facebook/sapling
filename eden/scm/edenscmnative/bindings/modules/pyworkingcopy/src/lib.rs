@@ -88,7 +88,7 @@ py_class!(class status |py| {
         let matcher = extract_option_matcher(py, pymatcher)?;
         let filesystem = match filesystem {
             "normal" => {
-                let fs = workingcopy::filesystem::PhysicalFileSystem::new(root).map_pyerr(py)?;
+                let fs = workingcopy::physicalfs::PhysicalFileSystem::new(root).map_pyerr(py)?;
                 workingcopy::status::FileSystem::Normal(fs)
             },
             "watchman" => {

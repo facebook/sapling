@@ -14,7 +14,6 @@ use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use pathmatcher::Matcher;
-use serde::Serialize;
 use storemodel::ReadFileContents;
 use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;
@@ -27,6 +26,7 @@ use crate::filechangedetector::FileChangeDetectorTrait;
 use crate::filechangedetector::FileChangeResult;
 use crate::filechangedetector::HgModifiedTime;
 use crate::filechangedetector::ResolvedFileChangeResult;
+use crate::filesystem::PendingChangeResult;
 use crate::walker::WalkEntry;
 use crate::walker::Walker;
 
@@ -110,27 +110,6 @@ impl PendingChangesStage {
             PendingChangesStage::Finished => PendingChangesStage::Finished,
         }
     }
-}
-
-#[derive(Serialize)]
-pub enum ChangeType {
-    Changed(RepoPathBuf),
-    Deleted(RepoPathBuf),
-}
-
-impl ChangeType {
-    pub fn get_path(&self) -> &RepoPathBuf {
-        match self {
-            ChangeType::Changed(path) => path,
-            ChangeType::Deleted(path) => path,
-        }
-    }
-}
-
-#[derive(Serialize)]
-pub enum PendingChangeResult {
-    File(ChangeType),
-    SeenDirectory(RepoPathBuf),
 }
 
 impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {

@@ -27,7 +27,7 @@ use crate::edenfs::EdenFileSystem;
 use crate::filechangedetector::HgModifiedTime;
 use crate::filesystem::ChangeType;
 use crate::filesystem::PendingChangeResult;
-use crate::filesystem::PhysicalFileSystem;
+use crate::physicalfs::PhysicalFileSystem;
 use crate::watchmanfs::WatchmanFileSystem;
 
 type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
