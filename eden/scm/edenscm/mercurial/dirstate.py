@@ -41,7 +41,6 @@ import bindings
 # circularly imports us.
 import edenscm.mercurial.localrepo
 
-# pyre-fixme[21]: Could not find module `edenscmnative`.
 from edenscmnative import parsers
 
 from . import (
@@ -69,7 +68,6 @@ from .pycompat import encodeutf8
 
 _rangemask = 0x7FFFFFFF
 
-# pyre-fixme[5]: Global expression must be annotated.
 dirstatetuple = parsers.dirstatetuple
 
 slowstatuswarning: str = _(
@@ -373,7 +371,6 @@ class dirstate(object):
         # pyre-fixme[6]: expected Iterable (maybe PEP 544 will fix this?)
         return iter(sorted(self._map))
 
-    # pyre-fixme[11]: Annotation `dirstatetuple` is not defined as a type.
     def items(self) -> "Iterable[Tuple[str, dirstatetuple]]":
         return pycompat.iteritems(self._map)
 
@@ -1484,8 +1481,6 @@ class dirstatemap(object):
 
     @util.propertycache
     def _map(self) -> "Dict[str, dirstatetuple]":
-        # pyre-fixme[8]: Attribute has type `propertycache[dirstatemap, unknown]`;
-        #  used as `Dict[Variable[_KT], Variable[_VT]]`.
         self._map = {}
         self.read()
         return self._map

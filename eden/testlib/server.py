@@ -40,7 +40,6 @@ if FBCODE and os.environ.get("USE_MONONOKE", False):
         RawStorageConfig,
     )
 
-    # pyre-fixme[21]: Could not find module `thrift.python.serializer`.
     from thrift.python.serializer import Protocol, serialize
 
 from .hg import hg
@@ -257,52 +256,40 @@ def _setup_mononoke_configs(
     blobstore_name = "blobstore"
     blobstore_path = os.path.join(config_dir, blobstore_name)
 
-    # pyre-fixme[29]: `Type[RawMetadataConfig]` is not a function.
     metadata_storage = RawMetadataConfig(
-        # pyre-fixme[29]: `Type[RawDbLocal]` is not a function.
         local=RawDbLocal(local_db_path=str(new_dir(label="Mononoke DB")))
     )
-    # pyre-fixme[29]: `Type[RawBlobstoreConfig]` is not a function.
     blobstore = RawBlobstoreConfig(
-        # pyre-fixme[29]: `Type[RawBlobstoreFilePath]` is not a function.
         blob_sqlite=RawBlobstoreFilePath(path=blobstore_path)
     )
-    # pyre-fixme[29]: `Type[RawStorageConfig]` is not a function.
     storage_config = RawStorageConfig(metadata=metadata_storage, blobstore=blobstore)
-    # pyre-fixme[29]: `Type[RawRedactionConfig]` is not a function.
     redaction_config = RawRedactionConfig(
         blobstore=blobstore_name,
         redaction_sets_location="scm/mononoke/redaction/redaction_sets",
     )
-    # pyre-fixme[29]: `Type[RawAllowlistIdentity]` is not a function.
     allowlist_entry = RawAllowlistIdentity(
         identity_type="USER", identity_data="myusername0"
     )
-    # pyre-fixme[29]: `Type[RawCommonConfig]` is not a function.
     common_config = RawCommonConfig(
         enable_http_control_api=True,
         redaction_config=redaction_config,
-        # pyre-fixme[29]: `Type[RawAllowlistIdentity]` is not a function.
         internal_identity=RawAllowlistIdentity(
             identity_type="SERVICE_IDENTITY", identity_data="internal"
         ),
         global_allowlist=[allowlist_entry],
     )
-    # pyre-fixme[29]: `Type[RawRepoConfigs]` is not a function.
     mononoke_config: RawRepoConfigs = RawRepoConfigs(
         commit_sync={},
         common=common_config,
         repos=repo_configs,
         storage={blobstore_name: storage_config},
         acl_region_configs={},
-        # pyre-fixme[29]: `Type[RawRepoDefinitions]` is not a function.
         repo_definitions=RawRepoDefinitions(repo_definitions=repo_definitions),
     )
 
     config_file = os.path.join(config_dir, "config.json")
     Path(config_file).parent.mkdir(parents=True, exist_ok=True)
     with open(config_file, "w+") as f:
-        # pyre-fixme[16]: Module `python` has no attribute `serializer`.
         f.write(serialize(mononoke_config, protocol=Protocol.JSON).decode("utf-8"))
 
     return config_file
@@ -321,14 +308,12 @@ def _setup_repos(
 
 
 def _setup_repo(repoid: int, repo_name: str) -> Tuple[RawRepoConfig, RawRepoDefinition]:
-    # pyre-fixme[29]: `Type[RawRepoDefinition]` is not a function.
     repo_def = RawRepoDefinition(
         repo_id=repoid,
         repo_name=repo_name,
         repo_config=repo_name,
     )
 
-    # pyre-fixme[29]: `Type[RawDerivedDataTypesConfig]` is not a function.
     derived_data_types = RawDerivedDataTypesConfig(
         types={
             "blame",
@@ -342,21 +327,16 @@ def _setup_repo(repoid: int, repo_name: str) -> Tuple[RawRepoConfig, RawRepoDefi
             "skeleton_manifests",
         }
     )
-    # pyre-fixme[29]: `Type[RawDerivedDataConfig]` is not a function.
     derived_data_config = RawDerivedDataConfig(
         available_configs={"default": derived_data_types},
         enabled_config_name="default",
     )
-    # pyre-fixme[29]: `Type[RawHookManagerParams]` is not a function.
     hook_params = RawHookManagerParams(disable_acl_checker=True)
-    # pyre-fixme[29]: `Type[RawPushrebaseParams]` is not a function.
     pushrebase_params = RawPushrebaseParams(
         rewritedates=False, forbid_p2_root_rebases=False
     )
-    # pyre-fixme[29]: `Type[RawPushParams]` is not a function.
     push_params = RawPushParams(pure_push_allowed=True)
 
-    # pyre-fixme[29]: `Type[RawRepoConfig]` is not a function.
     repo_config = RawRepoConfig(
         derived_data_config=derived_data_config,
         storage_config="blobstore",

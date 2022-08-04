@@ -30,7 +30,6 @@ from typing import IO, Optional, Tuple, Union
 
 import bindings
 
-# pyre-fixme[21]: Could not find module `edenscmnative`.
 from edenscmnative import parsers
 
 from . import ancestor, error, mdiff, pycompat, templatefilters, util

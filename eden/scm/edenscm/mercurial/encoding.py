@@ -17,7 +17,6 @@ import os
 import sys
 import unicodedata
 
-# pyre-fixme[21]: Could not find module `edenscmnative`.
 from edenscmnative import parsers as charencode
 
 from . import error, pycompat
