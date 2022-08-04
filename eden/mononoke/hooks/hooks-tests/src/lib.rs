@@ -1538,15 +1538,13 @@ async fn test_load_hooks_bad_rust_hook(fb: FacebookInit) {
         Ok(ErrorKind::InvalidRustHook(hook_name)) => {
             assert_eq!(hook_name, "hook1".to_string());
         }
-        _ => assert!(false, "Unexpected err type"),
+        _ => panic!("Unexpected err type"),
     };
 }
 
 #[fbinit::test]
 async fn test_load_disabled_hooks(fb: FacebookInit) {
     let mut config = RepoConfig::default();
-
-    config.bookmarks = vec![];
 
     config.hooks = vec![HookParams {
         name: "hook1".into(),
@@ -1602,11 +1600,7 @@ async fn test_load_disabled_hooks_referenced_by_bookmark(fb: FacebookInit) {
 
 #[fbinit::test]
 async fn test_load_disabled_hooks_hook_does_not_exist(fb: FacebookInit) {
-    let mut config = RepoConfig::default();
-
-    config.bookmarks = vec![];
-    config.hooks = vec![];
-
+    let config = RepoConfig::default();
     let mut hm = hook_manager_many_files_dirs_repo(fb).await;
 
     match load_hooks(
@@ -1623,6 +1617,6 @@ async fn test_load_disabled_hooks_hook_does_not_exist(fb: FacebookInit) {
         Ok(ErrorKind::NoSuchHookToDisable(hooks)) => {
             assert_eq!(hashset!["hook1".to_string()], hooks);
         }
-        _ => assert!(false, "Unexpected err type"),
+        _ => panic!("Unexpected err type"),
     };
 }

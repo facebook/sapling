@@ -27,22 +27,22 @@ pub enum InMemoryFileText {
     Elided(u64),
 }
 
-impl Into<InMemoryFileText> for Bytes {
-    fn into(self) -> InMemoryFileText {
-        InMemoryFileText::Present(self)
+impl From<Bytes> for InMemoryFileText {
+    fn from(bytes: Bytes) -> InMemoryFileText {
+        InMemoryFileText::Present(bytes)
     }
 }
 
-impl Into<InMemoryFileText> for &str {
-    fn into(self) -> InMemoryFileText {
-        let bytes: Bytes = Bytes::copy_from_slice(self.as_bytes());
+impl From<&str> for InMemoryFileText {
+    fn from(string: &str) -> InMemoryFileText {
+        let bytes: Bytes = Bytes::copy_from_slice(string.as_bytes());
         bytes.into()
     }
 }
 
-impl Into<InMemoryFileText> for u64 {
-    fn into(self) -> InMemoryFileText {
-        InMemoryFileText::Elided(self)
+impl From<u64> for InMemoryFileText {
+    fn from(int: u64) -> InMemoryFileText {
+        InMemoryFileText::Elided(int)
     }
 }
 
