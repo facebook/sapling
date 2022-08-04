@@ -28,5 +28,7 @@ base_app::subcommands! {
     mod pushrebase_history;
     mod repos;
     mod run_hooks;
+    mod sparse_profile_delta;
+    mod sparse_profile_size;
     mod xrepo_lookup;
 }

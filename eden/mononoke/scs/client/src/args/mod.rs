@@ -11,3 +11,4 @@ pub(crate) mod progress;
 pub(crate) mod pushvars;
 pub(crate) mod repo;
 pub(crate) mod service_id;
+pub(crate) mod sparse_profiles;

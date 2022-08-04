@@ -1114,6 +1114,13 @@ regex=".*"
 hooks_skip_ancestors_of=["master_bookmark"]
 CONFIG
 fi
+
+if [[ -n "${SPARSE_PROFILES_LOCATION}" ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+[sparse_profiles_config]
+sparse_profiles_location="$SPARSE_PROFILES_LOCATION"
+CONFIG
+fi
 }
 
 function write_infinitepush_config {
