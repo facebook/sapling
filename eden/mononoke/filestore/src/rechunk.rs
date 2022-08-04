@@ -18,6 +18,7 @@ use mononoke_types::ChunkedFileContents;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadata;
 use mononoke_types::FileContents;
+use std::cmp::Ordering;
 
 use crate::fetch;
 use crate::get_metadata;
@@ -102,16 +103,21 @@ fn uses_larger_chunks(
     let num_chunks = chunked_file_contents.num_chunks();
     for (idx, content_chunk_pointer) in chunked_file_contents.iter_chunks().enumerate() {
         let real_chunk_size = content_chunk_pointer.size();
-        if real_chunk_size > expected_chunk_size {
-            all_smaller_or_equal = false;
-            break;
-        } else if real_chunk_size < expected_chunk_size {
-            if idx == num_chunks - 1 {
-                // last pointer, it's ok if it is smaller
-                continue;
-            }
 
-            num_smaller_chunks += 1;
+        match real_chunk_size.cmp(&expected_chunk_size) {
+            Ordering::Greater => {
+                all_smaller_or_equal = false;
+                break;
+            }
+            Ordering::Less => {
+                if idx == num_chunks - 1 {
+                    // last pointer, it's ok if it is smaller
+                    continue;
+                }
+
+                num_smaller_chunks += 1;
+            }
+            Ordering::Equal => {}
         }
     }
 

@@ -45,11 +45,11 @@ pub enum MultiplexerError<E> {
     Cancelled,
 }
 
-impl Into<Error> for MultiplexerError<Error> {
-    fn into(self) -> Error {
+impl From<MultiplexerError<Error>> for Error {
+    fn from(me: MultiplexerError<Error>) -> Error {
         use MultiplexerError::*;
 
-        match self {
+        match me {
             InputError(e) => e,
             e @ Cancelled => format_err!("MultiplexerError: {:?}", e),
         }
