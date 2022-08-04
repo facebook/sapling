@@ -107,9 +107,9 @@ impl AsRef<str> for HttpScubaKey {
     }
 }
 
-impl Into<String> for HttpScubaKey {
-    fn into(self) -> String {
-        self.as_ref().to_string()
+impl From<HttpScubaKey> for String {
+    fn from(k: HttpScubaKey) -> String {
+        k.as_ref().to_string()
     }
 }
 

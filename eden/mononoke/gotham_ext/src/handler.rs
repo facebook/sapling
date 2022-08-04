@@ -128,6 +128,7 @@ pub struct MononokeHttpHandlerBuilder {
 }
 
 impl MononokeHttpHandlerBuilder {
+    #[allow(clippy::should_implement_trait)]
     pub fn add<T: Middleware>(mut self, middleware: T) -> Self {
         self.middleware.push(Box::new(middleware));
         self

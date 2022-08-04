@@ -45,9 +45,9 @@ impl ContentEncoding {
     }
 }
 
-impl Into<HeaderValue> for ContentEncoding {
-    fn into(self) -> HeaderValue {
-        HeaderValue::from_static(self.as_str())
+impl From<ContentEncoding> for HeaderValue {
+    fn from(e: ContentEncoding) -> HeaderValue {
+        HeaderValue::from_static(e.as_str())
     }
 }
 
