@@ -55,6 +55,7 @@ use samplingblob::SamplingHandler;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::Write;
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -135,12 +136,12 @@ where
 // aa/bb/cc etc is a subset of the hash used to prevent any one directory becoming too large.
 // For types without any in-repo path (e.g. `Changeset`) the repo_path component is omitted.
 fn disk_node_dir(
-    base_for_type: &PathBuf,
+    base_for_type: &Path,
     path: Option<&WrappedPath>,
     hash_subset: &[u8],
     dump_extension: bool,
 ) -> PathBuf {
-    let mut o = base_for_type.clone();
+    let mut o = base_for_type.to_path_buf();
     match path {
         Some(WrappedPath::NonRoot(path)) => {
             let path = PathBuf::from(percent_encode(&path.mpath().to_vec(), PATH).to_string());

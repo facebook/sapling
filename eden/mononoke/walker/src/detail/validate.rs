@@ -505,7 +505,7 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ValidateRoute>
         let mut fail = 0;
         let checked: Vec<_> = checks_to_do
             .map(|set| {
-                set.iter().filter_map(|check| {
+                set.iter().map(|check| {
                     // Lets check!
                     let status = match check {
                         CheckType::ChangesetPhaseIsPublic => check_bonsai_phase_is_public(
@@ -535,7 +535,7 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ValidateRoute>
                         CheckStatus::Pass(_) => pass += 1,
                         CheckStatus::Fail(_) => fail += 1,
                     }
-                    Some(CheckOutput::new(*check, status))
+                    CheckOutput::new(*check, status)
                 })
             })
             .into_iter()
@@ -762,7 +762,10 @@ impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
             // By type
             for c in &checkdata.checked {
                 let k = c.check;
-                let stats = self.stats_by_type.entry(k).or_insert(CheckStats::default());
+                let stats = self
+                    .stats_by_type
+                    .entry(k)
+                    .or_insert_with(CheckStats::default);
                 let (validate_info, check_fail) = match &c.status {
                     CheckStatus::Pass(validate_info) => {
                         stats.pass += 1;
@@ -796,7 +799,7 @@ impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
                         .add(CHECK_FAIL, check_fail)
                         .log();
                     if check_fail > 0 {
-                        for json in scuba.get_sample().to_json() {
+                        if let Ok(json) = scuba.get_sample().to_json() {
                             warn!(self.logger, "Validation failed: {}", json)
                         }
                     }
