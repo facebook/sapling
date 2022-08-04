@@ -365,9 +365,11 @@ mod tests {
             merge_imported_commit(&ctx, &repo, imported_cs_id, &dest_bookmark, changeset_args)
                 .await?;
 
-        let mut repo_config = RepoConfig::default();
-        repo_config.pushrebase = PushrebaseParams {
-            globalrevs_publishing_bookmark: Some(BookmarkName::new("master")?),
+        let repo_config = RepoConfig {
+            pushrebase: PushrebaseParams {
+                globalrevs_publishing_bookmark: Some(BookmarkName::new("master")?),
+                ..Default::default()
+            },
             ..Default::default()
         };
 
