@@ -55,7 +55,7 @@ async fn bridge_to_file<W: AsyncWriteExt + Unpin>(
 ) -> Result<()> {
     while let Some(string) = recv.next().await {
         file.write_all(string.as_bytes()).await?;
-        file.write(b"\n").await?;
+        file.write_all(b"\n").await?;
     }
     let _ = file.shutdown().await;
     Ok(())
@@ -68,7 +68,7 @@ async fn handle_errors<W: AsyncWriteExt + Unpin>(
     while let Some((key, err)) = recv.next().await {
         eprintln!("Error: {:?}", err.context(format!("Scrubbing key {}", key)));
         file.write_all(key.as_bytes()).await?;
-        file.write(b"\n").await?;
+        file.write_all(b"\n").await?;
     }
     let _ = file.shutdown().await;
     Ok(())

@@ -15,7 +15,7 @@ use std::io::Read;
 use toml::value;
 
 /// Configuration for the bonsai verify tool.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Config {
     /// Which changesets are known to be broken and therefore should skip verification.
     pub ignores: Vec<HgChangesetId>,
@@ -49,16 +49,6 @@ impl Config {
             ignores: config_serde.ignores,
             broken_merges_before,
         })
-    }
-}
-
-impl Default for Config {
-    #[inline]
-    fn default() -> Self {
-        Self {
-            ignores: vec![],
-            broken_merges_before: None,
-        }
     }
 }
 

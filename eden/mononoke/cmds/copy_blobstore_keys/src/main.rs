@@ -92,7 +92,7 @@ impl OutputFiles {
         };
 
         file.write_all(key.as_bytes()).await?;
-        file.write(b"\n").await?;
+        file.write_all(b"\n").await?;
 
         res.with_context(|| format!("failed to copy {}", key))?;
 
