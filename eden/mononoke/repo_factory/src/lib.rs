@@ -450,12 +450,13 @@ impl RepoFactory {
     }
 
     fn ctx(&self, repo_identity: Option<&ArcRepoIdentity>) -> CoreContext {
-        let logger = repo_identity
-            .map(|id| {
+        let logger = repo_identity.map_or_else(
+            || self.env.logger.new(o!()),
+            |id| {
                 let repo_name = String::from(id.name());
                 self.env.logger.new(o!("repo" => repo_name))
-            })
-            .unwrap_or_else(|| self.env.logger.new(o!()));
+            },
+        );
         let session = SessionContainer::new_with_defaults(self.env.fb);
         session.new_context(logger, self.env.scuba_sample_builder.clone())
     }
