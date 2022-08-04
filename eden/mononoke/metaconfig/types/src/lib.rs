@@ -387,7 +387,7 @@ pub struct CacheWarmupParams {
 }
 
 /// Configuration for the hook manager
-#[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Deserialize, Default)]
 pub struct HookManagerParams {
     /// Wether to disable the acl checker or not (intended for testing purposes)
     pub disable_acl_checker: bool,
@@ -395,16 +395,6 @@ pub struct HookManagerParams {
     pub all_hooks_bypassed: bool,
     /// Scuba table for bypassed commits logging.
     pub bypassed_commits_scuba_table: Option<String>,
-}
-
-impl Default for HookManagerParams {
-    fn default() -> Self {
-        Self {
-            disable_acl_checker: false,
-            all_hooks_bypassed: false,
-            bypassed_commits_scuba_table: None,
-        }
-    }
 }
 
 /// Configuration might be done for a single bookmark or for all bookmarks matching a regex
@@ -1096,7 +1086,7 @@ impl InfinitepushNamespace {
 /// while still providing a namespace. Doing so will prevent regular pushes to the namespace, as
 /// well as allow the creation of Infinitepush scratchbookmarks through e.g. replicating them from
 /// Mercurial.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct InfinitepushParams {
     /// Whether infinite push bundles are allowed on this server. If false, all infinitepush
     /// bundles will be rejected.
@@ -1111,17 +1101,6 @@ pub struct InfinitepushParams {
 
     /// Scribe category we log new commits to
     pub commit_scribe_category: Option<String>,
-}
-
-impl Default for InfinitepushParams {
-    fn default() -> Self {
-        Self {
-            allow_writes: false,
-            namespace: None,
-            hydrate_getbundle_response: false,
-            commit_scribe_category: None,
-        }
-    }
 }
 
 /// Filestore configuration.
@@ -1239,7 +1218,7 @@ pub struct SmallRepoPermanentConfig {
 }
 
 /// Source Control Service options
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct SourceControlServiceParams {
     /// Whether writes are permitted.
     pub permit_writes: bool,
@@ -1257,18 +1236,6 @@ pub struct SourceControlServiceParams {
 
     /// Whether users can create commits without parents.
     pub permit_commits_without_parents: bool,
-}
-
-impl Default for SourceControlServiceParams {
-    fn default() -> Self {
-        SourceControlServiceParams {
-            permit_writes: false,
-            permit_service_writes: false,
-            service_write_hipster_acl: None,
-            permit_commits_without_parents: false,
-            service_write_restrictions: HashMap::new(),
-        }
-    }
 }
 
 impl SourceControlServiceParams {
