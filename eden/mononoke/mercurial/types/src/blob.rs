@@ -56,9 +56,9 @@ impl From<Vec<u8>> for HgBlob {
 }
 
 /// Get a reference to the `HgBlob`'s data.
-impl<'a> Into<&'a [u8]> for &'a HgBlob {
-    fn into(self) -> &'a [u8] {
-        self.0.as_ref()
+impl<'a> From<&'a HgBlob> for &'a [u8] {
+    fn from(b: &'a HgBlob) -> &'a [u8] {
+        b.0.as_ref()
     }
 }
 

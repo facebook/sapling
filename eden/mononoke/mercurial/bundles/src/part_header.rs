@@ -284,8 +284,7 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
         ));
     }
 
-    for cur in 0..nmparams {
-        let (ksize, vsize) = param_sizes[cur];
+    for (cur, (ksize, vsize)) in param_sizes.iter().cloned().enumerate().take(nmparams) {
         let (key, val) =
             decode_header_param(&mut header_bytes, ksize, vsize).with_context(|| {
                 let err_msg = format!(
@@ -301,8 +300,13 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
             .with_context(|| ErrorKind::Bundle2Decode("invalid part header".into()))?;
     }
 
-    for cur in nmparams..(nmparams + naparams) {
-        let (ksize, vsize) = param_sizes[cur];
+    for (cur, (ksize, vsize)) in param_sizes
+        .iter()
+        .cloned()
+        .enumerate()
+        .skip(nmparams)
+        .take(naparams)
+    {
         let (key, val) =
             decode_header_param(&mut header_bytes, ksize, vsize).with_context(|| {
                 let err_msg = format!(

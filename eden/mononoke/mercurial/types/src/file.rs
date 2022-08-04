@@ -11,7 +11,7 @@ use quickcheck::Arbitrary;
 use quickcheck::Gen;
 
 /// Contents of a Mercurial file, stripped of any inline metadata.
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub struct FileBytes(pub Bytes);
 
 impl FileBytes {
@@ -40,12 +40,6 @@ impl IntoIterator for FileBytes {
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
-    }
-}
-
-impl Default for FileBytes {
-    fn default() -> Self {
-        Self(Bytes::default())
     }
 }
 

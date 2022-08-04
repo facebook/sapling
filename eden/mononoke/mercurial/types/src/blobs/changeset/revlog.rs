@@ -47,8 +47,8 @@ pub struct RevlogChangeset {
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub struct Extra(pub(super) BTreeMap<Vec<u8>, Vec<u8>>);
 
-impl Extra {
-    pub fn as_ref(&self) -> &BTreeMap<Vec<u8>, Vec<u8>> {
+impl AsRef<BTreeMap<Vec<u8>, Vec<u8>>> for Extra {
+    fn as_ref(&self) -> &BTreeMap<Vec<u8>, Vec<u8>> {
         &self.0
     }
 }

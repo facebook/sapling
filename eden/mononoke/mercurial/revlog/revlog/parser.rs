@@ -275,6 +275,7 @@ where
 
 /// Parse a 6 byte big-endian offset
 #[inline]
+#[allow(clippy::identity_op)]
 fn be_u48(i: &[u8]) -> IResult<&[u8], u64> {
     if i.len() < 6 {
         IResult::Incomplete(Needed::Size(6))

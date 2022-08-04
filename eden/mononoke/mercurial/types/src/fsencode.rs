@@ -78,6 +78,7 @@ pub fn simple_fsencode(elements: &[&[u8]]) -> PathBuf {
 
 static HEX: &[u8] = b"0123456789abcdef";
 
+#[allow(clippy::identity_op)]
 fn hexenc(byte: u8, out: &mut Vec<u8>) {
     out.push(b'~');
     out.push(HEX[((byte >> 4) & 0xf) as usize]);

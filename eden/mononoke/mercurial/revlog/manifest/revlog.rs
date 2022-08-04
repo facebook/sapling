@@ -133,9 +133,9 @@ impl ManifestContent {
     pub fn generate<W: Write>(&self, out: &mut W) -> io::Result<()> {
         for (k, v) in &self.files {
             k.generate(out)?;
-            out.write(&b"\0"[..])?;
+            out.write_all(&b"\0"[..])?;
             v.generate(out)?;
-            out.write(&b"\n"[..])?;
+            out.write_all(&b"\n"[..])?;
         }
         Ok(())
     }

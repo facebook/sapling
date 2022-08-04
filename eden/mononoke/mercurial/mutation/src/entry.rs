@@ -251,28 +251,27 @@ impl TryFrom<MutationEntry> for HgMutationEntry {
     }
 }
 
-// Conversion to client mutation entry
-impl Into<MutationEntry> for HgMutationEntry {
-    fn into(self: HgMutationEntry) -> MutationEntry {
+impl From<HgMutationEntry> for MutationEntry {
+    fn from(m: HgMutationEntry) -> MutationEntry {
         MutationEntry {
-            succ: self.successor.into_nodehash().into(),
-            preds: self
+            succ: m.successor.into_nodehash().into(),
+            preds: m
                 .predecessors
                 .into_iter()
                 .map(HgChangesetId::into_nodehash)
                 .map(HgId::from)
                 .collect(),
-            split: self
+            split: m
                 .split
                 .into_iter()
                 .map(HgChangesetId::into_nodehash)
                 .map(HgId::from)
                 .collect(),
-            op: self.op,
-            user: self.user,
-            time: self.timestamp,
-            tz: self.timezone,
-            extra: self
+            op: m.op,
+            user: m.user,
+            time: m.timestamp,
+            tz: m.timezone,
+            extra: m
                 .extra
                 .into_iter()
                 .map(|(key, value)| {

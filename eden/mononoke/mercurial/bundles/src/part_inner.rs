@@ -127,14 +127,16 @@ pub fn get_cg_unpacker(
     field: &str,
 ) -> changegroup::unpacker::CgUnpacker {
     // TODO(anastasiyaz): T34812941 return Result here, no default packer (version should be specified)
-    get_cg_version(header, field)
-        .map(|version| changegroup::unpacker::CgUnpacker::new(logger.clone(), version))
-        // ChangeGroup2 by default
-        .unwrap_or_else(|e| {
-            warn!(logger, "{:?}", e);
+    let _logger = logger.clone();
+    match get_cg_version(header, field) {
+        Ok(version) => changegroup::unpacker::CgUnpacker::new(logger, version),
+        Err(e) => {
+            // ChangeGroup2 by default
+            warn!(_logger.clone(), "{:?}", e);
             let default_version = changegroup::unpacker::CgVersion::Cg2Version;
-            changegroup::unpacker::CgUnpacker::new(logger, default_version)
-        })
+            changegroup::unpacker::CgUnpacker::new(_logger, default_version)
+        }
+    }
 }
 
 /// Convert an OuterStream into an InnerStream using the part header.

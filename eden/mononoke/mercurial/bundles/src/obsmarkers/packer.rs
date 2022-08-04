@@ -115,7 +115,7 @@ mod test {
         (BigEndian::read_u32(data) as usize) == data.len()
     }
 
-    fn metadata_matches(data: &[u8], metadata: &Vec<MetadataEntry>) -> bool {
+    fn metadata_matches(data: &[u8], metadata: &[MetadataEntry]) -> bool {
         let mut off = 0;
 
         let sizes_ok = metadata.iter().all(|e| {
@@ -144,7 +144,7 @@ mod test {
         sizes_ok && strings_ok
     }
 
-    fn successors_match(data: &[u8], successors: &Vec<HgChangesetId>) -> bool {
+    fn successors_match(data: &[u8], successors: &[HgChangesetId]) -> bool {
         let mut off = 0;
 
         successors.iter().all(|succ| {

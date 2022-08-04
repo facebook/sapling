@@ -39,8 +39,8 @@ impl fmt::Display for RevFlags {
     }
 }
 
-impl Into<u64> for RevFlags {
-    fn into(self) -> u64 {
-        self.bits().into()
+impl From<RevFlags> for u64 {
+    fn from(f: RevFlags) -> u64 {
+        f.bits().into()
     }
 }

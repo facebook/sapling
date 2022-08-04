@@ -14,13 +14,14 @@ use quickcheck::Arbitrary;
 use quickcheck::Gen;
 use rand_distr::Distribution;
 use rand_distr::LogNormal;
+use std::cmp::Ordering;
 
 use crate::errors::ErrorKind;
 
 use super::delta_apply::mpatch_fold;
 use super::delta_apply::wrap_deltas;
 
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Default)]
 pub struct Delta {
     // Fragments should be in sorted order by start offset and should not overlap.
     frags: Vec<Fragment>,
@@ -82,12 +83,6 @@ impl Delta {
             prev_frag = Some(frag);
         }
         Ok(())
-    }
-}
-
-impl Default for Delta {
-    fn default() -> Delta {
-        Delta { frags: Vec::new() }
     }
 }
 
@@ -268,15 +263,15 @@ pub fn apply(text: &[u8], delta: &Delta) -> Result<Vec<u8>> {
         }
         off = frag.end;
     }
-    if off < text.len() {
-        chunks.push(&text[off..text.len()]);
-    } else if off > text.len() {
-        bail!(
+    match off.cmp(&text.len()) {
+        Ordering::Greater => bail!(
             "Invalid delta, fragment is referencing out of bounds content: {} > {}",
             off,
             text.len()
-        );
-    }
+        ),
+        Ordering::Less => chunks.push(&text[off..text.len()]),
+        Ordering::Equal => {}
+    };
 
     let size = chunks.iter().map(|c| c.len()).sum::<usize>();
     let mut output = Vec::with_capacity(size);

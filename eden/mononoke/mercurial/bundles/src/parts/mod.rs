@@ -93,7 +93,7 @@ where
     let fut = phases_entries
         .fold(payload, |mut payload, (value, phase)| {
             payload.write_u32::<BigEndian>(u32::from(phase))?;
-            payload.write(value.as_ref())?;
+            payload.write_all(value.as_ref())?;
             Ok::<_, Error>(payload)
         })
         .map_err(|err| err.context(ErrorKind::PhaseHeadsGeneration))

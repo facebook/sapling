@@ -131,7 +131,20 @@ pub fn new_entry_intersection_stream(
     p1: Option<&RevlogManifest>,
     p2: Option<&RevlogManifest>,
 ) -> BoxStream<(Option<MPath>, RevlogEntry), Error> {
-    if p1.is_none() || p2.is_none() {
+    if let (Some(p1), Some(p2)) = (p1, p2) {
+        let p1 = changed_entry_stream(root, p1, None).filter_map(NewEntry::from_changed_entry);
+        let p2 = changed_entry_stream(root, p2, None).filter_map(NewEntry::from_changed_entry);
+
+        p2.collect()
+            .map(move |p2| {
+                let p2: HashSet<_> = HashSet::from_iter(p2.into_iter());
+
+                p1.filter_map(move |ne| if p2.contains(&ne) { Some(ne) } else { None })
+            })
+            .flatten_stream()
+            .map(NewEntry::into_tuple)
+            .boxify()
+    } else {
         let ces = if let Some(p1) = p1 {
             changed_entry_stream(root, p1, None)
         } else if let Some(p2) = p2 {
@@ -141,21 +154,6 @@ pub fn new_entry_intersection_stream(
         };
 
         ces.filter_map(NewEntry::from_changed_entry)
-            .map(NewEntry::into_tuple)
-            .boxify()
-    } else {
-        let p1 =
-            changed_entry_stream(root, p1.unwrap(), None).filter_map(NewEntry::from_changed_entry);
-        let p2 =
-            changed_entry_stream(root, p2.unwrap(), None).filter_map(NewEntry::from_changed_entry);
-
-        p2.collect()
-            .map(move |p2| {
-                let p2: HashSet<_> = HashSet::from_iter(p2.into_iter());
-
-                p1.filter_map(move |ne| if p2.contains(&ne) { Some(ne) } else { None })
-            })
-            .flatten_stream()
             .map(NewEntry::into_tuple)
             .boxify()
     }
