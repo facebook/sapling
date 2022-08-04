@@ -7,11 +7,21 @@
 
 //! edenfsctl redirect
 
+use anyhow::anyhow;
+use anyhow::Context;
 use async_trait::async_trait;
 use clap::Parser;
+use std::collections::BTreeMap;
+use std::env;
 use std::path::PathBuf;
+use tabular::row;
+use tabular::Table;
 use util::path::expand_path;
 
+use edenfs_client::checkout::find_checkout;
+use edenfs_client::redirect::get_effective_redirections;
+use edenfs_client::redirect::Redirection;
+use edenfs_client::redirect::RedirectionState;
 use edenfs_client::EdenFsInstance;
 use edenfs_error::Result;
 
@@ -31,14 +41,67 @@ pub enum RedirectCmd {
 }
 
 impl RedirectCmd {
+    fn print_redirection_table(
+        &self,
+        redirections: BTreeMap<PathBuf, Redirection>,
+    ) -> Result<ExitCode> {
+        let mut table = Table::new("{:<}    {:<}    {:<}    {:<}    {:<}");
+        table.add_row(row!("REPO_PATH", "TYPE", "TARGET", "SOURCE", "STATE"));
+        for redir in redirections.into_values() {
+            table.add_row(row!(
+                redir.repo_path().display(),
+                redir.redir_type,
+                redir
+                    .target
+                    .map(|x| x.display().to_string())
+                    .unwrap_or_default(),
+                redir.source,
+                redir.state.unwrap_or(RedirectionState::UnknownMount),
+            ));
+        }
+        println!("{}", table);
+        Ok(0)
+    }
+
+    fn print_redirection_json(
+        &self,
+        redirections: BTreeMap<PathBuf, Redirection>,
+    ) -> Result<ExitCode> {
+        let json_out = serde_json::to_string(&redirections.into_values().collect::<Vec<_>>())
+            .with_context(|| anyhow!("could not serialize redirections",))?;
+        println!("{}", json_out);
+        Ok(0)
+    }
+
     async fn list(
         &self,
         instance: EdenFsInstance,
         mount: &Option<PathBuf>,
         json: bool,
     ) -> Result<ExitCode> {
-        eprintln!("Rust `eden redirect list` is unimplemented...");
-        Ok(-1)
+        let mount_path = match mount {
+            Some(p) => p.clone(),
+            None => env::current_dir().context("Unable to retrieve current working dir")?,
+        };
+        let checkout = find_checkout(&instance, &mount_path)?;
+        let mut redirections = get_effective_redirections(&checkout).with_context(|| {
+            anyhow!(
+                "Unable to retrieve redirections for checkout '{}'",
+                mount_path.display()
+            )
+        })?;
+
+        redirections
+            .values_mut()
+            .map(|v| v.update_target_abspath(&checkout))
+            .collect::<Result<Vec<()>>>()
+            .with_context(|| anyhow!("failed to expand redirection target path"))?;
+
+        if json {
+            self.print_redirection_json(redirections)
+        } else {
+            self.print_redirection_table(redirections)
+        }
     }
 }
 

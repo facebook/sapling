@@ -32,7 +32,7 @@ const APFS_HELPER: &str = "/usr/local/libexec/eden/eden_apfs_mount_helper";
 
 #[derive(Clone, Serialize, Copy, Debug, PartialEq, PartialOrd)]
 #[serde(rename_all = "lowercase")]
-pub(crate) enum RedirectionType {
+pub enum RedirectionType {
     /// Linux: a bind mount to a mkscratch generated path
     /// macOS: a mounted dmg file in a mkscratch generated path
     /// Windows: equivalent to symlink type
@@ -40,6 +40,20 @@ pub(crate) enum RedirectionType {
     /// A symlink to a mkscratch generated path
     Symlink,
     Unknown,
+}
+
+impl fmt::Display for RedirectionType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match *self {
+                RedirectionType::Bind => "bind",
+                RedirectionType::Symlink => "symlink",
+                RedirectionType::Unknown => "unknown",
+            }
+        )
+    }
 }
 
 impl FromStr for RedirectionType {
@@ -60,17 +74,21 @@ impl FromStr for RedirectionType {
     }
 }
 
-#[derive(Debug)]
-enum RedirectionState {
-    #[allow(dead_code)]
+#[derive(Debug, Serialize)]
+pub enum RedirectionState {
+    #[serde(rename = "ok")]
     /// Matches the expectations of our configuration as far as we can tell
     MatchesConfiguration,
+    #[serde(rename = "unknown-mount")]
     /// Something Mounted that we don't have configuration for
     UnknownMount,
+    #[serde(rename = "not-mounted")]
     /// We Expected It To be mounted, but it isn't
     NotMounted,
+    #[serde(rename = "symlink-missing")]
     /// We Expected It To be a symlink, but it is not present
     SymlinkMissing,
+    #[serde(rename = "symlink-incorrect")]
     /// The Symlink Is Present but points to the wrong place
     SymlinkIncorrect,
 }
@@ -91,15 +109,16 @@ impl fmt::Display for RedirectionState {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Redirection {
-    repo_path: PathBuf,
-    redir_type: RedirectionType,
-    #[allow(dead_code)]
-    target: Option<PathBuf>,
-    #[allow(dead_code)]
-    source: String,
-    state: Option<RedirectionState>,
+    pub repo_path: PathBuf,
+    #[serde(rename = "type")]
+    pub redir_type: RedirectionType,
+    pub source: String,
+    pub state: Option<RedirectionState>,
+    /// This field is lazily calculated and it is only populated after
+    /// [`Redirection::update_target_abspath`] is called.
+    pub target: Option<PathBuf>,
 }
 
 impl Redirection {
@@ -130,6 +149,7 @@ impl Redirection {
     }
 
     fn make_scratch_dir(checkout: &EdenFsCheckout, subdir: &Path) -> Result<PathBuf> {
+        // TODO(zeyi): we can probably embed the logic from mkscratch here directly, without asking the CLI
         let mkscratch = Redirection::mkscratch_bin();
         let checkout_path_str = checkout.path().to_string_lossy().into_owned();
         let subdir = PathBuf::from("edenfs/redirections")
@@ -192,6 +212,11 @@ impl Redirection {
             )?)),
             RedirectionType::Unknown => Ok(None),
         }
+    }
+
+    pub fn update_target_abspath(&mut self, checkout: &EdenFsCheckout) -> Result<()> {
+        self.target = self.expand_target_abspath(checkout)?;
+        Ok(())
     }
 }
 
@@ -289,7 +314,7 @@ fn get_configured_redirections(
                     redir_type,
                     target: None,
                     source: REPO_SOURCE.to_string(),
-                    state: None,
+                    state: Some(RedirectionState::MatchesConfiguration),
                 },
             );
         }
@@ -305,7 +330,7 @@ fn get_configured_redirections(
                     redir_type: *redir_type,
                     target: None,
                     source: USER_REDIRECTION_SOURCE.to_string(),
-                    state: None,
+                    state: Some(RedirectionState::MatchesConfiguration),
                 },
             );
         }
