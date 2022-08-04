@@ -740,7 +740,7 @@ impl ChangesetPathHistoryContext {
                         .into_iter()
                         .map(|(descendant_cs_id, cs_ids)| {
                             self._visit(ctx, repo, descendant_cs_id.clone(), cs_ids.clone())
-                                .map_ok(move |res| (((descendant_cs_id, cs_ids), res)))
+                                .map_ok(move |res| ((descendant_cs_id, cs_ids), res))
                         }),
                 )
                 .await?

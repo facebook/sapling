@@ -166,33 +166,28 @@ async fn get_phase_hint_test(fb: FacebookInit) -> Result<(), Error> {
 
     let phases = repo.phases();
 
-    assert_eq!(
+    assert!(
         is_public(phases, &ctx, public_bookmark_commit).await?,
-        true,
         "slow path: get phase for a Public commit which is also a public bookmark"
     );
 
-    assert_eq!(
+    assert!(
         is_public(phases, &ctx, public_commit).await?,
-        true,
         "slow path: get phase for a Public commit"
     );
 
-    assert_eq!(
+    assert!(
         is_public(phases, &ctx, other_public_commit).await?,
-        true,
         "slow path: get phase for other Public commit"
     );
 
-    assert_eq!(
-        is_public(phases, &ctx, draft_commit).await?,
-        false,
+    assert!(
+        !is_public(phases, &ctx, draft_commit).await?,
         "slow path: get phase for a Draft commit"
     );
 
-    assert_eq!(
-        is_public(phases, &ctx, other_draft_commit).await?,
-        false,
+    assert!(
+        !is_public(phases, &ctx, other_draft_commit).await?,
         "slow path: get phase for other Draft commit"
     );
 
@@ -218,15 +213,13 @@ async fn get_phase_hint_test(fb: FacebookInit) -> Result<(), Error> {
         "slow path: get phases for set of commits"
     );
 
-    assert_eq!(
+    assert!(
         is_public(phases, &ctx, public_commit).await?,
-        true,
         "sql: make sure that phase was written to the db for public commit"
     );
 
-    assert_eq!(
-        is_public(phases, &ctx, draft_commit).await?,
-        false,
+    assert!(
+        !is_public(phases, &ctx, draft_commit).await?,
         "sql: make sure that phase was not written to the db for draft commit"
     );
 
