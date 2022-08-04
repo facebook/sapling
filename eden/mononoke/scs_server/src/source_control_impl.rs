@@ -144,7 +144,7 @@ impl SourceControlServiceImpl {
     ) -> Result<CoreContext, errors::ServiceError> {
         let session = self.create_session(req_ctxt).await?;
         let identities = session.metadata().identities();
-        let mut scuba = self.create_scuba(name, req_ctxt, specifier, params, &identities)?;
+        let mut scuba = self.create_scuba(name, req_ctxt, specifier, params, identities)?;
         scuba.add("session_uuid", session.metadata().session_id().to_string());
 
         let ctx = session.new_context_with_scribe(self.logger.clone(), scuba, self.scribe.clone());
