@@ -231,20 +231,11 @@ mod test {
             .build()?;
         let ctr = DummyCounter::default();
 
-        assert_eq!(
-            allow_consistent_routing(&ctx, dummy(4), ctr.clone()).await,
-            true
-        );
+        assert!(allow_consistent_routing(&ctx, dummy(4), ctr.clone()).await);
 
-        assert_eq!(
-            allow_consistent_routing(&ctx, dummy(4), ctr.clone()).await,
-            true
-        );
+        assert!(allow_consistent_routing(&ctx, dummy(4), ctr.clone()).await);
 
-        assert_eq!(
-            allow_consistent_routing(&ctx, dummy(4), ctr.clone()).await,
-            false
-        );
+        assert!(!allow_consistent_routing(&ctx, dummy(4), ctr.clone()).await);
 
         Ok(())
     }
@@ -262,10 +253,7 @@ mod test {
             .config(config)
             .build()?;
 
-        assert_eq!(
-            allow_consistent_routing(&ctx, dummy(None), TimeoutCounter).await,
-            true
-        );
+        assert!(allow_consistent_routing(&ctx, dummy(None), TimeoutCounter).await);
 
         Ok(())
     }
@@ -283,10 +271,7 @@ mod test {
             .config(config)
             .build()?;
 
-        assert_eq!(
-            allow_consistent_routing(&ctx, dummy(None), ErrorCounter).await,
-            true
-        );
+        assert!(allow_consistent_routing(&ctx, dummy(None), ErrorCounter).await);
 
         Ok(())
     }

@@ -496,7 +496,7 @@ pub struct ServerUris {
 }
 
 impl ServerUris {
-    pub fn new<'a>(self_uris: Vec<String>, upstream_uri: Option<String>) -> Result<Self, Error> {
+    pub fn new(self_uris: Vec<String>, upstream_uri: Option<String>) -> Result<Self, Error> {
         Ok(Self {
             self_uris: self_uris
                 .into_iter()
