@@ -126,7 +126,7 @@ impl CacheOps for CachelibOps {
     async fn get(&self, key: &str) -> Option<BlobstoreGetData> {
         let blob = self.blob_pool.get(key);
         let blob = blob.ok()??;
-        let blob = BlobstoreBytes::decode(blob).ok()?;
+        let blob = BlobstoreBytes::decode(blob)?;
         Some(blob.into())
     }
 
@@ -139,7 +139,7 @@ impl CacheOps for CachelibOps {
         } else {
             None
         };
-        if let Ok(bytes) = value.into_bytes().encode(encode_limit) {
+        if let Some(bytes) = value.into_bytes().encode(encode_limit) {
             let _ = self.blob_pool.set(key, bytes);
         }
     }

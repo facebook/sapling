@@ -71,12 +71,12 @@ async fn test_quorum_is_valid(_fb: FacebookInit) -> Result<()> {
         let quorum = 3;
         let result = WalMultiplexedBlobstore::new(
             MultiplexId::new(0),
-            wal.clone(),
+            wal,
             stores,
             write_mostly,
             quorum,
             None,
-            scuba.clone(),
+            scuba,
         );
 
         assert!(result.is_err());

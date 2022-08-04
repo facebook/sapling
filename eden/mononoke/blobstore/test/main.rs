@@ -313,7 +313,7 @@ async fn cache_blob_tests(fb: FacebookInit, expect_zstd: bool) -> Result<(), Err
 
     // Peek into cachelib to check its as expected
     let cachelib_len = blob_pool
-        .get(small_key.clone())
+        .get(small_key)
         .map(|bytes| bytes.map(|b| b.len()))?;
     assert!(cachelib_len.is_some());
     assert!(

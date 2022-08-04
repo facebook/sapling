@@ -226,10 +226,10 @@ impl BlobstoreBytes {
         &self.0
     }
 
-    pub fn encode(self, encode_limit: Option<u64>) -> Result<Bytes, ()> {
+    pub fn encode(self, encode_limit: Option<u64>) -> Option<Bytes> {
         let mut bytes = vec![UNCOMPRESSED];
         let prepared = BlobstoreBytesSerialisable::from(self);
-        unsafe { abomonation::encode(&prepared, &mut bytes).map_err(|_| ())? };
+        unsafe { abomonation::encode(&prepared, &mut bytes).ok()? };
 
         match encode_limit {
             Some(encode_limit) if bytes.len() as u64 >= encode_limit => {
@@ -238,24 +238,23 @@ impl BlobstoreBytes {
 
                 let mut cursor = Cursor::new(bytes);
                 cursor.set_position(1);
-                zstd::stream::copy_encode(cursor, &mut compressed, 0 /* use default */)
-                    .map_err(|_| ())?;
-                Ok(Bytes::from(compressed))
+                zstd::stream::copy_encode(cursor, &mut compressed, 0 /* use default */).ok()?;
+                Some(Bytes::from(compressed))
             }
-            _ => Ok(Bytes::from(bytes)),
+            _ => Some(Bytes::from(bytes)),
         }
     }
 
-    pub fn decode(mut bytes: Bytes) -> Result<Self, ()> {
+    pub fn decode(mut bytes: Bytes) -> Option<Self> {
         let prefix_size = 1;
         if bytes.len() < prefix_size {
-            return Err(());
+            return None;
         }
 
         let is_compressed = bytes.split_to(prefix_size);
         let mut bytes: Vec<u8> = if is_compressed[0] == COMPRESSED {
             let cursor = Cursor::new(bytes);
-            zstd::decode_all(cursor).map_err(|_| ())?
+            zstd::decode_all(cursor).ok()?
         } else {
             bytes.as_ref().into()
         };
@@ -263,18 +262,13 @@ impl BlobstoreBytes {
         let get_data_serialisable =
             unsafe { abomonation::decode::<BlobstoreBytesSerialisable>(&mut bytes) };
 
-        let result = get_data_serialisable.and_then(|(get_data_serialisable, tail)| {
+        get_data_serialisable.and_then(|(get_data_serialisable, tail)| {
             if tail.is_empty() {
                 Some(get_data_serialisable.clone().into())
             } else {
                 None
             }
-        });
-
-        match result {
-            Some(val) => Ok(val),
-            None => Err(()),
-        }
+        })
     }
 }
 

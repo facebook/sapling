@@ -55,8 +55,8 @@ define_stats! {
 // not attempt to recompress that given it was chosen to fit in cachelib.
 const MAX_CACHELIB_VALUE_SIZE: u64 = 4 * 1024 * 1024 - 1024 + 128;
 
-const NOT_STORABLE: Bytes = Bytes::from_static(&[0]);
-const STORED: Bytes = Bytes::from_static(&[1]);
+const NOT_STORABLE: &[u8] = &[0];
+const STORED: &[u8] = &[1];
 
 #[derive(Debug)]
 struct CacheKey(String);
@@ -92,7 +92,7 @@ impl CacheData {
 
         if prefix.as_ref() == STORED {
             let val = BlobstoreBytes::decode(val)
-                .map_err(|()| anyhow!("Invalid data in blob cache"))?
+                .ok_or_else(|| anyhow!("Invalid data in blob cache"))?
                 .into();
             return Ok(Self::Stored(val));
         }
@@ -110,8 +110,8 @@ enum PresenceData {
 }
 
 impl PresenceData {
-    const GET: Bytes = Bytes::from_static(&[0]);
-    const PUT: Bytes = Bytes::from_static(&[1]);
+    const GET: &'static [u8] = &[0];
+    const PUT: &'static [u8] = &[1];
 
     fn from_put(v: &BlobstoreBytes) -> Self {
         let mut hasher = XxHash::with_seed(0);
@@ -140,7 +140,7 @@ impl PresenceData {
 
     fn serialize(&self) -> Bytes {
         match self {
-            Self::Get => Self::GET,
+            Self::Get => Self::GET.into(),
             Self::Put(v) => {
                 let mut buff = BytesMut::with_capacity(1 + std::mem::size_of::<u64>());
                 buff.put(Self::PUT);
@@ -262,7 +262,7 @@ impl Cache {
         let stored = value
             .into_bytes()
             .encode(encode_limit)
-            .map_err(|()| anyhow!("Could not encode"))
+            .ok_or_else(|| anyhow!("Could not encode"))
             .and_then(|encoded| {
                 (self.cache_filter)(&encoded)?;
                 self.blob_pool.set(key, STORED.chain(encoded))
