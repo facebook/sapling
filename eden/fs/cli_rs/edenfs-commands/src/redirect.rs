@@ -23,6 +23,7 @@ use edenfs_client::redirect::Redirection;
 use edenfs_client::redirect::RedirectionState;
 use edenfs_client::EdenFsInstance;
 use edenfs_error::Result;
+use hg_util::path::expand_path;
 
 use crate::util::expand_path_or_cwd;
 use crate::ExitCode;
@@ -42,6 +43,27 @@ pub enum RedirectCmd {
         mount: PathBuf,
         #[clap(long, help = "output in json rather than human readable text")]
         json: bool,
+    },
+    Add {
+        #[clap(long, parse(try_from_str = expand_path_or_cwd), default_value = "", help = "The EdenFS mount point path.")]
+        mount: PathBuf,
+        #[clap(parse(from_str = expand_path), index = 1, help = "The path in the repo which should be redirected")]
+        repo_path: PathBuf,
+        #[clap(index = 2, help = "The type of the redirection", possible_values = ["bind", "symlink"])]
+        redir_type: String,
+        #[clap(
+            long,
+            help = "Unmount and re-bind mount any bind mount redirections to \
+            ensure that they are pointing to the right place. This is not the \
+            default behavior in the interest of preserving kernel caches."
+        )]
+        force_remount_bind_mounts: bool,
+        #[clap(
+            long,
+            help = "force the bind mount to fail if it would overwrite a \
+            pre-existing directory"
+        )]
+        strict: bool,
     },
 }
 
@@ -99,6 +121,19 @@ impl RedirectCmd {
             self.print_redirection_table(redirections)
         }
     }
+
+    async fn add(
+        &self,
+        _instance: EdenFsInstance,
+        _mount: &Path,
+        _repo_path: &Path,
+        _redir_type: &str,
+        _force_remount_bind_mounts: bool,
+        _strict: bool,
+    ) -> Result<ExitCode> {
+        eprintln!("Using Rust version of `eden redirect add` which is unimplemented.");
+        Ok(0)
+    }
 }
 
 #[async_trait]
@@ -106,6 +141,23 @@ impl Subcommand for RedirectCmd {
     async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
         match self {
             Self::List { mount, json } => self.list(instance, mount, *json).await,
+            Self::Add {
+                mount,
+                repo_path,
+                redir_type,
+                force_remount_bind_mounts,
+                strict,
+            } => {
+                self.add(
+                    instance,
+                    mount,
+                    repo_path,
+                    redir_type,
+                    *force_remount_bind_mounts,
+                    *strict,
+                )
+                .await
+            }
         }
     }
 }
