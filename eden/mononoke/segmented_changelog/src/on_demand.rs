@@ -289,7 +289,7 @@ impl OnDemandUpdateSegmentedChangelog {
             .are_descendants_of_known_commtis(ctx, client_heads)
             .await?
         {
-            let client_heads = client_heads.to_vec().into_iter().map(SeedHead::from);
+            let client_heads = client_heads.iter().map(SeedHead::from);
             let mut seed_heads = self.seed_heads.clone();
             seed_heads.extend(client_heads);
             let vertex_list =

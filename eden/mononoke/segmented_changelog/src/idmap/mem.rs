@@ -82,6 +82,10 @@ impl ConcurrentMemIdMap {
         inner.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn drain(&self) -> Vec<(DagId, ChangesetId)> {
         let mut inner = self.inner.write();
         inner.drain().collect()
