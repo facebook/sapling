@@ -319,7 +319,7 @@ async fn rebase_in_loop(
     head: ChangesetId,
     root: ChangesetId,
     client_cf: Vec<MPath>,
-    client_bcs: &Vec<BonsaiChangeset>,
+    client_bcs: &[BonsaiChangeset],
     prepushrebase_hooks: &[Box<dyn PushrebaseHook>],
 ) -> Result<PushrebaseOutcome, PushrebaseError> {
     let should_log = config.monitoring_bookmark.as_deref() == Some(onto_bookmark.as_str());

@@ -47,6 +47,11 @@ impl<Id: BlobstoreKey> Blob<Id> {
         self.data.len()
     }
 
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+
     pub fn id(&self) -> &Id {
         &self.id
     }

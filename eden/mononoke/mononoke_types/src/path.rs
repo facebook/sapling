@@ -112,6 +112,7 @@ impl RepoPath {
         }
     }
 
+    #[allow(clippy::len_without_is_empty)]
     /// Get the length of this repo path in bytes. `RepoPath::Root` has length 0.
     pub fn len(&self) -> usize {
         match *self {
@@ -290,6 +291,7 @@ impl MPathElement {
         Ok(())
     }
 
+    #[allow(clippy::len_without_is_empty)]
     #[inline]
     pub fn len(&self) -> usize {
         self.0.len()
@@ -617,6 +619,7 @@ impl MPath {
         ret.join(&b'/')
     }
 
+    #[allow(clippy::len_without_is_empty)]
     /// The length of this path, including any slashes in it.
     pub fn len(&self) -> usize {
         // n elements means n-1 slashes
