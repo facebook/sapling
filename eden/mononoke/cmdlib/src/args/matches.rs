@@ -254,7 +254,7 @@ impl<'a> MononokeMatches<'a> {
     }
 
     pub fn runtime(&self) -> &Handle {
-        &self.environment.runtime.handle()
+        self.environment.runtime.handle()
     }
 
     pub fn logger(&self) -> &Logger {
