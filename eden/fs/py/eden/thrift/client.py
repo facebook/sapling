@@ -9,14 +9,11 @@
 import os
 from typing import Optional
 
-# pyre-fixme[21]: Could not find module `eden.fs.service.streamingeden.clients`.
 from eden.fs.service.streamingeden.clients import StreamingEdenService
 from thrift.py3 import get_client
 
-# pyre-fixme[21]: Could not find module `thrift.py3.client`.
 from thrift.py3.client import ClientType
 
-# pyre-fixme[21]: Could not find module `thrift.py3.exceptions`.
 from thrift.py3.exceptions import TransportError, TransportErrorType
 
 SOCKET_PATH = "socket"
@@ -30,7 +27,6 @@ class EdenNotRunningError(Exception):
         self.socket_path = socket_path
 
 
-# pyre-fixme[11]: Annotation `StreamingEdenService` is not defined as a type.
 class EdenClient(StreamingEdenService):
     """
     EdenClient is a subclass of EdenService that provides
@@ -73,12 +69,10 @@ def create_thrift_client(
         # just leave the client with no timeout, unless one is given.
         timeout = 0
 
-    # pyre-fixme[16]: Module `py3` has no attribute `get_client`.
     client = get_client(
         EdenClient,
         path=socket_path,
         timeout=timeout,
-        # pyre-fixme[16]: Module `py3` has no attribute `client`.
         client_type=ClientType.THRIFT_ROCKET_CLIENT_TYPE,
     )
     client.socket_path = socket_path

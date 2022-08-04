@@ -111,7 +111,6 @@ class EdenFSProcess(NamedTuple):
 
 
 try:
-    # pyre-fixme[21]: Could not find module `common.base.pid_info.py`.
     from common.base.pid_info.py import build_info_lib  # @manual
 
     def get_build_info_from_pid(
