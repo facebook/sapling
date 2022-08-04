@@ -34,5 +34,6 @@ Sample config item that has been moved from configitems.py to Rust HG_PY_CORE_CO
 Make sure --config options are available when loading config itself.
 "root" is not material - the important thing is that the regen-command is respected:
   $ hg root --config "configs.regen-command=touch $TESTTMP/touch" --config configs.generationtime=0 > /dev/null
+  $ sleep 1
   $ ls $TESTTMP/touch
   $TESTTMP/touch
