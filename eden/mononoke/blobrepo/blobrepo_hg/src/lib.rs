@@ -281,12 +281,9 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
                 &BookmarkPagination::FromStart,
                 std::u64::MAX,
             )
-            .map_ok({
-                let repo = self.clone();
-                move |(_, cs)| {
-                    cloned!(ctx);
-                    async move { repo.derive_hg_changeset(&ctx, cs).await }
-                }
+            .map_ok(move |(_, cs)| {
+                cloned!(ctx);
+                async move { self.derive_hg_changeset(&ctx, cs).await }
             })
             .try_buffer_unordered(100)
             .boxed()
