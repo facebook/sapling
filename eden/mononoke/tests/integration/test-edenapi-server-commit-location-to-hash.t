@@ -69,7 +69,7 @@ Prepare request.
   > EOF
 
 Check files in response.
-  $ hgedenapi debugapi -e commitlocationtohash -f req
+  $ hgedenapi debugapi -e commitlocationtohash -f req --sort
   [{"count": 2,
     "hgids": [bin("c7dcf24fab3a8ab956273fa40d5cc44bc26ec655"),
               bin("e83645968c8f2954b97a3c79ce5a6b90a464c54d")],

@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::future;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::time::Duration;
 
 use anyhow::anyhow;
@@ -313,47 +312,47 @@ impl DerivedDataManager {
     where
         Derivable: BonsaiDerivable,
     {
-        // Ensure we don't visit the same commit multiple times in mergy repos
-        let visited: Mutex<HashSet<ChangesetId>> = Default::default();
-        borrowed!(visited);
         let underived_commits_parents: HashMap<ChangesetId, Vec<ChangesetId>> =
-            bounded_traversal::bounded_traversal_stream(100, Some(csid).into_iter(), {
-                move |csid| {
-                    async move {
-                        if let Some(limit) = limit {
-                            let visited = visited.lock().unwrap();
-                            if visited.len() as u64 > limit {
-                                return Ok::<_, Error>((None, Vec::new()));
+            bounded_traversal::bounded_traversal_dag_limited(
+                    100,
+                    csid,
+                    move |csid: ChangesetId| {
+                        async move {
+                            if derivation_ctx
+                                .fetch_derived::<Derivable>(ctx, csid)
+                                .await?
+                                .is_some()
+                            {
+                                Ok((None, Vec::new()))
+                            } else {
+                                let parents = self
+                                    .changesets()
+                                    .get(ctx.clone(), csid)
+                                    .await?
+                                    .ok_or_else(|| anyhow!("changeset not found: {}", csid))?
+                                    .parents;
+                                Ok((Some((csid, parents.clone())), parents))
                             }
                         }
-                        if derivation_ctx
-                            .fetch_derived::<Derivable>(ctx, csid)
-                            .await?
-                            .is_some()
-                        {
-                            Ok((None, Vec::new()))
-                        } else {
-                            let parents = self
-                                .changesets()
-                                .get(ctx.clone(), csid)
-                                .await?
-                                .ok_or_else(|| anyhow!("changeset not found: {}", csid))?
-                                .parents;
-                            let mut visited = visited.lock().unwrap();
-                            let parents_to_visit = parents
-                                .iter()
-                                .cloned()
-                                .filter(|p| visited.insert(*p))
-                                .collect::<Vec<_>>();
-                            Ok((Some((csid, parents)), parents_to_visit))
+                        .boxed()
+                    },
+                    move |out, results: bounded_traversal::Iter<HashMap<ChangesetId, Vec<ChangesetId>>>| {
+                        async move {
+                            anyhow::Ok(results
+                                .chain(std::iter::once(out.into_iter().collect()))
+                                .reduce(|mut acc, item| {
+                                    acc.extend(item);
+                                    acc
+                                })
+                                .unwrap_or_else(HashMap::new))
                         }
-                    }
-                    .boxed()
-                }
-            })
-            .try_filter_map(|underived| async { Ok(underived) })
-            .try_collect()
-            .await?;
+                        .boxed()
+                    },
+                    limit,
+                )
+                    .await?
+                    // If we visited no nodes, then we want an empty hashmap
+                    .unwrap_or_else(HashMap::new);
 
         // Remove parents that have already been derived.
         let underived_commits_parents = underived_commits_parents

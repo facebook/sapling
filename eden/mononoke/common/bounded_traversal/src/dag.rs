@@ -79,7 +79,32 @@ where
     Ins: IntoIterator<Item = In> + 'caller,
     Fold: FnMut(OutCtx, Iter<Out>) -> BoxFuture<'caller, Result<Out, Err>> + 'caller,
 {
-    BoundedTraversalDAG::new(scheduled_max, init, unfold, fold)
+    BoundedTraversalDAG::new(scheduled_max, init, unfold, fold, None)
+}
+
+/// As `bounded_traversal_dag`, but will stop unfolding once enough nodes
+/// have been visited.
+pub fn bounded_traversal_dag_limited<'caller, Err, In, Ins, Out, OutCtx, Unfold, Fold>(
+    scheduled_max: usize,
+    init: In,
+    unfold: Unfold,
+    fold: Fold,
+    limit: impl Into<Option<u64>>,
+) -> impl Future<Output = Result<Option<Out>, Err>> + 'caller
+where
+    Err: 'caller,
+    In: Eq + Hash + Clone + 'caller,
+    Out: Clone + 'caller,
+    OutCtx: 'caller,
+    // We use BoxFuture here because the `Unfold` future can be very large.
+    // As a result, it's more efficient to keep it in one place (the heap)
+    // than to move it around on the stack all the time.
+    // https://fburl.com/m3cdcdko
+    Unfold: FnMut(In) -> BoxFuture<'caller, Result<(OutCtx, Ins), Err>> + 'caller,
+    Ins: IntoIterator<Item = In> + 'caller,
+    Fold: FnMut(OutCtx, Iter<Out>) -> BoxFuture<'caller, Result<Out, Err>> + 'caller,
+{
+    BoundedTraversalDAG::new(scheduled_max, init, unfold, fold, limit.into())
 }
 
 struct Children<Out, OutCtx> {
@@ -106,9 +131,14 @@ where
     unfold: Unfold,
     fold: Fold,
     scheduled_max: usize,
-    scheduled: FuturesUnordered<Join<Ready<In>, Either2<UFut, FFut>>>, // jobs being executed
-    unscheduled: VecDeque<Join<Ready<In>, Either2<UFut, FFut>>>,       // as of yet unscheduled jobs
-    execution_tree: HashMap<In, Node<In, Out, OutCtx>>, // tree tracking execution process
+    /// Jobs being executed to traverse DAG nodes
+    scheduled: FuturesUnordered<Join<Ready<In>, Either2<UFut, FFut>>>,
+    /// Unscheduled traversal jobs - these are ready to be executed, but are blocked due to scheduled_max
+    unscheduled: VecDeque<Join<Ready<In>, Either2<UFut, FFut>>>,
+    /// Tree tracking execution progress
+    execution_tree: HashMap<In, Node<In, Out, OutCtx>>,
+    /// Maximum number of nodes to visit. Once we reach the limit, we stop scheduling `unfold`s.
+    unfold_limit: Option<u64>,
 }
 
 impl<Err, In, Ins, Out, OutCtx, Unfold, UFut, Fold, FFut>
@@ -122,7 +152,13 @@ where
     Fold: FnMut(OutCtx, Iter<Out>) -> FFut,
     FFut: Future<Output = Result<Out, Err>>,
 {
-    fn new(scheduled_max: usize, init: In, unfold: Unfold, fold: Fold) -> Self {
+    fn new(
+        scheduled_max: usize,
+        init: In,
+        unfold: Unfold,
+        fold: Fold,
+        unfold_limit: Option<u64>,
+    ) -> Self {
         let mut this = Self {
             init: init.clone(),
             unfold,
@@ -131,6 +167,7 @@ where
             scheduled: FuturesUnordered::new(),
             unscheduled: VecDeque::new(),
             execution_tree: HashMap::new(),
+            unfold_limit,
         };
         let init_out = this.enqueue_unfold(
             NodeLocation {
@@ -179,10 +216,19 @@ where
     }
 
     fn process_unfold(&mut self, value: In, (context, children): (OutCtx, Ins)) {
+        // limit children based on the number of nodes we're able to unfold
+        let children = if let Some(limit) = self.unfold_limit {
+            let unfold_budget = limit
+                .try_into()
+                .unwrap_or(usize::MAX)
+                .saturating_sub(self.execution_tree.len());
+            children.into_iter().take(unfold_budget)
+        } else {
+            children.into_iter().take(usize::MAX)
+        };
         // schedule unfold for node's children
         let mut children_left = 0;
         let children: Vec<_> = children
-            .into_iter()
             .enumerate()
             .map(|(child_index, child)| {
                 let out = self.enqueue_unfold(

@@ -18,6 +18,7 @@ pub use tree::bounded_traversal;
 
 mod dag;
 pub use dag::bounded_traversal_dag;
+pub use dag::bounded_traversal_dag_limited;
 
 mod stream;
 pub use stream::bounded_traversal_stream;
