@@ -53,12 +53,12 @@ impl TryFrom<thrift::TreeHandle> for TreeHandle {
     }
 }
 
-impl Into<thrift::TreeHandle> for TreeHandle {
-    fn into(self) -> thrift::TreeHandle {
-        let size = self.oid.size();
+impl From<TreeHandle> for thrift::TreeHandle {
+    fn from(th: TreeHandle) -> thrift::TreeHandle {
+        let size = th.oid.size();
 
         thrift::TreeHandle {
-            oid: self.oid.into_thrift(),
+            oid: th.oid.into_thrift(),
             size: size.try_into().expect("Tree size must fit in a i64"),
         }
     }
@@ -70,11 +70,11 @@ pub enum TreeMember {
     Tree(TreeHandle),
 }
 
-impl Into<Entry<TreeHandle, BlobHandle>> for TreeMember {
-    fn into(self) -> Entry<TreeHandle, BlobHandle> {
-        match self {
-            Self::Blob(handle) => Entry::Leaf(handle),
-            Self::Tree(handle) => Entry::Tree(handle),
+impl From<TreeMember> for Entry<TreeHandle, BlobHandle> {
+    fn from(tm: TreeMember) -> Entry<TreeHandle, BlobHandle> {
+        match tm {
+            TreeMember::Blob(handle) => Entry::Leaf(handle),
+            TreeMember::Tree(handle) => Entry::Tree(handle),
         }
     }
 }
@@ -123,11 +123,11 @@ impl TryFrom<thrift::TreeMember> for TreeMember {
     }
 }
 
-impl Into<thrift::TreeMember> for TreeMember {
-    fn into(self) -> thrift::TreeMember {
-        match self {
-            Self::Blob(blob) => thrift::TreeMember::Blob(blob.into()),
-            Self::Tree(tree) => thrift::TreeMember::Tree(tree.into()),
+impl From<TreeMember> for thrift::TreeMember {
+    fn from(tm: TreeMember) -> thrift::TreeMember {
+        match tm {
+            TreeMember::Blob(blob) => thrift::TreeMember::Blob(blob.into()),
+            TreeMember::Tree(tree) => thrift::TreeMember::Tree(tree.into()),
         }
     }
 }
@@ -164,9 +164,9 @@ impl TryFrom<thrift::Tree> for Tree {
     }
 }
 
-impl Into<thrift::Tree> for Tree {
-    fn into(self) -> thrift::Tree {
-        let Tree { handle, members } = self;
+impl From<Tree> for thrift::Tree {
+    fn from(t: Tree) -> thrift::Tree {
+        let Tree { handle, members } = t;
 
         let members = members
             .into_iter()
@@ -192,17 +192,17 @@ impl TreeBuilder {
     }
 }
 
-impl Into<Tree> for TreeBuilder {
-    fn into(self) -> Tree {
+impl From<TreeBuilder> for Tree {
+    fn from(tb: TreeBuilder) -> Tree {
         let mut object_buff = Vec::new();
-        self.write_serialized_object(&mut object_buff)
+        tb.write_serialized_object(&mut object_buff)
             .expect("Writes to Vec cannot fail");
 
         let oid = ObjectKind::Tree.create_oid(&object_buff);
 
         Tree {
             handle: TreeHandle { oid },
-            members: self.members,
+            members: tb.members,
         }
     }
 }

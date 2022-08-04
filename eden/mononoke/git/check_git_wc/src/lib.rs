@@ -95,10 +95,11 @@ async fn check_node(
     }
 
     // By this point, all the Mononoke entries have been checked
-    for (filename, _) in contents.drain() {
+    if let Some((filename, _)) = contents.drain().next() {
         let entry_path = RepoPath::file(MPath::join_opt_element(path.mpath(), &filename))?;
         bail!("{} in git but not Bonsai", entry_path);
     }
+
     Ok(())
 }
 

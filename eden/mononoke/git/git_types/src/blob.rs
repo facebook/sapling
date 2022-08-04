@@ -56,16 +56,16 @@ impl TryFrom<thrift::BlobHandle> for BlobHandle {
     }
 }
 
-impl Into<thrift::BlobHandle> for BlobHandle {
-    fn into(self) -> thrift::BlobHandle {
-        let size = self.oid.size();
+impl From<BlobHandle> for thrift::BlobHandle {
+    fn from(bh: BlobHandle) -> thrift::BlobHandle {
+        let size = bh.oid.size();
 
         thrift::BlobHandle {
-            oid: self.oid.into_thrift(),
+            oid: bh.oid.into_thrift(),
             size: size
                 .try_into()
                 .expect("Blob size must fit in a i64 for Thrift serialization"),
-            file_type: self.file_type.into_thrift(),
+            file_type: bh.file_type.into_thrift(),
         }
     }
 }
