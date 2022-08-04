@@ -12,11 +12,10 @@ use anyhow::Context;
 use async_trait::async_trait;
 use clap::Parser;
 use std::collections::BTreeMap;
-use std::env;
+use std::path::Path;
 use std::path::PathBuf;
 use tabular::row;
 use tabular::Table;
-use util::path::expand_path;
 
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::redirect::get_effective_redirections;
@@ -25,6 +24,7 @@ use edenfs_client::redirect::RedirectionState;
 use edenfs_client::EdenFsInstance;
 use edenfs_error::Result;
 
+use crate::util::expand_path_or_cwd;
 use crate::ExitCode;
 use crate::Subcommand;
 
@@ -33,8 +33,13 @@ use crate::Subcommand;
 #[clap(about = "List and manipulate redirected paths")]
 pub enum RedirectCmd {
     List {
-        #[clap(long, parse(from_str = expand_path), help = "The EdenFS mount point path.")]
-        mount: Option<PathBuf>,
+        #[clap(
+            long,
+            parse(try_from_str = expand_path_or_cwd),
+            default_value = "",
+            help = "The EdenFS mount point path."
+        )]
+        mount: PathBuf,
         #[clap(long, help = "output in json rather than human readable text")]
         json: bool,
     },
@@ -73,21 +78,12 @@ impl RedirectCmd {
         Ok(0)
     }
 
-    async fn list(
-        &self,
-        instance: EdenFsInstance,
-        mount: &Option<PathBuf>,
-        json: bool,
-    ) -> Result<ExitCode> {
-        let mount_path = match mount {
-            Some(p) => p.clone(),
-            None => env::current_dir().context("Unable to retrieve current working dir")?,
-        };
-        let checkout = find_checkout(&instance, &mount_path)?;
+    async fn list(&self, instance: EdenFsInstance, mount: &Path, json: bool) -> Result<ExitCode> {
+        let checkout = find_checkout(&instance, mount)?;
         let mut redirections = get_effective_redirections(&checkout).with_context(|| {
             anyhow!(
                 "Unable to retrieve redirections for checkout '{}'",
-                mount_path.display()
+                mount.display()
             )
         })?;
 

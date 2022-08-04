@@ -15,7 +15,7 @@ use tracing::Level;
 
 use edenfs_client::EdenFsInstance;
 use edenfs_error::Result;
-use util::path::expand_path;
+use hg_util::path::expand_path;
 
 mod config;
 mod debug;
@@ -29,6 +29,7 @@ mod redirect;
 mod status;
 mod top;
 mod uptime;
+mod util;
 
 #[cfg(unix)]
 const DEFAULT_CONFIG_DIR: &str = "~/local/.eden";

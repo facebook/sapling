@@ -11,12 +11,12 @@ use anyhow::anyhow;
 use anyhow::Context;
 use async_trait::async_trait;
 use clap::Parser;
-use std::env;
+use hg_util::path::expand_path;
 use std::fs::File;
 use std::io::Write;
+use std::path::Path;
 use std::path::PathBuf;
 use std::str;
-use util::path::expand_path;
 
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::checkout::CheckoutConfig;
@@ -32,6 +32,7 @@ use edenfs_telemetry::send;
 #[cfg(fbcode_build)]
 use fbinit::expect_init;
 
+use crate::util::expand_path_or_cwd;
 use crate::ExitCode;
 use crate::Subcommand;
 
@@ -43,8 +44,13 @@ pub struct ActivationOptions {
         help = "Print extra info including warnings and the names of the matching files to fetch."
     )]
     verbose: bool,
-    #[clap(long, parse(from_str = expand_path), help = "The checkout for which you want to activate this profile")]
-    checkout: Option<PathBuf>,
+    #[clap(
+        long,
+        parse(try_from_str = expand_path_or_cwd),
+        default_value = "",
+        help = "The checkout for which you want to activate this profile"
+    )]
+    checkout: PathBuf,
     #[clap(
         short,
         long,
@@ -98,15 +104,25 @@ pub enum PrefetchCmd {
     #[clap(about = "Stop recording fetched file paths and save previously \
         collected fetched file paths in the output prefetch profile")]
     Finish {
-        #[clap(long, parse(from_str = expand_path), help = "The output path to store the prefetch profile")]
-        output_path: Option<PathBuf>,
+        #[clap(
+            long,
+            parse(from_str = expand_path),
+            default_value = "prefetch_profile.txt",
+            help = "The output path to store the prefetch profile"
+        )]
+        output_path: PathBuf,
     },
     #[clap(about = "Start recording fetched file paths.")]
     Record,
     #[clap(about = "List all of the currenly activated prefetch profiles for a checkout.")]
     List {
-        #[clap(long, parse(from_str = expand_path), help = "The checkout for which you want to see all the profiles")]
-        checkout: Option<PathBuf>,
+        #[clap(
+            long,
+            parse(try_from_str = expand_path_or_cwd),
+            default_value = "",
+            help = "The checkout for which you want to see all the profiles"
+        )]
+        checkout: PathBuf,
     },
     #[clap(about = "Tell EdenFS to smart prefetch the files specified by the \
         prefetch profile. (EdenFS will prefetch the files in this profile \
@@ -176,22 +192,14 @@ pub enum PrefetchCmd {
 }
 
 impl PrefetchCmd {
-    async fn finish(
-        &self,
-        instance: EdenFsInstance,
-        output_path: &Option<PathBuf>,
-    ) -> Result<ExitCode> {
+    async fn finish(&self, instance: EdenFsInstance, output_path: &PathBuf) -> Result<ExitCode> {
         let client = instance.connect(None).await?;
         let files = client.stopRecordingBackingStoreFetch().await.from_err()?;
-        let out_path = match output_path {
-            Some(p) => p.clone(),
-            None => PathBuf::from(r"prefetch_profile.txt"),
-        };
         let fetched_files = files
             .fetchedFilePaths
             .get("HgQueuedBackingStore")
             .ok_or_else(|| anyhow!("no Path vector found"))?;
-        let mut out_file = File::create(out_path).context("unable to create output file")?;
+        let mut out_file = File::create(output_path).context("unable to create output file")?;
         for path_bytes in fetched_files {
             out_file
                 .write_all(path_bytes)
@@ -209,12 +217,8 @@ impl PrefetchCmd {
         Ok(0)
     }
 
-    async fn list(&self, instance: EdenFsInstance, checkout: &Option<PathBuf>) -> Result<ExitCode> {
-        let checkout_path = match checkout {
-            Some(p) => p.clone(),
-            None => env::current_dir().context("Unable to retrieve current working dir")?,
-        };
-        let client_name = instance.client_name(&checkout_path)?;
+    async fn list(&self, instance: EdenFsInstance, checkout: &Path) -> Result<ExitCode> {
+        let client_name = instance.client_name(checkout)?;
         let config_dir = instance.config_directory(&client_name);
         let checkout_config = CheckoutConfig::parse_config(config_dir);
         match checkout_config {
@@ -237,12 +241,7 @@ impl PrefetchCmd {
         profile_name: &str,
         force_fetch: &bool,
     ) -> Result<ExitCode> {
-        let checkout_path = match &options.checkout {
-            Some(p) => p.clone(),
-            None => env::current_dir().context("Unable to retrieve current working dir")?,
-        };
-
-        let client_name = instance.client_name(&checkout_path)?;
+        let client_name = instance.client_name(&options.checkout)?;
 
         #[cfg(fbcode_build)]
         let mut sample = {
@@ -271,7 +270,7 @@ impl PrefetchCmd {
         send(sample.builder);
 
         if !options.skip_prefetch {
-            let checkout = find_checkout(&instance, &checkout_path)?;
+            let checkout = find_checkout(&instance, &options.checkout)?;
             let result_globs = checkout
                 .prefetch_profiles(
                     &instance,
@@ -306,12 +305,7 @@ impl PrefetchCmd {
         options: &ActivationOptions,
         num_dirs: u32,
     ) -> Result<ExitCode> {
-        let checkout_path = match &options.checkout {
-            Some(p) => p.clone(),
-            None => env::current_dir().context("Unable to retrieve current working dir")?,
-        };
-
-        let client_name = instance.client_name(&checkout_path)?;
+        let client_name = instance.client_name(&options.checkout)?;
 
         #[cfg(fbcode_build)]
         let mut sample = {
@@ -341,7 +335,7 @@ impl PrefetchCmd {
         send(sample.builder);
 
         if !options.skip_prefetch {
-            let checkout = find_checkout(&instance, &checkout_path)?;
+            let checkout = find_checkout(&instance, &options.checkout)?;
             let result_globs = checkout
                 .prefetch_profiles(
                     &instance,
@@ -376,11 +370,7 @@ impl PrefetchCmd {
         options: &ActivationOptions,
         profile_name: &str,
     ) -> Result<ExitCode> {
-        let checkout_path = match &options.checkout {
-            Some(p) => p.clone(),
-            None => env::current_dir().context("Unable to retrieve current working dir")?,
-        };
-        let client_name = instance.client_name(&checkout_path)?;
+        let client_name = instance.client_name(&options.checkout)?;
 
         #[cfg(fbcode_build)]
         let mut sample = {
@@ -414,11 +404,7 @@ impl PrefetchCmd {
         instance: EdenFsInstance,
         options: &ActivationOptions,
     ) -> Result<ExitCode> {
-        let checkout_path = match &options.checkout {
-            Some(p) => p.clone(),
-            None => env::current_dir().context("Unable to retrieve current working dir")?,
-        };
-        let client_name = instance.client_name(&checkout_path)?;
+        let client_name = instance.client_name(&options.checkout)?;
 
         #[cfg(fbcode_build)]
         let mut sample = {
@@ -452,10 +438,7 @@ impl PrefetchCmd {
         profile_names: &Vec<String>,
         options: &FetchOptions,
     ) -> Result<ExitCode> {
-        let checkout_path = match &options.options.checkout {
-            Some(p) => p.clone(),
-            None => env::current_dir().context("Unable to retrieve current working dir")?,
-        };
+        let checkout_path = &options.options.checkout;
         let client_name = instance.client_name(&checkout_path)?;
         let config_dir = instance.config_directory(&client_name);
         let checkout_config = CheckoutConfig::parse_config(config_dir.clone())?;
@@ -507,11 +490,8 @@ impl PrefetchCmd {
         num_dirs: u32,
         if_active: bool,
     ) -> Result<ExitCode> {
-        let checkout_path = match &options.options.checkout {
-            Some(p) => p.clone(),
-            None => env::current_dir().context("Unable to retrieve current working dir")?,
-        };
-        let client_name = instance.client_name(&checkout_path)?;
+        let checkout_path = &options.options.checkout;
+        let client_name = instance.client_name(checkout_path)?;
         let config_dir = instance.config_directory(&client_name);
         let checkout_config = CheckoutConfig::parse_config(config_dir.clone())?;
 
@@ -535,7 +515,7 @@ impl PrefetchCmd {
             0
         };
 
-        let checkout = find_checkout(&instance, &checkout_path)?;
+        let checkout = find_checkout(&instance, checkout_path)?;
         let result_globs = checkout
             .prefetch_profiles(
                 &instance,
