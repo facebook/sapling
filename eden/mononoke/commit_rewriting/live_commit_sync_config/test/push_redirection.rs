@@ -48,14 +48,8 @@ async fn test_enabling_push_redirection(fb: FacebookInit) {
 
     // Check that push-redirection of public commits has been picked up
     ensure_all_updated();
-    assert_eq!(
-        live_commit_sync_config.push_redirector_enabled_for_draft(repo_1),
-        false
-    );
-    assert_eq!(
-        live_commit_sync_config.push_redirector_enabled_for_public(repo_1),
-        true
-    );
+    assert!(!live_commit_sync_config.push_redirector_enabled_for_draft(repo_1));
+    assert!(live_commit_sync_config.push_redirector_enabled_for_public(repo_1));
 
     // Enable push-redirection of public and draft commits
     test_source.insert_config(
@@ -66,12 +60,6 @@ async fn test_enabling_push_redirection(fb: FacebookInit) {
 
     // Check that push-redirection of public and draft commits has been picked up
     ensure_all_updated();
-    assert_eq!(
-        live_commit_sync_config.push_redirector_enabled_for_draft(repo_1),
-        true
-    );
-    assert_eq!(
-        live_commit_sync_config.push_redirector_enabled_for_public(repo_1),
-        true
-    );
+    assert!(live_commit_sync_config.push_redirector_enabled_for_draft(repo_1));
+    assert!(live_commit_sync_config.push_redirector_enabled_for_public(repo_1));
 }

@@ -56,7 +56,6 @@ use slog::debug;
 use slog::error;
 use slog::info;
 use stats::prelude::*;
-use std::cmp::min;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -1286,11 +1285,11 @@ fn report_missing(
     where_missing: &str,
 ) -> Result<(), Error> {
     if !missing_things.is_empty() {
-        for i in 0..min(missing_things.len(), 10) {
+        for missing_thing in missing_things.iter().take(10) {
             debug!(
                 ctx.logger(),
                 "A change to {:?} is present in {}, but missing in {} (large repo cs {})",
-                missing_things[i],
+                missing_thing,
                 where_present,
                 where_missing,
                 large_cs_id,

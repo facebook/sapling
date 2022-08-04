@@ -313,13 +313,12 @@ mod test {
             mark_public: false,
         });
 
-        let pushrebase_flags = {
-            let mut flags = PushrebaseFlags::default();
-            flags.rewritedates = true;
-            flags.forbid_p2_root_rebases = true;
-            flags.casefolding_check = true;
-            flags.recursion_limit = None;
-            flags
+        let pushrebase_flags = PushrebaseFlags {
+            rewritedates: true,
+            forbid_p2_root_rebases: true,
+            casefolding_check: true,
+            recursion_limit: None,
+            ..Default::default()
         };
 
         let commit_before_push = resolve_cs_id(&ctx, &repo, book.clone()).await?;

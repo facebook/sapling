@@ -197,7 +197,7 @@ fn get_small_repo_and_others_from_config(
     small_repo_id: RepositoryId,
 ) -> Result<(&SmallRepoCommitSyncConfig, Vec<&SmallRepoCommitSyncConfig>)> {
     let small_repo = match &commit_sync_config.small_repos.get(&small_repo_id) {
-        Some(config) => config.clone(),
+        Some(config) => *config,
         None => return Err(Error::from(ErrorKind::SmallRepoNotFound(small_repo_id))),
     };
     let others: Vec<_> = commit_sync_config

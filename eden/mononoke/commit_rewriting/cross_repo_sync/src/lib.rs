@@ -1131,13 +1131,12 @@ where
                 )
                 .await?;
 
-                let pushrebase_flags = {
-                    let mut flags = PushrebaseFlags::default();
-                    flags.rewritedates = false;
-                    flags.forbid_p2_root_rebases = false;
-                    flags.casefolding_check = false;
-                    flags.recursion_limit = None;
-                    flags
+                let pushrebase_flags = PushrebaseFlags {
+                    rewritedates: false,
+                    forbid_p2_root_rebases: false,
+                    casefolding_check: false,
+                    recursion_limit: None,
+                    ..Default::default()
                 };
 
                 let pushrebase_res = do_pushrebase_bonsai(

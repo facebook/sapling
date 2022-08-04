@@ -18,12 +18,6 @@ async fn test_empty_configs(fb: FacebookInit) {
     let (_ctx, _test_source, _store, live_commit_sync_config) =
         get_ctx_source_store_and_live_config(fb, EMPTY_PUSHREDIRECTOR, EMTPY_COMMIT_SYNC_ALL);
     let repo_1 = RepositoryId::new(1);
-    assert_eq!(
-        live_commit_sync_config.push_redirector_enabled_for_draft(repo_1),
-        false
-    );
-    assert_eq!(
-        live_commit_sync_config.push_redirector_enabled_for_public(repo_1),
-        false
-    );
+    assert!(!live_commit_sync_config.push_redirector_enabled_for_draft(repo_1));
+    assert!(!live_commit_sync_config.push_redirector_enabled_for_public(repo_1));
 }

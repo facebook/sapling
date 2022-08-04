@@ -34,16 +34,14 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         version_name.clone(),
         SyncedCommitSourceRepo::Large,
     );
-    assert_eq!(
-        true,
+    assert!(
         mapping
             .add(&ctx, entry.clone())
             .await
             .expect("Adding new entry failed")
     );
-    assert_eq!(
-        false,
-        mapping
+    assert!(
+        !mapping
             .add(&ctx, entry)
             .await
             .expect("Adding same entry failed")
@@ -71,8 +69,7 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         version_name.clone(),
         SyncedCommitSourceRepo::Large,
     );
-    assert_eq!(
-        true,
+    assert!(
         mapping
             .add(&ctx, entry.clone())
             .await

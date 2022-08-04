@@ -448,13 +448,12 @@ mod test {
             dry_run: false,
         };
 
-        let pushrebase_flags = {
-            let mut flags = PushrebaseFlags::default();
-            flags.rewritedates = true;
-            flags.forbid_p2_root_rebases = true;
-            flags.casefolding_check = true;
-            flags.recursion_limit = None;
-            flags
+        let pushrebase_flags = PushrebaseFlags {
+            rewritedates: true,
+            forbid_p2_root_rebases: true,
+            casefolding_check: true,
+            recursion_limit: None,
+            ..Default::default()
         };
 
         // Test dry-run mode
@@ -491,13 +490,12 @@ mod test {
             dry_run: false,
         };
 
-        let pushrebase_flags = {
-            let mut flags = PushrebaseFlags::default();
-            flags.rewritedates = true;
-            flags.forbid_p2_root_rebases = true;
-            flags.casefolding_check = true;
-            flags.recursion_limit = None;
-            flags
+        let pushrebase_flags = PushrebaseFlags {
+            rewritedates: true,
+            forbid_p2_root_rebases: true,
+            casefolding_check: true,
+            recursion_limit: None,
+            ..Default::default()
         };
 
         let mut result = HashMap::new();
@@ -539,13 +537,12 @@ mod test {
             dry_run: false,
         };
 
-        let pushrebase_flags = {
-            let mut flags = PushrebaseFlags::default();
-            flags.rewritedates = true;
-            flags.forbid_p2_root_rebases = true;
-            flags.casefolding_check = true;
-            flags.recursion_limit = None;
-            flags
+        let pushrebase_flags = PushrebaseFlags {
+            rewritedates: true,
+            forbid_p2_root_rebases: true,
+            casefolding_check: true,
+            recursion_limit: None,
+            ..Default::default()
         };
 
         let mut result = HashMap::new();
@@ -617,7 +614,7 @@ mod test {
         repo: &BlobRepo,
         gradual_merge_result: HashMap<ChangesetId, ChangesetId>,
         pre_deletion_commit: ChangesetId,
-        deletion_commits: &Vec<ChangesetId>,
+        deletion_commits: &[ChangesetId],
     ) -> Result<(), Error> {
         assert_eq!(gradual_merge_result.len(), 3);
         let working_copy = list_working_copy_utf8(
