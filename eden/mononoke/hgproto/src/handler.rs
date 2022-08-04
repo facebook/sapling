@@ -51,7 +51,7 @@ struct HgProtoHandlerInner<H, Dec, Enc> {
 }
 
 impl HgProtoHandler {
-    pub fn new<'a, In, H, Dec, Enc>(
+    pub fn new<In, H, Dec, Enc>(
         logger: Logger,
         input: In,
         commands: H,

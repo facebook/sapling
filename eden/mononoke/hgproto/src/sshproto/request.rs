@@ -613,11 +613,11 @@ fn parse_with_params(
                 two: parseval(&kv, "two", ident_complete)?.to_vec(),
                 all_args: kv,
             }))
-        | call!(parse_command, "clienttelemetry", parse_params, 0+1,
+        | call!(parse_command, "clienttelemetry", parse_params, 1,
             |kv| Ok(ClientTelemetry{
                 args: kv,
             }))
-        | call!(parse_command, "getbundle", parse_params, 0+1,
+        | call!(parse_command, "getbundle", parse_params, 1,
             |kv| Ok(Getbundle(GetbundleArgs {
                 // Some params are currently ignored, like:
                 // - obsmarkers
@@ -656,7 +656,7 @@ fn parse_with_params(
               replaydata => utf8_string_complete,
               respondlightly => boolean,
           })
-        | call!(parse_command, "gettreepack", parse_params, 0+1,
+        | call!(parse_command, "gettreepack", parse_params, 1,
             |kv| Ok(Gettreepack(GettreepackArgs {
                 rootdir: parseval(&kv, "rootdir", path_complete)?,
                 mfnodes: parseval(&kv, "mfnodes", manifestlist)?,
@@ -669,7 +669,7 @@ fn parse_with_params(
                     )
                 ))?,
             })))
-        | call!(parse_command, "stream_out_shallow", parse_params, 0+1, |kv| {
+        | call!(parse_command, "stream_out_shallow", parse_params, 1, |kv| {
             Ok(StreamOutShallow {
                 tag: parseval_option(&kv, "tag", utf8_string_complete)?
             })
