@@ -40,16 +40,14 @@ async fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
         hg_cs_id: hg::ONES_CSID,
         bcs_id: bonsai::ONES_CSID,
     };
-    assert_eq!(
-        true,
+    assert!(
         mapping
             .add(&ctx, entry.clone())
             .await
             .expect("Adding new entry failed")
     );
-    assert_eq!(
-        false,
-        mapping
+    assert!(
+        !mapping
             .add(&ctx, entry.clone())
             .await
             .expect("Adding same entry failed")
@@ -127,29 +125,25 @@ async fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M)
         bcs_id: bonsai::FS_CSID,
     };
 
-    assert_eq!(
-        true,
+    assert!(
         mapping
             .add(&ctx, entry1.clone())
             .await
             .expect("Adding entry1 failed")
     );
-    assert_eq!(
-        true,
+    assert!(
         mapping
             .add(&ctx, entry2.clone())
             .await
             .expect("Adding entry2 failed")
     );
-    assert_eq!(
-        true,
+    assert!(
         mapping
             .add(&ctx, entry3.clone())
             .await
             .expect("Adding entry3 failed")
     );
-    assert_eq!(
-        true,
+    assert!(
         mapping
             .add(&ctx, entry4.clone())
             .await
@@ -257,7 +251,7 @@ async fn get_hg_in_range<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     };
 
     for entry in [entry1, entry2, entry3] {
-        assert_eq!(true, mapping.add(&ctx, entry).await.unwrap());
+        assert!(mapping.add(&ctx, entry).await.unwrap());
     }
 
     assert!(
@@ -373,8 +367,7 @@ async fn caching<M: BonsaiHgMapping + 'static>(fb: FacebookInit, mapping: M) {
         hg_cs_id: hg::ONES_CSID,
         bcs_id: bonsai::ONES_CSID,
     };
-    assert_eq!(
-        true,
+    assert!(
         mapping
             .add(&ctx, entry.clone())
             .await
@@ -471,8 +464,7 @@ async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
         bcs_id: bonsai::ONES_CSID,
     };
 
-    assert_eq!(
-        true,
+    assert!(
         mapping
             .add(&ctx, entry.clone())
             .await
@@ -483,8 +475,7 @@ async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
         hg_cs_id: hg::ONES_CSID,
         bcs_id: bonsai::TWOS_CSID,
     };
-    assert_eq!(
-        true,
+    assert!(
         mapping
             .add(&ctx, entry.clone())
             .await
