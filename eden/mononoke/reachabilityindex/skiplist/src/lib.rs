@@ -254,8 +254,8 @@ async fn compute_single_skip_edge(
     Ok(*target_changeset)
 }
 
-fn nth_node_or_last<T: Clone>(v: &Vec<T>, i: usize) -> Option<T> {
-    return v.get(i).or(v.last()).cloned();
+fn nth_node_or_last<T: Clone>(v: &[T], i: usize) -> Option<T> {
+    return v.get(i).or_else(|| v.last()).cloned();
 }
 
 /// compute the skip list edges which start by pointing at start_node.
@@ -1098,7 +1098,7 @@ impl SkiplistIndex {
         let ancestor_gen = fetch_generation(ctx, changeset_fetcher, ancestor).await?;
         let node_frontier =
             NodeFrontier::new_from_single_node(ctx, changeset_fetcher.clone(), descendant).await?;
-        let mut trace = SkiplistTraversalTrace::new();
+        let trace = SkiplistTraversalTrace::new();
 
         let node_frontier = process_frontier(
             ctx,
@@ -1106,7 +1106,7 @@ impl SkiplistIndex {
             &self.skip_list_edges.load(),
             node_frontier,
             ancestor_gen,
-            &Some(&mut trace),
+            &Some(&trace),
         )
         .await?;
         if match node_frontier.get_all_changesets_for_gen_num(ancestor_gen) {
@@ -2083,14 +2083,14 @@ mod test {
         let mut expected_root_frontier_map = HashMap::new();
         expected_root_frontier_map
             .insert(Generation::new(1), vec![root_node].into_iter().collect());
-        let mut trace = SkiplistTraversalTrace::new();
+        let trace = SkiplistTraversalTrace::new();
         let f = process_frontier(
             &ctx,
             &repo.get_changeset_fetcher(),
             &sli.skip_list_edges.load(),
             NodeFrontier::new(starting_frontier_map),
             Generation::new(1),
-            &Some(&mut trace),
+            &Some(&trace),
         )
         .await;
         assert_eq!(f.unwrap(), NodeFrontier::new(expected_root_frontier_map));
@@ -2105,10 +2105,10 @@ mod test {
         if let Some(_skiplist_edges) = sli.get_skip_edges(cs_id) {
             // When the index is present we see if what's in skiplist for cs_id
             // matches what's in the trace.
-            assert_eq!(skiplist_node, false,);
+            assert!(!skiplist_node);
         } else {
             // When the index is empty, we check that parent edge was traversed.
-            assert_eq!(skiplist_node, false,);
+            assert!(!skiplist_node);
         }
     }
 

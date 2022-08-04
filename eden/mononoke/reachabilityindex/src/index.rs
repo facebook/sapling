@@ -101,7 +101,7 @@ impl NodeFrontier {
         self.generations.push(gen);
         self.gen_map
             .entry(gen)
-            .or_insert(HashSet::new())
+            .or_insert_with(HashSet::new)
             .insert(node);
     }
 

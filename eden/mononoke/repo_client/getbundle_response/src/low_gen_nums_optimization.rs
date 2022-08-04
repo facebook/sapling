@@ -1002,11 +1002,7 @@ mod test {
         .try_collect::<Vec<_>>()
         .await?;
 
-        let mut params = Params::default();
-        params.heads = heads;
-        params.excludes = excludes;
-
-        Ok(params)
+        Ok(Params { heads, excludes })
     }
 
     async fn create_repo(

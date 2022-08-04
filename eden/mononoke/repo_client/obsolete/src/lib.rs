@@ -41,7 +41,7 @@ pub fn pushrebased_changesets_to_obsmarkers_part(
     let mut metadata = vec![MetadataEntry::new("operation", "push")];
 
     if let Some(user) = ctx.metadata().unix_name() {
-        metadata.push(MetadataEntry::new("user", user.clone()));
+        metadata.push(MetadataEntry::new("user", user));
     }
 
     let part = parts::obsmarkers_part(hg_pushrebased_changesets, time, metadata);

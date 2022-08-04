@@ -271,10 +271,7 @@ async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
             panic!("should be a leaf");
         }
     };
-    assert_eq!(
-        run_and_check_if_lfs(&ctx, &repo, &path, &filenode_id, LfsParams::default()).await?,
-        false
-    );
+    assert!(!run_and_check_if_lfs(&ctx, &repo, &path, &filenode_id, LfsParams::default()).await?,);
 
     // Rollout percentage is 100 and threshold is set - enable lfs
     let lfs_params = LfsParams {
@@ -282,10 +279,7 @@ async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
         rollout_percentage: 100,
         ..Default::default()
     };
-    assert_eq!(
-        run_and_check_if_lfs(&ctx, &repo, &path, &filenode_id, lfs_params).await?,
-        true
-    );
+    assert!(run_and_check_if_lfs(&ctx, &repo, &path, &filenode_id, lfs_params).await?,);
 
     // Rollout percentage is 0 - no lfs is enabled
     let lfs_params = LfsParams {
@@ -293,10 +287,7 @@ async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
         rollout_percentage: 0,
         ..Default::default()
     };
-    assert_eq!(
-        run_and_check_if_lfs(&ctx, &repo, &path, &filenode_id, lfs_params).await?,
-        false
-    );
+    assert!(!run_and_check_if_lfs(&ctx, &repo, &path, &filenode_id, lfs_params).await?);
 
     // Rollout percentage is 100, but threshold is too high
     let lfs_params = LfsParams {
@@ -304,10 +295,7 @@ async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
         rollout_percentage: 100,
         ..Default::default()
     };
-    assert_eq!(
-        run_and_check_if_lfs(&ctx, &repo, &path, &filenode_id, lfs_params).await?,
-        false
-    );
+    assert!(!run_and_check_if_lfs(&ctx, &repo, &path, &filenode_id, lfs_params).await?);
     Ok(())
 }
 

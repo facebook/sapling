@@ -1301,7 +1301,7 @@ fn get_optional_ascii_param(
 
 fn get_ascii_param(params: &HashMap<String, Bytes>, param: &str) -> Result<AsciiString> {
     get_optional_ascii_param(params, param)
-        .unwrap_or(Err(format_err!("`{}` parameter is not set", param)))
+        .unwrap_or_else(|| Err(format_err!("`{}` parameter is not set", param)))
 }
 
 fn get_optional_changeset_param(
