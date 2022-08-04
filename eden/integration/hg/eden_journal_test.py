@@ -6,14 +6,21 @@
 
 # pyre-strict
 
+# pyre-fixme[21]: Could not find module `eden.fs.service.eden.types`.
 from eden.fs.service.eden.types import (
     JournalPosition as JournalPosition_py3,
     ScmFileStatus,
 )
+
+# pyre-fixme[21]: Could not find module `eden.fs.service.streamingeden.types`.
 from eden.fs.service.streamingeden.types import StreamChangesSinceParams
 from eden.integration.lib import hgrepo
 from facebook.eden.ttypes import JournalPosition as JournalPosition_py
+
+# pyre-fixme[21]: Could not find module `thrift.py3.converter`.
 from thrift.py3.converter import to_py3_struct
+
+# pyre-fixme[21]: Could not find module `thrift.util.converter`.
 from thrift.util.converter import to_py_struct
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
@@ -64,8 +71,11 @@ class EdenJournalTest(EdenHgTestCase):
         modified = set()
 
         async with self.get_thrift_client() as client:
+            # pyre-fixme[16]: Module `eden` has no attribute `fs`.
             params = StreamChangesSinceParams(
                 mountPoint=self.mount_path_bytes,
+                # pyre-fixme[16]: Module `py3` has no attribute `converter`.
+                # pyre-fixme[16]: Module `eden` has no attribute `fs`.
                 fromPosition=to_py3_struct(JournalPosition_py3, before),
             )
             result, changes = await client.streamChangesSince(params)
@@ -75,11 +85,14 @@ class EdenJournalTest(EdenHgTestCase):
                     continue
 
                 status = change.status
+                # pyre-fixme[16]: Module `eden` has no attribute `fs`.
                 if status == ScmFileStatus.ADDED:
                     added.add(path)
+                # pyre-fixme[16]: Module `eden` has no attribute `fs`.
                 elif status == ScmFileStatus.MODIFIED:
                     modified.add(path)
                 else:
+                    # pyre-fixme[16]: Module `eden` has no attribute `fs`.
                     self.assertEqual(status, ScmFileStatus.REMOVED)
                     removed.add(path)
 
@@ -93,6 +106,7 @@ class EdenJournalTest(EdenHgTestCase):
         # The directory is also removed.
         self.assertIn("foo", removed)
 
+        # pyre-fixme[16]: Module `util` has no attribute `converter`.
         self.assertNotEqual(before, to_py_struct(JournalPosition_py, result.toPosition))
 
         counter_name = (

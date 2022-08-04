@@ -24,6 +24,8 @@ import time
 from typing import IO, Optional
 
 import bindings
+
+# pyre-fixme[21]: Could not find module `edenscmnative`.
 from edenscmnative import osutil
 
 from . import encoding, error, pycompat, win32, winutil

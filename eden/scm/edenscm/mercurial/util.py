@@ -67,6 +67,8 @@ from typing import (
 
 import bindings
 from edenscm import tracing
+
+# pyre-fixme[21]: Could not find module `edenscmnative`.
 from edenscmnative import base85, osutil
 
 from . import blackbox, encoding, error, fscap, i18n, pycompat, urllibcompat
@@ -182,7 +184,6 @@ setsignalhandler = platform.setsignalhandler
 shellquote = platform.shellquote
 split = platform.split
 sshargs = platform.sshargs
-# pyre-fixme[16]: Module `osutil` has no attribute `statfiles`.
 statfiles = getattr(osutil, "statfiles", platform.statfiles)
 statisexec = platform.statisexec
 statislink = platform.statislink

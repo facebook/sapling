@@ -40,6 +40,7 @@ def _fixsys():
             sys.path.insert(0, depspath)
 
     # Make sure "edenscmnative" can be imported. Error early.
+    # pyre-fixme[21]: Could not find module `edenscmnative`.
     import edenscmnative
 
     edenscmnative.__name__

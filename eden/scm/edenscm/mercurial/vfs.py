@@ -250,8 +250,6 @@ class abstractvfs(pycompat.ABC):
         stat: "Optional[bool]" = None,
         skip: "Optional[str]" = None,
     ) -> "List[str]":
-        # pyre-fixme[7]: Expected `List[str]` but got `Union[List[Tuple[str, int]],
-        #  List[Tuple[str, int, edenscmnative.osutil.stat]]]`.
         return util.listdir(self.join(path), stat, skip)
 
     def readlock(self, path: "Optional[str]") -> str:

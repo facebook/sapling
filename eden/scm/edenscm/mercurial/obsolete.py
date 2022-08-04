@@ -63,6 +63,7 @@ from __future__ import absolute_import
 
 import struct
 
+# pyre-fixme[21]: Could not find module `edenscmnative`.
 from edenscmnative import parsers
 
 from . import error, util
@@ -170,7 +171,6 @@ def _fm1encodeonemarker(marker):
 # mapping to read/write various marker formats
 # <version> -> (decoder, encoder)
 formats = {
-    # pyre-fixme[16]: Module `parsers` has no attribute `fm1readmarkers`.
     _fm1version: (parsers.fm1readmarkers, _fm1encodeonemarker),
 }
 

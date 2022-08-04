@@ -183,7 +183,6 @@ def ctxpvec(ctx) -> "pvec":
                 else:
                     pvc[n] = _mergevec(pvc[p1], pvc[p2], node)
     bs = _join(*pvc[ctx.rev()])
-    # pyre-fixme[6]: For 1st param expected `bytes` but got `str`.
     return pvec(util.b85encode(bs))
 
 

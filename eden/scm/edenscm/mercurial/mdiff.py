@@ -18,6 +18,7 @@ import zlib
 from hashlib import sha1
 from typing import Iterator, List, Optional, Pattern, Sized, Tuple, TYPE_CHECKING
 
+# pyre-fixme[21]: Could not find module `edenscmnative`.
 from edenscmnative import bdiff, mpatch, xdiff
 
 from . import error, util
@@ -45,8 +46,6 @@ wordsplitter: Pattern[bytes] = re.compile(
 def init(ui: "UI") -> None:
     if ui.configbool("experimental", "xdiff"):
         global blocks
-        # pyre-fixme[9]: blocks has type `(a: str, b: str) -> List[Tuple[int, int,
-        #  int, int]]`; used as `(a: str, b: str) -> List[Tuple[int, int, int, int]]`.
         blocks = xdiff.blocks
 
 
@@ -127,22 +126,15 @@ defaultopts = diffopts()
 
 def wsclean(opts, text: str, blank: bool = True) -> bytes:
     if opts.ignorews:
-        # pyre-fixme[9]: text has type `str`; used as `bytes`.
-        # pyre-fixme[6]: For 2nd param expected `bool` but got `int`.
         text = bdiff.fixws(text, 1)
     elif opts.ignorewsamount:
-        # pyre-fixme[9]: text has type `str`; used as `bytes`.
-        # pyre-fixme[6]: For 2nd param expected `bool` but got `int`.
         text = bdiff.fixws(text, 0)
     if blank and opts.ignoreblanklines:
         # pyre-fixme[9]: text has type `str`; used as `bytes`.
-        # pyre-fixme[6]: For 3rd param expected `AnyStr` but got `str`.
         text = re.sub(b"\n+", b"\n", text).strip(b"\n")
     if opts.ignorewseol:
         # pyre-fixme[9]: text has type `str`; used as `bytes`.
-        # pyre-fixme[6]: For 3rd param expected `AnyStr` but got `str`.
         text = re.sub(b"[ \t\r\f]+\n", b"\n", text)
-    # pyre-fixme[7]: Expected `bytes` but got `str`.
     return text
 
 
@@ -613,7 +605,6 @@ def patch(a: Sized, bin):
     if len(a) == 0:
         # skip over trivial delta header
         return util.buffer(bin, 12)
-    # pyre-fixme[6]: For 1st param expected `bytes` but got `Sized`.
     return mpatch.patches(a, [bin])
 
 

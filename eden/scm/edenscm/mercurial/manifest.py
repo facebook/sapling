@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import heapq
 import struct
 
+# pyre-fixme[21]: Could not find module `edenscmnative`.
 from edenscmnative import parsers
 
 from . import error, mdiff, pycompat, revlog, util

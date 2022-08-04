@@ -10,6 +10,8 @@ import stat
 from typing import BinaryIO
 
 import eden.dirstate as eden_dirstate_serializer
+
+# pyre-fixme[21]: Could not find module `edenscmnative`.
 from edenscmnative import parsers
 
 from . import dirstate, EdenThriftClient, localrepo, pycompat, ui as ui_mod, util, vfs

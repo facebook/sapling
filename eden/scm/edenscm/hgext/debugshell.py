@@ -19,6 +19,8 @@ import time
 
 import bindings
 import edenscm
+
+# pyre-fixme[21]: Could not find module `edenscmnative`.
 import edenscmnative
 from edenscm import hgdemandimport, hgext, mercurial, traceimport
 from edenscm.hgext import commitcloud as cc

@@ -19,6 +19,8 @@ import stat
 from typing import Optional
 
 import bindings
+
+# pyre-fixme[21]: Could not find module `edenscmnative`.
 from edenscmnative import parsers
 
 from . import error, pycompat, util, vfs as vfsmod
@@ -46,7 +48,6 @@ def _encodedir(path):
     )
 
 
-# pyre-fixme[16]: Module `parsers` has no attribute `encodedir`.
 encodedir = getattr(parsers, "encodedir", _encodedir)
 
 
@@ -247,7 +248,6 @@ def _buildlowerencodefun():
     return lowerencode
 
 
-# pyre-fixme[16]: Module `parsers` has no attribute `lowerencode`.
 lowerencode = getattr(parsers, "lowerencode", None) or _buildlowerencodefun()
 
 # Windows reserved names: con, prn, aux, nul, com1..com9, lpt1..lpt9
@@ -387,7 +387,6 @@ def _pathencode(path):
     return res
 
 
-# pyre-fixme[16]: Module `parsers` has no attribute `pathencode`.
 _pathencode = getattr(parsers, "pathencode", _pathencode)
 
 
