@@ -99,7 +99,7 @@ use tokio::process;
 use tokio::time;
 use topo_sort::sort_topological;
 
-#[cfg(not(test))]
+#[cfg_attr(test, allow(unused))]
 use stats::schedule_stats_aggregation_preview;
 
 mod cli;
