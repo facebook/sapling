@@ -7,6 +7,9 @@
 
 #![feature(trait_alias)]
 
+use std::collections::BTreeMap;
+use std::num::NonZeroU64;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use blobrepo::BlobRepo;
@@ -28,8 +31,6 @@ use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use movers::Mover;
 use slog::info;
-use std::collections::BTreeMap;
-use std::num::NonZeroU64;
 
 pub mod chunking;
 pub mod commit_sync_config_utils;
@@ -225,7 +226,9 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::str::FromStr;
+    use std::sync::Arc;
+
     use anyhow::Result;
     use cloned::cloned;
     use fbinit::FacebookInit;
@@ -238,9 +241,9 @@ mod test {
     use mononoke_types::BonsaiChangesetMut;
     use mononoke_types::DateTime;
     use sorted_vector_map::sorted_vector_map;
-    use std::str::FromStr;
-    use std::sync::Arc;
     use tests_utils::resolve_cs_id;
+
+    use super::*;
 
     fn identity_mover(p: &MPath) -> Result<Option<MPath>> {
         Ok(Some(p.clone()))

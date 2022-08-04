@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::str::FromStr;
+
 use anyhow::format_err;
 use anyhow::Error;
 use blobstore::Storable;
@@ -46,9 +50,6 @@ use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
-use std::collections::BTreeMap;
-use std::collections::HashMap;
-use std::str::FromStr;
 use trait_alias::trait_alias;
 
 pub mod drawdag;

@@ -8,11 +8,10 @@
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use async_requests::types::RowId;
 use clap::Args;
 use context::CoreContext;
 use megarepo_api::MegarepoApi;
-
-use async_requests::types::RowId;
 
 #[derive(Args)]
 /// Subcommand responsible for showing the request

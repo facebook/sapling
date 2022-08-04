@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::io;
+use std::io::BufRead;
+
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
@@ -19,8 +22,6 @@ use futures::stream;
 use futures::stream::TryStreamExt;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::BlobstoreId;
-use std::io;
-use std::io::BufRead;
 
 mod pack_utils;
 

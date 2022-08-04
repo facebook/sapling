@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::time::Duration;
+
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_hg::to_hg_bookmark_stream;
@@ -31,10 +36,6 @@ use futures_old::Future;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_api::Repo;
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::time::Duration;
 use tunables::tunables;
 use warm_bookmarks_cache::BookmarksCache;
 
@@ -282,7 +283,6 @@ fn update_publishing_bookmarks_maybe_stale_cache_raw(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use bookmarks::BookmarkName;
     use bookmarks::BookmarkUpdateLogArc;
     use bookmarks::BookmarksArc;
@@ -295,6 +295,8 @@ mod test {
     use tests_utils::bookmark;
     use tests_utils::CreateCommitContext;
     use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
+
+    use super::*;
 
     struct BasicTestRepo {
         repo: BlobRepo,

@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+use std::sync::Arc;
+use std::time::Duration;
+
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::Blobstore;
@@ -23,9 +27,6 @@ use futures_stats::TimedFutureExt;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::BlobstoreBytes;
 use scuba_ext::MononokeScubaSampleBuilder;
-use std::fmt;
-use std::sync::Arc;
-use std::time::Duration;
 use tokio::time::timeout;
 
 // inferred from the current timeout, see https://fburl.com/code/rgj8497o

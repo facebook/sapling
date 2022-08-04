@@ -5,6 +5,36 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
+use std::time::Duration;
+
+use anyhow::format_err;
+use anyhow::Error;
+use blobstore::BlobstoreGetData;
+use blobstore::SizeMetadata;
+use cloned::cloned;
+use context::CoreContext;
+use derive_more::Add;
+use derive_more::Div;
+use derive_more::Mul;
+use derive_more::Sub;
+use fbinit::FacebookInit;
+use futures::future;
+use futures::future::try_join_all;
+use futures::future::FutureExt;
+use futures::stream::Stream;
+use futures::stream::TryStreamExt;
+use futures::TryFutureExt;
+use metaconfig_types::BlobstoreId;
+use mononoke_types::datetime::DateTime;
+use samplingblob::ComponentSamplingHandler;
+use slog::info;
+use stats::prelude::*;
+
 use crate::args::OutputFormat;
 use crate::commands::JobParams;
 use crate::commands::JobWalkParams;
@@ -39,35 +69,6 @@ use crate::detail::validate::TOTAL;
 use crate::detail::walk::EmptyRoute;
 use crate::detail::walk::RepoWalkParams;
 use crate::detail::walk::RepoWalkTypeParams;
-
-use anyhow::format_err;
-use anyhow::Error;
-use blobstore::BlobstoreGetData;
-use blobstore::SizeMetadata;
-use cloned::cloned;
-use context::CoreContext;
-use derive_more::Add;
-use derive_more::Div;
-use derive_more::Mul;
-use derive_more::Sub;
-use fbinit::FacebookInit;
-use futures::future;
-use futures::future::try_join_all;
-use futures::future::FutureExt;
-use futures::stream::Stream;
-use futures::stream::TryStreamExt;
-use futures::TryFutureExt;
-use metaconfig_types::BlobstoreId;
-use mononoke_types::datetime::DateTime;
-use samplingblob::ComponentSamplingHandler;
-use slog::info;
-use stats::prelude::*;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::fmt;
-use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
-use std::time::Duration;
 
 define_stats! {
     prefix = "mononoke.walker";

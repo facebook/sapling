@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use ascii::AsciiString;
 use std::cmp;
 use std::collections::HashMap;
 use std::fmt;
@@ -20,6 +19,7 @@ use anyhow::bail;
 use anyhow::Context as _;
 use anyhow::Error;
 use anyhow::Result;
+use ascii::AsciiString;
 use lazy_static::lazy_static;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
@@ -1239,10 +1239,12 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::mem::size_of;
+
     use quickcheck::quickcheck;
     use quickcheck::TestResult;
-    use std::mem::size_of;
+
+    use super::*;
 
     #[test]
     fn test_mpath_element_size() {

@@ -8,6 +8,7 @@
 //! Ephemeral Store
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Result;
 use blobstore::BlobstoreEnumerableWithUnlink;
@@ -21,7 +22,6 @@ use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use sql::queries;
 use sql_ext::SqlConnections;
-use std::time::Duration;
 
 use crate::bubble::Bubble;
 use crate::bubble::BubbleId;
@@ -435,8 +435,6 @@ impl RepoEphemeralStore {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::builder::RepoEphemeralStoreBuilder;
     use anyhow::anyhow;
     use blobstore::Blobstore;
     use blobstore::BlobstoreBytes;
@@ -453,6 +451,9 @@ mod test {
     use repo_blobstore::RepoBlobstore;
     use scuba_ext::MononokeScubaSampleBuilder;
     use sql_construct::SqlConstruct;
+
+    use super::*;
+    use crate::builder::RepoEphemeralStoreBuilder;
 
     fn bootstrap(
         fb: FacebookInit,

@@ -19,6 +19,7 @@ use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
+use derived_data_service_if::types as thrift;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -29,8 +30,6 @@ use mononoke_types::SkeletonManifestId;
 
 use crate::batch::derive_skeleton_manifests_in_batch;
 use crate::derive::derive_skeleton_manifest;
-
-use derived_data_service_if::types as thrift;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootSkeletonManifestId(pub(crate) SkeletonManifestId);
@@ -180,7 +179,6 @@ pub(crate) fn get_file_changes(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use blobrepo::BlobRepo;
     use blobstore::Loadable;
     use bookmarks::BookmarkName;
@@ -211,6 +209,8 @@ mod test {
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
     use tokio::runtime::Runtime;
+
+    use super::*;
 
     async fn fetch_manifest_by_cs_id(
         ctx: &CoreContext,

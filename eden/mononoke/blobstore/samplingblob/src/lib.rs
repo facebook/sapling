@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
@@ -16,7 +18,6 @@ use blobstore::PutBehaviour;
 use context::CoreContext;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::BlobstoreBytes;
-use std::sync::Arc;
 
 pub trait SamplingHandler: std::fmt::Debug + Send + Sync {
     fn sample_get(
@@ -229,15 +230,15 @@ impl<T: BlobstorePutOps> BlobstorePutOps for SamplingBlobstorePutOps<T> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
-    use borrowed::borrowed;
-    use fbinit::FacebookInit;
     use std::sync::atomic::AtomicBool;
     use std::sync::atomic::Ordering;
 
+    use borrowed::borrowed;
     use context::SamplingKey;
+    use fbinit::FacebookInit;
     use memblob::Memblob;
+
+    use super::*;
 
     #[derive(Debug)]
     struct TestSamplingHandler {

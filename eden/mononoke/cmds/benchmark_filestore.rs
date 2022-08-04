@@ -7,6 +7,10 @@
 
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
 
+use std::fmt::Debug;
+use std::sync::Arc;
+use std::time::Duration;
+
 use anyhow::format_err;
 use anyhow::Error;
 use blobstore::Blobstore;
@@ -33,9 +37,6 @@ use futures_stats::TimedFutureExt;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ContentMetadata;
 use rand::Rng;
-use std::fmt::Debug;
-use std::sync::Arc;
-use std::time::Duration;
 use throttledblob::ThrottledBlob;
 use tokio::fs::File;
 use tokio::io::BufReader;

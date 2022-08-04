@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::Context;
 use anyhow::Error;
 use blobstore::Blobstore;
@@ -16,7 +18,6 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mononoke_types::hash::Sha256;
-use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct DarkstormVerifier {
@@ -69,12 +70,13 @@ impl DarkstormVerifier {
 #[cfg(test)]
 mod test {
     #![allow(warnings)]
-    use super::*;
     use fbinit::FacebookInit;
     use futures::stream;
     use futures::TryFutureExt;
     use futures::TryStreamExt;
     use memblob::Memblob;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_upload(fb: FacebookInit) -> Result<(), anyhow::Error> {

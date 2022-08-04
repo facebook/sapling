@@ -18,7 +18,6 @@ use futures::stream::once;
 use futures::stream::Stream;
 use futures_ext::BoxStream;
 use futures_ext::StreamExt;
-
 use mercurial_types::MPath;
 use mercurial_types::MPathElement;
 use mercurial_types::Type;

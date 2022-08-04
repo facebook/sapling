@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::str::FromStr;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
@@ -50,8 +53,6 @@ use source_control::MegarepoSyncChangesetPollResponse as ThriftMegarepoSyncChang
 use source_control::MegarepoSyncChangesetResponse as ThriftMegarepoSyncChangesetResponse;
 use source_control::MegarepoSyncChangesetResult as ThriftMegarepoSyncChangesetResult;
 use source_control::MegarepoSyncChangesetToken as ThriftMegarepoSyncChangesetToken;
-use std::str::FromStr;
-use std::sync::Arc;
 
 /// Grouping of types and behaviors for an asynchronous request
 pub trait Request: Sized + Send + Sync {
@@ -540,13 +541,14 @@ impl MegarepoAsynchronousRequestParams {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use blobstore::Loadable;
     use blobstore::PutBehaviour;
     use blobstore::Storable;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use memblob::Memblob;
+
+    use super::*;
 
     macro_rules! test_blobstore_key {
         {

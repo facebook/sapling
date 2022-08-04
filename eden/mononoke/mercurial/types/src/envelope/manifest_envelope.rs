@@ -166,8 +166,9 @@ impl Arbitrary for HgManifestEnvelope {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use quickcheck::quickcheck;
+
+    use super::*;
 
     quickcheck! {
         fn thrift_roundtrip(me: HgManifestEnvelope) -> bool {

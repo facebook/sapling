@@ -206,7 +206,6 @@ async fn create_new_commit(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use bonsai_git_mapping::BonsaiGitMapping;
     use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
     use bonsai_hg_mapping::BonsaiHgMapping;
@@ -222,6 +221,8 @@ mod test {
     use repo_derived_data::RepoDerivedData;
     use tests_utils::list_working_copy_utf8;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
 
     #[facet::container]
     struct BasicTestRepo {

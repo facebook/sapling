@@ -5,10 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use crate::AsyncManifest as Manifest;
-use crate::Entry;
-use crate::PathTree;
-use crate::StoreLoadable;
+use std::collections::BTreeMap;
+use std::collections::HashSet;
+use std::fmt;
+use std::future::Future;
+use std::hash::Hash;
+use std::sync::Arc;
+
 use anyhow::format_err;
 use anyhow::Error;
 use borrowed::borrowed;
@@ -22,12 +25,11 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
-use std::collections::BTreeMap;
-use std::collections::HashSet;
-use std::fmt;
-use std::future::Future;
-use std::hash::Hash;
-use std::sync::Arc;
+
+use crate::AsyncManifest as Manifest;
+use crate::Entry;
+use crate::PathTree;
+use crate::StoreLoadable;
 
 /// Information passed to `create_tree` function when tree node is constructed
 ///

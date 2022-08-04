@@ -5,6 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::VecDeque;
+use std::fmt;
+use std::future::Future;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::time::SystemTime;
+
 use anyhow::bail;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -23,13 +31,6 @@ use lock_ext::LockExt;
 use metaconfig_types::MultiplexId;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::Timestamp;
-use std::collections::HashMap;
-use std::collections::VecDeque;
-use std::fmt;
-use std::future::Future;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::time::SystemTime;
 
 pub struct Tickable<T> {
     pub storage: Arc<Mutex<HashMap<String, T>>>,

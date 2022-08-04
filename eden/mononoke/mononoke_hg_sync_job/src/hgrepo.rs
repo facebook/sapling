@@ -5,7 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use crate::CommitsInBundle;
+use std::collections::HashMap;
+use std::ffi::OsStr;
+use std::fs;
+use std::fs::File;
+use std::process::Stdio;
+use std::str::FromStr;
+use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::bail;
 use anyhow::format_err;
@@ -29,20 +36,14 @@ use mononoke_hg_sync_job_helper_lib::write_to_named_temp_file;
 use slog::debug;
 use slog::info;
 use slog::Logger;
-use std::collections::HashMap;
-use std::ffi::OsStr;
-use std::fs;
-use std::fs::File;
-use std::process::Stdio;
-use std::str::FromStr;
-use std::sync::Arc;
-use std::time::Duration;
 use tempfile::NamedTempFile;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Child;
 use tokio::process::ChildStdin;
 use tokio::process::Command;
 use tokio::sync::Mutex;
+
+use crate::CommitsInBundle;
 
 const BOOKMARK_LOCATION_LOOKUP_TIMEOUT_MS: u64 = 10_000;
 const LIST_SERVER_BOOKMARKS_EXTENSION: &str = include_str!("listserverbookmarks.py");
@@ -542,8 +543,9 @@ impl HgRepo {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use assert_matches::assert_matches;
+
+    use super::*;
 
     #[tokio::test]
     async fn ensure_alive_alive_process() -> Result<()> {

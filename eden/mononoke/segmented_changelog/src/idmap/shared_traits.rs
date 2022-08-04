@@ -5,12 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use slog::info;
-use std::collections::HashMap;
-use std::sync::Arc;
+use stats::prelude::*;
 use tunables::tunables;
 
 use crate::dag::errors;
@@ -29,8 +31,6 @@ use crate::idmap::ConcurrentMemIdMap;
 use crate::idmap::IdMapVersion;
 use crate::DagId;
 use crate::IdMap;
-
-use stats::prelude::*;
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.idmap.memory";

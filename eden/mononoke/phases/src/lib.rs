@@ -14,9 +14,8 @@ use abomonation_derive::Abomonation;
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
-use mononoke_types::ChangesetId;
-
 pub use errors::PhasesError;
+use mononoke_types::ChangesetId;
 
 #[derive(Abomonation, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Phase {

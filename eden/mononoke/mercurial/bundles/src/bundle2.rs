@@ -19,12 +19,11 @@ use std::mem;
 
 use anyhow::Error;
 use bytes_old::BytesMut;
+use futures_ext::io::Either;
+use futures_ext::BoxFuture;
 use futures_old::Async;
 use futures_old::Poll;
 use futures_old::Stream;
-
-use futures_ext::io::Either;
-use futures_ext::BoxFuture;
 use slog::Logger;
 use tokio_codec::Framed;
 use tokio_codec::FramedParts;

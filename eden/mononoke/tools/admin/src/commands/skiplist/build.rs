@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use super::read::get_skiplist_index;
-use super::Repo;
+use std::collections::HashMap;
+use std::num::NonZeroU64;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
@@ -40,9 +42,9 @@ use skiplist::SkiplistNodeType;
 use slog::debug;
 use slog::info;
 use slog::Logger;
-use std::collections::HashMap;
-use std::num::NonZeroU64;
-use std::sync::Arc;
+
+use super::read::get_skiplist_index;
+use super::Repo;
 
 // skiplist will jump up to 2^9 changesets.
 const DEFAULT_SKIPLIST_EXPONENT_STR: &str = "9";

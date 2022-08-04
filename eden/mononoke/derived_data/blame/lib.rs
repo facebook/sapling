@@ -22,10 +22,15 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use blobstore::LoadableError;
+pub use compat::CompatBlame;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use derived_data::DeriveError;
+pub use fetch::fetch_content_for_blame;
+pub use fetch::FetchOutcome;
 use manifest::ManifestOps;
+pub use mapping_v1::BlameRoot;
+pub use mapping_v2::RootBlameV2;
 use metaconfig_types::BlameVersion;
 use mononoke_types::blame::BlameId;
 use mononoke_types::blame::BlameRejected;
@@ -35,12 +40,6 @@ use mononoke_types::FileUnodeId;
 use mononoke_types::MPath;
 use thiserror::Error;
 use unodes::RootUnodeManifestId;
-
-pub use compat::CompatBlame;
-pub use fetch::fetch_content_for_blame;
-pub use fetch::FetchOutcome;
-pub use mapping_v1::BlameRoot;
-pub use mapping_v2::RootBlameV2;
 
 pub const DEFAULT_BLAME_FILESIZE_LIMIT: u64 = 10 * 1024 * 1024;
 

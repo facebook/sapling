@@ -8,12 +8,13 @@
 mod bonsai_generation;
 mod create_changeset;
 pub mod repo_commit;
+pub use changeset_fetcher::ChangesetFetcher;
+
 pub use crate::bonsai_generation::create_bonsai_changeset_object;
 pub use crate::bonsai_generation::save_bonsai_changeset_object;
-pub use crate::repo_commit::ChangesetHandle;
-pub use changeset_fetcher::ChangesetFetcher;
 // TODO: This is exported for testing - is this the right place for it?
 pub use crate::repo_commit::compute_changed_files;
+pub use crate::repo_commit::ChangesetHandle;
 pub use crate::repo_commit::UploadEntries;
 pub mod errors {
     pub use blobrepo_errors::*;
@@ -23,6 +24,9 @@ pub use create_changeset::CreateChangeset;
 pub mod file_history {
     pub use blobrepo_common::file_history::*;
 }
+
+use std::collections::HashMap;
+use std::collections::HashSet;
 
 use anyhow::Error;
 use async_trait::async_trait;
@@ -57,8 +61,6 @@ use mononoke_types::ChangesetId;
 use mononoke_types::RepoPath;
 use repo_derived_data::RepoDerivedDataRef;
 use stats::prelude::*;
-use std::collections::HashMap;
-use std::collections::HashSet;
 
 /// `BlobRepoHg` is an extension trait for repo facet containers which contains
 /// mercurial specific methods.

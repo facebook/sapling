@@ -7,6 +7,14 @@
 
 //! Recursively fetch the contents of a directory.
 
+use std::borrow::Cow;
+use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
@@ -19,13 +27,6 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use source_control::types as thrift;
-use std::borrow::Cow;
-use std::io::Write;
-use std::path::Path;
-use std::path::PathBuf;
-use std::sync::atomic::AtomicU64;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncWriteExt;
 

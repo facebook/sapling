@@ -6,6 +6,7 @@
  */
 
 use std::collections::BTreeMap;
+use std::str::FromStr;
 
 use anyhow::Error;
 use assert_matches::assert_matches;
@@ -19,7 +20,6 @@ use fixtures::Linear;
 use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
 use futures::try_join;
-use std::str::FromStr;
 
 use crate::ChangesetContext;
 use crate::ChangesetId;

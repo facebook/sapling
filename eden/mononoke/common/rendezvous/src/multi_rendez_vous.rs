@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use dashmap::DashMap;
 use std::hash::Hash;
 use std::sync::Arc;
+
+use dashmap::DashMap;
 
 use crate::RendezVous;
 use crate::RendezVousController;

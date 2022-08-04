@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::save_bonsai_changesets;
@@ -34,7 +36,6 @@ use mononoke_types::MPath;
 use slog::debug;
 use slog::info;
 use sorted_vector_map::SortedVectorMap;
-use std::sync::Arc;
 
 #[derive(Clone, Copy, Debug)]
 pub enum ReuploadCommits {

@@ -33,8 +33,6 @@ use futures_ext::BoxFuture;
 use futures_ext::BoxStream;
 use futures_ext::FutureExt;
 use futures_ext::StreamExt;
-
-use crate::stockbookmarks::StockBookmarks;
 use mercurial_types::blobs::RevlogChangeset;
 use mercurial_types::fncache_fsencode;
 use mercurial_types::simple_fsencode;
@@ -50,6 +48,7 @@ pub use crate::manifest::RevlogManifest;
 use crate::revlog::RevIdx;
 use crate::revlog::Revlog;
 use crate::revlog::RevlogIter;
+use crate::stockbookmarks::StockBookmarks;
 
 const DEFAULT_LOGS_CAPACITY: usize = 1000000;
 

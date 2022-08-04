@@ -31,7 +31,10 @@ use std::iter;
 use std::sync::Arc;
 
 use anyhow::Error;
+use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use cloned::cloned;
+use context::CoreContext;
 use futures_ext::BoxFuture;
 use futures_ext::BoxStream;
 use futures_ext::FutureExt as FBFutureExt;
@@ -49,10 +52,6 @@ use futures_old::Poll;
 use futures_util::future::FutureExt;
 use futures_util::future::TryFutureExt;
 use maplit::hashset;
-
-use changeset_fetcher::ArcChangesetFetcher;
-use changeset_fetcher::ChangesetFetcher;
-use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -402,16 +401,17 @@ impl Stream for DifferenceOfUnionsOfAncestorsNodeStream {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::fixtures::Linear;
-    use crate::fixtures::MergeUneven;
-    use crate::fixtures::TestRepoFixture;
-    use crate::tests::TestChangesetFetcher;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use revset_test_helper::assert_changesets_sequence;
     use revset_test_helper::string_to_bonsai;
     use skiplist::SkiplistIndex;
+
+    use super::*;
+    use crate::fixtures::Linear;
+    use crate::fixtures::MergeUneven;
+    use crate::fixtures::TestRepoFixture;
+    use crate::tests::TestChangesetFetcher;
 
     #[fbinit::test]
     async fn empty_ancestors_combinators(fb: FacebookInit) {

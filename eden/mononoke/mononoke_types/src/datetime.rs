@@ -238,8 +238,9 @@ impl From<Timestamp> for DateTime {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use quickcheck::quickcheck;
+
+    use super::*;
 
     quickcheck! {
         fn thrift_roundtrip(dt: DateTime) -> bool {

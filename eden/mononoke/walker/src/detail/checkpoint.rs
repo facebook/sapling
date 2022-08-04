@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::detail::log;
+use std::cmp::Ordering;
+use std::fmt;
+use std::sync::Arc;
 
 use anyhow::bail;
 use anyhow::Error;
@@ -18,9 +20,8 @@ use sql::queries;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
-use std::cmp::Ordering;
-use std::fmt;
-use std::sync::Arc;
+
+use crate::detail::log;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Checkpoint {
@@ -365,8 +366,9 @@ queries! {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use fbinit::FacebookInit;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_sql_roundtrip(_fb: FacebookInit) -> Result<(), Error> {

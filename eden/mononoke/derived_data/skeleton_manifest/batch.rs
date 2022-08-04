@@ -161,7 +161,6 @@ pub async fn new_batch_derivation(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use blobrepo::BlobRepo;
     use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
@@ -174,6 +173,8 @@ mod test {
     use tests_utils::bookmark;
     use tests_utils::drawdag::create_from_dag;
     use tests_utils::resolve_cs_id;
+
+    use super::*;
 
     #[fbinit::test]
     async fn batch_derive(fb: FacebookInit) -> Result<(), Error> {

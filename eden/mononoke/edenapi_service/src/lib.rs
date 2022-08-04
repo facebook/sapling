@@ -15,6 +15,10 @@ mod middleware;
 mod scuba;
 mod utils;
 
+use std::path::Path;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
+
 use anyhow::Error;
 use fbinit::FacebookInit;
 use gotham::router::Router;
@@ -33,9 +37,6 @@ use mononoke_api::Mononoke;
 use rate_limiting::RateLimitEnvironment;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use std::path::Path;
-use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
 
 use crate::context::ServerContext;
 use crate::handlers::build_router;

@@ -8,26 +8,24 @@
 use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
-use futures::stream;
-use futures::stream::BoxStream;
-use futures::StreamExt;
-use futures::TryStreamExt;
-
 use cloned::cloned;
 use edenapi_types::HistoryRequest;
 use edenapi_types::HistoryResponseChunk;
 use edenapi_types::WireHistoryEntry;
+use futures::stream;
+use futures::stream::BoxStream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgNodeHash;
 use mononoke_api_hg::HgRepoContext;
 use types::Key;
 
-use crate::errors::ErrorKind;
-use crate::utils::to_mpath;
-
 use super::EdenApiHandler;
 use super::EdenApiMethod;
 use super::HandlerResult;
+use crate::errors::ErrorKind;
+use crate::utils::to_mpath;
 
 type HistoryStream = BoxStream<'static, Result<WireHistoryEntry, Error>>;
 

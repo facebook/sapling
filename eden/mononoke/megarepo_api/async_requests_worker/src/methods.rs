@@ -12,6 +12,8 @@
 //! This module is not aware of the async nature of those methods. All the token
 //! handling, enqueuing and polling should be done by the callers.
 
+use std::collections::HashMap;
+
 use anyhow::anyhow;
 use async_requests::types::MegarepoAsynchronousRequestParams;
 use async_requests::types::MegarepoAsynchronousRequestResult;
@@ -20,7 +22,6 @@ use megarepo_api::MegarepoApi;
 use megarepo_error::MegarepoError;
 use mononoke_types::ChangesetId;
 use source_control as thrift;
-use std::collections::HashMap;
 
 async fn megarepo_sync_changeset(
     ctx: &CoreContext,

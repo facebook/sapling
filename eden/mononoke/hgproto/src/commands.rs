@@ -723,14 +723,14 @@ pub trait HgCommands {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     use bytes_old::BufMut;
     use bytes_old::BytesMut;
     use futures::future;
     use futures::stream;
     use slog::o;
     use slog::Discard;
+
+    use super::*;
 
     struct Dummy;
     impl HgCommands for Dummy {

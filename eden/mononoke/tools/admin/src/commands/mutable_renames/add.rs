@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
@@ -24,7 +26,6 @@ use mutable_renames::MutableRenameEntry;
 use mutable_renames::MutableRenamesRef;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
-use std::collections::HashMap;
 use unodes::RootUnodeManifestId;
 
 use super::Repo;

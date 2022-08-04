@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BinaryHeap;
+use std::collections::HashMap;
+
 use anyhow::Context;
 use anyhow::Result;
 use blobstore::Loadable;
@@ -20,8 +23,6 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use repo_blobstore::RepoBlobstoreRef;
-use std::collections::BinaryHeap;
-use std::collections::HashMap;
 
 use super::Repo;
 use crate::commit_id::parse_commit_id;

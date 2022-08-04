@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -25,8 +28,6 @@ use slog::debug;
 use slog::info;
 use sql::queries;
 use sql_ext::SqlConnections;
-use std::collections::HashMap;
-use std::sync::Arc;
 
 use crate::idmap::IdMap;
 use crate::types::IdMapVersion;

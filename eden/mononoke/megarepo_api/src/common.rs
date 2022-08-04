@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
@@ -63,10 +68,6 @@ use mutable_renames::MutableRenameEntry;
 use mutable_renames::MutableRenames;
 use repo_authorization::AuthorizationContext;
 use sorted_vector_map::SortedVectorMap;
-use std::collections::BTreeMap;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::sync::Arc;
 use tunables::tunables;
 use unodes::RootUnodeManifestId;
 

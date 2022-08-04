@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+
 use clap::ArgEnum;
 use clap::Args;
-use std::collections::HashSet;
 use strum_macros::AsRefStr;
 use strum_macros::EnumString;
 use strum_macros::EnumVariantNames;

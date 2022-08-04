@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::Blobstore;
@@ -24,8 +27,6 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::MPath;
-use std::collections::HashMap;
-use std::sync::Arc;
 use unodes::find_unode_renames_incorrect_for_blame_v1;
 use unodes::RootUnodeManifestId;
 

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use super::*;
+use std::sync::Mutex;
 
 use anyhow::format_err;
 use async_trait::async_trait;
@@ -14,7 +14,8 @@ use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use bytes::Bytes;
 use fbinit::FacebookInit;
 use sql_construct::SqlConstruct;
-use std::sync::Mutex;
+
+use super::*;
 
 // In-memory "blob store"
 ///

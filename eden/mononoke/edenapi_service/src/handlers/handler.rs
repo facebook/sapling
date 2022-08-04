@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use super::EdenApiMethod;
+use std::num::NonZeroU64;
+
 use async_trait::async_trait;
 use edenapi_types::ToWire;
 use futures::stream::BoxStream;
@@ -17,7 +18,8 @@ use hyper::body::Body;
 use mononoke_api_hg::HgRepoContext;
 use nonzero_ext::nonzero;
 use serde::Deserialize;
-use std::num::NonZeroU64;
+
+use super::EdenApiMethod;
 
 pub trait PathExtractorWithRepo: PathExtractor<Body> + Send + Sync {
     fn repo(&self) -> &str;

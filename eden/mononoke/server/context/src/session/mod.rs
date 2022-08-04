@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use async_limiter::AsyncLimiter;
 use fbinit::FacebookInit;
 use metadata::Metadata;
@@ -17,7 +19,6 @@ use rate_limiting::RateLimiter;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use std::sync::Arc;
 
 pub use self::builder::SessionContainerBuilder;
 use crate::core::CoreContext;

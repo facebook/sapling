@@ -5,10 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::BundleResolverError;
-use crate::PostResolveAction;
-use crate::PostResolvePush;
-use crate::PostResolvePushRebase;
+use std::collections::HashMap;
+use std::time::Duration;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use context::CoreContext;
@@ -24,11 +23,14 @@ use sha2::Digest;
 use sha2::Sha256;
 use slog::debug;
 use slog::warn;
-use std::collections::HashMap;
-use std::time::Duration;
 use time_window_counter::BoxGlobalTimeWindowCounter;
 use time_window_counter::GlobalTimeWindowCounterBuilder;
 use tokio::time::timeout;
+
+use crate::BundleResolverError;
+use crate::PostResolveAction;
+use crate::PostResolvePush;
+use crate::PostResolvePushRebase;
 
 const TIME_WINDOW_MIN: u32 = 10;
 const TIME_WINDOW_MAX: u32 = 3600;

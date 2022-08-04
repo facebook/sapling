@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::RedactionConfigBlobstore;
+use std::collections::HashMap;
+use std::str::FromStr;
+use std::sync::Arc;
+
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -29,9 +32,8 @@ use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
-use std::collections::HashMap;
-use std::str::FromStr;
-use std::sync::Arc;
+
+use crate::RedactionConfigBlobstore;
 
 #[derive(Clone)]
 pub struct SqlRedactedContentStore {

@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+use std::time::Duration;
+use std::time::Instant;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use blobrepo::BlobRepo;
@@ -28,9 +32,6 @@ use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
 use mononoke_types::ChangesetId;
 use slog::debug;
-use std::sync::Arc;
-use std::time::Duration;
-use std::time::Instant;
 
 const ARG_BACKFILL: &str = "backfill";
 const ARG_BATCH_SIZE: &str = "batch-size";

@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeSet;
+use std::fmt;
+use std::str::FromStr;
+
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -13,9 +17,6 @@ use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
-use std::collections::BTreeSet;
-use std::fmt;
-use std::str::FromStr;
 
 pub type MononokeIdentitySet = BTreeSet<MononokeIdentity>;
 

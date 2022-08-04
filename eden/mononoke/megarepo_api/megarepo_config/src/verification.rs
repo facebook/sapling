@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use context::CoreContext;
 use megarepo_configs::types::SyncTargetConfig;
 use slog::warn;
-use std::collections::HashSet;
 
 /// Verify the config
 pub fn verify_config(ctx: &CoreContext, config: &SyncTargetConfig) -> Result<()> {
@@ -43,7 +44,6 @@ fn verify_unique_source_names(ctx: &CoreContext, config: &SyncTargetConfig) -> R
 
 #[cfg(test)]
 mod verification_tests {
-    use super::*;
     use fbinit::FacebookInit;
     use maplit::btreemap;
     use megarepo_configs::types::MergeMode;
@@ -52,6 +52,8 @@ mod verification_tests {
     use megarepo_configs::types::SourceRevision;
     use megarepo_configs::types::Target;
     use megarepo_configs::types::WithExtraMoveCommit;
+
+    use super::*;
 
     fn s(v: &str) -> String {
         v.to_owned()

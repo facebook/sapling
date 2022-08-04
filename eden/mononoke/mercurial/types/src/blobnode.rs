@@ -12,14 +12,13 @@ use quickcheck::Arbitrary;
 use quickcheck::Gen;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
+/// Equivalent type from Mercurial's Rust code representing parents.
+use types::Parents as HgTypesParents;
 
 use crate::blob::HgBlob;
 use crate::hash;
 use crate::hash::Context;
 use crate::nodehash::HgNodeHash;
-
-/// Equivalent type from Mercurial's Rust code representing parents.
-use types::Parents as HgTypesParents;
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Serialize, Deserialize)]
@@ -190,13 +189,14 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::blob::HgBlob;
     use bytes::BytesMut;
     use futures::compat::Future01CompatExt;
     use futures_old::stream;
     use quickcheck::quickcheck;
     use tokio::runtime::Runtime;
+
+    use super::*;
+    use crate::blob::HgBlob;
 
     #[test]
     fn test_node_none() {

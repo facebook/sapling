@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use context::CoreContext;
 use context::PerfCounters;
 use futures_stats::FutureStats;
@@ -16,8 +19,6 @@ use mononoke_types::MPath;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
 use scuba_ext::ScubaVerbosityLevel;
-use std::collections::HashMap;
-use std::sync::Arc;
 
 const COLUMN_SIZE_LIMIT: usize = 500_1000;
 const FULL_ARGS_LOG_TAG: &str = "Full Command Args";

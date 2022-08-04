@@ -190,14 +190,16 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::io::Cursor;
+
     use anyhow::ensure;
     use anyhow::Result;
     use quickcheck::quickcheck;
     use quickcheck::Arbitrary;
     use quickcheck::Gen;
     use quickcheck::TestResult;
-    use std::io::Cursor;
+
+    use super::*;
 
     // Vec of non empty Vec<u8> for quickcheck::Arbitrary
     #[derive(Clone, Debug)]

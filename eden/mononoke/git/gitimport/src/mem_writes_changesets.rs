@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use anyhow::Error;
 use async_trait::async_trait;
 use changesets::ChangesetEntry;
@@ -19,9 +23,6 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::RepositoryId;
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 #[derive(Clone)]
 pub struct MemWritesChangesets<T: Changesets + Clone + 'static> {

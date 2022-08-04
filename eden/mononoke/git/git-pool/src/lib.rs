@@ -6,15 +6,16 @@
  */
 
 #![feature(never_type)]
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use git2::Error as Git2Error;
 use git2::Repository;
 use r2d2::ManageConnection;
 use r2d2::Pool;
-use std::path::PathBuf;
-use std::sync::Arc;
-use std::time::Duration;
 use tokio::sync::Semaphore;
 
 const POOL_CONNECTION_TIMEOUT_SEC: u64 = 3600;

@@ -10,7 +10,6 @@ use anyhow::Result;
 use bytes::Bytes;
 use futures::stream::Stream;
 use futures::stream::TryStreamExt;
-
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_revlog::changeset::RevlogChangeset;
 use mercurial_types::delta;
@@ -55,11 +54,11 @@ pub(crate) fn convert_to_revlog_changesets(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use futures::stream::iter;
     use itertools::equal;
     use mercurial_types::HgNodeHash;
+
+    use super::*;
 
     enum CheckResult {
         ExpectedOk(bool),

@@ -5,14 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use crate::AppExtension;
+use std::collections::HashMap;
+use std::collections::HashSet;
+
 use anyhow::Context;
 use anyhow::Result;
 use clap::Args;
 use environment::MononokeEnvironment;
 use slog::warn;
-use std::collections::HashMap;
-use std::collections::HashSet;
+
+use crate::AppExtension;
 
 /// Command line arguments for tweaking hooks
 #[derive(Args, Debug)]

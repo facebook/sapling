@@ -8,6 +8,12 @@
 //! Tool to regenerate filenodes. It can be used to fix up linknodes -
 //! but it should be used with caution! PLEASE RUN IT ONLY IF YOU KNOW WHAT YOU ARE DOING!
 
+use std::fs::File;
+use std::io::BufRead;
+use std::io::BufReader;
+use std::str::FromStr;
+use std::sync::Arc;
+
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Error;
@@ -26,11 +32,6 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use repo_derived_data::RepoDerivedDataRef;
 use slog::info;
-use std::fs::File;
-use std::io::BufRead;
-use std::io::BufReader;
-use std::str::FromStr;
-use std::sync::Arc;
 
 fn convert_to_cs(s: &str) -> Option<HgChangesetId> {
     let nodehash = HgNodeHash::from_str(s).unwrap_or_else(|_| panic!("malformed hash: {}", s));

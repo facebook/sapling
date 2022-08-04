@@ -9,9 +9,6 @@ use std::collections::HashSet;
 use std::ffi::OsString;
 use std::num::NonZeroU32;
 
-use super::cache::add_cachelib_args;
-use super::cache::CachelibSettings;
-use super::matches::MononokeMatches;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore_factory::PutBehaviour;
@@ -27,6 +24,10 @@ use repo_factory::ReadOnlyStorage;
 use slog::Record;
 use sql_ext::facebook::SharedConnectionPool;
 use strum::VariantNames;
+
+use super::cache::add_cachelib_args;
+use super::cache::CachelibSettings;
+use super::matches::MononokeMatches;
 
 pub const CONFIG_PATH: &str = "mononoke-config-path";
 pub const REPO_ID: &str = "repo-id";

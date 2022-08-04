@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+
 use anyhow::Context;
 use anyhow::Error;
 use context::CoreContext;
@@ -22,7 +24,6 @@ use path_hash::PathHashBytes;
 use sql::queries;
 use sql::Connection;
 use stats::prelude::*;
-use std::collections::HashSet;
 use thiserror::Error as DeriveError;
 use tunables::tunables;
 

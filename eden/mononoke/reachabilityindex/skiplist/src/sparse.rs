@@ -5,22 +5,23 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::anyhow;
-use anyhow::Error;
-use slog::debug;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::num::NonZeroU64;
 
-use crate::NodeFrontier;
-use crate::SkiplistNodeType;
+use anyhow::anyhow;
+use anyhow::Error;
 use changeset_fetcher::ArcChangesetFetcher;
 use common::fetch_generations;
 use common::fetch_parents_and_generations;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
+use slog::debug;
+
+use crate::NodeFrontier;
+use crate::SkiplistNodeType;
 
 /// Update skiplist index so that all heads are indexed.
 ///
@@ -211,14 +212,16 @@ fn remove_unreachable_nodes(
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::collections::VecDeque;
+
     use blobrepo::BlobRepo;
     use fbinit::FacebookInit;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
-    use std::collections::VecDeque;
     use tests_utils::drawdag::create_from_dag;
     use tests_utils::resolve_cs_id;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_index_changeset_linear(fb: FacebookInit) -> Result<(), Error> {

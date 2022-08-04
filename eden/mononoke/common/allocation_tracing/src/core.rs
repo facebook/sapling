@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
 use std::alloc::GlobalAlloc;
 use std::alloc::Layout;
 use std::alloc::System;
 use std::cell::UnsafeCell;
 use std::mem;
 use std::thread_local;
+
+use anyhow::Error;
 
 thread_local! {
     // NOTE: We use an UnsafeCell here: ALLOCATION_STATS is a thread local that is never borrowed

@@ -135,8 +135,9 @@ impl BlobstoreValue for ContentMetadata {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use quickcheck::quickcheck;
+
+    use super::*;
 
     quickcheck! {
         fn content_metadata_thrift_roundtrip(cab: ContentMetadata) -> bool {

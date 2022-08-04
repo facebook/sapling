@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::fs;
+use std::path::Path;
+use std::sync::Arc;
+
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
@@ -30,9 +34,6 @@ use futures_old::future::Future;
 use futures_old::future::IntoFuture;
 use futures_old::stream;
 use futures_old::stream::Stream;
-use std::fs;
-use std::path::Path;
-use std::sync::Arc;
 
 fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("Tool to upload globalrevs from commits saved in file")

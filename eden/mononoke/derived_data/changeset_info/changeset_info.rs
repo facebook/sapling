@@ -259,14 +259,14 @@ fn get_title(message: &str) -> &str {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use mononoke_types::BonsaiChangeset;
     use mononoke_types::BonsaiChangesetMut;
     use mononoke_types::DateTime;
     use mononoke_types::FileChange;
     use mononoke_types::MPath;
-
     use sorted_vector_map::sorted_vector_map;
+
+    use super::*;
 
     #[fbinit::test]
     fn changeset_info_title_test() {

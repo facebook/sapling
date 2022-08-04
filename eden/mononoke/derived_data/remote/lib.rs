@@ -5,12 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use derived_data_service_if::types::DerivationType;
-
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Args;
 use derived_data_service_if::types as thrift;
+use derived_data_service_if::types::DerivationType;
 use mononoke_types::ChangesetId;
 
 #[derive(Clone, Debug)]

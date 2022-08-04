@@ -12,6 +12,38 @@
 //  3. Add a new validation method
 //  4. Add the method to the match/case in ValidatingVisitor::visit()
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt;
+use std::hash::Hash;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
+use std::time::Instant;
+
+use anyhow::Error;
+use async_trait::async_trait;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::BonsaiHgMappingEntry;
+use bulkops::Direction;
+use cloned::cloned;
+use context::CoreContext;
+use derive_more::AddAssign;
+use fbinit::FacebookInit;
+use futures::future::try_join_all;
+use futures::stream::TryStreamExt;
+use itertools::Itertools;
+use maplit::hashset;
+use mercurial_types::HgChangesetId;
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
+use phases::Phase;
+use phases::Phases;
+use scuba_ext::MononokeScubaSampleBuilder;
+use slog::info;
+use slog::warn;
+use slog::Logger;
+use stats::prelude::*;
+
 use crate::commands::JobParams;
 use crate::commands::JobWalkParams;
 use crate::commands::RepoSubcommandParams;
@@ -42,37 +74,6 @@ use crate::detail::walk::StepRoute;
 use crate::detail::walk::TailingWalkVisitor;
 use crate::detail::walk::VisitOne;
 use crate::detail::walk::WalkVisitor;
-
-use anyhow::Error;
-use async_trait::async_trait;
-use bonsai_hg_mapping::BonsaiHgMapping;
-use bonsai_hg_mapping::BonsaiHgMappingEntry;
-use bulkops::Direction;
-use cloned::cloned;
-use context::CoreContext;
-use derive_more::AddAssign;
-use fbinit::FacebookInit;
-use futures::future::try_join_all;
-use futures::stream::TryStreamExt;
-use itertools::Itertools;
-use maplit::hashset;
-use mercurial_types::HgChangesetId;
-use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
-use phases::Phase;
-use phases::Phases;
-use scuba_ext::MononokeScubaSampleBuilder;
-use slog::info;
-use slog::warn;
-use slog::Logger;
-use stats::prelude::*;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::fmt;
-use std::hash::Hash;
-use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
-use std::time::Instant;
 
 pub const NODES: &str = "nodes";
 pub const EDGES: &str = "edges";

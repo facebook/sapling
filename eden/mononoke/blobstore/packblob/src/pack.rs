@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::envelope::PackEnvelope;
-use crate::store;
+use std::collections::HashMap;
+use std::io;
+use std::io::Cursor;
+use std::io::Write;
 
 use anyhow::bail;
 use anyhow::format_err;
@@ -30,14 +32,13 @@ use packblob_thrift::SingleValue;
 use packblob_thrift::StorageEnvelope;
 use packblob_thrift::StorageFormat;
 use packblob_thrift::ZstdFromDictValue;
-use std::collections::HashMap;
-use std::io;
-use std::io::Cursor;
-use std::io::Write;
 use zstd::bulk::Compressor;
 use zstd::dict::EncoderDictionary;
 use zstd::stream::read::Decoder as ZstdDecoder;
 use zstd::stream::write::Encoder as ZstdEncoder;
+
+use crate::envelope::PackEnvelope;
+use crate::store;
 
 /// A block of data compressed on its own, rather than in pack format
 pub struct SingleCompressed {
@@ -378,12 +379,13 @@ fn split_key_prefix(key: &str) -> (&str, &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use bytes::Bytes;
     use rand::Rng;
     use rand::RngCore;
     use rand::SeedableRng;
     use rand_xorshift::XorShiftRng;
+
+    use super::*;
 
     #[test]
     fn decode_independent_zstd_test() -> Result<()> {

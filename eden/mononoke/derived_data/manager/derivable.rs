@@ -13,6 +13,7 @@ use std::fmt::Debug;
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
+use derived_data_service_if::types::DerivedData;
 use futures::future::try_join;
 use futures::stream;
 use futures::stream::StreamExt;
@@ -21,8 +22,6 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 
 use crate::context::DerivationContext;
-
-use derived_data_service_if::types::DerivedData;
 
 /// Defines how derivation occurs.  Each derived data type must implement
 /// `BonsaiDerivable` to describe how to derive a new value from its inputs

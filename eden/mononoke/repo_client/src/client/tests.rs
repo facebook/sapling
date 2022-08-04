@@ -7,7 +7,6 @@
 
 #![cfg(test)]
 
-use super::*;
 use blobstore::Loadable;
 use fbinit::FacebookInit;
 use fixtures::ManyFilesDirs;
@@ -24,6 +23,8 @@ use mononoke_types_mocks::changesetid::ONES_CSID;
 use scuba_ext::MononokeScubaSampleBuilder;
 use serde_json::json;
 use tests_utils::CreateCommitContext;
+
+use super::*;
 
 #[test]
 fn test_parsing_caps_simple() {

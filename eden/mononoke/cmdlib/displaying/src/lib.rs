@@ -9,12 +9,12 @@ mod changeset;
 mod content;
 mod mercurial;
 
+use std::io::Write;
+
+use anyhow::Result;
 pub use changeset::DisplayChangeset;
 pub use content::display_content;
 pub use mercurial::display_hg_manifest;
-
-use anyhow::Result;
-use std::io::Write;
 
 /// Hexdump a block of data to the output stream.
 pub fn hexdump(mut w: impl Write, data: impl AsRef<[u8]>) -> Result<()> {

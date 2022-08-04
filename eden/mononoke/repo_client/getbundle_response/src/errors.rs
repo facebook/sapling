@@ -5,10 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use thiserror::Error;
-
 use filestore::FetchKey;
 use mercurial_types::HgChangesetId;
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {

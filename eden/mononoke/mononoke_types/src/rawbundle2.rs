@@ -125,8 +125,9 @@ impl Arbitrary for RawBundle2 {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use quickcheck::quickcheck;
+
+    use super::*;
 
     quickcheck! {
         fn thrift_roundtrip(fc: RawBundle2) -> bool {

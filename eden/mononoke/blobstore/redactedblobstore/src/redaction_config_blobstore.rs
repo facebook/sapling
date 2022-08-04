@@ -5,17 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::Result;
 use async_trait::async_trait;
-
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use prefixblob::PrefixBlobstore;
-
-use std::sync::Arc;
 
 /// Blobstore where redaction sets are stored
 #[facet::facet]

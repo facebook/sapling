@@ -5,7 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::common::get_file_nodes;
+use std::collections::HashSet;
+use std::fs::File;
+use std::io::BufRead;
+use std::io::BufReader;
+
 use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Context;
@@ -43,11 +47,8 @@ use repo_factory::RepoFactory;
 use slog::error;
 use slog::info;
 use slog::Logger;
-use std::collections::HashSet;
-use std::fs::File;
-use std::io::BufRead;
-use std::io::BufReader;
 
+use crate::common::get_file_nodes;
 use crate::error::SubcommandError;
 
 pub const REDACTION: &str = "redaction";

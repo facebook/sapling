@@ -5,10 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use ascii::AsciiString;
+use std::collections::HashMap;
+use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Error;
+use ascii::AsciiString;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
@@ -40,9 +43,6 @@ use mononoke_types::DateTime;
 use mononoke_types::MPath;
 use mononoke_types::RepositoryId;
 use sql_construct::SqlConstruct;
-use std::collections::HashMap;
-use std::str::FromStr;
-use std::sync::Arc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;

@@ -5,20 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Result;
-use async_trait::async_trait;
-use governor::clock::DefaultClock;
-use governor::state::direct::NotKeyed;
-use governor::state::InMemoryState;
-use governor::Jitter;
-use governor::Quota;
-use governor::RateLimiter;
-use nonzero_ext::nonzero;
 use std::fmt;
 use std::num::NonZeroU32;
 use std::num::NonZeroUsize;
 use std::time::Duration;
 
+use anyhow::Result;
+use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
@@ -26,7 +19,14 @@ use blobstore::BlobstorePutOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
+use governor::clock::DefaultClock;
+use governor::state::direct::NotKeyed;
+use governor::state::InMemoryState;
+use governor::Jitter;
+use governor::Quota;
+use governor::RateLimiter;
 use mononoke_types::BlobstoreBytes;
+use nonzero_ext::nonzero;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ThrottleOptions {

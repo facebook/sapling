@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use crate::HgFileNodeId;
-use crate::HgNodeHash;
-use crate::Type;
 use mononoke_types::ContentId;
 use mononoke_types::RepoPath;
 use thiserror::Error;
+
+use crate::HgFileNodeId;
+use crate::HgNodeHash;
+use crate::Type;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {

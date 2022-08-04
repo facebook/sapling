@@ -6,9 +6,10 @@
  */
 
 #![feature(hash_drain_filter)]
+use std::sync::Arc;
+
 use anyhow::Result;
 use async_trait::async_trait;
-use std::sync::Arc;
 
 #[cfg(fbcode_build)]
 mod facebook;

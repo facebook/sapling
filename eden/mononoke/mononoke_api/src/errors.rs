@@ -5,6 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::backtrace::Backtrace;
+use std::convert::Infallible;
+use std::error::Error as StdError;
+use std::fmt;
+use std::sync::Arc;
+
+use anyhow::Error;
 use blame::BlameError;
 use blobstore::LoadableError;
 use bookmarks_movement::describe_hook_rejections;
@@ -15,16 +22,9 @@ use itertools::Itertools;
 use megarepo_error::MegarepoError;
 use pushrebase::PushrebaseError;
 use repo_authorization::AuthorizationError;
-use std::backtrace::Backtrace;
-use std::convert::Infallible;
-use std::error::Error as StdError;
-use std::fmt;
-use std::sync::Arc;
+use thiserror::Error;
 
 use crate::path::MononokePath;
-
-use anyhow::Error;
-use thiserror::Error;
 
 #[derive(Clone, Debug)]
 pub struct InternalError(Arc<Error>);

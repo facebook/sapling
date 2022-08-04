@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use serde::de;
-use serde::ser;
 use std::fmt;
 use std::marker::PhantomData;
 use std::str::FromStr;
+
+use serde::de;
+use serde::ser;
 
 struct FromStrVisitor<T> {
     _phantom: PhantomData<T>,

@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use anyhow::Error;
 use blame::fetch_content_for_blame;
 use blame::BlameRoot;
@@ -28,8 +31,6 @@ use manifest::find_intersection_of_diffs;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
 use repo_derived_data::RepoDerivedDataRef;
-use std::collections::HashSet;
-use std::sync::Arc;
 use unodes::find_unode_rename_sources;
 use unodes::RootUnodeManifestId;
 

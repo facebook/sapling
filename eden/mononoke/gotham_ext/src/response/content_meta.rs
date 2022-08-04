@@ -5,12 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::content_encoding::ContentEncoding;
-
 use super::stream::CompressedResponseStream;
 use super::stream::ResponseStream;
 use super::stream_ext::CaptureFirstErr;
 use super::stream_ext::EndOnErr;
+use crate::content_encoding::ContentEncoding;
 
 pub trait ContentMetaProvider {
     /// Provide the content (i.e. Content-Encoding) for the underlying content. This will be sent

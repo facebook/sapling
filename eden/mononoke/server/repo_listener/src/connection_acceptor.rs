@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use hostname::get_hostname;
-use hyper::server::conn::Http;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io;
@@ -24,6 +22,7 @@ use anyhow::Error;
 use anyhow::Result;
 use bytes::Bytes;
 use cached_config::ConfigStore;
+use cmdlib::monitoring::ReadyFlagService;
 use connection_security_checker::ConnectionSecurityChecker;
 use edenapi_service::EdenApi;
 use failure_ext::SlogKVError;
@@ -41,13 +40,18 @@ use futures_util::future::AbortHandle;
 use futures_util::future::FutureExt;
 use futures_util::stream::StreamExt;
 use futures_util::stream::TryStreamExt;
+use hostname::get_hostname;
+use hyper::server::conn::Http;
 use lazy_static::lazy_static;
 use metaconfig_types::CommonConfig;
+use metadata::Metadata;
 use openssl::ssl::Ssl;
 use openssl::ssl::SslAcceptor;
 use permission_checker::AclProvider;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
+use qps::Qps;
+use quiet_stream::QuietShutdownStream;
 use rate_limiting::RateLimitEnvironment;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -56,6 +60,12 @@ use slog::error;
 use slog::info;
 use slog::warn;
 use slog::Logger;
+use sshrelay::IoStream;
+use sshrelay::SshDecoder;
+use sshrelay::SshEncoder;
+use sshrelay::SshMsg;
+use sshrelay::Stdio;
+use stats::prelude::*;
 use tokio::io::AsyncRead;
 use tokio::io::AsyncWrite;
 use tokio::net::TcpListener;
@@ -64,17 +74,6 @@ use tokio::task::JoinHandle;
 use tokio_openssl::SslStream;
 use tokio_util::codec::FramedRead;
 use tokio_util::codec::FramedWrite;
-
-use cmdlib::monitoring::ReadyFlagService;
-use metadata::Metadata;
-use qps::Qps;
-use quiet_stream::QuietShutdownStream;
-use sshrelay::IoStream;
-use sshrelay::SshDecoder;
-use sshrelay::SshEncoder;
-use sshrelay::SshMsg;
-use sshrelay::Stdio;
-use stats::prelude::*;
 
 use crate::errors::ErrorKind;
 use crate::http_service::MononokeHttpService;

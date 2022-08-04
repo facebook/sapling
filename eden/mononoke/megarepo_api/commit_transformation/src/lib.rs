@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Error;
@@ -34,8 +37,6 @@ use mononoke_types::MPath;
 use mononoke_types::TrackedFileChange;
 use pushrebase::find_bonsai_diff;
 use sorted_vector_map::SortedVectorMap;
-use std::collections::HashMap;
-use std::sync::Arc;
 use thiserror::Error;
 
 pub type MultiMover = Arc<dyn Fn(&MPath) -> Result<Vec<MPath>, Error> + Send + Sync + 'static>;
@@ -581,7 +582,8 @@ pub async fn copy_file_contents<'a>(
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::collections::BTreeMap;
+
     use anyhow::bail;
     use blobrepo::save_bonsai_changesets;
     use fbinit::FacebookInit;
@@ -589,10 +591,11 @@ mod test {
     use maplit::hashmap;
     use mononoke_types::ContentId;
     use mononoke_types::FileType;
-    use std::collections::BTreeMap;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::list_working_copy_utf8;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
 
     #[test]
     fn test_multi_mover_simple() -> Result<(), Error> {

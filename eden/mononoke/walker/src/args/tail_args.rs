@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::time::Duration;
+
 use anyhow::Error;
 use bulkops::Direction;
 use clap::Args;
@@ -13,18 +15,16 @@ use metaconfig_types::MetadataDatabaseConfig;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
-use std::time::Duration;
-
-use crate::detail::checkpoint::CheckpointsByName;
-use crate::detail::checkpoint::SqlCheckpoints;
-use crate::detail::tail::ChunkingParams;
-use crate::detail::tail::ClearStateParams;
-use crate::detail::tail::TailParams;
 
 use crate::args::arg_types::ChunkByPublicArg;
 use crate::args::arg_types::InternedTypeArg;
 use crate::args::arg_types::DEFAULT_INTERNED_TYPES_STR;
 use crate::args::graph_arg_types::NodeTypeArg;
+use crate::detail::checkpoint::CheckpointsByName;
+use crate::detail::checkpoint::SqlCheckpoints;
+use crate::detail::tail::ChunkingParams;
+use crate::detail::tail::ClearStateParams;
+use crate::detail::tail::TailParams;
 
 #[derive(Args, Debug)]
 pub struct TailArgs {

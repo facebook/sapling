@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use bookmark_renaming::get_bookmark_renamers;
@@ -20,8 +23,6 @@ use mononoke_types::RepositoryId;
 use movers::get_movers;
 use movers::Mover;
 use movers::Movers;
-use std::collections::HashSet;
-use std::sync::Arc;
 
 #[derive(Clone)]
 pub enum CommitSyncDataProvider {

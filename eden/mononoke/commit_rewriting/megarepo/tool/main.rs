@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::num::NonZeroU64;
+use std::sync::Arc;
+
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
@@ -59,8 +62,6 @@ use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::NoReplicaLagMonitor;
 use sql_ext::replication::ReplicaLagMonitor;
 use sql_ext::replication::WaitForReplicationConfig;
-use std::num::NonZeroU64;
-use std::sync::Arc;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
@@ -77,6 +78,22 @@ mod gradual_merge;
 mod manual_commit_sync;
 mod merging;
 mod sync_diamond_merge;
+
+use megarepolib::chunking::even_chunker_with_max_size;
+use megarepolib::chunking::parse_chunking_hint;
+use megarepolib::chunking::path_chunker_from_hint;
+use megarepolib::chunking::Chunker;
+use megarepolib::commit_sync_config_utils::diff_small_repo_commit_sync_configs;
+use megarepolib::common::create_and_save_bonsai;
+use megarepolib::common::delete_files_in_chunks;
+use megarepolib::common::StackPosition;
+use megarepolib::history_fixup_delete::create_history_fixup_deletes;
+use megarepolib::history_fixup_delete::HistoryFixupDeletes;
+use megarepolib::perform_move;
+use megarepolib::perform_stack_move;
+use megarepolib::pre_merge_delete::create_pre_merge_delete;
+use megarepolib::pre_merge_delete::PreMergeDelete;
+use megarepolib::working_copy::get_working_copy_paths_by_prefixes;
 
 use crate::cli::cs_args_from_matches;
 use crate::cli::get_catchup_head_delete_commits_cs_args_factory;
@@ -136,21 +153,6 @@ use crate::cli::TO_MERGE_CS_ID;
 use crate::cli::VERSION;
 use crate::cli::WAIT_SECS;
 use crate::merging::perform_merge;
-use megarepolib::chunking::even_chunker_with_max_size;
-use megarepolib::chunking::parse_chunking_hint;
-use megarepolib::chunking::path_chunker_from_hint;
-use megarepolib::chunking::Chunker;
-use megarepolib::commit_sync_config_utils::diff_small_repo_commit_sync_configs;
-use megarepolib::common::create_and_save_bonsai;
-use megarepolib::common::delete_files_in_chunks;
-use megarepolib::common::StackPosition;
-use megarepolib::history_fixup_delete::create_history_fixup_deletes;
-use megarepolib::history_fixup_delete::HistoryFixupDeletes;
-use megarepolib::perform_move;
-use megarepolib::perform_stack_move;
-use megarepolib::pre_merge_delete::create_pre_merge_delete;
-use megarepolib::pre_merge_delete::PreMergeDelete;
-use megarepolib::working_copy::get_working_copy_paths_by_prefixes;
 
 async fn run_move<'a>(
     ctx: CoreContext,

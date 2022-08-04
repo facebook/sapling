@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use changesets::ChangesetsArc;
 use context::CoreContext;
 use ephemeral_blobstore::Bubble;
@@ -12,7 +14,6 @@ use ephemeral_blobstore::EphemeralChangesets;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
-use std::sync::Arc;
 
 use super::DerivationAssigner;
 use super::DerivationAssignment;

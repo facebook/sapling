@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::time::Duration;
+
 use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
@@ -27,7 +29,6 @@ use pushrebase_hook::PushrebaseTransactionHook;
 use pushrebase_hook::RebasedChangesets;
 use rand::Rng;
 use sql::Transaction;
-use std::time::Duration;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::bookmark;
 use tests_utils::resolve_cs_id;

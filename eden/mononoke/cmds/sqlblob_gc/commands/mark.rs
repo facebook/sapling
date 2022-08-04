@@ -7,8 +7,6 @@
 
 use std::sync::Arc;
 
-use crate::utils;
-use crate::MononokeSQLBlobGCArgs;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
@@ -22,8 +20,10 @@ use mononoke_app::MononokeApp;
 use retry::retry;
 use slog::info;
 use slog::Logger;
-
 use sqlblob::Sqlblob;
+
+use crate::utils;
+use crate::MononokeSQLBlobGCArgs;
 
 const BASE_RETRY_DELAY_MS: u64 = 1000;
 const RETRIES: usize = 3;

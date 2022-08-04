@@ -16,16 +16,14 @@ use blobstore::BlobstoreBytes;
 use blobstore::BlobstoreGetData;
 use bytes::Bytes;
 use context::CoreContext;
+use derived_data_manager::dependencies;
+use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivationContext;
+use derived_data_service_if::types as thrift;
 use fbinit::FacebookInit;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use test_repo_factory::TestRepoFactory;
-
-use derived_data_manager::dependencies;
-use derived_data_manager::BonsaiDerivable;
-use derived_data_manager::DerivationContext;
-
-use derived_data_service_if::types as thrift;
 
 #[derive(Clone, Debug)]
 pub struct DerivedGeneration {

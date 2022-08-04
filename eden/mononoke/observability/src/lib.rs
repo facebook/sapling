@@ -10,7 +10,8 @@ mod context;
 mod drain;
 mod scuba;
 
-pub use crate::config::ScubaVerbosityLevel;
-pub use crate::scuba::ScubaLoggingDecisionFields;
 pub use context::ObservabilityContext;
 pub use drain::DynamicLevelDrain;
+
+pub use crate::config::ScubaVerbosityLevel;
+pub use crate::scuba::ScubaLoggingDecisionFields;

@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::fs::File;
+use std::io::Read;
+
 use anyhow::Context;
 use anyhow::Result;
 use mercurial_types::HgChangesetId;
 use mononoke_types::DateTime;
 use serde_derive::Deserialize;
-use std::fs::File;
-use std::io::Read;
 use toml::value;
 
 /// Configuration for the bonsai verify tool.

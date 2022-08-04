@@ -5,11 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use core::future::Future;
+use std::str;
+use std::sync::Arc;
+
 use anyhow::format_err;
 use anyhow::Error;
 use bytes::Bytes;
 use context::CoreContext;
-use core::future::Future;
 use filestore::StoreRequest;
 use futures::stream;
 use futures::Stream;
@@ -27,8 +30,6 @@ use rand::thread_rng;
 use rand::Rng;
 use slog::error;
 use slog::warn;
-use std::str;
-use std::sync::Arc;
 use tokio::sync::Semaphore;
 use tokio::time::sleep;
 use tokio::time::Duration;

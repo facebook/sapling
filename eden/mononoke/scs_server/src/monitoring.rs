@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+use std::time::Duration;
+
 use futures::StreamExt;
 use mononoke_api::CoreContext;
 use mononoke_api::Mononoke;
 use slog::warn;
-use std::sync::Arc;
-use std::time::Duration;
 
 const SUBMIT_STATS_ONCE_PER_SECS: u64 = 10;
 

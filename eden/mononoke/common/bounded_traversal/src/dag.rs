@@ -5,9 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use super::common::Either2;
-use super::common::NodeLocation;
-use super::Iter;
+use std::collections::HashMap;
+use std::collections::VecDeque;
+use std::future::Future;
+use std::hash::Hash;
+use std::mem;
+use std::pin::Pin;
+use std::task::Context;
+use std::task::Poll;
+
 use either::Either;
 use futures::future::join;
 use futures::future::ready;
@@ -18,14 +24,9 @@ use futures::ready;
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
 
-use std::collections::HashMap;
-use std::collections::VecDeque;
-use std::future::Future;
-use std::hash::Hash;
-use std::mem;
-use std::pin::Pin;
-use std::task::Context;
-use std::task::Poll;
+use super::common::Either2;
+use super::common::NodeLocation;
+use super::Iter;
 
 /// `bounded_traversal_dag` traverses implicit asynchronous DAG specified by `init`
 /// and `unfold` arguments, and it also does backward pass with `fold` operation.

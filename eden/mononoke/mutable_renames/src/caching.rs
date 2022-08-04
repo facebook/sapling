@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::time::Duration;
+
 use abomonation_derive::Abomonation;
 use anyhow::Context;
 use anyhow::Error;
@@ -30,9 +34,6 @@ use mononoke_types::MPath;
 use mutable_rename_thrift as thrift;
 use path_hash::PathHash;
 use path_hash::PathHashBytes;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::time::Duration;
 
 use crate::MutableRenameEntry;
 use crate::MutableRenames;

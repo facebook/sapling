@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::derive::derive_unode_manifest;
-use crate::derive::derive_unode_manifest_stack;
+use std::collections::HashMap;
+
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
@@ -23,6 +23,7 @@ use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
+use derived_data_service_if::types as thrift;
 use futures::future::try_join_all;
 use futures::TryFutureExt;
 use metaconfig_types::UnodeVersion;
@@ -35,9 +36,9 @@ use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
 use slog::debug;
 use stats::prelude::*;
-use std::collections::HashMap;
 
-use derived_data_service_if::types as thrift;
+use crate::derive::derive_unode_manifest;
+use crate::derive::derive_unode_manifest_stack;
 
 define_stats! {
     prefix = "mononoke.derived_data.unodes";
@@ -246,7 +247,6 @@ pub(crate) fn get_file_changes(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use blobrepo::BlobRepo;
     use blobstore::Loadable;
     use bookmarks::BookmarkName;
@@ -279,6 +279,8 @@ mod test {
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
 
     async fn fetch_manifest_by_cs_id(
         ctx: &CoreContext,

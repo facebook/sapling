@@ -5,10 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::time::Duration;
+
 use anyhow::Error;
 use fbinit::FacebookInit;
 use stats::prelude::*;
-use std::time::Duration;
 use time_window_counter::BoxGlobalTimeWindowCounter;
 use time_window_counter::GlobalTimeWindowCounterBuilder;
 use tokio::time;
@@ -108,17 +109,17 @@ pub async fn allow_consistent_routing<B: PopularityBuilder>(
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::sync::atomic::AtomicU64;
+    use std::sync::atomic::Ordering;
+    use std::sync::Arc;
 
     use async_trait::async_trait;
     use futures::future;
     use mononoke_types_mocks::contentid::ONES_CTID;
     use mononoke_types_mocks::hash::ONES_SHA256;
-    use std::sync::atomic::AtomicU64;
-    use std::sync::atomic::Ordering;
-    use std::sync::Arc;
     use time_window_counter::GlobalTimeWindowCounter;
 
+    use super::*;
     use crate::config::ObjectPopularity;
     use crate::config::ServerConfig;
 

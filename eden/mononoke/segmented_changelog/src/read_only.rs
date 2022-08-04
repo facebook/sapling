@@ -14,13 +14,11 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::prelude::*;
-
-use stats::prelude::*;
-
 use context::CoreContext;
+use futures::prelude::*;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
+use stats::prelude::*;
 
 use crate::idmap::IdMap;
 use crate::CloneData;

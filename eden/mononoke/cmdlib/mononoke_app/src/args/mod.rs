@@ -21,8 +21,6 @@ mod runtime;
 mod shutdown_timeout;
 mod tunables;
 
-pub use self::tunables::TunablesArgs;
-pub use crate::fb303::Fb303Args;
 pub use acl::AclArgs;
 pub use changeset::ChangesetArgs;
 pub use config::ConfigArgs;
@@ -40,6 +38,9 @@ pub use repo_blobstore::RepoBlobstoreArgs;
 pub use repo_filter::RepoFilterAppExtension;
 pub use runtime::RuntimeArgs;
 pub use shutdown_timeout::ShutdownTimeoutArgs;
+
+pub use self::tunables::TunablesArgs;
+pub use crate::fb303::Fb303Args;
 
 /// NOTE: Don't use this. "configerator:" prefix don't need to exist and is going to be removed.
 /// Pass raw path instead.

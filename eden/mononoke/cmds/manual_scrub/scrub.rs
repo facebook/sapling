@@ -5,9 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::time::Instant;
+
 use anyhow::Error;
 use anyhow::Result;
+use blobstore::Blobstore;
 use cloned::cloned;
+use context::CoreContext;
 use futures::channel::mpsc;
 use futures::future;
 use futures::future::FutureExt;
@@ -15,10 +19,6 @@ use futures::sink::SinkExt;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use std::time::Instant;
-
-use blobstore::Blobstore;
-use context::CoreContext;
 
 use crate::checkpoint::FileCheckpoint;
 use crate::progress::Progress;

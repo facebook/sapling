@@ -91,11 +91,11 @@ impl<T: BlobstorePutOps> BlobstorePutOps for ReadOnlyBlobstore<T> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
-
     use memblob::Memblob;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_error_on_write(fb: FacebookInit) {

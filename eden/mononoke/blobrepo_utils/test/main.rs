@@ -14,17 +14,16 @@ mod test {
             mod $test_name {
                 use std::collections::HashSet;
 
+                use blobrepo_hg::BlobRepoHg;
+                use blobrepo_utils::BonsaiMFVerify;
+                use blobrepo_utils::BonsaiMFVerifyResult;
+                use context::CoreContext;
                 use fbinit::FacebookInit;
                 use fixtures::TestRepoFixture;
                 use futures::compat::Future01CompatExt;
                 use futures::TryStreamExt;
                 use futures_old::Future;
                 use futures_old::Stream;
-
-                use blobrepo_hg::BlobRepoHg;
-                use blobrepo_utils::BonsaiMFVerify;
-                use blobrepo_utils::BonsaiMFVerifyResult;
-                use context::CoreContext;
 
                 use crate::$repo;
 

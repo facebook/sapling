@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use reloader::Loader;
-use reloader::Reloader;
 use std::cmp::min;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -18,37 +16,36 @@ use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use bytes::Bytes;
+use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use cloned::cloned;
+use common::advance_bfs_layer;
+use common::changesets_with_generation_numbers;
+use common::check_if_node_exists;
+use common::fetch_generation;
+use common::get_parents;
 use context::CoreContext;
 use context::PerfCounterType;
 use dashmap::DashMap;
+use fbthrift::compact_protocol;
 use futures::future::try_join_all;
 use futures::stream::futures_unordered::FuturesUnordered;
 use futures::stream::TryStreamExt;
 use futures_util::try_join;
 use maplit::hashmap;
 use maplit::hashset;
-use slog::info;
-use slog::Logger;
-use tokio::task;
-
-use changeset_fetcher::ArcChangesetFetcher;
-use changeset_fetcher::ChangesetFetcher;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use mononoke_types::FIRST_GENERATION;
-
-use common::advance_bfs_layer;
-use common::changesets_with_generation_numbers;
-use common::check_if_node_exists;
-use common::fetch_generation;
-use common::get_parents;
 use reachabilityindex::errors::*;
 use reachabilityindex::LeastCommonAncestorsHint;
 use reachabilityindex::NodeFrontier;
 use reachabilityindex::ReachabilityIndex;
-
-use fbthrift::compact_protocol;
+use reloader::Loader;
+use reloader::Reloader;
+use slog::info;
+use slog::Logger;
+use tokio::task;
 
 pub mod sparse;
 
@@ -1139,6 +1136,7 @@ impl SkiplistIndex {
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashSet;
     use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::Ordering;
     use std::sync::Arc;
@@ -1150,6 +1148,14 @@ mod test {
     use context::CoreContext;
     use dashmap::DashMap;
     use fbinit::FacebookInit;
+    use fixtures::BranchEven;
+    use fixtures::BranchUneven;
+    use fixtures::BranchWide;
+    use fixtures::Linear;
+    use fixtures::MergeEven;
+    use fixtures::MergeUneven;
+    use fixtures::TestRepoFixture;
+    use fixtures::UnsharedMergeEven;
     use futures::compat::Future01CompatExt;
     use futures::stream::iter;
     use futures::stream::StreamExt;
@@ -1162,21 +1168,12 @@ mod test {
     use futures_util::future::FutureExt;
     use futures_util::future::TryFutureExt;
     use revset::AncestorsNodeStream;
-    use std::collections::HashSet;
-
-    use super::*;
-    use fixtures::BranchEven;
-    use fixtures::BranchUneven;
-    use fixtures::BranchWide;
-    use fixtures::Linear;
-    use fixtures::MergeEven;
-    use fixtures::MergeUneven;
-    use fixtures::TestRepoFixture;
-    use fixtures::UnsharedMergeEven;
     use test_helpers::string_to_bonsai;
     use test_helpers::test_branch_wide_reachability;
     use test_helpers::test_linear_reachability;
     use test_helpers::test_merge_uneven_reachability;
+
+    use super::*;
 
     #[tokio::test]
     async fn simple_init() {

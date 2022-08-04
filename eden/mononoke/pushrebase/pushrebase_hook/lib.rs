@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::Error;
 use async_trait::async_trait;
 use bookmarks::BookmarkTransactionError;
@@ -13,7 +15,6 @@ use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::Timestamp;
 use sql::Transaction;
-use std::collections::HashMap;
 
 pub type RebasedChangesets = HashMap<ChangesetId, (ChangesetId, Timestamp)>;
 

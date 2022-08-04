@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Error;
@@ -17,8 +20,6 @@ use futures::stream::TryStreamExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
-use std::collections::HashMap;
-use std::sync::Arc;
 
 use crate::ChangesetFetcher;
 

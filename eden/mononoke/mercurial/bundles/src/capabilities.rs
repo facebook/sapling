@@ -90,8 +90,9 @@ pub fn encode_capabilities(caps: Capabilities) -> Bytes {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use maplit::hashmap;
+
+    use super::*;
 
     #[test]
     fn caps_roundtrip() {

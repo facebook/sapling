@@ -8,8 +8,13 @@
 use std::time::Duration;
 
 use anyhow::Error;
+use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
+use blobstore::OverwriteStatus;
 use clap::ArgEnum;
+use context::PerfCounters;
 use futures_stats::FutureStats;
+use metaconfig_types::BlobstoreId;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
 use strum_macros::AsRefStr;
@@ -17,12 +22,6 @@ use strum_macros::Display;
 use strum_macros::EnumString;
 use strum_macros::EnumVariantNames;
 use time_ext::DurationExt;
-
-use blobstore::BlobstoreGetData;
-use blobstore::BlobstoreIsPresent;
-use blobstore::OverwriteStatus;
-use context::PerfCounters;
-use metaconfig_types::BlobstoreId;
 use tunables::tunables;
 
 const SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(5);

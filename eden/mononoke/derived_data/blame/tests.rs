@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::fetch_blame_compat;
-use crate::CompatBlame;
+use std::collections::HashMap;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use blobrepo::BlobRepo;
@@ -19,12 +19,14 @@ use metaconfig_types::BlameVersion;
 use mononoke_types::blame::BlameRejected;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
-use std::collections::HashMap;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::create_commit;
 use tests_utils::store_files;
 use tests_utils::store_rename;
 use tests_utils::CreateCommitContext;
+
+use crate::fetch_blame_compat;
+use crate::CompatBlame;
 
 // File with multiple changes and a merge
 const F0: &[&str] = &[

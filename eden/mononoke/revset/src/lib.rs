@@ -38,18 +38,16 @@ mod ancestorscombinators;
 pub use crate::ancestorscombinators::DifferenceOfUnionsOfAncestorsNodeStream;
 
 mod range;
-pub use crate::range::RangeNodeStream;
-
 use uniqueheap::UniqueHeap;
 
+pub use crate::range::RangeNodeStream;
 pub use crate::test::*;
 
 #[cfg(test)]
 mod test {
     pub use ascii;
-    pub use quickcheck;
-
     pub use fixtures;
+    pub use quickcheck;
 }
 #[cfg(not(test))]
 mod test {}

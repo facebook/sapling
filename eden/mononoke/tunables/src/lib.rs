@@ -6,7 +6,10 @@
  */
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::ops::Deref;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicI64;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
@@ -23,13 +26,8 @@ use once_cell::sync::OnceCell;
 use slog::debug;
 use slog::warn;
 use slog::Logger;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::AtomicI64;
-
 use tunables_derive::Tunables;
 use tunables_structs::Tunables as TunablesStruct;
-
-use std::collections::HashMap;
 
 static TUNABLES: OnceCell<MononokeTunables> = OnceCell::new();
 static TUNABLES_WORKER_STATE: OnceCell<Mutex<TunablesWorkerState>> = OnceCell::new();
@@ -457,10 +455,12 @@ pub fn override_tunables(new_tunables: Option<Arc<MononokeTunables>>) {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use maplit::hashmap;
     use std::collections::HashMap;
     use std::sync::atomic::AtomicBool;
+
+    use maplit::hashmap;
+
+    use super::*;
 
     #[derive(Tunables, Default)]
     struct TestTunables {

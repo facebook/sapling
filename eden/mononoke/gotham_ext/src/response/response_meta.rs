@@ -9,9 +9,8 @@ use anyhow::Error;
 use futures::channel::oneshot::Receiver;
 use gotham_derive::StateData;
 
-use crate::content_encoding::ContentCompression;
-
 use super::error_meta::ErrorMeta;
+use crate::content_encoding::ContentCompression;
 
 #[derive(Debug, Copy, Clone)]
 pub enum HeadersMeta {

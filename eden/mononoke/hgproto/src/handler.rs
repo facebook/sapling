@@ -5,11 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::commands::HgCommandHandler;
-use crate::errors::*;
-use crate::HgCommands;
-use crate::Request;
-use crate::Response;
+use std::io;
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use anyhow::Error;
 use bytes_old::Bytes;
 use failure_ext::FutureFailureErrorExt;
@@ -28,10 +27,13 @@ use futures_ext::FutureExt;
 use futures_ext::StreamExt;
 use qps::Qps;
 use slog::Logger;
-use std::io;
-use std::sync::Arc;
-use std::sync::Mutex;
 use tokio_io::codec::Decoder;
+
+use crate::commands::HgCommandHandler;
+use crate::errors::*;
+use crate::HgCommands;
+use crate::Request;
+use crate::Response;
 
 pub type OutputStream = BoxStream<Bytes, Error>;
 

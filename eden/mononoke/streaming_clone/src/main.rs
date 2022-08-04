@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Borrow;
+use std::io::SeekFrom;
+use std::path::Path;
+use std::path::PathBuf;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use blake2::Blake2b;
@@ -34,10 +39,6 @@ use repo_identity::RepoIdentityRef;
 use slog::info;
 use slog::o;
 use slog::Logger;
-use std::borrow::Borrow;
-use std::io::SeekFrom;
-use std::path::Path;
-use std::path::PathBuf;
 use streaming_clone::StreamingClone;
 use streaming_clone::StreamingCloneRef;
 use tokio::io::AsyncReadExt;

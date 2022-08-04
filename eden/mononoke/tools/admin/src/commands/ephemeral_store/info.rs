@@ -5,13 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use super::Repo;
+use std::str::FromStr;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use clap::Args;
 use ephemeral_blobstore::BubbleId;
 use mononoke_types::ChangesetId;
-use std::str::FromStr;
+
+use super::Repo;
 
 #[derive(Args)]
 /// Subcommand to describe metadata associated with a bubble within the ephemeral store.

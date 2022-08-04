@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::VecDeque;
+
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
@@ -26,9 +30,6 @@ use pushrebase::do_pushrebase_bonsai;
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::RangeNodeStream;
 use slog::info;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::collections::VecDeque;
 
 pub struct GradualMergeParams {
     pub pre_deletion_commit: ChangesetId,
@@ -338,7 +339,6 @@ async fn push_merge_commit(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use mononoke_types::DateTime;
@@ -347,6 +347,8 @@ mod test {
     use tests_utils::drawdag::create_from_dag;
     use tests_utils::list_working_copy_utf8;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_find_all_commits_to_merge(fb: FacebookInit) -> Result<(), Error> {

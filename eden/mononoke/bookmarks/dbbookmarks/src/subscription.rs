@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::time::Duration;
+use std::time::Instant;
+
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
@@ -20,9 +24,6 @@ use rand::Rng;
 use slog::warn;
 use sql::queries;
 use stats::prelude::*;
-use std::collections::HashMap;
-use std::time::Duration;
-use std::time::Instant;
 use tunables::tunables;
 
 use crate::store::GetLargestLogId;
@@ -217,8 +218,6 @@ queries! {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     use bookmarks::BookmarkUpdateReason;
     use bookmarks::Bookmarks;
     use fbinit::FacebookInit;
@@ -228,6 +227,7 @@ mod test {
     use sql_construct::SqlConstruct;
     use tunables::MononokeTunables;
 
+    use super::*;
     use crate::builder::SqlBookmarksBuilder;
 
     #[fbinit::test]

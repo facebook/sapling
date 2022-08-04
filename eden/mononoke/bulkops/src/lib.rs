@@ -19,6 +19,11 @@ use std::sync::Arc;
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use bounded_traversal::bounded_traversal_stream;
+use changesets::ChangesetEntry;
+use changesets::Changesets;
+use changesets::SortOrder;
+use context::CoreContext;
 use futures::future;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
@@ -26,17 +31,11 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::Stream;
+use mononoke_types::ChangesetId;
+use phases::Phases;
 use strum_macros::AsRefStr;
 use strum_macros::EnumString;
 use strum_macros::EnumVariantNames;
-
-use bounded_traversal::bounded_traversal_stream;
-use changesets::ChangesetEntry;
-use changesets::Changesets;
-use changesets::SortOrder;
-use context::CoreContext;
-use mononoke_types::ChangesetId;
-use phases::Phases;
 
 #[derive(
     Clone,
@@ -267,19 +266,18 @@ pub const MIN_FETCH_STEP: u64 = 1;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::str::FromStr;
-
-    use fbinit::FacebookInit;
 
     use blobrepo::BlobRepo;
     use bookmarks::BookmarkName;
+    use fbinit::FacebookInit;
     use fixtures::BranchWide;
     use fixtures::TestRepoFixture;
     use mononoke_types::ChangesetId;
     use phases::PhasesArc;
     use phases::PhasesRef;
+
+    use super::*;
 
     async fn get_test_repo(ctx: &CoreContext, fb: FacebookInit) -> Result<BlobRepo, Error> {
         let blobrepo = BranchWide::getrepo(fb).await;

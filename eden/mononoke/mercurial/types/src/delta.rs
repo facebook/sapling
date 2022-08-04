@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::cmp::Ordering;
+
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::format_err;
@@ -14,12 +16,10 @@ use quickcheck::Arbitrary;
 use quickcheck::Gen;
 use rand_distr::Distribution;
 use rand_distr::LogNormal;
-use std::cmp::Ordering;
-
-use crate::errors::ErrorKind;
 
 use super::delta_apply::mpatch_fold;
 use super::delta_apply::wrap_deltas;
+use crate::errors::ErrorKind;
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Default)]
 pub struct Delta {
@@ -336,8 +336,9 @@ pub mod compat {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use quickcheck::quickcheck;
+
+    use super::*;
 
     /// Test that fragments are verified properly.
     #[test]

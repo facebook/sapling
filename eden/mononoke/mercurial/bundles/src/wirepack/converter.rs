@@ -17,13 +17,11 @@ use futures_old::try_ready;
 use futures_old::Async;
 use futures_old::Poll;
 use futures_old::Stream;
-
 use mercurial_types::RepoPath;
 
 use super::DataEntry;
 use super::HistoryEntry;
 use super::Part;
-
 use crate::errors::ErrorKind;
 
 pub trait WirePackPartProcessor {

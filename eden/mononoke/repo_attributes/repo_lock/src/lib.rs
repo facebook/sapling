@@ -5,19 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use mononoke_types::RepositoryId;
-use sql_construct::SqlConstruct;
-use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::SqlConnections;
-
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
+use mononoke_types::RepositoryId;
 use sql::queries;
 use sql::Connection;
 use sql::Transaction;
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::SqlConnections;
 
 const DEFAULT_DB_MSG: &str = "Repo is locked in DB";
 

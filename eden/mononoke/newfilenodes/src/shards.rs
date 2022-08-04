@@ -5,16 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
 use core::future::Future;
-use futures_stats::TimedTryFutureExt;
-use mercurial_types::HgFileNodeId;
-use mononoke_types::RepoPath;
-use stats::prelude::*;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::sync::Arc;
+
+use anyhow::Error;
+use futures_stats::TimedTryFutureExt;
+use mercurial_types::HgFileNodeId;
+use mononoke_types::RepoPath;
+use stats::prelude::*;
 use time_ext::DurationExt;
 use tokio::sync::Semaphore;
 

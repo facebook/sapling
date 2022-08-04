@@ -24,9 +24,8 @@ use futures::stream::Stream;
 use futures_ext::BoxFuture;
 use futures_ext::BoxStream;
 use futures_ext::StreamExt;
-use thiserror::Error;
-
 use mercurial_types::HgChangesetId;
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -133,7 +132,6 @@ mod tests {
     use failure_ext::err_downcast;
     use failure_ext::err_downcast_ref;
     use futures::Future;
-
     use mercurial_types_mocks::nodehash::*;
 
     use super::*;

@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::verification::verify_config;
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use anyhow::anyhow;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -15,10 +18,8 @@ use megarepo_configs::types::Target;
 use megarepo_error::MegarepoError;
 use slog::info;
 use slog::Logger;
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::Mutex;
 
+use crate::verification::verify_config;
 use crate::MononokeMegarepoConfigs;
 
 #[derive(Clone)]

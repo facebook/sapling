@@ -47,9 +47,9 @@ pub fn alpn_format(desired: &str) -> Result<Vec<u8>, Error> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     use quickcheck::quickcheck;
+
+    use super::*;
 
     #[test]
     pub fn test_alpn_select() -> Result<(), Error> {

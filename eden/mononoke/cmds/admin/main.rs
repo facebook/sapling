@@ -8,14 +8,14 @@
 #![type_length_limit = "8000000"]
 #![feature(btree_drain_filter)]
 
-use blobstore::PutBehaviour;
-use fbinit::FacebookInit;
 use std::process::ExitCode;
 
+use blobstore::PutBehaviour;
 use cmdlib::args;
 use cmdlib::args::ArgType;
 use cmdlib::args::MononokeClapApp;
 use context::CoreContext;
+use fbinit::FacebookInit;
 use slog::error;
 
 use crate::blobstore_fetch::subcommand_blobstore_fetch;

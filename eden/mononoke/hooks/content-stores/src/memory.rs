@@ -5,10 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::ErrorKind;
-use crate::FileChange;
-use crate::FileContentManager;
-use crate::PathContent;
+use std::collections::HashMap;
 
 use anyhow::format_err;
 use async_trait::async_trait;
@@ -19,7 +16,11 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::MPath;
-use std::collections::HashMap;
+
+use crate::ErrorKind;
+use crate::FileChange;
+use crate::FileContentManager;
+use crate::PathContent;
 
 #[derive(Clone)]
 pub enum InMemoryFileText {

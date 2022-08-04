@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+
 use anyhow::bail;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -18,9 +22,6 @@ use mononoke_app::MononokeAppBuilder;
 use once_cell::sync::OnceCell;
 use slog::info;
 use slog::Logger;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use tokio::time;
 
 /// Test application for validating integration behavior with ShardManager.

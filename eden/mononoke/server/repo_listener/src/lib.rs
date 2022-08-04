@@ -17,10 +17,10 @@ mod repo_handlers;
 mod request_handler;
 mod wireproto_sink;
 
-pub use crate::connection_acceptor::wait_for_connections_closed;
+use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 
-use crate::connection_acceptor::connection_acceptor;
-use crate::repo_handlers::repo_handlers;
 use anyhow::Context as _;
 use anyhow::Result;
 use blobstore_factory::ReadOnlyStorage;
@@ -38,9 +38,10 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use slog::o;
 use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
-use std::path::PathBuf;
-use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
+
+use crate::connection_acceptor::connection_acceptor;
+pub use crate::connection_acceptor::wait_for_connections_closed;
+use crate::repo_handlers::repo_handlers;
 
 const CONFIGERATOR_RATE_LIMITING_CONFIG: &str = "scm/mononoke/ratelimiting/ratelimits";
 

@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::time::Duration;
+
 use anyhow::Result;
 use clap::Args;
-use std::time::Duration;
 
 /// Command line arguments for shutdown timeout
 #[derive(Args, Debug)]

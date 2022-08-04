@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::pin::Pin;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use futures::future;
@@ -16,11 +18,9 @@ use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
 use futures_ext::FbStreamExt;
-use pin_project::pin_project;
-use std::pin::Pin;
-
 use mercurial_bundles::changegroup::Part;
 use mercurial_bundles::changegroup::Section;
+use pin_project::pin_project;
 
 use crate::changegroup::changeset::ChangesetDeltaed;
 use crate::changegroup::filelog::FilelogDeltaed;
@@ -183,14 +183,13 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use futures::stream::iter;
     use itertools::assert_equal;
     use itertools::equal;
-
     use mercurial_bundles::changegroup::CgDeltaChunk;
     use mercurial_types::MPath;
+
+    use super::*;
 
     async fn check_splitting<S, I, J>(cg2s: S, exp_cs: I, exp_fs: J) -> bool
     where

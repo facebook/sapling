@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::errors::ErrorKind;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
@@ -80,10 +83,9 @@ use slog::debug;
 use slog::info;
 use slog::o;
 use stats::prelude::*;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::sync::Arc;
 use tunables::tunables;
+
+use crate::errors::ErrorKind;
 
 mod errors;
 mod low_gen_nums_optimization;

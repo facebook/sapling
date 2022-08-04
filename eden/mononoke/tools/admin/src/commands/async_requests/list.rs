@@ -7,19 +7,17 @@
 
 use anyhow::Error;
 use anyhow::Result;
+use async_requests::types::RequestStatus;
+use async_requests::types::ThriftMegarepoAsynchronousRequestParams;
 use clap::Args;
 use context::CoreContext;
-
 use megarepo_api::MegarepoApi;
+use mononoke_types::ChangesetId;
 use mononoke_types::Timestamp;
 use prettytable::cell;
 use prettytable::format;
 use prettytable::row;
 use prettytable::Table;
-
-use async_requests::types::RequestStatus;
-use async_requests::types::ThriftMegarepoAsynchronousRequestParams;
-use mononoke_types::ChangesetId;
 
 #[derive(Args)]
 /// Lists asynchronous requests (by default the ones active

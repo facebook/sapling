@@ -5,8 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::num::NonZeroU16;
+use std::time::Instant;
+
 use anyhow::Context;
 use anyhow::Error;
+use blobstore::Blobstore;
+use blobstore::Loadable;
+use blobstore::LoadableError;
+use filestore::Alias;
 use futures::future;
 use futures::future::FutureExt;
 use futures::pin_mut;
@@ -16,6 +24,7 @@ use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
 use gotham_ext::body_ext::BodyExt;
+use gotham_ext::error::HttpError;
 use gotham_ext::middleware::RequestStartTime;
 use gotham_ext::middleware::ScubaMiddlewareState;
 use gotham_ext::response::BytesBody;
@@ -23,23 +32,6 @@ use gotham_ext::response::TryIntoResponse;
 use http::header::HeaderMap;
 use hyper::Body;
 use hyper::StatusCode;
-use maplit::hashmap;
-use rand::Rng;
-use redactedblobstore::has_redaction_root_cause;
-use serde::Deserialize;
-use slog::debug;
-use stats::prelude::*;
-use std::collections::HashMap;
-use std::num::NonZeroU16;
-use std::time::Instant;
-use time_ext::DurationExt;
-use time_window_counter::GlobalTimeWindowCounterBuilder;
-
-use blobstore::Blobstore;
-use blobstore::Loadable;
-use blobstore::LoadableError;
-use filestore::Alias;
-use gotham_ext::error::HttpError;
 use lfs_protocol::git_lfs_mime;
 use lfs_protocol::ObjectAction;
 use lfs_protocol::ObjectError;
@@ -50,10 +42,18 @@ use lfs_protocol::RequestObject;
 use lfs_protocol::ResponseBatch;
 use lfs_protocol::ResponseObject;
 use lfs_protocol::Transfer;
+use maplit::hashmap;
 use mononoke_types::hash::Sha256;
 use mononoke_types::typed_hash::ContentId;
 use mononoke_types::BlobstoreKey;
+use rand::Rng;
+use redactedblobstore::has_redaction_root_cause;
 use repo_blobstore::RepoBlobstoreRef;
+use serde::Deserialize;
+use slog::debug;
+use stats::prelude::*;
+use time_ext::DurationExt;
+use time_window_counter::GlobalTimeWindowCounterBuilder;
 
 use crate::errors::ErrorKind;
 use crate::lfs_server_context::RepositoryRequestContext;
@@ -676,7 +676,10 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::collections::HashSet;
+    use std::sync::atomic::AtomicU64;
+    use std::sync::atomic::Ordering;
+    use std::sync::Arc;
 
     use async_trait::async_trait;
     use blobstore::BlobstoreBytes;
@@ -684,7 +687,6 @@ mod test {
     use bytes::Bytes;
     use context::CoreContext;
     use fbinit::FacebookInit;
-
     use filestore::FilestoreConfigRef;
     use filestore::StoreRequest;
     use futures::stream;
@@ -695,16 +697,12 @@ mod test {
     use mononoke_types_mocks::hash::ONES_SHA256;
     use mononoke_types_mocks::hash::THREES_SHA256;
     use mononoke_types_mocks::hash::TWOS_SHA256;
+    use pretty_assertions::assert_eq;
     use redactedblobstore::RedactedBlobs;
     use redactedblobstore::RedactedMetadata;
-    use std::collections::HashSet;
-    use std::sync::atomic::AtomicU64;
-    use std::sync::atomic::Ordering;
-    use std::sync::Arc;
     use test_repo_factory::TestRepoFactory;
 
-    use pretty_assertions::assert_eq;
-
+    use super::*;
     use crate::lfs_server_context::ServerUris;
     use crate::Repo;
 

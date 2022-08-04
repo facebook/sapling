@@ -7,6 +7,8 @@
 
 //! Scaffolding that's generally useful to build CLI tools on top of Mononoke.
 
+use std::sync::Arc;
+
 use anyhow::bail;
 use anyhow::Error;
 use blobrepo::BlobRepo;
@@ -24,7 +26,6 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use mononoke_app::args::SourceAndTargetRepoArgs;
 use mononoke_app::MononokeApp;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use std::sync::Arc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
 /// Instantiate the `Syncers` struct by parsing `app`

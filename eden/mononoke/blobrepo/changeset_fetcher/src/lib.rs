@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::any::Any;
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use anyhow::format_err;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -14,9 +18,6 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
-use std::any::Any;
-use std::collections::HashMap;
-use std::sync::Arc;
 
 mod prefetched;
 pub use prefetched::PrefetchedChangesetsFetcher;

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use cachelib::VolatileLruCachePool;
 use fbinit::FacebookInit;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
@@ -16,7 +18,6 @@ use sql_construct::SqlShardableConstructFromMetadataDatabaseConfig;
 use sql_construct::SqlShardedConstruct;
 use sql_ext::SqlConnections;
 use sql_ext::SqlShardedConnections;
-use std::sync::Arc;
 
 use crate::local_cache::CachelibCache;
 use crate::local_cache::LocalCache;

@@ -480,13 +480,14 @@ async fn fill_multiple_memcache<'a, V: 'a>(
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering;
 
     use abomonation_derive::Abomonation;
     use maplit::hashmap;
     use maplit::hashset;
-    use std::sync::atomic::AtomicUsize;
-    use std::sync::atomic::Ordering;
+
+    use super::*;
 
     #[derive(Abomonation, Clone, Debug, PartialEq, Eq)]
     struct TestEntity(Vec<u8>);

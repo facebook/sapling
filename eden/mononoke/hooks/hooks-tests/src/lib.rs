@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
+use std::collections::HashSet;
+
 use anyhow::Error;
 use async_trait::async_trait;
 use blobstore::Loadable;
@@ -56,9 +60,6 @@ use regex::Regex;
 use repo_blobstore::RepoBlobstoreRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sorted_vector_map::sorted_vector_map;
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::collections::HashSet;
 use tests_utils::bookmark;
 use tests_utils::create_commit;
 use tests_utils::store_files;

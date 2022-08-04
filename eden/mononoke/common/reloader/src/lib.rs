@@ -7,6 +7,10 @@
 
 #![feature(fn_traits)]
 
+use std::future::Future;
+use std::sync::Arc;
+use std::time::Duration;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use arc_swap::ArcSwap;
@@ -19,9 +23,6 @@ use futures_ext::future::spawn_controlled;
 use futures_ext::future::ControlledHandle;
 use rand::Rng;
 use slog::warn;
-use std::future::Future;
-use std::sync::Arc;
-use std::time::Duration;
 use tokio::sync::Notify;
 
 #[derive(Debug, Clone)]
@@ -206,12 +207,14 @@ impl<R: 'static + Send + Sync> Reloader<R> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use fbinit::FacebookInit;
     use std::sync::atomic::AtomicBool;
     use std::sync::atomic::AtomicU32;
     use std::sync::atomic::Ordering::Relaxed;
     use std::time::Duration;
+
+    use fbinit::FacebookInit;
+
+    use super::*;
 
     #[test]
     fn test_fixed() {

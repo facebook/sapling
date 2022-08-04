@@ -5,10 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::SmallRepoCommitSyncConfig;
 use mononoke_types::MPath;
-use std::collections::HashMap;
 
 pub struct SmallRepoCommitSyncConfigDiff {
     pub default_action_change: Option<(

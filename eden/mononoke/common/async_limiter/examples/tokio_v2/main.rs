@@ -6,13 +6,12 @@
  */
 
 use anyhow::Error;
+use async_limiter::AsyncLimiter;
 use chrono::Local;
 use futures::future::join_all;
 use nonzero_ext::nonzero;
 use ratelimit_meter::algorithms::LeakyBucket;
 use ratelimit_meter::DirectRateLimiter;
-
-use async_limiter::AsyncLimiter;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {

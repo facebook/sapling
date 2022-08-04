@@ -7,6 +7,14 @@
 
 #![feature(trait_alias)]
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::VecDeque;
+use std::fmt;
+use std::sync::Arc;
+use std::time::Duration;
+use std::time::Instant;
+
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
@@ -51,16 +59,15 @@ use phases::PhasesRef;
 use pushrebase::do_pushrebase_bonsai;
 use pushrebase::PushrebaseError;
 use reachabilityindex::LeastCommonAncestorsHint;
+use reporting::log_rewrite;
+pub use reporting::CommitSyncContext;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use slog::info;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::collections::VecDeque;
-use std::fmt;
-use std::sync::Arc;
-use std::time::Duration;
-use std::time::Instant;
+use sync_config_version_utils::get_mapping_change_version;
+use sync_config_version_utils::get_version;
+use sync_config_version_utils::get_version_for_merge;
+pub use sync_config_version_utils::CHANGE_XREPO_MAPPING_EXTRA;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
@@ -68,16 +75,10 @@ use synced_commit_mapping::SyncedCommitSourceRepo;
 use thiserror::Error;
 use topo_sort::sort_topological;
 use tunables::tunables;
-
-use crate::pushrebase_hook::CrossRepoSyncPushrebaseHook;
-use reporting::log_rewrite;
-pub use reporting::CommitSyncContext;
-use sync_config_version_utils::get_mapping_change_version;
-use sync_config_version_utils::get_version;
-use sync_config_version_utils::get_version_for_merge;
-pub use sync_config_version_utils::CHANGE_XREPO_MAPPING_EXTRA;
 use types::Source;
 use types::Target;
+
+use crate::pushrebase_hook::CrossRepoSyncPushrebaseHook;
 
 mod commit_sync_data_provider;
 pub mod commit_sync_outcome;
@@ -87,6 +88,8 @@ mod sync_config_version_utils;
 pub mod types;
 pub mod validation;
 
+pub use commit_sync_data_provider::CommitSyncDataProvider;
+
 pub use crate::commit_sync_outcome::commit_sync_outcome_exists;
 pub use crate::commit_sync_outcome::get_commit_sync_outcome;
 pub use crate::commit_sync_outcome::get_commit_sync_outcome_with_hint;
@@ -94,7 +97,6 @@ pub use crate::commit_sync_outcome::get_plural_commit_sync_outcome;
 pub use crate::commit_sync_outcome::CandidateSelectionHint;
 pub use crate::commit_sync_outcome::CommitSyncOutcome;
 pub use crate::commit_sync_outcome::PluralCommitSyncOutcome;
-pub use commit_sync_data_provider::CommitSyncDataProvider;
 
 const LEASE_WARNING_THRESHOLD: Duration = Duration::from_secs(60);
 

@@ -88,12 +88,14 @@ impl AsyncLimiter {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::time::Duration;
+    use std::time::Instant;
+
     use nonzero_ext::nonzero;
     use ratelimit_meter::algorithms::LeakyBucket;
     use ratelimit_meter::DirectRateLimiter;
-    use std::time::Duration;
-    use std::time::Instant;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_access_enters_queue_lazily() -> Result<(), Error> {

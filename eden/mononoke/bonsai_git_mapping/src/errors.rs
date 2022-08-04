@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use super::BonsaiGitMappingEntry;
-
 use thiserror::Error;
+
+use super::BonsaiGitMappingEntry;
 
 #[derive(Debug, Error)]
 pub enum AddGitMappingErrorKind {

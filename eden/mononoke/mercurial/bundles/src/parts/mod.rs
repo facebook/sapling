@@ -5,21 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use super::changegroup::packer::CgPacker;
-use super::changegroup::unpacker::CgVersion;
-use super::changegroup::CgDeltaChunk;
-use super::changegroup::Part;
-use super::changegroup::Section;
-use super::chunk::Chunk;
-use super::infinitepush::infinitepush_mutation_packer;
-use super::obsmarkers::packer::obsmarkers_packer_stream;
-use super::obsmarkers::MetadataEntry;
-use super::wirepack;
-use super::wirepack::packer::WirePackPacker;
-use crate::errors::ErrorKind;
-use crate::part_encode::PartEncodeBuilder;
-use crate::part_header::PartHeaderType;
-use crate::part_header::PartId;
+use std::collections::HashMap;
+use std::fmt;
+use std::io::Write;
+
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -51,9 +40,22 @@ use mercurial_types::RevFlags;
 use mercurial_types::NULL_HASH;
 use mononoke_types::DateTime;
 use phases::Phase;
-use std::collections::HashMap;
-use std::fmt;
-use std::io::Write;
+
+use super::changegroup::packer::CgPacker;
+use super::changegroup::unpacker::CgVersion;
+use super::changegroup::CgDeltaChunk;
+use super::changegroup::Part;
+use super::changegroup::Section;
+use super::chunk::Chunk;
+use super::infinitepush::infinitepush_mutation_packer;
+use super::obsmarkers::packer::obsmarkers_packer_stream;
+use super::obsmarkers::MetadataEntry;
+use super::wirepack;
+use super::wirepack::packer::WirePackPacker;
+use crate::errors::ErrorKind;
+use crate::part_encode::PartEncodeBuilder;
+use crate::part_header::PartHeaderType;
+use crate::part_header::PartId;
 
 pub type FilenodeEntry = (HgFileNodeId, HgChangesetId, HgBlobNode, Option<RevFlags>);
 

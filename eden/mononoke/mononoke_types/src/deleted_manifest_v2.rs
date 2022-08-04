@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+
 use anyhow::Result;
 use blobstore::Blobstore;
 use blobstore::Storable;
@@ -13,7 +15,6 @@ use context::CoreContext;
 use futures::stream::BoxStream;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use std::collections::BTreeMap;
 
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;

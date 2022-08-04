@@ -5,6 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+
+use bytes::Bytes;
+use mononoke_types::DateTime;
+use quickcheck::quickcheck;
+use quickcheck::QuickCheck;
+use quickcheck::TestResult;
+
 use super::revlog::escape;
 use super::revlog::serialize_extras;
 use super::revlog::unescape;
@@ -15,12 +23,6 @@ use crate::HgBlobNode;
 use crate::HgManifestId;
 use crate::HgNodeHash;
 use crate::MPath;
-use bytes::Bytes;
-use mononoke_types::DateTime;
-use quickcheck::quickcheck;
-use quickcheck::QuickCheck;
-use quickcheck::TestResult;
-use std::collections::BTreeMap;
 
 const CHANGESET: &[u8] = include_bytes!("cset.bin");
 const CHANGESET_NOEXTRA: &[u8] = include_bytes!("cset_noextra.bin");

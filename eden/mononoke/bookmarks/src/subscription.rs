@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks_types::BookmarkKind;
 use bookmarks_types::BookmarkName;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
-use std::collections::HashMap;
 
 #[async_trait]
 pub trait BookmarksSubscription: Send + Sync + 'static {

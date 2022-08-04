@@ -5,28 +5,28 @@
  * GNU General Public License version 2.
  */
 
+use std::str::FromStr;
+
 use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
 use blobrepo::BlobRepo;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use futures::future;
-use futures::TryFutureExt;
-use futures::TryStreamExt;
-
-use bookmarks::BookmarkName;
-use bookmarks::BookmarkUpdateReason;
 use fbinit::FacebookInit;
 use fixtures::Linear;
 use fixtures::TestRepoFixture;
+use futures::future;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
 use maplit::hashset;
 use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::ChangesetId;
 use phases::Phases;
 use phases::PhasesRef;
-use std::str::FromStr;
 
 async fn delete_all_publishing_bookmarks(ctx: &CoreContext, repo: &BlobRepo) -> Result<(), Error> {
     let bookmarks = repo

@@ -7,9 +7,14 @@
 
 use std::collections::BTreeMap;
 
+use ::manifest::Entry;
 use anyhow::Error;
 use ascii::AsAsciiStr;
+use blobrepo::BlobRepo;
+use blobrepo_hg::ChangesetHandle;
+use blobrepo_hg::CreateChangeset;
 use bytes::Bytes;
+use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 use futures::future::BoxFuture;
@@ -17,13 +22,6 @@ use futures::stream::FuturesUnordered;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryFutureExt;
-use scuba_ext::MononokeScubaSampleBuilder;
-
-use ::manifest::Entry;
-use blobrepo::BlobRepo;
-use blobrepo_hg::ChangesetHandle;
-use blobrepo_hg::CreateChangeset;
-use context::CoreContext;
 use mercurial_types::blobs::ChangesetMetadata;
 use mercurial_types::blobs::UploadHgFileContents;
 use mercurial_types::blobs::UploadHgFileEntry;
@@ -36,6 +34,7 @@ use mercurial_types::HgNodeHash;
 use mercurial_types::MPath;
 use mercurial_types::RepoPath;
 use mononoke_types::DateTime;
+use scuba_ext::MononokeScubaSampleBuilder;
 
 pub fn upload_file_no_parents<B>(
     ctx: CoreContext,

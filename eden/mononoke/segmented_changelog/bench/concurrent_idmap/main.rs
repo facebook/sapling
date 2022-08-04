@@ -5,15 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use criterion::Criterion;
-use tokio::runtime::Runtime;
-
 use context::CoreContext;
+use criterion::Criterion;
 use mononoke_types::hash::Blake2;
 use mononoke_types::ChangesetId;
 use segmented_changelog::ConcurrentMemIdMap;
 use segmented_changelog::DagId;
 use segmented_changelog::IdMap;
+use tokio::runtime::Runtime;
 
 async fn insert(ctx: &CoreContext, idmap: &dyn IdMap, low: u64, high: u64) {
     let mut cs_id_bytes = [0u8; 32];

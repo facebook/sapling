@@ -32,10 +32,6 @@ use hyper::Body;
 use hyper::Client;
 use hyper::Request;
 use hyper_openssl::HttpsConnector;
-use slog::info;
-use slog::warn;
-use thiserror::Error;
-
 use lfs_protocol::ObjectAction;
 use lfs_protocol::ObjectStatus;
 use lfs_protocol::Operation;
@@ -46,6 +42,9 @@ use lfs_protocol::ResponseObject;
 use lfs_protocol::Sha256 as LfsSha256;
 use lfs_protocol::Transfer;
 use mononoke_types::hash::Sha256;
+use slog::info;
+use slog::warn;
+use thiserror::Error;
 
 pub type HttpsHyperClient = Client<HttpsConnector<HttpConnector>>;
 

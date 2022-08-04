@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -35,9 +39,6 @@ use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::sync::Arc;
 use thiserror::Error;
 
 define_stats! {

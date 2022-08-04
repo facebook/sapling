@@ -5,8 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::CommitsInBundle;
-use crate::Repo;
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use anyhow::format_err;
 use anyhow::Error;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
@@ -19,8 +20,9 @@ use futures::TryStreamExt;
 use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;
-use std::collections::HashMap;
-use std::sync::Arc;
+
+use crate::CommitsInBundle;
+use crate::Repo;
 
 #[derive(Clone)]
 pub enum GlobalrevSyncer {
@@ -116,7 +118,6 @@ impl DarkstormGlobalrevSyncer {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
     use fbinit::FacebookInit;
     use mercurial_types_mocks::globalrev::GLOBALREV_ONE;
@@ -127,6 +128,8 @@ mod test {
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
     use test_repo_factory::TestRepoFactory;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_sync_darkstorm(fb: FacebookInit) -> Result<(), Error> {

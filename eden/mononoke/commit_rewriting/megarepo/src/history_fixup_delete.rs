@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeSet;
+
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use mercurial_types::MPath;
 use mononoke_types::ChangesetId;
-use std::collections::BTreeSet;
 
 use crate::chunking::Chunker;
 use crate::common::delete_files_in_chunks;
@@ -94,17 +95,19 @@ pub async fn create_history_fixup_deletes<'a>(
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::common::ChangesetArgs;
-    use crate::common::StackPosition;
-    use crate::working_copy::get_working_copy_paths;
+    use std::collections::BTreeSet;
+
     use cloned::cloned;
     use fbinit::FacebookInit;
     use fixtures::TestRepoFixture;
     use fixtures::UnsharedMergeUneven;
     use mononoke_types::DateTime;
-    use std::collections::BTreeSet;
     use tests_utils::resolve_cs_id;
+
+    use super::*;
+    use crate::common::ChangesetArgs;
+    use crate::common::StackPosition;
+    use crate::working_copy::get_working_copy_paths;
 
     #[fbinit::test]
     async fn test_create_fixup_deletes(fb: FacebookInit) -> Result<(), Error> {

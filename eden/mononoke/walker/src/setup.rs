@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::num::NonZeroU64;
+use std::sync::Arc;
+
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
@@ -34,10 +39,6 @@ use slog::o;
 use slog::warn;
 use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::num::NonZeroU64;
-use std::sync::Arc;
 
 use crate::args::NodeTypeArg;
 use crate::args::TailArgs;
@@ -61,7 +62,6 @@ use crate::detail::validate::REPO;
 use crate::detail::validate::WALK_TYPE;
 use crate::detail::walk::OutgoingEdge;
 use crate::detail::walk::RepoWalkParams;
-
 use crate::WalkerArgs;
 const CHECKPOINT_PREFIX: &str = "mononoke_sharded_walker";
 

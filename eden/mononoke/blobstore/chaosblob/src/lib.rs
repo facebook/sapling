@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::num::NonZeroU32;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
@@ -17,7 +19,6 @@ use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use rand::thread_rng;
 use rand::Rng;
-use std::num::NonZeroU32;
 
 mod errors;
 pub use crate::errors::ErrorKind;
@@ -184,11 +185,11 @@ impl<T: BlobstorePutOps> BlobstorePutOps for ChaosBlobstore<T> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
-
     use memblob::Memblob;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_error_on_write(fb: FacebookInit) {

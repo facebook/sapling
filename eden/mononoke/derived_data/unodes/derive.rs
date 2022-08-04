@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::format_err;
@@ -42,8 +44,6 @@ use mononoke_types::MPathElement;
 use mononoke_types::MPathHash;
 use mononoke_types::ManifestUnodeId;
 use sorted_vector_map::SortedVectorMap;
-use std::collections::BTreeMap;
-use std::collections::HashMap;
 
 use crate::ErrorKind;
 
@@ -464,9 +464,10 @@ fn return_if_unique_filenode(unodes: &[FileUnode]) -> Option<(&ContentId, &FileT
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::mapping::get_file_changes;
-    use crate::mapping::RootUnodeManifestId;
+    use std::collections::BTreeMap;
+    use std::collections::HashSet;
+    use std::collections::VecDeque;
+
     use anyhow::Result;
     use async_trait::async_trait;
     use blobrepo::save_bonsai_changesets;
@@ -496,12 +497,13 @@ mod tests {
     use mononoke_types::FileContents;
     use mononoke_types::RepoPath;
     use repo_derived_data::RepoDerivedDataRef;
-    use std::collections::BTreeMap;
-    use std::collections::HashSet;
-    use std::collections::VecDeque;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
+    use crate::mapping::get_file_changes;
+    use crate::mapping::RootUnodeManifestId;
 
     #[fbinit::test]
     async fn linear_test(fb: FacebookInit) -> Result<(), Error> {

@@ -5,10 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::errors::ErrorKind;
+use std::fmt;
+
 use anyhow::Result;
 use bitflags::bitflags;
-use std::fmt;
+
+use crate::errors::ErrorKind;
 
 bitflags! {
     // names are from hg revlog.py

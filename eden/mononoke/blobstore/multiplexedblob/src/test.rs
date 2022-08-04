@@ -15,15 +15,6 @@ use std::sync::Mutex;
 use std::time::Duration;
 use std::time::Instant;
 
-use crate::base::MultiplexedBlobstoreBase;
-use crate::base::MultiplexedBlobstorePutHandler;
-use crate::queue::MultiplexedBlobstore;
-use crate::scrub::LoggingScrubHandler;
-use crate::scrub::ScrubAction;
-use crate::scrub::ScrubBlobstore;
-use crate::scrub::ScrubHandler;
-use crate::scrub::ScrubOptions;
-use crate::scrub::ScrubWriteMostly;
 use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -62,6 +53,16 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstruct;
 use tunables::with_tunables_async;
 use tunables::MononokeTunables;
+
+use crate::base::MultiplexedBlobstoreBase;
+use crate::base::MultiplexedBlobstorePutHandler;
+use crate::queue::MultiplexedBlobstore;
+use crate::scrub::LoggingScrubHandler;
+use crate::scrub::ScrubAction;
+use crate::scrub::ScrubBlobstore;
+use crate::scrub::ScrubHandler;
+use crate::scrub::ScrubOptions;
+use crate::scrub::ScrubWriteMostly;
 
 #[async_trait]
 impl MultiplexedBlobstorePutHandler for Tickable<BlobstoreId> {

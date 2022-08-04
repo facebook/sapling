@@ -66,14 +66,14 @@ define_stats! {
 const BUFFER_SIZE: usize = 5;
 
 mod closeable_sender {
-    use pin_project::pin_project;
+    use std::pin::Pin;
 
     use futures::channel::mpsc::SendError;
     use futures::channel::mpsc::Sender;
     use futures::sink::Sink;
     use futures::task::Context;
     use futures::task::Poll;
-    use std::pin::Pin;
+    use pin_project::pin_project;
 
     #[pin_project]
     pub struct CloseableSender<T> {
@@ -434,16 +434,18 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::num::NonZeroU32;
+    use std::sync::Arc;
+
     use chaosblob::ChaosBlobstore;
     use chaosblob::ChaosOptions;
     use fbinit::FacebookInit;
     use futures::future;
     use futures::stream;
     use memblob::Memblob;
-    use std::num::NonZeroU32;
-    use std::sync::Arc;
     use test_repo_factory::TestRepoFactory;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_upload_from_client_discard_upstream(fb: FacebookInit) -> Result<(), Error> {

@@ -5,12 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::detail::pack::CTIME;
-use crate::detail::validate::CHECK_FAIL;
-use crate::detail::validate::CHECK_TYPE;
-use crate::detail::validate::ERROR_MSG;
-use crate::detail::validate::NODE_KEY;
-use crate::detail::validate::REPO;
+use std::collections::HashMap;
+use std::fmt;
+use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Error;
@@ -26,9 +23,13 @@ use scuba::value::NullScubaValue;
 use scuba::value::ScubaValue;
 use scuba_ext::MononokeScubaSampleBuilder;
 use stats::prelude::*;
-use std::collections::HashMap;
-use std::fmt;
-use std::str::FromStr;
+
+use crate::detail::pack::CTIME;
+use crate::detail::validate::CHECK_FAIL;
+use crate::detail::validate::CHECK_TYPE;
+use crate::detail::validate::ERROR_MSG;
+use crate::detail::validate::NODE_KEY;
+use crate::detail::validate::REPO;
 
 define_stats! {
     prefix = "mononoke.walker";

@@ -5,14 +5,22 @@
  * GNU General Public License version 2.
  */
 
-use crate::errors::ErrorKind;
-
-use unbundle::run_hooks;
-use unbundle::run_post_resolve_action;
-use unbundle::BundleResolverError;
-use unbundle::CrossRepoPushSource;
-use unbundle::PushRedirector;
-use unbundle::PushRedirectorArgs;
+use std::collections::hash_map::DefaultHasher;
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt::Write;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::mem;
+use std::num::NonZeroU64;
+use std::str::FromStr;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::time::Duration;
+use std::time::Instant;
 
 use anyhow::format_err;
 use anyhow::Context;
@@ -132,26 +140,18 @@ use slog::error;
 use slog::info;
 use slog::o;
 use stats::prelude::*;
-use std::collections::hash_map::DefaultHasher;
-use std::collections::BTreeMap;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::fmt::Write;
-use std::hash::Hash;
-use std::hash::Hasher;
-use std::mem;
-use std::num::NonZeroU64;
-use std::str::FromStr;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::time::Duration;
-use std::time::Instant;
 use streaming_clone::RevlogStreamingChunks;
 use streaming_clone::StreamingCloneArc;
 use time_ext::DurationExt;
 use tunables::tunables;
+use unbundle::run_hooks;
+use unbundle::run_post_resolve_action;
+use unbundle::BundleResolverError;
+use unbundle::CrossRepoPushSource;
+use unbundle::PushRedirector;
+use unbundle::PushRedirectorArgs;
+
+use crate::errors::ErrorKind;
 
 mod logging;
 mod monitor;

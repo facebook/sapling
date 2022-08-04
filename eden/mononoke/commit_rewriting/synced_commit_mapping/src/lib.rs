@@ -5,12 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use sql::Connection;
-use sql::Transaction;
-use sql_construct::SqlConstruct;
-use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::SqlConnections;
-
 use anyhow::anyhow;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -26,6 +20,11 @@ use sql::mysql_async::prelude::FromValue;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
 use sql::queries;
+use sql::Connection;
+use sql::Transaction;
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::SqlConnections;
 use stats::prelude::*;
 use thiserror::Error;
 

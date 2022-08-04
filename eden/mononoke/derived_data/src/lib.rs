@@ -65,8 +65,6 @@ pub use derived_data_manager::DerivationError as DeriveError;
 pub use metaconfig_types::DerivedDataTypesConfig;
 
 pub mod macro_export {
-    pub use super::BonsaiDerived;
-    pub use super::DeriveError;
     pub use anyhow::Error;
     pub use async_trait::async_trait;
     pub use blobrepo::BlobRepo;
@@ -74,6 +72,9 @@ pub mod macro_export {
     pub use derived_data_manager::BonsaiDerivable;
     pub use mononoke_types::ChangesetId;
     pub use repo_derived_data::RepoDerivedDataRef;
+
+    pub use super::BonsaiDerived;
+    pub use super::DeriveError;
 }
 
 /// Trait for accessing data that can be derived from bonsai changesets, such

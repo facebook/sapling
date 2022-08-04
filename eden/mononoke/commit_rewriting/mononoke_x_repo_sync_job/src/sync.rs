@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::reporting::log_bookmark_deletion_result;
-use crate::reporting::log_non_pushrebase_sync_single_changeset_result;
-use crate::reporting::log_pushrebase_sync_single_changeset_result;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
@@ -42,10 +43,11 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
 use slog::info;
 use slog::warn;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::sync::Arc;
 use synced_commit_mapping::SyncedCommitMapping;
+
+use crate::reporting::log_bookmark_deletion_result;
+use crate::reporting::log_non_pushrebase_sync_single_changeset_result;
+use crate::reporting::log_pushrebase_sync_single_changeset_result;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum SyncResult {
@@ -639,7 +641,6 @@ async fn move_or_create_bookmark(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use bookmarks::Freshness;
     use cross_repo_sync::validation;
     use cross_repo_sync_test_utils::init_small_large_repo;
@@ -652,6 +653,8 @@ mod test {
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
     use tokio::runtime::Runtime;
+
+    use super::*;
 
     #[fbinit::test]
     fn test_simple(fb: FacebookInit) -> Result<(), Error> {

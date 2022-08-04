@@ -20,6 +20,12 @@ mod facebook;
 pub mod hook_loader;
 mod rust_hooks;
 
+use std::borrow::Cow;
+use std::collections::HashMap;
+use std::fmt;
+use std::hash::Hash;
+use std::str;
+
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -51,11 +57,6 @@ use regex::Regex;
 use scuba::builder::ServerData;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
-use std::borrow::Cow;
-use std::collections::HashMap;
-use std::fmt;
-use std::hash::Hash;
-use std::str;
 
 /// Manages hooks and allows them to be installed and uninstalled given a name
 /// Knows how to run hooks

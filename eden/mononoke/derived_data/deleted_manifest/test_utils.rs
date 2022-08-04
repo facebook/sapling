@@ -5,10 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::derive::get_changes;
-use crate::derive::DeletedManifestDeriver;
-use crate::mapping::RootDeletedManifestIdCommon;
-use crate::ops::DeletedManifestOps;
+use std::collections::BTreeMap;
+
 use anyhow::Error;
 use blobrepo::save_bonsai_changesets;
 use blobrepo::BlobRepo;
@@ -39,8 +37,12 @@ use mononoke_types::MPath;
 use pretty_assertions::assert_eq;
 use repo_derived_data::RepoDerivedDataRef;
 use sorted_vector_map::SortedVectorMap;
-use std::collections::BTreeMap;
 use tests_utils::CreateCommitContext;
+
+use crate::derive::get_changes;
+use crate::derive::DeletedManifestDeriver;
+use crate::mapping::RootDeletedManifestIdCommon;
+use crate::ops::DeletedManifestOps;
 
 /// Defines all common DM tests.
 // Why a macro and not a function? So we get different tests that are paralellised
@@ -48,9 +50,10 @@ use tests_utils::CreateCommitContext;
 macro_rules! impl_deleted_manifest_tests {
     ($manifest:ty) => {
         mod tests {
-            use super::*;
             use ::anyhow::Result;
             use ::fbinit::FacebookInit;
+
+            use super::*;
 
             #[fbinit::test]
             async fn linear_test(fb: FacebookInit) {

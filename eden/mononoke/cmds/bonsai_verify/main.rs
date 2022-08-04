@@ -7,6 +7,16 @@
 
 mod config;
 
+use std::collections::HashSet;
+use std::io::Write;
+use std::process;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::time::Instant;
+
 use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
@@ -42,15 +52,6 @@ use slog::error;
 use slog::info;
 use slog::warn;
 use slog::Logger;
-use std::collections::HashSet;
-use std::io::Write;
-use std::process;
-use std::sync::atomic::AtomicU64;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::time::Instant;
 
 #[derive(Parser)]
 struct CommandArgs {

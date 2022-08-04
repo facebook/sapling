@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::fs;
+use std::io;
+use std::io::BufRead;
+use std::path::Path;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use args::MononokeClapApp;
@@ -22,10 +27,6 @@ use futures_util::future::TryFutureExt;
 use futures_util::stream::StreamExt;
 use futures_util::stream::TryStreamExt;
 use mercurial_types::HgChangesetId;
-use std::fs;
-use std::io;
-use std::io::BufRead;
-use std::path::Path;
 
 fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("Tool to backfill git mappings for given commits")

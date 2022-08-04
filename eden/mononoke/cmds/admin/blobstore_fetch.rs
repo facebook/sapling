@@ -5,19 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::ffi::OsStr;
 use std::fmt;
 use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
-use clap_old::App;
-use clap_old::Arg;
-use clap_old::ArgMatches;
-use clap_old::SubCommand;
-use fbinit::FacebookInit;
-use futures::future::try_join;
-
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore_factory::make_blobstore;
@@ -26,9 +20,15 @@ use blobstore_factory::ReadOnlyStorage;
 use cacheblob::new_memcache_blobstore;
 use cacheblob::CacheBlobstoreExt;
 use cached_config::ConfigStore;
+use clap_old::App;
+use clap_old::Arg;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use context::CoreContext;
+use fbinit::FacebookInit;
+use futures::future::try_join;
 use git_types::Tree as GitTree;
 use mercurial_types::HgChangesetEnvelope;
 use mercurial_types::HgFileEnvelope;
@@ -50,7 +50,6 @@ use slog::info;
 use slog::warn;
 use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
-use std::ffi::OsStr;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tunables::tunables;

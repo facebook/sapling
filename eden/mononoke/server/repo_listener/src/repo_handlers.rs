@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
@@ -29,9 +32,6 @@ use slog::o;
 use slog::Logger;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
-use std::collections::HashMap;
-use std::sync::Arc;
-
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
 use crate::errors::ErrorKind;

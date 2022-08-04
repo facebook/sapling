@@ -15,11 +15,10 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use bytes_old::BytesMut;
+use mercurial_types::RepoPath;
 use slog::trace;
 use slog::Logger;
 use tokio_codec::Decoder;
-
-use mercurial_types::RepoPath;
 
 use super::DataEntry;
 use super::DataEntryVersion;

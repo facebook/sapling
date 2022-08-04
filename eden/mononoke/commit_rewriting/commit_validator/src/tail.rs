@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::sync::Arc;
+use std::time::Duration;
+
 use anyhow::Context;
 use anyhow::Error;
 use bookmarks::BookmarkName;
@@ -21,9 +25,6 @@ use futures::TryStreamExt;
 use mononoke_types::RepositoryId;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
-use std::collections::HashSet;
-use std::sync::Arc;
-use std::time::Duration;
 
 use crate::reporting::log_noop_iteration_to_scuba;
 

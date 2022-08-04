@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
 /// This is a very hacky temporary tool that's used with only one purpose -
 /// to half-manually sync a diamond merge commit from a small repo into a large repo.
 /// NOTE - this is not a production quality tool, but rather a best effort attempt to
@@ -69,8 +72,6 @@ use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use slog::info;
 use slog::warn;
 use sorted_vector_map::SortedVectorMap;
-use std::collections::HashMap;
-use std::sync::Arc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
 /// The function syncs merge commit M from a small repo into a large repo.

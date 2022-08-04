@@ -5,16 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use std::time::Duration;
+
 use anyhow::Result;
 use context::CoreContext;
 use context::SessionClass;
 use scuba_ext::MononokeScubaSampleBuilder;
-use std::time::Duration;
-
-use crate::derivable::BonsaiDerivable;
-use crate::error::DerivationError;
 
 use super::DerivedDataManager;
+use crate::derivable::BonsaiDerivable;
+use crate::error::DerivationError;
 
 #[derive(Clone, Debug)]
 pub struct DiscoveryStats {
@@ -94,7 +94,6 @@ pub mod derived_data_service {
     use std::collections::HashMap;
     use std::sync::Arc;
 
-    use super::DerivedDataManager;
     use anyhow::Result;
     use bonsai_hg_mapping::BonsaiHgMapping;
     use cacheblob::LeaseOps;
@@ -106,6 +105,8 @@ pub mod derived_data_service {
     use mononoke_types::RepositoryId;
     use repo_blobstore::RepoBlobstore;
     use scuba_ext::MononokeScubaSampleBuilder;
+
+    use super::DerivedDataManager;
 
     #[facet::facet]
     pub struct DerivedDataManagerSet {

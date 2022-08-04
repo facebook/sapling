@@ -5,6 +5,36 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
+
+use anyhow::Error;
+use blobstore::BlobstoreGetData;
+use cloned::cloned;
+use context::CoreContext;
+use context::SamplingKey;
+use fbinit::FacebookInit;
+use filetime::FileTime;
+use futures::future;
+use futures::future::try_join_all;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::stream::Stream;
+use futures::stream::TryStreamExt;
+use maplit::hashset;
+use mononoke_types::datetime::DateTime;
+use percent_encoding::percent_encode;
+use percent_encoding::AsciiSet;
+use percent_encoding::CONTROLS;
+use regex::Regex;
+use samplingblob::SamplingHandler;
+use tokio::fs::{self as tkfs};
+
 use crate::commands::JobParams;
 use crate::commands::JobWalkParams;
 use crate::commands::RepoSubcommandParams;
@@ -31,35 +61,6 @@ use crate::detail::scrub::ScrubStats;
 use crate::detail::tail::walk_exact_tail;
 use crate::detail::walk::RepoWalkParams;
 use crate::detail::walk::RepoWalkTypeParams;
-
-use anyhow::Error;
-use blobstore::BlobstoreGetData;
-use cloned::cloned;
-use context::CoreContext;
-use context::SamplingKey;
-use fbinit::FacebookInit;
-use filetime::FileTime;
-use futures::future;
-use futures::future::try_join_all;
-use futures::future::FutureExt;
-use futures::future::TryFutureExt;
-use futures::stream::Stream;
-use futures::stream::TryStreamExt;
-use maplit::hashset;
-use mononoke_types::datetime::DateTime;
-use percent_encoding::percent_encode;
-use percent_encoding::AsciiSet;
-use percent_encoding::CONTROLS;
-use regex::Regex;
-use samplingblob::SamplingHandler;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::io::Write;
-use std::path::Path;
-use std::path::PathBuf;
-use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
-use tokio::fs::{self as tkfs};
 
 // https://url.spec.whatwg.org/#fragment-percent-encode-set
 const FRAGMENT: &AsciiSet = &CONTROLS.add(b' ').add(b'"').add(b'<').add(b'>').add(b'`');

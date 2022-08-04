@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use metaconfig_types::AclRegionRule;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
-use std::collections::HashMap;
-use std::sync::Arc;
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct RegionIndex(pub usize);
@@ -94,10 +95,12 @@ impl PrefixTrieWithRules {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::collections::HashSet;
+
     use metaconfig_types::AclRegion;
     use pretty_assertions::assert_eq;
-    use std::collections::HashSet;
+
+    use super::*;
 
     fn path(raw: &str) -> Option<MPath> {
         MPath::new_opt(raw).unwrap()

@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::path::Path;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use blobrepo::BlobRepo;
@@ -27,9 +31,6 @@ use mononoke_api::Mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mutable_renames::MutableRenames;
-use std::collections::BTreeMap;
-use std::path::Path;
-use std::sync::Arc;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::bookmark;
 use tests_utils::list_working_copy_utf8;

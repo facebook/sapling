@@ -18,6 +18,7 @@ use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
+use derived_data_service_if::types as thrift;
 use filestore::FetchKey;
 use futures::future::ready;
 use futures::stream::FuturesUnordered;
@@ -32,8 +33,6 @@ use crate::BlobHandle;
 use crate::Tree;
 use crate::TreeBuilder;
 use crate::TreeHandle;
-
-use derived_data_service_if::types as thrift;
 
 fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
     let root_prefix = "git.derived_root.";
@@ -192,7 +191,10 @@ pub async fn get_file_changes<B: Blobstore + Clone>(
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::fs::File;
+    use std::io::Write;
+    use std::path::Path;
+
     use anyhow::format_err;
     use blobrepo::BlobRepo;
     use derived_data::BonsaiDerived;
@@ -203,10 +205,9 @@ mod test {
     use git2::Oid;
     use git2::Repository;
     use manifest::ManifestOps;
-    use std::fs::File;
-    use std::io::Write;
-    use std::path::Path;
     use tempdir::TempDir;
+
+    use super::*;
 
     /// This function creates a new Git tree from the fixture's master Bonsai bookmark,
     /// materializes it to disk, then verifies that libgit produces the same Git tree for it.

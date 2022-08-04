@@ -420,8 +420,9 @@ impl Arbitrary for FileType {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use quickcheck::quickcheck;
+
+    use super::*;
 
     quickcheck! {
         fn filetype_thrift_roundtrip(ft: FileType) -> bool {

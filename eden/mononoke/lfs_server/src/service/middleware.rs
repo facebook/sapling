@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::pin::Pin;
+
 use cached_config::ConfigHandle;
 use fbinit::FacebookInit;
 use futures::future::FutureExt;
@@ -17,11 +19,9 @@ use gotham_ext::error::HttpError;
 use gotham_ext::middleware::ClientIdentity;
 use gotham_ext::response::build_error_response;
 use hyper::Uri;
-use std::pin::Pin;
-
-use crate::config::ServerConfig;
 
 use super::error_formatter::LfsErrorFormatter;
+use crate::config::ServerConfig;
 
 // NOTE: Our Throttling middleware is implemented as Gotham middleware for 3 reasons:
 // - It needs to replace responses.

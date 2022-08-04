@@ -5,10 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::add_branching_sync_target::AddBranchingSyncTarget;
-use crate::add_sync_target::AddSyncTarget;
-use crate::megarepo_test_utils::MegarepoTest;
-use crate::megarepo_test_utils::SyncTargetConfigBuilder;
+use std::sync::Arc;
+
 use anyhow::Error;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -16,10 +14,14 @@ use maplit::btreemap;
 use megarepo_config::MononokeMegarepoConfigs;
 use megarepo_config::Target;
 use megarepo_mapping::SourceName;
-use std::sync::Arc;
 use tests_utils::bookmark;
 use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
+
+use crate::add_branching_sync_target::AddBranchingSyncTarget;
+use crate::add_sync_target::AddSyncTarget;
+use crate::megarepo_test_utils::MegarepoTest;
+use crate::megarepo_test_utils::SyncTargetConfigBuilder;
 
 #[fbinit::test]
 async fn test_add_branching_sync_target_success(fb: FacebookInit) -> Result<(), Error> {

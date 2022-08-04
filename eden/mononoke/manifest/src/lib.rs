@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+pub use blobstore::StoreLoadable;
+pub use derive_batch::derive_manifests_for_simple_stack_of_commits;
+pub use derive_batch::ManifestChanges;
+
 pub use crate::bonsai::bonsai_diff;
 pub use crate::bonsai::BonsaiDiffFileChange;
 pub use crate::derive::derive_manifest;
@@ -25,9 +29,6 @@ pub use crate::types::Manifest;
 pub use crate::types::OrderedManifest;
 pub use crate::types::PathTree;
 pub use crate::types::Traced;
-pub use blobstore::StoreLoadable;
-pub use derive_batch::derive_manifests_for_simple_stack_of_commits;
-pub use derive_batch::ManifestChanges;
 
 mod bonsai;
 mod derive;

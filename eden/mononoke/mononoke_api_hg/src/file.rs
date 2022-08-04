@@ -202,8 +202,6 @@ impl HgDataId for HgFileNodeId {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::str::FromStr;
     use std::sync::Arc;
 
@@ -217,6 +215,7 @@ mod tests {
     use mononoke_api::repo::Repo;
     use mononoke_api::repo::RepoContext;
 
+    use super::*;
     use crate::RepoContextHgExt;
 
     #[fbinit::test]

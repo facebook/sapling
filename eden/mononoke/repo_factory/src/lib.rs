@@ -25,8 +25,10 @@ use blobstore_factory::default_scrub_handler;
 use blobstore_factory::make_blobstore;
 use blobstore_factory::make_blobstore_enumerable_with_unlink;
 use blobstore_factory::make_metadata_sql_factory;
+pub use blobstore_factory::BlobstoreOptions;
 use blobstore_factory::ComponentSamplingHandler;
 use blobstore_factory::MetadataSqlFactory;
+pub use blobstore_factory::ReadOnlyStorage;
 use blobstore_factory::ScrubHandler;
 use bonsai_git_mapping::ArcBonsaiGitMapping;
 use bonsai_git_mapping::SqlBonsaiGitMappingBuilder;
@@ -156,9 +158,6 @@ use virtually_sharded_blobstore::VirtuallyShardedBlobstore;
 use warm_bookmarks_cache::ArcBookmarksCache;
 use warm_bookmarks_cache::NoopBookmarksCache;
 use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
-
-pub use blobstore_factory::BlobstoreOptions;
-pub use blobstore_factory::ReadOnlyStorage;
 
 const DERIVED_DATA_LEASE: &str = "derived-data-lease";
 

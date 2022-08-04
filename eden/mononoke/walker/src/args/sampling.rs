@@ -5,12 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::detail::sampling::SamplingOptions;
 use anyhow::Error;
 use clap::Args;
 use regex::Regex;
 
 use crate::args::graph_arg_types::NodeTypeArg;
+use crate::detail::sampling::SamplingOptions;
 
 #[derive(Args, Debug)]
 pub struct SamplingArgs {

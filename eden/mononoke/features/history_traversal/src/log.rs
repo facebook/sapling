@@ -5,7 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use crate::Repo;
+use std::cmp::Reverse;
+use std::collections::BinaryHeap;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::VecDeque;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Error;
@@ -43,15 +49,11 @@ use mononoke_types::ManifestUnodeId;
 use mutable_renames::MutableRenames;
 use reachabilityindex::LeastCommonAncestorsHint;
 use stats::prelude::*;
-use std::cmp::Reverse;
-use std::collections::BinaryHeap;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::collections::VecDeque;
-use std::sync::Arc;
 use thiserror::Error;
 use time_ext::DurationExt;
 use unodes::RootUnodeManifestId;
+
+use crate::Repo;
 
 define_stats! {
     prefix = "mononoke.fastlog";
@@ -1203,7 +1205,9 @@ async fn prefetch_fastlog_by_changeset(
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering;
+
     use blobrepo::AsBlobRepo;
     use blobrepo::BlobRepo;
     use bonsai_hg_mapping::BonsaiHgMapping;
@@ -1225,10 +1229,10 @@ mod test {
     use repo_identity::RepoIdentity;
     use repo_identity::RepoIdentityRef;
     use skiplist::SkiplistIndex;
-    use std::sync::atomic::AtomicUsize;
-    use std::sync::atomic::Ordering;
     use tests_utils::CreateCommitContext;
     use tunables::with_tunables_async_arc;
+
+    use super::*;
 
     #[facet::container]
     #[derive(Clone)]

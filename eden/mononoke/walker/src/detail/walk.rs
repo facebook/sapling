@@ -5,29 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::commands::JobWalkParams;
-use crate::detail::graph::AliasKey;
-use crate::detail::graph::ChangesetKey;
-use crate::detail::graph::EdgeType;
-use crate::detail::graph::FastlogKey;
-use crate::detail::graph::FileContentData;
-use crate::detail::graph::HashValidationError;
-use crate::detail::graph::Node;
-use crate::detail::graph::NodeData;
-use crate::detail::graph::NodeType;
-use crate::detail::graph::PathKey;
-use crate::detail::graph::SqlShardInfo;
-use crate::detail::graph::UnodeFlags;
-use crate::detail::graph::UnodeKey;
-use crate::detail::graph::UnodeManifestEntry;
-use crate::detail::graph::WrappedPath;
-use crate::detail::log;
-use crate::detail::state::InternedType;
-use crate::detail::validate::add_node_to_scuba;
-use crate::detail::validate::CHECK_FAIL;
-use crate::detail::validate::CHECK_TYPE;
-use crate::detail::validate::EDGE_TYPE;
-use crate::detail::validate::ERROR_MSG;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt::Debug;
+use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Context;
@@ -99,12 +80,32 @@ use skeleton_manifest::RootSkeletonManifestId;
 use slog::info;
 use slog::warn;
 use slog::Logger;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::fmt::Debug;
-use std::sync::Arc;
 use thiserror::Error;
 use unodes::RootUnodeManifestId;
+
+use crate::commands::JobWalkParams;
+use crate::detail::graph::AliasKey;
+use crate::detail::graph::ChangesetKey;
+use crate::detail::graph::EdgeType;
+use crate::detail::graph::FastlogKey;
+use crate::detail::graph::FileContentData;
+use crate::detail::graph::HashValidationError;
+use crate::detail::graph::Node;
+use crate::detail::graph::NodeData;
+use crate::detail::graph::NodeType;
+use crate::detail::graph::PathKey;
+use crate::detail::graph::SqlShardInfo;
+use crate::detail::graph::UnodeFlags;
+use crate::detail::graph::UnodeKey;
+use crate::detail::graph::UnodeManifestEntry;
+use crate::detail::graph::WrappedPath;
+use crate::detail::log;
+use crate::detail::state::InternedType;
+use crate::detail::validate::add_node_to_scuba;
+use crate::detail::validate::CHECK_FAIL;
+use crate::detail::validate::CHECK_TYPE;
+use crate::detail::validate::EDGE_TYPE;
+use crate::detail::validate::ERROR_MSG;
 
 pub trait StepRoute: Debug {
     /// Where we stepped from, useful for immediate reproductions with --walk-root

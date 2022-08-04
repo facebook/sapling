@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use ref_cast::RefCast;
 use std::fmt;
 use std::fmt::Debug;
 use std::fmt::Display;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::ops::Deref;
+
+use ref_cast::RefCast;
 
 macro_rules! generic_newtype_with_obvious_impls {
     ($name: ident) => {

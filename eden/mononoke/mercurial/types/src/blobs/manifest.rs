@@ -7,6 +7,8 @@
 
 //! Root manifest, tree nodes
 
+use std::str;
+
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
@@ -20,7 +22,6 @@ use context::CoreContext;
 use manifest::Entry;
 use manifest::Manifest;
 use sorted_vector_map::SortedVectorMap;
-use std::str;
 
 use super::errors::ErrorKind;
 use crate::nodehash::HgNodeHash;

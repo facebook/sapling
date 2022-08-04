@@ -5,13 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use crate::RepoShardedProcess;
-use crate::RepoShardedProcessExecutor;
+use std::sync::Arc;
+
 use anyhow::Result;
 use fbinit::FacebookInit;
 use slog::Logger;
-use std::sync::Arc;
 use tokio::runtime::Handle;
+
+use crate::RepoShardedProcess;
+use crate::RepoShardedProcessExecutor;
 
 pub struct BackgroundProcessExecutor {}
 

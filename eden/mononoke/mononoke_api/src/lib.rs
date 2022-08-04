@@ -40,6 +40,12 @@ mod xrepo;
 #[cfg(test)]
 mod test;
 
+// Re-export types that are useful for clients.
+pub use blame::CompatBlame;
+pub use context::CoreContext;
+pub use context::LoggingContainer;
+pub use context::SessionContainer;
+
 pub use crate::changeset::ChangesetContext;
 pub use crate::changeset::ChangesetDiffItem;
 pub use crate::changeset::ChangesetFileOrdering;
@@ -82,12 +88,6 @@ pub use crate::tree::TreeEntry;
 pub use crate::tree::TreeId;
 pub use crate::tree::TreeSummary;
 pub use crate::xrepo::CandidateSelectionHintArgs;
-
-// Re-export types that are useful for clients.
-pub use blame::CompatBlame;
-pub use context::CoreContext;
-pub use context::LoggingContainer;
-pub use context::SessionContainer;
 
 /// An instance of Mononoke, which may manage multiple repositories.
 pub struct Mononoke {
@@ -229,12 +229,13 @@ impl Mononoke {
 }
 
 pub mod test_impl {
-    use super::*;
     use blobrepo::BlobRepo;
     use cloned::cloned;
     use live_commit_sync_config::LiveCommitSyncConfig;
     use metaconfig_types::CommitSyncConfig;
     use synced_commit_mapping::SyncedCommitMapping;
+
+    use super::*;
 
     impl Mononoke {
         /// Create a Mononoke instance for testing.

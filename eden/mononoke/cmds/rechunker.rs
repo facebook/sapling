@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::str::FromStr;
+
 use anyhow::format_err;
 use anyhow::Error;
 use blobrepo::BlobRepo;
@@ -12,17 +14,14 @@ use blobstore::Loadable;
 use blobstore::PutBehaviour;
 use clap_old::Arg;
 use cloned::cloned;
+use cmdlib::args;
+use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream;
 use futures::stream::TryStreamExt;
-
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgNodeHash;
-use std::str::FromStr;
-
-use cmdlib::args;
-use cmdlib::helpers::block_execute;
 
 const NAME: &str = "rechunker";
 const DEFAULT_NUM_JOBS: usize = 10;

@@ -5,9 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::setcommon::add_generations_by_bonsai;
-use crate::setcommon::BonsaiInputStream;
-use crate::BonsaiNodeStream;
+use std::collections::HashSet;
+
 use anyhow::Error;
 use changeset_fetcher::ArcChangesetFetcher;
 use context::CoreContext;
@@ -17,7 +16,10 @@ use futures_old::Async;
 use futures_old::Poll;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
-use std::collections::HashSet;
+
+use crate::setcommon::add_generations_by_bonsai;
+use crate::setcommon::BonsaiInputStream;
+use crate::BonsaiNodeStream;
 
 /// A wrapper around a NodeStream that asserts that the two revset invariants hold:
 /// 1. The generation number never increases
@@ -71,11 +73,8 @@ impl Stream for ValidateNodeStream {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::fixtures::Linear;
-    use crate::fixtures::TestRepoFixture;
-    use crate::setcommon::NotReadyEmptyStream;
-    use crate::tests::TestChangesetFetcher;
+    use std::sync::Arc;
+
     use fbinit::FacebookInit;
     use futures::compat::Stream01CompatExt;
     use futures::stream::StreamExt as _;
@@ -83,7 +82,12 @@ mod test {
     use revset_test_helper::assert_changesets_sequence;
     use revset_test_helper::single_changeset_id;
     use revset_test_helper::string_to_bonsai;
-    use std::sync::Arc;
+
+    use super::*;
+    use crate::fixtures::Linear;
+    use crate::fixtures::TestRepoFixture;
+    use crate::setcommon::NotReadyEmptyStream;
+    use crate::tests::TestChangesetFetcher;
 
     #[fbinit::test]
     async fn validate_accepts_single_node(fb: FacebookInit) {

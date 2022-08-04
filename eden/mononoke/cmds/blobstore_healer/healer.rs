@@ -5,6 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::future::Future;
+use std::iter::Sum;
+use std::ops::Add;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::Duration;
+
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::Blobstore;
@@ -30,15 +40,6 @@ use rand::Rng;
 use slog::debug;
 use slog::info;
 use slog::warn;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::future::Future;
-use std::iter::Sum;
-use std::ops::Add;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::time::Duration;
 
 #[cfg(test)]
 mod tests;

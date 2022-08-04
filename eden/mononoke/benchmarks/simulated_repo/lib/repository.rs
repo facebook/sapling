@@ -8,6 +8,9 @@
 //! Main function is `new_benchmark_repo` which creates `BlobRepo` which delay applied
 //! to all underlying stores, but which all the caching enabled.
 
+use std::sync::Arc;
+use std::time::Duration;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
@@ -94,8 +97,6 @@ use skiplist::ArcSkiplistIndex;
 use skiplist::SkiplistIndex;
 use sql_construct::SqlConstruct;
 use sqlphases::SqlPhasesBuilder;
-use std::sync::Arc;
-use std::time::Duration;
 
 pub type Normal = rand_distr::Normal<f64>;
 

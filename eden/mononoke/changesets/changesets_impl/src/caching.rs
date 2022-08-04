@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use abomonation_derive::Abomonation;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -18,6 +22,8 @@ use caching_ext::EntityStore;
 use caching_ext::KeyedEntityStore;
 use caching_ext::MemcacheEntity;
 use caching_ext::MemcacheHandler;
+#[cfg(test)]
+use caching_ext::MockStoreStats;
 use changeset_entry_thrift as thrift;
 use changesets::ChangesetEntry;
 use changesets::ChangesetInsert;
@@ -35,12 +41,6 @@ use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::RepositoryId;
 use ref_cast::RefCast;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::sync::Arc;
-
-#[cfg(test)]
-use caching_ext::MockStoreStats;
 
 pub fn get_cache_key(repo_id: RepositoryId, cs_id: &ChangesetId) -> String {
     format!("{}.{}", repo_id.prefix(), cs_id)

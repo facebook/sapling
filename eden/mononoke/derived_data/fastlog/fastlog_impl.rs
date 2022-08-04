@@ -5,8 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::ErrorKind;
-use crate::FastlogParent;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::VecDeque;
+use std::sync::Arc;
+
 use anyhow::Error;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
@@ -19,10 +22,9 @@ use mononoke_types::fastlog_batch::ParentOffset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::ManifestUnodeId;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::collections::VecDeque;
-use std::sync::Arc;
+
+use crate::ErrorKind;
+use crate::FastlogParent;
 
 pub(crate) async fn create_new_batch(
     ctx: &CoreContext,
@@ -236,7 +238,6 @@ fn flatten_raw_list(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
     use fixtures::Linear;
@@ -244,6 +245,8 @@ mod test {
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
+
+    use super::*;
 
     #[fbinit::test]
     async fn fetch_flattened_simple(fb: FacebookInit) -> Result<(), Error> {

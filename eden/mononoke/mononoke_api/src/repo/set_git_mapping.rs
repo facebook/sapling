@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::Context;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
@@ -12,8 +14,6 @@ use bonsai_git_mapping::BonsaiGitMappingRef;
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
-
-use std::collections::HashMap;
 
 const HGGIT_MARKER_EXTRA: &str = "hg-git-rename-source";
 const HGGIT_MARKER_VALUE: &[u8] = b"git";

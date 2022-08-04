@@ -7,6 +7,8 @@
 
 #![feature(auto_traits)]
 
+use std::collections::HashSet;
+
 /// Mononoke Cross Repo validator job
 ///
 /// This is a special job used to validate that cross-repo sync,
@@ -46,7 +48,6 @@ use futures::stream::TryStreamExt;
 use mononoke_api_types::InnerRepo;
 use mutable_counters::MutableCountersRef;
 use scuba_ext::MononokeScubaSampleBuilder;
-use std::collections::HashSet;
 
 mod cli;
 mod reporting;

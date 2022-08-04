@@ -5,6 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::str::FromStr;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use ascii::AsciiString;
@@ -54,14 +60,10 @@ use mononoke_types::MPath;
 use mononoke_types::RepositoryId;
 use movers::Mover;
 use mutable_counters::MutableCountersArc;
+use pretty_assertions::assert_eq;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use skiplist::SkiplistIndex;
 use sql_construct::SqlConstruct;
-use std::collections::BTreeMap;
-use std::collections::HashMap;
-use std::str::FromStr;
-use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
@@ -77,8 +79,6 @@ use tests_utils::store_rename;
 use tests_utils::CreateCommitContext;
 use tokio::runtime::Runtime;
 use tunables::with_tunables_async;
-
-use pretty_assertions::assert_eq;
 
 use crate::backsync_latest;
 use crate::format_counter;

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::path::PathBuf;
+
 use async_trait::async_trait;
 use cached_config::ConfigStore;
 use context::CoreContext;
@@ -15,7 +17,6 @@ use megarepo_configs::types::Target;
 use megarepo_error::MegarepoError;
 use slog::warn;
 use slog::Logger;
-use std::path::PathBuf;
 
 use crate::MononokeMegarepoConfigs;
 

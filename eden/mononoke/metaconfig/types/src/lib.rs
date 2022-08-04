@@ -10,9 +10,6 @@
 
 #![deny(missing_docs)]
 
-use anyhow::anyhow;
-use anyhow::Error;
-use anyhow::Result;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -24,6 +21,9 @@ use std::str;
 use std::str::FromStr;
 use std::time::Duration;
 
+use anyhow::anyhow;
+use anyhow::Error;
+use anyhow::Result;
 use ascii::AsciiString;
 use bookmarks_types::BookmarkName;
 use derive_more::From;

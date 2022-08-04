@@ -5,15 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use hyper::StatusCode;
-
-use thiserror::Error;
-
+use filestore::FetchKey;
 use gotham_ext::error::HttpError;
+use hyper::StatusCode;
 use lfs_protocol::RequestObject;
 use lfs_protocol::ResponseObject;
-
-use filestore::FetchKey;
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {

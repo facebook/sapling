@@ -5,13 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use mononoke_types::hash::Blake2;
 use sql::mysql_async::from_value_opt;
 use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
-
-use mononoke_types::hash::Blake2;
 
 use crate::types::IdDagVersion;
 use crate::types::IdMapVersion;

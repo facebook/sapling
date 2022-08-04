@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::fmt;
+
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
@@ -34,8 +37,6 @@ use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
-use std::collections::BTreeMap;
-use std::fmt;
 
 queries! {
     read GetMappingEntry(
@@ -425,12 +426,13 @@ impl SqlConstructFromMetadataDatabaseConfig for MegarepoMapping {}
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use fbinit::FacebookInit;
     use maplit::btreemap;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_simple_mapping(fb: FacebookInit) -> Result<(), Error> {

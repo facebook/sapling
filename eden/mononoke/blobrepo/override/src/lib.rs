@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use blobrepo::BlobRepo;
 use blobrepo::BlobRepoInner;
 use blobstore::Blobstore;
@@ -14,7 +16,6 @@ use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::ArcChangesets;
 use filenodes::ArcFilenodes;
 use repo_blobstore::RepoBlobstore;
-use std::sync::Arc;
 
 /// Create new instance of implementing object with overridden field of specified type.
 ///

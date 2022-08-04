@@ -12,10 +12,9 @@ use anyhow::Context;
 use anyhow::Result;
 use clap::Parser;
 use clap::Subcommand;
+use fetch::BlobstoreFetchArgs;
 use mononoke_app::args::RepoBlobstoreArgs;
 use mononoke_app::MononokeApp;
-
-use fetch::BlobstoreFetchArgs;
 use upload::BlobstoreUploadArgs;
 
 /// Directly access blobstore keys

@@ -5,8 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::Entry;
-use crate::Manifest;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt::Debug;
+use std::hash::Hash;
+
 use anyhow::Error;
 use blobstore::StoreLoadable;
 use cloned::cloned;
@@ -22,11 +25,10 @@ use maplit::hashmap;
 use maplit::hashset;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::fmt::Debug;
-use std::hash::Hash;
 use tokio::task;
+
+use crate::Entry;
+use crate::Manifest;
 
 pub(crate) type BonsaiEntry<ManifestId, FileId> = Entry<ManifestId, (FileType, FileId)>;
 
@@ -351,6 +353,9 @@ where
 
 #[cfg(test)]
 mod test {
+    use borrowed::borrowed;
+    use fbinit::FacebookInit;
+
     use super::*;
     use crate::tests::ctx;
     use crate::tests::dir;
@@ -361,8 +366,6 @@ mod test {
     use crate::tests::TestFileId;
     use crate::tests::TestManifestIdStr;
     use crate::tests::TestManifestStr;
-    use borrowed::borrowed;
-    use fbinit::FacebookInit;
 
     impl<ManifestId, FileId> CompositeEntry<ManifestId, FileId>
     where

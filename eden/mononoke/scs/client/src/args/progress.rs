@@ -7,15 +7,16 @@
 
 //! Adapters for rendering progress
 
+use std::io::Write;
 use std::time::Duration;
 
-use crate::render::Render;
 use anyhow::Result;
 use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use std::io::Write;
+
+use crate::render::Render;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct ProgressOutput {

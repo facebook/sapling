@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::Error;
 use async_trait::async_trait;
 use changesets::ChangesetEntry;
@@ -20,7 +22,6 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::RepositoryId;
-use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct MicrowaveChangesets {

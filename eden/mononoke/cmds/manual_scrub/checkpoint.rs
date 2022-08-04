@@ -5,14 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Context;
-use anyhow::Error;
-use slog::info;
-use slog::Logger;
 use std::ffi::OsStr;
 use std::fs::read_to_string;
 use std::io::Write;
 use std::path::PathBuf;
+
+use anyhow::Context;
+use anyhow::Error;
+use slog::info;
+use slog::Logger;
 use tempfile::NamedTempFile;
 
 #[derive(Clone, Debug)]

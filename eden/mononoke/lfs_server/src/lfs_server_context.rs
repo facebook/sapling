@@ -18,6 +18,7 @@ use anyhow::Context;
 use anyhow::Error;
 use bytes::Bytes;
 use cached_config::ConfigHandle;
+use context::CoreContext;
 use futures::future;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
@@ -33,23 +34,21 @@ use http::uri::Parts;
 use http::uri::PathAndQuery;
 use http::uri::Scheme;
 use http::uri::Uri;
+use hyper::client::HttpConnector;
 use hyper::header;
 use hyper::Body;
-use hyper::Request;
-use permission_checker::ArcPermissionChecker;
-use permission_checker::MononokeIdentitySet;
-use slog::Logger;
-use tokio::runtime::Handle;
-
-use context::CoreContext;
-use hyper::client::HttpConnector;
 use hyper::Client;
+use hyper::Request;
 use hyper_openssl::HttpsConnector;
 use lfs_protocol::RequestBatch;
 use lfs_protocol::RequestObject;
 use lfs_protocol::ResponseBatch;
 use metaconfig_types::RepoConfig;
 use mononoke_types::ContentId;
+use permission_checker::ArcPermissionChecker;
+use permission_checker::MononokeIdentitySet;
+use slog::Logger;
+use tokio::runtime::Handle;
 
 use crate::config::ServerConfig;
 use crate::errors::ErrorKind;
@@ -536,15 +535,17 @@ impl BaseUri {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::str::FromStr;
+
     use anyhow::anyhow;
     use fbinit::FacebookInit;
     use lfs_protocol::Sha256 as LfsSha256;
     use mononoke_types::hash::Sha256;
     use mononoke_types::ContentId;
     use permission_checker::PermissionCheckerBuilder;
-    use std::str::FromStr;
     use test_repo_factory::TestRepoFactory;
+
+    use super::*;
 
     const ONES_HASH: &str = "1111111111111111111111111111111111111111111111111111111111111111";
     const TWOS_HASH: &str = "2222222222222222222222222222222222222222222222222222222222222222";

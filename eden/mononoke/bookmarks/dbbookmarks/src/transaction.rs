@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use bookmarks::BookmarkKind;
@@ -25,8 +28,6 @@ use sql::queries;
 use sql::Connection;
 use sql::Transaction as SqlTransaction;
 use stats::prelude::*;
-use std::collections::HashSet;
-use std::sync::Arc;
 
 use crate::store::SelectBookmark;
 

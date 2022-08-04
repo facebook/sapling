@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::pin::Pin;
+use std::task::Poll;
+use std::time::Instant;
+
 use futures::ready;
 use futures::task::Context;
 use futures::Future;
@@ -16,9 +20,6 @@ use ratelimit_meter::clock::Clock;
 use ratelimit_meter::example_algorithms::Impossible;
 use ratelimit_meter::DirectRateLimiter;
 use ratelimit_meter::NonConformance;
-use std::pin::Pin;
-use std::task::Poll;
-use std::time::Instant;
 use tokio_shim::time::Sleep;
 
 #[pin_project]

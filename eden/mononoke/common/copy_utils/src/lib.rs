@@ -5,17 +5,19 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::num::NonZeroU64;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use blobrepo::save_bonsai_changesets;
+use blobrepo::BlobRepo;
+use commit_transformation::copy_file_contents;
+use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::future::try_join;
 use futures::TryStreamExt;
-
-use blobrepo::BlobRepo;
-use commit_transformation::copy_file_contents;
-use context::CoreContext;
 use manifest::Entry;
 use manifest::ManifestOps;
 use mononoke_types::fsnode::FsnodeFile;
@@ -29,8 +31,6 @@ use regex::Regex;
 use slog::debug;
 use slog::info;
 use sorted_vector_map::SortedVectorMap;
-use std::collections::BTreeMap;
-use std::num::NonZeroU64;
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Limits {
@@ -330,7 +330,6 @@ fn create_bonsai_changeset(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use blobstore::StoreLoadable;
     use fbinit::FacebookInit;
     use maplit::hashmap;
@@ -338,6 +337,8 @@ mod test {
     use test_repo_factory::TestRepoFactory;
     use tests_utils::list_working_copy_utf8;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_list_directory(fb: FacebookInit) -> Result<(), Error> {

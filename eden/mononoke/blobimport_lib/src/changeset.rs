@@ -13,6 +13,10 @@ use ::manifest::Entry;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
+use blobrepo::BlobRepo;
+use blobrepo_hg::create_bonsai_changeset_hook;
+use blobrepo_hg::ChangesetHandle;
+use blobrepo_hg::CreateChangeset;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
@@ -37,12 +41,6 @@ use futures_old::stream;
 use futures_old::stream::Stream;
 use futures_old::Future;
 use futures_old::IntoFuture;
-use tokio::runtime::Handle;
-
-use blobrepo::BlobRepo;
-use blobrepo_hg::create_bonsai_changeset_hook;
-use blobrepo_hg::ChangesetHandle;
-use blobrepo_hg::CreateChangeset;
 use lfs_import_lib::lfs_upload;
 use mercurial_revlog::manifest;
 use mercurial_revlog::revlog::RevIdx;
@@ -71,6 +69,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ContentMetadata;
 use phases::PhasesArc;
 use slog::info;
+use tokio::runtime::Handle;
 
 use crate::concurrency::JobProcessor;
 

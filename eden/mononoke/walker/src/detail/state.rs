@@ -5,21 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use crate::detail::graph::EdgeType;
-use crate::detail::graph::Node;
-use crate::detail::graph::NodeData;
-use crate::detail::graph::NodeType;
-use crate::detail::graph::UnodeFlags;
-use crate::detail::graph::WrappedPath;
-use crate::detail::graph::WrappedPathHash;
-use crate::detail::log;
-use crate::detail::progress::sort_by_string;
-use crate::detail::walk::expand_checked_nodes;
-use crate::detail::walk::EmptyRoute;
-use crate::detail::walk::OutgoingEdge;
-use crate::detail::walk::TailingWalkVisitor;
-use crate::detail::walk::VisitOne;
-use crate::detail::walk::WalkVisitor;
+use std::cmp;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt;
+use std::hash::Hash;
+use std::marker::PhantomData;
+use std::ops::Add;
+use std::sync::atomic::AtomicU32;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 
 use ahash::RandomState;
 use anyhow::bail;
@@ -49,20 +44,26 @@ use phases::Phase;
 use phases::Phases;
 use slog::info;
 use slog::Logger;
-use std::cmp;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::fmt;
-use std::hash::Hash;
-use std::marker::PhantomData;
-use std::ops::Add;
-use std::sync::atomic::AtomicU32;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
 use strum::EnumCount;
 use strum_macros::EnumIter;
 use strum_macros::EnumString;
 use strum_macros::EnumVariantNames;
+
+use crate::detail::graph::EdgeType;
+use crate::detail::graph::Node;
+use crate::detail::graph::NodeData;
+use crate::detail::graph::NodeType;
+use crate::detail::graph::UnodeFlags;
+use crate::detail::graph::WrappedPath;
+use crate::detail::graph::WrappedPathHash;
+use crate::detail::log;
+use crate::detail::progress::sort_by_string;
+use crate::detail::walk::expand_checked_nodes;
+use crate::detail::walk::EmptyRoute;
+use crate::detail::walk::OutgoingEdge;
+use crate::detail::walk::TailingWalkVisitor;
+use crate::detail::walk::VisitOne;
+use crate::detail::walk::WalkVisitor;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 pub struct StepStats {
@@ -1017,8 +1018,9 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::mem::size_of;
+
+    use super::*;
 
     #[test]
     fn test_interned_size() {

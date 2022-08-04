@@ -13,7 +13,10 @@ use std::iter;
 use std::mem::replace;
 
 use anyhow::Error;
+use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use cloned::cloned;
+use context::CoreContext;
 use futures::FutureExt;
 use futures::TryFutureExt;
 use futures_ext::BoxStream;
@@ -24,10 +27,6 @@ use futures_old::stream::iter_ok;
 use futures_old::stream::Stream;
 use futures_old::Async;
 use futures_old::Poll;
-
-use changeset_fetcher::ArcChangesetFetcher;
-use changeset_fetcher::ChangesetFetcher;
-use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 
@@ -263,10 +262,8 @@ impl Stream for RangeNodeStream {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::fixtures::Linear;
-    use crate::fixtures::MergeUneven;
-    use crate::fixtures::TestRepoFixture;
+    use std::sync::Arc;
+
     use blobrepo::BlobRepo;
     use context::CoreContext;
     use fbinit::FacebookInit;
@@ -274,7 +271,11 @@ mod test {
     use mercurial_types::HgChangesetId;
     use revset_test_helper::assert_changesets_sequence;
     use revset_test_helper::string_to_nodehash;
-    use std::sync::Arc;
+
+    use super::*;
+    use crate::fixtures::Linear;
+    use crate::fixtures::MergeUneven;
+    use crate::fixtures::TestRepoFixture;
 
     async fn string_to_bonsai<'a>(
         ctx: &'a CoreContext,

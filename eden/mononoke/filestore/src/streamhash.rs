@@ -28,21 +28,19 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use bytes::Bytes;
     use futures::stream;
-
-    use crate::incremental_hash::ContentIdIncrementalHasher;
-    use crate::incremental_hash::GitSha1IncrementalHasher;
-    use crate::incremental_hash::Sha1IncrementalHasher;
-    use crate::incremental_hash::Sha256IncrementalHasher;
-
-    use crate::expected_size::ExpectedSize;
-
     use mononoke_types::hash::RichGitSha1;
     use mononoke_types::hash::Sha1;
     use mononoke_types::hash::Sha256;
     use mononoke_types::ContentId;
+
+    use super::*;
+    use crate::expected_size::ExpectedSize;
+    use crate::incremental_hash::ContentIdIncrementalHasher;
+    use crate::incremental_hash::GitSha1IncrementalHasher;
+    use crate::incremental_hash::Sha1IncrementalHasher;
+    use crate::incremental_hash::Sha256IncrementalHasher;
 
     #[tokio::test]
     async fn sha1_simple() {

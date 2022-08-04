@@ -5,9 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use thiserror::Error;
-
 use mononoke_types::ContentId;
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {

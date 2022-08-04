@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Error;
@@ -30,8 +33,6 @@ use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
-use std::collections::HashSet;
-use std::sync::Arc;
 
 mod caching;
 use crate::caching::CacheHandlers;

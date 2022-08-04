@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use anyhow::Error;
 use anyhow::Result;
 use blobrepo::BlobRepo;
@@ -34,8 +37,6 @@ use revset::AncestorsNodeStream;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use slog::info;
-use std::collections::HashSet;
-use std::sync::Arc;
 use thiserror::Error;
 use tokio::task;
 

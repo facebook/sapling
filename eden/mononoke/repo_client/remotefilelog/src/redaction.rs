@@ -11,7 +11,6 @@ use futures_old::Async;
 use futures_old::Future;
 use futures_old::Poll;
 use mercurial_types::FileBytes;
-
 use redactedblobstore::has_redaction_root_cause;
 
 /// Tombstone string to replace the content of redacted files with

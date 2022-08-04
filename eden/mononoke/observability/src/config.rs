@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::RwLock;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use observability_config::types::ObservabilityConfig as CfgrObservabilityConfig;
@@ -17,7 +19,6 @@ use serde::de::Deserializer;
 use serde::de::Error as _;
 use serde::Deserialize;
 use slog::Level;
-use std::sync::RwLock;
 
 fn cfgr_to_slog_level(level: CfgrLoggingLevel) -> Result<Level, Error> {
     match level {

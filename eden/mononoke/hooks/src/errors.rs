@@ -6,11 +6,11 @@
  */
 
 use std::collections::HashSet;
-use thiserror::Error;
 
 pub use mercurial_types::HgChangesetId;
 use metaconfig_types::BookmarkOrRegex;
 pub use mononoke_types::MPath;
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {

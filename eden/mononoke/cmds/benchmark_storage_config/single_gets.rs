@@ -7,6 +7,9 @@
 
 use std::sync::Arc;
 
+use blobstore::Blobstore;
+use blobstore::BlobstoreBytes;
+use context::CoreContext;
 use criterion::BenchmarkId;
 use criterion::Criterion;
 use criterion::Throughput;
@@ -14,10 +17,6 @@ use rand::thread_rng;
 use rand::Rng;
 use rand::RngCore;
 use tokio::runtime::Handle;
-
-use blobstore::Blobstore;
-use blobstore::BlobstoreBytes;
-use context::CoreContext;
 
 use crate::KB;
 use crate::MB;

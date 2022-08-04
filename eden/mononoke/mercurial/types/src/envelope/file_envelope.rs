@@ -14,11 +14,10 @@ use anyhow::Error;
 use anyhow::Result;
 use bytes::Bytes;
 use fbthrift::compact_protocol;
+use mononoke_types::ContentId;
 use quickcheck::empty_shrinker;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
-
-use mononoke_types::ContentId;
 
 use super::HgEnvelopeBlob;
 use crate::errors::*;
@@ -195,8 +194,9 @@ impl Arbitrary for HgFileEnvelope {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use quickcheck::quickcheck;
+
+    use super::*;
 
     quickcheck! {
         fn thrift_roundtrip(fe: HgFileEnvelope) -> bool {

@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+use std::time::Duration;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use slog::info;
 use slog::Logger;
-use std::fmt;
-use std::time::Duration;
 use tokio::time;
 
 const MAX_ALLOWED_REPLICATION_LAG_SECS: u64 = 5;
@@ -130,8 +131,9 @@ impl<'a> WaitForReplicationConfig<'a> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use assert_matches::assert_matches;
+
+    use super::*;
 
     struct TestMonitor(u64);
 

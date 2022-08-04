@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use super::*;
 use anyhow::Context;
 use anyhow::Error;
 use blobstore::DEFAULT_PUT_BEHAVIOUR;
@@ -17,6 +16,8 @@ use rand::thread_rng;
 use rand::Rng;
 use rand::RngCore;
 use strum::IntoEnumIterator;
+
+use super::*;
 
 async fn test_chunking_methods<Test, Fut>(
     fb: FacebookInit,

@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use scuba_ext::MononokeScubaSampleBuilder;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
+
+use scuba_ext::MononokeScubaSampleBuilder;
 
 macro_rules! define_perf_counters {
     (enum $enum_name:ident {

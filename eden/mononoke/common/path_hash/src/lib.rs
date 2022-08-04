@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Borrow;
+use std::borrow::Cow;
+use std::hash::Hash;
+
 use abomonation_derive::Abomonation;
 use mononoke_types::hash;
 use mononoke_types::path_bytes_from_mpath;
@@ -15,9 +19,6 @@ use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
-use std::borrow::Borrow;
-use std::borrow::Cow;
-use std::hash::Hash;
 #[derive(Abomonation, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[derive(mysql::OptTryFromRowField)]
 pub struct PathHashBytes(pub Vec<u8>);

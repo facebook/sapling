@@ -5,18 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use futures::future;
-use futures::stream;
-use futures::stream::TryStreamExt;
-use slog::info;
-use std::collections::HashSet;
-
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkPagination;
@@ -24,9 +19,13 @@ use bookmarks::BookmarkPrefix;
 use bookmarks::Bookmarks;
 use bookmarks::Freshness;
 use context::CoreContext;
+use futures::future;
+use futures::stream;
+use futures::stream::TryStreamExt;
 use metaconfig_types::SegmentedChangelogConfig;
 use metaconfig_types::SegmentedChangelogHeadConfig;
 use mononoke_types::ChangesetId;
+use slog::info;
 
 use crate::dag::NameDagBuilder;
 use crate::dag::VertexListWithOptions;
@@ -173,12 +172,13 @@ async fn bookmark_with_options(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use blobrepo::BlobRepo;
     use fbinit::FacebookInit;
     use fixtures::set_bookmark;
     use fixtures::BranchWide;
     use fixtures::TestRepoFixture;
+
+    use super::*;
 
     async fn prep_branch_wide_repo(fb: FacebookInit) -> Result<Arc<BlobRepo>> {
         let blobrepo = BranchWide::getrepo(fb).await;

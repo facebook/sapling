@@ -72,17 +72,19 @@ pub async fn create_pre_merge_delete<'a>(
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::common::ChangesetArgs;
-    use crate::common::StackPosition;
+    use std::collections::HashSet;
+
     use cloned::cloned;
     use fbinit::FacebookInit;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
     use mononoke_types::DateTime;
-    use std::collections::HashSet;
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
+    use crate::common::ChangesetArgs;
+    use crate::common::StackPosition;
 
     #[fbinit::test]
     async fn test_create_pre_merge_delete(fb: FacebookInit) -> Result<(), Error> {

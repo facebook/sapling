@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Error;
@@ -62,8 +65,6 @@ use slog::info;
 use slog::warn;
 use slog::Logger;
 use sorted_vector_map::sorted_vector_map;
-use std::collections::BTreeMap;
-use std::sync::Arc;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
@@ -1402,7 +1403,9 @@ async fn get_large_to_small_commit_syncer<'a>(
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::collections::HashSet;
+    use std::sync::Arc;
+
     use ascii::AsciiString;
     use bookmarks::BookmarkName;
     use cross_repo_sync::validation::find_bookmark_diff;
@@ -1424,9 +1427,9 @@ mod test {
     use mononoke_types::RepositoryId;
     use revset::AncestorsNodeStream;
     use sql_construct::SqlConstruct;
-    use std::collections::HashSet;
-    use std::sync::Arc;
     use synced_commit_mapping::SyncedCommitMappingEntry;
+
+    use super::*;
 
     #[fbinit::test]
     fn test_bookmark_diff(fb: FacebookInit) -> Result<(), Error> {

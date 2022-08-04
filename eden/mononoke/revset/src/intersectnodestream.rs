@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::hash_map::IntoIter;
+use std::collections::HashMap;
+
 use anyhow::Error;
 use changeset_fetcher::ArcChangesetFetcher;
 use context::CoreContext;
@@ -13,8 +16,6 @@ use futures_old::Async;
 use futures_old::Poll;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
-use std::collections::hash_map::IntoIter;
-use std::collections::HashMap;
 
 use crate::setcommon::*;
 use crate::BonsaiNodeStream;
@@ -158,6 +159,19 @@ impl Stream for IntersectNodeStream {
 
 #[cfg(test)]
 mod test {
+    use std::sync::Arc;
+
+    use context::CoreContext;
+    use failure_ext::err_downcast;
+    use fbinit::FacebookInit;
+    use futures::compat::Stream01CompatExt;
+    use futures::stream::StreamExt as _;
+    use futures_ext::StreamExt;
+    use futures_old::executor::spawn;
+    use revset_test_helper::assert_changesets_sequence;
+    use revset_test_helper::single_changeset_id;
+    use revset_test_helper::string_to_bonsai;
+
     use super::*;
     use crate::errors::ErrorKind;
     use crate::fixtures::Linear;
@@ -169,17 +183,6 @@ mod test {
     use crate::tests::TestChangesetFetcher;
     use crate::BonsaiNodeStream;
     use crate::UnionNodeStream;
-    use context::CoreContext;
-    use failure_ext::err_downcast;
-    use fbinit::FacebookInit;
-    use futures::compat::Stream01CompatExt;
-    use futures::stream::StreamExt as _;
-    use futures_ext::StreamExt;
-    use futures_old::executor::spawn;
-    use revset_test_helper::assert_changesets_sequence;
-    use revset_test_helper::single_changeset_id;
-    use revset_test_helper::string_to_bonsai;
-    use std::sync::Arc;
 
     #[fbinit::test]
     async fn intersect_identical_node(fb: FacebookInit) {

@@ -8,7 +8,12 @@
 use std::time::Duration;
 
 use blobrepo::BlobRepo;
+use bulkops::Direction;
+use bulkops::PublicChangesetBulkFetch;
+use bulkops::MAX_FETCH_STEP;
 use clap::Arg;
+use cmdlib::args;
+use context::CoreContext;
 use criterion::BenchmarkId;
 use criterion::Criterion;
 use criterion::Throughput;
@@ -19,12 +24,6 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use phases::PhasesArc;
 use tokio::runtime::Handle;
-
-use bulkops::Direction;
-use bulkops::PublicChangesetBulkFetch;
-use bulkops::MAX_FETCH_STEP;
-use cmdlib::args;
-use context::CoreContext;
 
 const BENCHMARK_SAVE_BASELINE_ARG: &str = "benchmark-save-baseline";
 const BENCHMARK_USE_BASELINE_ARG: &str = "benchmark-use-baseline";

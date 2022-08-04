@@ -19,11 +19,11 @@
 //! in implentation, it is possible that conversion failures may occur
 //! in practice.
 
+use std::collections::BTreeMap;
+
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
-use std::collections::BTreeMap;
-
 use edenapi_types::commit::BonsaiFileChange;
 use edenapi_types::token::UploadToken;
 use edenapi_types::token::UploadTokenData;

@@ -7,7 +7,6 @@
 
 use async_trait::async_trait;
 use bytes::Bytes;
-
 use mercurial_types::HgNodeHash;
 use mercurial_types::HgParents;
 use mononoke_api::errors::MononokeError;

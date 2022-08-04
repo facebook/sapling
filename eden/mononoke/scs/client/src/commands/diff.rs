@@ -7,13 +7,14 @@
 
 //! Diff two commits
 
+use std::collections::BTreeSet;
+use std::io::Write;
+
 use anyhow::bail;
 use anyhow::Result;
 use maplit::btreeset;
 use serde::Serialize;
 use source_control as thrift;
-use std::collections::BTreeSet;
-use std::io::Write;
 
 use crate::args::commit_id::resolve_commit_ids;
 use crate::args::commit_id::CommitIdsArgs;

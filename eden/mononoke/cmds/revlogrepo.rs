@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::path::PathBuf;
+use std::str::FromStr;
+
 use clap_old::App;
 use clap_old::SubCommand;
 use mercurial_revlog::revlog::Revlog;
 use mercurial_revlog::RevlogChangeset;
 use mercurial_types::HgNodeHash;
-use std::path::PathBuf;
-use std::str::FromStr;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     App::new("read revlog repo content")

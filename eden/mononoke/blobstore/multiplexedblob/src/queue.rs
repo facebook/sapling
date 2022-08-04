@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::base::ErrorKind;
-use crate::base::MultiplexedBlobstoreBase;
-use crate::base::MultiplexedBlobstorePutHandler;
+use std::fmt;
+use std::num::NonZeroU64;
+use std::num::NonZeroUsize;
+use std::sync::Arc;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
@@ -30,11 +32,11 @@ use metaconfig_types::MultiplexId;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::DateTime;
 use scuba_ext::MononokeScubaSampleBuilder;
-use std::fmt;
-use std::num::NonZeroU64;
-use std::num::NonZeroUsize;
-use std::sync::Arc;
 use tunables::tunables;
+
+use crate::base::ErrorKind;
+use crate::base::MultiplexedBlobstoreBase;
+use crate::base::MultiplexedBlobstorePutHandler;
 
 const SYNC_QUEUE: &str = "mysql_sync_queue";
 /// Special error for cases where some blobstores failed during get/is_present

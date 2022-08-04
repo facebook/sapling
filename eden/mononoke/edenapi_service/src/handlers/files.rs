@@ -6,6 +6,7 @@
  */
 
 use std::num::NonZeroU64;
+use std::str::FromStr;
 
 use anyhow::format_err;
 use anyhow::Context;
@@ -13,18 +14,6 @@ use anyhow::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
 use context::PerfCounterType;
-use futures::stream;
-use futures::Stream;
-use futures::StreamExt;
-use futures::TryStreamExt;
-use gotham::state::FromState;
-use gotham::state::State;
-use gotham_derive::StateData;
-use gotham_derive::StaticResponseExtender;
-use hyper::Body;
-use serde::Deserialize;
-use std::str::FromStr;
-
 use edenapi_types::wire::ToWire;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
@@ -43,26 +32,35 @@ use edenapi_types::UploadToken;
 use edenapi_types::UploadTokenMetadata;
 use edenapi_types::UploadTokensResponse;
 use ephemeral_blobstore::BubbleId;
+use futures::stream;
+use futures::Stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use gotham::state::FromState;
+use gotham::state::State;
+use gotham_derive::StateData;
+use gotham_derive::StaticResponseExtender;
 use gotham_ext::error::HttpError;
 use gotham_ext::response::TryIntoResponse;
+use hyper::Body;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgNodeHash;
 use mononoke_api_hg::HgDataContext;
 use mononoke_api_hg::HgDataId;
 use mononoke_api_hg::HgRepoContext;
 use rate_limiting::Metric;
+use serde::Deserialize;
 use types::Key;
-
-use crate::context::ServerContext;
-use crate::errors::ErrorKind;
-use crate::middleware::RequestContext;
-use crate::utils::cbor_stream_filtered_errors;
-use crate::utils::get_repo;
 
 use super::EdenApiHandler;
 use super::EdenApiMethod;
 use super::HandlerInfo;
 use super::HandlerResult;
+use crate::context::ServerContext;
+use crate::errors::ErrorKind;
+use crate::middleware::RequestContext;
+use crate::utils::cbor_stream_filtered_errors;
+use crate::utils::get_repo;
 
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST: usize = 10;

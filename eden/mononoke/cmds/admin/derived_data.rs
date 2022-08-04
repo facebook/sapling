@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use blobrepo::BlobRepo;
@@ -46,10 +51,6 @@ use mononoke_types::MPath;
 use skeleton_manifest::RootSkeletonManifestId;
 use slog::info;
 use slog::Logger;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::fmt;
-use std::sync::Arc;
 use unodes::RootUnodeManifestId;
 
 use crate::error::SubcommandError;

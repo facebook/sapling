@@ -5,23 +5,21 @@
  * GNU General Public License version 2.
  */
 
-use futures_old::try_ready;
-use futures_old::Async;
-use futures_old::Poll;
-use futures_old::Stream;
-
 use anyhow::Error;
 use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use bytes_old::BufMut;
-
-use crate::chunk::Chunk;
-use crate::delta;
+use futures_old::try_ready;
+use futures_old::Async;
+use futures_old::Poll;
+use futures_old::Stream;
 
 use super::CgDeltaChunk;
 use super::Part;
 use super::Section;
+use crate::chunk::Chunk;
+use crate::delta;
 
 pub struct CgPacker<S> {
     delta_stream: S,

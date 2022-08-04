@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
 use std::time::Duration;
 use std::time::Instant;
+
+use anyhow::Error;
 
 #[derive(thiserror::Error, Debug)]
 pub enum TimeseriesError {

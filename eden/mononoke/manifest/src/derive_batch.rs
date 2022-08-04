@@ -5,11 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::Entry;
-use crate::LeafInfo;
-use crate::Manifest;
-use crate::PathTree;
-use crate::TreeInfo;
+use std::collections::BTreeMap;
+use std::fmt;
+use std::hash::Hash;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -22,10 +21,12 @@ use futures::FutureExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
-use std::collections::BTreeMap;
-use std::fmt;
-use std::hash::Hash;
-use std::sync::Arc;
+
+use crate::Entry;
+use crate::LeafInfo;
+use crate::Manifest;
+use crate::PathTree;
+use crate::TreeInfo;
 
 pub struct ManifestChanges<Leaf> {
     pub cs_id: ChangesetId,

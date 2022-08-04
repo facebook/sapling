@@ -5,10 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use crate::base::inner_put;
-use crate::base::ErrorKind;
-use crate::base::MultiplexedBlobstoreBase;
-use crate::queue::MultiplexedBlobstore;
+use std::cmp::max;
+use std::collections::HashMap;
+use std::fmt;
+use std::num::NonZeroU64;
+use std::num::NonZeroUsize;
+use std::sync::atomic::AtomicUsize;
+use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -33,17 +37,14 @@ use once_cell::sync::Lazy;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::info;
 use slog::warn;
-use std::cmp::max;
-use std::collections::HashMap;
-use std::fmt;
-use std::num::NonZeroU64;
-use std::num::NonZeroUsize;
-use std::sync::atomic::AtomicUsize;
-use std::sync::Arc;
-use std::time::Duration;
 use strum_macros::EnumString;
 use strum_macros::EnumVariantNames;
 use strum_macros::IntoStaticStr;
+
+use crate::base::inner_put;
+use crate::base::ErrorKind;
+use crate::base::MultiplexedBlobstoreBase;
+use crate::queue::MultiplexedBlobstore;
 
 static HEAL_MAX_BACKLOG: Lazy<Duration> =
     Lazy::new(|| Duration::from_secs(ChronoDuration::days(7).num_seconds() as u64));

@@ -5,19 +5,19 @@
  * GNU General Public License version 2.
  */
 
+use std::time::Duration;
+
 use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
+pub use cmdlib_caching::CachelibSettings;
 use environment::Caching;
 use fbinit::FacebookInit;
 use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
-use std::time::Duration;
 
 use super::app::bool_as_str;
 use super::app::BOOL_VALUES;
-
-pub use cmdlib_caching::CachelibSettings;
 
 const CACHE_SIZE_GB: &str = "cache-size-gb";
 const USE_TUPPERWARE_SHRINKER: &str = "use-tupperware-shrinker";

@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::str::FromStr;
+use std::sync::Arc;
+
 #[cfg(fbcode_build)]
 use anyhow::format_err;
 use anyhow::Context;
@@ -27,8 +30,6 @@ use slog_glog_fmt::kv_categorizer::FacebookCategorizer;
 use slog_glog_fmt::kv_defaults::FacebookKV;
 use slog_glog_fmt::GlogFormat;
 use slog_term::TermDecorator;
-use std::str::FromStr;
-use std::sync::Arc;
 
 /// Command line arguments for spawning slog Logger
 #[derive(Args, Debug)]

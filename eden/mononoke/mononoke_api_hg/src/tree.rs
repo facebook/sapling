@@ -7,7 +7,6 @@
 
 use async_trait::async_trait;
 use bytes::Bytes;
-
 use manifest::Entry;
 use manifest::Manifest;
 use mercurial_types::fetch_manifest_envelope;
@@ -131,8 +130,6 @@ impl HgDataId for HgManifestId {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::str::FromStr;
     use std::sync::Arc;
 
@@ -146,6 +143,7 @@ mod tests {
     use mononoke_api::repo::RepoContext;
     use mononoke_api::specifiers::HgChangesetId;
 
+    use super::*;
     use crate::RepoContextHgExt;
 
     #[fbinit::test]

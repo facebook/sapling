@@ -9,9 +9,6 @@ use std::num::NonZeroU64;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use futures_stats::TimedFutureExt;
-use scuba_ext::MononokeScubaSampleBuilder;
-
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
@@ -24,7 +21,9 @@ use blobstore_stats::record_put_stats;
 use blobstore_stats::OperationType;
 use context::CoreContext;
 use context::PerfCounterType;
+use futures_stats::TimedFutureExt;
 use mononoke_types::BlobstoreBytes;
+use scuba_ext::MononokeScubaSampleBuilder;
 
 #[derive(Debug)]
 pub struct LogBlob<B> {

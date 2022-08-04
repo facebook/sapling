@@ -5,6 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::io::Write;
+use std::marker::PhantomData;
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Error;
@@ -50,14 +59,6 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::RootSkeletonManifestId;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::hash::Hash;
-use std::hash::Hasher;
-use std::io::Write;
-use std::marker::PhantomData;
-use std::sync::Arc;
-use std::sync::Mutex;
 use topo_sort::sort_topological;
 use unodes::RootUnodeManifestId;
 
@@ -941,7 +942,10 @@ pub fn find_underived_many(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::collections::BTreeMap;
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering;
+
     use bookmarks::BookmarkName;
     use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
@@ -950,10 +954,9 @@ mod tests {
     use maplit::btreemap;
     use maplit::hashset;
     use metaconfig_types::UnodeVersion;
-    use std::collections::BTreeMap;
-    use std::sync::atomic::AtomicUsize;
-    use std::sync::atomic::Ordering;
     use tests_utils::drawdag::create_from_dag;
+
+    use super::*;
 
     // decompose graph into map between node indices and list of nodes
     fn derive_graph_unpack(node: &DeriveGraph) -> (BTreeMap<usize, Vec<usize>>, Vec<DeriveGraph>) {

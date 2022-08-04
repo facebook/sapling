@@ -5,14 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::blob::Blob;
-use crate::blob::BlobstoreValue;
-use crate::blob::FastlogBatchBlob;
-use crate::errors::ErrorKind;
-use crate::thrift;
-use crate::typed_hash::ChangesetId;
-use crate::typed_hash::FastlogBatchId;
-use crate::typed_hash::FastlogBatchIdContext;
+use std::collections::VecDeque;
+
 use anyhow::Context;
 use anyhow::Result;
 use blobstore::Blobstore;
@@ -25,7 +19,15 @@ use futures::future::try_join_all;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use itertools::Itertools;
-use std::collections::VecDeque;
+
+use crate::blob::Blob;
+use crate::blob::BlobstoreValue;
+use crate::blob::FastlogBatchBlob;
+use crate::errors::ErrorKind;
+use crate::thrift;
+use crate::typed_hash::ChangesetId;
+use crate::typed_hash::FastlogBatchId;
+use crate::typed_hash::FastlogBatchIdContext;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParentOffset(i32);
@@ -240,15 +242,17 @@ impl BlobstoreValue for FastlogBatch {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::hash::Blake2;
+    use std::sync::Arc;
+
     use borrowed::borrowed;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use memblob::Memblob;
     use pretty_assertions::assert_eq;
     use quickcheck::TestResult;
-    use std::sync::Arc;
+
+    use super::*;
+    use crate::hash::Blake2;
 
     #[fbinit::test]
     async fn test_fastlog_batch_empty(fb: FacebookInit) -> Result<()> {

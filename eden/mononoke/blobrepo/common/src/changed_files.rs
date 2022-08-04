@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use anyhow::Error;
 use blobstore::Blobstore;
 use context::CoreContext;
@@ -19,8 +22,6 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
-use std::collections::HashSet;
-use std::sync::Arc;
 
 /// NOTE: To be used only for generating list of files for old, Mercurial format of Changesets.
 ///

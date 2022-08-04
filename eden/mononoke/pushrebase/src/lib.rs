@@ -47,6 +47,14 @@
 //! sideload database updates in the transaction that moves forward the bookmark. See hooks.rs for
 //! more information on those;
 
+use std::cmp::max;
+use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::VecDeque;
+use std::sync::Arc;
+use std::time::Instant;
+
 use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
@@ -87,27 +95,19 @@ use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::Generation;
 use mononoke_types::Timestamp;
+use pushrebase_hook::PushrebaseCommitHook;
+use pushrebase_hook::PushrebaseHook;
+use pushrebase_hook::PushrebaseTransactionHook;
+use pushrebase_hook::RebasedChangesets;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use revset::RangeNodeStream;
 use slog::info;
 use stats::prelude::*;
-use std::cmp::max;
-use std::cmp::Ordering;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::collections::VecDeque;
-use std::sync::Arc;
-use std::time::Instant;
 use thiserror::Error;
 use trait_alias::trait_alias;
 use tunables::tunables;
-
-use pushrebase_hook::PushrebaseCommitHook;
-use pushrebase_hook::PushrebaseHook;
-use pushrebase_hook::PushrebaseTransactionHook;
-use pushrebase_hook::RebasedChangesets;
 
 define_stats! {
     prefix = "mononoke.pushrebase";
@@ -1253,7 +1253,10 @@ async fn try_move_bookmark(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::collections::BTreeMap;
+    use std::str::FromStr;
+    use std::time::Duration;
+
     use anyhow::format_err;
     use anyhow::Context;
     use async_trait::async_trait;
@@ -1285,13 +1288,12 @@ mod tests {
     use repo_blobstore::RepoBlobstoreRef;
     use sql::Transaction;
     use sql_ext::TransactionResult;
-    use std::collections::BTreeMap;
-    use std::str::FromStr;
-    use std::time::Duration;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::bookmark;
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
 
     async fn fetch_bonsai_changesets(
         ctx: &CoreContext,

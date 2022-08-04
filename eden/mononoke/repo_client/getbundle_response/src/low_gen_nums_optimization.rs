@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::call_difference_of_union_of_ancestors_revset;
-use crate::Params;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
@@ -21,11 +23,11 @@ use futures::stream::TryStreamExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use reachabilityindex::LeastCommonAncestorsHint;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::sync::Arc;
 use tunables::tunables;
 use uniqueheap::UniqueHeap;
+
+use crate::call_difference_of_union_of_ancestors_revset;
+use crate::Params;
 
 pub const DEFAULT_TRAVERSAL_LIMIT: u64 = 20;
 pub const LOW_GEN_HEADS_LIMIT: u64 = 20;
@@ -405,7 +407,8 @@ fn split_heads_excludes(ctx: &CoreContext, params: Params, threshold: u64) -> Op
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::collections::BTreeMap;
+
     use blobrepo::BlobRepo;
     use fbinit::FacebookInit;
     use futures::compat::Stream01CompatExt;
@@ -420,11 +423,12 @@ mod test {
     use mononoke_types_mocks::changesetid::TWOS_CSID;
     use revset::add_generations_by_bonsai;
     use skiplist::SkiplistIndex;
-    use std::collections::BTreeMap;
     use tests_utils::drawdag::create_from_dag;
     use tests_utils::CreateCommitContext;
     use tunables::with_tunables_async;
     use tunables::MononokeTunables;
+
+    use super::*;
 
     #[fbinit::test]
     fn test_split_heads_excludes(fb: FacebookInit) -> Result<(), Error> {

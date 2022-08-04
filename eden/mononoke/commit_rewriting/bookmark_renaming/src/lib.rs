@@ -5,14 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use anyhow::Result;
 use ascii::AsciiString;
 use bookmarks::BookmarkName;
 use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::CommonCommitSyncConfig;
 use mononoke_types::RepositoryId;
-use std::collections::HashSet;
-use std::sync::Arc;
 use thiserror::Error;
 
 #[derive(Debug, Eq, Error, PartialEq)]
@@ -113,10 +114,12 @@ pub fn get_bookmark_renamers(
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::str::FromStr;
+
     use maplit::hashmap;
     use metaconfig_types::SmallRepoPermanentConfig;
-    use std::str::FromStr;
+
+    use super::*;
 
     fn get_commit_sync_config() -> CommonCommitSyncConfig {
         CommonCommitSyncConfig {

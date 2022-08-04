@@ -15,7 +15,9 @@ pub use crate::store::ArcSqlBookmarks;
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::collections::BTreeMap;
+    use std::collections::HashSet;
+
     use anyhow::Result;
     use ascii::AsciiString;
     use bookmarks::Bookmark;
@@ -36,9 +38,9 @@ mod test {
     use mononoke_types_mocks::repo::REPO_ZERO;
     use quickcheck::quickcheck;
     use sql_construct::SqlConstruct;
-    use std::collections::BTreeMap;
-    use std::collections::HashSet;
     use tokio::runtime::Runtime;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_update_kind_compatibility(fb: FacebookInit) -> Result<()> {

@@ -100,8 +100,9 @@ impl BlobstoreUnlinkOps for DisabledBlob {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use fbinit::FacebookInit;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_disabled(fb: FacebookInit) {

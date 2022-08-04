@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::state_ext::StateExt;
+use std::net::IpAddr;
+use std::net::SocketAddr;
+
 use cats::try_get_cats_idents;
 use fbinit::FacebookInit;
 use futures::future;
@@ -27,13 +29,11 @@ use permission_checker::MononokeIdentitySet;
 use permission_checker::MononokeIdentitySetExt;
 use slog::error;
 use slog::Logger;
-use std::net::IpAddr;
-use std::net::SocketAddr;
 use trust_dns_resolver::TokioAsyncResolver;
 
 use super::Middleware;
-
 use crate::socket_data::TlsCertificateIdentities;
+use crate::state_ext::StateExt;
 
 const ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
 const CLIENT_IP: &str = "tfb-orig-client-ip";

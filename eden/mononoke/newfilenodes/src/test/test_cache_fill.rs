@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use context::CoreContext;
@@ -18,7 +20,6 @@ use mercurial_types_mocks::nodehash::TWOS_FNID;
 use mononoke_types::RepoPath;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use path_hash::PathWithHash;
-use std::sync::Arc;
 
 use super::util::build_reader_writer;
 use super::util::build_shard;

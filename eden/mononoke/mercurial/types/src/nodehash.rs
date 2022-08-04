@@ -7,6 +7,11 @@
 
 //! A hash of a node (changeset, manifest or file).
 
+use std::fmt;
+use std::fmt::Display;
+use std::result;
+use std::str::FromStr;
+
 use abomonation_derive::Abomonation;
 use anyhow::Result;
 use ascii::AsciiStr;
@@ -14,11 +19,6 @@ use ascii::AsciiString;
 use mononoke_types::FileType;
 use quickcheck_arbitrary_derive::Arbitrary;
 use sql::mysql;
-use std::fmt;
-use std::fmt::Display;
-use std::result;
-use std::str::FromStr;
-
 /// Type used to represent a node hash in the Mercurial client's Rust code.
 /// Equivalent to HgNodeHash;
 use types::HgId;

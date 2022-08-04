@@ -7,22 +7,11 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::back_sync_commits_to_small_repo;
-    use crate::check_dependent_systems;
-    use crate::derive_bonsais_single_repo;
-    use crate::find_mapping_version;
-    use crate::get_large_repo_config_if_pushredirected;
-    use crate::get_large_repo_setting;
-    use crate::merge_imported_commit;
-    use crate::move_bookmark;
-    use crate::push_merge_commit;
-    use crate::rewrite_file_paths;
-    use crate::ChangesetArgs;
-    use crate::CheckerFlags;
-    use crate::ImportStage;
-    use crate::RecoveryFields;
-    use crate::Repo;
-    use crate::RepoImportSetting;
+    use std::collections::HashMap;
+    use std::str::FromStr;
+    use std::sync::Arc;
+    use std::time::Duration;
+
     use anyhow::Result;
     use ascii::AsciiString;
     use blobrepo::AsBlobRepo;
@@ -74,10 +63,6 @@ mod tests {
     use mutable_counters::MutableCountersRef;
     use repo_blobstore::RepoBlobstoreRef;
     use sql_construct::SqlConstruct;
-    use std::collections::HashMap;
-    use std::str::FromStr;
-    use std::sync::Arc;
-    use std::time::Duration;
     use synced_commit_mapping::SqlSyncedCommitMapping;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::bookmark;
@@ -85,6 +70,23 @@ mod tests {
     use tests_utils::list_working_copy_utf8;
     use tests_utils::CreateCommitContext;
     use tokio::time;
+
+    use crate::back_sync_commits_to_small_repo;
+    use crate::check_dependent_systems;
+    use crate::derive_bonsais_single_repo;
+    use crate::find_mapping_version;
+    use crate::get_large_repo_config_if_pushredirected;
+    use crate::get_large_repo_setting;
+    use crate::merge_imported_commit;
+    use crate::move_bookmark;
+    use crate::push_merge_commit;
+    use crate::rewrite_file_paths;
+    use crate::ChangesetArgs;
+    use crate::CheckerFlags;
+    use crate::ImportStage;
+    use crate::RecoveryFields;
+    use crate::Repo;
+    use crate::RepoImportSetting;
 
     fn create_bookmark_name(book: &str) -> BookmarkName {
         BookmarkName::new(book).unwrap()

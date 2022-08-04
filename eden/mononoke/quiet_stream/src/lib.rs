@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::io::Error;
+use std::io::ErrorKind;
+use std::pin::Pin;
+
 use futures::ready;
 use futures::task::Context;
 use futures::task::Poll;
 use pin_project::pin_project;
-use std::io::Error;
-use std::io::ErrorKind;
-use std::pin::Pin;
 use tokio::io::AsyncRead;
 use tokio::io::AsyncWrite;
 use tokio::io::ReadBuf;

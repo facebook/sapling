@@ -9,6 +9,10 @@ mod errors;
 mod redaction_config_blobstore;
 pub mod store;
 
+use std::num::NonZeroU64;
+use std::ops::Deref;
+use std::sync::Arc;
+
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -19,9 +23,6 @@ use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
-use std::num::NonZeroU64;
-use std::ops::Deref;
-use std::sync::Arc;
 use tunables::tunables;
 
 pub use crate::errors::ErrorKind;
@@ -267,7 +268,8 @@ pub fn has_redaction_root_cause(e: &Error) -> bool {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::sync::Arc;
+
     use assert_matches::assert_matches;
     use borrowed::borrowed;
     use context::CoreContext;
@@ -275,7 +277,8 @@ mod test {
     use maplit::hashmap;
     use memblob::Memblob;
     use prefixblob::PrefixBlobstore;
-    use std::sync::Arc;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_redacted_key(fb: FacebookInit) {

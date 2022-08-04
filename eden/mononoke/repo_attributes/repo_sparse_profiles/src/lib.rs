@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::Result;
 use metaconfig_types::RemoteDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
@@ -14,7 +16,6 @@ use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
-use std::collections::HashMap;
 
 queries! {
     read GetProfilesSize(
@@ -122,10 +123,11 @@ impl SqlSparseProfilesSizes {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_simple() -> Result<()> {

@@ -5,20 +5,14 @@
  * GNU General Public License version 2.
  */
 
-pub(crate) use crate::bonsai::BonsaiEntry;
-pub(crate) use crate::derive_batch::derive_manifests_for_simple_stack_of_commits;
-pub(crate) use crate::derive_batch::ManifestChanges;
-pub(crate) use crate::derive_manifest;
-pub(crate) use crate::find_intersection_of_diffs;
-pub(crate) use crate::Diff;
-pub(crate) use crate::Entry;
-pub(crate) use crate::Manifest;
-pub(crate) use crate::ManifestOps;
-pub(crate) use crate::ManifestOrderedOps;
-pub(crate) use crate::OrderedManifest;
-pub(crate) use crate::PathOrPrefix;
-pub(crate) use crate::PathTree;
-pub(crate) use crate::TreeInfo;
+use std::collections::hash_map::DefaultHasher;
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
+use std::collections::HashMap;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::sync::Arc;
+
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -48,13 +42,21 @@ use mononoke_types_mocks::changesetid::TWOS_CSID;
 use pretty_assertions::assert_eq;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
-use std::collections::hash_map::DefaultHasher;
-use std::collections::BTreeMap;
-use std::collections::BTreeSet;
-use std::collections::HashMap;
-use std::hash::Hash;
-use std::hash::Hasher;
-use std::sync::Arc;
+
+pub(crate) use crate::bonsai::BonsaiEntry;
+pub(crate) use crate::derive_batch::derive_manifests_for_simple_stack_of_commits;
+pub(crate) use crate::derive_batch::ManifestChanges;
+pub(crate) use crate::derive_manifest;
+pub(crate) use crate::find_intersection_of_diffs;
+pub(crate) use crate::Diff;
+pub(crate) use crate::Entry;
+pub(crate) use crate::Manifest;
+pub(crate) use crate::ManifestOps;
+pub(crate) use crate::ManifestOrderedOps;
+pub(crate) use crate::OrderedManifest;
+pub(crate) use crate::PathOrPrefix;
+pub(crate) use crate::PathTree;
+pub(crate) use crate::TreeInfo;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 struct TestLeafId(u64);

@@ -169,8 +169,9 @@ pub trait Filenodes: Send + Sync {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use quickcheck::quickcheck;
+
+    use super::*;
 
     quickcheck! {
         fn filenodes_info_thrift_roundtrip(obj: FilenodeInfo) -> bool {

@@ -15,6 +15,8 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use async_compression::Compressor;
+use async_compression::CompressorType;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use bytes_old::Buf;
@@ -33,11 +35,9 @@ use futures_old::Poll;
 use futures_old::Sink;
 use futures_old::StartSend;
 use futures_old::Stream;
+use mercurial_types::percent_encode;
 use tokio_codec::FramedWrite;
 use tokio_io::AsyncWrite;
-
-use async_compression::Compressor;
-use async_compression::CompressorType;
 
 use crate::chunk::Chunk;
 use crate::chunk::ChunkEncoder;
@@ -49,7 +49,6 @@ use crate::types::StreamHeader;
 use crate::utils::capitalize_first;
 use crate::utils::get_compression_param;
 use crate::utils::is_mandatory_param;
-use mercurial_types::percent_encode;
 
 /// This is a general wrapper around a Sink to prevent closing of the underlying Sink. This is
 /// useful when using Sink::send_all, because in addition to writing and flushing the data it also

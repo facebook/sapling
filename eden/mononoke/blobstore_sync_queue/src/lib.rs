@@ -9,19 +9,18 @@ mod queries;
 mod sync_queue;
 mod write_ahead_log;
 
-pub use sync_queue::BlobstoreSyncQueue;
-pub use sync_queue::BlobstoreSyncQueueEntry;
-pub use sync_queue::SqlBlobstoreSyncQueue;
-pub use write_ahead_log::BlobstoreWal;
-pub use write_ahead_log::BlobstoreWalEntry;
-pub use write_ahead_log::SqlBlobstoreWal;
-
 use sql::mysql;
 use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
+pub use sync_queue::BlobstoreSyncQueue;
+pub use sync_queue::BlobstoreSyncQueueEntry;
+pub use sync_queue::SqlBlobstoreSyncQueue;
 use uuid::Uuid;
+pub use write_ahead_log::BlobstoreWal;
+pub use write_ahead_log::BlobstoreWalEntry;
+pub use write_ahead_log::SqlBlobstoreWal;
 
 // Identifier for given blobstore operation to faciliate correlating same operation
 // across multiple blobstores.

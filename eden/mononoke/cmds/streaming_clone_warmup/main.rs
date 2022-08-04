@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+use std::time::Duration;
+use std::time::Instant;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use blobstore_factory::make_blobstore;
@@ -32,13 +36,9 @@ use slog::error;
 use slog::info;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
-use std::sync::Arc;
-use std::time::Duration;
-use std::time::Instant;
 use streaming_clone::RevlogStreamingChunks;
 use streaming_clone::StreamingClone;
 use streaming_clone::StreamingCloneBuilder;
-
 use tokio::time;
 
 const REPO_ARG: &str = "repo";

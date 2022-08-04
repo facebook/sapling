@@ -5,6 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt;
+use std::fmt::Debug;
+use std::sync::Arc;
+use std::time::Duration;
+
 use anyhow::format_err;
 use anyhow::Error;
 use blobrepo::BlobRepo;
@@ -56,12 +63,6 @@ use slog::debug;
 use slog::error;
 use slog::info;
 use stats::prelude::*;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::fmt;
-use std::fmt::Debug;
-use std::sync::Arc;
-use std::time::Duration;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
 use crate::reporting::log_validation_result_to_scuba;
@@ -1538,7 +1539,6 @@ async fn verify_filenodes_have_same_contents<
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use cross_repo_sync::update_mapping_with_version;
     use cross_repo_sync_test_utils::init_small_large_repo;
     use cross_repo_sync_test_utils::xrepo_mapping_version_with_small_repo;
@@ -1548,6 +1548,8 @@ mod tests {
     use tests_utils::CommitIdentifier;
     use tests_utils::CreateCommitContext;
     use tokio::runtime::Runtime;
+
+    use super::*;
 
     async fn add_commits_to_repo(
         ctx: &CoreContext,

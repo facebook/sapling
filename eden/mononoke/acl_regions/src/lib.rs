@@ -7,6 +7,9 @@
 
 mod trie;
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -20,9 +23,6 @@ use metaconfig_types::AclRegionConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use reachabilityindex::ReachabilityIndex;
-use std::collections::HashMap;
-use std::sync::Arc;
-
 use trie::PrefixTrieWithRules;
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]

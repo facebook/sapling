@@ -7,13 +7,12 @@
 
 //! Code to deal with deltas received or sent over the wire.
 
-use bytes_old::BufMut;
-use bytes_old::BytesMut;
-
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use bufsize::SizeCounter;
+use bytes_old::BufMut;
+use bytes_old::BytesMut;
 use mercurial_types::delta::Delta;
 use mercurial_types::delta::Fragment;
 
@@ -87,12 +86,12 @@ pub fn encode_delta<B: BufMut>(delta: &Delta, out: &mut B) {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     use assert_matches::assert_matches;
     use failure_ext::err_downcast;
     use failure_ext::err_downcast_ref;
     use quickcheck::quickcheck;
+
+    use super::*;
 
     #[test]
     fn invalid_deltas() {

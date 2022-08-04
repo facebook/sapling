@@ -7,6 +7,12 @@
 
 //! Caching tests.
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -22,11 +28,6 @@ use mercurial_types_mocks::nodehash::make_hg_cs_id;
 use mononoke_types::RepositoryId;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use sql_construct::SqlConstruct;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
 use crate::basic::create_entries;
 use crate::util::check_entries;

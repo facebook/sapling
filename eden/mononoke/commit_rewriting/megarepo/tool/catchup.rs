@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::time::Duration;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use blobrepo::BlobRepo;
@@ -31,7 +33,6 @@ use pushrebase::do_pushrebase_bonsai;
 use regex::Regex;
 use slog::error;
 use slog::info;
-use std::time::Duration;
 use tokio::time::sleep;
 use unodes::RootUnodeManifestId;
 
@@ -214,7 +215,6 @@ async fn find_files_that_need_to_be_deleted(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use fbinit::FacebookInit;
     use futures::compat::Stream01CompatExt;
     use megarepolib::common::ChangesetArgs;
@@ -223,6 +223,8 @@ mod test {
     use tests_utils::bookmark;
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
 
     const PATH_REGEX: &str = "^(unchanged/.*|changed/.*|toremove/.*)";
 

@@ -5,6 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::io::Read;
+use std::io::Seek;
+use std::io::SeekFrom;
+use std::path::Path;
+use std::path::PathBuf;
+use std::time::Duration;
+
 use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
@@ -18,12 +25,6 @@ use mononoke_types::RawBundle2Id;
 use mutable_counters::MutableCountersRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
-use std::io::Read;
-use std::io::Seek;
-use std::io::SeekFrom;
-use std::path::Path;
-use std::path::PathBuf;
-use std::time::Duration;
 use tempfile::NamedTempFile;
 use tokio::fs::File as AsyncFile;
 use tokio::fs::OpenOptions;

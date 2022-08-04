@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::mapping::FilenodesOnlyPublic;
-use crate::mapping::PreparedRootFilenode;
 use anyhow::format_err;
 use anyhow::Result;
 use blobstore::Loadable;
@@ -38,6 +36,9 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use mononoke_types::RepoPath;
+
+use crate::mapping::FilenodesOnlyPublic;
+use crate::mapping::PreparedRootFilenode;
 
 pub async fn derive_filenodes(
     ctx: &CoreContext,
@@ -285,7 +286,10 @@ fn create_file_filenode(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::collections::HashMap;
+    use std::sync::Arc;
+    use std::sync::Mutex;
+
     use anyhow::anyhow;
     use anyhow::Context;
     use anyhow::Result;
@@ -306,14 +310,13 @@ mod tests {
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
     use slog::info;
-    use std::collections::HashMap;
-    use std::sync::Arc;
-    use std::sync::Mutex;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
     use tunables::with_tunables;
     use tunables::MononokeTunables;
+
+    use super::*;
 
     async fn verify_filenodes(
         ctx: &CoreContext,

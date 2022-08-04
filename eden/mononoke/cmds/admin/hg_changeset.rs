@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Borrow;
+use std::collections::BTreeMap;
+use std::io;
+use std::str::FromStr;
+
 use anyhow::format_err;
 use anyhow::Error;
 use blobrepo::BlobRepo;
@@ -27,10 +32,6 @@ use mercurial_types::MPath;
 use revset::RangeNodeStream;
 use serde_derive::Serialize;
 use slog::Logger;
-use std::borrow::Borrow;
-use std::collections::BTreeMap;
-use std::io;
-use std::str::FromStr;
 
 use crate::error::SubcommandError;
 

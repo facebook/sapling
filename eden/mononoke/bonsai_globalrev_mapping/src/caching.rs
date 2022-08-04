@@ -5,12 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+
 use abomonation_derive::Abomonation;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
+use bonsai_globalrev_mapping_thrift as thrift;
 use bytes::Bytes;
 use cachelib::VolatileLruCachePool;
 use caching_ext::get_or_fill;
@@ -29,10 +33,6 @@ use memcache::MemcacheClient;
 use mononoke_types::ChangesetId;
 use mononoke_types::Globalrev;
 use mononoke_types::RepositoryId;
-use std::collections::HashMap;
-use std::collections::HashSet;
-
-use bonsai_globalrev_mapping_thrift as thrift;
 
 use super::BonsaiGlobalrevMapping;
 use super::BonsaiGlobalrevMappingEntry;

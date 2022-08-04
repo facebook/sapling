@@ -10,9 +10,8 @@ use std::ops::Deref;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use stats::prelude::*;
-
 use context::CoreContext;
+use stats::prelude::*;
 
 use crate::Blobstore;
 use crate::BlobstoreBytes;

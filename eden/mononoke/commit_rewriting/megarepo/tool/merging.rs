@@ -11,14 +11,13 @@ use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
 use futures::try_join;
+use megarepolib::common::create_save_and_generate_hg_changeset;
+use megarepolib::common::ChangesetArgs;
 use megarepolib::working_copy::get_colliding_paths_between_commits;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use slog::info;
-
-use megarepolib::common::create_save_and_generate_hg_changeset;
-use megarepolib::common::ChangesetArgs;
 
 async fn fail_on_path_conflicts(
     ctx: &CoreContext,
@@ -73,11 +72,13 @@ pub async fn perform_merge(
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::str::FromStr;
+
     use fbinit::FacebookInit;
     use fixtures::MergeEven;
     use fixtures::TestRepoFixture;
-    use std::str::FromStr;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_path_conflict_detection(fb: FacebookInit) {

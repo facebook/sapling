@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::derive::RootDeletedManifestDeriver;
-use crate::mapping::RootDeletedManifestIdCommon;
+use std::collections::HashMap;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
@@ -18,15 +18,16 @@ use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
+use derived_data_service_if::types as thrift;
 use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DeletedManifestV2Id;
-use std::collections::HashMap;
 use unodes::RootUnodeManifestId;
 
-use derived_data_service_if::types as thrift;
+use crate::derive::RootDeletedManifestDeriver;
+use crate::mapping::RootDeletedManifestIdCommon;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct RootDeletedManifestV2Id(DeletedManifestV2Id);

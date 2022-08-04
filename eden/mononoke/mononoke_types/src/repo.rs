@@ -5,14 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+use std::str::FromStr;
+
 use abomonation_derive::Abomonation;
 use anyhow::Error;
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde_derive::Serialize;
 use sql::mysql;
-use std::fmt;
-use std::str::FromStr;
 
 use crate::errors::ErrorKind;
 

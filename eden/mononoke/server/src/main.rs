@@ -7,6 +7,11 @@
 
 #![feature(never_type)]
 
+use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+
 use anyhow::Context;
 use anyhow::Result;
 use clap::Parser;
@@ -27,10 +32,6 @@ use mononoke_app::MononokeAppBuilder;
 use openssl::ssl::AlpnError;
 use slog::error;
 use slog::info;
-use std::path::PathBuf;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
 /// Mononoke Server
 #[derive(Parser)]

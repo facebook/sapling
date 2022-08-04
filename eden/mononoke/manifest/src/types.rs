@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::hash::Hash;
+use std::hash::Hasher;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
@@ -12,7 +16,6 @@ use blobstore::Loadable;
 use blobstore::LoadableError;
 use blobstore::Storable;
 use context::CoreContext;
-
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
@@ -31,9 +34,6 @@ use mononoke_types::ManifestUnodeId;
 use mononoke_types::SkeletonManifestId;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
-use std::collections::BTreeMap;
-use std::hash::Hash;
-use std::hash::Hasher;
 
 #[async_trait]
 pub trait AsyncManifest<Store: Send + Sync>: Sized + 'static {

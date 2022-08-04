@@ -5,6 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::fs::File;
+use std::io::BufRead;
+use std::io::BufReader;
+use std::str::FromStr;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::Duration;
+
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
@@ -51,14 +60,6 @@ use slog::debug;
 use slog::error;
 use slog::info;
 use stats::prelude::*;
-use std::fs::File;
-use std::io::BufRead;
-use std::io::BufReader;
-use std::str::FromStr;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::time::Duration;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
 

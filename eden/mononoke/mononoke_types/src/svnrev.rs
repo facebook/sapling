@@ -5,16 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use crate::BonsaiChangeset;
+use std::fmt;
+use std::fmt::Display;
+use std::str;
+use std::str::FromStr;
+
 use abomonation_derive::Abomonation;
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use sql::mysql;
-use std::fmt;
-use std::fmt::Display;
-use std::str;
-use std::str::FromStr;
+
+use crate::BonsaiChangeset;
 
 // Changeset svnrev. Present only in some repos which were imported from SVN.
 #[derive(Abomonation, Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]

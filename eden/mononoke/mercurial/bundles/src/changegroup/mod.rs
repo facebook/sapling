@@ -54,28 +54,26 @@ mod test {
     use std::io::Cursor;
 
     use futures::compat::Future01CompatExt;
+    use futures_ext::StreamLayeredExt;
     use futures_old::Future;
     use futures_old::Stream;
-    use quickcheck::Gen;
-    use quickcheck::QuickCheck;
-    use quickcheck::TestResult;
-    use tokio_codec::FramedRead;
-    use tokio_codec::FramedWrite;
-
-    use futures_ext::StreamLayeredExt;
     use partial_io::GenWouldBlock;
     use partial_io::PartialAsyncRead;
     use partial_io::PartialAsyncWrite;
     use partial_io::PartialWithErrors;
-
-    use crate::chunk::ChunkDecoder;
-    use crate::chunk::ChunkEncoder;
-    use crate::quickcheck_types::CgPartSequence;
+    use quickcheck::Gen;
+    use quickcheck::QuickCheck;
+    use quickcheck::TestResult;
     use slog::o;
     use slog::Discard;
     use slog::Logger;
+    use tokio_codec::FramedRead;
+    use tokio_codec::FramedWrite;
 
     use super::*;
+    use crate::chunk::ChunkDecoder;
+    use crate::chunk::ChunkEncoder;
+    use crate::quickcheck_types::CgPartSequence;
 
     #[test]
     fn test_roundtrip() {

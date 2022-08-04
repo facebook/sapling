@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use super::*;
 use anyhow::Error;
 use changesets::ChangesetInsert;
 use changesets::Changesets;
@@ -18,6 +17,8 @@ use mononoke_types_mocks::hash::ONES;
 use mononoke_types_mocks::hash::TWOS;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use rendezvous::RendezVousOptions;
+
+use super::*;
 
 async fn setup_changesets(ctx: &CoreContext) -> Result<SqlChangesets, Error> {
     let changesets = SqlChangesetsBuilder::with_sqlite_in_memory()?

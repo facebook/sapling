@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::darkstorm_verifier::DarkstormVerifier;
-use crate::lfs_verifier::LfsVerifier;
-use crate::Repo;
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use anyhow::bail;
 use anyhow::Error;
 use blobstore::Loadable;
@@ -54,8 +54,10 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstoreRef;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use slog::debug;
-use std::collections::HashMap;
-use std::sync::Arc;
+
+use crate::darkstorm_verifier::DarkstormVerifier;
+use crate::lfs_verifier::LfsVerifier;
+use crate::Repo;
 
 pub fn create_bundle(
     ctx: CoreContext,

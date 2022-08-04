@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::RwLock;
+
 use regex::Regex;
 use scuba::ScubaValue;
-use std::sync::RwLock;
 
 use crate::config::ScubaObservabilityConfig;
 use crate::config::ScubaVerbosityLevel;
@@ -72,8 +73,9 @@ pub fn should_log_scuba_sample<'a>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::sync::RwLock;
+
+    use super::*;
 
     fn normal_scuba_cfg() -> ScubaObservabilityConfig {
         ScubaObservabilityConfig {

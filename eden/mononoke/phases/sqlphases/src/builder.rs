@@ -97,12 +97,13 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlPhasesBuilder {}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use anyhow::Error;
     use context::CoreContext;
     use maplit::hashset;
     use mononoke_types_mocks::changesetid::*;
     use phases::Phase;
+
+    use super::*;
 
     #[fbinit::test]
     async fn add_get_phase_sql_test(fb: FacebookInit) -> Result<(), Error> {

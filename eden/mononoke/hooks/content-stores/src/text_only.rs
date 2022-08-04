@@ -5,10 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::ErrorKind;
-use crate::FileChange;
-use crate::FileContentManager;
-use crate::PathContent;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
@@ -18,8 +16,11 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::MPath;
-use std::collections::HashMap;
-use std::sync::Arc;
+
+use crate::ErrorKind;
+use crate::FileChange;
+use crate::FileContentManager;
+use crate::PathContent;
 
 const NULL: u8 = 0;
 
@@ -105,11 +106,12 @@ fn looks_like_binary(file_bytes: &[u8]) -> bool {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::InMemoryFileContentManager;
     use fbinit::FacebookInit;
     use mononoke_types_mocks::contentid::ONES_CTID;
     use tokio::runtime::Runtime;
+
+    use super::*;
+    use crate::InMemoryFileContentManager;
 
     #[fbinit::test]
     fn test_acceptable_file(fb: FacebookInit) {

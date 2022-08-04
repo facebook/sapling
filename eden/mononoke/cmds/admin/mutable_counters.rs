@@ -5,11 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::error::SubcommandError;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
-
 use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
@@ -24,6 +22,8 @@ use mutable_counters::SqlMutableCounters;
 use mutable_counters::SqlMutableCountersBuilder;
 use slog::info;
 use slog::Logger;
+
+use crate::error::SubcommandError;
 
 pub const MUTABLE_COUNTERS: &str = "mutable-counters";
 const MUTABLE_COUNTERS_NAME: &str = "name";

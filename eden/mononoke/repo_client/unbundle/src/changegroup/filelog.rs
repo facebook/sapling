@@ -12,9 +12,12 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
+use filestore::FetchKey;
 use futures::future::BoxFuture;
 use futures::Future;
 use futures::FutureExt;
@@ -23,12 +26,6 @@ use futures::TryFutureExt;
 use futures::TryStreamExt;
 use futures_ext::future::TryShared;
 use futures_ext::FbTryFutureExt;
-use quickcheck::Arbitrary;
-use quickcheck::Gen;
-
-use blobrepo::BlobRepo;
-use blobstore::Loadable;
-use filestore::FetchKey;
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_types::blobs::ContentBlobMeta;
 use mercurial_types::blobs::File;
@@ -44,6 +41,8 @@ use mercurial_types::MPath;
 use mercurial_types::RepoPath;
 use mercurial_types::RevFlags;
 use mercurial_types::NULL_HASH;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
 use remotefilelog::create_raw_filenode_blob;
 
 use crate::stats::*;
@@ -331,8 +330,6 @@ impl Arbitrary for Filelog {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::cmp::min;
 
     use fbinit::FacebookInit;
@@ -340,11 +337,12 @@ mod tests {
     use itertools::assert_equal;
     use itertools::EitherOrBoth;
     use itertools::Itertools;
-    use quickcheck_macros::quickcheck;
-
     use mercurial_types::delta::Fragment;
     use mercurial_types::NULL_HASH;
     use mercurial_types_mocks::nodehash::*;
+    use quickcheck_macros::quickcheck;
+
+    use super::*;
 
     struct NodeHashGen {
         bytes: Vec<u8>,

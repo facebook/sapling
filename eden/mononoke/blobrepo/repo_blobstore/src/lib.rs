@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
@@ -18,7 +20,6 @@ use redactedblobstore::RedactedBlobs;
 use redactedblobstore::RedactedBlobstore;
 use redactedblobstore::RedactedBlobstoreConfig;
 use scuba_ext::MononokeScubaSampleBuilder;
-use std::sync::Arc;
 
 /// RedactedBlobstore should be part of every blobstore since it is a layer
 /// which adds security by preventing users to access sensitive content.

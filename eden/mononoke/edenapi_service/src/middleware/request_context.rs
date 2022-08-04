@@ -5,24 +5,24 @@
  * GNU General Public License version 2.
  */
 
-use gotham::state::FromState;
-use gotham::state::State;
-use gotham_derive::StateData;
-use hyper::Body;
-use hyper::Response;
-use rate_limiting::RateLimitEnvironment;
-use slog::o;
-use slog::Logger;
 use std::sync::Arc;
 
 use context::CoreContext;
 use context::SessionContainer;
 use fbinit::FacebookInit;
+use gotham::state::FromState;
+use gotham::state::State;
+use gotham_derive::StateData;
 use gotham_ext::middleware::ClientIdentity;
 use gotham_ext::middleware::Middleware;
 use gotham_ext::state_ext::StateExt;
+use hyper::Body;
+use hyper::Response;
 use metadata::Metadata;
+use rate_limiting::RateLimitEnvironment;
 use scuba_ext::MononokeScubaSampleBuilder;
+use slog::o;
+use slog::Logger;
 
 #[derive(StateData, Clone)]
 pub struct RequestContext {

@@ -1073,7 +1073,6 @@ async fn single_bookmark_updater(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use anyhow::anyhow;
     use bookmarks::BookmarkUpdateLogArc;
     use bookmarks::BookmarksArc;
@@ -1095,6 +1094,8 @@ mod tests {
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
     use tokio::time;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_simple(fb: FacebookInit) -> Result<(), Error> {

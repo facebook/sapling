@@ -5,12 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::select::select_path_tree;
-use crate::AsyncManifest as Manifest;
-use crate::Entry;
-use crate::PathOrPrefix;
-use crate::PathTree;
-use crate::StoreLoadable;
+use std::collections::HashMap;
+use std::marker::PhantomData;
+
 use anyhow::Error;
 use borrowed::borrowed;
 use cloned::cloned;
@@ -26,8 +23,13 @@ use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
 use mononoke_types::MPath;
-use std::collections::HashMap;
-use std::marker::PhantomData;
+
+use crate::select::select_path_tree;
+use crate::AsyncManifest as Manifest;
+use crate::Entry;
+use crate::PathOrPrefix;
+use crate::PathTree;
+use crate::StoreLoadable;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Diff<Entry> {

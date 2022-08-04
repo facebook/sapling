@@ -61,16 +61,15 @@ pub use crate::builder::new_test_segmented_changelog;
 pub use crate::builder::SegmentedChangelogSqlConnections;
 pub use crate::clone_hints::CloneHints;
 pub use crate::copy::copy_segmented_changelog;
+// public for benchmarking
+pub use crate::idmap::ConcurrentMemIdMap;
+pub use crate::idmap::IdMap;
 pub use crate::manager::ArcSegmentedChangelogManager;
 pub use crate::manager::SegmentedChangelogManager;
 pub use crate::tailer::SegmentedChangelogTailer;
 pub use crate::update::seedheads_from_config;
 pub use crate::update::JobType;
 pub use crate::update::SeedHead;
-
-// public for benchmarking
-pub use crate::idmap::ConcurrentMemIdMap;
-pub use crate::idmap::IdMap;
 
 // TODO(T74420661): use `thiserror` to represent error case
 

@@ -6,9 +6,10 @@
  */
 
 //! Tests for the Changesets store.
-use super::CachingChangesets;
-use super::SqlChangesets;
-use super::SqlChangesetsBuilder;
+use std::collections::HashSet;
+use std::str::FromStr;
+use std::sync::Arc;
+
 use anyhow::Error;
 use assert_matches::assert_matches;
 use caching_ext::MockStoreStats;
@@ -25,10 +26,10 @@ use mononoke_types_mocks::changesetid::*;
 use mononoke_types_mocks::repo::*;
 use rendezvous::RendezVousOptions;
 use sql_construct::SqlConstruct;
-use std::collections::HashSet;
-use std::str::FromStr;
-use std::sync::Arc;
 
+use super::CachingChangesets;
+use super::SqlChangesets;
+use super::SqlChangesetsBuilder;
 use crate::sql::SqlChangesetsError;
 
 async fn run_test<F, FO>(fb: FacebookInit, test_fn: F) -> Result<(), Error>

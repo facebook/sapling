@@ -8,6 +8,9 @@
 #![allow(dead_code)]
 #![allow(clippy::mutable_key_type)] // false positive: Bytes is not inner mutable
 
+use std::collections::BTreeMap;
+use std::fmt::Debug;
+
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Ok;
@@ -32,8 +35,6 @@ use once_cell::sync::OnceCell;
 use smallvec::SmallVec;
 use sorted_vector_map::sorted_vector_map;
 use sorted_vector_map::SortedVectorMap;
-use std::collections::BTreeMap;
-use std::fmt::Debug;
 
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
@@ -617,10 +618,8 @@ impl<Value: MapValue> BlobstoreValue for ShardedMapNode<Value> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::impl_typed_hash;
-    use crate::private::Blake2;
-    use crate::typed_hash::BlobstoreKey;
+    use std::str::FromStr;
+
     use async_trait::async_trait;
     use blobstore::BlobstoreKeyParam;
     use blobstore::BlobstoreKeyRange;
@@ -636,8 +635,12 @@ mod test {
     use quickcheck::QuickCheck;
     use quickcheck::TestResult;
     use quickcheck::Testable;
-    use std::str::FromStr;
     use ShardedMapNode::*;
+
+    use super::*;
+    use crate::impl_typed_hash;
+    use crate::private::Blake2;
+    use crate::typed_hash::BlobstoreKey;
 
     #[derive(Debug, Clone, Copy, Eq, PartialEq)]
     pub struct MyType(i32);

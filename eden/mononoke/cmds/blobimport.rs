@@ -7,6 +7,12 @@
 
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
 
+use std::collections::HashMap;
+use std::fs::read;
+use std::path::Path;
+use std::str::FromStr;
+use std::sync::Arc;
+
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
@@ -41,11 +47,6 @@ use slog::error;
 use slog::info;
 use slog::warn;
 use slog::Logger;
-use std::collections::HashMap;
-use std::fs::read;
-use std::path::Path;
-use std::str::FromStr;
-use std::sync::Arc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
 const ARG_DERIVED_DATA_TYPE: &str = "derived-data-type";
@@ -202,12 +203,12 @@ fn parse_fixed_parent_order<P: AsRef<Path>>(
 
 #[cfg(fbcode_build)]
 mod facebook {
-    use super::*;
-
     use manifold_client::cpp_client::ClientOptionsBuilder;
     use manifold_client::cpp_client::ManifoldCppClient;
     use manifold_client::write::WriteRequestOptionsBuilder;
     use manifold_client::ManifoldClient;
+
+    use super::*;
 
     pub async fn update_manifold_key(
         fb: FacebookInit,

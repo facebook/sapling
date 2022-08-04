@@ -5,10 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Result;
-use async_trait::async_trait;
 use std::panic::RefUnwindSafe;
 use std::sync::Arc;
+
+use anyhow::Result;
+use async_trait::async_trait;
 
 use crate::MononokeIdentitySet;
 

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::format_err;
 use anyhow::Error;
 use bonsai_git_mapping::ArcBonsaiGitMapping;
@@ -15,7 +17,6 @@ use bonsai_hg_mapping::ArcBonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::ArcBonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
-
 use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
 use bookmarks::Bookmark;
@@ -65,7 +66,6 @@ use repo_lock::RepoLock;
 use repo_permission_checker::ArcRepoPermissionChecker;
 use repo_permission_checker::RepoPermissionChecker;
 use stats::prelude::*;
-use std::sync::Arc;
 
 define_stats! {
     prefix = "mononoke.blobrepo";

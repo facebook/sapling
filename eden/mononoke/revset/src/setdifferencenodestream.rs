@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+
 use anyhow::Error;
 use anyhow::Result;
 use changeset_fetcher::ArcChangesetFetcher;
@@ -14,7 +16,6 @@ use futures_old::Async;
 use futures_old::Poll;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
-use std::collections::HashSet;
 
 use crate::setcommon::*;
 use crate::BonsaiNodeStream;
@@ -113,16 +114,8 @@ impl Stream for SetDifferenceNodeStream {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::errors::ErrorKind;
-    use crate::fixtures::Linear;
-    use crate::fixtures::MergeEven;
-    use crate::fixtures::MergeUneven;
-    use crate::fixtures::TestRepoFixture;
-    use crate::setcommon::NotReadyEmptyStream;
-    use crate::tests::get_single_bonsai_streams;
-    use crate::tests::TestChangesetFetcher;
-    use crate::UnionNodeStream;
+    use std::sync::Arc;
+
     use changeset_fetcher::ArcChangesetFetcher;
     use context::CoreContext;
     use failure_ext::err_downcast;
@@ -134,7 +127,17 @@ mod test {
     use revset_test_helper::assert_changesets_sequence;
     use revset_test_helper::single_changeset_id;
     use revset_test_helper::string_to_bonsai;
-    use std::sync::Arc;
+
+    use super::*;
+    use crate::errors::ErrorKind;
+    use crate::fixtures::Linear;
+    use crate::fixtures::MergeEven;
+    use crate::fixtures::MergeUneven;
+    use crate::fixtures::TestRepoFixture;
+    use crate::setcommon::NotReadyEmptyStream;
+    use crate::tests::get_single_bonsai_streams;
+    use crate::tests::TestChangesetFetcher;
+    use crate::UnionNodeStream;
 
     #[fbinit::test]
     async fn difference_identical_node(fb: FacebookInit) {

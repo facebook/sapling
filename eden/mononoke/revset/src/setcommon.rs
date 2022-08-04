@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Error;
 use changeset_fetcher::ArcChangesetFetcher;
 use cloned::cloned;
 use context::CoreContext;
@@ -14,15 +15,13 @@ use futures_ext::BoxStream;
 use futures_ext::StreamExt;
 use futures_old::future::Future;
 use futures_old::stream::Stream;
+use futures_old::Async;
+use futures_old::Poll;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 
 use crate::errors::*;
 use crate::BonsaiNodeStream;
-use anyhow::Error;
-
-use futures_old::Async;
-use futures_old::Poll;
 
 type GenericStream<T> = BoxStream<(T, Generation), Error>;
 pub type BonsaiInputStream = GenericStream<ChangesetId>;
@@ -71,12 +70,13 @@ pub fn poll_all_inputs<T>(inputs: &mut [(GenericStream<T>, Poll<Option<(T, Gener
 
 #[cfg(test)]
 mod test_utils {
-    use super::*;
+    use std::marker::PhantomData;
 
     use anyhow::bail;
     use futures_old::task;
     use mercurial_types::HgNodeHash;
-    use std::marker::PhantomData;
+
+    use super::*;
 
     pub struct NotReadyEmptyStream<T> {
         pub poll_count: usize,

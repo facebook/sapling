@@ -5,13 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use crate::mock_store::MockStore;
+use std::sync::atomic::Ordering;
+use std::time::Duration;
+
 use anyhow::Result;
 use bytes::Bytes;
 use memcache::MemcacheClient;
 use memcache::MemcacheSetType;
-use std::sync::atomic::Ordering;
-use std::time::Duration;
+
+use crate::mock_store::MockStore;
 
 #[derive(Clone)]
 pub enum MemcacheHandler {

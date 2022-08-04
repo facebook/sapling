@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
@@ -13,8 +16,6 @@ use blobstore::CountedBlobstore;
 use bytes::Bytes;
 use cachelib::LruCachePool;
 use context::PerfCounterType;
-use std::fmt;
-use std::sync::Arc;
 
 use crate::dummy::DummyLease;
 use crate::in_process_lease::InProcessLease;

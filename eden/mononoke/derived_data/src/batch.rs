@@ -288,12 +288,13 @@ fn has_file_conflict(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use blobrepo::BlobRepo;
     use fbinit::FacebookInit;
     use maplit::btreemap;
     use mononoke_types::FileType;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_split_batch_in_linear_stacks_simple(fb: FacebookInit) -> Result<(), Error> {

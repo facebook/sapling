@@ -77,8 +77,9 @@ pub const FS_SHA256: Sha256 = Sha256::from_byte_array([0xff; 32]);
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use mononoke_types::hash::Blake2Prefix;
+
+    use super::*;
 
     #[test]
     fn verify() {

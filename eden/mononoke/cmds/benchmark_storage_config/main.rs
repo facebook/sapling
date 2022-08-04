@@ -11,17 +11,16 @@ use std::time::Duration;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
-use clap_old::Arg;
-use criterion::Criterion;
-use tokio::runtime::Handle;
-
 use blobstore::Blobstore;
 use blobstore_factory::make_blobstore;
 use cacheblob::new_memcache_blobstore_no_lease;
 use cacheblob::CachelibBlobstoreOptions;
+use clap_old::Arg;
 use cmdlib::args;
 use context::CoreContext;
+use criterion::Criterion;
 use environment::Caching;
+use tokio::runtime::Handle;
 
 mod parallel_puts;
 mod single_puts;

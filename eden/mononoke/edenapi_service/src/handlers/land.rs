@@ -22,11 +22,10 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_api_hg::HgRepoContext;
 
-use crate::errors::ErrorKind;
-
 use super::EdenApiHandler;
 use super::EdenApiMethod;
 use super::HandlerResult;
+use crate::errors::ErrorKind;
 
 /// Rebase a stack of commits onto a bookmark, and update the bookmark to the top of the newly-rebased stack.
 pub struct LandStackHandler;

@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
@@ -23,9 +27,6 @@ use pushredirect_enable::types::PushRedirectEnableState;
 use slog::debug;
 use slog::error;
 use slog::Logger;
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::Mutex;
 use thiserror::Error;
 
 pub const CONFIGERATOR_PUSHREDIRECT_ENABLE: &str = "scm/mononoke/pushredirect/enable";

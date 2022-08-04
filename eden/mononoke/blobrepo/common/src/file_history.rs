@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::VecDeque;
+
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
@@ -39,8 +42,6 @@ use mercurial_types::NULL_HASH;
 use mononoke_types::ChangesetId;
 use slog::debug;
 use stats::prelude::*;
-use std::collections::HashMap;
-use std::collections::VecDeque;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

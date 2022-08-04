@@ -11,12 +11,13 @@ use std::time::Duration;
 
 use anyhow::Result;
 use async_trait::async_trait;
-
 use context::CoreContext;
 use futures::future::abortable;
 use futures::future::AbortHandle;
 use mononoke_types::ChangesetId;
 use rand::Rng;
+use reloader::Loader;
+use reloader::Reloader;
 use slog::info;
 use tokio::sync::Notify;
 use tunables::tunables;
@@ -27,8 +28,6 @@ use crate::types::SegmentedChangelogVersion;
 use crate::CloneData;
 use crate::Location;
 use crate::SegmentedChangelog;
-use reloader::Loader;
-use reloader::Reloader;
 
 struct SegmentedChangelogLoader {
     manager: SegmentedChangelogManager,

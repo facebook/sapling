@@ -5,10 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::time::Duration;
+
 use futures::Future;
 use slog::info;
 use slog::Logger;
-use std::time::Duration;
 
 #[derive(Copy, Clone)]
 pub struct RetryAttemptsCount(pub usize);

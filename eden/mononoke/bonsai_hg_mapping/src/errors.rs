@@ -5,8 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use super::BonsaiHgMappingEntry;
 use thiserror::Error;
+
+use super::BonsaiHgMappingEntry;
 
 #[derive(Debug, Eq, Error, PartialEq)]
 pub enum ErrorKind {

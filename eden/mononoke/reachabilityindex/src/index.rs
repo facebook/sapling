@@ -12,12 +12,11 @@ use std::collections::HashSet;
 use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use maplit::hashmap;
-use maplit::hashset;
-
 use changeset_fetcher::ArcChangesetFetcher;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
+use maplit::hashmap;
+use maplit::hashset;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use uniqueheap::UniqueHeap;

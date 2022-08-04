@@ -5,14 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::errors::MononokeError;
-use crate::ChangesetContext;
-use crate::ChangesetDiffItem;
-use crate::ChangesetFileOrdering;
-use crate::ChangesetPathContentContext;
-use crate::ChangesetPathDiffContext;
-use crate::MononokePath;
-use crate::PathEntry;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::ops::Not;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
@@ -34,10 +31,14 @@ use repo_sparse_profiles::RepoSparseProfiles;
 use slog::debug;
 use types::RepoPath;
 
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::ops::Not;
-use std::sync::Arc;
+use crate::errors::MononokeError;
+use crate::ChangesetContext;
+use crate::ChangesetDiffItem;
+use crate::ChangesetFileOrdering;
+use crate::ChangesetPathContentContext;
+use crate::ChangesetPathDiffContext;
+use crate::MononokePath;
+use crate::PathEntry;
 
 // This struct contains matchers which will be consulted in various scenarious
 // Clients can request analysis either for ALL profiles or Set of interested

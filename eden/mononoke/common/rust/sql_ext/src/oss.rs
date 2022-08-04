@@ -5,16 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use crate::facebook::*;
-use crate::replication::ReplicaLag;
-use crate::replication::ReplicaLagMonitor;
-use crate::*;
+use std::time::Duration;
 
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use fbinit::FacebookInit;
-use std::time::Duration;
+
+use crate::facebook::*;
+use crate::replication::ReplicaLag;
+use crate::replication::ReplicaLagMonitor;
+use crate::*;
 
 macro_rules! fb_unimplemented {
     () => {

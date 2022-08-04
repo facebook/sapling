@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::bail;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -30,8 +32,6 @@ use sorted_vector_map::SortedVectorMap;
 use sql::queries;
 use sql::Connection;
 use sql_ext::SqlConnections;
-
-use std::sync::Arc;
 
 use crate::bubble::BubbleId;
 

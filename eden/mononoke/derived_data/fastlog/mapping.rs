@@ -18,6 +18,7 @@ use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
+use derived_data_service_if::types as thrift;
 use futures::stream::TryStreamExt;
 use manifest::find_intersection_of_diffs;
 use manifest::Entry;
@@ -30,8 +31,6 @@ use unodes::RootUnodeManifestId;
 
 use crate::fastlog_impl::create_new_batch;
 use crate::fastlog_impl::save_fastlog_batch_by_unode_id;
-
-use derived_data_service_if::types as thrift;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum FastlogParent {
@@ -194,9 +193,12 @@ impl_bonsai_derived_via_manager!(RootFastlog);
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::fastlog_impl::fetch_fastlog_batch_by_unode_id;
-    use crate::fastlog_impl::fetch_flattened;
+    use std::collections::BTreeMap;
+    use std::collections::HashSet;
+    use std::collections::VecDeque;
+    use std::str::FromStr;
+    use std::sync::Arc;
+
     use blobrepo::save_bonsai_changesets;
     use blobrepo::BlobRepo;
     use bookmarks::BookmarkName;
@@ -231,11 +233,10 @@ mod tests {
     use revset::AncestorsNodeStream;
     use simulated_repo::GenManifest;
     use simulated_repo::GenSettings;
-    use std::collections::BTreeMap;
-    use std::collections::HashSet;
-    use std::collections::VecDeque;
-    use std::str::FromStr;
-    use std::sync::Arc;
+
+    use super::*;
+    use crate::fastlog_impl::fetch_fastlog_batch_by_unode_id;
+    use crate::fastlog_impl::fetch_flattened;
 
     #[fbinit::test]
     async fn test_derive_single_empty_commit_no_parents(fb: FacebookInit) {

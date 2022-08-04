@@ -5,8 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::hash;
 use mononoke_types::ContentId;
+
+use crate::hash;
 
 // Definitions for hashes 1111...ffff.
 pub const ONES_CTID: ContentId = ContentId::new(hash::ONES);

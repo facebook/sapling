@@ -5,11 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use thiserror::Error;
-
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::ChangesetId;
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {

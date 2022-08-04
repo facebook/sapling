@@ -5,8 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::path::MPath;
 use thiserror::Error;
+
+use crate::path::MPath;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {

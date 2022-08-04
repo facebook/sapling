@@ -5,20 +5,20 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
-use futures::future::TryFutureExt;
-use slog::debug;
-use thiserror::Error;
+use std::cmp::Ordering;
 
+use anyhow::Error;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
+use futures::future::TryFutureExt;
 use mononoke_types::ChunkedFileContents;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadata;
 use mononoke_types::FileContents;
-use std::cmp::Ordering;
+use slog::debug;
+use thiserror::Error;
 
 use crate::fetch;
 use crate::get_metadata;

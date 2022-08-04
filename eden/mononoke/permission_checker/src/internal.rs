@@ -131,8 +131,9 @@ impl AclProvider for InternalAclProvider {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use fbinit::FacebookInit;
+
+    use super::*;
 
     fn ids(ids: &[&str]) -> Result<MononokeIdentitySet> {
         let mut set = MononokeIdentitySet::new();

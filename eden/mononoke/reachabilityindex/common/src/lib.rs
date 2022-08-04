@@ -8,14 +8,13 @@
 use std::collections::HashSet;
 
 use anyhow::Error;
+use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use futures::future::try_join_all;
 use futures::stream::iter;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-
-use changeset_fetcher::ArcChangesetFetcher;
-use changeset_fetcher::ChangesetFetcher;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use reachabilityindex::errors::*;

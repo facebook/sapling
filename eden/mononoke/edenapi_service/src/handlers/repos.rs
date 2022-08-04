@@ -9,10 +9,9 @@ use anyhow::Context;
 use bytes::Bytes;
 use gotham::state::FromState;
 use gotham::state::State;
-use serde::Serialize;
-
 use gotham_ext::error::HttpError;
 use gotham_ext::response::BytesBody;
+use serde::Serialize;
 
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;

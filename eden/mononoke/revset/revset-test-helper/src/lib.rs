@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::str::FromStr;
+
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use context::CoreContext;
@@ -19,9 +22,6 @@ use futures_old::stream::Stream;
 use mercurial_types::nodehash::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::ChangesetId;
-
-use std::collections::HashSet;
-use std::str::FromStr;
 
 pub fn single_changeset_id(
     ctx: CoreContext,
@@ -119,13 +119,14 @@ pub async fn assert_changesets_sequence<I>(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
     use futures_ext::StreamExt;
     use mononoke_types_mocks::changesetid::ONES_CSID;
+
+    use super::*;
 
     #[fbinit::test]
     async fn valid_changeset(fb: FacebookInit) {

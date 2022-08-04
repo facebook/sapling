@@ -7,14 +7,15 @@
 
 //! Fetch the blame of a file
 
+use std::fmt::Write as _;
+use std::io::Write;
+
 use anyhow::format_err;
 use anyhow::Result;
 use clap::Parser;
 use maplit::btreeset;
 use serde_json::json;
 use source_control::types as thrift;
-use std::fmt::Write as _;
-use std::io::Write;
 use unicode_truncate::Alignment;
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;

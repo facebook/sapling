@@ -23,15 +23,14 @@ use hyper::Response;
 use hyper::StatusCode;
 use mime::Mime;
 
-use crate::content_encoding::ContentEncoding;
-use crate::error::ErrorFormatter;
-use crate::error::HttpError;
-
 use super::content_meta::ContentMetaProvider;
 use super::error_meta::ErrorMetaProvider;
 use super::response_meta::HeadersMeta;
 use super::response_meta::PendingResponseMeta;
 use super::signal_stream::SignalStream;
+use crate::content_encoding::ContentEncoding;
+use crate::error::ErrorFormatter;
+use crate::error::HttpError;
 
 pub trait TryIntoResponse {
     fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error>;

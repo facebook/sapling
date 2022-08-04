@@ -7,6 +7,8 @@
 
 //! Tests for the Bookmarks store.
 
+use std::collections::HashMap;
+
 use anyhow::Error;
 use anyhow::Result;
 use bookmarks::Bookmark;
@@ -39,7 +41,6 @@ use quickcheck_arbitrary_derive::Arbitrary;
 use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::Value;
 use sql_construct::SqlConstruct;
-use std::collections::HashMap;
 
 fn create_bookmark_name(book: &str) -> BookmarkName {
     BookmarkName::new(book).unwrap()

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
@@ -17,6 +19,7 @@ use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
+use derived_data_service_if::types as thrift;
 use filenodes::FilenodeInfo;
 use filenodes::FilenodeResult;
 use filenodes::PreparedFilenode;
@@ -27,12 +30,9 @@ use mercurial_types::NULL_HASH;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepoPath;
-use std::collections::HashMap;
 
 use crate::derive::derive_filenodes;
 use crate::derive::derive_filenodes_in_batch;
-
-use derived_data_service_if::types as thrift;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PreparedRootFilenode {

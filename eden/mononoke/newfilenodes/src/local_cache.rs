@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::marker::PhantomData;
+
 use abomonation::Abomonation;
 use cachelib::get_cached;
 use cachelib::set_cached;
 use cachelib::VolatileLruCachePool;
 use stats::prelude::*;
-use std::marker::PhantomData;
 
 define_stats! {
     prefix = "mononoke.filenodes";
@@ -117,9 +118,10 @@ impl CachelibCache {
 
 #[cfg(test)]
 pub mod test {
-    use super::*;
     use std::collections::HashMap;
     use std::sync::Mutex;
+
+    use super::*;
 
     pub struct HashMapCache {
         hashmap: Mutex<HashMap<String, Vec<u8>>>,

@@ -7,6 +7,13 @@
 
 use anyhow::Error;
 use assert_matches::assert_matches;
+use bonsai_globalrev_mapping::add_globalrevs;
+use bonsai_globalrev_mapping::AddGlobalrevsErrorKind;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
+use bonsai_globalrev_mapping::BonsaisOrGlobalrevs;
+use bonsai_globalrev_mapping::CachingBonsaiGlobalrevMapping;
+use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMappingBuilder;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use mercurial_types_mocks::globalrev::*;
@@ -16,14 +23,6 @@ use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_ext::open_sqlite_in_memory;
 use sql_ext::SqlConnections;
-
-use bonsai_globalrev_mapping::add_globalrevs;
-use bonsai_globalrev_mapping::AddGlobalrevsErrorKind;
-use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
-use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
-use bonsai_globalrev_mapping::BonsaisOrGlobalrevs;
-use bonsai_globalrev_mapping::CachingBonsaiGlobalrevMapping;
-use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMappingBuilder;
 
 #[fbinit::test]
 async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {

@@ -6,7 +6,6 @@
  */
 
 use anyhow::Error;
-
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::ContentMetadata;
 use mononoke_types::FileType;

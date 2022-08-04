@@ -18,8 +18,6 @@ use byteorder::BigEndian;
 use bytes_old::BufMut;
 use futures_old::Poll;
 use futures_old::Stream;
-
-use crate::chunk::Chunk;
 use mercurial_types::MPath;
 use mercurial_types::RepoPath;
 
@@ -30,7 +28,7 @@ use super::HistoryEntry;
 use super::Kind;
 use super::Part;
 use super::WIREPACK_END;
-
+use crate::chunk::Chunk;
 use crate::errors::ErrorKind;
 
 pub struct WirePackPacker<S> {

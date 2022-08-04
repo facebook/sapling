@@ -5,6 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+use std::ops::Bound;
+use std::ops::Range;
+use std::ops::RangeBounds;
+use std::ops::RangeFrom;
+use std::ops::RangeFull;
+use std::str::FromStr;
+
 use anyhow::format_err;
 use anyhow::Error;
 use ascii::AsciiChar;
@@ -17,13 +25,6 @@ use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
-use std::fmt;
-use std::ops::Bound;
-use std::ops::Range;
-use std::ops::RangeBounds;
-use std::ops::RangeFrom;
-use std::ops::RangeFull;
-use std::str::FromStr;
 
 /// This enum represents how fresh you want results to be. MostRecent will go to the master, so you
 /// normally don't want to issue queries using MostRecent unless you have a very good reason.
@@ -470,8 +471,9 @@ fn prefix_to_range_end(mut prefix: AsciiString) -> Option<AsciiString> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use quickcheck::quickcheck;
+
+    use super::*;
 
     #[test]
     fn bookmark_kind_all_contains_all_kinds() {

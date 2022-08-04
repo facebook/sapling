@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -17,7 +19,6 @@ use futures::channel::mpsc::Sender;
 use futures::sink::SinkExt;
 use mercurial_types::HgFileNodeId;
 use mononoke_types::RepoPath;
-use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct MicrowaveFilenodes {

@@ -6,6 +6,14 @@
  */
 
 #![type_length_limit = "4522397"]
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::path::Path;
+use std::process::Stdio;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
+use std::time::Duration;
+
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
@@ -21,7 +29,6 @@ use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use borrowed::borrowed;
-
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncer_lease;
 use cross_repo_sync::create_commit_syncers;
@@ -81,13 +88,8 @@ use slog::error;
 use slog::info;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::path::Path;
-use std::process::Stdio;
-use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
-use std::time::Duration;
+#[cfg_attr(test, allow(unused))]
+use stats::schedule_stats_aggregation_preview;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
 use tokio::fs;
@@ -99,9 +101,6 @@ use tokio::process;
 use tokio::time;
 use topo_sort::sort_topological;
 
-#[cfg_attr(test, allow(unused))]
-use stats::schedule_stats_aggregation_preview;
-
 mod cli;
 mod repo;
 mod tests;
@@ -112,7 +111,6 @@ use crate::cli::Commands::CheckAdditionalSetupSteps;
 use crate::cli::Commands::Import;
 use crate::cli::Commands::RecoverProcess;
 use crate::cli::MononokeRepoImportArgs;
-
 use crate::repo::Repo;
 
 #[derive(Deserialize, Clone, Debug)]

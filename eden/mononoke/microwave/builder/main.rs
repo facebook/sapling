@@ -8,6 +8,9 @@
 mod changesets;
 mod filenodes;
 
+use std::path::Path;
+use std::sync::Arc;
+
 use ::changesets::ArcChangesets;
 use ::filenodes::ArcFilenodes;
 use anyhow::format_err;
@@ -42,8 +45,6 @@ use repo_factory::RepoFactory;
 use slog::info;
 use slog::o;
 use slog::Logger;
-use std::path::Path;
-use std::sync::Arc;
 use warm_bookmarks_cache::create_derived_data_warmer;
 use warm_bookmarks_cache::find_all_underived_and_latest_derived;
 use warm_bookmarks_cache::LatestDerivedBookmarkEntry;

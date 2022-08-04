@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::str::FromStr;
+
 use anyhow::Error;
 use gotham::state::FromState;
 use gotham::state::State;
 use http::header::AsHeaderName;
 use http::header::HeaderMap;
 use permission_checker::MononokeIdentitySet;
-use std::str::FromStr;
 
 pub fn read_header_value<K, T>(state: &State, header: K) -> Option<Result<T, Error>>
 where

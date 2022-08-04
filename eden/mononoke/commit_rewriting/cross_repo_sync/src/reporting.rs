@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+use std::time::Duration;
+
 use anyhow::Error;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
-use std::fmt;
-use std::time::Duration;
 use tunables::tunables;
 
 const SCUBA_TABLE: &str = "mononoke_x_repo_mapping";

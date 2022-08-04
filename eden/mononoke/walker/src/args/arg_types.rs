@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+
 use clap::ArgEnum;
 use once_cell::sync::Lazy;
-use std::collections::HashSet;
 use strum::IntoEnumIterator;
 use strum_macros::AsRefStr;
 use strum_macros::EnumString;

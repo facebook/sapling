@@ -5,6 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::io::Cursor;
+use std::marker::PhantomData;
+use std::str::FromStr;
+use std::sync::atomic::Ordering;
+use std::task;
+
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
@@ -25,6 +31,7 @@ use http::Uri;
 use hyper::service::Service;
 use hyper::Body;
 use metadata::Metadata;
+use qps::Qps;
 use session_id::generate_session_id;
 use sha1::Digest;
 use sha1::Sha1;
@@ -32,11 +39,6 @@ use slog::debug;
 use slog::error;
 use slog::trace;
 use slog::Logger;
-use std::io::Cursor;
-use std::marker::PhantomData;
-use std::str::FromStr;
-use std::sync::atomic::Ordering;
-use std::task;
 use thiserror::Error;
 use tokio::io::AsyncReadExt;
 use tunables::force_update_tunables;
@@ -47,8 +49,6 @@ use crate::connection_acceptor::AcceptedConnection;
 use crate::connection_acceptor::Acceptor;
 use crate::connection_acceptor::FramedConn;
 use crate::connection_acceptor::MononokeStream;
-
-use qps::Qps;
 
 const HEADER_CLIENT_COMPRESSION: &str = "x-client-compression";
 const HEADER_CLIENT_DEBUG: &str = "x-client-debug";
@@ -496,12 +496,13 @@ mod h2m {
 
 #[cfg(fbcode_build)]
 mod h2m {
-    use super::*;
+    use std::net::IpAddr;
 
     use cats::try_get_cats_idents;
     use percent_encoding::percent_decode;
     use permission_checker::MononokeIdentity;
-    use std::net::IpAddr;
+
+    use super::*;
 
     const HEADER_ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
     const HEADER_CLIENT_IP: &str = "tfb-orig-client-ip";

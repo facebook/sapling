@@ -5,10 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::AppExtension;
 use anyhow::Result;
 use clap::Args;
 use environment::MononokeEnvironment;
+
+use crate::AppExtension;
 
 /// Command line arguments that affect mcrouter usage
 #[derive(Args, Debug)]

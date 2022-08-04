@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+
 use ::sql::queries;
 use ::sql::Connection;
 use anyhow::Error;
@@ -19,7 +21,6 @@ use slog::warn;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
-use std::collections::HashSet;
 use thiserror::Error;
 
 use super::BonsaiSvnrevMapping;

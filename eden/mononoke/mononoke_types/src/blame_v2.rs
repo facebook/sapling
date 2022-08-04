@@ -5,13 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::blame::BlameRejected;
-use crate::path::MPath;
-use crate::thrift;
-use crate::typed_hash::BlobstoreKey;
-use crate::typed_hash::ChangesetId;
-use crate::typed_hash::FileUnodeId;
-use crate::typed_hash::MononokeId;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::VecDeque;
+use std::str::FromStr;
+
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;
@@ -25,12 +23,16 @@ use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::collections::VecDeque;
-use std::str::FromStr;
 use vec_map::VecMap;
 use xdiff::diff_hunks;
+
+use crate::blame::BlameRejected;
+use crate::path::MPath;
+use crate::thrift;
+use crate::typed_hash::BlobstoreKey;
+use crate::typed_hash::ChangesetId;
+use crate::typed_hash::FileUnodeId;
+use crate::typed_hash::MononokeId;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct BlameV2Id(FileUnodeId);
@@ -1255,9 +1257,10 @@ impl<'a> Iterator for BlameMergeLines<'a> {
 mod test {
     #![allow(clippy::redundant_clone)]
 
+    use pretty_assertions::assert_eq;
+
     use super::*;
     use crate::hash::Blake2;
-    use pretty_assertions::assert_eq;
 
     const ONES_CSID: ChangesetId = ChangesetId::new(Blake2::from_byte_array([0x11; 32]));
     const TWOS_CSID: ChangesetId = ChangesetId::new(Blake2::from_byte_array([0x22; 32]));

@@ -15,12 +15,11 @@ use std::thread::JoinHandle;
 
 use anyhow::Error;
 use anyhow::Result;
+use cmdlib::args::MononokeMatches;
+use cmdlib::monitoring::ReadyFlagService;
 use fbinit::FacebookInit;
 use slog::info;
 use slog::Logger;
-
-use cmdlib::args::MononokeMatches;
-use cmdlib::monitoring::ReadyFlagService;
 
 // TODO: Stop using this one-off for Mononoke server, and instead use the one from cmdlib.
 pub fn start_thrift_service<'a>(

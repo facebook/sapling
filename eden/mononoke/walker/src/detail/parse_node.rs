@@ -5,17 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::detail::graph::AliasKey;
-use crate::detail::graph::AliasType;
-use crate::detail::graph::ChangesetKey;
-use crate::detail::graph::FastlogKey;
-use crate::detail::graph::Node;
-use crate::detail::graph::NodeType;
-use crate::detail::graph::PathKey;
-use crate::detail::graph::UnitKey;
-use crate::detail::graph::UnodeFlags;
-use crate::detail::graph::UnodeKey;
-use crate::detail::graph::WrappedPath;
+use std::str::FromStr;
 
 use anyhow::format_err;
 use anyhow::Error;
@@ -28,8 +18,19 @@ use mononoke_types::hash::Sha256;
 use mononoke_types::FileUnodeId;
 use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
-use std::str::FromStr;
 use strum::IntoEnumIterator;
+
+use crate::detail::graph::AliasKey;
+use crate::detail::graph::AliasType;
+use crate::detail::graph::ChangesetKey;
+use crate::detail::graph::FastlogKey;
+use crate::detail::graph::Node;
+use crate::detail::graph::NodeType;
+use crate::detail::graph::PathKey;
+use crate::detail::graph::UnitKey;
+use crate::detail::graph::UnodeFlags;
+use crate::detail::graph::UnodeKey;
+use crate::detail::graph::WrappedPath;
 
 const NODE_SEP: &str = ":";
 
@@ -187,8 +188,9 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use bookmarks::BookmarkName;
+
+    use super::*;
 
     const SAMPLE_BLAKE2: &str = "b847b8838bfe3ae13ea6f8ce2e341c51193587b8392494f6dbab7224b3b116bf";
     const SAMPLE_SHA1: &str = "e797dcabdd6d16ec4ae614165178b60d7054305b";

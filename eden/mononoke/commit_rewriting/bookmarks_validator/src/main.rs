@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::Duration;
+
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
@@ -40,10 +45,6 @@ use slog::error;
 use slog::info;
 use slog::Logger;
 use stats::prelude::*;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::time::Duration;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
 
@@ -529,8 +530,6 @@ async fn remap<M: SyncedCommitMapping + Clone + 'static>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use cross_repo_sync::CandidateSelectionHint;
     use cross_repo_sync::CommitSyncContext;
     use cross_repo_sync_test_utils::init_small_large_repo;
@@ -538,6 +537,8 @@ mod tests {
     use tests_utils::bookmark;
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_simple_check_large_bookmark_history(fb: FacebookInit) -> Result<(), Error> {

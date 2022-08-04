@@ -17,18 +17,15 @@ use filestore::FetchKey;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures_lazy_shared::LazyShared;
-
-use crate::errors::MononokeError;
-use crate::repo::RepoContext;
-
 /// A file's ID is its content id.
 pub use mononoke_types::ContentId as FileId;
-
+/// Metadata about a file.
+pub use mononoke_types::ContentMetadata as FileMetadata;
 /// The type of a file.
 pub use mononoke_types::FileType;
 
-/// Metadata about a file.
-pub use mononoke_types::ContentMetadata as FileMetadata;
+use crate::errors::MononokeError;
+use crate::repo::RepoContext;
 
 #[derive(Clone)]
 pub struct FileContext {

@@ -19,6 +19,7 @@ use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
+use derived_data_service_if::types as thrift;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -29,8 +30,6 @@ use mononoke_types::MPath;
 
 use crate::batch::derive_fsnode_in_batch;
 use crate::derive::derive_fsnode;
-
-use derived_data_service_if::types as thrift;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootFsnodeId(pub(crate) FsnodeId);
@@ -173,7 +172,6 @@ pub(crate) fn get_file_changes(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use blobrepo::BlobRepo;
     use blobstore::Loadable;
     use bookmarks::BookmarkName;
@@ -203,6 +201,8 @@ mod test {
     use mercurial_types::HgManifestId;
     use revset::AncestorsNodeStream;
     use tokio::runtime::Runtime;
+
+    use super::*;
 
     async fn fetch_manifest_by_cs_id(
         ctx: &CoreContext,

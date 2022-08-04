@@ -17,6 +17,7 @@ use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
 use maplit::btreeset;
 use pretty_assertions::assert_eq;
+use tests_utils::CreateCommitContext;
 
 use crate::ChangesetDiffItem;
 use crate::ChangesetFileOrdering;
@@ -25,7 +26,6 @@ use crate::CoreContext;
 use crate::HgChangesetId;
 use crate::Mononoke;
 use crate::MononokePath;
-use tests_utils::CreateCommitContext;
 
 #[fbinit::test]
 async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {

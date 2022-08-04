@@ -12,6 +12,8 @@ mod commands;
 mod detail;
 mod setup;
 
+use std::num::NonZeroU32;
+
 use anyhow::Error;
 use blobstore_factory::BlobstoreArgDefaults;
 use blobstore_factory::ReadOnlyStorage;
@@ -27,7 +29,6 @@ use mononoke_app::fb303::ReadyFlagService;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use multiplexedblob::ScrubWriteMostly;
-use std::num::NonZeroU32;
 
 #[derive(Parser)]
 #[clap(group(

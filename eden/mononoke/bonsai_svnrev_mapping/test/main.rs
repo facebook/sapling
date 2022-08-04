@@ -5,20 +5,20 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::Error;
+use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
+use bonsai_svnrev_mapping::BonsaiSvnrevMappingEntry;
+use bonsai_svnrev_mapping::BonsaisOrSvnrevs;
+use bonsai_svnrev_mapping::CachingBonsaiSvnrevMapping;
+use bonsai_svnrev_mapping::SqlBonsaiSvnrevMappingBuilder;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use mononoke_types_mocks::svnrev::*;
 use sql_construct::SqlConstruct;
-use std::sync::Arc;
-
-use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
-use bonsai_svnrev_mapping::BonsaiSvnrevMappingEntry;
-use bonsai_svnrev_mapping::BonsaisOrSvnrevs;
-use bonsai_svnrev_mapping::CachingBonsaiSvnrevMapping;
-use bonsai_svnrev_mapping::SqlBonsaiSvnrevMappingBuilder;
 
 #[fbinit::test]
 async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {

@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+use std::fmt::Debug;
+use std::pin::Pin;
+
 use anyhow::Error;
 use anyhow::Result;
 use bytes::Bytes;
@@ -18,9 +22,6 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::task::Context;
 use futures::task::Poll;
-use std::fmt;
-use std::fmt::Debug;
-use std::pin::Pin;
 
 use crate::expected_size::ExpectedSize;
 
@@ -198,12 +199,12 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     use assert_matches::assert_matches;
     use futures::stream;
     use quickcheck::quickcheck;
     use tokio::runtime::Runtime;
+
+    use super::*;
 
     #[test]
     fn test_make_chunks_no_chunk_size() {

@@ -5,19 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use clap_old::App;
-use clap_old::Arg;
-use clap_old::ArgMatches;
-use clap_old::SubCommand;
-use cmdlib::args;
-
 use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
+use clap_old::App;
+use clap_old::Arg;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
 use cloned::cloned;
+use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
 use context::CoreContext;

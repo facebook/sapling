@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Result;
-use sql::rusqlite::Connection as SqliteConnection;
-use sql::rusqlite::OpenFlags as SqliteOpenFlags;
 use std::fs::create_dir_all;
 use std::path::Path;
 use std::time::Duration;
+
+use anyhow::Result;
+use sql::rusqlite::Connection as SqliteConnection;
+use sql::rusqlite::OpenFlags as SqliteOpenFlags;
 
 fn sqlite_setup_connection(con: &SqliteConnection) {
     // By default, when there's a read/write contention, SQLite will not wait,

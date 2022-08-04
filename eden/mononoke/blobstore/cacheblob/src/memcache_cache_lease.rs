@@ -9,23 +9,22 @@ use std::time::Duration;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
+use blobstore::CountedBlobstore;
 use cloned::cloned;
+use context::CoreContext;
+use context::PerfCounterType;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use futures::future::select;
 use futures::future::BoxFuture;
 use futures::future::Either;
+use hostname::get_hostname;
 use memcache::KeyGen;
 use memcache::MemcacheClient;
 use memcache_lock_thrift::LockState;
 use slog::warn;
-
-use blobstore::Blobstore;
-use blobstore::BlobstoreGetData;
-use blobstore::CountedBlobstore;
-use context::CoreContext;
-use context::PerfCounterType;
-use hostname::get_hostname;
 use stats::prelude::*;
 use tunables::tunables;
 

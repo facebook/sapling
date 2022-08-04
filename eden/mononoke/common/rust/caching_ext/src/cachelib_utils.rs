@@ -10,13 +10,13 @@ use std::hash::Hash;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
-use crate::mock_store::MockStore;
 use anyhow::Result;
 use cachelib::get_cached;
 use cachelib::set_cached;
 use cachelib::Abomonation;
 use cachelib::VolatileLruCachePool;
 
+use crate::mock_store::MockStore;
 use crate::CachelibKey;
 
 #[derive(Clone)]
@@ -96,12 +96,12 @@ impl<T: Abomonation + Clone + Send + 'static> CachelibHandler<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::collections::HashSet;
 
     use quickcheck::quickcheck;
     use quickcheck::TestResult;
+
+    use super::*;
 
     quickcheck! {
         fn multiple_roundtrip(

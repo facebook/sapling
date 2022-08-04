@@ -605,14 +605,16 @@ pub(crate) async fn log_bonsai_commits_to_scribe(
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::collections::HashSet;
+
     use blobrepo::AsBlobRepo;
     use fbinit::FacebookInit;
     use maplit::hashset;
     use mononoke_api_types::InnerRepo;
-    use std::collections::HashSet;
     use tests_utils::bookmark;
     use tests_utils::drawdag::create_from_dag;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_find_draft_ancestors_simple(fb: FacebookInit) -> Result<(), Error> {

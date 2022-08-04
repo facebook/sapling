@@ -5,10 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::add_sync_target::AddSyncTarget;
-use crate::megarepo_test_utils::MegarepoTest;
-use crate::megarepo_test_utils::SyncTargetConfigBuilder;
-use crate::sync_changeset::SyncChangeset;
+use std::sync::Arc;
+
 use anyhow::Error;
 use blobstore::Loadable;
 use context::CoreContext;
@@ -22,12 +20,16 @@ use megarepo_mapping::SourceName;
 use megarepo_mapping::REMAPPING_STATE_FILE;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
-use std::sync::Arc;
 use tests_utils::bookmark;
 use tests_utils::list_working_copy_utf8;
 use tests_utils::list_working_copy_utf8_with_types;
 use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
+
+use crate::add_sync_target::AddSyncTarget;
+use crate::megarepo_test_utils::MegarepoTest;
+use crate::megarepo_test_utils::SyncTargetConfigBuilder;
+use crate::sync_changeset::SyncChangeset;
 
 #[fbinit::test]
 async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {

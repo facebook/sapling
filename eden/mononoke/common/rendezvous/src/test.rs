@@ -5,17 +5,18 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+
 use anyhow::Error;
 use fbinit::FacebookInit;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use maplit::hashmap;
 use maplit::hashset;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use tokio::sync::Notify;
 
 pub use crate::RendezVous;

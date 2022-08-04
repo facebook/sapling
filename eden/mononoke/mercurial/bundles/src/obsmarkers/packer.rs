@@ -8,8 +8,6 @@
 //! Packing obsmarkers to be sent after e.g. a pushrebase
 //! Format documentation: <https://www.mercurial-scm.org/repo/hg/file/tip/mercurial/obsolete.py>
 
-use super::MetadataEntry;
-use crate::chunk::Chunk;
 use anyhow::Error;
 use anyhow::Result;
 use byteorder::BigEndian;
@@ -19,6 +17,9 @@ use futures_old::stream::iter_result;
 use futures_old::Stream;
 use mercurial_types::HgChangesetId;
 use mononoke_types::DateTime;
+
+use super::MetadataEntry;
+use crate::chunk::Chunk;
 
 const VERSION: u8 = 1;
 
@@ -98,7 +99,6 @@ fn prepare_obsmarker_chunk(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use anyhow::Error;
     use futures_ext::StreamExt;
     use futures_old::stream;
@@ -106,6 +106,8 @@ mod test {
     use futures_old::Poll;
     use mercurial_types_mocks::nodehash;
     use quickcheck::quickcheck;
+
+    use super::*;
 
     fn long_string() -> String {
         String::from_utf8(vec![b'T'; u16::max_value() as usize]).unwrap()

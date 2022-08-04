@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
@@ -30,7 +32,6 @@ use mononoke_types::FileChange;
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::RangeNodeStream;
 use slog::info;
-use std::collections::HashMap;
 
 use crate::common::decode_latest_synced_state_extras;
 use crate::common::encode_latest_synced_state_extras;
@@ -284,8 +285,6 @@ async fn sync_commits(
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::add_source_repo::add_source_repo;
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use mononoke_types::MPath;
@@ -295,6 +294,9 @@ mod test {
     use tests_utils::list_working_copy_utf8;
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
+    use crate::add_source_repo::add_source_repo;
 
     #[fbinit::test]
     async fn test_sync_commit(fb: FacebookInit) -> Result<(), Error> {

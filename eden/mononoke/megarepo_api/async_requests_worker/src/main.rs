@@ -14,8 +14,6 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
-use fbinit::FacebookInit;
-
 use anyhow::Error;
 use clap::Parser;
 use cmdlib::helpers::serve_forever;
@@ -23,6 +21,7 @@ use cmdlib::monitoring::AliveService;
 use cmdlib_logging::ScribeLoggingArgs;
 use context::SessionContainer;
 use environment::WarmBookmarksCacheDerivedData;
+use fbinit::FacebookInit;
 use hostname::get_hostname;
 use megarepo_api::MegarepoApi;
 use mononoke_api::Mononoke;

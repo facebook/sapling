@@ -18,12 +18,6 @@ use futures::prelude::*;
 use futures::ready;
 use futures::task::Poll;
 use gotham::state::State;
-use mime::Mime;
-use once_cell::sync::Lazy;
-use pin_project::pin_project;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
-
 use gotham_ext::content_encoding::ContentEncoding;
 use gotham_ext::error::HttpError;
 use gotham_ext::response::ContentMetaProvider;
@@ -33,10 +27,14 @@ use gotham_ext::response::ResponseStream;
 use gotham_ext::response::ResponseTryStreamExt;
 use gotham_ext::response::StreamBody;
 use gotham_ext::response::TryIntoResponse;
-
-use crate::errors::ErrorKind;
+use mime::Mime;
+use once_cell::sync::Lazy;
+use pin_project::pin_project;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 
 use super::get_request_body;
+use crate::errors::ErrorKind;
 
 static CBOR_MIME: Lazy<Mime> = Lazy::new(|| "application/cbor".parse().unwrap());
 
@@ -183,9 +181,9 @@ impl<S, F> ContentMetaProvider for CustomCborStream<S, F> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use serde::Deserialize;
+
+    use super::*;
 
     #[derive(Serialize, Deserialize, Clone)]
     struct CustomWireResult {

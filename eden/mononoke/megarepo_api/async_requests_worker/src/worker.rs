@@ -13,7 +13,11 @@
 //! One important consideration to keep in mind - worker executes request "at least once"
 //! but not exactly once i.e. the same request might be executed a few times.
 
-use crate::methods::megarepo_async_request_compute;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::Duration;
+
 use async_requests::types::MegarepoAsynchronousRequestParams;
 use async_requests::AsyncMethodRequestQueue;
 use async_requests::ClaimedBy;
@@ -36,10 +40,8 @@ use mononoke_types::Timestamp;
 use slog::debug;
 use slog::error;
 use slog::info;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::time::Duration;
+
+use crate::methods::megarepo_async_request_compute;
 
 const DEQUEUE_STREAM_SLEEP_TIME: u64 = 1000;
 // Number of seconds after which inprogress request is considered abandoned
@@ -335,13 +337,15 @@ impl AsyncMethodRequestWorker {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::sync::atomic::Ordering;
+
     use anyhow::Error;
     use fbinit::FacebookInit;
     use megarepo_configs::types::Target as ThriftTarget;
     use requests_table::RequestType;
     use source_control as thrift;
-    use std::sync::atomic::Ordering;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_request_stream_simple(fb: FacebookInit) -> Result<(), Error> {

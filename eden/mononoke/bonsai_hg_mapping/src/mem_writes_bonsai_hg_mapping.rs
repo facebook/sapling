@@ -5,9 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use crate::BonsaiHgMapping;
-use crate::BonsaiHgMappingEntry;
-use crate::BonsaiOrHgChangesetIds;
+use std::collections::HashMap;
+use std::hash::Hash;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -16,12 +20,10 @@ use lock_ext::LockExt;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
-use std::collections::HashMap;
-use std::hash::Hash;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::sync::Mutex;
+
+use crate::BonsaiHgMapping;
+use crate::BonsaiHgMappingEntry;
+use crate::BonsaiOrHgChangesetIds;
 
 type Cache = (
     HashMap<ChangesetId, HgChangesetId>,

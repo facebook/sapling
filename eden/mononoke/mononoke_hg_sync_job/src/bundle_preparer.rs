@@ -5,16 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::bind_sync_err;
-use crate::bundle_generator::BookmarkChange;
-use crate::bundle_generator::FilenodeVerifier;
-use crate::errors::ErrorKind::BookmarkMismatchInBundleCombining;
-use crate::errors::ErrorKind::UnexpectedBookmarkMove;
-use crate::errors::PipelineError;
-use crate::BookmarkOverlay;
-use crate::CombinedBookmarkUpdateLogEntry;
-use crate::CommitsInBundle;
-use crate::Repo;
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use bookmarks::BookmarkName;
@@ -44,9 +37,18 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use slog::info;
 use slog::warn;
-use std::collections::HashMap;
-use std::sync::Arc;
 use tempfile::NamedTempFile;
+
+use crate::bind_sync_err;
+use crate::bundle_generator::BookmarkChange;
+use crate::bundle_generator::FilenodeVerifier;
+use crate::errors::ErrorKind::BookmarkMismatchInBundleCombining;
+use crate::errors::ErrorKind::UnexpectedBookmarkMove;
+use crate::errors::PipelineError;
+use crate::BookmarkOverlay;
+use crate::CombinedBookmarkUpdateLogEntry;
+use crate::CommitsInBundle;
+use crate::Repo;
 
 #[derive(Clone)]
 pub struct PreparedBookmarkUpdateLogEntry {
@@ -583,13 +585,14 @@ pub fn maybe_adjust_batch(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use mononoke_types::RepositoryId;
     use skiplist::SkiplistIndex;
     use tests_utils::drawdag::create_from_dag;
     use tests_utils::BasicTestRepo;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_split_in_batches_simple(fb: FacebookInit) -> Result<(), Error> {

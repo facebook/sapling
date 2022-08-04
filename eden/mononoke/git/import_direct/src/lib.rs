@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::path::Path;
+use std::time::Instant;
+
 use anyhow::format_err;
 use anyhow::Error;
 use blobrepo::BlobRepo;
@@ -15,10 +20,6 @@ use import_tools::GitRepoReader;
 use import_tools::GitimportTarget;
 use mononoke_types::typed_hash::ChangesetId;
 use slog::debug;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::path::Path;
-use std::time::Instant;
 
 mod uploader;
 

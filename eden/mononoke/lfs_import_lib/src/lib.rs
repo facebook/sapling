@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::process::Stdio;
+
 use anyhow::Context as _;
 use anyhow::Error;
 use anyhow::Result;
@@ -23,7 +25,6 @@ use mercurial_types::blobs::LFSContent;
 use mononoke_types::ContentMetadata;
 use repo_blobstore::RepoBlobstoreRef;
 use slog::info;
-use std::process::Stdio;
 use tokio::io::BufReader;
 use tokio::process::Child;
 use tokio::process::Command;

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+
 use acl_regions::AclRegions;
 use acl_regions::AclRegionsRef;
 use acl_regions::AssociatedRulesResult;
@@ -24,7 +26,6 @@ use mononoke_types::MPath;
 use pretty_assertions::assert_eq;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
-use std::collections::HashSet;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::drawdag::create_from_dag;
 

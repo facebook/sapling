@@ -665,9 +665,10 @@ impl Display for ChangesetIdPrefix {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use bytes::Bytes;
     use quickcheck::quickcheck;
+
+    use super::*;
 
     quickcheck! {
         fn changesetid_thrift_roundtrip(h: ChangesetId) -> bool {

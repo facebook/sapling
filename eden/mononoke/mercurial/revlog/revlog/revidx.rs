@@ -124,8 +124,9 @@ impl Iterator for RevIdxRange {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use std::str::FromStr;
+
+    use super::*;
 
     #[test]
     fn zero() {

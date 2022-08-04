@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 
@@ -48,8 +49,6 @@ use mononoke_types::ManifestUnodeId;
 use mononoke_types::SkeletonManifestId;
 use reachabilityindex::ReachabilityIndex;
 use skiplist::SkiplistIndex;
-use std::collections::HashMap;
-
 pub use xdiff::CopyInfo;
 
 use crate::changeset::ChangesetContext;

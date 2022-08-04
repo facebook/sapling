@@ -5,21 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::detail::graph::EdgeType;
-use crate::detail::graph::Node;
-use crate::detail::graph::NodeData;
-use crate::detail::graph::NodeType;
-use crate::detail::graph::WrappedPathHash;
-use crate::detail::graph::WrappedPathLike;
-use crate::detail::state::InternedType;
-use crate::detail::state::StepStats;
-use crate::detail::state::WalkState;
-use crate::detail::walk::EmptyRoute;
-use crate::detail::walk::OutgoingEdge;
-use crate::detail::walk::StepRoute;
-use crate::detail::walk::TailingWalkVisitor;
-use crate::detail::walk::VisitOne;
-use crate::detail::walk::WalkVisitor;
+use std::collections::HashSet;
+use std::fmt;
+use std::hash;
+use std::sync::Arc;
 
 use anyhow::Error;
 use async_trait::async_trait;
@@ -35,10 +24,22 @@ use mononoke_types::ChangesetId;
 use phases::Phases;
 use regex::Regex;
 use slog::Logger;
-use std::collections::HashSet;
-use std::fmt;
-use std::hash;
-use std::sync::Arc;
+
+use crate::detail::graph::EdgeType;
+use crate::detail::graph::Node;
+use crate::detail::graph::NodeData;
+use crate::detail::graph::NodeType;
+use crate::detail::graph::WrappedPathHash;
+use crate::detail::graph::WrappedPathLike;
+use crate::detail::state::InternedType;
+use crate::detail::state::StepStats;
+use crate::detail::state::WalkState;
+use crate::detail::walk::EmptyRoute;
+use crate::detail::walk::OutgoingEdge;
+use crate::detail::walk::StepRoute;
+use crate::detail::walk::TailingWalkVisitor;
+use crate::detail::walk::VisitOne;
+use crate::detail::walk::WalkVisitor;
 
 pub trait SampleTrigger<K> {
     fn map_keys(&self, key: SamplingKey, walk_key: K);

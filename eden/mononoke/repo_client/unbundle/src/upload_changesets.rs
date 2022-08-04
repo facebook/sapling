@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::ops::AddAssign;
+
 use ::manifest::Entry;
 use anyhow::bail;
 use anyhow::Error;
@@ -36,8 +39,6 @@ use mercurial_types::MPath;
 use mercurial_types::RepoPath;
 use mercurial_types::NULL_HASH;
 use scuba_ext::MononokeScubaSampleBuilder;
-use std::collections::HashMap;
-use std::ops::AddAssign;
 use wirepack::TreemanifestEntry;
 
 use crate::changegroup::Filelog;

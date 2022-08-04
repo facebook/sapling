@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::any::Any;
+use std::sync::Arc;
+
 use anyhow::Result;
 use clap::ArgMatches;
 use clap::Args;
@@ -13,8 +16,6 @@ use clap::FromArgMatches;
 use environment::MononokeEnvironment;
 use slog::Never;
 use slog::SendSyncRefUnwindSafeDrain;
-use std::any::Any;
-use std::sync::Arc;
 
 /// Trait implemented by things that need to extend the app building process,
 /// including adding additional arguments and modifying the environment before

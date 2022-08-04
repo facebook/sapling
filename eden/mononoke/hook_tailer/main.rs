@@ -7,6 +7,9 @@
 
 mod tailer;
 
+use std::collections::HashSet;
+use std::time::Duration;
+
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Error;
@@ -31,17 +34,14 @@ use repo_factory::RepoFactory;
 use slog::debug;
 use slog::info;
 use slog::Logger;
-use std::collections::HashSet;
-use std::time::Duration;
+use tailer::HookExecutionInstance;
+use tailer::Tailer;
 use time_ext::DurationExt;
 use tokio::fs::File;
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncWriteExt;
 use tokio::io::BufReader;
-
-use tailer::HookExecutionInstance;
-use tailer::Tailer;
 
 async fn get_changesets<'a>(
     matches: &'a MononokeMatches<'a>,

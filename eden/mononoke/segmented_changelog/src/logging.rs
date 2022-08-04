@@ -5,10 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use scuba_ext::MononokeScubaSampleBuilder;
-
 use context::CoreContext;
 use mononoke_types::RepositoryId;
+use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::types::IdDagVersion;
 use crate::types::SegmentedChangelogVersion;

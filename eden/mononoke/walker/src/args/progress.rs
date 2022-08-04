@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::detail::progress::ProgressOptions;
-use clap::Args;
 use std::time::Duration;
+
+use clap::Args;
+
+use crate::detail::progress::ProgressOptions;
 
 #[derive(Args, Debug)]
 pub struct ProgressArgs {

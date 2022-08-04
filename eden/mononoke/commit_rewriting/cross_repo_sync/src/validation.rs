@@ -5,15 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt::Debug;
+use std::sync::Arc;
+
 use anyhow::format_err;
 use anyhow::Error;
-
-use super::CommitSyncConfigVersion;
-use super::CommitSyncOutcome;
-use super::CommitSyncer;
-use crate::types::Source;
-use crate::types::Target;
-
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use context::CoreContext;
@@ -36,11 +34,13 @@ use ref_cast::RefCast;
 use slog::debug;
 use slog::error;
 use slog::info;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::fmt::Debug;
-use std::sync::Arc;
 use synced_commit_mapping::SyncedCommitMapping;
+
+use super::CommitSyncConfigVersion;
+use super::CommitSyncOutcome;
+use super::CommitSyncer;
+use crate::types::Source;
+use crate::types::Target;
 
 type SourceRepo = Source<BlobRepo>;
 type TargetRepo = Target<BlobRepo>;
@@ -783,11 +783,13 @@ async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static>(
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::CommitSyncDataProvider;
-    use crate::CommitSyncRepos;
+    use std::str::FromStr;
+    use std::sync::Arc;
+
     use ascii::AsciiString;
     use bookmarks::BookmarkName;
+    // To support async tests
+    use cross_repo_sync_test_utils::get_live_commit_sync_config;
     use fbinit::FacebookInit;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
@@ -805,15 +807,15 @@ mod test {
     use mononoke_types::RepositoryId;
     use revset::AncestorsNodeStream;
     use sql_construct::SqlConstruct;
-    use std::str::FromStr;
-    use std::sync::Arc;
-    // To support async tests
-    use cross_repo_sync_test_utils::get_live_commit_sync_config;
     use synced_commit_mapping::SqlSyncedCommitMapping;
     use synced_commit_mapping::SyncedCommitMappingEntry;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::bookmark;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
+    use crate::CommitSyncDataProvider;
+    use crate::CommitSyncRepos;
 
     #[fbinit::test]
     fn test_bookmark_diff_with_renamer(fb: FacebookInit) -> Result<(), Error> {

@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::Arc;
+use std::time::Duration;
+
 use anyhow::Context as _;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -28,10 +33,6 @@ use phases::Phase;
 use sql::queries;
 use sql::Connection;
 use stats::prelude::*;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::sync::Arc;
-use std::time::Duration;
 
 use crate::sql_phases::SqlPhase;
 

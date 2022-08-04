@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::panic::RefUnwindSafe;
+use std::sync::Arc;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
-use std::panic::RefUnwindSafe;
-use std::sync::Arc;
 
 use crate::MononokeIdentitySet;
 

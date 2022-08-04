@@ -5,19 +5,21 @@
  * GNU General Public License version 2.
  */
 
-use crate::CrossRepoPushSource;
-use crate::FileContentManager;
-use crate::FileHook;
-use crate::HookExecution;
-use crate::HookRejectionInfo;
-use crate::PushAuthoredBy;
+use std::collections::HashSet;
+
 use anyhow::Error;
 use async_trait::async_trait;
 use context::CoreContext;
 use maplit::hashset;
 use mononoke_types::BasicFileChange;
 use mononoke_types::MPath;
-use std::collections::HashSet;
+
+use crate::CrossRepoPushSource;
+use crate::FileContentManager;
+use crate::FileHook;
+use crate::HookExecution;
+use crate::HookRejectionInfo;
+use crate::PushAuthoredBy;
 
 pub struct ConflictMarkers {
     allowed_suffixes: HashSet<&'static [u8]>,

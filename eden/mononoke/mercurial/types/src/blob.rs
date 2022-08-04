@@ -5,11 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use blobstore::BlobstoreBytes;
 use bytes::Bytes;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
-
-use blobstore::BlobstoreBytes;
 
 // This used to have an Extern state earlier, which stood for the hash
 // being present but the content not. This state ended up never being used in

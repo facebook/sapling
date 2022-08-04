@@ -8,14 +8,12 @@
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
-use sql::queries;
-use sql_ext::SqlConnections;
-
-use stats::prelude::*;
-
 use context::CoreContext;
 use context::PerfCounterType;
 use mononoke_types::RepositoryId;
+use sql::queries;
+use sql_ext::SqlConnections;
+use stats::prelude::*;
 
 use crate::logging::log_new_segmented_changelog_version;
 use crate::types::IdDagVersion;
@@ -138,12 +136,10 @@ queries! {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use fbinit::FacebookInit;
-
     use sql_construct::SqlConstruct;
 
+    use super::*;
     use crate::builder::SegmentedChangelogSqlConnections;
 
     #[fbinit::test]

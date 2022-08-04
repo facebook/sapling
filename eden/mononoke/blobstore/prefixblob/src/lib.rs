@@ -7,10 +7,6 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use inlinable_string::InlinableString;
-
-use context::CoreContext;
-
 use blobstore::Blobstore;
 use blobstore::BlobstoreEnumerationData;
 use blobstore::BlobstoreGetData;
@@ -22,6 +18,8 @@ use blobstore::BlobstorePutOps;
 use blobstore::BlobstoreUnlinkOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
+use context::CoreContext;
+use inlinable_string::InlinableString;
 use mononoke_types::BlobstoreBytes;
 
 /// A layer over an existing blobstore that prepends a fixed string to each get and put.
@@ -178,14 +176,13 @@ impl<T: BlobstoreKeySource> BlobstoreKeySource for PrefixBlobstore<T> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     use borrowed::borrowed;
     use bytes::Bytes;
     use fbinit::FacebookInit;
     use maplit::hashset;
-
     use memblob::Memblob;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_prefix(fb: FacebookInit) {

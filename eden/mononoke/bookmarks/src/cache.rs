@@ -468,7 +468,9 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::collections::HashSet;
+    use std::fmt::Debug;
+
     use ascii::AsciiString;
     use fbinit::FacebookInit;
     use futures::channel::mpsc;
@@ -482,11 +484,11 @@ mod tests {
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
     use quickcheck::quickcheck;
-    use std::collections::HashSet;
-    use std::fmt::Debug;
     use tokio::runtime::Runtime;
     use tunables::with_tunables_async;
     use tunables::MononokeTunables;
+
+    use super::*;
 
     fn bookmark(name: impl AsRef<str>) -> Bookmark {
         Bookmark::new(

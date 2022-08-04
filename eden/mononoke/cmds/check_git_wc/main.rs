@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::str::FromStr;
+
 use anyhow::Result;
 use check_git_wc::check_git_wc;
 use clap_old::Arg;
@@ -17,7 +19,6 @@ use fbinit::FacebookInit;
 use git2::Repository;
 use git2::RepositoryOpenFlags;
 use mononoke_types::ChangesetId;
-use std::str::FromStr;
 
 const ARG_CS_ID: &str = "csid";
 const ARG_GIT_REPO_PATH: &str = "git-repo-path";

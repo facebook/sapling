@@ -7,6 +7,11 @@
 
 #![feature(async_closure)]
 
+use std::collections::HashMap;
+use std::future::Future;
+use std::hash::Hash;
+use std::sync::Arc;
+
 use add_branching_sync_target::AddBranchingSyncTarget;
 use add_sync_target::AddSyncTarget;
 use anyhow::anyhow;
@@ -46,10 +51,6 @@ use requests_table::LongRunningRequestsQueue;
 use slog::info;
 use slog::o;
 use slog::warn;
-use std::collections::HashMap;
-use std::future::Future;
-use std::hash::Hash;
-use std::sync::Arc;
 
 mod add_branching_sync_target;
 #[cfg(test)]

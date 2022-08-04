@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::format_err;
 use anyhow::Context as _;
 use async_trait::async_trait;
@@ -35,7 +37,6 @@ use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::ArcRepoDerivedData;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataArc;
-use std::collections::HashMap;
 use unodes::RootUnodeManifestId;
 
 use crate::ErrorKind;

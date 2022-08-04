@@ -12,6 +12,8 @@ use std::io::Read;
 
 use bitflags::bitflags;
 use flate2::read::ZlibDecoder;
+use mercurial_types::bdiff::Delta;
+use mercurial_types::HgNodeHash;
 use nom::be_u16;
 use nom::be_u32;
 use nom::Err;
@@ -20,12 +22,8 @@ use nom::IResult;
 use nom::Needed;
 use nom::*;
 
-use mercurial_types::bdiff::Delta;
-use mercurial_types::HgNodeHash;
-
-use crate::revlog::revidx::RevIdx;
-
 use super::lz4;
+use crate::revlog::revidx::RevIdx;
 
 // #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 // pub enum Badness {
@@ -292,11 +290,12 @@ fn be_u48(i: &[u8]) -> IResult<&[u8], u64> {
 
 #[cfg(test)]
 mod test {
+    use nom::IResult;
+
     use super::header;
     use super::Features;
     use super::Header;
     use super::Version;
-    use nom::IResult;
 
     #[test]
     fn test_header_0() {

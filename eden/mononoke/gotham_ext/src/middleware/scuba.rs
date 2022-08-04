@@ -24,15 +24,14 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
 use time_ext::DurationExt;
 
+use super::HeadersDuration;
+use super::RequestLoad;
 use crate::middleware::ClientIdentity;
 use crate::middleware::Middleware;
 use crate::middleware::PostResponseCallbacks;
 use crate::middleware::PostResponseInfo;
 use crate::response::HeadersMeta;
 use crate::state_ext::StateExt;
-
-use super::HeadersDuration;
-use super::RequestLoad;
 
 /// Common HTTP-related Scuba columns that the middlware will set automatically.
 /// Applications using the middleware are encouraged to follow a similar pattern

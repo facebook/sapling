@@ -8,10 +8,9 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use parking_lot::RwLock;
-
 use context::CoreContext;
 use mononoke_types::ChangesetId;
+use parking_lot::RwLock;
 
 use crate::idmap::IdMap;
 use crate::idmap::IdMapVersion;
@@ -152,15 +151,13 @@ impl IdMap for ConcurrentMemIdMap {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
-    use maplit::hashmap;
-
     use fbinit::FacebookInit;
-
+    use maplit::hashmap;
     use mononoke_types_mocks::changesetid::AS_CSID;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_concurrent_mem_idmap(fb: FacebookInit) -> Result<()> {

@@ -5,27 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::anyhow;
-use anyhow::Context;
-use anyhow::Error;
-use async_trait::async_trait;
-use futures::stream;
-use futures::try_join;
-use futures::Stream;
-use futures::StreamExt;
-use futures::TryStreamExt;
-use gotham::state::FromState;
-use gotham::state::State;
-use gotham_derive::StateData;
-use gotham_derive::StaticResponseExtender;
-use gotham_ext::error::HttpError;
-use gotham_ext::middleware::scuba::ScubaMiddlewareState;
-use gotham_ext::response::TryIntoResponse;
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::num::NonZeroU64;
 use std::time::Duration;
 
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
+use async_trait::async_trait;
 use blobstore::Loadable;
 use edenapi_types::wire::WireCommitHashToLocationRequestBatch;
 use edenapi_types::AnyFileContentId;
@@ -57,6 +44,18 @@ use edenapi_types::UploadHgChangesetsRequest;
 use edenapi_types::UploadToken;
 use edenapi_types::UploadTokensResponse;
 use ephemeral_blobstore::BubbleId;
+use futures::stream;
+use futures::try_join;
+use futures::Stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use gotham::state::FromState;
+use gotham::state::State;
+use gotham_derive::StateData;
+use gotham_derive::StaticResponseExtender;
+use gotham_ext::error::HttpError;
+use gotham_ext::middleware::scuba::ScubaMiddlewareState;
+use gotham_ext::response::TryIntoResponse;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_api_hg::HgRepoContext;
@@ -65,10 +64,15 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::Globalrev;
+use serde::Deserialize;
 use tunables::tunables;
 use types::HgId;
 use types::Parents;
 
+use super::EdenApiHandler;
+use super::EdenApiMethod;
+use super::HandlerInfo;
+use super::HandlerResult;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
@@ -81,11 +85,6 @@ use crate::utils::to_create_change;
 use crate::utils::to_hg_path;
 use crate::utils::to_mononoke_path;
 use crate::utils::to_revlog_changeset;
-
-use super::EdenApiHandler;
-use super::EdenApiMethod;
-use super::HandlerInfo;
-use super::HandlerResult;
 
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 100;

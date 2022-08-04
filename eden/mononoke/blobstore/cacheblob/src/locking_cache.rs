@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
@@ -22,7 +24,6 @@ use prefixblob::PrefixBlobstore;
 use redactedblobstore::config::GET_OPERATION;
 use redactedblobstore::RedactedBlobstore;
 use stats::prelude::*;
-use std::fmt;
 
 define_stats! {
     prefix = "mononoke.blobstore.cacheblob";

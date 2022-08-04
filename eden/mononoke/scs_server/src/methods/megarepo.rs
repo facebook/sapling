@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::from_request::FromRequest;
+use std::collections::HashSet;
+use std::time::Duration;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use async_requests::tokens::MegarepoAddBranchingTargetToken;
@@ -23,10 +25,9 @@ use mononoke_types::RepositoryId;
 use repo_authorization::RepoWriteOperation;
 use slog::warn;
 use source_control as thrift;
-use std::collections::HashSet;
-use std::time::Duration;
 
 use crate::errors;
+use crate::from_request::FromRequest;
 use crate::source_control_impl::SourceControlServiceImpl;
 
 impl SourceControlServiceImpl {

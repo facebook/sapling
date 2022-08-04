@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::str::FromStr;
+
 use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
@@ -30,8 +33,6 @@ use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::RepositoryId;
 use sorted_vector_map::SortedVectorMap;
-use std::collections::BTreeMap;
-use std::str::FromStr;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::BasicTestRepo;
 use tests_utils::Repo;

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
@@ -32,7 +34,6 @@ use sql::Connection;
 pub use sql_construct::SqlConstruct;
 pub use sql_ext::SqlConnections;
 use stats::prelude::*;
-use std::sync::Arc;
 
 use crate::OperationKey;
 

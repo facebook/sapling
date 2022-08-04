@@ -16,12 +16,16 @@ pub mod validate;
 pub mod walk_params;
 pub mod walk_root;
 
+use clap::Args;
 pub use graph_arg_types::NodeTypeArg;
 pub use hash_validation::HashValidationArgs;
 pub use progress::ProgressArgs;
 pub use sampling::SamplingArgs;
 pub use scrub::ScrubOutputNodeArgs;
 pub use scrub::ScrubPackLogArgs;
+use strum_macros::AsRefStr;
+use strum_macros::EnumString;
+use strum_macros::EnumVariantNames;
 pub use tail_args::CheckpointArgs;
 pub use tail_args::ChunkingArgs;
 pub use tail_args::TailArgs;
@@ -29,11 +33,6 @@ pub use validate::ValidateCheckTypeArgs;
 pub use walk_params::WalkerGraphArgs;
 pub use walk_params::WalkerGraphParams;
 pub use walk_root::WalkRootArgs;
-
-use clap::Args;
-use strum_macros::AsRefStr;
-use strum_macros::EnumString;
-use strum_macros::EnumVariantNames;
 
 #[derive(Args, Debug)]
 pub struct WalkerCommonArgs {

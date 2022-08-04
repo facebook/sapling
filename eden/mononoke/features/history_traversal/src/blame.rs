@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;
@@ -26,7 +28,6 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::MPath;
 use reachabilityindex::ReachabilityIndex;
-use std::collections::HashSet;
 use unodes::RootUnodeManifestId;
 
 use crate::common::find_possible_mutable_ancestors;

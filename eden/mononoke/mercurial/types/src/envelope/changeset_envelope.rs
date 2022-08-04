@@ -155,8 +155,9 @@ impl Arbitrary for HgChangesetEnvelope {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use quickcheck::quickcheck;
+
+    use super::*;
 
     quickcheck! {
         fn thrift_roundtrip(ce: HgChangesetEnvelope) -> bool {

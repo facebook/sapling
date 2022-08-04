@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::time::Duration;
+
 use anyhow::format_err;
 use anyhow::Error;
 use blobrepo::BlobRepo;
@@ -13,8 +15,6 @@ use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
-use std::time::Duration;
-
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::cli::ARG_COMMIT;

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use blobstore::Loadable;
@@ -13,7 +15,6 @@ use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncer;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
-use std::collections::HashMap;
 use synced_commit_mapping::SyncedCommitMapping;
 
 /// This operation is useful immediately after a small repo is merged into a large repo.
@@ -81,7 +82,6 @@ pub async fn manual_commit_sync<M: SyncedCommitMapping + Clone + 'static>(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use cross_repo_sync_test_utils::init_small_large_repo;
     use cross_repo_sync_test_utils::xrepo_mapping_version_with_small_repo;
     use fbinit::FacebookInit;
@@ -90,6 +90,8 @@ mod test {
     use tests_utils::list_working_copy_utf8;
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_manual_commit_sync(fb: FacebookInit) -> Result<(), Error> {

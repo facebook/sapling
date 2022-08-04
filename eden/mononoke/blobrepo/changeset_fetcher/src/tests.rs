@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use super::ChangesetFetcher;
-use super::PrefetchedChangesetsFetcher;
+use std::sync::Arc;
+
 use anyhow::Result;
 use changesets::ChangesetEntry;
 use changesets::ChangesetInsert;
@@ -20,7 +20,9 @@ use mononoke_types_mocks::changesetid::*;
 use mononoke_types_mocks::repo::*;
 use rendezvous::RendezVousOptions;
 use sql_construct::SqlConstruct;
-use std::sync::Arc;
+
+use super::ChangesetFetcher;
+use super::PrefetchedChangesetsFetcher;
 
 #[fbinit::test]
 async fn test_prefetched_fetcher_no_prefetching(fb: FacebookInit) -> Result<()> {

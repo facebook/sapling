@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Result;
-use async_trait::async_trait;
 use std::sync::Arc;
 
+use anyhow::Result;
+use async_trait::async_trait;
 use blobstore::Blobstore;
 use context::CoreContext;
 use filestore::BlobCopier;

@@ -472,8 +472,8 @@ async fn check_fsnode_leaf(
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::mapping::get_file_changes;
+    use std::str::FromStr;
+
     use derived_data_test_utils::bonsai_changeset_from_hg;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
@@ -481,8 +481,10 @@ mod test {
     use fixtures::ManyFilesDirs;
     use fixtures::TestRepoFixture;
     use repo_derived_data::RepoDerivedDataRef;
-    use std::str::FromStr;
     use tokio::runtime::Runtime;
+
+    use super::*;
+    use crate::mapping::get_file_changes;
 
     #[fbinit::test]
     fn flat_linear_test(fb: FacebookInit) {

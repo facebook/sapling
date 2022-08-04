@@ -117,8 +117,9 @@ pub fn new_blob_and_pointer<B: Into<Bytes>>(bytes: B) -> (ContentChunkBlob, Cont
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use quickcheck::quickcheck;
+
+    use super::*;
 
     quickcheck! {
         fn file_contents_thrift_roundtrip(fc: ContentChunk) -> bool {

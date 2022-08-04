@@ -11,6 +11,10 @@ mod file_history_test;
 mod tracing_blobstore;
 mod utils;
 
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use ::manifest::Entry;
 use ::manifest::Manifest;
 use ::manifest::ManifestOps;
@@ -61,9 +65,6 @@ use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileContents;
 use scuba_ext::MononokeScubaSampleBuilder;
-use std::collections::BTreeMap;
-use std::collections::HashMap;
-use std::sync::Arc;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::CreateCommitContext;
 use tracing_blobstore::TracingBlobstore;

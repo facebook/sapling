@@ -7,12 +7,13 @@
 
 //! Find common base of two commits
 
+use std::collections::BTreeMap;
+use std::io::Write;
+
 use anyhow::bail;
 use anyhow::Result;
 use serde::Serialize;
 use source_control::types as thrift;
-use std::collections::BTreeMap;
-use std::io::Write;
 
 use crate::args::commit_id::map_commit_ids;
 use crate::args::commit_id::resolve_commit_ids;

@@ -11,7 +11,6 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use gotham_derive::StateData;
-
 use mononoke_api::Mononoke;
 
 /// Struct containing the EdenAPI server's global shared state.

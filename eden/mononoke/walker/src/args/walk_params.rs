@@ -5,16 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use crate::detail::graph::EdgeType;
-use crate::detail::graph::NodeType;
+use std::collections::HashSet;
+
 use anyhow::Error;
 use clap::Args;
-use std::collections::HashSet;
 
 use crate::args::graph_arg_types::EdgeTypeArg;
 use crate::args::graph_arg_types::NodeTypeArg;
 use crate::args::graph_arg_types::DEEP;
 use crate::args::graph_arg_types::DEFAULT;
+use crate::detail::graph::EdgeType;
+use crate::detail::graph::NodeType;
 
 #[derive(Args, Debug)]
 pub struct WalkerGraphArgs {

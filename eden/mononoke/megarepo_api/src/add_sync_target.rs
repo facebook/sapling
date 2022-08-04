@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::common::MegarepoOp;
+use std::collections::BTreeMap;
+use std::sync::Arc;
+
 use bookmarks::BookmarkName;
 use context::CoreContext;
 use derived_data_utils::derived_data_utils;
@@ -22,8 +24,8 @@ use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use mutable_renames::MutableRenames;
-use std::collections::BTreeMap;
-use std::sync::Arc;
+
+use crate::common::MegarepoOp;
 
 // Create a new sync target given a config.
 // After this command finishes it creates

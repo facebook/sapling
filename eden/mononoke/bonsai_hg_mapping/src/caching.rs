@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use super::BonsaiHgMapping;
-use super::BonsaiHgMappingEntry;
-use super::BonsaiOrHgChangesetIds;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use abomonation_derive::Abomonation;
 use anyhow::anyhow;
 use anyhow::Error;
@@ -34,10 +35,11 @@ use mercurial_types::HgNodeHash;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use stats::prelude::*;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::sync::Arc;
 use tunables::tunables;
+
+use super::BonsaiHgMapping;
+use super::BonsaiHgMappingEntry;
+use super::BonsaiOrHgChangesetIds;
 
 define_stats! {
     prefix = "mononoke.bonsai_hg_mapping";

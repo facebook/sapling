@@ -5,13 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::bail;
-use anyhow::Result;
-use fbinit::FacebookInit;
-use itertools::Itertools;
 use std::collections::BTreeMap;
 
+use anyhow::bail;
+use anyhow::Result;
 use cmdlib::args;
+use fbinit::FacebookInit;
+use itertools::Itertools;
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {

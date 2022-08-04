@@ -19,14 +19,13 @@ use anyhow::Result;
 use bytes::Bytes;
 #[cfg(test)]
 use futures_old::stream;
-use quickcheck::empty_shrinker;
-use quickcheck::Arbitrary;
-use quickcheck::Gen;
-
 use mercurial_types::Delta;
 use mercurial_types::HgNodeHash;
 use mercurial_types::MPath;
 use mercurial_types::RevFlags;
+use quickcheck::empty_shrinker;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
 
 use crate::changegroup;
 

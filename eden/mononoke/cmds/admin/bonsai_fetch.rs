@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::str::FromStr;
+
 use anyhow::Context;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::Bookmarks;
@@ -25,8 +28,6 @@ use repo_blobstore::RepoBlobstore;
 use repo_identity::RepoIdentity;
 use serde_derive::Serialize;
 use slog::Logger;
-use std::collections::BTreeMap;
-use std::str::FromStr;
 
 use crate::common::fetch_bonsai_changeset;
 use crate::common::print_bonsai_changeset;

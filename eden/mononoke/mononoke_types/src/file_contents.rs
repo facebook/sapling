@@ -271,8 +271,9 @@ impl Arbitrary for ContentChunkPointer {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use quickcheck::quickcheck;
+
+    use super::*;
 
     quickcheck! {
         fn file_contents_thrift_roundtrip(fc: FileContents) -> bool {

@@ -5,6 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::hash::Hash;
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use anyhow::Error;
 use fbinit::FacebookInit;
 use futures::future::BoxFuture;
@@ -15,11 +21,6 @@ use futures_ext::FbTryFutureExt;
 use futures_stats::TimedFutureExt;
 use shared_error::anyhow::IntoSharedError;
 use shared_error::anyhow::SharedError;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::hash::Hash;
-use std::sync::Arc;
-use std::sync::Mutex;
 use time_ext::DurationExt;
 use tokio::sync::Notify;
 

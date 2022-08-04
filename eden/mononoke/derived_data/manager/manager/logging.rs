@@ -17,11 +17,10 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use slog::warn;
 use time_ext::DurationExt;
 
-use crate::derivable::BonsaiDerivable;
-use crate::error::DerivationError;
-
 use super::derive::DerivationOutcome;
 use super::DerivedDataManager;
+use crate::derivable::BonsaiDerivable;
+use crate::error::DerivationError;
 
 impl DerivedDataManager {
     /// Log the start of derivation to both the request and derived data scuba

@@ -5,6 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt::Debug;
+use std::future::Future;
+use std::panic;
+use std::pin::Pin;
+use std::sync::Arc;
+use std::time::Duration;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use blobstore::Blobstore;
@@ -27,12 +34,6 @@ use metaconfig_types::MultiplexId;
 use mononoke_types::BlobstoreBytes;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstruct;
-use std::fmt::Debug;
-use std::future::Future;
-use std::panic;
-use std::pin::Pin;
-use std::sync::Arc;
-use std::time::Duration;
 
 use crate::MultiplexTimeout;
 use crate::Scuba;

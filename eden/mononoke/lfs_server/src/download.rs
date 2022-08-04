@@ -216,7 +216,7 @@ pub async fn download_sha256(state: &mut State) -> Result<impl TryIntoResponse, 
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::sync::Arc;
 
     use anyhow::Error;
     use fbinit::FacebookInit;
@@ -227,8 +227,9 @@ mod test {
     use permission_checker::MononokeIdentity;
     use redactedblobstore::RedactedBlobs;
     use redactedblobstore::RedactedMetadata;
-    use std::sync::Arc;
     use test_repo_factory::TestRepoFactory;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_redacted_fetch(fb: FacebookInit) -> Result<(), Error> {

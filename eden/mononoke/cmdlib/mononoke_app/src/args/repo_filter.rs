@@ -7,10 +7,10 @@
 
 use anyhow::Result;
 use clap::Parser;
+use environment::MononokeEnvironment;
 use regex::Regex;
 
 use crate::AppExtension;
-use environment::MononokeEnvironment;
 
 /// Command line argument to filter repositories
 #[derive(Parser, Debug)]

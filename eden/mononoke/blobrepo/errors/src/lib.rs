@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+
 use ascii::AsciiString;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgBlob;
@@ -19,7 +21,6 @@ use mercurial_types::Type;
 use mononoke_types::hash::Sha256;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
-use std::fmt;
 use thiserror::Error;
 
 #[derive(Debug)]

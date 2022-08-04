@@ -9,23 +9,9 @@ use crate::tests::*;
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::ancestors::AncestorsNodeStream;
-    use crate::ancestorscombinators::DifferenceOfUnionsOfAncestorsNodeStream;
-    use crate::fixtures::BranchEven;
-    use crate::fixtures::BranchUneven;
-    use crate::fixtures::BranchWide;
-    use crate::fixtures::Linear;
-    use crate::fixtures::MergeEven;
-    use crate::fixtures::MergeUneven;
-    use crate::fixtures::TestRepoFixture;
-    use crate::fixtures::UnsharedMergeEven;
-    use crate::fixtures::UnsharedMergeUneven;
-    use crate::intersectnodestream::IntersectNodeStream;
-    use crate::setdifferencenodestream::SetDifferenceNodeStream;
-    use crate::unionnodestream::UnionNodeStream;
-    use crate::validation::ValidateNodeStream;
-    use crate::BonsaiNodeStream;
+    use std::collections::HashSet;
+    use std::sync::Arc;
+
     use anyhow::Error;
     use blobrepo::BlobRepo;
     use changeset_fetcher::ArcChangesetFetcher;
@@ -49,8 +35,24 @@ mod test {
     use rand::Rng;
     use revset_test_helper::single_changeset_id;
     use skiplist::SkiplistIndex;
-    use std::collections::HashSet;
-    use std::sync::Arc;
+
+    use super::*;
+    use crate::ancestors::AncestorsNodeStream;
+    use crate::ancestorscombinators::DifferenceOfUnionsOfAncestorsNodeStream;
+    use crate::fixtures::BranchEven;
+    use crate::fixtures::BranchUneven;
+    use crate::fixtures::BranchWide;
+    use crate::fixtures::Linear;
+    use crate::fixtures::MergeEven;
+    use crate::fixtures::MergeUneven;
+    use crate::fixtures::TestRepoFixture;
+    use crate::fixtures::UnsharedMergeEven;
+    use crate::fixtures::UnsharedMergeUneven;
+    use crate::intersectnodestream::IntersectNodeStream;
+    use crate::setdifferencenodestream::SetDifferenceNodeStream;
+    use crate::unionnodestream::UnionNodeStream;
+    use crate::validation::ValidateNodeStream;
+    use crate::BonsaiNodeStream;
 
     #[derive(Clone, Copy, Debug)]
     enum RevsetEntry {
@@ -469,9 +471,10 @@ mod test {
         };
     }
     mod empty_skiplist_tests {
-        use super::*;
         use futures_ext::FutureExt;
         use futures_old::Future;
+
+        use super::*;
 
         fn create_skiplist(
             _ctxt: CoreContext,
@@ -491,13 +494,14 @@ mod test {
     }
 
     mod full_skiplist_tests {
-        use super::*;
         use futures::stream::TryStreamExt;
         use futures_ext::FutureExt;
         use futures_old::Future;
         use futures_util::future::try_join_all;
         use futures_util::future::FutureExt as NewFutureExt;
         use futures_util::future::TryFutureExt;
+
+        use super::*;
 
         fn create_skiplist(
             ctx: CoreContext,

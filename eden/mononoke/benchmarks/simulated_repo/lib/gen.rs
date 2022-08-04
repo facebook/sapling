@@ -6,6 +6,8 @@
  */
 
 //! Utilities to generate reasonably looking stack of changesets
+use std::collections::BTreeMap;
+
 use anyhow::Error;
 use anyhow::Result;
 use blobrepo::save_bonsai_changesets;
@@ -28,7 +30,6 @@ use rand::seq::SliceRandom;
 use rand::Rng;
 use rand_distr::Binomial;
 use rand_distr::Uniform;
-use std::collections::BTreeMap;
 
 #[derive(Clone, Copy)]
 pub struct GenSettings {

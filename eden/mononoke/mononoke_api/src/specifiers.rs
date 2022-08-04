@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+
 use anyhow::Context;
 use anyhow::Result;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
-use std::fmt;
 
 /// A changeset ID.  This is the canonical ID for a changeset.
 pub type ChangesetId = mononoke_types::ChangesetId;

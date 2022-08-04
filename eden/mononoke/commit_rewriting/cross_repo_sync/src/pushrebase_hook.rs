@@ -17,13 +17,13 @@ use context::CoreContext;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
 use sql::Transaction;
+use synced_commit_mapping::add_many_in_txn;
+use synced_commit_mapping::SyncedCommitMappingEntry;
 use tunables::tunables;
 
 use crate::create_synced_commit_mapping_entry;
 use crate::CommitSyncRepos;
 use crate::ErrorKind;
-use synced_commit_mapping::add_many_in_txn;
-use synced_commit_mapping::SyncedCommitMappingEntry;
 
 #[derive(Clone)]
 pub struct CrossRepoSyncPushrebaseHook {

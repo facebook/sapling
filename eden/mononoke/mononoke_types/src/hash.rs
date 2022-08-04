@@ -601,9 +601,10 @@ impl Arbitrary for Sha256 {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use quickcheck::quickcheck;
     use quickcheck::TestResult;
+
+    use super::*;
 
     // NULL is not exposed because no production code should use it.
     const NULL: Blake2 = Blake2([0; BLAKE2_HASH_LENGTH_BYTES]);

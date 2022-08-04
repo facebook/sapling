@@ -6,7 +6,6 @@
  */
 
 use gotham::state::State;
-
 use gotham_ext::middleware::ClientIdentity;
 use gotham_ext::middleware::PostResponseInfo;
 use gotham_ext::middleware::ScubaHandler;

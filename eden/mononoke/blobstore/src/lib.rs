@@ -10,6 +10,16 @@ mod disabled;
 mod errors;
 pub mod macros;
 
+use std::collections::HashSet;
+use std::fmt;
+use std::io::Cursor;
+use std::ops::Bound;
+use std::ops::RangeBounds;
+use std::ops::RangeFrom;
+use std::ops::RangeFull;
+use std::ops::RangeInclusive;
+use std::ops::RangeToInclusive;
+
 use abomonation_derive::Abomonation;
 use anyhow::Context;
 use anyhow::Error;
@@ -21,15 +31,6 @@ use clap::ArgEnum;
 use context::CoreContext;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
-use std::collections::HashSet;
-use std::fmt;
-use std::io::Cursor;
-use std::ops::Bound;
-use std::ops::RangeBounds;
-use std::ops::RangeFrom;
-use std::ops::RangeFull;
-use std::ops::RangeInclusive;
-use std::ops::RangeToInclusive;
 use strum_macros::AsRefStr;
 use strum_macros::Display;
 use strum_macros::EnumIter;
@@ -45,18 +46,20 @@ pub use crate::errors::ErrorKind;
 // This module exists to namespace re-exported
 // imports, needed for macro exports.
 pub mod private {
+    pub use std::convert::TryFrom;
+    pub use std::convert::TryInto;
+
+    pub use anyhow::Error;
+    pub use async_trait::async_trait;
+    pub use context::CoreContext;
+    pub use fbthrift::compact_protocol;
+
     pub use crate::Blobstore;
     pub use crate::BlobstoreBytes;
     pub use crate::BlobstoreGetData;
     pub use crate::Loadable;
     pub use crate::LoadableError;
     pub use crate::Storable;
-    pub use anyhow::Error;
-    pub use async_trait::async_trait;
-    pub use context::CoreContext;
-    pub use fbthrift::compact_protocol;
-    pub use std::convert::TryFrom;
-    pub use std::convert::TryInto;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

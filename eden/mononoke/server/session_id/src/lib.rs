@@ -5,10 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+
 use rand::distributions::Alphanumeric;
 use rand::thread_rng;
 use rand::Rng;
-use std::fmt;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct SessionId(String);

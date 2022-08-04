@@ -562,9 +562,11 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlLongRunningRequestsQueue {}
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use fbinit::FacebookInit;
     use std::time::Duration;
+
+    use fbinit::FacebookInit;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_mark_inprogress(fb: FacebookInit) -> Result<()> {

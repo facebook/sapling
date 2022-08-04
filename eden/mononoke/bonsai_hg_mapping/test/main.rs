@@ -7,10 +7,14 @@
 
 //! Tests for the Changesets store.
 
-use anyhow::Error;
-use async_trait::async_trait;
+use std::str::FromStr;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
+use anyhow::Error;
 use assert_matches::assert_matches;
+use async_trait::async_trait;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use bonsai_hg_mapping::BonsaiOrHgChangesetIds;
@@ -28,11 +32,6 @@ use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use rendezvous::RendezVousOptions;
 use sql_construct::SqlConstruct;
-
-use std::str::FromStr;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
 async fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     let ctx = CoreContext::test_mock(fb);

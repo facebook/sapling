@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::io;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use bytes::BufMut;
@@ -13,17 +16,14 @@ use bytes::BytesMut;
 use futures::sync::mpsc;
 use futures_ext::BoxStream;
 use metadata::Metadata;
-use std::io;
-use std::sync::Arc;
+use netstring::NetstringDecoder;
+use netstring::NetstringEncoder;
 use tokio_util::codec::Decoder;
 use tokio_util::codec::Encoder;
 use zstd::stream::raw::Encoder as ZstdEncoder;
 use zstd::stream::raw::InBuffer;
 use zstd::stream::raw::Operation;
 use zstd::stream::raw::OutBuffer;
-
-use netstring::NetstringDecoder;
-use netstring::NetstringEncoder;
 
 // Multiplex stdin/out/err over a single stream using netstring as framing
 #[derive(Debug)]

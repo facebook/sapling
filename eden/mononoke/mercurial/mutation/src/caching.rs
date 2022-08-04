@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::Arc;
+use std::time::Duration;
+
 use abomonation_derive::Abomonation;
 use anyhow::anyhow;
 use anyhow::Error;
@@ -29,10 +34,6 @@ use memcache::MemcacheClient;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::RepositoryId;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::sync::Arc;
-use std::time::Duration;
 use tunables::tunables;
 
 use crate::HgMutationEntry;

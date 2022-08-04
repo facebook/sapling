@@ -7,10 +7,9 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
+use blobstore::BlobstoreGetData;
 use context::CoreContext;
 use futures::future::BoxFuture;
-
-use blobstore::BlobstoreGetData;
 
 use crate::CacheOps;
 use crate::LeaseOps;

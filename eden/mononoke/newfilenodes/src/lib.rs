@@ -18,9 +18,12 @@ mod writer;
 #[cfg(test)]
 mod test;
 
+use std::sync::Arc;
+
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
+pub use builder::NewFilenodesBuilder;
 use context::CoreContext;
 use filenodes::FilenodeInfo;
 use filenodes::FilenodeRangeResult;
@@ -30,13 +33,10 @@ use filenodes::PreparedFilenode;
 use mercurial_types::HgFileNodeId;
 use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
-use std::sync::Arc;
-use thiserror::Error as DeriveError;
-
-pub use builder::NewFilenodesBuilder;
 pub use path_hash::PathHash;
 use reader::FilenodesReader;
 pub use sql_timeout_knobs::disable_sql_timeouts;
+use thiserror::Error as DeriveError;
 use writer::FilenodesWriter;
 
 #[derive(Debug, DeriveError)]

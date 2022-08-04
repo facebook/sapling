@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;
@@ -27,7 +29,6 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use slog::debug;
 use stats::prelude::*;
-use std::collections::HashMap;
 
 define_stats! {
     prefix = "mononoke.derived_data.hgchangesets";
@@ -240,8 +241,6 @@ impl_bonsai_derived_via_manager!(MappedHgChangesetId);
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::DeriveHgChangeset;
     use blobrepo::BlobRepo;
     use bookmarks::BookmarkName;
     use borrowed::borrowed;
@@ -267,6 +266,9 @@ mod test {
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
+    use crate::DeriveHgChangeset;
 
     fn all_commits_descendants_to_ancestors(
         ctx: CoreContext,

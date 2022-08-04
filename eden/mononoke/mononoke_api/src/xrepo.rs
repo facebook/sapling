@@ -5,8 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::specifiers::ChangesetSpecifier;
 use bookmarks::BookmarkName;
+
+use crate::specifiers::ChangesetSpecifier;
 
 /// An aux struct to build `CandidateSelectionHint`
 pub enum CandidateSelectionHintArgs {

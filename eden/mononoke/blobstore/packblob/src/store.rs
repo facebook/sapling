@@ -5,9 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::envelope::PackEnvelope;
-use crate::pack;
-
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -27,6 +24,9 @@ use futures::stream::FuturesUnordered;
 use futures::stream::TryStreamExt;
 use metaconfig_types::PackFormat;
 use mononoke_types::BlobstoreBytes;
+
+use crate::envelope::PackEnvelope;
+use crate::pack;
 
 #[derive(Clone, Debug, Default)]
 pub struct PackOptions {
@@ -254,7 +254,8 @@ impl<T: Blobstore + BlobstoreUnlinkOps> PackBlob<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::sync::Arc;
+
     use borrowed::borrowed;
     use bytes::Bytes;
     use fbinit::FacebookInit;
@@ -262,7 +263,8 @@ mod tests {
     use rand::RngCore;
     use rand::SeedableRng;
     use rand_xorshift::XorShiftRng;
-    use std::sync::Arc;
+
+    use super::*;
 
     #[fbinit::test]
     async fn simple_roundtrip_test(fb: FacebookInit) -> Result<()> {

@@ -73,7 +73,9 @@ pub async fn copy_content(
 mod test {
     #![allow(warnings)]
 
-    use super::*;
+    use std::collections::HashMap;
+    use std::sync::Arc;
+
     use borrowed::borrowed;
     use bytes::Bytes;
     use context::CoreContext;
@@ -87,8 +89,8 @@ mod test {
     use redactedblobstore::RedactedBlobstore;
     use repo_blobstore::RepoBlobstore;
     use scuba_ext::MononokeScubaSampleBuilder;
-    use std::collections::HashMap;
-    use std::sync::Arc;
+
+    use super::*;
 
     fn request(data: impl AsRef<[u8]>) -> StoreRequest {
         StoreRequest::new(data.as_ref().len() as u64)

@@ -5,15 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use crate::detail::graph::NodeType;
-use crate::detail::pack::PackInfoLogOptions;
+use std::collections::HashSet;
+
 use anyhow::Error;
 use clap::Args;
 use fbinit::FacebookInit;
 use scuba_ext::MononokeScubaSampleBuilder;
-use std::collections::HashSet;
 
 use crate::args::graph_arg_types::NodeTypeArg;
+use crate::detail::graph::NodeType;
+use crate::detail::pack::PackInfoLogOptions;
 
 #[derive(Args, Debug)]
 pub struct ScrubOutputNodeArgs {

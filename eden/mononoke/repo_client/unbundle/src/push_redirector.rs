@@ -5,25 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::run_post_resolve_action;
-use crate::UnbundleBookmarkOnlyPushRebaseResponse;
-use crate::UnbundleInfinitePushResponse;
-use crate::UnbundlePushRebaseResponse;
-use crate::UnbundlePushResponse;
-use crate::UnbundleResponse;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 
-use crate::hook_running::HookRejectionRemapper;
-use crate::resolver::HgHookRejection;
-use crate::BundleResolverError;
-use crate::InfiniteBookmarkPush;
-use crate::PlainBookmarkPush;
-use crate::PostResolveAction;
-use crate::PostResolveBookmarkOnlyPushRebase;
-use crate::PostResolveInfinitePush;
-use crate::PostResolvePush;
-use crate::PostResolvePushRebase;
-use crate::PushrebaseBookmarkSpec;
-use crate::UploadedBonsais;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
@@ -56,13 +42,28 @@ use pushrebase::PushrebaseChangesetPair;
 use reachabilityindex::LeastCommonAncestorsHint;
 use skiplist::SkiplistIndexArc;
 use slog::debug;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
 use topo_sort::sort_topological;
+
+use crate::hook_running::HookRejectionRemapper;
+use crate::resolver::HgHookRejection;
+use crate::run_post_resolve_action;
+use crate::BundleResolverError;
+use crate::InfiniteBookmarkPush;
+use crate::PlainBookmarkPush;
+use crate::PostResolveAction;
+use crate::PostResolveBookmarkOnlyPushRebase;
+use crate::PostResolveInfinitePush;
+use crate::PostResolvePush;
+use crate::PostResolvePushRebase;
+use crate::PushrebaseBookmarkSpec;
+use crate::UnbundleBookmarkOnlyPushRebaseResponse;
+use crate::UnbundleInfinitePushResponse;
+use crate::UnbundlePushRebaseResponse;
+use crate::UnbundlePushResponse;
+use crate::UnbundleResponse;
+use crate::UploadedBonsais;
 
 /// An auxillary struct, which contains nearly
 /// everything needed to create a full `PushRedirector`

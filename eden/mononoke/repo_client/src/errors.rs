@@ -5,11 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use rate_limiting::RateLimitReason;
-use thiserror::Error;
-
 use mercurial_types::HgNodeHash;
 use mercurial_types::RepoPath;
+use rate_limiting::RateLimitReason;
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {

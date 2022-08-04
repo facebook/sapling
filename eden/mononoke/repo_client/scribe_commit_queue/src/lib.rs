@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::num::NonZeroU64;
+
 use anyhow::Error;
 use chrono::DateTime;
 use chrono::Utc;
@@ -15,7 +17,6 @@ use mononoke_types::RepositoryId;
 use permission_checker::MononokeIdentitySet;
 use scribe_ext::Scribe;
 use serde_derive::Serialize;
-use std::num::NonZeroU64;
 
 #[derive(Serialize)]
 pub struct CommitInfo<'a> {

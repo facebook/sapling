@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::error::SubcommandError;
+use std::collections::BTreeSet;
+use std::str::FromStr;
 
 use anyhow::format_err;
 use anyhow::Error;
@@ -38,8 +39,8 @@ use mononoke_types::MPath;
 use revset::AncestorsNodeStream;
 use slog::debug;
 use slog::Logger;
-use std::collections::BTreeSet;
-use std::str::FromStr;
+
+use crate::error::SubcommandError;
 
 pub const DELETED_MANIFEST: &str = "deleted-manifest";
 const COMMAND_MANIFEST: &str = "manifest";

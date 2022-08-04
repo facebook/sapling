@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use thiserror::Error;
+
 use crate::part_header::PartHeader;
 use crate::part_header::PartHeaderType;
-
-use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
@@ -15,7 +17,6 @@ use derived_data::BonsaiDerived;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
 use slog::info;
-use std::collections::HashSet;
 
 use crate::commit_sync_outcome::CommitSyncOutcome;
 
@@ -130,9 +131,10 @@ pub async fn get_mapping_change_version(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use fbinit::FacebookInit;
     use mononoke_types_mocks::changesetid as bonsai;
+
+    use super::*;
 
     #[fbinit::test]
     fn test_merge_version_determinator_success_single_rewritten(_fb: FacebookInit) {

@@ -5,7 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::AppExtension;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::thread;
+
 use anyhow::Error;
 use anyhow::Result;
 use clap::Args;
@@ -16,10 +20,8 @@ use slog::info;
 use slog::Logger;
 use slog::Never;
 use slog::SendSyncRefUnwindSafeDrain;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::thread;
+
+use crate::AppExtension;
 
 /// Command line arguments that fb303 for service
 #[derive(Args, Debug)]

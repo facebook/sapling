@@ -8,15 +8,14 @@
 use std::sync::Arc;
 
 use blobrepo::BlobRepo;
+#[cfg(test)]
+use common::fetch_generation;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fixtures::BranchWide;
 use fixtures::Linear;
 use fixtures::MergeUneven;
 use fixtures::TestRepoFixture;
-
-#[cfg(test)]
-use common::fetch_generation;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::ChangesetId;
@@ -241,8 +240,6 @@ pub async fn test_branch_wide_reachability<T: ReachabilityIndex + 'static>(
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     use std::sync::Arc;
 
     use context::CoreContext;
@@ -250,6 +247,8 @@ mod test {
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
     use mononoke_types::Generation;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_helpers(fb: FacebookInit) {

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::ErrorKind;
+use std::collections::HashMap;
 
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
@@ -15,7 +15,8 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::MPath;
-use std::collections::HashMap;
+
+use crate::ErrorKind;
 
 #[async_trait]
 pub trait FileContentManager: Send + Sync {

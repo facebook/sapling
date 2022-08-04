@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::cmp;
+
 use anyhow::Error;
 use futures_old::Async;
 use futures_old::Future;
 use futures_old::Stream;
-use std::cmp;
 
 use crate::trace_allocations;
 

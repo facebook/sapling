@@ -14,9 +14,6 @@ use std::sync::Mutex;
 use anyhow::format_err;
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::future::BoxFuture;
-use futures::future::FutureExt;
-
 use blobstore::Blobstore;
 use blobstore::BlobstoreEnumerationData;
 use blobstore::BlobstoreGetData;
@@ -28,6 +25,8 @@ use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use blobstore::DEFAULT_PUT_BEHAVIOUR;
 use context::CoreContext;
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
 use mononoke_types::BlobstoreBytes;
 
 // Implements hardlink-style links

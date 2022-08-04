@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+use std::sync::Once;
+
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
@@ -42,8 +45,6 @@ use readonlyblob::ReadOnlyBlobstore;
 use skeleton_manifest::RootSkeletonManifestId;
 use slog::info;
 use slog::warn;
-use std::sync::Arc;
-use std::sync::Once;
 use unodes::RootUnodeManifestId;
 
 use crate::commit_discovery::CommitDiscoveryOptions;

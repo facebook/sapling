@@ -5,13 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::CrossRepoPushSource;
-use crate::FileContentManager;
-use crate::FileHook;
-use crate::HookExecution;
-use crate::HookRejectionInfo;
-use crate::PushAuthoredBy;
-
 use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -19,6 +12,13 @@ use context::CoreContext;
 use metaconfig_types::HookConfig;
 use mononoke_types::BasicFileChange;
 use mononoke_types::MPath;
+
+use crate::CrossRepoPushSource;
+use crate::FileContentManager;
+use crate::FileHook;
+use crate::HookExecution;
+use crate::HookRejectionInfo;
+use crate::PushAuthoredBy;
 
 #[derive(Default)]
 pub struct NoBadExtensionsBuilder {

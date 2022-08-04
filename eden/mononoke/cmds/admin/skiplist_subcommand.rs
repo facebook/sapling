@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::num::NonZeroU64;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -38,9 +42,6 @@ use skiplist::SkiplistNodeType;
 use slog::debug;
 use slog::info;
 use slog::Logger;
-use std::collections::HashMap;
-use std::num::NonZeroU64;
-use std::sync::Arc;
 
 use crate::error::SubcommandError;
 

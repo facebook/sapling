@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::format_err;
 use anyhow::Error;
 use blobrepo::BlobRepo;
@@ -33,7 +35,6 @@ use serde_json::json;
 use serde_json::to_string_pretty;
 use slog::debug;
 use slog::Logger;
-use std::collections::HashMap;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
 pub async fn fetch_bonsai_changeset(

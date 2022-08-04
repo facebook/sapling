@@ -8,6 +8,12 @@
 mod ratelimit;
 mod shard;
 
+use std::fmt;
+use std::hash::Hasher;
+use std::num::NonZeroU64;
+use std::num::NonZeroUsize;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
@@ -27,19 +33,14 @@ use context::CoreContext;
 use context::PerfCounterType;
 use context::SessionClass;
 use mononoke_types::BlobstoreBytes;
+use shard::SemaphoreAcquisition;
+use shard::Shards;
 use stats::prelude::*;
-use std::fmt;
-use std::hash::Hasher;
-use std::num::NonZeroU64;
-use std::num::NonZeroUsize;
-use std::sync::Arc;
 use tunables::tunables;
 use twox_hash::XxHash;
 
 use crate::ratelimit::AccessReason;
 use crate::ratelimit::Ticket;
-use shard::SemaphoreAcquisition;
-use shard::Shards;
 
 define_stats! {
     prefix = "mononoke.virtually_sharded_blobstore";
@@ -528,12 +529,13 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
 
 #[cfg(all(test, fbcode_build))]
 mod test {
-    use super::*;
     use fbinit::FacebookInit;
     use futures_stats::TimedTryFutureExt;
     use nonzero_ext::nonzero;
     use once_cell::sync::OnceCell;
     use time_ext::DurationExt;
+
+    use super::*;
 
     fn make_blobstore<B: Blobstore>(
         fb: FacebookInit,
@@ -578,10 +580,10 @@ mod test {
     }
 
     mod caching {
-        use super::*;
-
         use mononoke_types::content_chunk::new_blob_and_pointer;
         use mononoke_types::BlobstoreKey;
+
+        use super::*;
 
         #[fbinit::test]
         fn test_filestore_chunk_is_not_compressed(fb: FacebookInit) -> Result<()> {
@@ -618,14 +620,16 @@ mod test {
     }
 
     mod sharding {
-        use super::*;
-        use borrowed::borrowed;
         use std::collections::HashMap;
         use std::sync::Mutex;
         use std::time::Duration;
+
+        use borrowed::borrowed;
         use tokio::sync::broadcast;
         use tokio::sync::broadcast::Receiver;
         use tokio::sync::broadcast::Sender;
+
+        use super::*;
 
         const TIMEOUT_MS: u64 = 100;
 
@@ -1080,7 +1084,8 @@ mod test {
     }
 
     mod ratelimiting {
-        use super::*;
+        use std::time::Duration;
+
         use async_limiter::AsyncLimiter;
         use borrowed::borrowed;
         use context::SessionContainer;
@@ -1094,7 +1099,8 @@ mod test {
         use slog::Level;
         use slog::Logger;
         use slog_glog_fmt::default_drain;
-        use std::time::Duration;
+
+        use super::*;
 
         #[derive(Clone, Debug)]
         struct DummyBlob;

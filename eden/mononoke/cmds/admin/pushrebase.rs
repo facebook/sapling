@@ -14,13 +14,12 @@ use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
 use clap_old::SubCommand;
-use fbinit::FacebookInit;
-use futures::TryFutureExt;
-
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
 use context::CoreContext;
+use fbinit::FacebookInit;
+use futures::TryFutureExt;
 use maplit::hashset;
 use metaconfig_types::BookmarkAttrs;
 use pushrebase::do_pushrebase_bonsai;

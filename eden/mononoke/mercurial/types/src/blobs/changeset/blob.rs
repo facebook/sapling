@@ -5,16 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use super::revlog::serialize_extras;
-use super::revlog::Extra;
-use super::revlog::RevlogChangeset;
-use crate::nodehash::HgChangesetId;
-use crate::nodehash::HgManifestId;
-use crate::HgBlobNode;
-use crate::HgChangesetEnvelopeMut;
-use crate::HgNodeHash;
-use crate::HgParents;
-use crate::MPath;
+use std::collections::BTreeMap;
+use std::fmt;
+use std::fmt::Display;
+use std::io::Write;
+
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
@@ -25,10 +20,17 @@ use blobstore::LoadableError;
 use bytes::Bytes;
 use context::CoreContext;
 use mononoke_types::DateTime;
-use std::collections::BTreeMap;
-use std::fmt;
-use std::fmt::Display;
-use std::io::Write;
+
+use super::revlog::serialize_extras;
+use super::revlog::Extra;
+use super::revlog::RevlogChangeset;
+use crate::nodehash::HgChangesetId;
+use crate::nodehash::HgManifestId;
+use crate::HgBlobNode;
+use crate::HgChangesetEnvelopeMut;
+use crate::HgNodeHash;
+use crate::HgParents;
+use crate::MPath;
 
 const STEP_PARENTS_METADATA_KEY: &str = "stepparents";
 

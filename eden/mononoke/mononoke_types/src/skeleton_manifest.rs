@@ -5,20 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Cow;
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-
-use crate::blob::Blob;
-use crate::blob::BlobstoreValue;
-use crate::blob::SkeletonManifestBlob;
-use crate::errors::ErrorKind;
-use crate::path::MPath;
-use crate::path::MPathElement;
-use crate::thrift;
-use crate::typed_hash::SkeletonManifestId;
-use crate::typed_hash::SkeletonManifestIdContext;
-
 use blobstore::Blobstore;
 use blobstore::StoreLoadable;
 use borrowed::borrowed;
@@ -32,9 +25,16 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use sorted_vector_map::SortedVectorMap;
-use std::borrow::Cow;
-use std::collections::BTreeMap;
-use std::collections::HashMap;
+
+use crate::blob::Blob;
+use crate::blob::BlobstoreValue;
+use crate::blob::SkeletonManifestBlob;
+use crate::errors::ErrorKind;
+use crate::path::MPath;
+use crate::path::MPathElement;
+use crate::thrift;
+use crate::typed_hash::SkeletonManifestId;
+use crate::typed_hash::SkeletonManifestIdContext;
 
 /// A skeleton manifest is a manifest node containing summary information about the
 /// the structure of files (their names, but not their contents) that is useful

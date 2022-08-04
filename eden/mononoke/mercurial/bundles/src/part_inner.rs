@@ -20,6 +20,8 @@ use bytes_old::Bytes;
 use bytes_old::BytesMut;
 use futures_ext::BoxFuture;
 use futures_ext::FutureExt;
+use futures_ext::StreamExt;
+use futures_ext::StreamLayeredExt;
 use futures_old::future;
 use futures_old::Future;
 use futures_old::Stream;
@@ -42,8 +44,6 @@ use crate::part_outer::OuterStream;
 use crate::pushrebase;
 use crate::wirepack;
 use crate::OldBundle2Item;
-use futures_ext::StreamExt;
-use futures_ext::StreamLayeredExt;
 
 // --- Part parameters
 

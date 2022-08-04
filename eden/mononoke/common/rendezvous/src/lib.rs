@@ -15,13 +15,14 @@ mod tunables;
 #[cfg(test)]
 mod test;
 
-pub use crate::tunables::TunablesMultiRendezVousController;
-pub use crate::tunables::TunablesRendezVousController;
 pub use multi_rendez_vous::MultiRendezVous;
 pub use multi_rendez_vous::MultiRendezVousController;
 pub use rendez_vous::RendezVous;
 pub use rendez_vous::RendezVousController;
 pub use rendez_vous_stats::RendezVousStats;
+
+pub use crate::tunables::TunablesMultiRendezVousController;
+pub use crate::tunables::TunablesRendezVousController;
 
 #[derive(Copy, Clone, Debug)]
 pub struct RendezVousOptions {
@@ -54,14 +55,15 @@ impl From<RendezVousArgs> for RendezVousOptions {
 
 #[cfg(test)]
 mod demo {
-    use super::*;
+    use std::collections::HashMap;
+    use std::sync::Arc;
 
     use anyhow::Error;
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use maplit::hashset;
-    use std::collections::HashMap;
-    use std::sync::Arc;
+
+    use super::*;
 
     // NOTE: I'd make this a doctest, but we don't have support for running those at the moment
     #[fbinit::test]

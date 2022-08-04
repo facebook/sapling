@@ -11,10 +11,6 @@
 //! SSH and HTTP. This module defines enums representing requests and responses for those
 //! protocols, and a Tokio Service framework for them via a trait.
 
-use bytes_old::Bytes;
-use mercurial_types::HgChangesetId;
-use mercurial_types::HgManifestId;
-use mononoke_types::MPath;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
@@ -22,6 +18,11 @@ use std::collections::HashSet;
 use std::fmt;
 use std::fmt::Debug;
 use std::sync::Mutex;
+
+use bytes_old::Bytes;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgManifestId;
+use mononoke_types::MPath;
 
 pub mod batch;
 mod commands;

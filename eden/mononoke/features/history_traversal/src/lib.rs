@@ -16,8 +16,10 @@ mod blame;
 mod common;
 mod log;
 
-pub use crate::blame::blame;
-pub use crate::blame::blame_with_content;
+use blobrepo::AsBlobRepo;
+use changeset_fetcher::ChangesetFetcherArc;
+use changeset_fetcher::ChangesetFetcherRef;
+use changesets::ChangesetsRef;
 pub use log::list_file_history;
 pub use log::CsAndPath;
 pub use log::FastlogError;
@@ -26,11 +28,6 @@ pub use log::HistoryAcrossDeletions;
 pub use log::NextChangeset;
 pub use log::TraversalOrder;
 pub use log::Visitor;
-
-use blobrepo::AsBlobRepo;
-use changeset_fetcher::ChangesetFetcherArc;
-use changeset_fetcher::ChangesetFetcherRef;
-use changesets::ChangesetsRef;
 use mutable_renames::MutableRenamesRef;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
@@ -38,6 +35,9 @@ use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use skiplist::SkiplistIndexRef;
 use trait_alias::trait_alias;
+
+pub use crate::blame::blame;
+pub use crate::blame::blame_with_content;
 
 /// Trait alias for history traversal ops.
 ///

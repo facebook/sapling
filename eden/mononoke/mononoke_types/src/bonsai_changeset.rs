@@ -380,13 +380,15 @@ impl Arbitrary for BonsaiChangeset {
 
 #[cfg(test)]
 mod test {
+    use std::str::FromStr;
+
+    use quickcheck::quickcheck;
+    use sorted_vector_map::sorted_vector_map;
+
     use super::*;
     use crate::file_change::FileType;
     use crate::hash::Blake2;
     use crate::typed_hash::ContentId;
-    use quickcheck::quickcheck;
-    use sorted_vector_map::sorted_vector_map;
-    use std::str::FromStr;
 
     quickcheck! {
         fn thrift_roundtrip(cs: BonsaiChangeset) -> bool {

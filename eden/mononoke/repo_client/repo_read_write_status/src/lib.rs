@@ -7,19 +7,17 @@
 
 use anyhow::Error;
 use metaconfig_types::HgsqlName;
+use metaconfig_types::RepoReadOnly;
 use sql::mysql;
+use sql::mysql_async::prelude::ConvIr;
+use sql::mysql_async::prelude::FromValue;
+use sql::mysql_async::FromValueError;
+use sql::mysql_async::Value;
 use sql::queries;
 use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
-
-use sql::mysql_async::prelude::ConvIr;
-use sql::mysql_async::prelude::FromValue;
-use sql::mysql_async::FromValueError;
-use sql::mysql_async::Value;
-
-use metaconfig_types::RepoReadOnly;
 
 static DEFAULT_MSG: &str = "Defaulting to locked as the lock state isn't initialised for this repo";
 static NOT_CONNECTED_MSG: &str = "Defaulting to locked as no database connection passed";
@@ -192,8 +190,9 @@ impl RepoReadWriteFetcher {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use metaconfig_types::RepoReadOnly::*;
+
+    use super::*;
 
     static CONFIG_MSG: &str = "Set by config option";
 

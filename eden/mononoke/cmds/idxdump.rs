@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::str::FromStr;
+
 use anyhow::bail;
 use anyhow::Result;
 use clap_old::App;
 use mercurial_revlog::revlog::RevIdx;
 use mercurial_revlog::revlog::Revlog;
-use std::str::FromStr;
 
 fn run() -> Result<()> {
     // Define command line args and parse command line

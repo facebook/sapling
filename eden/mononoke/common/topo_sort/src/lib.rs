@@ -175,9 +175,10 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use maplit::hashmap;
     use maplit::hashset;
+
+    use super::*;
 
     #[test]
     fn sort_topological_test() {

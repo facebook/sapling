@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::common::find_target_sync_config;
-use crate::common::MegarepoOp;
+use std::sync::Arc;
+
 use context::CoreContext;
 use megarepo_config::MononokeMegarepoConfigs;
 use megarepo_config::SyncTargetConfig;
@@ -14,7 +14,9 @@ use megarepo_config::Target;
 use megarepo_error::MegarepoError;
 use mononoke_api::Mononoke;
 use mononoke_types::ChangesetId;
-use std::sync::Arc;
+
+use crate::common::find_target_sync_config;
+use crate::common::MegarepoOp;
 
 // Create a new sync target
 pub struct AddBranchingSyncTarget<'a> {

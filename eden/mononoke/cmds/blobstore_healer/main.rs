@@ -11,6 +11,11 @@
 mod dummy;
 mod healer;
 
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::Duration;
+use std::time::Instant;
+
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
@@ -54,10 +59,6 @@ use sql_ext::replication::WaitForReplicationConfig;
 use stats as _;
 #[cfg(not(test))]
 use stats::schedule_stats_aggregation_preview;
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::time::Duration;
-use std::time::Instant;
 
 #[derive(Parser)]
 #[clap(about = "Monitors blobstore_sync_queue to heal blobstores with missing data")]

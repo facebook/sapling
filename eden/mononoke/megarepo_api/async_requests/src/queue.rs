@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+use std::time::Duration;
+use std::time::Instant;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use blobstore::Blobstore;
@@ -30,9 +34,6 @@ use requests_table::RequestType;
 pub use requests_table::RowId;
 use requests_table::SqlLongRunningRequestsQueue;
 use sql_construct::SqlConstruct;
-use std::sync::Arc;
-use std::time::Duration;
-use std::time::Instant;
 
 use crate::types::MegarepoAsynchronousRequestParams;
 use crate::types::MegarepoAsynchronousRequestResult;
@@ -308,28 +309,25 @@ impl AsyncMethodRequestQueue {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use requests_table::ClaimedBy;
     use requests_table::RequestStatus;
-
     use source_control::MegarepoAddBranchingTargetParams as ThriftMegarepoAddBranchingTargetParams;
-    use source_control::MegarepoAddTargetParams as ThriftMegarepoAddTargetParams;
-    use source_control::MegarepoChangeTargetConfigParams as ThriftMegarepoChangeTargetConfigParams;
-    use source_control::MegarepoRemergeSourceParams as ThriftMegarepoRemergeSourceParams;
-    use source_control::MegarepoSyncChangesetParams as ThriftMegarepoSyncChangesetParams;
-
-    use crate::types::MegarepoAsynchronousRequestResult;
-
     use source_control::MegarepoAddBranchingTargetResult;
+    use source_control::MegarepoAddTargetParams as ThriftMegarepoAddTargetParams;
     use source_control::MegarepoAddTargetResult;
+    use source_control::MegarepoChangeTargetConfigParams as ThriftMegarepoChangeTargetConfigParams;
     use source_control::MegarepoChangeTargetConfigResult;
+    use source_control::MegarepoRemergeSourceParams as ThriftMegarepoRemergeSourceParams;
     use source_control::MegarepoRemergeSourceResult;
+    use source_control::MegarepoSyncChangesetParams as ThriftMegarepoSyncChangesetParams;
     use source_control::MegarepoSyncChangesetResult;
 
+    use super::*;
     use crate::types::MegarepoAddBranchingSyncTarget;
     use crate::types::MegarepoAddSyncTarget;
+    use crate::types::MegarepoAsynchronousRequestResult;
     use crate::types::MegarepoChangeTargetConfig;
     use crate::types::MegarepoRemergeSource;
     use crate::types::MegarepoSyncChangeset;

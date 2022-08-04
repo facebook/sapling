@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::time::Duration;
+
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
@@ -18,7 +20,6 @@ use http::HeaderValue;
 use http::Method;
 use http::Response;
 use hyper::Body;
-use std::time::Duration;
 use thiserror::Error;
 use tokio::io::AsyncReadExt;
 use tokio_util::codec::BytesCodec;

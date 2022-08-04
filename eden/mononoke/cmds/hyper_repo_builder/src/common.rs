@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::str::FromStr;
+use std::sync::Arc;
+
 use anyhow::Context;
 use anyhow::Error;
 use blobrepo::BlobRepo;
@@ -19,9 +23,6 @@ use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use movers::Mover;
 use sorted_vector_map::SortedVectorMap;
-use std::collections::HashMap;
-use std::str::FromStr;
-use std::sync::Arc;
 
 pub const EXTRA_PREFIX: &str = "source-cs-id-";
 

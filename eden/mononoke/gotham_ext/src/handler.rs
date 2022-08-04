@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::net::SocketAddr;
+use std::panic::RefUnwindSafe;
+use std::pin::Pin;
+use std::sync::Arc;
+
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::task;
@@ -17,10 +22,6 @@ use hyper::service::Service;
 use hyper::Body;
 use hyper::Request;
 use hyper::Response;
-use std::net::SocketAddr;
-use std::panic::RefUnwindSafe;
-use std::pin::Pin;
-use std::sync::Arc;
 
 use crate::middleware::Middleware;
 use crate::socket_data::TlsSocketData;
@@ -191,12 +192,13 @@ impl<H: Handler + Clone + Send + Sync + 'static + RefUnwindSafe> Service<Request
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use futures::future;
     use gotham::test::TestServer;
     use gotham_derive::StateData;
     use hyper::http::StatusCode;
     use hyper::Body;
+
+    use super::*;
 
     // Basic response handler for tests
 

@@ -20,12 +20,11 @@ use hyper::body::Body;
 use hyper::Response;
 use tokio::task;
 
-use crate::response::PendingResponseMeta;
-use crate::response::ResponseMeta;
-
 use super::ClientIdentity;
 use super::Middleware;
 use super::RequestStartTime;
+use crate::response::PendingResponseMeta;
+use crate::response::ResponseMeta;
 
 type Callback = Box<dyn FnOnce(&PostResponseInfo) + Send + 'static>;
 

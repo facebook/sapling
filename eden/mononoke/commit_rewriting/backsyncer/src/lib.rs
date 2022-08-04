@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::Instant;
+
 /// Backsyncer
 ///
 /// Library to sync commits from source repo to target repo by following bookmark update log
@@ -90,10 +95,6 @@ use sql::Transaction;
 use sql_ext::facebook::MysqlOptions;
 use sql_ext::SqlConnections;
 use sql_ext::TransactionResult;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::time::Instant;
 use synced_commit_mapping::SyncedCommitMapping;
 use thiserror::Error;
 

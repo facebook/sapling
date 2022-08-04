@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use anyhow::bail;
 use anyhow::Result;
 use blobstore::Blobstore;
@@ -23,9 +27,6 @@ use mononoke_types::BlobstoreKey;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
-use std::collections::BTreeMap;
-use std::collections::HashMap;
-use std::sync::Arc;
 
 use crate::derive::DeletedManifestChangeType;
 use crate::derive::DeletedManifestDeriver;

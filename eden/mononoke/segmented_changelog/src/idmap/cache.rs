@@ -14,7 +14,6 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use bytes::Bytes;
-
 use caching_ext::get_or_fill_chunked;
 use caching_ext::CacheDisposition;
 use caching_ext::CacheTtl;
@@ -348,15 +347,13 @@ impl KeyedEntityStore<ChangesetId, DagIdWrapper> for DagIdCacheRequest<'_> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use fbinit::FacebookInit;
-
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
     use sql_construct::SqlConstruct;
     use sql_ext::replication::NoReplicaLagMonitor;
 
+    use super::*;
     use crate::builder::SegmentedChangelogSqlConnections;
     use crate::idmap::SqlIdMap;
 

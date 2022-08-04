@@ -28,8 +28,6 @@ use futures_ext::BoxFuture;
 use futures_ext::BoxStream;
 use futures_ext::FutureExt;
 use futures_ext::StreamExt;
-
-use crate::errors::ErrorKind;
 use mercurial_types::blobs::file;
 use mercurial_types::manifest::Type;
 use mercurial_types::FileType;
@@ -44,6 +42,7 @@ use mercurial_types::MPath;
 use mercurial_types::MPathElement;
 use mercurial_types::RepoPath;
 
+use crate::errors::ErrorKind;
 use crate::RevlogRepo;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -447,9 +446,9 @@ impl RevlogEntry {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     use mercurial_types_mocks::nodehash::*;
+
+    use super::*;
 
     #[test]
     fn test_find() {

@@ -7,15 +7,14 @@
 
 //! QuickCheck support for wire packs.
 
-use quickcheck::empty_shrinker;
-use quickcheck::Arbitrary;
-use quickcheck::Gen;
-
 use mercurial_types::Delta;
 use mercurial_types::HgNodeHash;
 use mercurial_types::MPath;
 use mercurial_types::RepoPath;
 use mercurial_types::NULL_HASH;
+use quickcheck::empty_shrinker;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
 use revisionstore_types::Metadata;
 
 use super::DataEntry;

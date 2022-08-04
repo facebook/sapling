@@ -13,18 +13,15 @@ use blobstore::LoadableError;
 use cloned::cloned;
 use futures_lazy_shared::LazyShared;
 use mononoke_types::fsnode::Fsnode;
-
-use crate::errors::MononokeError;
-use crate::repo::RepoContext;
-
+// An entry within a tree list (either a file or subdirectory).
+pub use mononoke_types::fsnode::FsnodeEntry as TreeEntry;
+// Summary information about the files in a tree.
+pub use mononoke_types::fsnode::FsnodeSummary as TreeSummary;
 // Trees are identified by their FsnodeId.
 pub use mononoke_types::FsnodeId as TreeId;
 
-// An entry within a tree list (either a file or subdirectory).
-pub use mononoke_types::fsnode::FsnodeEntry as TreeEntry;
-
-// Summary information about the files in a tree.
-pub use mononoke_types::fsnode::FsnodeSummary as TreeSummary;
+use crate::errors::MononokeError;
+use crate::repo::RepoContext;
 
 #[derive(Clone)]
 pub struct TreeContext {

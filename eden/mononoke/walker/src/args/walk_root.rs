@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Error;
+use bookmarks::BookmarkName;
+use clap::Args;
+
 use crate::detail::graph::EdgeType;
 use crate::detail::graph::Node;
 use crate::detail::parse_node::parse_node;
 use crate::detail::walk::OutgoingEdge;
-use anyhow::Error;
-use bookmarks::BookmarkName;
-use clap::Args;
 
 #[derive(Args, Debug)]
 pub struct WalkRootArgs {

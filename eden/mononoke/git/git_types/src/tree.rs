@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
 use std::cmp;
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -15,6 +14,7 @@ use std::io;
 use std::io::Write;
 
 use ::manifest::Entry;
+use anyhow::Error;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::MPathElement;
 

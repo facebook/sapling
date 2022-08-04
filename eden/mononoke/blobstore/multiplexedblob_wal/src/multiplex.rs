@@ -5,6 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::fmt;
+use std::num::NonZeroU64;
+use std::num::NonZeroUsize;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Context as _;
 use anyhow::Error;
@@ -30,11 +36,6 @@ use metaconfig_types::MultiplexId;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::Timestamp;
 use scuba_ext::MononokeScubaSampleBuilder;
-use std::collections::HashMap;
-use std::fmt;
-use std::num::NonZeroU64;
-use std::num::NonZeroUsize;
-use std::sync::Arc;
 use thiserror::Error;
 
 use crate::timed::with_timed_stores;

@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use super::Repo;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::Blobstore;
@@ -17,6 +16,8 @@ use skiplist::deserialize_skiplist_index;
 use skiplist::SkiplistIndex;
 use slog::debug;
 use slog::Logger;
+
+use super::Repo;
 
 #[derive(Args)]
 /// Subcommand to build skiplist indexes.

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use blobrepo::save_bonsai_changesets;
@@ -29,7 +31,6 @@ use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
 use slog::info;
-use std::collections::BTreeMap;
 
 use crate::common::decode_latest_synced_state_extras;
 use crate::common::encode_latest_synced_state_extras;
@@ -237,7 +238,6 @@ async fn ensure_no_file_intersection(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use mononoke_types::MPath;
@@ -247,6 +247,8 @@ mod tests {
     use tests_utils::list_working_copy_utf8;
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
 
     #[fbinit::test]
     async fn add_source_repo_simple(fb: FacebookInit) -> Result<(), Error> {

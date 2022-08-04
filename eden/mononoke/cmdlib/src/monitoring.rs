@@ -12,15 +12,14 @@ use std::thread;
 use anyhow::Error;
 use fbinit::FacebookInit;
 pub use mononoke_app::fb303::ReadyFlagService;
+// Re-eport AliveService for convenience so callers do not have to get the services dependency to
+// get AliveService.
+pub use services::AliveService;
 use services::Fb303Service;
 use slog::info;
 use slog::Logger;
 
 use crate::args::MononokeMatches;
-
-// Re-eport AliveService for convenience so callers do not have to get the services dependency to
-// get AliveService.
-pub use services::AliveService;
 
 /// This is a lower-level function that requires you to spawn the stats aggregation future
 /// yourself. This is useful if you'd like to be able to drop it in order to cancel it.

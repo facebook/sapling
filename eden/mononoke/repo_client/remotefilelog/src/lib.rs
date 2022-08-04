@@ -39,10 +39,9 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgParents;
 use mercurial_types::MPath;
 use mercurial_types::RevFlags;
+use redaction::RedactionFutureExt;
 use revisionstore_types::Metadata;
 use thiserror::Error;
-
-use redaction::RedactionFutureExt;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -362,7 +361,6 @@ fn prepare_blob_lfs_file(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use assert_matches::assert_matches;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
@@ -373,6 +371,8 @@ mod test {
     use mononoke_types::MPathElement;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
 
     async fn roundtrip_blob(
         fb: FacebookInit,

@@ -20,6 +20,8 @@ use blobstore::Loadable;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
+use derived_data_service_if::types::DerivationType;
+use derived_data_service_if::types::DeriveSingle;
 use futures::future::try_join;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
@@ -35,16 +37,13 @@ use mononoke_types::ChangesetId;
 use slog::debug;
 use topo_sort::TopoSortedDagTraversal;
 
+use super::DerivationAssignment;
+use super::DerivedDataManager;
 use crate::context::DerivationContext;
 use crate::derivable::BonsaiDerivable;
 use crate::derivable::DerivationDependencies;
 use crate::error::DerivationError;
 use crate::manager::util::DiscoveryStats;
-use derived_data_service_if::types::DerivationType;
-use derived_data_service_if::types::DeriveSingle;
-
-use super::DerivationAssignment;
-use super::DerivedDataManager;
 
 #[derive(Clone, Copy)]
 pub enum BatchDeriveOptions {

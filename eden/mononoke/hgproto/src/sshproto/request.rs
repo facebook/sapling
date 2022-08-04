@@ -5,12 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::batch;
-use crate::errors;
-use crate::GetbundleArgs;
-use crate::GettreepackArgs;
-use crate::Request;
-use crate::SingleRequest;
+use std::collections::HashMap;
+use std::iter;
+use std::str;
+use std::str::FromStr;
+
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
@@ -49,10 +48,13 @@ use nom::FindSubstring;
 use nom::IResult;
 use nom::Needed;
 use nom::Slice;
-use std::collections::HashMap;
-use std::iter;
-use std::str;
-use std::str::FromStr;
+
+use crate::batch;
+use crate::errors;
+use crate::GetbundleArgs;
+use crate::GettreepackArgs;
+use crate::Request;
+use crate::SingleRequest;
 
 const BAD_UTF8_ERR_CODE: u32 = 111;
 const BAD_PATH_ERR_CODE: u32 = 222;
@@ -685,9 +687,10 @@ fn parse_with_params(
 /// Test individual combinators
 #[cfg(test)]
 mod test {
-    use super::*;
     use maplit::hashmap;
     use mercurial_types_mocks::nodehash::NULL_HASH;
+
+    use super::*;
 
     #[test]
     fn test_integer() {
@@ -1184,11 +1187,13 @@ mod test {
 /// Test parsing each command
 #[cfg(test)]
 mod test_parse {
-    use super::*;
+    use std::fmt::Debug;
+
     use maplit::btreeset;
     use maplit::hashmap;
     use maplit::hashset;
-    use std::fmt::Debug;
+
+    use super::*;
 
     fn hash_ones() -> HgChangesetId {
         HgChangesetId::new("1111111111111111111111111111111111111111".parse().unwrap())

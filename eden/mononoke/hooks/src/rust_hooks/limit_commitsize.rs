@@ -5,14 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::ChangesetHook;
-use crate::CrossRepoPushSource;
-use crate::FileContentManager;
-use crate::HookConfig;
-use crate::HookExecution;
-use crate::HookRejectionInfo;
-use crate::PushAuthoredBy;
-
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
@@ -21,6 +13,14 @@ use bookmarks::BookmarkName;
 use context::CoreContext;
 use mononoke_types::BonsaiChangeset;
 use regex::Regex;
+
+use crate::ChangesetHook;
+use crate::CrossRepoPushSource;
+use crate::FileContentManager;
+use crate::HookConfig;
+use crate::HookExecution;
+use crate::HookRejectionInfo;
+use crate::PushAuthoredBy;
 
 #[derive(Default)]
 pub struct LimitCommitsizeBuilder {
@@ -225,16 +225,18 @@ impl ChangesetHook for LimitCommitsize {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::collections::HashMap;
+
     use anyhow::Error;
     use blobstore::Loadable;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
     use hooks_content_stores::RepoFileContentManager;
     use maplit::hashmap;
-    use std::collections::HashMap;
     use tests_utils::BasicTestRepo;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_limitcommitsize(fb: FacebookInit) -> Result<(), Error> {

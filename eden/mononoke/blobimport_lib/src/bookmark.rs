@@ -11,7 +11,12 @@ use std::sync::Arc;
 use anyhow::format_err;
 use anyhow::Error;
 use ascii::AsciiString;
+use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
 use cloned::cloned;
+use context::CoreContext;
 use futures::FutureExt;
 use futures::TryFutureExt;
 use futures_01_ext::try_boxfuture;
@@ -19,17 +24,11 @@ use futures_01_ext::BoxFuture;
 use futures_01_ext::FutureExt as _;
 use futures_old::prelude::*;
 use futures_old::stream;
-use slog::info;
-use slog::Logger;
-
-use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
-use bookmarks::BookmarkName;
-use bookmarks::BookmarkUpdateReason;
-use context::CoreContext;
 use mercurial_revlog::RevlogRepo;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
+use slog::info;
+use slog::Logger;
 
 pub fn read_bookmarks(revlogrepo: &RevlogRepo) -> BoxFuture<Vec<(Vec<u8>, HgChangesetId)>, Error> {
     let bookmarks = Arc::new(try_boxfuture!(revlogrepo.get_bookmarks()));

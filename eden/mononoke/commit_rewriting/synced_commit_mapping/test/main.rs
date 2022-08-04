@@ -7,10 +7,9 @@
 
 //! Tests for the synced commits mapping.
 
-use fbinit::FacebookInit;
-
 use anyhow::Error;
 use context::CoreContext;
+use fbinit::FacebookInit;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ONE;

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::Context;
 use blobstore_factory::make_metadata_sql_factory;
 use blobstore_factory::ReadOnlyStorage;
@@ -27,7 +29,6 @@ use slog::Logger;
 use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::NoReplicaLagMonitor;
 use sql_ext::replication::ReplicaLagMonitor;
-use std::sync::Arc;
 
 use crate::error::SubcommandError;
 

@@ -7,13 +7,11 @@
 
 //! Plain files, symlinks
 
-use super::errors::ErrorKind;
-use crate::FileBytes;
-use crate::HgBlob;
-use crate::HgBlobNode;
-use crate::HgFileEnvelope;
-use crate::HgFileNodeId;
-use crate::MPath;
+use std::collections::HashMap;
+use std::io::Write;
+use std::str;
+use std::str::FromStr;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
@@ -23,10 +21,14 @@ use bytes::Bytes;
 use context::CoreContext;
 use itertools::Itertools;
 use mononoke_types::hash::Sha256;
-use std::collections::HashMap;
-use std::io::Write;
-use std::str;
-use std::str::FromStr;
+
+use super::errors::ErrorKind;
+use crate::FileBytes;
+use crate::HgBlob;
+use crate::HgBlobNode;
+use crate::HgFileEnvelope;
+use crate::HgFileNodeId;
+use crate::MPath;
 
 #[async_trait]
 impl Loadable for HgFileNodeId {

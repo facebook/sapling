@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use fbinit::FacebookInit;
 use metadata::Metadata;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use slog_glog_fmt::logger_that_can_work_in_tests;
-use std::sync::Arc;
 
 use crate::logging::LoggingContainer;
 use crate::logging::SamplingKey;

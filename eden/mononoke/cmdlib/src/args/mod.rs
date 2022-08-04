@@ -9,8 +9,6 @@ mod app;
 mod cache;
 mod matches;
 
-pub use self::cache::CachelibSettings;
-
 use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::future::Future;
@@ -25,11 +23,6 @@ use anyhow::Result;
 use cached_config::ConfigStore;
 use clap_old::ArgMatches;
 use fbinit::FacebookInit;
-use scribe_ext::Scribe;
-use slog::info;
-use slog::warn;
-use slog::Logger;
-
 pub use metaconfig_parser::RepoConfigs;
 pub use metaconfig_parser::StorageConfigs;
 use metaconfig_types::BlobConfig;
@@ -39,11 +32,16 @@ use metaconfig_types::RepoConfig;
 use mononoke_types::RepositoryId;
 use repo_factory::RepoFactory;
 use repo_factory::RepoFactoryBuilder;
+use scribe_ext::Scribe;
+use slog::info;
+use slog::warn;
+use slog::Logger;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 
-use crate::helpers::setup_repo_dir;
-use crate::helpers::CreateStorage;
-
+pub use self::app::ArgType;
+pub use self::app::MononokeAppBuilder;
+pub use self::app::MononokeClapApp;
+pub use self::app::RepoRequirement;
 use self::app::CONFIG_PATH;
 use self::app::REPO_ID;
 use self::app::REPO_NAME;
@@ -52,12 +50,10 @@ use self::app::SOURCE_REPO_ID;
 use self::app::SOURCE_REPO_NAME;
 use self::app::TARGET_REPO_ID;
 use self::app::TARGET_REPO_NAME;
-
-pub use self::app::ArgType;
-pub use self::app::MononokeAppBuilder;
-pub use self::app::MononokeClapApp;
-pub use self::app::RepoRequirement;
+pub use self::cache::CachelibSettings;
 pub use self::matches::MononokeMatches;
+use crate::helpers::setup_repo_dir;
+use crate::helpers::CreateStorage;
 
 fn get_repo_id_and_name_from_values<'a>(
     config_store: &ConfigStore,

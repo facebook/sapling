@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
@@ -36,10 +41,6 @@ use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::ManifestUnodeId;
-use std::collections::BTreeMap;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::sync::Arc;
 use tokio::sync::Mutex;
 use tunables::tunables;
 use unodes::RootUnodeManifestId;
@@ -739,7 +740,6 @@ impl<Root: RootDeletedManifestIdCommon> RootDeletedManifestDeriver<Root> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use anyhow::Result;
     use fbinit::FacebookInit;
     use maplit::btreemap;
@@ -748,8 +748,9 @@ mod test {
     use mononoke_types::hash::Blake2;
     use mononoke_types::DeletedManifestV2Id;
     use pretty_assertions::assert_eq;
-
     use PathChange::*;
+
+    use super::*;
     type Id = DeletedManifestV2Id;
 
     fn csid(x: u8) -> ChangesetId {

@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::io::Write;
+use std::sync::Arc;
+
 use anyhow::format_err;
 use anyhow::Error;
 use blobrepo_errors::ErrorKind;
@@ -39,10 +44,6 @@ use mononoke_types::MPath;
 use mononoke_types::RepoPath;
 use mononoke_types::TrackedFileChange;
 use sorted_vector_map::SortedVectorMap;
-use std::collections::BTreeMap;
-use std::collections::HashMap;
-use std::io::Write;
-use std::sync::Arc;
 
 use crate::derive_hg_changeset::store_file_change;
 

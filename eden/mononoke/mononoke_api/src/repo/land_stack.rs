@@ -12,6 +12,7 @@ use std::sync::Arc;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use bookmarks_movement::BookmarkKindRestrictions;
+pub use bookmarks_movement::PushrebaseOutcome;
 use bytes::Bytes;
 use cloned::cloned;
 use futures::compat::Stream01CompatExt;
@@ -27,8 +28,6 @@ use revset::RangeNodeStream;
 
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
-
-pub use bookmarks_movement::PushrebaseOutcome;
 
 impl RepoContext {
     /// Land a stack of commits to a bookmark via pushrebase.

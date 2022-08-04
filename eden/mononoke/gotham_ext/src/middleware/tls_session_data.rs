@@ -5,11 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
-use gotham::state::FromState;
-use gotham::state::State;
-use hyper::Body;
-use hyper::Response;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -17,8 +12,13 @@ use std::path::Path;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use super::Middleware;
+use anyhow::Error;
+use gotham::state::FromState;
+use gotham::state::State;
+use hyper::Body;
+use hyper::Response;
 
+use super::Middleware;
 use crate::socket_data::TlsSessionData;
 
 pub struct TlsSessionDataMiddleware {

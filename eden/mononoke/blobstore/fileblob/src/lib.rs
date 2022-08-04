@@ -16,10 +16,6 @@ use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Result;
 use async_trait::async_trait;
-use percent_encoding::percent_encode;
-use percent_encoding::AsciiSet;
-use percent_encoding::CONTROLS;
-
 use blobstore::Blobstore;
 use blobstore::BlobstoreEnumerationData;
 use blobstore::BlobstoreGetData;
@@ -33,6 +29,9 @@ use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
+use percent_encoding::percent_encode;
+use percent_encoding::AsciiSet;
+use percent_encoding::CONTROLS;
 use tempfile::NamedTempFile;
 use tempfile::PersistError;
 use tokio::fs::hard_link;
@@ -41,7 +40,6 @@ use tokio::fs::File;
 use tokio::io;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
-
 use walkdir::WalkDir;
 
 const PREFIX: &str = "blob";
@@ -283,9 +281,9 @@ impl BlobstoreKeySource for Fileblob {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     use fbinit::FacebookInit;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_persist_error(fb: FacebookInit) -> Result<()> {

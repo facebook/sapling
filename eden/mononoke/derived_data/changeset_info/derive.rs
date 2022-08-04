@@ -17,12 +17,11 @@ use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
+use derived_data_service_if::types as thrift;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 
 use crate::ChangesetInfo;
-
-use derived_data_service_if::types as thrift;
 
 fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
     let root_prefix = "changeset_info.blake2.";
@@ -111,7 +110,8 @@ impl_bonsai_derived_via_manager!(ChangesetInfo);
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::collections::BTreeMap;
+    use std::str::FromStr;
 
     use blobstore::Loadable;
     use derived_data_manager::BatchDeriveOptions;
@@ -124,9 +124,9 @@ mod test {
     use mononoke_types::BonsaiChangeset;
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
-    use std::collections::BTreeMap;
-    use std::str::FromStr;
     use tests_utils::resolve_cs_id;
+
+    use super::*;
 
     #[fbinit::test]
     async fn derive_info_test(fb: FacebookInit) -> Result<(), Error> {

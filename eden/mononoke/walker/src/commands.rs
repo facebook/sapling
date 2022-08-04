@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+
 use crate::detail::graph::EdgeType;
 use crate::detail::graph::NodeType;
 use crate::detail::progress::ProgressStateCountByType;
@@ -13,8 +15,6 @@ use crate::detail::progress::ProgressSummary;
 use crate::detail::state::StepStats;
 use crate::detail::tail::TailParams;
 use crate::detail::walk::RepoWalkParams;
-
-use std::collections::HashSet;
 
 pub const SCRUB: &str = "scrub";
 pub const COMPRESSION_BENEFIT: &str = "compression-benefit";

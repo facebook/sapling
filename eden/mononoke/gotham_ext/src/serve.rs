@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::panic::RefUnwindSafe;
+use std::sync::Arc;
+
 use anyhow::Context as _;
 use anyhow::Error;
 use cloned::cloned;
@@ -17,8 +20,6 @@ use permission_checker::MononokeIdentitySet;
 use quiet_stream::QuietShutdownStream;
 use slog::warn;
 use slog::Logger;
-use std::panic::RefUnwindSafe;
-use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio_openssl::SslStream;
 

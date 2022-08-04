@@ -10,9 +10,10 @@ mod facebook;
 #[cfg(not(fbcode_build))]
 mod oss;
 
+use std::sync::Arc;
+
 use anyhow::Result;
 use async_trait::async_trait;
-use std::sync::Arc;
 
 pub type ArcGlobalTimeWindowCounter = Arc<dyn GlobalTimeWindowCounter + Send + Sync + 'static>;
 pub type BoxGlobalTimeWindowCounter = Box<dyn GlobalTimeWindowCounter + Send + Sync + 'static>;

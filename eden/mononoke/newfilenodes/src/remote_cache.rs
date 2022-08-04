@@ -5,29 +5,29 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::time::Duration;
+use std::time::Instant;
+
 use bytes::Bytes;
 use caching_ext::MemcacheHandler;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
+use filenodes::thrift;
+use filenodes::thrift::MC_CODEVER;
+use filenodes::thrift::MC_SITEVER;
+use filenodes::FilenodeInfo;
 use futures::future::try_join_all;
 use memcache::KeyGen;
 use memcache::MemcacheClient;
 use memcache::MEMCACHE_VALUE_MAX_SIZE;
 use rand::random;
 use stats::prelude::*;
-use std::collections::HashSet;
-use std::time::Duration;
-use std::time::Instant;
 use time_ext::DurationExt;
 
 use crate::local_cache::CacheKey;
 use crate::structs::CachedFilenode;
 use crate::structs::CachedHistory;
-
-use filenodes::thrift;
-use filenodes::thrift::MC_CODEVER;
-use filenodes::thrift::MC_SITEVER;
-use filenodes::FilenodeInfo;
 
 define_stats! {
     prefix = "mononoke.filenodes";
@@ -440,16 +440,17 @@ impl Iterator for PointersIter {
 
 #[cfg(test)]
 pub mod test {
-    use super::*;
+    use std::time::Duration;
+
     use anyhow::Error;
     use mercurial_types_mocks::nodehash::ONES_CSID;
     use mercurial_types_mocks::nodehash::ONES_FNID;
     use mononoke_types::RepoPath;
     use mononoke_types_mocks::repo::REPO_ZERO;
     use path_hash::PathWithHash;
-    use std::time::Duration;
     use tokio::time;
 
+    use super::*;
     use crate::reader::filenode_cache_key;
     use crate::reader::history_cache_key;
 

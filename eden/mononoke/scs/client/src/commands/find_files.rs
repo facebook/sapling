@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::io::Write;
+
 use anyhow::Context;
 use anyhow::Result;
 use clap::Parser;
 use serde::Serialize;
 use source_control::types as thrift;
-use std::io::Write;
 
 use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitIdArgs;

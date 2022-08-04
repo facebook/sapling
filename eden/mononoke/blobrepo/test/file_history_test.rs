@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::str::FromStr;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use blobrepo::BlobRepo;
@@ -19,7 +21,6 @@ use fixtures::TestRepoFixture;
 use manifest::ManifestOps;
 use mercurial_types::HgChangesetId;
 use mononoke_types::MPath;
-use std::str::FromStr;
 use tests_utils::resolve_cs_id;
 
 #[fbinit::test]

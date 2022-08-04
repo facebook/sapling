@@ -189,9 +189,9 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     use futures::stream;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_yield_stream() {

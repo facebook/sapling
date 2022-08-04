@@ -12,8 +12,6 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::str;
 
-use crate::convert::Convert;
-use crate::errors::ConfigurationError;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
@@ -34,6 +32,9 @@ use repos::RawRepoConfig;
 use repos::RawRepoConfigs;
 use repos::RawRepoDefinition;
 use repos::RawStorageConfig;
+
+use crate::convert::Convert;
+use crate::errors::ConfigurationError;
 
 const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
 const HOOK_MAX_FILE_SIZE_DEFAULT: u64 = 8 * 1024 * 1024; // 8MiB
@@ -434,7 +435,12 @@ impl RepoConfigs {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::fs::create_dir_all;
+    use std::fs::write;
+    use std::num::NonZeroUsize;
+    use std::sync::Arc;
+    use std::time::Duration;
+
     use bookmarks_types::BookmarkName;
     use cached_config::TestSource;
     use maplit::btreemap;
@@ -495,12 +501,9 @@ mod test {
     use pretty_assertions::assert_eq;
     use regex::Regex;
     use repos::RawCommitSyncConfig;
-    use std::fs::create_dir_all;
-    use std::fs::write;
-    use std::num::NonZeroUsize;
-    use std::sync::Arc;
-    use std::time::Duration;
     use tempdir::TempDir;
+
+    use super::*;
 
     /// Parse a collection of raw commit sync config into commit sync config and validate it.
     fn parse_commit_sync_config(

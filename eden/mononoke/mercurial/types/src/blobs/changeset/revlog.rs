@@ -5,6 +5,21 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::io;
+use std::io::Write;
+use std::str;
+use std::str::FromStr;
+
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
+use blobstore::Blobstore;
+use bytes::Bytes;
+use context::CoreContext;
+use mononoke_types::DateTime;
+
 use crate::HgBlob;
 use crate::HgBlobNode;
 use crate::HgChangesetEnvelope;
@@ -14,19 +29,6 @@ use crate::HgNodeHash;
 use crate::HgParents;
 use crate::MPath;
 use crate::NULL_HASH;
-use anyhow::bail;
-use anyhow::Context;
-use anyhow::Error;
-use anyhow::Result;
-use blobstore::Blobstore;
-use bytes::Bytes;
-use context::CoreContext;
-use mononoke_types::DateTime;
-use std::collections::BTreeMap;
-use std::io;
-use std::io::Write;
-use std::str;
-use std::str::FromStr;
 
 // The `user` and `comments` fields are expected to be utf8 encoded, but
 // some older commits might be corrupted. We handle them as pure binary here
@@ -468,9 +470,10 @@ pub fn serialize_extras<W: Write>(extras: &Extra, out: &mut W) -> io::Result<()>
 
 #[cfg(test)]
 mod tests {
+    use quickcheck::quickcheck;
+
     use super::*;
     use crate::hash;
-    use quickcheck::quickcheck;
 
     quickcheck! {
         fn escape_roundtrip(input: Vec<u8>) -> bool {

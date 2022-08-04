@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::hash::Hash;
+
 use anyhow::Error;
 use blobstore::StoreLoadable;
 use cloned::cloned;
@@ -17,8 +20,6 @@ use futures::TryFutureExt;
 use futures::TryStreamExt;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
-use std::collections::HashSet;
-use std::hash::Hash;
 
 use crate::Entry;
 use crate::Manifest;
@@ -156,6 +157,11 @@ where
 
 #[cfg(test)]
 mod test {
+    use std::fmt::Debug;
+
+    use fbinit::FacebookInit;
+    use maplit::hashmap;
+
     use super::*;
     use crate::tests::ctx;
     use crate::tests::dir;
@@ -165,9 +171,6 @@ mod test {
     use crate::tests::ManifestStore;
     use crate::tests::TestManifestIdStr;
     use crate::tests::TestManifestStr;
-    use fbinit::FacebookInit;
-    use maplit::hashmap;
-    use std::fmt::Debug;
 
     fn ensure_unordered_eq<T: Debug + Hash + PartialEq + Eq, I: IntoIterator<Item = T>>(
         v1: I,

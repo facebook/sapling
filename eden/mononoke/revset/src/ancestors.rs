@@ -15,7 +15,10 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Error;
+use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use cloned::cloned;
+use context::CoreContext;
 use futures::FutureExt;
 use futures::TryFutureExt;
 use futures_ext::StreamExt;
@@ -25,17 +28,13 @@ use futures_old::stream::Stream;
 use futures_old::Async;
 use futures_old::Poll;
 use maplit::hashset;
-
-use crate::UniqueHeap;
-use changeset_fetcher::ArcChangesetFetcher;
-use changeset_fetcher::ChangesetFetcher;
-use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 
 use crate::errors::*;
 use crate::BonsaiNodeStream;
 use crate::IntersectNodeStream;
+use crate::UniqueHeap;
 
 pub struct AncestorsNodeStream {
     ctx: CoreContext,
@@ -191,15 +190,16 @@ where
 
 #[cfg(test)]
 mod test {
+    use fbinit::FacebookInit;
+    use revset_test_helper::assert_changesets_sequence;
+    use revset_test_helper::string_to_bonsai;
+
     use super::*;
     use crate::fixtures::Linear;
     use crate::fixtures::MergeUneven;
     use crate::fixtures::TestRepoFixture;
     use crate::fixtures::UnsharedMergeUneven;
     use crate::tests::TestChangesetFetcher;
-    use fbinit::FacebookInit;
-    use revset_test_helper::assert_changesets_sequence;
-    use revset_test_helper::string_to_bonsai;
 
     #[fbinit::test]
     async fn linear_ancestors(fb: FacebookInit) {

@@ -5,6 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::fmt;
+use std::fmt::Debug;
+use std::fmt::Display;
+use std::mem;
+use std::str::FromStr;
+
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
@@ -17,12 +24,6 @@ use quickcheck::Arbitrary;
 use quickcheck::Gen;
 use serde::Deserialize;
 use serde::Serialize;
-use std::collections::HashMap;
-use std::fmt;
-use std::fmt::Debug;
-use std::fmt::Display;
-use std::mem;
-use std::str::FromStr;
 
 use crate::str_serialized;
 
@@ -329,12 +330,12 @@ impl Arbitrary for ResponseError {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     use assert_matches::assert_matches;
     use maplit::hashmap;
     use quickcheck::quickcheck;
     use serde_json::json;
+
+    use super::*;
 
     const ONES_SHA256: &str = "1111111111111111111111111111111111111111111111111111111111111111";
 

@@ -5,18 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use super::canonical;
-use super::chunk;
-use super::request;
-use crate as filestore;
-use crate::errors;
-use crate::Alias;
-use crate::FetchKey;
-use crate::FilestoreConfig;
-use crate::StoreRequest;
-
-use super::failing_blobstore::FailingBlobstore;
-use super::failing_blobstore::FailingBlobstoreError;
 use anyhow::Error;
 use anyhow::Result;
 use assert_matches::assert_matches;
@@ -38,6 +26,18 @@ use mononoke_types::ContentId;
 use mononoke_types::ContentMetadata;
 use mononoke_types::ContentMetadataId;
 use mononoke_types_mocks::contentid::ONES_CTID;
+
+use super::canonical;
+use super::chunk;
+use super::failing_blobstore::FailingBlobstore;
+use super::failing_blobstore::FailingBlobstoreError;
+use super::request;
+use crate as filestore;
+use crate::errors;
+use crate::Alias;
+use crate::FetchKey;
+use crate::FilestoreConfig;
+use crate::StoreRequest;
 
 const HELLO_WORLD: &[u8] = b"hello, world";
 const HELLO_WORLD_LENGTH: u64 = 12;

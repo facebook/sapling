@@ -5,13 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use super::Repo;
+use std::time::Duration;
+
 use anyhow::Result;
 use clap::Args;
 use context::CoreContext;
 use futures::future::try_join_all;
 use futures::TryFutureExt;
-use std::time::Duration;
+
+use super::Repo;
 
 // By default, at most 50 expired bubbles will be cleaned up in one go.
 const DEFAULT_MAX_BUBBLES_FOR_CLEANUP: u32 = 50;

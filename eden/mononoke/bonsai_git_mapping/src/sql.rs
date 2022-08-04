@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::collections::HashSet;
+
 use ::sql::queries;
 use ::sql::Connection;
 use ::sql::Transaction;
@@ -20,8 +23,6 @@ use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
-use std::collections::BTreeMap;
-use std::collections::HashSet;
 
 use crate::errors::AddGitMappingErrorKind;
 use crate::BonsaiGitMapping;

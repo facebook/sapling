@@ -5,9 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use super::IsWarmFn;
-use super::Warmer;
-use super::WarmerFn;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::BonsaiDerivable;
@@ -18,6 +15,10 @@ use phases::ArcPhases;
 use repo_derived_data::ArcRepoDerivedData;
 use slog::info;
 use slog::o;
+
+use super::IsWarmFn;
+use super::Warmer;
+use super::WarmerFn;
 
 pub fn create_derived_data_warmer<Derivable>(
     ctx: &CoreContext,

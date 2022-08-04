@@ -8,6 +8,16 @@
 #![type_length_limit = "15000000"]
 #![feature(map_first_last)]
 
+use std::collections::BTreeSet;
+use std::collections::HashSet;
+use std::fs;
+use std::path::Path;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::Duration;
+use std::time::Instant;
+
 use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Context;
@@ -71,15 +81,6 @@ use skiplist::SkiplistIndex;
 use slog::info;
 use slog::Logger;
 use stats::prelude::*;
-use std::collections::BTreeSet;
-use std::collections::HashSet;
-use std::fs;
-use std::path::Path;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::time::Duration;
-use std::time::Instant;
 use time_ext::DurationExt;
 use topo_sort::sort_topological;
 use tunables::tunables;
@@ -1591,7 +1592,10 @@ async fn subcommand_single(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::str::FromStr;
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering;
+
     use async_trait::async_trait;
     use blobstore::Blobstore;
     use blobstore::BlobstoreBytes;
@@ -1601,11 +1605,10 @@ mod tests {
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
     use mercurial_types::HgChangesetId;
-    use std::str::FromStr;
-    use std::sync::atomic::AtomicUsize;
-    use std::sync::atomic::Ordering;
     use tests_utils::resolve_cs_id;
     use unodes::RootUnodeManifestId;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_tail_one_iteration(fb: FacebookInit) -> Result<()> {

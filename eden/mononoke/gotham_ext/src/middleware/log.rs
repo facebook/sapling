@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+use std::fmt::Debug;
+use std::fmt::Display;
+use std::time::Duration;
+
 use gotham::state::FromState;
 use gotham::state::State;
 use hyper::Body;
@@ -16,10 +21,6 @@ use hyper::Version;
 use slog::info;
 use slog::o;
 use slog::Logger;
-use std::fmt;
-use std::fmt::Debug;
-use std::fmt::Display;
-use std::time::Duration;
 use time_ext::DurationExt;
 
 use super::ClientIdentity;

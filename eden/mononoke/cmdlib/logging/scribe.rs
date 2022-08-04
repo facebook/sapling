@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::path::PathBuf;
+
 use anyhow::Result;
 use clap::Args;
 use fbinit::FacebookInit;
 use scribe_ext::Scribe;
-use std::path::PathBuf;
 
 /// Command line argument that affect scribe logging
 #[derive(Args, Debug)]

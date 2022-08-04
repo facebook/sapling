@@ -871,8 +871,6 @@ impl HgRepoContext {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::collections::BTreeSet;
     use std::sync::Arc;
 
@@ -883,6 +881,7 @@ mod tests {
     use mononoke_types::ChangesetId;
     use tests_utils::CreateCommitContext;
 
+    use super::*;
     use crate::RepoContextHgExt;
 
     #[fbinit::test]

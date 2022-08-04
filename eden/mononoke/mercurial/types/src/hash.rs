@@ -301,9 +301,10 @@ impl Context {
 
 #[cfg(test)]
 mod test {
+    use std::str::FromStr;
+
     use quickcheck::quickcheck;
     use quickcheck::TestResult;
-    use std::str::FromStr;
 
     use super::*;
 

@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Context;
-use anyhow::Result;
 use std::sync::Arc;
 
+use anyhow::Context;
+use anyhow::Result;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use cacheblob::LeaseOps;
 use changesets::Changesets;

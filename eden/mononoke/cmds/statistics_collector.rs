@@ -5,6 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::fs;
+use std::ops::Add;
+use std::ops::Sub;
+use std::path::Path;
+use std::sync::Arc;
+use std::time::Duration;
+
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
@@ -45,13 +53,6 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use slog::info;
 use slog::Logger;
 use stats::prelude::*;
-use std::collections::HashMap;
-use std::fs;
-use std::ops::Add;
-use std::ops::Sub;
-use std::path::Path;
-use std::sync::Arc;
-use std::time::Duration;
 use tokio::time::sleep;
 
 define_stats! {
@@ -561,7 +562,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::str::FromStr;
+
     use borrowed::borrowed;
     use bytes::Bytes;
     use fixtures::Linear;
@@ -569,10 +571,11 @@ mod tests {
     use futures::future;
     use futures::stream;
     use maplit::btreemap;
-    use std::str::FromStr;
     use tests_utils::create_commit;
     use tests_utils::store_files;
     use tokio::runtime::Runtime;
+
+    use super::*;
 
     #[test]
     fn test_number_of_lines_empty_stream() -> Result<(), Error> {

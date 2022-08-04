@@ -6,7 +6,10 @@
  */
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt;
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::sync::Arc;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
@@ -117,9 +120,6 @@ use slog::error;
 use sql_construct::SqlConstruct;
 use sql_ext::facebook::MysqlOptions;
 use stats::prelude::*;
-use std::collections::HashSet;
-use std::hash::Hash;
-use std::hash::Hasher;
 use streaming_clone::StreamingClone;
 use streaming_clone::StreamingCloneBuilder;
 use synced_commit_mapping::SqlSyncedCommitMapping;
@@ -1639,11 +1639,13 @@ impl RepoContext {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::str::FromStr;
+
     use fixtures::Linear;
     use fixtures::MergeEven;
     use fixtures::TestRepoFixture;
-    use std::str::FromStr;
+
+    use super::*;
 
     #[fbinit::test]
     async fn test_try_find_child(fb: FacebookInit) -> Result<(), Error> {

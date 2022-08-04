@@ -5,12 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::common::find_target_bookmark_and_value;
-use crate::common::find_target_sync_config;
-use crate::common::MegarepoOp;
+use core::cmp::Ordering;
+use std::collections::BTreeMap;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use context::CoreContext;
-use core::cmp::Ordering;
 use derived_data_utils::derived_data_utils;
 use futures::future;
 use futures::stream::FuturesUnordered;
@@ -29,8 +29,10 @@ use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use mutable_renames::MutableRenames;
-use std::collections::BTreeMap;
-use std::sync::Arc;
+
+use crate::common::find_target_bookmark_and_value;
+use crate::common::find_target_sync_config;
+use crate::common::MegarepoOp;
 
 /// Structure representing changes needed to be applied onto target to change its
 /// config.
@@ -396,8 +398,6 @@ impl<'a> ChangeTargetConfig<'a> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::megarepo_test_utils::SyncTargetConfigBuilder;
     use anyhow::Error;
     use maplit::btreemap;
     use megarepo_config::Target;
@@ -405,6 +405,9 @@ mod test {
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
+
+    use super::*;
+    use crate::megarepo_test_utils::SyncTargetConfigBuilder;
 
     fn source_names(sources: &[(Source, ChangesetId)]) -> Vec<String> {
         sources

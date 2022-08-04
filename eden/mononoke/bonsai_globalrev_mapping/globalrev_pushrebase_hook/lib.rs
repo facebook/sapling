@@ -5,9 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use async_trait::async_trait;
+use bonsai_globalrev_mapping::add_globalrevs;
+use bonsai_globalrev_mapping::AddGlobalrevsErrorKind;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
 use bookmarks::BookmarkTransactionError;
 use context::CoreContext;
 use mononoke_types::globalrev::Globalrev;
@@ -21,13 +28,6 @@ use pushrebase_hook::PushrebaseHook;
 use pushrebase_hook::PushrebaseTransactionHook;
 use pushrebase_hook::RebasedChangesets;
 use sql::Transaction;
-use std::collections::HashMap;
-use std::sync::Arc;
-
-use bonsai_globalrev_mapping::add_globalrevs;
-use bonsai_globalrev_mapping::AddGlobalrevsErrorKind;
-use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
-use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
 
 #[cfg(test)]
 mod test;

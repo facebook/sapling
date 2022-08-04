@@ -18,7 +18,6 @@ use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use bytes_old::BufMut;
 use bytes_old::BytesMut;
-
 use mercurial_types::Delta;
 use mercurial_types::HgNodeHash;
 use mercurial_types::RepoPath;
@@ -370,13 +369,12 @@ impl DataEntry {
 mod test {
     use itertools::iproduct;
     use maplit::hashset;
-    use quickcheck::quickcheck;
-    use quickcheck::Arbitrary;
-    use quickcheck::Gen;
-
     use mercurial_types::delta::Fragment;
     use mercurial_types_mocks::nodehash::AS_HASH;
     use mercurial_types_mocks::nodehash::BS_HASH;
+    use quickcheck::quickcheck;
+    use quickcheck::Arbitrary;
+    use quickcheck::Gen;
 
     use super::*;
 

@@ -7,7 +7,10 @@
 
 use anyhow::format_err;
 use anyhow::Error;
+use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
 use bookmarks::Freshness;
 use clap_old::App;
 use clap_old::Arg;
@@ -24,10 +27,6 @@ use serde_json::json;
 use serde_json::to_string_pretty;
 use slog::info;
 use slog::Logger;
-
-use blobrepo::BlobRepo;
-use bookmarks::BookmarkName;
-use bookmarks::BookmarkUpdateReason;
 
 use crate::common::fetch_bonsai_changeset;
 use crate::common::format_bookmark_log_entry;

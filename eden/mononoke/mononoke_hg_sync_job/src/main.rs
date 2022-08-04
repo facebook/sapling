@@ -8,6 +8,13 @@
 #![feature(auto_traits)]
 #![feature(async_closure)]
 
+use std::collections::HashMap;
+use std::path::Path;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::Duration;
+
 /// Mononoke -> hg sync job
 ///
 /// It's a special job that is used to synchronize Mononoke to Mercurial when Mononoke is a source
@@ -87,13 +94,6 @@ use skiplist::SkiplistIndex;
 use slog::error;
 use slog::info;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-
-use std::collections::HashMap;
-use std::path::Path;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::time::Duration;
 use tempfile::NamedTempFile;
 
 mod bundle_generator;

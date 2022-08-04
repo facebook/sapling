@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::sync::SyncResult;
 use anyhow::Error;
 use context::CoreContext;
 use cross_repo_sync::CommitSyncer;
@@ -17,6 +16,8 @@ use slog::info;
 use slog::warn;
 use slog::Logger;
 use synced_commit_mapping::SyncedCommitMapping;
+
+use crate::sync::SyncResult;
 
 pub const SCUBA_TABLE: &str = "mononoke_x_repo_sync";
 

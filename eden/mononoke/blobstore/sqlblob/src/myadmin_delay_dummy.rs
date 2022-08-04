@@ -8,7 +8,6 @@
 use std::num::NonZeroUsize;
 
 use anyhow::Result;
-
 use fbinit::FacebookInit;
 
 use crate::delay::BlobDelay;

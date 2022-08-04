@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::pin::Pin;
+
 use fbinit::FacebookInit;
 use futures::FutureExt;
 use gotham::handler::HandlerFuture;
@@ -23,16 +25,14 @@ use gotham_ext::response::build_response;
 use hyper::Body;
 use hyper::Response;
 use hyper::StatusCode;
-use std::pin::Pin;
 
+use super::error_formatter::LfsErrorFormatter;
+use super::middleware::ThrottleMiddleware;
 use crate::batch;
 use crate::download;
 use crate::git_upload;
 use crate::lfs_server_context::LfsServerContext;
 use crate::upload;
-
-use super::error_formatter::LfsErrorFormatter;
-use super::middleware::ThrottleMiddleware;
 
 // These 3 methods are wrappers to go from async fn's to the implementations Gotham expects,
 // as well as creating HTTP responses using build_response().

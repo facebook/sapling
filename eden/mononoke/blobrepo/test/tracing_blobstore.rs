@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
@@ -12,8 +15,6 @@ use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 #[derive(Debug)]
 pub struct TracingBlobstore<T> {

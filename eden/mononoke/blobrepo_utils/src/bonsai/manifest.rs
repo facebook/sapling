@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::changeset::visit_changesets;
-use crate::changeset::ChangesetVisitMeta;
-use crate::changeset::ChangesetVisitor;
+use std::collections::HashSet;
+use std::fmt;
+use std::sync::Arc;
+
 use anyhow::bail;
 use anyhow::Error;
 use blobrepo::BlobRepo;
@@ -45,9 +46,10 @@ use mononoke_types::DateTime;
 use mononoke_types::FileType;
 use slog::debug;
 use slog::Logger;
-use std::collections::HashSet;
-use std::fmt;
-use std::sync::Arc;
+
+use crate::changeset::visit_changesets;
+use crate::changeset::ChangesetVisitMeta;
+use crate::changeset::ChangesetVisitor;
 
 #[derive(Clone, Debug)]
 pub enum BonsaiMFVerifyResult {

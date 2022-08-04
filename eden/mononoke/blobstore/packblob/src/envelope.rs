@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::pack;
+use std::mem::size_of;
 
 use anyhow::format_err;
 use anyhow::Context;
@@ -22,7 +22,8 @@ use fbthrift::serialize::Serialize as ThriftSerialize;
 use mononoke_types::BlobstoreBytes;
 use packblob_thrift::StorageEnvelope;
 use packblob_thrift::StorageFormat;
-use std::mem::size_of;
+
+use crate::pack;
 
 enum HeaderType {
     PackBlobCompactFormat,

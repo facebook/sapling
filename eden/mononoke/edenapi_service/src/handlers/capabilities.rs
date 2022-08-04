@@ -10,11 +10,11 @@ use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
-use serde::Deserialize;
-
 use gotham_ext::error::HttpError;
 use gotham_ext::response::BytesBody;
 use mononoke_api::MononokeError;
+use mononoke_api_hg::HgRepoContext;
+use serde::Deserialize;
 
 use crate::context::ServerContext;
 use crate::errors::MononokeErrorExt;
@@ -22,7 +22,6 @@ use crate::handlers::EdenApiMethod;
 use crate::handlers::HandlerInfo;
 use crate::middleware::RequestContext;
 use crate::utils::get_repo;
-use mononoke_api_hg::HgRepoContext;
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct CapabilitiesParams {

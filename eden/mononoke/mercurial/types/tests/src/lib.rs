@@ -7,6 +7,10 @@
 
 #![feature(never_type)]
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::str::FromStr;
+
 use anyhow::Error;
 use bytes::Bytes;
 use bytes::BytesMut;
@@ -31,9 +35,6 @@ use mononoke_types::hash::Sha256;
 use mononoke_types_mocks::contentid::ONES_CTID;
 use mononoke_types_mocks::contentid::TWOS_CTID;
 use quickcheck::quickcheck;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::str::FromStr;
 
 #[test]
 fn nodehash_option() {

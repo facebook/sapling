@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::error::SubcommandError;
-
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use clap_old::App;
@@ -19,16 +17,17 @@ use cmdlib::helpers;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
+use fsnodes::RootFsnodeId;
 use futures::stream::StreamExt;
 use manifest::Entry;
 use manifest::ManifestOps;
 use manifest::PathOrPrefix;
-
-use fsnodes::RootFsnodeId;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use slog::info;
 use slog::Logger;
+
+use crate::error::SubcommandError;
 
 pub const FSNODES: &str = "fsnodes";
 const COMMAND_TREE: &str = "tree";

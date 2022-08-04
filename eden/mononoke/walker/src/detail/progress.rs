@@ -5,10 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use crate::detail::graph::Node;
-use crate::detail::graph::NodeType;
-use crate::detail::log;
-use crate::detail::state::StepStats;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::ops::Add;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::time::Duration;
+use std::time::Instant;
+
 use anyhow::Error;
 use context::CoreContext;
 use derive_more::Add;
@@ -23,13 +27,11 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use slog::info;
 use slog::Logger;
 use stats::prelude::*;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::ops::Add;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::time::Duration;
-use std::time::Instant;
+
+use crate::detail::graph::Node;
+use crate::detail::graph::NodeType;
+use crate::detail::log;
+use crate::detail::state::StepStats;
 
 define_stats! {
     prefix = "mononoke.walker";

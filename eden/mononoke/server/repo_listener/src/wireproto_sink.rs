@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::pin::Pin;
+
 use chrono::DateTime;
 use chrono::Utc;
 use futures::sink::Sink;
@@ -13,7 +15,6 @@ use futures::task::Poll;
 use pin_project::pin_project;
 use sshrelay::IoStream;
 use sshrelay::SshMsg;
-use std::pin::Pin;
 
 #[pin_project]
 pub struct WireprotoSink<T> {

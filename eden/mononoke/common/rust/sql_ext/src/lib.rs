@@ -10,10 +10,9 @@ mod oss;
 pub mod replication;
 mod sqlite;
 
-use sql::Transaction;
-
 pub use sql::SqlConnections;
 pub use sql::SqlShardedConnections;
+use sql::Transaction;
 pub use sqlite::open_existing_sqlite_path;
 pub use sqlite::open_sqlite_in_memory;
 pub use sqlite::open_sqlite_path;

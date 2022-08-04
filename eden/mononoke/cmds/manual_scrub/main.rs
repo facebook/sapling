@@ -5,31 +5,31 @@
  * GNU General Public License version 2.
  */
 
+use std::ffi::OsStr;
+
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_compression::tokio::write::ZstdEncoder;
 use async_compression::Level;
+use blobstore_factory::make_blobstore;
+use blobstore_factory::ScrubAction;
+use blobstore_factory::ScrubWriteMostly;
 use clap_old::Arg;
+use cmdlib::args;
+use cmdlib::args::ArgType;
+use context::CoreContext;
 use futures::channel::mpsc;
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use slog::info;
-use std::ffi::OsStr;
 use tokio::fs::File;
 use tokio::io::stdin;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 use tokio::io::BufReader;
-
-use blobstore_factory::make_blobstore;
-use blobstore_factory::ScrubAction;
-use blobstore_factory::ScrubWriteMostly;
-use cmdlib::args;
-use cmdlib::args::ArgType;
-use context::CoreContext;
 
 mod checkpoint;
 mod progress;

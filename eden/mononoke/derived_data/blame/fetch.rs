@@ -14,7 +14,6 @@ use blobstore::Blobstore;
 use blobstore::Loadable;
 use bytes::Bytes;
 use context::CoreContext;
-
 use filestore::FetchKey;
 use futures::TryStreamExt;
 use mononoke_types::blame::BlameRejected;

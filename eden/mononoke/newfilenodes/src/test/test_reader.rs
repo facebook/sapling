@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::format_err;
 use anyhow::Error;
 use context::CoreContext;
@@ -28,18 +30,16 @@ use mononoke_types_mocks::repo::REPO_ONE;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use sql::queries;
 use sql::Connection;
-use std::sync::Arc;
 use tunables::with_tunables;
 use tunables::MononokeTunables;
 
+use super::util::build_reader_writer;
+use super::util::build_shard;
 use crate::builder::SQLITE_INSERT_CHUNK_SIZE;
 use crate::local_cache::test::HashMapCache;
 use crate::local_cache::LocalCache;
 use crate::reader::FilenodesReader;
 use crate::writer::FilenodesWriter;
-
-use super::util::build_reader_writer;
-use super::util::build_shard;
 
 async fn check_roundtrip(
     ctx: &CoreContext,
@@ -469,8 +469,9 @@ async fn assert_all_filenodes(
 macro_rules! filenodes_tests {
     ($test_suite_name:ident, $create_db:ident, $enable_caching:ident) => {
         mod $test_suite_name {
-            use super::*;
             use fbinit::FacebookInit;
+
+            use super::*;
 
             #[fbinit::test]
             async fn test_simple_filenode_insert_and_get(fb: FacebookInit) -> Result<(), Error> {

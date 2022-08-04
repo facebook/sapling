@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::num::NonZeroU64;
+use std::num::NonZeroUsize;
+use std::sync::Arc;
+use std::time::Duration;
+
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
@@ -54,10 +59,6 @@ use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use sqlblob::CountedSqlblob;
 use sqlblob::Sqlblob;
-use std::num::NonZeroU64;
-use std::num::NonZeroUsize;
-use std::sync::Arc;
-use std::time::Duration;
 use throttledblob::ThrottleOptions;
 use throttledblob::ThrottledBlob;
 

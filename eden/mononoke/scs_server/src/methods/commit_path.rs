@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Cow;
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
+
 use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
@@ -19,10 +24,6 @@ use mononoke_api::MononokeError;
 use mononoke_api::MononokePath;
 use mononoke_api::PathEntry;
 use source_control as thrift;
-use std::borrow::Cow;
-use std::collections::BTreeMap;
-use std::collections::HashMap;
-use std::collections::HashSet;
 
 use crate::commit_id::map_commit_identities;
 use crate::commit_id::map_commit_identity;

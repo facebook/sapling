@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::str;
+
 use anyhow::Error;
 use bytes::Bytes;
 use bytes::BytesMut;
@@ -17,7 +19,6 @@ use futures::stream::TryFold;
 use futures::stream::TryStreamExt;
 use http::header::HeaderMap;
 use http::header::CONTENT_LENGTH;
-use std::str;
 
 type BodyFuture<S, E> = MapOk<
     TryFold<
@@ -69,8 +70,9 @@ impl<S, E> BodyExt<E> for S where S: Stream<Item = Result<Bytes, E>> {}
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use futures::stream;
+
+    use super::*;
 
     fn make_stream() -> impl Stream<Item = Result<Bytes, Error>> {
         stream::iter(vec![

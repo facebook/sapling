@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::BonsaiNodeStream;
+use std::any::Any;
+use std::collections::HashMap;
+
 use anyhow::format_err;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -17,8 +19,8 @@ use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use revset_test_helper::single_changeset_id;
 use revset_test_helper::string_to_bonsai;
-use std::any::Any;
-use std::collections::HashMap;
+
+use crate::BonsaiNodeStream;
 
 pub struct TestChangesetFetcher {
     repo: BlobRepo,

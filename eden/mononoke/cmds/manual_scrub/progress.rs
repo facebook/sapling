@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+use std::time::Instant;
+
 use anyhow::Error;
 use derive_more::Add;
 use derive_more::Sub;
 use slog::info;
 use slog::Logger;
-use std::fmt;
-use std::time::Instant;
 
 #[derive(Add, Sub, Clone, Copy, Default, Debug)]
 pub struct Progress {

@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -15,9 +19,6 @@ use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::SmallRepoCommitSyncConfig;
 use mononoke_types::RepositoryId;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::sync::Arc;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -347,9 +348,10 @@ pub fn get_movers(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use maplit::hashmap;
     use metaconfig_types::CommitSyncConfigVersion;
+
+    use super::*;
 
     fn mp(s: &'static str) -> MPath {
         MPath::new(s).unwrap()

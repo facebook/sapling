@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::str::FromStr;
+
 use anyhow::Context;
 use anyhow::Error;
 use bytes::Bytes;
@@ -28,7 +30,6 @@ use mononoke_types::hash::RichGitSha1;
 use repo_blobstore::RepoBlobstoreRef;
 use serde::Deserialize;
 use stats::prelude::*;
-use std::str::FromStr;
 
 use crate::errors::ErrorKind;
 use crate::lfs_server_context::RepositoryRequestContext;

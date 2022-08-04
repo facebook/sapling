@@ -5,14 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use crate::detail::graph::NodeType;
-use crate::detail::validate::REPO;
+use std::collections::HashSet;
 
 use blobstore::SizeMetadata;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::Timestamp;
 use scuba_ext::MononokeScubaSampleBuilder;
-use std::collections::HashSet;
+
+use crate::detail::graph::NodeType;
+use crate::detail::validate::REPO;
 
 const RUN_START: &str = "run_start";
 const CHUNK_NUM: &str = "chunk_num";

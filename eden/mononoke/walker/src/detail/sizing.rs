@@ -5,6 +5,40 @@
  * GNU General Public License version 2.
  */
 
+use std::cmp::min;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt;
+use std::io::Cursor;
+use std::io::Write;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
+use std::time::Duration;
+
+use anyhow::Error;
+use async_compression::metered::MeteredWrite;
+use async_compression::Compressor;
+use async_compression::CompressorType;
+use blobstore::BlobstoreGetData;
+use bytes::Bytes;
+use cloned::cloned;
+use context::CoreContext;
+use derive_more::Add;
+use derive_more::Div;
+use derive_more::Mul;
+use derive_more::Sub;
+use fbinit::FacebookInit;
+use futures::future;
+use futures::future::try_join_all;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::stream::Stream;
+use futures::stream::TryStreamExt;
+use maplit::hashset;
+use mononoke_types::BlobstoreBytes;
+use samplingblob::SamplingHandler;
+use slog::info;
+
 use crate::commands::JobParams;
 use crate::commands::JobWalkParams;
 use crate::commands::RepoSubcommandParams;
@@ -30,39 +64,6 @@ use crate::detail::sampling::WalkSampleMapping;
 use crate::detail::tail::walk_exact_tail;
 use crate::detail::walk::RepoWalkParams;
 use crate::detail::walk::RepoWalkTypeParams;
-
-use anyhow::Error;
-use async_compression::metered::MeteredWrite;
-use async_compression::Compressor;
-use async_compression::CompressorType;
-use blobstore::BlobstoreGetData;
-use bytes::Bytes;
-use cloned::cloned;
-use context::CoreContext;
-use derive_more::Add;
-use derive_more::Div;
-use derive_more::Mul;
-use derive_more::Sub;
-use fbinit::FacebookInit;
-use futures::future;
-use futures::future::try_join_all;
-use futures::future::FutureExt;
-use futures::future::TryFutureExt;
-use futures::stream::Stream;
-use futures::stream::TryStreamExt;
-use maplit::hashset;
-use mononoke_types::BlobstoreBytes;
-use samplingblob::SamplingHandler;
-use slog::info;
-use std::cmp::min;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::fmt;
-use std::io::Cursor;
-use std::io::Write;
-use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
-use std::time::Duration;
 
 #[derive(Add, Div, Mul, Sub, Clone, Copy, Default, Debug)]
 struct SizingStats {

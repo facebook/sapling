@@ -8,6 +8,9 @@
 #![feature(backtrace)]
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
 
+use std::path::Path;
+use std::path::PathBuf;
+
 use async_trait::async_trait;
 use clap::Args;
 use context::CoreContext;
@@ -21,8 +24,6 @@ pub use megarepo_configs::types::SyncTargetConfig;
 pub use megarepo_configs::types::Target;
 pub use megarepo_configs::types::WithExtraMoveCommit;
 use megarepo_error::MegarepoError;
-use std::path::Path;
-use std::path::PathBuf;
 #[cfg(fbcode_build)]
 mod facebook;
 #[cfg(not(fbcode_build))]
@@ -30,13 +31,12 @@ mod oss;
 mod test_impl;
 mod verification;
 
-pub use verification::verify_config;
-
 #[cfg(fbcode_build)]
 pub use facebook::CfgrMononokeMegarepoConfigs;
 #[cfg(not(fbcode_build))]
 pub use oss::CfgrMononokeMegarepoConfigs;
 pub use test_impl::TestMononokeMegarepoConfigs;
+pub use verification::verify_config;
 
 /// Options for instantiating MononokeMegarepoConfigs
 #[derive(Clone, PartialEq, Eq)]

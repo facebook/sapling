@@ -223,7 +223,6 @@ pub(crate) async fn populate_git_mapping_txn_hook(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use anyhow::Result;
     use blobrepo::AsBlobRepo;
     use blobrepo::BlobRepo;
@@ -249,6 +248,8 @@ mod tests {
     use tests_utils::drawdag::changes;
     use tests_utils::drawdag::create_from_dag_with_changes;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
 
     fn add_git_extras(
         context: CreateCommitContext<BlobRepo>,

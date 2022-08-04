@@ -34,7 +34,6 @@ pub use facebook::get_region_capacity;
 pub use oss::create_rate_limiter;
 #[cfg(not(fbcode_build))]
 pub use oss::get_region_capacity;
-
 pub use rate_limiting_config::RateLimitStatus;
 
 pub mod config;

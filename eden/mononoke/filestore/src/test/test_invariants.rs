@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
@@ -18,9 +21,9 @@ use futures::future::TryFutureExt;
 use futures::stream;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
-use std::collections::HashSet;
-use std::sync::Arc;
 
+use super::failing_blobstore::FailingBlobstore;
+use super::request;
 use crate as filestore;
 use crate::incremental_hash::hash_bytes;
 use crate::incremental_hash::ContentIdIncrementalHasher;
@@ -30,9 +33,6 @@ use crate::incremental_hash::Sha256IncrementalHasher;
 use crate::Alias;
 use crate::FetchKey;
 use crate::FilestoreConfig;
-
-use super::failing_blobstore::FailingBlobstore;
-use super::request;
 
 /// Fetching through any alias should return the same outcome.
 async fn check_consistency<B: Blobstore>(

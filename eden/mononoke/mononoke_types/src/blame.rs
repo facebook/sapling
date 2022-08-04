@@ -5,12 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::thrift;
-use crate::typed_hash::BlobstoreKey;
-use crate::typed_hash::FileUnodeId;
-use crate::typed_hash::MononokeId;
-use crate::ChangesetId;
-use crate::MPath;
+use std::collections::HashMap;
+use std::collections::VecDeque;
+use std::str::FromStr;
+
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Error;
@@ -22,12 +20,16 @@ use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use std::collections::HashMap;
-use std::collections::VecDeque;
-use std::str::FromStr;
 use thiserror::Error;
 use xdiff::diff_hunks;
 use xdiff::Hunk;
+
+use crate::thrift;
+use crate::typed_hash::BlobstoreKey;
+use crate::typed_hash::FileUnodeId;
+use crate::typed_hash::MononokeId;
+use crate::ChangesetId;
+use crate::MPath;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct BlameId(FileUnodeId);

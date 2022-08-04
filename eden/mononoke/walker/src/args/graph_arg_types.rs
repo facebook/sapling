@@ -5,8 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::detail::graph::EdgeType;
-use crate::detail::graph::NodeType;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::hash::Hash;
+use std::str::FromStr;
+
 use anyhow::format_err;
 use anyhow::Context as _;
 use anyhow::Error;
@@ -14,11 +17,10 @@ use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::derivable::BonsaiDerivable;
 use mercurial_derived_data::MappedHgChangesetId;
 use once_cell::sync::Lazy;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::hash::Hash;
-use std::str::FromStr;
 use strum::IntoEnumIterator;
+
+use crate::detail::graph::EdgeType;
+use crate::detail::graph::NodeType;
 
 const ALL: &str = "all";
 const BONSAI: &str = "bonsai";

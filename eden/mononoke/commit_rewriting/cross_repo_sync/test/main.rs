@@ -7,33 +7,38 @@
 
 //! Tests for the synced commits mapping.
 
-use anyhow::anyhow;
-use anyhow::Error;
-use ascii::AsciiString;
-use assert_matches::assert_matches;
-use bytes::Bytes;
-use fbinit::FacebookInit;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use anyhow::anyhow;
+use anyhow::Error;
+use ascii::AsciiString;
+use assert_matches::assert_matches;
 use blobrepo::save_bonsai_changesets;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use blobstore::Storable;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
+use bytes::Bytes;
 use cacheblob::InProcessLease;
 use cloned::cloned;
 use context::CoreContext;
+use cross_repo_sync::types::Target;
 use cross_repo_sync::update_mapping_with_version;
 use cross_repo_sync::validation::verify_working_copy;
+use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncDataProvider;
 use cross_repo_sync::CommitSyncOutcome;
+use cross_repo_sync::CommitSyncRepos;
+use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::ErrorKind;
+use cross_repo_sync::PluralCommitSyncOutcome;
 use cross_repo_sync_test_utils::rebase_root_on_master;
+use fbinit::FacebookInit;
 use fixtures::Linear;
 use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
@@ -67,6 +72,7 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use skiplist::SkiplistIndex;
 use sorted_vector_map::sorted_vector_map;
 use sorted_vector_map::SortedVectorMap;
+use sql::rusqlite::Connection as SqliteConnection;
 use sql_construct::SqlConstruct;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
@@ -77,13 +83,6 @@ use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
 use tunables::with_tunables_async;
 use tunables::MononokeTunables;
-
-use cross_repo_sync::types::Target;
-use cross_repo_sync::CandidateSelectionHint;
-use cross_repo_sync::CommitSyncRepos;
-use cross_repo_sync::CommitSyncer;
-use cross_repo_sync::PluralCommitSyncOutcome;
-use sql::rusqlite::Connection as SqliteConnection;
 
 fn mpath(p: &str) -> MPath {
     MPath::new(p).unwrap()

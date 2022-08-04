@@ -63,7 +63,6 @@ pub mod remotefilelog;
 pub mod sql_types;
 pub mod utils;
 
-pub use self::manifest::Type;
 pub use blob::HgBlob;
 pub use blobnode::calculate_hg_node_id;
 pub use blobnode::calculate_hg_node_id_stream;
@@ -81,13 +80,13 @@ pub use envelope::HgFileEnvelopeMut;
 pub use envelope::HgManifestEnvelope;
 pub use envelope::HgManifestEnvelopeMut;
 pub use errors::ErrorKind;
+// Re-exports from mononoke_types. Eventually these should go away and everything should depend
+// directly on mononoke_types;
+pub use file::FileBytes;
 pub use flags::parse_rev_flags;
 pub use flags::RevFlags;
 pub use fsencode::fncache_fsencode;
 pub use fsencode::simple_fsencode;
-// Re-exports from mononoke_types. Eventually these should go away and everything should depend
-// directly on mononoke_types;
-pub use file::FileBytes;
 pub use mononoke_types::FileType;
 pub use mononoke_types::Globalrev;
 pub use mononoke_types::MPath;
@@ -107,6 +106,8 @@ pub use nodehash::NULL_HASH;
 pub use remotefilelog::convert_parents_to_remotefilelog_format;
 pub use remotefilelog::HgFileHistoryEntry;
 pub use utils::percent_encode;
+
+pub use self::manifest::Type;
 
 #[cfg(test)]
 mod test;

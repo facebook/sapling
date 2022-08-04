@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::format_err;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -27,7 +29,6 @@ use sql::Connection;
 use sql::WriteResult;
 use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;
-use std::sync::Arc;
 
 use crate::queries;
 use crate::OperationKey;

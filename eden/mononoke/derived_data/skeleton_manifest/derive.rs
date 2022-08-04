@@ -320,8 +320,6 @@ async fn create_skeleton_manifest(
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     use anyhow::anyhow;
     use blobrepo::BlobRepo;
     use fbinit::FacebookInit;
@@ -332,6 +330,7 @@ mod test {
     use tests_utils::drawdag::create_from_dag_with_changes;
     use tests_utils::CreateCommitContext;
 
+    use super::*;
     use crate::mapping::get_file_changes;
 
     const B_FILES: &[&str] = &[

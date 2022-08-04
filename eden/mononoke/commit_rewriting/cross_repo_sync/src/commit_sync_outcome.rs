@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::commit_sync_data_provider::CommitSyncDataProvider;
-use crate::types::Source;
-use crate::types::Target;
+use std::fmt;
+use std::pin::Pin;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use blobrepo::BlobRepo;
@@ -21,11 +22,12 @@ use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use reachabilityindex::LeastCommonAncestorsHint;
 use slog::debug;
-use std::fmt;
-use std::pin::Pin;
-use std::sync::Arc;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::WorkingCopyEquivalence;
+
+use crate::commit_sync_data_provider::CommitSyncDataProvider;
+use crate::types::Source;
+use crate::types::Target;
 
 /// The state of a source repo commit in a target repo, assuming
 /// that any multiple `RewrittenAs` options have been resolved
@@ -663,7 +665,6 @@ impl PluralCommitSyncOutcome {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use bookmarks::BookmarkUpdateReason;
     use fbinit::FacebookInit;
     use live_commit_sync_config::TestLiveCommitSyncConfig;
@@ -681,6 +682,8 @@ mod tests {
     use synced_commit_mapping::SyncedCommitSourceRepo;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::drawdag::create_from_dag;
+
+    use super::*;
 
     const SMALL_REPO_ID: RepositoryId = RepositoryId::new(0);
     const LARGE_REPO_ID: RepositoryId = RepositoryId::new(1);

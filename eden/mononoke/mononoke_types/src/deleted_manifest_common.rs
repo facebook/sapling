@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::fmt::Debug;
+
 use anyhow::Result;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use context::CoreContext;
 use futures::stream::BoxStream;
-use std::collections::BTreeMap;
-use std::fmt::Debug;
 
 use crate::blob::BlobstoreValue;
 use crate::ChangesetId;

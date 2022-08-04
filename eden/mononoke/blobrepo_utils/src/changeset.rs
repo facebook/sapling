@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::Error;
 use anyhow::Result;
 use blobrepo::BlobRepo;
@@ -26,7 +28,6 @@ use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgChangesetId;
 use slog::o;
 use slog::Logger;
-use std::sync::Arc;
 
 /// This trait enables parallelized walks over changesets.
 pub trait ChangesetVisitor: Clone + Send + Sync + 'static {

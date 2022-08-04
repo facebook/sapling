@@ -5,6 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::mem;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -16,12 +23,6 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use lock_ext::LockExt;
 use mononoke_types::BlobstoreBytes;
-use std::collections::HashMap;
-use std::mem;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::sync::Mutex;
 use tokio::sync::Mutex as AsyncMutex;
 
 #[derive(Default, Debug)]
@@ -166,15 +167,17 @@ impl<T: Blobstore + Clone> Blobstore for MemWritesBlobstore<T> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::time::Duration;
+
     use blobstore::PutBehaviour;
     use borrowed::borrowed;
     use bytes::Bytes;
     use cloned::cloned;
     use fbinit::FacebookInit;
     use memblob::Memblob;
-    use std::time::Duration;
     use tokio::sync::watch;
+
+    use super::*;
 
     #[fbinit::test]
     async fn basic_read(fb: FacebookInit) {

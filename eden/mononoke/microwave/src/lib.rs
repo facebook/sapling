@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::path::Path;
+use std::path::PathBuf;
+
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
@@ -24,8 +27,6 @@ use mononoke_types::ChangesetId;
 use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
 use slog::info;
-use std::path::Path;
-use std::path::PathBuf;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;

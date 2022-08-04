@@ -30,6 +30,8 @@ mod errors;
 pub use crate::errors::ErrorKind;
 mod utils;
 
+use std::fmt;
+
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
@@ -47,7 +49,6 @@ use futures_old::sync::mpsc;
 use futures_old::sync::oneshot;
 use futures_old::Future as OldFuture;
 use futures_old::Stream as OldStream;
-use std::fmt;
 
 pub use crate::bundle2_encode::Bundle2EncodeBuilder;
 pub use crate::part_header::PartHeader;

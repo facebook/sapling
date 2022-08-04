@@ -7,7 +7,10 @@
 
 #![feature(auto_traits)]
 
-use crate::sync::SyncResult;
+use std::collections::HashSet;
+use std::sync::Arc;
+use std::time::Duration;
+
 /// Mononoke Cross Repo sync job
 ///
 /// This is a special job used to tail "small" Mononoke repo into "large" Mononoke repo when
@@ -150,10 +153,9 @@ use slog::debug;
 use slog::error;
 use slog::info;
 use slog::warn;
-use std::collections::HashSet;
-use std::sync::Arc;
-use std::time::Duration;
 use synced_commit_mapping::SyncedCommitMapping;
+
+use crate::sync::SyncResult;
 
 mod cli;
 mod reporting;

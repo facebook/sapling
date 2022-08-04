@@ -5,17 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use fbinit::FacebookInit;
-use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
+use fbinit::FacebookInit;
+use scribe_ext::Scribe;
+use scuba_ext::MononokeScubaSampleBuilder;
+use slog::o;
+use slog::Logger;
+
 use crate::perf_counters::PerfCounters;
 use crate::perf_counters_stack::PerfCountersStack;
-use scribe_ext::Scribe;
-use slog::o;
 
 /// Used to correlation a high level action on a CoreContext
 /// e.g. walk of a repo,  with low level actions using that context

@@ -10,7 +10,6 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
-
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 

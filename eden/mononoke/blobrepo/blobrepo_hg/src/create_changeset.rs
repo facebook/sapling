@@ -5,10 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::bonsai_generation::create_bonsai_changeset_object;
-use crate::bonsai_generation::save_bonsai_changeset_object;
-use crate::repo_commit::*;
-use crate::ErrorKind;
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use ::manifest::Entry;
 use anyhow::anyhow;
 use anyhow::format_err;
@@ -46,9 +45,12 @@ use mononoke_types::MPath;
 use repo_blobstore::RepoBlobstoreRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use stats::prelude::*;
-use std::sync::Arc;
-use std::sync::Mutex;
 use uuid::Uuid;
+
+use crate::bonsai_generation::create_bonsai_changeset_object;
+use crate::bonsai_generation::save_bonsai_changeset_object;
+use crate::repo_commit::*;
+use crate::ErrorKind;
 
 type BonsaiChangesetHook = dyn Fn(
         CoreContext,

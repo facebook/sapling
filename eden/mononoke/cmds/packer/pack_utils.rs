@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
@@ -21,7 +23,6 @@ use packblob::Pack;
 use packblob::PackBlob;
 use packblob::SingleCompressed;
 use scuba_ext::MononokeScubaSampleBuilder;
-use std::collections::HashMap;
 use tokio::task::spawn_blocking;
 
 type BlobsWithKeys = Vec<(String, BlobstoreBytes)>;

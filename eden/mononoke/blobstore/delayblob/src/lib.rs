@@ -9,9 +9,6 @@ use std::time::Duration;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use rand::Rng;
-use rand_distr::Distribution;
-
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
@@ -20,6 +17,8 @@ use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
+use rand::Rng;
+use rand_distr::Distribution;
 
 pub type Normal = rand_distr::Normal<f64>;
 

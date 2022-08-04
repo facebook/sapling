@@ -5,11 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::common::find_source_config;
-use crate::common::find_target_bookmark_and_value;
-use crate::common::find_target_sync_config;
-use crate::common::MegarepoOp;
-use crate::common::SourceAndMovedChangesets;
+use std::collections::HashMap;
+use std::collections::VecDeque;
+use std::ops::Not;
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
@@ -43,10 +43,12 @@ use mononoke_api::RepoContext;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mutable_renames::MutableRenames;
-use std::collections::HashMap;
-use std::collections::VecDeque;
-use std::ops::Not;
-use std::sync::Arc;
+
+use crate::common::find_source_config;
+use crate::common::find_target_bookmark_and_value;
+use crate::common::find_target_sync_config;
+use crate::common::MegarepoOp;
+use crate::common::SourceAndMovedChangesets;
 
 pub(crate) struct SyncChangeset<'a> {
     megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
@@ -607,9 +609,6 @@ fn find_latest_synced_cs_id(
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::megarepo_test_utils::MegarepoTest;
-    use crate::megarepo_test_utils::SyncTargetConfigBuilder;
     use anyhow::Error;
     use fbinit::FacebookInit;
     use maplit::hashmap;
@@ -620,6 +619,10 @@ mod test {
     use tests_utils::list_working_copy_utf8;
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
+
+    use super::*;
+    use crate::megarepo_test_utils::MegarepoTest;
+    use crate::megarepo_test_utils::SyncTargetConfigBuilder;
 
     #[fbinit::test]
     async fn test_sync_changeset_simple(fb: FacebookInit) -> Result<(), Error> {

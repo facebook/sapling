@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::str::FromStr;
+
 use ahash::RandomState;
 use anyhow::format_err;
 use anyhow::Error;
@@ -72,10 +77,6 @@ use newfilenodes::PathHash;
 use once_cell::sync::OnceCell;
 use phases::Phase;
 use skeleton_manifest::RootSkeletonManifestId;
-use std::fmt;
-use std::hash::Hash;
-use std::hash::Hasher;
-use std::str::FromStr;
 use thiserror::Error;
 use unodes::RootUnodeManifestId;
 
@@ -1103,11 +1104,13 @@ impl Node {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::collections::HashSet;
     use std::mem::size_of;
+
     use strum::EnumCount;
     use strum::IntoEnumIterator;
+
+    use super::*;
 
     #[test]
     fn test_node_size() {

@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use anyhow::Error;
 use cached_config::ConfigHandle;
 use cached_config::ConfigStore;
 use slog::Level;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 use crate::config::ObservabilityConfig;
 use crate::config::ScubaVerbosityLevel;

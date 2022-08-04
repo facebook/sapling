@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeSet;
+use std::num::NonZeroU16;
+use std::str::FromStr;
+
 use anyhow::Context;
 use anyhow::Error;
 use gotham_ext::middleware::PostResponseConfig;
@@ -15,9 +19,6 @@ use serde::de::Error as _;
 use serde::ser::Serializer;
 use serde::Deserialize;
 use serde::Serialize;
-use std::collections::BTreeSet;
-use std::num::NonZeroU16;
-use std::str::FromStr;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ObjectPopularity {

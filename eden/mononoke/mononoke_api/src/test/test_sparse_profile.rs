@@ -5,14 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::sparse_profile::fetch;
-use crate::sparse_profile::get_profile_delta_size;
-use crate::sparse_profile::MonitoringProfiles;
-use crate::sparse_profile::ProfileSizeChange;
-use crate::sparse_profile::SparseProfileMonitoring;
-use crate::ChangesetContext;
-use crate::Mononoke;
-use crate::RepoContext;
+use std::collections::BTreeMap;
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use anyhow::Context;
 use anyhow::Result;
 use context::CoreContext;
@@ -32,9 +28,14 @@ use tests_utils::store_files;
 use tests_utils::CreateCommitContext;
 use types::RepoPath;
 
-use std::collections::BTreeMap;
-use std::collections::HashSet;
-use std::sync::Arc;
+use crate::sparse_profile::fetch;
+use crate::sparse_profile::get_profile_delta_size;
+use crate::sparse_profile::MonitoringProfiles;
+use crate::sparse_profile::ProfileSizeChange;
+use crate::sparse_profile::SparseProfileMonitoring;
+use crate::ChangesetContext;
+use crate::Mononoke;
+use crate::RepoContext;
 
 async fn init_sparse_profile(
     ctx: &CoreContext,

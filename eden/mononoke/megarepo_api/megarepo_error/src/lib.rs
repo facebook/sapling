@@ -7,8 +7,6 @@
 
 #![feature(backtrace)]
 
-use blobstore::LoadableError;
-use source_control as scs_thrift;
 use std::backtrace::Backtrace;
 use std::backtrace::BacktraceStatus;
 use std::convert::Infallible;
@@ -17,6 +15,8 @@ use std::fmt;
 use std::sync::Arc;
 
 use anyhow::Error;
+use blobstore::LoadableError;
+use source_control as scs_thrift;
 use thiserror::Error;
 
 pub mod macro_reexport {

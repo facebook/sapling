@@ -16,8 +16,6 @@ use futures::stream::BoxStream;
 use futures::TryStreamExt;
 use futures_old::Poll;
 use futures_old::Stream as OldStream;
-use thiserror::Error;
-
 use mercurial_bundles::wirepack::converter::WirePackConverter;
 use mercurial_bundles::wirepack::converter::WirePackPartProcessor;
 use mercurial_bundles::wirepack::DataEntry;
@@ -29,6 +27,7 @@ use mercurial_types::HgNodeHash;
 use mercurial_types::HgNodeKey;
 use mercurial_types::RepoPath;
 use mercurial_types::NULL_HASH;
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -176,17 +175,17 @@ fn unwrap_field<T: Clone>(field: &mut Option<T>, field_name: &str) -> Result<T> 
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use futures::stream;
     use futures::stream::StreamExt;
     use futures_old::Future;
-
     use maplit::btreemap;
     use mercurial_revlog::manifest::Details;
     use mercurial_types::manifest::Type;
     use mercurial_types::FileType;
     use mercurial_types::MPath;
     use mercurial_types_mocks::nodehash::*;
+
+    use super::*;
 
     #[test]
     fn test_simple() {

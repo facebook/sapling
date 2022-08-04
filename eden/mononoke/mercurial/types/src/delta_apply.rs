@@ -5,10 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::cmp;
+
 use anyhow::Result;
 use bytes::Bytes;
 use bytes::BytesMut;
-use std::cmp;
 
 use crate::delta::Delta;
 use crate::delta::Fragment;

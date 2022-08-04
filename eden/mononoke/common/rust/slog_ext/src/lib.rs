@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::fmt;
+use std::io;
+use std::str::FromStr;
+
 use anyhow::bail;
 use anyhow::Error;
 use failure_ext::SlogKVErrorKey;
@@ -15,10 +20,6 @@ use slog::Record;
 use slog::Serializer;
 use slog::KV;
 use slog_term::Decorator;
-use std::collections::HashSet;
-use std::fmt;
-use std::io;
-use std::str::FromStr;
 
 // Allow us to switch drain types without runtime check
 enum EitherDrain<L, R> {

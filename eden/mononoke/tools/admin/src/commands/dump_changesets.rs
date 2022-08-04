@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::num::NonZeroU64;
+use std::path::Path;
+
 use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
@@ -34,8 +37,6 @@ use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
 use phases::Phases;
 use phases::PhasesArc;
-use std::num::NonZeroU64;
-use std::path::Path;
 
 use crate::commit_id::parse_commit_id;
 

@@ -5,10 +5,20 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Cow;
+use std::collections::HashMap;
+use std::marker::PhantomData;
+use std::sync::Arc;
+use std::time::Duration;
+
 use anyhow::Error;
 use context::CoreContext;
 use context::PerfCounterType;
 use faster_hex::hex_encode;
+use filenodes::FilenodeInfo;
+use filenodes::FilenodeRangeResult;
+use filenodes::FilenodeResult;
+use filenodes::PreparedFilenode;
 use futures::future;
 use futures::future::Future;
 use itertools::Itertools;
@@ -24,19 +34,9 @@ use rand::Rng;
 use sql::queries;
 use sql::Connection;
 use stats::prelude::*;
-use std::borrow::Cow;
-use std::collections::HashMap;
-use std::marker::PhantomData;
-use std::sync::Arc;
-use std::time::Duration;
 use thiserror::Error as DeriveError;
 use tokio::time::timeout;
 use tunables::tunables;
-
-use filenodes::FilenodeInfo;
-use filenodes::FilenodeRangeResult;
-use filenodes::FilenodeResult;
-use filenodes::PreparedFilenode;
 
 use crate::connections::AcquireReason;
 use crate::connections::Connections;

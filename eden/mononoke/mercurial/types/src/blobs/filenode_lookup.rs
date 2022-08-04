@@ -19,7 +19,8 @@
 // slow (and use up quite a bit of RAM, though that's something we can mitigate by
 // streaming file contents).
 
-use crate::HgFileNodeId;
+use std::time::Duration;
+
 use anyhow::Result;
 use ascii::AsciiString;
 use blobstore::Blobstore;
@@ -30,9 +31,10 @@ use mononoke_types::BlobstoreBytes;
 use mononoke_types::ContentId;
 use mononoke_types::MPath;
 use stats::prelude::*;
-use std::time::Duration;
 use tokio::time::timeout;
 use tunables::tunables;
+
+use crate::HgFileNodeId;
 
 define_stats! {
     prefix = "mononoke.mercurial.filenode_lookup";

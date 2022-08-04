@@ -5,10 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use hyper::Body;
-use hyper::Response;
+use std::collections::HashSet;
 
-use crate::middleware::RequestContext;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
@@ -20,12 +18,15 @@ use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_ext::middleware::Middleware;
 use http::HeaderMap;
+use hyper::Body;
+use hyper::Response;
 use lazy_static::lazy_static;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::trace;
 use slog::warn;
-use std::collections::HashSet;
 use tunables::tunables;
+
+use crate::middleware::RequestContext;
 
 static MAX_BODY_LEN: usize = 16 * 1024; // 16 KB
 
