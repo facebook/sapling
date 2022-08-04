@@ -122,15 +122,13 @@ async fn duplicate<C: Changesets + 'static>(fb: FacebookInit, changesets: C) -> 
         parents: vec![],
     };
 
-    assert_eq!(
+    assert!(
         changesets.add(ctx.clone(), row.clone()).await?,
-        true,
         "inserting unique changeset must return true"
     );
 
-    assert_eq!(
-        changesets.add(ctx.clone(), row.clone()).await?,
-        false,
+    assert!(
+        !changesets.add(ctx.clone(), row.clone()).await?,
         "inserting the same changeset must return false"
     );
     Ok(())
@@ -145,9 +143,8 @@ async fn broken_duplicate<C: Changesets + 'static>(
         cs_id: ONES_CSID,
         parents: vec![],
     };
-    assert_eq!(
+    assert!(
         changesets.add(ctx.clone(), row).await?,
-        true,
         "inserting unique changeset must return true"
     );
 
@@ -155,9 +152,8 @@ async fn broken_duplicate<C: Changesets + 'static>(
         cs_id: TWOS_CSID,
         parents: vec![],
     };
-    assert_eq!(
+    assert!(
         changesets.add(ctx.clone(), row).await?,
-        true,
         "inserting unique changeset must return true"
     );
 
