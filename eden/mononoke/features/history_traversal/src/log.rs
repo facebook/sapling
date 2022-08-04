@@ -387,11 +387,11 @@ pub async fn list_file_history(
         },
         // unfold
         move |state| {
-            cloned!(ctx, mutable_renames, repo);
+            cloned!(ctx, mutable_renames);
             async move {
                 do_history_unfold(
                     ctx.clone(),
-                    repo.clone(),
+                    repo,
                     state,
                     history_across_deletions,
                     follow_mutable_renames,
