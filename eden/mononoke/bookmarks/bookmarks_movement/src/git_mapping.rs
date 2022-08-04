@@ -262,7 +262,7 @@ mod tests {
             .add_extra(HGGIT_SOURCE_EXTRA.to_string(), b"git".to_vec())
     }
 
-    fn mapping_entries(entries: &Vec<BonsaiGitMappingEntry>) -> HashSet<(ChangesetId, GitSha1)> {
+    fn mapping_entries(entries: &[BonsaiGitMappingEntry]) -> HashSet<(ChangesetId, GitSha1)> {
         entries
             .iter()
             .map(|entry| (entry.bcs_id, entry.git_sha1))

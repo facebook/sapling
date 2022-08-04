@@ -709,6 +709,7 @@ mod tests {
         T: Debug + Send + 'static,
         F: Future<Output = T> + Send + Unpin + 'static,
     {
+        #[allow(clippy::async_yields_async)]
         rt.block_on(async move {
             let timeout = Duration::from_millis(timeout_ms);
             let delay = tokio::time::sleep(timeout);

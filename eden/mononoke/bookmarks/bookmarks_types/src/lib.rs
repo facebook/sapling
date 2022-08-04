@@ -128,10 +128,6 @@ impl BookmarkName {
         &self.bookmark
     }
 
-    pub fn to_string(&self) -> String {
-        self.bookmark.clone().into()
-    }
-
     pub fn into_string(self) -> String {
         self.bookmark.into()
     }
@@ -391,10 +387,6 @@ impl BookmarkPrefix {
         Self {
             bookmark_prefix: AsciiString::default(),
         }
-    }
-
-    pub fn to_string(&self) -> String {
-        self.bookmark_prefix.clone().into()
     }
 
     pub fn is_empty(&self) -> bool {

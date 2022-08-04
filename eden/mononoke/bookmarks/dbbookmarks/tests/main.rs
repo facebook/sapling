@@ -1409,7 +1409,7 @@ enum TestOp {
 /// bookmark subscriptions returns the same data it would return if it was freshly created now (we
 /// test that this satisfies our assumptions in separate tests for the bookmarks subscription).
 #[fbinit::test]
-fn bookmark_subscription_quickcheck(fb: FacebookInit) {
+fn bookmark_subscription_quickcheck(_fb: FacebookInit) {
     #[tokio::main(flavor = "current_thread")]
     async fn check(fb: FacebookInit, mut ops: Vec<TestOp>) -> bool {
         async move {
@@ -1514,8 +1514,4 @@ fn bookmark_subscription_quickcheck(fb: FacebookInit) {
     }
 
     quickcheck::quickcheck(check as fn(FacebookInit, Vec<TestOp>) -> bool);
-
-    // We need to hold the FacebookInit until this point because Arbitrary for FacebookInit just
-    // assumes init!
-    drop(fb)
 }

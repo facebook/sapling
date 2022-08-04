@@ -635,7 +635,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
                 .watched(ctx.logger())
                 .await?;
 
-            let homogenous_entries: Vec<_> = match entries.iter().nth(0).cloned() {
+            let homogenous_entries: Vec<_> = match entries.first().cloned() {
                 Some(first_entry) => {
                     // Note: types are explicit here to protect us from query behavior change
                     //       when tuple items 2 or 5 become something else, and we still succeed
