@@ -27,10 +27,6 @@ impl SessionId {
         Self(s.to_string())
     }
 
-    pub fn to_string(&self) -> String {
-        self.0.clone()
-    }
-
     pub fn into_string(self) -> String {
         self.0
     }
