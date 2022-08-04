@@ -74,9 +74,9 @@ impl Stream for SetDifferenceNodeStream {
         // the standard futures_old::executor expects you to only return NotReady if blocked on I/O.
         loop {
             let (keep_hash, keep_gen) = match self.next_keep()? {
-                &Async::NotReady => return Ok(Async::NotReady),
-                &Async::Ready(None) => return Ok(Async::Ready(None)),
-                &Async::Ready(Some((hash, gen))) => (hash, gen),
+                Async::NotReady => return Ok(Async::NotReady),
+                Async::Ready(None) => return Ok(Async::Ready(None)),
+                Async::Ready(Some((hash, gen))) => (*hash, *gen),
             };
 
             // Clear nodes that won't affect future results
@@ -88,9 +88,9 @@ impl Stream for SetDifferenceNodeStream {
             // Gather the current generation's remove hashes
             loop {
                 let remove_hash = match self.next_remove()? {
-                    &Async::NotReady => return Ok(Async::NotReady),
-                    &Async::Ready(Some((hash, gen))) if gen == keep_gen => hash,
-                    &Async::Ready(Some((_, gen))) if gen > keep_gen => {
+                    Async::NotReady => return Ok(Async::NotReady),
+                    Async::Ready(Some((hash, gen))) if *gen == keep_gen => *hash,
+                    Async::Ready(Some((_, gen))) if *gen > keep_gen => {
                         // Refers to a generation that's already past (probably nothing on keep
                         // side of this generation). Skip it.
                         self.next_remove = Async::NotReady;

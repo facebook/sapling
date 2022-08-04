@@ -55,9 +55,9 @@ impl IntersectNodeStream {
             self.current_generation = self
                 .inputs
                 .iter()
-                .filter_map(|&(_, ref state)| match state {
-                    &Ok(Async::Ready(Some((_, gen_id)))) => Some(gen_id),
-                    &Ok(Async::NotReady) => panic!("All states ready, yet some not ready!"),
+                .filter_map(|(_, state)| match state {
+                    Ok(Async::Ready(Some((_, gen_id)))) => Some(*gen_id),
+                    Ok(Async::NotReady) => panic!("All states ready, yet some not ready!"),
                     _ => None,
                 })
                 .min();
@@ -111,8 +111,7 @@ impl Stream for IntersectNodeStream {
             // Empty the drain if any - return all items for this generation
             while self.drain.is_some() {
                 let next_in_drain = self.drain.as_mut().and_then(|drain| drain.next());
-                if next_in_drain.is_some() {
-                    let (csid, count) = next_in_drain.expect("is_some() said this was safe");
+                if let Some((csid, count)) = next_in_drain {
                     if count == self.inputs.len() {
                         return Ok(Async::Ready(Some(csid)));
                     }

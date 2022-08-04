@@ -63,9 +63,9 @@ impl UnionNodeStream {
             self.current_generation = self
                 .inputs
                 .iter()
-                .filter_map(|&(_, ref state)| match state {
-                    &Ok(Async::Ready(Some((_, gen_id)))) => Some(gen_id),
-                    &Ok(Async::NotReady) => panic!("All states ready, yet some not ready!"),
+                .filter_map(|(_, state)| match state {
+                    Ok(Async::Ready(Some((_, gen_id)))) => Some(*gen_id),
+                    Ok(Async::NotReady) => panic!("All states ready, yet some not ready!"),
                     _ => None,
                 })
                 .max();

@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::cmp::Ordering;
 /// Union and intersection can be made more efficient if the streams are uninterrupted streams of
 /// ancestors. For example:
 ///
@@ -283,11 +284,12 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
 
             // Attempt to extract the max generation of the frontier
             if let Some(exclude_gen) = self.current_exclude_generation {
-                {
-                    if exclude_gen < current_generation {
+                match exclude_gen.cmp(&current_generation) {
+                    Ordering::Less => {
                         self.exclude_ancestors_future = ok(curr_exclude_ancestors).boxify();
                         return Ok(Async::Ready(false));
-                    } else if exclude_gen == current_generation {
+                    }
+                    Ordering::Equal => {
                         let mut should_exclude: Option<bool> = None;
                         {
                             if let Some(nodes) = curr_exclude_ancestors.get(&current_generation) {
@@ -299,6 +301,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
                             return Ok(Async::Ready(should_exclude));
                         }
                     }
+                    Ordering::Greater => {}
                 }
 
                 // Current generation in `exclude_ancestors` is bigger

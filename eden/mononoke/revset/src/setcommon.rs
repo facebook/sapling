@@ -50,21 +50,19 @@ pub fn add_generations_by_bonsai(
 }
 
 pub fn all_inputs_ready<T>(
-    inputs: &Vec<(GenericStream<T>, Poll<Option<(T, Generation)>, Error>)>,
+    inputs: &[(GenericStream<T>, Poll<Option<(T, Generation)>, Error>)],
 ) -> bool {
     inputs
         .iter()
-        .map(|&(_, ref state)| match state {
-            &Err(_) => false,
-            &Ok(ref p) => p.is_ready(),
+        .map(|(_, state)| match state {
+            Err(_) => false,
+            Ok(p) => p.is_ready(),
         })
         .all(|ready| ready)
 }
 
-pub fn poll_all_inputs<T>(
-    inputs: &mut Vec<(GenericStream<T>, Poll<Option<(T, Generation)>, Error>)>,
-) {
-    for &mut (ref mut input, ref mut state) in inputs.iter_mut() {
+pub fn poll_all_inputs<T>(inputs: &mut [(GenericStream<T>, Poll<Option<(T, Generation)>, Error>)]) {
+    for (input, state) in inputs.iter_mut() {
         if let Ok(Async::NotReady) = *state {
             *state = input.poll();
         }
