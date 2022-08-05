@@ -391,12 +391,6 @@ impl AddScubaParams for thrift::TreeListParams {
     }
 }
 
-impl AddScubaParams for thrift::RepoListHgManifestParams {
-    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("hg_manifest_id", hex(&self.hg_manifest_id));
-    }
-}
-
 impl AddScubaParams for thrift::MegarepoAddTargetToken {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_megarepo_token", self.id);

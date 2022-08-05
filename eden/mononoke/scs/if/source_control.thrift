@@ -1227,10 +1227,6 @@ struct CommitLookupXRepoParams {
   3: optional CandidateSelectionHint candidate_selection_hint;
 }
 
-struct RepoListHgManifestParams {
-  1: binary hg_manifest_id;
-}
-
 /// Polling tokens for async megarepo methods
 struct MegarepoChangeConfigToken {
   /// A target this token relates to
@@ -1606,45 +1602,6 @@ struct TreeListResponse {
 struct FileDiffResponse {
   /// The differences between the two files.
   1: Diff diff;
-}
-
-struct HgManifestFileInfo {
-  /// The id of the file contents that can be used in subsequent look-ups.
-  1: binary hg_filenode_id;
-
-  /// The size of the file, or the length of the link target path for links.
-  2: i64 file_size;
-
-  /// The content sha1 of the file.
-  3: binary content_sha1;
-
-  /// The content sha256 of the file.
-  4: binary content_sha256;
-}
-
-struct HgManifestTreeInfo {
-  /// The manifest id of the tree that can be used in subsequent look-ups.
-  1: binary hg_manifest_id;
-}
-
-union HgManifestEntryInfo {
-  1: HgManifestTreeInfo tree;
-  2: HgManifestFileInfo file;
-}
-
-struct HgManifestEntry {
-  /// The name of the entry in this directory.
-  1: string name;
-
-  /// The type of the entry (file, link, exec, or sub-directory)
-  2: EntryType type;
-
-  /// The info for the entry (file or sub-directory).
-  3: HgManifestEntryInfo info;
-}
-
-struct RepoListHgManifestResponse {
-  1: list<HgManifestEntry> entries;
 }
 
 struct MegarepoAddConfigResponse {}
@@ -2162,17 +2119,5 @@ service SourceControlService extends fb303_core.BaseService {
   /// Poll the execution of megarepo_re_merge_source request
   MegarepoRemergeSourcePollResponse megarepo_remerge_source_poll(
     1: MegarepoRemergeSourceToken token,
-  ) throws (1: RequestError request_error, 2: InternalError internal_error);
-
-  /// Secret Methods
-  /// ==============
-  ///
-  /// These are for internal Source Control Team use only, and may be removed
-  /// without notice.
-
-  /// List a Hg manifest with Aux data
-  RepoListHgManifestResponse repo_list_hg_manifest(
-    1: RepoSpecifier repo,
-    2: RepoListHgManifestParams params,
   ) throws (1: RequestError request_error, 2: InternalError internal_error);
 } (rust.request_context, sr.service_name = "mononoke-scs-server")

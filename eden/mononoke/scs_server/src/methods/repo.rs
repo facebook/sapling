@@ -7,7 +7,6 @@
 
 use std::collections::BTreeMap;
 
-use blobstore::Loadable;
 use bytes::Bytes;
 use chrono::DateTime;
 use chrono::FixedOffset;
@@ -15,11 +14,8 @@ use chrono::Local;
 use context::CoreContext;
 use futures::future::try_join_all;
 use futures::stream::FuturesOrdered;
-use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
-use manifest::Entry;
-use manifest::Manifest;
 use maplit::btreemap;
 use mononoke_api::BookmarkFreshness;
 use mononoke_api::ChangesetPrefixSpecifier;
@@ -31,7 +27,6 @@ use mononoke_api::CreateCopyInfo;
 use mononoke_api::FileId;
 use mononoke_api::FileType;
 use mononoke_api::MononokePath;
-use mononoke_api_hg::RepoContextHgExt;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
@@ -46,7 +41,6 @@ use crate::from_request::check_range_and_convert;
 use crate::from_request::convert_pushvars;
 use crate::from_request::FromRequest;
 use crate::into_response::AsyncIntoResponseWith;
-use crate::into_response::IntoResponse;
 use crate::source_control_impl::SourceControlServiceImpl;
 
 mod land_stack;
@@ -610,90 +604,6 @@ impl SourceControlServiceImpl {
         repo.delete_bookmark(&params.bookmark, old_changeset_id, pushvars.as_ref())
             .await?;
         Ok(thrift::RepoDeleteBookmarkResponse {
-            ..Default::default()
-        })
-    }
-
-    pub(crate) async fn repo_list_hg_manifest(
-        &self,
-        ctx: CoreContext,
-        repo: thrift::RepoSpecifier,
-        params: thrift::RepoListHgManifestParams,
-    ) -> Result<thrift::RepoListHgManifestResponse, errors::ServiceError> {
-        let repo = self.repo(ctx.clone(), &repo).await?;
-        if !repo.derive_hgchangesets_enabled() {
-            return Err(errors::ServiceError::from(errors::not_available(format!(
-                "hgchangeset derivation is not enabled for '{}'",
-                repo.name()
-            ))));
-        }
-        let blobstore = repo.blob_repo().blobstore().boxed();
-        let repo = repo.hg();
-
-        let hg_manifest_id = mercurial_types::HgManifestId::from_bytes(&params.hg_manifest_id)
-            .map_err(errors::internal_error)?;
-        let tree = repo
-            .tree(hg_manifest_id)
-            .await?
-            .ok_or_else(|| errors::invalid_request("no such tree"))?;
-        let manifest = tree.into_blob_manifest().map_err(errors::internal_error)?;
-        let list: Vec<_> = manifest
-            .list()
-            .map(|(name, entry)| (name.to_string(), entry))
-            .collect();
-        let ctx = &ctx;
-        let blobstore = &blobstore;
-        let entries = futures::stream::iter(list)
-            .map({
-                move |(name, entry)| async move {
-                    let t = match entry {
-                        Entry::Leaf((file_type, child_id)) => {
-                            let hg_file_envelope = child_id
-                                .load(ctx, blobstore)
-                                .await
-                                .map_err(errors::internal_error)?;
-                            let fetch_key =
-                                filestore::FetchKey::Canonical(hg_file_envelope.content_id());
-                            let metadata = filestore::get_metadata(blobstore, ctx, &fetch_key)
-                                .await
-                                .map_err(errors::internal_error)?
-                                .ok_or_else(|| errors::internal_error("no metadata found"))?;
-
-                            thrift::HgManifestEntry {
-                                name,
-                                r#type: file_type.into_response(),
-                                info: thrift::HgManifestEntryInfo::file(
-                                    thrift::HgManifestFileInfo {
-                                        hg_filenode_id: child_id.as_bytes().to_vec(),
-                                        file_size: metadata.total_size as i64,
-                                        content_sha1: metadata.sha1.as_ref().to_vec(),
-                                        content_sha256: metadata.sha256.as_ref().to_vec(),
-                                        ..Default::default()
-                                    },
-                                ),
-                                ..Default::default()
-                            }
-                        }
-                        Entry::Tree(child_id) => thrift::HgManifestEntry {
-                            name,
-                            r#type: thrift::EntryType::TREE,
-                            info: thrift::HgManifestEntryInfo::tree(thrift::HgManifestTreeInfo {
-                                hg_manifest_id: child_id.as_bytes().to_vec(),
-                                ..Default::default()
-                            }),
-                            ..Default::default()
-                        },
-                    };
-
-                    Result::<_, errors::ServiceError>::Ok(t)
-                }
-            })
-            .buffered(100)
-            .try_collect()
-            .await?;
-
-        Ok(thrift::RepoListHgManifestResponse {
-            entries,
             ..Default::default()
         })
     }

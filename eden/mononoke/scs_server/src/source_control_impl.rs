@@ -86,8 +86,7 @@ define_stats! {
     method_completion_time_ms: dynamic_histogram("method.{}.completion_time_ms", (method: String); 10, 0, 1_000, Average, Sum, Count; P 5; P 50 ; P 90),
 }
 
-static POPULAR_METHODS: Lazy<HashSet<&'static str>> =
-    Lazy::new(|| hashset! {"repo_list_hg_manifest"});
+static POPULAR_METHODS: Lazy<HashSet<&'static str>> = Lazy::new(|| hashset! {});
 
 #[derive(Clone)]
 pub(crate) struct SourceControlServiceImpl {
@@ -884,10 +883,5 @@ impl SourceControlService for SourceControlServiceThriftImpl {
         async fn megarepo_remerge_source_poll(
             token: thrift::MegarepoRemergeSourceToken,
         ) -> Result<thrift::MegarepoRemergeSourcePollResponse, service::MegarepoRemergeSourcePollExn>;
-
-        async fn repo_list_hg_manifest(
-            repo: thrift::RepoSpecifier,
-            params: thrift::RepoListHgManifestParams,
-        ) -> Result<thrift::RepoListHgManifestResponse, service::RepoListHgManifestExn>;
     }
 }

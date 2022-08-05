@@ -91,8 +91,6 @@ impl AddScubaResponse for thrift::FileDiffResponse {}
 
 impl AddScubaResponse for thrift::TreeListResponse {}
 
-impl AddScubaResponse for thrift::RepoListHgManifestResponse {}
-
 // TODO: report cs_ids and actual error where possible
 impl AddScubaResponse for thrift::MegarepoRemergeSourceResult {}
 
