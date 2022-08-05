@@ -35,9 +35,9 @@ impl AsRef<str> for EdenApiScubaKey {
     }
 }
 
-impl Into<String> for EdenApiScubaKey {
-    fn into(self) -> String {
-        self.as_ref().to_string()
+impl From<EdenApiScubaKey> for String {
+    fn from(key: EdenApiScubaKey) -> Self {
+        key.as_ref().to_string()
     }
 }
 

@@ -233,8 +233,8 @@ async fn handler_wrapper<Handler: EdenApiHandler>(
 
         state.put(HandlerInfo::new(path.repo(), Handler::API_METHOD));
 
-        let rctx = RequestContext::borrow_from(&mut state).clone();
-        let sctx = ServerContext::borrow_from(&mut state);
+        let rctx = RequestContext::borrow_from(&state).clone();
+        let sctx = ServerContext::borrow_from(&state);
 
         let repo = get_repo(sctx, &rctx, path.repo(), None).await?;
         let request = parse_wire_request::<<Handler::Request as ToWire>::Wire>(&mut state).await?;
