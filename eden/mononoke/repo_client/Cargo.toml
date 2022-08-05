@@ -27,6 +27,7 @@ futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimenta
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 getbundle_response = { version = "0.1.0", path = "getbundle_response" }
 hgproto = { version = "0.1.0", path = "../hgproto" }
+hooks = { version = "0.1.0", path = "../hooks" }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 iterhelpers = { version = "0.1.0", path = "../common/iterhelpers" }
 itertools = "0.10.3"

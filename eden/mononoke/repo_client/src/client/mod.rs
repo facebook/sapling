@@ -85,6 +85,7 @@ use hgproto::GetbundleArgs;
 use hgproto::GettreepackArgs;
 use hgproto::HgCommandRes;
 use hgproto::HgCommands;
+use hooks::HookManagerArc;
 use hostname::get_hostname;
 use itertools::Itertools;
 use lazy_static::lazy_static;
@@ -1704,7 +1705,7 @@ impl HgCommands for RepoClient {
         let reponame = self.repo.inner_repo().repo_identity().name().to_string();
         cloned!(self.session_bookmarks_cache, self as repoclient);
 
-        let hook_manager = self.repo.hook_manager().clone();
+        let hook_manager = self.repo.hook_manager_arc();
 
         // Kill the saved set of bookmarks here - the unbundle may change them, and the next
         // command in sequence will need to fetch a new set

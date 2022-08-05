@@ -31,6 +31,7 @@ use futures::future::try_join_all;
 use futures::future::FutureExt;
 use futures::try_join;
 use hooks::CrossRepoPushSource;
+use hooks::HookManagerRef;
 use hooks::HookRejection;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use mercurial_derived_data::DeriveHgChangeset;
@@ -181,7 +182,7 @@ impl PushRedirector {
             &infinitepush_params,
             &pushrebase_params,
             &push_params,
-            self.repo.hook_manager().as_ref(),
+            self.repo.hook_manager(),
             large_repo_action,
             CrossRepoPushSource::PushRedirected,
         )

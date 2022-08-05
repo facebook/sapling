@@ -67,6 +67,7 @@ use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures::Future;
 use hooks::HookManager;
+use hooks::HookManagerArc;
 use itertools::Itertools;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
@@ -480,11 +481,6 @@ impl Repo {
         &self.warm_bookmarks_cache
     }
 
-    /// The hook manager for the referenced repository.
-    pub fn hook_manager(&self) -> &Arc<HookManager> {
-        &self.hook_manager
-    }
-
     /// The configuration for the referenced repository.
     pub fn config(&self) -> &RepoConfig {
         &self.inner.repo_config
@@ -807,8 +803,8 @@ impl RepoContext {
     }
 
     /// The hook manager for the referenced repository.
-    pub fn hook_manager(&self) -> &Arc<HookManager> {
-        self.repo.hook_manager()
+    pub fn hook_manager(&self) -> Arc<HookManager> {
+        self.repo.hook_manager_arc()
     }
 
     /// The configuration for the referenced repository.
