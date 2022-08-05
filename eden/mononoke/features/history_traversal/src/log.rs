@@ -1124,11 +1124,11 @@ async fn prefetch_and_process_history(
             affected_changesets
                 .into_iter()
                 .filter_map(|cs_id| {
-                    history_graph
-                        .get(&(cs_id, path.clone()))
-                        .cloned()
-                        .flatten()
-                        .map(|parents| (Some((cs_id, path.clone())), parents))
+                    if let Some(Some(parents)) = history_graph.get(&(cs_id, path.clone())) {
+                        Some((Some((cs_id, path.clone())), parents.clone()))
+                    } else {
+                        None
+                    }
                 })
                 .collect(),
         )
