@@ -43,12 +43,6 @@ except ImportError:
 
 log: logging.Logger = logging.getLogger(__name__)
 
-# On Linux we import fcntl for flock. The Windows LockFileEx is not semantically
-# same as flock. We will need to make some changes for LockFileEx to work.
-if sys.platform != "win32":
-    import fcntl
-
-
 if typing.TYPE_CHECKING:
     from eden.fs.cli.redirect import RedirectionType  # noqa: F401
 

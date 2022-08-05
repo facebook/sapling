@@ -22,7 +22,8 @@ from facebook.eden.overlay.ttypes import OverlayDir, OverlayEntry
 
 from .util import fdatasync
 
-
+# On Linux we import fcntl for flock. The Windows LockFileEx is not semantically
+# same as flock. We will need to make some changes for LockFileEx to work.
 if platform.system() != "Windows":
     import fcntl
 
