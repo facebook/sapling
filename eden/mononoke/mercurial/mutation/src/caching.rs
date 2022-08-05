@@ -23,6 +23,8 @@ use caching_ext::CacheTtl;
 use caching_ext::CachelibHandler;
 use caching_ext::EntityStore;
 use caching_ext::KeyedEntityStore;
+use caching_ext::McErrorKind;
+use caching_ext::McResult;
 use caching_ext::MemcacheEntity;
 use caching_ext::MemcacheHandler;
 use context::CoreContext;
@@ -154,9 +156,12 @@ impl CachedHgMutationStore {
     }
 }
 
-fn memcache_deserialize(bytes: Bytes) -> Result<HgMutationCacheEntry, ()> {
-    let thrift_entry = compact_protocol::deserialize(bytes).map_err(|_| ());
-    thrift_entry.and_then(|entry| HgMutationCacheEntry::from_thrift(entry).map_err(|_| ()))
+fn memcache_deserialize(bytes: Bytes) -> McResult<HgMutationCacheEntry> {
+    let thrift_entry =
+        compact_protocol::deserialize(bytes).map_err(|_| McErrorKind::Deserialization);
+    thrift_entry.and_then(|entry| {
+        HgMutationCacheEntry::from_thrift(entry).map_err(|_| McErrorKind::Deserialization)
+    })
 }
 
 fn memcache_serialize(entry: &HgMutationCacheEntry) -> Bytes {
@@ -211,7 +216,7 @@ impl MemcacheEntity for HgMutationCacheEntry {
         memcache_serialize(self)
     }
 
-    fn deserialize(bytes: Bytes) -> Result<Self, ()> {
+    fn deserialize(bytes: Bytes) -> McResult<Self> {
         memcache_deserialize(bytes)
     }
 }

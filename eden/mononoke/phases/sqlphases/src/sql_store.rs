@@ -21,6 +21,8 @@ use caching_ext::CacheTtl;
 use caching_ext::CachelibHandler;
 use caching_ext::EntityStore;
 use caching_ext::KeyedEntityStore;
+use caching_ext::McErrorKind;
+use caching_ext::McResult;
 use caching_ext::MemcacheEntity;
 use caching_ext::MemcacheHandler;
 use context::CoreContext;
@@ -171,8 +173,11 @@ impl MemcacheEntity for SqlPhase {
         Bytes::from(self.to_string())
     }
 
-    fn deserialize(bytes: Bytes) -> Result<Self, ()> {
-        bytes.as_ref().try_into().map_err(|_| ())
+    fn deserialize(bytes: Bytes) -> McResult<Self> {
+        bytes
+            .as_ref()
+            .try_into()
+            .map_err(|_| McErrorKind::Deserialization)
     }
 }
 

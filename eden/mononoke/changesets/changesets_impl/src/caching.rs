@@ -20,6 +20,8 @@ use caching_ext::CacheTtl;
 use caching_ext::CachelibHandler;
 use caching_ext::EntityStore;
 use caching_ext::KeyedEntityStore;
+use caching_ext::McErrorKind;
+use caching_ext::McResult;
 use caching_ext::MemcacheEntity;
 use caching_ext::MemcacheHandler;
 #[cfg(test)]
@@ -225,11 +227,11 @@ impl MemcacheEntity for ChangesetEntryWrapper {
         compact_protocol::serialize(&self.0.clone().into_thrift())
     }
 
-    fn deserialize(bytes: Bytes) -> Result<Self, ()> {
+    fn deserialize(bytes: Bytes) -> McResult<Self> {
         compact_protocol::deserialize(bytes)
             .and_then(ChangesetEntry::from_thrift)
             .map(ChangesetEntryWrapper)
-            .map_err(|_| ())
+            .map_err(|_| McErrorKind::Deserialization)
     }
 }
 

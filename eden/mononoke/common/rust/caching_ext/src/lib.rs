@@ -111,7 +111,7 @@ pub trait MemcacheEntity: Sized {
     fn serialize(&self) -> Bytes;
 
     /// Deserialize the item from bytes into an object, or fail to do so
-    fn deserialize(bytes: Bytes) -> Result<Self, ()>;
+    fn deserialize(bytes: Bytes) -> McResult<Self>;
 }
 
 /// Implement this trait to indicate that you can cache values retrived through you
@@ -386,9 +386,7 @@ where
                     .await
                     .map_err(|_| McErrorKind::MemcacheInternal)
                     .and_then(|maybe_bytes| maybe_bytes.ok_or(McErrorKind::Missing))
-                    .and_then(|bytes| {
-                        V::deserialize(bytes).map_err(|()| McErrorKind::Deserialization)
-                    });
+                    .and_then(V::deserialize);
 
                 (key, cachelib_key, memcache_key, res)
             }
@@ -497,7 +495,7 @@ mod test {
             Bytes::from(self.0.clone())
         }
 
-        fn deserialize(bytes: Bytes) -> Result<Self, ()> {
+        fn deserialize(bytes: Bytes) -> McResult<Self> {
             Ok(Self(bytes.to_vec()))
         }
     }

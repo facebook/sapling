@@ -20,6 +20,8 @@ use caching_ext::CacheTtl;
 use caching_ext::CachelibHandler;
 use caching_ext::EntityStore;
 use caching_ext::KeyedEntityStore;
+use caching_ext::McErrorKind;
+use caching_ext::McResult;
 use caching_ext::MemcacheEntity;
 use caching_ext::MemcacheHandler;
 use context::CoreContext;
@@ -166,13 +168,13 @@ impl MemcacheEntity for HasMutableRename {
         }
     }
 
-    fn deserialize(bytes: Bytes) -> Result<Self, ()> {
+    fn deserialize(bytes: Bytes) -> McResult<Self> {
         if bytes == TRUE {
             Ok(HasMutableRename(true))
         } else if bytes == FALSE {
             Ok(HasMutableRename(false))
         } else {
-            Err(())
+            Err(McErrorKind::Deserialization)
         }
     }
 }
@@ -344,7 +346,7 @@ impl MemcacheEntity for CachedMutableRenameEntry {
         };
         compact_protocol::serialize(&thrift_self)
     }
-    fn deserialize(bytes: Bytes) -> Result<Self, ()> {
+    fn deserialize(bytes: Bytes) -> McResult<Self> {
         if let thrift::CachedMutableRenameEntry {
             entry:
                 Some(thrift::MutableRenameEntry {
@@ -356,13 +358,18 @@ impl MemcacheEntity for CachedMutableRenameEntry {
                     src_unode,
                     is_tree,
                 }),
-        } = compact_protocol::deserialize(bytes).map_err(|_| ())?
+        } = compact_protocol::deserialize(bytes).map_err(|_| McErrorKind::Deserialization)?
         {
-            let dst_cs_id = ChangesetId::from_thrift(dst_cs_id).map_err(|_| ())?;
-            let dst_path_hash = path_hash_from_thrift(dst_path_hash).map_err(|_| ())?;
-            let src_cs_id = ChangesetId::from_thrift(src_cs_id).map_err(|_| ())?;
-            let src_path_hash = path_hash_from_thrift(src_path_hash).map_err(|_| ())?;
-            let src_unode = Blake2::from_thrift(src_unode).map_err(|_| ())?;
+            let dst_cs_id =
+                ChangesetId::from_thrift(dst_cs_id).map_err(|_| McErrorKind::Deserialization)?;
+            let dst_path_hash =
+                path_hash_from_thrift(dst_path_hash).map_err(|_| McErrorKind::Deserialization)?;
+            let src_cs_id =
+                ChangesetId::from_thrift(src_cs_id).map_err(|_| McErrorKind::Deserialization)?;
+            let src_path_hash =
+                path_hash_from_thrift(src_path_hash).map_err(|_| McErrorKind::Deserialization)?;
+            let src_unode =
+                Blake2::from_thrift(src_unode).map_err(|_| McErrorKind::Deserialization)?;
             let entry = CacheableMutableRenameEntry {
                 dst_cs_id,
                 dst_path_hash,
@@ -490,15 +497,15 @@ impl MemcacheEntity for ChangesetIdSet {
         compact_protocol::serialize(&thrift_self)
     }
 
-    fn deserialize(bytes: Bytes) -> Result<Self, ()> {
+    fn deserialize(bytes: Bytes) -> McResult<Self> {
         let thrift::ChangesetIdSet { cs_ids } =
-            compact_protocol::deserialize(bytes).map_err(|_| ())?;
+            compact_protocol::deserialize(bytes).map_err(|_| McErrorKind::Deserialization)?;
         Ok(Self {
             set: cs_ids
                 .into_iter()
                 .map(ChangesetId::from_thrift)
                 .collect::<Result<Vec<_>, Error>>()
-                .map_err(|_| ())?,
+                .map_err(|_| McErrorKind::Deserialization)?,
         })
     }
 }

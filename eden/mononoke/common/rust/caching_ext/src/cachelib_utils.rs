@@ -61,7 +61,7 @@ impl<T: Abomonation + Clone + Send + 'static> CachelibHandler<T> {
         }
     }
 
-    pub fn set_cached(&self, key: &String, value: &T, ttl: Option<Duration>) -> Result<bool> {
+    pub fn set_cached(&self, key: &str, value: &T, ttl: Option<Duration>) -> Result<bool> {
         match self {
             CachelibHandler::Real(ref cache) => set_cached(cache, key, value, ttl),
             CachelibHandler::Mock(store) => {

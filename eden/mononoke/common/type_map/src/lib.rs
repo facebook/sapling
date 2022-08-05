@@ -26,17 +26,9 @@ use std::sync::Arc;
 struct Handle<T: ?Sized + Send + Sync + 'static>(Arc<T>);
 
 /// Heterogeneous collection of objects.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct TypeMap {
     mapping: HashMap<TypeId, Arc<dyn Any + Send + Sync>>,
-}
-
-impl Default for TypeMap {
-    fn default() -> Self {
-        Self {
-            mapping: Default::default(),
-        }
-    }
 }
 
 impl TypeMap {

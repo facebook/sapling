@@ -23,6 +23,8 @@ use caching_ext::CacheTtl;
 use caching_ext::CachelibHandler;
 use caching_ext::EntityStore;
 use caching_ext::KeyedEntityStore;
+use caching_ext::McErrorKind;
+use caching_ext::McResult;
 use caching_ext::MemcacheEntity;
 use caching_ext::MemcacheHandler;
 use context::CoreContext;
@@ -183,16 +185,20 @@ impl MemcacheEntity for BonsaiSvnrevMappingCacheEntry {
         compact_protocol::serialize(&entry)
     }
 
-    fn deserialize(bytes: Bytes) -> Result<Self, ()> {
+    fn deserialize(bytes: Bytes) -> McResult<Self> {
         let thrift::BonsaiSvnrevMappingEntry {
             repo_id,
             bcs_id,
             svnrev,
-        } = compact_protocol::deserialize(bytes).map_err(|_| ())?;
+        } = compact_protocol::deserialize(bytes).map_err(|_| McErrorKind::Deserialization)?;
 
         let repo_id = RepositoryId::new(repo_id);
-        let bcs_id = ChangesetId::from_thrift(bcs_id).map_err(|_| ())?;
-        let svnrev = Svnrev::new(svnrev.try_into().map_err(|_| ())?);
+        let bcs_id = ChangesetId::from_thrift(bcs_id).map_err(|_| McErrorKind::Deserialization)?;
+        let svnrev = Svnrev::new(
+            svnrev
+                .try_into()
+                .map_err(|_| McErrorKind::Deserialization)?,
+        );
 
         Ok(BonsaiSvnrevMappingCacheEntry {
             repo_id,

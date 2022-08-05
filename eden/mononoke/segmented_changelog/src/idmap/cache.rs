@@ -20,6 +20,8 @@ use caching_ext::CacheTtl;
 use caching_ext::CachelibHandler;
 use caching_ext::EntityStore;
 use caching_ext::KeyedEntityStore;
+use caching_ext::McErrorKind;
+use caching_ext::McResult;
 use caching_ext::MemcacheEntity;
 use caching_ext::MemcacheHandler;
 use context::CoreContext;
@@ -203,10 +205,10 @@ impl MemcacheEntity for ChangesetIdWrapper {
         Bytes::copy_from_slice(self.0.as_ref())
     }
 
-    fn deserialize(bytes: Bytes) -> Result<Self, ()> {
+    fn deserialize(bytes: Bytes) -> McResult<Self> {
         match ChangesetId::from_bytes(&bytes) {
             Ok(cs_id) => Ok(ChangesetIdWrapper(cs_id)),
-            Err(_) => Err(()),
+            Err(_) => Err(McErrorKind::Deserialization),
         }
     }
 }
@@ -280,8 +282,11 @@ impl MemcacheEntity for DagIdWrapper {
         Bytes::copy_from_slice(&self.0.0.to_be_bytes())
     }
 
-    fn deserialize(bytes: Bytes) -> Result<Self, ()> {
-        let arr = bytes.as_ref().try_into().map_err(|_| ())?;
+    fn deserialize(bytes: Bytes) -> McResult<Self> {
+        let arr = bytes
+            .as_ref()
+            .try_into()
+            .map_err(|_| McErrorKind::Deserialization)?;
         Ok(DagIdWrapper(DagId(u64::from_be_bytes(arr))))
     }
 }
