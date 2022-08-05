@@ -339,8 +339,20 @@ fn clone_metadata(
     reponame: &str,
     destination: &Path,
 ) -> Result<Repo> {
+    let clone_type_str = if clone_opts.eden {
+        "EdenFS"
+    } else if !clone_opts.enable_profile.is_empty() {
+        "Sparse"
+    } else if clone_opts.noupdate {
+        "NoUpdate"
+    } else {
+        "Full"
+    };
+
     tracing::trace!("performing rust clone");
     tracing::debug!(target: "rust_clone", rust_clone="true");
+    tracing::debug!(target: "repo", repo=reponame);
+    tracing::debug!(target: "clone_type", clone_type=clone_type_str);
 
     let mut includes = global_opts.configfile.clone();
     if let Some(mut repo_config) = config.get_opt::<PathBuf>("clone", "repo-specific-config-dir")? {
