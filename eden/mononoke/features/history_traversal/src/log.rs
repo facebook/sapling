@@ -2427,28 +2427,28 @@ mod test {
     ) -> Result<ChangesetId, Error> {
         let filename = "1";
         // bottom
-        let bottom_id = CreateCommitContext::new(&ctx, repo, parents.clone())
+        let bottom_id = CreateCommitContext::new(ctx, repo, parents.clone())
             .add_file(filename, format!("B - {:?}", parents))
             .commit()
             .await?;
         expected.push(bottom_id.clone());
 
         // right
-        let right_id = CreateCommitContext::new(&ctx, repo, vec![bottom_id])
+        let right_id = CreateCommitContext::new(ctx, repo, vec![bottom_id])
             .add_file(filename, format!("R - {:?}", parents))
             .commit()
             .await?;
         expected.push(right_id.clone());
 
         // left
-        let left_id = CreateCommitContext::new(&ctx, repo, vec![bottom_id])
+        let left_id = CreateCommitContext::new(ctx, repo, vec![bottom_id])
             .add_file(filename, format!("L - {:?}", parents))
             .commit()
             .await?;
         expected.push(left_id.clone());
 
         // up
-        let up_id = CreateCommitContext::new(&ctx, repo, vec![left_id, right_id])
+        let up_id = CreateCommitContext::new(ctx, repo, vec![left_id, right_id])
             .add_file(filename, format!("U - {:?}", parents))
             .commit()
             .await?;
