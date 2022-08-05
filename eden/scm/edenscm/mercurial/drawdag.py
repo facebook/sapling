@@ -90,7 +90,7 @@ from .i18n import _
 from .node import hex, nullid, short
 
 
-def _parseasciigraph(text):
+def _parseasciigraph(text: str):
     r"""str -> {str : [str]}. convert the ASCII graph to edges
 
     >>> import pprint
@@ -286,7 +286,7 @@ def drawdag(repo, text, **opts):
         return _drawdagintransaction(repo, text, tr, **opts)
 
 
-def _drawdagintransaction(repo, text, tr, **opts):
+def _drawdagintransaction(repo, text, tr, **opts) -> None:
     # parse the graph and make sure len(parents) <= 2 for each node
     edges = _parseasciigraph(text)
     for k, v in edges.items():
