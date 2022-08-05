@@ -147,7 +147,6 @@ class WorkingCopy:
         self[path].write(content)
 
     def join(self, path: PathLike) -> Path:
-        # pyre-fixme[7]: Expected `Path` but got `str`.
         return os.path.join(self.root, str(path))
 
     def files(self) -> List[str]:

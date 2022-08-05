@@ -36,7 +36,6 @@ class Repo:
         return open(self._join(path), mode)
 
     def _join(self, path: str) -> Path:
-        # pyre-fixme[7]: Expected `Path` but got `str`.
         return os.path.join(self.root, ".hg", path)
 
     def new_working_copy(

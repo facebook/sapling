@@ -68,8 +68,6 @@ def cleanup_tmp_dir(tmp_dir: Path) -> None:
             if func not in (os.unlink, os.rmdir):
                 raise ex
 
-            # pyre-fixme[6]: For 1st param expected `PathLike[Variable[AnyStr <:
-            #  [str, bytes]]]` but got `Union[PathLike[typing.Any], str]`.
             parent_dir = os.path.dirname(path)
             os.chmod(parent_dir, 0o755)
             func(path)

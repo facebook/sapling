@@ -46,25 +46,48 @@ stats-interval = "100ms"
             # (Since we include memtable sizes in the values these are currently always
             # reported as taking up at least a small amount of space.)
             initial_counters = client.getRegexCounters(counter_regex)
+            # pyre-fixme[6]: For 2nd param expected `SupportsDunderLT[Variable[_T]]`
+            #  but got `int`.
             self.assertGreater(initial_counters.get("local_store.blob.size"), 0)
+            # pyre-fixme[6]: For 2nd param expected `SupportsDunderLT[Variable[_T]]`
+            #  but got `int`.
             self.assertGreater(initial_counters.get("local_store.blobmeta.size"), 0)
+            # pyre-fixme[6]: For 2nd param expected `SupportsDunderLT[Variable[_T]]`
+            #  but got `int`.
             self.assertGreater(initial_counters.get("local_store.tree.size"), 0)
             self.assertGreater(
-                initial_counters.get("local_store.hgcommit2tree.size"), 0
+                initial_counters.get("local_store.hgcommit2tree.size"),
+                # pyre-fixme[6]: For 2nd param expected
+                #  `SupportsDunderLT[Variable[_T]]` but got `int`.
+                0,
             )
+            # pyre-fixme[6]: For 2nd param expected `SupportsDunderLT[Variable[_T]]`
+            #  but got `int`.
             self.assertGreater(initial_counters.get("local_store.hgproxyhash.size"), 0)
             self.assertGreater(
-                initial_counters.get("local_store.ephemeral.total_size"), 0
+                initial_counters.get("local_store.ephemeral.total_size"),
+                # pyre-fixme[6]: For 2nd param expected
+                #  `SupportsDunderLT[Variable[_T]]` but got `int`.
+                0,
             )
             self.assertGreater(
-                initial_counters.get("local_store.persistent.total_size"), 0
+                initial_counters.get("local_store.persistent.total_size"),
+                # pyre-fixme[6]: For 2nd param expected
+                #  `SupportsDunderLT[Variable[_T]]` but got `int`.
+                0,
             )
             # Make sure the counters are less than 500MB, just as a sanity check
             self.assertLess(
-                initial_counters.get("local_store.ephemeral.total_size"), 500_000_000
+                initial_counters.get("local_store.ephemeral.total_size"),
+                # pyre-fixme[6]: For 2nd param expected
+                #  `SupportsDunderGT[Variable[_T]]` but got `int`.
+                500_000_000,
             )
             self.assertLess(
-                initial_counters.get("local_store.persistent.total_size"), 500_000_000
+                initial_counters.get("local_store.persistent.total_size"),
+                # pyre-fixme[6]: For 2nd param expected
+                #  `SupportsDunderGT[Variable[_T]]` but got `int`.
+                500_000_000,
             )
 
             # Read back several files
@@ -118,10 +141,15 @@ hgcommit2tree-size-limit = "1"
 
             # Check the local_store.auto_gc counters
             self.assertEqual(counters.get("local_store.auto_gc.last_run_succeeded"), 1)
+            # pyre-fixme[6]: For 2nd param expected `SupportsDunderLT[Variable[_T]]`
+            #  but got `int`.
             self.assertGreater(counters.get("local_store.auto_gc.success"), 0)
             self.assertEqual(counters.get("local_store.auto_gc.failure", 0), 0)
             self.assertGreaterEqual(
-                counters.get("local_store.auto_gc.last_duration_ms"), 0
+                counters.get("local_store.auto_gc.last_duration_ms"),
+                # pyre-fixme[6]: For 2nd param expected
+                #  `SupportsDunderLE[Variable[_T]]` but got `int`.
+                0,
             )
 
         # Run "eden stats local-store" and check the output

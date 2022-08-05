@@ -70,6 +70,4 @@ def notifyevent(name: str):
 
 def _eventfilepath(name: str):
     testtmp = os.getenv("TESTTMP")
-    # pyre-fixme[6]: For 1st param expected `Union[PathLike[str], str]` but got
-    #  `Optional[str]`.
     return os.path.join(testtmp, f"event-{name}")

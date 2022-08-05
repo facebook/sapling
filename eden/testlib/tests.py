@@ -24,14 +24,9 @@ class TestLibTests(BaseTest):
     @hgtest
     def test_working_copy_edits(self, repo: Repo, wc: WorkingCopy) -> None:
         def join(path: PathLike) -> Path:
-            # pyre-fixme[7]: Expected `Path` but got `str`.
-            # pyre-fixme[6]: For 2nd param expected `Union[PathLike[str], str]` but
-            #  got `Union[Path, File, str]`.
             return os.path.join(wc.root, path)
 
         def exists(path: PathLike) -> bool:
-            # pyre-fixme[6]: For 2nd param expected `Union[PathLike[str], str]` but
-            #  got `Union[Path, File, str]`.
             return os.path.exists(os.path.join(wc.root, path))
 
         def read(path: PathLike) -> str:
