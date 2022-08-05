@@ -323,7 +323,7 @@ helphomecommands = [
         ["previous", "next", "split", "fold", "histedit", "absorb"],
     ),
     ("Undo changes", ["uncommit", "unamend", "undo", "redo"]),
-    ("Other commands", ["config", "grep", "journal", "rage"]),
+    ("Other commands", ["config", "doctor", "grep", "journal", "rage"]),
 ]
 
 helphometopics = {"revisions", "filesets", "glossary", "patterns", "templating"}

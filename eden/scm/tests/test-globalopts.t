@@ -316,6 +316,7 @@ Testing -h/--help:
   Other commands:
   
    config        show config settings
+   doctor        attempt to check and fix issues
    grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
@@ -385,6 +386,7 @@ Testing -h/--help:
   Other commands:
   
    config        show config settings
+   doctor        attempt to check and fix issues
    grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:

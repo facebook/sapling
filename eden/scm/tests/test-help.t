@@ -48,6 +48,7 @@ Short help:
   Other commands:
   
    config        show config settings
+   doctor        attempt to check and fix issues
    grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
@@ -103,6 +104,7 @@ Short help:
   Other commands:
   
    config        show config settings
+   doctor        attempt to check and fix issues
    grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
@@ -158,6 +160,7 @@ Short help:
   Other commands:
   
    config        show config settings
+   doctor        attempt to check and fix issues
    grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
@@ -213,6 +216,7 @@ Short help:
   Other commands:
   
    config        show config settings
+   doctor        attempt to check and fix issues
    grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
@@ -880,6 +884,7 @@ Test that default list of commands omits extension commands
   Other commands:
   
    config        show config settings
+   doctor        attempt to check and fix issues
    grep          search for a pattern in tracked files in the working directory
   
   Additional help topics:
