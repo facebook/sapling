@@ -212,9 +212,6 @@ class EdenInstance:
         self._system_config_path = self._etc_eden_dir / SYSTEM_CONFIG
         self._interpolate_dict = interpolate_dict
 
-        # TODO: We should eventually read the default config_dir path from the config
-        # files rather than always using ~/local/.eden
-        #
         # We call resolve() to resolve any symlinks in the config directory location.
         # This is particularly important when starting edenfs, since edenfs in some
         # cases will try to access this path as root (e.g., when creating bind mounts).
@@ -223,10 +220,16 @@ class EdenInstance:
         # directory on NFS, which may not be readable as root.
         if config_dir:
             self._config_dir = Path(config_dir)
-        elif sys.platform == "win32":
-            self._config_dir = self._home_dir / ".eden"
         else:
-            self._config_dir = self._home_dir / "local" / ".eden"
+            if sys.platform == "win32":
+                config_dir_default = self._home_dir / ".eden"
+            else:
+                config_dir_default = self._home_dir / "local" / ".eden"
+            self._config_dir = Path(
+                self.get_config_value(
+                    "core.edenDirectory", default=str(config_dir_default)
+                )
+            )
 
         self._config_dir = self._config_dir.resolve(strict=False)
 
