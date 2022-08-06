@@ -13,6 +13,16 @@
 //! may want to use watchman to watch a portion of the scratch space
 //! and can arrange the directory structure to prevent over-watching.
 
+use std::collections::HashMap;
+use std::env;
+use std::fs;
+use std::io::prelude::*;
+#[cfg(unix)]
+use std::os::unix::fs::MetadataExt;
+use std::path::Component;
+use std::path::Path;
+use std::path::PathBuf;
+
 use anyhow::bail;
 #[cfg(unix)]
 use anyhow::ensure;
@@ -23,15 +33,6 @@ use clap::AppSettings;
 use clap::Arg;
 use clap::SubCommand;
 use serde::Deserialize;
-use std::collections::HashMap;
-use std::env;
-use std::fs;
-use std::io::prelude::*;
-#[cfg(unix)]
-use std::os::unix::fs::MetadataExt;
-use std::path::Component;
-use std::path::Path;
-use std::path::PathBuf;
 
 /// Configuration for scratch space style. This decides whether the directory
 /// structure is kept exactly as provided subdir or not.

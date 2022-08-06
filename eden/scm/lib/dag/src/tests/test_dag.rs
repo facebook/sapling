@@ -355,10 +355,11 @@ impl TestDag {
     #[cfg(test)]
     /// Dump Dag segments as ASCII string.
     pub fn dump_segments_ascii(&self) -> String {
+        use std::collections::HashSet;
+
         use crate::Id;
         use crate::IdSet;
         use crate::IdSpan;
-        use std::collections::HashSet;
 
         let span_iter = |span: IdSpan| IdSet::from_spans(vec![span]).into_iter().rev();
         let iddag = &self.dag.dag;

@@ -12,5 +12,6 @@
 mod gitstore;
 mod trait_impls;
 
-pub use crate::gitstore::GitStore;
 pub use git2;
+
+pub use crate::gitstore::GitStore;

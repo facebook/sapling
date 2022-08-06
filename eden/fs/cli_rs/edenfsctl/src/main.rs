@@ -15,15 +15,14 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use clap::Parser;
-use fbinit::FacebookInit;
-use tracing_subscriber::filter::EnvFilter;
-
 #[cfg(fbcode_build)]
 use edenfs_telemetry::cli_usage::CliUsageSample;
 #[cfg(fbcode_build)]
 use edenfs_telemetry::send;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
+use fbinit::FacebookInit;
+use tracing_subscriber::filter::EnvFilter;
 
 #[cfg(windows)]
 const PYTHON_CANDIDATES: &[&str] = &[

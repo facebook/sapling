@@ -14,13 +14,12 @@ use serde::Deserialize;
 use types::RepoPathBuf;
 use watchman_client::prelude::*;
 
+use super::treestate::WatchmanTreeStateRead;
+use super::treestate::WatchmanTreeStateWrite;
 use crate::filechangedetector::FileChangeDetectorTrait;
 use crate::filechangedetector::FileChangeResult;
 use crate::filechangedetector::ResolvedFileChangeResult;
 use crate::filesystem::PendingChangeResult;
-
-use super::treestate::WatchmanTreeStateRead;
-use super::treestate::WatchmanTreeStateWrite;
 
 query_result_type! {
     pub struct StatusQuery {
@@ -170,19 +169,17 @@ mod tests {
 
     use anyhow::Result;
     use types::RepoPathBuf;
-
     use watchman_client::prelude::*;
-
-    use crate::filechangedetector::FileChangeDetectorTrait;
-    use crate::filechangedetector::FileChangeResult;
-    use crate::filechangedetector::ResolvedFileChangeResult;
-    use crate::filesystem::ChangeType;
-    use crate::filesystem::PendingChangeResult;
 
     use super::super::state::StatusQuery;
     use super::super::state::WatchmanState;
     use super::super::treestate::WatchmanTreeStateRead;
     use super::super::treestate::WatchmanTreeStateWrite;
+    use crate::filechangedetector::FileChangeDetectorTrait;
+    use crate::filechangedetector::FileChangeResult;
+    use crate::filechangedetector::ResolvedFileChangeResult;
+    use crate::filesystem::ChangeType;
+    use crate::filesystem::PendingChangeResult;
 
     #[derive(Clone)]
     enum Event {

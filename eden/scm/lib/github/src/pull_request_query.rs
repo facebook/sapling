@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::git_hub_repo::GitHubRepo;
-use crate::make_request::make_request;
 use anyhow::Result;
 use graphql_client::GraphQLQuery;
 use serde::Serialize;
+
+use crate::git_hub_repo::GitHubRepo;
+use crate::make_request::make_request;
 
 // See https://github.com/graphql-rust/graphql-client#custom-scalars
 type GitObjectID = String;

@@ -5,21 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::anyhow;
-use anyhow::Context;
-use atomicfile::atomic_write;
-use byteorder::BigEndian;
-use byteorder::ReadBytesExt;
-use edenfs_error::EdenFsError;
-use edenfs_error::Result;
-use edenfs_error::ResultExt;
-use edenfs_utils::path_from_bytes;
-#[cfg(windows)]
-use edenfs_utils::strip_unc_prefix;
-use serde::Deserialize;
-use serde::Deserializer;
-use serde::Serialize;
-use serde::Serializer;
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::env;
@@ -36,15 +21,29 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
-
 use std::time::Duration;
 use std::vec;
+
+use anyhow::anyhow;
+use anyhow::Context;
+use atomicfile::atomic_write;
+use byteorder::BigEndian;
+use byteorder::ReadBytesExt;
+use edenfs_error::EdenFsError;
+use edenfs_error::Result;
+use edenfs_error::ResultExt;
+use edenfs_utils::path_from_bytes;
+#[cfg(windows)]
+use edenfs_utils::strip_unc_prefix;
+use serde::Deserialize;
+use serde::Deserializer;
+use serde::Serialize;
+use serde::Serializer;
 use thrift_types::edenfs::types::Glob;
 use thrift_types::edenfs::types::GlobParams;
 use thrift_types::edenfs::types::MountInfo;
 use thrift_types::edenfs::types::MountState;
 use thrift_types::edenfs::types::PredictiveFetch;
-
 use toml::value::Value;
 use uuid::Uuid;
 

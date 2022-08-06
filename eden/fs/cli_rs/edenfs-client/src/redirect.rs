@@ -5,6 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::fmt;
+use std::fs;
+use std::path::Path;
+use std::path::PathBuf;
+use std::str::FromStr;
+
 use anyhow::anyhow;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
@@ -13,12 +20,6 @@ use edenfs_utils::metadata::MetadataExt;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
-use std::collections::BTreeMap;
-use std::fmt;
-use std::fs;
-use std::path::Path;
-use std::path::PathBuf;
-use std::str::FromStr;
 use subprocess::Exec;
 use subprocess::Redirection as SubprocessRedirection;
 use toml::value::Value;

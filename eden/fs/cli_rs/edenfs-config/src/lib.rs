@@ -9,14 +9,13 @@ use std::path::Path;
 
 use anyhow::Context;
 use anyhow::Result;
+use edenfs_error::EdenFsError;
 use serde::Deserialize;
 use serde::Serialize;
 use stack_config::StackConfig;
 use tracing::event;
 use tracing::trace;
 use tracing::Level;
-
-use edenfs_error::EdenFsError;
 
 #[derive(Serialize, Deserialize, StackConfig, Debug)]
 #[serde(rename_all = "camelCase")]

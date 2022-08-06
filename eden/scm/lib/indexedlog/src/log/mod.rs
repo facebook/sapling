@@ -92,9 +92,8 @@ pub use path::GenericPath;
 
 pub use self::fold::Fold;
 pub use self::fold::FoldDef;
-pub use self::meta::LogMetadata;
-
 use self::fold::FoldState;
+pub use self::meta::LogMetadata;
 
 // Constants about file names
 pub(crate) const PRIMARY_FILE: &str = "log";

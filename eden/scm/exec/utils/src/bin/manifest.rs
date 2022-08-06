@@ -11,12 +11,11 @@ use std::sync::Arc;
 use anyhow::format_err;
 use anyhow::Result;
 use bytes::Bytes;
-use structopt::StructOpt;
-
 use pathmatcher::AlwaysMatcher;
 use revisionstore::datapack::DataPack;
 use revisionstore::datastore::DataStore;
 use revisionstore::uniondatastore::UnionDataStore;
+use structopt::StructOpt;
 use types::HgId;
 use types::Key;
 use types::RepoPath;

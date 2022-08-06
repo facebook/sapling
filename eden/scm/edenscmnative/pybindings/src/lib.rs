@@ -8,7 +8,6 @@
 use cpython::PyResult;
 use cpython::Python;
 use cpython::*;
-
 use hgcommands::prepare_builtin_modules;
 
 py_module_initializer!(bindings, initbindings, PyInit_bindings, |py, m| {

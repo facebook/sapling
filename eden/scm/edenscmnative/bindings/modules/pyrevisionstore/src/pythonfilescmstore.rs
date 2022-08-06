@@ -16,7 +16,6 @@ use cpython_ext::PyPathBuf;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use minibytes::Bytes;
-
 use storemodel::ReadFileContents;
 use types::Key;
 

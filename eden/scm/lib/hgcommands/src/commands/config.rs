@@ -21,7 +21,6 @@ use minibytes::Text;
 use super::ConfigSet;
 use super::Result;
 use super::IO;
-
 use crate::commands::FormatterOpts;
 
 define_flags! {

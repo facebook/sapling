@@ -10,7 +10,6 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::repo::Repo;
 use edenapi::EdenApi;
 use hgcommits::DagCommits;
 use hgcommits::DoubleWriteCommits;
@@ -21,6 +20,8 @@ use hgcommits::HybridCommits;
 use hgcommits::RevlogCommits;
 use metalog::MetaLog;
 use parking_lot::RwLock;
+
+use crate::repo::Repo;
 
 static HG_COMMITS_PATH: &str = "hgcommits/v1";
 static LAZY_HASH_PATH: &str = "lazyhashdir";

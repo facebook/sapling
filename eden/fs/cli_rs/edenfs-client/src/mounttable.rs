@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::path::PathBuf;
+
 use anyhow::anyhow;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
 use regex::Regex;
-use std::path::PathBuf;
 use subprocess::Exec;
 use subprocess::Redirection;
 

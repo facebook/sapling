@@ -7,6 +7,11 @@
 
 pub mod error;
 
+use std::fs::File;
+use std::io::Read;
+#[cfg(target_os = "macos")]
+use std::io::Write;
+
 use anyhow::bail;
 use anyhow::Result;
 use clap::App;
@@ -16,11 +21,6 @@ use commitcloudsubscriber::CommitCloudTcpReceiverService;
 use commitcloudsubscriber::CommitCloudWorkspaceSubscriberService;
 use log::info;
 use serde::Deserialize;
-use std::fs::File;
-use std::io::Read;
-
-#[cfg(target_os = "macos")]
-use std::io::Write;
 
 /// This is what we're going to decode toml config into.
 /// Each field is optional, meaning that it doesn't have to be present in TOML.

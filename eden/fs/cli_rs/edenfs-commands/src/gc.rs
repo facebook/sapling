@@ -12,7 +12,6 @@ use std::io::Write;
 
 use async_trait::async_trait;
 use clap::Parser;
-
 use edenfs_client::EdenFsInstance;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;

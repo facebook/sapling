@@ -6,15 +6,15 @@
  */
 
 use std::fs::Metadata;
-
-#[cfg(any(target_os = "macos", target_os = "linux"))]
-use nix::sys::stat::Mode;
 #[cfg(target_os = "linux")]
 use std::os::linux::fs::MetadataExt as MetadataLinuxExt;
 #[cfg(target_os = "macos")]
 use std::os::unix::fs::MetadataExt as MetadataMacosExt;
 #[cfg(windows)]
 use std::os::windows::fs::MetadataExt as MetadataWindowsExt;
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+use nix::sys::stat::Mode;
 
 /// Metadata helper methods that map equivalent methods for the
 /// edenfs purposes

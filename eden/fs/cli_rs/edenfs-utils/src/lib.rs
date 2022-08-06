@@ -7,13 +7,14 @@
 
 //! EdenFS utils
 
+use std::ffi::OsString;
+use std::path::Path;
+use std::path::PathBuf;
+
 use anyhow::anyhow;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
-use std::ffi::OsString;
-use std::path::Path;
-use std::path::PathBuf;
 use subprocess::Exec;
 use subprocess::Redirection;
 

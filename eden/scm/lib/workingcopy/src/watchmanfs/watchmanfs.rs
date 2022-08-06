@@ -16,14 +16,13 @@ use treestate::treestate::TreeState;
 use vfs::VFS;
 use watchman_client::prelude::*;
 
+use super::state::StatusQuery;
+use super::state::WatchmanState;
+use super::treestate::WatchmanTreeState;
 use crate::filechangedetector::ArcReadFileContents;
 use crate::filechangedetector::FileChangeDetector;
 use crate::filechangedetector::HgModifiedTime;
 use crate::filesystem::PendingChangeResult;
-
-use super::state::StatusQuery;
-use super::state::WatchmanState;
-use super::treestate::WatchmanTreeState;
 
 pub struct WatchmanFileSystem {
     vfs: VFS,

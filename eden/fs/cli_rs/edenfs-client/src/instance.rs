@@ -15,7 +15,6 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::Context;
-
 use edenfs_config::EdenFsConfig;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;

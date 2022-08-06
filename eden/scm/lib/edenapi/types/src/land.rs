@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
-use std::collections::HashMap;
 use type_macros::auto_wire;
 use types::HgId;
 

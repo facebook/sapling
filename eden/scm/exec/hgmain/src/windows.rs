@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::path::Path;
+
 use anyhow::format_err;
 use anyhow::Error;
-use std::path::Path;
 use winapi::shared::minwindef::DWORD;
 use winapi::um::consoleapi::GetConsoleMode;
 use winapi::um::consoleapi::SetConsoleMode;

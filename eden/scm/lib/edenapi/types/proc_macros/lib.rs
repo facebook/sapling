@@ -7,10 +7,11 @@
 
 extern crate proc_macro;
 
+use std::collections::HashSet;
+
 use proc_macro2::TokenStream;
 use quote::format_ident;
 use quote::quote;
-use std::collections::HashSet;
 use syn::spanned::Spanned;
 use syn::*;
 

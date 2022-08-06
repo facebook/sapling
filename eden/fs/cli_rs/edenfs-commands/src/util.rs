@@ -5,10 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::path::PathBuf;
+
 use anyhow::Context;
 use anyhow::Result;
 use hg_util::path::expand_path;
-use std::path::PathBuf;
 
 /// Expand the path if the user has supplied anything. Otherwise, use the current working directory instead.
 ///

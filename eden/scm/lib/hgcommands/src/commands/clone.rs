@@ -28,7 +28,6 @@ use util::path::absolute;
 use super::ConfigSet;
 use super::Result;
 use super::IO;
-
 use crate::HgPython;
 
 static SEGMENTED_CHANGELOG_CAPABILITY: &str = "segmented-changelog";

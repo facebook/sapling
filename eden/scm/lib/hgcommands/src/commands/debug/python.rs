@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use clidispatch::errors;
+
 use super::define_flags;
 use super::ConfigSet;
 use super::Result;
 use super::IO;
-use clidispatch::errors;
 
 define_flags! {
     pub struct DebugPythonOpts {

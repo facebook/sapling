@@ -4,12 +4,14 @@
  * This software may be used and distributed according to the terms of the
  * GNU General Public License version 2.
  */
-use crate::EagerRepoStore;
+use std::sync::Arc;
+
 use cpython::*;
 use cpython_ext::convert::register_into;
-use std::sync::Arc;
 use storemodel::ReadFileContents;
 use storemodel::TreeStore;
+
+use crate::EagerRepoStore;
 
 pub(crate) fn register(py: Python) {
     register_into(py, |py, obj: EagerRepoStore| obj.to_dyn_treestore(py));

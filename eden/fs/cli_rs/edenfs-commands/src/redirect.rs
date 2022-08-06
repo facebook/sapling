@@ -7,16 +7,14 @@
 
 //! edenfsctl redirect
 
+use std::collections::BTreeMap;
+use std::path::Path;
+use std::path::PathBuf;
+
 use anyhow::anyhow;
 use anyhow::Context;
 use async_trait::async_trait;
 use clap::Parser;
-use std::collections::BTreeMap;
-use std::path::Path;
-use std::path::PathBuf;
-use tabular::row;
-use tabular::Table;
-
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::redirect::get_effective_redirections;
 use edenfs_client::redirect::Redirection;
@@ -24,6 +22,8 @@ use edenfs_client::redirect::RedirectionState;
 use edenfs_client::EdenFsInstance;
 use edenfs_error::Result;
 use hg_util::path::expand_path;
+use tabular::row;
+use tabular::Table;
 
 use crate::util::expand_path_or_cwd;
 use crate::ExitCode;

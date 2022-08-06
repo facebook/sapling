@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::bail;
-use anyhow::Result;
 use std::fmt;
 use std::fs::create_dir;
 use std::fs::create_dir_all;
@@ -27,6 +25,9 @@ use std::sync::mpsc::TrySendError;
 use std::sync::Arc;
 use std::thread;
 use std::time::Instant;
+
+use anyhow::bail;
+use anyhow::Result;
 use structopt::StructOpt;
 
 #[derive(StructOpt)]

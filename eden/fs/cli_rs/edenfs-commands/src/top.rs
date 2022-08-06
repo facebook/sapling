@@ -7,13 +7,15 @@
 
 //! edenfsctl top
 
-use async_trait::async_trait;
-use clap::Parser;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::RwLock;
 use std::time::Duration;
 
+use async_trait::async_trait;
+use clap::Parser;
+use edenfs_client::EdenFsInstance;
+use edenfs_error::Result;
 use once_cell::sync::Lazy;
 use termwiz::caps::Capabilities;
 use termwiz::color::ColorAttribute;
@@ -32,9 +34,6 @@ use termwiz::widgets::UpdateArgs;
 use termwiz::widgets::Widget;
 use termwiz::widgets::WidgetEvent;
 use termwiz::Error;
-
-use edenfs_client::EdenFsInstance;
-use edenfs_error::Result;
 
 use crate::ExitCode;
 

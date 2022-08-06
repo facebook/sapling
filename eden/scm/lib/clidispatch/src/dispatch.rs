@@ -9,7 +9,6 @@ use std::env;
 use std::path::Path;
 use std::sync::atomic::Ordering::SeqCst;
 
-use crate::OptionalRepo;
 use anyhow::Error;
 use cliparser::alias::expand_aliases;
 use cliparser::alias::find_command_name;
@@ -26,6 +25,7 @@ use crate::command::CommandTable;
 use crate::errors;
 use crate::global_flags::HgGlobalOpts;
 use crate::io::IO;
+use crate::OptionalRepo;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 

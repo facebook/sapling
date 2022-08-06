@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::cell::RefCell;
+
 use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
-use std::cell::RefCell;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "indexedlog"].join(".");

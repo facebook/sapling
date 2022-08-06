@@ -7,12 +7,11 @@
 
 use std::path::PathBuf;
 
-use structopt::StructOpt;
-
 use revisionstore::datapack::DataPack;
 use revisionstore::datastore::DataStore;
 use revisionstore::localstore::ExtStoredPolicy;
 use revisionstore::uniondatastore::UnionDataStore;
+use structopt::StructOpt;
 use types::Key;
 use types::Node;
 use types::RepoPathBuf;

@@ -6,6 +6,7 @@
  */
 
 use std::path::PathBuf;
+
 use sysinfo::ProcessExt;
 use sysinfo::SystemExt;
 use tracing::trace;

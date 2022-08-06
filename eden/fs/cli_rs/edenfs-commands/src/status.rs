@@ -12,13 +12,12 @@ use std::time::Duration;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use clap::Parser;
-use tokio::time;
-use tracing::event;
-use tracing::Level;
-
 use edenfs_client::DaemonHealthy;
 use edenfs_client::EdenFsInstance;
 use edenfs_error::Result;
+use tokio::time;
+use tracing::event;
+use tracing::Level;
 
 use crate::ExitCode;
 

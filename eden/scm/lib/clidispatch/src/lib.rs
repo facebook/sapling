@@ -16,5 +16,4 @@ pub mod output;
 pub mod util;
 
 pub use io;
-
 pub use optional_repo::OptionalRepo;

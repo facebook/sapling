@@ -7,6 +7,12 @@
 
 //! edenfsctl du
 
+use std::collections::HashSet;
+use std::fs;
+use std::fs::DirEntry;
+use std::path::Path;
+use std::path::PathBuf;
+
 use anyhow::anyhow;
 use async_trait::async_trait;
 use clap::Parser;
@@ -16,15 +22,6 @@ use comfy_table::CellAlignment;
 use comfy_table::Color;
 use comfy_table::Row;
 use comfy_table::Table;
-use serde::Serialize;
-use std::collections::HashSet;
-use std::fs;
-use std::fs::DirEntry;
-use std::path::Path;
-use std::path::PathBuf;
-use subprocess::Exec;
-use subprocess::Redirection;
-
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::checkout::EdenFsCheckout;
 use edenfs_client::redirect::get_effective_redirections;
@@ -39,6 +36,9 @@ use edenfs_utils::get_env_with_buck_version;
 use edenfs_utils::get_environment_suitable_for_subprocess;
 use edenfs_utils::metadata::MetadataExt;
 use edenfs_utils::path_from_bytes;
+use serde::Serialize;
+use subprocess::Exec;
+use subprocess::Redirection;
 
 use crate::ExitCode;
 

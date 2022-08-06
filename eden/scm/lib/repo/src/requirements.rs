@@ -11,6 +11,7 @@ use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+
 use util::errors::IOContext;
 use util::errors::IOResult;
 
@@ -84,8 +85,9 @@ impl Requirements {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use tempfile::tempdir;
+
+    use super::*;
 
     #[test]
     fn test_requires_basic() {

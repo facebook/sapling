@@ -7,6 +7,15 @@
 
 //! edenfsctl minitop
 
+use std::collections::BTreeMap;
+use std::io::stdout;
+use std::io::Stdout;
+use std::io::Write;
+use std::path::Path;
+use std::time::Duration;
+use std::time::Instant;
+
+use anyhow::anyhow;
 use async_trait::async_trait;
 use clap::Parser;
 use comfy_table::presets::UTF8_BORDERS_ONLY;
@@ -20,21 +29,6 @@ use crossterm::event::KeyModifiers;
 use crossterm::queue;
 use crossterm::style;
 use crossterm::terminal;
-use futures::FutureExt;
-use futures::StreamExt;
-use shlex::quote;
-use std::collections::BTreeMap;
-use std::io::stdout;
-use std::io::Stdout;
-use std::io::Write;
-use std::path::Path;
-use std::time::Duration;
-use std::time::Instant;
-use sysinfo::Pid;
-use sysinfo::System;
-use sysinfo::SystemExt;
-
-use anyhow::anyhow;
 use edenfs_client::EdenFsClient;
 use edenfs_client::EdenFsInstance;
 use edenfs_error::EdenFsError;
@@ -43,7 +37,12 @@ use edenfs_error::ResultExt;
 use edenfs_utils::humantime::HumanTime;
 use edenfs_utils::humantime::TimeUnit;
 use edenfs_utils::path_from_bytes;
-
+use futures::FutureExt;
+use futures::StreamExt;
+use shlex::quote;
+use sysinfo::Pid;
+use sysinfo::System;
+use sysinfo::SystemExt;
 use thrift_types::edenfs::types::pid_t;
 use thrift_types::edenfs::types::AccessCounts;
 use thrift_types::edenfs::types::GetAccessCountsResult;

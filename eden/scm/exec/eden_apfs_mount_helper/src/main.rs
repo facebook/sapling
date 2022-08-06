@@ -11,14 +11,6 @@
 //! It is intended to be used together with edenfs, but may also be
 //! useful for non-virtualized repos as a way to move IO out of a recursive
 //! watch.
-use anyhow::anyhow;
-use anyhow::bail;
-use anyhow::format_err;
-use anyhow::Context;
-use anyhow::Result;
-use serde::*;
-use sha2::Digest;
-use sha2::Sha256;
 use std::os::unix::fs::MetadataExt;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
@@ -27,6 +19,15 @@ use std::process::Command;
 use std::process::Stdio;
 use std::str;
 use std::time::Duration;
+
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Result;
+use serde::*;
+use sha2::Digest;
+use sha2::Sha256;
 use structopt::StructOpt;
 
 #[cfg(feature = "fb")]
@@ -928,8 +929,9 @@ fn main() -> Result<()> {
 // system at fb.
 #[cfg(test)]
 mod test {
-    use super::*;
     use pretty_assertions::assert_eq;
+
+    use super::*;
 
     #[cfg_attr(any(target_os = "macos", feature = "native-plist"), test)]
     #[cfg_attr(

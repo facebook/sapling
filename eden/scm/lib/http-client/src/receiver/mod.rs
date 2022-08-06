@@ -5,12 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
+
 use crate::errors::Abort;
 use crate::errors::HttpClientError;
 use crate::header::Header;
 use crate::progress::Progress;
-
-use anyhow::Result;
 
 pub mod channel;
 

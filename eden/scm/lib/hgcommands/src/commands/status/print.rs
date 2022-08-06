@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::Result;
 use clidispatch::io::IO;
-use std::collections::HashMap;
 use types::path::RepoPathRelativizer;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -218,8 +219,9 @@ impl Default for PrintConfig {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use std::str;
+
+    use super::*;
 
     fn repo_path_buf(path: &str) -> RepoPathBuf {
         RepoPathBuf::from_string(path.to_string()).unwrap()
