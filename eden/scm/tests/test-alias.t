@@ -203,22 +203,22 @@ invalid options
   
   Options ([+] can be repeated):
   
-   -A --all               show status of all files
-   -m --modified          show only modified files
-   -a --added             show only added files
-   -r --removed           show only removed files
-   -d --deleted           show only deleted (but tracked) files
-   -c --clean             show only files without changes
-   -u --unknown           show only unknown (not tracked) files
-   -i --ignored           show only ignored files
-   -n --no-status         hide status prefix
-   -C --copies            show source of copied files
-   -0 --print0            end filenames with NUL, for use with xargs
-      --rev VALUE [+]     show difference from revision
-      --change VALUE      list the changed files of a revision
-      --root-relative     show status relative to root
-   -I --include VALUE [+] include names matching the given patterns
-   -X --exclude VALUE [+] exclude names matching the given patterns
+   -A --all                 show status of all files
+   -m --modified            show only modified files
+   -a --added               show only added files
+   -r --removed             show only removed files
+   -d --deleted             show only deleted (but tracked) files
+   -c --clean               show only files without changes
+   -u --unknown             show only unknown (not tracked) files
+   -i --ignored             show only ignored files
+   -n --no-status           hide status prefix
+   -C --copies              show source of copied files
+   -0 --print0              end filenames with NUL, for use with xargs
+      --rev REV [+]         show difference from revision
+      --change REV          list the changed files of a revision
+      --root-relative       show status relative to root
+   -I --include PATTERN [+] include names matching the given patterns
+   -X --exclude PATTERN [+] exclude names matching the given patterns
   
   (some details hidden, use --verbose to show complete help)
   $ hg no-R
@@ -273,22 +273,22 @@ invalid options
   
   Options ([+] can be repeated):
   
-   -A --all               show status of all files
-   -m --modified          show only modified files
-   -a --added             show only added files
-   -r --removed           show only removed files
-   -d --deleted           show only deleted (but tracked) files
-   -c --clean             show only files without changes
-   -u --unknown           show only unknown (not tracked) files
-   -i --ignored           show only ignored files
-   -n --no-status         hide status prefix
-   -C --copies            show source of copied files
-   -0 --print0            end filenames with NUL, for use with xargs
-      --rev VALUE [+]     show difference from revision
-      --change VALUE      list the changed files of a revision
-      --root-relative     show status relative to root
-   -I --include VALUE [+] include names matching the given patterns
-   -X --exclude VALUE [+] exclude names matching the given patterns
+   -A --all                 show status of all files
+   -m --modified            show only modified files
+   -a --added               show only added files
+   -r --removed             show only removed files
+   -d --deleted             show only deleted (but tracked) files
+   -c --clean               show only files without changes
+   -u --unknown             show only unknown (not tracked) files
+   -i --ignored             show only ignored files
+   -n --no-status           hide status prefix
+   -C --copies              show source of copied files
+   -0 --print0              end filenames with NUL, for use with xargs
+      --rev REV [+]         show difference from revision
+      --change REV          list the changed files of a revision
+      --root-relative       show status relative to root
+   -I --include PATTERN [+] include names matching the given patterns
+   -X --exclude PATTERN [+] exclude names matching the given patterns
   
   (some details hidden, use --verbose to show complete help)
   $ hg no--repo
@@ -343,22 +343,22 @@ invalid options
   
   Options ([+] can be repeated):
   
-   -A --all               show status of all files
-   -m --modified          show only modified files
-   -a --added             show only added files
-   -r --removed           show only removed files
-   -d --deleted           show only deleted (but tracked) files
-   -c --clean             show only files without changes
-   -u --unknown           show only unknown (not tracked) files
-   -i --ignored           show only ignored files
-   -n --no-status         hide status prefix
-   -C --copies            show source of copied files
-   -0 --print0            end filenames with NUL, for use with xargs
-      --rev VALUE [+]     show difference from revision
-      --change VALUE      list the changed files of a revision
-      --root-relative     show status relative to root
-   -I --include VALUE [+] include names matching the given patterns
-   -X --exclude VALUE [+] exclude names matching the given patterns
+   -A --all                 show status of all files
+   -m --modified            show only modified files
+   -a --added               show only added files
+   -r --removed             show only removed files
+   -d --deleted             show only deleted (but tracked) files
+   -c --clean               show only files without changes
+   -u --unknown             show only unknown (not tracked) files
+   -i --ignored             show only ignored files
+   -n --no-status           hide status prefix
+   -C --copies              show source of copied files
+   -0 --print0              end filenames with NUL, for use with xargs
+      --rev REV [+]         show difference from revision
+      --change REV          list the changed files of a revision
+      --root-relative       show status relative to root
+   -I --include PATTERN [+] include names matching the given patterns
+   -X --exclude PATTERN [+] exclude names matching the given patterns
   
   (some details hidden, use --verbose to show complete help)
   $ hg no--repository
@@ -413,22 +413,22 @@ invalid options
   
   Options ([+] can be repeated):
   
-   -A --all               show status of all files
-   -m --modified          show only modified files
-   -a --added             show only added files
-   -r --removed           show only removed files
-   -d --deleted           show only deleted (but tracked) files
-   -c --clean             show only files without changes
-   -u --unknown           show only unknown (not tracked) files
-   -i --ignored           show only ignored files
-   -n --no-status         hide status prefix
-   -C --copies            show source of copied files
-   -0 --print0            end filenames with NUL, for use with xargs
-      --rev VALUE [+]     show difference from revision
-      --change VALUE      list the changed files of a revision
-      --root-relative     show status relative to root
-   -I --include VALUE [+] include names matching the given patterns
-   -X --exclude VALUE [+] exclude names matching the given patterns
+   -A --all                 show status of all files
+   -m --modified            show only modified files
+   -a --added               show only added files
+   -r --removed             show only removed files
+   -d --deleted             show only deleted (but tracked) files
+   -c --clean               show only files without changes
+   -u --unknown             show only unknown (not tracked) files
+   -i --ignored             show only ignored files
+   -n --no-status           hide status prefix
+   -C --copies              show source of copied files
+   -0 --print0              end filenames with NUL, for use with xargs
+      --rev REV [+]         show difference from revision
+      --change REV          list the changed files of a revision
+      --root-relative       show status relative to root
+   -I --include PATTERN [+] include names matching the given patterns
+   -X --exclude PATTERN [+] exclude names matching the given patterns
   
   (some details hidden, use --verbose to show complete help)
   $ hg no--config

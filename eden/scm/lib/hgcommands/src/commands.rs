@@ -56,16 +56,19 @@ define_flags! {
     pub struct WalkOpts {
         /// include names matching the given patterns
         #[short('I')]
+        #[argtype("PATTERN")]
         include: Vec<String>,
 
         /// exclude names matching the given patterns
         #[short('X')]
+        #[argtype("PATTERN")]
         exclude: Vec<String>,
     }
 
     pub struct FormatterOpts {
         /// display with template (EXPERIMENTAL)
         #[short('T')]
+        #[argtype("TEMPLATE")]
         template: String,
     }
 

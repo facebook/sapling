@@ -40,10 +40,12 @@ define_flags! {
 
         /// revision or branch to check out
         #[short('u')]
+        #[argtype("REV")]
         updaterev: String,
 
         /// include the specified changeset (DEPRECATED)
         #[short('r')]
+        #[argtype("REV")]
         rev: String,
 
         /// use pull protocol to copy metadata

@@ -71,9 +71,11 @@ define_flags! {
         print0: bool,
 
         /// show difference from revision
+        #[argtype("REV")]
         rev: Vec<String>,
 
         /// list the changed files of a revision
+        #[argtype("REV")]
         change: String,
 
         /// show status relative to root
