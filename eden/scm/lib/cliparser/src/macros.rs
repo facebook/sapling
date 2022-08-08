@@ -25,7 +25,7 @@ macro_rules! define_flags {
 macro_rules! _define_flags_impl {
     // Nothing left to parse
     ( input []
-      flags [ $( ($short:literal, $field:ident, $doc:expr, $type:ty, $default:expr) )* ]
+      flags [ $( ($short:literal, $field:ident, $doc:expr, $type:ty, $default:expr, $argtype:literal) )* ]
       arg0 ( $( $arg0:ident )? )
       args [ $( ($arg:ident, $arg_index:tt) )* ]
       varargs ( $($varargs:ident)? )
@@ -42,8 +42,8 @@ macro_rules! _define_flags_impl {
 
         impl $crate::parser::StructFlags for $name {
             fn flags() -> Vec<$crate::parser::Flag> {
-                let flags: Vec<(char, String, String, $crate::parser::Value)> = vec![
-                    $( ($short, stringify!($field).replace("_", "-"), $doc.trim().to_string(), $crate::parser::Value::from($default)), )*
+                let flags: Vec<(char, String, String, $crate::parser::Value, String)> = vec![
+                    $( ($short, stringify!($field).replace("_", "-"), $doc.trim().to_string(), $crate::parser::Value::from($default), $argtype.to_string()), )*
                 ];
                 #[allow(unused_mut)]
                 let mut result: Vec<$crate::parser::Flag> = flags.into_iter().map(Into::into).collect();
@@ -88,7 +88,31 @@ macro_rules! _define_flags_impl {
     ) => {
         $crate::_define_flags_impl!(
             input [ $( $rest )* ]
-            flags [ $( $flags )* (' ', $field, $doc, $type, (<$type>::default())) ]
+            flags [ $( $flags )* (' ', $field, $doc, $type, (<$type>::default()), "") ]
+            arg0 $arg0
+            args $args
+            varargs $varargs
+            subflags $subflags
+            misc $misc
+        );
+    };
+
+    // Match a field like:
+    //
+    //    /// description
+    //    #[argtype("type")]
+    //    name: type,
+    ( input [ #[doc=$doc:expr] #[argtype($argtype:literal)] $field:ident : $type:ty, $($rest:tt)* ]
+      flags [ $( $flags:tt )* ]
+      arg0 $arg0:tt
+      args $args:tt
+      varargs $varargs:tt
+      subflags $subflags:tt
+      misc $misc:tt
+    ) => {
+        $crate::_define_flags_impl!(
+            input [ $( $rest )* ]
+            flags [ $( $flags )* (' ', $field, $doc, $type, (<$type>::default()), $argtype) ]
             arg0 $arg0
             args $args
             varargs $varargs
@@ -111,7 +135,7 @@ macro_rules! _define_flags_impl {
     ) => {
         $crate::_define_flags_impl!(
             input [ $( $rest )* ]
-            flags [ $( $flags )* (' ', $field, $doc, $type, $default) ]
+            flags [ $( $flags )* (' ', $field, $doc, $type, $default, "") ]
             arg0 $arg0
             args $args
             varargs $varargs
@@ -135,7 +159,32 @@ macro_rules! _define_flags_impl {
     ) => {
         $crate::_define_flags_impl!(
             input [ $( $rest )* ]
-            flags [ $( $flags )* ($short, $field, $doc, $type, (<$type>::default())) ]
+            flags [ $( $flags )* ($short, $field, $doc, $type, (<$type>::default()), "") ]
+            arg0 $arg0
+            args $args
+            varargs $varargs
+            subflags $subflags
+            misc $misc
+        );
+    };
+
+    // Match a field like:
+    //
+    //    /// description
+    //    #[short('s')]
+    //    #[argtype("type")]
+    //    name: type,
+    ( input [ #[doc=$doc:expr] #[short($short:literal)] #[argtype($argtype:literal)] $field:ident : $type:ty, $($rest:tt)* ]
+      flags [ $( $flags:tt )* ]
+      arg0 $arg0:tt
+      args $args:tt
+      varargs $varargs:tt
+      subflags $subflags:tt
+      misc $misc:tt
+    ) => {
+        $crate::_define_flags_impl!(
+            input [ $( $rest )* ]
+            flags [ $( $flags )* ($short, $field, $doc, $type, (<$type>::default()), $argtype) ]
             arg0 $arg0
             args $args
             varargs $varargs
@@ -159,7 +208,7 @@ macro_rules! _define_flags_impl {
     ) => {
         $crate::_define_flags_impl!(
             input [ $( $rest )* ]
-            flags [ $( $flags )* ($short, $field, $doc, $type, $default) ]
+            flags [ $( $flags )* ($short, $field, $doc, $type, $default, "") ]
             arg0 $arg0
             args $args
             varargs $varargs
@@ -316,11 +365,11 @@ mod tests {
     fn test_struct_flags() {
         let flags = TestOptions::flags();
         let expected: Vec<Flag> = vec![
-            (None, "boo", "bool value", Value::from(true)),
-            (None, "foo", "foo", Value::from(false)),
-            (None, "count", "int value", Value::from(12)),
-            (None, "long-name", "name", Value::from("alice")),
-            (Some('r'), "rev", "revisions", Value::from(Vec::new())),
+            (None, "boo", "bool value", Value::from(true), ""),
+            (None, "foo", "foo", Value::from(false), ""),
+            (None, "count", "int value", Value::from(12), ""),
+            (None, "long-name", "name", Value::from("alice"), ""),
+            (Some('r'), "rev", "revisions", Value::from(Vec::new()), ""),
         ]
         .into_iter()
         .map(Into::into)

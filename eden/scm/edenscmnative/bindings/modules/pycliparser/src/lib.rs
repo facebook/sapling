@@ -87,6 +87,7 @@ struct FlagDef {
     short: Option<char>,
     long: String,
     default: Value,
+    flag_type: String,
 }
 
 impl<'s> FromPyObject<'s> for FlagDef {
@@ -99,10 +100,16 @@ impl<'s> FromPyObject<'s> for FlagDef {
         let short: String = tuple.get_item(py, 0).extract(py)?;
         let long: String = tuple.get_item(py, 1).extract(py)?;
         let default: Value = tuple.get_item(py, 2).extract(py)?;
+        let flag_type: String = if tuple.len(py) >= 4 {
+            tuple.get_item(py, 3).extract(py)?
+        } else {
+            "".into()
+        };
         Ok(FlagDef {
             short: short.chars().next(),
             long,
             default,
+            flag_type,
         })
     }
 }
@@ -110,7 +117,14 @@ impl<'s> FromPyObject<'s> for FlagDef {
 impl Into<Flag> for FlagDef {
     fn into(self) -> Flag {
         let description = "";
-        (self.short, self.long, description, self.default).into()
+        (
+            self.short,
+            self.long,
+            description,
+            self.default,
+            self.flag_type,
+        )
+            .into()
     }
 }
 

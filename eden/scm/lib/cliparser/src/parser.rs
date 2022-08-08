@@ -255,6 +255,8 @@ pub struct Flag {
     description: Cow<'static, str>,
     /// default value (including its type)
     default_value: Value,
+    /// aaaa
+    flag_type: Option<Cow<'static, str>>,
 }
 
 /// Convert a tuple to a [`Flag`].
@@ -279,15 +281,16 @@ pub struct Flag {
 /// let flag: Flag = (Some('r'), "rev", "revisions", &["master", "stable"][..]).into();
 /// let flag: Flag = (None, format!("sleep"), format!("sleep few seconds (default: {})", 1), 1).into();
 /// ```
-impl<S, L, D, V> From<(S, L, D, V)> for Flag
+impl<S, L, D, V, T> From<(S, L, D, V, T)> for Flag
 where
     S: Into<Option<char>>,
     L: Into<Cow<'static, str>>,
     D: Into<Cow<'static, str>>,
     V: Into<Value>,
+    T: Into<Cow<'static, str>>,
 {
-    fn from(tuple: (S, L, D, V)) -> Flag {
-        let (short_name, long_name, description, default_value) = tuple;
+    fn from(tuple: (S, L, D, V, T)) -> Flag {
+        let (short_name, long_name, description, default_value, flag_type) = tuple;
 
         let mut short_name = short_name.into();
         // Translate ' ' to "no short name".
@@ -295,11 +298,19 @@ where
             short_name = None;
         }
 
+        let flag_type: Cow<'static, str> = flag_type.into();
+        let flag_type = if flag_type.is_empty() {
+            None
+        } else {
+            Some(flag_type)
+        };
+
         Flag {
             short_name,
             long_name: long_name.into(),
             description: description.into(),
             default_value: default_value.into(),
+            flag_type,
         }
     }
 }
@@ -310,14 +321,22 @@ impl ToPyObject for Flag {
     type ObjectType = PyObject;
 
     fn to_py_object(&self, py: Python) -> Self::ObjectType {
-        (
-            Str::from(self.short_name.map(|s| s.to_string()).unwrap_or_default()),
-            Str::from(self.long_name.to_string()),
-            &self.default_value,
-            Str::from(self.description.to_string()),
-        )
-            .to_py_object(py)
-            .into_object()
+        let short_name = Str::from(self.short_name.map(|s| s.to_string()).unwrap_or_default());
+        let long_name = Str::from(self.long_name.to_string());
+        let description = Str::from(self.description.to_string());
+        if let Some(flag_type) = &self.flag_type {
+            (
+                short_name,
+                long_name,
+                &self.default_value,
+                description,
+                Str::from(flag_type.to_string()),
+            )
+                .to_py_object(py)
+        } else {
+            (short_name, long_name, &self.default_value, description).to_py_object(py)
+        }
+        .into_object()
     }
 }
 
@@ -748,11 +767,17 @@ mod tests {
 
     fn flags() -> Vec<Flag> {
         vec![
-            ('q', "quiet", "silences the output", Value::Bool(false)),
-            ('c', "config", "supply config file", Value::List(Vec::new())),
-            ('h', "help", "get some help", Value::Bool(false)),
-            ('v', "verbose", "level of verbosity", Value::Bool(false)),
-            ('r', "rev", "revision hash", Value::Str("".to_string())),
+            ('q', "quiet", "silences the output", Value::Bool(false), ""),
+            (
+                'c',
+                "config",
+                "supply config file",
+                Value::List(Vec::new()),
+                "",
+            ),
+            ('h', "help", "get some help", Value::Bool(false), ""),
+            ('v', "verbose", "level of verbosity", Value::Bool(false), ""),
+            ('r', "rev", "revision hash", Value::Str("".to_string()), ""),
         ]
         .into_iter()
         .map(Into::into)
@@ -780,7 +805,7 @@ mod tests {
 
     #[test]
     fn test_parse_single_no_value_flag() {
-        let flag = ('q', "quiet", "silences the output", false).into();
+        let flag = ('q', "quiet", "silences the output", false, "").into();
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
@@ -796,7 +821,7 @@ mod tests {
 
     #[test]
     fn test_parse_single_value_flag() {
-        let flag = ('c', "config", "supply config file", "").into();
+        let flag = ('c', "config", "supply config file", "", "").into();
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
@@ -829,7 +854,7 @@ mod tests {
 
     #[test]
     fn test_parse_long_single_no_value() {
-        let flag = ('q', "quiet", "silences the output", false).into();
+        let flag = ('q', "quiet", "silences the output", false, "").into();
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
@@ -845,7 +870,7 @@ mod tests {
 
     #[test]
     fn test_parse_long_single_with_value() {
-        let flag = ('c', "config", "supply config file", "").into();
+        let flag = ('c', "config", "supply config file", "", "").into();
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
@@ -864,7 +889,7 @@ mod tests {
 
     #[test]
     fn test_parse_long_single_int_value() {
-        let flag = ('n', "number", "supply a number", 0).into();
+        let flag = ('n', "number", "supply a number", 0, "").into();
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
@@ -882,7 +907,7 @@ mod tests {
 
     #[test]
     fn test_parse_long_single_list_value() {
-        let flag = ('n', "number", "supply a list of numbers", &[][..]).into();
+        let flag = ('n', "number", "supply a list of numbers", &[][..], "").into();
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
 
@@ -908,7 +933,7 @@ mod tests {
 
     #[test]
     fn test_parse_long_and_short_single_list_value() {
-        let flag = ('n', "number", "supply a list of numbers", &[][..]).into();
+        let flag = ('n', "number", "supply a list of numbers", &[][..], "").into();
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
 
@@ -978,7 +1003,7 @@ mod tests {
 
     #[test]
     fn test_parse_equals_in_value() {
-        let flag = ('c', "config", "supply a config file", "").into();
+        let flag = ('c', "config", "supply a config file", "", "").into();
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
 
@@ -993,7 +1018,7 @@ mod tests {
 
     #[test]
     fn test_parse_list_equals_in_values() {
-        let flag = ('c', "config", "supply multiple config files", &[][..]).into();
+        let flag = ('c', "config", "supply multiple config files", &[][..], "").into();
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
 
@@ -1016,7 +1041,7 @@ mod tests {
 
     #[test]
     fn test_parse_list_short_name_with_equals_in_value() {
-        let flag = ('c', "config", "supply multiple config files", "").into();
+        let flag = ('c', "config", "supply multiple config files", "", "").into();
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
 
@@ -1075,7 +1100,7 @@ mod tests {
 
     #[test]
     fn test_template_value_long_str_value() {
-        let flag = ('T', "template", "specify a template", "").into();
+        let flag = ('T', "template", "specify a template", "", "").into();
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
 
@@ -1190,8 +1215,20 @@ mod tests {
     #[test]
     fn test_prefix_match_ambiguous() {
         let flags = vec![
-            ('c', "config", "config overrides", Value::List(Vec::new())),
-            (' ', "configfile", "config files", Value::List(Vec::new())),
+            (
+                'c',
+                "config",
+                "config overrides",
+                Value::List(Vec::new()),
+                "",
+            ),
+            (
+                ' ',
+                "configfile",
+                "config files",
+                Value::List(Vec::new()),
+                "",
+            ),
         ]
         .into_iter()
         .map(Into::into)
@@ -1306,6 +1343,7 @@ mod tests {
             "no-commit",
             "leaves the changes in the working copy",
             Value::Bool(false),
+            "",
         )];
         let flags = flags.into_iter().map(Into::into).collect();
         let parser = ParseOptions::new().flags(flags).into_parser();
@@ -1328,6 +1366,7 @@ mod tests {
             "no-commit",
             "leaves the changes in the working copy",
             Value::Bool(false),
+            "",
         )];
         let flags = flags.into_iter().map(Into::into).collect();
         let parser = ParseOptions::new().flags(flags).into_parser();
@@ -1346,7 +1385,7 @@ mod tests {
     #[test]
     fn test_no_arg_for_no_boolean() {
         // XXX: --no-foo should not affect non-boolean values.
-        let flags = vec![(None, "foo", "foo desc", "").into()];
+        let flags = vec![(None, "foo", "foo desc", "", "").into()];
         let parsed = ParseOptions::new()
             .flags(flags)
             .parse_args(&vec!["--no-foo", "bar"])
@@ -1358,7 +1397,7 @@ mod tests {
     #[test]
     fn test_no_flag_for_no_boolean() {
         // XXX: --foo should not affect non-boolean values.
-        let flags = vec![(None, "no-foo", "foo desc", "").into()];
+        let flags = vec![(None, "no-foo", "foo desc", "", "").into()];
         let parsed = ParseOptions::new()
             .flags(flags)
             .parse_args(&vec!["--foo", "bar"])
@@ -1369,7 +1408,16 @@ mod tests {
 
     #[test]
     fn test_parse_option_string_value() {
-        let flags = vec![(' ', "opt_str", "an optional string", Value::OptStr(None)).into()];
+        let flags = vec![
+            (
+                ' ',
+                "opt_str",
+                "an optional string",
+                Value::OptStr(None),
+                "",
+            )
+                .into(),
+        ];
         let parser = ParseOptions::new().flags(flags).into_parser();
 
         let args: Vec<&str> = Default::default();
