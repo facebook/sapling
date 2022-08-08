@@ -16,7 +16,7 @@ from edenscm.mercurial.i18n import _
 from . import service, token as tokenmod
 
 
-def showhistory(ui, repo, reponame, workspacename, template, **opts):
+def showhistory(ui, repo, reponame, workspacename, template, **opts) -> None:
     class cloudsl(object):
         def __init__(self, ui, repo, reponame, workspacename, **opts):
             self.ui = ui
