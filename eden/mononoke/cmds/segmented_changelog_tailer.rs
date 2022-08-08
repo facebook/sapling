@@ -14,6 +14,7 @@ use bytes::Bytes;
 use changesets::deserialize_cs_entries;
 use clap::Parser;
 use cmdlib::helpers;
+use context::SessionContainer;
 use fbinit::FacebookInit;
 use futures::future::join_all;
 use futures::stream;
@@ -100,7 +101,9 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         None => vec![],
     };
 
-    let ctx = app.new_context();
+    let (env, logger) = (app.environment(), app.logger());
+    let session = SessionContainer::new_with_defaults(env.fb);
+    let ctx = session.new_context(logger.clone(), env.scuba_sample_builder.clone());
 
     let mut tasks = Vec::new();
     for (index, blobrepo) in blobrepos.into_iter().enumerate() {
