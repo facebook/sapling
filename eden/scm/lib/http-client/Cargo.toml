@@ -11,7 +11,7 @@ path = "src/bin/cli.rs"
 
 [dependencies]
 anyhow = "1.0.56"
-async-compression = { version = "0.3.12", features = ["all-implementations", "brotli", "bzip2", "deflate", "gzip", "zlib", "zstd"] }
+async-compression = { version = "0.3.14", features = ["all-implementations", "brotli", "bzip2", "deflate", "gzip", "zlib", "zstd"] }
 atty = "0.2"
 curl = { version = "0.4.41", features = ["http2"] }
 curl-sys = "0.4.51"
