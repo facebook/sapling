@@ -516,7 +516,10 @@ class basetreemanifestlog(object):
 
     def commitsharedpacks(self):
         """Persist the dirty trees written to the shared packs."""
-        if self._isgit or self._iseager:
+        if self._isgit:
+            return
+        if self._iseager:
+            self.datastore.flush()
             return
 
         self.datastore.markforrefresh()
