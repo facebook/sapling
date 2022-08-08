@@ -521,20 +521,19 @@ def push(repo, remote, force=False, revs=None, bookmarks=(), opargs=None):
 
 
 def _pushaddblobs(pushop):
-    blobs = _findblobs(pushop)
+    blobs = findblobs(pushop.repo, pushop.outgoing.missing)
     peer = pushop.remote
     assert peer.capable("addblobs")
     peer.addblobs(blobs)
     pushop.cgresult = 1
 
 
-def _findblobs(pushop):
+def findblobs(repo, nodes):
     """find new HG blobs (file, tree, commit) to push.
 
     yield (blobtype, node, (p1, p2), text) per item.
     blobtype: "blob", "tree", or "commit"
     """
-    repo = pushop.repo
     dag = repo.changelog.dag
     parentnames = dag.parentnames
     clparents = repo.changelog.parents
@@ -548,7 +547,7 @@ def _findblobs(pushop):
         # subdir does not matter here - use ""
         return get("", node).read()
 
-    commitnodes = dag.sort(pushop.outgoing.missing)
+    commitnodes = dag.sort(nodes)
     for node in commitnodes.iterrev():
         parentnodes = parentnames(node)
         mfnode = changelogrevision(node).manifest
