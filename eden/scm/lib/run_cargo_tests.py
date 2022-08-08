@@ -24,6 +24,7 @@ def extraargs(manifestpath):
 
 def runtest(manifestpath):
     cargo = os.getenv("CARGO", "cargo")
+    os.environ["RUSTFLAGS"] = "--cfg=Py_38"
     name = os.path.dirname(manifestpath)
     try:
         os.unlink(os.path.join(name, "Cargo.lock"))
