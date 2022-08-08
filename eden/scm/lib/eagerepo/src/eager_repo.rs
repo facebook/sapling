@@ -143,6 +143,7 @@ impl EagerRepo {
                 "visibleheads",
                 "segmentedchangelog",
                 "eagerepo",
+                "invalidatelinkrev",
             ],
         )?;
         let repo = Self {
