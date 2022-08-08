@@ -345,7 +345,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
   /**
    * Indicates if the backing overlay supports semantic operations, see
-   * `IOverlay::supportsSemanticOperations` for mor information.
+   * `IOverlay::supportsSemanticOperations` for more information.
    */
   bool supportsSemanticOperations_;
 
