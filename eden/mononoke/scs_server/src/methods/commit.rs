@@ -397,25 +397,60 @@ impl SourceControlServiceImpl {
             Err(errors::diff_input_too_big(total_input_size))?;
         }
 
-        let path_diffs = future::try_join_all(paths.into_iter().map(
-            |(base_path, other_path, copy_info, mode)| async move {
+        if let Some(diff_size_limit) = params.diff_size_limit {
+            let mut size_so_far: i64 = 0;
+            let mut path_diffs = Vec::with_capacity(paths.len());
+            let mut stopped_at_pair = None;
+
+            for (base_path, other_path, copy_info, mode) in paths {
                 let diff =
                     unified_diff(other_path, base_path, copy_info, context_lines, mode).await?;
-                let r: Result<_, errors::ServiceError> =
-                    Ok(thrift::CommitFileDiffsResponseElement {
+
+                size_so_far += diff.raw_diff.len() as i64;
+                if size_so_far > diff_size_limit {
+                    stopped_at_pair = Some(thrift::CommitFileDiffsStoppedAtPair {
                         base_path: base_path.map(|p| p.path().to_string()),
                         other_path: other_path.map(|p| p.path().to_string()),
-                        diff: diff.into_response(),
                         ..Default::default()
                     });
-                r
-            },
-        ))
-        .await?;
-        Ok(thrift::CommitFileDiffsResponse {
-            path_diffs,
-            ..Default::default()
-        })
+                    break;
+                }
+
+                path_diffs.push(thrift::CommitFileDiffsResponseElement {
+                    base_path: base_path.map(|p| p.path().to_string()),
+                    other_path: other_path.map(|p| p.path().to_string()),
+                    diff: diff.into_response(),
+                    ..Default::default()
+                });
+            }
+
+            Ok(thrift::CommitFileDiffsResponse {
+                path_diffs,
+                stopped_at_pair,
+                ..Default::default()
+            })
+        } else {
+            let path_diffs = future::try_join_all(paths.into_iter().map(
+                |(base_path, other_path, copy_info, mode)| async move {
+                    let diff =
+                        unified_diff(other_path, base_path, copy_info, context_lines, mode).await?;
+                    let r: Result<_, errors::ServiceError> =
+                        Ok(thrift::CommitFileDiffsResponseElement {
+                            base_path: base_path.map(|p| p.path().to_string()),
+                            other_path: other_path.map(|p| p.path().to_string()),
+                            diff: diff.into_response(),
+                            ..Default::default()
+                        });
+                    r
+                },
+            ))
+            .await?;
+
+            Ok(thrift::CommitFileDiffsResponse {
+                path_diffs,
+                ..Default::default()
+            })
+        }
     }
 
     /// Get commit info.

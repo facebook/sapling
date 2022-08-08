@@ -23,6 +23,7 @@ use crate::render::Render;
 #[derive(Serialize)]
 struct DiffOutput {
     diffs: Vec<Vec<u8>>,
+    stopped_at_pair: Option<thrift::CommitFileDiffsStoppedAtPair>,
 }
 
 impl Render for DiffOutput {
@@ -32,6 +33,22 @@ impl Render for DiffOutput {
         for diff in &self.diffs {
             write!(w, "{}", String::from_utf8_lossy(diff))?;
         }
+
+        if let Some(stopped_at_pair) = &self.stopped_at_pair {
+            writeln!(
+                w,
+                "stopped at (base_path: {}, other_path: {})",
+                stopped_at_pair
+                    .base_path
+                    .as_ref()
+                    .unwrap_or(&String::from("")),
+                stopped_at_pair
+                    .other_path
+                    .as_ref()
+                    .unwrap_or(&String::from(""))
+            )?;
+        }
+
         Ok(())
     }
 
@@ -45,12 +62,14 @@ async fn make_file_diff_request(
     commit: &thrift::CommitSpecifier,
     other_commit_id: Option<thrift::CommitId>,
     paths: Vec<thrift::CommitFileDiffsParamsPathPair>,
+    diff_size_limit: Option<i64>,
 ) -> Result<DiffOutput> {
     let params = thrift::CommitFileDiffsParams {
         other_commit_id,
         paths,
         format: thrift::DiffFormat::RAW_DIFF,
         context: 3,
+        diff_size_limit,
         ..Default::default()
     };
 
@@ -67,7 +86,10 @@ async fn make_file_diff_request(
         })
         .collect();
 
-    Ok(DiffOutput { diffs })
+    Ok(DiffOutput {
+        diffs,
+        stopped_at_pair: response.stopped_at_pair,
+    })
 }
 
 /// Given the paths and sizes of files to diff returns the stream of renderable
@@ -77,6 +99,7 @@ pub(crate) fn diff_files(
     commit: thrift::CommitSpecifier,
     other_commit_id: Option<thrift::CommitId>,
     paths_sizes: impl IntoIterator<Item = (thrift::CommitFileDiffsParamsPathPair, i64)>,
+    diff_size_limit: Option<i64>,
 ) -> impl Stream<Item = Result<impl Render<Args = ()>>> {
     let mut size_sum: i64 = 0;
     let mut path_count: i64 = 0;
@@ -101,6 +124,15 @@ pub(crate) fn diff_files(
         let connection = connection.clone();
         let commit = commit.clone();
         let other_commit_id = other_commit_id.clone();
-        async move { make_file_diff_request(&connection, &commit, other_commit_id, paths).await }
+        async move {
+            make_file_diff_request(
+                &connection,
+                &commit,
+                other_commit_id,
+                paths,
+                diff_size_limit,
+            )
+            .await
+        }
     })
 }

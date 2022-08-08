@@ -955,6 +955,8 @@ struct CommitFileDiffsParams {
   3: DiffFormat format;
   /// Number of lines of unified context around differences (default: 3)
   4: i64 context = 3;
+  /// Limit the total size in bytes of returned diffs
+  5: optional i64 diff_size_limit;
 }
 
 const i64 COMMIT_FIND_FILES_MAX_LIMIT = 100000;
@@ -1460,8 +1462,15 @@ struct CommitFileDiffsResponseElement {
   3: Diff diff;
 }
 
+struct CommitFileDiffsStoppedAtPair {
+  1: optional Path base_path;
+  2: optional Path other_path;
+}
+
 struct CommitFileDiffsResponse {
   1: list<CommitFileDiffsResponseElement> path_diffs;
+  /// The first pair for which a diff was not returned. Start next request from this pair if you want to resume.
+  2: optional CommitFileDiffsStoppedAtPair stopped_at_pair;
 }
 
 struct CommitLookupResponse {

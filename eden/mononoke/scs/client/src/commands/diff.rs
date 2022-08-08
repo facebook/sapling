@@ -51,6 +51,9 @@ pub(super) struct CommandArgs {
     #[clap(long, short, default_value_t = 100, requires = "ordered")]
     /// Generate ordered diff for at most LIMIT files.
     limit: usize,
+    #[clap(long, short = 's')]
+    /// Limit the total size in bytes of returned diffs
+    diff_size_limit: Option<i64>,
 }
 
 #[derive(Serialize)]
@@ -187,6 +190,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 base_commit.clone(),
                 other_commit_id,
                 paths_sizes,
+                args.diff_size_limit,
             ),
         )
         .await
