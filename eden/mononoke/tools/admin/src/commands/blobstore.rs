@@ -36,7 +36,7 @@ pub enum BlobstoreSubcommand {
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
-    let ctx = app.new_context();
+    let ctx = app.new_basic_context();
 
     let blobstore = app
         .open_blobstore(&args.repo_blobstore_args)

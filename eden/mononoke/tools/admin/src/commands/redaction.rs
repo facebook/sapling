@@ -69,7 +69,7 @@ pub enum RedactionSubcommand {
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
-    let ctx = app.new_context();
+    let ctx = app.new_basic_context();
 
     match args.subcommand {
         RedactionSubcommand::CreateKeyList(create_args) => {

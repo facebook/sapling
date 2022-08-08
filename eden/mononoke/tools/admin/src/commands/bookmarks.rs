@@ -97,7 +97,7 @@ pub enum BookmarksSubcommand {
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
-    let ctx = app.new_context();
+    let ctx = app.new_basic_context();
 
     let repo: Repo = app
         .open_repo(&args.repo)

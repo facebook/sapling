@@ -58,7 +58,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         .await
         .context("Failed to open repo")?;
 
-    let ctx = app.new_context();
+    let ctx = app.new_basic_context();
 
     stream::iter(entries)
         .try_for_each_concurrent(args.concurrency, {

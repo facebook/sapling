@@ -192,8 +192,11 @@ impl MononokeApp {
         &self.env.readonly_storage
     }
 
-    /// Create a basic CoreContext.
-    pub fn new_context(&self) -> CoreContext {
+    /// Create a basic CoreContext without scuba logging.  Good choice for
+    /// simple CLI tools like admin.
+    ///
+    /// Warning: returned context doesn't provide any scuba logging!
+    pub fn new_basic_context(&self) -> CoreContext {
         CoreContext::new_with_logger(self.env.fb, self.logger().clone())
     }
 
@@ -406,7 +409,7 @@ impl MononokeApp {
         let blobstore = if redaction == Redaction::Enabled {
             let redacted_blobs = self
                 .repo_factory
-                .redacted_blobs(self.new_context(), &storage_config.metadata)
+                .redacted_blobs(self.new_basic_context(), &storage_config.metadata)
                 .await?;
             RedactedBlobstore::new(
                 blobstore,

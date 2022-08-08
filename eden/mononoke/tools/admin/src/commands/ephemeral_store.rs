@@ -53,7 +53,7 @@ pub enum EphemeralStoreSubcommand {
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
-    let ctx = app.new_context();
+    let ctx = app.new_basic_context();
     let repo: Repo = app.open_repo(&args.repo).await?;
 
     let subcommand_result = match args.subcommand {

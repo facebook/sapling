@@ -303,7 +303,7 @@ fn print_name_hash_pairs(pairs: impl IntoIterator<Item = (String, impl Display)>
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
-    let ctx = app.new_context();
+    let ctx = app.new_basic_context();
 
     let repo: BlobRepo = app
         .open_repo(&args.repo_args)

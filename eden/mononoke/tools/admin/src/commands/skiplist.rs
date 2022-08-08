@@ -78,7 +78,7 @@ fn get_blobstore_key(key_arg: Option<String>, config: RepoConfig) -> Result<Stri
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
-    let ctx = app.new_context();
+    let ctx = app.new_basic_context();
     let repo_arg = args.repo.id_or_name()?;
     let (_, repo_config) = app.repo_config(repo_arg)?;
     let logger = &app.logger();

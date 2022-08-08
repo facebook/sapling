@@ -46,7 +46,7 @@ pub struct CommandArgs {
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
-    let ctx = app.new_context();
+    let ctx = app.new_basic_context();
 
     let mut content = String::new();
     File::open(&args.bonsai_file)
