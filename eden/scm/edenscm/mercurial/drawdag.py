@@ -266,7 +266,7 @@ def _getcomments(text):
         yield line.split(" # ", 1)[1].split(" # ")[0].strip()
 
 
-def drawdag(repo, text, **opts):
+def drawdag(repo, text, **opts) -> None:
     r"""given an ASCII graph as text, create changesets in repo.
 
     The ASCII graph is like what :hg:`log -G` outputs, with each `o` replaced
@@ -286,7 +286,7 @@ def drawdag(repo, text, **opts):
         return _drawdagintransaction(repo, text, tr, **opts)
 
 
-def _drawdagintransaction(repo, text, tr, **opts) -> None:
+def _drawdagintransaction(repo, text: str, tr, **opts) -> None:
     # parse the graph and make sure len(parents) <= 2 for each node
     edges = _parseasciigraph(text)
     for k, v in edges.items():
