@@ -524,6 +524,7 @@ def _pushaddblobs(pushop):
     blobs = findblobs(pushop.repo, pushop.outgoing.missing)
     peer = pushop.remote
     assert peer.capable("addblobs")
+    blobs = [(t, n, ps, d) for t, _p, n, ps, d in blobs]
     peer.addblobs(blobs)
     pushop.cgresult = 1
 
@@ -531,7 +532,7 @@ def _pushaddblobs(pushop):
 def findblobs(repo, nodes):
     """find new HG blobs (file, tree, commit) to push.
 
-    yield (blobtype, node, (p1, p2), text) per item.
+    yield (blobtype, path, node, (p1, p2), text) per item.
     blobtype: "blob", "tree", or "commit"
     """
     dag = repo.changelog.dag
@@ -569,16 +570,16 @@ def findblobs(repo, nodes):
                 fctx = ctx[path]
                 assert fctx.filenode() == newnode
                 p1, p2 = fctx.filelog().parents(newnode)
-                yield "blob", newnode, (p1, p2), fctx.rawdata()
+                yield "blob", path, newnode, (p1, p2), fctx.rawdata()
 
         # changed trees
         difftrees = subdirdiff(mfstore, "", mfnode, basemfnodes, treedepth)
         for subdir, treenode, treetext, p1, p2 in difftrees:
-            yield "tree", treenode, (p1, p2), treetext
+            yield "tree", subdir, treenode, (p1, p2), treetext
 
         # commit
         p1, p2 = clparents(node)
-        yield "commit", node, (p1, p2), clrevision(node)
+        yield "commit", "", node, (p1, p2), clrevision(node)
 
 
 # list of steps to perform discovery before push
