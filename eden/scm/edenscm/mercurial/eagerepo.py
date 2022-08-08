@@ -74,10 +74,29 @@ class eagerfilelog(object):
         node = self.store.add_sha1_blob(rawtext)
         return node
 
-    def _get_content(self, node):
+    def parents(self, node):
+        if node == nullid:
+            return (nullid, nullid)
+        else:
+            t = self._get_sha1_blob(node)
+            p1 = t[len(nullid) : len(nullid) * 2]
+            p2 = t[: len(nullid)]
+            return (p1, p2)
+
+    def _get_sha1_blob(self, node):
+        """get the SHA1 prefixed (sorted([p1, p2])) content"""
         if node == nullid:
             return b""
         t = self.store.get_sha1_blob(node)
+        if t is None:
+            raise error.LookupError(node, self.name, _("no node"))
+        return t
+
+    def _get_content(self, node):
+        """get the content without hg's parent SHA1 prefix"""
+        if node == nullid:
+            return b""
+        t = self.store.get_content(node)
         if t is None:
             raise error.LookupError(node, self.name, _("no node"))
         return t
