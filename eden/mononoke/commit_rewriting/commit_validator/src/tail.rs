@@ -121,7 +121,7 @@ pub(crate) fn tail_entries(
                     );
                     let entries = entries
                         .into_iter()
-                        .filter({ |entry| skip_bookmarks.contains(&entry.bookmark_name) })
+                        .filter(|entry| skip_bookmarks.contains(&entry.bookmark_name))
                         .collect();
 
                     let entries_with_queue_size: std::iter::Map<_, _> =

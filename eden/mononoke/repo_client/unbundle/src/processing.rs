@@ -25,11 +25,9 @@ use bytes::Bytes;
 use context::CoreContext;
 use hooks::HookManager;
 use mercurial_mutation::HgMutationStoreRef;
-use metaconfig_types::Address;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::PushParams;
 use metaconfig_types::PushrebaseParams;
-use metaconfig_types::PushrebaseRemoteMode;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use pushrebase::PushrebaseError;
@@ -518,8 +516,10 @@ async fn normal_pushrebase<'a>(
             #[cfg(fbcode_build)]
             {
                 let result = match address {
-                    Address::Tier(tier) => ScsPushrebaseClient::from_tier(ctx, tier.clone(), repo)?,
-                    Address::HostPort(host_port) => {
+                    metaconfig_types::Address::Tier(tier) => {
+                        ScsPushrebaseClient::from_tier(ctx, tier.clone(), repo)?
+                    }
+                    metaconfig_types::Address::HostPort(host_port) => {
                         ScsPushrebaseClient::from_host_port(ctx, host_port.clone(), repo)?
                     }
                 }
@@ -534,7 +534,7 @@ async fn normal_pushrebase<'a>(
                 match (result, remote_mode) {
                     (Ok(outcome), _) => return Ok((outcome.head, outcome.rebased_changesets)),
                     // No fallback, propagate error
-                    (Err(err), PushrebaseRemoteMode::RemoteScs(..)) => {
+                    (Err(err), metaconfig_types::PushrebaseRemoteMode::RemoteScs(..)) => {
                         return Err(
                             convert_bookmark_movement_err(err, hook_rejection_remapper).await?
                         );

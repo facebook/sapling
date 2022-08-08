@@ -5,19 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::bail;
 use anyhow::Error;
 use fbinit::FacebookInit;
 use http::HeaderMap;
 use metaconfig_types::Identity;
-use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 
 pub const HEADER_CRYPTO_AUTH_TOKENS: &str = "x-auth-cats";
 
 #[cfg(not(fbcode_build))]
 pub fn try_get_cats_idents(
-    fb: FacebookInit,
+    _fb: FacebookInit,
     _headers: &HeaderMap,
     _verifier_identity: &Identity,
 ) -> Result<Option<MononokeIdentitySet>, Error> {
@@ -50,12 +48,14 @@ pub fn try_get_cats_idents(
             let tdata = cryptocat::deserialize_crypto_auth_token_data(
                 &token.serializedCryptoAuthTokenData[..],
             )?;
-            let m_ident =
-                MononokeIdentity::new(tdata.signerIdentity.id_type, tdata.signerIdentity.id_data);
+            let m_ident = permission_checker::MononokeIdentity::new(
+                tdata.signerIdentity.id_type,
+                tdata.signerIdentity.id_data,
+            );
             idents_acc.insert(m_ident);
             let res = cryptocat::verify_crypto_auth_token(fb, token, &svc_scm_ident, None)?;
             if res.code != cryptocat::CATVerificationCode::SUCCESS {
-                bail!(
+                anyhow::bail!(
                     "verification of CATs not successful. status code: {:?}",
                     res.code
                 );

@@ -1565,7 +1565,7 @@ async fn hg_all_bookmark_pushes_to_bonsai(
             let r = try_join_all(
                 plain_pushes
                     .into_iter()
-                    .map({ |plain_push| plain_hg_bookmark_push_to_bonsai(ctx, repo, plain_push) }),
+                    .map(|plain_push| plain_hg_bookmark_push_to_bonsai(ctx, repo, plain_push)),
             )
             .await?;
             AllBookmarkPushes::PlainPushes(r)

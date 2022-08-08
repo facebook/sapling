@@ -90,11 +90,11 @@ impl AclProvider for DummyAclProvider {
         Ok(Box::new(AlwaysAllow))
     }
 
-    async fn tier_acl(&self, name: &str) -> Result<BoxPermissionChecker> {
+    async fn tier_acl(&self, _name: &str) -> Result<BoxPermissionChecker> {
         Ok(Box::new(AlwaysAllow))
     }
 
-    async fn group(&self, name: &str) -> Result<BoxMembershipChecker> {
+    async fn group(&self, _name: &str) -> Result<BoxMembershipChecker> {
         Ok(Box::new(NeverMember))
     }
 

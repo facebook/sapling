@@ -13,7 +13,6 @@ use slog::Logger;
 use tokio::runtime::Handle;
 
 use crate::RepoShardedProcess;
-use crate::RepoShardedProcessExecutor;
 
 pub struct BackgroundProcessExecutor {}
 
@@ -30,7 +29,7 @@ impl BackgroundProcessExecutor {
         unimplemented!("BackgroundProcessExecutor is supported only for fbcode build")
     }
 
-    pub async fn block_and_execute(&mut self, logger: &Logger) -> Result<()> {
+    pub async fn block_and_execute(&mut self, _logger: &Logger) -> Result<()> {
         unimplemented!("BackgroundProcessExecutor is supported only for fbcode build")
     }
 }
