@@ -114,13 +114,19 @@ impl IncompleteRepoHandler {
         let maybe_backup_repo_source = match backup_repo_config {
             None => None,
             Some(backup_repo_config) => {
-                let backup_repo_source = try_find_repo_by_name(
-                    &backup_repo_config.source_repo_name,
-                    repo_lookup_table.values(),
-                )?;
-                Some(BackupSourceRepo::from_blob_repo(
-                    backup_repo_source.blob_repo(),
-                ))
+                let (orig_repo_name, source_repo_name) =
+                    (repo.name(), &backup_repo_config.source_repo_name);
+                // If the repo itself serves as its backup source, then it's not a backup repo.
+                // Hence, no need to setup backup_repo_source
+                if orig_repo_name == source_repo_name {
+                    None
+                } else {
+                    let backup_repo_source =
+                        try_find_repo_by_name(source_repo_name, repo_lookup_table.values())?;
+                    Some(BackupSourceRepo::from_blob_repo(
+                        backup_repo_source.blob_repo(),
+                    ))
+                }
             }
         };
 
@@ -140,8 +146,7 @@ fn try_find_repo_by_name<'a>(
     iter: impl Iterator<Item = &'a IncompleteRepoHandler>,
 ) -> Result<Arc<Repo>, Error> {
     for handler in iter {
-        let blobrepo = handler.repo.blob_repo();
-        if blobrepo.name() == name {
+        if handler.repo.name() == name {
             return Ok(Arc::clone(&handler.repo));
         }
     }
