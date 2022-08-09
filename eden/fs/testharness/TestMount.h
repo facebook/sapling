@@ -73,8 +73,14 @@ class TestMount {
    * The TestMount will not be fully initialized yet.  The caller must
    * populate the object store as desired, and then call initialize() to
    * create the underlying EdenMount object once the commit has been set up.
+   *
+   * enableActivityBuffer can be passed to override if the ActivityBuffer should
+   * be active in the TestMount. This is default set to true but some tests
+   * might fail with the ActivityBuffer enabled (i.e. InodePtr because inode
+   * reference counts might be inaccurate if paths to store in the
+   * ActivityBuffer are calculated concurrently), so we must turn it off then.
    */
-  TestMount();
+  TestMount(bool enableActivityBuffer = true);
 
   /**
    * Create a new TestMount
@@ -90,13 +96,22 @@ class TestMount {
    *
    * If an initialCommitHash is not explicitly specified, makeTestHash("1")
    * will be used.
+   *
+   * enableActivityBuffer can be set false to turn off the ActivityBuffer in the
+   * TestMount if needed, preventing any tracebus subscriptions for it.
    */
-  explicit TestMount(FakeTreeBuilder& rootBuilder, bool startReady = true);
-  explicit TestMount(FakeTreeBuilder&& rootBuilder);
+  explicit TestMount(
+      FakeTreeBuilder& rootBuilder,
+      bool startReady = true,
+      bool enableActivityBuffer = true);
+  explicit TestMount(
+      FakeTreeBuilder&& rootBuilder,
+      bool enableActivityBuffer = true);
   TestMount(
       const RootId& initialCommitHash,
       FakeTreeBuilder& rootBuilder,
-      bool startReady = true);
+      bool startReady = true,
+      bool enableActivityBuffer = true);
 
   ~TestMount();
 

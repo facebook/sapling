@@ -82,7 +82,7 @@ bool TestMountFile::operator==(const TestMountFile& other) const {
       type == other.type;
 }
 
-TestMount::TestMount()
+TestMount::TestMount(bool enableActivityBuffer)
     : blobCache_{BlobCache::create(
           kBlobCacheMaximumSize,
           kBlobCacheMinimumEntries)},
@@ -104,6 +104,8 @@ TestMount::TestMount()
           testDir_->path().string() + "edenfs.rc",
       });
 
+  edenConfig_->enableActivityBuffer.setValue(
+      enableActivityBuffer, ConfigSource::Default, true);
   // Create treeCache
   auto edenConfig = std::make_shared<ReloadableConfig>(
       edenConfig_, ConfigReloadBehavior::NoReload);
@@ -125,8 +127,11 @@ TestMount::TestMount()
       /*enableFaultInjection=*/true)};
 }
 
-TestMount::TestMount(FakeTreeBuilder& rootBuilder, bool startReady)
-    : TestMount() {
+TestMount::TestMount(
+    FakeTreeBuilder& rootBuilder,
+    bool startReady,
+    bool enableActivityBuffer)
+    : TestMount(enableActivityBuffer) {
   // Create treeCache
   edenConfig_ = EdenConfig::createTestEdenConfig();
 
@@ -136,8 +141,8 @@ TestMount::TestMount(FakeTreeBuilder& rootBuilder, bool startReady)
   initialize(rootBuilder, startReady);
 }
 
-TestMount::TestMount(FakeTreeBuilder&& rootBuilder)
-    : TestMount(rootBuilder, /*startReady=*/true) {
+TestMount::TestMount(FakeTreeBuilder&& rootBuilder, bool enableActivityBuffer)
+    : TestMount(rootBuilder, /*startReady=*/true, enableActivityBuffer) {
   XCHECK_NE(edenConfig_, nullptr);
   XCHECK_NE(treeCache_, nullptr);
 }
@@ -145,8 +150,9 @@ TestMount::TestMount(FakeTreeBuilder&& rootBuilder)
 TestMount::TestMount(
     const RootId& initialCommitHash,
     FakeTreeBuilder& rootBuilder,
-    bool startReady)
-    : TestMount() {
+    bool startReady,
+    bool enableActivityBuffer)
+    : TestMount(enableActivityBuffer) {
   edenConfig_ = EdenConfig::createTestEdenConfig();
 
   // Create treeCache
