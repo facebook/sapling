@@ -144,6 +144,7 @@ use segmented_changelog_types::ArcSegmentedChangelog;
 use skiplist::ArcSkiplistIndex;
 use skiplist::SkiplistIndex;
 use slog::o;
+use sql::SqlConnections;
 use sql::SqlConnectionsWithSchema;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromDatabaseConfig;
@@ -158,6 +159,10 @@ use virtually_sharded_blobstore::VirtuallyShardedBlobstore;
 use warm_bookmarks_cache::ArcBookmarksCache;
 use warm_bookmarks_cache::NoopBookmarksCache;
 use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
+use wireproto_handler::ArcPushRedirectorBase;
+use wireproto_handler::ArcTargetRepoDbs;
+use wireproto_handler::PushRedirectorBase;
+use wireproto_handler::TargetRepoDbs;
 
 const DERIVED_DATA_LEASE: &str = "derived-data-lease";
 
@@ -284,11 +289,19 @@ impl RepoFactory {
         &self,
         config: &MetadataDatabaseConfig,
     ) -> Result<SqlConnectionsWithSchema> {
+        self.sql_connections_with_label(config, "metadata").await
+    }
+
+    async fn sql_connections_with_label(
+        &self,
+        config: &MetadataDatabaseConfig,
+        label: &str,
+    ) -> Result<SqlConnectionsWithSchema> {
         let sql_factory = self.sql_factory(config).await?;
         self.sql_connections
             .get_or_try_init(config, || async move {
                 sql_factory
-                    .make_primary_connections("metadata".to_string())
+                    .make_primary_connections(label.to_string())
                     .await
             })
             .await
@@ -593,6 +606,12 @@ pub enum RepoFactoryError {
 
     #[error("Error creating streaming clone")]
     StreamingClone,
+
+    #[error("Error creating push redirector base")]
+    PushRedirectorBase,
+
+    #[error("Error creating target repo DB")]
+    TargetRepoDbs,
 }
 
 #[facet::factory(name: String, config: RepoConfig)]
@@ -1329,6 +1348,58 @@ impl RepoFactory {
             }
             None => Ok(Arc::new(NoopBookmarksCache::new(bookmarks.clone()))),
         }
+    }
+
+    pub async fn target_repo_dbs(
+        &self,
+        repo_config: &ArcRepoConfig,
+        bookmarks: &ArcBookmarks,
+        bookmark_update_log: &ArcBookmarkUpdateLog,
+        mutable_counters: &ArcMutableCounters,
+    ) -> Result<ArcTargetRepoDbs> {
+        let connections: SqlConnections = self
+            .sql_connections_with_label(
+                &repo_config.storage_config.metadata,
+                "bookmark_mutable_counters",
+            )
+            .await
+            .context(RepoFactoryError::TargetRepoDbs)?
+            .into();
+        let target_repo_dbs = TargetRepoDbs {
+            connections,
+            bookmarks: bookmarks.clone(),
+            bookmark_update_log: bookmark_update_log.clone(),
+            counters: mutable_counters.clone(),
+        };
+        Ok(Arc::new(target_repo_dbs))
+    }
+
+    pub async fn push_redirector_base(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_cross_repo: &ArcRepoCrossRepo,
+        target_repo_dbs: &ArcTargetRepoDbs,
+    ) -> Result<Option<ArcPushRedirectorBase>> {
+        let common_commit_sync_config = repo_cross_repo
+            .live_commit_sync_config()
+            .clone()
+            .get_common_config_if_exists(repo_identity.id())
+            .context(RepoFactoryError::PushRedirectorBase)?;
+        let synced_commit_mapping = repo_cross_repo.synced_commit_mapping();
+
+        Ok(common_commit_sync_config.and_then({
+            move |common_commit_sync_config| {
+                if common_commit_sync_config.large_repo_id == repo_identity.id() {
+                    None
+                } else {
+                    Some(Arc::new(PushRedirectorBase {
+                        common_commit_sync_config,
+                        synced_commit_mapping: synced_commit_mapping.clone(),
+                        target_repo_dbs: target_repo_dbs.clone(),
+                    }))
+                }
+            }
+        }))
     }
 }
 

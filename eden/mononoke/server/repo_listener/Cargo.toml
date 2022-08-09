@@ -10,7 +10,6 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.56"
 backsyncer = { version = "0.1.0", path = "../../commit_rewriting/backsyncer" }
-backup_source_repo = { version = "0.1.0", path = "../../repo_attributes/backup_source_repo" }
 base64 = "0.11.0"
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 bytes = { version = "1.1", features = ["serde"] }
@@ -72,3 +71,4 @@ tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tokio-openssl = "0.6"
 tokio-util = { version = "0.6", features = ["full"] }
 tunables = { version = "0.1.0", path = "../../tunables" }
+wireproto_handler = { version = "0.1.0", path = "../../wireproto_handler" }

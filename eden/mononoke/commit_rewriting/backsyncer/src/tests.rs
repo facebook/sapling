@@ -79,12 +79,12 @@ use tests_utils::store_rename;
 use tests_utils::CreateCommitContext;
 use tokio::runtime::Runtime;
 use tunables::with_tunables_async;
+use wireproto_handler::TargetRepoDbs;
 
 use crate::backsync_latest;
 use crate::format_counter;
 use crate::sync_entries;
 use crate::BacksyncLimit;
-use crate::TargetRepoDbs;
 
 const REPOMERGE_FOLDER: &str = "repomerge";
 const REPOMERGE_FILE: &str = "repomergefile";

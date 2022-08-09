@@ -20,7 +20,6 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use ascii::AsciiString;
-use backup_source_repo::BackupSourceRepo;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bonsai_globalrev_mapping::bulk_import_globalrevs;
@@ -49,6 +48,7 @@ use slog::info;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 use synced_commit_mapping::SyncedCommitSourceRepo;
+use wireproto_handler::BackupSourceRepo;
 
 use crate::changeset::UploadChangesets;
 

@@ -12,7 +12,6 @@ use ::manifest::Entry;
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
-use backup_source_repo::BackupSourceRepo;
 use blobrepo::BlobRepo;
 use blobrepo_hg::create_bonsai_changeset_hook;
 use blobrepo_hg::ChangesetHandle;
@@ -41,6 +40,7 @@ use mercurial_types::RepoPath;
 use mercurial_types::NULL_HASH;
 use scuba_ext::MononokeScubaSampleBuilder;
 use wirepack::TreemanifestEntry;
+use wireproto_handler::BackupSourceRepo;
 
 use crate::changegroup::Filelog;
 use crate::stats::*;

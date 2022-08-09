@@ -13,7 +13,6 @@ use ::manifest::Entry;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
-use backup_source_repo::BackupSourceRepo;
 use blobrepo::BlobRepo;
 use blobrepo_hg::create_bonsai_changeset_hook;
 use blobrepo_hg::ChangesetHandle;
@@ -71,6 +70,7 @@ use mononoke_types::ContentMetadata;
 use phases::PhasesArc;
 use slog::info;
 use tokio::runtime::Handle;
+use wireproto_handler::BackupSourceRepo;
 
 use crate::concurrency::JobProcessor;
 

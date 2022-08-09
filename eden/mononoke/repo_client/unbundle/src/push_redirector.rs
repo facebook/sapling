@@ -15,7 +15,6 @@ use anyhow::Context;
 use anyhow::Error;
 use backsyncer::backsync_latest;
 use backsyncer::BacksyncLimit;
-use backsyncer::TargetRepoDbs;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cacheblob::LeaseOps;
@@ -46,6 +45,7 @@ use slog::debug;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
 use topo_sort::sort_topological;
+use wireproto_handler::TargetRepoDbs;
 
 use crate::hook_running::HookRejectionRemapper;
 use crate::resolver::HgHookRejection;

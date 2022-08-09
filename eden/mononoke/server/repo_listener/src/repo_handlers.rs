@@ -12,8 +12,6 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use backsyncer::open_backsyncer_dbs;
-use backsyncer::TargetRepoDbs;
-use backup_source_repo::BackupSourceRepo;
 use blobstore_factory::ReadOnlyStorage;
 use cache_warmup::cache_warmup;
 use cloned::cloned;
@@ -34,6 +32,8 @@ use slog::Logger;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use synced_commit_mapping::SqlSyncedCommitMapping;
+use wireproto_handler::BackupSourceRepo;
+use wireproto_handler::TargetRepoDbs;
 
 use crate::errors::ErrorKind;
 

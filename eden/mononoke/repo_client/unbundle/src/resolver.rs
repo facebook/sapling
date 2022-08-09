@@ -18,7 +18,6 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use ascii::AsciiString;
-use backup_source_repo::BackupSourceRepo;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobrepo_hg::ChangesetHandle;
@@ -53,6 +52,7 @@ use slog::trace;
 use topo_sort::sort_topological;
 use tunables::tunables;
 use wirepack::TreemanifestBundle2Parser;
+use wireproto_handler::BackupSourceRepo;
 
 use crate::changegroup::convert_to_revlog_changesets;
 use crate::changegroup::convert_to_revlog_filelog;

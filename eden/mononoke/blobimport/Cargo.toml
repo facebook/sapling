@@ -14,7 +14,6 @@ path = "../cmds/blobimport.rs"
 [dependencies]
 anyhow = "1.0.56"
 ascii = "1.0"
-backup_source_repo = { version = "0.1.0", path = "../repo_attributes/backup_source_repo" }
 blobimport_lib = { version = "0.1.0", path = "../blobimport_lib" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapping" }
@@ -33,6 +32,7 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
+wireproto_handler = { version = "0.1.0", path = "../wireproto_handler" }
 
 [dev-dependencies]
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

@@ -67,8 +67,6 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore_factory::make_metadata_sql_factory;
 use blobstore_factory::ReadOnlyStorage;
-use bookmarks::ArcBookmarkUpdateLog;
-use bookmarks::ArcBookmarks;
 use bookmarks::BookmarkTransactionError;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateReason;
@@ -85,7 +83,6 @@ use futures::TryStreamExt;
 use metaconfig_types::MetadataDatabaseConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
-use mutable_counters::ArcMutableCounters;
 use mutable_counters::MutableCountersArc;
 use mutable_counters::SqlMutableCounters;
 use slog::debug;
@@ -97,6 +94,7 @@ use sql_ext::SqlConnections;
 use sql_ext::TransactionResult;
 use synced_commit_mapping::SyncedCommitMapping;
 use thiserror::Error;
+use wireproto_handler::TargetRepoDbs;
 
 #[cfg(test)]
 mod tests;
@@ -453,16 +451,6 @@ where
         .await?;
 
     Ok(updated)
-}
-
-// TODO(stash): T56228235 - consider removing SqlMutableCounters and SqlBookmarks and use static
-// methods instead
-#[derive(Clone)]
-pub struct TargetRepoDbs {
-    pub connections: SqlConnections,
-    pub bookmarks: ArcBookmarks,
-    pub bookmark_update_log: ArcBookmarkUpdateLog,
-    pub counters: ArcMutableCounters,
 }
 
 pub async fn open_backsyncer_dbs(

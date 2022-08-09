@@ -23,7 +23,6 @@ use backsyncer::backsync_latest;
 use backsyncer::format_counter;
 use backsyncer::open_backsyncer_dbs;
 use backsyncer::BacksyncLimit;
-use backsyncer::TargetRepoDbs;
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::Freshness;
 use clap::Arg;
@@ -62,6 +61,7 @@ use slog::info;
 use stats::prelude::*;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
+use wireproto_handler::TargetRepoDbs;
 
 const ARG_MODE_BACKSYNC_FOREVER: &str = "backsync-forever";
 const ARG_MODE_BACKSYNC_ALL: &str = "backsync-all";

@@ -26,7 +26,6 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use backup_source_repo::BackupSourceRepo;
 use blobrepo::AsBlobRepo;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
@@ -152,6 +151,7 @@ use unbundle::BundleResolverError;
 use unbundle::CrossRepoPushSource;
 use unbundle::PushRedirector;
 use unbundle::PushRedirectorArgs;
+use wireproto_handler::BackupSourceRepo;
 
 use crate::errors::ErrorKind;
 

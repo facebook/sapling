@@ -19,7 +19,6 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use ascii::AsciiString;
-use backup_source_repo::BackupSourceRepo;
 use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMappingBuilder;
 use clap_old::Arg;
@@ -49,6 +48,7 @@ use slog::info;
 use slog::warn;
 use slog::Logger;
 use synced_commit_mapping::SqlSyncedCommitMapping;
+use wireproto_handler::BackupSourceRepo;
 
 const ARG_DERIVED_DATA_TYPE: &str = "derived-data-type";
 const ARG_EXCLUDE_DERIVED_DATA_TYPE: &str = "exclude-derived-data-type";

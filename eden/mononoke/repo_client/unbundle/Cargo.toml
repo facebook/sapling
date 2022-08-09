@@ -11,7 +11,6 @@ license = "GPLv2+"
 anyhow = "1.0.56"
 ascii = "1.0"
 backsyncer = { version = "0.1.0", path = "../../commit_rewriting/backsyncer" }
-backup_source_repo = { version = "0.1.0", path = "../../repo_attributes/backup_source_repo" }
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
@@ -65,6 +64,7 @@ topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 trait_alias = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tunables = { version = "0.1.0", path = "../../tunables" }
 wirepack = { version = "0.1.0", path = "../wirepack" }
+wireproto_handler = { version = "0.1.0", path = "../../wireproto_handler" }
 
 [dev-dependencies]
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

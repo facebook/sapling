@@ -21,7 +21,6 @@ use anyhow::Error;
 use backsyncer::backsync_latest;
 use backsyncer::open_backsyncer_dbs;
 use backsyncer::BacksyncLimit;
-use backsyncer::TargetRepoDbs;
 use blobrepo::save_bonsai_changesets;
 use blobrepo::AsBlobRepo;
 use blobstore::Loadable;
@@ -100,6 +99,7 @@ use tokio::io::BufReader;
 use tokio::process;
 use tokio::time;
 use topo_sort::sort_topological;
+use wireproto_handler::TargetRepoDbs;
 
 mod cli;
 mod repo;

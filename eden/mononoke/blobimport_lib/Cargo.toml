@@ -10,7 +10,6 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.56"
 ascii = "1.0"
-backup_source_repo = { version = "0.1.0", path = "../repo_attributes/backup_source_repo" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapping" }
@@ -34,3 +33,4 @@ phases = { version = "0.1.0", path = "../phases" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+wireproto_handler = { version = "0.1.0", path = "../wireproto_handler" }

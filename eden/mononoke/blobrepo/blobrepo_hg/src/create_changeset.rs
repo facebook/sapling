@@ -14,7 +14,6 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use backup_source_repo::BackupSourceRepo;
 use blobrepo::scribe::log_commit_to_scribe;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
@@ -48,6 +47,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use stats::prelude::*;
 use uuid::Uuid;
+use wireproto_handler::BackupSourceRepo;
 
 use crate::bonsai_generation::create_bonsai_changeset_object;
 use crate::bonsai_generation::save_bonsai_changeset_object;

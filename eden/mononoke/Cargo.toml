@@ -363,7 +363,6 @@ members = [
   "reachabilityindex/skiplist",
   "reachabilityindex/test-helpers",
   "regenerate_hg_filenodes",
-  "repo_attributes/backup_source_repo",
   "repo_attributes/repo_bookmark_attrs",
   "repo_attributes/repo_cross_repo",
   "repo_attributes/repo_derived_data",
@@ -411,4 +410,5 @@ members = [
   "tunables/tunables-derive",
   "upload_globalrevs",
   "walker",
+  "wireproto_handler",
 ]
