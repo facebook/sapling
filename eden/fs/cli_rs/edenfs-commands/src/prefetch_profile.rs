@@ -442,7 +442,15 @@ impl PrefetchCmd {
         let config_dir = instance.config_directory(&client_name);
         let checkout_config = CheckoutConfig::parse_config(config_dir.clone())?;
         let profiles_to_prefetch = if profile_names.is_empty() {
-            checkout_config.get_prefetch_profiles()?
+            match checkout_config.get_prefetch_profiles() {
+                Ok(res) => res,
+                Err(_) => {
+                    if options.options.verbose {
+                        println!("No profiles to fetch")
+                    }
+                    return Ok(0);
+                }
+            }
         } else {
             profile_names
         };
