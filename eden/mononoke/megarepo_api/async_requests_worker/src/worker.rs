@@ -364,7 +364,7 @@ mod test {
             cs_id: vec![],
             source_name: "name".to_string(),
             target: thrift::MegarepoTarget {
-                repo_id: 0,
+                repo_id: Some(0),
                 bookmark: "book".to_string(),
                 ..Default::default()
             },
@@ -407,7 +407,7 @@ mod test {
             cs_id: vec![],
             source_name: "name".to_string(),
             target: thrift::MegarepoTarget {
-                repo_id: 0,
+                repo_id: Some(0),
                 bookmark: "book".to_string(),
                 ..Default::default()
             },

@@ -233,6 +233,10 @@ impl Mononoke {
         }
     }
 
+    pub fn repo_id_from_name(&self, name: impl AsRef<str>) -> Option<RepositoryId> {
+        self.repos.get(name.as_ref()).map(|repo| repo.repoid())
+    }
+
     /// Report configured monitoring stats
     pub async fn report_monitoring_stats(&self, ctx: &CoreContext) -> Result<(), MononokeError> {
         for (_, repo) in self.repos.iter() {

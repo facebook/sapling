@@ -324,6 +324,8 @@ mod tests {
     use fbinit::FacebookInit;
     use requests_table::ClaimedBy;
     use requests_table::RequestStatus;
+    use source_control::types::MegarepoTarget as ThriftMegarepoTarget;
+    use source_control::types::RepoSpecifier;
     use source_control::MegarepoAddBranchingTargetParams as ThriftMegarepoAddBranchingTargetParams;
     use source_control::MegarepoAddBranchingTargetResult;
     use source_control::MegarepoAddTargetParams as ThriftMegarepoAddTargetParams;
@@ -334,6 +336,7 @@ mod tests {
     use source_control::MegarepoRemergeSourceResult;
     use source_control::MegarepoSyncChangesetParams as ThriftMegarepoSyncChangesetParams;
     use source_control::MegarepoSyncChangesetResult;
+    use source_control::MegarepoSyncTargetConfig as ThriftMegarepoSyncTargetConfig;
 
     use super::*;
     use crate::types::MegarepoAddBranchingSyncTarget;
@@ -347,7 +350,7 @@ mod tests {
         {
             $fn_name: ident,
             $request_struct: ident,
-            $thrift_params: ident,
+            $thrift_params: expr,
             $result: ident,
             $request_type: expr,
         } => {
@@ -360,7 +363,7 @@ mod tests {
                     Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
 
                 // Enqueue a request
-                let params: $thrift_params = Default::default();
+                let params = $thrift_params;
                 let token = q.enqueue(ctx.clone(), &mononoke, params.clone()).await?;
 
                 // Verify that request metadata is in the db and has expected values
@@ -422,7 +425,17 @@ mod tests {
     test_enqueue_dequeue_and_poll_once! {
         test_enqueue_dequeue_and_poll_once_add_target,
         MegarepoAddSyncTarget,
-        ThriftMegarepoAddTargetParams,
+        ThriftMegarepoAddTargetParams {
+            config_with_new_target: ThriftMegarepoSyncTargetConfig {
+                target: ThriftMegarepoTarget {
+                    bookmark: "oculus".to_string(),
+                    repo_id: Some(0),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            ..Default::default()
+        },
         MegarepoAddTargetResult,
         "megarepo_add_sync_target",
     }
@@ -430,7 +443,14 @@ mod tests {
     test_enqueue_dequeue_and_poll_once! {
         test_enqueue_dequeue_and_poll_once_add_branching_target,
         MegarepoAddBranchingSyncTarget,
-        ThriftMegarepoAddBranchingTargetParams,
+        ThriftMegarepoAddBranchingTargetParams {
+            target: ThriftMegarepoTarget {
+                bookmark: "oculus".to_string(),
+                repo_id: Some(0),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
         MegarepoAddBranchingTargetResult,
         "megarepo_add_branching_sync_target",
     }
@@ -438,7 +458,19 @@ mod tests {
     test_enqueue_dequeue_and_poll_once! {
         test_enqueue_dequeue_and_poll_once_sync_changeset,
         MegarepoSyncChangeset,
-        ThriftMegarepoSyncChangesetParams,
+        ThriftMegarepoSyncChangesetParams {
+            target: ThriftMegarepoTarget {
+                bookmark: "oculus".to_string(),
+                repo: Some(
+                    RepoSpecifier {
+                        name: "test".to_string(),
+                        ..Default::default()
+                    }
+                ),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
         MegarepoSyncChangesetResult,
         "megarepo_sync_changeset",
     }
@@ -446,7 +478,14 @@ mod tests {
     test_enqueue_dequeue_and_poll_once! {
         test_enqueue_dequeue_and_poll_once_change_config,
         MegarepoChangeTargetConfig,
-        ThriftMegarepoChangeTargetConfigParams,
+        ThriftMegarepoChangeTargetConfigParams {
+            target: ThriftMegarepoTarget {
+                bookmark: "oculus".to_string(),
+                repo_id: Some(0),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
         MegarepoChangeTargetConfigResult,
         "megarepo_change_target_config",
     }
@@ -454,7 +493,14 @@ mod tests {
     test_enqueue_dequeue_and_poll_once! {
         test_enqueue_dequeue_and_poll_once_remerge_source,
         MegarepoRemergeSource,
-        ThriftMegarepoRemergeSourceParams,
+        ThriftMegarepoRemergeSourceParams {
+            target: ThriftMegarepoTarget {
+                bookmark: "oculus".to_string(),
+                repo_id: Some(0),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
         MegarepoRemergeSourceResult,
         "megarepo_remerge_source",
     }

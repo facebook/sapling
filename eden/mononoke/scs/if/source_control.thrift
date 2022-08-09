@@ -1232,10 +1232,14 @@ struct CommitLookupXRepoParams {
 /// Synchronization target
 struct MegarepoTarget {
   /// Mononoke repository id, where the target is located
-  1: i64 repo_id;
+  /// At least one of repo/repo_id must be set in queries both are set in responses
+  1: optional i64 repo_id;
   /// Bookmark, which this target represents
   2: string bookmark;
-}
+  /// Repo
+  /// At least one of repo/repo_id must be set in queries both are set in responses
+  3: optional RepoSpecifier repo;
+} (rust.ord)
 
 /// A single version of synchronization config for a target,
 /// bundling together all of the corresponding sources

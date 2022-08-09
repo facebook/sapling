@@ -28,6 +28,7 @@ use mononoke_types::hash::Blake2;
 use mononoke_types::impl_typed_context;
 use mononoke_types::impl_typed_hash_no_context;
 use mononoke_types::BlobstoreKey;
+use mononoke_types::RepositoryId;
 pub use requests_table::RequestStatus;
 pub use requests_table::RequestType;
 pub use requests_table::RowId;
@@ -58,6 +59,7 @@ use source_control::MegarepoSyncChangesetResult as ThriftMegarepoSyncChangesetRe
 use source_control::MegarepoSyncChangesetToken as ThriftMegarepoSyncChangesetToken;
 use source_control::MegarepoSyncTargetConfig as ThriftMegarepoSyncTargetConfig;
 use source_control::MegarepoTarget as ThriftMegarepoTarget;
+use source_control::RepoSpecifier as ThriftRepoSpecifier;
 
 /// Grouping of types and behaviors for an asynchronous request
 pub trait Request: Sized + Send + Sync {
@@ -550,9 +552,18 @@ pub trait IntoConfigFormat<T> {
 }
 
 impl IntoConfigFormat<Target> for ThriftMegarepoTarget {
-    fn into_config_format(self, _mononoke: &Mononoke) -> Result<Target, MegarepoError> {
+    fn into_config_format(self, mononoke: &Mononoke) -> Result<Target, MegarepoError> {
+        let repo_id = match (self.repo, self.repo_id) {
+            (Some(repo), _) => mononoke
+                .repo_id_from_name(repo.name.clone())
+                .ok_or_else(|| anyhow!("Invalid repo_name {}", repo.name))?
+                .id() as i64,
+            (_, Some(repo_id)) => repo_id,
+            (None, None) => Err(anyhow!("both repo_id and repo_name are None!"))?,
+        };
+
         Ok(Target {
-            repo_id: self.repo_id,
+            repo_id,
             bookmark: self.bookmark,
         })
     }
@@ -575,10 +586,18 @@ pub trait IntoApiFormat<T> {
 
 #[async_trait]
 impl IntoApiFormat<ThriftMegarepoTarget> for Target {
-    fn into_api_format(self, _mononoke: &Mononoke) -> Result<ThriftMegarepoTarget, MegarepoError> {
+    fn into_api_format(self, mononoke: &Mononoke) -> Result<ThriftMegarepoTarget, MegarepoError> {
+        let repo = mononoke
+            .repo_name_from_id(RepositoryId::new(self.repo_id as i32))
+            .cloned()
+            .map(|name| ThriftRepoSpecifier {
+                name,
+                ..Default::default()
+            });
         Ok(ThriftMegarepoTarget {
-            repo_id: self.repo_id,
+            repo_id: Some(self.repo_id),
             bookmark: self.bookmark,
+            repo,
             ..Default::default()
         })
     }
