@@ -22,6 +22,7 @@ use mononoke_app::MononokeApp;
 use mononoke_types::RepositoryId;
 use slog::debug;
 use slog::info;
+use stats::prelude::*;
 
 use crate::repo::RepoContextBuilder;
 
@@ -89,6 +90,16 @@ pub use crate::tree::TreeId;
 pub use crate::tree::TreeSummary;
 pub use crate::xrepo::CandidateSelectionHintArgs;
 
+define_stats! {
+    prefix = "mononoke.api";
+    completion_duration_secs: timeseries(Average, Sum, Count),
+    initialization_time_secs: dynamic_timeseries(
+        "initialization_time_secs.{}",
+        (reponame: String);
+        Average, Sum, Count
+    ),
+}
+
 /// An instance of Mononoke, which may manage multiple repositories.
 pub struct Mononoke {
     repos: HashMap<String, Arc<Repo>>,
@@ -116,13 +127,16 @@ impl Mononoke {
                 async move {
                     let logger = app.logger();
                     info!(logger, "Initializing repo: {}", &name);
-
+                    let start = Instant::now();
                     let repo: Repo = app
                         .repo_factory()
                         .build(name.clone(), config)
                         .await
                         .with_context(|| format!("could not initialize repo '{}'", &name))?;
-
+                    STATS::initialization_time_secs.add_value(
+                        start.elapsed().as_secs().try_into().unwrap_or(i64::MAX),
+                        (name.to_string(),),
+                    );
                     debug!(logger, "Initialized {}", &name);
                     Ok::<_, Error>((name, Arc::new(repo)))
                 }
@@ -143,7 +157,8 @@ impl Mononoke {
             "All repos initialized. It took: {} seconds",
             start.elapsed().as_secs()
         );
-
+        STATS::completion_duration_secs
+            .add_value(start.elapsed().as_secs().try_into().unwrap_or(i64::MAX));
         Self::new_from_repos(repos_vec)
     }
 
