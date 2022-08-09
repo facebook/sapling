@@ -139,11 +139,9 @@ impl AuxStore {
     }
 
     fn open_options(config: &ConfigSet) -> Result<StoreOpenOptions> {
-        // TODO(meyer): Decide exactly how we want to configure this store. This is all copied from indexedlogdatastore
-        // Default configuration: 4 x 2.5GB.
         let mut open_options = StoreOpenOptions::new()
             .max_log_count(4)
-            .max_bytes_per_log(2500 * 1000 * 1000)
+            .max_bytes_per_log(250 * 1000 * 1000 / 4)
             .auto_sync_threshold(10 * 1024 * 1024)
             .create(true)
             .index("node", |_| {
