@@ -14,7 +14,7 @@
 from __future__ import absolute_import
 
 import hashlib
-from typing import List, Sized
+from typing import List, Optional, Sized
 
 from . import bundle2, changegroup, discovery, error, progress, scmutil, util
 from .i18n import _
@@ -131,7 +131,9 @@ def stripgeneric(repo, nodelist, backup: bool = True, topic: str = "backup") -> 
         # to strip them.
 
 
-def strip(ui, repo, nodelist: List[str], backup: bool = True, topic: str = "backup"):
+def strip(
+    ui, repo, nodelist: List[str], backup: bool = True, topic: str = "backup"
+) -> None:
     # This function requires the caller to lock the repo, but it operates
     # within a transaction of its own, and thus requires there to be no current
     # transaction when it is called.
@@ -186,7 +188,7 @@ class stripcallback(object):
             strip(self.ui, self.repo, roots, self.backup, self.topic)
 
 
-def delayedstrip(ui, repo, nodelist, topic=None):
+def delayedstrip(ui, repo, nodelist, topic: Optional[str] = None):
     """like strip, but works inside transaction and won't strip irreverent revs
 
     nodelist must explicitly contain all descendants. Otherwise a warning will
@@ -198,6 +200,7 @@ def delayedstrip(ui, repo, nodelist, topic=None):
     tr = repo.currenttransaction()
     if not tr:
         nodes = safestriproots(ui, repo, nodelist)
+        # pyre-fixme[6]: For 5th param expected `str` but got `Optional[str]`.
         return strip(ui, repo, nodes, True, topic)
     # transaction postclose callbacks are called in alphabet order.
     # use '\xff' as prefix so we are likely to be called last.
