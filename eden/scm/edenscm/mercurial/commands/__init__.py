@@ -2588,7 +2588,7 @@ def grep(ui, repo, pattern, *pats, **opts):
         "--stripdir",
         "-r",
         "--expression",
-        pattern,
+        pattern.replace("-", r"\-"),
         biggreptier,
         biggrepcorpus,
         "re2",

@@ -11,6 +11,7 @@ eden/scm/tests/fake-biggrep-client.py
   $ cd grepdir
   $ echo 'foobarbaz' > grepfile1
   $ echo 'foobarboo' > grepfile2
+  $ echo '-g' > grepfile3
   $ mkdir subdir1
   $ echo 'foobar_subdir' > subdir1/subfile1
   $ mkdir subdir2
@@ -142,3 +143,9 @@ Test biggrep searching in a sibling subdirectory, using a relative path
   > -n foobar . | sort
   subfile1:1:foobar_subdir_bg
   $ cd ..
+
+Test escaping of dashes in biggrep expression:
+  $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
+  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
+  > -- -g | sort
+  grepfile3:-g_bg

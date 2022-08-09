@@ -55,7 +55,7 @@ def result_line(filename, line, col, context):
         if not re.match(args.f, filename):
             return
 
-    if not re.match(args.expression, context):
+    if not re.match(args.expression.replace(r"\-", "-"), context):
         return
 
     print(
@@ -84,6 +84,7 @@ print("#fake=%s:0" % rev.decode("utf-8"))
 files = {
     "grepdir/grepfile1": "foobarbaz",
     "grepdir/grepfile2": "foobarboo",
+    "grepdir/grepfile3": "-g",
     "grepdir/subdir1/subfile1": "foobar_subdir",
     "grepdir/subdir2/subfile2": "foobar_dirsub",
 }
