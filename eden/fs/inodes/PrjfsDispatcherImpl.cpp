@@ -683,21 +683,21 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileCreated(
     RelativePath path,
     std::shared_ptr<ObjectFetchContext> context) {
   return fileNotification(
-      *mount_, path, notificationExecutor_, std::move(context));
+      *mount_, std::move(path), notificationExecutor_, std::move(context));
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::dirCreated(
     RelativePath path,
     std::shared_ptr<ObjectFetchContext> context) {
   return fileNotification(
-      *mount_, path, notificationExecutor_, std::move(context));
+      *mount_, std::move(path), notificationExecutor_, std::move(context));
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileModified(
     RelativePath path,
     std::shared_ptr<ObjectFetchContext> context) {
   return fileNotification(
-      *mount_, path, notificationExecutor_, std::move(context));
+      *mount_, std::move(path), notificationExecutor_, std::move(context));
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
@@ -706,10 +706,10 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
     std::shared_ptr<ObjectFetchContext> context) {
   // A rename is just handled like 2 notifications separate notifications on
   // the old and new paths.
-  auto oldNotification =
-      fileNotification(*mount_, oldPath, notificationExecutor_, context);
+  auto oldNotification = fileNotification(
+      *mount_, std::move(oldPath), notificationExecutor_, context);
   auto newNotification = fileNotification(
-      *mount_, newPath, notificationExecutor_, std::move(context));
+      *mount_, std::move(newPath), notificationExecutor_, std::move(context));
 
   return collectAllSafe(std::move(oldNotification), std::move(newNotification))
       .thenValue(
@@ -750,7 +750,7 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileDeleted(
     RelativePath path,
     std::shared_ptr<ObjectFetchContext> context) {
   return fileNotification(
-      *mount_, path, notificationExecutor_, std::move(context));
+      *mount_, std::move(path), notificationExecutor_, std::move(context));
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preFileDelete(
@@ -767,7 +767,7 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::dirDeleted(
     RelativePath path,
     std::shared_ptr<ObjectFetchContext> context) {
   return fileNotification(
-      *mount_, path, notificationExecutor_, std::move(context));
+      *mount_, std::move(path), notificationExecutor_, std::move(context));
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preDirDelete(
