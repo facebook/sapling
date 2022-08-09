@@ -13,6 +13,7 @@ use ::manifest::Entry;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
+use backup_source_repo::BackupSourceRepo;
 use blobrepo::BlobRepo;
 use blobrepo_hg::create_bonsai_changeset_hook;
 use blobrepo_hg::ChangesetHandle;
@@ -312,7 +313,7 @@ impl UploadChangesets {
         self,
         changesets: impl Stream<Item = (RevIdx, HgNodeHash), Error = Error> + Send + 'static,
         is_import_from_beggining: bool,
-        origin_repo: Option<BlobRepo>,
+        origin_repo: Option<BackupSourceRepo>,
     ) -> BoxStream<(RevIdx, (BonsaiChangeset, HgBlobChangeset)), Error> {
         let Self {
             ctx,

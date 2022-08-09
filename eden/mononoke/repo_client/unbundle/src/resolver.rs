@@ -18,6 +18,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use ascii::AsciiString;
+use backup_source_repo::BackupSourceRepo;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobrepo_hg::ChangesetHandle;
@@ -263,7 +264,7 @@ pub async fn resolve<'a>(
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
     pure_push_allowed: bool,
     pushrebase_flags: PushrebaseFlags,
-    maybe_backup_repo_source: Option<BlobRepo>,
+    maybe_backup_repo_source: Option<BackupSourceRepo>,
 ) -> Result<PostResolveAction, BundleResolverError> {
     let result = resolve_impl(
         ctx,
@@ -286,7 +287,7 @@ async fn resolve_impl<'a>(
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
     pure_push_allowed: bool,
     pushrebase_flags: PushrebaseFlags,
-    maybe_backup_repo_source: Option<BlobRepo>,
+    maybe_backup_repo_source: Option<BackupSourceRepo>,
 ) -> Result<PostResolveAction, BundleResolverError> {
     let resolver = Bundle2Resolver::new(ctx, repo, infinitepush_writes_allowed, pushrebase_flags);
     let bundle2 = resolver.resolve_stream_params(bundle2).await?;
@@ -404,7 +405,7 @@ async fn resolve_push<'r>(
     maybe_pushvars: Option<HashMap<String, Bytes>>,
     non_fast_forward_policy: NonFastForwardPolicy,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
-    maybe_backup_repo_source: Option<BlobRepo>,
+    maybe_backup_repo_source: Option<BackupSourceRepo>,
 ) -> Result<PostResolveAction, Error> {
     let (cg_push, bundle2) = resolver
         .maybe_resolve_changegroup(bundle2, changegroup_acceptable)
@@ -588,7 +589,7 @@ async fn resolve_pushrebase<'r>(
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
     maybe_pushvars: Option<HashMap<String, Bytes>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
-    maybe_backup_repo_source: Option<BlobRepo>,
+    maybe_backup_repo_source: Option<BackupSourceRepo>,
 ) -> Result<PostResolveAction, BundleResolverError> {
     let (manifests, bundle2) = resolver
         .resolve_b2xtreegroup2(bundle2)
@@ -1171,7 +1172,7 @@ impl<'r> Bundle2Resolver<'r> {
         &self,
         cg_push: ChangegroupPush,
         manifests: Manifests,
-        maybe_backup_repo_source: Option<BlobRepo>,
+        maybe_backup_repo_source: Option<BackupSourceRepo>,
     ) -> Result<(UploadedBonsais, UploadedHgChangesetIds), Error> {
         let changesets = toposort_changesets(cg_push.changesets)?;
         let filelogs = cg_push.filelogs;

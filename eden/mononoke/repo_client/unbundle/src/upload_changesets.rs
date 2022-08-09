@@ -12,6 +12,7 @@ use ::manifest::Entry;
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use backup_source_repo::BackupSourceRepo;
 use blobrepo::BlobRepo;
 use blobrepo_hg::create_bonsai_changeset_hook;
 use blobrepo_hg::ChangesetHandle;
@@ -289,7 +290,7 @@ pub async fn upload_changeset(
     mut uploaded_changesets: UploadedChangesets,
     filelogs: &Filelogs,
     manifests: &Manifests,
-    maybe_backup_repo_source: Option<BlobRepo>,
+    maybe_backup_repo_source: Option<BackupSourceRepo>,
 ) -> Result<UploadedChangesets, Error> {
     let NewBlobs {
         root_manifest,

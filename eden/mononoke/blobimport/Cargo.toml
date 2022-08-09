@@ -14,6 +14,7 @@ path = "../cmds/blobimport.rs"
 [dependencies]
 anyhow = "1.0.56"
 ascii = "1.0"
+backup_source_repo = { version = "0.1.0", path = "../repo_attributes/backup_source_repo" }
 blobimport_lib = { version = "0.1.0", path = "../blobimport_lib" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapping" }

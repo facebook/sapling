@@ -10,6 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.56"
 ascii = "1.0"
+backup_source_repo = { version = "0.1.0", path = "../repo_attributes/backup_source_repo" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapping" }

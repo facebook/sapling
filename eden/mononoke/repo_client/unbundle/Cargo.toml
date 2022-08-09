@@ -11,6 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.56"
 ascii = "1.0"
 backsyncer = { version = "0.1.0", path = "../../commit_rewriting/backsyncer" }
+backup_source_repo = { version = "0.1.0", path = "../../repo_attributes/backup_source_repo" }
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }

@@ -14,12 +14,14 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use backup_source_repo::BackupSourceRepo;
 use blobrepo::scribe::log_commit_to_scribe;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use changesets::ChangesetInsert;
 use changesets::Changesets;
 use cloned::cloned;
@@ -74,7 +76,7 @@ async fn verify_bonsai_changeset_with_origin(
     ctx: CoreContext,
     bcs: BonsaiChangeset,
     cs: HgBlobChangeset,
-    origin_repo: Option<BlobRepo>,
+    origin_repo: Option<BackupSourceRepo>,
 ) -> Result<BonsaiChangeset, Error> {
     match origin_repo {
         Some(origin_repo) => {
@@ -87,7 +89,7 @@ async fn verify_bonsai_changeset_with_origin(
                 .await?;
             match origin_bonsai_id {
                 Some(id) if id != bcs.get_changeset_id() => {
-                    id.load(&ctx, origin_repo.blobstore())
+                    id.load(&ctx, origin_repo.repo_blobstore())
                         .map_err(|e| anyhow!(e))
                         .await
                 }
@@ -98,7 +100,9 @@ async fn verify_bonsai_changeset_with_origin(
     }
 }
 
-pub fn create_bonsai_changeset_hook(origin_repo: Option<BlobRepo>) -> Arc<BonsaiChangesetHook> {
+pub fn create_bonsai_changeset_hook(
+    origin_repo: Option<BackupSourceRepo>,
+) -> Arc<BonsaiChangesetHook> {
     Arc::new(
         move |ctx: CoreContext,
               hg_cs: HgBlobChangeset,

@@ -13,6 +13,7 @@ use anyhow::Context;
 use anyhow::Error;
 use backsyncer::open_backsyncer_dbs;
 use backsyncer::TargetRepoDbs;
+use backup_source_repo::BackupSourceRepo;
 use blobstore_factory::ReadOnlyStorage;
 use cache_warmup::cache_warmup;
 use cloned::cloned;
@@ -117,7 +118,9 @@ impl IncompleteRepoHandler {
                     &backup_repo_config.source_repo_name,
                     repo_lookup_table.values(),
                 )?;
-                Some(backup_repo_source)
+                Some(BackupSourceRepo::from_blob_repo(
+                    backup_repo_source.blob_repo(),
+                ))
             }
         };
 
@@ -153,7 +156,7 @@ pub struct RepoHandler {
     pub repo: Arc<Repo>,
     pub maybe_push_redirector_args: Option<PushRedirectorArgs>,
     pub repo_client_knobs: RepoClientKnobs,
-    pub maybe_backup_repo_source: Option<Arc<Repo>>,
+    pub maybe_backup_repo_source: Option<BackupSourceRepo>,
 }
 
 pub async fn repo_handlers<'a>(

@@ -20,6 +20,7 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use ascii::AsciiString;
+use backup_source_repo::BackupSourceRepo;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bonsai_globalrev_mapping::bulk_import_globalrevs;
@@ -78,7 +79,7 @@ pub struct Blobimport<'a> {
     pub populate_git_mapping: bool,
     pub small_repo_id: Option<RepositoryId>,
     pub derived_data_types: Vec<String>,
-    pub origin_repo: Option<BlobRepo>,
+    pub origin_repo: Option<BackupSourceRepo>,
 }
 
 impl<'a> Blobimport<'a> {

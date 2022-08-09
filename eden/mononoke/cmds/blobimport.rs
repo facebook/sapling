@@ -19,6 +19,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use ascii::AsciiString;
+use backup_source_repo::BackupSourceRepo;
 use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMappingBuilder;
 use clap_old::Arg;
@@ -383,7 +384,7 @@ async fn run_blobimport<'a>(
         args::create_repo_unredacted(fb, ctx.logger(), matches).await?
     };
 
-    let origin_repo =
+    let origin_repo: Option<BlobRepo> =
         if matches.is_present(BACKUP_FROM_REPO_ID) || matches.is_present(BACKUP_FROM_REPO_NAME) {
             let repo_id = args::get_repo_id_from_value(
                 config_store,
@@ -420,7 +421,7 @@ async fn run_blobimport<'a>(
             populate_git_mapping,
             small_repo_id,
             derived_data_types,
-            origin_repo,
+            origin_repo: origin_repo.map(|repo| BackupSourceRepo::from_blob_repo(&repo)),
         };
 
         let maybe_latest_imported_rev = if find_latest_imported_rev_only {

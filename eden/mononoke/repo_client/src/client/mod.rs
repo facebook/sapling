@@ -26,6 +26,7 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use backup_source_repo::BackupSourceRepo;
 use blobrepo::AsBlobRepo;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
@@ -468,7 +469,7 @@ pub struct RepoClient {
     request_perf_counters: Arc<PerfCounters>,
     // In case `repo` is a backup of another repository `maybe_backup_repo_source` points to
     // a source for this repository.
-    maybe_backup_repo_source: Option<Arc<Repo>>,
+    maybe_backup_repo_source: Option<BackupSourceRepo>,
 }
 
 impl RepoClient {
@@ -478,7 +479,7 @@ impl RepoClient {
         logging: LoggingContainer,
         maybe_push_redirector_args: Option<PushRedirectorArgs>,
         knobs: RepoClientKnobs,
-        maybe_backup_repo_source: Option<Arc<Repo>>,
+        maybe_backup_repo_source: Option<BackupSourceRepo>,
     ) -> Self {
         let session_bookmarks_cache = Arc::new(SessionBookmarkCache::new(repo.clone()));
 
@@ -1735,7 +1736,7 @@ impl HgCommands for RepoClient {
                         stream.compat().boxed(),
                         pure_push_allowed,
                         pushrebase_flags,
-                        maybe_backup_repo_source.map(|repo| repo.as_blob_repo().clone()),
+                        maybe_backup_repo_source,
                     )
                     .await?;
 

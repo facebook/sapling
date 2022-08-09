@@ -10,6 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.56"
 async-trait = "0.1.56"
+backup_source_repo = { version = "0.1.0", path = "../../repo_attributes/backup_source_repo" }
 blobrepo = { version = "0.1.0", path = ".." }
 blobrepo_common = { version = "0.1.0", path = "../common" }
 blobrepo_errors = { version = "0.1.0", path = "../errors" }
