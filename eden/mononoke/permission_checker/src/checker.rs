@@ -8,7 +8,6 @@
 use std::panic::RefUnwindSafe;
 use std::sync::Arc;
 
-use anyhow::Result;
 use async_trait::async_trait;
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
@@ -20,7 +19,7 @@ pub type BoxPermissionChecker = Box<dyn PermissionChecker + Send + Sync + RefUnw
 
 #[async_trait]
 pub trait PermissionChecker {
-    async fn check_set(&self, accessors: &MononokeIdentitySet, actions: &[&str]) -> Result<bool>;
+    async fn check_set(&self, accessors: &MononokeIdentitySet, actions: &[&str]) -> bool;
 }
 
 pub struct PermissionCheckerBuilder {
@@ -67,8 +66,8 @@ pub(crate) struct AlwaysAllow;
 
 #[async_trait]
 impl PermissionChecker for AlwaysAllow {
-    async fn check_set(&self, _accessors: &MononokeIdentitySet, _actions: &[&str]) -> Result<bool> {
-        Ok(true)
+    async fn check_set(&self, _accessors: &MononokeIdentitySet, _actions: &[&str]) -> bool {
+        true
     }
 }
 
@@ -76,8 +75,8 @@ pub(crate) struct AlwaysReject;
 
 #[async_trait]
 impl PermissionChecker for AlwaysReject {
-    async fn check_set(&self, _accessors: &MononokeIdentitySet, _actions: &[&str]) -> Result<bool> {
-        Ok(false)
+    async fn check_set(&self, _accessors: &MononokeIdentitySet, _actions: &[&str]) -> bool {
+        false
     }
 }
 
@@ -87,8 +86,8 @@ pub(crate) struct AllowlistChecker {
 
 #[async_trait]
 impl PermissionChecker for AllowlistChecker {
-    async fn check_set(&self, accessors: &MononokeIdentitySet, _actions: &[&str]) -> Result<bool> {
-        Ok(!self.allowlist.is_disjoint(accessors))
+    async fn check_set(&self, accessors: &MononokeIdentitySet, _actions: &[&str]) -> bool {
+        !self.allowlist.is_disjoint(accessors)
     }
 }
 
@@ -98,34 +97,21 @@ struct UnionPermissionChecker {
 
 #[async_trait]
 impl PermissionChecker for UnionPermissionChecker {
-    async fn check_set(&self, accessors: &MononokeIdentitySet, actions: &[&str]) -> Result<bool> {
+    async fn check_set(&self, accessors: &MononokeIdentitySet, actions: &[&str]) -> bool {
         // Check all checkers in parallel.
         let mut checks: FuturesUnordered<_> = self
             .checkers
             .iter()
             .map(|checker| async { checker.check_set(accessors, actions).await })
             .collect();
-        let mut error = None;
+
         while let Some(check_result) = checks.next().await {
-            match check_result {
-                Ok(true) => {
-                    // Return true as soon as any checker says access is permitted.
-                    return Ok(true);
-                }
-                Ok(false) => {}
-                Err(e) => {
-                    // If an error occurs in any checker, we still want other
-                    // checkers to potentially succeed.  For example, this
-                    // will allow the global allowlist to work even when a
-                    // remote ACL checking service is down.  Save the first
-                    // error, and only return it if nothing succeeded.
-                    error = error.or(Some(e));
-                }
+            if check_result {
+                // Return true as soon as any checker says access is permitted.
+                return true;
             }
         }
-        match error {
-            Some(error) => Err(error),
-            None => Ok(false),
-        }
+
+        return false;
     }
 }

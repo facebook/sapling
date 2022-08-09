@@ -152,10 +152,7 @@ impl ProdRepoPermissionChecker {
 #[async_trait]
 impl RepoPermissionChecker for ProdRepoPermissionChecker {
     async fn check_if_read_access_allowed(&self, identities: &MononokeIdentitySet) -> Result<bool> {
-        Ok(self
-            .repo_permchecker
-            .check_set(identities, &["read"])
-            .await?)
+        Ok(self.repo_permchecker.check_set(identities, &["read"]).await)
     }
 
     async fn check_if_any_region_read_access_allowed(
@@ -163,7 +160,7 @@ impl RepoPermissionChecker for ProdRepoPermissionChecker {
         identities: &MononokeIdentitySet,
     ) -> Result<bool> {
         for checker in self.repo_region_permcheckers.values() {
-            if checker.check_set(identities, &["read"]).await? {
+            if checker.check_set(identities, &["read"]).await {
                 return Ok(true);
             }
         }
@@ -177,7 +174,7 @@ impl RepoPermissionChecker for ProdRepoPermissionChecker {
     ) -> Result<bool> {
         for acl in region_hipster_acls {
             if let Some(checker) = self.repo_region_permcheckers.get(*acl) {
-                if checker.check_set(identities, &["read"]).await? {
+                if checker.check_set(identities, &["read"]).await {
                     return Ok(true);
                 }
             }
@@ -191,10 +188,7 @@ impl RepoPermissionChecker for ProdRepoPermissionChecker {
     ) -> Result<bool> {
         // TODO(T105334556): This should require draft permission
         // For now, we allow all readers draft access.
-        Ok(self
-            .repo_permchecker
-            .check_set(identities, &["read"])
-            .await?)
+        Ok(self.repo_permchecker.check_set(identities, &["read"]).await)
     }
 
     async fn check_if_write_access_allowed(
@@ -204,7 +198,7 @@ impl RepoPermissionChecker for ProdRepoPermissionChecker {
         Ok(self
             .repo_permchecker
             .check_set(identities, &["write"])
-            .await?)
+            .await)
     }
 
     async fn check_if_read_only_bypass_allowed(
@@ -214,7 +208,7 @@ impl RepoPermissionChecker for ProdRepoPermissionChecker {
         Ok(self
             .repo_permchecker
             .check_set(identities, &["bypass_readonly"])
-            .await?)
+            .await)
     }
 
     async fn check_if_service_writes_allowed(
@@ -225,7 +219,7 @@ impl RepoPermissionChecker for ProdRepoPermissionChecker {
         Ok(self
             .service_permchecker
             .check_set(identities, &[service_name])
-            .await?)
+            .await)
     }
 }
 

@@ -206,8 +206,7 @@ async fn acl_check(
 
     let acl_check = aclchecker
         .check_set(identities.as_ref(), &[ACL_CHECK_ACTION])
-        .await
-        .map_err(LfsServerContextErrorKind::PermissionCheckFailed)?;
+        .await;
 
     if !acl_check && enforce_authorization {
         Err(LfsServerContextErrorKind::Forbidden)

@@ -76,8 +76,6 @@ pub enum LfsServerContextErrorKind {
     Forbidden,
     #[error("Client not authenticated")]
     NotAuthenticated,
-    #[error("Permission check failed: {0}")]
-    PermissionCheckFailed(anyhow::Error),
     #[error("Repository does not exist: {0}")]
     RepositoryDoesNotExist(String),
     #[error("Missing host header")]
@@ -90,7 +88,6 @@ impl From<LfsServerContextErrorKind> for HttpError {
         match e {
             Forbidden => HttpError::e403(e),
             RepositoryDoesNotExist(_) => HttpError::e400(e),
-            PermissionCheckFailed(_) => HttpError::e500(e),
             MissingHostHeader => HttpError::e400(e),
             NotAuthenticated => HttpError::e403(e),
         }

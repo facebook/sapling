@@ -41,7 +41,7 @@ impl ConnectionSecurityChecker {
 
     /// Check if the given identities are trusted to act as a proxy, and
     /// provide the identities of the originator of the request.
-    pub async fn check_if_trusted(&self, identities: &MononokeIdentitySet) -> Result<bool> {
+    pub async fn check_if_trusted(&self, identities: &MononokeIdentitySet) -> bool {
         self.checker
             .check_set(identities, &["trusted_parties"])
             .await

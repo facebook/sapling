@@ -281,7 +281,7 @@ async fn handle_connection(conn: PendingConnection, sock: TcpStream) -> Result<(
         .acceptor
         .security_checker
         .check_if_trusted(&identities)
-        .await?;
+        .await;
 
     let conn = AcceptedConnection {
         pending: conn,

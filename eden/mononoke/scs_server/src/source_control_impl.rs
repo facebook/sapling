@@ -240,8 +240,7 @@ impl SourceControlServiceImpl {
         let is_trusted = self
             .identity_proxy_checker
             .check_if_trusted(&tls_identities)
-            .await
-            .map_err(errors::invalid_request)?;
+            .await;
 
         if is_trusted {
             if let (Some(forwarded_identities), Some(forwarded_ip)) = (

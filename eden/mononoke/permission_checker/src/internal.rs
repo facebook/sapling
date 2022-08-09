@@ -64,15 +64,15 @@ pub struct AclPermissionChecker {
 
 #[async_trait]
 impl PermissionChecker for AclPermissionChecker {
-    async fn check_set(&self, identities: &MononokeIdentitySet, actions: &[&str]) -> Result<bool> {
+    async fn check_set(&self, identities: &MononokeIdentitySet, actions: &[&str]) -> bool {
         for action in actions {
             // AclChecker uses the first action that exists
             if let Some(granted) = self.acl.actions.get(*action) {
-                return Ok(!granted.is_disjoint(identities));
+                return !granted.is_disjoint(identities);
             }
         }
         // If none of the actions were present, the check fails.
-        Ok(false)
+        false
     }
 }
 
@@ -171,17 +171,17 @@ mod test {
         assert!(
             repo1
                 .check_set(&ids(&["IP:localhost", "USER:user1"])?, &["access", "read"])
-                .await?
+                .await
         );
         assert!(
             !repo1
                 .check_set(&ids(&["IP:localhost", "USER:impostor"])?, &["read"])
-                .await?
+                .await
         );
         assert!(
             !repo1
                 .check_set(&ids(&["IP:localhost", "USER:user1"])?, &["write"])
-                .await?
+                .await
         );
         Ok(())
     }
