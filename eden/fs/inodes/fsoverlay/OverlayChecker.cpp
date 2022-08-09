@@ -60,16 +60,16 @@ struct OverlayChecker::InodeInfo {
 struct OverlayChecker::Impl {
   FsOverlay* const fs;
   std::optional<InodeNumber> loadedNextInodeNumber;
-  LookupCallback lookupCallback;
+  LookupCallback& lookupCallback;
   std::unordered_map<InodeNumber, InodeInfo> inodes;
 
   Impl(
       FsOverlay* fs,
       std::optional<InodeNumber> nextInodeNumber,
-      LookupCallback&& lookupCallback)
+      LookupCallback& lookupCallback)
       : fs{fs},
         loadedNextInodeNumber{nextInodeNumber},
-        lookupCallback{std::move(lookupCallback)} {}
+        lookupCallback{lookupCallback} {}
 };
 
 class OverlayChecker::RepairState {
@@ -734,11 +734,8 @@ class OverlayChecker::BadNextInodeNumber : public OverlayChecker::Error {
 OverlayChecker::OverlayChecker(
     FsOverlay* fs,
     optional<InodeNumber> nextInodeNumber,
-    LookupCallback&& lookupCallback)
-    : impl_{std::make_unique<Impl>(
-          fs,
-          nextInodeNumber,
-          std::move(lookupCallback))} {}
+    LookupCallback& lookupCallback)
+    : impl_{std::make_unique<Impl>(fs, nextInodeNumber, lookupCallback)} {}
 
 OverlayChecker::~OverlayChecker() {}
 

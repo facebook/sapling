@@ -205,7 +205,8 @@ void scanCurrentDir(
     AbsolutePathPiece dir,
     InodeNumber inode,
     overlay::OverlayDir knownState,
-    bool recordDeletion) {
+    bool recordDeletion,
+    TreeOverlay::LookupCallback& callback) {
   auto boostPath = boost::filesystem::path(dir.stringPiece());
   if (!boost::filesystem::is_directory(boostPath)) {
     XLOGF(WARN, "Attempting to scan '{}' which is not a directory", dir);
@@ -320,7 +321,7 @@ void scanCurrentDir(
       auto entryInode =
           InodeNumber::fromThrift(*overlayEntry->inodeNumber_ref());
       auto entryDir = overlay.loadOverlayDir(entryInode);
-      scanCurrentDir(overlay, path, entryInode, *entryDir, isFull);
+      scanCurrentDir(overlay, path, entryInode, *entryDir, isFull, callback);
     }
   }
 }
@@ -328,10 +329,11 @@ void scanCurrentDir(
 
 void windowsFsckScanLocalChanges(
     TreeOverlay& overlay,
-    AbsolutePathPiece mountPath) {
+    AbsolutePathPiece mountPath,
+    TreeOverlay::LookupCallback& callback) {
   XLOGF(INFO, "Start scanning {}", mountPath);
   if (auto view = overlay.loadOverlayDir(kRootNodeId)) {
-    scanCurrentDir(overlay, mountPath, kRootNodeId, *view, false);
+    scanCurrentDir(overlay, mountPath, kRootNodeId, *view, false, callback);
     XLOGF(INFO, "Scanning complete for {}", mountPath);
   } else {
     XLOG(INFO)

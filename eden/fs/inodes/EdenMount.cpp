@@ -322,6 +322,10 @@ class TreeLookupProcessor {
   ImmediateFuture<OverlayChecker::LookupCallbackValue> next(
       std::shared_ptr<const Tree> tree) {
     using RetType = OverlayChecker::LookupCallbackValue;
+    if (iter_ == iterRange_.end()) {
+      return ImmediateFuture{RetType{tree}};
+    }
+
     auto name = *iter_++;
     auto it = tree->find(name);
 

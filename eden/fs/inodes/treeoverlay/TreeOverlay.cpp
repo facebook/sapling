@@ -117,9 +117,11 @@ InodeNumber TreeOverlay::nextInodeNumber() {
   return store_.nextInodeNumber();
 }
 
-InodeNumber TreeOverlay::scanLocalChanges(AbsolutePathPiece mountPath) {
+InodeNumber TreeOverlay::scanLocalChanges(
+    AbsolutePathPiece mountPath,
+    FOLLY_MAYBE_UNUSED TreeOverlay::LookupCallback& callback) {
 #ifdef _WIN32
-  windowsFsckScanLocalChanges(*this, mountPath);
+  windowsFsckScanLocalChanges(*this, mountPath, callback);
 #else
   (void)mountPath;
 #endif

@@ -320,7 +320,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   void initOverlay(
       std::optional<AbsolutePath> mountPath,
       const OverlayChecker::ProgressCallback& progressCallback,
-      OverlayChecker::LookupCallback&& lookupCallback);
+      OverlayChecker::LookupCallback& lookupCallback);
   void gcThread() noexcept;
   void handleGCRequest(GCRequest& request);
 

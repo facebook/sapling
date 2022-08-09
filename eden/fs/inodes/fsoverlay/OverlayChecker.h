@@ -65,7 +65,7 @@ class OverlayChecker {
   OverlayChecker(
       FsOverlay* fs,
       std::optional<InodeNumber> nextInodeNumber,
-      LookupCallback&& lookupCallback);
+      LookupCallback& lookupCallback);
 
   ~OverlayChecker();
 

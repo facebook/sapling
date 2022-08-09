@@ -49,7 +49,11 @@ int main(int argc, char** argv) {
   TreeOverlay overlay(overlayPath);
   overlay.initOverlay(true);
   XLOG(INFO) << "start scanning";
-  overlay.scanLocalChanges(mountPath);
+  TreeOverlay::LookupCallback lookup = [](auto) {
+    return makeImmediateFuture<TreeOverlay::LookupCallbackValue>(
+        std::runtime_error("no lookup callback"));
+  };
+  overlay.scanLocalChanges(mountPath, lookup);
   XLOG(INFO) << "scanning end";
 
   return 0;

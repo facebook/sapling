@@ -9,11 +9,10 @@
 
 #ifdef _WIN32
 
+#include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
-
-class TreeOverlay;
 
 /**
  * Walk the directory hierarchy for the given `mountPath` and fix the
@@ -47,7 +46,8 @@ class TreeOverlay;
  */
 void windowsFsckScanLocalChanges(
     TreeOverlay& overlay,
-    AbsolutePathPiece mountPath);
+    AbsolutePathPiece mountPath,
+    TreeOverlay::LookupCallback& callback);
 
 } // namespace facebook::eden
 

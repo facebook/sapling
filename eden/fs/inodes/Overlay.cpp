@@ -164,11 +164,10 @@ folly::SemiFuture<Unit> Overlay::initialize(
   gcThread_ = std::thread([this,
                            mountPath = std::move(mountPath),
                            progressCallback = std::move(progressCallback),
-                           lookupCallback = std::move(lookupCallback),
+                           lookupCallback = lookupCallback,
                            promise = std::move(initPromise)]() mutable {
     try {
-      initOverlay(
-          std::move(mountPath), progressCallback, std::move(lookupCallback));
+      initOverlay(std::move(mountPath), progressCallback, lookupCallback);
     } catch (std::exception& ex) {
       XLOG(ERR) << "overlay initialization failed for "
                 << backingOverlay_->getLocalDir() << ": " << ex.what();
@@ -186,7 +185,7 @@ folly::SemiFuture<Unit> Overlay::initialize(
 void Overlay::initOverlay(
     std::optional<AbsolutePath> mountPath,
     FOLLY_MAYBE_UNUSED const OverlayChecker::ProgressCallback& progressCallback,
-    FOLLY_MAYBE_UNUSED OverlayChecker::LookupCallback&& lookupCallback) {
+    FOLLY_MAYBE_UNUSED OverlayChecker::LookupCallback& lookupCallback) {
   IORequest req{this};
   auto optNextInodeNumber = backingOverlay_->initOverlay(true);
   if (!optNextInodeNumber.has_value()) {
@@ -203,10 +202,14 @@ void Overlay::initOverlay(
 
     // TODO(zeyi): `OverlayCheck` should be associated with the specific
     // Overlay implementation. `reinterpret_cast` is a temporary workaround.
+    //
+    // Note: lookupCallback is a reference but is stored on OverlayChecker.
+    // Therefore OverlayChecker must not exist longer than this initOverlay
+    // call.
     OverlayChecker checker(
         reinterpret_cast<FsOverlay*>(backingOverlay_.get()),
         std::nullopt,
-        std::move(lookupCallback));
+        lookupCallback);
     folly::stop_watch<> fsckRuntime;
     checker.scanForErrors(progressCallback);
     auto result = checker.repairErrors();
@@ -244,7 +247,7 @@ void Overlay::initOverlay(
   // here to skip scanning in that case.
   if (supportsSemanticOperations_ && mountPath.has_value()) {
     optNextInodeNumber = dynamic_cast<TreeOverlay*>(backingOverlay_.get())
-                             ->scanLocalChanges(*mountPath);
+                             ->scanLocalChanges(*mountPath, lookupCallback);
   }
 
   nextInodeNumber_.store(optNextInodeNumber->get(), std::memory_order_relaxed);

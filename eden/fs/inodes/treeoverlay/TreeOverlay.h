@@ -12,6 +12,9 @@
 
 #include "eden/fs/inodes/IOverlay.h"
 #include "eden/fs/inodes/treeoverlay/TreeOverlayStore.h"
+#include "eden/fs/model/Tree.h"
+#include "eden/fs/utils/ImmediateFuture.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 class File;
@@ -41,6 +44,11 @@ class TreeOverlay : public IOverlay {
 
   TreeOverlay(TreeOverlay&&) = delete;
   TreeOverlay& operator=(TreeOverlay&&) = delete;
+
+  using LookupCallbackValue =
+      std::variant<std::shared_ptr<const Tree>, TreeEntry>;
+  using LookupCallback =
+      std::function<ImmediateFuture<LookupCallbackValue>(RelativePathPiece)>;
 
   bool supportsSemanticOperations() const override {
     return true;
@@ -107,7 +115,9 @@ class TreeOverlay : public IOverlay {
    * on Windows as ProjectedFS allows user to make changes under certain
    * directory when EdenFS is not running.
    */
-  InodeNumber scanLocalChanges(AbsolutePathPiece mountPath);
+  InodeNumber scanLocalChanges(
+      AbsolutePathPiece mountPath,
+      LookupCallback& callback);
 
   void maintenance() override {
     store_.maintenance();
