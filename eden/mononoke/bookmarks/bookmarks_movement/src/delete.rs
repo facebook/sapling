@@ -83,7 +83,7 @@ impl<'op> DeleteBookmarkOp<'op> {
         if self.only_log_acl_checks {
             if authz
                 .check_repo_write(ctx, repo, RepoWriteOperation::DeleteBookmark(kind))
-                .await?
+                .await
                 .is_denied()
             {
                 ctx.scuba()

@@ -83,7 +83,7 @@ impl AuthorizationContext {
         &self,
         ctx: &CoreContext,
         repo: &impl RepoPermissionCheckerRef,
-    ) -> Result<AuthorizationCheckOutcome> {
+    ) -> AuthorizationCheckOutcome {
         let permitted = match self {
             AuthorizationContext::FullAccess => true,
             AuthorizationContext::Identity | AuthorizationContext::Service(_) => {
@@ -92,10 +92,10 @@ impl AuthorizationContext {
                 // identity in this case also.
                 repo.repo_permission_checker()
                     .check_if_read_access_allowed(ctx.metadata().identities())
-                    .await?
+                    .await
             }
         };
-        Ok(AuthorizationCheckOutcome::from_permitted(permitted))
+        AuthorizationCheckOutcome::from_permitted(permitted)
     }
 
     /// Require that the user has read access to the full repo.
@@ -105,7 +105,7 @@ impl AuthorizationContext {
         repo: &impl RepoPermissionCheckerRef,
     ) -> Result<(), AuthorizationError> {
         self.check_full_repo_read(ctx, repo)
-            .await?
+            .await
             .permitted_or_else(|| self.permission_denied(ctx, DeniedAction::FullRepoRead))
     }
 
@@ -117,7 +117,7 @@ impl AuthorizationContext {
         &self,
         ctx: &CoreContext,
         repo: &impl RepoPermissionCheckerRef,
-    ) -> Result<AuthorizationCheckOutcome> {
+    ) -> AuthorizationCheckOutcome {
         let permitted = match self {
             AuthorizationContext::FullAccess => true,
             AuthorizationContext::Identity | AuthorizationContext::Service(_) => {
@@ -126,14 +126,14 @@ impl AuthorizationContext {
                 // identity in this case also.
                 repo.repo_permission_checker()
                     .check_if_read_access_allowed(ctx.metadata().identities())
-                    .await? ||
+                    .await ||
                 // Check if the caller can access via path ACLs.
                 repo.repo_permission_checker()
                     .check_if_any_region_read_access_allowed(ctx.metadata().identities())
-                    .await?
+                    .await
             }
         };
-        Ok(AuthorizationCheckOutcome::from_permitted(permitted))
+        AuthorizationCheckOutcome::from_permitted(permitted)
     }
 
     /// Require that the user has read access to the repo metadata.
@@ -143,7 +143,7 @@ impl AuthorizationContext {
         repo: &impl RepoPermissionCheckerRef,
     ) -> Result<(), AuthorizationError> {
         self.check_repo_metadata_read(ctx, repo)
-            .await?
+            .await
             .permitted_or_else(|| self.permission_denied(ctx, DeniedAction::RepoMetadataRead))
     }
 
@@ -162,13 +162,13 @@ impl AuthorizationContext {
                 // identity in this case also.
                 repo.repo_permission_checker()
                     .check_if_read_access_allowed(ctx.metadata().identities())
-                    .await?
+                    .await
                     || {
                         let rules = repo.acl_regions().associated_rules(ctx, csid, path).await?;
                         let acls = rules.hipster_acls();
                         repo.repo_permission_checker()
                             .check_if_region_read_access_allowed(&acls, ctx.metadata().identities())
-                            .await?
+                            .await
                     }
             }
         };
@@ -198,18 +198,18 @@ impl AuthorizationContext {
         ctx: &CoreContext,
         repo: &(impl RepoPermissionCheckerRef + RepoConfigRef),
         op: RepoWriteOperation,
-    ) -> Result<AuthorizationCheckOutcome> {
+    ) -> AuthorizationCheckOutcome {
         let permitted = match self {
             AuthorizationContext::FullAccess => true,
             AuthorizationContext::Identity => {
                 if op.is_draft() {
                     repo.repo_permission_checker()
                         .check_if_draft_access_allowed(ctx.metadata().identities())
-                        .await?
+                        .await
                 } else {
                     repo.repo_permission_checker()
                         .check_if_write_access_allowed(ctx.metadata().identities())
-                        .await?
+                        .await
                 }
             }
             AuthorizationContext::Service(service_name) => {
@@ -217,7 +217,7 @@ impl AuthorizationContext {
                 repo
                     .repo_permission_checker()
                     .check_if_service_writes_allowed(ctx.metadata().identities(), service_name)
-                    .await? &&
+                    .await &&
                 // Check the service is allowed to perform this operation
                 repo
                     .repo_config()
@@ -225,7 +225,7 @@ impl AuthorizationContext {
                     .service_write_method_permitted(service_name, op.method_name())
             }
         };
-        Ok(AuthorizationCheckOutcome::from_permitted(permitted))
+        AuthorizationCheckOutcome::from_permitted(permitted)
     }
 
     /// Require that the user has general write access to the repo, and return
@@ -240,7 +240,7 @@ impl AuthorizationContext {
         op: RepoWriteOperation,
     ) -> Result<(), AuthorizationError> {
         self.check_repo_write(ctx, repo, op)
-            .await?
+            .await
             .permitted_or_else(|| self.permission_denied(ctx, DeniedAction::RepoWrite(op)))
     }
 
@@ -249,7 +249,7 @@ impl AuthorizationContext {
         &self,
         _ctx: &CoreContext,
         repo: &impl RepoConfigRef,
-    ) -> Result<AuthorizationCheckOutcome> {
+    ) -> AuthorizationCheckOutcome {
         let permitted = match self {
             AuthorizationContext::FullAccess | AuthorizationContext::Identity => true,
             AuthorizationContext::Service(service_name) => repo
@@ -257,7 +257,7 @@ impl AuthorizationContext {
                 .source_control_service
                 .service_write_all_paths_permitted(service_name),
         };
-        Ok(AuthorizationCheckOutcome::from_permitted(permitted))
+        AuthorizationCheckOutcome::from_permitted(permitted)
     }
 
     /// Require that a user with write permissions may write to the paths in
@@ -286,7 +286,7 @@ impl AuthorizationContext {
         ctx: &CoreContext,
         repo: &(impl RepoConfigRef + RepoBookmarkAttrsRef),
         bookmark: &BookmarkName,
-    ) -> Result<AuthorizationCheckOutcome> {
+    ) -> AuthorizationCheckOutcome {
         let permitted = match self {
             AuthorizationContext::FullAccess => true,
             AuthorizationContext::Identity => {
@@ -304,7 +304,7 @@ impl AuthorizationContext {
                     .service_write_bookmark_permitted(service_name, bookmark)
             }
         };
-        Ok(AuthorizationCheckOutcome::from_permitted(permitted))
+        AuthorizationCheckOutcome::from_permitted(permitted)
     }
 
     /// Require that the user is allowed to modify (create, update or delete)
@@ -316,7 +316,7 @@ impl AuthorizationContext {
         bookmark: &BookmarkName,
     ) -> Result<(), AuthorizationError> {
         self.check_bookmark_modify(ctx, repo, bookmark)
-            .await?
+            .await
             .permitted_or_else(|| {
                 self.permission_denied(ctx, DeniedAction::BookmarkModification(bookmark.clone()))
             })
@@ -329,7 +329,7 @@ impl AuthorizationContext {
         &self,
         _ctx: &CoreContext,
         repo: &impl RepoConfigRef,
-    ) -> Result<AuthorizationCheckOutcome> {
+    ) -> AuthorizationCheckOutcome {
         let permitted = match self {
             AuthorizationContext::FullAccess => true,
             AuthorizationContext::Identity => {
@@ -344,7 +344,7 @@ impl AuthorizationContext {
                     .service_write_method_permitted(service_name, "set_git_mapping_from_changeset")
             }
         };
-        Ok(AuthorizationCheckOutcome::from_permitted(permitted))
+        AuthorizationCheckOutcome::from_permitted(permitted)
     }
 
     /// Require that the user is allowed to set the Git mapping for a
@@ -356,7 +356,7 @@ impl AuthorizationContext {
         repo: &impl RepoConfigRef,
     ) -> Result<(), AuthorizationError> {
         self.check_override_git_mapping(ctx, repo)
-            .await?
+            .await
             .permitted_or_else(|| self.permission_denied(ctx, DeniedAction::OverrideGitMapping))
     }
 }

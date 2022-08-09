@@ -122,7 +122,7 @@ impl<'op> CreateBookmarkOp<'op> {
         if self.only_log_acl_checks {
             if authz
                 .check_repo_write(ctx, repo, RepoWriteOperation::CreateBookmark(kind))
-                .await?
+                .await
                 .is_denied()
             {
                 ctx.scuba()

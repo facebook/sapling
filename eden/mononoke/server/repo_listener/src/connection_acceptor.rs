@@ -359,7 +359,6 @@ where
         &conn.pending.acceptor.security_checker,
         stdio,
         conn.pending.acceptor.rate_limiter.clone(),
-        conn.pending.addr.ip(),
         conn.pending.acceptor.scribe.clone(),
         conn.pending.acceptor.qps.clone(),
     )

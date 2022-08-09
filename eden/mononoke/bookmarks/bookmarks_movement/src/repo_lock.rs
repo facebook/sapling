@@ -38,28 +38,28 @@ async fn should_check_repo_lock(
     pushvars: Option<&HashMap<String, Bytes>>,
     repo_perm_checker: &dyn RepoPermissionChecker,
     idents: &MononokeIdentitySet,
-) -> Result<bool> {
+) -> bool {
     match kind {
-        BookmarkKind::Scratch => Ok(false),
+        BookmarkKind::Scratch => false,
         BookmarkKind::Publishing | BookmarkKind::PullDefaultPublishing => {
             if let Some(pushvars) = pushvars {
                 if let Some(value) = pushvars.get("BYPASS_READONLY") {
                     let bypass_allowed = repo_perm_checker
                         .check_if_read_only_bypass_allowed(idents)
-                        .await?;
+                        .await;
 
                     let enforce_acl_check = tunables().get_enforce_bypass_readonly_acl();
 
                     if !bypass_allowed && enforce_acl_check {
-                        return Ok(true);
+                        return true;
                     }
 
                     if value.to_ascii_lowercase() == b"true" {
-                        return Ok(false);
+                        return false;
                     }
                 }
             }
-            Ok(true)
+            true
         }
     }
 }
@@ -70,7 +70,7 @@ pub(crate) async fn check_repo_lock(
     pushvars: Option<&HashMap<String, Bytes>>,
     idents: &MononokeIdentitySet,
 ) -> Result<(), BookmarkMovementError> {
-    if should_check_repo_lock(kind, pushvars, repo.repo_permission_checker(), idents).await? {
+    if should_check_repo_lock(kind, pushvars, repo.repo_permission_checker(), idents).await {
         let state = repo
             .repo_lock()
             .check_repo_lock()
@@ -96,8 +96,8 @@ impl RepoLockPushrebaseHook {
         pushvars: Option<&HashMap<String, Bytes>>,
         repo_perm_checker: &dyn RepoPermissionChecker,
         idents: &MononokeIdentitySet,
-    ) -> Result<Option<Box<dyn PushrebaseHook>>> {
-        let hook = if should_check_repo_lock(kind, pushvars, repo_perm_checker, idents).await? {
+    ) -> Option<Box<dyn PushrebaseHook>> {
+        let hook = if should_check_repo_lock(kind, pushvars, repo_perm_checker, idents).await {
             let hook = Box::new(RepoLockPushrebaseHook {
                 transaction_repo_lock: TransactionRepoLock::new(repo_id),
             });
@@ -106,7 +106,7 @@ impl RepoLockPushrebaseHook {
             None
         };
 
-        Ok(hook)
+        hook
     }
 }
 

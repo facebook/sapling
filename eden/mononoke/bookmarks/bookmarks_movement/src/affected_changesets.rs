@@ -505,7 +505,7 @@ impl AffectedChangesets {
         // For optimization, first check if the user is permitted to modify
         // all paths.  In that case we don't need to find out which paths were
         // affected.
-        if authz.check_any_path_write(ctx, repo).await?.is_denied() {
+        if authz.check_any_path_write(ctx, repo).await.is_denied() {
             // User is not permitted to write to all paths, check if the paths
             // touched by the changesets are permitted.
             self.load_additional_changesets(ctx, repo, lca_hint, bookmark, additional_changesets)

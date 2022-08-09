@@ -116,7 +116,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         if self.only_log_acl_checks {
             if authz
                 .check_repo_write(ctx, repo, RepoWriteOperation::LandStack(kind))
-                .await?
+                .await
                 .is_denied()
             {
                 ctx.scuba().clone().log_with_msg(
@@ -184,7 +184,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             repo.repo_permission_checker(),
             ctx.metadata().identities(),
         )
-        .await?
+        .await
         {
             pushrebase_hooks.push(hook);
         }

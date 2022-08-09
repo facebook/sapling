@@ -81,59 +81,46 @@ struct TestPermissionChecker {
 
 #[async_trait]
 impl RepoPermissionChecker for TestPermissionChecker {
-    async fn check_if_read_access_allowed(
-        &self,
-        _identities: &MononokeIdentitySet,
-    ) -> Result<bool> {
-        Ok(self.read)
+    async fn check_if_read_access_allowed(&self, _identities: &MononokeIdentitySet) -> bool {
+        self.read
     }
 
     async fn check_if_any_region_read_access_allowed(
         &self,
         _identities: &MononokeIdentitySet,
-    ) -> Result<bool> {
-        Ok(self.any_region_read)
+    ) -> bool {
+        self.any_region_read
     }
 
     async fn check_if_region_read_access_allowed(
         &self,
         _acls: &[&str],
         _identities: &MononokeIdentitySet,
-    ) -> Result<bool> {
-        Ok(false)
+    ) -> bool {
+        false
     }
 
-    async fn check_if_draft_access_allowed(
-        &self,
-        _identities: &MononokeIdentitySet,
-    ) -> Result<bool> {
-        Ok(self.draft)
+    async fn check_if_draft_access_allowed(&self, _identities: &MononokeIdentitySet) -> bool {
+        self.draft
     }
 
-    async fn check_if_write_access_allowed(
-        &self,
-        _identities: &MononokeIdentitySet,
-    ) -> Result<bool> {
-        Ok(self.write)
+    async fn check_if_write_access_allowed(&self, _identities: &MononokeIdentitySet) -> bool {
+        self.write
     }
 
-    async fn check_if_read_only_bypass_allowed(
-        &self,
-        _identities: &MononokeIdentitySet,
-    ) -> Result<bool> {
-        Ok(self.read_only_bypass)
+    async fn check_if_read_only_bypass_allowed(&self, _identities: &MononokeIdentitySet) -> bool {
+        self.read_only_bypass
     }
 
     async fn check_if_service_writes_allowed(
         &self,
         _identities: &MononokeIdentitySet,
         service_name: &str,
-    ) -> Result<bool> {
-        Ok(self
-            .service_writes
+    ) -> bool {
+        self.service_writes
             .get(service_name)
             .copied()
-            .unwrap_or(false))
+            .unwrap_or(false)
     }
 }
 

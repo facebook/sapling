@@ -30,38 +30,33 @@ use slog::Logger;
 pub trait RepoPermissionChecker: Send + Sync + 'static {
     /// Check whether the given identities are permitted to **read** the
     /// repository.
-    async fn check_if_read_access_allowed(&self, identities: &MononokeIdentitySet) -> Result<bool>;
+    async fn check_if_read_access_allowed(&self, identities: &MononokeIdentitySet) -> bool;
 
     /// Check whether the given identities are premitted to **read** any of
     /// the regions of the repository.
     async fn check_if_any_region_read_access_allowed(
         &self,
         identities: &MononokeIdentitySet,
-    ) -> Result<bool>;
+    ) -> bool;
 
     async fn check_if_region_read_access_allowed(
         &self,
         region_hipster_acls: &[&str],
         identities: &MononokeIdentitySet,
-    ) -> Result<bool>;
+    ) -> bool;
 
     /// Check whether the given identities are permitted to make **draft**
     /// changes to the repository.  This means creating commit cloud commits
     /// and modifying scratch bookmarks.
-    async fn check_if_draft_access_allowed(&self, identities: &MononokeIdentitySet)
-    -> Result<bool>;
+    async fn check_if_draft_access_allowed(&self, identities: &MononokeIdentitySet) -> bool;
 
     /// Check whether the given identities are permitted to make **public**
     /// changes to the repository.  This means modifying public bookmarks.
-    async fn check_if_write_access_allowed(&self, identities: &MononokeIdentitySet)
-    -> Result<bool>;
+    async fn check_if_write_access_allowed(&self, identities: &MononokeIdentitySet) -> bool;
 
     /// Check whether the given identities are permitted to **bypass the
     /// read-only state** of the repository.
-    async fn check_if_read_only_bypass_allowed(
-        &self,
-        identities: &MononokeIdentitySet,
-    ) -> Result<bool>;
+    async fn check_if_read_only_bypass_allowed(&self, identities: &MononokeIdentitySet) -> bool;
 
     /// Check whether the given identities are permitted to **act as a
     /// service** to make modifications to the repository.  This means
@@ -71,7 +66,7 @@ pub trait RepoPermissionChecker: Send + Sync + 'static {
         &self,
         identities: &MononokeIdentitySet,
         service_name: &str,
-    ) -> Result<bool>;
+    ) -> bool;
 }
 
 pub struct ProdRepoPermissionChecker {
@@ -151,75 +146,63 @@ impl ProdRepoPermissionChecker {
 
 #[async_trait]
 impl RepoPermissionChecker for ProdRepoPermissionChecker {
-    async fn check_if_read_access_allowed(&self, identities: &MononokeIdentitySet) -> Result<bool> {
-        Ok(self.repo_permchecker.check_set(identities, &["read"]).await)
+    async fn check_if_read_access_allowed(&self, identities: &MononokeIdentitySet) -> bool {
+        self.repo_permchecker.check_set(identities, &["read"]).await
     }
 
     async fn check_if_any_region_read_access_allowed(
         &self,
         identities: &MononokeIdentitySet,
-    ) -> Result<bool> {
+    ) -> bool {
         for checker in self.repo_region_permcheckers.values() {
             if checker.check_set(identities, &["read"]).await {
-                return Ok(true);
+                return true;
             }
         }
-        Ok(false)
+        false
     }
 
     async fn check_if_region_read_access_allowed(
         &self,
         region_hipster_acls: &[&str],
         identities: &MononokeIdentitySet,
-    ) -> Result<bool> {
+    ) -> bool {
         for acl in region_hipster_acls {
             if let Some(checker) = self.repo_region_permcheckers.get(*acl) {
                 if checker.check_set(identities, &["read"]).await {
-                    return Ok(true);
+                    return true;
                 }
             }
         }
-        Ok(false)
+        false
     }
 
-    async fn check_if_draft_access_allowed(
-        &self,
-        identities: &MononokeIdentitySet,
-    ) -> Result<bool> {
+    async fn check_if_draft_access_allowed(&self, identities: &MononokeIdentitySet) -> bool {
         // TODO(T105334556): This should require draft permission
         // For now, we allow all readers draft access.
-        Ok(self.repo_permchecker.check_set(identities, &["read"]).await)
+        self.repo_permchecker.check_set(identities, &["read"]).await
     }
 
-    async fn check_if_write_access_allowed(
-        &self,
-        identities: &MononokeIdentitySet,
-    ) -> Result<bool> {
-        Ok(self
-            .repo_permchecker
+    async fn check_if_write_access_allowed(&self, identities: &MononokeIdentitySet) -> bool {
+        self.repo_permchecker
             .check_set(identities, &["write"])
-            .await)
+            .await
     }
 
-    async fn check_if_read_only_bypass_allowed(
-        &self,
-        identities: &MononokeIdentitySet,
-    ) -> Result<bool> {
-        Ok(self
-            .repo_permchecker
+    async fn check_if_read_only_bypass_allowed(&self, identities: &MononokeIdentitySet) -> bool {
+        self.repo_permchecker
             .check_set(identities, &["bypass_readonly"])
-            .await)
+            .await
     }
 
     async fn check_if_service_writes_allowed(
         &self,
         identities: &MononokeIdentitySet,
         service_name: &str,
-    ) -> Result<bool> {
-        Ok(self
-            .service_permchecker
+    ) -> bool {
+        self.service_permchecker
             .check_set(identities, &[service_name])
-            .await)
+            .await
     }
 }
 
@@ -233,54 +216,42 @@ impl AlwaysAllowMockRepoPermissionChecker {
 
 #[async_trait]
 impl RepoPermissionChecker for AlwaysAllowMockRepoPermissionChecker {
-    async fn check_if_read_access_allowed(
-        &self,
-        _identities: &MononokeIdentitySet,
-    ) -> Result<bool> {
-        Ok(true)
+    async fn check_if_read_access_allowed(&self, _identities: &MononokeIdentitySet) -> bool {
+        true
     }
 
     async fn check_if_any_region_read_access_allowed(
         &self,
         _identities: &MononokeIdentitySet,
-    ) -> Result<bool> {
-        Ok(true)
+    ) -> bool {
+        true
     }
 
     async fn check_if_region_read_access_allowed(
         &self,
         _region_hipster_acls: &[&str],
         _identities: &MononokeIdentitySet,
-    ) -> Result<bool> {
-        Ok(true)
+    ) -> bool {
+        true
     }
 
-    async fn check_if_draft_access_allowed(
-        &self,
-        _identities: &MononokeIdentitySet,
-    ) -> Result<bool> {
-        Ok(true)
+    async fn check_if_draft_access_allowed(&self, _identities: &MononokeIdentitySet) -> bool {
+        true
     }
 
-    async fn check_if_write_access_allowed(
-        &self,
-        _identities: &MononokeIdentitySet,
-    ) -> Result<bool> {
-        Ok(true)
+    async fn check_if_write_access_allowed(&self, _identities: &MononokeIdentitySet) -> bool {
+        true
     }
 
-    async fn check_if_read_only_bypass_allowed(
-        &self,
-        _identities: &MononokeIdentitySet,
-    ) -> Result<bool> {
-        Ok(true)
+    async fn check_if_read_only_bypass_allowed(&self, _identities: &MononokeIdentitySet) -> bool {
+        true
     }
 
     async fn check_if_service_writes_allowed(
         &self,
         _identities: &MononokeIdentitySet,
         _service_name: &str,
-    ) -> Result<bool> {
-        Ok(true)
+    ) -> bool {
+        true
     }
 }
