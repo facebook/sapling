@@ -293,7 +293,7 @@ impl AuthorizationContext {
                 let user = ctx.metadata().unix_name().unwrap_or("svcscm");
                 repo.repo_bookmark_attrs()
                     .is_allowed_user(ctx, user, bookmark)
-                    .await?
+                    .await
 
                 // TODO: Check using ctx.identities, and deny if neither are provided.
             }

@@ -84,7 +84,7 @@ impl RepoBookmarkAttrs {
         ctx: &CoreContext,
         unixname: &str,
         bookmark: &BookmarkName,
-    ) -> Result<bool> {
+    ) -> bool {
         for attr in self.select(bookmark) {
             let maybe_allowed = attr
                 .params()
@@ -93,7 +93,7 @@ impl RepoBookmarkAttrs {
                 .map(|re| re.is_match(unixname));
 
             let maybe_member = if let Some(membership) = &attr.membership {
-                Some(membership.is_member(ctx.metadata().identities()).await?)
+                Some(membership.is_member(ctx.metadata().identities()).await)
             } else {
                 None
             };
@@ -109,10 +109,10 @@ impl RepoBookmarkAttrs {
                 (None, None) => true,
             };
             if !allowed {
-                return Ok(false);
+                return false;
             }
         }
-        Ok(true)
+        true
     }
 }
 

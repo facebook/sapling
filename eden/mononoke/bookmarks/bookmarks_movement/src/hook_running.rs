@@ -43,7 +43,6 @@ pub async fn is_admin_bypass(
         .get_admin_perm_checker()
         .is_member(ctx.metadata().identities())
         .await
-        .with_context(|| "Error when checking BYPASS_ALL_HOOKS permissions")?
     {
         return Err(anyhow!(
             "In order to use BYPASS_ALL_HOOKS pushvar one needs to be member of the scm group."

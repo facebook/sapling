@@ -8,7 +8,6 @@
 use std::panic::RefUnwindSafe;
 use std::sync::Arc;
 
-use anyhow::Result;
 use async_trait::async_trait;
 
 use crate::MononokeIdentitySet;
@@ -18,7 +17,7 @@ pub type BoxMembershipChecker = Box<dyn MembershipChecker + Send + Sync + RefUnw
 
 #[async_trait]
 pub trait MembershipChecker {
-    async fn is_member(&self, identities: &MononokeIdentitySet) -> Result<bool>;
+    async fn is_member(&self, identities: &MononokeIdentitySet) -> bool;
 }
 
 pub struct AlwaysMember;
@@ -31,8 +30,8 @@ impl AlwaysMember {
 
 #[async_trait]
 impl MembershipChecker for AlwaysMember {
-    async fn is_member(&self, _identities: &MononokeIdentitySet) -> Result<bool> {
-        Ok(true)
+    async fn is_member(&self, _identities: &MononokeIdentitySet) -> bool {
+        true
     }
 }
 
@@ -46,8 +45,8 @@ impl NeverMember {
 
 #[async_trait]
 impl MembershipChecker for NeverMember {
-    async fn is_member(&self, _identities: &MononokeIdentitySet) -> Result<bool> {
-        Ok(false)
+    async fn is_member(&self, _identities: &MononokeIdentitySet) -> bool {
+        false
     }
 }
 
@@ -63,7 +62,7 @@ impl MemberAllowlist {
 
 #[async_trait]
 impl MembershipChecker for MemberAllowlist {
-    async fn is_member(&self, identities: &MononokeIdentitySet) -> Result<bool> {
-        Ok(!self.allowlist.is_disjoint(identities))
+    async fn is_member(&self, identities: &MononokeIdentitySet) -> bool {
+        !self.allowlist.is_disjoint(identities)
     }
 }

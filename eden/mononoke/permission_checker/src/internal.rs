@@ -53,8 +53,8 @@ pub struct AclMembershipChecker {
 
 #[async_trait]
 impl MembershipChecker for AclMembershipChecker {
-    async fn is_member(&self, identities: &MononokeIdentitySet) -> Result<bool> {
-        Ok(!self.group.is_disjoint(identities))
+    async fn is_member(&self, identities: &MononokeIdentitySet) -> bool {
+        !self.group.is_disjoint(identities)
     }
 }
 
@@ -165,8 +165,8 @@ mod test {
         let acls = serde_json::from_str(json)?;
         let prov = InternalAclProvider::new(acls);
         let users_group = prov.group("users").await?;
-        assert!(users_group.is_member(&ids(&["USER:user1"])?).await?);
-        assert!(!users_group.is_member(&ids(&["USER:impostor"])?).await?);
+        assert!(users_group.is_member(&ids(&["USER:user1"])?).await);
+        assert!(!users_group.is_member(&ids(&["USER:impostor"])?).await);
         let repo1 = prov.repo_acl("repo1").await?;
         assert!(
             repo1
