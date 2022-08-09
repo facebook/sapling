@@ -542,7 +542,7 @@ fn init_tunables_worker(
     tunables::init_tunables_worker(logger, config_handle)
 }
 
-fn create_acl_provider(fb: FacebookInit, acl_args: &AclArgs) -> Result<Box<dyn AclProvider>> {
+fn create_acl_provider(fb: FacebookInit, acl_args: &AclArgs) -> Result<Arc<dyn AclProvider>> {
     let acl_provider = match &acl_args.acl_file {
         Some(acl_file) => InternalAclProvider::from_file(acl_file).with_context(|| {
             format!("Failed to load ACLs from '{}'", acl_file.to_string_lossy())

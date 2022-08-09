@@ -6,6 +6,7 @@
  */
 
 use bytes::Bytes;
+use connection_security_checker::ConnectionSecurityChecker;
 use gotham::state::State;
 use gotham_derive::StateData;
 use openssl::ssl::SslRef;
@@ -19,12 +20,12 @@ pub struct TlsSocketData {
 }
 
 impl TlsSocketData {
-    pub fn from_ssl(
+    pub async fn from_ssl(
         ssl: &SslRef,
-        trusted_proxy_allowlist: &MononokeIdentitySet,
+        connection_security_checker: &ConnectionSecurityChecker,
         capture_session_data: bool,
     ) -> Self {
-        let identities = TlsCertificateIdentities::from_ssl(ssl, trusted_proxy_allowlist);
+        let identities = TlsCertificateIdentities::from_ssl(ssl, connection_security_checker).await;
 
         let session_data = if capture_session_data {
             TlsSessionData::from_ssl(ssl)
@@ -102,16 +103,20 @@ pub enum TlsCertificateIdentities {
 }
 
 impl TlsCertificateIdentities {
-    pub fn from_ssl(ssl: &SslRef, trusted_proxy_allowlist: &MononokeIdentitySet) -> Option<Self> {
+    pub async fn from_ssl(
+        ssl: &SslRef,
+        connection_security_checker: &ConnectionSecurityChecker,
+    ) -> Option<Self> {
         let peer_certificate = ssl.peer_certificate()?;
         let identities = MononokeIdentity::try_from_x509(&peer_certificate).ok()?;
 
-        let ret = if trusted_proxy_allowlist.is_disjoint(&identities) {
-            TlsCertificateIdentities::Authenticated(identities)
+        if connection_security_checker
+            .check_if_trusted(&identities)
+            .await
+        {
+            Some(TlsCertificateIdentities::TrustedProxy)
         } else {
-            TlsCertificateIdentities::TrustedProxy
-        };
-
-        Some(ret)
+            Some(TlsCertificateIdentities::Authenticated(identities))
+        }
     }
 }

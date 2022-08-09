@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::bail;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -75,8 +77,8 @@ impl MononokeIdentitySetExt for MononokeIdentitySet {
 pub struct DummyAclProvider;
 
 impl DummyAclProvider {
-    pub fn new(_fb: FacebookInit) -> Box<dyn AclProvider> {
-        Box::new(DummyAclProvider)
+    pub fn new(_fb: FacebookInit) -> Arc<dyn AclProvider> {
+        Arc::new(DummyAclProvider)
     }
 }
 

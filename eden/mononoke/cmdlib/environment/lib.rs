@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use blobstore_factory::BlobstoreOptions;
 use blobstore_factory::ReadOnlyStorage;
@@ -61,7 +62,7 @@ pub struct MononokeEnvironment {
     pub megarepo_configs_options: MononokeMegarepoConfigsOptions,
     pub remote_derivation_options: RemoteDerivationOptions,
     pub disabled_hooks: HashMap<String, HashSet<String>>,
-    pub acl_provider: Box<dyn AclProvider>,
+    pub acl_provider: Arc<dyn AclProvider>,
     pub skiplist_enabled: bool,
     pub warm_bookmarks_cache_derived_data: Option<WarmBookmarksCacheDerivedData>,
     pub filter_repos: Option<Regex>,

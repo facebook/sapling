@@ -11,12 +11,12 @@ use std::sync::Arc;
 use anyhow::Context as _;
 use anyhow::Error;
 use cloned::cloned;
+use connection_security_checker::ConnectionSecurityChecker;
 use futures::future::TryFutureExt;
 use gotham::handler::Handler;
 use hyper::server::conn::Http;
 use openssl::ssl::Ssl;
 use openssl::ssl::SslAcceptor;
-use permission_checker::MononokeIdentitySet;
 use quiet_stream::QuietShutdownStream;
 use slog::warn;
 use slog::Logger;
@@ -31,13 +31,13 @@ pub async fn https<H>(
     listener: TcpListener,
     acceptor: SslAcceptor,
     capture_session_data: bool,
-    trusted_proxy_idents: MononokeIdentitySet,
+    connection_security_checker: ConnectionSecurityChecker,
     handler: MononokeHttpHandler<H>,
 ) -> Result<(), Error>
 where
     H: Handler + Clone + Send + Sync + 'static + RefUnwindSafe,
 {
-    let trusted_proxy_idents = Arc::new(trusted_proxy_idents);
+    let connection_security_checker = Arc::new(connection_security_checker);
     let acceptor = Arc::new(acceptor);
 
     loop {
@@ -46,7 +46,7 @@ where
             .await
             .context("Error accepting connections")?;
 
-        cloned!(acceptor, logger, handler, trusted_proxy_idents);
+        cloned!(acceptor, logger, handler, connection_security_checker);
 
         let task = async move {
             let ssl = Ssl::new(acceptor.context()).context("Error creating Ssl")?;
@@ -61,9 +61,10 @@ where
 
             let tls_socket_data = TlsSocketData::from_ssl(
                 ssl_socket.ssl(),
-                trusted_proxy_idents.as_ref(),
+                connection_security_checker.as_ref(),
                 capture_session_data,
-            );
+            )
+            .await;
 
             let service = handler
                 .clone()

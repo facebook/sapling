@@ -271,6 +271,10 @@ impl<'a> MononokeMatches<'a> {
         &self.environment.readonly_storage
     }
 
+    pub fn acl_provider(&self) -> &Arc<dyn AclProvider> {
+        &self.environment.acl_provider
+    }
+
     pub fn scuba_sample_builder(&self) -> MononokeScubaSampleBuilder {
         self.environment.scuba_sample_builder.clone()
     }
@@ -1039,7 +1043,7 @@ fn parse_remote_derivation_options(
 fn create_acl_provider(
     fb: FacebookInit,
     matches: &ArgMatches<'_>,
-) -> Result<Box<dyn AclProvider>, Error> {
+) -> Result<Arc<dyn AclProvider>, Error> {
     match matches.value_of(ACL_FILE) {
         Some(file) => InternalAclProvider::from_file(file),
         None => Ok(DefaultAclProvider::new(fb)),

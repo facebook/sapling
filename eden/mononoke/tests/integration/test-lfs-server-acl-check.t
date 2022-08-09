@@ -28,7 +28,7 @@
 
 # Start an LFS server
   $ LFS_LOG="$TESTTMP/lfs.log"
-  $ LFS_ROOT="$(lfs_server --log "$LFS_LOG" --tls --live-config "$(get_configerator_relative_path "${LIVE_CONFIG}")" --allowed-test-identity USER:test --trusted-proxy-identity SERVICE_IDENTITY:proxy)"
+  $ LFS_ROOT="$(lfs_server --log "$LFS_LOG" --tls --live-config "$(get_configerator_relative_path "${LIVE_CONFIG}")" --allowed-test-identity USER:test)"
   $ LFS_URI="$LFS_ROOT/repo1"
   $ LFS_URI_REPO_ENFORCE_ACL="$LFS_ROOT/repo2"
 

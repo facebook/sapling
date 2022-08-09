@@ -77,11 +77,11 @@ impl PermissionChecker for AclPermissionChecker {
 }
 
 impl InternalAclProvider {
-    pub fn new(acls: Acls) -> Box<dyn AclProvider> {
-        Box::new(InternalAclProvider { acls })
+    pub fn new(acls: Acls) -> Arc<dyn AclProvider> {
+        Arc::new(InternalAclProvider { acls })
     }
 
-    pub fn from_file(path: impl AsRef<Path>) -> Result<Box<dyn AclProvider>> {
+    pub fn from_file(path: impl AsRef<Path>) -> Result<Arc<dyn AclProvider>> {
         let file = File::open(path.as_ref())?;
         let reader = BufReader::new(file);
         let acls = serde_json::from_reader(reader)?;

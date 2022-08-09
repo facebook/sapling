@@ -7,15 +7,14 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 # Create a repository
-  $ setup_common_config
+  $ PROXY_ID_TYPE=user PROXY_ID_DATA=foo123 setup_common_config
   $ REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config repo1
   $ enable lfs
 
 # Start an LFS server for this repository
   $ SCUBA="$TESTTMP/scuba.json"
   $ LFS_LOG="$TESTTMP/lfs.log"
-  $ LFS_URI="$(
-  > lfs_server --log "$LFS_LOG" --tls --scuba-log-file "$SCUBA" --trusted-proxy-identity USER:foo123)/repo1"
+  $ LFS_URI="$(lfs_server --log "$LFS_LOG" --tls --scuba-log-file "$SCUBA")/repo1"
 
 # Setup constants
   $ ALLOWED_IDENT="x-fb-validated-client-encoded-identity: %7B%22ai%22%3A%20%22%22%2C%20%22ch%22%3A%20%22%22%2C%20%22it%22%3A%20%22user%22%2C%20%22id%22%3A%20%22test%22%7D"

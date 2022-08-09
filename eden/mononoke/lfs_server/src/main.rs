@@ -30,6 +30,7 @@ use cmdlib::args::CachelibSettings;
 use cmdlib::helpers::serve_forever;
 use cmdlib::monitoring::start_fb303_server;
 use cmdlib::monitoring::AliveService;
+use connection_security_checker::ConnectionSecurityChecker;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use futures::channel::oneshot;
@@ -222,7 +223,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .multiple(true)
                 .number_of_values(1)
                 .required(false)
-                .help("Proxy identity to trust"),
+                .help("This is now unused"),
         )
         .arg(
             Arg::with_name(ARG_TEST_IDENTITY)
@@ -278,6 +279,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let logger = matches.logger().clone();
     let runtime = matches.runtime();
     let config_store = matches.config_store();
+    let acl_provider = matches.acl_provider();
 
     let listen_host = matches.value_of(ARG_LISTEN_HOST).unwrap().to_string();
     let listen_port = matches.value_of(ARG_LISTEN_PORT).unwrap();
@@ -312,8 +314,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .map(|v| v.to_string());
 
     let scuba_logger = matches.scuba_sample_builder();
-
-    let trusted_proxy_idents = idents_from_values(matches.values_of(ARG_TRUSTED_PROXY_IDENTITY))?;
 
     let test_idents = idents_from_values(matches.values_of(ARG_TEST_IDENTITY))?;
     let disable_acl_checker = matches.is_present(ARG_DISABLE_ACL_CHECKER);
@@ -395,7 +395,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         });
 
     let server = {
-        cloned!(logger, will_exit);
+        cloned!(acl_provider, common, logger, will_exit);
         async move {
             let repos: HashMap<_, _> = try_join_all(futs).await?.into_iter().collect();
 
@@ -477,12 +477,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             }
 
             if let Some(tls_acceptor) = tls_acceptor {
+                let connection_security_checker =
+                    ConnectionSecurityChecker::new(acl_provider, &common).await?;
+
                 serve::https(
                     logger,
                     listener,
                     tls_acceptor,
                     capture_session_data,
-                    trusted_proxy_idents,
+                    connection_security_checker,
                     handler,
                 )
                 .await
