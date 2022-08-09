@@ -21,6 +21,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use megarepo_error::MegarepoError;
 use memblob::Memblob;
+use mononoke_api::Mononoke;
 use mononoke_types::BlobstoreKey as BlobstoreKeyTrait;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
@@ -35,6 +36,8 @@ pub use requests_table::RowId;
 use requests_table::SqlLongRunningRequestsQueue;
 use sql_construct::SqlConstruct;
 
+use crate::types::IntoApiFormat;
+use crate::types::IntoConfigFormat;
 use crate::types::MegarepoAsynchronousRequestParams;
 use crate::types::MegarepoAsynchronousRequestResult;
 use crate::types::Request;
@@ -66,10 +69,14 @@ impl AsyncMethodRequestQueue {
     pub async fn enqueue<P: ThriftParams>(
         &self,
         ctx: CoreContext,
+        mononoke: &Mononoke,
         thrift_params: P,
     ) -> Result<<P::R as Request>::Token, Error> {
         let request_type = RequestType(P::R::NAME.to_owned());
-        let target = thrift_params.target().clone();
+        let target = thrift_params
+            .target()
+            .clone()
+            .into_config_format(mononoke)?;
         let rust_params: MegarepoAsynchronousRequestParams = thrift_params.into();
         let params_object_id = rust_params.store(&ctx, &self.blobstore).await?;
         let blobstore_key = BlobstoreKey(params_object_id.blobstore_key());
@@ -83,7 +90,10 @@ impl AsyncMethodRequestQueue {
                 &blobstore_key,
             )
             .await?;
-        let token = <P::R as Request>::Token::from_db_id_and_target(table_id, target);
+        let token = <P::R as Request>::Token::from_db_id_and_target(
+            table_id,
+            target.into_api_format(mononoke)?,
+        );
         Ok(token)
     }
 
@@ -309,6 +319,7 @@ impl AsyncMethodRequestQueue {
 
 #[cfg(test)]
 mod tests {
+    use blobrepo::BlobRepo;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use requests_table::ClaimedBy;
@@ -344,10 +355,13 @@ mod tests {
             async fn $fn_name(fb: FacebookInit) -> Result<(), Error> {
                 let q = AsyncMethodRequestQueue::new_test_in_memory().unwrap();
                 let ctx = CoreContext::test_mock(fb);
+                let blobrepo: BlobRepo = test_repo_factory::build_empty(fb)?;
+                let mononoke =
+                    Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
 
                 // Enqueue a request
                 let params: $thrift_params = Default::default();
-                let token = q.enqueue(ctx.clone(), params.clone()).await?;
+                let token = q.enqueue(ctx.clone(), &mononoke, params.clone()).await?;
 
                 // Verify that request metadata is in the db and has expected values
                 let (row_id, _) = token.to_db_id_and_target()?;

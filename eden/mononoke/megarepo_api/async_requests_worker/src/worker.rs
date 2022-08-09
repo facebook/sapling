@@ -18,6 +18,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 
+use async_requests::types::IntoConfigFormat;
 use async_requests::types::MegarepoAsynchronousRequestParams;
 use async_requests::AsyncMethodRequestQueue;
 use async_requests::ClaimedBy;
@@ -208,7 +209,10 @@ impl AsyncMethodRequestWorker {
         req_id: RequestId,
         params: MegarepoAsynchronousRequestParams,
     ) -> Result<bool, MegarepoError> {
-        let target = params.target()?.clone();
+        let target = params
+            .target()?
+            .clone()
+            .into_config_format(&self.megarepo.mononoke())?;
         let queue = self
             .megarepo
             .async_method_request_queue(&ctx, &target)
@@ -340,29 +344,34 @@ mod test {
     use std::sync::atomic::Ordering;
 
     use anyhow::Error;
+    use blobrepo::BlobRepo;
     use fbinit::FacebookInit;
-    use megarepo_configs::types::Target as ThriftTarget;
     use requests_table::RequestType;
     use source_control as thrift;
 
     use super::*;
+    use crate::Mononoke;
 
     #[fbinit::test]
     async fn test_request_stream_simple(fb: FacebookInit) -> Result<(), Error> {
         let q = AsyncMethodRequestQueue::new_test_in_memory().unwrap();
         let ctx = CoreContext::test_mock(fb);
+        let blobrepo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let mononoke =
+            Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
 
         let params = thrift::MegarepoSyncChangesetParams {
             cs_id: vec![],
             source_name: "name".to_string(),
-            target: ThriftTarget {
+            target: thrift::MegarepoTarget {
                 repo_id: 0,
                 bookmark: "book".to_string(),
+                ..Default::default()
             },
             target_location: vec![],
             ..Default::default()
         };
-        q.enqueue(ctx.clone(), params).await?;
+        q.enqueue(ctx.clone(), &mononoke, params).await?;
 
         let will_exit = Arc::new(AtomicBool::new(false));
         let s = AsyncMethodRequestWorker::request_stream_inner(
@@ -390,18 +399,22 @@ mod test {
     async fn test_request_stream_clear_abandoned(fb: FacebookInit) -> Result<(), Error> {
         let q = AsyncMethodRequestQueue::new_test_in_memory().unwrap();
         let ctx = CoreContext::test_mock(fb);
+        let blobrepo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let mononoke =
+            Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
 
         let params = thrift::MegarepoSyncChangesetParams {
             cs_id: vec![],
             source_name: "name".to_string(),
-            target: ThriftTarget {
+            target: thrift::MegarepoTarget {
                 repo_id: 0,
                 bookmark: "book".to_string(),
+                ..Default::default()
             },
             target_location: vec![],
             ..Default::default()
         };
-        q.enqueue(ctx.clone(), params).await?;
+        q.enqueue(ctx.clone(), &mononoke, params).await?;
 
         // Grab it from the queue...
         let dequed = q

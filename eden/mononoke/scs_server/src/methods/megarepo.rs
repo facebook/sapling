@@ -15,6 +15,8 @@ use async_requests::tokens::MegarepoAddTargetToken;
 use async_requests::tokens::MegarepoChangeTargetConfigToken;
 use async_requests::tokens::MegarepoRemergeSourceToken;
 use async_requests::tokens::MegarepoSyncChangesetToken;
+use async_requests::types::IntoApiFormat;
+use async_requests::types::IntoConfigFormat;
 use async_requests::types::ThriftParams;
 use async_requests::types::Token;
 use context::CoreContext;
@@ -94,7 +96,7 @@ impl SourceControlServiceImpl {
             RepositoryId::new(params.new_config.target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
-        let new_config = params.new_config;
+        let new_config = params.new_config.into_config_format(&self.mononoke)?;
         self.verify_repos_by_config(&new_config)?;
         let megarepo_configs = self.megarepo_api.configs();
         megarepo_configs
@@ -146,14 +148,15 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         params: thrift::MegarepoReadConfigParams,
     ) -> Result<thrift::MegarepoReadConfigResponse, errors::ServiceError> {
+        let target = params.target.clone().into_config_format(&self.mononoke)?;
         let repo = self
             .megarepo_api
-            .target_repo(&ctx, &params.target)
+            .target_repo(&ctx, &target)
             .await
             .map_err(|err| {
                 errors::invalid_request(anyhow!(
                     "can't open target repo {}: {}",
-                    params.target.repo_id,
+                    target.repo_id,
                     err
                 ))
             })?;
@@ -163,11 +166,11 @@ impl SourceControlServiceImpl {
             .ok_or_else(|| errors::invalid_request(anyhow!("commit not found")))?;
         let (_commit_remapping_state, target_config) = self
             .megarepo_api
-            .get_target_sync_config(&ctx, &params.target, &changeset.id())
+            .get_target_sync_config(&ctx, &target, &changeset.id())
             .await?;
 
         Ok(thrift::MegarepoReadConfigResponse {
-            config: target_config,
+            config: target_config.into_api_format(&self.mononoke)?,
             ..Default::default()
         })
     }
@@ -177,15 +180,20 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         params: thrift::MegarepoAddTargetParams,
     ) -> Result<thrift::MegarepoAddTargetToken, errors::ServiceError> {
-        let target_repo_id = RepositoryId::new(params.target().repo_id.try_into().unwrap());
+        let target = params.target().clone().into_config_format(&self.mononoke)?;
+        let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
-        self.verify_repos_by_config(&params.config_with_new_target)?;
+        let config_with_new_target = params
+            .config_with_new_target
+            .clone()
+            .into_config_format(&self.mononoke)?;
+        self.verify_repos_by_config(&config_with_new_target)?;
 
         let token = self
             .megarepo_api
-            .async_method_request_queue(&ctx, params.target())
+            .async_method_request_queue(&ctx, &target)
             .await?
-            .enqueue(ctx, params)
+            .enqueue(ctx, &self.mononoke, params)
             .await
             .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
 
@@ -197,13 +205,15 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         token: thrift::MegarepoAddTargetToken,
     ) -> Result<thrift::MegarepoAddTargetPollResponse, errors::ServiceError> {
-        let target_repo_id = RepositoryId::new(token.target.repo_id.try_into().unwrap());
+        let target = token.target.clone().into_config_format(&self.mononoke)?;
+        let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         let token = MegarepoAddTargetToken(token);
+        let target = token.target().clone().into_config_format(&self.mononoke)?;
         let poll_response = self
             .megarepo_api
-            .async_method_request_queue(&ctx, token.target())
+            .async_method_request_queue(&ctx, &target)
             .await?
             .poll(ctx, token)
             .await?;
@@ -216,14 +226,15 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         params: thrift::MegarepoAddBranchingTargetParams,
     ) -> Result<thrift::MegarepoAddBranchingTargetToken, errors::ServiceError> {
-        let target_repo_id = RepositoryId::new(params.target().repo_id.try_into().unwrap());
+        let target = params.target().clone().into_config_format(&self.mononoke)?;
+        let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         let token = self
             .megarepo_api
-            .async_method_request_queue(&ctx, params.target())
+            .async_method_request_queue(&ctx, &target)
             .await?
-            .enqueue(ctx, params)
+            .enqueue(ctx, &self.mononoke, params)
             .await
             .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
 
@@ -235,13 +246,15 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         token: thrift::MegarepoAddBranchingTargetToken,
     ) -> Result<thrift::MegarepoAddBranchingTargetPollResponse, errors::ServiceError> {
-        let target_repo_id = RepositoryId::new(token.target.repo_id.try_into().unwrap());
+        let target = token.target.clone().into_config_format(&self.mononoke)?;
+        let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         let token = MegarepoAddBranchingTargetToken(token);
+        let target = token.target().clone().into_config_format(&self.mononoke)?;
         let poll_response = self
             .megarepo_api
-            .async_method_request_queue(&ctx, token.target())
+            .async_method_request_queue(&ctx, &target)
             .await?
             .poll(ctx, token)
             .await?;
@@ -254,14 +267,15 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         params: thrift::MegarepoChangeTargetConfigParams,
     ) -> Result<thrift::MegarepoChangeConfigToken, errors::ServiceError> {
-        let target_repo_id = RepositoryId::new(params.target().repo_id.try_into().unwrap());
+        let target = params.target().clone().into_config_format(&self.mononoke)?;
+        let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         let token = self
             .megarepo_api
-            .async_method_request_queue(&ctx, params.target())
+            .async_method_request_queue(&ctx, &target)
             .await?
-            .enqueue(ctx, params)
+            .enqueue(ctx, &self.mononoke, params)
             .await
             .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
 
@@ -273,13 +287,14 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         token: thrift::MegarepoChangeConfigToken,
     ) -> Result<thrift::MegarepoChangeTargetConfigPollResponse, errors::ServiceError> {
-        let target_repo_id = RepositoryId::new(token.target.repo_id.try_into().unwrap());
+        let target = token.target.clone().into_config_format(&self.mononoke)?;
+        let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         let token = MegarepoChangeTargetConfigToken(token);
         let poll_response = self
             .megarepo_api
-            .async_method_request_queue(&ctx, token.target())
+            .async_method_request_queue(&ctx, &target)
             .await?
             .poll(ctx, token)
             .await?;
@@ -292,14 +307,15 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         params: thrift::MegarepoSyncChangesetParams,
     ) -> Result<thrift::MegarepoSyncChangesetToken, errors::ServiceError> {
-        let target_repo_id = RepositoryId::new(params.target().repo_id.try_into().unwrap());
+        let target = params.target().clone().into_config_format(&self.mononoke)?;
+        let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         let token = self
             .megarepo_api
-            .async_method_request_queue(&ctx, params.target())
+            .async_method_request_queue(&ctx, &target)
             .await?
-            .enqueue(ctx, params)
+            .enqueue(ctx, &self.mononoke, params)
             .await
             .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
 
@@ -315,9 +331,10 @@ impl SourceControlServiceImpl {
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         let token = MegarepoSyncChangesetToken(token);
+        let target = token.target().clone().into_config_format(&self.mononoke)?;
         let poll_response = self
             .megarepo_api
-            .async_method_request_queue(&ctx, token.target())
+            .async_method_request_queue(&ctx, &target)
             .await?
             .poll(ctx, token)
             .await?;
@@ -330,14 +347,15 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         params: thrift::MegarepoRemergeSourceParams,
     ) -> Result<thrift::MegarepoRemergeSourceToken, errors::ServiceError> {
-        let target_repo_id = RepositoryId::new(params.target().repo_id.try_into().unwrap());
+        let target = params.target().clone().into_config_format(&self.mononoke)?;
+        let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         let token = self
             .megarepo_api
-            .async_method_request_queue(&ctx, params.target())
+            .async_method_request_queue(&ctx, &target)
             .await?
-            .enqueue(ctx, params)
+            .enqueue(ctx, &self.mononoke, params)
             .await
             .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
 
@@ -353,9 +371,10 @@ impl SourceControlServiceImpl {
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         let token = MegarepoRemergeSourceToken(token);
+        let target = token.target().clone().into_config_format(&self.mononoke)?;
         let poll_response = self
             .megarepo_api
-            .async_method_request_queue(&ctx, token.target())
+            .async_method_request_queue(&ctx, &target)
             .await?
             .poll(ctx, token)
             .await?;

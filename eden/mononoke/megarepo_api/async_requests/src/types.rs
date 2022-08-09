@@ -11,16 +11,19 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use async_trait::async_trait;
 use blobstore::impl_loadable_storable;
 use blobstore::Blobstore;
 use context::CoreContext;
 use fbthrift::compact_protocol;
+pub use megarepo_config::SyncTargetConfig;
 pub use megarepo_config::Target;
 use megarepo_error::MegarepoError;
 pub use megarepo_types_thrift::MegarepoAsynchronousRequestParams as ThriftMegarepoAsynchronousRequestParams;
 pub use megarepo_types_thrift::MegarepoAsynchronousRequestParamsId as ThriftMegarepoAsynchronousRequestParamsId;
 pub use megarepo_types_thrift::MegarepoAsynchronousRequestResult as ThriftMegarepoAsynchronousRequestResult;
 pub use megarepo_types_thrift::MegarepoAsynchronousRequestResultId as ThriftMegarepoAsynchronousRequestResultId;
+use mononoke_api::Mononoke;
 use mononoke_types::hash::Blake2;
 use mononoke_types::impl_typed_context;
 use mononoke_types::impl_typed_hash_no_context;
@@ -53,6 +56,8 @@ use source_control::MegarepoSyncChangesetPollResponse as ThriftMegarepoSyncChang
 use source_control::MegarepoSyncChangesetResponse as ThriftMegarepoSyncChangesetResponse;
 use source_control::MegarepoSyncChangesetResult as ThriftMegarepoSyncChangesetResult;
 use source_control::MegarepoSyncChangesetToken as ThriftMegarepoSyncChangesetToken;
+use source_control::MegarepoSyncTargetConfig as ThriftMegarepoSyncTargetConfig;
+use source_control::MegarepoTarget as ThriftMegarepoTarget;
 
 /// Grouping of types and behaviors for an asynchronous request
 pub trait Request: Sized + Send + Sync {
@@ -88,7 +93,7 @@ pub trait ThriftParams: Sized + Send + Sync + Into<MegarepoAsynchronousRequestPa
     /// Every *Params argument referes to some Target
     /// This method is needed to extract it from the
     /// implementor of this trait
-    fn target(&self) -> &Target;
+    fn target(&self) -> &ThriftMegarepoTarget;
 }
 pub trait ThriftResult:
     Sized + Send + Sync + TryFrom<MegarepoAsynchronousRequestResult, Error = MegarepoError>
@@ -102,13 +107,13 @@ pub trait Token: Clone + Sized + Send + Sync {
     type ThriftToken;
 
     fn into_thrift(self) -> Self::ThriftToken;
-    fn from_db_id_and_target(id: RowId, target: Target) -> Self;
-    fn to_db_id_and_target(&self) -> Result<(RowId, Target), MegarepoError>;
+    fn from_db_id_and_target(id: RowId, target: ThriftMegarepoTarget) -> Self;
+    fn to_db_id_and_target(&self) -> Result<(RowId, ThriftMegarepoTarget), MegarepoError>;
 
     /// Every Token referes to some Target
     /// This method is needed to extract it from the
     /// implementor of this trait
-    fn target(&self) -> &Target;
+    fn target(&self) -> &ThriftMegarepoTarget;
 }
 
 /// This macro implements an async service method type,
@@ -253,13 +258,13 @@ macro_rules! impl_async_svc_method_types {
         token_type => $token_type: ident,
         token_thrift_type => $token_thrift_type: ident,
 
-        fn target(&$self_ident: ident: ThriftParams) -> &Target $target_in_params: tt
+        fn target(&$self_ident: ident: ThriftParams) -> &ThriftMegarepoTarget $target_in_params: tt
 
     } => {
         impl ThriftParams for $params_value_thrift_type {
             type R = $request_struct;
 
-            fn target(&$self_ident) -> &Target {
+            fn target(&$self_ident) -> &ThriftMegarepoTarget {
                 $target_in_params
             }
         }
@@ -271,7 +276,7 @@ macro_rules! impl_async_svc_method_types {
             type ThriftToken = $token_thrift_type;
             type R = $request_struct;
 
-            fn from_db_id_and_target(id: RowId, target: Target) -> Self {
+            fn from_db_id_and_target(id: RowId, target: ThriftMegarepoTarget) -> Self {
                 // Thrift token is a string alias
                 // but's guard ourselves here against
                 // it changing unexpectedly.
@@ -283,7 +288,7 @@ macro_rules! impl_async_svc_method_types {
                 Self(thrift_token)
             }
 
-            fn to_db_id_and_target(&self) -> Result<(RowId, Target), MegarepoError> {
+            fn to_db_id_and_target(&self) -> Result<(RowId, ThriftMegarepoTarget), MegarepoError> {
                 let row_id = self.0.id as u64;
                 let row_id = RowId(row_id);
                 let target = self.0.target.clone();
@@ -295,7 +300,7 @@ macro_rules! impl_async_svc_method_types {
                 self.0
             }
 
-            fn target(&self) -> &Target {
+            fn target(&self) -> &ThriftMegarepoTarget {
                 &self.0.target
             }
         }
@@ -402,7 +407,7 @@ impl_async_svc_method_types! {
     token_type => MegarepoAddTargetToken,
     token_thrift_type => ThriftMegarepoAddTargetToken,
 
-    fn target(&self: ThriftParams) -> &Target {
+    fn target(&self: ThriftParams) -> &ThriftMegarepoTarget {
         &self.config_with_new_target.target
     }
 }
@@ -424,7 +429,7 @@ impl_async_svc_method_types! {
     token_type => MegarepoAddBranchingTargetToken,
     token_thrift_type => ThriftMegarepoAddBranchingTargetToken,
 
-    fn target(&self: ThriftParams) -> &Target {
+    fn target(&self: ThriftParams) -> &ThriftMegarepoTarget {
         &self.target
     }
 }
@@ -446,7 +451,7 @@ impl_async_svc_method_types! {
     token_type => MegarepoChangeTargetConfigToken,
     token_thrift_type => ThriftMegarepoChangeConfigToken,
 
-    fn target(&self: ThriftParams) -> &Target {
+    fn target(&self: ThriftParams) -> &ThriftMegarepoTarget {
         &self.target
     }
 }
@@ -468,7 +473,7 @@ impl_async_svc_method_types! {
     token_type => MegarepoSyncChangesetToken,
     token_thrift_type => ThriftMegarepoSyncChangesetToken,
 
-    fn target(&self: ThriftParams) -> &Target {
+    fn target(&self: ThriftParams) -> &ThriftMegarepoTarget {
         &self.target
     }
 }
@@ -490,7 +495,7 @@ impl_async_svc_method_types! {
     token_type => MegarepoRemergeSourceToken,
     token_thrift_type => ThriftMegarepoRemergeSourceToken,
 
-    fn target(&self: ThriftParams) -> &Target {
+    fn target(&self: ThriftParams) -> &ThriftMegarepoTarget {
         &self.target
     }
 }
@@ -512,7 +517,7 @@ impl_async_svc_stored_type! {
 }
 
 impl MegarepoAsynchronousRequestParams {
-    pub fn target(&self) -> Result<&Target, MegarepoError> {
+    pub fn target(&self) -> Result<&ThriftMegarepoTarget, MegarepoError> {
         match &self.thrift {
             ThriftMegarepoAsynchronousRequestParams::megarepo_add_target_params(params) => {
                 Ok(params.target())
@@ -536,6 +541,61 @@ impl MegarepoAsynchronousRequestParams {
                 )))
             }
         }
+    }
+}
+
+/// Convert an item into a thrift type we use for storing configuration
+pub trait IntoConfigFormat<T> {
+    fn into_config_format(self, mononoke: &Mononoke) -> Result<T, MegarepoError>;
+}
+
+impl IntoConfigFormat<Target> for ThriftMegarepoTarget {
+    fn into_config_format(self, _mononoke: &Mononoke) -> Result<Target, MegarepoError> {
+        Ok(Target {
+            repo_id: self.repo_id,
+            bookmark: self.bookmark,
+        })
+    }
+}
+
+impl IntoConfigFormat<SyncTargetConfig> for ThriftMegarepoSyncTargetConfig {
+    fn into_config_format(self, mononoke: &Mononoke) -> Result<SyncTargetConfig, MegarepoError> {
+        Ok(SyncTargetConfig {
+            target: self.target.into_config_format(mononoke)?,
+            sources: self.sources,
+            version: self.version,
+        })
+    }
+}
+
+/// Convert an item into a thrift type we use in APIs
+pub trait IntoApiFormat<T> {
+    fn into_api_format(self, mononoke: &Mononoke) -> Result<T, MegarepoError>;
+}
+
+#[async_trait]
+impl IntoApiFormat<ThriftMegarepoTarget> for Target {
+    fn into_api_format(self, _mononoke: &Mononoke) -> Result<ThriftMegarepoTarget, MegarepoError> {
+        Ok(ThriftMegarepoTarget {
+            repo_id: self.repo_id,
+            bookmark: self.bookmark,
+            ..Default::default()
+        })
+    }
+}
+
+#[async_trait]
+impl IntoApiFormat<ThriftMegarepoSyncTargetConfig> for SyncTargetConfig {
+    fn into_api_format(
+        self,
+        mononoke: &Mononoke,
+    ) -> Result<ThriftMegarepoSyncTargetConfig, MegarepoError> {
+        Ok(ThriftMegarepoSyncTargetConfig {
+            target: self.target.into_api_format(mononoke)?,
+            sources: self.sources,
+            version: self.version,
+            ..Default::default()
+        })
     }
 }
 

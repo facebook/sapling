@@ -1229,36 +1229,55 @@ struct CommitLookupXRepoParams {
   3: optional CandidateSelectionHint candidate_selection_hint;
 }
 
+/// Synchronization target
+struct MegarepoTarget {
+  /// Mononoke repository id, where the target is located
+  1: i64 repo_id;
+  /// Bookmark, which this target represents
+  2: string bookmark;
+}
+
+/// A single version of synchronization config for a target,
+/// bundling together all of the corresponding sources
+struct MegarepoSyncTargetConfig {
+  // A target to which this config can apply
+  1: MegarepoTarget target;
+  // All of the sources to sync from
+  2: list<megarepo_configs.Source> sources;
+  // The version of this config
+  3: megarepo_configs.SyncConfigVersion version;
+}
+
 /// Polling tokens for async megarepo methods
 struct MegarepoChangeConfigToken {
   /// A target this token relates to
-  1: megarepo_configs.Target target;
+  1: MegarepoTarget target;
   /// An actual token payload
   2: i64 id;
 }
 
 struct MegarepoSyncChangesetToken {
   /// A target this token relates to
-  1: megarepo_configs.Target target;
+  1: MegarepoTarget target;
   /// An actual token payload
   2: i64 id;
 }
 struct MegarepoRemergeSourceToken {
   /// A target this token relates to
-  1: megarepo_configs.Target target;
+  1: MegarepoTarget target;
   /// An actual token payload
   2: i64 id;
 }
 struct MegarepoAddTargetToken {
   /// A target this token relates to
-  1: megarepo_configs.Target target;
+  1: MegarepoTarget target;
   /// An actual token payload
   2: i64 id;
 }
 
 struct MegarepoAddBranchingTargetToken {
   /// A target this token relates to
-  1: megarepo_configs.Target target;
+  1: MegarepoTarget target;
   /// An actual token payload
   2: i64 id;
 }
@@ -1269,12 +1288,12 @@ struct MegarepoAddConfigParams {
   /// the config *must* refer to an existing target
   /// Config's version *must* be different from
   /// any previously used config version
-  1: megarepo_configs.SyncTargetConfig new_config;
+  1: MegarepoSyncTargetConfig new_config;
 }
 
 /// Params for the megarepo_read_target_config method
 struct MegarepoReadConfigParams {
-  1: megarepo_configs.Target target;
+  1: MegarepoTarget target;
   2: CommitId commit;
 }
 
@@ -1285,7 +1304,7 @@ struct MegarepoAddTargetParams {
   /// which will be recorded as new target
   /// Config's version must be different from
   /// any previously used config version
-  1: megarepo_configs.SyncTargetConfig config_with_new_target;
+  1: MegarepoSyncTargetConfig config_with_new_target;
   /// Initial changesets to merge for each of the
   /// sources in the `config_with_new_target`.
   /// While each source provides a revision to
@@ -1306,7 +1325,7 @@ struct MegarepoAddTargetParams {
 /// Params for megarepo_add_sync_target method
 struct MegarepoAddBranchingTargetParams {
   /// A new target to be created
-  1: megarepo_configs.Target target;
+  1: MegarepoTarget target;
   /// The specified commit will be used as parent of the first commit in the
   /// newly created target. The megarepo config used to create the branching
   /// point will be used as the base for the new target config.
@@ -1314,13 +1333,13 @@ struct MegarepoAddBranchingTargetParams {
   /// The specified source target to use as the source of config for this
   /// new target. This call will verify that branching_point is a valid
   /// commit to use with that source target
-  3: megarepo_configs.Target source_target;
+  3: MegarepoTarget source_target;
 }
 
 /// Params for megarepo_change_target_config method
 struct MegarepoChangeTargetConfigParams {
   /// A target for which to change the version
-  1: megarepo_configs.Target target;
+  1: MegarepoTarget target;
   /// New config version to be used for the target above
   /// This version *must* refer to the `target`
   2: megarepo_configs.SyncConfigVersion new_version;
@@ -1342,7 +1361,7 @@ struct MegarepoSyncChangesetParams {
   /// Source from which to sync the changeset
   1: string source_name;
   /// Target into which to sync the changeset
-  2: megarepo_configs.Target target;
+  2: MegarepoTarget target;
   /// This operation will sync all not-yet synced
   /// changesets up to and including `cs_id` from
   /// `source` into `target`
@@ -1357,7 +1376,7 @@ struct MegarepoRemergeSourceParams {
   /// Source which needs remerging
   1: string source_name;
   /// Target into which to remerge the source
-  2: megarepo_configs.Target target;
+  2: MegarepoTarget target;
   /// Remerge source at `cs_id` and mark `cs_id`
   /// as the last synced changeset form this source
   /// Note: this does not do any ancestry checks
@@ -1616,7 +1635,7 @@ struct FileDiffResponse {
 struct MegarepoAddConfigResponse {}
 
 struct MegarepoReadConfigResponse {
-  1: megarepo_configs.SyncTargetConfig config;
+  1: MegarepoSyncTargetConfig config;
 }
 
 struct MegarepoAddTargetResponse {

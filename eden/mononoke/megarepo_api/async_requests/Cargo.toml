@@ -9,6 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.56"
+async-trait = "0.1.56"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 context = { version = "0.1.0", path = "../../server/context" }
@@ -18,6 +19,7 @@ megarepo_config = { version = "0.1.0", path = "../megarepo_config" }
 megarepo_error = { version = "0.1.0", path = "../megarepo_error" }
 megarepo_types_thrift = { version = "0.1.0", path = "../if" }
 memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
+mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
 rand = { version = "0.8", features = ["small_rng"] }
@@ -27,6 +29,8 @@ sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
+blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
+test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }

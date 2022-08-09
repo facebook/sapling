@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use megarepo_config::Target;
 use scuba_ext::MononokeScubaSampleBuilder;
+use source_control::MegarepoTarget as ThriftMegarepoTarget;
 
 pub(crate) fn hex(v: &[u8]) -> String {
     faster_hex::hex_string(v)
@@ -18,7 +18,7 @@ pub(crate) enum Reported {
 }
 
 pub(crate) fn report_megarepo_target(
-    target: &Target,
+    target: &ThriftMegarepoTarget,
     scuba: &mut MononokeScubaSampleBuilder,
     reported: Reported,
 ) {

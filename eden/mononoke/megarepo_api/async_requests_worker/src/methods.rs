@@ -15,6 +15,7 @@
 use std::collections::HashMap;
 
 use anyhow::anyhow;
+use async_requests::types::IntoConfigFormat;
 use async_requests::types::MegarepoAsynchronousRequestParams;
 use async_requests::types::MegarepoAsynchronousRequestResult;
 use context::CoreContext;
@@ -36,7 +37,7 @@ async fn megarepo_sync_changeset(
             ctx,
             source_cs_id,
             params.source_name,
-            params.target,
+            params.target.into_config_format(&megarepo_api.mononoke())?,
             target_location,
         )
         .await?
@@ -60,7 +61,12 @@ async fn megarepo_add_sync_target(
         changesets_to_merge.insert(s, cs_id);
     }
     let cs_id = megarepo_api
-        .add_sync_target(ctx, config, changesets_to_merge, params.message)
+        .add_sync_target(
+            ctx,
+            config.into_config_format(&megarepo_api.mononoke())?,
+            changesets_to_merge,
+            params.message,
+        )
         .await?
         .as_ref()
         .into();
@@ -78,9 +84,11 @@ async fn megarepo_add_branching_sync_target(
     let cs_id = megarepo_api
         .add_branching_sync_target(
             ctx,
-            params.target,
+            params.target.into_config_format(&megarepo_api.mononoke())?,
             ChangesetId::from_bytes(params.branching_point).map_err(MegarepoError::request)?,
-            params.source_target,
+            params
+                .source_target
+                .into_config_format(&megarepo_api.mononoke())?,
         )
         .await?
         .as_ref()
@@ -106,7 +114,7 @@ async fn megarepo_change_target_config(
     let cs_id = megarepo_api
         .change_target_config(
             ctx,
-            params.target,
+            params.target.into_config_format(&megarepo_api.mononoke())?,
             params.new_version,
             target_location,
             changesets_to_merge,
@@ -135,7 +143,7 @@ async fn megarepo_remerge_source(
             params.source_name,
             remerge_cs_id,
             params.message,
-            &params.target,
+            &params.target.into_config_format(&megarepo_api.mononoke())?,
             target_location,
         )
         .await?
