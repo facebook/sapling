@@ -9,11 +9,13 @@ use std::path::PathBuf;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use pathmatcher::Matcher;
 use thrift_types::edenfs::ScmFileStatus;
 use types::RepoPathBuf;
 
 use crate::filesystem::ChangeType;
 use crate::filesystem::PendingChangeResult;
+use crate::filesystem::PendingChanges;
 
 pub struct EdenFileSystem {
     root: PathBuf,
@@ -23,8 +25,16 @@ impl EdenFileSystem {
     pub fn new(root: PathBuf) -> Result<Self> {
         Ok(EdenFileSystem { root })
     }
+}
 
-    pub fn pending_changes(&self) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
+impl PendingChanges for EdenFileSystem {
+    fn pending_changes<M>(
+        &self,
+        _matcher: M,
+    ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>>
+    where
+        M: Matcher + Clone + Send + Sync,
+    {
         let result = edenfs_client::status::get_status(&self.root)?;
         Ok(Box::new(result.status.entries.into_iter().filter_map(
             |(path, status)| {

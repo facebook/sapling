@@ -63,7 +63,7 @@ impl FileSystem {
             }
             Self::Eden => {
                 let fs = EdenFileSystem::new(root)?;
-                fs.pending_changes()
+                fs.pending_changes(matcher)
             }
         }
     }
