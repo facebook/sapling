@@ -93,6 +93,19 @@ static const std::unordered_map<HgImportCause, const char*> kImportCauses = {
     {HgImportCause::PREFETCH, kCalendarEmoji},
 };
 
+/**
+ * Represents an active HgRequest that has been queued and possibly started but
+ * not finished. Note queue events must be optional since tracing could begin
+ * between queue and start events and also becaue queue events are not present
+ * in the ActivityBuffer for retroactive tracing. Note: Like `eden strace`, it
+ * would be nice to print the active set of requests (that are currently in
+ * progress when streaming starts) before streaming the events in trace_hg.
+ */
+struct ActiveHgRequest {
+  std::optional<HgEvent> queue;
+  std::optional<HgEvent> start;
+};
+
 std::string formatFuseOpcode(const FuseCall& call) {
   std::string name = call.get_opcodeName();
   auto mutableName = folly::MutableStringPiece(name.data(), name.size());
@@ -150,6 +163,96 @@ std::string formatPrjfsCall(
   }
 }
 
+void print_hg_event(
+    const HgEvent& evt,
+    std::unordered_map<uint64_t, ActiveHgRequest>& activeRequests) {
+  std::optional<HgEvent> queueEvent;
+  std::optional<HgEvent> startEvent;
+
+  const HgEventType eventType = *evt.eventType();
+  const HgResourceType resourceType = *evt.resourceType();
+  const HgImportPriority importPriority = *evt.importPriority();
+  const HgImportCause importCause = *evt.importCause();
+  const uint64_t unique = *evt.unique();
+
+  switch (eventType) {
+    case HgEventType::UNKNOWN:
+      break;
+    case HgEventType::QUEUE:
+      activeRequests[unique].queue = evt;
+      break;
+    case HgEventType::START: {
+      auto& record = activeRequests[unique];
+      queueEvent = record.queue;
+      record.start = evt;
+      break;
+    }
+    case HgEventType::FINISH: {
+      auto& record = activeRequests[unique];
+      startEvent = record.start;
+      activeRequests.erase(unique);
+      break;
+    }
+  }
+
+  std::string timeAnnotation;
+  switch (eventType) {
+    case HgEventType::UNKNOWN:
+      break;
+    case HgEventType::QUEUE:
+      // TODO: Might be interesting to add an option to see queuing events.
+      return;
+    case HgEventType::START:
+      if (queueEvent) {
+        auto queueTime = evt.times()->monotonic_time_ns().value() -
+            queueEvent->times()->monotonic_time_ns().value();
+        // Don't bother printing queue time under 1 ms.
+        if (queueTime >= 1000000) {
+          timeAnnotation =
+              fmt::format(" queued for {}", formatNsTimeToMs(queueTime));
+        }
+      } else {
+        // This event was queued before we subscribed.
+      }
+      break;
+
+    case HgEventType::FINISH:
+      if (startEvent) {
+        auto fetchTime = evt.times()->monotonic_time_ns().value() -
+            startEvent->times()->monotonic_time_ns().value();
+        timeAnnotation =
+            fmt::format(" fetched in {}", formatNsTimeToMs(fetchTime));
+      }
+      break;
+  }
+
+  const char* eventTypeStr = folly::get_default(kHgEventTypes, eventType, "?");
+  const char* resourceTypeStr =
+      folly::get_default(kResourceTypes, resourceType, "?");
+  const char* importPriorityStr =
+      folly::get_default(kImportPriorities, importPriority, "?");
+  const char* importCauseStr =
+      folly::get_default(kImportCauses, importCause, "?");
+
+  if (FLAGS_verbose) {
+    fmt::print(
+        "{} {} {} {} {}{}\n",
+        eventTypeStr,
+        resourceTypeStr,
+        importPriorityStr,
+        importCauseStr,
+        *evt.path(),
+        timeAnnotation);
+  } else {
+    fmt::print(
+        "{} {} {}{}\n",
+        eventTypeStr,
+        resourceTypeStr,
+        *evt.path(),
+        timeAnnotation);
+  }
+}
+
 int trace_hg(
     folly::ScopedEventBaseThread& evbThread,
     const AbsolutePath& mountRoot,
@@ -162,113 +265,62 @@ int trace_hg(
           .get();
 
   /**
-   * Like `eden strace`, it would be nice to print the active set of requests
-   * before streaming the events.
+   * Like `eden strace`, would be nice to print the active set of requests (that
+   * are currently in progress when streaming starts) before streaming the
+   * events in trace_hg.
    */
-  struct ActiveRequest {
-    std::optional<HgEvent> queue;
-    std::optional<HgEvent> start;
-  };
-
-  std::unordered_map<uint64_t, ActiveRequest> activeRequests;
+  std::unordered_map<uint64_t, ActiveHgRequest> activeRequests;
 
   std::move(traceHgStream).subscribeInline([&](folly::Try<HgEvent>&& event) {
     if (event.hasException()) {
       fmt::print("Error: {}\n", folly::exceptionStr(event.exception()));
       return;
     }
-
-    HgEvent& evt = event.value();
-
-    std::optional<HgEvent> queueEvent;
-    std::optional<HgEvent> startEvent;
-
-    const HgEventType eventType = *evt.eventType();
-    const HgResourceType resourceType = *evt.resourceType();
-    const HgImportPriority importPriority = *evt.importPriority();
-    const HgImportCause importCause = *evt.importCause();
-    const uint64_t unique = *evt.unique();
-
-    switch (eventType) {
-      case HgEventType::UNKNOWN:
-        break;
-      case HgEventType::QUEUE:
-        activeRequests[unique].queue = evt;
-        break;
-      case HgEventType::START: {
-        auto& record = activeRequests[unique];
-        queueEvent = record.queue;
-        record.start = evt;
-        break;
-      }
-      case HgEventType::FINISH: {
-        auto& record = activeRequests[unique];
-        startEvent = record.start;
-        activeRequests.erase(unique);
-        break;
-      }
-    }
-
-    std::string timeAnnotation;
-    switch (eventType) {
-      case HgEventType::UNKNOWN:
-        break;
-      case HgEventType::QUEUE:
-        // TODO: Might be interesting to add an option to see queuing events.
-        return;
-      case HgEventType::START:
-        if (queueEvent) {
-          auto queueTime = evt.times()->monotonic_time_ns().value() -
-              queueEvent->times()->monotonic_time_ns().value();
-          // Don't bother printing queue time under 1 ms.
-          if (queueTime >= 1000000) {
-            timeAnnotation =
-                fmt::format(" queued for {}", formatNsTimeToMs(queueTime));
-          }
-        } else {
-          // This event was queued before we subscribed.
-        }
-        break;
-
-      case HgEventType::FINISH:
-        if (startEvent) {
-          auto fetchTime = evt.times()->monotonic_time_ns().value() -
-              startEvent->times()->monotonic_time_ns().value();
-          timeAnnotation =
-              fmt::format(" fetched in {}", formatNsTimeToMs(fetchTime));
-        }
-        break;
-    }
-
-    const char* eventTypeStr =
-        folly::get_default(kHgEventTypes, eventType, "?");
-    const char* resourceTypeStr =
-        folly::get_default(kResourceTypes, resourceType, "?");
-    const char* importPriorityStr =
-        folly::get_default(kImportPriorities, importPriority, "?");
-    const char* importCauseStr =
-        folly::get_default(kImportCauses, importCause, "?");
-
-    if (FLAGS_verbose) {
-      fmt::print(
-          "{} {} {} {} {}{}\n",
-          eventTypeStr,
-          resourceTypeStr,
-          importPriorityStr,
-          importCauseStr,
-          *evt.path(),
-          timeAnnotation);
-    } else {
-      fmt::print(
-          "{} {} {}{}\n",
-          eventTypeStr,
-          resourceTypeStr,
-          *evt.path(),
-          timeAnnotation);
-    }
+    print_hg_event(event.value(), activeRequests);
   });
 
   fmt::print("{} was unmounted\n", FLAGS_mountRoot);
+  return 0;
+}
+
+int trace_hg_retroactive(
+    folly::ScopedEventBaseThread& evbThread,
+    const AbsolutePath& mountRoot,
+    apache::thrift::RocketClientChannel::Ptr channel) {
+  auto client =
+      std::make_unique<apache::thrift::Client<EdenService>>(std::move(channel));
+
+  GetRetroactiveHgEventsParams params{};
+  params.mountPoint() = mountRoot.stringPiece();
+  auto future = client->semifuture_getRetroactiveHgEvents(params).via(
+      evbThread.getEventBase());
+
+  std::move(future)
+      .thenValue([](GetRetroactiveHgEventsResult allEvents) {
+        auto events = *allEvents.events();
+        std::sort(
+            events.begin(), events.end(), [](const auto& a, const auto& b) {
+              return a.times()->timestamp() < b.times()->timestamp();
+            });
+
+        std::unordered_map<uint64_t, ActiveHgRequest> activeRequests;
+        fmt::print("Last {} hg events\n", events.size());
+        for (auto& event : events) {
+          print_hg_event(event, activeRequests);
+        }
+      })
+      .thenError([](const folly::exception_wrapper& ex) {
+        fmt::print("{}\n", ex.what());
+        if (ex.get_exception<EdenError>()->errorCode() == ENOTSUP) {
+          fmt::print(
+              "Can't run retroactive command in eden mount without an initialized ActivityBuffer. Make sure the enable-activitybuffer config is true to save events retroactively.\n");
+        }
+      })
+      .ensure(
+          // Move the client into the callback so that it will be destroyed
+          // on an EventBase thread.
+          [c = std::move(client)] {})
+      .get();
   return 0;
 }
 
@@ -549,9 +601,7 @@ int trace_thrift(
   return 0;
 }
 
-void format_trace_inode_event(
-    facebook::eden::InodeEvent& event,
-    size_t inode_width) {
+void print_inode_event(InodeEvent& event, size_t inode_width) {
   // Convert from ns to seconds
   time_t seconds = (*event.times()->timestamp()) / 1000000000;
   struct tm time_buffer;
@@ -602,7 +652,7 @@ int trace_inode(
         }
         inode_width =
             std::max(inode_width, folly::to_ascii_size_decimal(*event->ino()));
-        format_trace_inode_event(event.value(), inode_width);
+        print_inode_event(event.value(), inode_width);
       });
   return 0;
 }
@@ -611,7 +661,8 @@ int trace_inode_retroactive(
     folly::ScopedEventBaseThread& evbThread,
     const AbsolutePath& mountRoot,
     apache::thrift::RocketClientChannel::Ptr channel) {
-  auto client = std::make_unique<EdenServiceAsyncClient>(std::move(channel));
+  auto client =
+      std::make_unique<apache::thrift::Client<EdenService>>(std::move(channel));
 
   GetRetroactiveInodeEventsParams params{};
   params.mountPoint() = mountRoot.stringPiece();
@@ -643,7 +694,7 @@ int trace_inode_retroactive(
             inode_width);
         fmt::print("{}\n{}\n", header, std::string(header.size() + 2, '-'));
         for (auto& event : events) {
-          format_trace_inode_event(event, inode_width);
+          print_inode_event(event, inode_width);
         }
         fmt::print("{}\n", std::string(header.size() + 2, '-'));
       })
@@ -685,8 +736,9 @@ int main(int argc, char** argv) {
   AbsolutePath mountRoot{FLAGS_mountRoot};
   AbsolutePath socketPath = getSocketPath(mountRoot);
 
-  if (FLAGS_trace != "inode" && FLAGS_retroactive) {
-    fmt::print("Only eden trace inode currently supports retroactive mode\n");
+  if (FLAGS_retroactive && !(FLAGS_trace == "inode" || FLAGS_trace == "hg")) {
+    fmt::print(
+        "Retroactive mode only supported for hg or inode trace subcommands\n");
     return 0;
   }
 
@@ -702,7 +754,9 @@ int main(int argc, char** argv) {
                      .get();
 
   if (FLAGS_trace == "hg") {
-    return trace_hg(evbThread, mountRoot, std::move(channel));
+    return FLAGS_retroactive
+        ? trace_hg_retroactive(evbThread, mountRoot, std::move(channel))
+        : trace_hg(evbThread, mountRoot, std::move(channel));
   } else if (FLAGS_trace == "fs") {
     return trace_fs(
         evbThread, mountRoot, std::move(channel), FLAGS_reads, FLAGS_writes);

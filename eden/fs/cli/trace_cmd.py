@@ -44,6 +44,13 @@ def execute_cmd(arg_list: List[Union[pathlib.Path, str]]) -> int:
 @trace_cmd("hg", "Trace hg object fetches")
 class TraceHgCommand(Subcmd):
     DESCRIPTION = """Trace EdenFS object fetches from Mercurial.
+
+With the --retroactive flag, this will print a list of the past N object fetches.
+By default, it will print up to N=100 events, but this can be configured with the
+following config option:
+[telemetry]
+activitybuffer-max-events = 100
+
 Events are encoded using the following emojis:
 
 Event Type:
@@ -79,24 +86,25 @@ Import Cause (--verbose):
             default=False,
             help="Show import priority and cause",
         )
+        parser.add_argument(
+            "--retroactive",
+            action="store_true",
+            default=False,
+            help="Provide stored hg events (from a buffer) across past changes",
+        )
 
     async def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = require_checkout(args, args.checkout)
         trace_stream_command = get_trace_stream_command()
-        # TODO the verbose flag can be added directly to the list passed to execute_cmd
-        # after the daemon with this new flag is running everywhere using
-        # f"--verbose={'true' if args.verbose else 'false'}"
-        verbose = []
-        if args.verbose:
-            verbose.append("--verbose=true")
         return execute_cmd(
             [
                 trace_stream_command,
                 "--mountRoot",
                 checkout.path,
                 "--trace=hg",
+                f"--verbose={'true' if args.verbose else 'false'}",
+                f"--retroactive={'true' if args.retroactive else 'false'}",
             ]
-            + verbose
         )
 
 
