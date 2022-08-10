@@ -159,9 +159,13 @@ use virtually_sharded_blobstore::VirtuallyShardedBlobstore;
 use warm_bookmarks_cache::ArcBookmarksCache;
 use warm_bookmarks_cache::NoopBookmarksCache;
 use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
-use wireproto_handler::ArcPushRedirectorBase;
+use wireproto_handler::ArcPushRedirectorMode;
+use wireproto_handler::ArcRepoHandlerBase;
 use wireproto_handler::ArcTargetRepoDbs;
 use wireproto_handler::PushRedirectorBase;
+use wireproto_handler::PushRedirectorMode;
+use wireproto_handler::PushRedirectorMode::Enabled;
+use wireproto_handler::RepoHandlerBase;
 use wireproto_handler::TargetRepoDbs;
 
 const DERIVED_DATA_LEASE: &str = "derived-data-lease";
@@ -612,6 +616,9 @@ pub enum RepoFactoryError {
 
     #[error("Error creating target repo DB")]
     TargetRepoDbs,
+
+    #[error("Error creating repo handler base")]
+    RepoHandlerBase,
 }
 
 #[facet::factory(name: String, config: RepoConfig)]
@@ -1374,12 +1381,12 @@ impl RepoFactory {
         Ok(Arc::new(target_repo_dbs))
     }
 
-    pub async fn push_redirector_base(
+    pub async fn push_redirector_mode(
         &self,
         repo_identity: &ArcRepoIdentity,
         repo_cross_repo: &ArcRepoCrossRepo,
         target_repo_dbs: &ArcTargetRepoDbs,
-    ) -> Result<Option<ArcPushRedirectorBase>> {
+    ) -> Result<ArcPushRedirectorMode> {
         let common_commit_sync_config = repo_cross_repo
             .live_commit_sync_config()
             .clone()
@@ -1387,18 +1394,43 @@ impl RepoFactory {
             .context(RepoFactoryError::PushRedirectorBase)?;
         let synced_commit_mapping = repo_cross_repo.synced_commit_mapping();
 
-        Ok(common_commit_sync_config.and_then({
-            move |common_commit_sync_config| {
-                if common_commit_sync_config.large_repo_id == repo_identity.id() {
-                    None
-                } else {
-                    Some(Arc::new(PushRedirectorBase {
-                        common_commit_sync_config,
-                        synced_commit_mapping: synced_commit_mapping.clone(),
-                        target_repo_dbs: target_repo_dbs.clone(),
-                    }))
-                }
+        let push_redirector_mode = match common_commit_sync_config {
+            Some(common_commit_sync_config)
+                if common_commit_sync_config.large_repo_id != repo_identity.id() =>
+            {
+                PushRedirectorMode::Enabled(Arc::new(PushRedirectorBase {
+                    common_commit_sync_config,
+                    synced_commit_mapping: synced_commit_mapping.clone(),
+                    target_repo_dbs: target_repo_dbs.clone(),
+                }))
             }
+            _ => PushRedirectorMode::Disabled,
+        };
+
+        Ok(Arc::new(push_redirector_mode))
+    }
+
+    pub async fn repo_handler_base(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+        push_redirector_mode: &ArcPushRedirectorMode,
+    ) -> Result<ArcRepoHandlerBase> {
+        let ctx = self.ctx(Some(repo_identity));
+        let scuba = ctx.scuba().clone();
+        let logger = ctx.logger().clone();
+        let repo_client_knobs = repo_config.repo_client_knobs.clone();
+        let backup_repo_config = repo_config.backup_repo_config.clone();
+        let maybe_push_redirector_base = match **push_redirector_mode {
+            Enabled(ref push_redirector_base) => Some(Arc::clone(push_redirector_base)),
+            PushRedirectorMode::Disabled => None,
+        };
+        Ok(Arc::new(RepoHandlerBase {
+            logger,
+            scuba,
+            maybe_push_redirector_base,
+            repo_client_knobs,
+            backup_repo_config,
         }))
     }
 }
