@@ -559,7 +559,10 @@ async fn normal_pushrebase<'a>(
                 }
             }
             #[cfg(not(fbcode_build))]
-            unreachable!()
+            {
+                let _ignore_only_this_unused_variable = address;
+                unreachable!()
+            }
         } else {
             None
         };
