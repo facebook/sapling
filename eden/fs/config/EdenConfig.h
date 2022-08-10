@@ -918,6 +918,13 @@ class EdenConfig : private ConfigSettingManager {
       folly::kIsWindows ? MountProtocol::PRJFS : MountProtocol::FUSE,
       this};
 
+  // [fsck]
+
+  /**
+   * True if Windows FSCK should use the new, more thorough version.
+   */
+  ConfigSetting<bool> useThoroughFsck{"fsck:use-thorough-fsck", false, this};
+
   // [facebook]
   // Facebook internal
 

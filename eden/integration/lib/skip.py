@@ -157,6 +157,7 @@ if sys.platform != "win32":
     TEST_DISABLED.update(
         {
             "windows_fsck_test.WindowsFsckTest": True,
+            "windows_fsck_test.WindowsRebuildOverlayTest": True,
             "prjfs_stress.PrjFSStress": True,
         }
     )

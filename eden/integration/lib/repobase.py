@@ -135,3 +135,6 @@ class Repository(object):
         os.symlink(contents, full_path)
         if add:
             self.add_file(path)
+
+    def update(self, rev: str, clean: bool = False, merge: bool = False) -> str:
+        raise NotImplementedError()

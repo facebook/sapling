@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/inodes/treeoverlay/TreeOverlayWindowsFsck.h"
+#include <boost/filesystem/operations.hpp>
 
 #ifdef _WIN32
 #include <boost/filesystem.hpp>
@@ -19,12 +20,16 @@
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
+#include "eden/fs/model/ObjectId.h"
 #include "eden/fs/utils/DirType.h"
 
 namespace facebook::eden {
 namespace {
 
 namespace boost_fs = boost::filesystem;
+
+// TODO
+// - test/fix behavior when offline
 
 PRJ_FILE_STATE getPrjFileState(AbsolutePathPiece entry) {
   auto wpath = entry.wide();
@@ -48,7 +53,6 @@ std::set<PathComponent> makeEntriesSet(const overlay::OverlayDir& dir) {
   return result;
 }
 
-namespace {
 // Reparse tag for UNIX domain socket is not defined in Windows header files.
 const ULONG IO_REPARSE_TAG_SOCKET = 0x80000023;
 
@@ -79,23 +83,12 @@ struct REPARSE_DATA_BUFFER {
     } GenericReparseBuffer;
   };
 };
-} // namespace
 
-dtype_t dtypeFromEntry(const boost::filesystem::directory_entry& entry) {
-  XLOGF(DBG9, "dtypeFromEntry: {}", entry.path().string().c_str());
-  auto path = entry.path().wstring();
-  WIN32_FILE_ATTRIBUTE_DATA attrs;
-
-  if (!GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &attrs)) {
-    XLOGF(
-        DBG3,
-        "Unable to get file attributes for {}: {}",
-        entry.path().string(),
-        GetLastError());
-    return dtype_t::Unknown;
-  }
-
-  if (attrs.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
+dtype_t dtypeFromAttrs(
+    const boost::filesystem::path& boostPath,
+    DWORD dwFileAttributes) {
+  auto path = boostPath.wstring();
+  if (dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
     auto handle = CreateFileW(
         path.c_str(),
         FILE_GENERIC_READ,
@@ -108,7 +101,7 @@ dtype_t dtypeFromEntry(const boost::filesystem::directory_entry& entry) {
       XLOGF(
           DBG3,
           "Unable to determine reparse point type for {}: {}",
-          entry.path().string(),
+          boostPath.string(),
           GetLastError());
       return dtype_t::Unknown;
     }
@@ -128,7 +121,7 @@ dtype_t dtypeFromEntry(const boost::filesystem::directory_entry& entry) {
       XLOGF(
           DBG3,
           "Unable to read reparse point data for {}: {}",
-          entry.path().string(),
+          boostPath.string(),
           GetLastError());
       return dtype_t::Unknown;
     }
@@ -142,13 +135,32 @@ dtype_t dtypeFromEntry(const boost::filesystem::directory_entry& entry) {
     }
 
     // We don't care about other reparse point types, so treating them as
-    // regular files.
-    return dtype_t::Regular;
-  } else if (attrs.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+    // regular files/directories.
+    if (dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+      return dtype_t::Dir;
+    } else {
+      return dtype_t::Regular;
+    }
+  } else if (dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
     return dtype_t::Dir;
   } else {
     return dtype_t::Regular;
   }
+}
+
+dtype_t dtypeFromPath(const boost::filesystem::path& boostPath) {
+  auto path = boostPath.wstring();
+  WIN32_FILE_ATTRIBUTE_DATA attrs;
+
+  if (!GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &attrs)) {
+    XLOGF(
+        DBG3,
+        "Unable to get file attributes for {}: {}",
+        boostPath.string(),
+        GetLastError());
+    return dtype_t::Unknown;
+  }
+  return dtypeFromAttrs(boostPath, attrs.dwFileAttributes);
 }
 
 using InsensitiveOverlayMap = std::map<std::string, overlay::OverlayEntry>;
@@ -211,6 +223,405 @@ void removeOverlayEntry(
   overlay.removeChild(parent, name);
 }
 
+// clang-format off
+// T = tombstone
+//
+// for path in union(onDisk_paths, inOverlay_paths, inScm_paths):
+//   disk  overlay  scm   action
+//    y       n      n      add to overlay, no scm hash.   (If is_placeholder() error since there's no scm to fill it? We could call PrjDeleteFile on it.)
+//    y       y      n      fix overlay mode_t to match disk if necessary. (If is_placeholder(), error since there's no scm to fill it?)
+//    y       n      y      add to overlay, use scm hash if placeholder-file or empty-placeholder-directory.
+//    y       y      y      fix overlay mode_t to match disk if necessary
+//    T       n      *      do nothing
+//    T       y      *      drop from overlay, recursively
+//    n       y      n      remove from overlay
+//    n       y      y      fix overlay mode_t to match scm if necessary.
+//    n       n      y      add to overlay, use scm hash
+//
+// Notes:
+// - A directory can be "placeholder" even if one of it's recursive descendants
+//   is modified. It is only DirtyPlaceholder if a direct child is modified.
+// - Tombstone is only visible when eden is not mounted yet. And (maybe?)
+//   appears with a delay after eden closes.
+// - I think the overlay will treat HydratedPlaceholder, DirtyPlaceholder, and
+//   Full identical. All mean the data is on disk and the overlay entry will be a
+//   no-scm-hash entry.
+// - Since we'll have the scm hash during fsck, we could also verify the overlay
+//   hash is correct.
+// clang-format on
+
+struct FsckFileState {
+  bool onDisk = false;
+  // diskMaterialized is true if:
+  //  - a file is full
+  //  - a directory is full or a descendant is materialized or tombstoned.
+  bool diskMaterialized = false;
+  // diskEmptyPlaceholder is true if:
+  //  - a file is virtual or a placeholder
+  //  - a directory is a placeholder and has no children (placeholder or
+  //  otherwise)
+  bool diskEmptyPlaceholder = false;
+  bool diskTombstone = false;
+  dtype_t diskDtype = dtype_t::Unknown;
+
+  bool inOverlay = false;
+  dtype_t overlayDtype = dtype_t::Unknown;
+  std::optional<ObjectId> overlayHash = std::nullopt;
+  std::optional<overlay::OverlayEntry> overlayEntry = std::nullopt;
+
+  bool inScm = false;
+  dtype_t scmDtype = dtype_t::Unknown;
+  std::optional<ObjectId> scmHash = std::nullopt;
+
+  bool shouldExist = false;
+  dtype_t desiredDtype = dtype_t::Unknown;
+  std::optional<ObjectId> desiredHash = std::nullopt;
+};
+
+void populateDiskState(
+    AbsolutePathPiece root,
+    RelativePathPiece path,
+    FsckFileState& state,
+    const WIN32_FIND_DATAW& findFileData) {
+  auto absPath = root + path;
+  auto boostPath = boost_fs::path(absPath.stringPiece());
+
+  dtype_t dtype = dtypeFromAttrs(boostPath, findFileData.dwFileAttributes);
+  if (dtype != dtype_t::Dir && dtype != dtype_t::Regular) {
+    // TODO: What do we do with a symlink, or non-regular file.
+    return;
+  }
+
+  // Some empirical data on the values of reparse, recall, hidden, and
+  // system dwFileAttributes, compared with the tombstone and full
+  // getPrjFileState values.
+  //
+  // https://docs.microsoft.com/en-us/windows/win32/projfs/cache-state
+  // https://docs.microsoft.com/en-us/windows/win32/fileio/file-attribute-constants
+  //
+  // clang-format off
+  //
+  // (reparse, recall, hidden, system) => (tomb,  materialized) dwFileAttributes
+  // (false,   false,  false,  false)  => (false, true)  attr=16 (DIRECTORY)
+  // (false,   false,  false,  false)  => (false, true)  attr=32 (ARCHIVE)
+  // (true,    false,  true,   true)   => (true,  false) attr=1062 (REPARSE_POINT | ARCHIVE | HIDDEN | SYSTEM)
+  // (true,    false,  false,  false)  => (false, false) attr=1568 (REPARSE_POINT | SPARSE_FILE | ARCHIVE)
+  // (true,    true,   false,  false)  => (false, false) attr=4195344 (RECALL_ON_DATA_ACCESS | REPARSE_POINT | DIRECTORY)
+  //
+  // clang-format on
+  // TODO: try to repro FILE_ATTRIBUTE_RECALL_ON_OPEN using a placeholder
+  // directory
+  auto reparse = (findFileData.dwFileAttributes &
+                  FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT;
+  auto recall =
+      (findFileData.dwFileAttributes & FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS) ==
+      FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS;
+  auto hidden = (findFileData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) ==
+      FILE_ATTRIBUTE_HIDDEN;
+  auto system = (findFileData.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM) ==
+      FILE_ATTRIBUTE_SYSTEM;
+
+  bool detectedTombstone = reparse && !recall && hidden && system;
+  bool detectedFull = !reparse && !recall;
+
+  state.onDisk = true;
+  state.diskDtype = dtype;
+  state.diskTombstone = detectedTombstone;
+
+  // It can also be diskMaterialized if a descendant directory is
+  // materialized. But that is checked later when processing the children.
+  state.diskMaterialized = detectedFull || detectedTombstone;
+  // It's an empty placeholder unless it's materialized or it has children.
+  state.diskEmptyPlaceholder = !state.diskMaterialized;
+
+  if (dtype == dtype_t::Dir) {
+    for (const auto& entry : boost::filesystem::directory_iterator(boostPath)) {
+      auto childPath = AbsolutePath{entry.path().native()};
+      auto name = childPath.basename();
+      if (name != ".eden") {
+        state.diskEmptyPlaceholder = false;
+        break;
+      }
+    }
+  }
+}
+
+void populateOverlayState(
+    FsckFileState& state,
+    const overlay::OverlayEntry& overlayEntry) {
+  state.inOverlay = true;
+  state.overlayDtype = mode_to_dtype(*overlayEntry.mode());
+  if (overlayEntry.hash().has_value() && !overlayEntry.hash().value().empty()) {
+    auto objId = ObjectId(*overlayEntry.hash());
+    state.overlayHash = std::move(objId);
+  } else {
+    state.overlayHash = std::nullopt;
+  }
+  state.overlayEntry = overlayEntry;
+}
+
+void populateScmState(FsckFileState& state, const TreeEntry& treeEntry) {
+  state.scmHash = treeEntry.getHash();
+  state.scmDtype = treeEntry.getDType();
+  state.inScm = true;
+}
+
+InodeNumber addOrUpdateOverlay(
+    TreeOverlay& overlay,
+    InodeNumber parentInodeNum,
+    PathComponentPiece name,
+    dtype_t dtype,
+    std::optional<ObjectId> hash,
+    const InsensitiveOverlayMap& parentInsensitiveOverlayDir) {
+  if (overlay.hasChild(parentInodeNum, name)) {
+    XLOGF(DBG9, "Updating overlay: {}", name);
+    overlay.removeChild(parentInodeNum, name);
+  } else {
+    XLOGF(DBG9, "Add overlay: {}", name);
+  }
+  auto overlayEntryOpt =
+      getEntryFromOverlayDir(parentInsensitiveOverlayDir, name);
+  overlay::OverlayEntry overlayEntry;
+  if (overlayEntryOpt.has_value()) {
+    // Update the existing entry.
+    overlayEntry = *overlayEntryOpt;
+  } else {
+    // It's a new entry, so give it a new inode number.
+    overlayEntry.inodeNumber() = overlay.nextInodeNumber().get();
+  }
+  if (hash.has_value()) {
+    overlayEntry.hash() = hash->asString();
+  } else {
+    overlayEntry.hash().reset();
+  }
+  overlayEntry.mode() = dtype_to_mode(dtype);
+  overlay.addChild(parentInodeNum, name, overlayEntry);
+  return InodeNumber(*overlayEntry.inodeNumber());
+}
+
+std::optional<InodeNumber> fixup(
+    FsckFileState& state,
+    TreeOverlay& overlay,
+    PathComponentPiece name,
+    InodeNumber parentInodeNum,
+    const InsensitiveOverlayMap& insensitiveOverlayDir) {
+  if (!state.onDisk) {
+    if (state.inScm) {
+      state.desiredDtype = state.scmDtype;
+      state.desiredHash = state.scmHash;
+      state.shouldExist = true;
+    }
+  } else if (state.diskTombstone) {
+    // state.shouldExist defaults to false
+  } else { // if file exists normally on disk
+    if (!state.inScm && !state.diskMaterialized) {
+      // Throw error, since we can't materialize if it's not in scm.
+      throw std::runtime_error(
+          "unable to fix overlay, file is a placeholder but not in scm - TODO print path");
+    } else {
+      state.desiredDtype = state.diskDtype;
+      state.desiredHash = state.diskMaterialized ? std::nullopt : state.scmHash;
+      state.shouldExist = true;
+    }
+  }
+
+  XLOGF(
+      DBG9,
+      "shouldExist={}, onDisk={}, inOverlay={}, inScm={}, tombstone={}, materialized={}",
+      state.shouldExist,
+      state.onDisk,
+      state.inOverlay,
+      state.inScm,
+      state.diskTombstone,
+      state.diskMaterialized);
+
+  if (state.shouldExist) {
+    bool out_of_sync = !state.inOverlay ||
+        state.overlayDtype != state.desiredDtype ||
+        state.overlayHash.has_value() != state.desiredHash.has_value() ||
+        (state.overlayHash.has_value() &&
+         !state.overlayHash.value().bytesEqual(state.desiredHash.value()));
+    if (out_of_sync) {
+      XLOG(DBG9, "Out of sync: adding/updating entry");
+      XLOGF(
+          DBG9,
+          "overlayDtype={} vs desiredDtype={}, overlayHash={} vs desiredHash={}",
+          state.overlayDtype,
+          state.desiredDtype,
+          state.overlayHash->toLogString(),
+          state.desiredHash->toLogString());
+      if (state.inOverlay && state.overlayDtype != state.desiredDtype) {
+        // If the file/directory type doesn't match, remove the old entry
+        // entirely, since we need to recursively remove a directory in order to
+        // write a file, and vice versa.
+        removeOverlayEntry(overlay, parentInodeNum, name, *state.overlayEntry);
+      }
+
+      return addOrUpdateOverlay(
+          overlay,
+          parentInodeNum,
+          name,
+          state.desiredDtype,
+          state.desiredHash,
+          insensitiveOverlayDir);
+    } else {
+      return InodeNumber(*state.overlayEntry->inodeNumber());
+    }
+  } else {
+    if (state.inOverlay) {
+      XLOG(DBG9, "Out of sync: removing extra");
+      removeOverlayEntry(overlay, parentInodeNum, name, *state.overlayEntry);
+    }
+    return std::nullopt;
+  }
+}
+
+// Returns true if the given path is considered materialized.
+bool processChildren(
+    TreeOverlay& overlay,
+    RelativePathPiece path,
+    AbsolutePathPiece root,
+    InodeNumber inodeNumber,
+    const overlay::OverlayDir& overlayDir,
+    const InsensitiveOverlayMap& insensitiveOverlayDir,
+    const std::shared_ptr<const Tree>& scmTree,
+    const TreeOverlay::LookupCallback& callback) {
+  XLOGF(DBG9, "processChildren - {}", path);
+
+  // Handle children
+  std::map<PathComponent, FsckFileState> children;
+
+  // Populate children disk information
+  auto absPath = root + path;
+  WIN32_FIND_DATAW findFileData;
+  HANDLE h = FindFirstFileExW(
+      (absPath + "*"_relpath).wide().c_str(),
+      FindExInfoBasic,
+      &findFileData,
+      FindExSearchNameMatch,
+      nullptr,
+      0);
+  if (h == INVALID_HANDLE_VALUE) {
+    throw std::runtime_error(
+        fmt::format("unable to iterate over directory - {}", path));
+  }
+
+  do {
+    if (wcscmp(findFileData.cFileName, L".") == 0 ||
+        wcscmp(findFileData.cFileName, L"..") == 0 ||
+        wcscmp(findFileData.cFileName, L".eden") == 0) {
+      continue;
+    }
+    PathComponent name{findFileData.cFileName};
+    auto& childState = children[name];
+    populateDiskState(root, path + name, childState, findFileData);
+  } while (FindNextFileW(h, &findFileData) != 0);
+
+  auto error = GetLastError();
+  if (error != ERROR_NO_MORE_FILES) {
+    throw std::runtime_error(
+        fmt::format("unable to iterate over directory - {}", path));
+  }
+
+  FindClose(h);
+
+  // Populate children overlay information
+  const auto& entries = overlayDir.entries_ref();
+  for (const auto& [name, dirent] : *entries) {
+    auto entryName = PathComponent{name};
+    // Check if this entry is present in overlay
+    auto overlayEntryOpt =
+        getEntryFromOverlayDir(insensitiveOverlayDir, entryName);
+    if (overlayEntryOpt.has_value()) {
+      const auto& overlayEntry = overlayEntryOpt.value();
+      auto& childState = children[entryName];
+      populateOverlayState(childState, overlayEntry);
+    }
+  }
+
+  // Don't recurse if there are no disk children for fixing up or overlay
+  // children for deleting.
+  if (children.empty()) {
+    return false;
+  }
+
+  // Populate children scm information
+  if (scmTree) {
+    for (const auto& [name, treeEntry] : *scmTree) {
+      PathComponent pathName{name};
+      auto& childState = children[pathName];
+      populateScmState(childState, treeEntry);
+    }
+  }
+
+  // Recurse for any children.
+  bool anyChildMaterialized = false;
+  for (auto& [name, childState] : children) {
+    auto childName = PathComponentPiece{name};
+    auto childPath = path + childName;
+    XLOGF(DBG9, "process child - {}", childPath);
+
+    std::optional<InodeNumber> childInodeNumberOpt = fixup(
+        childState, overlay, childName, inodeNumber, insensitiveOverlayDir);
+
+    anyChildMaterialized |= childState.diskMaterialized;
+
+    if (childState.desiredDtype == dtype_t::Dir && childState.onDisk &&
+        !childState.diskEmptyPlaceholder && childInodeNumberOpt.has_value()) {
+      // Fetch child scm tree.
+      std::shared_ptr<const Tree> childScmTree;
+      if (childState.scmDtype == dtype_t::Dir) {
+        // TODO: handle scm failure
+        auto scmEntryTry = callback(childPath).getTry();
+        std::variant<
+            std::shared_ptr<const facebook::eden::Tree>,
+            facebook::eden::TreeEntry>& childScmEntry = scmEntryTry.value();
+        // It's guaranteed to be a Tree since scmDtype is Dir.
+        childScmTree = std::get<std::shared_ptr<const Tree>>(childScmEntry);
+      }
+
+      auto childInodeNumber = *childInodeNumberOpt;
+      auto childOverlayDir = *overlay.loadOverlayDir(childInodeNumber);
+      auto childInsensitiveOverlayDir = toAsciiInsensitiveMap(childOverlayDir);
+      bool childMaterialized = childState.diskMaterialized;
+      childMaterialized |= processChildren(
+          overlay,
+          childPath,
+          root,
+          childInodeNumber,
+          childOverlayDir,
+          childInsensitiveOverlayDir,
+          childScmTree,
+          callback);
+      anyChildMaterialized |= childMaterialized;
+
+      if (childMaterialized && childState.desiredHash != std::nullopt) {
+        XLOGF(
+            DBG9,
+            "Directory {} has a materialized child, and therefore is materialized too. Marking.",
+            childPath);
+        childState.diskMaterialized = true;
+        childState.desiredHash = std::nullopt;
+        // Refresh the parent state so we see and update the current overlay
+        // entry.
+        auto updatedOverlayDir = *overlay.loadOverlayDir(inodeNumber);
+        auto updatedInsensitiveOverlayDir =
+            toAsciiInsensitiveMap(updatedOverlayDir);
+        // Update the overlay entry to remove the scmHash.
+        addOrUpdateOverlay(
+            overlay,
+            inodeNumber,
+            childName,
+            childState.desiredDtype,
+            childState.desiredHash,
+            updatedInsensitiveOverlayDir);
+      }
+    }
+  }
+
+  return anyChildMaterialized;
+}
+
 void scanCurrentDir(
     TreeOverlay& overlay,
     AbsolutePathPiece dir,
@@ -232,7 +643,7 @@ void scanCurrentDir(
   for (const auto& entry : boost::filesystem::directory_iterator(boostPath)) {
     auto path = AbsolutePath{entry.path().c_str()};
     auto name = path.basename();
-    auto dtype = dtypeFromEntry(entry);
+    auto dtype = dtypeFromPath(entry.path());
 
     // TODO: EdenFS for Windows does not support symlinks yet, the only
     // symlink we have are redirection points.
@@ -315,7 +726,7 @@ void scanCurrentDir(
   // proceed to its children.
   for (const auto& entry : boost::filesystem::directory_iterator(boostPath)) {
     auto path = AbsolutePath{entry.path().c_str()};
-    auto mode = dtypeFromEntry(entry);
+    auto mode = dtypeFromPath(entry.path());
 
     // We can't scan non-directories nor follow symlinks
     if (mode == dtype_t::Symlink) {
@@ -352,21 +763,40 @@ void scanCurrentDir(
 } // namespace
 
 void windowsFsckScanLocalChanges(
-    FOLLY_MAYBE_UNUSED std::shared_ptr<const EdenConfig> config,
+    std::shared_ptr<const EdenConfig> config,
     TreeOverlay& overlay,
     AbsolutePathPiece mountPath,
     TreeOverlay::LookupCallback& callback) {
   XLOGF(INFO, "Start scanning {}", mountPath);
   if (auto view = overlay.loadOverlayDir(kRootNodeId)) {
     auto insensitiveOverlayDir = toAsciiInsensitiveMap(*view);
-    scanCurrentDir(
-        overlay,
-        mountPath,
-        kRootNodeId,
-        *view,
-        insensitiveOverlayDir,
-        false,
-        callback);
+    if (config->useThoroughFsck.getValue()) {
+      // TODO: Handler errors or no trees
+      auto scmEntryTry = callback(""_relpath).getTry();
+      std::variant<
+          std::shared_ptr<const facebook::eden::Tree>,
+          facebook::eden::TreeEntry>& scmEntry = scmEntryTry.value();
+      std::shared_ptr<const Tree> scmTree =
+          std::get<std::shared_ptr<const Tree>>(scmEntry);
+      processChildren(
+          overlay,
+          ""_relpath,
+          mountPath,
+          kRootNodeId,
+          *view,
+          insensitiveOverlayDir,
+          scmTree,
+          callback);
+    } else {
+      scanCurrentDir(
+          overlay,
+          mountPath,
+          kRootNodeId,
+          *view,
+          insensitiveOverlayDir,
+          false,
+          callback);
+    }
     XLOGF(INFO, "Scanning complete for {}", mountPath);
   } else {
     XLOG(INFO)

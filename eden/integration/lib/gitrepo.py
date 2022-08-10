@@ -144,3 +144,10 @@ class GitRepository(repobase.Repository):
 
         # Get the commit ID and return it
         return self.git("rev-parse", "HEAD").strip()
+
+    def update(self, rev: str, clean: bool = False, merge: bool = False) -> str:
+        args = ["checkout"]
+        if clean or merge:
+            raise NotImplementedError()
+        args.append(rev)
+        return self.git(*args)
