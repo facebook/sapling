@@ -52,20 +52,20 @@ pub extern "C" fn fb_get_env() -> u8 {
 
 #[no_mangle]
 pub extern "C" fn fb_is_prod() -> bool {
-    is_prod()
+    *IN_PROD
 }
 
 #[no_mangle]
 pub extern "C" fn fb_is_corp() -> bool {
-    is_corp()
+    *IN_CORP
 }
 
 #[no_mangle]
 pub extern "C" fn fb_is_lab() -> bool {
-    is_lab()
+    *IN_LAB
 }
 
 #[no_mangle]
 pub extern "C" fn fb_has_servicerouter() -> bool {
-    is_prod()
+    *IN_PROD
 }
