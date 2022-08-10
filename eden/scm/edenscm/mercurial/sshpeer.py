@@ -31,7 +31,7 @@ _totalbytessent = 0
 _totalbytesreceived = 0
 
 
-def _serverquote(s) -> str:
+def _serverquote(s: str) -> str:
     if not s:
         return s
     """quote a string for the remote shell ... which we assume is sh"""
