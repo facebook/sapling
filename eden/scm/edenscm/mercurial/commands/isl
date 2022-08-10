@@ -1,8 +1,8 @@
 #!/usr/bin/env dotslash
 
-// @generated SignedSource<<38ba770f81d8168bbd605522b8494250>>
+// @generated SignedSource<<0ace5dbc4be48717438244731a7f29d6>>
 // MSDK schedule URL: https://our.intern.facebook.com/intern/msdk/bump/?action=view&schedule_fbid=413790530659489
-// sandcastle build trigger URL: https://our.intern.facebook.com/intern/sandcastle/job/36028797764513157/
+// sandcastle build trigger URL: https://our.intern.facebook.com/intern/sandcastle/job/13510799627490636/
 
 {
     "name": "isl",
@@ -10,34 +10,37 @@
     "build_info": {
         "config_script": "xplat/scm/isl/release/dotslash_build.spec",
         "commit_repo": "fbsource",
-        "commit_hash": "a2647bda4fa3bf19cfa5fd3892c673f4ac58ce1b",
-        "commit_date": "2022-08-09 18:11:15 PDT",
-        "commit_timestamp": 1660093875,
-        "msdk_package_fbid": "400509442071061"
+        "commit_hash": "f18ac0d46247f84e01f04e3b7fa352892fe1634b",
+        "commit_date": "2022-08-10 07:13:47 PDT",
+        "commit_timestamp": 1660140827,
+        "msdk_package_fbid": "628840005126172"
     },
     "signatures": {
-        "msdk": "<<crypto.managed_sdk.mac:AeWTxuyjFcQmbWLWVpioK23e8esSbEGf7zSmYHyAyuPYlZ0g>>"
+        "msdk": "<<crypto.managed_sdk.mac:AeX8CD15_TRqNy-YKferxZjp2paWiyM9EfUbS3dX9kZ0zu-X>>"
     },
     "platforms": {
         "linux": {
-            "scheme": "everstore",
-            "handle": "GLKzyRGvtZFwiu4EAEes67jnc7IOblMqAAAA",
+            "scheme": "cas",
+            "use_case_id": "dotslash_msdk_prod",
+            "digest": "a07167306d6b3faa8553f53d7f19d5eb7bd7ad7b:992690",
             "extract": {
                 "path": "run-isl",
                 "decompress": "tar.gz"
             }
         },
         "macos": {
-            "scheme": "everstore",
-            "handle": "GLKzyRGvtZFwiu4EAEes67jnc7IOblMqAAAA",
+            "scheme": "cas",
+            "use_case_id": "dotslash_msdk_prod",
+            "digest": "a07167306d6b3faa8553f53d7f19d5eb7bd7ad7b:992690",
             "extract": {
                 "path": "run-isl",
                 "decompress": "tar.gz"
             }
         },
         "windows": {
-            "scheme": "everstore",
-            "handle": "GLKzyRGvtZFwiu4EAEes67jnc7IOblMqAAAA",
+            "scheme": "cas",
+            "use_case_id": "dotslash_msdk_prod",
+            "digest": "a07167306d6b3faa8553f53d7f19d5eb7bd7ad7b:992690",
             "extract": {
                 "path": "run-isl.bat",
                 "decompress": "tar.gz"
