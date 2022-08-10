@@ -8,6 +8,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -34,14 +35,15 @@ use crate::watchmanfs::WatchmanFileSystem;
 type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
 
 pub enum FileSystem {
-    Normal(PhysicalFileSystem),
-    Watchman(WatchmanFileSystem),
-    Eden(EdenFileSystem),
+    Normal,
+    Watchman,
+    Eden,
 }
 
 impl FileSystem {
     pub fn pending_changes<M: Matcher + Clone + Send + Sync + 'static>(
         &self,
+        root: PathBuf,
         manifest: Arc<RwLock<TreeManifest>>,
         store: ArcReadFileContents,
         treestate: Rc<RefCell<TreeState>>,
@@ -50,16 +52,24 @@ impl FileSystem {
         _list_unknown: bool,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         match self {
-            Self::Normal(fs) => {
+            Self::Normal => {
+                let fs = PhysicalFileSystem::new(root)?;
                 fs.pending_changes(manifest, store, treestate, matcher, false, last_write, 8)
             }
-            Self::Watchman(fs) => fs.pending_changes(treestate, last_write, manifest, store),
-            Self::Eden(fs) => fs.pending_changes(),
+            Self::Watchman => {
+                let fs = WatchmanFileSystem::new(root)?;
+                fs.pending_changes(treestate, last_write, manifest, store)
+            }
+            Self::Eden => {
+                let fs = EdenFileSystem::new(root)?;
+                fs.pending_changes()
+            }
         }
     }
 }
 
 pub fn status<M: Matcher + Clone + Send + Sync + 'static>(
+    root: PathBuf,
     filesystem: FileSystem,
     manifest: Arc<RwLock<TreeManifest>>,
     store: ArcReadFileContents,
@@ -70,6 +80,7 @@ pub fn status<M: Matcher + Clone + Send + Sync + 'static>(
 ) -> (TreeState, Result<Status>) {
     let treestate = Rc::new(RefCell::new(treestate));
     let result = status_inner(
+        root,
         filesystem,
         manifest,
         store,
@@ -85,6 +96,7 @@ pub fn status<M: Matcher + Clone + Send + Sync + 'static>(
 }
 
 fn status_inner<M: Matcher + Clone + Send + Sync + 'static>(
+    root: PathBuf,
     filesystem: FileSystem,
     manifest: Arc<RwLock<TreeManifest>>,
     store: ArcReadFileContents,
@@ -95,6 +107,7 @@ fn status_inner<M: Matcher + Clone + Send + Sync + 'static>(
 ) -> Result<Status> {
     let pending_changes = filesystem
         .pending_changes(
+            root,
             manifest.clone(),
             store,
             treestate.clone(),

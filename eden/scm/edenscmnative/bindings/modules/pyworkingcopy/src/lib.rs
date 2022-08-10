@@ -87,16 +87,13 @@ py_class!(class status |py| {
         let matcher = extract_option_matcher(py, pymatcher)?;
         let filesystem = match filesystem {
             "normal" => {
-                let fs = workingcopy::physicalfs::PhysicalFileSystem::new(root).map_pyerr(py)?;
-                workingcopy::status::FileSystem::Normal(fs)
+                workingcopy::status::FileSystem::Normal
             },
             "watchman" => {
-                let fs = workingcopy::watchmanfs::WatchmanFileSystem::new(root).map_pyerr(py)?;
-                workingcopy::status::FileSystem::Watchman(fs)
+                workingcopy::status::FileSystem::Watchman
             },
             "eden" => {
-                let fs = workingcopy::edenfs::EdenFileSystem::new(root).map_pyerr(py)?;
-                workingcopy::status::FileSystem::Eden(fs)
+                workingcopy::status::FileSystem::Eden
             },
             _ => return Err(anyhow!("Unsupported filesystem type: {}", filesystem)).map_pyerr(py),
         };
@@ -105,6 +102,7 @@ py_class!(class status |py| {
         let mut option = state.lock();
         let treestate = option.take().expect("TreeState is never taken outside of lock");
         let (treestate, status) = workingcopy::status::status(
+            root,
             filesystem,
             manifest,
             store,
