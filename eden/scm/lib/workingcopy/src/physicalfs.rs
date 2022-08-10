@@ -28,6 +28,7 @@ use crate::filechangedetector::FileChangeResult;
 use crate::filechangedetector::HgModifiedTime;
 use crate::filechangedetector::ResolvedFileChangeResult;
 use crate::filesystem::PendingChangeResult;
+use crate::filesystem::PendingChanges as PendingChangesTrait;
 use crate::walker::WalkEntry;
 use crate::walker::Walker;
 
@@ -35,44 +36,60 @@ type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Sen
 pub struct PhysicalFileSystem {
     // TODO: Make this an Arc<Mutex<VFS>> so we can persist the vfs pathauditor cache
     vfs: VFS,
+    manifest: Arc<RwLock<TreeManifest>>,
+    store: ArcReadFileContents,
+    treestate: Rc<RefCell<TreeState>>,
+    include_directories: bool,
+    last_write: HgModifiedTime,
+    num_threads: u8,
 }
 
 impl PhysicalFileSystem {
-    pub fn new(root: PathBuf) -> Result<Self> {
-        Ok(PhysicalFileSystem {
-            vfs: VFS::new(root)?,
-        })
-    }
-
-    pub fn pending_changes<M: Matcher + Clone + Send + Sync + 'static>(
-        &self,
+    pub fn new(
+        root: PathBuf,
         manifest: Arc<RwLock<TreeManifest>>,
         store: ArcReadFileContents,
         treestate: Rc<RefCell<TreeState>>,
-        matcher: M,
         include_directories: bool,
         last_write: HgModifiedTime,
         num_threads: u8,
+    ) -> Result<Self> {
+        Ok(PhysicalFileSystem {
+            vfs: VFS::new(root)?,
+            manifest,
+            store,
+            treestate,
+            include_directories,
+            last_write,
+            num_threads,
+        })
+    }
+}
+
+impl PendingChangesTrait for PhysicalFileSystem {
+    fn pending_changes<M: Matcher + Clone + Send + Sync + 'static>(
+        &self,
+        matcher: M,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         let walker = Walker::new(
             self.vfs.root().to_path_buf(),
             matcher.clone(),
             false,
-            num_threads,
+            self.num_threads,
         )?;
         let file_change_detector = FileChangeDetector::new(
-            treestate.clone(),
+            self.treestate.clone(),
             self.vfs.clone(),
-            last_write,
-            manifest,
-            store,
+            self.last_write.clone(),
+            self.manifest.clone(),
+            self.store.clone(),
         );
         let pending_changes = PendingChanges {
             walker,
             matcher,
-            treestate,
+            treestate: self.treestate.clone(),
             stage: PendingChangesStage::Walk,
-            include_directories,
+            include_directories: self.include_directories,
             seen: HashSet::new(),
             tree_iter: None,
             lookup_iter: None,

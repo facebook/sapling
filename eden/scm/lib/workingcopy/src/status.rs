@@ -54,8 +54,10 @@ impl FileSystem {
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         match self {
             Self::Normal => {
-                let fs = PhysicalFileSystem::new(root)?;
-                fs.pending_changes(manifest, store, treestate, matcher, false, last_write, 8)
+                let fs = PhysicalFileSystem::new(
+                    root, manifest, store, treestate, false, last_write, 8,
+                )?;
+                fs.pending_changes(matcher)
             }
             Self::Watchman => {
                 let fs = WatchmanFileSystem::new(root, treestate, manifest, store, last_write)?;
