@@ -62,10 +62,35 @@ pub fn status<M: Matcher + Clone + Send + Sync + 'static>(
     filesystem: FileSystem,
     manifest: Arc<RwLock<TreeManifest>>,
     store: ArcReadFileContents,
+    treestate: TreeState,
+    last_write: HgModifiedTime,
+    matcher: M,
+    list_unknown: bool,
+) -> (TreeState, Result<Status>) {
+    let treestate = Arc::new(Mutex::new(treestate));
+    let result = status_inner(
+        filesystem,
+        manifest,
+        store,
+        treestate.clone(),
+        last_write,
+        matcher,
+        list_unknown,
+    );
+    let treestate = Arc::try_unwrap(treestate)
+        .expect("Only a single reference to treestate left")
+        .into_inner();
+    (treestate, result)
+}
+
+fn status_inner<M: Matcher + Clone + Send + Sync + 'static>(
+    filesystem: FileSystem,
+    manifest: Arc<RwLock<TreeManifest>>,
+    store: ArcReadFileContents,
     treestate: Arc<Mutex<TreeState>>,
     last_write: HgModifiedTime,
     matcher: M,
-    _list_unknown: bool,
+    list_unknown: bool,
 ) -> Result<Status> {
     let pending_changes = filesystem
         .pending_changes(
@@ -74,7 +99,7 @@ pub fn status<M: Matcher + Clone + Send + Sync + 'static>(
             treestate.clone(),
             last_write,
             matcher.clone(),
-            _list_unknown,
+            list_unknown,
         )?
         .filter_map(|result| match result {
             Ok(PendingChangeResult::File(change_type)) => {
@@ -90,7 +115,7 @@ pub fn status<M: Matcher + Clone + Send + Sync + 'static>(
 
     compute_status(
         &*manifest.read(),
-        treestate,
+        treestate.clone(),
         pending_changes,
         matcher.clone(),
     )

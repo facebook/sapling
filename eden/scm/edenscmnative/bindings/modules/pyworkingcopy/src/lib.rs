@@ -83,7 +83,6 @@ py_class!(class status |py| {
         let root = pyroot.to_path_buf();
         let manifest = pymanifest.get_underlying(py);
         let store = pystore.into();
-        let treestate = pytreestate.get_state(py);
         let last_write = last_write.into();
         let matcher = extract_option_matcher(py, pymatcher)?;
         let filesystem = match filesystem {
@@ -101,7 +100,11 @@ py_class!(class status |py| {
             },
             _ => return Err(anyhow!("Unsupported filesystem type: {}", filesystem)).map_pyerr(py),
         };
-        let status = workingcopy::status::status(
+
+        let state = pytreestate.get_state(py);
+        let mut option = state.lock();
+        let treestate = option.take().expect("TreeState is never taken outside of lock");
+        let (treestate, status) = workingcopy::status::status(
             filesystem,
             manifest,
             store,
@@ -109,7 +112,10 @@ py_class!(class status |py| {
             last_write,
             matcher,
             listunknown,
-        ).map_pyerr(py)?;
+        );
+        option.replace(treestate);
+
+        let status = status.map_pyerr(py)?;
         pystatus::to_python_status(py, &status)
     }
 });

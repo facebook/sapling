@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
 use std::io::Cursor;
 use std::ops::Deref;
 use std::path::Path;
@@ -42,6 +43,12 @@ pub(crate) struct TreeStateRoot {
     pub file_count: u32,
     pub tree_block_id: BlockId,
     pub metadata: Box<[u8]>,
+}
+
+impl fmt::Debug for TreeState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "TreeState")
+    }
 }
 
 impl TreeState {
