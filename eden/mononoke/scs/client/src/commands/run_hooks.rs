@@ -108,6 +108,13 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                     thrift::HookOutcome::rejected(rej) => HookOutcome::Rejected {
                         reason: rej.long_description,
                     },
+                    thrift::HookOutcome::rejections(rejs) => HookOutcome::Rejected {
+                        reason: rejs
+                            .into_iter()
+                            .map(|rej| rej.long_description)
+                            .collect::<Vec<_>>()
+                            .join("\n"),
+                    },
                     thrift::HookOutcome::UnknownField(_) => anyhow::bail!("Unknown hook outcome"),
                 },
             ))
