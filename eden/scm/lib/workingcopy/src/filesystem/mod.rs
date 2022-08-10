@@ -9,3 +9,4 @@ mod pendingchanges;
 
 pub use pendingchanges::ChangeType;
 pub use pendingchanges::PendingChangeResult;
+pub use pendingchanges::PendingChanges;

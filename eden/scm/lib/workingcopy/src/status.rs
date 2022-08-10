@@ -29,6 +29,7 @@ use crate::edenfs::EdenFileSystem;
 use crate::filechangedetector::HgModifiedTime;
 use crate::filesystem::ChangeType;
 use crate::filesystem::PendingChangeResult;
+use crate::filesystem::PendingChanges;
 use crate::physicalfs::PhysicalFileSystem;
 use crate::watchmanfs::WatchmanFileSystem;
 
@@ -57,8 +58,8 @@ impl FileSystem {
                 fs.pending_changes(manifest, store, treestate, matcher, false, last_write, 8)
             }
             Self::Watchman => {
-                let fs = WatchmanFileSystem::new(root)?;
-                fs.pending_changes(treestate, last_write, manifest, store)
+                let fs = WatchmanFileSystem::new(root, treestate, manifest, store, last_write)?;
+                fs.pending_changes(matcher)
             }
             Self::Eden => {
                 let fs = EdenFileSystem::new(root)?;

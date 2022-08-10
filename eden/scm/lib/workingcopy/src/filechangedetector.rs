@@ -34,7 +34,7 @@ use crate::walker::WalkError;
 pub type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
 
 /// Represents a file modification time in Mercurial, in seconds since the unix epoch.
-#[derive(PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct HgModifiedTime(u64);
 
 impl From<u64> for HgModifiedTime {
