@@ -1223,12 +1223,16 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
   return std::move(serverStream);
 }
 
-apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
-    std::unique_ptr<std::string> mountPoint) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
-  auto mountPath = AbsolutePathPiece{*mountPoint};
-  auto edenMount = server_->getMount(mountPath);
-  auto backingStore = edenMount->getObjectStore()->getBackingStore();
+/**
+ * Helper function to get a cast a BackingStore shared_ptr to a
+ * HgQueuedBackingStore shared_ptr. Returns an error if the type of backingStore
+ * provided is not truly an HgQueuedBackingStore. Used in
+ * EdenServiceHandler::traceHgEvents and
+ * EdenServiceHandler::getRetroactiveHgEvents.
+ */
+std::shared_ptr<HgQueuedBackingStore> castToHgQueuedBackingStore(
+    std::shared_ptr<BackingStore>& backingStore,
+    AbsolutePathPiece mountPath) {
   std::shared_ptr<HgQueuedBackingStore> hgBackingStore{nullptr};
 
   // TODO: remove these dynamic casts in favor of a QueryInterface method
@@ -1248,12 +1252,92 @@ apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
   if (!hgBackingStore) {
     // typeid() does not evaluate expressions
     auto& r = *backingStore.get();
-    throw std::runtime_error(folly::to<std::string>(
-        "mount ",
-        mountPath,
-        " must use HgQueuedBackingStore, type is ",
-        typeid(r).name()));
+    throw newEdenError(
+        EdenErrorType::GENERIC_ERROR,
+        folly::to<std::string>(
+            "mount ",
+            mountPath,
+            " must use HgQueuedBackingStore, type is ",
+            typeid(r).name()));
   }
+
+  return hgBackingStore;
+}
+
+/**
+ * Helper function to convert an HgImportTraceEvent to a thrift HgEvent type.
+ * Used in EdenServiceHandler::traceHgEvents and
+ * EdenServiceHandler::getRetroactiveHgEvents.
+ */
+void convertHgImportTraceEventToHgEvent(
+    const HgImportTraceEvent& event,
+    HgEvent& te) {
+  te.times_ref() = thriftTraceEventTimes(event);
+  switch (event.eventType) {
+    case HgImportTraceEvent::QUEUE:
+      te.eventType_ref() = HgEventType::QUEUE;
+      break;
+    case HgImportTraceEvent::START:
+      te.eventType_ref() = HgEventType::START;
+      break;
+    case HgImportTraceEvent::FINISH:
+      te.eventType_ref() = HgEventType::FINISH;
+      break;
+  }
+
+  switch (event.resourceType) {
+    case HgImportTraceEvent::BLOB:
+      te.resourceType_ref() = HgResourceType::BLOB;
+      break;
+    case HgImportTraceEvent::TREE:
+      te.resourceType_ref() = HgResourceType::TREE;
+      break;
+  }
+
+  switch (event.importPriority) {
+    case ImportPriorityKind::Low:
+      te.importPriority_ref() = HgImportPriority::LOW;
+      break;
+    case ImportPriorityKind::Normal:
+      te.importPriority_ref() = HgImportPriority::NORMAL;
+      break;
+    case ImportPriorityKind::High:
+      te.importPriority_ref() = HgImportPriority::HIGH;
+      break;
+  }
+
+  switch (event.importCause) {
+    case ObjectFetchContext::Cause::Unknown:
+      te.importCause_ref() = HgImportCause::UNKNOWN;
+      break;
+    case ObjectFetchContext::Cause::Fs:
+      te.importCause_ref() = HgImportCause::FS;
+      break;
+    case ObjectFetchContext::Cause::Thrift:
+      te.importCause_ref() = HgImportCause::THRIFT;
+      break;
+    case ObjectFetchContext::Cause::Prefetch:
+      te.importCause_ref() = HgImportCause::PREFETCH;
+      break;
+  }
+
+  te.unique_ref() = event.unique;
+
+  te.manifestNodeId_ref() = event.manifestNodeId.toString();
+  te.path_ref() = event.getPath();
+
+  // TODO: trace requesting pid
+  // te.requestInfo_ref() = thriftRequestInfo(pid);
+}
+
+apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
+    std::unique_ptr<std::string> mountPoint) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
+  auto mountPath = AbsolutePathPiece{*mountPoint};
+  auto edenMount = server_->getMount(mountPath);
+  auto backingStore = edenMount->getObjectStore()->getBackingStore();
+  std::shared_ptr<HgQueuedBackingStore> hgBackingStore =
+      castToHgQueuedBackingStore(backingStore, mountPath);
 
   struct Context {
     TraceSubscriptionHandle<HgImportTraceEvent> subHandle;
@@ -1270,65 +1354,9 @@ apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
       folly::to<std::string>("hgtrace-", edenMount->getPath().basename()),
       [publisher = ThriftStreamPublisherOwner{std::move(publisher)}](
           const HgImportTraceEvent& event) {
-        HgEvent te;
-        te.times_ref() = thriftTraceEventTimes(event);
-        switch (event.eventType) {
-          case HgImportTraceEvent::QUEUE:
-            te.eventType_ref() = HgEventType::QUEUE;
-            break;
-          case HgImportTraceEvent::START:
-            te.eventType_ref() = HgEventType::START;
-            break;
-          case HgImportTraceEvent::FINISH:
-            te.eventType_ref() = HgEventType::FINISH;
-            break;
-        }
-
-        switch (event.resourceType) {
-          case HgImportTraceEvent::BLOB:
-            te.resourceType_ref() = HgResourceType::BLOB;
-            break;
-          case HgImportTraceEvent::TREE:
-            te.resourceType_ref() = HgResourceType::TREE;
-            break;
-        }
-
-        switch (event.importPriority) {
-          case ImportPriorityKind::Low:
-            te.importPriority_ref() = HgImportPriority::LOW;
-            break;
-          case ImportPriorityKind::Normal:
-            te.importPriority_ref() = HgImportPriority::NORMAL;
-            break;
-          case ImportPriorityKind::High:
-            te.importPriority_ref() = HgImportPriority::HIGH;
-            break;
-        }
-
-        switch (event.importCause) {
-          case ObjectFetchContext::Cause::Unknown:
-            te.importCause_ref() = HgImportCause::UNKNOWN;
-            break;
-          case ObjectFetchContext::Cause::Fs:
-            te.importCause_ref() = HgImportCause::FS;
-            break;
-          case ObjectFetchContext::Cause::Thrift:
-            te.importCause_ref() = HgImportCause::THRIFT;
-            break;
-          case ObjectFetchContext::Cause::Prefetch:
-            te.importCause_ref() = HgImportCause::PREFETCH;
-            break;
-        }
-
-        te.unique_ref() = event.unique;
-
-        te.manifestNodeId_ref() = event.manifestNodeId.toString();
-        te.path_ref() = event.getPath();
-
-        // TODO: trace requesting pid
-        // te.requestInfo_ref() = thriftRequestInfo(pid);
-
-        publisher.next(te);
+        HgEvent thriftEvent;
+        convertHgImportTraceEventToHgEvent(event, thriftEvent);
+        publisher.next(thriftEvent);
       });
 
   return std::move(serverStream);
@@ -3312,6 +3340,35 @@ void EdenServiceHandler::getTracePoints(std::vector<TracePoint>& result) {
     }
     result.emplace_back(std::move(tp));
   }
+}
+
+void EdenServiceHandler::getRetroactiveHgEvents(
+    GetRetroactiveHgEventsResult& result,
+    std::unique_ptr<GetRetroactiveHgEventsParams> params) {
+  auto mountPoint = params->get_mountPoint();
+  auto mountPath = AbsolutePathPiece{mountPoint};
+  auto edenMount = server_->getMount(mountPath);
+  auto backingStore = edenMount->getObjectStore()->getBackingStore();
+  std::shared_ptr<HgQueuedBackingStore> hgBackingStore =
+      castToHgQueuedBackingStore(backingStore, mountPath);
+
+  if (!hgBackingStore->getActivityBuffer().has_value()) {
+    throw newEdenError(
+        ENOTSUP,
+        EdenErrorType::POSIX_ERROR,
+        "ActivityBuffer not initialized in HgQueuedBackingStore.");
+  }
+
+  std::vector<HgEvent> thriftEvents;
+  auto bufferEvents = hgBackingStore->getActivityBuffer()->getAllEvents();
+  thriftEvents.reserve(bufferEvents.size());
+  for (auto const& event : bufferEvents) {
+    HgEvent thriftEvent{};
+    convertHgImportTraceEventToHgEvent(event, thriftEvent);
+    thriftEvents.push_back(std::move(thriftEvent));
+  }
+
+  result.events() = std::move(thriftEvents);
 }
 
 void EdenServiceHandler::getRetroactiveInodeEvents(

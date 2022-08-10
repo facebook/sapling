@@ -316,6 +316,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   void disableTracing() override;
   void getTracePoints(std::vector<TracePoint>& result) override;
 
+  void getRetroactiveHgEvents(
+      GetRetroactiveHgEventsResult& result,
+      std::unique_ptr<GetRetroactiveHgEventsParams> params) override;
+
   void getRetroactiveInodeEvents(
       GetRetroactiveInodeEventsResult& result,
       std::unique_ptr<GetRetroactiveInodeEventsParams> params) override;
