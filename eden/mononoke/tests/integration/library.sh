@@ -1350,7 +1350,6 @@ function lfs_server {
       opts=("${opts[@]}" "$1")
       shift
     elif
-      [[ "$1" = "--allowed-test-identity" ]] ||
       [[ "$1" = "--scuba-log-file" ]] ||
       [[ "$1" = "--max-upload-size" ]]
     then

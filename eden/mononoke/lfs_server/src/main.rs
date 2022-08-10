@@ -12,7 +12,6 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use std::net::ToSocketAddrs;
-use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -23,7 +22,6 @@ use anyhow::Context;
 use anyhow::Error;
 use cached_config::ConfigHandle;
 use clap::Arg;
-use clap::Values;
 use cloned::cloned;
 use cmdlib::args;
 use cmdlib::args::CachelibSettings;
@@ -53,12 +51,10 @@ use hyper::header::HeaderValue;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::RepoConfig;
 use mononoke_app::args::parse_config_spec_to_path;
-use permission_checker::ArcPermissionChecker;
-use permission_checker::MononokeIdentitySet;
-use permission_checker::PermissionCheckerBuilder;
 use repo_blobstore::RepoBlobstore;
 use repo_factory::RepoFactory;
 use repo_identity::RepoIdentity;
+use repo_permission_checker::RepoPermissionChecker;
 use slog::info;
 use tokio::net::TcpListener;
 
@@ -95,11 +91,9 @@ const ARG_ALWAYS_WAIT_FOR_UPSTREAM: &str = "always-wait-for-upstream";
 const ARG_LIVE_CONFIG: &str = "live-config";
 const ARG_LIVE_CONFIG_FETCH_INTERVAL: &str = "live-config-fetch-interval";
 const ARG_TRUSTED_PROXY_IDENTITY: &str = "trusted-proxy-identity";
-const ARG_TEST_IDENTITY: &str = "allowed-test-identity";
 const ARG_TEST_FRIENDLY_LOGGING: &str = "test-friendly-logging";
 const ARG_TLS_SESSION_DATA_LOG_FILE: &str = "tls-session-data-log-file";
 const ARG_MAX_UPLOAD_SIZE: &str = "max-upload-size";
-const ARG_DISABLE_ACL_CHECKER: &str = "disable-acl-checker";
 const ARG_GIT_BLOB_UPLOAD_ALLOWED: &str = "git-blob-upload-allowed";
 
 const SERVICE_NAME: &str = "mononoke_lfs_server";
@@ -123,6 +117,9 @@ pub struct Repo {
 
     #[facet]
     repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    repo_permission_checker: dyn RepoPermissionChecker,
 }
 
 #[fbinit::main]
@@ -226,15 +223,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .help("This is now unused"),
         )
         .arg(
-            Arg::with_name(ARG_TEST_IDENTITY)
-                .long(ARG_TEST_IDENTITY)
-                .takes_value(true)
-                .multiple(true)
-                .number_of_values(1)
-                .required(false)
-                .help("Test identity to allow (NOTE: this will disable AclChecker)"),
-        )
-        .arg(
             Arg::with_name(ARG_TEST_FRIENDLY_LOGGING)
                 .long(ARG_TEST_FRIENDLY_LOGGING)
                 .takes_value(false)
@@ -258,13 +246,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .takes_value(true)
                 .required(false)
                 .help("A limit (in bytes) to enforce for uploads."),
-        )
-        .arg(
-            Arg::with_name(ARG_DISABLE_ACL_CHECKER)
-                .long(ARG_DISABLE_ACL_CHECKER)
-                .takes_value(false)
-                .required(false)
-                .help("Whether to disable ACL checks (only use this locally!)"),
         )
         .arg(
             Arg::with_name(ARG_GIT_BLOB_UPLOAD_ALLOWED)
@@ -315,19 +296,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let scuba_logger = matches.scuba_sample_builder();
 
-    let test_idents = idents_from_values(matches.values_of(ARG_TEST_IDENTITY))?;
-    let disable_acl_checker = matches.is_present(ARG_DISABLE_ACL_CHECKER);
-
-    let test_acl_checker = if !test_idents.is_empty() {
-        Some(ArcPermissionChecker::from(
-            PermissionCheckerBuilder::new()
-                .allow_allowlist(test_idents)
-                .build(),
-        ))
-    } else {
-        None
-    };
-
     let will_exit = Arc::new(AtomicBool::new(false));
 
     let config_handle = match matches.value_of(ARG_LIVE_CONFIG) {
@@ -361,35 +329,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .into_iter()
         .filter(|(_name, config)| config.enabled)
         .map({
-            cloned!(repo_factory, test_acl_checker, logger);
+            cloned!(repo_factory);
             move |(name, config)| {
-                cloned!(test_acl_checker, logger, repo_factory, config.hipster_acl);
+                cloned!(repo_factory);
                 async move {
-                    let aclchecker = if let Some(test_checker) = test_acl_checker {
-                        test_checker
-                    } else {
-                        ArcPermissionChecker::from(match (disable_acl_checker, hipster_acl) {
-                            (true, _) | (false, None) => {
-                                PermissionCheckerBuilder::new().allow_all().build()
-                            }
-                            (_, Some(acl)) => {
-                                info!(
-                                    logger,
-                                    "{}: Actions will be checked against {} ACL", name, acl
-                                );
-                                PermissionCheckerBuilder::new()
-                                    .allow(repo_factory.acl_provider().repo_acl(&acl).await?)
-                                    .build()
-                            }
-                        })
-                    };
-
                     let repo = repo_factory.build(name.clone(), config.clone()).await?;
 
-                    Result::<(String, (Repo, ArcPermissionChecker, RepoConfig)), Error>::Ok((
-                        name,
-                        (repo, aclchecker, config),
-                    ))
+                    Result::<(String, (Repo, RepoConfig)), Error>::Ok((name, (repo, config)))
                 }
             }
         });
@@ -521,11 +467,4 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     info!(&logger, "Exiting...");
     Ok(())
-}
-
-fn idents_from_values(matches: Option<Values>) -> Result<MononokeIdentitySet, Error> {
-    match matches {
-        Some(matches) => matches.map(FromStr::from_str).collect(),
-        None => Ok(MononokeIdentitySet::new()),
-    }
 }

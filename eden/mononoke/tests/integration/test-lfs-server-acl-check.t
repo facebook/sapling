@@ -6,6 +6,18 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
+  $ cat >> "$ACL_FILE" << ACLS
+  > {
+  >   "repos": {
+  >     "open": {
+  >       "actions": {
+  >         "read": ["USER:test"]
+  >       }
+  >     }
+  >   }
+  > }
+  > ACLS
+
   $ setup_common_config
   $ enable lfs
 
@@ -13,7 +25,7 @@
   $ REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config repo1
 
 # Create a repository with ACL checking enforcement
-  $ ENFORCE_LFS_ACL_CHECK=1 REPOID=2 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config repo2
+  $ ENFORCE_LFS_ACL_CHECK=1 ACL_NAME=open REPOID=2 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config repo2
 
   $ LIVE_CONFIG="${LOCAL_CONFIGERATOR_PATH}/live.json"
   $ cat > "$LIVE_CONFIG" << EOF
@@ -28,7 +40,7 @@
 
 # Start an LFS server
   $ LFS_LOG="$TESTTMP/lfs.log"
-  $ LFS_ROOT="$(lfs_server --log "$LFS_LOG" --tls --live-config "$(get_configerator_relative_path "${LIVE_CONFIG}")" --allowed-test-identity USER:test)"
+  $ LFS_ROOT="$(lfs_server --log "$LFS_LOG" --tls --live-config "$(get_configerator_relative_path "${LIVE_CONFIG}")")"
   $ LFS_URI="$LFS_ROOT/repo1"
   $ LFS_URI_REPO_ENFORCE_ACL="$LFS_ROOT/repo2"
 

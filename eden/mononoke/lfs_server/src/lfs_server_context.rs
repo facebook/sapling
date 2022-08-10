@@ -45,8 +45,9 @@ use lfs_protocol::RequestObject;
 use lfs_protocol::ResponseBatch;
 use metaconfig_types::RepoConfig;
 use mononoke_types::ContentId;
-use permission_checker::ArcPermissionChecker;
 use permission_checker::MononokeIdentitySet;
+use repo_permission_checker::RepoPermissionChecker;
+use repo_permission_checker::RepoPermissionCheckerRef;
 use slog::Logger;
 use tokio::runtime::Handle;
 
@@ -59,13 +60,11 @@ use crate::Repo;
 
 pub type HttpsHyperClient = Client<HttpsConnector<HttpConnector>>;
 
-// For some reason Source Control uses the read action to decide if a user can write to a repo...
-const ACL_CHECK_ACTION: &str = "read";
 // The user agent string presented to upstream
 const CLIENT_USER_AGENT: &str = "mononoke-lfs-server/0.1.0 git/2.15.1";
 
 struct LfsServerContextInner {
-    repositories: HashMap<String, (Repo, ArcPermissionChecker, RepoConfig)>,
+    repositories: HashMap<String, (Repo, RepoConfig)>,
     client: Arc<HttpsHyperClient>,
     server: Arc<ServerUris>,
     always_wait_for_upstream: bool,
@@ -81,7 +80,7 @@ pub struct LfsServerContext {
 
 impl LfsServerContext {
     pub fn new(
-        repositories: HashMap<String, (Repo, ArcPermissionChecker, RepoConfig)>,
+        repositories: HashMap<String, (Repo, RepoConfig)>,
         server: ServerUris,
         always_wait_for_upstream: bool,
         max_upload_size: Option<u64>,
@@ -117,7 +116,6 @@ impl LfsServerContext {
     ) -> Result<RepositoryRequestContext, LfsServerContextErrorKind> {
         let (
             repo,
-            aclchecker,
             client,
             server,
             always_wait_for_upstream,
@@ -128,9 +126,8 @@ impl LfsServerContext {
             let inner = self.inner.lock().expect("poisoned lock");
 
             match inner.repositories.get(&repository) {
-                Some((repo, aclchecker, repo_config)) => (
+                Some((repo, repo_config)) => (
                     repo.clone(),
-                    aclchecker.clone(),
                     inner.client.clone(),
                     inner.server.clone(),
                     inner.always_wait_for_upstream,
@@ -150,7 +147,7 @@ impl LfsServerContext {
         let enforce_authentication = config.enforce_authentication();
 
         acl_check(
-            aclchecker,
+            repo.repo_permission_checker(),
             identities,
             enforce_acl_check,
             enforce_authentication,
@@ -191,7 +188,7 @@ impl LfsServerContext {
 }
 
 async fn acl_check(
-    aclchecker: ArcPermissionChecker,
+    permission_checker: &dyn RepoPermissionChecker,
     identities: Option<&MononokeIdentitySet>,
     enforce_authorization: bool,
     enforce_authentication: bool,
@@ -204,8 +201,8 @@ async fn acl_check(
         None => Cow::Owned(MononokeIdentitySet::new()),
     };
 
-    let acl_check = aclchecker
-        .check_set(identities.as_ref(), &[ACL_CHECK_ACTION])
+    let acl_check = permission_checker
+        .check_if_draft_access_allowed(identities.as_ref())
         .await;
 
     if !acl_check && enforce_authorization {
@@ -541,7 +538,7 @@ mod test {
     use lfs_protocol::Sha256 as LfsSha256;
     use mononoke_types::hash::Sha256;
     use mononoke_types::ContentId;
-    use permission_checker::PermissionCheckerBuilder;
+    use repo_permission_checker::AlwaysAllowMockRepoPermissionChecker;
     use test_repo_factory::TestRepoFactory;
 
     use super::*;
@@ -840,9 +837,9 @@ mod test {
 
     #[fbinit::test]
     async fn test_acl_check_no_certificates(_fb: FacebookInit) -> Result<(), Error> {
-        let aclchecker = PermissionCheckerBuilder::new().allow_all().build().into();
+        let aclchecker = AlwaysAllowMockRepoPermissionChecker::new();
 
-        let res = acl_check(aclchecker, None, false, true).await;
+        let res = acl_check(&aclchecker, None, false, true).await;
 
         match res.err().unwrap() {
             LfsServerContextErrorKind::NotAuthenticated => Ok(()),
