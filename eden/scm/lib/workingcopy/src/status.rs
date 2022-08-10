@@ -42,14 +42,14 @@ pub enum FileSystem {
 }
 
 impl FileSystem {
-    pub fn pending_changes<M: Matcher + Clone + Send + Sync + 'static>(
+    pub fn pending_changes(
         &self,
         root: PathBuf,
         manifest: Arc<RwLock<TreeManifest>>,
         store: ArcReadFileContents,
         treestate: Rc<RefCell<TreeState>>,
         last_write: HgModifiedTime,
-        matcher: M,
+        matcher: Arc<dyn Matcher + Send + Sync + 'static>,
         _list_unknown: bool,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         match self {
@@ -71,14 +71,14 @@ impl FileSystem {
     }
 }
 
-pub fn status<M: Matcher + Clone + Send + Sync + 'static>(
+pub fn status(
     root: PathBuf,
     filesystem: FileSystem,
     manifest: Arc<RwLock<TreeManifest>>,
     store: ArcReadFileContents,
     treestate: TreeState,
     last_write: HgModifiedTime,
-    matcher: M,
+    matcher: Arc<dyn Matcher + Send + Sync + 'static>,
     list_unknown: bool,
 ) -> (TreeState, Result<Status>) {
     let treestate = Rc::new(RefCell::new(treestate));
@@ -98,14 +98,14 @@ pub fn status<M: Matcher + Clone + Send + Sync + 'static>(
     (treestate, result)
 }
 
-fn status_inner<M: Matcher + Clone + Send + Sync + 'static>(
+fn status_inner(
     root: PathBuf,
     filesystem: FileSystem,
     manifest: Arc<RwLock<TreeManifest>>,
     store: ArcReadFileContents,
     treestate: Rc<RefCell<TreeState>>,
     last_write: HgModifiedTime,
-    matcher: M,
+    matcher: Arc<dyn Matcher + Send + Sync + 'static>,
     list_unknown: bool,
 ) -> Result<Status> {
     let pending_changes = filesystem
@@ -140,11 +140,11 @@ fn status_inner<M: Matcher + Clone + Send + Sync + 'static>(
 
 /// Compute the status of the working copy relative to the current commit.
 #[allow(unused_variables)]
-pub fn compute_status<M: Matcher + Clone + Send + Sync + 'static>(
+pub fn compute_status(
     manifest: &impl Manifest,
     treestate: Rc<RefCell<TreeState>>,
     pending_changes: impl Iterator<Item = Result<ChangeType>>,
-    matcher: M,
+    matcher: Arc<dyn Matcher + Send + Sync + 'static>,
 ) -> Result<Status> {
     let mut modified = vec![];
     let mut added = vec![];
@@ -449,7 +449,7 @@ mod tests {
         });
 
         // Compute the status.
-        let matcher = pathmatcher::AlwaysMatcher::new();
+        let matcher = Arc::new(pathmatcher::AlwaysMatcher::new());
         compute_status(&manifest, treestate, changes, matcher)
     }
 

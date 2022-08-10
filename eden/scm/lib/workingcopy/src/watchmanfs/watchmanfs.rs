@@ -79,13 +79,10 @@ impl WatchmanFileSystem {
 }
 
 impl PendingChanges for WatchmanFileSystem {
-    fn pending_changes<M>(
+    fn pending_changes(
         &self,
-        _matcher: M,
-    ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>>
-    where
-        M: Matcher + Clone + Send + Sync,
-    {
+        _matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+    ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         let state = WatchmanState::new(WatchmanTreeState {
             treestate: self.treestate.clone(),
         })?;

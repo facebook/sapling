@@ -67,9 +67,9 @@ impl PhysicalFileSystem {
 }
 
 impl PendingChangesTrait for PhysicalFileSystem {
-    fn pending_changes<M: Matcher + Clone + Send + Sync + 'static>(
+    fn pending_changes(
         &self,
-        matcher: M,
+        matcher: Arc<dyn Matcher + Send + Sync + 'static>,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         let walker = Walker::new(
             self.vfs.root().to_path_buf(),

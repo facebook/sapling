@@ -6,6 +6,7 @@
  */
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
@@ -28,13 +29,10 @@ impl EdenFileSystem {
 }
 
 impl PendingChanges for EdenFileSystem {
-    fn pending_changes<M>(
+    fn pending_changes(
         &self,
-        _matcher: M,
-    ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>>
-    where
-        M: Matcher + Clone + Send + Sync,
-    {
+        _matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+    ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         let result = edenfs_client::status::get_status(&self.root)?;
         Ok(Box::new(result.status.entries.into_iter().filter_map(
             |(path, status)| {

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::Result;
 use pathmatcher::Matcher;
 use serde::Serialize;
@@ -32,10 +34,8 @@ pub enum PendingChangeResult {
 }
 
 pub trait PendingChanges {
-    fn pending_changes<M>(
+    fn pending_changes(
         &self,
-        matcher: M,
-    ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>>
-    where
-        M: Matcher + Clone + Send + Sync + 'static;
+        matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+    ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>>;
 }
