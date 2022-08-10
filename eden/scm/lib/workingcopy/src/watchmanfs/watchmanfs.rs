@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::cell::RefCell;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use anyhow::Result;
 use manifest_tree::TreeManifest;
-use parking_lot::Mutex;
 use parking_lot::RwLock;
 use treestate::treestate::TreeState;
 use vfs::VFS;
@@ -37,13 +38,13 @@ impl WatchmanFileSystem {
 
     pub fn pending_changes(
         &self,
-        treestate: Arc<Mutex<TreeState>>,
+        treestate: Rc<RefCell<TreeState>>,
         last_write: HgModifiedTime,
         manifest: Arc<RwLock<TreeManifest>>,
         store: ArcReadFileContents,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         let state = WatchmanState::new(WatchmanTreeState {
-            treestate: treestate.lock(),
+            treestate: treestate.clone(),
         })?;
 
         let result = async_runtime::block_on(self.query_result(&state))?;
@@ -58,7 +59,7 @@ impl WatchmanFileSystem {
         let mut pending_changes = state.merge(result, file_change_detector)?;
 
         pending_changes.persist(WatchmanTreeState {
-            treestate: treestate.lock(),
+            treestate: treestate.clone(),
         })?;
 
         Ok(Box::new(pending_changes.into_iter()))

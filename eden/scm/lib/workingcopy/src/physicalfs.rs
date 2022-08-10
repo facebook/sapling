@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::cell::RefCell;
 use std::collections::HashSet;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use anyhow::Result;
 use manifest_tree::TreeManifest;
-use parking_lot::Mutex;
 use parking_lot::RwLock;
 use pathmatcher::Matcher;
 use storemodel::ReadFileContents;
@@ -47,7 +48,7 @@ impl PhysicalFileSystem {
         &self,
         manifest: Arc<RwLock<TreeManifest>>,
         store: ArcReadFileContents,
-        treestate: Arc<Mutex<TreeState>>,
+        treestate: Rc<RefCell<TreeState>>,
         matcher: M,
         include_directories: bool,
         last_write: HgModifiedTime,
@@ -84,7 +85,7 @@ impl PhysicalFileSystem {
 pub struct PendingChanges<M: Matcher + Clone + Send + Sync + 'static> {
     walker: Walker<M>,
     matcher: M,
-    treestate: Arc<Mutex<TreeState>>,
+    treestate: Rc<RefCell<TreeState>>,
     stage: PendingChangesStage,
     include_directories: bool,
     seen: HashSet<RepoPathBuf>,
@@ -200,13 +201,11 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
 
     /// Returns the files in the treestate that are from p1.
     /// We only care about files from p1 because pending_changes is relative to p1.
-    fn get_tracked_from_p1(&mut self) -> Result<Vec<RepoPathBuf>> {
-        let mut treestate = self.treestate.lock();
-
+    fn get_tracked_from_p1(&self) -> Result<Vec<RepoPathBuf>> {
         let mut result = Vec::new();
         let mask = StateFlags::EXIST_P1;
 
-        treestate.visit(
+        self.treestate.borrow_mut().visit(
             &mut |components, _| {
                 let path = components.concat();
                 let path = RepoPathBuf::from_utf8(path)?;

@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::cell::RefCell;
 use std::fs::Metadata;
+use std::rc::Rc;
 use std::sync::Arc;
 use std::time::SystemTime;
 
@@ -14,7 +16,6 @@ use anyhow::Result;
 use futures::StreamExt;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
-use parking_lot::Mutex;
 use parking_lot::RwLock;
 use pathmatcher::ExactMatcher;
 use storemodel::ReadFileContents;
@@ -83,7 +84,7 @@ pub trait FileChangeDetectorTrait {
 }
 
 pub struct FileChangeDetector {
-    treestate: Arc<Mutex<TreeState>>,
+    treestate: Rc<RefCell<TreeState>>,
     vfs: VFS,
     last_write: HgModifiedTime,
     lookups: Vec<RepoPathBuf>,
@@ -93,7 +94,7 @@ pub struct FileChangeDetector {
 
 impl FileChangeDetector {
     pub fn new(
-        treestate: Arc<Mutex<TreeState>>,
+        treestate: Rc<RefCell<TreeState>>,
         vfs: VFS,
         last_write: HgModifiedTime,
         manifest: Arc<RwLock<TreeManifest>>,
@@ -204,9 +205,9 @@ impl FileChangeDetector {
         Ok(FileChangeResult::No)
     }
 
-    fn get_treestate(&mut self, path: &RepoPathBuf) -> Result<Option<FileStateV2>> {
-        let mut treestate = self.treestate.lock();
-        treestate
+    fn get_treestate(&self, path: &RepoPathBuf) -> Result<Option<FileStateV2>> {
+        self.treestate
+            .borrow_mut()
             .get(path)
             .map(|option| option.map(|state| state.clone()))
     }

@@ -5,14 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use anyhow::Result;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
-use parking_lot::Mutex;
 use parking_lot::RwLock;
 use pathmatcher::ExactMatcher;
 use pathmatcher::Matcher;
@@ -43,7 +44,7 @@ impl FileSystem {
         &self,
         manifest: Arc<RwLock<TreeManifest>>,
         store: ArcReadFileContents,
-        treestate: Arc<Mutex<TreeState>>,
+        treestate: Rc<RefCell<TreeState>>,
         last_write: HgModifiedTime,
         matcher: M,
         _list_unknown: bool,
@@ -67,7 +68,7 @@ pub fn status<M: Matcher + Clone + Send + Sync + 'static>(
     matcher: M,
     list_unknown: bool,
 ) -> (TreeState, Result<Status>) {
-    let treestate = Arc::new(Mutex::new(treestate));
+    let treestate = Rc::new(RefCell::new(treestate));
     let result = status_inner(
         filesystem,
         manifest,
@@ -77,7 +78,7 @@ pub fn status<M: Matcher + Clone + Send + Sync + 'static>(
         matcher,
         list_unknown,
     );
-    let treestate = Arc::try_unwrap(treestate)
+    let treestate = Rc::try_unwrap(treestate)
         .expect("Only a single reference to treestate left")
         .into_inner();
     (treestate, result)
@@ -87,7 +88,7 @@ fn status_inner<M: Matcher + Clone + Send + Sync + 'static>(
     filesystem: FileSystem,
     manifest: Arc<RwLock<TreeManifest>>,
     store: ArcReadFileContents,
-    treestate: Arc<Mutex<TreeState>>,
+    treestate: Rc<RefCell<TreeState>>,
     last_write: HgModifiedTime,
     matcher: M,
     list_unknown: bool,
@@ -125,7 +126,7 @@ fn status_inner<M: Matcher + Clone + Send + Sync + 'static>(
 #[allow(unused_variables)]
 pub fn compute_status<M: Matcher + Clone + Send + Sync + 'static>(
     manifest: &impl Manifest,
-    treestate: Arc<Mutex<TreeState>>,
+    treestate: Rc<RefCell<TreeState>>,
     pending_changes: impl Iterator<Item = Result<ChangeType>>,
     matcher: M,
 ) -> Result<Status> {
@@ -139,7 +140,7 @@ pub fn compute_status<M: Matcher + Clone + Send + Sync + 'static>(
     // We may have a TreeState that only holds files that are being added/removed
     // (for example, in a repo backed by EdenFS). In this case, we need to make a note
     // of these paths to later query the manifest to determine if they're known or unknown files.
-    let mut treestate = treestate.lock();
+
     // Changed files that don't exist in the TreeState. Maps to (is_deleted, in_manifest).
     let mut manifest_files = HashMap::<RepoPathBuf, (bool, bool)>::new();
     for change in pending_changes {
@@ -149,7 +150,7 @@ pub fn compute_status<M: Matcher + Clone + Send + Sync + 'static>(
             Err(e) => return Err(e),
         };
 
-        match treestate.get(&path)? {
+        match treestate.borrow_mut().get(&path)? {
             Some(state) => {
                 let exist_parent = state
                     .state
@@ -215,7 +216,7 @@ pub fn compute_status<M: Matcher + Clone + Send + Sync + 'static>(
     // A file that's "added" in the tree (doesn't exist in a parent, but exists in the next
     // commit) but isn't in "pending changes" must have been deleted on the filesystem.
     walk_treestate(
-        &mut treestate,
+        &treestate,
         StateFlags::EXIST_NEXT,
         StateFlags::EXIST_P1 | StateFlags::EXIST_P2,
         |path, state| {
@@ -232,7 +233,7 @@ pub fn compute_status<M: Matcher + Clone + Send + Sync + 'static>(
     //   Otherwise, if they don't exist in the filesystem (which we determine by checking if they
     //   were in pending changes), they're either "deleted" or "removed" (based on EXIST_NEXT).
     walk_treestate(
-        &mut treestate,
+        &treestate,
         StateFlags::EXIST_P2,
         StateFlags::EXIST_P1,
         |path, state| {
@@ -252,7 +253,7 @@ pub fn compute_status<M: Matcher + Clone + Send + Sync + 'static>(
     // pending changes (e.g. even if the file still exists). Files that are in P2 but
     // not P1 are handled above, so we only need to handle files in P1 here.
     walk_treestate(
-        &mut treestate,
+        &treestate,
         StateFlags::EXIST_P1,
         StateFlags::EXIST_NEXT,
         |path, state| {
@@ -266,7 +267,7 @@ pub fn compute_status<M: Matcher + Clone + Send + Sync + 'static>(
     // Handle "retroactive copies": when a clean file is marked as having been copied
     // from another file. These files should be marked as "modified".
     walk_treestate(
-        &mut treestate,
+        &treestate,
         StateFlags::COPIED,
         StateFlags::empty(),
         |path, state| {
@@ -289,13 +290,13 @@ pub fn compute_status<M: Matcher + Clone + Send + Sync + 'static>(
 /// Walk the TreeState, calling the callback for files that have all flags in [`state_all`]
 /// and none of the flags in [`state_none`].
 fn walk_treestate(
-    treestate: &mut TreeState,
+    treestate: &Rc<RefCell<TreeState>>,
     state_all: StateFlags,
     state_none: StateFlags,
     mut callback: impl FnMut(RepoPathBuf, StateFlags) -> Result<()>,
 ) -> Result<()> {
     let file_mask = state_all | state_none;
-    treestate.visit(
+    treestate.borrow_mut().visit(
         &mut |components, state| {
             let path = RepoPathBuf::from_utf8(components.concat())?;
             (callback)(path, state.state)?;
@@ -416,7 +417,7 @@ mod tests {
                 state.insert(path, &file_state).expect("insert");
             }
         }
-        let treestate = Arc::new(Mutex::new(state));
+        let treestate = Rc::new(RefCell::new(state));
         let manifest = DummyManifest {
             files: manifest_files,
         };

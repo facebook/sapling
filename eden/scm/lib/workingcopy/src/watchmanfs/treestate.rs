@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use anyhow::anyhow;
 use anyhow::Result;
-use parking_lot::MutexGuard;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::metadata::Metadata;
@@ -30,13 +32,15 @@ pub trait WatchmanTreeStateRead {
     fn get_clock(&self) -> Result<Option<Clock>>;
 }
 
-pub struct WatchmanTreeState<'a> {
-    pub treestate: MutexGuard<'a, TreeState>,
+pub struct WatchmanTreeState {
+    pub treestate: Rc<RefCell<TreeState>>,
 }
 
-impl WatchmanTreeStateWrite for WatchmanTreeState<'_> {
+impl WatchmanTreeStateWrite for WatchmanTreeState {
     fn mark_needs_check(&mut self, path: &RepoPathBuf) -> Result<()> {
-        let state = self.treestate.get(path)?;
+        let mut treestate = self.treestate.borrow_mut();
+
+        let state = treestate.get(path)?;
         let filestate = match state {
             Some(filestate) => {
                 let filestate = filestate.clone();
@@ -54,23 +58,27 @@ impl WatchmanTreeStateWrite for WatchmanTreeState<'_> {
                 copied: None,
             },
         };
-        self.treestate.insert(path, &filestate)
+        treestate.insert(path, &filestate)
     }
 
     fn clear_needs_check(&mut self, path: &RepoPathBuf) -> Result<()> {
-        let state = self.treestate.get(path)?;
+        let mut treestate = self.treestate.borrow_mut();
+
+        let state = treestate.get(path)?;
         if let Some(filestate) = state {
             let filestate = filestate.clone();
             let filestate = FileStateV2 {
                 state: filestate.state & !StateFlags::NEED_CHECK,
                 ..filestate
             };
-            self.treestate.insert(path, &filestate)?;
+            treestate.insert(path, &filestate)?;
         }
         Ok(())
     }
 
     fn set_clock(&mut self, clock: Clock) -> Result<()> {
+        let mut treestate = self.treestate.borrow_mut();
+
         let clock_string = match clock {
             Clock::Spec(ClockSpec::StringClock(string)) => Ok(string),
             clock => Err(anyhow!(
@@ -79,20 +87,21 @@ impl WatchmanTreeStateWrite for WatchmanTreeState<'_> {
             )),
         }?;
 
-        let mut metadata_buf = self.treestate.get_metadata();
+        let mut metadata_buf = treestate.get_metadata();
         let mut metadata = Metadata::deserialize(&mut metadata_buf)?;
         metadata.0.insert("clock".to_string(), clock_string);
         let mut metadata_buf = vec![];
         metadata.serialize(&mut metadata_buf)?;
-        self.treestate.set_metadata(&metadata_buf);
+        treestate.set_metadata(&metadata_buf);
 
         Ok(())
     }
 }
 
-impl WatchmanTreeStateRead for WatchmanTreeState<'_> {
+impl WatchmanTreeStateRead for WatchmanTreeState {
     fn list_needs_check(&mut self) -> Result<Vec<Result<RepoPathBuf>>> {
         self.treestate
+            .borrow_mut()
             .visit_by_state(StateFlags::NEED_CHECK)
             .map(|paths| {
                 paths
@@ -103,7 +112,9 @@ impl WatchmanTreeStateRead for WatchmanTreeState<'_> {
     }
 
     fn get_clock(&self) -> Result<Option<Clock>> {
-        let mut metadata_buf = self.treestate.get_metadata();
+        let treestate = self.treestate.borrow();
+
+        let mut metadata_buf = treestate.get_metadata();
         let metadata = Metadata::deserialize(&mut metadata_buf)?;
         Ok(metadata
             .0
