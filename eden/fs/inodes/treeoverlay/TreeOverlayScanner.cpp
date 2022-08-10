@@ -12,6 +12,8 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
 
+#include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/inodes/fsoverlay/OverlayChecker.h"
 #include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/WinStackTrace.h"
@@ -53,7 +55,8 @@ int main(int argc, char** argv) {
     return makeImmediateFuture<TreeOverlay::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  overlay.scanLocalChanges(mountPath, lookup);
+  overlay.scanLocalChanges(
+      EdenConfig::createTestEdenConfig(), mountPath, lookup);
   XLOG(INFO) << "scanning end";
 
   return 0;

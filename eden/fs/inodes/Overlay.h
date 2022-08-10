@@ -117,6 +117,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    *   by an older version of the software.
    */
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> initialize(
+      std::shared_ptr<const EdenConfig> config,
       std::optional<AbsolutePath> mountPath = std::nullopt,
       OverlayChecker::ProgressCallback&& progressCallback = [](auto) {},
       OverlayChecker::LookupCallback&& lookupCallback =
@@ -318,6 +319,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   };
 
   void initOverlay(
+      std::shared_ptr<const EdenConfig> config,
       std::optional<AbsolutePath> mountPath,
       const OverlayChecker::ProgressCallback& progressCallback,
       OverlayChecker::LookupCallback& lookupCallback);

@@ -150,6 +150,7 @@ struct statfs Overlay::statFs() {
 #endif // !_WIN32
 
 folly::SemiFuture<Unit> Overlay::initialize(
+    std::shared_ptr<const EdenConfig> config,
     std::optional<AbsolutePath> mountPath,
     OverlayChecker::ProgressCallback&& progressCallback,
     OverlayChecker::LookupCallback&& lookupCallback) {
@@ -162,12 +163,17 @@ folly::SemiFuture<Unit> Overlay::initialize(
   auto [initPromise, initFuture] = folly::makePromiseContract<Unit>();
 
   gcThread_ = std::thread([this,
+                           config = std::move(config),
                            mountPath = std::move(mountPath),
                            progressCallback = std::move(progressCallback),
                            lookupCallback = lookupCallback,
                            promise = std::move(initPromise)]() mutable {
     try {
-      initOverlay(std::move(mountPath), progressCallback, lookupCallback);
+      initOverlay(
+          std::move(config),
+          std::move(mountPath),
+          progressCallback,
+          lookupCallback);
     } catch (std::exception& ex) {
       XLOG(ERR) << "overlay initialization failed for "
                 << backingOverlay_->getLocalDir() << ": " << ex.what();
@@ -183,6 +189,7 @@ folly::SemiFuture<Unit> Overlay::initialize(
 }
 
 void Overlay::initOverlay(
+    std::shared_ptr<const EdenConfig> config,
     std::optional<AbsolutePath> mountPath,
     FOLLY_MAYBE_UNUSED const OverlayChecker::ProgressCallback& progressCallback,
     FOLLY_MAYBE_UNUSED OverlayChecker::LookupCallback& lookupCallback) {
@@ -246,8 +253,9 @@ void Overlay::initOverlay(
   // mountPath will be empty during benchmarking so we must check the value
   // here to skip scanning in that case.
   if (supportsSemanticOperations_ && mountPath.has_value()) {
-    optNextInodeNumber = dynamic_cast<TreeOverlay*>(backingOverlay_.get())
-                             ->scanLocalChanges(*mountPath, lookupCallback);
+    optNextInodeNumber =
+        dynamic_cast<TreeOverlay*>(backingOverlay_.get())
+            ->scanLocalChanges(std::move(config), *mountPath, lookupCallback);
   }
 
   nextInodeNumber_.store(optNextInodeNumber->get(), std::memory_order_relaxed);

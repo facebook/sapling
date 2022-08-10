@@ -118,11 +118,13 @@ InodeNumber TreeOverlay::nextInodeNumber() {
 }
 
 InodeNumber TreeOverlay::scanLocalChanges(
+    std::shared_ptr<const EdenConfig> config,
     AbsolutePathPiece mountPath,
     FOLLY_MAYBE_UNUSED TreeOverlay::LookupCallback& callback) {
 #ifdef _WIN32
-  windowsFsckScanLocalChanges(*this, mountPath, callback);
+  windowsFsckScanLocalChanges(config, *this, mountPath, callback);
 #else
+  (void)config;
   (void)mountPath;
 #endif
   return store_.loadCounters();

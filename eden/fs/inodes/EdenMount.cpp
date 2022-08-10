@@ -425,6 +425,7 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
         // allocate inode numbers, including creating the root TreeInode.
         return overlay_
             ->initialize(
+                getEdenConfig(),
                 getPath(),
                 std::move(progressCallback),
                 [this](RelativePathPiece path) {

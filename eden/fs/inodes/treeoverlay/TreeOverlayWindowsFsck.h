@@ -14,6 +14,8 @@
 
 namespace facebook::eden {
 
+class EdenConfig;
+
 /**
  * Walk the directory hierarchy for the given `mountPath` and fix the
  * divergence in our overlay.
@@ -45,6 +47,7 @@ namespace facebook::eden {
  *
  */
 void windowsFsckScanLocalChanges(
+    std::shared_ptr<const EdenConfig> config,
     TreeOverlay& overlay,
     AbsolutePathPiece mountPath,
     TreeOverlay::LookupCallback& callback);

@@ -38,7 +38,7 @@ void benchmarkOverlayTreeWrites(AbsolutePathPiece overlayPath) {
       *EdenConfig::createTestEdenConfig());
   printf("Initalizing Overlay...\n");
 
-  overlay->initialize().get();
+  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
 
   printf("Overlay initalized. Starting benchmark...\n");
 

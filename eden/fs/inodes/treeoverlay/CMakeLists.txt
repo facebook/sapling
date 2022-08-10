@@ -35,6 +35,7 @@ add_executable(
 target_link_libraries(
   eden_scanner
   PRIVATE
+    cpptoml
     eden_tree_overlay
     eden_utils
     Folly::folly

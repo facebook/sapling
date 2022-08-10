@@ -70,7 +70,7 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
       kOverlayType,
       std::make_shared<NullStructuredLogger>(),
       *EdenConfig::createTestEdenConfig());
-  overlay->initialize().get();
+  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
 
   ObjectId hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
   ObjectId hash2{folly::ByteRange{"01234012340123401234"_sp}};
@@ -248,7 +248,7 @@ TEST(PlainOverlayTest, new_overlay_is_clean) {
       kOverlayType,
       std::make_shared<NullStructuredLogger>(),
       *EdenConfig::createTestEdenConfig());
-  overlay->initialize().get();
+  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
@@ -261,7 +261,7 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
         kOverlayType,
         std::make_shared<NullStructuredLogger>(),
         *EdenConfig::createTestEdenConfig());
-    overlay->initialize().get();
+    overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   }
 
   auto overlay = Overlay::create(
@@ -270,7 +270,7 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
       kOverlayType,
       std::make_shared<NullStructuredLogger>(),
       *EdenConfig::createTestEdenConfig());
-  overlay->initialize().get();
+  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
@@ -285,7 +285,7 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
         kOverlayType,
         std::make_shared<NullStructuredLogger>(),
         *EdenConfig::createTestEdenConfig());
-    overlay->initialize().get();
+    overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   }
 
   if (unlink((localDir + "next-inode-number"_pc).c_str())) {
@@ -298,7 +298,7 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
       kOverlayType,
       std::make_shared<NullStructuredLogger>(),
       *EdenConfig::createTestEdenConfig());
-  overlay->initialize().get();
+  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   EXPECT_FALSE(overlay->hadCleanStartup());
 }
 
@@ -340,7 +340,7 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
         kOverlayType,
         std::make_shared<NullStructuredLogger>(),
         *EdenConfig::createTestEdenConfig());
-    overlay->initialize().get();
+    overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   }
 
   void corruptOverlayFile(InodeNumber inodeNumber) {
@@ -750,7 +750,7 @@ class DebugDumpOverlayInodesTest : public ::testing::Test {
             kOverlayType,
             std::make_shared<NullStructuredLogger>(),
             *EdenConfig::createTestEdenConfig())} {
-    overlay->initialize().get();
+    overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   }
 
   folly::test::TemporaryDirectory testDir_;

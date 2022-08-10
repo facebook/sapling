@@ -22,6 +22,7 @@ class File;
 
 namespace facebook::eden {
 
+class EdenConfig;
 namespace overlay {
 class OverlayDir;
 }
@@ -116,6 +117,7 @@ class TreeOverlay : public IOverlay {
    * directory when EdenFS is not running.
    */
   InodeNumber scanLocalChanges(
+      std::shared_ptr<const EdenConfig> config,
       AbsolutePathPiece mountPath,
       LookupCallback& callback);
 

@@ -15,6 +15,7 @@
 #include <winioctl.h> // @manual
 
 #include "eden/common/utils/WinError.h"
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
@@ -328,6 +329,7 @@ void scanCurrentDir(
 } // namespace
 
 void windowsFsckScanLocalChanges(
+    FOLLY_MAYBE_UNUSED std::shared_ptr<const EdenConfig> config,
     TreeOverlay& overlay,
     AbsolutePathPiece mountPath,
     TreeOverlay::LookupCallback& callback) {

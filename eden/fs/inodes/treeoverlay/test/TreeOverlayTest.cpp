@@ -92,7 +92,7 @@ TEST(PlainTreeOverlayTest, new_overlay_is_clean) {
       Overlay::OverlayType::Tree,
       std::make_shared<NullStructuredLogger>(),
       *EdenConfig::createTestEdenConfig());
-  overlay->initialize().get();
+  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
@@ -104,7 +104,7 @@ TEST(PlainTreeOverlayTest, new_overlay_is_clean_buffered) {
       Overlay::OverlayType::TreeBuffered,
       std::make_shared<NullStructuredLogger>(),
       *EdenConfig::createTestEdenConfig());
-  overlay->initialize().get();
+  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
@@ -117,7 +117,7 @@ TEST(PlainTreeOverlayTest, reopened_overlay_is_clean) {
         Overlay::OverlayType::Tree,
         std::make_shared<NullStructuredLogger>(),
         *EdenConfig::createTestEdenConfig());
-    overlay->initialize().get();
+    overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   }
   auto overlay = Overlay::create(
       AbsolutePath{testDir.path().string()},
@@ -125,7 +125,7 @@ TEST(PlainTreeOverlayTest, reopened_overlay_is_clean) {
       Overlay::OverlayType::Tree,
       std::make_shared<NullStructuredLogger>(),
       *EdenConfig::createTestEdenConfig());
-  overlay->initialize().get();
+  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
@@ -138,7 +138,7 @@ TEST(PlainTreeOverlayTest, reopened_overlay_is_clean_buffered) {
         Overlay::OverlayType::TreeBuffered,
         std::make_shared<NullStructuredLogger>(),
         *EdenConfig::createTestEdenConfig());
-    overlay->initialize().get();
+    overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   }
   auto overlay = Overlay::create(
       AbsolutePath{testDir.path().string()},
@@ -146,7 +146,7 @@ TEST(PlainTreeOverlayTest, reopened_overlay_is_clean_buffered) {
       Overlay::OverlayType::TreeBuffered,
       std::make_shared<NullStructuredLogger>(),
       *EdenConfig::createTestEdenConfig());
-  overlay->initialize().get();
+  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
@@ -160,7 +160,7 @@ TEST(PlainTreeOverlayTest, close_overlay_with_no_capacity_buffered) {
       Overlay::OverlayType::TreeBuffered,
       std::make_shared<NullStructuredLogger>(),
       *config);
-  overlay->initialize().get();
+  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   overlay->close();
   EXPECT_TRUE(overlay->isClosed());
 }
@@ -193,7 +193,7 @@ class RawTreeOverlayTest
         overlayType(),
         std::make_shared<NullStructuredLogger>(),
         *EdenConfig::createTestEdenConfig());
-    overlay->initialize().get();
+    overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   }
 
   AbsolutePath getLocalDir() {
@@ -308,7 +308,7 @@ class DebugDumpTreeOverlayInodesTest
         overlayType(),
         std::make_shared<NullStructuredLogger>(),
         *EdenConfig::createTestEdenConfig());
-    overlay->initialize().get();
+    overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   }
 
   folly::test::TemporaryDirectory testDir_;
