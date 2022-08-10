@@ -1,8 +1,8 @@
 #chg-compatible
 
 #testcases pythonstatus ruststatus
-#if ruststatus
-  $ setconfig workingcopy.ruststatus=true 
+#if pythonstatus
+  $ setconfig workingcopy.ruststatus=false 
 #endif
 
   $ configure modernclient
