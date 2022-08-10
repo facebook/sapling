@@ -151,18 +151,31 @@ dtype_t dtypeFromEntry(const boost::filesystem::directory_entry& entry) {
   }
 }
 
-std::optional<overlay::OverlayEntry> getEntryFromOverlayDir(
-    const overlay::OverlayDir& dir,
-    PathComponentPiece name) {
-  const auto& entries = *dir.entries_ref();
+using InsensitiveOverlayMap = std::map<std::string, overlay::OverlayEntry>;
 
-  // Case insensitive look up
+InsensitiveOverlayMap toAsciiInsensitiveMap(overlay::OverlayDir& dir) {
+  std::map<std::string, overlay::OverlayEntry> newMap;
+  const auto& entries = *dir.entries_ref();
   for (auto iter = entries.begin(); iter != entries.end(); ++iter) {
-    if (name.stringPiece().equals(iter->first, folly::AsciiCaseInsensitive())) {
-      return std::make_optional<overlay::OverlayEntry>(iter->second);
-    }
+    std::string string = iter->first;
+    folly::toLowerAscii(string);
+    newMap.emplace(std::move(string), iter->second);
   }
-  return std::nullopt;
+  return newMap;
+}
+
+std::optional<overlay::OverlayEntry> getEntryFromOverlayDir(
+    const InsensitiveOverlayMap& dir,
+    PathComponentPiece name) {
+  auto string = name.stringPiece().toString();
+  folly::toLowerAscii(string);
+
+  auto result = dir.find(string);
+  if (result != dir.end()) {
+    return std::make_optional<overlay::OverlayEntry>(result->second);
+  } else {
+    return std::nullopt;
+  }
 }
 
 void removeChildRecursively(TreeOverlay& overlay, InodeNumber inode) {
@@ -188,14 +201,11 @@ void removeOverlayEntry(
     TreeOverlay& overlay,
     InodeNumber parent,
     PathComponentPiece name,
-    std::optional<overlay::OverlayEntry> entry = std::nullopt) {
-  if (!entry) {
-    auto dir = overlay.loadOverlayDir(parent);
-    entry = getEntryFromOverlayDir(*dir, name);
-  }
-  auto overlayMode = static_cast<mode_t>(*entry->mode_ref());
+    const overlay::OverlayEntry& entry) {
+  XLOGF(DBG9, "Remove overlay entry: {}", name);
+  auto overlayMode = static_cast<mode_t>(*entry.mode_ref());
   if (S_ISDIR(overlayMode)) {
-    auto overlayInode = InodeNumber::fromThrift(*entry->inodeNumber_ref());
+    auto overlayInode = InodeNumber::fromThrift(*entry.inodeNumber_ref());
     removeChildRecursively(overlay, overlayInode);
   }
   overlay.removeChild(parent, name);
@@ -205,7 +215,8 @@ void scanCurrentDir(
     TreeOverlay& overlay,
     AbsolutePathPiece dir,
     InodeNumber inode,
-    overlay::OverlayDir knownState,
+    const overlay::OverlayDir& parentOverlayDir,
+    const InsensitiveOverlayMap& parentInsensitiveOverlayDir,
     bool recordDeletion,
     TreeOverlay::LookupCallback& callback) {
   auto boostPath = boost::filesystem::path(dir.stringPiece());
@@ -216,7 +227,7 @@ void scanCurrentDir(
 
   XLOGF(DBG3, "Scanning {}", dir);
 
-  auto overlayEntries = makeEntriesSet(knownState);
+  auto overlayEntries = makeEntriesSet(parentOverlayDir);
   // Loop to synchronize overlay state with disk state
   for (const auto& entry : boost::filesystem::directory_iterator(boostPath)) {
     auto path = AbsolutePath{entry.path().c_str()};
@@ -244,7 +255,8 @@ void scanCurrentDir(
     }
 
     if (presentInOverlay) {
-      auto overlayEntry = getEntryFromOverlayDir(knownState, name);
+      auto overlayEntry =
+          getEntryFromOverlayDir(parentInsensitiveOverlayDir, name);
       // TODO: remove cast once we don't use Thrift to represent overlay entry
       auto overlayDtype =
           mode_to_dtype(static_cast<mode_t>(*overlayEntry->mode_ref()));
@@ -258,7 +270,7 @@ void scanCurrentDir(
             "Mismatch file type, expected: {} overlay: {}",
             dtype,
             overlayDtype);
-        removeOverlayEntry(overlay, inode, name, overlayEntry);
+        removeOverlayEntry(overlay, inode, name, *overlayEntry);
         presentInOverlay = false;
       }
     }
@@ -285,17 +297,19 @@ void scanCurrentDir(
   // entries from overlay incorrectly.
   if (recordDeletion && !overlayEntries.empty()) {
     // Files in overlay are not present on disk, remove them.
-    for (auto removed = overlayEntries.cbegin();
-         removed != overlayEntries.cend();
+    for (auto removed = overlayEntries.begin(); removed != overlayEntries.end();
          removed++) {
       XLOGF(DBG3, "Removing missing entry from overlay: {}", *removed);
-      removeOverlayEntry(overlay, inode, *removed);
+      auto overlayEntry =
+          getEntryFromOverlayDir(parentInsensitiveOverlayDir, *removed);
+      removeOverlayEntry(overlay, inode, *removed, *overlayEntry);
     }
   }
 
   XLOGF(DBG9, "Reloading {} from overlay.", inode);
   // Reload the updated overlay as we have fixed the inconsistency.
   auto updated = *overlay.loadOverlayDir(inode);
+  auto updatedInsensitiveOverlayDir = toAsciiInsensitiveMap(updated);
 
   // Now that this overlay directory is consistent with the on-disk state,
   // proceed to its children.
@@ -318,11 +332,20 @@ void scanCurrentDir(
     auto isDirtyPlaceholder = (state & PRJ_FILE_STATE_DIRTY_PLACEHOLDER) ==
         PRJ_FILE_STATE_DIRTY_PLACEHOLDER;
     if (isFull || isDirtyPlaceholder) {
-      auto overlayEntry = getEntryFromOverlayDir(updated, path.basename());
+      auto overlayEntry =
+          getEntryFromOverlayDir(updatedInsensitiveOverlayDir, path.basename());
       auto entryInode =
           InodeNumber::fromThrift(*overlayEntry->inodeNumber_ref());
       auto entryDir = overlay.loadOverlayDir(entryInode);
-      scanCurrentDir(overlay, path, entryInode, *entryDir, isFull, callback);
+      auto entryInsensitiveOverlayDir = toAsciiInsensitiveMap(updated);
+      scanCurrentDir(
+          overlay,
+          path,
+          entryInode,
+          *entryDir,
+          entryInsensitiveOverlayDir,
+          isFull,
+          callback);
     }
   }
 }
@@ -335,7 +358,15 @@ void windowsFsckScanLocalChanges(
     TreeOverlay::LookupCallback& callback) {
   XLOGF(INFO, "Start scanning {}", mountPath);
   if (auto view = overlay.loadOverlayDir(kRootNodeId)) {
-    scanCurrentDir(overlay, mountPath, kRootNodeId, *view, false, callback);
+    auto insensitiveOverlayDir = toAsciiInsensitiveMap(*view);
+    scanCurrentDir(
+        overlay,
+        mountPath,
+        kRootNodeId,
+        *view,
+        insensitiveOverlayDir,
+        false,
+        callback);
     XLOGF(INFO, "Scanning complete for {}", mountPath);
   } else {
     XLOG(INFO)
