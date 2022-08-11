@@ -44,8 +44,9 @@ pub struct EdenFsConfig {
     #[serde(skip_serializing_if = "skip_core_serialization")]
     pub core: Core,
 
+    #[stack(nested)]
     #[serde(rename = "prefetch-profiles")]
-    pub prefetch_profiles: PrefetchProfiles,
+    pub prefetch_profiles: Option<PrefetchProfiles>,
 
     #[stack(merge = "merge_table")]
     #[serde(flatten)]
