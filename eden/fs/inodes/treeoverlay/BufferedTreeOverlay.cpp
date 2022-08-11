@@ -223,6 +223,14 @@ void BufferedTreeOverlay::removeChild(
       captureSize);
 }
 
+bool BufferedTreeOverlay::hasChild(
+    InodeNumber parent,
+    PathComponentPiece childName) {
+  flush();
+
+  return TreeOverlay::hasChild(parent, childName);
+}
+
 void BufferedTreeOverlay::renameChild(
     InodeNumber src,
     InodeNumber dst,
