@@ -4164,7 +4164,9 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                         # .orig files (issue4793)
                         if dobackup == backupinteractive:
                             tobackup.add(abs)
-                        elif backup <= dobackup or wctx[abs].cmp(ctx[abs]):
+                        elif (backup <= dobackup or wctx[abs].cmp(ctx[abs])) and wctx[
+                            abs
+                        ].flags() != "m":
                             bakname = scmutil.origpath(ui, repo, rel)
                             ui.note(
                                 _("saving current version of %s as %s\n")
@@ -4231,6 +4233,10 @@ def _performrevert(
 
     def checkout(f):
         fc = ctx[f]
+        if fc.flags() == "m":
+            # f is a submodule, need special path to change
+            git.submodulecheckout(ctx, match=lambda p: p == f, force=True)
+            return
         wctx[f].clearunknown()
         repo.wwrite(f, fc.data(), fc.flags())
 

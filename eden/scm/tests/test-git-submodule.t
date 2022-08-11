@@ -308,48 +308,23 @@ Revert submodule change
 
   $ hg revert m1
 
-(FIXME: incorrect output)
   $ hg st
-  M m1
-  R m1
   $ hg d
-  diff --git a/m1 b/m1
-  deleted file mode 160000
-  --- a/m1
-  +++ /dev/null
-  @@ -1,1 +0,0 @@
-  -Subproject commit 73c8ee0cae8ffb843cc154c3bf28a12438801d3f
-  diff --git a/m1 b/m1
-  deleted file mode 160000
-  --- a/m1
-  +++ /dev/null
-  @@ -1,1 +0,0 @@
-  -Subproject commit 73c8ee0cae8ffb843cc154c3bf28a12438801d3f
 
 - revert to another commit
 
   $ hg up -qC .
   $ hg revert -r '.^' m1
 
-(FIXME: incorrect output)
   $ hg st
   M m1
-  R m1
   $ hg d
   diff --git a/m1 b/m1
-  deleted file mode 160000
   --- a/m1
-  +++ /dev/null
-  @@ -1,1 +0,0 @@
+  +++ b/m1
+  @@ -1,1 +1,1 @@
   -Subproject commit 73c8ee0cae8ffb843cc154c3bf28a12438801d3f
-  diff --git a/m1 b/m1
-  deleted file mode 160000
-  --- a/m1
-  +++ /dev/null
-  @@ -1,1 +0,0 @@
-  -Subproject commit 73c8ee0cae8ffb843cc154c3bf28a12438801d3f
+  +Subproject commit 0de30934572f96ff6d3cbfc70aa8b46ef95dbb42
 
   $ hg --config extensions.reset= reset -kr '.^'
   $ hg st
-  M m1
-  R m1
