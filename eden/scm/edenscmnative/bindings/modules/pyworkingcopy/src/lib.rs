@@ -87,13 +87,13 @@ py_class!(class status |py| {
         let matcher = extract_option_matcher(py, pymatcher)?;
         let filesystem = match filesystem {
             "normal" => {
-                workingcopy::status::FileSystem::Normal
+                workingcopy::filesystem::FileSystemType::Normal
             },
             "watchman" => {
-                workingcopy::status::FileSystem::Watchman
+                workingcopy::filesystem::FileSystemType::Watchman
             },
             "eden" => {
-                workingcopy::status::FileSystem::Eden
+                workingcopy::filesystem::FileSystemType::Eden
             },
             _ => return Err(anyhow!("Unsupported filesystem type: {}", filesystem)).map_pyerr(py),
         };

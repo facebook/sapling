@@ -13,3 +13,4 @@ pub mod sparse;
 pub mod status;
 pub mod walker;
 pub mod watchmanfs;
+pub mod workingcopy;

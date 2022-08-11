@@ -25,117 +25,40 @@ use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
 use types::RepoPathBuf;
 
-use crate::edenfs::EdenFileSystem;
 use crate::filechangedetector::HgModifiedTime;
 use crate::filesystem::ChangeType;
-use crate::filesystem::PendingChangeResult;
-use crate::filesystem::PendingChanges;
-use crate::physicalfs::PhysicalFileSystem;
-use crate::watchmanfs::WatchmanFileSystem;
+use crate::filesystem::FileSystemType;
+use crate::workingcopy::WorkingCopy;
 
 type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
 
-pub enum FileSystem {
-    Normal,
-    Watchman,
-    Eden,
-}
-
-impl FileSystem {
-    pub fn pending_changes(
-        &self,
-        root: PathBuf,
-        manifest: Arc<RwLock<TreeManifest>>,
-        store: ArcReadFileContents,
-        treestate: Rc<RefCell<TreeState>>,
-        last_write: HgModifiedTime,
-        matcher: Arc<dyn Matcher + Send + Sync + 'static>,
-        _list_unknown: bool,
-    ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
-        match self {
-            Self::Normal => {
-                let fs = PhysicalFileSystem::new(
-                    root, manifest, store, treestate, false, last_write, 8,
-                )?;
-                fs.pending_changes(matcher)
-            }
-            Self::Watchman => {
-                let fs = WatchmanFileSystem::new(root, treestate, manifest, store, last_write)?;
-                fs.pending_changes(matcher)
-            }
-            Self::Eden => {
-                let fs = EdenFileSystem::new(root)?;
-                fs.pending_changes(matcher)
-            }
-        }
-    }
-}
-
 pub fn status(
     root: PathBuf,
-    filesystem: FileSystem,
+    file_system_type: FileSystemType,
     manifest: Arc<RwLock<TreeManifest>>,
     store: ArcReadFileContents,
     treestate: TreeState,
     last_write: HgModifiedTime,
     matcher: Arc<dyn Matcher + Send + Sync + 'static>,
-    list_unknown: bool,
+    _list_unknown: bool,
 ) -> (TreeState, Result<Status>) {
-    let treestate = Rc::new(RefCell::new(treestate));
-    let result = status_inner(
+    let manifest = manifest.read().clone();
+    let result = WorkingCopy::new(
         root,
-        filesystem,
+        file_system_type,
+        treestate,
         manifest,
         store,
-        treestate.clone(),
         last_write,
-        matcher,
-        list_unknown,
     );
-    let treestate = Rc::try_unwrap(treestate)
-        .expect("Only a single reference to treestate left")
-        .into_inner();
-    (treestate, result)
-}
+    let working_copy = match result {
+        Ok(wc) => wc,
+        Err((treestate, e)) => return (treestate, Err(e)),
+    };
 
-fn status_inner(
-    root: PathBuf,
-    filesystem: FileSystem,
-    manifest: Arc<RwLock<TreeManifest>>,
-    store: ArcReadFileContents,
-    treestate: Rc<RefCell<TreeState>>,
-    last_write: HgModifiedTime,
-    matcher: Arc<dyn Matcher + Send + Sync + 'static>,
-    list_unknown: bool,
-) -> Result<Status> {
-    let pending_changes = filesystem
-        .pending_changes(
-            root,
-            manifest.clone(),
-            store,
-            treestate.clone(),
-            last_write,
-            matcher.clone(),
-            list_unknown,
-        )?
-        .filter_map(|result| match result {
-            Ok(PendingChangeResult::File(change_type)) => {
-                match matcher.matches_file(change_type.get_path()) {
-                    Ok(true) => Some(Ok(change_type)),
-                    Err(e) => Some(Err(e)),
-                    _ => None,
-                }
-            }
-            Err(e) => Some(Err(e)),
-            _ => None,
-        });
-
-    compute_status(
-        &*manifest.read(),
-        treestate.clone(),
-        pending_changes,
-        matcher.clone(),
-    )
+    let status = working_copy.status(matcher);
+    let treestate = working_copy.destroy();
+    (treestate, status)
 }
 
 /// Compute the status of the working copy relative to the current commit.
