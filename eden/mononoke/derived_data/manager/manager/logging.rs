@@ -11,6 +11,7 @@ use anyhow::Error;
 use anyhow::Result;
 use context::CoreContext;
 use context::PerfCounters;
+use derived_data_constants::*;
 use futures_stats::FutureStats;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -33,11 +34,11 @@ impl DerivedDataManager {
     ) where
         Derivable: BonsaiDerivable,
     {
-        let tag = "Generating derived data";
-        ctx.scuba()
-            .clone()
-            .log_with_msg(tag, Some(format!("{} {}", Derivable::NAME, csid)));
-        derived_data_scuba.log_with_msg(tag, None);
+        ctx.scuba().clone().log_with_msg(
+            DERIVATION_START,
+            Some(format!("{} {}", Derivable::NAME, csid)),
+        );
+        derived_data_scuba.log_with_msg(DERIVATION_START, None);
     }
 
     /// Log the end of derivation to both the request and derived data scuba
@@ -53,11 +54,8 @@ impl DerivedDataManager {
         Derivable: BonsaiDerivable,
     {
         let (tag, error_str) = match error {
-            None => ("Generated derived data", None),
-            Some(error) => (
-                "Failed to generate derived data",
-                Some(format!("{:#}", error)),
-            ),
+            None => (DERIVATION_END, None),
+            Some(error) => (FAILED_DERIVATION, Some(format!("{:#}", error))),
         };
 
         let mut ctx_scuba = ctx.scuba().clone();
@@ -84,11 +82,11 @@ impl DerivedDataManager {
         Derivable: BonsaiDerivable,
     {
         if let Some((first, last)) = csid_range {
-            let tag = "Generating derived data batch";
-            ctx.scuba()
-                .clone()
-                .log_with_msg(tag, Some(format!("{} {}-{}", Derivable::NAME, first, last)));
-            derived_data_scuba.log_with_msg(tag, None);
+            ctx.scuba().clone().log_with_msg(
+                DERIVATION_START_BATCH,
+                Some(format!("{} {}-{}", Derivable::NAME, first, last)),
+            );
+            derived_data_scuba.log_with_msg(DERIVATION_START_BATCH, None);
         }
     }
 
@@ -106,11 +104,8 @@ impl DerivedDataManager {
     {
         if let Some((first, last)) = csid_range {
             let (tag, error_str) = match error {
-                None => ("Generated derived data batch", None),
-                Some(error) => (
-                    "Failed to generate derived data batch",
-                    Some(format!("{:#}", error)),
-                ),
+                None => (DERIVATION_END_BATCH, None),
+                Some(error) => (FAILED_DERIVATION_BATCH, Some(format!("{:#}", error))),
             };
 
             let mut ctx_scuba = ctx.scuba().clone();
@@ -140,8 +135,8 @@ impl DerivedDataManager {
         Derivable: BonsaiDerivable,
     {
         let (tag, error_str) = match error {
-            None => ("Inserted mapping", None),
-            Some(error) => ("Failed to insert mapping", Some(format!("{:#}", error))),
+            None => (INSERTED_MAPPING, None),
+            Some(error) => (FAILED_INSERTING_MAPPING, Some(format!("{:#}", error))),
         };
 
         ctx.perf_counters().insert_perf_counters(derived_data_scuba);
@@ -213,6 +208,6 @@ impl DerivedDataManager {
             }
         }
 
-        scuba.log_with_msg("Slow derivation", None);
+        scuba.log_with_msg(SLOW_DERIVATION, None);
     }
 }
