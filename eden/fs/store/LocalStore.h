@@ -100,7 +100,16 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
   virtual StoreResult get(KeySpace keySpace, folly::ByteRange key) const = 0;
   StoreResult get(KeySpace keySpace, const ObjectId& id) const;
 
-  FOLLY_NODISCARD virtual ImmediateFuture<StoreResult> getImmediateFuture(
+  /**
+   * Wrapper around LocalStore::get
+   *
+   * The exceptions thrown by LocalStore::get will be returned as an errored
+   * out ImmediateFuture.
+   *
+   * Note that changing the implementation of this function can drastically
+   * affect EdenFS performance. Extreme care must be taken when modifying it.
+   */
+  FOLLY_NODISCARD ImmediateFuture<StoreResult> getImmediateFuture(
       KeySpace keySpace,
       const ObjectId& id) const;
 

@@ -398,17 +398,6 @@ StoreResult RocksDbLocalStore::get(KeySpace keySpace, ByteRange key) const {
   return StoreResult(std::move(value));
 }
 
-FOLLY_NODISCARD ImmediateFuture<StoreResult>
-RocksDbLocalStore::getImmediateFuture(KeySpace keySpace, const ObjectId& key)
-    const {
-  return faultInjector_.checkAsync("local store get single", "")
-      .via(&ioPool_)
-      .thenValue([keySpace, key, self = shared_from_this()](folly::Unit&&) {
-        return self->get(keySpace, key.getBytes());
-      })
-      .semi();
-}
-
 FOLLY_NODISCARD folly::Future<std::vector<StoreResult>>
 RocksDbLocalStore::getBatch(
     KeySpace keySpace,
