@@ -13,6 +13,8 @@ struct ConfigNested {
     field: String,
     remainder: bool,
     another: String,
+    #[stack(default)]
+    default: bool,
 }
 
 #[derive(Deserialize, StackConfig, Debug, PartialEq)]
@@ -30,6 +32,12 @@ struct Config {
 
     #[stack(nested)]
     nested: ConfigNested,
+
+    #[stack(nested)]
+    nested2: Option<ConfigNested>,
+
+    #[stack(nested)]
+    partial: Option<ConfigNested>,
 }
 
 fn default_list() -> Vec<String> {
@@ -63,6 +71,11 @@ unknown = "12345"
 [nested]
 field = "hello"
 another = "world"
+
+[partial]
+field = "hello"
+another = "world"
+remainder = true
 "#,
         )
         .unwrap(),
@@ -80,7 +93,15 @@ another = "world"
                 field: "hello".into(),
                 remainder: true,
                 another: "world".into(),
-            }
+                default: false,
+            },
+            nested2: None,
+            partial: Some(ConfigNested {
+                field: "hello".into(),
+                remainder: true,
+                another: "world".into(),
+                default: false,
+            }),
         }
     );
 }

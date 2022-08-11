@@ -36,6 +36,7 @@ struct MetaArgsFunc {
     merge: Option<String>,
 }
 
+#[derive(Debug)]
 pub struct ConfigField {
     pub name: Ident,
 

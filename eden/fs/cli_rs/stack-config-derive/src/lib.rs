@@ -18,17 +18,17 @@ use syn::Attribute;
 use syn::Field;
 use syn::Ident;
 use syn::ItemStruct;
-use syn::Type;
 use syn::Visibility;
 
 mod field;
 
 use crate::field::ConfigField;
 
-fn opt_ident(name: &Ident) -> Ident {
-    format_ident!("__StackConfig_Opt{}", name)
+fn layer_ident(name: &Ident) -> Ident {
+    format_ident!("__StackConfig_{}Layer", name)
 }
 
+#[derive(Debug)]
 struct StackConfig {
     /// Visibility
     vis: Option<Visibility>,
@@ -58,7 +58,8 @@ impl StackConfig {
 impl VisitMut for StackConfig {
     fn visit_item_struct_mut(&mut self, item: &mut ItemStruct) {
         self.vis = Some(item.vis.clone());
-        item.ident = opt_ident(&item.ident);
+        item.ident = layer_ident(&item.ident);
+        item.attrs.push(parse_quote! { #[derive(Debug)]});
         visit_mut::visit_item_struct_mut(self, item);
     }
 
@@ -80,14 +81,9 @@ impl VisitMut for StackConfig {
         };
 
         if config_field.nested {
-            if let Type::Path(path) = &mut field.ty {
-                if let Some(last) = path.path.segments.last_mut() {
-                    last.ident = opt_ident(&last.ident);
-                }
-                field.attrs.push(parse_quote! { #[serde(default)] })
-            } else {
-                abort!(field.ty, "can't use nested flag with this type");
-            }
+            field.attrs.push(parse_quote! { #[serde(default)] });
+            let old = &field.ty;
+            field.ty = parse_quote! { <#old as ::stack_config::__private::ConfigLayerType>::Layer };
         } else {
             let old = &field.ty;
             field.ty = parse_quote! { Option<#old> };
@@ -109,13 +105,13 @@ impl StackConfig {
 
     /// Generates `std::default` implementation
     fn default_impl(&self) -> proc_macro2::TokenStream {
-        let opt = opt_ident(&self.name);
+        let layer_ty = layer_ident(&self.name);
         let fields = self.fields.iter().map(|field| field.default());
 
         quote! {
-            impl ::std::default::Default for #opt {
+            impl ::std::default::Default for #layer_ty {
                 fn default() -> Self {
-                    #opt {
+                    #layer_ty {
                         #(#fields),*
                     }
                 }
@@ -124,23 +120,37 @@ impl StackConfig {
     }
 
     /// Generates conversion into the concrete type
-    fn opt_impl(&self) -> proc_macro2::TokenStream {
+    fn layer_impl(&self) -> proc_macro2::TokenStream {
         let name = &self.name;
-        let opt = opt_ident(&self.name);
+        let layer_ty = layer_ident(&self.name);
         let finalizes = self.fields.iter().map(|field| field.finalize());
         let merges = self.fields.iter().map(|field| field.merge());
 
         quote! {
-            impl #opt {
+            impl ::stack_config::__private::ConfigLayer for #layer_ty {
+                type Product = #name;
+
                 fn finalize(self) -> Result<#name, String> {
                     Ok(#name {
                         #(#finalizes),*
                     })
                 }
 
-                fn merge(&mut self, other: #opt) {
+                fn merge(&mut self, other: #layer_ty) {
                     #(#merges)*
                 }
+            }
+        }
+    }
+
+    // generates `ConfigLayerType` for type calculations
+    fn layer_type_impl(&self) -> proc_macro2::TokenStream {
+        let name = &self.name;
+        let layer_ty = layer_ident(&self.name);
+
+        quote! {
+            impl ::stack_config::__private::ConfigLayerType for #name {
+                type Layer = #layer_ty;
             }
         }
     }
@@ -148,12 +158,12 @@ impl StackConfig {
     fn builder(self) -> proc_macro2::TokenStream {
         let product = &self.name;
         let loader = format_ident!("{}Loader", self.name);
-        let opt = opt_ident(&self.name);
+        let layer_ty = layer_ident(&self.name);
         let vis = self.vis.unwrap_or(Visibility::Inherited);
 
         quote! {
             #vis struct #loader {
-                product: #opt,
+                product: #layer_ty,
             }
 
             impl #loader {
@@ -161,12 +171,12 @@ impl StackConfig {
                     Self { product: Default::default() }
                 }
 
-                pub fn load(&mut self, layer: #opt) {
-                    self.product.merge(layer);
+                pub fn load(&mut self, layer: #layer_ty) {
+                    ::stack_config::__private::ConfigLayer::merge(&mut self.product, layer);
                 }
 
                 pub fn build(self) -> ::std::result::Result<#product, String> {
-                    self.product.finalize()
+                    ::stack_config::__private::ConfigLayer::finalize(self.product)
                 }
             }
 
@@ -187,17 +197,19 @@ pub fn stack_config(input: TokenStream) -> TokenStream {
     let mut stack = StackConfig::new(input.ident.clone());
     stack.visit_item_struct_mut(&mut input);
 
-    let opt = stack.opt_impl();
+    let layer = stack.layer_impl();
     let default = stack.default_impl();
+    let layer_type = stack.layer_type_impl();
     let build = stack.builder();
 
     let result = quote! {
-        #[derive(stack_config::__private::Deserialize)]
+        #[derive(::stack_config::__private::Deserialize)]
         #[allow(non_camel_case_types)]
         #input
 
         #default
-        #opt
+        #layer_type
+        #layer
 
         #build
     };
