@@ -167,7 +167,10 @@ def pathcopies(x, y, match=None):
     """find {dst@y: src@x} copy mapping for directed compare"""
     # git does not track copy information. It will have to be implemented
     # differently. For now, git pathcopies remains unimplemented.
-    if git.isgitformat(x.repo()):
+    # eagerepo is similar - pathcopies need a new implementation.
+    from . import eagerepo
+
+    if git.isgitformat(x.repo()) or eagerepo.iseagerepo(x.repo()):
         return {}
 
     if x == y or not x or not y:
