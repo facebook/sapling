@@ -101,7 +101,8 @@ py_class!(class status |py| {
         let state = pytreestate.get_state(py);
         let mut option = state.lock();
         let treestate = option.take().expect("TreeState is never taken outside of lock");
-        let (treestate, status) = workingcopy::status::status(
+
+        let (treestate, status) = py.allow_threads(|| workingcopy::status::status(
             root,
             filesystem,
             manifest,
@@ -110,9 +111,9 @@ py_class!(class status |py| {
             last_write,
             matcher,
             listunknown,
-        );
-        option.replace(treestate);
+        ));
 
+        option.replace(treestate);
         let status = status.map_pyerr(py)?;
         pystatus::to_python_status(py, &status)
     }
