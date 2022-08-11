@@ -14,6 +14,7 @@
 from __future__ import absolute_import
 
 import socket
+from typing import Any, Dict
 
 from edenscm.mercurial import (
     blackbox,
@@ -39,7 +40,7 @@ def clienttelemetryfunc(f):
 
 
 @clienttelemetryfunc
-def hostname(ui):
+def hostname(ui) -> str:
     return socket.gethostname()
 
 
@@ -81,7 +82,7 @@ def wantsunhydratedcommits(ui):
 _clienttelemetrydata = {}
 
 
-def _clienttelemetry(repo, proto, args):
+def _clienttelemetry(repo, proto, args) -> str:
     """Handle received client telemetry"""
     logargs = {"client_%s" % key: value for key, value in args.items()}
     repo.ui.log("clienttelemetry", **logargs)
@@ -90,7 +91,7 @@ def _clienttelemetry(repo, proto, args):
     return socket.gethostname()
 
 
-def getclienttelemetry(repo):
+def getclienttelemetry(repo) -> Dict[str, Any]:
     kwargs = {}
     if util.safehasattr(repo, "clienttelemetry"):
         clienttelemetry = repo.clienttelemetry
@@ -127,7 +128,7 @@ def _runcommand(orig, lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdopti
     return orig(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions)
 
 
-def _peersetup(ui, peer):
+def _peersetup(ui, peer) -> None:
     if peer.capable("clienttelemetry"):
         logargs = clienttelemetryvaluesfromconfig(ui)
         logargs.update({name: f(ui) for name, f in _clienttelemetryfuncs.items()})
@@ -152,7 +153,7 @@ def _peersetup(ui, peer):
                 perftrace.tracevalue(f"Server {item}", value)
 
 
-def uisetup(ui):
+def uisetup(ui) -> None:
     wireproto.wireprotocommand("clienttelemetry", "*")(_clienttelemetry)
     extensions.wrapfunction(wireproto, "_capabilities", _capabilities)
     hg.wirepeersetupfuncs.append(_peersetup)
