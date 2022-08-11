@@ -167,6 +167,8 @@ impl<'a> MononokeMatches<'a> {
         let log_filter_fn: Option<fn(&Record) -> bool> = app_data.slog_filter_fn;
         let root_log_drain = create_root_log_drain(fb, &matches, log_level, log_filter_fn)
             .context("Failed to create root log drain")?;
+        #[cfg(fbcode_build)]
+        cmdlib_logging::glog::set_glog_log_level(fb, log_level)?;
 
         // TODO: FacebookKV for this one?
         let config_store =
