@@ -68,6 +68,8 @@ working_directory_was_stale = False
 def cure_what_ails_you(
     instance: EdenInstance,
     dry_run: bool,
+    *,
+    debug: bool = False,
     mount_table: Optional[mtab.MountTable] = None,
     fs_util: Optional[filesystem.FsUtil] = None,
     proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
@@ -75,18 +77,25 @@ def cure_what_ails_you(
     out: Optional[ui.Output] = None,
 ) -> int:
     return EdenDoctor(
-        instance, dry_run, mount_table, fs_util, proc_utils, kerberos_checker, out
+        instance,
+        dry_run,
+        debug,
+        mount_table,
+        fs_util,
+        proc_utils,
+        kerberos_checker,
+        out,
     ).cure_what_ails_you()
 
 
 class UnexpectedPrivHelperProblem(Problem):
     def __init__(self, ex: Exception) -> None:
-        super().__init__(f"Unexpected error while checking PrivHelper: {ex}")
+        super().__init__("Unexpected error while checking PrivHelper", exception=ex)
 
 
 class UnexpectedMountProblem(Problem):
     def __init__(self, mount: Path, ex: Exception) -> None:
-        super().__init__(f"unexpected error while checking {mount}: {ex}")
+        super().__init__(f"unexpected error while checking {mount}", exception=ex)
 
 
 class EdenDoctorChecker:
@@ -287,6 +296,7 @@ class EdenDoctor(EdenDoctorChecker):
         self,
         instance: EdenInstance,
         dry_run: bool,
+        debug: bool,
         mount_table: Optional[mtab.MountTable] = None,
         fs_util: Optional[filesystem.FsUtil] = None,
         proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
@@ -296,9 +306,9 @@ class EdenDoctor(EdenDoctorChecker):
         self.dry_run = dry_run
         out = out if out is not None else ui.get_output()
         if dry_run:
-            self.fixer = DryRunFixer(out)
+            self.fixer = DryRunFixer(out, debug)
         else:
-            self.fixer = ProblemFixer(out)
+            self.fixer = ProblemFixer(out, debug)
 
         super().__init__(
             instance,
@@ -479,7 +489,10 @@ def check_mount(
     checked_backing_repos: Set[str],
 ) -> None:
     if sys.platform == "win32":
-        check_mount_overlay_type(tracker, checkout)
+        try:
+            check_mount_overlay_type(tracker, checkout)
+        except Exception as ex:
+            raise RuntimeError("Failed to check overlay type") from ex
 
     if checkout.state is None:
         # This checkout is configured but not currently running.
@@ -487,7 +500,10 @@ def check_mount(
             CheckoutNotMounted(out, checkout, all_checkouts, checked_backing_repos)
         )
     elif checkout.state == MountState.RUNNING:
-        check_running_mount(tracker, instance, checkout, mount_table, watchman_info)
+        try:
+            check_running_mount(tracker, instance, checkout, mount_table, watchman_info)
+        except Exception as ex:
+            raise RuntimeError("Failed to check running mount") from ex
     elif checkout.state in (
         MountState.UNINITIALIZED,
         MountState.INITIALIZING,
@@ -508,13 +524,17 @@ def check_mount(
         tracker.add_problem(CheckoutFailedDuetoFuseError(checkout))
     else:
         tracker.add_problem(CheckoutInUnknownState(checkout))
-    # Check if this checkout is nested inside another one
-    existing_checkout, rel_path = config_mod.detect_nested_checkout(
-        checkout.path,
-        instance,
-    )
-    if existing_checkout is not None and rel_path is not None:
-        tracker.add_problem(NestedCheckout(checkout, existing_checkout))
+
+    try:
+        # Check if this checkout is nested inside another one
+        existing_checkout, rel_path = config_mod.detect_nested_checkout(
+            checkout.path,
+            instance,
+        )
+        if existing_checkout is not None and rel_path is not None:
+            tracker.add_problem(NestedCheckout(checkout, existing_checkout))
+    except Exception as ex:
+        raise RuntimeError("Failed to detect nested checkout") from ex
 
 
 def check_mount_overlay_type(
@@ -548,16 +568,43 @@ def check_running_mount(
         # Most of them rely on values from the configuration.
         return
 
-    check_filesystems.check_using_nfs_path(tracker, checkout.path)
-    check_watchman.check_active_mount(tracker, str(checkout.path), watchman_info)
-    check_redirections.check_redirections(tracker, instance, checkout, mount_table)
+    try:
+        check_filesystems.check_using_nfs_path(tracker, checkout.path)
+    except Exception as ex:
+        raise RuntimeError("Failed to check if backing store is on NFS") from ex
+
+    try:
+        check_watchman.check_active_mount(tracker, str(checkout.path), watchman_info)
+    except Exception as ex:
+        raise RuntimeError("Failed to check watchman status for mount") from ex
+
+    try:
+        check_redirections.check_redirections(tracker, instance, checkout, mount_table)
+    except Exception as ex:
+        raise RuntimeError("Failed to check redirections for mount") from ex
+
     if sys.platform == "win32":
-        check_filesystems.check_materialized_are_accessible(tracker, instance, checkout)
-        check_filesystems.check_loaded_content(
-            tracker, instance, checkout, prjfs.PrjGetOnDiskFileState
-        )
+        try:
+            check_filesystems.check_materialized_are_accessible(
+                tracker, instance, checkout
+            )
+        except Exception as ex:
+            raise RuntimeError(
+                "Failed to check if materialized files are accessible"
+            ) from ex
+
+        try:
+            check_filesystems.check_loaded_content(
+                tracker, instance, checkout, prjfs.PrjGetOnDiskFileState
+            )
+        except Exception as ex:
+            raise RuntimeError("Failed to check loaded content integrity") from ex
+
     if config.scm_type == "hg":
-        check_hg.check_hg(tracker, checkout)
+        try:
+            check_hg.check_hg(tracker, checkout)
+        except Exception as ex:
+            raise RuntimeError("Failed to check Mercurial status") from ex
 
 
 class CheckoutNotConfigured(Problem):

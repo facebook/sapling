@@ -170,7 +170,7 @@ Repairing hg directory contents for {self.checkout.path}...<green>fixed<reset>
         doctor.cure_what_ails_you(
             typing.cast(EdenInstance, self.instance),
             dry_run,
-            self.instance.mount_table,
+            mount_table=self.instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             kerberos_checker=FakeKerberosChecker(),

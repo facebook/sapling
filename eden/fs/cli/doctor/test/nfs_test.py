@@ -41,7 +41,7 @@ class NfsTest(DoctorTestBase):
         exit_code = doctor.cure_what_ails_you(
             typing.cast(EdenInstance, instance),
             dry_run,
-            instance.mount_table,
+            mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             kerberos_checker=FakeKerberosChecker(),
@@ -136,7 +136,7 @@ The Mercurial data directory for {v.client_path}/.hg/sharedpath is at {v.shared_
         exit_code = doctor.cure_what_ails_you(
             typing.cast(EdenInstance, instance),
             dry_run,
-            instance.mount_table,
+            mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             kerberos_checker=FakeKerberosChecker(),

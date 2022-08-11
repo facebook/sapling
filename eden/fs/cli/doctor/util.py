@@ -7,6 +7,7 @@
 
 import os
 import subprocess
+import traceback
 from pathlib import Path
 from typing import List, Optional, Set
 
@@ -148,3 +149,32 @@ may be corrupted beyond repair and {recommended_remediation}
 """
 
     return None
+
+
+def format_traceback(ex: BaseException, indent: str = "") -> List[str]:
+    lines = "".join(
+        traceback.format_exception(type(ex), ex, ex.__traceback__, chain=False)
+    ).splitlines()
+    return [indent + line for line in lines]
+
+
+def format_exception(ex: BaseException, with_tb: bool = False) -> str:
+    result = []
+    result.append(f"{type(ex).__name__}: {ex}")
+    if with_tb:
+        result.extend(format_traceback(ex, "│ "))
+    context = ex.__context__
+
+    if context:
+        result.append("")
+        result.append("Caused by:")
+
+    count = 0
+    while context:
+        result.append(f"  {count}: {type(context).__name__}: {context}")
+        if with_tb:
+            result.extend(format_traceback(context, "   │ "))
+        context = context.__context__
+        count += 1
+
+    return "\n".join(result)

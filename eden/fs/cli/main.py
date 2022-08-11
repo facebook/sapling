@@ -957,7 +957,7 @@ class DoctorCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
-        doctor = doctor_mod.EdenDoctor(instance, args.dry_run)
+        doctor = doctor_mod.EdenDoctor(instance, args.dry_run, args.debug)
         if args.current_edenfs_only:
             doctor.run_system_wide_checks = False
         return doctor.cure_what_ails_you()
