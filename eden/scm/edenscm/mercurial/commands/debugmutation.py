@@ -20,7 +20,7 @@ from .cmdtable import command
         ("t", "time-range", [], _("select time range"), _("TIME")),
     ],
 )
-def debugmutation(ui, repo, **opts):
+def debugmutation(ui, repo, **opts) -> int:
     """display the mutation history (or future) of a commit"""
     unfi = repo
 
@@ -118,8 +118,9 @@ def debugmutation(ui, repo, **opts):
 
 
 @command("debugmutationfromobsmarkers", [])
-def debugmutationfromobsmarkers(ui, repo, **opts):
+def debugmutationfromobsmarkers(ui, repo, **opts) -> int:
     """convert obsolescence markers to mutation records"""
+    # pyre-fixme[16]: Module `mutation` has no attribute `convertfromobsmarkers`.
     entries, commits, written = mutation.convertfromobsmarkers(repo)
     repo.ui.write(
         _("wrote %s of %s entries for %s commits\n") % (written, entries, commits)
@@ -128,7 +129,7 @@ def debugmutationfromobsmarkers(ui, repo, **opts):
 
 
 @command("debugvisibility", [], subonly=True)
-def debugvisibility(ui, repo):
+def debugvisibility(ui, repo) -> None:
     """control visibility tracking"""
 
 
@@ -136,21 +137,21 @@ subcmd = debugvisibility.subcommand()
 
 
 @subcmd("start", [])
-def debugvisibilitystart(ui, repo):
+def debugvisibilitystart(ui, repo) -> int:
     """start tracking commit visibility explicitly"""
     visibility.starttracking(repo)
     return 0
 
 
 @subcmd("stop", [])
-def debugvisibilitystop(ui, repo):
+def debugvisibilitystop(ui, repo) -> int:
     """stop tracking commit visibility explicitly"""
     visibility.stoptracking(repo)
     return 0
 
 
 @subcmd("status", [])
-def debugvisibilitystatus(ui, repo):
+def debugvisibilitystatus(ui, repo) -> None:
     """show current visibility tracking status"""
     if visibility.enabled(repo):
         ui.status(_("commit visibility is tracked explicitly\n"))
