@@ -46,6 +46,15 @@ impl fmt::Display for LfsMethod {
     }
 }
 
+impl LfsMethod {
+    pub fn is_read_only(&self) -> bool {
+        match self {
+            Self::Download | Self::DownloadSha256 | Self::Batch => true,
+            Self::Upload | Self::GitBlob => false,
+        }
+    }
+}
+
 #[derive(StateData, Clone)]
 pub struct RequestContext {
     pub ctx: CoreContext,

@@ -113,6 +113,7 @@ impl LfsServerContext {
         repository: String,
         identities: Option<&MononokeIdentitySet>,
         host: String,
+        method: LfsMethod,
     ) -> Result<RepositoryRequestContext, LfsServerContextErrorKind> {
         let (
             repo,
@@ -151,6 +152,7 @@ impl LfsServerContext {
             identities,
             enforce_acl_check,
             enforce_authentication,
+            method,
         )
         .await?;
 
@@ -192,6 +194,7 @@ async fn acl_check(
     identities: Option<&MononokeIdentitySet>,
     enforce_authorization: bool,
     enforce_authentication: bool,
+    method: LfsMethod,
 ) -> Result<(), LfsServerContextErrorKind> {
     let identities: Cow<MononokeIdentitySet> = match identities {
         Some(idents) => Cow::Borrowed(idents),
@@ -201,9 +204,15 @@ async fn acl_check(
         None => Cow::Owned(MononokeIdentitySet::new()),
     };
 
-    let acl_check = permission_checker
-        .check_if_draft_access_allowed(identities.as_ref())
-        .await;
+    let acl_check = if method.is_read_only() {
+        permission_checker
+            .check_if_read_access_allowed(identities.as_ref())
+            .await
+    } else {
+        permission_checker
+            .check_if_draft_access_allowed(identities.as_ref())
+            .await
+    };
 
     if !acl_check && enforce_authorization {
         Err(LfsServerContextErrorKind::Forbidden)
@@ -308,7 +317,9 @@ impl RepositoryRequestContext {
         let host = get_host_header(&headers)?;
 
         let lfs_ctx = LfsServerContext::borrow_from(state);
-        lfs_ctx.request(ctx, repository, identities, host).await
+        lfs_ctx
+            .request(ctx, repository, identities, host, method)
+            .await
     }
 
     pub fn logger(&self) -> &Logger {
@@ -539,6 +550,7 @@ mod test {
     use mononoke_types::hash::Sha256;
     use mononoke_types::ContentId;
     use repo_permission_checker::AlwaysAllowRepoPermissionChecker;
+    use repo_permission_checker::MockRepoPermissionChecker;
     use test_repo_factory::TestRepoFactory;
 
     use super::*;
@@ -835,16 +847,50 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
-    async fn test_acl_check_no_certificates(_fb: FacebookInit) -> Result<(), Error> {
+    #[tokio::test]
+    async fn test_acl_check_no_certificates() -> Result<(), Error> {
         let aclchecker = AlwaysAllowRepoPermissionChecker::new();
 
-        let res = acl_check(&aclchecker, None, false, true).await;
+        let res = acl_check(&aclchecker, None, false, true, LfsMethod::Download).await;
 
         match res.err().unwrap() {
             LfsServerContextErrorKind::NotAuthenticated => Ok(()),
             _ => Err(anyhow!("test failed")),
         }
+    }
+
+    #[tokio::test]
+    async fn test_acl_check_action() -> Result<(), Error> {
+        let mut aclchecker = MockRepoPermissionChecker::new();
+        aclchecker
+            .expect_check_if_read_access_allowed()
+            .return_const(true)
+            .times(1);
+
+        acl_check(
+            &aclchecker,
+            Some(&MononokeIdentitySet::new()),
+            false,
+            true,
+            LfsMethod::Download,
+        )
+        .await?;
+
+        aclchecker
+            .expect_check_if_draft_access_allowed()
+            .return_const(true)
+            .times(1);
+
+        acl_check(
+            &aclchecker,
+            Some(&MononokeIdentitySet::new()),
+            false,
+            true,
+            LfsMethod::Upload,
+        )
+        .await?;
+
+        Ok(())
     }
 
     #[test]
