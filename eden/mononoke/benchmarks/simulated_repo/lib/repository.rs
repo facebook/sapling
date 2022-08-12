@@ -88,7 +88,7 @@ use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
 use repo_lock::AlwaysUnlockedRepoLock;
 use repo_lock::ArcRepoLock;
-use repo_permission_checker::AlwaysAllowMockRepoPermissionChecker;
+use repo_permission_checker::AlwaysAllowRepoPermissionChecker;
 use repo_permission_checker::ArcRepoPermissionChecker;
 use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::DisabledSegmentedChangelog;
@@ -278,7 +278,7 @@ impl BenchmarkRepoFactory {
     }
 
     pub fn permission_checker(&self) -> Result<ArcRepoPermissionChecker> {
-        let permission_checker = AlwaysAllowMockRepoPermissionChecker::new();
+        let permission_checker = AlwaysAllowRepoPermissionChecker::new();
         Ok(Arc::new(permission_checker))
     }
 

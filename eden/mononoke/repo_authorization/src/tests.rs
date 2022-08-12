@@ -92,10 +92,10 @@ impl RepoPermissionChecker for TestPermissionChecker {
         self.any_region_read
     }
 
-    async fn check_if_region_read_access_allowed(
-        &self,
-        _acls: &[&str],
-        _identities: &MononokeIdentitySet,
+    async fn check_if_region_read_access_allowed<'a>(
+        &'a self,
+        _acls: &'a [&'a str],
+        _identities: &'a MononokeIdentitySet,
     ) -> bool {
         false
     }

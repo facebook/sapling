@@ -93,7 +93,7 @@ use repo_identity::RepoIdentity;
 use repo_lock::AlwaysUnlockedRepoLock;
 use repo_lock::ArcRepoLock;
 use repo_lock::SqlRepoLock;
-use repo_permission_checker::AlwaysAllowMockRepoPermissionChecker;
+use repo_permission_checker::AlwaysAllowRepoPermissionChecker;
 use repo_permission_checker::ArcRepoPermissionChecker;
 use repo_sparse_profiles::ArcRepoSparseProfiles;
 use repo_sparse_profiles::RepoSparseProfiles;
@@ -440,7 +440,7 @@ impl TestRepoFactory {
         if let Some(permission_checker) = &self.permission_checker {
             Ok(permission_checker.clone())
         } else {
-            let permission_checker = AlwaysAllowMockRepoPermissionChecker::new();
+            let permission_checker = AlwaysAllowRepoPermissionChecker::new();
             Ok(Arc::new(permission_checker))
         }
     }

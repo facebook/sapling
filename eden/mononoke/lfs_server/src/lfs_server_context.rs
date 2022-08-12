@@ -538,7 +538,7 @@ mod test {
     use lfs_protocol::Sha256 as LfsSha256;
     use mononoke_types::hash::Sha256;
     use mononoke_types::ContentId;
-    use repo_permission_checker::AlwaysAllowMockRepoPermissionChecker;
+    use repo_permission_checker::AlwaysAllowRepoPermissionChecker;
     use test_repo_factory::TestRepoFactory;
 
     use super::*;
@@ -837,7 +837,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_acl_check_no_certificates(_fb: FacebookInit) -> Result<(), Error> {
-        let aclchecker = AlwaysAllowMockRepoPermissionChecker::new();
+        let aclchecker = AlwaysAllowRepoPermissionChecker::new();
 
         let res = acl_check(&aclchecker, None, false, true).await;
 

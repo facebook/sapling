@@ -10,7 +10,6 @@ use std::collections::HashMap;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
-use auto_impl::auto_impl;
 use metaconfig_types::Identity;
 use permission_checker::AclProvider;
 use permission_checker::BoxPermissionChecker;
@@ -25,8 +24,8 @@ use slog::Logger;
 /// Perform checks against the various access control lists associated with
 /// the repository.
 #[facet::facet]
+#[mockall::automock]
 #[async_trait]
-#[auto_impl(&, Arc, Box)]
 pub trait RepoPermissionChecker: Send + Sync + 'static {
     /// Check whether the given identities are permitted to **read** the
     /// repository.
@@ -39,10 +38,10 @@ pub trait RepoPermissionChecker: Send + Sync + 'static {
         identities: &MononokeIdentitySet,
     ) -> bool;
 
-    async fn check_if_region_read_access_allowed(
-        &self,
-        region_hipster_acls: &[&str],
-        identities: &MononokeIdentitySet,
+    async fn check_if_region_read_access_allowed<'a>(
+        &'a self,
+        region_hipster_acls: &'a [&'a str],
+        identities: &'a MononokeIdentitySet,
     ) -> bool;
 
     /// Check whether the given identities are permitted to make **draft**
@@ -162,10 +161,10 @@ impl RepoPermissionChecker for ProdRepoPermissionChecker {
         false
     }
 
-    async fn check_if_region_read_access_allowed(
-        &self,
-        region_hipster_acls: &[&str],
-        identities: &MononokeIdentitySet,
+    async fn check_if_region_read_access_allowed<'a>(
+        &'a self,
+        region_hipster_acls: &'a [&'a str],
+        identities: &'a MononokeIdentitySet,
     ) -> bool {
         for acl in region_hipster_acls {
             if let Some(checker) = self.repo_region_permcheckers.get(*acl) {
@@ -206,16 +205,16 @@ impl RepoPermissionChecker for ProdRepoPermissionChecker {
     }
 }
 
-pub struct AlwaysAllowMockRepoPermissionChecker {}
+pub struct AlwaysAllowRepoPermissionChecker {}
 
-impl AlwaysAllowMockRepoPermissionChecker {
+impl AlwaysAllowRepoPermissionChecker {
     pub fn new() -> Self {
         Self {}
     }
 }
 
 #[async_trait]
-impl RepoPermissionChecker for AlwaysAllowMockRepoPermissionChecker {
+impl RepoPermissionChecker for AlwaysAllowRepoPermissionChecker {
     async fn check_if_read_access_allowed(&self, _identities: &MononokeIdentitySet) -> bool {
         true
     }
@@ -227,10 +226,10 @@ impl RepoPermissionChecker for AlwaysAllowMockRepoPermissionChecker {
         true
     }
 
-    async fn check_if_region_read_access_allowed(
-        &self,
-        _region_hipster_acls: &[&str],
-        _identities: &MononokeIdentitySet,
+    async fn check_if_region_read_access_allowed<'a>(
+        &'a self,
+        _region_hipster_acls: &'a [&'a str],
+        _identities: &'a MononokeIdentitySet,
     ) -> bool {
         true
     }
