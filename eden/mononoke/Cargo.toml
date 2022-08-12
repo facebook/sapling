@@ -33,16 +33,6 @@ name = "configlint"
 path = "cmds/configlint.rs"
 
 [[bin]]
-name = "dumprev"
-path = "cmds/dumprev.rs"
-test = false
-
-[[bin]]
-name = "idxdump"
-path = "cmds/idxdump.rs"
-test = false
-
-[[bin]]
 name = "manual_scrub"
 path = "cmds/manual_scrub/main.rs"
 
