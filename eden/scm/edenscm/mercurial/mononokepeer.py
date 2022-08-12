@@ -246,7 +246,7 @@ class mononokepeer(stdiopeer.stdiopeer):
         self._confheaders = ui.config("http", "extra_headers_json")
         self._verbose = ui.configwith(bool, "http", "verbose")
         try:
-            self._cats = cats.getcats(ui._uiconfig._rcfg, raise_if_missing=True)
+            self._cats = cats.getcats(ui._uiconfig._rcfg, "cats", raise_if_missing=True)
         except Exception as e:
             ui.log("features", feature="missing-cats")
             ui.debug("CATs missing: %s. Identities won't be propagated.\n" % e)

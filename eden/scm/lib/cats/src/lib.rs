@@ -73,11 +73,11 @@ pub struct CatsSection<'a> {
 }
 
 impl<'a> CatsSection<'a> {
-    pub fn from_config(config: &'a dyn Config) -> Self {
+    pub fn from_config(config: &'a dyn Config, section_name: &str) -> Self {
         // Use an IndexMap to preserve ordering; needed to correctly handle precedence.
         let mut groups = IndexMap::new();
 
-        let keys = config.keys("cats");
+        let keys = config.keys(section_name);
         for key in &keys {
             // Skip keys that aren't valid UTF-8 or that don't match
             // the expected cats key format of `group.setting`.
@@ -85,7 +85,7 @@ impl<'a> CatsSection<'a> {
                 Some(i) => (&key[..i], &key[i + 1..]),
                 None => continue,
             };
-            if let Some(value) = config.get("cats", key) {
+            if let Some(value) = config.get(section_name, key) {
                 groups
                     .entry(group)
                     .or_insert_with(HashMap::new)

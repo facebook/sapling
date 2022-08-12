@@ -20,22 +20,41 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(
         py,
         "findcats",
-        py_fn!(py, findcats(cfg: config, raise_if_missing: bool = true)),
+        py_fn!(
+            py,
+            findcats(
+                cfg: config,
+                section_name: &str,
+                raise_if_missing: bool = true
+            )
+        ),
     )?;
 
     m.add(
         py,
         "getcats",
-        py_fn!(py, getcats(cfg: config, raise_if_missing: bool = true)),
+        py_fn!(
+            py,
+            getcats(
+                cfg: config,
+                section_name: &str,
+                raise_if_missing: bool = true
+            )
+        ),
     )?;
 
     Ok(m)
 }
 
-fn findcats(py: Python, cfg: config, raise_if_missing: bool) -> PyResult<PyObject> {
+fn findcats(
+    py: Python,
+    cfg: config,
+    section_name: &str,
+    raise_if_missing: bool,
+) -> PyResult<PyObject> {
     let cfg = &cfg.get_cfg(py);
 
-    CatsSection::from_config(cfg)
+    CatsSection::from_config(cfg, section_name)
         .find_cats()
         .or_else(|e| if raise_if_missing { Err(e) } else { Ok(None) })
         .map_pyerr(py)?
@@ -57,10 +76,15 @@ fn findcats(py: Python, cfg: config, raise_if_missing: bool) -> PyResult<PyObjec
         )
 }
 
-fn getcats(py: Python, cfg: config, raise_if_missing: bool) -> PyResult<PyObject> {
+fn getcats(
+    py: Python,
+    cfg: config,
+    section_name: &str,
+    raise_if_missing: bool,
+) -> PyResult<PyObject> {
     let cfg = &cfg.get_cfg(py);
 
-    CatsSection::from_config(cfg)
+    CatsSection::from_config(cfg, section_name)
         .get_cats()
         .or_else(|e| if raise_if_missing { Err(e) } else { Ok(None) })
         .map_pyerr(py)?
