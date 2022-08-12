@@ -116,13 +116,13 @@ impl HgRepoContext {
     ) -> Result<Bubble, MononokeError> {
         Ok(self
             .repo()
-            .ephemeral_store()
+            .repo_ephemeral_store_arc()
             .create_bubble(custom_duration)
             .await?)
     }
 
-    pub fn ephemeral_store(&self) -> &Arc<RepoEphemeralStore> {
-        self.repo().ephemeral_store()
+    pub fn ephemeral_store(&self) -> Arc<RepoEphemeralStore> {
+        self.repo().repo_ephemeral_store_arc()
     }
 
     /// Load bubble from id
@@ -799,7 +799,7 @@ impl HgRepoContext {
     ) -> Result<HashMap<HgChangesetId, Vec<HgChangesetId>>, MononokeError> {
         let ctx = self.ctx().clone();
         let blob_repo = self.blob_repo();
-        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.repo.skiplist_index().clone();
+        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.repo.skiplist_index_arc();
         let phases = blob_repo.phases();
         let common: HashSet<_> = common.into_iter().collect();
         // make sure filenodes are derived before sending

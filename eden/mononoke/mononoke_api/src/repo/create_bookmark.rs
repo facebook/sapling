@@ -31,7 +31,7 @@ impl RepoContext {
         let bookmark = bookmark.as_ref();
         let bookmark = BookmarkName::new(bookmark)?;
 
-        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.skiplist_index().clone();
+        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.skiplist_index_arc();
 
         // Create the bookmark.
         let mut op = bookmarks_movement::CreateBookmarkOp::new(

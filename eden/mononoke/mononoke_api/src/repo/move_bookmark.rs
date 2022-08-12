@@ -51,7 +51,7 @@ impl RepoContext {
                 })?,
         };
 
-        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.skiplist_index().clone();
+        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.skiplist_index_arc();
 
         // Move the bookmark.
         let mut op = bookmarks_movement::UpdateBookmarkOp::new(

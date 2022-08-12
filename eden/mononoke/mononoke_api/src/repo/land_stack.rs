@@ -45,7 +45,7 @@ impl RepoContext {
         let bookmark = bookmark.as_ref();
         let bookmark = BookmarkName::new(bookmark)?;
 
-        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.skiplist_index().clone();
+        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.skiplist_index_arc();
 
         // Check that base is an ancestor of the head commit, and fail with an
         // appropriate error message if that's not the case.

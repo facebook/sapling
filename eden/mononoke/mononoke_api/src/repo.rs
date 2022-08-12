@@ -52,9 +52,12 @@ use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
+use ephemeral_blobstore::ArcRepoEphemeralStore;
 use ephemeral_blobstore::Bubble;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
+use ephemeral_blobstore::RepoEphemeralStoreArc;
+use ephemeral_blobstore::RepoEphemeralStoreRef;
 use ephemeral_blobstore::StorageLocation;
 use fbinit::FacebookInit;
 use filestore::Alias;
@@ -89,7 +92,9 @@ use mononoke_types::RepositoryId;
 use mononoke_types::Svnrev;
 use mononoke_types::Timestamp;
 use mutable_counters::MutableCounters;
+use mutable_renames::ArcMutableRenames;
 use mutable_renames::MutableRenames;
+use mutable_renames::MutableRenamesArc;
 use mutable_renames::SqlMutableRenamesStore;
 use phases::Phases;
 use phases::PhasesArc;
@@ -109,13 +114,18 @@ use repo_identity::RepoIdentityArc;
 use repo_identity::RepoIdentityRef;
 use repo_lock::RepoLock;
 use repo_permission_checker::RepoPermissionChecker;
+use repo_sparse_profiles::ArcRepoSparseProfiles;
 use repo_sparse_profiles::RepoSparseProfiles;
+use repo_sparse_profiles::RepoSparseProfilesArc;
 use revset::AncestorsNodeStream;
 use segmented_changelog::CloneData;
 use segmented_changelog::DisabledSegmentedChangelog;
 use segmented_changelog::Location;
 use segmented_changelog::SegmentedChangelog;
+use segmented_changelog::SegmentedChangelogRef;
+use skiplist::ArcSkiplistIndex;
 use skiplist::SkiplistIndex;
+use skiplist::SkiplistIndexArc;
 use slog::debug;
 use slog::error;
 use sql_construct::SqlConstruct;
@@ -248,7 +258,7 @@ impl RepoContextBuilder {
         F: FnOnce(RepoEphemeralStore) -> R,
         R: Future<Output = anyhow::Result<Option<BubbleId>>>,
     {
-        self.bubble_id = bubble_fetcher(self.repo.ephemeral_store().as_ref().clone()).await?;
+        self.bubble_id = bubble_fetcher(self.repo.repo_ephemeral_store().clone()).await?;
         Ok(self)
     }
 
@@ -447,23 +457,9 @@ impl Repo {
         &self.inner.blob_repo
     }
 
-    pub fn segmented_changelog(&self) -> &dyn SegmentedChangelog {
-        &self.inner.segmented_changelog
-    }
-
     /// `LiveCommitSyncConfig` instance to query current state of sync configs.
     pub fn live_commit_sync_config(&self) -> Arc<dyn LiveCommitSyncConfig> {
         self.inner.repo_cross_repo.live_commit_sync_config().clone()
-    }
-
-    /// The skiplist index for the referenced repository.
-    pub fn skiplist_index(&self) -> &Arc<SkiplistIndex> {
-        &self.inner.skiplist_index
-    }
-
-    /// The ephemeral store for the referenced repository
-    pub fn ephemeral_store(&self) -> &Arc<RepoEphemeralStore> {
-        &self.inner.ephemeral_store
     }
 
     /// The commit sync mapping for the referenced repository.
@@ -486,14 +482,6 @@ impl Repo {
         &self.inner.repo_config
     }
 
-    pub fn mutable_renames(&self) -> &Arc<MutableRenames> {
-        &self.inner.mutable_renames
-    }
-
-    pub fn sparse_profiles(&self) -> &Arc<RepoSparseProfiles> {
-        &self.inner.sparse_profiles
-    }
-
     pub async fn report_monitoring_stats(&self, ctx: &CoreContext) -> Result<(), MononokeError> {
         match self.config().source_control_service_monitoring.as_ref() {
             None => {}
@@ -512,13 +500,13 @@ impl Repo {
             ctx.logger(),
             "Monitored bookmark does not exist in the cache: {}, repo: {}",
             bookmark,
-            self.blob_repo().name()
+            self.repo_identity().name()
         );
 
         STATS::missing_from_cache.set_value(
             ctx.fb,
             1,
-            (self.blob_repo().get_repoid(), bookmark.to_string()),
+            (self.repo_identity().id(), bookmark.to_string()),
         );
     }
 
@@ -531,7 +519,7 @@ impl Repo {
         STATS::missing_from_repo.set_value(
             ctx.fb,
             1,
-            (self.blob_repo().get_repoid(), bookmark.to_string()),
+            (self.repo_identity().id(), bookmark.to_string()),
         );
     }
 
@@ -547,7 +535,7 @@ impl Repo {
                 ctx.logger(),
                 "Reporting staleness of {} in repo {} to be {}s",
                 bookmark,
-                self.blob_repo().get_repoid(),
+                self.repo_identity().id(),
                 staleness
             );
         }
@@ -555,7 +543,7 @@ impl Repo {
         STATS::staleness.set_value(
             ctx.fb,
             staleness,
-            (self.blob_repo().get_repoid(), bookmark.to_string()),
+            (self.repo_identity().id(), bookmark.to_string()),
         );
     }
 
@@ -728,7 +716,7 @@ impl RepoContext {
 
         // Open the bubble if necessary.
         let repo = if let Some(bubble_id) = bubble_id {
-            let bubble = repo.ephemeral_store().open_bubble(bubble_id).await?;
+            let bubble = repo.repo_ephemeral_store().open_bubble(bubble_id).await?;
             Arc::new(repo.with_bubble(bubble))
         } else {
             repo
@@ -778,13 +766,13 @@ impl RepoContext {
     }
 
     /// The skiplist index for the referenced repository.
-    pub fn skiplist_index(&self) -> &Arc<SkiplistIndex> {
-        self.repo.skiplist_index()
+    pub fn skiplist_index_arc(&self) -> ArcSkiplistIndex {
+        self.repo.skiplist_index_arc()
     }
 
     /// The ephemeral store for the referenced repository
-    pub fn ephemeral_store(&self) -> &Arc<RepoEphemeralStore> {
-        self.repo.ephemeral_store()
+    pub fn repo_ephemeral_store_arc(&self) -> ArcRepoEphemeralStore {
+        self.repo.repo_ephemeral_store_arc()
     }
 
     /// The segmeneted changelog for the referenced repository.
@@ -812,12 +800,12 @@ impl RepoContext {
         self.repo.config()
     }
 
-    pub fn mutable_renames(&self) -> &Arc<MutableRenames> {
-        self.repo.mutable_renames()
+    pub fn mutable_renames(&self) -> ArcMutableRenames {
+        self.repo.mutable_renames_arc()
     }
 
-    pub fn sparse_profiles(&self) -> &Arc<RepoSparseProfiles> {
-        self.repo.sparse_profiles()
+    pub fn sparse_profiles(&self) -> ArcRepoSparseProfiles {
+        self.repo.repo_sparse_profiles_arc()
     }
 
     pub fn derive_changeset_info_enabled(&self) -> bool {
@@ -834,7 +822,11 @@ impl RepoContext {
 
     /// Load bubble from id
     pub async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble, MononokeError> {
-        Ok(self.repo.ephemeral_store().open_bubble(bubble_id).await?)
+        Ok(self
+            .repo
+            .repo_ephemeral_store()
+            .open_bubble(bubble_id)
+            .await?)
     }
 
     // pub(crate) for testing
@@ -860,7 +852,7 @@ impl RepoContext {
             Bubble(id) => Some(id),
             UnknownBubble => match self
                 .repo
-                .ephemeral_store()
+                .repo_ephemeral_store()
                 .bubble_from_changeset(&changeset_id)
                 .await?
             {
@@ -1388,9 +1380,7 @@ impl RepoContext {
         &self,
     ) -> (Target<BlobRepo>, Target<Arc<dyn LeastCommonAncestorsHint>>) {
         let blob_repo = self.blob_repo().clone();
-        // TODO(ikostia): get rid of cloning the underlying `SkiplistIndex` here
-        let lca_hint: Arc<dyn LeastCommonAncestorsHint> =
-            Arc::new((*self.repo.skiplist_index()).clone());
+        let lca_hint = self.repo.skiplist_index_arc();
         (Target(blob_repo), Target(lca_hint))
     }
 

@@ -769,7 +769,7 @@ impl ChangesetPathHistoryContext {
                 descendants_of,
                 exclude_changeset_and_ancestors,
                 cache: HashMap::new(),
-                skiplist_index: self.repo().skiplist_index().clone(),
+                skiplist_index: self.repo().skiplist_index_arc().clone(),
             },
             history_across_deletions,
             if opts.follow_mutable_file_history {

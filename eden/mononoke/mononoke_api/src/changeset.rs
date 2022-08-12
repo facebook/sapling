@@ -187,7 +187,7 @@ impl ChangesetContext {
         &mut self,
         paths: impl Iterator<Item = MononokePath>,
     ) -> Result<(), MononokeError> {
-        let mutable_renames = self.repo.mutable_renames();
+        let mutable_renames = &self.repo.mutable_renames();
         let ctx = self.repo.ctx();
         let cs_id = self.id;
 
@@ -654,7 +654,7 @@ impl ChangesetContext {
 
         let is_ancestor_of = self
             .repo()
-            .skiplist_index()
+            .skiplist_index_arc()
             .query_reachability(
                 self.ctx(),
                 &self.repo().blob_repo().get_changeset_fetcher(),
@@ -675,7 +675,7 @@ impl ChangesetContext {
     ) -> Result<Option<ChangesetContext>, MononokeError> {
         let lca = self
             .repo()
-            .skiplist_index()
+            .skiplist_index_arc()
             .lca(
                 self.ctx().clone(),
                 self.repo().blob_repo().get_changeset_fetcher(),
