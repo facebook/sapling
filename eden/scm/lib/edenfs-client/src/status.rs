@@ -17,6 +17,8 @@ use std::path::PathBuf;
 use std::str;
 use std::sync::Arc;
 
+use ::io::CanColor;
+use ::io::IO;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::ensure;
@@ -24,9 +26,6 @@ use anyhow::Error;
 use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
-use clidispatch::errors::FallbackToPython;
-use clidispatch::io::CanColor;
-use clidispatch::io::IO;
 use eden::GetScmStatusParams;
 use eden::GetScmStatusResult;
 use eden::ScmFileStatus;
@@ -43,6 +42,10 @@ use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 use tokio_uds_compat::UnixStream;
 use types::RepoPath;
 use types::RepoPathBuf;
+
+#[derive(Debug, thiserror::Error)]
+#[error("")]
+pub struct OperationNotSupported;
 
 /// Standalone status command for edenfs.
 ///
@@ -115,16 +118,16 @@ async fn maybe_status_fastpath_internal(
     io: &IO,
     list_ignored: bool,
 ) -> Result<(status::Status, HashMap<RepoPathBuf, RepoPathBuf>)> {
-    let eden_root = get_eden_root(repo_root).map_err(|_| FallbackToPython("status"))?;
+    let eden_root = get_eden_root(repo_root).map_err(|_| OperationNotSupported)?;
 
     let transport = get_socket_transport(repo_root)
         .await
-        .map_err(|_| FallbackToPython("status"))?;
+        .map_err(|_| OperationNotSupported)?;
     let client = <dyn EdenService>::new(BinaryProtocol, transport);
 
     let transport = get_socket_transport(repo_root)
         .await
-        .map_err(|_| FallbackToPython("status"))?;
+        .map_err(|_| OperationNotSupported)?;
     let fb303_client = <dyn BaseService>::new(BinaryProtocol, transport);
 
     // TODO(mbolin): Run read_hg_dirstate() and core.run() in parallel.
@@ -136,7 +139,7 @@ async fn maybe_status_fastpath_internal(
     // and call out to it here rather than maintain a parallel implementation in the wrapper.
     let hg_dir = repo_root.join(".hg");
     if needs_morestatus_extension(&hg_dir, &dirstate_data.p2) {
-        return Err(FallbackToPython("status").into());
+        return Err(OperationNotSupported.into());
     }
 
     let use_color = io.output().can_color();

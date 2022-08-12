@@ -7,8 +7,10 @@
 
 mod print;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use clidispatch::errors;
+use clidispatch::errors::FallbackToPython;
 use clidispatch::io::CanColor;
 use clidispatch::io::IO;
 use cliparser::define_flags;
@@ -152,6 +154,12 @@ pub fn run(opts: StatusOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
         repo.path(),
         io,
         print_config.status_types.ignored,
+    )
+    .map_err(
+        |e| match e.downcast_ref::<edenfs_client::status::OperationNotSupported>() {
+            Some(_) => anyhow!(FallbackToPython("status")),
+            None => e,
+        },
     )?;
 
     let cwd = std::env::current_dir()?;
