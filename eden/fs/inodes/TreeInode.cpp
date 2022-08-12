@@ -320,7 +320,6 @@ ImmediateFuture<VirtualInode> TreeInode::getOrFindChild(
     ObjectFetchContext& context,
     bool loadInodes) {
   TraceBlock block("getOrFindChild");
-  auto mount = getMount();
 
 #ifndef _WIN32
   if (name == kDotEdenName && getNodeId() != kRootNodeId) {
@@ -330,7 +329,8 @@ ImmediateFuture<VirtualInode> TreeInode::getOrFindChild(
     // because getInodeSlow() will call TreeInode::getOrFindChild()
     // recursively, and it is cleaner to break this logic out
     // separately.
-    return mount->getInodeSlow(".eden/this-dir"_relpath, context)
+    return getMount()
+        ->getInodeSlow(".eden/this-dir"_relpath, context)
         .thenValue([](auto&& inode) {
           return ImmediateFuture{VirtualInode{std::move(inode)}};
         });
