@@ -12,10 +12,6 @@
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
 
-#ifdef _WIN32
-#include "eden/common/utils/Handle.h"
-#endif
-
 namespace facebook::eden {
 
 #ifndef _WIN32
@@ -84,22 +80,6 @@ off_t getMaterializedFileSize(struct stat& st, AbsolutePath& pathToFile) {
 }
 
 namespace {
-/*
- * Following is a traits class for File System handles with its handle value and
- * close function.
- */
-struct FileHandleTraits {
-  using Type = HANDLE;
-
-  static Type invalidHandleValue() noexcept {
-    return INVALID_HANDLE_VALUE;
-  }
-  static void close(Type handle) noexcept {
-    CloseHandle(handle);
-  }
-};
-
-using FileHandle = HandleBase<FileHandleTraits>;
 
 enum class OpenMode {
   READ,

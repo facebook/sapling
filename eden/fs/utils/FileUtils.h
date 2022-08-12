@@ -11,9 +11,29 @@
 #include <folly/Try.h>
 #include <limits>
 #include <string>
+#include "eden/common/utils/Handle.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
+
+#ifdef _WIN32
+/*
+ * Following is a traits class for File System handles with its handle value and
+ * close function.
+ */
+struct FileHandleTraits {
+  using Type = HANDLE;
+
+  static Type invalidHandleValue() noexcept {
+    return INVALID_HANDLE_VALUE;
+  }
+  static void close(Type handle) noexcept {
+    CloseHandle(handle);
+  }
+};
+
+using FileHandle = HandleBase<FileHandleTraits>;
+#endif
 
 /** Read up to num_bytes bytes from the file */
 FOLLY_NODISCARD folly::Try<std::string> readFile(

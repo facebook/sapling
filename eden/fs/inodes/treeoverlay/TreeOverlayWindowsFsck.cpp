@@ -23,6 +23,7 @@
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/DirType.h"
+#include "eden/fs/utils/FileUtils.h"
 
 namespace facebook::eden {
 namespace {
@@ -90,15 +91,15 @@ dtype_t dtypeFromAttrs(
     DWORD dwFileAttributes) {
   auto path = boostPath.wstring();
   if (dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
-    auto handle = CreateFileW(
+    FileHandle handle{CreateFileW(
         path.c_str(),
         FILE_GENERIC_READ,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         NULL,
         OPEN_EXISTING,
         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
-        NULL);
-    if (handle == INVALID_HANDLE_VALUE) {
+        NULL)};
+    if (handle.get() == INVALID_HANDLE_VALUE) {
       XLOGF(
           DBG3,
           "Unable to determine reparse point type for {}: {}",
@@ -111,7 +112,7 @@ dtype_t dtypeFromAttrs(
     DWORD bytes_written;
 
     if (!DeviceIoControl(
-            handle,
+            handle.get(),
             FSCTL_GET_REPARSE_POINT,
             NULL,
             0,
