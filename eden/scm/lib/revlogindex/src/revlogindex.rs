@@ -1134,7 +1134,11 @@ impl IdConvert for RevlogIndex {
 impl DagAlgorithm for RevlogIndex {
     /// Sort a `Set` topologically.
     async fn sort(&self, set: &Set) -> dag::Result<Set> {
-        if set.hints().contains(Flags::TOPO_DESC) {
+        let hints = set.hints();
+        if hints.contains(Flags::TOPO_DESC)
+            && matches!(hints.dag_version(), Some(v) if v <= self.dag_version())
+            && matches!(hints.id_map_version(), Some(v) if v <= self.map_version())
+        {
             Ok(set.clone())
         } else {
             let mut spans = IdSet::empty();

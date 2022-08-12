@@ -1641,8 +1641,10 @@ where
 {
     /// Sort a `NameSet` topologically.
     async fn sort(&self, set: &NameSet) -> Result<NameSet> {
-        if set.hints().contains(Flags::TOPO_DESC)
-            && set.hints().dag_version() <= Some(self.dag_version())
+        let hints = set.hints();
+        if hints.contains(Flags::TOPO_DESC)
+            && matches!(hints.dag_version(), Some(v) if v <= self.dag_version())
+            && matches!(hints.id_map_version(), Some(v) if v <= self.map_version())
         {
             Ok(set.clone())
         } else {

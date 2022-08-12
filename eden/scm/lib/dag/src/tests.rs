@@ -53,9 +53,7 @@ pub(crate) use test_dag::ProtocolMonitor;
 
 #[cfg(test)]
 use crate::iddag::FirstAncestorConstraint;
-#[cfg(test)]
 use crate::namedag::MemNameDag;
-#[cfg(test)]
 use crate::ops::IdConvert;
 #[cfg(test)]
 use crate::protocol::Process;
@@ -102,7 +100,24 @@ static ASCII_DAG5: &str = r#"
          \   \   \
       A---C---E---G"#;
 
-fn test_generic_dag1<T: DagAlgorithm + DagAddHeads>(dag: T) -> Result<T> {
+fn test_dag_sort_version<T: DagAlgorithm + IdConvert>(dag: &T) -> Result<()> {
+    // Test that sort() returns a set with dag and map hints assigned.
+    let sets = [
+        nameset(""),
+        nameset("A C B"),
+        r(from_ascii(MemNameDag::new(), ASCII_DAG3).sort(&nameset("C A B")))?,
+    ];
+    for set in sets {
+        let sorted = r(dag.sort(&set))?;
+        let hints = sorted.hints();
+        assert_eq!(hints.dag_version(), Some(dag.dag_version()));
+        assert_eq!(hints.id_map_version(), Some(dag.map_version()));
+    }
+
+    Ok(())
+}
+
+fn test_generic_dag1<T: DagAlgorithm + DagAddHeads + IdConvert>(dag: T) -> Result<T> {
     let dag = from_ascii(dag, ASCII_DAG1);
     assert_eq!(expand(r(dag.all())?), "A B C D E F G H I J K L");
     assert_eq!(expand(r(dag.dirty())?), "A B C D E F G H I J K L");
@@ -123,6 +138,9 @@ fn test_generic_dag1<T: DagAlgorithm + DagAddHeads>(dag: T) -> Result<T> {
     assert_eq!(expand(r(dag.roots(nameset("A B E F C D I J")))?), "A C I");
     assert_eq!(expand(r(dag.heads(nameset("A B E F C D I J")))?), "F J");
     assert_eq!(expand(r(dag.gca_all(nameset("J K H")))?), "G");
+
+    test_dag_sort_version(&dag)?;
+
     Ok(dag)
 }
 
@@ -1445,7 +1463,7 @@ fn from_ascii_with_heads<D: DagAddHeads>(mut dag: D, text: &str, heads: Option<&
 }
 
 /// Test a general DAG interface against a few test cases.
-pub fn test_generic_dag<D: DagAddHeads + DagAlgorithm + Send + Sync + 'static>(
+pub fn test_generic_dag<D: DagAddHeads + DagAlgorithm + IdConvert + Send + Sync + 'static>(
     new_dag: impl Fn() -> D,
 ) {
     test_generic_dag1(new_dag()).unwrap();

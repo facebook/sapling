@@ -32,6 +32,13 @@ use crate::VertexListWithOptions;
 #[async_trait::async_trait]
 pub trait DagAlgorithm: Send + Sync {
     /// Sort a `NameSet` topologically.
+    ///
+    /// The returned set should have `dag` and `id_map` hints set to associated
+    /// with this dag or its previous compatible version. For example, if a
+    /// `set` is sorted on another dag but not in this dag, it should be resorted
+    /// using this dag.  If a `set` is empty and not associated to the current
+    /// `dag` in its hints, the return value should be a different empty `set`
+    /// that has the `dag` and `id_map` hints set to this dag.
     async fn sort(&self, set: &NameSet) -> Result<NameSet>;
 
     /// Re-create the graph so it looks better when rendered.
