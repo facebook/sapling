@@ -21,6 +21,7 @@
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
 #include "eden/fs/model/ObjectId.h"
+#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/DirType.h"
 
 namespace facebook::eden {
@@ -163,26 +164,19 @@ dtype_t dtypeFromPath(const boost::filesystem::path& boostPath) {
   return dtypeFromAttrs(boostPath, attrs.dwFileAttributes);
 }
 
-using InsensitiveOverlayMap = std::map<std::string, overlay::OverlayEntry>;
-
-InsensitiveOverlayMap toAsciiInsensitiveMap(overlay::OverlayDir& dir) {
-  std::map<std::string, overlay::OverlayEntry> newMap;
+PathMap<overlay::OverlayEntry> toPathMap(overlay::OverlayDir& dir) {
+  PathMap<overlay::OverlayEntry> newMap(CaseSensitivity::Insensitive);
   const auto& entries = *dir.entries_ref();
   for (auto iter = entries.begin(); iter != entries.end(); ++iter) {
-    std::string string = iter->first;
-    folly::toLowerAscii(string);
-    newMap.emplace(std::move(string), iter->second);
+    newMap[PathComponentPiece{iter->first}] = iter->second;
   }
   return newMap;
 }
 
 std::optional<overlay::OverlayEntry> getEntryFromOverlayDir(
-    const InsensitiveOverlayMap& dir,
+    const PathMap<overlay::OverlayEntry>& dir,
     PathComponentPiece name) {
-  auto string = name.stringPiece().toString();
-  folly::toLowerAscii(string);
-
-  auto result = dir.find(string);
+  auto result = dir.find(name);
   if (result != dir.end()) {
     return std::make_optional<overlay::OverlayEntry>(result->second);
   } else {
@@ -372,7 +366,7 @@ InodeNumber addOrUpdateOverlay(
     PathComponentPiece name,
     dtype_t dtype,
     std::optional<ObjectId> hash,
-    const InsensitiveOverlayMap& parentInsensitiveOverlayDir) {
+    const PathMap<overlay::OverlayEntry>& parentInsensitiveOverlayDir) {
   if (overlay.hasChild(parentInodeNum, name)) {
     XLOGF(DBG9, "Updating overlay: {}", name);
     overlay.removeChild(parentInodeNum, name);
@@ -404,7 +398,7 @@ std::optional<InodeNumber> fixup(
     TreeOverlay& overlay,
     PathComponentPiece name,
     InodeNumber parentInodeNum,
-    const InsensitiveOverlayMap& insensitiveOverlayDir) {
+    const PathMap<overlay::OverlayEntry>& insensitiveOverlayDir) {
   if (!state.onDisk) {
     if (state.inScm) {
       state.desiredDtype = state.scmDtype;
@@ -482,8 +476,7 @@ bool processChildren(
     RelativePathPiece path,
     AbsolutePathPiece root,
     InodeNumber inodeNumber,
-    const overlay::OverlayDir& overlayDir,
-    const InsensitiveOverlayMap& insensitiveOverlayDir,
+    const PathMap<overlay::OverlayEntry>& insensitiveOverlayDir,
     const std::shared_ptr<const Tree>& scmTree,
     const TreeOverlay::LookupCallback& callback) {
   XLOGF(DBG9, "processChildren - {}", path);
@@ -526,17 +519,9 @@ bool processChildren(
   FindClose(h);
 
   // Populate children overlay information
-  const auto& entries = overlayDir.entries_ref();
-  for (const auto& [name, dirent] : *entries) {
-    auto entryName = PathComponent{name};
-    // Check if this entry is present in overlay
-    auto overlayEntryOpt =
-        getEntryFromOverlayDir(insensitiveOverlayDir, entryName);
-    if (overlayEntryOpt.has_value()) {
-      const auto& overlayEntry = overlayEntryOpt.value();
-      auto& childState = children[entryName];
-      populateOverlayState(childState, overlayEntry);
-    }
+  for (const auto& [name, overlayEntry] : insensitiveOverlayDir) {
+    auto& childState = children[PathComponent{name}];
+    populateOverlayState(childState, overlayEntry);
   }
 
   // Don't recurse if there are no disk children for fixing up or overlay
@@ -582,14 +567,13 @@ bool processChildren(
 
       auto childInodeNumber = *childInodeNumberOpt;
       auto childOverlayDir = *overlay.loadOverlayDir(childInodeNumber);
-      auto childInsensitiveOverlayDir = toAsciiInsensitiveMap(childOverlayDir);
+      auto childInsensitiveOverlayDir = toPathMap(childOverlayDir);
       bool childMaterialized = childState.diskMaterialized;
       childMaterialized |= processChildren(
           overlay,
           childPath,
           root,
           childInodeNumber,
-          childOverlayDir,
           childInsensitiveOverlayDir,
           childScmTree,
           callback);
@@ -605,8 +589,7 @@ bool processChildren(
         // Refresh the parent state so we see and update the current overlay
         // entry.
         auto updatedOverlayDir = *overlay.loadOverlayDir(inodeNumber);
-        auto updatedInsensitiveOverlayDir =
-            toAsciiInsensitiveMap(updatedOverlayDir);
+        auto updatedInsensitiveOverlayDir = toPathMap(updatedOverlayDir);
         // Update the overlay entry to remove the scmHash.
         addOrUpdateOverlay(
             overlay,
@@ -627,7 +610,7 @@ void scanCurrentDir(
     AbsolutePathPiece dir,
     InodeNumber inode,
     const overlay::OverlayDir& parentOverlayDir,
-    const InsensitiveOverlayMap& parentInsensitiveOverlayDir,
+    const PathMap<overlay::OverlayEntry>& parentInsensitiveOverlayDir,
     bool recordDeletion,
     TreeOverlay::LookupCallback& callback) {
   auto boostPath = boost::filesystem::path(dir.stringPiece());
@@ -720,7 +703,7 @@ void scanCurrentDir(
   XLOGF(DBG9, "Reloading {} from overlay.", inode);
   // Reload the updated overlay as we have fixed the inconsistency.
   auto updated = *overlay.loadOverlayDir(inode);
-  auto updatedInsensitiveOverlayDir = toAsciiInsensitiveMap(updated);
+  auto updatedInsensitiveOverlayDir = toPathMap(updated);
 
   // Now that this overlay directory is consistent with the on-disk state,
   // proceed to its children.
@@ -748,7 +731,7 @@ void scanCurrentDir(
       auto entryInode =
           InodeNumber::fromThrift(*overlayEntry->inodeNumber_ref());
       auto entryDir = overlay.loadOverlayDir(entryInode);
-      auto entryInsensitiveOverlayDir = toAsciiInsensitiveMap(updated);
+      auto entryInsensitiveOverlayDir = toPathMap(updated);
       scanCurrentDir(
           overlay,
           path,
@@ -769,7 +752,7 @@ void windowsFsckScanLocalChanges(
     TreeOverlay::LookupCallback& callback) {
   XLOGF(INFO, "Start scanning {}", mountPath);
   if (auto view = overlay.loadOverlayDir(kRootNodeId)) {
-    auto insensitiveOverlayDir = toAsciiInsensitiveMap(*view);
+    auto insensitiveOverlayDir = toPathMap(*view);
     if (config->useThoroughFsck.getValue()) {
       // TODO: Handler errors or no trees
       auto scmEntryTry = callback(""_relpath).getTry();
@@ -783,7 +766,6 @@ void windowsFsckScanLocalChanges(
           ""_relpath,
           mountPath,
           kRootNodeId,
-          *view,
           insensitiveOverlayDir,
           scmTree,
           callback);
