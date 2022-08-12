@@ -2405,7 +2405,7 @@ commit 3"#
                 RevlogIndex::new(&revlog_path, &nodemap_path).unwrap()
             }
         };
-        dag::tests::test_generic_dag(new_dag);
+        dag::tests::test_generic_dag(&new_dag);
     }
 
     #[test]

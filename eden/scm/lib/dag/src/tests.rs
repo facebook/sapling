@@ -144,7 +144,9 @@ fn test_generic_dag1<T: DagAlgorithm + DagAddHeads + IdConvert>(dag: T) -> Resul
     Ok(dag)
 }
 
-fn test_generic_dag_beautify<D: DagAlgorithm + DagAddHeads>(new_dag: impl Fn() -> D) -> Result<()> {
+fn test_generic_dag_beautify<D: DagAlgorithm + DagAddHeads>(
+    new_dag: &impl Fn() -> D,
+) -> Result<()> {
     let ascii = r#"
         A C
         | |
@@ -248,7 +250,9 @@ fn test_generic_dag_reachable_roots(dag: impl DagAlgorithm + DagAddHeads) -> Res
     Ok(())
 }
 
-fn test_generic_dag_import(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
+// This test is specific to the implementation in this crate, and requires
+// >2 parents support.
+fn test_specific_dag_import(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
     let ascii = r#"
             J K
            /|\|\
@@ -371,70 +375,24 @@ fn test_generic_dag2<T: DagAlgorithm + DagAddHeads>(dag: T) -> Result<T> {
 
 #[test]
 fn test_mem_namedag() {
-    let dag = test_generic_dag1(MemNameDag::new()).unwrap();
-    assert_eq!(
-        format!("{:?}", dag),
-        r#"Max Level: 0
- Level 0
-  Group Master:
-   Segments: 0
-  Group Non-Master:
-   Segments: 5
-    K+N10 : L+N11 [H+N7, J+N9]
-    I+N8 : J+N9 [G+N6]
-    E+N4 : H+N7 [B+N1, D+N3]
-    C+N2 : D+N3 [] Root
-    A+N0 : B+N1 [] Root
-"#
-    );
-}
-
-#[test]
-fn test_dag_reachable_roots() {
-    test_generic_dag_reachable_roots(MemNameDag::new()).unwrap()
-}
-
-#[test]
-fn test_dag_import() {
-    test_generic_dag_import(MemNameDag::new()).unwrap()
-}
-
-#[test]
-fn test_dag_beautify() {
-    test_generic_dag_beautify(|| MemNameDag::new()).unwrap()
+    let new_dag = MemNameDag::new;
+    test_generic_dag(&new_dag);
+    test_specific_dag_import(new_dag()).unwrap();
 }
 
 #[test]
 fn test_namedag() {
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering;
+
     let dir = tempdir().unwrap();
-    let name_dag = NameDag::open(dir.path().join("n")).unwrap();
-    let dag = test_generic_dag2(name_dag).unwrap();
-    assert_eq!(
-        format!("{:?}", dag),
-        r#"Max Level: 1
- Level 1
-  Group Master:
-   Segments: 0
-  Group Non-Master:
-   Segments: 1
-    A+N0 : J+N8 [] Root
- Level 0
-  Group Master:
-   Segments: 0
-  Group Non-Master:
-   Segments: 10
-    K+N10 : K+N10 [H+N9, I+N7]
-    H+N9 : H+N9 [E+N2, F+N6]
-    J+N8 : J+N8 [G+N3, I+N7]
-    I+N7 : I+N7 [D+N4, F+N6]
-    F+N6 : F+N6 [B+N1, C+N5]
-    C+N5 : C+N5 [] Root
-    D+N4 : D+N4 [] Root
-    E+N2 : G+N3 [A+N0, B+N1]
-    B+N1 : B+N1 [] Root
-    A+N0 : A+N0 [] Root
-"#
-    );
+    let counter = AtomicUsize::new(0);
+    let new_dag = move || {
+        let count = counter.fetch_add(1, Ordering::AcqRel);
+        NameDag::open(dir.path().join(count.to_string())).unwrap()
+    };
+    test_generic_dag(&new_dag);
+    test_specific_dag_import(new_dag()).unwrap();
 }
 
 #[test]
@@ -1464,12 +1422,12 @@ fn from_ascii_with_heads<D: DagAddHeads>(mut dag: D, text: &str, heads: Option<&
 
 /// Test a general DAG interface against a few test cases.
 pub fn test_generic_dag<D: DagAddHeads + DagAlgorithm + IdConvert + Send + Sync + 'static>(
-    new_dag: impl Fn() -> D,
+    new_dag: &impl Fn() -> D,
 ) {
     test_generic_dag1(new_dag()).unwrap();
     test_generic_dag2(new_dag()).unwrap();
     test_generic_dag_reachable_roots(new_dag()).unwrap();
-    test_generic_dag_beautify(new_dag).unwrap()
+    test_generic_dag_beautify(new_dag).unwrap();
 }
 
 fn render(dag: &(impl DagAlgorithm + ?Sized)) -> String {
