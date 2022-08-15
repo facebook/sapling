@@ -78,7 +78,8 @@ configitem("globalrevs", "fastlookup", default=False)
 configitem("globalrevs", "onlypushrebase", default=True)
 configitem("globalrevs", "readonly", default=False)
 configitem("globalrevs", "reponame", default=None)
-configitem("globalrevs", "scmquerylookup ", default=False)
+configitem("globalrevs", "scmquerylookup", default=False)
+configitem("globalrevs", "edenapilookup", default=False)
 configitem("globalrevs", "startrev", default=0)
 
 cmdtable = {}
@@ -314,6 +315,13 @@ def _lookupglobalrev(repo, grev):
         lastrev = globalrevmap.lastrev
         hgnode = globalrevmap.gethgnode(grev)
         if hgnode:
+            return [hgnode]
+
+    useedenapi = ui.configbool("globalrevs", "edenapilookup")
+    if useedenapi and repo.nullableedenapi is not None:
+        rsp = list(repo.edenapi.committranslateids([{"Globalrev": grev}], "Hg"))
+        if rsp:
+            hgnode = rsp[0]["translated"]["Hg"]
             return [hgnode]
 
     for rev in repo.revs("head()"):

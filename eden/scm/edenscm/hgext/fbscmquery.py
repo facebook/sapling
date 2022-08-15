@@ -43,7 +43,9 @@ def uisetup(ui):
                 globalrevsmod, "_lookupglobalrev", _scmquerylookupglobalrev
             )
 
-    if ui.configbool("globalrevs", "scmquerylookup"):
+    if ui.configbool("globalrevs", "scmquerylookup") and not ui.configbool(
+        "globalrevs", "edenapilookup"
+    ):
         extensions.afterloaded("globalrevs", _globalrevswrapper)
 
     revset.symbols["gitnode"] = gitnode

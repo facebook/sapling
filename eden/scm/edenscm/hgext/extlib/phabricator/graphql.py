@@ -275,10 +275,34 @@ class Client(object):
                 for diffid, globalrev in difftoglobalrev.items()
                 if diffid not in difftonode
             ]
+            globalrevtonode = {}
             if totranslate:
-                globalrevtonode = self.getmirroredrevmap(
-                    repo, totranslate, GLOBAL_REV_TYPE, "hg"
+                if (
+                    repo.ui.configbool("globalrevs", "edenapilookup")
+                    and repo.nullableedenapi is not None
+                ):
+                    for translation in repo.edenapi.committranslateids(
+                        [{"Globalrev": int(globalrev)} for globalrev in totranslate],
+                        "Hg",
+                    ):
+                        globalrev = str(translation["commit"]["Globalrev"])
+                        hgnode = translation["translated"]["Hg"]
+                        globalrevtonode[globalrev] = hgnode
+                    totranslate = [
+                        globalrev
+                        for globalrev in totranslate
+                        if globalrev not in globalrevtonode
+                    ]
+                    if totranslate:
+                        repo.ui.develwarn(
+                            "Falling back to SCMQuery for globalrev lookup for %s\n"
+                            % totranslate
+                        )
+            if totranslate:
+                globalrevtonode.update(
+                    self.getmirroredrevmap(repo, totranslate, GLOBAL_REV_TYPE, "hg")
                 )
+            if globalrevtonode:
                 for diffid, globalrev in difftoglobalrev.items():
                     node = globalrevtonode.get(globalrev)
                     if node:
