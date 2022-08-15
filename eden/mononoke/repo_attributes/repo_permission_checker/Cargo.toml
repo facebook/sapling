@@ -10,7 +10,6 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.56"
 async-trait = "0.1.56"
-auto_impl = "0.4"
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mockall = "0.11"
