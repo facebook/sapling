@@ -109,9 +109,9 @@ Add a new commit, and see the tailer tail it in properly
   * SegmentedChangelogTailer is done, repo_id: 0 (glob)
 
 Check scuba logging
-  $ cat $LOG_FILE
-  *"log_tag":"segmented_changelog_tailer_update",*"success":"true"* (glob)
-  *"log_tag":"segmented_changelog_tailer_update",*"success":"true"* (glob)
+  $ cat "$LOG_FILE" | summarize_scuba_json "segmented_changelog_tailer_update" \
+  >     .normal.log_tag | jq -s  length
+  2
 
 Run Segmented Changelog Tailer. Nothing to do.
 
