@@ -12,7 +12,10 @@ use std::future::Future;
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use anyhow::format_err;
 use anyhow::Context;
+#[cfg(not(test))]
+use anyhow::Error;
 use anyhow::Result;
 use base_app::BaseApp;
 use blobstore::Blobstore;
@@ -44,9 +47,13 @@ use redactedblobstore::RedactionConfigBlobstore;
 use repo_factory::RepoFactory;
 use repo_factory::RepoFactoryBuilder;
 use scuba_ext::MononokeScubaSampleBuilder;
+use services::Fb303Service;
+use slog::error;
 use slog::o;
 use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
+#[cfg(not(test))]
+use stats::schedule_stats_aggregation_preview;
 use tokio::runtime::Handle;
 
 use crate::args::ConfigArgs;
@@ -60,6 +67,7 @@ use crate::args::SourceAndTargetRepoArgs;
 use crate::extension::AppExtension;
 use crate::extension::AppExtensionArgsBox;
 use crate::extension::BoxedAppExtensionArgs;
+use crate::fb303::Fb303AppExtension;
 
 pub struct MononokeApp {
     pub fb: FacebookInit,
@@ -131,6 +139,43 @@ impl MononokeApp {
         let env = self.env.clone();
         env.runtime
             .block_on(async move { tokio::spawn(main(self)).await? })
+    }
+
+    /// Execute a future on this app's runtime and start fb303 monitoring
+    /// service for the app.
+    pub fn run_with_fb303_monitoring<F, Fut, S: Fb303Service + Sync + Send + 'static>(
+        self,
+        main: F,
+        app_name: &str,
+        service: S,
+    ) -> Result<()>
+    where
+        F: Fn(MononokeApp) -> Fut,
+        Fut: Future<Output = Result<()>>,
+    {
+        let env = self.env.clone();
+        let logger = self.logger().clone();
+        let fb303_args = self.extension_args::<Fb303AppExtension>()?;
+        fb303_args.start_fb303_server(self.fb, app_name, self.logger(), service)?;
+        let result = env.runtime.block_on(async move {
+            #[cfg(not(test))]
+            {
+                let stats_agg = schedule_stats_aggregation_preview()
+                    .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?;
+                // Note: this returns a JoinHandle, which we drop, thus detaching the task
+                // It thus does not count towards shutdown_on_idle below
+                tokio::task::spawn(stats_agg);
+            }
+
+            main(self).await
+        });
+
+        // Log error in glog format (main will log, but not with glog)
+        result.map_err(move |e| {
+            error!(&logger, "Execution error: {:?}", e);
+            // Shorten the error that main will print, given that already printed in glog form
+            format_err!("Execution failed")
+        })
     }
 
     /// Returns the selected subcommand of the app (if this app
