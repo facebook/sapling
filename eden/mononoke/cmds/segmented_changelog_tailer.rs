@@ -62,15 +62,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_app_extension(Fb303AppExtension {})
         .build::<SegmentedChangelogTailerArgs>()?;
 
-    let fb303_args = app.extension_args::<Fb303AppExtension>()?;
-    fb303_args.start_fb303_server(
-        fb,
+    app.run_with_fb303_monitoring(
+        async_main,
         "segmented_changelog_tailer",
-        app.logger(),
         cmdlib::monitoring::AliveService,
-    )?;
-
-    app.run(async_main)
+    )
 }
 
 async fn async_main(app: MononokeApp) -> Result<(), Error> {
