@@ -6,7 +6,6 @@
  */
 
 #![feature(backtrace)]
-#![feature(bool_to_option)]
 #![deny(unused)]
 #![type_length_limit = "2097152"]
 
