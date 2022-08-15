@@ -9,6 +9,7 @@ import marshal
 import os
 import shutil
 import time
+from typing import Optional, Sized
 
 import bindings
 
@@ -35,7 +36,7 @@ from .cmdtable import command
         ("", "revlog", False, _("use legacy revlog backend (DEPRECATED)")),
     ],
 )
-def debugrebuildchangelog(ui, repo, **opts):
+def debugrebuildchangelog(ui, repo, **opts) -> None:
     """rebuild changelog by recloning and copying draft commits
 
     This is a destructive command that will remove invisible commits including
@@ -152,7 +153,7 @@ def debugrebuildchangelog(ui, repo, **opts):
         ml.compact(ml.path())
 
 
-def _withsuffix(name, suffix):
+def _withsuffix(name, suffix) -> str:
     """segments/v1 -> segments.suffix/v1"""
     split = name.split("/", 1)
     split[0] = "%s.%s" % (split[0], suffix)
@@ -178,7 +179,7 @@ def _readshelved(repo):
     return _readcommits(repo, cl.torevset(visibleshelved))
 
 
-def _backupcommits(repo, commits, ts):
+def _backupcommits(repo, commits: Sized, ts) -> str:
     bakname = "commits-%s-%s.bak" % (len(commits), ts)
     with open(repo.svfs.join(bakname), "wb") as f:
         f.write(marshal.dumps(commits))
@@ -192,7 +193,7 @@ def _readnonmasterdrafts(repo):
     return _readcommits(repo, revs)
 
 
-def _readcommits(repo, revs):
+def _readcommits(repo, revs: Sized):
     """read commits as [(node, parents, text)]"""
     ui = repo.ui
     zstore = bindings.zstore.zstore(repo.svfs.join(changelog2.HGCOMMITS_DIR))
@@ -202,6 +203,7 @@ def _readcommits(repo, revs):
     tonode = cl.node
     commits = []  # [(node, parents, text)]
     with progress.bar(ui, _("reading commits"), _("commits"), len(revs)) as prog:
+        # pyre-fixme[16]: `Sized` has no attribute `__iter__`.
         for rev in revs:
             prog.value += 1
             try:
@@ -251,7 +253,7 @@ def _tryreadtextp1p2(node, zstore, revlog):
     return None
 
 
-def _clonetotmp(repo, tmprepopath):
+def _clonetotmp(repo, tmprepopath: str):
     """Stream clone to a temp repo"""
     # streamclone is still the fastest way of getting changelog from the server
     # create a new repo for streaming clone
@@ -275,13 +277,13 @@ def _clonetotmp(repo, tmprepopath):
     return tmprepo
 
 
-def _addcommits(repo, commits):
+def _addcommits(repo, commits) -> None:
     with repo.lock(), repo.transaction("debugrebuildchangelog"):
         repo.changelog.inner.addcommits(commits)
         repo.changelog.inner.flush([])
 
 
-def _timestamp():
+def _timestamp() -> str:
     """Return a timestamp string that is likely unique"""
     if util.istest():
         return "0000"
@@ -289,7 +291,7 @@ def _timestamp():
         return time.strftime("%m%d%H%M%S")
 
 
-def _replacechangelogrevlog(srcrepo, dstrepo):
+def _replacechangelogrevlog(srcrepo, dstrepo) -> None:
     """Replace changelog (revlog) at dstrepo with revlog from srcrepo.
 
     Revlog is used because it's still the only supported format for
@@ -311,7 +313,7 @@ def _replacechangelogrevlog(srcrepo, dstrepo):
         dstrepo._writestorerequirements()
 
 
-def _replacechangelogsegments(repo, suffix, timestamp):
+def _replacechangelogsegments(repo, suffix, timestamp) -> Optional[str]:
     """Replace changelog segments from segments.suffix
 
     Return the backup suffix if the original segments were backed up.
