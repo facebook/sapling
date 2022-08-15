@@ -83,12 +83,9 @@ use segmented_changelog::SeedHead;
 use segmented_changelog::SegmentedChangelogTailer;
 use serde::Deserialize;
 use serde::Serialize;
-use slog::error;
 use slog::info;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
-#[cfg_attr(test, allow(unused))]
-use stats::schedule_stats_aggregation_preview;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
 use tokio::fs;
@@ -1483,18 +1480,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = MononokeAppBuilder::new(fb)
         .with_app_extension(Fb303AppExtension {})
         .build::<MononokeRepoImportArgs>()?;
-    let args: MononokeRepoImportArgs = app.args()?;
-    let env = app.environment();
     let logger = app.logger();
-    let configs = app.repo_configs();
-
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let answer = Question::new("Does the git repo you're about to merge has multiple heads (unmerged branches)? It's unsafe to use this tool when it does.")
         .show_defaults()
         .confirm();
     match answer {
-        Answer::NO => info!(ctx.logger(), "Let's get this merged!"),
+        Answer::NO => info!(logger, "Let's get this merged!"),
         Answer::YES => bail!(
             "Try cloning with 'git clone -b master --single-branch $clone_path` to clone only ancestors of master. Then you should be good to go!"
         ),
@@ -1503,66 +1495,49 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         ),
     };
 
-    let repo = app.open_repo(&args.repo);
+    app.run_with_fb303_monitoring(async_main, "repo_import", cmdlib::monitoring::AliveService)
+}
 
-    let fb303_args = app.extension_args::<Fb303AppExtension>()?;
-    fb303_args.start_fb303_server(fb, "repo_import", logger, cmdlib::monitoring::AliveService)?;
+async fn async_main(app: MononokeApp) -> Result<(), Error> {
+    let args: MononokeRepoImportArgs = app.args()?;
+    let env = app.environment();
+    let logger = app.logger();
+    let configs = app.repo_configs();
+    let ctx = app.new_basic_context();
 
-    let import_task = async {
-        let repo: Repo = repo.await?;
-        info!(
-            logger,
-            "using repo \"{}\" repoid {:?}",
-            repo.name(),
-            repo.repo_id()
-        );
-        let mut recovery_fields = match args.command {
-            Some(CheckAdditionalSetupSteps(check_additional_setup_steps_args)) => {
-                check_additional_setup_steps(
-                    &app,
-                    ctx,
-                    repo,
-                    &check_additional_setup_steps_args,
-                    configs,
-                    env,
-                )
-                .await?;
-                return Ok(());
-            }
-            Some(RecoverProcess(recover_process_args)) => {
-                fetch_recovery_state(&ctx, recover_process_args.saved_recovery_file_path.as_str())
-                    .await?
-            }
-            Some(Import(import_args)) => setup_import_args(import_args),
-            _ => return Err(format_err!("Invalid subcommand")),
-        };
-
-        match repo_import(&app, ctx, repo, &mut recovery_fields, configs, env).await {
-            Ok(()) => Ok(()),
-            Err(e) => {
-                save_importing_state(&recovery_fields).await?;
-                Err(e)
-            }
+    let repo: Repo = app.open_repo(&args.repo).await?;
+    info!(
+        logger,
+        "using repo \"{}\" repoid {:?}",
+        repo.name(),
+        repo.repo_id()
+    );
+    let mut recovery_fields = match args.command {
+        Some(CheckAdditionalSetupSteps(check_additional_setup_steps_args)) => {
+            check_additional_setup_steps(
+                &app,
+                ctx,
+                repo,
+                &check_additional_setup_steps_args,
+                configs,
+                env,
+            )
+            .await?;
+            return Ok(());
         }
+        Some(RecoverProcess(recover_process_args)) => {
+            fetch_recovery_state(&ctx, recover_process_args.saved_recovery_file_path.as_str())
+                .await?
+        }
+        Some(Import(import_args)) => setup_import_args(import_args),
+        _ => return Err(format_err!("Invalid subcommand")),
     };
 
-    let result = app.runtime().block_on(async {
-        #[cfg(not(test))]
-        {
-            let stats_agg = schedule_stats_aggregation_preview()
-                .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?;
-            // Note: this returns a JoinHandle, which we drop, thus detaching the task
-            // It thus does not count towards shutdown_on_idle below
-            tokio::task::spawn(stats_agg);
+    match repo_import(&app, ctx, repo, &mut recovery_fields, configs, env).await {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            save_importing_state(&recovery_fields).await?;
+            Err(e)
         }
-
-        import_task.await
-    });
-
-    // Log error in glog format (main will log, but not with glog)
-    result.map_err(move |e| {
-        error!(logger, "Execution error: {:?}", e);
-        // Shorten the error that main will print, given that already printed in glog form
-        format_err!("Execution failed")
-    })
+    }
 }
