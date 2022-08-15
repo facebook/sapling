@@ -45,7 +45,7 @@ impl Connection {
 
     /// Build a connection from a `host:port` string.
     #[cfg(target_os = "windows")]
-    pub fn from_host_port(fb: FacebookInit, host_port: impl AsRef<str>) -> Result<Self, Error> {
+    pub fn from_host_port(_fb: FacebookInit, _host_port: impl AsRef<str>) -> Result<Self, Error> {
         Err(anyhow!(
             "Connection to host and port is not supported on this platform"
         ))
@@ -127,7 +127,6 @@ pub(super) struct ConnectionArgs {
     #[clap(long, short, default_value = DEFAULT_TIER)]
     /// Connect to SCS through given tier.
     tier: String,
-    #[cfg(not(target_os = "windows"))]
     #[clap(long, short, conflicts_with = "tier")]
     /// Connect to SCS through a given host and port pair, format HOST:PORT.
     host: Option<String>,
