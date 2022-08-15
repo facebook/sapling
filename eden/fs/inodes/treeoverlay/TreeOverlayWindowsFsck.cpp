@@ -397,9 +397,11 @@ InodeNumber addOrUpdateOverlay(
 std::optional<InodeNumber> fixup(
     FsckFileState& state,
     TreeOverlay& overlay,
-    PathComponentPiece name,
+    RelativePathPiece path,
     InodeNumber parentInodeNum,
     const PathMap<overlay::OverlayEntry>& insensitiveOverlayDir) {
+  auto name = path.basename();
+
   if (!state.onDisk) {
     if (state.inScm) {
       state.desiredDtype = state.scmDtype;
@@ -411,8 +413,12 @@ std::optional<InodeNumber> fixup(
   } else { // if file exists normally on disk
     if (!state.inScm && !state.diskMaterialized) {
       // Throw error, since we can't materialize if it's not in scm.
-      throw std::runtime_error(
-          "unable to fix overlay, file is a placeholder but not in scm - TODO print path");
+      // TODO: This is likely caused by EdenFS not having called PrjDeleteFile
+      // in a previous checkout operation. We should probably call it here.
+
+      throw std::runtime_error(fmt::format(
+          "unable to fix overlay, file is a placeholder but not in scm - {}",
+          path));
     } else {
       state.desiredDtype = state.diskDtype;
       state.desiredHash = state.diskMaterialized ? std::nullopt : state.scmHash;
@@ -548,7 +554,7 @@ bool processChildren(
     XLOGF(DBG9, "process child - {}", childPath);
 
     std::optional<InodeNumber> childInodeNumberOpt = fixup(
-        childState, overlay, childName, inodeNumber, insensitiveOverlayDir);
+        childState, overlay, childPath, inodeNumber, insensitiveOverlayDir);
 
     anyChildMaterialized |= childState.diskMaterialized;
 
