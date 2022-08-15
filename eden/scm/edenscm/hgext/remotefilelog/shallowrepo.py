@@ -17,7 +17,7 @@ from .repack import domaintenancerepack
 requirement = "remotefilelog"
 
 
-def wraprepo(repo):
+def wraprepo(repo) -> None:
     class shallowrepository(repo.__class__):
         @util.propertycache
         def name(self):
