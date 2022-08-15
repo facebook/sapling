@@ -24,6 +24,7 @@ use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use segmented_changelog::seedheads_from_config;
+use segmented_changelog::OperationMode;
 use segmented_changelog::SegmentedChangelogTailer;
 use slog::info;
 use slog::o;
@@ -162,11 +163,15 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
 
         info!(ctx.logger(), "SegmentedChangelogTailer initialized",);
 
-        if args.once || args.force_reseed {
+        if args.once {
             segmented_changelog_tailer
-                .once(&ctx, args.force_reseed)
-                .await
-                .with_context(|| format!("incrementally building repo {}", repo_id))?;
+                .run(&ctx, OperationMode::SingleIncrementalUpdate)
+                .await;
+            info!(ctx.logger(), "SegmentedChangelogTailer is done",);
+        } else if args.force_reseed {
+            segmented_changelog_tailer
+                .run(&ctx, OperationMode::ForceReseed)
+                .await;
             info!(ctx.logger(), "SegmentedChangelogTailer is done",);
         } else if let Some(period) = config.segmented_changelog_config.tailer_update_period {
             // spread out update operations, start updates on another repo after 7 seconds
@@ -174,7 +179,9 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             let ctx = ctx.clone();
             tasks.push(async move {
                 tokio::time::sleep(wait_to_start).await;
-                segmented_changelog_tailer.run(&ctx, period).await;
+                segmented_changelog_tailer
+                    .run(&ctx, OperationMode::ContinousIncrementalUpdate(period))
+                    .await;
             });
         }
     }

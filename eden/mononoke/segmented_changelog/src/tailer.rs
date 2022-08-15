@@ -81,6 +81,13 @@ define_stats! {
 
 const DEFAULT_LOG_SAMPLING_RATE: usize = 5000;
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum OperationMode {
+    ContinousIncrementalUpdate(Duration),
+    ForceReseed,
+    SingleIncrementalUpdate,
+}
+
 pub struct SegmentedChangelogTailer {
     repo_id: RepositoryId,
     changeset_fetcher: Arc<PrefetchedChangesetsFetcher>,
@@ -202,19 +209,29 @@ impl SegmentedChangelogTailer {
         ))
     }
 
-    pub async fn run(&self, ctx: &CoreContext, period: Duration) {
+    pub async fn run(&self, ctx: &CoreContext, mode: OperationMode) {
         STATS::success.add_value(0);
         STATS::success_per_repo.add_value(0, (self.repo_id.id(),));
 
-        let mut interval = tokio::time::interval(period);
+        let mut interval = if let OperationMode::ContinousIncrementalUpdate(period) = mode {
+            Some(tokio::time::interval(period))
+        } else {
+            None
+        };
+
         loop {
-            let _ = interval.tick().await;
+            if let Some(interval) = &mut interval {
+                let _ = interval.tick().await;
+            }
             debug!(ctx.logger(), "woke up to update");
 
             STATS::count.add_value(1);
             STATS::count_per_repo.add_value(1, (self.repo_id.id(),));
 
-            let (stats, update_result) = self.once(ctx, false).timed().await;
+            let (stats, update_result) = self
+                .once(ctx, mode == OperationMode::ForceReseed)
+                .timed()
+                .await;
 
             STATS::duration_ms.add_value(stats.completion_time.as_millis() as i64);
             STATS::duration_ms_per_repo.add_value(
@@ -244,6 +261,10 @@ impl SegmentedChangelogTailer {
                 }
             };
             scuba.log_with_msg("segmented_changelog_tailer_update", msg);
+            if mode == OperationMode::SingleIncrementalUpdate || mode == OperationMode::ForceReseed
+            {
+                break;
+            }
         }
     }
 

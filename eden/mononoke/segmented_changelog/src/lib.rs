@@ -66,6 +66,7 @@ pub use crate::idmap::ConcurrentMemIdMap;
 pub use crate::idmap::IdMap;
 pub use crate::manager::ArcSegmentedChangelogManager;
 pub use crate::manager::SegmentedChangelogManager;
+pub use crate::tailer::OperationMode;
 pub use crate::tailer::SegmentedChangelogTailer;
 pub use crate::update::seedheads_from_config;
 pub use crate::update::JobType;
