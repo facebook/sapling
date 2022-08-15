@@ -16,6 +16,7 @@
 from __future__ import absolute_import
 
 import collections
+from typing import Optional, Sized
 
 from . import error, pycompat, util
 from .i18n import _
@@ -132,7 +133,7 @@ def bisect(repo, state):
     return ([best_node], tot, good, badnode, goodnode)
 
 
-def checksparsebisectskip(repo, candidatenode, badnode, goodnode):
+def checksparsebisectskip(repo, candidatenode, badnode, goodnode) -> str:
     """
     Checks if the candidate node can be skipped as the contents haven't changed
     within the sparse profile.
@@ -190,7 +191,7 @@ def load_state(repo):
     return state
 
 
-def save_state(repo, state):
+def save_state(repo, state) -> None:
     f = repo.localvfs("bisect.state", "wb", atomictemp=True)
     with repo.wlock():
         for kind in sorted(state):
@@ -199,13 +200,13 @@ def save_state(repo, state):
         f.close()
 
 
-def resetstate(repo):
+def resetstate(repo) -> None:
     """remove any bisect state from the repository"""
     if repo.localvfs.exists("bisect.state"):
         repo.localvfs.unlink("bisect.state")
 
 
-def checkstate(state):
+def checkstate(state) -> bool:
     """check we have both 'good' and 'bad' to define a range
 
     Raise Abort exception otherwise."""
@@ -285,7 +286,7 @@ def get(repo, status):
             raise error.ParseError(_("invalid bisect state"))
 
 
-def label(repo, node):
+def label(repo, node) -> Optional[str]:
     rev = repo.changelog.rev(node)
 
     # Try explicit sets
@@ -323,13 +324,14 @@ def shortlabel(label):
     return None
 
 
-def printresult(ui, repo, state, displayer, nodes, good):
+def printresult(ui, repo, state, displayer, nodes: Sized, good) -> None:
     if len(nodes) == 1:
         # narrowed it down to a single revision
         if good:
             ui.write(_("The first good revision is:\n"))
         else:
             ui.write(_("The first bad revision is:\n"))
+        # pyre-fixme[16]: `Sized` has no attribute `__getitem__`.
         displayer.show(repo[nodes[0]])
         extendnode = extendrange(repo, state, nodes, good)
         if extendnode is not None:
@@ -357,6 +359,7 @@ def printresult(ui, repo, state, displayer, nodes, good):
                     "bad revision could be any of:\n"
                 )
             )
+        # pyre-fixme[16]: `Sized` has no attribute `__iter__`.
         for n in nodes:
             displayer.show(repo[n])
     displayer.close()
