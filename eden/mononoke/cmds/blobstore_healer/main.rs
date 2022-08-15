@@ -43,9 +43,9 @@ use metaconfig_types::BlobConfig;
 use metaconfig_types::DatabaseConfig;
 use metaconfig_types::StorageConfig;
 use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_types::DateTime;
-use slog::error;
 use slog::info;
 use slog::o;
 use sql_construct::SqlConstructFromDatabaseConfig;
@@ -55,10 +55,6 @@ use sql_ext::facebook::MysqlOptions;
 use sql_ext::replication::NoReplicaLagMonitor;
 use sql_ext::replication::ReplicaLagMonitor;
 use sql_ext::replication::WaitForReplicationConfig;
-#[cfg(test)]
-use stats as _;
-#[cfg(not(test))]
-use stats::schedule_stats_aggregation_preview;
 
 #[derive(Parser)]
 #[clap(about = "Monitors blobstore_sync_queue to heal blobstores with missing data")]
@@ -272,6 +268,15 @@ fn main(fb: FacebookInit) -> Result<()> {
     let app = MononokeAppBuilder::new(fb)
         .with_app_extension(Fb303AppExtension {})
         .build::<MononokeBlobstoreHealerArgs>()?;
+
+    app.run_with_fb303_monitoring(
+        async_main,
+        "blobstore_healer",
+        cmdlib::monitoring::AliveService,
+    )
+}
+
+async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let args: MononokeBlobstoreHealerArgs = app.args()?;
     let env = app.environment();
 
@@ -305,14 +310,14 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let scuba = env.scuba_sample_builder.clone();
 
-    let ctx = SessionContainer::new_with_defaults(fb).new_context(logger.clone(), scuba);
+    let ctx = SessionContainer::new_with_defaults(app.fb).new_context(logger.clone(), scuba);
     let buffered_params = BufferedParams {
         weight_limit: heal_max_bytes,
         buffer_size: heal_concurrency,
     };
 
-    let healer = maybe_schedule_healer_for_storage(
-        fb,
+    maybe_schedule_healer_for_storage(
+        app.fb,
         &ctx,
         dry_run,
         drain_only,
@@ -326,33 +331,6 @@ fn main(fb: FacebookInit) -> Result<()> {
         iter_limit,
         healing_min_age,
         config_store,
-    );
-
-    let fb303_args = app.extension_args::<Fb303AppExtension>()?;
-    fb303_args.start_fb303_server(
-        fb,
-        "mononoke_server",
-        logger,
-        cmdlib::monitoring::AliveService,
-    )?;
-
-    let result = app.runtime().block_on(async {
-        #[cfg(not(test))]
-        {
-            let stats_agg = schedule_stats_aggregation_preview()
-                .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?;
-            // Note: this returns a JoinHandle, which we drop, thus detaching the task
-            // It thus does not count towards shutdown_on_idle below
-            tokio::task::spawn(stats_agg);
-        }
-
-        healer.await
-    });
-
-    // Log error in glog format (main will log, but not with glog)
-    result.map_err(move |e| {
-        error!(logger, "Execution error: {:?}", e);
-        // Shorten the error that main will print, given that already printed in glog form
-        format_err!("Execution failed")
-    })
+    )
+    .await
 }
