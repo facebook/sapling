@@ -37,7 +37,7 @@ derive_more = "0.99.17"
 derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes" }
 derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
-executor_lib = { version = "0.1.0", path = "../tools/executor" }
+executor_lib = { version = "0.1.0", path = "../cmdlib/sharding" }
 fastlog = { version = "0.1.0", path = "../derived_data/fastlog" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../filenodes" }

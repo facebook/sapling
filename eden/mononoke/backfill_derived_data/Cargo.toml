@@ -33,7 +33,7 @@ deleted_manifest = { version = "0.1.0", path = "../derived_data/deleted_manifest
 derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
 derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
-executor_lib = { version = "0.1.0", path = "../tools/executor" }
+executor_lib = { version = "0.1.0", path = "../cmdlib/sharding" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fastlog = { version = "0.1.0", path = "../derived_data/fastlog" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

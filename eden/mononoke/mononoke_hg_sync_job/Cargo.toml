@@ -33,7 +33,7 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
 dbbookmarks = { version = "0.1.0", path = "../bookmarks/dbbookmarks" }
-executor_lib = { version = "0.1.0", path = "../tools/executor" }
+executor_lib = { version = "0.1.0", path = "../cmdlib/sharding" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../filestore" }
