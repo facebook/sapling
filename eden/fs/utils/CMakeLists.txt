@@ -28,7 +28,7 @@ target_link_libraries(
     eden_build_config
     eden_service_thrift_cpp
     Folly::folly
-    edencommon::utils
+    edencommon::edencommon_utils
 )
 
 if (WIN32)

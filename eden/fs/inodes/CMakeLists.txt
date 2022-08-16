@@ -60,7 +60,7 @@ target_link_libraries(
     eden_utils
     eden_tree_overlay
     Folly::folly
-    edencommon::utils
+    edencommon::edencommon_utils
   PRIVATE
     eden_nfs_server
 )

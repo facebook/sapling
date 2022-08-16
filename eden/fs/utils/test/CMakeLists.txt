@@ -15,7 +15,7 @@ target_link_libraries(
     eden_testharness
     Folly::folly_test_util
     ${LIBGMOCK_LIBRARIES}
-    edencommon::utils
+    edencommon::edencommon_utils
 )
 gtest_discover_tests(eden_utils_test)
 

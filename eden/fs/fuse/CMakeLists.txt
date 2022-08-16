@@ -17,7 +17,7 @@ target_link_libraries(
     eden_request_context
     eden_telemetry
     Folly::folly
-    edencommon::utils
+    edencommon::edencommon_utils
 )
 
 add_subdirectory(privhelper)

@@ -22,7 +22,7 @@ target_link_libraries(
     eden_service_thrift_cpp
     eden_sqlite
     fb303::fb303
-    edencommon::utils
+    edencommon::edencommon_utils
 )
 
 target_link_libraries(

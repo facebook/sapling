@@ -12,7 +12,7 @@ target_link_libraries(
   eden_notifications
   PUBLIC
     eden_config
-    edencommon::utils
+    edencommon::edencommon_utils
 )
 target_sources(
   eden_notifications
