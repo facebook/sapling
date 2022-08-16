@@ -128,7 +128,7 @@ const JOB_TYPE_BACKUP: &str = "backup";
 const LATEST_REPLAYED_REQUEST_KEY: &str = "latest-replayed-request";
 const SLEEP_SECS: u64 = 1;
 const SCUBA_TABLE: &str = "mononoke_hg_sync";
-const LOCK_REASON: &str = "Locked due to sync failure, check Source Control @ FB";
+const LOCK_REASON: &str = "Locked due to sync failure, check Source Control @ Meta";
 
 const HGSQL_GLOBALREVS_USE_SQLITE: &str = "hgsql-globalrevs-use-sqlite";
 const HGSQL_GLOBALREVS_DB_ADDR: &str = "hgsql-globalrevs-db-addr";
