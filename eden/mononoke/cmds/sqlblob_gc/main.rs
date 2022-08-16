@@ -45,7 +45,7 @@ pub struct MononokeSQLBlobGCArgs {
 fn main(fb: FacebookInit) -> Result<()> {
     MononokeAppBuilder::new(fb)
         .build_with_subcommands::<MononokeSQLBlobGCArgs>(commands::subcommands())?
-        .run(async_main)
+        .run_basic(async_main)
 }
 
 async fn async_main(app: MononokeApp) -> Result<()> {

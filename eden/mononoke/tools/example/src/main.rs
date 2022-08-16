@@ -33,7 +33,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     MononokeAppBuilder::new(fb)
         .with_app_extension(ext)
         .build::<ExampleArgs>()?
-        .run(async_main)
+        .run_basic(async_main)
 }
 
 async fn async_main(app: MononokeApp) -> Result<()> {

@@ -209,7 +209,7 @@ const SECS_IN_MINUTE: u64 = 60;
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let app = MononokeAppBuilder::new(fb).build::<TestArgs>()?;
-    app.run(run)
+    app.run_basic(run)
 }
 
 async fn run(app: MononokeApp) -> Result<()> {

@@ -66,6 +66,11 @@ impl Fb303Service for ReadyFlagService {
 }
 
 impl Fb303Args {
+    /// This is a lower-level function that requires you to spawn the stats aggregation future
+    /// yourself. This is useful if you'd like to be able to drop it in order to cancel it.
+    ///
+    /// Usually starting the fb303 server and stats aggregation is done by functions like
+    /// `MononokeApp::run_with_fb303_monitoring`.
     pub fn start_fb303_server<S: Fb303Service + Sync + Send + 'static>(
         &self,
         fb: FacebookInit,

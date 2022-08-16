@@ -22,7 +22,7 @@ struct TestToolArgs {}
 fn main(fb: FacebookInit) -> Result<()> {
     let subcommands = commands::subcommands();
     let app = MononokeAppBuilder::new(fb).build_with_subcommands::<TestToolArgs>(subcommands)?;
-    app.run(async_main)
+    app.run_basic(async_main)
 }
 
 async fn async_main(app: MononokeApp) -> Result<()> {

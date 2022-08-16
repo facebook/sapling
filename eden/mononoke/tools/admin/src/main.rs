@@ -26,7 +26,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let app = MononokeAppBuilder::new(fb)
         .with_app_extension(ScrubAppExtension::new())
         .build_with_subcommands::<AdminArgs>(subcommands)?;
-    app.run(async_main)
+    app.run_basic(async_main)
 }
 
 async fn async_main(app: MononokeApp) -> Result<()> {

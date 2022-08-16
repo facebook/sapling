@@ -144,7 +144,11 @@ impl MononokeApp {
     }
 
     /// Execute a future on this app's runtime.
-    pub fn run<F, Fut>(self, main: F) -> Result<()>
+    ///
+    /// This command doesn't provide anything mnore than executiing the provided future
+    /// it won't handle things like fb303 data collection, it's not a drop-in replacement
+    /// for cmdlib::block_execute (run_with_fb303_monitoring will do better here).
+    pub fn run_basic<F, Fut>(self, main: F) -> Result<()>
     where
         F: Fn(MononokeApp) -> Fut,
         Fut: Future<Output = Result<()>> + Send + 'static,
