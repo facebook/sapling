@@ -506,7 +506,7 @@ bool processChildren(
   XLOGF(DBG9, "processChildren - {}", path);
 
   // Handle children
-  std::map<PathComponent, FsckFileState> children;
+  folly::F14NodeMap<std::string, FsckFileState> children;
 
   // Populate children disk information
   auto absPath = root + path;
@@ -532,7 +532,7 @@ bool processChildren(
       continue;
     }
     PathComponent name{findFileData.cFileName};
-    auto& childState = children[name];
+    auto& childState = children[name.stringPiece()];
     populateDiskState(root, path + name, childState, findFileData);
   } while (FindNextFileW(h, &findFileData) != 0);
 
@@ -546,7 +546,7 @@ bool processChildren(
 
   // Populate children overlay information
   for (const auto& [name, overlayEntry] : insensitiveOverlayDir) {
-    auto& childState = children[PathComponent{name}];
+    auto& childState = children[name.stringPiece()];
     populateOverlayState(childState, overlayEntry);
   }
 
@@ -559,8 +559,8 @@ bool processChildren(
   // Populate children scm information
   if (scmTree) {
     for (const auto& [name, treeEntry] : *scmTree) {
-      PathComponent pathName{name};
-      auto& childState = children[pathName];
+      PathComponentPiece pathName{name};
+      auto& childState = children[pathName.stringPiece()];
       populateScmState(childState, treeEntry);
     }
   }
