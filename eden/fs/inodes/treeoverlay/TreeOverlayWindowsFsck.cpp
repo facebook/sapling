@@ -86,13 +86,10 @@ struct REPARSE_DATA_BUFFER {
   };
 };
 
-dtype_t dtypeFromAttrs(
-    const boost::filesystem::path& boostPath,
-    DWORD dwFileAttributes) {
-  auto path = boostPath.wstring();
+dtype_t dtypeFromAttrs(const wchar_t* path, DWORD dwFileAttributes) {
   if (dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
     FileHandle handle{CreateFileW(
-        path.c_str(),
+        path,
         FILE_GENERIC_READ,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         NULL,
@@ -103,7 +100,7 @@ dtype_t dtypeFromAttrs(
       XLOGF(
           DBG3,
           "Unable to determine reparse point type for {}: {}",
-          boostPath.string(),
+          AbsolutePath{path},
           GetLastError());
       return dtype_t::Unknown;
     }
@@ -123,7 +120,7 @@ dtype_t dtypeFromAttrs(
       XLOGF(
           DBG3,
           "Unable to read reparse point data for {}: {}",
-          boostPath.string(),
+          AbsolutePath{path},
           GetLastError());
       return dtype_t::Unknown;
     }
@@ -150,9 +147,9 @@ dtype_t dtypeFromAttrs(
   }
 }
 
-dtype_t dtypeFromPath(const boost::filesystem::path& boostPath) {
-  auto path = boostPath.wstring();
+dtype_t dtypeFromPath(const boost_fs::path& boostPath) {
   WIN32_FILE_ATTRIBUTE_DATA attrs;
+  auto path = boostPath.wstring();
 
   if (!GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &attrs)) {
     XLOGF(
@@ -162,7 +159,7 @@ dtype_t dtypeFromPath(const boost::filesystem::path& boostPath) {
         GetLastError());
     return dtype_t::Unknown;
   }
-  return dtypeFromAttrs(boostPath, attrs.dwFileAttributes);
+  return dtypeFromAttrs(path.c_str(), attrs.dwFileAttributes);
 }
 
 PathMap<overlay::OverlayEntry> toPathMap(overlay::OverlayDir& dir) {
@@ -273,15 +270,42 @@ struct FsckFileState {
   std::optional<ObjectId> desiredHash = std::nullopt;
 };
 
+bool directoryIsEmpty(const wchar_t* path) {
+  WIN32_FIND_DATAW findFileData;
+  HANDLE h = FindFirstFileExW(
+      path, FindExInfoBasic, &findFileData, FindExSearchNameMatch, nullptr, 0);
+  if (h == INVALID_HANDLE_VALUE) {
+    throw std::runtime_error(
+        fmt::format("unable to check directory - {}", AbsolutePath{path}));
+  }
+
+  do {
+    if (wcscmp(findFileData.cFileName, L".") == 0 ||
+        wcscmp(findFileData.cFileName, L"..") == 0) {
+      continue;
+    }
+    FindClose(h);
+    return false;
+  } while (FindNextFileW(h, &findFileData) != 0);
+
+  auto error = GetLastError();
+  if (error != ERROR_NO_MORE_FILES) {
+    throw std::runtime_error(
+        fmt::format("unable to check directory - {}", AbsolutePath{path}));
+  }
+
+  FindClose(h);
+  return true;
+}
+
 void populateDiskState(
     AbsolutePathPiece root,
     RelativePathPiece path,
     FsckFileState& state,
     const WIN32_FIND_DATAW& findFileData) {
   auto absPath = root + path;
-  auto boostPath = boost_fs::path(absPath.stringPiece());
-
-  dtype_t dtype = dtypeFromAttrs(boostPath, findFileData.dwFileAttributes);
+  auto wPath = std::wstring{L"\\\\?\\"} + absPath.wide();
+  dtype_t dtype = dtypeFromAttrs(wPath.c_str(), findFileData.dwFileAttributes);
   if (dtype != dtype_t::Dir && dtype != dtype_t::Regular) {
     // TODO: What do we do with a symlink, or non-regular file.
     return;
@@ -329,15 +353,8 @@ void populateDiskState(
   // It's an empty placeholder unless it's materialized or it has children.
   state.diskEmptyPlaceholder = !state.diskMaterialized;
 
-  if (dtype == dtype_t::Dir) {
-    for (const auto& entry : boost::filesystem::directory_iterator(boostPath)) {
-      auto childPath = AbsolutePath{entry.path().native()};
-      auto name = childPath.basename();
-      if (name != ".eden") {
-        state.diskEmptyPlaceholder = false;
-        break;
-      }
-    }
+  if (dtype == dtype_t::Dir && !directoryIsEmpty(wPath.c_str())) {
+    state.diskEmptyPlaceholder = false;
   }
 }
 
@@ -494,8 +511,10 @@ bool processChildren(
   // Populate children disk information
   auto absPath = root + path;
   WIN32_FIND_DATAW findFileData;
+  std::wstring longPath{L"\\\\?\\"};
+  longPath += (absPath + "*"_relpath).wide();
   HANDLE h = FindFirstFileExW(
-      (absPath + "*"_relpath).wide().c_str(),
+      longPath.c_str(),
       FindExInfoBasic,
       &findFileData,
       FindExSearchNameMatch,
