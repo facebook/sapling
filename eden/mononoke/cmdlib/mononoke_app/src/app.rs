@@ -14,7 +14,6 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Context;
-#[cfg(not(test))]
 use anyhow::Error;
 use anyhow::Result;
 use base_app::BaseApp;
@@ -33,12 +32,14 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_util::try_join;
+use itertools::Itertools;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_parser::StorageConfigs;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::Redaction;
 use metaconfig_types::RepoConfig;
+use mononoke_repos::MononokeRepos;
 use mononoke_types::RepositoryId;
 use prefixblob::PrefixBlobstore;
 use redactedblobstore::RedactedBlobstore;
@@ -49,6 +50,7 @@ use repo_factory::RepoFactoryBuilder;
 use scuba_ext::MononokeScubaSampleBuilder;
 use services::Fb303Service;
 use slog::error;
+use slog::info;
 use slog::o;
 use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
@@ -260,6 +262,13 @@ impl MononokeApp {
         self.config_mode == ConfigMode::Production
     }
 
+    fn repo_config_by_name(&self, repo_name: &str) -> Result<&RepoConfig> {
+        self.repo_configs
+            .repos
+            .get(repo_name)
+            .ok_or_else(|| anyhow!("unknown reponame: {:?}", repo_name))
+    }
+
     /// Get repo config based on user-provided arguments.
     pub fn repo_config(&self, repo_arg: RepoArg) -> Result<(String, RepoConfig)> {
         match repo_arg {
@@ -271,11 +280,7 @@ impl MononokeApp {
                 Ok((repo_name.clone(), repo_config.clone()))
             }
             RepoArg::Name(repo_name) => {
-                let repo_config = self
-                    .repo_configs
-                    .repos
-                    .get(repo_name)
-                    .ok_or_else(|| anyhow!("unknown reponame: {:?}", repo_name))?;
+                let repo_config = self.repo_config_by_name(repo_name)?;
                 Ok((repo_name.to_string(), repo_config.clone()))
             }
         }
@@ -339,6 +344,97 @@ impl MononokeApp {
         let (repo_name, repo_config) = self.repo_config(repo_arg)?;
         let repo = self.repo_factory.build(repo_name, repo_config).await?;
         Ok(repo)
+    }
+
+    async fn populate_repos<Repo, Names>(
+        &self,
+        mononoke_repos: &MononokeRepos<Repo>,
+        repo_names: Names,
+    ) -> Result<()>
+    where
+        Names: IntoIterator<Item = String>,
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        let repos_input = stream::iter(repo_names.into_iter().unique())
+            .map(|repo_name| {
+                let repo_factory = self.repo_factory.clone();
+                let name = repo_name.clone();
+                async move {
+                    let logger = self.logger();
+                    let config = self.repo_config_by_name(&repo_name)?;
+                    let repo_id = config.repoid.id();
+                    info!(logger, "Initializing repo: {}", &repo_name);
+                    let repo = repo_factory
+                        .build(name, config.clone())
+                        .await
+                        .with_context(|| format!("Failed to initialize repo '{}'", &repo_name))?;
+                    info!(logger, "Initialized repo: {}", &repo_name);
+                    Ok::<_, Error>((repo_id, repo_name, repo))
+                }
+            })
+            // Repo construction can be heavy, 30 at a time is sufficient.
+            .buffered(30)
+            .collect::<Vec<_>>();
+        // There are lots of deep FuturesUnordered here that have caused inefficient polling with
+        // Tokio coop in the past.
+        let repos_input = tokio::task::unconstrained(repos_input)
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>>>()?;
+        mononoke_repos.populate(repos_input);
+        Ok(())
+    }
+
+    /// Method responsible for constructing repos corresponding to the input
+    /// repo-names and populating MononokeRepos with the result. This method
+    /// should be used if dynamically reloadable repos (with configs) are
+    /// needed. For fixed set of repos, use open_repo or open_repos.
+    pub async fn open_mononoke_repos<Repo, Names>(
+        &self,
+        repo_names: Names,
+    ) -> Result<MononokeRepos<Repo>>
+    where
+        Names: IntoIterator<Item = String>,
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        let mononoke_repos = MononokeRepos::new();
+        self.populate_repos(&mononoke_repos, repo_names).await?;
+        Ok(mononoke_repos)
+    }
+
+    /// Method responsible for constructing and adding a new repo to the
+    /// passed-in MononokeRepos instance.
+    pub async fn add_repo<Repo>(&self, repos: &MononokeRepos<Repo>, repo_name: &str) -> Result<()>
+    where
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        let repo_config = self.repo_config_by_name(repo_name)?;
+        let repo_id = repo_config.repoid.id();
+        let repo = self
+            .repo_factory
+            .build(repo_name.to_string(), repo_config.clone())
+            .await?;
+        repos.add(repo_name, repo_id, repo);
+        Ok(())
+    }
+
+    /// Method responsible for removing an existing repo based on the input
+    /// repo-name from the passed-in MononokeRepos instance.
+    pub fn remove_repo<Repo>(&self, repos: &MononokeRepos<Repo>, repo_name: &str) {
+        repos.remove(repo_name);
+    }
+
+    /// Method responsible for reloading the current set of loaded repos within
+    /// MononokeApp. The reload will involve reconstruction of the repos using
+    /// the current version of the RepoConfig. The old repos will be dropped
+    /// once all references to it cease to exist.
+    pub async fn reload_repos<Repo>(&self, repos: &MononokeRepos<Repo>) -> Result<()>
+    where
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        let repo_names = repos.iter_names();
+        self.populate_repos(repos, repo_names).await?;
+        Ok(())
     }
 
     /// Open a source and target repos based on user-provided arguments.
