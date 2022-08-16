@@ -76,6 +76,7 @@ std::unique_ptr<Tree> fromRawTree(
     LocalStore::WriteBatch* FOLLY_NULLABLE writeBatch) {
   Tree::container entries{kPathMapDefaultCaseSensitive};
 
+  entries.reserve(tree->length);
   for (uintptr_t i = 0; i < tree->length; i++) {
     try {
       auto entry = fromRawTreeEntry(
