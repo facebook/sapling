@@ -324,7 +324,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         main.getEdenfsBuildName(),
         ", pid ",
         getpid(),
-        ", session_id",
+        ", session_id ",
         getSessionId());
 
     auto sessionInfo = makeSessionInfo(
