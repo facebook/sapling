@@ -1474,7 +1474,7 @@ EOF
 }
 
 function hgmn_clone() {
-  hgmn clone -q --shallow --config remotefilelog.reponame=master "$@" --config extensions.treemanifest= --config treemanifest.treeonly=True --config extensions.lz4revlog=
+  quiet hgmn clone --shallow  --config remotefilelog.reponame="$REPONAME" "$@" --config extensions.treemanifest= --config treemanifest.treeonly=True --config extensions.lz4revlog= && \
   cat >> "$2"/.hg/hgrc <<EOF
 [extensions]
 treemanifest=
@@ -1488,7 +1488,7 @@ flatcompat=False
 sendtrees=True
 treeonly=True
 [remotefilelog]
-reponame=$2
+reponame=$REPONAME
 cachepath=$TESTTMP/cachepath
 shallowtrees=True
 EOF
