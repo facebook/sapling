@@ -72,3 +72,4 @@ sqlphases = { version = "0.1.0", path = "../../phases/sqlphases" }
 streaming_clone = { version = "0.1.0", path = "../../repo_client/streaming_clone" }
 synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
+wireproto_handler = { version = "0.1.0", path = "../../wireproto_handler" }

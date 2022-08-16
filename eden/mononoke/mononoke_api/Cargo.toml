@@ -95,6 +95,7 @@ tunables = { version = "0.1.0", path = "../tunables" }
 types = { version = "0.1.0", path = "../../scm/lib/types" }
 unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 warm_bookmarks_cache = { version = "0.1.0", path = "../bookmarks/warm_bookmarks_cache" }
+wireproto_handler = { version = "0.1.0", path = "../wireproto_handler" }
 xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }
 
 [dev-dependencies]

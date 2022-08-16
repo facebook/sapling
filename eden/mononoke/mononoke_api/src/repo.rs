@@ -138,6 +138,7 @@ use synced_commit_mapping::SyncedCommitMapping;
 use test_repo_factory::TestRepoFactory;
 use warm_bookmarks_cache::BookmarksCache;
 use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
+use wireproto_handler::RepoHandlerBase;
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
@@ -215,6 +216,9 @@ pub struct Repo {
 
     #[facet]
     pub hook_manager: HookManager,
+
+    #[facet]
+    pub repo_handler_base: RepoHandlerBase,
 }
 
 impl AsBlobRepo for Repo {
@@ -303,6 +307,7 @@ impl Repo {
             inner,
             warm_bookmarks_cache: self.warm_bookmarks_cache.clone(),
             hook_manager: self.hook_manager.clone(),
+            repo_handler_base: self.repo_handler_base.clone(),
         }
     }
 
@@ -392,6 +397,21 @@ impl Repo {
             &blob_repo.bookmarks_arc(),
             &blob_repo.repo_blobstore_arc(),
         );
+        let repo_cross_repo = Arc::new(RepoCrossRepo::new(
+            synced_commit_mapping,
+            live_commit_sync_config
+                .unwrap_or_else(|| Arc::new(TestLiveCommitSyncConfig::new_empty())),
+            Arc::new(InProcessLease::new()),
+        ));
+        let mutable_counters = repo_factory.mutable_counters(&blob_repo.repo_identity_arc())?;
+        let repo_handler_base = repo_factory.repo_handler_base(
+            &Arc::new(config.clone()),
+            &repo_cross_repo,
+            &blob_repo.repo_identity_arc(),
+            blob_repo.bookmarks(),
+            blob_repo.bookmark_update_log(),
+            &mutable_counters,
+        )?;
 
         let inner = InnerRepo {
             blob_repo,
@@ -403,12 +423,7 @@ impl Repo {
                 repo_id,
                 SqlMutableRenamesStore::with_sqlite_in_memory()?,
             )),
-            repo_cross_repo: Arc::new(RepoCrossRepo::new(
-                synced_commit_mapping,
-                live_commit_sync_config
-                    .unwrap_or_else(|| Arc::new(TestLiveCommitSyncConfig::new_empty())),
-                Arc::new(InProcessLease::new()),
-            )),
+            repo_cross_repo,
             acl_regions: build_disabled_acl_regions(),
             sparse_profiles: Arc::new(RepoSparseProfiles::new(None)),
             streaming_clone: Arc::new(
@@ -434,6 +449,7 @@ impl Repo {
             inner,
             warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
             hook_manager,
+            repo_handler_base,
         })
     }
 

@@ -108,6 +108,7 @@ use skiplist::ArcSkiplistIndex;
 use skiplist::SkiplistIndex;
 use sql::rusqlite::Connection as SqliteConnection;
 use sql::Connection;
+use sql::SqlConnections;
 use sql::SqlConnectionsWithSchema;
 use sql_construct::SqlConstruct;
 use sqlphases::SqlPhasesBuilder;
@@ -115,6 +116,10 @@ use streaming_clone::ArcStreamingClone;
 use streaming_clone::StreamingCloneBuilder;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use unodes::RootUnodeManifestId;
+use wireproto_handler::ArcRepoHandlerBase;
+use wireproto_handler::PushRedirectorBase;
+use wireproto_handler::RepoHandlerBase;
+use wireproto_handler::TargetRepoDbs;
 
 /// Factory to construct test repositories.
 ///
@@ -569,6 +574,51 @@ impl TestRepoFactory {
             live_commit_sync_config,
             sync_lease,
         )))
+    }
+
+    /// Test repo-handler-base
+    pub fn repo_handler_base(
+        &self,
+        repo_config: &ArcRepoConfig,
+        repo_cross_repo: &ArcRepoCrossRepo,
+        repo_identity: &ArcRepoIdentity,
+        bookmarks: &ArcBookmarks,
+        bookmark_update_log: &ArcBookmarkUpdateLog,
+        mutable_counters: &ArcMutableCounters,
+    ) -> Result<ArcRepoHandlerBase> {
+        let ctx = CoreContext::test_mock(self.fb);
+        let scuba = ctx.scuba().clone();
+        let logger = ctx.logger().clone();
+        let repo_client_knobs = repo_config.repo_client_knobs.clone();
+
+        let common_commit_sync_config = repo_cross_repo
+            .live_commit_sync_config()
+            .clone()
+            .get_common_config_if_exists(repo_identity.id())?;
+        let synced_commit_mapping = repo_cross_repo.synced_commit_mapping();
+        let backup_repo_config = repo_config.backup_repo_config.clone();
+        let target_repo_dbs = Arc::new(TargetRepoDbs {
+            connections: SqlConnections::from(self.metadata_db.clone()),
+            bookmarks: bookmarks.clone(),
+            bookmark_update_log: bookmark_update_log.clone(),
+            counters: mutable_counters.clone(),
+        });
+
+        let maybe_push_redirector_base =
+            common_commit_sync_config.map(|common_commit_sync_config| {
+                Arc::new(PushRedirectorBase {
+                    common_commit_sync_config,
+                    target_repo_dbs,
+                    synced_commit_mapping: synced_commit_mapping.clone(),
+                })
+            });
+        Ok(Arc::new(RepoHandlerBase {
+            logger,
+            scuba,
+            repo_client_knobs,
+            maybe_push_redirector_base,
+            backup_repo_config,
+        }))
     }
 
     /// Mutable counters
