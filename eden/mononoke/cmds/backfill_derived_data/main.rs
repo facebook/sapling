@@ -583,6 +583,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 SM_SERVICE_SCOPE,
                 SM_CLEANUP_TIMEOUT_SECS,
                 Arc::new(process),
+                true, // enable shard (repo) level healing
             )?;
             helpers::block_execute(
                 executor.block_and_execute(&logger),

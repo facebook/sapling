@@ -208,6 +208,7 @@ pub async fn run_sharded(
         SM_SERVICE_SCOPE,
         SM_CLEANUP_TIMEOUT_SECS,
         Arc::new(validate_process),
+        true, // enable shard (repo) level healing
     )?;
     executor.block_and_execute(&logger).await
 }

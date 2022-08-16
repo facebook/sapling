@@ -25,6 +25,7 @@ impl BackgroundProcessExecutor {
         _service_scope: &'static str,
         _timeout_secs: u64,
         _bp_handle: Arc<dyn RepoShardedProcess>,
+        _shard_healing: bool,
     ) -> Result<Self> {
         unimplemented!("BackgroundProcessExecutor is supported only for fbcode build")
     }
