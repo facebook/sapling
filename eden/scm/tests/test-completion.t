@@ -129,6 +129,7 @@ Show debug commands if there are no other candidates
   debugedenrunpostupdatehook
   debugexistingcasecollisions
   debugexportmetalog
+  debugexportrevlog
   debugextensions
   debugfilerevision
   debugfileset
@@ -449,6 +450,7 @@ Show all commands + options
   debugedenrunpostupdatehook: 
   debugexistingcasecollisions: rev
   debugexportmetalog: 
+  debugexportrevlog: 
   debugextensions: excludedefault, template
   debugfilerevision: rev, include, exclude
   debugfileset: rev

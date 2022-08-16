@@ -974,6 +974,8 @@ Test list of internal help commands
                  check for existing case collisions in a commit
    debugexportmetalog
                  export metalog to a repo for easier investigation
+   debugexportrevlog
+                 exports to a legacy revlog repo
    debugextensions
                  show information about active extensions
    debugfilerevision

@@ -83,6 +83,9 @@ class eagerfilelog(object):
             p2 = t[: len(nullid)]
             return (p1, p2)
 
+    def revision(self, node, raw=True):
+        return self._get_content(node)
+
     def _get_sha1_blob(self, node):
         """get the SHA1 prefixed (sorted([p1, p2])) content"""
         if node == nullid:

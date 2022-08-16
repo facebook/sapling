@@ -1210,6 +1210,139 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
 
 
 @command(
+    "debugexportrevlog",
+    [],
+    _("PATH"),
+)
+def debugexportrevlog(ui, repo, path, **opts):
+    """exports to a legacy revlog repo
+
+    Export the repo in the old format (not necessarily supported by this
+    software) in destination. Useful for compatibility with other software
+    requiring the revlog format.
+    """
+
+    class RevlogInfo:
+        """state per revlog tracked by LiteRevlogRepo"""
+
+        def __init__(self):
+            self.next_rev = 0
+            self.next_offset = 0
+            self.node_to_rev = {}
+
+        def append(self, node: bytes, size: int):
+            rev = self.next_rev
+            self.node_to_rev[node] = rev
+            self.next_offset += size
+            self.next_rev += 1
+
+    class LiteRevlogRepo:
+        """lightweight revlog repo for export use-case only
+
+        Separated from the feature-complete revlog logic (revlog.revlog) so the
+        other revlog logic and its C dependency can be dropped independently.
+
+        Minimal. Does not support:
+        - Reading.
+        - Delta-chain.
+        - Compression.
+        - Non-inline revlog.
+        """
+
+        def __init__(self, path: str):
+            from .. import store
+
+            self.path = path
+            self.path_to_info = {}
+            self.fnencode, _fndecode = store._buildencodefun(forfncache=False)
+            self.append_raw("requires", b"treemanifest\nrevlogv1\nstore\n")
+
+        def store_join(self, path: str, suffix: str = None) -> str:
+            path = os.path.join(self.path, "store", self.fnencode(path))
+            if suffix:
+                path += suffix
+            return path
+
+        def append_raw(self, path: str, data: bytes):
+            full_path = os.path.join(self.path, path)
+            os.makedirs(os.path.dirname(full_path), exist_ok=True)
+            with open(full_path, "ab") as f:
+                f.write(data)
+
+        def revlog_info(self, path: str) -> RevlogInfo:
+            if path not in self.path_to_info:
+                self.path_to_info[path] = RevlogInfo()
+            return self.path_to_info[path]
+
+        def append_revlog(
+            self, path: str, p1: bytes, p2: bytes, data: bytes, flags: int = 0
+        ):
+            info = self.revlog_info(path)
+            rev = info.next_rev
+            p1rev = p2rev = nullrev
+            if p1 != nullid:
+                p1rev = info.node_to_rev[p1]
+            if p2 != nullid:
+                p1rev = info.node_to_rev[p2]
+            node = revlog.hash(data, p1, p2)
+            # u: uncompressed
+            compressed_data = b"u" + data
+            offset = info.next_offset
+            index_data = revlog.indexformatng_pack(
+                revlog.offset_type(offset, flags),
+                len(compressed_data),
+                len(data),
+                rev,
+                rev,
+                p1rev,
+                p2rev,
+                node,
+            )
+            if rev == 0:
+                # The first 4 bytes are used for version and flags.
+                # See revlogio.packentry.
+                v = revlog.FLAG_INLINE_DATA | revlog.REVLOGV1
+                index_data = revlog.versionformat.pack(v) + index_data[4:]
+            data = index_data + compressed_data
+            # The offset in index does not include index content itself.
+            info.append(node, len(compressed_data))
+            revlog_i_path = self.store_join(path, suffix=".i")
+            self.append_raw(revlog_i_path, data)
+            return node
+
+    lite_repo = LiteRevlogRepo(os.path.join(path, ".hg"))
+
+    from .. import exchange
+
+    nodes = list(repo.nodes("all()"))
+    items = exchange.findblobs(repo, nodes)
+    for blobtype, path, node, (p1, p2), text in items:
+        if blobtype == "blob":
+            store_path = f"data/{path}"
+        elif blobtype == "tree":
+            if not path:
+                store_path = "00manifest"
+            else:
+                store_path = f"meta/{path}/00manifest"
+        else:
+            store_path = "00changelog"
+        new_node = lite_repo.append_revlog(store_path, p1, p2, text)
+        assert node == new_node
+
+    # Vanilla hg uses 00manfiest.i for root trees, while this codebase uses
+    # 00manifesttree.i for root trees (so flat trees stay in 00manifest).
+    # Make a symlink for compatibility.
+    os.symlink(
+        lite_repo.store_join("00manifest", suffix=".i"),
+        lite_repo.store_join("00manifesttree", suffix=".i"),
+    )
+
+    # Export bookmarks
+    bookmarks_data = bindings.refencode.encodebookmarks(repo._bookmarks)
+    lite_repo.append_raw("bookmarks", bookmarks_data)
+
+
+@command(
     "debugextensions",
     [("", "excludedefault", False, _("exclude extensions marked as default-on"))]
     + cmdutil.formatteropts,

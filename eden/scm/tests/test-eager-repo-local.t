@@ -74,3 +74,5 @@ XXX: rename is tracked but not shown
   +E
   \ No newline at end of file
 
+Export to revlog repo:
+  $ hg debugexportrevlog "$TESTTMP/export-revlog"
