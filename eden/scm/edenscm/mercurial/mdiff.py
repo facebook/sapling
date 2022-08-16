@@ -16,7 +16,7 @@ import re
 import struct
 import zlib
 from hashlib import sha1
-from typing import Iterator, List, Optional, Pattern, Sized, Tuple, TYPE_CHECKING
+from typing import Iterator, List, Optional, Pattern, Sized, Tuple, TYPE_CHECKING, Union
 
 from edenscmnative import bdiff, mpatch, xdiff
 
@@ -146,10 +146,14 @@ def wsclean(opts, text: str, blank: bool = True) -> bytes:
     return text
 
 
-def splitblock(base1, lines1, base2, lines2, opts):
+def splitblock(
+    base1, lines1: List[Union[bytes, int]], base2, lines2: List[Union[bytes, int]], opts
+):
     # The input lines matches except for interwoven blank lines. We
     # transform it into a sequence of matching blocks and blank blocks.
+    # pyre-fixme[6]: For 2nd param expected `str` but got `Union[bytes, int]`.
     lines1 = [(wsclean(opts, l) and 1 or 0) for l in lines1]
+    # pyre-fixme[6]: For 2nd param expected `str` but got `Union[bytes, int]`.
     lines2 = [(wsclean(opts, l) and 1 or 0) for l in lines2]
     s1, e1 = 0, len(lines1)
     s2, e2 = 0, len(lines2)
