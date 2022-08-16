@@ -6,6 +6,10 @@
 
 # Copyright (c) Mercurial Contributors.
 
+#if fsmonitor
+  $ setconfig workingcopy.ruststatus=False
+#endif
+
   $ setconfig 'extensions.treemanifest=!' hint.ack-match-full-traversal=true
   $ hg init repo
   $ cd repo

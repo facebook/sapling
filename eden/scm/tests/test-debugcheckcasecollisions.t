@@ -4,6 +4,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+#if fsmonitor
+  $ setconfig workingcopy.ruststatus=False
+#endif
   $ setconfig 'extensions.treemanifest=!'
   $ newrepo
   $ mkdir -p dirA/subdirA dirA/subdirB dirB

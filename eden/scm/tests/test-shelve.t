@@ -5,9 +5,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import os
-import sys
-from edenscm.mercurial import extensions, hg, obsolete
+#if fsmonitor
+  $ setconfig workingcopy.ruststatus=False
+#endif
 
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]

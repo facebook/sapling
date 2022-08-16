@@ -8,6 +8,10 @@
 # test that we don't interrupt the merge session if
 # a file-level merge failed
 
+#if fsmonitor
+  $ setconfig workingcopy.ruststatus=False
+#endif
+
   $ hg init repo
   $ cd repo
 

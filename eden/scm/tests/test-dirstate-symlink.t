@@ -6,6 +6,10 @@
 
 #require symlink
 
+#if fsmonitor
+  $ setconfig workingcopy.ruststatus=False
+#endif
+
   $ cd $TESTTMP
 
   $ newrepo

@@ -8,6 +8,10 @@
   $ setconfig experimental.allowfilepeer=True
   $ setconfig 'extensions.treemanifest=!'
 
+#if fsmonitor
+  $ setconfig workingcopy.ruststatus=False
+#endif
+
 # Test update.requiredest
 
   $ cd "$TESTTMP"

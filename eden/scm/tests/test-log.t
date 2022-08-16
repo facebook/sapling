@@ -10,6 +10,10 @@
 
 # Log on empty repository: checking consistency
 
+#if fsmonitor
+  $ setconfig workingcopy.ruststatus=False
+#endif
+
   $ hg init empty
   $ cd empty
   $ hg log

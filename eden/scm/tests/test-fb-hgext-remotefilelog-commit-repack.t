@@ -4,6 +4,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+#if fsmonitor
+  $ setconfig workingcopy.ruststatus=False
+#endif
+
   $ . $TESTDIR/library.sh
 
   $ setconfig experimental.allowfilepeer=True

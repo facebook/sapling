@@ -26,8 +26,15 @@ from .python import python
 def testsetup(t: TestTmp):
     _checkenvironment()
 
+    hgrc = INITIAL_HGRC
+
+    # consider run-tests.py --watchman
+    use_watchman = os.getenv("HGFSMONITOR_TESTS") == "1"
+    if use_watchman:
+        hgrc += WATCHMAN_HGRC
+
     hgrcpath = t.path / "hgrc"
-    hgrcpath.write_bytes(INITIAL_HGRC)
+    hgrcpath.write_bytes(hgrc)
 
     # extra hgrc fixup via $TESTDIR/features.py
     testfile = t.getenv("TESTFILE")
@@ -91,6 +98,12 @@ def testsetup(t: TestTmp):
         "LOCALIP": "127.0.0.1",
         "TZ": "GMT",
     }
+
+    if use_watchman:
+        watchman_sock = os.getenv("WATCHMAN_SOCK")
+        if watchman_sock:
+            environ["WATCHMAN_SOCK"] = watchman_sock
+            environ["HGFSMONITOR_TESTS"] = "1"
 
     # prepare chg
     with open(testfile, "rb") as f:
@@ -252,4 +265,12 @@ cachepath=$TESTTMP/default-hgcache
 
 [mutation]
 record=False
+"""
+
+WATCHMAN_HGRC = b"""
+[extensions]
+fsmonitor=
+
+[fsmonitor]
+detectrace=True
 """

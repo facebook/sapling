@@ -1,14 +1,15 @@
 #debugruntest-compatible
 # coding=utf-8
 
-# coding=utf-8
-
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # Copyright (c) Mercurial Contributors.
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+#if fsmonitor
+  $ setconfig workingcopy.ruststatus=False
+#endif
 
   $ setconfig 'extensions.treemanifest=!'
 
