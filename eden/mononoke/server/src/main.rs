@@ -14,13 +14,18 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
+use cache_warmup::cache_warmup;
 use clap::Parser;
 use cloned::cloned;
 use cmdlib_logging::ScribeLoggingArgs;
 use environment::WarmBookmarksCacheDerivedData;
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
+use futures::stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use futures_watchdog::WatchdogExt;
+use mononoke_api::CoreContext;
 use mononoke_api::Mononoke;
 use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::McrouterAppExtension;
@@ -32,6 +37,7 @@ use mononoke_app::MononokeAppBuilder;
 use openssl::ssl::AlpnError;
 use slog::error;
 use slog::info;
+use slog::o;
 
 /// Mononoke Server
 #[derive(Parser)]
@@ -131,8 +137,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     let bound_addr_file = args.bound_address_file;
 
     let env = app.environment();
-    let mysql_options = env.mysql_options.clone();
-    let readonly_storage = env.readonly_storage.clone();
 
     let scuba = env.scuba_sample_builder.clone();
 
@@ -143,21 +147,42 @@ fn main(fb: FacebookInit) -> Result<()> {
         let app = Arc::clone(&app);
         async move {
             let common = configs.common.clone();
-            let mononoke = Mononoke::new(Arc::clone(&app)).watched(&root_log).await?;
+            let mononoke = Arc::new(Mononoke::new(Arc::clone(&app)).watched(&root_log).await?);
             info!(&root_log, "Built Mononoke");
 
+            info!(&root_log, "Warming up cache");
+            stream::iter(mononoke.repos())
+                .map(|repo| {
+                    let repo_name = repo.name().to_string();
+                    let blob_repo = repo.blob_repo().clone();
+                    let root_log = root_log.clone();
+                    let cache_warmup_params = repo.config().cache_warmup.clone();
+                    async move {
+                        let logger = root_log.new(o!("repo" => repo_name.clone()));
+                        let ctx = CoreContext::new_with_logger(fb, logger);
+                        cache_warmup(&ctx, &blob_repo, cache_warmup_params)
+                            .await
+                            .with_context(|| {
+                                format!("Error while warming up cache for repo {}", repo_name)
+                            })
+                    }
+                })
+                // Repo cache warmup can be quite expensive, let's limit to 40
+                // at a time.
+                .buffer_unordered(40)
+                .try_collect()
+                .await?;
+            info!(&root_log, "Cache warmup completed");
             repo_listener::create_repo_listeners(
                 fb,
                 common,
-                mononoke,
-                &mysql_options,
+                mononoke.clone(),
                 root_log,
                 host_port,
                 acceptor,
                 service,
                 terminate_receiver,
                 &env.config_store,
-                readonly_storage,
                 scribe,
                 &scuba,
                 will_exit,

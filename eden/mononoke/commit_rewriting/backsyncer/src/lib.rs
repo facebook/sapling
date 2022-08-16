@@ -116,7 +116,7 @@ pub enum BacksyncLimit {
 pub async fn backsync_latest<M>(
     ctx: CoreContext,
     commit_syncer: CommitSyncer<M>,
-    target_repo_dbs: TargetRepoDbs,
+    target_repo_dbs: Arc<TargetRepoDbs>,
     limit: BacksyncLimit,
     cancellation_requested: Arc<AtomicBool>,
 ) -> Result<(), Error>
@@ -179,7 +179,7 @@ where
 async fn sync_entries<M>(
     ctx: CoreContext,
     commit_syncer: &CommitSyncer<M>,
-    target_repo_dbs: TargetRepoDbs,
+    target_repo_dbs: Arc<TargetRepoDbs>,
     entries: Vec<BookmarkUpdateLogEntry>,
     mut counter: i64,
     cancellation_requested: Arc<AtomicBool>,
@@ -305,7 +305,7 @@ where
 async fn backsync_bookmark<M>(
     ctx: CoreContext,
     commit_syncer: &CommitSyncer<M>,
-    target_repo_dbs: TargetRepoDbs,
+    target_repo_dbs: Arc<TargetRepoDbs>,
     prev_counter: Option<i64>,
     log_entry: BookmarkUpdateLogEntry,
 ) -> Result<bool, Error>

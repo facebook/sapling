@@ -5,11 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use bytes::Bytes;
@@ -28,6 +28,7 @@ use hgproto::sshproto;
 use hgproto::HgProtoHandler;
 use maplit::hashmap;
 use maplit::hashset;
+use mononoke_api::Mononoke;
 use qps::Qps;
 use rate_limiting::Metric;
 use rate_limiting::RateLimitEnvironment;
@@ -46,6 +47,7 @@ use stats::prelude::*;
 use time_ext::DurationExt;
 
 use crate::errors::ErrorKind;
+use crate::repo_handlers::repo_handler;
 use crate::repo_handlers::RepoHandler;
 
 define_stats! {
@@ -60,7 +62,7 @@ define_stats! {
 pub async fn request_handler(
     fb: FacebookInit,
     reponame: String,
-    repo_handlers: &HashMap<String, RepoHandler>,
+    mononoke: Arc<Mononoke>,
     _security_checker: &ConnectionSecurityChecker,
     stdio: Stdio,
     rate_limiter: Option<RateLimitEnvironment>,
@@ -79,14 +81,14 @@ pub async fn request_handler(
     // We don't have a repository yet, so create without server drain
     let conn_log = create_conn_logger(stderr.clone(), None, Some(session_id));
 
-    let handler = repo_handlers.get(&reponame).cloned().ok_or_else(|| {
+    let handler = repo_handler(mononoke, &reponame).with_context(|| {
         error!(
             conn_log,
-            "Requested repo \"{}\" does not exist or is disabled", reponame;
+            "Requested repo \"{}\" does not exist or is disabled", &reponame;
             "remote" => "true"
         );
 
-        anyhow!("unknown repo: {}", reponame)
+        anyhow!("Unknown Repo: {}", &reponame)
     })?;
 
     let RepoHandler {

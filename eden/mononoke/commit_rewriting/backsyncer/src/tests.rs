@@ -160,6 +160,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
         let (commit_syncer, target_repo_dbs) =
             init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
 
+        let target_repo_dbs = Arc::new(target_repo_dbs);
         // Backsync a few entries
         let ctx = CoreContext::test_mock(fb);
         backsync_latest(
@@ -378,7 +379,7 @@ async fn backsync_two_small_repos(fb: FacebookInit) -> Result<(), Error> {
     for (commit_syncer, target_repo_dbs) in small_repos {
         let small_repo_id = commit_syncer.get_target_repo().get_repoid();
         println!("backsyncing small repo#{}", small_repo_id.id());
-
+        let target_repo_dbs = Arc::new(target_repo_dbs);
         let small_repo_id = commit_syncer.get_target_repo().get_repoid();
         backsync_latest(
             ctx.clone(),
@@ -596,7 +597,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
         BookmarkRenamerType::Only(master),
     )
     .await?;
-
+    let target_repo_dbs = Arc::new(target_repo_dbs);
     let source_repo = commit_syncer.get_source_repo();
 
     let ctx = CoreContext::test_mock(fb);
@@ -674,7 +675,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
         counters: target_repo.mutable_counters_arc(),
     };
     init_target_repo(&ctx, &target_repo_dbs, source_repo_id).await?;
-
+    let target_repo_dbs = Arc::new(target_repo_dbs);
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
 
     let repos = CommitSyncRepos::LargeToSmall {
@@ -880,7 +881,7 @@ async fn backsync_and_verify_master_wc(
         .read_next_bookmark_log_entries(ctx.clone(), 0, 1000, Freshness::MaybeStale)
         .try_collect()
         .await?;
-
+    let target_repo_dbs = Arc::new(target_repo_dbs);
     let latest_log_id = next_log_entries.len() as i64;
 
     let mut futs = vec![];

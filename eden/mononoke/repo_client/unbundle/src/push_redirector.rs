@@ -42,7 +42,6 @@ use pushrebase::PushrebaseChangesetPair;
 use reachabilityindex::LeastCommonAncestorsHint;
 use skiplist::SkiplistIndexArc;
 use slog::debug;
-use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
 use topo_sort::sort_topological;
 use wireproto_handler::TargetRepoDbs;
@@ -75,16 +74,16 @@ use crate::UploadedBonsais;
 pub struct PushRedirectorArgs {
     target_repo: Arc<Repo>,
     source_repo: Arc<Repo>,
-    synced_commit_mapping: SqlSyncedCommitMapping,
-    target_repo_dbs: TargetRepoDbs,
+    synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
+    target_repo_dbs: Arc<TargetRepoDbs>,
 }
 
 impl PushRedirectorArgs {
     pub fn new(
         target_repo: Arc<Repo>,
         source_repo: Arc<Repo>,
-        synced_commit_mapping: SqlSyncedCommitMapping,
-        target_repo_dbs: TargetRepoDbs,
+        synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
+        target_repo_dbs: Arc<TargetRepoDbs>,
     ) -> Self {
         Self {
             target_repo,
@@ -114,12 +113,11 @@ impl PushRedirectorArgs {
 
         let small_repo = source_repo.blob_repo().clone();
         let large_repo = target_repo.blob_repo().clone();
-        let mapping: Arc<dyn SyncedCommitMapping> = Arc::new(synced_commit_mapping);
         let syncers = create_commit_syncers(
             ctx,
             small_repo,
             large_repo,
-            mapping.clone(),
+            synced_commit_mapping,
             live_commit_sync_config,
             x_repo_sync_lease,
         )?;
@@ -149,7 +147,7 @@ pub struct PushRedirector {
     // `CommitSyncer` struct for the backsyncer
     pub large_to_small_commit_syncer: CommitSyncer<Arc<dyn SyncedCommitMapping>>,
     // A struct, needed to backsync commits
-    pub target_repo_dbs: TargetRepoDbs,
+    pub target_repo_dbs: Arc<TargetRepoDbs>,
 }
 
 impl PushRedirector {

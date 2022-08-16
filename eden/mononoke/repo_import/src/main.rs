@@ -505,7 +505,7 @@ async fn move_bookmark(
             backsync_latest(
                 ctx.clone(),
                 small_repo_back_sync_vars.large_to_small_syncer.clone(),
-                small_repo_back_sync_vars.target_repo_dbs.clone(),
+                Arc::new(small_repo_back_sync_vars.target_repo_dbs.clone()),
                 BacksyncLimit::NoLimit,
                 Arc::new(AtomicBool::new(false)),
             )

@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
 use std::fs::File;
 use std::io;
 use std::io::Write;
@@ -45,6 +44,7 @@ use hyper::server::conn::Http;
 use lazy_static::lazy_static;
 use metaconfig_types::CommonConfig;
 use metadata::Metadata;
+use mononoke_api::Mononoke;
 use openssl::ssl::Ssl;
 use openssl::ssl::SslAcceptor;
 use permission_checker::AclProvider;
@@ -77,7 +77,6 @@ use tokio_util::codec::FramedWrite;
 
 use crate::errors::ErrorKind;
 use crate::http_service::MononokeHttpService;
-use crate::repo_handlers::RepoHandler;
 use crate::request_handler::create_conn_logger;
 use crate::request_handler::request_handler;
 use crate::wireproto_sink::WireprotoSink;
@@ -115,7 +114,7 @@ pub async fn connection_acceptor(
     sockname: String,
     service: ReadyFlagService,
     root_log: Logger,
-    repo_handlers: HashMap<String, RepoHandler>,
+    mononoke: Arc<Mononoke>,
     tls_acceptor: SslAcceptor,
     terminate_process: oneshot::Receiver<()>,
     rate_limiter: Option<RateLimitEnvironment>,
@@ -163,7 +162,7 @@ pub async fn connection_acceptor(
     let acceptor = Arc::new(Acceptor {
         fb,
         tls_acceptor,
-        repo_handlers,
+        mononoke,
         security_checker,
         rate_limiter,
         scribe,
@@ -202,7 +201,7 @@ pub async fn connection_acceptor(
 pub struct Acceptor {
     pub fb: FacebookInit,
     pub tls_acceptor: SslAcceptor,
-    pub repo_handlers: HashMap<String, RepoHandler>,
+    pub mononoke: Arc<Mononoke>,
     pub security_checker: ConnectionSecurityChecker,
     pub rate_limiter: Option<RateLimitEnvironment>,
     pub scribe: Scribe,
@@ -355,7 +354,7 @@ where
     let result = request_handler(
         conn.pending.acceptor.fb,
         reponame,
-        &conn.pending.acceptor.repo_handlers,
+        Arc::clone(&conn.pending.acceptor.mononoke),
         &conn.pending.acceptor.security_checker,
         stdio,
         conn.pending.acceptor.rate_limiter.clone(),

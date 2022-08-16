@@ -25,7 +25,7 @@ pub struct ServerContext {
 }
 
 impl ServerContext {
-    pub fn new(mononoke: Mononoke, will_exit: Arc<AtomicBool>) -> Self {
+    pub fn new(mononoke: Arc<Mononoke>, will_exit: Arc<AtomicBool>) -> Self {
         let inner = ServerContextInner::new(mononoke);
         Self {
             inner: Arc::new(Mutex::new(inner)),
@@ -52,9 +52,7 @@ struct ServerContextInner {
 }
 
 impl ServerContextInner {
-    fn new(mononoke: Mononoke) -> Self {
-        Self {
-            mononoke: Arc::new(mononoke),
-        }
+    fn new(mononoke: Arc<Mononoke>) -> Self {
+        Self { mononoke }
     }
 }

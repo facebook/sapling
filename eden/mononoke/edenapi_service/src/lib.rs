@@ -51,7 +51,7 @@ pub fn build(
     fb: FacebookInit,
     logger: Logger,
     mut scuba: MononokeScubaSampleBuilder,
-    mononoke: Mononoke,
+    mononoke: Arc<Mononoke>,
     will_exit: Arc<AtomicBool>,
     test_friendly_loging: bool,
     tls_session_data_log_path: Option<&Path>,

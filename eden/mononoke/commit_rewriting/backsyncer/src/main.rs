@@ -284,7 +284,7 @@ async fn derive_target_hg_changesets(
 pub async fn backsync_forever<M>(
     ctx: CoreContext,
     commit_syncer: CommitSyncer<M>,
-    target_repo_dbs: TargetRepoDbs,
+    target_repo_dbs: Arc<TargetRepoDbs>,
     source_repo_name: String,
     target_repo_name: String,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
@@ -489,15 +489,17 @@ async fn run(
             let scuba_sample = MononokeScubaSampleBuilder::with_discard();
             let ctx = session_container.new_context(logger.clone(), scuba_sample);
             let db_config = target_repo.config.storage_config.metadata;
-            let target_repo_dbs = open_backsyncer_dbs(
-                ctx.clone(),
-                commit_syncer.get_target_repo().clone(),
-                db_config,
-                mysql_options.clone(),
-                *readonly_storage,
-            )
-            .boxed()
-            .await?;
+            let target_repo_dbs = Arc::new(
+                open_backsyncer_dbs(
+                    ctx.clone(),
+                    commit_syncer.get_target_repo().clone(),
+                    db_config,
+                    mysql_options.clone(),
+                    *readonly_storage,
+                )
+                .boxed()
+                .await?,
+            );
 
             // TODO(ikostia): why do we use discarding ScubaSample for BACKSYNC_ALL?
             backsync_latest(
@@ -514,15 +516,17 @@ async fn run(
             let db_config = target_repo.config.storage_config.metadata;
             let ctx = session_container
                 .new_context(logger.clone(), MononokeScubaSampleBuilder::with_discard());
-            let target_repo_dbs = open_backsyncer_dbs(
-                ctx,
-                commit_syncer.get_target_repo().clone(),
-                db_config,
-                mysql_options.clone(),
-                *readonly_storage,
-            )
-            .boxed()
-            .await?;
+            let target_repo_dbs = Arc::new(
+                open_backsyncer_dbs(
+                    ctx,
+                    commit_syncer.get_target_repo().clone(),
+                    db_config,
+                    mysql_options.clone(),
+                    *readonly_storage,
+                )
+                .boxed()
+                .await?,
+            );
 
             let mut scuba_sample = MononokeScubaSampleBuilder::new(fb, SCUBA_TABLE);
             scuba_sample.add("source_repo", source_repo.id.id());

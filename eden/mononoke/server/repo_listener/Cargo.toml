@@ -9,17 +9,13 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.56"
-backsyncer = { version = "0.1.0", path = "../../commit_rewriting/backsyncer" }
 base64 = "0.11.0"
-blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 bytes = { version = "1.1", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
-cache_warmup = { version = "0.1.0", path = "../../cache_warmup" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cats = { version = "0.1.0", path = "../../cats" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }
 connection_security_checker = { version = "0.1.0", path = "../../common/connection_security_checker" }
 context = { version = "0.1.0", path = "../context" }
@@ -60,11 +56,8 @@ slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 slog-kvfilter = "0.7"
 slog-term = "2.8"
 slog_ext = { version = "0.1.0", path = "../../common/rust/slog_ext" }
-sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
-sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 sshrelay = { version = "0.1.0", path = "../../sshrelay" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }
 thiserror = "1.0.30"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }

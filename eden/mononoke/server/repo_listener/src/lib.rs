@@ -23,7 +23,6 @@ use std::sync::Arc;
 
 use anyhow::Context as _;
 use anyhow::Result;
-use blobstore_factory::ReadOnlyStorage;
 use cached_config::ConfigStore;
 use cmdlib::monitoring::ReadyFlagService;
 use fbinit::FacebookInit;
@@ -37,26 +36,22 @@ use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::o;
 use slog::Logger;
-use sql_ext::facebook::MysqlOptions;
 
 use crate::connection_acceptor::connection_acceptor;
 pub use crate::connection_acceptor::wait_for_connections_closed;
-use crate::repo_handlers::repo_handlers;
 
 const CONFIGERATOR_RATE_LIMITING_CONFIG: &str = "scm/mononoke/ratelimiting/ratelimits";
 
 pub async fn create_repo_listeners<'a>(
     fb: FacebookInit,
     common_config: CommonConfig,
-    mononoke: Mononoke,
-    mysql_options: &'a MysqlOptions,
+    mononoke: Arc<Mononoke>,
     root_log: Logger,
     sockname: String,
     tls_acceptor: SslAcceptor,
     service: ReadyFlagService,
     terminate_process: oneshot::Receiver<()>,
     config_store: &'a ConfigStore,
-    readonly_storage: ReadOnlyStorage,
     scribe: Scribe,
     scuba: &'a MononokeScubaSampleBuilder,
     will_exit: Arc<AtomicBool>,
@@ -77,16 +72,6 @@ pub async fn create_repo_listeners<'a>(
         })
     };
 
-    let handlers = repo_handlers(
-        fb,
-        &mononoke,
-        mysql_options,
-        readonly_storage,
-        &root_log,
-        scuba,
-    )
-    .await?;
-
     let edenapi = {
         let mut scuba = scuba.clone();
         scuba.add("service", "edenapi");
@@ -95,7 +80,7 @@ pub async fn create_repo_listeners<'a>(
             fb,
             root_log.new(o!("service" => "edenapi")),
             scuba,
-            mononoke,
+            Arc::clone(&mononoke),
             will_exit.clone(),
             false,
             None,
@@ -111,7 +96,7 @@ pub async fn create_repo_listeners<'a>(
         sockname,
         service,
         root_log,
-        handlers,
+        mononoke,
         tls_acceptor,
         terminate_process,
         rate_limiter,

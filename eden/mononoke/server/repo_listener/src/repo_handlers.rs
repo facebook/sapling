@@ -5,154 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::format_err;
-use anyhow::Context;
-use anyhow::Error;
-use backsyncer::open_backsyncer_dbs;
-use blobstore_factory::ReadOnlyStorage;
-use cache_warmup::cache_warmup;
-use cloned::cloned;
-use context::CoreContext;
-use fbinit::FacebookInit;
-use metaconfig_types::BackupRepoConfig;
-use metaconfig_types::CommonCommitSyncConfig;
+use anyhow::anyhow;
 use metaconfig_types::RepoClientKnobs;
 use mononoke_api::Mononoke;
 use mononoke_api::Repo;
-use mononoke_types::RepositoryId;
 use repo_client::PushRedirectorArgs;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::debug;
-use slog::info;
-use slog::o;
 use slog::Logger;
-use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::facebook::MysqlOptions;
-use synced_commit_mapping::SqlSyncedCommitMapping;
 use wireproto_handler::BackupSourceRepo;
-use wireproto_handler::TargetRepoDbs;
 
 use crate::errors::ErrorKind;
-
-/// An auxillary struct to pass between closures before we
-/// are capable of creating a full `RepoHandler`
-/// To create `RepoHandler`, we need to look at various
-/// fields of such struct for other repos, so we first
-/// have to construct all `IncompleteRepoHandler`s and
-/// only then can we populate the `PushRedirector`
-#[derive(Clone)]
-struct IncompleteRepoHandler {
-    logger: Logger,
-    scuba: MononokeScubaSampleBuilder,
-    repo: Arc<Repo>,
-    maybe_incomplete_push_redirector_args: Option<IncompletePushRedirectorArgs>,
-    repo_client_knobs: RepoClientKnobs,
-    /// This is used for repositories that are backups of another prod repository
-    backup_repo_config: Option<BackupRepoConfig>,
-}
-
-#[derive(Clone)]
-struct IncompletePushRedirectorArgs {
-    common_commit_sync_config: CommonCommitSyncConfig,
-    synced_commit_mapping: SqlSyncedCommitMapping,
-    target_repo_dbs: TargetRepoDbs,
-    source_repo: Arc<Repo>,
-}
-
-impl IncompletePushRedirectorArgs {
-    fn try_into_push_redirector_args(
-        self,
-        repo_lookup_table: &HashMap<RepositoryId, IncompleteRepoHandler>,
-    ) -> Result<PushRedirectorArgs, Error> {
-        let Self {
-            common_commit_sync_config,
-            synced_commit_mapping,
-            target_repo_dbs,
-            source_repo,
-        } = self;
-
-        let large_repo_id = common_commit_sync_config.large_repo_id;
-        let target_repo: Arc<Repo> = repo_lookup_table
-            .get(&large_repo_id)
-            .ok_or(ErrorKind::LargeRepoNotFound(large_repo_id))?
-            .repo
-            .clone();
-
-        Ok(PushRedirectorArgs::new(
-            target_repo,
-            source_repo,
-            synced_commit_mapping,
-            target_repo_dbs,
-        ))
-    }
-}
-
-impl IncompleteRepoHandler {
-    fn try_into_repo_handler(
-        self,
-        repo_lookup_table: &HashMap<RepositoryId, IncompleteRepoHandler>,
-    ) -> Result<RepoHandler, Error> {
-        let IncompleteRepoHandler {
-            logger,
-            scuba,
-            repo,
-            maybe_incomplete_push_redirector_args,
-            repo_client_knobs,
-            backup_repo_config,
-        } = self;
-
-        let maybe_push_redirector_args = match maybe_incomplete_push_redirector_args {
-            None => None,
-            Some(incomplete_push_redirector_args) => Some(
-                incomplete_push_redirector_args.try_into_push_redirector_args(repo_lookup_table)?,
-            ),
-        };
-
-        let maybe_backup_repo_source = match backup_repo_config {
-            None => None,
-            Some(backup_repo_config) => {
-                let (orig_repo_name, source_repo_name) =
-                    (repo.name(), &backup_repo_config.source_repo_name);
-                // If the repo itself serves as its backup source, then it's not a backup repo.
-                // Hence, no need to setup backup_repo_source
-                if orig_repo_name == source_repo_name {
-                    None
-                } else {
-                    let backup_repo_source =
-                        try_find_repo_by_name(source_repo_name, repo_lookup_table.values())?;
-                    Some(BackupSourceRepo::from_blob_repo(
-                        backup_repo_source.blob_repo(),
-                    ))
-                }
-            }
-        };
-
-        Ok(RepoHandler {
-            logger,
-            scuba,
-            repo,
-            maybe_push_redirector_args,
-            repo_client_knobs,
-            maybe_backup_repo_source,
-        })
-    }
-}
-
-fn try_find_repo_by_name<'a>(
-    name: &str,
-    iter: impl Iterator<Item = &'a IncompleteRepoHandler>,
-) -> Result<Arc<Repo>, Error> {
-    for handler in iter {
-        if handler.repo.name() == name {
-            return Ok(Arc::clone(&handler.repo));
-        }
-    }
-
-    Err(format_err!("{} not found", name))
-}
 
 #[derive(Clone)]
 pub struct RepoHandler {
@@ -164,131 +28,59 @@ pub struct RepoHandler {
     pub maybe_backup_repo_source: Option<BackupSourceRepo>,
 }
 
-pub async fn repo_handlers<'a>(
-    fb: FacebookInit,
-    mononoke: &'a Mononoke,
-    mysql_options: &'a MysqlOptions,
-    readonly_storage: ReadOnlyStorage,
-    root_log: &Logger,
-    scuba: &MononokeScubaSampleBuilder,
-) -> Result<HashMap<String, RepoHandler>, Error> {
-    let futs = mononoke.repos().map(|repo| async move {
-        let reponame = repo.name().clone();
-        let config = repo.config();
-
-        let root_log = root_log.clone();
-
-        let logger = root_log.new(o!("repo" => reponame.clone()));
-        let ctx = CoreContext::new_with_logger(fb, logger.clone());
-
-        // Clone the few things we're going to need later in our bootstrap.
-        let cache_warmup_params = config.cache_warmup.clone();
-        let db_config = config.storage_config.metadata.clone();
-
-        let common_commit_sync_config = repo
-            .live_commit_sync_config()
-            .get_common_config_if_exists(repo.blob_repo().get_repoid())?;
-
-        let repo_client_knobs = config.repo_client_knobs.clone();
-        let backup_repo_config = config.backup_repo_config.clone();
-
-        let blobrepo = repo.blob_repo().clone();
-
-        info!(logger, "Warming up cache");
-        let initial_warmup = tokio::task::spawn({
-            cloned!(ctx, blobrepo, reponame);
-            async move {
-                cache_warmup(&ctx, &blobrepo, cache_warmup_params)
-                    .await
-                    .with_context(|| format!("while warming up cache for repo: {}", reponame))
-            }
-        });
-
-        let sql_commit_sync_mapping = SqlSyncedCommitMapping::with_metadata_database_config(
-            fb,
-            &db_config,
-            mysql_options,
-            readonly_storage.0,
-        )?;
-
-        info!(
-            logger,
-            "Creating CommitSyncMapping, TargetRepoDbs, WarmBookmarksCache"
-        );
-
-        let backsyncer_dbs = open_backsyncer_dbs(
-            ctx.clone(),
-            blobrepo.clone(),
-            db_config.clone(),
-            mysql_options.clone(),
-            readonly_storage,
+pub fn repo_handler(mononoke: Arc<Mononoke>, repo_name: &str) -> anyhow::Result<RepoHandler> {
+    let source_repo = mononoke.raw_repo(&repo_name).ok_or_else(|| {
+        anyhow!(
+            "Requested repo {} is not being served by this server",
+            &repo_name
         )
-        .await?;
-
-        let maybe_incomplete_push_redirector_args = common_commit_sync_config.and_then({
-            cloned!(logger, repo);
-            move |common_commit_sync_config| {
-                if common_commit_sync_config.large_repo_id == blobrepo.get_repoid() {
-                    debug!(
-                        logger,
-                        "Not constructing push redirection args: {:?}",
-                        blobrepo.get_repoid()
-                    );
-                    None
-                } else {
-                    debug!(
-                        logger,
-                        "Constructing incomplete push redirection args: {:?}",
-                        blobrepo.get_repoid()
-                    );
-                    Some(IncompletePushRedirectorArgs {
-                        common_commit_sync_config,
-                        synced_commit_mapping: sql_commit_sync_mapping,
-                        target_repo_dbs: backsyncer_dbs,
-                        source_repo: Arc::clone(&repo),
-                    })
-                }
+    })?;
+    let base = source_repo.repo_handler_base.clone();
+    let maybe_push_redirector_args = match &base.maybe_push_redirector_base {
+        Some(push_redirector_base) => {
+            let large_repo_id = push_redirector_base.common_commit_sync_config.large_repo_id;
+            let target_repo = mononoke
+                .raw_repo_by_id(large_repo_id.id())
+                .ok_or(ErrorKind::LargeRepoNotFound(large_repo_id))?;
+            Some(PushRedirectorArgs::new(
+                target_repo,
+                Arc::clone(&source_repo),
+                push_redirector_base.synced_commit_mapping.clone(),
+                Arc::clone(&push_redirector_base.target_repo_dbs),
+            ))
+        }
+        None => None,
+    };
+    let maybe_backup_repo_source = match &base.backup_repo_config {
+        None => None,
+        Some(ref backup_repo_config) => {
+            let (orig_repo_name, source_repo_name) =
+                (source_repo.name(), &backup_repo_config.source_repo_name);
+            // If the repo itself serves as its backup source, then it's not a backup repo.
+            // Hence, no need to setup backup_repo_source
+            if *orig_repo_name == *source_repo_name {
+                None
+            } else {
+                let backup_repo_source = mononoke.raw_repo(source_repo_name).ok_or_else(|| {
+                    anyhow!(
+                        "Backup source repo {} for core repo {} is not being served by this server",
+                        source_repo_name,
+                        orig_repo_name,
+                    )
+                })?;
+                Some(BackupSourceRepo::from_blob_repo(
+                    backup_repo_source.blob_repo(),
+                ))
             }
-        });
+        }
+    };
 
-        initial_warmup.await??;
-
-        info!(logger, "Repository is ready");
-        Result::<_, Error>::Ok((
-            reponame,
-            IncompleteRepoHandler {
-                logger,
-                scuba: scuba.clone(),
-                repo: Arc::clone(&repo),
-                maybe_incomplete_push_redirector_args,
-                repo_client_knobs,
-                backup_repo_config,
-            },
-        ))
-    });
-
-    let tuples = futures::future::try_join_all(futs).await?;
-
-    build_repo_handlers(tuples).await
-}
-
-async fn build_repo_handlers(
-    tuples: Vec<(String, IncompleteRepoHandler)>,
-) -> Result<HashMap<String, RepoHandler>, Error> {
-    let lookup_table: HashMap<RepositoryId, IncompleteRepoHandler> = tuples
-        .iter()
-        .map(|(_, incomplete_repo_handler)| {
-            (
-                incomplete_repo_handler.repo.repoid(),
-                incomplete_repo_handler.clone(),
-            )
-        })
-        .collect();
-
-    let mut res = HashMap::new();
-    for (reponame, incomplete_repo_handler) in tuples {
-        let repo_handler = incomplete_repo_handler.try_into_repo_handler(&lookup_table)?;
-        res.insert(reponame, repo_handler);
-    }
-    Ok(res)
+    Ok(RepoHandler {
+        logger: base.logger.clone(),
+        scuba: base.scuba.clone(),
+        repo_client_knobs: base.repo_client_knobs.clone(),
+        repo: source_repo,
+        maybe_push_redirector_args,
+        maybe_backup_repo_source,
+    })
 }

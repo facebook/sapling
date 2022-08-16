@@ -326,8 +326,8 @@ where
             .map_err(HttpError::internal)?;
 
         if path == "/drop_bookmarks_cache" {
-            for handler in self.acceptor().repo_handlers.values() {
-                handler.repo.blob_repo().bookmarks().drop_caches();
+            for repo in self.acceptor().mononoke.repos() {
+                repo.blob_repo().bookmarks().drop_caches();
             }
 
             return Ok(ok);
