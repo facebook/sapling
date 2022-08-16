@@ -21,18 +21,13 @@ pub use facebook::*;
 #[cfg(not(fbcode_build))]
 pub use oss::*;
 
-// BP: Background Process, e.g. Walker.
-// BPE: BackgroundProcessExecutor e.g. Executor wrapper over walker for
-// sharded execution.
-// BPM: BackgroundProcessManager e.g. ShardManager.
-
 /// Trait outlining the method responsible for performing the initial bootstrapping
-/// of the BP with the context of the incoming repo. Implementer of this trait should
+/// of the process with the context of the incoming repo. Implementer of this trait should
 /// NOT contain any repo-specific state since one instance of RepoShardedProcess
 /// caters all repos for the given job.
 #[async_trait]
 pub trait RepoShardedProcess: Send + Sync {
-    /// Method responsible for performing the initial setup of the BP in context of
+    /// Method responsible for performing the initial setup of the process in context of
     /// the provided repo. This method should ONLY contain code necessary to build
     /// state (in form of the struct that implements RepoShardedProcessExecutor trait)
     /// that is required to execute the job. The repo-name (or related entity)
@@ -46,23 +41,23 @@ pub trait RepoShardedProcess: Send + Sync {
 /// exists a 1-1 mapping between a repo and a RepoShardedProcessExecutor.
 #[async_trait]
 pub trait RepoShardedProcessExecutor: Send + Sync {
-    /// Callback for when the BPE for the current job is ready to begin execution
-    /// with the provided repo. The core BP logic should exist within this method.
-    /// The BP execution can be one-shot, batched or long-running in nature.
+    /// Callback for when the repo-process for the current job is ready to begin execution
+    /// with the provided repo. The core process logic should exist within this method.
+    /// The process execution can be one-shot, batched or long-running in nature.
     /// Correspondingly, the task associated with this method could return immediately,
     /// or after a while or just keep executing until the executor decides to terminate it.
     /// Depending on the execution mode, the implementer can choose to maintain some
     /// form of state (i.e. signal, oneshot, etc.) that can be used to interrupt the
-    /// normal execution of the BP when the BPM needs to move or terminate the BP
-    /// execution for the provided repo.
+    /// normal execution of the process when the Sharded Process Manager needs to move
+    /// or terminate the process execution for the provided repo.
     async fn execute(&self) -> Result<()>;
 
-    /// Callback for when the BPE for the current job is required to relinquish
-    /// an existing repo assigned to it earlier. The timeout specified during
-    /// creation determines the time for which the BPE will wait before
+    /// Callback for when the executing repo process for the current job is required to
+    /// relinquish an existing repo assigned to it earlier. The timeout specified during
+    /// creation determines the time for which the executing repo process will wait before
     /// performing a hard-cleaup of the repo associated task. Note that this
     /// method is responsible ONLY for signalling the termination of the execution
-    /// of the repo for the given BP. Once the control returns from this method,
+    /// of the repo for the given process. Once the control returns from this method,
     /// the executor waits for timeout seconds (specified during executor construction)
     /// before initiating forced termination of the executing process. If there
     /// are any book-keeping activities pending, they should be completed in the

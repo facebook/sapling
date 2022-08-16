@@ -13,9 +13,9 @@ use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
 use clap::Parser;
-use executor_lib::BackgroundProcessExecutor;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
+use executor_lib::ShardedProcessExecutor;
 use fbinit::FacebookInit;
 use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::MononokeApp;
@@ -221,7 +221,7 @@ pub async fn run_sharded(
     let logger = corpus_process.app.logger().clone();
     // The service name needs to be 'static to satisfy SM contract
     static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
-    let mut executor = BackgroundProcessExecutor::new(
+    let mut executor = ShardedProcessExecutor::new(
         corpus_process.app.fb,
         corpus_process.app.runtime().clone(),
         &logger,

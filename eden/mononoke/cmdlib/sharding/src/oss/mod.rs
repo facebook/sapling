@@ -14,9 +14,9 @@ use tokio::runtime::Handle;
 
 use crate::RepoShardedProcess;
 
-pub struct BackgroundProcessExecutor {}
+pub struct ShardedProcessExecutor {}
 
-impl BackgroundProcessExecutor {
+impl ShardedProcessExecutor {
     pub fn new(
         _fb: FacebookInit,
         _runtime_handle: Handle,
@@ -27,10 +27,10 @@ impl BackgroundProcessExecutor {
         _bp_handle: Arc<dyn RepoShardedProcess>,
         _shard_healing: bool,
     ) -> Result<Self> {
-        unimplemented!("BackgroundProcessExecutor is supported only for fbcode build")
+        unimplemented!("ShardedProcessExecutor is supported only for fbcode build")
     }
 
     pub async fn block_and_execute(&mut self, _logger: &Logger) -> Result<()> {
-        unimplemented!("BackgroundProcessExecutor is supported only for fbcode build")
+        unimplemented!("ShardedProcessExecutor is supported only for fbcode build")
     }
 }

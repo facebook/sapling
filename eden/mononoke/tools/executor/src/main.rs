@@ -13,9 +13,9 @@ use anyhow::bail;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use executor_lib::BackgroundProcessExecutor;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
+use executor_lib::ShardedProcessExecutor;
 use fbinit::FacebookInit;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
@@ -237,7 +237,7 @@ async fn run_sharded(app: MononokeApp, sharded_service_name: String) -> Result<(
     // The service name needs to be 'static to satisfy SM contract
     static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
     // For sharded execution, we need to first create the executor.
-    let mut executor = BackgroundProcessExecutor::new(
+    let mut executor = ShardedProcessExecutor::new(
         process.app.fb,
         process.app.runtime().clone(),
         &logger,

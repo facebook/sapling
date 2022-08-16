@@ -30,9 +30,9 @@ use cross_repo_sync::validation::BookmarkDiff;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Syncers;
-use executor_lib::BackgroundProcessExecutor;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
+use executor_lib::ShardedProcessExecutor;
 use fbinit::FacebookInit;
 use futures::future;
 use futures::TryStreamExt;
@@ -226,7 +226,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
             let logger = process.matches.logger().clone();
             let matches = Arc::clone(&process.matches);
-            let mut executor = BackgroundProcessExecutor::new(
+            let mut executor = ShardedProcessExecutor::new(
                 process.fb,
                 process.matches.runtime().clone(),
                 &logger,

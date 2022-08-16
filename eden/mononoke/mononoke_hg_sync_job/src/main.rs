@@ -49,9 +49,9 @@ use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use darkstorm_verifier::DarkstormVerifier;
 use dbbookmarks::SqlBookmarksBuilder;
-use executor_lib::BackgroundProcessExecutor;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
+use executor_lib::ShardedProcessExecutor;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use filestore::FilestoreConfigRef;
@@ -1452,7 +1452,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
             let logger = process.matches.logger().clone();
             let matches = Arc::clone(&process.matches);
-            let mut executor = BackgroundProcessExecutor::new(
+            let mut executor = ShardedProcessExecutor::new(
                 process.fb,
                 process.matches.runtime().clone(),
                 &logger,

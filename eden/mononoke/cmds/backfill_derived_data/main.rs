@@ -57,9 +57,9 @@ use derived_data_utils::DerivedUtils;
 use derived_data_utils::ThinOut;
 use derived_data_utils::DEFAULT_BACKFILLING_CONFIG_NAME;
 use derived_data_utils::POSSIBLE_DERIVED_TYPES;
-use executor_lib::BackgroundProcessExecutor;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
+use executor_lib::ShardedProcessExecutor;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::future;
@@ -575,7 +575,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
             let logger = process.matches.logger().clone();
             let matches = Arc::clone(&process.matches);
-            let mut executor = BackgroundProcessExecutor::new(
+            let mut executor = ShardedProcessExecutor::new(
                 process.fb,
                 process.matches.runtime().clone(),
                 &logger,
