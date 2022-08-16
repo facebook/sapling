@@ -494,13 +494,6 @@ allfilespats = [
 
 py3pats = [
     [
-        (r"os\.name", "use pycompat.osname instead (py3)"),
-        (r"os\.getcwd", "use pycompat.getcwd instead (py3)"),
-        (r"os\.sep", "use pycompat.ossep instead (py3)"),
-        (r"os\.pathsep", "use pycompat.ospathsep instead (py3)"),
-        (r"os\.altsep", "use pycompat.osaltsep instead (py3)"),
-        (r"sys\.platform", "use pycompat.sysplatform instead (py3)"),
-        (r"getopt\.getopt", "use pycompat.getoptb instead (py3)"),
         (r"os\.setenv", "modifying the environ dict is not preferred"),
     ],
     # warnings
