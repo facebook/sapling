@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
   $ setconfig workingcopy.ruststatus=False
 https://bz.mercurial-scm.org/522

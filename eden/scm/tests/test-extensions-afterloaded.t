@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 Test the extensions.afterloaded() function
 

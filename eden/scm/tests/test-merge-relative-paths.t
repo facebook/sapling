@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 Test that checks that relative paths are used in merge
 

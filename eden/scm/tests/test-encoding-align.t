@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 Test alignment of multibyte characters
 

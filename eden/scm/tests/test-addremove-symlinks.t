@@ -1,5 +1,6 @@
 #chg-compatible
 #require symlink
+#debugruntest-compatible
 
   $ setconfig workingcopy.ruststatus=False
   $ hg init repo

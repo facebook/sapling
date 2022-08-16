@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 Test migration between narrow-heads and non-narrow-heads
 

@@ -1,5 +1,6 @@
 #chg-compatible
 #require git no-windows
+#debugruntest-compatible
 
 Test that rebasing in a git repo with conflicts work.
 

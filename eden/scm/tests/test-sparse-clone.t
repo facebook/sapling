@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
   $ setconfig experimental.allowfilepeer=True clone.use-rust=1 commands.force-rust=clone
 
 test sparse

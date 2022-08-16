@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 https://bz.mercurial-scm.org/672
 

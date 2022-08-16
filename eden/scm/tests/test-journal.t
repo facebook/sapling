@@ -1,5 +1,6 @@
 #chg-compatible
 #require no-windows
+#debugruntest-compatible
 
 Tests for the journal extension; records bookmark locations.
 

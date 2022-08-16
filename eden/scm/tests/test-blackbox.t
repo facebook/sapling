@@ -1,4 +1,5 @@
 #require no-fsmonitor
+#debugruntest-compatible
 
 setup
   $ configure modernclient

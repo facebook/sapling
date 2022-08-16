@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
   $ configure mutation-norecord
   $ enable morestatus fbhistedit histedit rebase reset

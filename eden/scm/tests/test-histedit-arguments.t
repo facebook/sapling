@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
   $ setconfig workingcopy.ruststatus=False
 Test argument handling and various data parsing

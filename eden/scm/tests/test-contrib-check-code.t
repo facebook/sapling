@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
   $ run_check_code() {
   >   PYTHONPATH= python "$TESTDIR/../contrib/check-code.py" "$@"

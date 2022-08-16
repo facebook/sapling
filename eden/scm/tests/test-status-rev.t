@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 	
 #testcases pythonstatus ruststatus

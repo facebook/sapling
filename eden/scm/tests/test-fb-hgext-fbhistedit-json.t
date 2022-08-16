@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 Tests JSON Input support for histedit
 

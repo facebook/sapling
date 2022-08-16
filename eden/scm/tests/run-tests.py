@@ -1291,6 +1291,8 @@ class Test(unittest.TestCase):
                 self._skipped = True
                 raise unittest.SkipTest(missing[-1])
         elif ret == self.EXCEPTION_STATUS:
+            # Print exception (with traceback) as output mismatch.
+            self._result.addOutputMismatch(self, ret, out, "")
             self.fail("exception")
         elif ret == "timeout":
             self.fail("timed out")

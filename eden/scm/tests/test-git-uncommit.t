@@ -1,5 +1,6 @@
 #chg-compatible
 #require git no-windows
+#debugruntest-compatible
 
   $ . $TESTDIR/git.sh
 

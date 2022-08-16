@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
   $ setconfig workingcopy.ruststatus=False
   $ readconfig <<EOF

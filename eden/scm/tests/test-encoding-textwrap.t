@@ -1,3 +1,4 @@
+#debugruntest-compatible
 Test text wrapping for multibyte characters
 
   $ mkdir t

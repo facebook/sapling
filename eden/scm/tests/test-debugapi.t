@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
   $ configure modern
   $ setconfig paths.default=test:e1 ui.ssh=false

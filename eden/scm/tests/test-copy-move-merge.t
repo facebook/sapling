@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 Test for the full copytracing algorithm
 =======================================

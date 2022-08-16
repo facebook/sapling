@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 'narrow-heads' requires remotenames and visibility
 
   $ configure dummyssh modernclient

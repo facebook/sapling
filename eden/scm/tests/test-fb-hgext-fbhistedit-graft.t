@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
   $ configure mutation-norecord
   $ . "$TESTDIR/histedit-helpers.sh"

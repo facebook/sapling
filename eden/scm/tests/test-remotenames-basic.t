@@ -1,3 +1,4 @@
+#debugruntest-compatible
   $ enable remotenames
   $ setconfig experimental.allowfilepeer=True
   > mkcommit()

@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
   $ HGFOO=BAR; export HGFOO
   $ readconfig <<'EOF'

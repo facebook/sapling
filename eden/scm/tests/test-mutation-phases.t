@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
   $ enable amend
   $ setconfig experimental.evolution=obsolete

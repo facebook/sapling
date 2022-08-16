@@ -1,4 +1,5 @@
 #require tic
+#debugruntest-compatible
 
 Revert interactive tests with the Curses interface
 

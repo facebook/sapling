@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
   $ setconfig workingcopy.ruststatus=False
 Test adding, removing, changing files in both merge parents, without telling

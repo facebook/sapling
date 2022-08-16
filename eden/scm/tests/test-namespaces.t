@@ -1,3 +1,4 @@
+#debugruntest-compatible
 Test namespace registration using registrar
 
   $ shorttraceback

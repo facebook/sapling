@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 Tests of the file helper tool
 

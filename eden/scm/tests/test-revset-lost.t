@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
   $ configure modern
   $ setconfig ui.allowemptycommit=1
   $ enable histedit

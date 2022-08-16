@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 A script to generate nasty diff worst-case scenarios:
 

@@ -1,4 +1,5 @@
 #require no-windows
+#debugruntest-compatible
 
 Explore the semi-mysterious matchmod.match API
 

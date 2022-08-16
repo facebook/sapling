@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
   $ setconfig experimental.allowfilepeer=True
 
 Remotenames extension has a shortcut that makes heads discovery work faster.

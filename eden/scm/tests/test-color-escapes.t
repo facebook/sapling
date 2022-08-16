@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
   $ setconfig ui.color=always color.mode=ansi
   $ setconfig color.color.none=0

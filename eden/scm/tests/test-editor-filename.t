@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 Test temp file used with an editor has the expected suffix.
 

@@ -265,6 +265,9 @@ cachepath=$TESTTMP/default-hgcache
 
 [mutation]
 record=False
+
+[hint]
+ack-match-full-traversal=True
 """
 
 WATCHMAN_HGRC = b"""

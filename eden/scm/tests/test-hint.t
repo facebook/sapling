@@ -1,3 +1,4 @@
+#debugruntest-compatible
 `#chg-compatible
 
   $ newext showhint << EOF

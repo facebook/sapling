@@ -1,3 +1,4 @@
+#debugruntest-compatible
   $ configure modern
   $ newrepo
   $ drawdag << 'EOS'

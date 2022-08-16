@@ -1,3 +1,4 @@
+#debugruntest-compatible
   $ setconfig workingcopy.ruststatus=False
 set up test repo
 

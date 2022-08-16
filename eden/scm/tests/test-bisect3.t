@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 # Here we create a simple DAG which has just enough of the required
 # topology to test all the bisection status labels:

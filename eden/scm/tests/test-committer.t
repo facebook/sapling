@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
   $ unset HGUSER
   $ EMAIL="My Name <myname@example.com>"

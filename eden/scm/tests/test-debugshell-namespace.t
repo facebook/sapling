@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
   $ cat >> foo.py << EOF
   > def f(x): return x + 1

@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 #require gzip gunzip tr
 

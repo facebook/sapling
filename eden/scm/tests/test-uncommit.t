@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 Test uncommit - set up the config
 

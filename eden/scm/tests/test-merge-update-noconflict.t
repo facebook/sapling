@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
   $ enable amend rebase
   $ setconfig experimental.updatecheck=noconflict

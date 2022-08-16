@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
   $ configure modern
   $ newserver server1
   $ drawdag << 'EOS'

@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
   $ setconfig experimental.nativecheckout=true
   $ setconfig commands.update.check=noconflict
   $ newserver server

@@ -1,3 +1,4 @@
+#debugruntest-compatible
   $ enable sparse
   $ newrepo
   $ hg sparse include src

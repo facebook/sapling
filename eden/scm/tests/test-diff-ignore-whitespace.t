@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 GNU diff is the reference for all of these results.
 

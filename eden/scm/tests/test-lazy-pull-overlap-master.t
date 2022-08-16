@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 This test checks the pull works when:
 

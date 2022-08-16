@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 ensure that failing ui.atexit handlers report sensibly
 

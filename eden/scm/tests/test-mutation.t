@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
   $ configure dummyssh
   $ enable amend rebase histedit fbhistedit phabdiff absorb

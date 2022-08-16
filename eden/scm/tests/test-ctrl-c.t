@@ -1,4 +1,5 @@
 #require no-windows
+#debugruntest-compatible
 
   $ cat > sleep.py << 'EOF'
   > import os

@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
   $ configure modernclient
 
   $ setconfig format.usegeneraldelta=yes

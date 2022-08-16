@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 Test applying context diffs
 

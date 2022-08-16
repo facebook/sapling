@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 The ordering and format of case collisions detected using treemanifest is
 different, so this is a different test script.

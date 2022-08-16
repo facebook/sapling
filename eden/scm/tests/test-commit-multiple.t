@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 # reproduce issue2264, issue2516
 

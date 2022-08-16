@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
   $ configure modernclient
 
 this structure seems to tickle a bug in bundle's search for

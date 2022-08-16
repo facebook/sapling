@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 Using 'hgext.' prefix triggers the warning.
 

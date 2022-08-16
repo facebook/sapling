@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 #require execbit
   $ setconfig experimental.nativecheckout=true

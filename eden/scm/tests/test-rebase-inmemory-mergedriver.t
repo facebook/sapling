@@ -1,3 +1,4 @@
+#debugruntest-compatible
   $ configure mutation-norecord
 Test mergedriver invalidation with IMM.
 

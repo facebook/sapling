@@ -1,5 +1,6 @@
 #chg-compatible
 #require mkfifo
+#debugruntest-compatible
 
   $ hg init t
   $ cd t

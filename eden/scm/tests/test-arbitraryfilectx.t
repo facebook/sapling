@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 Setup:
   $ newext eval <<EOF

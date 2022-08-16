@@ -1,3 +1,4 @@
+#debugruntest-compatible
   $ enable commitextras
   $ newrepo
   $ echo data > file

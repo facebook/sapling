@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
   $ cat >> foo.py << EOF
   > ui.write('argv = %r\n' % (sys.argv,))

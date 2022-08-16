@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
 Alias can override builtin commands.
 

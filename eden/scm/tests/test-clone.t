@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
   $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
   $ setconfig clone.use-rust=1
