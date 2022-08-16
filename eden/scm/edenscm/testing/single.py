@@ -67,17 +67,14 @@ def main():
         runtest(testid, exts, mismatchcb)
     except SkipTest:
         return 80
-    except Exception:
-        raise
-    finally:
-        if not mismatches:
-            return 0
-        if outpath:
-            # fix mismatches on outpath
-            with open(testid.path, "rb") as src, open(outpath, "wb") as dst:
-                dst.write(src.read())
-            fixmismatches(mismatches)
-        return 1
+    if not mismatches:
+        return 0
+    if outpath:
+        # fix mismatches on outpath
+        with open(testid.path, "rb") as src, open(outpath, "wb") as dst:
+            dst.write(src.read())
+        fixmismatches(mismatches)
+    return 1
 
 
 if __name__ == "__main__":
