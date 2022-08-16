@@ -332,6 +332,7 @@ members = [
   "mononoke_api/types",
   "mononoke_api_hg",
   "mononoke_hg_sync_job",
+  "mononoke_repos",
   "mononoke_types",
   "mononoke_types/if",
   "mononoke_types/mocks",
