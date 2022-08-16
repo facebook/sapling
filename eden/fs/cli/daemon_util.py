@@ -21,6 +21,12 @@ class DaemonBinaryNotFound(Exception):
 def find_daemon_binary(explicit_daemon_binary: Optional[str]) -> str:
     if explicit_daemon_binary is not None:
         return explicit_daemon_binary
+
+    try:
+        return os.environ["EDENFS_SERVER_PATH"]
+    except KeyError:
+        pass
+
     daemon_binary = _find_default_daemon_binary()
     if daemon_binary is None:
         raise DaemonBinaryNotFound()

@@ -9,7 +9,7 @@
 #include <folly/io/async/AsyncSignalHandler.h>
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
-#include <gflags/gflags.h>
+#include <folly/portability/GFlags.h>
 #include <signal.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <algorithm>
@@ -70,6 +70,10 @@ DEFINE_double(
     sleepBeforeStop,
     0.0,
     "Sleep for this many seconds before stopping");
+DEFINE_string(
+    privhelper_path,
+    "",
+    "The path to the privhelper binary (only works if not running setuid)");
 
 using namespace facebook::eden;
 
