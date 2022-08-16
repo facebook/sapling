@@ -1,8 +1,8 @@
 #!/usr/bin/env dotslash
 
-// @generated SignedSource<<4bbf9d88a2f168297890522f4fb40d6c>>
+// @generated SignedSource<<a3ac73e2c0f420bd63fa271056661529>>
 // MSDK schedule URL: https://our.intern.facebook.com/intern/msdk/bump/?action=view&schedule_fbid=413790530659489
-// sandcastle build trigger URL: https://our.intern.facebook.com/intern/sandcastle/job/752538012/
+// sandcastle build trigger URL: https://our.intern.facebook.com/intern/sandcastle/job/27021598512869603/
 
 {
     "name": "isl",
@@ -10,19 +10,19 @@
     "build_info": {
         "config_script": "xplat/scm/isl/release/dotslash_build.spec",
         "commit_repo": "fbsource",
-        "commit_hash": "0596711b90edb29df82142ec9327d7cb923f6919",
-        "commit_date": "2022-08-15 11:16:50 PDT",
-        "commit_timestamp": 1660587410,
-        "msdk_package_fbid": "456856219679659"
+        "commit_hash": "8ec11238939085c867b9a9f4c8858e14761132b1",
+        "commit_date": "2022-08-16 08:03:58 PDT",
+        "commit_timestamp": 1660662238,
+        "msdk_package_fbid": "511607347397565"
     },
     "signatures": {
-        "msdk": "<<crypto.managed_sdk.mac:AeVQN4I2P1ZUj12iLGjUDGM7uxo06qiIMoK_DVF1Jb8IMnIq>>"
+        "msdk": "<<crypto.managed_sdk.mac:AeVsDIz_nICQS9vcg6vt68eR3QeK0FhMcY3JbHhkdXTmLqp->>"
     },
     "platforms": {
         "linux": {
             "scheme": "cas",
             "use_case_id": "dotslash_msdk_prod",
-            "digest": "080883ac5b807fdcee1ca2289f44eadb18967948:1004943",
+            "digest": "bd9195304b03af892e5bfa4e5fd1ccccbf34f8d8:1004966",
             "extract": {
                 "path": "run-isl",
                 "decompress": "tar.gz"
@@ -31,7 +31,7 @@
         "macos": {
             "scheme": "cas",
             "use_case_id": "dotslash_msdk_prod",
-            "digest": "080883ac5b807fdcee1ca2289f44eadb18967948:1004943",
+            "digest": "bd9195304b03af892e5bfa4e5fd1ccccbf34f8d8:1004966",
             "extract": {
                 "path": "run-isl",
                 "decompress": "tar.gz"
@@ -40,7 +40,7 @@
         "windows": {
             "scheme": "cas",
             "use_case_id": "dotslash_msdk_prod",
-            "digest": "080883ac5b807fdcee1ca2289f44eadb18967948:1004943",
+            "digest": "bd9195304b03af892e5bfa4e5fd1ccccbf34f8d8:1004966",
             "extract": {
                 "path": "run-isl.bat",
                 "decompress": "tar.gz"
