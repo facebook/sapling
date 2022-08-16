@@ -17,8 +17,8 @@ use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 
 #[derive(Clone, Serialize, Debug)]
-struct ReposResponse<'a> {
-    repos: Vec<&'a str>,
+struct ReposResponse {
+    repos: Vec<String>,
 }
 
 pub async fn repos(state: &mut State) -> Result<BytesBody<Bytes>, HttpError> {

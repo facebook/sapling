@@ -589,7 +589,6 @@ impl IntoApiFormat<ThriftMegarepoTarget> for Target {
     fn into_api_format(self, mononoke: &Mononoke) -> Result<ThriftMegarepoTarget, MegarepoError> {
         let repo = mononoke
             .repo_name_from_id(RepositoryId::new(self.repo_id as i32))
-            .cloned()
             .map(|name| ThriftRepoSpecifier {
                 name,
                 ..Default::default()

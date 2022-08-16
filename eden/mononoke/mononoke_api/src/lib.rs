@@ -7,19 +7,14 @@
 
 #![feature(backtrace)]
 
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
-use anyhow::anyhow;
-use anyhow::Context;
 use anyhow::Error;
 pub use bookmarks::BookmarkName;
-use futures::stream;
-use futures::StreamExt;
 use mononoke_app::MononokeApp;
+use mononoke_repos::MononokeRepos;
 use mononoke_types::RepositoryId;
-use slog::debug;
 use slog::info;
 use stats::prelude::*;
 
@@ -92,17 +87,11 @@ pub use crate::xrepo::CandidateSelectionHintArgs;
 define_stats! {
     prefix = "mononoke.api";
     completion_duration_secs: timeseries(Average, Sum, Count),
-    initialization_time_secs: dynamic_timeseries(
-        "initialization_time_secs.{}",
-        (reponame: String);
-        Average, Sum, Count
-    ),
 }
 
 /// An instance of Mononoke, which may manage multiple repositories.
 pub struct Mononoke {
-    repos: HashMap<String, Arc<Repo>>,
-    repos_by_ids: HashMap<RepositoryId, Arc<Repo>>,
+    repos: Arc<MononokeRepos<Repo>>,
 }
 
 impl Mononoke {
@@ -112,45 +101,15 @@ impl Mononoke {
         let logger = app.logger().clone();
         let start = Instant::now();
         let repo_filter = app.environment().filter_repos.clone();
-        let repos = stream::iter(configs.repos.into_iter().filter(
-            move |&(ref name, ref config)| {
-                let is_matching_filter = repo_filter
-                    .as_ref()
-                    .map_or(true, |re| re.is_match(name.as_str()));
-                config.enabled && is_matching_filter
-            },
-        ))
-        .map({
-            move |(name, config)| {
-                let app = app.clone();
-                async move {
-                    let logger = app.logger();
-                    info!(logger, "Initializing repo: {}", &name);
-                    let start = Instant::now();
-                    let repo: Repo = app
-                        .repo_factory()
-                        .build(name.clone(), config)
-                        .await
-                        .with_context(|| format!("could not initialize repo '{}'", &name))?;
-                    STATS::initialization_time_secs.add_value(
-                        start.elapsed().as_secs().try_into().unwrap_or(i64::MAX),
-                        (name.to_string(),),
-                    );
-                    debug!(logger, "Initialized {}", &name);
-                    Ok::<_, Error>((name, Arc::new(repo)))
-                }
+        let repo_names = configs.repos.into_iter().filter_map(|(name, config)| {
+            let is_matching_filter = repo_filter.as_ref().map_or(true, |re| re.is_match(&name));
+            if config.enabled && is_matching_filter {
+                Some(name)
+            } else {
+                None
             }
-        })
-        .buffer_unordered(30)
-        .collect::<Vec<_>>();
-
-        // There are lots of deep FuturesUnordered here that have caused inefficient polling with
-        // Tokio coop in the past.
-        let repos_vec = tokio::task::unconstrained(repos)
-            .await
-            .into_iter()
-            .collect::<Result<Vec<_>, _>>()?;
-
+        });
+        let repos = app.open_mononoke_repos(repo_names.into_iter()).await?;
         info!(
             &logger,
             "All repos initialized. It took: {} seconds",
@@ -158,28 +117,8 @@ impl Mononoke {
         );
         STATS::completion_duration_secs
             .add_value(start.elapsed().as_secs().try_into().unwrap_or(i64::MAX));
-        Self::new_from_repos(repos_vec)
-    }
-
-    fn new_from_repos(
-        repos_iter: impl IntoIterator<Item = (String, Arc<Repo>)>,
-    ) -> Result<Self, Error> {
-        let mut repos = HashMap::new();
-        let mut repos_by_ids = HashMap::new();
-        for (name, repo) in repos_iter {
-            if repos.insert(name.clone(), repo.clone()).is_some() {
-                return Err(anyhow!("repos with duplicate name '{}' found", name));
-            }
-
-            let repo_id = repo.blob_repo().get_repoid();
-            if repos_by_ids.insert(repo_id, repo).is_some() {
-                return Err(anyhow!("repos with duplicate id '{}' found", repo_id));
-            }
-        }
-
         Ok(Self {
-            repos,
-            repos_by_ids,
+            repos: Arc::new(repos),
         })
     }
 
@@ -191,9 +130,9 @@ impl Mononoke {
         ctx: CoreContext,
         name: impl AsRef<str>,
     ) -> Result<Option<RepoContextBuilder>, MononokeError> {
-        match self.repos.get(name.as_ref()) {
+        match self.repos.get_by_name(name.as_ref()) {
             None => Ok(None),
-            Some(repo) => Ok(Some(RepoContextBuilder::new(ctx, repo.clone()))),
+            Some(repo) => Ok(Some(RepoContextBuilder::new(ctx, Arc::clone(&repo)))),
         }
     }
 
@@ -205,40 +144,53 @@ impl Mononoke {
         ctx: CoreContext,
         repo_id: RepositoryId,
     ) -> Result<Option<RepoContextBuilder>, MononokeError> {
-        match self.repos_by_ids.get(&repo_id) {
+        match self.repos.get_by_id(repo_id.id()) {
             None => Ok(None),
-            Some(repo) => Ok(Some(RepoContextBuilder::new(ctx, repo.clone()))),
+            Some(repo) => Ok(Some(RepoContextBuilder::new(ctx, Arc::clone(&repo)))),
         }
+    }
+
+    /// Return the raw underlying repo corresponding to the provided
+    /// repo name.
+    pub fn raw_repo(&self, name: impl AsRef<str>) -> Option<Arc<Repo>> {
+        self.repos.get_by_name(name.as_ref())
+    }
+
+    /// Return the raw underlying repo corresponding to the provided
+    /// repo id.
+    pub fn raw_repo_by_id(&self, id: i32) -> Option<Arc<Repo>> {
+        self.repos.get_by_id(id)
     }
 
     /// Get all known repository ids
     pub fn known_repo_ids(&self) -> Vec<RepositoryId> {
-        self.repos.iter().map(|repo| repo.1.repoid()).collect()
+        self.repos.iter_ids().map(RepositoryId::new).collect()
     }
 
     /// Returns an `Iterator` over all repo names.
-    pub fn repo_names(&self) -> impl Iterator<Item = &str> {
-        self.repos.keys().map(AsRef::as_ref)
+    pub fn repo_names(&self) -> impl Iterator<Item = String> {
+        self.repos.iter_names()
     }
 
-    pub fn repos(&self) -> impl Iterator<Item = &Arc<Repo>> {
-        self.repos.values()
+    pub fn repos(&self) -> impl Iterator<Item = Arc<Repo>> {
+        self.repos.iter()
     }
 
-    pub fn repo_name_from_id(&self, repo_id: RepositoryId) -> Option<&String> {
-        match self.repos_by_ids.get(&repo_id) {
-            None => None,
-            Some(repo) => Some(repo.name()),
-        }
+    pub fn repo_name_from_id(&self, repo_id: RepositoryId) -> Option<String> {
+        self.repos
+            .get_by_id(repo_id.id())
+            .map(|repo| repo.name().to_string())
     }
 
     pub fn repo_id_from_name(&self, name: impl AsRef<str>) -> Option<RepositoryId> {
-        self.repos.get(name.as_ref()).map(|repo| repo.repoid())
+        self.repos
+            .get_by_name(name.as_ref())
+            .map(|repo| repo.repoid())
     }
 
     /// Report configured monitoring stats
     pub async fn report_monitoring_stats(&self, ctx: &CoreContext) -> Result<(), MononokeError> {
-        for (_, repo) in self.repos.iter() {
+        for repo in self.repos.iter() {
             repo.report_monitoring_stats(ctx).await?;
         }
 
@@ -271,14 +223,18 @@ pub mod test_impl {
                     async move {
                         Repo::new_test(ctx.clone(), repo)
                             .await
-                            .map(move |repo| (name, Arc::new(repo)))
+                            .map(move |repo| (repo.blob_repo().get_repoid().id(), name, repo))
                     }
                 })
                 .collect::<FuturesOrdered<_>>()
-                .try_collect::<HashMap<_, _>>()
+                .try_collect::<Vec<_>>()
                 .await?;
 
-            Self::new_from_repos(repos)
+            let mononoke_repos = MononokeRepos::new();
+            mononoke_repos.populate(repos);
+            Ok(Self {
+                repos: Arc::new(mononoke_repos),
+            })
         }
 
         pub async fn new_test_xrepo(
@@ -300,16 +256,19 @@ pub mod test_impl {
                         async move {
                             Repo::new_test_xrepo(ctx.clone(), repo, lv_cfg, mapping)
                                 .await
-                                .map(move |repo| (name, Arc::new(repo)))
+                                .map(move |repo| (repo.blob_repo().get_repoid().id(), name, repo))
                         }
                     }
                 })
                 .collect::<FuturesOrdered<_>>()
-                .try_collect::<HashMap<_, _>>()
+                .try_collect::<Vec<_>>()
                 .await?;
 
-            let mononoke = Self::new_from_repos(repos)?;
-            Ok(mononoke)
+            let mononoke_repos = MononokeRepos::new();
+            mononoke_repos.populate(repos);
+            Ok(Self {
+                repos: Arc::new(mononoke_repos),
+            })
         }
     }
 }

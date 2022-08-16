@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::future::Future;
 use std::sync::Arc;
+use std::time::Instant;
 
 use anyhow::anyhow;
 use anyhow::format_err;
@@ -54,6 +55,7 @@ use slog::info;
 use slog::o;
 use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
+use stats::prelude::*;
 #[cfg(not(test))]
 use stats::schedule_stats_aggregation_preview;
 use tokio::runtime::Handle;
@@ -70,6 +72,15 @@ use crate::extension::AppExtension;
 use crate::extension::AppExtensionArgsBox;
 use crate::extension::BoxedAppExtensionArgs;
 use crate::fb303::Fb303AppExtension;
+
+define_stats! {
+    prefix = "mononoke.app";
+    initialization_time_millisecs: dynamic_timeseries(
+        "initialization_time_millisecs.{}",
+        (reponame: String);
+        Average, Sum, Count
+    ),
+}
 
 pub struct MononokeApp {
     pub fb: FacebookInit,
@@ -360,6 +371,7 @@ impl MononokeApp {
                 let repo_factory = self.repo_factory.clone();
                 let name = repo_name.clone();
                 async move {
+                    let start = Instant::now();
                     let logger = self.logger();
                     let config = self.repo_config_by_name(&repo_name)?;
                     let repo_id = config.repoid.id();
@@ -369,6 +381,10 @@ impl MononokeApp {
                         .await
                         .with_context(|| format!("Failed to initialize repo '{}'", &repo_name))?;
                     info!(logger, "Initialized repo: {}", &repo_name);
+                    STATS::initialization_time_millisecs.add_value(
+                        start.elapsed().as_millis().try_into().unwrap_or(i64::MAX),
+                        (repo_name.to_string(),),
+                    );
                     Ok::<_, Error>((repo_id, repo_name, repo))
                 }
             })

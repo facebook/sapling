@@ -226,7 +226,7 @@ pub async fn repo_handlers<'a>(
         .await?;
 
         let maybe_incomplete_push_redirector_args = common_commit_sync_config.and_then({
-            cloned!(logger);
+            cloned!(logger, repo);
             move |common_commit_sync_config| {
                 if common_commit_sync_config.large_repo_id == blobrepo.get_repoid() {
                     debug!(
@@ -245,7 +245,7 @@ pub async fn repo_handlers<'a>(
                         common_commit_sync_config,
                         synced_commit_mapping: sql_commit_sync_mapping,
                         target_repo_dbs: backsyncer_dbs,
-                        source_repo: Arc::clone(repo),
+                        source_repo: Arc::clone(&repo),
                     })
                 }
             }
@@ -259,7 +259,7 @@ pub async fn repo_handlers<'a>(
             IncompleteRepoHandler {
                 logger,
                 scuba: scuba.clone(),
-                repo: Arc::clone(repo),
+                repo: Arc::clone(&repo),
                 maybe_incomplete_push_redirector_args,
                 repo_client_knobs,
                 backup_repo_config,
