@@ -90,7 +90,6 @@ const ARG_TLS_TICKET_SEEDS: &str = "tls-ticket-seeds";
 const ARG_ALWAYS_WAIT_FOR_UPSTREAM: &str = "always-wait-for-upstream";
 const ARG_LIVE_CONFIG: &str = "live-config";
 const ARG_LIVE_CONFIG_FETCH_INTERVAL: &str = "live-config-fetch-interval";
-const ARG_TRUSTED_PROXY_IDENTITY: &str = "trusted-proxy-identity";
 const ARG_TEST_FRIENDLY_LOGGING: &str = "test-friendly-logging";
 const ARG_TLS_SESSION_DATA_LOG_FILE: &str = "tls-session-data-log-file";
 const ARG_MAX_UPLOAD_SIZE: &str = "max-upload-size";
@@ -212,15 +211,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .required(false)
                 .default_value("5")
                 .help("How often to reload the live config, in seconds"),
-        )
-        .arg(
-            Arg::with_name(ARG_TRUSTED_PROXY_IDENTITY)
-                .long(ARG_TRUSTED_PROXY_IDENTITY)
-                .takes_value(true)
-                .multiple(true)
-                .number_of_values(1)
-                .required(false)
-                .help("This is now unused"),
         )
         .arg(
             Arg::with_name(ARG_TEST_FRIENDLY_LOGGING)
