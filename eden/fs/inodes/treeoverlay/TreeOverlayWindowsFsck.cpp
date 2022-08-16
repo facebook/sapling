@@ -737,13 +737,13 @@ void scanCurrentDir(
           getEntryFromOverlayDir(updatedInsensitiveOverlayDir, path.basename());
       auto entryInode =
           InodeNumber::fromThrift(*overlayEntry->inodeNumber_ref());
-      auto entryDir = overlay.loadOverlayDir(entryInode);
-      auto entryInsensitiveOverlayDir = toPathMap(updated);
+      auto entryDir = *overlay.loadOverlayDir(entryInode);
+      auto entryInsensitiveOverlayDir = toPathMap(entryDir);
       scanCurrentDir(
           overlay,
           path,
           entryInode,
-          *entryDir,
+          entryDir,
           entryInsensitiveOverlayDir,
           isFull,
           callback);
