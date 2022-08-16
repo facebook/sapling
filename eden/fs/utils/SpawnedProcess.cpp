@@ -416,8 +416,8 @@ SpawnedProcess::SpawnedProcess(SpawnedProcess&& other) noexcept {
 SpawnedProcess& SpawnedProcess::operator=(SpawnedProcess&& other) noexcept {
   if (&other != this) {
 #ifdef _WIN32
-    XCHECK_EQ(proc_, INVALID_HANDLE_VALUE);
-    proc_ = other.proc_;
+    XCHECK(!proc_);
+    proc_ = std::move(other.proc_);
 #else
     XCHECK_EQ(pid_, 0);
     pid_ = other.pid_;
@@ -665,7 +665,7 @@ SpawnedProcess::SpawnedProcess(
   }
 
   CloseHandle(procInfo.hThread);
-  proc_ = procInfo.hProcess;
+  proc_.reset(procInfo.hProcess);
 #endif
   waited_ = false;
 
@@ -684,8 +684,7 @@ SpawnedProcess::~SpawnedProcess() {
 
 void SpawnedProcess::detach() && {
 #ifdef _WIN32
-  CloseHandle(proc_);
-  proc_ = INVALID_HANDLE_VALUE;
+  proc_.reset();
   waited_ = true;
 #else
   // For posix we have no choice but to wait for the child in order to clean
@@ -723,10 +722,10 @@ bool SpawnedProcess::terminated() {
   }
 
 #else
-  auto res = WaitForSingleObject(proc_, 0);
+  auto res = WaitForSingleObject(proc_.get(), 0);
   if (res == WAIT_OBJECT_0) {
     DWORD exitCode = 0;
-    GetExitCodeProcess(proc_, &exitCode);
+    GetExitCodeProcess(proc_.get(), &exitCode);
     status_ = ProcessStatus(ProcessStatus::State::Exited, exitCode);
     waited_ = true;
   }
@@ -872,11 +871,11 @@ ProcessStatus SpawnedProcess::wait() {
     }
   }
 #else
-  auto res = WaitForSingleObject(proc_, INFINITE);
+  auto res = WaitForSingleObject(proc_.get(), INFINITE);
   DWORD exitCode = 0;
   switch (res) {
     case WAIT_OBJECT_0:
-      GetExitCodeProcess(proc_, &exitCode);
+      GetExitCodeProcess(proc_.get(), &exitCode);
       status_ = ProcessStatus(ProcessStatus::State::Exited, exitCode);
       waited_ = true;
       return status_;
@@ -926,11 +925,11 @@ ProcessStatus SpawnedProcess::waitTimeout(std::chrono::milliseconds timeout) {
     interval = std::min(maxSleep, interval * 2);
   }
 #else
-  auto res = WaitForSingleObject(proc_, timeout.count());
+  auto res = WaitForSingleObject(proc_.get(), timeout.count());
   DWORD exitCode = 0;
   switch (res) {
     case WAIT_OBJECT_0:
-      GetExitCodeProcess(proc_, &exitCode);
+      GetExitCodeProcess(proc_.get(), &exitCode);
       status_ = ProcessStatus(ProcessStatus::State::Exited, exitCode);
       waited_ = true;
       return status_;
@@ -1005,7 +1004,7 @@ void SpawnedProcess::sendSignal(int signo) {
     // an exit status based on the signal number.
     // There is no opportunity for it to catch and shutdown
     // gracefully.
-    TerminateProcess(proc_, 128 + signo);
+    TerminateProcess(proc_.get(), 128 + signo);
 #endif
   }
 }

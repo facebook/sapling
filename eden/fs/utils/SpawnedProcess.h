@@ -17,6 +17,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include "eden/common/utils/Handle.h"
 #include "eden/fs/utils/FileDescriptor.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/Pipe.h"
@@ -338,7 +339,7 @@ class SpawnedProcess {
 #ifndef _WIN32
   pid_t pid_{0};
 #else
-  HANDLE proc_{INVALID_HANDLE_VALUE};
+  ProcessHandle proc_{};
 #endif
   bool waited_{true};
   ProcessStatus status_;
