@@ -125,8 +125,12 @@ def testsetup(t: TestTmp):
     else:
         hgpath = util.hgcmd()[0]
 
-    # provide access to the real binary
-    t.requireexe("hg", hgpath)
+    if hgpath:
+        # provide access to the real binary
+        t.requireexe("hg", hgpath)
+        # required for util.hgcmd to work in buck test, where
+        # the entry point is a shell script, not argv[0].
+        t.setenv("HGEXECUTABLEPATH", hgpath)
 
     # change the 'hg' shell command to run inline without spawning
     # (about 2x faster than chg)
