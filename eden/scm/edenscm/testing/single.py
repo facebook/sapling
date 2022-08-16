@@ -21,10 +21,11 @@ Unlike 'debugruntest', this entry point only runs a single test, and:
 - Does not maintain a test process pool. Expects run-tests.py to do so.
 - Does not spawn child processes (using multiprocessing) for clean environment.
 
-Exit code:
+Exit code (matches run-tests.py DebugRunTestTest):
 - 0: Test passed
-- 1: Test failed (output mismatch or exception)
+- 1: Test failed (output mismatch)
 - 80: Test skipped
+- 81: Test failed (Python exception)
 """
 
 
@@ -78,4 +79,12 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    exitcode = 0
+    try:
+        exitcode = main()
+    except BaseException:
+        import traceback
+
+        traceback.print_exc()
+        exitcode = 81
+    sys.exit(exitcode)

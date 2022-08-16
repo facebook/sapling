@@ -1021,6 +1021,9 @@ class Test(unittest.TestCase):
     # Status code reserved for skipped tests (used by hghave).
     SKIPPED_STATUS = 80
 
+    # Exception happened during the test (used by DebugRunTestTest).
+    EXCEPTION_STATUS = 81
+
     def __init__(
         self,
         path,
@@ -1287,6 +1290,8 @@ class Test(unittest.TestCase):
             else:
                 self._skipped = True
                 raise unittest.SkipTest(missing[-1])
+        elif ret == self.EXCEPTION_STATUS:
+            self.fail("exception")
         elif ret == "timeout":
             self.fail("timed out")
         elif ret is False:
@@ -2282,9 +2287,11 @@ class DebugRunTestTest(Test):
         vlog("# Running", shlex.join(cmdargs))
         exitcode, out = self._runcommand(cmdargs, env)
 
-        if exitcode == 1 and os.path.exists(self.errpath):
-            with open(self.errpath, "rb") as f:
-                out = f.readlines()
+        if exitcode == 1:
+            if os.path.exists(self.errpath):
+                with open(self.errpath, "rb") as f:
+                    out = f.readlines()
+        # exitcode can also be EXCEPTION_STATUS
         if exitcode == 0:
             out = self._refout
 
