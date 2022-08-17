@@ -398,31 +398,45 @@ impl SourceControlServiceImpl {
         }
 
         if let Some(diff_size_limit) = params.diff_size_limit {
-            let mut size_so_far: i64 = 0;
-            let mut path_diffs = Vec::with_capacity(paths.len());
             let mut stopped_at_pair = None;
 
-            for (base_path, other_path, copy_info, mode) in paths {
-                let diff =
-                    unified_diff(other_path, base_path, copy_info, context_lines, mode).await?;
+            let path_diffs = stream::iter(paths)
+                .map(|(base_path, other_path, copy_info, mode)| async move {
+                    let diff =
+                        unified_diff(other_path, base_path, copy_info, context_lines, mode).await?;
+                    let r: Result<_, errors::ServiceError> = Ok((
+                        base_path.map(|p| p.path().to_string()),
+                        other_path.map(|p| p.path().to_string()),
+                        diff,
+                    ));
+                    r
+                })
+                .boxed() // Prevents compiler error
+                .buffered(20)
+                .scan(0i64, |size_so_far, response| match response {
+                    Ok((base_path, other_path, diff)) => {
+                        *size_so_far += diff.raw_diff.len() as i64;
 
-                size_so_far += diff.raw_diff.len() as i64;
-                if size_so_far > diff_size_limit {
-                    stopped_at_pair = Some(thrift::CommitFileDiffsStoppedAtPair {
-                        base_path: base_path.map(|p| p.path().to_string()),
-                        other_path: other_path.map(|p| p.path().to_string()),
-                        ..Default::default()
-                    });
-                    break;
-                }
-
-                path_diffs.push(thrift::CommitFileDiffsResponseElement {
-                    base_path: base_path.map(|p| p.path().to_string()),
-                    other_path: other_path.map(|p| p.path().to_string()),
-                    diff: diff.into_response(),
-                    ..Default::default()
-                });
-            }
+                        if *size_so_far > diff_size_limit {
+                            stopped_at_pair = Some(thrift::CommitFileDiffsStoppedAtPair {
+                                base_path,
+                                other_path,
+                                ..Default::default()
+                            });
+                            future::ready(None)
+                        } else {
+                            future::ready(Some(Ok(thrift::CommitFileDiffsResponseElement {
+                                base_path,
+                                other_path,
+                                diff: diff.into_response(),
+                                ..Default::default()
+                            })))
+                        }
+                    }
+                    Err(e) => future::ready(Some(Err(e))),
+                })
+                .try_collect()
+                .await?;
 
             Ok(thrift::CommitFileDiffsResponse {
                 path_diffs,
