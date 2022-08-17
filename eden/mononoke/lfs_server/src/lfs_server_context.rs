@@ -148,6 +148,7 @@ impl LfsServerContext {
         let enforce_authentication = config.enforce_authentication();
 
         acl_check(
+            &ctx,
             repo.repo_permission_checker(),
             identities,
             enforce_acl_check,
@@ -190,6 +191,7 @@ impl LfsServerContext {
 }
 
 async fn acl_check(
+    ctx: &CoreContext,
     permission_checker: &dyn RepoPermissionChecker,
     identities: Option<&MononokeIdentitySet>,
     enforce_authorization: bool,
@@ -210,7 +212,7 @@ async fn acl_check(
             .await
     } else {
         permission_checker
-            .check_if_draft_access_allowed(identities.as_ref())
+            .check_if_draft_access_allowed_with_tunable_enforcement(ctx, identities.as_ref())
             .await
     };
 
@@ -847,11 +849,12 @@ mod test {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn test_acl_check_no_certificates() -> Result<(), Error> {
+    #[fbinit::test]
+    async fn test_acl_check_no_certificates(fb: FacebookInit) -> Result<(), Error> {
         let aclchecker = AlwaysAllowRepoPermissionChecker::new();
 
-        let res = acl_check(&aclchecker, None, false, true, LfsMethod::Download).await;
+        let ctx = CoreContext::test_mock(fb);
+        let res = acl_check(&ctx, &aclchecker, None, false, true, LfsMethod::Download).await;
 
         match res.err().unwrap() {
             LfsServerContextErrorKind::NotAuthenticated => Ok(()),
@@ -859,15 +862,17 @@ mod test {
         }
     }
 
-    #[tokio::test]
-    async fn test_acl_check_action() -> Result<(), Error> {
+    #[fbinit::test]
+    async fn test_acl_check_action(fb: FacebookInit) -> Result<(), Error> {
         let mut aclchecker = MockRepoPermissionChecker::new();
         aclchecker
             .expect_check_if_read_access_allowed()
             .return_const(true)
             .times(1);
 
+        let ctx = CoreContext::test_mock(fb);
         acl_check(
+            &ctx,
             &aclchecker,
             Some(&MononokeIdentitySet::new()),
             false,
@@ -877,11 +882,13 @@ mod test {
         .await?;
 
         aclchecker
-            .expect_check_if_draft_access_allowed()
+            .expect_check_if_draft_access_allowed_with_tunable_enforcement()
             .return_const(true)
             .times(1);
 
+        let ctx = CoreContext::test_mock(fb);
         acl_check(
+            &ctx,
             &aclchecker,
             Some(&MononokeIdentitySet::new()),
             false,

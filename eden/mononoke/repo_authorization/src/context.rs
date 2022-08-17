@@ -189,10 +189,53 @@ impl AuthorizationContext {
             })
     }
 
+    /// Check whether the user has general draft access to the repo.
+    ///
+    /// This does not check specific paths or bookmarks, which must be checked
+    /// separately.
+    pub async fn check_full_repo_draft(
+        &self,
+        ctx: &CoreContext,
+        repo: &(impl RepoPermissionCheckerRef + RepoConfigRef),
+    ) -> AuthorizationCheckOutcome {
+        let permitted = match self {
+            AuthorizationContext::FullAccess => true,
+            AuthorizationContext::Identity => {
+                repo.repo_permission_checker()
+                    .check_if_draft_access_allowed_with_tunable_enforcement(
+                        ctx,
+                        ctx.metadata().identities(),
+                    )
+                    .await
+            }
+            // The services have narrowly defined permissions. Never full-repo.
+            AuthorizationContext::Service(_service_name) => false,
+        };
+        AuthorizationCheckOutcome::from_permitted(permitted)
+    }
+
+    /// Require that the user has general draft access to the repo, and return
+    /// and error if they do not.
+    ///
+    /// This does not check specific paths or bookmarks, which must be checked
+    /// separately.
+    pub async fn require_full_repo_draft(
+        &self,
+        ctx: &CoreContext,
+        repo: &(impl RepoPermissionCheckerRef + RepoConfigRef),
+    ) -> Result<(), AuthorizationError> {
+        self.check_full_repo_draft(ctx, repo)
+            .await
+            .permitted_or_else(|| self.permission_denied(ctx, DeniedAction::FullRepoDraft))
+    }
+
     /// Check whether the user has general write access to the repo.
     ///
     /// This does not check specific paths or bookmarks, which must be checked
     /// separately.
+    ///
+    /// In cases where write operation covers draft data the draft access will
+    /// be used.
     pub async fn check_repo_write(
         &self,
         ctx: &CoreContext,
@@ -204,7 +247,10 @@ impl AuthorizationContext {
             AuthorizationContext::Identity => {
                 if op.is_draft() {
                     repo.repo_permission_checker()
-                        .check_if_draft_access_allowed(ctx.metadata().identities())
+                        .check_if_draft_access_allowed_with_tunable_enforcement(
+                            ctx,
+                            ctx.metadata().identities(),
+                        )
                         .await
                 } else {
                     repo.repo_permission_checker()

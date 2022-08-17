@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
+use context::CoreContext;
 use metaconfig_types::Identity;
 use permission_checker::AclProvider;
 use permission_checker::BoxPermissionChecker;
@@ -18,6 +19,8 @@ use permission_checker::MononokeIdentitySet;
 use permission_checker::PermissionCheckerBuilder;
 use slog::trace;
 use slog::Logger;
+use tokio::join;
+use tunables::tunables;
 
 /// Repository permissions checks
 ///
@@ -66,6 +69,43 @@ pub trait RepoPermissionChecker: Send + Sync + 'static {
         identities: &MononokeIdentitySet,
         service_name: &str,
     ) -> bool;
+
+    /// This is helper function that allows us to gradually migrate towards
+    /// using draft permissions for draft access rather than using read
+    /// permissions.
+    ///
+    /// In the future it should be replaced by check_if_draft_access_allowed
+    /// from repo permission checker.
+    async fn check_if_draft_access_allowed_with_tunable_enforcement(
+        &self,
+        ctx: &CoreContext,
+        identities: &MononokeIdentitySet,
+    ) -> bool {
+        let log = tunables().get_log_draft_acl_failures();
+        let enforce = tunables().get_enforce_draft_acl();
+        if log || enforce {
+            let (draft_result, write_result) = join!(
+                self.check_if_draft_access_allowed(identities),
+                self.check_if_write_access_allowed(identities)
+            );
+            // All-repo write access implies draft access.
+            let result = draft_result || write_result;
+            if !result {
+                ctx.scuba().clone().log_with_msg(
+                    if enforce {
+                        "Repo draft ACL check failed"
+                    } else {
+                        "Repo draft ACL check would fail"
+                    },
+                    None,
+                );
+            }
+            if enforce {
+                return result;
+            }
+        }
+        self.check_if_read_access_allowed(identities).await
+    }
 }
 
 pub struct ProdRepoPermissionChecker {
@@ -177,9 +217,9 @@ impl RepoPermissionChecker for ProdRepoPermissionChecker {
     }
 
     async fn check_if_draft_access_allowed(&self, identities: &MononokeIdentitySet) -> bool {
-        // TODO(T105334556): This should require draft permission
-        // For now, we allow all readers draft access.
-        self.repo_permchecker.check_set(identities, &["read"]).await
+        self.repo_permchecker
+            .check_set(identities, &["draft"])
+            .await
     }
 
     async fn check_if_write_access_allowed(&self, identities: &MononokeIdentitySet) -> bool {

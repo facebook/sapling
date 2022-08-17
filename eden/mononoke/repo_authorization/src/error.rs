@@ -20,6 +20,7 @@ use crate::context::RepoWriteOperation;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum DeniedAction {
     FullRepoRead,
+    FullRepoDraft,
     RepoMetadataRead,
     PathRead(ChangesetId, Option<MPath>),
     RepoWrite(RepoWriteOperation),
@@ -32,6 +33,7 @@ impl fmt::Display for DeniedAction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             DeniedAction::FullRepoRead => f.write_str("Full repo read access"),
+            DeniedAction::FullRepoDraft => f.write_str("Full repo draft access"),
             DeniedAction::RepoMetadataRead => f.write_str("Repo metadata read access"),
             DeniedAction::PathRead(csid, None) => {
                 write!(f, "Repo read access for root of changeset {}", csid)

@@ -14,6 +14,7 @@ use bookmarks::BookmarkKind;
 use bookmarks::BookmarkName;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use futures::FutureExt;
 use maplit::hashmap;
 use maplit::hashset;
 use metaconfig_types::RepoConfig;
@@ -22,6 +23,8 @@ use mononoke_types::PrefixTrie;
 use permission_checker::MononokeIdentitySet;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_permission_checker::RepoPermissionChecker;
+use tunables::with_tunables_async;
+use tunables::MononokeTunables;
 
 use crate::AuthorizationContext;
 use crate::RepoWriteOperation;
@@ -125,7 +128,7 @@ impl RepoPermissionChecker for TestPermissionChecker {
 }
 
 #[fbinit::test]
-async fn test_user_access(fb: FacebookInit) -> Result<()> {
+async fn test_user_no_write_access(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let checker = Arc::new(TestPermissionChecker {
         read: true,
@@ -139,6 +142,7 @@ async fn test_user_access(fb: FacebookInit) -> Result<()> {
     let authz = AuthorizationContext::new();
 
     authz.require_full_repo_read(&ctx, &repo).await?;
+    authz.require_full_repo_draft(&ctx, &repo).await?;
     authz
         .require_repo_write(&ctx, &repo, RepoWriteOperation::CreateChangeset)
         .await?;
@@ -164,6 +168,178 @@ async fn test_user_access(fb: FacebookInit) -> Result<()> {
         .await?;
 
     Ok(())
+}
+
+#[fbinit::test]
+async fn test_user_no_draft_enforceent_off(fb: FacebookInit) -> Result<()> {
+    let tunables = MononokeTunables::default();
+    tunables.update_bools(&hashmap! {
+        "log_draft_acl_failures".to_string() => true,
+        "enforce_draft_acl".to_string() => false,
+    });
+    with_tunables_async(
+        tunables,
+        async {
+            let ctx = CoreContext::test_mock(fb);
+            let checker = Arc::new(TestPermissionChecker {
+                read: true,
+                draft: false,
+                write: false,
+                ..Default::default()
+            });
+            let repo: Repo = test_repo_factory::TestRepoFactory::new(fb)?
+                .with_permission_checker(checker)
+                .build()?;
+            let authz = AuthorizationContext::new();
+
+            authz.require_full_repo_read(&ctx, &repo).await?;
+            authz.require_full_repo_draft(&ctx, &repo).await?;
+            authz
+                .require_repo_write(&ctx, &repo, RepoWriteOperation::CreateChangeset)
+                .await?;
+            authz
+                .require_repo_write(
+                    &ctx,
+                    &repo,
+                    RepoWriteOperation::CreateBookmark(BookmarkKind::Scratch),
+                )
+                .await?;
+            assert!(
+                authz
+                    .require_repo_write(
+                        &ctx,
+                        &repo,
+                        RepoWriteOperation::LandStack(BookmarkKind::Publishing),
+                    )
+                    .await
+                    .is_err()
+            );
+
+            Ok(())
+        }
+        .boxed(),
+    )
+    .await
+}
+
+#[fbinit::test]
+async fn test_user_no_draft_no_write_access(fb: FacebookInit) -> Result<()> {
+    let tunables = MononokeTunables::default();
+    tunables.update_bools(&hashmap! {
+        "log_draft_acl_failures".to_string() => true,
+        "enforce_draft_acl".to_string() => true,
+    });
+    with_tunables_async(
+        tunables,
+        async {
+            let ctx = CoreContext::test_mock(fb);
+            let checker = Arc::new(TestPermissionChecker {
+                read: true,
+                draft: false,
+                write: false,
+                ..Default::default()
+            });
+            let repo: Repo = test_repo_factory::TestRepoFactory::new(fb)?
+                .with_permission_checker(checker)
+                .build()?;
+            let authz = AuthorizationContext::new();
+
+            authz.require_full_repo_read(&ctx, &repo).await?;
+            assert!(authz.require_full_repo_draft(&ctx, &repo).await.is_err());
+            assert!(
+                authz
+                    .require_repo_write(&ctx, &repo, RepoWriteOperation::CreateChangeset)
+                    .await
+                    .is_err(),
+            );
+            assert!(
+                authz
+                    .require_repo_write(
+                        &ctx,
+                        &repo,
+                        RepoWriteOperation::CreateBookmark(BookmarkKind::Scratch),
+                    )
+                    .await
+                    .is_err(),
+            );
+            assert!(
+                authz
+                    .require_repo_write(
+                        &ctx,
+                        &repo,
+                        RepoWriteOperation::LandStack(BookmarkKind::Publishing),
+                    )
+                    .await
+                    .is_err()
+            );
+
+            // TODO(mitrandir): This seems fishy: why would bookmark_modify succeed when
+            // the user has no write acceess!? Even if that's intended this API might be
+            // easily misused. We need to audit this.
+            authz
+                .require_bookmark_modify(&ctx, &repo, &BookmarkName::new("main")?)
+                .await?;
+
+            Ok(())
+        }
+        .boxed(),
+    )
+    .await
+}
+
+// Write access should give implied draft access. This will help with migration
+// to draft access enforcement and allow us to avoid unncecessary duplication of
+// ACLs.
+#[fbinit::test]
+async fn test_user_write_no_draft_access(fb: FacebookInit) -> Result<()> {
+    let tunables = MononokeTunables::default();
+    tunables.update_bools(&hashmap! {
+        "log_draft_acl_failures".to_string() => true,
+        "enforce_draft_acl".to_string() => true,
+    });
+    with_tunables_async(
+        tunables,
+        async {
+            let ctx = CoreContext::test_mock(fb);
+            let checker = Arc::new(TestPermissionChecker {
+                read: true,
+                draft: false,
+                write: true,
+                ..Default::default()
+            });
+            let repo: Repo = test_repo_factory::TestRepoFactory::new(fb)?
+                .with_permission_checker(checker)
+                .build()?;
+            let authz = AuthorizationContext::new();
+
+            authz.require_full_repo_read(&ctx, &repo).await?;
+            authz.require_full_repo_draft(&ctx, &repo).await?;
+            authz
+                .require_repo_write(&ctx, &repo, RepoWriteOperation::CreateChangeset)
+                .await?;
+            authz
+                .require_repo_write(
+                    &ctx,
+                    &repo,
+                    RepoWriteOperation::CreateBookmark(BookmarkKind::Scratch),
+                )
+                .await?;
+            authz
+                .require_repo_write(
+                    &ctx,
+                    &repo,
+                    RepoWriteOperation::LandStack(BookmarkKind::Publishing),
+                )
+                .await?;
+            authz
+                .require_bookmark_modify(&ctx, &repo, &BookmarkName::new("main")?)
+                .await?;
+
+            Ok(())
+        }
+        .boxed(),
+    )
+    .await
 }
 
 #[fbinit::test]
