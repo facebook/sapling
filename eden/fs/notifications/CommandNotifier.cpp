@@ -21,7 +21,7 @@ bool isGenericConnectivityError(const std::exception& err) {
     if (isErrnoError(*sys)) {
       errnum = sys->code().value();
     }
-  } else if (auto* timeout = dynamic_cast<const folly::FutureTimeout*>(&err)) {
+  } else if (dynamic_cast<const folly::FutureTimeout*>(&err)) {
     errnum = ETIMEDOUT;
   }
   return errnum == EIO || errnum == ETIMEDOUT;
