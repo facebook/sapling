@@ -1520,9 +1520,9 @@ def heads(repo, subset, x):
 @predicate("hidden()", safe=True)
 def hidden(repo, subset, x):
     """Hidden changesets."""
-    # i18n: "hidden" is a keyword
     getargs(x, 0, 0, _("hidden takes no arguments"))
-    return baseset([], repo=repo)
+    # _all() gives all commits, getall() gives visible commits.
+    return _all(repo, subset, x) - getall(repo, subset, x)
 
 
 @predicate("keyword(string)", safe=True, weight=10)

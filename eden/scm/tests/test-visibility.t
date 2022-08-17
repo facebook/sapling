@@ -564,6 +564,19 @@ Unamend and Uncommit
   @  df4f53cec30a 'base'
   
 
+Hidden revset
+  $ hg log --graph -r 'hidden()'
+  o  commit:      8e8ec65c0bb7
+  │  user:        test
+  ~  date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     commit2
+  
+  o  commit:      4c5b9b3e14b9
+  │  user:        test
+  ~  date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     commit1
+  
+
 Migration down
   $ setconfig visibility.enabled=false
   $ hg debugedenimporthelper --get-manifest-node df4f53cec30af1e4f669102135076fd4f9673fcc
