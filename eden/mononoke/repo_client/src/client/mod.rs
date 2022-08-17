@@ -131,6 +131,7 @@ use remotefilelog::create_getpack_v1_blob;
 use remotefilelog::create_getpack_v2_blob;
 use remotefilelog::get_unordered_file_history_for_multiple_nodes;
 use remotefilelog::GetpackBlobInfo;
+use repo_authorization::AuthorizationContext;
 use repo_identity::RepoIdentityRef;
 use revisionstore_types::Metadata;
 use serde::Deserialize;
@@ -1719,6 +1720,16 @@ impl HgCommands for RepoClient {
             .command_future(ops::UNBUNDLE, UNSAMPLED, move |ctx, command_logger| {
                 async move {
                     let repo = client.repo.inner_repo();
+
+                    // To use unbundle wireproto command the user needs at least all-repo `draft` permission.
+                    // This is overkill - we could check more granular permissions but wireproto is deprecated and
+                    // it doesn't seem worth auditing each codepath there so let's use the big hammer!
+                    let authz = AuthorizationContext::new();
+                    authz
+                        .require_full_repo_draft(&ctx, &repo)
+                        .await
+                        .map_err(|err| BundleResolverError::Error(err.into()))?;
+
                     let lca_hint: Arc<dyn LeastCommonAncestorsHint> = repo.skiplist_index_arc();
                     let infinitepush_params = repo.repo_config().infinitepush.clone();
                     let infinitepush_writes_allowed = infinitepush_params.allow_writes;
