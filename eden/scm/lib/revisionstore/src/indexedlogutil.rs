@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::io::ErrorKind;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -85,7 +86,17 @@ impl Store {
                 log.flush()?;
             }
             Store::Shared(log) => {
-                log.flush()?;
+                if let Err(err) = log.flush() {
+                    if !err.is_corruption() && err.io_error_kind() == ErrorKind::NotFound {
+                        // File-not-found errors can happen when the hg cache
+                        // was blown away during command execution. Ignore the
+                        // error since failed cache writes won't cause incorrect
+                        // behavior and do not have to abort the command.
+                        tracing::warn!(%err, "ignoring error flushing shared indexedlog");
+                    } else {
+                        return Err(err.into());
+                    }
+                }
             }
         };
         Ok(())

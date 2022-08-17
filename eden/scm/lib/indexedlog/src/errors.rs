@@ -79,7 +79,7 @@ impl Error {
         self.inner.is_corruption
     }
 
-    pub(crate) fn io_error_kind(&self) -> io::ErrorKind {
+    pub fn io_error_kind(&self) -> io::ErrorKind {
         self.inner.io_error_kind.unwrap_or(io::ErrorKind::Other)
     }
 
