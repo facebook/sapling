@@ -8,10 +8,10 @@
 #pragma once
 
 #include <folly/Synchronized.h>
+#include <folly/container/F14Map.h>
 #include <folly/synchronization/DistributedMutex.h>
 #include <list>
 #include <mutex>
-#include <unordered_map>
 
 #include "eden/fs/model/ObjectId.h"
 
@@ -258,7 +258,9 @@ class ObjectCache
 
   struct State {
     size_t totalSize{0};
-    std::unordered_map<ObjectId, CacheItem> items;
+    // A F14FastMap cannot be used as it moves elements on insertion/removal,
+    // but the evictionQueue below relies on moves not occuring.
+    folly::F14NodeMap<ObjectId, CacheItem> items;
 
     /// Entries are evicted from the front of the queue.
     std::list<CacheItem*> evictionQueue;

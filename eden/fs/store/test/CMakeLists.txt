@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-file(GLOB STORE_TEST_SRCS "*.cpp")
+file(GLOB STORE_TEST_SRCS "*Test.cpp")
 add_executable(
   eden_store_test
   ${STORE_TEST_SRCS}
