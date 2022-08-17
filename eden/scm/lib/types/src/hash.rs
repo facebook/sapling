@@ -72,6 +72,30 @@ impl<I, const N: usize> Serialize for AbstractHashType<I, N> {
     }
 }
 
+static HEXIFY_LOOKUP_TABLE: [i8; 256] = [
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, -1, -1, -1, -1, -1, 0, 10, 11, 12, 13, 14, 15, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 10,
+    11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+];
+
+#[inline]
+fn hexify(nibble: u8, hex: &[u8]) -> Result<u8, HexError> {
+    let res = HEXIFY_LOOKUP_TABLE[nibble as usize];
+    if res < 0 {
+        Err(HexError(hex.to_vec(), hex.len()))
+    } else {
+        Ok(res as u8)
+    }
+}
+
 impl<I, const N: usize> AbstractHashType<I, N> {
     pub const fn len() -> usize {
         N
@@ -103,25 +127,19 @@ impl<I, const N: usize> AbstractHashType<I, N> {
         to_hex(self.0.as_ref())
     }
 
+    /// Convert the hex string to a binary hash.
+    ///
+    /// Note: this function is performance sensitive, please benchmark it carefully while changing
+    /// it.
     pub fn from_hex(hex: &[u8]) -> Result<Self, HexError> {
         if hex.len() != Self::hex_len() {
             return Err(HexError(hex.to_vec(), Self::hex_len()));
         }
         let mut bytes = [0u8; N];
-        for (i, byte) in hex.iter().enumerate() {
-            let value = match byte {
-                b'0'..=b'9' => byte - b'0',
-                b'a'..=b'f' => byte - b'a' + 10,
-                b'A'..=b'F' => byte - b'A' + 10,
-                _ => {
-                    return Err(HexError(hex.to_vec(), Self::hex_len()).into());
-                }
-            };
-            if i & 1 == 0 {
-                bytes[i / 2] |= value << 4;
-            } else {
-                bytes[i / 2] |= value;
-            }
+        for (i, chunk) in hex.chunks_exact(2).enumerate() {
+            let high = hexify(chunk[0], hex)?;
+            let low = hexify(chunk[1], hex)?;
+            bytes[i] = (high << 4) | low;
         }
         Ok(Self::from_byte_array(bytes))
     }
