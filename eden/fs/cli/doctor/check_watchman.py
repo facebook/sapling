@@ -25,22 +25,18 @@ from eden.fs.cli.doctor.problem import (
 log: logging.Logger = logging.getLogger("eden.fs.cli.doctor.checks.watchman")
 
 
-WatchmanCheckInfo = collections.namedtuple(
-    "WatchmanCheckInfo", ["watchman_roots", "nuclide_roots"]
-)
+WatchmanCheckInfo = collections.namedtuple("WatchmanCheckInfo", ["watchman_roots"])
 
 
 def pre_check() -> WatchmanCheckInfo:
     watchman_roots = _get_watch_roots_for_watchman()
-    nuclide_roots = _get_roots_for_nuclide()
-    return WatchmanCheckInfo(watchman_roots, nuclide_roots)
+    return WatchmanCheckInfo(watchman_roots)
 
 
 def check_active_mount(
     tracker: ProblemTracker, path: str, info: WatchmanCheckInfo
 ) -> None:
     check_watchman_subscriptions(tracker, path, info)
-    check_nuclide_subscriptions(tracker, path, info)
 
 
 class IncorrectWatchmanWatch(FixableProblem):
@@ -91,125 +87,6 @@ def check_watchman_subscriptions(
     tracker.add_problem(IncorrectWatchmanWatch(path, watcher))
 
 
-# Watchman subscriptions that Nuclide creates for an Hg repository.
-NUCLIDE_HG_SUBSCRIPTIONS = [
-    "hg-repository-watchman-subscription-primary",
-    "hg-repository-watchman-subscription-conflicts",
-    "hg-repository-watchman-subscription-hgbookmark",
-    "hg-repository-watchman-subscription-hgbookmarks",
-    "hg-repository-watchman-subscription-dirstate",
-    "hg-repository-watchman-subscription-progress",
-    "hg-repository-watchman-subscription-lock-files",
-]
-
-
-def check_nuclide_subscriptions(
-    tracker: ProblemTracker, path: str, info: WatchmanCheckInfo
-) -> None:
-    if info.nuclide_roots is None:
-        return
-
-    # Note that nuclide_roots is a set, but each entry in the set
-    # could appear as a root folder multiple times if the user uses multiple
-    # Atom windows.
-    path_prefix = path + "/"
-    connected_nuclide_roots = [
-        nuclide_root
-        for nuclide_root in info.nuclide_roots
-        if path == nuclide_root or nuclide_root.startswith(path_prefix)
-    ]
-    if not connected_nuclide_roots:
-        # There do not appear to be any Nuclide connections for path.
-        return
-
-    subscriptions = _call_watchman(["debug-get-subscriptions", path])
-    subscribers = subscriptions.get("subscribers", [])
-    subscription_counts: Dict[str, int] = {}
-    for subscriber in subscribers:
-        subscriber_info = subscriber.get("info", {})
-        name = subscriber_info.get("name")
-        if name is None:
-            continue
-        elif name in subscription_counts:
-            subscription_counts[name] += 1
-        else:
-            subscription_counts[name] = 1
-
-    missing_or_duplicate_subscriptions = []
-    for nuclide_root in connected_nuclide_roots:
-        filewatcher_subscription = f"filewatcher-{nuclide_root}"
-        # Note that even if the user has `nuclide_root` opened in multiple
-        # Nuclide windows, the Nuclide server should not create the
-        # "filewatcher-" subscription multiple times.
-        if subscription_counts.get(filewatcher_subscription) != 1:
-            missing_or_duplicate_subscriptions.append(filewatcher_subscription)
-
-    # Today, Nuclide creates a number of Watchman subscriptions per root
-    # folder that is under an Hg working copy. (It should probably
-    # consolidate these subscriptions, though it will take some work to
-    # refactor things to do that.) Because each of connected_nuclide_roots
-    # is a root folder in at least one Atom window, there must be at least
-    # as many instances of each subscription as there are
-    # connected_nuclide_roots.
-    #
-    # TODO(mbolin): Come up with a more stable contract than including a
-    # hardcoded list of Nuclide subscription names in here because EdenFS and
-    # Nuclide releases are not synced. This is admittedly a stopgap measure:
-    # the primary objective is to figure out how Eden/Nuclide gets into
-    # this state to begin with and prevent it.
-    #
-    # Further, Nuclide should probably rename these subscriptions so that:
-    # (1) It is clear that Nuclide is the one who created the subscription.
-    # (2) The subscription can be ascribed to an individual Nuclide client
-    #     if we are going to continue to create the same subscription
-    #     multiple times.
-    num_roots = len(connected_nuclide_roots)
-    for hg_subscription in NUCLIDE_HG_SUBSCRIPTIONS:
-        if subscription_counts.get(hg_subscription, 0) < num_roots:
-            missing_or_duplicate_subscriptions.append(hg_subscription)
-
-    if missing_or_duplicate_subscriptions:
-
-        def format_paths(paths: List[str]) -> str:
-            return "\n  ".join(paths)
-
-        missing_subscriptions = [
-            sub
-            for sub in missing_or_duplicate_subscriptions
-            if 0 == subscription_counts.get(sub, 0)
-        ]
-        duplicate_subscriptions = [
-            sub
-            for sub in missing_or_duplicate_subscriptions
-            if 1 < subscription_counts.get(sub, 0)
-        ]
-
-        output = io.StringIO()
-        output.write(
-            "Nuclide appears to be used to edit the following directories\n"
-            f"under {path}:\n\n"
-            f"  {format_paths(connected_nuclide_roots)}\n\n"
-        )
-        if missing_subscriptions:
-            output.write(
-                "but the following Watchman subscriptions appear to be missing:\n\n"
-                f"  {format_paths(missing_subscriptions)}\n\n"
-            )
-        if duplicate_subscriptions:
-            conj = "and" if missing_subscriptions else "but"
-            output.write(
-                f"{conj} the following Watchman subscriptions have duplicates:\n\n"
-                f"  {format_paths(duplicate_subscriptions)}\n\n"
-            )
-        output.write(
-            "This can cause file changes to fail to show up in Nuclide.\n"
-            "Currently, the only workaround for this is to run\n"
-            '"Nuclide Remote Projects: Kill And Restart" from the\n'
-            "command palette in Atom.\n"
-        )
-        tracker.add_problem(MissingOrDuplicatedSubscription(output.getvalue()))
-
-
 def _get_watch_roots_for_watchman() -> Set[str]:
     js = _call_watchman(["watch-list"])
     roots = set(js.get("roots", []))
@@ -220,15 +97,6 @@ def _call_watchman(args: List[str]) -> Dict:
     full_args = ["watchman"]
     full_args.extend(args)
     return _check_json_output(full_args)
-
-
-def _get_roots_for_nuclide() -> Optional[Set[str]]:
-    connections = _check_json_output(["nuclide-connections"])
-    if isinstance(connections, list):
-        return set(connections)
-    else:
-        # connections should be a dict with an "error" property.
-        return None
 
 
 def _check_json_output(args: List[str]) -> Dict[str, Any]:

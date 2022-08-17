@@ -80,10 +80,7 @@ class DoctorTest(DoctorTestBase):
     maxDiff = None
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    @patch("eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide")
-    def test_end_to_end_test_with_various_scenarios(
-        self, mock_get_roots_for_nuclide, mock_watchman
-    ) -> None:
+    def test_end_to_end_test_with_various_scenarios(self, mock_watchman) -> None:
         side_effects: List[Dict[str, Any]] = []
         calls = []
         instance = FakeEdenInstance(self.make_temporary_directory())
@@ -108,25 +105,11 @@ class DoctorTest(DoctorTestBase):
         edenfs_path3 = str(instance.create_test_mount("path3", setup_path=False).path)
         os.makedirs(edenfs_path3)
 
-        # Assume all paths are used as root folders in a connected Nuclide.
-        mock_get_roots_for_nuclide.return_value = {
-            edenfs_path1,
-            edenfs_path2,
-            edenfs_path3,
-        }
-
         calls.append(call(["watch-list"]))
         side_effects.append({"roots": [edenfs_path1, edenfs_path2, edenfs_path3]})
 
         calls.append(call(["watch-project", edenfs_path1]))
         side_effects.append({"watcher": "eden"})
-
-        calls.append(call(["debug-get-subscriptions", edenfs_path1]))
-        side_effects.append(
-            _create_watchman_subscription(
-                filewatcher_subscriptions=[f"filewatcher-{edenfs_path1}"]
-            )
-        )
 
         calls.append(call(["watch-project", edenfs_path2]))
         side_effects.append({"watcher": "inotify"})
@@ -135,17 +118,8 @@ class DoctorTest(DoctorTestBase):
         calls.append(call(["watch-project", edenfs_path2]))
         side_effects.append({"watcher": "eden"})
 
-        calls.append(call(["debug-get-subscriptions", edenfs_path2]))
-        side_effects.append(_create_watchman_subscription(filewatcher_subscriptions=[]))
-
         calls.append(call(["watch-project", edenfs_path3]))
         side_effects.append({"watcher": "eden"})
-        calls.append(call(["debug-get-subscriptions", edenfs_path3]))
-        side_effects.append(
-            _create_watchman_subscription(
-                filewatcher_subscriptions=[f"filewatcher-{edenfs_path3}"]
-            )
-        )
 
         mock_watchman.side_effect = side_effects
 
@@ -179,43 +153,20 @@ Watchman is watching {edenfs_path2} with the wrong watcher type: \
 "inotify" instead of "eden"
 Fixing watchman watch for {edenfs_path2}...<green>fixed<reset>
 
-<yellow>- Found problem:<reset>
-Nuclide appears to be used to edit the following directories
-under {edenfs_path2}:
-
-  {edenfs_path2}
-
-but the following Watchman subscriptions appear to be missing:
-
-  filewatcher-{edenfs_path2}
-
-This can cause file changes to fail to show up in Nuclide.
-Currently, the only workaround for this is to run
-"Nuclide Remote Projects: Kill And Restart" from the
-command palette in Atom.
-
 Checking {edenfs_path3}
 <yellow>- Found problem:<reset>
 Missing hg directory: {edenfs_path3}/.hg
 Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
 
 <yellow>Successfully fixed 3 problems.<reset>
-<yellow>1 issue requires manual attention.<reset>
-Ask in the EdenFS Users group if you need help fixing issues with EdenFS:
-https://fb.facebook.com/groups/eden.users/
 """,
             out.getvalue(),
         )
         mock_watchman.assert_has_calls(calls)
-        self.assertEqual(1, exit_code)
+        self.assertEqual(0, exit_code)
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    @patch(
-        "eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide", return_value=set()
-    )
-    def test_not_all_mounts_have_watchman_watcher(
-        self, mock_get_roots_for_nuclide, mock_watchman
-    ) -> None:
+    def test_not_all_mounts_have_watchman_watcher(self, mock_watchman) -> None:
         instance = FakeEdenInstance(self.make_temporary_directory())
         edenfs_path = str(instance.create_test_mount("eden-mount", scm_type="git").path)
         edenfs_path_not_watched = str(
@@ -254,8 +205,7 @@ https://fb.facebook.com/groups/eden.users/
         self.assertEqual(0, exit_code)
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    @patch("eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide")
-    def test_eden_not_in_use(self, mock_get_roots_for_nuclide, mock_watchman) -> None:
+    def test_eden_not_in_use(self, mock_watchman) -> None:
         instance = FakeEdenInstance(
             self.make_temporary_directory(), status=fb303_status.DEAD
         )
@@ -278,10 +228,7 @@ https://fb.facebook.com/groups/eden.users/
         self.assertEqual(0, exit_code)
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    @patch("eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide")
-    def test_edenfs_not_running(
-        self, mock_get_roots_for_nuclide, mock_watchman
-    ) -> None:
+    def test_edenfs_not_running(self, mock_watchman) -> None:
         instance = FakeEdenInstance(
             self.make_temporary_directory(), status=fb303_status.DEAD
         )
@@ -318,8 +265,7 @@ https://fb.facebook.com/groups/eden.users/
         self.assertEqual(1, exit_code)
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    @patch("eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide")
-    def test_edenfs_starting(self, mock_get_roots_for_nuclide, mock_watchman) -> None:
+    def test_edenfs_starting(self, mock_watchman) -> None:
         instance = FakeEdenInstance(
             self.make_temporary_directory(), status=fb303_status.STARTING
         )
@@ -356,8 +302,7 @@ https://fb.facebook.com/groups/eden.users/
         self.assertEqual(1, exit_code)
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    @patch("eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide")
-    def test_edenfs_stopping(self, mock_get_roots_for_nuclide, mock_watchman) -> None:
+    def test_edenfs_stopping(self, mock_watchman) -> None:
         instance = FakeEdenInstance(
             self.make_temporary_directory(), status=fb303_status.STOPPING
         )
@@ -488,174 +433,10 @@ https://fb.facebook.com/groups/eden.users/
         fixer, out = self.create_fixer(dry_run)
 
         watchman_roots = {edenfs_path}
-        watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots, None)
+        watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
         check_watchman.check_active_mount(fixer, edenfs_path, watchman_info)
 
         mock_watchman.assert_has_calls(calls)
-        return fixer, out.getvalue()
-
-    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    def test_no_issue_when_expected_nuclide_subscriptions_present(
-        self, mock_watchman
-    ) -> None:
-        fixer, out = self._test_nuclide_check(
-            mock_watchman=mock_watchman, include_filewatcher_subscriptions=True
-        )
-        self.assertEqual("", out)
-        self.assert_results(fixer, num_problems=0)
-
-    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    def test_no_issue_when_path_not_in_nuclide_roots(self, mock_watchman) -> None:
-        fixer, out = self._test_nuclide_check(
-            mock_watchman=mock_watchman, include_path_in_nuclide_roots=False
-        )
-        self.assertEqual("", out)
-        self.assert_results(fixer, num_problems=0)
-
-    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    def test_watchman_subscriptions_are_missing(self, mock_watchman) -> None:
-        fixer, out = self._test_nuclide_check(
-            mock_watchman=mock_watchman, include_hg_subscriptions=False, dry_run=False
-        )
-        self.assertEqual(
-            f"""\
-<yellow>- Found problem:<reset>
-Nuclide appears to be used to edit the following directories
-under /path/to/eden-mount:
-
-  /path/to/eden-mount/subdirectory
-
-but the following Watchman subscriptions appear to be missing:
-
-  filewatcher-/path/to/eden-mount/subdirectory
-  hg-repository-watchman-subscription-primary
-  hg-repository-watchman-subscription-conflicts
-  hg-repository-watchman-subscription-hgbookmark
-  hg-repository-watchman-subscription-hgbookmarks
-  hg-repository-watchman-subscription-dirstate
-  hg-repository-watchman-subscription-progress
-  hg-repository-watchman-subscription-lock-files
-
-This can cause file changes to fail to show up in Nuclide.
-Currently, the only workaround for this is to run
-"Nuclide Remote Projects: Kill And Restart" from the
-command palette in Atom.
-
-""",
-            out,
-        )
-        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
-
-    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    def test_filewatcher_watchman_subscription_has_duplicate(
-        self, mock_watchman
-    ) -> None:
-        fixer, out = self._test_nuclide_check(
-            mock_watchman=mock_watchman,
-            include_hg_subscriptions=False,
-            dry_run=False,
-            include_filewatcher_subscriptions=2,
-        )
-        self.assertEqual(
-            f"""\
-<yellow>- Found problem:<reset>
-Nuclide appears to be used to edit the following directories
-under /path/to/eden-mount:
-
-  /path/to/eden-mount/subdirectory
-
-but the following Watchman subscriptions appear to be missing:
-
-  hg-repository-watchman-subscription-primary
-  hg-repository-watchman-subscription-conflicts
-  hg-repository-watchman-subscription-hgbookmark
-  hg-repository-watchman-subscription-hgbookmarks
-  hg-repository-watchman-subscription-dirstate
-  hg-repository-watchman-subscription-progress
-  hg-repository-watchman-subscription-lock-files
-
-and the following Watchman subscriptions have duplicates:
-
-  filewatcher-/path/to/eden-mount/subdirectory
-
-This can cause file changes to fail to show up in Nuclide.
-Currently, the only workaround for this is to run
-"Nuclide Remote Projects: Kill And Restart" from the
-command palette in Atom.
-
-""",
-            out,
-        )
-        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
-
-    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    def test_filewatcher_subscription_is_missing_dry_run(self, mock_watchman) -> None:
-        fixer, out = self._test_nuclide_check(mock_watchman=mock_watchman)
-        self.assertEqual(
-            f"""\
-<yellow>- Found problem:<reset>
-Nuclide appears to be used to edit the following directories
-under /path/to/eden-mount:
-
-  /path/to/eden-mount/subdirectory
-
-but the following Watchman subscriptions appear to be missing:
-
-  filewatcher-/path/to/eden-mount/subdirectory
-
-This can cause file changes to fail to show up in Nuclide.
-Currently, the only workaround for this is to run
-"Nuclide Remote Projects: Kill And Restart" from the
-command palette in Atom.
-
-""",
-            out,
-        )
-        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
-
-    def _test_nuclide_check(
-        self,
-        mock_watchman,
-        dry_run: bool = True,
-        include_filewatcher_subscriptions: int = 0,
-        include_path_in_nuclide_roots: bool = True,
-        include_hg_subscriptions: bool = True,
-    ) -> Tuple[doctor.ProblemFixer, str]:
-        edenfs_path = "/path/to/eden-mount"
-        side_effects: List[Dict[str, Any]] = []
-        watchman_calls = []
-
-        if include_path_in_nuclide_roots:
-            watchman_calls.append(call(["debug-get-subscriptions", edenfs_path]))
-
-        nuclide_root = os.path.join(edenfs_path, "subdirectory")
-        # Note that a "filewatcher-" subscription in a subdirectory of the
-        # EdenFS mount should signal that the proper Watchman subscription is
-        # set up.
-        filewatcher_sub: List[str] = [
-            f"filewatcher-{nuclide_root}"
-        ] * include_filewatcher_subscriptions
-
-        unrelated_path = "/path/to/non-eden-mount"
-        if include_path_in_nuclide_roots:
-            nuclide_roots = {nuclide_root, unrelated_path}
-        else:
-            nuclide_roots = {unrelated_path}
-
-        side_effects.append(
-            _create_watchman_subscription(
-                filewatcher_subscriptions=filewatcher_sub,
-                include_hg_subscriptions=include_hg_subscriptions,
-            )
-        )
-        mock_watchman.side_effect = side_effects
-        watchman_roots = {edenfs_path}
-
-        fixer, out = self.create_fixer(dry_run)
-        watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots, nuclide_roots)
-        check_watchman.check_nuclide_subscriptions(fixer, edenfs_path, watchman_info)
-
-        mock_watchman.assert_has_calls(watchman_calls)
         return fixer, out.getvalue()
 
     def test_snapshot_and_dirstate_file_match(self) -> None:
@@ -938,10 +719,7 @@ which may have important bug fixes or performance improvements.
         mock_rpm_q.assert_has_calls(calls)
         return fixer, out.getvalue()
 
-    @patch(
-        "eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide", return_value=set()
-    )
-    def test_unconfigured_mounts_dont_crash(self, mock_get_roots_for_nuclide) -> None:
+    def test_unconfigured_mounts_dont_crash(self) -> None:
         # If EdenFS advertises that a mount is active, but it is not in the
         # configuration, then at least don't throw an exception.
         instance = FakeEdenInstance(self.make_temporary_directory())
@@ -1033,12 +811,8 @@ Would remount {mounts[1]}
         self.assertEqual(exit_code, 1)
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    @patch(
-        "eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide", return_value=set()
-    )
     def _test_remount_checkouts(
         self,
-        mock_get_roots_for_nuclide,
         mock_watchman,
         dry_run: bool,
         old_edenfs: bool = False,
@@ -1328,7 +1102,6 @@ Checking {mount}
 
 def _create_watchman_subscription(
     filewatcher_subscriptions: Optional[List[str]] = None,
-    include_hg_subscriptions: bool = True,
 ) -> Dict:
     if filewatcher_subscriptions is None:
         filewatcher_subscriptions = []
@@ -1348,17 +1121,4 @@ def _create_watchman_subscription(
                 }
             }
         )
-    if include_hg_subscriptions:
-        for name in check_watchman.NUCLIDE_HG_SUBSCRIPTIONS:
-            subscribers.append(
-                {
-                    "info": {
-                        "name": name,
-                        "query": {
-                            "empty_on_fresh_instance": True,
-                            "fields": ["name", "new", "exists", "mode"],
-                        },
-                    }
-                }
-            )
     return {"subscribers": subscribers}
