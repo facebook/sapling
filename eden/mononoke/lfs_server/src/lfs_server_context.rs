@@ -6,7 +6,6 @@
  */
 
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::fmt::Arguments;
 use std::fmt::Write;
 use std::sync::atomic::AtomicBool;
@@ -43,7 +42,6 @@ use hyper_openssl::HttpsConnector;
 use lfs_protocol::RequestBatch;
 use lfs_protocol::RequestObject;
 use lfs_protocol::ResponseBatch;
-use metaconfig_types::RepoConfig;
 use mononoke_types::ContentId;
 use permission_checker::MononokeIdentitySet;
 use repo_permission_checker::RepoPermissionChecker;
@@ -56,6 +54,7 @@ use crate::errors::ErrorKind;
 use crate::errors::LfsServerContextErrorKind;
 use crate::middleware::LfsMethod;
 use crate::middleware::RequestContext;
+use crate::LfsRepos;
 use crate::Repo;
 
 pub type HttpsHyperClient = Client<HttpsConnector<HttpConnector>>;
@@ -64,7 +63,7 @@ pub type HttpsHyperClient = Client<HttpsConnector<HttpConnector>>;
 const CLIENT_USER_AGENT: &str = "mononoke-lfs-server/0.1.0 git/2.15.1";
 
 struct LfsServerContextInner {
-    repositories: HashMap<String, (Repo, RepoConfig)>,
+    repositories: LfsRepos,
     client: Arc<HttpsHyperClient>,
     server: Arc<ServerUris>,
     always_wait_for_upstream: bool,
@@ -80,7 +79,7 @@ pub struct LfsServerContext {
 
 impl LfsServerContext {
     pub fn new(
-        repositories: HashMap<String, (Repo, RepoConfig)>,
+        repositories: LfsRepos,
         server: ServerUris,
         always_wait_for_upstream: bool,
         max_upload_size: Option<u64>,
@@ -233,7 +232,7 @@ enum HttpClient {
 #[derive(Clone)]
 pub struct RepositoryRequestContext {
     pub ctx: CoreContext,
-    pub repo: Repo,
+    pub repo: Arc<Repo>,
     pub uri_builder: UriBuilder,
     pub config: Arc<ServerConfig>,
     always_wait_for_upstream: bool,
@@ -616,7 +615,7 @@ mod test {
 
             Ok(RepositoryRequestContext {
                 ctx: CoreContext::test_mock(fb),
-                repo,
+                repo: Arc::new(repo),
                 config: Arc::new(config),
                 uri_builder,
                 always_wait_for_upstream: false,

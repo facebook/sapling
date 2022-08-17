@@ -8,7 +8,6 @@
 #![recursion_limit = "256"]
 #![feature(never_type)]
 
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use std::net::ToSocketAddrs;
@@ -20,6 +19,7 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::Result;
 use cached_config::ConfigHandle;
 use clap::Parser;
 use cloned::cloned;
@@ -32,7 +32,6 @@ use filestore::FilestoreConfig;
 use futures::channel::oneshot;
 use futures::future::lazy;
 use futures::future::select;
-use futures::future::try_join_all;
 use futures::FutureExt;
 use futures::TryFutureExt;
 use gotham_ext::handler::MononokeHttpHandler;
@@ -53,7 +52,9 @@ use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::args::TLSArgs;
 use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use mononoke_repos::MononokeRepos;
 use repo_blobstore::RepoBlobstore;
 use repo_identity::RepoIdentity;
 use repo_permission_checker::RepoPermissionChecker;
@@ -152,6 +153,37 @@ struct LfsServerArgs {
     max_upload_size: Option<u64>,
 }
 
+#[derive(Clone)]
+pub struct LfsRepos {
+    pub(crate) app: Arc<MononokeApp>,
+    pub(crate) repos: Arc<MononokeRepos<Repo>>,
+}
+
+impl LfsRepos {
+    pub(crate) async fn new(app: Arc<MononokeApp>) -> Result<Self> {
+        let repo_names = app
+            .repo_configs()
+            .repos
+            .iter()
+            .filter_map(|(name, config)| {
+                if config.enabled {
+                    Some(name.to_string())
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        let repos = Arc::new(app.open_mononoke_repos(repo_names).await?);
+        Ok(Self { app, repos })
+    }
+
+    pub(crate) fn get(&self, repo_name: &str) -> Option<(Arc<Repo>, RepoConfig)> {
+        let repo = self.repos.get_by_name(repo_name);
+        let config = self.app.repo_config_by_name(repo_name).ok();
+        repo.and_then(|repo| config.map(|config| (repo, config.clone())))
+    }
+}
+
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let cachelib_settings = CachelibSettings {
@@ -226,30 +258,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         LogMiddleware::slog(logger.clone())
     };
 
-    let RepoConfigs { repos, common } = app.repo_configs().clone();
+    let RepoConfigs { repos: _, common } = app.repo_configs().clone();
     let internal_identity = common.internal_identity.clone();
-
-    let repo_factory = Arc::new(app.repo_factory());
-
-    let futs = repos
-        .into_iter()
-        .filter(|(_name, config)| config.enabled)
-        .map({
-            cloned!(repo_factory);
-            move |(name, config)| {
-                cloned!(repo_factory);
-                async move {
-                    let repo = repo_factory.build(name.clone(), config.clone()).await?;
-
-                    Result::<(String, (Repo, RepoConfig)), Error>::Ok((name, (repo, config)))
-                }
-            }
-        });
-
     let server = {
-        cloned!(acl_provider, common, logger, will_exit);
+        cloned!(acl_provider, common, logger, will_exit, app);
         async move {
-            let repos: HashMap<_, _> = try_join_all(futs).await?.into_iter().collect();
+            let repos = LfsRepos::new(app)
+                .await
+                .context(Error::msg("Error opening repos"))?;
 
             let addr = addr
                 .to_socket_addrs()

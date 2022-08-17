@@ -277,7 +277,7 @@ impl MononokeApp {
         self.config_mode == ConfigMode::Production
     }
 
-    fn repo_config_by_name(&self, repo_name: &str) -> Result<&RepoConfig> {
+    pub fn repo_config_by_name(&self, repo_name: &str) -> Result<&RepoConfig> {
         self.repo_configs
             .repos
             .get(repo_name)
