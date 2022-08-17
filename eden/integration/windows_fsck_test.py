@@ -145,6 +145,32 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         # bdir should be visible when EdenFS is running
         self.assertIn(bdir, list(subdir.iterdir()))
 
+    def test_fsck_dirty_dir_checking(self) -> None:
+        self.assertFalse(self._eden_status())
+
+        subdir = self.mount_path / "subdir"
+        bdir = subdir / "bdir"
+        filepath = subdir / "foo.txt"
+        with open(filepath, "w+") as f:
+            f.write("asdf")
+        # Load subdir and bdirs contents so the fsck will into the dirty subdir
+        # and the non-dirty bdir.
+        list(subdir.iterdir())
+        list(bdir.iterdir())
+
+        # T129264761 involved restarting eden causing directories below dirty
+        # directories to get deleted. Let's run status and verify that there
+        # are no pending changes aside from the foo.txt we created.
+        self.eden.shutdown()
+        self.eden.start()
+
+        self.assertEqual(
+            self._eden_status(),
+            {
+                b"subdir/foo.txt": 0,
+            },
+        )
+
 
 MATERIALIZED = True
 UNMATERIALIZED = False
