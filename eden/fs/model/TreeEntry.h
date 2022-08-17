@@ -114,9 +114,12 @@ class TreeEntry {
       case TreeEntryType::REGULAR_FILE:
       case TreeEntryType::EXECUTABLE_FILE:
         return dtype_t::Regular;
-#ifndef _WIN32
       case TreeEntryType::SYMLINK:
+#ifndef _WIN32
         return dtype_t::Symlink;
+#else
+        // On Windows, scm symlinks are treated as normal files.
+        return dtype_t::Regular;
 #endif
       default:
         return dtype_t::Unknown;
