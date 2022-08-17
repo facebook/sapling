@@ -1326,10 +1326,10 @@ function lfs_server {
   while [[ "$#" -gt 0 ]]; do
     if [[ "$1" = "--upstream" ]]; then
       shift
-      args=("${args[@]}" "" "$1")
+      args=("${args[@]}" --upstream-url "$1") # Upstream URL is now a named parameter.
       shift
     elif [[ "$1" = "--live-config" ]]; then
-      opts=("${opts[@]}" "$1" "$2" "--live-config-fetch-interval" "1")
+      opts=("${opts[@]}" "$1" "$2") # --live-config-fetch-interval is no longer used.
       shift
       shift
     elif [[ "$1" = "--tls" ]]; then

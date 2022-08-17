@@ -19,6 +19,7 @@ mod repo_blobstore;
 mod repo_filter;
 mod runtime;
 mod shutdown_timeout;
+mod tls;
 mod tunables;
 
 pub use acl::AclArgs;
@@ -38,6 +39,7 @@ pub use repo_blobstore::RepoBlobstoreArgs;
 pub use repo_filter::RepoFilterAppExtension;
 pub use runtime::RuntimeArgs;
 pub use shutdown_timeout::ShutdownTimeoutArgs;
+pub use tls::TLSArgs;
 
 pub use self::tunables::TunablesArgs;
 pub use crate::fb303::Fb303Args;
