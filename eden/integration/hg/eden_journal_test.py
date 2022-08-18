@@ -6,18 +6,9 @@
 
 # pyre-strict
 
-from eden.fs.service.eden.types import (
-    JournalPosition as JournalPosition_py3,
-    ScmFileStatus,
-)
-
+from eden.fs.service.eden.types import ScmFileStatus
 from eden.fs.service.streamingeden.types import StreamChangesSinceParams
 from eden.integration.lib import hgrepo
-from facebook.eden.ttypes import JournalPosition as JournalPosition_py
-
-from thrift.py3.converter import to_py3_struct
-
-from thrift.util.converter import to_py_struct
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
@@ -34,17 +25,17 @@ class EdenJournalTest(EdenHgTestCase):
         repo.write_file("foo/bar.txt", "bar\n")
         self.commit2 = repo.commit("Commit 2")
 
-    def test_journal_position_write(self) -> None:
+    async def test_journal_position_write(self) -> None:
         """
         Verify that the journal is updated when writing to the working copy.
         """
-        with self.get_thrift_client_legacy() as client:
-            before = client.getCurrentJournalPosition(self.mount_path_bytes)
+        async with self.get_thrift_client() as client:
+            before = await client.getCurrentJournalPosition(self.mount_path_bytes)
 
         self.repo.write_file("hello.txt", "hola\n")
 
-        with self.get_thrift_client_legacy() as client:
-            after = client.getCurrentJournalPosition(self.mount_path_bytes)
+        async with self.get_thrift_client() as client:
+            after = await client.getCurrentJournalPosition(self.mount_path_bytes)
 
         self.assertNotEqual(before, after)
 
@@ -54,8 +45,8 @@ class EdenJournalTest(EdenHgTestCase):
         files/directories across update.
         """
 
-        with self.get_thrift_client_legacy() as client:
-            before = client.getCurrentJournalPosition(self.mount_path_bytes)
+        async with self.get_thrift_client() as client:
+            before = await client.getCurrentJournalPosition(self.mount_path_bytes)
 
         self.repo.update(self.commit1)
 
@@ -69,7 +60,7 @@ class EdenJournalTest(EdenHgTestCase):
         async with self.get_thrift_client() as client:
             params = StreamChangesSinceParams(
                 mountPoint=self.mount_path_bytes,
-                fromPosition=to_py3_struct(JournalPosition_py3, before),
+                fromPosition=before,
             )
             result, changes = await client.streamChangesSince(params)
             async for change in changes:
@@ -96,7 +87,7 @@ class EdenJournalTest(EdenHgTestCase):
         # The directory is also removed.
         self.assertIn("foo", removed)
 
-        self.assertNotEqual(before, to_py_struct(JournalPosition_py, result.toPosition))
+        self.assertNotEqual(before, result.toPosition)
 
         counter_name = (
             "thrift.StreamingEdenService.streamChangesSince.streaming_time_us.avg.60"
