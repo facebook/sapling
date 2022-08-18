@@ -406,7 +406,7 @@ find:
 
 pwd == $PWD
 
-    >>> f('[ $(pwd) = $PWD ] && echo pwd match')
+    >>> f('[ "$(pwd)" = "$PWD" ] && echo pwd match')
     'pwd match\n'
 
 wc -l:

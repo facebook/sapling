@@ -30,7 +30,7 @@ class OSFS(ShellFS):
         fullpat = self._absjoin(pat)
         paths = glob.glob(fullpat, recursive="**" in pat)
         if not os.path.isabs(pat):
-            paths = [p[prefixlen:] for p in paths]
+            paths = [_to_posix(p[prefixlen:]) for p in paths]
         return sorted(paths)
 
     def _absjoin(self, path: str) -> str:
@@ -96,7 +96,8 @@ class OSFS(ShellFS):
         dst = self._absjoin(dst)
         try:
             shutil.copy2(src, dst)
-        except IsADirectoryError:
+        except (IsADirectoryError, PermissionError):
+            # on Windows, PermissionError could mean "is a directory"
             shutil.copytree(src, dst, symlinks=True)
 
     def link(self, src: str, dst: str):
@@ -111,3 +112,14 @@ class OSFS(ShellFS):
     def utime(self, path: str, time: int):
         path = self._absjoin(path)
         os.utime(path, (time, time))
+
+
+if os.name == "nt":
+
+    def _to_posix(path: str):
+        return path.replace("\\", "/")
+
+else:
+
+    def _to_posix(path: str):
+        return path

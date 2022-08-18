@@ -70,7 +70,7 @@ testmod("edenscm.mercurial.util")
 testmod("edenscm.mercurial.util", testtarget="platform")
 testmod("edenscm.hgext.commitcloud.sync")
 
-if sys.platform == "linux":
+if sys.platform in {"linux", "win32"}:
     testmod("edenscm.testing.sh")
     testmod("edenscm.testing.t.diff")
     testmod("edenscm.testing.t.runtime")
