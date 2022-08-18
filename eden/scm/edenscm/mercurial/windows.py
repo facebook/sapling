@@ -348,15 +348,15 @@ _needsshellquote = None
 
 def shellquote(s):
     r"""
-    >>> shellquote(br'C:\Users\xyz')
+    >>> shellquote(r'C:\Users\xyz')
     '"C:\\Users\\xyz"'
-    >>> shellquote(br'C:\Users\xyz/mixed')
+    >>> shellquote(r'C:\Users\xyz/mixed')
     '"C:\\Users\\xyz/mixed"'
     >>> # Would be safe not to quote too, since it is all double backslashes
-    >>> shellquote(br'C:\\Users\\xyz')
+    >>> shellquote(r'C:\\Users\\xyz')
     '"C:\\\\Users\\\\xyz"'
     >>> # But this must be quoted
-    >>> shellquote(br'C:\\Users\\xyz/abc')
+    >>> shellquote(r'C:\\Users\\xyz/abc')
     '"C:\\\\Users\\\\xyz/abc"'
     """
     global _quotere
