@@ -42,6 +42,7 @@ parking_lot = { version = "0.11.2", features = ["send_guard"] }
 procinfo = { version = "0.1.0", path = "../procinfo" }
 progress-model = { version = "0.1.0", path = "../progress/model" }
 progress-render = { version = "0.1.0", path = "../progress/render" }
+pyconfigparser = { path = "../../edenscmnative/bindings/modules/pyconfigparser" }
 python27-sys = { version = "0.7", optional = true }
 python3-sys = { version = "0.7", optional = true }
 pytracing = { path = "../../edenscmnative/bindings/modules/pytracing", default-features = false }

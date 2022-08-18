@@ -224,6 +224,8 @@ Verify we load and verify dynamicconfigs during clone
   > [hooks]
   > pretxnclose = printf "Hook ran!\n"
   > EOF
+Clear the cached, non-repo dynamic config
+  $ rm -rf $TESTTMP/.cache 
   $ cat > good_hgrc <<EOF
   > [hooks]
   > pretxnclose = printf "Hook ran!\n"
@@ -231,6 +233,10 @@ Verify we load and verify dynamicconfigs during clone
   > bar=True
   > EOF
   $ hg clone ssh://user@dummy/server client2 --configfile $TESTTMP/good_hgrc --config configs.validationsubset=good_hgrc --config configs.validatedynamicconfig=True --config configs.mismatchwarn=True
+  Config mismatch: foo.bar has 'None' (dynamic) vs 'True' (file)
+  Config mismatch: foo.bar has 'None' (dynamic) vs 'True' (file)
+  Config mismatch: foo.bar has 'None' (dynamic) vs 'True' (file)
+  Config mismatch: foo.bar has 'None' (dynamic) vs 'True' (file)
   no changes found
   Hook ran!
   updating to branch default

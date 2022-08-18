@@ -170,7 +170,7 @@ class deprecationlevel(IntEnum):
 
 
 class ui(object):
-    def __init__(self, src=None):
+    def __init__(self, src=None, rcfg=None):
         """Create a fresh new ui object if no src given
 
         Use uimod.ui.load() to create a ui which knows global and user configs.
@@ -232,7 +232,7 @@ class ui(object):
             self.cliconfigfiles = src.cliconfigfiles.copy()
             self.clioptions = src.clioptions.copy()
         else:
-            self._uiconfig = uiconfig.uiconfig()
+            self._uiconfig = uiconfig.uiconfig(rcfg=rcfg)
 
             self.fout = util.refcell(util.mainio.output())
             self.ferr = util.refcell(util.mainio.error())

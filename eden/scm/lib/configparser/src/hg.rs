@@ -259,6 +259,8 @@ impl ConfigSetHgExt for ConfigSet {
         repo_path: Option<&Path>,
         readonly_items: Option<Vec<(S, N)>>,
     ) -> Result<SupersetVerification, Errors> {
+        tracing::info!(?repo_path, "loading config");
+
         let mut errors = vec![];
 
         let mut opts = Options::new();

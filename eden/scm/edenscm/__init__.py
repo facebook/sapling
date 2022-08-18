@@ -65,7 +65,7 @@ _fixsys()
 del globals()["_fixsys"]
 
 
-def run(args=None, fin=None, fout=None, ferr=None):
+def run(args=None, fin=None, fout=None, ferr=None, config=None):
     import sys
 
     if args is None:
@@ -103,4 +103,4 @@ def run(args=None, fin=None, fout=None, ferr=None):
         # so 'import dispatch' happens after demandimport
         from .mercurial import dispatch
 
-        dispatch.run(args, fin, fout, ferr)
+        dispatch.run(args, fin, fout, ferr, config)

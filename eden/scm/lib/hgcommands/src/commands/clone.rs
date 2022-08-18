@@ -399,7 +399,14 @@ fn clone_metadata(
         )?;
         logger.debug(|| format!("Pulled bookmarks {:?}", bookmark_ids));
     } else {
-        revlog_clone(logger, io, global_opts, &clone_opts.source, destination)?;
+        revlog_clone(
+            repo.config(),
+            logger,
+            io,
+            global_opts,
+            &clone_opts.source,
+            destination,
+        )?;
         // reload the repo to pick up any changes written out by the revlog clone
         // such as metalog remotenames writes
         repo = Repo::load(destination, &global_opts.config, &global_opts.configfile)?;
@@ -412,6 +419,7 @@ fn clone_metadata(
 }
 
 pub fn revlog_clone(
+    config: &ConfigSet,
     logger: &mut TermLogger,
     io: &IO,
     global_opts: &HgGlobalOpts,
@@ -444,7 +452,11 @@ pub fn revlog_clone(
 
     let hg_python = HgPython::new(&args);
 
-    abort_if!(hg_python.run_hg(args, io) != 0, "Cloning revlog failed");
+    abort_if!(
+        hg_python.run_hg(args, io, config) != 0,
+        "Cloning revlog failed"
+    );
+
     Ok(())
 }
 

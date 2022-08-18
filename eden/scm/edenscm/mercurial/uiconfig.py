@@ -38,7 +38,7 @@ def optional(func, s):
 class uiconfig(object):
     """Config portion of the ui object"""
 
-    def __init__(self, src=None):
+    def __init__(self, src=None, rcfg=None):
         """Create a fresh new uiconfig object.
 
         Or copy from an existing uiconfig object.
@@ -52,16 +52,16 @@ class uiconfig(object):
             self._unserializable = src._unserializable.copy()
             self._pinnedconfigs = src._pinnedconfigs.copy()
             self._knownconfig = src._knownconfig
-
-            self.fixconfig()
         else:
-            self._rcfg = configparser.config()
+            self._rcfg = rcfg or configparser.config()
             # map from IDs to unserializable Python objects.
             self._unserializable = {}
             # config "pinned" that cannot be loaded from files.
             # ex. --config flags
             self._pinnedconfigs = set()
             self._knownconfig = configitems.coreitems
+
+        self.fixconfig()
 
     @classmethod
     def load(cls, ui, repopath):

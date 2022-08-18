@@ -65,7 +65,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
         && args.get(2).map(|s| s.as_ref()) == Some("--cmdserver")
         && args.get(3).map(|s| s.as_ref()) == Some("chgunix2")
     {
-        return HgPython::new(&args).run_hg(args, io);
+        return HgPython::new(&args).run_hg(args, io, &ConfigSet::new());
     }
     // Skip initialization for debugpython. Make it closer to vanilla Python.
     if args.get(1).map(|s| s.as_str()) == Some("debugpython") {
@@ -234,7 +234,7 @@ fn dispatch_command(
                     // Error is not fatal.
                     let _ = interp.setup_tracing("*".into());
                 }
-                interp.run_hg(args, io)
+                interp.run_hg(args, io, config)
             } else {
                 errors::print_error(&err, io, &args[1..]);
                 255

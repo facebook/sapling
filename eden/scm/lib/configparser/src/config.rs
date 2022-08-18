@@ -653,6 +653,7 @@ impl<S: Into<Text>> From<S> for Options {
     }
 }
 
+#[derive(Debug)]
 pub struct SupersetVerification {
     // Configs (and their values) not set by the superset config, but should be.
     pub missing: Vec<((Text, Text), Text)>,

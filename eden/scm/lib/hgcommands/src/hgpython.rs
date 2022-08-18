@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::cell::RefCell;
 use std::env;
 
 use clidispatch::io::IO;
+use configparser::config::ConfigSet;
 use cpython::*;
 use cpython_ext::format_py_error;
 use cpython_ext::wrap_pyio;
@@ -98,6 +100,7 @@ impl HgPython {
         py: Python<'_>,
         args: Vec<String>,
         io: &clidispatch::io::IO,
+        config: &ConfigSet,
     ) -> PyResult<()> {
         let entry_point_mod =
             info_span!("import edenscm").in_scope(|| py.import(HGPYENTRYPOINT_MOD))?;
@@ -109,17 +112,19 @@ impl HgPython {
                 Some(error) => write_to_py_object(py, error),
             });
             let args: Vec<Str> = args.into_iter().map(Str::from).collect();
-            (args, fin, fout, ferr).to_py_object(py)
+            let config =
+                pyconfigparser::config::create_instance(py, RefCell::new(config.clone())).unwrap();
+            (args, fin, fout, ferr, config).to_py_object(py)
         };
         entry_point_mod.call(py, "run", call_args, None)?;
         Ok(())
     }
 
     /// Run an hg command defined in Python.
-    pub fn run_hg(&self, args: Vec<String>, io: &clidispatch::io::IO) -> i32 {
+    pub fn run_hg(&self, args: Vec<String>, io: &clidispatch::io::IO, config: &ConfigSet) -> i32 {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        match self.run_hg_py(py, args, io) {
+        match self.run_hg_py(py, args, io, config) {
             // The code below considers the following exit scenarios:
             // - `PyResult` is `Ok`. This means that the Python code returned
             //    successfully, without calling `sys.exit` or raising an
