@@ -118,18 +118,18 @@ class LazyFinder(object):
 ignore = set()
 
 
-def init(ignorelist):
+def init(ignorelist) -> None:
     global ignore
     ignore = set(ignorelist)
 
 
-def isenabled():
+def isenabled() -> bool:
     return not _deactivated and any(
         isinstance(finder, LazyFinder) for finder in sys.meta_path
     )
 
 
-def enable():
+def enable() -> None:
     new_finders = []
     for finder in sys.meta_path:
         new_finders.append(
