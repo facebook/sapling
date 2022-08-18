@@ -139,7 +139,7 @@ class TestTmp:
 
         >>> with TestTmp() as t:
         ...     print(t.sheval('echo foo > a; cat a'), end="")
-        ...     print(t.sheval('echo `pwd`'), end="")
+        ...     print(t.sheval('echo "`pwd`"'), end="")
         foo
         $TESTTMP
 

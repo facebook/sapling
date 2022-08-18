@@ -192,6 +192,20 @@ Command substitution:
     >>> t('A=1; echo `A=2; echo $A`; echo $A')
     '2\n1\n'
 
+Substitution as arguments:
+
+    >>> t(r"printf %s-%s \x y")
+    'x-y (no-eol)\n'
+    >>> t(r"printf %s-%s '\x y'")
+    '\\x y- (no-eol)\n'
+    >>> # note '\x' doesn't become 'x' with ``.
+    >>> t(r"printf %s '\x y' > a; printf %s-%s `cat a`")
+    '\\x-y (no-eol)\n'
+    >>> t(r'''printf %s '\x y' > a; printf %s-%s "`cat a`" ''')
+    '\\x y- (no-eol)\n'
+    >>> t(r"A='C:\Users'; printf %s-%s $A $A/1")
+    'C:\\Users-C:\\Users/1 (no-eol)\n'
+
 Exit code ($?):
 
     >>> t('false; echo "$?"; echo $?')
@@ -206,10 +220,15 @@ Glob:
     >>> t('touch a1 a2 a3; for i in a*; do echo $i; done')
     'a1\na2\na3\n'
 
+Glob with substitution:
+
+    >>> t('touch a1 a2 b1 b2; A=a; echo $A*')
+    'a1 a2\n'
+
 Tilde:
 
-    >>> t('echo ~ a~ ~a')
-    ' a~ ~a\n'
+    >>> t('HOME=x; echo ~ a~ ~a ~/a')
+    'x a~ ~a x/a\n'
 
 Remove prefix:
 

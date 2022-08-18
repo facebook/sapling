@@ -74,7 +74,7 @@ def interpvec(trees, env: Env) -> InterpResult:
     return res
 
 
-def interpliteral(v, env: Env, quoted: bool = False) -> InterpResult:
+def interpliteral(v, env: Env, quoted: Optional[str] = None) -> InterpResult:
     return InterpResult(out=str(v), quoted=quoted)
 
 
@@ -85,11 +85,11 @@ def interpfixed(out: str, v, env: Env) -> InterpResult:
 def interpdoublequote(v, env: Env) -> InterpResult:
     # v: Vec<DefaultSimpleWord>
     words = []
-    quoted = True
+    quoted = '"'
     for tree in v:
         # Special case: do not treat "$@" as quoted.
         if tree.get("t") == "Param" and tree["v"]["t"] == "At":
-            quoted = False
+            quoted = None
         out = interp(tree, env).out
         words.append(out)
     return InterpResult(out="".join(words), quoted=quoted)
@@ -136,7 +136,7 @@ def interpenvvar(v, env: Env, scope: Optional[Scope]) -> InterpResult:
 
 def interpvar(v, env: Env) -> InterpResult:
     out = env.getenv(v)
-    return InterpResult(out=out)
+    return InterpResult(out=out, quoted="$")
 
 
 def interpdefault(v, env: Env) -> InterpResult:
@@ -148,18 +148,28 @@ def interpargs(trees, env: Env) -> List[str]:
     args = []
     for tree in trees:
         res = interp(tree, env)
-        if "*" in res.out and not res.quoted:
+        # Expand ~ first.
+        if not res.quoted and (res.out == "~" or res.out.startswith("~/")):
+            home = env.getenv("HOME")
+            if home:
+                res.out = home + res.out[1:]
+        # Expand globs.
+        if res.quoted in {"$", None} and "*" in res.out:
             matched = env.fs.glob(res.out)
             if matched:
                 args += matched
                 continue
-        elif "~" == res.out:
-            out = env.getenv("HOME")
-            args.append(out)
-            continue
-        if res.quoted:
+        # Expand space-separated words, or handle quotes.
+        # note about shlex.split:
+        # input       | shlex.split(posix=True) | shlex.split(posix=False)
+        # r'C:\Users' | ['C:Users']             | [r'C:\Users']
+        # '"a  b"'    | ['a  b']                | ['"a  b"']
+        if res.quoted in {'"', "'"}:
             args.append(res.out)
+        elif res.quoted in {"`", "$"}:
+            args += shlex.split(res.out, posix=False)
         else:
+            assert res.quoted is None, f"unsupported {res.quoted=}"
             args += shlex.split(res.out)
     return args
 
@@ -171,6 +181,7 @@ def interpsubst(v, env: Env) -> InterpResult:
     # pyre-fixme[16]: `Optional` has no attribute `getvalue`.
     res.out += env.stdout.getvalue().decode()
     res.out = res.out.rstrip()
+    res.quoted = "`"
     return res
 
 
@@ -460,7 +471,7 @@ INTERP_TYPE_TABLE = {
     # Word
     "SimpleWord": interp,
     "DoubleQuoted": interpdoublequote,
-    "SingleQuoted": partial(interpliteral, quoted=True),
+    "SingleQuoted": partial(interpliteral, quoted="'"),
     # Parameter
     "At": interpat,
     "StarParameter": None,

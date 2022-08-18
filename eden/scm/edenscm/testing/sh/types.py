@@ -27,16 +27,17 @@ class InterpResult:
     # exit code
     exitcode: int = 0
 
-    # Quoted by '' or "".
-    # If True, prevent glob-expand or shlex.split.
-    quoted: bool = False
+    # Quoted by: ' or " or ` or $ or None.
+    # If not None, prevent glob-expand or shlex.split.
+    quoted: Optional[str] = None
 
     def chain(self, other: InterpResult) -> InterpResult:
         """combine 2 outputs into one"""
         return InterpResult(
             out=self.out + other.out,
             exitcode=other.exitcode,
-            quoted=other.quoted,
+            # XXX: mixed quoting is not handled correctly.
+            quoted=self.quoted or other.quoted,
         )
 
 
