@@ -442,7 +442,14 @@ def source(args: List[str], env: Env):
 
     from .interp import interpcode
 
-    return interpcode(code, env).exitcode
+    try:
+        ret = interpcode(code, env)
+    except ShellExit:
+        raise
+    except Exception as e:
+        raise RuntimeError(f"cannot source {args}") from e
+
+    return ret.exitcode
 
 
 @command

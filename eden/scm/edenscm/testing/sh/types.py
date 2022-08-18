@@ -55,6 +55,19 @@ class Scope(IntEnum):
     SHELL = 3
 
 
+class OnError(IntEnum):
+    # Raise as a Python exception. Discard pending shell output.
+    RAISE = 0
+
+    # Append traceback to shell output, then abort shell execution
+    # with an non-zero exit code.
+    WARN_ABORT = 1
+
+    # Append traceback to shell output, then continue shell execution.
+    # Shell exit code won't reflect what was wrong.
+    WARN_CONTINUE = 2
+
+
 @dataclass
 class Env:
     """Environment for interp functions

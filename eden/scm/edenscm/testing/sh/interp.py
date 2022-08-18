@@ -11,7 +11,9 @@ See module-level doc for examples.
 import functools
 import re
 import shlex
+import textwrap
 import threading
+import traceback
 from dataclasses import dataclass
 from functools import partial
 from io import BytesIO
@@ -20,12 +22,12 @@ from typing import List, Optional
 # pyre-fixme[21]: Could not find module `conch_parser`.
 import conch_parser
 
-from .types import Env, InterpResult, Scope, ShellExit, ShellReturn
+from .types import Env, InterpResult, OnError, Scope, ShellExit, ShellReturn
 
 
-def sheval(code, env: Env) -> str:
+def sheval(code, env: Env, onerror=OnError.RAISE) -> str:
     """parse and interpret shell logic"""
-    res = interpcode(code, env)
+    res = interpcode(code, env, onerror=onerror)
     # convert to '.t'-friendly representation
     out = res.out
     if out and not out.endswith("\n"):
@@ -35,13 +37,13 @@ def sheval(code, env: Env) -> str:
     return out
 
 
-def interpcode(code: str, env: Env) -> InterpResult:
+def interpcode(code: str, env: Env, onerror=OnError.RAISE) -> InterpResult:
     try:
         trees = conch_parser.parse(code)
     except Exception as e:
         raise ValueError(f"cannot parse shell code: {code}") from e
     try:
-        return interpvec(trees, env)
+        return interpvec(trees, env, onerror=onerror)
     except ShellExit as e:
         return e.result()
 
@@ -58,7 +60,7 @@ def interp(tree: dict, env: Env) -> InterpResult:
     return result
 
 
-def interpvec(trees, env: Env) -> InterpResult:
+def interpvec(trees, env: Env, onerror=OnError.RAISE) -> InterpResult:
     """Interprete a list of ASTs and chain their result together"""
     res = InterpResult()
     for tree in trees:
@@ -70,7 +72,22 @@ def interpvec(trees, env: Env) -> InterpResult:
                 res = res.chain(e.res)
             e.res = res
             raise
-        res = res.chain(nextres)
+        except Exception:
+            if onerror == OnError.RAISE:
+                raise
+            else:
+                res.out += "# Python Exception in Shell interpreter:\n"
+                res.out += "# Stack\n"
+                res.out += textwrap.indent("".join(traceback.format_stack()[:-1]), "# ")
+                res.out += textwrap.indent(traceback.format_exc(), "# ")
+                if onerror == OnError.WARN_ABORT:
+                    e = ShellExit(127)
+                    e.res = res
+                    raise e
+                else:
+                    assert onerror == OnError.WARN_CONTINUE
+        else:
+            res = res.chain(nextres)
     return res
 
 

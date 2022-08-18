@@ -21,7 +21,7 @@ from typing import Optional
 
 from .. import sh
 from ..sh.osfs import OSFS
-from ..sh.types import Env, Scope
+from ..sh.types import Env, OnError, Scope
 from . import shext
 from .diff import MultiLineMatcher
 
@@ -260,7 +260,7 @@ class TestTmp:
         if env is None:
             env = self.shenv
         try:
-            out = sh.sheval(code, env)
+            out = sh.sheval(code, env, onerror=OnError.WARN_ABORT)
 
         except Exception as e:
             raise RuntimeError(f"cannot execute: {code.strip()}") from e
