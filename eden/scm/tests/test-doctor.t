@@ -1,4 +1,6 @@
 #chg-compatible
+#debugruntest-compatible
+#inprocess-hg-incompatible
 
   $ configure modern
   $ setconfig format.use-symlink-atomic-write=1
@@ -264,9 +266,9 @@ Check dirstate pointing to a stripped commit:
   $ echo 'A-B' | drawdag 
 
  (replace dirstate with A-B-C repo pointing to C to break it)
-  $ cp ~/abc/.hg/dirstate .hg/dirstate
+  $ cp "$TESTTMP/abc/.hg/dirstate" .hg/dirstate
   $ rm -rf .hg/treestate
-  $ cp -R ~/abc/.hg/treestate .hg/treestate
+  $ cp -R "$TESTTMP/abc/.hg/treestate" .hg/treestate
 
  (cannot resolve . since C does not exist)
   $ hg log -r . -T '{desc}\n'

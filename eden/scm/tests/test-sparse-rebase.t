@@ -1,5 +1,6 @@
 #chg-compatible
 #debugruntest-compatible
+#inprocess-hg-incompatible
 
   $ hg init repo
   $ cd repo

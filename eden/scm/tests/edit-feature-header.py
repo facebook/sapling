@@ -52,6 +52,7 @@ FEATURES = [
     ),
     Feature("no-ignore-revnum", "  $ setconfig ui.ignorerevnum=false\n"),
     Feature("py2", "#require py2\n"),
+    Feature("no-inprocess-hg", "#inprocess-hg-incompatible\n"),
 ]
 
 

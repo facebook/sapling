@@ -1,6 +1,7 @@
 #chg-compatible
 #require no-windows
 #debugruntest-compatible
+#inprocess-hg-incompatible
 
 test merging things outside of the sparse checkout
 

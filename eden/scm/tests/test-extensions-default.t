@@ -1,5 +1,6 @@
 #chg-compatible
 #debugruntest-compatible
+#inprocess-hg-incompatible
 
 Tests the behavior of the DEFAULT_EXTENSIONS constant in extensions.py
 

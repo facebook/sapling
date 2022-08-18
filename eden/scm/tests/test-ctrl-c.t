@@ -1,5 +1,6 @@
 #require no-windows
 #debugruntest-compatible
+#inprocess-hg-incompatible
 
   $ cat > sleep.py << 'EOF'
   > import os

@@ -41,7 +41,6 @@ def testsetup(t: TestTmp):
     testdir = t.getenv("TESTDIR")
     featurespy = os.path.join(testdir, "features.py")
 
-    inprocesshg = True
     if os.path.exists(featurespy):
         with open(featurespy, "r") as f:
             globalenv = {}
@@ -50,7 +49,12 @@ def testsetup(t: TestTmp):
             if setup:
                 testname = os.path.basename(testfile)
                 setup(testname, str(hgrcpath))
-                inprocesshg = globalenv.get("inprocesshg", inprocesshg)
+    inprocesshg = True
+    if os.path.exists(testfile):
+        with open(testfile) as f:
+            content = f.read()
+        if "#inprocess-hg-incompatible" in content:
+            inprocesshg = False
 
     # the 'f' utility in $TESTDIR/f
     fpath = os.path.join(testdir, "f")

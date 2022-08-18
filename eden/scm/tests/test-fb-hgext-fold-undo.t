@@ -1,5 +1,6 @@
 #chg-compatible
 #debugruntest-compatible
+#inprocess-hg-incompatible
 
 Set up test environment.
 This test confirms cacheinvalidation in hg fold.

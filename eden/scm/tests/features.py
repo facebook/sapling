@@ -720,74 +720,6 @@ ignorerevnumincompatiblelist = """
     test-commitcloud-backup-sql2.t
 """
 
-inprocesshgincompatiblelist = """
-    test-auth-match.t
-    test-bad-extension.t
-    test-bundle2-multiple-changegroups.t
-    test-clienttelemetry.t
-    test-clone.t
-    test-clone-uncompressed.t
-    test-commitcloud-backup-lfs.t
-    test-commitcloud-backup-remotenames-public.t
-    test-commitcloud-backup.t
-    test-commitcloud-debugephemeralcommit.t
-    test-commitcloud-sync-omission.t
-    test-commitcloud-sync-race.t
-    test-commitcloud-sync.t
-    test-ctrl-c.t
-    test-debugstrip.t
-    test-dirstate.t
-    test-dispatch.t
-    test-extension-hgext-prefix.t
-    test-extensions-afterloaded.t
-    test-extensions-default.t
-    test-fb-hgext-copytrace.t
-    test-fb-hgext-crdump.t
-    test-fb-hgext-drop.t
-    test-fb-hgext-fastannotate-hg.t
-    test-fb-hgext-fastannotate.t
-    test-fb-hgext-fold-undo.t
-    test-fb-hgext-mergedriver.t
-    test-fb-hgext-morestatus.t
-    test-fb-hgext-phabstatus.t
-    test-fb-hgext-pull-createmarkers.t
-    test-fb-hgext-pushrebase-remotenames.t
-    test-fb-hgext-smartlog-smartdate.t
-    test-fb-hgext-smartlog.t
-    test-fb-hgext-tweakdefaults-blame.t
-    test-fb-hgext-tweakdefaults-remotenames.t
-    test-fb-hgext-tweakdefaults-revsets.t
-    test-histedit-mutation.t
-    test-infinitepush-publicscratchbookmarks.t
-    test-infinitepush-scratchbookmark-commands.t
-    test-issue586.t
-    test-journal.t
-    test-perftweaks-remotenames.t
-    test-pull-r.t
-    test-pull.t
-    test-remotenames-basic.t
-    test-remotenames-push.t
-    test-rename-after-merge.t
-    test-rename-dir-merge.t
-    test-schemes.t
-    test-setdiscovery.t
-    test-simple-update.t
-    test-sparse-clone.t
-    test-sparse-merges.t
-    test-sparse-rebase.t
-    test-ssh-clone-r.t
-    test-unrelated-pull.t
-    test-up-local-change.t
-    test-url-rev.t
-    test-doctor.t
-    test-extdiff.t
-
-    test-pull-update.t
-    test-rebase-pull.t
-"""
-
-inprocesshg = True
-
 
 def setup(testname, hgrcpath):
     # Disable mutation.record to maintain commit hashes.
@@ -801,11 +733,3 @@ def setup(testname, hgrcpath):
     if testname in ignorerevnumincompatiblelist:
         with open(hgrcpath, "a") as f:
             f.write("\n[ui]\nignorerevnum=False\n")
-
-    # Incompatible with in-process hg (only affects debugruntest)?  This
-    # incompatibility is mostly caused by side effects of uisetup()s, since
-    # in-process hg only runs uisetup() per extension once.
-    # Note: the 'hg serve' process is always run out side process.
-    global inprocesshg
-    if testname in inprocesshgincompatiblelist:
-        inprocesshg = False

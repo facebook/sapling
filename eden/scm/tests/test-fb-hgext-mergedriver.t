@@ -1,5 +1,6 @@
 #chg-compatible
 #debugruntest-compatible
+#inprocess-hg-incompatible
 
   $ setconfig workingcopy.ruststatus=False
   $ enable mergedriver

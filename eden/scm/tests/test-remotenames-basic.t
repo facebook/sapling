@@ -1,4 +1,5 @@
 #debugruntest-compatible
+#inprocess-hg-incompatible
   $ enable remotenames
   $ setconfig experimental.allowfilepeer=True
   > mkcommit()

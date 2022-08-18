@@ -1,5 +1,6 @@
 #chg-compatible
 #debugruntest-compatible
+#inprocess-hg-incompatible
   $ setconfig experimental.allowfilepeer=True
 
 Issue586: removing remote files after merge appears to corrupt the

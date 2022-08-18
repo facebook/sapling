@@ -1,5 +1,6 @@
 #chg-compatible
 #debugruntest-compatible
+#inprocess-hg-incompatible
   $ configure mutation-norecord
 
   $ setconfig format.usegeneraldelta=yes

@@ -1,5 +1,6 @@
 #chg-compatible
 #debugruntest-compatible
+#inprocess-hg-incompatible
   $ setconfig experimental.allowfilepeer=True
 
   $ configure dummyssh

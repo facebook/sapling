@@ -1,5 +1,6 @@
 #chg-compatible
 #debugruntest-compatible
+#inprocess-hg-incompatible
 
 ensure that failing ui.atexit handlers report sensibly
 
