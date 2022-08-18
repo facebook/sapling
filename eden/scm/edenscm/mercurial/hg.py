@@ -992,11 +992,15 @@ def merge(repo, node, force=None, remind=True, mergeforce=False, labels=None):
 
 def remoteui(src, opts):
     "build a remote ui from ui or repo and opts"
-    if util.safehasattr(src, "baseui"):  # looks like a repository
-        dst = src.baseui.copy()  # drop repo-specific config
-        src = src.ui  # copy target options from repo
-    else:  # assume it's a global ui object
-        dst = src.copy()  # keep all global options
+
+    if util.safehasattr(src, "ui"):  # looks like a repository
+        # drop repo-specific config
+        dst = src.ui.copywithoutrepo()
+        # to copy target options from repo
+        src = src.ui
+    else:
+        # assume it's a global ui object
+        dst = src.copy()
 
     # copy ssh-specific options
     for o in "ssh", "remotecmd":

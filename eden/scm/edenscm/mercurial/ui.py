@@ -198,6 +198,11 @@ class ui(object):
         # The current command name being executed.
         self.cmdname = None
 
+        # CLI config overrides to allow easier reloading of config.
+        self.cliconfigs = []
+        self.cliconfigfiles = []
+        self.clioptions = {}
+
         if src:
             self._uiconfig = src._uiconfig.copy()
 
@@ -222,6 +227,10 @@ class ui(object):
 
             self.metrics = src.metrics
             self.cmdname = src.cmdname
+
+            self.cliconfigs = src.cliconfigs.copy()
+            self.cliconfigfiles = src.cliconfigfiles.copy()
+            self.clioptions = src.clioptions.copy()
         else:
             self._uiconfig = uiconfig.uiconfig()
 
@@ -264,6 +273,18 @@ class ui(object):
     def copy(self):
         return self.__class__(self)
 
+    def copywithoutrepo(self):
+        """Create a copy sans repo-specific config."""
+
+        # This copies the config as well, but uiconfig.load below
+        # completely replaces the _uiconfig object.
+        repoless = self.copy()
+        uiconfig.uiconfig.load(repoless, None)
+
+        repoless.setclioverrides(self.cliconfigs, self.cliconfigfiles)
+        repoless.deriveconfigfromclioptions(self.clioptions)
+        return repoless
+
     def resetstate(self):
         """Clear internal state that shouldn't persist across commands"""
         progress.resetstate()
@@ -279,6 +300,30 @@ class ui(object):
             self._correlator.swap(correlator)
             self.log("clienttelemetry", client_correlator=correlator)
         return self._correlator.get()
+
+    def setclioverrides(self, cliconfigs, cliconfigfiles):
+        self.cliconfigs = (cliconfigs or []).copy()
+        self.cliconfigfiles = (cliconfigfiles or []).copy()
+        self._uiconfig.setclioverrides(self.cliconfigs, self.cliconfigfiles)
+
+    def deriveconfigfromclioptions(self, options):
+        options = self.clioptions = (options or {}).copy()
+
+        get = lambda name: options.get(name, None)
+
+        if get("verbose") or get("debug") or get("quiet"):
+            for opt in ("verbose", "debug", "quiet"):
+                val = str(bool(get(opt)))
+                self.setconfig("ui", opt, val, "--" + opt)
+
+        if get("traceback"):
+            self.setconfig("ui", "traceback", "on", "--traceback")
+
+        if get("noninteractive"):
+            self.setconfig("ui", "interactive", "off", "-y")
+
+        if get("insecure"):
+            self.insecureconnections = True
 
     @contextlib.contextmanager
     def timeblockedsection(self, key):

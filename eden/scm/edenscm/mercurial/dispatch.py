@@ -396,7 +396,7 @@ def dispatch(req):
     try:
         if not req.ui:
             req.ui = uimod.ui.load()
-        req.earlyoptions.update(_earlyparseopts(req.ui, req.args))
+        req.earlyoptions.update(_earlyparseopts(req.args))
         if req.earlyoptions["traceback"] or req.earlyoptions["trace"]:
             req.ui.setconfig("ui", "traceback", "on", "--traceback")
 
@@ -609,9 +609,13 @@ def _runcatch(req):
 
             # read --config before doing anything else
             # (e.g. to change trust settings for reading .hg/hgrc)
-            _parseconfig(req.ui, req.earlyoptions)
+            req.ui.setclioverrides(
+                req.earlyoptions["config"], req.earlyoptions["configfile"]
+            )
             if req.repo:
-                _parseconfig(req.repo.ui, req.earlyoptions)
+                req.repo.ui.setclioverrides(
+                    req.earlyoptions["config"], req.earlyoptions["configfile"]
+                )
 
             # developer config: ui.debugger
             debugger = ui.config("ui", "debugger")
@@ -858,40 +862,7 @@ def _parse(ui, args):
     return (cmd, cmd and entry[0] or None, args, options, cmdoptions, aliases)
 
 
-def _parseconfig(ui, earlyoptions):
-    """parse the --config options from the command line"""
-
-    configfiles = ui.configlist("_configs", "configfiles", [])
-
-    # --config takes prescendence over --configfile, so process
-    # --configfile first then --config second.
-    for configfile in earlyoptions["configfile"]:
-        configfiles.append(configfile)
-        tempconfig = uiconfig.uiconfig()
-        tempconfig.readconfig(configfile)
-        # Set the configfile values one-by-one so they get put in the internal
-        # _pinnedconfigs list and don't get overwritten in the future.
-        for section, name, value in tempconfig.walkconfig():
-            ui.setconfig(section, name, value, configfile)
-
-    for cfg in earlyoptions["config"]:
-        try:
-            name, value = [cfgelem.strip() for cfgelem in cfg.split("=", 1)]
-            section, name = name.split(".", 1)
-            if not section or not name:
-                raise IndexError
-            ui.setconfig(section, name, value, "--config")
-        except (IndexError, ValueError):
-            raise error.Abort(
-                _("malformed --config option: %r " "(use --config section.name=value)")
-                % cfg
-            )
-
-    if configfiles:
-        ui.setconfig("_configs", "configfiles", configfiles)
-
-
-def _earlyparseopts(ui, args):
+def _earlyparseopts(args):
     try:
         return cliparser.earlyparse(args)
     except UnicodeDecodeError:
@@ -1122,23 +1093,8 @@ def _dispatch(req):
         if options["profile"]:
             profiler.start()
 
-        if options["verbose"] or options["debug"] or options["quiet"]:
-            for opt in ("verbose", "debug", "quiet"):
-                val = str(bool(options[opt]))
-                for ui_ in uis:
-                    ui_.setconfig("ui", opt, val, "--" + opt)
-
-        if options["traceback"]:
-            for ui_ in uis:
-                ui_.setconfig("ui", "traceback", "on", "--traceback")
-
-        if options["noninteractive"]:
-            for ui_ in uis:
-                ui_.setconfig("ui", "interactive", "off", "-y")
-
-        if options["insecure"]:
-            for ui_ in uis:
-                ui_.insecureconnections = True
+        for ui_ in uis:
+            ui_.deriveconfigfromclioptions(options)
 
         if util.parsebool(options["pager"]):
             # ui.pager() expects 'internal-always-' prefix in this case

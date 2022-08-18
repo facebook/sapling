@@ -501,6 +501,36 @@ class uiconfig(object):
             if ("ui", "quiet") in overrides:
                 self.fixconfig(section="ui")
 
+    def setclioverrides(self, cliconfigs, cliconfigfiles):
+        # --config takes prescendence over --configfile, so process
+        # --configfile first then --config second.
+        for configfile in cliconfigfiles:
+            tempconfig = uiconfig()
+            tempconfig.readconfig(configfile)
+            # Set the configfile values one-by-one so they get put in the internal
+            # _pinnedconfigs list and don't get overwritten in the future.
+            for section, name, value in tempconfig.walkconfig():
+                self.setconfig(section, name, value, configfile)
+
+        for cfg in cliconfigs:
+            try:
+                name, value = [cfgelem.strip() for cfgelem in cfg.split("=", 1)]
+                section, name = name.split(".", 1)
+                if not section or not name:
+                    raise IndexError
+                self.setconfig(section, name, value, "--config")
+            except (IndexError, ValueError):
+                raise error.Abort(
+                    _(
+                        "malformed --config option: %r "
+                        "(use --config section.name=value)"
+                    )
+                    % cfg
+                )
+
+        if cliconfigfiles:
+            self.setconfig("_configs", "configfiles", cliconfigfiles)
+
     def develwarn(self, msg, stacklevel=1, config=None):
         # FIXME: Do something here?
         pass
