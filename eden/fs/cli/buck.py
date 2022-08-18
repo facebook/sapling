@@ -76,6 +76,12 @@ def is_buckd_running_for_path(path: str) -> bool:
     except OSError as exc:
         if exc.errno == errno.ENOENT:
             return False
+        if exc.errno == errno.EINVAL and sys.platform == "win32":
+            print(
+                f"Could not read project {path} buck pid file due to Eden stopping too recently. Attempting to proceed, please try again in a few minutes on failure."
+            )
+            return False
+
         raise
 
     return proc_utils.new().is_process_alive(buckd_pid)
