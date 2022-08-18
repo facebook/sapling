@@ -189,6 +189,7 @@ pub use crate::historystore::HgIdMutableHistoryStore;
 pub use crate::historystore::RemoteHistoryStore;
 pub use crate::indexedlogauxstore::AuxStore;
 pub use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
+pub use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
 pub use crate::indexedloghistorystore::IndexedLogHgIdHistoryStore;
 pub use crate::indexedlogutil::StoreType;
 pub use crate::localstore::ExtStoredPolicy;

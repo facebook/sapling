@@ -176,7 +176,6 @@ impl<T: HgIdMutableHistoryStore> LocalStore for MultiplexHgIdHistoryStore<T> {
 
 #[cfg(test)]
 mod tests {
-    use configparser::config::ConfigSet;
     use minibytes::Bytes;
     use tempfile::TempDir;
     use types::testutil::*;
@@ -187,6 +186,7 @@ mod tests {
     use crate::historypack::HistoryPackVersion;
     use crate::historystore::HgIdHistoryStore;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
+    use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
     use crate::indexedlogutil::StoreType;
     use crate::localstore::ExtStoredPolicy;
     use crate::mutabledatapack::MutableDataPack;
@@ -195,10 +195,15 @@ mod tests {
     #[test]
     fn test_delta_add_static() -> Result<()> {
         let tempdir = TempDir::new()?;
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let mut log = IndexedLogHgIdDataStore::new(
             &tempdir,
             ExtStoredPolicy::Ignore,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
         )?;
         let mut multiplex = MultiplexDeltaStore::new();
@@ -222,10 +227,15 @@ mod tests {
     #[test]
     fn test_delta_add_dynamic() -> Result<()> {
         let tempdir = TempDir::new()?;
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let mut log = IndexedLogHgIdDataStore::new(
             &tempdir,
             ExtStoredPolicy::Ignore,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
         )?;
         let mut pack = MutableDataPack::new(&tempdir, DataPackVersion::One);

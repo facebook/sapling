@@ -8,11 +8,13 @@
 use std::str::FromStr;
 
 use clidispatch::errors;
+use configparser::convert::ByteCount;
 use revisionstore::CorruptionPolicy;
 use revisionstore::DataPackStore;
 use revisionstore::ExtStoredPolicy;
 use revisionstore::HgIdDataStore;
 use revisionstore::IndexedLogHgIdDataStore;
+use revisionstore::IndexedLogHgIdDataStoreConfig;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
 use revisionstore::StoreType;
@@ -59,9 +61,24 @@ pub fn run(opts: DebugstoreOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
         ExtStoredPolicy::Use,
     ));
     let fullpath = format!("{}/{}/indexedlogdatastore", cachepath, reponame);
+
+    let max_log_count = config.get_opt::<u8>("indexedlog", "data.max-log-count")?;
+    let max_bytes_per_log = config.get_opt::<ByteCount>("indexedlog", "data.max-bytes-per-log")?;
+    let max_bytes = config.get_opt::<ByteCount>("remotefilelog", "cachelimit")?;
+    let indexedlog_config = IndexedLogHgIdDataStoreConfig {
+        max_log_count,
+        max_bytes_per_log,
+        max_bytes,
+    };
+
     let indexedstore = Box::new(
-        IndexedLogHgIdDataStore::new(fullpath, ExtStoredPolicy::Use, &config, StoreType::Local)
-            .unwrap(),
+        IndexedLogHgIdDataStore::new(
+            fullpath,
+            ExtStoredPolicy::Use,
+            &indexedlog_config,
+            StoreType::Local,
+        )
+        .unwrap(),
     );
     let mut unionstore: UnionHgIdDataStore<Box<dyn HgIdDataStore>> = UnionHgIdDataStore::new();
     unionstore.add(packstore);

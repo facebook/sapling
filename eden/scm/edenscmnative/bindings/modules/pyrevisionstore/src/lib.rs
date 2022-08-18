@@ -58,6 +58,7 @@ use revisionstore::HistoryPack;
 use revisionstore::HistoryPackStore;
 use revisionstore::HistoryPackVersion;
 use revisionstore::IndexedLogHgIdDataStore;
+use revisionstore::IndexedLogHgIdDataStoreConfig;
 use revisionstore::IndexedLogHgIdHistoryStore;
 use revisionstore::LegacyStore;
 use revisionstore::LocalStore;
@@ -447,7 +448,7 @@ py_class!(class indexedlogdatastore |py| {
     data store: Box<IndexedLogHgIdDataStore>;
 
     def __new__(_cls, path: &PyPath, config: config) -> PyResult<indexedlogdatastore> {
-        let config = config.get_cfg(py);
+        let config = IndexedLogHgIdDataStoreConfig { max_log_count: None, max_bytes_per_log: None, max_bytes: None };
         indexedlogdatastore::create_instance(
             py,
             Box::new(IndexedLogHgIdDataStore::new(path.as_path(), ExtStoredPolicy::Ignore, &config, StoreType::Local).map_pyerr(py)?),
@@ -530,6 +531,11 @@ fn make_mutabledeltastore(
             DataPackVersion::One,
         ))
     } else if let Some(indexedlogpath) = indexedlogpath {
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         Arc::new(IndexedLogHgIdDataStore::new(
             indexedlogpath.as_path(),
             ExtStoredPolicy::Ignore,

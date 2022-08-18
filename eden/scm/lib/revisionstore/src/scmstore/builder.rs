@@ -24,6 +24,7 @@ use crate::contentstore::check_cache_buster;
 use crate::fetch_logger::FetchLogger;
 use crate::indexedlogauxstore::AuxStore;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
+use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
 use crate::indexedlogutil::StoreType;
 use crate::lfs::LfsRemote;
 use crate::lfs::LfsStore;
@@ -194,10 +195,15 @@ impl<'a> FileStoreBuilder<'a> {
     pub fn build_indexedlog_local(&self) -> Result<Option<Arc<IndexedLogHgIdDataStore>>> {
         Ok(if let Some(local_path) = self.local_path.clone() {
             let local_path = get_local_path(local_path, &self.suffix)?;
+            let config = IndexedLogHgIdDataStoreConfig {
+                max_log_count: None,
+                max_bytes_per_log: None,
+                max_bytes: None,
+            };
             Some(Arc::new(IndexedLogHgIdDataStore::new(
                 get_indexedlogdatastore_path(&local_path)?,
                 self.get_extstored_policy()?,
-                self.config,
+                &config,
                 StoreType::Local,
             )?))
         } else {
@@ -207,10 +213,24 @@ impl<'a> FileStoreBuilder<'a> {
 
     pub fn build_indexedlog_cache(&self) -> Result<Arc<IndexedLogHgIdDataStore>> {
         let cache_path = get_cache_path(self.config, &self.suffix)?;
+        let max_log_count = self
+            .config
+            .get_opt::<u8>("indexedlog", "data.max-log-count")?;
+        let max_bytes_per_log = self
+            .config
+            .get_opt::<ByteCount>("indexedlog", "data.max-bytes-per-log")?;
+        let max_bytes = self
+            .config
+            .get_opt::<ByteCount>("remotefilelog", "cachelimit")?;
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count,
+            max_bytes_per_log,
+            max_bytes,
+        };
         Ok(Arc::new(IndexedLogHgIdDataStore::new(
             get_indexedlogdatastore_path(&cache_path)?,
             self.get_extstored_policy()?,
-            self.config,
+            &config,
             StoreType::Shared,
         )?))
     }
@@ -500,10 +520,15 @@ impl<'a> TreeStoreBuilder<'a> {
     pub fn build_indexedlog_local(&self) -> Result<Option<Arc<IndexedLogHgIdDataStore>>> {
         Ok(if let Some(local_path) = self.local_path.clone() {
             let local_path = get_local_path(local_path, &self.suffix)?;
+            let config = IndexedLogHgIdDataStoreConfig {
+                max_log_count: None,
+                max_bytes_per_log: None,
+                max_bytes: None,
+            };
             Some(Arc::new(IndexedLogHgIdDataStore::new(
                 get_indexedlogdatastore_path(&local_path)?,
                 ExtStoredPolicy::Use,
-                self.config,
+                &config,
                 StoreType::Local,
             )?))
         } else {
@@ -513,10 +538,25 @@ impl<'a> TreeStoreBuilder<'a> {
 
     pub fn build_indexedlog_cache(&self) -> Result<Arc<IndexedLogHgIdDataStore>> {
         let cache_path = get_cache_path(self.config, &self.suffix)?;
+        let max_log_count = self
+            .config
+            .get_opt::<u8>("indexedlog", "manifest.max-log-count")?;
+        let max_bytes_per_log = self
+            .config
+            .get_opt::<ByteCount>("indexedlog", "manifest.max-bytes-per-log")?;
+        let max_bytes = self
+            .config
+            .get_opt::<ByteCount>("remotefilelog", "manifestlimit")?;
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count,
+            max_bytes_per_log,
+            max_bytes,
+        };
+
         Ok(Arc::new(IndexedLogHgIdDataStore::new(
             get_indexedlogdatastore_path(&cache_path)?,
             ExtStoredPolicy::Use,
-            self.config,
+            &config,
             StoreType::Shared,
         )?))
     }

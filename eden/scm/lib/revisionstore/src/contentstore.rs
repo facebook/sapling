@@ -34,6 +34,7 @@ use crate::datastore::RemoteDataStore;
 use crate::datastore::ReportingRemoteDataStore;
 use crate::datastore::StoreResult;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
+use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
 use crate::indexedlogutil::StoreType;
 use crate::lfs::LfsFallbackRemoteStore;
 use crate::lfs::LfsMultiplexer;
@@ -97,15 +98,25 @@ impl ContentStore {
             .map(|p| get_local_path(p.as_ref().to_path_buf(), &suffix))
             .transpose()?;
 
+        let max_log_count = config.get_opt::<u8>("indexedlog", "data.max-log-count")?;
+        let max_bytes_per_log =
+            config.get_opt::<ByteCount>("indexedlog", "data.max-bytes-per-log")?;
+        let max_bytes = config.get_opt::<ByteCount>("remotefilelog", "cachelimit")?;
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count,
+            max_bytes_per_log,
+            max_bytes,
+        };
+
         repair_str += &IndexedLogHgIdDataStore::repair(
             get_indexedlogdatastore_path(&shared_path)?,
-            config,
+            &config,
             StoreType::Shared,
         )?;
         if let Some(local_path) = local_path {
             repair_str += &IndexedLogHgIdDataStore::repair(
                 get_indexedlogdatastore_path(local_path)?,
-                config,
+                &config,
                 StoreType::Local,
             )?;
         }
@@ -400,10 +411,24 @@ impl<'a> ContentStoreBuilder<'a> {
             if let Some(shared_indexedlog_shared) = self.shared_indexedlog_shared {
                 shared_indexedlog_shared
             } else {
+                let max_log_count = self
+                    .config
+                    .get_opt::<u8>("indexedlog", "data.max-log-count")?;
+                let max_bytes_per_log = self
+                    .config
+                    .get_opt::<ByteCount>("indexedlog", "data.max-bytes-per-log")?;
+                let max_bytes = self
+                    .config
+                    .get_opt::<ByteCount>("remotefilelog", "cachelimit")?;
+                let config = IndexedLogHgIdDataStoreConfig {
+                    max_log_count,
+                    max_bytes_per_log,
+                    max_bytes,
+                };
                 Arc::new(IndexedLogHgIdDataStore::new(
                     get_indexedlogdatastore_path(&cache_path)?,
                     extstored_policy,
-                    self.config,
+                    &config,
                     StoreType::Shared,
                 )?)
             };
@@ -467,10 +492,15 @@ impl<'a> ContentStoreBuilder<'a> {
                     if let Some(shared_indexedlog_local) = self.shared_indexedlog_local {
                         shared_indexedlog_local
                     } else {
+                        let config = IndexedLogHgIdDataStoreConfig {
+                            max_log_count: None,
+                            max_bytes_per_log: None,
+                            max_bytes: None,
+                        };
                         Arc::new(IndexedLogHgIdDataStore::new(
                             get_indexedlogdatastore_path(local_path.as_ref().unwrap())?,
                             extstored_policy,
-                            self.config,
+                            &config,
                             StoreType::Local,
                         )?)
                     };
@@ -882,10 +912,15 @@ mod tests {
         store.flush()?;
         drop(store);
 
+        let indexed_log_config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let store = IndexedLogHgIdDataStore::new(
             get_indexedlogdatastore_path(&localdir)?,
             ExtStoredPolicy::Use,
-            &config,
+            &indexed_log_config,
             StoreType::Local,
         )?;
         assert_eq!(

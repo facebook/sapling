@@ -210,12 +210,13 @@ mod tests {
     use types::testutil::*;
 
     use super::*;
+    use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
+    use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
     use crate::scmstore::FileAttributes;
     use crate::scmstore::FileStore;
     use crate::testutil::*;
     use crate::ExtStoredPolicy;
     use crate::HgIdMutableDeltaStore;
-    use crate::IndexedLogHgIdDataStore;
 
     fn single_byte_sha1(fst: u8) -> Sha1 {
         let mut x: [u8; Sha1::len()] = Default::default();
@@ -341,10 +342,15 @@ mod tests {
 
         // Setup local indexedlog
         let tmp = TempDir::new()?;
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let content = Arc::new(IndexedLogHgIdDataStore::new(
             &tmp,
             ExtStoredPolicy::Ignore,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
         )?);
 

@@ -16,7 +16,6 @@ use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
-use configparser::config::ConfigSet;
 use configparser::convert::ByteCount;
 use edenapi_types::FileEntry;
 use edenapi_types::TreeEntry;
@@ -45,6 +44,12 @@ use crate::missing::MissingInjection;
 use crate::repack::ToKeys;
 use crate::sliceext::SliceExt;
 use crate::types::StoreKey;
+
+pub struct IndexedLogHgIdDataStoreConfig {
+    pub max_log_count: Option<u8>,
+    pub max_bytes_per_log: Option<ByteCount>,
+    pub max_bytes: Option<ByteCount>,
+}
 
 pub struct IndexedLogHgIdDataStore {
     store: RwLock<Store>,
@@ -206,10 +211,10 @@ impl IndexedLogHgIdDataStore {
     pub fn new(
         path: impl AsRef<Path>,
         extstored_policy: ExtStoredPolicy,
-        config: &ConfigSet,
+        config: &IndexedLogHgIdDataStoreConfig,
         store_type: StoreType,
     ) -> Result<Self> {
-        let open_options = IndexedLogHgIdDataStore::open_options(config)?;
+        let open_options = IndexedLogHgIdDataStore::open_options(config);
 
         let log = match store_type {
             StoreType::Local => open_options.local(&path),
@@ -223,7 +228,7 @@ impl IndexedLogHgIdDataStore {
         })
     }
 
-    fn open_options(config: &ConfigSet) -> Result<StoreOpenOptions> {
+    fn open_options(config: &IndexedLogHgIdDataStoreConfig) -> StoreOpenOptions {
         // Default configuration: 4 x 2.5GB.
         let mut open_options = StoreOpenOptions::new()
             .max_log_count(4)
@@ -234,27 +239,26 @@ impl IndexedLogHgIdDataStore {
                 vec![IndexOutput::Reference(0..HgId::len() as u64)]
             });
 
-        if let Some(max_log_count) = config.get_opt::<u8>("indexedlog", "data.max-log-count")? {
+        if let Some(max_log_count) = config.max_log_count {
             open_options = open_options.max_log_count(max_log_count);
         }
-        if let Some(max_bytes_per_log) =
-            config.get_opt::<ByteCount>("indexedlog", "data.max-bytes-per-log")?
-        {
+        if let Some(max_bytes_per_log) = config.max_bytes_per_log {
             open_options = open_options.max_bytes_per_log(max_bytes_per_log.value());
-        } else if let Some(max_bytes_per_log) =
-            config.get_opt::<ByteCount>("remotefilelog", "cachelimit")?
-        {
+        } else if let Some(max_bytes) = config.max_bytes {
             let log_count: u64 = open_options.max_log_count.unwrap_or(1).max(1).into();
-            open_options =
-                open_options.max_bytes_per_log((max_bytes_per_log.value() / log_count).max(1));
+            open_options = open_options.max_bytes_per_log((max_bytes.value() / log_count).max(1));
         }
-        Ok(open_options)
+        open_options
     }
 
-    pub fn repair(path: PathBuf, config: &ConfigSet, store_type: StoreType) -> Result<String> {
+    pub fn repair(
+        path: PathBuf,
+        config: &IndexedLogHgIdDataStoreConfig,
+        store_type: StoreType,
+    ) -> Result<String> {
         match store_type {
-            StoreType::Local => IndexedLogHgIdDataStore::open_options(config)?.repair_local(path),
-            StoreType::Shared => IndexedLogHgIdDataStore::open_options(config)?.repair_shared(path),
+            StoreType::Local => IndexedLogHgIdDataStore::open_options(config).repair_local(path),
+            StoreType::Shared => IndexedLogHgIdDataStore::open_options(config).repair_shared(path),
         }
     }
 
@@ -437,10 +441,15 @@ mod tests {
     #[test]
     fn test_empty() {
         let tempdir = TempDir::new().unwrap();
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,
             ExtStoredPolicy::Use,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
         )
         .unwrap();
@@ -450,10 +459,15 @@ mod tests {
     #[test]
     fn test_add() {
         let tempdir = TempDir::new().unwrap();
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,
             ExtStoredPolicy::Use,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
         )
         .unwrap();
@@ -472,10 +486,15 @@ mod tests {
     #[test]
     fn test_add_get() {
         let tempdir = TempDir::new().unwrap();
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,
             ExtStoredPolicy::Use,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
         )
         .unwrap();
@@ -490,10 +509,15 @@ mod tests {
         log.add(&delta, &metadata).unwrap();
         log.flush().unwrap();
 
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,
             ExtStoredPolicy::Use,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
         )
         .unwrap();
@@ -504,10 +528,15 @@ mod tests {
     #[test]
     fn test_lookup_failure() {
         let tempdir = TempDir::new().unwrap();
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,
             ExtStoredPolicy::Use,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
         )
         .unwrap();
@@ -519,10 +548,15 @@ mod tests {
     #[test]
     fn test_add_chain() -> Result<()> {
         let tempdir = TempDir::new()?;
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,
             ExtStoredPolicy::Use,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
         )?;
 
@@ -540,10 +574,15 @@ mod tests {
     #[test]
     fn test_iter() -> Result<()> {
         let tempdir = TempDir::new()?;
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,
             ExtStoredPolicy::Use,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
         )?;
 
@@ -563,10 +602,15 @@ mod tests {
     #[test]
     fn test_corrupted() -> Result<()> {
         let tempdir = TempDir::new()?;
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,
             ExtStoredPolicy::Use,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
         )?;
 
@@ -588,10 +632,15 @@ mod tests {
         rotate_log_path.push("log");
         remove_file(rotate_log_path)?;
 
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,
             ExtStoredPolicy::Use,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
         )?;
         let k = key("a", "3");
@@ -612,13 +661,17 @@ mod tests {
     #[test]
     fn test_extstored_ignore() -> Result<()> {
         let tempdir = TempDir::new().unwrap();
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,
             ExtStoredPolicy::Ignore,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
-        )
-        .unwrap();
+        )?;
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -643,13 +696,17 @@ mod tests {
     #[test]
     fn test_extstored_use() -> Result<()> {
         let tempdir = TempDir::new().unwrap();
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,
             ExtStoredPolicy::Use,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
-        )
-        .unwrap();
+        )?;
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -682,10 +739,15 @@ mod tests {
 
         // Setup local indexedlog
         let tmp = TempDir::new()?;
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let local = Arc::new(IndexedLogHgIdDataStore::new(
             &tmp,
             ExtStoredPolicy::Ignore,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
         )?);
 
@@ -714,10 +776,15 @@ mod tests {
 
         // Setup local indexedlog
         let tmp = TempDir::new()?;
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let local = Arc::new(IndexedLogHgIdDataStore::new(
             &tmp,
             ExtStoredPolicy::Ignore,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
         )?);
 
@@ -741,10 +808,15 @@ mod tests {
     #[test]
     fn test_scmstore_extstore_use() -> Result<()> {
         let tempdir = TempDir::new()?;
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,
             ExtStoredPolicy::Use,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
         )?;
 
@@ -795,10 +867,15 @@ mod tests {
     #[test]
     fn test_scmstore_extstore_ignore() -> Result<()> {
         let tempdir = TempDir::new()?;
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,
             ExtStoredPolicy::Ignore,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
         )?;
 

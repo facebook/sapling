@@ -2076,6 +2076,7 @@ mod tests {
 
     use super::*;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
+    use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
     use crate::indexedlogutil::StoreType;
     use crate::localstore::ExtStoredPolicy;
     use crate::testutil::example_blob;
@@ -2452,10 +2453,15 @@ mod tests {
         let lfs = Arc::new(LfsStore::shared(&dir, &config)?);
 
         let dir = TempDir::new()?;
+        let indexedlog_config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
             &dir,
             ExtStoredPolicy::Ignore,
-            &ConfigSet::new(),
+            &indexedlog_config,
             StoreType::Shared,
         )?);
 
@@ -2484,10 +2490,15 @@ mod tests {
         let lfs = Arc::new(LfsStore::shared(&dir, &config)?);
 
         let dir = TempDir::new()?;
+        let indexedlog_config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
             &dir,
             ExtStoredPolicy::Ignore,
-            &ConfigSet::new(),
+            &indexedlog_config,
             StoreType::Shared,
         )?);
 
@@ -2519,10 +2530,15 @@ mod tests {
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
 
         let dir = TempDir::new()?;
+        let indexedlog_config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
             &dir,
             ExtStoredPolicy::Ignore,
-            &ConfigSet::new(),
+            &indexedlog_config,
             StoreType::Shared,
         )?);
 
@@ -2591,10 +2607,15 @@ mod tests {
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
 
         let dir = TempDir::new()?;
+        let indexedlog_config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
             &dir,
             ExtStoredPolicy::Ignore,
-            &ConfigSet::new(),
+            &indexedlog_config,
             StoreType::Shared,
         )?);
 
@@ -2666,10 +2687,15 @@ mod tests {
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
 
         let dir = TempDir::new()?;
+        let indexedlog_config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
             &dir,
             ExtStoredPolicy::Ignore,
-            &ConfigSet::new(),
+            &indexedlog_config,
             StoreType::Shared,
         )?);
 

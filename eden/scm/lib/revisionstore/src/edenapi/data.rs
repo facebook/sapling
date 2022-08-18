@@ -212,6 +212,7 @@ mod tests {
     use crate::edenapi::Tree;
     use crate::indexedlogauxstore::AuxStore;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
+    use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
     use crate::indexedlogutil::StoreType;
     use crate::localstore::ExtStoredPolicy;
     use crate::scmstore::FileAttributes;
@@ -234,10 +235,15 @@ mod tests {
         let mut store = FileStore::empty();
 
         let tmp = TempDir::new()?;
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let cache = Arc::new(IndexedLogHgIdDataStore::new(
             &tmp,
             ExtStoredPolicy::Ignore,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
         )?);
         store.indexedlog_cache = Some(cache.clone());
@@ -271,10 +277,15 @@ mod tests {
         let mut store = TreeStore::empty();
 
         let tmp = TempDir::new()?;
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let cache = Arc::new(IndexedLogHgIdDataStore::new(
             &tmp,
             ExtStoredPolicy::Ignore,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
         )?);
         store.indexedlog_cache = Some(cache.clone());
@@ -338,10 +349,15 @@ mod tests {
 
         // Empty content cache
         let tmp = TempDir::new()?;
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
         let cache = Arc::new(IndexedLogHgIdDataStore::new(
             &tmp,
             ExtStoredPolicy::Ignore,
-            &ConfigSet::new(),
+            &config,
             StoreType::Shared,
         )?);
         store.indexedlog_cache = Some(cache.clone());
