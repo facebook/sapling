@@ -401,12 +401,26 @@ namespace facebook::eden {
 
 const char* const kServiceName = "EdenFS";
 
+std::optional<ActivityBuffer<ThriftRequestTraceEvent>>
+EdenServiceHandler::initThriftRequestActivityBuffer() {
+  if (server_->getServerState()
+          ->getEdenConfig()
+          ->enableActivityBuffer.getValue()) {
+    return std::make_optional<ActivityBuffer<ThriftRequestTraceEvent>>(
+        server_->getServerState()
+            ->getEdenConfig()
+            ->ActivityBufferMaxEvents.getValue());
+  }
+  return std::nullopt;
+}
+
 EdenServiceHandler::EdenServiceHandler(
     std::vector<std::string> originalCommandLine,
     EdenServer* server)
     : BaseService{kServiceName},
       originalCommandLine_{std::move(originalCommandLine)},
       server_{server},
+      thriftRequestActivityBuffer_(initThriftRequestActivityBuffer()),
       thriftRequestTraceBus_(TraceBus<ThriftRequestTraceEvent>::create(
           "ThriftRequestTrace",
           kTraceBusCapacity)) {
@@ -452,8 +466,8 @@ EdenServiceHandler::EdenServiceHandler(
       server_->getServerState()->getThreadPool(),
       server_->getServerState()->getEdenConfig());
 #endif
-
-  thriftRequestTraceSubscriptionHandles_.push_back(
+  thriftRequestTraceHandle_ = std::make_shared<ThriftRequestTraceHandle>();
+  thriftRequestTraceHandle_->subHandle =
       thriftRequestTraceBus_->subscribeFunction(
           "Outstanding Thrift request tracing",
           [this](const ThriftRequestTraceEvent& event) {
@@ -466,7 +480,10 @@ EdenServiceHandler::EdenServiceHandler(
                 outstandingThriftRequests_.wlock()->erase(event.requestId);
                 break;
             }
-          }));
+            if (thriftRequestActivityBuffer_.has_value()) {
+              thriftRequestActivityBuffer_->addEvent(event);
+            }
+          });
 }
 
 EdenServiceHandler::~EdenServiceHandler() = default;
@@ -1015,6 +1032,26 @@ ThriftRequestMetadata populateThriftRequestMetadata(
   return thriftRequestMetadata;
 }
 
+/**
+ * Helper function to convert a ThriftRequestTraceEvent to a ThriftRequestEvent
+ * type. Used in EdenServiceHandler::traceThriftRequestEvents and
+ * EdenServiceHandler::getRetroactiveThriftRequestEvents.
+ */
+void convertThriftRequestTraceEventToThriftRequestEvent(
+    const ThriftRequestTraceEvent& event,
+    ThriftRequestEvent& te) {
+  te.times_ref() = thriftTraceEventTimes(event);
+  switch (event.type) {
+    case ThriftRequestTraceEvent::START:
+      te.eventType() = ThriftRequestEventType::START;
+      break;
+    case ThriftRequestTraceEvent::FINISH:
+      te.eventType() = ThriftRequestEventType::FINISH;
+      break;
+  }
+  te.requestMetadata_ref() = populateThriftRequestMetadata(event);
+}
+
 apache::thrift::ServerStream<ThriftRequestEvent>
 EdenServiceHandler::traceThriftRequestEvents() {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
@@ -1033,19 +1070,10 @@ EdenServiceHandler::traceThriftRequestEvents() {
   h->handle = thriftRequestTraceBus_->subscribeFunction(
       "Live Thrift request tracing",
       [publisher = ThriftStreamPublisherOwner{std::move(publisher)}](
-          const ThriftRequestTraceEvent& traceEvent) mutable {
-        ThriftRequestEvent event;
-        event.times_ref() = thriftTraceEventTimes(traceEvent);
-        switch (traceEvent.type) {
-          case ThriftRequestTraceEvent::START:
-            event.eventType() = ThriftRequestEventType::START;
-            break;
-          case ThriftRequestTraceEvent::FINISH:
-            event.eventType() = ThriftRequestEventType::FINISH;
-            break;
-        }
-        event.requestMetadata_ref() = populateThriftRequestMetadata(traceEvent);
-        publisher.next(event);
+          const ThriftRequestTraceEvent& event) mutable {
+        ThriftRequestEvent thriftEvent;
+        convertThriftRequestTraceEventToThriftRequestEvent(event, thriftEvent);
+        publisher.next(thriftEvent);
       });
 
   return std::move(serverStream);
@@ -3340,6 +3368,27 @@ void EdenServiceHandler::getTracePoints(std::vector<TracePoint>& result) {
     }
     result.emplace_back(std::move(tp));
   }
+}
+
+void EdenServiceHandler::getRetroactiveThriftRequestEvents(
+    GetRetroactiveThriftRequestEventsResult& result) {
+  if (!thriftRequestActivityBuffer_.has_value()) {
+    throw newEdenError(
+        ENOTSUP,
+        EdenErrorType::POSIX_ERROR,
+        "ActivityBuffer not initialized in thrift server.");
+  }
+
+  std::vector<ThriftRequestEvent> thriftEvents;
+  auto bufferEvents = thriftRequestActivityBuffer_->getAllEvents();
+  thriftEvents.reserve(bufferEvents.size());
+  for (auto const& event : bufferEvents) {
+    ThriftRequestEvent thriftEvent;
+    convertThriftRequestTraceEventToThriftRequestEvent(event, thriftEvent);
+    thriftEvents.push_back(std::move(thriftEvent));
+  }
+
+  result.events() = std::move(thriftEvents);
 }
 
 void EdenServiceHandler::getRetroactiveHgEvents(

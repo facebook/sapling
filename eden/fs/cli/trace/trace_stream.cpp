@@ -525,6 +525,37 @@ std::string formatThriftRequestMetadata(const ThriftRequestMetadata& request) {
       stripAsyncThriftMethodPrefix(request.get_method()));
 }
 
+void print_thrift_event(
+    const ThriftRequestEvent& event,
+    std::unordered_map<int64_t, int64_t>& startTimesNs) {
+  const auto requestId = event.get_requestMetadata().get_requestId();
+  const int64_t eventNs = event.get_times().get_monotonic_time_ns();
+
+  std::string latencyString;
+  switch (*event.eventType()) {
+    case ThriftRequestEventType::START:
+      startTimesNs[requestId] = eventNs;
+      break;
+    case ThriftRequestEventType::FINISH: {
+      auto kv = startTimesNs.find(requestId);
+      if (kv != startTimesNs.end()) {
+        int64_t startNs = kv->second;
+        int64_t latencyNs = eventNs - startNs;
+        latencyString = fmt::format(" in {} μs", latencyNs / 1000);
+        startTimesNs.erase(kv);
+      }
+    } break;
+    case ThriftRequestEventType::UNKNOWN:
+      break;
+  }
+
+  fmt::print(
+      "{} {}{}\n",
+      thriftRequestEventTypeSymbol(event),
+      formatThriftRequestMetadata(*event.requestMetadata()),
+      latencyString);
+}
+
 int trace_thrift(
     folly::ScopedEventBaseThread& evbThread,
     apache::thrift::RocketClientChannel::Ptr channel) {
@@ -568,36 +599,47 @@ int trace_thrift(
                   "Error: {}\n", folly::exceptionStr(maybeEvent.exception()));
               return;
             }
-
-            const auto& event = maybeEvent.value();
-            const auto requestId = event.get_requestMetadata().get_requestId();
-            const int64_t eventNs = event.get_times().get_monotonic_time_ns();
-
-            std::string latencyString;
-            switch (*event.eventType()) {
-              case ThriftRequestEventType::START:
-                startTimesNs[requestId] = eventNs;
-                break;
-              case ThriftRequestEventType::FINISH: {
-                auto kv = startTimesNs.find(requestId);
-                if (kv != startTimesNs.end()) {
-                  int64_t startNs = kv->second;
-                  int64_t latencyNs = eventNs - startNs;
-                  latencyString = fmt::format(" in {} μs", latencyNs / 1000);
-                  startTimesNs.erase(kv);
-                }
-              } break;
-              case ThriftRequestEventType::UNKNOWN:
-                break;
-            }
-
-            fmt::print(
-                "{} {}{}\n",
-                thriftRequestEventTypeSymbol(event),
-                formatThriftRequestMetadata(*event.requestMetadata()),
-                latencyString);
+            print_thrift_event(maybeEvent.value(), startTimesNs);
           });
 
+  return 0;
+}
+
+int trace_thrift_retroactive(
+    folly::ScopedEventBaseThread& evbThread,
+    apache::thrift::RocketClientChannel::Ptr channel) {
+  auto client =
+      std::make_unique<apache::thrift::Client<EdenService>>(std::move(channel));
+
+  auto future = client->semifuture_getRetroactiveThriftRequestEvents().via(
+      evbThread.getEventBase());
+
+  std::move(future)
+      .thenValue([](GetRetroactiveThriftRequestEventsResult allEvents) {
+        auto events = *allEvents.events();
+        std::sort(
+            events.begin(), events.end(), [](const auto& a, const auto& b) {
+              return a.times()->timestamp() < b.times()->timestamp();
+            });
+
+        fmt::print("Last {} thrift events\n", events.size());
+        std::unordered_map<int64_t, int64_t> requestStartMonoTimesNs;
+        for (auto& event : events) {
+          print_thrift_event(event, requestStartMonoTimesNs);
+        }
+      })
+      .thenError([](const folly::exception_wrapper& ex) {
+        fmt::print("{}\n", ex.what());
+        if (ex.get_exception<EdenError>()->errorCode() == ENOTSUP) {
+          fmt::print(
+              "Can't run retroactive command in eden mount without an initialized ActivityBuffer. Make sure the enable-activitybuffer config is true to save events retroactively.\n");
+        }
+      })
+      .ensure(
+          // Move the client into the callback so that it will be destroyed
+          // on an EventBase thread.
+          [c = std::move(client)] {})
+      .get();
   return 0;
 }
 
@@ -736,9 +778,8 @@ int main(int argc, char** argv) {
   AbsolutePath mountRoot{FLAGS_mountRoot};
   AbsolutePath socketPath = getSocketPath(mountRoot);
 
-  if (FLAGS_retroactive && !(FLAGS_trace == "inode" || FLAGS_trace == "hg")) {
-    fmt::print(
-        "Retroactive mode only supported for hg or inode trace subcommands\n");
+  if (FLAGS_retroactive && FLAGS_trace == "fs") {
+    fmt::print("Retroactive mode not supported for fs events\n");
     return 0;
   }
 
@@ -761,7 +802,9 @@ int main(int argc, char** argv) {
     return trace_fs(
         evbThread, mountRoot, std::move(channel), FLAGS_reads, FLAGS_writes);
   } else if (FLAGS_trace == "thrift") {
-    return trace_thrift(evbThread, std::move(channel));
+    return FLAGS_retroactive
+        ? trace_thrift_retroactive(evbThread, std::move(channel))
+        : trace_thrift(evbThread, std::move(channel));
   } else if (FLAGS_trace == "inode") {
     return FLAGS_retroactive
         ? trace_inode_retroactive(evbThread, mountRoot, std::move(channel))

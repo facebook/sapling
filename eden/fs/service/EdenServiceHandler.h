@@ -11,6 +11,7 @@
 #include <optional>
 #include "eden/fs/eden-config.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
+#include "eden/fs/telemetry/ActivityBuffer.h"
 #include "eden/fs/telemetry/TraceBus.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -89,6 +90,13 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   EdenServiceHandler(EdenServiceHandler const&) = delete;
   EdenServiceHandler& operator=(EdenServiceHandler const&) = delete;
+
+  /**
+   * Return a newly initialized ActivityBuffer<ThriftRequestTraceEvent> if
+   * using ActivityBuffers is enabled and return std::nullopt otherwise.
+   */
+  std::optional<ActivityBuffer<ThriftRequestTraceEvent>>
+  initThriftRequestActivityBuffer();
 
   std::unique_ptr<apache::thrift::AsyncProcessor> getProcessor() override;
 
@@ -316,6 +324,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   void disableTracing() override;
   void getTracePoints(std::vector<TracePoint>& result) override;
 
+  void getRetroactiveThriftRequestEvents(
+      GetRetroactiveThriftRequestEventsResult& result) override;
+
   void getRetroactiveHgEvents(
       GetRetroactiveHgEventsResult& result,
       std::unique_ptr<GetRetroactiveHgEventsParams> params) override;
@@ -396,8 +407,15 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   const std::vector<std::string> originalCommandLine_;
   EdenServer* const server_;
 
-  std::vector<TraceSubscriptionHandle<ThriftRequestTraceEvent>>
-      thriftRequestTraceSubscriptionHandles_;
+  std::optional<ActivityBuffer<ThriftRequestTraceEvent>>
+      thriftRequestActivityBuffer_;
+
+  // Handle for traceBus subscription
+  struct ThriftRequestTraceHandle {
+    TraceSubscriptionHandle<ThriftRequestTraceEvent> subHandle;
+  };
+
+  std::shared_ptr<ThriftRequestTraceHandle> thriftRequestTraceHandle_;
 
   std::shared_ptr<TraceBus<ThriftRequestTraceEvent>> thriftRequestTraceBus_;
 };

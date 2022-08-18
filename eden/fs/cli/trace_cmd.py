@@ -214,9 +214,33 @@ M MATERIALIZE
 
 @trace_cmd("thrift", "Monitor Thrift requests.")
 class TraceThriftCmd(Subcmd):
+    DESCRIPTION = """Trace thrift requests made to EdenFS.
+
+    With the --retroactive flag, this will print a list of the past N thrift requests.
+    By default, it will print up to N=100 events, but this can be configured with the
+    following config option:
+    [telemetry]
+    activitybuffer-max-events = 100
+
+    A '+' represents a thrift call starting, and a '-' represents it's end. Additionally,
+    the thrift request ID is displayed along with what process id (pid) the call was made
+    from. Finally, the thrift method name and duration for how long the thrift call took
+    are displayed as well.
+    """
+
+    # pyre-fixme[15]: Type typing.Type[argparse.RawDescriptionHelpFormatter] is not a
+    # subtype of the overridden attribute typing.Optional[argparse.HelpFormatter]
+    FORMATTER = argparse.RawDescriptionHelpFormatter
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "checkout", default=None, nargs="?", help="Path to the checkout"
+        )
+        parser.add_argument(
+            "--retroactive",
+            action="store_true",
+            default=False,
+            help="Provide stored thrift request events (from a buffer) across past changes",
         )
 
     async def run(self, args: argparse.Namespace) -> int:
@@ -228,5 +252,6 @@ class TraceThriftCmd(Subcmd):
                 "--mountRoot",
                 checkout.path,
                 "--trace=thrift",
+                f"--retroactive={'true' if args.retroactive else 'false'}",
             ]
         )
