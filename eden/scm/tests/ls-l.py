@@ -41,13 +41,20 @@ paths = sys.argv[1:]
 if not paths:
     paths = ["."]
 
+
+def print_lf(s):
+    sys.stdout.buffer.write(s.encode() + b"\n")
+
+
 for path in paths:
     if os.path.isdir(path):
         os.chdir(path)
 
         for name in sorted(os.listdir(".")):
             st = os.stat(name)
-            print("%s %s %s" % (modestr(st), sizestr(st), name))
+            print_lf("%s %s %s" % (modestr(st), sizestr(st), name))
     else:
         st = os.stat(path)
-        print("%s %s %s" % (modestr(st), sizestr(st), os.path.abspath(path)))
+        print_lf("%s %s %s" % (modestr(st), sizestr(st), os.path.abspath(path)))
+
+sys.stdout.flush()

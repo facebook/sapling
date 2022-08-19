@@ -4,6 +4,18 @@
   $ setconfig workingcopy.ruststatus=False
   $ configure mutation-norecord
   $ disable treemanifest
+
+Avoid "\r" in messages:
+
+  $ cat > crlf.py << 'EOF'
+  > from edenscm.mercurial import extensions, util
+  > def uisetup(ui):
+  >     extensions.wrapfunction(util, 'tonativeeol', lambda _orig, x: x)
+  > EOF
+  $ setconfig extensions.nonativecrlf=~/crlf.py
+
+Repo:
+
   $ newrepo
   $ drawdag << 'EOS'
   > B  # B/B=B\n
@@ -43,7 +55,7 @@ Amending changeset with changes in working dir:
   > EOF
 
   $ echo a >> A
-  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit --amend -m 'amend base1'
+  $ HGEDITOR='sh "`pwd`/editor.sh"' hg commit --amend -m 'amend base1'
   pretxncommit 217e580a9218a74044be7970e41021181317b52b
   217e580a9218
 
@@ -75,7 +87,7 @@ Check proper abort for empty message
   > __EOF__
 
   $ echo a >> A
-  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit --amend
+  $ HGEDITOR='sh "`pwd`/editor.sh"' hg commit --amend
   transaction abort! (?)
   rollback completed (?)
   abort: empty commit message
@@ -93,7 +105,7 @@ Remove file that was added in amended commit:
 
   $ hg rm C
   $ echo 'amend base1 remove new file' > ../logfile
-  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg ci --amend --logfile ../logfile
+  $ HGEDITOR='sh "`pwd`/editor.sh"' hg ci --amend --logfile ../logfile
 
   $ hg cat C
   C: no such file in rev 9579b4a5c1df
@@ -146,7 +158,7 @@ Open editor with old commit message if a message isn't given otherwise:
 
   $ cat > editor.sh << '__EOF__'
   > #!/bin/sh
-  > cat $1
+  > cat "$1"
   > echo "another precious commit message" > "$1"
   > __EOF__
 
@@ -169,7 +181,7 @@ at first, test saving last-message.txt
 
   $ rm -f .hg/last-message.txt
 
-  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit --amend
+  $ HGEDITOR='sh "`pwd`/editor.sh"' hg commit --amend
   no changes, new message
   
   
@@ -195,7 +207,7 @@ at first, test saving last-message.txt
 
 then, test editing custom commit message
 
-  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit --amend
+  $ HGEDITOR='sh "`pwd`/editor.sh"' hg commit --amend
   no changes, new message
   
   
@@ -210,7 +222,7 @@ then, test editing custom commit message
 Same, but with changes in working dir (different code path):
 
   $ echo a >> A
-  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit --amend
+  $ HGEDITOR='sh "`pwd`/editor.sh"' hg commit --amend
   another precious commit message
   
   

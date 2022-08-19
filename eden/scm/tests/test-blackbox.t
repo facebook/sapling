@@ -17,6 +17,8 @@ command, exit codes, and duration
   $ echo a > a
   $ hg add a
   $ hg blackbox --pattern '{"legacy_log":{"service":["or","command","command_finish"]}}'
+  [legacy][command] up -q tip
+  [legacy][command_finish] up -q tip exited 0 after 0.00 seconds
   [legacy][command] add a
   [legacy][command_finish] add a exited 0 after 0.00 seconds
   [legacy][command] blackbox --pattern '{"legacy_log":{"service":["or","command","command_finish"]}}'
@@ -107,6 +109,12 @@ clone, commit, pull
   pulling from test:blackboxtest_server
   searching for changes
   $ hg blackbox --pattern '{"legacy_log":{"service":["or","command","command_finish","command_alias"]}}'
+  [legacy][command] pull -q -B head1
+  [legacy][command_finish] pull -q -B head1 exited 0 after 0.00 seconds
+  [legacy][command] pull -q -B head2
+  [legacy][command_finish] pull -q -B head2 exited 0 after 0.00 seconds
+  [legacy][command] up -q tip
+  [legacy][command_finish] up -q tip exited 0 after 0.00 seconds
   [legacy][command] pull
   [legacy][command_finish] pull exited 0 after 0.00 seconds
   [legacy][command] blackbox --pattern '{"legacy_log":{"service":["or","command","command_finish","command_alias"]}}'

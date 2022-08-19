@@ -33,11 +33,7 @@ Sanity check
   $ hg sparse disable foo.sparse
 
 Relative works from root.
-#if windows
-  $ hg sparse enable .\\foo.sparse
-#else
   $ hg sparse enable ./foo.sparse
-#endif
   $ hg sparse
   %include foo.sparse
   [include]
@@ -67,11 +63,7 @@ Canonical path works from subdir.
   $ hg sparse disable foo.sparse
 
 Relative path also works
-#if windows
-  $ hg sparse enable ..\\foo.sparse
-#else
   $ hg sparse enable ../foo.sparse
-#endif
   $ hg sparse
   %include foo.sparse
   [include]

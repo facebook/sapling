@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-CACHEDIR=$TESTTMP/hgcache
+CACHEDIR="$TESTTMP/hgcache"
 export DUMMYSSH_STABLE_ORDER=1
 cat >> $HGRCPATH <<EOF
 [remotefilelog]
@@ -22,6 +22,14 @@ changegroup3=True
 [rebase]
 singletransaction=True
 EOF
+
+_cachecount=0
+
+newcachedir() {
+  _cachecount=$((_cachecount+1))
+  CACHEDIR="$TESTTMP/hgcache$_cachecount"
+  setconfig remotefilelog.cachepath="$CACHEDIR"
+}
 
 hgcloneshallow() {
   local name
@@ -84,7 +92,7 @@ ls_l() {
 }
 
 findfilessorted() {
-  find $1 -type f | sort
+  find "$1" -type f | sort
 }
 
 getmysqldb() {

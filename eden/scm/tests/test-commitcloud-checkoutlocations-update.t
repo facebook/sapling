@@ -26,17 +26,19 @@ Enable syncing checkout locations
 Utility script to dump json of the checkoutlocation being sent
   $ cat > $TESTTMP/dumpdata.py <<EOF
   > import json
-  > import os
+  > import os, sys
   > testtmp = os.environ['TESTTMP']
   > path = os.path.join(testtmp, "checkoutlocations")
   > location = json.load(open(path))
-  > print("repo_name: %s" % location["repo_name"])
-  > print("workspace: %s" % location["workspace"])
-  > print("hostname: %s" % location["hostname"])
-  > print("commit: %s" % location["commit"])
-  > print("shared_path: %s" % location["shared_path"])
-  > print("checkout_path: %s" % location["checkout_path"])
-  > print("unixname: %s" % location["unixname"])
+  > def println(s):  # avoid CRLF on Windows
+  >     sys.stdout.buffer.write(f"{s}\n".encode())
+  > println("repo_name: %s" % location["repo_name"])
+  > println("workspace: %s" % location["workspace"])
+  > println("hostname: %s" % location["hostname"])
+  > println("commit: %s" % location["commit"])
+  > println("shared_path: %s" % location["shared_path"])
+  > println("checkout_path: %s" % location["checkout_path"])
+  > println("unixname: %s" % location["unixname"])
   > EOF
 
 Make a random commit

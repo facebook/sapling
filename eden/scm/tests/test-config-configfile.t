@@ -53,7 +53,7 @@ Cloning adds --configfile values to .hg/hgrc
   no changes found
   updating to branch default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cat repo2/.hg/hgrc
+  $ dos2unix repo2/.hg/hgrc
   # example repository config (see 'hg help config' for more info)
   [paths]
   default = ssh://user@dummy/repo

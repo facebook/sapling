@@ -29,12 +29,12 @@ def main():
                         buf = pprint.pformat(obj, width=sys.maxsize)
                     except Exception:
                         pass
-                    sys.stdout.write(buf)
+                    sys.stdout.buffer.write(buf.encode())
                     buf = ""
                 else:
-                    sys.stdout.write(ch)
+                    sys.stdout.buffer.write(ch.encode())
         if level > 0 and buf:
-            sys.stdout.write(buf)
+            sys.stdout.buffer.write(buf.encode())
     sys.stdout.flush()
 
 

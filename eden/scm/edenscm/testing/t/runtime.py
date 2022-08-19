@@ -405,6 +405,13 @@ class TestTmp:
         self.shenv = shenv
         self.pyenv = pyenv
         self.substitutions = [(re.escape(str(path)), "$TESTTMP")]
+        if os.name == "nt":
+            self.substitutions += [
+                # TESTTMP using posix slash
+                (re.escape(str(path).replace("\\", "/")), "$TESTTMP"),
+                # strip UNC prefix
+                (re.escape("\\\\?\\"), ""),
+            ]
 
     @property
     def checkoutput(self):

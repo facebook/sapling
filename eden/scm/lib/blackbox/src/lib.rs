@@ -32,6 +32,7 @@ pub use self::blackbox::SessionId;
 pub use self::blackbox::ToValue;
 pub use self::singleton::init;
 pub use self::singleton::log;
+pub use self::singleton::reset;
 pub use self::singleton::sync;
 pub use self::singleton::SINGLETON;
 

@@ -91,7 +91,7 @@ edit the history
   (hg histedit --continue to resume)
 
 rules should end up in .hg/histedit-last-edit.txt:
-  $ cat .hg/histedit-last-edit.txt
+  $ dos2unix .hg/histedit-last-edit.txt
   edit 177f92b77385 c
   pick e860deea161a e
   pick 652413bf663e f

@@ -60,6 +60,14 @@ pub fn sync() {
     SINGLETON.lock().sync();
 }
 
+/// Reset the blackbox to an in-memory instance.
+/// This releases file handlers on Windows so related files
+/// can be deleted.
+pub fn reset() {
+    let blackbox = BlackboxOptions::new().create_in_memory().unwrap();
+    init(blackbox);
+}
+
 #[cfg(test)]
 mod tests {
     use tempfile::tempdir;

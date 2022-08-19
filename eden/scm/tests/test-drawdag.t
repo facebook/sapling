@@ -4,10 +4,10 @@
   $ configure modern
 
   $ reinit () {
-  >   rm -rf .hg && hg init
+  >   newrepo
   > }
 
-  $ hg init
+  $ newrepo
 
 Test what said in drawdag.py docstring
 

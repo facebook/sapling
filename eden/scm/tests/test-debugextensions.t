@@ -25,10 +25,10 @@
 
   $ hg debugextensions -v --excludedefault
   ext1
-    location: $TESTTMP/ext1.py* (glob)
+    location: *ext1.py* (glob)
     bundled: no
   ext2
-    location: $TESTTMP/ext2.py* (glob)
+    location: *ext2.py* (glob)
     bundled: no
     tested with: 3.0 3.1 3.2.1
     bug reporting: https://example.org/bts

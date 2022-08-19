@@ -71,8 +71,7 @@ In a more complex case, where hunks cannot be grouped together, the result will
 look weird in xdiff's case but okay in bdiff's case where there is no conflict,
 and everything gets auto resolved reasonably.
 
-  $ rm -rf .hg
-  $ hg init
+  $ newrepo
 
   $ cat << EOF > A
   > S

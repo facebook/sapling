@@ -12,10 +12,7 @@ Set up test environment.
   >    hg ci -m "add ${1}1 and ${1}2"
   > }
   $ reset() {
-  >   cd ..
-  >   rm -rf repo
-  >   hg init repo
-  >   cd repo
+  >   newrepo
   > }
 
 Initialize repo.

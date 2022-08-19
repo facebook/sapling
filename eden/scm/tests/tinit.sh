@@ -54,7 +54,6 @@ newclientrepo() {
       hg pull -q -B $book
   done
   hg up -q tip
-  rm -rf .hg/blackbox*
 }
 
 # create repo connected to remote repo ssh://user@dummy/server.

@@ -11,6 +11,7 @@
 - source tinit.sh
 """
 
+import io
 import os
 import sys
 from functools import partial
@@ -51,8 +52,8 @@ def testsetup(t: TestTmp):
                 setup(testname, str(hgrcpath))
     inprocesshg = True
     if os.path.exists(testfile):
-        with open(testfile) as f:
-            content = f.read()
+        with open(testfile, "rb") as f:
+            content = f.read().decode("utf-8", errors="ignore")
         if "#inprocess-hg-incompatible" in content:
             inprocesshg = False
 
@@ -187,6 +188,18 @@ def hg(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> int:
     rawsystem = partial(_rawsystem, env, stdin, stdout, stderr)
     origstdio = (pycompat.stdin, pycompat.stdout, pycompat.stderr)
 
+    # bindings.commands.run might keep the stdio strems to prevent
+    # file delection (for example, if stdout redirects to a file).
+    # Workaround that by using a temporary in-memory stream.
+    if os.name == "nt":
+        real_stdout, real_stderr = stdout, stderr
+        stdout = io.BytesIO()
+        if real_stdout is real_stderr:
+            stderr = stdout
+        else:
+            stderr = io.BytesIO()
+        stdin = io.BytesIO(stdin.read())
+
     try:
         with shellenv(
             env, stdin=stdin, stdout=stdout, stderr=stderr
@@ -200,6 +213,16 @@ def hg(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> int:
             exitcode = bindings.commands.run(env.args, stdin, stdout, stderr)
             return exitcode
     finally:
+        # See above. This avoids leaking file descriptions that prevents
+        # file deletion on Windows.
+        if os.name == "nt":
+            real_stdout.write(stdout.getvalue())
+            real_stdout.flush()
+            if real_stdout is not real_stderr:
+                real_stderr.write(stderr.getvalue())
+                real_stderr.flush()
+            # release blackbox for deletion
+            bindings.blackbox.reset()
         # restore environ
         encoding.setfromenviron()
         pycompat.stdin, pycompat.stdout, pycompat.stderr = origstdio

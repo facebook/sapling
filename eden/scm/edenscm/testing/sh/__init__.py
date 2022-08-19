@@ -205,6 +205,8 @@ Substitution as arguments:
     '\\x y- (no-eol)\n'
     >>> t(r"A='C:\Users'; printf %s-%s $A $A/1")
     'C:\\Users-C:\\Users/1 (no-eol)\n'
+    >>> t(r'''A='a\b'; B="b$A\c"; printf %s-%s "$A" "$B"''')
+    'a\\b-ba\\b\\c (no-eol)\n'
 
 Exit code ($?):
 

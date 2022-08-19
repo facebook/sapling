@@ -210,6 +210,17 @@ def cat(
 
 
 @command
+def dos2unix(
+    args: List[str],
+    stdout: BinaryIO,
+    stdin: BinaryIO,
+    fs: ShellFS,
+):
+    text = b"".join(_lines(fs, args, stdin)).replace(b"\r\n", b"\n")
+    stdout.write(text)
+
+
+@command
 def tee(
     args: List[str], stdout: BinaryIO, stderr: BinaryIO, stdin: BinaryIO, fs: ShellFS
 ):

@@ -506,9 +506,7 @@ def caller():
     # could possibly require this is HGPLAIN is set.
     caller = encoding.environ.get("HG_CALLER_ID")
     if caller is None:
-        import getpass
-
-        caller = getpass.getuser()
+        caller = os.getenv("USER") or os.getenv("USERNAME")
 
     return caller
 

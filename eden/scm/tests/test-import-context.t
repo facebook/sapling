@@ -22,7 +22,7 @@ Test applying context diffs
   > EOF
   $ cat > cat.py <<EOF
   > import sys, binascii
-  > sys.stdout.write(binascii.b2a_hex(open(sys.argv[1], 'rb').read()).decode('utf-8') + '\n')
+  > sys.stdout.buffer.write((binascii.b2a_hex(open(sys.argv[1], 'rb').read()).decode('utf-8') + '\n').encode())
   > EOF
 
 Initialize the test repository

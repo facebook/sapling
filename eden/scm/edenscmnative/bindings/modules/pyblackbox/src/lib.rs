@@ -47,6 +47,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
             events_by_session_ids(session_ids: Vec<u64>, pattern: PyObject)
         ),
     )?;
+    m.add(py, "reset", py_fn!(py, reset()))?;
 
     Ok(m)
 }
@@ -73,6 +74,11 @@ fn log(py: Python, obj: PyObject) -> PyResult<PyNone> {
 /// Write buffered changes to disk.
 fn sync(_py: Python) -> PyResult<PyNone> {
     blackbox::sync();
+    Ok(PyNone)
+}
+
+fn reset(_py: Python) -> PyResult<PyNone> {
+    blackbox::reset();
     Ok(PyNone)
 }
 

@@ -84,10 +84,10 @@ Amend with editor
   > EOF
   $ chmod +x $TESTTMP/prefix.sh
 
-  $ HGEDITOR="sh $TESTTMP/prefix.sh" hg amend --edit
+  $ HGEDITOR='sh "$TESTTMP/prefix.sh"' hg amend --edit
   $ hg log -r . -T '{node|short} {desc}\n'
   298f085230c3 EDITED: NEWMESSAGE
-  $ HGEDITOR="sh $TESTTMP/prefix.sh" hg amend -e -m MSG
+  $ HGEDITOR='sh "$TESTTMP/prefix.sh"' hg amend -e -m MSG
   $ hg log -r . -T '{node|short} {desc}\n'
   974f07f28537 EDITED: MSG
 
