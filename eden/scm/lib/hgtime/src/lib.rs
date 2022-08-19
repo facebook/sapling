@@ -104,16 +104,20 @@ impl HgTime {
     /// year >= 1900.
     pub const RANGE: RangeInclusive<HgTime> = Self::min_value()..=Self::max_value();
 
-    /// Return the current time, or `None` if the timestamp is outside
-    /// [`HgTime::RANGE`].
+    /// Return the current time with local timezone, or `None` if the timestamp
+    /// is outside [`HgTime::RANGE`].
+    ///
+    /// The local timezone can be affected by `set_default_offset`.
     pub fn now() -> Option<Self> {
-        let forced_now = FORCED_NOW.load(Ordering::SeqCst);
+        let forced_now = FORCED_NOW.load(Ordering::Acquire);
         if forced_now == 0 {
-            Local::now()
-                .try_into()
-                .ok()
-                .map(|t: HgTime| t.use_default_offset())
-                .and_then(|t| t.bounded())
+            Self::try_from(Local::now()).ok().and_then(|mut t: HgTime| {
+                let offset = DEFAULT_OFFSET.load(Ordering::Acquire);
+                if is_valid_offset(offset) {
+                    t.offset = offset;
+                }
+                t.bounded()
+            })
         } else {
             Some(Self::from_compact_u64(forced_now))
         }
@@ -177,9 +181,8 @@ impl HgTime {
             "now" => Self::now().and_then(|n| (n + 1).map(|m| n..m)),
             "today" => Self::now().and_then(|now| {
                 let date = now.to_naive().date();
-                let start = Self::try_from(date.and_hms(0, 0, 0)).map(|t| t.use_default_offset());
-                let end =
-                    Self::try_from(date.and_hms(23, 59, 59)).map(|t| t.use_default_offset() + 1);
+                let start = Self::try_from(date.and_hms(0, 0, 0));
+                let end = Self::try_from(date.and_hms(23, 59, 59)).map(|t| t + 1);
                 if let (Ok(start), Ok(Some(end))) = (start, end) {
                     Some(start..end)
                 } else {
@@ -188,9 +191,8 @@ impl HgTime {
             }),
             "yesterday" => Self::now().and_then(|now| {
                 let date = now.to_naive().date() - Duration::days(1);
-                let start = Self::try_from(date.and_hms(0, 0, 0)).map(|t| t.use_default_offset());
-                let end =
-                    Self::try_from(date.and_hms(23, 59, 59)).map(|t| t.use_default_offset() + 1);
+                let start = Self::try_from(date.and_hms(0, 0, 0));
+                let end = Self::try_from(date.and_hms(23, 59, 59)).map(|t| t + 1);
                 if let (Ok(start), Ok(Some(end))) = (start, end) {
                     Some(start..end)
                 } else {
@@ -336,16 +338,6 @@ impl HgTime {
         }
 
         None
-    }
-
-    /// Change "offset" to DEFAULT_OFFSET. Useful for tests so they won't be
-    /// affected by local timezone.
-    fn use_default_offset(mut self) -> Self {
-        let offset = DEFAULT_OFFSET.load(Ordering::SeqCst);
-        if is_valid_offset(offset) {
-            self.offset = offset
-        }
-        self
     }
 
     /// See [`HgTime::RANGE`] for details.
