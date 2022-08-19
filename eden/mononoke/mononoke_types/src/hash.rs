@@ -275,6 +275,18 @@ impl Blake2Prefix {
         self.1.as_ref()
     }
 
+    #[inline]
+    /// Get the lower bound `Blake2`.
+    pub fn min_bound(&self) -> Blake2 {
+        self.0
+    }
+
+    #[inline]
+    /// Get the inclusive upper bound `Blake2`.
+    pub fn max_bound(&self) -> Blake2 {
+        self.1
+    }
+
     /// Convert into blake2 if it is the full prefix of the hash.
     #[inline]
     pub fn into_blake2(self) -> Option<Blake2> {

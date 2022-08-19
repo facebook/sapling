@@ -645,6 +645,16 @@ impl ChangesetIdPrefix {
     }
 
     #[inline]
+    pub fn min_bound(&self) -> ChangesetId {
+        ChangesetId(self.0.min_bound())
+    }
+
+    #[inline]
+    pub fn max_bound(&self) -> ChangesetId {
+        ChangesetId(self.0.max_bound())
+    }
+
+    #[inline]
     pub fn into_changeset_id(self) -> Option<ChangesetId> {
         self.0.into_blake2().map(ChangesetId)
     }
