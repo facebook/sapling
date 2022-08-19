@@ -8,7 +8,7 @@
 mod changesets;
 mod filenodes;
 
-use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use ::changesets::ArcChangesets;
@@ -16,18 +16,17 @@ use ::filenodes::ArcFilenodes;
 use anyhow::format_err;
 use anyhow::Error;
 use blobrepo_override::DangerousOverride;
+use blobstore_factory::BlobstoreArgDefaults;
 use blobstore_factory::PutBehaviour;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarksRef;
 use cache_warmup::CacheWarmupRequest;
 use cache_warmup::CacheWarmupTarget;
-use clap::Arg;
-use clap::SubCommand;
+use clap::Args;
+use clap::Parser;
+use clap::Subcommand;
 use cloned::cloned;
-use cmdlib::args;
-use cmdlib::args::MononokeMatches;
-use cmdlib::monitoring::AliveService;
 use context::CoreContext;
 use context::SessionContainer;
 use derived_data_filenodes::FilenodesOnlyPublic;
@@ -40,22 +39,18 @@ use metaconfig_types::CacheWarmupParams;
 use microwave::Snapshot;
 use microwave::SnapshotLocation;
 use mononoke_api_types::InnerRepo;
+use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::MononokeApp;
+use mononoke_app::MononokeAppBuilder;
 use repo_derived_data::RepoDerivedDataArc;
-use repo_factory::RepoFactory;
 use slog::info;
 use slog::o;
-use slog::Logger;
 use warm_bookmarks_cache::create_derived_data_warmer;
 use warm_bookmarks_cache::find_all_underived_and_latest_derived;
 use warm_bookmarks_cache::LatestDerivedBookmarkEntry;
 
 use crate::changesets::MicrowaveChangesets;
 use crate::filenodes::MicrowaveFilenodes;
-
-const SUBCOMMAND_LOCAL_PATH: &str = "local-path";
-const ARG_LOCAL_PATH: &str = "local-path";
-
-const SUBCOMMAND_BLOBSTORE: &str = "blobstore";
 
 async fn cache_warmup_target(
     ctx: &CoreContext,
@@ -90,28 +85,25 @@ async fn cache_warmup_target(
     }
 }
 
-async fn do_main<'a>(
-    fb: FacebookInit,
-    matches: &MononokeMatches<'a>,
-    logger: &Logger,
-) -> Result<(), Error> {
-    let scuba = matches.scuba_sample_builder();
+async fn async_main(app: MononokeApp) -> Result<(), Error> {
+    let env = app.environment();
+    let logger = app.logger();
+    let args: MononokeMicrowaveArgs = app.args()?;
 
-    let config_store = matches.config_store();
+    let repo_factory = Arc::new(app.repo_factory());
+    let scuba = env.scuba_sample_builder.clone();
 
-    let RepoConfigs { repos, common } = args::load_repo_configs(config_store, matches)?;
+    let repo_configs = app.repo_configs().clone();
+    let RepoConfigs { repos, .. } = repo_configs;
 
-    let location = match matches.subcommand() {
-        (SUBCOMMAND_LOCAL_PATH, Some(sub)) => {
-            let path = Path::new(sub.value_of_os(ARG_LOCAL_PATH).unwrap());
+    let location = match &args.command {
+        Commands::LocalPath(local_path_args) => {
+            let path = &local_path_args.local_path;
             info!(logger, "Writing to path {}", path.display());
-            SnapshotLocation::SharedLocalPath(path)
+            SnapshotLocation::SharedLocalPath(path.as_path())
         }
-        (SUBCOMMAND_BLOBSTORE, Some(_)) => SnapshotLocation::Blobstore,
-        (name, _) => return Err(format_err!("Invalid subcommand: {:?}", name)),
+        Commands::Blobstore => SnapshotLocation::Blobstore,
     };
-
-    let repo_factory = Arc::new(RepoFactory::new(matches.environment().clone(), &common));
 
     let futs = repos
         .into_iter()
@@ -123,7 +115,7 @@ async fn do_main<'a>(
 
                 let ctx = {
                     scuba.add("reponame", name.clone());
-                    let session = SessionContainer::new_with_defaults(fb);
+                    let session = SessionContainer::new_with_defaults(app.fb);
                     session.new_context(logger.clone(), scuba)
                 };
 
@@ -189,36 +181,39 @@ async fn do_main<'a>(
     Ok(())
 }
 
+#[derive(Parser)]
+#[clap(name = "Mononoke Local Replay")]
+struct MononokeMicrowaveArgs {
+    #[clap(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    #[clap(name = "local-path", about = "Write cache priming data to path")]
+    LocalPath(LocalPath),
+    #[clap(
+        name = "blobstore",
+        about = "Write cache priming data to the repository blobstore"
+    )]
+    Blobstore,
+}
+
+#[derive(Args)]
+struct LocalPath {
+    #[clap(name = "local-path", value_parser)]
+    local_path: PathBuf,
+}
+
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app = args::MononokeAppBuilder::new("Mononoke Local Replay")
-        .with_advanced_args_hidden()
-        .with_fb303_args()
-        .with_all_repos()
-        .with_scuba_logging_args()
-        .with_special_put_behaviour(PutBehaviour::Overwrite)
-        .build()
-        .subcommand(
-            SubCommand::with_name(SUBCOMMAND_LOCAL_PATH)
-                .about("Write cache priming data to path")
-                .arg(
-                    Arg::with_name(ARG_LOCAL_PATH)
-                        .takes_value(true)
-                        .required(true),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name(SUBCOMMAND_BLOBSTORE)
-                .about("Write cache priming data to the repository blobstore"),
-        );
+    let app = MononokeAppBuilder::new(fb)
+        .with_app_extension(Fb303AppExtension {})
+        .with_arg_defaults(BlobstoreArgDefaults {
+            put_behaviour: Some(PutBehaviour::Overwrite),
+            ..Default::default()
+        })
+        .build::<MononokeMicrowaveArgs>()?;
 
-    let matches = app.get_matches(fb)?;
-
-    let logger = matches.logger();
-
-    let main = do_main(fb, &matches, logger);
-
-    cmdlib::helpers::block_execute(main, fb, "microwave", logger, &matches, AliveService)?;
-
-    Ok(())
+    app.run_with_fb303_monitoring(async_main, "microwave", cmdlib::monitoring::AliveService)
 }

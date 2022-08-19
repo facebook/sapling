@@ -19,7 +19,7 @@ blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 cache_warmup = { version = "0.1.0", path = "../../cache_warmup" }
 changesets = { version = "0.1.0", path = "../../changesets" }
-clap = "2.33"
+clap = { version = "3.2.10", features = ["derive", "regex", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }
 context = { version = "0.1.0", path = "../../server/context" }
@@ -33,9 +33,9 @@ metaconfig_parser = { version = "0.1.0", path = "../../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 microwave = { version = "0.1.0", path = ".." }
 mononoke_api_types = { version = "0.1.0", path = "../../mononoke_api/types" }
+mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
-repo_factory = { version = "0.1.0", path = "../../repo_factory" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 warm_bookmarks_cache = { version = "0.1.0", path = "../../bookmarks/warm_bookmarks_cache" }
