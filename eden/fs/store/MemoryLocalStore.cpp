@@ -55,6 +55,7 @@ MemoryLocalStore::MemoryLocalStore() {
   storage_.wlock()->resize(KeySpace::kTotalCount);
 }
 
+void MemoryLocalStore::open() {}
 void MemoryLocalStore::close() {}
 
 void MemoryLocalStore::clearKeySpace(KeySpace keySpace) {

@@ -34,7 +34,7 @@ class RocksDbLocalStore : public LocalStore {
       std::shared_ptr<StructuredLogger> structuredLogger,
       FaultInjector* FOLLY_NONNULL faultInjector,
       RocksDBOpenMode mode = RocksDBOpenMode::ReadWrite);
-  void open();
+  void open() override;
   ~RocksDbLocalStore();
   void close() override;
   void clearKeySpace(KeySpace keySpace) override;

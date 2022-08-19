@@ -53,6 +53,13 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
   virtual ~LocalStore() = default;
 
   /**
+   * Open the underlying store. This must be called before calling any other
+   * method on the localStore. If this is not called first, runtime_errors
+   * will be thrown.
+   */
+  virtual void open() = 0;
+
+  /**
    * Close the underlying store.
    */
   virtual void close() = 0;

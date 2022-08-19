@@ -23,7 +23,7 @@ using LocalStoreImplResult = std::pair<
     std::shared_ptr<LocalStore>>;
 using LocalStoreImpl = LocalStoreImplResult (*)(FaultInjector*);
 
-class LocalStoreTest : public ::testing::TestWithParam<LocalStoreImpl> {
+class BasicLocalStoreTest : public ::testing::TestWithParam<LocalStoreImpl> {
  protected:
   void SetUp() override {
     auto result = GetParam()(&faultInjector_);
@@ -41,6 +41,15 @@ class LocalStoreTest : public ::testing::TestWithParam<LocalStoreImpl> {
   std::shared_ptr<LocalStore> store_;
 
   using StringPiece = folly::StringPiece;
+};
+
+class OpenCloseLocalStoreTest : public BasicLocalStoreTest {};
+
+class LocalStoreTest : public BasicLocalStoreTest {
+  void SetUp() override {
+    BasicLocalStoreTest::SetUp();
+    store_->open();
+  }
 };
 
 } // namespace facebook::eden

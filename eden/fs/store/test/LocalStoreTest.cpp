@@ -23,28 +23,23 @@ LocalStoreImplResult makeSqliteLocalStore(FaultInjector*) {
   auto tempDir = makeTempDir();
   auto store = std::make_shared<SqliteLocalStore>(
       AbsolutePathPiece{tempDir.path().string()} + "sqlite"_pc);
-  store->open();
   return {std::move(tempDir), std::move(store)};
 }
 
-TEST(OpenCloseLocalStoreSemanticsTest, closeBeforeOpen) {
+TEST_P(OpenCloseLocalStoreTest, closeBeforeOpen) {
   auto tempDir = makeTempDir();
-  auto store = std::make_shared<SqliteLocalStore>(
-      AbsolutePathPiece{tempDir.path().string()} + "sqlite"_pc);
-  store->close();
+  store_->close();
 }
 
-TEST(OpenCloseLocalStoreSemanticsTest, doubleClose) {
+TEST_P(OpenCloseLocalStoreTest, doubleClose) {
   auto tempDir = makeTempDir();
-  auto store = std::make_shared<SqliteLocalStore>(
-      AbsolutePathPiece{tempDir.path().string()} + "sqlite"_pc);
-  store->open();
-  store->close();
+  store_->open();
+  store_->close();
   // no exception
-  store->close();
+  store_->close();
 }
 
-void openLocalStore(std::shared_ptr<SqliteLocalStore> store) {
+void openLocalStore(std::shared_ptr<LocalStore> store) {
   try {
     store->open();
   } catch (std::runtime_error&) {
@@ -53,13 +48,11 @@ void openLocalStore(std::shared_ptr<SqliteLocalStore> store) {
   }
 }
 
-TEST(OpenCloseLocalStoreSemanticsTest, closeWhileOpen) {
+TEST_P(OpenCloseLocalStoreTest, closeWhileOpen) {
   auto tempDir = makeTempDir();
-  auto store = std::make_shared<SqliteLocalStore>(
-      AbsolutePathPiece{tempDir.path().string()} + "sqlite"_pc);
   // relying on the stress testing to capture the potential interleavings here.
-  std::thread openThread(openLocalStore, store);
-  store->close();
+  std::thread openThread(openLocalStore, store_);
+  store_->close();
   openThread.join();
 }
 
@@ -260,6 +253,16 @@ INSTANTIATE_TEST_CASE_P(
 INSTANTIATE_TEST_CASE_P(
     Sqlite,
     LocalStoreTest,
+    ::testing::Values(makeSqliteLocalStore));
+
+INSTANTIATE_TEST_CASE_P(
+    Memory,
+    OpenCloseLocalStoreTest,
+    ::testing::Values(makeMemoryLocalStore));
+
+INSTANTIATE_TEST_CASE_P(
+    Sqlite,
+    OpenCloseLocalStoreTest,
     ::testing::Values(makeSqliteLocalStore));
 #pragma clang diagnostic pop
 

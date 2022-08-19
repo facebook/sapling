@@ -21,6 +21,7 @@ namespace facebook::eden {
 class MemoryLocalStore : public LocalStore {
  public:
   explicit MemoryLocalStore();
+  void open() override;
   void close() override;
   void clearKeySpace(KeySpace keySpace) override;
   void compactKeySpace(KeySpace keySpace) override;

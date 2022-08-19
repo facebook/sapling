@@ -19,7 +19,7 @@ namespace facebook::eden {
 class SqliteLocalStore : public LocalStore {
  public:
   explicit SqliteLocalStore(AbsolutePathPiece pathToDb);
-  void open();
+  void open() override;
   void close() override;
   void clearKeySpace(KeySpace keySpace) override;
   void compactKeySpace(KeySpace keySpace) override;

@@ -56,6 +56,7 @@ class NullLocalStore final : public LocalStore {
   };
 
   void close() override {}
+  void open() override {}
   void clearKeySpace(KeySpace) override {}
   void compactKeySpace(KeySpace) override {}
 
@@ -89,6 +90,7 @@ struct BlobAccessTest : ::testing::Test {
         rawEdenConfig, ConfigReloadBehavior::NoReload);
     auto treeCache = TreeCache::create(edenConfig);
 
+    localStore->open();
     objectStore = ObjectStore::create(
         localStore,
         backingStore,

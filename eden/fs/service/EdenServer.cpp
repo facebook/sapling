@@ -997,15 +997,15 @@ bool EdenServer::openStorageEngine(
   if (storageEngine == "memory") {
     logger.log("Creating new memory store.");
     localStore_ = make_shared<MemoryLocalStore>();
+    localStore_->open();
   } else if (storageEngine == "sqlite") {
     const auto path = edenDir_.getPath() + RelativePathPiece{kSqlitePath};
     const auto parentDir = path.dirname();
     ensureDirectoryExists(parentDir);
     logger.log("Opening local SQLite store ", path, "...");
     folly::stop_watch<std::chrono::milliseconds> watch;
-    auto localStore = make_shared<SqliteLocalStore>(path);
-    localStore->open();
-    localStore_ = std::move(localStore);
+    localStore_ = make_shared<SqliteLocalStore>(path);
+    localStore_->open();
     logger.log(
         "Opened SQLite store in ",
         watch.elapsed().count() / 1000.0,
@@ -1015,12 +1015,11 @@ bool EdenServer::openStorageEngine(
     folly::stop_watch<std::chrono::milliseconds> watch;
     const auto rocksPath = edenDir_.getPath() + RelativePathPiece{kRocksDBPath};
     ensureDirectoryExists(rocksPath);
-    auto localStore = make_shared<RocksDbLocalStore>(
+    localStore_ = make_shared<RocksDbLocalStore>(
         rocksPath,
         serverState_->getStructuredLogger(),
         &serverState_->getFaultInjector());
-    localStore->open();
-    localStore_ = std::move(localStore);
+    localStore_->open();
     localStore_->enableBlobCaching.store(
         serverState_->getEdenConfig()->enableBlobCaching.getValue(),
         std::memory_order_relaxed);
