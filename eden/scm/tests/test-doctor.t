@@ -1,3 +1,4 @@
+#debugruntest-compatible
 #chg-compatible
 #debugruntest-compatible
 #inprocess-hg-incompatible

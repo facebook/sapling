@@ -1,9 +1,10 @@
+#debugruntest-compatible
 #chg-compatible
   $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
   $ disable treemanifest
-  $ . library.sh
+  $ . $RUNTESTDIR/library.sh
 
 Setup
 

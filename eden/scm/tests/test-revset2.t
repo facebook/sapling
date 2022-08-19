@@ -1,3 +1,4 @@
+#debugruntest-compatible
 #chg-compatible
 
   $ enable commitextras
@@ -39,9 +40,6 @@
   $ commit() {
   >   if [ -n "$BRANCH" ]; then
   >     hg commit --extra "branch=$BRANCH" "$@"
-  >     if [[ $BRANCH =~ '^[0-9a-zA-Z]+$' ]]; then
-  >         eval "export $BRANCH=`hg log -r . -T '{node}'`"
-  >     fi
   >   else
   >     hg commit "$@"
   >   fi

@@ -1,3 +1,4 @@
+#debugruntest-compatible
 #chg-compatible
 
   $ configure mutation-norecord
@@ -364,7 +365,7 @@ Test continue a stopped histedit
   │
   o  cb9a9f314b8b a
   
-  $ hg histedit 055a42cdd887 --commands - 2>&1 << EOF
+  $ hg histedit 055a42cdd887 --commands - << EOF
   > pick e860deea161a e
   > pick 055a42cdd887 d
   > exec false
@@ -436,7 +437,7 @@ Test continue a stopped histedit
 
 Test abort a stopped histedit with obsmarkers
 
-  $ hg histedit d8249471110a --commands - 2>&1 << EOF
+  $ hg histedit d8249471110a --commands - << EOF
   > pick 8800a5180f91 d
   > stop d8249471110a e
   > exec false
@@ -497,7 +498,7 @@ Test amend inside exec rule:
   o  cb9a9f314b8b a
   
 
-  $ hg histedit 8800a5180f91 --commands - 2>&1 << EOF
+  $ hg histedit 8800a5180f91 --commands - << EOF
   > pick 8800a5180f91 d
   > exec hg commit --amend -m "d (amended)"
   > pick 0d9a4961b100 f
@@ -522,7 +523,7 @@ on top of a public commit).  Histedit shouldn't try to obsolete the
 public commit.
 
   $ hg debugmakepublic ::d8249471110a
-  $ hg histedit --commands - 2>&1 << EOF
+  $ hg histedit --commands - << EOF
   > exec touch x; hg add x; hg commit -m "x (inserted)"
   > pick 6bd17118649c
   > pick 5aeafddb5246

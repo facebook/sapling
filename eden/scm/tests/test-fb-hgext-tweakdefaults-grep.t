@@ -1,4 +1,6 @@
+#debugruntest-compatible
 #chg-compatible
+#require xargs env python3.8
 
   $ enable tweakdefaults rebase
 
@@ -11,7 +13,7 @@ eden/scm/tests/fake-biggrep-client.py
   $ cd grepdir
   $ echo 'foobarbaz' > grepfile1
   $ echo 'foobarboo' > grepfile2
-  $ echo '-g' > grepfile3
+  $ printf '%s\n' '-g' > grepfile3
   $ mkdir subdir1
   $ echo 'foobar_subdir' > subdir1/subfile1
   $ mkdir subdir2

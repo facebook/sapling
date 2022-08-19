@@ -161,11 +161,11 @@ Old style deprecation warning
   (compatibility will be dropped after Mercurial-13.37, update your code.)
     util.nouideprecwarn('this is a test', '13.37')
 
-#endif
-
 (disabled outside of test run)
 
   $ HGEMITWARNINGS= hg nouiwarning
+#endif
+
 
 Test warning on config option access and registration
 

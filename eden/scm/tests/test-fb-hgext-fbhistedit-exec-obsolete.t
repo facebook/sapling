@@ -1,3 +1,4 @@
+#debugruntest-compatible
 #chg-compatible
 
   $ . "$TESTDIR/histedit-helpers.sh"
@@ -200,7 +201,7 @@ Multiple exec commands must work
 
 amend should just work fine
 
-  $ hg histedit 177f92b77385 --commands - 2>&1 << EOF
+  $ hg histedit 177f92b77385 --commands - << EOF
   > pick 177f92b77385 c
   > pick 055a42cdd887 d
   > pick e860deea161a e

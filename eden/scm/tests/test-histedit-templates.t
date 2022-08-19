@@ -1,3 +1,4 @@
+#debugruntest-compatible
 #chg-compatible
 
 Testing templating for histedit command
@@ -22,7 +23,7 @@ Setup
   
 Getting the JSON output for nodechanges
 
-  $ hg histedit -Tjson --commands - 2>&1 <<EOF
+  $ hg histedit -Tjson --commands - <<EOF
   > pick 28ad74487de9 Added c
   > pick 62615734edd5 Added d
   > pick 18d04c59bb5d Added a
@@ -43,7 +44,7 @@ Getting the JSON output for nodechanges
   │
   o  bff9e07c1807 Added c
   
-  $ hg histedit -T "{nodechanges|json}" --commands - 2>&1 <<EOF
+  $ hg histedit -T "{nodechanges|json}" --commands - <<EOF
   > pick bff9e07c1807 Added c
   > pick 201423b441c8 Added d
   > pick 109f8ec89544 Added a

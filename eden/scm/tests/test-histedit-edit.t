@@ -56,7 +56,7 @@ log before edit
   
 dirty a file
   $ echo a > g
-  $ hg histedit 177f92b77385 --commands - 2>&1 << EOF
+  $ hg histedit 177f92b77385 --commands - << EOF
   > EOF
   abort: uncommitted changes
   [255]
@@ -105,7 +105,7 @@ edit the plan via the editor
   
 
 edit the plan via --commands
-  $ hg histedit --edit-plan --commands - 2>&1 << EOF
+  $ hg histedit --edit-plan --commands - << EOF
   > edit e860deea161a e
   > pick 652413bf663e f
   > drop 3c6a8ed2ebe8 g
@@ -293,7 +293,7 @@ check saving last-message.txt, at first
   A f
 
   $ rm -f .hg/last-message.txt
-  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit tip --commands - 2>&1 << EOF
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit tip --commands - << EOF
   > mess 1fd3b2fe7754 f
   > EOF
   ==== before editing

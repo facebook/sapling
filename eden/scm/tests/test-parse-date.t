@@ -1,3 +1,4 @@
+#debugruntest-compatible
 #chg-compatible
 
 This runs with TZ="GMT"
@@ -261,11 +262,11 @@ Test issue 3764 (interpreting 'today' and 'yesterday')
   >>> _ = dates.write(today + '\n')
   >>> _ = dates.write(yesterday + '\n')
   >>> dates.close()
-  $ hg ci -d "`sed -n '1p' dates`" -m "today is a good day to code"
+  $ hg ci -d "`head -1 dates`" -m "today is a good day to code"
   $ hg log -d today --template '{desc}\n'
   today is a good day to code
   $ echo "goodbye" >> a
-  $ hg ci -d "`sed -n '2p' dates`" -m "the time traveler's code"
+  $ hg ci -d "`tail -1 dates`" -m "the time traveler's code"
   $ hg log -d yesterday --template '{desc}\n'
   the time traveler's code
   $ echo "foo" >> a

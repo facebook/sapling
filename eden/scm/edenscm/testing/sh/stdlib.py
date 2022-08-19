@@ -199,12 +199,12 @@ def cat(
 ) -> int:
     exitcode = 0
 
-    def reportmissing(path):
+    def reporterror(path, message):
         nonlocal exitcode
         exitcode = 1
-        stderr.write(f"cat: {path}: No such file or directory\n".encode())
+        stderr.write(f"cat: {path}: {message}\n".encode())
 
-    lines = list(_lines(fs, args, stdin, reportmissing=reportmissing))
+    lines = list(_lines(fs, args, stdin, reporterror=reporterror))
     stdout.write(b"".join(lines))
     return exitcode
 
@@ -686,6 +686,7 @@ def grep(args: List[str], arg0: str, stdin: BinaryIO, fs: ShellFS, stdout: Binar
     import re
 
     inverse = False
+    only = False
     extended = arg0 == "egrep"
 
     while args[0].startswith("-"):
@@ -695,6 +696,8 @@ def grep(args: List[str], arg0: str, stdin: BinaryIO, fs: ShellFS, stdout: Binar
         elif flag == "-e":
             extended = True
             arg0 = "egrep"
+        elif flag == "-o":
+            only = True
         elif flag == "--":
             break
         else:
@@ -708,7 +711,13 @@ def grep(args: List[str], arg0: str, stdin: BinaryIO, fs: ShellFS, stdout: Binar
     pat = re.compile(patstr)
     paths = args[1:]
     lines = [l.decode() for l in _lines(fs, paths, stdin)]
-    out = "".join(l for l in lines if bool(pat.search(l)) != inverse)
+    line_matches = [(l, pat.search(l)) for l in lines]
+    if only:
+        out = "".join(
+            f"{m.group()}\n" for l, m in line_matches if m and bool(m) != inverse
+        )
+    else:
+        out = "".join(l for l, m in line_matches if bool(m) != inverse)
     stdout.write(out.encode())
     if not out:
         return 1
@@ -844,7 +853,7 @@ def _lines(
     fs: ShellFS,
     paths: List[str],
     stdin: Optional[BinaryIO] = None,
-    reportmissing: Optional[Callable[[str], None]] = None,
+    reporterror: Optional[Callable[[str, str], None]] = None,
 ) -> Iterator[bytes]:
     """yield lines in paths and stdin"""
     if not paths:
@@ -858,9 +867,13 @@ def _lines(
                 with fs.open(path, "rb") as f:
                     yield from f
             except FileNotFoundError:
-                if reportmissing is None:
+                if reporterror is None:
                     raise
-                reportmissing(path)
+                reporterror(path, "No such file or directory")
+            except NotADirectoryError:
+                if reporterror is None:
+                    raise
+                reporterror(path, "Not a directory")
 
 
 cmdtable["["] = cmdtable["[["] = cmdtable["test"]

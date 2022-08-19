@@ -33,13 +33,9 @@ Test autocreatetrees
   $ hg commit -qAm 'add subdir/z'
 
   $ cd ../client
-  $ hg pull
-  pulling from ssh://user@dummy/master
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  $ hg up -r tip
+  $ hg pull -q
+
+  $ hg up -r 'desc("add subdir/z")'
   fetching tree '' 3171d1d9315ec883e4028e787f617120bd06cfa8
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   1 trees fetched over 0.00s

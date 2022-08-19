@@ -73,13 +73,16 @@ checkexe("cmp")
 checkexe("dd")
 checkexe("diff")
 checkexe("echo")
+checkexe("env")
 checkexe("gunzip")
 checkexe("gzip")
 checkexe("mkfifo")
+checkexe("python3.8")
 checkexe("tar")
 checkexe("tr")
 checkexe("umask")
 checkexe("unzip")
+checkexe("xargs")
 
 
 _checkfeaturecache = {}

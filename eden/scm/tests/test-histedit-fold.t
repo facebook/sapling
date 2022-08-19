@@ -1,3 +1,4 @@
+#debugruntest-compatible
 #chg-compatible
 
 Test histedit extension: Fold commands
@@ -56,7 +57,7 @@ log before edit
   o  8580ff50825a a
   
 
-  $ hg histedit ff2c9fa2018b --commands - 2>&1 <<EOF | fixbundle
+  $ hg histedit ff2c9fa2018b --commands - <<EOF | fixbundle
   > pick 1ddb6c90f2ee e
   > pick 178e35e0ce73 f
   > fold ff2c9fa2018b c
@@ -108,7 +109,7 @@ rollup will fold without preserving the folded commit's message or date
 
   $ OLDHGEDITOR=$HGEDITOR
   $ HGEDITOR=false
-  $ hg histedit 97d72e5f12c7 --commands - 2>&1 <<EOF | fixbundle
+  $ hg histedit 97d72e5f12c7 --commands - <<EOF | fixbundle
   > pick 97d72e5f12c7 b
   > roll 505a591af19e e
   > pick 575228819b7e f
@@ -171,7 +172,7 @@ check saving last-message.txt
   A c
   A d
   A f
-  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit 58c8f2bfc151 --commands - 2>&1 <<EOF
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit 58c8f2bfc151 --commands - <<EOF
   > pick 58c8f2bfc151 f
   > fold bab801520cec d
   > EOF
@@ -433,7 +434,7 @@ Folding with initial rename (issue3729)
   1c4f440a8085 rename
   6c795aa153cb a
 
-  $ hg histedit 1c4f440a8085 --commands - 2>&1 << EOF | fixbundle
+  $ hg histedit 1c4f440a8085 --commands - << EOF | fixbundle
   > pick 1c4f440a8085 rename
   > fold e0371e0426bc b
   > EOF
@@ -474,7 +475,7 @@ into the hook command.
 #else
   $ NODE="\$HG_NODE"
 #endif
-  $ hg histedit 6c795aa153cb --config hooks.commit="echo commit $NODE" --commands - 2>&1 << EOF | fixbundle
+  $ hg histedit 6c795aa153cb --config hooks.commit="echo commit $NODE" --commands - << EOF | fixbundle
   > pick 199b6bb90248 b
   > fold a1a953ffb4b0 c
   > pick 6c795aa153cb a
@@ -512,7 +513,7 @@ editors.
   > echo END >> "$TESTTMP/editorlog.txt"
   > echo merged foos > \$1
   > EOF
-  $ HGEDITOR="sh \"$TESTTMP/editor.sh\"" hg histedit 'max(desc(a))' --commands - 2>&1 <<EOF | fixbundle
+  $ HGEDITOR="sh \"$TESTTMP/editor.sh\"" hg histedit 'max(desc(a))' --commands - <<EOF | fixbundle
   > pick 578c7455730c 1 a
   > pick 0e01aeef5fa8 2 foo1
   > fold b7389cc4d66e 3 foo2

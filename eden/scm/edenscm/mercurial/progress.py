@@ -266,9 +266,8 @@ class engine(object):
 
 
 def getengine():
-    from . import error
-
-    raise error.ProgrammingError("call init() first")
+    init()
+    return getengine()
 
 
 def init():

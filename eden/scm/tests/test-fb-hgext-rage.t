@@ -1,6 +1,7 @@
+#debugruntest-compatible
 #chg-compatible
 
-  $ enable blackbox rage smartlog sparse
+  $ enable blackbox rage smartlog sparse share
 
   $ hg init repo
   $ cd repo
@@ -18,7 +19,6 @@
   $ rm out.txt
 
 Test with shared repo
-  $ setglobalconfig extensions.share=
   $ cd ..
   $ hg share repo repo2
   updating working directory
