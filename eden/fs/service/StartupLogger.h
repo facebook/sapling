@@ -12,7 +12,7 @@
 #include <folly/Range.h>
 #include <folly/lang/Assume.h>
 #include <folly/logging/LogLevel.h>
-#include <gflags/gflags_declare.h>
+#include <folly/portability/GFlags.h>
 #include <memory>
 #include <optional>
 #include "eden/fs/config/EdenConfig.h"
