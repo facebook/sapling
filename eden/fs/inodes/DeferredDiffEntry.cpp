@@ -121,7 +121,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       // Tree in the source control state, we have to record the files from the
       // Tree as removed. We can delegate this work to the source control tree
       // differ.
-      context_->callback->removedPath(getPath(), scmEntries_[0].getDType());
+      context_->callback->removedPath(getPath(), scmEntries_[0].getDtype());
       return diffRemovedTree(context_, getPath(), scmEntries_[0].getHash());
     }
 
@@ -139,7 +139,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
 
         // If it didn't exactly match any of the trees, then just diff with the
         // first scmEntry.
-        context_->callback->modifiedPath(getPath(), scmEntries_[0].getDType());
+        context_->callback->modifiedPath(getPath(), scmEntries_[0].getDtype());
         auto contentsHash = contents->treeHash.value();
         contents.unlock();
         return diffTrees(
@@ -177,7 +177,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       // tree as untracked/ignored.
       auto path = getPath();
       XLOG(DBG5) << "removed file: " << path;
-      context_->callback->removedPath(path, scmEntries_[0].getDType());
+      context_->callback->removedPath(path, scmEntries_[0].getDtype());
       context_->callback->addedPath(path, inode->getType());
       auto treeInode = inode.asTreePtr();
       if (isIgnored_ && !context_->listIgnored) {

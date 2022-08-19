@@ -64,7 +64,7 @@ void processRemovedSide(
     RelativePathPiece currentPath,
     const Tree::value_type& scmEntry) {
   context->callback->removedPath(
-      currentPath + scmEntry.first, scmEntry.second.getDType());
+      currentPath + scmEntry.first, scmEntry.second.getDtype());
   if (!scmEntry.second.isTree()) {
     return;
   }
@@ -103,9 +103,9 @@ void processAddedSide(
   }
 
   if (!entryIgnored) {
-    context->callback->addedPath(entryPath, wdEntry.second.getDType());
+    context->callback->addedPath(entryPath, wdEntry.second.getDtype());
   } else if (context->listIgnored) {
-    context->callback->ignoredPath(entryPath, wdEntry.second.getDType());
+    context->callback->ignoredPath(entryPath, wdEntry.second.getDtype());
   } else {
     // Don't bother reporting this ignored file since
     // listIgnored is false.
@@ -163,7 +163,7 @@ void processBothPresent(
               scmEntry.second.getHash(), wdEntry.second.getHash())) {
         return;
       }
-      context->callback->modifiedPath(entryPath, wdEntry.second.getDType());
+      context->callback->modifiedPath(entryPath, wdEntry.second.getDtype());
       auto childFuture = diffTrees(
           context,
           entryPath,
@@ -177,14 +177,14 @@ void processBothPresent(
       // Add a ADDED entry for this path and a removal of the directory
       if (entryIgnored) {
         if (context->listIgnored) {
-          context->callback->ignoredPath(entryPath, wdEntry.second.getDType());
+          context->callback->ignoredPath(entryPath, wdEntry.second.getDtype());
         }
       } else {
-        context->callback->addedPath(entryPath, wdEntry.second.getDType());
+        context->callback->addedPath(entryPath, wdEntry.second.getDtype());
       }
 
       // Report everything in scmTree as REMOVED
-      context->callback->removedPath(entryPath, scmEntry.second.getDType());
+      context->callback->removedPath(entryPath, scmEntry.second.getDtype());
       auto childFuture =
           diffRemovedTree(context, entryPath, scmEntry.second.getHash());
       childFutures.add(std::move(entryPath), std::move(childFuture));
@@ -193,10 +193,10 @@ void processBothPresent(
     if (isTreeWD) {
       // file-to-tree
       // Add a REMOVED entry for this path
-      context->callback->removedPath(entryPath, scmEntry.second.getDType());
+      context->callback->removedPath(entryPath, scmEntry.second.getDtype());
 
       // Report everything in wdEntry as ADDED
-      context->callback->addedPath(entryPath, wdEntry.second.getDType());
+      context->callback->addedPath(entryPath, wdEntry.second.getDtype());
       auto childFuture = diffAddedTree(
           context, entryPath, wdEntry.second.getHash(), ignore, entryIgnored);
       childFutures.add(std::move(entryPath), std::move(childFuture));
@@ -208,7 +208,7 @@ void processBothPresent(
       // the same but the blobs would have different hashes
       // If the types are different, then this entry is definitely modified
       if (scmEntry.second.getType() != wdEntry.second.getType()) {
-        context->callback->modifiedPath(entryPath, wdEntry.second.getDType());
+        context->callback->modifiedPath(entryPath, wdEntry.second.getDtype());
       } else {
         // If Mercurial eventually switches to using blob IDs that are solely
         // based on the file contents (as opposed to file contents + history)
@@ -222,7 +222,7 @@ void processBothPresent(
           return collectAllSafe(scmFuture, wdFuture)
               .thenValue([entryPath = entryPath.copy(),
                           context,
-                          dtype = scmEntry.second.getDType()](
+                          dtype = scmEntry.second.getDtype()](
                              const std::tuple<Hash20, Hash20>& info) {
                 const auto& [scmHash, wdHash] = info;
                 if (scmHash != wdHash) {

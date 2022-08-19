@@ -107,7 +107,7 @@ class TreeEntry {
 #endif
   }
 
-  dtype_t getDType() const {
+  dtype_t getDtype() const {
     switch (type_) {
       case TreeEntryType::TREE:
         return dtype_t::Dir;

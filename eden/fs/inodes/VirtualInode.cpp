@@ -43,7 +43,7 @@ dtype_t VirtualInode::getDtype() const {
         } else if constexpr (std::is_same_v<T, TreePtr>) {
           return dtype_t::Dir;
         } else if constexpr (std::is_same_v<T, TreeEntry>) {
-          return arg.getDType();
+          return arg.getDtype();
         } else {
           static_assert(always_false_v<T>, "non-exhaustive visitor!");
         }

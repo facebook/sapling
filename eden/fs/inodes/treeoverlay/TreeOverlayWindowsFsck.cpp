@@ -374,7 +374,7 @@ void populateOverlayState(
 
 void populateScmState(FsckFileState& state, const TreeEntry& treeEntry) {
   state.scmHash = treeEntry.getHash();
-  state.scmDtype = treeEntry.getDType();
+  state.scmDtype = treeEntry.getDtype();
   state.inScm = true;
 }
 

@@ -72,64 +72,19 @@ struct TreeInodePtrRoot {
   }
   /** Returns true if we should call getOrLoadChildTree() for the given
    * ENTRY.  We only do this if the child is already materialized */
-  template <typename ENTRY>
-  bool entryShouldLoadChildTree(const ENTRY& entry) {
-    return entry.second.isMaterialized();
-  }
   bool entryShouldLoadChildTree(const DirEntry* entry) {
     return entry->isMaterialized();
   }
 
-  /** Returns the name for a given ENTRY */
-  template <typename ENTRY>
-  PathComponentPiece entryName(const ENTRY& entry) {
-    return entry.first;
-  }
-
-  /** Returns true if the given ENTRY is a tree */
-  template <typename ENTRY>
-  bool entryIsTree(const ENTRY& entry) {
-    return entry.second.isDirectory();
-  }
-
-  /** Returns true if the given ENTRY is a tree (pointer version) */
+  /** Returns true if the given entry is a tree */
   bool entryIsTree(const DirEntry* entry) {
     return entry->isDirectory();
   }
 
   /** Returns true if we should prefetch the blob content for the entry.
    * We only do this if the child is not already materialized */
-  template <typename ENTRY>
-  bool entryShouldPrefetch(const ENTRY& entry) {
-    return !entry.second.isMaterialized() && !entryIsTree(entry);
-  }
   bool entryShouldPrefetch(const DirEntry* entry) {
     return !entry->isMaterialized() && !entryIsTree(entry);
-  }
-
-  /** Returns the hash for the given ENTRY */
-  template <typename ENTRY>
-  const ObjectId entryHash(const ENTRY& entry) {
-    return entry.second.getHash();
-  }
-  const ObjectId entryHash(const DirEntry* entry) {
-    return entry->getHash();
-  }
-
-  template <typename ENTRY>
-  GlobNode::GlobResult entryToResult(
-      RelativePath&& entryPath,
-      const ENTRY& entry,
-      const RootId& originRootId) {
-    return this->entryToResult(
-        std::move(entryPath), &entry.second, originRootId);
-  }
-  GlobNode::GlobResult entryToResult(
-      RelativePath&& entryPath,
-      const DirEntry* entry,
-      const RootId& originRootId) {
-    return GlobNode::GlobResult{
-        std::move(entryPath), entry->getDtype(), originRootId};
   }
 };
 
@@ -165,8 +120,8 @@ struct TreeRoot {
       ObjectFetchContext&) {
     throw std::runtime_error("impossible to get here");
   }
-  template <typename ENTRY>
-  bool entryShouldLoadChildTree(const ENTRY&) {
+
+  bool entryShouldLoadChildTree(const TreeEntry*) {
     return false;
   }
 
@@ -179,44 +134,13 @@ struct TreeRoot {
     return nullptr;
   }
 
-  PathComponentPiece entryName(const Tree::value_type& entry) {
-    return entry.first;
-  }
-
-  bool entryIsTree(const Tree::value_type& entry) {
-    return entry.second.isTree();
-  }
   bool entryIsTree(const TreeEntry* entry) {
     return entry->isTree();
   }
 
   // We always need to prefetch file children of a raw Tree
-  template <typename ENTRY>
-  bool entryShouldPrefetch(const ENTRY& entry) {
+  bool entryShouldPrefetch(const TreeEntry* entry) {
     return !entryIsTree(entry);
-  }
-
-  const ObjectId entryHash(const Tree::value_type& entry) {
-    return entry.second.getHash();
-  }
-  const ObjectId entryHash(const TreeEntry* entry) {
-    return entry->getHash();
-  }
-
-  GlobNode::GlobResult entryToResult(
-      RelativePath&& entryPath,
-      const TreeEntry* entry,
-      const RootId& originRootId) {
-    return GlobNode::GlobResult{
-        std::move(entryPath), entry->getDType(), originRootId};
-  }
-
-  GlobNode::GlobResult entryToResult(
-      RelativePath&& entryPath,
-      const Tree::value_type& entry,
-      const RootId& originRootId) {
-    return this->entryToResult(
-        std::move(entryPath), &entry.second, originRootId);
   }
 };
 } // namespace
@@ -331,7 +255,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateImpl(
             recurse.emplace_back(name, node);
           } else {
             futures.emplace_back(
-                store->getTree(root.entryHash(entry), context)
+                store->getTree(entry->getHash(), context)
                     .thenValue([candidateName = rootPath + name,
                                 store,
                                 &context,
@@ -364,10 +288,10 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateImpl(
           // Matched!
           if (node->isLeaf_) {
             globResult.wlock()->emplace_back(
-                root.entryToResult(rootPath + name, entry, originRootId));
+                rootPath + name, entry->getDtype(), originRootId);
 
             if (fileBlobsToPrefetch && root.entryShouldPrefetch(entry)) {
-              fileBlobsToPrefetch->wlock()->emplace_back(root.entryHash(entry));
+              fileBlobsToPrefetch->wlock()->emplace_back(entry->getHash());
             }
           }
 
@@ -377,19 +301,20 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateImpl(
       } else {
         // We need to match it out of the entries in this inode
         for (auto& entry : root.iterate(contents)) {
-          auto name = root.entryName(entry);
+          PathComponentPiece name = entry.first;
           if (node->alwaysMatch_ || node->matcher_.match(name.stringPiece())) {
             if (node->isLeaf_) {
               globResult.wlock()->emplace_back(
-                  root.entryToResult(rootPath + name, entry, originRootId));
-              if (fileBlobsToPrefetch && root.entryShouldPrefetch(entry)) {
+                  rootPath + name, entry.second.getDtype(), originRootId);
+              if (fileBlobsToPrefetch &&
+                  root.entryShouldPrefetch(&entry.second)) {
                 fileBlobsToPrefetch->wlock()->emplace_back(
-                    root.entryHash(entry));
+                    entry.second.getHash());
               }
             }
             // Not the leaf of a pattern; if this is a dir, we need to
             // recurse
-            recurseIfNecessary(name, node.get(), entry);
+            recurseIfNecessary(name, node.get(), &entry.second);
           }
         }
       }
@@ -520,15 +445,15 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
   {
     const auto& contents = root.lockContents();
     for (auto& entry : root.iterate(contents)) {
-      auto candidateName = startOfRecursive + root.entryName(entry);
+      auto candidateName = startOfRecursive + entry.first;
 
       for (auto& node : recursiveChildren_) {
         if (node->alwaysMatch_ ||
             node->matcher_.match(candidateName.stringPiece())) {
-          globResult.wlock()->emplace_back(root.entryToResult(
-              rootPath + candidateName.copy(), entry, originRootId));
-          if (fileBlobsToPrefetch && root.entryShouldPrefetch(entry)) {
-            fileBlobsToPrefetch->wlock()->emplace_back(root.entryHash(entry));
+          globResult.wlock()->emplace_back(
+              rootPath + candidateName, entry.second.getDtype(), originRootId);
+          if (fileBlobsToPrefetch && root.entryShouldPrefetch(&entry.second)) {
+            fileBlobsToPrefetch->wlock()->emplace_back(entry.second.getHash());
           }
           // No sense running multiple matches for this same file.
           break;
@@ -537,12 +462,12 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
 
       // Remember to recurse through child dirs after we've released
       // the lock on the contents.
-      if (root.entryIsTree(entry)) {
-        if (root.entryShouldLoadChildTree(entry)) {
+      if (root.entryIsTree(&entry.second)) {
+        if (root.entryShouldLoadChildTree(&entry.second)) {
           subDirNames.emplace_back(std::move(candidateName));
         } else {
           futures.emplace_back(
-              store->getTree(root.entryHash(entry), context)
+              store->getTree(entry.second.getHash(), context)
                   .thenValue([candidateName = std::move(candidateName),
                               rootPath = rootPath.copy(),
                               store,
