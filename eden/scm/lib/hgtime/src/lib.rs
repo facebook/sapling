@@ -157,7 +157,7 @@ impl HgTime {
                     .ok()
                     .and_then(|duration| Self::now().and_then(|n| n - duration.as_secs()))
             }
-            _ => Self::parse_absolute(date, default_date_lower),
+            _ => Self::parse_absolute(date, &default_date_lower),
         }
     }
 
@@ -230,11 +230,11 @@ impl HgTime {
                 }
             }
             _ => {
-                let start = Self::parse_absolute(date, default_date_lower);
-                let end = Self::parse_absolute(date, default_date_upper::<N31>)
-                    .or_else(|| Self::parse_absolute(date, default_date_upper::<N30>))
-                    .or_else(|| Self::parse_absolute(date, default_date_upper::<N29>))
-                    .or_else(|| Self::parse_absolute(date, default_date_upper::<N28>))
+                let start = Self::parse_absolute(date, &default_date_lower);
+                let end = Self::parse_absolute(date, &|c| default_date_upper(c, "31"))
+                    .or_else(|| Self::parse_absolute(date, &|c| default_date_upper(c, "30")))
+                    .or_else(|| Self::parse_absolute(date, &|c| default_date_upper(c, "29")))
+                    .or_else(|| Self::parse_absolute(date, &|c| default_date_upper(c, "28")))
                     .and_then(|end| end + 1);
                 if let (Some(start), Some(end)) = (start, end) {
                     Some(start..end)
@@ -251,7 +251,7 @@ impl HgTime {
     ///
     /// `default_date` takes a format char, for example, `H`, and returns a
     /// default value of it.
-    fn parse_absolute(date: &str, default_date: fn(char) -> &'static str) -> Option<Self> {
+    fn parse_absolute(date: &str, default_date: &dyn Fn(char) -> &'static str) -> Option<Self> {
         let date = date.trim();
 
         // Hg internal format. "unixtime offset"
@@ -490,46 +490,13 @@ fn default_date_lower(format_char: char) -> &'static str {
     }
 }
 
-trait ToStaticStr {
-    fn to_static_str() -> &'static str;
-}
-
-struct N31;
-struct N30;
-struct N29;
-struct N28;
-
-impl ToStaticStr for N31 {
-    fn to_static_str() -> &'static str {
-        "31"
-    }
-}
-
-impl ToStaticStr for N30 {
-    fn to_static_str() -> &'static str {
-        "30"
-    }
-}
-
-impl ToStaticStr for N29 {
-    fn to_static_str() -> &'static str {
-        "29"
-    }
-}
-
-impl ToStaticStr for N28 {
-    fn to_static_str() -> &'static str {
-        "28"
-    }
-}
-
 /// Upper bound. Assume a month has `N::to_static_str()` days.
-fn default_date_upper<N: ToStaticStr>(format_char: char) -> &'static str {
+fn default_date_upper(format_char: char, max_day: &'static str) -> &'static str {
     match format_char {
         'H' => "23",
         'M' | 'S' => "59",
         'm' => "12",
-        'd' => N::to_static_str(),
+        'd' => max_day,
         _ => unreachable!(),
     }
 }
