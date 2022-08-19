@@ -216,6 +216,11 @@ pub struct RepoConfig {
     pub hg_sync_config: Option<HgSyncConfig>,
     /// Configuration related to hg-sync job for backup repos
     pub backup_hg_sync_config: Option<HgSyncConfig>,
+    /// Flag that determines if the repo is shallow sharded or deep sharded,
+    /// shallow-sharded: Requests are sharded but repo is on every server
+    /// deep-sharded: In addition to requests, repo is also sharded, i.e. present
+    /// on select servers.
+    pub deep_sharded: bool,
 }
 
 /// Backup repo configuration
