@@ -23,6 +23,8 @@ from __future__ import absolute_import
 
 import errno
 
+from collections.abc import MutableMapping, MutableSet
+
 from bindings import checkout as nativecheckout
 from edenscm.mercurial import (
     bookmarks,
@@ -54,7 +56,7 @@ from edenscm.mercurial import (
     visibility,
 )
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import nullid, nullrev, short
+from edenscm.mercurial.node import hex, nullid, nullrev, short
 
 
 release = lock.release
@@ -152,6 +154,97 @@ def _ctxdesc(ctx):
     return desc
 
 
+class RevToRevCompatMap(MutableMapping):
+    """{rev: rev} mapping backed by {node: node}
+
+    This allows changelog to reassign node to different revs, which can happen
+    with segmented changelog backend, for example:
+
+        with repo.transaction(...):
+            node = repo.commitctx(...)      # dag change is buffered in memory
+            rev1 = repo.changelog.rev(node) # could be 1<<56.
+            # transaction close - write to disk and might reassign revs,
+            # especially when devel.segmented-changelog-rev-compat=true
+        rev2 = repo.changelog.rev(node)  # could be 0, different from rev1
+
+    Ideally all callsites migrate to use nodes directly. However that involves
+    too many places to migrate confidently without a strict type checker.
+    """
+
+    def __init__(self, repo, state=None):
+        self.repo = repo
+        self.node2node = {}
+        if state:
+            for k, v in state.items():
+                self[k] = v
+
+    def __setitem__(self, rev_key, rev_value):
+        node_key = self.repo.changelog.node(rev_key)
+        node_value = self.repo.changelog.node(rev_value)
+        self.node2node[node_key] = node_value
+        self._invalidate()
+
+    def __getitem__(self, rev):
+        return self._rev2rev.__getitem__(rev)
+
+    def __delitem__(self, rev):
+        node = self.repo.changelog.node(rev)
+        del self.node2node[node]
+        self._invalidate()
+
+    def __iter__(self):
+        return iter(self._rev2rev)
+
+    def __len__(self):
+        return len(self.node2node)
+
+    @util.propertycache
+    def _rev2rev(self):
+        rev = self.repo.changelog.rev
+        return {rev(k): rev(v) for k, v in self.node2node.items()}
+
+    def _invalidate(self):
+        self.__dict__.pop("_rev2rev", None)
+
+
+class RevCompatSet(MutableSet):
+    """see also RevToRevCompatMap. {rev} backed by {node}"""
+
+    def __init__(self, repo, revs=None):
+        self.repo = repo
+        self.nodes = set()
+        if revs:
+            for r in revs:
+                self.add(r)
+
+    def __contains__(self, rev):
+        return rev in self._revs
+
+    def __iter__(self):
+        return iter(self._revs)
+
+    def __len__(self):
+        return len(self.nodes)
+
+    def add(self, rev):
+        node = self.repo.changelog.node(rev)
+        self.nodes.add(node)
+        self._invalidate()
+
+    def discard(self, rev):
+        node = self.repo.changelog.node(rev)
+        self.nodes.discard(node)
+        self._invalidate()
+
+    @util.propertycache
+    def _revs(self):
+        rev = self.repo.changelog.rev
+        return {rev(n) for n in self.nodes}
+
+    def _invalidate(self):
+        self.__dict__.pop("_revs", None)
+
+
 class rebaseruntime(object):
     """This class is a container for rebase runtime state"""
 
@@ -178,10 +271,10 @@ class rebaseruntime(object):
         # Mapping between the old revision id and either what is the new rebased
         # revision or what needs to be done with the old revision. The state
         # dict will be what contains most of the rebase progress state.
-        self.state = {}
+        self.state = RevToRevCompatMap(repo)
         self.activebookmark = None
-        self.destmap = {}
-        self.skipped = set()
+        self.destmap = RevToRevCompatMap(repo)
+        self.skipped = RevCompatSet(repo)
 
         self.collapsef = opts.get("collapse", False)
         self.collapsemsg = cmdutil.logmessage(repo, opts)
@@ -193,8 +286,8 @@ class rebaseruntime(object):
             self.extrafns = [e]
 
         self.keepf = opts.get("keep", False)
-        self.obsoletenotrebased = {}
-        self.obsoletewithoutsuccessorindestination = set()
+        self.obsoletenotrebased = RevToRevCompatMap(repo)
+        self.obsoletewithoutsuccessorindestination = RevCompatSet(repo)
         self.inmemory = inmemory
 
     @property
@@ -227,15 +320,10 @@ class rebaseruntime(object):
         if self.activebookmark:
             activebookmark = pycompat.encodeutf8(self.activebookmark)
         f.write(b"%s\n" % activebookmark)
-        destmap = self.destmap
-        for d, v in pycompat.iteritems(self.state):
-            oldrev = repo[d].hex()
-            if v >= 0:
-                newrev = repo[v].hex()
-            else:
-                newrev = v
-            destnode = repo[destmap[d]].hex()
-            f.write(pycompat.encodeutf8("%s:%s:%s\n" % (oldrev, newrev, destnode)))
+        destmap = self.destmap.node2node
+        for d, v in pycompat.iteritems(self.state.node2node):
+            destnode = hex(destmap[d])
+            f.write(pycompat.encodeutf8("%s:%s:%s\n" % (hex(d), hex(v), destnode)))
         repo.ui.debug("rebase status stored\n")
 
     def restorestatus(self):
@@ -315,9 +403,9 @@ class rebaseruntime(object):
         repo.ui.debug("rebase status resumed\n")
 
         self.originalwd = originalwd
-        self.destmap = destmap
-        self.state = state
-        self.skipped = skipped
+        self.destmap = RevToRevCompatMap(repo, destmap)
+        self.state = RevToRevCompatMap(repo, state)
+        self.skipped = RevCompatSet(repo, skipped)
         self.collapsef = collapse
         self.keepf = keep
         self.external = external
@@ -329,14 +417,18 @@ class rebaseruntime(object):
         obsoleterevs:   iterable of all obsolete revisions in rebaseset
         destmap:        {srcrev: destrev} destination revisions
         """
-        self.obsoletenotrebased = {}
+        self.obsoletenotrebased = RevToRevCompatMap(self.repo)
         if not self.ui.configbool("experimental", "rebaseskipobsolete"):
             return
         obsoleteset = set(obsoleterevs)
         (
-            self.obsoletenotrebased,
-            self.obsoletewithoutsuccessorindestination,
+            obsoletenotrebased,
+            obsoletewithoutsuccessorindestination,
         ) = _computeobsoletenotrebased(self.repo, obsoleteset, destmap)
+        self.obsoletenotrebased = RevToRevCompatMap(self.repo, obsoletenotrebased)
+        self.obsoletewithoutsuccessorindestination = RevCompatSet(
+            self.repo, obsoletewithoutsuccessorindestination
+        )
         skippedset = set(self.obsoletenotrebased)
         skippedset.update(self.obsoletewithoutsuccessorindestination)
         if not mutation.enabled(self.repo):
@@ -399,7 +491,9 @@ class rebaseruntime(object):
                     hint=_("see 'hg help phases' for details"),
                 )
 
-        (self.originalwd, self.destmap, self.state) = result
+        (self.originalwd, destmap, state) = result
+        self.destmap = RevToRevCompatMap(self.repo, destmap)
+        self.state = RevToRevCompatMap(self.repo, state)
         if self.collapsef:
             dests = set(self.destmap.values())
             if len(dests) != 1:
