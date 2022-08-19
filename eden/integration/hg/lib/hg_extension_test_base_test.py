@@ -26,7 +26,7 @@ class HgExtensionTestBaseTest(EdenHgTestCase):
         hg_dir = os.path.join(self.mount, ".hg")
         self.assertTrue(os.path.isdir(hg_dir))
 
-        eden_extension = self.hg("config", "extensions.eden").rstrip()
+        eden_extension = self.hg("config", "extensions.eden", check=False).rstrip()
         self.assertEqual("", eden_extension)
 
         self.assertTrue(os.path.isfile(self.get_path("hello.txt")))
