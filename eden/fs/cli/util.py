@@ -707,7 +707,7 @@ class Spinner:
     operations with optional additional text.
     """
 
-    def __init__(self, header: str):
+    def __init__(self, header: str) -> None:
         self._header = header
         self._cursor = self.cursor()
 
@@ -717,16 +717,16 @@ class Spinner:
             for cursor in "|/-\\":
                 yield cursor
 
-    def spin(self, text: str = ""):
+    def spin(self, text: str = "") -> None:
         sys.stdout.write("\r\033[K")
         sys.stdout.write(f"{self._header} {text} ")
         sys.stdout.write(f"{next(self._cursor)} ")
         sys.stdout.flush()
 
-    def __enter__(self):
+    def __enter__(self) -> "Spinner":
         return self
 
-    def __exit__(self, ex_type, ex_value, ex_traceback):
+    def __exit__(self, ex_type, ex_value, ex_traceback) -> bool:
         sys.stdout.write("\n")
         sys.stdout.flush()
         return False
