@@ -2457,14 +2457,31 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
       toLogArg(*params->globs_ref()),
       globber.logString());
   auto& context = helper->getPrefetchFetchContext();
-  auto globFut =
-      globber
-          .glob(
-              server_->getMount(AbsolutePathPiece{*params->mountPoint_ref()}),
-              server_->getServerState(),
-              *params->globs_ref(),
-              context)
-          .ensure([helper = std::move(helper)] {});
+  auto mount = server_->getMount(AbsolutePathPiece{*params->mountPoint_ref()});
+  auto serverState = server_->getServerState();
+  auto& globs = *params->globs();
+
+  ImmediateFuture<std::unique_ptr<Glob>> globFut;
+  if (*params->background()) {
+    globFut = ImmediateFuture{folly::makeSemiFuture().deferValue(
+        [globber = std::move(globber),
+         mount = std::move(mount),
+         serverState = std::move(serverState),
+         globs = std::move(globs),
+         &context](auto&&) mutable {
+          return globber
+              .glob(
+                  std::move(mount),
+                  std::move(serverState),
+                  std::move(globs),
+                  context)
+              .semi();
+        })};
+  } else {
+    globFut = globber.glob(mount, serverState, std::move(globs), context);
+  }
+
+  globFut = std::move(globFut).ensure([helper = std::move(helper)] {});
   return detachIfBackgrounded(
              std::move(globFut),
              server_->getServerState(),
