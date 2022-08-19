@@ -73,6 +73,29 @@ const INVALID_OFFSET: i32 = i32::max_value();
 static DEFAULT_OFFSET: AtomicI32 = AtomicI32::new(INVALID_OFFSET);
 static FORCED_NOW: AtomicU64 = AtomicU64::new(0); // test only
 
+/// Call `TimeZone` methods on either `Local` (system default) or
+/// TimeZone specified by `set_default_offset`.
+///
+/// This cannot be made as a regular function because:
+/// - TimeZone<Local> and TimeZone<FixedOffset> are different types.
+/// - TimeZone<T> cannot be made into a trait object.
+macro_rules! with_local_timezone {
+    (|$tz:ident| { $($expr: tt)* }) => {
+        {
+            let offset = DEFAULT_OFFSET.load(Ordering::Acquire);
+            match FixedOffset::west_opt(offset) {
+                Some($tz) => {
+                    $($expr)*
+                },
+                None => {
+                    let $tz = Local;
+                    $($expr)*
+                },
+            }
+        }
+    };
+}
+
 impl HgTime {
     /// Supported Range. This is to be compatible with Python stdlib.
     ///
@@ -457,11 +480,7 @@ impl<Tz: TimeZone> TryFrom<LocalResult<DateTime<Tz>>> for HgTime {
 impl TryFrom<NaiveDateTime> for HgTime {
     type Error = ();
     fn try_from(time: NaiveDateTime) -> Result<Self, ()> {
-        let offset = DEFAULT_OFFSET.load(Ordering::SeqCst);
-        match FixedOffset::west_opt(offset) {
-            Some(offset) => offset.from_local_datetime(&time).try_into(),
-            None => Local.from_local_datetime(&time).try_into(),
-        }
+        with_local_timezone!(|tz| { tz.from_local_datetime(&time).try_into() })
     }
 }
 
