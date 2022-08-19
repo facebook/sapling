@@ -65,6 +65,7 @@ members = [
   "lib/edenfs-client",
   "lib/encoding",
   "lib/exchange",
+  "lib/formatter",
   "lib/fsinfo",
   "lib/fsyncglob",
   "lib/github",
