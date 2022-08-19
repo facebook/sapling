@@ -444,19 +444,23 @@ impl<Tz: TimeZone> TryFrom<DateTime<Tz>> for HgTime {
     }
 }
 
+impl<Tz: TimeZone> TryFrom<LocalResult<DateTime<Tz>>> for HgTime {
+    type Error = ();
+    fn try_from(time: LocalResult<DateTime<Tz>>) -> Result<Self, ()> {
+        match time {
+            LocalResult::Single(datetime) => HgTime::try_from(datetime),
+            _ => Err(()),
+        }
+    }
+}
+
 impl TryFrom<NaiveDateTime> for HgTime {
     type Error = ();
     fn try_from(time: NaiveDateTime) -> Result<Self, ()> {
         let offset = DEFAULT_OFFSET.load(Ordering::SeqCst);
         match FixedOffset::west_opt(offset) {
-            Some(offset) => match offset.from_local_datetime(&time) {
-                LocalResult::Single(datetime) => HgTime::try_from(datetime),
-                _ => Err(()),
-            },
-            None => match Local.from_local_datetime(&time) {
-                LocalResult::Single(local) => HgTime::try_from(local),
-                _ => Err(()),
-            },
+            Some(offset) => offset.from_local_datetime(&time).try_into(),
+            None => Local.from_local_datetime(&time).try_into(),
         }
     }
 }
