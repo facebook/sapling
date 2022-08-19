@@ -105,11 +105,8 @@ def uisetup(ui):
         _pid = ui.configint("progress", "fakedpid") or util.getpid()
 
         def wrapengine(orig):
-            origengine = progress._engine
             currentengine = orig()
-            if origengine != currentengine or not getattr(
-                currentengine, "_filewrapped", False
-            ):
+            if not getattr(currentengine, "_filewrapped", False):
 
                 class fileengine(currentengine.__class__):
                     def _show(self, now):

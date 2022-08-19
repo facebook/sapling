@@ -39,6 +39,7 @@ from . import (
     i18n,
     perftrace,
     profiling,
+    progress,
     pycompat,
     registrar,
     scmutil,
@@ -1008,6 +1009,8 @@ def _dispatch(req):
             ui_.setconfig("profiling", "enabled", "true", "--profile")
 
     with profiling.profile(lui) as profiler:
+        # progress behavior might be changed by extensions
+        progress.init()
         # Configure extensions in phases: uisetup, extsetup, cmdtable, and
         # reposetup
         extensions.loadall(lui)

@@ -265,18 +265,27 @@ class engine(object):
                 bar._updateestimation(now)
 
 
-_engine_pid = None
-_engine = None
-
-
 def getengine():
-    global _engine
-    global _engine_pid
-    pid = os.getpid()
-    if pid != _engine_pid:
-        _engine = engine()
-        _engine_pid = pid
-    return _engine
+    from . import error
+
+    raise error.ProgrammingError("call init() first")
+
+
+def init():
+    _engine_pid = None
+    _engine = None
+
+    def _getengine():
+        nonlocal _engine
+        nonlocal _engine_pid
+        pid = os.getpid()
+        if pid != _engine_pid:
+            _engine = engine()
+            _engine_pid = pid
+        return _engine
+
+    global getengine
+    getengine = _getengine
 
 
 @contextlib.contextmanager
