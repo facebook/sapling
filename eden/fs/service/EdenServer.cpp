@@ -1003,7 +1003,9 @@ bool EdenServer::openStorageEngine(
     ensureDirectoryExists(parentDir);
     logger.log("Opening local SQLite store ", path, "...");
     folly::stop_watch<std::chrono::milliseconds> watch;
-    localStore_ = make_shared<SqliteLocalStore>(path);
+    auto localStore = make_shared<SqliteLocalStore>(path);
+    localStore->open();
+    localStore_ = std::move(localStore);
     logger.log(
         "Opened SQLite store in ",
         watch.elapsed().count() / 1000.0,

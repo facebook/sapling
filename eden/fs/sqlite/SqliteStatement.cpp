@@ -11,9 +11,9 @@
 
 namespace facebook::eden {
 SqliteStatement::SqliteStatement(
-    folly::Synchronized<sqlite3*>::LockedPtr& db,
+    LockedSqliteConnection& db,
     folly::StringPiece query)
-    : db_{*db} {
+    : db_{db->db} {
   checkSqliteResult(
       db_,
       sqlite3_prepare_v3(

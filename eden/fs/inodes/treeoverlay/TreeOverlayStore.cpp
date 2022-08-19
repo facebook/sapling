@@ -40,7 +40,7 @@ constexpr size_t kBatchInsertSize = 8;
 } // namespace
 
 struct TreeOverlayStore::StatementCache {
-  explicit StatementCache(SqliteDatabase::Connection& db)
+  explicit StatementCache(LockedSqliteConnection& db)
       : deleteParent{db, "DELETE FROM ", kEntryTable, " WHERE parent = ?"},
         selectTree{
             db,
@@ -94,7 +94,7 @@ struct TreeOverlayStore::StatementCache {
         } {}
 
   PersistentSqliteStatement makeBatchInsert(
-      SqliteDatabase::Connection& db,
+      LockedSqliteConnection& db,
       size_t size) {
     constexpr folly::StringPiece values_fmt = "(?,?,?,?,?,?)";
     fmt::memory_buffer stmt_buffer;

@@ -9,6 +9,8 @@
 
 #include <folly/Synchronized.h>
 #include <sqlite3.h>
+
+#include "eden/fs/sqlite/SqliteConnection.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
@@ -19,7 +21,7 @@ void checkSqliteResult(sqlite3* db, int result);
 /** A helper class for managing a handle to a sqlite database. */
 class SqliteDatabase {
  public:
-  using Connection = folly::Synchronized<sqlite3*>::LockedPtr;
+  using DelayOpeningDB = folly::Unit;
 
   constexpr static struct InMemory {
   } inMemory{};
@@ -29,13 +31,25 @@ class SqliteDatabase {
    * The database will be created if it didn't already exist.
    */
   explicit SqliteDatabase(AbsolutePathPiece path)
-      : SqliteDatabase(path.copy().c_str()) {}
+      : SqliteDatabase(path.copy().value()) {}
+
+  /** Constructs the SqliteDatabase object with out opening the database.
+   * openDb must be called before any other method.
+   */
+  SqliteDatabase(AbsolutePathPiece path, DelayOpeningDB);
 
   /**
    * Create a SQLite database in memory. It will throw an exception if the
    * database fails to open. This should be only used in testing.
    */
   explicit SqliteDatabase(InMemory) : SqliteDatabase(":memory:") {}
+
+  /**
+   * Open a handle to the database at the specified path.
+   * Will throw an exception if the database fails to open.
+   * The database will be created if it didn't already exist.
+   */
+  void openDb();
 
   // Not copyable...
   SqliteDatabase(const SqliteDatabase&) = delete;
@@ -54,7 +68,7 @@ class SqliteDatabase {
 
   /** Obtain a locked database pointer suitable for passing
    * to the SqliteStatement class. */
-  Connection lock();
+  LockedSqliteConnection lock();
 
   /**
    * Executes a SQLite transaction. If the lambda body throws any error, the
@@ -70,16 +84,18 @@ class SqliteDatabase {
    * };
    * ```
    */
-  void transaction(const std::function<void(Connection&)>& func);
+  void transaction(const std::function<void(LockedSqliteConnection&)>& func);
 
   void checkpoint();
 
  private:
   struct StatementCache;
 
-  explicit SqliteDatabase(const char* address);
+  explicit SqliteDatabase(std::string address);
 
-  folly::Synchronized<sqlite3*> db_{nullptr};
+  std::string dbPath_;
+
+  folly::Synchronized<SqliteConnection> db_;
 
   std::unique_ptr<StatementCache> cache_;
 };

@@ -9,6 +9,8 @@
 
 #include <folly/String.h>
 #include <sqlite3.h>
+
+#include "eden/fs/sqlite/SqliteConnection.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
@@ -26,9 +28,7 @@ class SqliteStatement {
   /**
    * Prepare to execute the statement described by the `query` parameter
    */
-  SqliteStatement(
-      folly::Synchronized<sqlite3*>::LockedPtr& db,
-      folly::StringPiece sql);
+  SqliteStatement(LockedSqliteConnection& db, folly::StringPiece sql);
 
   /**
    * Join together the arguments as a single query string and prepare a
@@ -41,7 +41,7 @@ class SqliteStatement {
    */
   template <typename Arg1, typename Arg2, typename... Args>
   SqliteStatement(
-      folly::Synchronized<sqlite3*>::LockedPtr& db,
+      LockedSqliteConnection& db,
       Arg1&& first,
       Arg2&& second,
       Args&&... args)

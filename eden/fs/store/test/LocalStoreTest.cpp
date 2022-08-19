@@ -23,7 +23,44 @@ LocalStoreImplResult makeSqliteLocalStore(FaultInjector*) {
   auto tempDir = makeTempDir();
   auto store = std::make_shared<SqliteLocalStore>(
       AbsolutePathPiece{tempDir.path().string()} + "sqlite"_pc);
+  store->open();
   return {std::move(tempDir), std::move(store)};
+}
+
+TEST(OpenCloseLocalStoreSemanticsTest, closeBeforeOpen) {
+  auto tempDir = makeTempDir();
+  auto store = std::make_shared<SqliteLocalStore>(
+      AbsolutePathPiece{tempDir.path().string()} + "sqlite"_pc);
+  store->close();
+}
+
+TEST(OpenCloseLocalStoreSemanticsTest, doubleClose) {
+  auto tempDir = makeTempDir();
+  auto store = std::make_shared<SqliteLocalStore>(
+      AbsolutePathPiece{tempDir.path().string()} + "sqlite"_pc);
+  store->open();
+  store->close();
+  // no exception
+  store->close();
+}
+
+void openLocalStore(std::shared_ptr<SqliteLocalStore> store) {
+  try {
+    store->open();
+  } catch (std::runtime_error&) {
+    // sometimes the close might have happened before the open. so the open will
+    // fail. thats alright.
+  }
+}
+
+TEST(OpenCloseLocalStoreSemanticsTest, closeWhileOpen) {
+  auto tempDir = makeTempDir();
+  auto store = std::make_shared<SqliteLocalStore>(
+      AbsolutePathPiece{tempDir.path().string()} + "sqlite"_pc);
+  // relying on the stress testing to capture the potential interleavings here.
+  std::thread openThread(openLocalStore, store);
+  store->close();
+  openThread.join();
 }
 
 TEST_P(LocalStoreTest, testReadAndWriteBlob) {

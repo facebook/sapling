@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "eden/fs/sqlite/SqliteConnection.h"
 #include "eden/fs/sqlite/SqliteStatement.h"
 
 namespace facebook::eden {
@@ -23,9 +24,7 @@ namespace facebook::eden {
 class PersistentSqliteStatement {
  public:
   /** Prepare to execute the statement described by the `query` parameter */
-  PersistentSqliteStatement(
-      folly::Synchronized<sqlite3*>::LockedPtr& db,
-      folly::StringPiece sql)
+  PersistentSqliteStatement(LockedSqliteConnection& db, folly::StringPiece sql)
       : stmt_(db, sql) {}
 
   /**
@@ -39,7 +38,7 @@ class PersistentSqliteStatement {
    */
   template <typename Arg1, typename Arg2, typename... Args>
   PersistentSqliteStatement(
-      folly::Synchronized<sqlite3*>::LockedPtr& db,
+      LockedSqliteConnection& db,
       Arg1&& first,
       Arg2&& second,
       Args&&... args)
@@ -81,7 +80,7 @@ class PersistentSqliteStatement {
    * database lock in order to use the prepared statement. This function will
    * also take care of resetting the state of the given statement.
    */
-  Guard get(folly::Synchronized<sqlite3*>::LockedPtr&) & {
+  Guard get(LockedSqliteConnection&) & {
     return Guard{stmt_};
   }
 

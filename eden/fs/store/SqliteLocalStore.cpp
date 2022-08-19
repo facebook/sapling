@@ -101,7 +101,10 @@ class SqliteWriteBatch : public LocalStore::WriteBatch {
 } // namespace
 
 SqliteLocalStore::SqliteLocalStore(AbsolutePathPiece pathToDb)
-    : db_(SqliteDatabase(pathToDb)) {
+    : db_(pathToDb, SqliteDatabase::DelayOpeningDB{}) {}
+
+void SqliteLocalStore::open() {
+  db_.openDb();
   {
     auto db = db_.lock();
 
