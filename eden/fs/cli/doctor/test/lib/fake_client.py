@@ -6,11 +6,14 @@
 
 # pyre-unsafe
 
-import binascii
+import os
+from collections import defaultdict
 from pathlib import Path
-from typing import Callable, List, NamedTuple, Optional, Union
+from typing import Dict, List, NamedTuple, Optional
 
 import facebook.eden.ttypes as eden_ttypes
+
+from .fake_mount_table import FakeMountTable
 
 
 class ResetParentsCommitsArgs(NamedTuple):
@@ -21,9 +24,18 @@ class ResetParentsCommitsArgs(NamedTuple):
 
 
 class FakeClient:
-    def __init__(self) -> None:
-        self._mounts = []
+    def __init__(self, eden_dir: Path, mount_table: FakeMountTable) -> None:
+        self._eden_dir = eden_dir
+        self._mount_table = mount_table
         self.set_parents_calls: List[ResetParentsCommitsArgs] = []
+
+        # pyre won't infer the Optional type if we express this as a lambda.
+        def _get_default_mount_state() -> Optional[eden_ttypes.MountState]:
+            return eden_ttypes.MountState.RUNNING
+
+        self._path_mount_state: Dict[
+            bytes, Optional[eden_ttypes.MountState]
+        ] = defaultdict(_get_default_mount_state)
 
     def __enter__(self) -> "FakeClient":
         return self
@@ -35,15 +47,22 @@ class FakeClient:
         self, path: Path, state: Optional[eden_ttypes.MountState]
     ) -> None:
         """This function allows tests to change the reported state of mounts."""
-        path_bytes = bytes(path)
-        for mount in self._mounts:
-            if mount.mountPoint == path_bytes:
-                mount.state = state
-                return
-        raise KeyError(f"no mount found at {path}")
+        self._path_mount_state[os.fsencode(path)] = state
 
-    def listMounts(self):
-        return self._mounts
+    def listMounts(self) -> List[eden_ttypes.MountInfo]:
+        result = []
+        for mount in self._mount_table.mounts:
+            mount_path = Path(os.fsdecode(mount.mount_point))
+            client_name = mount_path.parts[-1]
+            client_path = self._eden_dir / "clients" / client_name
+            thrift_mount_info = eden_ttypes.MountInfo(
+                mountPoint=mount.mount_point,
+                edenClientPath=os.fsencode(client_path),
+                state=self._path_mount_state[mount.mount_point],
+            )
+            result.append(thrift_mount_info)
+
+        return result
 
     def resetParentCommits(
         self,

@@ -54,7 +54,6 @@ class FakeEdenInstance:
         self._status = status
         self._build_info = build_info if build_info else {}
         self._config = config if config else {}
-        self._fake_client = FakeClient()
 
         self._eden_dir = Path(self._tmp_dir) / "eden"
         self._eden_dir.mkdir()
@@ -68,6 +67,8 @@ class FakeEdenInstance:
         self._hg_repo_by_path: Dict[Path, FakeHgRepo] = {}
         self.mount_table = FakeMountTable()
         self._next_dev_id = 10
+
+        self._fake_client = FakeClient(self._eden_dir, self.mount_table)
 
     @property
     def state_dir(self) -> Path:
@@ -146,14 +147,8 @@ class FakeEdenInstance:
                 st_uid=os.getuid(), st_dev=dev_id, st_mode=(stat.S_IFDIR | 0o755)
             )
 
-            # Tell the thrift client to report the mount as active
-            self._fake_client._mounts.append(
-                eden_ttypes.MountInfo(
-                    mountPoint=os.fsencode(full_path),
-                    edenClientPath=os.fsencode(state_dir),
-                    state=eden_ttypes.MountState.RUNNING,
-                )
-            )
+            # Add so that the thrift client will report mount as active
+            self.mount_table.add_mount(full_path)
 
             # Set up directories on disk that look like the mounted checkout
             if setup_path:
