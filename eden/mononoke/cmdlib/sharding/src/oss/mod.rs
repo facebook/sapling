@@ -33,4 +33,8 @@ impl ShardedProcessExecutor {
     pub async fn block_and_execute(&mut self, _logger: &Logger) -> Result<()> {
         unimplemented!("ShardedProcessExecutor is supported only for fbcode build")
     }
+
+    pub fn execute(&mut self, _logger: &Logger) {
+        unimplemented!("ShardedProcessExecutor is supported only for fbcode build")
+    }
 }

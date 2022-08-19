@@ -17,22 +17,30 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Error;
+use async_trait::async_trait;
 use clap::Parser;
 use cloned::cloned;
 use cmdlib::helpers::serve_forever;
 use cmdlib_logging::ScribeLoggingArgs;
 use connection_security_checker::ConnectionSecurityChecker;
 use environment::WarmBookmarksCacheDerivedData;
+use executor_lib::RepoShardedProcess;
+use executor_lib::RepoShardedProcessExecutor;
+use executor_lib::ShardedProcessExecutor;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
 use futures::future::FutureExt;
 use megarepo_api::MegarepoApi;
+use mononoke_api::repo::Repo;
 use mononoke_api::CoreContext;
 use mononoke_api::Mononoke;
 use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
+use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use mononoke_repos::MononokeRepos;
+use once_cell::sync::OnceCell;
 use panichandler::Fate;
 use permission_checker::DefaultAclProvider;
 use slog::info;
@@ -63,6 +71,8 @@ mod source_control_impl;
 mod specifiers;
 
 const SERVICE_NAME: &str = "mononoke_scs_server";
+const DEFAULT_SCOPE: &str = "global";
+const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;
 
 /// Mononoke Source Control Service Server
 #[derive(Parser)]
@@ -80,6 +90,104 @@ struct ScsServerArgs {
     /// Path for file in which to write the bound tcp address in rust std::net::SocketAddr format
     #[clap(long)]
     bound_address_file: Option<String>,
+    /// The name of the ShardManager service corresponding to this SCS region instance.
+    /// If this argument isn't provided, the service will operate in non-sharded mode.
+    #[clap(long, requires = "sharded-scope-name")]
+    sharded_service_name: Option<String>,
+    /// The scope of the ShardManager service that this SCS instance corresponds to.
+    #[clap(long, requires = "sharded-service-name")]
+    sharded_scope_name: Option<String>,
+}
+
+/// Struct representing the Source Control Service process.
+pub struct SCSProcess {
+    app: Arc<MononokeApp>,
+    repos: Arc<MononokeRepos<Repo>>,
+}
+
+impl SCSProcess {
+    fn new(app: Arc<MononokeApp>, repos: Arc<MononokeRepos<Repo>>) -> Self {
+        Self { app, repos }
+    }
+}
+
+#[async_trait]
+impl RepoShardedProcess for SCSProcess {
+    async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+        let logger = self.app.repo_logger(repo_name);
+        info!(&logger, "Setting up repo {} in SCS service", repo_name);
+        // Check if the input repo is already initialized. This can happen if the repo is a
+        // shallow-sharded repo, in which case it would already be initialized during service startup.
+        if self.repos.get_by_name(repo_name).is_none() {
+            // The input repo is a deep-sharded repo, so it needs to be added now.
+            self.app
+                .add_repo(&self.repos, repo_name)
+                .await
+                .with_context(|| {
+                    format!("Failure in setting up repo {} in SCS service", repo_name)
+                })?;
+            info!(&logger, "Completed repo {} setup in SCS service", repo_name);
+        } else {
+            info!(
+                &logger,
+                "Repo {} is already setup in SCS service", repo_name
+            );
+        }
+        Ok(Arc::new(SCSProcessExecutor {
+            repo_name: repo_name.to_string(),
+            repos: Arc::clone(&self.repos),
+            app: Arc::clone(&self.app),
+        }))
+    }
+}
+
+/// Struct representing the execution of SCS service
+/// over the context of a provided repo.
+pub struct SCSProcessExecutor {
+    repo_name: String,
+    app: Arc<MononokeApp>,
+    repos: Arc<MononokeRepos<Repo>>,
+}
+
+#[async_trait]
+impl RepoShardedProcessExecutor for SCSProcessExecutor {
+    async fn execute(&self) -> anyhow::Result<()> {
+        info!(
+            self.app.logger(),
+            "Serving repo {} in SCS service", &self.repo_name,
+        );
+        Ok(())
+    }
+
+    async fn stop(&self) -> anyhow::Result<()> {
+        let config = self
+            .app
+            .repo_config_by_name(&self.repo_name)
+            .with_context(|| {
+                format!(
+                    "Failure in stopping repo {}. The config for repo doesn't exist",
+                    &self.repo_name
+                )
+            })?;
+        // Check if the current repo is a deep-sharded or shallow-sharded repo. If the
+        // repo is deep-sharded, then remove it since SM wants some other host to serve it.
+        // If repo is shallow-sharded, then keep it since regardless of SM sharding, shallow
+        // sharded repos need to be present on each host.
+        if config.deep_sharded {
+            self.repos.remove(&self.repo_name);
+            info!(
+                self.app.logger(),
+                "No longer serving repo {} in SCS service.", &self.repo_name,
+            );
+        } else {
+            info!(
+                self.app.logger(),
+                "Continuing serving repo {} in SCS service because it's shallow-sharded.",
+                &self.repo_name,
+            );
+        }
+        Ok(())
+    }
 }
 
 #[fbinit::main]
@@ -147,7 +255,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             )
         }
     };
-
+    let mononoke_repos = mononoke.repos.clone();
     let monitoring_forever = {
         let monitoring_ctx = CoreContext::new_with_logger(fb, logger.clone());
         monitoring::monitoring_stats_submitter(monitoring_ctx, mononoke)
@@ -189,6 +297,28 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         let mut writer = File::create(bound_addr_path)?;
         writer.write_all(bound_addr.as_bytes())?;
         writer.write_all(b"\n")?;
+    }
+
+    if let Some(sharded_service_name) = args.sharded_service_name {
+        let scs_process = SCSProcess::new(app.clone(), mononoke_repos);
+        let logger = scs_process.app.logger().clone();
+        let scope = args
+            .sharded_scope_name
+            .unwrap_or_else(|| DEFAULT_SCOPE.to_string());
+        // The service name & scope needs to be 'static to satisfy SM contract
+        static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
+        static SM_SERVICE_SCOPE: OnceCell<String> = OnceCell::new();
+        let mut executor = ShardedProcessExecutor::new(
+            app.fb,
+            runtime.clone(),
+            &logger,
+            SM_SERVICE_NAME.get_or_init(|| sharded_service_name),
+            SM_SERVICE_SCOPE.get_or_init(|| scope),
+            SM_CLEANUP_TIMEOUT_SECS,
+            Arc::new(scs_process),
+            false, // disable shard (repo) level healing
+        )?;
+        executor.execute(&logger);
     }
 
     serve_forever(

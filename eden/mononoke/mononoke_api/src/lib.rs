@@ -91,7 +91,7 @@ define_stats! {
 
 /// An instance of Mononoke, which may manage multiple repositories.
 pub struct Mononoke {
-    repos: Arc<MononokeRepos<Repo>>,
+    pub repos: Arc<MononokeRepos<Repo>>,
 }
 
 impl Mononoke {

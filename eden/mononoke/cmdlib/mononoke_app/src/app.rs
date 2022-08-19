@@ -424,7 +424,11 @@ impl MononokeApp {
 
     /// Method responsible for constructing and adding a new repo to the
     /// passed-in MononokeRepos instance.
-    pub async fn add_repo<Repo>(&self, repos: &MononokeRepos<Repo>, repo_name: &str) -> Result<()>
+    pub async fn add_repo<Repo>(
+        &self,
+        repos: &Arc<MononokeRepos<Repo>>,
+        repo_name: &str,
+    ) -> Result<()>
     where
         Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
     {
@@ -440,7 +444,7 @@ impl MononokeApp {
 
     /// Method responsible for removing an existing repo based on the input
     /// repo-name from the passed-in MononokeRepos instance.
-    pub fn remove_repo<Repo>(&self, repos: &MononokeRepos<Repo>, repo_name: &str) {
+    pub fn remove_repo<Repo>(&self, repos: &Arc<MononokeRepos<Repo>>, repo_name: &str) {
         repos.remove(repo_name);
     }
 
@@ -448,7 +452,7 @@ impl MononokeApp {
     /// MononokeApp. The reload will involve reconstruction of the repos using
     /// the current version of the RepoConfig. The old repos will be dropped
     /// once all references to it cease to exist.
-    pub async fn reload_repos<Repo>(&self, repos: &MononokeRepos<Repo>) -> Result<()>
+    pub async fn reload_repos<Repo>(&self, repos: &Arc<MononokeRepos<Repo>>) -> Result<()>
     where
         Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
     {
