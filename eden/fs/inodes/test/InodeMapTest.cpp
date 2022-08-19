@@ -62,23 +62,37 @@ TEST(InodeMap, simpleLookups) {
 
   // Look up the tree inode by name first
   auto root = testMount.getEdenMount()->getRootInode();
-  auto srcTree =
+  auto srcTreeFut =
       root->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext())
-          .get();
+          .semi()
+          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
+  auto srcTree = std::move(srcTreeFut).get(0ms);
 
   // Next look up the tree by inode number
-  auto tree2 = inodeMap->lookupTreeInode(srcTree->getNodeId()).get();
+  auto tree2Fut = inodeMap->lookupTreeInode(srcTree->getNodeId())
+                      .semi()
+                      .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
+  auto tree2 = std::move(tree2Fut).get(0ms);
   EXPECT_EQ(srcTree, tree2);
   EXPECT_EQ(RelativePath{"src"}, tree2->getPath());
 
   // Next look up src/noop.c by name
-  auto noop =
+  auto noopFut =
       tree2->getOrLoadChild("noop.c"_pc, ObjectFetchContext::getNullContext())
-          .get();
+          .semi()
+          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
+  auto noop = std::move(noopFut).get(0ms);
   EXPECT_NE(srcTree->getNodeId(), noop->getNodeId());
 
   // And look up src/noop.c by inode ID
-  auto noop2 = inodeMap->lookupFileInode(noop->getNodeId()).get();
+  auto noop2Fut = inodeMap->lookupFileInode(noop->getNodeId())
+                      .semi()
+                      .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
+  auto noop2 = std::move(noop2Fut).get(0ms);
   EXPECT_EQ(noop, noop2);
   EXPECT_EQ(RelativePath{"src/noop.c"}, noop2->getPath());
 
@@ -359,30 +373,42 @@ TEST(InodeMap, unloadedUnlinkedTreesAreRemovedFromOverlay) {
   auto dir1ino = dir1->getNodeId();
   auto dir2ino = dir2->getNodeId();
 
-  dir1->unlink(
-          "file.txt"_pc,
-          InvalidationRequired::No,
-          ObjectFetchContext::getNullContext())
-      .get(0ms);
-  dir2->unlink(
-          "file.txt"_pc,
-          InvalidationRequired::No,
-          ObjectFetchContext::getNullContext())
-      .get(0ms);
+  auto fut = dir1->unlink(
+                     "file.txt"_pc,
+                     InvalidationRequired::No,
+                     ObjectFetchContext::getNullContext())
+                 .semi()
+                 .via(mount.getServerExecutor().get());
+  mount.drainServerExecutor();
+  std::move(fut).get(0ms);
+  fut = dir2->unlink(
+                "file.txt"_pc,
+                InvalidationRequired::No,
+                ObjectFetchContext::getNullContext())
+            .semi()
+            .via(mount.getServerExecutor().get());
+  mount.drainServerExecutor();
+  std::move(fut).get(0ms);
 
   // Test both having a positive and zero fuse reference counts.
   dir2->incFsRefcount();
 
-  root->rmdir(
-          "dir1"_pc,
-          InvalidationRequired::No,
-          ObjectFetchContext::getNullContext())
-      .get(0ms);
-  root->rmdir(
-          "dir2"_pc,
-          InvalidationRequired::No,
-          ObjectFetchContext::getNullContext())
-      .get(0ms);
+  fut = root->rmdir(
+                "dir1"_pc,
+                InvalidationRequired::No,
+                ObjectFetchContext::getNullContext())
+            .semi()
+            .via(mount.getServerExecutor().get());
+  mount.drainServerExecutor();
+  std::move(fut).get(0ms);
+  fut = root->rmdir(
+                "dir2"_pc,
+                InvalidationRequired::No,
+                ObjectFetchContext::getNullContext())
+            .semi()
+            .via(mount.getServerExecutor().get());
+  mount.drainServerExecutor();
+  std::move(fut).get(0ms);
 
   dir1.reset();
   dir2.reset();
@@ -535,15 +561,22 @@ TEST_F(
     InodePersistenceTakeoverTest,
     preservesInodeNumbersForLoadedInodesDuringTakeover_lookupFirstByNumber) {
   // Look up by number first.
-  EXPECT_EQ(
-      "dir",
-      edenMount->getInodeMap()->lookupInode(oldTreeId).get()->getLogPath());
-  EXPECT_EQ(
-      "dir/file1.txt",
-      edenMount->getInodeMap()->lookupInode(oldFile1Id).get()->getLogPath());
-  EXPECT_EQ(
-      "dir/file2.txt",
-      edenMount->getInodeMap()->lookupInode(oldFile2Id).get()->getLogPath());
+  auto oldTreeIdFut =
+      edenMount->getInodeMap()->lookupInode(oldTreeId).semi().via(
+          testMount.getServerExecutor().get());
+  auto oldFile1IdFut = edenMount->getInodeMap()
+                           ->lookupInode(oldFile1Id)
+                           .semi()
+                           .via(testMount.getServerExecutor().get());
+  auto oldFile2IdFut = edenMount->getInodeMap()
+                           ->lookupInode(oldFile2Id)
+                           .semi()
+                           .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
+
+  EXPECT_EQ("dir", std::move(oldTreeIdFut).get(0ms)->getLogPath());
+  EXPECT_EQ("dir/file1.txt", std::move(oldFile1IdFut).get(0ms)->getLogPath());
+  EXPECT_EQ("dir/file2.txt", std::move(oldFile2IdFut).get(0ms)->getLogPath());
 
   // Verify the same inodes can be looked up by name too.
   auto tree = testMount.getInode("dir"_relpath);

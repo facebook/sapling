@@ -154,6 +154,7 @@ TEST(RawEdenDispatcherTest, lookup_returns_valid_inode_for_bad_file) {
           .via(mount.getServerExecutor().get());
   builder.getStoredBlob("bad"_relpath)
       ->triggerError(std::runtime_error("failed to load"));
+  builder.setAllReady();
   mount.drainServerExecutor();
   auto entry = std::move(entryFuture).get(0ms);
   EXPECT_NE(0, entry.nodeid);

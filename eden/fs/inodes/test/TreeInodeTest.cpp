@@ -279,21 +279,27 @@ void runConcurrentModificationAndReaddirIteration(
                 randomName(), "symlink-target", InvalidationRequired::No);
             break;
           case 1: { // unlink
-            root->unlink(
-                    pickName(),
-                    InvalidationRequired::No,
-                    ObjectFetchContext::getNullContext())
-                .get(0ms);
+            auto fut = root->unlink(
+                               pickName(),
+                               InvalidationRequired::No,
+                               ObjectFetchContext::getNullContext())
+                           .semi()
+                           .via(mount.getServerExecutor().get());
+            mount.drainServerExecutor();
+            std::move(fut).get(0ms);
             break;
           }
           case 2: { // rename
-            root->rename(
-                    pickName(),
-                    root,
-                    pickName(),
-                    InvalidationRequired::No,
-                    ObjectFetchContext::getNullContext())
-                .get(0ms);
+            auto fut = root->rename(
+                               pickName(),
+                               root,
+                               pickName(),
+                               InvalidationRequired::No,
+                               ObjectFetchContext::getNullContext())
+                           .semi()
+                           .via(mount.getServerExecutor().get());
+            mount.drainServerExecutor();
+            std::move(fut).get(0ms);
             break;
           }
         }
@@ -557,8 +563,10 @@ TEST(TreeInode, addNewMaterializationsToInodeTraceBus) {
 }
 
 void collectResults(
+    TestMount& testMount,
     std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>
         results) {
+  testMount.drainServerExecutor();
   for (auto& result : results) {
     std::move(result.second).get(kFutureTimeout);
   }
@@ -574,7 +582,7 @@ TEST(TreeInode, getOrFindChildrenSimple) {
       somedir->getChildren(ObjectFetchContext::getNullContext(), false);
   EXPECT_EQ(1, result.size());
   EXPECT_THAT(result, testing::Contains(testing::Key("foo.txt"_pc)));
-  collectResults(std::move(result));
+  collectResults(mount, std::move(result));
 }
 
 TEST(TreeInode, getOrFindChildrenLoadInodes) {
@@ -591,7 +599,7 @@ TEST(TreeInode, getOrFindChildrenLoadInodes) {
   EXPECT_EQ(2, result.size());
   EXPECT_THAT(result, testing::Contains(testing::Key("bar.txt"_pc)));
   EXPECT_THAT(result, testing::Contains(testing::Key("foo.txt"_pc)));
-  collectResults(std::move(result));
+  collectResults(mount, std::move(result));
 }
 
 TEST(TreeInode, getOrFindChildrenMaterializedLoadedChild) {
@@ -607,7 +615,7 @@ TEST(TreeInode, getOrFindChildrenMaterializedLoadedChild) {
   EXPECT_EQ(2, result.size());
   EXPECT_THAT(result, testing::Contains(testing::Key("foo.txt"_pc)));
   EXPECT_THAT(result, testing::Contains(testing::Key("newfile.txt"_pc)));
-  collectResults(std::move(result));
+  collectResults(mount, std::move(result));
 }
 
 TEST(TreeInode, getOrFindChildrenMaterializedUnloadedChild) {
@@ -629,7 +637,7 @@ TEST(TreeInode, getOrFindChildrenMaterializedUnloadedChild) {
   EXPECT_THAT(result, testing::Contains(testing::Key("foo.txt"_pc)));
   EXPECT_THAT(result, testing::Contains(testing::Key("newfile.txt"_pc)));
   EXPECT_THAT(result, testing::Contains(testing::Key("zoo.txt"_pc)));
-  collectResults(std::move(result));
+  collectResults(mount, std::move(result));
 }
 
 TEST(TreeInode, getOrFindChildrenRemovedChild) {
@@ -639,12 +647,15 @@ TEST(TreeInode, getOrFindChildrenRemovedChild) {
   auto somedir = mount.getTreeInode("somedir"_relpath);
   somedir->mknod("newfile.txt"_pc, S_IFREG | 0740, 0, InvalidationRequired::No);
 
-  somedir
-      ->unlink(
-          "foo.txt"_pc,
-          InvalidationRequired::No,
-          ObjectFetchContext::getNullContext())
-      .get();
+  auto fut = somedir
+                 ->unlink(
+                     "foo.txt"_pc,
+                     InvalidationRequired::No,
+                     ObjectFetchContext::getNullContext())
+                 .semi()
+                 .via(mount.getServerExecutor().get());
+  mount.drainServerExecutor();
+  std::move(fut).get(0ms);
 
   auto result =
       somedir->getChildren(ObjectFetchContext::getNullContext(), false);
@@ -653,7 +664,7 @@ TEST(TreeInode, getOrFindChildrenRemovedChild) {
   EXPECT_THAT(
       result, testing::Not(testing::Contains(testing::Key("foo.txt"_pc))));
   EXPECT_THAT(result, testing::Contains(testing::Key("newfile.txt"_pc)));
-  collectResults(std::move(result));
+  collectResults(mount, std::move(result));
 }
 
 #endif

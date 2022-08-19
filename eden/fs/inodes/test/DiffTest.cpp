@@ -1669,13 +1669,16 @@ class DiffTestNonMateralized : public ::testing::Test {
   }
 
   std::unique_ptr<ScmStatus> diff(const RootId& hash) {
-    return testMount_.getEdenMount()
-        ->diff(
-            hash,
-            folly::CancellationToken{},
-            /*listIgnored=*/true,
-            /*enforceCurrentParent=*/false)
-        .get(10ms);
+    auto fut = testMount_.getEdenMount()
+                   ->diff(
+                       hash,
+                       folly::CancellationToken{},
+                       /*listIgnored=*/true,
+                       /*enforceCurrentParent=*/false)
+                   .semi()
+                   .via(testMount_.getServerExecutor().get());
+    testMount_.drainServerExecutor();
+    return std::move(fut).get(10ms);
   }
 
   void addFile(const std::string& path, const std::string& contents) {

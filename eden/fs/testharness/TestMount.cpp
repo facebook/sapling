@@ -489,8 +489,7 @@ void TestMount::addSymlink(
     folly::StringPiece pointsTo) {
   const RelativePathPiece relativePath{path};
   const auto parent = getTreeInode(relativePath.dirname());
-  (void)parent
-      ->symlink(relativePath.basename(), pointsTo, InvalidationRequired::No)
+  parent->symlink(relativePath.basename(), pointsTo, InvalidationRequired::No)
       .get();
 }
 #endif
@@ -546,24 +545,34 @@ void TestMount::move(folly::StringPiece src, folly::StringPiece dest) {
                         getTreeInode(destPath.dirname()),
                         destPath.basename(),
                         InvalidationRequired::No,
-                        ObjectFetchContext::getNullContext());
-  std::move(future).get();
+                        ObjectFetchContext::getNullContext())
+                    .semi()
+                    .via(getServerExecutor().get());
+  drainServerExecutor();
+  std::move(future).get(0ms);
 }
 
 std::string TestMount::readFile(folly::StringPiece path) {
-  return getFileInode(path)
-      ->readAll(
-          ObjectFetchContext::getNullContext(), CacheHint::LikelyNeededAgain)
-      .get();
+  auto fut = getFileInode(path)
+                 ->readAll(
+                     ObjectFetchContext::getNullContext(),
+                     CacheHint::LikelyNeededAgain)
+                 .semi()
+                 .via(getServerExecutor().get());
+  drainServerExecutor();
+  return std::move(fut).get(0ms);
 }
 
 bool TestMount::hasFileAt(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
   try {
-    auto child =
+    auto fut =
         edenMount_
             ->getInodeSlow(relativePath, ObjectFetchContext::getNullContext())
-            .get();
+            .semi()
+            .via(getServerExecutor().get());
+    drainServerExecutor();
+    auto child = std::move(fut).get(0ms);
     return child->getType() == dtype_t::Regular;
   } catch (const std::system_error& e) {
     if (e.code().value() == ENOENT) {
@@ -600,12 +609,15 @@ void TestMount::deleteFile(folly::StringPiece path) {
   removeFileWithAbsolutePath(absolutePath);
 #endif
 
-  treeInode
-      ->unlink(
-          relativePath.basename(),
-          InvalidationRequired::No,
-          ObjectFetchContext::getNullContext())
-      .get();
+  auto fut = treeInode
+                 ->unlink(
+                     relativePath.basename(),
+                     InvalidationRequired::No,
+                     ObjectFetchContext::getNullContext())
+                 .semi()
+                 .via(getServerExecutor().get());
+  drainServerExecutor();
+  std::move(fut).get(0ms);
 }
 
 void TestMount::rmdir(folly::StringPiece path) {
@@ -618,12 +630,15 @@ void TestMount::rmdir(folly::StringPiece path) {
   removeRecursively(absolutePath);
 #endif
 
-  treeInode
-      ->rmdir(
-          relativePath.basename(),
-          InvalidationRequired::No,
-          ObjectFetchContext::getNullContext())
-      .get();
+  auto fut = treeInode
+                 ->rmdir(
+                     relativePath.basename(),
+                     InvalidationRequired::No,
+                     ObjectFetchContext::getNullContext())
+                 .semi()
+                 .via(getServerExecutor().get());
+  drainServerExecutor();
+  std::move(fut).get(0ms);
 }
 
 #ifndef _WIN32
@@ -632,7 +647,11 @@ void TestMount::chmod(folly::StringPiece path, mode_t permissions) {
 
   DesiredMetadata desiredAttr;
   desiredAttr.mode = permissions;
-  inode->setattr(desiredAttr, ObjectFetchContext::getNullContext()).get();
+  auto fut = inode->setattr(desiredAttr, ObjectFetchContext::getNullContext())
+                 .semi()
+                 .via(getServerExecutor().get());
+  drainServerExecutor();
+  std::move(fut).get(0ms);
 }
 #endif
 
@@ -640,8 +659,12 @@ InodePtr TestMount::getInode(RelativePathPiece path) const {
   // Call future.get() with a timeout.  Generally in tests we expect the future
   // to be immediately ready.  We want to make sure the test does not hang
   // forever if something goes wrong.
-  return edenMount_->getInodeSlow(path, ObjectFetchContext::getNullContext())
-      .get(std::chrono::milliseconds(1));
+  auto fut =
+      edenMount_->getInodeSlow(path, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(getServerExecutor().get());
+  getServerExecutor()->drain();
+  return std::move(fut).get(std::chrono::milliseconds(100));
 }
 
 InodePtr TestMount::getInode(folly::StringPiece path) const {
@@ -665,10 +688,14 @@ FileInodePtr TestMount::getFileInode(folly::StringPiece path) const {
 }
 
 VirtualInode TestMount::getVirtualInode(RelativePathPiece path) const {
-  return edenMount_
-      ->getVirtualInode(
-          RelativePathPiece{path}, ObjectFetchContext::getNullContext())
-      .get();
+  auto fut =
+      edenMount_
+          ->getVirtualInode(
+              RelativePathPiece{path}, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(getServerExecutor().get());
+  getServerExecutor()->drain();
+  return std::move(fut).get(std::chrono::milliseconds(1));
 }
 
 VirtualInode TestMount::getVirtualInode(folly::StringPiece path) const {
@@ -676,7 +703,9 @@ VirtualInode TestMount::getVirtualInode(folly::StringPiece path) const {
 }
 
 void TestMount::loadAllInodes() {
-  loadAllInodesFuture().get();
+  auto fut = loadAllInodesFuture().via(getServerExecutor().get());
+  drainServerExecutor();
+  std::move(fut).get(std::chrono::milliseconds(1));
 }
 
 Future<Unit> TestMount::loadAllInodesFuture() {

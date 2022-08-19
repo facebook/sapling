@@ -448,11 +448,15 @@ void verifyTreeState(
     // TODO: the code below is equivalent to EXPECT_INODE_OR(), perhaps it
     // should be broken out so test failures appear within the line#/function
     // they are occuring in?
-    auto virtualInodeTry = mount.getEdenMount()
+    auto virtualInodeFut = mount.getEdenMount()
                                ->getVirtualInode(
                                    RelativePathPiece{expected.path},
                                    ObjectFetchContext::getNullContext())
-                               .getTry();
+                               .semi()
+                               .via(mount.getServerExecutor().get());
+    mount.drainServerExecutor();
+
+    auto virtualInodeTry = std::move(virtualInodeFut).getTry(0ms);
     if (virtualInodeTry.hasValue()) {
       auto virtualInode = virtualInodeTry.value();
       EXPECT_EQ(virtualInode.getDtype(), expected.dtype) << dbgMsg;
@@ -497,26 +501,32 @@ void verifyTreeState(
       // SHA1s are only computed for files
       if ((verify_flags & VERIFY_SHA1) &&
           virtualInode.getDtype() == dtype_t::Regular) {
-        auto sha1 = virtualInode
-                        .getSHA1(
-                            expected.path,
-                            mount.getEdenMount()->getObjectStore(),
-                            ObjectFetchContext::getNullContext())
-                        .get();
+        auto sha1Fut = virtualInode
+                           .getSHA1(
+                               expected.path,
+                               mount.getEdenMount()->getObjectStore(),
+                               ObjectFetchContext::getNullContext())
+                           .semi()
+                           .via(mount.getServerExecutor().get());
+        mount.drainServerExecutor();
+        auto sha1 = std::move(sha1Fut).get(0ms);
         EXPECT_EQ(sha1, expected.getSHA1()) << dbgMsg << " expected.contents=\""
                                             << expected.getContents() << "\"";
       }
 
       if ((verify_flags & VERIFY_BLOB_METADATA) &&
           virtualInode.getDtype() == dtype_t::Regular) {
-        auto metadata = virtualInode
-                            .getEntryAttributes(
-                                ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
-                                    ENTRY_ATTRIBUTE_TYPE,
-                                expected.path,
-                                mount.getEdenMount()->getObjectStore(),
-                                ObjectFetchContext::getNullContext())
-                            .get();
+        auto metadataFut = virtualInode
+                               .getEntryAttributes(
+                                   ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
+                                       ENTRY_ATTRIBUTE_TYPE,
+                                   expected.path,
+                                   mount.getEdenMount()->getObjectStore(),
+                                   ObjectFetchContext::getNullContext())
+                               .semi()
+                               .via(mount.getServerExecutor().get());
+        mount.drainServerExecutor();
+        auto metadata = std::move(metadataFut).get(0ms);
         EXPECT_EQ(metadata.sha1.value().value(), expected.getSHA1()) << dbgMsg;
         EXPECT_EQ(metadata.size.value().value(), expected.getContents().size())
             << dbgMsg;
@@ -528,12 +538,15 @@ void verifyTreeState(
         // TODO: choose random?
         auto lastCheckoutTime =
             mount.getEdenMount()->getLastCheckoutTime().toTimespec();
-        auto st = virtualInode
-                      .stat(
-                          lastCheckoutTime,
-                          mount.getEdenMount()->getObjectStore(),
-                          ObjectFetchContext::getNullContext())
-                      .get();
+        auto stFut = virtualInode
+                         .stat(
+                             lastCheckoutTime,
+                             mount.getEdenMount()->getObjectStore(),
+                             ObjectFetchContext::getNullContext())
+                         .semi()
+                         .via(mount.getServerExecutor().get());
+        mount.drainServerExecutor();
+        auto st = std::move(stFut).get(0ms);
 
         EXPECT_EQ(st.st_size, expected.getContents().size()) << dbgMsg;
 #ifdef _WIN32
@@ -601,6 +614,7 @@ void testRootDirAChildren(TestMount& mount) {
       children.value(), testing::Contains(testing::Key("child1_fileA1"_pc)));
   EXPECT_THAT(
       children.value(), testing::Contains(testing::Key("child1_fileA2"_pc)));
+  mount.drainServerExecutor();
   for (auto& child : children.value()) {
     std::move(child.second).get(kFutureTimeout);
   }

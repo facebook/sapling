@@ -443,24 +443,42 @@ TEST(EdenMount, ensureDirectoryExists) {
   TestMount testMount{builder};
   auto edenMount = testMount.getEdenMount();
 
-  edenMount
-      ->ensureDirectoryExists(
-          "sub/foo/bar"_relpath, ObjectFetchContext::getNullContext())
-      .get(0ms);
+  auto fut =
+      edenMount
+          ->ensureDirectoryExists(
+              "sub/foo/bar"_relpath, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
+  std::move(fut).get(0ms);
   EXPECT_NE(nullptr, testMount.getTreeInode("sub/foo/bar"));
 
-  edenMount
-      ->ensureDirectoryExists(
-          "sub/other/stuff/here"_relpath, ObjectFetchContext::getNullContext())
-      .get(0ms);
+  fut = edenMount
+            ->ensureDirectoryExists(
+                "sub/other/stuff/here"_relpath,
+                ObjectFetchContext::getNullContext())
+            .semi()
+            .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
+  std::move(fut).get(0ms);
   EXPECT_NE(nullptr, testMount.getTreeInode("sub/other/stuff/here"));
 
-  auto f1 = edenMount->ensureDirectoryExists(
-      "sub/file.txt/baz"_relpath, ObjectFetchContext::getNullContext());
+  auto f1 =
+      edenMount
+          ->ensureDirectoryExists(
+              "sub/file.txt/baz"_relpath, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
   EXPECT_THROW(std::move(f1).get(0ms), std::system_error);
 
-  auto f2 = edenMount->ensureDirectoryExists(
-      "sub/file.txt"_relpath, ObjectFetchContext::getNullContext());
+  auto f2 =
+      edenMount
+          ->ensureDirectoryExists(
+              "sub/file.txt"_relpath, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
   EXPECT_THROW(std::move(f2).get(0ms), std::system_error);
 }
 

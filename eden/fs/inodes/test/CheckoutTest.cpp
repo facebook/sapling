@@ -249,11 +249,13 @@ void testAddFile(
   commit2->setReady();
 
   loadInodes(testMount, newFilePath, loadType);
+  testMount.drainServerExecutor();
 
   auto executor = testMount.getServerExecutor().get();
   auto checkoutResult = testMount.getEdenMount()
                             ->checkout(RootId{"2"}, std::nullopt, __func__)
-                            .waitVia(executor);
+                            .via(executor);
+  testMount.drainServerExecutor();
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
   EXPECT_EQ(0, result.conflicts.size());
@@ -1104,6 +1106,8 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
   commit2->setReady();
 
+  testMount.drainServerExecutor();
+
   // Load "dir/sub" on behalf of a FUSE connection.
   auto subTree = testMount.getTreeInode("dir/sub"_relpath);
   auto dirInodeNumber = subTree->getParentRacy()->getNodeId();
@@ -1123,10 +1127,14 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
 
   // Try to load the same tree by its inode number and verify its parents have
   // the same inode numbers.
-  subTree = testMount.getEdenMount()
-                ->getInodeMap()
-                ->lookupTreeInode(subInodeNumber)
-                .get(1ms);
+  auto subTreeFut = testMount.getEdenMount()
+                        ->getInodeMap()
+                        ->lookupTreeInode(subInodeNumber)
+                        .semi()
+                        .via(executor);
+  testMount.drainServerExecutor();
+
+  subTree = std::move(subTreeFut).get(1ms);
   EXPECT_EQ(dirInodeNumber, subTree->getParentRacy()->getNodeId());
   EXPECT_EQ(subInodeNumber, subTree->getNodeId());
 

@@ -14,6 +14,7 @@
 #include "eden/fs/testharness/TestMount.h"
 
 using namespace facebook::eden;
+using namespace std::literals::chrono_literals;
 using folly::StringPiece;
 
 TEST(InodeBase, getPath) {
@@ -27,11 +28,15 @@ TEST(InodeBase, getPath) {
   EXPECT_EQ(RelativePathPiece(), root->getPath().value());
   EXPECT_EQ("<root>", root->getLogPath());
 
-  auto getChild = [](const TreeInodePtr& parent, StringPiece name) {
-    return parent
-        ->getOrLoadChild(
-            PathComponentPiece{name}, ObjectFetchContext::getNullContext())
-        .get();
+  auto getChild = [&testMount](const TreeInodePtr& parent, StringPiece name) {
+    auto fut =
+        parent
+            ->getOrLoadChild(
+                PathComponentPiece{name}, ObjectFetchContext::getNullContext())
+            .semi()
+            .via(testMount.getServerExecutor().get());
+    testMount.drainServerExecutor();
+    return std::move(fut).get(0ms);
   };
   auto childTree = [&getChild](const TreeInodePtr& parent, StringPiece name) {
     return getChild(parent, name).asTreePtr();
@@ -100,9 +105,13 @@ bool isInodeMaterialized(const FileInodePtr& inode) {
 TEST_F(InodeBaseEnsureMaterializedTest, testFile) {
   auto regularFile = mount_.getFileInode("dir/a.txt");
   EXPECT_FALSE(isInodeMaterialized(regularFile));
-  (void)regularFile
-      ->ensureMaterialized(ObjectFetchContext::getNullContext(), false)
-      .get();
+  auto fut =
+      regularFile
+          ->ensureMaterialized(ObjectFetchContext::getNullContext(), true)
+          .semi()
+          .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
+  std::move(fut).get(0ms);
 
   EXPECT_TRUE(isInodeMaterialized(regularFile));
   // The parent tree should also be materialized
@@ -113,17 +122,24 @@ TEST_F(InodeBaseEnsureMaterializedTest, testFile) {
 TEST_F(InodeBaseEnsureMaterializedTest, testFileAlreadyMaterialized) {
   auto regularFile = mount_.getFileInode("dir/a.txt");
   EXPECT_FALSE(isInodeMaterialized(regularFile));
-  (void)regularFile
-      ->ensureMaterialized(ObjectFetchContext::getNullContext(), false)
-      .get();
+  auto fut =
+      regularFile
+          ->ensureMaterialized(ObjectFetchContext::getNullContext(), false)
+          .semi()
+          .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
+  std::move(fut).get(0ms);
   // The parent tree should also be materialized
   auto parentTree = mount_.getTreeInode("dir");
   EXPECT_TRUE(isInodeMaterialized(parentTree));
 
   // Should be fine if we call ensureMaterialized if a file is materialized
-  (void)regularFile
-      ->ensureMaterialized(ObjectFetchContext::getNullContext(), false)
-      .get();
+  fut = regularFile
+            ->ensureMaterialized(ObjectFetchContext::getNullContext(), false)
+            .semi()
+            .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
+  std::move(fut).get(0ms);
   EXPECT_TRUE(isInodeMaterialized(regularFile));
 }
 
@@ -133,8 +149,12 @@ TEST_F(InodeBaseEnsureMaterializedTest, testSymlinksNoFollow) {
   auto tree = mount_.getTreeInode("dir");
   auto inode =
       tree->symlink(PathComponentPiece{name}, target, InvalidationRequired::No);
-  (void)inode->ensureMaterialized(ObjectFetchContext::getNullContext(), false)
-      .get();
+  auto fut =
+      inode->ensureMaterialized(ObjectFetchContext::getNullContext(), false)
+          .semi()
+          .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
+  std::move(fut).get(0ms);
 
   auto fileB = mount_.getFileInode("dir/sub/b.txt");
   EXPECT_FALSE(isInodeMaterialized(fileB));
@@ -146,8 +166,12 @@ TEST_F(InodeBaseEnsureMaterializedTest, testSymlinksFollow) {
   auto tree = mount_.getTreeInode("dir");
   auto inode =
       tree->symlink(PathComponentPiece{name}, target, InvalidationRequired::No);
-  (void)inode->ensureMaterialized(ObjectFetchContext::getNullContext(), true)
-      .get();
+  auto fut =
+      inode->ensureMaterialized(ObjectFetchContext::getNullContext(), true)
+          .semi()
+          .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
+  std::move(fut).get(0ms);
 
   auto fileB = mount_.getFileInode("dir/sub/b.txt");
   EXPECT_TRUE(isInodeMaterialized(fileB));
@@ -161,8 +185,12 @@ TEST_F(InodeBaseEnsureMaterializedTest, testSymlinksOutOfMountNoThrow) {
   auto tree = mount_.getTreeInode("dir");
   auto inode =
       tree->symlink(PathComponentPiece{name}, target, InvalidationRequired::No);
-  (void)inode->ensureMaterialized(ObjectFetchContext::getNullContext(), true)
-      .get();
+  auto fut =
+      inode->ensureMaterialized(ObjectFetchContext::getNullContext(), true)
+          .semi()
+          .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
+  std::move(fut).get(0ms);
 }
 
 TEST_F(InodeBaseEnsureMaterializedTest, testSymlinksAbsolutePathNoThrow) {
@@ -173,8 +201,12 @@ TEST_F(InodeBaseEnsureMaterializedTest, testSymlinksAbsolutePathNoThrow) {
   auto tree = mount_.getTreeInode("dir");
   auto inode =
       tree->symlink(PathComponentPiece{name}, target, InvalidationRequired::No);
-  (void)inode->ensureMaterialized(ObjectFetchContext::getNullContext(), true)
-      .get();
+  auto fut =
+      inode->ensureMaterialized(ObjectFetchContext::getNullContext(), true)
+          .semi()
+          .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
+  std::move(fut).get(0ms);
 }
 
 TEST_F(InodeBaseEnsureMaterializedTest, testSymlinksNonUtf8Exception) {
@@ -184,10 +216,12 @@ TEST_F(InodeBaseEnsureMaterializedTest, testSymlinksNonUtf8Exception) {
   auto tree = mount_.getTreeInode("dir");
   auto inode =
       tree->symlink(PathComponentPiece{name}, target, InvalidationRequired::No);
-  EXPECT_THROW(
+  auto fut =
       inode->ensureMaterialized(ObjectFetchContext::getNullContext(), true)
-          .get(),
-      facebook::eden::PathComponentNotUtf8);
+          .semi()
+          .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
+  EXPECT_THROW(std::move(fut).get(0ms), facebook::eden::PathComponentNotUtf8);
 }
 
 TEST_F(InodeBaseEnsureMaterializedTest, testTree) {
@@ -202,8 +236,12 @@ TEST_F(InodeBaseEnsureMaterializedTest, testTree) {
   auto symlink =
       tree->symlink(PathComponentPiece{name}, target, InvalidationRequired::No);
 
-  (void)tree->ensureMaterialized(ObjectFetchContext::getNullContext(), true)
-      .get();
+  auto fut =
+      tree->ensureMaterialized(ObjectFetchContext::getNullContext(), true)
+          .semi()
+          .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
+  std::move(fut).get(0ms);
 
   EXPECT_TRUE(isInodeMaterialized(tree));
 
@@ -246,8 +284,12 @@ TEST_F(InodeBaseEnsureMaterializedTest, testSymlinkTree) {
 
   // So ensureMaterialize symlink dir2/s1 should materialize dir and its
   // children recursively
-  (void)symlink->ensureMaterialized(ObjectFetchContext::getNullContext(), true)
-      .get();
+  auto fut =
+      symlink->ensureMaterialized(ObjectFetchContext::getNullContext(), true)
+          .semi()
+          .via(mount_.getServerExecutor().get());
+  mount_.drainServerExecutor();
+  std::move(fut).get(0ms);
 
   EXPECT_TRUE(isInodeMaterialized(tree));
 
