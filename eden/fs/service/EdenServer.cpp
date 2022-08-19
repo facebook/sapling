@@ -1015,10 +1015,12 @@ bool EdenServer::openStorageEngine(
     folly::stop_watch<std::chrono::milliseconds> watch;
     const auto rocksPath = edenDir_.getPath() + RelativePathPiece{kRocksDBPath};
     ensureDirectoryExists(rocksPath);
-    localStore_ = make_shared<RocksDbLocalStore>(
+    auto localStore = make_shared<RocksDbLocalStore>(
         rocksPath,
         serverState_->getStructuredLogger(),
         &serverState_->getFaultInjector());
+    localStore->open();
+    localStore_ = std::move(localStore);
     localStore_->enableBlobCaching.store(
         serverState_->getEdenConfig()->enableBlobCaching.getValue(),
         std::memory_order_relaxed);

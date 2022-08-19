@@ -90,6 +90,7 @@ class Command {
         std::make_shared<NullStructuredLogger>(),
         &faultInjector_,
         mode);
+    localStore->open();
     XLOG(INFO) << "Opened RocksDB store in "
                << (mode == RocksDBOpenMode::ReadOnly ? "read-only"
                                                      : "read-write")

@@ -34,6 +34,7 @@ class RocksDbLocalStore : public LocalStore {
       std::shared_ptr<StructuredLogger> structuredLogger,
       FaultInjector* FOLLY_NONNULL faultInjector,
       RocksDBOpenMode mode = RocksDBOpenMode::ReadWrite);
+  void open();
   ~RocksDbLocalStore();
   void close() override;
   void clearKeySpace(KeySpace keySpace) override;
@@ -56,6 +57,13 @@ class RocksDbLocalStore : public LocalStore {
 
   void periodicManagementTask(const EdenConfig& config) override;
 
+  enum class RockDbHandleStatus { NOT_YET_OPENED, OPEN, CLOSED };
+
+  struct RockDBState {
+    std::unique_ptr<RocksHandles> handles;
+    RockDbHandleStatus status{RockDbHandleStatus::NOT_YET_OPENED};
+  };
+
  private:
   /**
    * Get a pointer to the RocksHandles object in order to perform an I/O
@@ -65,14 +73,9 @@ class RocksDbLocalStore : public LocalStore {
    * DB may still be performed.  The lock exists to prevent the DB from being
    * closed while the I/O operation is in progress.
    */
-  folly::Synchronized<RocksHandles>::ConstRLockedPtr getHandles() const {
-    auto handles = dbHandles_.rlock();
-    if (!handles->db) {
-      throwStoreClosedError();
-    }
-    return handles;
-  }
+  folly::Synchronized<RockDBState>::ConstRLockedPtr getHandles() const;
   [[noreturn]] void throwStoreClosedError() const;
+  [[noreturn]] void throwStoreNotYetOpenedError() const;
   std::shared_ptr<RocksDbLocalStore> getSharedFromThis() {
     return std::static_pointer_cast<RocksDbLocalStore>(shared_from_this());
   }
@@ -116,7 +119,9 @@ class RocksDbLocalStore : public LocalStore {
   FaultInjector& faultInjector_;
   mutable UnboundedQueueExecutor ioPool_;
   folly::Synchronized<AutoGCState> autoGCState_;
-  folly::Synchronized<RocksHandles> dbHandles_;
+  AbsolutePath pathToDb_;
+  RocksDBOpenMode mode_;
+  folly::Synchronized<RockDBState> dbHandles_;
 };
 
 } // namespace facebook::eden

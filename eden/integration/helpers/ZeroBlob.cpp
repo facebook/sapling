@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
   FaultInjector faultInjector(/*enabled=*/false);
   RocksDbLocalStore localStore(
       rocksPath, std::make_shared<NullStructuredLogger>(), &faultInjector);
-
+  localStore.open();
   Blob blob(blobID, IOBuf());
   localStore.putBlob(blobID, &blob);
 
