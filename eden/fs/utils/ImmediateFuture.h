@@ -28,6 +28,10 @@ namespace facebook::eden {
  * All methods can throw an DestroyedImmediateFutureError if an ImmediateFuture
  * is used after being destroyed. This can happen if an ImmediateFuture is used
  * after being moved.
+ *
+ * When detail::kImmediateFutureAlwaysDefer is set, all ImmediateFuture
+ * constructor are pessimized to behave as if constructed from a non-ready
+ * SemiFuture.
  */
 template <typename T>
 class ImmediateFuture {
@@ -41,15 +45,14 @@ class ImmediateFuture {
    * Default construct an ImmediateFuture with T's default constructor.
    */
   ImmediateFuture() noexcept(std::is_nothrow_default_constructible_v<T>)
-      : immediate_{folly::Try<T>{T{}}}, kind_{Kind::Immediate} {}
+      : ImmediateFuture{folly::Try<T>{T{}}} {}
 
   /**
    * Construct an ImmediateFuture with an already constructed value. No
    * folly::SemiFuture will be allocated.
    */
   /* implicit */ ImmediateFuture(folly::Try<T>&& value) noexcept(
-      std::is_nothrow_move_constructible_v<folly::Try<T>>)
-      : immediate_{std::move(value)}, kind_{Kind::Immediate} {}
+      std::is_nothrow_move_constructible_v<folly::Try<T>>);
 
   /**
    * Construct an ImmediateFuture with an already constructed value. No
@@ -287,6 +290,9 @@ ImmediateFuture<T> makeImmediateFuture(folly::exception_wrapper e);
  * This is a shorthand for:
  *
  *   ImmediateFuture<folly::Unit>().thenTry([](auto&&) { return func(); });
+ *
+ * Note that even when kImmediateFutureAlwaysDefer is set, func will be
+ * executed eagerly, however, the returned ImmediateFuture will not be ready.
  */
 template <typename Func>
 auto makeImmediateFutureWith(Func&& func);

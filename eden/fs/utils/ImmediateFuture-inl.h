@@ -29,14 +29,26 @@ void ImmediateFuture<T>::destroy() {
 }
 
 template <typename T>
+ImmediateFuture<T>::ImmediateFuture(folly::Try<T>&& value) noexcept(
+    std::is_nothrow_move_constructible_v<folly::Try<T>>) {
+  if (detail::kImmediateFutureAlwaysDefer) {
+    kind_ = Kind::SemiFuture;
+    new (&semi_) folly::SemiFuture<T>{std::move(value)};
+  } else {
+    kind_ = Kind::Immediate;
+    new (&immediate_) folly::Try<T>{std::move(value)};
+  }
+}
+
+template <typename T>
 ImmediateFuture<T>::ImmediateFuture(folly::SemiFuture<T>&& fut) noexcept(
     std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>) {
-  if (fut.isReady()) {
-    kind_ = Kind::Immediate;
-    new (&immediate_) folly::Try<T>{std::move(fut).getTry()};
-  } else {
+  if (!fut.isReady() || detail::kImmediateFutureAlwaysDefer) {
     kind_ = Kind::SemiFuture;
     new (&semi_) folly::SemiFuture<T>{std::move(fut)};
+  } else {
+    kind_ = Kind::Immediate;
+    new (&immediate_) folly::Try<T>{std::move(fut).getTry()};
   }
 }
 
@@ -289,8 +301,7 @@ ImmediateFuture<T> makeImmediateFuture(folly::exception_wrapper e) {
 
 template <typename Func>
 auto makeImmediateFutureWith(Func&& func) {
-  return ImmediateFuture<folly::Unit>().thenTry(
-      [func = std::forward<Func>(func)](auto&&) mutable { return func(); });
+  return detail::makeImmediateFutureFromImmediate(std::forward<Func>(func));
 }
 
 template <typename T>

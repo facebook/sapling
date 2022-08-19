@@ -67,5 +67,15 @@ using continuation_result_t = typename continuation_result<
     Func,
     Arg...>::type;
 
+/**
+ * When set, an ImmediateFuture is always holding a SemiFuture.
+ *
+ * In order to make it easy to reproduce use-after-free bugs in debug/sanitized
+ * builds, the ImmediateFuture code can be forced to always hold a SemiFuture,
+ * even when immediate values are being passed to it.
+ */
+constexpr bool kImmediateFutureAlwaysDefer =
+    folly::kIsDebug || folly::kIsSanitize;
+
 } // namespace detail
 } // namespace facebook::eden

@@ -10,7 +10,8 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
-using namespace facebook::eden;
+namespace facebook::eden {
+
 using namespace std::literals::chrono_literals;
 
 TEST(ImmediateFuture, get) {
@@ -19,7 +20,7 @@ TEST(ImmediateFuture, get) {
   EXPECT_EQ(std::move(fortyTwo).get(), value);
 
   ImmediateFuture<int> fortyTwoFut{folly::makeSemiFuture(value)};
-  EXPECT_EQ(std::move(fortyTwo).get(), value);
+  EXPECT_EQ(std::move(fortyTwoFut).get(), value);
 }
 
 TEST(ImmediateFuture, getTry) {
@@ -149,10 +150,10 @@ ImmediateFuture<folly::Unit> unitFunc() {
 
 TEST(ImmediateFuture, unit) {
   auto fut = unitFunc();
-  EXPECT_TRUE(fut.isReady());
+  EXPECT_TRUE(fut.isReady() ^ detail::kImmediateFutureAlwaysDefer);
 
   auto voidFut = std::move(fut).thenValue([](folly::Unit) {});
-  EXPECT_TRUE(voidFut.isReady());
+  EXPECT_TRUE(voidFut.isReady() ^ detail::kImmediateFutureAlwaysDefer);
 }
 
 class Foo {
@@ -213,17 +214,17 @@ TEST(ImmediateFuture, getTimeout) {
 
 TEST(ImmediateFuture, makeImmediateFutureWith) {
   auto fut1 = makeImmediateFutureWith([]() { return 42; });
-  EXPECT_TRUE(fut1.isReady());
+  EXPECT_TRUE(fut1.isReady() ^ detail::kImmediateFutureAlwaysDefer);
   EXPECT_EQ(std::move(fut1).get(), 42);
 
   auto fut2 = makeImmediateFutureWith(
       []() { throw std::logic_error("Test exception"); });
-  EXPECT_TRUE(fut2.isReady());
+  EXPECT_TRUE(fut2.isReady() ^ detail::kImmediateFutureAlwaysDefer);
   EXPECT_THROW_RE(std::move(fut2).get(), std::logic_error, "Test exception");
 
   auto fut3 =
       makeImmediateFutureWith([]() { return folly::makeSemiFuture(42); });
-  EXPECT_TRUE(fut3.isReady());
+  EXPECT_TRUE(fut3.isReady() ^ detail::kImmediateFutureAlwaysDefer);
   EXPECT_EQ(std::move(fut3).get(), 42);
 
   auto [p, sf] = folly::makePromiseContract<int>();
@@ -235,16 +236,25 @@ TEST(ImmediateFuture, makeImmediateFutureWith) {
   EXPECT_EQ(std::move(fut4).get(), 42);
 }
 
+TEST(ImmediateFuture, makeImmediateFutureWithIsEager) {
+  bool isEager = false;
+  auto fut1 = makeImmediateFutureWith([&]() mutable {
+    isEager = true;
+    return 42;
+  });
+  EXPECT_TRUE(isEager);
+}
+
 TEST(ImmediateFuture, isReady_from_value) {
   int value = 42;
   ImmediateFuture<int> fortyTwo{value};
-  EXPECT_TRUE(fortyTwo.isReady());
+  EXPECT_TRUE(fortyTwo.isReady() ^ detail::kImmediateFutureAlwaysDefer);
 }
 
 TEST(ImmediateFuture, isReady_from_completed_SemiFuture) {
   auto semi = folly::makeSemiFuture<int>(10);
   auto imm = ImmediateFuture<int>{std::move(semi)};
-  EXPECT_TRUE(imm.isReady());
+  EXPECT_TRUE(imm.isReady() ^ detail::kImmediateFutureAlwaysDefer);
   EXPECT_EQ(10, std::move(imm).get());
 }
 
@@ -252,10 +262,10 @@ TEST(ImmediateFuture, ready_ImmediateFuture_thenValue_is_also_ready) {
   auto semi = folly::makeSemiFuture<int>(10);
   EXPECT_TRUE(semi.isReady());
   auto imm = ImmediateFuture<int>{std::move(semi)};
-  EXPECT_TRUE(imm.isReady());
+  EXPECT_TRUE(imm.isReady() ^ detail::kImmediateFutureAlwaysDefer);
   auto then =
       std::move(imm).thenValue([](int i) -> ImmediateFuture<int> { return i; });
-  EXPECT_TRUE(then.isReady());
+  EXPECT_TRUE(then.isReady() ^ detail::kImmediateFutureAlwaysDefer);
 }
 
 TEST(
@@ -280,7 +290,7 @@ TEST(ImmediateFuture, collectAllImmediate) {
   vec.push_back(ImmediateFuture<int>{43});
 
   auto fut = collectAll(std::move(vec));
-  EXPECT_TRUE(fut.isReady());
+  EXPECT_TRUE(fut.isReady() ^ detail::kImmediateFutureAlwaysDefer);
   auto res = std::move(fut).get();
   EXPECT_EQ(*res[0], 42);
   EXPECT_EQ(*res[1], 43);
@@ -336,7 +346,7 @@ TEST(ImmediateFuture, collectUncopyable) {
   vec.push_back(Uncopyable{});
 
   auto fut = collectAll(std::move(vec));
-  EXPECT_TRUE(fut.isReady());
+  EXPECT_TRUE(fut.isReady() ^ detail::kImmediateFutureAlwaysDefer);
 }
 
 TEST(ImmediateFuture, collectAllOrdering) {
@@ -368,7 +378,7 @@ TEST(ImmediateFuture, collectAllTuple) {
   auto f2 = ImmediateFuture<float>{42.};
 
   auto future = collectAll(std::move(f1), std::move(f2));
-  EXPECT_TRUE(future.isReady());
+  EXPECT_TRUE(future.isReady() ^ detail::kImmediateFutureAlwaysDefer);
 
   auto res = std::move(future).get();
   EXPECT_EQ(std::get<folly::Try<int>>(res).value(), 42);
@@ -413,7 +423,7 @@ TEST(ImmediateFuture, collectAllSafeTuple) {
       folly::Try<float>{std::logic_error("Test exception")}};
 
   auto future = collectAllSafe(std::move(f1), std::move(f2));
-  EXPECT_TRUE(future.isReady());
+  EXPECT_TRUE(future.isReady() ^ detail::kImmediateFutureAlwaysDefer);
 
   EXPECT_THROW_RE(std::move(future).get(), std::logic_error, "Test exception");
 }
@@ -445,7 +455,7 @@ TEST(ImmediateFuture, collectAllSafeTupleValid) {
   auto f2 = ImmediateFuture<float>{42.};
 
   auto future = collectAllSafe(std::move(f1), std::move(f2));
-  EXPECT_TRUE(future.isReady());
+  EXPECT_TRUE(future.isReady() ^ detail::kImmediateFutureAlwaysDefer);
 
   auto res = std::move(future).get();
   EXPECT_EQ(std::get<int>(res), 42);
@@ -458,7 +468,7 @@ TEST(ImmediateFuture, collectAllSafeVector) {
   vec.push_back(makeImmediateFuture<int>(std::logic_error("Test exception")));
 
   auto fut = collectAllSafe(std::move(vec));
-  EXPECT_TRUE(fut.isReady());
+  EXPECT_TRUE(fut.isReady() ^ detail::kImmediateFutureAlwaysDefer);
 
   EXPECT_THROW_RE(std::move(fut).get(), std::logic_error, "Test exception");
 }
@@ -492,7 +502,7 @@ TEST(ImmediateFuture, collectAllSafeVectorValid) {
   vec.push_back(ImmediateFuture<int>{43});
 
   auto future = collectAllSafe(std::move(vec));
-  EXPECT_TRUE(future.isReady());
+  EXPECT_TRUE(future.isReady() ^ detail::kImmediateFutureAlwaysDefer);
 
   auto res = std::move(future).get();
   EXPECT_EQ(res.size(), 2);
@@ -506,7 +516,7 @@ TEST(ImmediateFuture, unit_method) {
   vec.push_back(ImmediateFuture<int>{43});
 
   auto future = collectAllSafe(std::move(vec)).unit();
-  EXPECT_TRUE(future.isReady());
+  EXPECT_TRUE(future.isReady() ^ detail::kImmediateFutureAlwaysDefer);
 
   auto res = std::move(future).get();
   EXPECT_EQ(res, folly::unit);
@@ -576,3 +586,4 @@ TEST(ImmediateFuture, thenErrorSemiError) {
   EXPECT_THROW_RE(
       std::move(thenErrorFut).get(), std::runtime_error, "Test exception");
 }
+} // namespace facebook::eden
