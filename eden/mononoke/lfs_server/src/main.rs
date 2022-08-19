@@ -166,7 +166,9 @@ impl LfsRepos {
             .repos
             .iter()
             .filter_map(|(name, config)| {
-                if config.enabled {
+                // Initialize repos that are enabled and not deep sharded
+                // (i.e. need to exist at service start-up)
+                if config.enabled && !config.deep_sharded {
                     Some(name.to_string())
                 } else {
                     None

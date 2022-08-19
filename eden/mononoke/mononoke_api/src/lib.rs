@@ -103,7 +103,9 @@ impl Mononoke {
         let repo_filter = app.environment().filter_repos.clone();
         let repo_names = configs.repos.into_iter().filter_map(|(name, config)| {
             let is_matching_filter = repo_filter.as_ref().map_or(true, |re| re.is_match(&name));
-            if config.enabled && is_matching_filter {
+            // Initialize repos that are enabled and not deep-sharded (i.e. need to exist
+            // at service startup)
+            if config.enabled && !config.deep_sharded && is_matching_filter {
                 Some(name)
             } else {
                 None
