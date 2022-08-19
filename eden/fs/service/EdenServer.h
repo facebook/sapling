@@ -543,7 +543,8 @@ class EdenServer : private TakeoverHandler {
    * Open local storage engine for caching source control data.
    * Returns whether the config was modified.
    */
-  bool openStorageEngine(cpptoml::table& config, StartupLogger& logger);
+  bool createStorageEngine(cpptoml::table& config);
+  void openStorageEngine(StartupLogger& logger);
 
   // Called when a mount has been unmounted and has stopped.
   void mountFinished(

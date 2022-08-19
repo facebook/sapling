@@ -919,7 +919,7 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
   // another is required, introduce an EdenStateConfig class to manage
   // defaults and save on update.
   auto config = parseConfig();
-  bool shouldSaveConfig = openStorageEngine(*config, *logger);
+  bool shouldSaveConfig = createStorageEngine(*config);
   if (shouldSaveConfig) {
     saveConfig(*config);
   }
@@ -934,22 +934,34 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
   takeoverServer_->start();
 #endif // !_WIN32
 
-  std::vector<Future<Unit>> mountFutures;
-  if (doingTakeover) {
+  return via(
+      mainEventBase_,
+      [this,
+       logger,
+       doingTakeover,
 #ifndef _WIN32
-    mountFutures =
-        prepareMountsTakeover(logger, std::move(takeoverData.mountPoints));
-#else
-    NOT_IMPLEMENTED();
-#endif // !_WIN32
-  } else {
-    mountFutures = prepareMounts(logger);
-  }
+       takeoverData = std::move(takeoverData),
+#endif
+       thriftRunningFuture = std::move(thriftRunningFuture)]() mutable {
+        openStorageEngine(*logger);
 
-  // Return a future that will complete only when all mount points have
-  // started and the thrift server is also running.
-  mountFutures.emplace_back(std::move(thriftRunningFuture));
-  return folly::collectAllUnsafe(mountFutures).unit();
+        std::vector<Future<Unit>> mountFutures;
+        if (doingTakeover) {
+#ifndef _WIN32
+          mountFutures = prepareMountsTakeover(
+              logger, std::move(takeoverData.mountPoints));
+#else
+          NOT_IMPLEMENTED();
+#endif // !_WIN32
+        } else {
+          mountFutures = prepareMounts(logger);
+        }
+
+        // Return a future that will complete only when all mount points have
+        // started and the thrift server is also running.
+        mountFutures.emplace_back(std::move(thriftRunningFuture));
+        return folly::collectAllUnsafe(std::move(mountFutures)).unit();
+      });
 }
 
 std::shared_ptr<cpptoml::table> EdenServer::parseConfig() {
@@ -976,9 +988,7 @@ void EdenServer::saveConfig(const cpptoml::table& root) {
   writeFileAtomic(configPath, folly::StringPiece(stream.str())).value();
 }
 
-bool EdenServer::openStorageEngine(
-    cpptoml::table& config,
-    StartupLogger& logger) {
+bool EdenServer::createStorageEngine(cpptoml::table& config) {
   std::string defaultStorageEngine = FLAGS_local_storage_engine_unsafe.empty()
       ? DEFAULT_STORAGE_ENGINE
       : FLAGS_local_storage_engine_unsafe;
@@ -995,23 +1005,19 @@ bool EdenServer::openStorageEngine(
   }
 
   if (storageEngine == "memory") {
-    logger.log("Creating new memory store.");
+    XLOG(DBG2) << "Creating new memory store.";
     localStore_ = make_shared<MemoryLocalStore>();
-    localStore_->open();
   } else if (storageEngine == "sqlite") {
     const auto path = edenDir_.getPath() + RelativePathPiece{kSqlitePath};
     const auto parentDir = path.dirname();
     ensureDirectoryExists(parentDir);
-    logger.log("Opening local SQLite store ", path, "...");
+    XLOG(DBG2) << "Creating local SQLite store " << path << "...";
     folly::stop_watch<std::chrono::milliseconds> watch;
     localStore_ = make_shared<SqliteLocalStore>(path);
-    localStore_->open();
-    logger.log(
-        "Opened SQLite store in ",
-        watch.elapsed().count() / 1000.0,
-        " seconds.");
+    XLOG(DBG2) << "Opened SQLite store in " << watch.elapsed().count() / 1000.0
+               << " seconds.";
   } else if (storageEngine == "rocksdb") {
-    logger.log("Opening local RocksDB store...");
+    XLOG(DBG2) << "Creating local RocksDB store...";
     folly::stop_watch<std::chrono::milliseconds> watch;
     const auto rocksPath = edenDir_.getPath() + RelativePathPiece{kRocksDBPath};
     ensureDirectoryExists(rocksPath);
@@ -1019,20 +1025,25 @@ bool EdenServer::openStorageEngine(
         rocksPath,
         serverState_->getStructuredLogger(),
         &serverState_->getFaultInjector());
-    localStore_->open();
     localStore_->enableBlobCaching.store(
         serverState_->getEdenConfig()->enableBlobCaching.getValue(),
         std::memory_order_relaxed);
-    logger.log(
-        "Opened RocksDB store in ",
-        watch.elapsed().count() / 1000.0,
-        " seconds.");
+    XLOG(DBG2) << "Created RocksDB store in "
+               << watch.elapsed().count() / 1000.0 << " seconds.";
   } else {
     throw std::runtime_error(
         folly::to<string>("invalid storage engine: ", storageEngine));
   }
 
   return configUpdated;
+}
+
+void EdenServer::openStorageEngine(StartupLogger& logger) {
+  logger.log("Opening local store...");
+  folly::stop_watch<std::chrono::milliseconds> watch;
+  localStore_->open();
+  logger.log(
+      "Opened local store in ", watch.elapsed().count() / 1000.0, " seconds.");
 }
 
 std::vector<Future<Unit>> EdenServer::prepareMountsTakeover(
