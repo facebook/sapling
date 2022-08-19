@@ -24,6 +24,7 @@ from edenscm.mercurial import (
     wireproto,
 )
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.util import sortdict
 
 from . import bookmarks, constants
 from .constants import pathname
@@ -40,7 +41,7 @@ configitem = registrar.configitem(configtable)
 configitem("infinitepush", "httpbookmarks", default=True)
 
 
-def extsetup(ui):
+def extsetup(ui) -> None:
     entry = extensions.wrapcommand(commands.table, "push", _push)
     # Don't add the 'to' arg if it already exists
     if not any(a for a in entry[1] if a[1] == "to"):
@@ -86,6 +87,7 @@ def extsetup(ui):
     extensions.wrapcommand(commands.table, "pull", _pull)
     extensions.wrapfunction(bundle2, "_addpartsfromopts", _addpartsfromopts)
 
+    # pyre-fixme[16]: `Type` has no attribute `knownnodes`.
     wireproto.wirepeer.knownnodes = knownnodes
 
     # Move infinitepush part before pushrebase part
@@ -213,7 +215,7 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
     return result
 
 
-def _phasemove(orig, pushop, nodes, phase=phases.public):
+def _phasemove(orig, pushop, nodes, phase=phases.public) -> None:
     """prevent commits from being marked public
 
     Since these are going to a scratch branch, they aren't really being
@@ -274,7 +276,7 @@ def _bookmarks(orig, ui, repo, *names, **opts):
         return orig(ui, repo, *names, **opts)
 
 
-def _showbookmarks(ui, remotebookmarks, **opts):
+def _showbookmarks(ui, remotebookmarks, **opts) -> None:
     # Copy-paste from commands.py
     fm = ui.formatter("bookmarks", opts)
     for bmark, n in sorted(pycompat.iteritems(remotebookmarks)):
@@ -288,16 +290,16 @@ def _showbookmarks(ui, remotebookmarks, **opts):
     fm.end()
 
 
-def _http_bookmark_fetch(repo, names):
+def _http_bookmark_fetch(repo, names) -> sortdict:
     bookmarks = repo.edenapi.bookmarks(names)
     return util.sortdict(((bm, n) for (bm, n) in bookmarks.items() if n is not None))
 
 
-def _pull(orig, ui, repo, source="default", **opts):
+def _pull(orig, ui, repo, source: str = "default", **opts):
     return _dopull(orig, ui, repo, source, **opts)
 
 
-def _dopull(orig, ui, repo, source="default", **opts):
+def _dopull(orig, ui, repo, source: str = "default", **opts):
     # Copy paste from `pull` command
     source, branches = hg.parseurl(ui.expandpath(source), opts.get("branch"))
 
