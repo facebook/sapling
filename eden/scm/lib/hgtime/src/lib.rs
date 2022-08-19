@@ -119,10 +119,6 @@ impl HgTime {
         }
     }
 
-    pub fn to_local(self) -> DateTime<Local> {
-        DateTime::from(self.to_utc())
-    }
-
     pub fn to_utc(self) -> DateTime<Utc> {
         let naive = NaiveDateTime::from_timestamp(self.unixtime, 0);
         DateTime::from_utc(naive, Utc)
@@ -303,7 +299,7 @@ impl HgTime {
                         // For example, if the user only specified "month/day",
                         // then we should use the current "year", instead of
                         // year 0.
-                        now = now.or_else(|| Self::now().map(|n| n.to_local()));
+                        now = now.or_else(|| Self::now().map(|n| n.to_naive()));
                         match now {
                             Some(now) => {
                                 date_with_defaults +=
@@ -401,12 +397,6 @@ impl From<HgTime> for NaiveDateTime {
 impl From<HgTime> for DateTime<Utc> {
     fn from(time: HgTime) -> Self {
         time.to_utc()
-    }
-}
-
-impl From<HgTime> for DateTime<Local> {
-    fn from(time: HgTime) -> Self {
-        time.to_local()
     }
 }
 
@@ -549,10 +539,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_local_roundtrip() {
-        let now = Local::now().with_nanosecond(0).unwrap();
+    fn test_naive_local_roundtrip() {
+        let now = Local::now().with_nanosecond(0).unwrap().naive_local();
         let hgtime: HgTime = now.try_into().unwrap();
-        let now_again = DateTime::<Local>::from(hgtime);
+        let now_again = hgtime.to_naive();
         assert_eq!(now, now_again);
     }
 
