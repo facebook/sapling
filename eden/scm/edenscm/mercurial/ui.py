@@ -270,6 +270,24 @@ class ui(object):
         # repopath should be the non-shared repo path without .hg/
         self._uiconfig.reload(self, repopath)
 
+    def loadrepoconfig(self, repopath):
+        """Load repofull config from repopath if not already loaded."""
+        loadedfiles = self._rcfg.files()
+        repohgrc = os.path.join(repopath, ".hg", "hgrc")
+
+        # Check if our repo hgrc path (or Windows UNC flavor) have already been loaded.
+        if not any(lf in {repohgrc, f"\\\\?\\{repohgrc}"} for lf in loadedfiles):
+            tracing.debug(
+                "reloading config: hgrc %s not in %s" % (repohgrc, loadedfiles),
+                target="config",
+            )
+            self.reloadconfigs(repopath)
+        else:
+            # Expand "paths" using proper repo root.
+            self._uiconfig.fixconfig(root=repopath)
+
+            self._uiconfig.validatedynamic(self)
+
     def copy(self):
         return self.__class__(self)
 

@@ -92,6 +92,10 @@ class uiconfig(object):
         # fixconfig expects the non-shard repo root, without the .hg.
         self.fixconfig(root=repopath)
 
+    def validatedynamic(self, ui):
+        issues = self._rcfg.validate()
+        reportissues(ui, issues)
+
     def copy(self):
         return self.__class__(self)
 
@@ -124,7 +128,6 @@ class uiconfig(object):
         if section in (None, "paths"):
             # expand vars and ~
             # translate paths relative to root (or home) into absolute paths
-            root = root or pycompat.getcwd()
             c = self._rcfg
             for n in c.names("paths"):
                 if ":" in n:
@@ -140,6 +143,9 @@ class uiconfig(object):
                     p = p.replace("%%", "%")
                 p = util.expandpath(p)
                 if not util.hasscheme(p) and not os.path.isabs(p):
+                    if not root:
+                        # Don't expand relative path if we don't know the repo root.
+                        continue
                     p = os.path.normpath(os.path.join(root, p))
                 if origp != p:
                     c.set("paths", n, p, "ui.fixconfig")

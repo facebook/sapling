@@ -981,7 +981,7 @@ def _getlocal(ui, rpath):
 
     # Don't load repo configs if the path is a bundle file.
     if path and os.path.isdir(path):
-        lui.reloadconfigs(path)
+        lui.loadrepoconfig(path)
 
     return path, lui
 

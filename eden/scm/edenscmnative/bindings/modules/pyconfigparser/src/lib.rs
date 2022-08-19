@@ -16,6 +16,7 @@ use configparser::convert::parse_list;
 use configparser::hg::ConfigSetHgExt;
 use configparser::hg::OptionsHgExt;
 use cpython::*;
+use cpython_ext::error::Result;
 use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
@@ -153,6 +154,16 @@ py_class!(pub class config |py| {
         let repopath = repopath.as_ref().map(|p| p.as_path());
         let mut cfg = self.cfg(py).borrow_mut();
         let results = cfg.load(repopath, readonly_items).map_pyerr(py)?;
+        Ok(convert_superset_verification(results))
+    }
+
+    def files(&self) -> PyResult<Vec<PyPathBuf>> {
+        self.cfg(py).borrow().files().iter().map(|p| p.as_path().try_into()).collect::<Result<Vec<PyPathBuf>>>().map_pyerr(py)
+    }
+
+    def validate(&self) -> PyResult<Vec<(Str, Str, Option<Str>, Option<Str>)>> {
+        let mut cfg = self.cfg(py).borrow_mut();
+        let results = cfg.validate_dynamic().map_pyerr(py)?;
         Ok(convert_superset_verification(results))
     }
 });

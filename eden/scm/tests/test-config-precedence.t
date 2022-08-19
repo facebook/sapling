@@ -37,3 +37,9 @@ Make sure --config options are available when loading config itself.
   $ sleep 1
   $ ls $TESTTMP/touch
   $TESTTMP/touch
+
+
+Only load config a single time.
+  $ LOG=configparser::hg=info hg files abc
+   INFO configparser::hg: loading config repo_path=Some("$TESTTMP*") (glob)
+  [1]

@@ -221,7 +221,7 @@ source of paths is not mangled
 
   $ cat >> $HGRCPATH <<EOF
   > [paths]
-  > foo = bar
+  > foo = $TESTTMP/bar
   > EOF
   $ hg showconfig --debug paths
   plain: True

@@ -27,6 +27,8 @@ use crate::error::Error;
 #[derive(Clone, Default, Debug)]
 pub struct ConfigSet {
     sections: IndexMap<Text, Section>,
+    // canonicalized files that were loaded, including files with errors
+    files: Vec<PathBuf>,
 }
 
 /// Internal representation of a config section.
@@ -296,6 +298,8 @@ impl ConfigSet {
                 return;
             }
 
+            self.files.push(path.to_path_buf());
+
             match fs::read_to_string(path) {
                 Ok(mut text) => {
                     text.push('\n');
@@ -402,6 +406,10 @@ impl ConfigSet {
                 }
             }
         }
+    }
+
+    pub fn files(&self) -> &[PathBuf] {
+        &self.files
     }
 
     pub fn to_string(&self) -> String {

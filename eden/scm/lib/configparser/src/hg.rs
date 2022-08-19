@@ -366,7 +366,7 @@ impl ConfigSetHgExt for ConfigSet {
 
         // Synchronously generate the new config if it's out of date with our version
         if version != Some(this_version) {
-            tracing::info!("dynamicconfig: regenerate at {}", dynamic_path.display());
+            tracing::info!(?dynamic_path, file_version=?version, my_version=%this_version, "regenerating dynamic config (version mismatch)");
             let (repo_name, user_name) = {
                 let mut temp_config = ConfigSet::new();
                 if !temp_config.load_user(opts.clone()).is_empty() {
@@ -404,6 +404,8 @@ impl ConfigSetHgExt for ConfigSet {
                     return Err(e);
                 }
             }
+        } else {
+            tracing::debug!(?dynamic_path, version=%this_version, "dynamicconfig version in-sync");
         }
 
         if !dynamic_path.exists() {
@@ -441,8 +443,9 @@ impl ConfigSetHgExt for ConfigSet {
                             vec!["hg".to_string(), "debugdynamicconfig".to_string()]
                         })?;
                     tracing::debug!(
-                        "spawn {:?} because mtime {:?} > generation_time {:?}",
+                        "spawn {:?} because mtime({}) {:?} > generation_time {:?}",
                         &config_regen_command,
+                        dynamic_path.display(),
                         mtime_age,
                         generation_time
                     );

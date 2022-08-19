@@ -464,7 +464,7 @@ class localrepository(object):
             if reponame and not self.localvfs.exists("reponame"):
                 self.localvfs.writeutf8("reponame", reponame.strip())
 
-        self.ui.reloadconfigs(self.root)
+        self.ui.loadrepoconfig(self.root)
 
         # Setting the inner Rust repo should only be done when the filesystem actually exists
         self._rsrepo = bindings.repo.repo(self.root, self.ui._rcfg)
