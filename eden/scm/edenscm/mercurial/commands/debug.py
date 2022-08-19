@@ -1252,15 +1252,13 @@ def debugexportrevlog(ui, repo, path, **opts):
         def __init__(self, path: str):
             from .. import store
 
-            self.path = path
+            self.path = os.path.realpath(path)
             self.path_to_info = {}
-            self.fnencode, _fndecode = store._buildencodefun(forfncache=False)
+            self.fnencode = store.encodefilename
             self.append_raw("requires", b"treemanifest\nrevlogv1\nstore\n")
 
-        def store_join(self, path: str, suffix: str = None) -> str:
+        def store_join(self, path: str) -> str:
             path = os.path.join(self.path, "store", self.fnencode(path))
-            if suffix:
-                path += suffix
             return path
 
         def append_raw(self, path: str, data: bytes):
@@ -1275,25 +1273,41 @@ def debugexportrevlog(ui, repo, path, **opts):
             return self.path_to_info[path]
 
         def append_revlog(
-            self, path: str, p1: bytes, p2: bytes, data: bytes, flags: int = 0
+            self,
+            path: str,
+            p1: bytes,
+            p2: bytes,
+            data: bytes,
+            flags: int = 0,
+            node=None,
         ):
             info = self.revlog_info(path)
+            if node is None:
+                node = revlog.hash(data, p1, p2)
+            elif flags == 0:
+                # verify hash for non-LFS entries
+                new_node = revlog.hash(data, p1, p2)
+                assert node == new_node
+            if node in info.node_to_rev:
+                # skip existing entries
+                return node
             rev = info.next_rev
             p1rev = p2rev = nullrev
             if p1 != nullid:
                 p1rev = info.node_to_rev[p1]
             if p2 != nullid:
-                p1rev = info.node_to_rev[p2]
-            node = revlog.hash(data, p1, p2)
+                p2rev = info.node_to_rev[p2]
             # u: uncompressed
             compressed_data = b"u" + data
             offset = info.next_offset
+            base_rev = rev  # means 'fulltext, no delta'
+            link_rev = self.revlog_info("00changelog.i").next_rev
             index_data = revlog.indexformatng_pack(
                 revlog.offset_type(offset, flags),
                 len(compressed_data),
                 len(data),
-                rev,
-                rev,
+                base_rev,
+                link_rev,
                 p1rev,
                 p2rev,
                 node,
@@ -1306,7 +1320,7 @@ def debugexportrevlog(ui, repo, path, **opts):
             data = index_data + compressed_data
             # The offset in index does not include index content itself.
             info.append(node, len(compressed_data))
-            revlog_i_path = self.store_join(path, suffix=".i")
+            revlog_i_path = self.store_join(path)
             self.append_raw(revlog_i_path, data)
             return node
 
@@ -1314,28 +1328,34 @@ def debugexportrevlog(ui, repo, path, **opts):
 
     from .. import exchange
 
-    nodes = list(repo.nodes("all()"))
+    nodes = list(repo.nodes("_all()"))
     items = exchange.findblobs(repo, nodes)
+    verbose = ui.verbose
     for blobtype, path, node, (p1, p2), text in items:
         if blobtype == "blob":
-            store_path = f"data/{path}"
+            store_path = f"data/{path}.i"
         elif blobtype == "tree":
             if not path:
-                store_path = "00manifest"
+                store_path = "00manifest.i"
             else:
-                store_path = f"meta/{path}/00manifest"
+                store_path = f"meta/{path}/00manifest.i"
         else:
-            store_path = "00changelog"
-        new_node = lite_repo.append_revlog(store_path, p1, p2, text)
-        assert node == new_node
+            store_path = "00changelog.i"
+        lite_repo.append_revlog(store_path, p1, p2, text)
+        if verbose:
+            ui.write_err(_("exported %s at %r as %s\n") % (blobtype, path, hex(node)))
 
-    # Vanilla hg uses 00manfiest.i for root trees, while this codebase uses
-    # 00manifesttree.i for root trees (so flat trees stay in 00manifest).
-    # Make a symlink for compatibility.
-    os.symlink(
-        lite_repo.store_join("00manifest", suffix=".i"),
-        lite_repo.store_join("00manifesttree", suffix=".i"),
-    )
+    if nodes:
+        # Vanilla hg uses 00manfiest.i for root trees, while this codebase uses
+        # 00manifesttree.i for root trees (so flat trees stay in 00manifest).
+        # Make a symlink for compatibility. But skip it if the repo is empty.
+        os.symlink(
+            "00manifest.i",
+            lite_repo.store_join("00manifesttree.i"),
+        )
+    else:
+        # Ensure key files exist for an empty repo.
+        lite_repo.append_raw("store/00changelog.i", b"")
 
     # Export bookmarks
     bookmarks_data = bindings.refencode.encodebookmarks(repo._bookmarks)

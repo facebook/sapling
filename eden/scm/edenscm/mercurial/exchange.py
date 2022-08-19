@@ -570,6 +570,9 @@ def findblobs(repo, nodes):
                 fctx = ctx[path]
                 assert fctx.filenode() == newnode
                 p1, p2 = fctx.filelog().parents(newnode)
+                assert (
+                    not fctx.rawflags()
+                ), f"findblobs does not support LFS content {path}"
                 yield "blob", path, newnode, (p1, p2), fctx.rawdata()
 
         # changed trees

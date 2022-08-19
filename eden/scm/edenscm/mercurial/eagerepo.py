@@ -74,6 +74,9 @@ class eagerfilelog(object):
         node = self.store.add_sha1_blob(rawtext)
         return node
 
+    def flags(self, rev):
+        return 0
+
     def parents(self, node):
         if node == nullid:
             return (nullid, nullid)
