@@ -31,8 +31,7 @@ from facebook.eden.ttypes import MountInfo as ThriftMountInfo, MountState
 from filelock import BaseFileLock, FileLock
 
 from . import configinterpolator, configutil, telemetry, util, version
-from .util import HealthStatus, print_stderr, write_file_atomically
-
+from .util import HealthStatus, print_stderr, Spinner, write_file_atomically
 
 try:
     from eden.thrift import client  # @manual
@@ -815,9 +814,38 @@ Do you want to run `eden mount %s` instead?"""
 
         This should normally be called after unmounting the mount point.
         """
-        path = Path(path)
-        shutil.rmtree(self._get_client_dir_for_mount_point(path))
-        self._remove_path_from_directory_map(path)
+
+        # The shutil.rmtree operation can take a lot of time and we'd like to give the user
+        # a view into what it is doing. Hooking the internal recursive rmtree to display a
+        # spinner
+        # We're gently caressing an internal shutil function
+        # pyre-ignore[16]: Module shutil has no attribute _rmtree_unsafe.
+        old_rmtree_unsafe = shutil._rmtree_unsafe
+        # We're gently caressing an internal shutil function
+        # pyre-ignore[16]: Module shutil has no attribute _rmtree_safe_fd.
+        old_rmtree_safe_fd = shutil._rmtree_safe_fd
+
+        with Spinner("Deleting: ") as spinner:
+            shutil._rmtree_unsafe = util.hook_recursive_with_spinner(
+                # We're gently caressing an internal shutil function
+                # pyre-ignore[16]: Module shutil has no attribute _rmtree_unsafe.
+                shutil._rmtree_unsafe,
+                spinner,
+            )
+            shutil._rmtree_safe_fd = util.hook_recursive_with_spinner(
+                # We're gently caressing an internal shutil function
+                # pyre-ignore[16]: Module shutil has no attribute _rmtree_safe_fd.
+                shutil._rmtree_safe_fd,
+                spinner,
+            )
+
+            path = Path(path)
+            shutil.rmtree(self._get_client_dir_for_mount_point(path))
+            self._remove_path_from_directory_map(path)
+
+        # Restore the original rmtree
+        shutil._rmtree_unsafe = old_rmtree_unsafe
+        shutil._rmtree_safe_fd = old_rmtree_safe_fd
 
     def cleanup_mount(self, path: Path, preserve_mount_point: bool = False) -> None:
         if sys.platform != "win32":

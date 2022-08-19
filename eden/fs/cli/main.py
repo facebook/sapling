@@ -36,7 +36,7 @@ from eden.fs.cli.util import (
 )
 from eden.thrift.legacy import EdenClient, EdenNotRunningError
 from facebook.eden import EdenService
-from facebook.eden.ttypes import FuseCall, MountState
+from facebook.eden.ttypes import MountState
 from fb303_core.ttypes import fb303_status
 
 from . import (
@@ -1380,6 +1380,7 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
                     # anyways so the removal of the repo will remove them.
                     # This would usually happen because the daemon is not
                     # running, so this is usually just extra spam for users.
+                    print(f"Stopping aux processes for {mount}...")
                     stop_aux_processes_for_path(
                         mount,
                         complain_about_failing_to_unmount_redirs=(
@@ -1394,6 +1395,7 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
                     # unmounting could still timeout, though we unmount with -f,
                     # so should this theoretically should not happen.
                 try:
+                    print(f"Unmounting {mount}...")
                     instance.unmount(mount)
                 except EdenNotRunningError:
                     # Its fine if we could not tell the daemon to unmount
@@ -1411,6 +1413,7 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
 
             try:
                 if remove_type != RemoveType.CLEANUP_ONLY:
+                    print(f"Deleting mount {mount}")
                     instance.destroy_mount(mount, args.preserve_mount_point)
             except Exception as ex:
                 print_stderr(f"error deleting configuration for {mount}: {ex}")
@@ -1419,6 +1422,7 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
                     traceback.print_exc()
             else:
                 try:
+                    print(f"Cleaning up mount {mount}")
                     instance.cleanup_mount(Path(mount), args.preserve_mount_point)
                 except Exception as ex:
                     print_stderr(f"error cleaning up mount {mount}: {ex}")

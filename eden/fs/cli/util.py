@@ -9,8 +9,8 @@
 import abc
 import binascii
 import errno
+import functools
 import getpass
-import json
 import os
 import random
 import re
@@ -21,7 +21,7 @@ import sys
 import time
 import typing
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING, TypeVar
 
 import thrift.transport
 from eden.thrift.legacy import EdenClient, EdenNotRunningError
@@ -699,3 +699,51 @@ def get_tip_commit_hash(repo: Path) -> bytes:
         stderr=subprocess.PIPE,
     )
     return binascii.unhexlify(result.stdout.strip())
+
+
+class Spinner:
+    """
+    A small utility class for displaying a progress spinner during long running
+    operations with optional additional text.
+    """
+
+    def __init__(self, header: str):
+        self._header = header
+        self._cursor = self.cursor()
+
+    @staticmethod
+    def cursor():
+        while True:
+            for cursor in "|/-\\":
+                yield cursor
+
+    def spin(self, text: str = ""):
+        sys.stdout.write("\r\033[K")
+        sys.stdout.write(f"{self._header} {text} ")
+        sys.stdout.write(f"{next(self._cursor)} ")
+        sys.stdout.flush()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, ex_type, ex_value, ex_traceback):
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+        return False
+
+
+def hook_recursive_with_spinner(function: Callable, spinner: Spinner):
+    """
+    hook_recursive_with_spinner
+    Hook a recursive function updating a spinner at every recursion step
+    Params:
+    - function: the recursive function to hook
+    - spinner: Spinner supporting text arguments
+    """
+
+    @functools.wraps(function)
+    def run(*args, **kwargs):
+        spinner.spin(args[0])
+        return function(*args, **kwargs)
+
+    return run
