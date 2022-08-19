@@ -216,8 +216,11 @@ def hg(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> int:
         # See above. This avoids leaking file descriptions that prevents
         # file deletion on Windows.
         if os.name == "nt":
+            # pyre-fixme[16]: `BinaryIO` has no attribute `getvalue`.
             real_stdout.write(stdout.getvalue())
             real_stdout.flush()
+            # pyre-fixme[61]: `real_stdout` is undefined, or not always defined.
+            # pyre-fixme[61]: `real_stderr` is undefined, or not always defined.
             if real_stdout is not real_stderr:
                 real_stderr.write(stderr.getvalue())
                 real_stderr.flush()
