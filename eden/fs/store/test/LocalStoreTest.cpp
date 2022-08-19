@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#ifndef _WIN32
-
 #include "eden/fs/store/test/LocalStoreTest.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/SqliteLocalStore.h"
@@ -229,5 +227,3 @@ INSTANTIATE_TEST_CASE_P(
 #pragma clang diagnostic pop
 
 } // namespace
-
-#endif
