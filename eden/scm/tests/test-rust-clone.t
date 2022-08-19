@@ -27,7 +27,7 @@ test rust clone
 Test that nonsupported options fallback to python:
 
   $ cd $TESTTMP
-  $ hg clone -U -r $D test:e1 $TESTTMP/rev-clone
+  $ hg clone -U -r $D ~/e1 $TESTTMP/rev-clone
   fetching lazy changelog
   populating main commit graph
   tip commit: 9bc730a19041f9ec7cb33c626e811aa233efb18c
