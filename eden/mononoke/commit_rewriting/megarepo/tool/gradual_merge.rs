@@ -333,8 +333,11 @@ async fn push_merge_commit(
     )
     .await?;
 
-    info!(ctx.logger(), "Pushrebased to {}", pushrebase_res.head);
-    Ok(pushrebase_res.head)
+    info!(
+        ctx.logger(),
+        "Pushrebased to {}", pushrebase_res.new_bookmark_value
+    );
+    Ok(pushrebase_res.new_bookmark_value)
 }
 
 #[cfg(test)]

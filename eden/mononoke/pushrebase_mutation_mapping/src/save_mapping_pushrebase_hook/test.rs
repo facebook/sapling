@@ -71,7 +71,7 @@ async fn pushrebase_saves_mapping(fb: FacebookInit) -> Result<()> {
         &hooks,
     )
     .await?
-    .head;
+    .new_bookmark_value;
 
     let prepushrebase_ids = get_prepushrebase_ids(
         &repo_factory.metadata_db().connections().read_connection,

@@ -332,7 +332,7 @@ impl AsyncIntoResponseWith<thrift::PushrebaseOutcome> for PushrebaseOutcome {
         let (repo, identity_schemes, old_identity_schemes) = additional;
         let mut new_ids = HashSet::new();
         let mut old_ids = HashSet::new();
-        new_ids.insert(self.head);
+        new_ids.insert(self.new_bookmark_value);
         for rebase in self.rebased_changesets.iter() {
             old_ids.insert(rebase.id_old);
             new_ids.insert(rebase.id_new);
@@ -358,7 +358,8 @@ impl AsyncIntoResponseWith<thrift::PushrebaseOutcome> for PushrebaseOutcome {
             }
         }
 
-        let head = try_get(&new_id_map, self.head);
+        let old_bookmark_value = try_get(&new_id_map, self.old_bookmark_value);
+        let new_bookmark_value = try_get(&new_id_map, self.new_bookmark_value);
         let rebased_commits: Vec<_> = self
             .rebased_changesets
             .iter()
@@ -374,7 +375,8 @@ impl AsyncIntoResponseWith<thrift::PushrebaseOutcome> for PushrebaseOutcome {
             .collect();
 
         Ok(thrift::PushrebaseOutcome {
-            head,
+            old_bookmark_value,
+            new_bookmark_value,
             rebased_commits,
             pushrebase_distance: to_i64(self.pushrebase_distance.0)?,
             retry_num: to_i64(self.retry_num.0)?,

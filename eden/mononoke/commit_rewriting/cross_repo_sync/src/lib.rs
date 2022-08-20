@@ -1156,7 +1156,7 @@ where
                 .await;
                 let pushrebase_res =
                     pushrebase_res.map_err(|e| Error::from(ErrorKind::PushrebaseFailure(e)))?;
-                let pushrebased_changeset = pushrebase_res.head;
+                let pushrebased_changeset = pushrebase_res.new_bookmark_value;
                 Ok(Some(pushrebased_changeset))
             }
         }

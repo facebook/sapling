@@ -95,6 +95,41 @@ impl<'a> CommitInfo<'a> {
     }
 }
 
+#[derive(Serialize)]
+pub struct BookmarkInfo<'a> {
+    repo_id: RepositoryId,
+    bookmark_name: &'a str,
+    bookmark_kind: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    old_bookmark_value: Option<ChangesetId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    new_bookmark_value: Option<ChangesetId>,
+    operation: &'a str,
+    update_reason: &'a str,
+}
+
+impl<'a> BookmarkInfo<'a> {
+    pub fn new(
+        repo_id: RepositoryId,
+        bookmark_name: &'a str,
+        bookmark_kind: &'a str,
+        old_bookmark_value: Option<ChangesetId>,
+        new_bookmark_value: Option<ChangesetId>,
+        operation: &'a str,
+        update_reason: &'a str,
+    ) -> Self {
+        Self {
+            repo_id,
+            bookmark_name,
+            bookmark_kind,
+            old_bookmark_value,
+            new_bookmark_value,
+            operation,
+            update_reason,
+        }
+    }
+}
+
 pub struct LogToScribe {
     client: Option<Scribe>,
     category: String,
@@ -120,6 +155,16 @@ impl LogToScribe {
             Some(ref client) => {
                 let commit = serde_json::to_string(commit)?;
                 client.offer(&self.category, &commit)
+            }
+            None => Ok(()),
+        }
+    }
+
+    pub fn queue_bookmark(&self, bookmark: &BookmarkInfo<'_>) -> Result<(), Error> {
+        match &self.client {
+            Some(ref client) => {
+                let bookmark = serde_json::to_string(bookmark)?;
+                client.offer(&self.category, &bookmark)
             }
             None => Ok(()),
         }

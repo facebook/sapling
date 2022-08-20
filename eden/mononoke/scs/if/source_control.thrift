@@ -525,7 +525,7 @@ struct PushrebaseRebasedCommit {
 }
 
 struct PushrebaseOutcome {
-  /// The new id for the rebased head.
+  /// Deprecated. Please, use `new_bookmark_value` instead.
   1: map<CommitIdentityScheme, CommitId> head;
 
   /// List of mappings from old commit id to new commit id for the rebased
@@ -538,6 +538,12 @@ struct PushrebaseOutcome {
 
   /// How many retries it took to do the rebase successfully, due to race conditions.
   4: i64 retry_num;
+
+  /// The old id where the bookmark was before the pushrebase operation.
+  5: map<CommitIdentityScheme, CommitId> old_bookmark_value;
+
+  /// The new id for the rebased head.
+  6: map<CommitIdentityScheme, CommitId> new_bookmark_value;
 }
 
 typedef string SparseProfileName

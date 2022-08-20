@@ -504,7 +504,7 @@ async fn change_mapping_via_extras<'a>(
     .map_err(Error::from)
     .await?;
 
-    println!("{}", pushrebase_res.head);
+    println!("{}", pushrebase_res.new_bookmark_value);
 
     Ok(())
 }

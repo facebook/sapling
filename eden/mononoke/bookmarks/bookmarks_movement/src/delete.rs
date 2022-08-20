@@ -7,6 +7,9 @@
 
 use std::collections::HashMap;
 
+use blobrepo::scribe::log_bookmark_operation_to_scribe;
+use blobrepo::scribe::BookmarkOperation;
+use blobrepo::scribe::ScribeBookmarkInfo;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKind;
 use bookmarks_types::BookmarkName;
@@ -132,6 +135,15 @@ impl<'op> DeleteBookmarkOp<'op> {
             return Err(BookmarkMovementError::TransactionFailed);
         }
 
+        if let Some(category) = &repo.repo_config().bookmark_scribe_category {
+            let info = ScribeBookmarkInfo {
+                bookmark_name: self.bookmark.clone(),
+                bookmark_kind: kind,
+                operation: BookmarkOperation::Delete(self.old_target),
+                reason: self.reason,
+            };
+            log_bookmark_operation_to_scribe(ctx, category, repo, &info).await;
+        }
         Ok(())
     }
 }
