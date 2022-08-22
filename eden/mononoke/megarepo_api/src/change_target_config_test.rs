@@ -642,3 +642,49 @@ async fn test_change_target_config_noop_change(fb: FacebookInit) -> Result<(), E
 
     Ok(())
 }
+
+#[fbinit::test]
+async fn test_change_target_config_linkfile_to_file_mapped_to_multiple_paths(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let mut test = MegarepoTest::new(&ctx).await?;
+    let first_source_name = SourceName::new("source_1");
+    let target: Target = test.target("target".to_string());
+
+    init_megarepo(&ctx, &mut test).await?;
+
+    let version_2 = "version_2".to_string();
+    SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version_2.clone())
+        .source_builder(first_source_name.clone())
+        .set_prefix_bookmark_to_source_name()
+        .copyfile("first", "copy_of_first")
+        .linkfile("first", "linkfiles/first")
+        .build_source()?
+        .build(&mut test.configs_storage);
+
+    let first_source_cs_id =
+        resolve_cs_id(&ctx, &test.blobrepo, first_source_name.0.clone()).await?;
+    let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
+    let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
+    let change_target_config =
+        ChangeTargetConfig::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let err = change_target_config
+        .run(
+            &ctx,
+            &target,
+            version_2,
+            target_cs_id,
+            btreemap! {
+                first_source_name.clone() => first_source_cs_id,
+            },
+            None,
+        )
+        .await;
+
+    assert_eq!(
+        format!("{}", err.unwrap_err()),
+        "linkfile source first maps to too many files inside source source_1"
+    );
+    Ok(())
+}
