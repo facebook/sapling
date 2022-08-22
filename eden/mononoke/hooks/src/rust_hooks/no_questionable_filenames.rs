@@ -110,7 +110,10 @@ impl FileHook for NoQuestionableFilenames {
                 _ => {
                     return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                         "Illegal filename",
-                        format!("ABORT: Illegal filename: {}", path),
+                        format!(
+                            "ABORT: Illegal filename: {}. The file name cannot include brace(s).",
+                            path
+                        ),
                     )));
                 }
             }
@@ -122,7 +125,10 @@ impl FileHook for NoQuestionableFilenames {
                 _ => {
                     return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                         "Illegal filename",
-                        format!("ABORT: Illegal filename: {}", path),
+                        format!(
+                            "ABORT: Illegal filename: {}. The file name cannot include spaces, apostrophes or start with hyphens.",
+                            path
+                        ),
                     )));
                 }
             }
