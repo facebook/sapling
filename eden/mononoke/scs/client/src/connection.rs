@@ -121,13 +121,13 @@ impl Connection {
 
 #[derive(clap::Args)]
 pub(super) struct ConnectionArgs {
-    #[clap(long, default_value = "scsc-default-client")]
+    #[clap(long, default_value = "scsc-default-client", global = true)]
     /// Name of the client for quota attribution and logging.
     client_id: String,
-    #[clap(long, short, default_value = DEFAULT_TIER)]
+    #[clap(long, short, default_value = DEFAULT_TIER, global = true)]
     /// Connect to SCS through given tier.
     tier: String,
-    #[clap(long, short, conflicts_with = "tier")]
+    #[clap(long, short, conflicts_with = "tier", global = true)]
     /// Connect to SCS through a given host and port pair, format HOST:PORT.
     host: Option<String>,
 }

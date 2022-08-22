@@ -81,7 +81,7 @@ impl BaseApp for ScscApp {
 /// Send requests to the Source Control Service
 struct SCSCArgs {
     /// Should the output of the command be JSON?
-    #[clap(long)]
+    #[clap(long, global = true)]
     json: bool,
 
     #[clap(flatten)]
