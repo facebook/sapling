@@ -406,11 +406,13 @@ if not os.path.isdir(builddir):
             ensureexists(scratchpath)
         else:
             # Prefer a symlink to a "scratch path" path if the "mkscratch" tool exists
-            scratchpath = subprocess.check_output(
-                ["mkscratch", "path", "--subdir", "hgbuild3"]
-            ).strip()
+            scratchpath = (
+                subprocess.check_output(["mkscratch", "path", "--subdir", "hgbuild3"])
+                .strip()
+                .decode()
+            )
         assert os.path.isdir(scratchpath)
-        os.symlink(scratchpath, builddir)
+        os.symlink(scratchpath, builddir, target_is_directory=True)
     except Exception:
         ensureexists(builddir)
 
