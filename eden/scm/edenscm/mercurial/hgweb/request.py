@@ -16,12 +16,15 @@ from __future__ import absolute_import
 import cgi
 import errno
 import socket
+from typing import Dict, List, Optional, Tuple, Union
 
 from .. import pycompat, util
 from .common import ErrorResponse, HTTP_NOT_MODIFIED, statusmessage
 
 
-shortcuts = {
+shortcuts: Dict[
+    str, Union[List[Tuple[str, List[str]]], List[Tuple[str, Optional[List[str]]]]]
+] = {
     "cl": [("cmd", ["changelog"]), ("rev", None)],
     "sl": [("cmd", ["shortlog"]), ("rev", None)],
     "cs": [("cmd", ["changeset"]), ("node", None)],
