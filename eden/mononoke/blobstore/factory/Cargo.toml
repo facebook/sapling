@@ -16,7 +16,7 @@ blobstore_sync_queue = { version = "0.1.0", path = "../../blobstore_sync_queue" 
 cacheblob = { version = "0.1.0", path = "../cacheblob" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 chaosblob = { version = "0.1.0", path = "../chaosblob" }
-clap = { version = "3.2.10", features = ["derive", "regex", "unicode", "wrap_help"] }
+clap = { version = "3.2.17", features = ["derive", "regex", "unicode", "wrap_help"] }
 clap-old = { package = "clap", version = "2.33" }
 delayblob = { version = "0.1.0", path = "../delayblob" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

@@ -20,7 +20,7 @@ blobstore_sync_queue = { version = "0.1.0", path = "../blobstore_sync_queue" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
-clap = { version = "3.2.10", features = ["derive", "regex", "unicode", "wrap_help"] }
+clap = { version = "3.2.17", features = ["derive", "regex", "unicode", "wrap_help"] }
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

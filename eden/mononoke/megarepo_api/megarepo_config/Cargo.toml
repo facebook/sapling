@@ -11,7 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.56"
 async-trait = "0.1.56"
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-clap = { version = "3.2.10", features = ["derive", "regex", "unicode", "wrap_help"] }
+clap = { version = "3.2.17", features = ["derive", "regex", "unicode", "wrap_help"] }
 configo_client = { version = "0.1.0", path = "../configo_client" }
 context = { version = "0.1.0", path = "../../server/context" }
 faster-hex = "0.6.1"
