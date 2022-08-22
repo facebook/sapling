@@ -4,8 +4,10 @@
 # GNU General Public License version 2.
 
 import socket
+
 import ssl
 import sys
+from typing import List, Optional, Sized
 
 from edenscm.mercurial import mutation, pycompat, registrar, smartset, util as hgutil
 from edenscm.mercurial.i18n import _
@@ -65,7 +67,7 @@ def memoize(f):
     return helper
 
 
-def _fail(repo, diffids, *msgs):
+def _fail(repo, diffids: Sized, *msgs) -> List[str]:
     for msg in msgs:
         repo.ui.warn(msg)
     return ["Error"] * len(diffids)
@@ -120,7 +122,7 @@ def getdiffstatus(repo, *diffid):
     return result
 
 
-def populateresponseforphab(repo, diffnum):
+def populateresponseforphab(repo, diffnum) -> None:
     """:populateresponse: Runs the memoization function
     for use of phabstatus and sync status
     """
@@ -233,7 +235,7 @@ don't say anything. All good.
 
 
 @templatekeyword("syncstatus")
-def showsyncstatus(repo, ctx, templ, **args):
+def showsyncstatus(repo, ctx, templ, **args) -> Optional[str]:
     """String. Return whether the local revision is in sync
     with the remote (phabricator) revision
     """
@@ -279,7 +281,7 @@ def getdiffnum(repo, ctx):
     return diffprops.parserevfromcommitmsg(ctx.description())
 
 
-def extsetup(ui):
+def extsetup(ui) -> None:
     smartset.prefetchtemplatekw.update(
         {
             "phabsignalstatus": ["phabstatus"],
