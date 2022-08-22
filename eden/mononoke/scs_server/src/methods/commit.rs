@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -921,31 +922,43 @@ impl SourceControlServiceImpl {
         let outcomes = changeset
             .run_hooks(params.bookmark, pushvars.as_ref())
             .await?;
+
+        let mut outcomes_map = BTreeMap::new();
+
+        for outcome in outcomes {
+            let (name, execution) = match outcome {
+                HookOutcome::FileHook(id, exec) => (id.hook_name, exec),
+                HookOutcome::ChangesetHook(id, exec) => (id.hook_name, exec),
+            };
+
+            match execution {
+                HookExecution::Accepted => {
+                    outcomes_map.entry(name).or_insert_with(|| {
+                        thrift::HookOutcome::accepted(thrift::HookOutcomeAccepted {
+                            ..Default::default()
+                        })
+                    });
+                }
+                HookExecution::Rejected(rej) => {
+                    let rejection = thrift::HookOutcomeRejected {
+                        description: rej.description.to_string(),
+                        long_description: rej.long_description,
+                        ..Default::default()
+                    };
+
+                    match outcomes_map
+                        .entry(name)
+                        .or_insert_with(|| thrift::HookOutcome::rejections(vec![]))
+                    {
+                        thrift::HookOutcome::rejections(rejs) => rejs.push(rejection),
+                        obj => *obj = thrift::HookOutcome::rejections(vec![rejection]),
+                    }
+                }
+            }
+        }
+
         Ok(thrift::CommitRunHooksResponse {
-            outcomes: outcomes
-                .into_iter()
-                .map(|outcome| {
-                    let (name, execution) = match outcome {
-                        HookOutcome::FileHook(id, exec) => (id.hook_name, exec),
-                        HookOutcome::ChangesetHook(id, exec) => (id.hook_name, exec),
-                    };
-                    let thrift_outcome = match execution {
-                        HookExecution::Accepted => {
-                            thrift::HookOutcome::accepted(thrift::HookOutcomeAccepted {
-                                ..Default::default()
-                            })
-                        }
-                        HookExecution::Rejected(rej) => {
-                            thrift::HookOutcome::rejected(thrift::HookOutcomeRejected {
-                                description: rej.description.to_string(),
-                                long_description: rej.long_description,
-                                ..Default::default()
-                            })
-                        }
-                    };
-                    (name, thrift_outcome)
-                })
-                .collect(),
+            outcomes: outcomes_map,
             ..Default::default()
         })
     }
