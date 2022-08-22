@@ -89,8 +89,6 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests ncurses
     - name: Fetch python
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests python
-    - name: Fetch bison
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests bison
     - name: Fetch libsodium
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests libsodium
     - name: Fetch xz
@@ -173,8 +171,6 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests ncurses
     - name: Build python
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests python
-    - name: Build bison
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests bison
     - name: Build libsodium
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests libsodium
     - name: Build xz
