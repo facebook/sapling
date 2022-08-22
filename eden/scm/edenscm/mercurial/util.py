@@ -1405,6 +1405,9 @@ def _reloadenv():
 
     timer = time.time
 
+    # Respect $TZ change
+    bindings.hgtime.tzset()
+
     if "TESTTMP" in os.environ or "testutil" in sys.modules:
         # Stabilize test output
         def timer():

@@ -198,7 +198,6 @@ def hg(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> int:
             stderr = stdout
         else:
             stderr = io.BytesIO()
-        stdin = io.BytesIO(stdin.read())
 
     try:
         with shellenv(
