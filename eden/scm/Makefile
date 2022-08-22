@@ -66,6 +66,22 @@ help:
 
 all: build
 
+oss:
+	SAPLING_OSS_BUILD=true \
+	  $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
+	  build_py -c -d . \
+	  build_clib $(COMPILERFLAG) \
+	  build_ext $(COMPILERFLAG) -i \
+	  build_rust_ext -i -l $(RFLAG)\
+	  build_pyzip -i \
+	  build_mo
+ifeq ($(OS),Windows_NT)
+	cp build/scripts-3*/$(HGNAME).exe $(HGNAME).exe
+else
+	$(RM) $(HGNAME)
+	cp build/scripts-3*/$(HGNAME) $(HGNAME)
+endif
+
 local:
 	$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
 	  build_py -c -d . \

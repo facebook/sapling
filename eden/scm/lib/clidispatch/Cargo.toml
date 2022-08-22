@@ -17,7 +17,10 @@ network-doctor = { version = "0.1.0", path = "../doctor/network" }
 repo = { version = "0.1.0", path = "../repo" }
 termlogger = { version = "0.1.0", path = "../termlogger" }
 thiserror = "1.0.30"
-thrift-types = { version = "0.1.0", path = "../thrift-types" }
+thrift-types = { version = "0.1.0", path = "../thrift-types", optional = true }
 tracing = "0.1.35"
 types = { version = "0.1.0", path = "../types" }
 util = { version = "0.1.0", path = "../util" }
+
+[features]
+eden = ["dep:thrift-types"]

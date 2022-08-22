@@ -149,23 +149,28 @@ pub fn run(opts: StatusOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
         use_color: io.output().can_color(),
     };
 
-    // Attempt to fetch status information from EdenFS.
-    let (status, copymap) = edenfs_client::status::maybe_status_fastpath(
-        repo.path(),
-        io,
-        print_config.status_types.ignored,
-    )
-    .map_err(
-        |e| match e.downcast_ref::<edenfs_client::status::OperationNotSupported>() {
-            Some(_) => anyhow!(FallbackToPython("status")),
-            None => e,
-        },
-    )?;
+    #[cfg(feature = "eden")]
+    {
+        // Attempt to fetch status information from EdenFS.
+        let (status, copymap) = edenfs_client::status::maybe_status_fastpath(
+            repo.path(),
+            io,
+            print_config.status_types.ignored,
+        )
+        .map_err(
+            |e| match e.downcast_ref::<edenfs_client::status::OperationNotSupported>() {
+                Some(_) => anyhow!(FallbackToPython("status")),
+                None => e,
+            },
+        )?;
 
-    let cwd = std::env::current_dir()?;
-    let relativizer = RepoPathRelativizer::new(cwd, repo.path());
-    print::print_status(io, relativizer, &print_config, &status, &copymap)?;
-    Ok(0)
+        let cwd = std::env::current_dir()?;
+        let relativizer = RepoPathRelativizer::new(cwd, repo.path());
+        print::print_status(io, relativizer, &print_config, &status, &copymap)?;
+        return Ok(0);
+    }
+
+    Err(errors::FallbackToPython(name()).into())
 }
 
 pub fn name() -> &'static str {

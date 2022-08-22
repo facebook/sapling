@@ -19,7 +19,9 @@ use status::Status;
 use storemodel::ReadFileContents;
 use treestate::treestate::TreeState;
 
+#[cfg(feature = "eden")]
 use crate::edenfs::EdenFileSystem;
+
 use crate::filechangedetector::HgModifiedTime;
 use crate::filesystem::FileSystemType;
 use crate::filesystem::PendingChangeResult;
@@ -101,7 +103,12 @@ impl WorkingCopy {
                 store,
                 last_write,
             )?),
-            FileSystemType::Eden => Box::new(EdenFileSystem::new(root)?),
+            FileSystemType::Eden => {
+                #[cfg(not(feature = "eden"))]
+                panic!("cannot use EdenFS in a non-EdenFS build");
+                #[cfg(feature = "eden")]
+                Box::new(EdenFileSystem::new(root)?)
+            },
         })
     }
 
