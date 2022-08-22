@@ -4,6 +4,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+from typing import Optional
 from unittest.mock import MagicMock, patch
 
 import eden.fs.cli.doctor as doctor
@@ -16,6 +17,9 @@ from eden.fs.cli.test.lib.output import TestOutput
 
 class DoctorUnixTest(DoctorTestBase):
     """Doctor tests relevant to only Unix-like platforms"""
+
+    # The diffs for what is written to stdout can be large.
+    maxDiff: Optional[int] = None
 
     @patch(
         "eden.fs.cli.doctor.test.lib.fake_eden_instance.FakeEdenInstance.check_privhelper_connection",

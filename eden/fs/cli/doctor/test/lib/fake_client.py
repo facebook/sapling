@@ -37,6 +37,14 @@ class FakeClient:
             bytes, Optional[eden_ttypes.MountState]
         ] = defaultdict(_get_default_mount_state)
 
+        self._path_mount_inode_info: Dict[
+            bytes, eden_ttypes.MountInodeInfo
+        ] = defaultdict(
+            lambda: eden_ttypes.MountInodeInfo(
+                unloadedInodeCount=1, loadedFileCount=2, loadedTreeCount=3
+            )
+        )
+
     def __enter__(self) -> "FakeClient":
         return self
 
@@ -48,6 +56,11 @@ class FakeClient:
     ) -> None:
         """This function allows tests to change the reported state of mounts."""
         self._path_mount_state[os.fsencode(path)] = state
+
+    def set_mount_inode_info(
+        self, path: Path, mount_inode_info: eden_ttypes.MountInodeInfo
+    ) -> None:
+        self._path_mount_inode_info[os.fsencode(path)] = mount_inode_info
 
     def listMounts(self) -> List[eden_ttypes.MountInfo]:
         result = []
@@ -92,3 +105,12 @@ class FakeClient:
         self, mountPoint: bytes, paths: List[bytes], sync: eden_ttypes.SyncBehavior
     ) -> List[eden_ttypes.SHA1Result]:
         return []
+
+    def getStatInfo(
+        self, params: eden_ttypes.GetStatInfoParams
+    ) -> eden_ttypes.InternalStats:
+        mount_paths = [mount.mount_point for mount in self._mount_table.mounts]
+        mount_point_info = {
+            path: self._path_mount_inode_info[path] for path in mount_paths
+        }
+        return eden_ttypes.InternalStats(mountPointInfo=mount_point_info)

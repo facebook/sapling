@@ -8,6 +8,7 @@ import binascii
 import os
 import stat
 import struct
+import sys
 import typing
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -30,7 +31,12 @@ from eden.fs.cli.doctor.test.lib.problem_collector import ProblemCollector
 from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
 from eden.fs.cli.prjfs import PRJ_FILE_STATE
 from eden.fs.cli.test.lib.output import TestOutput
-from facebook.eden.ttypes import SHA1Result, TreeInodeDebugInfo, TreeInodeEntryDebugInfo
+from facebook.eden.ttypes import (
+    MountInodeInfo,
+    SHA1Result,
+    TreeInodeDebugInfo,
+    TreeInodeEntryDebugInfo,
+)
 from fb303_core.ttypes import fb303_status
 
 
@@ -1016,6 +1022,54 @@ Checking {mount}
             tracker.problems[0].description(),
             "The on-disk file at a is out of sync from EdenFS. Expected SHA1: 01020304, on-disk SHA1: 8843d7f92416211de9ebb963ff4ce28125932878",
         )
+
+    def test_inode_counts(self) -> None:
+        tmp_dir = self.make_temporary_directory()
+        instance = FakeEdenInstance(tmp_dir)
+        checkout = instance.create_test_mount("path")
+
+        instance.get_thrift_client_legacy().set_mount_inode_info(
+            checkout.path,
+            MountInodeInfo(
+                unloadedInodeCount=2_000_000,
+                loadedFileCount=3_000_000,
+                loadedTreeCount=4_000_000,
+            ),
+        )
+
+        out = TestOutput()
+        dry_run = False
+        exit_code = doctor.cure_what_ails_you(
+            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+            #  `FakeEdenInstance`.
+            instance,
+            dry_run,
+            mount_table=instance.mount_table,
+            fs_util=FakeFsUtil(),
+            proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
+            out=out,
+        )
+
+        # Making platform-specific assertions dynamically because pyre checks
+        # fail for Windows-only targets.
+        if sys.platform == "win32":
+            self.assertEqual(
+                f"""\
+Checking {checkout.path}
+<yellow>- Found problem:<reset>
+Mount point {checkout.path} has 9000000 files on disk, which may impact EdenFS performance
+Reclone your repository to improve performance, if needed: https://fburl.com/wiki/ji8ik51v
+
+<yellow>1 issue requires manual attention.<reset>
+Ask in the EdenFS Windows Users group if you need help fixing issues with EdenFS:
+https://fb.workplace.com/groups/edenfswindows
+""",
+                out.getvalue(),
+            )
+            self.assertEqual(exit_code, 1)
+        else:
+            self.assertEqual(exit_code, 0)
 
 
 def _create_watchman_subscription(

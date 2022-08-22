@@ -185,7 +185,19 @@ class SnapshotState(typing.NamedTuple):
     last_checkout_hash: str
 
 
-class EdenInstance:
+class AbstractEdenInstance:
+    def get_config_int(self, key: str, default: int) -> int:
+        val = self.get_config_value(key, str(default))
+        try:
+            return int(val)
+        except ValueError:
+            return default
+
+    def get_config_value(self, key: str, default: str) -> str:
+        ...
+
+
+class EdenInstance(AbstractEdenInstance):
     """This class contains information about a particular edenfs instance.
 
     It provides APIs for communicating with edenfs over thrift and for examining and

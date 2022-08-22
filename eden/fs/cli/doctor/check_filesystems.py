@@ -18,6 +18,7 @@ from typing import Callable, List, Set, Tuple
 
 from eden.fs.cli.config import EdenCheckout, EdenInstance
 from eden.fs.cli.doctor.problem import Problem, ProblemSeverity, ProblemTracker
+from eden.fs.cli.doctor.util import CheckoutInfo
 from eden.fs.cli.filesystem import FsUtil
 from eden.fs.cli.prjfs import PRJ_FILE_STATE
 from facebook.eden.constants import DIS_REQUIRE_LOADED, DIS_REQUIRE_MATERIALIZED
@@ -370,3 +371,46 @@ def check_loaded_content(
 
         if errors != []:
             tracker.add_problem(LoadedFileHasDifferentContentOnDisk(errors))
+
+
+class HighInodeCountProblem(Problem):
+    def __init__(self, path, inode_count) -> None:
+        super().__init__(
+            description=f"Mount point {path} has {inode_count} files on disk, which may impact EdenFS performance",
+            # TODO(T94186741): Change remediation instructions once we can unload inodes on demand.
+            remediation="Reclone your repository to improve performance, if needed: https://fburl.com/wiki/ji8ik51v",
+            severity=ProblemSeverity.ADVICE,
+        )
+
+
+class UnknownInodeCountProblem(Problem):
+    def __init__(self, path) -> None:
+        super().__init__(
+            description=f"Unable to determine the number of inodes loaded for mount point {path}",
+            severity=ProblemSeverity.ERROR,
+        )
+
+
+def check_inode_counts(
+    tracker: ProblemTracker, instance: EdenInstance, checkout: CheckoutInfo
+) -> None:
+    # This check is specific to the Windows implementation.
+    if sys.platform != "win32":
+        return
+
+    threshold = instance.get_config_int(
+        "doctor.windows-inode-count-problem-threshold", 1_000_000
+    )
+
+    inode_info = checkout.mount_inode_info
+    if inode_info is None:
+        tracker.add_problem(UnknownInodeCountProblem(checkout.path))
+        return
+
+    inode_count = (
+        inode_info.loadedFileCount
+        + inode_info.loadedTreeCount
+        + inode_info.unloadedInodeCount
+    )
+    if inode_count > threshold:
+        tracker.add_problem(HighInodeCountProblem(checkout.path, inode_count))

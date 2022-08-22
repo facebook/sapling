@@ -20,6 +20,7 @@ import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
 from eden.fs.cli import mtab, version as version_mod
 from eden.fs.cli.config import (
+    AbstractEdenInstance,
     CheckoutConfig,
     EdenCheckout,
     EdenInstance,
@@ -40,7 +41,7 @@ class FakeCheckout(NamedTuple):
     snapshot: str
 
 
-class FakeEdenInstance:
+class FakeEdenInstance(AbstractEdenInstance):
     default_commit_hash: str = "1" * 40
     _build_info: Dict[str, str] = {}
 

@@ -13,7 +13,7 @@ from typing import List, Optional, Set
 
 from eden.fs.cli.config import EdenCheckout, EdenInstance
 from eden.fs.cli.util import get_environment_suitable_for_subprocess
-from facebook.eden.ttypes import MountState
+from facebook.eden.ttypes import MountInodeInfo, MountState
 
 
 class CheckoutInfo:
@@ -25,6 +25,7 @@ class CheckoutInfo:
         running_state_dir: Optional[Path] = None,
         configured_state_dir: Optional[Path] = None,
         state: Optional[MountState] = None,
+        mount_inode_info: Optional[MountInodeInfo] = None,
     ) -> None:
         self.instance = instance
         self.path = path
@@ -32,6 +33,7 @@ class CheckoutInfo:
         self.running_state_dir = running_state_dir
         self.configured_state_dir = configured_state_dir
         self.state = state
+        self.mount_inode_info = mount_inode_info
 
     def get_checkout(self) -> EdenCheckout:
         state_dir = (

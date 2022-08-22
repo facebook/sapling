@@ -29,7 +29,7 @@ from eden.fs.cli.doctor.util import (
     get_dependent_repos,
     hg_doctor_in_backing_repo,
 )
-from facebook.eden.ttypes import MountState
+from facebook.eden.ttypes import GetStatInfoParams, MountState
 from fb303_core.ttypes import fb303_status
 
 from . import (
@@ -196,6 +196,9 @@ class EdenDoctorChecker:
         # Get information about the checkouts currently known to the running
         # edenfs process
         with self.instance.get_thrift_client_legacy() as client:
+            internal_stats = client.getStatInfo(GetStatInfoParams())
+            mount_point_info = internal_stats.mountPointInfo or {}
+
             for mount in client.listMounts():
                 # Old versions of edenfs did not return a mount state field.
                 # These versions only listed running mounts, so treat the mount state
@@ -212,6 +215,7 @@ class EdenDoctorChecker:
                     else None,
                     running_state_dir=Path(os.fsdecode(mount.edenClientPath)),
                     state=mount_state,
+                    mount_inode_info=mount_point_info.get(mount.mountPoint),
                 )
                 checkouts[path] = checkout
 
@@ -567,6 +571,11 @@ def check_running_mount(
         # Just skip the remaining checks.
         # Most of them rely on values from the configuration.
         return
+
+    try:
+        check_filesystems.check_inode_counts(tracker, instance, checkout_info)
+    except Exception as ex:
+        raise RuntimeError("Failed to check inode counts for mount") from ex
 
     try:
         check_filesystems.check_using_nfs_path(tracker, checkout.path)
