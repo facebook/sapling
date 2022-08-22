@@ -14,6 +14,8 @@ from typing import Dict, List, Optional, Set, Union
 
 from eden.fs.cli import mtab
 
+from .testcase import FAKE_UID
+
 
 EDENFS_DEVTYPE = "edenfs:"
 
@@ -39,7 +41,7 @@ class FakeMountTable(mtab.MountTable):
         vfstype: str = "fuse",
     ) -> None:
         if uid is None:
-            uid = os.getuid()
+            uid = FAKE_UID
         if dev is None:
             dev = self._next_dev
         self._next_dev += 1

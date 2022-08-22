@@ -10,11 +10,15 @@ import datetime
 import errno
 import os
 import stat
+import sys
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 from eden.fs.cli.proc_utils import BuildInfo, EdenFSProcess, LinuxProcUtils
+
+
+FAKE_UID = 1234
 
 
 class FakeEdenFSProcess(EdenFSProcess):
@@ -27,7 +31,14 @@ class FakeEdenFSProcess(EdenFSProcess):
 _default_start_age = datetime.timedelta(hours=1)
 
 
-class FakeProcUtils(LinuxProcUtils):
+FakeProcUtilsBase = LinuxProcUtils
+if sys.platform == "win32":
+    from eden.fs.cli.proc_utils_win import WinProcUtils
+
+    FakeProcUtilsBase = WinProcUtils
+
+
+class FakeProcUtils(FakeProcUtilsBase):
     _file_contents: Dict[Path, Union[bytes, Exception]] = {}
     _process_stat: Dict[int, os.stat_result] = {}
     _default_uid: int
@@ -35,7 +46,7 @@ class FakeProcUtils(LinuxProcUtils):
 
     def __init__(self, tmp_dir: str, default_uid: Optional[int] = None) -> None:
         self.proc_path = Path(tmp_dir)
-        self._default_uid = os.getuid() if default_uid is None else default_uid
+        self._default_uid = FAKE_UID if default_uid is None else default_uid
 
     def add_process(
         self,

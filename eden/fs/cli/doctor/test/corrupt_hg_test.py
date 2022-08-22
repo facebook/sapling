@@ -32,18 +32,6 @@ class CorruptHgTest(DoctorTestBase):
             FakeEdenInstance, self.checkout.instance
         ).default_backing_repo
 
-    def test_unreadable_hg_shared_path_is_a_problem(self) -> None:
-        sharedpath_path = self.checkout.path / ".hg" / "sharedpath"
-        sharedpath_path.unlink()
-        sharedpath_path.symlink_to(sharedpath_path.name)
-
-        out = self.cure_what_ails_you(dry_run=True)
-        self.assertIn(
-            "Failed to read .hg/sharedpath: "
-            f"[Errno {errno.ELOOP}] Too many levels of symbolic links",
-            out.getvalue(),
-        )
-
     def test_truncated_hg_dirstate_is_a_problem(self) -> None:
         dirstate_path = self.checkout.path / ".hg" / "dirstate"
         os.truncate(dirstate_path, dirstate_path.stat().st_size - 1)
@@ -54,8 +42,8 @@ class CorruptHgTest(DoctorTestBase):
 Checking {self.checkout.path}
 <yellow>- Found problem:<reset>
 Found inconsistent/missing data in {self.checkout.path}/.hg:
-  error parsing .hg/dirstate: Reached EOF while reading checksum \
-hash in {self.checkout.path}/.hg/dirstate.
+  error parsing .hg{os.sep}dirstate: Reached EOF while reading checksum \
+hash in {self.checkout.path}{os.sep}.hg{os.sep}dirstate.
 
 Would repair hg directory contents for {self.checkout.path}
 
@@ -76,9 +64,9 @@ Would repair hg directory contents for {self.checkout.path}
 Checking {self.checkout.path}
 <yellow>- Found problem:<reset>
 Found inconsistent/missing data in {self.checkout.path}/.hg:
-  error reading .hg/requires: [Errno 2] No such file or directory: \
+  error reading .hg{os.sep}requires: [Errno 2] No such file or directory: \
 {str(requires_path)!r}
-  error reading .hg/sharedpath: [Errno 2] No such file or directory: \
+  error reading .hg{os.sep}sharedpath: [Errno 2] No such file or directory: \
 {str(sharedpath_path)!r}
 Repairing hg directory contents for {self.checkout.path}...<green>fixed<reset>
 

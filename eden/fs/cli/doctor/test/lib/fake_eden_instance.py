@@ -31,6 +31,7 @@ from fb303_core.ttypes import fb303_status
 from .fake_client import FakeClient
 from .fake_hg_repo import FakeHgRepo
 from .fake_mount_table import FakeMountTable
+from .testcase import FAKE_UID
 
 
 class FakeCheckout(NamedTuple):
@@ -144,7 +145,7 @@ class FakeEdenInstance:
             dev_id = self._next_dev_id
             self._next_dev_id += 1
             self.mount_table.stats[full_path] = mtab.MTStat(
-                st_uid=os.getuid(), st_dev=dev_id, st_mode=(stat.S_IFDIR | 0o755)
+                st_uid=FAKE_UID, st_dev=dev_id, st_mode=(stat.S_IFDIR | 0o755)
             )
 
             # Add so that the thrift client will report mount as active

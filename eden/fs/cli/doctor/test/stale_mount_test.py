@@ -13,7 +13,7 @@ from typing import List, Tuple
 import eden.fs.cli.doctor as doctor
 from eden.fs.cli.doctor import check_stale_mounts
 from eden.fs.cli.doctor.test.lib.fake_mount_table import FakeMountTable
-from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
+from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase, FAKE_UID
 
 
 class StaleMountsCheckTest(DoctorTestBase):
@@ -171,7 +171,7 @@ Unmounting 1 stale edenfs mount...<green>fixed<reset>
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
     def test_does_not_unmount_other_users_mounts(self) -> None:
-        self.mount_table.add_mount("/mnt/stale1", uid=os.getuid() + 1)
+        self.mount_table.add_mount("/mnt/stale1", uid=FAKE_UID + 1)
 
         fixer, out = self.run_check(dry_run=False)
         self.assertEqual("", out)

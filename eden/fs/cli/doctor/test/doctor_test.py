@@ -248,19 +248,18 @@ Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
             out=out,
         )
 
-        self.assertEqual(
-            """\
-<yellow>- Found problem:<reset>
-EdenFS is not running.
+        self.assertRegex(
+            out.getvalue(),
+            r"""<yellow>- Found problem:<reset>
+EdenFS is not running\.
 To start EdenFS, run:
 
     eden start
 
-<yellow>1 issue requires manual attention.<reset>
-Ask in the EdenFS Users group if you need help fixing issues with EdenFS:
-https://fb.facebook.com/groups/eden.users/
+<yellow>1 issue requires manual attention\.<reset>
+Ask in the EdenFS (Windows )?Users group if you need help fixing issues with EdenFS:
+(https://fb\.facebook\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows)
 """,
-            out.getvalue(),
         )
         self.assertEqual(1, exit_code)
 
@@ -285,19 +284,18 @@ https://fb.facebook.com/groups/eden.users/
             out=out,
         )
 
-        self.assertEqual(
-            """\
-<yellow>- Found problem:<reset>
-EdenFS is currently still starting.
-Please wait for edenfs to finish starting.
+        self.assertRegex(
+            out.getvalue(),
+            r"""<yellow>- Found problem:<reset>
+EdenFS is currently still starting\.
+Please wait for edenfs to finish starting\.
 If EdenFS seems to be taking too long to start you can try restarting it
 with "eden restart --force"
 
-<yellow>1 issue requires manual attention.<reset>
-Ask in the EdenFS Users group if you need help fixing issues with EdenFS:
-https://fb.facebook.com/groups/eden.users/
+<yellow>1 issue requires manual attention\.<reset>
+Ask in the EdenFS (Windows )?Users group if you need help fixing issues with EdenFS:
+(https://fb\.facebook\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows)
 """,
-            out.getvalue(),
         )
         self.assertEqual(1, exit_code)
 
@@ -322,19 +320,18 @@ https://fb.facebook.com/groups/eden.users/
             out=out,
         )
 
-        self.assertEqual(
-            """\
-<yellow>- Found problem:<reset>
-EdenFS is currently shutting down.
+        self.assertRegex(
+            out.getvalue(),
+            r"""<yellow>- Found problem:<reset>
+EdenFS is currently shutting down\.
 Either wait for edenfs to exit, or to forcibly kill EdenFS, run:
 
     eden stop --kill
 
-<yellow>1 issue requires manual attention.<reset>
-Ask in the EdenFS Users group if you need help fixing issues with EdenFS:
-https://fb.facebook.com/groups/eden.users/
+<yellow>1 issue requires manual attention\.<reset>
+Ask in the EdenFS (Windows )?Users group if you need help fixing issues with EdenFS:
+(https://fb\.facebook\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows)
 """,
-            out.getvalue(),
         )
         self.assertEqual(1, exit_code)
 
@@ -682,19 +679,18 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
     def test_edenfs_when_installed_and_running_old(self, mock_getver) -> None:
         # pyre-fixme[6]: For 2nd param expected `str` but got `Tuple[str, str]`.
         fixer, out = self._test_edenfs_version(mock_getver, ("20171227", "246561"))
-        self.assertEqual(
-            """\
-<yellow>- Found problem:<reset>
+        self.assertRegex(
+            out,
+            r"""<yellow>- Found problem:<reset>
 The version of EdenFS that is installed on your machine is:
-    fb-eden-20171227-246561.x86_64
+    fb.eden.20171227-246561(\.x86_64)?
 but the version of EdenFS that is currently running is:
-    fb-eden-20171213-165642.x86_64
+    fb.eden.20171213-165642(\.x86_64)?
 
-Consider running `edenfsctl restart --graceful` to migrate to the newer version,
-which may have important bug fixes or performance improvements.
+Consider running `edenfsctl restart( --graceful)?` to migrate to the newer version,
+which may have important bug fixes or performance improvements\.
 
 """,
-            out,
         )
         self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
@@ -718,45 +714,6 @@ which may have important bug fixes or performance improvements.
         doctor.check_edenfs_version(fixer, typing.cast(EdenInstance, instance))
         mock_rpm_q.assert_has_calls(calls)
         return fixer, out.getvalue()
-
-    def test_unconfigured_mounts_dont_crash(self) -> None:
-        # If EdenFS advertises that a mount is active, but it is not in the
-        # configuration, then at least don't throw an exception.
-        instance = FakeEdenInstance(self.make_temporary_directory())
-        edenfs_path1 = instance.create_test_mount("path1").path
-        edenfs_path2 = instance.create_test_mount("path2").path
-        # Remove path2 from the list of mounts in the instance
-        instance.remove_checkout_configuration(str(edenfs_path2))
-
-        dry_run = False
-        out = TestOutput()
-        exit_code = doctor.cure_what_ails_you(
-            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
-            #  `FakeEdenInstance`.
-            instance,
-            dry_run,
-            mount_table=instance.mount_table,
-            fs_util=FakeFsUtil(),
-            proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
-            out=out,
-        )
-
-        self.assertEqual(
-            f"""\
-Checking {edenfs_path1}
-Checking {edenfs_path2}
-<yellow>- Found problem:<reset>
-Checkout {edenfs_path2} is running but not listed in Eden's configuration file.
-Running "eden unmount {edenfs_path2}" will unmount this checkout.
-
-<yellow>1 issue requires manual attention.<reset>
-Ask in the EdenFS Users group if you need help fixing issues with EdenFS:
-https://fb.facebook.com/groups/eden.users/
-""",
-            out.getvalue(),
-        )
-        self.assertEqual(1, exit_code)
 
     def test_remount_checkouts(self) -> None:
         exit_code, out, mounts = self._test_remount_checkouts(dry_run=False)
@@ -888,20 +845,19 @@ Remounting {mount}...<green>fixed<reset>
         mount = instance.create_test_mount("path1").path
 
         exit_code, out = self._test_with_pwd(instance, pwd=tmp_dir)
-        self.assertEqual(
+        self.assertRegex(
             out,
-            f"""\
-<yellow>- Found problem:<reset>
-Your current working directory is out-of-date.
-This can happen if you have (re)started EdenFS but your shell is still pointing to
-the old directory from before the EdenFS checkouts were mounted.
+            r"""<yellow>- Found problem:<reset>
+Your current working directory is out-of-date\.
+This can happen if you have \(re\)started EdenFS but your shell is still pointing to
+the old directory from before the EdenFS checkouts were mounted\.
 
-Run "cd / && cd -" to update your shell's working directory.
+Run "cd / && cd -" to update your shell's working directory\.
 
-Checking {mount}
-<yellow>1 issue requires manual attention.<reset>
-Ask in the EdenFS Users group if you need help fixing issues with EdenFS:
-https://fb.facebook.com/groups/eden.users/
+Checking .*
+<yellow>1 issue requires manual attention\.<reset>
+Ask in the EdenFS (Windows )?Users group if you need help fixing issues with EdenFS:
+(https://fb\.facebook\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows)
 """,
         )
         self.assertEqual(1, exit_code)
@@ -944,44 +900,6 @@ Checking {mount}
         finally:
             if old_pwd is not None:
                 os.environ["PWD"] = old_pwd
-
-    @patch(
-        "eden.fs.cli.doctor.test.lib.fake_eden_instance.FakeEdenInstance.check_privhelper_connection",
-        return_value=False,
-    )
-    def test_privhelper_check_not_accessible(
-        self, mock_check_privhelper_connection
-    ) -> None:
-        instance = FakeEdenInstance(self.make_temporary_directory())
-        mount = instance.create_test_mount("path1").path
-        dry_run = False
-        out = TestOutput()
-        exit_code = doctor.cure_what_ails_you(
-            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
-            #  `FakeEdenInstance`.
-            instance,
-            dry_run,
-            mount_table=instance.mount_table,
-            fs_util=FakeFsUtil(),
-            proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
-            out=out,
-        )
-
-        self.assertEqual(
-            f"""\
-<yellow>- Found problem:<reset>
-The PrivHelper process is not accessible.
-To restore the connection to the PrivHelper, run `eden restart`
-
-Checking {mount}
-<yellow>1 issue requires manual attention.<reset>
-Ask in the EdenFS Users group if you need help fixing issues with EdenFS:
-https://fb.facebook.com/groups/eden.users/
-""",
-            out.getvalue(),
-        )
-        self.assertEqual(1, exit_code)
 
     @patch(
         "eden.fs.cli.doctor.test.lib.fake_eden_instance.FakeEdenInstance.check_privhelper_connection",
@@ -1050,13 +968,13 @@ Checking {mount}
             tracker, typing.cast(EdenInstance, instance), checkout
         )
 
-        self.assertEqual(
+        self.assertRegex(
             tracker.problems[0].description(),
-            "a/b/c is inaccessible despite EdenFS believing it should be",
+            r"a[/\\]b[/\\]c is inaccessible despite EdenFS believing it should be",
         )
-        self.assertEqual(
+        self.assertRegex(
             tracker.problems[1].description(),
-            "a/b is known to EdenFS as a file, but is a directory on disk",
+            r"a[/\\]b is known to EdenFS as a file, but is a directory on disk",
         )
 
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.getSHA1")

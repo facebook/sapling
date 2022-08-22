@@ -16,6 +16,9 @@ from eden.fs.cli.test.lib.output import TestOutput
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 
+FAKE_UID = 1234
+
+
 class DoctorTestBase(unittest.TestCase, TemporaryDirectoryMixin):
     def create_fixer(self, dry_run: bool) -> Tuple[doctor.ProblemFixer, TestOutput]:
         out = TestOutput()
