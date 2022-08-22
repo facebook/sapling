@@ -82,7 +82,7 @@ pub async fn pushrebase(
     .map_err(Error::from)
     .await?;
 
-    println!("{}", result.new_bookmark_value);
+    println!("{}", result.head);
 
     Ok(())
 }

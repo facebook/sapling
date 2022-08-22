@@ -74,7 +74,7 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
         .resolve_bookmark("trunk", BookmarkFreshness::MostRecent)
         .await?
         .expect("trunk should be set");
-    assert_eq!(trunk_g.id(), outcome.new_bookmark_value);
+    assert_eq!(trunk_g.id(), outcome.head);
     assert_ne!(trunk_g.id(), changesets["G"]);
     assert_eq!(outcome.rebased_changesets[0].id_old, changesets["G"]);
     assert_eq!(outcome.rebased_changesets[0].id_new, trunk_g.id());
@@ -94,7 +94,7 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
         .resolve_bookmark("trunk", BookmarkFreshness::MostRecent)
         .await?
         .expect("trunk should be set");
-    assert_eq!(trunk_e.id(), outcome.new_bookmark_value);
+    assert_eq!(trunk_e.id(), outcome.head);
     let mapping: HashMap<_, _> = outcome
         .rebased_changesets
         .iter()
@@ -121,7 +121,7 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
         .resolve_bookmark("trunk", BookmarkFreshness::MostRecent)
         .await?
         .expect("trunk should be set");
-    assert_eq!(trunk_f.id(), outcome.new_bookmark_value);
+    assert_eq!(trunk_f.id(), outcome.head);
     assert_eq!(trunk_f.parents().await?, vec![trunk_e.id()]);
 
     // With everything landed, all files should be present

@@ -532,9 +532,7 @@ async fn normal_pushrebase<'a>(
                 )
                 .await;
                 match (result, remote_mode) {
-                    (Ok(outcome), _) => {
-                        return Ok((outcome.new_bookmark_value, outcome.rebased_changesets));
-                    }
+                    (Ok(outcome), _) => return Ok((outcome.head, outcome.rebased_changesets)),
                     // No fallback, propagate error
                     (Err(err), metaconfig_types::PushrebaseRemoteMode::RemoteScs(..)) => {
                         return Err(
@@ -593,7 +591,7 @@ async fn normal_pushrebase<'a>(
     }
 
     match result {
-        Ok(outcome) => Ok((outcome.new_bookmark_value, outcome.rebased_changesets)),
+        Ok(outcome) => Ok((outcome.head, outcome.rebased_changesets)),
         Err(err) => Err(convert_bookmark_movement_err(err, hook_rejection_remapper).await?),
     }
 }

@@ -100,7 +100,7 @@ async fn land_stack(
         )
         .await?;
 
-    let new_head = pushrebase_outcome.new_bookmark_value;
+    let new_head = pushrebase_outcome.head;
     let (old_ids, new_ids): (Vec<_>, Vec<_>) = pushrebase_outcome
         .rebased_changesets
         .into_iter()

@@ -654,7 +654,7 @@ async fn push_merge_commit(
     )
     .await?;
 
-    let pushrebase_cs_id = pushrebase_res.new_bookmark_value;
+    let pushrebase_cs_id = pushrebase_res.head;
     info!(
         ctx.logger(),
         "Finished pushrebasing to {}", pushrebase_cs_id

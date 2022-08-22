@@ -185,7 +185,6 @@ fn parse_with_repo_definition(
         hg_sync_config,
         backup_hg_sync_config,
         deep_sharded,
-        bookmark_scribe_category,
         ..
     } = named_repo_config;
 
@@ -337,7 +336,6 @@ fn parse_with_repo_definition(
         hg_sync_config,
         backup_hg_sync_config,
         deep_sharded,
-        bookmark_scribe_category,
     })
 }
 
@@ -1220,7 +1218,6 @@ mod test {
                     lock_on_failure: false,
                     darkstorm_backup_repo_id: Some(1001),
                 }),
-                bookmark_scribe_category: None,
             },
         );
 
@@ -1293,7 +1290,6 @@ mod test {
                 hg_sync_config: None,
                 backup_hg_sync_config: None,
                 deep_sharded: false,
-                bookmark_scribe_category: None,
             },
         );
         assert_eq!(

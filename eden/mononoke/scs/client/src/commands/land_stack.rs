@@ -129,7 +129,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         .repo_land_stack(&repo, &params)
         .await?
         .pushrebase_outcome;
-    let head = map_commit_ids(outcome.new_bookmark_value.values());
+    let head = map_commit_ids(outcome.head.values());
     let mut rebased_commits = outcome
         .rebased_commits
         .into_iter()

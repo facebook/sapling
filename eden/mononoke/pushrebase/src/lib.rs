@@ -229,8 +229,7 @@ impl PushrebaseDistance {
 
 #[derive(Debug, Clone)]
 pub struct PushrebaseOutcome {
-    pub old_bookmark_value: ChangesetId,
-    pub new_bookmark_value: ChangesetId,
+    pub head: ChangesetId,
     pub retry_num: PushrebaseRetryNum,
     pub rebased_changesets: Vec<PushrebaseChangesetPair>,
     pub pushrebase_distance: PushrebaseDistance,
@@ -338,14 +337,14 @@ async fn rebase_in_loop(
         );
 
         let start_critical_section = Instant::now();
-        let (hooks, old_bookmark_value) =
+        let (hooks, bookmark_val) =
             try_join(hooks, get_bookmark_value(ctx, repo, onto_bookmark)).await?;
 
         let server_bcs = fetch_bonsai_range_ancestor_not_included(
             ctx,
             repo,
             latest_rebase_attempt,
-            old_bookmark_value.unwrap_or(root),
+            bookmark_val.unwrap_or(root),
         )
         .await?;
         pushrebase_distance = pushrebase_distance.add(server_bcs.len());
@@ -368,7 +367,7 @@ async fn rebase_in_loop(
             ctx,
             repo,
             latest_rebase_attempt,
-            old_bookmark_value.unwrap_or(root),
+            bookmark_val.unwrap_or(root),
         )
         .await?;
 
@@ -381,7 +380,7 @@ async fn rebase_in_loop(
             config,
             root,
             head,
-            old_bookmark_value,
+            bookmark_val,
             onto_bookmark,
             hooks,
             retry_num,
@@ -403,8 +402,7 @@ async fn rebase_in_loop(
                     .add_value(rebased_changesets.len() as i64, repo_args.clone());
             }
             let res = PushrebaseOutcome {
-                old_bookmark_value: old_bookmark_value.unwrap_or(root),
-                new_bookmark_value: head,
+                head,
                 retry_num,
                 rebased_changesets,
                 pushrebase_distance,
@@ -415,7 +413,7 @@ async fn rebase_in_loop(
                 .add_value(critical_section_duration_us, repo_args.clone());
         }
 
-        latest_rebase_attempt = old_bookmark_value.unwrap_or(root);
+        latest_rebase_attempt = bookmark_val.unwrap_or(root);
     }
     if should_log {
         STATS::critical_section_retries_failed.add_value(MAX_REBASE_ATTEMPTS as i64, repo_args);
@@ -434,7 +432,7 @@ async fn do_rebase(
     config: &PushrebaseFlags,
     root: ChangesetId,
     head: ChangesetId,
-    old_bookmark_value: Option<ChangesetId>,
+    bookmark_val: Option<ChangesetId>,
     onto_bookmark: &BookmarkName,
     mut hooks: Vec<Box<dyn PushrebaseCommitHook>>,
     retry_num: PushrebaseRetryNum,
@@ -445,7 +443,7 @@ async fn do_rebase(
         config,
         root,
         head,
-        old_bookmark_value.unwrap_or(root),
+        bookmark_val.unwrap_or(root),
         &mut hooks,
     )
     .await?;
@@ -465,7 +463,7 @@ async fn do_rebase(
         ctx.clone(),
         repo,
         onto_bookmark,
-        old_bookmark_value,
+        bookmark_val,
         new_head,
         rebased_changesets,
         hooks,
@@ -1757,13 +1755,7 @@ mod tests {
             .await?;
 
             // should only rebase {bcs2, bcs3}
-            let rebased = find_rebased_set(
-                &ctx,
-                &repo,
-                bcs_id_master,
-                bcs_id_rebased.new_bookmark_value,
-            )
-            .await?;
+            let rebased = find_rebased_set(&ctx, &repo, bcs_id_master, bcs_id_rebased.head).await?;
             assert_eq!(rebased.len(), 2);
             let bcs2 = &rebased[0];
             let bcs3 = &rebased[1];
@@ -2071,12 +2063,9 @@ mod tests {
             let bcs_rewrite_date = do_pushrebase(&ctx, &repo, &config, &book, &hgcss).await?;
 
             let bcs = bcs.load(&ctx, repo.repo_blobstore()).await?;
-            let bcs_keep_date = bcs_keep_date
-                .new_bookmark_value
-                .load(&ctx, repo.repo_blobstore())
-                .await?;
+            let bcs_keep_date = bcs_keep_date.head.load(&ctx, repo.repo_blobstore()).await?;
             let bcs_rewrite_date = bcs_rewrite_date
-                .new_bookmark_value
+                .head
                 .load(&ctx, repo.repo_blobstore())
                 .await?;
 
@@ -2235,10 +2224,7 @@ mod tests {
             .await?;
 
             let result = do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss).await?;
-            let result_bcs = result
-                .new_bookmark_value
-                .load(&ctx, repo.repo_blobstore())
-                .await?;
+            let result_bcs = result.head.load(&ctx, repo.repo_blobstore()).await?;
             let file_1_result = match result_bcs
                 .file_changes()
                 .find(|(path, _)| path == &&path_1)
@@ -2250,9 +2236,7 @@ mod tests {
             };
             assert_eq!(FileChange::Change(file_1_result), file_1_exec);
 
-            let result_hg = repo
-                .derive_hg_changeset(&ctx, result.new_bookmark_value)
-                .await?;
+            let result_hg = repo.derive_hg_changeset(&ctx, result.head).await?;
             let result_cs = result_hg.load(&ctx, repo.repo_blobstore()).await?;
             let result_1_id = result_cs
                 .manifestid()
@@ -2594,7 +2578,7 @@ mod tests {
                 do_pushrebase(&ctx, &repo, &config, &book, &hashset![hg_cs]).await?;
 
             let bcs_rewrite_date = bcs_rewrite_date
-                .new_bookmark_value
+                .head
                 .load(&ctx, repo.repo_blobstore())
                 .await?;
 
@@ -3067,15 +3051,10 @@ mod tests {
         .map_err(|err| format_err!("{:?}", err))
         .await?;
 
-        let bcs = result
-            .new_bookmark_value
-            .load(&ctx, repo.repo_blobstore())
-            .await?;
+        let bcs = result.head.load(&ctx, repo.repo_blobstore()).await?;
         assert_eq!(bcs.file_changes().collect::<Vec<_>>(), vec![]);
 
-        let master_hg = repo
-            .derive_hg_changeset(&ctx, result.new_bookmark_value)
-            .await?;
+        let master_hg = repo.derive_hg_changeset(&ctx, result.head).await?;
 
         ensure_content(
             &ctx,

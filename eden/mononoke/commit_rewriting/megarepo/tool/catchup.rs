@@ -94,10 +94,7 @@ pub async fn create_deletion_head_commits<'a>(
             &[],
         )
         .await?;
-        info!(
-            ctx.logger(),
-            "Pushrebased to {}", pushrebase_res.new_bookmark_value
-        );
+        info!(ctx.logger(), "Pushrebased to {}", pushrebase_res.head);
         if wait_secs > 0 {
             info!(ctx.logger(), "waiting for {} seconds", wait_secs);
             sleep(Duration::from_secs(wait_secs)).await;
