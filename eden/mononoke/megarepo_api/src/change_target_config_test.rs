@@ -669,7 +669,7 @@ async fn test_change_target_config_linkfile_to_file_mapped_to_multiple_paths(
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
     let change_target_config =
         ChangeTargetConfig::new(&configs_storage, &test.mononoke, &test.mutable_renames);
-    let err = change_target_config
+    change_target_config
         .run(
             &ctx,
             &target,
@@ -680,11 +680,23 @@ async fn test_change_target_config_linkfile_to_file_mapped_to_multiple_paths(
             },
             None,
         )
-        .await;
+        .await
+        .unwrap();
+
+    let target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
+    let mut wc = list_working_copy_utf8_with_types(&ctx, &test.blobrepo, target_cs_id).await?;
+
+    // Remove file with commit remapping state because it's never present in source
+    assert!(wc.remove(&MPath::new(REMAPPING_STATE_FILE)?).is_some());
 
     assert_eq!(
-        format!("{}", err.unwrap_err()),
-        "linkfile source first maps to too many files inside source source_1"
+        wc,
+        hashmap! {
+            MPath::new("source_1/first")? => ("first".to_string(), FileType::Regular),
+            MPath::new("linkfiles/first")? => ("../source_1/first".to_string(), FileType::Symlink),
+            MPath::new("copy_of_first")? => ("first".to_string(), FileType::Regular),
+        }
     );
+
     Ok(())
 }

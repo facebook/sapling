@@ -735,25 +735,17 @@ pub trait MegarepoOp {
 
             let mut iter = moved_srcs.into_iter();
             let moved_src = match (iter.next(), iter.next()) {
-                (Some(moved_src), None) => moved_src,
-                (None, None) => {
+                // If the source maps to many files we use the first one as the symlink
+                // source this choice doesn't matter for the symlinked content - just the
+                // symlinked path.
+                (Some(moved_src), _) => moved_src,
+                (None, _) => {
                     let src = match src {
                         None => ".".to_string(),
                         Some(path) => path.to_string(),
                     };
                     return Err(MegarepoError::request(anyhow!(
                         "linkfile source {} does not map to any file inside source {}",
-                        src,
-                        source_config.name
-                    )));
-                }
-                _ => {
-                    let src = match src {
-                        None => ".".to_string(),
-                        Some(path) => path.to_string(),
-                    };
-                    return Err(MegarepoError::request(anyhow!(
-                        "linkfile source {} maps to too many files inside source {}",
                         src,
                         source_config.name
                     )));

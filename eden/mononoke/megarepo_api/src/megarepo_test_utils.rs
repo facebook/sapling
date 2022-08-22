@@ -240,7 +240,6 @@ impl SourceVersionBuilder {
         self
     }
 
-    #[allow(dead_code)]
     pub fn copyfile<S1: ToString, S2: ToString>(mut self, src: S1, dst: S2) -> Self {
         self.copyfiles.insert(src.to_string(), dst.to_string());
         self
