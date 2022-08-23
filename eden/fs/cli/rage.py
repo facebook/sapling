@@ -34,6 +34,7 @@ from .config import EdenInstance
 
 try:
     from .facebook.rage import find_fb_cdb, setup_fb_env
+
 except ImportError:
 
     def find_fb_cdb() -> Optional[Path]:
@@ -41,6 +42,17 @@ except ImportError:
 
     def setup_fb_env(env: Dict[str, str]) -> Dict[str, str]:
         return env
+
+
+try:
+    from eden.fs.cli.doctor.facebook.check_vscode_extensions import (
+        find_problematic_vscode_extensions,
+    )
+
+except ImportError:
+
+    def find_problematic_vscode_extensions() -> None:
+        return
 
 
 try:
@@ -139,6 +151,8 @@ def print_diagnostic_info(
     print_eden_config(instance, out)
 
     print_prefetch_profiles_list(instance, out)
+
+    print_third_party_vscode_extensions(out)
 
     print_env_variables(out)
 
@@ -534,3 +548,24 @@ def print_sample_trace(pid: int, sink: IO[bytes]) -> None:
         stderr=subprocess.STDOUT,
         stdout=sink,
     )
+
+
+def print_third_party_vscode_extensions(out: IO[bytes]) -> None:
+    problematic_extensions = find_problematic_vscode_extensions()
+
+    if problematic_extensions is None:
+        return
+
+    section_title("Visual Studio Code Extensions:", out)
+
+    out.write(b"Blocked extensions installed:\n")
+    for extension in problematic_extensions.blocked:
+        out.write(f"{extension}\n".encode())
+    if len(problematic_extensions.blocked) == 0:
+        out.write(b"None\n")
+
+    out.write(b"\nUnsupported extensions installed:\n")
+    for extension in problematic_extensions.unsupported:
+        out.write(f"{extension}\n".encode())
+    if len(problematic_extensions.unsupported) == 0:
+        out.write(b"None\n")
