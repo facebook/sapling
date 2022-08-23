@@ -1018,6 +1018,7 @@ Checking {mount}
             fake_PrjGetOnDiskFileState,
         )
 
+        self.assertTrue(len(tracker.problems) == 1)
         self.assertEqual(
             tracker.problems[0].description(),
             "The on-disk file at a is out of sync from EdenFS. Expected SHA1: 01020304, on-disk SHA1: 8843d7f92416211de9ebb963ff4ce28125932878",
