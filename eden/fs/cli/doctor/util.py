@@ -5,9 +5,11 @@
 
 # pyre-strict
 
+import math
 import os
 import subprocess
 import traceback
+from datetime import timedelta
 from pathlib import Path
 from typing import List, Optional, Set
 
@@ -180,3 +182,20 @@ def format_exception(ex: BaseException, with_tb: bool = False) -> str:
         count += 1
 
     return "\n".join(result)
+
+
+def format_approx_duration(duration: timedelta) -> str:
+    """Formats a duration as an approximate, human-readable string."""
+
+    seconds = math.floor(duration.total_seconds())
+    if seconds < 0:
+        raise ValueError("Unable to format a negative duration")
+
+    units = [("day", 86400), ("hour", 3600), ("minute", 60), ("second", 1)]
+    for unit_name, unit_seconds in units:
+        if seconds >= unit_seconds:
+            count = seconds // unit_seconds
+            suffix = "s" if count > 1 else ""
+            return f"{count} {unit_name}{suffix}"
+
+    return "a moment"

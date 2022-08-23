@@ -1135,6 +1135,45 @@ https://fb.workplace.com/groups/edenfswindows
         else:
             self.assertEqual(exit_code, 0)
 
+    def test_slow_hg_import(self) -> None:
+        tmp_dir = self.make_temporary_directory()
+        instance = FakeEdenInstance(tmp_dir)
+
+        instance.get_thrift_client_legacy().set_counter_value(
+            "store.hg.live_import.max_duration_us", 15 * 60 * 1_000_000
+        )
+
+        out = TestOutput()
+        dry_run = False
+
+        exit_code = doctor.cure_what_ails_you(
+            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+            #  `FakeEdenInstance`.
+            instance,
+            dry_run,
+            mount_table=instance.mount_table,
+            fs_util=FakeFsUtil(),
+            proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
+            out=out,
+        )
+
+        self.assertRegex(
+            out.getvalue(),
+            r"""<yellow>- Found problem:<reset>
+Slow file download taking up to 15 minutes observed
+Try:
+- Running `hg debugnetwork`.
+- Checking your network connection's performance.
+- Running `eden top` to check whether downloads are making progress.
+
+<yellow>1 issue requires manual attention\.<reset>
+Ask in the EdenFS (Windows )?Users group if you need help fixing issues with EdenFS:
+(https://fb\.facebook\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows)
+""",
+        )
+        self.assertEqual(exit_code, 1)
+
 
 def _create_watchman_subscription(
     filewatcher_subscriptions: Optional[List[str]] = None,

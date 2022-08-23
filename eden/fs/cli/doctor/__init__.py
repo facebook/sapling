@@ -9,7 +9,7 @@
 import os
 import shlex
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from textwrap import dedent
 from typing import Dict, List, Optional, Set
@@ -26,6 +26,7 @@ from eden.fs.cli import (
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.doctor.util import (
     CheckoutInfo,
+    format_approx_duration,
     get_dependent_repos,
     hg_doctor_in_backing_repo,
 )
@@ -263,6 +264,7 @@ class EdenDoctorChecker:
                 self.instance,
                 fs_util=self.fs_util,
             )
+            check_slow_hg_import(self.tracker, self.instance)
             check_facebook(
                 self.tracker,
                 list(checkouts.values()),
@@ -848,3 +850,30 @@ Consider running `edenfsctl restart --graceful` to migrate to the newer version,
 which may have important bug fixes or performance improvements.
 """
     tracker.add_problem(OutOfDateVersion(dedent(help_string)))
+
+
+class SlowHgImportProblem(Problem):
+    def __init__(self, max_fetch_duration: timedelta) -> None:
+        super().__init__(
+            description=f"Slow file download taking up to {format_approx_duration(max_fetch_duration)} observed",
+            remediation="""\
+Try:
+- Running `hg debugnetwork`.
+- Checking your network connection's performance.
+- Running `eden top` to check whether downloads are making progress.""",
+            severity=ProblemSeverity.ADVICE,
+        )
+
+
+def check_slow_hg_import(tracker: ProblemTracker, instance: EdenInstance) -> None:
+    threshold_s = instance.get_config_int(
+        "doctor.slow-hg-import-problem-threshold-seconds", 60
+    )
+    threshold = timedelta(seconds=threshold_s)
+
+    with instance.get_thrift_client_legacy() as client:
+        max_duration_us = client.getCounter("store.hg.live_import.max_duration_us")
+
+    max_duration = timedelta(microseconds=max_duration_us)
+    if max_duration > threshold:
+        tracker.add_problem(SlowHgImportProblem(max_duration))

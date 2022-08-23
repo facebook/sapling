@@ -45,6 +45,8 @@ class FakeClient:
             )
         )
 
+        self._counter_values: Dict[str, int] = defaultdict(int)
+
     def __enter__(self) -> "FakeClient":
         return self
 
@@ -61,6 +63,9 @@ class FakeClient:
         self, path: Path, mount_inode_info: eden_ttypes.MountInodeInfo
     ) -> None:
         self._path_mount_inode_info[os.fsencode(path)] = mount_inode_info
+
+    def set_counter_value(self, counter: str, value: int) -> None:
+        self._counter_values[counter] = value
 
     def listMounts(self) -> List[eden_ttypes.MountInfo]:
         result = []
@@ -114,3 +119,6 @@ class FakeClient:
             path: self._path_mount_inode_info[path] for path in mount_paths
         }
         return eden_ttypes.InternalStats(mountPointInfo=mount_point_info)
+
+    def getCounter(self, key: str) -> int:
+        return self._counter_values[key]
