@@ -244,15 +244,49 @@ class MaterializedInodesHaveDifferentModeOnDisk(Problem):
         )
 
 
-class MaterializedInodesAreInaccessible(Problem):
+class PathsProblem(Problem):
+    @staticmethod
+    def omitPathsDescription(paths: List[Path], pathSuffix: str):
+        pathDescriptions = [str(path) + pathSuffix for path in paths[:10]]
+        if len(paths) > 10:
+            pathDescriptions.append("{len(paths) - 10} more paths omitted")
+        return "\n".join(pathDescriptions)
+
+
+class MaterializedInodesAreInaccessible(PathsProblem):
     def __init__(self, paths: List[Path]) -> None:
         super().__init__(
-            "\n".join(
-                [
-                    f"{path} is inaccessible despite EdenFS believing it should be"
-                    for path in paths
-                ]
+            self.omitPathsDescription(
+                paths, " is inaccessible despite EdenFS believing it should be"
             ),
+            severity=ProblemSeverity.ERROR,
+        )
+
+
+class MissingInodesForFiles(PathsProblem):
+    def __init__(self, paths: List[Path]) -> None:
+        super().__init__(
+            self.omitPathsDescription(
+                paths, " is not known to EdenFS but is accessible on disk"
+            ),
+            severity=ProblemSeverity.ERROR,
+        )
+
+
+class MissingFilesForInodes(PathsProblem):
+    def __init__(self, paths: List[Path]) -> None:
+        super().__init__(
+            self.omitPathsDescription(
+                paths, " is not present on disk despite EdenFS believing it should be"
+            ),
+            severity=ProblemSeverity.ERROR,
+        )
+
+
+class DuplicateInodes(PathsProblem):
+    def __init__(self, paths: List[Path]) -> None:
+        super().__init__(
+            self.omitPathsDescription(paths, " is duplicated in EdenFS"),
             severity=ProblemSeverity.ERROR,
         )
 
@@ -262,8 +296,17 @@ def check_materialized_are_accessible(
     instance: EdenInstance,
     checkout: EdenCheckout,
 ) -> None:
+    # {path | path is a materialized directory or one of its entries whose mode does not match on the filesystem}
     mismatched_mode = []
+    # {path | path is a materialized file or directory inside EdenFS, and can not be read on the filesystem}
     inaccessible_inodes = []
+    # {path | path is a materialized file or directory inside EdenFS, and does not exist on the filesystem}
+    nonexistent_inodes = []
+    # {path | path is a child of a directory on disk where that directory is materialized inside EdenFS and the child does not exist inside EdenFS}
+    missing_inodes = []
+    # {path | path is a child of a directory that contains two children with the same name inside of EdenFS}
+    # This generally always should be [], EdenFS directories should not be able to contain duplicates.
+    duplicate_inodes = []
 
     with instance.get_thrift_client_legacy() as client:
         materialized = client.debugInodeStatus(
@@ -274,23 +317,48 @@ def check_materialized_are_accessible(
         )
 
     for materialized_dir in materialized:
-        path = Path(os.fsdecode(materialized_dir.path))
+        materialized_name = os.fsdecode(materialized_dir.path)
+        path = Path(materialized_name)
+        osPath = checkout.path / path
         try:
-            st = os.lstat(checkout.path / path)
+            st = os.lstat(osPath)
+        except FileNotFoundError:
+            nonexistent_inodes.append(path)
+            continue
         except OSError:
-            inaccessible_inodes += [path]
+            inaccessible_inodes.append(path)
             continue
 
         if not stat.S_ISDIR(st.st_mode):
             mismatched_mode += [(path, stat.S_IFDIR, st.st_mode)]
 
+        # A None missing_path_names avoids the listdir and missing inodes check
+        missing_path_names = None
+        # We will ignore special '.eden' checkout path
+        if materialized_name != ".eden":
+            missing_path_names = set(os.listdir(osPath))
+        visited_path_names = set()
+
         for dirent in materialized_dir.entries:
+            name = os.fsdecode(dirent.name)
+            dirent_path = path / Path(name)
+            if name in visited_path_names:
+                duplicate_inodes.append(dirent_path)
+                continue
+            visited_path_names.add(name)
+            if missing_path_names is not None:
+                if name not in missing_path_names:
+                    nonexistent_inodes.append(dirent_path)
+                    continue
+                missing_path_names.remove(name)
             if dirent.materialized:
-                dirent_path = path / Path(os.fsdecode(dirent.name))
                 try:
                     dirent_stat = os.lstat(checkout.path / dirent_path)
+                except FileNotFoundError:
+                    nonexistent_inodes.append(dirent_path)
+                    continue
                 except OSError:
-                    inaccessible_inodes += [dirent_path]
+                    inaccessible_inodes.append(dirent_path)
                     continue
 
                 # TODO(xavierd): Symlinks are for now recognized as files.
@@ -302,10 +370,22 @@ def check_materialized_are_accessible(
                 if dirent_mode != stat.S_IFMT(dirent.mode):
                     mismatched_mode += [(dirent_path, dirent_stat.st_mode, dirent.mode)]
 
-    if inaccessible_inodes != []:
+        if missing_path_names:
+            missing_inodes += [path / name for name in missing_path_names]
+
+    if duplicate_inodes:
+        tracker.add_problem(DuplicateInodes(duplicate_inodes))
+
+    if missing_inodes:
+        tracker.add_problem(MissingInodesForFiles(missing_inodes))
+
+    if nonexistent_inodes:
+        tracker.add_problem(MissingFilesForInodes(nonexistent_inodes))
+
+    if inaccessible_inodes:
         tracker.add_problem(MaterializedInodesAreInaccessible(inaccessible_inodes))
 
-    if mismatched_mode != []:
+    if mismatched_mode:
         tracker.add_problem(MaterializedInodesHaveDifferentModeOnDisk(mismatched_mode))
 
 
@@ -337,7 +417,10 @@ def _validate_loaded_content(
     client: EdenClient,
     checkout_path: Path,
     query_prjfs_file: Callable[[Path], PRJ_FILE_STATE],
-) -> List[Tuple[Path, bytes, bytes]]:
+) -> Tuple[List[Tuple[Path, bytes, bytes]], List[Path]]:
+    # {path | path is a child of a directory on disk where that directory is a loaded inode inside EdenFS and the child does not exist inside EdenFS}
+    missing_inodes = []
+
     loaded = client.debugInodeStatus(
         bytes(checkout_path),
         b"",
@@ -349,11 +432,20 @@ def _validate_loaded_content(
     for loaded_dir in loaded:
         path = Path(os.fsdecode(loaded_dir.path))
 
+        osPath = checkout_path / path
+        missing_path_names = set()
+        refcount = loaded_dir.refcount or 0
+        if not loaded_dir.materialized and refcount > 0:
+            missing_path_names = set(os.listdir(osPath))
+
         for dirent in loaded_dir.entries:
+            name = os.fsdecode(dirent.name)
+            if name in missing_path_names:
+                missing_path_names.remove(name)
             if not stat.S_ISREG(dirent.mode) or dirent.materialized:
                 continue
 
-            dirent_path = path / Path(os.fsdecode(dirent.name))
+            dirent_path = path / Path(name)
             filestate = query_prjfs_file(checkout_path / dirent_path)
             if (
                 filestate & PRJ_FILE_STATE.HydratedPlaceholder
@@ -367,7 +459,10 @@ def _validate_loaded_content(
             on_disk_sha1 = _compute_file_sha1(checkout_path / dirent_path)
             if sha1 != on_disk_sha1:
                 errors += [(dirent_path, sha1, on_disk_sha1)]
-    return errors
+
+        missing_inodes += [path / name for name in missing_path_names]
+
+    return errors, missing_inodes
 
 
 def check_loaded_content(
@@ -377,10 +472,15 @@ def check_loaded_content(
     query_prjfs_file: Callable[[Path], PRJ_FILE_STATE],
 ) -> None:
     with instance.get_thrift_client_legacy() as client:
-        errors = _validate_loaded_content(client, checkout.path, query_prjfs_file)
+        errors, missing_inodes = _validate_loaded_content(
+            client, checkout.path, query_prjfs_file
+        )
 
     if errors:
         tracker.add_problem(LoadedFileHasDifferentContentOnDisk(errors))
+
+    if missing_inodes:
+        tracker.add_problem(MissingInodesForFiles(missing_inodes))
 
 
 class HighInodeCountProblem(Problem):

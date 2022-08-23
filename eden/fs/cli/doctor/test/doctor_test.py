@@ -940,6 +940,37 @@ Checking {mount}
         self.assertEqual(0, exit_code)
 
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
+    def test_accessible_are_inodes(self, mock_debugInodeStatus) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+        mount = checkout.path
+
+        os.makedirs(mount / "a" / "b")
+
+        mock_debugInodeStatus.return_value = [
+            # Pretend that a/b is a file (it's a directory)
+            TreeInodeDebugInfo(
+                1,
+                b"a",
+                True,
+                b"abcd",
+                [],
+                1,
+            ),
+            # a/b is now missing from inodes
+        ]
+
+        tracker = ProblemCollector()
+        check_materialized_are_accessible(
+            tracker, typing.cast(EdenInstance, instance), checkout
+        )
+
+        self.assertEqual(
+            tracker.problems[0].description(),
+            f"{Path('a/b')} is not known to EdenFS but is accessible on disk",
+        )
+
+    @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
     def test_materialized_are_accessible(self, mock_debugInodeStatus) -> None:
         instance = FakeEdenInstance(self.make_temporary_directory())
         checkout = instance.create_test_mount("path1")
@@ -955,10 +986,20 @@ Checking {mount}
                 b"a",
                 True,
                 b"abcd",
-                [TreeInodeEntryDebugInfo(b"b", 2, stat.S_IFREG, False, True, b"dcba")],
+                [
+                    TreeInodeEntryDebugInfo(
+                        b"b", 2, stat.S_IFREG, False, True, b"dcba"
+                    ),
+                    TreeInodeEntryDebugInfo(
+                        b"d", 4, stat.S_IFREG, False, False, b"efgh"
+                    ),
+                    TreeInodeEntryDebugInfo(
+                        b"d", 5, stat.S_IFREG, False, False, b"efgh"
+                    ),
+                ],
                 1,
             ),
-            # Pretent that a/b/c is a directory (it doesn't exists)
+            # Pretend that a/b/c is a directory (it doesn't exist)
             TreeInodeDebugInfo(
                 2,
                 b"a/b",
@@ -974,13 +1015,16 @@ Checking {mount}
             tracker, typing.cast(EdenInstance, instance), checkout
         )
 
-        self.assertRegex(
-            tracker.problems[0].description(),
-            r"a[/\\]b[/\\]c is inaccessible despite EdenFS believing it should be",
-        )
-        self.assertRegex(
-            tracker.problems[1].description(),
-            r"a[/\\]b is known to EdenFS as a file, but is a directory on disk",
+        problemDescriptions = {problem.description() for problem in tracker.problems}
+        self.assertEqual(
+            problemDescriptions,
+            {
+                f"""\
+{Path("a/d")} is not present on disk despite EdenFS believing it should be
+{Path("a/b/c")} is not present on disk despite EdenFS believing it should be""",
+                f"{Path('a/d')} is duplicated in EdenFS",
+                f"{Path('a/b')} is known to EdenFS as a file, but is a directory on disk",
+            },
         )
 
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.getSHA1")
@@ -992,6 +1036,11 @@ Checking {mount}
         with open(checkout.path / "a", "wb") as f:
             f.write(b"foobar")
 
+        unmaterialized = checkout.path / "unmaterialized"
+        os.makedirs(unmaterialized)
+        with open(unmaterialized / "extra", "wb") as f:
+            f.write(b"read all about it")
+
         mock_getSHA1.return_value = [SHA1Result(b"\x01\x02\x03\x04")]
 
         mock_debugInodeStatus.return_value = [
@@ -1001,7 +1050,16 @@ Checking {mount}
                 True,
                 b"abcd",
                 [TreeInodeEntryDebugInfo(b"a", 2, stat.S_IFREG, True, False, b"1234")],
-            )
+                1,
+            ),
+            TreeInodeDebugInfo(
+                3,
+                b"unmaterialized",
+                False,
+                b"bcde",
+                [],
+                1,
+            ),
         ]
 
         def fake_PrjGetOnDiskFileState(path: Path) -> PRJ_FILE_STATE:
@@ -1018,10 +1076,15 @@ Checking {mount}
             fake_PrjGetOnDiskFileState,
         )
 
-        self.assertTrue(len(tracker.problems) == 1)
+        self.assertTrue(len(tracker.problems) == 2)
         self.assertEqual(
             tracker.problems[0].description(),
             "The on-disk file at a is out of sync from EdenFS. Expected SHA1: 01020304, on-disk SHA1: 8843d7f92416211de9ebb963ff4ce28125932878",
+        )
+        # .hg is a materialized directory and will not present for check_loaded_content alone
+        self.assertEqual(
+            tracker.problems[1].description(),
+            f"{Path('unmaterialized/extra')} is not known to EdenFS but is accessible on disk",
         )
 
     def test_inode_counts(self) -> None:
