@@ -6,9 +6,9 @@
   $ enable remotenames
 
 Set up repos
-  $ hg init remoterepo --config extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
+  $ hg init remoterepo --config extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
   $ cd remoterepo
-  $ setconfig treemanifest.server=True extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
+  $ setconfig treemanifest.server=True extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
   $ cd ..
   $ hg clone --config remotenames.selectivepull=True --config remotenames.selectivepulldefault=master -q ssh://user@dummy/remoterepo localrepo
   $ cd localrepo

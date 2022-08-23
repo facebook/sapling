@@ -8,13 +8,13 @@
 New errors are not allowed. Warnings are strongly discouraged.
 (The writing "no-che?k-code" is for not skipping this file when checking.)
 
-  $ testrepohg files . | egrep -v "^(edenscm/hgext/extlib/pywatchman|lib/cdatapack|lib/third-party|edenscm/mercurial/thirdparty|fb|newdoc|tests|edenscm/mercurial/templates/static|i18n|slides|.*\\.(bin|bindag|hg|pdf|jpg)$)" \
+  $ testrepohg files . | egrep -v "^(edenscm/ext/extlib/pywatchman|lib/cdatapack|lib/third-party|edenscm/mercurial/thirdparty|fb|newdoc|tests|edenscm/mercurial/templates/static|i18n|slides|.*\\.(bin|bindag|hg|pdf|jpg)$)" \
   > | sed 's-\\-/-g' > $TESTTMP/files.txt
 
   $ NPROC=`hg debugpython -- -c 'import multiprocessing; print(str(multiprocessing.cpu_count()))'`
   $ cat $TESTTMP/files.txt | PYTHONPATH= xargs -n64 -P $NPROC contrib/check-code.py --warnings --per-file=0 | LC_ALL=C sort
-  Skipping edenscm/hgext/globalrevs.py it has no-che?k-code (glob)
-  Skipping edenscm/hgext/hgsql.py it has no-che?k-code (glob)
+  Skipping edenscm/ext/globalrevs.py it has no-che?k-code (glob)
+  Skipping edenscm/ext/hgsql.py it has no-che?k-code (glob)
   Skipping edenscm/mercurial/commands/eden.py it has no-che?k-code (glob)
   Skipping edenscm/mercurial/httpclient/__init__.py it has no-che?k-code (glob)
   Skipping edenscm/mercurial/httpclient/_readers.py it has no-che?k-code (glob)

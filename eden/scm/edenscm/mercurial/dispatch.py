@@ -320,7 +320,7 @@ def _preimportmodules():
         "undo",
     ]
     modnames = ["edenscm.mercurial.%s" % name for name in coremods] + [
-        "edenscm.hgext.fastannotate.support"
+        "edenscm.ext.fastannotate.support"
     ]
     for name in modnames:
         __import__(name)
@@ -1113,6 +1113,7 @@ def _dispatch(req):
 
         if options["version"]:
             return commands.version_(ui)
+
         if options["help"]:
             if len(foundaliases) > 0:
                 aliascmd = foundaliases[0]

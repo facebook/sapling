@@ -34,7 +34,7 @@ def testmod(name, optionflags=0, testtarget=None):
     runner.summarize()
 
 
-testmod("edenscm.hgext.github.templates")
+testmod("edenscm.ext.github.templates")
 testmod("edenscm.mercurial.changegroup")
 testmod("edenscm.mercurial.changelog")
 testmod("edenscm.mercurial.cmdutil")
@@ -68,7 +68,7 @@ testmod("edenscm.mercurial.uiconfig")
 testmod("edenscm.mercurial.url")
 testmod("edenscm.mercurial.util")
 testmod("edenscm.mercurial.util", testtarget="platform")
-testmod("edenscm.hgext.commitcloud.sync")
+testmod("edenscm.ext.commitcloud.sync")
 
 if sys.platform in {"linux", "win32"}:
     testmod("edenscm.testing.sh")

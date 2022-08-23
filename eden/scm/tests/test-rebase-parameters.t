@@ -13,7 +13,7 @@
 
   $ hg init a
   $ cd a
-  $ setconfig extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
+  $ setconfig extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
   $ setconfig treemanifest.server=True
   $ hg commit -qm "A"
   $ hg commit -qm "B"

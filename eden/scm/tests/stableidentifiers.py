@@ -7,7 +7,7 @@
 # incrementing sequence.
 import os
 
-from edenscm.hgext import extutil
+from edenscm.ext import extutil
 from edenscm.mercurial import extensions, util
 
 

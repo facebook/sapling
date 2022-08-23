@@ -38,7 +38,7 @@ import tempfile
 
 from edenscm.mercurial import pycompat
 
-cdef extern from "edenscm/hgext/extlib/traceprofimpl.cpp":
+cdef extern from "edenscm/ext/extlib/traceprofimpl.cpp":
     void enable()
     void disable()
     void report(FILE *)

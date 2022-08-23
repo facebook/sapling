@@ -101,7 +101,7 @@ def doctor(ui, **opts) -> typing.Optional[int]:
     repo = hg.repository(origui, repopath)
     ui = repo.ui
     if "remotefilelog" in repo.requirements:
-        from ...hgext.remotefilelog import shallowutil
+        from ...ext.remotefilelog import shallowutil
 
         sharedpath = os.path.join(shallowutil.getcachepath(ui), repo.name)
         localpath = svfs.base
@@ -563,7 +563,7 @@ def runglobalindexedlogdoctor(ui):
         # remotefilelog is not enabled, skipping
         return
 
-    from ...hgext.remotefilelog import shallowutil
+    from ...ext.remotefilelog import shallowutil
 
     for path in shallowutil.getallcachepaths(ui):
         for suffix in [None, "manifests"]:

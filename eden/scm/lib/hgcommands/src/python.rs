@@ -147,7 +147,7 @@ pub fn py_finalize() {
         // ....
         // #15 ... in hgmain::main () eden/scm/exec/hgmain/src/main.rs:81
         //
-        // (The SIGABRT was triggered by running test-fb-hgext-fastlog.t)
+        // (The SIGABRT was triggered by running test-fb-ext-fastlog.t)
         PyGILState_Ensure();
         Py_Finalize();
     }

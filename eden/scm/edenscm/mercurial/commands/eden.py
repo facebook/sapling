@@ -258,7 +258,7 @@ class HgServer(object):
         return (name is not None) and (name != "unknown")
 
     def _gen_options(self) -> bytes:
-        from edenscm.hgext.remotefilelog import constants, shallowutil
+        from edenscm.ext.remotefilelog import constants, shallowutil
 
         repo_name = getattr(self.repo, "name", None)
         use_treemanifest = (self.treemanifest is not None) and bool(repo_name)

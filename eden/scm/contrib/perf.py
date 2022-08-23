@@ -414,7 +414,7 @@ def perfannotate(ui, repo, f, **opts):
 
 @command("perfdatapack", formatteropts)
 def perfdatapack(ui, repo, packpath, **opts):
-    from edenscm.hgext.remotefilelog.datapack import datapack
+    from edenscm.ext.remotefilelog.datapack import datapack
 
     keys = list(iter(datapack(packpath)))
     ui.write(("\nGetMissing (Key Count: %s)\n") % len(keys))
@@ -433,7 +433,7 @@ def perfdatapack(ui, repo, packpath, **opts):
     _packtestfn(ui, packpath, opts, f)
 
     ui.write(("\nMark Ledger (Key Count: %s)\n") % len(keys))
-    from edenscm.hgext.remotefilelog.repack import repackledger
+    from edenscm.ext.remotefilelog.repack import repackledger
 
     def f(pack):
         ledger = repackledger()
@@ -444,7 +444,7 @@ def perfdatapack(ui, repo, packpath, **opts):
 
 def _packtestfn(ui, packpath, opts, func):
     from bindings import revisionstore
-    from edenscm.hgext.remotefilelog.datapack import datapack, fastdatapack
+    from edenscm.ext.remotefilelog.datapack import datapack, fastdatapack
 
     kinds = [
         ("Python", datapack),

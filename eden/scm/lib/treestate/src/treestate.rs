@@ -318,12 +318,12 @@ mod tests {
         assert_eq!(state.get_metadata()[..], b"foobar"[..]);
     }
 
-    // Some random paths extracted from fb-hgext, plus some manually added entries, shuffled.
+    // Some random paths extracted from fb-ext, plus some manually added entries, shuffled.
     const SAMPLE_PATHS: [&[u8]; 21] = [
         b".fbarcanist",
         b"phabricator/phabricator_graphql_client_urllib.pyc",
-        b"hgext3rd/__init__.py",
-        b"hgext3rd/.git/objects/14/8f179e7e702ddedb54c53f2726e7f81b14a33f",
+        b"ext3rd/__init__.py",
+        b"ext3rd/.git/objects/14/8f179e7e702ddedb54c53f2726e7f81b14a33f",
         b"rust/radixbuf/.git/objects/pack/pack-c0bc37a255e59f5563de9a76013303d8df46a659.idx",
         b".hg/shelved/default-106.patch",
         b"rust/radixbuf/.git/objects/20/94e0274ba1ef2ec30de884e3ca4d7093838064",
@@ -333,12 +333,12 @@ mod tests {
         b".fbarcanist/unit/MercurialTestEngine.php",
         b".hg/shelved/default-37.patch",
         b"rust/radixbuf/.git/objects/01/d8e75b3bae0819c4095ae96ebdc889e9e5d806",
-        b"hgext3rd/fastannotate/error.py",
+        b"ext3rd/fastannotate/error.py",
         b"rust/radixbuf/.git/objects/pack/pack-c0bc37a255e59f5563de9a76013303d8df46a659.pack",
         b"distutils_rust/__init__.py",
         b".editorconfig",
         b"rust/radixbuf/.git/objects/01/89a583d7e9aff802cdfed3ff3cc3a473253281",
-        b"hgext3rd/fastannotate/commands.py",
+        b"ext3rd/fastannotate/commands.py",
         b"distutils_rust/__init__.pyc",
         b"rust/radixbuf/.git/objects/b3/9b2824f47b66462e92ffa4f978bc95f5fdad2e",
     ];
@@ -411,8 +411,8 @@ mod tests {
         let dir = TempDir::new("treestate").expect("tempdir");
         let mut state = new_treestate(dir.path().join("1"));
         assert!(state.has_dir(b"/").unwrap());
-        assert!(state.has_dir(b"hgext3rd/").unwrap());
-        assert!(!state.has_dir(b"hgext4th/").unwrap());
+        assert!(state.has_dir(b"ext3rd/").unwrap());
+        assert!(!state.has_dir(b"ext4th/").unwrap());
         assert!(state.has_dir(b"rust/radixbuf/.git/objects/").unwrap());
         assert!(!state.has_dir(b"rust/radixbuf/.git2/objects/").unwrap());
     }
@@ -503,17 +503,17 @@ mod tests {
     fn test_get_keys_ignorecase() {
         let dir = TempDir::new("treestate").expect("tempdir");
         let mut state = new_treestate(dir.path().join("1"));
-        let expected = vec![b"hgext3rd/__init__.py".to_vec().into_boxed_slice()];
+        let expected = vec![b"ext3rd/__init__.py".to_vec().into_boxed_slice()];
         assert_eq!(
-            state.get_keys_ignorecase(b"hgext3rd/__init__.py").unwrap(),
+            state.get_keys_ignorecase(b"ext3rd/__init__.py").unwrap(),
             expected
         );
         assert_eq!(
-            state.get_keys_ignorecase(b"hGext3rd/__init__.py").unwrap(),
+            state.get_keys_ignorecase(b"exT3rd/__init__.py").unwrap(),
             expected
         );
         assert_eq!(
-            state.get_keys_ignorecase(b"hgext3rd/__Init__.py").unwrap(),
+            state.get_keys_ignorecase(b"ext3rd/__Init__.py").unwrap(),
             expected
         );
     }

@@ -46,7 +46,7 @@ another bad extension
 
   $ hg -q help help 2>&1 |grep extension
   warning: extension badext is disabled because it cannot be imported from $TESTTMP/badext.py: bit bucket overflow
-  warning: extension badext2 is disabled because it cannot be imported: No module named 'edenscm.hgext.badext2'
+  warning: extension badext2 is disabled because it cannot be imported: No module named 'edenscm.ext.badext2'
 
 show traceback
 
@@ -54,7 +54,7 @@ show traceback
   warning: extension badext is disabled because it cannot be imported from $TESTTMP/badext.py: bit bucket overflow
   Traceback (most recent call last):
   Exception: bit bucket overflow
-  warning: extension badext2 is disabled because it cannot be imported: No module named 'edenscm.hgext.badext2'
+  warning: extension badext2 is disabled because it cannot be imported: No module named 'edenscm.ext.badext2'
   Traceback (most recent call last):
 
 names of extensions failed to load can be accessed via extensions.notloaded()
@@ -70,7 +70,7 @@ names of extensions failed to load can be accessed via extensions.notloaded()
   $ hg --config extensions.badexts=showbadexts.py showbadexts 2>&1 | grep '^BADEXTS'
   BADEXTS: badext badext2
 
-show traceback for ImportError of hgext.name if debug is set
+show traceback for ImportError of ext.name if debug is set
 (note that --debug option isn't applied yet when loading extensions)
 
   $ (hg -q help help --traceback --config ui.debug=True 2>&1) \
@@ -79,14 +79,14 @@ show traceback for ImportError of hgext.name if debug is set
   warning: extension badext is disabled because it cannot be imported from $TESTTMP/badext.py: bit bucket overflow
   Traceback (most recent call last):
   Exception: bit bucket overflow
-  warning: extension badext2 is disabled because it cannot be imported: No module named 'edenscm.hgext.badext2'
+  warning: extension badext2 is disabled because it cannot be imported: No module named 'edenscm.ext.badext2'
   Traceback (most recent call last):
 
 confirm that there's no crash when an extension's documentation is bad
 
   $ hg help --keyword baddocext
   warning: extension badext is disabled because it cannot be imported from $TESTTMP/badext.py: bit bucket overflow
-  warning: extension badext2 is disabled because it cannot be imported: No module named 'edenscm.hgext.badext2'
+  warning: extension badext2 is disabled because it cannot be imported: No module named 'edenscm.ext.badext2'
   Topics:
   
    extensions Using Additional Features

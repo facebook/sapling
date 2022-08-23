@@ -3,8 +3,8 @@
   $ configure modern
   $ enable shelve
 
-  $ newrepo server --config extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
-  $ setconfig treemanifest.server=true extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
+  $ newrepo server --config extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
+  $ setconfig treemanifest.server=true extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
   $ drawdag << 'EOS'
   > C
   > |

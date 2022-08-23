@@ -144,13 +144,13 @@ msgstr ""
 
 msgid ""
 "  # Use this if you want to check access restrictions at commit time\n"
-"  pretxncommit.acl = python:hgext.acl.hook"
+"  pretxncommit.acl = python:ext.acl.hook"
 msgstr ""
 
 msgid ""
 "  # Use this if you want to check access restrictions for pull, push,\n"
 "  # bundle and serve.\n"
-"  pretxnchangegroup.acl = python:hgext.acl.hook"
+"  pretxnchangegroup.acl = python:ext.acl.hook"
 msgstr ""
 
 msgid ""
@@ -596,7 +596,7 @@ msgstr ""
 msgid ""
 "    [hooks]\n"
 "    # run bugzilla hook on every change pulled or pushed in here\n"
-"    incoming.bugzilla = python:hgext.bugzilla.hook"
+"    incoming.bugzilla = python:ext.bugzilla.hook"
 msgstr ""
 
 msgid "Example configuration:"
@@ -2347,7 +2347,7 @@ msgid ""
 "hgk consists of two parts: a Tcl script that does the displaying and\n"
 "querying of information, and an extension to Mercurial named hgk.py,\n"
 "which provides hooks for hgk to get information. hgk can be found in\n"
-"the contrib directory, and the extension is shipped in the hgext\n"
+"the contrib directory, and the extension is shipped in the ext\n"
 "repository, and needs to be enabled."
 msgstr ""
 
@@ -4237,9 +4237,9 @@ msgstr ""
 msgid ""
 "  [hooks]\n"
 "  # one email for each incoming changeset\n"
-"  incoming.notify = python:hgext.notify.hook\n"
+"  incoming.notify = python:ext.notify.hook\n"
 "  # batch emails when many changesets incoming at one time\n"
-"  changegroup.notify = python:hgext.notify.hook"
+"  changegroup.notify = python:ext.notify.hook"
 msgstr ""
 
 msgid ""
@@ -5580,8 +5580,8 @@ msgstr ""
 
 msgid ""
 "  [hooks]\n"
-"  pretxncommit.crlf = python:hgext.win32text.forbidcrlf\n"
-"  # or pretxncommit.cr = python:hgext.win32text.forbidcr"
+"  pretxncommit.crlf = python:ext.win32text.forbidcrlf\n"
+"  # or pretxncommit.cr = python:ext.win32text.forbidcr"
 msgstr ""
 
 msgid ""
@@ -5591,8 +5591,8 @@ msgstr ""
 
 msgid ""
 "  [hooks]\n"
-"  pretxnchangegroup.crlf = python:hgext.win32text.forbidcrlf\n"
-"  # or pretxnchangegroup.cr = python:hgext.win32text.forbidcr\n"
+"  pretxnchangegroup.crlf = python:ext.win32text.forbidcrlf\n"
+"  # or pretxnchangegroup.cr = python:ext.win32text.forbidcr\n"
 msgstr ""
 
 #, python-format
@@ -5621,7 +5621,7 @@ msgstr ""
 #, python-format
 msgid ""
 "[hooks]\n"
-"pretxncommit.%s = python:hgext.win32text.forbid%s"
+"pretxncommit.%s = python:ext.win32text.forbid%s"
 msgstr ""
 
 #, python-format
@@ -9751,7 +9751,7 @@ msgstr ""
 
 msgid ""
 "  [extensions]\n"
-"  myfeature = ~/.hgext/myfeature.py"
+"  myfeature = ~/.ext/myfeature.py"
 msgstr ""
 
 msgid ""
@@ -10779,10 +10779,10 @@ msgstr ""
 
 msgid ""
 "- Changesets between tags 1.3 and 1.5 mentioning \"bug\" that affect\n"
-"  ``hgext/*``::"
+"  ``ext/*``::"
 msgstr ""
 
-msgid "    hg log -r \"1.3::1.5 and keyword(bug) and file('hgext/*')\""
+msgid "    hg log -r \"1.3::1.5 and keyword(bug) and file('ext/*')\""
 msgstr ""
 
 msgid "- Changesets in committed May 2008, sorted by user::"

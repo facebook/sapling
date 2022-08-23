@@ -33,13 +33,13 @@
     tested with: 3.0 3.1 3.2.1
     bug reporting: https://example.org/bts
   histedit
-    location: */hgext/histedit.py* (glob)
+    location: */ext/histedit.py* (glob)
     bundled: yes
   hotfix1
-    location: <edenscm_hgext_hotfix1>
+    location: <edenscm_ext_hotfix1>
     bundled: no
   rebase
-    location: */hgext/rebase.py* (glob)
+    location: */ext/rebase.py* (glob)
     bundled: yes
 
   $ hg debugextensions --excludedefault -Tjson | sed 's|\\\\|/|g'
@@ -62,21 +62,21 @@
     "buglink": "",
     "bundled": true,
     "name": "histedit",
-    "source": "*/hgext/histedit.py*", (glob)
+    "source": "*/ext/histedit.py*", (glob)
     "testedwith": []
    },
    {
     "buglink": "",
     "bundled": false,
     "name": "hotfix1",
-    "source": "<edenscm_hgext_hotfix1>",
+    "source": "<edenscm_ext_hotfix1>",
     "testedwith": []
    },
    {
     "buglink": "",
     "bundled": true,
     "name": "rebase",
-    "source": "*/hgext/rebase.py*", (glob)
+    "source": "*/ext/rebase.py*", (glob)
     "testedwith": []
    }
   ]

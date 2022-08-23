@@ -23,7 +23,7 @@ class issue(object):
 
 def computecachesize(repo):
     """measure size of cache directory"""
-    from ..hgext.remotefilelog import shallowutil
+    from ..ext.remotefilelog import shallowutil
 
     cachepath = shallowutil.getcachepath(repo.ui)
 

@@ -21,7 +21,7 @@ Create a race by write files by writing files if context._dirstatestatus is call
   $ mkdir c
   $ touch e f g
   $ cat > $TESTTMP/racy.py << EOF
-  > from edenscm.hgext import fsmonitor
+  > from edenscm.ext import fsmonitor
   > from edenscm.mercurial import extensions
   > def _race(orig, *args, **kwargs):
   >     open('a', 'w').close()

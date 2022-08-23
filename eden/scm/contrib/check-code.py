@@ -504,10 +504,10 @@ checks = [
     ("python", r".*\.(py|cgi)$", r"^#!.*python", pyfilters, pypats),
     ("python", r"edenscm.*\.(py|cgi)$", r"^#!.*python", pyfilters, corepypats),
     ("python", r".*\.(py|cgi)$", r"^#!.*python", [], pynfpats),
-    ("python", r".*hgext.*\.py$", "", [], pyextnfpats),
+    ("python", r".*ext.*\.py$", "", [], pyextnfpats),
     (
         "python 3",
-        r".*(hgext|mercurial)/(?!demandimport|pycompat).*\.py",
+        r".*(ext|mercurial)/(?!demandimport|pycompat).*\.py",
         "",
         pyfilters,
         py3pats,

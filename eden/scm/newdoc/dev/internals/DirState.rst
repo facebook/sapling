@@ -95,12 +95,12 @@ Here's a real example of a dirstate of a clone of the Mercurial repository itsel
    n 666       8097 2008-08-21 11:29:20 doc/ja/hgrc.5.ja.txt
    n 666        307 2008-08-21 11:29:20 hg
    n 666       1138 2008-08-21 11:29:20 hgeditor
-   n 666         14 2008-08-21 11:29:20 hgext/__init__.py
-   n 666       8552 2008-08-21 11:29:20 hgext/gpg.py
-   n 666      10097 2008-08-21 11:29:20 hgext/hbisect.py
-   n 666      45715 2008-08-21 11:29:20 hgext/mq.py
-   n 666      10124 2008-08-21 11:29:20 hgext/patchbomb.py
-   n 666        592 2008-08-21 11:29:20 hgext/win32text.py
+   n 666         14 2008-08-21 11:29:20 ext/__init__.py
+   n 666       8552 2008-08-21 11:29:20 ext/gpg.py
+   n 666      10097 2008-08-21 11:29:20 ext/hbisect.py
+   n 666      45715 2008-08-21 11:29:20 ext/mq.py
+   n 666      10124 2008-08-21 11:29:20 ext/patchbomb.py
+   n 666        592 2008-08-21 11:29:20 ext/win32text.py
    n 666       4919 2008-08-21 11:29:20 hgmerge
    n 666        283 2008-08-21 11:29:20 hgweb.cgi
    n 666        892 2008-08-21 11:29:20 hgwebdir.cgi

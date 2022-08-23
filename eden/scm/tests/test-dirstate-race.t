@@ -60,7 +60,7 @@ confused with a file with the exec bit set
   >     extensions,
   >     filesystem,
   > )
-  > from edenscm.hgext import fsmonitor
+  > from edenscm.ext import fsmonitor
   > def extsetup():
   >     extensions.wrapfunction(filesystem.physicalfilesystem, '_postpendingfixup', overridepostpending)
   >     extensions.wrapfunction(fsmonitor.fsmonitorfilesystem, '_fspostpendingfixup', overridepostpending)

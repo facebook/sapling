@@ -419,10 +419,10 @@ Test handling of non-ASCII paths in generated docstrings (issue5301)
   >>> _ = open("u", "wb").write(b"\xa5\xa5")
   $ U=`cat u`
 
-  $ HGPLAIN=1 hg --config hgext.extdiff= --config extdiff.cmd.td=hi help -k xyzzy
+  $ HGPLAIN=1 hg --config ext.extdiff= --config extdiff.cmd.td=hi help -k xyzzy
   abort: no matches
   (try 'hg help' for a list of topics)
   [255]
 
-  $ HGPLAIN=1 hg --config hgext.extdiff= --config extdiff.cmd.td=hi help td > /dev/null
+  $ HGPLAIN=1 hg --config ext.extdiff= --config extdiff.cmd.td=hi help td > /dev/null
 #endif

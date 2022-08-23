@@ -506,7 +506,7 @@ def clone(
         destrepo.ui.reloadconfigs(destrepo.root)
 
         if shallow:
-            from edenscm.hgext.remotefilelog.shallowrepo import requirement
+            from edenscm.ext.remotefilelog.shallowrepo import requirement
 
             if requirement not in destrepo.requirements:
                 with destrepo.lock():

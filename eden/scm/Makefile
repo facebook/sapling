@@ -26,7 +26,7 @@ PYTHON3 := python3
 $(eval HGROOT := $(shell pwd))
 HGPYTHONS ?= $(HGROOT)/build/pythons
 PURE=
-PYFILES:=$(shell find mercurial hgext -name '*.py' 2>/dev/null)
+PYFILES:=$(shell find mercurial ext -name '*.py' 2>/dev/null)
 DOCFILES=edenscm/mercurial/help/*.txt
 export LANGUAGE=C
 export LC_ALL=C
@@ -100,7 +100,7 @@ cleanbutpackages:
 	-$(PYTHON3) setup.py clean --all # ignore errors from this command
 	find contrib doc i18n edenscm edenscmnative tests \
 		\( -name '*.py[cdo]' -o -name '*.so' \) -exec rm -f '{}' ';'
-	rm -f MANIFEST MANIFEST.in edenscm/hgext/__index__.py tests/*.err
+	rm -f MANIFEST MANIFEST.in edenscm/ext/__index__.py tests/*.err
 	rm -f edenscm/mercurial/__modulepolicy__.py
 	if test -d .hg; then rm -f edenscm/mercurial/__version__.py; fi
 	rm -rf build/*
@@ -137,7 +137,7 @@ update-pot: i18n/hg.pot
 
 i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 	$(PYTHON) i18n/hggettext edenscm/mercurial/commands.py \
-	  edenscm/hgext/*.py edenscm/hgext/*/__init__.py \
+	  edenscm/ext/*.py edenscm/ext/*/__init__.py \
 	  edenscm/mercurial/fileset.py edenscm/mercurial/revset.py \
 	  edenscm/mercurial/templatefilters.py edenscm/mercurial/templatekw.py \
 	  edenscm/mercurial/templater.py \

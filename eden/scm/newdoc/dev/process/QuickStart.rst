@@ -31,8 +31,8 @@ Directory Layout
   - ``mercurial/rust``: Rust Python wrappers
 - ``lib``: Native components unrelated to Python
 - ``exec``: Native standalone executable projects unrelated to Python
-- ``hgext``: Extensions
-  - ``hgext/extlib``: Python wrappers. Similar to ``mercurial/rust`` or ``mercurial/cext``, but for extensions.
+- ``ext``: Extensions
+  - ``ext/extlib``: Python wrappers. Similar to ``mercurial/rust`` or ``mercurial/cext``, but for extensions.
 - ``tests``: Mostly integration tests
 
 .. note:: The above layout assumes that ``hg`` is mainly a Python program. That will change over time.

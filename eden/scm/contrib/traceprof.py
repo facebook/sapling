@@ -14,7 +14,7 @@ from __future__ import absolute_import, print_function
 import os
 import sys
 
-from edenscm.hgext import traceprof
+from edenscm.ext import traceprof
 from edenscm.mercurial import ui as uimod
 
 

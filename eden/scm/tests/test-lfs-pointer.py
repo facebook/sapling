@@ -1,6 +1,11 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 from __future__ import absolute_import, print_function
 
-from edenscm.hgext.lfs import pointer
+from edenscm.ext.lfs import pointer
 from edenscm.mercurial import pycompat
 from hghave import require
 

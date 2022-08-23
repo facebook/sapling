@@ -9,14 +9,14 @@
   $ setconfig remotefilelog.reponame=server
   $ setconfig pullcreatemarkers.use-graphql=false
   $ setconfig pullcreatemarkers.hook-pull=true
-  $ setconfig extensions.arcconfig="$TESTDIR/../edenscm/hgext/extlib/phabricator/arcconfig.py"
+  $ setconfig extensions.arcconfig="$TESTDIR/../edenscm/ext/extlib/phabricator/arcconfig.py"
   $ setconfig devel.segmented-changelog-rev-compat=true
 
-  $ hg init server --config extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
+  $ hg init server --config extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
   $ cd server
   $ setconfig infinitepush.server=yes infinitepush.reponame=testrepo
   $ setconfig infinitepush.indextype=disk infinitepush.storetype=disk
-  $ setconfig treemanifest.server=True extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
+  $ setconfig treemanifest.server=True extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
   $ touch base
   $ hg commit -Aqm base
   $ hg bookmark master

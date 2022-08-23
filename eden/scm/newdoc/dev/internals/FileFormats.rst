@@ -40,7 +40,7 @@ This file contains changeset signatures from the gpg extension, one per line. Fo
 
 <full hex changeset id> <signature version> <base64-encoded signature>
 
-Source: hgext/gpg.py
+Source: ext/gpg.py
 
 .hg/
 ~~~~

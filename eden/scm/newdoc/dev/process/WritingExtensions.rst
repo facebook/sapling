@@ -1,7 +1,7 @@
 Writing Extensions
 ==================
 
-Extensions are Python modules that live in ``edenscm/hgext/``.
+Extensions are Python modules that live in ``edenscm/ext/``.
 
 These modules should be side-effect free when imported.
 

@@ -22,7 +22,7 @@ from contextlib import contextmanager
 
 import bindings
 from edenscm import tracing
-from edenscm.hgext.extlib.phabricator import diffprops
+from edenscm.ext.extlib.phabricator import diffprops
 
 from . import (
     bookmarks,

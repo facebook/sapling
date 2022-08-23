@@ -246,7 +246,7 @@ Test extension help:
       You may also specify the full path to an extension:
   
         [extensions]
-        myfeature = ~/.hgext/myfeature.py
+        myfeature = ~/.ext/myfeature.py
   
       See 'hg help config' for more information on configuration files.
   

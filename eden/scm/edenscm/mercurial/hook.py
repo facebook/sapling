@@ -52,8 +52,8 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
             except (ImportError, SyntaxError):
                 e1 = sys.exc_info()
                 try:
-                    # extensions are loaded with hgext_ prefix
-                    obj = __import__("edenscm_hgext_%s" % modname)
+                    # extensions are loaded with ext_ prefix
+                    obj = __import__("edenscm_ext_%s" % modname)
                 except (ImportError, SyntaxError):
                     e2 = sys.exc_info()
                     ui.warn(_("exception from first failed import " "attempt:\n"))
@@ -269,9 +269,9 @@ def runhooks(ui, repo, htype, hooks, throw=False, **args):
                     hookfn = getattr(mod, cmd)
                 else:
                     hookfn = cmd[7:].strip()
-                    # Compatibility: Change "hgext" to "edenscm.hgext"
+                    # Compatibility: Change "ext" to "edenscm.ext"
                     # automatically.
-                    if hookfn.startswith("hgext."):
+                    if hookfn.startswith("ext."):
                         hookfn = "edenscm." + hookfn
                 with util.mercurialmodule():
                     r, raised = _pythonhook(ui, repo, htype, hname, hookfn, args, throw)

@@ -80,7 +80,7 @@ rev = out.rstrip()
 print("#fake=%s:0" % rev.decode("utf-8"))
 
 # This list is coupled with the "Set up the repository with some simple files"
-# section of eden/scm/tests/test-fb-hgext-tweakdefaults-grep.t
+# section of eden/scm/tests/test-fb-ext-tweakdefaults-grep.t
 files = {
     "grepdir/grepfile1": "foobarbaz",
     "grepdir/grepfile2": "foobarboo",

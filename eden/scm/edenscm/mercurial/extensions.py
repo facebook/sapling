@@ -86,7 +86,7 @@ _sysroot = os.path.abspath(os.path.join(os.__file__, "../"))
 # List of extensions to always enable by default, unless overwritten by config.
 #
 # This allows us to integrate extensions into the codebase while leaving them in
-# hgext/ -- useful for extensions that need cleaning up, or significant
+# ext/ -- useful for extensions that need cleaning up, or significant
 # integration work, to be brought into mercurial/.
 DEFAULT_EXTENSIONS = {
     "conflictinfo",
@@ -105,7 +105,7 @@ ALWAYS_ON_EXTENSIONS = ()
 
 
 def isenabled(ui, name):
-    for format in ["%s", "hgext.%s"]:
+    for format in ["%s", "ext.%s"]:
         conf = ui.config("extensions", format % name)
         if name in ALWAYS_ON_EXTENSIONS:
             return True
@@ -197,8 +197,8 @@ def loadsource(source, name):
 
 
 def preimport(name):
-    """preimport an hgext module"""
-    mod = getattr(__import__("edenscm.hgext.%s" % name).hgext, name)
+    """preimport an ext module"""
+    mod = getattr(__import__("edenscm.ext.%s" % name).ext, name)
     # use a dict explicitly - "dict.get" is much faster than "import" again.
     _preimported[name] = mod
 
@@ -208,7 +208,7 @@ def loaddefault(name, reportfunc=None):
     mod = _preimported.get(name)
     if mod:
         return mod
-    mod = _importh("edenscm.hgext.%s" % name)
+    mod = _importh("edenscm.ext.%s" % name)
     return mod
 
 
@@ -257,7 +257,7 @@ def _importext(name, path=None, reportfunc=None):
         # the module will be loaded in sys.modules
         # choose an unique name so that it doesn't
         # conflicts with other modules
-        mod = loadpath(path, "edenscm.hgext.%s" % name)
+        mod = loadpath(path, "edenscm.ext.%s" % name)
     else:
         mod = loaddefault(name, reportfunc)
     return mod
@@ -311,11 +311,11 @@ _warned = set()
 
 
 def load(ui, name, path):
-    if name.startswith("hgext.") or name.startswith("hgext/"):
-        shortname = name[6:]
+    if name.startswith("ext.") or name.startswith("ext/"):
+        shortname = name[4:]
         if name not in _warned:
             _warned.add(name)
-            msg = _("'hgext' prefix in [extensions] config section is deprecated.\n")
+            msg = _("'ext' prefix in [extensions] config section is deprecated.\n")
             location = ui.configsource("extensions", name)
             if location and ":" in location:
                 msg += _("(hint: replace %r with %r at %s)\n") % (
@@ -340,12 +340,12 @@ def load(ui, name, path):
 
     mod = _importext(shortname, path, bind(_reportimporterror, ui))
 
-    # "mercurial" and "hgext" were moved. Detect wrong module imports.
+    # "mercurial" and "ext" were moved. Detect wrong module imports.
     if ui.configbool("devel", "all-warnings"):
         if (
             "mercurial" in sys.modules
             and sys.modules["mercurial"] is not sys.modules["edenscm.mercurial"]
-        ) or "hgext" in sys.modules:
+        ) or "ext" in sys.modules:
             ui.develwarn("extension %s imported incorrect modules" % name)
 
     # Before we do anything with the extension, check against minimum stated
@@ -779,9 +779,9 @@ def getwrapperchain(container, funcname):
 def _disabledpaths(strip_init=False):
     """find paths of disabled extensions. returns a dict of {name: path}
     removes /__init__.py from packages if strip_init is True"""
-    from edenscm import hgext
+    from edenscm import ext
 
-    extpath = os.path.dirname(os.path.abspath(hgext.__file__))
+    extpath = os.path.dirname(os.path.abspath(ext.__file__))
     try:  # might not be a filesystem path
         files = os.listdir(extpath)
     except OSError:
@@ -860,10 +860,10 @@ def _disabledhelp(path):
 
 
 def disabled():
-    """find disabled extensions from hgext. returns a dict of {name: desc}"""
+    """find disabled extensions from ext. returns a dict of {name: desc}"""
     try:
-        # pyre-fixme[21]: Could not find name `__index__` in `edenscm.hgext`.
-        from edenscm.hgext import __index__
+        # pyre-fixme[21]: Could not find name `__index__` in `edenscm.ext`.
+        from edenscm.ext import __index__
 
         return dict(
             (name, gettext(desc))
@@ -887,9 +887,9 @@ def disabled():
 
 
 def disabledext(name):
-    """find a specific disabled extension from hgext. returns desc"""
+    """find a specific disabled extension from ext. returns desc"""
     try:
-        from edenscm.hgext import __index__
+        from edenscm.ext import __index__
 
         if name in _order:  # enabled
             return
@@ -915,7 +915,7 @@ def disabledcmd(ui, cmd):
 
     def findcmd(cmd, name, path):
         try:
-            mod = loadpath(path, "hgext.%s" % name)
+            mod = loadpath(path, "ext.%s" % name)
         except Exception:
             return
         try:

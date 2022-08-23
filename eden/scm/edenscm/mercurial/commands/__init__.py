@@ -97,9 +97,9 @@ with hgdemandimport.deactivated():
     )
 
 release = lockmod.release
-
 table = cmdtable.table
 command = cmdtable.command
+
 
 readonly = registrar.command.readonly
 

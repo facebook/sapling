@@ -46,9 +46,9 @@ Or overriden by a different path:
 
 A default extension's reposetup and extsetup are run:
   $ cd $TESTTMP
-  $ mkdir hgext
-  $ cat > hgext/mofunc.py <<EOF
-  > from edenscm.hgext import githelp
+  $ mkdir ext
+  $ cat > ext/mofunc.py <<EOF
+  > from edenscm.ext import githelp
   > def extsetup(ui):
   >     # Only print reposetup() once so that this test output doesn't change
   >     # the number of times repo gets wrapped as we enable extensions.
@@ -62,7 +62,7 @@ A default extension's reposetup and extsetup are run:
   >     githelp.reposetup = reposetup
   >     githelp.extsetup = extsetup
   > EOF
-  $ hg -R a githelp --config extensions.path=hgext/mofunc.py -- git status
+  $ hg -R a githelp --config extensions.path=ext/mofunc.py -- git status
   githelp extsetup()
   githelp reposetup()
   hg status

@@ -44,20 +44,20 @@ _origimport = __import__
 nothing = object()
 
 
-def _hgextimport(importfunc, name, globals, *args, **kwargs):
+def _extimport(importfunc, name, globals, *args, **kwargs):
     try:
         return importfunc(name, globals, *args, **kwargs)
     except ImportError:
         if not globals:
             raise
-        # extensions are loaded with "hgext_" prefix
-        hgextname = "hgext_%s" % name
-        nameroot = hgextname.split(".", 1)[0]
+        # extensions are loaded with "ext_" prefix
+        extname = "ext_%s" % name
+        nameroot = extname.split(".", 1)[0]
         contextroot = globals.get("__name__", "").split(".", 1)[0]
         if nameroot != contextroot:
             raise
-        # retry to import with "hgext_" prefix
-        return importfunc(hgextname, globals, *args, **kwargs)
+        # retry to import with "ext_" prefix
+        return importfunc(extname, globals, *args, **kwargs)
 
 
 class _demandmod(object):
@@ -95,17 +95,17 @@ class _demandmod(object):
     def _load(self):
         if not self._module:
             head, globals, locals, after, level, modrefs = self._data
-            mod = _hgextimport(_origimport, head, globals, locals, None, level)
+            mod = _extimport(_origimport, head, globals, locals, None, level)
             if mod is self:
-                # In this case, _hgextimport() above should imply
-                # _demandimport(). Otherwise, _hgextimport() never
+                # In this case, _extimport() above should imply
+                # _demandimport(). Otherwise, _extimport() never
                 # returns _demandmod. This isn't intentional behavior,
                 # in fact. (see also issue5304 for detail)
                 #
                 # If self._module is already bound at this point, self
-                # should be already _load()-ed while _hgextimport().
+                # should be already _load()-ed while _extimport().
                 # Otherwise, there is no way to import actual module
-                # as expected, because (re-)invoking _hgextimport()
+                # as expected, because (re-)invoking _extimport()
                 # should cause same result.
                 # This is reason why _load() returns without any more
                 # setup but assumes self to be already bound.
@@ -173,7 +173,7 @@ _pypy = "__pypy__" in sys.builtin_module_names
 def _demandimport(name, globals=None, locals=None, fromlist=None, level=-1):
     if locals is None or name in ignore or fromlist == ("*",):
         # these cases we can't really delay
-        return _hgextimport(_origimport, name, globals, locals, fromlist, level)
+        return _extimport(_origimport, name, globals, locals, fromlist, level)
     elif not fromlist:
         # import a [as b]
         if "." in name:  # a.b
@@ -248,7 +248,7 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=-1):
         if level >= 0:
             if name:
                 # "from a import b" or "from .a import b" style
-                rootmod = _hgextimport(_origimport, name, globals, locals, level=level)
+                rootmod = _extimport(_origimport, name, globals, locals, level=level)
                 mod = chainmodules(rootmod, name)
             elif _pypy:
                 # PyPy's __import__ throws an exception if invoked
@@ -263,7 +263,7 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=-1):
                     mn = mn.rsplit(".", level - 1)[0]
                     mod = sys.modules[mn]
             else:
-                mod = _hgextimport(_origimport, name, globals, locals, level=level)
+                mod = _extimport(_origimport, name, globals, locals, level=level)
 
             for x in fromlist:
                 processfromitem(mod, x)
@@ -272,7 +272,7 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=-1):
 
         # But, we still need to support lazy loading of standard library and 3rd
         # party modules. So handle level == -1.
-        mod = _hgextimport(_origimport, name, globals, locals)
+        mod = _extimport(_origimport, name, globals, locals)
         mod = chainmodules(mod, name)
 
         for x in fromlist:

@@ -8,7 +8,7 @@
 
   $ hg init a
   $ cd a
-  $ setconfig extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
+  $ setconfig extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
   $ setconfig treemanifest.server=True
 
   $ echo A > A
@@ -372,7 +372,7 @@ All destination are B
 
   $ hg init ah
   $ cd ah
-  $ setconfig extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
+  $ setconfig extensions.treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
   $ setconfig treemanifest.server=True
 
   $ echo A > A

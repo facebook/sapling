@@ -2,17 +2,17 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
-Using 'hgext.' prefix triggers the warning.
+Using 'ext.' prefix triggers the warning.
 
-  $ hg init --config extensions.hgext.rebase=
-  'hgext' prefix in [extensions] config section is deprecated.
-  (hint: replace 'hgext.rebase' with 'rebase')
+  $ hg init --config extensions.ext.rebase=
+  'ext' prefix in [extensions] config section is deprecated.
+  (hint: replace 'ext.rebase' with 'rebase')
 
 If the location of the config is printed.
 Despite the warning, the extension is still loaded.
 
-  $ setconfig extensions.hgext.rebase=
+  $ setconfig extensions.ext.rebase=
   $ hg rebase -s 'tip-tip' -d 'tip'
-  'hgext' prefix in [extensions] config section is deprecated.
-  (hint: replace 'hgext.rebase' with 'rebase' at $TESTTMP/.hg/hgrc:2)
+  'ext' prefix in [extensions] config section is deprecated.
+  (hint: replace 'ext.rebase' with 'rebase' at $TESTTMP/.hg/hgrc:2)
   empty "source" revision set - nothing to rebase

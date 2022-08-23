@@ -1140,10 +1140,10 @@ class buildpyzip(Command):
                 process_top_level(extracteddir)
 
 
-class buildhgextindex(Command):
-    description = "generate prebuilt index of hgext (for frozen package)"
+class buildextindex(Command):
+    description = "generate prebuilt index of ext (for frozen package)"
     user_options = []
-    _indexfilename = "edenscm/hgext/__index__.py"
+    _indexfilename = "edenscm/ext/__index__.py"
 
     def initialize_options(self):
         pass
@@ -1320,7 +1320,7 @@ cmdclass = {
     "build_py": hgbuildpy,
     "build_pyzip": buildpyzip,
     "build_scripts": hgbuildscripts,
-    "build_hgextindex": buildhgextindex,
+    "build_extindex": buildextindex,
     "install": hginstall,
     "install_lib": hginstalllib,
     "install_scripts": hginstallscripts,
@@ -1332,25 +1332,25 @@ cmdclass = {
 packages = [
     "edenscm",
     "edenscm.hgdemandimport",
-    "edenscm.hgext",
-    "edenscm.hgext.absorb",
-    "edenscm.hgext.amend",
-    "edenscm.hgext.commitcloud",
-    "edenscm.hgext.extlib",
-    "edenscm.hgext.extlib.phabricator",
-    "edenscm.hgext.extlib.pywatchman",
-    "edenscm.hgext.extlib.watchmanclient",
-    "edenscm.hgext.fastannotate",
-    "edenscm.hgext.fsmonitor",
-    "edenscm.hgext.hgevents",
-    "edenscm.hgext.highlight",
-    "edenscm.hgext.infinitepush",
-    "edenscm.hgext.lfs",
-    "edenscm.hgext.memcommit",
-    "edenscm.hgext.pushrebase",
-    "edenscm.hgext.remotefilelog",
-    "edenscm.hgext.snapshot",
-    "edenscm.hgext.treemanifest",
+    "edenscm.ext",
+    "edenscm.ext.absorb",
+    "edenscm.ext.amend",
+    "edenscm.ext.commitcloud",
+    "edenscm.ext.extlib",
+    "edenscm.ext.extlib.phabricator",
+    "edenscm.ext.extlib.pywatchman",
+    "edenscm.ext.extlib.watchmanclient",
+    "edenscm.ext.fastannotate",
+    "edenscm.ext.fsmonitor",
+    "edenscm.ext.hgevents",
+    "edenscm.ext.highlight",
+    "edenscm.ext.infinitepush",
+    "edenscm.ext.lfs",
+    "edenscm.ext.memcommit",
+    "edenscm.ext.pushrebase",
+    "edenscm.ext.remotefilelog",
+    "edenscm.ext.snapshot",
+    "edenscm.ext.treemanifest",
     "edenscm.mercurial",
     "edenscm.mercurial.cffi",
     "edenscm.mercurial.commands",
@@ -1516,7 +1516,7 @@ extmodules = [
     ),
     Extension(
         "edenscmnative.bser",
-        sources=["edenscm/hgext/extlib/pywatchman/bser.c"],
+        sources=["edenscm/ext/extlib/pywatchman/bser.c"],
         include_dirs=include_dirs,
     ),
 ]

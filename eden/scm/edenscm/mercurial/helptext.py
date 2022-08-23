@@ -1029,7 +1029,7 @@ Example for ``~/.hgrc``::
   # (the amend extension will get loaded from Mercurial's path)
   amend =
   # (this extension will get loaded from the file specified)
-  myfeature = ~/.hgext/myfeature.py
+  myfeature = ~/.ext/myfeature.py
 
 
 ``format``
@@ -3196,7 +3196,7 @@ like this::
 You may also specify the full path to an extension::
 
   [extensions]
-  myfeature = ~/.hgext/myfeature.py
+  myfeature = ~/.ext/myfeature.py
 
 See :hg:`help config` for more information on configuration files.
 
@@ -4416,9 +4416,9 @@ Some sample queries:
     hg log -r "head() and not closed()"
 
 - Changesets between tags 1.3 and 1.5 mentioning "bug" that affect
-  ``hgext/*``::
+  ``ext/*``::
 
-    hg log -r "1.3::1.5 and keyword(bug) and file('hgext/*')"
+    hg log -r "1.3::1.5 and keyword(bug) and file('ext/*')"
 
 - Changesets committed in May 2008, sorted by user::
 

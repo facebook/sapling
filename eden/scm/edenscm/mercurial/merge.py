@@ -2325,7 +2325,7 @@ def update(
 
             prefetchprofiles = repo.ui.configlist("eden", "prefetchsparseprofiles")
             if prefetchprofiles:
-                from edenscm.hgext import sparse
+                from edenscm.ext import sparse
 
                 raw = ""
                 for profile in prefetchprofiles:
@@ -2677,7 +2677,7 @@ def update(
 def getsparsematchers(repo, fp1, fp2, matcher=None):
     sparsematch = getattr(repo, "sparsematch", None)
     if sparsematch is not None:
-        from edenscm.hgext import sparse
+        from edenscm.ext import sparse
 
         revs = {fp1, fp2}
         revs -= {nullid}

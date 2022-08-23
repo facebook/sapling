@@ -152,69 +152,69 @@ segmentedchangelogcompatiblelist = """
     test-eolfilename.t
     test-execute-bit.t
     test-exitcodemask.t
-    test-extension-hgext-prefix.t
+    test-extension-ext-prefix.t
     test-extension-inline.t
     test-extensions-afterloaded.t
     test-extensions-default.t
     test-extensions-wrapfunction.py
-    test-fb-hgext-absorb-filefixupstate.py
-    test-fb-hgext-arcconfig.t
-    test-fb-hgext-catnotate.t
-    test-fb-hgext-checkmessagehook.t
-    test-fb-hgext-copytrace-amend.t
-    test-fb-hgext-copytrace-mergedriver.t
-    test-fb-hgext-debugcommitmessage.t
-    test-fb-hgext-diff-since-last-submit.t
-    test-fb-hgext-errorredirect.t
-    test-fb-hgext-extorder.t
-    test-fb-hgext-extutil.py
-    test-fb-hgext-fastannotate-revmap.py
-    test-fb-hgext-fbhistedit-exec-obsolete.t
-    test-fb-hgext-fbhistedit-exec.t
-    test-fb-hgext-fbhistedit-graft.t
-    test-fb-hgext-fbhistedit-json.t
-    test-fb-hgext-fbhistedit-show-plan.t
-    test-fb-hgext-fbhistedit-stop-obsolete.t
-    test-fb-hgext-fbhistedit-stop.t
-    test-fb-hgext-generic-bisect.py
-    test-fb-hgext-githelp.t
-    test-fb-hgext-grpcheck.t
-    test-fb-hgext-morestatus.t
-    test-fb-hgext-myparent.t
-    test-fb-hgext-ownercheck-t.py
-    test-fb-hgext-patchrmdir.py
-    test-fb-hgext-phabdiff.t
-    test-fb-hgext-phabstatus.t
-    test-fb-hgext-rage.t
-    test-fb-hgext-remotefilelog-bundleloop.t
-    test-fb-hgext-remotefilelog-commit-repack.t
-    test-fb-hgext-remotefilelog-datapack.py
-    test-fb-hgext-remotefilelog-histpack.py
-    test-fb-hgext-remotefilelog-localdatarepack-full.t
-    test-fb-hgext-remotefilelog-rust-lfs.t
-    test-fb-hgext-remotefilelog-ruststores-lfs-bundle.t
-    test-fb-hgext-remotefilelog-ruststores-lfs-duplicated.t
-    test-fb-hgext-sampling.t
-    test-fb-hgext-scm-prompt-compat.t
-    test-fb-hgext-scm-prompt-git.t
-    test-fb-hgext-scm-prompt-hg.t
-    test-fb-hgext-sigtrace.t
-    test-fb-hgext-simplecache.t
-    test-fb-hgext-smartlog-smallcommitmetadata.t
-    test-fb-hgext-smartlog.t
-    test-fb-hgext-sshaskpass.py
-    test-fb-hgext-syncstatus.t
-    test-fb-hgext-template-stat.t
-    test-fb-hgext-treemanifest-bad-tree.t
-    test-fb-hgext-treemanifest-convertflat.t
-    test-fb-hgext-treemanifest-sendtrees.t
-    test-fb-hgext-treemanifest-sparse-prefetch.t
-    test-fb-hgext-treemanifest-sparse.t
-    test-fb-hgext-tweakdefaults-bookmarks.t
-    test-fb-hgext-tweakdefaults-grep.t
-    test-fb-hgext-tweakdefaults-opawarecommands.t
-    test-fb-hgext-tweakdefaults-ordering.t
-    test-fb-hgext-tweakdefaults-revsets.t
+    test-fb-ext-absorb-filefixupstate.py
+    test-fb-ext-arcconfig.t
+    test-fb-ext-catnotate.t
+    test-fb-ext-checkmessagehook.t
+    test-fb-ext-copytrace-amend.t
+    test-fb-ext-copytrace-mergedriver.t
+    test-fb-ext-debugcommitmessage.t
+    test-fb-ext-diff-since-last-submit.t
+    test-fb-ext-errorredirect.t
+    test-fb-ext-extorder.t
+    test-fb-ext-extutil.py
+    test-fb-ext-fastannotate-revmap.py
+    test-fb-ext-fbhistedit-exec-obsolete.t
+    test-fb-ext-fbhistedit-exec.t
+    test-fb-ext-fbhistedit-graft.t
+    test-fb-ext-fbhistedit-json.t
+    test-fb-ext-fbhistedit-show-plan.t
+    test-fb-ext-fbhistedit-stop-obsolete.t
+    test-fb-ext-fbhistedit-stop.t
+    test-fb-ext-generic-bisect.py
+    test-fb-ext-githelp.t
+    test-fb-ext-grpcheck.t
+    test-fb-ext-morestatus.t
+    test-fb-ext-myparent.t
+    test-fb-ext-ownercheck-t.py
+    test-fb-ext-patchrmdir.py
+    test-fb-ext-phabdiff.t
+    test-fb-ext-phabstatus.t
+    test-fb-ext-rage.t
+    test-fb-ext-remotefilelog-bundleloop.t
+    test-fb-ext-remotefilelog-commit-repack.t
+    test-fb-ext-remotefilelog-datapack.py
+    test-fb-ext-remotefilelog-histpack.py
+    test-fb-ext-remotefilelog-localdatarepack-full.t
+    test-fb-ext-remotefilelog-rust-lfs.t
+    test-fb-ext-remotefilelog-ruststores-lfs-bundle.t
+    test-fb-ext-remotefilelog-ruststores-lfs-duplicated.t
+    test-fb-ext-sampling.t
+    test-fb-ext-scm-prompt-compat.t
+    test-fb-ext-scm-prompt-git.t
+    test-fb-ext-scm-prompt-hg.t
+    test-fb-ext-sigtrace.t
+    test-fb-ext-simplecache.t
+    test-fb-ext-smartlog-smallcommitmetadata.t
+    test-fb-ext-smartlog.t
+    test-fb-ext-sshaskpass.py
+    test-fb-ext-syncstatus.t
+    test-fb-ext-template-stat.t
+    test-fb-ext-treemanifest-bad-tree.t
+    test-fb-ext-treemanifest-convertflat.t
+    test-fb-ext-treemanifest-sendtrees.t
+    test-fb-ext-treemanifest-sparse-prefetch.t
+    test-fb-ext-treemanifest-sparse.t
+    test-fb-ext-tweakdefaults-bookmarks.t
+    test-fb-ext-tweakdefaults-grep.t
+    test-fb-ext-tweakdefaults-opawarecommands.t
+    test-fb-ext-tweakdefaults-ordering.t
+    test-fb-ext-tweakdefaults-revsets.t
     test-filecache.py
     test-filelog.py
     test-fileset-generated.t
@@ -224,7 +224,7 @@ segmentedchangelogcompatiblelist = """
     test-globalrevs-svnrev.t
     test-help.t
     test-hg-parseurl.py
-    test-hgext-logginghelper.t
+    test-ext-logginghelper.t
     test-hghave.t
     test-hgrc.t
     test-hint.t
@@ -417,45 +417,45 @@ segmentedchangelogcompatiblelist = """
     test-eol-add.t
     test-eol-patch.t
     test-eol.t
-    test-fb-hgext-copytrace.t
-    test-fb-hgext-crdump.t
-    test-fb-hgext-debugdetectissues.t
-    test-fb-hgext-dirsync-amend.t
-    test-fb-hgext-dirsync.t
-    test-fb-hgext-git-getmeta.t
-    test-fb-hgext-merge-conflictinfo.t
-    test-fb-hgext-mergedriver.t
-    test-fb-hgext-pull-createmarkers.t
-    test-fb-hgext-pushrebase-protection.t
-    test-fb-hgext-pushvars-remotenames.t
-    test-fb-hgext-remotefilelog-archive.t
-    test-fb-hgext-remotefilelog-bad-configs.t
-    test-fb-hgext-remotefilelog-bundle2-legacy.t
-    test-fb-hgext-remotefilelog-bundle2.t
-    test-fb-hgext-remotefilelog-bundles.t
-    test-fb-hgext-remotefilelog-getpackv2.t
-    test-fb-hgext-remotefilelog-local.t
-    test-fb-hgext-remotefilelog-pull-noshallow.t
-    test-fb-hgext-remotefilelog-push-pull-query-string.t
-    test-fb-hgext-remotefilelog-ruststores-repack.t
-    test-fb-hgext-remotefilelog-ruststores-rotatelog-size.t
-    test-fb-hgext-remotefilelog-treemanifest-corrupt.t
-    test-fb-hgext-remotefilelog-worker.t
-    test-fb-hgext-reset-remotenames.t
-    test-fb-hgext-treemanifest-blame.t
-    test-fb-hgext-treemanifest-comparetrees.t
-    test-fb-hgext-treemanifest-disabled.t
-    test-fb-hgext-treemanifest-infinitepush.t
-    test-fb-hgext-treemanifest-peertopeer.t
-    test-fb-hgext-treemanifest-pushrebase.t
-    test-fb-hgext-treemanifest-pushrebase-treeonly.t
-    test-fb-hgext-treemanifest-remotenames-out-of-sync.t
-    test-fb-hgext-treemanifest-treeonly-copyamend.t
-    test-fb-hgext-treemanifest-treeonly-fetching.t
-    test-fb-hgext-tweakdefaults-remotenames.t
+    test-fb-ext-copytrace.t
+    test-fb-ext-crdump.t
+    test-fb-ext-debugdetectissues.t
+    test-fb-ext-dirsync-amend.t
+    test-fb-ext-dirsync.t
+    test-fb-ext-git-getmeta.t
+    test-fb-ext-merge-conflictinfo.t
+    test-fb-ext-mergedriver.t
+    test-fb-ext-pull-createmarkers.t
+    test-fb-ext-pushrebase-protection.t
+    test-fb-ext-pushvars-remotenames.t
+    test-fb-ext-remotefilelog-archive.t
+    test-fb-ext-remotefilelog-bad-configs.t
+    test-fb-ext-remotefilelog-bundle2-legacy.t
+    test-fb-ext-remotefilelog-bundle2.t
+    test-fb-ext-remotefilelog-bundles.t
+    test-fb-ext-remotefilelog-getpackv2.t
+    test-fb-ext-remotefilelog-local.t
+    test-fb-ext-remotefilelog-pull-noshallow.t
+    test-fb-ext-remotefilelog-push-pull-query-string.t
+    test-fb-ext-remotefilelog-ruststores-repack.t
+    test-fb-ext-remotefilelog-ruststores-rotatelog-size.t
+    test-fb-ext-remotefilelog-treemanifest-corrupt.t
+    test-fb-ext-remotefilelog-worker.t
+    test-fb-ext-reset-remotenames.t
+    test-fb-ext-treemanifest-blame.t
+    test-fb-ext-treemanifest-comparetrees.t
+    test-fb-ext-treemanifest-disabled.t
+    test-fb-ext-treemanifest-infinitepush.t
+    test-fb-ext-treemanifest-peertopeer.t
+    test-fb-ext-treemanifest-pushrebase.t
+    test-fb-ext-treemanifest-pushrebase-treeonly.t
+    test-fb-ext-treemanifest-remotenames-out-of-sync.t
+    test-fb-ext-treemanifest-treeonly-copyamend.t
+    test-fb-ext-treemanifest-treeonly-fetching.t
+    test-fb-ext-tweakdefaults-remotenames.t
     test-gitlookup-infinitepush.t
     test-globalopts.t
-    test-hgext-stablerev.t
+    test-ext-stablerev.t
     test-histedit-arguments.t
     test-histedit-base.t
     test-histedit-commute.t
@@ -562,18 +562,18 @@ segmentedchangelogcompatiblelist = """
     test-debugrebuildchangelog.t
     test-doctor.t
 
-    test-fb-hgext-pull-createmarkers-hide-later.t
+    test-fb-ext-pull-createmarkers-hide-later.t
 
-    test-fb-hgext-remotefilelog-blame.t
-    test-fb-hgext-remotefilelog-push-pull.t
-    test-fb-hgext-remotefilelog-sparse.t
-    test-fb-hgext-remotefilelog-treemanifest-lfs.t
+    test-fb-ext-remotefilelog-blame.t
+    test-fb-ext-remotefilelog-push-pull.t
+    test-fb-ext-remotefilelog-sparse.t
+    test-fb-ext-remotefilelog-treemanifest-lfs.t
 
-    test-fb-hgext-treemanifest-autoconvert.t
-    test-fb-hgext-treemanifest-prefetch.t
-    test-fb-hgext-treemanifest-pullpublic.t
-    test-fb-hgext-treemanifest-treeonly.t
-    test-fb-hgext-treemanifest.t
+    test-fb-ext-treemanifest-autoconvert.t
+    test-fb-ext-treemanifest-prefetch.t
+    test-fb-ext-treemanifest-pullpublic.t
+    test-fb-ext-treemanifest-treeonly.t
+    test-fb-ext-treemanifest.t
 
     test-pushrebase-withmerges.t
     test-rebase-mutation.t
@@ -621,33 +621,33 @@ ignorerevnumincompatiblelist = """
     test-eol-update.t
     test-export.t
     test-extdata.t
-    test-fb-hgext-copytrace-errormsg.t
-    test-fb-hgext-drop.t
-    test-fb-hgext-fastannotate-corrupt.t
-    test-fb-hgext-fastannotate-perfhack.t
-    test-fb-hgext-fastannotate-protocol.t
-    test-fb-hgext-fastannotate-renames.t
-    test-fb-hgext-fastannotate.t
-    test-fb-hgext-fastlog.t
-    test-fb-hgext-fbhistedit-rebase-interactive.t
-    test-fb-hgext-morestatus.t
-    test-fb-hgext-phrevset.t
-    test-fb-hgext-pushrebase-remotenames.t
-    test-fb-hgext-remotefilelog-prefetch.t
-    test-fb-hgext-remotefilelog-sparse.t
-    test-fb-hgext-remotefilelog-wireproto.t
-    test-fb-hgext-reset-remotenames.t
-    test-fb-hgext-reset.t
-    test-fb-hgext-smartlog-inhibit.t
-    test-fb-hgext-smartlog-remotenames.t
-    test-fb-hgext-treemanifest-noflat.t
-    test-fb-hgext-treemanifest-prefetch.t
-    test-fb-hgext-treemanifest.t
-    test-fb-hgext-tweakdefaults-ordering.t
-    test-fb-hgext-tweakdefaults-pullrebaseremotenames.t
-    test-fb-hgext-tweakdefaults-remotenames.t
-    test-fb-hgext-tweakdefaults.t
-    test-fb-hgext-tweakdefaults-update.t
+    test-fb-ext-copytrace-errormsg.t
+    test-fb-ext-drop.t
+    test-fb-ext-fastannotate-corrupt.t
+    test-fb-ext-fastannotate-perfhack.t
+    test-fb-ext-fastannotate-protocol.t
+    test-fb-ext-fastannotate-renames.t
+    test-fb-ext-fastannotate.t
+    test-fb-ext-fastlog.t
+    test-fb-ext-fbhistedit-rebase-interactive.t
+    test-fb-ext-morestatus.t
+    test-fb-ext-phrevset.t
+    test-fb-ext-pushrebase-remotenames.t
+    test-fb-ext-remotefilelog-prefetch.t
+    test-fb-ext-remotefilelog-sparse.t
+    test-fb-ext-remotefilelog-wireproto.t
+    test-fb-ext-reset-remotenames.t
+    test-fb-ext-reset.t
+    test-fb-ext-smartlog-inhibit.t
+    test-fb-ext-smartlog-remotenames.t
+    test-fb-ext-treemanifest-noflat.t
+    test-fb-ext-treemanifest-prefetch.t
+    test-fb-ext-treemanifest.t
+    test-fb-ext-tweakdefaults-ordering.t
+    test-fb-ext-tweakdefaults-pullrebaseremotenames.t
+    test-fb-ext-tweakdefaults-remotenames.t
+    test-fb-ext-tweakdefaults.t
+    test-fb-ext-tweakdefaults-update.t
     test-fileset.t
     test-git-export.t
     test-glog-topological.t

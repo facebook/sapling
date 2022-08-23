@@ -169,7 +169,7 @@ error:
   abortmsgerrno("failed to restore signal handlers");
 }
 
-/* This implementation is based on hgext/pager.py (post 369741ef7253)
+/* This implementation is based on ext/pager.py (post 369741ef7253)
  * Return 0 if pager is not started, or pid of the pager */
 pid_t setuppager(
     const char* pagercmd,
