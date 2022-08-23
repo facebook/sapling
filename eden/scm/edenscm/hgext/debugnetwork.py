@@ -16,6 +16,7 @@
 """
 
 import socket
+from typing import List, Optional, Tuple, Union
 
 from edenscm.mercurial import (
     error,
@@ -35,7 +36,7 @@ command = registrar.command(cmdtable)
 SOCKET_AF = {
     getattr(socket, field): field for field in dir(socket) if field.startswith("AF_")
 }
-BLOCK_SIZE = 2 * 1024 * 1024
+BLOCK_SIZE: int = 2 * 1024 * 1024
 HEADER_MONONOKE_HOST = "x-mononoke-host"
 HEADER_NETSPEEDTEST_NBYTES = "x-netspeedtest-nbytes"
 
@@ -44,7 +45,19 @@ def httpstatussuccess(s):
     return s >= 200 and s < 300
 
 
-def checkdnsresolution(ui, url):
+def checkdnsresolution(
+    ui, url
+) -> Optional[
+    List[
+        Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[Tuple[str, int], Tuple[str, int, int, int]],
+        ]
+    ]
+]:
     ui.status(_("Resolving remote hostname: %s\n") % url.host, component="debugnetwork")
     try:
         addrinfos = socket.getaddrinfo(url.host, url.port or 22, 0, socket.SOCK_STREAM)
@@ -60,7 +73,7 @@ def checkdnsresolution(ui, url):
     return addrinfos
 
 
-def checkreachability(ui, url, addrinfos):
+def checkreachability(ui, url, addrinfos) -> bool:
     ok = False
     for family, socktype, _proto, _canonname, sockaddr in addrinfos:
         ui.status(
@@ -84,7 +97,7 @@ def checkreachability(ui, url, addrinfos):
     return ok
 
 
-def checkmononokehost(ui, url, opts):
+def checkmononokehost(ui, url, opts) -> bool:
     sslvalidator = lambda x: None if opts.get("insecure") else sslutil.validatesocket
 
     _authdata, auth = httpconnection.readauthforuri(ui, str(url), url.user)
@@ -203,7 +216,8 @@ def checkspeedhttp(ui, url, opts):
     return res
 
 
-def drivespeedtests(ui, latency, upload, download):
+def drivespeedtests(ui, latency: float, upload, download) -> bool:
+    # pyre-fixme[23]: Unable to unpack `float` into 2 values.
     latencytest, latency_ntests = latency
     uploadtest, testname, bytecount = upload
     downloadtest, testname, bytecount = download
@@ -258,7 +272,7 @@ def drivespeedtests(ui, latency, upload, download):
     ],
     _("[REMOTE]"),
 )
-def debugnetwork(ui, repo, remote="default", **opts):
+def debugnetwork(ui, repo, remote: str = "default", **opts) -> Optional[int]:
     """debug the network connection to a remote"""
 
     alltests = not any(opts.get(opt) for opt in ["connection", "speed"])
