@@ -31,6 +31,7 @@ use http::Uri;
 use hyper::service::Service;
 use hyper::Body;
 use metadata::Metadata;
+use percent_encoding::percent_decode;
 use qps::Qps;
 use session_id::generate_session_id;
 use sha1::Digest;
@@ -212,7 +213,13 @@ where
         &self,
         mut req: Request<Body>,
     ) -> Result<Response<Body>, HttpError> {
-        let reponame = req.uri().path().trim_matches('/').to_string();
+        let reponame_urlencoded = req.uri().path().trim_matches('/').to_string();
+
+        let reponame = percent_decode(reponame_urlencoded.as_bytes())
+            .decode_utf8()
+            .context("reponame must be url-encoded utf-8")
+            .map_err(HttpError::BadRequest)?
+            .into_owned();
 
         let websocket_key = calculate_websocket_accept(req.headers());
 
