@@ -446,6 +446,13 @@ def clone(
     anything else is treated as a revision)
     """
 
+    ui.log(
+        "clone_info",
+        rust_clone=False,
+        clone_type="full",
+        is_update_clone=update,
+    )
+
     if dest is None:
         dest = defaultdest(source)
         if dest:

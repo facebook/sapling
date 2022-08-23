@@ -215,6 +215,19 @@ pub fn run(
 
     let dest_hg = destination.join(HG_PATH);
 
+    let clone_type_str = if clone_opts.eden {
+        "eden_fs"
+    } else if !clone_opts.enable_profile.is_empty() {
+        "sparse"
+    } else {
+        "full"
+    };
+    tracing::trace!("performing rust clone");
+    tracing::debug!(target: "clone_info", rust_clone="true", repo=reponame, clone_type=clone_type_str, is_update_clone=!clone_opts.noupdate);
+    if !clone_opts.enable_profile.is_empty() {
+        tracing::debug!(target: "clone_info", cloned_sparse_profiles=clone_opts.enable_profile.join(" "));
+    }
+
     abort_if!(
         dest_hg.exists(),
         ".hg directory already exists at clone destination {}",
@@ -340,21 +353,6 @@ fn clone_metadata(
     reponame: &str,
     destination: &Path,
 ) -> Result<Repo> {
-    let clone_type_str = if clone_opts.eden {
-        "EdenFS"
-    } else if !clone_opts.enable_profile.is_empty() {
-        "Sparse"
-    } else if clone_opts.noupdate {
-        "NoUpdate"
-    } else {
-        "Full"
-    };
-
-    tracing::trace!("performing rust clone");
-    tracing::debug!(target: "rust_clone", rust_clone="true");
-    tracing::debug!(target: "repo", repo=reponame);
-    tracing::debug!(target: "clone_type", clone_type=clone_type_str);
-
     let mut includes = global_opts.configfile.clone();
     if let Some(mut repo_config) = config.get_opt::<PathBuf>("clone", "repo-specific-config-dir")? {
         repo_config.push(format!("{}.rc", reponame));

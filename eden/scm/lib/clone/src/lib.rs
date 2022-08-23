@@ -216,6 +216,14 @@ pub fn eden_clone(backing_repo: &Repo, working_copy: &Path, target: Option<HgId>
         )
         .into());
     }
+
+    if String::from_utf8_lossy(&output.stdout)
+        .to_string()
+        .contains("edenfs daemon is not currently running")
+    {
+        tracing::debug!(target: "clone_info", edenfs_started_at_clone="true");
+    }
+
     Ok(())
 }
 
