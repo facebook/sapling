@@ -42,6 +42,7 @@ impl SessionContainerBuilder {
                 rate_limiter: None,
                 blobstore_write_limiter: None,
                 blobstore_read_limiter: None,
+                readonly: false,
             },
             session_class: SessionClass::UserWaiting,
         }
@@ -84,6 +85,11 @@ impl SessionContainerBuilder {
     }
     pub fn session_class(mut self, value: SessionClass) -> Self {
         self.session_class = value;
+        self
+    }
+
+    pub fn readonly(mut self, readonly: bool) -> Self {
+        self.inner.readonly = readonly;
         self
     }
 }

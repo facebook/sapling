@@ -56,6 +56,9 @@ struct SessionContainerInner {
     rate_limiter: Option<BoxRateLimiter>,
     blobstore_write_limiter: Option<AsyncLimiter>,
     blobstore_read_limiter: Option<AsyncLimiter>,
+    // Whether this session is supposed to be readonly, this will cause the right
+    // AuthContext to constructed.
+    readonly: bool,
 }
 
 impl SessionContainer {
@@ -125,6 +128,10 @@ impl SessionContainer {
 
     pub fn is_quicksand(&self) -> bool {
         self.metadata().identities().is_quicksand()
+    }
+
+    pub fn is_readonly(&self) -> bool {
+        self.inner.readonly
     }
 
     pub fn is_hg_sync_job(&self) -> bool {
