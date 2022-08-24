@@ -1537,7 +1537,7 @@ where
     ) -> Result<BonsaiChangesetMut, Error> {
         source_cs
             .parents
-            .retain(|p| new_source_parents.contains(&&*p));
+            .retain(|p| new_source_parents.contains(&p));
 
         for (_, file_change) in source_cs.file_changes.iter_mut() {
             match file_change {

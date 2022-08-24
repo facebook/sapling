@@ -50,7 +50,7 @@ pub(crate) async fn create_new_batch(
             None => {
                 let mut d = VecDeque::new();
                 d.push_back((linknode, vec![]));
-                FastlogBatch::new_from_raw_list(ctx, &*blobstore, d).await
+                FastlogBatch::new_from_raw_list(ctx, blobstore, d).await
             }
         }
     } else {
@@ -60,7 +60,7 @@ pub(crate) async fn create_new_batch(
             }))
             .await?;
         let raw_list = convert_to_raw_list(create_merged_list(linknode, parents_flattened));
-        FastlogBatch::new_from_raw_list(ctx, &*blobstore, raw_list).await
+        FastlogBatch::new_from_raw_list(ctx, blobstore, raw_list).await
     }
 }
 
