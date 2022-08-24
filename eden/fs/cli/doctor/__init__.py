@@ -38,6 +38,7 @@ from . import (
     check_hg,
     check_kerberos,
     check_os,
+    check_recent_writes,
     check_redirections,
     check_rogue_edenfs,
     check_stale_mounts,
@@ -122,6 +123,7 @@ class EdenDoctorChecker:
         self,
         instance: EdenInstance,
         tracker: ProblemTracker,
+        debug: bool,
         mount_table: Optional[mtab.MountTable] = None,
         fs_util: Optional[filesystem.FsUtil] = None,
         proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
@@ -130,6 +132,7 @@ class EdenDoctorChecker:
     ) -> None:
         self.instance = instance
         self.tracker = tracker
+        self.debug = debug
         self.mount_table = mount_table if mount_table is not None else mtab.new()
         self.fs_util = fs_util if fs_util is not None else filesystem.new()
         self.proc_utils = proc_utils if proc_utils is not None else proc_utils_mod.new()
@@ -289,6 +292,7 @@ class EdenDoctorChecker:
                     watchman_info,
                     list(checkouts.values()),
                     checked_backing_repos,
+                    self.debug,
                 )
             except Exception as ex:
                 self.tracker.add_problem(UnexpectedMountProblem(path, ex))
@@ -319,6 +323,7 @@ class EdenDoctor(EdenDoctorChecker):
         super().__init__(
             instance,
             tracker=self.fixer,
+            debug=debug,
             mount_table=mount_table,
             fs_util=fs_util,
             proc_utils=proc_utils,
@@ -493,6 +498,7 @@ def check_mount(
     watchman_info: check_watchman.WatchmanCheckInfo,
     all_checkouts: List[CheckoutInfo],
     checked_backing_repos: Set[str],
+    debug: bool,
 ) -> None:
     if sys.platform == "win32":
         try:
@@ -507,7 +513,9 @@ def check_mount(
         )
     elif checkout.state == MountState.RUNNING:
         try:
-            check_running_mount(tracker, instance, checkout, mount_table, watchman_info)
+            check_running_mount(
+                tracker, instance, checkout, mount_table, watchman_info, debug
+            )
         except Exception as ex:
             raise RuntimeError("Failed to check running mount") from ex
     elif checkout.state in (
@@ -557,6 +565,7 @@ def check_running_mount(
     checkout_info: CheckoutInfo,
     mount_table: mtab.MountTable,
     watchman_info: check_watchman.WatchmanCheckInfo,
+    debug: bool,
 ) -> None:
     if checkout_info.configured_state_dir is None:
         tracker.add_problem(CheckoutNotConfigured(checkout_info))
@@ -593,6 +602,11 @@ def check_running_mount(
         check_redirections.check_redirections(tracker, instance, checkout, mount_table)
     except Exception as ex:
         raise RuntimeError("Failed to check redirections for mount") from ex
+
+    try:
+        check_recent_writes.check_recent_writes(tracker, instance, debug)
+    except Exception as ex:
+        raise RuntimeError("Failed to check recent writes counts for mount") from ex
 
     if sys.platform == "win32":
         try:

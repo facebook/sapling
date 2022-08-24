@@ -97,6 +97,15 @@ class FakeClient:
             )
         )
 
+    # TODO: this returns gobbledy gook at the moment.  improve to return a realistic value
+    def getRegexCounters(self, regexValue: str) -> Dict[str, int]:
+        result = {
+            "prjfs.something": 1,
+            "prjfs.somethingelse": 2,
+            "prjfs.somethingelseelse": 3,
+        }
+        return result
+
     def debugInodeStatus(
         self,
         mountPoint: bytes,
