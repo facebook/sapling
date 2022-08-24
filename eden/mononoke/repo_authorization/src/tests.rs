@@ -13,6 +13,7 @@ use async_trait::async_trait;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkName;
 use context::CoreContext;
+use context::SessionContainer;
 use fbinit::FacebookInit;
 use futures::FutureExt;
 use maplit::hashmap;
@@ -390,4 +391,57 @@ async fn test_service_access(fb: FacebookInit) -> Result<()> {
     );
 
     Ok(())
+}
+
+#[fbinit::test]
+async fn test_user_readonly_instance(fb: FacebookInit) -> () {
+    let ctx_session = SessionContainer::builder(fb).readonly(true).build();
+    let ctx = CoreContext::test_mock_session(ctx_session);
+    let checker = Arc::new(TestPermissionChecker {
+        read: true,
+        draft: true,
+        write: true,
+        ..Default::default()
+    });
+    let repo: Repo = test_repo_factory::TestRepoFactory::new(fb)
+        .unwrap()
+        .with_permission_checker(checker)
+        .build()
+        .unwrap();
+    let authz = AuthorizationContext::new(&ctx);
+
+    authz.require_full_repo_read(&ctx, &repo).await.unwrap();
+    assert!(authz.require_full_repo_draft(&ctx, &repo).await.is_err());
+    assert!(
+        authz
+            .require_repo_write(&ctx, &repo, RepoWriteOperation::CreateChangeset)
+            .await
+            .is_err(),
+    );
+    assert!(
+        authz
+            .require_repo_write(
+                &ctx,
+                &repo,
+                RepoWriteOperation::CreateBookmark(BookmarkKind::Scratch),
+            )
+            .await
+            .is_err(),
+    );
+    assert!(
+        authz
+            .require_repo_write(
+                &ctx,
+                &repo,
+                RepoWriteOperation::LandStack(BookmarkKind::Publishing),
+            )
+            .await
+            .is_err()
+    );
+    assert!(
+        authz
+            .require_bookmark_modify(&ctx, &repo, &BookmarkName::new("main").unwrap())
+            .await
+            .is_err()
+    );
 }

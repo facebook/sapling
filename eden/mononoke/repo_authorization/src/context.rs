@@ -6,6 +6,7 @@
  */
 
 use acl_regions::AclRegionsRef;
+use anyhow::anyhow;
 use anyhow::Result;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkName;
@@ -30,6 +31,9 @@ pub enum AuthorizationContext {
     /// Access is granted based on the caller's identity.
     Identity,
 
+    /// Access is granted only for reads. All write and draft operations are forbidden.
+    ReadOnlyIdentity,
+
     /// Access is granted based on the caller acting as a named service.
     Service(String),
 }
@@ -39,8 +43,12 @@ impl AuthorizationContext {
     ///
     /// This context will use the user's identity to check whether they are
     /// authorized to perform each action.
-    pub fn new(_ctx: &CoreContext) -> AuthorizationContext {
-        AuthorizationContext::Identity
+    pub fn new(ctx: &CoreContext) -> AuthorizationContext {
+        if ctx.session().is_readonly() {
+            AuthorizationContext::ReadOnlyIdentity
+        } else {
+            AuthorizationContext::Identity
+        }
     }
 
     /// Create a new authorization context.
@@ -86,7 +94,9 @@ impl AuthorizationContext {
     ) -> AuthorizationCheckOutcome {
         let permitted = match self {
             AuthorizationContext::FullAccess => true,
-            AuthorizationContext::Identity | AuthorizationContext::Service(_) => {
+            AuthorizationContext::Identity
+            | AuthorizationContext::ReadOnlyIdentity
+            | AuthorizationContext::Service(_) => {
                 // Check the caller's identity permits read access.  Acting as
                 // a service does not change read access, so we check the
                 // identity in this case also.
@@ -120,7 +130,9 @@ impl AuthorizationContext {
     ) -> AuthorizationCheckOutcome {
         let permitted = match self {
             AuthorizationContext::FullAccess => true,
-            AuthorizationContext::Identity | AuthorizationContext::Service(_) => {
+            AuthorizationContext::Identity
+            | AuthorizationContext::ReadOnlyIdentity
+            | AuthorizationContext::Service(_) => {
                 // Check the caller's identity permits read access.  Acting as
                 // a service does not change read access, so we check the
                 // identity in this case also.
@@ -156,7 +168,9 @@ impl AuthorizationContext {
     ) -> Result<AuthorizationCheckOutcome> {
         let permitted = match self {
             AuthorizationContext::FullAccess => true,
-            AuthorizationContext::Identity | AuthorizationContext::Service(_) => {
+            AuthorizationContext::Identity
+            | AuthorizationContext::ReadOnlyIdentity
+            | AuthorizationContext::Service(_) => {
                 // Check the caller's identity permits read access.  Acting as
                 // a service does not change read access, so we check the
                 // identity in this case also.
@@ -209,7 +223,7 @@ impl AuthorizationContext {
                     .await
             }
             // The services have narrowly defined permissions. Never full-repo.
-            AuthorizationContext::Service(_service_name) => false,
+            AuthorizationContext::Service(..) | AuthorizationContext::ReadOnlyIdentity => false,
         };
         AuthorizationCheckOutcome::from_permitted(permitted)
     }
@@ -270,6 +284,7 @@ impl AuthorizationContext {
                     .source_control_service
                     .service_write_method_permitted(service_name, op.method_name())
             }
+            AuthorizationContext::ReadOnlyIdentity => false,
         };
         AuthorizationCheckOutcome::from_permitted(permitted)
     }
@@ -302,6 +317,7 @@ impl AuthorizationContext {
                 .repo_config()
                 .source_control_service
                 .service_write_all_paths_permitted(service_name),
+            AuthorizationContext::ReadOnlyIdentity => false,
         };
         AuthorizationCheckOutcome::from_permitted(permitted)
     }
@@ -322,6 +338,17 @@ impl AuthorizationContext {
                 .source_control_service
                 .service_write_paths_permitted(service_name, changeset)
                 .map_err(|path| self.permission_denied(ctx, DeniedAction::PathWrite(path.clone()))),
+            AuthorizationContext::ReadOnlyIdentity => Err(self.permission_denied(
+                ctx,
+                DeniedAction::PathWrite(
+                    changeset
+                        .file_changes_map()
+                        .keys()
+                        .next()
+                        .cloned()
+                        .ok_or_else(|| anyhow!("no writes allowed in readonly mode!"))?,
+                ),
+            )),
         }
     }
 
@@ -349,6 +376,7 @@ impl AuthorizationContext {
                     .source_control_service
                     .service_write_bookmark_permitted(service_name, bookmark)
             }
+            AuthorizationContext::ReadOnlyIdentity => false,
         };
         AuthorizationCheckOutcome::from_permitted(permitted)
     }
@@ -389,6 +417,7 @@ impl AuthorizationContext {
                     .source_control_service
                     .service_write_method_permitted(service_name, "set_git_mapping_from_changeset")
             }
+            AuthorizationContext::ReadOnlyIdentity => false,
         };
         AuthorizationCheckOutcome::from_permitted(permitted)
     }
