@@ -178,6 +178,8 @@ fn wrapper_main() -> Result<i32> {
 
 #[fbinit::main]
 fn main(_fb: FacebookInit) -> Result<()> {
+    // NOTE: if you are considering passing `FacebookInit` down, you may want to check
+    // [`fbinit::expect_init`].
     #[cfg(fbcode_build)]
     let mut sample = CliUsageSample::build(_fb);
 
