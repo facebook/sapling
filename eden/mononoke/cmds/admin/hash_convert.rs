@@ -102,7 +102,7 @@ async fn convert_to_bonsai(
     } else if from == "bonsai" {
         ChangesetId::from_str(hash)
     } else {
-        return Err(anyhow!("unknown source {}", from));
+        Err(anyhow!("unknown source {}", from))
     }
 }
 
@@ -126,6 +126,6 @@ async fn convert_from_bonsai(
     } else if to == "bonsai" {
         Ok(format!("{}", cs_id))
     } else {
-        return Err(anyhow!("unknown target {}", to));
+        Err(anyhow!("unknown target {}", to))
     }
 }

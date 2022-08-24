@@ -314,7 +314,7 @@ impl UploadHgFileContents {
 
                 STATS::upload_blob.add_value(1);
                 let ((id, size), upload_fut) = filestore::store_bytes(
-                    &*blobstore,
+                    blobstore,
                     filestore_config,
                     &ctx,
                     file_bytes.into_bytes(),

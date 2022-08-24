@@ -677,9 +677,7 @@ async fn get_synced_commit<M: SyncedCommitMapping + Clone + 'static>(
 
     use CommitSyncOutcome::*;
     match sync_outcome {
-        NotSyncCandidate(_) => {
-            return Err(format_err!("{} does not remap in small repo", hash));
-        }
+        NotSyncCandidate(_) => Err(format_err!("{} does not remap in small repo", hash)),
         RewrittenAs(cs_id, mapping_version)
         | EquivalentWorkingCopyAncestor(cs_id, mapping_version) => Ok((cs_id, mapping_version)),
     }

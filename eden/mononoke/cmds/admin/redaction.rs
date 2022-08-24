@@ -255,9 +255,7 @@ fn paths_parser(sub_m: &ArgMatches<'_>) -> Result<Vec<MPath>, Error> {
 
                 Ok(files)
             }
-            None => {
-                return Err(format_err!("file list is not specified"));
-            }
+            None => Err(format_err!("file list is not specified")),
         },
     }
 }

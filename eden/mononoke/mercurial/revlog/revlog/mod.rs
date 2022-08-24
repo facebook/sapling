@@ -283,13 +283,11 @@ impl RevlogInner {
                 }
                 Ok(res)
             }
-            err => {
-                return Err(ErrorKind::Revlog(format!(
-                    "failed to parse entry offset {}: {:?}",
-                    off, err
-                ))
-                .into());
-            }
+            err => Err(ErrorKind::Revlog(format!(
+                "failed to parse entry offset {}: {:?}",
+                off, err
+            ))
+            .into()),
         }
     }
 

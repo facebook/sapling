@@ -374,7 +374,7 @@ impl HgPeer {
                 Err(e) => format!("no hg logs available ({:?})", e),
             };
 
-            return Err(format_err!("sync failed: {}", log));
+            Err(format_err!("sync failed: {}", log))
         }
         .watched(logger)
         .await;
