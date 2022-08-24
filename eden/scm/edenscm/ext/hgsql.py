@@ -45,13 +45,13 @@ import threading
 import time
 import warnings
 
+from edenscm import hgdemandimport as demandimport
 from edenscm.mercurial import (
     bookmarks,
     bundle2,
     bundlerepo,
     changegroup,
     commands,
-    demandimport,
     error,
     exchange,
     extensions,

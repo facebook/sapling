@@ -15,7 +15,9 @@ from __future__ import absolute_import
 import os
 import sys
 
-from . import demandimport, encoding, error, extensions, pycompat, util
+from edenscm import hgdemandimport as demandimport
+
+from . import encoding, error, extensions, pycompat, util
 from .i18n import _
 
 

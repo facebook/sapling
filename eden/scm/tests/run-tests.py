@@ -1534,9 +1534,6 @@ class Test(unittest.TestCase):
         # Claim that 256 colors is not supported.
         env["HGCOLORS"] = "16"
 
-        # Do not be affected by system legacy configs.
-        env["HGLEGACY"] = ""
-
         # Do not log to scuba (fb).
         env["FB_SCM_DIAGS_NO_SCUBA"] = "1"
 

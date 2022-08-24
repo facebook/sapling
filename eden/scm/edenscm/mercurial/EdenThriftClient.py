@@ -14,9 +14,10 @@ import os
 import sys
 
 import toml
+from edenscm import hgdemandimport as demandimport
 from thrift.Thrift import TApplicationException
 
-from . import demandimport, error, node, pycompat, util
+from . import error, node, pycompat, util
 from .i18n import _
 
 

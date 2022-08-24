@@ -24,12 +24,12 @@ import time
 
 import bindings
 
+from .. import hgdemandimport as demandimport
 from . import (
     blackbox,
     cmdutil,
     color,
     commands,
-    demandimport,
     encoding,
     error,
     extensions,

@@ -2,7 +2,7 @@ from __future__ import absolute_import, print_function
 
 # isort:skip_file
 
-from edenscm.mercurial import demandimport
+from edenscm import hgdemandimport as demandimport
 
 demandimport.enable()
 
