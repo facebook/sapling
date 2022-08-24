@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::borrow::Cow;
 use std::fmt::Arguments;
 use std::fmt::Write;
 use std::sync::atomic::AtomicBool;
@@ -44,7 +43,7 @@ use lfs_protocol::RequestObject;
 use lfs_protocol::ResponseBatch;
 use mononoke_types::ContentId;
 use permission_checker::MononokeIdentitySet;
-use repo_permission_checker::RepoPermissionChecker;
+use repo_authorization::AuthorizationContext;
 use repo_permission_checker::RepoPermissionCheckerRef;
 use slog::Logger;
 use tokio::runtime::Handle;
@@ -110,7 +109,7 @@ impl LfsServerContext {
         &self,
         ctx: CoreContext,
         repository: String,
-        identities: Option<&MononokeIdentitySet>,
+        _identities: Option<&MononokeIdentitySet>,
         host: String,
         method: LfsMethod,
     ) -> Result<RepositoryRequestContext, LfsServerContextErrorKind> {
@@ -145,14 +144,7 @@ impl LfsServerContext {
 
         let enforce_acl_check = enforce_acl_check && config.enforce_acl_check();
 
-        acl_check(
-            &ctx,
-            repo.repo_permission_checker(),
-            identities,
-            enforce_acl_check,
-            method,
-        )
-        .await?;
+        acl_check(&ctx, &repo, enforce_acl_check, method).await?;
 
         Ok(RepositoryRequestContext {
             ctx,
@@ -189,27 +181,18 @@ impl LfsServerContext {
 
 async fn acl_check(
     ctx: &CoreContext,
-    permission_checker: &dyn RepoPermissionChecker,
-    identities: Option<&MononokeIdentitySet>,
+    repo: &impl RepoPermissionCheckerRef,
     enforce_authorization: bool,
     method: LfsMethod,
 ) -> Result<(), LfsServerContextErrorKind> {
-    let identities: Cow<MononokeIdentitySet> = match identities {
-        Some(idents) => Cow::Borrowed(idents),
-        None => Cow::Owned(MononokeIdentitySet::new()),
-    };
-
+    let authz = AuthorizationContext::new();
     let acl_check = if method.is_read_only() {
-        permission_checker
-            .check_if_read_access_allowed(identities.as_ref())
-            .await
+        authz.check_full_repo_read(ctx, repo).await
     } else {
-        permission_checker
-            .check_if_draft_access_allowed_with_tunable_enforcement(ctx, identities.as_ref())
-            .await
+        authz.check_full_repo_draft(ctx, repo).await
     };
 
-    if !acl_check && enforce_authorization {
+    if acl_check.is_denied() && enforce_authorization {
         Err(LfsServerContextErrorKind::Forbidden)
     } else {
         Ok(())
@@ -844,10 +827,13 @@ mod test {
     #[fbinit::test]
     async fn test_acl_check_no_certificates(fb: FacebookInit) -> Result<(), Error> {
         let aclchecker = AlwaysAllowRepoPermissionChecker::new();
+        let repo: Repo = test_repo_factory::TestRepoFactory::new(fb)?
+            .with_permission_checker(Arc::new(aclchecker))
+            .build()?;
 
         let ctx = CoreContext::test_mock(fb);
         // No certificates + ACL enforcement off = free pass
-        acl_check(&ctx, &aclchecker, None, false, LfsMethod::Download).await?;
+        acl_check(&ctx, &repo, false, LfsMethod::Download).await?;
 
         Ok(())
     }
@@ -859,31 +845,18 @@ mod test {
             .expect_check_if_read_access_allowed()
             .return_const(true)
             .times(1);
-
-        let ctx = CoreContext::test_mock(fb);
-        acl_check(
-            &ctx,
-            &aclchecker,
-            Some(&MononokeIdentitySet::new()),
-            false,
-            LfsMethod::Download,
-        )
-        .await?;
-
         aclchecker
             .expect_check_if_draft_access_allowed_with_tunable_enforcement()
             .return_const(true)
             .times(1);
 
+        let repo: Repo = test_repo_factory::TestRepoFactory::new(fb)?
+            .with_permission_checker(Arc::new(aclchecker))
+            .build()?;
+
         let ctx = CoreContext::test_mock(fb);
-        acl_check(
-            &ctx,
-            &aclchecker,
-            Some(&MononokeIdentitySet::new()),
-            false,
-            LfsMethod::Upload,
-        )
-        .await?;
+        acl_check(&ctx, &repo, false, LfsMethod::Download).await?;
+        acl_check(&ctx, &repo, false, LfsMethod::Upload).await?;
 
         Ok(())
     }

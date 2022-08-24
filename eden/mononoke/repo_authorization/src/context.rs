@@ -196,7 +196,7 @@ impl AuthorizationContext {
     pub async fn check_full_repo_draft(
         &self,
         ctx: &CoreContext,
-        repo: &(impl RepoPermissionCheckerRef + RepoConfigRef),
+        repo: &impl RepoPermissionCheckerRef,
     ) -> AuthorizationCheckOutcome {
         let permitted = match self {
             AuthorizationContext::FullAccess => true,
@@ -222,7 +222,7 @@ impl AuthorizationContext {
     pub async fn require_full_repo_draft(
         &self,
         ctx: &CoreContext,
-        repo: &(impl RepoPermissionCheckerRef + RepoConfigRef),
+        repo: &impl RepoPermissionCheckerRef,
     ) -> Result<(), AuthorizationError> {
         self.check_full_repo_draft(ctx, repo)
             .await
