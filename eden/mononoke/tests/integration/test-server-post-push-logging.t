@@ -67,12 +67,26 @@ create new commits in repo2 and check that they are seen as outgoing
   adding file changes
   updating bookmark master_bookmark
 
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .repo_id
+  0
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .repo_name
   "repo"
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .bookmark
   "master_bookmark"
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .generation
+  2
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
   "022352db2112d2f43ca2635686a6275ade50d612865551fa8d1f392b375e412e"
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .bubble_id
+  null
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .parents
+  [
+    "30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473"
+  ]
+Note: user_unix_name, user_identities and source_hostname are different between oss and fb context, so only test them in the facebook directory
+The timestamp is not stable, so count its digits instead to ensure it is not null
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .received_timestamp | { IFS= read -r timestamp; printf '%s\n' "${#timestamp}"; }
+  10
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changed_files_count
   2
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changed_files_size
