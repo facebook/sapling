@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
+use std::fmt::Write;
 use std::str::FromStr;
 
 use anyhow::anyhow;
@@ -723,7 +724,7 @@ impl BlameData {
             }
             let csid = self.csids[range.csid_index as usize];
             result.push_str(&csid.to_string()[..12]);
-            result.push_str(&format!(":{}: ", origin_offset + 1));
+            let _ = write!(result, ":{}: ", origin_offset + 1);
             result.push_str(line);
             result.push('\n');
             origin_offset += 1;
