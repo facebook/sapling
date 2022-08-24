@@ -166,7 +166,7 @@ impl StreamingClone {
         let tag = tag.unwrap_or("");
         let res =
             CountChunks::query(&self.connections.read_connection, &self.repo_id, &tag).await?;
-        Ok(res.get(0).map_or(0, |x| x.0))
+        Ok(res.first().map_or(0, |x| x.0))
     }
 
     pub async fn fetch_changelog(

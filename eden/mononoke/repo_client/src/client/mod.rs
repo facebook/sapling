@@ -2470,7 +2470,7 @@ fn parse_utf8_getbundle_caps(caps: &[u8]) -> Option<(String, HashMap<String, Has
                 .ok()?;
             for cap in caps.split('\n') {
                 let split = cap.splitn(2, '=').collect::<Vec<_>>();
-                let urlencoded_cap_name = split.get(0)?;
+                let urlencoded_cap_name = split.first()?;
                 let cap_name = percent_encoding::percent_decode(urlencoded_cap_name.as_bytes())
                     .decode_utf8()
                     .ok()?;

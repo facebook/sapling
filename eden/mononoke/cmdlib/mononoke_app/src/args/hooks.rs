@@ -33,6 +33,7 @@ impl AppExtension for HooksAppExtension {
         let mut res = HashMap::new();
         for repohook in &args.disabled_hooks {
             let repohook: Vec<_> = repohook.splitn(2, ':').collect();
+            #[allow(clippy::get_first)]
             let repo = repohook.get(0);
             let hook = repohook.get(1);
 

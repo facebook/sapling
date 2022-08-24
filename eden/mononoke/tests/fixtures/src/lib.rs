@@ -104,6 +104,7 @@ async fn create_bonsai_changeset_from_test_data(
 
     let bonsai_parents = try_join_all(parents).await.unwrap();
 
+    #[allow(clippy::get_first)]
     let bcs = BonsaiChangesetMut {
         parents: bonsai_parents,
         author: commit_metadata.get("author").unwrap().to_string(),
