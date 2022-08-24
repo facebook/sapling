@@ -93,7 +93,7 @@ impl fmt::Display for ReplicaLag {
             self.delay.as_secs(),
             self.delay.subsec_millis(),
         )?;
-        for details in self.details.iter() {
+        if let Some(details) = &self.details {
             write!(f, " {}", details)?;
         }
         Ok(())
