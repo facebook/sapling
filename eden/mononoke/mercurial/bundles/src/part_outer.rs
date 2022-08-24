@@ -196,7 +196,7 @@ impl OuterDecoder {
 
             cur_state @ OuterState::Payload { .. } | cur_state @ OuterState::DiscardPayload => {
                 let (payload, next_state) = Self::decode_payload(buf, cur_state);
-                (payload.map_err(|e| e), next_state)
+                (payload, next_state)
             }
 
             OuterState::StreamEnd => (Ok(Some(OuterFrame::StreamEnd)), OuterState::StreamEnd),

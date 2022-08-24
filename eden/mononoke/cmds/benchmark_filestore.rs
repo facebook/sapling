@@ -208,8 +208,7 @@ async fn get_blob<'a>(
                     blobstore_options.manifold_options.weak_consistency_ms,
                     blobstore_options.manifold_options.request_priority,
                     put_behaviour,
-                )
-                .map_err(|e| -> Error { e })?;
+                )?;
                 let blobstore = PrefixBlobstore::new(manifold, format!("{}.", NAME));
                 Arc::new(blobstore)
             }
