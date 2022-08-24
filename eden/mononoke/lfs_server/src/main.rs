@@ -48,6 +48,7 @@ use hyper::header::HeaderValue;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::RepoConfig;
 use mononoke_app::args::parse_config_spec_to_path;
+use mononoke_app::args::ReadonlyArgs;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::args::TLSArgs;
@@ -151,6 +152,8 @@ struct LfsServerArgs {
     /// A limit (in bytes) to enforce for uploads.
     #[clap(long)]
     max_upload_size: Option<u64>,
+    #[clap(flatten)]
+    readonly: ReadonlyArgs,
 }
 
 #[derive(Clone)]
@@ -330,6 +333,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     fb,
                     logger.clone(),
                     enforce_authentication,
+                    args.readonly.readonly,
                 ))
                 .add(LoadMiddleware::new())
                 .add(log_middleware)

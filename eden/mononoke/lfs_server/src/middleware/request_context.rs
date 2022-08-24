@@ -92,14 +92,21 @@ pub struct RequestContextMiddleware {
     fb: FacebookInit,
     logger: Logger,
     enforce_authentication: bool,
+    readonly: bool,
 }
 
 impl RequestContextMiddleware {
-    pub fn new(fb: FacebookInit, logger: Logger, enforce_authentication: bool) -> Self {
+    pub fn new(
+        fb: FacebookInit,
+        logger: Logger,
+        enforce_authentication: bool,
+        readonly: bool,
+    ) -> Self {
         Self {
             fb,
             logger,
             enforce_authentication,
+            readonly,
         }
     }
 }
@@ -148,6 +155,7 @@ impl Middleware for RequestContextMiddleware {
         let metadata = Metadata::new(None, identities, false, address).await;
         let session = SessionContainer::builder(self.fb)
             .metadata(Arc::new(metadata))
+            .readonly(self.readonly)
             .build();
         let ctx = session.new_context(logger, MononokeScubaSampleBuilder::with_discard());
 

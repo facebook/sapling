@@ -1345,6 +1345,7 @@ function lfs_server {
       shift
     elif
       [[ "$1" = "--always-wait-for-upstream" ]] ||
+      [[ "$1" = "--readonly" ]] ||
       [[ "$1" = "--git-blob-upload-allowed" ]]
     then
       opts=("${opts[@]}" "$1")

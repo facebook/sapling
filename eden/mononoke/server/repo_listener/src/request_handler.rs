@@ -68,6 +68,7 @@ pub async fn request_handler(
     rate_limiter: Option<RateLimitEnvironment>,
     scribe: Scribe,
     qps: Option<Arc<Qps>>,
+    readonly: bool,
 ) -> Result<()> {
     let Stdio {
         stdin,
@@ -139,6 +140,7 @@ pub async fn request_handler(
 
     let session_builder = SessionContainer::builder(fb)
         .metadata(metadata.clone())
+        .readonly(readonly)
         .rate_limiter(rate_limiter);
 
     let session = session_builder.build();

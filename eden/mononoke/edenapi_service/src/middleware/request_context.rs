@@ -42,6 +42,7 @@ pub struct RequestContextMiddleware {
     logger: Logger,
     scuba: Arc<MononokeScubaSampleBuilder>,
     rate_limiter: Option<RateLimitEnvironment>,
+    readonly: bool,
 }
 
 impl RequestContextMiddleware {
@@ -50,12 +51,14 @@ impl RequestContextMiddleware {
         logger: Logger,
         scuba: MononokeScubaSampleBuilder,
         rate_limiter: Option<RateLimitEnvironment>,
+        readonly: bool,
     ) -> Self {
         Self {
             fb,
             logger,
             scuba: Arc::new(scuba),
             rate_limiter,
+            readonly,
         }
     }
 }
@@ -72,6 +75,7 @@ impl Middleware for RequestContextMiddleware {
         let metadata = Arc::new(metadata);
         let session = SessionContainer::builder(self.fb)
             .metadata(metadata)
+            .readonly(self.readonly)
             .rate_limiter(self.rate_limiter.as_ref().map(|r| r.get_rate_limiter()))
             .build();
 

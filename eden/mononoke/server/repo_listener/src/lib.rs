@@ -58,6 +58,7 @@ pub async fn create_repo_listeners<'a>(
     cslb_config: Option<String>,
     bound_addr_file: Option<PathBuf>,
     acl_provider: &dyn AclProvider,
+    readonly: bool,
 ) -> Result<()> {
     let rate_limiter = {
         let handle = config_store
@@ -86,6 +87,7 @@ pub async fn create_repo_listeners<'a>(
             None,
             rate_limiter.clone(),
             &common_config,
+            readonly,
         )
         .context("Error instantiating EdenAPI")?
     };
@@ -112,6 +114,7 @@ pub async fn create_repo_listeners<'a>(
         },
         bound_addr_file,
         acl_provider,
+        readonly,
     )
     .await
 }

@@ -126,6 +126,7 @@ pub async fn connection_acceptor(
     wireproto_scuba: MononokeScubaSampleBuilder,
     bound_addr_path: Option<PathBuf>,
     acl_provider: &dyn AclProvider,
+    readonly: bool,
 ) -> Result<()> {
     let enable_http_control_api = common_config.enable_http_control_api;
 
@@ -175,6 +176,7 @@ pub async fn connection_acceptor(
         qps,
         wireproto_scuba,
         common_config,
+        readonly,
     });
 
     loop {
@@ -214,6 +216,7 @@ pub struct Acceptor {
     pub qps: Option<Arc<Qps>>,
     pub wireproto_scuba: MononokeScubaSampleBuilder,
     pub common_config: CommonConfig,
+    pub readonly: bool,
 }
 
 /// Details for a socket we've just opened.
@@ -360,6 +363,7 @@ where
         conn.pending.acceptor.rate_limiter.clone(),
         conn.pending.acceptor.scribe.clone(),
         conn.pending.acceptor.qps.clone(),
+        conn.pending.acceptor.readonly,
     )
     .await
     .context("Failed to execute request_handler");

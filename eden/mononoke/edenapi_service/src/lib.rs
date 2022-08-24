@@ -57,6 +57,7 @@ pub fn build(
     tls_session_data_log_path: Option<&Path>,
     rate_limiter: Option<RateLimitEnvironment>,
     common_config: &CommonConfig,
+    readonly: bool,
 ) -> Result<EdenApi, Error> {
     let ctx = ServerContext::new(mononoke, will_exit);
 
@@ -88,6 +89,7 @@ pub fn build(
             logger,
             scuba.clone(),
             rate_limiter,
+            readonly,
         ))
         .add(RequestDumperMiddleware::new(fb))
         .add(LoadMiddleware::new())

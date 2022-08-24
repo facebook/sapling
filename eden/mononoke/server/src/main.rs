@@ -29,6 +29,7 @@ use mononoke_api::CoreContext;
 use mononoke_api::Mononoke;
 use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::McrouterAppExtension;
+use mononoke_app::args::ReadonlyArgs;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::fb303::Fb303AppExtension;
@@ -76,6 +77,8 @@ struct MononokeServerArgs {
     /// Top level Mononoke tier where CSLB publishes routing table
     #[clap(long)]
     cslb_config: Option<String>,
+    #[clap(flatten)]
+    readonly: ReadonlyArgs,
 }
 
 #[fbinit::main]
@@ -189,6 +192,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 cslb_config,
                 bound_addr_file,
                 env.acl_provider.as_ref(),
+                args.readonly.readonly,
             )
             .await
         }
