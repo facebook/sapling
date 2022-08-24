@@ -4,8 +4,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
-
 import hashlib
 import os
 import platform
@@ -246,7 +244,7 @@ class MaterializedInodesHaveDifferentModeOnDisk(Problem):
 
 class PathsProblem(Problem):
     @staticmethod
-    def omitPathsDescription(paths: List[Path], pathSuffix: str):
+    def omitPathsDescription(paths: List[Path], pathSuffix: str) -> str:
         pathDescriptions = [str(path) + pathSuffix for path in paths[:10]]
         if len(paths) > 10:
             pathDescriptions.append("{len(paths) - 10} more paths omitted")
@@ -484,7 +482,7 @@ def check_loaded_content(
 
 
 class HighInodeCountProblem(Problem):
-    def __init__(self, path, inode_count) -> None:
+    def __init__(self, path: Path, inode_count: int) -> None:
         super().__init__(
             description=f"Mount point {path} has {inode_count} files on disk, which may impact EdenFS performance",
             # TODO(T94186741): Change remediation instructions once we can unload inodes on demand.
@@ -494,7 +492,7 @@ class HighInodeCountProblem(Problem):
 
 
 class UnknownInodeCountProblem(Problem):
-    def __init__(self, path) -> None:
+    def __init__(self, path: Path) -> None:
         super().__init__(
             description=f"Unable to determine the number of inodes loaded for mount point {path}",
             severity=ProblemSeverity.ERROR,
