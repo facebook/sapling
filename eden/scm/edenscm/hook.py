@@ -263,8 +263,7 @@ def runhooks(ui, repo, htype, hooks, throw=False, **args):
                     if repo:
                         path = os.path.join(repo.root, path)
                     try:
-                        with util.mercurialmodule():
-                            mod = extensions.loadpath(path, "hghook.%s" % hname)
+                        mod = extensions.loadpath(path, "hghook.%s" % hname)
                     except Exception as e:
                         ui.write(_("loading %s hook failed: %s\n") % (hname, e))
                         raise
@@ -275,8 +274,7 @@ def runhooks(ui, repo, htype, hooks, throw=False, **args):
                     # automatically.
                     if hookfn.startswith("ext."):
                         hookfn = "edenscm." + hookfn
-                with util.mercurialmodule():
-                    r, raised = _pythonhook(ui, repo, htype, hname, hookfn, args, throw)
+                r, raised = _pythonhook(ui, repo, htype, hname, hookfn, args, throw)
             else:
                 r = _exthook(ui, repo, htype, hname, cmd, args, throw)
                 raised = False

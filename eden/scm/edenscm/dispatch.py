@@ -147,6 +147,14 @@ def run(args=None, fin=None, fout=None, ferr=None, config=None):
     if config:
         ui = uimod.ui(rcfg=config)
 
+    if not ui or ui.configbool("experimental", "mercurial-shim", True):
+        from . import mercurialshim
+
+        # Insert at the beginning so nested module imports are
+        # redirected to the true module instead of the shim module
+        # (even though the shim module appears in sys.modules).
+        sys.meta_path.insert(0, mercurialshim.MercurialImporter())
+
     req = request(args[1:], fin=fin, fout=fout, ferr=ferr, ui=ui)
     err = None
     try:

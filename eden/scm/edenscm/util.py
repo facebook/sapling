@@ -742,25 +742,6 @@ def environoverride(name, value):
             encoding.environ[name] = origvalue
 
 
-class mercurialmodule(object):
-    """Provide 'mercurial' module compatibility. Used by legacy Python hooks."""
-
-    def __init__(self):
-        self._needdel = False
-
-    def __enter__(self):
-        if sys.modules.get("mercurial") is not sys.modules["edenscm"]:
-            assert "mercurial" not in sys.modules
-            sys.modules["mercurial"] = sys.modules["edenscm"]
-            self._needdel = True
-        return self
-
-    def __exit__(self, exctype, excvalue, traceback):
-        if self._needdel:
-            del sys.modules["mercurial"]
-            self._needdel = False
-
-
 class _lrucachenode(object):
     """A node in a doubly linked list.
 

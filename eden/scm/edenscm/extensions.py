@@ -176,6 +176,7 @@ def loadpath(path, module_name):
         # module/__init__.py style
         d, f = os.path.split(path)
         fd, fpath, desc = imp.find_module(f, [d])
+
         return imp.load_module(module_name, fd, fpath, desc)
     else:
         try:
