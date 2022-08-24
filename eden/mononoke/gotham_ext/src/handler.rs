@@ -159,12 +159,10 @@ impl<H: Handler + Clone + Send + Sync + 'static + RefUnwindSafe> MononokeHttpHan
             tls_socket_data.populate_state(&mut state);
         }
 
-        let res = match self.handler.handle(state).await {
+        match self.handler.handle(state).await {
             Ok((_state, res)) => res,
             Err((state, err)) => err.into_response(&state),
-        };
-
-        res
+        }
     }
 }
 

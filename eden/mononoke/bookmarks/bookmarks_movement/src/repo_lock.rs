@@ -97,16 +97,14 @@ impl RepoLockPushrebaseHook {
         repo_perm_checker: &dyn RepoPermissionChecker,
         idents: &MononokeIdentitySet,
     ) -> Option<Box<dyn PushrebaseHook>> {
-        let hook = if should_check_repo_lock(kind, pushvars, repo_perm_checker, idents).await {
+        if should_check_repo_lock(kind, pushvars, repo_perm_checker, idents).await {
             let hook = Box::new(RepoLockPushrebaseHook {
                 transaction_repo_lock: TransactionRepoLock::new(repo_id),
             });
             Some(hook as Box<dyn PushrebaseHook>)
         } else {
             None
-        };
-
-        hook
+        }
     }
 }
 

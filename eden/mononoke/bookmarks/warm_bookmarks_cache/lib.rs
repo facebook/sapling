@@ -1472,7 +1472,7 @@ mod tests {
         Fut: futures::future::Future<Output = Result<bool, Error>>,
     {
         let timeout_ms = 4000;
-        let res = time::timeout(Duration::from_millis(timeout_ms), async {
+        time::timeout(Duration::from_millis(timeout_ms), async {
             loop {
                 if func().await? {
                     break;
@@ -1483,8 +1483,7 @@ mod tests {
 
             Ok(())
         })
-        .await?;
-        res
+        .await?
     }
 
     #[fbinit::test]

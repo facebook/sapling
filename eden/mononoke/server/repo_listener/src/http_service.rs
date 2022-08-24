@@ -423,8 +423,7 @@ where
             let uri = req.uri().clone();
             debug!(this.logger(), "{} {}", method, uri);
 
-            let res = this
-                .handle(req)
+            this.handle(req)
                 .await
                 .map(|mut res| {
                     match HeaderValue::from_str(this.conn.pending.acceptor.server_hostname.as_str())
@@ -455,11 +454,9 @@ where
                     );
 
                     res
-                });
-
+                })
             // NOTE: If we fail to even generate the response here, this will crash
             // serve_connection in Hyper, so we don't actually need to log this here.
-            res
         }
         .boxed()
     }

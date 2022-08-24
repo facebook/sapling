@@ -63,13 +63,12 @@ impl Blobstore for PutFailingMemblob {
     ) -> Result<()> {
         let mut inner = self.hash.lock().expect("lock poison");
         let inner_flag = self.fail_puts.lock().expect("lock poison");
-        let res = if *inner_flag {
+        if *inner_flag {
             Err(format_err!("Put failed for key"))
         } else {
             inner.insert(key, value);
             Ok(())
-        };
-        res
+        }
     }
 
     async fn get<'a>(

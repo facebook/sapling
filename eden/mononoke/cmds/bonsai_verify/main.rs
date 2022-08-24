@@ -183,7 +183,7 @@ fn subcommand_round_trip(
                         }
                     }
 
-                    let fut = match &result {
+                    match &result {
                         BonsaiMFVerifyResult::Valid { .. } => {
                             debug!(logger, "VALID");
                             valid.fetch_add(1, Ordering::Relaxed);
@@ -226,9 +226,7 @@ fn subcommand_round_trip(
                             ignored.fetch_add(1, Ordering::Relaxed);
                             Either::A(old_future::ok(()))
                         }
-                    };
-
-                    fut
+                    }
                 }
             })
             .then(move |res| {
