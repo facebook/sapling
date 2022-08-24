@@ -42,29 +42,27 @@ pub fn bench_stream<'a, F, S, O, E>(
     E: std::fmt::Debug,
 {
     let mut group = c.benchmark_group(group);
-    for num_to_load in [100000] {
-        group.throughput(Throughput::Elements(num_to_load));
-        for step in [MAX_FETCH_STEP] {
-            group.bench_with_input(
-                BenchmarkId::from_parameter(step),
-                &num_to_load,
-                |b, &num_to_load| {
-                    let test = || async {
-                        let mut loaded: u64 = 0;
-                        let stream = to_stream(ctx, fetcher).take_while(|_entry| {
-                            loaded += 1;
-                            future::ready(loaded < num_to_load)
-                        });
-                        let _ = stream
-                            .try_collect::<Vec<_>>()
-                            .await
-                            .expect("no stream errors");
-                    };
-                    b.iter(|| runtime.block_on(async { test().await }));
-                },
-            );
-        }
-    }
+    let num_to_load = 100000;
+    group.throughput(Throughput::Elements(num_to_load));
+    let step = MAX_FETCH_STEP;
+    group.bench_with_input(
+        BenchmarkId::from_parameter(step),
+        &num_to_load,
+        |b, &num_to_load| {
+            let test = || async {
+                let mut loaded: u64 = 0;
+                let stream = to_stream(ctx, fetcher).take_while(|_entry| {
+                    loaded += 1;
+                    future::ready(loaded < num_to_load)
+                });
+                let _ = stream
+                    .try_collect::<Vec<_>>()
+                    .await
+                    .expect("no stream errors");
+            };
+            b.iter(|| runtime.block_on(async { test().await }));
+        },
+    );
     group.finish();
 }
 
