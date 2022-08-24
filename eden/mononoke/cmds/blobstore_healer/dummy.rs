@@ -34,7 +34,7 @@ impl<B: std::fmt::Display> std::fmt::Display for DummyBlobstore<B> {
     }
 }
 
-impl<'a, B: Blobstore> DummyBlobstore<B> {
+impl<B: Blobstore> DummyBlobstore<B> {
     pub fn new(inner: B, logger: Logger) -> Self {
         Self { inner, logger }
     }
