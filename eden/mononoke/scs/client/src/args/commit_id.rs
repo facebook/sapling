@@ -480,7 +480,7 @@ async fn try_resolve_hg_commit_id(
     value: impl AsRef<str>,
 ) -> Result<Option<thrift::CommitId>, Error> {
     // Possible prefix should be valid to be passed to `repo_resolve_commit_prefix`:
-    if value.as_ref().len() > 40 || value.as_ref().chars().any(|c| !c.is_digit(16)) {
+    if value.as_ref().len() > 40 || value.as_ref().chars().any(|c| !c.is_ascii_hexdigit()) {
         return Ok(None);
     }
 
@@ -517,7 +517,7 @@ async fn try_resolve_bonsai_id(
     value: impl AsRef<str>,
 ) -> Result<Option<thrift::CommitId>, Error> {
     // Possible prefix should be valid to be passed to `repo_resolve_commit_prefix`:
-    if value.as_ref().len() > 64 || value.as_ref().chars().any(|c| !c.is_digit(16)) {
+    if value.as_ref().len() > 64 || value.as_ref().chars().any(|c| !c.is_ascii_hexdigit()) {
         return Ok(None);
     }
 
