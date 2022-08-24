@@ -50,6 +50,35 @@ DISABLE_ALL_NETWORK_ACCESS_SKIPLIST: Set[str] = {
     "test-mononoke-hg-sync-job.t",
     # TOOD(simonfaR) Investigate why this fails, even though it should never talk to SMC
     "test-remote-gitimport.t",
+    # Tests implicilitly relying on crypto cat library which needs network access to
+    # read its configs.
+    "test-remote-gitimport-hooks.t",
+    "test-scs-blame-v2.t",
+    "test-scs-blame.t",
+    "test-scs-bookmark-info.t",
+    "test-scs-cat.t",
+    "test-scs-common-base.t",
+    "test-scs-diff.t",
+    "test-scs-export.t",
+    "test-scs-find-files.t",
+    "test-scs-land-stack.t",
+    "test-scs-list-bookmarks.t",
+    "test-scs-log.t",
+    "test-scs-lookup-pushrebase-history.t",
+    "test-scs-lookup.t",
+    "test-scs-modify-bookmarks.t",
+    "test-scs-path-acls.t",
+    "test-scs-post-move-logging.t",
+    "test-scs-pushrebase-remote-cross-repo.t",
+    "test-scs-pushrebase-remote.t",
+    "test-scs-run-hooks.t",
+    "test-scs-segmented-changelog-ancestry-tests.t",
+    "test-scs-sparse-profiles.t",
+    "test-scs-svnrev-lookup-and-backfill-svnrev-mapping.t",
+    "test-scs-x-repo-mapping-change.t",
+    "test-scs-x-repo.t",
+    "test-scs.t",
+    "test-snapshot.t",
 }
 
 
