@@ -35,6 +35,7 @@ lfs_server_config = { version = "0.1.0", path = "../../../configerator/structs/s
 maplit = "1.0"
 metaconfig_parser = { version = "0.1.0", path = "../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
+metadata = { version = "0.1.0", path = "../server/metadata" }
 mime = "0.3.14"
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_repos = { version = "0.1.0", path = "../mononoke_repos" }

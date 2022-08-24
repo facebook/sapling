@@ -6,6 +6,7 @@
  */
 
 use std::fmt;
+use std::sync::Arc;
 
 use context::CoreContext;
 use context::SessionContainer;
@@ -18,6 +19,7 @@ use gotham_ext::middleware::Middleware;
 use gotham_ext::state_ext::StateExt;
 use hyper::body::Body;
 use hyper::Response;
+use metadata::Metadata;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::o;
 use slog::Logger;
@@ -99,12 +101,21 @@ impl Middleware for RequestContextMiddleware {
         let request_id = state.short_request_id();
 
         let logger = self.logger.new(o!("request_id" => request_id.to_string()));
-        let session = SessionContainer::new_with_defaults(self.fb);
+        let (should_log, identities, address) =
+            if let Some(client_identity) = ClientIdentity::try_borrow_from(state) {
+                (
+                    !client_identity.is_proxygen_test_identity(),
+                    client_identity.identities().clone().unwrap_or_default(),
+                    client_identity.address().clone(),
+                )
+            } else {
+                (true, Default::default(), None)
+            };
+        let metadata = Metadata::new(None, identities, false, address).await;
+        let session = SessionContainer::builder(self.fb)
+            .metadata(Arc::new(metadata))
+            .build();
         let ctx = session.new_context(logger, MononokeScubaSampleBuilder::with_discard());
-
-        let should_log = ClientIdentity::try_borrow_from(state).map_or(true, |client_identity| {
-            !client_identity.is_proxygen_test_identity()
-        });
 
         state.put(RequestContext::new(ctx, should_log));
 
