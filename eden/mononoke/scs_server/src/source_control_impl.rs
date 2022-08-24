@@ -302,7 +302,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: &thrift::RepoSpecifier,
     ) -> Result<RepoContext, errors::ServiceError> {
-        let authz = AuthorizationContext::new();
+        let authz = AuthorizationContext::new(&ctx);
         self.repo_impl(ctx, repo, authz, |_| async { Ok(None) })
             .await
     }
@@ -317,7 +317,7 @@ impl SourceControlServiceImpl {
     ) -> Result<RepoContext, errors::ServiceError> {
         let authz = match service_name {
             Some(service_name) => AuthorizationContext::new_for_service_writes(service_name),
-            None => AuthorizationContext::new(),
+            None => AuthorizationContext::new(&ctx),
         };
         self.repo_impl(ctx, repo, authz, |_| async { Ok(None) })
             .await
@@ -362,11 +362,12 @@ impl SourceControlServiceImpl {
         commit: &thrift::CommitSpecifier,
     ) -> Result<(RepoContext, ChangesetContext), errors::ServiceError> {
         let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
+        let authz = AuthorizationContext::new(&ctx);
         let repo = self
             .repo_impl(
                 ctx,
                 &commit.repo,
-                AuthorizationContext::new(),
+                authz,
                 self.bubble_fetcher_for_changeset(changeset_specifier.clone()),
             )
             .await?;
@@ -395,11 +396,12 @@ impl SourceControlServiceImpl {
                 other_changeset_specifier
             )))?
         }
+        let authz = AuthorizationContext::new(&ctx);
         let repo = self
             .repo_impl(
                 ctx,
                 &commit.repo,
-                AuthorizationContext::new(),
+                authz,
                 self.bubble_fetcher_for_changeset(changeset_specifier.clone()),
             )
             .await?;

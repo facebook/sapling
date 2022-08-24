@@ -272,7 +272,10 @@ impl RepoContextBuilder {
     }
 
     pub async fn build(self) -> Result<RepoContext, MononokeError> {
-        let authz = Arc::new(self.authz.unwrap_or_else(AuthorizationContext::new));
+        let authz = Arc::new(
+            self.authz
+                .unwrap_or_else(|| AuthorizationContext::new(&self.ctx)),
+        );
         RepoContext::new(self.ctx, authz, self.repo, self.bubble_id).await
     }
 }

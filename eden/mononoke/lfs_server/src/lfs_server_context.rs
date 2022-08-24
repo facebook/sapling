@@ -185,7 +185,7 @@ async fn acl_check(
     enforce_authorization: bool,
     method: LfsMethod,
 ) -> Result<(), LfsServerContextErrorKind> {
-    let authz = AuthorizationContext::new();
+    let authz = AuthorizationContext::new(ctx);
     let acl_check = if method.is_read_only() {
         authz.check_full_repo_read(ctx, repo).await
     } else {

@@ -566,7 +566,7 @@ async fn normal_pushrebase<'a>(
         } else {
             None
         };
-    let authz = AuthorizationContext::new();
+    let authz = AuthorizationContext::new(ctx);
     let result = LocalPushrebaseClient {
         ctx,
         authz: &authz,
@@ -667,7 +667,7 @@ async fn plain_push_bookmark(
                     .only_log_acl_checks(tunables().get_log_only_wireproto_write_acl())
                     .run(
                         ctx,
-                        &AuthorizationContext::new(),
+                        &AuthorizationContext::new(ctx),
                         repo,
                         lca_hint,
                         infinitepush_params,
@@ -713,7 +713,7 @@ async fn plain_push_bookmark(
             .only_log_acl_checks(tunables().get_log_only_wireproto_write_acl())
             .run(
                 ctx,
-                &AuthorizationContext::new(),
+                &AuthorizationContext::new(ctx),
                 repo,
                 lca_hint,
                 infinitepush_params,
@@ -750,7 +750,12 @@ async fn plain_push_bookmark(
                 .only_if_public()
                 .with_pushvars(maybe_pushvars)
                 .only_log_acl_checks(tunables().get_log_only_wireproto_write_acl())
-                .run(ctx, &AuthorizationContext::new(), repo, infinitepush_params)
+                .run(
+                    ctx,
+                    &AuthorizationContext::new(ctx),
+                    repo,
+                    infinitepush_params,
+                )
                 .await
                 .context("Failed to delete bookmark")?;
         }
@@ -781,7 +786,7 @@ async fn infinitepush_scratch_bookmark(
         .only_log_acl_checks(tunables().get_log_only_wireproto_write_acl())
         .run(
             ctx,
-            &AuthorizationContext::new(),
+            &AuthorizationContext::new(ctx),
             repo,
             lca_hint,
             infinitepush_params,
@@ -815,7 +820,7 @@ async fn infinitepush_scratch_bookmark(
         .only_log_acl_checks(tunables().get_log_only_wireproto_write_acl())
         .run(
             ctx,
-            &AuthorizationContext::new(),
+            &AuthorizationContext::new(ctx),
             repo,
             lca_hint,
             infinitepush_params,

@@ -139,7 +139,7 @@ async fn test_user_no_write_access(fb: FacebookInit) -> Result<()> {
     let repo: Repo = test_repo_factory::TestRepoFactory::new(fb)?
         .with_permission_checker(checker)
         .build()?;
-    let authz = AuthorizationContext::new();
+    let authz = AuthorizationContext::new(&ctx);
 
     authz.require_full_repo_read(&ctx, &repo).await?;
     authz.require_full_repo_draft(&ctx, &repo).await?;
@@ -190,7 +190,7 @@ async fn test_user_no_draft_enforceent_off(fb: FacebookInit) -> Result<()> {
             let repo: Repo = test_repo_factory::TestRepoFactory::new(fb)?
                 .with_permission_checker(checker)
                 .build()?;
-            let authz = AuthorizationContext::new();
+            let authz = AuthorizationContext::new(&ctx);
 
             authz.require_full_repo_read(&ctx, &repo).await?;
             authz.require_full_repo_draft(&ctx, &repo).await?;
@@ -242,7 +242,7 @@ async fn test_user_no_draft_no_write_access(fb: FacebookInit) -> Result<()> {
             let repo: Repo = test_repo_factory::TestRepoFactory::new(fb)?
                 .with_permission_checker(checker)
                 .build()?;
-            let authz = AuthorizationContext::new();
+            let authz = AuthorizationContext::new(&ctx);
 
             authz.require_full_repo_read(&ctx, &repo).await?;
             assert!(authz.require_full_repo_draft(&ctx, &repo).await.is_err());
@@ -310,7 +310,7 @@ async fn test_user_write_no_draft_access(fb: FacebookInit) -> Result<()> {
             let repo: Repo = test_repo_factory::TestRepoFactory::new(fb)?
                 .with_permission_checker(checker)
                 .build()?;
-            let authz = AuthorizationContext::new();
+            let authz = AuthorizationContext::new(&ctx);
 
             authz.require_full_repo_read(&ctx, &repo).await?;
             authz.require_full_repo_draft(&ctx, &repo).await?;

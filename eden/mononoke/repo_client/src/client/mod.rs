@@ -1724,7 +1724,7 @@ impl HgCommands for RepoClient {
                     // To use unbundle wireproto command the user needs at least all-repo `draft` permission.
                     // This is overkill - we could check more granular permissions but wireproto is deprecated and
                     // it doesn't seem worth auditing each codepath there so let's use the big hammer!
-                    let authz = AuthorizationContext::new();
+                    let authz = AuthorizationContext::new(&ctx);
                     authz
                         .require_full_repo_draft(&ctx, &repo)
                         .await

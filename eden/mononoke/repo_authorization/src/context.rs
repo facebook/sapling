@@ -39,7 +39,7 @@ impl AuthorizationContext {
     ///
     /// This context will use the user's identity to check whether they are
     /// authorized to perform each action.
-    pub fn new() -> AuthorizationContext {
+    pub fn new(_ctx: &CoreContext) -> AuthorizationContext {
         AuthorizationContext::Identity
     }
 
