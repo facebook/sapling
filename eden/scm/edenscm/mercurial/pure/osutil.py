@@ -17,12 +17,13 @@ import ctypes.util
 import os
 import socket
 import stat as statmod
+from typing import Optional
 
 from .. import pycompat
 from ..pycompat import range
 
 
-def _mode_to_kind(mode):
+def _mode_to_kind(mode: int) -> int:
     if statmod.S_ISREG(mode):
         return statmod.S_IFREG
     if statmod.S_ISDIR(mode):
@@ -40,7 +41,7 @@ def _mode_to_kind(mode):
     return mode
 
 
-def listdir(path, stat=False, skip=None):
+def listdir(path, stat: bool = False, skip=None):
     from .. import util
 
     """listdir(path, stat=False) -> list_of_tuples
@@ -115,7 +116,7 @@ if not pycompat.iswindows:
         ]
 
     _libc = ctypes.CDLL(ctypes.util.find_library("c"), use_errno=True)
-    _recvmsg = getattr(_libc, "recvmsg", None)
+    _recvmsg: ctypes._NamedFuncPointer = getattr(_libc, "recvmsg", None)
     if _recvmsg:
         _recvmsg.restype = getattr(ctypes, "c_ssize_t", ctypes.c_long)
         _recvmsg.argtypes = (ctypes.c_int, ctypes.POINTER(_msghdr), ctypes.c_int)
@@ -124,7 +125,7 @@ if not pycompat.iswindows:
         def _recvmsg(sockfd, msg, flags):
             raise NotImplementedError("unsupported platform")
 
-    def _CMSG_FIRSTHDR(msgh):
+    def _CMSG_FIRSTHDR(msgh) -> Optional[_cmsghdr]:
         if msgh.msg_controllen < ctypes.sizeof(_cmsghdr):
             return
         cmsgptr = ctypes.cast(msgh.msg_control, ctypes.POINTER(_cmsghdr))
@@ -174,7 +175,7 @@ else:
     _LPCSTR = _LPSTR = ctypes.c_char_p
     _HANDLE = ctypes.c_void_p
 
-    _INVALID_HANDLE_VALUE = _HANDLE(-1).value
+    _INVALID_HANDLE_VALUE: Optional[int] = _HANDLE(-1).value
 
     # CreateFile
     _FILE_SHARE_READ = 0x00000001
