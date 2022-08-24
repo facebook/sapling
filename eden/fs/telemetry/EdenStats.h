@@ -223,6 +223,8 @@ class ObjectStoreThreadStats : public EdenThreadStatsBase {
       createStat("object_store.get_blob_metadata.local_store")};
   Stat getBlobMetadataFromBackingStore{
       createStat("object_store.get_blob_metadata.backing_store")};
+  Stat getLocalBlobMetadataFromBackingStore{
+      createStat("object_store.get_blob_metadata.backing_store_cache")};
 
   Stat getBlobSizeFromLocalStore{
       createStat("object_store.get_blob_size.local_store")};

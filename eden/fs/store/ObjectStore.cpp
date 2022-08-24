@@ -304,6 +304,8 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
     // if configured, check hg cache for aux metadata
     auto localMetadata = backingStore_->getLocalBlobMetadata(id, context);
     if (localMetadata) {
+      stats_->getObjectStoreStatsForCurrentThread()
+          .getLocalBlobMetadataFromBackingStore.addValue(1);
       metadataCache_.wlock()->set(id, *localMetadata);
       context.didFetch(
           ObjectFetchContext::BlobMetadata,
@@ -354,6 +356,9 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
               if (result.blob) {
                 self->stats_->getObjectStoreStatsForCurrentThread()
                     .getBlobMetadataFromBackingStore.addValue(1);
+                // we retrived the full blob data
+                self->stats_->getObjectStoreStatsForCurrentThread()
+                    .getBlobFromBackingStore.addValue(1);
                 self->localStore_->putBlob(id, result.blob.get());
                 auto metadata =
                     self->localStore_->putBlobMetadata(id, result.blob.get());

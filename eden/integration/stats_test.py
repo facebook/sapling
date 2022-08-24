@@ -117,7 +117,7 @@ class ObjectStoreStatsTest(testcase.EdenRepoTest):
         foo.read_bytes()
 
         counters = self.get_counters()
-        self.assertEqual(counters.get(LOCAL, 0) + counters.get(BACKING, 0), 2)
+        self.assertEqual(counters.get(LOCAL, 0) + counters.get(BACKING, 0), 3)
 
 
 @testcase.eden_nfs_repo_test
