@@ -12,6 +12,7 @@ use std::path::Path;
 use anyhow::anyhow;
 use anyhow::Result;
 use cached_config::ConfigStore;
+use percent_encoding::percent_decode;
 use repos::RawAclRegionConfig;
 use repos::RawCommitSyncConfig;
 use repos::RawCommonConfig;
@@ -96,7 +97,11 @@ fn read_raw_configs_toml(config_path: &Path) -> Result<RawRepoConfigs> {
                     "invalid repo path {:?}",
                     repo_definition_path
                 ))
-            })?
+            })?;
+
+        let reponame = percent_decode(reponame.as_bytes())
+            .decode_utf8()?
+            .to_owned()
             .to_string();
 
         let repo_definition = read_toml_path::<RawRepoDefinition>(
@@ -129,7 +134,11 @@ fn read_raw_configs_toml(config_path: &Path) -> Result<RawRepoConfigs> {
                     "invalid repo path {:?}",
                     repo_config_path
                 ))
-            })?
+            })?;
+
+        let reponame = percent_decode(reponame.as_bytes())
+            .decode_utf8()?
+            .to_owned()
             .to_string();
 
         let repo_config =
