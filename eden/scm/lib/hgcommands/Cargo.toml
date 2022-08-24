@@ -67,7 +67,7 @@ zstd = "0.11.1+zstd.1.5.2"
 
 [features]
 default = ["python3"]
-eden = ["dep:edenfs_client", "clidispatch/eden"]
+eden = ["edenfs_client", "clidispatch/eden"]
 fb = ["configparser/fb", "version/generated"]
 python2 = ["bindings/python2", "cpython/python27-sys", "cpython_ext/python2", "python27-sys", "pytracing/python2"]
 python3 = ["bindings/python3", "cpython/python3-sys", "cpython_ext/python3", "python3-sys", "pytracing/python3"]

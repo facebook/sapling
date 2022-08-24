@@ -23,4 +23,4 @@ types = { version = "0.1.0", path = "../types" }
 util = { version = "0.1.0", path = "../util" }
 
 [features]
-eden = ["dep:thrift-types"]
+eden = ["thrift-types"]

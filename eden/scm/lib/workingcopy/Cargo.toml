@@ -36,4 +36,4 @@ tempdir = "0.3"
 tempfile = "3.3"
 
 [features]
-eden = ["dep:edenfs_client", "dep:thrift-types"]
+eden = ["edenfs_client", "thrift-types"]
