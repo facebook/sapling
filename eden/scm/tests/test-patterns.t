@@ -14,46 +14,46 @@ Explore the semi-mysterious matchmod.match API
 
 "patterns="
 
-  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(m.match.match(repo.root, "", patterns=["a*"])))))'
+  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(e.match.match(repo.root, "", patterns=["a*"])))))'
   []
 
-  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(m.match.match(repo.root, "", patterns=["a*1"])))))'
+  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(e.match.match(repo.root, "", patterns=["a*1"])))))'
   []
 
-  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(m.match.match(repo.root, "", patterns=["a*/*"])))))'
+  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(e.match.match(repo.root, "", patterns=["a*/*"])))))'
   ['a*1/a', 'a*2/b']
 
 "include="
 
-  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(m.match.match(repo.root, "", include=["a*"])))))'
+  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(e.match.match(repo.root, "", include=["a*"])))))'
   ['a*1/a', 'a*2/b']
 
-  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(m.match.match(repo.root, "", include=["a*1"])))))'
+  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(e.match.match(repo.root, "", include=["a*1"])))))'
   ['a*1/a']
 
-  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(m.match.match(repo.root, "", include=["a*/*"])))))'
+  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(e.match.match(repo.root, "", include=["a*/*"])))))'
   ['a*1/a', 'a*2/b']
 
 "patterns=" with "default='path'"
 
-  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(m.match.match(repo.root, "", patterns=["a*"], default="path")))))'
+  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(e.match.match(repo.root, "", patterns=["a*"], default="path")))))'
   []
 
-  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(m.match.match(repo.root, "", patterns=["a*1"], default="path")))))'
+  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(e.match.match(repo.root, "", patterns=["a*1"], default="path")))))'
   ['a*1/a']
 
-  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(m.match.match(repo.root, "", patterns=["a*/*"], default="path")))))'
+  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(e.match.match(repo.root, "", patterns=["a*/*"], default="path")))))'
   []
 
 "include=" with "default='path'" (ex. "default=" has no effect on "include=")
 
-  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(m.match.match(repo.root, "", include=["a*"], default="path")))))'
+  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(e.match.match(repo.root, "", include=["a*"], default="path")))))'
   ['a*1/a', 'a*2/b']
 
-  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(m.match.match(repo.root, "", include=["a*1"], default="path")))))'
+  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(e.match.match(repo.root, "", include=["a*1"], default="path")))))'
   ['a*1/a']
 
-  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(m.match.match(repo.root, "", include=["a*/*"], default="path")))))'
+  $ hg dbsh -c 'ui.write("%s\n" % str(list(repo["."].walk(e.match.match(repo.root, "", include=["a*/*"], default="path")))))'
   ['a*1/a', 'a*2/b']
 
 Give a hint if a pattern will traverse the entire repo.

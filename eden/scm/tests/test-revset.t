@@ -13,9 +13,9 @@
   $ HGENCODING=utf-8
 
   $ cat > testrevset.py << 'EOF'
-  > import edenscm.mercurial.revset
+  > import edenscm.revset
   > 
-  > baseset = edenscm.mercurial.revset.baseset
+  > baseset = edenscm.revset.baseset
   > 
   > def r3232(repo, subset, x):
   >     """"simple revset that return [3,2,3,2]
@@ -28,7 +28,7 @@
   >        return baseset(repo=repo)
   >     return baseset([3,3,2,2], repo=repo)
   > 
-  > edenscm.mercurial.revset.symbols['r3232'] = r3232
+  > edenscm.revset.symbols['r3232'] = r3232
   > EOF
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
@@ -68,7 +68,7 @@
 
   $ cat > debugrevlistspec.py << 'EOF'
   > from __future__ import absolute_import
-  > from edenscm.mercurial import (
+  > from edenscm import (
   >     node as nodemod,
   >     registrar,
   >     revset,

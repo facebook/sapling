@@ -199,7 +199,7 @@ from typing import Callable, Iterable, Optional, Tuple
 
 from bindings import workingcopy
 
-from edenscm.mercurial import (
+from edenscm import (
     blackbox,
     context,
     dirstate as dirstatemod,
@@ -217,7 +217,7 @@ from edenscm.mercurial import (
     scmutil,
     util,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.i18n import _
 
 from ..extlib import pywatchman, watchmanclient
 from . import state

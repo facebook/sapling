@@ -1,6 +1,6 @@
 from __future__ import absolute_import, print_function
 
-from edenscm.mercurial import extensions
+from edenscm import extensions
 from hghave import require
 
 

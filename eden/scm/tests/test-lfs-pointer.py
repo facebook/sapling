@@ -5,8 +5,9 @@
 
 from __future__ import absolute_import, print_function
 
+from edenscm import pycompat
+
 from edenscm.ext.lfs import pointer
-from edenscm.mercurial import pycompat
 from hghave import require
 
 

@@ -103,7 +103,7 @@ def crateversion(crate):
         for pattern in [
             "lib/Cargo.lock",
             "edenscm/ext/extlib/*/Cargo.lock",
-            "edenscm/mercurial/rust/*/Cargo.lock",
+            "edenscm/rust/*/Cargo.lock",
             "exec/*/Cargo.lock",
         ]:
             paths += list(glob.glob(os.path.join(root, pattern)))

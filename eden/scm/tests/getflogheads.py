@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
-from edenscm.mercurial import hg, registrar
-from edenscm.mercurial.i18n import _
+from edenscm import hg, registrar
+from edenscm.i18n import _
 
 
 cmdtable = {}

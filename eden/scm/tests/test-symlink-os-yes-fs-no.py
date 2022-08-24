@@ -4,7 +4,7 @@ import os
 import sys
 import time
 
-from edenscm.mercurial import commands, fscap, hg, ui as uimod, util
+from edenscm import commands, fscap, hg, ui as uimod, util
 from hghave import require
 
 

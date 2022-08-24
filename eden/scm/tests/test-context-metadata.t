@@ -16,7 +16,7 @@ Tests about metadataonlyctx
 
   $ cat > metaedit.py <<EOF
   > from __future__ import absolute_import
-  > from edenscm.mercurial import context, registrar
+  > from edenscm import context, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('metaedit')

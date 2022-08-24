@@ -7,7 +7,7 @@ To enable events add them to the ``extralog.events`` config list.
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import extensions, util
+from edenscm import extensions, util
 
 
 def logevent(ui, event, *msg, **opts):

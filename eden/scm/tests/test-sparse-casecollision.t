@@ -10,7 +10,7 @@ profile.
   $ cat > force_case_insensitivity.py <<EOF
   > # We force the issue at update time, by monkey-patching util.fscasesensitive
   > # and util.normcase to act like a case-insensitive filesystem
-  > from edenscm.mercurial import encoding, util
+  > from edenscm import encoding, util
   > util.fscasesensitive = lambda *args: False
   > util.normcase = lambda p: encoding.upper(p)
   > EOF

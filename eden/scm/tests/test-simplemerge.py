@@ -17,8 +17,8 @@ from __future__ import absolute_import
 
 import unittest
 
-from edenscm.mercurial import error, simplemerge, util
-from edenscm.mercurial.pycompat import decodeutf8, encodeutf8
+from edenscm import error, simplemerge, util
+from edenscm.pycompat import decodeutf8, encodeutf8
 from hghave import require
 
 

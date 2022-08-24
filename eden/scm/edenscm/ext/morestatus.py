@@ -12,7 +12,7 @@ the state of the repo
 import math
 import os
 
-from edenscm.mercurial import (
+from edenscm import (
     commands,
     hbisect,
     merge as mergemod,
@@ -21,9 +21,9 @@ from edenscm.mercurial import (
     registrar,
     scmutil,
 )
-from edenscm.mercurial.error import Abort
-from edenscm.mercurial.extensions import wrapcommand
-from edenscm.mercurial.i18n import _
+from edenscm.error import Abort
+from edenscm.extensions import wrapcommand
+from edenscm.i18n import _
 
 
 UPDATEARGS = "updateargs"

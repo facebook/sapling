@@ -6,11 +6,11 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from edenscm.mercurial import error, perftrace, util
-from edenscm.mercurial.edenapi_upload import filetypefromfile, uploadhgchangesets
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import nullid
-from edenscm.mercurial.revset import parseage
+from edenscm import error, perftrace, util
+from edenscm.edenapi_upload import filetypefromfile, uploadhgchangesets
+from edenscm.i18n import _
+from edenscm.node import nullid
+from edenscm.revset import parseage
 
 from .metalog import fetchlatestbubble, storelatest
 

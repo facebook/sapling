@@ -7,7 +7,7 @@ from __future__ import absolute_import
 
 import socket
 
-from edenscm.mercurial import error
+from edenscm import error
 
 from . import httpsservice, localservice
 

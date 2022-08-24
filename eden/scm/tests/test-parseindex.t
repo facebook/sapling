@@ -14,7 +14,7 @@ Test SEGV caused by bad revision passed to reachableroots() (issue4775):
 
   $ hg debugpython -- <<EOF
   > from __future__ import print_function
-  > from edenscm.mercurial import changelog, uiconfig, vfs
+  > from edenscm import changelog, uiconfig, vfs
   > cl = changelog.changelog(vfs.vfs('.hg/store'), uiconfig.uiconfig())
   > print('good heads:')
   > for head in [0, len(cl) - 1, -1]:

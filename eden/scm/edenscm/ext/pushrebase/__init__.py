@@ -44,7 +44,7 @@ import mmap
 import os
 import tempfile
 
-from edenscm.mercurial import (
+from edenscm import (
     bundle2,
     changegroup,
     commands,
@@ -68,9 +68,9 @@ from edenscm.mercurial import (
     visibility,
     wireproto,
 )
-from edenscm.mercurial.extensions import unwrapfunction, wrapcommand, wrapfunction
-from edenscm.mercurial.i18n import _, _n
-from edenscm.mercurial.node import bin, hex, nullid, nullrev, short
+from edenscm.extensions import unwrapfunction, wrapcommand, wrapfunction
+from edenscm.i18n import _, _n
+from edenscm.node import bin, hex, nullid, nullrev, short
 
 from .. import hgsql
 from ..remotefilelog import (

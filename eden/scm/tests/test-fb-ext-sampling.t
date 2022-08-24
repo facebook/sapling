@@ -24,7 +24,7 @@ Create an extension that logs every commit and also call repo.revs twice
 
 Create an extension that logs the call to commit
   $ cat > $TESTTMP/logcommit.py << EOF
-  > from edenscm.mercurial import extensions, localrepo
+  > from edenscm import extensions, localrepo
   > def cb(sample):
   >   return len(sample)
   > def _commit(orig, repo, *args, **kwargs):
@@ -67,7 +67,7 @@ Do a couple of commits.  We expect to log two messages per call to repo.commit.
   $ mkcommit c
   atexit handler executed
   atexit handler executed
-  >>> from edenscm.mercurial import pycompat
+  >>> from edenscm import pycompat
   >>> import json
   >>> with open("$LOGDIR/samplingpath.txt") as f:
   ...     data = f.read()
@@ -96,7 +96,7 @@ Test topdir logging:
   $ setconfig sampling.key.command_info=command_info
   $ hg st > /dev/null
   atexit handler executed
-  >>> from edenscm.mercurial import json
+  >>> from edenscm import json
   >>> with open("$LOGDIR/samplingpath.txt") as f:
   ...     data = f.read().strip("\0").split("\0")
   >>> print([json.loads(d)["data"]["topdir"] for d in data if "topdir" in d])

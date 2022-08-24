@@ -1264,7 +1264,7 @@
   @  6408d34d8180 'commit1'
 
   $ cat >> $TESTTMP/abortupdate.py << 'EOF'
-  > from edenscm.mercurial import extensions, hg
+  > from edenscm import extensions, hg
   > def update(orig, repo, *args, **kwargs):
   >     if not repo.ui.configbool("abortupdate", "abort"):
   >         return orig(repo, *args, **kwargs)

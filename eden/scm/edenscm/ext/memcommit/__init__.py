@@ -21,9 +21,9 @@ import contextlib
 import json
 import sys
 
-from edenscm.mercurial import bookmarks, error, registrar, scmutil
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import hex, nullid
+from edenscm import bookmarks, error, registrar, scmutil
+from edenscm.i18n import _
+from edenscm.node import hex, nullid
 
 from ..pushrebase.stackpush import pushrequest
 from . import commitdata, serialization

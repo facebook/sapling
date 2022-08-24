@@ -24,8 +24,8 @@ Here is an example of registering a simple ``hello`` command:
 
 .. sourcecode:: python
 
-    from edenscm.mercurial import registrar
-    from edenscm.mercurial.i18n import _
+    from edenscm import registrar
+    from edenscm.i18n import _
 
     cmdtable = {}
     command = registrar.command(cmdtable)
@@ -55,7 +55,7 @@ Here is an example of registering a ``draftbranch`` revset:
 
 .. sourcecode:: python
 
-    from edenscm.mercurial import registrar, revset, smartset
+    from edenscm import registrar, revset, smartset
 
     revsetpredicate = registrar.revsetpredicate()
 
@@ -97,8 +97,8 @@ unlinking:
 
 .. sourcecode:: python
 
-    from edenscm.mercurial.i18n import _
-    from edenscm.mercurial import error
+    from edenscm.i18n import _
+    from edenscm import error
     import os
 
     def uisetup(ui):
@@ -122,8 +122,8 @@ writes need to take the lock):
 
 .. sourcecode:: python
 
-    from edenscm.mercurial import error
-    from edenscm.mercurial.i18n import _
+    from edenscm import error
+    from edenscm.i18n import _
 
     def reposetup(ui, repo):
         class readonlyrepo(repo.__class__):

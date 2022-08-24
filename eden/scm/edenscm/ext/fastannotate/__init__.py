@@ -98,8 +98,8 @@ annotate cache greatly. Run "debugbuildlinkrevcache" before
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import error as hgerror, localrepo, util
-from edenscm.mercurial.i18n import _
+from edenscm import error as hgerror, localrepo, util
+from edenscm.i18n import _
 
 from . import commands, context, protocol
 

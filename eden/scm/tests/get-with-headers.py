@@ -17,7 +17,7 @@ import json
 import os
 import sys
 
-from edenscm.mercurial import util
+from edenscm import util
 
 
 httplib = util.httplib

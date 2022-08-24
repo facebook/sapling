@@ -4,8 +4,8 @@
   $ . "$TESTDIR/library.sh"
 
   $ cat >> "$TESTTMP/uilog.py" <<EOF
-  > from edenscm.mercurial import extensions
-  > from edenscm.mercurial import ui as uimod
+  > from edenscm import extensions
+  > from edenscm import ui as uimod
   > def uisetup(ui):
   >   extensions.wrapfunction(uimod.ui, 'log', mylog)
   > def mylog(orig, self, service, *msg, **opts):

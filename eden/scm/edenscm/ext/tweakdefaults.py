@@ -53,7 +53,7 @@ import subprocess
 import sys
 import time
 
-from edenscm.mercurial import (
+from edenscm import (
     bookmarks,
     commands,
     encoding,
@@ -69,8 +69,8 @@ from edenscm.mercurial import (
     templater,
     util,
 )
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import short
+from edenscm.i18n import _
+from edenscm.node import short
 
 from . import rebase
 

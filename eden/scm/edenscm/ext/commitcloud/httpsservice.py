@@ -14,7 +14,7 @@ import tempfile
 import time
 from subprocess import PIPE, Popen
 
-from edenscm.mercurial import (
+from edenscm import (
     commands,
     error,
     httpclient,
@@ -24,7 +24,7 @@ from edenscm.mercurial import (
     pycompat,
     util,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.i18n import _
 
 from . import baseservice, error as ccerror, util as ccutil
 

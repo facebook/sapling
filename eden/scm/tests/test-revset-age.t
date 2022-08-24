@@ -20,7 +20,7 @@
 
 # Check age ranges
 
-  from edenscm.mercurial.extensions import wrappedfunction
+  from edenscm.extensions import wrappedfunction
   with wrappedfunction(time, "time", lambda orig: now + 1):
       $ hg log -T '{rev} {desc}\n' -r 'age("<30")'
       5 Changeset 5 seconds ago

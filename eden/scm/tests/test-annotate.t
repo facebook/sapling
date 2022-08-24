@@ -404,7 +404,7 @@ and its ancestor by overriding "repo._filecommit".
 
   $ cat > ../legacyrepo.py <<EOF
   > from __future__ import absolute_import
-  > from edenscm.mercurial import error, node
+  > from edenscm import error, node
   > def reposetup(ui, repo):
   >     class legacyrepo(repo.__class__):
   >         def _filecommit(self, fctx, manifest1, manifest2,

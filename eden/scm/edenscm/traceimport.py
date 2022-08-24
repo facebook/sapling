@@ -35,7 +35,7 @@ class TraceImporter(object):
         # parsers.isasciistr can be called very frequently.
         "edenscmnative.parsers",
         # encoding.tolocal can be called very frequently.
-        "edenscm.mercurial.encoding",
+        "edenscm.encoding",
     }
 
     def __init__(self, shouldtrace=lambda _name: True):
@@ -116,7 +116,7 @@ class TraceImporter(object):
             # Example arguments:
             # - fullname = "contextlib", path = None
             # - fullname = "io", path = None
-            # - fullname = "edenscm.mercurial.blackbox", path = ["/data/edenscm"]
+            # - fullname = "edenscm.blackbox", path = ["/data/edenscm"]
             # - fullname = "email.errors", path = ["/lib/python/email"]
 
             # PEP 302 says "find_module" returns either None or a "loader" that has

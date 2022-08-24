@@ -105,7 +105,7 @@ don't allow marking or unmarking driver-resolved files
 
   $ cat > $TESTTMP/markdriver.py << EOF
   > '''mark and unmark files as driver-resolved'''
-  > from edenscm.mercurial import merge, registrar, scmutil
+  > from edenscm import merge, registrar, scmutil
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('markdriver',

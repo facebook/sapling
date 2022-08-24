@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import time
 
 import bindings
-from edenscm.mercurial import progress, pycompat, registrar, util
+from edenscm import progress, pycompat, registrar, util
 
 cmdtable = {}
 command = registrar.command(cmdtable)

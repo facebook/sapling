@@ -12,10 +12,16 @@ import json
 import os
 import sys
 
-from edenscm.mercurial import error, hg, util
-from edenscm.mercurial.commands import command
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.pycompat import decodeutf8, encodeutf8
+try:
+    from edenscm.mercurial import error, hg, util
+    from edenscm.mercurial.commands import command
+    from edenscm.mercurial.i18n import _
+    from edenscm.mercurial.pycompat import decodeutf8, encodeutf8
+except ImportError:
+    from edenscm import error, hg, util
+    from edenscm.commands import command
+    from edenscm.i18n import _
+    from edenscm.pycompat import decodeutf8, encodeutf8
 
 
 def getcommitdates(ui, fname=None):

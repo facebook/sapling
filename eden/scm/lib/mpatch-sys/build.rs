@@ -7,7 +7,7 @@
 
 fn main() {
     cc::Build::new()
-        .file("../../edenscm/mercurial/mpatch.c")
+        .file("../../edenscm/mpatch.c")
         .include("../../../../")
         .compile("mpatch");
 }

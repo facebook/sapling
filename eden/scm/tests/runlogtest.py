@@ -9,7 +9,7 @@ import os.path
 import sys
 import time
 
-from edenscm.mercurial import progress, registrar
+from edenscm import progress, registrar
 
 
 cmdtable = {}

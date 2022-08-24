@@ -5,8 +5,8 @@
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import error, extensions
-from edenscm.mercurial.i18n import _
+from edenscm import error, extensions
+from edenscm.i18n import _
 
 
 infinitepush = None

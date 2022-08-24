@@ -133,7 +133,7 @@ With IMM, it's *very* noisy, but we do eventually get to the same place:
   error: preprocess hook raised an exception: in-memory merge does not support merge conflicts
   Traceback (most recent call last):
     # collapsed by devel.collapse-traceback
-  edenscm.mercurial.error.InMemoryMergeConflictsError: in-memory merge does not support merge conflicts
+  edenscm.error.InMemoryMergeConflictsError: in-memory merge does not support merge conflicts
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   hit merge conflicts (in FILE); switching to on-disk merge

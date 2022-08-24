@@ -12,7 +12,7 @@ import errno
 import os
 import time
 
-from edenscm.mercurial import error, lock as lockmod, util, vfs as vfsmod
+from edenscm import error, lock as lockmod, util, vfs as vfsmod
 
 
 def replaceclass(container, classname):

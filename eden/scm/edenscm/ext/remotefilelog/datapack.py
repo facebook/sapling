@@ -6,7 +6,7 @@
 from __future__ import absolute_import
 
 from bindings import revisionstore
-from edenscm.mercurial.node import hex
+from edenscm.node import hex
 
 from . import basepack
 

@@ -2,8 +2,8 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from edenscm.mercurial import context, encoding, hg, pycompat, scmutil, ui as uimod
-from edenscm.mercurial.node import hex
+from edenscm import context, encoding, hg, pycompat, scmutil, ui as uimod
+from edenscm.node import hex
 from hghave import require
 
 

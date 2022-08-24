@@ -126,7 +126,7 @@ Tests that there are no race condition between pulling changesets and remote boo
   $ cd ..
   $ cat > hangpull.py << EOF
   > """A small extension that makes pull hang for 5 sec, for testing"""
-  > from edenscm.mercurial import extensions, exchange
+  > from edenscm import extensions, exchange
   > def _pullremotenames(orig, repo, remote, *args, **opts):
   >     import time
   >     time.sleep(5)

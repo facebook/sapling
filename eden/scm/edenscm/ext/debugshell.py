@@ -21,10 +21,9 @@ import bindings
 import edenscm
 
 import edenscmnative
-from edenscm import ext, hgdemandimport, mercurial, traceimport
+from edenscm import ext, hgdemandimport, pycompat, registrar, traceimport, util
 from edenscm.ext import commitcloud as cc
-from edenscm.mercurial import pycompat, registrar, util
-from edenscm.mercurial.i18n import _
+from edenscm.i18n import _
 
 
 cmdtable = {}
@@ -36,18 +35,17 @@ def _assignobjects(objects, repo):
         {
             # Shortcuts
             "b": bindings,
-            "m": mercurial,
+            "e": edenscm,
             "x": ext,
             "td": bindings.tracing.tracingdata,
             # Modules
             "bindings": bindings,
             "edenscm": edenscm,
             "edenscmnative": edenscmnative,
-            "mercurial": mercurial,
             # Utilities
-            "util": mercurial.util,
-            "hex": mercurial.node.hex,
-            "bin": mercurial.node.bin,
+            "util": edenscm.util,
+            "hex": edenscm.node.hex,
+            "bin": edenscm.node.bin,
         }
     )
     if repo:
@@ -124,10 +122,10 @@ def _startipython(ui, repo, env):
 
     bannermsg = "loaded repo:  %s\n" "using source: %s" % (
         repo and repo.root or "(none)",
-        mercurial.__path__[0],
+        edenscm.__path__[0],
     ) + (
         "\n\nAvailable variables:\n"
-        " m:  edenscm.mercurial\n"
+        " e:  edenscm\n"
         " x:  edenscm.ext\n"
         " b:  bindings\n"
         " ui: the ui object\n"

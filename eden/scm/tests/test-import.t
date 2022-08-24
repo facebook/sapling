@@ -1432,8 +1432,8 @@ sh % "hg diff --git -c tip" == r"""
 # ===========================
 
   $ cat > $TESTTMP/parseextra.py << 'EOF'
-  > import edenscm.mercurial.patch
-  > import edenscm.mercurial.cmdutil
+  > import edenscm.patch
+  > import edenscm.cmdutil
   > 
   > def processfoo(repo, data, extra, opts):
   >     if 'foo' in data:
@@ -1442,11 +1442,11 @@ sh % "hg diff --git -c tip" == r"""
   >     if 'foo' in ctx.extra():
   >         ctx.repo().ui.write('imported-foo: %s\n' % ctx.extra()['foo'])
   > 
-  > edenscm.mercurial.patch.patchheadermap.append((b'Foo', 'foo'))
-  > edenscm.mercurial.cmdutil.extrapreimport.append('foo')
-  > edenscm.mercurial.cmdutil.extrapreimportmap['foo'] = processfoo
-  > edenscm.mercurial.cmdutil.extrapostimport.append('foo')
-  > edenscm.mercurial.cmdutil.extrapostimportmap['foo'] = postimport
+  > edenscm.patch.patchheadermap.append((b'Foo', 'foo'))
+  > edenscm.cmdutil.extrapreimport.append('foo')
+  > edenscm.cmdutil.extrapreimportmap['foo'] = processfoo
+  > edenscm.cmdutil.extrapostimport.append('foo')
+  > edenscm.cmdutil.extrapostimportmap['foo'] = postimport
   > EOF
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]

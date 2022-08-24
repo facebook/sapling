@@ -11,8 +11,8 @@ import os
 import subprocess
 from tempfile import NamedTemporaryFile
 
-from edenscm.mercurial import error
-from edenscm.mercurial.i18n import _
+from edenscm import error
+from edenscm.i18n import _
 
 
 class bundlestore(object):

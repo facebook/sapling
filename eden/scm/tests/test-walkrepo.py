@@ -2,7 +2,7 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from edenscm.mercurial import hg, scmutil, ui as uimod, util
+from edenscm import hg, scmutil, ui as uimod, util
 from hghave import require
 
 

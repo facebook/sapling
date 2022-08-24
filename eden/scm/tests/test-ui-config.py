@@ -1,6 +1,6 @@
 from __future__ import absolute_import, print_function
 
-from edenscm.mercurial import dispatch, error, ui as uimod
+from edenscm import dispatch, error, ui as uimod
 from hghave import require
 
 

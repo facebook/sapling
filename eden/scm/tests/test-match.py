@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import unittest
 
 import silenttestrunner
-from edenscm.mercurial import match as matchmod
+from edenscm import match as matchmod
 from hghave import require
 
 

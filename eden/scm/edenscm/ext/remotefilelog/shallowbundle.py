@@ -8,7 +8,7 @@ from __future__ import absolute_import
 
 from typing import Any, Iterable, Mapping, MutableMapping, Sequence
 
-from edenscm.mercurial import (
+from edenscm import (
     bundlerepo,
     changegroup,
     error,
@@ -20,9 +20,9 @@ from edenscm.mercurial import (
     revlog,
     util,
 )
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin, hex, nullid
-from edenscm.mercurial.pycompat import range
+from edenscm.i18n import _
+from edenscm.node import bin, hex, nullid
+from edenscm.pycompat import range
 
 from . import remotefilelog, shallowutil
 

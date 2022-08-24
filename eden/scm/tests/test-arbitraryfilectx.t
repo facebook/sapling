@@ -5,7 +5,7 @@ Setup:
   $ newext eval <<EOF
   > from __future__ import absolute_import
   > import filecmp
-  > from edenscm.mercurial import commands, context, registrar
+  > from edenscm import commands, context, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('eval', [], 'hg eval CMD')

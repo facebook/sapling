@@ -391,7 +391,7 @@ impl wrapfunc {
         // `runcommand`, it's easier to tell what's going on.
         if let Some(module_last_name) = module.rsplit(".").nth(0) {
             // Only keep the last part of module name. There is limited space
-            // in a span, and common prefix like `edenscm.mercurial` is not
+            // in a span, and common prefix like `edenscm` is not
             // very interesting.
             if module_last_name != "<missing>" {
                 name = format!("{}.{}", module_last_name, name);

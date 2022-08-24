@@ -7,8 +7,8 @@ from __future__ import absolute_import
 
 import unittest
 
-import edenscm.mercurial.error as error
-import edenscm.mercurial.registrar as registrar
+import edenscm.error as error
+import edenscm.registrar as registrar
 import silenttestrunner
 
 command = registrar.command(dict())

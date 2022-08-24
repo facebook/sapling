@@ -35,7 +35,7 @@ import subprocess
 import sys
 import traceback
 
-from edenscm.mercurial import dispatch, encoding, extensions, pycompat, registrar, util
+from edenscm import dispatch, encoding, extensions, pycompat, registrar, util
 
 
 configtable = {}

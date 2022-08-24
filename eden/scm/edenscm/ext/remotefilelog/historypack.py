@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import struct
 
 from bindings import revisionstore
-from edenscm.mercurial.node import hex
+from edenscm.node import hex
 
 from . import basepack
 

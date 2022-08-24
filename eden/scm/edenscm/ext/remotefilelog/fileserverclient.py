@@ -11,9 +11,9 @@ import struct
 import time
 import traceback
 
-from edenscm.mercurial import error, perftrace, pycompat, revlog, util, wireproto
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin
+from edenscm import error, perftrace, pycompat, revlog, util, wireproto
+from edenscm.i18n import _
+from edenscm.node import bin
 
 from . import constants, shallowutil, wirepack
 

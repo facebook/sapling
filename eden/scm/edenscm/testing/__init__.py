@@ -184,7 +184,7 @@ EdenSCM tests were the main motivation to create `testing`. But the general
 `.t` format seems useful beyond just EdenSCM use-cases. So the shell
 interpreter and the `.t` runner are designed to not couple with EdenSCM.
 For example, `testing.t`:
-- Does not depend on anything in `edenscm.mercurial`.
+- Does not depend on anything in `edenscm`.
 - Does not set test environment variables like `HGUSER`.
 - Does not handle business-logic related syntaxes like `#chg-compatible`.
 

@@ -95,7 +95,7 @@ This command is ancient:
 Verify that updating to revision acb14030fe0a via commands.update() works properly
 
   $ cat <<EOF > update_to_rev0.py
-  > from edenscm.mercurial import ui, hg, commands
+  > from edenscm import ui, hg, commands
   > myui = ui.ui.load()
   > repo = hg.repository(myui, path='.')
   > commands.update(myui, repo, rev='acb14030fe0a')

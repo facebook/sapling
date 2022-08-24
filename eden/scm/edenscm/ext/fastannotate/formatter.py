@@ -5,11 +5,11 @@
 
 # format: defines the format used to output annotate result
 
-from edenscm.mercurial import encoding, node, pycompat, templatefilters, util
-from edenscm.mercurial.pycompat import decodeutf8, encodeutf8, range
+from edenscm import encoding, node, pycompat, templatefilters, util
+from edenscm.pycompat import decodeutf8, encodeutf8, range
 
 
-# imitating mercurial.commands.annotate, not using the vanilla formatter since
+# imitating commands.annotate, not using the vanilla formatter since
 # the data structures are a bit different, and we have some fast paths.
 class defaultformatter(object):
     """the default formatter that does leftpad and support some common flags"""

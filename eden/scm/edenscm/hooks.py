@@ -5,7 +5,7 @@
 
 """predefined hooks"""
 
-from .mercurial import util
+from . import util
 
 
 def backgroundfsync(ui, repo, hooktype, **kwargs):

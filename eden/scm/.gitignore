@@ -48,9 +48,9 @@ doc/*.[0-9].html
 MANIFEST
 MANIFEST.in
 patches
-edenscm/mercurial/__modulepolicy__.py
-edenscm/mercurial/__version__.py
-edenscm/mercurial/hgpythonlib.h
+edenscm/__modulepolicy__.py
+edenscm/__version__.py
+edenscm/hgpythonlib.h
 edenscm/mercurial.egg-info
 .DS_Store
 tags
@@ -58,7 +58,7 @@ cscope.*
 .idea/
 .asv/
 i18n/hg.pot
-edenscm/mercurial/locale/*/LC_MESSAGES/hg.mo
+edenscm/locale/*/LC_MESSAGES/hg.mo
 edenscm/hgext/__index__.py
 edenscmnative/clindex.c
 edenscmnative/linelog.c

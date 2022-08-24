@@ -14,8 +14,9 @@ from __future__ import absolute_import, print_function
 import os
 import sys
 
+from edenscm import ui as uimod
+
 from edenscm.ext import traceprof
-from edenscm.mercurial import ui as uimod
 
 
 if __name__ == "__main__":

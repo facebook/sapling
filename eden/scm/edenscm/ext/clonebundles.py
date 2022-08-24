@@ -108,7 +108,7 @@ BUNDLESPEC
 
    The values are parsed in strict mode, which means they must be of the
    "<compression>-<type>" form. See
-   mercurial.exchange.parsebundlespec() for more details.
+   exchange.parsebundlespec() for more details.
 
    :hg:`debugbundle --spec` can be used to print the bundle specification
    string for a bundle file. The output of this command can be used verbatim
@@ -171,7 +171,7 @@ Mercurial server when the bundle hosting service fails.
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import extensions, wireproto
+from edenscm import extensions, wireproto
 
 
 testedwith = "ships-with-hg-core"

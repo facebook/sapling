@@ -12,9 +12,9 @@ import os
 import struct
 from typing import Optional
 
-from edenscm.mercurial import error as hgerror, pycompat
-from edenscm.mercurial.node import hex
-from edenscm.mercurial.pycompat import range
+from edenscm import error as hgerror, pycompat
+from edenscm.node import hex
+from edenscm.pycompat import range
 
 from . import error
 
@@ -44,7 +44,7 @@ sidebranchflag = 1
 # whether the changeset changes the file path (ie. is a rename)
 renameflag = 2
 
-# len(mercurial.node.nullid)
+# len(node.nullid)
 _hshlen = 20
 
 

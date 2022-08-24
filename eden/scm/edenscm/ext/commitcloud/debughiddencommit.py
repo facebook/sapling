@@ -3,10 +3,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from edenscm.mercurial import cmdutil, scmutil, visibility
-from edenscm.mercurial.context import memctx
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import hex
+from edenscm import cmdutil, scmutil, visibility
+from edenscm.context import memctx
+from edenscm.i18n import _
+from edenscm.node import hex
 
 from . import backup, backuplock
 from .commands import command

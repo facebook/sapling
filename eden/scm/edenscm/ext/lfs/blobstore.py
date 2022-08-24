@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 import os
 
-from edenscm.mercurial import (
+from edenscm import (
     blobstore,
     error,
     extensions,
@@ -22,7 +22,7 @@ from edenscm.mercurial import (
     vfs as vfsmod,
     worker,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.i18n import _
 
 
 class filewithprogress(object):

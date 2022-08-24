@@ -15,8 +15,7 @@
 
 from __future__ import absolute_import
 
-from edenscm.ext import rebase
-from edenscm.mercurial import (
+from edenscm import (
     bookmarks,
     cmdutil,
     commands,
@@ -28,8 +27,10 @@ from edenscm.mercurial import (
     scmutil,
     visibility,
 )
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import hex
+
+from edenscm.ext import rebase
+from edenscm.i18n import _
+from edenscm.node import hex
 
 from ..extlib.phabricator import diffprops
 from . import common

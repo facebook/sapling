@@ -6,8 +6,8 @@
 import re
 from typing import Optional
 
-from edenscm.mercurial import error, scmutil
-from edenscm.mercurial.i18n import _
+from edenscm import error, scmutil
+from edenscm.i18n import _
 
 from .pullrequeststore import PullRequest, PullRequestStore
 

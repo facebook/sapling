@@ -5,8 +5,8 @@
 
 import os
 
-from edenscm.mercurial import cmdutil, registrar, scmutil, util
-from edenscm.mercurial.i18n import _
+from edenscm import cmdutil, registrar, scmutil, util
+from edenscm.i18n import _
 
 
 cmdtable = {}
@@ -36,7 +36,7 @@ def catnotate(ui, repo, file1, *args, **opts):
     prefix = ""
 
     err = 1
-    # modified and stripped mercurial.cmdutil.cat follows
+    # modified and stripped cmdutil.cat follows
     def write(path):
         fp = cmdutil.makefileobj(
             repo, opts.get("output"), ctx.node(), pathname=os.path.join(prefix, path)

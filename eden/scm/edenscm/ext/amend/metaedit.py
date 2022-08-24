@@ -15,7 +15,7 @@
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import (
+from edenscm import (
     cmdutil,
     commands,
     encoding,
@@ -30,8 +30,8 @@ from edenscm.mercurial import (
     scmutil,
     util,
 )
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin
+from edenscm.i18n import _
+from edenscm.node import bin
 
 from . import common, fold
 

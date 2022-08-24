@@ -4,14 +4,7 @@ import os
 import subprocess
 import sys
 
-from edenscm.mercurial import (
-    extensions,
-    hg,
-    localrepo,
-    ui as uimod,
-    util,
-    vfs as vfsmod,
-)
+from edenscm import extensions, hg, localrepo, ui as uimod, util, vfs as vfsmod
 from hghave import require
 
 

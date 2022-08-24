@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import pycompat
+from edenscm import pycompat
 
 
 def reposetup(ui, repo):

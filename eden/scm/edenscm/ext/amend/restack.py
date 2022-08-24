@@ -7,9 +7,10 @@
 
 from __future__ import absolute_import
 
+from edenscm import commands
+
 from edenscm.ext import rebase
-from edenscm.mercurial import commands
-from edenscm.mercurial.i18n import _
+from edenscm.i18n import _
 
 
 def restack(ui, repo, **rebaseopts):

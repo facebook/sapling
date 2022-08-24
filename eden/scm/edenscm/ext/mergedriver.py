@@ -10,8 +10,8 @@ from __future__ import absolute_import
 import errno
 import sys
 
-from edenscm.mercurial import commands, error, extensions, hook, merge, perftrace
-from edenscm.mercurial.i18n import _
+from edenscm import commands, error, extensions, hook, merge, perftrace
+from edenscm.i18n import _
 
 
 @perftrace.tracefunc("Merge Driver Preprocess")

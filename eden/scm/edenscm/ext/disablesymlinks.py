@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import posix, util
+from edenscm import posix, util
 
 
 def checklink(path):

@@ -7,8 +7,7 @@
 
 from __future__ import absolute_import
 
-from edenscm.ext import rebase
-from edenscm.mercurial import (
+from edenscm import (
     cmdutil,
     context,
     copies,
@@ -17,7 +16,9 @@ from edenscm.mercurial import (
     lock as lockmod,
     mutation,
 )
-from edenscm.mercurial.i18n import _
+
+from edenscm.ext import rebase
+from edenscm.i18n import _
 
 
 def restackonce(

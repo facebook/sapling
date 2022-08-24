@@ -439,7 +439,7 @@ and (2) the extension to allow filelog merging between the revision
 and its ancestor by overriding "repo._filecommit".
 
   $ cat > ../legacyrepo.py <<EOF
-  > from edenscm.mercurial import node, error
+  > from edenscm import node, error
   > def reposetup(ui, repo):
   >     class legacyrepo(repo.__class__):
   >         def _filecommit(self, fctx, manifest1, manifest2,

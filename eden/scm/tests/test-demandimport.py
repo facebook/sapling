@@ -49,14 +49,14 @@ print("os =", f(os))
 print("os.system =", f(os.system))
 print("os =", f(os))
 
-from edenscm.mercurial import util
+from edenscm import util
 
 print("util =", f(util))
 print("util.system =", f(util.rawsystem))
 print("util =", f(util))
 print("util.system =", f(util.rawsystem))
 
-from edenscm.mercurial import hgweb
+from edenscm import hgweb
 
 print("hgweb =", f(hgweb))
 print("hgweb_mod =", f(hgweb.hgweb_mod))
@@ -86,7 +86,7 @@ print("re.stderr =", f(re.stderr))
 print("re =", f(re))
 
 # Test access to special attributes through demandmod proxy
-from edenscm.mercurial import pvec as pvecproxy
+from edenscm import pvec as pvecproxy
 
 print("pvecproxy =", f(pvecproxy))
 print("pvecproxy.__doc__ = %r" % (" ".join(pvecproxy.__doc__.split()[:3]) + " ..."))
@@ -123,6 +123,6 @@ print(
 os.environ["HGDEMANDIMPORT"] = "disable"
 # this enable call should not actually enable demandimport!
 demandimport.enable()
-from edenscm.mercurial import node
+from edenscm import node
 
 print("node =", f(node))

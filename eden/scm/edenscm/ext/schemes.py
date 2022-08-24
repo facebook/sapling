@@ -49,7 +49,7 @@ from __future__ import absolute_import
 import os
 import re
 
-from edenscm.mercurial import (
+from edenscm import (
     error,
     extensions,
     hg,
@@ -59,7 +59,7 @@ from edenscm.mercurial import (
     ui as uimod,
     util,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.i18n import _
 
 cmdtable = {}
 command = registrar.command(cmdtable)

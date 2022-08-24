@@ -99,7 +99,7 @@ update the "latest replayed" counter. We want to make sure we just skip the firs
 Now let's simulate the case when repo-hg is a bit behind the source of truth
 (e.g. it didn't sync with hgsql yet) and returns outdated version of bookmarks.
   $ cat > $TESTTMP/modifylistkeys.py <<EOF
-  > from edenscm.mercurial import (
+  > from edenscm import (
   >     extensions,
   >     localrepo,
   > )

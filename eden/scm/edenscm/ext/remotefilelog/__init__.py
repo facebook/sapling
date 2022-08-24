@@ -129,7 +129,7 @@ import os
 import time
 from contextlib import contextmanager
 
-from edenscm.mercurial import (
+from edenscm import (
     archival,
     bundle2,
     changegroup,
@@ -157,11 +157,11 @@ from edenscm.mercurial import (
     templatekw,
     util,
 )
-from edenscm.mercurial.commands import debug as hgdebugcommands
-from edenscm.mercurial.extensions import wrapfunction
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import hex
-from edenscm.mercurial.pycompat import isint, sysplatform
+from edenscm.commands import debug as hgdebugcommands
+from edenscm.extensions import wrapfunction
+from edenscm.i18n import _
+from edenscm.node import hex
+from edenscm.pycompat import isint, sysplatform
 
 from . import (
     debugcommands,
@@ -180,7 +180,7 @@ from . import (
 hgdebugcommands.command
 
 try:
-    from edenscm.mercurial import streamclone
+    from edenscm import streamclone
 
     streamclone._walkstreamfiles
     hasstreamclone = True

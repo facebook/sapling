@@ -11,7 +11,7 @@ import errno
 import json
 import os
 
-from edenscm.mercurial import encoding, error, pycompat, registrar
+from edenscm import encoding, error, pycompat, registrar
 
 
 cmdtable = {}

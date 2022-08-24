@@ -4,7 +4,7 @@ from __future__ import absolute_import, print_function
 
 import sys
 
-from edenscm.mercurial import encoding, node, revlog, transaction, vfs
+from edenscm import encoding, node, revlog, transaction, vfs
 from hghave import require
 
 

@@ -12,8 +12,8 @@
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import error, hg, registrar
-from edenscm.mercurial.i18n import _
+from edenscm import error, hg, registrar
+from edenscm.i18n import _
 
 
 repository = hg.repository

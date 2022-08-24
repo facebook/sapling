@@ -8,7 +8,7 @@ Tests for the journal extension; records bookmark locations.
   $ newext testmocks <<EOF
   > # mock out util.getuser() and util.makedate() to supply testable values
   > import os
-  > from edenscm.mercurial import util
+  > from edenscm import util
   > def mockgetuser():
   >     return 'foobar'
   > 

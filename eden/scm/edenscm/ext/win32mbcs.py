@@ -54,8 +54,8 @@ from __future__ import absolute_import
 import os
 import sys
 
-from edenscm.mercurial import encoding, error, pycompat, registrar
-from edenscm.mercurial.i18n import _, _x
+from edenscm import encoding, error, pycompat, registrar
+from edenscm.i18n import _, _x
 
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
@@ -166,15 +166,15 @@ def wrapname(name, wrapper):
 # NOTE: os.path.dirname() and os.path.basename() are safe because
 #       they use result of os.path.split()
 funcs = """os.path.join os.path.split os.path.splitext
- os.path.normpath os.makedirs mercurial.util.endswithsep
- mercurial.util.splitpath mercurial.util.fscasesensitive
- mercurial.util.fspath mercurial.util.pconvert mercurial.util.normpath
- mercurial.util.split"""
+ os.path.normpath os.makedirs util.endswithsep
+ util.splitpath util.fscasesensitive
+ util.fspath util.pconvert util.normpath
+ util.split"""
 
 # These functions are required to be called with local encoded string
 # because they expects argument is local encoded string and cause
 # problem with unicode string.
-rfuncs = """mercurial.encoding.upper mercurial.encoding.lower"""
+rfuncs = """encoding.upper encoding.lower"""
 
 # List of Windows specific functions to be wrapped.
 winfuncs = """os.path.splitunc"""
@@ -201,8 +201,8 @@ def extsetup(ui):
         if pycompat.iswindows:
             for f in winfuncs.split():
                 wrapname(f, wrapper)
-        wrapname("mercurial.util.listdir", wrapperforlistdir)
-        wrapname("mercurial.windows.listdir", wrapperforlistdir)
+        wrapname("util.listdir", wrapperforlistdir)
+        wrapname("windows.listdir", wrapperforlistdir)
         # wrap functions to be called with local byte string arguments
         for f in rfuncs.split():
             wrapname(f, reversewrapper)

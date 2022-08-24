@@ -26,11 +26,11 @@ thus multiple stable commits.
 import re
 import subprocess
 
-from edenscm.mercurial import commands, encoding, error, json, pycompat, registrar, util
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.revsetlang import getargsdict, getstring
-from edenscm.mercurial.smartset import baseset
-from edenscm.mercurial.templatekw import hybridlist
+from edenscm import commands, encoding, error, json, pycompat, registrar, util
+from edenscm.i18n import _
+from edenscm.revsetlang import getargsdict, getstring
+from edenscm.smartset import baseset
+from edenscm.templatekw import hybridlist
 
 revsetpredicate = registrar.revsetpredicate()
 namespacepredicate = registrar.namespacepredicate()

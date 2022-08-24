@@ -41,7 +41,7 @@ import os
 import sys
 import time
 
-from edenscm.mercurial import (
+from edenscm import (
     cmdutil,
     copies as copiesmod,
     dispatch,
@@ -55,7 +55,7 @@ from edenscm.mercurial import (
     scmutil,
     util,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.i18n import _
 
 
 if sys.version_info[0] < 3:

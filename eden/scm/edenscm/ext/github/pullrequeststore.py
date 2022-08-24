@@ -11,8 +11,8 @@ ML_COMMITS_PROPERTY = "commits"
 
 import json
 
-from edenscm.mercurial import mutation
-from edenscm.mercurial.node import hex
+from edenscm import mutation
+from edenscm.node import hex
 
 
 class PullRequest:

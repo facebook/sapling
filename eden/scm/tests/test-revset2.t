@@ -7,9 +7,9 @@
   $ HGENCODING=utf-8
   $ export HGENCODING
   $ newext testrevset << EOF
-  > import edenscm.mercurial.revset
+  > import edenscm.revset
   > 
-  > baseset = edenscm.mercurial.revset.baseset
+  > baseset = edenscm.revset.baseset
   > 
   > def r3232(repo, subset, x):
   >     """"simple revset that return [3,2,3,2]
@@ -22,7 +22,7 @@
   >        return baseset()
   >     return baseset([3,3,2,2])
   > 
-  > edenscm.mercurial.revset.symbols['r3232'] = r3232
+  > edenscm.revset.symbols['r3232'] = r3232
   > EOF
 
   $ try() {
@@ -50,7 +50,7 @@ these predicates use '\0' as a separator:
 
   $ cat <<EOF > debugrevlistspec.py
   > from __future__ import absolute_import
-  > from edenscm.mercurial import (
+  > from edenscm import (
   >     node as nodemod,
   >     registrar,
   >     revset,
@@ -1540,7 +1540,7 @@ loading it
   $ cd repo
 
   $ cat <<EOF > $TESTTMP/custompredicate.py
-  > from edenscm.mercurial import error, registrar, revset
+  > from edenscm import error, registrar, revset
   > 
   > revsetpredicate = registrar.revsetpredicate()
   > 
@@ -1563,7 +1563,7 @@ loading it
 Test repo.anyrevs with customized revset overrides
 
   $ cat > $TESTTMP/printprevset.py <<EOF
-  > from edenscm.mercurial import encoding, registrar
+  > from edenscm import encoding, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('printprevset')

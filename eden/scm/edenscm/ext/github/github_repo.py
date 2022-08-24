@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from edenscm.mercurial import git
+from edenscm import git
 
 
 def is_github_repo(repo) -> bool:

@@ -31,7 +31,7 @@ import datetime
 import re
 import time
 
-from edenscm.mercurial import (
+from edenscm import (
     bookmarks,
     cmdutil,
     commands,
@@ -47,8 +47,8 @@ from edenscm.mercurial import (
     templater,
     util,
 )
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.pycompat import range
+from edenscm.i18n import _
+from edenscm.pycompat import range
 
 
 cmdtable = {}

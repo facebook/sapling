@@ -148,7 +148,7 @@ import os
 import re
 from typing import Any, Callable, Optional
 
-from edenscm.mercurial import (
+from edenscm import (
     cmdutil,
     commands,
     context,
@@ -172,9 +172,9 @@ from edenscm.mercurial import (
     ui as uimod,
     util,
 )
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import nullid, nullrev
-from edenscm.mercurial.thirdparty import attr
+from edenscm.i18n import _
+from edenscm.node import nullid, nullrev
+from edenscm.thirdparty import attr
 
 
 cmdtable = {}
@@ -526,7 +526,6 @@ def _trackdirstatesizes(lui: "uimod.ui", repo: "localrepo.localrepository") -> N
     dirstatesize = None
     try:
         # Eden and flat dirstate.
-        # pyre-fixme[16]: treedirstatemap has no attribute _map
         dirstatesize = len(dirstate._map._map)
     except AttributeError:
         # Treestate and treedirstate.

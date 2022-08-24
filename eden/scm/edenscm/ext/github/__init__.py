@@ -8,8 +8,8 @@
 
 from typing import Optional
 
-from edenscm.mercurial import registrar
-from edenscm.mercurial.i18n import _
+from edenscm import registrar
+from edenscm.i18n import _
 
 from . import github_repo as gh_repo, link, submit, templates
 

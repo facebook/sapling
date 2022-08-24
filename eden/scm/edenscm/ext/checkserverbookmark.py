@@ -7,10 +7,10 @@
 # it to be on a server
 from __future__ import absolute_import
 
-from edenscm.mercurial import error, hg
-from edenscm.mercurial.commands import command
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import hex
+from edenscm import error, hg
+from edenscm.commands import command
+from edenscm.i18n import _
+from edenscm.node import hex
 
 
 def getremote(ui, path):

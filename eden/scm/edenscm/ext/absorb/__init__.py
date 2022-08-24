@@ -28,7 +28,7 @@ from __future__ import absolute_import
 
 import collections
 
-from edenscm.mercurial import (
+from edenscm import (
     cmdutil,
     commands,
     context,
@@ -45,8 +45,8 @@ from edenscm.mercurial import (
     scmutil,
     util,
 )
-from edenscm.mercurial.i18n import _, _n
-from edenscm.mercurial.pycompat import decodeutf8, encodeutf8, range
+from edenscm.i18n import _, _n
+from edenscm.pycompat import decodeutf8, encodeutf8, range
 
 # pyre-fixme[21]: Could not find name `linelog` in `edenscmnative`.
 from edenscmnative import linelog

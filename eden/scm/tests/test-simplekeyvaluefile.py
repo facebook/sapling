@@ -8,8 +8,8 @@ from __future__ import absolute_import
 import unittest
 
 import silenttestrunner
-from edenscm.mercurial import error, scmutil
-from edenscm.mercurial.pycompat import decodeutf8
+from edenscm import error, scmutil
+from edenscm.pycompat import decodeutf8
 from hghave import require
 
 

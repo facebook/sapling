@@ -6,9 +6,9 @@
 # shallowrepo.py - shallow repository that uses remote filelogs
 from __future__ import absolute_import
 
-from edenscm.mercurial import error, match, progress, util
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import hex, nullid
+from edenscm import error, match, progress, util
+from edenscm.i18n import _
+from edenscm.node import hex, nullid
 
 from . import fileserverclient, remotefilectx, remotefilelog
 from .repack import domaintenancerepack

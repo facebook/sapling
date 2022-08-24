@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import unittest
 
-from edenscm.mercurial import error, mdiff
+from edenscm import error, mdiff
 from hghave import require
 
 

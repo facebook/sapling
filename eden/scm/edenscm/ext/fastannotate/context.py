@@ -12,7 +12,7 @@ import contextlib
 import hashlib
 import os
 
-from edenscm.mercurial import (
+from edenscm import (
     error,
     lock as lockmod,
     mdiff,
@@ -22,8 +22,8 @@ from edenscm.mercurial import (
     scmutil,
     util,
 )
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.pycompat import range
+from edenscm.i18n import _
+from edenscm.pycompat import range
 
 # pyre-fixme[21]: Could not find name `linelog` in `edenscmnative`.
 from edenscmnative import linelog as linelogmod

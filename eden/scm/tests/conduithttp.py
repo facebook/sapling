@@ -15,7 +15,7 @@ import sys
 # no-check-code
 from optparse import OptionParser
 
-from edenscm.mercurial import pycompat
+from edenscm import pycompat
 
 
 if sys.version_info[0] >= 3:
@@ -27,9 +27,9 @@ else:
 
 
 try:
-    from edenscm.mercurial.server import runservice
+    from edenscm.server import runservice
 except ImportError:
-    from edenscm.mercurial.cmdutil import service as runservice
+    from edenscm.cmdutil import service as runservice
 
 known_translations = {}
 next_error_message = []

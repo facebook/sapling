@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 import bindings
-from edenscm.mercurial import (
+from edenscm import (
     bookmarks,
     color,
     encoding,
@@ -35,7 +35,7 @@ from edenscm.mercurial import (
     registrar,
     util,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.i18n import _
 
 
 cmdtable = {}
@@ -318,9 +318,7 @@ def _makerage(ui, repo, **opts) -> str:
         ("active bookmark", lambda: bookmarks._readactive(repo, repo._bookmarks)),
         (
             "hg version",
-            lambda: __import__(
-                "edenscm.mercurial.__version__"
-            ).mercurial.__version__.version,
+            lambda: __import__("edenscm.__version__").__version__.version,
         ),
     ]
 

@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import context as hgcontext, extensions, hgweb, patch, util
+from edenscm import context as hgcontext, extensions, hgweb, patch, util
 
 from . import context, revmap
 

@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 import silenttestrunner
-from edenscm.mercurial import error, lock, pycompat, ui, vfs
+from edenscm import error, lock, pycompat, ui, vfs
 
 
 class testrustlock(unittest.TestCase):

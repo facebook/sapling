@@ -16,7 +16,7 @@ import os
 import weakref
 from typing import Dict, NamedTuple, Tuple
 
-from edenscm.mercurial import (
+from edenscm import (
     bookmarks,
     cmdutil,
     dispatch,
@@ -30,7 +30,7 @@ from edenscm.mercurial import (
     registrar,
     util,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.i18n import _
 
 
 cmdtable = {}

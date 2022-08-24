@@ -894,7 +894,7 @@ Testing rebase being called inside another transaction
   $ cd tr-state
   $ cat > $TESTTMP/wraprebase.py <<EOF
   > from __future__ import absolute_import
-  > from edenscm.mercurial import extensions
+  > from edenscm import extensions
   > def _rebase(orig, ui, repo, *args, **kwargs):
   >     with repo.wlock():
   >         with repo.lock():

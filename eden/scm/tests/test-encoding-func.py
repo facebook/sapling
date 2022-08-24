@@ -7,7 +7,7 @@ from __future__ import absolute_import
 
 import unittest
 
-from edenscm.mercurial import encoding
+from edenscm import encoding
 from hghave import require
 
 

@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function
 
 import sys
 
-from edenscm.mercurial import store
+from edenscm import store
 from hghave import require
 
 

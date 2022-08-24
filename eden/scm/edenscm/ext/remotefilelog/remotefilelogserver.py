@@ -13,7 +13,7 @@ import stat
 import time
 from typing import Dict, IO, Iterable, List, Set
 
-from edenscm.mercurial import (
+from edenscm import (
     context,
     error,
     exchange,
@@ -24,17 +24,17 @@ from edenscm.mercurial import (
     util,
     wireproto,
 )
-from edenscm.mercurial.extensions import wrapfunction
-from edenscm.mercurial.hgweb import protocol as httpprotocol
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin, hex, nullid
-from edenscm.mercurial.pycompat import range
+from edenscm.extensions import wrapfunction
+from edenscm.hgweb import protocol as httpprotocol
+from edenscm.i18n import _
+from edenscm.node import bin, hex, nullid
+from edenscm.pycompat import range
 
 from . import constants, lz4wrapper, shallowrepo, shallowutil, wirepack
 
 
 try:
-    from edenscm.mercurial import streamclone
+    from edenscm import streamclone
 
     streamclone._walkstreamfiles
     hasstreamclone = True

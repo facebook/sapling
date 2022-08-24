@@ -32,7 +32,7 @@
 
 An extension which makes the log command slow
   $ cat > $TESTTMP/slowlog.py <<EOF
-  > from edenscm.mercurial import commands, extensions, util
+  > from edenscm import commands, extensions, util
   > import time
   > def log(orig, ui, repo, *args, **kwargs):
   >     ui.flush()

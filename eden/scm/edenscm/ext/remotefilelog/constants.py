@@ -7,7 +7,7 @@ from __future__ import absolute_import
 
 import struct
 
-from edenscm.mercurial.i18n import _
+from edenscm.i18n import _
 
 
 REQUIREMENT = "remotefilelog"

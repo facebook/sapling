@@ -6,7 +6,7 @@ then
 fi
 
 cat > notcapable-"${CAP}".py << EOF
-from edenscm.mercurial import extensions, localrepo, repository
+from edenscm import extensions, localrepo, repository
 def extsetup():
     extensions.wrapfunction(repository.peer, 'capable', wrapcapable)
     extensions.wrapfunction(localrepo.localrepository, 'peer', wrappeer)

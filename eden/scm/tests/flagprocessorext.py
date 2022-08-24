@@ -13,7 +13,7 @@ from __future__ import absolute_import
 import base64
 import zlib
 
-from edenscm.mercurial import changegroup, exchange, extensions, filelog, revlog, util
+from edenscm import changegroup, exchange, extensions, filelog, revlog, util
 
 
 # Test only: These flags are defined here only in the context of testing the

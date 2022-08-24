@@ -9,8 +9,8 @@ from __future__ import absolute_import
 
 import traceback
 
-from edenscm.mercurial import error
-from edenscm.mercurial.i18n import _
+from edenscm import error
+from edenscm.i18n import _
 
 
 def getsupportcontact(ui):

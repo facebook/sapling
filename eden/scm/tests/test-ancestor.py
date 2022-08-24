@@ -13,8 +13,8 @@ import random
 import sys
 import time
 
-from edenscm.mercurial import ancestor, debugcommands, hg, pycompat, ui as uimod, util
-from edenscm.mercurial.node import nullrev
+from edenscm import ancestor, debugcommands, hg, pycompat, ui as uimod, util
+from edenscm.node import nullrev
 from hghave import require
 
 

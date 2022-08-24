@@ -10,10 +10,10 @@ import hashlib
 import os
 
 from bindings import revisionstore
+from edenscm import error, filelog, pycompat, revlog
 from edenscm.ext import extutil
-from edenscm.mercurial import error, filelog, pycompat, revlog
-from edenscm.mercurial.i18n import _, _x
-from edenscm.mercurial.node import bin, hex, nullid, short
+from edenscm.i18n import _, _x
+from edenscm.node import bin, hex, nullid, short
 
 from . import constants, fileserverclient, shallowrepo, shallowutil
 from .contentstore import unioncontentstore

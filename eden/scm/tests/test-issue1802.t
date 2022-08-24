@@ -9,7 +9,7 @@
 Create extension that can disable exec checks:
 
   $ cat > noexec.py <<EOF
-  > from edenscm.mercurial import extensions, util
+  > from edenscm import extensions, util
   > def setflags(orig, f, l, x):
   >     pass
   > def checkexec(orig, path):

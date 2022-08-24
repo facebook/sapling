@@ -5,7 +5,7 @@
   > import os
   > import shutil
   > 
-  > from edenscm.mercurial import util
+  > from edenscm import util
   > 
   > with util.posixfile("file", "w") as f:
   >     f.write("CONTENT")

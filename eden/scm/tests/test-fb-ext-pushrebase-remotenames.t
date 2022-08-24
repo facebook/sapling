@@ -179,7 +179,7 @@ Test a push that comes with out-of-date bookmark discovery
   >     import traceback
   >     if [f for f in traceback.extract_stack(limit=10)[:-1] if f[2] == "movebookmark"]:
   >         return
-  >     import edenscm.mercurial.lock as lockmod
+  >     import edenscm.lock as lockmod
   >     tr = None
   >     try:
   >         lock = repo.lock()

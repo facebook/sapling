@@ -5,7 +5,7 @@
 
 import re
 
-from edenscm.mercurial import (
+from edenscm import (
     autopull,
     bundle2,
     commands,
@@ -23,8 +23,8 @@ from edenscm.mercurial import (
     util,
     wireproto,
 )
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.util import sortdict
+from edenscm.i18n import _
+from edenscm.util import sortdict
 
 from . import bookmarks, constants
 from .constants import pathname

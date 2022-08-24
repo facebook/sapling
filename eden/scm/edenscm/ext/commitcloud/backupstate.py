@@ -8,8 +8,8 @@ from __future__ import absolute_import
 import hashlib
 import os
 
-from edenscm.mercurial import error, node as nodemod, util
-from edenscm.mercurial.pycompat import encodeutf8
+from edenscm import error, node as nodemod, util
+from edenscm.pycompat import encodeutf8
 
 from . import dependencies
 

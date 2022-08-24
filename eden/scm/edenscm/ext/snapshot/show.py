@@ -3,11 +3,11 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from edenscm.mercurial import error, scmutil
-from edenscm.mercurial.cmdutil import changeset_printer, jsonchangeset
-from edenscm.mercurial.context import memctx, memfilectx
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.util import pickle
+from edenscm import error, scmutil
+from edenscm.cmdutil import changeset_printer, jsonchangeset
+from edenscm.context import memctx, memfilectx
+from edenscm.i18n import _
+from edenscm.util import pickle
 
 
 def _snapshot2ctx(repo, snapshot):

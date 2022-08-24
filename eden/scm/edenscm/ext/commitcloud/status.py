@@ -7,8 +7,8 @@ from __future__ import absolute_import
 
 import time
 
-from edenscm.mercurial import hintutil, node as nodemod, util
-from edenscm.mercurial.i18n import _
+from edenscm import hintutil, node as nodemod, util
+from edenscm.i18n import _
 
 from . import (
     background,

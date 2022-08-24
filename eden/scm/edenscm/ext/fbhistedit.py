@@ -11,13 +11,13 @@ Adds a s/stop verb to histedit to stop after a changeset was picked.
 
 from pipes import quote
 
-from edenscm import mercurial
-from edenscm.mercurial import (
+from edenscm import (
     cmdutil,
     encoding,
     error,
     extensions,
     hg,
+    json,
     lock,
     merge as mergemod,
     mergeutil,
@@ -26,7 +26,7 @@ from edenscm.mercurial import (
     registrar,
     scmutil,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.i18n import _
 
 
 cmdtable = {}
@@ -223,7 +223,7 @@ def parserules(orig, rules, state):
 
 
 def _parsejsonrules(rules, state):
-    jsondata = mercurial.json.loads(rules)
+    jsondata = json.loads(rules)
 
     parsedrules = ""
     try:

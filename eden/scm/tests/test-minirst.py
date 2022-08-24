@@ -2,7 +2,7 @@ from __future__ import absolute_import, print_function
 
 import pprint
 
-from edenscm.mercurial import minirst
+from edenscm import minirst
 from hghave import require
 
 

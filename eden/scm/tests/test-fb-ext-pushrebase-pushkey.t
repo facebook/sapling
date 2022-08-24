@@ -51,7 +51,7 @@ Set up the client to commit on the server-side when a push happens. This simulat
   $ set config extensions.pushrebase=
 
   $ cat >> $TESTTMP/wrapper.py << EOF
-  > from edenscm.mercurial import exchange, extensions
+  > from edenscm import exchange, extensions
   > def wrapper(orig, pushop):
   >   r = orig(pushop)
   >   pushop.repo.ui.system("bash $TESTTMP/commit.sh")

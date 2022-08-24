@@ -7,8 +7,8 @@ from __future__ import absolute_import
 
 import os
 
-from edenscm.mercurial import commands, encoding, error, pycompat, util
-from edenscm.mercurial.i18n import _
+from edenscm import commands, encoding, error, pycompat, util
+from edenscm.i18n import _
 
 from . import error as ccerror
 

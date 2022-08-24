@@ -33,8 +33,8 @@ from __future__ import absolute_import
 
 import socket
 
-from edenscm.mercurial import registrar
-from edenscm.mercurial.hgweb import server
+from edenscm import registrar
+from edenscm.hgweb import server
 
 
 configtable = {}

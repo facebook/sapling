@@ -9,8 +9,8 @@ from __future__ import absolute_import
 
 import re
 
-from edenscm.mercurial import commands, error, extensions, registrar
-from edenscm.mercurial.i18n import _
+from edenscm import commands, error, extensions, registrar
+from edenscm.i18n import _
 
 
 cmdtable = {}

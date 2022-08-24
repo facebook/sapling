@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 import time
 
-from edenscm.mercurial import (
+from edenscm import (
     bundle2,
     changegroup,
     discovery,
@@ -29,7 +29,7 @@ from edenscm.mercurial import (
     util,
     wireproto,
 )
-from edenscm.mercurial.i18n import _, _n, _x
+from edenscm.i18n import _, _n, _x
 
 from . import constants
 

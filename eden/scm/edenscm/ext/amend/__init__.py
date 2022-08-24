@@ -52,7 +52,7 @@ from __future__ import absolute_import
 import io
 
 from bindings import checkout as nativecheckout
-from edenscm.mercurial import (
+from edenscm import (
     cmdutil,
     commands,
     context,
@@ -66,8 +66,8 @@ from edenscm.mercurial import (
     registrar,
     scmutil,
 )
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import short
+from edenscm.i18n import _
+from edenscm.node import short
 
 from .. import rebase as rebasemod
 from . import common, fold, hide, metaedit, movement, restack, revsets, split, unamend

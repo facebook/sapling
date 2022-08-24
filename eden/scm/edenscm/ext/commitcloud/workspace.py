@@ -5,8 +5,8 @@
 
 import socket
 
-from edenscm.mercurial import config, error, pycompat, util
-from edenscm.mercurial.i18n import _
+from edenscm import config, error, pycompat, util
+from edenscm.i18n import _
 
 
 workspaceopts = [

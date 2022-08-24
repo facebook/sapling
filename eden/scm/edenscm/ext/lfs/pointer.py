@@ -9,8 +9,8 @@ from __future__ import absolute_import
 
 import re
 
-from edenscm.mercurial import error, pycompat
-from edenscm.mercurial.i18n import _
+from edenscm import error, pycompat
+from edenscm.i18n import _
 
 
 class InvalidPointer(error.RevlogError):

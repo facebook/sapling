@@ -119,14 +119,8 @@ Configs::
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import (
-    extensions,
-    localrepo,
-    node as nodemod,
-    registrar,
-    smartset,
-)
-from edenscm.mercurial.i18n import _
+from edenscm import extensions, localrepo, node as nodemod, registrar, smartset
+from edenscm.i18n import _
 
 from . import (
     background,
@@ -206,7 +200,9 @@ def reposetup(ui, repo):
             return orig(self, ui, prefix)
 
     if synccheckout:
-        extensions.wrapfunction(localrepo.dirstate.dirstate, "loginfo", _sendlocation)
+        extensions.wrapfunction(
+            localrepo.dirstatemod.dirstate, "loginfo", _sendlocation
+        )
 
     class commitcloudrepo(repo.__class__):
         def automigratefinish(self):

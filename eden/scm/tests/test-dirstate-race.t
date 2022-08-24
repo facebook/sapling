@@ -56,7 +56,7 @@ confused with a file with the exec bit set
   $ hg commit -m test2
 
   $ cat >> $TESTTMP/dirstaterace.py << EOF
-  > from edenscm.mercurial import (
+  > from edenscm import (
   >     extensions,
   >     filesystem,
   > )

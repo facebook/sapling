@@ -9,8 +9,8 @@ import ssl
 import sys
 from typing import List, Optional, Sized
 
-from edenscm.mercurial import mutation, pycompat, registrar, smartset, util as hgutil
-from edenscm.mercurial.i18n import _
+from edenscm import mutation, pycompat, registrar, smartset, util as hgutil
+from edenscm.i18n import _
 
 from .extlib.phabricator import arcconfig, diffprops, graphql
 

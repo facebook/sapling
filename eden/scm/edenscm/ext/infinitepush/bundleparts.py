@@ -7,7 +7,7 @@ import errno
 import os
 import tempfile
 
-from edenscm.mercurial import (
+from edenscm import (
     bundle2,
     changegroup,
     error,
@@ -19,8 +19,8 @@ from edenscm.mercurial import (
     revsetlang,
     util,
 )
-from edenscm.mercurial.bundle2 import bundlepart
-from edenscm.mercurial.i18n import _
+from edenscm.bundle2 import bundlepart
+from edenscm.i18n import _
 
 from . import bookmarks, constants, server
 

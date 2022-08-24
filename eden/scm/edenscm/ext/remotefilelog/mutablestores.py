@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 from bindings import revisionstore
-from edenscm.mercurial.node import hex
+from edenscm.node import hex
 
 from . import shallowutil
 

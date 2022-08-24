@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from edenscm.mercurial import util
+from edenscm import util
 
 
 # XXX: we should probably offer a devel option to do this in blackbox directly

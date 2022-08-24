@@ -11,10 +11,10 @@ import collections
 import os
 
 from bindings import revisionstore
-from edenscm.mercurial import ancestor, error, filelog, mdiff, pycompat, revlog, util
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin, hex, nullid
-from edenscm.mercurial.pycompat import isint
+from edenscm import ancestor, error, filelog, mdiff, pycompat, revlog, util
+from edenscm.i18n import _
+from edenscm.node import bin, hex, nullid
+from edenscm.pycompat import isint
 
 from .. import clienttelemetry
 from . import constants, fileserverclient, shallowutil

@@ -12,9 +12,9 @@ from __future__ import absolute_import, print_function
 
 import unittest
 
-from edenscm.mercurial import mdiff
-from edenscm.mercurial.annotate import _annotatepair
-from edenscm.mercurial.context import annotateline
+from edenscm import mdiff
+from edenscm.annotate import _annotatepair
+from edenscm.context import annotateline
 from hghave import require
 
 

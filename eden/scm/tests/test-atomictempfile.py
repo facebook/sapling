@@ -11,7 +11,7 @@ import shutil
 import tempfile
 import unittest
 
-from edenscm.mercurial import util
+from edenscm import util
 from hghave import require
 
 

@@ -9,9 +9,9 @@ import hashlib
 import os
 import socket
 
-from edenscm.mercurial import vfs as vfsmod
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.pycompat import encodeutf8
+from edenscm import vfs as vfsmod
+from edenscm.i18n import _
+from edenscm.pycompat import encodeutf8
 
 from . import error as ccerror, util as ccutil, workspace
 

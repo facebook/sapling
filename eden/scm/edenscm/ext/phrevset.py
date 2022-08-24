@@ -28,18 +28,9 @@ Example for www::
 
 import re
 
-from edenscm.mercurial import (
-    autopull,
-    error,
-    hg,
-    json,
-    namespaces,
-    pycompat,
-    registrar,
-    util,
-)
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin, hex, nullhex
+from edenscm import autopull, error, hg, json, namespaces, pycompat, registrar, util
+from edenscm.i18n import _
+from edenscm.node import bin, hex, nullhex
 
 from .extlib.phabricator import graphql
 

@@ -9,17 +9,9 @@ from __future__ import absolute_import
 
 from itertools import count
 
-from edenscm.mercurial import (
-    bookmarks,
-    cmdutil,
-    commands,
-    error,
-    phases,
-    registrar,
-    scmutil,
-)
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import hex, nullrev, short
+from edenscm import bookmarks, cmdutil, commands, error, phases, registrar, scmutil
+from edenscm.i18n import _
+from edenscm.node import hex, nullrev, short
 
 from . import common
 

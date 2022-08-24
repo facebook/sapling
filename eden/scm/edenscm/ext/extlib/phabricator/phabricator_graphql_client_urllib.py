@@ -7,7 +7,7 @@ from __future__ import absolute_import
 
 import ssl
 
-from edenscm.mercurial import json, util
+from edenscm import json, util
 
 
 urlreq = util.urlreq

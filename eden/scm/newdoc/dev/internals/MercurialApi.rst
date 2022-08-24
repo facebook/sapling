@@ -35,7 +35,7 @@ A reasonably complex example might be ``hg commit -m "A test" --addremove file1.
 
 .. sourcecode:: python
 
-       from edenscm.mercurial import commands
+       from edenscm import commands
        commands.commit(ui, repo, 'file1.py', 'file2.py', message="A test", addremove=True)
 
 In practice, some of the options for the commit command are required in a call, and must be included as keyword parameters - adding ``date=None, user=None, logfile=None`` would be sufficient in this case. This detail can be ignored for now.
@@ -44,7 +44,7 @@ Commands which fail will raise a mercurial.error.Abort exception, with a message
 
 .. sourcecode:: python
 
-       from edenscm.mercurial import error
+       from edenscm import error
        raise error.Abort("The repository is not local")
 
 Generally, however, you should **not** use this interface, as it mixes user interface and functionality. If you want to write robust code, you should read the source of the command function, and extract the relevant details. For most commands, this is not as hard as it seems - there is often a "core" function (usually in the ``cmdutil`` or ``hg`` module) which performs the important work of the command.
@@ -56,7 +56,7 @@ In order to get started, you'll often need a UI and a repository object. The UI 
 
 .. sourcecode:: python
 
-       from edenscm.mercurial import ui, hg
+       from edenscm import ui, hg
        repo = hg.repository(ui.ui(), '.')
 
 Here, the '.' is the path to the repository, which could also be something starting with http or ssh, for example. You'll often need these objects to get any work done through the Mercurial API, for example by using the commands as detailed above.
@@ -113,7 +113,7 @@ Here is a sample code snippet adapted from http://selenic.com/pipermail/mercuria
 
 .. sourcecode:: python
 
-   from edenscm.mercurial import ui, hg, commands
+   from edenscm import ui, hg, commands
    u = ui.ui()
    repo = hg.repository(u, "/path/to/repo")
    u.pushbuffer()

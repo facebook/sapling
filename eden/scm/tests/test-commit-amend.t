@@ -8,7 +8,7 @@
 Avoid "\r" in messages:
 
   $ cat > crlf.py << 'EOF'
-  > from edenscm.mercurial import extensions, util
+  > from edenscm import extensions, util
   > def uisetup(ui):
   >     extensions.wrapfunction(util, 'tonativeeol', lambda _orig, x: x)
   > EOF

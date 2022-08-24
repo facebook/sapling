@@ -41,8 +41,8 @@ from __future__ import absolute_import
 
 import json
 
-from edenscm.mercurial import progress, registrar, util
-from edenscm.mercurial.extensions import wrapfunction
+from edenscm import progress, registrar, util
+from edenscm.extensions import wrapfunction
 
 
 testedwith = "ships-with-fb-ext"

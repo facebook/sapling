@@ -25,7 +25,7 @@ from __future__ import absolute_import
 
 import copy
 
-from edenscm.mercurial import (
+from edenscm import (
     commands,
     error,
     extensions,
@@ -34,9 +34,9 @@ from edenscm.mercurial import (
     scmutil,
     util,
 )
-from edenscm.mercurial.filemerge import absentfilectx
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin
+from edenscm.filemerge import absentfilectx
+from edenscm.i18n import _
+from edenscm.node import bin
 
 
 testedwith = "ships-with-fb-ext"

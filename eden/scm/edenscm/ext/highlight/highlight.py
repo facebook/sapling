@@ -15,9 +15,7 @@
 
 from __future__ import absolute_import
 
-from edenscm import hgdemandimport as demandimport
-
-from edenscm.mercurial import encoding, util
+from edenscm import encoding, hgdemandimport as demandimport, util
 
 
 demandimport.ignore.extend(["pkgutil", "pkg_resources", "__main__"])

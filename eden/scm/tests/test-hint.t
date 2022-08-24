@@ -2,7 +2,7 @@
 `#chg-compatible
 
   $ newext showhint << EOF
-  > from edenscm.mercurial import (
+  > from edenscm import (
   >     cmdutil,
   >     hintutil,
   >     registrar,

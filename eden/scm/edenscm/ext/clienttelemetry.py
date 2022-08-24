@@ -16,17 +16,9 @@ from __future__ import absolute_import
 import socket
 from typing import Any, Dict
 
-from edenscm.mercurial import (
-    blackbox,
-    dispatch,
-    extensions,
-    hg,
-    perftrace,
-    util,
-    wireproto,
-)
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.pycompat import decodeutf8
+from edenscm import blackbox, dispatch, extensions, hg, perftrace, util, wireproto
+from edenscm.i18n import _
+from edenscm.pycompat import decodeutf8
 
 
 # Client telemetry functions generate client telemetry data at connection time.

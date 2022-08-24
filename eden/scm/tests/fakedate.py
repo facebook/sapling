@@ -2,7 +2,7 @@ import datetime
 import time
 
 import bindings
-from edenscm.mercurial import util
+from edenscm import util
 
 
 def extsetup(ui):

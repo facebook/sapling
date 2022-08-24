@@ -28,16 +28,8 @@ The default is 50.
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import (
-    commands,
-    copies,
-    error,
-    extensions,
-    registrar,
-    scmutil,
-    similar,
-)
-from edenscm.mercurial.i18n import _
+from edenscm import commands, copies, error, extensions, registrar, scmutil, similar
+from edenscm.i18n import _
 
 
 configtable = {}

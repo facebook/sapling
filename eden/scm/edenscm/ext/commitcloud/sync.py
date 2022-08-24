@@ -11,7 +11,7 @@ import re
 import socket
 import time
 
-from edenscm.mercurial import (
+from edenscm import (
     blackbox,
     bookmarks,
     error,
@@ -24,9 +24,9 @@ from edenscm.mercurial import (
     util,
     visibility,
 )
-from edenscm.mercurial.i18n import _, _n
-from edenscm.mercurial.node import hex
-from edenscm.mercurial.pycompat import encodeutf8
+from edenscm.i18n import _, _n
+from edenscm.node import hex
+from edenscm.pycompat import encodeutf8
 
 from . import (
     backup,

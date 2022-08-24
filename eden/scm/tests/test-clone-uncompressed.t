@@ -66,7 +66,7 @@ while cloning
 
   $ cat > delayer.py <<EOF
   > import time
-  > from edenscm.mercurial import extensions, vfs
+  > from edenscm import extensions, vfs
   > def __call__(orig, self, path, *args, **kwargs):
   >     if path == 'data/f1.i':
   >         time.sleep(2)

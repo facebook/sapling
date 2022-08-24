@@ -343,7 +343,7 @@ py_class!(pub class treemanifest |py| {
 
     def matches(&self, pymatcher: PyObject) -> PyResult<PyObject> {
         let flatmanifest = self.text(py, Some(pymatcher))?;
-        let manifestmod = py.import("edenscm.mercurial.manifest")?;
+        let manifestmod = py.import("edenscm.manifest")?;
         let manifestdict = manifestmod.get(py, "manifestdict")?;
         manifestdict.call(py, (flatmanifest,), None)
     }

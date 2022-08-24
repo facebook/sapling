@@ -24,7 +24,7 @@ In alias
 #if normal-layout
 statprof can be used as a standalone module
 
-  $ hg debugpython -- -m edenscm.mercurial.statprof hotpath
+  $ hg debugpython -- -m edenscm.statprof hotpath
   must specify --file to load
   [1]
 #endif

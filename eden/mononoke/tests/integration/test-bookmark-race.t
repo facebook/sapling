@@ -60,7 +60,7 @@ update master_bookmark concurrently.
 configure an extension so that a push happens right after pulldiscovery
 
   $ cat > $TESTTMP/pulldiscovery_push.py << EOF
-  > from edenscm.mercurial import (
+  > from edenscm import (
   >     exchange,
   >     extensions,
   > )

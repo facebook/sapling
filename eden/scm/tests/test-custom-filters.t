@@ -20,7 +20,7 @@
   > EOF
 
   $ cat > prefix.py << 'EOF'
-  > from edenscm.mercurial import error
+  > from edenscm import error
   > def stripprefix(s, cmd, filename, **kwargs):
   >     header = '%s\n' % cmd
   >     if s[:len(header)] != header:

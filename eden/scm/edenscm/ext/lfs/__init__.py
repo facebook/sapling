@@ -45,7 +45,7 @@ from __future__ import absolute_import
 
 import hashlib
 
-from edenscm.mercurial import (
+from edenscm import (
     blobstore as blobstoremod,
     bundle2,
     changegroup,
@@ -62,7 +62,7 @@ from edenscm.mercurial import (
     util,
     vfs as vfsmod,
 )
-from edenscm.mercurial.i18n import _, _x
+from edenscm.i18n import _, _x
 
 from . import blobstore, pointer, wrapper
 

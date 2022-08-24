@@ -72,7 +72,7 @@ import re
 import shutil
 import tempfile
 
-from edenscm.mercurial import (
+from edenscm import (
     archival,
     cmdutil,
     error,
@@ -82,8 +82,8 @@ from edenscm.mercurial import (
     scmutil,
     util,
 )
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import nullid, short
+from edenscm.i18n import _
+from edenscm.node import nullid, short
 
 
 cmdtable = {}

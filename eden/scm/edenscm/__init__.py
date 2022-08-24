@@ -81,7 +81,7 @@ def run(args=None, fin=None, fout=None, ferr=None, config=None):
         tracing.disabletracing = True
 
         # no demandimport, since chgserver wants to preimport everything.
-        from .mercurial import dispatch
+        from . import dispatch
 
         dispatch.runchgserver()
     else:
@@ -101,6 +101,6 @@ def run(args=None, fin=None, fout=None, ferr=None, config=None):
 
         # demandimport has side effect on importing dispatch.
         # so 'import dispatch' happens after demandimport
-        from .mercurial import dispatch
+        from . import dispatch
 
         dispatch.run(args, fin, fout, ferr, config)

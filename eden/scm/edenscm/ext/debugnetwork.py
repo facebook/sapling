@@ -18,16 +18,8 @@
 import socket
 from typing import List, Optional, Tuple, Union
 
-from edenscm.mercurial import (
-    error,
-    hg,
-    httpclient,
-    httpconnection,
-    registrar,
-    sslutil,
-    util,
-)
-from edenscm.mercurial.i18n import _
+from edenscm import error, hg, httpclient, httpconnection, registrar, sslutil, util
+from edenscm.i18n import _
 
 
 cmdtable = {}

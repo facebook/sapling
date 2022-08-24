@@ -17,9 +17,9 @@ import unittest
 
 import silenttestrunner
 from bindings import revisionstore
+from edenscm import error, pycompat, ui as uimod, util
 from edenscm.ext.remotefilelog.metadatastore import unionmetadatastore
-from edenscm.mercurial import error, pycompat, ui as uimod, util
-from edenscm.mercurial.node import nullid
+from edenscm.node import nullid
 from hghave import require
 
 

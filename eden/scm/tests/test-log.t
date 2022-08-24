@@ -1764,7 +1764,7 @@
   $ cat > ../names.py << 'EOF'
   > """A small extension to test adding arbitrary names to a repo"""
   > from __future__ import absolute_import
-  > from edenscm.mercurial import namespaces, registrar
+  > from edenscm import namespaces, registrar
   > 
   > 
   > namespacepredicate = registrar.namespacepredicate()
@@ -1803,7 +1803,7 @@
 
 # revert side effect of names.py
 
-  >>> from edenscm.mercurial import namespaces
+  >>> from edenscm import namespaces
   >>> del namespaces.namespacetable["bars"]
 
 # Templater parse errors:

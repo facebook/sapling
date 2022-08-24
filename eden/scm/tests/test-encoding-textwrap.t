@@ -7,7 +7,7 @@ Test text wrapping for multibyte characters
 define commands to display help text
 
   $ cat << EOF > show.py
-  > from edenscm.mercurial import registrar
+  > from edenscm import registrar
   > 
   > cmdtable = {}
   > command = registrar.command(cmdtable)

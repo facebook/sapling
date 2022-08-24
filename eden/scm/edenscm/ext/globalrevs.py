@@ -55,7 +55,7 @@ from __future__ import absolute_import
 import struct
 
 from bindings import nodemap as nodemapmod
-from edenscm.mercurial import (
+from edenscm import (
     error,
     extensions,
     localrepo,
@@ -65,7 +65,7 @@ from edenscm.mercurial import (
     registrar,
     revset,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.i18n import _
 
 from .hgsql import CorruptionException, executewithsql, ishgsqlbypassed, issqlrepo
 from .pushrebase import isnonpushrebaseblocked

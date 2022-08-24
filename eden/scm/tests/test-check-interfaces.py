@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import, print_function
 
-from edenscm.mercurial import bundlerepo, localrepo, sshpeer, ui as uimod
+from edenscm import bundlerepo, localrepo, sshpeer, ui as uimod
 from hghave import require
 
 

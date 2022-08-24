@@ -8,8 +8,8 @@ from __future__ import absolute_import
 # Standard Library
 import os
 
-from edenscm.mercurial import error, json, pycompat
-from edenscm.mercurial.i18n import _
+from edenscm import error, json, pycompat
+from edenscm.i18n import _
 
 from . import baseservice, error as ccerror, workspace as ccworkspace
 

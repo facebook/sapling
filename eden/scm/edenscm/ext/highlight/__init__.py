@@ -33,8 +33,8 @@ match (even matches with a low confidence score) will be used.
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import encoding, extensions, fileset
-from edenscm.mercurial.hgweb import common, webcommands, webutil
+from edenscm import encoding, extensions, fileset
+from edenscm.hgweb import common, webcommands, webutil
 
 from . import highlight
 

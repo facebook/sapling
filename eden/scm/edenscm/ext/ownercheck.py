@@ -15,8 +15,8 @@ This prevents some common mistakes like using sudo to clone a repo.
 
 import os
 
-from edenscm.mercurial import error, extensions, localrepo
-from edenscm.mercurial.i18n import _
+from edenscm import error, extensions, localrepo
+from edenscm.i18n import _
 
 
 try:

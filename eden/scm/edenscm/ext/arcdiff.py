@@ -8,7 +8,7 @@
 
 import os
 
-from edenscm.mercurial import (
+from edenscm import (
     autopull,
     commands,
     error,
@@ -21,8 +21,8 @@ from edenscm.mercurial import (
     scmutil,
     smartset,
 )
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import hex
+from edenscm.i18n import _
+from edenscm.node import hex
 
 from .extlib.phabricator import arcconfig, diffprops, graphql
 

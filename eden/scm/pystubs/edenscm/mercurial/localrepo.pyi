@@ -26,37 +26,37 @@ from typing import (
     Union,
 )
 
-import edenscm.mercurial.connectionpool
-import edenscm.mercurial.context
-import edenscm.mercurial.filelog
-import edenscm.mercurial.lock
-import edenscm.mercurial.namespaces
-import edenscm.mercurial.pathutil
-import edenscm.mercurial.peer
-import edenscm.mercurial.phases
-import edenscm.mercurial.repository
-import edenscm.mercurial.scmutil
-import edenscm.mercurial.store
-import edenscm.mercurial.urllibcompat
-import edenscm.mercurial.util
-import edenscm.mercurial.vfs
+import edenscm.connectionpool
+import edenscm.context
+import edenscm.filelog
+import edenscm.lock
+import edenscm.namespaces
+import edenscm.pathutil
+import edenscm.peer
+import edenscm.phases
+import edenscm.repository
+import edenscm.scmutil
+import edenscm.store
+import edenscm.urllibcompat
+import edenscm.util
+import edenscm.vfs
 
 _T = TypeVar("_T")
 _T0 = TypeVar("_T0")
 _T1 = TypeVar("_T1")
-_Tlocalpeer = TypeVar("_Tlocalpeer", bound="edenscm.mercurial.repository._basepeer")
+_Tlocalpeer = TypeVar("_Tlocalpeer", bound="edenscm.repository._basepeer")
 _Tlocalrepository = TypeVar("_Tlocalrepository", bound=localrepository)
 
-class _basefilecache(edenscm.mercurial.scmutil.filecache):
+class _basefilecache(edenscm.scmutil.filecache):
     __doc__: str
     def __delete__(self, obj) -> None: ...
     def __get__(self, obj, type=...) -> Any: ...
     def __set__(self, obj, value) -> None: ...
 
-class filteredpropertycache(edenscm.mercurial.util.propertycache):
+class filteredpropertycache(edenscm.util.propertycache):
     __doc__: str
 
-class locallegacypeer(edenscm.mercurial.repository.legacypeer, localpeer):
+class locallegacypeer(edenscm.repository.legacypeer, localpeer):
     __doc__: str
     _caps: Any
     _repo: Any
@@ -67,7 +67,7 @@ class locallegacypeer(edenscm.mercurial.repository.legacypeer, localpeer):
     def changegroup(self, nodes, kind) -> Any: ...
     def changegroupsubset(self, bases, heads, kind) -> Any: ...
 
-class localpeer(edenscm.mercurial.repository.peer):
+class localpeer(edenscm.repository.peer):
     __doc__: str
     _caps: Any
     _repo: Any
@@ -83,7 +83,7 @@ class localpeer(edenscm.mercurial.repository.peer):
         self, source, heads=..., common=..., bundlecaps=..., **kwargs
     ) -> Any: ...
     def heads(self, *args, **kwargs) -> list: ...
-    def iterbatch(self) -> edenscm.mercurial.peer.localiterbatcher: ...
+    def iterbatch(self) -> edenscm.peer.localiterbatcher: ...
     def known(self, nodes) -> Any: ...
     def listkeys(self, namespace) -> Any: ...
     def local(self) -> Any: ...
@@ -111,27 +111,27 @@ class localrepository(object):
     _lockfreeprefix: Set[str]
     _lockref: Optional[_weakref.ReferenceType[Any]]
     _mutationstore: Any
-    _phasecache: edenscm.mercurial.phases.phasecache
+    _phasecache: edenscm.phases.phasecache
     _phasedefaults: List[Any]
     _postdsstatus: List[Tuple[Any, Any]]
     _transref: Optional[_weakref.ReferenceType[Any]]
     _wlockfreeprefix: Set[str]
     _wlockref: Optional[_weakref.ReferenceType[Any]]
-    auditor: edenscm.mercurial.pathutil.pathauditor
-    baseui: edenscm.mercurial.ui.ui
-    cachevfs: edenscm.mercurial.vfs.vfs
-    connectionpool: edenscm.mercurial.connectionpool.connectionpool
-    dirstate: edenscm.mercurial.dirstate.dirstate
+    auditor: edenscm.pathutil.pathauditor
+    baseui: edenscm.ui.ui
+    cachevfs: edenscm.vfs.vfs
+    connectionpool: edenscm.connectionpool.connectionpool
+    dirstate: edenscm.dirstate.dirstate
     disableeventreporting: Callable[..., contextlib._GeneratorContextManager]
     featuresetupfuncs: Set[Any]
     fileservice: Any
     fileslog: Any
     filteredrevcache: Dict[Any, Any]
     filterpats: Dict[Any, List[Tuple[Any, Any, Any]]]
-    localvfs: edenscm.mercurial.vfs.vfs
+    localvfs: edenscm.vfs.vfs
     manifestlog: Any
-    names: edenscm.mercurial.namespaces.namespaces
-    nofsauditor: edenscm.mercurial.pathutil.pathauditor
+    names: edenscm.namespaces.namespaces
+    nofsauditor: edenscm.pathutil.pathauditor
     obsstore: Any
     openerreqs: Set[str]
     origroot: str
@@ -142,19 +142,19 @@ class localrepository(object):
     sharedfeatures: Set[str]
     sharedpath: str
     sharedroot: str
-    sharedvfs: Optional[edenscm.mercurial.vfs.vfs]
+    sharedvfs: Optional[edenscm.vfs.vfs]
     sjoin: Callable[[Any], Any]
     spath: str
-    store: edenscm.mercurial.store.basicstore
+    store: edenscm.store.basicstore
     storefeaturesetupfuncs: Set[Any]
     storerequirements: Set[str]
     storesupported: Set[str]
     supported: Set[str]
     supportedformats: Set[str]
-    svfs: edenscm.mercurial.vfs.vfs
-    ui: edenscm.mercurial.ui.ui
-    vfs: edenscm.mercurial.vfs.vfs
-    wvfs: edenscm.mercurial.vfs.vfs
+    svfs: edenscm.vfs.vfs
+    ui: edenscm.ui.ui
+    vfs: edenscm.vfs.vfs
+    wvfs: edenscm.vfs.vfs
     def __bool__(self) -> bool: ...
     def __contains__(self, changeid) -> bool: ...
     def __getitem__(self, changeid) -> Any: ...
@@ -180,9 +180,9 @@ class localrepository(object):
         self,
     ) -> Tuple[
         Tuple[Any, str],
-        Tuple[edenscm.mercurial.vfs.vfs, str],
-        Tuple[edenscm.mercurial.vfs.vfs, str],
-        Tuple[edenscm.mercurial.vfs.vfs, str],
+        Tuple[edenscm.vfs.vfs, str],
+        Tuple[edenscm.vfs.vfs, str],
+        Tuple[edenscm.vfs.vfs, str],
         Tuple[Any, str],
         Tuple[Any, str],
         Tuple[Any, str],
@@ -220,8 +220,8 @@ class localrepository(object):
     def cancopy(self) -> bool: ...
     def changectx(
         self,
-        changeid: Union[int, str, bytes, edenscm.mercurial.context.basectx],
-    ) -> edenscm.mercurial.context.basectx: ...
+        changeid: Union[int, str, bytes, edenscm.context.basectx],
+    ) -> edenscm.context.basectx: ...
     def checkcommitpatterns(self, wctx, match, status, fail) -> None: ...
     def checkpush(self, pushop) -> None: ...
     def clearpostdsstatus(self) -> None: ...
@@ -234,10 +234,8 @@ class localrepository(object):
     def debugwireargs(self, one, two, three=..., four=..., five=...) -> str: ...
     def destroyed(self) -> None: ...
     def destroying(self) -> None: ...
-    def file(self, f) -> edenscm.mercurial.filelog.filelog: ...
-    def filectx(
-        self, path, changeid=..., fileid=...
-    ) -> edenscm.mercurial.context.filectx: ...
+    def file(self, f) -> edenscm.filelog.filelog: ...
+    def filectx(self, path, changeid=..., fileid=...) -> edenscm.context.filectx: ...
     def getcwd(self) -> str: ...
     def headrevs(
         self, start=..., includepublic=..., includedraft=..., reverse=...
@@ -299,7 +297,7 @@ class storecache(_basefilecache):
     __doc__: str
     def join(self, obj, fname) -> Any: ...
 
-class unfilteredpropertycache(edenscm.mercurial.util.propertycache):
+class unfilteredpropertycache(edenscm.util.propertycache):
     __doc__: str
     def __get__(self, obj, type=...) -> Any: ...
 

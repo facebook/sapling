@@ -1,7 +1,7 @@
 #chg-compatible
 
   $ newext crash <<EOF
-  > from edenscm.mercurial import registrar
+  > from edenscm import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('crash', [])

@@ -7,8 +7,8 @@
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import mutation, phases, registrar, revset, smartset
-from edenscm.mercurial.node import nullrev
+from edenscm import mutation, phases, registrar, revset, smartset
+from edenscm.node import nullrev
 
 
 revsetpredicate = registrar.revsetpredicate()

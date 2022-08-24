@@ -45,8 +45,7 @@ from __future__ import absolute_import
 from typing import Sized
 
 import bindings
-from edenscm import tracing
-from edenscm.mercurial import (
+from edenscm import (
     config,
     context,
     error,
@@ -54,12 +53,13 @@ from edenscm.mercurial import (
     localrepo,
     pycompat,
     scmutil,
+    tracing,
     util,
 )
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin
-from edenscm.mercurial.scmutil import status
-from edenscm.mercurial.util import sortdict
+from edenscm.i18n import _
+from edenscm.node import bin
+from edenscm.scmutil import status
+from edenscm.util import sortdict
 
 
 testedwith = "ships-with-fb-ext"

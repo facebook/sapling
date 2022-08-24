@@ -199,7 +199,7 @@ Remove these remote bookmarks
   unsubscribing remote bookmark "remote/scratch/draft1"
   1 remote bookmark unsubscribed
 TODO: make this a command
-  $ hg debugshell -c "with repo.wlock(), repo.lock(), repo.transaction(\"deleteremotebookmarks\"): repo._remotenames.applychanges({\"bookmarks\": {key: '0'*40 if key in {'remote/other', 'remote/created'} else edenscm.mercurial.node.hex(value[0]) for key, value in repo._remotenames[\"bookmarks\"].items() }})"
+  $ hg debugshell -c "with repo.wlock(), repo.lock(), repo.transaction(\"deleteremotebookmarks\"): repo._remotenames.applychanges({\"bookmarks\": {key: '0'*40 if key in {'remote/other', 'remote/created'} else edenscm.node.hex(value[0]) for key, value in repo._remotenames[\"bookmarks\"].items() }})"
   $ showgraph
   @  public1: public  remote/master
   │

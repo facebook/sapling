@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import, print_function
 
-from edenscm.mercurial import error, peer, util, wireproto
+from edenscm import error, peer, util, wireproto
 from hghave import require
 
 

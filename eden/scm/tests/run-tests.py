@@ -3959,7 +3959,7 @@ class TestRunner(object):
             # The pythondir has been inferred from --with-hg flag.
             # We cannot expect anything sensible here.
             return
-        expecthg = os.path.join(self._pythondir, "edenscm", "mercurial")
+        expecthg = os.path.join(self._pythondir, "edenscm")
         actualhg = self._gethgpath()
         if os.path.abspath(actualhg) != os.path.abspath(expecthg):
             sys.stderr.write(

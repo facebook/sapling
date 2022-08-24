@@ -4,8 +4,8 @@ Tests the behavior of filelog w.r.t. data starting with '\1\n'
 """
 from __future__ import absolute_import, print_function
 
-from edenscm.mercurial import hg, ui as uimod
-from edenscm.mercurial.node import hex, nullid
+from edenscm import hg, ui as uimod
+from edenscm.node import hex, nullid
 from hghave import require
 
 

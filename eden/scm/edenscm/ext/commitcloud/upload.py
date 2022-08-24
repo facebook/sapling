@@ -5,8 +5,8 @@
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import edenapi_upload, node as nodemod
-from edenscm.mercurial.i18n import _, _n
+from edenscm import edenapi_upload, node as nodemod
+from edenscm.i18n import _, _n
 
 
 def upload(repo, revs, force=False):

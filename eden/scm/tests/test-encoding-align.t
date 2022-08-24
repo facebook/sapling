@@ -19,7 +19,7 @@ Test alignment of multibyte characters
   > f = open('l', 'wb'); _ = f.write(l); f.close()
   > # instant extension to show list of options
   > f = open('showoptlist.py', 'wb'); _ = f.write(b"""# encoding: utf-8
-  > from edenscm.mercurial import registrar
+  > from edenscm import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > 

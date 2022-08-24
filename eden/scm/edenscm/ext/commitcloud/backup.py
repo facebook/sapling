@@ -5,8 +5,8 @@
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import node as nodemod, perftrace, smartset
-from edenscm.mercurial.i18n import _, _n
+from edenscm import node as nodemod, perftrace, smartset
+from edenscm.i18n import _, _n
 
 from . import backuplock, backupstate, dependencies, util as ccutil
 

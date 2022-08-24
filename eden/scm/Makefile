@@ -27,7 +27,7 @@ $(eval HGROOT := $(shell pwd))
 HGPYTHONS ?= $(HGROOT)/build/pythons
 PURE=
 PYFILES:=$(shell find mercurial ext -name '*.py' 2>/dev/null)
-DOCFILES=edenscm/mercurial/help/*.txt
+DOCFILES=edenscm/help/*.txt
 export LANGUAGE=C
 export LC_ALL=C
 TESTFLAGS ?= $(shell echo $$HGTESTFLAGS)
@@ -101,10 +101,10 @@ cleanbutpackages:
 	find contrib doc i18n edenscm edenscmnative tests \
 		\( -name '*.py[cdo]' -o -name '*.so' \) -exec rm -f '{}' ';'
 	rm -f MANIFEST MANIFEST.in edenscm/ext/__index__.py tests/*.err
-	rm -f edenscm/mercurial/__modulepolicy__.py
-	if test -d .hg; then rm -f edenscm/mercurial/__version__.py; fi
+	rm -f edenscm/__modulepolicy__.py
+	if test -d .hg; then rm -f edenscm/__version__.py; fi
 	rm -rf build/*
-	rm -rf build edenscm/mercurial/locale
+	rm -rf build edenscm/locale
 ifeq ($(OS),Windows_NT)
 	$(RM) -r hg-python $(HGNAME).exe python27.dll
 else
@@ -136,14 +136,14 @@ check: tests
 update-pot: i18n/hg.pot
 
 i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
-	$(PYTHON) i18n/hggettext edenscm/mercurial/commands.py \
+	$(PYTHON) i18n/hggettext edenscm/commands.py \
 	  edenscm/ext/*.py edenscm/ext/*/__init__.py \
-	  edenscm/mercurial/fileset.py edenscm/mercurial/revset.py \
-	  edenscm/mercurial/templatefilters.py edenscm/mercurial/templatekw.py \
-	  edenscm/mercurial/templater.py \
-	  edenscm/mercurial/filemerge.py \
-	  edenscm/mercurial/hgweb/webcommands.py \
-	  edenscm/mercurial/util.py \
+	  edenscm/fileset.py edenscm/revset.py \
+	  edenscm/templatefilters.py edenscm/templatekw.py \
+	  edenscm/templater.py \
+	  edenscm/filemerge.py \
+	  edenscm/hgweb/webcommands.py \
+	  edenscm/util.py \
 	  $(DOCFILES) > i18n/hg.pot.tmp
         # All strings marked for translation in Mercurial contain
         # ASCII characters only. But some files contain string

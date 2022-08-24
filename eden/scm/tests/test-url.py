@@ -4,7 +4,7 @@ from __future__ import absolute_import, print_function
 import doctest
 import os
 
-from edenscm.mercurial import sslutil
+from edenscm import sslutil
 from hghave import require
 
 
@@ -237,7 +237,7 @@ check(
 
 def test_url():
     """
-    >>> from edenscm.mercurial.util import url
+    >>> from edenscm.util import url
 
     This tests for edge cases in url.URL's parsing algorithm. Most of
     these aren't useful for documentation purposes, so they aren't

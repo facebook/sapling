@@ -16,9 +16,14 @@ import optparse
 import os
 import sys
 
-from edenscm import hgdemandimport as demandimport
-from edenscm.mercurial import commands, extensions, help, minirst, ui as uimod
-
+from edenscm import (
+    commands,
+    extensions,
+    help,
+    hgdemandimport as demandimport,
+    minirst,
+    ui as uimod,
+)
 
 # import from the live mercurial repo
 os.environ["HGMODULEPOLICY"] = "py"

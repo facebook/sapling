@@ -155,7 +155,7 @@ blackbox does not crash with empty log message
   $ newclientrepo
   $ cat > $TESTTMP/uilog.py << EOF
   > from __future__ import absolute_import
-  > from edenscm.mercurial import registrar, scmutil, util
+  > from edenscm import registrar, scmutil, util
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('uilog')

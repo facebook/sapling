@@ -2,7 +2,7 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from edenscm.mercurial import dispatch, ui as uimod
+from edenscm import dispatch, ui as uimod
 from hghave import require
 
 

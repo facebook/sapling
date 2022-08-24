@@ -11,8 +11,8 @@ import time
 import unittest
 
 import silenttestrunner
+from edenscm import error, util, vfs
 from edenscm.ext import extutil
-from edenscm.mercurial import error, util, vfs
 from hghave import require
 
 

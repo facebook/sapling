@@ -6,7 +6,7 @@
 from __future__ import absolute_import
 
 import requests
-from edenscm.mercurial import json
+from edenscm import json
 
 
 # helper class so phabricator_graphql_client can talk using the requests

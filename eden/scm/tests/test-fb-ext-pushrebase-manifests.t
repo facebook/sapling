@@ -95,8 +95,8 @@ Add an extension that logs whenever `manifest.readmf()` is called when the lock 
   $ cat >> $TESTTMP/manifestcheck.py <<EOF
   > from __future__ import print_function
   > import sys, traceback, os
-  > from edenscm.mercurial import extensions, manifest
-  > from edenscm.mercurial.node import nullrev
+  > from edenscm import extensions, manifest
+  > from edenscm.node import nullrev
   > def uisetup(ui):
   >     def captureui(*args, **kwargs):
   >         kwargs["ui"] = ui

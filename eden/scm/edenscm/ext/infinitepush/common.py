@@ -4,16 +4,9 @@
 # GNU General Public License version 2.
 
 
-from edenscm.mercurial import (
-    bundlerepo,
-    extensions,
-    mutation,
-    node as nodemod,
-    util,
-    wireproto,
-)
-from edenscm.mercurial.commands import debug as debugcommands
-from edenscm.mercurial.i18n import _x
+from edenscm import bundlerepo, extensions, mutation, node as nodemod, util, wireproto
+from edenscm.commands import debug as debugcommands
+from edenscm.i18n import _x
 
 from . import constants
 

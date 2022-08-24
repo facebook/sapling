@@ -5,8 +5,8 @@ import itertools
 import unittest
 
 import silenttestrunner
-from edenscm.mercurial import manifest as manifestmod, match as matchmod
-from edenscm.mercurial.pycompat import encodeutf8
+from edenscm import manifest as manifestmod, match as matchmod
+from edenscm.pycompat import encodeutf8
 from hghave import require
 
 

@@ -10,11 +10,11 @@ import struct
 import time
 from typing import cast, Dict, Generator, IO, Iterable, List, Optional, Sequence, Tuple
 
-from edenscm.mercurial import perftrace, progress, pycompat
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import hex, nullid
-from edenscm.mercurial.pycompat import range
-from edenscm.mercurial.types import UI
+from edenscm import perftrace, progress, pycompat
+from edenscm.i18n import _
+from edenscm.node import hex, nullid
+from edenscm.pycompat import range
+from edenscm.types import UI
 
 from . import constants
 from .mutablestores import mutabledatastore, mutablehistorystore

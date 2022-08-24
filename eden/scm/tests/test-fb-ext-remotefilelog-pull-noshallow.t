@@ -13,7 +13,7 @@ triggered due to a shallow repo, and then the code can later interact with
 non-shallow repositories.
 
   $ cat > setupremotefilelog.py << EOF
-  > from edenscm.mercurial import extensions
+  > from edenscm import extensions
   > def extsetup(ui):
   >     remotefilelog = extensions.find('remotefilelog')
   >     remotefilelog.onetimeclientsetup(ui)

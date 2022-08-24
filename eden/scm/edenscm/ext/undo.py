@@ -8,7 +8,7 @@
 from __future__ import absolute_import
 
 from bindings import cliparser
-from edenscm.mercurial import (
+from edenscm import (
     cmdutil,
     commands,
     dispatch,
@@ -34,9 +34,9 @@ from edenscm.mercurial import (
     util,
     visibility,
 )
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin, hex, nullid, short
-from edenscm.mercurial.pycompat import decodeutf8, encodeutf8
+from edenscm.i18n import _
+from edenscm.node import bin, hex, nullid, short
+from edenscm.pycompat import decodeutf8, encodeutf8
 
 
 if not pycompat.iswindows:
@@ -164,7 +164,7 @@ def safelog(repo, command):
     """boilerplate for log command
 
     input:
-        repo: mercurial.localrepo
+        repo: edenscm.localrepo
         command: list of strings, first is string of command run
     output: bool
         True if changes have been recorded, False otherwise
@@ -229,7 +229,7 @@ def log(repo, command, tr):
     """logs data necessary for undo if repo state has changed
 
     input:
-        repo: mercurial.localrepo
+        repo: edenscm.localrepo
         command: los, first is command to be recorded as run
         tr: transaction
     output: bool
@@ -1195,7 +1195,7 @@ def _computerelative(repo, reverseindex, absolute=False, branch=""):
 def _findnextdelta(repo, reverseindex, branch, direction):
     # finds closest repos state making changes to branch in direction
     # input:
-    #   repo: mercurial.localrepo
+    #   repo: edenscm.localrepo
     #   reverseindex: positive int for index.i
     #   branch: string changectx (commit hash)
     #   direction: positive or negative int
@@ -1334,7 +1334,7 @@ def _preview(ui, repo, reverseindex):
     # Print smartlog like preview of undo
     # Input:
     #   ui:
-    #   repo: mercurial.localrepo
+    #   repo: edenscm.localrepo
     # Output:
     #   returns 1 on index error, 0 otherwise
 

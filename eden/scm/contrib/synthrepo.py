@@ -52,19 +52,10 @@ import random
 import sys
 import time
 
-from edenscm.mercurial import (
-    context,
-    error,
-    hg,
-    patch,
-    pycompat,
-    registrar,
-    scmutil,
-    util,
-)
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import nullid, nullrev, short
-from edenscm.mercurial.pycompat import iteritems
+from edenscm import context, error, hg, patch, pycompat, registrar, scmutil, util
+from edenscm.i18n import _
+from edenscm.node import nullid, nullrev, short
+from edenscm.pycompat import iteritems
 
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for

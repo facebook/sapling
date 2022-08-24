@@ -5,8 +5,8 @@
 
 import time
 
-from edenscm.mercurial import cmdutil, error, hg, perftrace, scmutil, util
-from edenscm.mercurial.i18n import _
+from edenscm import cmdutil, error, hg, perftrace, scmutil, util
+from edenscm.i18n import _
 
 from .metalog import storelatest
 

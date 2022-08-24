@@ -11,8 +11,8 @@ import time
 import traceback
 
 from bindings import revisionstore
-from edenscm.mercurial import error, progress, util, vfs
-from edenscm.mercurial.i18n import _
+from edenscm import error, progress, util, vfs
+from edenscm.i18n import _
 
 from ..extutil import flock
 from . import constants, datapack, historypack, shallowutil

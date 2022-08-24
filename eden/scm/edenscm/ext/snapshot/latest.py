@@ -3,9 +3,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from edenscm.mercurial import error, node
-from edenscm.mercurial.edenapi_upload import filetypefromfile
-from edenscm.mercurial.i18n import _
+from edenscm import error, node
+from edenscm.edenapi_upload import filetypefromfile
+from edenscm.i18n import _
 
 from .createremote import parsemaxuntracked, workingcopy
 from .metalog import fetchlatestsnapshot

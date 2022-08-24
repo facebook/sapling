@@ -27,7 +27,7 @@ import sys
 import threading
 import time
 
-from edenscm.mercurial import pycompat, registrar, util
+from edenscm import pycompat, registrar, util
 
 
 pathformat = "/tmp/trace-%(pid)s-%(time)s.log"

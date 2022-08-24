@@ -100,7 +100,7 @@ pub fn to_python_status(py: Python, status: &Status) -> PyResult<PyObject> {
     }
 
     // Create the Python-native status object.
-    let scmutil_module = py.import("edenscm.mercurial.scmutil")?;
+    let scmutil_module = py.import("edenscm.scmutil")?;
     let status_class = scmutil_module.get(py, "status")?;
     let lists = (modified, added, removed, deleted, unknown, ignored, clean);
     status_class.call(py, lists, None)

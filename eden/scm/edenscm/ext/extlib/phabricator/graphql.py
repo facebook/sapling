@@ -12,8 +12,8 @@ from __future__ import absolute_import
 
 import operator
 
-from edenscm.mercurial import encoding, json, pycompat, util
-from edenscm.mercurial.node import bin, hex
+from edenscm import encoding, json, pycompat, util
+from edenscm.node import bin, hex
 
 from . import arcconfig, phabricator_graphql_client, phabricator_graphql_client_urllib
 

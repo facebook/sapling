@@ -9,15 +9,8 @@ import contextlib
 import errno
 import subprocess
 
-from edenscm.mercurial import (
-    error,
-    json,
-    lock as lockmod,
-    node as nodemod,
-    pycompat,
-    util,
-)
-from edenscm.mercurial.i18n import _
+from edenscm import error, json, lock as lockmod, node as nodemod, pycompat, util
+from edenscm.i18n import _
 
 
 lockfilename = "infinitepushbackup.lock"

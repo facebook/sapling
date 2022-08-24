@@ -183,7 +183,7 @@ with environment variables
 plain mode with exceptions
 
   $ cat > plain.py <<EOF
-  > from edenscm.mercurial import commands, extensions
+  > from edenscm import commands, extensions
   > def _config(orig, ui, repo, *values, **opts):
   >     ui.write('plain: %r\n' % ui.plain())
   >     return orig(ui, repo, *values, **opts)

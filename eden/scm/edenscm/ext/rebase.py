@@ -26,7 +26,7 @@ import errno
 from collections.abc import MutableMapping, MutableSet
 
 from bindings import checkout as nativecheckout
-from edenscm.mercurial import (
+from edenscm import (
     bookmarks,
     cmdutil,
     commands,
@@ -55,8 +55,8 @@ from edenscm.mercurial import (
     util,
     visibility,
 )
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import hex, nullid, nullrev, short
+from edenscm.i18n import _
+from edenscm.node import hex, nullid, nullrev, short
 
 
 release = lock.release
@@ -542,7 +542,7 @@ class rebaseruntime(object):
 
     def _assignworkingcopy(self):
         if self.inmemory:
-            from edenscm.mercurial.context import overlayworkingctx
+            from edenscm.context import overlayworkingctx
 
             self.wctx = overlayworkingctx(self.repo)
             self.repo.ui.debug("rebasing in-memory\n")
@@ -1025,7 +1025,7 @@ class rebaseruntime(object):
 
 
 def _simplemerge(ui, basectx, ctx, p1ctx, manifestbuilder):
-    from ..mercurial.simplemerge import Merge3Text, wordmergemode
+    from ..simplemerge import Merge3Text, wordmergemode
 
     conflicts = []
     resolved = {}

@@ -4,7 +4,7 @@
 
   $ setconfig workingcopy.ruststatus=False
   $ newext adddrop <<EOF
-  > from edenscm.mercurial import registrar
+  > from edenscm import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('debugadddrop',

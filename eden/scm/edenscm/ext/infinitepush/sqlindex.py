@@ -10,8 +10,8 @@ import warnings
 
 # pyre-fixme[21]: Could not find module `mysql.connector`.
 import mysql.connector
-from edenscm.mercurial import error, pycompat, util
-from edenscm.mercurial.i18n import _
+from edenscm import error, pycompat, util
+from edenscm.i18n import _
 
 
 def _getloglevel(ui):

@@ -38,7 +38,7 @@ import struct
 import sys
 import time
 
-from edenscm.mercurial import (
+from edenscm import (
     changegroup,
     changelog,
     cmdutil,
@@ -58,21 +58,21 @@ from edenscm.mercurial import (
 # try to import modules separately (in dict order), and ignore
 # failure, because these aren't available with early Mercurial
 try:
-    from edenscm.mercurial import branchmap  # since 2.5 (or bcee63733aad)
+    from edenscm import branchmap  # since 2.5 (or bcee63733aad)
 except ImportError:
     pass
 try:
-    from edenscm.mercurial import registrar  # since 3.7 (or 37d50250b696)
+    from edenscm import registrar  # since 3.7 (or 37d50250b696)
 
     dir(registrar)  # forcibly load it
 except ImportError:
     registrar = None
 try:
-    from edenscm.mercurial import repoview  # since 2.5 (or 3a6ddacb7198)
+    from edenscm import repoview  # since 2.5 (or 3a6ddacb7198)
 except ImportError:
     pass
 try:
-    from edenscm.mercurial import scmutil  # since 1.9 (or 8b252e826c68)
+    from edenscm import scmutil  # since 1.9 (or 8b252e826c68)
 except ImportError:
     pass
 
@@ -173,15 +173,14 @@ else:
 
 
 try:
-    import edemscm.mercurial.configitems
-    import edemscm.mercurial.registrar
-    import edenscm.mercurial as mercurial
+    import edenscm.configitems
+    import edenscm.registrar
 
     configtable = {}
-    configitem = mercurial.registrar.configitem(configtable)
-    configitem("perf", "presleep", default=mercurial.configitems.dynamicdefault)
-    configitem("perf", "stub", default=mercurial.configitems.dynamicdefault)
-    configitem("perf", "parentscount", default=mercurial.configitems.dynamicdefault)
+    configitem = edenscm.registrar.configitem(configtable)
+    configitem("perf", "presleep", default=edenscm.configitems.dynamicdefault)
+    configitem("perf", "stub", default=edenscm.configitems.dynamicdefault)
+    configitem("perf", "parentscount", default=edenscm.configitems.dynamicdefault)
 except (ImportError, AttributeError):
     pass
 
@@ -221,7 +220,7 @@ def gettimer(ui, opts=None):
         # for "historical portability":
         # define formatter locally, because ui.formatter has been
         # available since 2.2 (or ae5f92e154d3)
-        from edenscm.mercurial import node
+        from edenscm import node
 
         class defaultformatter(object):
             """Minimized composition of baseformatter and plainformatter"""
@@ -492,7 +491,7 @@ def clearcaches(cl):
     if util.safehasattr(cl, "clearcaches"):
         cl.clearcaches()
     elif util.safehasattr(cl, "_nodecache"):
-        from edenscm.mercurial.node import nullid, nullrev
+        from edenscm.node import nullid, nullrev
 
         cl._nodecache = {nullid: nullrev}
         cl._nodepos = None
@@ -560,7 +559,7 @@ def perfbundleread(ui, repo, bundlepath, **opts):
     This command is meant to isolate the I/O part of bundle reading as
     much as possible.
     """
-    from edenscm.mercurial import bundle2, exchange, streamclone
+    from edenscm import bundle2, exchange, streamclone
 
     def makebench(fn):
         def run():

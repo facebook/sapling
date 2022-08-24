@@ -9,9 +9,9 @@ from __future__ import absolute_import
 
 import hashlib
 
-from edenscm.mercurial import error, filelog, pycompat, revlog, util
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin, nullid, short
+from edenscm import error, filelog, pycompat, revlog, util
+from edenscm.i18n import _
+from edenscm.node import bin, nullid, short
 
 from . import blobstore, pointer
 

@@ -26,7 +26,7 @@
 Loops are not normally possible, but they can sneak in through backfilling complex
 obsmarker graphs.  Create a fake one to check behaviour.
 
-  $ hg debugsh -c "with repo.lock(): m.mutation.recordentries(repo, [m.mutation.createsyntheticentry(repo, [m.node.bin(\"e6c779c67aa947c951f334f4f312bd2b21d27e55\"), m.node.bin(\"672a4910c364d425231d2dd2fb0486f32a2d88f4\")], m.node.bin(\"932f02c9fad3fa46e55b62560c88eb67528b02f0\"), \"loop\")], skipexisting=False)"
+  $ hg debugsh -c "with repo.lock(): e.mutation.recordentries(repo, [e.mutation.createsyntheticentry(repo, [e.node.bin(\"e6c779c67aa947c951f334f4f312bd2b21d27e55\"), e.node.bin(\"672a4910c364d425231d2dd2fb0486f32a2d88f4\")], e.node.bin(\"932f02c9fad3fa46e55b62560c88eb67528b02f0\"), \"loop\")], skipexisting=False)"
   $ tglogm --hidden
   @  21c93100b04c 'commit5'
   │
@@ -66,5 +66,5 @@ continuously cycles round the commit2 to commit4 loop.
   
 Similarly, check that predecessorsset is also safe.
 
-  $ hg debugsh -c "ui.write(str([m.node.hex(n) for n in m.mutation.predecessorsset(repo, m.node.bin(\"21c93100b04c543843a7dab4fa0d5bada061b7a0\"))]) + '\n')"
+  $ hg debugsh -c "ui.write(str([e.node.hex(n) for n in e.mutation.predecessorsset(repo, e.node.bin(\"21c93100b04c543843a7dab4fa0d5bada061b7a0\"))]) + '\n')"
   ['e6c779c67aa947c951f334f4f312bd2b21d27e55']

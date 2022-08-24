@@ -45,8 +45,7 @@ import threading
 import time
 import warnings
 
-from edenscm import hgdemandimport as demandimport
-from edenscm.mercurial import (
+from edenscm import (
     bookmarks,
     bundle2,
     bundlerepo,
@@ -56,6 +55,7 @@ from edenscm.mercurial import (
     exchange,
     extensions,
     hg,
+    hgdemandimport as demandimport,
     localrepo,
     lock as lockmod,
     mdiff,
@@ -67,9 +67,9 @@ from edenscm.mercurial import (
     util,
     wireproto,
 )
-from edenscm.mercurial.i18n import _, _x
-from edenscm.mercurial.node import bin, hex, nullid, nullrev
-from edenscm.mercurial.pycompat import decodeutf8, encodeutf8, queue, range
+from edenscm.i18n import _, _x
+from edenscm.node import bin, hex, nullid, nullrev
+from edenscm.pycompat import decodeutf8, encodeutf8, queue, range
 
 
 wrapcommand = extensions.wrapcommand
@@ -614,12 +614,12 @@ class sqlcontext(object):
 
         freq = self.repo.ui.configint("profiling", "freq")
         if profiler == "ls":
-            from edenscm.mercurial import lsprof
+            from edenscm import lsprof
 
             self._profiler = lsprof.Profiler()
             self._profiler.enable(subcalls=True)
         elif profiler == "stat":
-            from edenscm.mercurial import statprof
+            from edenscm import statprof
 
             statprof.reset(freq)
             statprof.start()
@@ -638,7 +638,7 @@ class sqlcontext(object):
         timestamp = time.time()
 
         if profiler == "ls":
-            from edenscm.mercurial import lsprof
+            from edenscm import lsprof
 
             self._profiler.disable()
             stats = lsprof.Stats(self._profiler.getstats())
@@ -650,7 +650,7 @@ class sqlcontext(object):
                 stats.pprint(limit=30, file=f, climit=0)
                 f.write("Total Elapsed Time: %s\n" % elapsed)
         elif profiler == "stat":
-            from edenscm.mercurial import statprof
+            from edenscm import statprof
 
             statprof.stop()
             path = os.path.join(

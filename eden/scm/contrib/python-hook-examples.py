@@ -13,7 +13,7 @@ Examples of useful python hooks for Mercurial.
 """
 from __future__ import absolute_import
 
-from edenscm.mercurial import patch, util
+from edenscm import patch, util
 
 
 def diffstat(ui, repo, **kwargs):

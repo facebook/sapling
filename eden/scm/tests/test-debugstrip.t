@@ -654,7 +654,7 @@
 # Check that the phase cache is properly invalidated after a strip with bookmark.
 
 #   $ cat > ../stripstalephasecache.py << EOF
-#   > from edenscm.mercurial import extensions, localrepo
+#   > from edenscm import extensions, localrepo
 #   > def transactioncallback(orig, repo, desc, *args, **kwargs):
 #   >     def test(transaction):
 #   >         # observe cache inconsistency
@@ -708,7 +708,7 @@
 #   $ echo 3 >> I
 #   $ cat > $TESTTMP/delayedstrip.py <<EOF
 #   > from __future__ import absolute_import
-#   > from edenscm.mercurial import commands, registrar, repair
+#   > from edenscm import commands, registrar, repair
 #   > cmdtable = {}
 #   > command = registrar.command(cmdtable)
 #   > @command('testdelayedstrip')
@@ -757,7 +757,7 @@
 #   $ cp -R . ../scmutilcleanup.obsstore
 
 #   $ cat > $TESTTMP/scmutilcleanup.py <<EOF
-#   > from edenscm.mercurial import registrar, scmutil
+#   > from edenscm import registrar, scmutil
 #   > cmdtable = {}
 #   > command = registrar.command(cmdtable)
 #   > @command('testnodescleanup')

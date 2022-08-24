@@ -5,7 +5,7 @@
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import util
+from edenscm import util
 
 from . import shallowutil
 

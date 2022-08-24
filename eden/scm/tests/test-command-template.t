@@ -4158,7 +4158,7 @@
 
 # revert side effect of loading the revnames extension
 
-  from edenscm.mercurial import namespaces
+  from edenscm import namespaces
   del namespaces.namespacetable["revnames"]
 
   $ hg log -r2 -T '{namespaces % "{namespace}: {names}\n"}'
@@ -4525,7 +4525,7 @@
   $ cd a
 
   $ cat > $TESTTMP/customfunc.py << 'EOF'
-  > from edenscm.mercurial import registrar
+  > from edenscm import registrar
   > templatefunc = registrar.templatefunc()
   > @templatefunc('custom()')
   > def custom(context, mapping, args):

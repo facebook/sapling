@@ -30,8 +30,8 @@ import stat
 import time
 
 import bindings
-from edenscm.mercurial import dispatch, encoding, extensions, pycompat, util
-from edenscm.mercurial.i18n import _
+from edenscm import dispatch, encoding, extensions, pycompat, util
+from edenscm.i18n import _
 
 from . import workspace
 

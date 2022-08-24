@@ -5,8 +5,8 @@
 
 import struct
 
-from edenscm.mercurial import error, extensions, json, node as nodemod, pycompat
-from edenscm.mercurial.i18n import _
+from edenscm import error, extensions, json, node as nodemod, pycompat
+from edenscm.i18n import _
 
 
 def remotebookmarksenabled(ui):

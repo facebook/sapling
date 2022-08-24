@@ -3,9 +3,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from edenscm.mercurial import error
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import hex, nullid
+from edenscm import error
+from edenscm.i18n import _
+from edenscm.node import hex, nullid
 
 from . import github_repo, pullrequeststore
 

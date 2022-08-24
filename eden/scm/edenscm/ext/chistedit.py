@@ -29,9 +29,9 @@ import functools
 import os
 from typing import List, Optional
 
-from edenscm.mercurial import cmdutil, destutil, error, node, registrar, scmutil, util
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.pycompat import range
+from edenscm import cmdutil, destutil, error, node, registrar, scmutil, util
+from edenscm.i18n import _
+from edenscm.pycompat import range
 
 from . import histedit
 

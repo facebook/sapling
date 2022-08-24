@@ -81,9 +81,9 @@ because everything has been already downloaded.
   B
 
   $ cat >> $TESTTMP/gettreepack.py <<EOF
-  > from edenscm.mercurial import registrar
-  > from edenscm.mercurial.node import bin
-  > from edenscm.mercurial import (bundle2, extensions)
+  > from edenscm import registrar
+  > from edenscm.node import bin
+  > from edenscm import (bundle2, extensions)
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('gettreepack', [

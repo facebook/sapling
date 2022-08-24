@@ -4,7 +4,7 @@ import collections
 import struct
 import unittest
 
-from edenscm.mercurial import mdiff
+from edenscm import mdiff
 from hghave import require
 
 

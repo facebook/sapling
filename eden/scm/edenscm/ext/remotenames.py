@@ -28,8 +28,7 @@ import re
 import shutil
 import typing
 
-from edenscm import tracing
-from edenscm.mercurial import (
+from edenscm import (
     bookmarks,
     commands,
     discovery,
@@ -46,12 +45,13 @@ from edenscm.mercurial import (
     revset,
     scmutil,
     smartset,
+    tracing,
     url,
     util,
     vfs as vfsmod,
     visibility,
 )
-from edenscm.mercurial.bookmarks import (
+from edenscm.bookmarks import (
     joinremotename,
     journalremotebookmarktype,
     readremotenames,
@@ -59,8 +59,8 @@ from edenscm.mercurial.bookmarks import (
     selectivepullbookmarknames,
     splitremotename,
 )
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin, hex, short
+from edenscm.i18n import _
+from edenscm.node import bin, hex, short
 
 
 cmdtable = {}

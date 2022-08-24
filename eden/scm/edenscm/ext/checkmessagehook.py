@@ -5,8 +5,8 @@
 
 import string
 
-from edenscm.mercurial import encoding, registrar
-from edenscm.mercurial.i18n import _
+from edenscm import encoding, registrar
+from edenscm.i18n import _
 
 
 configtable = {}

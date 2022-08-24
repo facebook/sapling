@@ -1,6 +1,6 @@
 
   $ newext signal <<EOF
-  > from edenscm.mercurial import registrar
+  > from edenscm import registrar
   > import os, signal
   > cmdtable = {}
   > command = registrar.command(cmdtable)

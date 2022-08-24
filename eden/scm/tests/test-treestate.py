@@ -14,7 +14,7 @@ import unittest
 
 import silenttestrunner
 from bindings import treestate
-from edenscm.mercurial import pycompat
+from edenscm import pycompat
 from hghave import require
 
 

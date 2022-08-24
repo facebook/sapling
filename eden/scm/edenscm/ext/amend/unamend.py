@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import (
+from edenscm import (
     autopull,
     error,
     mutation,
@@ -16,7 +16,7 @@ from edenscm.mercurial import (
     registrar,
     visibility,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.i18n import _
 
 
 cmdtable = {}

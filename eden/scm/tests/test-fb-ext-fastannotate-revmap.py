@@ -8,8 +8,9 @@ from __future__ import absolute_import, print_function
 import os
 import tempfile
 
+from edenscm import pycompat
+
 from edenscm.ext.fastannotate import error, revmap
-from edenscm.mercurial import pycompat
 from hghave import require
 
 

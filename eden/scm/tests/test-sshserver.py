@@ -4,7 +4,7 @@ import io
 import unittest
 
 import silenttestrunner
-from edenscm.mercurial import sshserver, wireproto
+from edenscm import sshserver, wireproto
 from hghave import require
 
 

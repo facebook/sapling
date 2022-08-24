@@ -7,7 +7,7 @@ from __future__ import absolute_import
 
 import socket
 
-from edenscm.mercurial import perftrace, util
+from edenscm import perftrace, util
 
 from . import service, token, util as ccutil, workspace
 

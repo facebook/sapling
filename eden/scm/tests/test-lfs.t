@@ -518,8 +518,8 @@
   $ cat > $TESTTMP/dumpflog.py << EOF
   > # print raw revision sizes, flags, and hashes for certain files
   > import hashlib
-  > from edenscm.mercurial import revlog
-  > from edenscm.mercurial.node import short
+  > from edenscm import revlog
+  > from edenscm.node import short
   > def hash(rawtext):
   >     h = hashlib.sha512()
   >     h.update(rawtext)

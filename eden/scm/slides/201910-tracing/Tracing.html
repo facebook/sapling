@@ -13532,7 +13532,7 @@ a.anchor-link {
 <li><code>wrapfunc</code> has 300ns overhead per Python function call.</li>
 <li>A command like <code>hg sl</code> can take 1 second. It has 200k calls.</li>
 <li>If <em>all</em> functions are wrapped, the overhead of <code>hg sl</code> is 60ms, or 6%.</li>
-<li>As a comparison, <code>import edenscm.mercurial.eden_dirstate</code> takes 50ms.</li>
+<li>As a comparison, <code>import edenscm.eden_dirstate</code> takes 50ms.</li>
 </ul>
 <p>If some functions are not cheap to trace, we can blacklist them.</p>
 

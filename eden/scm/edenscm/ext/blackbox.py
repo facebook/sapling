@@ -45,9 +45,9 @@ import errno
 import os
 import weakref
 
-from edenscm.mercurial import extensions, registrar, ui as uimod, util
-from edenscm.mercurial.node import hex
-from edenscm.mercurial.pycompat import encodeutf8, range
+from edenscm import extensions, registrar, ui as uimod, util
+from edenscm.node import hex
+from edenscm.pycompat import encodeutf8, range
 
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for

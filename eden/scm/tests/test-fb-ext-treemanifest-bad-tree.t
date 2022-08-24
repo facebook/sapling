@@ -12,7 +12,7 @@
 
 Create an empty commit with a misconstructed memctx in the same transaction as a normal commit
   $ cat >> $TESTTMP/repro.py <<EOF
-  > from edenscm.mercurial import context, registrar
+  > from edenscm import context, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > 

@@ -11,9 +11,9 @@ import os
 import stat as statmod
 import time
 
-from edenscm.mercurial import pycompat, util
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.pycompat import range
+from edenscm import pycompat, util
+from edenscm.i18n import _
+from edenscm.pycompat import range
 
 
 # The amount of time to wait between checking for new packs. This prevents an

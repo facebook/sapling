@@ -10,8 +10,8 @@ import time
 import traceback
 
 from bindings import sptui
-from edenscm.mercurial import cmdutil, error, progress, util
-from edenscm.mercurial.i18n import _
+from edenscm import cmdutil, error, progress, util
+from edenscm.i18n import _
 
 from . import service, token as tokenmod
 

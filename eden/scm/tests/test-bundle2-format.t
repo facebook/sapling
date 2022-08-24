@@ -21,15 +21,15 @@ Create an extension to test bundle2 API
   > import gc
   > import os
   > import sys
-  > from edenscm.mercurial import util
-  > from edenscm.mercurial import bundle2
-  > from edenscm.mercurial import scmutil
-  > from edenscm.mercurial import discovery
-  > from edenscm.mercurial import changegroup
-  > from edenscm.mercurial import error
-  > from edenscm.mercurial import obsolete
-  > from edenscm.mercurial import pycompat
-  > from edenscm.mercurial import registrar
+  > from edenscm import util
+  > from edenscm import bundle2
+  > from edenscm import scmutil
+  > from edenscm import discovery
+  > from edenscm import changegroup
+  > from edenscm import error
+  > from edenscm import obsolete
+  > from edenscm import pycompat
+  > from edenscm import registrar
   > 
   > 
   > cmdtable = {}

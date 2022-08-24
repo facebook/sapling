@@ -7,7 +7,7 @@ from __future__ import absolute_import
 
 import subprocess
 
-from edenscm.mercurial import config, pycompat, util, vfs as vfsmod
+from edenscm import config, pycompat, util, vfs as vfsmod
 
 from . import error as ccerror, util as ccutil
 

@@ -41,7 +41,7 @@ import socket
 import tempfile
 from typing import Optional, Sized
 
-from edenscm.mercurial import (
+from edenscm import (
     context,
     copies,
     encoding,
@@ -52,9 +52,9 @@ from edenscm.mercurial import (
     pycompat,
     util,
 )
-from edenscm.mercurial.node import nullid, wdirid
-from edenscm.mercurial.pycompat import range
-from edenscm.mercurial.scmutil import status
+from edenscm.node import nullid, wdirid
+from edenscm.pycompat import range
+from edenscm.scmutil import status
 
 
 testedwith = "ships-with-fb-ext"

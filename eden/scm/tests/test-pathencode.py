@@ -16,7 +16,7 @@ import random
 import sys
 import time
 
-from edenscm.mercurial import pycompat, store
+from edenscm import pycompat, store
 from hghave import require
 
 

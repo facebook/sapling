@@ -4,7 +4,7 @@
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import merge, registrar
+from edenscm import merge, registrar
 
 
 cmdtable = {}

@@ -36,7 +36,7 @@ import gc
 import os
 import tempfile
 
-from edenscm.mercurial import pycompat
+from edenscm import pycompat
 
 cdef extern from "edenscm/ext/extlib/traceprofimpl.cpp":
     void enable()

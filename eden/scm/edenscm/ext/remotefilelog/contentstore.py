@@ -5,8 +5,8 @@
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import manifest, mdiff, util
-from edenscm.mercurial.node import hex, nullid
+from edenscm import manifest, mdiff, util
+from edenscm.node import hex, nullid
 
 from . import constants, shallowutil
 

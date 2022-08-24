@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import errno
 import time
 
-from edenscm.mercurial import (
+from edenscm import (
     bookmarks as bookmarksmod,
     cmdutil,
     edenapi_upload,
@@ -25,7 +25,7 @@ from edenscm.mercurial import (
     util,
     visibility,
 )
-from edenscm.mercurial.i18n import _, _n
+from edenscm.i18n import _, _n
 
 from . import (
     background,

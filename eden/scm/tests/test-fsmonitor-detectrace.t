@@ -22,7 +22,7 @@ Create a race by write files by writing files if context._dirstatestatus is call
   $ touch e f g
   $ cat > $TESTTMP/racy.py << EOF
   > from edenscm.ext import fsmonitor
-  > from edenscm.mercurial import extensions
+  > from edenscm import extensions
   > def _race(orig, *args, **kwargs):
   >     open('a', 'w').close()
   >     open('f', 'w').close()

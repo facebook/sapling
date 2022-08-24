@@ -23,8 +23,8 @@ maintainers if the command is legitimate. To customize this footer, set:
 import re
 
 from bindings import cliparser
-from edenscm.mercurial import error, extensions, pycompat, registrar, util
-from edenscm.mercurial.i18n import _
+from edenscm import error, extensions, pycompat, registrar, util
+from edenscm.i18n import _
 
 
 cmdtable = {}

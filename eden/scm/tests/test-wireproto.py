@@ -1,6 +1,6 @@
 from __future__ import absolute_import, print_function
 
-from edenscm.mercurial import pycompat, ui, util, wireproto
+from edenscm import pycompat, ui, util, wireproto
 from hghave import require
 
 

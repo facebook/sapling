@@ -10,7 +10,7 @@
 # GNU General Public License version 2 or any later version.
 
   $ cat > abortcommit.py << 'EOF'
-  > from edenscm.mercurial import error
+  > from edenscm import error
   > def hook(**args):
   >     raise error.Abort("no commits allowed")
   > def reposetup(ui, repo):

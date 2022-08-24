@@ -6,7 +6,7 @@ Test UI worker interaction
   $ cat > t.py <<EOF
   > from __future__ import absolute_import, print_function
   > import time
-  > from edenscm.mercurial import (
+  > from edenscm import (
   >     error,
   >     registrar,
   >     ui as uimod,
@@ -80,7 +80,7 @@ Run tests without worker by forcing a low cost
 Known exception should be caught, but printed if --traceback is enabled
 
   $ hg --config "extensions.t=$abspath" --config 'worker.numcpus=8' \
-  > test 100000.0 abort --traceback 2>&1 | egrep '^(SystemExit|(edenscm.mercurial.error.)?Abort)'
+  > test 100000.0 abort --traceback 2>&1 | egrep '^(SystemExit|(edenscm.error.)?Abort)'
   *Abort: known exception (glob)
   *Abort: known exception (glob)
 

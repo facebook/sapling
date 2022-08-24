@@ -19,9 +19,9 @@ from __future__ import absolute_import
 
 import re
 
-from edenscm.mercurial import error, hg, namespaces, registrar, revset
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import hex
+from edenscm import error, hg, namespaces, registrar, revset
+from edenscm.i18n import _
+from edenscm.node import hex
 
 
 namespacepredicate = registrar.namespacepredicate()

@@ -16,7 +16,7 @@ from __future__ import absolute_import
 
 import json
 
-from edenscm.mercurial import (
+from edenscm import (
     copies as copiesmod,
     encoding,
     error,
@@ -27,10 +27,10 @@ from edenscm.mercurial import (
     scmutil,
     util,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.i18n import _
 
 # Mercurial
-from edenscm.mercurial.node import bin
+from edenscm.node import bin
 
 from . import common, server
 

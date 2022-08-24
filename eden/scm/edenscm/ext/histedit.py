@@ -236,7 +236,7 @@ from __future__ import absolute_import
 import errno
 import os
 
-from edenscm.mercurial import (
+from edenscm import (
     bundle2,
     cmdutil,
     context,
@@ -259,8 +259,8 @@ from edenscm.mercurial import (
     util,
     visibility,
 )
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.pycompat import range
+from edenscm.i18n import _
+from edenscm.pycompat import range
 
 
 # pyre-fixme[11]: Annotation `pickle` is not defined as a type.

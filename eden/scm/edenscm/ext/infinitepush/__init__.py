@@ -104,7 +104,7 @@ Configs::
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import (
+from edenscm import (
     bundle2,
     changegroup,
     discovery,
@@ -115,7 +115,7 @@ from edenscm.mercurial import (
     registrar,
     util,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.i18n import _
 
 from . import bundleparts, bundlestore, client, common, infinitepushcommands, server
 

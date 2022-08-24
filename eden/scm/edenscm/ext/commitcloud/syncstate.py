@@ -9,8 +9,8 @@ import hashlib
 import json
 import time
 
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.pycompat import encodeutf8, ensurestr
+from edenscm.i18n import _
+from edenscm.pycompat import encodeutf8, ensurestr
 
 from . import error as ccerror
 

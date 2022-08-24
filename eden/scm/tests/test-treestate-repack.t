@@ -10,7 +10,7 @@ Fsmonitor makes the size numbers less predicatable.
 Prepare: stabilize random filename so it becomes predictable
 
   $ cat > fakeuuid.py << EOF
-  > from edenscm.mercurial import treestate
+  > from edenscm import treestate
   > import os
   > path = os.path.join(os.environ.get('TESTTMP'), 'uuid')
   > def _stable_filename():

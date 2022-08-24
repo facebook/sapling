@@ -68,7 +68,7 @@ import os
 import struct
 
 from bindings import manifest as rustmanifest, revisionstore
-from edenscm.mercurial import (
+from edenscm import (
     bundle2,
     bundlerepo,
     changegroup,
@@ -95,10 +95,10 @@ from edenscm.mercurial import (
     util,
     wireproto,
 )
-from edenscm.mercurial.commands import debug as debugcommands
-from edenscm.mercurial.i18n import _, _n
-from edenscm.mercurial.node import bin, hex, nullid, short
-from edenscm.mercurial.pycompat import range
+from edenscm.commands import debug as debugcommands
+from edenscm.i18n import _, _n
+from edenscm.node import bin, hex, nullid, short
+from edenscm.pycompat import range
 
 from .. import clienttelemetry
 from ..remotefilelog import (

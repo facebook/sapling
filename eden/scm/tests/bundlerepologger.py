@@ -3,8 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from edenscm.mercurial import bundlerepo, extensions
-from edenscm.mercurial.i18n import _
+from edenscm import bundlerepo, extensions
+from edenscm.i18n import _
 
 
 def extsetup(ui):

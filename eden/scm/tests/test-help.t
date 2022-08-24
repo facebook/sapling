@@ -739,7 +739,7 @@ this is a section and erroring out weirdly.
 
   $ cat > helpext.py <<EOF
   > import os
-  > from edenscm.mercurial import commands, registrar
+  > from edenscm import commands, registrar
   > 
   > cmdtable = {}
   > command = registrar.command(cmdtable)
@@ -1308,7 +1308,7 @@ Test deprecated items
 Test help hooks
 
   $ cat > helphook1.py <<EOF
-  > from edenscm.mercurial import help
+  > from edenscm import help
   > 
   > def rewrite(ui, topic, doc):
   >     return doc + '\nhelphook1\n'
@@ -1317,7 +1317,7 @@ Test help hooks
   >     help.addtopichook('revisions', rewrite)
   > EOF
   $ cat > helphook2.py <<EOF
-  > from edenscm.mercurial import help
+  > from edenscm import help
   > 
   > def rewrite(ui, topic, doc):
   >     return doc + '\nhelphook2\n'
@@ -1439,7 +1439,7 @@ Test omit indicating for help
   > This paragraph is never omitted, too (for extension)
   > '''
   > from __future__ import absolute_import
-  > from edenscm.mercurial import commands, help
+  > from edenscm import commands, help
   > testtopic = """This paragraph is never omitted (for topic).
   > 
   > .. container:: verbose

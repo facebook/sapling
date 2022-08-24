@@ -6,16 +6,7 @@ import tempfile
 import unittest
 
 import silenttestrunner
-from edenscm.mercurial import (
-    encoding,
-    error,
-    extensions,
-    lock,
-    pycompat,
-    ui,
-    util,
-    vfs as vfsmod,
-)
+from edenscm import encoding, error, extensions, lock, pycompat, ui, util, vfs as vfsmod
 from hghave import require
 
 

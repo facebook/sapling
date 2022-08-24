@@ -10,18 +10,10 @@ import os
 import sys
 from typing import Dict, Sized
 
-from edenscm.mercurial import (
-    error,
-    extensions,
-    hg,
-    localrepo,
-    pycompat,
-    scmutil,
-    wireproto,
-)
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.localrepo import localrepository
-from edenscm.mercurial.node import bin, hex
+from edenscm import error, extensions, hg, localrepo, pycompat, scmutil, wireproto
+from edenscm.i18n import _
+from edenscm.localrepo import localrepository
+from edenscm.node import bin, hex
 
 from . import context
 

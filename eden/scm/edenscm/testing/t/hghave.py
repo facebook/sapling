@@ -292,7 +292,7 @@ def has_executablebit():
 
 @check("icasefs", "case insensitive file system")
 def has_icasefs():
-    # Stolen from edenscm.mercurial.util
+    # Stolen from edenscm.util
     fd, path = tempfile.mkstemp(dir=tempdir(), prefix=tempprefix)
     os.close(fd)
     try:
@@ -473,7 +473,7 @@ def has_symlink():
 
 @check("hardlink", "hardlinks")
 def has_hardlink():
-    from edenscm.mercurial import util
+    from edenscm import util
 
     fh, fn = tempfile.mkstemp(dir=tempdir(), prefix=tempprefix)
     os.close(fh)
@@ -625,7 +625,7 @@ def has_sslcontext():
 
 @check("defaultcacerts", "can verify SSL certs by system's CA certs store")
 def has_defaultcacerts():
-    from edenscm.mercurial import sslutil, ui as uimod
+    from edenscm import sslutil, ui as uimod
 
     ui = uimod.ui.load()
     return sslutil._defaultcacerts(ui) or sslutil._canloaddefaultcerts
@@ -635,7 +635,7 @@ def has_defaultcacerts():
 def has_defaultcacertsloaded():
     import ssl
 
-    from edenscm.mercurial import sslutil, ui as uimod
+    from edenscm import sslutil, ui as uimod
 
     if not has_defaultcacerts():
         return False
@@ -655,7 +655,7 @@ def has_defaultcacertsloaded():
 
 @check("tls1.2", "TLS 1.2 protocol support")
 def has_tls1_2():
-    from edenscm.mercurial import sslutil
+    from edenscm import sslutil
 
     return "tls1.2" in sslutil.supportedprotocols
 

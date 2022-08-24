@@ -7,8 +7,8 @@ import json
 import time
 from functools import partial
 
-from edenscm.mercurial import error
-from edenscm.mercurial.i18n import _
+from edenscm import error
+from edenscm.i18n import _
 
 
 def generatedate(ui, commithash, commitdate):

@@ -38,7 +38,7 @@ import sys
 import edenscm.hgdemandimport
 edenscm.hgdemandimport.enable()
 
-from edenscm.mercurial import (
+from edenscm import (
     dispatch,
 )
 

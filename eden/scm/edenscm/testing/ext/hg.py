@@ -133,7 +133,7 @@ def testsetup(t: TestTmp):
     run = None
     try:
         import bindings
-        from edenscm.mercurial import util
+        from edenscm import util
 
         run = bindings.commands.run
     except ImportError:
@@ -182,7 +182,7 @@ def hg(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> int:
         return python(args, stdin, stdout, stderr, env)
 
     import bindings
-    from edenscm.mercurial import encoding, extensions, pycompat, util
+    from edenscm import encoding, extensions, pycompat, util
 
     # emulate ui.system via sheval
     rawsystem = partial(_rawsystem, env, stdin, stdout, stderr)

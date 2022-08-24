@@ -9,17 +9,9 @@ from __future__ import absolute_import
 import collections
 import time
 
-from edenscm.mercurial import (
-    ancestor,
-    context,
-    error,
-    perftrace,
-    phases,
-    progress,
-    util,
-)
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin, hex, nullid, nullrev
+from edenscm import ancestor, context, error, perftrace, phases, progress, util
+from edenscm.i18n import _
+from edenscm.node import bin, hex, nullid, nullrev
 
 from ..extlib.phabricator import graphql
 from . import shallowutil

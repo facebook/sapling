@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from edenscm.mercurial import commands, localrepo, ui as uimod
+from edenscm import commands, localrepo, ui as uimod
 
 
 u = uimod.ui.load()

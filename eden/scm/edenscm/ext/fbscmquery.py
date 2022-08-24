@@ -9,17 +9,9 @@
 import re
 from typing import Any, List
 
-from edenscm.mercurial import (
-    extensions,
-    namespaces,
-    node,
-    registrar,
-    revset,
-    smartset,
-    templater,
-)
-from edenscm.mercurial.i18n import _, _x
-from edenscm.mercurial.node import bin
+from edenscm import extensions, namespaces, node, registrar, revset, smartset, templater
+from edenscm.i18n import _, _x
+from edenscm.node import bin
 
 from .extlib.phabricator import arcconfig, graphql
 

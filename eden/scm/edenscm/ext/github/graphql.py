@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Optional
 
 from bindings import github
-from edenscm.mercurial import pycompat
+from edenscm import pycompat
 
 
 @dataclass

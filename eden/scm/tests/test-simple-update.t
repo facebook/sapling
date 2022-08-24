@@ -59,7 +59,7 @@ update with worker processes
 #if no-windows
 
   $ cat <<EOF > forceworker.py
-  > from edenscm.mercurial import extensions, worker
+  > from edenscm import extensions, worker
   > def nocost(orig, ui, costperop, nops):
   >     return worker._numworkers(ui) > 1
   > def uisetup(ui):

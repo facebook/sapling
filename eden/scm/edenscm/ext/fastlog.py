@@ -28,7 +28,7 @@ import heapq
 from collections import deque
 from threading import Event, Thread
 
-from edenscm.mercurial import (
+from edenscm import (
     error,
     extensions,
     match as matchmod,
@@ -38,8 +38,8 @@ from edenscm.mercurial import (
     smartset,
     util,
 )
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import nullrev
+from edenscm.i18n import _
+from edenscm.node import nullrev
 
 from .extlib.phabricator import graphql
 

@@ -5,7 +5,7 @@
 ensure that failing ui.atexit handlers report sensibly
 
   $ cat > $TESTTMP/bailatexit.py <<EOF
-  > from edenscm.mercurial import util
+  > from edenscm import util
   > def bail():
   >     raise RuntimeError('ui.atexit handler exception')
   > 
@@ -60,7 +60,7 @@ show traceback
 names of extensions failed to load can be accessed via extensions.notloaded()
 
   $ cat <<EOF > showbadexts.py
-  > from edenscm.mercurial import commands, extensions, registrar
+  > from edenscm import commands, extensions, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('showbadexts', norepo=True)

@@ -114,7 +114,7 @@ verify skipping works with --command flag
   $ cat > script.py <<EOF
   > from __future__ import absolute_import
   > import sys
-  > from edenscm.mercurial import hg, ui as uimod
+  > from edenscm import hg, ui as uimod
   > repo = hg.repository(uimod.ui.load(), '.')
   > if repo['.'].rev() >= 6: # where the bug was introduced
   >     sys.exit(1)

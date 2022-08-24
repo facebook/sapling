@@ -4,7 +4,7 @@
   $ configure modern
 
   $ newext deprecatecmd <<EOF
-  > from edenscm.mercurial import registrar
+  > from edenscm import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('testdeprecate', [], 'hg testdeprecate')

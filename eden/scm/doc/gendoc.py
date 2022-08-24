@@ -33,12 +33,12 @@ demandimport.enable()
 
 # Load util so that the locale path is set by i18n.setdatapath() before
 # calling _().
-from edenscm.mercurial import util
+from edenscm import util
 
 util.datapath
 
-from edenscm.mercurial import commands, extensions, help, minirst, ui as uimod
-from edenscm.mercurial.i18n import _, gettext
+from edenscm import commands, extensions, help, minirst, ui as uimod
+from edenscm.i18n import _, gettext
 
 
 table = commands.table

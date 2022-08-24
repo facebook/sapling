@@ -153,25 +153,7 @@ import random
 import struct
 
 from bindings import manifest as rustmanifest, revisionstore
-from edenscm.ext import clienttelemetry
-from edenscm.ext.remotefilelog import (
-    cmdtable as remotefilelogcmdtable,
-    mutablestores,
-    resolveprefetchopts,
-    shallowbundle,
-    shallowrepo,
-    shallowutil,
-    wirepack,
-)
-from edenscm.ext.remotefilelog.contentstore import (
-    manifestrevlogstore,
-    unioncontentstore,
-)
-from edenscm.ext.remotefilelog.datapack import makedatapackstore, memdatapack
-from edenscm.ext.remotefilelog.historypack import makehistorypackstore, memhistorypack
-from edenscm.ext.remotefilelog.metadatastore import unionmetadatastore
-from edenscm.ext.remotefilelog.repack import domaintenancerepack
-from edenscm.mercurial import (
+from edenscm import (
     bundle2,
     bundlerepo,
     changegroup,
@@ -198,10 +180,28 @@ from edenscm.mercurial import (
     util,
     wireproto,
 )
-from edenscm.mercurial.commands import debug as debugcommands
-from edenscm.mercurial.i18n import _, _n
-from edenscm.mercurial.node import bin, hex, nullid, short
-from edenscm.mercurial.pycompat import range
+from edenscm.commands import debug as debugcommands
+from edenscm.ext import clienttelemetry
+from edenscm.ext.remotefilelog import (
+    cmdtable as remotefilelogcmdtable,
+    mutablestores,
+    resolveprefetchopts,
+    shallowbundle,
+    shallowrepo,
+    shallowutil,
+    wirepack,
+)
+from edenscm.ext.remotefilelog.contentstore import (
+    manifestrevlogstore,
+    unioncontentstore,
+)
+from edenscm.ext.remotefilelog.datapack import makedatapackstore, memdatapack
+from edenscm.ext.remotefilelog.historypack import makehistorypackstore, memhistorypack
+from edenscm.ext.remotefilelog.metadatastore import unionmetadatastore
+from edenscm.ext.remotefilelog.repack import domaintenancerepack
+from edenscm.i18n import _, _n
+from edenscm.node import bin, hex, nullid, short
+from edenscm.pycompat import range
 
 
 try:

@@ -105,7 +105,7 @@ Confirm that we logged some reporting identifying designated nodes fetching too
 And check that the proper linknode was returned. Run this using hg, as opposed to hgmn, so we crash if it's not there.
   $ hg debugshell \
   > --config "remotefilelog.cachepath=$TESTTMP/cache2" \
-  > -c 'ui.write("%s\n" % m.node.hex(mf.historystore.getnodeinfo("root/d,", m.node.bin("0bc6688f4a1b0dca0ef82474e5fc62048eed3c2c"))[2]))'
+  > -c 'ui.write("%s\n" % e.node.hex(mf.historystore.getnodeinfo("root/d,", e.node.bin("0bc6688f4a1b0dca0ef82474e5fc62048eed3c2c"))[2]))'
   e1972bf883fd70e2bb3bb68fe027099329ee854d
 
   $ hg log -r e1972bf883fd70e2bb3bb68fe027099329ee854d -T '{desc}\n'

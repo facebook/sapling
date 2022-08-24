@@ -31,7 +31,7 @@ Or overriden by a different path:
 
   $ cat > githelp2.py <<EOF
   > from __future__ import absolute_import
-  > from edenscm.mercurial import registrar
+  > from edenscm import registrar
   > 
   > cmdtable = {}
   > command = registrar.command(cmdtable)
