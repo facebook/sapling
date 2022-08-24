@@ -97,7 +97,7 @@ COLUMN_REVERSE_SORT = Row(
     command=False,
 )
 
-COUNTER_REGEX = r"((store\.hg.*)|(fuse\.([^\.]*)\..*requests.*))"
+COUNTER_REGEX = r"((store\.hg.*)|(fuse\.([^\.]*)\..*requests.*)|(object_store\..*))"
 
 
 def format_duration(duration) -> str:
