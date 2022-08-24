@@ -7,6 +7,8 @@
 
 use std::cell::RefCell;
 use std::env;
+use std::path::Path;
+use std::path::PathBuf;
 
 use clidispatch::io::IO;
 use configparser::config::ConfigSet;
@@ -48,6 +50,21 @@ impl HgPython {
     fn setup_python(args: &[String]) {
         let span = info_span!("Initialize Python");
         let _guard = span.enter();
+        let python_paths = std::env::var("PYTHONPATH").unwrap_or_else(|_| "".to_string());
+        let site_packages_path = std::env::current_exe()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join(Path::new("lib/python3.8/site-packages"))
+            .into_os_string()
+            .into_string()
+            .unwrap();
+        let path_iter = std::env::split_paths(&python_paths)
+            .chain([PathBuf::from(site_packages_path)].into_iter());
+        std::env::set_var("PYTHONPATH", std::env::join_paths(path_iter).unwrap());
+
         let args = Self::prepare_args(args);
         let executable_name = &args[0];
         py_set_program_name(executable_name);

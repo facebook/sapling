@@ -781,6 +781,8 @@ class fetchbuilddeps(Command):
             ]
         ]
 
+    # All of these pyassets are eden and thrift related. We don't use those in open source.
+    if not OSS_BUILD:
         pyassets += [
             fbsourcepylibrary(
                 "thrift",
