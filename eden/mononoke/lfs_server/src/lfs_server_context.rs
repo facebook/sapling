@@ -144,14 +144,12 @@ impl LfsServerContext {
         };
 
         let enforce_acl_check = enforce_acl_check && config.enforce_acl_check();
-        let enforce_authentication = config.enforce_authentication();
 
         acl_check(
             &ctx,
             repo.repo_permission_checker(),
             identities,
             enforce_acl_check,
-            enforce_authentication,
             method,
         )
         .await?;
@@ -194,14 +192,10 @@ async fn acl_check(
     permission_checker: &dyn RepoPermissionChecker,
     identities: Option<&MononokeIdentitySet>,
     enforce_authorization: bool,
-    enforce_authentication: bool,
     method: LfsMethod,
 ) -> Result<(), LfsServerContextErrorKind> {
     let identities: Cow<MononokeIdentitySet> = match identities {
         Some(idents) => Cow::Borrowed(idents),
-        None if enforce_authentication => {
-            return Err(LfsServerContextErrorKind::NotAuthenticated);
-        }
         None => Cow::Owned(MononokeIdentitySet::new()),
     };
 
@@ -545,7 +539,6 @@ impl BaseUri {
 mod test {
     use std::str::FromStr;
 
-    use anyhow::anyhow;
     use fbinit::FacebookInit;
     use lfs_protocol::Sha256 as LfsSha256;
     use mononoke_types::hash::Sha256;
@@ -853,12 +846,10 @@ mod test {
         let aclchecker = AlwaysAllowRepoPermissionChecker::new();
 
         let ctx = CoreContext::test_mock(fb);
-        let res = acl_check(&ctx, &aclchecker, None, false, true, LfsMethod::Download).await;
+        // No certificates + ACL enforcement off = free pass
+        acl_check(&ctx, &aclchecker, None, false, LfsMethod::Download).await?;
 
-        match res.err().unwrap() {
-            LfsServerContextErrorKind::NotAuthenticated => Ok(()),
-            _ => Err(anyhow!("test failed")),
-        }
+        Ok(())
     }
 
     #[fbinit::test]
@@ -875,7 +866,6 @@ mod test {
             &aclchecker,
             Some(&MononokeIdentitySet::new()),
             false,
-            true,
             LfsMethod::Download,
         )
         .await?;
@@ -891,7 +881,6 @@ mod test {
             &aclchecker,
             Some(&MononokeIdentitySet::new()),
             false,
-            true,
             LfsMethod::Upload,
         )
         .await?;

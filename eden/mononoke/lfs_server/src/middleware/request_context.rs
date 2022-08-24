@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::default::Default;
 use std::fmt;
 use std::sync::Arc;
 
@@ -19,8 +20,11 @@ use gotham_ext::middleware::Middleware;
 use gotham_ext::state_ext::StateExt;
 use hyper::body::Body;
 use hyper::Response;
+use hyper::StatusCode;
 use metadata::Metadata;
+use permission_checker::MononokeIdentitySet;
 use scuba_ext::MononokeScubaSampleBuilder;
+use slog::error;
 use slog::o;
 use slog::Logger;
 
@@ -87,11 +91,16 @@ impl RequestContext {
 pub struct RequestContextMiddleware {
     fb: FacebookInit,
     logger: Logger,
+    enforce_authentication: bool,
 }
 
 impl RequestContextMiddleware {
-    pub fn new(fb: FacebookInit, logger: Logger) -> Self {
-        Self { fb, logger }
+    pub fn new(fb: FacebookInit, logger: Logger, enforce_authentication: bool) -> Self {
+        Self {
+            fb,
+            logger,
+            enforce_authentication,
+        }
     }
 }
 
@@ -105,12 +114,37 @@ impl Middleware for RequestContextMiddleware {
             if let Some(client_identity) = ClientIdentity::try_borrow_from(state) {
                 (
                     !client_identity.is_proxygen_test_identity(),
-                    client_identity.identities().clone().unwrap_or_default(),
+                    client_identity.identities().clone(),
                     client_identity.address().clone(),
                 )
             } else {
-                (true, Default::default(), None)
+                (true, None, None)
             };
+
+        let identities: MononokeIdentitySet = match identities {
+            Some(identities) => identities,
+            None => {
+                if self.enforce_authentication {
+                    let msg = "Client not authenticated".to_string();
+                    error!(self.logger, "{}", &msg);
+                    let response = Response::builder()
+                        .status(StatusCode::FORBIDDEN)
+                        .body(
+                            format!(
+                                "{{\"message:\"{}\", \"request_id\":\"{}\"}}",
+                                msg,
+                                state.short_request_id()
+                            )
+                            .into(),
+                        )
+                        .expect("Couldn't build http response");
+
+                    return Some(response);
+                } else {
+                    Default::default()
+                }
+            }
+        };
         let metadata = Metadata::new(None, identities, false, address).await;
         let session = SessionContainer::builder(self.fb)
             .metadata(Arc::new(metadata))

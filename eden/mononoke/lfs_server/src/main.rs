@@ -312,6 +312,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 will_exit,
                 config_handle.clone(),
             )?;
+            let enforce_authentication = ctx.get_config().enforce_authentication();
 
             let router = build_router(fb, ctx, git_blob_upload_allowed);
 
@@ -325,7 +326,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     internal_identity,
                 ))
                 .add(PostResponseMiddleware::with_config(config_handle))
-                .add(RequestContextMiddleware::new(fb, logger.clone()))
+                .add(RequestContextMiddleware::new(
+                    fb,
+                    logger.clone(),
+                    enforce_authentication,
+                ))
                 .add(LoadMiddleware::new())
                 .add(log_middleware)
                 .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
