@@ -81,7 +81,8 @@ void ObjectStore::updateProcessFetch(
   if (auto pid = fetchContext.getClientPid()) {
     auto fetch_count = pidFetchCounts_->recordProcessFetch(pid.value());
     auto threshold = edenConfig_->fetchHeavyThreshold.getValue();
-    if (fetch_count && threshold && !(fetch_count % threshold)) {
+    // indicate heavy event when fetch_count reaches multiple of threshold
+    if (fetch_count && threshold && (fetch_count % threshold) == 0) {
       sendFetchHeavyEvent(pid.value(), fetch_count);
     }
   }
@@ -91,8 +92,13 @@ void ObjectStore::sendFetchHeavyEvent(pid_t pid, uint64_t fetch_count) const {
   auto processName = processNameCache_->getProcessName(pid);
   if (processName) {
     std::replace(processName->begin(), processName->end(), '\0', ' ');
+    XLOG(WARN) << "Heavy fetches (" << fetch_count << ") from process "
+               << *processName << "(pid=" << pid << ")";
     structuredLogger_->logEvent(
         FetchHeavy{processName.value(), pid, fetch_count});
+  } else {
+    XLOG(WARN) << "Heavy fetches (" << fetch_count << ") from pid " << pid
+               << ")";
   }
 }
 
