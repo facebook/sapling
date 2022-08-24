@@ -126,7 +126,7 @@ impl LfsServerContext {
 
             match inner.repositories.get(&repository) {
                 Some((repo, repo_config)) => (
-                    repo.clone(),
+                    repo,
                     inner.client.clone(),
                     inner.server.clone(),
                     inner.always_wait_for_upstream,
