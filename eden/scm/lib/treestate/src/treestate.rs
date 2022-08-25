@@ -5,16 +5,21 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::fmt;
 use std::io::Cursor;
 use std::ops::Deref;
 use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Result;
 
 use crate::filestate::FileStateV2;
 use crate::filestate::StateFlags;
 use crate::filestore::FileStore;
+use crate::legacy_dirstate::read_dirstate;
+use crate::legacy_dirstate::write_dirstate;
+use crate::metadata::Metadata;
 use crate::serialization::Serializable;
 use crate::store::BlockId;
 use crate::store::Store;
@@ -34,6 +39,10 @@ pub struct TreeState {
     store: FileStore,
     tree: Tree<FileStateV2>,
     root: TreeStateRoot,
+    // dirstate is only used in the case the case that the treestate is
+    // wrapping a legacy dirstate which is necessary for EdenFS compatility.
+    // TODO: Remove once EdenFS has migrated to treestate.
+    dirstate: Option<PathBuf>,
 }
 
 /// `TreeStateRoot` contains block id to the root `Tree`, and other metadata.
@@ -62,15 +71,53 @@ impl TreeState {
                     TreeStateRoot::deserialize(&mut root_buf)?
                 };
                 let tree = Tree::open(root.tree_block_id, root.file_count);
-                Ok(TreeState { store, tree, root })
+                Ok(TreeState {
+                    store,
+                    tree,
+                    root,
+                    dirstate: None,
+                })
             }
             None => {
                 let store = FileStore::create(path)?;
                 let root = TreeStateRoot::default();
                 let tree = Tree::new();
-                Ok(TreeState { store, tree, root })
+                Ok(TreeState {
+                    store,
+                    tree,
+                    root,
+                    dirstate: None,
+                })
             }
         }
+    }
+
+    /// Provides the ability to populate a treestate from a legacy dirstate.
+    /// Clean up once EdenFS has been migrated from legacy dirstate to
+    /// treestate.
+    pub fn from_dirstate<P: AsRef<Path>>(dirstate_path: P) -> Result<Self> {
+        let store = FileStore::in_memory()?;
+        let mut root = TreeStateRoot::default();
+        let tree = Tree::new();
+
+        let (metadata, entries) = read_dirstate(dirstate_path.as_ref())?;
+        let mut buf = Vec::new();
+        metadata.serialize(&mut buf)?;
+        root.metadata = buf.into_boxed_slice();
+
+        let path = dirstate_path.as_ref().to_path_buf();
+        let mut treestate = TreeState {
+            store,
+            tree,
+            root,
+            dirstate: Some(path),
+        };
+
+        for (key, state) in entries {
+            treestate.insert(key, &state)?;
+        }
+
+        Ok(treestate)
     }
 
     pub fn path(&self) -> Option<&Path> {
@@ -100,7 +147,31 @@ impl TreeState {
         self.root.serialize(&mut root_buf)?;
         let result = self.store.append(&root_buf)?;
         self.store.flush()?;
+
+        // TODO: Clean up once we migrate EdenFS to TreeState and no longer
+        // need to write to legacy dirstate format.
+        if let Some(dirstate_path) = self.dirstate.clone() {
+            let mut metadata_buf = self.get_metadata();
+            let metadata = Metadata::deserialize(&mut metadata_buf)?;
+            let entries = self.flatten_tree()?;
+            write_dirstate(&dirstate_path, metadata, entries)?;
+        }
+
         Ok(result)
+    }
+
+    fn flatten_tree(&mut self) -> Result<HashMap<Box<[u8]>, FileStateV2>> {
+        let mut results = HashMap::with_capacity(self.len());
+        self.visit(
+            &mut |path_components, state| {
+                results.insert(path_components.concat().into_boxed_slice(), state.clone());
+                Ok(VisitorResult::NotChanged)
+            },
+            &|_, _| true, // Visit all directories
+            &|_, _| true, // Visit all files
+        )?;
+
+        Ok(results)
     }
 
     /// Create or replace the existing entry.

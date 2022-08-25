@@ -17,6 +17,7 @@ pub mod errors;
 mod filereadwrite;
 pub mod filestate;
 pub mod filestore;
+mod legacy_dirstate;
 pub mod metadata;
 pub mod serialization;
 pub mod store;
