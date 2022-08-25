@@ -24,6 +24,11 @@
 using namespace std::chrono_literals;
 using namespace facebook::eden;
 
+constexpr auto loadTimeoutLimit = 1000ms;
+// we will wait up to loadTimeoutLimit, maxWaitForLoads times
+// for EdenFS to finish loading all it's initial inodes.
+constexpr auto maxWaitForLoads = 60;
+
 #ifdef _WIN32
 // TODO(puneetk): Defining these flags here to fix the linker issue. These
 // symbols should come from ThriftProtocol.lib. But, for some reason it's not
@@ -358,6 +363,93 @@ TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
   // We should have successfully looked up the inode, but it will report it
   // self (correctly) at its new path now.
   EXPECT_EQ("a/b/x/d/file.txt"_relpath, fileInode->getPath().value());
+}
+
+// Tests InodeMap::lookupInode when loading an unloaded inode by inode number
+TEST(InodeMap, lookingUpAnUnloadedInodeAddsLoadsToTraceBus) {
+  folly::UnboundedQueue<InodeTraceEvent, true, true, false> queue;
+  auto builder = FakeTreeBuilder();
+  builder.setFile("a/b/file.txt", "this is a test file");
+  TestMount testMount{builder, false};
+  const auto& edenMount = testMount.getEdenMount();
+  auto* inodeMap = edenMount->getInodeMap();
+  auto& trace_bus = edenMount->getInodeTraceBus();
+
+  // Detect inode load events and add events to synchronized queue
+  auto handle = trace_bus.subscribeFunction(
+      folly::to<std::string>("inodeMapTest-", edenMount->getPath().basename()),
+      [&](const InodeTraceEvent& event) {
+        if (event.eventType == InodeEventType::LOAD) {
+          std::cout << "Event: " << event.getPath() << " " << event.ino << " "
+                    << ((event.progress == InodeEventProgress::END) ? "End"
+                                                                    : "Start")
+                    << std::endl;
+          queue.enqueue(event);
+        }
+      });
+
+  // Wait for any initial load events to complete
+  size_t iteration_count = 0;
+  while (queue.try_dequeue_for(loadTimeoutLimit).has_value() &&
+         iteration_count < maxWaitForLoads) {
+    ++iteration_count;
+    if (iteration_count >= maxWaitForLoads) {
+      throw std::runtime_error{
+          "EdenFS not settling after startup, too many loads"};
+    }
+  };
+
+  // In order to get inode numbers, we load "a" and "a/b" by path
+  auto root = edenMount->getRootInode();
+  auto a_future =
+      edenMount->getInodeSlow("a"_relpath, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(testMount.getServerExecutor().get());
+  auto b_future =
+      edenMount
+          ->getInodeSlow("a/b"_relpath, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(testMount.getServerExecutor().get());
+  builder.setReady("a");
+  builder.setReady("a/b");
+  testMount.drainServerExecutor();
+
+  // Get inode numbers and move inodes to the InodeMap's UnloadedInodes
+  InodeNumber an, bn;
+  {
+    auto a = std::move(a_future).get(0ms).asTreePtr();
+    an = a->getNodeId();
+    a->incFsRefcount();
+    {
+      auto b = std::move(b_future).get(0ms);
+      bn = b->getNodeId();
+      b->incFsRefcount();
+    }
+    a->unloadChildrenNow(); // Unloads b
+  }
+  root->unloadChildrenNow(); // Unloads a
+
+  // With inode numbers, we ensure the initial loads came in expected order
+  EXPECT_TRUE(isInodeMaterializedInQueue(queue, InodeEventProgress::START, an));
+  EXPECT_TRUE(isInodeMaterializedInQueue(queue, InodeEventProgress::END, an));
+  EXPECT_TRUE(isInodeMaterializedInQueue(queue, InodeEventProgress::START, bn));
+  EXPECT_TRUE(isInodeMaterializedInQueue(queue, InodeEventProgress::END, bn));
+
+  // Finally, we lookup the inodes by InodeNumber
+  auto secondAFuture = inodeMap->lookupTreeInode(an).semi().via(
+      testMount.getServerExecutor().get());
+  auto secondBFuture = inodeMap->lookupTreeInode(bn).semi().via(
+      testMount.getServerExecutor().get());
+  testMount.drainServerExecutor();
+  std::move(secondAFuture).get(0ms);
+  std::move(secondBFuture).get(0ms);
+  EXPECT_TRUE(isInodeMaterializedInQueue(queue, InodeEventProgress::START, an));
+  EXPECT_TRUE(isInodeMaterializedInQueue(queue, InodeEventProgress::END, an));
+  EXPECT_TRUE(isInodeMaterializedInQueue(queue, InodeEventProgress::START, bn));
+  EXPECT_TRUE(isInodeMaterializedInQueue(queue, InodeEventProgress::END, bn));
+
+  // Ensure we do not count any other loads a second time
+  EXPECT_FALSE(queue.try_dequeue_for(loadTimeoutLimit).has_value());
 }
 
 TEST(InodeMap, unloadedUnlinkedTreesAreRemovedFromOverlay) {
