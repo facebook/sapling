@@ -243,13 +243,13 @@ FileInode::runWhileMaterialized(
   // from a recursive call waiting for/timing how long it takes to load the blob
   if (!startTime.has_value() && state->tag != State::MATERIALIZED_IN_OVERLAY) {
     startTime = std::chrono::system_clock::now();
-    getMount()->addInodeTraceEvent(
+    getMount()->publishInodeTraceEvent(InodeTraceEvent(
         startTime.value(),
-        InodeEventType::MATERIALIZE,
-        InodeType::FILE,
         getNodeId(),
-        getNameRacy().stringPiece(),
-        InodeEventProgress::START);
+        InodeType::FILE,
+        InodeEventType::MATERIALIZE,
+        InodeEventProgress::START,
+        getNameRacy().stringPiece()));
   }
 
   ImmediateFuture<std::shared_ptr<const Blob>> future;
@@ -276,13 +276,13 @@ FileInode::runWhileMaterialized(
           XCHECK(state.isNull());
           materializeInParent();
           // Add materialize event after parent finishes its materialization
-          getMount()->addInodeTraceEvent(
+          getMount()->publishInodeTraceEvent(InodeTraceEvent(
               startTime.value(),
-              InodeEventType::MATERIALIZE,
-              InodeType::FILE,
               getNodeId(),
-              getNameRacy().stringPiece(),
-              InodeEventProgress::END);
+              InodeType::FILE,
+              InodeEventType::MATERIALIZE,
+              InodeEventProgress::END,
+              getNameRacy().stringPiece()));
         };
         logAccess(fetchContext);
         // Note that we explicitly create a temporary LockedState object
@@ -353,13 +353,13 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
       // - If we successfully materialized the file and were in the
       //   BLOB_LOADING state, fulfill the blobLoadingPromise.
       auto startTime = std::chrono::system_clock::now();
-      getMount()->addInodeTraceEvent(
+      getMount()->publishInodeTraceEvent(InodeTraceEvent(
           startTime,
-          InodeEventType::MATERIALIZE,
-          InodeType::FILE,
           getNodeId(),
-          getNameRacy().stringPiece(),
-          InodeEventProgress::START);
+          InodeType::FILE,
+          InodeEventType::MATERIALIZE,
+          InodeEventProgress::START,
+          getNameRacy().stringPiece()));
 
       std::unique_ptr<folly::SharedPromise<std::shared_ptr<const Blob>>>
           loadingPromise;
@@ -385,13 +385,13 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
         XCHECK(state.isNull());
         materializeInParent();
         // Publish to TraceBus after parent finishes its materialization
-        getMount()->addInodeTraceEvent(
+        getMount()->publishInodeTraceEvent(InodeTraceEvent(
             startTime,
-            InodeEventType::MATERIALIZE,
-            InodeType::FILE,
             getNodeId(),
-            getNameRacy().stringPiece(),
-            InodeEventProgress::END);
+            InodeType::FILE,
+            InodeEventType::MATERIALIZE,
+            InodeEventProgress::END,
+            getNameRacy().stringPiece()));
       };
 
       // Now invoke the input function.

@@ -864,13 +864,13 @@ void TreeInode::materialize(const RenameLock* renameLock) {
       if (contents->isMaterialized()) {
         return;
       }
-      getMount()->addInodeTraceEvent(
+      getMount()->publishInodeTraceEvent(InodeTraceEvent(
           startTime,
-          InodeEventType::MATERIALIZE,
-          InodeType::TREE,
           getNodeId(),
-          getLocationInfo(*renameLock).name.stringPiece(),
-          InodeEventProgress::START);
+          InodeType::TREE,
+          InodeEventType::MATERIALIZE,
+          InodeEventProgress::START,
+          getLocationInfo(*renameLock).name.stringPiece()));
       contents->setMaterialized();
       saveOverlayDir(contents->entries);
     }
@@ -882,13 +882,13 @@ void TreeInode::materialize(const RenameLock* renameLock) {
     }
 
     // Finished materializing so publish event to TraceBus
-    getMount()->addInodeTraceEvent(
+    getMount()->publishInodeTraceEvent(InodeTraceEvent(
         startTime,
-        InodeEventType::MATERIALIZE,
-        InodeType::TREE,
         getNodeId(),
-        loc.name.stringPiece(),
-        InodeEventProgress::END);
+        InodeType::TREE,
+        InodeEventType::MATERIALIZE,
+        InodeEventProgress::END,
+        loc.name.stringPiece()));
   }
 }
 
@@ -904,13 +904,13 @@ void TreeInode::childMaterialized(
     auto contents = contents_.wlock();
     wasAlreadyMaterialized = contents->isMaterialized();
     if (!wasAlreadyMaterialized) {
-      getMount()->addInodeTraceEvent(
+      getMount()->publishInodeTraceEvent(InodeTraceEvent(
           startTime,
-          InodeEventType::MATERIALIZE,
-          InodeType::TREE,
           getNodeId(),
-          getLocationInfo(renameLock).name.stringPiece(),
-          InodeEventProgress::START);
+          InodeType::TREE,
+          InodeEventType::MATERIALIZE,
+          InodeEventProgress::START,
+          getLocationInfo(renameLock).name.stringPiece()));
     }
 
     auto iter = contents->entries.find(childName);
@@ -942,13 +942,13 @@ void TreeInode::childMaterialized(
       location.parent->childMaterialized(renameLock, location.name);
     }
 
-    getMount()->addInodeTraceEvent(
+    getMount()->publishInodeTraceEvent(InodeTraceEvent(
         startTime,
-        InodeEventType::MATERIALIZE,
-        InodeType::TREE,
         getNodeId(),
-        location.name.stringPiece(),
-        InodeEventProgress::END);
+        InodeType::TREE,
+        InodeEventType::MATERIALIZE,
+        InodeEventProgress::END,
+        location.name.stringPiece()));
   }
 }
 
@@ -962,13 +962,13 @@ void TreeInode::childDematerialized(
     auto contents = contents_.wlock();
     wasAlreadyMaterialized = contents->isMaterialized();
     if (!wasAlreadyMaterialized) {
-      getMount()->addInodeTraceEvent(
+      getMount()->publishInodeTraceEvent(InodeTraceEvent(
           startTime,
-          InodeEventType::MATERIALIZE,
-          InodeType::TREE,
           getNodeId(),
-          getLocationInfo(renameLock).name.stringPiece(),
-          InodeEventProgress::START);
+          InodeType::TREE,
+          InodeEventType::MATERIALIZE,
+          InodeEventProgress::START,
+          getLocationInfo(renameLock).name.stringPiece()));
     }
 
     auto iter = contents->entries.find(childName);
@@ -1014,13 +1014,13 @@ void TreeInode::childDematerialized(
     if (location.parent && !location.unlinked) {
       location.parent->childMaterialized(renameLock, location.name);
     }
-    getMount()->addInodeTraceEvent(
+    getMount()->publishInodeTraceEvent(InodeTraceEvent(
         startTime,
-        InodeEventType::MATERIALIZE,
-        InodeType::TREE,
         getNodeId(),
-        location.name.stringPiece(),
-        InodeEventProgress::END);
+        InodeType::TREE,
+        InodeEventType::MATERIALIZE,
+        InodeEventProgress::END,
+        location.name.stringPiece()));
   }
 }
 
@@ -1133,13 +1133,13 @@ FileInodePtr TreeInode::createImpl(
 
     // Generate an inode number for this new entry.
     auto childNumber = getOverlay()->allocateInodeNumber();
-    getMount()->addInodeTraceEvent(
+    getMount()->publishInodeTraceEvent(InodeTraceEvent(
         startTime,
-        InodeEventType::MATERIALIZE,
-        InodeType::FILE,
         childNumber,
-        targetName.stringPiece(),
-        InodeEventProgress::START);
+        InodeType::FILE,
+        InodeEventType::MATERIALIZE,
+        InodeEventProgress::START,
+        targetName.stringPiece()));
 
 #ifndef _WIN32
     // Create the overlay file before we insert the file into our entries map.
@@ -1171,13 +1171,13 @@ FileInodePtr TreeInode::createImpl(
 
     // Once the overlay is fully updated, the inode is materialized so we can
     // publish this to TraceBus
-    getMount()->addInodeTraceEvent(
+    getMount()->publishInodeTraceEvent(InodeTraceEvent(
         startTime,
-        InodeEventType::MATERIALIZE,
-        InodeType::FILE,
         childNumber,
-        targetName.stringPiece(),
-        InodeEventProgress::END);
+        InodeType::FILE,
+        InodeEventType::MATERIALIZE,
+        InodeEventProgress::END,
+        targetName.stringPiece()));
   }
 
   if (InvalidationRequired::Yes == invalidate) {
@@ -1310,13 +1310,13 @@ TreeInodePtr TreeInode::mkdir(
 
     // Allocate an inode number
     auto childNumber = getOverlay()->allocateInodeNumber();
-    getMount()->addInodeTraceEvent(
+    getMount()->publishInodeTraceEvent(InodeTraceEvent(
         startTime,
-        InodeEventType::MATERIALIZE,
-        InodeType::TREE,
         childNumber,
-        targetName.stringPiece(),
-        InodeEventProgress::START);
+        InodeType::TREE,
+        InodeEventType::MATERIALIZE,
+        InodeEventProgress::START,
+        targetName.stringPiece()));
 
     // The mode passed in by the caller may not have the file type bits set.
     // Ensure that we mark this as a directory.
@@ -1352,13 +1352,13 @@ TreeInodePtr TreeInode::mkdir(
 
     // Once the overlay is fully updated, the inode is materialized so we can
     // publish this to TraceBus
-    getMount()->addInodeTraceEvent(
+    getMount()->publishInodeTraceEvent(InodeTraceEvent(
         startTime,
-        InodeEventType::MATERIALIZE,
-        InodeType::TREE,
         childNumber,
-        targetName.stringPiece(),
-        InodeEventProgress::END);
+        InodeType::TREE,
+        InodeEventType::MATERIALIZE,
+        InodeEventProgress::END,
+        targetName.stringPiece()));
   }
 
   getMount()->getJournal().recordCreated(targetName);

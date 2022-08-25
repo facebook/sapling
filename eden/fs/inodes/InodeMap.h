@@ -14,6 +14,7 @@
 #include <optional>
 #include <unordered_map>
 
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/Overlay.h"
@@ -611,22 +612,24 @@ class InodeMap {
       mode_t mode);
 
   /**
-   * Publish an inode load start event to the eden mount's inodeTraceBus
-   * for telemetry. Additionally sets the unloaded inode's loadStartTime
-   * timestamp for when the start event began. This function should be called
-   * while holding the data_ write lock
+   * Create and return inode load start event that will later be published to
+   * tracebus for telemetry. Additionally sets the unloaded inode's
+   * loadStartTime timestamp for when the start event began. This function
+   * should be called while holding the data_ write lock, and the event should
+   * be published after releasing the lock.
    */
-  void publishInodeLoadStartEvent(
+  InodeTraceEvent createInodeLoadStartEvent(
       InodeNumber number,
       UnloadedInode& unloadedData,
-      const folly::Synchronized<Members>::WLockedPtr& data) noexcept;
+      const folly::Synchronized<Members>::WLockedPtr& data);
 
   /**
-   * Publish an inode load failure event to the eden mount's inodeTraceBus
-   * for telemetry. This method acquires a read lock on data_. It should never
-   * be called while already holding the lock.
+   * Create and return an inode load failure event that will later be published
+   * to tracebus for telemetry. This method acquires a read lock on data_. It
+   * should never be called while already holding the lock. The function returns
+   * std::nullopt if failing to find the inode number passed in.
    */
-  void publishInodeLoadFailEvent(InodeNumber number) noexcept;
+  std::optional<InodeTraceEvent> createInodeLoadFailEvent(InodeNumber number);
 
   /**
    * Extract the list of promises waiting on the specified inode number to be

@@ -81,20 +81,19 @@ DEFINE_string(
 namespace facebook::eden {
 
 InodeTraceEvent::InodeTraceEvent(
-    TraceEventBase times,
+    std::chrono::system_clock::time_point startTime,
     InodeNumber ino,
     InodeType inodeType,
     InodeEventType eventType,
     InodeEventProgress progress,
-    std::chrono::microseconds duration,
     folly::StringPiece stringPath)
-    : ino{ino},
-      inodeType{inodeType},
-      eventType{eventType},
-      progress{progress},
-      duration{duration} {
-  systemTime = times.systemTime;
-  monotonicTime = times.monotonicTime;
+    : ino{ino}, inodeType{inodeType}, eventType{eventType}, progress{progress} {
+  systemTime = (progress == InodeEventProgress::START)
+      ? startTime
+      : std::chrono::system_clock::now();
+  duration = std::chrono::duration_cast<std::chrono::microseconds>(
+      systemTime - startTime);
+  monotonicTime = std::chrono::steady_clock::now();
   setPath(stringPath);
 }
 
@@ -2273,6 +2272,12 @@ void EdenMount::subscribeInodeActivityBuffer() {
           // Use full path name for the inode event if available, otherwise
           // default to the filename already stored
           try {
+            // Note calling getPathForInode acquires the InodeMap data_ lock and
+            // an InodeBase's location_ lock. This is safe since we ensure to
+            // never publish to tracebus holding the data_ or a location_ lock.
+            // However, we do still publish holding the EdenMount's Rename and
+            // TreeInode's contents_ locks, so we must make sure to NEVER aquire
+            // those locks in this subscriber.
             auto relativePath = inodeMap_->getPathForInode(event.ino);
             if (relativePath.has_value()) {
               InodeTraceEvent newTraceEvent = event;
@@ -2287,34 +2292,12 @@ void EdenMount::subscribeInodeActivityBuffer() {
   }
 }
 
-void EdenMount::addInodeTraceEvent(
-    std::chrono::system_clock::time_point startTime,
-    InodeEventType eventType,
-    InodeType type,
-    InodeNumber ino,
-    folly::StringPiece path,
-    InodeEventProgress progress) noexcept {
+void EdenMount::publishInodeTraceEvent(InodeTraceEvent&& event) noexcept {
   if (!getEdenConfig()->enableInodeTraceBus.getValue()) {
     return;
   }
-  // Measure timestamps and duration
-  auto eventSystemTime = (progress == InodeEventProgress::START)
-      ? startTime
-      : std::chrono::system_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
-      eventSystemTime - startTime);
-  auto steadyTime = std::chrono::steady_clock::now();
-
   try {
-    // Publish event to inodeTraceBus
-    inodeTraceBus_->publish(InodeTraceEvent(
-        {eventSystemTime, steadyTime},
-        ino,
-        type,
-        eventType,
-        progress,
-        duration,
-        path));
+    inodeTraceBus_->publish(event);
   } catch (const std::exception& e) {
     XLOG(DBG3) << "Error publishing inode event to tracebus: " << e.what();
   }

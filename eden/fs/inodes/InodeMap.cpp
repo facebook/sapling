@@ -16,7 +16,6 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
-#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/ParentInodeInfo.h"
@@ -271,6 +270,7 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
   // We hold it while doing most of our work below, but explicitly unlock it
   // before triggering inode loading or before fulfilling any Promises.
   auto data = data_.wlock();
+  std::vector<InodeTraceEvent> startLoadEvents;
 
   // Check to see if this Inode is already loaded
   auto loadedIter = data->loadedInodes_.find(number);
@@ -302,7 +302,8 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
   bool alreadyLoading = !unloadedData->promises.empty();
 
   if (!alreadyLoading) {
-    publishInodeLoadStartEvent(number, *unloadedData, data);
+    startLoadEvents.push_back(
+        createInodeLoadStartEvent(number, *unloadedData, data));
   }
 
   // Add a new entry to the promises list.
@@ -339,8 +340,11 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
       bool isUnlinked = unloadedData->isUnlinked;
       auto optionalHash = unloadedData->hash;
       auto mode = unloadedData->mode;
-      // Unlock the data before starting the child lookup
+      // Unlock data and publish load events before starting the child lookup
       data.unlock();
+      for (auto& event : startLoadEvents) {
+        mount_->publishInodeTraceEvent(std::move(event));
+      }
       // Trigger the lookup, then return to our caller.
       startChildLookup(
           firstLoadedParent,
@@ -360,8 +364,12 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
       auto bug = EDEN_BUG_EXCEPTION()
           << "unknown parent inode " << unloadedData->parent << " (of "
           << unloadedData->name << ")";
-      // Unlock our data before calling inodeLoadFailed()
+      // Unlock our data before publishing any stored load start events and
+      // calling inodeLoadFailed()
       data.unlock();
+      for (auto& event : startLoadEvents) {
+        mount_->publishInodeTraceEvent(std::move(event));
+      }
       inodeLoadFailed(childInodeNumber, bug);
       return result;
     }
@@ -370,7 +378,8 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
     alreadyLoading = !parentData->promises.empty();
 
     if (!alreadyLoading) {
-      publishInodeLoadStartEvent(unloadedData->parent, *parentData, data);
+      startLoadEvents.push_back(
+          createInodeLoadStartEvent(unloadedData->parent, *parentData, data));
     }
 
     // Add a new entry to the promises list.
@@ -388,6 +397,10 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
     if (alreadyLoading) {
       // This parent is already being loaded.
       // We don't need to trigger any new loads ourself.
+      data.unlock();
+      for (auto& event : startLoadEvents) {
+        mount_->publishInodeTraceEvent(std::move(event));
+      }
       return result;
     }
 
@@ -457,26 +470,32 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
 
   PromiseVector promises;
   try {
-    auto data = data_.wlock();
-    auto it = data->unloadedInodes_.find(number);
-    XCHECK(it != data->unloadedInodes_.end())
-        << "failed to find unloaded inode data when finishing load of inode "
-        << number << ": " << inode->getLogPath();
-    swap(promises, it->second.promises);
+    std::optional<InodeTraceEvent> endLoadEvent;
+    {
+      auto data = data_.wlock();
+      auto it = data->unloadedInodes_.find(number);
+      XCHECK(it != data->unloadedInodes_.end())
+          << "failed to find unloaded inode data when finishing load of inode "
+          << number << ": " << inode->getLogPath();
+      swap(promises, it->second.promises);
 
-    inode->setChannelRefcount(it->second.numFsReferences);
+      inode->setChannelRefcount(it->second.numFsReferences);
 
-    // Insert the entry into loadedInodes_ and remove it from unloadedInodes_
-    insertLoadedInode(data, inode);
-    // Before removing from unloadedInodes_, publish load end event to tracebus
-    mount_->addInodeTraceEvent(
-        it->second.loadStartTime,
-        InodeEventType::LOAD,
-        it->second.getInodeType(),
-        number,
-        it->second.name.stringPiece(),
-        InodeEventProgress::END);
-    data->unloadedInodes_.erase(it);
+      // Insert the entry into loadedInodes_ and remove it from unloadedInodes_
+      insertLoadedInode(data, inode);
+      // Before removing from unloadedInodes_, create an inode end event (for
+      // which we need the data_ lock to read attributes) and publish the event
+      // after releasing the data_ lock
+      endLoadEvent = std::make_optional<InodeTraceEvent>(
+          it->second.loadStartTime,
+          number,
+          it->second.getInodeType(),
+          InodeEventType::LOAD,
+          InodeEventProgress::END,
+          it->second.name.stringPiece());
+      data->unloadedInodes_.erase(it);
+    }
+    mount_->publishInodeTraceEvent(std::move(endLoadEvent.value()));
     return promises;
   } catch (const std::exception& ex) {
     XLOG(ERR) << "error marking inode " << number
@@ -485,7 +504,10 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
     for (auto& promise : promises) {
       promise.setException(ew);
     }
-    publishInodeLoadFailEvent(number);
+    auto optionalFailEvent = createInodeLoadFailEvent(number);
+    if (optionalFailEvent.has_value()) {
+      mount_->publishInodeTraceEvent(std::move(optionalFailEvent.value()));
+    }
     return PromiseVector{};
   }
 }
@@ -499,39 +521,43 @@ void InodeMap::inodeLoadFailed(
   for (auto& promise : promises) {
     promise.setException(ex);
   }
-  publishInodeLoadFailEvent(number);
+  auto optionalFailEvent = createInodeLoadFailEvent(number);
+  if (optionalFailEvent.has_value()) {
+    mount_->publishInodeTraceEvent(std::move(optionalFailEvent.value()));
+  }
 }
 
-void InodeMap::publishInodeLoadStartEvent(
+InodeTraceEvent InodeMap::createInodeLoadStartEvent(
     InodeNumber number,
     UnloadedInode& unloadedData,
-    const folly::Synchronized<Members>::LockedPtr& /* data */) noexcept {
+    const folly::Synchronized<Members>::LockedPtr& /* data */) {
   unloadedData.loadStartTime = std::chrono::system_clock::now();
-  mount_->addInodeTraceEvent(
+  return InodeTraceEvent(
       unloadedData.loadStartTime,
-      InodeEventType::LOAD,
-      unloadedData.getInodeType(),
       number,
-      unloadedData.name.stringPiece(),
-      InodeEventProgress::START);
+      unloadedData.getInodeType(),
+      InodeEventType::LOAD,
+      InodeEventProgress::START,
+      unloadedData.name.stringPiece());
 }
 
-void InodeMap::publishInodeLoadFailEvent(InodeNumber number) noexcept {
+std::optional<InodeTraceEvent> InodeMap::createInodeLoadFailEvent(
+    InodeNumber number) {
   auto data = data_.rlock();
   auto it = data->unloadedInodes_.find(number);
   if (it != data->unloadedInodes_.end()) {
     XLOG(ERR)
         << "failed to find unloaded inode data when finishing load of inode "
         << number;
-  } else {
-    mount_->addInodeTraceEvent(
-        it->second.loadStartTime,
-        InodeEventType::LOAD,
-        it->second.getInodeType(),
-        number,
-        it->second.name.stringPiece(),
-        InodeEventProgress::FAIL);
+    return std::nullopt;
   }
+  return InodeTraceEvent(
+      it->second.loadStartTime,
+      number,
+      it->second.getInodeType(),
+      InodeEventType::LOAD,
+      InodeEventProgress::FAIL,
+      it->second.name.stringPiece());
 }
 
 InodeMap::PromiseVector InodeMap::extractPendingPromises(InodeNumber number) {
@@ -1151,31 +1177,39 @@ bool InodeMap::startLoadingChildIfNotLoading(
     InodeNumber childInode,
     mode_t mode,
     folly::Promise<InodePtr> promise) {
-  auto data = data_.wlock();
-  UnloadedInode* unloadedData{nullptr};
-  auto iter = data->unloadedInodes_.find(childInode);
-  if (iter == data->unloadedInodes_.end()) {
-    InodeNumber parentNumber = parent->getNodeId();
-    // T127459236: not all attributes of the UnloadedInode are set here. For
-    // example, isUnlinked, hash, and numFsReferences are set to default values
-    auto newUnloadedData = UnloadedInode(parentNumber, name, mode);
-    auto ret =
-        data->unloadedInodes_.emplace(childInode, std::move(newUnloadedData));
-    XDCHECK(ret.second);
-    unloadedData = &ret.first->second;
-  } else {
-    unloadedData = &iter->second;
+  bool isFirstPromise;
+  std::optional<InodeTraceEvent> startLoadEvent;
+  {
+    auto data = data_.wlock();
+    UnloadedInode* unloadedData{nullptr};
+    auto iter = data->unloadedInodes_.find(childInode);
+    if (iter == data->unloadedInodes_.end()) {
+      InodeNumber parentNumber = parent->getNodeId();
+      // T127459236: not all attributes of the UnloadedInode are set here. For
+      // example, isUnlinked, hash, and numFsReferences are set to default
+      // values
+      auto newUnloadedData = UnloadedInode(parentNumber, name, mode);
+      auto ret =
+          data->unloadedInodes_.emplace(childInode, std::move(newUnloadedData));
+      XDCHECK(ret.second);
+      unloadedData = &ret.first->second;
+    } else {
+      unloadedData = &iter->second;
+    }
+
+    isFirstPromise = unloadedData->promises.empty();
+
+    if (isFirstPromise) {
+      startLoadEvent = std::make_optional<InodeTraceEvent>(
+          createInodeLoadStartEvent(childInode, *unloadedData, data));
+    }
+
+    // Add the promise to the existing list for this inode.
+    unloadedData->promises.push_back(std::move(promise));
   }
-
-  bool isFirstPromise = unloadedData->promises.empty();
-
-  if (isFirstPromise) {
-    publishInodeLoadStartEvent(childInode, *unloadedData, data);
+  if (startLoadEvent.has_value()) {
+    mount_->publishInodeTraceEvent(std::move(startLoadEvent.value()));
   }
-
-  // Add the promise to the existing list for this inode.
-  unloadedData->promises.push_back(std::move(promise));
-
   // If this is the very first promise then tell the caller they need
   // to start the load operation.  Otherwise someone else (whoever added the
   // first promise) has already started loading the inode.

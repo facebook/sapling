@@ -105,15 +105,18 @@ class SharedRenameLock;
  * An inode load refers to fetching state for the inode to store into memory.
  * Note: this is not the same as fetching data content for the inode. Fetching
  * data content from an hg BackingStore in particular is an HgImportTraceEvent.
+ *
+ * Note, path could be the full path (in the case of inode creations), or,
+ * more commonly, just base filenames depending on how much is easily
+ * available during the inode event.
  */
 struct InodeTraceEvent : TraceEventBase {
   InodeTraceEvent(
-      TraceEventBase times,
+      std::chrono::system_clock::time_point startTime,
       InodeNumber ino,
       InodeType inodeType,
       InodeEventType eventType,
       InodeEventProgress progress,
-      std::chrono::microseconds duration,
       folly::StringPiece path);
 
   // Simple accessor that hides the internal memory representation of the trace
@@ -845,25 +848,28 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * store InodeTraceEvents into the ActivityBuffer as they occur. In addition,
    * path names for the inodes are calculated here outside of the critical path
    * of the inode event in order to be displayed in the eden inode tracing CLI.
+   *
+   * Note: subscribers will acquire the InodeMap's data_ and an InodeBase's
+   * location_ lock to calculate paths for inodes. However, we must ensure
+   * subscribers NEVER aquire EdenMount's Rename or a TreeInode's contents_
+   * lock since inode events can still be published to the inode tracebus
+   * holding those locks.
    */
   void subscribeInodeActivityBuffer();
 
   /**
    * Helper function to publish a new InodeTraceEvent to the mount's
    * inodeTraceBus for telemetry. Used in FileInode, TreeInode, and InodeMap.
-   * Note, path could be the full path (in the case of inode creations), or,
-   * more commonly, just base filenames depending on how much is easily
-   * available during the inode event. This function is marked noexcept and is
-   * guaranteed to never throw an exception. If tracebus fails (i.e. due to
-   * being out of memory), then this exception is caught and telemetry is lost.
+   * This function is marked noexcept and is guaranteed to never throw an
+   * exception. If tracebus fails (i.e. due to being out of memory), then this
+   * exception is caught and telemetry is lost.
+   *
+   * Note: we must make sure to NEVER call this while holding the InodeMap's
+   * data_ lock or an InodeBase's location_ lock since subscribers will also
+   * attempt to acquire those locks, causing a deadlock if capacity is reached
+   * and tracebus starts to block.
    */
-  void addInodeTraceEvent(
-      std::chrono::system_clock::time_point startTime,
-      InodeEventType eventType,
-      InodeType type,
-      InodeNumber ino,
-      folly::StringPiece path,
-      InodeEventProgress progress) noexcept;
+  void publishInodeTraceEvent(InodeTraceEvent&& event) noexcept;
 
   /**
    * mount any configured bind mounts.

@@ -142,6 +142,12 @@ class TraceSubscriptionHandle {
  * computation: if the subscriptions perform heavy computation and events are
  * submitted more frequently than they're processed, publish() will block.
  *
+ * Note: this blocking behavior then waits for subscribers to finish processing
+ * events, and if any locks are held that are subsequently attempted to be
+ * acquired by a tracebus subscriber, this can cause a deadlock. As a general
+ * rule one should try to avoid publishing to tracebus while holding any locks
+ * and should be very careful when subscribers attempt to acquire locks.
+ *
  * The capacity should be selected based on the expected usage in context.
  * Memory usage will be capacity * sizeof(TraceEvent) * 2, but a capacity too
  * small will block publishers. The buffer is not intended to prevent all
@@ -186,13 +192,17 @@ class TraceBus : public std::enable_shared_from_this<TraceBus<TraceEvent>> {
 
   /**
    * Publishes an event into the trace queue. The copy constructor must not
-   * throw.
+   * throw. Also, one should avoid publishing to tracebus while holding any
+   * locks or ensure held locks are not attempted to be acquired by tracebus
+   * subscribers. Otherwise, the thread could deadlock if capacity is reached
    */
   void publish(const TraceEvent& event) noexcept;
 
   /**
    * Publishes an event into the trace queue. The move constructor must not
-   * throw.
+   * throw. Also, one should avoid publishing to tracebus while holding any
+   * locks or ensure held locks are not attempted to be acquired by tracebus
+   * subscribers. Otherwise, the thread could deadlock if capacity is reached
    */
   void publish(TraceEvent&& event) noexcept;
 
