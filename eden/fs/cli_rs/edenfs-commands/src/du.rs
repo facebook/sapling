@@ -263,6 +263,19 @@ impl DiskUsageCmd {
     }
 }
 
+/// Get all the backing repositories associated with the passed in mounts.
+fn get_backing_repos(mounts: &Vec<PathBuf>, instance: &EdenFsInstance) -> Result<HashSet<PathBuf>> {
+    let mut backing_repos = HashSet::new();
+
+    for mount in mounts {
+        let checkout = find_checkout(instance, mount)?;
+        if let Some(backing_repo) = checkout.backing_repo() {
+            backing_repos.insert(backing_repo);
+        }
+    }
+    Ok(backing_repos)
+}
+
 #[async_trait]
 impl crate::Subcommand for DiskUsageCmd {
     async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
@@ -271,35 +284,34 @@ impl crate::Subcommand for DiskUsageCmd {
         let mounts = self
             .get_mounts(&instance)
             .context("Failed to get EdenFS mounts")?;
+        let backing_repos = get_backing_repos(&mounts, &instance)
+            .context("Failed to get EdenFS backing repositories")?;
 
         let mut aggregated_usage_counts = AggregatedUsageCounts::new();
         let mut backing_failed_file_checks = HashSet::new();
         let mut mount_failed_file_checks = HashSet::new();
         let mut redirection_failed_file_checks = HashSet::new();
-        let mut backing_repos = HashSet::new();
         let mut backed_working_copy_repos = HashSet::new();
         let mut redirections = HashSet::new();
         let mut fsck_dirs = Vec::new();
+
+        for b in backing_repos.iter() {
+            // GET SUMMARY INFO for backing counts
+            let (usage_count, failed_file_checks) = usage_for_dir(b, None).from_err()?;
+            aggregated_usage_counts.backing += usage_count;
+            backing_failed_file_checks.extend(failed_file_checks);
+
+            // GET BACKED WORKING COPY REPOS
+            // if the backing repo folder contains ".hg" and
+            // has more than just the .hg directory inside it,
+            // then it is a backed working copy repo
+            if b.join(".hg").is_dir() && fs::read_dir(&b).from_err()?.count() > 1 {
+                backed_working_copy_repos.insert(b);
+            }
+        }
+
         for mount in &mounts {
             let checkout = find_checkout(&instance, mount)?;
-
-            if let Some(b) = checkout.backing_repo() {
-                // GET SUMMARY INFO for backing counts
-                let (usage_count, failed_file_checks) = usage_for_dir(&b, None).from_err()?;
-                aggregated_usage_counts.backing += usage_count;
-                backing_failed_file_checks.extend(failed_file_checks);
-
-                // GET BACKING REPO INFO
-                backing_repos.insert(b.clone());
-
-                // GET BACKED WORKING COPY REPOS
-                // if the backing repo folder contains ".hg" and
-                // has more than just the .hg directory inside it,
-                // then it is a backed working copy repo
-                if b.join(".hg").is_dir() && fs::read_dir(&b).from_err()?.count() > 1 {
-                    backed_working_copy_repos.insert(b);
-                }
-            }
 
             // GET SUMMARY INFO for materialized counts
             let overlay_dir = checkout.data_dir().join("local");
@@ -349,7 +361,6 @@ impl crate::Subcommand for DiskUsageCmd {
         let backing_failed_file_checks = backing_failed_file_checks;
         let mount_failed_file_checks = mount_failed_file_checks;
         let redirection_failed_file_checks = redirection_failed_file_checks;
-        let backing_repos = backing_repos;
         let backed_working_copy_repos = backed_working_copy_repos;
         let redirections = redirections;
 
@@ -499,7 +510,7 @@ To automatically remove this directory, run `eden du --deep-clean`.",
                 write_title("Backing repos");
             }
             if !backing_repos.is_empty() {
-                for backing in backing_repos {
+                for backing in backing_repos.iter() {
                     println!("{}", backing.display());
                 }
                 println!(
