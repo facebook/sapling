@@ -7,6 +7,7 @@
 
 use std::cell::RefCell;
 use std::env;
+use std::path::PathBuf;
 
 use clidispatch::io::IO;
 use configparser::config::ConfigSet;
@@ -58,14 +59,45 @@ impl HgPython {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
+        // Putting the module in sys.modules makes it importable.
+        let sys = py.import("sys").unwrap();
+        HgPython::update_path(py, &sys);
+
         // If this fails, it's a fatal error.
         let name = "bindings";
         let bindings_module = PyModule::new(py, &name).unwrap();
         prepare_builtin_modules(py, &bindings_module).unwrap();
-        // Putting the module in sys.modules makes it importable.
-        let sys = py.import("sys").unwrap();
         let sys_modules = PyDict::extract(py, &sys.get(py, "modules").unwrap()).unwrap();
         sys_modules.set_item(py, name, bindings_module).unwrap();
+    }
+
+    fn update_path(py: Python, sys: &PyModule) {
+        // In homebrew and other environments, the python modules may be installed isolated
+        // alongside the binary. Let's setup the PATH so we discover those python modules.
+        // An example layout:
+        //   $PREFIX/usr/local/bin/hg
+        //   $PREFIX/usr/local/lib/python3.8/site-packages/edenscmnative
+        //   $PREFIX/usr/local/lib/python3.8/site-packages/edenscmdeps3.zip
+        //   $PREFIX/usr/local/lib/python3.8/site-packages/edenscm
+        let py_version: (i32, i32, i32, String, i32) =
+            sys.get(py, "version_info").unwrap().extract(py).unwrap();
+        let rel_path = PathBuf::from(format!(
+            "lib/python{}.{}/site-packages",
+            py_version.0, py_version.1
+        ));
+        let site_packages_path = std::env::current_exe()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join(rel_path)
+            .into_os_string()
+            .into_string()
+            .unwrap();
+
+        let py_path: PyList = sys.get(py, "path").unwrap().extract(py).unwrap();
+        py_path.append(py, PyUnicode::new(py, &site_packages_path).into_object());
     }
 
     fn prepare_args(args: &[String]) -> Vec<String> {
