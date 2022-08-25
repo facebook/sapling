@@ -9,9 +9,9 @@
 
 use std::borrow::Cow;
 use std::cell::RefCell;
-use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::BufWriter;
+use std::io::Cursor;
 use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
@@ -27,6 +27,8 @@ use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
 
 use crate::errors::ErrorKind;
+use crate::filereadwrite::FileReadWrite;
+use crate::filereadwrite::FileReaderWriter;
 use crate::store::BlockId;
 use crate::store::Store;
 use crate::store::StoreView;
@@ -47,7 +49,7 @@ const HEADER_LEN: u64 = (MAGIC_LEN + 4) as u64;
 /// Implementation of a store using file I/O to read and write blocks to a file.
 pub struct FileStore {
     /// The underlying file.  This is stored in a RefCell so that we can seek during reads.
-    file: RefCell<BufWriter<File>>,
+    file: RefCell<Box<dyn FileReadWrite>>,
 
     /// The position in the file to which new items will be written.
     position: u64,
@@ -65,29 +67,46 @@ pub struct FileStore {
     cache: Option<Vec<u8>>,
 
     /// The path to underlying file.
-    path: PathBuf,
+    path: Option<PathBuf>,
 }
 
 impl FileStore {
     /// Create a new FileStore, overwriting any existing file.
     pub fn create<P: AsRef<Path>>(path: P) -> Result<FileStore> {
-        let mut file = BufWriter::new(
+        let mut file = FileReaderWriter::new(BufWriter::new(
             OpenOptions::new()
                 .read(true)
                 .write(true)
                 .create(true)
                 .truncate(true)
                 .open(&path)?,
-        );
+        ));
         file.write(&MAGIC)?;
         file.write_u32::<BigEndian>(VERSION)?;
         Ok(FileStore {
-            file: RefCell::new(file),
+            file: RefCell::new(Box::new(file) as Box<dyn FileReadWrite>),
             position: HEADER_LEN,
             at_end: RefCell::new(true),
             read_only: false,
             cache: None,
-            path: path.as_ref().to_path_buf(),
+            path: Some(path.as_ref().to_path_buf()),
+        })
+    }
+
+    /// Create a new FileStore in memory. This is used solely for providing
+    /// EdenFS a TreeState that is backed by a legacy dirstate.
+    /// TODO: Remove once EdenFS has migrated to TreeState.
+    pub fn in_memory() -> Result<FileStore> {
+        let mut file = Cursor::new(Vec::new());
+        file.write_all(&MAGIC)?;
+        file.write_u32::<BigEndian>(VERSION)?;
+        Ok(FileStore {
+            file: RefCell::new(Box::new(file) as Box<dyn FileReadWrite>),
+            position: HEADER_LEN,
+            at_end: RefCell::new(true),
+            read_only: false,
+            cache: None,
+            path: None,
         })
     }
 
@@ -104,17 +123,16 @@ impl FileStore {
                 read_only = true;
                 OpenOptions::new().read(true).open(&path)
             })?;
-        let mut file = BufWriter::new(file);
+        let mut file = FileReaderWriter::new(BufWriter::new(file));
 
         // Check the file header is as expected.
         let mut buffer = [0; MAGIC_LEN];
-        file.get_ref()
-            .read_exact(&mut buffer)
+        file.read_exact(&mut buffer)
             .map_err(|_e| ErrorKind::NotAStoreFile)?;
         if buffer != MAGIC {
             bail!(ErrorKind::NotAStoreFile);
         }
-        let version = file.get_ref().read_u32::<BigEndian>()?;
+        let version = file.read_u32::<BigEndian>()?;
         if version != VERSION {
             bail!(ErrorKind::UnsupportedVersion(version));
         }
@@ -124,18 +142,18 @@ impl FileStore {
         let position = file.seek(SeekFrom::End(0))?;
 
         Ok(FileStore {
-            file: RefCell::new(file),
+            file: RefCell::new(Box::new(file) as Box<dyn FileReadWrite>),
             position,
             at_end: RefCell::new(true),
             read_only,
             cache: None,
-            path: path.as_ref().to_path_buf(),
+            path: Some(path.as_ref().to_path_buf()),
         })
     }
 
     pub fn cache(&mut self) -> Result<()> {
         if self.cache.is_none() {
-            let file = self.file.get_mut();
+            let mut file = self.file.borrow_mut();
             file.flush()?;
             file.seek(SeekFrom::Start(0))?;
             *self.at_end.get_mut() = false;
@@ -144,7 +162,7 @@ impl FileStore {
                 // This is safe as we've just allocated the buffer and are about to read into it.
                 buffer.set_len(self.position as usize);
             }
-            file.get_mut().read_exact(buffer.as_mut_slice())?;
+            file.read_exact(buffer.as_mut_slice())?;
             file.seek(SeekFrom::Start(self.position))?;
             *self.at_end.get_mut() = true;
             self.cache = Some(buffer);
@@ -156,8 +174,8 @@ impl FileStore {
         self.position
     }
 
-    pub fn path(&self) -> &Path {
-        &self.path
+    pub fn path(&self) -> Option<&Path> {
+        self.path.as_ref().map(|path| path.as_ref())
     }
 }
 
@@ -167,7 +185,7 @@ impl Store for FileStore {
             bail!(ErrorKind::ReadOnlyStore);
         }
         let id = BlockId(self.position);
-        let file = self.file.get_mut();
+        let mut file = self.file.borrow_mut();
         let at_end = self.at_end.get_mut();
         if !*at_end {
             file.seek(SeekFrom::Start(self.position))?;
@@ -182,9 +200,9 @@ impl Store for FileStore {
     }
 
     fn flush(&mut self) -> Result<()> {
-        let file = self.file.get_mut();
+        let mut file = self.file.borrow_mut();
         file.flush()?;
-        file.get_mut().sync_all()?;
+        file.sync_all()?;
         Ok(())
     }
 }
@@ -220,7 +238,7 @@ impl StoreView for FileStore {
         *self.at_end.borrow_mut() = false;
 
         // Read the block of data from the file.
-        let size = file.get_mut().read_u32::<BigEndian>()?;
+        let size = file.read_u32::<BigEndian>()?;
         if size as u64 > self.position - id.0 {
             // The stored size of this block exceeds the number of bytes left in the file.  We
             // must have been given an invalid ID.
@@ -231,7 +249,7 @@ impl StoreView for FileStore {
             // This is safe as we've just allocated the buffer and are about to read into it.
             buffer.set_len(size as usize);
         }
-        file.get_mut().read_exact(&mut buffer[..])?;
+        file.read_exact(&mut buffer[..])?;
 
         Ok(Cow::from(buffer))
     }

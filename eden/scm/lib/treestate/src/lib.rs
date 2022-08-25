@@ -14,6 +14,7 @@
 
 pub mod dirstate;
 pub mod errors;
+mod filereadwrite;
 pub mod filestate;
 pub mod filestore;
 pub mod metadata;

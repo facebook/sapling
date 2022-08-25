@@ -73,7 +73,7 @@ impl TreeState {
         }
     }
 
-    pub fn path(&self) -> &Path {
+    pub fn path(&self) -> Option<&Path> {
         self.store.path()
     }
 

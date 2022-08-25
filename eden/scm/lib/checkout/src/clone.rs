@@ -252,6 +252,7 @@ pub fn flush_dirstate(
 
     let tree_file = ts
         .path()
+        .ok_or_else(|| anyhow!("TreeState shouldn't be backed by memory but a physical file"))?
         .file_name()
         .ok_or_else(|| anyhow!("bad treestate path: {:?}", ts.path()))?;
 
