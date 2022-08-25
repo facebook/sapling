@@ -276,6 +276,26 @@ fn get_backing_repos(mounts: &Vec<PathBuf>, instance: &EdenFsInstance) -> Result
     Ok(backing_repos)
 }
 
+/// Warn about backing repositories that are non-empty working copy.
+fn warn_about_working_copy_for_backing_repo(backing_repos: &HashSet<PathBuf>) -> Result<()> {
+    let mut warned = false;
+    for backing_repo in backing_repos.iter() {
+        // A non-empty working copy will contain more than just the .hg at the root.
+        if backing_repo.join(".hg").is_dir() && fs::read_dir(backing_repo).from_err()?.count() > 1 {
+            if !warned {
+                println!(
+                    "\nWorking copy detected in backing repo. This is not generally useful \
+                    and just takes up space.  You can make this a bare repo to reclaim \
+                    space by running:\n"
+                );
+                warned = true;
+            }
+            println!("hg -R {} checkout null", backing_repo.display());
+        }
+    }
+    Ok(())
+}
+
 #[async_trait]
 impl crate::Subcommand for DiskUsageCmd {
     async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
@@ -291,7 +311,6 @@ impl crate::Subcommand for DiskUsageCmd {
         let mut backing_failed_file_checks = HashSet::new();
         let mut mount_failed_file_checks = HashSet::new();
         let mut redirection_failed_file_checks = HashSet::new();
-        let mut backed_working_copy_repos = HashSet::new();
         let mut redirections = HashSet::new();
         let mut fsck_dirs = Vec::new();
 
@@ -300,14 +319,6 @@ impl crate::Subcommand for DiskUsageCmd {
             let (usage_count, failed_file_checks) = usage_for_dir(b, None).from_err()?;
             aggregated_usage_counts.backing += usage_count;
             backing_failed_file_checks.extend(failed_file_checks);
-
-            // GET BACKED WORKING COPY REPOS
-            // if the backing repo folder contains ".hg" and
-            // has more than just the .hg directory inside it,
-            // then it is a backed working copy repo
-            if b.join(".hg").is_dir() && fs::read_dir(&b).from_err()?.count() > 1 {
-                backed_working_copy_repos.insert(b);
-            }
         }
 
         for mount in &mounts {
@@ -361,7 +372,6 @@ impl crate::Subcommand for DiskUsageCmd {
         let backing_failed_file_checks = backing_failed_file_checks;
         let mount_failed_file_checks = mount_failed_file_checks;
         let redirection_failed_file_checks = redirection_failed_file_checks;
-        let backed_working_copy_repos = backed_working_copy_repos;
         let redirections = redirections;
 
         // GET SUMMARY INFO for shared usage
@@ -534,16 +544,8 @@ To automatically remove this directory, run `eden du --deep-clean`.",
                 temporarily. This will affect other users if you run this command on a shared machine."
             );
 
-            if !backed_working_copy_repos.is_empty() {
-                println!(
-                    "\nWorking copy detected in backing repo.  This is not generally useful \
-                    and just takes up space.  You can make this a bare repo to reclaim \
-                    space by running:\n"
-                );
-                for backed_working_copy in backed_working_copy_repos {
-                    println!("hg -R {} checkout null", backed_working_copy.display());
-                }
-            }
+            warn_about_working_copy_for_backing_repo(&backing_repos)
+                .context("Failed to warn about working copy in backing repo")?;
 
             // PRINT SHARED SPACE
             write_title("Shared space");
