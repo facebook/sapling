@@ -48,6 +48,8 @@ if os.name == "nt":
 else:
     PY_VERSION = "38"
 
+ossbuild = bool(os.environ.get("SAPLING_OSS_BUILD"))
+
 
 def ensureenv():
     """Load build/env's as environment variables.
@@ -105,7 +107,7 @@ from distutils.version import StrictVersion
 
 from distutils_rust import BuildRustExt, InstallRustExt, RustBinary, RustExtension
 
-havefb = os.path.exists("fb")
+havefb = not ossbuild and os.path.exists("fb")
 isgetdepsbuild = os.environ.get("GETDEPS_BUILD") == "1"
 
 # Find path for dependencies when not in havefb mode
@@ -654,7 +656,7 @@ class fbsourcepylibrary(asset):
 
     def __init__(self, name, path, excludes=None):
         assert (
-            havefb or isgetdepsbuild
+            havefb or isgetdepsbuild or ossbuild
         ), "can only build this internally at FB or via the getdeps.py script"
         topname = "fbsource-" + name.replace("/", ".")
         super(fbsourcepylibrary, self).__init__(name=name, destdir=topname)
@@ -776,40 +778,43 @@ class fetchbuilddeps(Command):
         ]
     ]
 
-    pyassets += [
-        fbsourcepylibrary(
-            "thrift",
-            "../../thrift/lib/py"
+    # These pyassets are eden and thrift related. We don't use those in open
+    # source for now.
+    if not ossbuild:
+        pyassets += [
+            fbsourcepylibrary(
+                "thrift",
+                "../../thrift/lib/py"
+                if havefb
+                else f"{dep_build_dir}/fbthrift/thrift/lib/py/thrift_py.lib_install/thrift_py/thrift",
+                excludes=[
+                    "thrift/util/asyncio.py",
+                    "thrift/util/inspect.py",
+                    "thrift/server/TAsyncioServer.py",
+                    "thrift/server/test/TAsyncioServerTest.py",
+                    "thrift/util/tests/__init__.py",
+                ],
+            ),
+            fbsourcepylibrary("eden", "../../eden/fs/py/eden"),
+        ]
+        pyassets += (
+            [
+                edenpythrift(
+                    name="eden-rust-deps-2f6da57cdd616a6f0e5d1b9fcd7f0349f4edcf47.zip"
+                )
+            ]
             if havefb
-            else f"{dep_build_dir}/fbthrift/thrift/lib/py/thrift_py.lib_install/thrift_py/thrift",
-            excludes=[
-                "thrift/util/asyncio.py",
-                "thrift/util/inspect.py",
-                "thrift/server/TAsyncioServer.py",
-                "thrift/server/test/TAsyncioServerTest.py",
-                "thrift/util/tests/__init__.py",
-            ],
-        ),
-        fbsourcepylibrary("eden", "../../eden/fs/py/eden"),
-    ]
-    pyassets += (
-        [
-            edenpythrift(
-                name="eden-rust-deps-2f6da57cdd616a6f0e5d1b9fcd7f0349f4edcf47.zip"
-            )
-        ]
-        if havefb
-        else [
-            thriftasset(
-                name="eden-thrift",
-                sourcemap={
-                    "../../eden/fs/service/eden.thrift": "eden/fs/service/eden.thrift",
-                    "../../eden/fs/config/eden_config.thrift": "eden/fs/config/eden_config.thrift",
-                    f"{dep_install_dir}/fb303/include/thrift-files/fb303/thrift/fb303_core.thrift": "fb303/thrift/fb303_core.thrift",
-                },
-            )
-        ]
-    )
+            else [
+                thriftasset(
+                    name="eden-thrift",
+                    sourcemap={
+                        "../../eden/fs/service/eden.thrift": "eden/fs/service/eden.thrift",
+                        "../../eden/fs/config/eden_config.thrift": "eden/fs/config/eden_config.thrift",
+                        f"{dep_install_dir}/fb303/include/thrift-files/fb303/thrift/fb303_core.thrift": "fb303/thrift/fb303_core.thrift",
+                    },
+                )
+            ]
+        )
 
     assets = pyassets
 
@@ -1769,7 +1774,7 @@ hgmainfeatures = (
                 "buildinfo" if needbuildinfo else None,
                 "with_chg" if not iswindows else None,
                 "fb" if havefb else None,
-                "eden",
+                "eden" if not ossbuild else None,
             ],
         )
     ).strip()
