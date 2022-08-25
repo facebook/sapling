@@ -202,7 +202,7 @@ Test warning on config option access and registration
   > EOF
 
   $ hg --config "extensions.buggyconfig=${TESTTMP}/buggyconfig.py" buggyconfig
-  devel-warn: extension 'buggyconfig' overwrite config item 'ui.interactive' at:*mercurial/extensions.py:* (_loadextra) (glob)
-  devel-warn: extension 'buggyconfig' overwrite config item 'ui.quiet' at:*mercurial/extensions.py:* (_loadextra) (glob)
+  devel-warn: extension 'buggyconfig' overwrite config item 'ui.interactive' at:*edenscm/extensions.py:* (_loadextra) (glob)
+  devel-warn: extension 'buggyconfig' overwrite config item 'ui.quiet' at:*edenscm/extensions.py:* (_loadextra) (glob)
 
   $ cd ..
