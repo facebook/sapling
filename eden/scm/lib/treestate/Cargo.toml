@@ -17,6 +17,7 @@ vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 
 [dev-dependencies]
 itertools = "0.10.3"
+pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 quickcheck = "1.0"
 rand = { version = "0.8", features = ["small_rng"] }
 rand_chacha = "0.3"
