@@ -22,7 +22,7 @@ dag = { version = "0.1.0", path = "../dag" }
 debugtop = { version = "0.1.0", path = "../debugtop" }
 eagerepo = { version = "0.1.0", path = "../eagerepo" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
-edenfs_client = { version = "0.1.0", path = "../edenfs-client" }
+edenfs_client = { version = "0.1.0", path = "../edenfs-client", optional = true }
 exchange = { version = "0.1.0", path = "../exchange" }
 fail = { version = "0.4", features = ["failpoints"] }
 flate2 = { version = "1.0.22", features = ["rust_backend", "tokio"], default-features = false }
@@ -67,6 +67,7 @@ zstd = "0.11.1+zstd.1.5.2"
 
 [features]
 default = ["python3"]
+eden = ["clidispatch/eden", "edenfs_client"]
 fb = ["configparser/fb", "version/generated"]
 python2 = ["bindings/python2", "cpython/python27-sys", "cpython_ext/python2", "python27-sys", "pytracing/python2"]
 python3 = ["bindings/python3", "cpython/python3-sys", "cpython_ext/python3", "python3-sys", "pytracing/python3"]
