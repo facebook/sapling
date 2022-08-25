@@ -609,11 +609,6 @@ FileInodePtr InodeMap::lookupLoadedFile(InodeNumber number) {
 }
 
 std::optional<RelativePath> InodeMap::getPathForInode(InodeNumber inodeNumber) {
-  // TODO: Remove the rootInode from the loadedInodes_ when it is unreferenced.
-  if (inodeNumber == kRootNodeId) {
-    return RelativePath();
-  }
-
   auto data = data_.rlock();
   return getPathForInodeHelper(inodeNumber, data);
 }
