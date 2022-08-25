@@ -25,7 +25,6 @@ use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_ext::body_ext::BodyExt;
-use gotham_ext::middleware::ClientIdentity;
 use http::header::HeaderMap;
 use http::uri::Authority;
 use http::uri::Parts;
@@ -42,7 +41,6 @@ use lfs_protocol::RequestBatch;
 use lfs_protocol::RequestObject;
 use lfs_protocol::ResponseBatch;
 use mononoke_types::ContentId;
-use permission_checker::MononokeIdentitySet;
 use repo_authorization::AuthorizationContext;
 use repo_permission_checker::RepoPermissionCheckerRef;
 use slog::Logger;
@@ -109,7 +107,6 @@ impl LfsServerContext {
         &self,
         ctx: CoreContext,
         repository: String,
-        _identities: Option<&MononokeIdentitySet>,
         host: String,
         method: LfsMethod,
     ) -> Result<RepositoryRequestContext, LfsServerContextErrorKind> {
@@ -285,19 +282,11 @@ impl RepositoryRequestContext {
 
         let ctx = req_ctx.ctx.clone();
 
-        let identities = if let Some(client_ident) = state.try_borrow::<ClientIdentity>() {
-            client_ident.identities().as_ref()
-        } else {
-            None
-        };
-
         let headers = HeaderMap::try_borrow_from(state);
         let host = get_host_header(&headers)?;
 
         let lfs_ctx = LfsServerContext::borrow_from(state);
-        lfs_ctx
-            .request(ctx, repository, identities, host, method)
-            .await
+        lfs_ctx.request(ctx, repository, host, method).await
     }
 
     pub fn logger(&self) -> &Logger {
