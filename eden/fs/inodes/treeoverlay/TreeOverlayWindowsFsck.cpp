@@ -429,13 +429,13 @@ std::optional<InodeNumber> fixup(
     // state.shouldExist defaults to false
   } else { // if file exists normally on disk
     if (!state.inScm && !state.diskMaterialized) {
-      // Throw error, since we can't materialize if it's not in scm.
+      // Stop fixing this up since we can't materialize if it's not in scm.
       // TODO: This is likely caused by EdenFS not having called PrjDeleteFile
-      // in a previous checkout operation. We should probably call it here.
+      // in a previous checkout operation. We should probably call it here or
+      // as a post-PrjfsChannel initialization.
 
-      throw std::runtime_error(fmt::format(
-          "unable to fix overlay, file is a placeholder but not in scm - {}",
-          path));
+      XLOGF(ERR, "Placeholder present on disk but not in SCM - {}", path);
+      return std::nullopt;
     } else {
       state.desiredDtype = state.diskDtype;
       state.desiredHash = state.diskMaterialized ? std::nullopt : state.scmHash;
