@@ -163,31 +163,6 @@ fn expand_args(
 ) -> PyResult<(Vec<Str>, Vec<Str>)> {
     let cfg = &config.get_cfg(py);
 
-    if !strict && !args.is_empty() {
-        // Expand args[0] from a prefix to a full command name
-        let mut command_map = BTreeMap::new();
-        for (i, name) in command_names.into_iter().enumerate() {
-            let i: isize = i as isize + 1; // avoid using 0
-            let multiples = expand_command_name(name);
-            let is_debug = multiples.iter().any(|s| s.starts_with("debug"));
-            for multiple in multiples.into_iter() {
-                command_map.insert(multiple, if is_debug { -i } else { i });
-            }
-        }
-
-        // Add command names from the alias configuration.
-        // XXX: This duplicates with clidispatch. They should be de-duplicated.
-        for name in cfg.keys("alias") {
-            let name = name.to_string();
-            if name.contains(":") {
-                continue;
-            }
-            let is_debug = name.starts_with("debug");
-            let i = command_map.len() as isize;
-            command_map.insert(name, if is_debug { -i } else { i });
-        }
-    }
-
     let lookup = move |name: &str| {
         if name.contains(":") {
             return None;
