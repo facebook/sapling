@@ -14,6 +14,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use async_trait::async_trait;
 use clap::Parser;
 use colored::Colorize;
@@ -240,16 +241,14 @@ impl DiskUsageCmd {
     fn should_clean(&self) -> bool {
         self.clean || self.deep_clean
     }
-}
 
-#[async_trait]
-impl crate::Subcommand for DiskUsageCmd {
-    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
-        let client = instance.connect(None).await?;
-
-        // GET MOUNT INFO
-        let mounts = if !self.mounts.is_empty() {
-            (&self.mounts).to_vec()
+    /// Get all the EdenFS mount that `du` should run on.
+    ///
+    /// This is either the mounts passed as an argument, or all the mounts known to the EdenFS
+    /// instance.
+    fn get_mounts(&self, instance: &EdenFsInstance) -> Result<Vec<PathBuf>> {
+        if !self.mounts.is_empty() {
+            Ok((&self.mounts).to_vec())
         } else {
             let config_paths: Vec<PathBuf> = instance
                 .get_configured_mounts_map()?
@@ -259,8 +258,19 @@ impl crate::Subcommand for DiskUsageCmd {
             if config_paths.is_empty() {
                 return Err(EdenFsError::Other(anyhow!("No EdenFS mount found")));
             }
-            config_paths
-        };
+            Ok(config_paths)
+        }
+    }
+}
+
+#[async_trait]
+impl crate::Subcommand for DiskUsageCmd {
+    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
+        let client = instance.connect(None).await?;
+
+        let mounts = self
+            .get_mounts(&instance)
+            .context("Failed to get EdenFS mounts")?;
 
         let mut aggregated_usage_counts = AggregatedUsageCounts::new();
         let mut backing_failed_file_checks = HashSet::new();
