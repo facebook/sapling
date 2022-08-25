@@ -146,7 +146,7 @@ import functools
 import hashlib
 import os
 import re
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Dict, List, Optional, Pattern, Tuple
 
 from edenscm import (
     cmdutil,
@@ -212,12 +212,12 @@ configitem("sparse", "bypassfullcheckoutwarn", default=False)
 profilecachefile = "sparseprofileconfigs"
 
 
-def uisetup(ui):
+def uisetup(ui) -> None:
     _setupupdates(ui)
     _setupcommit(ui)
 
 
-def extsetup(ui):
+def extsetup(ui) -> None:
     extensions.wrapfunction(dispatch, "runcommand", _tracktelemetry)
     _setupclone(ui)
     _setuplog(ui)
@@ -246,7 +246,7 @@ def extsetup(ui):
         pass
 
 
-def reposetup(ui, repo):
+def reposetup(ui, repo) -> None:
     if not repo.local():
         return
 
@@ -259,7 +259,7 @@ def reposetup(ui, repo):
     _wraprepo(ui, repo)
 
 
-def replacefilecache(cls, propname, replacement):
+def replacefilecache(cls, propname: str, replacement: Callable[..., object]) -> None:
     """Replace a filecache property with a new class. This allows changing the
     cache invalidation condition."""
     origcls = cls
@@ -275,7 +275,7 @@ def replacefilecache(cls, propname, replacement):
         raise AttributeError(_("type '%s' has no property '%s'") % (origcls, propname))
 
 
-def _checksparse(repo):
+def _checksparse(repo) -> None:
     if "eden" in repo.requirements:
         raise error.Abort(
             _(
@@ -292,7 +292,7 @@ def _hassparse(repo):
     return "eden" not in repo.requirements and util.safehasattr(repo, "sparsematch")
 
 
-def _setupupdates(_ui):
+def _setupupdates(_ui) -> None:
     def _calculateupdates(
         orig, repo, wctx, mctx, ancestors, branchmerge, *arg, **kwargs
     ):
@@ -446,7 +446,7 @@ def _setupupdates(_ui):
     extensions.wrapfunction(mergemod, "_checkcollision", _checkcollision)
 
 
-def _setupcommit(ui):
+def _setupcommit(ui) -> None:
     def _refreshoncommit(orig, self, node):
         """Refresh the checkout when commits touch .hgsparse"""
         orig(self, node)
@@ -469,7 +469,7 @@ def _setupcommit(ui):
     extensions.wrapfunction(context.committablectx, "markcommitted", _refreshoncommit)
 
 
-def _setuplog(ui):
+def _setuplog(ui) -> None:
     entry = commands.table["log|history"]
     entry[1].append(
         ("", "sparse", None, "limit to changesets affecting the sparse checkout")
@@ -592,7 +592,7 @@ def _clonesparsecmd(orig, ui, repo, *args, **opts):
     return orig(ui, repo, *args, **opts)
 
 
-def _setupclone(ui):
+def _setupclone(ui) -> None:
     entry = commands.table["clone"]
     entry[1].append(("", "enable-profile", [], "enable a sparse profile"))
     entry[1].append(("", "include", [], "include sparse pattern"))
@@ -600,7 +600,7 @@ def _setupclone(ui):
     extensions.wrapcommand(commands.table, "clone", _clonesparsecmd)
 
 
-def _setupadd(ui):
+def _setupadd(ui) -> None:
     entry = commands.table["add"]
     entry[1].append(
         (
@@ -625,7 +625,7 @@ def _setupadd(ui):
     extensions.wrapcommand(commands.table, "add", _add)
 
 
-def _setupdirstate(ui):
+def _setupdirstate(ui) -> None:
     """Modify the dirstate to prevent stat'ing excluded files,
     and to prevent modifications to files outside the checkout.
     """
@@ -721,7 +721,7 @@ def _setupdirstate(ui):
         extensions.wrapfunction(dirstate.dirstate, func, _wrapper)
 
 
-def _setupdiff(ui):
+def _setupdiff(ui) -> None:
     entry = commands.table["diff|d|di|dif"]
     entry[1].append(
         ("s", "sparse", None, "only show changes in files in the sparse config")
@@ -907,10 +907,10 @@ class SparseProfile(object):
 
 
 # metadata parsing expression
-metadata_key_value = re.compile(r"(?P<key>.*)\s*[:=]\s*(?P<value>.*)")
+metadata_key_value: Pattern[str] = re.compile(r"(?P<key>.*)\s*[:=]\s*(?P<value>.*)")
 
 
-def _wraprepo(ui, repo):
+def _wraprepo(ui, repo) -> None:
     class SparseRepo(repo.__class__):
         def _getlatestprofileconfigs(self):
             includes = collections.defaultdict(list)
@@ -1146,7 +1146,7 @@ def _wraprepo(ui, repo):
 
 
 def computesparsematcher(
-    repo, revs, rawconfig=None, debugversion=None, nocatchall=False
+    repo, revs, rawconfig=None, debugversion=None, nocatchall: bool = False
 ):
     matchers = []
     isalways = False
@@ -1206,7 +1206,9 @@ def computesparsematcher(
         return matchmod.union(matchers, repo.root, "")
 
 
-def getsparsepatterns(repo, rev, rawconfig=None, debugversion=None, nocatchall=False):
+def getsparsepatterns(
+    repo, rev, rawconfig=None, debugversion=None, nocatchall: bool = False
+) -> SparseConfig:
     """Produce the full sparse config for a revision as a SparseConfig
 
     This includes all patterns from included profiles, transitively.
@@ -1221,6 +1223,7 @@ def getsparsepatterns(repo, rev, rawconfig=None, debugversion=None, nocatchall=F
     if rawconfig is None:
         if not repo.localvfs.exists("sparse"):
             _warnfullcheckout(repo)
+            # pyre-fixme[19]: Expected 0 positional arguments.
             return SparseConfig(None, [], [])
 
         raw = repo.localvfs.readutf8("sparse")
@@ -1292,6 +1295,7 @@ def getsparsepatterns(repo, rev, rawconfig=None, debugversion=None, nocatchall=F
         rules.insert(0, "**")
         ruleorigins.append("sparse.py")
 
+    # pyre-fixme[19]: Expected 0 positional arguments.
     return SparseConfig(
         "<aggregated from {}>".format(rawconfig.path),
         rules,
@@ -1302,7 +1306,9 @@ def getsparsepatterns(repo, rev, rawconfig=None, debugversion=None, nocatchall=F
     )
 
 
-def readsparseconfig(repo, raw, filename=None, warn=True):
+def readsparseconfig(
+    repo, raw, filename: Optional[str] = None, warn: bool = True
+) -> RawSparseConfig:
     """Takes a string sparse config and returns a SparseConfig
 
     This object contains the includes, excludes, and profiles from the
@@ -1398,10 +1404,11 @@ def readsparseconfig(repo, raw, filename=None, warn=True):
             )
 
     metadata = {key: "\n".join(value).strip() for key, value in metadata.items()}
+    # pyre-fixme[19]: Expected 0 positional arguments.
     return RawSparseConfig(filename, lines, profiles, metadata)
 
 
-def readsparseprofile(repo, rev, name, profileconfigs):
+def readsparseprofile(repo, rev, name, profileconfigs) -> Optional[SparseProfile]:
     ctx = repo[rev]
     try:
         raw = getrawprofile(repo, name, ctx.hex())
@@ -1453,6 +1460,7 @@ def readsparseprofile(repo, rev, name, profileconfigs):
                     rules.append("!" + value)
                     ruleorigins.append(rawprofileconfig.path)
 
+    # pyre-fixme[19]: Expected 0 positional arguments.
     return SparseProfile(name, rules, profiles, rawconfig.metadata, ruleorigins)
 
 
@@ -1489,11 +1497,11 @@ def _getcachedprofileconfigs(repo):
     return {}
 
 
-def _pendingprofileconfigname():
+def _pendingprofileconfigname() -> str:
     return "%s.%s" % (profilecachefile, os.getpid())
 
 
-def _warnfullcheckout(repo):
+def _warnfullcheckout(repo) -> None:
     # Only warn once per command
     if util.safehasattr(repo, "_warnedfullcheckout") and repo._warnedfullcheckout:
         return
@@ -1555,7 +1563,7 @@ class ProfileInfo(pycompat.Mapping):
         return len(self._metadata)
 
 
-def _discover(ui, repo, rev=None):
+def _discover(ui, repo, rev: Optional[str] = None):
     """Generate a list of available profiles with metadata
 
     Returns a generator yielding ProfileInfo objects, paths are relative to the
@@ -1618,6 +1626,7 @@ def _discover(ui, repo, rev=None):
                 raise
             continue
         md = readsparseconfig(repo, raw, filename=p).metadata
+        # pyre-fixme[19]: Expected 0 positional arguments.
         yield ProfileInfo(
             p,
             (
@@ -1712,7 +1721,7 @@ hint = registrar.hint()
 
 
 @hint("sparse-largecheckout")
-def hintlargecheckout(dirstatesize, repo):
+def hintlargecheckout(dirstatesize, repo) -> str:
     return (
         _(
             "Your repository checkout has %s files which makes Many mercurial "
@@ -1724,7 +1733,7 @@ def hintlargecheckout(dirstatesize, repo):
 
 
 @hint("sparse-unsafe-profile")
-def hintsparseunsafeprofile(file, repo, ui):
+def hintsparseunsafeprofile(file, repo, ui) -> str:
     msg = _(
         "Your sparse profile might be incorrect, and it can lead to "
         "downloading too much data and slower mercurial operations."
@@ -1736,7 +1745,7 @@ def hintsparseunsafeprofile(file, repo, ui):
 
 
 @hint("sparse-explain-verbose")
-def hintexplainverbose(*profiles):
+def hintexplainverbose(*profiles) -> str:
     return _(
         "use 'hg sparse explain --verbose %s' to include the total file "
         "size for a give profile"
@@ -1744,7 +1753,7 @@ def hintexplainverbose(*profiles):
 
 
 @hint("sparse-list-verbose")
-def hintlistverbose(profiles, filters, load_matcher):
+def hintlistverbose(profiles, filters, load_matcher) -> Optional[str]:
     # move the hidden flag from the without to the with pile and count
     # the matches
     filters["with"].add("hidden")
@@ -1759,7 +1768,7 @@ def hintlistverbose(profiles, filters, load_matcher):
 
 
 @hint("sparse-fullcheckout")
-def hintwarnfullcheckout():
+def hintwarnfullcheckout() -> str:
     return _(
         "warning: full checkouts will eventually be disabled in "
         "this repository. Use EdenFS or hg sparse to get a "
@@ -1841,7 +1850,7 @@ _deprecate = (
     + [_deprecate(o) for o in commands.templateopts],
     _("SUBCOMMAND ..."),
 )
-def sparse(ui, repo, *pats, **opts):
+def sparse(ui, repo, *pats, **opts) -> None:
     """make the current checkout sparse, or edit the existing checkout
 
     The sparse command is used to make the current checkout sparse.
@@ -1966,7 +1975,7 @@ subcmd = sparse.subcommand(
 
 
 @subcmd("show", commands.templateopts)
-def show(ui, repo, **opts):
+def show(ui, repo, **opts) -> None:
     """show the currently enabled sparse profile"""
     _checksparse(repo)
     if not repo.localvfs.exists("sparse"):
@@ -2056,7 +2065,7 @@ def show(ui, repo, **opts):
     [],
     _(""),
 )
-def debugsparseprofilev2(ui, repo, profile, **opts):
+def debugsparseprofilev2(ui, repo, profile, **opts) -> None:
     """compares v1 and v2 computations of the sparse profile, printing the
     number of files matched by each, and the files that are different between
     the two.
@@ -2095,7 +2104,7 @@ def debugsparseprofilev2(ui, repo, profile, **opts):
     ],
     _("-s SPARSE_PROFILE [OPTION]... FILE..."),
 )
-def debugsparsematch(ui, repo, *args, **opts):
+def debugsparsematch(ui, repo, *args, **opts) -> None:
     """Filter paths using the given sparse profile
 
     Print paths that match the given sparse profile.
@@ -2154,7 +2163,7 @@ def debugsparsematch(ui, repo, *args, **opts):
     ],
     _("-s SPARSE_PROFILE FILE..."),
 )
-def debugsparseexplainmatch(ui, repo, *args, **opts):
+def debugsparseexplainmatch(ui, repo, *args, **opts) -> None:
     # Make it work in an edenfs checkout.
     if "eden" in repo.requirements:
         _wraprepo(ui, repo)
@@ -2196,7 +2205,7 @@ def debugsparseexplainmatch(ui, repo, *args, **opts):
                 ui.write(_("%s: %s by rule %s\n") % (f, verb, explanation))
 
 
-def _contains_files(load_matcher, profile, files):
+def _contains_files(load_matcher, profile, files) -> bool:
     matcher = load_matcher(profile)
     return all(matcher(f) for f in files)
 
@@ -2271,7 +2280,7 @@ def _build_profile_filter(filters, load_matcher):
     + commands.templateopts,
     "[OPTION]...",
 )
-def _listprofiles(ui, repo, *pats, **opts):
+def _listprofiles(ui, repo, *pats, **opts) -> None:
     """list available sparse profiles
 
     Show all available sparse profiles, with the active profiles marked.
@@ -2318,9 +2327,14 @@ def _listprofiles(ui, repo, *pats, **opts):
         fieldname, __, value = fieldvalue.partition(":")
         if not value:
             raise error.Abort(_("Missing value for filter on %s") % fieldname)
+        # pyre-fixme[16]: Item `Set` of `Union[Dict[typing.Any, typing.Any],
+        #  Set[typing.Any]]` has no attribute `setdefault`.
         filters["filter"].setdefault(fieldname, set()).add(value.lower())
 
     # It's an error to put a field both in the 'with' and 'without' buckets
+    # pyre-fixme[58]: `&` is not supported for operand types `Union[Dict[typing.Any,
+    #  typing.Any], typing.Set[typing.Any]]` and `Union[Dict[typing.Any, typing.Any],
+    #  typing.Set[typing.Any]]`.
     if filters["with"] & filters["without"]:
         raise error.Abort(
             _(
@@ -2328,12 +2342,17 @@ def _listprofiles(ui, repo, *pats, **opts):
                 "--without-field, please use only one or the other, for "
                 "%s"
             )
+            # pyre-fixme[58]: `&` is not supported for operand types
+            #  `Union[Dict[typing.Any, typing.Any], typing.Set[typing.Any]]` and
+            #  `Union[Dict[typing.Any, typing.Any], typing.Set[typing.Any]]`.
             % ",".join(filters["with"] & filters["without"])
         )
 
     if not (ui.verbose or "hidden" in filters["with"]):
         # without the -v switch, hide profiles that have 'hidden' set. Unless,
         # of course, we specifically are filtering on hidden profiles!
+        # pyre-fixme[16]: Item `Dict` of `Union[Dict[typing.Any, typing.Any],
+        #  Set[typing.Any]]` has no attribute `add`.
         filters["without"].add("hidden")
 
     chars = {PROFILE_INACTIVE: "", PROFILE_INCLUDED: "~", PROFILE_ACTIVE: "*"}
@@ -2392,7 +2411,7 @@ def _listprofiles(ui, repo, *pats, **opts):
     + commands.templateopts,
     _("[OPTION]... [PROFILE]..."),
 )
-def _explainprofile(ui, repo, *profiles, **opts):
+def _explainprofile(ui, repo, *profiles, **opts) -> int:
     """show information about a sparse profile
 
     If --verbose is given, calculates the file size impact of a profile (slow).
@@ -2541,7 +2560,7 @@ def _explainprofile(ui, repo, *profiles, **opts):
     + commands.templateopts,
     _("[OPTION]... PROFILE [FILES]..."),
 )
-def _listfilessubcmd(ui, repo, profile, *files, **opts):
+def _listfilessubcmd(ui, repo, profile, *files, **opts) -> int:
     """list all files included in a sparse profile
 
     If files are given to match, print the names of the files in the profile
@@ -2577,7 +2596,7 @@ def _listfilessubcmd(ui, repo, profile, *files, **opts):
     return exitcode
 
 
-_common_config_opts = [
+_common_config_opts: List[Tuple[str, str, bool, str]] = [
     ("f", "force", False, _("allow changing rules even with pending changes")),
     (
         "",
@@ -2588,28 +2607,28 @@ _common_config_opts = [
 ]
 
 
-def getcommonopts(opts):
+def getcommonopts(opts) -> Dict[str, Any]:
     allowunsafeprofilechanges = opts.get("allow_unsafe_profile_changes")
     force = opts.get("force")
     return {"allowunsafeprofilechanges": allowunsafeprofilechanges, "force": force}
 
 
 @subcmd("reset", _common_config_opts + commands.templateopts)
-def resetsubcmd(ui, repo, **opts):
+def resetsubcmd(ui, repo, **opts) -> None:
     """disable all sparse profiles and convert to a full checkout"""
     commonopts = getcommonopts(opts)
     _config(ui, repo, [], opts, reset=True, **commonopts)
 
 
 @subcmd("disable|disableprofile", _common_config_opts, "[PROFILE]...")
-def disableprofilesubcmd(ui, repo, *pats, **opts):
+def disableprofilesubcmd(ui, repo, *pats, **opts) -> None:
     """disable a sparse profile"""
     commonopts = getcommonopts(opts)
     _config(ui, repo, pats, opts, disableprofile=True, **commonopts)
 
 
 @subcmd("enable|enableprofile", _common_config_opts, "[PROFILE]...")
-def enableprofilesubcmd(ui, repo, *pats, **opts):
+def enableprofilesubcmd(ui, repo, *pats, **opts) -> None:
     """enable a sparse profile"""
 
     def normalizeprofile(p):
@@ -2632,7 +2651,7 @@ def enableprofilesubcmd(ui, repo, *pats, **opts):
 
 
 @subcmd("switch|switchprofile", _common_config_opts, "[PROFILE]...")
-def switchprofilesubcmd(ui, repo, *pats, **opts):
+def switchprofilesubcmd(ui, repo, *pats, **opts) -> None:
     """switch to another sparse profile
 
     Disables all other profiles and stops including and excluding any additional
@@ -2644,35 +2663,35 @@ def switchprofilesubcmd(ui, repo, *pats, **opts):
 
 
 @subcmd("delete", _common_config_opts, "[RULE]...")
-def deletesubcmd(ui, repo, *pats, **opts):
+def deletesubcmd(ui, repo, *pats, **opts) -> None:
     """delete an include or exclude rule (DEPRECATED)"""
     commonopts = getcommonopts(opts)
     _config(ui, repo, pats, opts, delete=True, **commonopts)
 
 
 @subcmd("exclude", _common_config_opts, "[RULE]...")
-def excludesubcmd(ui, repo, *pats, **opts):
+def excludesubcmd(ui, repo, *pats, **opts) -> None:
     """exclude some additional files"""
     commonopts = getcommonopts(opts)
     _config(ui, repo, pats, opts, exclude=True, **commonopts)
 
 
 @subcmd("unexclude", _common_config_opts, "[RULE]...")
-def unexcludesubcmd(ui, repo, *pats, **opts):
+def unexcludesubcmd(ui, repo, *pats, **opts) -> None:
     """stop excluding some additional files"""
     commonopts = getcommonopts(opts)
     _config(ui, repo, pats, opts, unexclude=True, **commonopts)
 
 
 @subcmd("include", _common_config_opts, "[RULE]...")
-def includesubcmd(ui, repo, *pats, **opts):
+def includesubcmd(ui, repo, *pats, **opts) -> None:
     """include some additional files"""
     commonopts = getcommonopts(opts)
     _config(ui, repo, pats, opts, include=True, **commonopts)
 
 
 @subcmd("uninclude", _common_config_opts, "[RULE]...")
-def unincludesubcmd(ui, repo, *pats, **opts):
+def unincludesubcmd(ui, repo, *pats, **opts) -> None:
     """stop including some additional files"""
     commonopts = getcommonopts(opts)
     _config(ui, repo, pats, opts, uninclude=True, **commonopts)
@@ -2689,7 +2708,7 @@ be preserved).
 
 
 @subcmd("importrules", _common_config_opts, _("[OPTION]... [FILE]..."))
-def _importsubcmd(ui, repo, *pats, **opts):
+def _importsubcmd(ui, repo, *pats, **opts) -> None:
     """import sparse profile rules
 
     Accepts a path to a file containing rules in the .hgsparse format.
@@ -2703,7 +2722,7 @@ def _importsubcmd(ui, repo, *pats, **opts):
 
 
 @subcmd("clear", _common_config_opts, _("[OPTION]..."))
-def _clearsubcmd(ui, repo, *pats, **opts):
+def _clearsubcmd(ui, repo, *pats, **opts) -> None:
     """clear all extra files included or excluded
 
     Removes all extra include and exclude rules, without changing which
@@ -2714,7 +2733,7 @@ def _clearsubcmd(ui, repo, *pats, **opts):
 
 
 @subcmd("refresh", _common_config_opts, _("[OPTION]..."))
-def _refreshsubcmd(ui, repo, *pats, **opts):
+def _refreshsubcmd(ui, repo, *pats, **opts) -> None:
     """refresh the files on disk based on the enabled sparse profiles
 
     This is only necessary if .hg/sparse was changed by hand.
@@ -2732,7 +2751,7 @@ def _refreshsubcmd(ui, repo, *pats, **opts):
 
 
 @subcmd("cwd")
-def _cwdsubcmd(ui, repo, *pats, **opts):
+def _cwdsubcmd(ui, repo, *pats, **opts) -> None:
     """list all names in this directory
 
     The list includes any names that are excluded by the current sparse
@@ -2747,17 +2766,17 @@ def _config(
     repo,
     pats,
     opts,
-    include=False,
-    exclude=False,
-    reset=False,
-    delete=False,
-    uninclude=False,
-    unexclude=False,
-    enableprofile=False,
-    disableprofile=False,
-    force=False,
-    allowunsafeprofilechanges=False,
-):
+    include: bool = False,
+    exclude: bool = False,
+    reset: bool = False,
+    delete: bool = False,
+    uninclude: bool = False,
+    unexclude: bool = False,
+    enableprofile: bool = False,
+    disableprofile: bool = False,
+    force: bool = False,
+    allowunsafeprofilechanges: bool = False,
+) -> None:
     _checksparse(repo)
 
     if not reset:
@@ -2878,7 +2897,7 @@ def _find_unsafe_marker_files(repo, ui):
     return None
 
 
-def _validate_new_sparse_config(repo, ui):
+def _validate_new_sparse_config(repo, ui) -> None:
     unsafemarkerfile = _find_unsafe_marker_files(repo, ui)
     if unsafemarkerfile is not None:
         msg = (
@@ -2898,7 +2917,7 @@ def _validate_new_sparse_config(repo, ui):
         )
 
 
-def _checknonexistingprofiles(ui, repo, profiles):
+def _checknonexistingprofiles(ui, repo, profiles) -> None:
     for p in profiles:
         try:
             repo.filectx(p, changeid=".").data()
@@ -2915,7 +2934,7 @@ def _checknonexistingprofiles(ui, repo, profiles):
             )
 
 
-def _import(ui, repo, files, opts, force=False):
+def _import(ui, repo, files, opts, force: bool = False) -> None:
     _checksparse(repo)
 
     with repo.wlock():
@@ -2985,7 +3004,7 @@ def _import(ui, repo, files, opts, force=False):
         _verbose_output(ui, opts, profilecount, includecount, excludecount, *fcounts)
 
 
-def _clear(ui, repo, files, force=False):
+def _clear(ui, repo, files, force: bool = False) -> None:
     _checksparse(repo)
 
     _warnfullcheckout(repo)
@@ -3127,7 +3146,7 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
 
 def _verbose_output(
     ui, opts, profilecount, includecount, excludecount, added, dropped, lookup
-):
+) -> None:
     """Produce --verbose and templatable output
 
     This specifically enables -Tjson, providing machine-readable stats on how
@@ -3162,7 +3181,7 @@ def _verbose_output(
             )
 
 
-def _cwdlist(repo):
+def _cwdlist(repo) -> None:
     """List the contents in the current directory. Annotate
     the files in the sparse profile.
     """
