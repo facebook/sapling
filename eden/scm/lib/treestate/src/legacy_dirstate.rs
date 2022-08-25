@@ -8,22 +8,29 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::io::Read;
+use std::io::Write;
 use std::path::Path;
+use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
+use types::hgid::WriteHgIdExt;
 use types::HgId;
 
 use crate::filestate::FileStateV2;
 use crate::filestate::StateFlags;
 use crate::metadata::Metadata;
 
+const CURRENT_VERSION: u32 = 1;
+
 const DIRSTATE_HEADER: u8 = 0x01;
 const COPYMAP_HEADER: u8 = 0x02;
 const CHECKSUM_HEADER: u8 = 0xFF;
 
+const MERGE_NOT_APPLICABLE: i8 = 0;
 const MERGE_BOTH_PARENTS: i8 = -1;
 const MERGE_OTHER_PARENT: i8 = -2;
 
@@ -71,6 +78,90 @@ pub fn write_dirstate(
 //   - The first byte is '\xFF' to distinguish it from the other fields.
 //   - Because we use SHA-256 as the hash algorithm for the checksum, the
 //     remaining 32 bytes are used for the hash.
+fn serialize_dirstate(
+    mut dirstate: impl Write,
+    metadata: &Metadata,
+    treestate: &HashMap<Box<[u8]>, FileStateV2>,
+) -> Result<()> {
+    let p1 = metadata
+        .0
+        .get("p1")
+        .ok_or_else(|| anyhow!("Treestate is missing necessary P1 node"))?;
+    let p1 = HgId::from_str(p1)?;
+    dirstate.write_hgid(&p1)?;
+
+    if let Some(p2) = metadata.0.get("p2") {
+        let p2 = HgId::from_str(p2)?;
+        dirstate.write_hgid(&p2)?;
+    } else {
+        dirstate.write_hgid(HgId::null_id())?;
+    }
+
+    dirstate.write_u32::<BigEndian>(CURRENT_VERSION)?;
+
+    for (path, state) in treestate {
+        serialize_entry(&mut dirstate, path, state)?;
+    }
+
+    dirstate.write_u8(CHECKSUM_HEADER)?;
+    // TODO: Write checksum
+    Ok(())
+}
+
+fn serialize_entry(mut dirstate: impl Write, path: &[u8], state: &FileStateV2) -> Result<()> {
+    if state.state.contains(StateFlags::COPIED) {
+        dirstate.write_u8(COPYMAP_HEADER)?;
+        dirstate.write_u16::<BigEndian>(path.len().try_into()?)?;
+        dirstate.write_all(path)?;
+
+        let source_path = state.copied.as_ref().ok_or_else(|| {
+            anyhow!(
+                "Missing source path on copied entry ({})",
+                String::from_utf8_lossy(path)
+            )
+        })?;
+        dirstate.write_u16::<BigEndian>(source_path.len().try_into()?)?;
+        dirstate.write_all(source_path)?;
+    }
+
+    dirstate.write_u8(DIRSTATE_HEADER)?;
+
+    let (state_char, merge_state) = {
+        let s =
+            state.state & (StateFlags::EXIST_NEXT | StateFlags::EXIST_P1 | StateFlags::EXIST_P2);
+
+        if s == StateFlags::EXIST_NEXT | StateFlags::EXIST_P1 | StateFlags::EXIST_P2 {
+            (b'm', MERGE_BOTH_PARENTS)
+        } else if s == StateFlags::EXIST_NEXT | StateFlags::EXIST_P1 {
+            (b'n', MERGE_NOT_APPLICABLE)
+        } else if s == StateFlags::EXIST_NEXT | StateFlags::EXIST_P2 {
+            (b'n', MERGE_OTHER_PARENT)
+        } else if s == StateFlags::EXIST_NEXT {
+            (b'a', MERGE_BOTH_PARENTS)
+        } else if s == StateFlags::EXIST_P1 | StateFlags::EXIST_P2 {
+            (b'r', MERGE_BOTH_PARENTS)
+        } else if s == StateFlags::EXIST_P2 {
+            (b'r', MERGE_OTHER_PARENT)
+        } else if s == StateFlags::EXIST_P1 {
+            (b'r', MERGE_NOT_APPLICABLE)
+        } else if s.is_empty() {
+            (b'?', MERGE_NOT_APPLICABLE)
+        } else {
+            return Err(anyhow!(
+                "Unhandled treestate -> dirstate conversion ({:?})",
+                s
+            ));
+        }
+    };
+
+    dirstate.write_u8(state_char)?;
+    dirstate.write_u32::<BigEndian>(0)?;
+    dirstate.write_i8(merge_state)?;
+    dirstate.write_u16::<BigEndian>(path.len().try_into()?)?;
+    dirstate.write_all(path)?;
+    Ok(())
+}
+
 fn deserialize_dirstate(
     dirstate: &mut &[u8],
 ) -> Result<(Metadata, HashMap<Box<[u8]>, FileStateV2>)> {
@@ -181,6 +272,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::deserialize_dirstate;
+    use super::serialize_dirstate;
     use crate::filestate::FileStateV2;
     use crate::filestate::StateFlags;
     use crate::metadata::Metadata;
@@ -297,5 +389,30 @@ mod tests {
         expected_entries.sort_unstable_by_key(|(path, _)| path.clone());
 
         assert_eq!(entries, expected_entries);
+    }
+
+    #[test]
+    fn serialize_test() {
+        let (in_metadata, in_entries) = treestate();
+        let mut dirstate = Vec::new();
+        serialize_dirstate(&mut dirstate, &in_metadata, &in_entries).unwrap();
+
+        let (out_metadata, out_entries) = deserialize_dirstate(&mut dirstate.as_slice()).unwrap();
+
+        assert_eq!(in_metadata, out_metadata);
+
+        let mut in_entries = in_entries
+            .into_iter()
+            .map(|(path, state)| (String::from_utf8_lossy(&path).into_owned(), state))
+            .collect::<Vec<_>>();
+        in_entries.sort_unstable_by_key(|(path, _)| path.clone());
+
+        let mut out_entries = out_entries
+            .into_iter()
+            .map(|(path, state)| (String::from_utf8_lossy(&path).into_owned(), state))
+            .collect::<Vec<_>>();
+        out_entries.sort_unstable_by_key(|(path, _)| path.clone());
+
+        assert_eq!(in_entries, out_entries);
     }
 }
