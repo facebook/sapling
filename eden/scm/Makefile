@@ -105,6 +105,12 @@ endif
 build:
 	$(PYTHON) setup.py $(PURE) build $(COMPILERFLAG)
 
+deb:
+	DESTDIR=install make install-oss
+	mkdir "install/DEBIAN"
+	cp packaging/deb/control "install/DEBIAN/control"
+	dpkg-deb --build --root-owner-group install
+
 wheel:
 	FORCE_SETUPTOOLS=1 $(PYTHON) setup.py $(PURE) bdist_wheel $(COMPILERFLAG)
 
@@ -191,4 +197,4 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 
 # Packaging targets
 
-.PHONY: help all local build cleanbutpackages clean install install-home install-getdeps getdepsbuild
+.PHONY: help all local build cleanbutpackages clean install install-home install-getdeps getdepsbuild deb
