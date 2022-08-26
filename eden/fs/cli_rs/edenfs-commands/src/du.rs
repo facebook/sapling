@@ -378,6 +378,44 @@ fn warn_about_working_copy_for_backing_repo(backing_repos: &HashSet<PathBuf>) ->
     Ok(())
 }
 
+/// Run `buck clean` to reduce disk space usage of the buck-out directories.
+fn clean_buck_redirections(buck_redirections: HashSet<PathBuf>) -> Result<()> {
+    for redir in buck_redirections {
+        println!(
+            "\n{}",
+            format!("Reclaiming space from redirection: {}", redir.display()).blue()
+        );
+        if let Some(basename) = redir.parent() {
+            let output = Exec::cmd(get_buck_command())
+                .arg("clean")
+                .stderr(Redirection::Pipe)
+                .cwd(basename)
+                .env_clear()
+                .env_extend(&get_env_with_buck_version(basename)?)
+                .capture()
+                .from_err()
+                .with_context(|| format!("Failed to run buck {}", get_buck_command()))?;
+
+            if output.success() {
+                println!("{}", "Space reclaimed".blue());
+            } else {
+                return Err(EdenFsError::Other(anyhow!(
+                    "Failed to execute buck clean from {}, stderr: {}, exit status: {:?}",
+                    basename.display(),
+                    output.stderr_str(),
+                    output.exit_status,
+                )));
+            }
+        } else {
+            return Err(EdenFsError::Other(anyhow!(
+                "Found invalid redirection: {}",
+                redir.display()
+            )));
+        };
+    }
+    Ok(())
+}
+
 #[async_trait]
 impl crate::Subcommand for DiskUsageCmd {
     async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
@@ -600,45 +638,10 @@ To automatically remove this directory, run `eden du --deep-clean`.",
             }
             write_failed_to_check_files_message(&redirection_failed_file_checks);
 
-            // CLEAN REDIRECTIONS
             if !buck_redirections.is_empty() {
                 if self.should_clean() {
-                    for redir in buck_redirections {
-                        println!(
-                            "\n{}",
-                            format!("Reclaiming space from redirection: {}", redir.display())
-                                .blue()
-                        );
-                        if let Some(basename) = redir.parent() {
-                            let output = Exec::cmd(get_buck_command())
-                                .arg("clean")
-                                .stderr(Redirection::Pipe)
-                                .cwd(basename)
-                                .env_clear()
-                                .env_extend(&get_env_with_buck_version(basename)?)
-                                .capture()
-                                .from_err()
-                                .with_context(|| {
-                                    format!("Failed to run buck {}", get_buck_command())
-                                })?;
-
-                            if output.success() {
-                                println!("{}", "Space reclaimed".blue());
-                            } else {
-                                return Err(EdenFsError::Other(anyhow!(
-                                    "Failed to execute buck clean from {}, stderr: {}, exit status: {:?}",
-                                    basename.display(),
-                                    output.stderr_str(),
-                                    output.exit_status,
-                                )));
-                            }
-                        } else {
-                            return Err(EdenFsError::Other(anyhow!(
-                                "Found invalid redirection: {}",
-                                redir.display()
-                            )));
-                        };
-                    }
+                    clean_buck_redirections(buck_redirections)
+                        .context("Failed to clean Buck redirections")?;
                 } else {
                     println!(
                         "\nTo reclaim space from buck-out directories, run `buck clean` from the \
