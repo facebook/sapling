@@ -889,6 +889,12 @@ scuba_local_path="$SCUBA_LOGGING_PATH"
 CONFIG
 fi
 
+if [[ -n "${BOOKMARK_SCRIBE_CATEGORY:-}" ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+bookmark_scribe_category = "$BOOKMARK_SCRIBE_CATEGORY"
+CONFIG
+fi
+
 if [[ -n "${ENFORCE_LFS_ACL_CHECK:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 enforce_lfs_acl_check=true

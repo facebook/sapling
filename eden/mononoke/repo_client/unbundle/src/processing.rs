@@ -532,7 +532,9 @@ async fn normal_pushrebase<'a>(
                 )
                 .await;
                 match (result, remote_mode) {
-                    (Ok(outcome), _) => return Ok((outcome.head, outcome.rebased_changesets)),
+                    (Ok(outcome), _) => {
+                        return Ok((outcome.head, outcome.rebased_changesets));
+                    }
                     // No fallback, propagate error
                     (Err(err), metaconfig_types::PushrebaseRemoteMode::RemoteScs(..)) => {
                         return Err(

@@ -10,6 +10,9 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use blobrepo::logger::log_bookmark_operation;
+use blobrepo::logger::BookmarkInfo;
+use blobrepo::logger::BookmarkOperation;
 use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
 use bookmarks::BookmarkUpdateReason;
@@ -150,6 +153,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
                 .into());
             }
         }
+        let reason = BookmarkUpdateReason::Pushrebase;
 
         self.affected_changesets
             .check_restrictions(
@@ -161,7 +165,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
                 hook_manager,
                 self.bookmark,
                 self.pushvars,
-                BookmarkUpdateReason::Pushrebase,
+                reason,
                 kind,
                 AdditionalChangesets::None,
                 self.cross_repo_push_source,
@@ -216,12 +220,25 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         let mut scuba_logger = ctx.scuba().clone();
         scuba_logger.add_future_stats(&stats);
         match &result {
-            Ok(outcome) => scuba_logger
-                .add("pushrebase_retry_num", outcome.retry_num.0)
-                .add("pushrebase_distance", outcome.pushrebase_distance.0)
-                .add("bookmark", self.bookmark.to_string())
-                .add("changeset_id", format!("{}", outcome.head))
-                .log_with_msg("Pushrebase finished", None),
+            Ok(outcome) => {
+                scuba_logger
+                    .add("pushrebase_retry_num", outcome.retry_num.0)
+                    .add("pushrebase_distance", outcome.pushrebase_distance.0)
+                    .add("bookmark", self.bookmark.to_string())
+                    .add("changeset_id", format!("{}", outcome.head))
+                    .log_with_msg("Pushrebase finished", None);
+
+                let info = BookmarkInfo {
+                    bookmark_name: self.bookmark.clone(),
+                    bookmark_kind: kind,
+                    operation: BookmarkOperation::Pushrebase(
+                        outcome.old_bookmark_value,
+                        outcome.head,
+                    ),
+                    reason,
+                };
+                log_bookmark_operation(ctx, repo, &info).await;
+            }
             Err(err) => scuba_logger.log_with_msg("Pushrebase failed", Some(format!("{:#?}", err))),
         }
 
@@ -285,6 +302,5 @@ pub fn get_pushrebase_hooks(
         Some(hook) => pushrebase_hooks.push(hook),
         None => {}
     }
-
     Ok(pushrebase_hooks)
 }

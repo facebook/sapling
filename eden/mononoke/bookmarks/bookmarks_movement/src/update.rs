@@ -9,6 +9,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
+use blobrepo::logger::log_bookmark_operation;
+use blobrepo::logger::BookmarkInfo;
+use blobrepo::logger::BookmarkOperation;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKind;
 use bookmarks_types::BookmarkName;
@@ -306,13 +309,20 @@ impl<'op> UpdateBookmarkOp<'op> {
                 ctx,
                 repo,
                 Some(self.bookmark),
-                commits_to_log,
+                commits_to_log.clone(),
                 kind,
                 infinitepush_params,
                 pushrebase_params,
             )
             .await;
         }
+        let info = BookmarkInfo {
+            bookmark_name: self.bookmark.clone(),
+            bookmark_kind: kind,
+            operation: BookmarkOperation::Update(self.targets.old, self.targets.new),
+            reason: self.reason,
+        };
+        log_bookmark_operation(ctx, repo, &info).await;
 
         Ok(())
     }

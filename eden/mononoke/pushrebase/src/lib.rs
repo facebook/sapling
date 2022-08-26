@@ -229,6 +229,7 @@ impl PushrebaseDistance {
 
 #[derive(Debug, Clone)]
 pub struct PushrebaseOutcome {
+    pub old_bookmark_value: Option<ChangesetId>,
     pub head: ChangesetId,
     pub retry_num: PushrebaseRetryNum,
     pub rebased_changesets: Vec<PushrebaseChangesetPair>,
@@ -337,14 +338,14 @@ async fn rebase_in_loop(
         );
 
         let start_critical_section = Instant::now();
-        let (hooks, bookmark_val) =
+        let (hooks, old_bookmark_value) =
             try_join(hooks, get_bookmark_value(ctx, repo, onto_bookmark)).await?;
 
         let server_bcs = fetch_bonsai_range_ancestor_not_included(
             ctx,
             repo,
             latest_rebase_attempt,
-            bookmark_val.unwrap_or(root),
+            old_bookmark_value.unwrap_or(root),
         )
         .await?;
         pushrebase_distance = pushrebase_distance.add(server_bcs.len());
@@ -367,7 +368,7 @@ async fn rebase_in_loop(
             ctx,
             repo,
             latest_rebase_attempt,
-            bookmark_val.unwrap_or(root),
+            old_bookmark_value.unwrap_or(root),
         )
         .await?;
 
@@ -380,7 +381,7 @@ async fn rebase_in_loop(
             config,
             root,
             head,
-            bookmark_val,
+            old_bookmark_value,
             onto_bookmark,
             hooks,
             retry_num,
@@ -402,6 +403,7 @@ async fn rebase_in_loop(
                     .add_value(rebased_changesets.len() as i64, repo_args.clone());
             }
             let res = PushrebaseOutcome {
+                old_bookmark_value: Some(old_bookmark_value.unwrap_or(root)),
                 head,
                 retry_num,
                 rebased_changesets,
@@ -413,7 +415,7 @@ async fn rebase_in_loop(
                 .add_value(critical_section_duration_us, repo_args.clone());
         }
 
-        latest_rebase_attempt = bookmark_val.unwrap_or(root);
+        latest_rebase_attempt = old_bookmark_value.unwrap_or(root);
     }
     if should_log {
         STATS::critical_section_retries_failed.add_value(MAX_REBASE_ATTEMPTS as i64, repo_args);
@@ -432,7 +434,7 @@ async fn do_rebase(
     config: &PushrebaseFlags,
     root: ChangesetId,
     head: ChangesetId,
-    bookmark_val: Option<ChangesetId>,
+    old_bookmark_value: Option<ChangesetId>,
     onto_bookmark: &BookmarkName,
     mut hooks: Vec<Box<dyn PushrebaseCommitHook>>,
     retry_num: PushrebaseRetryNum,
@@ -443,7 +445,7 @@ async fn do_rebase(
         config,
         root,
         head,
-        bookmark_val.unwrap_or(root),
+        old_bookmark_value.unwrap_or(root),
         &mut hooks,
     )
     .await?;
@@ -463,7 +465,7 @@ async fn do_rebase(
         ctx.clone(),
         repo,
         onto_bookmark,
-        bookmark_val,
+        old_bookmark_value,
         new_head,
         rebased_changesets,
         hooks,

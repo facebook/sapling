@@ -5,6 +5,7 @@
 # directory of this source tree.
 
   $ export COMMIT_SCRIBE_CATEGORY=mononoke_commits
+  $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
   $ export DRAFT_COMMIT_SCRIBE_CATEGORY=draft_mononoke_commits
   $ . "${TEST_FIXTURES}/library.sh"
 
@@ -93,6 +94,22 @@ The timestamp is not stable, so count its digits instead to ensure it is not nul
   34
   $ rm "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY"
 
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .repo_name
+  "repo"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .bookmark_name
+  "master_bookmark"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .bookmark_kind
+  "publishing"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .old_bookmark_value
+  "30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .new_bookmark_value
+  "022352db2112d2f43ca2635686a6275ade50d612865551fa8d1f392b375e412e"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .operation
+  "pushrebase"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .update_reason
+  "pushrebase"
+  $ rm "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY"
+
   $ echo forcepushrebase > forcepushrebase
   $ hg add -q forcepushrebase
   $ hg ci -m forcepushrebase
@@ -108,6 +125,21 @@ The timestamp is not stable, so count its digits instead to ensure it is not nul
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
   "cf79ab3ba838b597ca4973ba397b4b687f54d9eed2f0edc4f950f3b80a68f8b3"
 
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .repo_name
+  "repo"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .bookmark_name
+  "forcepushrebase"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .bookmark_kind
+  "publishing"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .old_bookmark_value
+  null
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .new_bookmark_value
+  "cf79ab3ba838b597ca4973ba397b4b687f54d9eed2f0edc4f950f3b80a68f8b3"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .operation
+  "create"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .update_reason
+  "pushrebase"
+  $ rm "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY"
 
 Use normal push (non-pushrebase)
   $ rm "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY"
@@ -149,6 +181,7 @@ Stop tracking master_bookmark
   "29259d73c8207a083a44f2635df387b194f76c41d2ccb71e7529ec0f70a4af28"
   $ rm "$TESTTMP/scribe_logs/$DRAFT_COMMIT_SCRIBE_CATEGORY"
 
+
   $ hgmn up -q master_bookmark
   $ echo infinitepush > infinitepush
   $ hg add -q infinitepush
@@ -160,3 +193,68 @@ Stop tracking master_bookmark
   "scratch/123"
   $ cat "$TESTTMP/scribe_logs/$DRAFT_COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
   "06b8cee4d65704bcb81b988c1153daee3063d9e565f4d65e9e68475676b2438b"
+
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .repo_name
+  "repo"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .bookmark_name
+  "scratch/123"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .bookmark_kind
+  "scratch"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .old_bookmark_value
+  null
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .new_bookmark_value
+  "06b8cee4d65704bcb81b988c1153daee3063d9e565f4d65e9e68475676b2438b"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .operation
+  "create"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .update_reason
+  "push"
+  $ rm "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY"
+
+Update the scratch/123 bookmark
+
+  $ echo new_commit > new_commit
+  $ hg add -q new_commit
+  $ hg ci -m 'new commit'
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "scratch/123"
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  searching for changes
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .repo_name
+  "repo"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .bookmark_name
+  "scratch/123"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .bookmark_kind
+  "scratch"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .old_bookmark_value
+  "06b8cee4d65704bcb81b988c1153daee3063d9e565f4d65e9e68475676b2438b"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .new_bookmark_value
+  "cde64fba54d56734c1ee9c2c2c2f61bc70f8407d1bab219a7c2bee524df35386"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .operation
+  "update"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .update_reason
+  "push"
+  $ rm "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY"
+
+Delete the master_bookmark
+
+  $ hgmn push --delete master_bookmark --config extensions.remotenames= --config extensions.pushrebase=
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  searching for changes
+  no changes found
+  deleting remote bookmark master_bookmark
+  [1]
+
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .repo_name
+  "repo"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .bookmark_name
+  "master_bookmark"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .bookmark_kind
+  "publishing"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .old_bookmark_value
+  "022352db2112d2f43ca2635686a6275ade50d612865551fa8d1f392b375e412e"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .new_bookmark_value
+  null
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .operation
+  "delete"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .update_reason
+  "pushrebase"
+  $ rm "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY"

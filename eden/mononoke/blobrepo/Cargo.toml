@@ -43,6 +43,10 @@ repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 repo_lock = { version = "0.1.0", path = "../repo_attributes/repo_lock/repo_lock" }
 repo_permission_checker = { version = "0.1.0", path = "../repo_attributes/repo_permission_checker" }
 scribe_commit_queue = { version = "0.1.0", path = "../repo_client/scribe_commit_queue" }
+scribe_ext = { version = "0.1.0", path = "../common/scribe_ext" }
+serde = { version = "1.0.136", features = ["derive", "rc"] }
+serde_derive = "1.0"
+serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 
 [dev-dependencies]

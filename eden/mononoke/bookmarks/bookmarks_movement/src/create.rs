@@ -8,6 +8,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use blobrepo::logger::log_bookmark_operation;
+use blobrepo::logger::BookmarkInfo;
+use blobrepo::logger::BookmarkOperation;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKind;
 use bookmarks_types::BookmarkName;
@@ -244,6 +247,14 @@ impl<'op> CreateBookmarkOp<'op> {
             )
             .await;
         }
+
+        let info = BookmarkInfo {
+            bookmark_name: self.bookmark.clone(),
+            bookmark_kind: kind,
+            operation: BookmarkOperation::Create(self.target),
+            reason: self.reason,
+        };
+        log_bookmark_operation(ctx, repo, &info).await;
         Ok(())
     }
 }

@@ -358,6 +358,11 @@ impl AsyncIntoResponseWith<thrift::PushrebaseOutcome> for PushrebaseOutcome {
             }
         }
 
+        let old_bookmark_value = self
+            .old_bookmark_value
+            .map_or_else(BTreeMap::new, |old_bookmark_value| {
+                try_get(&new_id_map, old_bookmark_value)
+            });
         let head = try_get(&new_id_map, self.head);
         let rebased_commits: Vec<_> = self
             .rebased_changesets
@@ -374,6 +379,7 @@ impl AsyncIntoResponseWith<thrift::PushrebaseOutcome> for PushrebaseOutcome {
             .collect();
 
         Ok(thrift::PushrebaseOutcome {
+            old_bookmark_value,
             head,
             rebased_commits,
             pushrebase_distance: to_i64(self.pushrebase_distance.0)?,
