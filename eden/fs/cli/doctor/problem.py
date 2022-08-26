@@ -142,7 +142,11 @@ class ProblemFixer(ProblemTracker):
             self.num_fixed_problems += 1
         except Exception as ex:
             self._out.writeln("error", fg=self._out.RED)
-            self._out.write(f"Failed to fix problem: {ex}", end="\n\n", flush=True)
+            self._out.write(
+                f"Failed to fix problem: {format_exception(ex, with_tb=True)}",
+                end="\n\n",
+                flush=True,
+            )
             self.num_failed_fixes += 1
 
 

@@ -393,15 +393,14 @@ Ask in the EdenFS (Windows )?Users group if you need help fixing issues with Ede
             new_watcher="inotify",
             dry_run=False,
         )
-        self.assertEqual(
+        self.assertIn(
             (
                 "<yellow>- Found problem:<reset>\n"
                 "Watchman is watching /path/to/eden-mount with the wrong watcher type: "
                 '"inotify" instead of "eden"\n'
                 "Fixing watchman watch for /path/to/eden-mount...<red>error<reset>\n"
-                "Failed to fix problem: Failed to replace watchman watch for "
-                '/path/to/eden-mount with an "eden" watcher\n'
-                "\n"
+                "Failed to fix problem: RemediationError: Failed to replace "
+                'watchman watch for /path/to/eden-mount with an "eden" watcher'
             ),
             out,
         )

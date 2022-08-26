@@ -97,16 +97,15 @@ Would unmount 2 stale edenfs mounts
         self.mount_table.fail_unmount_force(b"/mnt/stale1")
 
         fixer, out = self.run_check(dry_run=False)
-        self.assertEqual(
-            f"""\
+        self.assertIn(
+            """\
 <yellow>- Found problem:<reset>
 Found 2 stale edenfs mounts:
   /mnt/stale1
   /mnt/stale2
 Unmounting 2 stale edenfs mounts...<red>error<reset>
-Failed to fix problem: Failed to unmount 1 mount point:
+Failed to fix problem: RemediationError: Failed to unmount 1 mount point:
   /mnt/stale1
-
 """,
             out,
         )
