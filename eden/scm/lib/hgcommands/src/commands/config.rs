@@ -6,6 +6,8 @@
  */
 
 use std::collections::BTreeSet;
+use std::io::Result as IoResult;
+use std::io::Write;
 
 use anyhow::bail;
 use clidispatch::abort;
@@ -15,9 +17,13 @@ use clidispatch::global_flags::HgGlobalOpts;
 use clidispatch::io::IsTty;
 use clidispatch::OptionalRepo;
 use cliparser::define_flags;
-use configparser::Config;
+use formatter::formatter::get_formatter;
+use formatter::formatter::FormatOptions;
+use formatter::formatter::Formattable;
+use formatter::formatter::ListFormatter;
 use minibytes::Text;
 
+use super::global_to_format_opts;
 use super::ConfigSet;
 use super::Result;
 use super::IO;
@@ -68,21 +74,115 @@ pub fn run(
         || config_opts.local
         || config_opts.global
         || !config_opts.formatter_opts.template.is_empty()
-        || global_opts.debug
     {
         bail!(errors::FallbackToPython(short_name()));
     }
 
     let config = repo.config();
+    let formatter = get_formatter(
+        "config",
+        &config_opts.formatter_opts.template,
+        global_to_format_opts(&global_opts),
+        Box::new(io.output()),
+    )?;
 
     if io.output().is_tty() {
         io.start_pager(config)?;
     }
 
-    show_configs(config_opts.args, io, config)
+    show_configs(config_opts.args, config, formatter)
 }
 
-fn show_configs(requested_configs: Vec<String>, io: &IO, config: &ConfigSet) -> Result<u8> {
+struct ConfigItem<'a> {
+    source: String,
+    section: &'a str,
+    key: &'a str,
+    value: String,
+    single_item: bool,
+    builtin: bool,
+}
+
+impl<'a> Formattable for ConfigItem<'a> {
+    fn format_plain(&self, options: &FormatOptions, writer: &mut dyn Write) -> IoResult<()> {
+        let source_section = if options.debug {
+            format!("{}: ", self.source)
+        } else {
+            "".to_string()
+        };
+        let kv_section = if !self.single_item {
+            format!("{}.{}=", self.section, self.key)
+        } else {
+            "".to_string()
+        };
+        write!(
+            writer,
+            "{}{}{}\n",
+            source_section,
+            kv_section,
+            self.value.replace('\n', "\\n")
+        )?;
+        Ok(())
+    }
+}
+
+fn get_config_item<'a>(
+    config: &'a ConfigSet,
+    section: &'a str,
+    key: &'a str,
+    single_item: bool,
+) -> Option<ConfigItem<'a>> {
+    let sources_list = config.get_sources(section, key);
+    let config_value_source = match sources_list.last() {
+        None => {
+            return None;
+        }
+        Some(s) => s,
+    };
+    let value = match config_value_source.value() {
+        None => {
+            return None;
+        }
+        Some(v) => v.to_string(),
+    };
+
+    let (source, builtin) = config_value_source
+        .location()
+        .and_then(|(location, range)| {
+            config_value_source.file_content().map(|file| {
+                let line = 1 + file
+                    .slice(0..range.start)
+                    .chars()
+                    .filter(|ch| *ch == '\n')
+                    .count();
+                if !location.as_os_str().is_empty() {
+                    (format!("{}:{}", location.display(), line), false)
+                } else {
+                    let source = config_value_source.source();
+                    if source.to_string().as_str() == "builtin.rc" {
+                        (format!("<builtin>:{}", line), true)
+                    } else {
+                        (format!("{}:{}", source, line), false)
+                    }
+                }
+            })
+        })
+        .unwrap_or_else(|| (config_value_source.source().to_string(), false));
+
+    Some(ConfigItem {
+        source,
+        section,
+        key,
+        value,
+        single_item,
+        builtin,
+    })
+}
+
+fn show_configs(
+    requested_configs: Vec<String>,
+    config: &ConfigSet,
+    mut formatter: Box<dyn ListFormatter>,
+) -> Result<u8> {
     let requested_items: Vec<_> = requested_configs
         .iter()
         .filter(|a| a.contains('.'))
@@ -108,8 +208,9 @@ fn show_configs(requested_configs: Vec<String>, io: &IO, config: &ConfigSet) -> 
     if requested_items.len() == 1 {
         let item = &requested_items[0];
         let parts: Vec<_> = item.splitn(2, '.').collect();
-        if let Some(value) = config.get_nonempty(parts[0], parts[1]) {
-            io.write(format!("{}\n", value))?;
+
+        if let Some(item) = get_config_item(config, parts[0], parts[1], true) {
+            formatter.format_item(&item)?;
             return Ok(0);
         }
         // Config is expected to return an empty string if anything goes wrong
@@ -133,21 +234,11 @@ fn show_configs(requested_configs: Vec<String>, io: &IO, config: &ConfigSet) -> 
         let mut keys = config.keys(section);
         keys.sort();
         for key in keys {
-            if empty_selection
-                && config
-                    .get_sources(&section, &key)
-                    .iter()
-                    .any(|source| source.source().to_string().as_str() == "builtin.rc")
-            {
-                continue;
-            }
-            if let Some(value) = config.get(&section, &key) {
-                io.write(format!(
-                    "{}.{}={}\n",
-                    section,
-                    key,
-                    value.replace('\n', "\\n")
-                ))?;
+            if let Some(item) = get_config_item(config, section, &key, false) {
+                if empty_selection && item.builtin {
+                    continue;
+                }
+                formatter.format_item(&item)?;
             }
         }
     }

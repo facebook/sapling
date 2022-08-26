@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig config.use-rust=False
+  $ setconfig config.use-rust=True
   $ setconfig workingcopy.ruststatus=False
 
 Test config:

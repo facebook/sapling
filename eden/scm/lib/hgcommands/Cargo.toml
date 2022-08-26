@@ -26,6 +26,7 @@ edenfs_client = { version = "0.1.0", path = "../edenfs-client", optional = true 
 exchange = { version = "0.1.0", path = "../exchange" }
 fail = { version = "0.4", features = ["failpoints"] }
 flate2 = { version = "1.0.22", features = ["rust_backend", "tokio"], default-features = false }
+formatter = { version = "0.1.0", path = "../formatter" }
 fsyncglob = { version = "0.1.0", path = "../fsyncglob" }
 hg-http = { version = "0.1.0", path = "../hg-http" }
 hgtime = { version = "0.1.0", path = "../hgtime" }

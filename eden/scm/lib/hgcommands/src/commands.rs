@@ -37,10 +37,20 @@ commands! {
 
 pub use anyhow::Result;
 use clidispatch::command::CommandTable;
+use clidispatch::global_flags::HgGlobalOpts;
 pub use clidispatch::io::IO;
 pub use cliparser::define_flags;
 pub use configparser::config::ConfigSet;
+use formatter::formatter::FormatOptions;
 pub use repo::repo::Repo;
+
+fn global_to_format_opts(options: &HgGlobalOpts) -> FormatOptions {
+    FormatOptions {
+        debug: options.debug,
+        verbose: options.verbose,
+        quiet: options.quiet,
+    }
+}
 
 #[allow(dead_code)]
 /// Return the main command table including all Rust commands.

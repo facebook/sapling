@@ -124,8 +124,6 @@ Test empty config source:
   > emptysource = `pwd`/emptysource.py
   > EOF
 
-  $ hg config --debug empty.source
-  ui.setconfig: value
   $ hg config empty.source -Tjson
   [
    {
