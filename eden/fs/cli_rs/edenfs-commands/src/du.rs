@@ -343,6 +343,47 @@ impl DiskUsageCmd {
             Ok(config_paths)
         }
     }
+
+    /// Remove all the fsck directories if --deep-clean is used.
+    fn clean_fsck_directories(&self, fsck_dirs: Vec<PathBuf>) {
+        if self.deep_clean {
+            println!();
+            for dir in &fsck_dirs {
+                println!(
+                    "\n{}",
+                    format!("Reclaiming space from directory: {}", dir.display()).blue()
+                );
+                match fs::remove_dir_all(&dir) {
+                    Ok(_) => println!("{}", "Space reclaimed. Directory removed.".blue()),
+                    Err(e) => println!(
+                        "{}",
+                        format!("Failed to remove {} : {:?}", dir.display(), e).yellow()
+                    ),
+                };
+            }
+        } else if self.clean {
+            let fsck_dir_strings: Vec<String> = fsck_dirs
+                .iter()
+                .map(|path| path.display().to_string())
+                .collect();
+
+            if !fsck_dir_strings.is_empty() {
+                println!(
+                            "\n{}",
+                            format!(
+                                "A filesytem check recovered data and stored it at:
+- {}
+
+If you have recovered all that you need from these locations, you can remove that directory to reclaim the disk space.
+
+To automatically remove this directory, run `eden du --deep-clean`.",
+                                fsck_dir_strings.join("\n- ")
+                            )
+                            .blue()
+                        )
+            }
+        }
+    }
 }
 
 /// Get all the backing repositories associated with the passed in mounts.
@@ -586,45 +627,8 @@ impl crate::Subcommand for DiskUsageCmd {
             }
             write_failed_to_check_files_message(&mount_failed_file_checks);
 
-            // CLEAN MOUNTS
             if self.should_clean() {
-                if self.deep_clean {
-                    println!();
-                    for dir in &fsck_dirs {
-                        println!(
-                            "\n{}",
-                            format!("Reclaiming space from directory: {}", dir.display()).blue()
-                        );
-                        match fs::remove_dir_all(&dir) {
-                            Ok(_) => println!("{}", "Space reclaimed. Directory removed.".blue()),
-                            Err(e) => println!(
-                                "{}",
-                                format!("Failed to remove {} : {:?}", dir.display(), e).yellow()
-                            ),
-                        };
-                    }
-                } else if self.clean {
-                    let fsck_dir_strings: Vec<String> = fsck_dirs
-                        .iter()
-                        .map(|path| path.display().to_string())
-                        .collect();
-
-                    if !fsck_dir_strings.is_empty() {
-                        println!(
-                            "\n{}",
-                            format!(
-                                "A filesytem check recovered data and stored it at:
-- {}
-
-If you have recovered all that you need from these locations, you can remove that directory to reclaim the disk space.
-
-To automatically remove this directory, run `eden du --deep-clean`.",
-                                fsck_dir_strings.join("\n- ")
-                            )
-                            .blue()
-                        )
-                    }
-                }
+                self.clean_fsck_directories(fsck_dirs);
             }
 
             // PRINT REDIRECTIONS
