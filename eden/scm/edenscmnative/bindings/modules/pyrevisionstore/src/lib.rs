@@ -447,7 +447,7 @@ py_class!(class historypackstore |py| {
 py_class!(class indexedlogdatastore |py| {
     data store: Box<IndexedLogHgIdDataStore>;
 
-    def __new__(_cls, path: &PyPath, config: config) -> PyResult<indexedlogdatastore> {
+    def __new__(_cls, path: &PyPath) -> PyResult<indexedlogdatastore> {
         let config = IndexedLogHgIdDataStoreConfig { max_log_count: None, max_bytes_per_log: None, max_bytes: None };
         indexedlogdatastore::create_instance(
             py,
@@ -523,7 +523,6 @@ py_class!(class indexedloghistorystore |py| {
 fn make_mutabledeltastore(
     packfilepath: Option<PyPathBuf>,
     indexedlogpath: Option<PyPathBuf>,
-    config: &ConfigSet,
 ) -> Result<Arc<dyn HgIdMutableDeltaStore + Send>> {
     let store: Arc<dyn HgIdMutableDeltaStore + Send> = if let Some(packfilepath) = packfilepath {
         Arc::new(MutableDataPack::new(
@@ -551,9 +550,8 @@ fn make_mutabledeltastore(
 py_class!(pub class mutabledeltastore |py| {
     data store: Arc<dyn HgIdMutableDeltaStore>;
 
-    def __new__(_cls, packfilepath: Option<PyPathBuf> = None, indexedlogpath: Option<PyPathBuf> = None, config: config) -> PyResult<mutabledeltastore> {
-        let config = config.get_cfg(py);
-        let store = make_mutabledeltastore(packfilepath, indexedlogpath, &config).map_pyerr(py)?;
+    def __new__(_cls, packfilepath: Option<PyPathBuf> = None, indexedlogpath: Option<PyPathBuf> = None) -> PyResult<mutabledeltastore> {
+        let store = make_mutabledeltastore(packfilepath, indexedlogpath).map_pyerr(py)?;
         mutabledeltastore::create_instance(py, store)
     }
 

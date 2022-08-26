@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::BTreeMap;
 use std::collections::HashMap;
 
 use clidispatch::global_flags::HgGlobalOpts;
@@ -40,15 +39,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(
         py,
         "expandargs",
-        py_fn!(
-            py,
-            expand_args(
-                config: config,
-                command_names: Vec<String>,
-                args: Vec<String>,
-                strict: bool = false
-            )
-        ),
+        py_fn!(py, expand_args(config: config, args: Vec<String>,)),
     )?;
     m.add(
         py,
@@ -154,13 +145,7 @@ fn parse_command(
     Ok((arguments, options))
 }
 
-fn expand_args(
-    py: Python,
-    config: config,
-    command_names: Vec<String>,
-    args: Vec<String>,
-    strict: bool,
-) -> PyResult<(Vec<Str>, Vec<Str>)> {
+fn expand_args(py: Python, config: config, args: Vec<String>) -> PyResult<(Vec<Str>, Vec<Str>)> {
     let cfg = &config.get_cfg(py);
 
     let lookup = move |name: &str| {
@@ -188,13 +173,6 @@ fn expand_args(
     let replaced_aliases: Vec<Str> = replaced_aliases.into_iter().map(Str::from).collect();
 
     Ok((expanded_args, replaced_aliases))
-}
-
-fn expand_command_name(name: String) -> Vec<String> {
-    name.trim_start_matches("^")
-        .split("|")
-        .map(|s| s.to_string())
-        .collect()
 }
 
 fn early_parse(py: Python, args: Vec<String>) -> PyResult<HashMap<String, PyObject>> {

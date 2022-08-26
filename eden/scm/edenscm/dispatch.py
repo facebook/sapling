@@ -814,12 +814,9 @@ def _parse(ui, args):
     commandnames = [command for command in commands.table]
 
     args, options, replace = cliparser.parse(args, True)
-    strict = ui.configbool("ui", "strict")
     if args:
         try:
-            replacement, aliases = cliparser.expandargs(
-                ui._rcfg, commandnames, args, strict
-            )
+            replacement, aliases = cliparser.expandargs(ui._rcfg, args)
         except cliparser.AmbiguousCommand as e:
             e.args[2].sort()
             possibilities = e.args[2]
@@ -837,10 +834,7 @@ def _parse(ui, args):
     if len(replacement) > 0:
         # FIXME: Find a way to avoid calling expandargs twice.
         fullargs = (
-            fullargs[:replace]
-            + cliparser.expandargs(ui._rcfg, commandnames, fullargs[replace:], strict)[
-                0
-            ]
+            fullargs[:replace] + cliparser.expandargs(ui._rcfg, fullargs[replace:])[0]
         )
 
         # Only need to figure out the command name. Parse result is dropped.
