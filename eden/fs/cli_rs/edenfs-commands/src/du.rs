@@ -202,10 +202,19 @@ fn usage_for_dir_entry(
     }
 }
 
+fn ignored_io_error(error: &std::io::Error) -> bool {
+    error.kind() == std::io::ErrorKind::NotFound
+        || error.kind() == std::io::ErrorKind::PermissionDenied
+}
+
 fn usage_for_dir(path: &Path, device_id: Option<u64>) -> std::io::Result<(u64, Vec<PathBuf>)> {
     let device_id = match device_id {
         Some(device_id) => device_id,
-        None => fs::metadata(&path)?.eden_dev(),
+        None => match fs::metadata(&path) {
+            Ok(metadata) => metadata.eden_dev(),
+            Err(e) if ignored_io_error(&e) => return Ok((0, vec![path.to_path_buf()])),
+            Err(e) => return Err(e),
+        },
     };
 
     let mut total_size = 0;
@@ -217,10 +226,7 @@ fn usage_for_dir(path: &Path, device_id: Option<u64>) -> std::io::Result<(u64, V
                 failed_to_check_files.append(&mut failed_files);
                 Ok(())
             }
-            Err(e)
-                if e.kind() == std::io::ErrorKind::NotFound
-                    || e.kind() == std::io::ErrorKind::PermissionDenied =>
-            {
+            Err(e) if ignored_io_error(&e) => {
                 failed_to_check_files.push(path.to_path_buf());
                 Ok(())
             }
