@@ -7,6 +7,7 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::fs::File;
 use std::io::Read;
 use std::io::Write;
 use std::path::Path;
@@ -21,10 +22,15 @@ use sha2::Digest;
 use sha2::Sha256;
 use types::hgid::WriteHgIdExt;
 use types::HgId;
+use util::file::atomic_write;
 
 use crate::filestate::FileStateV2;
 use crate::filestate::StateFlags;
 use crate::metadata::Metadata;
+
+/// Reader and writer functions to a legacy Eden dirstate. Note carefully that
+/// a legacy Eden dirstate has a different binary format to a legacy dirstate
+/// in a non-Eden repo.
 
 const CURRENT_VERSION: u32 = 1;
 
@@ -36,16 +42,25 @@ const MERGE_NOT_APPLICABLE: i8 = 0;
 const MERGE_BOTH_PARENTS: i8 = -1;
 const MERGE_OTHER_PARENT: i8 = -2;
 
-pub fn read_dirstate(_dirstate_path: &Path) -> Result<(Metadata, HashMap<Box<[u8]>, FileStateV2>)> {
-    todo!();
+const DIRSTATE_PATH: &str = ".hg/dirstate";
+
+pub fn read_dirstate(repo_root: &Path) -> Result<(Metadata, HashMap<Box<[u8]>, FileStateV2>)> {
+    let mut dirstate = File::open(repo_root.join(DIRSTATE_PATH))?;
+    deserialize_dirstate(&mut dirstate)
 }
 
 pub fn write_dirstate(
-    _dirstate_path: &Path,
-    _metadata: Metadata,
-    _entries: HashMap<Box<[u8]>, FileStateV2>,
+    repo_root: &Path,
+    metadata: Metadata,
+    entries: HashMap<Box<[u8]>, FileStateV2>,
 ) -> Result<()> {
-    todo!();
+    let mut dirstate_bytes = Vec::new();
+    serialize_dirstate(&mut dirstate_bytes, &metadata, &entries)?;
+    atomic_write(&repo_root.join(DIRSTATE_PATH), |f| {
+        f.write_all(&dirstate_bytes)
+    })
+    .map(|_| ())
+    .map_err(|e| anyhow!(e))
 }
 
 struct Reader<T> {
