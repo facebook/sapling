@@ -10,3 +10,14 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 #[error("unable to find formatter for template {0}")]
 pub struct FormatterNotFound(pub String);
+
+#[derive(Debug, Error)]
+pub enum FormattingError {
+    /// IO error likely caused by failure to write
+    #[error("Write Error")]
+    WriterError(#[from] std::io::Error),
+
+    /// Non-IO error caused by `format_plain` application code
+    #[error(transparent)]
+    PlainFormattingError(#[from] anyhow::Error),
+}

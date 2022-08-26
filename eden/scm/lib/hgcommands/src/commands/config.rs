@@ -6,7 +6,6 @@
  */
 
 use std::collections::BTreeSet;
-use std::io::Result as IoResult;
 use std::io::Write;
 
 use anyhow::bail;
@@ -103,7 +102,11 @@ struct ConfigItem<'a> {
 }
 
 impl<'a> Formattable for ConfigItem<'a> {
-    fn format_plain(&self, options: &FormatOptions, writer: &mut dyn Write) -> IoResult<()> {
+    fn format_plain(
+        &self,
+        options: &FormatOptions,
+        writer: &mut dyn Write,
+    ) -> std::result::Result<(), anyhow::Error> {
         let source_section = if options.debug {
             format!("{}: ", self.source)
         } else {

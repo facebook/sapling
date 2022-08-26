@@ -5,10 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use std::io::Result as IoResult;
 use std::io::Write;
 
 use crate::errors::FormatterNotFound;
+use crate::errors::FormattingError;
+
+pub type FormatResult<T> = std::result::Result<T, FormattingError>;
 
 pub struct FormatOptions {
     pub debug: bool,
@@ -17,11 +19,15 @@ pub struct FormatOptions {
 }
 
 pub trait Formattable {
-    fn format_plain(&self, options: &FormatOptions, writer: &mut dyn Write) -> IoResult<()>;
+    fn format_plain(
+        &self,
+        options: &FormatOptions,
+        writer: &mut dyn Write,
+    ) -> Result<(), anyhow::Error>;
 }
 
 pub trait ListFormatter {
-    fn format_item(&mut self, item: &dyn Formattable) -> IoResult<()>;
+    fn format_item(&mut self, item: &dyn Formattable) -> FormatResult<()>;
 }
 
 pub struct PlainFormatter {
@@ -30,8 +36,12 @@ pub struct PlainFormatter {
 }
 
 impl ListFormatter for PlainFormatter {
-    fn format_item(&mut self, item: &dyn Formattable) -> IoResult<()> {
+    fn format_item(&mut self, item: &dyn Formattable) -> FormatResult<()> {
         item.format_plain(&self.options, self.writer.as_mut())
+            .map_err(|err| match err.downcast::<std::io::Error>() {
+                Ok(io_err) => FormattingError::WriterError(io_err),
+                Err(err) => FormattingError::PlainFormattingError(err),
+            })
     }
 }
 
@@ -50,7 +60,10 @@ pub fn get_formatter(
 #[cfg(test)]
 mod tests {
     use std::cell::RefCell;
+    use std::io::Result as IoResult;
     use std::rc::Rc;
+
+    use anyhow::bail;
 
     use super::*;
 
@@ -60,7 +73,11 @@ mod tests {
     }
 
     impl<'a> Formattable for RequestTest<'a> {
-        fn format_plain(&self, _options: &FormatOptions, writer: &mut dyn Write) -> IoResult<()> {
+        fn format_plain(
+            &self,
+            _options: &FormatOptions,
+            writer: &mut dyn Write,
+        ) -> Result<(), anyhow::Error> {
             write!(writer, "{}: {}", self.url, self.result)?;
             Ok(())
         }
@@ -77,6 +94,32 @@ mod tests {
 
         fn flush(&mut self) -> IoResult<()> {
             self.writer.borrow_mut().flush()
+        }
+    }
+
+    struct FaultyItem;
+
+    impl Formattable for FaultyItem {
+        fn format_plain(
+            &self,
+            _options: &FormatOptions,
+            _writer: &mut dyn Write,
+        ) -> Result<(), anyhow::Error> {
+            bail!("Nope")
+        }
+    }
+
+    struct FaultyBuffer {
+        buf: [u8; 0],
+    }
+
+    impl Write for FaultyBuffer {
+        fn write(&mut self, buf: &[u8]) -> IoResult<usize> {
+            (&mut self.buf[..]).write(buf)
+        }
+
+        fn flush(&mut self) -> IoResult<()> {
+            (&mut self.buf[..]).flush()
         }
     }
 
@@ -125,5 +168,36 @@ mod tests {
             String::from_utf8(buf.as_ref().borrow().clone()).unwrap(),
             "foo://bar: 200".to_string()
         );
+    }
+
+    #[test]
+    fn test_errors() {
+        let buf: [u8; 0] = [0; 0];
+        let mut fm = get_formatter(
+            "",
+            "",
+            FormatOptions {
+                debug: false,
+                verbose: false,
+                quiet: false,
+            },
+            Box::new(FaultyBuffer { buf }),
+        )
+        .unwrap();
+
+        let item = RequestTest {
+            url: "foo://bar",
+            result: 200,
+        };
+        assert!(matches!(
+            fm.format_item(&item).err().unwrap(),
+            FormattingError::WriterError(_)
+        ));
+
+        let item = FaultyItem;
+        assert!(matches!(
+            fm.format_item(&item).err().unwrap(),
+            FormattingError::PlainFormattingError(_)
+        ));
     }
 }

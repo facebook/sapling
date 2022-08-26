@@ -7,4 +7,5 @@ authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.56"
 thiserror = "1.0.30"
