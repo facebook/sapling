@@ -309,7 +309,6 @@ impl DataEntry {
                 // Metadata::read doesn't consume bytes (it just reads them), but our
                 // implementation here wants to consume bytes we read. We work around this here.
                 let pos = cursor.position();
-                std::mem::drop(cursor);
                 let _ = buf.split_to(pos as usize);
 
                 Some(metadata)
