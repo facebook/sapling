@@ -225,6 +225,12 @@ rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
 
 [target.x86_64-apple-darwin]
 rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
+
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
+
+[target.arm64-apple-darwin]
+rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
 """
         if os.path.exists("/usr/bin/lld"):
             # lld is the fastest.

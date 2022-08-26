@@ -82,6 +82,11 @@ else
 	cp build/scripts-3*/$(HGNAME) $(HGNAME)
 endif
 
+install-oss: oss
+	SAPLING_OSS_BUILD=true \
+	  $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
+	  install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --force
+
 local:
 	$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
 	  build_py -c -d . \
