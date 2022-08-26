@@ -393,7 +393,7 @@ impl crate::Subcommand for DiskUsageCmd {
         let mut backing_failed_file_checks = HashSet::new();
         let mut mount_failed_file_checks = HashSet::new();
         let mut redirection_failed_file_checks = HashSet::new();
-        let mut redirections = HashSet::new();
+        let mut buck_redirections = HashSet::new();
         let mut fsck_dirs = Vec::new();
 
         for b in backing_repos.iter() {
@@ -476,7 +476,7 @@ impl crate::Subcommand for DiskUsageCmd {
                 if let Some(file_name) = repo_path.file_name() {
                     if file_name == "buck-out" {
                         let redir_full_path = checkout.path().join(repo_path);
-                        redirections.insert(redir_full_path);
+                        buck_redirections.insert(redir_full_path);
                     }
                 }
             }
@@ -485,7 +485,7 @@ impl crate::Subcommand for DiskUsageCmd {
         let backing_failed_file_checks = backing_failed_file_checks;
         let mount_failed_file_checks = mount_failed_file_checks;
         let redirection_failed_file_checks = redirection_failed_file_checks;
-        let redirections = redirections;
+        let buck_redirections = buck_redirections;
 
         // GET SUMMARY INFO for shared usage
         let mut shared_failed_file_checks = HashSet::new();
@@ -590,20 +590,20 @@ To automatically remove this directory, run `eden du --deep-clean`.",
             }
 
             // PRINT REDIRECTIONS
-            write_title("Redirections");
-            if redirections.is_empty() {
-                println!("No redirections");
+            write_title("Buck redirections");
+            if buck_redirections.is_empty() {
+                println!("No Buck redirections");
             } else {
-                for redir in &redirections {
+                for redir in &buck_redirections {
                     println!("{}", redir.display());
                 }
             }
             write_failed_to_check_files_message(&redirection_failed_file_checks);
 
             // CLEAN REDIRECTIONS
-            if !redirections.is_empty() {
+            if !buck_redirections.is_empty() {
                 if self.should_clean() {
-                    for redir in redirections {
+                    for redir in buck_redirections {
                         println!(
                             "\n{}",
                             format!("Reclaiming space from redirection: {}", redir.display())
