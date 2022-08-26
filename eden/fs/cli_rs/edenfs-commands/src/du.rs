@@ -8,6 +8,7 @@
 //! edenfsctl du
 
 use std::collections::HashSet;
+use std::fmt;
 use std::fs;
 use std::fs::DirEntry;
 use std::path::Path;
@@ -104,6 +105,81 @@ fn format_size(size: u64) -> String {
         format!("{} B", size)
     } else {
         "0".to_string()
+    }
+}
+
+impl fmt::Display for AggregatedUsageCounts {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut table = Table::new();
+        table.load_preset(comfy_table::presets::NOTHING);
+
+        if self.materialized > 0 {
+            let mut row = Row::new();
+            row.add_cell(Cell::new("Materialized files:").set_alignment(CellAlignment::Right));
+            row.add_cell(Cell::new(format_size(self.materialized)));
+            if f.alternate() {
+                row.add_cell(Cell::new("Not cleaned. Please see WARNING above").fg(Color::Yellow));
+            }
+            table.add_row(row);
+        }
+        if self.redirection > 0 {
+            let mut row = Row::new();
+            row.add_cell(Cell::new("Redirections:").set_alignment(CellAlignment::Right));
+            row.add_cell(Cell::new(format_size(self.redirection)));
+            if f.alternate() {
+                row.add_cell(Cell::new("Cleaned").fg(Color::Green));
+            }
+            table.add_row(row);
+        }
+        if self.ignored > 0 {
+            let mut row = Row::new();
+            row.add_cell(Cell::new("Ignored files:").set_alignment(CellAlignment::Right));
+            row.add_cell(Cell::new(format_size(self.ignored)));
+            if f.alternate() {
+                row.add_cell(Cell::new("Not cleaned. Please see WARNING above").fg(Color::Yellow));
+            }
+            table.add_row(row);
+        }
+        if self.backing > 0 {
+            let mut row = Row::new();
+            row.add_cell(Cell::new("Backing repos:").set_alignment(CellAlignment::Right));
+            row.add_cell(Cell::new(format_size(self.backing)));
+            if f.alternate() {
+                row.add_cell(Cell::new("Not cleaned. Please see CAUTION above").fg(Color::Yellow));
+            }
+            table.add_row(row);
+        }
+        if self.shared > 0 {
+            let mut row = Row::new();
+            row.add_cell(Cell::new("Shared space:").set_alignment(CellAlignment::Right));
+            row.add_cell(Cell::new(format_size(self.shared)));
+            if f.alternate() {
+                row.add_cell(Cell::new("Cleaned").fg(Color::Green));
+            }
+            table.add_row(row);
+        }
+        if self.fsck > 0 {
+            let mut row = Row::new();
+            row.add_cell(
+                Cell::new("Filesystem Check recovered files:").set_alignment(CellAlignment::Right),
+            );
+            row.add_cell(Cell::new(format_size(self.fsck)));
+            if f.alternate() {
+                if f.sign_plus() {
+                    row.add_cell(Cell::new("Cleaned").fg(Color::Green));
+                } else {
+                    row.add_cell(
+                        Cell::new(
+                            "Not cleaned. Directories listed above. Check and remove manually",
+                        )
+                        .fg(Color::Yellow),
+                    );
+                }
+            }
+            table.add_row(row);
+        }
+
+        write!(f, "{}", table)
     }
 }
 
@@ -577,81 +653,13 @@ To automatically remove this directory, run `eden du --deep-clean`.",
 
             // PRINT SUMMARY
             write_title("Summary");
-            let mut table = Table::new();
-            table.load_preset(comfy_table::presets::NOTHING);
-
-            if aggregated_usage_counts.materialized > 0 {
-                let mut row = Row::new();
-                row.add_cell(Cell::new("Materialized files:").set_alignment(CellAlignment::Right));
-                row.add_cell(Cell::new(format_size(aggregated_usage_counts.materialized)));
-                if self.should_clean() {
-                    row.add_cell(
-                        Cell::new("Not cleaned. Please see WARNING above").fg(Color::Yellow),
-                    );
-                }
-                table.add_row(row);
+            if self.deep_clean {
+                println!("{:+#}", aggregated_usage_counts);
+            } else if self.clean {
+                println!("{:#}", aggregated_usage_counts);
+            } else {
+                println!("{}", aggregated_usage_counts);
             }
-            if aggregated_usage_counts.redirection > 0 {
-                let mut row = Row::new();
-                row.add_cell(Cell::new("Redirections:").set_alignment(CellAlignment::Right));
-                row.add_cell(Cell::new(format_size(aggregated_usage_counts.redirection)));
-                if self.should_clean() {
-                    row.add_cell(Cell::new("Cleaned").fg(Color::Green));
-                }
-                table.add_row(row);
-            }
-            if aggregated_usage_counts.ignored > 0 {
-                let mut row = Row::new();
-                row.add_cell(Cell::new("Ignored files:").set_alignment(CellAlignment::Right));
-                row.add_cell(Cell::new(format_size(aggregated_usage_counts.ignored)));
-                if self.should_clean() {
-                    row.add_cell(
-                        Cell::new("Not cleaned. Please see WARNING above").fg(Color::Yellow),
-                    );
-                }
-                table.add_row(row);
-            }
-            if aggregated_usage_counts.backing > 0 {
-                let mut row = Row::new();
-                row.add_cell(Cell::new("Backing repos:").set_alignment(CellAlignment::Right));
-                row.add_cell(Cell::new(format_size(aggregated_usage_counts.backing)));
-                if self.should_clean() {
-                    row.add_cell(
-                        Cell::new("Not cleaned. Please see CAUTION above").fg(Color::Yellow),
-                    );
-                }
-                table.add_row(row);
-            }
-            if aggregated_usage_counts.shared > 0 {
-                let mut row = Row::new();
-                row.add_cell(Cell::new("Shared space:").set_alignment(CellAlignment::Right));
-                row.add_cell(Cell::new(format_size(aggregated_usage_counts.shared)));
-                if self.should_clean() {
-                    row.add_cell(Cell::new("Cleaned").fg(Color::Green));
-                }
-                table.add_row(row);
-            }
-            if aggregated_usage_counts.fsck > 0 {
-                let mut row = Row::new();
-                row.add_cell(
-                    Cell::new("Filesystem Check recovered files:")
-                        .set_alignment(CellAlignment::Right),
-                );
-                row.add_cell(Cell::new(format_size(aggregated_usage_counts.fsck)));
-                if self.deep_clean {
-                    row.add_cell(Cell::new("Cleaned").fg(Color::Green));
-                } else if self.clean {
-                    row.add_cell(
-                        Cell::new(
-                            "Not cleaned. Directories listed above. Check and remove manually",
-                        )
-                        .fg(Color::Yellow),
-                    );
-                }
-                table.add_row(row);
-            }
-
-            println!("{}", table.to_string());
 
             if !self.should_clean() {
                 println!(
