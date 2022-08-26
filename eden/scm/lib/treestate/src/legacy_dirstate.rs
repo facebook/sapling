@@ -17,6 +17,8 @@ use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
+use sha2::Digest;
+use sha2::Sha256;
 use types::hgid::WriteHgIdExt;
 use types::HgId;
 
@@ -44,6 +46,61 @@ pub fn write_dirstate(
     _entries: HashMap<Box<[u8]>, FileStateV2>,
 ) -> Result<()> {
     todo!();
+}
+
+struct Reader<T> {
+    hasher: Sha256,
+    inner: T,
+}
+
+impl<T: Read> Reader<T> {
+    fn new(inner: T) -> Self {
+        let hasher = Sha256::new();
+        Self { hasher, inner }
+    }
+
+    fn verify_checksum(mut self) -> Result<bool> {
+        let actual: [u8; 32] = self.hasher.finalize().into();
+        let mut expected = [0; 32];
+        self.inner.read_exact(&mut expected)?;
+        Ok(actual == expected)
+    }
+}
+
+impl<T: Read> Read for Reader<T> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let result = self.inner.read(buf)?;
+        self.hasher.update(buf);
+        Ok(result)
+    }
+}
+
+struct Writer<T> {
+    hasher: Sha256,
+    inner: T,
+}
+
+impl<T: Write> Writer<T> {
+    fn new(inner: T) -> Self {
+        let hasher = Sha256::new();
+        Self { hasher, inner }
+    }
+
+    fn write_checksum(mut self) -> std::io::Result<()> {
+        let checksum = self.hasher.finalize();
+        self.inner.write_all(&checksum)
+    }
+}
+
+impl<T: Write> Write for Writer<T> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.hasher.update(buf);
+        self.inner.write(buf)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
 }
 
 // The serialization format of the dirstate is as follows:
@@ -79,32 +136,35 @@ pub fn write_dirstate(
 //   - Because we use SHA-256 as the hash algorithm for the checksum, the
 //     remaining 32 bytes are used for the hash.
 fn serialize_dirstate(
-    mut dirstate: impl Write,
+    dirstate: impl Write,
     metadata: &Metadata,
     treestate: &HashMap<Box<[u8]>, FileStateV2>,
 ) -> Result<()> {
+    let mut writer = Writer::new(dirstate);
+
     let p1 = metadata
         .0
         .get("p1")
         .ok_or_else(|| anyhow!("Treestate is missing necessary P1 node"))?;
     let p1 = HgId::from_str(p1)?;
-    dirstate.write_hgid(&p1)?;
+    writer.write_hgid(&p1)?;
 
     if let Some(p2) = metadata.0.get("p2") {
         let p2 = HgId::from_str(p2)?;
-        dirstate.write_hgid(&p2)?;
+        writer.write_hgid(&p2)?;
     } else {
-        dirstate.write_hgid(HgId::null_id())?;
+        writer.write_hgid(HgId::null_id())?;
     }
 
-    dirstate.write_u32::<BigEndian>(CURRENT_VERSION)?;
+    writer.write_u32::<BigEndian>(CURRENT_VERSION)?;
 
     for (path, state) in treestate {
-        serialize_entry(&mut dirstate, path, state)?;
+        serialize_entry(&mut writer, path, state)?;
     }
 
-    dirstate.write_u8(CHECKSUM_HEADER)?;
-    // TODO: Write checksum
+    writer.write_u8(CHECKSUM_HEADER)?;
+    writer.write_checksum()?;
+
     Ok(())
 }
 
@@ -163,14 +223,15 @@ fn serialize_entry(mut dirstate: impl Write, path: &[u8], state: &FileStateV2) -
 }
 
 fn deserialize_dirstate(
-    dirstate: &mut &[u8],
+    dirstate: impl Read,
 ) -> Result<(Metadata, HashMap<Box<[u8]>, FileStateV2>)> {
+    let mut reader = Reader::new(dirstate);
     let mut p1 = [0; 20];
-    dirstate.read_exact(&mut p1)?;
+    reader.read_exact(&mut p1)?;
     let p1 = HgId::from(&p1);
 
     let mut p2_bytes = [0; 20];
-    dirstate.read_exact(&mut p2_bytes)?;
+    reader.read_exact(&mut p2_bytes)?;
     let p2 = HgId::from(&p2_bytes);
 
     let mut metadata = BTreeMap::new();
@@ -180,10 +241,10 @@ fn deserialize_dirstate(
     }
     let metadata = Metadata(metadata);
 
-    let _version = dirstate.read_u32::<BigEndian>()?;
+    let _version = reader.read_u32::<BigEndian>()?;
 
     let mut entries: HashMap<Box<[u8]>, FileStateV2> = HashMap::new();
-    while let Some((path, mut state)) = deserialize_entry(dirstate)? {
+    while let Some((path, mut state)) = deserialize_entry(&mut reader)? {
         if let Some(existing_state) = entries.get_mut(&path) {
             state.state |= existing_state.state;
             if existing_state.copied.is_some() {
@@ -193,12 +254,16 @@ fn deserialize_dirstate(
         entries.insert(path, state);
     }
 
-    // TODO: Verify checksum
+    if !reader.verify_checksum()? {
+        return Err(anyhow!(
+            "Dirstate contained incorrect checksum: likely a corrupt dirstate"
+        ));
+    }
 
     Ok((metadata, entries))
 }
 
-fn deserialize_entry(dirstate: &mut &[u8]) -> Result<Option<(Box<[u8]>, FileStateV2)>> {
+fn deserialize_entry(mut dirstate: impl Read) -> Result<Option<(Box<[u8]>, FileStateV2)>> {
     let header = dirstate.read_u8()?;
     if header == CHECKSUM_HEADER {
         // Reached checksum, no more entries in dirstate
@@ -207,10 +272,10 @@ fn deserialize_entry(dirstate: &mut &[u8]) -> Result<Option<(Box<[u8]>, FileStat
 
     if header == COPYMAP_HEADER {
         let dest_size = dirstate.read_u16::<BigEndian>()?;
-        let dest_path = read_path(dirstate, dest_size)?;
+        let dest_path = read_path(&mut dirstate, dest_size)?;
 
         let source_size = dirstate.read_u16::<BigEndian>()?;
-        let source_path = read_path(dirstate, source_size)?;
+        let source_path = read_path(&mut dirstate, source_size)?;
 
         return Ok(Some((
             dest_path,
@@ -245,7 +310,7 @@ fn deserialize_entry(dirstate: &mut &[u8]) -> Result<Option<(Box<[u8]>, FileStat
         s => return Err(anyhow!("Unexpected state: {}", s)),
     };
 
-    let path = read_path(dirstate, size)?;
+    let path = read_path(&mut dirstate, size)?;
     Ok(Some((
         path,
         FileStateV2 {
@@ -258,7 +323,7 @@ fn deserialize_entry(dirstate: &mut &[u8]) -> Result<Option<(Box<[u8]>, FileStat
     )))
 }
 
-fn read_path(dirstate: &mut &[u8], size: u16) -> Result<Box<[u8]>> {
+fn read_path(dirstate: impl Read, size: u16) -> Result<Box<[u8]>> {
     let mut path = Vec::with_capacity(size.into());
     let mut reader = Read::take(dirstate, size.into());
     reader.read_to_end(&mut path)?;
@@ -270,6 +335,8 @@ mod tests {
     use std::collections::HashMap;
 
     use pretty_assertions::assert_eq;
+    use sha2::Digest;
+    use sha2::Sha256;
 
     use super::deserialize_dirstate;
     use super::serialize_dirstate;
@@ -414,5 +481,19 @@ mod tests {
         out_entries.sort_unstable_by_key(|(path, _)| path.clone());
 
         assert_eq!(in_entries, out_entries);
+    }
+
+    #[test]
+    fn write_checksum_test() {
+        let (metadata, entries) = treestate();
+        let mut dirstate = Vec::new();
+        serialize_dirstate(&mut dirstate, &metadata, &entries).unwrap();
+        assert_eq!(dirstate.len(), 215);
+
+        let mut hasher = Sha256::new();
+        hasher.update(&dirstate[0..183]);
+        let expected_checksum: [u8; 32] = hasher.finalize().into();
+
+        assert_eq!(expected_checksum, dirstate[183..215]);
     }
 }
