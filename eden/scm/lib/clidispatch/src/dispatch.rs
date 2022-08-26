@@ -23,6 +23,7 @@ use crate::command::CommandDefinition;
 use crate::command::CommandFunc;
 use crate::command::CommandTable;
 use crate::errors;
+use crate::errors::UnknownCommand;
 use crate::global_flags::HgGlobalOpts;
 use crate::io::IO;
 use crate::OptionalRepo;
@@ -177,22 +178,22 @@ pub struct Dispatcher {
     optional_repo: OptionalRepo,
 }
 
-fn version_args() -> Vec<String> {
-    vec!["version".to_string()]
+fn version_args(binary_path: &str) -> Vec<String> {
+    vec![binary_path.to_string(), "version".to_string()]
 }
 
 impl Dispatcher {
     /// Load configs. Prepare to run a command.
     pub fn from_args(mut args: Vec<String>) -> Result<Self> {
-        if args.get(0).map(|s| s.as_ref()) == Some("--version") {
-            args = version_args();
+        if args.get(1).map(|s| s.as_ref()) == Some("--version") {
+            args = version_args(&args[0]);
         }
 
-        let mut early_result = early_parse(&args)?;
+        let mut early_result = early_parse(&args[1..])?;
         let global_opts: HgGlobalOpts = early_result.clone().try_into()?;
         if global_opts.version {
-            args = version_args();
-            early_result = early_parse(&args)?;
+            args = version_args(&args[0]);
+            early_result = early_parse(&args[1..])?;
         }
 
         let cwd = if global_opts.cwd.is_empty() {
@@ -222,6 +223,10 @@ impl Dispatcher {
                 }
             }
         }
+    }
+
+    pub fn args(&self) -> &[String] {
+        &self.args
     }
 
     /// Get a reference to the parsed config.
@@ -255,13 +260,28 @@ impl Dispatcher {
         configparser::hg::load(None, &self.global_opts.config, &self.global_opts.configfile)
     }
 
+    fn default_command(&self) -> Result<String, UnknownCommand> {
+        // Passing in --verbose also disables this behavior,
+        // but that option is handled somewhere else
+        if self.global_opts.help || configparser::hg::is_plain(None) {
+            return Err(errors::UnknownCommand(String::new()));
+        }
+        Ok(if let OptionalRepo::Some(repo) = &self.optional_repo {
+            repo.config().get("commands", "naked-default.in-repo")
+        } else {
+            self.optional_repo
+                .config()
+                .get("commands", "naked-default.no-repo")
+        }
+        .ok_or_else(|| errors::UnknownCommand(String::new()))?
+        .to_string())
+    }
+
     fn prepare_command<'a>(
-        &self,
+        &mut self,
         command_table: &'a CommandTable,
         io: &IO,
     ) -> Result<(&'a CommandDefinition, ParseOutput)> {
-        let args = &self.args;
-        let early_result = &self.early_result;
         let config = self.optional_repo.config();
 
         if !self.global_opts.cwd.is_empty() {
@@ -291,30 +311,49 @@ impl Dispatcher {
             }
         };
 
-        let early_args = early_result.args();
-        let first_arg = early_args
-            .get(0)
-            .ok_or_else(|| errors::UnknownCommand(String::new()))?;
+        let first_arg = if let Some(first_arg) = self.early_result.args.get(0) {
+            first_arg.clone()
+        } else {
+            let default_command = self.default_command()?;
+            self.args.insert(1, default_command.clone());
+            self.early_result.args = vec![default_command.clone()];
+            self.early_result.first_arg_index = 0;
+            default_command
+        };
 
+        let args = self.args[1..].to_vec();
+        let early_result = &self.early_result;
         let first_arg_index = early_result.first_arg_index();
 
         // This should hold true since `first_arg` is not empty (tested above).
         // Therefore positional args is non-empty and first_arg_index should be
         // an index in args.
         debug_assert!(first_arg_index < args.len());
-        debug_assert_eq!(&args[first_arg_index], first_arg);
+        debug_assert_eq!(args[first_arg_index], first_arg);
 
         // The difference between args, expanded and new_args is:
-        // - args are unchanged arguments provided by the user.
+        // - args are unchanged arguments provided by the user, unless only global options are provided.
         //   args can have global flags before command name.
-        //   for example, ["hg", "--traceback", "log", "-Gvr", "master"]
+        //   for example, ["--traceback", "log", "-Gvr", "master"]
         //                                      ^^^^^ first_arg_index, "log" is "command_name"
         // - expanded: includes alias expansion result
         //   no global flags before command name.
         //   for example, with alias "log = log -f", ["log", "-Gvr", "master"]
         //   will be expanded to ["log", "-f", "-Gvr", "master"].
         // - new_args: final args to parse, like expanded with global flags.
-        //   ["hg", "--traceback", "log", "-f", "-Gvr", "master"].
+        //   ["--traceback", "log", "-f", "-Gvr", "master"].
+
+        // If only global options are provided and some conditions are met (see `self.default_command` for details),
+        // then the command/alias provided in commands.naked-default.{in|no}-repo is inserted at the beginning
+        // and the difference mentioned above is kept. For instance, if :
+        // - The `commands.naked-default.in-repo` config is set to "stj"
+        // - The `alias.stj` config is set to "stj = status -Tjson --verbose"
+        // - The command is run in a repo,
+        // - The original args are ["--verbose", "--traceback"]
+        // Then the final values of the variables mentioned above are:
+        // - args     => ["stj", "--verbose", "--traceback"]
+        // - expanded => ["status", "-Tjson", "--verbose", "--verbose", "--traceback"]
+        // - new_args => ["status", "-Tjson", "--verbose", "--verbose", "--traceback"]
 
         let command_name = first_arg.to_string();
         let (expanded, _first_arg_index) = expand_aliases(alias_lookup, &args[first_arg_index..])?;

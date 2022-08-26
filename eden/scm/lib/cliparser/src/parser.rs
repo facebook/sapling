@@ -712,7 +712,7 @@ pub struct ParseOutput {
     opts: HashMap<String, Value>,
     /// The positional args
     pub args: Vec<String>,
-    first_arg_index: usize,
+    pub first_arg_index: usize,
 }
 
 /// ParseOutput represents all of the information successfully parsed from the command-line

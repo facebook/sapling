@@ -137,7 +137,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
             Ok(dir) => dir,
         };
 
-        match dispatch::Dispatcher::from_args(args[1..].to_vec()) {
+        match dispatch::Dispatcher::from_args(args.clone()) {
             Ok(dispatcher) => {
                 let _guard = span.enter();
 
@@ -145,7 +145,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
                     sampling_config.set(sc).unwrap();
                 }
 
-                dispatch_command(io, dispatcher, args, cwd, Arc::downgrade(&in_scope), now)
+                dispatch_command(io, dispatcher, cwd, Arc::downgrade(&in_scope), now)
             }
             Err(err) => {
                 errors::print_error(&err, io, &args[1..]);
@@ -176,20 +176,20 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
 fn dispatch_command(
     io: &IO,
     mut dispatcher: Dispatcher,
-    args: Vec<String>,
     cwd: PathBuf,
     in_scope: Weak<()>,
     start_time: SystemTime,
 ) -> i32 {
     log_repo_path_and_exe_version(dispatcher.repo());
 
-    let run_logger = match runlog::Logger::from_repo(dispatcher.repo(), args[1..].to_vec()) {
-        Ok(logger) => Some(logger),
-        Err(err) => {
-            let _ = io.write_err(format!("Error creating runlogger: {}\n", err));
-            None
-        }
-    };
+    let run_logger =
+        match runlog::Logger::from_repo(dispatcher.repo(), dispatcher.args()[1..].to_vec()) {
+            Ok(logger) => Some(logger),
+            Err(err) => {
+                let _ = io.write_err(format!("Error creating runlogger: {}\n", err));
+                None
+            }
+        };
 
     setup_http(dispatcher.global_opts());
 
@@ -229,14 +229,14 @@ fn dispatch_command(
                 // code.
                 let _ = env::set_current_dir(cwd);
 
-                let mut interp = HgPython::new(&args);
+                let mut interp = HgPython::new(dispatcher.args());
                 if dispatcher.global_opts().trace {
                     // Error is not fatal.
                     let _ = interp.setup_tracing("*".into());
                 }
-                interp.run_hg(args, io, config)
+                interp.run_hg(dispatcher.args().to_vec(), io, config)
             } else {
-                errors::print_error(&err, io, &args[1..]);
+                errors::print_error(&err, io, &dispatcher.args()[1..]);
                 255
             }
         }
