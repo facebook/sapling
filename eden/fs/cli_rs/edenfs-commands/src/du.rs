@@ -392,17 +392,31 @@ impl crate::Subcommand for DiskUsageCmd {
 
         for b in backing_repos.iter() {
             // GET SUMMARY INFO for backing counts
-            let (usage_count, failed_file_checks) = usage_for_dir(b, None).from_err()?;
+            let (usage_count, failed_file_checks) =
+                usage_for_dir(b, None).from_err().with_context(|| {
+                    format!(
+                        "Failed to measure disk space usage for backing repository {}",
+                        b.display()
+                    )
+                })?;
             aggregated_usage_counts.backing += usage_count;
             backing_failed_file_checks.extend(failed_file_checks);
         }
 
         for mount in &mounts {
-            let checkout = find_checkout(&instance, mount)?;
+            let checkout = find_checkout(&instance, mount)
+                .with_context(|| format!("Failed to find checkout for {}", mount.display()))?;
 
             // GET SUMMARY INFO for materialized counts
             let overlay_dir = checkout.data_dir().join("local");
-            let (usage_count, failed_file_checks) = usage_for_dir(&overlay_dir, None).from_err()?;
+            let (usage_count, failed_file_checks) = usage_for_dir(&overlay_dir, None)
+                .from_err()
+                .with_context(|| {
+                    format!(
+                        "Failed to measure disk space usage for overlay {}",
+                        overlay_dir.display()
+                    )
+                })?;
             aggregated_usage_counts.materialized += usage_count;
             mount_failed_file_checks.extend(failed_file_checks);
 
@@ -414,17 +428,34 @@ impl crate::Subcommand for DiskUsageCmd {
             let fsck_dir = checkout.fsck_dir();
             if fsck_dir.exists() {
                 let (usage_count, failed_file_checks) =
-                    usage_for_dir(&fsck_dir, None).from_err()?;
+                    usage_for_dir(&fsck_dir, None).from_err().with_context(|| {
+                        format!(
+                            "Failed to measure disk space usage for fsck directory {}",
+                            fsck_dir.display()
+                        )
+                    })?;
                 aggregated_usage_counts.fsck += usage_count;
                 mount_failed_file_checks.extend(failed_file_checks);
                 fsck_dirs.push(fsck_dir);
             }
 
-            for (_, redir) in get_effective_redirections(&checkout)? {
+            for (_, redir) in get_effective_redirections(&checkout)
+                .with_context(|| format!("Failed to get redirections for {}", mount.display()))?
+            {
                 // GET SUMMARY INFO for redirections
-                if let Some(target) = redir.expand_target_abspath(&checkout)? {
+                if let Some(target) = redir.expand_target_abspath(&checkout).with_context(|| {
+                    format!(
+                        "Failed to get redirection destination for {}",
+                        redir.repo_path.display()
+                    )
+                })? {
                     let (usage_count, failed_file_checks) =
-                        usage_for_dir(&target, None).from_err()?;
+                        usage_for_dir(&target, None).from_err().with_context(|| {
+                            format!(
+                                "Failed to measure disk space usage for redirection {}",
+                                target.display()
+                            )
+                        })?;
                     aggregated_usage_counts.redirection += usage_count;
                     redirection_failed_file_checks.extend(failed_file_checks);
                 } else {
@@ -453,11 +484,25 @@ impl crate::Subcommand for DiskUsageCmd {
         // GET SUMMARY INFO for shared usage
         let mut shared_failed_file_checks = HashSet::new();
         let (logs_dir_usage, failed_logs_dir_file_checks) =
-            usage_for_dir(&instance.logs_dir(), None).from_err()?;
+            usage_for_dir(&instance.logs_dir(), None)
+                .from_err()
+                .with_context(|| {
+                    format!(
+                        "Failed to measure disk space usage for EdenFS logs {}",
+                        instance.logs_dir().display()
+                    )
+                })?;
         aggregated_usage_counts.shared += logs_dir_usage;
         shared_failed_file_checks.extend(failed_logs_dir_file_checks);
         let (storage_dir_usage, failed_storage_dir_file_checks) =
-            usage_for_dir(&instance.storage_dir(), None).from_err()?;
+            usage_for_dir(&instance.storage_dir(), None)
+                .from_err()
+                .with_context(|| {
+                    format!(
+                        "Failed to measure disk space usage for EdenFS LocalStore {}",
+                        instance.storage_dir().display()
+                    )
+                })?;
         aggregated_usage_counts.shared += storage_dir_usage;
         shared_failed_file_checks.extend(failed_storage_dir_file_checks);
 
@@ -466,13 +511,15 @@ impl crate::Subcommand for DiskUsageCmd {
         let aggregated_usage_counts = aggregated_usage_counts;
 
         // GET HGCACHE PATH
-        let hg_cache_path = get_hg_cache_path()?;
+        let hg_cache_path = get_hg_cache_path().context("Failed to get hgcache path")?;
 
         // PRINT OUTPUT
         if self.json {
             println!(
                 "{}",
-                serde_json::to_string(&aggregated_usage_counts).from_err()?
+                serde_json::to_string(&aggregated_usage_counts)
+                    .from_err()
+                    .context("Failed to serialize usage counts")?
             );
         } else {
             if self.should_clean() {
@@ -564,7 +611,10 @@ To automatically remove this directory, run `eden du --deep-clean`.",
                                 .env_clear()
                                 .env_extend(&get_env_with_buck_version(basename)?)
                                 .capture()
-                                .from_err()?;
+                                .from_err()
+                                .with_context(|| {
+                                    format!("Failed to run buck {}", get_buck_command())
+                                })?;
 
                             if output.success() {
                                 println!("{}", "Space reclaimed".blue());
