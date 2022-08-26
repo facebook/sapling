@@ -1,0 +1,5 @@
+Package: sapling
+Version: 0.1
+Architecture: amd64
+Maintainer: Meta Platforms, Inc.
+Description: A source control client

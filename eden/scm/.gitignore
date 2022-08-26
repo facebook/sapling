@@ -69,6 +69,7 @@ edenscmnative/traceprof.cpp
 # Build output
 build
 debbuild/
+install/
 .pytype/
 rpmbuild/
 getdeps_build.log
