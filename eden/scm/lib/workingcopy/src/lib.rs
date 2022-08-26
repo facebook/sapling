@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(feature = "eden")]
 pub mod edenfs;
+
 mod filechangedetector;
 pub mod filesystem;
 pub mod physicalfs;

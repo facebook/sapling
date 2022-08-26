@@ -9,6 +9,7 @@ use std::borrow::Cow;
 
 use configparser::config::ConfigSet;
 use thiserror::Error;
+#[cfg(feature = "eden")]
 use thrift_types::edenfs as eden;
 
 #[derive(Debug, Error)]
@@ -65,12 +66,17 @@ pub fn print_error(err: &anyhow::Error, io: &crate::io::IO, _args: &[String]) {
             // UX: Colorize the output once `io` can output colors.
             let _ = io.write_err(format!("     {}\n", possibility));
         }
-    } else if let Some(eden::errors::eden_service::GetScmStatusV2Error::ex(e)) =
-        err.downcast_ref::<eden::errors::eden_service::GetScmStatusV2Error>()
-    {
-        let _ = io.write_err(format!("abort: {}\n", e.message));
-        let _ = io.flush();
     } else {
+        #[cfg(feature = "eden")]
+        {
+            if let Some(eden::errors::eden_service::GetScmStatusV2Error::ex(e)) =
+                err.downcast_ref::<eden::errors::eden_service::GetScmStatusV2Error>()
+            {
+                let _ = io.write_err(format!("abort: {}\n", e.message));
+                let _ = io.flush();
+                return;
+            }
+        }
         let _ = io.write_err(format!("abort: {:?}\n", err));
     }
 }
