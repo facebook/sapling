@@ -118,6 +118,7 @@ use repo_sparse_profiles::ArcRepoSparseProfiles;
 use repo_sparse_profiles::RepoSparseProfiles;
 use repo_sparse_profiles::RepoSparseProfilesArc;
 use revset::AncestorsNodeStream;
+use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use segmented_changelog::CloneData;
 use segmented_changelog::DisabledSegmentedChangelog;
 use segmented_changelog::Location;
@@ -1002,6 +1003,24 @@ impl RepoContext {
             .await?
             .map(|cs_id| ChangesetContext::new(self.clone(), cs_id));
         Ok(changeset)
+    }
+
+    pub fn difference_of_unions_of_ancestors(
+        &self,
+        includes: Vec<ChangesetId>,
+        excludes: Vec<ChangesetId>,
+    ) -> impl Stream<Item = Result<ChangesetContext, MononokeError>> {
+        let repo = self.clone();
+        DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+            self.ctx.clone(),
+            self.blob_repo().changeset_fetcher(),
+            self.skiplist_index_arc(),
+            includes,
+            excludes,
+        )
+        .compat()
+        .map_ok(move |cs_id| ChangesetContext::new(repo.clone(), cs_id))
+        .map_err(|err| err.into())
     }
 
     /// Get Mercurial ID for multiple changesets

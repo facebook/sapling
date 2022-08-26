@@ -6,8 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::collections::VecDeque;
-use std::ops::Not;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -153,9 +151,8 @@ impl<'a> SyncChangeset<'a> {
             Some(megarepo_config::MergeMode::squashed(sq)) => {
                 let (is_squashable, side_commits) = self
                     .is_commit_squashable(
-                        ctx,
                         target,
-                        &source_cs,
+                        source_cs_id,
                         &commit_remapping_state,
                         source_name,
                         &source_repo,
@@ -243,90 +240,57 @@ impl<'a> SyncChangeset<'a> {
 
     async fn is_commit_squashable(
         &self,
-        ctx: &CoreContext,
         target: &Target,
-        source_cs: &BonsaiChangeset,
+        source_cs_id: ChangesetId,
         commit_remapping_state: &CommitRemappingState,
         source_name: &SourceName,
         source_repo: &RepoContext,
         limit: u64,
     ) -> Result<(bool, Vec<ChangesetContext>)> {
+        let limit = limit as usize;
         if limit == 0 {
             return Ok((false, vec![]));
         }
 
         let latest_synced_cs_id =
             find_latest_synced_cs_id(commit_remapping_state, source_name, target)?;
-        let side_parents: VecDeque<_> =
-            stream::iter(source_cs.parents().filter(|p| *p != latest_synced_cs_id))
-                .map(|p| async move {
-                    source_repo
-                        .changeset(p)
-                        .await?
-                        .ok_or_else(|| anyhow!("commit specifier not found {}", p))
-                })
-                .buffered(100)
-                .try_collect()
-                .await?;
-        let author = match side_parents.front() {
+
+        // Take all ancestors of source_cs_id which are not ancestors of
+        // latest_synced_cs_id up to limit+1 commits.
+        let side_commits: Vec<_> = source_repo
+            .difference_of_unions_of_ancestors(vec![source_cs_id], vec![latest_synced_cs_id])
+            .skip(1) // The source_cs_id is always the first returned commit.
+            .take(limit + 1) // Get one above limit so we know if there's more than limit.
+            .try_collect()
+            .await?;
+
+        // Bail if we got nothing to do
+        if side_commits.is_empty() {
+            return Ok((false, vec![]));
+        }
+
+        // Bail if we got over limit of commits
+        if side_commits.len() > limit {
+            return Ok((false, vec![]));
+        }
+
+        // The author we'll be comparing to ensure all commits are the same author.
+        let author = match side_commits.first() {
             Some(p) => p.author().await?,
             None => {
                 return Ok((false, vec![]));
             }
         };
-        let res = stream::try_unfold(
-            (0, side_parents),
-            |(local_limit, mut queue): (u64, VecDeque<ChangesetContext>)| {
-                let author = author.clone();
-                async move {
-                    if let Some(cs) = queue.pop_front() {
-                        let is_commit_synced = self
-                            .target_megarepo_mapping
-                            .get_reverse_mapping_entry(ctx, target, cs.id())
-                            .await?
-                            .is_empty()
-                            .not();
-                        // if commit is in the target's mapping,
-                        // then we should not check further
-                        if is_commit_synced {
-                            return anyhow::Ok(Some(((true, cs), (local_limit, queue))));
-                        }
-                        // if we traversed more than a limit commits
-                        if local_limit >= limit {
-                            // We reached out maximum and commit is not in the targets mapping
-                            // return false indicating that branch isn't squashable
-                            return anyhow::Ok(Some(((false, cs), (local_limit, queue))));
-                        }
-                        // if author is different branch isn't squashable
-                        if author != cs.author().await? {
-                            return anyhow::Ok(Some(((false, cs), (local_limit, queue))));
-                        }
-                        // still need to check parents
-                        let parents: Result<VecDeque<_>> =
-                            stream::iter(cs.parents().await?.into_iter())
-                                .map(|p| async move {
-                                    source_repo
-                                        .changeset(p)
-                                        .await?
-                                        .ok_or_else(|| anyhow!("commit specifier not found {}", p))
-                                })
-                                .buffered(100)
-                                .try_collect()
-                                .await;
-                        queue.extend(parents?);
-                        anyhow::Ok(Some(((true, cs), (local_limit + 1, queue))))
-                    } else {
-                        anyhow::Ok(None)
-                    }
-                }
-            },
-        )
-        .try_collect::<Vec<_>>()
-        .await?;
-        let (maybe_squashable, mut side_commits): (Vec<_>, Vec<_>) = res.into_iter().unzip();
-        let is_squashable = maybe_squashable.into_iter().all(|x| x);
-        side_commits.pop();
-        Ok((is_squashable, side_commits))
+
+        for side_commit in side_commits.iter() {
+            // Author is different, bail
+            if author != side_commit.author().await? {
+                return Ok((false, vec![]));
+            }
+        }
+
+        // All checks passed, squashing is possible
+        Ok((true, side_commits))
     }
 
     // Creates move commits on top of the merge parents in the source that
