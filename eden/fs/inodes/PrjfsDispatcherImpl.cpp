@@ -14,6 +14,7 @@
 #include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/executors/SerialExecutor.h>
 #include <folly/logging/xlog.h>
+#include <folly/stop_watch.h>
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -648,22 +649,33 @@ ImmediateFuture<folly::Unit> fileNotification(
     folly::Executor::KeepAlive<folly::SequencedExecutor> executor,
     std::shared_ptr<ObjectFetchContext> context) {
   auto receivedAt = std::chrono::steady_clock::now();
+  folly::stop_watch<std::chrono::milliseconds> watch;
+
   folly::via(
       executor,
-      [&mount, path, receivedAt, context = std::move(context)]() mutable {
+      [&mount,
+       path,
+       receivedAt,
+       context = std::move(context),
+
+       watch]() mutable {
         auto fault = ImmediateFuture{
             mount.getServerState()->getFaultInjector().checkAsync(
                 "PrjfsDispatcherImpl::fileNotification", path)};
 
-        return std::move(fault)
-            .thenValue([&mount,
-                        path = std::move(path),
-                        receivedAt,
-                        context = std::move(context)](auto&&) {
-              return fileNotificationImpl(
-                  mount, std::move(path), receivedAt, *context);
-            })
-            .get();
+        auto retval = std::move(fault)
+                          .thenValue([&mount,
+                                      path = std::move(path),
+                                      receivedAt,
+                                      context = std::move(context)](auto&&) {
+                            return fileNotificationImpl(
+                                mount, std::move(path), receivedAt, *context);
+                          })
+                          .get();
+        mount.getStats()
+            ->getChannelStatsForCurrentThread()
+            .queuedFileNotification.addValue(watch.elapsed().count());
+        return std::move(retval);
       })
       .thenError([path](const folly::exception_wrapper& ew) {
         // These should in theory never happen, but they sometimes happen

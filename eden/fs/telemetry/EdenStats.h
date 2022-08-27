@@ -175,6 +175,7 @@ class ChannelThreadStats : public EdenThreadStatsBase {
   Stat nfsCommit{createStat("nfs.commit_us")};
 #else
   Stat outOfOrderCreate{createStat("prjfs.out_of_order_create")};
+  Stat queuedFileNotification{createStat("prjfs.queued_file_notification_us")};
 
   Stat newFileCreated{createStat("prjfs.newFileCreated_us")};
   Stat fileOverwritten{createStat("prjfs.fileOverwritten_us")};

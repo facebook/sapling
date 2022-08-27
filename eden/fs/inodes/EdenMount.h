@@ -1303,6 +1303,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * This is the channel between ProjectedFS and rest of Eden.
    */
   std::unique_ptr<PrjfsChannel> channel_;
+
 #else
   using FuseChannelVariant = std::unique_ptr<FuseChannel, FuseChannelDeleter>;
   using NfsdChannelVariant = std::unique_ptr<Nfsd3>;
