@@ -108,7 +108,8 @@ build:
 deb:
 	DESTDIR=install make install-oss
 	mkdir -p "install/DEBIAN"
-	cp packaging/debian/control "install/DEBIAN/control"
+	cp packaging/debian/control install/DEBIAN/control
+	sed -i "s/%VERSION%/$(VERSION)/g" install/DEBIAN/control
 	dpkg-deb --build --root-owner-group install
 	dpkg-name install.deb
 
