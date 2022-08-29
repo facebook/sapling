@@ -290,7 +290,11 @@ Overlay::OverlayType EdenMount::getOverlayType(
 
   if (checkoutConfig_->getEnableTreeOverlay()) {
     if (getEdenConfig()->unsafeInMemoryOverlay.getValue()) {
-      return Overlay::OverlayType::TreeInMemory;
+      if (getEdenConfig()->overlayBuffered.getValue()) {
+        return Overlay::OverlayType::TreeInMemoryBuffered;
+      } else {
+        return Overlay::OverlayType::TreeInMemory;
+      }
     }
     if (getEdenConfig()->overlaySynchronousMode.getValue() == "off") {
       return Overlay::OverlayType::TreeSynchronousOff;

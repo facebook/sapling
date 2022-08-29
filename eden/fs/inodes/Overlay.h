@@ -76,6 +76,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
     TreeInMemory = 2,
     TreeSynchronousOff = 3,
     TreeBuffered = 4,
+    TreeInMemoryBuffered = 5,
   };
 
   /**
