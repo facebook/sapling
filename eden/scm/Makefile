@@ -113,6 +113,12 @@ deb:
 	dpkg-deb --build --root-owner-group install
 	dpkg-name install.deb
 
+rpm:
+	rpmbuild \
+		--define "sapling_root `pwd`" \
+		--define "version $(VERSION)" \
+		-bb packaging/rpm/sapling.spec
+
 wheel:
 	FORCE_SETUPTOOLS=1 $(PYTHON) setup.py $(PURE) bdist_wheel $(COMPILERFLAG)
 

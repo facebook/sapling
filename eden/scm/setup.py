@@ -522,7 +522,9 @@ void print_buildinfo() {
 
 # If NEED_BUILDINFO is set, write buildinfo.
 # For rpmbuild, imply NEED_BUILDINFO.
-needbuildinfo = bool(os.environ.get("NEED_BUILDINFO", "RPM_PACKAGE_NAME" in os.environ))
+needbuildinfo = bool(
+    os.environ.get("NEED_BUILDINFO", "RPM_PACKAGE_NAME" in os.environ and not ossbuild)
+)
 
 if needbuildinfo:
     buildinfocpath = writebuildinfoc()
