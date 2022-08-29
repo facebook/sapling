@@ -15,8 +15,10 @@ from __future__ import absolute_import, print_function
 import copy
 import os
 import re
+from typing import List, Optional, Pattern, Sized
 
 from bindings import pathmatcher
+from edenscm.pathutil import pathauditor
 
 from . import error, pathutil, pycompat, util
 from .i18n import _
@@ -94,7 +96,7 @@ def _expandsubinclude(kindpats, root):
     return relmatchers, other
 
 
-def _kindpatsalwaysmatch(kindpats):
+def _kindpatsalwaysmatch(kindpats) -> bool:
     """ "Checks whether the kindspats match everything, as e.g.
     'relpath:.' does.
     """
@@ -114,14 +116,14 @@ def match(
     patterns=None,
     include=None,
     exclude=None,
-    default="glob",
-    exact=False,
-    auditor=None,
+    default: str = "glob",
+    exact: bool = False,
+    auditor: Optional[pathauditor] = None,
     ctx=None,
     warn=None,
     badfn=None,
-    icasefs=False,
-    emptyalways=True,
+    icasefs: bool = False,
+    emptyalways: bool = True,
 ):
     """build an object to match a set of file patterns
 
@@ -209,15 +211,15 @@ def match(
     return m
 
 
-def exact(root, cwd, files, badfn=None):
+def exact(root, cwd, files, badfn=None) -> "exactmatcher":
     return exactmatcher(root, cwd, files, badfn=badfn)
 
 
-def always(root, cwd):
+def always(root, cwd) -> "alwaysmatcher":
     return alwaysmatcher(root, cwd)
 
 
-def never(root, cwd):
+def never(root, cwd) -> "nevermatcher":
     return nevermatcher(root, cwd)
 
 
@@ -298,7 +300,7 @@ def _donormalize(patterns, default, root, cwd, auditor, warn):
     return kindpats
 
 
-def _testrefastpath(repat):
+def _testrefastpath(repat) -> bool:
     """Test if a re pattern can use fast path.
 
     That is, for every "$A/$B" path the pattern matches, "$A" must also be
@@ -321,7 +323,7 @@ def _testrefastpath(repat):
     return False
 
 
-def _globpatsplit(pat):
+def _globpatsplit(pat) -> List[str]:
     """Split a glob pattern. Return a list.
 
     A naive version is "path.split("/")". This function handles more cases, like
@@ -463,7 +465,7 @@ class _tree(dict):
         return subdir, rest
 
 
-def _remainingpats(pat, prefix):
+def _remainingpats(pat, prefix: Sized):
     """list of patterns with prefix stripped
 
     >>> _remainingpats("a/b/c", "")
@@ -773,7 +775,7 @@ class gitignorematcher(basematcher):
         return "<gitignorematcher>"
 
 
-def rulesmatch(root, cwd, rules, ruledetails=None):
+def rulesmatch(root, cwd, rules, ruledetails=None) -> "treematcher":
     # Strip the exclude indicator from the rules, then reapply it later after
     # normalizing everything.
     excludeindexes = set()
@@ -848,7 +850,7 @@ class treematcher(basematcher):
         return "<treematcher rules=%r>" % self._rules
 
 
-def normalizerootdir(dir, funcname):
+def normalizerootdir(dir, funcname) -> str:
     if dir == ".":
         util.nouideprecwarn(
             "match.%s() no longer accepts '.', use '' instead." % funcname, "20190805"
@@ -857,7 +859,7 @@ def normalizerootdir(dir, funcname):
     return dir
 
 
-def _kindpatstoglobs(kindpats, recursive=False):
+def _kindpatstoglobs(kindpats, recursive: bool = False):
     """Attempt to convert 'kindpats' to glob patterns that can be used in a
     treematcher.
 
@@ -920,14 +922,16 @@ def _makeglobrecursive(pat):
 
 # re:x/(?!y/)
 # meaning: include x, but not x/y.
-_repat1 = re.compile(r"^\^?([\w._/]+)/\(\?\!([\w._/]+)/?\)$")
+_repat1: Pattern[str] = re.compile(r"^\^?([\w._/]+)/\(\?\!([\w._/]+)/?\)$")
 
 # re:x/(?:.*/)?y
 # meaning: glob:x/**/y
-_repat2 = re.compile(r"^\^?([\w._/]+)/\(\?:\.\*/\)\?([\w._]+)(?:\(\?\:\/\|\$\))?$")
+_repat2: Pattern[str] = re.compile(
+    r"^\^?([\w._/]+)/\(\?:\.\*/\)\?([\w._]+)(?:\(\?\:\/\|\$\))?$"
+)
 
 
-def _convertretoglobs(repat):
+def _convertretoglobs(repat) -> Optional[List[str]]:
     """Attempt to convert a regular expression pattern to glob patterns.
 
     A single regular expression pattern might be converted into multiple
@@ -1416,7 +1420,7 @@ def _patsplit(pattern, default):
     return default, pattern
 
 
-def _globre(pat):
+def _globre(pat: Sized) -> str:
     r"""Convert an extended glob string to a regexp string.
 
     >>> from . import pycompat
@@ -1448,6 +1452,7 @@ def _globre(pat):
         return i < n and pat[i : i + 1]
 
     while i < n:
+        # pyre-fixme[16]: `Sized` has no attribute `__getitem__`.
         c = pat[i : i + 1]
         i += 1
         if c not in "*?[{},\\":
@@ -1566,11 +1571,12 @@ def _buildmatch(ctx, kindpats, globsuffix, root):
         return regex, lambda f: any(mf(f) for mf in matchfuncs)
 
 
-def _buildregexmatch(kindpats, globsuffix):
+def _buildregexmatch(kindpats: Sized, globsuffix):
     """Build a match function from a list of kinds and kindpats,
     return regexp string and a matcher function."""
     try:
         regex = "(?:%s)" % "|".join(
+            # pyre-fixme[16]: `Sized` has no attribute `__iter__`.
             [_regex(k, p, globsuffix) for (k, p, s) in kindpats]
         )
         if len(regex) > 20000:
@@ -1583,8 +1589,10 @@ def _buildregexmatch(kindpats, globsuffix):
         l = len(kindpats)
         if l < 2:
             raise
+        # pyre-fixme[16]: `Sized` has no attribute `__getitem__`.
         regexa, a = _buildregexmatch(kindpats[: l // 2], globsuffix)
         regexb, b = _buildregexmatch(kindpats[l // 2 :], globsuffix)
+        # pyre-fixme[61]: `regex` is undefined, or not always defined.
         return regex, lambda s: a(s) or b(s)
     except re.error:
         for k, p, s in kindpats:
@@ -1683,7 +1691,7 @@ def _explicitfiles(kindpats):
     return _roots(filable)
 
 
-def _prefix(kindpats):
+def _prefix(kindpats) -> bool:
     """Whether all the patterns match a prefix (i.e. recursively)"""
     for kind, pat, source in kindpats:
         if kind not in ("path", "relpath"):
@@ -1694,7 +1702,7 @@ def _prefix(kindpats):
 _commentre = None
 
 
-def readpatternfile(filepath, warn, sourceinfo=False):
+def readpatternfile(filepath, warn, sourceinfo: bool = False):
     """parse a pattern file, returning a list of
     patterns. These patterns should be given to compile()
     to be validated and converted into a match function.
@@ -1772,6 +1780,6 @@ def readpatternfile(filepath, warn, sourceinfo=False):
 _usetreematcher = True
 
 
-def init(ui):
+def init(ui) -> None:
     global _usetreematcher
     _usetreematcher = ui.configbool("experimental", "treematcher")
