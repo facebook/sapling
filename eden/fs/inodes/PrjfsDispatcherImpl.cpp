@@ -663,19 +663,18 @@ ImmediateFuture<folly::Unit> fileNotification(
             mount.getServerState()->getFaultInjector().checkAsync(
                 "PrjfsDispatcherImpl::fileNotification", path)};
 
-        auto retval = std::move(fault)
-                          .thenValue([&mount,
-                                      path = std::move(path),
-                                      receivedAt,
-                                      context = std::move(context)](auto&&) {
-                            return fileNotificationImpl(
-                                mount, std::move(path), receivedAt, *context);
-                          })
-                          .get();
+        std::move(fault)
+            .thenValue([&mount,
+                        path = std::move(path),
+                        receivedAt,
+                        context = std::move(context)](auto&&) {
+              return fileNotificationImpl(
+                  mount, std::move(path), receivedAt, *context);
+            })
+            .get();
         mount.getStats()
             ->getChannelStatsForCurrentThread()
             .queuedFileNotification.addValue(watch.elapsed().count());
-        return std::move(retval);
       })
       .thenError([path](const folly::exception_wrapper& ew) {
         // These should in theory never happen, but they sometimes happen
