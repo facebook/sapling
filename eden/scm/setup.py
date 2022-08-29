@@ -1784,13 +1784,9 @@ hgmainfeatures = (
     ).strip()
     or None
 )
-rustextmodules = [
-    RustExtension(
-        "conch_parser",
-        package="",
-        manifest="edenscmnative/conch_parser/Cargo.toml",
-    )
-]
+
+rustextmodules = []
+
 rustextbinaries = [
     RustBinary(
         "hgmain",
@@ -1799,9 +1795,20 @@ rustextbinaries = [
         features=hgmainfeatures,
         cfgs=["Py_%s" % PY_VERSION],
     ),
-    RustBinary("mkscratch", manifest="exec/scratch/Cargo.toml"),
-    RustBinary("scm_daemon", manifest="exec/scm_daemon/Cargo.toml"),
 ]
+
+if not ossbuild:
+    rustextmodules += [
+        RustExtension(
+            "conch_parser",
+            package="",
+            manifest="edenscmnative/conch_parser/Cargo.toml",
+        )
+    ]
+    rustextbinaries += [
+        RustBinary("mkscratch", manifest="exec/scratch/Cargo.toml"),
+        RustBinary("scm_daemon", manifest="exec/scm_daemon/Cargo.toml"),
+    ]
 
 if havefb and iswindows:
     rustextbinaries += [RustBinary("fbclone", manifest="fb/fbclone/Cargo.toml")]
