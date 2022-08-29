@@ -625,19 +625,23 @@ class asset(object):
         else:
             raise RuntimeError("don't know how to extract %s" % self.name)
 
-    def __hash__(self):
-        return hash((self.name.encode("utf-8"), self.url, self.version))
+    def hash(self):
+        sha = hashlib.sha256()
+        sha.update((self.name or "").encode("utf8"))
+        sha.update((self.url or "").encode("utf8"))
+        sha.update(b"%i" % self.version)
+        return sha.hexdigest()
 
     def _isready(self):
         try:
             with open(self._readypath) as f:
-                return int(f.read()) == hash(self)
+                return f.read() == self.hash()
         except Exception:
             return False
 
     def _markready(self):
         with open(self._readypath, "w") as f:
-            f.write("%s" % hash(self))
+            f.write("%s" % self.hash())
 
     @property
     def _readypath(self):
