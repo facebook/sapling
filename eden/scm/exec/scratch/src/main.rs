@@ -218,7 +218,7 @@ fn run() -> Result<()> {
         .arg(
             Arg::with_name("no-create")
                 .long("no-create")
-                .short("n")
+                .short('n')
                 .help("Do not create files or directories"),
         )
         .subcommand(
@@ -251,7 +251,7 @@ fn run() -> Result<()> {
     let config = Config::load()?;
 
     match matches.subcommand() {
-        ("path", Some(cmd)) => {
+        Some(("path", cmd)) => {
             let subdir = cmd.value_of("subdir");
             let watchable = cmd.is_present("watchable");
             let repo = cmd.value_of("REPO");
