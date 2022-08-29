@@ -1,8 +1,8 @@
 #!/usr/bin/env dotslash
 
-// @generated SignedSource<<9e23d8496f7680b4feb442703f7948e3>>
+// @generated SignedSource<<6e83ea7232d5e13c9dcba58a6a20d645>>
 // MSDK schedule URL: https://our.intern.facebook.com/intern/msdk/bump/?action=view&schedule_fbid=413790530659489
-// sandcastle build trigger URL: https://our.intern.facebook.com/intern/sandcastle/job/18014399269385555/
+// sandcastle build trigger URL: https://our.intern.facebook.com/intern/sandcastle/job/4503600388735919/
 
 {
     "name": "isl",
@@ -10,19 +10,19 @@
     "build_info": {
         "config_script": "fbcode/eden/addons/isl/release/dotslash_build.spec",
         "commit_repo": "fbsource",
-        "commit_hash": "92c3113f29d95d3fe0788a9ee6e942537df44d0f",
-        "commit_date": "2022-08-25 13:33:59 PDT",
-        "commit_timestamp": 1661459639,
-        "msdk_package_fbid": "548127950423189"
+        "commit_hash": "71f9371a0901c5a564268a220d6585cb1a6a5335",
+        "commit_date": "2022-08-29 11:44:18 PDT",
+        "commit_timestamp": 1661798658,
+        "msdk_package_fbid": "760513961838786"
     },
     "signatures": {
-        "msdk": "<<crypto.managed_sdk.mac:AeUEsrFEbS_GGJrW_9wQxDllVS2r1pcMS1uiPUw-1WngweTE>>"
+        "msdk": "<<crypto.managed_sdk.mac:AeV5L5NIaX_uCg4QQ65YSRj1wRjaUzA0IMK4VONY1gjDnPOJ>>"
     },
     "platforms": {
         "linux": {
             "scheme": "cas",
             "use_case_id": "dotslash_msdk_prod",
-            "digest": "d9d6e5ec43b1302184dbd4d624edd026b9fa847f:1022382",
+            "digest": "3549e327a7975c6360849fc49fe7e9c275547661:1032919",
             "extract": {
                 "path": "run-isl",
                 "decompress": "tar.gz"
@@ -31,7 +31,7 @@
         "macos": {
             "scheme": "cas",
             "use_case_id": "dotslash_msdk_prod",
-            "digest": "d9d6e5ec43b1302184dbd4d624edd026b9fa847f:1022382",
+            "digest": "3549e327a7975c6360849fc49fe7e9c275547661:1032919",
             "extract": {
                 "path": "run-isl",
                 "decompress": "tar.gz"
@@ -40,7 +40,7 @@
         "windows": {
             "scheme": "cas",
             "use_case_id": "dotslash_msdk_prod",
-            "digest": "d9d6e5ec43b1302184dbd4d624edd026b9fa847f:1022382",
+            "digest": "3549e327a7975c6360849fc49fe7e9c275547661:1032919",
             "extract": {
                 "path": "run-isl.bat",
                 "decompress": "tar.gz"
