@@ -72,6 +72,36 @@ def section_title(message: str, out: IO[bytes]) -> None:
     out.write(util_mod.underlined(message).encode())
 
 
+def get_watchman_log_path() -> Optional[Path]:
+    watchman_log = ""
+    for root in [
+        "/var/facebook/watchman",
+        "/opt/facebook/var/run/watchman",
+        "/opt/facebook/watchman/var/run/watchman",
+        os.environ.get("TEMP"),
+        os.environ.get("TMP"),
+    ]:
+        if root is None or root == "":
+            continue
+
+        watchman_log = os.path.join(
+            "%s/%s-state" % (root, os.environ.get("USER")), "log"
+        )
+        if os.path.isfile(watchman_log):
+            break
+
+    if sys.platform == "win32":
+        appdata = os.environ.get("LOCALAPPDATA")
+        if appdata:
+            watchman_appdata = os.path.join(appdata, "watchman")
+            if os.path.exists(watchman_appdata):
+                watchman_log = os.path.join(watchman_appdata, "log")
+
+    if os.path.isfile(watchman_log):
+        return Path(watchman_log)
+    return None
+
+
 def print_diagnostic_info(
     instance: EdenInstance, out: IO[bytes], dry_run: bool
 ) -> None:
@@ -110,6 +140,20 @@ def print_diagnostic_info(
         paste_output(
             lambda sink: print_log_file(
                 instance.get_log_path(), sink, whole_file=False
+            ),
+            processor,
+            out,
+        )
+    watchman_log_path = get_watchman_log_path()
+
+    if watchman_log_path:
+        section_title("Watchman logs:", out)
+        out.write(b"Logs from: %s\n" % str(watchman_log_path).encode())
+        paste_output(
+            lambda sink: print_log_file(
+                watchman_log_path,
+                sink,
+                whole_file=False,
             ),
             processor,
             out,
