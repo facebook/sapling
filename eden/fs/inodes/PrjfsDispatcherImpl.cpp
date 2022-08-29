@@ -258,8 +258,8 @@ ImmediateFuture<TreeInodePtr> createDirInode(
           mount.getStats()
               ->getChannelStatsForCurrentThread()
               .outOfOrderCreate.addValue(1);
-          XLOG(DBG2) << "Out of order directory creation notification for: "
-                     << path;
+          XLOG_EVERY_MS(DBG2, 1000)
+              << "Out of order directory creation notification for: " << path;
 
           /*
            * ProjectedFS notifications are asynchronous and sent after the
