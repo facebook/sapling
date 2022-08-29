@@ -433,7 +433,9 @@ class EdenInstance(AbstractEdenInstance):
             timeout=timeout,
         )
 
-    def get_checkout_info(self, path: Union[Path, str]) -> typing.Mapping[str, str]:
+    def get_checkout_info(
+        self, path: Union[Path, str]
+    ) -> "collections.OrderedDict[str, str]":
         """
         Given a path to a checkout, return a dictionary containing diagnostic
         information about it.
@@ -445,7 +447,7 @@ class EdenInstance(AbstractEdenInstance):
 
     def get_checkout_info_from_checkout(
         self, checkout: "EdenCheckout"
-    ) -> typing.Mapping[str, str]:
+    ) -> "collections.OrderedDict[str, str]":
         checkout_config = checkout.get_config()
 
         error = None

@@ -177,9 +177,21 @@ def print_diagnostic_info(
     for key in sorted(instance.get_mount_paths()):
         out.write(key.encode() + b"\n")
         mountpoint_paths.append(key)
+    mounts = instance.get_mounts()
+    mounts_data = {
+        mount.path.as_posix(): mount.to_json_dict() for mount in mounts.values()
+    }
+
     for checkout_path in mountpoint_paths:
         out.write(b"\nMount point info for path %s:\n" % checkout_path.encode())
-        for k, v in instance.get_checkout_info(checkout_path).items():
+        checkout_data = instance.get_checkout_info(checkout_path)
+        mount_data = mounts_data.get(checkout_path, {})
+        # "data_dir" in mount_data and "state_dir" in checkout_data are duplicates
+        if "data_dir" in mount_data:
+            mount_data.pop("data_dir")
+
+        checkout_data.update(mount_data)
+        for k, v in checkout_data.items():
             out.write("{:>20} : {}\n".format(k, v).encode())
     if health_status.is_healthy():
         # TODO(zeyi): enable this when memory usage collecting is implemented on Windows
