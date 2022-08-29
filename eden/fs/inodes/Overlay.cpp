@@ -404,6 +404,7 @@ void Overlay::removeOverlayData(InodeNumber inodeNumber) {
 
 void Overlay::recursivelyRemoveOverlayData(InodeNumber inodeNumber) {
   IORequest req{this};
+  freeInodeFromMetadataTable(inodeNumber);
 
   // This inode's data must be removed from the overlay before
   // recursivelyRemoveOverlayData returns to avoid a race condition if
