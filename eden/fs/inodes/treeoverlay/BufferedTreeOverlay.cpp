@@ -53,6 +53,7 @@ void BufferedTreeOverlay::stopWorkerThread() {
     // size limit.
     state->work.push_back(std::make_pair([]() { return true; }, 0));
     workCV_.notify_one();
+    fullCV_.notify_all();
   }
 
   workerThread_.join();
@@ -91,7 +92,17 @@ void BufferedTreeOverlay::processOnWorkerThread() {
       for (auto& event : work) {
         workSize += event.second;
       }
-      state->totalSize -= workSize;
+      bool shouldNotify = state->totalSize >= bufferSize_;
+      XCHECK_EQ(state->totalSize, workSize)
+          << "totalSize bookkeeping diverged!";
+      state->totalSize = 0;
+      if (shouldNotify) {
+        fullCV_.notify_all();
+      }
+      //  In the worst case, it's possible twice the overlay memory could be
+      //  used. When the lock is released and waiters are notified, the new
+      //  buffer could be filled to capacity while the current one is being
+      //  processed
     }
 
     for (auto& event : work) {
@@ -108,15 +119,12 @@ void BufferedTreeOverlay::process(
     folly::Function<bool()> fn,
     size_t captureSize) {
   auto state = state_.lock();
-  // Don't enqueue work if a stop was already requested
-  if (state->workerThreadStopRequested) {
-    return;
-  }
 
   fullCV_.wait(state.as_lock(), [&] {
     return state->totalSize < bufferSize_ || state->workerThreadStopRequested;
   });
 
+  // Don't enqueue work if a stop was already requested
   if (state->workerThreadStopRequested) {
     return;
   }

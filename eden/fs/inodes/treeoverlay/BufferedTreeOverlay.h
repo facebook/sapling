@@ -92,7 +92,8 @@ class BufferedTreeOverlay : public TreeOverlay {
   folly::Synchronized<State, std::mutex> state_;
   // Encodes the condition !state_.work.empty()
   std::condition_variable workCV_;
-  // Encodes the condition state_.totalSize < bufferSize_
+  // Encodes the condition state_->totalSize < bufferSize_ ||
+  // state_->workerThreadStopRequested
   std::condition_variable fullCV_;
 
   /**

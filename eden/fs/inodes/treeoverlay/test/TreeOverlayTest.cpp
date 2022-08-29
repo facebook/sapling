@@ -165,6 +165,34 @@ TEST(PlainTreeOverlayTest, close_overlay_with_no_capacity_buffered) {
   EXPECT_TRUE(overlay->isClosed());
 }
 
+TEST(PlainTreeOverlayTest, small_capacity_write_multiple_directories_buffered) {
+  auto config = EdenConfig::createTestEdenConfig();
+  config->overlayBufferSize.setValue(1, ConfigSource::Default, true);
+  folly::test::TemporaryDirectory testDir;
+  auto overlay = Overlay::create(
+      AbsolutePath{testDir.path().string()},
+      kPathMapDefaultCaseSensitive,
+      Overlay::OverlayType::TreeBuffered,
+      std::make_shared<NullStructuredLogger>(),
+      *config);
+  overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+
+  EXPECT_EQ(kRootNodeId, overlay->getMaxInodeNumber());
+
+  DirContents dir(kPathMapDefaultCaseSensitive);
+  InodeNumber ino;
+
+  // 20 iterations is an arbitrary choice. With the buffer size set to 1 byte,
+  // the worker thread will process events one-by-one, and 20 here gives a good
+  // chance of getting more than one write queued
+  for (int i = 0; i < 20; i++) {
+    ino = overlay->allocateInodeNumber();
+    overlay->saveOverlayDir(ino, dir);
+  }
+
+  EXPECT_EQ(ino, overlay->getMaxInodeNumber());
+}
+
 class RawTreeOverlayTest
     : public ::testing::TestWithParam<Overlay::OverlayType> {
  public:
