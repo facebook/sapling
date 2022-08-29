@@ -176,10 +176,6 @@ class remotefilectx(context.filectx):
         if not copyfrom:
             return None
 
-        renamed = (copyfrom, p1)
-        if self.rev() == self.linkrev():
-            return renamed
-
         name = self.path()
         fnode = self._filenode
         for p in self._changectx.parents():
@@ -188,7 +184,8 @@ class remotefilectx(context.filectx):
                     return None
             except error.LookupError:
                 pass
-        return renamed
+
+        return (copyfrom, p1)
 
     def ancestormap(self):
         if not self._ancestormap:
