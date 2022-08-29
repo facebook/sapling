@@ -139,10 +139,18 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::vector<std::string>> paths,
       std::unique_ptr<SyncBehavior> sync) override;
 
+  // the caller should ensure the relativePath is valid until the returned
+  // futures complete.
   ImmediateFuture<EntryAttributes> getEntryAttributesForPath(
       EntryAttributeFlags reqBitmask,
       AbsolutePathPiece mountPoint,
       folly::StringPiece path,
+      ObjectFetchContext& fetchContext);
+  ImmediateFuture<std::vector<folly::Try<EntryAttributes>>> getEntryAttributes(
+      AbsolutePathPiece mountPath,
+      std::vector<std::string>& paths,
+      EntryAttributeFlags reqBitmask,
+      SyncBehavior sync,
       ObjectFetchContext& fetchContext);
 
   void getCurrentJournalPosition(
@@ -181,6 +189,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResult>>
   semifuture_getAttributesFromFiles(
+      std::unique_ptr<GetAttributesFromFilesParams> params) override;
+
+  folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResultV2>>
+  semifuture_getAttributesFromFilesV2(
       std::unique_ptr<GetAttributesFromFilesParams> params) override;
 
   folly::SemiFuture<std::unique_ptr<ReaddirResult>> semifuture_readdir(

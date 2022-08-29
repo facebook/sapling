@@ -11,7 +11,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Pattern, Tuple, TypeVar, Union
+from typing import List, Optional, Pattern, Tuple, TypeVar, Union
 
 from facebook.eden.ttypes import (
     DirListAttributeDataOrError,
@@ -24,6 +24,7 @@ from facebook.eden.ttypes import (
     FileAttributes,
     GetAttributesFromFilesParams,
     GetAttributesFromFilesResult,
+    GetAttributesFromFilesResultV2,
     ReaddirParams,
     ReaddirResult,
     ScmFileStatus,
@@ -38,7 +39,11 @@ from facebook.eden.ttypes import (
 
 from .lib import testcase
 
-EdenThriftResult = TypeVar("EdenThriftResult", FileAttributeDataOrError, SHA1Result)
+EdenThriftResult = TypeVar(
+    "EdenThriftResult",
+    Union[FileAttributeDataOrError, FileAttributeDataOrErrorV2],
+    SHA1Result,
+)
 
 # Change this if more attributes are added
 ALL_ATTRIBUTES = (
@@ -210,82 +215,161 @@ class ThriftTest(testcase.EdenRepoTest):
             )
             return client.getAttributesFromFiles(thrift_params)
 
+    def get_attributes_v2(
+        self, files: List[bytes], req_attr: int
+    ) -> GetAttributesFromFilesResultV2:
+        with self.get_thrift_client_legacy() as client:
+            thrift_params = GetAttributesFromFilesParams(
+                self.mount_path_bytes,
+                files,
+                req_attr,
+            )
+            return client.getAttributesFromFilesV2(thrift_params)
+
     def get_all_attributes(self, files: List[bytes]) -> GetAttributesFromFilesResult:
         return self.get_attributes(files, ALL_ATTRIBUTES)
+
+    def get_all_attributes_v2(
+        self, files: List[bytes]
+    ) -> GetAttributesFromFilesResultV2:
+        return self.get_attributes_v2(files, ALL_ATTRIBUTES)
+
+    def wrap_expected_attributes(
+        self,
+        raw_attributes: Tuple[
+            Optional[bytes], Optional[int], Optional[SourceControlType]
+        ],
+    ) -> Tuple[FileAttributeDataOrError, FileAttributeDataOrErrorV2]:
+        (
+            raw_sha1,
+            raw_size,
+            raw_type,
+        ) = raw_attributes
+        data = FileAttributeData()
+        data_v2 = FileAttributeDataV2()
+
+        if raw_sha1 is not None:
+            data.sha1 = raw_sha1
+            data_v2.sha1 = Sha1OrError(raw_sha1)
+
+        if raw_size is not None:
+            data.fileSize = raw_size
+            data_v2.size = SizeOrError(raw_size)
+
+        if raw_type is not None:
+            data.type = raw_type
+            data_v2.sourceControlType = SourceControlTypeOrError(raw_type)
+
+        return (
+            FileAttributeDataOrError(data),
+            FileAttributeDataOrErrorV2(data_v2),
+        )
+
+    def assert_attributes_result(
+        self,
+        expected_result,
+        expected_result_v2,
+        paths,
+        attributes: int = ALL_ATTRIBUTES,
+    ) -> None:
+        print("expected: \n{}", expected_result)
+        actual_result = self.get_attributes(paths, attributes)
+        print("actual: \n{}", actual_result)
+        self.assertEqual(len(paths), len(actual_result.res))
+        self.assertEqual(
+            expected_result,
+            actual_result,
+        )
+
+        print(f"expected v2: \n{expected_result_v2}")
+        actual_result_v2 = self.get_attributes_v2(paths, attributes)
+        print(f"actual v2: \n{actual_result_v2}")
+        self.assertEqual(len(paths), len(actual_result_v2.res))
+        self.assertEqual(
+            expected_result_v2,
+            actual_result_v2,
+        )
 
     def test_get_attributes(self) -> None:
         # expected results for file named "hello"
         (
-            expected_hello_sha1,
-            expected_hello_size,
-            expected_hello_type,
-        ) = self.get_expected_file_attributes("hello")
-        expected_hello_data = FileAttributeData(
-            expected_hello_sha1, expected_hello_size, expected_hello_type
-        )
-        expected_hello_result = FileAttributeDataOrError(expected_hello_data)
+            expected_hello_result,
+            expected_hello_result_v2,
+        ) = self.wrap_expected_attributes(self.get_expected_file_attributes("hello"))
 
         # expected results for file "adir/file"
-        (
-            expected_adir_sha1,
-            expected_adir_size,
-            expected_adir_type,
-        ) = self.get_expected_file_attributes("adir/file")
-        expected_adir_data = FileAttributeData(
-            expected_adir_sha1, expected_adir_size, expected_adir_type
+        (expected_adir_result, expected_adir_result_v2) = self.wrap_expected_attributes(
+            self.get_expected_file_attributes("adir/file")
         )
-        expected_adir_result = FileAttributeDataOrError(expected_adir_data)
 
         # list of expected_results
-        result_list = [
-            expected_hello_result,
-            expected_adir_result,
-        ]
-        expected_result = GetAttributesFromFilesResult(result_list)
+        expected_result = GetAttributesFromFilesResult(
+            [
+                expected_hello_result,
+                expected_adir_result,
+            ]
+        )
+        expected_result_v2 = GetAttributesFromFilesResultV2(
+            [
+                expected_hello_result_v2,
+                expected_adir_result_v2,
+            ]
+        )
 
-        # Run assertions
-        self.assertEqual(
-            expected_result,
-            self.get_all_attributes([b"hello", b"adir/file"]),
+        self.assert_attributes_result(
+            expected_result, expected_result_v2, [b"hello", b"adir/file"]
         )
 
     def test_get_size_only(self) -> None:
         # expected size result for file
         expected_hello_size = self.get_expected_file_attributes("hello")[1]
-        expected_hello_data = FileAttributeData(None, expected_hello_size, None)
-        expected_hello_result = FileAttributeDataOrError(expected_hello_data)
+        (
+            expected_hello_result,
+            expected_hello_result_v2,
+        ) = self.wrap_expected_attributes((None, expected_hello_size, None))
 
         # create result object for "hello"
-        result_list = [
-            expected_hello_result,
-        ]
-        expected_result = GetAttributesFromFilesResult(result_list)
+        expected_result = GetAttributesFromFilesResult(
+            [
+                expected_hello_result,
+            ]
+        )
+        expected_result_v2 = GetAttributesFromFilesResultV2(
+            [
+                expected_hello_result_v2,
+            ]
+        )
 
-        # get actual result
-        results = self.get_attributes([b"hello"], FileAttributes.FILE_SIZE)
-
-        # ensure expected and actual results match
-        self.assertEqual(1, len(results.res))
-        self.assertEqual(expected_result, results)
+        self.assert_attributes_result(
+            expected_result, expected_result_v2, [b"hello"], FileAttributes.FILE_SIZE
+        )
 
     def test_get_type_only(self) -> None:
         # expected size result for file
         expected_hello_type = self.get_expected_file_attributes("hello")[2]
-        expected_hello_data = FileAttributeData(None, None, expected_hello_type)
-        expected_hello_result = FileAttributeDataOrError(expected_hello_data)
+        (
+            expected_hello_result,
+            expected_hello_result_v2,
+        ) = self.wrap_expected_attributes((None, None, expected_hello_type))
 
         # create result object for "hello"
-        result_list = [
-            expected_hello_result,
-        ]
-        expected_result = GetAttributesFromFilesResult(result_list)
+        expected_result = GetAttributesFromFilesResult(
+            [
+                expected_hello_result,
+            ]
+        )
+        expected_result_v2 = GetAttributesFromFilesResultV2(
+            [
+                expected_hello_result_v2,
+            ]
+        )
 
-        # get actual result
-        results = self.get_attributes([b"hello"], FileAttributes.SOURCE_CONTROL_TYPE)
-
-        # ensure expected and actual results match
-        self.assertEqual(1, len(results.res))
-        self.assertEqual(expected_result, results)
+        self.assert_attributes_result(
+            expected_result,
+            expected_result_v2,
+            [b"hello"],
+            FileAttributes.SOURCE_CONTROL_TYPE,
+        )
 
     def test_get_attributes_throws_for_non_existent_file(self) -> None:
         results = self.get_all_attributes([b"i_do_not_exist"])
@@ -294,24 +378,38 @@ class ThriftTest(testcase.EdenRepoTest):
             results, "i_do_not_exist: No such file or directory", 0
         )
 
+        results_v2 = self.get_all_attributes_v2([b"i_do_not_exist"])
+        self.assertEqual(1, len(results_v2.res))
+        self.assert_attribute_error(
+            results_v2, "i_do_not_exist: No such file or directory", 0
+        )
+
     def test_get_sha1_only(self) -> None:
         # expected sha1 result for file
         expected_hello_sha1 = self.get_expected_file_attributes("hello")[0]
-        expected_hello_data = FileAttributeData(expected_hello_sha1, None, None)
-        expected_hello_result = FileAttributeDataOrError(expected_hello_data)
+        (
+            expected_hello_result,
+            expected_hello_result_v2,
+        ) = self.wrap_expected_attributes((expected_hello_sha1, None, None))
 
         # create result object for "hello"
-        result_list = [
-            expected_hello_result,
-        ]
-        expected_result = GetAttributesFromFilesResult(result_list)
+        expected_result = GetAttributesFromFilesResult(
+            [
+                expected_hello_result,
+            ]
+        )
+        expected_result_v2 = GetAttributesFromFilesResultV2(
+            [
+                expected_hello_result_v2,
+            ]
+        )
 
-        # get actual result
-        results = self.get_attributes([b"hello"], FileAttributes.SHA1_HASH)
-
-        # ensure expected and actual results match
-        self.assertEqual(1, len(results.res))
-        self.assertEqual(expected_result, results)
+        self.assert_attributes_result(
+            expected_result,
+            expected_result_v2,
+            [b"hello"],
+            FileAttributes.SHA1_HASH,
+        )
 
     def test_get_attributes_throws_for_path_with_dot_components(self) -> None:
         results = self.get_all_attributes([b"./hello"])
@@ -322,15 +420,58 @@ class ThriftTest(testcase.EdenRepoTest):
             0,
         )
 
+        results_v2 = self.get_all_attributes_v2([b"./hello"])
+        self.assertEqual(1, len(results_v2.res))
+        self.assert_attribute_error(
+            results_v2,
+            re.compile(r"PathComponent must not be \."),
+            0,
+        )
+
     def test_get_attributes_throws_for_empty_string(self) -> None:
         results = self.get_all_attributes([b""])
         self.assertEqual(1, len(results.res))
         self.assert_attribute_error(results, "path cannot be the empty string", 0)
 
+        results_v2 = self.get_all_attributes_v2([b""])
+        self.assertEqual(1, len(results_v2.res))
+        self.assert_attribute_error(results_v2, "path cannot be the empty string", 0)
+
     def test_get_attributes_directory(self) -> None:
         results = self.get_all_attributes([b"adir"])
         self.assertEqual(1, len(results.res))
         self.assert_attribute_error(results, "adir: Is a directory", 0)
+
+        expected_adir_result_v2 = FileAttributeDataOrErrorV2(
+            FileAttributeDataV2(
+                Sha1OrError(
+                    error=EdenError(
+                        message="adir: Is a directory",
+                        errorCode=21,
+                        errorType=EdenErrorType.POSIX_ERROR,
+                    )
+                ),
+                SizeOrError(
+                    error=EdenError(
+                        message="adir: Is a directory",
+                        errorCode=21,
+                        errorType=EdenErrorType.POSIX_ERROR,
+                    )
+                ),
+                SourceControlTypeOrError(SourceControlType.TREE),
+            )
+        )
+
+        expected_result_v2 = GetAttributesFromFilesResultV2(
+            [
+                expected_adir_result_v2,
+            ]
+        )
+        print(f"expected v2: \n{expected_result_v2}")
+        results_v2 = self.get_all_attributes_v2([b"adir"])
+        print(f"actual v2: \n{results_v2}")
+        self.assertEqual(1, len(results_v2.res))
+        self.assertEqual(expected_result_v2, results_v2)
 
     def test_get_attributes_symlink(self) -> None:
         results = self.get_all_attributes([b"slink"])
@@ -339,43 +480,87 @@ class ThriftTest(testcase.EdenRepoTest):
             self.assert_attribute_error(
                 results, "slink: file is a symlink: Invalid argument", 0
             )
+            expected_slink_result_v2 = FileAttributeDataOrErrorV2(
+                FileAttributeDataV2(
+                    Sha1OrError(
+                        error=EdenError(
+                            message="slink: file is a symlink: Invalid argument",
+                            errorCode=22,
+                            errorType=EdenErrorType.POSIX_ERROR,
+                        )
+                    ),
+                    SizeOrError(
+                        error=EdenError(
+                            message="slink: file is a symlink: Invalid argument",
+                            errorCode=22,
+                            errorType=EdenErrorType.POSIX_ERROR,
+                        )
+                    ),
+                    SourceControlTypeOrError(SourceControlType.SYMLINK),
+                )
+            )
+
+            expected_result_v2 = GetAttributesFromFilesResultV2(
+                [
+                    expected_slink_result_v2,
+                ]
+            )
+            print(f"expected v2: \n{expected_result_v2}")
+            results_v2 = self.get_all_attributes_v2([b"slink"])
+            print(f"actual v2: \n{results_v2}")
+            self.assertEqual(1, len(results_v2.res))
+            self.assertEqual(expected_result_v2, results_v2)
+
         else:  # one windows symlinks don't report as symlinks but rather regular files.
-            (
-                expected_sha1,
-                expected_size,
-                expected_type,
-            ) = self.get_expected_file_attributes("slink")
-            expected_data = FileAttributeData(
-                expected_sha1, expected_size, expected_type
+            (expected_result, expected_result_v2,) = self.wrap_expected_attributes(
+                self.get_expected_file_attributes("slink")
             )
-            expected_result = GetAttributesFromFilesResult(
-                [FileAttributeDataOrError(expected_data)]
+
+            results = self.get_all_attributes([b"slink"])
+            self.assertEqual(1, len(results.res))
+            self.assertEqual(GetAttributesFromFilesResult([expected_result]), results)
+
+            results_v2 = self.get_all_attributes_v2([b"slink"])
+            self.assertEqual(1, len(results_v2.res))
+            self.assertEqual(
+                GetAttributesFromFilesResultV2([expected_result_v2]), results_v2
             )
-            self.assertEqual(expected_result, results)
 
     def test_get_attributes_no_files(self) -> None:
         results = self.get_all_attributes([])
         self.assertEqual(0, len(results.res))
 
+        results = self.get_all_attributes_v2([])
+        self.assertEqual(0, len(results.res))
+
     def test_get_no_attributes(self) -> None:
         expected_hello_result = FileAttributeDataOrError(FileAttributeData())
+        expected_hello_result_v2 = FileAttributeDataOrErrorV2(FileAttributeDataV2())
 
         # create result object for "hello"
-        result_list = [
-            expected_hello_result,
-        ]
-        expected_result = GetAttributesFromFilesResult(result_list)
+        expected_result = GetAttributesFromFilesResult(
+            [
+                expected_hello_result,
+            ]
+        )
+        expected_result_v2 = GetAttributesFromFilesResultV2(
+            [
+                expected_hello_result_v2,
+            ]
+        )
 
-        # get actual result
-        results = self.get_attributes([b"hello"], 0)
-
-        # ensure expected and actual results match
-        self.assertEqual(1, len(results.res))
-        self.assertEqual(expected_result, results)
+        self.assert_attributes_result(
+            expected_result,
+            expected_result_v2,
+            [b"hello"],
+            0,
+        )
 
     def assert_attribute_error(
         self,
-        attribute_result: GetAttributesFromFilesResult,
+        attribute_result: Union[
+            GetAttributesFromFilesResult, GetAttributesFromFilesResultV2
+        ],
         error_message: Union[str, Pattern],
         map_entry: int,
     ) -> None:
@@ -383,8 +568,13 @@ class ThriftTest(testcase.EdenRepoTest):
             attribute_result, msg="Must pass a GetAttributesFromFilesResult"
         )
         attr_or_err = attribute_result.res[map_entry]
+        expected_error = (
+            FileAttributeDataOrError.ERROR
+            if isinstance(attribute_result, GetAttributesFromFilesResult)
+            else FileAttributeDataOrErrorV2.ERROR
+        )
         self.assertEqual(
-            FileAttributeDataOrError.ERROR,
+            expected_error,
             attr_or_err.getType(),
             msg="GetAttributesFromFilesResult must be an error",
         )

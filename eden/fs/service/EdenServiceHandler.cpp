@@ -1941,7 +1941,7 @@ template <typename SerializedT, typename T>
 bool fillErrorRef(
     SerializedT& result,
     std::optional<folly::Try<T>> rawResult,
-    PathComponentPiece path,
+    folly::StringPiece path,
     folly::StringPiece attributeName) {
   if (!rawResult.has_value()) {
     result.error_ref() = newEdenError(
@@ -1960,6 +1960,48 @@ bool fillErrorRef(
   return false;
 }
 
+FileAttributeDataOrErrorV2 serializeEntryAttributes(
+    folly::StringPiece entryPath,
+    const folly::Try<EntryAttributes>& attributes,
+    EntryAttributeFlags requestedAttributes) {
+  FileAttributeDataOrErrorV2 fileResult;
+
+  if (attributes.hasException()) {
+    fileResult.error_ref() = newEdenError(attributes.exception());
+  } else {
+    FileAttributeDataV2 fileData;
+    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
+      Sha1OrError sha1;
+      if (!fillErrorRef<Sha1OrError, Hash20>(
+              sha1, attributes->sha1, entryPath, "sha1")) {
+        sha1.sha1_ref() = thriftHash20(attributes->sha1.value().value());
+      }
+      fileData.sha1() = std::move(sha1);
+    }
+
+    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
+      SizeOrError size;
+      if (!fillErrorRef<SizeOrError, uint64_t>(
+              size, attributes->size, entryPath, "size")) {
+        size.size_ref() = attributes->size.value().value();
+      }
+      fileData.size() = std::move(size);
+    }
+
+    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_TYPE)) {
+      SourceControlTypeOrError type;
+      if (!fillErrorRef<SourceControlTypeOrError, TreeEntryType>(
+              type, attributes->type, entryPath, "type")) {
+        type.sourceControlType_ref() =
+            entryTypeToThriftType(attributes->type.value().value());
+      }
+      fileData.sourceControlType() = std::move(type);
+    }
+    fileResult.fileAttributeData_ref() = fileData;
+  }
+  return fileResult;
+}
+
 DirListAttributeDataOrError serializeEntryAttributes(
     const folly::Try<std::vector<
         std::pair<PathComponent, folly::Try<EntryAttributes>>>>& entries,
@@ -1971,44 +2013,12 @@ DirListAttributeDataOrError serializeEntryAttributes(
   }
   std::map<std::string, FileAttributeDataOrErrorV2> thriftEntryResult;
   for (auto& entry : entries.value()) {
-    FileAttributeDataOrErrorV2 fileResult;
-
-    if (entry.second.hasException()) {
-      fileResult.error_ref() = newEdenError(entry.second.exception());
-    } else {
-      FileAttributeDataV2 fileData;
-      if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
-        Sha1OrError sha1;
-        if (!fillErrorRef<Sha1OrError, Hash20>(
-                sha1, entry.second->sha1, entry.first.piece(), "sha1")) {
-          sha1.sha1_ref() = thriftHash20(entry.second->sha1.value().value());
-        }
-        fileData.sha1() = std::move(sha1);
-      }
-
-      if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
-        SizeOrError size;
-        if (!fillErrorRef<SizeOrError, uint64_t>(
-                size, entry.second->size, entry.first.piece(), "size")) {
-          size.size_ref() = entry.second->size.value().value();
-        }
-        fileData.size() = std::move(size);
-      }
-
-      if (requestedAttributes.contains(ENTRY_ATTRIBUTE_TYPE)) {
-        SourceControlTypeOrError type;
-        if (!fillErrorRef<SourceControlTypeOrError, TreeEntryType>(
-                type, entry.second->type, entry.first, "type")) {
-          type.sourceControlType_ref() =
-              entryTypeToThriftType(entry.second->type.value().value());
-        }
-        fileData.sourceControlType() = std::move(type);
-      }
-      fileResult.fileAttributeData_ref() = fileData;
-    }
-
     thriftEntryResult.emplace(
-        entry.first.stringPiece().str(), std::move(fileResult));
+        entry.first.stringPiece().str(),
+        serializeEntryAttributes(
+            entry.first.piece().stringPiece(),
+            entry.second,
+            requestedAttributes));
   }
 
   result.dirListAttributeData_ref() = std::move(thriftEntryResult);
@@ -2082,117 +2092,170 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
 constexpr EntryAttributeFlags kAllEntryAttributes =
     ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 | ENTRY_ATTRIBUTE_TYPE;
 
+ImmediateFuture<std::vector<folly::Try<EntryAttributes>>>
+EdenServiceHandler::getEntryAttributes(
+    AbsolutePathPiece mountPath,
+    std::vector<std::string>& paths,
+    EntryAttributeFlags reqBitmask,
+    SyncBehavior sync,
+    ObjectFetchContext& fetchContext) {
+  return waitForPendingNotifications(*server_->getMount(mountPath), sync)
+      .thenValue([this,
+                  &paths,
+                  &fetchContext,
+                  mountPath = mountPath.copy(),
+                  reqBitmask](auto&&) mutable {
+        vector<ImmediateFuture<EntryAttributes>> futures;
+        for (const auto& p : paths) {
+          futures.emplace_back(getEntryAttributesForPath(
+              reqBitmask, mountPath, p, fetchContext));
+        }
+
+        // Collect all futures into a single tuple
+        return facebook::eden::collectAll(std::move(futures));
+      });
+}
+
 folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResult>>
 EdenServiceHandler::semifuture_getAttributesFromFiles(
     std::unique_ptr<GetAttributesFromFilesParams> params) {
   auto mountPoint = params->get_mountPoint();
   auto mountPath = AbsolutePathPiece{mountPoint};
-  auto paths = params->get_paths();
+  std::vector<std::string>& paths = params->paths_ref().value();
   auto reqBitmask = EntryAttributeFlags::raw(params->get_requestedAttributes());
   // Get requested attributes for each path
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3, mountPoint, getSyncTimeout(*params->sync()), toLogArg(paths));
   auto& fetchContext = helper->getFetchContext();
 
+  // Buck2 relies on getAttributesFromFiles returning certain
+  // specific errors. So we need to preserve behavior of all
+  // ways fetching sll attributes.
+  // TODO(kmancini): When Buck2 migrates to our
+  // explicit type information, we can get shape up
+  // this API better.
+  auto entryAttributesFuture = getEntryAttributes(
+      mountPath, paths, kAllEntryAttributes, *params->sync(), fetchContext);
+
   return wrapImmediateFuture(
              std::move(helper),
-             waitForPendingNotifications(
-                 *server_->getMount(mountPath), *params->sync())
-                 .thenValue([this,
-                             paths = std::move(paths),
-                             &fetchContext,
-                             mountPath = mountPath.copy(),
-                             reqBitmask](auto&&) mutable {
-                   vector<ImmediateFuture<EntryAttributes>> futures;
-                   for (const auto& p : paths) {
-                     // Buck2 relies on getAttributesFromFiles returning certain
-                     // specific errors. So we need to preserve behavior of all
-                     // ways fetching sll attributes.
-                     // TODO(kmancini): When Buck2 migrates to our
-                     // explicit type information, we can get shape up
-                     // this API better.
-                     futures.emplace_back(getEntryAttributesForPath(
-                         kAllEntryAttributes, mountPath, p, fetchContext));
-                   }
+             std::move(entryAttributesFuture)
+                 .thenValue([&paths, reqBitmask](
+                                std::vector<folly::Try<EntryAttributes>>&&
+                                    allRes) {
+                   auto res = std::make_unique<GetAttributesFromFilesResult>();
 
-                   // Collect all futures into a single tuple
-                   return facebook::eden::collectAll(std::move(futures))
-                       .thenValue([paths = std::move(paths), reqBitmask](
-                                      std::vector<folly::Try<EntryAttributes>>&&
-                                          allRes) {
-                         auto res =
-                             std::make_unique<GetAttributesFromFilesResult>();
+                   size_t index = 0;
+                   for (const auto& tryAttributes : allRes) {
+                     FileAttributeDataOrError file_res;
+                     // check for exceptions. if found, return EdenError
+                     // early
+                     if (tryAttributes.hasException()) {
+                       file_res.error_ref() =
+                           newEdenError(tryAttributes.exception());
+                     } else { /* No exceptions, fill in data */
+                       FileAttributeData file_data;
+                       const auto& attributes = tryAttributes.value();
 
-                         size_t index = 0;
-                         for (const auto& tryAttributes : allRes) {
-                           FileAttributeDataOrError file_res;
-                           // check for exceptions. if found, return EdenError
-                           // early
-                           if (tryAttributes.hasException()) {
-                             file_res.error_ref() =
-                                 newEdenError(tryAttributes.exception());
-                           } else { /* No exceptions, fill in data */
-                             FileAttributeData file_data;
-                             const auto& attributes = tryAttributes.value();
-
-                             // clients rely on these top level exceptions to
-                             // detect symlinks and directories.
-                             // TODO(kmancini): When Buck2 migrates to our
-                             // explicit type information, we can get shape up
-                             // this API better.
-                             if (!attributes.sha1.has_value()) {
-                               file_res.error_ref() = newEdenError(
-                                   EdenErrorType::GENERIC_ERROR,
-                                   fmt::format(
-                                       "{}: sha1 requested, but no type available",
-                                       paths.at(index)));
-                             } else if (attributes.sha1.value()
-                                            .hasException()) {
-                               file_res.error_ref() = newEdenError(
-                                   attributes.sha1.value().exception());
-                             } else if (!attributes.size.has_value()) {
-                               file_res.error_ref() = newEdenError(
-                                   EdenErrorType::GENERIC_ERROR,
-                                   fmt::format(
-                                       "{}: size requested, but no type available",
-                                       paths.at(index)));
-                             } else if (attributes.size.value()
-                                            .hasException()) {
-                               file_res.error_ref() = newEdenError(
-                                   attributes.size.value().exception());
-                             } else if (!attributes.type.has_value()) {
-                               file_res.error_ref() = newEdenError(
-                                   EdenErrorType::GENERIC_ERROR,
-                                   fmt::format(
-                                       "{}: type requested, but no type available",
-                                       paths.at(index)));
-                             } else if (attributes.type.value()
-                                            .hasException()) {
-                               file_res.error_ref() = newEdenError(
-                                   attributes.type.value().exception());
-                             } else {
-                               // Only fill in requested fields
-                               if (reqBitmask.contains(ENTRY_ATTRIBUTE_SHA1)) {
-                                 file_data.sha1_ref() = thriftHash20(
-                                     attributes.sha1.value().value());
-                               }
-                               if (reqBitmask.contains(ENTRY_ATTRIBUTE_SIZE)) {
-                                 file_data.fileSize_ref() =
-                                     attributes.size.value().value();
-                               }
-                               if (reqBitmask.contains(ENTRY_ATTRIBUTE_TYPE)) {
-                                 file_data.type_ref() = entryTypeToThriftType(
-                                     attributes.type.value().value());
-                               }
-                               file_res.data_ref() = file_data;
-                             }
-                           }
-                           res->res_ref()->emplace_back(file_res);
-                           ++index;
+                       // clients rely on these top level exceptions to
+                       // detect symlinks and directories.
+                       // TODO(kmancini): When Buck2 migrates to our
+                       // explicit type information, we can get shape up
+                       // this API better.
+                       if (!attributes.sha1.has_value()) {
+                         file_res.error_ref() = newEdenError(
+                             EdenErrorType::GENERIC_ERROR,
+                             fmt::format(
+                                 "{}: sha1 requested, but no type available",
+                                 paths.at(index)));
+                       } else if (attributes.sha1.value().hasException()) {
+                         file_res.error_ref() =
+                             newEdenError(attributes.sha1.value().exception());
+                       } else if (!attributes.size.has_value()) {
+                         file_res.error_ref() = newEdenError(
+                             EdenErrorType::GENERIC_ERROR,
+                             fmt::format(
+                                 "{}: size requested, but no type available",
+                                 paths.at(index)));
+                       } else if (attributes.size.value().hasException()) {
+                         file_res.error_ref() =
+                             newEdenError(attributes.size.value().exception());
+                       } else if (!attributes.type.has_value()) {
+                         file_res.error_ref() = newEdenError(
+                             EdenErrorType::GENERIC_ERROR,
+                             fmt::format(
+                                 "{}: type requested, but no type available",
+                                 paths.at(index)));
+                       } else if (attributes.type.value().hasException()) {
+                         file_res.error_ref() =
+                             newEdenError(attributes.type.value().exception());
+                       } else {
+                         // Only fill in requested fields
+                         if (reqBitmask.contains(ENTRY_ATTRIBUTE_SHA1)) {
+                           file_data.sha1_ref() =
+                               thriftHash20(attributes.sha1.value().value());
                          }
-                         return res;
-                       });
+                         if (reqBitmask.contains(ENTRY_ATTRIBUTE_SIZE)) {
+                           file_data.fileSize_ref() =
+                               attributes.size.value().value();
+                         }
+                         if (reqBitmask.contains(ENTRY_ATTRIBUTE_TYPE)) {
+                           file_data.type_ref() = entryTypeToThriftType(
+                               attributes.type.value().value());
+                         }
+                         file_res.data_ref() = file_data;
+                       }
+                     }
+                     res->res_ref()->emplace_back(file_res);
+                     ++index;
+                   }
+                   return res;
                  }))
+      .ensure([params = std::move(params)]() {
+        // keeps the params memory around for the duration of the thrift call,
+        // so that we can safely use the paths by reference to avoid making
+        // copies.
+      })
+      .semi();
+}
+
+folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResultV2>>
+EdenServiceHandler::semifuture_getAttributesFromFilesV2(
+    std::unique_ptr<GetAttributesFromFilesParams> params) {
+  auto mountPoint = params->get_mountPoint();
+  auto mountPath = AbsolutePathPiece{mountPoint};
+  auto reqBitmask = EntryAttributeFlags::raw(params->get_requestedAttributes());
+  std::vector<std::string>& paths = params->paths().value();
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG3, mountPoint, getSyncTimeout(*params->sync()), toLogArg(paths));
+  auto& fetchContext = helper->getFetchContext();
+
+  auto entryAttributesFuture = getEntryAttributes(
+      mountPath, paths, reqBitmask, *params->sync(), fetchContext);
+
+  return wrapImmediateFuture(
+             std::move(helper),
+             std::move(entryAttributesFuture)
+                 .thenValue(
+                     [reqBitmask, &paths](
+                         std::vector<folly::Try<EntryAttributes>>&& allRes) {
+                       auto res =
+                           std::make_unique<GetAttributesFromFilesResultV2>();
+                       size_t index = 0;
+                       for (const auto& tryAttributes : allRes) {
+                         res->res_ref()->emplace_back(serializeEntryAttributes(
+                             basename(paths.at(index)),
+                             tryAttributes,
+                             reqBitmask));
+                         ++index;
+                       }
+                       return res;
+                     }))
+      .ensure([params = std::move(params)]() {
+        // keeps the params memory around for the duration of the thrift call,
+        // so that we can safely use the paths by reference to avoid making
+        // copies.
+      })
       .semi();
 }
 
