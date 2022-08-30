@@ -11,6 +11,7 @@ anyhow = "1.0.56"
 blackbox = { version = "0.1.0", path = "../blackbox" }
 cliparser = { version = "0.1.0", path = "../cliparser" }
 configparser = { version = "0.1.0", path = "../configparser" }
+identity = { version = "0.1.0", path = "../identity" }
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
 io = { version = "0.1.0", path = "../io" }
 network-doctor = { version = "0.1.0", path = "../doctor/network" }

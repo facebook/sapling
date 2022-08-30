@@ -6,7 +6,6 @@
  */
 
 use std::path::Path;
-use std::path::PathBuf;
 
 use anyhow::Result;
 use configparser::config::ConfigSet;
@@ -27,8 +26,8 @@ impl OptionalRepo {
     ///
     /// Return None if there is no repo found from the current directory or its
     /// parent directories.
-    pub fn from_cwd(opts: &HgGlobalOpts, cwd: impl AsRef<Path>) -> Result<OptionalRepo> {
-        if let Some(path) = find_hg_repo_root(&util::path::absolute(cwd)?) {
+    fn from_cwd(opts: &HgGlobalOpts, cwd: impl AsRef<Path>) -> Result<OptionalRepo> {
+        if let Some((path, _)) = identity::sniff_root(&util::path::absolute(cwd)?)? {
             let repo = Repo::load(path, &opts.config, &opts.configfile)?;
             Ok(OptionalRepo::Some(repo))
         } else {
@@ -58,8 +57,7 @@ impl OptionalRepo {
                 cwd.join(repository_path)
             };
         if let Ok(path) = util::path::absolute(&full_repository_path) {
-            if path.join(".hg").is_dir() {
-                // `path` is a directory with `.hg`.
+            if identity::sniff_dir(&path)?.is_some() {
                 let repo = Repo::load(path, &opts.config, &opts.configfile)?;
                 return Ok(OptionalRepo::Some(repo));
             } else if path.is_file() {
@@ -82,16 +80,5 @@ impl OptionalRepo {
             OptionalRepo::Some(ref repo) => repo.config(),
             OptionalRepo::None(ref config) => config,
         }
-    }
-}
-
-fn find_hg_repo_root(current_path: &Path) -> Option<PathBuf> {
-    assert!(current_path.is_absolute());
-    if current_path.join(".hg").is_dir() {
-        Some(current_path.to_path_buf())
-    } else if let Some(parent) = current_path.parent() {
-        find_hg_repo_root(parent)
-    } else {
-        None
     }
 }
