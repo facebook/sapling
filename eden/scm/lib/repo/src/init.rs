@@ -25,18 +25,20 @@ pub fn init_hg_repo(
     if !root_path.exists() {
         create_dir(root_path)?;
     }
-    let hg_path = root_path.join(HG_PATH);
-    let hg_path = hg_path.as_path();
+
+    let ident = identity::sniff_env();
+
+    let hg_path = root_path.join(ident.dot_dir());
     if hg_path.exists() {
         return Err(InitError::ExistingRepoError(PathBuf::from(root_path)));
     }
-    create_dir(hg_path)?;
+    create_dir(&hg_path)?;
 
-    write_reponame(hg_path, config)?;
-    write_changelog(hg_path)?;
-    write_hgrc(hg_path, hgrc_contents)?;
-    write_requirements(hg_path)?;
-    write_store_requirements(hg_path, config)?;
+    write_reponame(&hg_path, config)?;
+    write_changelog(&hg_path)?;
+    write_hgrc(&hg_path, hgrc_contents)?;
+    write_requirements(&hg_path)?;
+    write_store_requirements(&hg_path, config)?;
     // TODO(sggutier): Add cleanup for the .hg directory in the event of an error
 
     Ok(())

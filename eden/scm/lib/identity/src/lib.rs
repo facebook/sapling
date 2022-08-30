@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::env::VarError;
 use std::fs;
 use std::io;
 use std::path::Path;
@@ -42,6 +43,15 @@ impl Identity {
 
     pub fn env_prefix(&self) -> &'static str {
         self.env_prefix
+    }
+
+    fn env_var(&self, suffix: &str) -> Option<Result<String, VarError>> {
+        let var_name = format!("{}{}", self.env_prefix, suffix);
+        match std::env::var(var_name) {
+            Err(err) if err == VarError::NotPresent => None,
+            Err(err) => Some(Err(err)),
+            Ok(val) => Some(Ok(val)),
+        }
     }
 }
 
@@ -135,6 +145,43 @@ pub fn sniff_root(path: &Path) -> Result<Option<(PathBuf, Identity)>> {
     }
 
     Ok(None)
+}
+
+fn try_env_var(var_suffix: &str) -> Result<String, VarError> {
+    let current_id = IDENTITY.read();
+
+    // Always prefer current identity.
+    if let Some(res) = current_id.env_var(var_suffix) {
+        return res;
+    }
+
+    // Backwards compat for old env vars.
+    for id in ALL_IDENTITIES {
+        if *current_id == *id {
+            continue;
+        }
+
+        if let Some(res) = id.env_var(var_suffix) {
+            return res;
+        }
+    }
+
+    Err(VarError::NotPresent)
+}
+
+pub fn sniff_env() -> Identity {
+    if let Ok(id_name) = try_env_var("IDENTITY") {
+        for id in ALL_IDENTITIES {
+            if id.cli_name == id_name {
+                tracing::info!(identity = id.cli_name, "sniffed identity from env");
+                return id.clone();
+            }
+        }
+    }
+
+    // TODO: sniff executable name for hg vs sl.
+
+    DEFAULT
 }
 
 #[cfg(test)]
