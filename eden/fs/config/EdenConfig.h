@@ -352,7 +352,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<uint32_t> fetchHeavyThreshold{
       "store:fetch-heavy-threshold",
-      2000,
+      100000,
       this};
 
   /**
