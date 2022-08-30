@@ -50,6 +50,7 @@ pygithub = { path = "modules/pygithub" }
 pygitstore = { path = "modules/pygitstore" }
 pyhgmetrics = { path = "modules/pyhgmetrics" }
 pyhgtime = { path = "modules/pyhgtime" }
+pyidentity = { path = "modules/pyidentity" }
 pyindexedlog = { path = "modules/pyindexedlog" }
 pyio = { path = "modules/pyio" }
 pylock = { path = "modules/pylock" }

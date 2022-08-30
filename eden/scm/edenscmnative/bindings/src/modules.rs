@@ -60,6 +60,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
             gitstore,
             hgmetrics,
             hgtime,
+            identity,
             indexedlog,
             io,
             lock,
