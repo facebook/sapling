@@ -19,6 +19,7 @@ import random
 import time
 import weakref
 from contextlib import contextmanager
+from typing import Set
 
 import bindings
 from edenscm import tracing
@@ -142,13 +143,13 @@ def isfilecached(repo, name):
     return cacheentry.obj, True
 
 
-def hascache(repo, name):
+def hascache(repo, name) -> bool:
     """check if a repo has an value for <name>"""
     return name in vars(repo)
 
 
 moderncaps = {"lookup", "branchmap", "pushkey", "known", "getbundle", "unbundle"}
-legacycaps = moderncaps.union({"changegroupsubset"})
+legacycaps: Set[str] = moderncaps.union({"changegroupsubset"})
 
 
 class localpeer(repository.peer):
@@ -3210,15 +3211,15 @@ def undoname(fn):
     return os.path.join(base, name.replace("journal", "undo", 1))
 
 
-def instance(ui, path, create):
+def instance(ui, path, create) -> localrepository:
     return localrepository(ui, util.urllocalpath(path), create)
 
 
-def islocal(path):
+def islocal(path) -> bool:
     return True
 
 
-def newreporequirements(repo):
+def newreporequirements(repo) -> Set[str]:
     """Determine the set of requirements for a new local repository.
 
     Extensions can wrap this function to specify custom requirements for
