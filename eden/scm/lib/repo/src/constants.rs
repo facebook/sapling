@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-pub static HG_PATH: &str = ".hg";
 pub static REPONAME_FILE: &str = "reponame";
 pub static CHANGELOG_FILE: &str = "00changelog.i";
 pub static REQUIREMENTS_FILE: &str = "requires";

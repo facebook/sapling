@@ -19,7 +19,6 @@ use clidispatch::output::new_logger;
 use clidispatch::output::TermLogger;
 use cliparser::define_flags;
 use migration::feature::deprecate;
-use repo::constants::HG_PATH;
 use repo::repo::Repo;
 use tracing::instrument;
 use types::HgId;
@@ -213,8 +212,6 @@ pub fn run(
         destination.display(),
     ));
 
-    let dest_hg = destination.join(HG_PATH);
-
     let clone_type_str = if clone_opts.eden {
         "eden_fs"
     } else if !clone_opts.enable_profile.is_empty() {
@@ -228,11 +225,13 @@ pub fn run(
         tracing::debug!(target: "clone_info", cloned_sparse_profiles=clone_opts.enable_profile.join(" "));
     }
 
-    abort_if!(
-        dest_hg.exists(),
-        ".hg directory already exists at clone destination {}",
-        destination.display(),
-    );
+    if let Some(ident) = identity::sniff_dir(&destination)? {
+        abort!(
+            "{} directory already exists at clone destination {}",
+            ident.dot_dir(),
+            destination.display(),
+        );
+    }
 
     if clone_opts.eden {
         let backing_path = if !clone_opts.eden_backing_repo.is_empty() {
@@ -242,9 +241,8 @@ pub fn run(
         } else {
             abort!("please specify --eden-backing-repo");
         };
-        let backing_hg = backing_path.join(".hg");
 
-        let mut backing_repo = if !backing_hg.exists() {
+        let mut backing_repo = if identity::sniff_dir(&backing_path)?.is_none() {
             logger.info(|| {
                 format!(
                     "Cloning {} backing repo to {}",
@@ -332,7 +330,8 @@ fn try_clone_metadata(
     ) {
         Err(e) => {
             let removal_dir = if dest_preexists {
-                destination.join(HG_PATH)
+                let ident = identity::sniff_dir(destination)?.unwrap_or_else(identity::sniff_env);
+                destination.join(ident.dot_dir())
             } else {
                 destination.to_path_buf()
             };
