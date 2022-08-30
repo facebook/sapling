@@ -81,9 +81,7 @@ impl Repo {
         let path = path.into();
         assert!(path.is_absolute());
 
-        let dot_hg_path = path.join(".hg");
-        let config =
-            configparser::hg::load(Some(&dot_hg_path), extra_config_values, extra_config_files)?;
+        let config = configparser::hg::load(Some(&path), extra_config_values, extra_config_files)?;
         Self::load_with_config(path, config)
     }
 

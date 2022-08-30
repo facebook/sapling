@@ -28,13 +28,13 @@ use BackingStore::*;
 
 impl BackingStore {
     pub fn new<P: AsRef<Path>>(
-        repository: P,
+        root: P,
         use_edenapi: bool,
         aux_data: bool,
         allow_retries: bool,
     ) -> Result<Self> {
-        let hg = repository.as_ref().join(".hg");
-        let mut config = configparser::hg::load(Some(&hg), &[], &[])?;
+        let root = root.as_ref();
+        let mut config = configparser::hg::load(Some(root), &[], &[])?;
 
         if !allow_retries {
             let source = configparser::config::Options::new().source("backingstore");
@@ -42,6 +42,8 @@ impl BackingStore {
             config.set("lfs", "throttlebackofftimes", Some(""), &source);
             config.set("edenapi", "max-retry-per-request", Some("0"), &source);
         }
+
+        let hg = root.join(".hg");
 
         Ok(if config.get_or_default("scmstore", "backingstore")? {
             New(BackingScmStores::new(&config, &hg, use_edenapi, aux_data)?)

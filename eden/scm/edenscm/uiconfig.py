@@ -68,9 +68,8 @@ class uiconfig(object):
         """Create a uiconfig and load global and user configs"""
         u = cls()
         try:
-            # repopath should be the non-shared .hg directory
-            dothgpath = os.path.join(repopath, ".hg") if repopath else None
-            rcfg, issues = configparser.config.load(dothgpath)
+            # repopath should be the non-shared root directory
+            rcfg, issues = configparser.config.load(repopath or None)
         except Exception as ex:
             raise error.ParseError(str(ex))
 
@@ -83,10 +82,8 @@ class uiconfig(object):
         u.fixconfig(root=repopath or root)
 
     def reload(self, ui, repopath):
-        # The actual config expects the non-shared .hg directory.
-        issues = self._rcfg.reload(
-            os.path.join(repopath, ".hg"), list(self._pinnedconfigs)
-        )
+        # The actual config expects the non-shared root directory.
+        issues = self._rcfg.reload(repopath, list(self._pinnedconfigs))
         reportissues(ui, issues)
 
         # fixconfig expects the non-shard repo root, without the .hg.

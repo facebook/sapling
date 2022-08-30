@@ -86,7 +86,7 @@ pub trait ConfigSetHgExt {
     fn validate_dynamic(&mut self) -> Result<SupersetVerification, Error>;
 }
 
-/// Load config from specified repo .hg path, or global config if no path specified.
+/// Load config from specified repo root path, or global config if no path specified.
 /// `extra_values` contains config overrides (i.e. "--config" CLI values).
 /// `extra_files` contains additional config files (i.e. "--configfile" CLI values).
 pub fn load(
@@ -261,6 +261,8 @@ impl ConfigSetHgExt for ConfigSet {
     ) -> Result<SupersetVerification, Errors> {
         tracing::info!(?repo_path, "loading config");
 
+        let repo_path = repo_path.map(|p| p.join(".hg"));
+
         let mut errors = vec![];
 
         let mut opts = Options::new();
@@ -279,14 +281,14 @@ impl ConfigSetHgExt for ConfigSet {
         #[cfg(feature = "fb")]
         errors.append(
             &mut self
-                .load_dynamic(repo_path, opts.clone())
+                .load_dynamic(repo_path.as_deref(), opts.clone())
                 .map_err(|e| Errors(vec![Error::Other(e)]))?,
         );
         errors.append(&mut self.load_system(opts.clone()));
         errors.append(&mut self.load_user(opts.clone()));
 
-        if let Some(repo_path) = repo_path {
-            errors.append(&mut self.load_repo(&repo_path, opts.clone()));
+        if let Some(repo_path) = repo_path.as_deref() {
+            errors.append(&mut self.load_repo(repo_path, opts));
             if let Err(e) = read_set_repo_name(self, repo_path) {
                 errors.push(e);
             }
@@ -1121,7 +1123,7 @@ mod tests {
 
         let dir = TempDir::new("test_load").unwrap();
 
-        let repo_rc = dir.path().join("hgrc");
+        let repo_rc = dir.path().join(".hg/hgrc");
         write_file(repo_rc, "[s]\na=orig\nb=orig\nc=orig");
 
         let other_rc = dir.path().join("other.rc");
