@@ -76,6 +76,7 @@ members = [
   "lib/hgcommits",
   "lib/hgtime",
   "lib/http-client",
+  "lib/identity",
   "lib/indexedlog",
   "lib/insta_ext",
   "lib/io",
