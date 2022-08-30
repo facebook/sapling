@@ -435,16 +435,16 @@ def print_eden_redirections(instance: EdenInstance, out: IO[bytes]) -> None:
 
 
 def print_counters(
-    instance: EdenInstance, type: str, regex: str, out: IO[bytes]
+    instance: EdenInstance, counter_type: str, regex: str, out: IO[bytes]
 ) -> None:
     try:
-        section_title(f"{type} counters:", out)
+        section_title(f"{counter_type} counters:", out)
         with instance.get_thrift_client_legacy(timeout=3) as client:
             counters = client.getRegexCounters(regex)
             for key, value in counters.items():
                 out.write(f"{key}: {value}\n".encode())
     except Exception as e:
-        out.write(f"Error getting {type} Thrift counters: {str(e)}\n".encode())
+        out.write(f"Error getting {counter_type} Thrift counters: {e}\n".encode())
 
 
 def print_env_variables(out: IO[bytes]) -> None:
