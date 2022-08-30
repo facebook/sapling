@@ -61,6 +61,10 @@ pub struct MainCommand {
     #[clap(long, parse(from_str = expand_path))]
     home_dir: Option<PathBuf>,
 
+    /// Path to directory within a checkout.
+    #[clap(long, parse(from_str = expand_path), hide = true)]
+    checkout_dir: Option<PathBuf>,
+
     #[clap(long)]
     pub debug: bool,
 
@@ -151,7 +155,21 @@ impl MainCommand {
         )
     }
 
+    fn set_working_directory(&self) -> Result<()> {
+        if let Some(checkout_dir) = &self.checkout_dir {
+            std::env::set_current_dir(checkout_dir).with_context(|| {
+                format!(
+                    "Unable to change to checkout directory: {}",
+                    checkout_dir.display()
+                )
+            })?;
+        }
+        Ok(())
+    }
+
     pub fn run(self) -> Result<ExitCode> {
+        self.set_working_directory()?;
+
         // For command line program, we don't really need concurrency. Schedule everything in
         // current thread should be sufficient.
         let runtime = tokio::runtime::Builder::new_current_thread()

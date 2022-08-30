@@ -2180,6 +2180,7 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--home-dir", help="Path to directory where .edenrc config file is stored."
     )
+    parser.add_argument("--checkout-dir", help=argparse.SUPPRESS)
     parser.add_argument(
         "--version", "-v", action="store_true", help="Print EdenFS version."
     )
@@ -2225,6 +2226,17 @@ def normalize_path_arg(path_arg: str, may_need_tilde_expansion: bool = False) ->
         # Use the canonical version of the path.
         path_arg = os.path.realpath(path_arg)
     return path_arg
+
+
+def set_working_directory(args: argparse.Namespace) -> Optional[int]:
+    if args.checkout_dir is None:
+        return
+
+    try:
+        os.chdir(args.checkout_dir)
+    except OSError as e:
+        print(f"Unable to change to checkout directory: {e}", file=sys.stderr)
+        return EX_OSFILE
 
 
 def is_working_directory_stale() -> bool:
@@ -2277,6 +2289,10 @@ Please run "cd / && cd -" to update your shell's working directory."""
 
 
 async def async_main(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
+    set_return_code = set_working_directory(args)
+    if set_return_code is not None:
+        return set_return_code
+
     # Before doing anything else check that the current working directory is valid.
     # This helps catch the case where a user is trying to run the EdenFS CLI inside
     # a stale eden mount point.
