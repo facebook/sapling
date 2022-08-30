@@ -562,7 +562,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<HgObjectIdFormat> hgObjectIdFormat{
       "hg:object-id-format",
-      HgObjectIdFormat::ProxyHash,
+      HgObjectIdFormat::WithPath,
       this};
 
   /**
