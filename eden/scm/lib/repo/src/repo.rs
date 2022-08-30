@@ -38,8 +38,10 @@ use crate::requirements::Requirements;
 
 pub struct Repo {
     path: PathBuf,
+    ident: identity::Identity,
     config: ConfigSet,
     shared_path: PathBuf,
+    shared_ident: identity::Identity,
     store_path: PathBuf,
     dot_hg_path: PathBuf,
     shared_dot_hg_path: PathBuf,
@@ -78,11 +80,7 @@ impl Repo {
     where
         P: Into<PathBuf>,
     {
-        let path = path.into();
-        assert!(path.is_absolute());
-
-        let config = configparser::hg::load(Some(&path), extra_config_values, extra_config_files)?;
-        Self::load_with_config(path, config)
+        Self::build(path, extra_config_values, extra_config_files, None)
     }
 
     /// Loads the repo at given path, eschewing any config loading in
@@ -93,12 +91,45 @@ impl Repo {
     where
         P: Into<PathBuf>,
     {
+        Self::build(path, &[], &[], Some(config))
+    }
+
+    fn build<P>(
+        path: P,
+        extra_config_values: &[String],
+        extra_config_files: &[String],
+        config: Option<ConfigSet>,
+    ) -> Result<Self>
+    where
+        P: Into<PathBuf>,
+    {
         let path = path.into();
         assert!(path.is_absolute());
 
-        let shared_path = read_sharedpath(&path)?;
-        let dot_hg_path = path.join(".hg");
-        let shared_dot_hg_path = shared_path.join(".hg");
+        assert!(
+            config.is_none() || (extra_config_values.is_empty() && extra_config_files.is_empty()),
+            "Don't pass a config and CLI overrides to Repo::build"
+        );
+
+        let ident = match identity::sniff_dir(&path)? {
+            Some(ident) => ident,
+            None => {
+                return Err(errors::RepoNotFound(path.to_string_lossy().to_string()).into());
+            }
+        };
+
+        let config = match config {
+            Some(config) => config,
+            None => configparser::hg::load(Some(&path), extra_config_values, extra_config_files)?,
+        };
+
+        let dot_hg_path = path.join(ident.dot_dir());
+
+        let (shared_path, shared_ident) = match read_sharedpath(&dot_hg_path)? {
+            Some((path, ident)) => (path, ident),
+            None => (path.clone(), ident.clone()),
+        };
+        let shared_dot_hg_path = shared_path.join(shared_ident.dot_dir());
         let store_path = shared_dot_hg_path.join("store");
 
         let repo_name = configparser::hg::read_repo_name_from_disk(&shared_dot_hg_path)
@@ -114,8 +145,10 @@ impl Repo {
 
         Ok(Repo {
             path,
+            ident,
             config,
             shared_path,
+            shared_ident,
             store_path,
             dot_hg_path,
             shared_dot_hg_path,
@@ -292,32 +325,31 @@ impl Repo {
     }
 }
 
-fn read_sharedpath(path: &Path) -> Result<PathBuf> {
-    let mut sharedpath = fs::read_to_string(path.join(".hg/sharedpath"))
+fn read_sharedpath(dot_path: &Path) -> Result<Option<(PathBuf, identity::Identity)>> {
+    let sharedpath = fs::read_to_string(dot_path.join("sharedpath"))
         .ok()
         .map(|s| PathBuf::from(s))
         .and_then(|p| Some(PathBuf::from(p.parent()?)));
 
-    if let Some(possible_path) = sharedpath {
-        if possible_path.is_absolute() && !possible_path.is_dir() {
-            return Err(errors::InvalidSharedPath(
-                possible_path.join(".hg").to_string_lossy().to_string(),
-            )
-            .into());
-        } else if possible_path.is_absolute() {
-            sharedpath = Some(possible_path)
-        } else {
-            // join relative path from the REPO/.hg path
-            let new_possible = path.join(".hg").join(possible_path);
-            if !new_possible.join(".hg").exists() {
-                return Err(
-                    errors::InvalidSharedPath(new_possible.to_string_lossy().to_string()).into(),
-                );
-            }
-            sharedpath = Some(new_possible)
+    if let Some(mut possible_path) = sharedpath {
+        // sharedpath can be relative to our dot dir.
+        possible_path = dot_path.join(possible_path);
+
+        if !possible_path.is_dir() {
+            return Err(
+                errors::InvalidSharedPath(possible_path.to_string_lossy().to_string()).into(),
+            );
         }
+
+        return match identity::sniff_dir(&possible_path)? {
+            Some(ident) => Ok(Some((possible_path, ident))),
+            None => {
+                Err(errors::InvalidSharedPath(possible_path.to_string_lossy().to_string()).into())
+            }
+        };
     }
-    Ok(sharedpath.unwrap_or_else(|| path.to_path_buf()))
+
+    Ok(None)
 }
 
 impl std::fmt::Debug for Repo {
