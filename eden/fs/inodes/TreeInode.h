@@ -44,7 +44,7 @@ constexpr folly::StringPiece kDotEdenName{".eden"};
  */
 struct TreeInodeState {
   explicit TreeInodeState(DirContents&& dir, std::optional<ObjectId> hash)
-      : entries{std::forward<DirContents>(dir)}, treeHash{hash} {}
+      : entries{std::forward<DirContents>(dir)}, treeHash{std::move(hash)} {}
 
   bool isMaterialized() const {
     return !treeHash.has_value();

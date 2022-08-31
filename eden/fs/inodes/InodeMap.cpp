@@ -50,7 +50,7 @@ InodeMap::UnloadedInode::UnloadedInode(
       name(entryName),
       isUnlinked{isUnlinked},
       mode{mode},
-      hash{hash},
+      hash{std::move(hash)},
       numFsReferences{fsRefcount} {
   if (folly::kIsWindows) {
     XDCHECK_LE(numFsReferences, 1u);
@@ -71,7 +71,7 @@ InodeMap::UnloadedInode::UnloadedInode(
       // this specific mode bit pattern in eden so we can
       // force the value down here.
       mode{S_IFDIR | 0755},
-      hash{hash},
+      hash{std::move(hash)},
       numFsReferences{fsRefcount} {
   if (folly::kIsWindows) {
     XDCHECK_LE(numFsReferences, 1u);
@@ -338,7 +338,7 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
       InodePtr firstLoadedParent = loadedIter->second.getPtr();
       PathComponent requiredChildName = unloadedData->name;
       bool isUnlinked = unloadedData->isUnlinked;
-      auto optionalHash = unloadedData->hash;
+      std::optional<ObjectId> optionalHash = unloadedData->hash;
       auto mode = unloadedData->mode;
       // Unlock data and publish load events before starting the child lookup
       data.unlock();

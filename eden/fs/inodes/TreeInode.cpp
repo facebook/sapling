@@ -163,7 +163,7 @@ TreeInode::TreeInode(
     DirContents&& dir,
     std::optional<ObjectId> treeHash)
     : Base(ino, initialMode, initialTimestamps, parent, name),
-      contents_(folly::in_place, std::move(dir), treeHash) {
+      contents_(folly::in_place, std::move(dir), std::move(treeHash)) {
   XDCHECK_NE(ino, kRootNodeId);
 }
 
@@ -509,7 +509,12 @@ void TreeInode::loadUnlinkedChildInode(
 
     if (!S_ISDIR(mode)) {
       auto file = std::make_unique<FileInode>(
-          number, inodePtrFromThis(), name, mode, std::nullopt, hash);
+          number,
+          inodePtrFromThis(),
+          name,
+          mode,
+          std::nullopt,
+          hash ? &*hash : nullptr);
       promises = getInodeMap()->inodeLoadComplete(file.get());
       inodePtr = InodePtr::takeOwnership(std::move(file));
     } else {
@@ -535,7 +540,7 @@ void TreeInode::loadUnlinkedChildInode(
           mode,
           std::nullopt,
           std::move(overlayContents),
-          hash);
+          hash ? std::optional<ObjectId>{*hash} : std::nullopt);
       promises = getInodeMap()->inodeLoadComplete(tree.get());
       inodePtr = InodePtr::takeOwnership(std::move(tree));
     }
@@ -745,7 +750,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
         name,
         entry.getInitialMode(),
         std::nullopt,
-        entry.getOptionalHash());
+        entry.getHashPtr());
   }
 
   if (!entry.isMaterialized()) {

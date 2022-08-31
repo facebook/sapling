@@ -416,7 +416,7 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
  * FileInode::State methods
  ********************************************************************/
 
-FileInodeState::FileInodeState(const std::optional<ObjectId>& h)
+FileInodeState::FileInodeState(const ObjectId* h)
     : nonMaterializedState(
           h ? std::optional(NonMaterializedState{*h}) : std::nullopt) {
   tag = nonMaterializedState ? BLOB_NOT_LOADING : MATERIALIZED_IN_OVERLAY;
@@ -471,7 +471,7 @@ FileInode::FileInode(
     PathComponentPiece name,
     mode_t initialMode,
     const std::optional<InodeTimestamps>& initialTimestamps,
-    const std::optional<ObjectId>& hash)
+    const ObjectId* hash)
     : Base(ino, initialMode, initialTimestamps, std::move(parentInode), name),
       state_(folly::in_place, hash) {}
 

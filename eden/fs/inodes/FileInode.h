@@ -59,7 +59,7 @@ struct FileInodeState {
     MATERIALIZED_IN_OVERLAY,
   };
 
-  explicit FileInodeState(const std::optional<ObjectId>& hash);
+  explicit FileInodeState(const ObjectId* hash);
   explicit FileInodeState();
   ~FileInodeState();
 
@@ -137,7 +137,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   enum : int { WRONG_TYPE_ERRNO = EISDIR };
 
   /**
-   * If hash is none, this opens the file in the overlay and leaves the inode
+   * If hash is nullptr, this opens the file in the overlay and leaves the inode
    * in MATERIALIZED_IN_OVERLAY state.  If hash is set, the inode is in
    * NOT_LOADED state.
    */
@@ -147,7 +147,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       PathComponentPiece name,
       mode_t initialMode,
       const std::optional<InodeTimestamps>& initialTimestamps,
-      const std::optional<ObjectId>& hash);
+      const ObjectId* hash);
 
   /**
    * Construct an inode using a freshly created overlay file.

@@ -81,6 +81,21 @@ class DirEntry {
     return hash_;
   }
 
+  /**
+   * Returns a pointer to this entry's object ID (if not materialized) or
+   * nullptr (if materialized).
+   *
+   * CAREFUL: the returned pointer may only be accessed while the TreeInode's
+   * contents lock is held.
+   */
+  const ObjectId* getHashPtr() const {
+    if (hasHash_) {
+      return &hash_;
+    } else {
+      return nullptr;
+    }
+  }
+
   std::optional<ObjectId> getOptionalHash() const {
     if (hasHash_) {
       return hash_;
