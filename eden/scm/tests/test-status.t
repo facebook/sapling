@@ -5,6 +5,7 @@
   $ setconfig workingcopy.ruststatus=false 
 #endif
 
+  $ export HG_NO_DEFAULT_CONFIG=true
   $ configure modernclient
   $ newclientrepo repo1
   $ mkdir a b a/1 b/1 b/2

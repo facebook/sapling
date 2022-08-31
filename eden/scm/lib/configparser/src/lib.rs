@@ -83,6 +83,8 @@ pub use minibytes::Text;
 
 #[cfg(feature = "fb")]
 mod fb;
+#[cfg(not(feature = "fb"))]
+mod opensource;
 
 #[cfg(test)]
 mod test_util;

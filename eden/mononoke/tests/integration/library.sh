@@ -42,6 +42,9 @@ VI_SERVICE_DEFAULT_START_TIMEOUT=60
 REPOID=0
 REPONAME=${REPONAME:-repo}
 
+# Disable OSS hg configs during hg builds.
+export HG_NO_DEFAULT_CONFIG=true
+
 # Where we write host:port information after servers bind to :0
 MONONOKE_SERVER_ADDR_FILE="$TESTTMP/mononoke_server_addr.txt"
 

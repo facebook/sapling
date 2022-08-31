@@ -30,6 +30,8 @@ use crate::config::Options;
 use crate::config::SupersetVerification;
 use crate::error::Error;
 use crate::error::Errors;
+#[cfg(not(feature = "fb"))]
+use crate::opensource;
 
 pub const HGPLAIN: &str = "HGPLAIN";
 pub const HGPLAINEXCEPT: &str = "HGPLAINEXCEPT";
@@ -66,7 +68,6 @@ pub trait ConfigSetHgExt {
     /// Return errors parsing files.
     fn load_system(&mut self, opts: Options) -> Vec<Error>;
 
-    #[cfg(feature = "fb")]
     /// Load the dynamic config files for the given repo path.
     /// Returns errors parsing, generating, or fetching the configs.
     fn load_dynamic(&mut self, repo_path: Option<&Path>, opts: Options) -> Result<Vec<Error>>;
@@ -278,7 +279,6 @@ impl ConfigSetHgExt for ConfigSet {
                 &mut self.parse(MERGE_TOOLS_CONFIG, &opts.clone().source("merge-tools.rc")),
             );
         }
-        #[cfg(feature = "fb")]
         errors.append(
             &mut self
                 .load_dynamic(repo_path.as_deref(), opts.clone())
@@ -477,6 +477,15 @@ impl ConfigSetHgExt for ConfigSet {
         }
 
         Ok(errors)
+    }
+
+    #[cfg(not(feature = "fb"))]
+    fn load_dynamic(&mut self, repo_path: Option<&Path>, opts: Options) -> Result<Vec<Error>> {
+        if env::var("HG_NO_DEFAULT_CONFIG").is_ok() {
+            Ok(vec![])
+        } else {
+            Ok(self.parse(opensource::STATIC_HGRC, &opts))
+        }
     }
 
     fn load_user(&mut self, opts: Options) -> Vec<Error> {

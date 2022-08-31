@@ -66,6 +66,6 @@ mockito = "0.25"
 rand_chacha = "0.3"
 
 [features]
-default = ["for-tests"]
-fb = []
+default = []
+fb = ["configparser/fb"]
 for-tests = []
