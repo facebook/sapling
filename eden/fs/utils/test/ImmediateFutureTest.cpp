@@ -586,4 +586,16 @@ TEST(ImmediateFuture, thenErrorSemiError) {
   EXPECT_THROW_RE(
       std::move(thenErrorFut).get(), std::runtime_error, "Test exception");
 }
+
+TEST(ImmediateFuture, not_ready) {
+  auto f1 = makeNotReadyImmediateFuture();
+  EXPECT_FALSE(f1.isReady());
+
+  int value = 42;
+  auto f2 = std::move(f1).thenValue([&](auto&&) { value++; });
+  EXPECT_EQ(value, 42);
+  EXPECT_FALSE(f2.isReady());
+  std::move(f2).get(0ms);
+  EXPECT_EQ(value, 43);
+}
 } // namespace facebook::eden

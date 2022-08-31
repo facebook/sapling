@@ -261,6 +261,16 @@ class DestroyedImmediateFutureError : public std::logic_error {
 };
 
 /**
+ * Build an ImmediateFuture that is constructed as not ready.
+ *
+ * Due to not being ready, the returned ImmediateFuture will never execute
+ * continuation inline, this can be used to send work to a background thread
+ * when desired even if all the data is present in memory and thus the work
+ * would otherwise execute inline.
+ */
+ImmediateFuture<folly::Unit> makeNotReadyImmediateFuture();
+
+/**
  * Build an ImmediateFuture from an error.
  *
  * The ImmediateFuture type must be exclicitely passed in like:
