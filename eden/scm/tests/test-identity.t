@@ -12,7 +12,7 @@ Command doesn't work, but we don't get "not inside a repository error":
   DEBUG identity: sniffing for repo root start=$TESTTMP/repo1
   DEBUG identity: sniffed repo dir id=sl path=$TESTTMP/repo1
   DEBUG identity: sniffed repo dir id=sl path=$TESTTMP/repo1
-  hg: parse errors: required config not found at "$TESTTMP/repo1/.hg/hgrc.dynamic"
+  hg: parse errors: required config not found at $TESTTMP/repo1/.hg/hgrc.dynamic
   
   [255]
 
@@ -23,7 +23,7 @@ Command doesn't work, but we don't get "not inside a repository error":
   $ cd sapling
 Doesn't work yet, but we create a .sl directory.
   $ HGIDENTITY=sl hg init 2>&1 | grep error
-  error.RustError: required config not found at "$TESTTMP/sapling/.hg/hgrc.dynamic"
+  error.RustError: required config not found at $TESTTMP/sapling/.hg/hgrc.dynamic
   $ ls .hg
   $ ls .sl
   00changelog.i
@@ -43,6 +43,6 @@ Doesn't work yet, but tries to create a .sl repo.
   Cloning reponame-default into $TESTTMP/cloned
    INFO identity: sniffed identity from env identity="sl"
   DEBUG identity: sniffed repo dir id=sl path=$TESTTMP/cloned
-  hg: parse errors: required config not found at "$TESTTMP/cloned/.hg/hgrc.dynamic"
+  hg: parse errors: required config not found at $TESTTMP/cloned/.hg/hgrc.dynamic
   
   [255]

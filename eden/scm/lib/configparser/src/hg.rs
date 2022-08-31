@@ -413,7 +413,7 @@ impl ConfigSetHgExt for ConfigSet {
         if !dynamic_path.exists() {
             return Err(IOError::new(
                 ErrorKind::NotFound,
-                format!("required config not found at {:?}", dynamic_path),
+                format!("required config not found at {}", dynamic_path.display()),
             )
             .into());
         }

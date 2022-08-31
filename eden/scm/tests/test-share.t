@@ -401,7 +401,7 @@ renames and changes of PWD
   $TESTTMP/thisdir/rel
   $ mv thisdir thatdir
   $ hg -R thatdir/abs root
-  hg: parse errors: required config not found at "$TESTTMP/thisdir/orig/.hg/hgrc.dynamic"
+  hg: parse errors: required config not found at $TESTTMP/thisdir/orig/.hg/hgrc.dynamic
   
   [255]
   $ hg -R thatdir/rel root
