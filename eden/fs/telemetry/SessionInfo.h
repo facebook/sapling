@@ -22,10 +22,16 @@ struct SessionInfo {
   std::string os;
   std::string osVersion;
   std::string edenVersion;
+#ifdef __APPLE__
+  std::string systemArchitecture;
+#endif
 };
 
 std::string getOperatingSystemName();
 std::string getOperatingSystemVersion();
+#if defined(__APPLE__)
+std::string getOperatingSystemArchitecture();
+#endif
 
 /**
  * Returns the result of calling gethostname() in a std::string. Throws an

@@ -20,6 +20,8 @@
 
 #include <cstdlib>
 
+#include "eden/fs/utils/SysctlUtil.h"
+
 namespace {
 /**
  * Windows limits hostnames to 256 bytes. Linux provides HOST_NAME_MAX
@@ -70,6 +72,13 @@ std::string getOperatingSystemVersion() {
   return "unknown";
 #endif
 }
+
+#if defined(__APPLE__)
+std::string getOperatingSystemArchitecture() {
+  // the c_str strips the trailing null bytes.
+  return getSysCtlByName("machdep.cpu.brand_string", 64).c_str();
+}
+#endif
 
 std::string getHostname() {
   char hostname[kHostNameMax + 1];

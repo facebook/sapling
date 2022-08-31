@@ -75,8 +75,22 @@ TEST_F(ScubaStructuredLoggerTest, json_contains_types_at_top_level_and_values) {
 
   auto normals = doc["normal"];
   EXPECT_TRUE(normals.isObject());
+#if defined(__APPLE__)
+  EXPECT_THAT(
+      keysOf(normals),
+      UnorderedElementsAre(
+          "str",
+          "user",
+          "host",
+          "type",
+          "os",
+          "osver",
+          "edenver",
+          "system_architecture"));
+#else
   EXPECT_THAT(
       keysOf(normals),
       UnorderedElementsAre(
           "str", "user", "host", "type", "os", "osver", "edenver"));
+#endif
 }

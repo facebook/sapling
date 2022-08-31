@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/telemetry/StructuredLogger.h"
+
 #include "eden/fs/telemetry/SessionId.h"
 
 #include <time.h>
@@ -39,6 +40,9 @@ DynamicEvent StructuredLogger::populateDefaultFields(const char* type) {
   event.addString("os", sessionInfo_.os);
   event.addString("osver", sessionInfo_.osVersion);
   event.addString("edenver", sessionInfo_.edenVersion);
+#if defined(__APPLE__)
+  event.addString("system_architecture", sessionInfo_.systemArchitecture);
+#endif
   return event;
 }
 

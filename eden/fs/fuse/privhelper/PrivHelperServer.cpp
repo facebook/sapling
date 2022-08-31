@@ -36,6 +36,7 @@
 #include "eden/fs/fuse/privhelper/NfsMountRpc.h"
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/SysctlUtil.h"
 #include "eden/fs/utils/Throw.h"
 
 #ifdef __APPLE__
@@ -96,19 +97,6 @@ void PrivHelperServer::initPartial(folly::File&& socket, uid_t uid, gid_t gid) {
 
 #ifdef __APPLE__
 namespace {
-
-// Fetches the value of a sysctl by name.
-// The result is assumed to be a string.
-std::string getSysCtlByName(const char* name, size_t size) {
-  std::string buffer(size, 0);
-  size_t returnedSize = size - 1;
-  auto ret = sysctlbyname(name, &buffer[0], &returnedSize, nullptr, 0);
-  if (ret != 0) {
-    folly::throwSystemError("failed to retrieve sysctl ", name);
-  }
-  buffer.resize(returnedSize);
-  return buffer;
-}
 
 std::pair<int, int> determineMacOsVersion() {
   auto version = getSysCtlByName("kern.osproductversion", 64);

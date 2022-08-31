@@ -76,6 +76,9 @@ SessionInfo makeSessionInfo(
   env.os = getOperatingSystemName();
   env.osVersion = getOperatingSystemVersion();
   env.edenVersion = std::move(edenVersion);
+#if defined(__APPLE__)
+  env.systemArchitecture = getOperatingSystemArchitecture();
+#endif
   return env;
 }
 
