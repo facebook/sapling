@@ -523,7 +523,7 @@ void TreeInode::loadUnlinkedChildInode(
         if (!overlayContents.empty()) {
           // Should be impossible, but worth checking for
           // defensive purposes!
-          throw new std::runtime_error(
+          throw std::runtime_error(
               "unlinked dir inode should have no children");
         }
       }
