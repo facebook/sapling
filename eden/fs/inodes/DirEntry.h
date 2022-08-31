@@ -73,7 +73,14 @@ class DirEntry {
     return !hasHash_;
   }
 
-  ObjectId getHash() const {
+  /**
+   * Returns the ID of this non-materialized entry. Must only be called if
+   * not isMaterialized().
+   *
+   * The returned reference is only valid while the TreeInode's contents lock is
+   * held.
+   */
+  const ObjectId& getHash() const {
     // TODO: In the future we should probably only allow callers to invoke
     // this method when inode is not set.  If inode is set it should be the
     // authoritative source of data.
