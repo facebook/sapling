@@ -12,6 +12,9 @@ mkdir -p install/debian
 cp packaging/debian/control install/debian
 cd install
 DEB_DEPS=$(dpkg-shlibdeps -O -e usr/local/bin/*)
+# dpkg-shlibdeps does not know about the runtime dependency on Git,
+# so it must be added explicitly.
+DEB_DEPS="${DEB_DEPS}, ${GIT_DEB_DEP}"
 cd ..
 
 # In contrast to dpkg-shlibdeps, dpkg-deb requires the file to be named
