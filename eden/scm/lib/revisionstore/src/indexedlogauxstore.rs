@@ -148,15 +148,15 @@ impl AuxStore {
                 vec![IndexOutput::Reference(0..HgId::len() as u64)]
             });
 
-        if let Some(max_log_count) = config.get_opt::<u8>("indexedlog", "data.max-log-count")? {
+        if let Some(max_log_count) = config.get_opt::<u8>("indexedlog", "aux.max-log-count")? {
             open_options = open_options.max_log_count(max_log_count);
         }
         if let Some(max_bytes_per_log) =
-            config.get_opt::<ByteCount>("indexedlog", "data.max-bytes-per-log")?
+            config.get_opt::<ByteCount>("indexedlog", "aux.max-bytes-per-log")?
         {
             open_options = open_options.max_bytes_per_log(max_bytes_per_log.value());
         } else if let Some(max_bytes_per_log) =
-            config.get_opt::<ByteCount>("remotefilelog", "cachelimit")?
+            config.get_opt::<ByteCount>("remotefilelog", "auxlimit")?
         {
             let log_count: u64 = open_options.max_log_count.unwrap_or(1).max(1).into();
             open_options =
