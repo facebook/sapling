@@ -51,7 +51,7 @@ struct PyByteArrayObject {
 }
 
 #[cfg(feature = "python3")]
-#[cfg(Py_39)]
+#[cfg(any(Py_39, Py_310))]
 #[repr(C)]
 struct PyByteArrayObject {
     pub ob_base: PyVarObject,

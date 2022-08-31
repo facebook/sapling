@@ -22,15 +22,25 @@ CARGO_FETCH_PATHS = [
 
 UBUNTU_VERSIONS = ["20.04", "22.04"]
 
+UBUNTU_VERSION_DEPS = {
+    "20.04": [
+        "python3.8",
+        "python3.8-dev",
+        "python3.8-distutils",
+    ],
+    "22.04": [
+        "python3.10",
+        "python3.10-dev",
+        "python3.10-distutils",
+    ],
+}
+
 UBUNTU_DEPS = [
     "nodejs",
-    "python3.8",
-    "python3.8-dev",
     "pkg-config",
     "libssl-dev",
     "cython3",
     "make",
-    "python3.8-distutils",
     "g++",
     "cargo",
     # This is needed for dpkg-name.
@@ -79,16 +89,7 @@ class WorkflowGenerator:
                 + cargo_prefetch_commands
             )
 
-        python38_ppa = ""
-        if ubuntu_version == "22.04":
-            python38_ppa = """\
-RUN apt-get -y install software-properties-common
-RUN add-apt-repository -y ppa:deadsnakes/ppa
-RUN apt-get -y update
-"""
-        else:
-            python38_ppa = ""
-
+        full_deps = UBUNTU_DEPS + UBUNTU_VERSION_DEPS[ubuntu_version]
         dockerfile = f"""\
 FROM {image_name}
 
@@ -104,9 +105,9 @@ RUN apt-get -y install curl git
 # Use a PPA to ensure a specific version of Node (the default Node on
 # Ubuntu 20.04 is v10, which is too old):
 RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash -
-{python38_ppa}
+
 # Now we can install the bulk of the packages:
-RUN apt-get -y install {' '.join(UBUNTU_DEPS)}
+RUN apt-get -y install {' '.join(full_deps)}
 
 # Copy the full repo over because `cargo fetch` follows deps within the repo,
 # so assume it needs everything.
@@ -256,7 +257,7 @@ RUN rm -rf /tmp/repo
                 {
                     "name": "Create .deb",
                     "working-directory": "./eden/scm",
-                    "run": f"${{{{ format('VERSION=0.0-{{0}} make deb', env.{DEB_UPSTREAM_VERISION}) }}}}",
+                    "run": f"${{{{ format('VERSION=0.0-{{0}} make deb-ubuntu-{ubuntu_version}', env.{DEB_UPSTREAM_VERISION}) }}}}",
                 },
                 {
                     "name": "Rename .deb",

@@ -107,11 +107,17 @@ build:
 
 deb:
 	DESTDIR=install make install-oss
-	mkdir -p "install/DEBIAN"
-	cp packaging/debian/control install/DEBIAN/control
-	sed -i "s/%VERSION%/$(VERSION)/g" install/DEBIAN/control
-	dpkg-deb --build --root-owner-group install
-	dpkg-name install.deb
+# Define the build script in a separate file so we don't have to escape shell
+# commands to work with Make inline.
+	./packaging/debian/build_deb.sh
+
+deb-ubuntu-20.04:
+	# For Ubuntu 20.04, target Python 3.8.
+	PY_VERSION=38 make deb
+
+deb-ubuntu-22.04:
+	# For Ubuntu 22.04, target Python 3.10.
+	PY_VERSION=310 make deb
 
 rpm:
 	rpmbuild \

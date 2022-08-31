@@ -23,7 +23,7 @@ def main(args):
     names = args or ["python3"]
     if names == ["python3"]:
         # Try different pythons
-        names = ["python3.8", "python3.7", "python3.6"] + names
+        names = ["python3.8", "python3.10", "python3.7", "python3.6"] + names
     for name in names:
         for dir in dirs:
             path = os.path.join(dir, name)

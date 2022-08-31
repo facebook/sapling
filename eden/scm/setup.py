@@ -43,10 +43,12 @@ import zipfile
 if sys.version_info.major == 2:
     raise RuntimeError("This setup.py is Python 3 only!")
 
-if os.name == "nt":
-    PY_VERSION = "39"
-else:
-    PY_VERSION = "38"
+PY_VERSION = os.environ.get("PY_VERSION")
+if PY_VERSION is None:
+    if os.name == "nt":
+        PY_VERSION = "39"
+    else:
+        PY_VERSION = "38"
 
 ossbuild = bool(os.environ.get("SAPLING_OSS_BUILD"))
 
