@@ -107,25 +107,6 @@ NOTE: Mononoke gave us a NULL linknode
 
 NOTE: linkrevfixup was called to fix up the null linkrev
 
-push the commit back to the Mercurial server to check the null linkrevs don't leak
-  $ hg push --to test --create
-  pushing rev 038218e96533 to destination ssh://user@dummy/repo-hg bookmark test
-  searching for changes
-  exporting bookmark test
-  remote: adding changesets
-  remote: adding manifests
-  remote: adding file changes
-  $ cd $TESTTMP/repo-hg
-  $ hg debugindex file
-     rev    offset  length  delta linkrev nodeid       p1           p2
-       0         0      10     -1       0 599997c6080f 000000000000 000000000000
-       1        10      10     -1       1 b4aa7b980f00 599997c6080f 000000000000
-  $ hg debugindex .hg/store/00manifesttree.i
-     rev    offset  length  delta linkrev nodeid       p1           p2
-       0         0      47     -1       0 6d825d076849 000000000000 000000000000
-       1        47      47     -1       1 10ec57c4d9f1 6d825d076849 000000000000
-       2        94      59      1       2 a985f306fade 10ec57c4d9f1 000000000000
-
 push a master commit with the same content
   $ cd $TESTTMP/repo-push
   $ hg up master_bookmark
