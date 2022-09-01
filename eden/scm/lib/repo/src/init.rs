@@ -37,7 +37,7 @@ pub fn init_hg_repo(
     write_reponame(&hg_path, config)?;
     write_changelog(&hg_path)?;
     write_hgrc(&hg_path, hgrc_contents)?;
-    write_requirements(&hg_path)?;
+    write_requirements(&hg_path, config)?;
     write_store_requirements(&hg_path, config)?;
     // TODO(sggutier): Add cleanup for the .hg directory in the event of an error
 
@@ -109,16 +109,25 @@ fn write_requirements_file(path: &Path, requirements: HashSet<&str>) -> Result<(
     )
 }
 
-fn write_requirements(path: &Path) -> Result<(), InitError> {
-    let requirements = HashSet::from([
+fn write_requirements(path: &Path, config: &ConfigSet) -> Result<(), InitError> {
+    let mut requirements = HashSet::from([
         "lz4revlog",
         "revlogv1",
         "store",
         "fncache",
         "dotencode",
         "treestate",
-        "generaldelta",
     ]);
+
+    if config
+        .get_or_default("format", "generaldelta")
+        .unwrap_or_default()
+        || config
+            .get_or_default("format", "usegeneraldelta")
+            .unwrap_or_default()
+    {
+        requirements.insert("generaldelta");
+    }
 
     write_requirements_file(path, requirements)
 }
@@ -184,11 +193,25 @@ mod tests {
     fn test_requirements() {
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join(REQUIREMENTS_FILE);
-        let path = path.as_path();
 
-        write_requirements(tmp.path()).unwrap();
+        let mut config = ConfigSet::new();
+
+        write_requirements(tmp.path(), &config).unwrap();
         assert_eq!(
-            fs::read_to_string(path).unwrap(),
+            fs::read_to_string(&path).unwrap(),
+            r#"dotencode
+fncache
+lz4revlog
+revlogv1
+store
+treestate
+"#
+        );
+
+        config.set("format", "usegeneraldelta", Some("true"), &"".into());
+        write_requirements(tmp.path(), &config).unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
             r#"dotencode
 fncache
 generaldelta

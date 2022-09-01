@@ -1311,9 +1311,13 @@ repackfactor=3
 timeout=600
 
 [checkout]
-resumable=True
+resumable=true
 
 [tracing]
-stderr=False
+stderr=false
 threshold=10
+
+[format]
+generaldelta=false
+usegeneraldelta=true
 "#;
