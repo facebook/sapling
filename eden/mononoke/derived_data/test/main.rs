@@ -13,13 +13,16 @@ use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
-use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkName;
+use bookmarks::Bookmarks;
 use bookmarks::BookmarksRef;
 use bytes::Bytes;
 use cacheblob::LeaseOps;
+use changeset_fetcher::ChangesetFetcher;
+use changesets::Changesets;
 use changesets::ChangesetsRef;
 use cloned::cloned;
 use context::CoreContext;
@@ -28,6 +31,7 @@ use derived_data_manager::DerivationError;
 use derived_data_test_derived_generation::make_test_repo_factory;
 use derived_data_test_derived_generation::DerivedGeneration;
 use fbinit::FacebookInit;
+use filestore::FilestoreConfig;
 use fixtures::BranchEven;
 use fixtures::BranchUneven;
 use fixtures::BranchWide;
@@ -47,12 +51,37 @@ use maplit::hashmap;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use mononoke_types::RepositoryId;
+use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentity;
+use repo_identity::RepoIdentityRef;
 use tests_utils::CreateCommitContext;
 use tunables::override_tunables;
 use tunables::MononokeTunables;
+
+#[facet::container]
+#[derive(Clone)]
+struct TestRepo {
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+    #[facet]
+    bookmarks: dyn Bookmarks,
+    #[facet]
+    changesets: dyn Changesets,
+    #[facet]
+    changeset_fetcher: dyn ChangesetFetcher,
+    #[facet]
+    filestore_config: FilestoreConfig,
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+    #[facet]
+    repo_identity: RepoIdentity,
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+}
 
 async fn derive_for_master(
     ctx: &CoreContext,
@@ -85,43 +114,43 @@ async fn test_derive_fixtures(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mut factory = make_test_repo_factory(fb);
 
-    let repo: BlobRepo = factory.with_id(RepositoryId::new(1)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(1)).build()?;
     BranchEven::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
-    let repo: BlobRepo = factory.with_id(RepositoryId::new(2)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(2)).build()?;
     BranchUneven::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
-    let repo: BlobRepo = factory.with_id(RepositoryId::new(3)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(3)).build()?;
     BranchWide::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
-    let repo: BlobRepo = factory.with_id(RepositoryId::new(4)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(4)).build()?;
     Linear::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
-    let repo: BlobRepo = factory.with_id(RepositoryId::new(5)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(5)).build()?;
     ManyFilesDirs::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
-    let repo: BlobRepo = factory.with_id(RepositoryId::new(6)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(6)).build()?;
     MergeEven::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
-    let repo: BlobRepo = factory.with_id(RepositoryId::new(7)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(7)).build()?;
     MergeUneven::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
-    let repo: BlobRepo = factory.with_id(RepositoryId::new(8)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(8)).build()?;
     UnsharedMergeEven::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
-    let repo: BlobRepo = factory.with_id(RepositoryId::new(9)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(9)).build()?;
     UnsharedMergeUneven::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
-    let repo: BlobRepo = factory.with_id(RepositoryId::new(10)).build()?;
+    let repo: TestRepo = factory.with_id(RepositoryId::new(10)).build()?;
     ManyDiamonds::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
@@ -133,7 +162,7 @@ async fn test_derive_fixtures(fb: FacebookInit) -> Result<()> {
 /// derived changesets do not have their parents derived).
 async fn test_gapped_derivation(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = make_test_repo_factory(fb).build()?;
+    let repo: TestRepo = make_test_repo_factory(fb).build()?;
     Linear::initrepo(fb, &repo).await;
 
     let master = repo
@@ -190,7 +219,7 @@ async fn test_gapped_derivation(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_leases(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = make_test_repo_factory(fb).build()?;
+    let repo: TestRepo = make_test_repo_factory(fb).build()?;
     Linear::initrepo(fb, &repo).await;
 
     let master = repo
@@ -202,7 +231,7 @@ async fn test_leases(fb: FacebookInit) -> Result<(), Error> {
     let lease = repo.repo_derived_data().lease();
     let lease_key = format!(
         "repo{}.{}.{}",
-        repo.get_repoid().id(),
+        repo.repo_identity().id(),
         DerivedGeneration::NAME,
         master
     );
@@ -289,7 +318,7 @@ impl LeaseOps for FailingLease {
 #[fbinit::test]
 async fn test_always_failing_lease(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = make_test_repo_factory(fb)
+    let repo: TestRepo = make_test_repo_factory(fb)
         .with_derived_data_lease(|| Arc::new(FailingLease))
         .build()?;
     Linear::initrepo(fb, &repo).await;
@@ -303,7 +332,7 @@ async fn test_always_failing_lease(fb: FacebookInit) -> Result<(), Error> {
     let lease = repo.repo_derived_data().lease();
     let lease_key = format!(
         "repo{}.{}.{}",
-        repo.get_repoid().id(),
+        repo.repo_identity().id(),
         DerivedGeneration::NAME,
         master,
     );
@@ -330,7 +359,7 @@ async fn test_always_failing_lease(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_parallel_derivation(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = make_test_repo_factory(fb).build()?;
+    let repo: TestRepo = make_test_repo_factory(fb).build()?;
 
     // Create a commit with lots of parents, and make each derivation take
     // 2 seconds.  Check that derivations happen in parallel by ensuring
@@ -397,7 +426,7 @@ async fn ensure_tunables_disable_derivation(
 /// the appropriate values in tunables.
 async fn test_cancelling_slow_derivation(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = make_test_repo_factory(fb).build()?;
+    let repo: TestRepo = make_test_repo_factory(fb).build()?;
 
     let create_tunables = || {
         let tunables = MononokeTunables::default();
@@ -420,7 +449,7 @@ async fn test_cancelling_slow_derivation(fb: FacebookInit) -> Result<(), Error> 
     // Disable derived data for all types
     let tunables_to_disable_all = create_tunables();
     tunables_to_disable_all.update_by_repo_bools(&hashmap! {
-        repo.name().to_string() => hashmap! {
+        repo.repo_identity().name().to_string() => hashmap! {
             "all_derived_data_disabled".to_string() => true,
         },
     });
@@ -432,7 +461,7 @@ async fn test_cancelling_slow_derivation(fb: FacebookInit) -> Result<(), Error> 
     // Disable derived data for a single type
     let tunables_to_disable_by_type = create_tunables();
     tunables_to_disable_by_type.update_by_repo_vec_of_strings(&hashmap! {
-        repo.name().to_string() => hashmap! {
+        repo.repo_identity().name().to_string() => hashmap! {
             "derived_data_types_disabled".to_string() => vec![DerivedGeneration::NAME.to_string()],
         },
     });
