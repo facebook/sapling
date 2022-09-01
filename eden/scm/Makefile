@@ -83,7 +83,7 @@ else
 endif
 
 install-oss: oss
-	SAPLING_OSS_BUILD=true \
+	SAPLING_OSS_BUILD=true HGNAME=sl \
 	  $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
 	  install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --force
 
@@ -106,7 +106,7 @@ build:
 	$(PYTHON) setup.py $(PURE) build $(COMPILERFLAG)
 
 deb:
-	DESTDIR=install make install-oss
+	DESTDIR=install make PREFIX=/usr install-oss
 # Define the build script in a separate file so we don't have to escape shell
 # commands to work with Make inline.
 	./packaging/debian/build_deb.sh

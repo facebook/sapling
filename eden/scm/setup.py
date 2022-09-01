@@ -227,7 +227,7 @@ def chdir(nwd):
 
 # Rename hg to $HGNAME. Useful when "hg" is a wrapper calling $HGNAME (or chg).
 hgname = os.environ.get("HGNAME", "hg")
-if not re.match("\Ahg[.0-9a-z-]*\Z", hgname):
+if not re.match(r"\A(hg|sl)[.0-9a-z-]*\Z", hgname):
     raise RuntimeError("Illegal HGNAME: %s" % hgname)
 
 
