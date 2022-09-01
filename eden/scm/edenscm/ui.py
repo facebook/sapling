@@ -231,6 +231,8 @@ class ui(object):
             self.cliconfigs = src.cliconfigs.copy()
             self.cliconfigfiles = src.cliconfigfiles.copy()
             self.clioptions = src.clioptions.copy()
+
+            self.identity = src.identity
         else:
             self._uiconfig = uiconfig.uiconfig(rcfg=rcfg)
 
@@ -249,6 +251,8 @@ class ui(object):
             self._measuredtimes = collections.defaultdict(int)
 
             self.metrics = metrics.metrics(self)
+
+            self.identity = bindings.identity.sniffenv()
 
         allowed = self.configlist("experimental", "exportableenviron")
         if "*" in allowed:
@@ -272,8 +276,13 @@ class ui(object):
 
     def loadrepoconfig(self, repopath):
         """Load repofull config from repopath if not already loaded."""
+
+        ident = bindings.identity.sniffdir(repopath)
+        if ident:
+            self.identity = ident
+
         loadedfiles = self._rcfg.files()
-        repohgrc = os.path.join(repopath, ".hg", "hgrc")
+        repohgrc = os.path.join(repopath, self.identity.dotdir(), "hgrc")
 
         # Check if our repo hgrc path (or Windows UNC flavor) have already been loaded.
         if not any(lf in {repohgrc, f"\\\\?\\{repohgrc}"} for lf in loadedfiles):

@@ -54,6 +54,7 @@ Clone can create a ".sl" repo.
 
   $ cd cloned
 Status kind of runs, but doesn't ignore ".sl" properly (for non-watchman)
-  $ hg status | head -1
+  $ LOG=configparser::hg=info hg status | head -1
   ? .sl/.dir_lock (?)
+   INFO configparser::hg: loading config repo_path=Some("$TESTTMP/clone_me/cloned")
 
