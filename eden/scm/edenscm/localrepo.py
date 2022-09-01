@@ -404,9 +404,9 @@ class localrepository(object):
     _lockfreeprefix = set()
 
     def __init__(self, baseui, path, create=False):
-        if create and baseui.configbool("init", "use-rust"):
+        if create:
             bindings.repo.repo.initialize(path, baseui._rcfg)
-            create = False
+
         self._containscount = 0
         self.requirements = set()
         self.storerequirements = set()
@@ -444,26 +444,8 @@ class localrepository(object):
         # This list it to be filled by extension during repo setup
         self._phasedefaults = []
 
-        # Create the initial directory if it doesn't already exist.
-        created = False
         if not self.localvfs.isdir():
-            if create:
-                created = True
-                # Create initial directory. Just enough to allow basic config
-                # loading.
-                if not self.wvfs.exists():
-                    self.wvfs.makedirs()
-                self.localvfs.makedir(notindexed=True)
-            else:
-                raise errormod.RepoError(_("repository %s not found") % path)
-        elif create:
-            raise errormod.RepoError(_("repository %s already exists") % path)
-
-        # Prepare .hg/reponame in localvfs before calling into dynamicconfig.
-        if created:
-            reponame = self.ui.config("remotefilelog", "reponame")
-            if reponame and not self.localvfs.exists("reponame"):
-                self.localvfs.writeutf8("reponame", reponame.strip())
+            raise errormod.RepoError(_("repository %s not found") % path)
 
         self.ui.loadrepoconfig(self.root)
 
@@ -487,25 +469,11 @@ class localrepository(object):
             if engine.revlogheader():
                 self.supported.add("exp-compression-%s" % name)
 
-        if created:
-            self.requirements = newreporequirements(self)
-            if "store" in self.requirements:
-                self.storerequirements = newrepostorerequirements(self)
-
-                self.localvfs.mkdir("store")
-
-                # create an invalid changelog
-                self.localvfs.append(
-                    "00changelog.i",
-                    b"\0\0\0\1"
-                    b" dummy changelog to prevent using the old repo layout",
-                )
-        else:
-            try:
-                self.requirements = scmutil.readrequires(self.localvfs, self.supported)
-            except IOError as inst:
-                if inst.errno != errno.ENOENT:
-                    raise
+        try:
+            self.requirements = scmutil.readrequires(self.localvfs, self.supported)
+        except IOError as inst:
+            if inst.errno != errno.ENOENT:
+                raise
 
         cachepath = self.localvfs.join("cache")
         self.sharedpath = self.path
@@ -537,12 +505,6 @@ class localrepository(object):
                 raise
             self.sharedvfs = self.localvfs
 
-        # If this is a new repo, generate the dynamic configs. We must do this
-        # after the sharedvfs is set up so we can generate the dynamic config in
-        # the shared vfs.
-        if created:
-            self.ui.reloadconfigs(self.root)
-
         self.store = store.store(
             self.requirements,
             self.sharedpath,
@@ -564,7 +526,7 @@ class localrepository(object):
                 self.svfs.vfs.audit = self._getsvfsward(self.svfs.vfs.audit)
             else:  # standard vfs
                 self.svfs.audit = self._getsvfsward(self.svfs.audit)
-        if not create and "store" in self.requirements:
+        if "store" in self.requirements:
             try:
                 self.storerequirements = scmutil.readrequires(
                     self.svfs, self.storesupported
@@ -573,9 +535,6 @@ class localrepository(object):
                 if inst.errno != errno.ENOENT:
                     raise
 
-        if create:
-            self._writerequirements()
-            self._writestorerequirements()
         if "hgsql" in self.requirements:
             # hgsql wants raw access to revlog. Disable modern features
             # unconditionally for hgsql.

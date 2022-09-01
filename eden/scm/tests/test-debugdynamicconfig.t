@@ -236,7 +236,6 @@ Clear the cached, non-repo dynamic config
   Config mismatch: foo.bar has 'None' (dynamic) vs 'True' (file)
   Config mismatch: foo.bar has 'None' (dynamic) vs 'True' (file)
   Config mismatch: foo.bar has 'None' (dynamic) vs 'True' (file)
-  Config mismatch: foo.bar has 'None' (dynamic) vs 'True' (file)
   no changes found
   Hook ran!
   updating to branch default
