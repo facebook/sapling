@@ -51,3 +51,9 @@ Clone can create a ".sl" repo.
   updateprogress
   wlock.data
   wlock.lock
+
+  $ cd cloned
+Status kind of runs, but doesn't ignore ".sl" properly (for non-watchman)
+  $ hg status | head -1
+  ? .sl/.dir_lock (?)
+

@@ -20,7 +20,7 @@ import stat
 import tempfile
 from typing import Dict
 
-from bindings import renderdag
+from bindings import identity, renderdag
 from edenscm import tracing
 
 from . import (
@@ -882,12 +882,11 @@ def findsubcmd(args, table, partial=False):
 
 
 def findrepo(p):
-    while not os.path.isdir(os.path.join(p, ".hg")):
-        oldp, p = p, os.path.dirname(p)
-        if p == oldp:
-            return None
+    root = identity.sniffroot(p)
+    if root:
+        return root[0]
 
-    return p
+    return None
 
 
 def uncommittedchanges(repo):

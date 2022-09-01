@@ -434,7 +434,7 @@ class localrepository(object):
         # If this is a shared repository, this vfs may point to another
         # repository's .hg/store directory.
         self.svfs = None
-        self.path = self.wvfs.join(".hg")
+        self.path = self._rsrepo.dotpath()
         self.origroot = path
         # This is only used by context.workingctx.match in order to
         # detect files in forbidden paths.

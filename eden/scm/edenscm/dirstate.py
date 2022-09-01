@@ -267,7 +267,7 @@ class dirstate(object):
 
     @util.propertycache
     def _checkcase(self) -> bool:
-        return not util.fscasesensitive(self._join(".hg"))
+        return not util.fscasesensitive(self._repo.path)
 
     def _join(self, f: str) -> str:
         # much faster than os.path.join()

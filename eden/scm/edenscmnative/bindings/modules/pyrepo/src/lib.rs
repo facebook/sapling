@@ -75,4 +75,8 @@ py_class!(pub class repo |py| {
         repo_ref.invalidate_dag_commits();
         Ok(PyNone)
     }
+
+    def dotpath(&self) -> PyResult<PyPathBuf> {
+        self.inner(py).read().dot_hg_path().try_into().map_pyerr(py)
+    }
 });
