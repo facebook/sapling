@@ -18,6 +18,7 @@ use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Error;
 use async_trait::async_trait;
+use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use blame::BlameRoot;
 use blame::RootBlameV2;
 use blobrepo::BlobRepo;
@@ -73,6 +74,7 @@ pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
     RootSkeletonManifestId::NAME,
     TreeHandle::NAME,
     RootDeletedManifestV2Id::NAME,
+    RootBasenameSuffixSkeletonManifest::NAME,
 ];
 
 pub const DEFAULT_BACKFILLING_CONFIG_NAME: &str = "backfilling";
@@ -89,6 +91,7 @@ lazy_static! {
         let deleted_mf_v2 = RootDeletedManifestV2Id::NAME;
         let filenodes = FilenodesOnlyPublic::NAME;
         let skeleton_mf = RootSkeletonManifestId::NAME;
+        let bssm = RootBasenameSuffixSkeletonManifest::NAME;
 
         let mut dag = HashMap::new();
 
@@ -101,6 +104,7 @@ lazy_static! {
         dag.insert(fsnodes, vec![]);
         dag.insert(deleted_mf_v2, vec![unodes]);
         dag.insert(skeleton_mf, vec![]);
+        dag.insert(bssm, vec![]);
 
         dag
     };
@@ -478,6 +482,13 @@ fn derived_data_utils_impl(
             config,
             enabled_config_name,
         ))),
+        RootBasenameSuffixSkeletonManifest::NAME => {
+            Ok(Arc::new(DerivedUtilsFromManager::<
+                RootBasenameSuffixSkeletonManifest,
+            >::new(
+                repo, config, enabled_config_name
+            )))
+        }
         name => Err(format_err!("Unsupported derived data type: {}", name)),
     }
 }

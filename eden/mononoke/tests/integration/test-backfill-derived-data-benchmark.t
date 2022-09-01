@@ -20,7 +20,7 @@ setup configuration
 
 Derive data
   $ backfill_derived_data single c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd --all-types 2>&1 | grep 'derived .* in' | wc -l
-  9
+  10
   $ cd $TESTTMP/repo-hg
   $ hg log -r ':' -T '{node}\n' > "$TESTTMP/hashes.txt"
   $ cat "$TESTTMP/hashes.txt"

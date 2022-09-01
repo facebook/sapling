@@ -63,6 +63,7 @@ impl RootBasenameSuffixSkeletonManifest {
                 .find_entries(ctx.clone(), blobstore, prefixes)
                 .left_stream(),
             // The order returned is consistent, but not really lexicographical
+            // TODO: Fix order
             Some(after) => self
                 .0
                 .find_entries_ordered(
