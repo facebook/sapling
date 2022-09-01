@@ -105,6 +105,7 @@ where
     /// multi-threaded walker will be created.
     pub fn new(
         root: PathBuf,
+        dot_dir: String,
         matcher: M,
         include_directories: bool,
         num_threads: u8,
@@ -112,11 +113,17 @@ where
         let inner = match NonZeroU8::new(num_threads) {
             Some(num_threads) => WalkerType::Multi(MultiWalker::new(
                 root,
+                dot_dir,
                 matcher,
                 include_directories,
                 num_threads,
             )?),
-            None => WalkerType::Single(SingleWalker::new(root, matcher, include_directories)?),
+            None => WalkerType::Single(SingleWalker::new(
+                root,
+                dot_dir,
+                matcher,
+                include_directories,
+            )?),
         };
         Ok(Walker(inner))
     }
@@ -148,13 +155,19 @@ struct SingleWalker<M> {
     results: Vec<Result<WalkEntry>>,
     matcher: M,
     include_directories: bool,
+    dot_dir: String,
 }
 
 impl<M> SingleWalker<M>
 where
     M: Matcher,
 {
-    pub fn new(root: PathBuf, matcher: M, include_directories: bool) -> Result<Self> {
+    pub fn new(
+        root: PathBuf,
+        dot_dir: String,
+        matcher: M,
+        include_directories: bool,
+    ) -> Result<Self> {
         let mut dir_matches = vec![];
         if matcher.matches_directory(&RepoPathBuf::new())? != DirectoryMatch::Nothing {
             dir_matches.push(RepoPathBuf::new());
@@ -165,6 +178,7 @@ where
             results: Vec::new(),
             matcher,
             include_directories,
+            dot_dir,
         };
         Ok(walker)
     }
@@ -190,7 +204,7 @@ where
                     .push(Ok(WalkEntry::File(candidate_path, entry.metadata()?)));
             }
         } else if filetype.is_dir() {
-            if filename.as_str() != ".hg"
+            if filename.as_str() != self.dot_dir
                 && self
                     .matcher
                     .matches_directory(candidate_path.as_repo_path())?
@@ -214,7 +228,7 @@ where
             }
             let abs_next_dir = self.root.join(next_dir.as_str());
             // Don't process the directory if it contains a .hg directory, unless it's the root.
-            if next_dir.is_empty() || !Path::exists(&abs_next_dir.join(".hg")) {
+            if next_dir.is_empty() || !Path::exists(&abs_next_dir.join(&self.dot_dir)) {
                 for entry in fs::read_dir(abs_next_dir)
                     .map_err(|e| WalkError::IOError(next_dir.clone(), e))?
                 {
@@ -271,6 +285,7 @@ struct MultiWalker<M> {
     result_receiver: Receiver<Result<WalkEntry>>,
     has_walked: bool,
     payload: Arc<WalkerData<M>>,
+    dot_dir: String,
 }
 
 impl<M> MultiWalker<M>
@@ -285,6 +300,7 @@ where
 
     pub fn new(
         root: PathBuf,
+        dot_dir: String,
         matcher: M,
         include_directories: bool,
         num_threads: NonZeroU8,
@@ -308,6 +324,7 @@ where
                 matcher,
                 include_directories,
             }),
+            dot_dir,
         })
     }
 
@@ -315,6 +332,7 @@ where
     // child and increment busy_nodes atomic.
     fn match_entry_and_enqueue(
         dir: &RepoPathBuf,
+        dot_dir: &str,
         entry: DirEntry,
         shared_data: Arc<WalkerData<M>>,
     ) -> Result<()> {
@@ -339,7 +357,7 @@ where
                     .enqueue_result(Ok(WalkEntry::File(candidate_path, entry.metadata()?)))?;
             }
         } else if filetype.is_dir() {
-            if filename.as_str() != ".hg"
+            if filename.as_str() != dot_dir
                 && shared_data
                     .matcher
                     .matches_directory(candidate_path.as_repo_path())?
@@ -368,6 +386,7 @@ where
 
         for _t in 0..self.threads.capacity() {
             let shared_data = self.payload.clone();
+            let dot_dir = self.dot_dir.clone();
 
             // TODO make sure that _t is different for each thread
             self.threads.push(thread::spawn(move || {
@@ -392,6 +411,7 @@ where
                                         entry.map_err(|e| WalkError::IOError(dir.clone(), e))?;
                                     if let Err(e) = MultiWalker::match_entry_and_enqueue(
                                         &dir,
+                                        &dot_dir,
                                         entry,
                                         shared_data.clone(),
                                     ) {
@@ -496,7 +516,7 @@ mod tests {
         let files = vec!["dirA/a.txt", "b.txt"];
         let root_dir = create_directory(&directories, &files)?;
         let root_path = PathBuf::from(root_dir.path());
-        let walker = SingleWalker::new(root_path, NeverMatcher::new(), false)?;
+        let walker = SingleWalker::new(root_path, ".hg".to_string(), NeverMatcher::new(), false)?;
         let walked_files: Result<Vec<_>> = walker.collect();
         let walked_files = walked_files?;
         assert!(walked_files.is_empty());
@@ -509,7 +529,7 @@ mod tests {
         let files = vec!["dirA/a.txt", "dirA/b.txt", "dirB/dirC/dirD/c.txt"];
         let root_dir = create_directory(&directories, &files)?;
         let root_path = PathBuf::from(root_dir.path());
-        let walker = SingleWalker::new(root_path, AlwaysMatcher::new(), false)?;
+        let walker = SingleWalker::new(root_path, ".hg".to_string(), AlwaysMatcher::new(), false)?;
         let walked_files: Result<Vec<_>> = walker.collect();
         let walked_files = walked_files?;
         assert_eq!(walked_files.len(), 3);
@@ -527,6 +547,7 @@ mod tests {
         let root_path = PathBuf::from(root_dir.path());
         let walker = SingleWalker::new(
             root_path,
+            ".hg".to_string(),
             TreeMatcher::from_rules(["foo/bar/**"].iter()).unwrap(),
             false,
         )?;
@@ -546,7 +567,7 @@ mod tests {
         let files = vec!["dirA/a.txt", "dirA/b.txt", "dirB/dirC/dirD/c.txt"];
         let root_dir = create_directory(&directories, &files)?;
         let root_path = PathBuf::from(root_dir.path());
-        let walker = SingleWalker::new(root_path, AlwaysMatcher::new(), true)?;
+        let walker = SingleWalker::new(root_path, ".hg".to_string(), AlwaysMatcher::new(), true)?;
         let walked_files: Result<Vec<_>> = walker.collect();
         let walked_files = walked_files?;
         // Includes root dir ""
@@ -575,6 +596,7 @@ mod tests {
         let root_path = PathBuf::from(root_dir.path());
         let walker = MultiWalker::new(
             root_path,
+            ".hg".to_string(),
             NeverMatcher::new(),
             false,
             NonZeroU8::new(5).unwrap(),
@@ -593,6 +615,7 @@ mod tests {
         let root_path = PathBuf::from(root_dir.path());
         let walker = MultiWalker::new(
             root_path,
+            ".hg".to_string(),
             AlwaysMatcher::new(),
             false,
             NonZeroU8::new(1).unwrap(),
@@ -614,6 +637,7 @@ mod tests {
         let root_path = PathBuf::from(root_dir.path());
         let walker = MultiWalker::new(
             root_path,
+            ".hg".to_string(),
             AlwaysMatcher::new(),
             false,
             NonZeroU8::new(2).unwrap(),
@@ -635,6 +659,7 @@ mod tests {
         let root_path = PathBuf::from(root_dir.path());
         let walker = MultiWalker::new(
             root_path,
+            ".hg".to_string(),
             AlwaysMatcher::new(),
             false,
             NonZeroU8::new(u8::MAX).unwrap(),
@@ -656,6 +681,7 @@ mod tests {
         let root_path = PathBuf::from(root_dir.path());
         let walker = MultiWalker::new(
             root_path,
+            ".hg".to_string(),
             TreeMatcher::from_rules(["foo/bar/**"].iter()).unwrap(),
             false,
             NonZeroU8::new(4).unwrap(),
@@ -678,6 +704,7 @@ mod tests {
         let root_path = PathBuf::from(root_dir.path());
         let walker = MultiWalker::new(
             root_path,
+            ".hg".to_string(),
             AlwaysMatcher::new(),
             true,
             NonZeroU8::new(2).unwrap(),

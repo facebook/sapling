@@ -39,9 +39,22 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 py_class!(class walker |py| {
     data inner: RefCell<Walker<Arc<dyn Matcher + Sync + Send>>>;
     data _errors: RefCell<Vec<Error>>;
-    def __new__(_cls, root: PyPathBuf, pymatcher: PyObject, include_directories: bool, thread_count: u8) -> PyResult<walker> {
+    def __new__(
+        _cls,
+        root: PyPathBuf,
+        dot_dir: String,
+        pymatcher: PyObject,
+        include_directories: bool,
+        thread_count: u8,
+    ) -> PyResult<walker> {
         let matcher = extract_matcher(py, pymatcher)?;
-        let walker = Walker::new(root.to_path_buf(), matcher, include_directories, thread_count).map_pyerr(py)?;
+        let walker = Walker::new(
+            root.to_path_buf(),
+            dot_dir,
+            matcher,
+            include_directories,
+            thread_count,
+        ).map_pyerr(py)?;
         walker::create_instance(py, RefCell::new(walker), RefCell::new(Vec::new()))
     }
 

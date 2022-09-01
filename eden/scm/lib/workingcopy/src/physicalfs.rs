@@ -71,8 +71,11 @@ impl PendingChangesTrait for PhysicalFileSystem {
         &self,
         matcher: Arc<dyn Matcher + Send + Sync + 'static>,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
+        let root = self.vfs.root().to_path_buf();
+        let ident = identity::must_sniff_dir(&root)?;
         let walker = Walker::new(
-            self.vfs.root().to_path_buf(),
+            root,
+            ident.dot_dir().to_string(),
             matcher.clone(),
             false,
             self.num_threads,

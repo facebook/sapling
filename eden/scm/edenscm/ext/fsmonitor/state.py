@@ -156,7 +156,11 @@ class state(object):
 
     def invalidate(self, reason=None):
         try:
-            os.unlink(os.path.join(self._rootdir, ".hg", "fsmonitor.state"))
+            os.unlink(
+                os.path.join(
+                    self._rootdir, self._ui.identity.dotdir(), "fsmonitor.state"
+                )
+            )
         except OSError as inst:
             if inst.errno != errno.ENOENT:
                 raise

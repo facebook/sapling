@@ -268,7 +268,9 @@ class physicalfilesystem(object):
 
         traversedir = bool(match.traversedir)
         threadcount = self.ui.configint("workingcopy", "rustwalkerthreads")
-        walker = workingcopy.walker(join(""), match, traversedir, threadcount)
+        walker = workingcopy.walker(
+            join(""), self.ui.identity.dotdir(), match, traversedir, threadcount
+        )
         for fn in walker:
             fn = self.dirstate.normalize(fn)
             st = util.lstat(join(fn))
@@ -367,16 +369,18 @@ class physicalfilesystem(object):
         explicitfiles = set(match.files())
         explicitdirs = set(util.dirs(explicitfiles))
 
+        dotdir = self.ui.identity.dotdir()
+
         work = [""]
         wadd = work.append
         seen = set()
         while work:
             nd = work.pop()
-            if not match.visitdir(nd) or nd == ".hg":
+            if not match.visitdir(nd) or nd == dotdir:
                 continue
             skip = None
             if nd != "":
-                skip = ".hg"
+                skip = dotdir
             try:
                 entries = listdir(join(nd), stat=True, skip=skip)
             except OSError as inst:

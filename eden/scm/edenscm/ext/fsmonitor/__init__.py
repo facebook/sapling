@@ -313,7 +313,14 @@ def _finddirs(ui, fs):
             "expression": [
                 "allof",
                 ["type", "d"],
-                ["not", ["anyof", ["dirname", ".hg"], ["name", ".hg", "wholename"]]],
+                [
+                    "not",
+                    [
+                        "anyof",
+                        ["dirname", ui.identity.dotdir()],
+                        ["name", ui.identity.dotdir(), "wholename"],
+                    ],
+                ],
             ],
             "sync_timeout": int(state.timeout * 1000),
             "empty_on_fresh_instance": state.walk_on_invalidate,
@@ -477,7 +484,11 @@ def _innerwalk(self, match, event, span):
         # Use the user-configured timeout for the query.
         # Add a little slack over the top of the user query to allow for
         # overheads while transferring the data
-        excludes = ["anyof", ["dirname", ".hg"], ["name", ".hg", "wholename"]]
+        excludes = [
+            "anyof",
+            ["dirname", self._ui.identity.dotdir()],
+            ["name", self._ui.identity.dotdir(), "wholename"],
+        ]
         # Exclude submodules.
         if git.isgitformat(self._repo):
             submods = git.parsesubmodules(self._repo[None])
@@ -723,7 +734,7 @@ def _innerwalk(self, match, event, span):
     state.setdroplist(droplist)
     state.setignorelist(ignorelist)
 
-    results.pop(".hg", None)
+    results.pop(self.ui.identity.dotdir(), None)
     return pycompat.iteritems(results)
 
 
@@ -979,7 +990,7 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
                     "expression": [
                         "allof",
                         ["type", "f"],
-                        ["not", ["anyof", ["dirname", ".hg"]]],
+                        ["not", ["anyof", ["dirname", ui.identity.dotdir()]]],
                     ],
                     "sync_timeout": int(state.timeout * 1000),
                     "empty_on_fresh_instance": True,
