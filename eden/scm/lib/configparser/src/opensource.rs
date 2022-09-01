@@ -576,6 +576,10 @@ nativecheckout=True
 use-rust=True
 nativepull=True
 
+[commands]
+naked-default.in-repo=sl
+naked-default.no-repo=help
+
 [scale]
 largeworkingcopy=True
 
