@@ -611,7 +611,7 @@ def check_running_mount(
     if sys.platform == "win32":
         try:
             check_filesystems.check_materialized_are_accessible(
-                tracker, instance, checkout
+                tracker, instance, checkout, lambda p: os.lstat(p).st_mode
             )
         except Exception as ex:
             raise RuntimeError(

@@ -250,11 +250,22 @@ class PathsProblem(Problem):
             pathDescriptions.append("{len(paths) - 10} more paths omitted")
         return "\n".join(pathDescriptions)
 
+    @staticmethod
+    def omitPathsDescriptionWithException(
+        paths: List[Tuple[Path, str]], pathSuffix: str
+    ) -> str:
+        pathDescriptions = [
+            f"{path}{pathSuffix}: {error}" for path, error in paths[:10]
+        ]
+        if len(paths) > 10:
+            pathDescriptions.append("{len(paths) - 10} more paths omitted")
+        return "\n".join(pathDescriptions)
+
 
 class MaterializedInodesAreInaccessible(PathsProblem):
-    def __init__(self, paths: List[Path]) -> None:
+    def __init__(self, paths: List[Tuple[Path, str]]) -> None:
         super().__init__(
-            self.omitPathsDescription(
+            self.omitPathsDescriptionWithException(
                 paths, " is inaccessible despite EdenFS believing it should be"
             ),
             severity=ProblemSeverity.ERROR,
@@ -293,6 +304,7 @@ def check_materialized_are_accessible(
     tracker: ProblemTracker,
     instance: EdenInstance,
     checkout: EdenCheckout,
+    get_mode: Callable[[Path], int],
 ) -> None:
     # {path | path is a materialized directory or one of its entries whose mode does not match on the filesystem}
     mismatched_mode = []
@@ -319,16 +331,16 @@ def check_materialized_are_accessible(
         path = Path(materialized_name)
         osPath = checkout.path / path
         try:
-            st = os.lstat(osPath)
+            mode = get_mode(osPath)
         except FileNotFoundError:
             nonexistent_inodes.append(path)
             continue
-        except OSError:
-            inaccessible_inodes.append(path)
+        except OSError as ex:
+            inaccessible_inodes.append((path, str(ex)))
             continue
 
-        if not stat.S_ISDIR(st.st_mode):
-            mismatched_mode += [(path, stat.S_IFDIR, st.st_mode)]
+        if not stat.S_ISDIR(mode):
+            mismatched_mode += [(path, stat.S_IFDIR, mode)]
 
         # A None missing_path_names avoids the listdir and missing inodes check
         missing_path_names = None
@@ -351,22 +363,22 @@ def check_materialized_are_accessible(
                 missing_path_names.remove(name)
             if dirent.materialized:
                 try:
-                    dirent_stat = os.lstat(checkout.path / dirent_path)
+                    dirent_mode = get_mode(checkout.path / dirent_path)
                 except FileNotFoundError:
                     nonexistent_inodes.append(dirent_path)
                     continue
-                except OSError:
-                    inaccessible_inodes.append(dirent_path)
+                except OSError as ex:
+                    inaccessible_inodes.append((dirent_path, str(ex)))
                     continue
 
                 # TODO(xavierd): Symlinks are for now recognized as files.
                 dirent_mode = (
                     stat.S_IFREG
-                    if stat.S_ISLNK(dirent_stat.st_mode)
-                    else stat.S_IFMT(dirent_stat.st_mode)
+                    if stat.S_ISLNK(dirent_mode)
+                    else stat.S_IFMT(dirent_mode)
                 )
                 if dirent_mode != stat.S_IFMT(dirent.mode):
-                    mismatched_mode += [(dirent_path, dirent_stat.st_mode, dirent.mode)]
+                    mismatched_mode += [(dirent_path, dirent_mode, dirent.mode)]
 
         if missing_path_names:
             missing_inodes += [path / name for name in missing_path_names]

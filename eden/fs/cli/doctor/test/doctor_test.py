@@ -961,12 +961,52 @@ Checking {mount}
 
         tracker = ProblemCollector()
         check_materialized_are_accessible(
-            tracker, typing.cast(EdenInstance, instance), checkout
+            tracker,
+            typing.cast(EdenInstance, instance),
+            checkout,
+            lambda p: os.lstat(p).st_mode,
         )
 
         self.assertEqual(
             tracker.problems[0].description(),
             f"{Path('a/b')} is not known to EdenFS but is accessible on disk",
+        )
+
+    @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
+    def test_inaccessible_materialized(self, mock_debugInodeStatus) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+        mount = checkout.path
+
+        os.makedirs(mount / "a")
+        b = mount / "a" / "b"
+        b.touch()
+
+        mock_debugInodeStatus.return_value = [
+            TreeInodeDebugInfo(
+                1,
+                b"a",
+                True,
+                b"abcd",
+                [TreeInodeEntryDebugInfo(b"b", 2, stat.S_IFREG, True, True, b"dcba")],
+                1,
+            ),
+        ]
+
+        def get_mode(path: Path) -> int:
+            if path.name == "b":
+                raise PermissionError("Permission denied")
+            else:
+                return os.lstat(path).st_mode
+
+        tracker = ProblemCollector()
+        check_materialized_are_accessible(
+            tracker, typing.cast(EdenInstance, instance), checkout, get_mode
+        )
+
+        self.assertEqual(
+            tracker.problems[0].description(),
+            f"{Path('a/b')} is inaccessible despite EdenFS believing it should be: Permission denied",
         )
 
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
@@ -1011,7 +1051,10 @@ Checking {mount}
 
         tracker = ProblemCollector()
         check_materialized_are_accessible(
-            tracker, typing.cast(EdenInstance, instance), checkout
+            tracker,
+            typing.cast(EdenInstance, instance),
+            checkout,
+            lambda p: os.lstat(p).st_mode,
         )
 
         problemDescriptions = {problem.description() for problem in tracker.problems}
