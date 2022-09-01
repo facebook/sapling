@@ -241,7 +241,7 @@ RUN rm -rf /tmp/repo
                 {
                     "name": "Create .deb",
                     "working-directory": "./eden/scm",
-                    "run": f"${{{{ format('VERSION=0.0-{{0}} make deb-ubuntu-{ubuntu_version}', env.{DEB_UPSTREAM_VERISION}) }}}}",
+                    "run": f"${{{{ format('VERSION=0.0-{{0}} make deb', env.{DEB_UPSTREAM_VERISION}) }}}}",
                 },
                 {
                     "name": "Rename .deb",

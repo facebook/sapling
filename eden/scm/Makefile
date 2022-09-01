@@ -106,25 +106,7 @@ build:
 	$(PYTHON) setup.py $(PURE) build $(COMPILERFLAG)
 
 deb:
-	DESTDIR=install make PREFIX=/usr install-oss
-# Define the build script in a separate file so we don't have to escape shell
-# commands to work with Make inline.
 	./packaging/debian/build_deb.sh
-
-# Values of GIT_DEB_DEP below are based on running the following on "pristine"
-# Docker containers for the various versions of Ubuntu:
-#
-# apt update -y
-# apt install -y git
-# apt list --installed | grep -E '^git/'
-
-deb-ubuntu-20.04:
-	# For Ubuntu 20.04, target Python 3.8.
-	PY_VERSION=38 GIT_DEB_DEP="git (>= 1:2.25.1)" make deb
-
-deb-ubuntu-22.04:
-	# For Ubuntu 22.04, target Python 3.10.
-	PY_VERSION=310 GIT_DEB_DEP="git (>= 1:2.34.1)" make deb
 
 rpm:
 	rpmbuild \

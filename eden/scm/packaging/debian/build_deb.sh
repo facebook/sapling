@@ -6,6 +6,48 @@
 
 set -e
 
+# Determine the version of Ubuntu by sourcing /etc/os-release. While there is
+# debate about whether source'ing the file creates a security issue:
+#
+# https://unix.stackexchange.com/questions/432816/grab-id-of-os-from-etc-os-release
+#
+# It is worth noting that this is how lsb_release gets its data from /etc/lsb-release:
+#
+# https://github.com/OpenMandrivaSoftware/lsb-release/blob/fd23738b8411/lsb_release#L194
+if [ -f /etc/os-release ]; then
+  UBUNTU_VERSION=$(bash -c 'source /etc/os-release; echo $VERSION_ID')
+else
+  echo "could not find /etc/os-release" >> /dev/stderr
+  exit 1
+fi
+
+# Values of GIT_DEB_DEP below are based on running the following on "pristine"
+# Docker containers for the various versions of Ubuntu:
+#
+# apt update -y
+# apt install -y git
+# apt list --installed | grep -E '^git/'
+case "$UBUNTU_VERSION" in
+  20.04)
+    # For Ubuntu 20.04, target Python 3.8.
+    export PY_VERSION=38
+    GIT_DEB_DEP="git (>= 1:2.25.1)"
+    ;;
+
+  22.04)
+    # For Ubuntu 22.04, target Python 3.10.
+    export PY_VERSION=310
+    GIT_DEB_DEP="git (>= 1:2.34.1)"
+    ;;
+
+  *)
+    echo "unsupported Ubuntu version: '${UBUNTU_VERSION}'" >> /dev/stderr
+    exit 1
+    ;;
+esac
+
+DESTDIR=install make PREFIX=/usr install-oss
+
 # For simplicity, we currently use `dpkg-deb --build`, though we should
 # ultimately migrate to dpkg-buildpackage. Because we are going to mess with
 # the contents of the install folder, we create a copy to work with instead.
