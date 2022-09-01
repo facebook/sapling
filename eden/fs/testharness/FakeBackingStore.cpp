@@ -50,13 +50,13 @@ std::string FakeBackingStore::renderObjectId(const ObjectId& objectId) {
   return objectId.asString();
 }
 
-folly::SemiFuture<std::unique_ptr<TreeEntry>>
-FakeBackingStore::getTreeEntryForRootId(
-    const RootId& commitID,
+ImmediateFuture<std::unique_ptr<TreeEntry>>
+FakeBackingStore::getTreeEntryForObjectId(
+    const ObjectId& commitID,
     TreeEntryType treeEntryType,
     ObjectFetchContext& /* context */) {
   return folly::makeSemiFuture(
-      std::make_unique<TreeEntry>(ObjectId{commitID.value()}, treeEntryType));
+      std::make_unique<TreeEntry>(commitID, treeEntryType));
 }
 
 SemiFuture<unique_ptr<Tree>> FakeBackingStore::getRootTree(

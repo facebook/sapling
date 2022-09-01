@@ -41,8 +41,8 @@ class LocalStoreCachedBackingStore : public BackingStore {
       const RootId& rootId,
       ObjectFetchContext& context) override;
 
-  folly::SemiFuture<std::unique_ptr<TreeEntry>> getTreeEntryForRootId(
-      const RootId& rootId,
+  ImmediateFuture<std::unique_ptr<TreeEntry>> getTreeEntryForObjectId(
+      const ObjectId& objectId,
       TreeEntryType treeEntryType,
       ObjectFetchContext& context) override;
   folly::SemiFuture<GetTreeRes> getTree(

@@ -54,8 +54,8 @@ class FakeBackingStore final : public BackingStore {
   folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(
       const RootId& commitID,
       ObjectFetchContext& context) override;
-  folly::SemiFuture<std::unique_ptr<TreeEntry>> getTreeEntryForRootId(
-      const RootId& /* commitID */,
+  ImmediateFuture<std::unique_ptr<TreeEntry>> getTreeEntryForObjectId(
+      const ObjectId& /* commitID */,
       TreeEntryType /* treeEntryType */,
       ObjectFetchContext& /* context */) override;
 

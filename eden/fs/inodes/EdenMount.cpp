@@ -773,13 +773,14 @@ TreeEntryType toEdenTreeEntryType(facebook::eden::ObjectType objectType) {
 
 ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
     RelativePathPiece path,
-    const RootId& rootId,
+    const ObjectId& objectId,
     ObjectType objectType,
     CheckoutMode checkoutMode,
     FOLLY_MAYBE_UNUSED ObjectFetchContext& context) {
+  auto renderObjectId = objectStore_->renderObjectId(objectId);
   if (objectType == facebook::eden::ObjectType::SYMLINK) {
     XLOG(DBG3) << "setPathObjectId called with symlink for object with id "
-               << rootId << " at path" << path;
+               << renderObjectId << " at path" << path;
   }
 
   const folly::stop_watch<> stopWatch;
@@ -787,11 +788,11 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
   /**
    * In theory, an exclusive wlock should be issued, but
    * this is not efficent if many calls to this method ran in parallel.
-   * So we use read lock instead assuming the contents of loaded rootId
+   * So we use read lock instead assuming the contents of loaded objectId
    * objects are not weaving too much
    */
-  XLOG(DBG3) << "adding " << rootId << " to Eden mount " << this->getPath()
-             << " at path " << path;
+  XLOG(DBG3) << "adding " << renderObjectId << " to Eden mount "
+             << this->getPath() << " at path " << path;
 
   auto ctx = std::make_shared<CheckoutContext>(
       this,
@@ -811,11 +812,13 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
   auto getTargetTreeInodeFuture = ensureDirectoryExists(
       isTree ? path : path.dirname(), ctx->getFetchContext());
 
-  auto getRootTreeFuture = isTree
-      ? objectStore_->getRootTree(rootId, ctx->getFetchContext())
+  auto getTreeFuture = isTree
+      ? objectStore_->getTree(objectId, ctx->getFetchContext())
       : objectStore_
-            ->getTreeEntryForRootId(
-                rootId, toEdenTreeEntryType(objectType), ctx->getFetchContext())
+            ->getTreeEntryForObjectId(
+                objectId,
+                toEdenTreeEntryType(objectType),
+                ctx->getFetchContext())
             .thenValue(
                 [name = PathComponent{path.basename()},
                  caseSensitive = getCheckoutConfig()->getCaseSensitive()](
@@ -830,8 +833,8 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
                       std::move(treeEntries), fakeObjectId);
                 });
 
-  return collectAllSafe(getTargetTreeInodeFuture, getRootTreeFuture)
-      .thenValue([ctx, setPathObjectIdTime, stopWatch, rootId](
+  return collectAllSafe(getTargetTreeInodeFuture, getTreeFuture)
+      .thenValue([ctx, setPathObjectIdTime, stopWatch](
                      std::tuple<TreeInodePtr, shared_ptr<const Tree>> results) {
         setPathObjectIdTime->didLookupTreesOrGetInodeByPath =
             stopWatch.elapsed();
@@ -840,7 +843,7 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
         return targetTreeInode->checkout(ctx.get(), nullptr, incomingTree)
             .semi();
       })
-      .thenValue([ctx, setPathObjectIdTime, stopWatch, rootId](auto&&) {
+      .thenValue([ctx, setPathObjectIdTime, stopWatch](auto&&) {
         setPathObjectIdTime->didCheckout = stopWatch.elapsed();
         return ctx->flush().semi();
       })
@@ -854,14 +857,15 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
         resultAndTimes.result = std::move(result);
         return resultAndTimes;
       })
-      .thenTry([this, ctx, rootId](
+      .thenTry([this, ctx, renderObjectId = std::move(renderObjectId)](
                    Try<SetPathObjectIdResultAndTimes>&& resultAndTimes) {
         auto fetchStats = ctx->getFetchContext().computeStatistics();
 
         XLOG(DBG1) << (resultAndTimes.hasValue() ? "" : "failed ")
                    << "setPathObjectId for " << this->getPath() << " to "
-                   << rootId << " accessed " << fetchStats.tree.accessCount
-                   << " trees (" << fetchStats.tree.cacheHitRate << "% chr), "
+                   << renderObjectId << " accessed "
+                   << fetchStats.tree.accessCount << " trees ("
+                   << fetchStats.tree.cacheHitRate << "% chr), "
                    << fetchStats.blob.accessCount << " blobs ("
                    << fetchStats.blob.cacheHitRate << "% chr), and "
                    << fetchStats.metadata.accessCount << " metadata ("

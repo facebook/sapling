@@ -2268,10 +2268,14 @@ EdenServiceHandler::semifuture_setPathObjectId(
   auto edenMount = server_->getMount(mountPath);
   // TODO: This function should operate with ObjectId instead of RootId.
   auto repoPath = params->get_path();
-  auto parsedRootId =
-      edenMount->getObjectStore()->parseRootId(params->get_objectId());
+  auto parsedObjectId =
+      edenMount->getObjectStore()->parseObjectId(params->get_objectId());
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG1, mountPoint, repoPath, parsedRootId, params->get_type());
+      DBG1,
+      mountPoint,
+      repoPath,
+      parsedObjectId.asString(),
+      params->get_type());
 
   auto& fetchContext = helper->getFetchContext();
   if (auto requestInfo = params->requestInfo_ref()) {
@@ -2282,7 +2286,7 @@ EdenServiceHandler::semifuture_setPathObjectId(
              edenMount
                  ->setPathObjectId(
                      RelativePathPiece{repoPath},
-                     parsedRootId,
+                     parsedObjectId,
                      params->get_type(),
                      params->get_mode(),
                      fetchContext)

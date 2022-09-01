@@ -43,12 +43,13 @@ LocalStoreCachedBackingStore::getRootTree(
       });
 }
 
-folly::SemiFuture<std::unique_ptr<TreeEntry>>
-LocalStoreCachedBackingStore::getTreeEntryForRootId(
-    const RootId& rootId,
+ImmediateFuture<std::unique_ptr<TreeEntry>>
+LocalStoreCachedBackingStore::getTreeEntryForObjectId(
+    const ObjectId& objectId,
     TreeEntryType treeEntryType,
     ObjectFetchContext& context) {
-  return backingStore_->getTreeEntryForRootId(rootId, treeEntryType, context);
+  return backingStore_->getTreeEntryForObjectId(
+      objectId, treeEntryType, context);
 }
 
 folly::SemiFuture<BackingStore::GetTreeRes>

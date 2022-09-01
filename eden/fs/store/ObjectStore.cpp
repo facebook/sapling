@@ -174,16 +174,17 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getRootTree(
       });
 }
 
-ImmediateFuture<std::shared_ptr<TreeEntry>> ObjectStore::getTreeEntryForRootId(
-    const RootId& rootId,
+ImmediateFuture<std::shared_ptr<TreeEntry>>
+ObjectStore::getTreeEntryForObjectId(
+    const ObjectId& objectId,
     TreeEntryType treeEntryType,
     ObjectFetchContext& context) const {
-  XLOG(DBG3) << "getTreeEntryForRootId(" << rootId << ")";
+  XLOG(DBG3) << "getTreeEntryForRootId(" << objectId << ")";
 
-  auto future =
-      backingStore_->getTreeEntryForRootId(rootId, treeEntryType, context);
-  return ImmediateFuture{std::move(future)}.thenValue(
-      [](std::shared_ptr<TreeEntry> treeEntry) { return treeEntry; });
+  return backingStore_
+      ->getTreeEntryForObjectId(objectId, treeEntryType, context)
+      .thenValue(
+          [](std::shared_ptr<TreeEntry> treeEntry) { return treeEntry; });
 }
 
 ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(

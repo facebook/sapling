@@ -152,8 +152,8 @@ class ObjectStore : public IObjectStore,
    * ready. It may result in a std::domain_error if the specified tree ID does
    * not exist, or possibly other exceptions on error.
    */
-  ImmediateFuture<std::shared_ptr<TreeEntry>> getTreeEntryForRootId(
-      const RootId& rootId,
+  ImmediateFuture<std::shared_ptr<TreeEntry>> getTreeEntryForObjectId(
+      const ObjectId& objectId,
       TreeEntryType treeEntryType,
       ObjectFetchContext& context) const;
 

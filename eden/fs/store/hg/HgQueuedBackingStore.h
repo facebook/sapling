@@ -158,8 +158,8 @@ class HgQueuedBackingStore final : public BackingStore {
   folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(
       const RootId& rootId,
       ObjectFetchContext& context) override;
-  folly::SemiFuture<std::unique_ptr<TreeEntry>> getTreeEntryForRootId(
-      const RootId& /* rootId */,
+  ImmediateFuture<std::unique_ptr<TreeEntry>> getTreeEntryForObjectId(
+      const ObjectId& /* objectId */,
       TreeEntryType /* treeEntryType */,
       ObjectFetchContext& /* context */) override {
     throw std::domain_error("unimplemented");

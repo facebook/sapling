@@ -931,7 +931,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   FOLLY_NODISCARD ImmediateFuture<SetPathObjectIdResultAndTimes>
   setPathObjectId(
       RelativePathPiece path,
-      const RootId& rootId,
+      const ObjectId& objectId,
       ObjectType objectType,
       CheckoutMode checkoutMode,
       ObjectFetchContext& context);

@@ -16,6 +16,7 @@
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -76,13 +77,8 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
       const RootId& rootId,
       ObjectFetchContext& context) = 0;
 
-  /**
-   * The API should accept object id instead of rootId. But Object is currently
-   * a fixed 20 bytes, so temporariorly use rootId instead.
-   * TODO: Replace rootID with objectId once objectId is widened.
-   */
-  virtual folly::SemiFuture<std::unique_ptr<TreeEntry>> getTreeEntryForRootId(
-      const RootId& rootId,
+  virtual ImmediateFuture<std::unique_ptr<TreeEntry>> getTreeEntryForObjectId(
+      const ObjectId& objectId,
       TreeEntryType treeEntryType,
       ObjectFetchContext& context) = 0;
 
