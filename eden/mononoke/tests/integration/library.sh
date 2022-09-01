@@ -1206,10 +1206,16 @@ function blobimport {
   input="$1"
   output="$2"
   shift 2
+  #   input (repo in new format)
+  # --debugexportrevlog--> revlog (repo in old format)
+  # --blobimport--> Mononoke repo
+  local revlog="$input/revlog-export"
+  rm -rf "$revlog"
+  hgedenapi --cwd "$input" debugexportrevlog revlog-export
   mkdir -p "$output"
   $MONONOKE_BLOBIMPORT --repo-id $REPOID \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
-     "$input" "${COMMON_ARGS[@]}" "$@" > "$TESTTMP/blobimport.out" 2>&1
+     "$revlog/.hg" "${COMMON_ARGS[@]}" "$@" > "$TESTTMP/blobimport.out" 2>&1
   BLOBIMPORT_RC="$?"
   if [[ $BLOBIMPORT_RC -ne 0 ]]; then
     cat "$TESTTMP/blobimport.out"
