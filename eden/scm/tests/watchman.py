@@ -43,7 +43,7 @@ class Watchman:
 
     def start(self) -> None:
         with open(self.config, "w", encoding="utf8") as f:
-            f.write("{}")
+            f.write('{"min_acceptable_nice_value": 999}')
 
         clilogfile = os.path.join(self._watchman_dir, "cli-log")
         logfile = os.path.join(self._watchman_dir, "log")
