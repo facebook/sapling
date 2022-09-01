@@ -19,7 +19,6 @@ mod mapping_v2;
 mod tests;
 
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 pub use compat::CompatBlame;
@@ -38,6 +37,8 @@ use mononoke_types::blame_v2::BlameV2Id;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use thiserror::Error;
 use unodes::RootUnodeManifestId;
 
@@ -77,11 +78,11 @@ pub enum BlameError {
 /// Fetch the blame for a file.  Blame will be derived if necessary.
 pub async fn fetch_blame_compat(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: impl RepoBlobstoreRef + RepoDerivedDataRef + Sync + Send + Copy,
     csid: ChangesetId,
     path: MPath,
 ) -> Result<(CompatBlame, FileUnodeId), BlameError> {
-    let blame_version = repo.get_active_derived_data_types_config().blame_version;
+    let blame_version = repo.repo_derived_data().manager().config().blame_version;
     let root_unode = match blame_version {
         BlameVersion::V1 => {
             BlameRoot::derive(ctx, repo, csid).await?;
@@ -92,7 +93,7 @@ pub async fn fetch_blame_compat(
             root_blame.root_manifest()
         }
     };
-    let blobstore = repo.get_blobstore();
+    let blobstore = repo.repo_blobstore();
     let file_unode_id = root_unode
         .manifest_unode_id()
         .clone()

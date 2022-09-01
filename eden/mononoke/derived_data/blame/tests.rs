@@ -9,16 +9,22 @@ use std::collections::HashMap;
 
 use anyhow::anyhow;
 use anyhow::Error;
-use blobrepo::BlobRepo;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bookmarks::Bookmarks;
 use borrowed::borrowed;
+use changeset_fetcher::ChangesetFetcher;
+use changesets::Changesets;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use filestore::FilestoreConfig;
 use maplit::btreemap;
 use maplit::hashmap;
 use metaconfig_types::BlameVersion;
 use mononoke_types::blame::BlameRejected;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstore;
+use repo_derived_data::RepoDerivedData;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::create_commit;
 use tests_utils::store_files;
@@ -27,6 +33,24 @@ use tests_utils::CreateCommitContext;
 
 use crate::fetch_blame_compat;
 use crate::CompatBlame;
+
+#[facet::container]
+struct TestRepo {
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+    #[facet]
+    bookmarks: dyn Bookmarks,
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+    #[facet]
+    filestore_config: FilestoreConfig,
+    #[facet]
+    changeset_fetcher: dyn ChangesetFetcher,
+    #[facet]
+    changesets: dyn Changesets,
+}
 
 // File with multiple changes and a merge
 const F0: &[&str] = &[
@@ -159,7 +183,7 @@ async fn test_blame_version(fb: FacebookInit, version: BlameVersion) -> Result<(
     //   4
     //
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = TestRepoFactory::new(fb)?
+    let repo: TestRepo = TestRepoFactory::new(fb)?
         .with_config_override(|config| {
             config
                 .derived_data_config
@@ -269,7 +293,7 @@ async fn test_blame_size_rejected_version(
     version: BlameVersion,
 ) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = test_repo_factory::build_empty(fb).unwrap();
+    let repo: TestRepo = test_repo_factory::build_empty(fb).unwrap();
     borrowed!(ctx, repo);
     let file1 = "file1";
     let content = "content";
@@ -283,7 +307,7 @@ async fn test_blame_size_rejected_version(
     let (blame, _) = fetch_blame_compat(ctx, repo, c1, MPath::new(file1)?).await?;
     let _ = blame.ranges()?;
 
-    let repo: BlobRepo = TestRepoFactory::new(fb)?
+    let repo: TestRepo = TestRepoFactory::new(fb)?
         .with_config_override(|config| {
             config
                 .derived_data_config
@@ -320,7 +344,7 @@ async fn test_blame_size_rejected_version(
 #[fbinit::test]
 async fn test_blame_copy_source(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = TestRepoFactory::new(fb)?
+    let repo: TestRepo = TestRepoFactory::new(fb)?
         .with_config_override(|config| {
             config
                 .derived_data_config

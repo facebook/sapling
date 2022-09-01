@@ -9,7 +9,6 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
-use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use bytes::Bytes;
@@ -18,6 +17,8 @@ use filestore::FetchKey;
 use futures::TryStreamExt;
 use mononoke_types::blame::BlameRejected;
 use mononoke_types::FileUnodeId;
+use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 
 use crate::DEFAULT_BLAME_FILESIZE_LIMIT;
 
@@ -39,14 +40,16 @@ impl FetchOutcome {
 /// too large or binary data is detected then the fetch may be rejected.
 pub async fn fetch_content_for_blame(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: impl RepoBlobstoreRef + RepoDerivedDataRef,
     file_unode_id: FileUnodeId,
 ) -> Result<FetchOutcome> {
     let filesize_limit = repo
-        .get_active_derived_data_types_config()
+        .repo_derived_data()
+        .manager()
+        .config()
         .blame_filesize_limit
         .unwrap_or(DEFAULT_BLAME_FILESIZE_LIMIT);
-    let blobstore = repo.blobstore().boxed();
+    let blobstore = repo.repo_blobstore().boxed();
     fetch_content_for_blame_with_limit(ctx, &blobstore, file_unode_id, filesize_limit).await
 }
 
