@@ -137,7 +137,7 @@
   $ cp -R . $TESTTMP/tt-2
   $ cd $TESTTMP/tt-2
 
-  $ hg pull -u '$TESTTMP/t#active-after-pull'
+  $ hg pull -u "$TESTTMP/t#active-after-pull"
   pulling from $TESTTMP/t
   searching for changes
   adding changesets

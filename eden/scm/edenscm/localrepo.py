@@ -407,11 +407,23 @@ class localrepository(object):
         if create:
             bindings.repo.repo.initialize(path, baseui._rcfg)
 
+        if not bindings.identity.sniffdir(path):
+            raise errormod.RepoError(_("repository %s not found") % path)
+
         self._containscount = 0
         self.requirements = set()
         self.storerequirements = set()
+
         # wvfs: rooted at the repository root, used to access the working copy
         self.wvfs = vfsmod.vfs(path, expandpath=True, realpath=True, cacheaudited=False)
+        self.root = self.wvfs.base
+
+        self.baseui = baseui
+        self.ui = baseui.copy()
+        self.ui.loadrepoconfig(self.root)
+
+        self._rsrepo = bindings.repo.repo(self.root, self.ui._rcfg)
+
         # localvfs: rooted at .hg, used to access repo files outside of
         # the store that are local to this working copy.
         self.localvfs = None
@@ -422,7 +434,6 @@ class localrepository(object):
         # If this is a shared repository, this vfs may point to another
         # repository's .hg/store directory.
         self.svfs = None
-        self.root = self.wvfs.base
         self.path = self.wvfs.join(".hg")
         self.origroot = path
         # This is only used by context.workingctx.match in order to
@@ -431,8 +442,6 @@ class localrepository(object):
         # This is only used by context.basectx.match in order to detect
         # files in forbidden paths..
         self.nofsauditor = pathutil.pathauditor(self.root, realfs=False, cached=True)
-        self.baseui = baseui
-        self.ui = baseui.copy()
         self.localvfs = vfsmod.vfs(self.path, cacheaudited=True)
         if self.ui.configbool("devel", "all-warnings") or self.ui.configbool(
             "devel", "check-locks"
@@ -443,14 +452,6 @@ class localrepository(object):
         # Callback are in the form: func(repo, roots) --> processed root.
         # This list it to be filled by extension during repo setup
         self._phasedefaults = []
-
-        if not self.localvfs.isdir():
-            raise errormod.RepoError(_("repository %s not found") % path)
-
-        self.ui.loadrepoconfig(self.root)
-
-        # Setting the inner Rust repo should only be done when the filesystem actually exists
-        self._rsrepo = bindings.repo.repo(self.root, self.ui._rcfg)
 
         self._loadextensions()
 

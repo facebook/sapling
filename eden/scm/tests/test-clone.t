@@ -455,7 +455,7 @@ Inaccessible source
   $ mkdir a
   $ chmod 000 a
   $ hg clone a b
-  abort: repository a not found!
+  abort: Permission denied (os error 13)
   [255]
 
 Inaccessible destination
