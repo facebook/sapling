@@ -1,7 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
-  $ configure modern
+  $ configure modernclient
   $ setconfig clone.use-rust=true
 
   $ newrepo
@@ -35,7 +35,9 @@ Init can create a ".sl" repo.
   $ hg push -r . --to master --create -q
 
 Clone can create a ".sl" repo.
-  $ HGIDENTITY=sl hg clone -Uq eager:clone_me cloned
+  $ HGIDENTITY=sl hg clone -q test:clone_me cloned
+  $ find cloned
+  cloned/foo
   $ ls cloned/.hg
   $ ls cloned/.sl
   00changelog.i
@@ -46,3 +48,6 @@ Clone can create a ".sl" repo.
   requires
   store
   treestate
+  updateprogress
+  wlock.data
+  wlock.lock

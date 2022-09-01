@@ -13,6 +13,7 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Context;
 use configmodel::convert::ByteCount;
 use configmodel::Config;
@@ -83,10 +84,10 @@ pub struct CheckoutError {
 }
 
 /// A somewhat simplified/specialized checkout suitable for use during a clone.
-#[instrument(skip_all, fields(path=%wc_path.display(), %target), err)]
+#[instrument(skip_all, fields(path=%dot_path.display(), %target), err)]
 pub fn checkout(
     config: &dyn Config,
-    wc_path: &Path,
+    dot_path: &Path,
     source_mf: &TreeManifest,
     target_mf: &TreeManifest,
     file_store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
@@ -96,7 +97,7 @@ pub fn checkout(
     let mut state = CheckoutState::default();
     state
         .checkout(
-            config, wc_path, source_mf, target_mf, file_store, ts, target,
+            config, dot_path, source_mf, target_mf, file_store, ts, target,
         )
         .map_err(|err| CheckoutError {
             resumable: state.resumable,
@@ -113,20 +114,23 @@ impl CheckoutState {
     fn checkout(
         &mut self,
         config: &dyn Config,
-        wc_path: &Path,
+        dot_path: &Path,
         source_mf: &TreeManifest,
         target_mf: &TreeManifest,
         file_store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
         ts: &mut TreeState,
         target: HgId,
     ) -> anyhow::Result<CheckoutStats> {
-        let dot_hg = wc_path.join(".hg");
+        let wc_path = match dot_path.parent() {
+            Some(p) => p,
+            None => bail!("invalid dot path {}", dot_path.display()),
+        };
 
-        let _wlock = repolock::lock_working_copy(config, &dot_hg)?;
+        let _wlock = repolock::lock_working_copy(config, dot_path)?;
 
         let mut sparse_overrides = None;
 
-        let matcher: Box<dyn Matcher> = match util::file::read_to_string(dot_hg.join("sparse")) {
+        let matcher: Box<dyn Matcher> = match util::file::read_to_string(dot_path.join("sparse")) {
             Ok(contents) => {
                 let overrides = sparse::config_overrides(config);
                 sparse_overrides = Some(overrides.clone());
@@ -156,14 +160,14 @@ impl CheckoutState {
         // Write out overrides first so they don't change when resuming
         // this checkout.
         if let Some(sparse_overrides) = sparse_overrides {
-            atomic_write(&dot_hg.join(CONFIG_OVERRIDE_CACHE), |f| {
+            atomic_write(&dot_path.join(CONFIG_OVERRIDE_CACHE), |f| {
                 serde_json::to_writer(f, &sparse_overrides)?;
                 Ok(())
             })?;
         }
 
         if config.get_or_default("checkout", "resumable")? {
-            let progress_path = dot_hg.join("updateprogress");
+            let progress_path = dot_path.join("updateprogress");
             plan.add_progress(&progress_path).with_context(|| {
                 format!(
                     "error loading checkout progress '{}'",
@@ -173,7 +177,7 @@ impl CheckoutState {
             self.resumable = true;
         }
 
-        atomic_write(&dot_hg.join("updatestate"), |f| {
+        atomic_write(&dot_path.join("updatestate"), |f| {
             f.write_all(target.to_hex().as_bytes())
         })?;
 
@@ -185,9 +189,9 @@ impl CheckoutState {
         ts.set_metadata(&ts_buf);
 
         update_dirstate(&plan, ts, &vfs)?;
-        flush_dirstate(config, ts, &dot_hg, target)?;
+        flush_dirstate(config, ts, dot_path, target)?;
 
-        remove_file(dot_hg.join("updatestate"))?;
+        remove_file(dot_path.join("updatestate"))?;
 
         Ok(CheckoutStats {
             updated: plan.stats().0,

@@ -129,7 +129,7 @@ pub fn init_working_copy(
 
     match checkout::clone::checkout(
         repo.config(),
-        repo.path(),
+        repo.dot_hg_path(),
         &source_mf,
         &target_mf,
         file_store.clone(),
