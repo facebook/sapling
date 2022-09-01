@@ -74,8 +74,6 @@ async fn inner_derive(
             move |info: TreeInfo<TreeId, IntermediateLeafId, Ctx>, fut_sender| {
                 cloned!(ctx, blobstore);
                 async move {
-                    // Number of entries in subtree, including directories
-                    let mut rollup_count = 1;
                     let entries =
                         info.subentries
                             .into_iter()
@@ -84,11 +82,10 @@ async fn inner_derive(
                                     Entry::Leaf(()) => BssmEntry::File,
                                     Entry::Tree(entry) => BssmEntry::Directory(entry),
                                 };
-                                rollup_count += entry.rollup_count();
                                 (path_el, Some(entry))
                             });
 
-                    let mf = BasenameSuffixSkeletonManifest::empty()
+                    let (mf, rollup_count) = BasenameSuffixSkeletonManifest::empty()
                         .update(&ctx, &blobstore, entries.collect())
                         .await?;
                     let entry = {
@@ -102,7 +99,10 @@ async fn inner_derive(
                             .map_err(|err| {
                                 anyhow::anyhow!("failed to send manifest future {}", err)
                             })?;
-                        BssmDirectory { id, rollup_count }
+                        BssmDirectory {
+                            id,
+                            rollup_count: (1 + rollup_count) as u64,
+                        }
                     };
                     anyhow::Ok(((), entry))
                 }

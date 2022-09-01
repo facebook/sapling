@@ -6,6 +6,8 @@
  */
 
 use std::collections::BTreeMap;
+use std::sync::atomic::AtomicI64;
+use std::sync::atomic::Ordering;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -134,19 +136,21 @@ impl ThriftConvert for BasenameSuffixSkeletonManifest {
     }
 }
 
+type RollupCountDifference = i64;
+
 impl BasenameSuffixSkeletonManifest {
     pub fn empty() -> Self {
         Self {
             subentries: ShardedMapNode::default(),
         }
     }
-
     pub async fn update(
         self,
         ctx: &CoreContext,
         blobstore: &impl Blobstore,
         subentries_to_update: BTreeMap<MPathElement, Option<BssmEntry>>,
-    ) -> Result<Self> {
+    ) -> Result<(Self, RollupCountDifference)> {
+        let size_diff = AtomicI64::new(0);
         let subentries = self
             .subentries
             .update(
@@ -154,11 +158,19 @@ impl BasenameSuffixSkeletonManifest {
                 blobstore,
                 subentries_to_update
                     .into_iter()
+                    .inspect(|(_, maybe_entry)| {
+                        if let Some(new_entry) = maybe_entry {
+                            size_diff.fetch_add(new_entry.rollup_count() as i64, Ordering::Relaxed);
+                        }
+                    })
                     .map(|(k, v)| (Bytes::copy_from_slice(k.as_ref()), v))
                     .collect(),
+                |deleted| {
+                    size_diff.fetch_sub(deleted.rollup_count() as i64, Ordering::Relaxed);
+                },
             )
             .await?;
-        Ok(Self { subentries })
+        Ok((Self { subentries }, size_diff.load(Ordering::Relaxed)))
     }
 
     pub async fn lookup(

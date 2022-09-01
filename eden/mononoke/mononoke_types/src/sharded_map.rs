@@ -231,13 +231,15 @@ impl<Value: MapValue> ShardedMapNode<Value> {
     fn update_map(
         mut map: BTreeMap<SmallBinary, Value>,
         replacements: impl IntoIterator<Item = (Bytes, Option<Value>)>,
+        deleter: impl Fn(Value),
     ) -> Result<SortedVectorMap<SmallBinary, Value>> {
         for (key, value) in replacements {
             let key = SmallVec::from_iter(key);
             match value {
                 Some(value) => map.insert(key, value),
                 None => map.remove(&key),
-            };
+            }
+            .map(&deleter);
         }
         Ok(map.into())
     }
@@ -281,11 +283,13 @@ impl<Value: MapValue> ShardedMapNode<Value> {
         ctx: &CoreContext,
         blobstore: &impl Blobstore,
         replacements: BTreeMap<Bytes, Option<Value>>,
+        // Called for all deletions
+        deleter: impl Fn(Value) + Send + Copy + 'async_recursion,
     ) -> Result<Self> {
         let shard_size = Self::shard_size()?;
         match self {
             Self::Terminal { values } => {
-                let values = Self::update_map(values.into_iter().collect(), replacements)?;
+                let values = Self::update_map(values.into_iter().collect(), replacements, deleter)?;
                 if values.len() <= shard_size {
                     // Case 1: values is small enough, return a terminal node
                     Ok(Self::Terminal { values })
@@ -308,6 +312,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                                 .into_iter()
                                 .map(|(k, v)| (Bytes::copy_from_slice(k.as_ref()), Some(v)))
                                 .collect(),
+                            deleter,
                         )
                         .await
                 }
@@ -347,7 +352,9 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                             },
                         },
                     );
-                    left_node.update(ctx, blobstore, replacements).await
+                    left_node
+                        .update(ctx, blobstore, replacements, deleter)
+                        .await
                 } else {
                     // Case 4: All added keys traverse the long edge (have the prefix `prefix`)
                     let mut partitioned = BTreeMap::<u8, BTreeMap<Bytes, Option<Value>>>::new();
@@ -366,7 +373,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                                         // Panic safety: rest was produced from k
                                         .insert(k.slice_ref(rest), v);
                                 } else {
-                                    value = v;
+                                    std::mem::replace(&mut value, v).map(deleter);
                                 }
                             }
                         }
@@ -380,7 +387,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                             async move {
                                 let node = edge.load_child(ctx, blobstore).await?;
                                 let replaced_node =
-                                    node.update(ctx, blobstore, replacements).await?;
+                                    node.update(ctx, blobstore, replacements, deleter).await?;
                                 Ok((next_byte, replaced_node))
                             }
                         })
@@ -774,8 +781,13 @@ mod test {
             Ok(())
         }
 
-        async fn add_remove(&mut self, to_add: &[(&str, i32)], to_remove: &[&str]) -> Result<()> {
+        async fn add_remove(
+            &mut self,
+            to_add: &[(&str, i32)],
+            to_remove: &[&str],
+        ) -> Result<Vec<i32>> {
             let map = std::mem::take(&mut self.0);
+            let (send, recv) = crossbeam::channel::unbounded();
             self.0 = map
                 .update(
                     &self.1,
@@ -789,10 +801,11 @@ mod test {
                                 .map(|k| (Bytes::copy_from_slice(k.as_bytes()), None)),
                         )
                         .collect(),
+                    |x| send.send(x.0).unwrap(),
                 )
                 .await?;
             self.validate().await?;
-            Ok(())
+            Ok(recv.try_iter().collect())
         }
 
         #[async_recursion]
@@ -1030,10 +1043,12 @@ mod test {
             map.assert_entries(EXAMPLE_ENTRIES).await?;
             assert_eq!(map.0, example_map());
         }
-        map.add_remove(&[], &["abalaba", "non_existing"]).await?;
+        let deleted = map.add_remove(&[], &["abalaba", "non_existing"]).await?;
+        assert_eq!(deleted, vec![5]);
         assert_eq!(map.0.size(), EXAMPLE_ENTRIES.len() - 1);
         assert_key_count(&ctx, &blobstore, 4).await?;
-        map.add_remove(&[], &["abalada"]).await?;
+        let deleted = map.add_remove(&[], &["abalada"]).await?;
+        assert_eq!(deleted, vec![6]);
         // Intermeditate node should now have 1 child, but also a value
         assert_key_count(&ctx, &blobstore, 4).await?;
         let child = map.child('a').await?;
@@ -1044,7 +1059,8 @@ mod test {
                 assert_eq!(edges.len(), 1);
             }
         }
-        map.add_remove(&[], &["aba"]).await?;
+        let deleted = map.add_remove(&[], &["aba"]).await?;
+        assert_eq!(deleted, vec![12]);
         // Intermediate node without a value should be merged
         assert_key_count(&ctx, &blobstore, 5).await?;
         map.assert_entries(&[
@@ -1060,6 +1076,16 @@ mod test {
         ])
         .await?;
         map.child('a').await?.assert_terminal(5);
+        assert!(
+            map.add_remove(&[], &["abalada", "abalaba", "aba"])
+                .await?
+                .is_empty()
+        );
+        assert_eq!(
+            map.add_remove(&[("potato", 1000), ("abacaxi", 1001)], &[])
+                .await?,
+            vec![11]
+        );
         Ok(())
     }
 

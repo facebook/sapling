@@ -130,6 +130,7 @@ impl DeletedManifestCommon for DeletedManifestV2 {
                     .into_iter()
                     .map(|(k, v)| (Bytes::copy_from_slice(k.as_ref()), v))
                     .collect(),
+                |_| (),
             )
             .await?;
         Ok(Self::new(linknode, subentries))
