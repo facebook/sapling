@@ -161,12 +161,19 @@ pub async fn new_batch_derivation(
 
 #[cfg(test)]
 mod test {
-    use blobrepo::BlobRepo;
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::Bookmarks;
+    use changeset_fetcher::ChangesetFetcher;
+    use changeset_fetcher::ChangesetFetcherArc;
+    use changesets::Changesets;
     use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
     use futures::compat::Stream01CompatExt;
+    use repo_blobstore::RepoBlobstore;
+    use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
     use test_repo_factory::TestRepoFactory;
@@ -175,6 +182,25 @@ mod test {
     use tests_utils::resolve_cs_id;
 
     use super::*;
+
+    #[facet::container]
+    #[derive(Clone)]
+    struct TestRepo {
+        #[facet]
+        bonsai_hg_mapping: dyn BonsaiHgMapping,
+        #[facet]
+        bookmarks: dyn Bookmarks,
+        #[facet]
+        changesets: dyn Changesets,
+        #[facet]
+        changeset_fetcher: dyn ChangesetFetcher,
+        #[facet]
+        repo_derived_data: RepoDerivedData,
+        #[facet]
+        filestore_config: FilestoreConfig,
+        #[facet]
+        repo_blobstore: RepoBlobstore,
+    }
 
     #[fbinit::test]
     async fn batch_derive(fb: FacebookInit) -> Result<(), Error> {
@@ -229,7 +255,7 @@ mod test {
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
 
             let mut cs_ids =
-                AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), master_cs_id)
+                AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher_arc(), master_cs_id)
                     .compat()
                     .try_collect::<Vec<_>>()
                     .await?;
@@ -267,8 +293,8 @@ mod test {
         Ok(())
     }
 
-    async fn repo_with_merge(ctx: &CoreContext) -> Result<BlobRepo, Error> {
-        let repo: BlobRepo = TestRepoFactory::new(ctx.fb)?.build()?;
+    async fn repo_with_merge(ctx: &CoreContext) -> Result<TestRepo, Error> {
+        let repo: TestRepo = TestRepoFactory::new(ctx.fb)?.build()?;
 
         let commit_map = create_from_dag(
             ctx,

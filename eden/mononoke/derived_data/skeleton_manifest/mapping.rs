@@ -179,10 +179,11 @@ pub(crate) fn get_file_changes(
 
 #[cfg(test)]
 mod test {
-    use blobrepo::BlobRepo;
     use blobstore::Loadable;
     use bookmarks::BookmarkName;
+    use bookmarks::BookmarksRef;
     use borrowed::borrowed;
+    use changeset_fetcher::ChangesetFetcherArc;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
     use fixtures::BranchEven;
@@ -206,6 +207,7 @@ mod test {
     use mercurial_types::HgChangesetId;
     use mercurial_types::HgManifestId;
     use mononoke_types::ChangesetId;
+    use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
     use tokio::runtime::Runtime;
@@ -214,15 +216,18 @@ mod test {
 
     async fn fetch_manifest_by_cs_id(
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: impl RepoBlobstoreRef,
         hg_cs_id: HgChangesetId,
     ) -> Result<HgManifestId> {
-        Ok(hg_cs_id.load(ctx, repo.blobstore()).await?.manifestid())
+        Ok(hg_cs_id
+            .load(ctx, repo.repo_blobstore())
+            .await?
+            .manifestid())
     }
 
     async fn verify_skeleton_manifest(
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: impl RepoDerivedDataRef + RepoBlobstoreRef + Copy + Send + Sync,
         bcs_id: ChangesetId,
         hg_cs_id: HgChangesetId,
     ) -> Result<()> {
@@ -253,16 +258,17 @@ mod test {
 
     async fn all_commits<'a>(
         ctx: &'a CoreContext,
-        repo: &'a BlobRepo,
+        repo: impl BookmarksRef + ChangesetFetcherArc + RepoDerivedDataRef + Copy + Send + Sync + 'a,
     ) -> Result<impl Stream<Item = Result<(ChangesetId, HgChangesetId)>> + 'a> {
         let master_book = BookmarkName::new("master").unwrap();
         let bcs_id = repo
-            .get_bonsai_bookmark(ctx.clone(), &master_book)
+            .bookmarks()
+            .get(ctx.clone(), &master_book)
             .await?
             .unwrap();
 
         Ok(
-            AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bcs_id.clone())
+            AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher_arc(), bcs_id.clone())
                 .compat()
                 .and_then(move |new_bcs_id| async move {
                     let hg_cs_id = repo.derive_hg_changeset(ctx, new_bcs_id).await?;
@@ -271,9 +277,15 @@ mod test {
         )
     }
 
-    fn verify_repo<F>(fb: FacebookInit, repo: F, runtime: &Runtime)
+    fn verify_repo<F, R>(fb: FacebookInit, repo: F, runtime: &Runtime)
     where
-        F: Future<Output = BlobRepo>,
+        F: Future<Output = R>,
+        for<'a> &'a R: BookmarksRef
+            + ChangesetFetcherArc
+            + RepoBlobstoreRef
+            + RepoDerivedDataRef
+            + Send
+            + Sync,
     {
         let ctx = CoreContext::test_mock(fb);
         let repo = runtime.block_on(repo);
