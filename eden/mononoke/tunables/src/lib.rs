@@ -313,6 +313,9 @@ pub struct MononokeTunables {
 
     // Force local pushrebase instead of talking to SCS
     force_local_pushrebase: AtomicBool,
+
+    // Enable usage of basename_suffix_skeleton_manifest in commit_find_files
+    enable_basename_suffix_skeleton_manifest: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

@@ -13,6 +13,7 @@ use std::fmt;
 use std::future::Future;
 
 use anyhow::anyhow;
+use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
@@ -120,6 +121,8 @@ pub struct ChangesetContext {
     root_fsnode_id: LazyShared<Result<RootFsnodeId, MononokeError>>,
     root_skeleton_manifest_id: LazyShared<Result<RootSkeletonManifestId, MononokeError>>,
     root_deleted_manifest_v2_id: LazyShared<Result<RootDeletedManifestV2Id, MononokeError>>,
+    root_basename_suffix_skeleton_manifest:
+        LazyShared<Result<RootBasenameSuffixSkeletonManifest, MononokeError>>,
     /// None if no mutable history, else map from supplied paths to data fetched
     mutable_history: Option<HashMap<MononokePath, PathMutableHistory>>,
 }
@@ -168,6 +171,7 @@ impl ChangesetContext {
         let root_fsnode_id = LazyShared::new_empty();
         let root_skeleton_manifest_id = LazyShared::new_empty();
         let root_deleted_manifest_v2_id = LazyShared::new_empty();
+        let root_basename_suffix_skeleton_manifest = LazyShared::new_empty();
         Self {
             repo,
             id,
@@ -177,6 +181,7 @@ impl ChangesetContext {
             root_fsnode_id,
             root_skeleton_manifest_id,
             root_deleted_manifest_v2_id,
+            root_basename_suffix_skeleton_manifest,
             mutable_history: None,
         }
     }
@@ -303,6 +308,14 @@ impl ChangesetContext {
     pub(crate) async fn root_fsnode_id(&self) -> Result<RootFsnodeId, MononokeError> {
         self.root_fsnode_id
             .get_or_init(|| self.derive::<RootFsnodeId>())
+            .await
+    }
+
+    pub(crate) async fn root_basename_suffix_skeleton_manifest(
+        &self,
+    ) -> Result<RootBasenameSuffixSkeletonManifest, MononokeError> {
+        self.root_basename_suffix_skeleton_manifest
+            .get_or_init(|| self.derive::<RootBasenameSuffixSkeletonManifest>())
             .await
     }
 
@@ -1164,16 +1177,44 @@ impl ChangesetContext {
         basename_suffixes: Option<Vec<String>>,
         ordering: ChangesetFileOrdering,
     ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>>, MononokeError> {
-        self.inner_find_files(
-            to_vec1(prefixes),
-            to_vec1(basenames),
-            to_vec1(basename_suffixes),
-            ordering,
-        )
-        .await
+        Ok(match (to_vec1(basenames), to_vec1(basename_suffixes)) {
+            (Some(basenames), None)
+                if tunables().get_enable_basename_suffix_skeleton_manifest() =>
+            {
+                self.root_basename_suffix_skeleton_manifest()
+                    .await?
+                    .find_files_filter_basenames(
+                        self.ctx(),
+                        self.repo().blob_repo().get_blobstore(),
+                        prefixes
+                            .unwrap_or_else(Vec::new)
+                            .into_iter()
+                            .map(MononokePath::into_mpath)
+                            .collect(),
+                        basenames,
+                        match ordering {
+                            ChangesetFileOrdering::Unordered => None,
+                            ChangesetFileOrdering::Ordered { after } => {
+                                Some(after.map(MononokePath::into_mpath))
+                            }
+                        },
+                    )
+                    .await
+                    .map_err(MononokeError::from)?
+                    .map(|r| match r {
+                        Ok(p) => Ok(MononokePath::new(p)),
+                        Err(err) => Err(MononokeError::from(err)),
+                    })
+                    .left_stream()
+            }
+            (basenames, basename_suffixes) => self
+                .find_files_without_bssm(to_vec1(prefixes), basenames, basename_suffixes, ordering)
+                .await?
+                .right_stream(),
+        })
     }
 
-    async fn inner_find_files(
+    async fn find_files_without_bssm(
         &self,
         prefixes: Option<Vec1<MononokePath>>,
         basenames: Option<Vec1<String>>,

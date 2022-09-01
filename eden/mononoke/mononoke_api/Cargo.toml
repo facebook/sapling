@@ -11,6 +11,7 @@ license = "GPLv2+"
 acl_regions = { version = "0.1.0", path = "../acl_regions" }
 anyhow = "1.0.56"
 async-trait = "0.1.56"
+basename_suffix_skeleton_manifest = { version = "0.1.0", path = "../derived_data/basename_suffix_skeleton_manifest" }
 blame = { version = "0.1.0", path = "../derived_data/blame" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
