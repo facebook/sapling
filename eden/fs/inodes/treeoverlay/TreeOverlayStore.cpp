@@ -41,12 +41,7 @@ constexpr size_t kBatchInsertSize = 8;
 
 struct TreeOverlayStore::StatementCache {
   explicit StatementCache(LockedSqliteConnection& db)
-      : deleteParent{db, "DELETE FROM ", kEntryTable, " WHERE parent = ?"},
-        selectTree{
-            db,
-            "SELECT name, dtype, inode, hash FROM ",
-            kEntryTable,
-            " WHERE parent = ? ORDER BY name"},
+      : selectTree{db, "SELECT name, dtype, inode, hash FROM ", kEntryTable, " WHERE parent = ? ORDER BY name"},
         countChildren{
             db,
             "SELECT COUNT(*) FROM ",
@@ -112,7 +107,6 @@ struct TreeOverlayStore::StatementCache {
     return PersistentSqliteStatement{db, fmt::to_string(stmt_buffer)};
   }
 
-  PersistentSqliteStatement deleteParent;
   PersistentSqliteStatement selectTree;
   PersistentSqliteStatement countChildren;
   PersistentSqliteStatement deleteTree;
@@ -272,7 +266,7 @@ void TreeOverlayStore::saveTree(
   db_->transaction([&](auto& txn) {
     // When `saveTree` gets called, caller is expected to rewrite the tree
     // content. So we need to remove the previously stored version.
-    auto stmt = cache_->deleteParent.get(txn);
+    auto stmt = cache_->deleteTree.get(txn);
     stmt->bind(1, inodeNumber.get());
     stmt->step();
 
