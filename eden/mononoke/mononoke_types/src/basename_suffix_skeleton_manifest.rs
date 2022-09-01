@@ -5,7 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+
 use anyhow::Result;
+use blobstore::Blobstore;
+use bytes::Bytes;
+use context::CoreContext;
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
 
 use crate::blob::BasenameSuffixSkeletonManifestBlob;
 use crate::blob::Blob;
@@ -18,6 +25,7 @@ use crate::typed_hash::BasenameSuffixSkeletonManifestId;
 use crate::typed_hash::IdContext;
 use crate::typed_hash::ShardedMapNodeBSSMContext;
 use crate::typed_hash::ShardedMapNodeBSSMId;
+use crate::MPathElement;
 use crate::ThriftConvert;
 
 /// See docs/basename_suffix_skeleton_manifest.md for more documentation on this.
@@ -98,6 +106,48 @@ impl ThriftConvert for BasenameSuffixSkeletonManifest {
         thrift::BasenameSuffixSkeletonManifest {
             subentries: self.subentries.into_thrift(),
         }
+    }
+}
+
+impl BasenameSuffixSkeletonManifest {
+    pub async fn update(
+        self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+        subentries_to_update: BTreeMap<MPathElement, Option<BssmEntry>>,
+    ) -> Result<Self> {
+        let subentries = self
+            .subentries
+            .update(
+                ctx,
+                blobstore,
+                subentries_to_update
+                    .into_iter()
+                    .map(|(k, v)| (Bytes::copy_from_slice(k.as_ref()), v))
+                    .collect(),
+            )
+            .await?;
+        Ok(Self { subentries })
+    }
+
+    pub async fn lookup(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+        name: &MPathElement,
+    ) -> Result<Option<BssmEntry>> {
+        self.subentries.lookup(ctx, blobstore, name.as_ref()).await
+    }
+
+    pub fn into_subentries<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+    ) -> BoxStream<'a, Result<(MPathElement, BssmEntry)>> {
+        self.subentries
+            .into_entries(ctx, blobstore)
+            .map(|res| res.and_then(|(k, v)| anyhow::Ok((MPathElement::from_smallvec(k)?, v))))
+            .boxed()
     }
 }
 

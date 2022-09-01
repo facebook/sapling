@@ -19,6 +19,10 @@ use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use mononoke_types::basename_suffix_skeleton_manifest::BasenameSuffixSkeletonManifest;
+use mononoke_types::basename_suffix_skeleton_manifest::BssmDirectory;
+use mononoke_types::basename_suffix_skeleton_manifest::BssmEntry;
 use mononoke_types::fsnode::Fsnode;
 use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::fsnode::FsnodeFile;
@@ -44,7 +48,7 @@ pub trait AsyncManifest<Store: Send + Sync>: Sized + 'static {
         &self,
         ctx: &CoreContext,
         blobstore: &Store,
-    ) -> Result<BoxStream<'_, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>;
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>;
     async fn lookup(
         &self,
         ctx: &CoreContext,
@@ -69,7 +73,8 @@ impl<M: Manifest, Store: Send + Sync> AsyncManifest<Store> for M {
         &self,
         _ctx: &CoreContext,
         _blobstore: &Store,
-    ) -> Result<BoxStream<'_, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>> {
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
         Ok(stream::iter(Manifest::list(self).map(anyhow::Ok).collect::<Vec<_>>()).boxed())
     }
 
@@ -80,6 +85,42 @@ impl<M: Manifest, Store: Send + Sync> AsyncManifest<Store> for M {
         name: &MPathElement,
     ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
         anyhow::Ok(Manifest::lookup(self, name))
+    }
+}
+
+fn to_mf_entry(entry: BssmEntry) -> Entry<BssmDirectory, ()> {
+    match entry {
+        BssmEntry::Directory(dir) => Entry::Tree(dir),
+        BssmEntry::File => Entry::Leaf(()),
+    }
+}
+
+#[async_trait]
+impl<Store: Blobstore> AsyncManifest<Store> for BasenameSuffixSkeletonManifest {
+    type TreeId = BssmDirectory;
+    type LeafId = ();
+
+    async fn list(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.clone()
+                .into_subentries(ctx, blobstore)
+                .map_ok(|(path, entry)| (path, to_mf_entry(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn lookup(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+        Ok(self.lookup(ctx, blobstore, name).await?.map(to_mf_entry))
     }
 }
 
