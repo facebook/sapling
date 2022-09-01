@@ -27,43 +27,17 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ContentId;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
-use mononoke_types::MPathElement;
 use skeleton_manifest::mapping::get_file_changes;
 
 use crate::mapping::RootBasenameSuffixSkeletonManifest;
-
-// 36 = code for '$'
-const SENTINEL_CHAR: u8 = 36;
-
-fn bsm_sentinel() -> MPathElement {
-    MPathElement::new(vec![SENTINEL_CHAR]).unwrap()
-}
-
-/// Put reversed basename in beginning, plus sentinel in the end
-struct BsmPath(MPath);
-
-impl BsmPath {
-    fn transform(path: MPath) -> Self {
-        let (dirname, basename) = path.split_dirname();
-        let mut basename = basename.clone();
-        // Basename is reversed to allow for faster suffix queries
-        basename.reverse();
-        // Let's add a sentinel add the end of the path
-        // This prevents bugs, otherwise files in top-level become files
-        // But they should become directories
-        // So a repo with files `file` and `dir/file` will become a repo with files
-        // `elif/$` and `elif/dir/$`, which otherwise could cause a file-dir conflict.
-        let dirname = MPath::join_opt_element(dirname.as_ref(), &bsm_sentinel());
-        Self(MPath::from(basename).join(&dirname))
-    }
-}
+use crate::path::BsmPath;
 
 /// Calculate a list of changes of the changeset, but putting the basename first and
 /// reversing it.
 fn get_fixed_up_changes(bcs: &BonsaiChangeset) -> Vec<(MPath, Option<(ContentId, FileType)>)> {
     get_file_changes(bcs)
         .into_iter()
-        .map(|(path, content)| (BsmPath::transform(path).0, content))
+        .map(|(path, content)| (BsmPath::transform(path).into_raw(), content))
         .collect()
 }
 

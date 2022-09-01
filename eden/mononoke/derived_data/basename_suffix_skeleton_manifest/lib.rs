@@ -7,5 +7,7 @@
 
 mod derive;
 mod mapping;
+mod ops;
+mod path;
 
 pub use mapping::RootBasenameSuffixSkeletonManifest;
