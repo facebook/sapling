@@ -32,7 +32,7 @@ pub enum BssmEntry {
     Directory(BssmDirectory),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct BssmDirectory {
     id: BasenameSuffixSkeletonManifestId,
     rollup_count: u64,
