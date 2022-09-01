@@ -439,6 +439,23 @@ fn get_checkouts(mounts: &[PathBuf], instance: &EdenFsInstance) -> Result<Vec<Ed
         .collect::<Result<_, anyhow::Error>>()?)
 }
 
+/// Get all the fsck directories for the pssed in checkouts.
+///
+/// Some checkouts do not have a fsck directory, the returned Vec will not included them.
+fn get_fsck_dirs(checkouts: &[EdenFsCheckout]) -> Vec<PathBuf> {
+    checkouts
+        .iter()
+        .filter_map(|checkout| {
+            let fsck_dir = checkout.fsck_dir();
+            if fsck_dir.exists() {
+                Some(fsck_dir)
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 /// Warn about backing repositories that are non-empty working copy.
 fn warn_about_working_copy_for_backing_repo(backing_repos: &HashSet<PathBuf>) -> Result<()> {
     let mut warned = false;
@@ -510,12 +527,12 @@ impl crate::Subcommand for DiskUsageCmd {
         let backing_repos = get_backing_repos(&checkouts);
         let (redirections, buck_redirections) =
             get_redirections(&checkouts).context("Failed to get EdenFS redirections")?;
+        let fsck_dirs = get_fsck_dirs(&checkouts);
 
         let mut aggregated_usage_counts = AggregatedUsageCounts::new();
         let mut backing_failed_file_checks = HashSet::new();
         let mut mount_failed_file_checks = HashSet::new();
         let mut redirection_failed_file_checks = HashSet::new();
-        let mut fsck_dirs = Vec::new();
 
         for b in backing_repos.iter() {
             // GET SUMMARY INFO for backing counts
@@ -547,21 +564,18 @@ impl crate::Subcommand for DiskUsageCmd {
             // GET SUMMARY INFO for ignored counts
             aggregated_usage_counts.ignored +=
                 ignored_usage_counts_for_mount(&checkout, &client).await?;
+        }
 
-            // GET SUMMARY INFO for fsck
-            let fsck_dir = checkout.fsck_dir();
-            if fsck_dir.exists() {
-                let (usage_count, failed_file_checks) =
-                    usage_for_dir(&fsck_dir, None).from_err().with_context(|| {
-                        format!(
-                            "Failed to measure disk space usage for fsck directory {}",
-                            fsck_dir.display()
-                        )
-                    })?;
-                aggregated_usage_counts.fsck += usage_count;
-                mount_failed_file_checks.extend(failed_file_checks);
-                fsck_dirs.push(fsck_dir);
-            }
+        for fsck_dir in fsck_dirs.iter() {
+            let (usage_count, failed_file_checks) =
+                usage_for_dir(fsck_dir, None).from_err().with_context(|| {
+                    format!(
+                        "Failed to measure disk space usage for fsck directory {}",
+                        fsck_dir.display()
+                    )
+                })?;
+            aggregated_usage_counts.fsck += usage_count;
+            mount_failed_file_checks.extend(failed_file_checks);
         }
 
         for target in redirections {
