@@ -43,12 +43,18 @@ impl BackingStore {
             config.set("edenapi", "max-retry-per-request", Some("0"), &source);
         }
 
-        let hg = root.join(".hg");
+        let ident = identity::must_sniff_dir(root)?;
+        let dot_path = root.join(ident.dot_dir());
 
         Ok(if config.get_or_default("scmstore", "backingstore")? {
-            New(BackingScmStores::new(&config, &hg, use_edenapi, aux_data)?)
+            New(BackingScmStores::new(
+                &config,
+                &dot_path,
+                use_edenapi,
+                aux_data,
+            )?)
         } else {
-            Old(BackingContentStores::new(&config, &hg, use_edenapi)?)
+            Old(BackingContentStores::new(&config, &dot_path, use_edenapi)?)
         })
     }
 

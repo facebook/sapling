@@ -63,13 +63,17 @@ pub struct OperationNotSupported;
 ///   - Print status (Move to another crate).
 /// - Avoid `print!` directly. Use `clidispatch::io` instead.
 pub fn maybe_status_fastpath(
-    repo_root: &Path,
+    repo_dot_path: &Path,
     io: &IO,
     list_ignored: bool,
 ) -> Result<(status::Status, HashMap<RepoPathBuf, RepoPathBuf>)> {
     let rt = tokio::runtime::Runtime::new()?;
 
-    rt.block_on(maybe_status_fastpath_internal(repo_root, io, list_ignored))
+    rt.block_on(maybe_status_fastpath_internal(
+        repo_dot_path,
+        io,
+        list_ignored,
+    ))
 }
 
 fn get_eden_root(repo_root: &Path) -> Result<String> {
@@ -114,10 +118,15 @@ async fn get_status_internal(repo_root: &Path) -> Result<GetScmStatusResult> {
 }
 
 async fn maybe_status_fastpath_internal(
-    repo_root: &Path,
+    repo_dot_path: &Path,
     io: &IO,
     list_ignored: bool,
 ) -> Result<(status::Status, HashMap<RepoPathBuf, RepoPathBuf>)> {
+    let repo_root = match repo_dot_path.parent() {
+        Some(p) => p,
+        None => bail!("invalid dot dir {}", repo_dot_path.display()),
+    };
+
     let eden_root = get_eden_root(repo_root).map_err(|_| OperationNotSupported)?;
 
     let transport = get_socket_transport(repo_root)
@@ -137,8 +146,7 @@ async fn maybe_status_fastpath_internal(
     // the wrapper here and default to the Python implementation. D9025269 has a prototype
     // implementation of 'morestatus' in Rust, but we should gradually rewrite Mercurial in-place
     // and call out to it here rather than maintain a parallel implementation in the wrapper.
-    let hg_dir = repo_root.join(".hg");
-    if needs_morestatus_extension(&hg_dir, &dirstate_data.p2) {
+    if needs_morestatus_extension(repo_dot_path, &dirstate_data.p2) {
         return Err(OperationNotSupported.into());
     }
 
@@ -461,7 +469,8 @@ impl DirstateReader {
 }
 
 fn read_hg_dirstate(repo_root: &Path) -> Result<DirstateData> {
-    let dirstate = repo_root.join(".hg").join("dirstate");
+    let ident = identity::must_sniff_dir(repo_root)?;
+    let dirstate = repo_root.join(ident.dot_dir()).join("dirstate");
     let mut reader = DirstateReader {
         reader: BufReader::new(File::open(dirstate)?),
         sha256: Sha256::new(),

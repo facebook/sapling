@@ -62,7 +62,9 @@ pub fn run(opts: StatusOpts, _io: &IO, config: &mut ConfigSet) -> Result<u8> {
     }
     .context("error cloning segmented changelog")?;
 
-    let namedag_path = IndexedLogNameDagPath(destination.join(".hg/store/segments/v1"));
+    let ident = identity::sniff_env();
+    let dot_path = destination.join(ident.dot_dir());
+    let namedag_path = IndexedLogNameDagPath(dot_path.join("store/segments/v1"));
     let mut namedag = namedag_path
         .open()
         .context("error opening segmented changelog")?;
@@ -92,14 +94,14 @@ pub fn run(opts: StatusOpts, _io: &IO, config: &mut ConfigSet) -> Result<u8> {
         block_on(namedag.flush(&heads)).context("error writing segmented changelog to disk")?;
 
         fs::write(
-            destination.join(".hg/store/remotenames"),
+            dot_path.join("store/remotenames"),
             format!("{} bookmarks remote/master\n", master.to_hex()).as_bytes(),
         )
         .context("error writing to remotenames")?;
     }
 
     fs::write(
-        destination.join(".hg/requires"),
+        dot_path.join("requires"),
         b"dotencode\n\
           fncache\n\
           generaldelta\n\
@@ -110,7 +112,7 @@ pub fn run(opts: StatusOpts, _io: &IO, config: &mut ConfigSet) -> Result<u8> {
     .context("error writing to hg requires")?;
 
     fs::write(
-        destination.join(".hg/store/requires"),
+        dot_path.join("store/requires"),
         b"lazychangelog\n\
           narrowheads\n\
           visibleheads\n",
@@ -118,7 +120,7 @@ pub fn run(opts: StatusOpts, _io: &IO, config: &mut ConfigSet) -> Result<u8> {
     .context("error writing to hg store requires")?;
 
     fs::write(
-        destination.join(".hg/hgrc"),
+        dot_path.join("hgrc"),
         format!(
             "[paths]\n\
              default = ssh://hg.vip.facebook.com//data/scm/{0}\n\

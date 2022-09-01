@@ -153,7 +153,7 @@ pub fn run(opts: StatusOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
     {
         // Attempt to fetch status information from EdenFS.
         let (status, copymap) = edenfs_client::status::maybe_status_fastpath(
-            repo.path(),
+            repo.dot_hg_path(),
             io,
             print_config.status_types.ignored,
         )

@@ -58,8 +58,9 @@ impl WatchmanFileSystem {
             .resolve_root(CanonicalPath::canonicalize(self.vfs.root())?)
             .await?;
 
+        let ident = identity::must_sniff_dir(self.vfs.root())?;
         let excludes = Expr::Any(vec![Expr::DirName(DirNameTerm {
-            path: PathBuf::from(".hg"),
+            path: PathBuf::from(ident.dot_dir()),
             depth: None,
         })]);
 

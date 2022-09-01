@@ -131,7 +131,7 @@ fn initialize_blackbox(optional_repo: &OptionalRepo) -> Result<()> {
             })?
             .value();
         let max_files = config.get_or("blackbox", "maxfiles", || 3)?;
-        let path = repo.shared_path().join(".hg/blackbox/v1");
+        let path = repo.shared_dot_hg_path().join("blackbox/v1");
         if let Ok(blackbox) = ::blackbox::BlackboxOptions::new()
             .max_bytes_per_log(max_size)
             .max_log_count(max_files as u8)
