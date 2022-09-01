@@ -13,13 +13,6 @@ import yaml
 
 DOCKERFILE_DIR = ".github/workflows"
 
-CARGO_FETCH_PATHS = [
-    "eden/scm/exec/hgmain/Cargo.toml",
-    "eden/scm/edenscmnative/conch_parser/Cargo.toml",
-    "eden/scm/exec/scratch/Cargo.toml",
-    "eden/scm/exec/scm_daemon/Cargo.toml",
-]
-
 UBUNTU_VERSIONS = ["20.04", "22.04"]
 
 UBUNTU_VERSION_DEPS = {
@@ -80,15 +73,6 @@ class WorkflowGenerator:
     def gen_build_ubuntu_image(self, *, ubuntu_version: str) -> None:
         image_name = f"ubuntu:{ubuntu_version}"
         dockerfile_name = f"sapling-cli-ubuntu-{ubuntu_version}.Dockerfile"
-        cargo_prefetch_commands = "".join(
-            [f"RUN cargo fetch --manifest-path {p}\n" for p in CARGO_FETCH_PATHS]
-        )
-        if cargo_prefetch_commands:
-            cargo_prefetch_commands = (
-                "\n# Run `cargo fetch` on the crates we plan to build.\n"
-                + cargo_prefetch_commands
-            )
-
         full_deps = UBUNTU_DEPS + UBUNTU_VERSION_DEPS[ubuntu_version]
         dockerfile = f"""\
 FROM {image_name}
@@ -113,7 +97,7 @@ RUN apt-get -y install {' '.join(full_deps)}
 # so assume it needs everything.
 COPY . /tmp/repo
 WORKDIR /tmp/repo
-{cargo_prefetch_commands}
+
 # Create and populate a Yarn offline mirror by running `yarn install`
 # in the addons/ folder that contains yarn.lock, package.json, and the
 # package.json file for each entry in the Yarn workspace.
