@@ -7,6 +7,8 @@
 
 //! See docs/basename_suffix_skeleton_manifest.md for more information
 
+use std::sync::Arc;
+
 use anyhow::Result;
 use blobstore::Blobstore;
 use blobstore::Storable;
@@ -49,26 +51,22 @@ async fn empty_mf(
     leaf.into_blob().store(ctx, blobstore).await
 }
 
-pub(crate) async fn derive_single(
+async fn inner_derive(
     ctx: &CoreContext,
-    derivation_ctx: &DerivationContext,
-    bonsai: BonsaiChangeset,
-    parents: Vec<RootBasenameSuffixSkeletonManifest>,
-) -> Result<RootBasenameSuffixSkeletonManifest> {
-    let changes = get_fixed_up_changes(&bonsai);
-    let blobstore = derivation_ctx.blobstore();
+    blobstore: &Arc<dyn Blobstore>,
+    parents: Vec<BssmDirectory>,
+    changes: Vec<(MPath, Option<(ContentId, FileType)>)>,
+) -> Result<Option<BssmDirectory>> {
     // Types to help understand how to use derive_manifest helper
     type Leaf = (ContentId, FileType);
     type LeafId = ();
     type TreeId = BssmDirectory;
     type IntermediateLeafId = LeafId;
     type Ctx = ();
-    // TODO(yancouto): Optimise by doing the first query separately using the optimisations
-    // in sharded map, which are unused in common manifest code recently
-    let root = derive_manifest_with_io_sender(
+    derive_manifest_with_io_sender(
         ctx.clone(),
         blobstore.clone(),
-        parents.into_iter().map(|root| root.0),
+        parents,
         changes,
         // create_tree
         {
@@ -117,7 +115,21 @@ pub(crate) async fn derive_single(
             }
         },
     )
-    .await?;
+    .await
+}
+
+pub(crate) async fn derive_single(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    bonsai: BonsaiChangeset,
+    parents: Vec<RootBasenameSuffixSkeletonManifest>,
+) -> Result<RootBasenameSuffixSkeletonManifest> {
+    let parents = parents.into_iter().map(|root| root.0).collect::<Vec<_>>();
+    let changes = get_fixed_up_changes(&bonsai);
+    let blobstore = derivation_ctx.blobstore();
+    // TODO(yancouto): Optimise by doing the first query separately using the optimisations
+    // in sharded map, which are unused in common manifest code recently
+    let root = inner_derive(ctx, blobstore, parents, changes).await?;
     Ok(RootBasenameSuffixSkeletonManifest(match root {
         Some(root) => root,
         // Only happens on empty repo
