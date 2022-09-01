@@ -280,7 +280,7 @@ impl MutableRenames {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        if !self.has_rename(ctx, dst_cs_id).await? {
+        if !self.has_rename_uncached(ctx, dst_cs_id).await? {
             return Ok(None);
         }
 
