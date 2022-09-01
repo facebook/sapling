@@ -43,6 +43,7 @@ typedef IdType ShardedMapNodeId (rust.newtype)
 typedef IdType FsnodeId (rust.newtype)
 typedef IdType SkeletonManifestId (rust.newtype)
 typedef IdType MPathHash (rust.newtype)
+typedef IdType BasenameSuffixSkeletonManifestId (rust.newtype)
 
 typedef IdType ContentMetadataId (rust.newtype)
 typedef IdType ContentMetadataV2Id (rust.newtype)
@@ -392,6 +393,28 @@ struct DeletedManifestV2 {
   1: optional ChangesetId linknode;
   // Map of MPathElement -> DeletedManifestV2Id
   2: ShardedMapNode subentries;
+} (rust.exhaustive)
+
+struct BssmFile {} (rust.exhaustive)
+struct BssmDirectory {
+  1: BasenameSuffixSkeletonManifestId id;
+  // Number of entries in this subtree.
+  // This doesn't need to be part of the manifest, but we add it here to
+  // speed up ordered manifest operations
+  2: i64 rollup_count;
+} (rust.exhaustive)
+
+union BssmEntry {
+  1: BssmFile file;
+  2: BssmDirectory directory;
+} (rust.exhaustive)
+
+// Basename suffix manifest stores file trees in a way that allows fast filtering
+// based on suffix of basenames as well as directory prefix of root.
+// See docs/basename_suffix_skeleton_manifest.md for more documentation on this.
+struct BasenameSuffixSkeletonManifest {
+  // Map of MPathElement -> BssmEntry
+  1: ShardedMapNode subentries;
 } (rust.exhaustive)
 
 struct FsnodeFile {

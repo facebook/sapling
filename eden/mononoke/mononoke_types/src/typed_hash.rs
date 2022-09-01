@@ -24,6 +24,8 @@ use edenapi_types::ContentId as EdenapiContentId;
 use edenapi_types::FsnodeId as EdenapiFsnodeId;
 use sql::mysql;
 
+use crate::basename_suffix_skeleton_manifest::BasenameSuffixSkeletonManifest;
+use crate::basename_suffix_skeleton_manifest::BssmEntry;
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::bonsai_changeset::BonsaiChangeset;
@@ -131,6 +133,14 @@ pub struct DeletedManifestV2Id(Blake2);
 /// An identifier for a sharded map node used in deleted manifest v2
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct ShardedMapNodeDMv2Id(Blake2);
+
+/// An identifier for a sharded map node used in basename suffix manifest
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct ShardedMapNodeBSSMId(Blake2);
+
+/// An identifier for basename suffix manifest
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct BasenameSuffixSkeletonManifestId(Blake2);
 
 /// An identifier for an fsnode
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
@@ -544,6 +554,22 @@ impl_typed_hash! {
 }
 
 impl_typed_hash! {
+    hash_type => BasenameSuffixSkeletonManifestId,
+    thrift_hash_type => thrift::BasenameSuffixSkeletonManifestId,
+    value_type => BasenameSuffixSkeletonManifest,
+    context_type => BasenameSuffixSkeletonManifestContext,
+    context_key => "bssm",
+}
+
+impl_typed_hash! {
+    hash_type => ShardedMapNodeBSSMId,
+    thrift_hash_type => thrift::ShardedMapNodeId,
+    value_type => ShardedMapNode<BssmEntry>,
+    context_type => ShardedMapNodeBSSMContext,
+    context_key => "bssm.mapnode",
+}
+
+impl_typed_hash! {
     hash_type => FsnodeId,
     thrift_hash_type => thrift::FsnodeId,
     value_type => Fsnode,
@@ -727,6 +753,9 @@ mod test {
             format!("deletedmanifest2.mapnode.blake2.{}", id)
         );
 
+        let id = ShardedMapNodeBSSMId::from_byte_array([1; 32]);
+        assert_eq!(id.blobstore_key(), format!("bssm.mapnode.blake2.{}", id));
+
         let id = ContentChunkId::from_byte_array([1; 32]);
         assert_eq!(id.blobstore_key(), format!("chunk.blake2.{}", id));
 
@@ -744,6 +773,9 @@ mod test {
             id.blobstore_key(),
             format!("deletedmanifest2.blake2.{}", id)
         );
+
+        let id = BasenameSuffixSkeletonManifestId::from_byte_array([1; 32]);
+        assert_eq!(id.blobstore_key(), format!("bssm.blake2.{}", id),);
 
         let id = FsnodeId::from_byte_array([1; 32]);
         assert_eq!(id.blobstore_key(), format!("fsnode.blake2.{}", id));
@@ -793,6 +825,11 @@ mod test {
         let deserialized = serde_json::from_str(&serialized).unwrap();
         assert_eq!(id, deserialized);
 
+        let id = ShardedMapNodeBSSMId::from_byte_array([1; 32]);
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
+
         let id = ContentChunkId::from_byte_array([1; 32]);
         let serialized = serde_json::to_string(&id).unwrap();
         let deserialized = serde_json::from_str(&serialized).unwrap();
@@ -814,6 +851,11 @@ mod test {
         assert_eq!(id, deserialized);
 
         let id = DeletedManifestV2Id::from_byte_array([1; 32]);
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
+
+        let id = BasenameSuffixSkeletonManifestId::from_byte_array([1; 32]);
         let serialized = serde_json::to_string(&id).unwrap();
         let deserialized = serde_json::from_str(&serialized).unwrap();
         assert_eq!(id, deserialized);

@@ -7,6 +7,7 @@
 
 //! Base types used throughout Mononoke.
 
+pub mod basename_suffix_skeleton_manifest;
 pub mod blame;
 pub mod blame_v2;
 pub mod blob;
