@@ -62,6 +62,7 @@ use skeleton_manifest::RootSkeletonManifestId;
 use sorted_vector_map::SortedVectorMap;
 use tunables::tunables;
 use unodes::RootUnodeManifestId;
+use vec1::Vec1;
 
 use crate::changeset_path::ChangesetPathContentContext;
 use crate::changeset_path::ChangesetPathContext;
@@ -150,6 +151,10 @@ impl fmt::Debug for ChangesetContext {
             self.id()
         )
     }
+}
+
+fn to_vec1<X>(maybe_vec: Option<Vec<X>>) -> Option<Vec1<X>> {
+    maybe_vec.and_then(|v| Vec1::try_from_vec(v).ok())
 }
 
 /// A context object representing a query to a particular commit in a repo.
@@ -1090,7 +1095,7 @@ impl ChangesetContext {
 
     async fn find_entries(
         &self,
-        prefixes: Option<Vec<MononokePath>>,
+        prefixes: Option<Vec1<MononokePath>>,
         ordering: ChangesetFileOrdering,
     ) -> Result<
         impl Stream<
@@ -1147,10 +1152,9 @@ impl ChangesetContext {
     /// A files is returned if the following conditions hold:
     /// - `prefixes` is None, or there is an element of `prefixes` such that the
     ///   element is a prefix of the file path.
-    /// - the basename of the file path is in `basenames`, or there is a suffix
-    ///   in `basename_suffixes` such that that suffix is a suffix of the
-    ///   basename of the file, or both `basenames` and `basename_suffixes` are
-    ///   None.
+    /// - the basename of the file path is in `basenames`, or there is a string
+    ///   in `basename_suffixes` that is a suffix of the basename of the file,
+    ///   or both `basenames` and `basename_suffixes` are None.
     /// The order that files are returned is based on the parameter `ordering`.
     /// To continue a paginated query, use the parameter `ordering`.
     pub async fn find_files(
@@ -1158,6 +1162,22 @@ impl ChangesetContext {
         prefixes: Option<Vec<MononokePath>>,
         basenames: Option<Vec<String>>,
         basename_suffixes: Option<Vec<String>>,
+        ordering: ChangesetFileOrdering,
+    ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>>, MononokeError> {
+        self.inner_find_files(
+            to_vec1(prefixes),
+            to_vec1(basenames),
+            to_vec1(basename_suffixes),
+            ordering,
+        )
+        .await
+    }
+
+    async fn inner_find_files(
+        &self,
+        prefixes: Option<Vec1<MononokePath>>,
+        basenames: Option<Vec1<String>>,
+        basename_suffixes: Option<Vec1<String>>,
         ordering: ChangesetFileOrdering,
     ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>>, MononokeError> {
         // First, find the entries, and filter by file prefix.
@@ -1200,7 +1220,6 @@ impl ChangesetContext {
                                 .any(|suffix| basename.has_suffix(suffix.as_bytes())),
                     )
                 })
-                .into_stream()
                 .left_stream()
                 .left_stream(),
             // If no suffixes are provided, only match on basenames that are
@@ -1209,7 +1228,6 @@ impl ChangesetContext {
                 .try_filter(move |mpath| {
                     future::ready(basenames_as_mpath_elements_set.contains(mpath.basename()))
                 })
-                .into_stream()
                 .left_stream()
                 .right_stream(),
             (None, Some(basename_suffixes)) =>
@@ -1225,12 +1243,11 @@ impl ChangesetContext {
                                 .any(|suffix| basename.has_suffix(suffix.as_bytes())),
                         )
                     })
-                    .into_stream()
                     .right_stream()
                     .left_stream()
             }
             // Otherwise, there are no basename filters, so do not filter.
-            (None, None) => mpaths.into_stream().right_stream().right_stream(),
+            (None, None) => mpaths.right_stream().right_stream(),
         };
 
         Ok(mpaths
@@ -1383,7 +1400,7 @@ impl ChangesetContext {
         let diff_files = diff_items.contains(&ChangesetDiffItem::FILES);
         let diff_trees = diff_items.contains(&ChangesetDiffItem::TREES);
 
-        self.find_entries(path_restrictions, ordering)
+        self.find_entries(to_vec1(path_restrictions), ordering)
             .await?
             .try_filter_map(|(path, entry)| async move {
                 match (path, entry) {
