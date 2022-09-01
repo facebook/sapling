@@ -2344,7 +2344,7 @@ ImmediateFuture<std::unique_ptr<Glob>> detachIfBackgrounded(
 #ifndef _WIN32
 namespace {
 ImmediateFuture<folly::Unit> ensureMaterializedImpl(
-    const EdenMount& edenMount,
+    std::shared_ptr<EdenMount> edenMount,
     const std::vector<std::string>& repoPaths,
     std::unique_ptr<ThriftLogHelper> helper,
     bool followSymlink) {
@@ -2355,7 +2355,12 @@ ImmediateFuture<folly::Unit> ensureMaterializedImpl(
 
   for (auto& path : repoPaths) {
     futures.emplace_back(
-        edenMount.getInodeSlow(RelativePath{path}, fetchContext)
+        makeNotReadyImmediateFuture()
+            .thenValue([edenMount = edenMount.get(),
+                        path = RelativePath{path},
+                        &fetchContext](auto&&) {
+              return edenMount->getInodeSlow(path, fetchContext);
+            })
             .thenValue([&fetchContext, followSymlink](InodePtr inode) {
               return inode->ensureMaterialized(fetchContext, followSymlink)
                   .ensure([inode]() {});
@@ -2393,7 +2398,7 @@ EdenServiceHandler::semifuture_ensureMaterialized(
                       edenMount = std::move(edenMount),
                       helper = std::move(helper)](auto&&) mutable {
             return ensureMaterializedImpl(
-                *edenMount,
+                std::move(edenMount),
                 params->get_paths(),
                 std::move(helper),
                 params->get_followSymlink());
