@@ -10,7 +10,7 @@ use thiserror::Error;
 
 mod batch;
 mod derive;
-mod mapping;
+pub mod mapping;
 
 pub use mapping::RootSkeletonManifestId;
 

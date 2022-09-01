@@ -368,6 +368,11 @@ impl MPathElement {
     pub fn has_suffix(&self, potential_suffix: &[u8]) -> bool {
         self.0.ends_with(potential_suffix)
     }
+
+    /// Reverse this path element inplace
+    pub fn reverse(&mut self) {
+        self.0.reverse()
+    }
 }
 
 // Regex for looking for invalid windows filenames

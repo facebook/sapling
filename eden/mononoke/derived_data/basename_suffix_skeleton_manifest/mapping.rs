@@ -25,7 +25,7 @@ use mononoke_types::ThriftConvert;
 use crate::derive::derive_single;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct RootBasenameSuffixSkeletonManifest(BssmDirectory);
+pub struct RootBasenameSuffixSkeletonManifest(pub(crate) BssmDirectory);
 
 fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
     let root_prefix = "derived_root_bssm.";

@@ -14,8 +14,12 @@ path = "lib.rs"
 anyhow = "1.0.56"
 async-trait = "0.1.56"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data = { version = "0.1.0", path = ".." }
 derived_data_manager = { version = "0.1.0", path = "../manager" }
 derived_data_service_if = { version = "0.1.0", path = "../remote/if" }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
+manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+skeleton_manifest = { version = "0.1.0", path = "../skeleton_manifest" }

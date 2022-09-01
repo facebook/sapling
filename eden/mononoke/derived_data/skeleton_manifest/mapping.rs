@@ -162,9 +162,7 @@ impl BonsaiDerivable for RootSkeletonManifestId {
 
 impl_bonsai_derived_via_manager!(RootSkeletonManifestId);
 
-pub(crate) fn get_file_changes(
-    bcs: &BonsaiChangeset,
-) -> Vec<(MPath, Option<(ContentId, FileType)>)> {
+pub fn get_file_changes(bcs: &BonsaiChangeset) -> Vec<(MPath, Option<(ContentId, FileType)>)> {
     bcs.file_changes()
         .map(|(mpath, file_change)| {
             (

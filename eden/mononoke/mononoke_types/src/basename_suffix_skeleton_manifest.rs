@@ -8,7 +8,10 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
+use async_trait::async_trait;
 use blobstore::Blobstore;
+use blobstore::Loadable;
+use blobstore::LoadableError;
 use bytes::Bytes;
 use context::CoreContext;
 use futures::stream::BoxStream;
@@ -42,8 +45,30 @@ pub enum BssmEntry {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct BssmDirectory {
-    id: BasenameSuffixSkeletonManifestId,
+    pub id: BasenameSuffixSkeletonManifestId,
     pub rollup_count: u64,
+}
+
+impl BssmEntry {
+    pub fn rollup_count(&self) -> u64 {
+        match self {
+            Self::File => 1,
+            Self::Directory(dir) => dir.rollup_count,
+        }
+    }
+}
+
+#[async_trait]
+impl Loadable for BssmDirectory {
+    type Value = BasenameSuffixSkeletonManifest;
+
+    async fn load<'a, B: Blobstore>(
+        &'a self,
+        ctx: &'a CoreContext,
+        blobstore: &'a B,
+    ) -> Result<Self::Value, LoadableError> {
+        self.id.load(ctx, blobstore).await
+    }
 }
 
 impl ThriftConvert for BssmDirectory {
@@ -110,6 +135,12 @@ impl ThriftConvert for BasenameSuffixSkeletonManifest {
 }
 
 impl BasenameSuffixSkeletonManifest {
+    pub fn empty() -> Self {
+        Self {
+            subentries: ShardedMapNode::default(),
+        }
+    }
+
     pub async fn update(
         self,
         ctx: &CoreContext,
