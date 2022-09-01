@@ -11,6 +11,8 @@ use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 
+use anyhow::Context;
+use anyhow::Error;
 use anyhow::Result;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
@@ -118,13 +120,20 @@ pub fn sniff_dir(path: &Path) -> Result<Option<Identity>> {
                 // don't infer the wrong identity. Ideally this would
                 // be an allowlist of errors, but unstable errors like
                 // NotADirectory are unmatchable for now.
-                return Err(err.into());
+                return Err::<_, Error>(err.into()).with_context(|| {
+                    format!("error sniffing {} for identity", test_path.display())
+                });
             }
             _ => {}
         };
     }
 
     Ok(None)
+}
+
+/// Like sniff_dir, but returns an error instead of None.
+pub fn must_sniff_dir(path: &Path) -> Result<Identity> {
+    sniff_dir(path)?.with_context(|| format!("repo {} missing dot dir", path.display()))
 }
 
 /// Recursively sniff path and its ancestors for the first directory

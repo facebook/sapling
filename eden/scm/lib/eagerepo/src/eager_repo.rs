@@ -128,8 +128,9 @@ impl EagerRepoStore {
 impl EagerRepo {
     /// Open an [`EagerRepo`] at the given directory. Create an empty repo on demand.
     pub fn open(dir: &Path) -> Result<Self> {
+        let ident = identity::sniff_dir(dir)?.unwrap_or_else(identity::sniff_env);
         // Attempt to match directory layout of a real client repo.
-        let hg_dir = dir.join(".hg");
+        let hg_dir = dir.join(ident.dot_dir());
         let store_dir = hg_dir.join("store");
         let dag = Dag::open(store_dir.join("segments/v1"))?;
         let store = EagerRepoStore::open(&store_dir.join("hgcommits/v1"))?;
