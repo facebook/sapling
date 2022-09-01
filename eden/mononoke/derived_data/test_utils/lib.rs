@@ -8,8 +8,8 @@
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bounded_traversal::bounded_traversal_stream;
 use context::CoreContext;
 use futures::future::FutureExt;
@@ -22,10 +22,11 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstoreRef;
 
 pub async fn bonsai_changeset_from_hg(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: impl RepoBlobstoreRef + BonsaiHgMappingRef,
     s: &str,
 ) -> Result<(ChangesetId, BonsaiChangeset)> {
     let hg_cs_id = s.parse::<HgChangesetId>()?;
@@ -34,13 +35,13 @@ pub async fn bonsai_changeset_from_hg(
         .get_bonsai_from_hg(ctx, hg_cs_id)
         .await?
         .ok_or_else(|| anyhow!("Failed to find bonsai changeset id for {}", hg_cs_id))?;
-    let bcs = bcs_id.load(ctx, repo.blobstore()).await?;
+    let bcs = bcs_id.load(ctx, repo.repo_blobstore()).await?;
     Ok((bcs_id, bcs))
 }
 
 pub fn iterate_all_manifest_entries<'a, MfId, LId>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: impl RepoBlobstoreRef + Copy + Send + Sync + 'a,
     entry: Entry<MfId, LId>,
 ) -> impl Stream<Item = Result<(Option<MPath>, Entry<MfId, LId>)>> + 'a
 where
@@ -53,7 +54,7 @@ where
             match entry {
                 Entry::Leaf(_) => Ok((vec![(path, entry.clone())], vec![])),
                 Entry::Tree(tree) => {
-                    let mf = tree.load(ctx, repo.blobstore()).await?;
+                    let mf = tree.load(ctx, repo.repo_blobstore()).await?;
                     let recurse = mf
                         .list()
                         .map(|(basename, new_entry)| {
