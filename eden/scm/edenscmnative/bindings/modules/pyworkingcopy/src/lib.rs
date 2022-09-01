@@ -9,6 +9,8 @@
 
 use std::cell::RefCell;
 use std::sync::Arc;
+use std::time::Duration;
+use std::time::SystemTime;
 
 use anyhow::anyhow;
 use anyhow::Error;
@@ -96,7 +98,9 @@ py_class!(class status |py| {
         let root = pyroot.to_path_buf();
         let manifest = pymanifest.get_underlying(py);
         let store = pystore.into();
-        let last_write = last_write.into();
+        let last_write = SystemTime::UNIX_EPOCH.checked_add(
+            Duration::from_secs(last_write.into())).ok_or_else(|| anyhow!("Failed to convert {} to SystemTime", last_write)
+        ).map_pyerr(py)?;
         let matcher = extract_option_matcher(py, pymatcher)?;
         let filesystem = match filesystem {
             "normal" => {

@@ -9,6 +9,7 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::time::SystemTime;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -46,7 +47,7 @@ impl WorkingCopy {
         treestate: TreeState,
         manifest: TreeManifest,
         store: ArcReadFileContents,
-        last_write: HgModifiedTime,
+        last_write: SystemTime,
     ) -> std::result::Result<Self, (TreeState, Error)> {
         let treestate = Rc::new(RefCell::new(treestate));
         let manifest = Arc::new(RwLock::new(manifest));
@@ -83,8 +84,10 @@ impl WorkingCopy {
         treestate: Rc<RefCell<TreeState>>,
         manifest: Arc<RwLock<TreeManifest>>,
         store: ArcReadFileContents,
-        last_write: HgModifiedTime,
+        last_write: SystemTime,
     ) -> Result<FileSystem> {
+        let last_write: HgModifiedTime = last_write.try_into()?;
+
         Ok(match file_system_type {
             FileSystemType::Normal => Box::new(PhysicalFileSystem::new(
                 root,

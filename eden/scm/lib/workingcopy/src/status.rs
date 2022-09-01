@@ -11,6 +11,7 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::time::SystemTime;
 
 use anyhow::Result;
 use manifest::Manifest;
@@ -25,7 +26,6 @@ use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
 use types::RepoPathBuf;
 
-use crate::filechangedetector::HgModifiedTime;
 use crate::filesystem::ChangeType;
 use crate::filesystem::FileSystemType;
 use crate::workingcopy::WorkingCopy;
@@ -38,7 +38,7 @@ pub fn status(
     manifest: Arc<RwLock<TreeManifest>>,
     store: ArcReadFileContents,
     treestate: TreeState,
-    last_write: HgModifiedTime,
+    last_write: SystemTime,
     matcher: Arc<dyn Matcher + Send + Sync + 'static>,
     _list_unknown: bool,
 ) -> (TreeState, Result<Status>) {

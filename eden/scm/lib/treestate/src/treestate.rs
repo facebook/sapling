@@ -221,6 +221,12 @@ impl TreeState {
         self.root.metadata.deref()
     }
 
+    pub fn get_metadata_by_key(&self, key: &str) -> Result<Option<String>> {
+        let mut metadata_buf = self.get_metadata();
+        let metadata = Metadata::deserialize(&mut metadata_buf)?;
+        Ok(metadata.0.get(key).cloned())
+    }
+
     pub fn has_dir<P: AsRef<[u8]>>(&mut self, path: P) -> Result<bool> {
         self.tree.has_dir(&self.store, path.as_ref())
     }

@@ -7,9 +7,12 @@
 
 use std::collections::BTreeMap;
 use std::fs;
+use std::fs::File;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
+use std::time::SystemTime;
 
 use anyhow::Result;
 use configparser::config::ConfigSet;
@@ -18,6 +21,7 @@ use edenapi::Builder;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
 use hgcommits::DagCommits;
+use manifest_tree::TreeManifest;
 use metalog::MetaLog;
 use parking_lot::RwLock;
 use revisionstore::scmstore::FileStoreBuilder;
@@ -28,8 +32,13 @@ use revisionstore::EdenApiTreeStore;
 use revisionstore::MemcacheStore;
 use storemodel::ReadFileContents;
 use storemodel::TreeStore;
+use treestate::dirstate::Dirstate;
+use treestate::serialization::Serializable;
+use treestate::treestate::TreeState;
 use types::HgId;
 use util::path::absolute;
+use workingcopy::filesystem::FileSystemType;
+use workingcopy::workingcopy::WorkingCopy;
 
 use crate::commits::open_dag_commits;
 use crate::errors;
@@ -322,6 +331,53 @@ impl Repo {
         let ts = Arc::new(tree_builder.build()?);
         self.tree_store = Some(ts.clone());
         Ok(ts)
+    }
+
+    pub fn working_copy(&mut self, path: &Path) -> Result<WorkingCopy> {
+        let is_eden = self.requirements.contains("eden");
+        let is_watchman = self.config.get_nonempty("fsmonitor", "mode") == Some("on".into());
+        let filesystem = match (is_eden, is_watchman) {
+            (true, _) => FileSystemType::Eden,
+            (false, true) => FileSystemType::Watchman,
+            (false, false) => FileSystemType::Normal,
+        };
+
+        let dirstate_path = path.join(self.ident.dot_dir()).join("dirstate");
+        let treestate = match filesystem {
+            // TODO: Fix from_dirstate to accept dirstate path
+            FileSystemType::Eden => TreeState::from_dirstate(path)?,
+            _ => {
+                let mut buf = File::open(dirstate_path)?;
+                let dirstate = Dirstate::deserialize(&mut buf)?;
+                let fields = dirstate.tree_state.expect(
+                    "Dirstate must contain tree state fields necessary to construct treestate",
+                );
+                let treestate_path = path
+                    .join(self.ident.dot_dir())
+                    .join("treestate")
+                    .join(fields.tree_filename);
+                TreeState::open(treestate_path, Some(fields.tree_root_id))?
+            }
+        };
+
+        let p1 = match treestate.get_metadata_by_key("p1")? {
+            Some(s) => HgId::from_str(&s)?,
+            None => *HgId::null_id(),
+        };
+
+        let store = self.file_store()?;
+        let treestore = self.tree_store()?;
+        let manifest = TreeManifest::durable(treestore, p1);
+
+        WorkingCopy::new(
+            path.to_path_buf(),
+            filesystem,
+            treestate,
+            manifest,
+            store,
+            SystemTime::UNIX_EPOCH,
+        )
+        .map_err(|(_treestate, err)| err)
     }
 }
 
