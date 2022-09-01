@@ -54,10 +54,11 @@
 
 use anyhow::Error;
 use async_trait::async_trait;
-use blobrepo::BlobRepo;
 use context::CoreContext;
 use context::SessionClass;
 use mononoke_types::ChangesetId;
+use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 
 pub mod batch;
 
@@ -67,7 +68,6 @@ pub use metaconfig_types::DerivedDataTypesConfig;
 pub mod macro_export {
     pub use anyhow::Error;
     pub use async_trait::async_trait;
-    pub use blobrepo::BlobRepo;
     pub use context::CoreContext;
     pub use derived_data_manager::BonsaiDerivable;
     pub use mononoke_types::ChangesetId;
@@ -95,7 +95,7 @@ pub trait BonsaiDerived: Sized + Send + Sync + Clone + 'static {
     /// enabled for this repo.
     async fn derive(
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: impl RepoDerivedDataRef + Send + Sync,
         csid: ChangesetId,
     ) -> Result<Self, DeriveError>;
 
@@ -103,7 +103,7 @@ pub trait BonsaiDerived: Sized + Send + Sync + Clone + 'static {
     /// derivation, e.g. when scrubbing.
     async fn fetch_derived(
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: impl RepoDerivedDataRef + Send + Sync,
         csid: &ChangesetId,
     ) -> Result<Option<Self>, Error>;
 
@@ -111,7 +111,7 @@ pub trait BonsaiDerived: Sized + Send + Sync + Clone + 'static {
     /// changeset.
     async fn is_derived(
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: impl RepoDerivedDataRef + Send + Sync,
         csid: &ChangesetId,
     ) -> Result<bool, DeriveError> {
         Ok(Self::fetch_derived(ctx, repo, csid).await?.is_some())
@@ -124,7 +124,7 @@ pub trait BonsaiDerived: Sized + Send + Sync + Clone + 'static {
     /// this repo.
     async fn count_underived(
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: impl RepoDerivedDataRef + Send + Sync,
         csid: &ChangesetId,
         limit: u64,
     ) -> Result<u64, DeriveError>;
@@ -140,33 +140,30 @@ macro_rules! impl_bonsai_derived_via_manager {
 
             async fn derive(
                 ctx: &$crate::macro_export::CoreContext,
-                repo: &$crate::macro_export::BlobRepo,
+                repo: impl $crate::macro_export::RepoDerivedDataRef + Send + Sync,
                 csid: $crate::macro_export::ChangesetId,
             ) -> Result<Self, $crate::macro_export::DeriveError> {
-                $crate::macro_export::RepoDerivedDataRef::repo_derived_data(repo)
-                    .derive::<Self>(ctx, csid)
-                    .await
+                repo.repo_derived_data().derive::<Self>(ctx, csid).await
             }
 
             async fn fetch_derived(
                 ctx: &$crate::macro_export::CoreContext,
-                repo: &$crate::macro_export::BlobRepo,
+                repo: impl $crate::macro_export::RepoDerivedDataRef + Send + Sync,
                 csid: &$crate::macro_export::ChangesetId,
             ) -> Result<Option<Self>, $crate::macro_export::Error> {
-                Ok(
-                    $crate::macro_export::RepoDerivedDataRef::repo_derived_data(repo)
-                        .fetch_derived::<Self>(ctx, *csid)
-                        .await?,
-                )
+                Ok(repo
+                    .repo_derived_data()
+                    .fetch_derived::<Self>(ctx, *csid)
+                    .await?)
             }
 
             async fn count_underived(
                 ctx: &$crate::macro_export::CoreContext,
-                repo: &$crate::macro_export::BlobRepo,
+                repo: impl $crate::macro_export::RepoDerivedDataRef + Send + Sync,
                 csid: &$crate::macro_export::ChangesetId,
                 limit: u64,
             ) -> Result<u64, $crate::macro_export::DeriveError> {
-                $crate::macro_export::RepoDerivedDataRef::repo_derived_data(repo)
+                repo.repo_derived_data()
                     .count_underived::<Self>(ctx, *csid, Some(limit))
                     .await
             }
@@ -174,9 +171,9 @@ macro_rules! impl_bonsai_derived_via_manager {
     };
 }
 
-pub fn override_ctx(mut ctx: CoreContext, repo: &BlobRepo) -> CoreContext {
-    let use_bg_class =
-        tunables::tunables().get_by_repo_derived_data_use_background_session_class(repo.name());
+pub fn override_ctx(mut ctx: CoreContext, repo: impl RepoIdentityRef) -> CoreContext {
+    let use_bg_class = tunables::tunables()
+        .get_by_repo_derived_data_use_background_session_class(repo.repo_identity().name());
     if let Some(true) = use_bg_class {
         ctx.session_mut()
             .override_session_class(SessionClass::BackgroundUnlessTooSlow);

@@ -288,18 +288,43 @@ fn has_file_conflict(
 
 #[cfg(test)]
 mod test {
-    use blobrepo::BlobRepo;
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::Bookmarks;
+    use changeset_fetcher::ChangesetFetcher;
+    use changesets::Changesets;
     use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
     use maplit::btreemap;
     use mononoke_types::FileType;
+    use repo_blobstore::RepoBlobstore;
+    use repo_blobstore::RepoBlobstoreRef;
+    use repo_derived_data::RepoDerivedData;
     use tests_utils::CreateCommitContext;
 
     use super::*;
 
+    #[facet::container]
+    struct TestRepo {
+        #[facet]
+        bonsai_hg_mapping: dyn BonsaiHgMapping,
+        #[facet]
+        bookmarks: dyn Bookmarks,
+        #[facet]
+        repo_blobstore: RepoBlobstore,
+        #[facet]
+        repo_derived_data: RepoDerivedData,
+        #[facet]
+        filestore_config: FilestoreConfig,
+        #[facet]
+        changeset_fetcher: dyn ChangesetFetcher,
+        #[facet]
+        changesets: dyn Changesets,
+    }
+
     #[fbinit::test]
     async fn test_split_batch_in_linear_stacks_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
 
         let file1 = "file1";
         let root = CreateCommitContext::new_root(&ctx, &repo)
@@ -314,7 +339,7 @@ mod test {
 
         let linear_stacks = split_batch_in_linear_stacks(
             &ctx,
-            repo.blobstore(),
+            repo.repo_blobstore(),
             vec![root],
             FileConflicts::ChangeDelete.into(),
         )
@@ -332,7 +357,7 @@ mod test {
 
         let linear_stacks = split_batch_in_linear_stacks(
             &ctx,
-            repo.blobstore(),
+            repo.repo_blobstore(),
             vec![second],
             FileConflicts::ChangeDelete.into(),
         )
@@ -350,7 +375,7 @@ mod test {
 
         let linear_stacks = split_batch_in_linear_stacks(
             &ctx,
-            repo.blobstore(),
+            repo.repo_blobstore(),
             vec![root, second],
             FileConflicts::ChangeDelete.into(),
         )
@@ -395,7 +420,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_batch_in_linear_stacks_with_limit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
 
         let file1 = "file1";
         let root = CreateCommitContext::new_root(&ctx, &repo)
@@ -410,7 +435,7 @@ mod test {
 
         let linear_stacks = split_batch_in_linear_stacks(
             &ctx,
-            repo.blobstore(),
+            repo.repo_blobstore(),
             vec![root, second],
             SplitOptions {
                 file_conflicts: FileConflicts::ChangeDelete,
@@ -459,7 +484,7 @@ mod test {
     }
     #[fbinit::test]
     async fn test_split_batch_in_linear_stacks_merge(fb: FacebookInit) -> Result<(), Error> {
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
         let ctx = CoreContext::test_mock(fb);
 
         let file1 = "file1";
@@ -480,7 +505,7 @@ mod test {
 
         let linear_stacks = split_batch_in_linear_stacks(
             &ctx,
-            repo.blobstore(),
+            repo.repo_blobstore(),
             vec![p1, merge],
             FileConflicts::ChangeDelete.into(),
         )
@@ -504,7 +529,7 @@ mod test {
 
         let linear_stacks = split_batch_in_linear_stacks(
             &ctx,
-            repo.blobstore(),
+            repo.repo_blobstore(),
             vec![p1, p2],
             FileConflicts::ChangeDelete.into(),
         )
@@ -533,7 +558,7 @@ mod test {
     async fn test_split_batch_in_linear_stacks_replace_dir_with_file(
         fb: FacebookInit,
     ) -> Result<(), Error> {
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
         let ctx = CoreContext::test_mock(fb);
 
         let dir = "dir";
@@ -549,7 +574,7 @@ mod test {
 
         let linear_stacks = split_batch_in_linear_stacks(
             &ctx,
-            repo.blobstore(),
+            repo.repo_blobstore(),
             vec![root, child],
             FileConflicts::ChangeDelete.into(),
         )
@@ -576,7 +601,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_split_batch_in_linear_stacks_delete_file(fb: FacebookInit) -> Result<(), Error> {
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
         let ctx = CoreContext::test_mock(fb);
 
         let file1 = "file1";
@@ -591,7 +616,7 @@ mod test {
 
         let linear_stacks = split_batch_in_linear_stacks(
             &ctx,
-            repo.blobstore(),
+            repo.repo_blobstore(),
             vec![root, child],
             FileConflicts::ChangeDelete.into(),
         )
@@ -617,7 +642,7 @@ mod test {
     async fn test_split_batch_in_linear_stacks_add_same_file(
         fb: FacebookInit,
     ) -> Result<(), Error> {
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
         let ctx = CoreContext::test_mock(fb);
 
         let file1 = "file1";
@@ -633,7 +658,7 @@ mod test {
         // With ChangeDelete, the stack is combined.
         let linear_stacks = split_batch_in_linear_stacks(
             &ctx,
-            repo.blobstore(),
+            repo.repo_blobstore(),
             vec![root, child],
             FileConflicts::ChangeDelete.into(),
         )
@@ -655,7 +680,7 @@ mod test {
         // With AnyChange, the stack is split.
         let linear_stacks = split_batch_in_linear_stacks(
             &ctx,
-            repo.blobstore(),
+            repo.repo_blobstore(),
             vec![root, child],
             FileConflicts::AnyChange.into(),
         )
@@ -684,7 +709,7 @@ mod test {
         fb: FacebookInit,
     ) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
 
         let root = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir", "content1")
@@ -702,7 +727,7 @@ mod test {
 
         let linear_stacks = split_batch_in_linear_stacks(
             &ctx,
-            repo.blobstore(),
+            repo.repo_blobstore(),
             vec![root, second, third],
             FileConflicts::ChangeDelete.into(),
         )
@@ -739,7 +764,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_batch_in_linear_stacks_copy_info(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
 
         let root = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir", "content1")
@@ -756,7 +781,7 @@ mod test {
 
         let linear_stacks = split_batch_in_linear_stacks(
             &ctx,
-            repo.blobstore(),
+            repo.repo_blobstore(),
             vec![root, second, third],
             SplitOptions {
                 file_conflicts: FileConflicts::ChangeDelete,
@@ -795,7 +820,7 @@ mod test {
 
     async fn assert_linear_stacks(
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: impl RepoBlobstoreRef,
         actual: Vec<LinearStack>,
         expected: Vec<(
             Vec<ChangesetId>,
@@ -818,7 +843,7 @@ mod test {
                     let maybe_content = match maybe_content {
                         Some((content_id, file_type)) => {
                             let content = filestore::fetch_concat(
-                                &repo.get_blobstore(),
+                                &repo.repo_blobstore(),
                                 ctx,
                                 filestore::FetchKey::Canonical(content_id),
                             )
