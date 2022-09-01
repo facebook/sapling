@@ -43,7 +43,7 @@ pub enum BssmEntry {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct BssmDirectory {
     id: BasenameSuffixSkeletonManifestId,
-    rollup_count: u64,
+    pub rollup_count: u64,
 }
 
 impl ThriftConvert for BssmDirectory {
