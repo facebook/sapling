@@ -28,6 +28,7 @@ use mercurial_mutation::HgMutationStoreRef;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::PushParams;
 use metaconfig_types::PushrebaseParams;
+use metaconfig_types::PushrebaseRemoteMode;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use pushrebase::PushrebaseError;
@@ -510,7 +511,11 @@ async fn normal_pushrebase<'a>(
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
     let bookmark_restriction = BookmarkKindRestrictions::OnlyPublishing;
-    let remote_mode = &pushrebase_params.remote_mode;
+    let remote_mode = if tunables().get_force_local_pushrebase() {
+        &PushrebaseRemoteMode::Local
+    } else {
+        &pushrebase_params.remote_mode
+    };
     let maybe_fallback_scuba: Option<(MononokeScubaSampleBuilder, BookmarkMovementError)> =
         if let Some(address) = remote_mode.scs_address() {
             #[cfg(fbcode_build)]

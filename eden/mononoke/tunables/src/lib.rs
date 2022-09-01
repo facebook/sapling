@@ -310,6 +310,9 @@ pub struct MononokeTunables {
 
     // If set the `draft` ACL action will be used for `draft` access.
     enforce_draft_acl: AtomicBool,
+
+    // Force local pushrebase instead of talking to SCS
+    force_local_pushrebase: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
