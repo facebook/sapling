@@ -386,17 +386,57 @@ To automatically remove this directory, run `eden du --deep-clean`.",
     }
 }
 
-/// Get all the backing repositories associated with the passed in mounts.
-fn get_backing_repos(mounts: &Vec<PathBuf>, instance: &EdenFsInstance) -> Result<HashSet<PathBuf>> {
-    let mut backing_repos = HashSet::new();
+/// Get all the backing repositories associated with the passed in checkouts.
+fn get_backing_repos(checkouts: &[EdenFsCheckout]) -> HashSet<PathBuf> {
+    checkouts
+        .iter()
+        .filter_map(|checkout| checkout.backing_repo())
+        .collect()
+}
 
-    for mount in mounts {
-        let checkout = find_checkout(instance, mount)?;
-        if let Some(backing_repo) = checkout.backing_repo() {
-            backing_repos.insert(backing_repo);
+/// Get the target folder for all the redirections.
+///
+/// This returns 2 sets: the target of all redirections, and all the Buck redirections.
+fn get_redirections(checkouts: &[EdenFsCheckout]) -> Result<(HashSet<PathBuf>, HashSet<PathBuf>)> {
+    let mut redirections = HashSet::new();
+    let mut buck_redirections = HashSet::new();
+
+    for checkout in checkouts.iter() {
+        for (_, redir) in get_effective_redirections(checkout).with_context(|| {
+            format!(
+                "Failed to get redirections for {}",
+                checkout.path().display()
+            )
+        })? {
+            if let Some(target) = redir.expand_target_abspath(checkout).with_context(|| {
+                format!(
+                    "Failed to get redirection destination for {}",
+                    redir.repo_path.display()
+                )
+            })? {
+                redirections.insert(target);
+            }
+
+            let repo_path = redir.repo_path();
+            if let Some(file_name) = repo_path.file_name() {
+                if file_name == "buck-out" {
+                    buck_redirections.insert(checkout.path().join(repo_path));
+                }
+            }
         }
     }
-    Ok(backing_repos)
+    Ok((redirections, buck_redirections))
+}
+
+/// Get all the checkous associated with the passed in mounts.
+fn get_checkouts(mounts: &[PathBuf], instance: &EdenFsInstance) -> Result<Vec<EdenFsCheckout>> {
+    Ok(mounts
+        .iter()
+        .map(|mount| {
+            find_checkout(instance, mount)
+                .with_context(|| format!("Failed to find checkout for {}", mount.display()))
+        })
+        .collect::<Result<_, anyhow::Error>>()?)
 }
 
 /// Warn about backing repositories that are non-empty working copy.
@@ -465,14 +505,16 @@ impl crate::Subcommand for DiskUsageCmd {
         let mounts = self
             .get_mounts(&instance)
             .context("Failed to get EdenFS mounts")?;
-        let backing_repos = get_backing_repos(&mounts, &instance)
-            .context("Failed to get EdenFS backing repositories")?;
+        let checkouts =
+            get_checkouts(&mounts, &instance).context("Failed to get EdenFS checkouts")?;
+        let backing_repos = get_backing_repos(&checkouts);
+        let (redirections, buck_redirections) =
+            get_redirections(&checkouts).context("Failed to get EdenFS redirections")?;
 
         let mut aggregated_usage_counts = AggregatedUsageCounts::new();
         let mut backing_failed_file_checks = HashSet::new();
         let mut mount_failed_file_checks = HashSet::new();
         let mut redirection_failed_file_checks = HashSet::new();
-        let mut buck_redirections = HashSet::new();
         let mut fsck_dirs = Vec::new();
 
         for b in backing_repos.iter() {
@@ -488,10 +530,7 @@ impl crate::Subcommand for DiskUsageCmd {
             backing_failed_file_checks.extend(failed_file_checks);
         }
 
-        for mount in &mounts {
-            let checkout = find_checkout(&instance, mount)
-                .with_context(|| format!("Failed to find checkout for {}", mount.display()))?;
-
+        for checkout in checkouts.iter() {
             // GET SUMMARY INFO for materialized counts
             let overlay_dir = checkout.data_dir().join("local");
             let (usage_count, failed_file_checks) = usage_for_dir(&overlay_dir, None)
@@ -523,43 +562,21 @@ impl crate::Subcommand for DiskUsageCmd {
                 mount_failed_file_checks.extend(failed_file_checks);
                 fsck_dirs.push(fsck_dir);
             }
-
-            for (_, redir) in get_effective_redirections(&checkout)
-                .with_context(|| format!("Failed to get redirections for {}", mount.display()))?
-            {
-                // GET SUMMARY INFO for redirections
-                if let Some(target) = redir.expand_target_abspath(&checkout).with_context(|| {
-                    format!(
-                        "Failed to get redirection destination for {}",
-                        redir.repo_path.display()
-                    )
-                })? {
-                    let (usage_count, failed_file_checks) =
-                        usage_for_dir(&target, None).from_err().with_context(|| {
-                            format!(
-                                "Failed to measure disk space usage for redirection {}",
-                                target.display()
-                            )
-                        })?;
-                    aggregated_usage_counts.redirection += usage_count;
-                    redirection_failed_file_checks.extend(failed_file_checks);
-                } else {
-                    return Err(EdenFsError::Other(anyhow!(
-                        "Cannot resolve target for redirection: {:?}",
-                        redir
-                    )));
-                }
-
-                // GET REDIRECTIONS LIST
-                let repo_path = redir.repo_path();
-                if let Some(file_name) = repo_path.file_name() {
-                    if file_name == "buck-out" {
-                        let redir_full_path = checkout.path().join(repo_path);
-                        buck_redirections.insert(redir_full_path);
-                    }
-                }
-            }
         }
+
+        for target in redirections {
+            // GET SUMMARY INFO for redirections
+            let (usage_count, failed_file_checks) =
+                usage_for_dir(&target, None).from_err().with_context(|| {
+                    format!(
+                        "Failed to measure disk space usage for redirection {}",
+                        target.display()
+                    )
+                })?;
+            aggregated_usage_counts.redirection += usage_count;
+            redirection_failed_file_checks.extend(failed_file_checks);
+        }
+
         // Make immutable
         let backing_failed_file_checks = backing_failed_file_checks;
         let mount_failed_file_checks = mount_failed_file_checks;
