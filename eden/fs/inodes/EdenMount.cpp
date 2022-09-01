@@ -326,7 +326,7 @@ class TreeLookupProcessor {
       std::shared_ptr<const Tree> tree) {
     using RetType = OverlayChecker::LookupCallbackValue;
     if (iter_ == iterRange_.end()) {
-      return ImmediateFuture{RetType{tree}};
+      return RetType{tree};
     }
 
     auto name = *iter_++;
@@ -344,7 +344,7 @@ class TreeLookupProcessor {
               return tree;
             });
       } else {
-        return ImmediateFuture{RetType{it->second}};
+        return RetType{it->second};
       }
     } else {
       if (!it->second.isTree()) {
@@ -1136,8 +1136,8 @@ EdenMount::getTreeOrTreeEntry(
     ObjectFetchContext& context) const {
   auto rootTree = getCheckedOutRootTree();
   if (path.empty()) {
-    return ImmediateFuture{std::variant<std::shared_ptr<const Tree>, TreeEntry>{
-        std::move(rootTree)}};
+    return std::variant<std::shared_ptr<const Tree>, TreeEntry>{
+        std::move(rootTree)};
   }
 
   auto processor =
@@ -1172,7 +1172,7 @@ class CanonicalizeProcessor {
     retPath_ = retPath_ + it->first;
 
     if (iter_ == iterRange_.end()) {
-      return ImmediateFuture{retPath_};
+      return retPath_;
     } else {
       if (!it->second.isTree()) {
         return makeImmediateFuture<RelativePath>(
@@ -1246,7 +1246,7 @@ class VirtualInodeLookupProcessor {
   ImmediateFuture<VirtualInode> next(VirtualInode inodeTreeEntry) {
     if (iter_ == iterRange_.end()) {
       // Lookup terminated, return the existing entry
-      return ImmediateFuture{std::move(inodeTreeEntry)};
+      return std::move(inodeTreeEntry);
     }
 
     // There are path components left, recurse looking for the next child

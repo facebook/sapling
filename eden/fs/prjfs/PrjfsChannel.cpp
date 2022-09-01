@@ -500,38 +500,41 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
 
     FB_LOGF(getStraceLogger(), DBG7, "lookup({})", path);
     return dispatcher_->lookup(std::move(path), context)
-        .thenValue([context = std::move(context),
-                    virtualizationContext = virtualizationContext](
-                       std::optional<LookupResult>&& optLookupResult) {
-          if (!optLookupResult) {
-            context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
-            return ImmediateFuture{folly::unit};
-          }
-          const auto& lookupResult = optLookupResult.value();
+        .thenValue(
+            [context = std::move(context),
+             virtualizationContext = virtualizationContext](
+                std::optional<LookupResult>&& optLookupResult)
+                -> ImmediateFuture<folly::Unit> {
+              if (!optLookupResult) {
+                context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
+                return folly::unit;
+              }
+              const auto& lookupResult = optLookupResult.value();
 
-          PRJ_PLACEHOLDER_INFO placeholderInfo{};
-          placeholderInfo.FileBasicInfo.IsDirectory = lookupResult.isDir;
-          placeholderInfo.FileBasicInfo.FileSize = lookupResult.size;
-          auto inodeName = lookupResult.path.wide();
+              PRJ_PLACEHOLDER_INFO placeholderInfo{};
+              placeholderInfo.FileBasicInfo.IsDirectory = lookupResult.isDir;
+              placeholderInfo.FileBasicInfo.FileSize = lookupResult.size;
+              auto inodeName = lookupResult.path.wide();
 
-          HRESULT result = PrjWritePlaceholderInfo(
-              virtualizationContext,
-              inodeName.c_str(),
-              &placeholderInfo,
-              sizeof(placeholderInfo));
+              HRESULT result = PrjWritePlaceholderInfo(
+                  virtualizationContext,
+                  inodeName.c_str(),
+                  &placeholderInfo,
+                  sizeof(placeholderInfo));
 
-          if (FAILED(result)) {
-            return makeImmediateFuture<folly::Unit>(makeHResultErrorExplicit(
-                result,
-                fmt::format(
-                    FMT_STRING("Writing placeholder for {}"),
-                    lookupResult.path)));
-          }
+              if (FAILED(result)) {
+                return makeImmediateFuture<folly::Unit>(
+                    makeHResultErrorExplicit(
+                        result,
+                        fmt::format(
+                            FMT_STRING("Writing placeholder for {}"),
+                            lookupResult.path)));
+              }
 
-          context->sendSuccess();
+              context->sendSuccess();
 
-          return ImmediateFuture{folly::unit};
-        });
+              return folly::unit;
+            });
   });
 
   detachAndCompleteCallback(

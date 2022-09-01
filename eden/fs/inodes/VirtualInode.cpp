@@ -334,7 +334,7 @@ ImmediateFuture<struct stat> VirtualInode::stat(
           }
 #endif
           st.st_size = 0U;
-          return ImmediateFuture{st};
+          return st;
         } else if constexpr (std::is_same_v<T, TreeEntry>) {
           hash = arg.getHash();
           mode = modeFromTreeEntryType(arg.getType());
@@ -386,8 +386,7 @@ getChildrenHelper(
               })));
     } else {
       // This is a file, return the TreeEntry for it
-      result.push_back(std::make_pair(
-          child.first, ImmediateFuture{VirtualInode{*treeEntry}}));
+      result.push_back(std::make_pair(child.first, VirtualInode{*treeEntry}));
     }
   }
 
@@ -514,7 +513,7 @@ ImmediateFuture<VirtualInode> getOrFindChildHelper(
             });
   } else {
     // This is a file, return the TreeEntry for it
-    return ImmediateFuture{VirtualInode{*treeEntry}};
+    return VirtualInode{*treeEntry};
   }
 }
 } // namespace

@@ -58,8 +58,12 @@ class ImmediateFuture {
    * Construct an ImmediateFuture with an already constructed value. No
    * folly::SemiFuture will be allocated.
    */
-  /* implicit */ ImmediateFuture(T value) noexcept(
-      std::is_nothrow_move_constructible_v<folly::Try<T>>)
+  template <
+      typename U = T,
+      typename = std::enable_if_t<std::is_constructible_v<folly::Try<T>, U>>>
+  /* implicit */ ImmediateFuture(U value) noexcept(
+      std::is_nothrow_constructible_v<folly::Try<T>, U>&&
+          std::is_nothrow_move_constructible_v<folly::Try<T>>)
       : ImmediateFuture{folly::Try<T>{std::move(value)}} {}
 
   /**

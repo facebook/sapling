@@ -598,4 +598,17 @@ TEST(ImmediateFuture, not_ready) {
   std::move(f2).get(0ms);
   EXPECT_EQ(value, 43);
 }
+
+TEST(ImmediateFuture, constructionFromCompatible) {
+  struct Base {};
+  struct Child : public Base {};
+
+  ImmediateFuture<int> fut{0};
+
+  std::move(fut).thenValue(
+      [](auto&&) -> ImmediateFuture<std::unique_ptr<Base>> {
+        return std::make_unique<Child>();
+      });
+}
+
 } // namespace facebook::eden

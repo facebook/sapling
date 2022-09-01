@@ -220,7 +220,7 @@ std::optional<ImmediateFuture<VirtualInode>> TreeInode::rlockGetOrFindChild(
   // Check to see if the entry is already loaded
   auto& entry = iter->second;
   if (auto inodePtr = entry.getInodePtr()) {
-    return ImmediateFuture{VirtualInode{std::move(inodePtr)}};
+    return VirtualInode{std::move(inodePtr)};
   }
 
   // The node is not loaded. If the caller requires that we load
@@ -251,8 +251,7 @@ std::optional<ImmediateFuture<VirtualInode>> TreeInode::rlockGetOrFindChild(
   // is not materialized, it's guaranteed to have a hash set, and
   // the constructor of UnmaterializedUnloadedBlobDirEntry can be
   // called safely.
-  return ImmediateFuture{
-      VirtualInode{UnmaterializedUnloadedBlobDirEntry(entry)}};
+  return VirtualInode{UnmaterializedUnloadedBlobDirEntry(entry)};
 }
 
 std::pair<folly::SemiFuture<InodePtr>, TreeInode::LoadChildCleanUp>
@@ -331,9 +330,7 @@ ImmediateFuture<VirtualInode> TreeInode::getOrFindChild(
     // separately.
     return getMount()
         ->getInodeSlow(".eden/this-dir"_relpath, context)
-        .thenValue([](auto&& inode) {
-          return ImmediateFuture{VirtualInode{std::move(inode)}};
-        });
+        .thenValue([](auto&& inode) { return VirtualInode{std::move(inode)}; });
   }
 #endif // !_WIN32
   return tryRlockCheckBeforeUpdate<ImmediateFuture<VirtualInode>>(
@@ -472,7 +469,7 @@ ImmediateFuture<InodePtr> TreeInode::getChildRecursive(
     ObjectFetchContext& context) {
   auto pathStr = path.stringPiece();
   if (pathStr.empty()) {
-    return ImmediateFuture<InodePtr>{static_cast<InodePtr>(inodePtrFromThis())};
+    return inodePtrFromThis();
   }
 
   auto processor = std::make_unique<LookupProcessor>(path, context);
@@ -1551,12 +1548,14 @@ ImmediateFuture<folly::Unit> TreeInode::removeRecursively(
     InvalidationRequired invalidate,
     ObjectFetchContext& context) {
   return this->removeRecursivelyNoFlushInvalidation(name, invalidate, context)
-      .thenValue([self = inodePtrFromThis(), invalidate](folly::Unit&&) {
-        if (invalidate == InvalidationRequired::Yes) {
-          return self->getMount()->flushInvalidations();
-        }
-        return ImmediateFuture(folly::unit);
-      });
+      .thenValue(
+          [self = inodePtrFromThis(),
+           invalidate](folly::Unit&&) -> ImmediateFuture<folly::Unit> {
+            if (invalidate == InvalidationRequired::Yes) {
+              return self->getMount()->flushInvalidations();
+            }
+            return folly::unit;
+          });
 }
 
 template <typename InodePtrType>

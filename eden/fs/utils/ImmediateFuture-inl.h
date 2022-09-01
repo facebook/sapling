@@ -328,7 +328,7 @@ ImmediateFuture<std::vector<folly::Try<T>>> collectAll(
   if (semis.empty()) {
     // All the ImmediateFuture were immediate, let's return an ImmediateFuture
     // that holds an immediate vector too.
-    return ImmediateFuture{std::move(res)};
+    return std::move(res);
   }
 
   return folly::collectAll(std::move(semis))

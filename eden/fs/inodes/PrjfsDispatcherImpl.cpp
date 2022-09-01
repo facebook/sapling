@@ -270,7 +270,7 @@ ImmediateFuture<TreeInodePtr> createDirInode(
            * directories.
            */
 
-          auto fut = ImmediateFuture{mount.getRootInode()};
+          auto fut = ImmediateFuture<TreeInodePtr>{mount.getRootInode()};
           for (auto parent : path.paths()) {
             fut = std::move(fut).thenValue(
                 [parent = parent.copy(), &context](TreeInodePtr treeInode) {
@@ -596,23 +596,25 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
                       return treeInode
                           ->removeRecursively(
                               basename, InvalidationRequired::No, context)
-                          .thenTry([basename = basename.copy(),
-                                    treeInode](folly::Try<folly::Unit> try_) {
-                            if (auto* exc = try_.tryGetExceptionObject<
-                                            std::system_error>()) {
-                              if (!isEnoent(*exc)) {
-                                return makeImmediateFuture<folly::Unit>(
-                                    try_.exception());
-                              }
-                            }
-                            auto child = treeInode->mknod(
-                                basename,
-                                _S_IFREG,
-                                0,
-                                InvalidationRequired::No);
-                            child->incFsRefcount();
-                            return ImmediateFuture{folly::unit};
-                          });
+                          .thenTry(
+                              [basename = basename.copy(),
+                               treeInode](folly::Try<folly::Unit> try_)
+                                  -> ImmediateFuture<folly::Unit> {
+                                if (auto* exc = try_.tryGetExceptionObject<
+                                                std::system_error>()) {
+                                  if (!isEnoent(*exc)) {
+                                    return makeImmediateFuture<folly::Unit>(
+                                        try_.exception());
+                                  }
+                                }
+                                auto child = treeInode->mknod(
+                                    basename,
+                                    _S_IFREG,
+                                    0,
+                                    InvalidationRequired::No);
+                                child->incFsRefcount();
+                                return folly::unit;
+                              });
                     }
                   }
 

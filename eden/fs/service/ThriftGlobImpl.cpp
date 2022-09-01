@@ -169,57 +169,62 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
 
             return sortedResults;
           })
-          .thenValue([edenMount,
-                      wantDtype = wantDtype_,
-                      fileBlobsToPrefetch,
-                      suppressFileList = suppressFileList_,
-                      listOnlyFiles = listOnlyFiles_,
-                      &fetchContext,
-                      config = serverState->getEdenConfig()](
-                         std::vector<GlobNode::GlobResult>&& results) mutable {
-            auto out = std::make_unique<Glob>();
+          .thenValue(
+              [edenMount,
+               wantDtype = wantDtype_,
+               fileBlobsToPrefetch,
+               suppressFileList = suppressFileList_,
+               listOnlyFiles = listOnlyFiles_,
+               &fetchContext,
+               config = serverState->getEdenConfig()](
+                  std::vector<GlobNode::GlobResult>&& results) mutable
+              -> ImmediateFuture<std::unique_ptr<Glob>> {
+                auto out = std::make_unique<Glob>();
 
-            if (!suppressFileList) {
-              // already deduplicated at this point, no need to de-dup
-              for (auto& entry : results) {
-                if (!listOnlyFiles || entry.dtype != dtype_t::Dir) {
-                  out->matchingFiles_ref()->emplace_back(
-                      entry.name.stringPiece().toString());
+                if (!suppressFileList) {
+                  // already deduplicated at this point, no need to de-dup
+                  for (auto& entry : results) {
+                    if (!listOnlyFiles || entry.dtype != dtype_t::Dir) {
+                      out->matchingFiles_ref()->emplace_back(
+                          entry.name.stringPiece().toString());
 
-                  if (wantDtype) {
-                    out->dtypes_ref()->emplace_back(
-                        static_cast<OsDtype>(entry.dtype));
+                      if (wantDtype) {
+                        out->dtypes_ref()->emplace_back(
+                            static_cast<OsDtype>(entry.dtype));
+                      }
+
+                      out->originHashes_ref()->emplace_back(
+                          edenMount->getObjectStore()->renderRootId(
+                              *entry.originHash));
+                    }
+                  }
+                }
+                if (fileBlobsToPrefetch) {
+                  std::vector<ImmediateFuture<folly::Unit>> futures;
+
+                  auto store = edenMount->getObjectStore();
+                  auto blobs = fileBlobsToPrefetch->rlock();
+                  auto range = folly::Range{blobs->data(), blobs->size()};
+
+                  while (range.size() > 20480) {
+                    auto curRange = range.subpiece(0, 20480);
+                    range.advance(20480);
+                    futures.emplace_back(
+                        store->prefetchBlobs(curRange, fetchContext));
+                  }
+                  if (!range.empty()) {
+                    futures.emplace_back(
+                        store->prefetchBlobs(range, fetchContext));
                   }
 
-                  out->originHashes_ref()->emplace_back(
-                      edenMount->getObjectStore()->renderRootId(
-                          *entry.originHash));
+                  return collectAll(std::move(futures))
+                      .thenValue([glob = std::move(out),
+                                  fileBlobsToPrefetch](auto&&) mutable {
+                        return std::move(glob);
+                      });
                 }
-              }
-            }
-            if (fileBlobsToPrefetch) {
-              std::vector<ImmediateFuture<folly::Unit>> futures;
-
-              auto store = edenMount->getObjectStore();
-              auto blobs = fileBlobsToPrefetch->rlock();
-              auto range = folly::Range{blobs->data(), blobs->size()};
-
-              while (range.size() > 20480) {
-                auto curRange = range.subpiece(0, 20480);
-                range.advance(20480);
-                futures.emplace_back(
-                    store->prefetchBlobs(curRange, fetchContext));
-              }
-              if (!range.empty()) {
-                futures.emplace_back(store->prefetchBlobs(range, fetchContext));
-              }
-
-              return collectAll(std::move(futures))
-                  .thenValue([glob = std::move(out), fileBlobsToPrefetch](
-                                 auto&&) mutable { return std::move(glob); });
-            }
-            return ImmediateFuture{std::move(out)};
-          })
+                return std::move(out);
+              })
           .ensure([globRoot, originRootIds = std::move(originRootIds)]() {
             // keep globRoot and originRootIds alive until the end
           });
