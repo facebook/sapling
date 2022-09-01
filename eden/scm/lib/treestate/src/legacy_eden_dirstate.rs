@@ -42,25 +42,23 @@ const MERGE_NOT_APPLICABLE: i8 = 0;
 const MERGE_BOTH_PARENTS: i8 = -1;
 const MERGE_OTHER_PARENT: i8 = -2;
 
-const DIRSTATE_PATH: &str = ".hg/dirstate";
-
-pub fn read_dirstate(repo_root: &Path) -> Result<(Metadata, HashMap<Box<[u8]>, FileStateV2>)> {
-    let mut dirstate = File::open(repo_root.join(DIRSTATE_PATH))?;
+pub fn read_eden_dirstate(
+    dirstate_path: &Path,
+) -> Result<(Metadata, HashMap<Box<[u8]>, FileStateV2>)> {
+    let mut dirstate = File::open(dirstate_path)?;
     deserialize_dirstate(&mut dirstate)
 }
 
-pub fn write_dirstate(
-    repo_root: &Path,
+pub fn write_eden_dirstate(
+    dirstate_path: &Path,
     metadata: Metadata,
     entries: HashMap<Box<[u8]>, FileStateV2>,
 ) -> Result<()> {
     let mut dirstate_bytes = Vec::new();
     serialize_dirstate(&mut dirstate_bytes, &metadata, &entries)?;
-    atomic_write(&repo_root.join(DIRSTATE_PATH), |f| {
-        f.write_all(&dirstate_bytes)
-    })
-    .map(|_| ())
-    .map_err(|e| anyhow!(e))
+    atomic_write(dirstate_path, |f| f.write_all(&dirstate_bytes))
+        .map(|_| ())
+        .map_err(|e| anyhow!(e))
 }
 
 struct Reader<T> {

@@ -17,8 +17,8 @@ use anyhow::Result;
 use crate::filestate::FileStateV2;
 use crate::filestate::StateFlags;
 use crate::filestore::FileStore;
-use crate::legacy_dirstate::read_dirstate;
-use crate::legacy_dirstate::write_dirstate;
+use crate::legacy_eden_dirstate::read_eden_dirstate;
+use crate::legacy_eden_dirstate::write_eden_dirstate;
 use crate::metadata::Metadata;
 use crate::serialization::Serializable;
 use crate::store::BlockId;
@@ -39,10 +39,10 @@ pub struct TreeState {
     store: FileStore,
     tree: Tree<FileStateV2>,
     root: TreeStateRoot,
-    // repo_root is only used in the case the case that the treestate is
-    // wrapping a legacy dirstate which is necessary for EdenFS compatility.
+    // eden_dirstate_path is only used in the case the case that the treestate is
+    // wrapping a legacy eden dirstate which is necessary for EdenFS compatility.
     // TODO: Remove once EdenFS has migrated to treestate.
-    repo_root: Option<PathBuf>,
+    eden_dirstate_path: Option<PathBuf>,
 }
 
 /// `TreeStateRoot` contains block id to the root `Tree`, and other metadata.
@@ -75,7 +75,7 @@ impl TreeState {
                     store,
                     tree,
                     root,
-                    repo_root: None,
+                    eden_dirstate_path: None,
                 })
             }
             None => {
@@ -86,31 +86,33 @@ impl TreeState {
                     store,
                     tree,
                     root,
-                    repo_root: None,
+                    eden_dirstate_path: None,
                 })
             }
         }
     }
 
-    /// Provides the ability to populate a treestate from a legacy dirstate.
+    /// Provides the ability to populate a treestate from a legacy eden dirstate.
     /// Clean up once EdenFS has been migrated from legacy dirstate to
     /// treestate.
-    pub fn from_dirstate<P: AsRef<Path>>(repo_root: P) -> Result<Self> {
+    /// N.B: A legacy eden dirstate has a different binary format to a legacy
+    /// dirstate.
+    pub fn from_eden_dirstate<P: AsRef<Path>>(eden_dirstate_path: P) -> Result<Self> {
         let store = FileStore::in_memory()?;
         let mut root = TreeStateRoot::default();
         let tree = Tree::new();
 
-        let (metadata, entries) = read_dirstate(repo_root.as_ref())?;
+        let (metadata, entries) = read_eden_dirstate(eden_dirstate_path.as_ref())?;
         let mut buf = Vec::new();
         metadata.serialize(&mut buf)?;
         root.metadata = buf.into_boxed_slice();
 
-        let path = repo_root.as_ref().to_path_buf();
+        let path = eden_dirstate_path.as_ref().to_path_buf();
         let mut treestate = TreeState {
             store,
             tree,
             root,
-            repo_root: Some(path),
+            eden_dirstate_path: Some(path),
         };
 
         for (key, state) in entries {
@@ -149,12 +151,12 @@ impl TreeState {
         self.store.flush()?;
 
         // TODO: Clean up once we migrate EdenFS to TreeState and no longer
-        // need to write to legacy dirstate format.
-        if let Some(dirstate_path) = self.repo_root.clone() {
+        // need to write to legacy eden dirstate format.
+        if let Some(eden_dirstate_path) = self.eden_dirstate_path.clone() {
             let mut metadata_buf = self.get_metadata();
             let metadata = Metadata::deserialize(&mut metadata_buf)?;
             let entries = self.flatten_tree()?;
-            write_dirstate(&dirstate_path, metadata, entries)?;
+            write_eden_dirstate(&eden_dirstate_path, metadata, entries)?;
         }
 
         Ok(result)

@@ -344,8 +344,7 @@ impl Repo {
 
         let dirstate_path = path.join(self.ident.dot_dir()).join("dirstate");
         let treestate = match filesystem {
-            // TODO: Fix from_dirstate to accept dirstate path
-            FileSystemType::Eden => TreeState::from_dirstate(path)?,
+            FileSystemType::Eden => TreeState::from_eden_dirstate(dirstate_path)?,
             _ => {
                 let mut buf = File::open(dirstate_path)?;
                 let dirstate = Dirstate::deserialize(&mut buf)?;
