@@ -1456,16 +1456,17 @@ for plat, func in [("bsd", "setproctitle")]:
     if re.search(plat, sys.platform) and hasfunction(new_compiler(), func):
         osutil_cflags.append("-DHAVE_%s" % func.upper())
 
-if "linux" in sys.platform and cancompile(
-    new_compiler(),
-    """
+havefanotify = (
+    not ossbuild
+    and "linux" in sys.platform
+    and cancompile(
+        new_compiler(),
+        """
      #include <fcntl.h>
      #include <sys/fanotify.h>
      int main() { return fanotify_init(0, 0); }""",
-):
-    havefanotify = True
-else:
-    havefanotify = False
+    )
+)
 
 
 extmodules = [
