@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.56"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
-configmodel = { version = "0.1.0", path = "../configmodel" }
+configmodel = { version = "0.1.0", path = "../config/model" }
 crossbeam = "0.8"
 edenfs_client = { version = "0.1.0", path = "../edenfs-client", optional = true }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }

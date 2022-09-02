@@ -9,7 +9,7 @@
 using namespace facebook::eden;
 
 // The following functions are exported from this rust library:
-// @dep=//eden/scm/lib/configparser:configparser
+// @dep=//eden/scm/lib/config/parser:configparser
 
 namespace {
 struct BytesData {

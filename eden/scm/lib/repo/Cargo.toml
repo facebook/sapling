@@ -7,8 +7,8 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.56"
-configmodel = { version = "0.1.0", path = "../configmodel" }
-configparser = { version = "0.1.0", path = "../configparser" }
+configmodel = { version = "0.1.0", path = "../config/model" }
+configparser = { version = "0.1.0", path = "../config/parser" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
 hgcommits = { version = "0.1.0", path = "../hgcommits" }
 identity = { version = "0.1.0", path = "../identity" }

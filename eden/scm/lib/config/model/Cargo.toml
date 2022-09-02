@@ -8,6 +8,6 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.56"
 auto_impl = "0.4"
-minibytes = { version = "0.1.0", path = "../minibytes" }
+minibytes = { version = "0.1.0", path = "../../minibytes" }
 thiserror = "1.0.30"
-util = { version = "0.1.0", path = "../util" }
+util = { version = "0.1.0", path = "../../util" }

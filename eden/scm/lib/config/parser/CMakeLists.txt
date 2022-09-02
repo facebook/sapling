@@ -32,5 +32,5 @@ install(
   TARGETS configparser
   EXPORT mercurial
   LIBRARY DESTINATION ${LIB_INSTALL_DIR}
-  PUBLIC_HEADER DESTINATION "include/eden/scm/lib/configparser/"
+  PUBLIC_HEADER DESTINATION "include/eden/scm/lib/config/parser/"
 )

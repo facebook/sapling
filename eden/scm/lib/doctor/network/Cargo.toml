@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 auth = { version = "0.1.0", path = "../../auth" }
-configmodel = { version = "0.1.0", path = "../../configmodel" }
+configmodel = { version = "0.1.0", path = "../../config/model" }
 curl = { version = "0.4.41", features = ["http2"] }
 hg-http = { version = "0.1.0", path = "../../hg-http" }
 http = "0.2"

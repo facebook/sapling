@@ -12,7 +12,7 @@ async-trait = "0.1.56"
 auth = { version = "0.1.0", path = "../auth" }
 bytes = { version = "1.1", features = ["serde"] }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
-configmodel = { version = "0.1.0", path = "../configmodel" }
+configmodel = { version = "0.1.0", path = "../config/model" }
 edenapi_trait = { version = "0.1.0", path = "trait" }
 edenapi_types = { version = "0.1.0", path = "types" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }

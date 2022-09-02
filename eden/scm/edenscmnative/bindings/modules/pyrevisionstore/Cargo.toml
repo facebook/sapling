@@ -7,8 +7,8 @@ edition = "2021"
 anyhow = "1.0.20"
 async-trait = "0.1.56"
 async-runtime = { path = "../../../../lib/async-runtime" }
-configmodel = { path = "../../../../lib/configmodel" }
-configparser = { path = "../../../../lib/configparser" }
+configmodel = { path = "../../../../lib/config/model" }
+configparser = { path = "../../../../lib/config/parser" }
 cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.7", default-features = false }
 io = { path = "../../../../lib/io" }

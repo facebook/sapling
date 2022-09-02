@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.56"
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
-configmodel = { version = "0.1.0", path = "../configmodel" }
+configmodel = { version = "0.1.0", path = "../config/model" }
 indexmap = { version = "1.8.0", features = ["rayon", "serde-1"] }
 pem = "0.8"
 simple_asn1 = "0.4"
@@ -18,5 +18,5 @@ url = "2.2.2"
 util = { version = "0.1.0", path = "../util" }
 
 [dev-dependencies]
-configparser = { version = "0.1.0", path = "../configparser" }
+configparser = { version = "0.1.0", path = "../config/parser" }
 once_cell = "1.12"

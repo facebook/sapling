@@ -11,8 +11,8 @@ crate-type = ["lib", "staticlib"]
 
 [dependencies]
 anyhow = "1.0.56"
-configmodel = { version = "0.1.0", path = "../configmodel" }
-configparser = { version = "0.1.0", path = "../configparser" }
+configmodel = { version = "0.1.0", path = "../config/model" }
+configparser = { version = "0.1.0", path = "../config/parser" }
 eagerepo = { version = "0.1.0", path = "../eagerepo" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
 env_logger = "0.7"

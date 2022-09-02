@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.56"
-configmodel = { version = "0.1.0", path = "../configmodel" }
+configmodel = { version = "0.1.0", path = "../config/model" }
 fs2 = "0.4"
 thiserror = "1.0.30"
 tracing = "0.1.35"

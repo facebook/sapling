@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.56"
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
-configmodel = { version = "0.1.0", path = "../configmodel" }
+configmodel = { version = "0.1.0", path = "../config/model" }
 fs2 = "0.4"
 hg-http = { version = "0.1.0", path = "../hg-http" }
 libc = "0.2.121"

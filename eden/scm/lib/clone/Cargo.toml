@@ -9,7 +9,7 @@ edition = "2021"
 anyhow = "1.0.56"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
 checkout = { version = "0.1.0", path = "../checkout" }
-configmodel = { version = "0.1.0", path = "../configmodel" }
+configmodel = { version = "0.1.0", path = "../config/model" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 repo = { version = "0.1.0", path = "../repo" }
 termlogger = { version = "0.1.0", path = "../termlogger" }

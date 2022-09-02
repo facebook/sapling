@@ -13,8 +13,8 @@ auth = { version = "0.1.0", path = "../auth" }
 bincode = "1.3.3"
 blake2 = "0.9"
 byteorder = "1.3"
-configmodel = { version = "0.1.0", path = "../configmodel" }
-configparser = { version = "0.1.0", path = "../configparser" }
+configmodel = { version = "0.1.0", path = "../config/model" }
+configparser = { version = "0.1.0", path = "../config/parser" }
 crossbeam = "0.8"
 edenapi = { version = "0.1.0", path = "../edenapi" }
 edenapi_types = { version = "0.1.0", path = "../edenapi/types" }

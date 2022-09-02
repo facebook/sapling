@@ -8,8 +8,8 @@ edition = "2021"
 
 [dependencies]
 atty = "0.2"
-configmodel = { version = "0.1.0", path = "../configmodel" }
-configparser = { version = "0.1.0", path = "../configparser" }
+configmodel = { version = "0.1.0", path = "../config/model" }
+configparser = { version = "0.1.0", path = "../config/parser" }
 once_cell = "1.12"
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 pipe = "0.2"
