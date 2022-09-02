@@ -13,6 +13,8 @@ use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Result;
+use configmodel::Config;
+use configmodel::ConfigExt;
 use configparser::config::ConfigSet;
 use configparser::convert::ByteCount;
 use hgtime::HgTime;

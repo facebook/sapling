@@ -7,6 +7,7 @@
 
 use std::borrow::Cow;
 
+use configmodel::ConfigExt;
 use configparser::config::ConfigSet;
 use thiserror::Error;
 #[cfg(feature = "eden")]

@@ -18,6 +18,7 @@ use clidispatch::global_flags::HgGlobalOpts;
 use clidispatch::output::new_logger;
 use clidispatch::output::TermLogger;
 use cliparser::define_flags;
+use configmodel::ConfigExt;
 use migration::feature::deprecate;
 use repo::repo::Repo;
 use tracing::instrument;

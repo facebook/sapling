@@ -9,6 +9,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::Result;
+use configmodel::ConfigExt;
 use configparser::config::ConfigSet;
 use edenapi::Builder as EdenApiBuilder;
 use log::warn;

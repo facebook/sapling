@@ -36,6 +36,7 @@ use anyhow::Result;
 use async_runtime::block_on;
 use async_runtime::stream_to_iter;
 use auth::AuthSection;
+use configmodel::ConfigExt;
 use configparser::config::ConfigSet;
 use configparser::convert::ByteCount;
 use futures::future::FutureExt;

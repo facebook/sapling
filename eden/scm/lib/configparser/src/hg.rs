@@ -21,6 +21,8 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use configmodel::Config;
+use configmodel::ConfigExt;
 use minibytes::Text;
 use url::Url;
 use util::path::expand_path;

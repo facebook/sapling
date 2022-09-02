@@ -19,6 +19,7 @@ use anyhow::format_err;
 use anyhow::Error;
 use async_runtime::block_on;
 use async_runtime::stream_to_iter as block_on_stream;
+use configmodel::ConfigExt;
 use configparser::config::ConfigSet;
 use cpython::*;
 use cpython_ext::ExtractInner;

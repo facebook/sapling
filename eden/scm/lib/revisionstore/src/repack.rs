@@ -16,6 +16,7 @@ use std::sync::Arc;
 use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
+use configmodel::ConfigExt;
 use configparser::config::ConfigSet;
 use configparser::convert::ByteCount;
 use minibytes::Bytes;

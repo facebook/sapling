@@ -12,6 +12,7 @@ use std::path::Path;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use configmodel::ConfigExt;
 use manifest::List;
 use revisionstore::scmstore::file::FileAuxData;
 use types::Key;

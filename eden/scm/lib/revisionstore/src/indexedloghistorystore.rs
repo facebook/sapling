@@ -14,6 +14,7 @@ use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
+use configmodel::ConfigExt;
 use configparser::config::ConfigSet;
 use configparser::convert::ByteCount;
 use indexedlog::log::IndexOutput;

@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use clidispatch::global_flags::HgGlobalOpts;
 use cliparser::alias::expand_aliases;
 use cliparser::parser::*;
+use configmodel::Config;
 use cpython::*;
 use cpython_ext::Str;
 use pyconfigparser::config;

@@ -16,6 +16,8 @@ use cliparser::parser::ParseError;
 use cliparser::parser::ParseOptions;
 use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
+use configmodel::Config;
+use configmodel::ConfigExt;
 use configparser::config::ConfigSet;
 use repo::repo::Repo;
 

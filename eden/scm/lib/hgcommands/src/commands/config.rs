@@ -16,6 +16,8 @@ use clidispatch::global_flags::HgGlobalOpts;
 use clidispatch::io::IsTty;
 use clidispatch::OptionalRepo;
 use cliparser::define_flags;
+use configmodel::ConfigExt;
+use configparser::Config;
 use formatter::formatter::get_formatter;
 use formatter::formatter::FormatOptions;
 use formatter::formatter::Formattable;
@@ -220,7 +222,7 @@ fn show_configs(
         return Ok(1);
     }
 
-    let config_sections: BTreeSet<_> = BTreeSet::from_iter(config.sections());
+    let config_sections: BTreeSet<Text> = config.sections().as_ref().iter().cloned().collect();
     let empty_selection = requested_sections.is_empty();
     let selected_sections: Box<dyn Iterator<Item = &Text>> = if empty_selection {
         Box::new(config_sections.iter())

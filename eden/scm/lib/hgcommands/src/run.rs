@@ -32,6 +32,8 @@ use clidispatch::global_flags::HgGlobalOpts;
 use clidispatch::io::CanColor;
 use clidispatch::io::IsTty;
 use clidispatch::io::IO;
+use configmodel::Config;
+use configmodel::ConfigExt;
 use configparser::config::ConfigSet;
 use fail::FailScenario;
 use once_cell::sync::Lazy;
@@ -244,11 +246,15 @@ fn dispatch_command(
 
     if !fell_back {
         if let Some(command) = command {
-            let mut hooks = config.keys(&["hooks", &format!("pre-{}", command.name())]);
+            let hooks_with_prefix =
+                |prefix: String| -> Vec<minibytes::Text> { config.keys_prefixed("hooks", &prefix) };
+            let mut hooks = hooks_with_prefix(format!("pre-{}.", command.name()));
             if exit_code > 0 {
-                hooks.append(&mut config.keys(&["hooks", &format!("fail-{}", command.name())]));
+                let mut names = hooks_with_prefix(format!("fail-{}.", command.name()));
+                hooks.append(&mut names);
             } else {
-                hooks.append(&mut config.keys(&["hooks", &format!("post-{}", command.name())]));
+                let mut names = hooks_with_prefix(format!("post-{}.", command.name()));
+                hooks.append(&mut names);
             }
 
             if !hooks.is_empty() {

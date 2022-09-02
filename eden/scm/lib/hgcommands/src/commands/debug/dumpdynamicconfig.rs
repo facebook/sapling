@@ -6,6 +6,8 @@
  */
 
 #[cfg(feature = "fb")]
+use configmodel::ConfigExt;
+#[cfg(feature = "fb")]
 use configparser::hg::calculate_dynamicconfig;
 
 use super::define_flags;

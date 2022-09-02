@@ -15,6 +15,7 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 use anyhow::Result;
+use configmodel::ConfigExt;
 use configparser::config::ConfigSet;
 use configparser::Config;
 use edenapi::Builder;

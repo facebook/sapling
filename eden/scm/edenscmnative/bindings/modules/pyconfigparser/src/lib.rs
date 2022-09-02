@@ -15,6 +15,7 @@ use configparser::config::SupersetVerification;
 use configparser::convert::parse_list;
 use configparser::hg::ConfigSetHgExt;
 use configparser::hg::OptionsHgExt;
+use configparser::Config;
 use cpython::*;
 use cpython_ext::error::Result;
 use cpython_ext::error::ResultPyErrExt;
@@ -76,21 +77,21 @@ py_class!(pub class config |py| {
         Ok(errors_to_str_vec(errors))
     }
 
-    def get(&self, section: String, name: String) -> PyResult<Option<PyUnicode>> {
+    def get(&self, section: &str, name: &str) -> PyResult<Option<PyUnicode>> {
         let cfg = self.cfg(py).borrow();
 
         Ok(cfg.get(section, name).map(|v| PyUnicode::new(py, &v)))
     }
 
     def sources(
-        &self, section: String, name: String
+        &self, section: &str, name: &str
     ) -> PyResult<Vec<(Option<PyUnicode>, Option<(PyPathBuf, usize, usize, usize)>, PyUnicode)>> {
         // Return [(value, file_source, source)]
         // file_source is a tuple of (file_path, byte_start, byte_end, line)
         let cfg = self.cfg(py).borrow();
         let sources = cfg.get_sources(section, name);
         let mut result = Vec::with_capacity(sources.len());
-        for source in sources {
+        for source in sources.as_ref().iter() {
             let value = source.value().as_ref().map(|v| PyUnicode::new(py, &v));
             let file = source.location().map(|(path, range)| {
                 // Calculate the line number - count "\n" till range.start
@@ -125,7 +126,7 @@ py_class!(pub class config |py| {
         Ok(cfg.sections().iter().map(|s| PyUnicode::new(py, &s)).collect())
     }
 
-    def names(&self, section: String) -> PyResult<Vec<PyUnicode>> {
+    def names(&self, section: &str) -> PyResult<Vec<PyUnicode>> {
         let cfg = self.cfg(py).borrow();
         Ok(cfg.keys(section).iter().map(|s| PyUnicode::new(py, &s)).collect())
     }

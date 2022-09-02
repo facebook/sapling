@@ -8,6 +8,8 @@
 use std::str::FromStr;
 
 use clidispatch::errors;
+use configmodel::Config;
+use configmodel::ConfigExt;
 use configparser::convert::ByteCount;
 use revisionstore::CorruptionPolicy;
 use revisionstore::DataPackStore;

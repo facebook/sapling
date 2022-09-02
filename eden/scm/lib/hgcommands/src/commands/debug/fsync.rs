@@ -7,6 +7,8 @@
 
 use std::path::Path;
 
+use configmodel::ConfigExt;
+
 use super::NoOpts;
 use super::Repo;
 use super::Result;

@@ -23,6 +23,14 @@ pub trait Config {
     /// Get config names in the given section. Sorted by insertion order.
     fn keys(&self, section: &str) -> Vec<Text>;
 
+    /// Keys with the given prefix.
+    fn keys_prefixed(&self, section: &str, prefix: &str) -> Vec<Text> {
+        self.keys(section)
+            .into_iter()
+            .filter(|k| k.starts_with(prefix))
+            .collect()
+    }
+
     /// Get config value for a given config.
     /// Return `None` if the config item does not exist or is unset.
     fn get(&self, section: &str, name: &str) -> Option<Text>;

@@ -9,12 +9,12 @@ use std::borrow::Cow;
 use std::collections::hash_map::RandomState;
 use std::collections::HashSet;
 use std::fs;
-use std::ops::Range;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str;
 use std::sync::Arc;
 
+use configmodel::Config;
 pub use configmodel::ValueLocation;
 pub use configmodel::ValueSource;
 use indexmap::IndexMap;
@@ -23,7 +23,6 @@ use pest_hgrc::parse;
 use pest_hgrc::Instruction;
 use util::path::expand_path;
 
-use crate::convert::FromConfigValue;
 use crate::error::Error;
 
 /// Collection of config sections loaded from various sources.
@@ -48,21 +47,38 @@ pub struct Options {
     filters: Vec<Arc<Box<dyn Fn(Text, Text, Option<Text>) -> Option<(Text, Text, Option<Text>)>>>>,
 }
 
-impl crate::Config for ConfigSet {
+impl Config for ConfigSet {
+    /// Get config names under a section, sorted by insertion order.
+    ///
+    /// keys("foo") returns keys in section "foo".
     fn keys(&self, section: &str) -> Vec<Text> {
-        ConfigSet::keys(self, section)
+        self.sections
+            .get(section)
+            .map(|section| section.items.keys().cloned().collect())
+            .unwrap_or_default()
     }
 
+    /// Get config value for a given config.
+    /// Return `None` if the config item does not exist or is unset.
     fn get(&self, section: &str, name: &str) -> Option<Text> {
-        ConfigSet::get(self, section, name)
+        self.sections.get(section).and_then(|section| {
+            section
+                .items
+                .get(name)
+                .and_then(|values| values.last().and_then(|value| value.value.clone()))
+        })
     }
 
     /// Get config sections.
     fn sections(&self) -> Cow<[Text]> {
-        Cow::Owned(ConfigSet::sections(self))
+        let sections = self.sections.keys().cloned().collect();
+        Cow::Owned(sections)
     }
 
-    /// Get the sources of a config.
+    /// Get detailed sources of a given config, including overrides, and source information.
+    /// The last item in the returned vector is the latest value that is considered effective.
+    ///
+    /// Return an emtpy vector if the config does not exist.
     fn get_sources(&self, section: &str, name: &str) -> Cow<[ValueSource]> {
         match self
             .sections
@@ -133,97 +149,6 @@ impl ConfigSet {
         let buf = content.into();
         self.load_file_content(Path::new(""), buf, opts, &mut visited, &mut errors);
         errors
-    }
-
-    /// Get config sections.
-    pub fn sections(&self) -> Vec<Text> {
-        self.sections.keys().cloned().collect()
-    }
-
-    /// Get config names matching the given prefix, sorted by insertion order.
-    ///
-    /// keys("foo") returns keys in section "foo".
-    /// keys(&["foo", "bar"]) returns keys in section "foo" with prefix "bar(.|$)".
-    ///
-    /// As a special case, keys(&[]) returns nothing.
-    pub fn keys(&self, prefix: impl KeyPrefix) -> Vec<Text> {
-        match prefix.section() {
-            None => Vec::new(),
-            Some(section_name) => {
-                let name_prefixes = prefix.name_prefixes();
-                self.sections
-                    .get(section_name)
-                    .map(|section| {
-                        section
-                            .items
-                            .keys()
-                            .filter(|name| {
-                                name.split('.')
-                                    .take(name_prefixes.len())
-                                    .eq(name_prefixes.iter().copied())
-                            })
-                            .cloned()
-                            .collect()
-                    })
-                    .unwrap_or_default()
-            }
-        }
-    }
-
-    /// Get config value for a given config.
-    /// Return `None` if the config item does not exist or is unset.
-    pub fn get(&self, section: impl AsRef<str>, name: impl AsRef<str>) -> Option<Text> {
-        self.sections.get(section.as_ref()).and_then(|section| {
-            section
-                .items
-                .get(name.as_ref())
-                .and_then(|values| values.last().and_then(|value| value.value.clone()))
-        })
-    }
-
-    /// Get detailed sources of a given config, including overrides, and source information.
-    /// The last item in the returned vector is the latest value that is considered effective.
-    ///
-    /// Return an emtpy vector if the config does not exist.
-    pub fn get_sources(&self, section: impl AsRef<str>, name: impl AsRef<str>) -> Vec<ValueSource> {
-        self.sections
-            .get(section.as_ref())
-            .and_then(|section| section.items.get(name.as_ref()).cloned())
-            .unwrap_or_default()
-    }
-
-    /// Get a config item. Convert to type `T`.
-    pub fn get_opt<T: FromConfigValue>(
-        &self,
-        section: &str,
-        name: &str,
-    ) -> crate::Result<Option<T>> {
-        self.get(section, name)
-            .map(|bytes| T::try_from_str(&bytes))
-            .transpose()
-    }
-
-    /// Get a config item. Convert to type `T`.
-    ///
-    /// If the config item is not set, calculate it using `default_func`.
-    pub fn get_or<T: FromConfigValue>(
-        &self,
-        section: &str,
-        name: &str,
-        default_func: impl Fn() -> T,
-    ) -> crate::Result<T> {
-        Ok(self.get_opt(section, name)?.unwrap_or_else(default_func))
-    }
-
-    /// Get a config item. Convert to type `T`.
-    ///
-    /// If the config item is not set, return `T::default()`.
-    pub fn get_or_default<T: Default + FromConfigValue>(
-        &self,
-        section: &str,
-        name: &str,
-    ) -> crate::Result<T> {
-        self.get_or(section, name, Default::default)
     }
 
     /// Set a config item directly. `section`, `name` locates the config. `value` is the new value.
@@ -565,41 +490,6 @@ impl ConfigSet {
     }
 }
 
-pub trait KeyPrefix {
-    fn section(&self) -> Option<&str>;
-    fn name_prefixes(&self) -> &[&str] {
-        &[]
-    }
-}
-
-impl KeyPrefix for &str {
-    fn section(&self) -> Option<&str> {
-        Some(*self)
-    }
-}
-
-impl KeyPrefix for &Text {
-    fn section(&self) -> Option<&str> {
-        Some(self)
-    }
-}
-
-impl KeyPrefix for String {
-    fn section(&self) -> Option<&str> {
-        Some(self)
-    }
-}
-
-impl<const N: usize> KeyPrefix for &[&str; N] {
-    fn section(&self) -> Option<&str> {
-        self.first().copied()
-    }
-
-    fn name_prefixes(&self) -> &[&str] {
-        &self[1..]
-    }
-}
-
 impl Options {
     /// Create a default `Options`.
     pub fn new() -> Self {
@@ -665,6 +555,7 @@ impl SupersetVerification {
 pub(crate) mod tests {
     use std::io::Write;
 
+    use configmodel::ConfigExt;
     use tempdir::TempDir;
 
     use super::*;
@@ -713,16 +604,9 @@ pub(crate) mod tests {
         cfg.set("foo", "bar.qux", Some(""), &"".into());
         cfg.set("foo", "bar.qux.more", Some(""), &"".into());
 
-        assert_eq!(cfg.keys(&[] as &[&str; 0]), Vec::<Text>::new());
-
         assert_eq!(
             cfg.keys("foo"),
             vec!["other", "bar", "bar.baz", "bar.qux", "bar.qux.more"]
-        );
-
-        assert_eq!(
-            cfg.keys(&["foo", "bar"]),
-            vec!["bar", "bar.baz", "bar.qux", "bar.qux.more"]
         );
     }
 

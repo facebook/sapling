@@ -12,6 +12,7 @@ use std::path::Path;
 use std::ptr;
 use std::slice;
 
+use configmodel::Config;
 use minibytes::Text;
 
 use crate::config::ConfigSet;
