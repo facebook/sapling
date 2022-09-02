@@ -18,7 +18,7 @@ use crate::convert::FromConfigValue;
 use crate::Result;
 
 /// Readable config. This can be used as a trait object.
-#[auto_impl::auto_impl(&)]
+#[auto_impl::auto_impl(&, Arc)]
 pub trait Config {
     /// Get config names in the given section. Sorted by insertion order.
     fn keys(&self, section: &str) -> Vec<Text>;
@@ -51,6 +51,18 @@ pub trait Config {
     fn files(&self) -> Cow<[PathBuf]> {
         Cow::Borrowed(&[])
     }
+
+    /// Break the config into (immutable) layers.
+    /// If returns None, then the config object is considered atomic.
+    /// If returns a list, then the list should contain all configs. The order
+    /// matters. Config with a larger index overrides configs with smaller
+    /// indexes.
+    fn layers(&self) -> Option<Vec<Arc<dyn Config>>> {
+        None
+    }
+
+    /// The name of the current layer.
+    fn layer_name(&self) -> Text;
 }
 
 /// Extra APIs (incompatible with trait objects) around reading config.
@@ -126,6 +138,10 @@ impl Config for BTreeMap<&str, &str> {
             }]),
         }
     }
+
+    fn layer_name(&self) -> Text {
+        Text::from_static("BTreeMap")
+    }
 }
 
 impl Config for BTreeMap<String, String> {
@@ -161,6 +177,10 @@ impl Config for BTreeMap<String, String> {
                 location: None,
             }]),
         }
+    }
+
+    fn layer_name(&self) -> Text {
+        Text::from_static("BTreeMap")
     }
 }
 

@@ -94,6 +94,10 @@ impl Config for ConfigSet {
     fn files(&self) -> Cow<[PathBuf]> {
         Cow::Borrowed(&self.files)
     }
+
+    fn layer_name(&self) -> Text {
+        Text::from_static("ConfigSet")
+    }
 }
 
 impl ConfigSet {
