@@ -33,7 +33,15 @@ pub trait Config {
 
     /// Get config value for a given config.
     /// Return `None` if the config item does not exist or is unset.
-    fn get(&self, section: &str, name: &str) -> Option<Text>;
+    fn get(&self, section: &str, name: &str) -> Option<Text> {
+        self.get_considering_unset(section, name)?
+    }
+
+    /// Similar to `get`, but can represent "%unset" result.
+    /// - `None`: not set or unset.
+    /// - `Some(None)`: unset.
+    /// - `Some(Some(value))`: set.
+    fn get_considering_unset(&self, section: &str, name: &str) -> Option<Option<Text>>;
 
     /// Get a nonempty config value for a given config.
     /// Return `None` if the config item does not exist, is unset or is empty str.
@@ -123,9 +131,9 @@ impl Config for BTreeMap<&str, &str> {
         Cow::Owned(sections)
     }
 
-    fn get(&self, section: &str, name: &str) -> Option<Text> {
+    fn get_considering_unset(&self, section: &str, name: &str) -> Option<Option<Text>> {
         let key: &str = &format!("{}.{}", section, name);
-        BTreeMap::get(self, &key).map(|v| v.to_string().into())
+        BTreeMap::get(self, &key).map(|v| Some(v.to_string().into()))
     }
 
     fn get_sources(&self, section: &str, name: &str) -> Cow<[ValueSource]> {
@@ -164,8 +172,8 @@ impl Config for BTreeMap<String, String> {
         Cow::Owned(sections)
     }
 
-    fn get(&self, section: &str, name: &str) -> Option<Text> {
-        BTreeMap::get(self, &format!("{}.{}", section, name)).map(|v| v.clone().into())
+    fn get_considering_unset(&self, section: &str, name: &str) -> Option<Option<Text>> {
+        BTreeMap::get(self, &format!("{}.{}", section, name)).map(|v| Some(v.clone().into()))
     }
 
     fn get_sources(&self, section: &str, name: &str) -> Cow<[ValueSource]> {

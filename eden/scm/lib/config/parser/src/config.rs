@@ -60,13 +60,11 @@ impl Config for ConfigSet {
 
     /// Get config value for a given config.
     /// Return `None` if the config item does not exist or is unset.
-    fn get(&self, section: &str, name: &str) -> Option<Text> {
-        self.sections.get(section).and_then(|section| {
-            section
-                .items
-                .get(name)
-                .and_then(|values| values.last().and_then(|value| value.value.clone()))
-        })
+    fn get_considering_unset(&self, section: &str, name: &str) -> Option<Option<Text>> {
+        let section = self.sections.get(section)?;
+        let value_sources: &Vec<ValueSource> = section.items.get(name)?;
+        let value = value_sources.last()?.value.clone();
+        Some(value)
     }
 
     /// Get config sections.
@@ -861,6 +859,8 @@ pub(crate) mod tests {
         assert_eq!(cfg.get("x", "b"), Some(Text::from("2")));
         assert_eq!(cfg.get("x", "c"), Some(Text::from("3")));
         assert_eq!(cfg.get("x", "d"), None);
+        assert_eq!(cfg.get_considering_unset("x", "d"), Some(None));
+        assert_eq!(cfg.get_considering_unset("x", "e"), None);
 
         let sources = cfg.get_sources("x", "a");
         assert_eq!(sources.len(), 2);
