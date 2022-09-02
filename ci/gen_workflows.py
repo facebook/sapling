@@ -35,7 +35,6 @@ UBUNTU_DEPS = [
     "cython3",
     "make",
     "g++",
-    "cargo",
     # This is needed for dpkg-name.
     "dpkg-dev",
 ]
@@ -92,6 +91,24 @@ RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash -
 
 # Now we can install the bulk of the packages:
 RUN apt-get -y install {' '.join(full_deps)}
+
+# Unfortunately, we cannot `apt install cargo` because at the time of this
+# writing, it installs a version of cargo that is too old (1.59). Specifically,
+# cargo <1.60 has a known issue with weak dependency features:
+#
+# https://github.com/rust-lang/cargo/issues/10623
+#
+# which is new Cargo syntax that was introduced in Rust 1.60:
+#
+# https://blog.rust-lang.org/2022/04/07/Rust-1.60.0.html
+#
+# and indeed one of our dependencies makes use of this feature:
+# https://github.com/rust-phf/rust-phf/blob/250c6b456fe28c0c8213518d6bddfd972922fd53/phf/Cargo.toml#L22
+#
+# Realistically, the Rust ecosystem moves forward quickly, so installing via
+# rustup is the most sustainable option.
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+ENV PATH="/root/.cargo/bin:${{PATH}}"
 
 # Copy the full repo over because `cargo fetch` follows deps within the repo,
 # so assume it needs everything.
@@ -235,6 +252,20 @@ RUN rm -rf /tmp/repo
             "steps": [
                 {"name": "Checkout Code", "uses": "actions/checkout@v3"},
                 grant_repo_access(),
+                # This step feels as though it should be unnecessary because we
+                # specified `--default-toolchain stable` when we ran rustup
+                # originally in the Dockerfile. Nevertheless, without this step,
+                # we see the following error message when trying to do the
+                # build under GitHub Actions:
+                #
+                # error: rustup could not choose a version of cargo to run, because one wasn't specified explicitly, and no default is configured.
+                # help: run 'rustup default stable' to download the latest stable release of Rust and set it as your default toolchain.
+                #
+                # It would be nice to debug this at some point, but it isn't pressing.
+                {
+                    "name": "rustup",
+                    "run": "rustup default stable",
+                },
                 create_set_env_step(
                     DEB_UPSTREAM_VERISION, "$(ci/tag-name.sh | tr \\- .)"
                 ),
