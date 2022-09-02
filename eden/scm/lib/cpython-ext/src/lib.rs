@@ -22,7 +22,7 @@ pub mod ser;
 mod str;
 
 #[cfg(test)]
-#[cfg(not(all(fbcode_build, feature = "python2")))]
+#[cfg(not(fbcode_build))]
 mod tests;
 
 pub use bytes::Bytes;

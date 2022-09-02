@@ -7,8 +7,6 @@
 
 use cpython::*;
 use minibytes::Bytes as MiniBytes;
-#[cfg(feature = "python2")]
-use python27_sys as ffi;
 #[cfg(feature = "python3")]
 use python3_sys as ffi;
 
@@ -22,18 +20,9 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 py_class!(pub class Bytes |py| {
     data inner: MiniBytes;
 
-    /// Convert to `memoryview` (Python 3) or `buffer` (Python 2).
+    /// Convert to `memoryview` (Python 3).
     def asref(&self) -> PyResult<PyObject> {
         let slice: &[u8] = self.inner(py).as_ref();
-
-        #[cfg(feature = "python2")]
-        unsafe {
-            let raw_obj = ffi::PyBuffer_FromMemory(
-                slice.as_ptr() as *const _ as *mut _,
-                slice.len() as _,
-            );
-            return Ok(PyObject::from_owned_ptr(py, raw_obj))
-        }
 
         #[cfg(feature = "python3")]
         unsafe {

@@ -183,9 +183,8 @@ mod pytypes {
     });
 }
 
-// fbcode has a whitelist of python2 executables, not including tests here
 #[cfg(test)]
-#[cfg(not(all(fbcode_build, feature = "python2")))]
+#[cfg(not(fbcode_build))]
 mod tests {
     use futures::stream::StreamExt;
 

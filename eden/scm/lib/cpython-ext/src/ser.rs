@@ -188,12 +188,7 @@ impl<'a, 'b> ser::Serializer for &'a Serializer<'b> {
     }
 
     fn serialize_str(self, v: &str) -> Result<PyObject> {
-        if cfg!(feature = "python2-sys") {
-            // Use the 'str' (aka. 'bytes') type consistently on Python 2.
-            Ok(PyBytes::new(self.py, v.as_bytes()).into_object())
-        } else {
-            Ok(v.to_py_object(self.py).into_object())
-        }
+        Ok(v.to_py_object(self.py).into_object())
     }
 
     fn serialize_bytes(self, v: &[u8]) -> Result<PyObject> {

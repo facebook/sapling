@@ -18,26 +18,8 @@ use ffi::PyTypeObject;
 use ffi::PyVarObject;
 use ffi::Py_ssize_t;
 use ffi::_PyObject_New;
-#[cfg(feature = "python2")]
-use python27_sys as ffi;
 #[cfg(feature = "python3")]
 use python3_sys as ffi;
-
-// From Python bytearrayobject.h. Must match the C definition.
-#[cfg(feature = "python2")]
-#[repr(C)]
-struct PyByteArrayObject {
-    #[cfg(py_sys_config = "Py_TRACE_REFS")]
-    pub _ob_next: *mut PyObject,
-    #[cfg(py_sys_config = "Py_TRACE_REFS")]
-    pub _ob_prev: *mut PyObject,
-    pub ob_refcnt: Py_ssize_t,
-    pub ob_type: *mut PyTypeObject,
-    pub ob_size: Py_ssize_t,
-    pub ob_exports: c_int,
-    pub ob_alloc: Py_ssize_t,
-    pub ob_bytes: *mut u8,
-}
 
 #[cfg(feature = "python3")]
 #[cfg(Py_38)]
@@ -67,10 +49,6 @@ pub fn vec_to_pyobj(py: RustPythonGILGuard<'_>, mut value: Vec<u8>) -> RustPyObj
     unsafe {
         let ptr: *mut PyObject = _PyObject_New(&mut PyByteArray_Type as *mut PyTypeObject);
         let typed: *mut PyByteArrayObject = mem::transmute(ptr);
-        #[cfg(feature = "python2")]
-        {
-            (*typed).ob_size = value.len() as Py_ssize_t;
-        }
         (*typed).ob_exports = 0;
         (*typed).ob_alloc = value.capacity() as Py_ssize_t;
         (*typed).ob_bytes = value.as_mut_ptr();
@@ -95,10 +73,6 @@ pub fn boxed_slice_to_pyobj(py: RustPythonGILGuard<'_>, mut value: Box<[u8]>) ->
     unsafe {
         let ptr: *mut PyObject = _PyObject_New(&mut PyByteArray_Type as *mut PyTypeObject);
         let typed: *mut PyByteArrayObject = mem::transmute(ptr);
-        #[cfg(feature = "python2")]
-        {
-            (*typed).ob_size = value.len() as Py_ssize_t;
-        }
         (*typed).ob_exports = 0;
         (*typed).ob_alloc = value.len() as Py_ssize_t;
         (*typed).ob_bytes = value.as_mut_ptr();

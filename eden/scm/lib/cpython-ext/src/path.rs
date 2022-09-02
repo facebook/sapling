@@ -14,17 +14,10 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use cpython::*;
-#[cfg(feature = "python2")]
-use encoding::local_bytes_to_path;
-#[cfg(feature = "python2")]
-use encoding::path_to_local_bytes;
 use thiserror::Error;
 use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
-
-#[cfg(feature = "python2")]
-use crate::ResultPyErrExt;
 
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Default, Hash, Ord)]
 pub struct PyPathBuf(String);
@@ -79,16 +72,11 @@ impl PyPathBuf {
 impl ToPyObject for PyPathBuf {
     #[cfg(feature = "python3")]
     type ObjectType = PyUnicode;
-    #[cfg(feature = "python2")]
-    type ObjectType = PyBytes;
 
     #[inline]
     fn to_py_object(&self, py: Python) -> Self::ObjectType {
         #[cfg(feature = "python3")]
-        return self.0.to_py_object(py);
-
-        #[cfg(feature = "python2")]
-        PyBytes::new(py, &path_to_local_bytes(self.0.as_ref()).unwrap())
+        self.0.to_py_object(py)
     }
 }
 
@@ -98,18 +86,6 @@ impl<'source> FromPyObject<'source> for PyPathBuf {
         {
             let s = obj.cast_as::<PyUnicode>(py)?.data(py);
             Ok(Self(s.to_string(py)?.into()))
-        }
-
-        #[cfg(feature = "python2")]
-        {
-            let s = obj.cast_as::<PyBytes>(py)?.data(py);
-            let path = local_bytes_to_path(s).map_pyerr(py)?;
-            Ok(Self(
-                path.to_str()
-                    .ok_or_else(|| Error::NonUTF8Path(path.to_path_buf()))
-                    .map_pyerr(py)?
-                    .into(),
-            ))
         }
     }
 }
@@ -240,18 +216,6 @@ impl RefFromPyObject for PyPath {
         {
             let s = obj.cast_as::<PyUnicode>(py)?.to_string(py)?;
             Ok(f(PyPath::from_str(s.as_ref())))
-        }
-
-        #[cfg(feature = "python2")]
-        {
-            let s = obj.cast_as::<PyBytes>(py)?.data(py);
-            let path = local_bytes_to_path(s).map_pyerr(py)?;
-            let py_path = PyPath::from_str(
-                path.to_str()
-                    .ok_or_else(|| Error::NonUTF8Path(path.to_path_buf()))
-                    .map_pyerr(py)?,
-            );
-            Ok(f(py_path))
         }
     }
 }

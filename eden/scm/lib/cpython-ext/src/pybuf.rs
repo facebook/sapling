@@ -40,8 +40,6 @@ use std::slice;
 
 use cpython::PyObject;
 use cpython::Python;
-#[cfg(feature = "python2")]
-use python27_sys as cpy;
 #[cfg(feature = "python3")]
 use python3_sys as cpy;
 
@@ -59,12 +57,6 @@ unsafe fn is_safe_type(obj: &PyObject) -> bool {
     }
     if cpy::PyBytes_Check(obj.as_ptr()) != 0 {
         return true;
-    }
-    #[cfg(feature = "python2")]
-    {
-        if cpy::PyBuffer_Check(obj.as_ptr()) != 0 {
-            return true;
-        }
     }
     #[cfg(feature = "python3")]
     {

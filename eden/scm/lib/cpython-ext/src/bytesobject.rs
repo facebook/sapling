@@ -12,8 +12,6 @@ use std::slice;
 
 use cpython::PyObject as RustPyObject;
 use cpython::Python as RustPythonGILGuard;
-#[cfg(feature = "python2")]
-use ffi::PyBytesObject;
 use ffi::PyBytes_Type;
 use ffi::PyObject;
 use ffi::PyTypeObject;
@@ -22,8 +20,6 @@ use ffi::PyVarObject;
 use ffi::Py_hash_t;
 use ffi::Py_ssize_t;
 use ffi::_PyObject_NewVar;
-#[cfg(feature = "python2")]
-use python27_sys as ffi;
 #[cfg(feature = "python3")]
 use python3_sys as ffi;
 
@@ -48,11 +44,6 @@ pub fn allocate_pybytes(py: RustPythonGILGuard<'_>, size: usize) -> (RustPyObjec
         let mut ptr: *mut PyObject = mem::transmute(ptr);
         let typed: *mut PyBytesObject = mem::transmute(ptr);
         (*typed).ob_shash = -1; // hash not calculated
-        #[cfg(feature = "python2")]
-        {
-            (*typed).ob_sstate = 0; // SSTATE_NOT_INTERNED
-            (*typed).ob_size = size as Py_ssize_t;
-        }
         #[cfg(feature = "python3")]
         {
             (*typed).ob_base.ob_size = size as Py_ssize_t;
