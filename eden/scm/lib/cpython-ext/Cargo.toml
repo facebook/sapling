@@ -12,7 +12,6 @@ io = { version = "0.1.0", path = "../io" }
 libc = "0.2.121"
 once_cell = "1.12"
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
-python27-sys = { version = "0.7", optional = true }
 python3-sys = { version = "0.7", optional = true }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 thiserror = "1.0.30"
@@ -24,5 +23,4 @@ serde_cbor = "0.11"
 
 [features]
 default = ["python3"]
-python2 = ["cpython/python27-sys", "python27-sys"]
 python3 = ["cpython/python3-sys", "python3-sys"]

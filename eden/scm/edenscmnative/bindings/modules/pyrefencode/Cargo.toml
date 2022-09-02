@@ -9,5 +9,4 @@ cpython = { version = "0.7", default-features = false }
 refencode = { path = "../../../../lib/refencode" }
 
 [features]
-python2 = ["cpython/python27-sys", "cpython_ext/python2"]
 python3 = ["cpython/python3-sys", "cpython_ext/python3"]

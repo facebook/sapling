@@ -18,5 +18,4 @@ tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 
 [features]
 default = ["python3"]
-python2 = ["cpython_ext/python2"]
 python3 = ["cpython_ext/python3"]

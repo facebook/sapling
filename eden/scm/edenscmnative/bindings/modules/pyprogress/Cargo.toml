@@ -10,5 +10,4 @@ progress-model = { path = "../../../../lib/progress/model" }
 progress-render = { path = "../../../../lib/progress/render" }
 
 [features]
-python2 = ["cpython/python27-sys", "cpython_ext/python2"]
 python3 = ["cpython/python3-sys", "cpython_ext/python3"]

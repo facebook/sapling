@@ -8,7 +8,6 @@ name = "bindings"
 
 [features]
 default = []
-python2 = ["pybytes/python2", "pytracing/python2", "pydirs/python2"]
 python3 = ["pybytes/python3", "pytracing/python3", "pydirs/python3"]
 
 [profile.release]

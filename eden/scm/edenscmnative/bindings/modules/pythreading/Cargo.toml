@@ -10,5 +10,4 @@ lto = "thin"
 cpython = { version = "0.7", default-features = false }
 
 [features]
-python2 = ["cpython/python27-sys"]
 python3 = ["cpython/python3-sys"]

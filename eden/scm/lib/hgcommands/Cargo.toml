@@ -46,7 +46,6 @@ procinfo = { version = "0.1.0", path = "../procinfo" }
 progress-model = { version = "0.1.0", path = "../progress/model" }
 progress-render = { version = "0.1.0", path = "../progress/render" }
 pyconfigparser = { path = "../../edenscmnative/bindings/modules/pyconfigparser" }
-python27-sys = { version = "0.7", optional = true }
 python3-sys = { version = "0.7", optional = true }
 pytracing = { path = "../../edenscmnative/bindings/modules/pytracing", default-features = false }
 rand = { version = "0.8", features = ["small_rng"] }
@@ -72,5 +71,4 @@ zstd = "0.11.1+zstd.1.5.2"
 default = ["python3"]
 eden = ["clidispatch/eden", "edenfs_client"]
 fb = ["configparser/fb", "version/generated"]
-python2 = ["bindings/python2", "cpython/python27-sys", "cpython_ext/python2", "python27-sys", "pytracing/python2"]
 python3 = ["bindings/python3", "cpython/python3-sys", "cpython_ext/python3", "python3-sys", "pytracing/python3"]

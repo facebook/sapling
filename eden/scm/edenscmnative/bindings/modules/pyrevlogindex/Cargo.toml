@@ -12,5 +12,3 @@ pydag = { path = "../pydag" }
 revlogindex = { path = "../../../../lib/revlogindex" }
 
 [features]
-python2 = ["cpython/python27-sys", "cpython_ext/python2", "pybytes/python2"]
-python3 = ["cpython/python3-sys", "cpython_ext/python3", "pybytes/python2"]

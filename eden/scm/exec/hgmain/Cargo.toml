@@ -24,7 +24,6 @@ buildinfo = []
 default = []
 eden = ["hgcommands/eden"]
 fb = ["hgcommands/fb"]
-python2 = ["hgcommands/python2"]
 python3 = ["hgcommands/python3"]
 with_chg = ["dirs"]
 

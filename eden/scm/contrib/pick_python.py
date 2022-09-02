@@ -6,7 +6,7 @@
 """
 Pick a Python that is more likely to be able to build with setup.py.
 
-Arguments: Binary name (ex. python2, or python3).
+Arguments: Binary name (ex. python3).
 Stdout: Full path to a system python, or the first argument of the input.
 
 This script does not need to be executed using a system Python.

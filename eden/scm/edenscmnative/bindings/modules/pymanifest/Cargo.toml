@@ -15,5 +15,4 @@ pypathmatcher = { path = "../pypathmatcher" }
 types = { path = "../../../../lib/types" }
 
 [features]
-python2 = ["cpython/python27-sys", "cpython_ext/python2"]
 python3 = ["cpython/python3-sys", "cpython_ext/python3"]

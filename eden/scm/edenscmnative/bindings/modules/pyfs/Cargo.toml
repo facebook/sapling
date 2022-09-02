@@ -9,5 +9,4 @@ cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
 fsinfo = { path = "../../../../lib/fsinfo" }
 
 [features]
-python2 = ["cpython_ext/python2"]
 python3 = ["cpython_ext/python3"]

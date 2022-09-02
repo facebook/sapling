@@ -5,7 +5,6 @@ edition = "2021"
 
 [features]
 default = []
-python2 = ["python27-sys", "cpython/python27-sys", "cpython_ext/python2"]
 python3 = ["python3-sys", "cpython/python3-sys", "cpython_ext/python3"]
 
 [dependencies]
@@ -14,7 +13,6 @@ cpython = { version = "0.7", default-features = false }
 lazy_static = "1"
 mincode = { path = "../../../../lib/mincode" }
 parking_lot = "0.11.2"
-python27-sys = { version = "0.7", optional = true }
 python3-sys = { version = "0.7", optional = true }
 serde_json = "1"
 tracing = "0.1"
