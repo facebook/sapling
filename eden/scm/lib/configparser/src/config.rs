@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Cow;
 use std::collections::hash_map::RandomState;
 use std::collections::HashSet;
 use std::fs;
@@ -14,6 +15,8 @@ use std::path::PathBuf;
 use std::str;
 use std::sync::Arc;
 
+pub use configmodel::ValueLocation;
+pub use configmodel::ValueSource;
 use indexmap::IndexMap;
 use minibytes::Text;
 use pest_hgrc::parse;
@@ -37,23 +40,6 @@ struct Section {
     items: IndexMap<Text, Vec<ValueSource>>,
 }
 
-/// A config value with associated metadata like where it comes from.
-#[derive(Clone, Debug)]
-pub struct ValueSource {
-    value: Option<Text>,
-    source: Text, // global, user, repo, "--config", or an extension name, etc.
-    location: Option<ValueLocation>,
-}
-
-/// The on-disk file name and byte offsets that provide the config value.
-/// Useful if applications want to edit config values in-place.
-#[derive(Clone, Debug)]
-struct ValueLocation {
-    path: Arc<PathBuf>,
-    content: Text,
-    location: Range<usize>,
-}
-
 /// Options that affects config setting functions like `load_path`, `parse`,
 /// and `set`.
 #[derive(Clone, Default)]
@@ -69,6 +55,28 @@ impl crate::Config for ConfigSet {
 
     fn get(&self, section: &str, name: &str) -> Option<Text> {
         ConfigSet::get(self, section, name)
+    }
+
+    /// Get config sections.
+    fn sections(&self) -> Cow<[Text]> {
+        Cow::Owned(ConfigSet::sections(self))
+    }
+
+    /// Get the sources of a config.
+    fn get_sources(&self, section: &str, name: &str) -> Cow<[ValueSource]> {
+        match self
+            .sections
+            .get(section)
+            .and_then(|section| section.items.get(name))
+        {
+            None => Cow::Owned(Vec::new()),
+            Some(sources) => Cow::Borrowed(sources),
+        }
+    }
+
+    /// Get on-disk files loaded for this `Config`.
+    fn files(&self) -> Cow<[PathBuf]> {
+        Cow::Borrowed(&self.files)
     }
 }
 
@@ -589,38 +597,6 @@ impl<const N: usize> KeyPrefix for &[&str; N] {
 
     fn name_prefixes(&self) -> &[&str] {
         &self[1..]
-    }
-}
-
-impl ValueSource {
-    /// Return the actual value stored in this config value, or `None` if uset.
-    pub fn value(&self) -> &Option<Text> {
-        &self.value
-    }
-
-    /// Return the "source" information for the config value. It's usually who sets the config,
-    /// like "--config", "user_hgrc", "system_hgrc", etc.
-    pub fn source(&self) -> &Text {
-        &self.source
-    }
-
-    /// Return the file path and byte range for the exact config value,
-    /// or `None` if there is no such information.
-    ///
-    /// If the value is `None`, the byte range is for the "%unset" statement.
-    pub fn location(&self) -> Option<(PathBuf, Range<usize>)> {
-        match self.location {
-            Some(ref src) => Some((src.path.as_ref().to_path_buf(), src.location.clone())),
-            None => None,
-        }
-    }
-
-    /// Return the file content. Or `None` if there is no such information.
-    pub fn file_content(&self) -> Option<Text> {
-        match self.location {
-            Some(ref src) => Some(src.content.clone()),
-            None => None,
-        }
     }
 }
 

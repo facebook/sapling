@@ -5,8 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
+use std::ops::Range;
+use std::path::PathBuf;
 use std::str;
+use std::sync::Arc;
 
 use minibytes::Text;
 
@@ -27,6 +31,17 @@ pub trait Config {
     /// Return `None` if the config item does not exist, is unset or is empty str.
     fn get_nonempty(&self, section: &str, name: &str) -> Option<Text> {
         self.get(section, name).filter(|v| !v.is_empty())
+    }
+
+    /// Get config sections.
+    fn sections(&self) -> Cow<[Text]>;
+
+    /// Get the sources of a config.
+    fn get_sources(&self, section: &str, name: &str) -> Cow<[ValueSource]>;
+
+    /// Get on-disk files loaded for this `Config`.
+    fn files(&self) -> Cow<[PathBuf]> {
+        Cow::Borrowed(&[])
     }
 }
 
@@ -76,9 +91,32 @@ impl Config for BTreeMap<&str, &str> {
             .collect()
     }
 
+    fn sections(&self) -> Cow<[Text]> {
+        let mut sections = Vec::new();
+        let mut last_section = None;
+        for section in BTreeMap::keys(self).filter_map(|k| k.split('.').next()) {
+            if Some(section) != last_section {
+                last_section = Some(section);
+                sections.push(Text::from(section.to_string()));
+            }
+        }
+        Cow::Owned(sections)
+    }
+
     fn get(&self, section: &str, name: &str) -> Option<Text> {
         let key: &str = &format!("{}.{}", section, name);
         BTreeMap::get(self, &key).map(|v| v.to_string().into())
+    }
+
+    fn get_sources(&self, section: &str, name: &str) -> Cow<[ValueSource]> {
+        match Config::get(self, section, name) {
+            None => Cow::Borrowed(&[]),
+            Some(value) => Cow::Owned(vec![ValueSource {
+                value: Some(value),
+                source: Text::from_static("BTreeMap"),
+                location: None,
+            }]),
+        }
     }
 }
 
@@ -90,8 +128,76 @@ impl Config for BTreeMap<String, String> {
             .collect()
     }
 
+    fn sections(&self) -> Cow<[Text]> {
+        let mut sections = Vec::new();
+        let mut last_section = None;
+        for section in BTreeMap::keys(self).filter_map(|k| k.split('.').next()) {
+            if Some(section) != last_section {
+                last_section = Some(section);
+                sections.push(Text::from(section.to_string()));
+            }
+        }
+        Cow::Owned(sections)
+    }
+
     fn get(&self, section: &str, name: &str) -> Option<Text> {
         BTreeMap::get(self, &format!("{}.{}", section, name)).map(|v| v.clone().into())
+    }
+
+    fn get_sources(&self, section: &str, name: &str) -> Cow<[ValueSource]> {
+        match Config::get(self, section, name) {
+            None => Cow::Borrowed(&[]),
+            Some(value) => Cow::Owned(vec![ValueSource {
+                value: Some(value),
+                source: Text::from_static("BTreeMap"),
+                location: None,
+            }]),
+        }
+    }
+}
+
+/// A config value with associated metadata like where it comes from.
+#[derive(Clone, Debug)]
+pub struct ValueSource {
+    pub value: Option<Text>,
+    pub source: Text, // global, user, repo, "--config", or an extension name, etc.
+    pub location: Option<ValueLocation>,
+}
+
+/// The on-disk file name and byte offsets that provide the config value.
+/// Useful if applications want to edit config values in-place.
+#[derive(Clone, Debug)]
+pub struct ValueLocation {
+    pub path: Arc<PathBuf>,
+    pub content: Text,
+    pub location: Range<usize>,
+}
+
+impl ValueSource {
+    /// Return the actual value stored in this config value, or `None` if uset.
+    pub fn value(&self) -> &Option<Text> {
+        &self.value
+    }
+
+    /// Return the "source" information for the config value. It's usually who sets the config,
+    /// like "--config", "user_hgrc", "system_hgrc", etc.
+    pub fn source(&self) -> &Text {
+        &self.source
+    }
+
+    /// Return the file path and byte range for the exact config value,
+    /// or `None` if there is no such information.
+    ///
+    /// If the value is `None`, the byte range is for the "%unset" statement.
+    pub fn location(&self) -> Option<(PathBuf, Range<usize>)> {
+        self.location
+            .as_ref()
+            .map(|src| (src.path.as_ref().to_path_buf(), src.location.clone()))
+    }
+
+    /// Return the file content. Or `None` if there is no such information.
+    pub fn file_content(&self) -> Option<Text> {
+        self.location.as_ref().map(|src| src.content.clone())
     }
 }
 
