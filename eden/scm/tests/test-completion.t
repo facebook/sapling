@@ -503,7 +503,7 @@ Show all commands + options
   debugrevspec: optimize, show-revs, show-set, show-stage, no-optimized, verify-optimized
   debugrunlog: ended, template
   debugrunshell: cmd
-  debugruntest: fix, jobs, ext
+  debugruntest: fix, jobs, ext, direct
   debugscmstore: mode, path, python
   debugscmstorereplay: path
   debugsegmentclone: 

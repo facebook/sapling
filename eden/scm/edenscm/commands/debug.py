@@ -3957,11 +3957,20 @@ def debugresetheads(ui, repo):
         ("i", "fix", False, _("update tests to match output")),
         ("j", "jobs", 0, _("number of jobs to run in parallel")),
         ("x", "ext", [], _("extension modules to import")),
+        ("d", "direct", False, _("run without isolation")),
     ],
     norepo=True,
 )
 def debugruntest(ui, *paths, **opts):
-    """run .t test"""
+    """run .t or Python doctest test
+
+    With -i or --fix, the test output will be updated to match actual output.
+
+    With -d or --direct, the tests will be run using the current Python
+    instance without isolation. This makes --profile or --debugger useful.
+    But lack of isolation means test can fail due to side effects of the
+    current configuration.
+    """
     import textwrap
 
     # pyre-fixme[21]: Could not find name `util` in `multiprocessing` (stubbed).
@@ -4067,6 +4076,7 @@ def debugruntest(ui, *paths, **opts):
     failed = collections.defaultdict(list)
     mismatches = []
     fix = opts.get("fix")
+    isolate = not opts.get("direct")
 
     exts = ["edenscm.testing.ext.hg", "edenscm.testing.ext.python"]
     exts += opts.get("ext") or []
@@ -4086,7 +4096,7 @@ def debugruntest(ui, *paths, **opts):
 
     with extensions.wrappedfunction(
         mputil, "_args_from_interpreter_flags", _args
-    ), TestRunner(paths, jobs=jobs, exts=exts) as r:
+    ), TestRunner(paths, jobs=jobs, exts=exts, isolate=isolate) as r:
         for item in r:
             if isinstance(item, Mismatch):
                 mismatches.append(item)
@@ -4119,6 +4129,14 @@ def debugruntest(ui, *paths, **opts):
 
         if fix:
             writenames(_("Fixed"), [m.testname for m in mismatches])
+
+    if failed and not isolate:
+        ui.write(
+            _(
+                "# Failed tests might be false positive caused by --direct. "
+                "Re-reun without --direct to confirm.\n"
+            )
+        )
 
     def count(group):
         return sum(len(names) for names in group.values())

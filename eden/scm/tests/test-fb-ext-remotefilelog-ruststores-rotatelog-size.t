@@ -1,6 +1,9 @@
 #chg-compatible
 #debugruntest-compatible
   $ setconfig experimental.allowfilepeer=True
+#if fsmonitor
+  $ setconfig workingcopy.ruststatus=False
+#endif
 
   $ . "$TESTDIR/library.sh"
   $ setconfig remotefilelog.useruststore=True remotefilelog.write-hgcache-to-indexedlog=True

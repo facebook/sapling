@@ -104,10 +104,13 @@ class TestRunner:
             fixmismatches(mismatches)
     """
 
-    def __init__(self, paths: List[str], jobs: int = 1, exts=List[str]):
+    def __init__(
+        self, paths: List[str], jobs: int = 1, exts=List[str], isolate: bool = True
+    ):
         self.testids = [TestId.frompath(p) for p in paths]
         self.jobs = jobs or multiprocessing.cpu_count()
         self.exts = exts
+        self.isolate = isolate
 
     def __iter__(self):
         return self
@@ -130,40 +133,50 @@ class TestRunner:
         self.mp = mp = multiprocessing.get_context("spawn")
         self.resultqueue = mp.Queue()
         self.sem = mp.Semaphore(self.jobs)
-        # start running tests in background
-        self.runnerthread = thread = threading.Thread(target=self._start, daemon=True)
         self.running = True
-        thread.start()
+        if self.isolate:
+            # start running tests in background
+            self.runnerthread = thread = threading.Thread(
+                target=self._start, daemon=True
+            )
+            thread.start()
+        else:
+            self._start()
         return self
 
     def __exit__(self, et, ev, tb):
         """stop and clean up test environment"""
         self.running = False
-        self.runnerthread.join()
+        if self.isolate:
+            self.runnerthread.join()
 
     def _start(self):
         """run tests (blocking, intended to run in thread)"""
         processes = []
         try:
             for t in self.testids:
-                # limit concurrency, release by the Process
-                while True:
-                    acquired = self.sem.acquire(timeout=1)
-                    if not self.running:
-                        return
-                    if acquired:
-                        break
-                p = self.mp.Process(
-                    target=_spawnmain,
-                    kwargs={
-                        "testid": t,
-                        "sem": self.sem,
-                        "resultqueue": self.resultqueue,
-                        "exts": self.exts,
-                    },
-                )
-                p.start()
-                processes.append(p)
+                kwargs = {
+                    "testid": t,
+                    "sem": self.isolate and self.sem or None,
+                    "resultqueue": self.resultqueue,
+                    "exts": self.exts,
+                }
+                if self.isolate:
+                    # limit concurrency, release by the Process
+                    while True:
+                        acquired = self.sem.acquire(timeout=1)
+                        if not self.running:
+                            return
+                        if acquired:
+                            break
+                    p = self.mp.Process(
+                        target=_spawnmain,
+                        kwargs=kwargs,
+                    )
+                    p.start()
+                    processes.append(p)
+                else:
+                    _spawnmain(**kwargs)
         finally:
             for p in processes:
                 p.join()
@@ -174,7 +187,7 @@ def _spawnmain(
     testid: TestId,
     exts: List[str],
     # pyre-fixme[11]: Annotation `Semaphore` is not defined as a type.
-    sem: multiprocessing.Semaphore,
+    sem: Optional[multiprocessing.Semaphore],
     resultqueue: multiprocessing.Queue,
 ):
     """run a test and report progress back
@@ -201,8 +214,9 @@ def _spawnmain(
         if result.exc is None and hasmismatch:
             result.exc = MismatchError("output mismatch")
         resultqueue.put(result)
-        resultqueue.close()
-        sem.release()
+        if sem:
+            resultqueue.close()
+            sem.release()
 
 
 class TestNotFoundError(FileNotFoundError):
