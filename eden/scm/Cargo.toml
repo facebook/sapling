@@ -47,6 +47,7 @@ members = [
   "lib/config/pest-hgrc",
   "lib/config/static",
   "lib/config/static/macros",
+  "lib/config/union",
   "lib/cpython-async",
   "lib/cpython-ext",
   "lib/dag",
