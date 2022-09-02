@@ -19,7 +19,7 @@ pub struct AbstractBytes<T: ?Sized> {
     pub(crate) len: usize,
 
     // Actual owner of the bytes. None for static buffers.
-    owner: Option<Arc<dyn AbstractOwner<T>>>,
+    pub(crate) owner: Option<Arc<dyn AbstractOwner<T>>>,
 }
 
 /// The actual storage owning the bytes.
@@ -126,17 +126,6 @@ where
         }
     }
 
-    /// Creates `Bytes` from a static slice.
-    #[inline]
-    pub fn from_static(value: &'static T) -> Self {
-        let slice: &[u8] = value.as_bytes();
-        Self {
-            ptr: slice.as_ptr(),
-            len: slice.len(),
-            owner: None,
-        }
-    }
-
     /// Creates `Bytes` from a [`BytesOwner`] (for example, `Vec<u8>`).
     pub fn from_owner(value: impl AbstractOwner<T>) -> Self {
         let slice: &T = value.as_ref();
@@ -180,6 +169,15 @@ impl Bytes {
     #[inline]
     pub(crate) fn as_slice(&self) -> &[u8] {
         self.as_bytes()
+    }
+
+    /// Creates `Bytes` from a static slice.
+    pub const fn from_static(slice: &'static [u8]) -> Self {
+        Self {
+            ptr: slice.as_ptr(),
+            len: slice.len(),
+            owner: None,
+        }
     }
 
     /// Convert to `Vec<u8>`, in a zero-copy way if possible.

@@ -21,6 +21,15 @@ impl<T: TextOwner> AbstractOwner<str> for T {
 }
 
 impl Text {
+    /// Creates `Text` from a static str.
+    pub const fn from_static(slice: &'static str) -> Self {
+        Self {
+            ptr: slice.as_ptr(),
+            len: slice.len(),
+            owner: None,
+        }
+    }
+
     #[inline]
     pub(crate) fn as_slice(&self) -> &str {
         let bytes = self.as_bytes();
