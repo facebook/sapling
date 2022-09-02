@@ -5,19 +5,14 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(feature = "eden")]
 mod print;
 
-use anyhow::anyhow;
 use anyhow::Result;
 use clidispatch::errors;
-use clidispatch::errors::FallbackToPython;
-use clidispatch::io::CanColor;
 use clidispatch::io::IO;
 use cliparser::define_flags;
-use print::PrintConfig;
-use print::PrintConfigStatusTypes;
 use repo::repo::Repo;
-use types::path::RepoPathRelativizer;
 
 use crate::commands::FormatterOpts;
 use crate::commands::WalkOpts;
@@ -91,7 +86,14 @@ define_flags! {
     }
 }
 
+#[cfg(feature = "eden")]
 pub fn run(opts: StatusOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
+    use anyhow::anyhow;
+    use clidispatch::io::CanColor;
+    use print::PrintConfig;
+    use print::PrintConfigStatusTypes;
+    use types::path::RepoPathRelativizer;
+
     let rev_check = opts.rev.is_empty() || (opts.rev.len() == 1 && opts.rev[0] == ".");
 
     let args_check = opts.args.is_empty() || (opts.args.len() == 1 && opts.args[0] == "re:.");
@@ -149,28 +151,27 @@ pub fn run(opts: StatusOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
         use_color: io.output().can_color(),
     };
 
-    #[cfg(feature = "eden")]
-    {
-        // Attempt to fetch status information from EdenFS.
-        let (status, copymap) = edenfs_client::status::maybe_status_fastpath(
-            repo.dot_hg_path(),
-            io,
-            print_config.status_types.ignored,
-        )
-        .map_err(|e| {
-            match e.downcast_ref::<edenfs_client::status::OperationNotSupported>() {
-                Some(_) => anyhow!(FallbackToPython("status")),
-                None => e,
-            }
-        })?;
+    // Attempt to fetch status information from EdenFS.
+    let (status, copymap) = edenfs_client::status::maybe_status_fastpath(
+        repo.dot_hg_path(),
+        io,
+        print_config.status_types.ignored,
+    )
+    .map_err(
+        |e| match e.downcast_ref::<edenfs_client::status::OperationNotSupported>() {
+            Some(_) => anyhow!(errors::FallbackToPython("status")),
+            None => e,
+        },
+    )?;
 
-        let cwd = std::env::current_dir()?;
-        let relativizer = RepoPathRelativizer::new(cwd, repo.path());
-        print::print_status(io, relativizer, &print_config, &status, &copymap)?;
-        return Ok(0);
-    }
+    let cwd = std::env::current_dir()?;
+    let relativizer = RepoPathRelativizer::new(cwd, repo.path());
+    print::print_status(io, relativizer, &print_config, &status, &copymap)?;
+    Ok(0)
+}
 
-    #[cfg(not(feature = "eden"))]
+#[cfg(not(feature = "eden"))]
+pub fn run(_opts: StatusOpts, _io: &IO, _repo: &mut Repo) -> Result<u8> {
     Err(errors::FallbackToPython(name()).into())
 }
 
