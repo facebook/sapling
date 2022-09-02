@@ -83,6 +83,15 @@ connect = ctypes.windll.ws2_32.connect
 connect.argtypes = [ctypes.wintypes.HANDLE, ctypes.c_void_p, ctypes.c_int]
 connect.restype = ctypes.c_int
 
+# int bind(
+#   SOCKET         s,
+#   const sockaddr *name,
+#   int            namelen
+# );
+bind = ctypes.windll.ws2_32.bind
+bind.argtypes = [ctypes.wintypes.HANDLE, ctypes.c_void_p, ctypes.c_int]
+bind.restype = ctypes.c_int
+
 
 # int WSAAPI send(
 #   SOCKET     s,
@@ -240,6 +249,11 @@ class WindowsSocketHandle(object):
         self._checkReturnCode(
             connect(self.fd, ctypes.pointer(addr), ctypes.sizeof(addr))
         )
+        self.address = address
+
+    def bind(self, address: str) -> None:
+        addr = SOCKADDR_UN(sun_family=self.AF_UNIX, sun_path=address.encode("utf-8"))
+        self._checkReturnCode(bind(self.fd, ctypes.pointer(addr), ctypes.sizeof(addr)))
         self.address = address
 
     def send(self, buff: "bytes | memoryview") -> int:

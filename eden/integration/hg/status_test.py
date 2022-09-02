@@ -6,7 +6,9 @@
 
 import binascii
 import os
+import socket
 import stat
+import sys
 from typing import Dict
 
 from eden.integration.lib.hgrepo import HgRepository
@@ -225,6 +227,18 @@ enforce-parents = false
         subdir2 = os.path.join(self.mount, "subdir2")
         os.rename(subdir1, subdir2)
         self.assert_status({"subdir2/file.txt": "?"})
+
+    def test_status_socket(self) -> None:
+        if sys.platform == "win32":
+            from eden.thrift.windows_thrift import WindowsSocketHandle  # @manual
+
+            uds = WindowsSocketHandle()
+        else:
+            uds = socket.socket(family=socket.AF_UNIX)
+
+        uds.bind(os.path.join(self.mount, "socket"))
+        uds.close()
+        self.assert_status({"socket": "?"})
 
 
 @hg_test

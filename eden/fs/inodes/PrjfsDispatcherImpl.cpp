@@ -316,6 +316,10 @@ ImmediateFuture<OnDiskState> getOnDiskState(
     return OnDiskState::MaterializedFile;
   } else if (fileType == boost::filesystem::symlink_file) {
     return OnDiskState::MaterializedFile;
+  } else if (fileType == boost::filesystem::reparse_file) {
+    // Boost reports anything that is a reparse point which is not a symlink a
+    // reparse_file. In particular, socket are reported as such.
+    return OnDiskState::MaterializedFile;
   } else if (fileType == boost::filesystem::directory_file) {
     const auto elapsed = std::chrono::steady_clock::now() - receivedAt;
     const auto delay =
