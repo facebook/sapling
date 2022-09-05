@@ -150,7 +150,7 @@ def _catchterm(*args):
 
 # unique object used to detect no default value has been provided when
 # retrieving configuration value.
-_unset = uiconfig._unset
+_unset: object = uiconfig._unset
 
 # _reqexithandlers: callbacks run at the end of a request
 _reqexithandlers = []
