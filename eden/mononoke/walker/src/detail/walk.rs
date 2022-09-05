@@ -49,8 +49,8 @@ use futures::stream::Stream;
 use futures::stream::TryStreamExt;
 use itertools::Either;
 use itertools::Itertools;
+use manifest::AsyncManifest;
 use manifest::Entry;
-use manifest::Manifest;
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::FileBytes;
 use mercurial_types::HgChangesetId;
@@ -1088,9 +1088,11 @@ async fn hg_manifest_step<V: VisitOne>(
     path: WrappedPath,
     hg_manifest_id: HgManifestId,
 ) -> Result<StepOutput, StepError> {
+    let blobstore = repo.blobstore();
     let hgmanifest = hg_manifest_id.load(ctx, repo.blobstore()).await?;
+    let subentries: Vec<_> = hgmanifest.list(ctx, blobstore).await?.try_collect().await?;
     let (manifests, filenodes): (Vec<_>, Vec<_>) =
-        hgmanifest.list().partition_map(|(name, entry)| {
+        subentries.into_iter().partition_map(|(name, entry)| {
             let path_opt = WrappedPath::from(Some(MPath::join_opt_element(path.as_ref(), &name)));
             match entry {
                 Entry::Leaf((_, filenode_id)) => Either::Right((path_opt, filenode_id)),
