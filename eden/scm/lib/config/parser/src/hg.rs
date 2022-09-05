@@ -487,7 +487,7 @@ impl ConfigSetHgExt for ConfigSet {
     }
 
     #[cfg(not(feature = "fb"))]
-    fn load_dynamic(&mut self, repo_path: Option<&Path>, opts: Options) -> Result<Vec<Error>> {
+    fn load_dynamic(&mut self, _repo_path: Option<&Path>, opts: Options) -> Result<Vec<Error>> {
         if env::var("HG_NO_DEFAULT_CONFIG").is_ok() {
             Ok(vec![])
         } else {
