@@ -850,7 +850,7 @@ class treematcher(basematcher):
         return "<treematcher rules=%r>" % self._rules
 
 
-def normalizerootdir(dir, funcname) -> str:
+def normalizerootdir(dir: str, funcname) -> str:
     if dir == ".":
         util.nouideprecwarn(
             "match.%s() no longer accepts '.', use '' instead." % funcname, "20190805"
