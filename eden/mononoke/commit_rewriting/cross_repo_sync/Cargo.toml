@@ -26,7 +26,7 @@ derived_data = { version = "0.1.0", path = "../../derived_data" }
 environment = { version = "0.1.0", path = "../../cmdlib/environment" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 live_commit_sync_config = { version = "0.1.0", path = "../live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"

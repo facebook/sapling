@@ -21,7 +21,7 @@ config_thrift = { version = "0.1.0", path = "../config" }
 const-cstr = "0.3.0"
 fb303_core = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 once_cell = "1.12"
 ref-cast = "1.0.2"
 serde = { version = "1.0.136", features = ["derive", "rc"] }

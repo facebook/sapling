@@ -21,7 +21,7 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hooks = { version = "0.1.0", path = "../hooks" }
 hooks_content_stores = { version = "0.1.0", path = "../hooks/content-stores" }

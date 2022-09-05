@@ -11,7 +11,7 @@ async-trait = "0.1.56"
 dag = { version = "0.1.0", path = "../dag" }
 edenapi_trait = { version = "0.1.0", path = "../edenapi/trait" }
 fail = { version = "0.4", features = ["failpoints"] }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 http = "0.2"
 identity = { version = "0.1.0", path = "../identity" }
 metalog = { version = "0.1.0", path = "../metalog" }

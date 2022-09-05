@@ -12,7 +12,7 @@ anyhow = "1.0.56"
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
 changesets = { version = "0.1.0", path = "../changesets" }
 context = { version = "0.1.0", path = "../server/context" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 phases = { version = "0.1.0", path = "../phases" }
 strum = "0.21"

@@ -16,7 +16,7 @@ bufsize = "1.0"
 bytes = { version = "1.1", features = ["serde"] }
 context = { version = "0.1.0", path = "../../server/context" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 packblob_thrift = { version = "0.1.0", path = "if" }

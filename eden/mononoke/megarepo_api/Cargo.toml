@@ -24,7 +24,7 @@ derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
 environment = { version = "0.1.0", path = "../cmdlib/environment" }
 filestore = { version = "0.1.0", path = "../filestore" }
 fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 itertools = "0.10.3"
 manifest = { version = "0.1.0", path = "../manifest" }
 megarepo_config = { version = "0.1.0", path = "megarepo_config" }

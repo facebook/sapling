@@ -11,7 +11,7 @@ async-runtime = { version = "0.1.0", path = "../async-runtime" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 crossbeam = "0.8"
 edenfs_client = { version = "0.1.0", path = "../edenfs-client", optional = true }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 identity = { version = "0.1.0", path = "../identity" }
 manifest = { version = "0.1.0", path = "../manifest" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }

@@ -16,7 +16,7 @@ atty = "0.2"
 curl = { version = "0.4.41", features = ["http2"] }
 curl-sys = "0.4.51"
 env_logger = "0.7"
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 http = "0.2"
 lru-cache = "0.1.2"
 maplit = "1.0"

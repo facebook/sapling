@@ -21,7 +21,7 @@ clap-old = { package = "clap", version = "2.33" }
 delayblob = { version = "0.1.0", path = "../delayblob" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fileblob = { version = "0.1.0", path = "../fileblob" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
 logblob = { version = "0.1.0", path = "../logblob" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }

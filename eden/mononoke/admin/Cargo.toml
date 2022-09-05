@@ -49,7 +49,7 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 filenodes = { version = "0.1.0", path = "../filenodes" }
 filestore = { version = "0.1.0", path = "../filestore" }
 fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_types = { version = "0.1.0", path = "../git/git_types" }
 humantime = "2.1"

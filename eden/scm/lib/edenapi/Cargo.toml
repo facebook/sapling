@@ -15,7 +15,7 @@ chrono = { version = "0.4", features = ["clock", "serde", "std"], default-featur
 configmodel = { version = "0.1.0", path = "../config/model" }
 edenapi_trait = { version = "0.1.0", path = "trait" }
 edenapi_types = { version = "0.1.0", path = "types" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 hg-http = { version = "0.1.0", path = "../hg-http" }
 http-client = { version = "0.1.0", path = "../http-client" }
 itertools = "0.10.3"

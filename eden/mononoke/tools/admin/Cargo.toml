@@ -37,7 +37,7 @@ fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 itertools = "0.10.3"
 manifest = { version = "0.1.0", path = "../../manifest" }

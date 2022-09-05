@@ -20,7 +20,7 @@ clap = "2.33"
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }
 context = { version = "0.1.0", path = "../../server/context" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 git-hash = "0.9"
 import_direct = { version = "0.1.0", path = "../import_direct" }
 import_tools = { version = "0.1.0", path = "../import_tools" }

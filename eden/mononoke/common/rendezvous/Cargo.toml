@@ -13,7 +13,7 @@ async-trait = "0.1.56"
 clap = { version = "3.2.17", features = ["derive", "regex", "unicode", "wrap_help"] }
 dashmap = { version = "4.0.2", features = ["rayon", "serde"] }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 shared_error = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

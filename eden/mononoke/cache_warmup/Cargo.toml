@@ -21,7 +21,7 @@ context = { version = "0.1.0", path = "../server/context" }
 derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes" }
 filenodes = { version = "0.1.0", path = "../filenodes" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 manifest = { version = "0.1.0", path = "../manifest" }
 mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }

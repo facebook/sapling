@@ -15,7 +15,7 @@ dag-types = { version = "0.1.0", path = "dag-types" }
 drawdag = { version = "0.1.0", path = "../drawdag" }
 fail = { version = "0.4", features = ["failpoints"] }
 fs2 = { version = "0.4", optional = true }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 indexedlog = { version = "0.1.0", path = "../indexedlog", optional = true }
 indexmap = { version = "1.8.0", features = ["rayon", "serde-1"] }
 itertools = "0.10.3"

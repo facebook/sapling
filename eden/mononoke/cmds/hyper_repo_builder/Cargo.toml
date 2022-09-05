@@ -20,7 +20,7 @@ cross_repo_sync = { version = "0.1.0", path = "../../commit_rewriting/cross_repo
 derived_data = { version = "0.1.0", path = "../../derived_data" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_api_types = { version = "0.1.0", path = "../../mononoke_api/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

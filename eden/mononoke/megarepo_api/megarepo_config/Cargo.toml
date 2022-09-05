@@ -17,7 +17,7 @@ context = { version = "0.1.0", path = "../../server/context" }
 faster-hex = "0.6.1"
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 maplit = "1.0"
 megarepo_configs = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/megarepo" }
 megarepo_error = { version = "0.1.0", path = "../megarepo_error" }

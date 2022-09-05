@@ -14,7 +14,7 @@ blobstore = { version = "0.1.0", path = ".." }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 prefixblob = { version = "0.1.0", path = "../prefixblob" }
 redaction_set = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/redaction" }

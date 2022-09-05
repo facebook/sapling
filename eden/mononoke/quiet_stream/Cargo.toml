@@ -8,6 +8,6 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 pin-project = "0.4.29"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }

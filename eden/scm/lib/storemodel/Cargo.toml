@@ -9,6 +9,6 @@ edition = "2021"
 anyhow = "1.0.56"
 async-trait = "0.1.56"
 auto_impl = "0.4"
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 minibytes = { version = "0.1.0", path = "../minibytes" }
 types = { version = "0.1.0", path = "../types" }

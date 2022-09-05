@@ -15,7 +15,7 @@ clap = "2.33"
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }
 context = { version = "0.1.0", path = "../../server/context" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_factory = { version = "0.1.0", path = "../../repo_factory" }

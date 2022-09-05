@@ -16,7 +16,7 @@ test = false
 context = { version = "0.1.0", path = "../../../server/context" }
 criterion = "=0.3.1"
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 segmented_changelog = { version = "0.1.0", path = "../.." }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }

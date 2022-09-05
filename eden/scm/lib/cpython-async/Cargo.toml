@@ -10,7 +10,7 @@ anyhow = "1.0.56"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
 cpython = { version = "0.7", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../cpython-ext", default-features = false }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 itertools = "0.10.3"
 
 [features]

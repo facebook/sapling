@@ -22,7 +22,7 @@ context = { version = "0.1.0", path = "../../server/context" }
 deleted_manifest = { version = "0.1.0", path = "../../derived_data/deleted_manifest" }
 derived_data = { version = "0.1.0", path = "../../derived_data" }
 fastlog = { version = "0.1.0", path = "../../derived_data/fastlog" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 futures-util = "0.3.7"
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 itertools = "0.10.3"

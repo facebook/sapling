@@ -20,7 +20,7 @@ context = { version = "0.1.0", path = "../server/context" }
 edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
 filestore = { version = "0.1.0", path = "../filestore" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 futures-util = "0.3.7"
 getbundle_response = { version = "0.1.0", path = "../repo_client/getbundle_response" }
 hgproto = { version = "0.1.0", path = "../hgproto" }

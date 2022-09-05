@@ -10,7 +10,7 @@ autoexamples = false
 
 [dependencies]
 anyhow = "1.0.56"
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 pin-project = "0.4.29"
 ratelimit_meter = "5"
 thiserror = "1.0.30"

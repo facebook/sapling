@@ -16,7 +16,7 @@ borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 nonzero_ext = "0.2"

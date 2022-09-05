@@ -11,6 +11,6 @@ license = "GPLv2+"
 anyhow = "1.0.56"
 changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
 context = { version = "0.1.0", path = "../../server/context" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 reachabilityindex = { version = "0.1.0", path = ".." }

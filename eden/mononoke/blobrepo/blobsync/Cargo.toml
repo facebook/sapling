@@ -20,7 +20,7 @@ borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 bytes = { version = "1.1", features = ["serde"] }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }

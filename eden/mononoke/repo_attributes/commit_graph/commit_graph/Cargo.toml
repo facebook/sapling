@@ -12,7 +12,7 @@ anyhow = "1.0.56"
 async-trait = "0.1.56"
 context = { version = "0.1.0", path = "../../../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 parking_lot = { version = "0.11.2", features = ["send_guard"] }

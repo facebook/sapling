@@ -14,7 +14,7 @@ blobstore = { version = "0.1.0", path = "../../blobstore" }
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data = { version = "0.1.0", path = "../../derived_data" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 git2 = "0.13"
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 sha2 = "0.10"

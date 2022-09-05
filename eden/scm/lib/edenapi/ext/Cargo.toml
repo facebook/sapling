@@ -12,7 +12,7 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 crossbeam = "0.8"
 edenapi = { version = "0.1.0", path = ".." }
 edenapi_types = { version = "0.1.0", path = "../types" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 itertools = "0.10.3"
 minibytes = { version = "0.1.0", path = "../../minibytes" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }

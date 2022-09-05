@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.56"
 bytes = { version = "1.1", features = ["serde"] }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
 mercurial_bundles = { version = "0.1.0", path = "../../mercurial/bundles" }
 mercurial_revlog = { version = "0.1.0", path = "../../mercurial/revlog" }

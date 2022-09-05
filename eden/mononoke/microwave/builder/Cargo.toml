@@ -26,7 +26,7 @@ context = { version = "0.1.0", path = "../../server/context" }
 derived_data_filenodes = { version = "0.1.0", path = "../../derived_data/filenodes" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../../filenodes" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercurial_derived_data" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_parser = { version = "0.1.0", path = "../../metaconfig/parser" }

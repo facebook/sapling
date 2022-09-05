@@ -12,7 +12,7 @@ anyhow = "1.0.56"
 bytes = { version = "1.1", features = ["serde"] }
 context = { version = "0.1.0", path = "../server/context" }
 filestore = { version = "0.1.0", path = "../filestore" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }

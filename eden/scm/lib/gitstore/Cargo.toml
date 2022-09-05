@@ -12,7 +12,7 @@ harness = false
 [dependencies]
 anyhow = "1.0.56"
 async-trait = "0.1.56"
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 git2 = "0.13"
 minibytes = { version = "0.1.0", path = "../minibytes" }
 storemodel = { version = "0.1.0", path = "../storemodel" }

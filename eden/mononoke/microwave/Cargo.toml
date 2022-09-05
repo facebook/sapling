@@ -15,7 +15,7 @@ changesets = { version = "0.1.0", path = "../changesets" }
 context = { version = "0.1.0", path = "../server/context" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../filenodes" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 microwave_if = { version = "0.1.0", path = "if" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }

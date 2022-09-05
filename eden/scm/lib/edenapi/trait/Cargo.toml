@@ -10,7 +10,7 @@ anyhow = "1.0.56"
 async-trait = "0.1.56"
 configmodel = { version = "0.1.0", path = "../../config/model" }
 edenapi_types = { version = "0.1.0", path = "../types" }
-futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 http = "0.2"
 http-client = { version = "0.1.0", path = "../../http-client" }
 minibytes = { version = "0.1.0", path = "../../minibytes" }
