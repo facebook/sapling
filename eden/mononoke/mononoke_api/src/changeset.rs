@@ -134,6 +134,7 @@ pub struct ChangesetHistoryOptions {
     pub exclude_changeset_and_ancestors: Option<ChangesetId>,
 }
 
+#[derive(Clone)]
 pub enum ChangesetFileOrdering {
     Unordered,
     Ordered { after: Option<MononokePath> },
@@ -1181,30 +1182,8 @@ impl ChangesetContext {
             (Some(basenames), None)
                 if tunables().get_enable_basename_suffix_skeleton_manifest() =>
             {
-                self.root_basename_suffix_skeleton_manifest()
+                self.find_files_with_bssm(prefixes, basenames, ordering)
                     .await?
-                    .find_files_filter_basenames(
-                        self.ctx(),
-                        self.repo().blob_repo().get_blobstore(),
-                        prefixes
-                            .unwrap_or_else(Vec::new)
-                            .into_iter()
-                            .map(MononokePath::into_mpath)
-                            .collect(),
-                        basenames,
-                        match ordering {
-                            ChangesetFileOrdering::Unordered => None,
-                            ChangesetFileOrdering::Ordered { after } => {
-                                Some(after.map(MononokePath::into_mpath))
-                            }
-                        },
-                    )
-                    .await
-                    .map_err(MononokeError::from)?
-                    .map(|r| match r {
-                        Ok(p) => Ok(MononokePath::new(p)),
-                        Err(err) => Err(MononokeError::from(err)),
-                    })
                     .left_stream()
             }
             (basenames, basename_suffixes) => self
@@ -1214,7 +1193,40 @@ impl ChangesetContext {
         })
     }
 
-    async fn find_files_without_bssm(
+    pub(crate) async fn find_files_with_bssm(
+        &self,
+        prefixes: Option<Vec<MononokePath>>,
+        basenames: Vec1<String>,
+        ordering: ChangesetFileOrdering,
+    ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>>, MononokeError> {
+        Ok(self
+            .root_basename_suffix_skeleton_manifest()
+            .await?
+            .find_files_filter_basenames(
+                self.ctx(),
+                self.repo().blob_repo().get_blobstore(),
+                prefixes
+                    .unwrap_or_else(Vec::new)
+                    .into_iter()
+                    .map(MononokePath::into_mpath)
+                    .collect(),
+                basenames,
+                match ordering {
+                    ChangesetFileOrdering::Unordered => None,
+                    ChangesetFileOrdering::Ordered { after } => {
+                        Some(after.map(MononokePath::into_mpath))
+                    }
+                },
+            )
+            .await
+            .map_err(MononokeError::from)?
+            .map(|r| match r {
+                Ok(p) => Ok(MononokePath::new(p)),
+                Err(err) => Err(MononokeError::from(err)),
+            }))
+    }
+
+    pub(crate) async fn find_files_without_bssm(
         &self,
         prefixes: Option<Vec1<MononokePath>>,
         basenames: Option<Vec1<String>>,

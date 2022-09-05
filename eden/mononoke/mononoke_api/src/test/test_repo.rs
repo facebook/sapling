@@ -11,6 +11,7 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::Result;
 use blobstore::Loadable;
 use bytes::Bytes;
 use cacheblob::InProcessLease;
@@ -26,6 +27,7 @@ use fixtures::Linear;
 use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
 use futures::stream::TryStreamExt;
+use futures::FutureExt;
 use live_commit_sync_config::TestLiveCommitSyncConfigSource;
 use maplit::hashmap;
 use metaconfig_types::CommitSyncConfigVersion;
@@ -40,6 +42,9 @@ use synced_commit_mapping::SyncedCommitMapping;
 use tests_utils::bookmark;
 use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
+use tunables::tunables;
+use tunables::with_tunables_async;
+use tunables::MononokeTunables;
 
 use crate::BookmarkFreshness;
 use crate::ChangesetFileOrdering;
@@ -251,8 +256,7 @@ async fn commit_is_ancestor_of(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
-async fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
+async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
         ctx.clone(),
@@ -480,8 +484,13 @@ async fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
         .await?
         .try_collect()
         .await?;
-    let expected_files = vec![MononokePath::try_from("dir2/file_1_in_dir2")?];
-    assert_eq!(files, expected_files);
+    if tunables().get_enable_basename_suffix_skeleton_manifest() {
+        // Ordering with BSSM is consistent, but not the same
+        assert!(files.is_empty());
+    } else {
+        let expected_files = vec![MononokePath::try_from("dir2/file_1_in_dir2")?];
+        assert_eq!(files, expected_files);
+    }
 
     // Suffixes
     let mut files: Vec<_> = cs
@@ -739,6 +748,22 @@ async fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
     assert_eq!(files, expected_files);
 
     Ok(())
+}
+
+#[fbinit::test]
+async fn commit_find_files(fb: FacebookInit) {
+    commit_find_files_impl(fb).await.unwrap();
+}
+
+#[fbinit::test]
+async fn commit_find_files_with_bssm(fb: FacebookInit) {
+    let tunables = MononokeTunables::default();
+    tunables.update_bools(&hashmap! {
+        "enable_basename_suffix_skeleton_manifest".to_string() => true
+    });
+    with_tunables_async(tunables, commit_find_files_impl(fb).boxed())
+        .await
+        .unwrap();
 }
 
 #[fbinit::test]
