@@ -9,5 +9,7 @@ mod derive;
 mod mapping;
 mod ops;
 mod path;
+#[cfg(test)]
+mod tests;
 
 pub use mapping::RootBasenameSuffixSkeletonManifest;
