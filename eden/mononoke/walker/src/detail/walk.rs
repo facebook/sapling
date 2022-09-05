@@ -15,6 +15,7 @@ use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
+use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
@@ -62,6 +63,7 @@ use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::skeleton_manifest::SkeletonManifestEntry;
 use mononoke_types::unode::UnodeEntry;
+use mononoke_types::BasenameSuffixSkeletonManifestId;
 use mononoke_types::BlameId;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
@@ -615,6 +617,11 @@ async fn bonsai_changeset_step<V: VisitOne>(
         &mut edges,
         EdgeType::ChangesetToSkeletonManifestMapping,
         || Node::SkeletonManifestMapping(*bcs_id),
+    );
+    checker.add_edge(
+        &mut edges,
+        EdgeType::ChangesetToBasenameSuffixSkeletonManifestMapping,
+        || Node::BasenameSuffixSkeletonManifestMapping(*bcs_id),
     );
     checker.add_edge(
         &mut edges,
@@ -1670,6 +1677,87 @@ async fn skeleton_manifest_mapping_step<V: VisitOne>(
     }
 }
 
+async fn basename_suffix_skeleton_manifest_step<V: VisitOne>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
+    manifest_id: &BasenameSuffixSkeletonManifestId,
+    path: Option<&WrappedPath>,
+) -> Result<StepOutput, StepError> {
+    let manifest = manifest_id.load(ctx, repo.blobstore()).await?;
+    let mut edges = vec![];
+    let children: Vec<_> = manifest
+        .list(ctx, repo.blobstore())
+        .await?
+        .try_collect()
+        .await?;
+
+    for (child_path, entry) in children {
+        match entry {
+            manifest::Entry::Tree(subdir) => {
+                checker.add_edge_with_path(
+                    &mut edges,
+                    EdgeType::BasenameSuffixSkeletonManifestToBasenameSuffixSkeletonManifestChild,
+                    || Node::BasenameSuffixSkeletonManifest(subdir.id),
+                    || {
+                        path.map(|p| {
+                            WrappedPath::from(MPath::join_element_opt(
+                                p.as_ref(),
+                                Some(&child_path),
+                            ))
+                        })
+                    },
+                );
+            }
+            manifest::Entry::Leaf(()) => {}
+        }
+    }
+
+    Ok(StepOutput::Done(
+        checker.step_data(NodeType::BasenameSuffixSkeletonManifest, || {
+            NodeData::BasenameSuffixSkeletonManifest(Some(manifest))
+        }),
+        edges,
+    ))
+}
+
+async fn basename_suffix_skeleton_manifest_mapping_step<V: VisitOne>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
+    bcs_id: ChangesetId,
+    enable_derive: bool,
+) -> Result<StepOutput, StepError> {
+    let root_manifest =
+        maybe_derived::<RootBasenameSuffixSkeletonManifest>(ctx, repo, bcs_id, enable_derive)
+            .await?;
+
+    if let Some(root_manifest) = root_manifest {
+        let mut edges = vec![];
+        let id = root_manifest.into_inner_id();
+
+        checker.add_edge_with_path(
+            &mut edges,
+            EdgeType::BasenameSuffixSkeletonManifestMappingToRootBasenameSuffixSkeletonManifest,
+            || Node::BasenameSuffixSkeletonManifest(id),
+            || Some(WrappedPath::Root),
+        );
+        Ok(StepOutput::Done(
+            checker.step_data(NodeType::BasenameSuffixSkeletonManifestMapping, || {
+                NodeData::BasenameSuffixSkeletonManifestMapping(Some(id))
+            }),
+            edges,
+        ))
+    } else {
+        Ok(StepOutput::Done(
+            checker.step_data(NodeType::BasenameSuffixSkeletonManifestMapping, || {
+                NodeData::BasenameSuffixSkeletonManifestMapping(None)
+            }),
+            vec![],
+        ))
+    }
+}
+
 /// Expand nodes where check for a type is used as a check for other types.
 /// e.g. to make sure metadata looked up/considered for files.
 pub fn expand_checked_nodes(children: &mut Vec<OutgoingEdge>) {
@@ -2108,6 +2196,26 @@ where
         }
         Node::SkeletonManifestMapping(bcs_id) => {
             skeleton_manifest_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
+        }
+        Node::BasenameSuffixSkeletonManifest(id) => {
+            basename_suffix_skeleton_manifest_step(
+                &ctx,
+                &repo,
+                &checker,
+                &id,
+                walk_item.path.as_ref(),
+            )
+            .await
+        }
+        Node::BasenameSuffixSkeletonManifestMapping(bcs_id) => {
+            basename_suffix_skeleton_manifest_mapping_step(
+                &ctx,
+                &repo,
+                &checker,
+                bcs_id,
+                enable_derive,
+            )
+            .await
         }
         Node::UnodeFile(id) => {
             unode_file_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await

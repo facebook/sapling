@@ -13,6 +13,7 @@ use std::sync::Arc;
 use acl_regions::build_acl_regions;
 use acl_regions::ArcAclRegions;
 use anyhow::Result;
+use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use blame::BlameRoot;
 use blobstore::Blobstore;
 use bonsai_git_mapping::ArcBonsaiGitMapping;
@@ -159,6 +160,7 @@ pub fn default_test_repo_config() -> RepoConfig {
             TreeHandle::NAME.to_string(),
             MappedHgChangesetId::NAME.to_string(),
             RootSkeletonManifestId::NAME.to_string(),
+            RootBasenameSuffixSkeletonManifest::NAME.to_string(),
         },
         unode_version: UnodeVersion::V2,
         blame_version: BlameVersion::V2,

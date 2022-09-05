@@ -210,6 +210,8 @@ fn dump_with_extension(node_type: NodeType) -> bool {
         NodeType::FsnodeMapping => false,
         NodeType::SkeletonManifest => false,
         NodeType::SkeletonManifestMapping => false,
+        NodeType::BasenameSuffixSkeletonManifest => false,
+        NodeType::BasenameSuffixSkeletonManifestMapping => false,
         NodeType::UnodeFile => false,
         NodeType::UnodeManifest => false,
         NodeType::UnodeMapping => false,

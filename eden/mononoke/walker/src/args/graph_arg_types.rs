@@ -119,6 +119,7 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::ChangesetToDeletedManifestV2Mapping,
     EdgeType::ChangesetToFsnodeMapping,
     EdgeType::ChangesetToSkeletonManifestMapping,
+    EdgeType::ChangesetToBasenameSuffixSkeletonManifestMapping,
     EdgeType::ChangesetToUnodeMapping,
     // Hg
     EdgeType::HgBonsaiMappingToChangeset,
@@ -162,6 +163,8 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::FsnodeToFileContent,
     EdgeType::SkeletonManifestMappingToRootSkeletonManifest,
     EdgeType::SkeletonManifestToSkeletonManifestChild,
+    EdgeType::BasenameSuffixSkeletonManifestMappingToRootBasenameSuffixSkeletonManifest,
+    EdgeType::BasenameSuffixSkeletonManifestToBasenameSuffixSkeletonManifestChild,
     EdgeType::UnodeFileToBlame,
     EdgeType::UnodeFileToFastlogFile,
     EdgeType::UnodeFileToFileContent,
@@ -188,6 +191,7 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::ChangesetToDeletedManifestV2Mapping,
     EdgeType::ChangesetToFsnodeMapping,
     EdgeType::ChangesetToSkeletonManifestMapping,
+    EdgeType::ChangesetToBasenameSuffixSkeletonManifestMapping,
     EdgeType::ChangesetToUnodeMapping,
     // Hg
     EdgeType::HgBonsaiMappingToChangeset,
@@ -217,6 +221,8 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::FsnodeMappingToRootFsnode,
     EdgeType::SkeletonManifestMappingToRootSkeletonManifest,
     EdgeType::SkeletonManifestToSkeletonManifestChild,
+    EdgeType::BasenameSuffixSkeletonManifestMappingToRootBasenameSuffixSkeletonManifest,
+    EdgeType::BasenameSuffixSkeletonManifestToBasenameSuffixSkeletonManifestChild,
     EdgeType::UnodeFileToBlame,
     EdgeType::UnodeFileToFastlogFile,
     EdgeType::UnodeFileToFileContent,

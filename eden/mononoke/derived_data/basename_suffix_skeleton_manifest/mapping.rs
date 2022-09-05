@@ -17,6 +17,7 @@ use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
 use derived_data_service_if::types as thrift;
 use mononoke_types::basename_suffix_skeleton_manifest::BssmDirectory;
+use mononoke_types::BasenameSuffixSkeletonManifestId;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -50,6 +51,12 @@ impl TryFrom<BlobstoreGetData> for RootBasenameSuffixSkeletonManifest {
 impl From<RootBasenameSuffixSkeletonManifest> for BlobstoreBytes {
     fn from(root_mf_id: RootBasenameSuffixSkeletonManifest) -> Self {
         BlobstoreBytes::from_bytes(root_mf_id.0.into_bytes())
+    }
+}
+
+impl RootBasenameSuffixSkeletonManifest {
+    pub fn into_inner_id(self) -> BasenameSuffixSkeletonManifestId {
+        self.0.id
     }
 }
 

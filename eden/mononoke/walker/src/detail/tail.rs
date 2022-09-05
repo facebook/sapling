@@ -80,6 +80,9 @@ fn roots_for_chunk(
                 NodeType::DeletedManifestV2Mapping => Node::DeletedManifestV2Mapping(id),
                 NodeType::FsnodeMapping => Node::FsnodeMapping(id),
                 NodeType::SkeletonManifestMapping => Node::SkeletonManifestMapping(id),
+                NodeType::BasenameSuffixSkeletonManifestMapping => {
+                    Node::BasenameSuffixSkeletonManifestMapping(id)
+                }
                 NodeType::UnodeMapping => Node::UnodeMapping(id),
                 _ => bail!("Unsupported root type for chunking {:?}", r),
             };

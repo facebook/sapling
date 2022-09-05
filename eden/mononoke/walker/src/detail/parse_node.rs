@@ -388,6 +388,26 @@ mod tests {
                     .get_type()
                 );
             }
+            NodeType::BasenameSuffixSkeletonManifest => {
+                assert_eq!(
+                    node_type,
+                    &parse_node(&format!(
+                        "BasenameSuffixSkeletonManifest{}{}",
+                        NODE_SEP, SAMPLE_BLAKE2
+                    ))?
+                    .get_type()
+                );
+            }
+            NodeType::BasenameSuffixSkeletonManifestMapping => {
+                assert_eq!(
+                    node_type,
+                    &parse_node(&format!(
+                        "BasenameSuffixSkeletonManifestMapping{}{}",
+                        NODE_SEP, SAMPLE_BLAKE2
+                    ))?
+                    .get_type()
+                );
+            }
             NodeType::UnodeFile => {
                 assert_eq!(
                     node_type,

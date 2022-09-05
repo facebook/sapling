@@ -13,6 +13,7 @@ use std::str::FromStr;
 use ahash::RandomState;
 use anyhow::format_err;
 use anyhow::Error;
+use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use bitflags::bitflags;
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
@@ -49,6 +50,7 @@ use mercurial_types::HgFileEnvelopeMut;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgParents;
+use mononoke_types::basename_suffix_skeleton_manifest::BasenameSuffixSkeletonManifest;
 use mononoke_types::blame::Blame;
 use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
 use mononoke_types::fastlog_batch::FastlogBatch;
@@ -56,6 +58,7 @@ use mononoke_types::fsnode::Fsnode;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
 use mononoke_types::unode::FileUnode;
 use mononoke_types::unode::ManifestUnode;
+use mononoke_types::BasenameSuffixSkeletonManifestId;
 use mononoke_types::BlameId;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BlobstoreValue;
@@ -367,6 +370,8 @@ create_graph!(
             FsnodeMapping,
             SkeletonManifest,
             SkeletonManifestMapping,
+            BasenameSuffixSkeletonManifest,
+            BasenameSuffixSkeletonManifestMapping,
             UnodeFile,
             UnodeManifest,
             UnodeMapping
@@ -387,6 +392,7 @@ create_graph!(
             DeletedManifestV2Mapping,
             FsnodeMapping,
             SkeletonManifestMapping,
+            BasenameSuffixSkeletonManifestMapping,
             UnodeMapping
         ]
     ),
@@ -493,6 +499,12 @@ create_graph!(
     ),
     (SkeletonManifestMapping, ChangesetId, [RootSkeletonManifest(SkeletonManifest)]),
     (
+        BasenameSuffixSkeletonManifest,
+        BasenameSuffixSkeletonManifestId,
+        [BasenameSuffixSkeletonManifestChild(BasenameSuffixSkeletonManifest)]
+    ),
+    (BasenameSuffixSkeletonManifestMapping, ChangesetId, [RootBasenameSuffixSkeletonManifest(BasenameSuffixSkeletonManifest)]),
+    (
         UnodeFile,
         UnodeKey<FileUnodeId>,
         [Blame, FastlogFile, FileContent, LinkedChangeset(Changeset), UnodeFileParent(UnodeFile)]
@@ -549,6 +561,12 @@ impl NodeType {
             NodeType::FsnodeMapping => Some(RootFsnodeId::NAME),
             NodeType::SkeletonManifest => Some(RootSkeletonManifestId::NAME),
             NodeType::SkeletonManifestMapping => Some(RootSkeletonManifestId::NAME),
+            NodeType::BasenameSuffixSkeletonManifest => {
+                Some(RootBasenameSuffixSkeletonManifest::NAME)
+            }
+            NodeType::BasenameSuffixSkeletonManifestMapping => {
+                Some(RootBasenameSuffixSkeletonManifest::NAME)
+            }
             NodeType::UnodeFile => Some(RootUnodeManifestId::NAME),
             NodeType::UnodeManifest => Some(RootUnodeManifestId::NAME),
             NodeType::UnodeMapping => Some(RootUnodeManifestId::NAME),
@@ -590,6 +608,8 @@ impl NodeType {
             NodeType::FsnodeMapping => false,
             NodeType::SkeletonManifest => true,
             NodeType::SkeletonManifestMapping => false,
+            NodeType::BasenameSuffixSkeletonManifest => true,
+            NodeType::BasenameSuffixSkeletonManifestMapping => false,
             NodeType::UnodeFile => true,
             NodeType::UnodeManifest => true,
             NodeType::UnodeMapping => false,
@@ -846,6 +866,8 @@ pub enum NodeData {
     FsnodeMapping(Option<FsnodeId>),
     SkeletonManifest(Option<SkeletonManifest>),
     SkeletonManifestMapping(Option<SkeletonManifestId>),
+    BasenameSuffixSkeletonManifest(Option<BasenameSuffixSkeletonManifest>),
+    BasenameSuffixSkeletonManifestMapping(Option<BasenameSuffixSkeletonManifestId>),
     UnodeFile(FileUnode),
     UnodeManifest(ManifestUnode),
     UnodeMapping(Option<ManifestUnodeId>),
@@ -917,6 +939,8 @@ impl Node {
             Node::FsnodeMapping(_) => None,
             Node::SkeletonManifest(_) => None,
             Node::SkeletonManifestMapping(_) => None,
+            Node::BasenameSuffixSkeletonManifest(_) => None,
+            Node::BasenameSuffixSkeletonManifestMapping(_) => None,
             Node::UnodeFile(_) => None,
             Node::UnodeManifest(_) => None,
             Node::UnodeMapping(_) => None,
@@ -957,6 +981,8 @@ impl Node {
             Node::FsnodeMapping(k) => k.blobstore_key(),
             Node::SkeletonManifest(k) => k.blobstore_key(),
             Node::SkeletonManifestMapping(k) => k.blobstore_key(),
+            Node::BasenameSuffixSkeletonManifest(k) => k.blobstore_key(),
+            Node::BasenameSuffixSkeletonManifestMapping(k) => k.blobstore_key(),
             Node::UnodeFile(k) => k.blobstore_key(),
             Node::UnodeManifest(k) => k.blobstore_key(),
             Node::UnodeMapping(k) => k.blobstore_key(),
@@ -997,6 +1023,8 @@ impl Node {
             Node::FsnodeMapping(_) => None,
             Node::SkeletonManifest(_) => None,
             Node::SkeletonManifestMapping(_) => None,
+            Node::BasenameSuffixSkeletonManifest(_) => None,
+            Node::BasenameSuffixSkeletonManifestMapping(_) => None,
             Node::UnodeFile(_) => None,
             Node::UnodeManifest(_) => None,
             Node::UnodeMapping(_) => None,
@@ -1038,6 +1066,8 @@ impl Node {
             Node::FsnodeMapping(k) => Some(k.sampling_fingerprint()),
             Node::SkeletonManifest(k) => Some(k.sampling_fingerprint()),
             Node::SkeletonManifestMapping(k) => Some(k.sampling_fingerprint()),
+            Node::BasenameSuffixSkeletonManifest(k) => Some(k.sampling_fingerprint()),
+            Node::BasenameSuffixSkeletonManifestMapping(k) => Some(k.sampling_fingerprint()),
             Node::UnodeFile(k) => Some(k.sampling_fingerprint()),
             Node::UnodeManifest(k) => Some(k.sampling_fingerprint()),
             Node::UnodeMapping(k) => Some(k.sampling_fingerprint()),

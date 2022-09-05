@@ -88,6 +88,7 @@ pub enum ChunkByPublicArg {
     DeletedManifestV2Mapping,
     FsnodeMapping,
     SkeletonManifestMapping,
+    BasenameSuffixSkeletonManifestMapping,
     UnodeMapping,
 }
 
@@ -102,6 +103,9 @@ impl From<ChunkByPublicArg> for NodeType {
             ChunkByPublicArg::DeletedManifestV2Mapping => NodeType::DeletedManifestV2Mapping,
             ChunkByPublicArg::FsnodeMapping => NodeType::FsnodeMapping,
             ChunkByPublicArg::SkeletonManifestMapping => NodeType::SkeletonManifestMapping,
+            ChunkByPublicArg::BasenameSuffixSkeletonManifestMapping => {
+                NodeType::BasenameSuffixSkeletonManifestMapping
+            }
             ChunkByPublicArg::UnodeMapping => NodeType::UnodeMapping,
         }
     }
