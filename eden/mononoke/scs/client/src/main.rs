@@ -79,7 +79,7 @@ impl BaseApp for ScscApp {
     term_width(textwrap::termwidth()),
 )]
 /// Send requests to the Source Control Service
-struct SCSCArgs {
+struct ScscArgs {
     /// Should the output of the command be JSON?
     #[clap(long, global = true)]
     json: bool,
@@ -91,12 +91,12 @@ struct SCSCArgs {
 async fn main_impl(fb: FacebookInit) -> anyhow::Result<()> {
     let subcommands = commands::subcommands();
     assert!(!subcommands.is_empty());
-    let app = SCSCArgs::command()
+    let app = ScscArgs::command()
         .subcommands(subcommands)
         .subcommand_required(true)
         .arg_required_else_help(true);
     let matches = app.get_matches();
-    let common_args = SCSCArgs::from_arg_matches(&matches)?;
+    let common_args = ScscArgs::from_arg_matches(&matches)?;
     let connection = common_args.connection_args.get_connection(fb)?;
     let target = if common_args.json {
         OutputTarget::Json
