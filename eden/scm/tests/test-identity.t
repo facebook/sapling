@@ -55,5 +55,5 @@ Clone can create a ".sl" repo.
   $ cd cloned
 Status works in ".sl" repo
   $ LOG=configparser::hg=info hg status -A
-   INFO configparser::hg: loading config repo_path=Some("$TESTTMP/clone_me/cloned")
+   INFO configparser::hg: loading config repo_path="$TESTTMP/clone_me/cloned"
   C foo

@@ -262,7 +262,10 @@ impl ConfigSetHgExt for ConfigSet {
         repo_path: Option<&Path>,
         readonly_items: Option<Vec<(S, N)>>,
     ) -> Result<SupersetVerification, Errors> {
-        tracing::info!(?repo_path, "loading config");
+        tracing::info!(
+            repo_path = repo_path.and_then(|p| p.to_str()).unwrap_or("<none>"),
+            "loading config"
+        );
 
         let ident = repo_path
             .map(|p| identity::must_sniff_dir(p).map_err(|e| Errors(vec![Error::Other(e)])))
