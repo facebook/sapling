@@ -199,7 +199,6 @@ impl<T: EdenApiStoreKind> LocalStore for EdenApiDataStore<T> {
 mod tests {
     use std::str::FromStr;
 
-    use configparser::config::ConfigSet;
     use edenapi_types::ContentId;
     use edenapi_types::Sha1;
     use maplit::hashmap;
@@ -344,7 +343,7 @@ mod tests {
 
         // Empty aux cache
         let tmp = TempDir::new()?;
-        let aux_cache = Arc::new(AuxStore::new(&tmp, &ConfigSet::new(), StoreType::Shared)?);
+        let aux_cache = Arc::new(AuxStore::new(&tmp, &empty_config(), StoreType::Shared)?);
         store.aux_cache = Some(aux_cache.clone());
 
         // Empty content cache

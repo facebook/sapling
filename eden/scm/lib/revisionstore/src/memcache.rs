@@ -61,7 +61,7 @@ pub(crate) struct McHist {
 mod dummy {
     use std::iter::empty;
 
-    use configparser::config::ConfigSet;
+    use configmodel::Config;
 
     use super::*;
 
@@ -69,7 +69,7 @@ mod dummy {
     pub struct MemcacheStore;
 
     impl MemcacheStore {
-        pub fn new(_config: &ConfigSet) -> Result<Self> {
+        pub fn new(_config: &dyn Config) -> Result<Self> {
             Ok(MemcacheStore {})
         }
 

@@ -36,9 +36,9 @@ use anyhow::Result;
 use async_runtime::block_on;
 use async_runtime::stream_to_iter;
 use auth::AuthSection;
+use configmodel::convert::ByteCount;
+use configmodel::Config;
 use configmodel::ConfigExt;
-use configparser::config::ConfigSet;
-use configparser::convert::ByteCount;
 use futures::future::FutureExt;
 use futures::stream::iter;
 use futures::stream::FuturesUnordered;
@@ -255,7 +255,7 @@ impl LfsPointersStore {
             })
     }
 
-    fn open_options(config: &ConfigSet) -> Result<StoreOpenOptions> {
+    fn open_options(config: &dyn Config) -> Result<StoreOpenOptions> {
         let mut open_options = Self::default_store_open_options();
         if let Some(log_size) = config.get_opt::<ByteCount>("lfs", "pointersstoresize")? {
             open_options = open_options.max_bytes_per_log(log_size.value() / 4);
@@ -264,13 +264,13 @@ impl LfsPointersStore {
     }
 
     /// Create a local `LfsPointersStore`.
-    fn local(path: &Path, config: &ConfigSet) -> Result<Self> {
+    fn local(path: &Path, config: &dyn Config) -> Result<Self> {
         let path = get_lfs_pointers_path(path)?;
         Ok(Self(LfsPointersStore::open_options(config)?.local(path)?))
     }
 
     /// Create a shared `LfsPointersStore`.
-    fn shared(path: &Path, config: &ConfigSet) -> Result<Self> {
+    fn shared(path: &Path, config: &dyn Config) -> Result<Self> {
         let path = get_lfs_pointers_path(path)?;
         Ok(Self(LfsPointersStore::open_options(config)?.shared(path)?))
     }
@@ -322,7 +322,7 @@ impl DefaultOpenOptions<rotate::OpenOptions> for LfsIndexedLogBlobsStore {
 }
 
 impl LfsIndexedLogBlobsStore {
-    fn chunk_size(config: &ConfigSet) -> Result<usize> {
+    fn chunk_size(config: &dyn Config) -> Result<usize> {
         Ok(config
             .get_or("lfs", "blobschunksize", || ByteCount::from(20_000_000))?
             .value() as usize)
@@ -338,7 +338,7 @@ impl LfsIndexedLogBlobsStore {
             })
     }
 
-    fn open_options(config: &ConfigSet) -> Result<StoreOpenOptions> {
+    fn open_options(config: &dyn Config) -> Result<StoreOpenOptions> {
         let mut open_options = Self::default_store_open_options();
         if let Some(log_size) = config.get_opt::<ByteCount>("lfs", "blobsstoresize")? {
             open_options = open_options.max_bytes_per_log(log_size.value() / 4);
@@ -351,7 +351,7 @@ impl LfsIndexedLogBlobsStore {
         Ok(open_options)
     }
 
-    pub fn shared(path: &Path, config: &ConfigSet) -> Result<Self> {
+    pub fn shared(path: &Path, config: &dyn Config) -> Result<Self> {
         let path = get_lfs_blobs_path(path)?;
         Ok(Self {
             inner: RwLock::new(LfsIndexedLogBlobsStore::open_options(config)?.shared(path)?),
@@ -493,7 +493,7 @@ impl LfsBlobsStore {
 
     /// Store the shared blobs in an `IndexedLog`, but still allow reading blobs in their loose
     /// format.
-    pub fn shared(path: &Path, config: &ConfigSet) -> Result<Self> {
+    pub fn shared(path: &Path, config: &dyn Config) -> Result<Self> {
         let indexedlog = Box::new(LfsBlobsStore::IndexedLog(LfsIndexedLogBlobsStore::shared(
             &path, config,
         )?));
@@ -643,7 +643,7 @@ impl LfsStore {
     /// Create a new local `LfsStore`.
     ///
     /// Local stores will `fsync(2)` data to disk, and will never rotate data out of the store.
-    pub fn local(path: impl AsRef<Path>, config: &ConfigSet) -> Result<Self> {
+    pub fn local(path: impl AsRef<Path>, config: &dyn Config) -> Result<Self> {
         let path = path.as_ref();
         let pointers = LfsPointersStore::local(path, config)?;
         let blobs = LfsBlobsStore::local(path)?;
@@ -651,7 +651,7 @@ impl LfsStore {
     }
 
     /// Create a new shared `LfsStore`.
-    pub fn shared(path: impl AsRef<Path>, config: &ConfigSet) -> Result<Self> {
+    pub fn shared(path: impl AsRef<Path>, config: &dyn Config) -> Result<Self> {
         let path = path.as_ref();
         let pointers = LfsPointersStore::shared(path, config)?;
         let blobs = LfsBlobsStore::shared(path, config)?;
@@ -1567,7 +1567,7 @@ impl LfsRemote {
     pub fn new(
         shared: Arc<LfsStore>,
         local: Option<Arc<LfsStore>>,
-        config: &ConfigSet,
+        config: &dyn Config,
         correlator: Option<String>,
     ) -> Result<Self> {
         let mut url = get_str_config(config, "lfs", "url")?;
@@ -2081,11 +2081,15 @@ mod tests {
     use crate::indexedlogutil::StoreType;
     use crate::localstore::ExtStoredPolicy;
     use crate::testutil::example_blob;
+    #[cfg(feature = "fb")]
     use crate::testutil::example_blob2;
     use crate::testutil::get_lfs_batch_mock;
     use crate::testutil::get_lfs_download_mock;
     use crate::testutil::make_lfs_config;
+    #[cfg(feature = "fb")]
     use crate::testutil::nonexistent_blob;
+    use crate::testutil::setconfig;
+    #[cfg(feature = "fb")]
     use crate::testutil::TestBlob;
 
     #[test]
@@ -2266,7 +2270,7 @@ mod tests {
     fn test_add_get_split() -> Result<()> {
         let dir = TempDir::new()?;
         let mut config = make_lfs_config(&dir, "test_add_get_split");
-        config.set("lfs", "blobschunksize", Some("2"), &Default::default());
+        setconfig(&mut config, "lfs", "blobschunksize", "2");
 
         let store = LfsStore::shared(&dir, &config)?;
 
@@ -2740,6 +2744,7 @@ mod tests {
 
     #[cfg(feature = "fb")]
     mod fb_test {
+        use std::collections::BTreeMap;
         use std::env::set_var;
         use std::sync::atomic::AtomicBool;
 
@@ -2885,7 +2890,7 @@ mod tests {
 
         fn test_download<C>(configure: C, blobs: &[&TestBlob]) -> Result<()>
         where
-            C: for<'a> FnOnce(&'a mut ConfigSet),
+            C: for<'a> FnOnce(&'a mut BTreeMap<String, String>),
         {
             let _env_lock = crate::env_lock();
 
@@ -2946,9 +2951,7 @@ mod tests {
             let _m1 = get_lfs_batch_mock(200, &blobs);
 
             test_download(
-                |config| {
-                    config.set("lfs", "http-version", Some("1.1"), &Default::default());
-                },
+                |config| setconfig(config, "lfs", "http-version", "1.1"),
                 &blobs,
             )
         }
@@ -2964,9 +2967,7 @@ mod tests {
             let _m1 = get_lfs_batch_mock(200, &blobs);
 
             test_download(
-                |config| {
-                    config.set("lfs", "http-version", Some("2"), &Default::default());
-                },
+                |config| setconfig(config, "lfs", "http-version", "2"),
                 &blobs,
             )
         }
@@ -2986,7 +2987,7 @@ mod tests {
 
             test_download(
                 |config| {
-                    config.set("lfs", "download-chunk-size", Some("3"), &Default::default());
+                    setconfig(config, "lfs", "download-chunk-size", "3");
                 },
                 &blobs,
             )
@@ -2999,7 +3000,7 @@ mod tests {
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
             let mut config = make_lfs_config(&cachedir, "test_lfs_invalid_http");
-            config.set("lfs", "http-version", Some("3"), &Default::default());
+            setconfig(&mut config, "lfs", "http-version", "3");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config).unwrap());
             let result = LfsRemote::new(lfs, None, &config, None);
@@ -3017,7 +3018,7 @@ mod tests {
             let lfsdir = TempDir::new()?;
             let mut config = make_lfs_config(&cachedir, "test_lfs_request_timeout");
 
-            config.set("lfs", "requesttimeout", Some("0"), &Default::default());
+            setconfig(&mut config, "lfs", "requesttimeout", "0");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config, None)?;
@@ -3094,11 +3095,11 @@ mod tests {
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
             let mut config = make_lfs_config(&cachedir, "test_lfs_redacted");
-            config.set(
+            setconfig(
+                &mut config,
                 "lfs",
                 "url",
-                Some(&[mockito::server_url(), "/repo".to_string()].join("")),
-                &Default::default(),
+                &[mockito::server_url(), "/repo".to_string()].concat(),
             );
 
             let blob = &example_blob();
@@ -3158,7 +3159,7 @@ mod tests {
         remote_lfs_file_store.flush()?;
 
         let url = Url::from_file_path(&remote).unwrap();
-        config.set("lfs", "url", Some(url.as_str()), &Default::default());
+        setconfig(&mut config, "lfs", "url", url.as_str());
 
         let remote = LfsRemote::new(lfs, None, &config, None)?;
 
@@ -3218,7 +3219,7 @@ mod tests {
         local_lfs.blobs.flush()?;
 
         let url = Url::from_file_path(&remote_dir).unwrap();
-        config.set("lfs", "url", Some(url.as_str()), &Default::default());
+        setconfig(&mut config, "lfs", "url", url.as_str());
 
         let remote = LfsRemote::new(shared_lfs, Some(local_lfs.clone()), &config, None)?;
 
@@ -3266,7 +3267,7 @@ mod tests {
 
         let remote_dir = TempDir::new()?;
         let url = Url::from_file_path(&remote_dir).unwrap();
-        config.set("lfs", "url", Some(url.as_str()), &Default::default());
+        setconfig(&mut config, "lfs", "url", url.as_str());
 
         let remote = Arc::new(LfsRemote::new(
             shared_lfs.clone(),
@@ -3352,7 +3353,7 @@ mod tests {
 
         // 192.0.2.0 won't be routable, since that's TEST-NET-1. This test will fail if we attempt
         // to connect.
-        config.set("lfs", "url", Some("http://192.0.2.0/"), &Default::default());
+        setconfig(&mut config, "lfs", "url", "http://192.0.2.0/");
 
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
         let remote = Arc::new(LfsRemote::new(lfs, None, &config, None)?);
@@ -3424,12 +3425,7 @@ mod tests {
             let cachedir = TempDir::new()?;
             let mut config = make_lfs_config(&cachedir, "test_download");
 
-            config.set(
-                "lfs",
-                "backofftimes",
-                Some(backoff_config),
-                &Default::default(),
-            );
+            setconfig(&mut config, "lfs", "backofftimes", backoff_config);
 
             let lfsdir = TempDir::new()?;
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);

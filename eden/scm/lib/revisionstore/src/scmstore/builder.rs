@@ -11,10 +11,9 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::Result;
+use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use configparser::config::ConfigSet;
-use configparser::convert::ByteCount;
 use edenapi::Builder;
 use parking_lot::Mutex;
 use progress_model::AggregatingProgressBar;
@@ -43,7 +42,7 @@ use crate::ExtStoredPolicy;
 use crate::MemcacheStore;
 
 pub struct FileStoreBuilder<'a> {
-    config: &'a ConfigSet,
+    config: &'a dyn Config,
     local_path: Option<PathBuf>,
     suffix: Option<PathBuf>,
     correlator: Option<String>,
@@ -62,7 +61,7 @@ pub struct FileStoreBuilder<'a> {
 }
 
 impl<'a> FileStoreBuilder<'a> {
-    pub fn new(config: &'a ConfigSet) -> Self {
+    pub fn new(config: &'a dyn Config) -> Self {
         Self {
             config,
             local_path: None,
@@ -424,7 +423,7 @@ impl<'a> FileStoreBuilder<'a> {
 }
 
 pub struct TreeStoreBuilder<'a> {
-    config: &'a ConfigSet,
+    config: &'a dyn Config,
     local_path: Option<PathBuf>,
     suffix: Option<PathBuf>,
     override_edenapi: Option<bool>,
@@ -438,7 +437,7 @@ pub struct TreeStoreBuilder<'a> {
 }
 
 impl<'a> TreeStoreBuilder<'a> {
-    pub fn new(config: &'a ConfigSet) -> Self {
+    pub fn new(config: &'a dyn Config) -> Self {
         Self {
             config,
             local_path: None,
@@ -459,7 +458,7 @@ impl<'a> TreeStoreBuilder<'a> {
     }
 
     // TODO(meyer): Can we remove this since we have seprate builders for files and trees?
-    // Is this configurable somewhere we can directly check from ConfigSet instead of having the
+    // Is this configurable somewhere we can directly check from Config instead of having the
     // caller pass in, or is it just hardcoded elsewhere and we should hardcode it here?
     /// Cache path suffix for the associated indexedlog. For files, this will not be given.
     /// For trees, it will be "manifests".

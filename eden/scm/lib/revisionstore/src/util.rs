@@ -15,7 +15,6 @@ use std::path::PathBuf;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use configparser::config::ConfigSet;
 use edenapi::Stats;
 use hgtime::HgTime;
 use thiserror::Error;
@@ -29,18 +28,18 @@ pub enum Error {
     ConfigNotSet(String),
 }
 
-pub fn get_str_config(config: &ConfigSet, section: &str, name: &str) -> Result<String> {
+pub fn get_str_config(config: &dyn Config, section: &str, name: &str) -> Result<String> {
     let name = config
         .get(section, name)
         .ok_or_else(|| Error::ConfigNotSet(format!("{}.{}", section, name)))?;
     Ok(name.to_string())
 }
 
-pub fn get_repo_name(config: &ConfigSet) -> Result<String> {
+pub fn get_repo_name(config: &dyn Config) -> Result<String> {
     get_str_config(config, "remotefilelog", "reponame")
 }
 
-fn get_config_cache_path(config: &ConfigSet) -> Result<PathBuf> {
+fn get_config_cache_path(config: &dyn Config) -> Result<PathBuf> {
     let reponame = get_repo_name(config)?;
     let config_path: PathBuf = config
         .get_or_default::<Option<_>>("remotefilelog", "cachepath")?
@@ -53,7 +52,7 @@ fn get_config_cache_path(config: &ConfigSet) -> Result<PathBuf> {
     Ok(path)
 }
 
-pub fn get_cache_path(config: &ConfigSet, suffix: &Option<impl AsRef<Path>>) -> Result<PathBuf> {
+pub fn get_cache_path(config: &dyn Config, suffix: &Option<impl AsRef<Path>>) -> Result<PathBuf> {
     let mut path = get_config_cache_path(config)?;
 
     if let Some(ref suffix) = suffix {
@@ -110,7 +109,7 @@ pub fn get_packs_path(path: impl AsRef<Path>, suffix: &Option<PathBuf>) -> Resul
     Ok(path)
 }
 
-pub fn get_cache_packs_path(config: &ConfigSet, suffix: &Option<PathBuf>) -> Result<PathBuf> {
+pub fn get_cache_packs_path(config: &dyn Config, suffix: &Option<PathBuf>) -> Result<PathBuf> {
     get_packs_path(get_config_cache_path(config)?, suffix)
 }
 

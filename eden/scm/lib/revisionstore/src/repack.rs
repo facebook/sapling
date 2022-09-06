@@ -16,9 +16,9 @@ use std::sync::Arc;
 use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
+use configmodel::convert::ByteCount;
+use configmodel::Config;
 use configmodel::ConfigExt;
-use configparser::config::ConfigSet;
-use configparser::convert::ByteCount;
 use minibytes::Bytes;
 use thiserror::Error;
 use types::Key;
@@ -239,7 +239,7 @@ fn list_packs(dir: &Path, extension: &str) -> Result<Vec<PathBuf>> {
 fn filter_incrementalpacks(
     packs: Vec<PathBuf>,
     extension: &str,
-    config: &ConfigSet,
+    config: &dyn Config,
 ) -> Result<Vec<PathBuf>> {
     // The overall maximum pack size.
     let max_pack_size: u64 = {
@@ -302,7 +302,7 @@ fn filter_incrementalpacks(
 
 /// Fallback for `repack` for when no `ContentStore`/`MetadataStore` were passed in. Will simply
 /// use the legacy code path to write the content of the packfiles to a packfile.
-fn repack_no_store(path: PathBuf, kind: RepackKind, config: &ConfigSet) -> Result<()> {
+fn repack_no_store(path: PathBuf, kind: RepackKind, config: &dyn Config) -> Result<()> {
     let mut datapacks = list_packs(&path, "datapack")?;
     let mut histpacks = list_packs(&path, "histpack")?;
 
@@ -462,7 +462,7 @@ pub fn repack(
     stores: Option<(Arc<dyn LegacyStore>, Arc<MetadataStore>)>,
     kind: RepackKind,
     location: RepackLocation,
-    config: &ConfigSet,
+    config: &dyn Config,
 ) -> Result<()> {
     let (content, metadata) = match stores {
         Some((content, metadata)) => (content, metadata),
@@ -510,6 +510,7 @@ mod tests {
     use crate::datastore::Delta;
     use crate::historypack::tests::get_nodes;
     use crate::historypack::tests::make_historypack;
+    use crate::testutil::empty_config;
 
     #[test]
     fn test_repack_filter_incremental() -> Result<()> {
@@ -533,15 +534,15 @@ mod tests {
             })
             .collect();
 
-        let config = ConfigSet::new();
+        let config = empty_config();
         assert_eq!(
             filter_incrementalpacks(packs.clone(), "datapack", &config)?,
             get_packfile_paths(&[100, 200, 300, 400, 500])
         );
 
         let config = {
-            let mut config = ConfigSet::new();
-            config.set("repack", "sizelimit", Some("300"), &Default::default());
+            let mut config = empty_config();
+            config.insert("repack.sizelimit".to_string(), "300".to_string());
             config
         };
         assert_eq!(
@@ -550,8 +551,8 @@ mod tests {
         );
 
         let config = {
-            let mut config = ConfigSet::new();
-            config.set("repack", "maxdatapacksize", Some("1k"), &Default::default());
+            let mut config = empty_config();
+            config.insert("repack.maxdatapacksize".to_string(), "1k".to_string());
             config
         };
         assert_eq!(
@@ -560,8 +561,8 @@ mod tests {
         );
 
         let config = {
-            let mut config = ConfigSet::new();
-            config.set("repack", "maxhistpacksize", Some("1k"), &Default::default());
+            let mut config = empty_config();
+            config.insert("repack.maxhistpacksize".to_string(), "1k".to_string());
             config
         };
         assert!(filter_incrementalpacks(packs.clone(), "histpack", &config)?.is_empty());
@@ -569,9 +570,9 @@ mod tests {
         // We have 5 packs pre-repack and we want to make sure we have no more
         // than 2 packs post-repack.
         let config = {
-            let mut config = ConfigSet::new();
-            config.set("repack", "sizelimit", Some("300"), &Default::default());
-            config.set("repack", "maxpacks", Some("2"), &Default::default());
+            let mut config = empty_config();
+            config.insert("repack.sizelimit".to_string(), "300".to_string());
+            config.insert("repack.maxpacks".to_string(), "2".to_string());
             config
         };
         assert_eq!(

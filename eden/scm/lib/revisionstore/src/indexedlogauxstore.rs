@@ -14,9 +14,9 @@ use anyhow::bail;
 use anyhow::Result;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
+use configmodel::convert::ByteCount;
+use configmodel::Config;
 use configmodel::ConfigExt;
-use configparser::config::ConfigSet;
-use configparser::convert::ByteCount;
 use edenapi_types::ContentId;
 use edenapi_types::FileAuxData;
 use edenapi_types::Sha1;
@@ -127,7 +127,7 @@ impl Entry {
 pub struct AuxStore(RwLock<Store>);
 
 impl AuxStore {
-    pub fn new(path: impl AsRef<Path>, config: &ConfigSet, store_type: StoreType) -> Result<Self> {
+    pub fn new(path: impl AsRef<Path>, config: &dyn Config, store_type: StoreType) -> Result<Self> {
         // TODO(meyer): Eliminate "local" AuxStore - always treat it as shared / cache?
         let open_options = AuxStore::open_options(config)?;
 
@@ -139,7 +139,7 @@ impl AuxStore {
         Ok(AuxStore(RwLock::new(log)))
     }
 
-    fn open_options(config: &ConfigSet) -> Result<StoreOpenOptions> {
+    fn open_options(config: &dyn Config) -> Result<StoreOpenOptions> {
         let mut open_options = StoreOpenOptions::new()
             .max_log_count(4)
             .max_bytes_per_log(250 * 1000 * 1000 / 4)
@@ -228,7 +228,7 @@ mod tests {
     #[test]
     fn test_empty() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let store = AuxStore::new(&tempdir, &ConfigSet::new(), StoreType::Shared)?;
+        let store = AuxStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
         store.flush()?;
         Ok(())
     }
@@ -236,7 +236,7 @@ mod tests {
     #[test]
     fn test_add_get() -> Result<()> {
         let tempdir = TempDir::new().unwrap();
-        let store = AuxStore::new(&tempdir, &ConfigSet::new(), StoreType::Shared)?;
+        let store = AuxStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
 
         let mut entry = Entry::default();
         entry.total_size = 1;
@@ -255,7 +255,7 @@ mod tests {
     #[test]
     fn test_lookup_failure() -> Result<()> {
         let tempdir = TempDir::new().unwrap();
-        let store = AuxStore::new(&tempdir, &ConfigSet::new(), StoreType::Shared)?;
+        let store = AuxStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
 
         let mut entry = Entry::default();
         entry.total_size = 1;
@@ -276,7 +276,7 @@ mod tests {
     #[test]
     fn test_corrupted() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let store = AuxStore::new(&tempdir, &ConfigSet::new(), StoreType::Shared)?;
+        let store = AuxStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
 
         let k = key("a", "2");
         let mut entry = Entry::default();
@@ -293,7 +293,7 @@ mod tests {
         rotate_log_path.push("log");
         remove_file(rotate_log_path)?;
 
-        let store = AuxStore::new(&tempdir, &ConfigSet::new(), StoreType::Shared)?;
+        let store = AuxStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
 
         let k = key("a", "3");
         let mut entry = Entry::default();
@@ -311,7 +311,7 @@ mod tests {
     #[test]
     fn test_scmstore_read() -> Result<()> {
         let tmp = TempDir::new()?;
-        let aux = Arc::new(AuxStore::new(&tmp, &ConfigSet::new(), StoreType::Shared)?);
+        let aux = Arc::new(AuxStore::new(&tmp, &empty_config(), StoreType::Shared)?);
 
         let mut entry = Entry::default();
         entry.total_size = 1;
@@ -359,7 +359,7 @@ mod tests {
         content.flush().unwrap();
 
         let tmp = TempDir::new()?;
-        let aux = Arc::new(AuxStore::new(&tmp, &ConfigSet::new(), StoreType::Shared)?);
+        let aux = Arc::new(AuxStore::new(&tmp, &empty_config(), StoreType::Shared)?);
 
         // Set up local-only FileStore
         let mut store = FileStore::empty();

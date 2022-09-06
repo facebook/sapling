@@ -14,9 +14,9 @@ use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
+use configmodel::convert::ByteCount;
+use configmodel::Config;
 use configmodel::ConfigExt;
-use configparser::config::ConfigSet;
-use configparser::convert::ByteCount;
 use indexedlog::log::IndexOutput;
 use minibytes::Bytes;
 use parking_lot::RwLock;
@@ -194,7 +194,7 @@ impl Entry {
 
 impl IndexedLogHgIdHistoryStore {
     /// Create or open an `IndexedLogHgIdHistoryStore`.
-    pub fn new(path: impl AsRef<Path>, config: &ConfigSet, store_type: StoreType) -> Result<Self> {
+    pub fn new(path: impl AsRef<Path>, config: &dyn Config, store_type: StoreType) -> Result<Self> {
         let open_options = Self::open_options(config)?;
         let log = match store_type {
             StoreType::Local => open_options.local(&path),
@@ -205,7 +205,7 @@ impl IndexedLogHgIdHistoryStore {
         })
     }
 
-    fn open_options(config: &ConfigSet) -> Result<StoreOpenOptions> {
+    fn open_options(config: &dyn Config) -> Result<StoreOpenOptions> {
         let mut open_options = StoreOpenOptions::new()
             .max_log_count(4)
             .max_bytes_per_log(500 * 1000 * 1000)
@@ -226,7 +226,7 @@ impl IndexedLogHgIdHistoryStore {
         Ok(open_options)
     }
 
-    pub fn repair(path: PathBuf, config: &ConfigSet, store_type: StoreType) -> Result<String> {
+    pub fn repair(path: PathBuf, config: &dyn Config, store_type: StoreType) -> Result<String> {
         match store_type {
             StoreType::Local => {
                 IndexedLogHgIdHistoryStore::open_options(config)?.repair_local(path)
@@ -304,11 +304,12 @@ mod tests {
 
     use super::*;
     use crate::historypack::tests::get_nodes;
+    use crate::testutil::empty_config;
 
     #[test]
     fn test_empty() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new(), StoreType::Shared)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
         log.flush()?;
         Ok(())
     }
@@ -316,7 +317,7 @@ mod tests {
     #[test]
     fn test_add() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new(), StoreType::Shared)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],
@@ -331,7 +332,7 @@ mod tests {
     #[test]
     fn test_add_get_node_info() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new(), StoreType::Shared)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],
@@ -340,7 +341,7 @@ mod tests {
         log.add(&k, &nodeinfo)?;
         log.flush()?;
 
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new(), StoreType::Shared)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
         let read_nodeinfo = log.get_node_info(&k)?;
         assert_eq!(Some(nodeinfo), read_nodeinfo);
         Ok(())
@@ -349,7 +350,7 @@ mod tests {
     #[test]
     fn test_corrupted() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new(), StoreType::Shared)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
 
         let nodes = get_nodes(&mut rng);
@@ -365,7 +366,7 @@ mod tests {
         rotate_log_path.push("log");
         remove_file(rotate_log_path)?;
 
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new(), StoreType::Shared)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
         for (key, info) in nodes.iter() {
             log.add(&key, &info)?;
         }
@@ -378,7 +379,7 @@ mod tests {
     #[test]
     fn test_iter() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new(), StoreType::Shared)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],

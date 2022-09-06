@@ -16,7 +16,7 @@ use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
-use configparser::convert::ByteCount;
+use configmodel::convert::ByteCount;
 use edenapi_types::FileEntry;
 use edenapi_types::TreeEntry;
 use indexedlog::log::IndexOutput;

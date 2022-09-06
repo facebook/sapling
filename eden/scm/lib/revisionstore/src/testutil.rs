@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -12,7 +13,6 @@ use std::sync::Arc;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
-use configparser::config::ConfigSet;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
 use edenapi::Response;
@@ -366,30 +366,25 @@ impl EdenApi for FakeEdenApi {
     }
 }
 
-pub fn make_config(dir: impl AsRef<Path>) -> ConfigSet {
-    let mut config = ConfigSet::new();
+pub fn make_config(dir: impl AsRef<Path>) -> BTreeMap<String, String> {
+    [
+        ("remotefilelog.reponame", "test".to_string()),
+        (
+            "remotefilelog.cachepath",
+            dir.as_ref().display().to_string(),
+        ),
+        (
+            "remotefilelog.cachekey",
+            "cca::hg:rust_unittest".to_string(),
+        ),
+    ]
+    .iter()
+    .map(|(k, v)| (k.to_string(), v.clone()))
+    .collect()
+}
 
-    config.set(
-        "remotefilelog",
-        "reponame",
-        Some("test"),
-        &Default::default(),
-    );
-    config.set(
-        "remotefilelog",
-        "cachepath",
-        Some(dir.as_ref().to_str().unwrap()),
-        &Default::default(),
-    );
-
-    config.set(
-        "remotefilelog",
-        "cachekey",
-        Some("cca:hg:rust_unittest"),
-        &Default::default(),
-    );
-
-    config
+pub(crate) fn empty_config() -> BTreeMap<String, String> {
+    BTreeMap::new()
 }
 
 #[cfg(test)]
@@ -550,36 +545,33 @@ mod lfs_mocks {
         mocks.into_iter().map(|m| m.create()).collect()
     }
 
-    pub fn make_lfs_config(dir: impl AsRef<Path>, agent_sufix: &str) -> ConfigSet {
+    pub fn make_lfs_config(dir: impl AsRef<Path>, agent_sufix: &str) -> BTreeMap<String, String> {
         let mut config = make_config(dir);
-
-        config.set(
-            "lfs",
-            "url",
-            Some(&[mockito::server_url(), "/repo".to_string()].join("")),
-            &Default::default(),
+        let mut set = |key: &str, value: &str| {
+            config.insert(key.to_string(), value.to_string());
+        };
+        set(
+            "lfs.url",
+            &[mockito::server_url(), "/repo".to_string()].concat(),
         );
-
-        config.set(
-            "lfs",
-            "use-client-certs",
-            Some("False"),
-            &Default::default(),
+        set("lfs.use-client-certs", "false");
+        set(
+            "experimental.lfs.user-agent",
+            &format!("mercurial/revisionstore/unittests/{}", agent_sufix),
         );
-
-        config.set(
-            "experimental",
-            "lfs.user-agent",
-            Some(format!("mercurial/revisionstore/unittests/{}", agent_sufix)),
-            &Default::default(),
-        );
-
-        config.set("lfs", "threshold", Some("4"), &Default::default());
-
-        config.set("remotefilelog", "lfs", Some("true"), &Default::default());
-
-        config.set("lfs", "moveafterupload", Some("true"), &Default::default());
+        set("lfs.threshold", "4");
+        set("remotefilelog.lfs", "true");
+        set("lfs.moveafterupload", "true");
 
         config
     }
+}
+
+pub(crate) fn setconfig(
+    config: &mut BTreeMap<String, String>,
+    section: &str,
+    name: &str,
+    value: &str,
+) {
+    config.insert(format!("{}.{}", section, name), value.to_string());
 }

@@ -11,9 +11,9 @@ use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Result;
+use configmodel::convert::ByteCount;
+use configmodel::Config;
 use configmodel::ConfigExt;
-use configparser::config::ConfigSet;
-use configparser::convert::ByteCount;
 use types::Key;
 use types::NodeInfo;
 
@@ -49,7 +49,7 @@ pub struct MetadataStore {
 }
 
 impl MetadataStore {
-    pub fn new(local_path: impl AsRef<Path>, config: &ConfigSet) -> Result<Self> {
+    pub fn new(local_path: impl AsRef<Path>, config: &dyn Config) -> Result<Self> {
         MetadataStoreBuilder::new(config)
             .local_path(&local_path)
             .build()
@@ -63,7 +63,7 @@ impl MetadataStore {
         shared_path: impl AsRef<Path>,
         local_path: Option<impl AsRef<Path>>,
         suffix: Option<impl AsRef<Path>>,
-        config: &ConfigSet,
+        config: &dyn Config,
     ) -> Result<String> {
         let mut repair_str = String::new();
         let mut shared_path = shared_path.as_ref().to_path_buf();
@@ -174,18 +174,18 @@ impl HgIdMutableHistoryStore for MetadataStore {
 }
 
 /// Builder for `MetadataStore`. An `impl AsRef<Path>` represents the path to the store and a
-/// `ConfigSet` of the Mercurial configuration are required to build a `MetadataStore`.
+/// `dyn Config` of the Mercurial configuration are required to build a `MetadataStore`.
 pub struct MetadataStoreBuilder<'a> {
     local_path: Option<PathBuf>,
     no_local_store: bool,
-    config: &'a ConfigSet,
+    config: &'a dyn Config,
     remotestore: Option<Arc<dyn HgIdRemoteStore>>,
     suffix: Option<PathBuf>,
     memcachestore: Option<Arc<MemcacheStore>>,
 }
 
 impl<'a> MetadataStoreBuilder<'a> {
-    pub fn new(config: &'a ConfigSet) -> Self {
+    pub fn new(config: &'a dyn Config) -> Self {
         Self {
             local_path: None,
             no_local_store: false,
@@ -377,6 +377,7 @@ mod tests {
 
     use super::*;
     use crate::testutil::make_config;
+    use crate::testutil::setconfig;
     use crate::testutil::FakeHgIdRemoteStore;
 
     #[test]
@@ -621,11 +622,11 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let mut config = make_config(&cachedir);
-        config.set(
+        setconfig(
+            &mut config,
             "remotefilelog",
             "write-local-to-indexedlog",
-            Some("True"),
-            &Default::default(),
+            "True",
         );
 
         let store = MetadataStoreBuilder::new(&config)

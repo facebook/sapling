@@ -13,10 +13,9 @@ use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Result;
+use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use configparser::config::ConfigSet;
-use configparser::convert::ByteCount;
 use hgtime::HgTime;
 use minibytes::Bytes;
 use regex::Regex;
@@ -75,7 +74,7 @@ pub struct ContentStore {
 }
 
 impl ContentStore {
-    pub fn new(local_path: impl AsRef<Path>, config: &ConfigSet) -> Result<Self> {
+    pub fn new(local_path: impl AsRef<Path>, config: &dyn Config) -> Result<Self> {
         ContentStoreBuilder::new(config)
             .local_path(&local_path)
             .build()
@@ -89,7 +88,7 @@ impl ContentStore {
         shared_path: impl AsRef<Path>,
         local_path: Option<impl AsRef<Path>>,
         suffix: Option<impl AsRef<Path>>,
-        config: &ConfigSet,
+        config: &dyn Config,
     ) -> Result<String> {
         let mut repair_str = String::new();
         let mut shared_path = shared_path.as_ref().to_path_buf();
@@ -272,13 +271,13 @@ impl ContentDataStore for ContentStore {
 }
 
 /// Builder for `ContentStore`. An `impl AsRef<Path>` represents the path to the store and a
-/// `ConfigSet` of the Mercurial configuration are required to build a `ContentStore`. Users can
+/// `dyn Config` of the Mercurial configuration are required to build a `ContentStore`. Users can
 /// use this builder to add optional `HgIdRemoteStore` to enable remote data fetching， and a `Path`
 /// suffix to specify other type of stores.
 pub struct ContentStoreBuilder<'a> {
     local_path: Option<PathBuf>,
     no_local_store: bool,
-    config: &'a ConfigSet,
+    config: &'a dyn Config,
     remotestore: Option<Arc<dyn HgIdRemoteStore>>,
     suffix: Option<PathBuf>,
     memcachestore: Option<Arc<MemcacheStore>>,
@@ -290,7 +289,7 @@ pub struct ContentStoreBuilder<'a> {
 }
 
 impl<'a> ContentStoreBuilder<'a> {
-    pub fn new(config: &'a ConfigSet) -> Self {
+    pub fn new(config: &'a dyn Config) -> Self {
         Self {
             local_path: None,
             no_local_store: false,
@@ -638,7 +637,7 @@ impl<'a> ContentStoreBuilder<'a> {
 
 /// Reads the configs and deletes the hgcache if a hgcache-purge.$KEY=$DATE value hasn't already
 /// been processed.
-pub fn check_cache_buster(config: &ConfigSet, store_path: &Path) {
+pub fn check_cache_buster(config: &dyn Config, store_path: &Path) {
     for key in config.keys("hgcache-purge").into_iter() {
         if let Some(cutoff) = config
             .get("hgcache-purge", &key)
@@ -694,15 +693,18 @@ mod tests {
     use crate::repack::repack;
     use crate::repack::RepackKind;
     use crate::repack::RepackLocation;
+    #[cfg(feature = "fb")]
     use crate::testutil::example_blob;
     use crate::testutil::get_lfs_batch_mock;
     use crate::testutil::get_lfs_download_mock;
     use crate::testutil::make_config;
     use crate::testutil::make_lfs_config;
+    use crate::testutil::setconfig;
     use crate::testutil::FakeHgIdRemoteStore;
     use crate::testutil::TestBlob;
     use crate::types::ContentHash;
 
+    #[cfg(feature = "fb")]
     fn prepare_lfs_mocks(blob: &TestBlob) -> Vec<Mock> {
         let m1 = get_lfs_batch_mock(200, &[blob]);
         let mut m2 = get_lfs_download_mock(200, blob);
@@ -745,11 +747,11 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let mut config = make_config(&cachedir);
-        config.set(
+        setconfig(
+            &mut config,
             "remotefilelog",
             "write-local-to-indexedlog",
-            Some("False"),
-            &Default::default(),
+            "False",
         );
 
         let store = ContentStore::new(&localdir, &config)?;
@@ -893,11 +895,11 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let mut config = make_config(&cachedir);
-        config.set(
+        setconfig(
+            &mut config,
             "remotefilelog",
             "write-local-to-indexedlog",
-            Some("True"),
-            &Default::default(),
+            "True",
         );
 
         let store = ContentStoreBuilder::new(&config)
@@ -970,11 +972,11 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let mut config = make_config(&cachedir);
-        config.set(
+        setconfig(
+            &mut config,
             "remotefilelog",
             "write-local-to-indexedlog",
-            Some("False"),
-            &Default::default(),
+            "False",
         );
 
         let store = ContentStore::new(&localdir, &config)?;
@@ -1134,7 +1136,7 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let mut config = make_lfs_config(&cachedir, "test_repack_one_datapack_lfs");
-        config.set("lfs", "threshold", Some("10M"), &Default::default());
+        setconfig(&mut config, "lfs", "threshold", "10M");
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -1168,17 +1170,17 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let mut config = make_config(&cachedir);
-        config.set(
+        setconfig(
+            &mut config,
             "remotefilelog",
             "write-local-to-indexedlog",
-            Some("False"),
-            &Default::default(),
+            "False",
         );
-        config.set(
+        setconfig(
+            &mut config,
             "remotefilelog",
             "write-hgcache-to-indexedlog",
-            Some("False"),
-            &Default::default(),
+            "False",
         );
 
         let k = key("a", "2");
@@ -1191,7 +1193,7 @@ mod tests {
         remotestore.data(map);
         let remotestore = Arc::new(remotestore);
 
-        let create_store = |config: &ConfigSet| -> ContentStore {
+        let create_store = |config: &dyn Config| -> ContentStore {
             ContentStoreBuilder::new(&config)
                 .local_path(&localdir)
                 .remotestore(remotestore.clone())
@@ -1218,12 +1220,12 @@ mod tests {
         assert!(!get_subdirs().is_empty());
 
         // Set a purge that ended yesterday.
-        let yesterday = HgTime::now().unwrap().sub(86000);
-        config.set(
+        let yesterday = HgTime::now().unwrap().sub(86000).unwrap();
+        setconfig(
+            &mut config,
             "hgcache-purge",
             "marker",
-            yesterday.map(|t| t.to_utc().to_string()),
-            &Default::default(),
+            &yesterday.to_utc().to_string(),
         );
 
         // Recreate the store, which should not activate the purge.
@@ -1233,12 +1235,12 @@ mod tests {
         assert!(!get_subdirs().is_empty());
 
         // Set a purge that lasts until tomorrow.
-        let tomorrow = HgTime::now().unwrap().add(86000);
-        config.set(
+        let tomorrow = HgTime::now().unwrap().add(86000).unwrap();
+        setconfig(
+            &mut config,
             "hgcache-purge",
             "marker",
-            tomorrow.map(|t| t.to_utc().to_string()),
-            &Default::default(),
+            &tomorrow.to_utc().to_string(),
         );
 
         // Recreate the store, which will activate the purge.
@@ -1315,11 +1317,11 @@ mod tests {
             let mut config = make_lfs_config(&cachedir, "test_lfs_fallback_on_missing_blob");
 
             let lfsdir = TempDir::new()?;
-            config.set(
+            setconfig(
+                &mut config,
                 "lfs",
                 "url",
-                Some(Url::from_file_path(&lfsdir).unwrap()),
-                &Default::default(),
+                &Url::from_file_path(&lfsdir).unwrap().to_string(),
             );
 
             let k = key("a", "1");
@@ -1515,12 +1517,7 @@ mod tests {
             let cachedir = TempDir::new()?;
             let localdir = TempDir::new()?;
             let mut config = make_config(&cachedir);
-            config.set(
-                "remotefilelog",
-                "waitformemcache",
-                Some("false"),
-                &Default::default(),
-            );
+            setconfig(&mut config, "remotefilelog", "waitformemcache", "false");
 
             let k = key("a", "1");
             let data = Bytes::from(&[1, 2, 3, 4][..]);
