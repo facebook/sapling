@@ -33,17 +33,24 @@ tunables = { version = "0.1.0", path = "../../tunables" }
 
 [dev-dependencies]
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
-blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
+changesets = { version = "0.1.0", path = "../../changesets" }
 derived_data_filenodes = { version = "0.1.0", path = "../filenodes" }
 derived_data_test_utils = { version = "0.1.0", path = "../test_utils" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+filenodes = { version = "0.1.0", path = "../../filenodes" }
+filestore = { version = "0.1.0", path = "../../filestore" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 maplit = "1.0"
 mercurial_derived_data = { version = "0.1.0", path = "../mercurial_derived_data" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
+repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
+repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 revset = { version = "0.1.0", path = "../../revset" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

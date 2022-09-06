@@ -471,8 +471,6 @@ mod tests {
     use anyhow::Result;
     use async_trait::async_trait;
     use blobrepo::save_bonsai_changesets;
-    use blobrepo::BlobRepo;
-    use blobrepo_hg::BlobRepoHg;
     use blobstore::Storable;
     use bytes::Bytes;
     use derived_data::BonsaiDerived;
@@ -504,10 +502,11 @@ mod tests {
     use super::*;
     use crate::mapping::get_file_changes;
     use crate::mapping::RootUnodeManifestId;
+    use crate::tests::TestRepo;
 
     #[fbinit::test]
     async fn linear_test(fb: FacebookInit) -> Result<(), Error> {
-        let repo = Linear::getrepo(fb).await;
+        let repo: TestRepo = Linear::get_custom_test_repo(fb).await;
         let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
         let ctx = CoreContext::test_mock(fb);
 
@@ -529,7 +528,7 @@ mod tests {
             .await?;
 
             // Make sure it's saved in the blobstore
-            unode_id.load(&ctx, repo.blobstore()).await?;
+            unode_id.load(&ctx, &repo.repo_blobstore).await?;
             let all_unodes: Vec<_> =
                 iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(unode_id))
                     .try_collect()
@@ -562,7 +561,7 @@ mod tests {
             .await?;
 
             // Make sure it's saved in the blobstore
-            let root_unode = unode_id.load(&ctx, repo.blobstore()).await?;
+            let root_unode = unode_id.load(&ctx, &repo.repo_blobstore).await?;
             assert_eq!(root_unode.parents(), &vec![parent_unode_id]);
 
             let root_filenode_id = fetch_root_filenode_id(fb, repo.clone(), bcs_id).await?;
@@ -592,12 +591,12 @@ mod tests {
 
     #[fbinit::test]
     async fn test_same_content_different_paths(fb: FacebookInit) -> Result<(), Error> {
-        let repo = Linear::getrepo(fb).await;
+        let repo: TestRepo = Linear::get_custom_test_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         async fn check_unode_uniqeness(
             ctx: CoreContext,
-            repo: BlobRepo,
+            repo: TestRepo,
             file_changes: BTreeMap<MPath, FileChange>,
         ) -> Result<(), Error> {
             let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
@@ -613,7 +612,7 @@ mod tests {
                 UnodeVersion::V2,
             )
             .await?;
-            let unode_mf = unode_id.load(&ctx, repo.blobstore()).await?;
+            let unode_mf = unode_id.load(&ctx, &repo.repo_blobstore).await?;
 
             // Unodes should be unique even if content is the same. Check it
             let vals: Vec<_> = unode_mf.list().collect();
@@ -640,7 +639,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_same_content_no_change(fb: FacebookInit) -> Result<(), Error> {
-        let repo = Linear::getrepo(fb).await;
+        let repo: TestRepo = Linear::get_custom_test_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         build_diamond_graph(
@@ -687,7 +686,7 @@ mod tests {
     async fn diamond_merge_unodes_v2(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let mut factory = TestRepoFactory::new(fb)?;
-        let repo: BlobRepo = factory.build()?;
+        let repo: TestRepo = factory.build()?;
         let merged_files = "dir/file.txt";
         let root_commit = CreateCommitContext::new_root(&ctx, &repo)
             .add_file(merged_files, "a")
@@ -711,14 +710,14 @@ mod tests {
             .await?;
 
         let find_unodes = {
-            |ctx: CoreContext, repo: BlobRepo| async move {
+            |ctx: CoreContext, repo: TestRepo| async move {
                 let p1_root_unode_mf_id = RootUnodeManifestId::derive(&ctx, &repo, p1).await?;
 
                 let mut p1_unodes: Vec<_> = p1_root_unode_mf_id
                     .manifest_unode_id()
                     .find_entries(
                         ctx.clone(),
-                        repo.get_blobstore(),
+                        repo.repo_blobstore.clone(),
                         vec![Some(MPath::new(&merged_files)?), Some(MPath::new("dir")?)],
                         // Some(MPath::new(&merged_files)?),
                     )
@@ -733,7 +732,7 @@ mod tests {
                     .manifest_unode_id()
                     .find_entries(
                         ctx.clone(),
-                        repo.get_blobstore(),
+                        repo.repo_blobstore.clone(),
                         vec![Some(MPath::new(&merged_files)?), Some(MPath::new("dir")?)],
                     )
                     .try_collect()
@@ -750,7 +749,7 @@ mod tests {
         assert_eq!(p1_unodes, merge_unodes);
 
         // Unodes v1 should create a new one that points to the parent unode
-        let repo: BlobRepo = factory
+        let repo: TestRepo = factory
             .with_config_override(|config| {
                 config
                     .derived_data_config
@@ -763,7 +762,7 @@ mod tests {
         assert_ne!(p1_unodes, merge_unodes);
 
         for ((_, p1), (_, merge)) in p1_unodes.iter().zip(merge_unodes.iter()) {
-            let merge_unode = merge.load(&ctx, repo.blobstore()).await?;
+            let merge_unode = merge.load(&ctx, &repo.repo_blobstore).await?;
 
             match (p1, merge_unode) {
                 (Entry::Leaf(p1), Entry::Leaf(ref merge_unode)) => {
@@ -788,7 +787,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_parent_order(fb: FacebookInit) -> Result<(), Error> {
-        let repo: BlobRepo = test_repo_factory::build_empty(fb).unwrap();
+        let repo: TestRepo = test_repo_factory::build_empty(fb).unwrap();
         let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
         let ctx = CoreContext::test_mock(fb);
 
@@ -855,7 +854,7 @@ mod tests {
 
     async fn create_changeset_and_derive_unode(
         ctx: CoreContext,
-        repo: BlobRepo,
+        repo: TestRepo,
         file_changes: BTreeMap<&str, Option<(&str, FileType)>>,
     ) -> Result<ManifestUnodeId, Error> {
         let file_changes = store_files(ctx.clone(), file_changes, repo.clone()).await?;
@@ -877,7 +876,7 @@ mod tests {
 
     async fn build_diamond_graph(
         ctx: CoreContext,
-        repo: BlobRepo,
+        repo: TestRepo,
         changes_first: BTreeMap<&str, Option<(&str, FileType)>>,
         changes_merge_p1: BTreeMap<&str, Option<(&str, FileType)>>,
         changes_merge_p2: BTreeMap<&str, Option<(&str, FileType)>>,
@@ -969,7 +968,7 @@ mod tests {
 
     async fn create_bonsai_changeset(
         fb: FacebookInit,
-        repo: BlobRepo,
+        repo: TestRepo,
         file_changes: BTreeMap<MPath, FileChange>,
     ) -> Result<BonsaiChangeset, Error> {
         create_bonsai_changeset_with_params(fb, repo, file_changes, "message", vec![]).await
@@ -977,7 +976,7 @@ mod tests {
 
     async fn create_bonsai_changeset_with_params(
         fb: FacebookInit,
-        repo: BlobRepo,
+        repo: TestRepo,
         file_changes: BTreeMap<MPath, FileChange>,
         message: &str,
         parents: Vec<ChangesetId>,
@@ -1003,7 +1002,7 @@ mod tests {
     async fn store_files(
         ctx: CoreContext,
         files: BTreeMap<&str, Option<(&str, FileType)>>,
-        repo: BlobRepo,
+        repo: TestRepo,
     ) -> Result<BTreeMap<MPath, FileChange>, Error> {
         let mut res = btreemap! {};
 
@@ -1014,7 +1013,7 @@ mod tests {
                     let size = content.len();
                     let content =
                         FileContents::Bytes(Bytes::copy_from_slice(content.as_bytes())).into_blob();
-                    let content_id = content.store(&ctx, repo.blobstore()).await?;
+                    let content_id = content.store(&ctx, &repo.repo_blobstore).await?;
                     let file_change = FileChange::tracked(content_id, file_type, size as u64, None);
                     res.insert(path, file_change);
                 }
@@ -1031,13 +1030,13 @@ mod tests {
         async fn get_parents<'a>(
             &'a self,
             ctx: &'a CoreContext,
-            repo: &'a BlobRepo,
+            repo: &'a TestRepo,
         ) -> Result<Vec<UnodeEntry>, Error>;
 
         async fn get_linknode<'a>(
             &'a self,
             ctx: &'a CoreContext,
-            repo: &'a BlobRepo,
+            repo: &'a TestRepo,
         ) -> Result<ChangesetId, Error>;
     }
 
@@ -1046,11 +1045,11 @@ mod tests {
         async fn get_parents<'a>(
             &'a self,
             ctx: &'a CoreContext,
-            repo: &'a BlobRepo,
+            repo: &'a TestRepo,
         ) -> Result<Vec<UnodeEntry>, Error> {
             match self {
                 UnodeEntry::File(file_unode_id) => {
-                    let unode_mf = file_unode_id.load(ctx, repo.blobstore()).await?;
+                    let unode_mf = file_unode_id.load(ctx, &repo.repo_blobstore).await?;
                     Ok(unode_mf
                         .parents()
                         .iter()
@@ -1059,7 +1058,7 @@ mod tests {
                         .collect())
                 }
                 UnodeEntry::Directory(mf_unode_id) => {
-                    let unode_mf = mf_unode_id.load(ctx, repo.blobstore()).await?;
+                    let unode_mf = mf_unode_id.load(ctx, &repo.repo_blobstore).await?;
                     Ok(unode_mf
                         .parents()
                         .iter()
@@ -1073,15 +1072,15 @@ mod tests {
         async fn get_linknode<'a>(
             &'a self,
             ctx: &'a CoreContext,
-            repo: &'a BlobRepo,
+            repo: &'a TestRepo,
         ) -> Result<ChangesetId, Error> {
             match self {
                 UnodeEntry::File(file_unode_id) => {
-                    let unode_file = file_unode_id.load(ctx, repo.blobstore()).await?;
+                    let unode_file = file_unode_id.load(ctx, &repo.repo_blobstore).await?;
                     Ok(unode_file.linknode().clone())
                 }
                 UnodeEntry::Directory(mf_unode_id) => {
-                    let unode_mf = mf_unode_id.load(ctx, repo.blobstore()).await?;
+                    let unode_mf = mf_unode_id.load(ctx, &repo.repo_blobstore).await?;
                     Ok(unode_mf.linknode().clone())
                 }
             }
@@ -1090,7 +1089,7 @@ mod tests {
 
     async fn find_unode_history(
         fb: FacebookInit,
-        repo: BlobRepo,
+        repo: TestRepo,
         start: UnodeEntry,
     ) -> Result<Vec<ChangesetId>, Error> {
         let ctx = CoreContext::test_mock(fb);
@@ -1119,7 +1118,7 @@ mod tests {
 
     async fn find_filenode_history(
         fb: FacebookInit,
-        repo: BlobRepo,
+        repo: TestRepo,
         start: HgFileNodeId,
     ) -> Result<Vec<ChangesetId>, Error> {
         let ctx = CoreContext::test_mock(fb);
@@ -1140,12 +1139,15 @@ mod tests {
             };
 
             let hg_linknode = repo
-                .get_filenode(ctx.clone(), &RepoPath::RootPath, filenode_id)
+                .filenodes
+                .get_filenode(&ctx.clone(), &RepoPath::RootPath, filenode_id)
                 .await?
+                .do_not_handle_disabled_filenodes()?
                 .map(|filenode| filenode.linknode)
-                .do_not_handle_disabled_filenodes()?;
+                .unwrap();
+
             let linknode = repo
-                .bonsai_hg_mapping()
+                .bonsai_hg_mapping
                 .get_bonsai_from_hg(&ctx, hg_linknode)
                 .await?
                 .unwrap();
@@ -1153,7 +1155,7 @@ mod tests {
 
             let mf = HgBlobManifest::load(
                 &ctx,
-                repo.blobstore(),
+                &repo.repo_blobstore,
                 HgManifestId::new(filenode_id.into_nodehash()),
             )
             .await?
@@ -1178,12 +1180,12 @@ mod tests {
 
     async fn fetch_root_filenode_id(
         fb: FacebookInit,
-        repo: BlobRepo,
+        repo: TestRepo,
         bcs_id: ChangesetId,
     ) -> Result<HgFileNodeId, Error> {
         let ctx = CoreContext::test_mock(fb);
         let hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
-        let hg_cs = hg_cs_id.load(&ctx, repo.blobstore()).await?;
+        let hg_cs = hg_cs_id.load(&ctx, &repo.repo_blobstore).await?;
         Ok(HgFileNodeId::new(hg_cs.manifestid().into_nodehash()))
     }
 }

@@ -173,19 +173,49 @@ pub async fn find_unode_renames_incorrect_for_blame_v1(
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
-    use blobrepo::BlobRepo;
     use blobstore::Loadable;
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::Bookmarks;
     use borrowed::borrowed;
+    use changeset_fetcher::ChangesetFetcher;
+    use changesets::Changesets;
     use context::CoreContext;
     use fbinit::FacebookInit;
+    use filenodes::Filenodes;
+    use filestore::FilestoreConfig;
     use mononoke_types::MPath;
-    use repo_derived_data::RepoDerivedDataRef;
+    use repo_blobstore::RepoBlobstore;
+    use repo_derived_data::RepoDerivedData;
+    use repo_identity::RepoIdentity;
     use tests_utils::CreateCommitContext;
+
+    #[derive(Clone)]
+    #[facet::container]
+    pub(crate) struct TestRepo {
+        #[facet]
+        pub(crate) bonsai_hg_mapping: dyn BonsaiHgMapping,
+        #[facet]
+        pub(crate) bookmarks: dyn Bookmarks,
+        #[facet]
+        pub(crate) repo_blobstore: RepoBlobstore,
+        #[facet]
+        pub(crate) repo_derived_data: RepoDerivedData,
+        #[facet]
+        pub(crate) filestore_config: FilestoreConfig,
+        #[facet]
+        pub(crate) changeset_fetcher: dyn ChangesetFetcher,
+        #[facet]
+        pub(crate) changesets: dyn Changesets,
+        #[facet]
+        pub(crate) filenodes: dyn Filenodes,
+        #[facet]
+        pub(crate) repo_identity: RepoIdentity,
+    }
 
     #[fbinit::test]
     async fn test_find_unode_rename_sources(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
         borrowed!(ctx, repo);
 
         let c1 = CreateCommitContext::new_root(ctx, repo)
@@ -210,8 +240,8 @@ mod tests {
             .commit()
             .await?;
 
-        let bonsai = c4.load(ctx, repo.blobstore()).await?;
-        let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
+        let bonsai = c4.load(ctx, &repo.repo_blobstore).await?;
+        let derivation_ctx = repo.repo_derived_data.manager().derivation_context(None);
         let renames = crate::find_unode_rename_sources(ctx, &derivation_ctx, &bonsai).await?;
 
         let check = |path: &str, parent_index: usize, from_path: &str| {

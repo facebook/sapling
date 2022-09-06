@@ -247,7 +247,6 @@ pub(crate) fn get_file_changes(
 
 #[cfg(test)]
 mod test {
-    use blobrepo::BlobRepo;
     use blobstore::Loadable;
     use bookmarks::BookmarkName;
     use borrowed::borrowed;
@@ -281,18 +280,19 @@ mod test {
     use tests_utils::CreateCommitContext;
 
     use super::*;
+    use crate::tests::TestRepo;
 
     async fn fetch_manifest_by_cs_id(
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &TestRepo,
         hg_cs_id: HgChangesetId,
     ) -> Result<HgManifestId, Error> {
-        Ok(hg_cs_id.load(ctx, repo.blobstore()).await?.manifestid())
+        Ok(hg_cs_id.load(ctx, &repo.repo_blobstore).await?.manifestid())
     }
 
     async fn verify_unode(
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &TestRepo,
         bcs_id: ChangesetId,
         hg_cs_id: HgChangesetId,
     ) -> Result<RootUnodeManifestId, Error> {
@@ -328,13 +328,14 @@ mod test {
 
     fn all_commits_descendants_to_ancestors(
         ctx: CoreContext,
-        repo: BlobRepo,
+        repo: TestRepo,
     ) -> impl Stream<Item = Result<(ChangesetId, HgChangesetId), Error>> {
         let master_book = BookmarkName::new("master").unwrap();
-        repo.get_bonsai_bookmark(ctx.clone(), &master_book)
+        repo.bookmarks
+            .get(ctx.clone(), &master_book)
             .map_ok(move |maybe_bcs_id| {
                 let bcs_id = maybe_bcs_id.unwrap();
-                AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bcs_id.clone())
+                AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher, bcs_id.clone())
                     .compat()
                     .and_then(move |new_bcs_id| {
                         cloned!(ctx, repo);
@@ -350,11 +351,11 @@ mod test {
     async fn verify_repo<F, Fut>(fb: FacebookInit, repo_func: F)
     where
         F: Fn() -> Fut,
-        Fut: Future<Output = BlobRepo>,
+        Fut: Future<Output = TestRepo>,
     {
         let ctx = CoreContext::test_mock(fb);
         let repo = repo_func().await;
-        println!("Processing {}", repo.name());
+        println!("Processing {}", repo.repo_identity.name());
         borrowed!(ctx, repo);
 
         let commits_desc_to_anc = all_commits_descendants_to_ancestors(ctx.clone(), repo.clone())
@@ -395,19 +396,25 @@ mod test {
 
     #[fbinit::test]
     async fn test_unode_derivation_on_multiple_repos(fb: FacebookInit) {
-        verify_repo(fb, || Linear::getrepo(fb)).await;
-        verify_repo(fb, || BranchEven::getrepo(fb)).await;
-        verify_repo(fb, || BranchUneven::getrepo(fb)).await;
-        verify_repo(fb, || BranchWide::getrepo(fb)).await;
-        verify_repo(fb, || ManyDiamonds::getrepo(fb)).await;
-        verify_repo(fb, || ManyFilesDirs::getrepo(fb)).await;
-        verify_repo(fb, || MergeEven::getrepo(fb)).await;
-        verify_repo(fb, || MergeUneven::getrepo(fb)).await;
-        verify_repo(fb, || UnsharedMergeEven::getrepo(fb)).await;
-        verify_repo(fb, || UnsharedMergeUneven::getrepo(fb)).await;
+        verify_repo(fb, || Linear::get_custom_test_repo::<TestRepo>(fb)).await;
+        verify_repo(fb, || BranchEven::get_custom_test_repo::<TestRepo>(fb)).await;
+        verify_repo(fb, || BranchUneven::get_custom_test_repo::<TestRepo>(fb)).await;
+        verify_repo(fb, || BranchWide::get_custom_test_repo::<TestRepo>(fb)).await;
+        verify_repo(fb, || ManyDiamonds::get_custom_test_repo::<TestRepo>(fb)).await;
+        verify_repo(fb, || ManyFilesDirs::get_custom_test_repo::<TestRepo>(fb)).await;
+        verify_repo(fb, || MergeEven::get_custom_test_repo::<TestRepo>(fb)).await;
+        verify_repo(fb, || MergeUneven::get_custom_test_repo::<TestRepo>(fb)).await;
+        verify_repo(fb, || {
+            UnsharedMergeEven::get_custom_test_repo::<TestRepo>(fb)
+        })
+        .await;
+        verify_repo(fb, || {
+            UnsharedMergeUneven::get_custom_test_repo::<TestRepo>(fb)
+        })
+        .await;
         // Create a repo with a few empty commits in a row
         verify_repo(fb, || async {
-            let repo: BlobRepo = test_repo_factory::build_empty(fb).unwrap();
+            let repo: TestRepo = test_repo_factory::build_empty(fb).unwrap();
             let ctx = CoreContext::test_mock(fb);
             let root_empty = CreateCommitContext::new_root(&ctx, &repo)
                 .commit()
@@ -449,7 +456,7 @@ mod test {
         .await;
 
         verify_repo(fb, || async {
-            let repo: BlobRepo = test_repo_factory::build_empty(fb).unwrap();
+            let repo: TestRepo = test_repo_factory::build_empty(fb).unwrap();
             let ctx = CoreContext::test_mock(fb);
             let root = CreateCommitContext::new_root(&ctx, &repo)
                 .add_file("dir/subdir/to_replace", "one")
@@ -482,7 +489,7 @@ mod test {
 
         // Weird case - let's delete a file that was already replaced with a directory
         verify_repo(fb, || async {
-            let repo: BlobRepo = test_repo_factory::build_empty(fb).unwrap();
+            let repo: TestRepo = test_repo_factory::build_empty(fb).unwrap();
             let ctx = CoreContext::test_mock(fb);
             let root = CreateCommitContext::new_root(&ctx, &repo)
                 .add_file("dir/subdir/to_replace", "one")
