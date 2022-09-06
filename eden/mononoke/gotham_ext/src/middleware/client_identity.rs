@@ -19,7 +19,6 @@ use hyper::header::HeaderMap;
 use hyper::Body;
 use hyper::Response;
 use hyper::StatusCode;
-use lazy_static::lazy_static;
 use metaconfig_types::Identity;
 use percent_encoding::percent_decode;
 use permission_checker::MononokeIdentity;
@@ -34,11 +33,6 @@ use crate::state_ext::StateExt;
 const ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
 const CLIENT_IP: &str = "tfb-orig-client-ip";
 
-lazy_static! {
-    static ref PROXYGEN_ORIGIN_IDENTITY: MononokeIdentity =
-        MononokeIdentity::new("SERVICE_IDENTITY", "proxygen-origin");
-}
-
 #[derive(StateData, Default)]
 pub struct ClientIdentity {
     address: Option<IpAddr>,
@@ -50,26 +44,8 @@ impl ClientIdentity {
         &self.address
     }
 
-    // Extract the client's username from the identity set, if present.
-    pub fn username(&self) -> Option<&str> {
-        for id in self.identities.as_ref()? {
-            if id.id_type() == "USER" {
-                return Some(id.id_data());
-            }
-        }
-        None
-    }
-
     pub fn identities(&self) -> &Option<MononokeIdentitySet> {
         &self.identities
-    }
-
-    pub fn is_proxygen_test_identity(&self) -> bool {
-        if let Some(identities) = &self.identities {
-            identities.contains(&PROXYGEN_ORIGIN_IDENTITY)
-        } else {
-            false
-        }
     }
 }
 

@@ -91,9 +91,13 @@ pub trait MononokeIdentitySetExt {
 
     fn is_hg_sync_job(&self) -> bool;
 
+    fn is_proxygen_test_identity(&self) -> bool;
+
     fn hostprefix(&self) -> Option<&str>;
 
     fn hostname(&self) -> Option<&str>;
+
+    fn username(&self) -> Option<&str>;
 }
 
 #[test]

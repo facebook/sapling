@@ -23,7 +23,6 @@ gotham_derive = "0.6.0"
 hex = "0.4.3"
 http = "0.2"
 hyper = { version = "0.14.7", features = ["client", "http1", "http2"] }
-lazy_static = "1.4"
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mime = "0.3.14"
 openssl = "0.10.35"

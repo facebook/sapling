@@ -12,6 +12,7 @@ use gotham_ext::middleware::PostResponseCallbacks;
 use hyper::Body;
 use hyper::Response;
 use hyper::StatusCode;
+use permission_checker::MononokeIdentitySetExt;
 use stats::prelude::*;
 
 use crate::handlers::EdenApiMethod;
@@ -58,7 +59,14 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
     // requests to check server health. These requests will look like ordinary
     // user requests, but should be filtered out of the server's metrics.
     match state.try_borrow::<ClientIdentity>() {
-        Some(id) if id.is_proxygen_test_identity() => return None,
+        Some(id)
+            if id
+                .identities()
+                .as_ref()
+                .map_or(false, |id| id.is_proxygen_test_identity()) =>
+        {
+            return None;
+        }
         _ => {}
     }
 

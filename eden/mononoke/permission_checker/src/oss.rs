@@ -65,11 +65,19 @@ impl MononokeIdentitySetExt for MononokeIdentitySet {
         false
     }
 
+    fn is_proxygen_test_identity(&self) -> bool {
+        false
+    }
+
     fn hostprefix(&self) -> Option<&str> {
         None
     }
 
     fn hostname(&self) -> Option<&str> {
+        None
+    }
+
+    fn username(&self) -> Option<&str> {
         None
     }
 }

@@ -23,6 +23,7 @@ use hyper::Response;
 use hyper::StatusCode;
 use metadata::Metadata;
 use permission_checker::MononokeIdentitySet;
+use permission_checker::MononokeIdentitySetExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::error;
 use slog::o;
@@ -117,16 +118,19 @@ impl Middleware for RequestContextMiddleware {
         let request_id = state.short_request_id();
 
         let logger = self.logger.new(o!("request_id" => request_id.to_string()));
-        let (should_log, identities, address) =
+        let (identities, address) =
             if let Some(client_identity) = ClientIdentity::try_borrow_from(state) {
                 (
-                    !client_identity.is_proxygen_test_identity(),
                     client_identity.identities().clone(),
                     client_identity.address().clone(),
                 )
             } else {
-                (true, None, None)
+                (None, None)
             };
+
+        let should_log = !identities
+            .as_ref()
+            .map_or(false, |id| id.is_proxygen_test_identity());
 
         let identities: MononokeIdentitySet = match identities {
             Some(identities) => identities,
