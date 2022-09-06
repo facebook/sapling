@@ -235,26 +235,32 @@ where
     let server_handle = tokio::task::spawn(server);
 
     // Now wait for the termination signal, or a server exit.
-    let server_result: Result<(), Error> = match future::select(server_handle, signalled).await {
-        Either::Left((join_handle_res, _)) => {
-            let res = join_handle_res.map_err(Error::from).and_then(|res| res);
-            match res.as_ref() {
-                Ok(()) => {
-                    error!(&logger, "Server has exited! Starting shutdown...");
+    let server_result_or_handle: Result<_, Error> =
+        match future::select(server_handle, signalled).await {
+            Either::Left((join_handle_res, _)) => {
+                let res = join_handle_res.map_err(Error::from).and_then(|res| res);
+                match res.as_ref() {
+                    Ok(()) => {
+                        error!(&logger, "Server has exited! Starting shutdown...");
+                    }
+                    Err(e) => {
+                        error!(
+                            &logger,
+                            "Server exited with an error! Starting shutdown... Error: {:?}", e
+                        );
+                    }
                 }
-                Err(e) => {
-                    error!(
-                        &logger,
-                        "Server exited with an error! Starting shutdown... Error: {:?}", e
-                    );
-                }
+                res.map(|_| None)
             }
-            res
-        }
-        Either::Right(..) => {
-            info!(&logger, "Signalled! Starting shutdown...");
-            Ok(())
-        }
+            Either::Right((_, server_handle)) => {
+                info!(&logger, "Signalled! Starting shutdown...");
+                Ok(Some(server_handle))
+            }
+        };
+    let (server_handle, server_result) = match server_result_or_handle {
+        Ok(Some(server_handle)) => (Some(server_handle), Ok(())),
+        Ok(None) => (None, Ok(())),
+        Err(err) => (None, Err(err)),
     };
 
     // Shutting down: wait for the grace period.
@@ -266,6 +272,13 @@ where
     );
 
     time::sleep(shutdown_grace_period).await;
+
+    let shutdown = async move {
+        shutdown.await;
+        if let Some(server_handle) = server_handle {
+            let _res = server_handle.await;
+        }
+    };
 
     info!(&logger, "Shutting down...");
     let () = time::timeout(shutdown_timeout, shutdown)
