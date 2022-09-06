@@ -25,6 +25,7 @@ use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use blame::BlameRoot;
+use blobrepo::AsBlobRepo;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use blobstore::StoreLoadable;
@@ -75,6 +76,8 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use once_cell::sync::OnceCell;
+use repo_derived_data::RepoDerivedDataArc;
+use repo_derived_data::RepoDerivedDataRef;
 use repo_factory::RepoFactoryBuilder;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
@@ -665,7 +668,7 @@ async fn run_subcmd<'a>(
 
             let derived_data_types = sub_m.values_of(ARG_DERIVED_DATA_TYPE).map_or_else(
                 || {
-                    let enabled_types = repo.blob_repo.get_active_derived_data_types_config();
+                    let enabled_types = repo.as_blob_repo().get_active_derived_data_types_config();
                     if let Some(backfill_config) = repo
                         .blob_repo
                         .get_derived_data_types_config(backfill_config_name)
@@ -1069,7 +1072,11 @@ async fn subcommand_backfill(
         );
         let (stats, chunk_size) = async {
             let chunk = derived_utils
-                .pending(ctx.clone(), repo.blob_repo.clone(), chunk.to_vec())
+                .pending(
+                    ctx.clone(),
+                    repo.blob_repo.repo_derived_data_arc(),
+                    chunk.to_vec(),
+                )
                 .await?;
             let chunk_size = chunk.len();
 
@@ -1079,7 +1086,7 @@ async fn subcommand_backfill(
             derived_utils
                 .backfill_batch_dangerous(
                     get_batch_ctx(ctx, parallel || gap_size.is_some()).await,
-                    repo.blob_repo.clone(),
+                    repo.repo_derived_data_arc(),
                     chunk,
                     parallel,
                     gap_size,
@@ -1398,7 +1405,7 @@ async fn tail_batch_iteration(
                         let job = deriver
                             .backfill_batch_dangerous(
                                 get_batch_ctx(&ctx, parallel || gap_size.is_some()).await,
-                                repo.clone(),
+                                repo.repo_derived_data_arc(),
                                 node.csids.clone(),
                                 parallel,
                                 gap_size,
@@ -1452,7 +1459,9 @@ async fn find_oldest_underived(
     let underived_ancestors = stream::iter(csids)
         .map(|csid| {
             Ok(async move {
-                let underived = derive.find_underived(ctx, repo, csid).await?;
+                let underived = derive
+                    .find_underived(ctx, repo.repo_derived_data(), csid)
+                    .await?;
                 let underived = sort_topological(&underived)
                     .ok_or_else(|| anyhow!("commit graph has cycles!"))?;
                 // The first element is the first underived ancestor in
@@ -1496,7 +1505,9 @@ async fn tail_one_iteration(
             |derive| {
                 let heads = heads.clone();
                 async move {
-                    let pending = derive.pending(ctx.clone(), (*repo).clone(), heads).await?;
+                    let pending = derive
+                        .pending(ctx.clone(), (*repo).repo_derived_data_arc(), heads)
+                        .await?;
 
                     let oldest_underived =
                         find_oldest_underived(ctx, repo, derive.as_ref(), pending.clone()).await?;
@@ -1523,7 +1534,7 @@ async fn tail_one_iteration(
     let pending_futs = pending.into_iter().map(|(derive, pending, _)| {
         pending
             .into_iter()
-            .map(|csid| derive.derive(ctx.clone(), (*repo).clone(), csid))
+            .map(|csid| derive.derive(ctx.clone(), (*repo).repo_derived_data_arc(), csid))
             .collect::<Vec<_>>()
     });
 
@@ -1575,7 +1586,7 @@ async fn subcommand_single(
             cloned!(ctx, repo);
             async move {
                 let (stats, result) = derived_utils
-                    .derive(ctx.clone(), repo.clone(), csid)
+                    .derive(ctx.clone(), repo.repo_derived_data_arc(), csid)
                     .timed()
                     .await;
                 info!(
@@ -1634,22 +1645,19 @@ mod tests {
     #[fbinit::test]
     async fn test_single(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let mut repo = Linear::get_inner_repo(fb).await;
-
+        let mut repo = Linear::getrepo(fb).await;
         let mut counting_blobstore = None;
-        repo.blob_repo = repo
-            .blob_repo
-            .dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
-                let blobstore = Arc::new(CountingBlobstore::new(blobstore));
-                counting_blobstore = Some(blobstore.clone());
-                blobstore
-            });
+        repo = repo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
+            let blobstore = Arc::new(CountingBlobstore::new(blobstore));
+            counting_blobstore = Some(blobstore.clone());
+            blobstore
+        });
         let counting_blobstore = counting_blobstore.unwrap();
 
-        let master = resolve_cs_id(&ctx, &repo.blob_repo, "master").await?;
+        let master = resolve_cs_id(&ctx, &repo, "master").await?;
         subcommand_single(
             &ctx,
-            &repo.blob_repo,
+            &repo,
             master,
             vec![RootUnodeManifestId::NAME.to_string()],
         )
@@ -1658,7 +1666,7 @@ mod tests {
         let writes_count = counting_blobstore.writes_count();
         subcommand_single(
             &ctx,
-            &repo.blob_repo,
+            &repo,
             master,
             vec![RootUnodeManifestId::NAME.to_string()],
         )
@@ -1684,7 +1692,13 @@ mod tests {
         // error.
         assert!(
             derived_utils
-                .backfill_batch_dangerous(ctx.clone(), repo.clone(), vec![bcs_id], false, None)
+                .backfill_batch_dangerous(
+                    ctx.clone(),
+                    repo.repo_derived_data_arc(),
+                    vec![bcs_id],
+                    false,
+                    None
+                )
                 .await
                 .is_err()
         );
@@ -1696,12 +1710,18 @@ mod tests {
             .await?
             .unwrap();
         derived_utils
-            .derive(ctx.clone(), repo.clone(), parent_bcs_id)
+            .derive(ctx.clone(), repo.repo_derived_data_arc(), parent_bcs_id)
             .await?;
 
         // Now the parent is derived, we can backfill a batch.
         derived_utils
-            .backfill_batch_dangerous(ctx.clone(), repo, vec![bcs_id], false, None)
+            .backfill_batch_dangerous(
+                ctx.clone(),
+                repo.repo_derived_data_arc(),
+                vec![bcs_id],
+                false,
+                None,
+            )
             .await?;
 
         Ok(())
@@ -1737,13 +1757,21 @@ mod tests {
 
         let derived_utils = derived_data_utils(fb, &repo, RootUnodeManifestId::NAME)?;
         let pending = derived_utils
-            .pending(ctx.clone(), repo.clone(), batch.clone())
+            .pending(ctx.clone(), repo.repo_derived_data_arc(), batch.clone())
             .await?;
         assert_eq!(pending.len(), hg_cs_ids.len());
         derived_utils
-            .backfill_batch_dangerous(ctx.clone(), repo.clone(), batch.clone(), false, None)
+            .backfill_batch_dangerous(
+                ctx.clone(),
+                repo.repo_derived_data_arc(),
+                batch.clone(),
+                false,
+                None,
+            )
             .await?;
-        let pending = derived_utils.pending(ctx, repo, batch).await?;
+        let pending = derived_utils
+            .pending(ctx, repo.repo_derived_data_arc(), batch)
+            .await?;
         assert_eq!(pending.len(), 0);
 
         Ok(())
@@ -1770,7 +1798,13 @@ mod tests {
 
         let derived_utils = derived_data_utils(fb, &repo, RootUnodeManifestId::NAME)?;
         let res = derived_utils
-            .backfill_batch_dangerous(ctx.clone(), repo.clone(), vec![first_bcs_id], false, None)
+            .backfill_batch_dangerous(
+                ctx.clone(),
+                repo.repo_derived_data_arc(),
+                vec![first_bcs_id],
+                false,
+                None,
+            )
             .await;
         // Deriving should fail because blobstore writes fail
         assert!(res.is_err());
@@ -1789,12 +1823,12 @@ mod tests {
         let derived_utils = derived_data_utils(fb, &repo, RootUnodeManifestId::NAME)?;
         assert_eq!(
             derived_utils
-                .pending(ctx.clone(), repo.clone(), batch.clone())
+                .pending(ctx.clone(), repo.repo_derived_data_arc(), batch.clone())
                 .await?,
             batch,
         );
         derived_utils
-            .backfill_batch_dangerous(ctx, repo, batch, false, None)
+            .backfill_batch_dangerous(ctx, repo.repo_derived_data_arc(), batch, false, None)
             .await?;
 
         Ok(())

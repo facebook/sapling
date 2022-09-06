@@ -15,9 +15,9 @@ anyhow = "1.0.56"
 async-trait = "0.1.56"
 basename_suffix_skeleton_manifest = { version = "0.1.0", path = "../basename_suffix_skeleton_manifest" }
 blame = { version = "0.1.0", path = "../blame" }
-blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bounded_traversal = { version = "0.1.0", path = "../../common/bounded_traversal" }
+changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
 changeset_info = { version = "0.1.0", path = "../changeset_info" }
 changesets = { version = "0.1.0", path = "../../changesets" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -40,16 +40,20 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
+repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 skeleton_manifest = { version = "0.1.0", path = "../skeleton_manifest" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
+trait_alias = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 unodes = { version = "0.1.0", path = "../unodes" }
 
 [dev-dependencies]
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+filestore = { version = "0.1.0", path = "../../filestore" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 maplit = "1.0"
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }

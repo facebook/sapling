@@ -10,7 +10,6 @@ use std::str::FromStr;
 
 use anyhow::Error;
 use assert_matches::assert_matches;
-use blobrepo::BlobRepo;
 use bytes::Bytes;
 use chrono::FixedOffset;
 use chrono::TimeZone;
@@ -20,6 +19,7 @@ use fixtures::Linear;
 use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
 use futures::try_join;
+use repo_derived_data::RepoDerivedDataArc;
 
 use crate::ChangesetContext;
 use crate::ChangesetId;
@@ -117,7 +117,7 @@ async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result
 
     validate_unnecessary_derived_data_is_not_derived(
         &ctx,
-        repo.blob_repo(),
+        &repo,
         cs.id(),
         second_cs.id(),
         derived_data_to_derive,
@@ -155,19 +155,28 @@ async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result
 // This function validates it's actualy the case
 async fn validate_unnecessary_derived_data_is_not_derived(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &RepoContext,
     parent_cs_id: ChangesetId,
     cs_id: ChangesetId,
     derived_data_to_derive: &str,
 ) -> Result<(), Error> {
-    for ty in &repo.get_active_derived_data_types_config().types {
+    for ty in &repo
+        .blob_repo()
+        .repo_derived_data_arc()
+        .active_config()
+        .types
+    {
         if ty == "git_trees" {
             // Derived data utils doesn't support git_trees, so we have to skip it
             continue;
         }
-        let utils = derived_data_utils(ctx.fb, repo, ty)?;
+        let utils = derived_data_utils(ctx.fb, repo.blob_repo(), ty)?;
         let not_derived = utils
-            .pending(ctx.clone(), repo.clone(), vec![parent_cs_id, cs_id])
+            .pending(
+                ctx.clone(),
+                repo.blob_repo().repo_derived_data_arc(),
+                vec![parent_cs_id, cs_id],
+            )
             .await?;
         // It's expected to derive skeleton manifests for the parent commit
         if ty == derived_data_to_derive {

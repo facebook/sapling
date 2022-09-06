@@ -22,6 +22,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
+use repo_derived_data::RepoDerivedDataArc;
 use skiplist::SkiplistIndex;
 use slog::info;
 
@@ -37,7 +38,7 @@ async fn underived_heads(
         .map(|deriver| async move {
             Ok::<_, Error>(stream::iter(
                 deriver
-                    .pending(ctx.clone(), repo.clone(), heads.to_vec())
+                    .pending(ctx.clone(), repo.repo_derived_data_arc(), heads.to_vec())
                     .await?
                     .into_iter()
                     .map(Ok::<_, Error>),

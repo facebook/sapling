@@ -29,6 +29,7 @@ use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use mutable_renames::MutableRenames;
+use repo_derived_data::RepoDerivedDataArc;
 
 use crate::common::find_target_bookmark_and_value;
 use crate::common::find_target_sync_config;
@@ -287,7 +288,11 @@ impl<'a> ChangeTargetConfig<'a> {
         let derivers = FuturesUnordered::new();
         for ty in derived_data_types {
             let utils = derived_data_utils(ctx.fb, target_repo.blob_repo(), ty)?;
-            derivers.push(utils.derive(ctx.clone(), target_repo.blob_repo().clone(), final_merge));
+            derivers.push(utils.derive(
+                ctx.clone(),
+                target_repo.blob_repo().repo_derived_data_arc(),
+                final_merge,
+            ));
         }
         derivers.try_for_each(|_| future::ready(Ok(()))).await?;
 

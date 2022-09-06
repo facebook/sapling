@@ -62,6 +62,7 @@ mod tests {
     use movers::Mover;
     use mutable_counters::MutableCountersRef;
     use repo_blobstore::RepoBlobstoreRef;
+    use repo_derived_data::RepoDerivedDataArc;
     use sql_construct::SqlConstruct;
     use synced_commit_mapping::SqlSyncedCommitMapping;
     use test_repo_factory::TestRepoFactory;
@@ -786,7 +787,7 @@ mod tests {
         for derived_data_type in derived_data_types {
             let derived_utils = derived_data_utils(ctx.fb, blob_repo, derived_data_type)?;
             let pending = derived_utils
-                .pending(ctx.clone(), repo.as_blob_repo().clone(), cs_ids.to_vec())
+                .pending(ctx.clone(), repo.repo_derived_data_arc(), cs_ids.to_vec())
                 .await?;
             assert!(pending.is_empty());
         }

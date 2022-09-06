@@ -24,6 +24,7 @@ use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use mutable_renames::MutableRenames;
+use repo_derived_data::RepoDerivedDataArc;
 
 use crate::common::MegarepoOp;
 
@@ -145,7 +146,11 @@ impl<'a> AddSyncTarget<'a> {
             let derivers = FuturesUnordered::new();
             for ty in derived_data_types {
                 let utils = derived_data_utils(ctx.fb, repo.blob_repo(), ty)?;
-                derivers.push(utils.derive(ctx.clone(), repo.blob_repo().clone(), top_merge_cs_id));
+                derivers.push(utils.derive(
+                    ctx.clone(),
+                    repo.blob_repo().repo_derived_data_arc(),
+                    top_merge_cs_id,
+                ));
             }
 
             let res = derivers.try_for_each(|_| future::ready(Ok(()))).await;

@@ -15,8 +15,13 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMappingArc;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bookmarks::BookmarksRef;
 use cacheblob::dummy::DummyLease;
 use cacheblob::LeaseOps;
+use changesets::ChangesetsArc;
+use changesets::ChangesetsRef;
 use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
@@ -34,6 +39,8 @@ use derived_data_utils::derived_data_utils_for_config;
 use derived_data_utils::DEFAULT_BACKFILLING_CONFIG_NAME;
 use derived_data_utils::POSSIBLE_DERIVED_TYPES;
 use fbinit::FacebookInit;
+use filenodes::FilenodesArc;
+use filenodes::FilenodesRef;
 use fsnodes::RootFsnodeId;
 use futures::future::try_join_all;
 use futures::future::FutureExt as PreviewFutureExt;
@@ -48,6 +55,9 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataArc;
+use repo_identity::RepoIdentityRef;
 use skeleton_manifest::RootSkeletonManifestId;
 use slog::info;
 use slog::Logger;
@@ -234,7 +244,7 @@ pub async fn subcommand_derived_data<'a>(
             .await
         }
         (SUBCOMMAND_COUNT_UNDERIVED, Some(arg_matches)) => {
-            let repo = args::open_repo(fb, &logger, matches).await?;
+            let repo: BlobRepo = args::open_repo(fb, &logger, matches).await?;
             let hashes_or_bookmarks: Vec<_> = arg_matches
                 .values_of(ARG_HASH_OR_BOOKMARK)
                 .map(|matches| matches.map(|cs| cs.to_string()).collect())
@@ -329,7 +339,7 @@ pub async fn subcommand_derived_data<'a>(
             for csid in csids {
                 info!(ctx.logger(), "deriving {}", csid);
                 let (stats, res) = derived_utils
-                    .derive(ctx.clone(), repo.clone(), csid)
+                    .derive(ctx.clone(), repo.repo_derived_data_arc(), csid)
                     .timed()
                     .await;
                 info!(
@@ -369,7 +379,7 @@ async fn check_derived_data_exists(
     let cs_ids = try_join_all(cs_id_futs).await?;
 
     let pending = derived_utils
-        .pending(ctx.clone(), repo.clone(), cs_ids.clone())
+        .pending(ctx.clone(), repo.repo_derived_data_arc(), cs_ids.clone())
         .await?;
 
     for cs_id in cs_ids {
@@ -385,7 +395,17 @@ async fn check_derived_data_exists(
 
 async fn count_underived(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: impl RepoDerivedDataArc
+    + RepoBlobstoreRef
+    + FilenodesArc
+    + FilenodesRef
+    + RepoIdentityRef
+    + BonsaiHgMappingArc
+    + BonsaiHgMappingRef
+    + BookmarksRef
+    + ChangesetsArc
+    + ChangesetsRef
+    + Clone,
     derived_data_type: String,
     hashes_or_bookmarks: Vec<String>,
     backfill: bool,
@@ -409,7 +429,9 @@ async fn count_underived(
     let derived_utils = &derived_utils;
     let res = stream::iter(cs_ids)
         .map(|cs_id| async move {
-            let underived = derived_utils.count_underived(ctx, repo, cs_id).await?;
+            let underived = derived_utils
+                .count_underived(ctx, repo.repo_derived_data(), cs_id)
+                .await?;
             Result::<_, Error>::Ok((cs_id, underived))
         })
         .buffer_unordered(10)

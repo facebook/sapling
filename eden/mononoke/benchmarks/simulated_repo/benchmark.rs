@@ -25,6 +25,7 @@ use futures::future::TryFutureExt;
 use futures_stats::futures03::TimedFutureExt;
 use rand::SeedableRng;
 use rand_xorshift::XorShiftRng;
+use repo_derived_data::RepoDerivedDataArc;
 use simulated_repo::new_benchmark_repo;
 use simulated_repo::DelaySettings;
 use simulated_repo::GenManifest;
@@ -74,7 +75,7 @@ async fn run(
         derive_utils
             .backfill_batch_dangerous(
                 ctx,
-                repo.clone(),
+                repo.repo_derived_data_arc(),
                 vec![csid],
                 true, /* parallel */
                 None, /* No gaps */
@@ -84,7 +85,7 @@ async fn run(
             .await
     } else {
         derive_utils
-            .derive(ctx.clone(), repo.clone(), csid)
+            .derive(ctx.clone(), repo.repo_derived_data_arc(), csid)
             .map_ok(|_| ())
             .timed()
             .await

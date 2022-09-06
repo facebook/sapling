@@ -31,6 +31,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
 use mononoke_types::ChangesetId;
+use repo_derived_data::RepoDerivedDataArc;
 use slog::debug;
 
 const ARG_BACKFILL: &str = "backfill";
@@ -121,7 +122,7 @@ pub async fn regenerate_derived_data(
         // we can use `backfill_batch_dangerous()` function (because all dependent derive data
         // types are derived) and also we know that all ancestors of `csids` are derived.
         let pending = utils
-            .pending(ctx.clone(), repo.clone(), csids.clone())
+            .pending(ctx.clone(), repo.repo_derived_data_arc(), csids.clone())
             .await?;
         if !pending.is_empty() {
             return Err(anyhow!(
@@ -170,7 +171,9 @@ pub async fn regenerate_derived_data(
                         async move {
                             if let Some(deriver) = &node.deriver {
                                 for csid in &node.csids {
-                                    deriver.derive(ctx.clone(), repo.clone(), *csid).await?;
+                                    deriver
+                                        .derive(ctx.clone(), repo.repo_derived_data_arc(), *csid)
+                                        .await?;
                                 }
                             }
                             Result::<_, Error>::Ok(())

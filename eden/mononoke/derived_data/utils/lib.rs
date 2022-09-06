@@ -21,8 +21,9 @@ use async_trait::async_trait;
 use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use blame::BlameRoot;
 use blame::RootBlameV2;
-use blobrepo::BlobRepo;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
+use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::ChangesetFetcherArc;
 use changeset_info::ChangesetInfo;
 use changesets::ChangesetsArc;
 use cloned::cloned;
@@ -57,10 +58,13 @@ use mercurial_derived_data::MappedHgChangesetId;
 use metaconfig_types::BlameVersion;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
-use repo_derived_data::RepoDerivedDataRef;
+use repo_derived_data::RepoDerivedData;
+use repo_derived_data::RepoDerivedDataArc;
+use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::RootSkeletonManifestId;
 use topo_sort::sort_topological;
+use trait_alias::trait_alias;
 use unodes::RootUnodeManifestId;
 
 pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
@@ -118,9 +122,17 @@ lazy_static! {
     };
 }
 
+#[trait_alias]
+pub trait Repo = RepoDerivedDataArc
+    + RepoIdentityRef
+    + ChangesetsArc
+    + BonsaiHgMappingArc
+    + FilenodesArc
+    + RepoBlobstoreRef;
+
 pub fn derive_data_for_csids(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &(impl Repo + Clone + Send + Sync + 'static),
     csids: Vec<ChangesetId>,
     derived_data_types: &[String],
 ) -> Result<impl Future<Output = Result<(), Error>>, Error> {
@@ -132,7 +144,7 @@ pub fn derive_data_for_csids(
         let mut futs = vec![];
         for csid in &csids {
             let fut = derived_utils
-                .derive(ctx.clone(), repo.clone(), *csid)
+                .derive(ctx.clone(), repo.repo_derived_data_arc(), *csid)
                 .map_ok(|_| ());
             futs.push(fut);
         }
@@ -159,14 +171,14 @@ pub trait DerivedUtils: Send + Sync + 'static {
     fn derive(
         &self,
         ctx: CoreContext,
-        repo: BlobRepo,
+        repo: Arc<RepoDerivedData>,
         csid: ChangesetId,
     ) -> BoxFuture<'static, Result<String, Error>>;
 
     fn backfill_batch_dangerous(
         &self,
         ctx: CoreContext,
-        repo: BlobRepo,
+        repo: Arc<RepoDerivedData>,
         csids: Vec<ChangesetId>,
         parallel: bool,
         gap_size: Option<usize>,
@@ -176,7 +188,7 @@ pub trait DerivedUtils: Send + Sync + 'static {
     async fn pending(
         &self,
         ctx: CoreContext,
-        repo: BlobRepo,
+        repo: Arc<RepoDerivedData>,
         csids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetId>, Error>;
 
@@ -184,7 +196,7 @@ pub trait DerivedUtils: Send + Sync + 'static {
     async fn count_underived(
         &self,
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &RepoDerivedData,
         csid: ChangesetId,
     ) -> Result<u64, Error>;
 
@@ -204,7 +216,7 @@ pub trait DerivedUtils: Send + Sync + 'static {
     async fn find_underived<'a>(
         &'a self,
         ctx: &'a CoreContext,
-        repo: &'a BlobRepo,
+        _repo: &'a RepoDerivedData,
         csid: ChangesetId,
     ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>, Error>;
 
@@ -221,12 +233,12 @@ struct DerivedUtilsFromManager<Derivable> {
 }
 
 impl<Derivable> DerivedUtilsFromManager<Derivable> {
-    fn new(repo: &BlobRepo, config: &DerivedDataTypesConfig, config_name: String) -> Self {
+    fn new(repo: &impl Repo, config: &DerivedDataTypesConfig, config_name: String) -> Self {
         let lease = repo.repo_derived_data().lease().clone();
         let scuba = repo.repo_derived_data().manager().scuba().clone();
         let manager = DerivedDataManager::new(
-            repo.get_repoid(),
-            repo.name().clone(),
+            repo.repo_identity().id(),
+            repo.repo_identity().name().to_string(),
             repo.changesets_arc(),
             repo.bonsai_hg_mapping_arc(),
             repo.filenodes_arc(),
@@ -273,7 +285,7 @@ where
     fn derive(
         &self,
         ctx: CoreContext,
-        _repo: BlobRepo,
+        _repo: Arc<RepoDerivedData>,
         csid: ChangesetId,
     ) -> BoxFuture<'static, Result<String, Error>> {
         let utils = Arc::new(self.clone());
@@ -290,7 +302,7 @@ where
     fn backfill_batch_dangerous(
         &self,
         ctx: CoreContext,
-        _repo: BlobRepo,
+        _repo: Arc<RepoDerivedData>,
         csids: Vec<ChangesetId>,
         parallel: bool,
         gap_size: Option<usize>,
@@ -314,7 +326,7 @@ where
     async fn pending(
         &self,
         ctx: CoreContext,
-        _repo: BlobRepo,
+        _repo: Arc<RepoDerivedData>,
         mut csids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetId>, Error> {
         let utils = Arc::new(self.clone());
@@ -329,7 +341,7 @@ where
     async fn count_underived(
         &self,
         ctx: &CoreContext,
-        _repo: &BlobRepo,
+        _repo: &RepoDerivedData,
         csid: ChangesetId,
     ) -> Result<u64, Error> {
         let utils = Arc::new(self.clone());
@@ -355,7 +367,7 @@ where
     async fn find_underived<'a>(
         &'a self,
         ctx: &'a CoreContext,
-        _repo: &'a BlobRepo,
+        _repo: &'a RepoDerivedData,
         csid: ChangesetId,
     ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>, Error> {
         let utils = Arc::new(self.clone());
@@ -375,13 +387,13 @@ where
 
 pub fn derived_data_utils(
     fb: FacebookInit,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     name: impl AsRef<str>,
 ) -> Result<Arc<dyn DerivedUtils>, Error> {
     let name = name.as_ref();
-    let derived_data_config = repo.get_derived_data_config();
+    let derived_data_config = repo.repo_derived_data().config();
     let types_config = if derived_data_config.is_enabled(name) {
-        repo.get_active_derived_data_types_config()
+        repo.repo_derived_data().active_config()
     } else {
         return Err(anyhow!("Derived data type {} is not configured", name));
     };
@@ -396,14 +408,16 @@ pub fn derived_data_utils(
 
 pub fn derived_data_utils_for_config(
     fb: FacebookInit,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     type_name: impl AsRef<str>,
     config_name: impl AsRef<str>,
 ) -> Result<Arc<dyn DerivedUtils>, Error> {
-    let config = repo.get_derived_data_config();
+    let config = repo.repo_derived_data().config();
     if config.is_enabled_for_config_name(type_name.as_ref(), config_name.as_ref()) {
         let named_config = repo
-            .get_derived_data_types_config(config_name.as_ref())
+            .repo_derived_data()
+            .config()
+            .get_config(config_name.as_ref())
             .ok_or_else(|| {
                 anyhow!(
                     "Named config: {} not found in the available derived data configs",
@@ -424,7 +438,7 @@ pub fn derived_data_utils_for_config(
 
 fn derived_data_utils_impl(
     _fb: FacebookInit,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     name: &str,
     config: &DerivedDataTypesConfig,
     enabled_config_name: &str,
@@ -564,7 +578,7 @@ impl DeriveGraph {
     pub async fn derive(
         &self,
         ctx: CoreContext,
-        repo: BlobRepo,
+        repo: impl RepoDerivedDataArc + Send + Sync + Clone,
         parallel: bool,
         gap_size: Option<usize>,
     ) -> Result<(), Error> {
@@ -585,7 +599,7 @@ impl DeriveGraph {
                         let job = deriver
                             .backfill_batch_dangerous(
                                 ctx.clone(),
-                                repo,
+                                repo.repo_derived_data_arc(),
                                 node.csids.clone(),
                                 parallel,
                                 gap_size,
@@ -697,7 +711,7 @@ impl Hash for DeriveGraph {
 ///       function in mononoke.
 pub async fn build_derive_graph(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &(impl RepoDerivedDataArc + ChangesetFetcherArc + Send + Sync + Clone + 'static),
     csids: Vec<ChangesetId>,
     mut derivers: Vec<Arc<dyn DerivedUtils>>,
     batch_size: usize,
@@ -874,7 +888,7 @@ impl ThinOut {
 ///   - derivers that should be used on this changeset
 pub fn find_underived_many(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: impl RepoDerivedDataArc + ChangesetFetcherArc + Send + Sync + Clone + 'static,
     csids: Vec<ChangesetId>,
     derivers: Vec<Arc<dyn DerivedUtils>>,
     thin_out: ThinOut,
@@ -894,8 +908,8 @@ pub fn find_underived_many(
         .map(|csid| (csid, derivers.clone(), thin_out))
         .collect();
 
-    let changeset_fetcher = repo.get_changeset_fetcher();
     let visited = Arc::new(Mutex::new(HashSet::new()));
+    let changeset_fetcher = repo.changeset_fetcher_arc();
     bounded_traversal::bounded_traversal_stream(100, init, {
         move |(csid, derivers, mut thin_out)| {
             cloned!(changeset_fetcher, visited, repo, ctx);
@@ -906,7 +920,7 @@ pub fn find_underived_many(
                     // exclude derivers not applicable (already derived) to this changeset id
                     let derivers = derivers.iter().map(|deriver| async move {
                         if deriver
-                            .pending(ctx.clone(), repo.clone(), vec![csid])
+                            .pending(ctx.clone(), repo.repo_derived_data_arc(), vec![csid])
                             .await?
                             .is_empty()
                         {
@@ -957,17 +971,49 @@ mod tests {
     use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::Ordering;
 
+    use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkName;
+    use bookmarks::Bookmarks;
+    use changeset_fetcher::ChangesetFetcher;
+    use changesets::Changesets;
     use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
+    use filenodes::Filenodes;
+    use filestore::FilestoreConfig;
     use fixtures::MergeEven;
     use fixtures::TestRepoFixture;
     use maplit::btreemap;
     use maplit::hashset;
     use metaconfig_types::UnodeVersion;
+    use repo_blobstore::RepoBlobstore;
+    use repo_derived_data::RepoDerivedData;
+    use repo_identity::RepoIdentity;
     use tests_utils::drawdag::create_from_dag;
 
     use super::*;
+
+    #[derive(Clone)]
+    #[facet::container]
+    struct TestRepo {
+        #[facet]
+        bonsai_hg_mapping: dyn BonsaiHgMapping,
+        #[facet]
+        bookmarks: dyn Bookmarks,
+        #[facet]
+        repo_blobstore: RepoBlobstore,
+        #[facet]
+        repo_derived_data: RepoDerivedData,
+        #[facet]
+        filestore_config: FilestoreConfig,
+        #[facet]
+        changeset_fetcher: dyn ChangesetFetcher,
+        #[facet]
+        changesets: dyn Changesets,
+        #[facet]
+        repo_identity: RepoIdentity,
+        #[facet]
+        filenodes: dyn Filenodes,
+    }
 
     // decompose graph into map between node indices and list of nodes
     fn derive_graph_unpack(node: &DeriveGraph) -> (BTreeMap<usize, Vec<usize>>, Vec<DeriveGraph>) {
@@ -992,10 +1038,11 @@ mod tests {
     #[fbinit::test]
     async fn test_build_derive_graph(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = MergeEven::getrepo(fb).await;
+        let repo: TestRepo = MergeEven::get_custom_test_repo(fb).await;
         let thin_out = ThinOut::new_keep_all();
         let master = repo
-            .get_bonsai_bookmark(ctx.clone(), &BookmarkName::new("master").unwrap())
+            .bookmarks
+            .get(ctx.clone(), &BookmarkName::new("master").unwrap())
             .await?
             .unwrap();
         let blame_deriver = derived_data_utils(ctx.fb, &repo, "blame")?;
@@ -1114,7 +1161,7 @@ mod tests {
         fn derive(
             &self,
             ctx: CoreContext,
-            repo: BlobRepo,
+            repo: Arc<RepoDerivedData>,
             csid: ChangesetId,
         ) -> BoxFuture<'static, Result<String, Error>> {
             self.deriver.derive(ctx, repo, csid)
@@ -1123,7 +1170,7 @@ mod tests {
         fn backfill_batch_dangerous(
             &self,
             ctx: CoreContext,
-            repo: BlobRepo,
+            repo: Arc<RepoDerivedData>,
             csids: Vec<ChangesetId>,
             parallel: bool,
             gap_size: Option<usize>,
@@ -1135,7 +1182,7 @@ mod tests {
         async fn pending(
             &self,
             ctx: CoreContext,
-            repo: BlobRepo,
+            repo: Arc<RepoDerivedData>,
             csids: Vec<ChangesetId>,
         ) -> Result<Vec<ChangesetId>, Error> {
             self.count.fetch_add(1, Ordering::SeqCst);
@@ -1145,7 +1192,7 @@ mod tests {
         async fn count_underived(
             &self,
             _ctx: &CoreContext,
-            _repo: &BlobRepo,
+            _repo: &RepoDerivedData,
             _csid: ChangesetId,
         ) -> Result<u64, Error> {
             unimplemented!()
@@ -1166,7 +1213,7 @@ mod tests {
         async fn find_underived<'a>(
             &'a self,
             _ctx: &'a CoreContext,
-            _repo: &'a BlobRepo,
+            _repo: &'a RepoDerivedData,
             _csid: ChangesetId,
         ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>, Error> {
             unimplemented!()
@@ -1180,7 +1227,7 @@ mod tests {
     #[fbinit::test]
     async fn test_find_underived_many(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb).unwrap();
+        let repo: TestRepo = test_repo_factory::build_empty(fb).unwrap();
         let dag = create_from_dag(&ctx, &repo, "A-B-C").await?;
         let a = *dag.get("A").unwrap();
         let b = *dag.get("B").unwrap();
@@ -1216,8 +1263,12 @@ mod tests {
             }
         );
 
-        unodes_deriver.derive(ctx.clone(), repo.clone(), b).await?;
-        blame_deriver.derive(ctx.clone(), repo.clone(), a).await?;
+        unodes_deriver
+            .derive(ctx.clone(), repo.repo_derived_data_arc(), b)
+            .await?;
+        blame_deriver
+            .derive(ctx.clone(), repo.repo_derived_data_arc(), a)
+            .await?;
 
         let entries: BTreeMap<_, _> = find_underived_many(
             ctx.clone(),
@@ -1240,14 +1291,13 @@ mod tests {
                 c => vec!["blame", "unodes"],
             }
         );
-
         Ok::<_, Error>(())
     }
 
     #[fbinit::test]
     async fn multiple_independent_mappings(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb).unwrap();
+        let repo: TestRepo = test_repo_factory::build_empty(fb).unwrap();
         let dag = create_from_dag(&ctx, &repo, "A-B-C").await?;
         let a = *dag.get("A").unwrap();
         let b = *dag.get("B").unwrap();
@@ -1280,44 +1330,46 @@ mod tests {
 
         assert_eq!(
             utils_v1
-                .pending(ctx.clone(), repo.clone(), vec![a, b, c])
+                .pending(ctx.clone(), repo.repo_derived_data_arc(), vec![a, b, c])
                 .await?,
             vec![a, b, c]
         );
         assert_eq!(
             utils_v2
-                .pending(ctx.clone(), repo.clone(), vec![a, b, c])
+                .pending(ctx.clone(), repo.repo_derived_data_arc(), vec![a, b, c])
                 .await?,
             vec![a, b, c]
         );
 
         // Derive V1 of A using the V1 utils.  V2 of A should still be underived.
-        utils_v1.derive(ctx.clone(), repo.clone(), a).await?;
+        utils_v1
+            .derive(ctx.clone(), repo.repo_derived_data_arc(), a)
+            .await?;
         assert_eq!(
             utils_v1
-                .pending(ctx.clone(), repo.clone(), vec![a, b, c])
+                .pending(ctx.clone(), repo.repo_derived_data_arc(), vec![a, b, c])
                 .await?,
             vec![b, c]
         );
         assert_eq!(
             utils_v2
-                .pending(ctx.clone(), repo.clone(), vec![a, b, c])
+                .pending(ctx.clone(), repo.repo_derived_data_arc(), vec![a, b, c])
                 .await?,
             vec![a, b, c]
         );
 
         // Derive B directly, which should use the V2 mapping, as that is the
         // version configured on the repo.  V1 of B should still be underived.
-        RootUnodeManifestId::derive(&ctx, &repo, b).await?;
+        RootUnodeManifestId::derive(&ctx, repo.clone(), b).await?;
         assert_eq!(
             utils_v1
-                .pending(ctx.clone(), repo.clone(), vec![a, b, c])
+                .pending(ctx.clone(), repo.repo_derived_data_arc(), vec![a, b, c])
                 .await?,
             vec![b, c]
         );
         assert_eq!(
             utils_v2
-                .pending(ctx.clone(), repo.clone(), vec![a, b, c])
+                .pending(ctx.clone(), repo.repo_derived_data_arc(), vec![a, b, c])
                 .await?,
             vec![c]
         );

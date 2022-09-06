@@ -42,6 +42,7 @@ use mercurial_derived_data::MappedHgChangesetId;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ChangesetId;
 use readonlyblob::ReadOnlyBlobstore;
+use repo_derived_data::RepoDerivedDataArc;
 use skeleton_manifest::RootSkeletonManifestId;
 use slog::info;
 use slog::warn;
@@ -146,8 +147,9 @@ pub async fn validate(
                     return Err(anyhow!("{} unexpectedly not derived", csid));
                 }
 
-                let f1 = real_derived_utils.derive(ctx.clone(), orig_repo.clone(), csid);
-                let f2 = rederived_utils.derive(ctx.clone(), repo.clone(), csid);
+                let f1 =
+                    real_derived_utils.derive(ctx.clone(), orig_repo.repo_derived_data_arc(), csid);
+                let f2 = rederived_utils.derive(ctx.clone(), repo.repo_derived_data_arc(), csid);
                 let (real, rederived) = try_join(f1, f2).await?;
                 if real != rederived {
                     return Err(anyhow!("mismatch in {}: {} vs {}", csid, real, rederived));

@@ -78,6 +78,7 @@ use pushrebase::do_pushrebase_bonsai;
 use question::Answer;
 use question::Question;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataArc;
 use segmented_changelog::seedheads_from_config;
 use segmented_changelog::SeedHead;
 use segmented_changelog::SegmentedChangelogTailer;
@@ -391,7 +392,7 @@ async fn derive_bonsais_single_repo(
         .try_for_each_concurrent(derived_data_types.len(), |derived_util| async move {
             for csid in bcs_ids {
                 derived_util
-                    .derive(ctx.clone(), repo.as_blob_repo().clone(), csid.clone())
+                    .derive(ctx.clone(), repo.repo_derived_data_arc(), csid.clone())
                     .map_ok(|_| ())
                     .await?;
             }
