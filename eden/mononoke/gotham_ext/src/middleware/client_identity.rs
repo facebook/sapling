@@ -10,8 +10,6 @@ use std::net::SocketAddr;
 
 use cats::try_get_cats_idents;
 use fbinit::FacebookInit;
-use futures::future;
-use futures::Future;
 use futures::FutureExt;
 use gotham::state::client_addr;
 use gotham::state::FromState;
@@ -26,10 +24,8 @@ use metaconfig_types::Identity;
 use percent_encoding::percent_decode;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
-use permission_checker::MononokeIdentitySetExt;
 use slog::error;
 use slog::Logger;
-use trust_dns_resolver::TokioAsyncResolver;
 
 use super::Middleware;
 use crate::socket_data::TlsCertificateIdentities;
@@ -52,31 +48,6 @@ pub struct ClientIdentity {
 impl ClientIdentity {
     pub fn address(&self) -> &Option<IpAddr> {
         &self.address
-    }
-
-    // Hostname of the client is for non-critical use only (best-effort lookup):
-    pub fn hostname(&self) -> impl Future<Output = Option<String>> + 'static {
-        // XXX: Can't make this an async fn because the resulting Future would
-        // have a non-'static lifetime (due to the &self argument).
-
-        // 1) We're extracting it from identities (which requires no remote calls)
-        if let Some(client_hostname) = self
-            .identities
-            .as_ref()
-            .and_then(|id| id.hostname().map(|h| h.to_string()))
-        {
-            return future::ready(Some(client_hostname)).left_future();
-        }
-        // 2) Perform a reverse DNS lookup of the client's IP address to determine
-        // its hostname.
-        let address = self.address.clone();
-        (async move {
-            let resolver = TokioAsyncResolver::tokio_from_system_conf().ok()?;
-            let hosts = resolver.reverse_lookup(address?).await.ok()?;
-            let host = hosts.iter().next()?;
-            Some(host.to_string().trim_end_matches('.').to_string())
-        })
-        .right_future()
     }
 
     // Extract the client's username from the identity set, if present.

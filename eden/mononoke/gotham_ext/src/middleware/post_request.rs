@@ -12,13 +12,17 @@ use std::time::Instant;
 use anyhow::Error;
 use async_trait::async_trait;
 use cached_config::ConfigHandle;
+use futures::future;
 use futures::prelude::*;
+use futures::Future;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
 use hyper::body::Body;
 use hyper::Response;
+use permission_checker::MononokeIdentitySetExt;
 use tokio::task;
+use trust_dns_resolver::TokioAsyncResolver;
 
 use super::ClientIdentity;
 use super::Middleware;
@@ -95,7 +99,7 @@ impl<C: PostResponseConfig> Middleware for PostResponseMiddleware<C> {
     async fn outbound(&self, state: &mut State, _response: &mut Response<Body>) {
         let config = self.config.clone();
         let start_time = RequestStartTime::try_borrow_from(state).map(|t| t.0);
-        let hostname_future = ClientIdentity::try_borrow_from(state).map(|id| id.hostname());
+        let hostname_future = ClientIdentity::try_borrow_from(state).map(resolve_hostname);
         let meta = PendingResponseMeta::try_take_from(state);
 
         if let Some(callbacks) = state.try_take::<PostResponseCallbacks>() {
@@ -166,4 +170,31 @@ impl PostResponseCallbacks {
             callback(&info);
         }
     }
+}
+
+// Hostname of the client is for non-critical use only (best-effort lookup):
+pub fn resolve_hostname(
+    client_identity: &ClientIdentity,
+) -> impl Future<Output = Option<String>> + 'static {
+    // XXX: Can't make this an async fn because the resulting Future would
+    // have a non-'static lifetime (due to the &ClientIdentity argument).
+
+    // 1) We're extracting it from identities (which requires no remote calls)
+    if let Some(client_hostname) = client_identity
+        .identities()
+        .as_ref()
+        .and_then(|id| id.hostname().map(|h| h.to_string()))
+    {
+        return future::ready(Some(client_hostname)).left_future();
+    }
+    // 2) Perform a reverse DNS lookup of the client's IP address to determine
+    // its hostname.
+    let address = client_identity.address().clone();
+    (async move {
+        let resolver = TokioAsyncResolver::tokio_from_system_conf().ok()?;
+        let hosts = resolver.reverse_lookup(address?).await.ok()?;
+        let host = hosts.iter().next()?;
+        Some(host.to_string().trim_end_matches('.').to_string())
+    })
+    .right_future()
 }
