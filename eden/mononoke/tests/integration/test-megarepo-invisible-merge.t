@@ -161,7 +161,7 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Megarepo
 Set current version of CommitSyncConfig to have fbsource as large repo,
 but disable push-redirection until invisible merge is done
 -- stop mononoke before changing config with large repo change
-  $ kill $MONONOKE_PID
+  $ killandwait $MONONOKE_PID
 
 Add a new config version to "all" configs, this new version has fbsource as large repo.
   $ cp "$TEST_FIXTURES/commitsync/all_with_flipped_config.json" "$COMMIT_SYNC_CONF/all"
