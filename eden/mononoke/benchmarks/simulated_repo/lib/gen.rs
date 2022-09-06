@@ -11,8 +11,8 @@ use std::collections::BTreeMap;
 use anyhow::Error;
 use anyhow::Result;
 use blobrepo::save_bonsai_changesets;
-use blobrepo::BlobRepo;
 use blobstore::Storable;
+use changesets::ChangesetsRef;
 use context::CoreContext;
 use futures::future;
 use futures::stream;
@@ -30,6 +30,7 @@ use rand::seq::SliceRandom;
 use rand::Rng;
 use rand_distr::Binomial;
 use rand_distr::Uniform;
+use repo_blobstore::RepoBlobstoreRef;
 
 #[derive(Clone, Copy)]
 pub struct GenSettings {
@@ -93,7 +94,7 @@ impl GenManifest {
     pub async fn gen_stack(
         &mut self,
         ctx: CoreContext,
-        repo: BlobRepo,
+        repo: impl RepoBlobstoreRef + ChangesetsRef + Send + Sync,
         rng: &mut impl Rng,
         settings: &GenSettings,
         parent: Option<ChangesetId>,
@@ -102,7 +103,7 @@ impl GenManifest {
         let mut parents: Vec<_> = parent.into_iter().collect();
         let mut changesets = Vec::new();
         async move {
-            let blobstore = repo.blobstore();
+            let blobstore = repo.repo_blobstore();
             let store_changes = stream::FuturesUnordered::new();
             for changes_size in changes_count {
                 // generate file changes

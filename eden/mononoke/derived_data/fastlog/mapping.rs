@@ -200,10 +200,14 @@ mod tests {
     use std::sync::Arc;
 
     use blobrepo::save_bonsai_changesets;
-    use blobrepo::BlobRepo;
+    use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::BookmarkName;
+    use bookmarks::Bookmarks;
+    use changeset_fetcher::ChangesetFetcher;
+    use changesets::Changesets;
     use context::CoreContext;
     use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
     use fixtures::create_bonsai_changeset;
     use fixtures::create_bonsai_changeset_with_author;
     use fixtures::create_bonsai_changeset_with_files;
@@ -229,6 +233,8 @@ mod tests {
     use pretty_assertions::assert_eq;
     use rand::SeedableRng;
     use rand_xorshift::XorShiftRng;
+    use repo_blobstore::RepoBlobstore;
+    use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
     use simulated_repo::GenManifest;
@@ -238,9 +244,28 @@ mod tests {
     use crate::fastlog_impl::fetch_fastlog_batch_by_unode_id;
     use crate::fastlog_impl::fetch_flattened;
 
+    #[derive(Clone)]
+    #[facet::container]
+    struct TestRepo {
+        #[facet]
+        bonsai_hg_mapping: dyn BonsaiHgMapping,
+        #[facet]
+        bookmarks: dyn Bookmarks,
+        #[facet]
+        repo_blobstore: RepoBlobstore,
+        #[facet]
+        repo_derived_data: RepoDerivedData,
+        #[facet]
+        filestore_config: FilestoreConfig,
+        #[facet]
+        changeset_fetcher: dyn ChangesetFetcher,
+        #[facet]
+        changesets: dyn Changesets,
+    }
+
     #[fbinit::test]
     async fn test_derive_single_empty_commit_no_parents(fb: FacebookInit) {
-        let repo = Linear::getrepo(fb).await;
+        let repo: TestRepo = Linear::get_custom_test_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let bcs = create_bonsai_changeset(vec![]);
         let bcs_id = bcs.get_changeset_id();
@@ -256,14 +281,14 @@ mod tests {
 
     #[fbinit::test]
     async fn test_derive_single_commit_no_parents(fb: FacebookInit) {
-        let repo = Linear::getrepo(fb).await;
+        let repo: TestRepo = Linear::get_custom_test_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         // This is the initial diff with no parents
         // See tests/fixtures/src/lib.rs
         let hg_cs_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
         let bcs_id = repo
-            .bonsai_hg_mapping()
+            .bonsai_hg_mapping
             .get_bonsai_from_hg(&ctx, hg_cs_id)
             .await
             .unwrap()
@@ -273,7 +298,7 @@ mod tests {
         let list = fetch_list(&ctx, &repo, Entry::Tree(root_unode_mf_id.clone())).await;
         assert_eq!(list, vec![(bcs_id, vec![])]);
 
-        let blobstore = Arc::new(repo.get_blobstore());
+        let blobstore = Arc::new(repo.repo_blobstore.clone());
         let path_1 = MPath::new(&"1").unwrap();
         let path_files = MPath::new(&"files").unwrap();
         let entries: Vec<_> = root_unode_mf_id
@@ -291,12 +316,12 @@ mod tests {
 
     #[fbinit::test]
     async fn test_derive_linear(fb: FacebookInit) {
-        let repo = Linear::getrepo(fb).await;
+        let repo: TestRepo = Linear::get_custom_test_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let hg_cs_id = HgChangesetId::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb").unwrap();
         let bcs_id = repo
-            .bonsai_hg_mapping()
+            .bonsai_hg_mapping
             .get_bonsai_from_hg(&ctx, hg_cs_id)
             .await
             .unwrap()
@@ -304,7 +329,7 @@ mod tests {
 
         let root_unode_mf_id = derive_fastlog_batch_and_unode(&ctx, bcs_id.clone(), &repo).await;
 
-        let blobstore = Arc::new(repo.get_blobstore());
+        let blobstore = Arc::new(repo.repo_blobstore.clone());
         let entries: Vec<_> = root_unode_mf_id
             .list_all_entries(ctx.clone(), blobstore)
             .map_ok(|(_, entry)| entry)
@@ -319,7 +344,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_derive_overflow(fb: FacebookInit) {
-        let repo = Linear::getrepo(fb).await;
+        let repo: TestRepo = Linear::get_custom_test_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let mut bonsais = vec![];
@@ -350,7 +375,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_random_repo(fb: FacebookInit) {
-        let repo = Linear::getrepo(fb).await;
+        let repo: TestRepo = Linear::get_custom_test_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
@@ -374,7 +399,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_derive_empty_commits(fb: FacebookInit) {
-        let repo = Linear::getrepo(fb).await;
+        let repo: TestRepo = Linear::get_custom_test_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let mut bonsais = vec![];
@@ -396,7 +421,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_find_intersection_of_diffs_unodes_linear(fb: FacebookInit) -> Result<(), Error> {
-        let repo = Linear::getrepo(fb).await;
+        let repo: TestRepo = Linear::get_custom_test_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         // This commit creates file "1" and "files"
@@ -411,7 +436,7 @@ mod tests {
 
         let mut entries: Vec<_> = find_intersection_of_diffs(
             ctx,
-            Arc::new(repo.get_blobstore()),
+            Arc::new(repo.repo_blobstore),
             child_root_unode,
             vec![parent_root_unode],
         )
@@ -438,7 +463,7 @@ mod tests {
             merge_files: BTreeMap<&str, Option<&str>>,
             expected: Vec<String>,
         ) -> Result<(), Error> {
-            let repo = Linear::getrepo(fb).await;
+            let repo: TestRepo = Linear::get_custom_test_repo(fb).await;
             let ctx = CoreContext::test_mock(fb);
             let manager = repo.repo_derived_data().manager();
 
@@ -478,7 +503,7 @@ mod tests {
 
             let mut entries: Vec<_> = find_intersection_of_diffs(
                 ctx,
-                Arc::new(repo.get_blobstore()),
+                Arc::new(repo.repo_blobstore),
                 merge_unode,
                 parent_unodes,
             )
@@ -568,7 +593,7 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
 
         {
-            let repo = MergeUneven::getrepo(fb).await;
+            let repo: TestRepo = MergeUneven::get_custom_test_repo(fb).await;
             let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).try_collect().await?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
@@ -577,7 +602,7 @@ mod tests {
         }
 
         {
-            let repo = MergeEven::getrepo(fb).await;
+            let repo: TestRepo = MergeEven::get_custom_test_repo(fb).await;
             let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).try_collect().await?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
@@ -586,7 +611,7 @@ mod tests {
         }
 
         {
-            let repo = UnsharedMergeEven::getrepo(fb).await;
+            let repo: TestRepo = UnsharedMergeEven::get_custom_test_repo(fb).await;
             let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).try_collect().await?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
@@ -595,7 +620,7 @@ mod tests {
         }
 
         {
-            let repo = UnsharedMergeUneven::getrepo(fb).await;
+            let repo: TestRepo = UnsharedMergeUneven::get_custom_test_repo(fb).await;
             let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).try_collect().await?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
@@ -608,7 +633,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_bfs_order(fb: FacebookInit) -> Result<(), Error> {
-        let repo = Linear::getrepo(fb).await;
+        let repo: TestRepo = Linear::get_custom_test_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         //            E
@@ -664,13 +689,14 @@ mod tests {
 
     fn all_commits(
         ctx: CoreContext,
-        repo: BlobRepo,
+        repo: TestRepo,
     ) -> impl Stream<Item = Result<(ChangesetId, HgChangesetId), Error>> {
         let master_book = BookmarkName::new("master").unwrap();
-        repo.get_bonsai_bookmark(ctx.clone(), &master_book)
+        repo.bookmarks
+            .get(ctx.clone(), &master_book)
             .map_ok(move |maybe_bcs_id| {
                 let bcs_id = maybe_bcs_id.unwrap();
-                AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bcs_id.clone())
+                AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher, bcs_id.clone())
                     .compat()
                     .and_then(move |new_bcs_id| {
                         cloned!(ctx, repo);
@@ -685,12 +711,12 @@ mod tests {
 
     async fn verify_all_entries_for_commit(
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &TestRepo,
         bcs_id: ChangesetId,
     ) {
         let root_unode_mf_id = derive_fastlog_batch_and_unode(ctx, bcs_id.clone(), repo).await;
 
-        let blobstore = Arc::new(repo.get_blobstore());
+        let blobstore = Arc::new(repo.repo_blobstore.clone());
         let entries: Vec<_> = root_unode_mf_id
             .list_all_entries(ctx.clone(), blobstore.clone())
             .try_collect()
@@ -705,13 +731,13 @@ mod tests {
 
     async fn derive_unode(
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &TestRepo,
         hg_cs: &str,
     ) -> Result<ManifestUnodeId, Error> {
         let manager = repo.repo_derived_data().manager();
         let hg_cs_id = HgChangesetId::from_str(hg_cs)?;
         let bcs_id = repo
-            .bonsai_hg_mapping()
+            .bonsai_hg_mapping
             .get_bonsai_from_hg(ctx, hg_cs_id)
             .await?
             .unwrap();
@@ -724,7 +750,7 @@ mod tests {
     async fn derive_fastlog_batch_and_unode(
         ctx: &CoreContext,
         bcs_id: ChangesetId,
-        repo: &BlobRepo,
+        repo: &TestRepo,
     ) -> ManifestUnodeId {
         let manager = repo.repo_derived_data().manager();
         manager
@@ -741,7 +767,7 @@ mod tests {
 
     async fn verify_list(
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &TestRepo,
         entry: Entry<ManifestUnodeId, FileUnodeId>,
     ) {
         let list = fetch_list(ctx, repo, entry).await;
@@ -753,11 +779,11 @@ mod tests {
 
     async fn fetch_list(
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &TestRepo,
         entry: Entry<ManifestUnodeId, FileUnodeId>,
     ) -> Vec<(ChangesetId, Vec<FastlogParent>)> {
-        let blobstore = repo.blobstore();
-        let batch = fetch_fastlog_batch_by_unode_id(ctx, blobstore, &entry)
+        let blobstore = repo.repo_blobstore.clone();
+        let batch = fetch_fastlog_batch_by_unode_id(ctx, &blobstore, &entry)
             .await
             .unwrap()
             .expect("batch hasn't been generated yet");
@@ -770,12 +796,12 @@ mod tests {
         );
         assert!(batch.latest().len() <= MAX_LATEST_LEN);
         assert!(batch.previous_batches().len() <= MAX_BATCHES);
-        fetch_flattened(&batch, ctx, blobstore).await.unwrap()
+        fetch_flattened(&batch, ctx, &blobstore).await.unwrap()
     }
 
     async fn find_unode_history(
         fb: FacebookInit,
-        repo: &BlobRepo,
+        repo: &TestRepo,
         start: Entry<ManifestUnodeId, FileUnodeId>,
     ) -> Vec<ChangesetId> {
         let ctx = CoreContext::test_mock(fb);
@@ -810,13 +836,13 @@ mod tests {
         async fn get_parents<'a>(
             &'a self,
             ctx: &'a CoreContext,
-            repo: &'a BlobRepo,
+            repo: &'a TestRepo,
         ) -> Result<Vec<Entry<ManifestUnodeId, FileUnodeId>>, Error>;
 
         async fn get_linknode<'a>(
             &'a self,
             ctx: &'a CoreContext,
-            repo: &'a BlobRepo,
+            repo: &'a TestRepo,
         ) -> Result<ChangesetId, Error>;
     }
 
@@ -825,11 +851,11 @@ mod tests {
         async fn get_parents<'a>(
             &'a self,
             ctx: &'a CoreContext,
-            repo: &'a BlobRepo,
+            repo: &'a TestRepo,
         ) -> Result<Vec<Entry<ManifestUnodeId, FileUnodeId>>, Error> {
             match self {
                 Entry::Leaf(file_unode_id) => {
-                    let unode_mf = file_unode_id.load(ctx, repo.blobstore()).await?;
+                    let unode_mf = file_unode_id.load(ctx, &repo.repo_blobstore).await?;
                     Ok(unode_mf
                         .parents()
                         .iter()
@@ -838,7 +864,7 @@ mod tests {
                         .collect())
                 }
                 Entry::Tree(mf_unode_id) => {
-                    let unode_mf = mf_unode_id.load(ctx, repo.blobstore()).await?;
+                    let unode_mf = mf_unode_id.load(ctx, &repo.repo_blobstore).await?;
                     Ok(unode_mf
                         .parents()
                         .iter()
@@ -852,15 +878,15 @@ mod tests {
         async fn get_linknode<'a>(
             &'a self,
             ctx: &'a CoreContext,
-            repo: &'a BlobRepo,
+            repo: &'a TestRepo,
         ) -> Result<ChangesetId, Error> {
             match self {
                 Entry::Leaf(file_unode_id) => {
-                    let unode_file = file_unode_id.load(ctx, repo.blobstore()).await?;
+                    let unode_file = file_unode_id.load(ctx, &repo.repo_blobstore).await?;
                     Ok(unode_file.linknode().clone())
                 }
                 Entry::Tree(mf_unode_id) => {
-                    let unode_mf = mf_unode_id.load(ctx, repo.blobstore()).await?;
+                    let unode_mf = mf_unode_id.load(ctx, &repo.repo_blobstore).await?;
                     Ok(unode_mf.linknode().clone())
                 }
             }

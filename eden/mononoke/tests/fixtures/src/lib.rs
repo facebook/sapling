@@ -34,6 +34,7 @@ use mononoke_types::FileType;
 use mononoke_types::RepositoryId;
 use sorted_vector_map::SortedVectorMap;
 use test_repo_factory::TestRepoFactory;
+use test_repo_factory::TestRepoFactoryBuilder;
 use tests_utils::BasicTestRepo;
 use tests_utils::Repo;
 
@@ -171,6 +172,16 @@ pub trait TestRepoFixture {
             .with_name(Self::REPO_NAME.to_string())
             .build()
             .unwrap();
+        Self::initrepo(fb, &repo).await;
+        repo
+    }
+
+    async fn get_custom_test_repo<
+        R: Repo + for<'builder> facet::Buildable<TestRepoFactoryBuilder<'builder>>,
+    >(
+        fb: FacebookInit,
+    ) -> R {
+        let repo: R = test_repo_factory::build_empty(fb).unwrap();
         Self::initrepo(fb, &repo).await;
         repo
     }
