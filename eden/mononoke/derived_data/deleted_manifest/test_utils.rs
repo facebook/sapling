@@ -8,14 +8,18 @@
 use std::collections::BTreeMap;
 
 use anyhow::Error;
-use blobrepo::save_bonsai_changesets;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bookmarks::Bookmarks;
 use bounded_traversal::bounded_traversal_stream;
+use changeset_fetcher::ChangesetFetcher;
+use changesets::Changesets;
+use changesets_creation::save_changesets;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_test_utils::bonsai_changeset_from_hg;
 use fbinit::FacebookInit;
+use filestore::FilestoreConfig;
 use fixtures::store_files;
 use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
@@ -35,6 +39,9 @@ use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::MPath;
 use pretty_assertions::assert_eq;
+use repo_blobstore::RepoBlobstore;
+use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
 use sorted_vector_map::SortedVectorMap;
 use tests_utils::CreateCommitContext;
@@ -43,6 +50,25 @@ use crate::derive::get_changes;
 use crate::derive::DeletedManifestDeriver;
 use crate::mapping::RootDeletedManifestIdCommon;
 use crate::ops::DeletedManifestOps;
+
+#[derive(Clone)]
+#[facet::container]
+struct TestRepo {
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+    #[facet]
+    bookmarks: dyn Bookmarks,
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+    #[facet]
+    filestore_config: FilestoreConfig,
+    #[facet]
+    changeset_fetcher: dyn ChangesetFetcher,
+    #[facet]
+    changesets: dyn Changesets,
+}
 
 /// Defines all common DM tests.
 // Why a macro and not a function? So we get different tests that are paralellised
@@ -80,13 +106,13 @@ macro_rules! impl_deleted_manifest_tests {
 }
 pub(crate) use impl_deleted_manifest_tests;
 
-fn build_repo<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) -> Result<BlobRepo, Error> {
+fn build_repo<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) -> Result<TestRepo, Error> {
     Ok(test_repo_factory::TestRepoFactory::new(fb)?.build()?)
 }
 
 pub(crate) async fn linear_test<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) {
     // Test simple separate files and whole dir deletions
-    let repo: BlobRepo = build_repo::<Root>(fb).unwrap();
+    let repo: TestRepo = build_repo::<Root>(fb).unwrap();
     let ctx = CoreContext::test_mock(fb);
 
     // create parent deleted manifest
@@ -250,7 +276,8 @@ pub(crate) async fn linear_test<Root: RootDeletedManifestIdCommon>(fb: FacebookI
 }
 
 pub(crate) async fn many_file_dirs_test<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) {
-    let repo = ManyFilesDirs::getrepo(fb).await;
+    let repo: TestRepo = build_repo::<Root>(fb).unwrap();
+    ManyFilesDirs::initrepo(fb, &repo).await;
     let ctx = CoreContext::test_mock(fb);
 
     let mf_id_1 = {
@@ -353,7 +380,7 @@ pub(crate) async fn merged_history_test<Root: RootDeletedManifestIdCommon>(
     //  | /
     //  A
     //
-    let repo: BlobRepo = build_repo::<Root>(fb).unwrap();
+    let repo: TestRepo = build_repo::<Root>(fb).unwrap();
     let ctx = CoreContext::test_mock(fb);
 
     let a = CreateCommitContext::new_root(&ctx, &repo)
@@ -561,7 +588,7 @@ pub(crate) async fn merged_history_test<Root: RootDeletedManifestIdCommon>(
 
 pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) {
     // Test simple separate files and whole dir deletions
-    let repo: BlobRepo = build_repo::<Root>(fb).unwrap();
+    let repo: TestRepo = build_repo::<Root>(fb).unwrap();
     let ctx = CoreContext::test_mock(fb);
 
     // create parent deleted manifest
@@ -607,7 +634,7 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(fb: Fac
             let mut entries = Root::new(mf_id)
                 .find_entries(
                     &ctx,
-                    repo.blobstore(),
+                    repo.repo_blobstore(),
                     vec![
                         PathOrPrefix::Path(Some(path("file.txt"))),
                         PathOrPrefix::Path(Some(path("dir/f-2"))),
@@ -629,7 +656,7 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(fb: Fac
             let mut entries = Root::new(mf_id)
                 .find_entries(
                     &ctx,
-                    repo.blobstore(),
+                    repo.repo_blobstore(),
                     vec![PathOrPrefix::Prefix(Some(path("dir-2")))],
                 )
                 .map_ok(|(path, _)| path)
@@ -651,7 +678,7 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(fb: Fac
             let mut entries = Root::new(mf_id)
                 .find_entries(
                     &ctx,
-                    repo.blobstore(),
+                    repo.repo_blobstore(),
                     vec![
                         PathOrPrefix::Prefix(Some(path("dir/sub"))),
                         PathOrPrefix::Path(Some(path("dir/sub/f-1"))),
@@ -675,7 +702,7 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(fb: Fac
 
 pub(crate) async fn test_list_all_entries<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) {
     // Test simple separate files and whole dir deletions
-    let repo: BlobRepo = build_repo::<Root>(fb).unwrap();
+    let repo: TestRepo = build_repo::<Root>(fb).unwrap();
     let ctx = CoreContext::test_mock(fb);
 
     // create parent deleted manifest
@@ -711,7 +738,7 @@ pub(crate) async fn test_list_all_entries<Root: RootDeletedManifestIdCommon>(fb:
         {
             // check that it will yield only two deleted paths
             let entries = Root::new(mf_id)
-                .list_all_entries(&ctx, repo.blobstore())
+                .list_all_entries(&ctx, repo.repo_blobstore())
                 .try_collect::<Vec<_>>()
                 .await
                 .unwrap();
@@ -733,7 +760,7 @@ pub(crate) async fn test_list_all_entries<Root: RootDeletedManifestIdCommon>(fb:
 
 async fn gen_deleted_manifest_nodes<Root: RootDeletedManifestIdCommon>(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &TestRepo,
     bonsai: ChangesetId,
 ) -> Result<Vec<(Option<MPath>, Status)>, Error> {
     let manifest = repo
@@ -751,7 +778,7 @@ async fn gen_deleted_manifest_nodes<Root: RootDeletedManifestIdCommon>(
 
 async fn create_cs_and_derive_manifest<Root: RootDeletedManifestIdCommon>(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: TestRepo,
     file_changes: BTreeMap<&str, Option<&str>>,
     parent_ids: Vec<(ChangesetId, Root::Id)>,
 ) -> (ChangesetId, Root::Id, Vec<(Option<MPath>, Status)>) {
@@ -770,11 +797,11 @@ async fn create_cs_and_derive_manifest<Root: RootDeletedManifestIdCommon>(
 
 async fn derive_manifest<Root: RootDeletedManifestIdCommon>(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &TestRepo,
     bcs: BonsaiChangeset,
     parent_mf_ids: Vec<Root::Id>,
 ) -> (ChangesetId, Root::Id, Vec<(Option<MPath>, Status)>) {
-    let blobstore = repo.blobstore().boxed();
+    let blobstore = repo.repo_blobstore().boxed();
     let bcs_id = bcs.get_changeset_id();
 
     let changes = get_changes(
@@ -808,7 +835,7 @@ async fn derive_manifest<Root: RootDeletedManifestIdCommon>(
 
 async fn create_bonsai_changeset(
     fb: FacebookInit,
-    repo: BlobRepo,
+    repo: TestRepo,
     file_changes: SortedVectorMap<MPath, FileChange>,
     parents: Vec<ChangesetId>,
 ) -> BonsaiChangeset {
@@ -826,7 +853,7 @@ async fn create_bonsai_changeset(
     .freeze()
     .unwrap();
 
-    save_bonsai_changesets(vec![bcs.clone()], CoreContext::test_mock(fb), &repo)
+    save_changesets(&CoreContext::test_mock(fb), &repo, vec![bcs.clone()])
         .await
         .unwrap();
     bcs
@@ -846,11 +873,11 @@ impl From<Option<ChangesetId>> for Status {
 
 fn iterate_all_entries<Root: RootDeletedManifestIdCommon>(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: TestRepo,
     manifest_id: Root::Id,
 ) -> impl Stream<Item = Result<(Option<MPath>, Status, Root::Id), Error>> {
     async_stream::stream! {
-        let blobstore = repo.get_blobstore();
+        let blobstore = repo.repo_blobstore();
         let s = bounded_traversal_stream(256, Some((None, manifest_id)), move |(path, manifest_id)| {
             cloned!(ctx, blobstore);
             async move {

@@ -14,11 +14,11 @@ path = "lib.rs"
 anyhow = "1.0.56"
 async-stream = "0.3"
 async-trait = "0.1.56"
-blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bounded_traversal = { version = "0.1.0", path = "../../common/bounded_traversal" }
 bytes = { version = "1.1", features = ["serde"] }
+changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data = { version = "0.1.0", path = ".." }
@@ -29,15 +29,23 @@ itertools = "0.10.3"
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+trait_alias = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tunables = { version = "0.1.0", path = "../../tunables" }
 unodes = { version = "0.1.0", path = "../unodes" }
 
 [dev-dependencies]
+bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
+bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+changesets = { version = "0.1.0", path = "../../changesets" }
+changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 derived_data_test_utils = { version = "0.1.0", path = "../test_utils" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+filestore = { version = "0.1.0", path = "../../filestore" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }

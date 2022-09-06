@@ -10,10 +10,10 @@ use std::collections::HashSet;
 use std::collections::VecDeque;
 
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use bounded_traversal::bounded_traversal_stream;
+use changeset_fetcher::ChangesetFetcherRef;
 use cloned::cloned;
 use context::CoreContext;
 use futures::future;
@@ -33,7 +33,9 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
+use trait_alias::trait_alias;
 use unodes::RootUnodeManifestId;
 
 //use time_ext::DurationExt;
@@ -47,6 +49,10 @@ pub enum PathState {
     // Unode if the path exists.
     Exists(UnodeEntry),
 }
+
+#[trait_alias]
+pub trait Repo =
+    RepoDerivedDataRef + RepoBlobstoreArc + ChangesetFetcherRef + Clone + Copy + Send + Sync;
 
 #[async_trait::async_trait]
 pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
@@ -64,7 +70,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
     /// fetch find where the path was deleted.
     async fn resolve_path_state<'a>(
         ctx: &'a CoreContext,
-        repo: &'a BlobRepo,
+        repo: impl Repo + 'a,
         cs_id: ChangesetId,
         path: &'a Option<MPath>,
     ) -> Result<Option<PathState>, Error> {
@@ -74,7 +80,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
             return Ok(Some(PathState::Exists(unode_entry)));
         }
 
-        let use_deleted_manifest = repo.get_derived_data_config().is_enabled(Self::NAME);
+        let use_deleted_manifest = repo.repo_derived_data().config().is_enabled(Self::NAME);
         if !use_deleted_manifest {
             return Ok(None);
         }
@@ -112,7 +118,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
 
     async fn resolve_path_state_unfold(
         ctx: CoreContext,
-        repo: BlobRepo,
+        repo: impl Repo,
         path: Option<MPath>,
         mut queue: VecDeque<ChangesetId>,
         mut visited: HashSet<ChangesetId>,
@@ -129,14 +135,14 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
         if let Some(cs_id) = queue.pop_front() {
             let root_dfm_id = manager.derive::<Self>(&ctx, cs_id, None).await?;
             let entry = root_dfm_id
-                .find_entry(&ctx, repo.blobstore(), path.clone())
+                .find_entry(&ctx, repo.repo_blobstore(), path.clone())
                 .await?;
 
             if let Some(mf_id) = entry {
                 // we need to get the linknode, so let's load the deleted manifest
                 // if the linknodes is None it means that file should exist
                 // but it doesn't, let's throw an error
-                let mf = mf_id.load(&ctx, repo.blobstore()).await?;
+                let mf = mf_id.load(&ctx, repo.repo_blobstore()).await?;
                 let linknode = mf.linknode().ok_or_else(|| {
                 let message = format!(
                     "there is no unode for the path '{}' and changeset {:?}, but it exists as a live entry in deleted manifest",
@@ -148,18 +154,19 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
 
                 // to get last change before deletion we have to look at the liknode
                 // parents for the deleted path
-                let parents = repo
-                    .get_changeset_parents_by_bonsai(ctx.clone(), linknode.clone())
+                let parents = &repo
+                    .changeset_fetcher()
+                    .get_parents(ctx.clone(), linknode.clone())
                     .await?;
 
                 // checking parent unodes
-                let parent_unodes = parents.into_iter().map({
+                let parent_unodes = parents.iter().map({
                     cloned!(ctx, repo, path);
                     move |parent| {
                         cloned!(ctx, repo, path);
                         async move {
                             let unode_entry =
-                                derive_unode_entry(&ctx, &repo, parent.clone(), &path).await?;
+                                derive_unode_entry(&ctx, repo, parent.clone(), &path).await?;
                             Ok::<_, Error>((parent, unode_entry))
                         }
                     }
@@ -199,7 +206,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
                                 // the path could have been already deleted here
                                 // need to add this node into the queue
                                 if visited.insert(parent.clone()) {
-                                    queue.push_back(parent);
+                                    queue.push_back(*parent);
                                 }
                             }
                         }
@@ -385,7 +392,7 @@ impl<Root: RootDeletedManifestIdCommon> DeletedManifestOps for Root {}
 
 async fn derive_unode_entry(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: impl RepoDerivedDataRef + RepoBlobstoreArc,
     cs_id: ChangesetId,
     path: &Option<MPath>,
 ) -> Result<Option<UnodeEntry>, Error> {
@@ -396,6 +403,6 @@ async fn derive_unode_entry(
         .await?;
     root_unode_mf_id
         .manifest_unode_id()
-        .find_entry(ctx.clone(), repo.get_blobstore(), path.clone())
+        .find_entry(ctx.clone(), repo.repo_blobstore_arc(), path.clone())
         .await
 }
