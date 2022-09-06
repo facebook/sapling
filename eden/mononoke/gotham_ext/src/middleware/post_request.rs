@@ -24,7 +24,7 @@ use permission_checker::MononokeIdentitySetExt;
 use tokio::task;
 use trust_dns_resolver::TokioAsyncResolver;
 
-use super::ClientIdentity;
+use super::MetadataState;
 use super::Middleware;
 use super::RequestStartTime;
 use crate::response::PendingResponseMeta;
@@ -99,7 +99,7 @@ impl<C: PostResponseConfig> Middleware for PostResponseMiddleware<C> {
     async fn outbound(&self, state: &mut State, _response: &mut Response<Body>) {
         let config = self.config.clone();
         let start_time = RequestStartTime::try_borrow_from(state).map(|t| t.0);
-        let hostname_future = ClientIdentity::try_borrow_from(state).map(resolve_hostname);
+        let hostname_future = MetadataState::try_borrow_from(state).map(resolve_hostname);
         let meta = PendingResponseMeta::try_take_from(state);
 
         if let Some(callbacks) = state.try_take::<PostResponseCallbacks>() {
@@ -174,22 +174,19 @@ impl PostResponseCallbacks {
 
 // Hostname of the client is for non-critical use only (best-effort lookup):
 pub fn resolve_hostname(
-    client_identity: &ClientIdentity,
+    metadata_state: &MetadataState,
 ) -> impl Future<Output = Option<String>> + 'static {
     // XXX: Can't make this an async fn because the resulting Future would
     // have a non-'static lifetime (due to the &ClientIdentity argument).
 
+    let metadata = metadata_state.metadata();
     // 1) We're extracting it from identities (which requires no remote calls)
-    if let Some(client_hostname) = client_identity
-        .identities()
-        .as_ref()
-        .and_then(|id| id.hostname().map(|h| h.to_string()))
-    {
+    if let Some(client_hostname) = metadata.identities().hostname().map(|h| h.to_string()) {
         return future::ready(Some(client_hostname)).left_future();
     }
     // 2) Perform a reverse DNS lookup of the client's IP address to determine
     // its hostname.
-    let address = client_identity.address().clone();
+    let address = metadata.client_ip().cloned();
     (async move {
         let resolver = TokioAsyncResolver::tokio_from_system_conf().ok()?;
         let hosts = resolver.reverse_lookup(address?).await.ok()?;

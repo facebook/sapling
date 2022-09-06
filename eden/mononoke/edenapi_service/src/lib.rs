@@ -23,9 +23,9 @@ use anyhow::Error;
 use fbinit::FacebookInit;
 use gotham::router::Router;
 use gotham_ext::handler::MononokeHttpHandler;
-use gotham_ext::middleware::ClientIdentityMiddleware;
 use gotham_ext::middleware::LoadMiddleware;
 use gotham_ext::middleware::LogMiddleware;
+use gotham_ext::middleware::MetadataMiddleware;
 use gotham_ext::middleware::PostResponseMiddleware;
 use gotham_ext::middleware::ScubaMiddleware;
 use gotham_ext::middleware::ServerIdentityMiddleware;
@@ -75,7 +75,7 @@ pub fn build(
 
     let handler = MononokeHttpHandler::builder()
         .add(TlsSessionDataMiddleware::new(tls_session_data_log_path)?)
-        .add(ClientIdentityMiddleware::new(
+        .add(MetadataMiddleware::new(
             fb,
             logger.clone(),
             common_config.internal_identity.clone(),

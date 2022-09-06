@@ -77,6 +77,9 @@
       "method": "batch",
       "repository": "lfs1",
       "request_id": "*" (glob)
+    },
+    "normvector": {
+      "client_identities": []
     }
   }
   {
@@ -123,6 +126,9 @@
       "method": "upload",
       "repository": "lfs1",
       "request_id": "*" (glob)
+    },
+    "normvector": {
+      "client_identities": []
     }
   }
   {
@@ -176,7 +182,8 @@
       "request_id": "*" (glob)
     },
     "normvector": {
-      "batch_internal_missing_blobs": []
+      "batch_internal_missing_blobs": [],
+      "client_identities": []
     }
   }
   {
@@ -222,6 +229,9 @@
       "method": "download",
       "repository": "lfs1",
       "request_id": "*" (glob)
+    },
+    "normvector": {
+      "client_identities": []
     }
   }
   {
@@ -263,6 +273,9 @@
       "http_query": "foo=bar",
       "http_user_agent": "curl/*", (glob)
       "request_id": * (glob)
+    },
+    "normvector": {
+      "client_identities": []
     }
   }
 

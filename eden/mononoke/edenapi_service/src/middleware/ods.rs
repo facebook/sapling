@@ -6,7 +6,7 @@
  */
 
 use gotham::state::State;
-use gotham_ext::middleware::ClientIdentity;
+use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::Middleware;
 use gotham_ext::middleware::PostResponseCallbacks;
 use hyper::Body;
@@ -58,13 +58,8 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
     // Proxygen can be configured to periodically send a preconfigured set of
     // requests to check server health. These requests will look like ordinary
     // user requests, but should be filtered out of the server's metrics.
-    match state.try_borrow::<ClientIdentity>() {
-        Some(id)
-            if id
-                .identities()
-                .as_ref()
-                .map_or(false, |id| id.is_proxygen_test_identity()) =>
-        {
+    match state.try_borrow::<MetadataState>() {
+        Some(state) if state.metadata().identities().is_proxygen_test_identity() => {
             return None;
         }
         _ => {}

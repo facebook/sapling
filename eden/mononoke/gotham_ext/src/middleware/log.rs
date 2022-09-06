@@ -23,7 +23,7 @@ use slog::o;
 use slog::Logger;
 use time_ext::DurationExt;
 
-use super::ClientIdentity;
+use super::MetadataState;
 use super::Middleware;
 use super::PostResponseCallbacks;
 use super::RequestLoad;
@@ -100,8 +100,8 @@ fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Opti
     let method = Method::borrow_from(state).clone();
     let version = *Version::borrow_from(state);
     let request_id = state.short_request_id().to_string();
-    let address = ClientIdentity::try_borrow_from(state)
-        .and_then(|client_identity| *client_identity.address())
+    let address = MetadataState::try_borrow_from(state)
+        .and_then(|metadata| metadata.metadata().client_ip())
         .map(|addr| addr.to_string());
 
     let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;

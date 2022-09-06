@@ -15,14 +15,13 @@ use fbinit::FacebookInit;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
-use gotham_ext::middleware::ClientIdentity;
+use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::Middleware;
 use gotham_ext::state_ext::StateExt;
 use hyper::body::Body;
 use hyper::Response;
 use hyper::StatusCode;
 use metadata::Metadata;
-use permission_checker::MononokeIdentitySet;
 use permission_checker::MononokeIdentitySetExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::error;
@@ -118,45 +117,32 @@ impl Middleware for RequestContextMiddleware {
         let request_id = state.short_request_id();
 
         let logger = self.logger.new(o!("request_id" => request_id.to_string()));
-        let (identities, address) =
-            if let Some(client_identity) = ClientIdentity::try_borrow_from(state) {
-                (
-                    client_identity.identities().clone(),
-                    client_identity.address().clone(),
-                )
-            } else {
-                (None, None)
-            };
-
-        let should_log = !identities
-            .as_ref()
-            .map_or(false, |id| id.is_proxygen_test_identity());
-
-        let identities: MononokeIdentitySet = match identities {
-            Some(identities) => identities,
-            None => {
-                if self.enforce_authentication {
-                    let msg = "Client not authenticated".to_string();
-                    error!(self.logger, "{}", &msg);
-                    let response = Response::builder()
-                        .status(StatusCode::FORBIDDEN)
-                        .body(
-                            format!(
-                                "{{\"message:\"{}\", \"request_id\":\"{}\"}}",
-                                msg,
-                                state.short_request_id()
-                            )
-                            .into(),
-                        )
-                        .expect("Couldn't build http response");
-
-                    return Some(response);
-                } else {
-                    Default::default()
-                }
-            }
+        let metadata = if let Some(metadata_state) = MetadataState::try_borrow_from(state) {
+            metadata_state.metadata().clone()
+        } else {
+            Metadata::default()
         };
-        let metadata = Metadata::new(None, identities, false, address).await;
+
+        let should_log = !metadata.identities().is_proxygen_test_identity();
+
+        if metadata.identities().is_empty() && self.enforce_authentication {
+            let msg = "Client not authenticated".to_string();
+            error!(self.logger, "{}", &msg);
+            let response = Response::builder()
+                .status(StatusCode::FORBIDDEN)
+                .body(
+                    format!(
+                        "{{\"message:\"{}\", \"request_id\":\"{}\"}}",
+                        msg,
+                        state.short_request_id()
+                    )
+                    .into(),
+                )
+                .expect("Couldn't build http response");
+
+            return Some(response);
+        }
+
         let session = SessionContainer::builder(self.fb)
             .metadata(Arc::new(metadata))
             .readonly(self.readonly)

@@ -16,7 +16,7 @@ use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::NewMiddleware;
 use gotham_ext::error::HttpError;
-use gotham_ext::middleware::ClientIdentity;
+use gotham_ext::middleware::MetadataState;
 use gotham_ext::response::build_error_response;
 use hyper::Uri;
 
@@ -51,11 +51,9 @@ impl Middleware for ThrottleMiddleware {
             }
         }
 
-        let identities = if let Some(client_ident) = state.try_borrow::<ClientIdentity>() {
-            client_ident.identities().as_ref()
-        } else {
-            None
-        };
+        let identities = state
+            .try_borrow::<MetadataState>()
+            .map(|metadata_state| metadata_state.metadata().identities());
 
         for limit in self.handle.get().loadshedding_limits().iter() {
             if let Err(err) = limit.should_load_shed(self.fb, identities) {

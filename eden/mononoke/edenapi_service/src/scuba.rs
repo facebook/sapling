@@ -6,7 +6,7 @@
  */
 
 use gotham::state::State;
-use gotham_ext::middleware::ClientIdentity;
+use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::PostResponseInfo;
 use gotham_ext::middleware::ScubaHandler;
 use permission_checker::MononokeIdentitySetExt;
@@ -55,8 +55,8 @@ impl ScubaHandler for EdenApiScubaHandler {
             request_context: state.try_borrow::<RequestContext>().cloned(),
             handler_info: state.try_borrow::<HandlerInfo>().cloned(),
             client_username: state
-                .try_borrow::<ClientIdentity>()
-                .and_then(|id| id.identities().as_ref().and_then(|id| id.username()))
+                .try_borrow::<MetadataState>()
+                .and_then(|metadata_state| metadata_state.metadata().identities().username())
                 .map(ToString::to_string),
         }
     }

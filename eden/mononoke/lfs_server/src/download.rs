@@ -20,7 +20,6 @@ use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
 use gotham_ext::content_encoding::ContentEncoding;
 use gotham_ext::error::HttpError;
-use gotham_ext::middleware::ClientIdentity;
 use gotham_ext::middleware::ScubaMiddlewareState;
 use gotham_ext::response::CompressedResponseStream;
 use gotham_ext::response::ResponseStream;
@@ -171,10 +170,8 @@ async fn download_inner(
 
     let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), method).await?;
 
-    let idents =
-        ClientIdentity::try_borrow_from(state).and_then(|ident| ident.identities().as_ref());
-
-    let disable_compression = should_disable_compression(&ctx.config, idents);
+    let disable_compression =
+        should_disable_compression(&ctx.config, Some(ctx.ctx.metadata().identities()));
 
     let content_encoding = if disable_compression {
         ContentEncoding::Identity

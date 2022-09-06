@@ -26,7 +26,7 @@ use time_ext::DurationExt;
 
 use super::HeadersDuration;
 use super::RequestLoad;
-use crate::middleware::ClientIdentity;
+use crate::middleware::MetadataState;
 use crate::middleware::Middleware;
 use crate::middleware::PostResponseCallbacks;
 use crate::middleware::PostResponseInfo;
@@ -230,16 +230,16 @@ fn log_stats<H: ScubaHandler>(state: &mut State, status_code: &StatusCode) -> Op
         );
     }
 
-    if let Some(identity) = ClientIdentity::try_borrow_from(state) {
-        if let Some(ref address) = identity.address() {
+    if let Some(metadata_state) = MetadataState::try_borrow_from(state) {
+        let metadata = metadata_state.metadata();
+        if let Some(ref address) = metadata.client_ip() {
             scuba.add(HttpScubaKey::ClientIp, address.to_string());
         }
 
-        if let Some(ref identities) = identity.identities() {
-            scuba.sample_for_identities(identities);
-            let identities: Vec<_> = identities.iter().map(|i| i.to_string()).collect();
-            scuba.add(HttpScubaKey::ClientIdentities, identities);
-        }
+        let identities = metadata.identities();
+        scuba.sample_for_identities(identities);
+        let identities: Vec<_> = identities.iter().map(|i| i.to_string()).collect();
+        scuba.add(HttpScubaKey::ClientIdentities, identities);
     }
 
     if let Some(request_load) = RequestLoad::try_borrow_from(state) {

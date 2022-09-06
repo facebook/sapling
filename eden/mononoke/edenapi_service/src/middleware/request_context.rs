@@ -13,7 +13,7 @@ use fbinit::FacebookInit;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
-use gotham_ext::middleware::ClientIdentity;
+use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::Middleware;
 use gotham_ext::state_ext::StateExt;
 use hyper::Body;
@@ -66,15 +66,14 @@ impl RequestContextMiddleware {
 #[async_trait::async_trait]
 impl Middleware for RequestContextMiddleware {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
-        let identities = ClientIdentity::borrow_from(state)
-            .identities()
-            .clone()
-            .unwrap_or_default();
+        let metadata = if let Some(metadata_state) = MetadataState::try_borrow_from(state) {
+            metadata_state.metadata().clone()
+        } else {
+            Metadata::default()
+        };
 
-        let metadata = Metadata::default().set_identities(identities);
-        let metadata = Arc::new(metadata);
         let session = SessionContainer::builder(self.fb)
-            .metadata(metadata)
+            .metadata(Arc::new(metadata))
             .readonly(self.readonly)
             .rate_limiter(self.rate_limiter.as_ref().map(|r| r.get_rate_limiter()))
             .build();
