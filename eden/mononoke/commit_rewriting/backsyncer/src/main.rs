@@ -39,6 +39,7 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
+use executor_lib::split_repo_names;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
 use executor_lib::ShardedProcessExecutor;
@@ -138,7 +139,7 @@ impl RepoShardedProcess for BacksyncProcess {
         // Since for backsyncer, two repos (i.e. source and target)
         // are required, the input would be of the form:
         // source_repo_TO_target_repo (e.g. fbsource_TO_aros)
-        let repo_pair: Vec<_> = repo_names_pair.split("_TO_").collect();
+        let repo_pair: Vec<_> = split_repo_names(repo_names_pair);
         if repo_pair.len() != 2 {
             error!(
                 self.matches.logger(),

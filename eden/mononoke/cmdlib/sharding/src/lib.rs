@@ -21,6 +21,10 @@ pub use facebook::*;
 #[cfg(not(fbcode_build))]
 pub use oss::*;
 
+const ENCODED_SLASH: &str = "_SLASH_";
+const ENCODED_PLUS: &str = "_PLUS_";
+const X_REPO_SEPARATOR: &str = "_TO_";
+
 /// Trait outlining the method responsible for performing the initial bootstrapping
 /// of the process with the context of the incoming repo. Implementer of this trait should
 /// NOT contain any repo-specific state since one instance of RepoShardedProcess
@@ -64,4 +68,17 @@ pub trait RepoShardedProcessExecutor: Send + Sync {
     /// main execution method during this timeout period. The stop() method itself
     /// SHOULD return quickly (i.e. should not be long running).
     async fn stop(&self) -> Result<()>;
+}
+
+/// Function responsible for decoding an SM-encoded repo-name.
+pub fn decode_repo_name(encoded_repo_name: &str) -> String {
+    encoded_repo_name
+        .replace(ENCODED_SLASH, "/")
+        .replace(ENCODED_PLUS, "+")
+}
+
+/// Function responsible for splitting source and target repo name
+/// from combined repo-name string.
+pub fn split_repo_names(combined_repo_names: &str) -> Vec<&str> {
+    combined_repo_names.split(X_REPO_SEPARATOR).collect()
 }
