@@ -24,6 +24,7 @@ hex = "0.4.3"
 http = "0.2"
 hyper = { version = "0.14.7", features = ["client", "http1", "http2"] }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
+metadata = { version = "0.1.0", path = "../server/metadata" }
 mime = "0.3.14"
 openssl = "0.10.35"
 percent-encoding = "2.1"

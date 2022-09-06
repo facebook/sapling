@@ -19,6 +19,7 @@ use hyper::Body;
 use hyper::Response;
 use hyper::StatusCode;
 use metaconfig_types::Identity;
+use metadata::Metadata;
 use percent_encoding::percent_decode;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
@@ -33,29 +34,21 @@ const ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
 const CLIENT_IP: &str = "tfb-orig-client-ip";
 
 #[derive(StateData, Default)]
-pub struct ClientIdentity {
-    address: Option<IpAddr>,
-    identities: Option<MononokeIdentitySet>,
-}
+pub struct MetadataState(Metadata);
 
-impl ClientIdentity {
-    pub fn address(&self) -> &Option<IpAddr> {
-        &self.address
-    }
-
-    pub fn identities(&self) -> &Option<MononokeIdentitySet> {
-        &self.identities
+impl MetadataState {
+    pub fn metadata(&self) -> &Metadata {
+        &self.0
     }
 }
 
-#[derive(Clone)]
-pub struct ClientIdentityMiddleware {
+pub struct MetadataMiddleware {
     fb: FacebookInit,
     logger: Logger,
     internal_identity: Identity,
 }
 
-impl ClientIdentityMiddleware {
+impl MetadataMiddleware {
     pub fn new(fb: FacebookInit, logger: Logger, internal_identity: Identity) -> Self {
         Self {
             fb,
@@ -92,15 +85,15 @@ fn request_identities_from_headers(headers: &HeaderMap) -> Option<MononokeIdenti
 }
 
 #[async_trait::async_trait]
-impl Middleware for ClientIdentityMiddleware {
+impl Middleware for MetadataMiddleware {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
-        let mut client_identity = ClientIdentity::default();
         let cert_idents = TlsCertificateIdentities::try_take_from(state);
+        let mut metadata = Metadata::default();
 
         if let Some(headers) = HeaderMap::try_borrow_from(state) {
-            client_identity.address = request_ip_from_headers(headers);
+            metadata = metadata.set_client_ip(request_ip_from_headers(headers));
 
-            client_identity.identities = {
+            let maybe_identities = {
                 let maybe_cat_idents =
                     match try_get_cats_idents(self.fb, headers, &self.internal_identity) {
                         Err(e) => {
@@ -135,14 +128,17 @@ impl Middleware for ClientIdentityMiddleware {
                     (None, Some(tls_or_proxied_idents)) => Some(tls_or_proxied_idents),
                 }
             };
+            if let Some(identities) = maybe_identities {
+                metadata = metadata.set_identities(identities)
+            }
         }
 
         // For the IP, we can fallback to the peer IP
-        if client_identity.address.is_none() {
-            client_identity.address = client_addr(state).as_ref().map(SocketAddr::ip);
+        if metadata.client_ip().is_none() {
+            metadata = metadata.set_client_ip(client_addr(state).as_ref().map(SocketAddr::ip));
         }
 
-        state.put(client_identity);
+        state.put(MetadataState(metadata));
 
         None
     }

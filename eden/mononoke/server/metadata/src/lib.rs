@@ -149,6 +149,11 @@ impl Metadata {
         self.client_ip.as_ref()
     }
 
+    pub fn set_client_ip(mut self, client_ip: Option<IpAddr>) -> Self {
+        self.client_ip = client_ip;
+        self
+    }
+
     pub fn client_hostname(&self) -> Option<&str> {
         self.client_hostname.as_deref()
     }
