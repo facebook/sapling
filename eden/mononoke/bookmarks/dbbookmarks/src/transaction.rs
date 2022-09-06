@@ -37,6 +37,7 @@ define_stats! {
     prefix = "mononoke.dbbookmarks";
     bookmarks_update_log_insert_success: timeseries(Rate, Sum),
     bookmarks_update_log_insert_success_attempt_count: timeseries(Rate, Average, Sum),
+    bookmarks_update_log_insert_retry: timeseries(Rate, Sum),
     bookmarks_insert_retryable_error: timeseries(Rate, Sum),
     bookmarks_insert_retryable_error_attempt_count: timeseries(Rate, Average, Sum),
     bookmarks_insert_logic_error: timeseries(Rate, Sum),
@@ -596,7 +597,9 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
                 }
             };
 
-            match result {
+            // The number of `RetryableError`'s that were encountered
+            let mut retryable_errors = attempt as i64 - 1;
+            let result = match result {
                 Ok(txn) => {
                     STATS::bookmarks_update_log_insert_success.add_value(1);
                     STATS::bookmarks_update_log_insert_success_attempt_count
@@ -621,6 +624,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
                     // was not enough, or the error was misclassified
                     STATS::bookmarks_insert_retryable_error.add_value(1);
                     STATS::bookmarks_insert_retryable_error_attempt_count.add_value(attempt as i64);
+                    retryable_errors += 1;
                     Err(err)
                 }
                 Err(BookmarkTransactionError::Other(err)) => {
@@ -632,7 +636,9 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
                     STATS::bookmarks_insert_other_error_attempt_count.add_value(attempt as i64);
                     Err(err)
                 }
-            }
+            };
+            STATS::bookmarks_update_log_insert_retry.add_value(retryable_errors);
+            result
         }
         .boxed()
     }
