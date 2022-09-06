@@ -199,6 +199,7 @@ impl Convert for RawBlobstoreConfig {
                     .num_concurrent_operations
                     .map(|x| x.try_into())
                     .transpose()?,
+                secret_name: raw.secret_name,
             },
             RawBlobstoreConfig::UnknownField(f) => {
                 return Err(anyhow!("unsupported blobstore configuration ({})", f));

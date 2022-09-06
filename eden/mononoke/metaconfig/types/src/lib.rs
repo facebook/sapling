@@ -881,6 +881,8 @@ pub enum BlobConfig {
         endpoint: String,
         /// Limit the number of concurrent operations to S3 blobstore.
         num_concurrent_operations: Option<usize>,
+        /// Name of the secret key within the keychain group
+        secret_name: Option<String>,
     },
 }
 

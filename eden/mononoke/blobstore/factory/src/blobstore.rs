@@ -499,6 +499,7 @@ fn make_blobstore_put_ops<'a>(
                 region_name,
                 endpoint,
                 num_concurrent_operations,
+                secret_name,
             } => {
                 #[cfg(fbcode_build)]
                 {
@@ -506,6 +507,7 @@ fn make_blobstore_put_ops<'a>(
                         fb,
                         bucket,
                         keychain_group,
+                        secret_name,
                         region_name,
                         endpoint,
                         blobstore_options.put_behaviour,
