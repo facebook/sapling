@@ -90,10 +90,8 @@ use itertools::Itertools;
 use metrics::Counter;
 use metrics::EntranceGuard;
 use minibytes::Bytes;
-use percent_encoding::utf8_percent_encode;
-use percent_encoding::AsciiSet;
-use percent_encoding::NON_ALPHANUMERIC;
 use progress_model::AggregatingProgressBar;
+use repo_name::encode_repo_name;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use types::HgId;
@@ -111,10 +109,6 @@ use crate::retryable::RetryableStreamRequest;
 use crate::retryable::RetryableTrees;
 use crate::types::wire::pull::PullFastForwardRequest;
 use crate::types::wire::pull::PullLazyRequest;
-
-/// All non-alphanumeric characters (except hypens, underscores, and periods)
-/// found in the repo's name will be percent-encoded before being used in URLs.
-const RESERVED_CHARS: &AsciiSet = &NON_ALPHANUMERIC.remove(b'_').remove(b'-').remove(b'.');
 
 const MAX_CONCURRENT_LOOKUPS_PER_REQUEST: usize = 10000;
 const MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST: usize = 10000;
@@ -200,10 +194,7 @@ impl Client {
         let url = &self.config().server_url;
         // Repo name must be sanitized since it can be set by the user.
         let url = url
-            .join(&format!(
-                "{}/",
-                utf8_percent_encode(self.repo_name(), RESERVED_CHARS)
-            ))?
+            .join(&format!("{}/", encode_repo_name(self.repo_name())))?
             .join(path)?;
         Ok(url)
     }

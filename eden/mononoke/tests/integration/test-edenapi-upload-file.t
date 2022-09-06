@@ -7,6 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 Set up local hgrc and Mononoke config.
+  $ REPONAME="test/repo"
   $ setup_common_config
   $ setup_configerator_configs
   $ cd $TESTTMP
@@ -81,15 +82,15 @@ Check responses.
 
 
 Check file in blobstores
-  $ mononoke_newadmin filestore -R repo verify --content-sha1 03cfd743661f07975fa2f1220c5194cbaff48451
+  $ mononoke_newadmin filestore -R "$REPONAME" verify --content-sha1 03cfd743661f07975fa2f1220c5194cbaff48451
   content_id: true
   sha1: true
   sha256: true
   git_sha1: true
-  $ mononoke_newadmin filestore -R repo verify --content-sha1 7b18d017f89f61cf17d47f92749ea6930a3f1deb
+  $ mononoke_newadmin filestore -R "$REPONAME" verify --content-sha1 7b18d017f89f61cf17d47f92749ea6930a3f1deb
   Error: Content not found
   [1]
-  $ mononoke_newadmin filestore -R repo verify --bubble-id 1 --content-sha1 7b18d017f89f61cf17d47f92749ea6930a3f1deb
+  $ mononoke_newadmin filestore -R "$REPONAME" verify --bubble-id 1 --content-sha1 7b18d017f89f61cf17d47f92749ea6930a3f1deb
   content_id: true
   sha1: true
   sha256: true

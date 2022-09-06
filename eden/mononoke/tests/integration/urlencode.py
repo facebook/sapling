@@ -10,7 +10,7 @@ from urllib.parse import quote, unquote
 if sys.argv[1] == "decode":
     print(unquote(sys.argv[2]))
 elif sys.argv[1] == "encode":
-    print(quote(sys.argv[2]))
+    print(quote(sys.argv[2], safe=""))
 else:
     print("argv[1] must be either 'decode' or 'encode'.", file=sys.stderr)
     exit(1)

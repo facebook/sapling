@@ -109,6 +109,7 @@ members = [
   "lib/refencode",
   "lib/renderdag",
   "lib/repo",
+  "lib/repo_name",
   "lib/repolock",
   "lib/revisionstore",
   "lib/revisionstore/types",

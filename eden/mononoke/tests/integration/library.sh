@@ -27,17 +27,21 @@ CLIENT2_ID_DATA="${FB_CLIENT2_ID_DATA:-CN=client2,O=Mononoke,C=US,ST=CA}"
 JSON_CLIENT_ID="${FB_JSON_CLIENT_ID:-[\"X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA\"]}"
 
 if [[ -n "$DB_SHARD_NAME" ]]; then
-  MONONOKE_DEFAULT_START_TIMEOUT=60
+  MONONOKE_DEFAULT_START_TIMEOUT=600
   MONONOKE_LFS_DEFAULT_START_TIMEOUT=60
   MONONOKE_SCS_DEFAULT_START_TIMEOUT=120
 else
-  MONONOKE_DEFAULT_START_TIMEOUT=20
-  MONONOKE_LFS_DEFAULT_START_TIMEOUT=30
+  MONONOKE_DEFAULT_START_TIMEOUT=60
+  MONONOKE_LFS_DEFAULT_START_TIMEOUT=60
   # First scsc call takes a while as scs server is doing derivation
   MONONOKE_SCS_DEFAULT_START_TIMEOUT=120
   MONONOKE_DDS_DEFAULT_START_TIMEOUT=60
 fi
 VI_SERVICE_DEFAULT_START_TIMEOUT=60
+
+function urlencode {
+  "$URLENCODE" "$@"
+}
 
 REPOID=0
 REPONAME=${REPONAME:-repo}
@@ -100,10 +104,6 @@ function killandwait {
 
 function get_free_socket {
   "$GET_FREE_SOCKET"
-}
-
-function urlencode {
-  "$URLENCODE" "$@"
 }
 
 function mononoke_host {
@@ -861,17 +861,19 @@ EOF
 function setup_mononoke_repo_config {
   cd "$TESTTMP/mononoke-config" || exit
   local reponame="$1"
+  local reponame_urlencoded
+  reponame_urlencoded="$(urlencode encode "$reponame")"
   local storageconfig="$2"
-  mkdir -p "repos/$reponame"
-  mkdir -p "repo_definitions/$reponame"
+  mkdir -p "repos/$reponame_urlencoded"
+  mkdir -p "repo_definitions/$reponame_urlencoded"
   mkdir -p "$TESTTMP/monsql"
-  mkdir -p "$TESTTMP/$reponame"
+  mkdir -p "$TESTTMP/$reponame_urlencoded"
   mkdir -p "$TESTTMP/traffic-replay-blobstore"
-  cat > "repos/$reponame/server.toml" <<CONFIG
+  cat > "repos/$reponame_urlencoded/server.toml" <<CONFIG
 hash_validation_percentage=100
 CONFIG
 
-  cat > "repo_definitions/$reponame/server.toml" <<CONFIG
+  cat > "repo_definitions/$reponame_urlencoded/server.toml" <<CONFIG
 repo_id=$REPOID
 repo_name="$reponame"
 repo_config="$reponame"
@@ -881,13 +883,13 @@ CONFIG
 
 
 if [[ -n "${READ_ONLY_REPO:-}" ]]; then
-  cat >> "repo_definitions/$reponame/server.toml" <<CONFIG
+  cat >> "repo_definitions/$reponame_urlencoded/server.toml" <<CONFIG
 readonly=true
 CONFIG
 fi
 
 if [[ -n "${SCUBA_LOGGING_PATH:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 scuba_local_path="$SCUBA_LOGGING_PATH"
 CONFIG
 fi
@@ -899,35 +901,35 @@ CONFIG
 fi
 
 if [[ -n "${ENFORCE_LFS_ACL_CHECK:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 enforce_lfs_acl_check=true
 CONFIG
 fi
 
 if [[ -n "${REPO_CLIENT_USE_WARM_BOOKMARKS_CACHE:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 repo_client_use_warm_bookmarks_cache=true
 CONFIG
 fi
 
 if [[ -n "${SKIPLIST_INDEX_BLOBSTORE_KEY:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 skiplist_index_blobstore_key="$SKIPLIST_INDEX_BLOBSTORE_KEY"
 CONFIG
 fi
 
 # Normally point to common storageconfig, but if none passed, create per-repo
 if [[ -z "$storageconfig" ]]; then
-  storageconfig="blobstore_$reponame"
+  storageconfig="blobstore_$reponame_urlencoded"
   setup_mononoke_storage_config "$REPOTYPE" "$storageconfig"
 fi
-cat >> "repos/$reponame/server.toml" <<CONFIG
+cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 storage_config = "$storageconfig"
 
 CONFIG
 
 if [[ -n "${FILESTORE:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [filestore]
 chunk_size = ${FILESTORE_CHUNK_SIZE:-10}
 concurrency = 24
@@ -935,19 +937,19 @@ CONFIG
 fi
 
 if [[ -n "${REDACTION_DISABLED:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 redaction=false
 CONFIG
 fi
 
 if [[ -n "${LIST_KEYS_PATTERNS_MAX:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 list_keys_patterns_max=$LIST_KEYS_PATTERNS_MAX
 CONFIG
 fi
 
 if [[ -n "${ONLY_FAST_FORWARD_BOOKMARK:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [[bookmarks]]
 name="$ONLY_FAST_FORWARD_BOOKMARK"
 only_fast_forward=true
@@ -955,102 +957,102 @@ CONFIG
 fi
 
 if [[ -n "${ONLY_FAST_FORWARD_BOOKMARK_REGEX:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [[bookmarks]]
 regex="$ONLY_FAST_FORWARD_BOOKMARK_REGEX"
 only_fast_forward=true
 CONFIG
 fi
 
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [pushrebase]
 forbid_p2_root_rebases=false
 CONFIG
 
 if [[ -n "${COMMIT_SCRIBE_CATEGORY:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 commit_scribe_category = "$COMMIT_SCRIBE_CATEGORY"
 CONFIG
 fi
 
 if [[ -n "${ALLOW_CASEFOLDING:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 casefolding_check=false
 CONFIG
 fi
 
 if [[ -n "${BLOCK_MERGES:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 block_merges=true
 CONFIG
 fi
 
 if [[ -n "${PUSHREBASE_REWRITE_DATES:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 rewritedates=true
 CONFIG
 else
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 rewritedates=false
 CONFIG
 fi
 
 if [[ -n "${EMIT_OBSMARKERS:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 emit_obsmarkers=true
 CONFIG
 fi
 
 if [[ -n "${GLOBALREVS_PUBLISHING_BOOKMARK:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 globalrevs_publishing_bookmark = "${GLOBALREVS_PUBLISHING_BOOKMARK}"
 CONFIG
 fi
 
 if [[ -n "${POPULATE_GIT_MAPPING:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 populate_git_mapping=true
 CONFIG
 fi
 
 if [[ -n "${ALLOW_CHANGE_XREPO_MAPPING_EXTRA:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 allow_change_xrepo_mapping_extra=true
 CONFIG
 fi
 
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 
 [hook_manager_params]
 disable_acl_checker=true
 CONFIG
 
 if [[ -n "${DISALLOW_NON_PUSHREBASE:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [push]
 pure_push_allowed = false
 CONFIG
 else
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [push]
 pure_push_allowed = true
 CONFIG
 fi
 
 if [[ -n "${COMMIT_SCRIBE_CATEGORY:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 commit_scribe_category = "$COMMIT_SCRIBE_CATEGORY"
 CONFIG
 fi
 
 if [[ -n "${CACHE_WARMUP_BOOKMARK:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [cache_warmup]
 bookmark="$CACHE_WARMUP_BOOKMARK"
 CONFIG
 
   if [[ -n "${CACHE_WARMUP_MICROWAVE:-}" ]]; then
-    cat >> "repos/$reponame/server.toml" <<CONFIG
+    cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 microwave_preload = true
 CONFIG
   fi
@@ -1058,7 +1060,7 @@ fi
 
 
 if [[ -n "${LFS_THRESHOLD:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [lfs]
 threshold=$LFS_THRESHOLD
 rollout_percentage=${LFS_ROLLOUT_PERCENTAGE:-100}
@@ -1068,37 +1070,37 @@ fi
 
 write_infinitepush_config "$reponame"
 
-cat >> "repos/$reponame/server.toml" <<CONFIG
+cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
   [derived_data_config]
   enabled_config_name = "default"
 CONFIG
 
 if [[ -n "${ENABLED_DERIVED_DATA:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [derived_data_config.available_configs.default]
 types = $ENABLED_DERIVED_DATA
 CONFIG
 else
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [derived_data_config.available_configs.default]
 types=["blame", "changeset_info", "deleted_manifest", "fastlog", "filenodes", "fsnodes", "unodes", "hgchangesets", "skeleton_manifests", "bssm"]
 CONFIG
 fi
 
 if [[ -n "${BLAME_VERSION}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 blame_version = $BLAME_VERSION
 CONFIG
 fi
 
 if [[ -n "${HG_SET_COMMITTER_EXTRA}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 hg_set_committer_extra = true
 CONFIG
 fi
 
 if [[ -n "${SEGMENTED_CHANGELOG_ENABLE:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [segmented_changelog_config]
 enabled=true
 heads_to_include = [
@@ -1109,13 +1111,13 @@ CONFIG
 fi
 
 if [[ -n "${BACKUP_FROM:-}" ]]; then
-  cat >> "repo_definitions/$reponame/server.toml" <<CONFIG
+  cat >> "repo_definitions/$reponame_urlencoded/server.toml" <<CONFIG
 backup_source_repo_name="$BACKUP_FROM"
 CONFIG
 fi
 
 if [[ -n "${ENABLE_API_WRITES:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [source_control_service]
 permit_writes = true
 [[bookmarks]]
@@ -1125,7 +1127,7 @@ CONFIG
 fi
 
 if [[ -n "${SPARSE_PROFILES_LOCATION}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [sparse_profiles_config]
 sparse_profiles_location="$SPARSE_PROFILES_LOCATION"
 CONFIG
@@ -1134,6 +1136,8 @@ fi
 
 function write_infinitepush_config {
   local reponame="$1"
+  local reponame_urlencoded
+  reponame_urlencoded=$(urlencode encode "$reponame")
   if [[ -n "${INFINITEPUSH_ALLOW_WRITES:-}" ]] || \
      [[ -n "${INFINITEPUSH_NAMESPACE_REGEX:-}" ]] || \
      [[ -n "${INFINITEPUSH_HYDRATE_GETBUNDLE_RESPONSE:-}" ]];
@@ -1143,7 +1147,7 @@ function write_infinitepush_config {
       namespace="namespace_pattern=\"$INFINITEPUSH_NAMESPACE_REGEX\""
     fi
 
-    cat >> "repos/$reponame/server.toml" <<CONFIG
+    cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [infinitepush]
 allow_writes = ${INFINITEPUSH_ALLOW_WRITES:-true}
 hydrate_getbundle_response = ${INFINITEPUSH_HYDRATE_GETBUNDLE_RESPONSE:-false}
@@ -1152,7 +1156,7 @@ CONFIG
   fi
 
 if [[ -n "${DRAFT_COMMIT_SCRIBE_CATEGORY:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 commit_scribe_category = "$DRAFT_COMMIT_SCRIBE_CATEGORY"
 CONFIG
 fi
@@ -1167,6 +1171,7 @@ function register_hook {
     EXTRA_CONFIG_DESCRIPTOR="$1"
   fi
 
+  reponame_urlencoded="$(urlencode encode "$REPONAME")"
   (
     cat <<CONFIG
 [[bookmarks.hooks]]
@@ -1175,7 +1180,7 @@ hook_name="$hook_name"
 name="$hook_name"
 CONFIG
     [ -n "$EXTRA_CONFIG_DESCRIPTOR" ] && cat "$EXTRA_CONFIG_DESCRIPTOR"
-  ) >> "repos/$REPONAME/server.toml"
+  ) >> "repos/$reponame_urlencoded/server.toml"
 }
 
 function register_hook_limit_filesize_global_limit {
@@ -1413,7 +1418,8 @@ function lfs_server {
 
 # Run an hg binary configured with the settings required to talk to Mononoke
 function hgmn {
-  hg --config paths.default="mononoke://$(mononoke_address)/$REPONAME" "$@"
+  reponame_urlencoded="$(urlencode encode "$REPONAME")"
+  hg --config paths.default="mononoke://$(mononoke_address)/$reponame_urlencoded" "$@"
 }
 
 # Run an hg binary configured with the settings require to talk to Mononoke
@@ -1545,7 +1551,7 @@ server=False
 treeonly=True
 [remotefilelog]
 server=False
-reponame=repo
+reponame=$REPONAME
 [mutation]
 record=False
 EOF
@@ -1556,8 +1562,9 @@ function hook_test_setup() {
   setup_mononoke_config
   cd "$TESTTMP/mononoke-config" || exit 1
 
+  reponame_urlencoded="$(urlencode encode "$REPONAME")"
   HOOKBOOKMARK="${HOOKBOOKMARK:-master_bookmark}"
-  cat >> "repos/$REPONAME/server.toml" <<CONFIG
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [[bookmarks]]
 name="$HOOKBOOKMARK"
 CONFIG
@@ -1594,7 +1601,7 @@ EOF
   hg bookmark "$HOOKBOOKMARK" -r tip
 
   cd ..
-  blobimport repo-hg/.hg repo
+  blobimport repo-hg/.hg "$REPONAME"
 
   start_and_wait_for_mononoke_server
 
@@ -1828,7 +1835,7 @@ EOF
 function default_setup_blobimport() {
   default_setup_pre_blobimport "$@"
   echo "blobimporting"
-  blobimport repo-hg/.hg repo
+  blobimport repo-hg/.hg "$REPONAME"
 }
 
 function default_setup() {

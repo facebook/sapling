@@ -17,8 +17,8 @@ itertools = "0.10.3"
 metaconfig_types = { version = "0.1.0", path = "../types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 nonzero_ext = "0.2"
-percent-encoding = "2.1"
 regex = "1.5.4"
+repo_name = { version = "0.1.0", path = "../../../scm/lib/repo_name" }
 repos = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/repos/repos" }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_ignored = "0.1"
