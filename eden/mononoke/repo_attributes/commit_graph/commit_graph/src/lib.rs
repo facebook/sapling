@@ -27,7 +27,6 @@ use crate::edges::ChangesetEdges;
 use crate::edges::ChangesetFrontier;
 use crate::edges::ChangesetNode;
 use crate::edges::ChangesetNodeParents;
-use crate::edges::MergeAncestorOrSkipTreeParent;
 use crate::storage::CommitGraphStorage;
 
 pub mod edges;
@@ -67,10 +66,18 @@ impl CommitGraph {
         cs_id: ChangesetId,
         parents: ChangesetParents,
     ) -> Result<bool> {
-        let parent_edges = self.storage.fetch_many_edges(ctx, &parents, None).await?;
+        let parent_edges = self
+            .storage
+            .fetch_many_edges_required(ctx, &parents, None)
+            .await?;
+
         let mut max_parent_gen = 0;
         let mut edge_parents = ChangesetNodeParents::new();
-        let mut merge_ancestor_or_skip_tree_parent = Default::default();
+        let mut merge_ancestor = None;
+
+        let mut skip_tree_parent = None;
+        let mut first_parent = true;
+
         for parent in &parents {
             let parent_edge = parent_edges
                 .get(parent)
@@ -78,21 +85,43 @@ impl CommitGraph {
             max_parent_gen = max_parent_gen.max(parent_edge.node.generation.value());
             edge_parents.push(parent_edge.node);
             if parents.len() == 1 {
-                merge_ancestor_or_skip_tree_parent = MergeAncestorOrSkipTreeParent::MergeAncestor(
-                    parent_edge
-                        .merge_ancestor_or_skip_tree_parent
-                        .merge_ancestor()
-                        .unwrap_or(parent_edge.node),
-                );
+                merge_ancestor = Some(parent_edge.merge_ancestor.unwrap_or(parent_edge.node));
+            }
+
+            // skip_tree_parent is the skip tree lowest common ancestor of all parents
+            if first_parent {
+                first_parent = false;
+                skip_tree_parent = Some(parent_edge.node);
+            } else if let Some(previous_parent) = skip_tree_parent {
+                skip_tree_parent = self
+                    .skip_tree_lowest_common_ancestor(
+                        ctx,
+                        previous_parent.cs_id,
+                        parent_edge.node.cs_id,
+                    )
+                    .await?;
             }
         }
+
         let generation = Generation::new(max_parent_gen + 1);
-        // TODO(mbthomas): fill in the other ancestor edges.
+        let skip_tree_depth = match skip_tree_parent {
+            Some(node) => node.skip_tree_depth + 1,
+            None => 0,
+        };
+        let node = ChangesetNode {
+            cs_id,
+            generation,
+            skip_tree_depth,
+        };
+
         let edges = ChangesetEdges {
-            node: ChangesetNode { cs_id, generation },
+            node,
             parents: edge_parents,
-            merge_ancestor_or_skip_tree_parent,
-            skip_tree_skew_ancestor: None,
+            merge_ancestor,
+            skip_tree_parent,
+            skip_tree_skew_ancestor: self
+                .calc_skip_tree_skew_ancestor(ctx, skip_tree_parent)
+                .await?,
             p1_linear_skew_ancestor: None,
         };
 
@@ -141,6 +170,159 @@ impl CommitGraph {
         Ok(edges.map(|edges| edges.node.generation))
     }
 
+    /// Calculates the skew binary ancestor of a changeset
+    /// in the skip tree, given its direct skip tree parent.
+    pub async fn calc_skip_tree_skew_ancestor(
+        &self,
+        ctx: &CoreContext,
+        skip_tree_parent: Option<ChangesetNode>,
+    ) -> Result<Option<ChangesetNode>> {
+        // The skew binary ancestor is either the parent of the
+        // changeset or the skew binary ancestor of the skew binary
+        // ancestor of the parent if it exists, and if the difference
+        // in depth between the parent and the first ancestor is the
+        // same as the difference between the two ancestors.
+
+        let skip_tree_parent = match skip_tree_parent {
+            Some(node) => node,
+            None => return Ok(None),
+        };
+
+        let skip_tree_parent_edges = self
+            .storage
+            .fetch_edges_required(ctx, skip_tree_parent.cs_id)
+            .await?;
+
+        let skip_tree_parent_skew_binary_ancestor =
+            match skip_tree_parent_edges.skip_tree_skew_ancestor {
+                Some(node) => node,
+                None => return Ok(Some(skip_tree_parent)),
+            };
+
+        let skip_tree_parent_skew_binary_ancestor_edges = self
+            .storage
+            .fetch_edges_required(ctx, skip_tree_parent_skew_binary_ancestor.cs_id)
+            .await?;
+
+        let skip_tree_parent_second_skew_binary_ancestor =
+            match skip_tree_parent_skew_binary_ancestor_edges.skip_tree_skew_ancestor {
+                Some(node) => node,
+                None => return Ok(Some(skip_tree_parent)),
+            };
+
+        if skip_tree_parent.skip_tree_depth - skip_tree_parent_skew_binary_ancestor.skip_tree_depth
+            == skip_tree_parent_skew_binary_ancestor.skip_tree_depth
+                - skip_tree_parent_second_skew_binary_ancestor.skip_tree_depth
+        {
+            Ok(Some(skip_tree_parent_second_skew_binary_ancestor))
+        } else {
+            Ok(Some(skip_tree_parent))
+        }
+    }
+
+    /// Returns the skip tree ancestor of a changeset that has
+    /// depth target_depth, or None if the changeset's
+    /// skip_tree_depth is smaller than target_depth.
+    pub async fn skip_tree_level_ancestor(
+        &self,
+        ctx: &CoreContext,
+        mut cs_id: ChangesetId,
+        target_depth: u64,
+    ) -> Result<Option<ChangesetNode>> {
+        loop {
+            let node_edges = self.storage.fetch_edges_required(ctx, cs_id).await?;
+
+            if node_edges.node.skip_tree_depth == target_depth {
+                return Ok(Some(node_edges.node));
+            }
+
+            if node_edges.node.skip_tree_depth < target_depth {
+                return Ok(None);
+            }
+
+            match (
+                node_edges.skip_tree_skew_ancestor,
+                node_edges.skip_tree_parent,
+            ) {
+                (Some(skew_ancestor), _) if skew_ancestor.skip_tree_depth >= target_depth => {
+                    cs_id = skew_ancestor.cs_id
+                }
+                (_, Some(skip_parent)) => cs_id = skip_parent.cs_id,
+                _ => {
+                    return Err(anyhow!(
+                        "Changeset has positive skip_tree_depth yet has no skip_tree_parent: {}",
+                        cs_id
+                    ));
+                }
+            }
+        }
+    }
+
+    /// Returns the lowest common ancestor of two changesets in the skip tree.
+    pub async fn skip_tree_lowest_common_ancestor(
+        &self,
+        ctx: &CoreContext,
+        cs_id1: ChangesetId,
+        cs_id2: ChangesetId,
+    ) -> Result<Option<ChangesetNode>> {
+        let (edges1, edges2) = futures::try_join!(
+            self.storage.fetch_edges_required(ctx, cs_id1),
+            self.storage.fetch_edges_required(ctx, cs_id2),
+        )?;
+
+        let (mut u, mut v) = (edges1.node, edges2.node);
+
+        if u.skip_tree_depth < v.skip_tree_depth {
+            std::mem::swap(&mut u, &mut v);
+        }
+
+        // Get ancestor of u that has the same skip_tree_depth
+        // as v and change u to it
+        u = self
+            .skip_tree_level_ancestor(ctx, u.cs_id, v.skip_tree_depth)
+            .await?
+            .ok_or_else(|| {
+                anyhow!(
+                    "Failed to get ancestor of changeset {} that has depth {}",
+                    u.cs_id,
+                    u.skip_tree_depth
+                )
+            })?;
+
+        // Now that u and v have the same skip_tree_depth,
+        // we check if u and v have different skew binary
+        // ancestors, if that is the case we move to those ancestors,
+        // otherwise we move to their skip tree parents. This way
+        // we guarantee ending up in the lowest common ancestor.
+        while u.cs_id != v.cs_id {
+            let (u_edges, v_edges) = futures::try_join!(
+                self.storage.fetch_edges_required(ctx, u.cs_id),
+                self.storage.fetch_edges_required(ctx, v.cs_id),
+            )?;
+
+            match (
+                u_edges.skip_tree_skew_ancestor,
+                v_edges.skip_tree_skew_ancestor,
+                u_edges.skip_tree_parent,
+                v_edges.skip_tree_parent,
+            ) {
+                (Some(u_skew_ancestor), Some(v_skew_ancestor), _, _)
+                    if u_skew_ancestor.cs_id != v_skew_ancestor.cs_id =>
+                {
+                    u = u_skew_ancestor;
+                    v = v_skew_ancestor;
+                }
+                (_, _, Some(u_skip_parent), Some(v_skip_parent)) => {
+                    u = u_skip_parent;
+                    v = v_skip_parent;
+                }
+                _ => return Ok(None),
+            }
+        }
+
+        Ok(Some(u))
+    }
+
     /// Obtain a frontier of changesets from a single changeset id.
     ///
     /// If the changeset does not exist, the frontier is empty.
@@ -187,16 +369,14 @@ impl CommitGraph {
                 let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
                 let frontier_edges = self
                     .storage
-                    .fetch_many_edges(ctx, &cs_ids, Some(target_generation))
+                    .fetch_many_edges_required(ctx, &cs_ids, Some(target_generation))
                     .await?;
                 for cs_id in cs_ids {
                     let edges = frontier_edges
                         .get(&cs_id)
                         .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))?;
                     match edges
-                        .merge_ancestor_or_skip_tree_parent
-                        // TODO(mbthomas): switch to .skip_tree_parent() once populated
-                        .changeset_node()
+                        .merge_ancestor
                         .into_iter()
                         .chain(edges.skip_tree_skew_ancestor)
                         .filter(|ancestor| ancestor.generation >= target_generation)

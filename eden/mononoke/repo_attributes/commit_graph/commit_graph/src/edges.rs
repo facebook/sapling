@@ -23,6 +23,9 @@ pub struct ChangesetNode {
     /// this commit and the farthest root commit.  Root commits have a
     /// generation of 1.
     pub generation: Generation,
+
+    /// The changeset's depth in the skip tree.
+    pub skip_tree_depth: u64,
 }
 
 /// The parents of a changeset node.
@@ -31,42 +34,8 @@ pub struct ChangesetNode {
 /// `ChangesetParents`, this includes the generation number of the parents.
 pub type ChangesetNodeParents = SmallVec<[ChangesetNode; 1]>;
 
-/// The merge ancestor or skip tree parent of a commit.  These are combined
-/// into a single field to save space: single-parent commits only ever have
-/// merge ancestors, and merge commits only ever have skip tree parents.
-#[derive(Copy, Clone, Eq, PartialEq, Default)]
-pub enum MergeAncestorOrSkipTreeParent {
-    #[default]
-    None,
-    MergeAncestor(ChangesetNode),
-    SkipTreeParent(ChangesetNode),
-}
-
-impl MergeAncestorOrSkipTreeParent {
-    pub fn changeset_node(self) -> Option<ChangesetNode> {
-        match self {
-            Self::None => None,
-            Self::MergeAncestor(node) | Self::SkipTreeParent(node) => Some(node),
-        }
-    }
-
-    pub fn merge_ancestor(self) -> Option<ChangesetNode> {
-        match self {
-            Self::None | Self::SkipTreeParent(_) => None,
-            Self::MergeAncestor(node) => Some(node),
-        }
-    }
-
-    pub fn skip_tree_parent(self) -> Option<ChangesetNode> {
-        match self {
-            Self::None | Self::MergeAncestor(_) => None,
-            Self::SkipTreeParent(node) => Some(node),
-        }
-    }
-}
-
 /// Outgoing edges from a changeset node.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ChangesetEdges {
     /// The starting changeset for this set of edges.
     pub node: ChangesetNode,
@@ -74,14 +43,15 @@ pub struct ChangesetEdges {
     /// The changeset's immediate parents.
     pub parents: ChangesetNodeParents,
 
-    /// For root commits, this is `None`.
+    /// For root and merge commits, this is `None`.
     ///
     /// For single-parent commits, this is the merge ancestor: the most recent
     /// ancestor that is a merge or root.
-    ///
-    /// For merge commits, this is the skip tree parent: the single common
-    /// ancestor of the commit's parents, if such an ancestor exists.
-    pub merge_ancestor_or_skip_tree_parent: MergeAncestorOrSkipTreeParent,
+    pub merge_ancestor: Option<ChangesetNode>,
+
+    /// The skip tree parent: this is the most recent single common ancestor
+    /// of this commit's parents
+    pub skip_tree_parent: Option<ChangesetNode>,
 
     /// The skip tree skew ancestor: this is some ancestor of the common
     /// ancestors of this commit's parents, which provides a skew-binary

@@ -12,6 +12,7 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -43,6 +44,18 @@ pub trait CommitGraphStorage: Send + Sync {
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEdges>>;
 
+    /// Returns the changeset graph edges for this changeset, or an error of
+    /// this changeset is missing in the commit graph.
+    async fn fetch_edges_required(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<ChangesetEdges> {
+        self.fetch_edges(ctx, cs_id)
+            .await?
+            .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))
+    }
+
     /// Returns the changeset graph edges for multiple changesets.
     ///
     /// Prefetch hint indicates that this request is part of a larger request
@@ -57,6 +70,33 @@ pub trait CommitGraphStorage: Send + Sync {
         cs_ids: &[ChangesetId],
         _prefetch_hint: Option<Generation>,
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>>;
+
+    /// Same as fetch_many_edges but returns an error if any of
+    /// the changesets are missing in the commit graph.
+    async fn fetch_many_edges_required(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: &[ChangesetId],
+        prefetch_hint: Option<Generation>,
+    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+        let edges = self.fetch_many_edges(ctx, cs_ids, prefetch_hint).await?;
+        let missing_changesets: Vec<_> = cs_ids
+            .iter()
+            .filter(|cs_id| !edges.contains_key(cs_id))
+            .collect();
+
+        if !missing_changesets.is_empty() {
+            Err(anyhow!(
+                "Missing changesets in commit graph: {}",
+                missing_changesets
+                    .into_iter()
+                    .map(|cs_id| format!("{}, ", cs_id))
+                    .collect::<String>()
+            ))
+        } else {
+            Ok(edges)
+        }
+    }
 
     /// Returns the changeset graph edges for multiple changesets plus
     /// additional prefetched edges for subsequent traversals.

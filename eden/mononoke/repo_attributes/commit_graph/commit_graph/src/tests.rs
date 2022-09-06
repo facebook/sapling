@@ -32,10 +32,14 @@ fn name_cs_id(name: &str) -> ChangesetId {
 
 /// Generate a fake changeset node for graph testing purposes by using the raw
 /// bytes of the changeset name, padded with zeroes.
-fn name_cs_node(name: &str, gen: u64) -> ChangesetNode {
+fn name_cs_node(name: &str, gen: u64, skip_tree_depth: u64) -> ChangesetNode {
     let cs_id = name_cs_id(name);
     let generation = Generation::new(gen);
-    ChangesetNode { cs_id, generation }
+    ChangesetNode {
+        cs_id,
+        generation,
+        skip_tree_depth,
+    }
 }
 
 /// Build a commit graph from an ASCII-art dag.
@@ -169,8 +173,7 @@ async fn test_storage_store_and_fetch(fb: FacebookInit) -> Result<()> {
             .fetch_edges(&ctx, name_cs_id("A"))
             .await?
             .unwrap()
-            .merge_ancestor_or_skip_tree_parent
-            .changeset_node(),
+            .merge_ancestor,
         None
     );
     assert_eq!(
@@ -179,9 +182,8 @@ async fn test_storage_store_and_fetch(fb: FacebookInit) -> Result<()> {
             .fetch_edges(&ctx, name_cs_id("C"))
             .await?
             .unwrap()
-            .merge_ancestor_or_skip_tree_parent
-            .merge_ancestor(),
-        Some(name_cs_node("A", 1))
+            .merge_ancestor,
+        Some(name_cs_node("A", 1, 0))
     );
     assert_eq!(
         graph
@@ -189,9 +191,203 @@ async fn test_storage_store_and_fetch(fb: FacebookInit) -> Result<()> {
             .fetch_edges(&ctx, name_cs_id("I"))
             .await?
             .unwrap()
-            .merge_ancestor_or_skip_tree_parent
-            .merge_ancestor(),
-        Some(name_cs_node("G", 5))
+            .merge_ancestor,
+        Some(name_cs_node("G", 5, 1))
+    );
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_skip_tree(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let graph = from_dag(
+        &ctx,
+        r##"
+        A-B-C-D-G-H---J-K
+           \   /   \ /
+            E-F     I
+
+        L-M-N-O-P-Q-R-S-T-U
+        "##,
+    )
+    .await?;
+
+    assert_eq!(
+        graph
+            .storage
+            .fetch_edges(&ctx, name_cs_id("K"))
+            .await?
+            .unwrap()
+            .node,
+        name_cs_node("K", 9, 5)
+    );
+
+    assert_eq!(
+        graph
+            .storage
+            .fetch_edges(&ctx, name_cs_id("G"))
+            .await?
+            .unwrap()
+            .skip_tree_parent,
+        Some(name_cs_node("B", 2, 1))
+    );
+
+    assert_eq!(
+        graph
+            .storage
+            .fetch_edges(&ctx, name_cs_id("K"))
+            .await?
+            .unwrap()
+            .skip_tree_parent,
+        Some(name_cs_node("J", 8, 4))
+    );
+
+    assert_eq!(
+        graph
+            .storage
+            .fetch_edges(&ctx, name_cs_id("J"))
+            .await?
+            .unwrap()
+            .skip_tree_parent,
+        Some(name_cs_node("H", 6, 3))
+    );
+
+    assert_eq!(
+        graph
+            .storage
+            .fetch_edges(&ctx, name_cs_id("H"))
+            .await?
+            .unwrap()
+            .skip_tree_parent,
+        Some(name_cs_node("G", 5, 2))
+    );
+
+    assert_eq!(
+        graph
+            .storage
+            .fetch_edges(&ctx, name_cs_id("H"))
+            .await?
+            .unwrap()
+            .skip_tree_skew_ancestor,
+        Some(name_cs_node("A", 1, 0))
+    );
+
+    assert_eq!(
+        graph
+            .storage
+            .fetch_edges(&ctx, name_cs_id("K"))
+            .await?
+            .unwrap()
+            .skip_tree_skew_ancestor,
+        Some(name_cs_node("J", 8, 4))
+    );
+
+    assert_eq!(
+        graph
+            .storage
+            .fetch_edges(&ctx, name_cs_id("U"))
+            .await?
+            .unwrap()
+            .skip_tree_skew_ancestor,
+        Some(name_cs_node("T", 9, 8))
+    );
+
+    assert_eq!(
+        graph
+            .storage
+            .fetch_edges(&ctx, name_cs_id("T"))
+            .await?
+            .unwrap()
+            .skip_tree_skew_ancestor,
+        Some(name_cs_node("S", 8, 7))
+    );
+
+    assert_eq!(
+        graph
+            .storage
+            .fetch_edges(&ctx, name_cs_id("S"))
+            .await?
+            .unwrap()
+            .skip_tree_skew_ancestor,
+        Some(name_cs_node("L", 1, 0))
+    );
+
+    assert_eq!(
+        graph
+            .skip_tree_level_ancestor(&ctx, name_cs_id("S"), 4)
+            .await?,
+        Some(name_cs_node("P", 5, 4))
+    );
+
+    assert_eq!(
+        graph
+            .skip_tree_level_ancestor(&ctx, name_cs_id("U"), 7)
+            .await?,
+        Some(name_cs_node("S", 8, 7))
+    );
+
+    assert_eq!(
+        graph
+            .skip_tree_level_ancestor(&ctx, name_cs_id("T"), 7)
+            .await?,
+        Some(name_cs_node("S", 8, 7))
+    );
+
+    assert_eq!(
+        graph
+            .skip_tree_level_ancestor(&ctx, name_cs_id("O"), 2)
+            .await?,
+        Some(name_cs_node("N", 3, 2))
+    );
+
+    assert_eq!(
+        graph
+            .skip_tree_level_ancestor(&ctx, name_cs_id("N"), 3)
+            .await?,
+        None
+    );
+
+    assert_eq!(
+        graph
+            .skip_tree_level_ancestor(&ctx, name_cs_id("K"), 2)
+            .await?,
+        Some(name_cs_node("G", 5, 2))
+    );
+
+    assert_eq!(
+        graph
+            .skip_tree_lowest_common_ancestor(&ctx, name_cs_id("D"), name_cs_id("F"))
+            .await?,
+        Some(name_cs_node("B", 2, 1))
+    );
+
+    assert_eq!(
+        graph
+            .skip_tree_lowest_common_ancestor(&ctx, name_cs_id("K"), name_cs_id("I"))
+            .await?,
+        Some(name_cs_node("H", 6, 3))
+    );
+
+    assert_eq!(
+        graph
+            .skip_tree_lowest_common_ancestor(&ctx, name_cs_id("D"), name_cs_id("C"))
+            .await?,
+        Some(name_cs_node("C", 3, 2))
+    );
+
+    assert_eq!(
+        graph
+            .skip_tree_lowest_common_ancestor(&ctx, name_cs_id("N"), name_cs_id("K"))
+            .await?,
+        None
+    );
+
+    assert_eq!(
+        graph
+            .skip_tree_lowest_common_ancestor(&ctx, name_cs_id("A"), name_cs_id("I"))
+            .await?,
+        Some(name_cs_node("A", 1, 0))
     );
 
     Ok(())
