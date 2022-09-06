@@ -294,12 +294,16 @@ mod tests {
     use anyhow::Context;
     use anyhow::Result;
     use async_trait::async_trait;
-    use blobrepo::BlobRepo;
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::Bookmarks;
+    use changeset_fetcher::ChangesetFetcher;
+    use changesets::Changesets;
     use cloned::cloned;
     use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
     use filenodes::FilenodeRangeResult;
     use filenodes::Filenodes;
+    use filestore::FilestoreConfig;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
     use futures::compat::Stream01CompatExt;
@@ -307,6 +311,8 @@ mod tests {
     use maplit::hashmap;
     use mercurial_derived_data::DeriveHgChangeset;
     use mononoke_types::FileType;
+    use repo_blobstore::RepoBlobstore;
+    use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
     use slog::info;
@@ -318,13 +324,33 @@ mod tests {
 
     use super::*;
 
+    #[facet::container]
+    struct TestRepo {
+        #[facet]
+        bonsai_hg_mapping: dyn BonsaiHgMapping,
+        #[facet]
+        bookmarks: dyn Bookmarks,
+        #[facet]
+        repo_blobstore: RepoBlobstore,
+        #[facet]
+        repo_derived_data: RepoDerivedData,
+        #[facet]
+        filestore_config: FilestoreConfig,
+        #[facet]
+        changeset_fetcher: dyn ChangesetFetcher,
+        #[facet]
+        changesets: dyn Changesets,
+        #[facet]
+        filenodes: dyn Filenodes,
+    }
+
     async fn verify_filenodes(
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &TestRepo,
         cs_id: ChangesetId,
         expected_paths: Vec<RepoPath>,
     ) -> Result<()> {
-        let bonsai = cs_id.load(ctx, repo.blobstore()).await?;
+        let bonsai = cs_id.load(ctx, &repo.repo_blobstore).await?;
         let filenodes = generate_all_filenodes(
             ctx,
             &repo.repo_derived_data().manager().derivation_context(None),
@@ -347,7 +373,7 @@ mod tests {
 
     async fn test_generate_filenodes_simple(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
         let filename = "path";
         let commit = CreateCommitContext::new_root(&ctx, &repo)
             .add_file(filename, "content")
@@ -374,7 +400,7 @@ mod tests {
 
     async fn test_generate_filenodes_merge(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
         let first_p1 = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("path1", "content")
             .commit()
@@ -403,7 +429,7 @@ mod tests {
 
     async fn test_generate_type_change(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
         let parent = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("path", "content")
             .commit()
@@ -428,7 +454,7 @@ mod tests {
 
     async fn test_many_parents(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
         let p1 = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("path1", "content")
             .commit()
@@ -469,7 +495,7 @@ mod tests {
 
     async fn test_derive_empty_commits(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
         let parent_empty = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
 
         let child_empty = CreateCommitContext::new(&ctx, &repo, vec![parent_empty])
@@ -500,7 +526,7 @@ mod tests {
 
     async fn test_derive_only_empty_commits(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
 
         let parent_empty = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
         let child_empty = CreateCommitContext::new(&ctx, &repo, vec![parent_empty])
@@ -541,7 +567,7 @@ mod tests {
 
     async fn test_derive_disabled_filenodes(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
         let cs = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
         let derived = repo
             .repo_derived_data()
@@ -563,11 +589,13 @@ mod tests {
     #[fbinit::test]
     async fn verify_batch_and_sequential_derive(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo1 = Linear::getrepo(fb).await;
-        let repo2 = Linear::getrepo(fb).await;
+        let repo1: TestRepo = test_repo_factory::build_empty(fb)?;
+        Linear::initrepo(fb, &repo1).await;
+        let repo2: TestRepo = test_repo_factory::build_empty(fb)?;
+        Linear::initrepo(fb, &repo2).await;
         let master_cs_id = resolve_cs_id(&ctx, &repo1, "master").await?;
         let mut cs_ids =
-            AncestorsNodeStream::new(ctx.clone(), &repo1.get_changeset_fetcher(), master_cs_id)
+            AncestorsNodeStream::new(ctx.clone(), &repo1.changeset_fetcher, master_cs_id)
                 .compat()
                 .try_collect::<Vec<_>>()
                 .await?;
@@ -610,7 +638,7 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         let filenodes_cs_id = Arc::new(Mutex::new(None));
         let mut factory = TestRepoFactory::new(fb)?;
-        let repo: BlobRepo = factory
+        let repo: TestRepo = factory
             .with_filenodes_override({
                 cloned!(filenodes_cs_id);
                 move |inner| {
@@ -628,7 +656,7 @@ mod tests {
         *filenodes_cs_id.lock().unwrap() = Some(commit8);
         let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
         let mut cs_ids =
-            AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), master_cs_id)
+            AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher, master_cs_id)
                 .compat()
                 .try_collect::<Vec<_>>()
                 .await?;
@@ -716,19 +744,19 @@ mod tests {
 
     async fn compare_filenodes(
         ctx: &CoreContext,
-        repo: &BlobRepo,
-        backup_repo: &BlobRepo,
+        repo: &TestRepo,
+        backup_repo: &TestRepo,
         cs: ChangesetId,
     ) -> Result<()> {
         let manifest = repo
             .derive_hg_changeset(ctx, cs)
             .await?
-            .load(ctx, repo.blobstore())
+            .load(ctx, &repo.repo_blobstore)
             .await
             .with_context(|| format!("while fetching manifest from prod for cs {:?}", cs))?
             .manifestid();
         manifest
-            .list_all_entries(ctx.clone(), repo.get_blobstore())
+            .list_all_entries(ctx.clone(), repo.repo_blobstore.clone())
             .map_ok(|(path, entry)| {
                 async move {
                     let (path, node) = match (path, entry) {
@@ -742,11 +770,11 @@ mod tests {
                             (RepoPath::RootPath, HgFileNodeId::new(id.into_nodehash()))
                         }
                     };
-                    let prod = repo.filenodes()
+                    let prod = repo.filenodes
                         .get_filenode(ctx, &path, node)
                         .await
                         .with_context(|| format!("while get prod filenode for cs {:?}", cs))?;
-                    let backup = backup_repo.filenodes()
+                    let backup = backup_repo.filenodes
                         .get_filenode(ctx, &path, node)
                         .await
                         .with_context(|| format!("while get backup filenode for cs {:?}", cs))?;
