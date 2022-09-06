@@ -10,7 +10,7 @@ use anyhow::Result;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 
-const SENTINEL_CHAR: u8 = '$' as u8;
+const SENTINEL_CHAR: u8 = b'$';
 
 fn bsm_sentinel() -> MPathElement {
     MPathElement::new(vec![SENTINEL_CHAR]).unwrap()

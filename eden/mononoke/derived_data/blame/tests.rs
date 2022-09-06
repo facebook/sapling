@@ -196,7 +196,7 @@ async fn test_blame_version(fb: FacebookInit, version: BlameVersion) -> Result<(
 
     let c0 = create_commit(
         ctx.clone(),
-        repo.clone(),
+        repo,
         vec![],
         store_files(
             ctx,
@@ -214,11 +214,11 @@ async fn test_blame_version(fb: FacebookInit, version: BlameVersion) -> Result<(
     let mut c1_changes = store_files(ctx, btreemap! {"f0" => Some(F0[1])}, repo).await;
     let (f2_path, f2_change) = store_rename(ctx, (MPath::new("_f2")?, c0), "f2", F2[1], repo).await;
     c1_changes.insert(f2_path, f2_change);
-    let c1 = create_commit(ctx.clone(), repo.clone(), vec![c0], c1_changes).await;
+    let c1 = create_commit(ctx.clone(), repo, vec![c0], c1_changes).await;
 
     let c2 = create_commit(
         ctx.clone(),
-        repo.clone(),
+        repo,
         vec![c1],
         store_files(ctx, btreemap! {"f0" => Some(F0[2])}, repo).await,
     )
@@ -226,7 +226,7 @@ async fn test_blame_version(fb: FacebookInit, version: BlameVersion) -> Result<(
 
     let c3 = create_commit(
         ctx.clone(),
-        repo.clone(),
+        repo,
         vec![c0],
         store_files(
             ctx,
@@ -243,7 +243,7 @@ async fn test_blame_version(fb: FacebookInit, version: BlameVersion) -> Result<(
 
     let c4 = create_commit(
         ctx.clone(),
-        repo.clone(),
+        repo,
         vec![c2, c3],
         store_files(
             ctx,
