@@ -37,7 +37,6 @@ use crate::state_ext::StateExt;
 
 const ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
 const CLIENT_IP: &str = "tfb-orig-client-ip";
-const CLIENT_CORRELATOR: &str = "x-client-correlator";
 
 lazy_static! {
     static ref PROXYGEN_ORIGIN_IDENTITY: MononokeIdentity =
@@ -48,7 +47,6 @@ lazy_static! {
 pub struct ClientIdentity {
     address: Option<IpAddr>,
     identities: Option<MononokeIdentitySet>,
-    client_correlator: Option<String>,
 }
 
 impl ClientIdentity {
@@ -93,10 +91,6 @@ impl ClientIdentity {
 
     pub fn identities(&self) -> &Option<MononokeIdentitySet> {
         &self.identities
-    }
-
-    pub fn client_correlator(&self) -> &Option<String> {
-        &self.client_correlator
     }
 
     pub fn is_proxygen_test_identity(&self) -> bool {
@@ -151,12 +145,6 @@ fn request_identities_from_headers(headers: &HeaderMap) -> Option<MononokeIdenti
     MononokeIdentity::try_from_json_encoded(&json_identities).ok()
 }
 
-fn request_client_correlator_from_headers(headers: &HeaderMap) -> Option<String> {
-    let header = headers.get(CLIENT_CORRELATOR)?;
-    let header = header.to_str().ok()?;
-    Some(header.to_string())
-}
-
 #[async_trait::async_trait]
 impl Middleware for ClientIdentityMiddleware {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
@@ -165,7 +153,6 @@ impl Middleware for ClientIdentityMiddleware {
 
         if let Some(headers) = HeaderMap::try_borrow_from(state) {
             client_identity.address = request_ip_from_headers(headers);
-            client_identity.client_correlator = request_client_correlator_from_headers(headers);
 
             client_identity.identities = {
                 let maybe_cat_idents =

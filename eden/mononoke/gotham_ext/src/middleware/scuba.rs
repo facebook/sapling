@@ -33,6 +33,9 @@ use crate::middleware::PostResponseInfo;
 use crate::response::HeadersMeta;
 use crate::state_ext::StateExt;
 
+/// HTTP header used to correlate the request with the client-side logging
+const CLIENT_CORRELATOR: &str = "x-client-correlator";
+
 /// Common HTTP-related Scuba columns that the middlware will set automatically.
 /// Applications using the middleware are encouraged to follow a similar pattern
 /// when adding application-specific columns to the `ScubaMiddlewareState`.
@@ -217,18 +220,19 @@ fn log_stats<H: ScubaHandler>(state: &mut State, status_code: &StatusCode) -> Op
             header::USER_AGENT,
             |header| header.to_string(),
         );
+
+        add_header(
+            &mut scuba,
+            headers,
+            HttpScubaKey::ClientCorrelator,
+            CLIENT_CORRELATOR,
+            |header| header.to_string(),
+        );
     }
 
     if let Some(identity) = ClientIdentity::try_borrow_from(state) {
         if let Some(ref address) = identity.address() {
             scuba.add(HttpScubaKey::ClientIp, address.to_string());
-        }
-
-        if let Some(ref client_correlator) = identity.client_correlator() {
-            scuba.add(
-                HttpScubaKey::ClientCorrelator,
-                client_correlator.to_string(),
-            );
         }
 
         if let Some(ref identities) = identity.identities() {
