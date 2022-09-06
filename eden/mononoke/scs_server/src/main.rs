@@ -318,7 +318,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             Arc::new(scs_process),
             false, // disable shard (repo) level healing
         )?;
-        executor.execute(&logger);
+        // The Sharded Process Executor needs to branch off and execute
+        // on its own dedicated task spawned off the common tokio runtime.
+        runtime.spawn({
+            let logger = logger.clone();
+            async move { executor.block_and_execute(&logger).await }
+        });
     }
 
     serve_forever(
