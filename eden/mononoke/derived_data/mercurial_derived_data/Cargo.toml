@@ -34,11 +34,16 @@ stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
-blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
+changesets = { version = "0.1.0", path = "../../changesets" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+filestore = { version = "0.1.0", path = "../../filestore" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
+repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
+repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 revset = { version = "0.1.0", path = "../../revset" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
