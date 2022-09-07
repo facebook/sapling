@@ -13,6 +13,7 @@ use anyhow::Context;
 use async_runtime::block_on;
 use async_runtime::block_unless_interrupted;
 use clidispatch::errors;
+use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use dag::namedag::IndexedLogNameDagPath;
 use dag::ops::DagImportCloneData;
@@ -26,7 +27,6 @@ use progress_model::ProgressBar;
 
 use super::ConfigSet;
 use super::Result;
-use super::IO;
 
 define_flags! {
     pub struct StatusOpts {
@@ -37,9 +37,9 @@ define_flags! {
         dest: String,
     }
 }
-pub fn run(opts: StatusOpts, _io: &IO, config: &mut ConfigSet) -> Result<u8> {
-    let reponame = opts.reponame;
-    let destination = PathBuf::from(&opts.dest);
+pub fn run(ctx: ReqCtx<StatusOpts>, config: &mut ConfigSet) -> Result<u8> {
+    let reponame = ctx.opts.reponame;
+    let destination = PathBuf::from(&ctx.opts.dest);
 
     if destination.exists() {
         return Err(

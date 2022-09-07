@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use clidispatch::ReqCtx;
+
 use super::ConfigSet;
 use super::DebugArgsOpts;
 use super::Result;
-use super::IO;
 
-pub fn run(opts: DebugArgsOpts, io: &IO, _config: &mut ConfigSet) -> Result<u8> {
-    match io.write(format!("{:?}\n", opts.args)) {
+pub fn run(ctx: ReqCtx<DebugArgsOpts>, _config: &mut ConfigSet) -> Result<u8> {
+    match ctx.io().write(format!("{:?}\n", ctx.opts.args)) {
         Ok(_) => Ok(0),
         Err(_) => Ok(255),
     }

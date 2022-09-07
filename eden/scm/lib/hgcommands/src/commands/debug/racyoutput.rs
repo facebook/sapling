@@ -12,6 +12,7 @@ use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
+use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use progress_model::IoSample;
 use progress_model::IoTimeSeries;
@@ -44,14 +45,18 @@ define_flags! {
     }
 }
 
-pub fn run(opts: DebugRacyOutputOpts, io: &IO, _config: &mut ConfigSet) -> Result<u8> {
-    add_time_series(opts.time_series as _);
+pub fn run(ctx: ReqCtx<DebugRacyOutputOpts>, _config: &mut ConfigSet) -> Result<u8> {
+    add_time_series(ctx.opts.time_series as _);
     add_progress_bar_threads(
-        opts.progress_bars as _,
-        opts.progress_total as _,
-        opts.progress_interval_ms as _,
+        ctx.opts.progress_bars as _,
+        ctx.opts.progress_total as _,
+        ctx.opts.progress_interval_ms as _,
     );
-    write_random_outputs(io, opts.output_total as _, opts.output_interval_ms as _);
+    write_random_outputs(
+        ctx.io(),
+        ctx.opts.output_total as _,
+        ctx.opts.output_interval_ms as _,
+    );
     Ok(0)
 }
 

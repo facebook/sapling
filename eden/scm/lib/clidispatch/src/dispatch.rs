@@ -421,10 +421,6 @@ impl Dispatcher {
                     self.convert_to_repoless_config()?;
                     f(parsed, io, self.optional_repo.config_mut())
                 }
-                CommandFunc::CtxNoRepo(f) => {
-                    self.convert_to_repoless_config()?;
-                    f(parsed, io, self.optional_repo.config_mut())
-                }
             }
         }();
 

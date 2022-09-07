@@ -6,11 +6,11 @@
  */
 
 use clidispatch::errors;
+use clidispatch::ReqCtx;
 
 use super::define_flags;
 use super::ConfigSet;
 use super::Result;
-use super::IO;
 
 define_flags! {
     pub struct DebugPythonOpts {
@@ -19,7 +19,7 @@ define_flags! {
     }
 }
 
-pub fn run(_opts: DebugPythonOpts, _io: &IO, _config: &mut ConfigSet) -> Result<u8> {
+pub fn run(_ctx: ReqCtx<DebugPythonOpts>, _config: &mut ConfigSet) -> Result<u8> {
     let e = errors::Abort("wrong debugpython code path used".into());
     Err(e.into())
 }

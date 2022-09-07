@@ -21,7 +21,6 @@ use crate::ReqCtx;
 
 pub enum CommandFunc {
     NoRepo(Box<dyn Fn(ParseOutput, &IO, &mut ConfigSet) -> Result<u8>>),
-    CtxNoRepo(Box<dyn Fn(ParseOutput, &IO, &mut ConfigSet) -> Result<u8>>),
     OptionalRepo(Box<dyn Fn(ParseOutput, &IO, &mut OptionalRepo) -> Result<u8>>),
     Repo(Box<dyn Fn(ParseOutput, &IO, &mut Repo) -> Result<u8>>),
 }
@@ -117,23 +116,6 @@ pub trait Register<FN, T> {
     fn register(&mut self, f: FN, name: &str, doc: &str, synopsis: Option<&str>);
 }
 
-// NoRepo commands.
-impl<S, FN> Register<FN, (S,)> for CommandTable
-where
-    S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
-    FN: Fn(S, &IO, &mut ConfigSet) -> Result<u8> + 'static,
-{
-    fn register(&mut self, f: FN, name: &str, doc: &str, synopsis: Option<&str>) {
-        self.insert_aliases(name);
-        let func = move |opts: ParseOutput, io: &IO, config: &mut ConfigSet| {
-            f(opts.try_into()?, io, config)
-        };
-        let func = CommandFunc::NoRepo(Box::new(func));
-        let def = CommandDefinition::new(name, doc, S::flags, func, synopsis);
-        self.commands.insert(name.to_string(), def);
-    }
-}
-
 // OptionalRepo commands.
 impl<S, FN> Register<FN, ((), S)> for CommandTable
 where
@@ -166,7 +148,7 @@ where
     }
 }
 
-// CtxNoRepo commands.
+// NoRepo commands.
 impl<S, FN> Register<FN, ((), (), (), S)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
@@ -177,7 +159,7 @@ where
         let func = move |opts: ParseOutput, io: &IO, config: &mut ConfigSet| {
             f(ReqCtx::new(opts, io.clone())?, config)
         };
-        let func = CommandFunc::CtxNoRepo(Box::new(func));
+        let func = CommandFunc::NoRepo(Box::new(func));
         let def = CommandDefinition::new(name, doc, S::flags, func, synopsis);
         self.commands.insert(name.to_string(), def);
     }

@@ -5,13 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use clidispatch::ReqCtx;
+
 use super::ConfigSet;
 use super::NoOpts;
 use super::Result;
-use super::IO;
 
-pub fn run(_opts: NoOpts, io: &IO, _config: &mut ConfigSet) -> Result<u8> {
-    io.write(format!("EdenSCM {}\n", ::version::VERSION))?;
+pub fn run(ctx: ReqCtx<NoOpts>, _config: &mut ConfigSet) -> Result<u8> {
+    ctx.io()
+        .write(format!("EdenSCM {}\n", ::version::VERSION))?;
     Ok(0)
 }
 

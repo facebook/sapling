@@ -11,15 +11,10 @@ use clidispatch::OptionalRepo;
 use clidispatch::ReqCtx;
 use configparser::config::Options;
 
-use super::define_flags;
+use super::NoOpts;
 use super::Result;
 
-define_flags! {
-    pub struct DebugNetworkDoctorOps {
-    }
-}
-
-pub fn run(ctx: ReqCtx<DebugNetworkDoctorOps>, repo: &mut OptionalRepo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<NoOpts>, repo: &mut OptionalRepo) -> Result<u8> {
     // Set a default repo so we can build valid edenapi URLs outside a repo.
     if let OptionalRepo::None(ref mut config) = repo {
         config.set(

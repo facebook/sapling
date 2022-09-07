@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use clidispatch::ReqCtx;
 #[cfg(feature = "fb")]
 use configmodel::ConfigExt;
 #[cfg(feature = "fb")]
@@ -13,7 +14,6 @@ use configparser::hg::calculate_dynamicconfig;
 use super::define_flags;
 use super::ConfigSet;
 use super::Result;
-use super::IO;
 
 define_flags! {
     pub struct DebugDumpConfigOpts {
@@ -31,33 +31,33 @@ define_flags! {
     }
 }
 
-pub fn run(opts: DebugDumpConfigOpts, io: &IO, config: &mut ConfigSet) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>, config: &mut ConfigSet) -> Result<u8> {
     #[cfg(feature = "fb")]
     {
-        let reponame = opts.reponame;
-        let mut username = opts.username;
+        let reponame = ctx.opts.reponame;
+        let mut username = ctx.opts.username;
         if username.is_empty() {
             username = config.get_opt("ui", "username")?.unwrap_or_default();
         }
-        let canary = opts.canary;
+        let canary = ctx.opts.canary;
 
         let temp_dir = std::env::temp_dir();
         let generated = calculate_dynamicconfig(temp_dir, reponame, canary, username)?;
 
-        if opts.args.is_empty() {
-            io.write(generated.to_string())?;
+        if ctx.opts.args.is_empty() {
+            ctx.core.io.write(generated.to_string())?;
         } else {
-            for arg in opts.args {
+            for arg in ctx.opts.args {
                 let split: Vec<_> = arg.splitn(2, ".").collect();
                 if let [section, name] = split[..] {
                     let value: String = generated.get_opt(section, name)?.unwrap_or_default();
-                    io.write(format!("{}\n", value))?;
+                    ctx.core.io.write(format!("{}\n", value))?;
                 }
             }
         }
     }
     #[cfg(not(feature = "fb"))]
-    let _ = (opts, io, config);
+    let _ = (ctx, config);
 
     Ok(0)
 }
