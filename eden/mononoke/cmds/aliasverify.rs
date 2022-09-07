@@ -11,6 +11,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use anyhow::format_err;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use blobrepo::BlobRepo;
@@ -18,11 +19,8 @@ use blobstore::Loadable;
 use blobstore::Storable;
 use bytes::Bytes;
 use changesets::ChangesetsRef;
-use clap_old::Arg;
-use cmdlib::args;
-use cmdlib::args::MononokeClapApp;
-use cmdlib::args::MononokeMatches;
-use cmdlib::helpers::block_execute;
+use clap::ArgEnum;
+use clap::Parser;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::Alias;
@@ -33,6 +31,10 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mercurial_types::FileBytes;
+use mononoke_app::args::RepoArgs;
+use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::MononokeApp;
+use mononoke_app::MononokeAppBuilder;
 use mononoke_types::hash;
 use mononoke_types::hash::Sha256;
 use mononoke_types::ChangesetId;
@@ -54,10 +56,27 @@ pub fn get_sha256(contents: &Bytes) -> hash::Sha256 {
     hash::Sha256::from_byte_array(hasher.finalize().into())
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, ArgEnum)]
 enum Mode {
     Verify,
     Generate,
+}
+
+/// Verify and reload all the alias blobs
+#[derive(Parser)]
+#[clap(about = "Verify and reload all the alias blobs into Mononoke blobstore.")]
+struct AliasVerifyArgs {
+    /// Mode for missing blobs
+    #[clap(long, arg_enum, default_value_t = Mode::Verify)]
+    mode: Mode,
+    /// Number of commit ids to process at a time
+    #[clap(long, default_value_t = 5000)]
+    step: u64,
+    /// Changeset to start verification from. Id from changeset table. Not connected to hash
+    #[clap(long, default_value_t = 0)]
+    min_cs_db_id: u64,
+    #[clap(flatten)]
+    repo: RepoArgs,
 }
 
 #[derive(Clone)]
@@ -278,83 +297,31 @@ impl AliasVerification {
     }
 }
 
-fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
-    args::MononokeAppBuilder::new("Verify and reload all the alias blobs")
-        .build()
-        .about("Verify and reload all the alias blobs into Mononoke blobstore.")
-        .arg(
-            Arg::with_name("mode")
-                .long("mode")
-                .value_name("MODE")
-                .possible_values(&["verify", "generate"])
-                .default_value("verify")
-                .help("mode for missing blobs"),
-        )
-        .arg(
-            Arg::with_name("step")
-                .long("step")
-                .value_name("STEP")
-                .default_value("5000")
-                .help("Number of commit ids to process at a time"),
-        )
-        .arg(
-            Arg::with_name("min-cs-db-id")
-                .long("min-cs-db-id")
-                .value_name("min_cs_db_id")
-                .default_value("0")
-                .help("Changeset to start verification from. Id from changeset table. Not connected to hash"),
-        )
-}
+async fn async_main(app: MononokeApp) -> Result<(), Error> {
+    let args: AliasVerifyArgs = app.args()?;
 
-async fn run_aliasverify<'a>(
-    fb: FacebookInit,
-    ctx: CoreContext,
-    logger: &Logger,
-    step: u64,
-    min_cs_db_id: u64,
-    repoid: RepositoryId,
-    matches: &'a MononokeMatches<'a>,
-    mode: Mode,
-) -> Result<(), Error> {
-    let blobrepo = args::open_repo(fb, logger, matches).await?;
-    AliasVerification::new(logger.clone(), blobrepo, repoid, mode)
+    let logger = app.logger();
+    let ctx = app.new_basic_context();
+
+    let mode = args.mode;
+    let step = args.step;
+    let min_cs_db_id = args.min_cs_db_id;
+
+    let repo: BlobRepo = app
+        .open_repo(&args.repo)
+        .await
+        .context("Failed to open repo")?;
+    let repo_id = repo.get_repoid();
+    AliasVerification::new(logger.clone(), repo, repo_id, mode)
         .verify_all(&ctx, step, min_cs_db_id)
         .await
 }
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let matches = setup_app().get_matches(fb)?;
+    let app = MononokeAppBuilder::new(fb)
+        .with_app_extension(Fb303AppExtension {})
+        .build::<AliasVerifyArgs>()?;
 
-    let logger = matches.logger();
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
-
-    let config_store = matches.config_store();
-
-    let mode = match matches.value_of("mode").expect("no default on mode") {
-        "verify" => Mode::Verify,
-        "generate" => Mode::Generate,
-        bad => panic!("bad mode {}", bad),
-    };
-    let step = matches
-        .value_of("step")
-        .unwrap()
-        .parse()
-        .expect("Step should be numeric");
-    let min_cs_db_id = matches
-        .value_of("min-cs-db-id")
-        .unwrap()
-        .parse()
-        .expect("Minimum Changeset Id should be numeric");
-
-    let repoid = args::get_repo_id(config_store, &matches).expect("Need repo id");
-
-    block_execute(
-        run_aliasverify(fb, ctx, logger, step, min_cs_db_id, repoid, &matches, mode),
-        fb,
-        "aliasverify",
-        logger,
-        &matches,
-        cmdlib::monitoring::AliveService,
-    )
+    app.run_with_fb303_monitoring(async_main, "aliasverify", cmdlib::monitoring::AliveService)
 }
