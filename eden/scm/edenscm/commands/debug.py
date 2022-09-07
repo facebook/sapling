@@ -27,8 +27,10 @@ import subprocess
 import sys
 import tempfile
 import time
+from typing import Optional, Sized
 
 import bindings
+from edenscm.bundle2 import unbundle20
 
 from .. import (
     bookmarks,
@@ -88,7 +90,7 @@ release = lockmod.release
 
 
 @command("debugancestor", [], _("[INDEX] REV1 REV2"), optionalrepo=True)
-def debugancestor(ui, repo, *args):
+def debugancestor(ui, repo, *args) -> None:
     """find the ancestor revision of two revisions in a given index"""
     if len(args) == 3:
         index, rev1, rev2 = args
@@ -108,7 +110,7 @@ def debugancestor(ui, repo, *args):
     ui.write("%d:%s\n" % (r.rev(a), hex(a)))
 
 
-def _flattenresponse(response, sort=False):
+def _flattenresponse(response: Sized, sort: bool = False):
     """convert response from pyedenapi to Python basic type for pprint.
 
     If sort is True, also sort the top-level list for test stabilization.
@@ -127,9 +129,13 @@ def _flattenresponse(response, sort=False):
         and util.safehasattr(response, "__iter__")
         and util.safehasattr(response, "typename")
     ):
+        # pyre-fixme[6]: For 1st param expected `Iterable[Variable[_T]]` but got
+        #  `Union[tuple[typing.Any], Sized]`.
         response = list(response)
     # Resolve PyCell (opaque data) to PyObject.
     elif util.safehasattr(response, "export"):
+        # pyre-fixme[16]: Item `List` of `Union[List[typing.Any], tuple[typing.Any],
+        #  Sized]` has no attribute `export`.
         response = response.export()
 
     # Additional sort to stabilize test output.
@@ -149,7 +155,7 @@ def _flattenresponse(response, sort=False):
     _(""),
     optionalrepo=True,
 )
-def debugapi(ui, repo=None, **opts):
+def debugapi(ui, repo=None, **opts) -> None:
     """send an EdenAPI request and print its output
 
     The endpoint name is the method name defined on the edenapi object.
@@ -180,7 +186,7 @@ def debugapi(ui, repo=None, **opts):
 
 
 @command("debugapplystreamclonebundle", [], "FILE")
-def debugapplystreamclonebundle(ui, repo, fname):
+def debugapplystreamclonebundle(ui, repo, fname) -> None:
     """apply a stream clone bundle file"""
     f = hg.openpath(ui, fname)
     gen = exchange.readbundle(ui, f, fname)
@@ -194,7 +200,7 @@ def debugapplystreamclonebundle(ui, repo, fname):
         ("o", "output", "", _("output path")),
     ],
 )
-def debugbindag(ui, repo, rev=None, output=None):
+def debugbindag(ui, repo, rev=None, output=None) -> None:
     """serialize dag to a compat binary format
 
     See 'dagparser.bindag' for the actual format.
@@ -220,8 +226,13 @@ def debugbindag(ui, repo, rev=None, output=None):
     _("[OPTION]... [TEXT]"),
 )
 def debugbuilddag(
-    ui, repo, text=None, mergeable_file=False, overwritten_file=False, new_file=False
-):
+    ui,
+    repo,
+    text: Optional[str] = None,
+    mergeable_file: bool = False,
+    overwritten_file: bool = False,
+    new_file: bool = False,
+) -> None:
     """builds a repo with a given DAG from scratch in the current empty repo
 
     The description of the DAG is read from stdin if not given on the
@@ -315,7 +326,11 @@ def debugbuilddag(
                             datastr = pycompat.decodeutf8(p1[fn].data())
                             ml = datastr.split("\n")
                         else:
+                            # pyre-fixme[61]: `initialmergedlines` is undefined, or
+                            #  not always defined.
                             ml = initialmergedlines
+                        # pyre-fixme[61]: `linesperrev` is undefined, or not always
+                        #  defined.
                         ml[id * linesperrev] += " r%i" % id
 
                         mergedtext = "\n".join(ml)
@@ -380,7 +395,7 @@ def debugbuilddag(
         release(tr, lock, wlock)
 
 
-def _debugchangegroup(ui, gen, all=None, indent=0, **opts):
+def _debugchangegroup(ui, gen: unbundle20, all=None, indent: int = 0, **opts) -> None:
     indent_string = " " * indent
     if all:
         ui.write(
@@ -404,10 +419,13 @@ def _debugchangegroup(ui, gen, all=None, indent=0, **opts):
                     )
                 )
 
+        # pyre-fixme[16]: `unbundle20` has no attribute `changelogheader`.
         chunkdata = gen.changelogheader()
         showchunks("changelog")
+        # pyre-fixme[16]: `unbundle20` has no attribute `manifestheader`.
         chunkdata = gen.manifestheader()
         showchunks("manifest")
+        # pyre-fixme[16]: `unbundle20` has no attribute `filelogheader`.
         for chunkdata in iter(gen.filelogheader, {}):
             fname = chunkdata["filename"]
             showchunks(fname)
@@ -420,7 +438,7 @@ def _debugchangegroup(ui, gen, all=None, indent=0, **opts):
             ui.write("%s%s\n" % (indent_string, hex(node)))
 
 
-def _debugphaseheads(ui, data, indent=0):
+def _debugphaseheads(ui, data, indent: int = 0) -> None:
     """display version and markers contained in 'data'"""
     indent_string = " " * indent
     headsbyphase = phases.binarydecode(data)
@@ -430,13 +448,13 @@ def _debugphaseheads(ui, data, indent=0):
             ui.write("%s %s\n" % (hex(head), phases.phasenames[phase]))
 
 
-def _quasirepr(thing):
+def _quasirepr(thing) -> str:
     if isinstance(thing, (dict, util.sortdict, collections.OrderedDict)):
         return "{%s}" % (", ".join("%s: %s" % (k, thing[k]) for k in sorted(thing)))
     return pycompat.bytestr(repr(thing))
 
 
-def _debugbundle2(ui, gen, all=None, **opts):
+def _debugbundle2(ui, gen: unbundle20, all=None, **opts) -> None:
     """lists the contents of a bundle2"""
     if not isinstance(gen, bundle2.unbundle20):
         raise error.Abort(_("not a bundle2 file"))
@@ -455,7 +473,7 @@ def _debugbundle2(ui, gen, all=None, **opts):
         _debugbundle2part(ui, part, all, **opts)
 
 
-def _debugbundle2part(ui, part, all, **opts):
+def _debugbundle2part(ui, part, all, **opts) -> None:
     pass
 
 
@@ -494,7 +512,7 @@ def debugbundle(ui, bundlepath, all=None, spec=None, **opts):
 
 
 @command("debugcapabilities", [], _("PATH"), norepo=True)
-def debugcapabilities(ui, path, **opts):
+def debugcapabilities(ui, path, **opts) -> None:
     """lists the capabilities of a remote peer"""
     peer = hg.peer(ui, opts, path)
     caps = peer.capabilities()
@@ -524,7 +542,9 @@ def debugcapabilities(ui, path, **opts):
     ],
     "",
 )
-def debugchangelog(ui, repo, migrate=None, unless=[], remove_backup=False):
+def debugchangelog(
+    ui, repo, migrate=None, unless=[], remove_backup: bool = False
+) -> None:
     """show or migrate changelog backend
 
     If --migrate is not set, print details about the current changelog backend.
@@ -598,7 +618,7 @@ def debugchangelog(ui, repo, migrate=None, unless=[], remove_backup=False):
 
 
 @command("debugcheckstate", [], "")
-def debugcheckstate(ui, repo):
+def debugcheckstate(ui, repo) -> None:
     """validate the correctness of the current dirstate"""
     parent1, parent2 = repo.dirstate.parents()
     m1 = repo[parent1].manifest()
@@ -626,7 +646,7 @@ def debugcheckstate(ui, repo):
 
 
 @command("debugcleanremotenames", [], "")
-def debugcleanremotenames(ui, repo):
+def debugcleanremotenames(ui, repo) -> Optional[int]:
     """remove non-essential remote bookmarks
 
     A remote bookmark is not essential if it is not an ancestor of a visible
@@ -655,7 +675,7 @@ def debugcolor(ui, **opts):
 
 
 @command("debugcompactmetalog", [], "")
-def debugcompactmetalog(ui, repo):
+def debugcompactmetalog(ui, repo) -> None:
     """compact the metalog by dropping history"""
     ml = repo.metalog()
     with repo.lock():
@@ -663,7 +683,7 @@ def debugcompactmetalog(ui, repo):
 
 
 @command("debugdetectissues", [], "")
-def debugdetectissues(ui, repo):
+def debugdetectissues(ui, repo) -> None:
     """various repository integrity and health checks. for automatic remediation, use doctor."""
 
     findings = detectissues.detectissues(repo)
@@ -678,7 +698,7 @@ def debugdetectissues(ui, repo):
             ui.log("repoissues", issue.message, category=issue.category, **issue.data)
 
 
-def _debugdisplaycolor(ui):
+def _debugdisplaycolor(ui) -> None:
     ui = ui.copy()
     ui._styles.clear()
     for effect in color._activeeffects(ui).keys():
@@ -690,7 +710,7 @@ def _debugdisplaycolor(ui):
         ui.write(_x("%s\n") % colorname, label=label)
 
 
-def _debugdisplaystyle(ui):
+def _debugdisplaystyle(ui) -> None:
     ui.write(_("available style:\n"))
     if not ui._styles:
         return
@@ -710,7 +730,7 @@ def _debugdisplaystyle(ui):
 
 
 @command("debugcreatestreamclonebundle", [], "FILE")
-def debugcreatestreamclonebundle(ui, repo, fname):
+def debugcreatestreamclonebundle(ui, repo, fname: Optional[str]) -> None:
     """create a stream clone bundle file
 
     Stream bundles are special bundles that are essentially archives of
@@ -824,7 +844,7 @@ def debugdata(ui, repo, file_, rev=None, **opts):
     norepo=True,
     optionalrepo=True,
 )
-def debugdate(ui, date, **opts):
+def debugdate(ui, date, **opts) -> None:
     """parse and display a date"""
     if opts.get("range"):
         f = util.matchdate(date)
@@ -842,7 +862,7 @@ def debugdate(ui, date, **opts):
     _("-c|-m|FILE"),
     optionalrepo=True,
 )
-def debugdeltachain(ui, repo, file_=None, **opts):
+def debugdeltachain(ui, repo, file_=None, **opts) -> None:
     """dump information about delta chains in a revlog
 
     Output can be templatized. Available template keywords are:
@@ -1015,7 +1035,7 @@ def debugdeltachain(ui, repo, file_=None, **opts):
     ],
     _("[OPTION]..."),
 )
-def debugstate(ui, repo, **opts):
+def debugstate(ui, repo, **opts) -> Optional[int]:
     """show the contents of the current dirstate"""
     if edenfs.requirement in repo.requirements:
         import eden.dirstate
@@ -1069,6 +1089,9 @@ def debugstate(ui, repo, **opts):
         keyfunc = None  # sort by filename
     ds = repo.dirstate
     dmap = ds._map
+    # pyre-fixme[6]: For 2nd param expected `None` but got
+    #  `Optional[typing.Callable[[Named(x, typing.Any)], Tuple[typing.Any,
+    #  typing.Any]]]`.
     for path, ent in sorted(pycompat.iteritems(dmap), key=keyfunc):
         if ent[3] == -1:
             timestr = "unset               "
@@ -1096,7 +1119,7 @@ def debugstate(ui, repo, **opts):
     + cmdutil.walkopts
     + cmdutil.templateopts,
 )
-def debugdifftree(ui, repo, *pats, **opts):
+def debugdifftree(ui, repo, *pats, **opts) -> None:
     """diff two trees
 
     Print changed paths.
@@ -1139,7 +1162,7 @@ def debugdifftree(ui, repo, *pats, **opts):
     + cmdutil.walkopts
     + cmdutil.templateopts,
 )
-def debugdiffdirs(ui, repo, *pats, **opts):
+def debugdiffdirs(ui, repo, *pats, **opts) -> None:
     """print the changed directories between two commits
 
     Print the directories who have had children added or removed. Modified
@@ -1178,7 +1201,7 @@ def debugdiffdirs(ui, repo, *pats, **opts):
     [("", "rev", [], "restrict discovery to this set of revs")],
     _("[--rev REV] [OTHER]"),
 )
-def debugdiscovery(ui, repo, remoteurl="default", **opts):
+def debugdiscovery(ui, repo, remoteurl: str = "default", **opts) -> None:
     """runs the changeset discovery protocol in isolation"""
     remoteurl, branches = hg.parseurl(ui.expandpath(remoteurl))
     remote = hg.peer(repo, opts, remoteurl)
@@ -1214,7 +1237,7 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
     [],
     _("PATH"),
 )
-def debugexportrevlog(ui, repo, path, **opts):
+def debugexportrevlog(ui, repo, path, **opts) -> None:
     """exports to a legacy revlog repo
 
     Export the repo in the old format (not necessarily supported by this
@@ -1369,7 +1392,7 @@ def debugexportrevlog(ui, repo, path, **opts):
     [],
     norepo=True,
 )
-def debugextensions(ui, **opts):
+def debugextensions(ui, **opts) -> None:
     """show information about active extensions"""
     exts = extensions.extensions(ui)
     hgver = util.version()
@@ -1440,7 +1463,7 @@ def debugextensions(ui, **opts):
     [("r", "rev", [], _("examine specified REV"))] + cmdutil.walkopts,
     _("[-r REV] FILE"),
 )
-def debugfilerevision(ui, repo, *pats, **opts):
+def debugfilerevision(ui, repo, *pats, **opts) -> None:
     """dump internal metadata for given file revisions
 
     Show metadata for given files in revisions specified by '--rev'. By
@@ -1494,7 +1517,7 @@ def debugfilerevision(ui, repo, *pats, **opts):
     [("r", "rev", "", _("apply the filespec on this revision"), _("REV"))],
     _("[-r REV] FILESPEC"),
 )
-def debugfileset(ui, repo, expr, **opts):
+def debugfileset(ui, repo, expr, **opts) -> None:
     """parse and apply a fileset specification"""
     ctx = scmutil.revsingle(repo, opts.get(r"rev"), None)
     if ui.verbose:
@@ -1516,7 +1539,7 @@ def debugfileset(ui, repo, expr, **opts):
 
 
 @command("debugfsinfo|debugfs", [], _("[PATH]"), norepo=True)
-def debugfsinfo(ui, path="."):
+def debugfsinfo(ui, path: str = ".") -> None:
     """show information detected about current filesystem"""
     ui.write(_x("exec: %s\n") % (util.checkexec(path) and "yes" or "no"))
     ui.write(_x("fstype: %s\n") % (util.getfstype(path) or "(unknown)"))
@@ -1541,7 +1564,9 @@ def debugfsinfo(ui, path="."):
     _("REPO FILE [-H|-C ID]..."),
     norepo=True,
 )
-def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
+def debuggetbundle(
+    ui, repopath, bundlepath: str, head=None, common=None, **opts
+) -> None:
     """retrieves a bundle from a repo
 
     Every ID must be a full-length hex node id string. Saves the bundle to the
@@ -1568,7 +1593,7 @@ def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
 
 
 @command("debugignore", [], "[FILE]")
-def debugignore(ui, repo, *files, **opts):
+def debugignore(ui, repo, *files, **opts) -> None:
     """display the combined ignore pattern and information about ignored files
 
     With no argument display the combined ignore pattern.
@@ -1622,7 +1647,7 @@ def debugignore(ui, repo, *files, **opts):
     _("[-f FORMAT] -c|-m|FILE"),
     optionalrepo=True,
 )
-def debugindex(ui, repo, file_=None, **opts):
+def debugindex(ui, repo, file_=None, **opts) -> None:
     """dump the contents of an index file"""
     r = cmdutil.openrevlog(repo, "debugindex", file_, opts)
     format = opts.get("format", 0)
@@ -1705,7 +1730,7 @@ def debugindex(ui, repo, file_=None, **opts):
 
 
 @command("debugindexdot", cmdutil.debugrevlogopts, _("-c|-m|FILE"), optionalrepo=True)
-def debugindexdot(ui, repo, file_=None, **opts):
+def debugindexdot(ui, repo, file_=None, **opts) -> None:
     """dump an index DAG as a graphviz dot file"""
     r = cmdutil.openrevlog(repo, "debugindexdot", file_, opts)
     ui.write(_x("digraph G {\n"))
@@ -1724,7 +1749,7 @@ def debugindexdot(ui, repo, file_=None, **opts):
     _("--git-dir PATH -- DEST"),
     norepo=True,
 )
-def debuginitgit(ui, destpath, **opts):
+def debuginitgit(ui, destpath, **opts) -> None:
     """init a repo from a git backend
 
     Currently this is very limited. Bookmarks, trees, files, exchange do not
@@ -1738,7 +1763,7 @@ def debuginitgit(ui, destpath, **opts):
 
 
 @command("debuginstall", [] + cmdutil.formatteropts, "", norepo=True)
-def debuginstall(ui, **opts):
+def debuginstall(ui, **opts) -> int:
     """test Mercurial installation
 
     Returns 0 on success.
@@ -1961,7 +1986,7 @@ def debuginstall(ui, **opts):
         ("o", "output", "", _("export internal files to a specified tar file")),
     ],
 )
-def debuginternals(ui, repo, *args, **opts):
+def debuginternals(ui, repo, *args, **opts) -> None:
     """list or export internal files
 
     With --output, components that are less than 20MB are included.
@@ -2014,7 +2039,7 @@ def debuginternals(ui, repo, *args, **opts):
 
 
 @command("debugknown", [], _("REPO ID..."), norepo=True)
-def debugknown(ui, repopath, *ids, **opts):
+def debugknown(ui, repopath, *ids, **opts) -> None:
     """test whether node ids are known to a repo
 
     Every ID must be a full-length hex node id string. Returns a list of 0s
@@ -2028,7 +2053,7 @@ def debugknown(ui, repopath, *ids, **opts):
 
 
 @command("debuglabelcomplete", [], _("LABEL..."))
-def debuglabelcomplete(ui, repo, *args):
+def debuglabelcomplete(ui, repo, *args) -> None:
     """backwards compatibility with old bash completion scripts (DEPRECATED)"""
     debugnamecomplete(ui, repo, *args)
 
@@ -2045,7 +2070,7 @@ def debuglabelcomplete(ui, repo, *args):
     ],
     _("[OPTION]..."),
 )
-def debuglocks(ui, repo, **opts):
+def debuglocks(ui, repo, **opts) -> int:
     """show or modify state of locks
 
     By default, this command will show which locks are held. This
@@ -2171,7 +2196,7 @@ def debuglocks(ui, repo, **opts):
 
 
 @command("debugmanifestdirs", [("r", "rev", [], _("revisions to show"))], "")
-def debugmanifestdirs(ui, repo, rev):
+def debugmanifestdirs(ui, repo, rev) -> None:
     """print treemanifest id, and paths
 
     Example output:
@@ -2202,7 +2227,7 @@ def debugmanifestdirs(ui, repo, rev):
     ],
     "",
 )
-def debugmakepublic(ui, repo, *revs, **opts):
+def debugmakepublic(ui, repo, *revs, **opts) -> None:
     """make revisions public"""
     revspec = list(revs) + list(opts.get("rev") or [])
     revs = scmutil.revrange(repo, revspec or ["."])
@@ -2224,7 +2249,7 @@ def debugmakepublic(ui, repo, *revs, **opts):
 
 
 @command("debugmergestate", [], "")
-def debugmergestate(ui, repo, *args):
+def debugmergestate(ui, repo, *args) -> None:
     """print merge state
 
     Use --verbose to print out information about whether v1 or v2 merge state
@@ -2333,7 +2358,7 @@ def debugmergestate(ui, repo, *args):
 
 
 @command("debugnamecomplete", [], _("NAME..."))
-def debugnamecomplete(ui, repo, *args):
+def debugnamecomplete(ui, repo, *args) -> None:
     """complete "names" - tags, open branch names, bookmark names"""
 
     names = set()
@@ -2374,7 +2399,7 @@ def debugnamecomplete(ui, repo, *args):
     + cmdutil.formatteropts,
     _("[OBSOLETED [REPLACEMENT ...]]"),
 )
-def debugobsolete(ui, repo, precursor=None, *successors, **opts):
+def debugobsolete(ui, repo, precursor=None, *successors, **opts) -> None:
     """create arbitrary obsolete marker
 
     With no arguments, do nothing."""
@@ -2475,7 +2500,7 @@ def debugpreviewbindag(ui, repo, path):
     ],
     _("FILESPEC..."),
 )
-def debugpathcomplete(ui, repo, *specs, **opts):
+def debugpathcomplete(ui, repo, *specs, **opts) -> None:
     """complete part or all of a tracked path
 
     This command supports shells that offer path name completion. It
@@ -2565,7 +2590,7 @@ def debugpathcomplete(ui, repo, *specs, **opts):
     _("[PATTERN]..."),
     inferrepo=True,
 )
-def debugpickmergetool(ui, repo, *pats, **opts):
+def debugpickmergetool(ui, repo, *pats, **opts) -> None:
     """examine which merge tool is chosen for specified file
 
     As described in :hg:`help merge-tools`, Mercurial examines
@@ -2638,7 +2663,7 @@ def debugpickmergetool(ui, repo, *pats, **opts):
 
 
 @command("debugprocesstree|debugproc", [], _("[PID] [PID] ..."), norepo=True)
-def debugprocesstree(ui, *pids, **opts):
+def debugprocesstree(ui, *pids, **opts) -> None:
     """show process tree related to hg
 
     If pid is provided, only show hg processes related to given pid.
@@ -2734,7 +2759,7 @@ def debugprocesstree(ui, *pids, **opts):
         ("r", "rev", [], _("names to pull (not revset)"), _("REV")),
     ],
 )
-def debugpull(ui, repo, **opts):
+def debugpull(ui, repo, **opts) -> None:
     """test repo.pull interface"""
     headnames = []
     headnodes = []
@@ -2747,7 +2772,7 @@ def debugpull(ui, repo, **opts):
 
 
 @command("debugpushkey", [], _("REPO NAMESPACE [KEY OLD NEW]"), norepo=True)
-def debugpushkey(ui, repopath, namespace, *keyinfo, **opts):
+def debugpushkey(ui, repopath, namespace, *keyinfo, **opts) -> Optional[bool]:
     """access the pushkey key/value protocol
 
     With two args, list the keys in the given namespace.
@@ -2768,7 +2793,7 @@ def debugpushkey(ui, repopath, namespace, *keyinfo, **opts):
 
 
 @command("debugpvec", [], _("A B"))
-def debugpvec(ui, repo, a, b=None):
+def debugpvec(ui, repo, a, b=None) -> None:
     ca = scmutil.revsingle(repo, a)
     cb = scmutil.revsingle(repo, b)
     pa = pvec.ctxpvec(ca)
@@ -2790,6 +2815,7 @@ def debugpvec(ui, repo, a, b=None):
             abs(pa._depth - pb._depth),
             pvec._hamming(pa._vec, pb._vec),
             pa.distance(pb),
+            # pyre-fixme[61]: `rel` is undefined, or not always defined.
             rel,
         )
     )
@@ -2811,7 +2837,7 @@ def debugpvec(ui, repo, a, b=None):
     ],
     _("[-r REV]"),
 )
-def debugrebuilddirstate(ui, repo, rev, **opts):
+def debugrebuilddirstate(ui, repo, rev, **opts) -> None:
     """rebuild the dirstate as it would look like for the given revision
 
     If no revision is specified the first current parent will be used.
@@ -2872,7 +2898,7 @@ def debugrebuilddirstate(ui, repo, rev, **opts):
 
 
 @command("debugrebuildfncache", [], "")
-def debugrebuildfncache(ui, repo):
+def debugrebuildfncache(ui, repo: Sized) -> None:
     """rebuild the fncache file"""
     repair.rebuildfncache(ui, repo)
 
@@ -2882,7 +2908,7 @@ def debugrebuildfncache(ui, repo):
     [("r", "rev", "", _("revision to debug"), _("REV"))],
     _("[-r REV] FILE"),
 )
-def debugrename(ui, repo, file1, *pats, **opts):
+def debugrename(ui, repo, file1, *pats, **opts) -> None:
     """dump rename information"""
 
     ctx = scmutil.revsingle(repo, opts.get("rev"))
@@ -2903,7 +2929,7 @@ def debugrename(ui, repo, file1, *pats, **opts):
     _("-c|-m|FILE"),
     optionalrepo=True,
 )
-def debugrevlog(ui, repo, file_=None, **opts):
+def debugrevlog(ui, repo, file_=None, **opts) -> Optional[int]:
     """show data and statistics about a revlog"""
     r = cmdutil.openrevlog(repo, "debugrevlog", file_, opts)
 
@@ -3049,18 +3075,23 @@ def debugrevlog(ui, repo, file_=None, **opts):
     numdeltas = numrevs - numfull
     numoprev = numprev - nump1prev - nump2prev
     totalrawsize = datasize[2]
+    # pyre-fixme[16]: `Optional` has no attribute `__itruediv__`.
     datasize[2] /= numrevs
     fulltotal = fullsize[2]
     fullsize[2] /= numfull
     deltatotal = deltasize[2]
     if numrevs - numfull > 0:
         deltasize[2] /= numrevs - numfull
+    # pyre-fixme[58]: `+` is not supported for operand types `Optional[int]` and
+    #  `Optional[int]`.
     totalsize = fulltotal + deltatotal
     avgchainlen = sum(chainlengths) / numrevs
     maxchainlen = max(chainlengths)
     maxchainspan = max(chainspans)
     compratio = 1
     if totalsize:
+        # pyre-fixme[58]: `/` is not supported for operand types `Optional[int]` and
+        #  `Any`.
         compratio = totalrawsize / totalsize
 
     basedfmtstr = "%%%dd\n"
@@ -3162,7 +3193,7 @@ def debugrevlog(ui, repo, file_=None, **opts):
     ],
     "REVSPEC",
 )
-def debugrevspec(ui, repo, expr, **opts):
+def debugrevspec(ui, repo, expr, **opts) -> Optional[int]:
     """parse and apply a revision specification
 
     Use -p/--show-stage option to print the parsed tree at the given stages.
@@ -3253,7 +3284,7 @@ def debugrevspec(ui, repo, expr, **opts):
 
 
 @command("debugsetparents", [], _("REV1 [REV2]"))
-def debugsetparents(ui, repo, rev1, rev2=None):
+def debugsetparents(ui, repo, rev1, rev2=None) -> None:
     """manually set the parents of the current working directory
 
     This is useful for writing repository conversion tools, but should
@@ -3281,7 +3312,7 @@ def debugsetparents(ui, repo, rev1, rev2=None):
     + cmdutil.formatteropts,
     "[OPTS] [VALUE]",
 )
-def debugsmallcommitmetadata(ui, repo, value="", **opts):
+def debugsmallcommitmetadata(ui, repo, value: str = "", **opts) -> None:
     """store string metadata for a commit
 
     Stores local-only, size-limited string metadata for a commit with a string
@@ -3368,7 +3399,7 @@ def debugsmallcommitmetadata(ui, repo, value="", **opts):
 
 
 @command("debugssl", [], "[SOURCE]", optionalrepo=True)
-def debugssl(ui, repo, source=None, **opts):
+def debugssl(ui, repo, source=None, **opts) -> None:
     """test a secure connection to a server
 
     This builds the certificate chain for the server on Windows, installing the
@@ -3422,11 +3453,13 @@ def debugssl(ui, repo, source=None, **opts):
 
         ui.status(_("checking the certificate chain for %s\n") % url.host)
 
+        # pyre-fixme[16]: Module `commands` has no attribute `win32`.
         complete = win32.checkcertificatechain(cert, build=False)
 
         if not complete:
             ui.status(_("certificate chain is incomplete, updating... "))
 
+            # pyre-fixme[16]: Module `commands` has no attribute `win32`.
             if not win32.checkcertificatechain(cert):
                 ui.status(_("failed.\n"))
             else:
@@ -3442,7 +3475,7 @@ def debugssl(ui, repo, source=None, **opts):
     [("", "closest", False, _("return closest successors sets only"))],
     _("[REV]"),
 )
-def debugsuccessorssets(ui, repo, *revs, **opts):
+def debugsuccessorssets(ui, repo, *revs, **opts) -> None:
     """show set of successors for revision
 
     A successors set of changeset A is a consistent group of revisions that
@@ -3512,7 +3545,7 @@ def debugsuccessorssets(ui, repo, *revs, **opts):
     _("[-r REV]... [-D KEY=VALUE]... TEMPLATE"),
     optionalrepo=True,
 )
-def debugtemplate(ui, repo, tmpl, **opts):
+def debugtemplate(ui, repo, tmpl, **opts) -> None:
     """parse and apply a template
 
     If -r/--rev is given, the template is processed as a log template and
@@ -3559,14 +3592,14 @@ def debugtemplate(ui, repo, tmpl, **opts):
 
 
 @command("debugupdatecaches", [])
-def debugupdatecaches(ui, repo, *pats, **opts):
+def debugupdatecaches(ui, repo, *pats, **opts) -> None:
     """warm all known caches in the repository"""
     with repo.wlock(), repo.lock():
         repo.updatecaches()
 
 
 @command("debugvisibleheads", cmdutil.templateopts)
-def debugvisibleheads(ui, repo, **opts):
+def debugvisibleheads(ui, repo, **opts) -> None:
     """print visible heads"""
     heads = repo.changelog._visibleheads.heads
     fm = ui.formatter("debugvisibleheads", opts)
@@ -3577,7 +3610,7 @@ def debugvisibleheads(ui, repo, **opts):
 
 
 @command("debugwalk", cmdutil.walkopts, _("[OPTION]... [FILE]..."), inferrepo=True)
-def debugwalk(ui, repo, *pats, **opts):
+def debugwalk(ui, repo, *pats, **opts) -> None:
     """show how files match on given patterns"""
     m = scmutil.match(repo[None], pats, opts)
     ui.write(_x("matcher: %r\n" % m))
@@ -3602,7 +3635,7 @@ def debugwalk(ui, repo, *pats, **opts):
     _("REPO [OPTIONS]... [ONE [TWO]]"),
     norepo=True,
 )
-def debugwireargs(ui, repopath, *vals, **opts):
+def debugwireargs(ui, repopath, *vals, **opts) -> None:
     repo = hg.peer(ui, opts, repopath)
     args = {}
     for k, v in pycompat.iteritems(opts):
@@ -3625,7 +3658,7 @@ def debugwireargs(ui, repopath, *vals, **opts):
         ("", "write-env", "", _("write NAME=HEX per line to a given file (ADVANCED)")),
     ],
 )
-def debugdrawdag(ui, repo, **opts):
+def debugdrawdag(ui, repo, **opts) -> None:
     r"""read an ASCII graph from stdin and create changesets
 
     The ASCII graph is like what :hg:`log -G` outputs, with each `o` replaced
@@ -3662,13 +3695,13 @@ def debugprogress(
     ui,
     repo,
     number,
-    spinner=False,
-    nototal=False,
-    bytes=False,
-    with_output=False,
-    sleep=0,
-    nested=False,
-):
+    spinner: bool = False,
+    nototal: bool = False,
+    bytes: bool = False,
+    with_output: bool = False,
+    sleep: float = 0,
+    nested: bool = False,
+) -> None:
     """
     Initiate a progress bar and increment the progress NUMBER times.
 
@@ -3725,7 +3758,7 @@ def debugprogress(
                     ui.write(_x("processed %d items\n") % i)
 
 
-def _findtreemanifest(ctx):
+def _findtreemanifest(ctx) -> None:
     return None
 
 
@@ -3734,7 +3767,7 @@ def _findtreemanifest(ctx):
     [("r", "rev", "", _("check the specified revision"), _("REV"))],
     _("[-r REV]... FILENAMES"),
 )
-def debugcheckcasecollisions(ui, repo, *testfiles, **opts):
+def debugcheckcasecollisions(ui, repo, *testfiles, **opts) -> int:
     """check for case collisions against a commit"""
     res = 0
     ctx = scmutil.revsingle(repo, opts.get("rev"))
@@ -3816,7 +3849,7 @@ def debugcheckcasecollisions(ui, repo, *testfiles, **opts):
     [("r", "rev", "", _("check the specified revision"), _("REV"))],
     _("[-r REV] [PATH...]"),
 )
-def debugexistingcasecollisions(ui, repo, *basepaths, **opts):
+def debugexistingcasecollisions(ui, repo, *basepaths, **opts) -> None:
     """check for existing case collisions in a commit"""
     ctx = scmutil.revsingle(repo, opts.get("rev"))
     treemanifest = _findtreemanifest(ctx)
@@ -3848,7 +3881,7 @@ def debugexistingcasecollisions(ui, repo, *basepaths, **opts):
     [],
     "hg debugtreestate [on|off|status|repack|cleanup|v0|v1|v2|list]",
 )
-def debugtreestate(ui, repo, cmd="status", **opts):
+def debugtreestate(ui, repo, cmd: str = "status", **opts) -> None:
     """manage treestate
 
     v0/off: migrate to flat dirstate
@@ -3908,7 +3941,7 @@ def debugtreestate(ui, repo, cmd="status", **opts):
     [("u", "user", "", _("Use a given user"), _("USER"))],
     _("uri"),
 )
-def debugreadauthforuri(ui, _repo, uri, user=None):
+def debugreadauthforuri(ui, _repo, uri, user=None) -> None:
     auth = httpconnection.readauthforuri(ui, uri, user)
     if auth is not None:
         auth, items = auth
@@ -3919,7 +3952,7 @@ def debugreadauthforuri(ui, _repo, uri, user=None):
 
 
 @command("debugresetheads")
-def debugresetheads(ui, repo):
+def debugresetheads(ui, repo) -> None:
     """reset heads of repo so it looks like after a fresh clone
 
     Removes all draft heads and non-essential public heads.
@@ -3961,7 +3994,7 @@ def debugresetheads(ui, repo):
     ],
     norepo=True,
 )
-def debugruntest(ui, *paths, **opts):
+def debugruntest(ui, *paths, **opts) -> int:
     """run .t or Python doctest test
 
     With -i or --fix, the test output will be updated to match actual output.
@@ -4095,7 +4128,11 @@ def debugruntest(ui, *paths, **opts):
         return args
 
     with extensions.wrappedfunction(
-        mputil, "_args_from_interpreter_flags", _args
+        # pyre-fixme[16]: Module `multiprocessing` has no attribute `util`.
+        mputil,
+        "_args_from_interpreter_flags",
+        _args
+        # pyre-fixme[6]: For 1st param expected `List[str]` but got `Tuple[Any, ...]`.
     ), TestRunner(paths, jobs=jobs, exts=exts, isolate=isolate) as r:
         for item in r:
             if isinstance(item, Mismatch):
@@ -4157,13 +4194,13 @@ def debugruntest(ui, *paths, **opts):
 
 
 @command("debugthrowrustexception", [], "")
-def debugthrowrustexception(ui, _repo):
+def debugthrowrustexception(ui, _repo) -> None:
     """cause an error to be returned from rust and propagated to python"""
     bindings.error.throwrustexception()
 
 
 @command("debugthrowrustbail", [], "")
-def debugthrowrustbail(ui, _repo):
+def debugthrowrustbail(ui, _repo) -> None:
     """cause an error to be returned from rust and propagated to python using bail"""
     bindings.error.throwrustbail()
 
@@ -4187,7 +4224,7 @@ def debugthrowexception(ui, _repo):
         ("", "python", False, _("signal rust command dispatch to fall back to python")),
     ],
 )
-def debugscmstore(ui, repo, mode=None, path=None, python=False):
+def debugscmstore(ui, repo, mode=None, path=None, python: bool = False) -> None:
     if mode not in ["file", "tree"]:
         raise error.Abort("mode must be one of 'file' and 'tree'")
     if path is None:
@@ -4199,7 +4236,7 @@ def debugscmstore(ui, repo, mode=None, path=None, python=False):
 
 
 @command("debugrevlogclone", [], _("source"))
-def debugrevlogclone(ui, repo, source):
+def debugrevlogclone(ui, repo, source) -> None:
     """download revlog and bookmarks into a newly initialized repo"""
     clone.revlogclone(source, repo)
     changelog_format = ui.config("clone", "nonsegmented-changelog", "doublewrite")
