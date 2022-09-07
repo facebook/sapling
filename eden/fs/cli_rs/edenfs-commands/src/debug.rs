@@ -7,10 +7,10 @@
 
 //! edenfsctl config
 
+use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::EdenFsInstance;
-use edenfs_error::Result;
 
 use crate::ExitCode;
 use crate::Subcommand;

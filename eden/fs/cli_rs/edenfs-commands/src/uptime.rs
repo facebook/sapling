@@ -9,11 +9,11 @@
 
 use std::time::Duration;
 
+use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::DaemonHealthy;
 use edenfs_client::EdenFsInstance;
-use edenfs_error::Result;
 use edenfs_utils::humantime::HumanTime;
 
 use crate::ExitCode;

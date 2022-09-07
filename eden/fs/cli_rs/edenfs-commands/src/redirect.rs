@@ -13,6 +13,7 @@ use std::path::PathBuf;
 
 use anyhow::anyhow;
 use anyhow::Context;
+use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::checkout::find_checkout;
@@ -20,7 +21,6 @@ use edenfs_client::redirect::get_effective_redirections;
 use edenfs_client::redirect::Redirection;
 use edenfs_client::redirect::RedirectionState;
 use edenfs_client::EdenFsInstance;
-use edenfs_error::Result;
 use hg_util::path::expand_path;
 use tabular::row;
 use tabular::Table;
@@ -112,7 +112,7 @@ impl RedirectCmd {
         redirections
             .values_mut()
             .map(|v| v.update_target_abspath(&checkout))
-            .collect::<Result<Vec<()>>>()
+            .collect::<Result<Vec<()>, _>>()
             .with_context(|| anyhow!("failed to expand redirection target path"))?;
 
         if json {

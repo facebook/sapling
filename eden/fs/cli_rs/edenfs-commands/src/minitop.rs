@@ -16,6 +16,7 @@ use std::time::Duration;
 use std::time::Instant;
 
 use anyhow::anyhow;
+use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use comfy_table::presets::UTF8_BORDERS_ONLY;
@@ -31,9 +32,6 @@ use crossterm::style;
 use crossterm::terminal;
 use edenfs_client::EdenFsClient;
 use edenfs_client::EdenFsInstance;
-use edenfs_error::EdenFsError;
-use edenfs_error::Result;
-use edenfs_error::ResultExt;
 use edenfs_utils::humantime::HumanTime;
 use edenfs_utils::humantime::TimeUnit;
 use edenfs_utils::path_from_bytes;
@@ -105,7 +103,7 @@ impl GetAccessCountsResultExt for GetAccessCountsResult {
     fn get_cmd_for_pid(&self, pid: pid_t) -> Result<String> {
         match self.cmdsByPid.get(&pid) {
             Some(cmd) => {
-                let cmd = String::from_utf8(cmd.to_vec()).from_err()?;
+                let cmd = String::from_utf8(cmd.to_vec())?;
 
                 // remove trailing null which would cause the command to show up with an
                 // extra empty string on the end
@@ -270,10 +268,7 @@ struct ImportStat {
 async fn get_pending_import_counts(client: &EdenFsClient) -> Result<BTreeMap<String, ImportStat>> {
     let mut imports = BTreeMap::<String, ImportStat>::new();
 
-    let counters = client
-        .getRegexCounters(PENDING_COUNTER_REGEX)
-        .await
-        .from_err()?;
+    let counters = client.getRegexCounters(PENDING_COUNTER_REGEX).await?;
     for import_type in IMPORT_OBJECT_TYPES {
         let counter_prefix = format!("store.hg.pending_import.{}", import_type);
         let number_requests = counters
@@ -297,10 +292,7 @@ async fn get_pending_import_counts(client: &EdenFsClient) -> Result<BTreeMap<Str
 
 async fn get_live_import_counts(client: &EdenFsClient) -> Result<BTreeMap<String, ImportStat>> {
     let mut imports = BTreeMap::<String, ImportStat>::new();
-    let counters = client
-        .getRegexCounters(LIVE_COUNTER_REGEX)
-        .await
-        .from_err()?;
+    let counters = client.getRegexCounters(LIVE_COUNTER_REGEX).await?;
     for import_type in IMPORT_OBJECT_TYPES {
         let single_prefix = format!("store.hg.live_import.{}", import_type);
         let batched_prefix = format!("store.hg.live_import.batched_{}", import_type);
@@ -351,19 +343,19 @@ impl TerminalAttributes {
     }
 
     fn disable_line_wrap(mut self) -> Result<TerminalAttributes> {
-        queue!(self.stdout, terminal::DisableLineWrap).from_err()?;
+        queue!(self.stdout, terminal::DisableLineWrap)?;
         self.line_wrap_disabled = true;
         Ok(self)
     }
 
     fn enter_alt_screen(mut self) -> Result<TerminalAttributes> {
-        queue!(self.stdout, terminal::EnterAlternateScreen).from_err()?;
+        queue!(self.stdout, terminal::EnterAlternateScreen)?;
         self.alt_screen_entered = true;
         Ok(self)
     }
 
     fn enter_raw_mode(mut self) -> Result<TerminalAttributes> {
-        terminal::enable_raw_mode().from_err()?;
+        terminal::enable_raw_mode()?;
         self.raw_mode_entered = true;
         Ok(self)
     }
@@ -394,23 +386,23 @@ struct Cursor {
 
 impl Cursor {
     fn new() -> Result<Self> {
-        let (_, row) = cursor::position().from_err()?;
-        let (_, terminal_rows) = terminal::size().from_err()?;
+        let (_, row) = cursor::position()?;
+        let (_, terminal_rows) = terminal::size()?;
 
         Ok(Self { row, terminal_rows })
     }
 
-    fn new_line(&mut self, stdout: &mut Stdout) -> Result<()> {
+    fn new_line(&mut self, stdout: &mut Stdout) -> Result<(), std::io::Error> {
         if self.row == self.terminal_rows {
-            queue!(stdout, terminal::ScrollUp(1), cursor::MoveToColumn(1)).from_err()
+            queue!(stdout, terminal::ScrollUp(1), cursor::MoveToColumn(1))
         } else {
             self.row += 1;
-            queue!(stdout, cursor::MoveToNextLine(1)).from_err()
+            queue!(stdout, cursor::MoveToNextLine(1))
         }
     }
 
     fn refresh_terminal_size(&mut self) -> Result<()> {
-        let (_, terminal_rows) = terminal::size().from_err()?;
+        let (_, terminal_rows) = terminal::size()?;
         self.terminal_rows = terminal_rows;
 
         // In the case where the terminal was resized and the cursor was on the last line, we want
@@ -446,7 +438,7 @@ impl crate::Subcommand for MinitopCmd {
 
         loop {
             if self.interactive {
-                queue!(stdout, terminal::Clear(terminal::ClearType::All)).from_err()?;
+                queue!(stdout, terminal::Clear(terminal::ClearType::All))?;
             }
             client.flushStatsNow();
             system.refresh_processes();
@@ -460,9 +452,8 @@ impl crate::Subcommand for MinitopCmd {
 
             // Update currently tracked processes (and add new ones if they haven't been tracked yet)
             let counts = client
-                .getAccessCounts(self.refresh_rate.as_secs().try_into().from_err()?)
-                .await
-                .from_err()?;
+                .getAccessCounts(self.refresh_rate.as_secs().try_into()?)
+                .await?;
 
             for (mount, accesses) in &counts.accessesByMount {
                 let mount_name = get_mount_name(mount)?;
@@ -486,18 +477,12 @@ impl crate::Subcommand for MinitopCmd {
 
             // Render pending trees/blobs
             for import_type in IMPORT_OBJECT_TYPES {
-                let pending_counts =
-                    pending_imports
-                        .get(&import_type.to_string())
-                        .ok_or_else(|| {
-                            EdenFsError::Other(anyhow!(
-                                "Did not fetch pending {} info",
-                                import_type
-                            ))
-                        })?;
-                let live_counts = live_imports.get(&import_type.to_string()).ok_or_else(|| {
-                    EdenFsError::Other(anyhow!("Did not fetch live {} info", import_type))
-                })?;
+                let pending_counts = pending_imports
+                    .get(&import_type.to_string())
+                    .ok_or_else(|| anyhow!("Did not fetch pending {} info", import_type))?;
+                let live_counts = live_imports
+                    .get(&import_type.to_string())
+                    .ok_or_else(|| anyhow!("Did not fetch live {} info", import_type))?;
                 let pending_string = format!(
                     "total pending {}: {} ({:.3}s)",
                     import_type,
@@ -513,8 +498,7 @@ impl crate::Subcommand for MinitopCmd {
                 queue!(
                     stdout,
                     style::Print(format!("{:<40} {}", pending_string, live_string)),
-                )
-                .from_err()?;
+                )?;
                 cursor.new_line(&mut stdout)?;
             }
 
@@ -546,8 +530,7 @@ impl crate::Subcommand for MinitopCmd {
                         aggregated_process
                             .access_counts
                             .fsChannelDurationNs
-                            .try_into()
-                            .from_err()?,
+                            .try_into()?,
                     ))
                     .simple_human_time(TimeUnit::Nanoseconds),
                     HumanTime::from(aggregated_process.last_access_time.elapsed())
@@ -557,12 +540,12 @@ impl crate::Subcommand for MinitopCmd {
             }
 
             for line in table.lines() {
-                queue!(stdout, style::Print(line),).from_err()?;
+                queue!(stdout, style::Print(line),)?;
                 cursor.new_line(&mut stdout)?;
             }
             cursor.new_line(&mut stdout)?;
             cursor.new_line(&mut stdout)?;
-            stdout.flush().from_err()?;
+            stdout.flush()?;
 
             loop {
                 let delay = tokio::time::sleep(self.refresh_rate);
@@ -573,7 +556,7 @@ impl crate::Subcommand for MinitopCmd {
                     maybe_event = event => {
                         match maybe_event {
                             Some(event) => {
-                                let event = event.from_err()?;
+                                let event = event?;
 
                                 let q = Event::Key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE));
                                 let ctrlc = Event::Key(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL));

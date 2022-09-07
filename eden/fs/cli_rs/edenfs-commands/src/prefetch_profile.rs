@@ -15,14 +15,12 @@ use std::str;
 
 use anyhow::anyhow;
 use anyhow::Context;
+use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::checkout::CheckoutConfig;
 use edenfs_client::EdenFsInstance;
-use edenfs_error::EdenFsError;
-use edenfs_error::Result;
-use edenfs_error::ResultExt;
 #[cfg(fbcode_build)]
 use edenfs_telemetry::prefetch_profile::PrefetchProfileSample;
 #[cfg(fbcode_build)]
@@ -193,7 +191,7 @@ pub enum PrefetchCmd {
 impl PrefetchCmd {
     async fn finish(&self, instance: EdenFsInstance, output_path: &PathBuf) -> Result<ExitCode> {
         let client = instance.connect(None).await?;
-        let files = client.stopRecordingBackingStoreFetch().await.from_err()?;
+        let files = client.stopRecordingBackingStoreFetch().await?;
         let fetched_files = files
             .fetchedFilePaths
             .get("HgQueuedBackingStore")
@@ -212,7 +210,7 @@ impl PrefetchCmd {
 
     async fn record(&self, instance: EdenFsInstance) -> Result<ExitCode> {
         let client = instance.connect(None).await?;
-        client.startRecordingBackingStoreFetch().await.from_err()?;
+        client.startRecordingBackingStoreFetch().await?;
         Ok(0)
     }
 
@@ -226,10 +224,10 @@ impl PrefetchCmd {
                 checkout_config.print_prefetch_profiles();
                 Ok(0)
             }
-            Err(_) => Err(EdenFsError::Other(anyhow!(
+            Err(_) => Err(anyhow!(
                 "Could not print prefetch profile data for {}",
                 client_name
-            ))),
+            )),
         }
     }
 
@@ -263,7 +261,7 @@ impl PrefetchCmd {
                 sample.fail(&e.to_string());
                 send(sample.builder);
             }
-            return Err(e);
+            return Err(anyhow::Error::new(e));
         }
         #[cfg(fbcode_build)]
         send(sample.builder);
@@ -328,7 +326,7 @@ impl PrefetchCmd {
                 sample.fail(&e.to_string());
                 send(sample.builder);
             }
-            return Err(e);
+            return Err(anyhow::Error::new(e));
         }
         #[cfg(fbcode_build)]
         send(sample.builder);
@@ -391,7 +389,7 @@ impl PrefetchCmd {
                 sample.fail(&e.to_string());
                 send(sample.builder);
             }
-            return Err(e);
+            return Err(anyhow::Error::new(e));
         }
         #[cfg(fbcode_build)]
         send(sample.builder);
@@ -424,7 +422,7 @@ impl PrefetchCmd {
                 sample.fail(&e.to_string());
                 send(sample.builder);
             }
-            return Err(e);
+            return Err(anyhow::Error::new(e));
         }
         #[cfg(fbcode_build)]
         send(sample.builder);

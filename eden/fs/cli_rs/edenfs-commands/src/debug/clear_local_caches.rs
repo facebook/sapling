@@ -7,11 +7,10 @@
 
 //! edenfsctl config
 
+use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::EdenFsInstance;
-use edenfs_error::Result;
-use edenfs_error::ResultExt;
 
 use crate::ExitCode;
 
@@ -23,7 +22,7 @@ pub struct ClearLocalCachesCmd {}
 impl crate::Subcommand for ClearLocalCachesCmd {
     async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
         let client = instance.connect(None).await?;
-        client.debugClearLocalStoreCaches().await.from_err()?;
+        client.debugClearLocalStoreCaches().await?;
         Ok(0)
     }
 }

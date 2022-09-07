@@ -16,6 +16,7 @@ use std::path::PathBuf;
 
 use anyhow::anyhow;
 use anyhow::Context;
+use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use colored::Colorize;
@@ -29,9 +30,6 @@ use edenfs_client::checkout::EdenFsCheckout;
 use edenfs_client::redirect::get_effective_redirections;
 use edenfs_client::EdenFsClient;
 use edenfs_client::EdenFsInstance;
-use edenfs_error::EdenFsError;
-use edenfs_error::Result;
-use edenfs_error::ResultExt;
 use edenfs_utils::bytes_from_path;
 use edenfs_utils::get_buck_command;
 use edenfs_utils::get_env_with_buck_version;
@@ -250,8 +248,7 @@ async fn ignored_usage_counts_for_mount(
                 .as_bytes()
                 .to_vec(),
         )
-        .await
-        .from_err()?;
+        .await?;
 
     let mut aggregated_usage_counts_ignored = 0;
     for (rel_path, _file_status) in scm_status.entries {
@@ -268,8 +265,7 @@ async fn ignored_usage_counts_for_mount(
                 Ok(0)
             }
             Err(e) => Err(e),
-        }
-        .from_err()?;
+        }?;
     }
     Ok(aggregated_usage_counts_ignored)
 }
@@ -281,8 +277,7 @@ fn get_hg_cache_path() -> Result<PathBuf> {
         .stderr(Redirection::Pipe)
         .env_clear()
         .env_extend(&get_environment_suitable_for_subprocess())
-        .capture()
-        .from_err()?;
+        .capture()?;
 
     if output.success() {
         let raw_path = output.stdout_str();
@@ -290,11 +285,11 @@ fn get_hg_cache_path() -> Result<PathBuf> {
         assert!(!raw_path.is_empty());
         Ok(PathBuf::from(raw_path))
     } else {
-        Err(EdenFsError::Other(anyhow!(
+        Err(anyhow!(
             "Failed to execute `hg config remotefilelog.cachepath`, stderr: {}, exit status: {:?}",
             output.stderr_str(),
             output.exit_status,
-        )))
+        ))
     }
 }
 
@@ -338,7 +333,7 @@ impl DiskUsageCmd {
                 .cloned()
                 .collect();
             if config_paths.is_empty() {
-                return Err(EdenFsError::Other(anyhow!("No EdenFS mount found")));
+                return Err(anyhow!("No EdenFS mount found"));
             }
             Ok(config_paths)
         }
@@ -461,7 +456,7 @@ fn warn_about_working_copy_for_backing_repo(backing_repos: &HashSet<PathBuf>) ->
     let mut warned = false;
     for backing_repo in backing_repos.iter() {
         // A non-empty working copy will contain more than just the .hg at the root.
-        if backing_repo.join(".hg").is_dir() && fs::read_dir(backing_repo).from_err()?.count() > 1 {
+        if backing_repo.join(".hg").is_dir() && fs::read_dir(backing_repo)?.count() > 1 {
             if !warned {
                 println!(
                     "\nWorking copy detected in backing repo. This is not generally useful \
@@ -491,24 +486,20 @@ fn clean_buck_redirections(buck_redirections: HashSet<PathBuf>) -> Result<()> {
                 .env_clear()
                 .env_extend(&get_env_with_buck_version(basename)?)
                 .capture()
-                .from_err()
                 .with_context(|| format!("Failed to run buck {}", get_buck_command()))?;
 
             if output.success() {
                 println!("{}", "Space reclaimed".blue());
             } else {
-                return Err(EdenFsError::Other(anyhow!(
+                return Err(anyhow!(
                     "Failed to execute buck clean from {}, stderr: {}, exit status: {:?}",
                     basename.display(),
                     output.stderr_str(),
                     output.exit_status,
-                )));
+                ));
             }
         } else {
-            return Err(EdenFsError::Other(anyhow!(
-                "Found invalid redirection: {}",
-                redir.display()
-            )));
+            return Err(anyhow!("Found invalid redirection: {}", redir.display()));
         };
     }
     Ok(())
@@ -536,13 +527,12 @@ impl crate::Subcommand for DiskUsageCmd {
 
         for b in backing_repos.iter() {
             // GET SUMMARY INFO for backing counts
-            let (usage_count, failed_file_checks) =
-                usage_for_dir(b, None).from_err().with_context(|| {
-                    format!(
-                        "Failed to measure disk space usage for backing repository {}",
-                        b.display()
-                    )
-                })?;
+            let (usage_count, failed_file_checks) = usage_for_dir(b, None).with_context(|| {
+                format!(
+                    "Failed to measure disk space usage for backing repository {}",
+                    b.display()
+                )
+            })?;
             aggregated_usage_counts.backing += usage_count;
             backing_failed_file_checks.extend(failed_file_checks);
         }
@@ -551,7 +541,6 @@ impl crate::Subcommand for DiskUsageCmd {
             // GET SUMMARY INFO for materialized counts
             let overlay_dir = checkout.data_dir().join("local");
             let (usage_count, failed_file_checks) = usage_for_dir(&overlay_dir, None)
-                .from_err()
                 .with_context(|| {
                     format!(
                         "Failed to measure disk space usage for overlay {}",
@@ -568,7 +557,7 @@ impl crate::Subcommand for DiskUsageCmd {
 
         for fsck_dir in fsck_dirs.iter() {
             let (usage_count, failed_file_checks) =
-                usage_for_dir(fsck_dir, None).from_err().with_context(|| {
+                usage_for_dir(fsck_dir, None).with_context(|| {
                     format!(
                         "Failed to measure disk space usage for fsck directory {}",
                         fsck_dir.display()
@@ -581,7 +570,7 @@ impl crate::Subcommand for DiskUsageCmd {
         for target in redirections {
             // GET SUMMARY INFO for redirections
             let (usage_count, failed_file_checks) =
-                usage_for_dir(&target, None).from_err().with_context(|| {
+                usage_for_dir(&target, None).with_context(|| {
                     format!(
                         "Failed to measure disk space usage for redirection {}",
                         target.display()
@@ -600,25 +589,21 @@ impl crate::Subcommand for DiskUsageCmd {
         // GET SUMMARY INFO for shared usage
         let mut shared_failed_file_checks = HashSet::new();
         let (logs_dir_usage, failed_logs_dir_file_checks) =
-            usage_for_dir(&instance.logs_dir(), None)
-                .from_err()
-                .with_context(|| {
-                    format!(
-                        "Failed to measure disk space usage for EdenFS logs {}",
-                        instance.logs_dir().display()
-                    )
-                })?;
+            usage_for_dir(&instance.logs_dir(), None).with_context(|| {
+                format!(
+                    "Failed to measure disk space usage for EdenFS logs {}",
+                    instance.logs_dir().display()
+                )
+            })?;
         aggregated_usage_counts.shared += logs_dir_usage;
         shared_failed_file_checks.extend(failed_logs_dir_file_checks);
         let (storage_dir_usage, failed_storage_dir_file_checks) =
-            usage_for_dir(&instance.storage_dir(), None)
-                .from_err()
-                .with_context(|| {
-                    format!(
-                        "Failed to measure disk space usage for EdenFS LocalStore {}",
-                        instance.storage_dir().display()
-                    )
-                })?;
+            usage_for_dir(&instance.storage_dir(), None).with_context(|| {
+                format!(
+                    "Failed to measure disk space usage for EdenFS LocalStore {}",
+                    instance.storage_dir().display()
+                )
+            })?;
         aggregated_usage_counts.shared += storage_dir_usage;
         shared_failed_file_checks.extend(failed_storage_dir_file_checks);
 
@@ -634,7 +619,6 @@ impl crate::Subcommand for DiskUsageCmd {
             println!(
                 "{}",
                 serde_json::to_string(&aggregated_usage_counts)
-                    .from_err()
                     .context("Failed to serialize usage counts")?
             );
         } else {
@@ -728,17 +712,16 @@ impl crate::Subcommand for DiskUsageCmd {
                     .arg("gc")
                     .stdout(Redirection::Pipe)
                     .stderr(Redirection::Pipe)
-                    .capture()
-                    .from_err()?;
+                    .capture()?;
 
                 if output.success() {
                     println!("{}", "Finished cleaning shared space.".blue())
                 } else {
-                    return Err(EdenFsError::Other(anyhow!(
+                    return Err(anyhow!(
                         "Failed to execute `eden gc`, stderr: {}, exit status: {:?}",
                         output.stderr_str(),
                         output.exit_status,
-                    )));
+                    ));
                 }
             } else {
                 println!("Run `eden gc` to reduce the space used by the storage engine.");
