@@ -644,12 +644,15 @@ fn clean_buck_redirections(buck_redirections: HashSet<PathBuf>) -> Result<()> {
             if output.success() {
                 println!("{}", "Space reclaimed".blue());
             } else {
-                return Err(anyhow!(
-                    "Failed to execute buck clean from {}, stderr: {}, exit status: {:?}",
-                    basename.display(),
-                    output.stderr_str(),
-                    output.exit_status,
-                ));
+                println!(
+                    "{}",
+                    format!(
+                        "Failed to execute buck clean from {}, stderr: {}",
+                        basename.display(),
+                        output.stderr_str().trim()
+                    )
+                    .yellow()
+                );
             }
         } else {
             return Err(anyhow!("Found invalid redirection: {}", redir.display()));
