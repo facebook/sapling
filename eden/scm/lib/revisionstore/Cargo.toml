@@ -45,7 +45,6 @@ serde_derive = "1.0"
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 sha-1 = "0.10"
 sha2 = "0.10"
-staticconfig = { version = "0.1.0", path = "../config/static" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
 tempfile = "3.3"
 thiserror = "1.0.30"
