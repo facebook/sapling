@@ -12,9 +12,9 @@ use anyhow::bail;
 use clidispatch::abort;
 use clidispatch::abort_if;
 use clidispatch::errors;
-use clidispatch::global_flags::HgGlobalOpts;
 use clidispatch::io::IsTty;
 use clidispatch::OptionalRepo;
+use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use configmodel::ConfigExt;
 use configparser::Config;
@@ -27,7 +27,6 @@ use minibytes::Text;
 use super::global_to_format_opts;
 use super::ConfigSet;
 use super::Result;
-use super::IO;
 use crate::commands::FormatterOpts;
 
 define_flags! {
@@ -55,12 +54,7 @@ define_flags! {
     }
 }
 
-pub fn run(
-    config_opts: ConfigOpts,
-    global_opts: HgGlobalOpts,
-    io: &IO,
-    repo: &mut OptionalRepo,
-) -> Result<u8> {
+pub fn run(ctx: ReqCtx<ConfigOpts>, repo: &mut OptionalRepo) -> Result<u8> {
     let config = repo.config();
     let force_rust = config
         .get_or_default::<Vec<String>>("commands", "force-rust")?
@@ -71,10 +65,10 @@ pub fn run(
         bail!(errors::FallbackToPython(short_name()));
     }
 
-    if config_opts.edit
-        || config_opts.local
-        || config_opts.global
-        || !config_opts.formatter_opts.template.is_empty()
+    if ctx.opts.edit
+        || ctx.opts.local
+        || ctx.opts.global
+        || !ctx.opts.formatter_opts.template.is_empty()
     {
         bail!(errors::FallbackToPython(short_name()));
     }
@@ -82,16 +76,16 @@ pub fn run(
     let config = repo.config();
     let formatter = get_formatter(
         "config",
-        &config_opts.formatter_opts.template,
-        global_to_format_opts(&global_opts),
-        Box::new(io.output()),
+        &ctx.opts.formatter_opts.template,
+        global_to_format_opts(ctx.global_opts()),
+        Box::new(ctx.io().output()),
     )?;
 
-    if io.output().is_tty() {
-        io.start_pager(config)?;
+    if ctx.io().output().is_tty() {
+        ctx.io().start_pager(config)?;
     }
 
-    show_configs(config_opts.args, config, formatter)
+    show_configs(ctx.opts.args, config, formatter)
 }
 
 struct ConfigItem<'a> {

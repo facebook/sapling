@@ -8,18 +8,18 @@
 use std::io::Write;
 
 use clidispatch::OptionalRepo;
+use clidispatch::ReqCtx;
 use configparser::config::Options;
 
 use super::define_flags;
 use super::Result;
-use super::IO;
 
 define_flags! {
     pub struct DebugNetworkDoctorOps {
     }
 }
 
-pub fn run(_opts: DebugNetworkDoctorOps, io: &IO, repo: &mut OptionalRepo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugNetworkDoctorOps>, repo: &mut OptionalRepo) -> Result<u8> {
     // Set a default repo so we can build valid edenapi URLs outside a repo.
     if let OptionalRepo::None(ref mut config) = repo {
         config.set(
@@ -30,7 +30,7 @@ pub fn run(_opts: DebugNetworkDoctorOps, io: &IO, repo: &mut OptionalRepo) -> Re
         );
     }
 
-    let mut stdout = io.output();
+    let mut stdout = ctx.io().output();
     match network_doctor::Doctor::new().diagnose(repo.config()) {
         Ok(()) => write!(stdout, "No network problems detected.\n")?,
         Err(d) => write!(stdout, "{}\n\n{}\n", d.treatment(repo.config()), d)?,
