@@ -23,6 +23,7 @@ use formatter::formatter::FormatOptions;
 use formatter::formatter::Formattable;
 use formatter::formatter::ListFormatter;
 use minibytes::Text;
+use serde::Serialize;
 
 use super::global_to_format_opts;
 use super::ConfigSet;
@@ -88,6 +89,7 @@ pub fn run(ctx: ReqCtx<ConfigOpts>, repo: &mut OptionalRepo) -> Result<u8> {
     show_configs(ctx.opts.args, config, formatter)
 }
 
+#[derive(Serialize)]
 struct ConfigItem<'a> {
     source: String,
     section: &'a str,

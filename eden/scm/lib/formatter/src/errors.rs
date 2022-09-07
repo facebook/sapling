@@ -17,6 +17,10 @@ pub enum FormattingError {
     #[error("Write Error")]
     WriterError(#[from] std::io::Error),
 
+    /// Error caused when serializing using the JSON formatter
+    #[error("Serializing Error")]
+    JsonFormatterError(#[from] serde_json::Error),
+
     /// Non-IO error caused by `format_plain` application code
     #[error(transparent)]
     PlainFormattingError(#[from] anyhow::Error),

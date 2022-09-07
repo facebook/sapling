@@ -7,6 +7,9 @@
 
 use std::io::Write;
 
+use serde::Serialize;
+use serde_json::to_writer_pretty;
+
 use crate::errors::FormatterNotFound;
 use crate::errors::FormattingError;
 
@@ -18,7 +21,18 @@ pub struct FormatOptions {
     pub quiet: bool,
 }
 
-pub trait Formattable {
+pub trait JsonFormattable {
+    fn format_json(&self, writer: &mut dyn Write) -> Result<(), serde_json::Error>;
+}
+
+impl<S: Serialize> JsonFormattable for S {
+    fn format_json(&self, writer: &mut dyn Write) -> Result<(), serde_json::Error> {
+        to_writer_pretty(writer, self)?;
+        Ok(())
+    }
+}
+
+pub trait Formattable: JsonFormattable {
     fn format_plain(
         &self,
         options: &FormatOptions,
@@ -28,11 +42,18 @@ pub trait Formattable {
 
 pub trait ListFormatter {
     fn format_item(&mut self, item: &dyn Formattable) -> FormatResult<()>;
+    fn begin_list(&mut self) -> FormatResult<()>;
+    fn end_list(&mut self) -> FormatResult<()>;
 }
 
 pub struct PlainFormatter {
     writer: Box<dyn Write>,
     options: FormatOptions,
+}
+
+pub struct JsonFormatter {
+    writer: Box<dyn Write>,
+    first_item_formatted: bool,
 }
 
 impl ListFormatter for PlainFormatter {
@@ -43,6 +64,38 @@ impl ListFormatter for PlainFormatter {
                 Err(err) => FormattingError::PlainFormattingError(err),
             })
     }
+
+    fn begin_list(&mut self) -> FormatResult<()> {
+        Ok(())
+    }
+
+    fn end_list(&mut self) -> FormatResult<()> {
+        Ok(())
+    }
+}
+
+impl ListFormatter for JsonFormatter {
+    fn format_item(&mut self, item: &dyn Formattable) -> FormatResult<()> {
+        let prev_separator = if self.first_item_formatted {
+            ","
+        } else {
+            self.first_item_formatted = true;
+            ""
+        };
+        write!(self.writer, "{}\n", prev_separator)?;
+        item.format_json(self.writer.as_mut())?;
+        Ok(())
+    }
+
+    fn begin_list(&mut self) -> FormatResult<()> {
+        write!(self.writer, "[")?;
+        Ok(())
+    }
+
+    fn end_list(&mut self) -> FormatResult<()> {
+        write!(self.writer, "\n]\n")?;
+        Ok(())
+    }
 }
 
 pub fn get_formatter(
@@ -51,10 +104,14 @@ pub fn get_formatter(
     options: FormatOptions,
     writer: Box<dyn Write>,
 ) -> Result<Box<dyn ListFormatter>, FormatterNotFound> {
-    if template.is_empty() {
-        return Ok(Box::new(PlainFormatter { writer, options }));
+    match template {
+        "" => Ok(Box::new(PlainFormatter { writer, options })),
+        "json" => Ok(Box::new(JsonFormatter {
+            writer,
+            first_item_formatted: false,
+        })),
+        _ => Err(FormatterNotFound(template.into())),
     }
-    Err(FormatterNotFound(template.into()))
 }
 
 #[cfg(test)]
@@ -64,9 +121,12 @@ mod tests {
     use std::rc::Rc;
 
     use anyhow::bail;
+    use serde::Deserialize;
+    use serde_json::json;
 
     use super::*;
 
+    #[derive(Serialize, Deserialize)]
     struct RequestTest<'a> {
         url: &'a str,
         result: u32,
@@ -109,6 +169,18 @@ mod tests {
         }
     }
 
+    impl JsonFormattable for FaultyItem {
+        fn format_json(&self, _writer: &mut dyn Write) -> Result<(), serde_json::Error> {
+            let serialized = json!({
+                "x": 1,
+                "y": 2,
+            })
+            .to_string();
+            serde_json::from_str::<RequestTest>(serialized.as_str())?;
+            Ok(())
+        }
+    }
+
     struct FaultyBuffer {
         buf: [u8; 0],
     }
@@ -123,23 +195,28 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_formatter() {
-        let buf = Rc::new(RefCell::new(Vec::<u8>::new()));
-        let err = get_formatter(
+    fn get_trivial_formatter(
+        template: &str,
+        buffer: Rc<RefCell<Vec<u8>>>,
+    ) -> Result<Box<dyn ListFormatter>, FormatterNotFound> {
+        get_formatter(
             "",
-            "{node|short}",
+            template,
             FormatOptions {
                 debug: false,
                 verbose: false,
                 quiet: false,
             },
-            Box::new(Buffer {
-                writer: buf.clone(),
-            }),
+            Box::new(Buffer { writer: buffer }),
         )
-        .err()
-        .unwrap();
+    }
+
+    #[test]
+    fn test_formatter() {
+        let buf = Rc::new(RefCell::new(Vec::<u8>::new()));
+        let err = get_trivial_formatter("{node|short}", buf.clone())
+            .err()
+            .unwrap();
         assert!(matches!(err, FormatterNotFound(_)));
         assert_eq!(
             err.to_string(),
@@ -150,23 +227,68 @@ mod tests {
             url: "foo://bar",
             result: 200,
         };
-        let mut fm = get_formatter(
-            "",
-            "",
-            FormatOptions {
-                debug: false,
-                verbose: false,
-                quiet: false,
-            },
-            Box::new(Buffer {
-                writer: buf.clone(),
-            }),
-        )
-        .unwrap();
+        let mut fm = get_trivial_formatter("", buf.clone()).unwrap();
         fm.format_item(&item).unwrap();
         assert_eq!(
             String::from_utf8(buf.as_ref().borrow().clone()).unwrap(),
             "foo://bar: 200".to_string()
+        );
+    }
+
+    #[test]
+    fn test_json_formatter() {
+        let item = RequestTest {
+            url: "foo://bar",
+            result: 200,
+        };
+
+        // Test no items
+        let buf = Rc::new(RefCell::new(Vec::<u8>::new()));
+        let mut fm = get_trivial_formatter("json", buf.clone()).unwrap();
+        fm.begin_list().unwrap();
+        fm.end_list().unwrap();
+        assert_eq!(
+            String::from_utf8(buf.as_ref().borrow().clone()).unwrap(),
+            "[\n]\n".to_string()
+        );
+        // Test single item
+        let buf = Rc::new(RefCell::new(Vec::<u8>::new()));
+        let mut fm = get_trivial_formatter("json", buf.clone()).unwrap();
+        fm.begin_list().unwrap();
+        fm.format_item(&item).unwrap();
+        fm.end_list().unwrap();
+        assert_eq!(
+            String::from_utf8(buf.as_ref().borrow().clone()).unwrap(),
+            r#"[
+{
+  "url": "foo://bar",
+  "result": 200
+}
+]
+"#
+            .to_string()
+        );
+        // Test more than one item
+        let buf = Rc::new(RefCell::new(Vec::<u8>::new()));
+        let mut fm = get_trivial_formatter("json", buf.clone()).unwrap();
+        fm.begin_list().unwrap();
+        fm.format_item(&item).unwrap();
+        fm.format_item(&item).unwrap();
+        fm.end_list().unwrap();
+        assert_eq!(
+            String::from_utf8(buf.as_ref().borrow().clone()).unwrap(),
+            r#"[
+{
+  "url": "foo://bar",
+  "result": 200
+},
+{
+  "url": "foo://bar",
+  "result": 200
+}
+]
+"#
+            .to_string()
         );
     }
 
@@ -198,6 +320,13 @@ mod tests {
         assert!(matches!(
             fm.format_item(&item).err().unwrap(),
             FormattingError::PlainFormattingError(_)
+        ));
+
+        let buf = Rc::new(RefCell::new(Vec::<u8>::new()));
+        let mut fm = get_trivial_formatter("json", buf).unwrap();
+        assert!(matches!(
+            fm.format_item(&item).err().unwrap(),
+            FormattingError::JsonFormatterError(_)
         ));
     }
 }
