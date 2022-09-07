@@ -263,7 +263,7 @@ impl ConfigSetHgExt for ConfigSet {
         readonly_items: Option<Vec<(S, N)>>,
     ) -> Result<SupersetVerification, Errors> {
         tracing::info!(
-            repo_path = repo_path.and_then(|p| p.to_str()).unwrap_or("<none>"),
+            repo_path = %repo_path.and_then(|p| p.to_str()).unwrap_or("<none>"),
             "loading config"
         );
 
