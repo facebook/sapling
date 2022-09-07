@@ -814,11 +814,9 @@ mod test {
         );
 
         let stdout = "";
-        let src_lib_path = Path::new("src").join("lib");
         let stderr = format!(
-            "{}\n  {}: {}\n",
+            "{}\n  src/lib: {}\n",
             "Encountered errors computing status for some paths:",
-            src_lib_path.display(),
             "unable to fetch directory data: connection reset",
         );
 
