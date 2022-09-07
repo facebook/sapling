@@ -138,13 +138,13 @@ pub fn init_working_copy(
         target,
     ) {
         Ok(stats) => {
-            logger.status(format!("{}", stats));
+            logger.info(format!("{}", stats));
 
             Ok(())
         }
         Err(err) => {
             if err.resumable {
-                logger.status(format!(
+                logger.info(format!(
                     "Checkout failed. Resume with '{} checkout --continue'",
                     logger.cli_name(),
                 ));

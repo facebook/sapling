@@ -139,7 +139,7 @@ pub fn run(
             "--eden requires --config clone.use-rust=True"
         );
 
-        logger.info("Falling back to Python clone (config not enabled)");
+        logger.verbose("Falling back to Python clone (config not enabled)");
         return Err(errors::FallbackToPython(name()).into());
     }
 
@@ -161,7 +161,7 @@ pub fn run(
             "some specified options are not compatible with --eden"
         );
 
-        logger.info("Falling back to Python clone (incompatible options)");
+        logger.verbose("Falling back to Python clone (incompatible options)");
         return Err(errors::FallbackToPython(name()).into());
     }
 
@@ -177,12 +177,12 @@ pub fn run(
         // bogus "no-repo" value that dynamicconfig sets when there is
         // no repo name.
         Some(c) if c != "no-repo" => {
-            logger.debug(|| format!("Repo name is {} from config", c));
+            logger.verbose(|| format!("Repo name is {} from config", c));
             c
         }
         Some(_) | None => match configparser::hg::repo_name_from_url(&clone_opts.source) {
             Some(name) => {
-                logger.debug(|| format!("Repo name is {} via URL {}", name, clone_opts.source));
+                logger.verbose(|| format!("Repo name is {} via URL {}", name, clone_opts.source));
                 config.set(
                     "remotefilelog",
                     "reponame",
@@ -207,7 +207,7 @@ pub fn run(
         }
     };
 
-    logger.status(format!(
+    logger.info(format!(
         "Cloning {} into {}",
         reponame,
         destination.display(),
@@ -244,7 +244,7 @@ pub fn run(
         };
 
         let mut backing_repo = if identity::sniff_dir(&backing_path)?.is_none() {
-            logger.info(|| {
+            logger.verbose(|| {
                 format!(
                     "Cloning {} backing repo to {}",
                     reponame,
@@ -265,7 +265,7 @@ pub fn run(
         };
         let target_rev =
             get_update_target(&mut logger, &mut backing_repo, &clone_opts)?.map(|(rev, _)| rev);
-        logger.info(|| {
+        logger.verbose(|| {
             format!(
                 "Performing EdenFS clone {}@{} from {} to {}",
                 reponame,
@@ -288,15 +288,15 @@ pub fn run(
 
         let target_rev = get_update_target(&mut logger, &mut repo, &clone_opts)?;
         if let Some((target_rev, bm)) = &target_rev {
-            logger.status(format!("Checking out '{}'", bm));
-            logger.info(|| {
+            logger.info(format!("Checking out '{}'", bm));
+            logger.verbose(|| {
                 format!(
                     "Initializing non-EdenFS working copy to commit {}",
                     target_rev.to_hex(),
                 )
             });
         } else {
-            logger.info("Initializing empty non-EdenFS working copy");
+            logger.verbose("Initializing empty non-EdenFS working copy");
         }
 
         clone::init_working_copy(
@@ -395,7 +395,7 @@ fn clone_metadata(
             &mut commits.write(),
             bookmark_names,
         )?;
-        logger.debug(|| format!("Pulled bookmarks {:?}", bookmark_ids));
+        logger.verbose(|| format!("Pulled bookmarks {:?}", bookmark_ids));
     } else {
         revlog_clone(
             repo.config(),
@@ -446,7 +446,7 @@ pub fn revlog_clone(
         args.push("--debug".into());
     }
 
-    logger.debug(|| format!("Running {}", args.join(" ")));
+    logger.verbose(|| format!("Running {}", args.join(" ")));
 
     let hg_python = HgPython::new(&args);
 
@@ -493,7 +493,7 @@ fn get_update_target(
     match remote_bookmarks.get(&remote_bookmark) {
         Some(rev) => Ok(Some((rev.clone(), main_bookmark))),
         None => {
-            logger.status(format!(
+            logger.info(format!(
                 "Server has no '{}' bookmark - skipping checkout.",
                 remote_bookmark,
             ));

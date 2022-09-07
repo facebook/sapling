@@ -46,9 +46,9 @@ impl TermLogger {
     }
 
     /// Write to stdout if not --quiet.
-    pub fn status(&mut self, msg: impl AsRef<str>) {
+    pub fn info(&mut self, msg: impl LazyStr) {
         if !self.quiet {
-            Self::write(&mut self.output, msg)
+            Self::write(&mut self.output, msg.to_str())
         }
     }
 
@@ -58,15 +58,8 @@ impl TermLogger {
     }
 
     /// Write to stdout if --verbose.
-    pub fn info(&mut self, msg: impl LazyStr) {
+    pub fn verbose(&mut self, msg: impl LazyStr) {
         if self.verbose {
-            Self::write(&mut self.output, msg.to_str())
-        }
-    }
-
-    /// Write to stdout if --debug.
-    pub fn debug(&mut self, msg: impl LazyStr) {
-        if self.debug {
             Self::write(&mut self.output, msg.to_str())
         }
     }
@@ -104,7 +97,7 @@ mod test {
     fn test_quiet() {
         let io = IO::new("".as_bytes(), Vec::new(), Some(Vec::new()));
         let mut logger = TermLogger::new(&io).with_quiet(true);
-        logger.status("hello");
+        logger.info("hello");
         logger.warn("error");
         assert_eq!(get_stdout(&io), "");
         assert_eq!(get_stderr(&io), "error\n");
@@ -114,24 +107,24 @@ mod test {
     fn test_default() {
         let io = IO::new("".as_bytes(), Vec::new(), Some(Vec::new()));
         let mut logger = TermLogger::new(&io);
-        logger.status("status");
-        logger.info("info");
-        logger.debug("debug");
+        logger.info("status");
+        logger.verbose("verbose");
+        logger.warn("warn");
         assert_eq!(get_stdout(&io), "status\n");
-        assert_eq!(get_stderr(&io), "");
+        assert_eq!(get_stderr(&io), "warn\n");
     }
 
     #[test]
-    fn test_debug() {
+    fn test_verbose() {
         let io = IO::new("".as_bytes(), Vec::new(), Some(Vec::new()));
         let mut logger = TermLogger::new(&io);
-        logger.debug(|| -> String {
+        logger.verbose(|| -> String {
             panic!("don't call me!");
         });
         assert_eq!(get_stdout(&io), "");
 
-        let mut logger = logger.with_debug(true);
-        logger.debug(|| "okay".to_string());
+        let mut logger = logger.with_verbose(true);
+        logger.verbose(|| "okay".to_string());
         assert_eq!(get_stdout(&io), "okay\n");
     }
 
