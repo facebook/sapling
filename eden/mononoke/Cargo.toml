@@ -33,10 +33,6 @@ name = "configlint"
 path = "cmds/configlint.rs"
 
 [[bin]]
-name = "land_service"
-path = "src/main.rs"
-
-[[bin]]
 name = "manual_scrub"
 path = "cmds/manual_scrub/main.rs"
 
@@ -308,6 +304,7 @@ members = [
   "hook_tailer",
   "hooks",
   "hooks/content-stores",
+  "land_service",
   "lfs_import_lib",
   "lfs_protocol",
   "lfs_server",
