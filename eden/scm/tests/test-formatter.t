@@ -11,11 +11,11 @@ Test config:
   testsection.subsection2=bar
   $ hg --config foo.bar=baz config foo -Tjson
   [
-   {
+  {
     "name": "foo.bar",
     "source": "--config",
     "value": "baz"
-   }
+  }
   ]
   $ hg --config foo.bar=baz config foo -Tdebug
   config = [
@@ -25,11 +25,11 @@ Test config:
   baz
   $ hg --config foo.bar=baz config foo.bar -Tjson
   [
-   {
+  {
     "name": "foo.bar",
     "source": "--config",
     "value": "baz"
-   }
+  }
   ]
   $ hg --config foo.bar=baz config foo.bar -Tdebug
   config = [
@@ -48,16 +48,16 @@ Test config:
   ]
   $ hg config testsection -Tjson
   [
-   {
+  {
     "name": "testsection.subsection1",
     "source": "*.hgrc:*", (glob)
     "value": "foo"
-   },
-   {
+  },
+  {
     "name": "testsection.subsection2",
     "source": "*.hgrc:*", (glob)
     "value": "bar"
-   }
+  }
   ]
   $ hg config testsection.subsection1
   foo
@@ -69,11 +69,11 @@ Test config:
   ]
   $ hg config testsection.subsection1 -Tjson
   [
-   {
+  {
     "name": "testsection.subsection1",
     "source": "*.hgrc:*", (glob)
     "value": "foo"
-   }
+  }
   ]
 
 Test status:

@@ -18,14 +18,15 @@ use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use configmodel::ConfigExt;
 use configparser::Config;
-use formatter::formatter::get_formatter;
 use formatter::formatter::FormatOptions;
 use formatter::formatter::Formattable;
 use formatter::formatter::ListFormatter;
 use minibytes::Text;
-use serde::Serialize;
+use serde::ser::Serialize;
+use serde::ser::SerializeStruct;
+use serde::ser::Serializer;
 
-use super::global_to_format_opts;
+use super::get_formatter;
 use super::ConfigSet;
 use super::Result;
 use crate::commands::FormatterOpts;
@@ -66,19 +67,15 @@ pub fn run(ctx: ReqCtx<ConfigOpts>, repo: &mut OptionalRepo) -> Result<u8> {
         bail!(errors::FallbackToPython(short_name()));
     }
 
-    if ctx.opts.edit
-        || ctx.opts.local
-        || ctx.opts.global
-        || !ctx.opts.formatter_opts.template.is_empty()
-    {
+    if ctx.opts.edit || ctx.opts.local || ctx.opts.global {
         bail!(errors::FallbackToPython(short_name()));
     }
 
     let config = repo.config();
-    let formatter = get_formatter(
-        "config",
+    let mut formatter = get_formatter(
+        short_name(),
         &ctx.opts.formatter_opts.template,
-        global_to_format_opts(ctx.global_opts()),
+        ctx.global_opts(),
         Box::new(ctx.io().output()),
     )?;
 
@@ -86,10 +83,13 @@ pub fn run(ctx: ReqCtx<ConfigOpts>, repo: &mut OptionalRepo) -> Result<u8> {
         ctx.io().start_pager(config)?;
     }
 
-    show_configs(ctx.opts.args, config, formatter)
+    formatter.begin_list()?;
+    let exit_code = show_configs(ctx.opts.args, config, formatter.as_mut())?;
+    formatter.end_list()?;
+
+    Ok(exit_code)
 }
 
-#[derive(Serialize)]
 struct ConfigItem<'a> {
     source: String,
     section: &'a str,
@@ -97,6 +97,20 @@ struct ConfigItem<'a> {
     value: String,
     single_item: bool,
     builtin: bool,
+}
+
+impl<'a> Serialize for ConfigItem<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut item = serializer.serialize_struct("ConfigItem", 3)?;
+        let name = format!("{}.{}", self.section, self.key);
+        item.serialize_field("name", name.as_str())?;
+        item.serialize_field("source", &self.source)?;
+        item.serialize_field("value", &self.value)?;
+        item.end()
+    }
 }
 
 impl<'a> Formattable for ConfigItem<'a> {
@@ -182,7 +196,7 @@ fn get_config_item<'a>(
 fn show_configs(
     requested_configs: Vec<String>,
     config: &ConfigSet,
-    mut formatter: Box<dyn ListFormatter>,
+    formatter: &mut dyn ListFormatter,
 ) -> Result<u8> {
     let requested_items: Vec<_> = requested_configs
         .iter()

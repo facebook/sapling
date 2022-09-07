@@ -84,56 +84,33 @@ Test case sensitive configuration
 
   $ hg showconfig Section -Tjson
   [
-   {
+  {
     "name": "Section.KeY",
     "source": "*", (glob)
     "value": "Case Sensitive"
-   },
-   {
+  },
+  {
     "name": "Section.key",
     "source": "*", (glob)
     "value": "lower case"
-   }
+  }
   ]
   $ hg showconfig Section.KeY -Tjson
   [
-   {
+  {
     "name": "Section.KeY",
     "source": "*", (glob)
     "value": "Case Sensitive"
-   }
+  }
   ]
   $ hg showconfig -Tjson | tail -7
-   },
-   {
+  },
+  {
     "name": "*", (glob)
     "source": "*", (glob)
     "value": "*" (glob)
-   }
+  }
   ]
-
-Test empty config source:
-
-  $ cat <<EOF > emptysource.py
-  > def reposetup(ui, repo):
-  >     ui.setconfig('empty', 'source', 'value')
-  > EOF
-  $ cp .hg/hgrc .hg/hgrc.orig
-  $ cat <<EOF >> .hg/hgrc
-  > [extensions]
-  > emptysource = `pwd`/emptysource.py
-  > EOF
-
-  $ hg config empty.source -Tjson
-  [
-   {
-    "name": "empty.source",
-    "source": "ui.setconfig",
-    "value": "value"
-   }
-  ]
-
-  $ cp .hg/hgrc.orig .hg/hgrc
 
 Test "%unset"
 

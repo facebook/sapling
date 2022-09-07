@@ -35,21 +35,35 @@ commands! {
     mod whereami;
 }
 
+use std::io::Write;
+
 pub use anyhow::Result;
 use clidispatch::command::CommandTable;
+use clidispatch::errors::FallbackToPython;
 use clidispatch::global_flags::HgGlobalOpts;
 pub use clidispatch::io::IO;
 pub use cliparser::define_flags;
 pub use configparser::config::ConfigSet;
-use formatter::formatter::FormatOptions;
+use formatter::formatter;
 pub use repo::repo::Repo;
 
-fn global_to_format_opts(options: &HgGlobalOpts) -> FormatOptions {
-    FormatOptions {
-        debug: options.debug,
-        verbose: options.verbose,
-        quiet: options.quiet,
-    }
+fn get_formatter(
+    command_name: &'static str,
+    template: &str,
+    options: &HgGlobalOpts,
+    writer: Box<dyn Write>,
+) -> Result<Box<dyn formatter::ListFormatter>, FallbackToPython> {
+    formatter::get_formatter(
+        command_name,
+        template,
+        formatter::FormatOptions {
+            debug: options.debug,
+            verbose: options.verbose,
+            quiet: options.quiet,
+        },
+        writer,
+    )
+    .map_err(|_| FallbackToPython(command_name))
 }
 
 #[allow(dead_code)]
