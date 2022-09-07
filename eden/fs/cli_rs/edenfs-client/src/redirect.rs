@@ -138,7 +138,7 @@ impl Redirection {
         .from_err()
     }
 
-    fn mkscratch_bin() -> PathBuf {
+    pub fn mkscratch_bin() -> PathBuf {
         // mkscratch is provided by the hg deployment at facebook, which has a
         // different installation prefix on macOS vs Linux, so we need to resolve
         // it via the PATH.  In the integration test environment we'll set the
@@ -149,11 +149,15 @@ impl Redirection {
         }
     }
 
+    pub fn scratch_subdir() -> PathBuf {
+        PathBuf::from("edenfs/redirections")
+    }
+
     fn make_scratch_dir(checkout: &EdenFsCheckout, subdir: &Path) -> Result<PathBuf> {
         // TODO(zeyi): we can probably embed the logic from mkscratch here directly, without asking the CLI
         let mkscratch = Redirection::mkscratch_bin();
         let checkout_path_str = checkout.path().to_string_lossy().into_owned();
-        let subdir = PathBuf::from("edenfs/redirections")
+        let subdir = Redirection::scratch_subdir()
             .join(subdir)
             .to_string_lossy()
             .into_owned();
