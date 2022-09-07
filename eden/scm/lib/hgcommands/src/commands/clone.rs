@@ -14,9 +14,9 @@ use async_runtime::block_unless_interrupted as block_on;
 use clidispatch::abort;
 use clidispatch::abort_if;
 use clidispatch::errors;
-use clidispatch::global_flags::HgGlobalOpts;
 use clidispatch::output::new_logger;
 use clidispatch::output::TermLogger;
+use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use configmodel::ConfigExt;
 use migration::feature::deprecate;
@@ -27,7 +27,6 @@ use util::path::absolute;
 
 use super::ConfigSet;
 use super::Result;
-use super::IO;
 use crate::HgPython;
 
 static SEGMENTED_CHANGELOG_CAPABILITY: &str = "segmented-changelog";
@@ -83,25 +82,20 @@ define_flags! {
     }
 }
 
-pub fn run(
-    mut clone_opts: CloneOpts,
-    global_opts: HgGlobalOpts,
-    io: &IO,
-    config: &mut ConfigSet,
-) -> Result<u8> {
-    let mut logger = new_logger(io, &global_opts);
+pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
+    let mut logger = new_logger(ctx.io(), ctx.global_opts());
 
     let deprecated_options = [
-        ("--rev", "rev-option", clone_opts.rev.is_empty()),
+        ("--rev", "rev-option", ctx.opts.rev.is_empty()),
         (
             "--include",
             "clone-include-option",
-            clone_opts.include.is_empty(),
+            ctx.opts.include.is_empty(),
         ),
         (
             "--exclude",
             "clone-exclude-option",
-            clone_opts.exclude.is_empty(),
+            ctx.opts.exclude.is_empty(),
         ),
     ];
     for (option_name, option_config, option_is_empty) in deprecated_options {
@@ -115,17 +109,17 @@ pub fn run(
     }
 
     abort_if!(
-        !clone_opts.eden && !clone_opts.eden_backing_repo.is_empty(),
+        !ctx.opts.eden && !ctx.opts.eden_backing_repo.is_empty(),
         "--eden-backing-repo requires --eden",
     );
 
     abort_if!(
-        !clone_opts.enable_profile.is_empty() && clone_opts.eden,
+        !ctx.opts.enable_profile.is_empty() && ctx.opts.eden,
         "--enable-profile is not compatible with --eden",
     );
 
     abort_if!(
-        clone_opts.eden && clone_opts.noupdate,
+        ctx.opts.eden && ctx.opts.noupdate,
         "--noupdate is not compatible with --eden",
     );
 
@@ -135,7 +129,7 @@ pub fn run(
     let use_rust = force_rust || config.get_or_default("clone", "use-rust")?;
     if !use_rust {
         abort_if!(
-            clone_opts.eden,
+            ctx.opts.eden,
             "--eden requires --config clone.use-rust=True"
         );
 
@@ -143,21 +137,21 @@ pub fn run(
         return Err(errors::FallbackToPython(name()).into());
     }
 
-    let supported_url = match url::Url::parse(&clone_opts.source) {
+    let supported_url = match url::Url::parse(&ctx.opts.source) {
         Err(_) => false,
         Ok(url) => url.scheme() != "file" && url.scheme() != "ssh",
     };
 
-    if !clone_opts.updaterev.is_empty()
-        || !clone_opts.rev.is_empty()
-        || clone_opts.pull
-        || clone_opts.stream
-        || !clone_opts.shallow
-        || clone_opts.git
+    if !ctx.opts.updaterev.is_empty()
+        || !ctx.opts.rev.is_empty()
+        || ctx.opts.pull
+        || ctx.opts.stream
+        || !ctx.opts.shallow
+        || ctx.opts.git
         || !supported_url
     {
         abort_if!(
-            clone_opts.eden,
+            ctx.opts.eden,
             "some specified options are not compatible with --eden"
         );
 
@@ -168,7 +162,7 @@ pub fn run(
     config.set(
         "paths",
         "default",
-        Some(clone_opts.source.clone()),
+        Some(ctx.opts.source.clone()),
         &"arg".into(),
     );
 
@@ -180,9 +174,9 @@ pub fn run(
             logger.verbose(|| format!("Repo name is {} from config", c));
             c
         }
-        Some(_) | None => match configparser::hg::repo_name_from_url(&clone_opts.source) {
+        Some(_) | None => match configparser::hg::repo_name_from_url(&ctx.opts.source) {
             Some(name) => {
-                logger.verbose(|| format!("Repo name is {} via URL {}", name, clone_opts.source));
+                logger.verbose(|| format!("Repo name is {} via URL {}", name, ctx.opts.source));
                 config.set(
                     "remotefilelog",
                     "reponame",
@@ -195,7 +189,7 @@ pub fn run(
         },
     };
 
-    let destination = match clone_opts.args.pop() {
+    let destination = match ctx.opts.args.pop() {
         Some(dest) => absolute(dest).with_context(|| "Cannot get absolute destination path")?,
         None => {
             abort_if!(
@@ -213,17 +207,17 @@ pub fn run(
         destination.display(),
     ));
 
-    let clone_type_str = if clone_opts.eden {
+    let clone_type_str = if ctx.opts.eden {
         "eden_fs"
-    } else if !clone_opts.enable_profile.is_empty() {
+    } else if !ctx.opts.enable_profile.is_empty() {
         "sparse"
     } else {
         "full"
     };
     tracing::trace!("performing rust clone");
-    tracing::debug!(target: "clone_info", rust_clone="true", repo=reponame, clone_type=clone_type_str, is_update_clone=!clone_opts.noupdate);
-    if !clone_opts.enable_profile.is_empty() {
-        tracing::debug!(target: "clone_info", cloned_sparse_profiles=clone_opts.enable_profile.join(" "));
+    tracing::debug!(target: "clone_info", rust_clone="true", repo=reponame, clone_type=clone_type_str, is_update_clone=!ctx.opts.noupdate);
+    if !ctx.opts.enable_profile.is_empty() {
+        tracing::debug!(target: "clone_info", cloned_sparse_profiles=ctx.opts.enable_profile.join(" "));
     }
 
     if let Some(ident) = identity::sniff_dir(&destination)? {
@@ -234,9 +228,9 @@ pub fn run(
         );
     }
 
-    if clone_opts.eden {
-        let backing_path = if !clone_opts.eden_backing_repo.is_empty() {
-            PathBuf::from(&clone_opts.eden_backing_repo)
+    if ctx.opts.eden {
+        let backing_path = if !ctx.opts.eden_backing_repo.is_empty() {
+            PathBuf::from(&ctx.opts.eden_backing_repo)
         } else if let Some(dir) = clone::get_default_eden_backing_directory(config)? {
             dir.join(&reponame)
         } else {
@@ -251,20 +245,16 @@ pub fn run(
                     backing_path.display(),
                 )
             });
-            try_clone_metadata(
-                &mut logger,
-                io,
-                &clone_opts,
-                &global_opts,
-                config,
-                &reponame,
-                &backing_path,
-            )?
+            try_clone_metadata(&ctx, &mut logger, config, &reponame, &backing_path)?
         } else {
-            Repo::load(&backing_path, &global_opts.config, &global_opts.configfile)?
+            Repo::load(
+                &backing_path,
+                &ctx.global_opts().config,
+                &ctx.global_opts().configfile,
+            )?
         };
         let target_rev =
-            get_update_target(&mut logger, &mut backing_repo, &clone_opts)?.map(|(rev, _)| rev);
+            get_update_target(&mut logger, &mut backing_repo, &ctx.opts)?.map(|(rev, _)| rev);
         logger.verbose(|| {
             format!(
                 "Performing EdenFS clone {}@{} from {} to {}",
@@ -276,17 +266,9 @@ pub fn run(
         });
         clone::eden_clone(&backing_repo, &destination, target_rev)?;
     } else {
-        let mut repo = try_clone_metadata(
-            &mut logger,
-            io,
-            &clone_opts,
-            &global_opts,
-            config,
-            &reponame,
-            &destination,
-        )?;
+        let mut repo = try_clone_metadata(&ctx, &mut logger, config, &reponame, &destination)?;
 
-        let target_rev = get_update_target(&mut logger, &mut repo, &clone_opts)?;
+        let target_rev = get_update_target(&mut logger, &mut repo, &ctx.opts)?;
         if let Some((target_rev, bm)) = &target_rev {
             logger.info(format!("Checking out '{}'", bm));
             logger.verbose(|| {
@@ -303,7 +285,7 @@ pub fn run(
             &mut logger,
             &mut repo,
             target_rev.map(|(rev, _)| rev),
-            clone_opts.enable_profile.clone(),
+            ctx.opts.enable_profile.clone(),
         )?;
     }
 
@@ -311,24 +293,14 @@ pub fn run(
 }
 
 fn try_clone_metadata(
+    ctx: &ReqCtx<CloneOpts>,
     logger: &mut TermLogger,
-    io: &IO,
-    clone_opts: &CloneOpts,
-    global_opts: &HgGlobalOpts,
     config: &mut ConfigSet,
     reponame: &str,
     destination: &Path,
 ) -> Result<Repo> {
     let dest_preexists = destination.exists();
-    match clone_metadata(
-        logger,
-        io,
-        clone_opts,
-        global_opts,
-        config,
-        reponame,
-        destination,
-    ) {
+    match clone_metadata(ctx, logger, config, reponame, destination) {
         Err(e) => {
             let removal_dir = if dest_preexists {
                 let ident = identity::sniff_dir(destination)?.unwrap_or_else(identity::sniff_env);
@@ -345,15 +317,13 @@ fn try_clone_metadata(
 
 #[instrument(skip_all, fields(repo=reponame), err)]
 fn clone_metadata(
+    ctx: &ReqCtx<CloneOpts>,
     logger: &mut TermLogger,
-    io: &IO,
-    clone_opts: &CloneOpts,
-    global_opts: &HgGlobalOpts,
     config: &mut ConfigSet,
     reponame: &str,
     destination: &Path,
 ) -> Result<Repo> {
-    let mut includes = global_opts.configfile.clone();
+    let mut includes = ctx.global_opts().configfile.clone();
     if let Some(mut repo_config) = config.get_opt::<PathBuf>("clone", "repo-specific-config-dir")? {
         repo_config.push(format!("{}.rc", reponame));
         if repo_config.exists() {
@@ -368,9 +338,14 @@ fn clone_metadata(
         .into_iter()
         .map(|file| format!("%include {}\n", file))
         .collect::<String>();
-    hgrc_content.push_str(format!("\n[paths]\ndefault = {}\n", clone_opts.source).as_str());
+    hgrc_content.push_str(format!("\n[paths]\ndefault = {}\n", ctx.opts.source).as_str());
 
-    let mut repo = Repo::init(destination, config, Some(hgrc_content), &global_opts.config)?;
+    let mut repo = Repo::init(
+        destination,
+        config,
+        Some(hgrc_content),
+        &ctx.global_opts().config,
+    )?;
     repo.add_requirement("remotefilelog")?;
 
     let edenapi = repo.eden_api()?;
@@ -397,17 +372,14 @@ fn clone_metadata(
         )?;
         logger.verbose(|| format!("Pulled bookmarks {:?}", bookmark_ids));
     } else {
-        revlog_clone(
-            repo.config(),
-            logger,
-            io,
-            global_opts,
-            &clone_opts.source,
-            destination,
-        )?;
+        revlog_clone(repo.config(), logger, ctx, destination)?;
         // reload the repo to pick up any changes written out by the revlog clone
         // such as metalog remotenames writes
-        repo = Repo::load(destination, &global_opts.config, &global_opts.configfile)?;
+        repo = Repo::load(
+            destination,
+            &ctx.global_opts().config,
+            &ctx.global_opts().configfile,
+        )?;
     }
 
     ::fail::fail_point!("run::clone", |_| {
@@ -419,30 +391,28 @@ fn clone_metadata(
 pub fn revlog_clone(
     config: &ConfigSet,
     logger: &mut TermLogger,
-    io: &IO,
-    global_opts: &HgGlobalOpts,
-    source: &str,
+    ctx: &ReqCtx<CloneOpts>,
     root: &Path,
 ) -> Result<()> {
     let mut args = vec![
         "hg".to_string(),
         "debugrevlogclone".to_string(),
-        source.to_string(),
+        ctx.opts.source.to_string(),
         "-R".to_string(),
         root.to_string_lossy().to_string(),
     ];
 
-    for config in global_opts.config.iter() {
+    for config in ctx.global_opts().config.iter() {
         args.push("--config".into());
         args.push(config.into());
     }
-    if global_opts.quiet {
+    if ctx.global_opts().quiet {
         args.push("-q".into());
     }
-    if global_opts.verbose {
+    if ctx.global_opts().verbose {
         args.push("-v".into());
     }
-    if global_opts.debug {
+    if ctx.global_opts().debug {
         args.push("--debug".into());
     }
 
@@ -451,10 +421,9 @@ pub fn revlog_clone(
     let hg_python = HgPython::new(&args);
 
     abort_if!(
-        hg_python.run_hg(args, io, config) != 0,
+        hg_python.run_hg(args, ctx.io(), config) != 0,
         "Cloning revlog failed"
     );
-
     Ok(())
 }
 

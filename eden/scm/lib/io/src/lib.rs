@@ -28,9 +28,9 @@ mod impls;
 
 use crate::impls::PipeWriterWithTty;
 
-// IO is not Clone. But IO::error() and IO::output() can be cloned.
-// This ensures that there is only one strong reference, and dropping
-// that IO triggers Drop clean-ups properly.
+// IO is Clone, but care must be taken to drop the IO object normally
+// to ensure things are cleaned up before the process exits.
+#[derive(Clone)]
 pub struct IO {
     inner: Arc<Mutex<Inner>>,
 }
