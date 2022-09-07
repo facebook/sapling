@@ -72,6 +72,7 @@ use futures_watchdog::WatchdogExt;
 use http::Uri;
 use lfs_verifier::LfsVerifier;
 use mercurial_types::HgChangesetId;
+use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mutable_counters::ArcMutableCounters;
@@ -188,6 +189,9 @@ pub struct Repo {
 
     #[facet]
     pub repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    pub repo_config: RepoConfig,
 }
 
 impl HgSyncProcess {
@@ -1006,8 +1010,6 @@ async fn run<'a>(
 
     let push_vars = if vars.is_empty() { None } else { Some(vars) };
 
-    let lfs_params = repo_config.lfs.clone();
-
     let verify_lfs_blob_presence = matches
         .value_of("verify-lfs-blob-presence")
         .map(|s| s.to_string());
@@ -1079,7 +1081,6 @@ async fn run<'a>(
                     repo,
                     base_retry_delay_ms,
                     retry_num,
-                    lfs_params,
                     filenode_verifier,
                     bookmark_regex_force_lfs,
                     push_vars,

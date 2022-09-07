@@ -28,7 +28,7 @@ use getbundle_response::SessionLfsParams;
 use itertools::Itertools;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
-use metaconfig_types::LfsParams;
+use metaconfig_types::RepoConfigRef;
 use mononoke_hg_sync_job_helper_lib::save_bytes_to_temp_file;
 use mononoke_hg_sync_job_helper_lib::write_to_named_temp_file;
 use mononoke_types::datetime::Timestamp;
@@ -69,14 +69,13 @@ pub struct BundlePreparer {
 #[derive(Clone)]
 struct PrepareInfo {
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    lfs_params: SessionLfsParams,
+    session_lfs_params: SessionLfsParams,
     filenode_verifier: FilenodeVerifier,
 }
 
 #[derive(Clone)]
 struct BundleInfo {
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    lfs_params: LfsParams,
     filenode_verifier: FilenodeVerifier,
     bookmark_regex_force_lfs: Option<Regex>,
 }
@@ -86,7 +85,6 @@ impl BundlePreparer {
         repo: Repo,
         base_retry_delay_ms: u64,
         retry_num: usize,
-        lfs_params: LfsParams,
         filenode_verifier: FilenodeVerifier,
         bookmark_regex_force_lfs: Option<Regex>,
         push_vars: Option<HashMap<String, bytes::Bytes>>,
@@ -98,7 +96,6 @@ impl BundlePreparer {
             retry_num,
             bundle_info: BundleInfo {
                 lca_hint,
-                lfs_params,
                 filenode_verifier,
                 bookmark_regex_force_lfs,
             },
@@ -143,17 +140,15 @@ impl BundlePreparer {
 
         let BundleInfo {
             lca_hint,
-            lfs_params,
             filenode_verifier,
             bookmark_regex_force_lfs,
         } = &self.bundle_info;
         for batch in batches {
             let prepare_type = PrepareInfo {
                 lca_hint: lca_hint.clone(),
-                lfs_params: get_session_lfs_params(
+                session_lfs_params: self.session_lfs_params(
                     &ctx,
                     &batch.bookmark_name,
-                    lfs_params.clone(),
                     bookmark_regex_force_lfs,
                 ),
                 filenode_verifier: filenode_verifier.clone(),
@@ -288,7 +283,7 @@ impl BundlePreparer {
     ) -> Result<(NamedTempFile, NamedTempFile, CommitsInBundle), Error> {
         let PrepareInfo {
             lca_hint,
-            lfs_params,
+            session_lfs_params,
             filenode_verifier,
         } = prepare_info;
         let (bytes, timestamps) = crate::bundle_generator::create_bundle(
@@ -298,7 +293,7 @@ impl BundlePreparer {
             bookmark_name.clone(),
             bookmark_change.clone(),
             hg_server_heads.to_vec(),
-            lfs_params,
+            session_lfs_params,
             filenode_verifier.clone(),
             push_vars,
         )
@@ -321,29 +316,31 @@ impl BundlePreparer {
         .await?;
         Ok((bundle, timestamps, CommitsInBundle::Commits(bcs_ids)))
     }
-}
 
-fn get_session_lfs_params(
-    ctx: &CoreContext,
-    bookmark: &BookmarkName,
-    lfs_params: LfsParams,
-    bookmark_regex_force_lfs: &Option<Regex>,
-) -> SessionLfsParams {
-    if let Some(regex) = bookmark_regex_force_lfs {
-        if regex.is_match(bookmark.as_str()) {
-            info!(ctx.logger(), "force generating lfs bundle for {}", bookmark);
-            return SessionLfsParams {
+    fn session_lfs_params(
+        &self,
+        ctx: &CoreContext,
+        bookmark: &BookmarkName,
+        bookmark_regex_force_lfs: &Option<Regex>,
+    ) -> SessionLfsParams {
+        let lfs_params = &self.repo.repo_config().lfs;
+
+        if let Some(regex) = bookmark_regex_force_lfs {
+            if regex.is_match(bookmark.as_str()) {
+                info!(ctx.logger(), "force generating lfs bundle for {}", bookmark);
+                return SessionLfsParams {
+                    threshold: lfs_params.threshold,
+                };
+            }
+        }
+
+        if lfs_params.generate_lfs_blob_in_hg_sync_job {
+            SessionLfsParams {
                 threshold: lfs_params.threshold,
-            };
+            }
+        } else {
+            SessionLfsParams { threshold: None }
         }
-    }
-
-    if lfs_params.generate_lfs_blob_in_hg_sync_job {
-        SessionLfsParams {
-            threshold: lfs_params.threshold,
-        }
-    } else {
-        SessionLfsParams { threshold: None }
     }
 }
 
