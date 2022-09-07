@@ -10,6 +10,7 @@ use std::io::Write;
 use async_runtime::block_on;
 use async_runtime::stream_to_iter as block_on_stream;
 use clidispatch::errors;
+use clidispatch::ReqCtx;
 use configparser::config::ConfigSet;
 use revisionstore::scmstore::file_to_async_key_stream;
 use revisionstore::scmstore::FileAttributes;
@@ -40,25 +41,25 @@ enum FetchMode {
     Tree,
 }
 
-pub fn run(opts: DebugScmStoreOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
-    if opts.python {
+pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &mut Repo) -> Result<u8> {
+    if ctx.opts.python {
         return Err(errors::FallbackToPython(name()).into());
     }
 
-    let mode = match opts.mode.as_ref() {
+    let mode = match ctx.opts.mode.as_ref() {
         "file" => FetchMode::File,
         "tree" => FetchMode::Tree,
         _ => return Err(errors::Abort("'mode' must be one of 'file' or 'tree'".into()).into()),
     };
 
     let keys: Vec<_> =
-        block_on_stream(block_on(file_to_async_key_stream(opts.path.into()))?).collect();
+        block_on_stream(block_on(file_to_async_key_stream(ctx.opts.path.into()))?).collect();
 
     let config = repo.config();
 
     match mode {
-        FetchMode::File => fetch_files(io, &config, keys)?,
-        FetchMode::Tree => fetch_trees(io, &config, keys)?,
+        FetchMode::File => fetch_files(&ctx.core.io, config, keys)?,
+        FetchMode::Tree => fetch_trees(&ctx.core.io, config, keys)?,
     }
 
     Ok(0)

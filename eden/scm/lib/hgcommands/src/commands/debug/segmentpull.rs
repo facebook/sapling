@@ -7,6 +7,7 @@
 
 use anyhow::Context;
 use async_runtime::block_unless_interrupted as block_on;
+use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use dag::namedag::IndexedLogNameDagPath;
 use dag::ops::DagImportPullData;
@@ -20,7 +21,6 @@ use types::HgId;
 
 use super::Repo;
 use super::Result;
-use super::IO;
 
 define_flags! {
     pub struct StatusOpts {
@@ -32,7 +32,7 @@ define_flags! {
     }
 }
 
-pub fn run(opts: StatusOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo) -> Result<u8> {
     let repopath = repo.path();
     let config = repo.config();
 
@@ -42,12 +42,12 @@ pub fn run(opts: StatusOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
         .open()
         .context("error opening segmented changelog")?;
 
-    let from = HgId::from_hex(opts.from.as_bytes()).unwrap();
-    let to = HgId::from_hex(opts.to.as_bytes()).unwrap();
+    let from = HgId::from_hex(ctx.opts.from.as_bytes()).unwrap();
+    let to = HgId::from_hex(ctx.opts.to.as_bytes()).unwrap();
     let pull_data = block_on(edenapi_client.pull_fast_forward_master(from, to))
         .context("error pulling segmented changelog")??;
 
-    io.write(format!(
+    ctx.io().write(format!(
         "Got {} segments and {} ids\n",
         pull_data.flat_segments.segments.len(),
         pull_data.idmap.len()
@@ -63,7 +63,7 @@ pub fn run(opts: StatusOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
         flat_segments: pull_data.flat_segments,
         idmap,
     };
-    let heads = VertexListWithOptions::from(vec![VertexName::copy_from(opts.to.as_bytes())])
+    let heads = VertexListWithOptions::from(vec![VertexName::copy_from(ctx.opts.to.as_bytes())])
         .with_highest_group(Group::MASTER);
 
     block_on(namedag.import_pull_data(vertex_pull_data, &heads))

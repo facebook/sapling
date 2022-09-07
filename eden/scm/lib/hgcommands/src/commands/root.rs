@@ -5,10 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use clidispatch::ReqCtx;
+
 use super::define_flags;
 use super::Repo;
 use super::Result;
-use super::IO;
 
 define_flags! {
     pub struct RootOpts {
@@ -17,14 +18,14 @@ define_flags! {
     }
 }
 
-pub fn run(opts: RootOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
-    let path = if opts.shared {
+pub fn run(ctx: ReqCtx<RootOpts>, repo: &mut Repo) -> Result<u8> {
+    let path = if ctx.opts.shared {
         repo.shared_path()
     } else {
         repo.path()
     };
 
-    io.write(format!(
+    ctx.io().write(format!(
         "{}\n",
         util::path::strip_unc_prefix(&path).display()
     ))?;

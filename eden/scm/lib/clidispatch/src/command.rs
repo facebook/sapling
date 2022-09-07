@@ -137,11 +137,13 @@ where
 impl<S, FN> Register<FN, ((), (), S)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
-    FN: Fn(S, &IO, &mut Repo) -> Result<u8> + 'static,
+    FN: Fn(ReqCtx<S>, &mut Repo) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str, synopsis: Option<&str>) {
         self.insert_aliases(name);
-        let func = move |opts: ParseOutput, io: &IO, repo: &mut Repo| f(opts.try_into()?, io, repo);
+        let func = move |opts: ParseOutput, io: &IO, repo: &mut Repo| {
+            f(ReqCtx::new(opts, io.clone())?, repo)
+        };
         let func = CommandFunc::Repo(Box::new(func));
         let def = CommandDefinition::new(name, doc, S::flags, func, synopsis);
         self.commands.insert(name.to_string(), def);

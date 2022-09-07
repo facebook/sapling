@@ -9,11 +9,11 @@ use blackbox::event::Event;
 use blackbox::json;
 use blackbox::SessionId;
 use clidispatch::errors;
+use clidispatch::ReqCtx;
 
 use super::define_flags;
 use super::Repo;
 use super::Result;
-use super::IO;
 
 define_flags! {
     pub struct DumpTraceOpts {
@@ -31,12 +31,12 @@ define_flags! {
     }
 }
 
-pub fn run(opts: DumpTraceOpts, io: &IO, _repo: &mut Repo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DumpTraceOpts>, _repo: &mut Repo) -> Result<u8> {
     let entries = {
         let blackbox = blackbox::SINGLETON.lock();
-        let session_ids = if opts.session_id != 0 {
-            vec![SessionId(opts.session_id as u64)]
-        } else if let Some(range) = hgtime::HgTime::parse_range(&opts.time_range) {
+        let session_ids = if ctx.opts.session_id != 0 {
+            vec![SessionId(ctx.opts.session_id as u64)]
+        } else if let Some(range) = hgtime::HgTime::parse_range(&ctx.opts.time_range) {
             // Blackbox uses milliseconds. HgTime uses seconds.
             let ratio = 1000;
             blackbox.session_ids_by_pattern(&json!({"start": {
@@ -62,7 +62,7 @@ pub fn run(opts: DumpTraceOpts, io: &IO, _repo: &mut Repo) -> Result<u8> {
     }
     let merged = tracing_collector::TracingData::merge(tracing_data_list);
 
-    crate::run::write_trace(io, &opts.output_path, &merged)?;
+    crate::run::write_trace(ctx.io(), &ctx.opts.output_path, &merged)?;
 
     Ok(0)
 }

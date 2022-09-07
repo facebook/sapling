@@ -10,7 +10,7 @@ mod print;
 
 use anyhow::Result;
 use clidispatch::errors;
-use clidispatch::io::IO;
+use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use repo::repo::Repo;
 
@@ -87,24 +87,25 @@ define_flags! {
 }
 
 #[cfg(feature = "eden")]
-pub fn run(opts: StatusOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo) -> Result<u8> {
     use anyhow::anyhow;
     use clidispatch::io::CanColor;
     use print::PrintConfig;
     use print::PrintConfigStatusTypes;
     use types::path::RepoPathRelativizer;
 
-    let rev_check = opts.rev.is_empty() || (opts.rev.len() == 1 && opts.rev[0] == ".");
+    let rev_check = ctx.opts.rev.is_empty() || (ctx.opts.rev.len() == 1 && ctx.opts.rev[0] == ".");
 
-    let args_check = opts.args.is_empty() || (opts.args.len() == 1 && opts.args[0] == "re:.");
+    let args_check =
+        ctx.opts.args.is_empty() || (ctx.opts.args.len() == 1 && ctx.opts.args[0] == "re:.");
 
-    if opts.all
-        || !opts.change.is_empty()
-        || !opts.terse.is_empty()
+    if ctx.opts.all
+        || !ctx.opts.change.is_empty()
+        || !ctx.opts.terse.is_empty()
         || !rev_check
-        || !opts.walk_opts.include.is_empty()
-        || !opts.walk_opts.exclude.is_empty()
-        || !opts.formatter_opts.template.is_empty()
+        || !ctx.opts.walk_opts.include.is_empty()
+        || !ctx.opts.walk_opts.exclude.is_empty()
+        || !ctx.opts.formatter_opts.template.is_empty()
         || !args_check
     {
         return Err(errors::FallbackToPython(name()).into());
@@ -119,7 +120,7 @@ pub fn run(opts: StatusOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
         unknown,
         ignored,
         ..
-    } = opts;
+    } = ctx.opts;
 
     let status_types = if modified || added || removed || deleted || clean || unknown || ignored {
         PrintConfigStatusTypes {
@@ -144,17 +145,17 @@ pub fn run(opts: StatusOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
     };
     let print_config = PrintConfig {
         status_types,
-        no_status: opts.no_status,
-        copies: opts.copies,
-        endl: if opts.print0 { '\0' } else { '\n' },
-        root_relative: opts.root_relative,
-        use_color: io.output().can_color(),
+        no_status: ctx.opts.no_status,
+        copies: ctx.opts.copies,
+        endl: if ctx.opts.print0 { '\0' } else { '\n' },
+        root_relative: ctx.opts.root_relative,
+        use_color: ctx.io().output().can_color(),
     };
 
     // Attempt to fetch status information from EdenFS.
     let (status, copymap) = edenfs_client::status::maybe_status_fastpath(
         repo.dot_hg_path(),
-        io,
+        ctx.io(),
         print_config.status_types.ignored,
     )
     .map_err(
@@ -166,12 +167,12 @@ pub fn run(opts: StatusOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
 
     let cwd = std::env::current_dir()?;
     let relativizer = RepoPathRelativizer::new(cwd, repo.path());
-    print::print_status(io, relativizer, &print_config, &status, &copymap)?;
+    print::print_status(ctx.io(), relativizer, &print_config, &status, &copymap)?;
     Ok(0)
 }
 
 #[cfg(not(feature = "eden"))]
-pub fn run(_opts: StatusOpts, _io: &IO, _repo: &mut Repo) -> Result<u8> {
+pub fn run(_ctx: ReqCtx<StatusOpts>, _repo: &mut Repo) -> Result<u8> {
     Err(errors::FallbackToPython(name()).into())
 }
 

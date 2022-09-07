@@ -8,6 +8,7 @@
 use std::str::FromStr;
 
 use clidispatch::errors;
+use clidispatch::ReqCtx;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use configparser::convert::ByteCount;
@@ -28,7 +29,6 @@ use types::RepoPathBuf;
 use super::define_flags;
 use super::Repo;
 use super::Result;
-use super::IO;
 
 define_flags! {
     pub struct DebugstoreOpts {
@@ -43,9 +43,9 @@ define_flags! {
     }
 }
 
-pub fn run(opts: DebugstoreOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
-    let path = RepoPathBuf::from_string(opts.path)?;
-    let hgid = HgId::from_str(&opts.hgid)?;
+pub fn run(ctx: ReqCtx<DebugstoreOpts>, repo: &mut Repo) -> Result<u8> {
+    let path = RepoPathBuf::from_string(ctx.opts.path)?;
+    let hgid = HgId::from_str(&ctx.opts.hgid)?;
     let config = repo.config();
     let cachepath = match config.get("remotefilelog", "cachepath") {
         Some(c) => c.to_string(),
@@ -87,7 +87,7 @@ pub fn run(opts: DebugstoreOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
     unionstore.add(indexedstore);
     let k = Key::new(path, hgid);
     if let StoreResult::Found(content) = unionstore.get(StoreKey::hgid(k))? {
-        io.write(content)?;
+        ctx.core.io.write(content)?;
     }
     Ok(0)
 }

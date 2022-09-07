@@ -9,7 +9,7 @@ use std::io::Write;
 
 use anyhow::Result;
 use clidispatch::errors;
-use clidispatch::io::IO;
+use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use repo::repo::Repo;
 
@@ -29,11 +29,11 @@ enum Format {
     Json,
 }
 
-pub fn run(opts: DebugRunlogOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
-    let mut stdout = io.output();
-    let mut stderr = io.error();
+pub fn run(ctx: ReqCtx<DebugRunlogOpts>, repo: &mut Repo) -> Result<u8> {
+    let mut stdout = ctx.io().output();
+    let mut stderr = ctx.io().error();
 
-    let format = match opts.template.as_str() {
+    let format = match ctx.opts.template.as_str() {
         "json" => Format::Json,
         "" => Format::Text,
         _ => return Err(errors::Abort("invalid template (only \"json\" supported)".into()).into()),
@@ -49,7 +49,7 @@ pub fn run(opts: DebugRunlogOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
             }
         };
 
-        if opts.ended == running {
+        if ctx.opts.ended == running {
             continue;
         }
 

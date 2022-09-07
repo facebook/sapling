@@ -10,13 +10,13 @@ use std::thread::sleep;
 use std::time::Duration;
 
 use clidispatch::io::IsTty;
+use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use comfy_table::Table;
 use debugtop::TableGenerator;
 
 use super::Repo;
 use super::Result;
-use super::IO;
 
 define_flags! {
     pub struct DebugTopOpts {
@@ -34,14 +34,14 @@ define_flags! {
     }
 }
 
-pub fn run(opts: DebugTopOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
-    let mut stdout = io.output();
-    let mut stderr = io.error();
+pub fn run(ctx: ReqCtx<DebugTopOpts>, repo: &mut Repo) -> Result<u8> {
+    let mut stdout = ctx.io().output();
+    let mut stderr = ctx.io().error();
     let running_in_tty = stdout.is_tty();
-    let refresh_rate = opts.refresh_rate.max(0) as u64;
-    let reap_delay = chrono::Duration::milliseconds(opts.reap_delay);
+    let refresh_rate = ctx.opts.refresh_rate.max(0) as u64;
+    let reap_delay = chrono::Duration::milliseconds(ctx.opts.reap_delay);
 
-    let mut table_generator = match TableGenerator::new(opts.columns, reap_delay) {
+    let mut table_generator = match TableGenerator::new(ctx.opts.columns, reap_delay) {
         Err(unexpected_columns) => {
             for column in unexpected_columns.iter() {
                 write!(stderr, "Error: column \"{}\" was not expected\n", column)?;
@@ -62,7 +62,7 @@ pub fn run(opts: DebugTopOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
             write!(stdout, "{}\n", table)?;
             break;
         }
-        io.set_progress(format!("{}\n", table).as_str())?;
+        ctx.core.io.set_progress(format!("{}\n", table).as_str())?;
         sleep(Duration::from_millis(refresh_rate));
     }
 

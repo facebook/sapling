@@ -9,21 +9,16 @@ use std::fs::File;
 use std::io::Write;
 
 use anyhow::Context;
+use clidispatch::ReqCtx;
 use treestate::serialization::Serializable;
 use types::HgId;
 
-use super::define_flags;
+use super::NoOpts;
 use super::Repo;
 use super::Result;
-use super::IO;
 
-define_flags! {
-    pub struct WhereamiOpts {
-    }
-}
-
-pub fn run(_opts: WhereamiOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
-    let mut stdout = io.output();
+pub fn run(ctx: ReqCtx<NoOpts>, repo: &mut Repo) -> Result<u8> {
+    let mut stdout = ctx.io().output();
 
     let dirstate_path = repo.dot_hg_path().join("dirstate");
     let mut dirstate_file = match File::open(&dirstate_path) {

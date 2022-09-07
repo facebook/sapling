@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use clidispatch::ReqCtx;
 #[cfg(feature = "fb")]
 use configmodel::Config;
 #[cfg(feature = "fb")]
@@ -13,7 +14,6 @@ use configparser::hg::generate_dynamicconfig;
 use super::define_flags;
 use super::Repo;
 use super::Result;
-use super::IO;
 
 define_flags! {
     pub struct DebugDynamicConfigOpts {
@@ -22,7 +22,7 @@ define_flags! {
     }
 }
 
-pub fn run(opts: DebugDynamicConfigOpts, _io: &IO, repo: &mut Repo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: &mut Repo) -> Result<u8> {
     #[cfg(feature = "fb")]
     {
         let username = repo
@@ -34,12 +34,12 @@ pub fn run(opts: DebugDynamicConfigOpts, _io: &IO, repo: &mut Repo) -> Result<u8
         generate_dynamicconfig(
             Some(repo.shared_dot_hg_path()),
             repo.repo_name(),
-            opts.canary,
+            ctx.opts.canary,
             username,
         )?;
     }
     #[cfg(not(feature = "fb"))]
-    let _ = (opts, repo);
+    let _ = (ctx, repo);
 
     Ok(0)
 }

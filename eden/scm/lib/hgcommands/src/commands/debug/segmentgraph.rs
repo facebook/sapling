@@ -8,12 +8,12 @@
 use std::io::Write;
 
 use clidispatch::errors;
+use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use dag::render::render_segment_dag;
 
 use super::Repo;
 use super::Result;
-use super::IO;
 
 define_flags! {
     pub struct GraphOpts {
@@ -27,19 +27,19 @@ define_flags! {
     }
 }
 
-pub fn run(opts: GraphOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
-    let group = match opts.group.as_ref() {
+pub fn run(ctx: ReqCtx<GraphOpts>, repo: &mut Repo) -> Result<u8> {
+    let group = match ctx.opts.group.as_ref() {
         "master" => dag::Group::MASTER,
         "non_master" => dag::Group::NON_MASTER,
         _ => return Err(errors::Abort("invalid group".into()).into()),
     };
 
-    let level: dag::Level = match opts.level.try_into() {
+    let level: dag::Level = match ctx.opts.level.try_into() {
         Ok(level) => level,
         _ => return Err(errors::Abort("invalid level".into()).into()),
     };
 
-    let mut out = io.output();
+    let mut out = ctx.io().output();
     write!(out, "{}, Level: {}\n", group, level)?;
 
     let dag = dag::Dag::open(repo.store_path().join("segments/v1"))?;
