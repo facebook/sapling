@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use anyhow::bail;
 use anyhow::Error;
@@ -50,9 +49,9 @@ use mercurial_types::MPath;
 use mononoke_types::datetime::Timestamp;
 use mononoke_types::hash::Sha256;
 use mononoke_types::ChangesetId;
-use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstoreRef;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
+use skiplist::SkiplistIndexArc;
 use slog::debug;
 
 use crate::darkstorm_verifier::DarkstormVerifier;
@@ -62,7 +61,6 @@ use crate::Repo;
 pub fn create_bundle(
     ctx: CoreContext,
     repo: Repo,
-    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     bookmark: BookmarkName,
     bookmark_change: BookmarkChange,
     hg_server_heads: Vec<ChangesetId>,
@@ -74,7 +72,6 @@ pub fn create_bundle(
     let commits_to_push = find_commits_to_push(
         ctx.clone(),
         repo.clone(),
-        lca_hint.clone(),
         // Always add "from" bookmark, because is must to be on the hg server
         // If it's not then the push will fail anyway
         hg_server_heads
@@ -390,14 +387,14 @@ async fn fetch_timestamps(
 fn find_commits_to_push(
     ctx: CoreContext,
     repo: Repo,
-    lca_hint_index: Arc<dyn LeastCommonAncestorsHint>,
     hg_server_heads: impl IntoIterator<Item = ChangesetId>,
     maybe_to_cs_id: Option<ChangesetId>,
 ) -> impl Stream<Item = (ChangesetId, HgChangesetId), Error = Error> {
+    let lca_hint = repo.skiplist_index_arc();
     DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
         ctx.clone(),
         &repo.changeset_fetcher_arc(),
-        lca_hint_index,
+        lca_hint,
         maybe_to_cs_id.into_iter().collect(),
         hg_server_heads.into_iter().collect(),
     )

@@ -68,14 +68,12 @@ pub struct BundlePreparer {
 
 #[derive(Clone)]
 struct PrepareInfo {
-    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     session_lfs_params: SessionLfsParams,
     filenode_verifier: FilenodeVerifier,
 }
 
 #[derive(Clone)]
 struct BundleInfo {
-    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     filenode_verifier: FilenodeVerifier,
     bookmark_regex_force_lfs: Option<Regex>,
 }
@@ -89,13 +87,11 @@ impl BundlePreparer {
         bookmark_regex_force_lfs: Option<Regex>,
         push_vars: Option<HashMap<String, bytes::Bytes>>,
     ) -> Result<BundlePreparer, Error> {
-        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = repo.skiplist_index.clone();
         Ok(BundlePreparer {
             repo,
             base_retry_delay_ms,
             retry_num,
             bundle_info: BundleInfo {
-                lca_hint,
                 filenode_verifier,
                 bookmark_regex_force_lfs,
             },
@@ -122,7 +118,7 @@ impl BundlePreparer {
 
         split_in_batches(
             ctx,
-            &self.bundle_info.lca_hint,
+            &self.repo.skiplist_index,
             &self.repo.changeset_fetcher_arc(),
             entries,
         )
@@ -139,13 +135,11 @@ impl BundlePreparer {
         let push_vars = self.push_vars.clone();
 
         let BundleInfo {
-            lca_hint,
             filenode_verifier,
             bookmark_regex_force_lfs,
         } = &self.bundle_info;
         for batch in batches {
             let prepare_type = PrepareInfo {
-                lca_hint: lca_hint.clone(),
                 session_lfs_params: self.session_lfs_params(
                     &ctx,
                     &batch.bookmark_name,
@@ -282,14 +276,12 @@ impl BundlePreparer {
         push_vars: Option<HashMap<String, bytes::Bytes>>,
     ) -> Result<(NamedTempFile, NamedTempFile, CommitsInBundle), Error> {
         let PrepareInfo {
-            lca_hint,
             session_lfs_params,
             filenode_verifier,
         } = prepare_info;
         let (bytes, timestamps) = crate::bundle_generator::create_bundle(
             ctx.clone(),
             repo.clone(),
-            lca_hint.clone(),
             bookmark_name.clone(),
             bookmark_change.clone(),
             hg_server_heads.to_vec(),
@@ -385,7 +377,7 @@ impl BookmarkLogEntryBatch {
     pub async fn try_append(
         &mut self,
         ctx: &CoreContext,
-        lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
+        lca_hint: &dyn LeastCommonAncestorsHint,
         changeset_fetcher: &ArcChangesetFetcher,
         entry: BookmarkUpdateLogEntry,
     ) -> Result<Result<(), BookmarkUpdateLogEntry>, Error> {
@@ -462,7 +454,7 @@ impl BookmarkLogEntryBatch {
 
 async fn split_in_batches(
     ctx: &CoreContext,
-    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
+    lca_hint: &dyn LeastCommonAncestorsHint,
     changeset_fetcher: &ArcChangesetFetcher,
     entries: Vec<BookmarkUpdateLogEntry>,
 ) -> Result<Vec<BookmarkLogEntryBatch>, Error> {
