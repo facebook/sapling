@@ -22,7 +22,6 @@ pub mod ser;
 mod str;
 
 #[cfg(test)]
-#[cfg(not(fbcode_build))]
 mod tests;
 
 pub use bytes::Bytes;

@@ -184,7 +184,6 @@ mod pytypes {
 }
 
 #[cfg(test)]
-#[cfg(not(fbcode_build))]
 mod tests {
     use futures::stream::StreamExt;
 
