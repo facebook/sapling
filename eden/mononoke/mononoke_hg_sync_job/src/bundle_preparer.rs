@@ -62,20 +62,9 @@ pub struct BundlePreparer {
     repo: Repo,
     base_retry_delay_ms: u64,
     retry_num: usize,
-    bundle_info: BundleInfo,
-    push_vars: Option<HashMap<String, bytes::Bytes>>,
-}
-
-#[derive(Clone)]
-struct PrepareInfo {
-    session_lfs_params: SessionLfsParams,
-    filenode_verifier: FilenodeVerifier,
-}
-
-#[derive(Clone)]
-struct BundleInfo {
     filenode_verifier: FilenodeVerifier,
     bookmark_regex_force_lfs: Option<Regex>,
+    push_vars: Option<HashMap<String, bytes::Bytes>>,
 }
 
 impl BundlePreparer {
@@ -91,10 +80,8 @@ impl BundlePreparer {
             repo,
             base_retry_delay_ms,
             retry_num,
-            bundle_info: BundleInfo {
-                filenode_verifier,
-                bookmark_regex_force_lfs,
-            },
+            filenode_verifier,
+            bookmark_regex_force_lfs,
             push_vars,
         })
     }
@@ -132,30 +119,11 @@ impl BundlePreparer {
         overlay: &mut crate::BookmarkOverlay,
     ) -> BoxFuture<'static, Result<Vec<CombinedBookmarkUpdateLogEntry>, PipelineError>> {
         let mut futs = vec![];
-        let push_vars = self.push_vars.clone();
 
-        let BundleInfo {
-            filenode_verifier,
-            bookmark_regex_force_lfs,
-        } = &self.bundle_info;
         for batch in batches {
-            let prepare_type = PrepareInfo {
-                session_lfs_params: self.session_lfs_params(
-                    &ctx,
-                    &batch.bookmark_name,
-                    bookmark_regex_force_lfs,
-                ),
-                filenode_verifier: filenode_verifier.clone(),
-            };
-
+            let session_lfs_params = self.session_lfs_params(&ctx, &batch.bookmark_name);
             let entries = batch.entries.clone();
-            let f = self.prepare_single_bundle(
-                ctx.clone(),
-                batch,
-                overlay,
-                prepare_type,
-                push_vars.clone(),
-            );
+            let f = self.prepare_single_bundle(ctx.clone(), batch, overlay, session_lfs_params);
             futs.push((f, entries));
         }
 
@@ -185,10 +153,9 @@ impl BundlePreparer {
         ctx: CoreContext,
         batch: BookmarkLogEntryBatch,
         overlay: &mut crate::BookmarkOverlay,
-        prepare_info: PrepareInfo,
-        push_vars: Option<HashMap<String, bytes::Bytes>>,
+        session_lfs_params: SessionLfsParams,
     ) -> BoxFuture<'static, Result<CombinedBookmarkUpdateLogEntry, Error>> {
-        cloned!(self.repo);
+        cloned!(self.repo, self.push_vars, self.filenode_verifier);
 
         let book_values = overlay.get_bookmark_values();
         overlay.update(batch.bookmark_name.clone(), batch.to_cs_id.clone());
@@ -220,10 +187,11 @@ impl BundlePreparer {
                 ctx.logger(),
                 {
                     |_| {
-                        Self::try_prepare_bundle_timestamps_file(
+                        Self::try_prepare_bundle_and_timestamps_file(
                             &ctx,
                             &repo,
-                            prepare_info.clone(),
+                            &filenode_verifier,
+                            session_lfs_params.clone(),
                             &book_values,
                             &bookmark_change,
                             &batch.bookmark_name,
@@ -266,19 +234,16 @@ impl BundlePreparer {
         .boxed()
     }
 
-    async fn try_prepare_bundle_timestamps_file<'a>(
+    async fn try_prepare_bundle_and_timestamps_file<'a>(
         ctx: &'a CoreContext,
         repo: &'a Repo,
-        prepare_info: PrepareInfo,
+        filenode_verifier: &'a FilenodeVerifier,
+        session_lfs_params: SessionLfsParams,
         hg_server_heads: &'a [ChangesetId],
         bookmark_change: &'a BookmarkChange,
         bookmark_name: &'a BookmarkName,
         push_vars: Option<HashMap<String, bytes::Bytes>>,
     ) -> Result<(NamedTempFile, NamedTempFile, CommitsInBundle), Error> {
-        let PrepareInfo {
-            session_lfs_params,
-            filenode_verifier,
-        } = prepare_info;
         let (bytes, timestamps) = crate::bundle_generator::create_bundle(
             ctx.clone(),
             repo.clone(),
@@ -309,15 +274,10 @@ impl BundlePreparer {
         Ok((bundle, timestamps, CommitsInBundle::Commits(bcs_ids)))
     }
 
-    fn session_lfs_params(
-        &self,
-        ctx: &CoreContext,
-        bookmark: &BookmarkName,
-        bookmark_regex_force_lfs: &Option<Regex>,
-    ) -> SessionLfsParams {
+    fn session_lfs_params(&self, ctx: &CoreContext, bookmark: &BookmarkName) -> SessionLfsParams {
         let lfs_params = &self.repo.repo_config().lfs;
 
-        if let Some(regex) = bookmark_regex_force_lfs {
+        if let Some(regex) = &self.bookmark_regex_force_lfs {
             if regex.is_match(bookmark.as_str()) {
                 info!(ctx.logger(), "force generating lfs bundle for {}", bookmark);
                 return SessionLfsParams {
