@@ -17,9 +17,9 @@ fn bsm_sentinel() -> MPathElement {
 }
 
 /// Put reversed basename in beginning, plus sentinel in the end
-pub(crate) struct BsmPath(MPath);
+pub(crate) struct BssmPath(MPath);
 
-impl BsmPath {
+impl BssmPath {
     pub(crate) fn transform(path: MPath) -> Self {
         let (dirname, basename) = path.split_dirname();
         let mut basename = basename.clone();
@@ -66,21 +66,21 @@ mod test {
 
     quickcheck! {
         fn roundtrip(path: MPath) -> bool {
-            let bsm = BsmPath::transform(path.clone());
+            let bsm = BssmPath::transform(path.clone());
             bsm.untransform().unwrap() == path
         }
     }
 
     fn assert_transform(orig: &str, transform: &str) {
         assert_eq!(
-            BsmPath::transform(MPath::new(orig).unwrap()).into_raw(),
+            BssmPath::transform(MPath::new(orig).unwrap()).into_raw(),
             MPath::new(transform).unwrap()
         );
     }
 
     fn assert_untransform(transform: &str, orig: Option<&str>) {
         let untransform =
-            BsmPath::from_bsm_formatted_path(MPath::new(transform).unwrap()).untransform();
+            BssmPath::from_bsm_formatted_path(MPath::new(transform).unwrap()).untransform();
         if let Some(orig) = orig {
             assert_eq!(untransform.unwrap(), MPath::new(orig).unwrap(),);
         } else {

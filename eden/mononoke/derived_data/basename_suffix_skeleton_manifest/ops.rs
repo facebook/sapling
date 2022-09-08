@@ -21,7 +21,7 @@ use mononoke_types::MPathElement;
 use vec1::vec1;
 use vec1::Vec1;
 
-use crate::path::BsmPath;
+use crate::path::BssmPath;
 use crate::RootBasenameSuffixSkeletonManifest;
 
 type MononokePath = Option<MPath>;
@@ -32,12 +32,12 @@ fn create_prefix(prefix: MononokePath, mut basename: MPathElement) -> MononokePa
 }
 
 fn custom_to_normal(path: MononokePath) -> Result<MononokePath> {
-    path.map(|p| BsmPath::from_bsm_formatted_path(p).untransform())
+    path.map(|p| BssmPath::from_bsm_formatted_path(p).untransform())
         .transpose()
 }
 
 fn normal_to_custom(path: MononokePath) -> MononokePath {
-    path.map(|p| BsmPath::transform(p).into_raw())
+    path.map(|p| BssmPath::transform(p).into_raw())
 }
 
 impl RootBasenameSuffixSkeletonManifest {

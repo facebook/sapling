@@ -38,14 +38,14 @@ use mononoke_types::MPathElement;
 use skeleton_manifest::mapping::get_file_changes;
 
 use crate::mapping::RootBasenameSuffixSkeletonManifest;
-use crate::path::BsmPath;
+use crate::path::BssmPath;
 
 /// Calculate a list of changes of the changeset, but putting the basename first and
 /// reversing it.
 fn get_fixed_up_changes(bcs: &BonsaiChangeset) -> Vec<(MPath, Option<(ContentId, FileType)>)> {
     get_file_changes(bcs)
         .into_iter()
-        .map(|(path, content)| (BsmPath::transform(path).into_raw(), content))
+        .map(|(path, content)| (BssmPath::transform(path).into_raw(), content))
         .collect()
 }
 
