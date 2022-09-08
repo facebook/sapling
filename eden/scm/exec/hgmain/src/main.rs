@@ -84,6 +84,9 @@ fn main() {
     windows::enable_vt_processing().unwrap();
 
     let mut io = clidispatch::io::IO::stdio();
+
+    let _ = io.setup_term();
+
     io.set_main();
     let mut code = hgcommands::run_command(full_args, &mut io);
     if io.flush().is_err() {

@@ -23,6 +23,11 @@ use pipe::PipeWriter;
 use streampager::config::InterfaceMode;
 use streampager::config::WrappingMode;
 use streampager::Pager;
+use term::make_real_term;
+use term::DumbTerm;
+use term::Term;
+use termwiz::surface::change::ChangeSequence;
+use termwiz::surface::Change;
 
 mod impls;
 mod term;
@@ -53,6 +58,7 @@ struct Inner {
     output: Box<dyn Write>,
     error: Option<Box<dyn Write>>,
     progress: Option<Box<dyn Write>>,
+    term: Option<Box<dyn Term + Send + Sync>>,
 
     // Used to decide whether to render progress bars.
     output_on_new_line: bool,
@@ -254,6 +260,7 @@ impl IO {
             error: error.map(|e| Box::new(e) as Box<dyn Write>),
             progress: None,
             pager_handle: None,
+            term: None,
             progress_conflict_with_output,
             output_on_new_line: true,
             error_on_new_line: true,
@@ -334,6 +341,7 @@ impl IO {
             error: Some(Box::new(io::stderr())),
             progress: None,
             pager_handle: None,
+            term: None,
             progress_conflict_with_output,
             progress_has_content: false,
             progress_disabled: 0,
@@ -344,6 +352,19 @@ impl IO {
         Self {
             inner: Arc::new(Mutex::new(inner)),
         }
+    }
+
+    pub fn setup_term(&mut self) -> Result<(), termwiz::Error> {
+        let mut inner = self.inner.lock();
+
+        if std::env::var_os("TESTTMP").is_some() {
+            // Use dumb terminal with static width/height for tests.
+            inner.term = Some(Box::new(DumbTerm::new(Box::new(io::stderr()))?));
+        } else {
+            inner.term = Some(make_real_term()?);
+        }
+
+        Ok(())
     }
 
     /// Obtain the main IO.
@@ -516,9 +537,9 @@ impl Inner {
     fn clear_progress_for_error(&mut self) -> io::Result<()> {
         if self.progress_has_content && self.progress.is_none() {
             self.progress_has_content = false;
-            if let Some(e) = self.error.as_mut() {
-                e.write_all(ANSI_ERASE_DISPLAY.as_bytes())?;
-                e.flush()?;
+            if let Some(ref mut term) = self.term {
+                write_term_progress(term, "")
+                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
             }
         }
         Ok(())
@@ -556,41 +577,36 @@ impl Inner {
                 return Ok(());
             }
 
-            if let Some(ref mut error) = inner.error {
-                // Flush pending output if it might conflict with progress.
-                if inner.progress_conflict_with_output {
-                    inner.output.flush()?;
-                }
-                let erase = if inner.progress_has_content {
-                    ANSI_ERASE_DISPLAY
-                } else {
-                    ""
-                };
-                // Write progress to stderr.
-                // Move to the left-top corner of the progress output.
-                let move_up = {
-                    let lines = if data.is_empty() {
-                        0
-                    } else {
-                        data.chars().filter(|&c| c == '\n').count() + 1
-                    };
-                    match lines {
-                        0 => "".to_string(),
-                        1 => "\r".to_string(),
-                        n => format!("\r\x1b[{}A", n - 1),
-                    }
-                };
-                // Write the progress clear sequences within one syscall if possible, to reduce flash.
-                let message = format!("{}{}{}", erase, data, move_up);
-                if !message.is_empty() {
-                    error.write_all(message.as_bytes())?;
-                    error.flush()?;
-                }
+            // Flush pending output if it might conflict with progress.
+            if inner.progress_conflict_with_output {
+                inner.output.flush()?;
+            }
+
+            if let Some(ref mut term) = inner.term {
+                write_term_progress(term, data)
+                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
                 inner.progress_has_content = !data.is_empty();
             }
         }
         Ok(())
     }
+}
+
+/// Write data to the progress area by clearing everything after
+/// cursor, writing data, then moving cursor back.
+fn write_term_progress(
+    term: &mut Box<dyn Term + Send + Sync>,
+    data: &str,
+) -> Result<(), termwiz::Error> {
+    let (cols, rows) = term.size()?;
+    let mut changes = ChangeSequence::new(rows, cols);
+    changes.add(Change::ClearToEndOfScreen(Default::default()));
+    changes.add(data);
+    changes.move_to((0, 0));
+
+    term.render(&changes.consume())?;
+
+    Ok(())
 }
 
 impl Drop for Inner {
@@ -609,6 +625,3 @@ impl Drop for Inner {
         }
     }
 }
-
-// CSI J - Clear from cursor to end of screen.
-const ANSI_ERASE_DISPLAY: &str = "\r\x1b[J";

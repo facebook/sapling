@@ -5,12 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use std::fs::OpenOptions;
 use std::io;
+#[cfg(unix)]
+use std::os::unix::prelude::AsRawFd;
 
 use termwiz::caps::Capabilities;
 use termwiz::render::terminfo::TerminfoRenderer;
 use termwiz::render::RenderTty;
 use termwiz::surface::Change;
+use termwiz::terminal::SystemTerminal;
 use termwiz::terminal::Terminal;
 use termwiz::Result;
 
@@ -83,4 +87,65 @@ impl io::Write for DumbTty {
 fn caps() -> Result<Capabilities> {
     let hints = termwiz::caps::ProbeHints::new_from_env().mouse_reporting(Some(false));
     termwiz::caps::Capabilities::new_with_hints(hints)
+}
+
+pub(crate) fn make_real_term() -> Result<Box<dyn Term + Send + Sync>> {
+    let caps = caps()?;
+
+    #[cfg(windows)]
+    return Ok(Box::new(SystemTerminal::new(caps.clone()).or_else(
+        |_err| {
+            // Fall back to stderr since that won't interfere with command output.
+            SystemTerminal::new_with(caps.clone(), io::stdin(), io::stderr())
+        },
+    )?));
+
+    #[cfg(unix)]
+    {
+        // First try the tty. With this we can show progress even with
+        // stdout and/or and stderr redirected.
+        if let Ok(dev_tty) = OpenOptions::new().read(true).write(true).open("/dev/tty") {
+            // Make sure our process is in the foreground process
+            // group, otherwise we will block/fail writing to the tty.
+            if is_foreground_process_group(dev_tty.as_raw_fd())? {
+                if let Ok(term) = SystemTerminal::new_with(caps.clone(), &dev_tty, &dev_tty) {
+                    return Ok(Box::new(term));
+                }
+            }
+        }
+
+        let stderr = io::stderr();
+        if is_foreground_process_group(stderr.as_raw_fd())? {
+            // Fall back to stderr (don't use stdout since that would
+            // interfere with command output).
+            return Ok(Box::new(SystemTerminal::new_with(
+                caps.clone(),
+                &io::stdin(),
+                &stderr,
+            )?));
+        }
+
+        termwiz::bail!("no suitable term output file");
+    }
+}
+
+#[cfg(unix)]
+/// Report whether the given fd is associated with a terminal and
+/// our process is in the foreground process group.
+fn is_foreground_process_group(fd: std::os::unix::prelude::RawFd) -> io::Result<bool> {
+    let foreground_pg = unsafe { libc::tcgetpgrp(fd) };
+    if foreground_pg < 0 {
+        let err = io::Error::last_os_error();
+        return match err.raw_os_error() {
+            Some(libc::ENOTTY) => Ok(false),
+            _ => Err(err),
+        };
+    }
+
+    let my_pg = unsafe { libc::getpgid(0) };
+    if my_pg < 0 {
+        return Err(io::Error::last_os_error());
+    }
+
+    Ok(foreground_pg == my_pg)
 }
