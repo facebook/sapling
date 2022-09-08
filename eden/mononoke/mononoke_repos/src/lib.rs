@@ -114,9 +114,11 @@ impl<R> MononokeRepos<R> {
     /// Adds a new repo corresponding to the provided repo-name
     /// and repo-id. If a repo already exists for that combination,
     /// then it is replaced by the passed in new repo.
-    /// NOTE: This is a mutex guarded operation that can induce wait
-    /// times for the caller thread. If this isn't desired, use try_add
-    /// instead.
+    /// NOTE: This is a mutex guarded operation that can induce wait times for
+    /// the caller thread. If this isn't desired, use try_add instead.
+    /// Before calling this method ensure that the caller is not holding additional
+    /// locks. If the caller does hold additional locks, ensure that the locks are
+    /// acquired in proper sequence to avoid deadlock or starvation.
     pub fn add(&self, repo_name: &str, repo_id: i32, repo: R) {
         // Acquire the lock to avoid race conditions during update.
         let lock = self.update_lock.lock();
@@ -210,8 +212,11 @@ impl<R> MononokeRepos<R> {
     /// input iterator of Repos. This method completely discards any previous
     /// repos that were part of MononokeRepos and uses the input to generate
     /// a new collection. Do not use for partial updates.
-    /// NOTE: This is a mutex guarded operation that can induce wait
-    /// times for the caller thread.
+    /// NOTE: This is a mutex guarded operation that can induce wait times for
+    /// the caller thread.
+    /// Before calling this method ensure that the caller is not holding additional
+    /// locks. If the caller does hold additional locks, ensure that the locks are
+    /// acquired in proper sequence to avoid deadlock or starvation.
     pub fn populate<I>(&self, repos: I)
     where
         I: IntoIterator<Item = (i32, String, R)>,
