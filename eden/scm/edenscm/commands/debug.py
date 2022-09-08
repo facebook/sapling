@@ -487,7 +487,7 @@ def _debugbundle2part(ui, part, all, **opts) -> None:
     _("FILE"),
     norepo=True,
 )
-def debugbundle(ui, bundlepath, all=None, spec=None, **opts):
+def debugbundle(ui, bundlepath, all=None, spec=None, **opts) -> Optional[int]:
     """lists the contents of a bundle"""
     if git.isgitbundle(bundlepath):
         refmap = git.listbundle(ui, bundlepath)
@@ -665,7 +665,7 @@ def debugcleanremotenames(ui, repo) -> Optional[int]:
     "hg debugcolor",
     norepo=True,
 )
-def debugcolor(ui, **opts):
+def debugcolor(ui, **opts) -> None:
     """show available color, effects or style"""
     ui.write(_x("color mode: %s\n") % ui._colormode)
     if opts.get(r"style"):
