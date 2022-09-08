@@ -153,32 +153,7 @@ fn render_progress_bars(
         }
 
         // 12 / 56 files
-        let unit = bar.unit();
-        let phrase = match unit {
-            "%" => {
-                let total = total.max(1);
-                format!("{}%", pos.min(total) * 100 / total)
-            }
-            "bytes" | "B" => {
-                if total == 0 {
-                    human_bytes(pos as _)
-                } else {
-                    format!("{}/{}", human_bytes(pos as _), human_bytes(total as _))
-                }
-            }
-            _ => {
-                if total == 0 {
-                    if pos == 0 {
-                        String::new()
-                    } else {
-                        format!("{} {}", pos, unit)
-                    }
-                } else {
-                    format!("{}/{} {}", pos, total, unit)
-                }
-            }
-        };
-        phrases.push(phrase);
+        phrases.push(crate::unit::unit_phrase(bar.unit(), pos, total));
 
         // message
         if let Some(message) = bar.message() {
@@ -234,26 +209,14 @@ fn human_rx_tx_total(rx: u64, tx: u64) -> String {
     let mut result = Vec::new();
     for (total, dir) in [(rx, "down"), (tx, "up")] {
         if total > 0 {
-            result.push(format!("{} {}", human_bytes(total), dir));
+            result.push(format!("{} {}", crate::unit::human_bytes(total), dir));
         }
     }
     result.join(", ")
 }
 
-fn human_bytes(bytes: u64) -> String {
-    if bytes < 5000 {
-        format!("{}B", bytes)
-    } else if bytes < 5_000_000 {
-        format!("{}KB", bytes / 1000)
-    } else if bytes < 5_000_000_000 {
-        format!("{}MB", bytes / 1000000)
-    } else {
-        format!("{}GB", bytes / 1000000000)
-    }
-}
-
 fn human_bytes_per_second(bytes_per_second: u64) -> String {
-    format!("{}/s", human_bytes(bytes_per_second))
+    format!("{}/s", crate::unit::human_bytes(bytes_per_second))
 }
 
 fn ascii_time_series(time_series: &IoTimeSeries) -> String {
