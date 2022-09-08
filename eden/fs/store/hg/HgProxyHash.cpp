@@ -24,10 +24,8 @@ using std::string;
 
 namespace facebook::eden {
 
-HgProxyHash::HgProxyHash(RelativePathPiece path, const Hash20& hgRevHash) {
-  auto [hash, buf] = prepareToStoreLegacy(path, hgRevHash);
-  value_ = std::move(buf);
-}
+HgProxyHash::HgProxyHash(RelativePathPiece path, const Hash20& hgRevHash)
+    : value_{serialize(path, hgRevHash)} {}
 
 std::optional<HgProxyHash> HgProxyHash::tryParseEmbeddedProxyHash(
     const ObjectId& edenObjectId) {
