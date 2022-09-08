@@ -247,7 +247,7 @@ class PathsProblem(Problem):
     def omitPathsDescription(paths: List[Path], pathSuffix: str) -> str:
         pathDescriptions = [str(path) + pathSuffix for path in paths[:10]]
         if len(paths) > 10:
-            pathDescriptions.append("{len(paths) - 10} more paths omitted")
+            pathDescriptions.append(f"{len(paths) - 10} more paths omitted")
         return "\n".join(pathDescriptions)
 
     @staticmethod
@@ -258,7 +258,7 @@ class PathsProblem(Problem):
             f"{path}{pathSuffix}: {error}" for path, error in paths[:10]
         ]
         if len(paths) > 10:
-            pathDescriptions.append("{len(paths) - 10} more paths omitted")
+            pathDescriptions.append(f"{len(paths) - 10} more paths omitted")
         return "\n".join(pathDescriptions)
 
 
