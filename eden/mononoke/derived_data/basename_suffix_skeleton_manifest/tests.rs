@@ -25,6 +25,7 @@ use mononoke_types::basename_suffix_skeleton_manifest::BssmEntry;
 use mononoke_types::BasenameSuffixSkeletonManifestId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::MPathElement;
 use repo_derived_data::RepoDerivedDataRef;
 
 use crate::RootBasenameSuffixSkeletonManifest;
@@ -35,6 +36,7 @@ async fn validate(
     ctx: &CoreContext,
     blobstore: &impl Blobstore,
     dir: BssmDirectory,
+    rev_basename: Option<&'async_recursion MPathElement>,
 ) -> Result<()> {
     let from_cache = cache.read().unwrap().get(&dir.id).copied();
     let calculated_rollup_count = if let Some(count) = from_cache {
@@ -44,11 +46,16 @@ async fn validate(
         let calculated_rollup_count = AtomicU64::new(1);
         let calculated_rollup_count = &calculated_rollup_count;
         mf.into_subentries(ctx, blobstore)
-            .try_for_each_concurrent(None, |(path, entry)| async move {
+            .try_for_each_concurrent(None, |(mut path, entry)| async move {
                 calculated_rollup_count.fetch_add(entry.rollup_count(), Ordering::Relaxed);
                 match entry {
-                    BssmEntry::File => assert_eq!(path.as_ref(), b"$"),
-                    BssmEntry::Directory(dir) => validate(cache, ctx, blobstore, dir).await?,
+                    BssmEntry::File => {
+                        path.reverse();
+                        assert_eq!(Some(&path), rev_basename)
+                    }
+                    BssmEntry::Directory(dir) => {
+                        validate(cache, ctx, blobstore, dir, rev_basename.or(Some(&path))).await?
+                    }
                 }
                 Ok(())
             })
@@ -92,7 +99,7 @@ async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result
     stream::iter(all_commits.into_iter().map(anyhow::Ok))
         .try_for_each_concurrent(None, |cs_id| async move {
             let mf: RootBasenameSuffixSkeletonManifest = derived_data.derive(ctx, cs_id).await?;
-            validate(cache, ctx, blobstore, mf.0).await
+            validate(cache, ctx, blobstore, mf.0, None).await
         })
         .await?;
     Ok(())

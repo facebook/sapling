@@ -478,19 +478,14 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
             Some(vec![String::from("file_2"), String::from("file_1_in_dir2")]),
             None,
             ChangesetFileOrdering::Ordered {
-                after: Some(MononokePath::try_from("dir1a/nonexistent")?),
+                after: Some(MononokePath::try_from("dir1a/file_1_in_dir2")?),
             },
         )
         .await?
         .try_collect()
         .await?;
-    if tunables().get_enable_basename_suffix_skeleton_manifest() {
-        // Ordering with BSSM is consistent, but not the same
-        assert!(files.is_empty());
-    } else {
-        let expected_files = vec![MononokePath::try_from("dir2/file_1_in_dir2")?];
-        assert_eq!(files, expected_files);
-    }
+    let expected_files = vec![MononokePath::try_from("dir2/file_1_in_dir2")?];
+    assert_eq!(files, expected_files);
 
     // Suffixes
     let mut files: Vec<_> = cs

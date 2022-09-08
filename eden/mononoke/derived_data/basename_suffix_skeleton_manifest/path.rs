@@ -8,29 +8,21 @@
 use anyhow::Context;
 use anyhow::Result;
 use mononoke_types::MPath;
-use mononoke_types::MPathElement;
 
-const SENTINEL_CHAR: u8 = b'$';
-
-fn bsm_sentinel() -> MPathElement {
-    MPathElement::new(vec![SENTINEL_CHAR]).unwrap()
-}
-
-/// Put reversed basename in beginning, plus sentinel in the end
+/// Put reversed basename in beginning
 pub(crate) struct BssmPath(MPath);
 
 impl BssmPath {
     pub(crate) fn transform(path: MPath) -> Self {
-        let (dirname, basename) = path.split_dirname();
-        let mut basename = basename.clone();
-        basename.reverse();
-        // Let's add a sentinel add the end of the path
+        let mut rev_basename = path.split_dirname().1.clone();
+        rev_basename.reverse();
+        // Let's add the basename in the end of the path as well
         // This prevents bugs, otherwise files in top-level become files
         // But they should become directories
         // So a repo with files `file` and `dir/file` will become a repo with files
-        // `elif/$` and `elif/dir/$`, which otherwise could cause a file-dir conflict.
-        let dirname = MPath::join_opt_element(dirname.as_ref(), &bsm_sentinel());
-        Self(MPath::from(basename).join(&dirname))
+        // `elif/file` and `elif/dir/file`, which otherwise could cause a file-dir conflict.
+        // It also conserves ordering of files, for the same basename.
+        Self(MPath::from(rev_basename).join(&path))
     }
 
     pub(crate) fn from_bsm_formatted_path(path: MPath) -> Self {
@@ -42,19 +34,17 @@ impl BssmPath {
     }
 
     pub(crate) fn untransform(self) -> Result<MPath> {
-        let (root, rest) = self.0.split_first();
-        let rest = rest.with_context(|| format!("No filename {}", root))?;
-        let mut root = root.clone();
-        root.reverse();
-        let (dirname, basename) = rest.split_dirname();
-        if basename.as_ref() != [SENTINEL_CHAR] {
+        let (rev_basename, rest) = self.0.split_first();
+        let rest = rest.with_context(|| format!("Invalid format for path {}", self.0))?;
+        let mut rev_basename2 = rest.split_dirname().1.clone();
+        rev_basename2.reverse();
+        if *rev_basename != rev_basename2 {
             anyhow::bail!(
-                "Invalid filename {}, not sentinel {}",
-                basename,
-                char::from(SENTINEL_CHAR),
+                "Invalid format for path {}, expected reverse basename in root.",
+                self.0
             )
         }
-        Ok(MPath::join_opt_element(dirname.as_ref(), &root))
+        Ok(rest)
     }
 }
 
@@ -90,20 +80,23 @@ mod test {
 
     #[test]
     fn test_transform() {
-        assert_transform("a/b/c", "c/a/b/$");
-        assert_transform("dir/file", "elif/dir/$");
-        assert_transform("file", "elif/$");
-        assert_transform("dir/subdir/hello", "olleh/dir/subdir/$");
-        assert_transform("eden/mononoke/main.rs", "sr.niam/eden/mononoke/$");
+        assert_transform("a/b/c", "c/a/b/c");
+        assert_transform("dir/file", "elif/dir/file");
+        assert_transform("file", "elif/file");
+        assert_transform("dir/subdir/hello", "olleh/dir/subdir/hello");
+        assert_transform("eden/mononoke/main.rs", "sr.niam/eden/mononoke/main.rs");
     }
 
     #[test]
     fn test_untransform() {
-        assert_untransform("c/a/b/$", Some("a/b/c"));
-        assert_untransform("elif/dir/$", Some("dir/file"));
-        assert_untransform("elif/$", Some("file"));
-        assert_untransform("olleh/dir/subdir/$", Some("dir/subdir/hello"));
-        assert_untransform("sr.niam/eden/mononoke/$", Some("eden/mononoke/main.rs"));
+        assert_untransform("c/a/b/c", Some("a/b/c"));
+        assert_untransform("elif/dir/file", Some("dir/file"));
+        assert_untransform("elif/file", Some("file"));
+        assert_untransform("olleh/dir/subdir/hello", Some("dir/subdir/hello"));
+        assert_untransform(
+            "sr.niam/eden/mononoke/main.rs",
+            Some("eden/mononoke/main.rs"),
+        );
         assert_untransform("$", None);
         assert_untransform("c/b/a", None);
     }
