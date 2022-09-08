@@ -424,14 +424,15 @@ fn spawn_progress_thread(
     let runlog_interval =
         Duration::from_secs_f64(config.get_or("runlog", "progress-refresh", || 0.5)?).max(interval);
 
+    let progress = io.progress();
+
     let mut config = progress_render::RenderingConfig {
         delay: Duration::from_secs_f64(config.get_or("progress", "delay", || 3.0)?),
-        term_width: term_width(),
+        term_width: progress.term_size().0,
         ..Default::default()
     };
 
     let registry = Registry::main();
-    let progress = io.progress();
 
     let mut stderr = io.error();
 
@@ -453,7 +454,7 @@ fn spawn_progress_thread(
             if !disable_rendering {
                 let mut text = (render_function)(&registry, &config);
                 if text != last_text {
-                    let term_width = term_width();
+                    let term_width = progress.term_size().0;
                     if term_width != config.term_width {
                         config.term_width = term_width;
                         text = (render_function)(&registry, &config);
@@ -489,29 +490,6 @@ fn spawn_progress_thread(
     });
 
     Ok(())
-}
-
-fn term_width() -> usize {
-    #[cfg(unix)]
-    {
-        use std::os::unix::io::AsRawFd;
-        if let Some((w, _h)) = terminal_size::terminal_size_using_fd(std::io::stderr().as_raw_fd())
-        {
-            return w.0 as _;
-        }
-    }
-    #[cfg(windows)]
-    {
-        use std::os::windows::io::AsRawHandle;
-        if let Some((w, _h)) =
-            terminal_size::terminal_size_using_handle(std::io::stderr().as_raw_handle())
-        {
-            return w.0 as _;
-        }
-    }
-
-    // Fallback width.
-    80
 }
 
 fn maybe_write_trace(

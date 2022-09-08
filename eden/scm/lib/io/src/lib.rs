@@ -27,6 +27,8 @@ use term::make_real_term;
 use term::DumbTerm;
 use term::DumbTty;
 use term::Term;
+use term::DEFAULT_TERM_HEIGHT;
+use term::DEFAULT_TERM_WIDTH;
 use termwiz::surface::change::ChangeSequence;
 use termwiz::surface::Change;
 
@@ -205,6 +207,14 @@ impl IOProgress {
         };
         let mut inner = inner.lock();
         inner.set_progress(text)
+    }
+
+    pub fn term_size(&self) -> (usize, usize) {
+        if let Some(inner) = Weak::upgrade(&self.0) {
+            inner.lock().term_size()
+        } else {
+            (DEFAULT_TERM_WIDTH, DEFAULT_TERM_HEIGHT)
+        }
     }
 }
 
@@ -555,6 +565,16 @@ impl Inner {
             self.clear_progress_for_error()?;
         }
         Ok(())
+    }
+
+    fn term_size(&mut self) -> (usize, usize) {
+        if let Some(ref mut term) = self.term {
+            if let Ok((cols, rows)) = term.size() {
+                return (cols, rows);
+            }
+        }
+
+        (DEFAULT_TERM_WIDTH, DEFAULT_TERM_HEIGHT)
     }
 
     fn set_progress(&mut self, data: &str) -> io::Result<()> {

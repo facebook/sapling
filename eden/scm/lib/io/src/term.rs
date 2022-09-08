@@ -18,6 +18,9 @@ use termwiz::terminal::SystemTerminal;
 use termwiz::terminal::Terminal;
 use termwiz::Result;
 
+pub(crate) const DEFAULT_TERM_WIDTH: usize = 80;
+pub(crate) const DEFAULT_TERM_HEIGHT: usize = 25;
+
 #[cfg(windows)]
 use crate::IsTty;
 
@@ -82,7 +85,7 @@ impl DumbTty {
 
 impl RenderTty for DumbTty {
     fn get_size_in_cells(&mut self) -> Result<(usize, usize)> {
-        Ok((80, 25))
+        Ok((DEFAULT_TERM_WIDTH, DEFAULT_TERM_HEIGHT))
     }
 }
 

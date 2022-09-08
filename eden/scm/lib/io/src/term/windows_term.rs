@@ -33,7 +33,7 @@ impl RenderTty for WindowsTty {
         match terminal_size::terminal_size_using_handle(self.write.as_raw_handle()) {
             Some((width, height)) => Ok((width.0 as _, height.0 as _)),
             // Fallback size, just in case.
-            None => Ok((80, 25)),
+            None => Ok((super::DEFAULT_TERM_WIDTH, super::DEFAULT_TERM_HEIGHT)),
         }
     }
 }
