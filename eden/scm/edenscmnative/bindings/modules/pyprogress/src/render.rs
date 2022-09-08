@@ -16,7 +16,7 @@ pub(crate) fn simple(_py: Python) -> PyResult<String> {
     // Formal progress rendering is done by pure Rust.
     let config = Default::default();
     let reg = Registry::main();
-    Ok(progress_render::simple::render(reg, &config))
+    Ok(progress_render::simple::render_string(reg, &config))
 }
 
 pub(crate) fn debug(_py: Python) -> PyResult<String> {

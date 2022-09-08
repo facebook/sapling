@@ -62,7 +62,9 @@ pub fn run(ctx: ReqCtx<DebugTopOpts>, repo: &mut Repo) -> Result<u8> {
             write!(stdout, "{}\n", table)?;
             break;
         }
-        ctx.core.io.set_progress(format!("{}\n", table).as_str())?;
+        ctx.core
+            .io
+            .set_progress_str(format!("{}\n", table).as_str())?;
         sleep(Duration::from_millis(refresh_rate));
     }
 

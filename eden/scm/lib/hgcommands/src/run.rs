@@ -441,7 +441,7 @@ fn spawn_progress_thread(
     // Not fatal if we cannot spawn the progress rendering thread.
     let thread_name = "rust-progress".to_string();
     let _ = thread::Builder::new().name(thread_name).spawn(move || {
-        let mut last_text = String::new();
+        let mut last_changes = Vec::new();
         let mut last_runlog_time: Option<Instant> = None;
 
         while Weak::upgrade(&in_scope).is_some() {
@@ -452,16 +452,13 @@ fn spawn_progress_thread(
             }
 
             if !disable_rendering {
-                let mut text = (render_function)(&registry, &config);
-                if text != last_text {
-                    let term_width = progress.term_size().0;
-                    if term_width != config.term_width {
-                        config.term_width = term_width;
-                        text = (render_function)(&registry, &config);
-                    }
+                config.term_width = progress.term_size().0;
+
+                let changes = (render_function)(registry, &config);
+                if changes != last_changes {
                     // This might block (so we use a thread, not an async task)
-                    let _ = progress.set(&text);
-                    last_text = text;
+                    let _ = progress.set(&changes);
+                    last_changes = changes;
                 }
             }
 

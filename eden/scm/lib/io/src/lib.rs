@@ -61,6 +61,7 @@ struct Inner {
     output: Box<dyn Write>,
     error: Option<Box<dyn Write>>,
     pager_progress: Option<Box<dyn Term + Send + Sync>>,
+
     term: Option<Box<dyn Term + Send + Sync>>,
 
     // Used to decide whether to render progress bars.
@@ -200,13 +201,13 @@ impl io::Write for IOOutput {
 
 impl IOProgress {
     /// Set progress to the given text.
-    pub fn set(&self, text: &str) -> io::Result<()> {
+    pub fn set(&self, changes: &[Change]) -> io::Result<()> {
         let inner = match Weak::upgrade(&self.0) {
             Some(inner) => inner,
             None => return Ok(()),
         };
         let mut inner = inner.lock();
-        inner.set_progress(text)
+        inner.set_progress(changes)
     }
 
     pub fn term_size(&self) -> (usize, usize) {
@@ -334,9 +335,13 @@ impl IO {
         Ok(())
     }
 
-    pub fn set_progress(&self, data: &str) -> io::Result<()> {
+    pub fn set_progress(&self, changes: &[Change]) -> io::Result<()> {
         let mut inner = self.inner.lock();
-        inner.set_progress(data)
+        inner.set_progress(changes)
+    }
+
+    pub fn set_progress_str(&self, data: &str) -> io::Result<()> {
+        self.set_progress(&[data.into()])
     }
 
     pub fn flush(&self) -> io::Result<()> {
@@ -429,7 +434,7 @@ impl IO {
         if inner.pager_handle.is_some() {
             return Ok(());
         }
-        inner.set_progress("")?;
+        inner.set_progress(&[])?;
 
         let mut pager = Pager::new_using_system_terminal()
             .or_else(|_| Pager::new_using_stdio())
@@ -519,7 +524,7 @@ impl IO {
         let mut inner = self.inner.lock();
         if disabled {
             inner.progress_disabled += 1;
-            inner.set_progress("")?;
+            inner.set_progress(&[])?;
         } else {
             if inner.progress_disabled == 0 {
                 return Err(io::Error::new(
@@ -561,7 +566,7 @@ impl Inner {
         if self.progress_has_content && self.pager_progress.is_none() {
             self.progress_has_content = false;
             if let Some(ref mut term) = self.term {
-                write_term_progress(term, "")
+                write_term_progress(term, &[])
                     .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
             }
         }
@@ -587,24 +592,24 @@ impl Inner {
         (DEFAULT_TERM_WIDTH, DEFAULT_TERM_HEIGHT)
     }
 
-    fn set_progress(&mut self, data: &str) -> io::Result<()> {
+    fn set_progress(&mut self, mut changes: &[Change]) -> io::Result<()> {
         let inner = self;
-        let mut data = data.trim_end();
         if inner.progress_disabled > 0 {
-            data = "";
+            changes = &[];
         }
+
         if let Some(ref mut progress) = inner.pager_progress {
-            write_term_progress(progress, data)
+            write_term_progress(progress, changes)
                 .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         } else {
             if !inner.output_on_new_line || !inner.error_on_new_line {
                 // There is a line that hasn't ended.
                 // Not suitable to render progress bars.
-                data = "";
+                changes = &[];
             }
 
             // Fast path: empty progress, unchanged.
-            if data.is_empty() && !inner.progress_has_content {
+            if changes.is_empty() && !inner.progress_has_content {
                 return Ok(());
             }
 
@@ -614,9 +619,9 @@ impl Inner {
             }
 
             if let Some(ref mut term) = inner.term {
-                write_term_progress(term, data)
+                inner.progress_has_content = !changes.is_empty();
+                write_term_progress(term, changes)
                     .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-                inner.progress_has_content = !data.is_empty();
             }
         }
         Ok(())
@@ -627,22 +632,21 @@ impl Inner {
 /// cursor, writing data, then moving cursor back.
 fn write_term_progress(
     term: &mut Box<dyn Term + Send + Sync>,
-    data: &str,
+    changes: &[Change],
 ) -> Result<(), termwiz::Error> {
     let (cols, rows) = term.size()?;
-    let mut changes = ChangeSequence::new(rows, cols);
-    changes.add(Change::ClearToEndOfScreen(Default::default()));
-    changes.add(data);
-    changes.move_to((0, 0));
-
-    term.render(&changes.consume())?;
+    let mut change_seq = ChangeSequence::new(rows, cols);
+    change_seq.add(Change::ClearToEndOfScreen(Default::default()));
+    change_seq.add_changes(changes.to_vec());
+    change_seq.move_to((0, 0));
+    term.render(&change_seq.consume())?;
 
     Ok(())
 }
 
 impl Drop for Inner {
     fn drop(&mut self) {
-        let _ = self.set_progress("");
+        let _ = self.set_progress(&[]);
         let _ = self.flush();
         // Drop the output and error. This sends EOF to pager.
         self.output = Box::new(Vec::new());

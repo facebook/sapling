@@ -17,7 +17,7 @@ fn test_simple_render() {
     let reg = example();
     let mut config = RenderingConfig::for_testing();
     assert_eq!(
-        format!("\n{}", crate::simple::render(&reg, &config)),
+        format!("\n{}", crate::simple::render_string(&reg, &config)),
         r#"
        Files  110 (9% miss)
        Trees  110 (9% miss)
@@ -33,7 +33,7 @@ fn test_simple_render() {
 
     config.term_width = 80;
     assert_eq!(
-        format!("\n{}", crate::simple::render(&reg, &config)),
+        format!("\n{}", crate::simple::render_string(&reg, &config)),
         r#"
            Files  110 (9% miss)
            Trees  110 (9% miss)

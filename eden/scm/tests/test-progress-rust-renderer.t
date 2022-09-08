@@ -80,7 +80,7 @@ test unicode topic
 test iter adapter
   $ hg iterprogresstest
    (clear) (no-eol)
-           Numbers  [===>           ]  1/4\x1b[40D (clear) (no-eol) (esc)
-           Numbers  [=======>       ]  2/4\x1b[40D (clear) (no-eol) (esc)
-           Numbers  [===========>   ]  3/4\x1b[40D (clear) (no-eol) (esc)
-           Numbers  [===============]  4/4\x1b[40D (clear) (no-eol) (esc)
+           Numbers  [===>           ]  1/4 \x1b[41D (clear) (no-eol) (esc)
+           Numbers  [=======>       ]  2/4 \x1b[41D (clear) (no-eol) (esc)
+           Numbers  [===========>   ]  3/4 \x1b[41D (clear) (no-eol) (esc)
+           Numbers  [===============]  4/4 \x1b[41D (clear) (no-eol) (esc)

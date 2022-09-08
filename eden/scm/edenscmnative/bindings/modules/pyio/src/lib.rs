@@ -66,7 +66,7 @@ py_class!(class IO |py| {
     def set_progress(&self, message: &str) -> PyResult<PyNone> {
         self.check_closed(py)?;
         let io = RustIO::main().map_pyerr(py)?;
-        io.set_progress(message).map_pyerr(py)?;
+        io.set_progress_str(message).map_pyerr(py)?;
         Ok(PyNone)
     }
 

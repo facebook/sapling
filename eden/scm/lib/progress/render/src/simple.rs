@@ -15,11 +15,17 @@ use progress_model::IoTimeSeries;
 use progress_model::ProgressBar;
 use progress_model::Registry;
 use progress_model::TimeSeriesMode;
+use termwiz::surface::Change;
 
 use crate::RenderingConfig;
 
+/// Render progress in to a list of termwiz changes.
+pub fn render(registry: &Registry, config: &RenderingConfig) -> Vec<Change> {
+    vec![render_string(registry, config).into()]
+}
+
 /// Render progress into a multi-line string.
-pub fn render(registry: &Registry, config: &RenderingConfig) -> String {
+pub fn render_string(registry: &Registry, config: &RenderingConfig) -> String {
     let mut lines = Vec::new();
 
     let cache_list = registry.list_cache_stats();

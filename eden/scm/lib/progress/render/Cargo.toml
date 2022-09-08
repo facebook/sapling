@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 progress-model = { version = "0.1.0", path = "../model" }
+termwiz = { version = "0.15", features = ["widgets"] }
 unicode-width = "0.1"
