@@ -3686,7 +3686,7 @@ def debugdrawdag(ui, repo, **opts) -> None:
         ("b", "bytes", False, _("use a bytes format function")),
         ("", "sleep", 0, _("milliseconds to sleep for each tick")),
         ("", "nested", False, _("use nested progress bars")),
-        ("", "with-output", False, _("also print output every 10%")),
+        ("", "with-output", 0, _("also print output every X items")),
     ],
     _("NUMBER"),
     optionalrepo=True,
@@ -3698,7 +3698,7 @@ def debugprogress(
     spinner: bool = False,
     nototal: bool = False,
     bytes: bool = False,
-    with_output: bool = False,
+    with_output: int = 0,
     sleep: float = 0,
     nested: bool = False,
 ) -> None:
@@ -3714,13 +3714,6 @@ def debugprogress(
 
     formatfunc = util.bytecount if bytes else None
 
-    if with_output:
-        outputfreq = num // 10
-        if outputfreq == 0:
-            outputfreq = 1
-    else:
-        outputfreq = None
-
     if spinner:
         with progress.spinner(ui, _spinning):
             for i in range(num):
@@ -3729,7 +3722,7 @@ def debugprogress(
                         pass
                 if sleep:
                     time.sleep(sleep)
-                if outputfreq and i % outputfreq == 0:
+                if with_output and i % with_output == 0:
                     ui.write(_x("processed %d items\n") % i)
     elif nototal:
         with progress.bar(ui, _spinning, formatfunc=formatfunc) as p:
@@ -3740,7 +3733,7 @@ def debugprogress(
                 if sleep:
                     time.sleep(sleep)
                 p.value = (i, "item %s" % i)
-                if outputfreq and i % outputfreq == 0:
+                if with_output and i % with_output == 0:
                     ui.write(_x("processed %d items\n") % i)
     else:
         with progress.bar(ui, _("progressing"), total=num, formatfunc=formatfunc) as p:
@@ -3757,7 +3750,7 @@ def debugprogress(
                 if sleep:
                     time.sleep(sleep)
                 p.value = (i, "item %s" % i)
-                if outputfreq and i % outputfreq == 0:
+                if with_output and i % with_output == 0:
                     ui.write(_x("processed %d items\n") % i)
 
 
