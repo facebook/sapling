@@ -58,7 +58,7 @@ struct Inner {
     input: Box<dyn Read>,
     output: Box<dyn Write>,
     error: Option<Box<dyn Write>>,
-    progress: Option<Box<dyn Write>>,
+    pager_progress: Option<Box<dyn Write>>,
     term: Option<Box<dyn Term + Send + Sync>>,
 
     // Used to decide whether to render progress bars.
@@ -259,7 +259,7 @@ impl IO {
             input: Box::new(input),
             output: Box::new(output),
             error: error.map(|e| Box::new(e) as Box<dyn Write>),
-            progress: None,
+            pager_progress: None,
             pager_handle: None,
             term: None,
             progress_conflict_with_output,
@@ -286,7 +286,7 @@ impl IO {
         inner.output = Box::new(io::stdout());
         inner.error = Some(Box::new(io::stderr()));
         inner.redirect_err_to_out = false;
-        inner.progress = None;
+        inner.pager_progress = None;
 
         // Wait for the pager (if running).
         let mut handle = None;
@@ -340,7 +340,7 @@ impl IO {
             input: Box::new(io::stdin()),
             output: Box::new(io::stdout()),
             error: Some(Box::new(io::stderr())),
-            progress: None,
+            pager_progress: None,
             pager_handle: None,
             term: None,
             progress_conflict_with_output,
@@ -485,7 +485,7 @@ impl IO {
                     .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
             }
         }
-        inner.progress = Some(Box::new(PipeWriterWithTty::new(prg_write, false)));
+        inner.pager_progress = Some(Box::new(PipeWriterWithTty::new(prg_write, false)));
         pager.set_progress_stream(prg_read);
 
         inner.pager_handle = Some(spawn(|| {
@@ -520,7 +520,7 @@ impl IO {
 
     pub fn set_progress_pipe_writer(&self, progress: Option<PipeWriter>) {
         let mut inner = self.inner.lock();
-        inner.progress = match progress {
+        inner.pager_progress = match progress {
             Some(progress) => Some(Box::new(PipeWriterWithTty::new(progress, false))),
             None => None,
         }
@@ -538,7 +538,7 @@ impl Inner {
 
     /// Clear the progress (temporarily) for other output.
     fn clear_progress_for_error(&mut self) -> io::Result<()> {
-        if self.progress_has_content && self.progress.is_none() {
+        if self.progress_has_content && self.pager_progress.is_none() {
             self.progress_has_content = false;
             if let Some(ref mut term) = self.term {
                 write_term_progress(term, "")
@@ -551,7 +551,7 @@ impl Inner {
     /// Clear the progress (temporarily) if it ("stderr") conflicts with "stdout" output.
     fn clear_progress_for_output(&mut self) -> io::Result<()> {
         // If self.progress is set. Progress writes to streampager, and does not need clear.
-        if self.progress_conflict_with_output && self.progress.is_none() {
+        if self.progress_conflict_with_output && self.pager_progress.is_none() {
             self.clear_progress_for_error()?;
         }
         Ok(())
@@ -563,7 +563,7 @@ impl Inner {
         if inner.progress_disabled > 0 {
             data = "";
         }
-        if let Some(ref mut progress) = inner.progress {
+        if let Some(ref mut progress) = inner.pager_progress {
             // \x0c (\f) is defined by streampager.
             let data = format!("{}\x0c", data);
             progress.write_all(data.as_bytes())?;
@@ -619,7 +619,7 @@ impl Drop for Inner {
         // Drop the output and error. This sends EOF to pager.
         self.output = Box::new(Vec::new());
         self.error = None;
-        self.progress = None;
+        self.pager_progress = None;
         // Wait for the pager.
         let mut handle = None;
         mem::swap(&mut handle, &mut self.pager_handle);
