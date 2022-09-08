@@ -34,9 +34,6 @@ use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::Freshness;
 use borrowed::borrowed;
-use bundle_generator::FilenodeVerifier;
-use bundle_preparer::maybe_adjust_batch;
-use bundle_preparer::BundlePreparer;
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use clap_old::Arg;
@@ -105,13 +102,15 @@ mod globalrev_syncer;
 mod hgrepo;
 mod lfs_verifier;
 
-use errors::ErrorKind::SyncFailed;
-use errors::PipelineError;
-use errors::PipelineError::AnonymousError;
-use errors::PipelineError::EntryError;
-use globalrev_syncer::GlobalrevSyncer;
-use hgrepo::list_hg_server_bookmarks;
-use hgrepo::HgRepo;
+use crate::bundle_generator::FilenodeVerifier;
+use crate::bundle_preparer::BundlePreparer;
+use crate::errors::ErrorKind::SyncFailed;
+use crate::errors::PipelineError;
+use crate::errors::PipelineError::AnonymousError;
+use crate::errors::PipelineError::EntryError;
+use crate::globalrev_syncer::GlobalrevSyncer;
+use crate::hgrepo::list_hg_server_bookmarks;
+use crate::hgrepo::HgRepo;
 
 const ARG_BOOKMARK_REGEX_FORCE_GENERATE_LFS: &str = "bookmark-regex-force-generate-lfs";
 const ARG_BOOKMARK_MOVE_ANY_DIRECTION: &str = "bookmark-move-any-direction";
@@ -899,20 +898,15 @@ impl BookmarkOverlay {
         self.overlay.insert(book, val);
     }
 
-    fn get_bookmark_values(&self) -> Vec<ChangesetId> {
-        let mut res = vec![];
-        for key in self.bookmarks.keys().chain(self.overlay.keys()) {
-            if let Some(val) = self.overlay.get(key) {
-                res.extend(val.clone().into_iter());
-            } else if let Some(val) = self.bookmarks.get(key) {
-                res.push(*val);
-            }
-        }
-
-        res
+    fn all_values(&self) -> Vec<ChangesetId> {
+        self.bookmarks
+            .values()
+            .chain(self.overlay.values().flatten())
+            .copied()
+            .collect()
     }
 
-    fn get_value(&self, bookmark: &BookmarkName) -> Option<ChangesetId> {
+    fn get(&self, bookmark: &BookmarkName) -> Option<ChangesetId> {
         if let Some(value) = self.overlay.get(bookmark) {
             return value.clone();
         }
@@ -1208,10 +1202,10 @@ async fn run<'a>(
             if let Some(log_entry) = maybe_log_entry {
                 let (stats, res) = async {
                     let batches = bundle_preparer
-                        .prepare_batches(ctx, vec![log_entry.clone()])
+                        .prepare_batches(ctx, &mut overlay, vec![log_entry.clone()])
                         .await?;
                     let mut combined_entries = bundle_preparer
-                        .prepare_bundles(ctx.clone(), batches, &mut overlay)
+                        .prepare_bundles(ctx.clone(), batches)
                         .await?;
 
                     let combined_entry = combined_entries.remove(0);
@@ -1243,8 +1237,6 @@ async fn run<'a>(
         }
         (MODE_SYNC_LOOP, Some(sub_m)) => {
             let start_id = args::get_i64_opt(&sub_m, "start-id");
-            let bundle_buffer_size =
-                args::get_usize_opt(&sub_m, "bundle-prefetch").unwrap_or(0) + 1;
             let combine_bundles = args::get_u64_opt(&sub_m, "combine-bundles").unwrap_or(1);
             let loop_forever = sub_m.is_present("loop-forever");
             let replayed_sync_counter =
@@ -1253,20 +1245,22 @@ async fn run<'a>(
                 .value_of("exit-file")
                 .map(|name| Path::new(name).to_path_buf());
 
-            // NOTE: We poll this callback twice:
-            // - Once after possibly pulling a new piece of work.
-            // - Once after pulling a prepared piece of work.
-            //
-            // This ensures that we exit ASAP in the two following cases:
-            // - There is no work whatsoever. The first check exits early.
-            // - There is a lot of buffered work. The 2nd check exits early without doing it all.
             borrowed!(ctx);
-            let can_continue = move || match exit_path {
-                Some(ref exit_path) if exit_path.exists() => {
-                    info!(ctx.logger(), "path {:?} exists: exiting ...", exit_path);
+            let can_continue = move || {
+                let exit_file_exists = match exit_path {
+                    Some(ref exit_path) if exit_path.exists() => {
+                        info!(ctx.logger(), "path {:?} exists: exiting ...", exit_path);
+                        true
+                    }
+                    _ => false,
+                };
+                let cancelled = if cancellation_requested.load(Ordering::Relaxed) {
+                    info!(ctx.logger(), "sync stopping due to cancellation request");
+                    true
+                } else {
                     false
-                }
-                _ => true,
+                };
+                !exit_file_exists && !cancelled
             };
             let counter = replayed_sync_counter
                 .get_counter(ctx)
@@ -1279,11 +1273,14 @@ async fn run<'a>(
                     }))
                 });
 
-            let (start_id, (bundle_preparer, overlay, globalrev_syncer)) =
+            let (start_id, (bundle_preparer, mut overlay, globalrev_syncer)) =
                 try_join(counter, repo_parts).watched(ctx.logger()).await?;
 
+            let outcome_handler = build_outcome_handler(ctx, lock_via);
+
             borrowed!(bundle_preparer: &BundlePreparer);
-            borrowed!(mut overlay: &BookmarkOverlay);
+            let overlay = &mut overlay;
+            let mut seen_first = false;
             let s = loop_over_log_entries(
                 ctx,
                 &bookmarks,
@@ -1292,126 +1289,89 @@ async fn run<'a>(
                 &scuba_sample,
                 combine_bundles,
                 unlock_via,
-            )
-            .try_take_while({
-                borrowed!(can_continue);
-                move |_| future::ready(Ok(can_continue()))
-            })
-            .try_filter_map(|entry_vec| {
-                if entry_vec.is_empty() {
-                    future::ready(Ok(None))
-                } else {
-                    future::ready(Ok(Some(entry_vec)))
-                }
-            })
-            .map(|res_entries| async move {
-                let entries = res_entries?;
-                bundle_preparer
-                    .prepare_batches(ctx, entries)
-                    .watched(ctx.logger())
-                    .await
-            })
-            .buffered(bundle_buffer_size)
-            .map_err(|cause| AnonymousError { cause })
-            .map({
-                let mut seen_first_batch = false;
-                move |res_batches| {
-                    let batches = res_batches?;
-                    let mut batches = batches.into_iter();
-                    let mut first = batches.next();
-                    if !seen_first_batch {
-                        // In case sync job failed to update "latest-replayed-request"
-                        // counter during its previous run, the first batch might contain
-                        // entries that were already synced to hg server. Syncing them again
-                        // would result in an error. Let's try to detect this case and
-                        // fix the first batch if possible.
-                        if let Some(batch) = first {
-                            first = maybe_adjust_batch(ctx, batch, overlay)
-                                .map_err(|cause| AnonymousError { cause })?;
-                            seen_first_batch = true;
-                        }
-                    }
-
-                    Ok(first.into_iter().chain(batches))
-                }
-            })
-            .map(|batches| async move {
-                let batches = batches?;
-                bundle_preparer
-                    .prepare_bundles(
-                        ctx.clone(),
-                        batches.into_iter().collect(),
-                        &mut overlay.clone(),
-                    )
-                    .watched(ctx.logger())
-                    .await
-            })
-            .buffered(bundle_buffer_size)
-            .map_ok(|vec| stream::iter(vec.into_iter().map(Ok)))
-            .try_flatten();
-
-            let outcome_handler = build_outcome_handler(ctx, lock_via);
+            );
             pin_mut!(s);
-            // Before beginning the iteration, check if cancellation is requested.
-            if cancellation_requested.load(Ordering::Relaxed) {
-                info!(ctx.logger(), "sync stopping due to cancellation request");
-                return Ok(());
-            }
-            while let Some(res) = s.next().watched(ctx.logger()).await {
+            while let Some(entries) = s.try_next().await? {
                 if !can_continue() {
                     break;
                 }
-                let res = match res {
-                    Ok(combined_entry) => {
-                        let (stats, res) = sync_single_combined_entry(
-                            ctx,
-                            &combined_entry,
-                            &hg_repo,
-                            base_retry_delay_ms,
-                            retry_num,
-                            &globalrev_syncer,
-                        )
-                        .watched(ctx.logger())
-                        .timed()
-                        .await;
-                        let res = bind_sync_result(&combined_entry.components, res);
 
-                        match res {
-                            Ok(ok) => Ok((stats, ok)),
-                            Err(err) => Err((Some(stats), err)),
-                        }
+                if entries.is_empty() {
+                    continue;
+                }
+
+                let mut batches = bundle_preparer
+                    .prepare_batches(ctx, overlay, entries)
+                    .watched(ctx.logger())
+                    .await
+                    .map_err(|cause| AnonymousError { cause })?;
+
+                if batches.is_empty() {
+                    continue;
+                }
+
+                if !seen_first {
+                    // In the case that the sync job failed to update the
+                    // "latest-replayed-request" counter during its previous
+                    // run, the first batch might contain entries that were
+                    // already synced to the hg server. Syncing them again
+                    // would result in an error. Let's try to detect this case
+                    // and adjust the first batch to skip the already-synced
+                    // commits, if possible.
+                    if let Some(first) = batches.first_mut() {
+                        first.maybe_adjust(ctx);
+                        seen_first = true;
                     }
-                    Err(e) => Err((None, e)),
-                };
+                }
 
-                let res = reporting_handler(res).watched(ctx.logger()).await;
-                let entry = outcome_handler(res).watched(ctx.logger()).await?;
-                let next_id = get_id_to_search_after(&entry);
+                let bundles = bundle_preparer
+                    .prepare_bundles(ctx.clone(), batches)
+                    .watched(ctx.logger())
+                    .await?;
 
-                retry(
-                    ctx.logger(),
-                    |_| async {
-                        let success = replayed_sync_counter
-                            .set_counter(ctx, next_id)
-                            .watched(ctx.logger())
-                            .await?;
+                for bundle in bundles {
+                    if !can_continue() {
+                        break;
+                    }
+                    let (stats, res) = sync_single_combined_entry(
+                        ctx,
+                        &bundle,
+                        &hg_repo,
+                        base_retry_delay_ms,
+                        retry_num,
+                        &globalrev_syncer,
+                    )
+                    .watched(ctx.logger())
+                    .timed()
+                    .await;
+                    let res = bind_sync_result(&bundle.components, res);
+                    let res = match res {
+                        Ok(ok) => Ok((stats, ok)),
+                        Err(err) => Err((Some(stats), err)),
+                    };
+                    let res = reporting_handler(res).watched(ctx.logger()).await;
+                    let entry = outcome_handler(res).watched(ctx.logger()).await?;
+                    let next_id = get_id_to_search_after(&entry);
 
-                        if success {
-                            Ok(())
-                        } else {
-                            bail!("failed to update counter")
-                        }
-                    },
-                    base_retry_delay_ms,
-                    retry_num,
-                )
-                .watched(ctx.logger())
-                .await?;
-                // At the end of each iteration, check if cancellation has been
-                // requested.
-                if cancellation_requested.load(Ordering::Relaxed) {
-                    info!(ctx.logger(), "sync stopping due to cancellation request");
-                    return Ok(());
+                    retry(
+                        ctx.logger(),
+                        |_| async {
+                            let success = replayed_sync_counter
+                                .set_counter(ctx, next_id)
+                                .watched(ctx.logger())
+                                .await?;
+
+                            if success {
+                                Ok(())
+                            } else {
+                                bail!("failed to update counter")
+                            }
+                        },
+                        base_retry_delay_ms,
+                        retry_num,
+                    )
+                    .watched(ctx.logger())
+                    .await?;
                 }
             }
             Ok(())

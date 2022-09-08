@@ -8,7 +8,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Error;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateLogEntry;
@@ -89,6 +88,7 @@ impl BundlePreparer {
     pub async fn prepare_batches(
         &self,
         ctx: &CoreContext,
+        overlay: &mut BookmarkOverlay,
         entries: Vec<BookmarkUpdateLogEntry>,
     ) -> Result<Vec<BookmarkLogEntryBatch>, Error> {
         use BookmarkUpdateReason::*;
@@ -107,6 +107,7 @@ impl BundlePreparer {
             ctx,
             &self.repo.skiplist_index,
             &self.repo.changeset_fetcher_arc(),
+            overlay,
             entries,
         )
         .await
@@ -116,14 +117,16 @@ impl BundlePreparer {
         &self,
         ctx: CoreContext,
         batches: Vec<BookmarkLogEntryBatch>,
-        overlay: &mut crate::BookmarkOverlay,
     ) -> BoxFuture<'static, Result<Vec<CombinedBookmarkUpdateLogEntry>, PipelineError>> {
         let mut futs = vec![];
 
         for batch in batches {
+            if batch.is_empty() {
+                continue;
+            }
             let session_lfs_params = self.session_lfs_params(&ctx, &batch.bookmark_name);
             let entries = batch.entries.clone();
-            let f = self.prepare_single_bundle(ctx.clone(), batch, overlay, session_lfs_params);
+            let f = self.prepare_single_bundle(ctx.clone(), batch, session_lfs_params);
             futs.push((f, entries));
         }
 
@@ -152,13 +155,9 @@ impl BundlePreparer {
         &self,
         ctx: CoreContext,
         batch: BookmarkLogEntryBatch,
-        overlay: &mut crate::BookmarkOverlay,
         session_lfs_params: SessionLfsParams,
     ) -> BoxFuture<'static, Result<CombinedBookmarkUpdateLogEntry, Error>> {
         cloned!(self.repo, self.push_vars, self.filenode_verifier);
-
-        let book_values = overlay.get_bookmark_values();
-        overlay.update(batch.bookmark_name.clone(), batch.to_cs_id.clone());
 
         let base_retry_delay_ms = self.base_retry_delay_ms;
         let retry_num = self.retry_num;
@@ -192,7 +191,7 @@ impl BundlePreparer {
                             &repo,
                             &filenode_verifier,
                             session_lfs_params.clone(),
-                            &book_values,
+                            &batch.server_heads,
                             &bookmark_change,
                             &batch.bookmark_name,
                             push_vars.clone(),
@@ -316,19 +315,30 @@ pub struct BookmarkLogEntryBatch {
     bookmark_name: BookmarkName,
     from_cs_id: Option<ChangesetId>,
     to_cs_id: Option<ChangesetId>,
+    server_old_value: Option<ChangesetId>,
+    server_heads: Vec<ChangesetId>,
 }
 
 impl BookmarkLogEntryBatch {
-    pub fn new(log_entry: BookmarkUpdateLogEntry) -> Self {
+    pub fn new(overlay: &mut BookmarkOverlay, log_entry: BookmarkUpdateLogEntry) -> Self {
         let bookmark_name = log_entry.bookmark_name.clone();
         let from_cs_id = log_entry.from_changeset_id;
         let to_cs_id = log_entry.to_changeset_id;
+        let server_heads = overlay.all_values();
+        let server_old_value = overlay.get(&bookmark_name);
+        overlay.update(bookmark_name.clone(), to_cs_id.clone());
         Self {
             entries: vec![log_entry],
             bookmark_name,
             from_cs_id,
             to_cs_id,
+            server_old_value,
+            server_heads,
         }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.entries.is_empty()
     }
 
     // Outer result's error means that some infrastructure error happened.
@@ -339,6 +349,7 @@ impl BookmarkLogEntryBatch {
         ctx: &CoreContext,
         lca_hint: &dyn LeastCommonAncestorsHint,
         changeset_fetcher: &ArcChangesetFetcher,
+        overlay: &mut BookmarkOverlay,
         entry: BookmarkUpdateLogEntry,
     ) -> Result<Result<(), BookmarkUpdateLogEntry>, Error> {
         // Combine two bookmark update log entries only if bookmark names are the same
@@ -382,33 +393,18 @@ impl BookmarkLogEntryBatch {
             return Ok(Err(entry));
         }
 
-        self.push(entry);
+        self.push(overlay, entry);
         Ok(Ok(()))
     }
 
-    fn push(&mut self, entry: BookmarkUpdateLogEntry) {
+    fn push(&mut self, overlay: &mut BookmarkOverlay, entry: BookmarkUpdateLogEntry) {
         self.to_cs_id = entry.to_changeset_id;
         self.entries.push(entry);
-    }
 
-    pub fn remove_first_entries(
-        mut self,
-        num_entries_to_remove: usize,
-    ) -> Result<Option<Self>, Error> {
-        if num_entries_to_remove > self.entries.len() {
-            return Err(anyhow!(
-                "Programmer error: tried to skip more entries that the batch has"
-            ));
-        }
-
-        let last_entries = self.entries.split_off(num_entries_to_remove);
-        self.entries = last_entries;
-        if let Some(entry) = self.entries.get(0) {
-            self.from_cs_id = entry.from_changeset_id;
-            Ok(Some(self))
-        } else {
-            Ok(None)
-        }
+        // Side-effect: successfully appending the entry to the batch updates
+        // the bookmark value in the overlay.  This means the overlay is
+        // correct when computing the server heads for the next batch.
+        overlay.update(self.bookmark_name.clone(), self.to_cs_id);
     }
 }
 
@@ -416,6 +412,7 @@ async fn split_in_batches(
     ctx: &CoreContext,
     lca_hint: &dyn LeastCommonAncestorsHint,
     changeset_fetcher: &ArcChangesetFetcher,
+    overlay: &mut BookmarkOverlay,
     entries: Vec<BookmarkUpdateLogEntry>,
 ) -> Result<Vec<BookmarkLogEntryBatch>, Error> {
     let mut batches: Vec<BookmarkLogEntryBatch> = vec![];
@@ -423,7 +420,7 @@ async fn split_in_batches(
     for entry in entries {
         let entry = match batches.last_mut() {
             Some(batch) => match batch
-                .try_append(ctx, lca_hint, changeset_fetcher, entry)
+                .try_append(ctx, lca_hint, changeset_fetcher, overlay, entry)
                 .watched(ctx.logger())
                 .await?
             {
@@ -434,7 +431,7 @@ async fn split_in_batches(
             },
             None => entry,
         };
-        batches.push(BookmarkLogEntryBatch::new(entry));
+        batches.push(BookmarkLogEntryBatch::new(overlay, entry));
     }
 
     Ok(batches)
@@ -455,52 +452,53 @@ async fn split_in_batches(
 //    update "latest-replayed-request" counter.
 // 3) If overlay doesn't point to any commit in the batch, then the batch is not modified.
 //    Usually it means that hg server is out of date with hgsql, and we don't need to do anything
-pub fn maybe_adjust_batch(
-    ctx: &CoreContext,
-    batch: BookmarkLogEntryBatch,
-    overlay: &BookmarkOverlay,
-) -> Result<Option<BookmarkLogEntryBatch>, Error> {
-    let book_name = &batch.bookmark_name;
-
-    // No adjustment needed
-    let overlay_value = overlay.get_value(book_name);
-    if overlay_value == batch.from_cs_id {
-        return Ok(Some(batch));
-    }
-
-    info!(
-        ctx.logger(),
-        "trying to adjust first batch for bookmark {}. \
-        First batch starts points to {:?}",
-        book_name,
-        batch.from_cs_id
-    );
-
-    let mut found = false;
-    let mut entries_to_skip = vec![];
-    for entry in &batch.entries {
-        entries_to_skip.push(entry.id);
-        if overlay_value == entry.to_changeset_id {
-            found = true;
-            break;
+impl BookmarkLogEntryBatch {
+    pub fn maybe_adjust(&mut self, ctx: &CoreContext) {
+        if self.server_old_value == self.from_cs_id {
+            // No adjustment needed
+            return;
         }
-    }
 
-    if found {
-        warn!(
+        info!(
             ctx.logger(),
-            "adjusting first batch - skipping first entries {:?}", entries_to_skip
+            concat!(
+                "trying to adjust first batch for bookmark {} - ",
+                "first batch starts points to {:?} but server points to {:?}",
+            ),
+            self.bookmark_name,
+            self.from_cs_id,
+            self.server_old_value,
         );
-        batch.remove_first_entries(entries_to_skip.len())
-    } else {
-        warn!(
-            ctx.logger(),
-            "could not adjust first batch, because bookmark hg \
-            server bookmark doesn't point to any commit from the batch. This might \
-            be expected in a repo with high commit rate in case hg server is out of \
-            sync with hgsql."
-        );
-        Ok(Some(batch))
+
+        let mut found = false;
+        let mut entries_to_skip = vec![];
+        for entry in &self.entries {
+            entries_to_skip.push(entry.id);
+            if self.server_old_value == entry.to_changeset_id {
+                found = true;
+                break;
+            }
+        }
+
+        if found {
+            warn!(
+                ctx.logger(),
+                "adjusting first batch - skipping first entries: {:?}", entries_to_skip
+            );
+            self.entries.splice(..entries_to_skip.len(), None);
+            self.from_cs_id = self.server_old_value;
+        } else {
+            // The server bookmark doesn't point to any commit from the batch. This might
+            // be expected in a repo with high commit rate.
+            warn!(
+                ctx.logger(),
+                concat!(
+                    "could not adjust first batch - ",
+                    "the server bookmark ({:?}) does not point to any commit in the batch",
+                ),
+                self.server_old_value
+            );
+        }
     }
 }
 
@@ -539,14 +537,25 @@ mod test {
             None,
             Some(commit),
         )];
-        let res =
-            split_in_batches(&ctx, &sli, &repo.changeset_fetcher_arc(), entries.clone()).await?;
+        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
+        let res = split_in_batches(
+            &ctx,
+            &sli,
+            &repo.changeset_fetcher_arc(),
+            &mut overlay,
+            entries.clone(),
+        )
+        .await?;
 
         assert_eq!(res.len(), 1);
         assert_eq!(res[0].entries, entries);
         assert_eq!(res[0].bookmark_name, main);
         assert_eq!(res[0].from_cs_id, None);
         assert_eq!(res[0].to_cs_id, Some(commit));
+
+        // The overlay should've been mutated so that the bookmark points to
+        // the latest value.
+        assert_eq!(overlay.get(&main), Some(commit));
 
         Ok(())
     }
@@ -576,8 +585,15 @@ mod test {
             create_bookmark_log_entry(1, main.clone(), Some(commit_a), Some(commit_b)),
             create_bookmark_log_entry(2, main.clone(), Some(commit_b), Some(commit_c)),
         ];
-        let res =
-            split_in_batches(&ctx, &sli, &repo.changeset_fetcher_arc(), entries.clone()).await?;
+        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
+        let res = split_in_batches(
+            &ctx,
+            &sli,
+            &repo.changeset_fetcher_arc(),
+            &mut overlay,
+            entries.clone(),
+        )
+        .await?;
 
         assert_eq!(res.len(), 1);
         assert_eq!(res[0].entries, entries);
@@ -618,8 +634,15 @@ mod test {
             log_entry_2.clone(),
             log_entry_3.clone(),
         ];
-        let res =
-            split_in_batches(&ctx, &sli, &repo.changeset_fetcher_arc(), entries.clone()).await?;
+        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
+        let res = split_in_batches(
+            &ctx,
+            &sli,
+            &repo.changeset_fetcher_arc(),
+            &mut overlay,
+            entries.clone(),
+        )
+        .await?;
 
         assert_eq!(res.len(), 3);
         assert_eq!(res[0].entries, vec![log_entry_1]);
@@ -670,8 +693,15 @@ mod test {
             log_entry_2.clone(),
             log_entry_3.clone(),
         ];
-        let res =
-            split_in_batches(&ctx, &sli, &repo.changeset_fetcher_arc(), entries.clone()).await?;
+        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
+        let res = split_in_batches(
+            &ctx,
+            &sli,
+            &repo.changeset_fetcher_arc(),
+            &mut overlay,
+            entries.clone(),
+        )
+        .await?;
 
         assert_eq!(res.len(), 2);
         assert_eq!(res[0].entries, vec![log_entry_1, log_entry_2]);
@@ -711,8 +741,15 @@ mod test {
         let log_entry_2 =
             create_bookmark_log_entry(1, main.clone(), Some(commit_b), Some(commit_c));
         let entries = vec![log_entry_1.clone(), log_entry_2.clone()];
-        let res =
-            split_in_batches(&ctx, &sli, &repo.changeset_fetcher_arc(), entries.clone()).await?;
+        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
+        let res = split_in_batches(
+            &ctx,
+            &sli,
+            &repo.changeset_fetcher_arc(),
+            &mut overlay,
+            entries.clone(),
+        )
+        .await?;
 
         assert_eq!(res.len(), 2);
         assert_eq!(res[0].entries, vec![log_entry_1]);
@@ -743,6 +780,8 @@ mod test {
         )
         .await?;
 
+        let sli: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
+
         let main = BookmarkName::new("main")?;
         let commit_a = commits.get("A").cloned().unwrap();
         let commit_b = commits.get("B").cloned().unwrap();
@@ -753,53 +792,108 @@ mod test {
             create_bookmark_log_entry(1, main.clone(), Some(commit_a), Some(commit_b));
         let log_entry_3 =
             create_bookmark_log_entry(1, main.clone(), Some(commit_b), Some(commit_c));
+        let entries = vec![log_entry_1, log_entry_2.clone(), log_entry_3.clone()];
 
-        let mut batch = BookmarkLogEntryBatch::new(log_entry_1);
-        batch.push(log_entry_2.clone());
-        batch.push(log_entry_3.clone());
-
-        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
-        let adjusted = maybe_adjust_batch(&ctx, batch.clone(), &overlay)?;
-        assert_eq!(Some(batch.clone()), adjusted);
+        // Default case: no adjustment
+        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
+        let mut batch = split_in_batches(
+            &ctx,
+            &sli,
+            &repo.changeset_fetcher_arc(),
+            &mut overlay,
+            entries.clone(),
+        )
+        .await?
+        .into_iter()
+        .next()
+        .unwrap();
+        let original = batch.clone();
+        batch.maybe_adjust(&ctx);
+        assert_eq!(batch, original);
 
         // Skip a single entry
-        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {
+        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {
           main.clone() => commit_a,
         }));
-        let adjusted = maybe_adjust_batch(&ctx, batch.clone(), &overlay)?;
-        assert!(adjusted.is_some());
-        assert_ne!(Some(batch.clone()), adjusted);
-        let adjusted = adjusted.unwrap();
-        assert_eq!(adjusted.from_cs_id, Some(commit_a));
-        assert_eq!(adjusted.to_cs_id, Some(commit_c));
-        assert_eq!(adjusted.entries, vec![log_entry_2, log_entry_3.clone()]);
+        let mut batch = split_in_batches(
+            &ctx,
+            &sli,
+            &repo.changeset_fetcher_arc(),
+            &mut overlay,
+            entries.clone(),
+        )
+        .await?
+        .into_iter()
+        .next()
+        .unwrap();
+        let original = batch.clone();
+        batch.maybe_adjust(&ctx);
+        assert_ne!(batch, original);
+        assert_eq!(batch.from_cs_id, Some(commit_a));
+        assert_eq!(batch.to_cs_id, Some(commit_c));
+        assert_eq!(batch.entries, vec![log_entry_2, log_entry_3.clone()]);
 
         // Skip two entries
-        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {
+        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {
           main.clone() => commit_b,
         }));
-        let adjusted = maybe_adjust_batch(&ctx, batch.clone(), &overlay)?;
-        assert!(adjusted.is_some());
-        assert_ne!(Some(batch.clone()), adjusted);
-        let adjusted = adjusted.unwrap();
-        assert_eq!(adjusted.from_cs_id, Some(commit_b));
-        assert_eq!(adjusted.to_cs_id, Some(commit_c));
-        assert_eq!(adjusted.entries, vec![log_entry_3]);
+        let mut batch = split_in_batches(
+            &ctx,
+            &sli,
+            &repo.changeset_fetcher_arc(),
+            &mut overlay,
+            entries.clone(),
+        )
+        .await?
+        .into_iter()
+        .next()
+        .unwrap();
+        let original = batch.clone();
+        batch.maybe_adjust(&ctx);
+        assert_ne!(batch, original);
+        assert_eq!(batch.from_cs_id, Some(commit_b));
+        assert_eq!(batch.to_cs_id, Some(commit_c));
+        assert_eq!(batch.entries, vec![log_entry_3]);
 
         // The whole batch was already synced - nothing to do!
-        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {
+        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {
           main.clone() => commit_c,
         }));
-        let adjusted = maybe_adjust_batch(&ctx, batch.clone(), &overlay)?;
-        assert_eq!(None, adjusted);
+        let mut batch = split_in_batches(
+            &ctx,
+            &sli,
+            &repo.changeset_fetcher_arc(),
+            &mut overlay,
+            entries.clone(),
+        )
+        .await?
+        .into_iter()
+        .next()
+        .unwrap();
+        let original = batch.clone();
+        batch.maybe_adjust(&ctx);
+        assert_ne!(batch, original);
+        assert!(batch.is_empty());
 
         // Bookmark is not in the batch at all - in that case just do nothing and
         // return existing bundle
-        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {
+        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {
           main => commit_d,
         }));
-        let adjusted = maybe_adjust_batch(&ctx, batch.clone(), &overlay)?;
-        assert_eq!(Some(batch), adjusted);
+        let mut batch = split_in_batches(
+            &ctx,
+            &sli,
+            &repo.changeset_fetcher_arc(),
+            &mut overlay,
+            entries.clone(),
+        )
+        .await?
+        .into_iter()
+        .next()
+        .unwrap();
+        let original = batch.clone();
+        batch.maybe_adjust(&ctx);
+        assert_eq!(batch, original);
         Ok(())
     }
 

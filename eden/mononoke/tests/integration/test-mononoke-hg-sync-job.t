@@ -146,7 +146,6 @@ Replay in a loop
   $ cd $TESTTMP
   $ mononoke_hg_sync_loop repo-hg-3 0 2>&1 | grep 'unexpected bookmark'
   * unexpected bookmark move: blobimport* (glob)
-  *] Execution error: unexpected bookmark move: blobimport (glob)
   $ mononoke_hg_sync_loop repo-hg-3 1 --bundle-prefetch 0 2>&1 | grep 'successful sync'
   * successful sync of entries [2]* (glob)
   * successful sync of entries [3]* (glob)
