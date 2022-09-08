@@ -3743,14 +3743,17 @@ def debugprogress(
                 if outputfreq and i % outputfreq == 0:
                     ui.write(_x("processed %d items\n") % i)
     else:
-        with progress.bar(ui, _spinning, total=num, formatfunc=formatfunc) as p:
+        with progress.bar(ui, _("progressing"), total=num, formatfunc=formatfunc) as p:
             for i in range(num):
                 if nested:
                     with progress.bar(
-                        ui, _spinning, total=5, formatfunc=formatfunc
+                        ui, _("nested progressing"), total=5, formatfunc=formatfunc
                     ) as p2:
                         for j in range(5):
                             p2.value = (j, "item %s" % j)
+                            if sleep:
+                                time.sleep(sleep)
+
                 if sleep:
                     time.sleep(sleep)
                 p.value = (i, "item %s" % i)
