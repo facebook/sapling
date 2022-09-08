@@ -237,13 +237,13 @@ py_class!(class sptui |py| {
         let io = IO::main().unwrap();
         let (prg_read, prg_write) = pipe::pipe();
         pager.set_progress_stream(prg_read);
-        io.set_progress_pipe_writer(Some(prg_write));
+        io.set_progress_pipe_writer(Some(prg_write)).unwrap();
 
         let action_sender = pager.action_sender();
 
         let pager_handle = std::thread::spawn(move || {
             let result = pager.run();
-            io.set_progress_pipe_writer(None);
+            io.set_progress_pipe_writer(None).unwrap();
             result
         });
 

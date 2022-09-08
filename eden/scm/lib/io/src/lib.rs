@@ -60,7 +60,7 @@ struct Inner {
     input: Box<dyn Read>,
     output: Box<dyn Write>,
     error: Option<Box<dyn Write>>,
-    pager_progress: Option<Box<dyn Write>>,
+    pager_progress: Option<Box<dyn Term + Send + Sync>>,
     term: Option<Box<dyn Term + Send + Sync>>,
 
     // Used to decide whether to render progress bars.
@@ -495,7 +495,11 @@ impl IO {
                     .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
             }
         }
-        inner.pager_progress = Some(Box::new(PipeWriterWithTty::new(prg_write, false)));
+
+        let mut pager_term = DumbTerm::new(DumbTty::new(Box::new(prg_write)))
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        pager_term.set_separator(0x0C);
+        inner.pager_progress = Some(Box::new(pager_term));
         pager.set_progress_stream(prg_read);
 
         inner.pager_handle = Some(spawn(|| {
@@ -528,12 +532,18 @@ impl IO {
         Ok(())
     }
 
-    pub fn set_progress_pipe_writer(&self, progress: Option<PipeWriter>) {
+    pub fn set_progress_pipe_writer(&self, progress: Option<PipeWriter>) -> io::Result<()> {
         let mut inner = self.inner.lock();
         inner.pager_progress = match progress {
-            Some(progress) => Some(Box::new(PipeWriterWithTty::new(progress, false))),
+            Some(progress) => {
+                let mut pager_term = DumbTerm::new(DumbTty::new(Box::new(progress)))
+                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                pager_term.set_separator(0x0C);
+                Some(Box::new(pager_term))
+            }
             None => None,
-        }
+        };
+        Ok(())
     }
 }
 
@@ -584,10 +594,8 @@ impl Inner {
             data = "";
         }
         if let Some(ref mut progress) = inner.pager_progress {
-            // \x0c (\f) is defined by streampager.
-            let data = format!("{}\x0c", data);
-            progress.write_all(data.as_bytes())?;
-            progress.flush()?;
+            write_term_progress(progress, data)
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         } else {
             if !inner.output_on_new_line || !inner.error_on_new_line {
                 // There is a line that hasn't ended.

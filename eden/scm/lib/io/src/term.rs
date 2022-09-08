@@ -52,6 +52,7 @@ impl<T: Terminal> Term for T {
 pub(crate) struct DumbTerm<W: RenderTty + io::Write> {
     tty: W,
     renderer: TerminfoRenderer,
+    separator: Option<u8>,
 }
 
 impl<W: RenderTty + io::Write> DumbTerm<W> {
@@ -59,13 +60,23 @@ impl<W: RenderTty + io::Write> DumbTerm<W> {
         Ok(Self {
             tty,
             renderer: TerminfoRenderer::new(caps()?),
+            separator: None,
         })
+    }
+
+    pub fn set_separator(&mut self, sep: u8) {
+        self.separator = Some(sep);
     }
 }
 
 impl<W: RenderTty + io::Write> Term for DumbTerm<W> {
     fn render(&mut self, changes: &[Change]) -> Result<()> {
-        self.renderer.render_to(changes, &mut self.tty)
+        self.renderer.render_to(changes, &mut self.tty)?;
+        if let Some(sep) = self.separator {
+            self.tty.write_all(&[sep])?;
+            self.tty.flush()?;
+        }
+        Ok(())
     }
 
     fn size(&mut self) -> Result<(usize, usize)> {
