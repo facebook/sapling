@@ -18,6 +18,12 @@ use termwiz::terminal::SystemTerminal;
 use termwiz::terminal::Terminal;
 use termwiz::Result;
 
+#[cfg(windows)]
+use crate::IsTty;
+
+#[cfg(windows)]
+mod windows_term;
+
 /// Term is a minimally skinny abstraction over termwiz::Terminal.
 /// It makes it easy to swap in other things for testing.
 pub(crate) trait Term {
@@ -40,21 +46,21 @@ impl<T: Terminal> Term for T {
 
 /// DumbTerm allows writing termwiz Changes to an arbitrary writer,
 /// ignoring lack of ttyness and using a default terminal size.
-pub(crate) struct DumbTerm {
-    tty: DumbTty,
+pub(crate) struct DumbTerm<W: RenderTty + io::Write> {
+    tty: W,
     renderer: TerminfoRenderer,
 }
 
-impl DumbTerm {
-    pub fn new(write: Box<dyn io::Write + Send + Sync>) -> Result<Self> {
+impl<W: RenderTty + io::Write> DumbTerm<W> {
+    pub fn new(tty: W) -> Result<Self> {
         Ok(Self {
-            tty: DumbTty { write },
+            tty,
             renderer: TerminfoRenderer::new(caps()?),
         })
     }
 }
 
-impl Term for DumbTerm {
+impl<W: RenderTty + io::Write> Term for DumbTerm<W> {
     fn render(&mut self, changes: &[Change]) -> Result<()> {
         self.renderer.render_to(changes, &mut self.tty)
     }
@@ -64,8 +70,14 @@ impl Term for DumbTerm {
     }
 }
 
-struct DumbTty {
+pub(crate) struct DumbTty {
     write: Box<dyn io::Write + Send + Sync>,
+}
+
+impl DumbTty {
+    pub fn new(write: Box<dyn io::Write + Send + Sync>) -> Self {
+        Self { write }
+    }
 }
 
 impl RenderTty for DumbTty {
@@ -90,18 +102,20 @@ fn caps() -> Result<Capabilities> {
 }
 
 pub(crate) fn make_real_term() -> Result<Box<dyn Term + Send + Sync>> {
-    let caps = caps()?;
-
     #[cfg(windows)]
-    return Ok(Box::new(SystemTerminal::new(caps.clone()).or_else(
-        |_err| {
-            // Fall back to stderr since that won't interfere with command output.
-            SystemTerminal::new_with(caps.clone(), io::stdin(), io::stderr())
-        },
-    )?));
+    {
+        // Don't use the real termwiz WindowsTerminal yet. See comment in WindowsTty.
+        let stderr = io::stderr();
+        if stderr.is_tty() {
+            let tty = windows_term::WindowsTty::new(Box::new(stderr));
+            return Ok(Box::new(DumbTerm::new(tty)?));
+        }
+    }
 
     #[cfg(unix)]
     {
+        let caps = caps()?;
+
         // First try the tty. With this we can show progress even with
         // stdout and/or and stderr redirected.
         if let Ok(dev_tty) = OpenOptions::new().read(true).write(true).open("/dev/tty") {
@@ -119,14 +133,14 @@ pub(crate) fn make_real_term() -> Result<Box<dyn Term + Send + Sync>> {
             // Fall back to stderr (don't use stdout since that would
             // interfere with command output).
             return Ok(Box::new(SystemTerminal::new_with(
-                caps.clone(),
+                caps,
                 &io::stdin(),
                 &stderr,
             )?));
         }
-
-        termwiz::bail!("no suitable term output file");
     }
+
+    termwiz::bail!("no suitable term output file");
 }
 
 #[cfg(unix)]

@@ -25,6 +25,7 @@ use streampager::config::WrappingMode;
 use streampager::Pager;
 use term::make_real_term;
 use term::DumbTerm;
+use term::DumbTty;
 use term::Term;
 use termwiz::surface::change::ChangeSequence;
 use termwiz::surface::Change;
@@ -359,7 +360,9 @@ impl IO {
 
         if std::env::var_os("TESTTMP").is_some() {
             // Use dumb terminal with static width/height for tests.
-            inner.term = Some(Box::new(DumbTerm::new(Box::new(io::stderr()))?));
+            inner.term = Some(Box::new(DumbTerm::new(DumbTty::new(Box::new(
+                io::stderr(),
+            )))?));
         } else {
             inner.term = Some(make_real_term()?);
         }
