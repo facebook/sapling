@@ -1694,7 +1694,14 @@ class Test(unittest.TestCase):
         if normalizenewlines:
             output = output.replace(b"\r\n", b"\n")
 
-        return ret, output.splitlines(True)
+        # Convert clear-to-end-of-screen sequence into a separate line
+        # to give some division of output.
+        output = output.split(b"\x1b[J")
+        for i in range(len(output) - 1):
+
+            output[i] += b" (clear)"
+
+        return ret, [l for part in output for l in part.splitlines(True)]
 
 
 class PythonTest(Test):
