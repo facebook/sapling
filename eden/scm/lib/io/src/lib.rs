@@ -25,6 +25,7 @@ use streampager::config::WrappingMode;
 use streampager::Pager;
 
 mod impls;
+mod term;
 
 use crate::impls::PipeWriterWithTty;
 
