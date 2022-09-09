@@ -598,6 +598,114 @@ def formatblock(block, width):
     return util.wrap(text, width=width, initindent=indent, hangindent=subindent) + "\n"
 
 
+def formatmd(blocks):
+    out = []
+    headernest = ""
+
+    # We generally ignore indents because markdown does not like them, however
+    # we do want to preserve the indentation of lists. The first bullet point
+    # in a list will be translated to a 0 indent, and we will adust each
+    # subsequent indent relative to this first one.
+    # We keep a stack of the translated indentation levels for lists here.
+    indentation_translation = []
+
+    def translate_indent(indent: int) -> int:
+        nonlocal indentation_translation
+        if len(indentation_translation) == 0:
+            indentation_translation.append((indent, 0))
+            return 0
+
+        while len(indentation_translation) > 0:
+            (last_raw_indent, last_real_indent) = indentation_translation[-1]
+            # same level of indent
+            if last_raw_indent == indent:
+                return last_real_indent
+
+            # We have a subindent
+            if last_raw_indent < indent:
+                new_indent = indent - last_raw_indent + last_real_indent
+                indentation_translation.append((indent, new_indent))
+                return new_indent
+
+            # we broke out of a subindent, pop and find the parent/sibling level
+            # of indent
+            indentation_translation.pop()
+
+        # we broke out to the top level
+        indentation_translation.append((indent, 0))
+        return 0
+
+    for pos, b in enumerate(blocks):
+        btype = b["type"]
+        lines = b["lines"]
+
+        if btype != "bullet":
+            # new paragraphs of markdown bullets need to restart their indents
+            indentation_translation = []
+
+        if btype == "paragraph":
+            text = "\n".join(lines)
+            out.append(f"\n{text}\n")
+        elif btype == "literal":
+            text = "\n".join(lines)
+            out.append(f"\n```\n{text}\n```\n")
+        elif btype == "section":
+            i = b["underline"]
+            if i not in headernest:
+                headernest += i
+            level = headernest.index(i) + 1
+            header_value = "#" * level
+            text = lines[0]
+            out.append(f"\n{header_value} {text}\n")
+        elif btype == "table":
+            table = b["table"]
+            if len(table):
+                out.append("\n")
+                tableheader = ("| " * len(table[0])) + "|\n"
+                tablemiddle = ("| - " * len(table[0])) + "|\n"
+                out.append(tableheader)
+                out.append(tablemiddle)
+            for row in table:
+                for v in row:
+                    out.append("| ")
+                    out.append(v)
+                    out.append(" ")
+                out.append("|\n")
+        elif btype == "definition":
+            term = lines[0]
+            text = "\n> ".join(map(str.strip, lines[1:]))
+            out.append(f"\n{term}\n> {text}\n")
+        elif btype == "bullet":
+            out.append("\n")
+            indent = " " * translate_indent(b["indent"])
+            out.extend([f"{indent}{line}" for line in lines])
+            out.append("\n")
+        elif btype == "field":
+            key = b["key"]
+            text = " ".join(map(str.strip, lines))
+            out.append(f"\n{key}\n{text}\n")
+        elif btype == "option":
+            opt = b["optstr"]
+            desc = " ".join(map(str.strip, lines))
+            out.append(f"\n{opt}\n{desc}\n")
+        elif btype == "admonition":
+            # TODO: at some point we should figure out how to convert these to
+            # markdown well. The only text included in the admonition block
+            # itself is the label like "note" or "warn" and the actual contents
+            # often comes in a later block. The rst indicates the text is part
+            # of the admonition with indentation. But we generally are ignoring
+            # indentation here because markdown doesn't do indentation well.
+            # for now we just skip the label as all existing admonitions make
+            # sense with out it.
+            pass
+        elif btype == "margin":
+            # markdown and indentation don't go well, so we just skip these
+            # blocks
+            pass
+
+    return "".join(out)
+
+
 def formathtml(blocks):
     """Format RST blocks as HTML"""
 
@@ -767,6 +875,8 @@ def format(text, width=80, indent=0, keep=None, style="plain", section=None):
 
     if style == "html":
         text = formathtml(blocks)
+    elif style == "md":
+        text = formatmd(blocks)
     else:
         text = "".join(formatblock(b, width) for b in blocks)
     if keep is None:

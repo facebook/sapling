@@ -1,3 +1,8 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 from __future__ import absolute_import, print_function
 
 import pprint
@@ -9,6 +14,9 @@ from hghave import require
 def debugformat(text, form, **kwargs):
     if form == "html":
         print("html format:")
+        out = minirst.format(text, style=form, **kwargs)
+    elif form == "md":
+        print("md format:")
         out = minirst.format(text, style=form, **kwargs)
     else:
         print("%d column format:" % form)
@@ -30,6 +38,7 @@ def debugformats(title, text, **kwargs):
     debugformat(text, 60, **kwargs)
     debugformat(text, 30, **kwargs)
     debugformat(text, "html", **kwargs)
+    debugformat(text, "md", **kwargs)
 
 
 paragraphs = """
@@ -95,6 +104,8 @@ lists = """
 We can have indented lists:
 
   - This is an indented list item
+
+    - a subindented list item
 
   - Another indented list item::
 
