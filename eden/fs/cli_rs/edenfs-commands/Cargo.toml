@@ -16,7 +16,6 @@ comfy-table = "4.0.1"
 crossterm = { version = "0.23.1", features = ["event-stream"] }
 dirs = "2.0"
 edenfs-client = { version = "0.1.0", path = "../edenfs-client" }
-edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
 edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
@@ -33,3 +32,6 @@ thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 toml = "=0.5.8"
 tracing = "0.1.35"
+
+[dev-dependencies]
+tempfile = "3.3"
