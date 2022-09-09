@@ -132,6 +132,7 @@ fastpartialmatch=
 fbhistedit=
 fsmonitor=
 githelp=
+github=
 gitlookup=!
 gitrevset=!
 hgsubversion=!
