@@ -71,6 +71,11 @@ pub enum MergeMode {
     },
 }
 
+pub struct SquashingConfig {
+    squash_limit: usize,
+    check_author: bool,
+}
+
 const MERGE_COMMIT_MOVES_CONCURRENCY: usize = 10;
 
 impl<'a> SyncChangeset<'a> {
@@ -147,55 +152,49 @@ impl<'a> SyncChangeset<'a> {
 
         // In case of merge commits we need to add move commits on top of the
         // merged-in commits or squash side-branch.
-        let merge_mode = match &source_config.merge_mode {
-            Some(megarepo_config::MergeMode::squashed(sq)) => {
-                let (is_squashable, side_commits) = self
-                    .is_commit_squashable(
-                        target,
-                        source_cs_id,
-                        &commit_remapping_state,
-                        source_name,
-                        &source_repo,
-                        sq.squash_limit
-                            .try_into()
-                            .context("couldn't convert squash commits limit")?,
-                    )
-                    .await?;
-                if is_squashable {
-                    MergeMode::Squashed { side_commits }
-                } else {
-                    MergeMode::ExtraMoveCommits {
-                        side_parents_move_commits: self
-                            .create_move_commits(
-                                ctx,
-                                target,
-                                &source_cs,
-                                &commit_remapping_state,
-                                &source_repo,
-                                source_name,
-                                source_config,
-                            )
-                            .await?,
-                    }
-                }
-            }
-            None | Some(megarepo_config::MergeMode::with_move_commit(_)) => {
-                MergeMode::ExtraMoveCommits {
-                    side_parents_move_commits: self
-                        .create_move_commits(
-                            ctx,
-                            target,
-                            &source_cs,
-                            &commit_remapping_state,
-                            &source_repo,
-                            source_name,
-                            source_config,
-                        )
-                        .await?,
-                }
-            }
+        let maybe_squashing_config = match &source_config.merge_mode {
+            Some(megarepo_config::MergeMode::squashed(sq)) => Some(SquashingConfig {
+                squash_limit: sq
+                    .squash_limit
+                    .try_into()
+                    .context("couldn't convert squash commits limit")?,
+                check_author: true,
+            }),
+            None | Some(megarepo_config::MergeMode::with_move_commit(_)) => None,
             Some(megarepo_config::MergeMode::UnknownField(_)) => {
                 return Err(anyhow!("Unknown MergeMode").into());
+            }
+        };
+
+        let (is_squashable, side_commits) = if let Some(sq) = maybe_squashing_config {
+            self.is_commit_squashable(
+                target,
+                source_cs_id,
+                &commit_remapping_state,
+                source_name,
+                &source_repo,
+                &sq,
+            )
+            .await?
+        } else {
+            (false, vec![])
+        };
+
+        let merge_mode = if is_squashable {
+            MergeMode::Squashed { side_commits }
+        } else {
+            MergeMode::ExtraMoveCommits {
+                side_parents_move_commits: self
+                    .create_move_commits(
+                        ctx,
+                        target,
+                        &source_cs,
+                        &commit_remapping_state,
+                        &source_repo,
+                        source_name,
+                        source_config,
+                    )
+                    .await?,
             }
         };
 
@@ -245,10 +244,9 @@ impl<'a> SyncChangeset<'a> {
         commit_remapping_state: &CommitRemappingState,
         source_name: &SourceName,
         source_repo: &RepoContext,
-        limit: u64,
+        squashing_config: &SquashingConfig,
     ) -> Result<(bool, Vec<ChangesetContext>)> {
-        let limit = limit as usize;
-        if limit == 0 {
+        if squashing_config.squash_limit == 0 {
             return Ok((false, vec![]));
         }
 
@@ -260,7 +258,7 @@ impl<'a> SyncChangeset<'a> {
         let side_commits: Vec<_> = source_repo
             .difference_of_unions_of_ancestors(vec![source_cs_id], vec![latest_synced_cs_id])
             .skip(1) // The source_cs_id is always the first returned commit.
-            .take(limit + 1) // Get one above limit so we know if there's more than limit.
+            .take(squashing_config.squash_limit + 1) // Get one above limit so we know if there's more than limit.
             .try_collect()
             .await?;
 
@@ -270,22 +268,24 @@ impl<'a> SyncChangeset<'a> {
         }
 
         // Bail if we got over limit of commits
-        if side_commits.len() > limit {
+        if side_commits.len() > squashing_config.squash_limit {
             return Ok((false, vec![]));
         }
 
         // The author we'll be comparing to ensure all commits are the same author.
-        let author = match side_commits.first() {
-            Some(p) => p.author().await?,
-            None => {
-                return Ok((false, vec![]));
-            }
-        };
+        if squashing_config.check_author {
+            let author = match side_commits.first() {
+                Some(p) => p.author().await?,
+                None => {
+                    return Ok((false, vec![]));
+                }
+            };
 
-        for side_commit in side_commits.iter() {
-            // Author is different, bail
-            if author != side_commit.author().await? {
-                return Ok((false, vec![]));
+            for side_commit in side_commits.iter() {
+                // Author is different, bail
+                if author != side_commit.author().await? {
+                    return Ok((false, vec![]));
+                }
             }
         }
 
