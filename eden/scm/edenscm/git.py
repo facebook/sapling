@@ -150,10 +150,18 @@ def maybegiturl(url):
 
     For now url schemes "git", "git+file", "git+ftp", "git+http", "git+https",
     "git+ssh" are considered git urls. The "git+" part will be stripped.
+
+    git:// and https:// urls are considered git unconditionally.
     """
     parsed = util.url(url)
-    if parsed.scheme == "git":
+    if parsed.scheme in {"git", "https"}:
         return url
+
+    # We have several test cases that rely on performing legacy (Mercurial)
+    # clones for coverage.
+    if parsed.scheme == "ssh" and not util.istest():
+        return url
+
     if parsed.scheme in {
         "git+file",
         "git+ftp",
@@ -162,8 +170,8 @@ def maybegiturl(url):
         "git+https",
         "git+ssh",
     }:
-        if url.startswith("git+"):
-            return url[4:]
+        return url[4:]
+
     return None
 
 

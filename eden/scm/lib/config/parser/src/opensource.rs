@@ -574,7 +574,7 @@ generationnumber=5
 [clone]
 default-destination-dir=$HOME
 nativecheckout=True
-use-rust=True
+use-rust=False
 nativepull=True
 
 [commands]
