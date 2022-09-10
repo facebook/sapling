@@ -58,6 +58,33 @@ void getSimple(benchmark::State& st) {
 
 BENCHMARK(getSimple)->UseManualTime();
 
+void insertSimple(benchmark::State& st) {
+  auto numObjects = 100000u;
+  auto cache = SimpleObjectCache::create(40 * 1024 * 1024, 1);
+  std::vector<std::shared_ptr<Object>> vec;
+  vec.reserve(numObjects);
+  for (auto i = 0u; i < numObjects; i++) {
+    auto object =
+        std::make_shared<Object>(ObjectId::sha1(fmt::format("{}", i)));
+    vec.push_back(std::move(object));
+  }
+
+  auto i = 0u;
+  for (auto _ : st) {
+    auto start = std::chrono::high_resolution_clock::now();
+    cache->insertSimple(vec[i]);
+    auto end = std::chrono::high_resolution_clock::now();
+
+    auto elapsed =
+        std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+    st.SetIterationTime(elapsed.count());
+
+    i = (i + 1) % numObjects;
+  }
+}
+
+BENCHMARK(insertSimple)->UseManualTime();
+
 } // namespace
 } // namespace facebook::eden
 
