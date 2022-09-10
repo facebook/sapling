@@ -16,5 +16,5 @@ changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" 
 context = { version = "0.1.0", path = "../server/context" }
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-thiserror = "1.0.30"
+thiserror = "=1.0.30"
 uniqueheap = { version = "0.1.0", path = "../common/uniqueheap" }

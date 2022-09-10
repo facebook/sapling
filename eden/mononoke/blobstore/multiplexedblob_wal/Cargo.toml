@@ -20,7 +20,7 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
-thiserror = "1.0.30"
+thiserror = "=1.0.30"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]

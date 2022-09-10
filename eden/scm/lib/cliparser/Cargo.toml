@@ -10,7 +10,7 @@ edition = "2021"
 cpython = { version = "0.7", optional = true, default-features = false }
 cpython_ext = { version = "0.1.0", path = "../cpython-ext", optional = true, default-features = false }
 shlex = "1.0"
-thiserror = "1.0.30"
+thiserror = "=1.0.30"
 
 [dev-dependencies]
 anyhow = "1.0.56"

@@ -16,7 +16,7 @@ minibytes = { version = "0.1.0", path = "../minibytes" }
 nonblocking = { version = "0.1.0", path = "../nonblocking" }
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 radixbuf = { version = "0.1.0", path = "../radixbuf" }
-thiserror = "1.0.30"
+thiserror = "=1.0.30"
 util = { version = "0.1.0", path = "../util" }
 
 [dev-dependencies]

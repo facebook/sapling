@@ -21,7 +21,7 @@ serde = { version = "1.0.136", features = ["derive", "rc"] }
 sparse = { version = "0.1.0", path = "../sparse" }
 status = { version = "0.1.0", path = "../status" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
-thiserror = "1.0.30"
+thiserror = "=1.0.30"
 thrift-types = { version = "0.1.0", path = "../thrift-types", optional = true }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tracing = "0.1.35"

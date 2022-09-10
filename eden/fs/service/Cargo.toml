@@ -27,7 +27,7 @@ ref-cast = "1.0.2"
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_derive = "1.0"
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "1.0.30"
+thiserror = "=1.0.30"
 tracing = "0.1.35"
 tracing-futures = "0.2.5"
 

@@ -11,7 +11,7 @@ license = "GPLv2+"
 either = "1.5"
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
-thiserror = "1.0.30"
+thiserror = "=1.0.30"
 
 [dev-dependencies]
 anyhow = "1.0.56"

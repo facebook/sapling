@@ -15,7 +15,7 @@ futures-old = { package = "futures", version = "0.1.31" }
 mercurial_bundles = { version = "0.1.0", path = "../../mercurial/bundles" }
 mercurial_revlog = { version = "0.1.0", path = "../../mercurial/revlog" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
-thiserror = "1.0.30"
+thiserror = "=1.0.30"
 
 [dev-dependencies]
 maplit = "1.0"

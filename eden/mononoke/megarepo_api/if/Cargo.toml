@@ -26,7 +26,7 @@ ref-cast = "1.0.2"
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_derive = "1.0"
 source_control = { version = "0.1.0", path = "../../scs/if" }
-thiserror = "1.0.30"
+thiserror = "=1.0.30"
 tracing = "0.1.35"
 tracing-futures = "0.2.5"
 

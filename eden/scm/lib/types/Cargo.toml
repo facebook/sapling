@@ -23,7 +23,7 @@ serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_bytes = "0.11"
 serde_derive = "1.0"
 sha-1 = "0.10"
-thiserror = "1.0.30"
+thiserror = "=1.0.30"
 util = { version = "0.1.0", path = "../util" }
 vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 

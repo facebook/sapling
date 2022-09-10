@@ -10,4 +10,4 @@ edition = "2021"
 anyhow = "1.0.56"
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
-thiserror = "1.0.30"
+thiserror = "=1.0.30"
