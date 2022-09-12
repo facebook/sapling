@@ -189,7 +189,7 @@ ObjectCache<ObjectType, Flavor>::insertInterestHandle(
   XLOG(DBG6) << "  creating entry with generation=" << cacheItemGeneration;
 
   auto state = state_.lock();
-  auto [item, inserted] = insertImpl(object, *state);
+  auto [item, inserted] = insertImpl(std::move(object), *state);
   switch (interest) {
     case Interest::UnlikelyNeededAgain:
       break;
@@ -218,7 +218,7 @@ ObjectCache<ObjectType, Flavor>::insertSimple(
     ObjectCache<ObjectType, Flavor>::ObjectPtr object) {
   XLOG(DBG6) << "ObjectCache::insertSimple " << object->getHash();
   auto state = state_.lock();
-  insertImpl(object, *state);
+  insertImpl(std::move(object), *state);
 }
 
 template <typename ObjectType, ObjectCacheFlavor Flavor>
