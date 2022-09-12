@@ -204,7 +204,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   folly::SemiFuture<std::unique_ptr<Glob>> semifuture_predictiveGlobFiles(
       std::unique_ptr<GlobParams> params) override;
 
-  folly::Future<folly::Unit> future_chown(
+  folly::SemiFuture<folly::Unit> semifuture_chown(
       std::unique_ptr<std::string> mountPoint,
       int32_t uid,
       int32_t gid) override;

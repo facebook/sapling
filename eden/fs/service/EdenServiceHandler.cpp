@@ -2553,7 +2553,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
       .semi();
 }
 
-folly::Future<Unit> EdenServiceHandler::future_chown(
+folly::SemiFuture<struct folly::Unit> EdenServiceHandler::semifuture_chown(
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint,
     FOLLY_MAYBE_UNUSED int32_t uid,
     FOLLY_MAYBE_UNUSED int32_t gid) {
