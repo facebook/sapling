@@ -241,22 +241,15 @@ class Client(object):
         return self._getlandednodes(repo, ret)
 
     def _getlandednodes(self, repo, ret):
-        difftonode = {}
-        difftoglobalrev = {}
         difftolocalcommits = {}  # {str: set(node)}
+        diffidentifiers = {}
         for result in ret["data"]["phabricator_diff_query"][0]["results"]["nodes"]:
             try:
                 diffid = "%s" % result["number"]
                 nodes = result["phabricator_diff_commit"]["nodes"]
                 for n in nodes:
-                    identifier = n["commit_identifier"]
-                    # commit_identifier could be svn revision numbers, ignore
-                    # them.
-                    if len(identifier) == 40 and identifier in repo:
-                        difftonode[diffid] = bin(identifier)
-                    elif identifier.isdigit():
-                        # This is probably a globalrev.
-                        difftoglobalrev[diffid] = identifier
+                    diffidentifiers[n["commit_identifier"]] = diffid
+
                 allversionnodes = result["phabricator_versions"]["nodes"]
                 for version in allversionnodes:
                     versioncommits = version["local_commits"]
@@ -267,6 +260,21 @@ class Client(object):
             except (KeyError, IndexError, TypeError):
                 # Not fatal.
                 continue
+
+        difftonode = {}
+        maybehash = [bin(i) for i in diffidentifiers if len(i) == 40]
+        # Batch up node existence checks using filternodes() in case
+        # they trigger a network operation.
+        for hashident in repo.changelog.filternodes(maybehash):
+            difftonode[diffidentifiers.pop(hex(hashident))] = hashident
+
+        difftoglobalrev = {}
+        for (identifier, diffid) in diffidentifiers.items():
+            # commit_identifier could be svn revision numbers, ignore
+            # them.
+            if identifier.isdigit():
+                # This is probably a globalrev.
+                difftoglobalrev[diffid] = identifier
 
         # Translate global revs to nodes.
         if difftoglobalrev:
