@@ -65,6 +65,7 @@ types = { version = "0.1.0", path = "../types" }
 url = "2.2.2"
 util = { version = "0.1.0", path = "../util" }
 version = { version = "0.1.0", path = "../version" }
+workingcopy = { version = "0.1.0", path = "../workingcopy" }
 zstd = "0.11.1+zstd.1.5.2"
 
 [features]

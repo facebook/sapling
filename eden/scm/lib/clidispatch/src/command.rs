@@ -14,6 +14,7 @@ use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
 use configparser::config::ConfigSet;
 use repo::repo::Repo;
+use workingcopy::workingcopy::WorkingCopy;
 
 use crate::io::IO;
 use crate::OptionalRepo;
@@ -23,6 +24,7 @@ pub enum CommandFunc {
     NoRepo(Box<dyn Fn(ParseOutput, &IO, &mut ConfigSet) -> Result<u8>>),
     OptionalRepo(Box<dyn Fn(ParseOutput, &IO, &mut OptionalRepo) -> Result<u8>>),
     Repo(Box<dyn Fn(ParseOutput, &IO, &mut Repo) -> Result<u8>>),
+    WorkingCopy(Box<dyn Fn(ParseOutput, &IO, &mut Repo, &mut WorkingCopy) -> Result<u8>>),
 }
 
 pub struct CommandDefinition {
@@ -162,6 +164,24 @@ where
             f(ReqCtx::new(opts, io.clone())?, config)
         };
         let func = CommandFunc::NoRepo(Box::new(func));
+        let def = CommandDefinition::new(name, doc, S::flags, func, synopsis);
+        self.commands.insert(name.to_string(), def);
+    }
+}
+
+// WorkingCopy commands.
+impl<S, FN> Register<FN, ((), (), (), (), S)> for CommandTable
+where
+    S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
+    FN: Fn(ReqCtx<S>, &mut Repo, &mut WorkingCopy) -> Result<u8> + 'static,
+{
+    fn register(&mut self, f: FN, name: &str, doc: &str, synopsis: Option<&str>) {
+        self.insert_aliases(name);
+        let func =
+            move |opts: ParseOutput, io: &IO, repo: &mut Repo, working_copy: &mut WorkingCopy| {
+                f(ReqCtx::new(opts, io.clone())?, repo, working_copy)
+            };
+        let func = CommandFunc::WorkingCopy(Box::new(func));
         let def = CommandDefinition::new(name, doc, S::flags, func, synopsis);
         self.commands.insert(name.to_string(), def);
     }

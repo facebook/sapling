@@ -13,6 +13,7 @@ use clidispatch::errors;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use repo::repo::Repo;
+use workingcopy::workingcopy::WorkingCopy;
 
 use crate::commands::FormatterOpts;
 use crate::commands::WalkOpts;
@@ -87,7 +88,7 @@ define_flags! {
 }
 
 #[cfg(feature = "eden")]
-pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, _wc: &mut WorkingCopy) -> Result<u8> {
     use anyhow::anyhow;
     use clidispatch::io::CanColor;
     use print::PrintConfig;

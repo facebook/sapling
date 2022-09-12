@@ -401,29 +401,42 @@ impl Dispatcher {
         let res = || -> Result<u8> {
             add_global_flag_derived_configs(&mut self.optional_repo, parsed.clone().try_into()?);
             match handler.func() {
-                CommandFunc::Repo(f) => {
-                    match self.optional_repo {
-                        OptionalRepo::Some(ref mut repo) => f(parsed, io, repo),
-                        OptionalRepo::None(_) => {
-                            // FIXME: Try to "infer repo" here.
-                            Err(errors::RepoRequired(
-                                env::current_dir()
-                                    .ok()
-                                    .map(|p| p.to_string_lossy().to_string())
-                                    .unwrap_or_default(),
-                            )
-                            .into())
-                        }
-                    }
-                }
+                CommandFunc::Repo(f) => f(parsed, io, self.repo_mut()?),
                 CommandFunc::OptionalRepo(f) => f(parsed, io, &mut self.optional_repo),
                 CommandFunc::NoRepo(f) => {
                     self.convert_to_repoless_config()?;
                     f(parsed, io, self.optional_repo.config_mut())
                 }
+                CommandFunc::WorkingCopy(f) => {
+                    let repo = self.repo_mut()?;
+                    if !repo.config().get_or_default("workingcopy", "use-rust")? {
+                        // TODO(T131699257): Migrate all tests to use Rust
+                        // workingcopy and removed fallback to Python.
+                        return Err(errors::FallbackToPython("workingcopy").into());
+                    }
+                    let path = repo.path().to_owned();
+                    let mut wc = repo.working_copy(&path)?;
+                    f(parsed, io, repo, &mut wc)
+                }
             }
         }();
 
         (Some(handler), res)
+    }
+
+    fn repo_mut(&mut self) -> Result<&mut Repo> {
+        match self.optional_repo {
+            OptionalRepo::Some(ref mut repo) => Ok(repo),
+            OptionalRepo::None(_) => {
+                // FIXME: Try to "infer repo" here.
+                Err(errors::RepoRequired(
+                    env::current_dir()
+                        .ok()
+                        .map(|p| p.to_string_lossy().to_string())
+                        .unwrap_or_default(),
+                )
+                .into())
+            }
+        }
     }
 }

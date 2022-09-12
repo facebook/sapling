@@ -22,7 +22,7 @@ winapi = { version = "0.3", features = ["everything"] }
 [features]
 buildinfo = []
 default = []
-eden = ["hgcommands/eden"]
+eden = ["clidispatch/eden", "hgcommands/eden"]
 fb = ["hgcommands/fb"]
 python3 = ["hgcommands/python3"]
 with_chg = ["dirs"]

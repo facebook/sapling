@@ -549,6 +549,8 @@ edenapi.cert=$TEST_CERTDIR/${OVERRIDE_CLIENT_CERT:-client0}.crt
 edenapi.key=$TEST_CERTDIR/${OVERRIDE_CLIENT_CERT:-client0}.key
 edenapi.prefix=localhost
 edenapi.cacerts=$TEST_CERTDIR/root-ca.crt
+[workingcopy]
+use-rust=False
 EOF
 }
 
