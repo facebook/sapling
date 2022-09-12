@@ -9,6 +9,7 @@
 
 # plain
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ hg init
   $ hg debugbuilddag '+2:f +3:p2 @temp <f+4 @default /p2 +2' --config 'extensions.progress=' --config 'progress.debug=true'
   progress: building: 0/12 revisions (0.00%)

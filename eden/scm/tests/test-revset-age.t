@@ -7,6 +7,7 @@
 
 # Setup repo
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ newrepo
 
 # Prepare commits

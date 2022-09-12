@@ -8,6 +8,7 @@
 
 # Verify ancestry data is readable by mergedrivers by looking at mergestate:
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ newrepo
   $ enable rebase
   $ setconfig 'experimental.evolution='

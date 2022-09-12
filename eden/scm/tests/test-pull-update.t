@@ -7,6 +7,7 @@
 # GNU General Public License version 2 or any later version.
 #inprocess-hg-incompatible
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
 #if fsmonitor
   $ setconfig workingcopy.ruststatus=False
 #endif

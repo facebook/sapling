@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig workingcopy.ruststatus=False
   $ fileset() {
   >   hg debugfileset "$@"

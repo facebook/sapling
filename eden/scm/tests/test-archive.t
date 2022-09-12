@@ -3,6 +3,7 @@
 
 #require serve tar unzip
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ enable share
   $ hg init test
   $ cd test

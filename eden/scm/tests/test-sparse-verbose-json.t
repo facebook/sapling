@@ -6,6 +6,7 @@
 
 # test sparse with --verbose and -T json
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ enable sparse
   $ hg init myrepo
   $ cd myrepo

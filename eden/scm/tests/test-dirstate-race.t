@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig workingcopy.ruststatus=False
 Race detector will complain about this test.
 

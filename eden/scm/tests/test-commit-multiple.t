@@ -3,6 +3,7 @@
 
 # reproduce issue2264, issue2516
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
 create test repo
   $ hg init repo
   $ cd repo

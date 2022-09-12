@@ -2,6 +2,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ enable tweakdefaults
 
 Test wrapped blame to be able to handle the usual command line attributes

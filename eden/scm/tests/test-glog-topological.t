@@ -11,6 +11,7 @@
 
 # This test file aims at test topological iteration and the various configuration it can has.
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ cat >> $HGRCPATH << 'EOF'
   > [ui]
   > logtemplate={rev}\n

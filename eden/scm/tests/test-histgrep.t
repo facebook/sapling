@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ hg init t
   $ cd t
   $ echo import > port

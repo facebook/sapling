@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ mkdir -p t
   $ cd t
   $ cat <<EOF > merge

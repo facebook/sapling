@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ newrepo repo
 
   $ printf "confuse str.splitlines\nembedded\rnewline\n" > a

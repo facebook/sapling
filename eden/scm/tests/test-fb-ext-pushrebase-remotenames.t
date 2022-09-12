@@ -1,5 +1,6 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig workingcopy.ruststatus=False
   $ disable treemanifest
   $ setconfig experimental.allowfilepeer=True

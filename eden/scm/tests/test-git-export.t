@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ hg init repo
   $ cd repo
   $ echo start > start

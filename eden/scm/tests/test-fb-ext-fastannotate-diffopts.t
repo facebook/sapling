@@ -2,6 +2,7 @@
 #debugruntest-compatible
 
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ enable fastannotate
 
   $ hg init repo

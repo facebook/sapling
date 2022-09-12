@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig experimental.allowfilepeer=True
 
 Set up extension and repos

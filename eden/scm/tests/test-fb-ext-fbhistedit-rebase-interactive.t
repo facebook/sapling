@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable fbhistedit histedit rebase

@@ -1,6 +1,7 @@
 #debugruntest-compatible
 #chg-compatible
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
 This runs with TZ="GMT"
 
   $ hg init repo

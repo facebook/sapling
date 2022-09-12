@@ -6,6 +6,7 @@
 
 # Simulate an environment that disables allowfullrepogrep:
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig 'histgrep.allowfullrepogrep=False'
 
 # Test histgrep and check that it respects the specified file:

@@ -4,6 +4,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ hg init
   $ hg debugdrawdag << 'EOS'
   > C

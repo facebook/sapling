@@ -10,6 +10,8 @@
 
 # Log on empty repository: checking consistency
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
+
 #if fsmonitor
   $ setconfig workingcopy.ruststatus=False
 #endif

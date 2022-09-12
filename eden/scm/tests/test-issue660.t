@@ -8,6 +8,8 @@
 # https://bz.mercurial-scm.org/660 and:
 # https://bz.mercurial-scm.org/322
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
+
 #if fsmonitor
   $ setconfig workingcopy.ruststatus=False
 #endif

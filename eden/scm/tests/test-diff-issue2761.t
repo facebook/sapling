@@ -7,6 +7,7 @@
 
 # Test issue2761
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ hg init repo
   $ cd repo
 

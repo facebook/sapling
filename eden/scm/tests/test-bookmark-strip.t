@@ -7,6 +7,7 @@
 
 # Test bookmark -D
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ hg init book-D
   $ cd book-D
   $ cat >> .hg/hgrc << 'EOF'

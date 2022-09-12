@@ -9,6 +9,7 @@
 
 # https://bz.mercurial-scm.org/1438
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ hg init repo
   $ cd repo
 

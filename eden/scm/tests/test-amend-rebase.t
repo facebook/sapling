@@ -7,6 +7,7 @@
 
 # Set up test environment.
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > amend=

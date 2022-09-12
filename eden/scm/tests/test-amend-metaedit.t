@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ configure mutation-norecord
   $ enable amend rebase
   $ readconfig <<EOF

@@ -1,3 +1,4 @@
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ cat >> fakepager.py <<EOF
   > import sys
   > printed = False

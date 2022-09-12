@@ -2,6 +2,7 @@
 #debugruntest-compatible
 
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ hg init repo
   $ cd repo
   $ echo a > a

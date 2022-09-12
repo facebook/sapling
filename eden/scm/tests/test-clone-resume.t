@@ -1,6 +1,7 @@
 #chg-compatible
 
   $ configure modern
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig clone.nativecheckout=True
   $ newserver server
 

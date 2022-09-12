@@ -1,5 +1,6 @@
 #chg-compatible
 #debugruntest-compatible
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ configure modern
   $ newserver server1
   $ drawdag << 'EOS'

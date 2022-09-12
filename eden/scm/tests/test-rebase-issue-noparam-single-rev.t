@@ -9,6 +9,7 @@
 
 # TODO: Make this test compatibile with obsstore enabled.
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig 'experimental.evolution='
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]

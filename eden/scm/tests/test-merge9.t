@@ -8,6 +8,7 @@
 # test that we don't interrupt the merge session if
 # a file-level merge failed
 
+  $ setconfig devel.segmented-changelog-rev-compat=true
 #if fsmonitor
   $ setconfig workingcopy.ruststatus=False
 #endif
