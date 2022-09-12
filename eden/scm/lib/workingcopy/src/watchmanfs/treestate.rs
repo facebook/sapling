@@ -100,15 +100,13 @@ impl WatchmanTreeStateWrite for WatchmanTreeState {
 
 impl WatchmanTreeStateRead for WatchmanTreeState {
     fn list_needs_check(&mut self) -> Result<Vec<Result<RepoPathBuf>>> {
-        self.treestate
+        Ok(self
+            .treestate
             .borrow_mut()
-            .visit_by_state(StateFlags::NEED_CHECK)
-            .map(|paths| {
-                paths
-                    .into_iter()
-                    .map(|path| RepoPathBuf::from_utf8(path).map_err(|e| anyhow!(e)))
-                    .collect()
-            })
+            .visit_by_state(StateFlags::NEED_CHECK)?
+            .into_iter()
+            .map(|(path, _state)| RepoPathBuf::from_utf8(path).map_err(|e| anyhow!(e)))
+            .collect())
     }
 
     fn get_clock(&self) -> Result<Option<Clock>> {

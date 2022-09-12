@@ -248,11 +248,14 @@ impl TreeState {
             .visit_advanced(&self.store, visitor, visit_dir, visit_file)
     }
 
-    pub fn visit_by_state(&mut self, state_required_any: StateFlags) -> Result<Vec<Vec<u8>>> {
+    pub fn visit_by_state(
+        &mut self,
+        state_required_any: StateFlags,
+    ) -> Result<Vec<(Vec<u8>, FileStateV2)>> {
         let mut result = Vec::new();
         self.visit(
-            &mut |path_components, _| {
-                result.push(path_components.concat());
+            &mut |path_components, state| {
+                result.push((path_components.concat(), state.clone()));
                 Ok(VisitorResult::NotChanged)
             },
             &|_, dir| match dir.get_aggregated_state() {
@@ -509,10 +512,20 @@ mod tests {
         file.state = StateFlags::COPIED | StateFlags::EXIST_P2;
         state.insert(b"a/c/3", &file).expect("insert");
 
-        let files = state.visit_by_state(StateFlags::IGNORED).unwrap();
+        let files: Vec<Vec<u8>> = state
+            .visit_by_state(StateFlags::IGNORED)
+            .unwrap()
+            .into_iter()
+            .map(|e| e.0)
+            .collect();
         assert_eq!(files, vec![b"a/b/1", b"a/b/2"]);
 
-        let files = state.visit_by_state(StateFlags::EXIST_P2).unwrap();
+        let files: Vec<Vec<u8>> = state
+            .visit_by_state(StateFlags::EXIST_P2)
+            .unwrap()
+            .into_iter()
+            .map(|e| e.0)
+            .collect();
         assert_eq!(files, vec![b"a/b/2", b"a/c/3"]);
     }
 
@@ -572,7 +585,12 @@ mod tests {
                         &|_, _| true,
                     )
                     .expect("visit");
-                let files = state.visit_by_state(bit).unwrap();
+                let files: Vec<Vec<u8>> = state
+                    .visit_by_state(bit)
+                    .unwrap()
+                    .into_iter()
+                    .map(|e| e.0)
+                    .collect();
                 assert_eq!(files, expected);
             }
         }

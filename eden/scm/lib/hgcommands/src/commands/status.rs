@@ -5,14 +5,23 @@
  * GNU General Public License version 2.
  */
 
-#[cfg(feature = "eden")]
 mod print;
 
+use std::sync::Arc;
+
+use anyhow::anyhow;
 use anyhow::Result;
 use clidispatch::errors;
+use clidispatch::errors::FallbackToPython;
+use clidispatch::io::CanColor;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
+use configparser::configmodel::ConfigExt;
+use pathmatcher::AlwaysMatcher;
+use print::PrintConfig;
+use print::PrintConfigStatusTypes;
 use repo::repo::Repo;
+use types::path::RepoPathRelativizer;
 use workingcopy::workingcopy::WorkingCopy;
 
 use crate::commands::FormatterOpts;
@@ -87,14 +96,7 @@ define_flags! {
     }
 }
 
-#[cfg(feature = "eden")]
-pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, _wc: &mut WorkingCopy) -> Result<u8> {
-    use anyhow::anyhow;
-    use clidispatch::io::CanColor;
-    use print::PrintConfig;
-    use print::PrintConfigStatusTypes;
-    use types::path::RepoPathRelativizer;
-
+pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Result<u8> {
     let rev_check = ctx.opts.rev.is_empty() || (ctx.opts.rev.len() == 1 && ctx.opts.rev[0] == ".");
 
     let args_check =
@@ -153,28 +155,39 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, _wc: &mut WorkingCopy) -> R
         use_color: ctx.io().output().can_color(),
     };
 
-    // Attempt to fetch status information from EdenFS.
-    let (status, copymap) = edenfs_client::status::maybe_status_fastpath(
-        repo.dot_hg_path(),
-        ctx.io(),
-        print_config.status_types.ignored,
-    )
-    .map_err(
-        |e| match e.downcast_ref::<edenfs_client::status::OperationNotSupported>() {
-            Some(_) => anyhow!(errors::FallbackToPython("status")),
-            None => e,
-        },
-    )?;
+    let (status, copymap) = match repo.config().get_or_default("status", "use-rust")? {
+        true => {
+            let matcher = Arc::new(AlwaysMatcher::new());
+            let status = wc.status(matcher)?;
+            let copymap = wc.copymap()?.into_iter().collect();
+            (status, copymap)
+        }
+        false => {
+            #[cfg(feature = "eden")]
+            {
+                // Attempt to fetch status information from EdenFS.
+                let (status, copymap) = edenfs_client::status::maybe_status_fastpath(
+                    repo.dot_hg_path(),
+                    ctx.io(),
+                    print_config.status_types.ignored,
+                )
+                .map_err(|e| match e
+                    .downcast_ref::<edenfs_client::status::OperationNotSupported>()
+                {
+                    Some(_) => anyhow!(FallbackToPython("status")),
+                    None => e,
+                })?;
+                (status, copymap)
+            }
+            #[cfg(not(feature = "eden"))]
+            return Err(errors::FallbackToPython(name()).into());
+        }
+    };
 
     let cwd = std::env::current_dir()?;
     let relativizer = RepoPathRelativizer::new(cwd, repo.path());
     print::print_status(ctx.io(), relativizer, &print_config, &status, &copymap)?;
     Ok(0)
-}
-
-#[cfg(not(feature = "eden"))]
-pub fn run(_ctx: ReqCtx<StatusOpts>, _repo: &mut Repo) -> Result<u8> {
-    Err(errors::FallbackToPython(name()).into())
 }
 
 pub fn name() -> &'static str {

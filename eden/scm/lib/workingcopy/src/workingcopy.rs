@@ -11,6 +11,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::SystemTime;
 
+use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use manifest_tree::TreeManifest;
@@ -18,7 +19,9 @@ use parking_lot::RwLock;
 use pathmatcher::Matcher;
 use status::Status;
 use storemodel::ReadFileContents;
+use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
+use types::RepoPathBuf;
 
 #[cfg(feature = "eden")]
 use crate::edenfs::EdenFileSystem;
@@ -146,5 +149,24 @@ impl WorkingCopy {
             pending_changes,
             matcher.clone(),
         )
+    }
+
+    pub fn copymap(&self) -> Result<Vec<(RepoPathBuf, RepoPathBuf)>> {
+        self.treestate
+            .borrow_mut()
+            .visit_by_state(StateFlags::COPIED)?
+            .into_iter()
+            .map(|(path, state)| {
+                let copied_path = state
+                    .copied
+                    .ok_or_else(|| anyhow!("Invalid treestate entry for {}: missing copied from path on file with COPIED flag", String::from_utf8_lossy(&path)))
+                    .map(|p| p.into_vec())
+                    .and_then(|p| RepoPathBuf::from_utf8(p).map_err(|e| anyhow!(e)))?;
+                Ok((
+                    RepoPathBuf::from_utf8(path).map_err(|e| anyhow!(e))?,
+                    copied_path,
+                ))
+            })
+            .collect()
     }
 }
