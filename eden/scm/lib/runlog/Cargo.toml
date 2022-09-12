@@ -11,7 +11,7 @@ chrono = { version = "0.4", features = ["clock", "serde", "std"], default-featur
 configmodel = { version = "0.1.0", path = "../config/model" }
 fs2 = "0.4"
 hg-http = { version = "0.1.0", path = "../hg-http" }
-libc = "0.2.121"
+libc = "=0.2.125"
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 progress-model = { version = "0.1.0", path = "../progress/model" }
 rand = { version = "0.8", features = ["small_rng"] }

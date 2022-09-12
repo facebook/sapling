@@ -10,7 +10,7 @@ name = "zstdelta"
 doc = false
 
 [dependencies]
-libc = "0.2.121"
+libc = "=0.2.125"
 zstd-sys = { version = "2.0.1+zstd.1.5.2", features = ["experimental"] }
 
 [dev-dependencies]

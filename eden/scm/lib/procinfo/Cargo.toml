@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-libc = "0.2.121"
+libc = "=0.2.125"
 
 [target.'cfg(target_os = "macos")'.build-dependencies]
 cc = "1.0"
