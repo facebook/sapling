@@ -200,7 +200,7 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<Token> {
         });
     }
 
-    // Try to issue a CAT token authomatically.
+    // Try to issue a CAT token automatically.
     let clicat_tool = if hostcaps::is_prod() {
         "clicat"
     } else {
@@ -210,7 +210,7 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<Token> {
         "Token Lookup: generating commitcloud CAT token via {}...",
         clicat_tool
     );
-    let day_seconds = 86400;
+    let ten_mins_seconds = 600;
     let output = Command::new(clicat_tool)
         .args(vec![
             "create",
@@ -219,7 +219,7 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<Token> {
             "--verifier_id",
             "commitcloud-service",
             "--token_timeout_seconds",
-            &day_seconds.to_string(),
+            &ten_mins_seconds.to_string(),
         ])
         .output();
 
