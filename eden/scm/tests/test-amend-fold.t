@@ -1,6 +1,8 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
 Set up test environment.
   $ configure mutation-norecord
   $ enable amend rebase
@@ -130,26 +132,26 @@ rebase is not on the topmost folded commit.
   $ hg fold --from 'desc(r2)'
   3 changesets folded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  rebasing a422badec216 "r3"
-  merging mf
-  rebasing b762560d23fd "r4"
-  merging mf
   rebasing 77d787dfa5b6 "r5"
   merging mf
   rebasing ec6d8e65acbe "r6"
   merging mf
   rebasing 9c9414e0356c "r7"
   merging mf
+  rebasing a422badec216 "r3"
+  merging mf
+  rebasing b762560d23fd "r4"
+  merging mf
   $ showgraph
-  o  69b8281910bd r7
+  o  a78a744630c5 r4
   │
-  o  b494e86b0fcd r6
+  o  6032a3d5c310 r3
   │
-  o  3b418b2dcaeb r5
-  │
-  │ o  a78a744630c5 r4
+  │ o  69b8281910bd r7
   │ │
-  │ o  6032a3d5c310 r3
+  │ o  b494e86b0fcd r6
+  │ │
+  │ o  3b418b2dcaeb r5
   ├─╯
   @  001b0872b432 r0
 

@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ setconfig format.use-segmented-changelog=true
   $ configure modern
 
   $ reinit () {
@@ -173,16 +174,12 @@ Create mutations or hide commits via comments
   > EOS
 
   $ hg log -r 'sort(all(), topo)' -G --hidden -T '{desc} {node}'
-  o  I 58e6b987bf7045fcd9c54f496396ca1d1fc81047
+  o  G 711f53bbef0bebd12eb6f0511d5e2e998b984846
   │
-  o  H 575c4b5ec114d64b681d33f8792853568bfb2b2c
+  o  F 64a8289d249234b9886244d379f15e6b650b28e3
   │
-  │ o  G 711f53bbef0bebd12eb6f0511d5e2e998b984846
-  │ │
-  │ o  F 64a8289d249234b9886244d379f15e6b650b28e3
-  │ │
-  │ o  E 7fb047a69f220c21711122dfd94305a9efb60cba
-  ├─╯
+  o  E 7fb047a69f220c21711122dfd94305a9efb60cba
+  │
   │ x  L 12ac214c2132ccaa5b97fa70b25570496f86853c
   │ │
   │ x  K 623037570ba0971f93c31b1b90fa8a1b82307329
@@ -195,10 +192,13 @@ Create mutations or hide commits via comments
   │ ├─╯
   │ x  B 112478962961147124edd43549aedd1a335e44bf
   ├─╯
+  │ o  I 58e6b987bf7045fcd9c54f496396ca1d1fc81047
+  │ │
+  │ o  H 575c4b5ec114d64b681d33f8792853568bfb2b2c
+  ├─╯
   │ o  M 699bc4b6fa2207ae482508d19836281c02008d1e
   ├─╯
   o  A 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
-  
   $ hg debugmutation -r 'all()'
    *  426bada5c67598ca65036d57d9e4b64b0c1ce7a0
   

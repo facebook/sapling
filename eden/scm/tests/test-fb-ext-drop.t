@@ -2,6 +2,8 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
 UTILS:
   $ reset() {
   >   cd ..
@@ -96,31 +98,30 @@ TEST: dropping a changest with child changesets
   
   $ hg drop 'desc(r2)'
   Dropping changeset 37d4c1: r2
-  rebasing a422badec216 "r3"
-  merging mf
-  rebasing b762560d23fd "r4"
-  merging mf
   rebasing e76b6544a13a "r5"
   merging mf
   rebasing 4905937520ff "r6"
   merging mf
   rebasing 2c7cfba83429 "r7"
   merging mf
+  rebasing a422badec216 "r3"
+  merging mf
+  rebasing b762560d23fd "r4"
+  merging mf
   $ hg log -G -T '{desc|firstline}'
-  o  r7
+  o  r4
   │
-  o  r6
+  o  r3
   │
-  o  r5
-  │
-  │ o  r4
+  │ o  r7
   │ │
-  │ o  r3
+  │ o  r6
+  │ │
+  │ o  r5
   ├─╯
   o  r1
   │
   o  r0
-  
 TEST: aborting drop on merge changeset
 
   $ hg checkout 'max(desc(r3))'
@@ -133,20 +134,19 @@ TEST: aborting drop on merge changeset
   $ hg log -G -T '{desc|firstline}'
   @    merge
   ├─╮
-  │ o  r7
-  │ │
-  │ o  r6
-  │ │
-  │ o  r5
-  │ │
   │ │ o  r4
-  ├───╯
-  o │  r3
+  │ ├─╯
+  │ o  r3
+  │ │
+  o │  r7
+  │ │
+  o │  r6
+  │ │
+  o │  r5
   ├─╯
   o  r1
   │
   o  r0
-  
   $ hg drop 'desc(merge)'
   abort: merge changeset cannot be dropped
   [255]

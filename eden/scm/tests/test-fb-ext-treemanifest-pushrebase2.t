@@ -1,5 +1,7 @@
 #chg-compatible
 
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
 Push merge commits from a treeonly shallow repo to a hybrid treemanifest server
 
   $ setconfig remotefilelog.reponame=x remotefilelog.cachepath=$TESTTMP/cache
@@ -29,22 +31,23 @@ Push merge commits from a treeonly shallow repo to a hybrid treemanifest server
   exporting bookmark foo
   remote: pushing 5 changesets:
   remote:     426bada5c675  A
+  remote:     9f93d39c36cf  B (?)
   remote:     a6661b868de9  F
-  remote:     9f93d39c36cf  B
+  remote:     9f93d39c36cf  B (?)
   remote:     fc0baf5da824  E
   remote:     5a587c09248a  D
 
 Verify the renames are preserved (commit hashes did not change)
 
   $ cd $TESTTMP/server
-  $ hg log -r "::$D" -G -T "{desc} {bookmarks}"
+  $ hg log -r "sort(::$D,topo)" -G -T "{desc} {bookmarks}"
   o    D foo
   ├─╮
   │ o  E
   │ │
-  o │  B
-  │ │
   │ o  F
+  │
+  o  B
   │
   o  A
   

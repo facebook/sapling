@@ -76,6 +76,8 @@
 # |/
 # o  (0) root
 
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ commit() {
   >   rev=$1
   >   msg=$2
@@ -1496,15 +1498,15 @@
       1 files changed, 0 insertions(+), 0 deletions(-)
 
   $ hg log -G --git --patch --follow b
-  o  commit:      216d4c92cf98
-  │  user:        test
-  │  date:        Thu Jan 01 00:00:00 1970 +0000
-  │  summary:     copy a b
-  │
-  │  diff --git a/a b/b
-  │  copy from a
-  │  copy to b
-  │
+  @  commit:      4e4494cd467d
+  ╷  user:        test
+  ╷  date:        Thu Jan 01 00:00:00 1970 +0000
+  ╷  summary:     mv a b; add d
+  ╷
+  ╷  diff --git a/a b/b
+  ╷  copy from a
+  ╷  copy to b
+  ╷
   o  commit:      f8035bb17114
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1518,14 +1520,14 @@
      +a
 
   $ hg log -G --git --stat --follow b
-  o  commit:      216d4c92cf98
-  │  user:        test
-  │  date:        Thu Jan 01 00:00:00 1970 +0000
-  │  summary:     copy a b
-  │
-  │   b |  0
-  │   1 files changed, 0 insertions(+), 0 deletions(-)
-  │
+  @  commit:      4e4494cd467d
+  ╷  user:        test
+  ╷  date:        Thu Jan 01 00:00:00 1970 +0000
+  ╷  summary:     mv a b; add d
+  ╷
+  ╷   b |  0
+  ╷   1 files changed, 0 insertions(+), 0 deletions(-)
+  ╷
   o  commit:      f8035bb17114
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -2703,20 +2705,20 @@
   (branch merge, don't forget to commit)
   $ hg ci -qm 6
   $ hg log -G -r '0 | 1 | 2 | 6'
-  @      commit:      851fe89689ad
-  ├─┬─╮  user:        test
-  ╷ ╷ ╷  date:        Thu Jan 01 00:00:00 1970 +0000
-  ╷ ╷ ╷  summary:     6
-  ╷ ╷ ╷
-  ╷ o ╷  commit:      3e6599df4cce
-  ╷ ├─╯  user:        test
-  ╷ │    date:        Thu Jan 01 00:00:00 1970 +0000
-  ╷ │    summary:     2
-  ╷ │
-  ╷ o  commit:      bd9a55143933
-  ╭─╯  user:        test
+  @    commit:      851fe89689ad
+  ├─╮  user:        test
+  ╷ ╷  date:        Thu Jan 01 00:00:00 1970 +0000
+  ╷ ╷  summary:     6
+  ╷ ╷
+  o ╷  commit:      3e6599df4cce
+  ├─╯  user:        test
   │    date:        Thu Jan 01 00:00:00 1970 +0000
-  │    summary:     1
+  │    summary:     2
+  │
+  o  commit:      bd9a55143933
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     1
   │
   o  commit:      870a5edc339c
      user:        test

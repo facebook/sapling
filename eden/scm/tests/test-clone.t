@@ -1,6 +1,8 @@
 #chg-compatible
 #debugruntest-compatible
 #inprocess-hg-incompatible
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
   $ setconfig clone.use-rust=1
@@ -46,45 +48,7 @@ Invalid dest '' must abort:
 
 No update, with debug option:
 
-#if hardlink
-  $ hg --debug clone -U . ../c --config progress.debug=true
-  progress: linking: 1
-  progress: linking: 2
-  progress: linking: 3
-  progress: linking: 4
-  progress: linking: 5
-  progress: linking: 6
-  progress: linking: 7
-  progress: linking: 8
-  progress: linking: 9
-  progress: linking: 10
-  progress: linking: 11
-  progress: linking: 12
-  progress: linking: 13
-  progress: linking: 14
-  progress: linking: 15
-  progress: linking: 16
-  progress: linking: 17
-  progress: linking: 18
-  progress: linking: 19
-  progress: linking: 20
-  progress: linking: 21
-  progress: linking: 22
-  progress: linking: 23
-  progress: linking (end)
-  copied 23 files
-#else
-  $ hg --debug clone -U . ../c --config progress.debug=true
-  linking: 1
-  copying: 2
-  copying: 3
-  copying: 4
-  copying: 5
-  copying: 6
-  copying: 7
-  copying: 8
-  copied 8 files
-#endif
+  $ hg clone -U . ../c
   $ cd ../c
 
   $ cat a 2>/dev/null || echo "a not present"

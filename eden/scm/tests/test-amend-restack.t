@@ -7,6 +7,8 @@
 
 # Set up test environment.
 
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ mkcommit() {
   >   echo $1 > $1
   >   hg ci -m "add $1" -A $1
@@ -556,9 +558,9 @@
   ├─╯
   o  1f0dee641bb7 add a
   $ hg rebase --restack
-  rebasing 849d5cce0019 "add f"
   rebasing dd2a887139a3 "add c"
   rebasing 8282a17a7483 "add g"
+  rebasing 849d5cce0019 "add f"
   rebasing 47d2a3944de8 "add d"
   rebasing e86422ad5d0e "add h"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -567,14 +569,14 @@
   │
   │ o  4e2bc7d6cfea add d
   │ │
-  o │  c7fc06907e30 add g
-  ├─╯
-  o  afa76d04eaa3 add c
-  │
-  │ o  6aaca8e17a00 add f
-  │ │
-  │ o  e429b2ca5d8b add e
-  ├─╯
+  │ │ o  6aaca8e17a00 add f
+  │ │ │
+  o │ │  c7fc06907e30 add g
+  ├─╯ │
+  o   │  afa76d04eaa3 add c
+  │   │
+  │   o  e429b2ca5d8b add e
+  ├───╯
   @  743396f58c5c add b
   │
   o  1f0dee641bb7 add a

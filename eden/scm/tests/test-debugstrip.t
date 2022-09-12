@@ -1,6 +1,8 @@
 #chg-compatible
 #debugruntest-compatible
 #inprocess-hg-incompatible
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ configure mutation-norecord
 
   $ setconfig format.usegeneraldelta=yes
@@ -146,11 +148,6 @@
   % after update null, strip desc(c)
 
   $ hg log
-  commit:      264128213d29
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     c
-  
   commit:      443431ffac4f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -161,6 +158,11 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     d
   
+  commit:      264128213d29
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     c
+  
   commit:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -170,7 +172,6 @@
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
-  
   $ hg up -C 'desc(c)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg parents
@@ -203,20 +204,20 @@
   adding file changes
   $ rm .hg/strip-backup/*
   $ hg log --graph
-  o  commit:      264128213d29
+  o  commit:      443431ffac4f
   │  user:        test
   │  date:        Thu Jan 01 00:00:00 1970 +0000
-  │  summary:     c
+  │  summary:     e
   │
-  │ o  commit:      443431ffac4f
-  │ │  user:        test
-  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
-  │ │  summary:     e
-  │ │
-  │ o  commit:      65bd5f99a4a3
+  o  commit:      65bd5f99a4a3
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
+  │ o  commit:      264128213d29
   ├─╯  user:        test
   │    date:        Thu Jan 01 00:00:00 1970 +0000
-  │    summary:     d
+  │    summary:     c
   │
   @  commit:      ef3a871183d7
   │  user:        test
@@ -227,7 +228,6 @@
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
-  
   $ hg up -C 'desc(d)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg merge 'desc(c)'
@@ -260,25 +260,23 @@ after strip of merge parent
   
   $ restore
 
-  $ hg up
+  $ hg up 'desc(c)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated to "264128213d29: c"
-  1 other heads for branch "default"
   $ hg log -G
-  @  commit:      264128213d29
+  o  commit:      443431ffac4f
   │  user:        test
   │  date:        Thu Jan 01 00:00:00 1970 +0000
-  │  summary:     c
+  │  summary:     e
   │
-  │ o  commit:      443431ffac4f
-  │ │  user:        test
-  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
-  │ │  summary:     e
-  │ │
-  │ o  commit:      65bd5f99a4a3
+  o  commit:      65bd5f99a4a3
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
+  │ @  commit:      264128213d29
   ├─╯  user:        test
   │    date:        Thu Jan 01 00:00:00 1970 +0000
-  │    summary:     d
+  │    summary:     c
   │
   o  commit:      ef3a871183d7
   │  user:        test
@@ -289,7 +287,6 @@ after strip of merge parent
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
-  
 
 2 is parent of 3, only one strip should happen
 
@@ -778,24 +775,23 @@ Test high-level scmutil.cleanupnodes API
   $ hg testnodescleanup --config extensions.t=$TESTTMP/scmutilcleanup.py
 
   $ hg log -G -T '{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
-  o  1473d4b996d1 G2 G G2 b-F@divergent3 b-G
+  o  d11b3456a873 F2 F F2 b-F
   │
-  │ o  d11b3456a873 F2 F F2 b-F
-  │ │
-  │ o  5cb05ba470a7 H H
-  ╭─┤
-  │ o  7fb047a69f22 E E b-F@divergent1
-  │ │
-  │ │ o  7c78f703e465 D2 D D2 b-D
-  │ │ │
-  │ │ o  26805aba1e60 C
-  │ │ │
-  │ │ o  112478962961 B
-  │ ├─╯
+  o    5cb05ba470a7 H H
+  ├─╮
+  │ │ o  1473d4b996d1 G2 G G2 b-F@divergent3 b-G
+  ├───╯
   o │  1fc8102cda62 G
     │
-    o  426bada5c675 A A B C I b-B b-C b-I
-  
+    o  7fb047a69f22 E E b-F@divergent1
+    │
+  o │  7c78f703e465 D2 D D2 b-D
+  │ │
+  o │  26805aba1e60 C
+  │ │
+  o │  112478962961 B
+  ├─╯
+  o  426bada5c675 A A B C I b-B b-C b-I
   $ hg bookmark
      A                         426bada5c675
      B                         426bada5c675
@@ -833,24 +829,23 @@ we have reusable code here
   $ hg testnodescleanup --config extensions.t=$TESTTMP/scmutilcleanup.py
 
   $ hg log -G -T '{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
-  o  1473d4b996d1 G2 G G2 b-F@divergent3 b-G
+  o  d11b3456a873 F2 F F2 b-F
   │
-  │ o  d11b3456a873 F2 F F2 b-F
-  │ │
-  │ o  5cb05ba470a7 H H
-  ╭─┤
-  │ o  7fb047a69f22 E E b-F@divergent1
-  │ │
-  │ │ o  7c78f703e465 D2 D D2 b-D
-  │ │ │
-  │ │ o  26805aba1e60 C
-  │ │ │
-  │ │ o  112478962961 B
-  │ ├─╯
+  o    5cb05ba470a7 H H
+  ├─╮
+  │ │ o  1473d4b996d1 G2 G G2 b-F@divergent3 b-G
+  ├───╯
   o │  1fc8102cda62 G
     │
-    o  426bada5c675 A A B C I b-B b-C b-I
-  
+    o  7fb047a69f22 E E b-F@divergent1
+    │
+  o │  7c78f703e465 D2 D D2 b-D
+  │ │
+  o │  26805aba1e60 C
+  │ │
+  o │  112478962961 B
+  ├─╯
+  o  426bada5c675 A A B C I b-B b-C b-I
   $ hg debugobsolete
   $ cd ..
 

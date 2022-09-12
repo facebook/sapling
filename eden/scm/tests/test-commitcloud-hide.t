@@ -1,5 +1,6 @@
 #chg-compatible
 #debugruntest-compatible
+  $ setconfig format.use-segmented-changelog=true
   $ setconfig experimental.allowfilepeer=True
 
   $ configure modern
@@ -87,14 +88,13 @@ manually.
   ├───╯
   │ o  A: draft
   │ │
-  │ o  W: public  remote/master
-  │ │
   @ │  Y: public  remote/other
+  │ │
+  │ o  W: public  remote/master
   │ │
   │ o  X: public x-bookmark
   ├─╯
   o  Z: public
-  
 
 Remove by hash with two related commits removes both of them
   $ gensmartlogdata
@@ -121,14 +121,13 @@ Remove by hash with two related commits removes both of them
   │ │
   o │  A: draft
   │ │
-  o │  W: public  remote/master
-  │ │
   │ @  Y: public  remote/other
+  │ │
+  o │  W: public  remote/master
   │ │
   o │  X: public x-bookmark
   ├─╯
   o  Z: public
-  
 
 Remove by hash removes commit, all descendants and their bookmarks
   $ gensmartlogdata
@@ -157,14 +156,13 @@ Remove by hash removes commit, all descendants and their bookmarks
   │ │
   o │  A: draft
   │ │
-  o │  W: public  remote/master
-  │ │
   │ @  Y: public  remote/other
+  │ │
+  o │  W: public  remote/master
   │ │
   o │  X: public x-bookmark
   ├─╯
   o  Z: public
-  
 
 Remove when other heads keep ancestors alive, removing it just removes the head
   $ gensmartlogdata
@@ -185,14 +183,13 @@ Remove when other heads keep ancestors alive, removing it just removes the head
   │ │
   o │  A: draft
   │ │
-  o │  W: public  remote/master
-  │ │
   │ @  Y: public  remote/other
+  │ │
+  o │  W: public  remote/master
   │ │
   o │  X: public x-bookmark
   ├─╯
   o  Z: public
-  
 
 Remove by bookmark leaves commits alone if there are other bookmarks
   $ gensmartlogdata
@@ -213,14 +210,13 @@ Remove by bookmark leaves commits alone if there are other bookmarks
   │ │
   o │  A: draft
   │ │
-  o │  W: public  remote/master
-  │ │
   │ @  Y: public  remote/other
+  │ │
+  o │  W: public  remote/master
   │ │
   o │  X: public x-bookmark
   ├─╯
   o  Z: public
-  
 
 But removing all of the bookmarks pointing to a head removes the head
   $ gensmartlogdata
@@ -242,14 +238,13 @@ But removing all of the bookmarks pointing to a head removes the head
   │ │
   o │  A: draft
   │ │
-  o │  W: public  remote/master
-  │ │
   │ @  Y: public  remote/other
+  │ │
+  o │  W: public  remote/master
   │ │
   o │  X: public x-bookmark
   ├─╯
   o  Z: public
-  
 
 Removing a bookmark in the stack doesn't hide the commit
   $ gensmartlogdata
@@ -268,14 +263,13 @@ Removing a bookmark in the stack doesn't hide the commit
   │ │
   o │  A: draft
   │ │
-  o │  W: public  remote/master
-  │ │
   │ @  Y: public  remote/other
+  │ │
+  o │  W: public  remote/master
   │ │
   o │  X: public x-bookmark
   ├─╯
   o  Z: public
-  
 
 Removing a bookmark on a public commit just removes it
   $ gensmartlogdata
@@ -294,14 +288,13 @@ Removing a bookmark on a public commit just removes it
   │ │
   o │  A: draft
   │ │
-  o │  W: public  remote/master
-  │ │
   │ @  Y: public  remote/other
+  │ │
+  o │  W: public  remote/master
   │ │
   o │  X: public
   ├─╯
   o  Z: public
-  
 
 Removing a lone commit just removes that head
   $ gensmartlogdata
@@ -318,14 +311,13 @@ Removing a lone commit just removes that head
   │
   o  A: draft
   │
-  o  W: public  remote/master
-  │
   │ @  Y: public  remote/other
+  │ │
+  o │  W: public  remote/master
   │ │
   o │  X: public
   ├─╯
   o  Z: public
-  
 
 Removing a remote bookmark works
   $ gensmartlogdata
@@ -342,14 +334,13 @@ Removing a remote bookmark works
   │
   o  A: draft
   │
-  o  W: public  remote/master
-  │
   │ @  Y: draft
+  │ │
+  o │  W: public  remote/master
   │ │
   o │  X: public
   ├─╯
   o  Z: public
-  
 
 BUG! Commit Y is now draft - it should've been hidden
 
@@ -377,14 +368,13 @@ Merge commits can be removed
   ├─╯
   o  A: draft
   │
-  o  W: public  remote/master
-  │
   │ @  Y: draft
+  │ │
+  o │  W: public  remote/master
   │ │
   o │  X: public
   ├─╯
   o  Z: public
-  
 
   $ gensmartlogdata
   $ hg cloud hide $H
@@ -405,12 +395,11 @@ Merge commits can be removed
   ├─╯
   o  A: draft
   │
-  o  W: public  remote/master
-  │
   │ @  Y: draft
+  │ │
+  o │  W: public  remote/master
   │ │
   o │  X: public
   ├─╯
   o  Z: public
-  
 
