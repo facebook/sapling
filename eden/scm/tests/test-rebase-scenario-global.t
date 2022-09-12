@@ -1,7 +1,8 @@
 #chg-compatible
   $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
-  $ setconfig devel.segmented-changelog-rev-compat=True
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
 
   $ configure dummyssh
   $ enable rebase amend

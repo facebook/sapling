@@ -1,4 +1,6 @@
 #chg-compatible
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig experimental.allowfilepeer=True
 
   $ cat > patchtool.py <<EOF
@@ -45,8 +47,10 @@ Issue2417: hg import with # comments in description
 
 Prepare source repo and patch:
 
-  $ rm $HGRCPATH
-  $ setconfig experimental.allowfilepeer=True
+  $ cat >> "$HGRCPATH" << EOF
+  > [ui]
+  > %unset patch
+  > EOF
   $ hg init c
   $ cd c
   $ printf "a\rc" > a

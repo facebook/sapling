@@ -1,5 +1,7 @@
 #chg-compatible
 
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig workingcopy.ruststatus=False
   $ disable treemanifest
 #require test-repo
@@ -60,13 +62,11 @@ perfstatus
   $ hg perffncacheload
   $ hg perffncachewrite
   $ hg perfheads
-  $ hg perfindex
   $ hg perflog
   $ hg perflookup 2
   $ hg perflrucache
   $ hg perfmanifest 'desc(third)'
   $ hg perfmergecalculate -r 8401ab48b23f93e6592bba6c753148a61f35d5c9
-  $ hg perfnodelookup 2
   $ hg perfpathcopies 'desc(second)' 'desc(third)'
   $ hg perfrawfiles 2
   $ hg perfrevrange

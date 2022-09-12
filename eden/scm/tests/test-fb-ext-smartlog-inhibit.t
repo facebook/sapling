@@ -5,6 +5,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > amend=
@@ -25,13 +27,13 @@
   hint[amend-restack]: descendants of 66f7d451a68b are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg smartlog -T '{rev} {bookmarks}'
-  @  4
+  o  3 test
   │
-  │ o  3 test
-  │ │
-  │ o  2
-  │ │
-  │ x  1
+  o  2
+  │
+  x  1
+  │
+  │ @  4
   ├─╯
   o  0
   $ hg unamend

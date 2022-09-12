@@ -1,5 +1,7 @@
 #debugruntest-compatible
 
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig 'ui.allowemptycommit=1'
 
   $ hg init a
@@ -2420,7 +2422,7 @@
   6: 
   5: f7e5795620e7
   4: f7e5795620e7
-  3: 07fa1db10648 13207e5a10d9
+  3: 13207e5a10d9 07fa1db10648
   2: 10e46f2dcbf4
   1: 97054abb4ab8
   0: b608e9d1a3f0
@@ -4675,12 +4677,12 @@
 # one column. The remaining columns are added in between the nodes.
 
   $ hg log --graph -T '{graphwidth}' -r '0|2|4|5'
-  o      7
-  ├─┬─╮
-  o ╷ ╷  7
-  ├─╯ ╷
-  │   o  7
-  ├───╯
+  o    5
+  ├─╮
+  o ╷  5
+  │ ╷
+  │ o  5
+  ├─╯
   o  3
 
   $ cd ..

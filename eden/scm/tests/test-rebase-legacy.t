@@ -1,8 +1,6 @@
 #debugruntest-compatible
 # coding=utf-8
 
-# coding=utf-8
-
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # Copyright (c) Mercurial Contributors.
 #
@@ -11,6 +9,8 @@
 
 # TODO: Make this test compatibile with obsstore enabled.
 
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig 'experimental.evolution='
 
 # Test rebase --continue with rebasestate written by legacy client
@@ -56,22 +56,22 @@
   > EOF
 
   $ hg rebase --continue
-  rebasing c1e6b162678d "B" (B)
-  rebasing 6f7a236de685 "D" (D)
   rebasing de008c61a447 "E" (E)
   rebasing d2fa1c02b240 "G" (G)
   rebasing 6582e6951a9c "H" (H)
+  rebasing c1e6b162678d "B" (B)
+  rebasing 6f7a236de685 "D" (D)
 
   $ hg log -G -T '{rev}:{node|short} {desc}\n'
-  o  14:721b8da0a708 H
+  o  14:fc52970345e8 D
   │
-  o  13:9d65695ec3c2 G
+  o  13:eac96551b107 B
   │
-  o  12:21c8397a5d68 E
-  │
-  │ o  11:fc52970345e8 D
+  │ o  12:721b8da0a708 H
   │ │
-  │ o  10:eac96551b107 B
+  │ o  11:9d65695ec3c2 G
+  │ │
+  │ o  10:21c8397a5d68 E
   ├─╯
   │ o  6:bd5548558fcf C
   │ │

@@ -1,6 +1,8 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig workingcopy.ruststatus=False
   $ disable treemanifest
   $ hg init
@@ -60,15 +62,6 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     test
   
-  $ hg debugindex --changelog
-     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
-       0         0      60  .....       0 5e0375449e74 000000000000 000000000000 (re)
-       1        60      62  .....       1 96155394af80 5e0375449e74 000000000000 (re)
-       2       122      62  .....       2 92cc4c306b19 5e0375449e74 000000000000 (re)
-       3       184      69  .....       3 e16a66a37edd 92cc4c306b19 96155394af80 (re)
-       4       253      69  .....       4 2ee31f665a86 96155394af80 92cc4c306b19 (re)
-
-revision 1
   $ hg manifest --debug 96155394af80e900c1e01da6607cb913696d5782
   79d7492df40aa0fa093ec4209be78043c181f094 644   a
   2ed2a3912a0b24502043eae84ee4b279c18b90dd 644   b

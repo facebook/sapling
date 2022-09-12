@@ -3,8 +3,10 @@
 
 #require serve
 
-#if no-outer-repo
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
 
+#if no-outer-repo
 no repo
 
   $ hg id

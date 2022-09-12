@@ -1,5 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig experimental.allowfilepeer=True
 
 Test discovery with modern setup: selectivepull, visibility.
@@ -38,7 +40,7 @@ consider all visible local heads (X, Y):
   $ hg hide $Z -q
 
   $ hg pull --debug 2>&1 | grep 'remote heads'
-  local heads: 2; remote heads: 1 (explicit: 1); initial common: 0
+  local heads: 3; remote heads: 1 (explicit: 1); initial common: 0
 
   $ hg log -G -r 'all()' -T '{desc} {remotenames}'
   o  B remote/master

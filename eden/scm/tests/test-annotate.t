@@ -1,6 +1,8 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig workingcopy.ruststatus=False
   $ disable treemanifest
 
@@ -656,6 +658,7 @@ merge
   baz:3
   baz:4
   baz:3->3+
+  baz:3->3+
   qux:4->4+
   baz:3+->3-
   merge
@@ -669,6 +672,7 @@ merge
   baz:0
   baz:3
   baz:4
+  baz:3->3+
   baz:3->3+
   qux:4->4+
   baz:3+->3-

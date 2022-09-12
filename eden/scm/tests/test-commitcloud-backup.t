@@ -1,6 +1,8 @@
 #chg-compatible
 #debugruntest-compatible
 #inprocess-hg-incompatible
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
@@ -244,8 +246,8 @@ Create logs directory and set correct permissions
   commitcloud: backed up 4 commits
   remote: pushing 4 commits:
   remote:     426bada5c675  A
-  remote:     112478962961  B
   remote:     b18e25de2cf5  D
+  remote:     112478962961  B
   remote:     26805aba1e60  C
   $ hg cloud check -r ':'
   7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455 backed up

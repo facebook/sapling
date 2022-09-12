@@ -4,6 +4,8 @@
   $ configure modern
 
   $ newrepo
+  $ hg debugchangelog --migrate revlog
+
   $ drawdag << 'EOS'
   > B C
   > |/|
@@ -265,7 +267,7 @@ To lazy:
   o  E
   │
   o  G
-  
+
 Revlog -> Lazy:
 
   $ cd $TESTTMP/revlogrepo

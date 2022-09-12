@@ -1,6 +1,8 @@
 #debugruntest-compatible
 #chg-compatible
 
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ enable commitextras
   $ setconfig ui.allowemptycommit=1
 
@@ -866,7 +868,7 @@ aliases:
     None)
   * set:
   <nameset-
-    <meta ?>>
+    <spans [e0cc66ef77e8b6f711815af4e001a6594fde3ba5+6]>>
   6
 
   $ HGPLAIN=1
@@ -886,7 +888,7 @@ aliases:
     None)
   * set:
   <nameset-
-    <meta ?>>
+    <spans [e0cc66ef77e8b6f711815af4e001a6594fde3ba5+6]>>
   6
 
   $ unset HGPLAIN

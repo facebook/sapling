@@ -1,4 +1,6 @@
 #chg-compatible
+  $ setconfig format.use-segmented-changelog=true
+  $ setconfig devel.segmented-changelog-rev-compat=true
   $ configure modernclient
 
   $ add()
@@ -1587,18 +1589,9 @@ test for case where we didn't look sufficiently far back to find rename ancestor
   o  f
   
   $ hg diff --git -r 'desc("f=f")'
-  diff --git a/f b/f
-  deleted file mode 100644
-  --- a/f
-  +++ /dev/null
-  @@ -1,1 +0,0 @@
-  -f
-  diff --git a/g b/g
-  new file mode 100644
-  --- /dev/null
-  +++ b/g
-  @@ -0,0 +1,1 @@
-  +f
+  diff --git a/f b/g
+  rename from f
+  rename to g
   $ cd ..
 
 Additional tricky linkrev case
