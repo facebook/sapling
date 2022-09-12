@@ -1418,6 +1418,8 @@ class ui(object):
                 environ.update({"HG_SHAREDPENDING": sharedpending})
 
             editor = self.geteditor()
+            if not editor:
+                raise error.ProgrammingError("editor is not defined")
 
             # Special cases to avoid shelling out
             if editor == "internal:none":
@@ -1550,13 +1552,17 @@ class ui(object):
             # vi is the MIPS instruction simulator on Plan 9. We
             # instead default to E to plumb commit messages to
             # avoid confusion.
-            editor = "E"
+            defaulteditor = "E"
         else:
-            editor = "vi"
-        return encoding.environ.get("HGEDITOR") or self.config(
-            "ui",
-            "editor",
-            encoding.environ.get("VISUAL") or encoding.environ.get("EDITOR") or editor,
+
+            defaulteditor = "vi"
+        return (
+            encoding.environ.get("HGEDITOR")
+            or self.config(
+                "ui",
+                "editor",
+            )
+            or defaulteditor
         )
 
     def progress(self):

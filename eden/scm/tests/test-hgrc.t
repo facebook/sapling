@@ -180,6 +180,13 @@ with environment variables
   --debug: ui.debug=True
   --quiet: ui.quiet=False
 
+don't set editor to empty string
+
+  $ VISUAL= hg showconfig --debug
+  --verbose: ui.verbose=False
+  --debug: ui.debug=True
+  --quiet: ui.quiet=False
+
 plain mode with exceptions
 
   $ cat > plain.py <<EOF

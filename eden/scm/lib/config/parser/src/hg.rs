@@ -644,13 +644,15 @@ impl ConfigSet {
         // SCM's usecases.
         for name in ["VISUAL", "EDITOR"] {
             if let Ok(editor) = env::var(name) {
-                self.set(
-                    "ui",
-                    "editor",
-                    Some(editor),
-                    &opts.clone().source(format!("${}", name)),
-                );
-                break;
+                if !editor.is_empty() {
+                    self.set(
+                        "ui",
+                        "editor",
+                        Some(editor),
+                        &opts.clone().source(format!("${}", name)),
+                    );
+                    break;
+                }
             }
         }
 
