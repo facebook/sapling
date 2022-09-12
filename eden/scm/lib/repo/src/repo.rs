@@ -360,24 +360,31 @@ impl Repo {
             }
         };
 
+        let file_store = self.file_store()?;
+        let tree_store = self.tree_store()?;
+
         let p1 = match treestate.get_metadata_by_key("p1")? {
             Some(s) => HgId::from_str(&s)?,
             None => *HgId::null_id(),
         };
-
-        let store = self.file_store()?;
-        let treestore = self.tree_store()?;
-        let manifest = TreeManifest::durable(treestore, p1);
+        let p1_tree_id = async_runtime::block_on(self.get_root_tree_id(p1))?;
+        let manifest = TreeManifest::durable(tree_store, p1_tree_id);
 
         WorkingCopy::new(
             path.to_path_buf(),
             filesystem,
             treestate,
             manifest,
-            store,
+            file_store,
             SystemTime::UNIX_EPOCH,
         )
         .map_err(|(_treestate, err)| err)
+    }
+
+    async fn get_root_tree_id(&mut self, commit_id: HgId) -> Result<HgId> {
+        let commit_store = self.dag_commits()?.read().to_dyn_read_root_tree_ids();
+        let tree_ids = commit_store.read_root_tree_ids(vec![commit_id]).await?;
+        Ok(tree_ids[0].1)
     }
 }
 
