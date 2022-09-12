@@ -19,6 +19,7 @@ import locale
 import os
 import re
 import signal
+from typing import Dict, Optional
 
 from . import encoding, error, patch as patchmod, progress, pycompat, scmutil, util
 from .i18n import _
@@ -31,14 +32,14 @@ stringio = util.stringio
 locale.setlocale(locale.LC_ALL, "")
 
 # patch comments based on the git one
-diffhelptext = _(
+diffhelptext: str = _(
     """# To remove '-' lines, make them ' ' lines (context).
 # To remove '+' lines, delete them.
 # Lines starting with # will be removed from the patch.
 """
 )
 
-hunkhelptext = _(
+hunkhelptext: str = _(
     """#
 # If the patch applies cleanly, the edited hunk will immediately be
 # added to the record list. If it does not apply cleanly, a rejects file
@@ -48,7 +49,7 @@ hunkhelptext = _(
 """
 )
 
-patchhelptext = _(
+patchhelptext: str = _(
     """#
 # If the patch applies cleanly, the edited patch will immediately
 # be finalised. If it does not apply cleanly, rejects files will be
@@ -597,7 +598,7 @@ def testchunkselector(testfn, ui, headerlist, operation=None):
     return chunkselector.opts
 
 
-_headermessages = {  # {operation: text}
+_headermessages: Dict[Optional[str], str] = {  # {operation: text}
     "apply": _("Select hunks to apply"),
     "discard": _("Select hunks to discard"),
     None: _("Select hunks to record"),
