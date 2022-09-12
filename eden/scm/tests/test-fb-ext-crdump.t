@@ -310,6 +310,34 @@ Test basic dump of two commits
   62000a
 
 
+Check we respect --unified 0 properly (i.e. should be no lines of context in patch file)
+
+  $ hg debugcrdump -r . --unified 0 > ../json_output
+
+  >>> import codecs
+  >>> import json
+  >>> from os import path
+  >>> with open("../json_output") as f:
+  ...     data = json.loads(f.read())
+  ...     outdir = data['output_directory']
+  ...     for commit in data['commits']:
+  ...         print(open(path.join(outdir, commit['patch_file'])).read())
+  diff --git a/a b/a
+  --- a/a
+  +++ b/a
+  @@ -6,0 +7,1 @@
+  +G
+  diff --git a/bin1 b/bin1
+  Binary file bin1 has changed
+  diff --git a/bin2 b/bin2
+  deleted file mode 100644
+  Binary file bin2 has changed
+  diff --git a/c b/c
+  new file mode 100644
+  --- /dev/null
+  +++ b/c
+  @@ -0,0 +1,1 @@
+  +C
 
 
 #if jq

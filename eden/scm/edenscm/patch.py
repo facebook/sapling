@@ -2518,7 +2518,7 @@ def difffeatureopts(
             # entries from hgrc with command line values if they
             # appear to have been set, which is any truthy value,
             # True, or False.
-            if v or isinstance(v, bool):
+            if v or isinstance(v, bool) or isinstance(v, int):
                 return v
         if forceplain is not None and ui.plain("diffopts"):
             return forceplain
