@@ -1,7 +1,7 @@
 #chg-compatible
 
   $ setconfig config.use-rust=True
-  $ setconfig workingcopy.ruststatus=False
+  $ setconfig workingcopy.use-rust=False
 
 Test config:
   $ setconfig testsection.subsection1=foo

@@ -14,6 +14,7 @@ use anyhow::Result;
 use clidispatch::errors;
 use clidispatch::errors::FallbackToPython;
 use clidispatch::io::CanColor;
+use clidispatch::io::IsTty;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use configparser::configmodel::ConfigExt;
@@ -24,6 +25,7 @@ use repo::repo::Repo;
 use types::path::RepoPathRelativizer;
 use workingcopy::workingcopy::WorkingCopy;
 
+use super::get_formatter;
 use crate::commands::FormatterOpts;
 use crate::commands::WalkOpts;
 
@@ -108,7 +110,6 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
         || !rev_check
         || !ctx.opts.walk_opts.include.is_empty()
         || !ctx.opts.walk_opts.exclude.is_empty()
-        || !ctx.opts.formatter_opts.template.is_empty()
         || !args_check
     {
         return Err(errors::FallbackToPython(name()).into());
@@ -186,7 +187,19 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
 
     let cwd = std::env::current_dir()?;
     let relativizer = RepoPathRelativizer::new(cwd, repo.path());
-    print::print_status(ctx.io(), relativizer, &print_config, &status, &copymap)?;
+    let formatter = get_formatter(
+        "status",
+        ctx.opts.formatter_opts.template.as_str(),
+        ctx.global_opts(),
+        Box::new(ctx.io().output()),
+    )?;
+
+    if ctx.io().output().is_tty() {
+        ctx.io().start_pager(repo.config())?;
+    }
+
+    print::print_status(formatter, relativizer, &print_config, &status, &copymap)?;
+
     Ok(0)
 }
 

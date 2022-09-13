@@ -8,7 +8,9 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use clidispatch::io::IO;
+use formatter::formatter::Formattable;
+use formatter::formatter::ListFormatter;
+use serde::Serialize;
 use types::path::RepoPathRelativizer;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -100,97 +102,132 @@ const BOLD: &str = "\u{001B}[1m";
 const UNDERLINE: &str = "\u{001b}[4m";
 const RESET: &str = "\u{001B}[0m";
 
+#[derive(Serialize)]
+struct StatusEntry<'a> {
+    path: String,
+
+    status: &'a str,
+
+    copy: Option<String>,
+
+    #[serde(skip_serializing)]
+    ansi_color_prefix: &'a str,
+
+    #[serde(skip_serializing)]
+    print_config: &'a PrintConfig,
+}
+
+impl<'a> Formattable for StatusEntry<'a> {
+    fn format_plain(
+        &self,
+        _options: &formatter::formatter::FormatOptions,
+        writer: &mut dyn std::io::Write,
+    ) -> Result<(), anyhow::Error> {
+        let status = if self.print_config.no_status {
+            ""
+        } else {
+            self.status
+        };
+        let (colorized_status, ansi_suffix) = if self.print_config.use_color {
+            (
+                format!("{}{}", self.ansi_color_prefix, status),
+                RESET.to_string(),
+            )
+        } else {
+            (status.to_owned(), "".to_owned())
+        };
+        write!(
+            writer,
+            "{}{}{}{}",
+            colorized_status, self.path, ansi_suffix, self.print_config.endl
+        )?;
+        if let Some(p) = &self.copy {
+            write!(writer, "  {}{}", p, self.print_config.endl)?;
+        }
+        Ok(())
+    }
+}
+
 pub fn print_status(
-    io: &IO,
+    mut formatter: Box<dyn ListFormatter>,
     relativizer: RepoPathRelativizer,
-    config: &PrintConfig,
+    print_config: &PrintConfig,
     status: &status::Status,
     copymap: &HashMap<RepoPathBuf, RepoPathBuf>,
 ) -> Result<()> {
-    let endl = config.endl;
-    let relativizer = HgStatusPathRelativizer::new(config.root_relative, relativizer);
+    formatter.begin_list()?;
 
-    let print_group = |print_group,
-                       enabled: bool,
-                       group: &mut dyn Iterator<Item = &RepoPathBuf>|
-     -> Result<(), std::io::Error> {
-        if !enabled {
-            return Ok(());
-        }
-
-        // `hg config | grep color` did not yield the entries for color.status listed on
-        // https://www.mercurial-scm.org/wiki/ColorExtension. At Facebook, we seem to match
-        // the defaults listed on the wiki page, except we don't change the background color.
-        let (code, ansi_prefix) = match print_group {
-            PrintGroup::Modified => ("M ", format!("{}{}", BLUE, BOLD)),
-            PrintGroup::Added => ("A ", format!("{}{}", GREEN, BOLD)),
-            PrintGroup::Removed => ("R ", format!("{}{}", RED, BOLD)),
-            PrintGroup::Deleted => ("! ", format!("{}{}{}", CYAN, BOLD, UNDERLINE)),
-            PrintGroup::Unknown => ("? ", format!("{}{}{}", MAGENTA, BOLD, UNDERLINE)),
-            PrintGroup::Ignored => ("I ", format!("{}{}", BRIGHT_BLACK, BOLD)),
-            PrintGroup::Clean => ("C ", "".to_owned()),
-        };
-        let prefix = if config.no_status { "" } else { code };
-        let (prefix, suffix) = if config.use_color {
-            (format!("{}{}", ansi_prefix, prefix), RESET.to_string())
-        } else {
-            (prefix.to_owned(), "".to_owned())
-        };
-
-        let mut group = group.collect::<Vec<_>>();
-        group.sort();
-        for path in group {
-            io.write(format!(
-                "{}{}{}{}",
-                prefix,
-                &relativizer.relativize(path),
-                suffix,
-                endl
-            ))?;
-            if config.copies {
-                if let Some(p) = copymap.get(path) {
-                    io.write(format!("  {}{}", &relativizer.relativize(p), endl))?;
-                }
+    let relativizer = HgStatusPathRelativizer::new(print_config.root_relative, relativizer);
+    let mut print_group =
+        |print_group, enabled: bool, group: &mut dyn Iterator<Item = &RepoPathBuf>| -> Result<()> {
+            if !enabled {
+                return Ok(());
             }
-        }
-        Ok(())
-    };
+
+            // `hg config | grep color` did not yield the entries for color.status listed on
+            // https://www.mercurial-scm.org/wiki/ColorExtension. At Meta, we seem to match
+            // the defaults listed on the wiki page, except we don't change the background color.
+            let (status, ansi_color_prefix) = match print_group {
+                PrintGroup::Modified => ("M ", format!("{}{}", BLUE, BOLD)),
+                PrintGroup::Added => ("A ", format!("{}{}", GREEN, BOLD)),
+                PrintGroup::Removed => ("R ", format!("{}{}", RED, BOLD)),
+                PrintGroup::Deleted => ("! ", format!("{}{}{}", CYAN, BOLD, UNDERLINE)),
+                PrintGroup::Unknown => ("? ", format!("{}{}{}", MAGENTA, BOLD, UNDERLINE)),
+                PrintGroup::Ignored => ("I ", format!("{}{}", BRIGHT_BLACK, BOLD)),
+                PrintGroup::Clean => ("C ", "".to_owned()),
+            };
+
+            let mut group = group.collect::<Vec<_>>();
+            group.sort();
+            for path in group {
+                formatter.format_item(&StatusEntry {
+                    path: relativizer.relativize(path),
+                    status,
+                    copy: copymap.get(path).map(|p| relativizer.relativize(p)),
+                    ansi_color_prefix: ansi_color_prefix.as_str(),
+                    print_config,
+                })?;
+            }
+            Ok(())
+        };
 
     print_group(
         PrintGroup::Modified,
-        config.status_types.modified,
+        print_config.status_types.modified,
         &mut status.modified(),
     )?;
     print_group(
         PrintGroup::Added,
-        config.status_types.added,
+        print_config.status_types.added,
         &mut status.added(),
     )?;
     print_group(
         PrintGroup::Removed,
-        config.status_types.removed,
+        print_config.status_types.removed,
         &mut status.removed(),
     )?;
     print_group(
         PrintGroup::Deleted,
-        config.status_types.deleted,
+        print_config.status_types.deleted,
         &mut status.deleted(),
     )?;
     print_group(
         PrintGroup::Unknown,
-        config.status_types.unknown,
+        print_config.status_types.unknown,
         &mut status.unknown(),
     )?;
     print_group(
         PrintGroup::Ignored,
-        config.status_types.ignored,
+        print_config.status_types.ignored,
         &mut status.ignored(),
     )?;
     print_group(
         PrintGroup::Clean,
-        config.status_types.clean,
+        print_config.status_types.clean,
         &mut status.clean(),
     )?;
+
+    formatter.end_list()?;
 
     Ok(())
 }
@@ -220,6 +257,10 @@ impl Default for PrintConfig {
 #[cfg(test)]
 mod test {
     use std::str;
+
+    use clidispatch::io::IO;
+    use formatter::formatter::get_formatter;
+    use formatter::formatter::FormatOptions;
 
     use super::*;
 
@@ -258,8 +299,14 @@ mod test {
         let tout = Vec::new();
         let terr = Vec::new();
         let io = IO::new(tin, tout, Some(terr));
+        let options = FormatOptions {
+            debug: false,
+            verbose: false,
+            quiet: false,
+        };
+        let fm = get_formatter("status", "", options, Box::new(io.output())).unwrap();
         print_status(
-            &io,
+            fm,
             relativizer,
             &test_case.print_config,
             &test_case.status,
