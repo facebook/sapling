@@ -7,6 +7,7 @@
 
 mod exact_matcher;
 mod gitignore_matcher;
+mod regex_matcher;
 mod tree_matcher;
 mod utils;
 
@@ -200,6 +201,7 @@ impl Matcher for UnionMatcher {
 
 pub use exact_matcher::ExactMatcher;
 pub use gitignore_matcher::GitignoreMatcher;
+pub use regex_matcher::RegexMatcher;
 pub use tree_matcher::TreeMatcher;
 pub use utils::expand_curly_brackets;
 pub use utils::normalize_glob;
