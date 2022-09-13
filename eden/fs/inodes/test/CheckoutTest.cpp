@@ -1151,6 +1151,18 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   EXPECT_EQ(subInodeNumber, subTree->getNodeId());
 }
 
+std::vector<SetPathObjectIdObjectAndPath> getObjects(
+    RelativePathPiece path,
+    folly::StringPiece objectId,
+    facebook::eden::ObjectType type) {
+  SetPathObjectIdObjectAndPath objectAndPath;
+  objectAndPath.path = RelativePath{path};
+  objectAndPath.id = ObjectId{objectId};
+  objectAndPath.type = type;
+  std::vector<SetPathObjectIdObjectAndPath> objects{objectAndPath};
+  return objects;
+}
+
 void runTestSetPathObjectId(
     folly::StringPiece file,
     folly::StringPiece pathToSet,
@@ -1173,14 +1185,13 @@ void runTestSetPathObjectId(
   commit2->setReady();
 
   // Insert file2 to pathToSet
-  RelativePathPiece path{pathToSet};
-
   auto setPathObjectIdResultAndTimesAndTimes =
       testMount.getEdenMount()
-          ->setPathObjectId(
-              path,
-              ObjectId{storeTree->get().getHash().asString()},
-              facebook::eden::ObjectType::TREE,
+          ->setPathsToObjectIds(
+              getObjects(
+                  RelativePathPiece{pathToSet},
+                  storeTree->get().getHash().asString(),
+                  facebook::eden::ObjectType::TREE),
               facebook::eden::CheckoutMode::NORMAL,
               ObjectFetchContext::getNullContext())
           .semi()
@@ -1253,10 +1264,11 @@ TEST(Checkout, testSetPathObjectIdConflict) {
   params.type_ref() = facebook::eden::ObjectType::TREE;
   auto setPathObjectIdResultAndTimes =
       testMount.getEdenMount()
-          ->setPathObjectId(
-              path,
-              ObjectId{storeTree->get().getHash().asString()},
-              facebook::eden::ObjectType::TREE,
+          ->setPathsToObjectIds(
+              getObjects(
+                  path,
+                  storeTree->get().getHash().asString(),
+                  facebook::eden::ObjectType::TREE),
               facebook::eden::CheckoutMode::NORMAL,
               ObjectFetchContext::getNullContext())
           .semi()
@@ -1331,10 +1343,11 @@ TEST(Checkout, testSetPathObjectIdLastCheckoutTime) {
   params.type_ref() = facebook::eden::ObjectType::TREE;
   auto setPathObjectIdResultAndTimes =
       testMount.getEdenMount()
-          ->setPathObjectId(
-              path,
-              ObjectId{storeTree->get().getHash().asString()},
-              facebook::eden::ObjectType::TREE,
+          ->setPathsToObjectIds(
+              getObjects(
+                  path,
+                  storeTree->get().getHash().asString(),
+                  facebook::eden::ObjectType::TREE),
               facebook::eden::CheckoutMode::NORMAL,
               ObjectFetchContext::getNullContext())
           .semi()
@@ -1375,10 +1388,8 @@ TEST(Checkout, testSetPathObjectIdCheckoutSingleFile) {
 
   auto setPathObjectIdResultAndTimes =
       testMount.getEdenMount()
-          ->setPathObjectId(
-              path,
-              ObjectId{"2"},
-              facebook::eden::ObjectType::REGULAR_FILE,
+          ->setPathsToObjectIds(
+              getObjects(path, "2", facebook::eden::ObjectType::REGULAR_FILE),
               facebook::eden::CheckoutMode::NORMAL,
               ObjectFetchContext::getNullContext())
           .semi()
@@ -1408,10 +1419,8 @@ TEST(Checkout, testSetPathObjectIdCheckoutMultipleFiles) {
 
   auto setPathObjectIdResultAndTimes =
       testMount.getEdenMount()
-          ->setPathObjectId(
-              path,
-              ObjectId{"1"},
-              facebook::eden::ObjectType::REGULAR_FILE,
+          ->setPathsToObjectIds(
+              getObjects(path, "1", facebook::eden::ObjectType::REGULAR_FILE),
               facebook::eden::CheckoutMode::NORMAL,
               ObjectFetchContext::getNullContext())
           .semi()
@@ -1427,10 +1436,8 @@ TEST(Checkout, testSetPathObjectIdCheckoutMultipleFiles) {
 
   auto setPathObjectIdResultAndTimes2 =
       testMount.getEdenMount()
-          ->setPathObjectId(
-              path2,
-              ObjectId{"2"},
-              facebook::eden::ObjectType::REGULAR_FILE,
+          ->setPathsToObjectIds(
+              getObjects(path2, "2", facebook::eden::ObjectType::REGULAR_FILE),
               facebook::eden::CheckoutMode::NORMAL,
               ObjectFetchContext::getNullContext())
           .semi()

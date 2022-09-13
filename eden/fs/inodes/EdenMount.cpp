@@ -771,108 +771,175 @@ TreeEntryType toEdenTreeEntryType(facebook::eden::ObjectType objectType) {
 
 } // namespace
 
-ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
-    RelativePathPiece path,
-    const ObjectId& objectId,
-    ObjectType objectType,
+ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
+    std::vector<SetPathObjectIdObjectAndPath> objects,
     CheckoutMode checkoutMode,
     FOLLY_MAYBE_UNUSED ObjectFetchContext& context) {
-  auto renderObjectId = objectStore_->renderObjectId(objectId);
-  if (objectType == facebook::eden::ObjectType::SYMLINK) {
-    XLOG(DBG3) << "setPathObjectId called with symlink for object with id "
-               << renderObjectId << " at path" << path;
+  std::vector<ImmediateFuture<SetPathObjectIdResultAndTimes>> futures;
+  // A map used to consolidates objects that is merge-able. For Blobs,
+  // if they are set to the same parent path, then they can be merged into one
+  // request, i.e. a/b/c, a/b/d.
+  // But Trees can not be merged, so
+  // 1. we put object type into key to avoid the merge of (a/b/c, BLOB) and
+  // (a/b/d, TREE).
+  // 2. For tree, the path of the key is its full path to avoid the merge of
+  //  (a/b/c, TREE) and (a/b/d, TREE)
+  folly::F14FastMap<
+      std::pair<RelativePath, ObjectType>,
+      std::vector<SetPathObjectIdObjectAndPath>>
+      parentToObjectsMap;
+  for (auto& object : objects) {
+    /*
+     * In theory, an exclusive wlock should be issued, but
+     * this is not efficent if many calls to this method ran in parallel.
+     * So we use read lock instead assuming the contents of loaded rootId
+     * objects are not weaving too much
+     */
+    XLOG(DBG3) << "adding " << objectStore_->renderObjectId(object.id)
+               << " to mount " << this->getPath() << " at path " << object.path;
+
+    bool isTree = (object.type == ObjectType::TREE);
+    auto key = std::pair<RelativePath, ObjectType>(
+        isTree ? object.path : RelativePath{object.path.dirname()},
+        object.type);
+    if (parentToObjectsMap.find(key) != parentToObjectsMap.end()) {
+      if (isTree) {
+        throw std::runtime_error(
+            "Can not merge tree requests. It is likely the request contains two identical tree paths");
+      }
+      parentToObjectsMap[key].emplace_back(std::move(object));
+    } else {
+      std::vector<SetPathObjectIdObjectAndPath> mergedObjct;
+      mergedObjct.emplace_back(std::move(object));
+      parentToObjectsMap[key] = std::move(mergedObjct);
+    }
+  }
+  objects.clear();
+
+  for (auto& [pathAndType, objects] : parentToObjectsMap) {
+    auto& [path, type] = pathAndType;
+    const folly::stop_watch<> stopWatch;
+    auto setPathObjectIdTime = std::make_shared<SetPathObjectIdTimes>();
+
+    auto ctx = std::make_shared<CheckoutContext>(
+        this,
+        checkoutMode,
+        std::nullopt,
+        "setPathObjectId",
+        context.getRequestInfo());
+
+    /**
+     * This will update the timestamp for the entire mount,
+     * TODO(yipu) We should only update the timestamp for the
+     * partial node so only affects its children.
+     */
+    setLastCheckoutTime(EdenTimestamp{clock_->getRealtime()});
+
+    bool isTree = (type == ObjectType::TREE);
+
+    auto getTargetTreeInodeFuture =
+        ensureDirectoryExists(path, ctx->getFetchContext());
+
+    std::vector<ImmediateFuture<shared_ptr<TreeEntry>>> getTreeEntryFutures;
+    if (!isTree) {
+      for (auto& object : objects) {
+        getTreeEntryFutures.emplace_back(objectStore_->getTreeEntryForObjectId(
+            object.id,
+            toEdenTreeEntryType(object.type),
+            ctx->getFetchContext()));
+      }
+    }
+
+    auto getRootTreeFuture = isTree
+        ? objectStore_->getTree(objects.at(0).id, ctx->getFetchContext())
+        : collectAllSafe(std::move(getTreeEntryFutures))
+              .thenValue(
+                  [objects = std::move(objects),
+                   caseSensitive = getCheckoutConfig()->getCaseSensitive()](
+                      std::vector<shared_ptr<TreeEntry>> entries) {
+                    // Make up a fake ObjectId for this tree.
+                    // WARNING: This is dangerous -- this ObjectId cannot be
+                    // used to look up this synthesized tree from the
+                    // BackingStore.
+                    ObjectId fakeObjectId{};
+                    Tree::container treeEntries{caseSensitive};
+                    for (size_t i = 0; i < entries.size(); ++i) {
+                      treeEntries.emplace(
+                          PathComponent{objects.at(i).path.basename()},
+                          std::move(*entries.at(i)));
+                    }
+
+                    return std::make_shared<const Tree>(
+                        std::move(treeEntries), fakeObjectId);
+                  });
+
+    auto future =
+        collectAllSafe(getTargetTreeInodeFuture, getRootTreeFuture)
+            .thenValue(
+                [ctx, setPathObjectIdTime, stopWatch](
+                    std::tuple<TreeInodePtr, shared_ptr<const Tree>> results) {
+                  setPathObjectIdTime->didLookupTreesOrGetInodeByPath =
+                      stopWatch.elapsed();
+                  auto [targetTreeInode, incomingTree] = results;
+                  targetTreeInode->unloadChildrenUnreferencedByFs();
+                  return targetTreeInode
+                      ->checkout(ctx.get(), nullptr, incomingTree)
+                      .semi();
+                })
+            .thenValue([ctx, setPathObjectIdTime, stopWatch](auto&&) {
+              setPathObjectIdTime->didCheckout = stopWatch.elapsed();
+              return ctx->flush().semi();
+            })
+            .thenValue([ctx, setPathObjectIdTime, stopWatch](
+                           std::vector<CheckoutConflict>&& conflicts) {
+              setPathObjectIdTime->didFinish = stopWatch.elapsed();
+              SetPathObjectIdResultAndTimes resultAndTimes;
+              resultAndTimes.times = *setPathObjectIdTime;
+              SetPathObjectIdResult result;
+              result.conflicts_ref() = std::move(conflicts);
+              resultAndTimes.result = std::move(result);
+              return resultAndTimes;
+            })
+            .thenTry([this, ctx](
+                         Try<SetPathObjectIdResultAndTimes>&& resultAndTimes) {
+              auto fetchStats = ctx->getFetchContext().computeStatistics();
+              XLOG(DBG4) << (resultAndTimes.hasValue() ? "" : "failed ")
+                         << "setPathObjectId for " << this->getPath()
+                         << " accessed " << fetchStats.tree.accessCount
+                         << " trees (" << fetchStats.tree.cacheHitRate
+                         << "% chr), " << fetchStats.blob.accessCount
+                         << " blobs (" << fetchStats.blob.cacheHitRate
+                         << "% chr), and " << fetchStats.metadata.accessCount
+                         << " metadata (" << fetchStats.metadata.cacheHitRate
+                         << "% chr).";
+
+              return std::move(resultAndTimes);
+            });
+    futures.emplace_back(std::move(future));
   }
 
-  const folly::stop_watch<> stopWatch;
-  auto setPathObjectIdTime = std::make_shared<SetPathObjectIdTimes>();
-  /**
-   * In theory, an exclusive wlock should be issued, but
-   * this is not efficent if many calls to this method ran in parallel.
-   * So we use read lock instead assuming the contents of loaded objectId
-   * objects are not weaving too much
-   */
-  XLOG(DBG3) << "adding " << renderObjectId << " to Eden mount "
-             << this->getPath() << " at path " << path;
-
-  auto ctx = std::make_shared<CheckoutContext>(
-      this,
-      checkoutMode,
-      std::nullopt,
-      "setPathObjectId",
-      context.getRequestInfo());
-
-  /**
-   * This will update the timestamp for the entire mount,
-   * TODO(yipu) We should only update the timestamp for the
-   * partial node so only affects its children.
-   */
-  setLastCheckoutTime(EdenTimestamp{clock_->getRealtime()});
-  bool isTree = (objectType == facebook::eden::ObjectType::TREE);
-
-  auto getTargetTreeInodeFuture = ensureDirectoryExists(
-      isTree ? path : path.dirname(), ctx->getFetchContext());
-
-  auto getTreeFuture = isTree
-      ? objectStore_->getTree(objectId, ctx->getFetchContext())
-      : objectStore_
-            ->getTreeEntryForObjectId(
-                objectId,
-                toEdenTreeEntryType(objectType),
-                ctx->getFetchContext())
-            .thenValue(
-                [name = PathComponent{path.basename()},
-                 caseSensitive = getCheckoutConfig()->getCaseSensitive()](
-                    std::shared_ptr<TreeEntry> treeEntry) {
-                  // Make up a fake ObjectId for this tree.
-                  // WARNING: This is dangerous -- this ObjectId cannot be used
-                  // to look up this synthesized tree from the BackingStore.
-                  ObjectId fakeObjectId{};
-                  Tree::container treeEntries{caseSensitive};
-                  treeEntries.emplace(name, std::move(*treeEntry));
-                  return std::make_shared<const Tree>(
-                      std::move(treeEntries), fakeObjectId);
-                });
-
-  return collectAllSafe(getTargetTreeInodeFuture, getTreeFuture)
-      .thenValue([ctx, setPathObjectIdTime, stopWatch](
-                     std::tuple<TreeInodePtr, shared_ptr<const Tree>> results) {
-        setPathObjectIdTime->didLookupTreesOrGetInodeByPath =
-            stopWatch.elapsed();
-        auto [targetTreeInode, incomingTree] = results;
-        targetTreeInode->unloadChildrenUnreferencedByFs();
-        return targetTreeInode->checkout(ctx.get(), nullptr, incomingTree)
-            .semi();
-      })
-      .thenValue([ctx, setPathObjectIdTime, stopWatch](auto&&) {
-        setPathObjectIdTime->didCheckout = stopWatch.elapsed();
-        return ctx->flush().semi();
-      })
-      .thenValue([ctx, setPathObjectIdTime, stopWatch](
-                     std::vector<CheckoutConflict>&& conflicts) {
-        setPathObjectIdTime->didFinish = stopWatch.elapsed();
-        SetPathObjectIdResultAndTimes resultAndTimes;
-        resultAndTimes.times = *setPathObjectIdTime;
-        SetPathObjectIdResult result;
-        result.conflicts_ref() = std::move(conflicts);
-        resultAndTimes.result = std::move(result);
-        return resultAndTimes;
-      })
-      .thenTry([this, ctx, renderObjectId = std::move(renderObjectId)](
-                   Try<SetPathObjectIdResultAndTimes>&& resultAndTimes) {
-        auto fetchStats = ctx->getFetchContext().computeStatistics();
-
-        XLOG(DBG1) << (resultAndTimes.hasValue() ? "" : "failed ")
-                   << "setPathObjectId for " << this->getPath() << " to "
-                   << renderObjectId << " accessed "
-                   << fetchStats.tree.accessCount << " trees ("
-                   << fetchStats.tree.cacheHitRate << "% chr), "
-                   << fetchStats.blob.accessCount << " blobs ("
-                   << fetchStats.blob.cacheHitRate << "% chr), and "
-                   << fetchStats.metadata.accessCount << " metadata ("
-                   << fetchStats.metadata.cacheHitRate << "% chr).";
-
-        return std::move(resultAndTimes);
-      });
+  // Merge conflicts and stats
+  return collectAllSafe(std::move(futures))
+      .thenValue(
+          [](std::vector<SetPathObjectIdResultAndTimes> resultAndTimesList) {
+            SetPathObjectIdTimes times;
+            std::vector<CheckoutConflict> conflicts;
+            for (auto& resultAndTime : resultAndTimesList) {
+              for (auto conflict : *resultAndTime.result.conflicts_ref()) {
+                conflicts.emplace_back(std::move(conflict));
+              }
+              times.didLookupTreesOrGetInodeByPath +=
+                  resultAndTime.times.didLookupTreesOrGetInodeByPath;
+              times.didCheckout += resultAndTime.times.didCheckout;
+              times.didFinish += resultAndTime.times.didFinish;
+            }
+            SetPathObjectIdResult result;
+            result.conflicts_ref() = std::move(conflicts);
+            SetPathObjectIdResultAndTimes resultAndTimes;
+            resultAndTimes.times = std::move(times);
+            resultAndTimes.result = std::move(result);
+            return resultAndTimes;
+          });
 }
 #endif // !_WIN32
 

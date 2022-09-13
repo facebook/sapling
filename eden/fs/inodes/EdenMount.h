@@ -225,6 +225,34 @@ struct SetPathObjectIdResultAndTimes {
   SetPathObjectIdTimes times;
 };
 
+struct SetPathObjectIdObjectAndPath {
+  RelativePath path;
+  ObjectId id;
+  ObjectType type;
+
+  std::string toString() const {
+    return fmt::format(
+        "path={}, objectId={}, type={}",
+        path.value(),
+        id.asString(),
+        convertTypeToString(type));
+  }
+
+ private:
+  std::string_view convertTypeToString(ObjectType type) const {
+    switch (type) {
+      case ObjectType::TREE:
+        return "tree";
+      case ObjectType::REGULAR_FILE:
+        return "regular_file";
+      case ObjectType::EXECUTABLE_FILE:
+        return "executable_file";
+      case ObjectType::SYMLINK:
+        return "symlink";
+    }
+  }
+};
+
 /**
  * EdenMount contains all of the data about a specific eden mount point.
  *
@@ -929,10 +957,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * 3. In DRYRUN mode, no action action will be executed.
    */
   FOLLY_NODISCARD ImmediateFuture<SetPathObjectIdResultAndTimes>
-  setPathObjectId(
-      RelativePathPiece path,
-      const ObjectId& objectId,
-      ObjectType objectType,
+  setPathsToObjectIds(
+      std::vector<SetPathObjectIdObjectAndPath> objects,
       CheckoutMode checkoutMode,
       ObjectFetchContext& context);
 

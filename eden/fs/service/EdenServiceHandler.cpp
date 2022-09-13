@@ -2266,16 +2266,37 @@ EdenServiceHandler::semifuture_setPathObjectId(
   auto mountPoint = params->get_mountPoint();
   auto mountPath = AbsolutePathPiece{mountPoint};
   auto edenMount = server_->getMount(mountPath);
-  // TODO: This function should operate with ObjectId instead of RootId.
-  auto repoPath = params->get_path();
-  auto parsedObjectId =
-      edenMount->getObjectStore()->parseObjectId(params->get_objectId());
+  std::vector<SetPathObjectIdObjectAndPath> objects;
+  std::vector<std::string> object_strings;
+  auto objectSize =
+      params->objects().is_set() ? params->objects()->size() + 1 : 1;
+  objects.reserve(objectSize);
+  object_strings.reserve(objectSize);
+
+  // TODO deprecate non-batch fields once all clients moves to the batch fields.
+  // Rust clients might set to default and is_set() would return false negative
+  if (params->objectId().is_set() && !params->objectId()->empty()) {
+    SetPathObjectIdObjectAndPath objectAndPath;
+    objectAndPath.path = RelativePath{*params->path()};
+    objectAndPath.id =
+        edenMount->getObjectStore()->parseObjectId(*params->objectId());
+    objectAndPath.type = *params->type();
+    object_strings.emplace_back(objectAndPath.toString());
+    objects.emplace_back(std::move(objectAndPath));
+  }
+
+  for (auto& object : *params->objects()) {
+    SetPathObjectIdObjectAndPath objectAndPath;
+    objectAndPath.path = RelativePath{*object.path()};
+    objectAndPath.id =
+        edenMount->getObjectStore()->parseObjectId(object.objectId().value());
+    objectAndPath.type = *object.type();
+    object_strings.emplace_back(objectAndPath.toString());
+    objects.emplace_back(std::move(objectAndPath));
+  }
+
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG1,
-      mountPoint,
-      repoPath,
-      parsedObjectId.asString(),
-      params->get_type());
+      DBG1, mountPoint, folly::join(",", object_strings));
 
   auto& fetchContext = helper->getFetchContext();
   if (auto requestInfo = params->requestInfo_ref()) {
@@ -2284,12 +2305,8 @@ EdenServiceHandler::semifuture_setPathObjectId(
   return wrapImmediateFuture(
              std::move(helper),
              edenMount
-                 ->setPathObjectId(
-                     RelativePathPiece{repoPath},
-                     parsedObjectId,
-                     params->get_type(),
-                     params->get_mode(),
-                     fetchContext)
+                 ->setPathsToObjectIds(
+                     std::move(objects), params->get_mode(), fetchContext)
                  .thenValue([](auto&& resultAndTimes) {
                    return std::make_unique<SetPathObjectIdResult>(
                        std::move(resultAndTimes.result));
