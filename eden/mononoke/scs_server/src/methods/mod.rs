@@ -26,7 +26,7 @@ impl SourceControlServiceImpl {
         _ctx: CoreContext,
         _params: thrift::ListReposParams,
     ) -> Result<Vec<thrift::Repo>, errors::ServiceError> {
-        let mut repo_names: Vec<_> = self.mononoke.repo_names().collect();
+        let mut repo_names: Vec<_> = self.mononoke.repo_names_in_tier.clone();
         repo_names.sort();
         let rsp = repo_names
             .into_iter()

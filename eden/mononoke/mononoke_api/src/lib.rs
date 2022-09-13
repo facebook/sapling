@@ -91,7 +91,11 @@ define_stats! {
 
 /// An instance of Mononoke, which may manage multiple repositories.
 pub struct Mononoke {
+    // Collection of instantiated repos currently being served.
     pub repos: Arc<MononokeRepos<Repo>>,
+    // The collective list of all enabled repos that exist
+    // in the current tier (e.g. prod, backup, etc.)
+    pub repo_names_in_tier: Vec<String>,
 }
 
 impl Mononoke {
@@ -101,6 +105,14 @@ impl Mononoke {
         let logger = app.logger().clone();
         let start = Instant::now();
         let repo_filter = app.environment().filter_repos.clone();
+        let repo_names_in_tier =
+            Vec::from_iter(configs.repos.iter().filter_map(|(name, config)| {
+                if config.enabled {
+                    Some(name.to_string())
+                } else {
+                    None
+                }
+            }));
         let repo_names = configs.repos.into_iter().filter_map(|(name, config)| {
             let is_matching_filter = repo_filter.as_ref().map_or(true, |re| re.is_match(&name));
             // Initialize repos that are enabled and not deep-sharded (i.e. need to exist
@@ -121,6 +133,7 @@ impl Mononoke {
             .add_value(start.elapsed().as_secs().try_into().unwrap_or(i64::MAX));
         Ok(Self {
             repos: Arc::new(repos),
+            repo_names_in_tier,
         })
     }
 
@@ -217,7 +230,6 @@ pub mod test_impl {
         ) -> Result<Self, Error> {
             use futures::stream::FuturesOrdered;
             use futures::stream::TryStreamExt;
-
             let repos = repos
                 .into_iter()
                 .map(move |(name, repo)| {
@@ -231,11 +243,13 @@ pub mod test_impl {
                 .collect::<FuturesOrdered<_>>()
                 .try_collect::<Vec<_>>()
                 .await?;
-
+            let repo_names_in_tier =
+                Vec::from_iter(repos.iter().map(|(_, name, _)| name.to_string()));
             let mononoke_repos = MononokeRepos::new();
             mononoke_repos.populate(repos);
             Ok(Self {
                 repos: Arc::new(mononoke_repos),
+                repo_names_in_tier,
             })
         }
 
@@ -266,10 +280,13 @@ pub mod test_impl {
                 .try_collect::<Vec<_>>()
                 .await?;
 
+            let repo_names_in_tier =
+                Vec::from_iter(repos.iter().map(|(_, name, _)| name.to_string()));
             let mononoke_repos = MononokeRepos::new();
             mononoke_repos.populate(repos);
             Ok(Self {
                 repos: Arc::new(mononoke_repos),
+                repo_names_in_tier,
             })
         }
     }
