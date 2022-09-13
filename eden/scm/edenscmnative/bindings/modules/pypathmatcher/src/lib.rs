@@ -25,6 +25,7 @@ use pathmatcher::DirectoryMatch;
 use pathmatcher::GitignoreMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::NeverMatcher;
+use pathmatcher::RegexMatcher;
 use pathmatcher::TreeMatcher;
 use pathmatcher::UnionMatcher;
 use types::RepoPath;
@@ -34,6 +35,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
     m.add_class::<gitignorematcher>(py)?;
     m.add_class::<treematcher>(py)?;
+    m.add_class::<regexmatcher>(py)?;
     m.add(py, "normalizeglob", py_fn!(py, normalize_glob(path: &str)))?;
     m.add(py, "plaintoglob", py_fn!(py, plain_to_glob(path: &str)))?;
     m.add(
@@ -64,6 +66,35 @@ py_class!(class gitignorematcher |py| {
 
 impl ExtractInnerRef for gitignorematcher {
     type Inner = Arc<GitignoreMatcher>;
+
+    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
+        self.matcher(py)
+    }
+}
+
+py_class!(pub class regexmatcher |py| {
+    data matcher: Arc<RegexMatcher>;
+
+    def __new__(_cls, pattern: &str) -> PyResult<Self> {
+        let matcher = RegexMatcher::new(pattern).map_pyerr(py)?;
+        Self::create_instance(py, Arc::new(matcher))
+    }
+
+    def matches(&self, path: &str) -> PyResult<bool> {
+        Ok(self.matcher(py).matches(path))
+    }
+
+    def match_prefix(&self, dir: &str) -> PyResult<Option<bool>> {
+        if dir.is_empty() {
+            Ok(None)
+        } else {
+            Ok(self.matcher(py).match_prefix(dir))
+        }
+    }
+});
+
+impl ExtractInnerRef for regexmatcher {
+    type Inner = Arc<RegexMatcher>;
 
     fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
         self.matcher(py)
@@ -203,12 +234,18 @@ pub fn extract_matcher(py: Python, matcher: PyObject) -> PyResult<Arc<dyn Matche
     if let Ok(matcher) = gitignorematcher::downcast_from(py, matcher.clone_ref(py)) {
         return Ok(matcher.extract_inner(py));
     }
+    if let Ok(matcher) = regexmatcher::downcast_from(py, matcher.clone_ref(py)) {
+        return Ok(matcher.extract_inner(py));
+    }
     let py_type = matcher.get_type(py);
     let type_name = py_type.name(py);
     if type_name.as_ref() == "treematcher" {
         return extract_matcher(py, matcher.getattr(py, "_matcher")?);
     }
     if type_name.as_ref() == "gitignorematcher" {
+        return extract_matcher(py, matcher.getattr(py, "_matcher")?);
+    }
+    if type_name.as_ref() == "regexmatcher" {
         return extract_matcher(py, matcher.getattr(py, "_matcher")?);
     }
     if type_name.as_ref() == "unionmatcher" {
