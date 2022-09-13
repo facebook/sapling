@@ -50,7 +50,7 @@ revset = { version = "0.1.0", path = "../../revset" }
 scribe_commit_queue = { version = "0.1.0", path = "../../repo_client/scribe_commit_queue" }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "=1.0.30"
+thiserror = "1.0.34"
 trait_alias = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tunables = { version = "0.1.0", path = "../../tunables" }
 

@@ -21,7 +21,7 @@ repolock = { version = "0.1.0", path = "../repolock" }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 status = { version = "0.1.0", path = "../status" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
-thiserror = "=1.0.30"
+thiserror = "1.0.34"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tracing = "0.1.35"
 treestate = { version = "0.1.0", path = "../treestate" }

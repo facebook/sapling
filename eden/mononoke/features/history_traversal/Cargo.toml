@@ -35,7 +35,7 @@ repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_deri
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "=1.0.30"
+thiserror = "1.0.34"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 trait_alias = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tunables = { version = "0.1.0", path = "../../tunables" }

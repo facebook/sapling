@@ -20,7 +20,7 @@ maplit = "1.0"
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
-thiserror = "=1.0.30"
+thiserror = "1.0.34"
 uniqueheap = { version = "0.1.0", path = "../common/uniqueheap" }
 
 [dev-dependencies]

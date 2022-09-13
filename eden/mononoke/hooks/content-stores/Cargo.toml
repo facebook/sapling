@@ -24,7 +24,7 @@ mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
-thiserror = "=1.0.30"
+thiserror = "1.0.34"
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 
 [dev-dependencies]

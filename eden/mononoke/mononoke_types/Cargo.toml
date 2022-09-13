@@ -44,7 +44,7 @@ serde_derive = "1.0"
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "=1.0.30"
+thiserror = "1.0.34"
 vec_map = "0.8"
 xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }
 

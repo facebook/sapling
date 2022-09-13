@@ -19,4 +19,4 @@ dag = { version = "0.1.0", path = "../../../scm/lib/dag", features = ["for-tests
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-thiserror = "=1.0.30"
+thiserror = "1.0.34"

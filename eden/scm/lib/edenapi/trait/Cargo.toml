@@ -15,6 +15,6 @@ http = "0.2"
 http-client = { version = "0.1.0", path = "../../http-client" }
 minibytes = { version = "0.1.0", path = "../../minibytes" }
 serde_cbor = "0.11"
-thiserror = "=1.0.30"
+thiserror = "1.0.34"
 types = { version = "0.1.0", path = "../../types" }
 url = "2.2.2"

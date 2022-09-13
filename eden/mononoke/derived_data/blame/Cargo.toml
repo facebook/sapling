@@ -30,7 +30,7 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-thiserror = "=1.0.30"
+thiserror = "1.0.34"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 unodes = { version = "0.1.0", path = "../unodes" }
 

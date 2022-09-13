@@ -22,7 +22,7 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 nom = { version = "3", features = ["verbose-errors"] }
 qps = { version = "0.1.0", path = "../server/qps" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-thiserror = "=1.0.30"
+thiserror = "1.0.34"
 tokio-io = "0.1"
 
 [dev-dependencies]

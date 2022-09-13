@@ -23,7 +23,7 @@ git_types_thrift = { version = "0.1.0", path = "if" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 sha-1 = "0.10"
-thiserror = "=1.0.30"
+thiserror = "1.0.34"
 
 [dev-dependencies]
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }

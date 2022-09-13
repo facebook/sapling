@@ -24,7 +24,7 @@ pin-project = "0.4.29"
 sha-1 = "0.10"
 sha2 = "0.10"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-thiserror = "=1.0.30"
+thiserror = "1.0.34"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]

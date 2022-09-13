@@ -9,7 +9,7 @@ edition = "2021"
 anyhow = "1.0.56"
 configmodel = { version = "0.1.0", path = "../config/model" }
 fs2 = "0.4"
-thiserror = "=1.0.30"
+thiserror = "1.0.34"
 tracing = "0.1.35"
 util = { version = "0.1.0", path = "../util" }
 

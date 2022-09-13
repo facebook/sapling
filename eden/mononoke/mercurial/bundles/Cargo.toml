@@ -32,7 +32,7 @@ phases = { version = "0.1.0", path = "../../phases" }
 quickcheck = "1.0"
 revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-thiserror = "=1.0.30"
+thiserror = "1.0.34"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tokio-codec = "0.1"
 tokio-io = "0.1"

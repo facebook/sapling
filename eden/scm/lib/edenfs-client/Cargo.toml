@@ -14,7 +14,7 @@ identity = { version = "0.1.0", path = "../identity" }
 io = { version = "0.1.0", path = "../io" }
 sha2 = "0.10"
 status = { version = "0.1.0", path = "../status" }
-thiserror = "=1.0.30"
+thiserror = "1.0.34"
 thrift-types = { version = "0.1.0", path = "../thrift-types" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tokio-uds-compat = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
