@@ -302,7 +302,6 @@ members = [
   "hook_tailer",
   "hooks",
   "hooks/content-stores",
-  "land_service",
   "lfs_import_lib",
   "lfs_protocol",
   "lfs_server",
