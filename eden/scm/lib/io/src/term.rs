@@ -5,18 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use std::fs::OpenOptions;
 use std::io;
-#[cfg(unix)]
-use std::os::unix::prelude::AsRawFd;
 
 use termwiz::caps::Capabilities;
 use termwiz::render::terminfo::TerminfoRenderer;
 use termwiz::render::RenderTty;
 use termwiz::surface::Change;
-use termwiz::terminal::SystemTerminal;
 use termwiz::terminal::Terminal;
 use termwiz::Result;
+
+use crate::IsTty;
 
 pub(crate) const DEFAULT_TERM_WIDTH: usize = 80;
 pub(crate) const DEFAULT_TERM_HEIGHT: usize = 25;
@@ -26,6 +24,9 @@ use crate::IsTty;
 
 #[cfg(windows)]
 mod windows_term;
+
+#[cfg(unix)]
+mod unix_term;
 
 /// Term is a minimally skinny abstraction over termwiz::Terminal.
 /// It makes it easy to swap in other things for testing.
@@ -116,9 +117,13 @@ fn caps() -> Result<Capabilities> {
 }
 
 pub(crate) fn make_real_term() -> Result<Box<dyn Term + Send + Sync>> {
+    // Don't use the real termwiz terminal yet because:
+    //   1. On Windows, it disables automatic \n -> \r\n conversion.
+    //   2. On Mac, we were detecting /dev/tty as usable, but ended up blocking when dropping the UnixTerminal object (when invoked via buck).
+    //   3. Termwiz sets up a SIGWINCH handler which causes crash in Python crecord stuff.
+
     #[cfg(windows)]
     {
-        // Don't use the real termwiz WindowsTerminal yet. See comment in WindowsTty.
         let stderr = io::stderr();
         if stderr.is_tty() {
             let tty = windows_term::WindowsTty::new(Box::new(stderr));
@@ -128,52 +133,12 @@ pub(crate) fn make_real_term() -> Result<Box<dyn Term + Send + Sync>> {
 
     #[cfg(unix)]
     {
-        let caps = caps()?;
-
-        // First try the tty. With this we can show progress even with
-        // stdout and/or and stderr redirected.
-        if let Ok(dev_tty) = OpenOptions::new().read(true).write(true).open("/dev/tty") {
-            // Make sure our process is in the foreground process
-            // group, otherwise we will block/fail writing to the tty.
-            if is_foreground_process_group(dev_tty.as_raw_fd())? {
-                if let Ok(term) = SystemTerminal::new_with(caps.clone(), &dev_tty, &dev_tty) {
-                    return Ok(Box::new(term));
-                }
-            }
-        }
-
         let stderr = io::stderr();
-        if is_foreground_process_group(stderr.as_raw_fd())? {
-            // Fall back to stderr (don't use stdout since that would
-            // interfere with command output).
-            return Ok(Box::new(SystemTerminal::new_with(
-                caps,
-                &io::stdin(),
-                &stderr,
-            )?));
+        if stderr.is_tty() {
+            let tty = unix_term::UnixTty::new(Box::new(stderr));
+            return Ok(Box::new(DumbTerm::new(tty)?));
         }
     }
 
     termwiz::bail!("no suitable term output file");
-}
-
-#[cfg(unix)]
-/// Report whether the given fd is associated with a terminal and
-/// our process is in the foreground process group.
-fn is_foreground_process_group(fd: std::os::unix::prelude::RawFd) -> io::Result<bool> {
-    let foreground_pg = unsafe { libc::tcgetpgrp(fd) };
-    if foreground_pg < 0 {
-        let err = io::Error::last_os_error();
-        return match err.raw_os_error() {
-            Some(libc::ENOTTY) => Ok(false),
-            _ => Err(err),
-        };
-    }
-
-    let my_pg = unsafe { libc::getpgid(0) };
-    if my_pg < 0 {
-        return Err(io::Error::last_os_error());
-    }
-
-    Ok(foreground_pg == my_pg)
 }
