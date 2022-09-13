@@ -7,8 +7,8 @@ Explore the semi-mysterious matchmod.match API
   $ mkdir 'a*1' 'a*2'
   $ touch 'a*1/a' 'a*2/b'
   $ hg ci -m 1 -A 'a*1/a' 'a*2/b' -q 2>&1 | sort
-  possible glob in non-glob pattern: a*1/a
-  possible glob in non-glob pattern: a*2/b
+  possible glob in non-glob pattern: a*1/a, check 'hg help patterns' for correct syntax.
+  possible glob in non-glob pattern: a*2/b, check 'hg help patterns' for correct syntax.
   warning: filename contains '*', which is reserved on Windows: 'a*1/a'
   warning: filename contains '*', which is reserved on Windows: 'a*2/b'
 
