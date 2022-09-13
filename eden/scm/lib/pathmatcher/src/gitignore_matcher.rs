@@ -173,7 +173,7 @@ impl GitignoreMatcher {
         explain: &mut Option<&mut Explain>,
     ) -> MatchResult {
         {
-            let submatchers = self.submatchers.read();
+            let submatchers = self.submatchers.read_recursive();
             if let Some(m) = submatchers.get(name) {
                 return m.as_ref().match_path(rest, is_dir, root, explain);
             }
