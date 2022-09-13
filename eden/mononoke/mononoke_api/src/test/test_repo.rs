@@ -42,7 +42,6 @@ use synced_commit_mapping::SyncedCommitMapping;
 use tests_utils::bookmark;
 use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
-use tunables::tunables;
 use tunables::with_tunables_async;
 use tunables::MononokeTunables;
 

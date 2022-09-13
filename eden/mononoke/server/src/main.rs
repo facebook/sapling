@@ -12,13 +12,19 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
+use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use async_trait::async_trait;
 use cache_warmup::cache_warmup;
 use clap::Parser;
 use cloned::cloned;
 use cmdlib_logging::ScribeLoggingArgs;
 use environment::WarmBookmarksCacheDerivedData;
+use executor_lib::RepoShardedProcess;
+use executor_lib::RepoShardedProcessExecutor;
+use executor_lib::ShardedProcessExecutor;
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
 use futures::stream;
@@ -27,6 +33,7 @@ use futures::stream::TryStreamExt;
 use futures_watchdog::WatchdogExt;
 use mononoke_api::CoreContext;
 use mononoke_api::Mononoke;
+use mononoke_api::Repo;
 use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::McrouterAppExtension;
 use mononoke_app::args::ReadonlyArgs;
@@ -34,11 +41,17 @@ use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::fb303::ReadyFlagService;
+use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use mononoke_repos::MononokeRepos;
+use once_cell::sync::OnceCell;
 use openssl::ssl::AlpnError;
 use slog::error;
 use slog::info;
 use slog::o;
+use slog::Logger;
+
+const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 
 /// Mononoke Server
 #[derive(Parser)]
@@ -79,6 +92,131 @@ struct MononokeServerArgs {
     cslb_config: Option<String>,
     #[clap(flatten)]
     readonly: ReadonlyArgs,
+    /// The name of the ShardManager service corresponding to this Mononoke API
+    /// region instance. If this argument isn't provided, the service will operate
+    /// in non-sharded mode.
+    #[clap(long, requires = "sharded-scope-name")]
+    sharded_service_name: Option<String>,
+    /// The scope of the ShardManager service that this Mononoke API instance
+    /// corresponds to.
+    #[clap(long, requires = "sharded-service-name")]
+    sharded_scope_name: Option<String>,
+}
+
+/// Struct representing the Mononoke API process.
+pub struct MononokeApiProcess {
+    app: Arc<MononokeApp>,
+    repos: Arc<MononokeRepos<Repo>>,
+}
+
+impl MononokeApiProcess {
+    fn new(app: Arc<MononokeApp>, repos: Arc<MononokeRepos<Repo>>) -> Self {
+        Self { app, repos }
+    }
+
+    async fn add_repo(&self, repo_name: &str, logger: &Logger) -> Result<()> {
+        // Check if the input repo is already initialized. This can happen if the repo is a
+        // shallow-sharded repo, in which case it would already be initialized during service startup.
+        if self.repos.get_by_name(repo_name).is_none() {
+            // The input repo is a deep-sharded repo, so it needs to be added now.
+            self.app.add_repo(&self.repos, repo_name).await?;
+            match self.repos.get_by_name(repo_name) {
+                None => bail!("Added repo {} does not exist in MononokeRepos", repo_name),
+                Some(repo) => {
+                    let blob_repo = repo.blob_repo().clone();
+                    let cache_warmup_params = repo.config().cache_warmup.clone();
+                    let ctx = CoreContext::new_with_logger(self.app.fb, logger.clone());
+                    cache_warmup(&ctx, &blob_repo, cache_warmup_params)
+                        .await
+                        .with_context(|| {
+                            format!("Error while warming up cache for repo {}", repo_name)
+                        })?;
+                    info!(
+                        &logger,
+                        "Completed repo {} setup in Mononoke service", repo_name
+                    );
+                }
+            }
+        } else {
+            info!(
+                &logger,
+                "Repo {} is already setup in Mononoke service", repo_name
+            );
+        }
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl RepoShardedProcess for MononokeApiProcess {
+    async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+        let logger = self.app.repo_logger(repo_name);
+        info!(&logger, "Setting up repo {} in Mononoke service", repo_name);
+        self.add_repo(repo_name, &logger).await.with_context(|| {
+            format!(
+                "Failure in setting up repo {} in Mononoke service",
+                repo_name
+            )
+        })?;
+        Ok(Arc::new(MononokeApiProcessExecutor {
+            repo_name: repo_name.to_string(),
+            repos: Arc::clone(&self.repos),
+            app: Arc::clone(&self.app),
+        }))
+    }
+}
+
+/// Struct representing the execution of Mononoke service
+/// over the context of a provided repo.
+pub struct MononokeApiProcessExecutor {
+    repo_name: String,
+    app: Arc<MononokeApp>,
+    repos: Arc<MononokeRepos<Repo>>,
+}
+
+impl MononokeApiProcessExecutor {
+    fn remove_repo(&self, repo_name: &str) -> Result<()> {
+        let config = self.app.repo_config_by_name(repo_name).with_context(|| {
+            format!(
+                "Failure in remove repo {}. The config for repo doesn't exist",
+                repo_name
+            )
+        })?;
+        // Check if the current repo is a deep-sharded or shallow-sharded repo. If the
+        // repo is deep-sharded, then remove it since SM wants some other host to serve it.
+        // If repo is shallow-sharded, then keep it since regardless of SM sharding, shallow
+        // sharded repos need to be present on each host.
+        if config.deep_sharded {
+            self.repos.remove(repo_name);
+            info!(
+                self.app.logger(),
+                "No longer serving repo {} in Mononoke service.", repo_name,
+            );
+        } else {
+            info!(
+                self.app.logger(),
+                "Continuing serving repo {} in Mononoke service because it's shallow-sharded.",
+                repo_name,
+            );
+        }
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl RepoShardedProcessExecutor for MononokeApiProcessExecutor {
+    async fn execute(&self) -> anyhow::Result<()> {
+        info!(
+            self.app.logger(),
+            "Serving repo {} in Mononoke service", &self.repo_name,
+        );
+        Ok(())
+    }
+
+    async fn stop(&self) -> anyhow::Result<()> {
+        self.remove_repo(&self.repo_name)
+            .with_context(|| format!("Failure in stopping repo {}", &self.repo_name))
+    }
 }
 
 #[fbinit::main]
@@ -146,7 +284,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let will_exit = Arc::new(AtomicBool::new(false));
 
     let repo_listeners = {
-        cloned!(root_log, service, will_exit, env);
+        cloned!(root_log, service, will_exit, env, runtime);
         let app = Arc::clone(&app);
         async move {
             let common = configs.common.clone();
@@ -176,6 +314,34 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .try_collect()
                 .await?;
             info!(&root_log, "Cache warmup completed");
+            if let Some(sharded_service_name) = args.sharded_service_name {
+                let mononoke_process = MononokeApiProcess::new(app.clone(), mononoke.repos.clone());
+                let logger = mononoke_process.app.logger().clone();
+                let scope = args.sharded_scope_name.ok_or_else(|| {
+                    anyhow!(
+                        "sharded-scope-name must be provided when sharded-service-name is provided"
+                    )
+                })?;
+                // The service name & scope needs to be 'static to satisfy SM contract
+                static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
+                static SM_SERVICE_SCOPE: OnceCell<String> = OnceCell::new();
+                let mut executor = ShardedProcessExecutor::new(
+                    app.fb,
+                    runtime.clone(),
+                    &logger,
+                    SM_SERVICE_NAME.get_or_init(|| sharded_service_name),
+                    SM_SERVICE_SCOPE.get_or_init(|| scope),
+                    SM_CLEANUP_TIMEOUT_SECS,
+                    Arc::new(mononoke_process),
+                    false, // disable shard (repo) level healing
+                )?;
+                // The Sharded Process Executor needs to branch off and execute
+                // on its own dedicated task spawned off the common tokio runtime.
+                runtime.spawn({
+                    let logger = logger.clone();
+                    async move { executor.block_and_execute(&logger).await }
+                });
+            }
             repo_listener::create_repo_listeners(
                 fb,
                 common,

@@ -42,7 +42,7 @@ Derive data, then regenerate microwave snapshot:
 
 Start Mononoke again, check that the microwave snapshot was used
 
-  $ mononoke
+  $ start_and_wait_for_mononoke_server
   $ wait_for_mononoke_cache_warmup
   $ grep primed "$TESTTMP/mononoke.out"
   * primed filenodes cache with 3 entries, repo: repo (glob)

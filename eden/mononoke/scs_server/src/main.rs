@@ -15,6 +15,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -71,7 +72,6 @@ mod source_control_impl;
 mod specifiers;
 
 const SERVICE_NAME: &str = "mononoke_scs_server";
-const DEFAULT_SCOPE: &str = "global";
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;
 
 /// Mononoke Source Control Service Server
@@ -302,9 +302,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     if let Some(sharded_service_name) = args.sharded_service_name {
         let scs_process = SCSProcess::new(app.clone(), mononoke_repos);
         let logger = scs_process.app.logger().clone();
-        let scope = args
-            .sharded_scope_name
-            .unwrap_or_else(|| DEFAULT_SCOPE.to_string());
+        let scope = args.sharded_scope_name.ok_or_else(|| {
+            anyhow!("sharded-scope-name must be provided when sharded-service-name is provided")
+        })?;
         // The service name & scope needs to be 'static to satisfy SM contract
         static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
         static SM_SERVICE_SCOPE: OnceCell<String> = OnceCell::new();
