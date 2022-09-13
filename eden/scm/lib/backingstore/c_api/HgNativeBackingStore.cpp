@@ -67,6 +67,33 @@ void getBlobBatchCallback(
  * function instead.
  */
 template <typename Fn>
+void getBlobMetadataBatchCallback(
+    RustBackingStore* store,
+    RustRequest* request,
+    uintptr_t size,
+    bool local,
+    Fn&& fn) {
+  rust_backingstore_get_file_aux_batch(
+      store,
+      request,
+      size,
+      local,
+      // We need to take address of the function, not to forward it.
+      // @lint-ignore CLANGTIDY
+      &fn,
+      [](void* fn, size_t index, RustCFallibleBase result) {
+        (*static_cast<Fn*>(fn))(index, result);
+      });
+}
+
+/**
+ * A helper function to make it easier to work with FFI function pointers. Only
+ * non-capturing lambdas can be used as FFI function pointers. To bypass this
+ * restriction, we pass in the pointer to the capturing function opaquely.
+ * Whenever we get called to process the result, we call that capturing
+ * function instead.
+ */
+template <typename Fn>
 void getTreeBatchCallback(
     RustBackingStore* store,
     RustRequest* request,
@@ -152,6 +179,71 @@ std::shared_ptr<RustFileAuxData> HgNativeBackingStore::getBlobMetadata(
   }
 
   return result.unwrap();
+}
+
+void HgNativeBackingStore::getBlobMetadataBatch(
+    const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>& requests,
+    bool local,
+    std::function<void(size_t, std::shared_ptr<RustFileAuxData>)>&& resolve) {
+  size_t count = requests.size();
+
+  XLOG(DBG7) << "Import blob metadatas with size:" << count;
+
+  std::vector<RustRequest> raw_requests;
+  raw_requests.reserve(count);
+
+  for (auto& request : requests) {
+    auto& name = request.first;
+    auto& node = request.second;
+
+    raw_requests.emplace_back(RustRequest{
+        name.data(),
+        name.size(),
+        node.data(),
+    });
+
+    XLOGF(
+        DBG9,
+        "Processing metadata path=\"{}\" ({}) node={} ({:p})",
+        name.data(),
+        name.size(),
+        folly::hexlify(node),
+        node.data());
+  }
+
+  getBlobMetadataBatchCallback(
+      store_.get(),
+      raw_requests.data(),
+      count,
+      local,
+      [resolve, requests, count](size_t index, RustCFallibleBase raw_result) {
+        RustCFallible<RustFileAuxData> result(
+            std::move(raw_result), rust_file_aux_free);
+
+        if (result.isError()) {
+          // TODO: It would be nice if we can differentiate not found error with
+          // other errors.
+          auto error = result.getError();
+          XLOGF(
+              DBG6,
+              "Failed to import metadata path=\"{}\" node={} from EdenAPI (batch {}/{}): {}",
+              folly::StringPiece{requests[index].first},
+              folly::hexlify(requests[index].second),
+              index,
+              count,
+              error);
+        } else {
+          auto metadata = result.unwrap();
+          XLOGF(
+              DBG6,
+              "Imported metadata path=\"{}\" node={} from EdenAPI (batch: {}/{})",
+              folly::StringPiece{requests[index].first},
+              folly::hexlify(requests[index].second),
+              index,
+              count);
+          resolve(index, std::move(metadata));
+        }
+      });
 }
 
 void HgNativeBackingStore::getBlobBatch(

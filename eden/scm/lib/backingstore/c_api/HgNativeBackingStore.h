@@ -33,6 +33,12 @@ class HgNativeBackingStore {
       folly::ByteRange node,
       bool local);
 
+  void getBlobMetadataBatch(
+      const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>&
+          requests,
+      bool local,
+      std::function<void(size_t, std::shared_ptr<RustFileAuxData>)>&& resolve);
+
   /**
    * Imports a list of files from Rust contentstore. `names` and `nodes` are
    * required to have the same length, and both are combined to constitute a
