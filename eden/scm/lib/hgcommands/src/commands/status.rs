@@ -9,10 +9,8 @@ mod print;
 
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Result;
 use clidispatch::errors;
-use clidispatch::errors::FallbackToPython;
 use clidispatch::io::CanColor;
 use clidispatch::io::IsTty;
 use clidispatch::ReqCtx;
@@ -166,6 +164,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
         false => {
             #[cfg(feature = "eden")]
             {
+                use anyhow::anyhow;
                 // Attempt to fetch status information from EdenFS.
                 let (status, copymap) = edenfs_client::status::maybe_status_fastpath(
                     repo.dot_hg_path(),
@@ -175,7 +174,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
                 .map_err(|e| match e
                     .downcast_ref::<edenfs_client::status::OperationNotSupported>()
                 {
-                    Some(_) => anyhow!(FallbackToPython("status")),
+                    Some(_) => anyhow!(errors::FallbackToPython("status")),
                     None => e,
                 })?;
                 (status, copymap)
