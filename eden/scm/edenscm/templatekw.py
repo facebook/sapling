@@ -12,6 +12,8 @@
 
 from __future__ import absolute_import
 
+from typing import Dict, Optional, Sized, Union
+
 from . import (
     encoding,
     error,
@@ -119,14 +121,16 @@ class _mappable(object):
         yield self.tomap()
 
 
-def hybriddict(data, key="key", value="value", fmt="%s=%s", gen=None):
+def hybriddict(
+    data, key: str = "key", value: str = "value", fmt: str = "%s=%s", gen=None
+) -> _hybrid:
     """Wrap data to support both dict-like and string-like operations"""
     return _hybrid(
         gen, data, lambda k: {key: k, value: data[k]}, lambda k: fmt % (k, data[k])
     )
 
 
-def hybridlist(data, name, fmt="%s", gen=None):
+def hybridlist(data, name, fmt: str = "%s", gen=None) -> _hybrid:
     """Wrap data to support both list-like and string-like operations"""
     return _hybrid(gen, data, lambda x: {name: x}, lambda x: fmt % x)
 
@@ -149,7 +153,7 @@ def unwrapvalue(thing):
     return thing._value
 
 
-def wraphybridvalue(container, key, value):
+def wraphybridvalue(container, key, value) -> _mappable:
     """Wrap an element of hybrid container to be mappable
 
     The key is passed to the makemap function of the given container, which
@@ -169,24 +173,24 @@ def showdict(
     data,
     mapping,
     plural=None,
-    key="key",
-    value="value",
-    fmt="%s=%s",
-    separator=" ",
+    key: str = "key",
+    value: str = "value",
+    fmt: str = "%s=%s",
+    separator: str = " ",
 ):
     c = [{key: k, value: v} for k, v in pycompat.iteritems(data)]
     f = _showlist(name, c, mapping, plural, separator)
     return hybriddict(data, key=key, value=value, fmt=fmt, gen=f)
 
 
-def showlist(name, values, mapping, plural=None, element=None, separator=" "):
+def showlist(name, values, mapping, plural=None, element=None, separator: str = " "):
     if not element:
         element = name
     f = _showlist(name, values, mapping, plural, separator)
     return hybridlist(values, name=element, gen=f)
 
 
-def _showlist(name, values, mapping, plural=None, separator=" "):
+def _showlist(name, values: Sized, mapping, plural=None, separator: str = " "):
     """expand set of values.
     name is name of key in template map.
     values is list of strings or dicts.
@@ -218,7 +222,9 @@ def _showlist(name, values, mapping, plural=None, separator=" "):
             yield templ(noname, **strmapping)
         return
     if name not in templ:
+        # pyre-fixme[16]: `Sized` has no attribute `__getitem__`.
         if isinstance(values[0], str):
+            # pyre-fixme[6]: For 1st param expected `Iterable[str]` but got `Sized`.
             yield separator.join(values)
         else:
             count = len(values)
@@ -242,9 +248,11 @@ def _showlist(name, values, mapping, plural=None, separator=" "):
 
     lastname = "last_" + name
     if lastname in templ:
+        # pyre-fixme[16]: `Sized` has no attribute `pop`.
         last = values.pop()
     else:
         last = None
+    # pyre-fixme[16]: `Sized` has no attribute `__iter__`.
     for v in values:
         yield one(v)
     if last is not None:
@@ -260,7 +268,7 @@ def getfiles(repo, ctx, revcache):
     return revcache["files"]
 
 
-def getrenamedfn(repo, endrev=None):
+def getrenamedfn(repo: Sized, endrev: Optional[int] = None):
     rcache = {}
     if endrev is None:
         endrev = len(repo)
@@ -312,7 +320,7 @@ def getlogcolumns():
 
 
 # default templates internally used for rendering of lists
-defaulttempl = templatefixtures.defaulttempl
+defaulttempl: Dict[str, str] = templatefixtures.defaulttempl
 
 # keywords are callables like:
 # fn(repo, ctx, templ, cache, revcache, **args)
@@ -334,7 +342,7 @@ def showauthor(repo, ctx, templ, **args):
 
 
 @templatekeyword("bisect")
-def showbisect(repo, ctx, templ, **args):
+def showbisect(repo, ctx, templ, **args) -> Optional[str]:
     """String. The changeset bisection status."""
     return hbisect.label(repo, ctx.node())
 
@@ -361,7 +369,7 @@ def showbranches(**args):
 
 
 @templatekeyword("bookmarks")
-def showbookmarks(**args):
+def showbookmarks(**args) -> _hybrid:
     """List of strings. Any bookmarks associated with the
     changeset. Also sets 'active', the name of the active bookmark.
     """
@@ -421,7 +429,7 @@ def showdescription(repo, ctx, templ, **args):
 
 
 @templatekeyword("diffstat")
-def showdiffstat(repo, ctx, templ, **args):
+def showdiffstat(repo, ctx, templ, **args) -> str:
     """String. Statistics of changes with the following format:
     "modified files: +added/-removed lines"
     """
@@ -440,7 +448,7 @@ def showenvvars(repo, **args):
 
 
 @templatekeyword("extras")
-def showextras(**args):
+def showextras(**args) -> _hybrid:
     """List of dicts with key, value entries of the 'extras'
     field of this changeset."""
     args = args
@@ -540,7 +548,7 @@ def showfiles(**args):
 
 
 @templatekeyword("filestat")
-def showfilestat(**args):
+def showfilestat(**args) -> _hybrid:
     """List of file status objects. Status information for each file affected.
 
     Each file status object has the following fields:
@@ -575,7 +583,7 @@ def showfilestat(**args):
 
 
 @templatekeyword("graphnode")
-def showgraphnode(repo, ctx, **args):
+def showgraphnode(repo, ctx, **args) -> str:
     """String. The character representing the changeset node in an ASCII
     revision graph."""
     wpnodes = repo.dirstate.parents()
@@ -607,7 +615,7 @@ def showindex(**args):
 
 
 @templatekeyword("manifest")
-def showmanifest(**args):
+def showmanifest(**args) -> Optional[_mappable]:
     repo, ctx, templ = args[r"repo"], args[r"ctx"], args[r"templ"]
     mnode = ctx.manifestnode()
     if mnode is None:
@@ -652,7 +660,7 @@ def shownames(namespace, **args):
 
 
 @templatekeyword("namespaces")
-def shownamespaces(**args):
+def shownamespaces(**args) -> _hybrid:
     """Dict of lists. Names attached to this changeset per
     namespace."""
     args = args
@@ -692,7 +700,7 @@ def shownode(repo, ctx, templ, **args):
 
 
 @templatekeyword("obsolete")
-def showobsolete(repo, ctx, templ, **args):
+def showobsolete(repo, ctx, templ, **args) -> str:
     """String. Whether the changeset is obsolete. (EXPERIMENTAL)"""
     if ctx.obsolete():
         return "obsolete"
@@ -700,7 +708,7 @@ def showobsolete(repo, ctx, templ, **args):
 
 
 @templatekeyword("peerurls")
-def showpeerurls(repo, **args):
+def showpeerurls(repo, **args) -> _hybrid:
     """A dictionary of repository locations defined in the [paths] section
     of your configuration file."""
     # see commands.paths() for naming of dictionary keys
@@ -717,7 +725,7 @@ def showpeerurls(repo, **args):
 
 
 @templatekeyword("predecessors")
-def showpredecessors(repo, ctx, **args):
+def showpredecessors(repo, ctx, **args) -> _hybrid:
     """Returns the list if the closest visible predecessors. (EXPERIMENTAL)"""
     if mutation.enabled(repo):
         predecessors = sorted(mutation.predecessorsset(repo, ctx.node(), closest=True))
@@ -734,7 +742,7 @@ def showpredecessors(repo, ctx, **args):
 
 
 @templatekeyword("successorssets")
-def showsuccessorssets(repo, ctx, **args):
+def showsuccessorssets(repo, ctx, **args) -> Union[_hybrid, str]:
     """Returns a string of sets of successors for a changectx. Format used
     is: [ctx1, ctx2], [ctx3] if ctx has been split into ctx1 and ctx2
     while also diverged into ctx3. (EXPERIMENTAL)"""
@@ -772,7 +780,7 @@ def showsuccessorssets(repo, ctx, **args):
 
 
 @templatekeyword("mutations")
-def mutations(repo, ctx, **args):
+def mutations(repo, ctx, **args) -> _hybrid:
     """Returns a list of the results of mutating the commit.
 
     Each mutation has the following fields:
@@ -831,7 +839,7 @@ def showp2node(repo, ctx, templ, **args):
 
 
 @templatekeyword("parents")
-def showparents(**args):
+def showparents(**args) -> _hybrid:
     """List of strings. The parents of the changeset in "rev:node" format."""
     args = args
     repo = args["repo"]
@@ -874,7 +882,7 @@ def showrev(repo, ctx, templ, **args):
     return scmutil.revf64encode(scmutil.intrev(ctx))
 
 
-def showrevslist(name, revs, **args):
+def showrevslist(name, revs, **args) -> _hybrid:
     """helper to generate a list of revisions in which a mapped template will
     be evaluated"""
     args = args
@@ -902,7 +910,7 @@ def showusername(repo, *args, **kwargs):
 
 
 @templatekeyword("verbosity")
-def showverbosity(ui, **args):
+def showverbosity(ui, **args) -> str:
     """String. The current output verbosity in 'debug', 'quiet', 'verbose',
     or ''."""
     # see cmdutil.changeset_templater for priority of these flags
@@ -929,7 +937,7 @@ def remotenameskw(**args):
     return showlist("remotename", remotenames, args, plural="remotenames")
 
 
-def loadkeyword(ui, extname, registrarobj):
+def loadkeyword(ui, extname, registrarobj) -> None:
     """Load template keyword from specified registrarobj"""
     for name, func in pycompat.iteritems(registrarobj._table):
         keywords[name] = func
