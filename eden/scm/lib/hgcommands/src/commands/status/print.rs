@@ -108,6 +108,7 @@ struct StatusEntry<'a> {
 
     status: &'a str,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     copy: Option<String>,
 
     #[serde(skip_serializing)]
@@ -124,9 +125,9 @@ impl<'a> Formattable for StatusEntry<'a> {
         writer: &mut dyn std::io::Write,
     ) -> Result<(), anyhow::Error> {
         let status = if self.print_config.no_status {
-            ""
+            "".to_owned()
         } else {
-            self.status
+            format!("{} ", self.status)
         };
         let (colorized_status, ansi_suffix) = if self.print_config.use_color {
             (
@@ -168,13 +169,13 @@ pub fn print_status(
             // https://www.mercurial-scm.org/wiki/ColorExtension. At Meta, we seem to match
             // the defaults listed on the wiki page, except we don't change the background color.
             let (status, ansi_color_prefix) = match print_group {
-                PrintGroup::Modified => ("M ", format!("{}{}", BLUE, BOLD)),
-                PrintGroup::Added => ("A ", format!("{}{}", GREEN, BOLD)),
-                PrintGroup::Removed => ("R ", format!("{}{}", RED, BOLD)),
-                PrintGroup::Deleted => ("! ", format!("{}{}{}", CYAN, BOLD, UNDERLINE)),
-                PrintGroup::Unknown => ("? ", format!("{}{}{}", MAGENTA, BOLD, UNDERLINE)),
-                PrintGroup::Ignored => ("I ", format!("{}{}", BRIGHT_BLACK, BOLD)),
-                PrintGroup::Clean => ("C ", "".to_owned()),
+                PrintGroup::Modified => ("M", format!("{}{}", BLUE, BOLD)),
+                PrintGroup::Added => ("A", format!("{}{}", GREEN, BOLD)),
+                PrintGroup::Removed => ("R", format!("{}{}", RED, BOLD)),
+                PrintGroup::Deleted => ("!", format!("{}{}{}", CYAN, BOLD, UNDERLINE)),
+                PrintGroup::Unknown => ("?", format!("{}{}{}", MAGENTA, BOLD, UNDERLINE)),
+                PrintGroup::Ignored => ("I", format!("{}{}", BRIGHT_BLACK, BOLD)),
+                PrintGroup::Clean => ("C", "".to_owned()),
             };
 
             let mut group = group.collect::<Vec<_>>();

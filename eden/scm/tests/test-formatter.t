@@ -1,7 +1,10 @@
 #chg-compatible
 
   $ setconfig config.use-rust=True
-  $ setconfig workingcopy.use-rust=False
+  $ setconfig workingcopy.use-rust=True
+  $ setconfig status.use-rust=True
+We need to set edenapi.url for now since working copy at the moment requires this to be set
+  $ setconfig edenapi.url=https://test_fail/foo
 
 Test config:
   $ setconfig testsection.subsection1=foo
@@ -79,6 +82,11 @@ Test config:
 Test status:
   $ hg init testrepo
   $ cd testrepo
+  $ touch file0
+  $ hg add
+  adding file0
+At the moment the working copy, which the status command uses, requires having at least one commit on the repo
+  $ hg commit -m "A commit should make things better"
   $ touch file1
   $ touch file2
   $ hg status
@@ -91,12 +99,12 @@ Test status:
   ]
   $ hg status -Tjson
   [
-   {
+  {
     "path": "file1",
     "status": "?"
-   },
-   {
+  },
+  {
     "path": "file2",
     "status": "?"
-   }
+  }
   ]
