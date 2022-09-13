@@ -28,14 +28,17 @@ class WrapStdIO(io.TextIOWrapper):
 def shellenv(env: Env, stdin=None, stdout=None, stderr=None):
     """run with environ and cwd specified by the shell env"""
     origenv = os.environ.copy()
-    origcwd = os.getcwd()
+    origcwd = try_getcwd()
     origargv = sys.argv
     origstdin = sys.stdin
     origstdout = sys.stdout
     origstderr = sys.stderr
     try:
         updateosenv(env.getexportedenv())
-        os.chdir(env.fs.cwd())
+        try:
+            os.chdir(env.fs.cwd())
+        except FileNotFoundError:
+            pass
         sys.argv = env.args
         if stdin is not None:
             sys.stdin = WrapStdIO(stdin)
@@ -55,8 +58,18 @@ def shellenv(env: Env, stdin=None, stdout=None, stderr=None):
         sys.stdin = origstdin
         sys.stdout = origstdout
         sys.stderr = origstderr
-        if os.getcwd() != origcwd:
+        cwd = try_getcwd()
+        if cwd and origcwd and cwd != origcwd:
             os.chdir(origcwd)
+
+
+def try_getcwd():
+    try:
+        cwd = os.getcwd()
+    except IOError:
+        # In missing-cwd tests, os.getcwd() can raise.
+        cwd = None
+    return cwd
 
 
 def updateosenv(environ: Dict[str, str]):

@@ -367,7 +367,11 @@ class TestTmp:
     def __exit__(self, et, ev, tb):
         if self._updateglobalstate:
             # restore global state
-            if os.getcwd() != self._origcwd:
+            try:
+                cwd = os.getcwd()
+            except Exception:
+                cwd = None
+            if cwd != self._origcwd:
                 os.chdir(self._origcwd)
             shext.updateosenv(self._origenv)
         self._teardown()

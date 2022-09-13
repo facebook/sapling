@@ -1,3 +1,4 @@
+#debugruntest-compatible
 #chg-compatible
 
   $ configure mutation-norecord
@@ -25,8 +26,7 @@ Ensure that dirsync does not cause an abort when cwd goes missing
   current directory was removed
   (consider changing to repo root: $TESTTMP/repo1)
 
-  $ cd -
-  $TESTTMP/repo1
+  $ cd "$TESTTMP/repo1"
   $ hg status
 
   $ hg log -Gr "all()" -T "{node|short} {desc}"
