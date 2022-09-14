@@ -52,12 +52,20 @@ def launch_server(ui, *, cwd, port=DEFAULT_PORT, open_isl=True, json_output=Fals
         # TODO(T125822314): Fix packaging issue so isl works on Windows.
         raise error.Abort(_("isl is not currently supported on Windows"))
 
-    isl_bin = os.path.join(os.path.dirname(__file__), "isl")
+    this_dir = os.path.dirname(__file__)
+    isl_bin = os.path.join(this_dir, "isl")
+    if os.path.isfile(isl_bin):
+        # This is the path to ISL in the Buck-built release.
+        isl_args = ["dotslash", isl_bin]
+    else:
+        # This is the path to ISL in the Make-built release.
+        script = "run-isl.bat" if iswindows else "run-isl"
+        isl_args = [os.path.join(this_dir, "..", "..", "edenscm-isl", script)]
 
     ui.status_err(_("launching web server for Interactive Smartlog...\n"))
-    args = ["dotslash", isl_bin, "--port", str(port)]
+    args = ["--port", str(port)]
     if not open_isl:
         args.append("--no-open")
     if json_output:
         args.append("--json")
-    subprocess.call(args, cwd=cwd)
+    subprocess.call(isl_args + args, cwd=cwd)

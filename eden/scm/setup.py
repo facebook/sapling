@@ -1184,6 +1184,55 @@ class buildextindex(Command):
             f.write(out)
 
 
+class BuildInteractiveSmartLog(build):
+    description = "builds interactive Smartlog"
+
+    user_options = [
+        ("build-lib=", "b", "directory for compiled extension modules"),
+        ("build-temp=", "t", "directory for temporary files (build by-products)"),
+    ]
+
+    def initialize_options(self):
+        self.build_lib = None
+        self.build_temp = None
+
+    def finalize_options(self):
+        self.set_undefined_options(
+            "build",
+            ("build_lib", "build_lib"),
+            ("build_temp", "build_temp"),
+        )
+
+    def run(self):
+        if not ossbuild:
+            raise DistutilsSetupError(
+                "ISL should only built as part of the open source build"
+            )
+
+        # External path to addons/
+        addons_path = os.path.realpath(pjoin(scriptdir, "..", "..", "addons"))
+        if not os.path.isdir(addons_path):
+            # Internal path to addons/
+            addons_path = os.path.realpath(pjoin(scriptdir, "..", "addons"))
+            if not os.path.isdir(addons_path):
+                # Currently, the addons/ folder is not available at this
+                # revision in the Sapling repo.
+                return
+
+        isl_out = os.path.realpath(pjoin(self.build_temp, "edenscm-isl"))
+        ensureempty(isl_out)
+
+        subprocess.run(
+            ["yarn", "install", "--prefer-offline"], check=True, cwd=addons_path
+        )
+        subprocess.run(
+            ["node", "release.js", isl_out],
+            check=True,
+            cwd=os.path.join(addons_path, "isl"),
+        )
+        copy_to(isl_out, pjoin(self.build_lib, "edenscm-isl"))
+
+
 class hginstall(install):
 
     user_options = install.user_options + [
@@ -1340,6 +1389,7 @@ cmdclass = {
     "build_rust_ext": BuildRustExt,
     "build_embedded": buildembedded,
     "install_rust_ext": InstallRustExt,
+    "build_interactive_smartlog": BuildInteractiveSmartLog,
 }
 
 packages = [
