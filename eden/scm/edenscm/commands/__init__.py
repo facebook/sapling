@@ -6119,7 +6119,7 @@ def _ensurebaserev(ui, repo, fname):
 
 
 @command(
-    "update|up|checkout|co|upd|upda|updat|che|chec|check|checko|checkou",
+    "update|up|checkout|co|upd|upda|updat|che|chec|check|checko|checkou|goto|go",
     [
         ("C", "clean", None, _("discard uncommitted changes (no backup)")),
         ("c", "check", None, _("require clean working directory")),

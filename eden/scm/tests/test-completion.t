@@ -315,7 +315,7 @@ Show the options for the "serve" command
 
 Show aliases with -v
   $ hg debugcomplete update -v
-  update checkout co
+  update checkout co goto
 
   $ hg debugcomplete -v
   add
@@ -381,7 +381,7 @@ Show aliases with -v
   unbundle
   uncommit
   uncopy
-  update checkout co
+  update checkout co goto
   verify
   verifyremotefilelog
   version
