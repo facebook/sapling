@@ -357,6 +357,7 @@ members = [
   "reachabilityindex/test-helpers",
   "regenerate_hg_filenodes",
   "repo_attributes/commit_graph/commit_graph",
+  "repo_attributes/commit_graph/sql_commit_graph_storage",
   "repo_attributes/repo_bookmark_attrs",
   "repo_attributes/repo_cross_repo",
   "repo_attributes/repo_derived_data",
