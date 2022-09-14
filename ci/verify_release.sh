@@ -50,6 +50,12 @@ fi
 cat > Dockerfile <<EOF
 FROM ubuntu:${UBUNTU_VERSION}
 COPY *.deb /root/sapling.deb
+
+# https://serverfault.com/a/1016972 to ensure installing tzdata does not
+# result in a prompt that hangs forever.
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
 RUN apt update -y
 RUN apt install -y /root/sapling.deb
 RUN which sl
