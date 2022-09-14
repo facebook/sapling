@@ -6,11 +6,7 @@
 
 set -e
 
-if [[ -n "$USEBUCK1" ]]; then
-    BUCK=buck1
-else
-    BUCK=buck2
-fi
+BUCK=buck2
 
 if [[ "$1" == facebook/* ]]; then
     # Strip facebook prefix
@@ -23,4 +19,4 @@ shift
 
 set -x
 
-$BUCK build "$@" //eden/mononoke/tests/integration:integration_runner_real "//eden/mononoke/tests/integration$TARGET"
+$BUCK build "$@" //eden/mononoke/tests/integration:integration_runner_real "//eden/mononoke/tests/integration$TARGET" "//eden/mononoke/tests/integration${TARGET}[deps]"
