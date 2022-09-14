@@ -7,7 +7,7 @@
 
 use std::cell::RefCell;
 
-use cpython_ext::cpython::*;
+use cpython::*;
 use cpython_ext::ResultPyErrExt;
 use futures::future::BoxFuture;
 use futures::future::Future;

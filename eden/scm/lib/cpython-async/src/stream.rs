@@ -7,7 +7,7 @@
 
 use std::cell::RefCell;
 
-use cpython_ext::cpython::*;
+use cpython::*;
 use cpython_ext::AnyhowResultExt;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
