@@ -68,6 +68,17 @@ pub struct DiskUsageCmd {
     )]
     deep_clean: bool,
 
+    #[clap(
+        long,
+        help = "Performs automated cleanup of the orphaned redirections. \
+        This is a subset of --clean that is safe to run without affecting \
+        running tools relying on redirections.",
+        conflicts_with = "deep-clean",
+        conflicts_with = "clean",
+        conflicts_with = "json"
+    )]
+    clean_orphaned: bool,
+
     #[clap(long, help = "Print the output in JSON format")]
     json: bool,
 }
@@ -138,7 +149,7 @@ impl fmt::Display for AggregatedUsageCounts {
             let mut row = Row::new();
             row.add_cell(Cell::new("Orphaned redirections:").set_alignment(CellAlignment::Right));
             row.add_cell(Cell::new(format_size(self.orphaned_redirections)));
-            if f.alternate() {
+            if f.alternate() || f.sign_minus() {
                 row.add_cell(Cell::new("Cleaned").fg(Color::Green));
             }
             table.add_row(row);
@@ -782,9 +793,6 @@ impl crate::Subcommand for DiskUsageCmd {
         let shared_failed_file_checks = shared_failed_file_checks;
         let aggregated_usage_counts = aggregated_usage_counts;
 
-        // GET HGCACHE PATH
-        let hg_cache_path = get_hg_cache_path().context("Failed to get hgcache path")?;
-
         // PRINT OUTPUT
         if self.json {
             println!(
@@ -851,7 +859,7 @@ impl crate::Subcommand for DiskUsageCmd {
             write_failed_to_check_files_message(&orphaned_redirection_failed_file_checks);
 
             if !orphaned_redirections.is_empty() {
-                if self.should_clean() {
+                if self.clean_orphaned || self.should_clean() {
                     for redir in orphaned_redirections.iter() {
                         fs::remove_dir_all(&redir).with_context(|| {
                             format!("Failed to recursively remove {}", redir.display())
@@ -876,6 +884,9 @@ impl crate::Subcommand for DiskUsageCmd {
                 );
             }
             write_failed_to_check_files_message(&backing_failed_file_checks);
+
+            // GET HGCACHE PATH
+            let hg_cache_path = get_hg_cache_path().context("Failed to get hgcache path")?;
 
             println!("\nTo reclaim space from the hgcache directory, run:");
             if cfg!(windows) {
@@ -921,7 +932,9 @@ impl crate::Subcommand for DiskUsageCmd {
 
             // PRINT SUMMARY
             write_title("Summary");
-            if self.deep_clean {
+            if self.clean_orphaned {
+                println!("{:-}", aggregated_usage_counts);
+            } else if self.deep_clean {
                 println!("{:+#}", aggregated_usage_counts);
             } else if self.clean {
                 println!("{:#}", aggregated_usage_counts);

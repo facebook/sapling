@@ -194,6 +194,13 @@ class DiskUsageCmd(Subcmd):
             "hope to recover, recover them before you run this command.",
         )
         group.add_argument(
+            "--clean-orphaned",
+            action="store_true",
+            help="Performs automated cleanup of the orphaned redirections. "
+            "This is a subset of --clean that is safe to run without affecting "
+            "running tools relying on redirections.",
+        )
+        group.add_argument(
             "--json",
             action="store_true",
             default=False,
