@@ -123,6 +123,17 @@ impl<'a> Default for WaitForReplicationConfig<'a> {
 }
 
 impl<'a> WaitForReplicationConfig<'a> {
+    pub fn new(
+        max_replication_lag_allowed: Duration,
+        poll_interval: Duration,
+        logger: &'a Logger,
+    ) -> Self {
+        Self {
+            max_replication_lag_allowed,
+            poll_interval,
+            logger: Some(logger),
+        }
+    }
     pub fn with_logger(mut self, logger: &'a Logger) -> Self {
         self.logger = Some(logger);
         self
