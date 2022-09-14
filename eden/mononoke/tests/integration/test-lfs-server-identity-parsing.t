@@ -45,4 +45,4 @@
 # (this is a common usecase as the proxies need to check for the pool health)
 # Such request won't have identities in the header as there's no downstream client.
   $ sslcurlas proxy -s "$LFS_URI_HEALTH_CHECK"
-  {"message:"Client not authenticated", "request_id":"*"} (no-eol) (glob)
+  I_AM_ALIVE (no-eol)

@@ -39,9 +39,9 @@ impl TlsSocketData {
         }
     }
 
-    pub fn trusted_proxy() -> Self {
+    pub fn trusted_proxy(proxy_identites: MononokeIdentitySet) -> Self {
         Self {
-            identities: Some(TlsCertificateIdentities::TrustedProxy),
+            identities: Some(TlsCertificateIdentities::TrustedProxy(proxy_identites)),
             session_data: None,
         }
     }
@@ -98,7 +98,7 @@ impl TlsSessionData {
 
 #[derive(Clone, StateData)]
 pub enum TlsCertificateIdentities {
-    TrustedProxy,
+    TrustedProxy(MononokeIdentitySet),
     Authenticated(MononokeIdentitySet),
 }
 
@@ -114,7 +114,7 @@ impl TlsCertificateIdentities {
             .check_if_trusted(&identities)
             .await
         {
-            Some(TlsCertificateIdentities::TrustedProxy)
+            Some(TlsCertificateIdentities::TrustedProxy(identities))
         } else {
             Some(TlsCertificateIdentities::Authenticated(identities))
         }

@@ -376,7 +376,7 @@ where
         }
 
         let tls_socket_data = if self.conn.is_trusted {
-            TlsSocketData::trusted_proxy()
+            TlsSocketData::trusted_proxy((*self.conn.identities).clone())
         } else {
             TlsSocketData::authenticated_identities((*self.conn.identities).clone())
         };
