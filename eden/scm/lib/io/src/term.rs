@@ -20,9 +20,6 @@ pub(crate) const DEFAULT_TERM_WIDTH: usize = 80;
 pub(crate) const DEFAULT_TERM_HEIGHT: usize = 25;
 
 #[cfg(windows)]
-use crate::IsTty;
-
-#[cfg(windows)]
 mod windows_term;
 
 #[cfg(unix)]
