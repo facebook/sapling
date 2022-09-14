@@ -256,7 +256,8 @@ def _donormalize(patterns, default, root, cwd, auditor, warn):
         if warn and kind in {"path", "relpath", "rootfilesin"} and "*" in pat:
             warn(
                 _(
-                    "possible glob in non-glob pattern: {pat}, check '@prog@ help patterns' for correct syntax.\n"
+                    "possible glob in non-glob pattern '{pat}', did you mean 'glob:{pat}'? "
+                    "(see '@prog@ help patterns' for details).\n"
                 ).format(pat=pat)
             )
 
