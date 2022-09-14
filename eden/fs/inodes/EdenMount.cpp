@@ -776,17 +776,29 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
     CheckoutMode checkoutMode,
     FOLLY_MAYBE_UNUSED ObjectFetchContext& context) {
   std::vector<ImmediateFuture<SetPathObjectIdResultAndTimes>> futures;
-  // A map used to consolidates objects that is merge-able. For Blobs,
-  // if they are set to the same parent path, then they can be merged into one
-  // request, i.e. a/b/c, a/b/d.
-  // But Trees can not be merged, so
-  // 1. we put object type into key to avoid the merge of (a/b/c, BLOB) and
-  // (a/b/d, TREE).
-  // 2. For tree, the path of the key is its full path to avoid the merge of
-  //  (a/b/c, TREE) and (a/b/d, TREE)
+  // Helper structs to heterogeneous lookup parentToObjectsMap by
+  // RelativePathPiece whose index is RelativePath
+  struct RelativePathHeterogeneousHasher {
+    using is_transparent = void;
+
+    size_t operator()(const RelativePathPiece& path) const {
+      return facebook::eden::detail::hash_value(path);
+    }
+  };
+
+  struct RelativePathHeterogeneousEqual {
+    using is_transparent = void;
+    bool operator()(const RelativePathPiece& lhs, const RelativePath& rhs)
+        const {
+      return lhs.stringPiece() == rhs.stringPiece();
+    }
+  };
+
   folly::F14FastMap<
-      std::pair<RelativePath, ObjectType>,
-      std::vector<SetPathObjectIdObjectAndPath>>
+      RelativePath,
+      std::vector<SetPathObjectIdObjectAndPath>,
+      RelativePathHeterogeneousHasher,
+      RelativePathHeterogeneousEqual>
       parentToObjectsMap;
   for (auto& object : objects) {
     /*
@@ -797,27 +809,26 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
      */
     XLOG(DBG3) << "adding " << objectStore_->renderObjectId(object.id)
                << " to mount " << this->getPath() << " at path " << object.path;
-
-    bool isTree = (object.type == ObjectType::TREE);
-    auto key = std::pair<RelativePath, ObjectType>(
-        isTree ? object.path : RelativePath{object.path.dirname()},
-        object.type);
-    if (parentToObjectsMap.find(key) != parentToObjectsMap.end()) {
-      if (isTree) {
-        throw std::runtime_error(
-            "Can not merge tree requests. It is likely the request contains two identical tree paths");
+    auto& path = object.path;
+    if (path.empty()) {
+      // If the path is root, only setting to a tree is allowed
+      if (facebook::eden::ObjectType::TREE == object.type) {
+        // If the path is root, and setting to tree type, no more than one tree
+        // is allowed.
+        if (parentToObjectsMap[path.dirname()].size() > 0) {
+          throw std::domain_error(
+              "SetPathObjectId does not support set multiple trees on root");
+        }
+      } else {
+        throw std::domain_error(
+            "SetPathObjectId only support set tree object type on root");
       }
-      parentToObjectsMap[key].emplace_back(std::move(object));
-    } else {
-      std::vector<SetPathObjectIdObjectAndPath> mergedObjct;
-      mergedObjct.emplace_back(std::move(object));
-      parentToObjectsMap[key] = std::move(mergedObjct);
     }
+    parentToObjectsMap[path.dirname()].push_back(std::move(object));
   }
   objects.clear();
 
-  for (auto& [pathAndType, objects] : parentToObjectsMap) {
-    auto& [path, type] = pathAndType;
+  for (auto& [path, objects] : parentToObjectsMap) {
     const folly::stop_watch<> stopWatch;
     auto setPathObjectIdTime = std::make_shared<SetPathObjectIdTimes>();
 
@@ -835,22 +846,28 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
      */
     setLastCheckoutTime(EdenTimestamp{clock_->getRealtime()});
 
-    bool isTree = (type == ObjectType::TREE);
+    // A special case is set root to a tree. Then setPathObjectId is essentially
+    // checkout
+    bool setOnRoot = path.empty() && objects.size() == 1 &&
+        objects.at(0).path.empty() &&
+        facebook::eden::ObjectType::TREE == objects.at(0).type;
 
     auto getTargetTreeInodeFuture =
         ensureDirectoryExists(path, ctx->getFetchContext());
 
     std::vector<ImmediateFuture<shared_ptr<TreeEntry>>> getTreeEntryFutures;
-    if (!isTree) {
+    if (!setOnRoot) {
       for (auto& object : objects) {
-        getTreeEntryFutures.emplace_back(objectStore_->getTreeEntryForObjectId(
-            object.id,
-            toEdenTreeEntryType(object.type),
-            ctx->getFetchContext()));
+        ImmediateFuture<shared_ptr<TreeEntry>> getTreeEntryFuture =
+            objectStore_->getTreeEntryForObjectId(
+                object.id,
+                toEdenTreeEntryType(object.type),
+                ctx->getFetchContext());
+        getTreeEntryFutures.emplace_back(std::move(getTreeEntryFuture));
       }
     }
 
-    auto getRootTreeFuture = isTree
+    auto getRootTreeFuture = setOnRoot
         ? objectStore_->getTree(objects.at(0).id, ctx->getFetchContext())
         : collectAllSafe(std::move(getTreeEntryFutures))
               .thenValue(
