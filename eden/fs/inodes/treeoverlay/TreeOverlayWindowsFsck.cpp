@@ -130,7 +130,7 @@ dtype_t dtypeFromAttrs(const wchar_t* path, DWORD dwFileAttributes) {
     if (reparse_data->ReparseTag == IO_REPARSE_TAG_SYMLINK) {
       return dtype_t::Symlink;
     } else if (reparse_data->ReparseTag == IO_REPARSE_TAG_SOCKET) {
-      return dtype_t::Regular;
+      return dtype_t::Socket;
     }
 
     // We don't care about other reparse point types, so treating them as
@@ -307,7 +307,11 @@ void populateDiskState(
   auto wPath = std::wstring{L"\\\\?\\"} + absPath.wide();
   dtype_t dtype = dtypeFromAttrs(wPath.c_str(), findFileData.dwFileAttributes);
   if (dtype != dtype_t::Dir && dtype != dtype_t::Regular) {
-    // TODO: What do we do with a symlink, or non-regular file.
+    state.onDisk = true;
+    // On Windows, EdenFS consider all special files (symlinks, sockets, etc)
+    // to be regular.
+    state.diskDtype = dtype_t::Regular;
+    state.diskMaterialized = true;
     return;
   }
 
