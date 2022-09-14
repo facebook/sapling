@@ -502,8 +502,18 @@ bool processChildren(
     InodeNumber inodeNumber,
     const PathMap<overlay::OverlayEntry>& insensitiveOverlayDir,
     const std::shared_ptr<const Tree>& scmTree,
-    const TreeOverlay::LookupCallback& callback) {
+    const TreeOverlay::LookupCallback& callback,
+    uint64_t logFrequency,
+    uint64_t& traversedDirectories) {
   XLOGF(DBG9, "processChildren - {}", path);
+
+  traversedDirectories++;
+  if (traversedDirectories % logFrequency == 0) {
+    // TODO: We could also report the progress to the StartupLogger to be
+    // displayed in the user console. That however requires a percent and it's
+    // a bit unclear how we can compute this percent.
+    XLOGF(INFO, "{} directories scanned", traversedDirectories);
+  }
 
   // Handle children
   folly::F14NodeMap<std::string, FsckFileState> children;
@@ -602,7 +612,9 @@ bool processChildren(
           childInodeNumber,
           childInsensitiveOverlayDir,
           childScmTree,
-          callback);
+          callback,
+          logFrequency,
+          traversedDirectories);
       anyChildMaterialized |= childMaterialized;
 
       if (childMaterialized && childState.desiredHash != std::nullopt) {
@@ -787,6 +799,7 @@ void windowsFsckScanLocalChanges(
           facebook::eden::TreeEntry>& scmEntry = scmEntryTry.value();
       std::shared_ptr<const Tree> scmTree =
           std::get<std::shared_ptr<const Tree>>(scmEntry);
+      uint64_t traversedDirectories = 1;
       processChildren(
           overlay,
           ""_relpath,
@@ -794,7 +807,9 @@ void windowsFsckScanLocalChanges(
           kRootNodeId,
           insensitiveOverlayDir,
           scmTree,
-          callback);
+          callback,
+          config->fsckLogFrequency.getValue(),
+          traversedDirectories);
     } else {
       scanCurrentDir(
           overlay,

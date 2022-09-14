@@ -925,6 +925,13 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> useThoroughFsck{"fsck:use-thorough-fsck", false, this};
 
+  /**
+   * When FSCK is running, how often should we log about the number of scanned
+   * directories. This is the number of directories that are scanned in between
+   * logs.
+   */
+  ConfigSetting<uint64_t> fsckLogFrequency{"fsck:log-frequency", 10000, this};
+
   // [facebook]
   // Facebook internal
 
