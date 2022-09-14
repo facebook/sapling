@@ -11,31 +11,41 @@
 #     https://github.com/bolinfest/eden/releases/download/20220831-124726-b53cb8ea/sapling_0.0-20220831.124726.b53cb8ea_amd64.Ubuntu20.04.deb
 #
 # and creates a barebones Docker container to install and run it.
+#
+# If the file has already been download locally (perhaps from a private
+# GitHub repo?), then the local path can also be used as an argument:
+#
+#     verify_release.sh ~/Downloads/sapling_0.0-20220831.124726.b53cb8ea_amd64.Ubuntu20.04.deb
+#
 # Note that a sapling.deb should not assume the user has `apt install`'d
 # anything else.
 
 set -e
 set -x
 
-URL="$1"
-echo "$URL"
+FILE_OR_URL="$1"
+echo "$FILE_OR_URL"
 
 tmp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
 echo "$tmp_dir"
 cd "$tmp_dir"
 
-if [[ "$URL" == *"Ubuntu20.04.deb" ]]; then
+if [[ "$FILE_OR_URL" == *"Ubuntu20.04.deb" ]]; then
   UBUNTU_VERSION=20.04
 else
-  if [[ "$URL" == *"Ubuntu22.04.deb" ]]; then
+  if [[ "$FILE_OR_URL" == *"Ubuntu22.04.deb" ]]; then
     UBUNTU_VERSION=22.04
   else
-    echo "could not determine Ubuntu version from URL '${URL}'" >> /dev/stderr
+    echo "could not determine Ubuntu version from arg '${FILE_OR_URL}'" >> /dev/stderr
     exit 1
   fi
 fi
 
-curl --location -O "$URL"
+if [ ! -f "$FILE_OR_URL" ]; then
+  curl --location -O "$FILE_OR_URL"
+else
+  cp "$FILE_OR_URL" .
+fi
 
 cat > Dockerfile <<EOF
 FROM ubuntu:${UBUNTU_VERSION}
