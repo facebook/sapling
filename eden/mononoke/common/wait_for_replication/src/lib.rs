@@ -118,14 +118,9 @@ impl WaitForReplication {
         config: Option<&'a ReplicationLagTableConfig>,
     ) -> Result<()> {
         if let Some(raw_config) = config {
-            let max_replication_lag_allowed = Duration::from_millis(
-                raw_config
-                    .max_replication_lag_allowed_ms
-                    .try_into()
-                    .unwrap_or(0),
-            );
-            let poll_interval =
-                Duration::from_millis(raw_config.poll_interval_ms.try_into().unwrap_or(0));
+            let max_replication_lag_allowed =
+                Duration::from_millis(raw_config.max_replication_lag_allowed_ms.try_into()?);
+            let poll_interval = Duration::from_millis(raw_config.poll_interval_ms.try_into()?);
             info!(
                 logger,
                 "Waiting for replication lag on {} to drop below {:?}",

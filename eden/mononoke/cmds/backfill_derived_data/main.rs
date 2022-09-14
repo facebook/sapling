@@ -87,6 +87,7 @@ use stats::prelude::*;
 use time_ext::DurationExt;
 use topo_sort::sort_topological;
 use tunables::tunables;
+use wait_for_replication::WaitForReplication;
 
 mod commit_discovery;
 mod regenerate;
@@ -657,6 +658,10 @@ async fn run_subcmd<'a>(
     repo_name: String,
     cancellation_requested: Arc<AtomicBool>,
 ) -> Result<()> {
+    let config_store = matches.config_store();
+    let storage_config = args::get_config(config_store, matches)?.1.storage_config;
+    let wait_for_replication =
+        WaitForReplication::new(fb, config_store, storage_config, "backfill")?;
     match matches.subcommand() {
         (SUBCOMMAND_BACKFILL_ALL, Some(sub_m)) => {
             let repo: InnerRepo =
@@ -710,6 +715,7 @@ async fn run_subcmd<'a>(
                 parallel,
                 gap_size,
                 backfill_config_name,
+                wait_for_replication,
             )
             .await
         }
@@ -846,6 +852,7 @@ async fn run_subcmd<'a>(
                 slice_size,
                 backfill_config_name,
                 cancellation_requested,
+                wait_for_replication,
             )
             .await
         }
@@ -946,6 +953,7 @@ async fn subcommand_backfill_all(
     parallel: bool,
     gap_size: Option<usize>,
     config_name: &str,
+    wait_for_replication: WaitForReplication,
 ) -> Result<()> {
     info!(ctx.logger(), "derived data types: {:?}", derived_data_types);
     let derivers = derived_data_types
@@ -966,6 +974,7 @@ async fn subcommand_backfill_all(
         batch_size,
         parallel,
         gap_size,
+        wait_for_replication,
     )
     .await
 }
@@ -980,6 +989,7 @@ async fn backfill_heads(
     batch_size: usize,
     parallel: bool,
     gap_size: Option<usize>,
+    wait_for_replication: WaitForReplication,
 ) -> Result<()> {
     if let (Some(skiplist_index), Some(slice_size)) = (skiplist_index, slice_size) {
         let (count, slices) =
@@ -1001,12 +1011,23 @@ async fn backfill_heads(
                 batch_size,
                 parallel,
                 gap_size,
+                wait_for_replication.clone(),
             )
             .await?;
         }
     } else {
         info!(ctx.logger(), "Deriving {} heads", heads.len());
-        tail_batch_iteration(ctx, repo, derivers, heads, batch_size, parallel, gap_size).await?;
+        tail_batch_iteration(
+            ctx,
+            repo,
+            derivers,
+            heads,
+            batch_size,
+            parallel,
+            gap_size,
+            wait_for_replication,
+        )
+        .await?;
     }
     Ok(())
 }
@@ -1144,6 +1165,7 @@ async fn subcommand_tail(
     slice_size: Option<u64>,
     config_name: &str,
     cancellation_requested: Arc<AtomicBool>,
+    wait_for_replication: WaitForReplication,
 ) -> Result<()> {
     if backfill && batch_size == None {
         return Err(anyhow!("tail --backfill requires --batched"));
@@ -1230,81 +1252,87 @@ async fn subcommand_tail(
 
         let (sender, receiver) = tokio::sync::watch::channel(HashSet::new());
 
-        let tail_loop = async move {
-            cloned!(ctx, repo);
-            tokio::spawn(async move {
-                let mut derived_heads = HashSet::new();
-                loop {
-                    let heads_res = bookmarks_subscription.refresh(&ctx).await;
-                    let heads = match heads_res {
-                        Ok(()) => bookmarks_subscription
-                            .bookmarks()
-                            .iter()
-                            .map(|(_, (cs_id, _))| *cs_id)
-                            .collect::<HashSet<_>>(),
-                        Err(e) => return Err::<(), _>(e),
-                    };
-                    let underived_heads = heads
-                        .difference(&derived_heads)
-                        .cloned()
-                        .collect::<Vec<_>>();
-                    if stop_on_idle && underived_heads.is_empty() {
-                        info!(ctx.logger(), "tail stopping due to --stop-on-idle");
-                        return Ok(());
-                    }
-                    tail_batch_iteration(
-                        &ctx,
-                        &repo,
-                        &tail_derivers,
-                        underived_heads,
-                        batch_size,
-                        parallel,
-                        gap_size,
-                    )
-                    .await?;
-                    let _ = sender.send(heads.clone());
-                    derived_heads = heads;
-                    // Before initiating next iteration, check if cancellation
-                    // has been requested
-                    if cancellation_requested.load(Ordering::Relaxed) {
-                        info!(ctx.logger(), "tail stopping due to cancellation request");
-                        return Ok(());
-                    }
-                }
-            })
-            .await?
-        };
-
-        let backfill_loop = async move {
-            cloned!(ctx, repo);
-            tokio::spawn(async move {
-                if backfill {
+        let tail_loop = {
+            cloned!(ctx, repo, wait_for_replication);
+            async move {
+                tokio::spawn(async move {
                     let mut derived_heads = HashSet::new();
-                    let mut receiver = tokio_stream::wrappers::WatchStream::new(receiver);
-                    while let Some(heads) = receiver.next().await {
+                    loop {
+                        let heads_res = bookmarks_subscription.refresh(&ctx).await;
+                        let heads = match heads_res {
+                            Ok(()) => bookmarks_subscription
+                                .bookmarks()
+                                .iter()
+                                .map(|(_, (cs_id, _))| *cs_id)
+                                .collect::<HashSet<_>>(),
+                            Err(e) => return Err::<(), _>(e),
+                        };
                         let underived_heads = heads
                             .difference(&derived_heads)
                             .cloned()
                             .collect::<Vec<_>>();
-                        backfill_heads(
+                        if stop_on_idle && underived_heads.is_empty() {
+                            info!(ctx.logger(), "tail stopping due to --stop-on-idle");
+                            return Ok(());
+                        }
+                        tail_batch_iteration(
                             &ctx,
                             &repo,
-                            skiplist_index.as_deref(),
-                            &backfill_derivers,
+                            &tail_derivers,
                             underived_heads,
-                            slice_size,
                             batch_size,
                             parallel,
                             gap_size,
+                            wait_for_replication.clone(),
                         )
                         .await?;
+                        let _ = sender.send(heads.clone());
                         derived_heads = heads;
+                        // Before initiating next iteration, check if cancellation
+                        // has been requested
+                        if cancellation_requested.load(Ordering::Relaxed) {
+                            info!(ctx.logger(), "tail stopping due to cancellation request");
+                            return Ok(());
+                        }
                     }
-                    info!(ctx.logger(), "backfill stopping");
-                }
-                Ok::<_, Error>(())
-            })
-            .await?
+                })
+                .await?
+            }
+        };
+
+        let backfill_loop = {
+            cloned!(ctx, repo, wait_for_replication);
+            async move {
+                tokio::spawn(async move {
+                    if backfill {
+                        let mut derived_heads = HashSet::new();
+                        let mut receiver = tokio_stream::wrappers::WatchStream::new(receiver);
+                        while let Some(heads) = receiver.next().await {
+                            let underived_heads = heads
+                                .difference(&derived_heads)
+                                .cloned()
+                                .collect::<Vec<_>>();
+                            backfill_heads(
+                                &ctx,
+                                &repo,
+                                skiplist_index.as_deref(),
+                                &backfill_derivers,
+                                underived_heads,
+                                slice_size,
+                                batch_size,
+                                parallel,
+                                gap_size,
+                                wait_for_replication.clone(),
+                            )
+                            .await?;
+                            derived_heads = heads;
+                        }
+                        info!(ctx.logger(), "backfill stopping");
+                    }
+                    anyhow::Ok(())
+                })
+                .await?
+            }
         };
 
         try_join(tail_loop, backfill_loop).await?;
@@ -1338,14 +1366,15 @@ async fn get_most_recent_heads(ctx: &CoreContext, repo: &BlobRepo) -> Result<Vec
         .await
 }
 
-async fn tail_batch_iteration(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    derive_utils: &[Arc<dyn DerivedUtils>],
+async fn tail_batch_iteration<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
+    derive_utils: &'a [Arc<dyn DerivedUtils>],
     heads: Vec<ChangesetId>,
     batch_size: usize,
     parallel: bool,
     gap_size: Option<usize>,
+    wait_for_replication: WaitForReplication,
 ) -> Result<()> {
     let derive_graph = derived_data_utils::build_derive_graph(
         ctx,
@@ -1391,9 +1420,12 @@ async fn tail_batch_iteration(
                 .boxed()
             },
             move |node, _| {
-                cloned!(ctx, repo);
+                cloned!(ctx, repo, wait_for_replication);
                 async move {
                     if let Some(deriver) = &node.deriver {
+                        wait_for_replication
+                            .wait_for_replication(ctx.logger())
+                            .await?;
                         let mut scuba =
                             create_derive_graph_scuba_sample(&ctx, &node.csids, deriver.name());
                         let (stats, _) = warmup::warmup(&ctx, &repo, deriver.name(), &node.csids)

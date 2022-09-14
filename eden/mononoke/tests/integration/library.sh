@@ -858,6 +858,19 @@ EOF
 }
 EOF
   fi
+
+
+  export REPLICATION_LAG_CONF
+  REPLICATION_LAG_CONF="${LOCAL_CONFIGERATOR_PATH}/scm/mononoke/mysql/replication_lag/config"
+  mkdir -p "$REPLICATION_LAG_CONF"
+  for CONF in "healer" "backfill"; do
+    if [[ ! -f "$REPLICATION_LAG_CONF/$CONF" ]]; then
+      cat >> "$REPLICATION_LAG_CONF/$CONF" <<EOF
+ {
+ }
+EOF
+    fi
+  done
 }
 
 function setup_mononoke_repo_config {
