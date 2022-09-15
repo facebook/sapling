@@ -27,6 +27,8 @@ use edenfs_utils::metadata::MetadataExt;
 use edenfs_utils::remove_symlink;
 #[cfg(target_os = "windows")]
 use mkscratch::zzencode;
+#[cfg(target_os = "macos")]
+use nix::sys::stat::stat;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
@@ -233,6 +235,127 @@ impl Redirection {
     pub fn update_target_abspath(&mut self, checkout: &EdenFsCheckout) -> Result<()> {
         self.target = self.expand_target_abspath(checkout)?;
         Ok(())
+    }
+
+    fn _dmg_file_name(&self, target: &Path) -> PathBuf {
+        target.join("image.dmg.sparseimage")
+    }
+
+    #[cfg(target_os = "macos")]
+    /// Attempt to use an APFS volume for a bind redirection.
+    /// The heavy lifting is part of the APFS_HELPER utility found
+    /// in `eden/scm/exec/eden_apfs_mount_helper/`
+    fn _bind_mount_darwin_apfs(&self, checkout_path: &Path) -> Result<()> {
+        let mount_path = checkout_path.join(&self.repo_path);
+        std::fs::create_dir_all(&mount_path).from_err()?;
+        let mount_path = checkout_path.join(&self.repo_path);
+        let status = Exec::cmd(APFS_HELPER)
+            .args(&["mount", &mount_path.to_string_lossy()])
+            .stdout(SubprocessRedirection::Pipe)
+            .stderr(SubprocessRedirection::Pipe)
+            .capture()
+            .from_err()?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err(EdenFsError::Other(anyhow!(
+                "failed to add bind mount for mount {}. stderr: {}\n stdout: {}",
+                checkout_path.display(),
+                status.stderr_str(),
+                status.stdout_str()
+            )))
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    fn _bind_mount_darwin_dmg(&self, checkout_path: &Path, target: &Path) -> Result<()> {
+        // Since we don't have bind mounts, we set up a disk image file
+        // and mount that instead.
+        let image_file_path = self._dmg_file_name(target);
+        let target_stat = stat(target).from_err()?;
+
+        // Specify the size in kb because the disk utilities have weird
+        // defaults if the units are unspecified, and `b` doesn't mean
+        // bytes!
+        let total_kb = target_stat.st_size / 1024;
+        let mount_path = checkout_path.join(&self.repo_path());
+
+        if !image_file_path.exists() {
+            // We need to convert paths -> strings for the hdiutil commands
+            let image_file_name = image_file_path.to_string_lossy();
+            let mount_name = mount_path.to_string_lossy();
+
+            let create_status = Exec::cmd("hdiutil")
+                .args(&[
+                    "create",
+                    "--size",
+                    &format!("{}k", total_kb),
+                    "--type",
+                    "SPARSE",
+                    "--fs",
+                    "HFS+",
+                    "--volname",
+                    &format!("EdenFS redirection for {}", &mount_name),
+                    &image_file_name,
+                ])
+                .stdout(SubprocessRedirection::Pipe)
+                .stderr(SubprocessRedirection::Pipe)
+                .capture()
+                .from_err()?;
+            if !create_status.success() {
+                return Err(EdenFsError::Other(anyhow!(
+                    "failed to create dmg volume {} for mount {}. stderr: {}\n stdout: {}",
+                    &image_file_name,
+                    &mount_name,
+                    create_status.stderr_str(),
+                    create_status.stdout_str()
+                )));
+            }
+
+            let attach_status = Exec::cmd("hdiutil")
+                .args(&[
+                    "attach",
+                    &image_file_name,
+                    "--nobrowse",
+                    "--mountpoint",
+                    &mount_name,
+                ])
+                .stdout(SubprocessRedirection::Pipe)
+                .stderr(SubprocessRedirection::Pipe)
+                .capture()
+                .from_err()?;
+            if !attach_status.success() {
+                return Err(EdenFsError::Other(anyhow!(
+                    "failed to attach dmg volume {} for mount {}. stderr: {}\n stdout: {}",
+                    &image_file_name,
+                    &mount_name,
+                    attach_status.stderr_str(),
+                    attach_status.stdout_str()
+                )));
+            }
+        }
+        Ok(())
+    }
+
+    #[cfg(target_os = "macos")]
+    fn _bind_mount_darwin(&self, checkout_path: &Path, target: &Path) -> Result<()> {
+        if Redirection::have_apfs_helper()? {
+            self._bind_mount_darwin_apfs(checkout_path)
+        } else {
+            self._bind_mount_darwin_dmg(checkout_path, target)
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    async fn _bind_mount(&self, checkout: &Path, target: &Path) -> Result<()> {
+        self._bind_mount_darwin(checkout, target)
+    }
+
+    #[cfg(all(not(unix), not(windows)))]
+    async fn _bind_mount(&self, checkout: &Path, target: &Path) -> Result<()> {
+        Err(EdenFsError::Other(anyhow!(
+            "could not complete bind mount: unsupported platform"
+        )))
     }
 
     #[cfg(target_os = "linux")]
