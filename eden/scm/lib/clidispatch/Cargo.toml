@@ -17,7 +17,7 @@ indexedlog = { version = "0.1.0", path = "../indexedlog" }
 io = { version = "0.1.0", path = "../io" }
 network-doctor = { version = "0.1.0", path = "../doctor/network" }
 repo = { version = "0.1.0", path = "../repo" }
-termlogger = { version = "0.1.0", path = "../termlogger" }
+termlogger = { version = "0.1.0", path = "../io/term/logger" }
 thiserror = "1.0.34"
 thrift-types = { version = "0.1.0", path = "../thrift-types", optional = true }
 tracing = "0.1.35"
