@@ -44,6 +44,8 @@ import sys
 import threading
 import time
 import warnings
+from types import ModuleType
+from typing import Optional, Sized, Tuple
 
 from edenscm import (
     bookmarks,
@@ -115,7 +117,7 @@ configitem("hgsql", "waittimeout", default=300)
 # do not get the sql lock unless specified time has passed
 configitem("hgsql", "debugminsqllockwaittime", default=0)
 
-mysql = None
+mysql: Optional[ModuleType] = None
 
 writelock = "write_lock"
 
@@ -123,7 +125,7 @@ INITIAL_SYNC_NORMAL = "normal"
 INITIAL_SYNC_DISABLE = "disabled"
 INITIAL_SYNC_FORCE = "force"
 
-initialsync = INITIAL_SYNC_NORMAL
+initialsync: str = INITIAL_SYNC_NORMAL
 initialsyncfromreplica = False
 
 cls = localrepo.localrepository
@@ -144,7 +146,7 @@ class CorruptionException(Exception):
     pass
 
 
-def isrootpidns():
+def isrootpidns() -> bool:
     """False if we're sure it's not a root pid namespace. True otherwise."""
     try:
         # Linux implementation detail - inode number is 0xeffffffc for root
@@ -170,7 +172,7 @@ def cansyncwithsql(repo):
     return issqlrepo(repo) and not isinstance(repo, bundlerepo.bundlerepository)
 
 
-def uisetup(ui):
+def uisetup(ui) -> None:
     # hgsql is incompatible with visibleheads - hgsql always wants all heads.
     ui.setconfig("visibility", "enabled", "false", "hgsql")
     # hgsql is incompatible with narrow-heads - hgsql always wants all heads.
@@ -242,7 +244,7 @@ def uisetup(ui):
     extensions.afterloaded("memcommit", memcommitwrapper)
 
 
-def _importmysqlconnector():
+def _importmysqlconnector() -> None:
     # mysql.connector does not import nicely with the demandimporter, so
     # temporarily disable it.
     with demandimport.deactivated():
@@ -250,7 +252,7 @@ def _importmysqlconnector():
         mysql = __import__("mysql.connector")
 
 
-def extsetup(ui):
+def extsetup(ui) -> None:
     # Importing MySQL connector here allows other modules to import code from
     # `hgsql` without requiring the MySQL connector. There are cases where this
     # makes sense. For example, there is no need for MySQL connector on a
@@ -300,7 +302,7 @@ def extsetup(ui):
         initialsync = INITIAL_SYNC_FORCE
 
 
-def reposetup(ui, repo):
+def reposetup(ui, repo) -> None:
     if ishgsqlbypassed(ui):
         return
 
@@ -661,7 +663,7 @@ class sqlcontext(object):
                 f.write("Total Elapsed Time: %s\n" % elapsed)
 
 
-def executewithsql(repo, action, sqllock=False, *args, **kwargs):
+def executewithsql(repo, action, sqllock: bool = False, *args, **kwargs):
     """Executes the given action while having a SQL connection open.
     If a locks are specified, those locks are held for the duration of the
     action.
@@ -698,7 +700,7 @@ def executewithsql(repo, action, sqllock=False, *args, **kwargs):
         return action(*args, **kwargs)
 
 
-def wraprepo(repo):
+def wraprepo(repo) -> None:
     class sqllocalrepo(repo.__class__):
         def sqlconnect(self):
             if self.sqlconn:
@@ -1766,7 +1768,7 @@ class bufferedopener(object):
         self.closed = True
 
 
-def addentries(repo, queue, transaction, ignoreexisting=False):
+def addentries(repo, queue, transaction, ignoreexisting: bool = False) -> None:
     """Reads new rev entries from a queue and writes them to a buffered
     revlog. At the end it flushes all the new data to disk.
     """
@@ -1937,7 +1939,7 @@ class EntryRevlog(revlog.revlog):
             self.checkinlinesize(transaction, ifh)
 
 
-def addgroup(orig, self, deltas, linkmapper, transaction):
+def addgroup(orig, self: Sized, deltas, linkmapper, transaction):
     """Copy paste of revlog.addgroup, but we ensure that the revisions are
     added in linkrev order.
     """
@@ -1951,14 +1953,20 @@ def addgroup(orig, self, deltas, linkmapper, transaction):
     r = len(self)
     end = 0
     if r:
+        # pyre-fixme[16]: `Sized` has no attribute `end`.
         end = self.end(r - 1)
+    # pyre-fixme[16]: `Sized` has no attribute `opener`.
+    # pyre-fixme[16]: `Sized` has no attribute `indexfile`.
     ifh = self.opener(self.indexfile, "a+")
+    # pyre-fixme[16]: `Sized` has no attribute `_io`.
     isize = r * self._io.size
+    # pyre-fixme[16]: `Sized` has no attribute `_inline`.
     if self._inline:
         transaction.add(self.indexfile, end + isize, r)
         dfh = None
     else:
         transaction.add(self.indexfile, isize, r)
+        # pyre-fixme[16]: `Sized` has no attribute `datafile`.
         transaction.add(self.datafile, end)
         dfh = self.opener(self.datafile, "a+")
 
@@ -2032,10 +2040,12 @@ def addgroup(orig, self, deltas, linkmapper, transaction):
                 return fulltext
 
             visited = set()
+            # pyre-fixme[16]: `Sized` has no attribute `node`.
             prevnode = self.node(len(self) - 1)
             for link, chunkdata in chunkdatas:
                 node = chunkdata["node"]
                 deltabase = chunkdata["deltabase"]
+                # pyre-fixme[16]: `Sized` has no attribute `nodemap`.
                 if not deltabase in self.nodemap and not deltabase in visited:
                     fulltext = getfulltext(node)
                     ptext = getfulltext(prevnode)
@@ -2071,7 +2081,9 @@ def addgroup(orig, self, deltas, linkmapper, transaction):
             if deltabase not in self.nodemap:
                 raise LookupError(deltabase, self.indexfile, _("unknown delta base"))
 
+            # pyre-fixme[16]: `Sized` has no attribute `rev`.
             baserev = self.rev(deltabase)
+            # pyre-fixme[16]: `Sized` has no attribute `_addrevision`.
             self._addrevision(
                 node, None, transaction, link, p1, p2, flags, (baserev, delta), ifh, dfh
             )
@@ -2126,7 +2138,7 @@ def pushkey(orig, repo, proto, namespace, key, old, new):
     _("hg sqlrecover"),
     norepo=True,
 )
-def sqlrecover(ui, *args, **opts):
+def sqlrecover(ui, *args, **opts) -> None:
     """
     Strips commits from the local repo until it is back in sync with the SQL
     server.
@@ -2202,7 +2214,7 @@ def sqlrecover(ui, *args, **opts):
     ],
     _("hg sqltreestrip REV"),
 )
-def sqltreestrip(ui, repo, rev, *args, **opts):
+def sqltreestrip(ui, repo, rev: int, *args, **opts) -> Optional[int]:
     """Strips trees from local and sql history"""
     try:
         treemfmod = extensions.find("treemanifest")
@@ -2290,7 +2302,7 @@ def sqltreestrip(ui, repo, rev, *args, **opts):
                 repo.store.markremoved(file)
 
 
-def _parsecompressedrevision(data):
+def _parsecompressedrevision(data: bytes) -> Tuple[bytes, bytes]:
     """Takes a compressed revision and parses it into the data0 (compression
     indicator) and data1 (payload). Ideally we'd refactor revlog.decompress to
     have this logic be separate, but there are comments in the code about perf
@@ -2370,7 +2382,7 @@ def _discoverrevisions(repo, startrev):
     _("hg sqlrefill REV"),
     norepo=True,
 )
-def sqlrefill(ui, startrev, **opts):
+def sqlrefill(ui, startrev: int, **opts) -> None:
     """Inserts the given revs into the database"""
     if not opts.get("i_know_what_i_am_doing"):
 
@@ -2398,6 +2410,7 @@ def sqlrefill(ui, startrev, **opts):
             # totalrevs = len(repo.changelog)
             # with progress.bar(ui, 'refilling', total=totalrevs - startrev) as prog:
             # prog.value += 1
+            # pyre-fixme[61]: `repo` is undefined, or not always defined.
             revlogrevs = _discoverrevisions(repo, startrev)
 
             for path, rlrev in revlogrevs:
@@ -2442,7 +2455,7 @@ def sqlrefill(ui, startrev, **opts):
     _("hg sqlstrip [OPTIONS] REV"),
     norepo=True,
 )
-def sqlstrip(ui, rev, *args, **opts):
+def sqlstrip(ui, rev: int, *args, **opts) -> None:
     """strips all revisions greater than or equal to the given revision from the sql database
 
     Deletes all revisions with linkrev >= the given revision from the local
@@ -2536,7 +2549,7 @@ def sqlstrip(ui, rev, *args, **opts):
     ],
     _("hg sqlreplay"),
 )
-def sqlreplay(ui, repo, *args, **opts):
+def sqlreplay(ui, repo, *args, **opts) -> None:
     """goes through the entire sql history and performs missing revlog writes
 
     This is useful for adding entirely new revlogs to history, like when
@@ -2557,7 +2570,7 @@ def sqlreplay(ui, repo, *args, **opts):
     executewithsql(repo, _helper, False)
 
 
-def _sqlreplay(repo, startrev, endrev):
+def _sqlreplay(repo, startrev, endrev) -> None:
     wlock = lock = None
 
     try:
@@ -2602,7 +2615,7 @@ def _sqlreplay(repo, startrev, endrev):
     [("", "earliest-rev", "", _("the earliest rev to process"), "")],
     _("hg sqlverify"),
 )
-def sqlverify(ui, repo, *args, **opts):
+def sqlverify(ui, repo, *args, **opts) -> None:
     """verifies the current revlog indexes match the data in mysql
 
     Runs in reverse order, so it verifies the latest commits first.
