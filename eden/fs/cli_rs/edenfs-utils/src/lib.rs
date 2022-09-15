@@ -209,3 +209,23 @@ pub fn strip_unc_prefix(path: PathBuf) -> PathBuf {
         .map(From::from)
         .unwrap_or(path)
 }
+
+#[cfg(unix)]
+/// on Unixy platforms, all symlinks are files and must be removed with std::fs::remove_file
+pub fn remove_symlink(path: &Path) -> Result<()> {
+    std::fs::remove_file(path).from_err()?;
+    Ok(())
+}
+
+#[cfg(windows)]
+/// on Windows, directory symlinks must be removed with std::fs::remove_dir instead.
+pub fn remove_symlink(path: &Path) -> Result<()> {
+    std::fs::remove_dir(path).from_err()?;
+    Ok(())
+}
+
+#[cfg(not(any(windows, unix)))]
+/// on other platforms, we don't know how to handle removing symlinks. Panic instead of guessing
+pub fn remove_symlink(path: &Path) -> Result<()> {
+    panic!("failed to remove symlink, unsupported platform");
+}
