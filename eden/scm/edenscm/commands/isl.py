@@ -29,6 +29,7 @@ DEFAULT_PORT = 3011
         ),
         ("", "json", False, _("output machine-readable JSON")),
         ("", "open", True, _("open ISL in a local browser")),
+        ("f", "foreground", False, _("keep the server process in the foreground")),
     ],
 )
 def isl_cmd(ui, repo, *args, **opts):
@@ -42,12 +43,20 @@ def isl_cmd(ui, repo, *args, **opts):
     port = opts.get("port")
     open_isl = opts.get("open")
     json_output = opts.get("json")
+    foreground = opts.get("foreground")
     return launch_server(
-        ui, cwd=repo.root, port=port, open_isl=open_isl, json_output=json_output
+        ui,
+        cwd=repo.root,
+        port=port,
+        open_isl=open_isl,
+        json_output=json_output,
+        foreground=foreground,
     )
 
 
-def launch_server(ui, *, cwd, port=DEFAULT_PORT, open_isl=True, json_output=False):
+def launch_server(
+    ui, *, cwd, port=DEFAULT_PORT, open_isl=True, json_output=False, foreground=False
+):
     if iswindows:
         # TODO(T125822314): Fix packaging issue so isl works on Windows.
         raise error.Abort(_("isl is not currently supported on Windows"))
@@ -68,4 +77,6 @@ def launch_server(ui, *, cwd, port=DEFAULT_PORT, open_isl=True, json_output=Fals
         args.append("--no-open")
     if json_output:
         args.append("--json")
+    if foreground:
+        args.append("--foreground")
     subprocess.call(isl_args + args, cwd=cwd)
