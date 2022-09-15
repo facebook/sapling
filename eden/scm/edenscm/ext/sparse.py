@@ -1207,7 +1207,11 @@ def computesparsematcher(
 
 
 def getsparsepatterns(
-    repo, rev, rawconfig=None, debugversion=None, nocatchall: bool = False
+    repo,
+    rev,
+    rawconfig: Optional[RawSparseConfig] = None,
+    debugversion=None,
+    nocatchall: bool = False,
 ) -> SparseConfig:
     """Produce the full sparse config for a revision as a SparseConfig
 
@@ -1408,7 +1412,9 @@ def readsparseconfig(
     return RawSparseConfig(filename, lines, profiles, metadata)
 
 
-def readsparseprofile(repo, rev, name, profileconfigs) -> Optional[SparseProfile]:
+def readsparseprofile(
+    repo, rev, name: Optional[str], profileconfigs
+) -> Optional[SparseProfile]:
     ctx = repo[rev]
     try:
         raw = getrawprofile(repo, name, ctx.hex())
@@ -1450,7 +1456,11 @@ def readsparseprofile(repo, rev, name, profileconfigs) -> Optional[SparseProfile
         raw = profileconfigs.get(name)
         if raw:
             rawprofileconfig = readsparseconfig(
-                repo, raw, filename=name + "-hgrc.dynamic"
+                repo,
+                raw,
+                # pyre-fixme[58]: `+` is not supported for operand types
+                #  `Optional[str]` and `str`.
+                filename=name + "-hgrc.dynamic",
             )
             for kind, value in rawprofileconfig.lines:
                 if kind == "include":
@@ -2560,7 +2570,7 @@ def _explainprofile(ui, repo, *profiles, **opts) -> int:
     + commands.templateopts,
     _("[OPTION]... PROFILE [FILES]..."),
 )
-def _listfilessubcmd(ui, repo, profile, *files, **opts) -> int:
+def _listfilessubcmd(ui, repo, profile: Optional[str], *files, **opts) -> int:
     """list all files included in a sparse profile
 
     If files are given to match, print the names of the files in the profile
