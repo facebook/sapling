@@ -228,7 +228,7 @@ impl Redirection {
     }
 
     pub fn scratch_subdir() -> PathBuf {
-        PathBuf::from("edenfs/redirections")
+        PathBuf::from("edenfs").join("redirections")
     }
 
     fn make_scratch_dir(checkout: &EdenFsCheckout, subdir: &Path) -> Result<PathBuf> {
