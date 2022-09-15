@@ -8,6 +8,7 @@
 #![allow(non_camel_case_types)]
 
 use std::cell::Cell;
+use std::cell::RefCell;
 
 use clidispatch::io::IO as RustIO;
 use cpython::*;
@@ -20,6 +21,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "io"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<IO>(py)?;
+    m.add_class::<styler>(py)?;
     Ok(m)
 }
 
@@ -118,3 +120,28 @@ impl IO {
         }
     }
 }
+
+py_class!(class styler |py| {
+    data inner: RefCell<termstyle::Styler>;
+
+    def __new__(_cls, colors: u32) -> PyResult<styler> {
+        let level = if colors >= 16777216 {
+            termstyle::ColorLevel::TrueColor
+        } else if colors >= 256 {
+            termstyle::ColorLevel::TwoFiftySix
+        } else {
+            termstyle::ColorLevel::Sixteen
+        };
+
+        Self::create_instance(py, RefCell::new(termstyle::Styler::new(level).map_pyerr(py)?))
+    }
+
+    def renderbytes(&self, style: &str, text: &str)  -> PyResult<PyBytes> {
+        Ok(PyBytes::new(
+            py,
+            self.inner(py).borrow_mut().render_bytes(style, text)
+                .map_pyerr(py)?
+                .as_ref(),
+        ))
+    }
+});

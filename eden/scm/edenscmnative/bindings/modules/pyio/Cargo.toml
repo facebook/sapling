@@ -8,6 +8,7 @@ clidispatch = { path = "../../../../lib/clidispatch", default-features = false }
 cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.7", default-features = false }
 pyconfigparser = { path = "../pyconfigparser" }
+termstyle = { path = "../../../../lib/io/term/style" }
 
 [features]
 default = []
