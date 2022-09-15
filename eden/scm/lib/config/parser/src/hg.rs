@@ -1311,8 +1311,9 @@ UltraCompare.check = conflicts,changed
 UltraCompare.diffargs=$child $parent -title1 $clabel -title2 $plabel1
 "#;
 
-// Config items from python's configitems.py which previously were
-// only available in Python. They have the lowest priority.
+// Config items from python's configitems.py and elsewhere which
+// previously were only available in Python. They have the lowest
+// priority.
 static HG_PY_CORE_CONFIG: &str = r#"
 [treestate]
 mingcage=900
@@ -1332,4 +1333,14 @@ threshold=10
 [format]
 generaldelta=false
 usegeneraldelta=true
+
+[color]
+status.added=green bold
+status.clean=none
+status.copied=none
+status.deleted=cyan bold underline
+status.ignored=black bold
+status.modified=blue bold
+status.removed=red bold
+status.unknown=magenta bold underline
 "#;
