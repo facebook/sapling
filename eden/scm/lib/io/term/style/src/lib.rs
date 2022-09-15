@@ -64,7 +64,7 @@ pub fn eval_style(level: ColorLevel, style_specs: &str) -> CellAttributes {
 }
 
 struct DumbTty<'a> {
-    buf: &'a mut Vec<u8>,
+    w: &'a mut dyn Write,
 }
 
 impl RenderTty for DumbTty<'_> {
@@ -75,11 +75,11 @@ impl RenderTty for DumbTty<'_> {
 
 impl io::Write for DumbTty<'_> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.buf.write(buf)
+        self.w.write(buf)
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.buf.flush()
+        self.w.flush()
     }
 }
 
@@ -90,19 +90,52 @@ pub struct Styler {
 }
 
 impl Styler {
-    pub fn new(level: ColorLevel) -> termwiz::Result<Styler> {
+    /// Initialize a styler, letting termwiz sniff the supported color level.
+    pub fn new() -> termwiz::Result<Styler> {
+        let mut hints = ProbeHints::new_from_env();
+        if cfg!(test) || std::env::var("TESTTMP").is_ok() {
+            // Use a consistent (and non-existent) terminal to avoid differences in tests.
+            hints = hints.term(Some("fake-term".to_string()));
+        }
+        let caps = Capabilities::new_with_hints(hints)?;
+        Ok(Styler {
+            level: caps.color_level(),
+            renderer: TerminfoRenderer::new(caps),
+        })
+    }
+
+    /// Initialize a styler using specified color level. Python uses
+    /// this for now to keep closer compatibility with the Python
+    /// color support detection.
+    pub fn from_level(level: ColorLevel) -> termwiz::Result<Styler> {
         let mut hints = ProbeHints::default().color_level(Some(level));
         if cfg!(test) || std::env::var("TESTTMP").is_ok() {
             // Use a consistent (and non-existent) terminal to avoid differences in tests.
             hints = hints.term(Some("fake-term".to_string()));
         }
-        let renderer = TerminfoRenderer::new(Capabilities::new_with_hints(hints)?);
+        let caps = Capabilities::new_with_hints(hints)?;
+        let renderer = TerminfoRenderer::new(caps);
         Ok(Styler { level, renderer })
     }
 
     pub fn render_bytes(&mut self, style_specs: &str, text: &str) -> termwiz::Result<Vec<u8>> {
         let mut buf: Vec<u8> = Vec::new();
-        let mut tty = DumbTty { buf: &mut buf };
+        self.render(&mut buf, style_specs, text)?;
+        Ok(buf)
+    }
+
+    pub fn render(
+        &mut self,
+        w: &mut dyn Write,
+        style_specs: &str,
+        text: &str,
+    ) -> termwiz::Result<()> {
+        if style_specs.is_empty() {
+            w.write_all(text.as_bytes())?;
+            return Ok(());
+        }
+
+        let mut tty = DumbTty { w };
 
         // Line breaks within escape sequences don't look right, so
         // process each line's contents separately.
@@ -125,7 +158,7 @@ impl Styler {
             )?;
         }
 
-        Ok(buf)
+        Ok(())
     }
 }
 
@@ -303,7 +336,7 @@ mod test {
 
     #[test]
     fn test_render_bytes() {
-        let mut styler = Styler::new(TwoFiftySix).unwrap();
+        let mut styler = Styler::from_level(TwoFiftySix).unwrap();
 
         assert_eq!(
             styler.render_bytes("red", "hello\nthere\n").unwrap(),
@@ -320,7 +353,7 @@ mod test {
             .term(Some("fake-term".to_string()));
         let caps = Capabilities::new_with_hints(hints).unwrap();
         let mut renderer = TerminfoRenderer::new(caps);
-        let mut tty = DumbTty { buf: &mut buf };
+        let mut tty = DumbTty { w: &mut buf };
         renderer
             .render_to(&[Change::AllAttributes(cell_attrs)], &mut tty)
             .unwrap();

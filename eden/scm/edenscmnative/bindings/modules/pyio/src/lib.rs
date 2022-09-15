@@ -133,7 +133,7 @@ py_class!(class styler |py| {
             termstyle::ColorLevel::Sixteen
         };
 
-        Self::create_instance(py, RefCell::new(termstyle::Styler::new(level).map_pyerr(py)?))
+        Self::create_instance(py, RefCell::new(termstyle::Styler::from_level(level).map_pyerr(py)?))
     }
 
     def renderbytes(&self, style: &str, text: &str)  -> PyResult<PyBytes> {
