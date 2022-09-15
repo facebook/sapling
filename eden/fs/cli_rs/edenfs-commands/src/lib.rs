@@ -96,8 +96,8 @@ pub enum TopLevelSubcommand {
     List(crate::list::ListCmd),
     #[clap(subcommand, alias = "pp")]
     PrefetchProfile(crate::prefetch_profile::PrefetchCmd),
-    // #[clap(subcommand, alias = "redir")]
-    // Redirect(crate::redirect::RedirectCmd),
+    #[clap(subcommand, alias = "redir")]
+    Redirect(crate::redirect::RedirectCmd),
 }
 
 #[async_trait]
@@ -116,7 +116,7 @@ impl Subcommand for TopLevelSubcommand {
             Du(cmd) => cmd,
             List(cmd) => cmd,
             PrefetchProfile(cmd) => cmd,
-            // Redirect(cmd) => cmd,
+            Redirect(cmd) => cmd,
         };
         sc.run().await
     }
