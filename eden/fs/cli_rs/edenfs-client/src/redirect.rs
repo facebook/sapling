@@ -17,7 +17,9 @@ use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
 use edenfs_utils::metadata::MetadataExt;
-#[cfg(windows)]
+#[cfg(target_os = "windows")]
+use edenfs_utils::remove_symlink;
+#[cfg(target_os = "windows")]
 use mkscratch::zzencode;
 use serde::Deserialize;
 use serde::Deserializer;
@@ -228,6 +230,18 @@ impl Redirection {
 
     pub fn expand_repo_path(&self, checkout: &EdenFsCheckout) -> PathBuf {
         checkout.path().join(&self.repo_path)
+    }
+
+    #[cfg(target_os = "windows")]
+    fn _bind_unmount_windows(&self, checkout: &EdenFsCheckout) -> Result<()> {
+        let repo_path = self.expand_repo_path(checkout);
+        remove_symlink(&repo_path)?;
+        Ok(())
+    }
+
+    #[cfg(target_os = "windows")]
+    async fn _bind_unmount(&self, checkout: &EdenFsCheckout) -> Result<()> {
+        self._bind_unmount_windows(checkout)
     }
 
     /// Attempts to create a symlink at checkout_path/self.repo_path that points to target.
