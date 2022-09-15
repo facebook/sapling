@@ -10,6 +10,10 @@ use std::fmt;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
+#[cfg(target_os = "macos")]
+use std::process::Command;
+#[cfg(target_os = "macos")]
+use std::process::Stdio;
 use std::str::FromStr;
 
 use anyhow::anyhow;
@@ -232,6 +236,26 @@ impl Redirection {
         checkout.path().join(&self.repo_path)
     }
 
+    #[cfg(target_os = "macos")]
+    fn _bind_unmount_darwin(&self, checkout: &EdenFsCheckout) -> Result<()> {
+        let mount_path = checkout.path().join(&self.repo_path);
+        let status = Exec::cmd("diskutil")
+            .args(&["unmount", "force", &mount_path.to_string_lossy()])
+            .stdout(SubprocessRedirection::Pipe)
+            .stderr(SubprocessRedirection::Pipe)
+            .capture()
+            .from_err()?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err(EdenFsError::Other(anyhow!(format!(
+                "failed to remove bind mount. stderr: {}\n stdout: {}",
+                status.stderr_str(),
+                status.stdout_str()
+            ))))
+        }
+    }
+
     #[cfg(target_os = "windows")]
     fn _bind_unmount_windows(&self, checkout: &EdenFsCheckout) -> Result<()> {
         let repo_path = self.expand_repo_path(checkout);
@@ -242,6 +266,11 @@ impl Redirection {
     #[cfg(target_os = "windows")]
     async fn _bind_unmount(&self, checkout: &EdenFsCheckout) -> Result<()> {
         self._bind_unmount_windows(checkout)
+    }
+
+    #[cfg(target_os = "macos")]
+    async fn _bind_unmount(&self, checkout: &EdenFsCheckout) -> Result<()> {
+        self._bind_unmount_darwin(checkout)
     }
 
     /// Attempts to create a symlink at checkout_path/self.repo_path that points to target.
