@@ -17,6 +17,8 @@ use std::process::Stdio;
 use std::str::FromStr;
 
 use anyhow::anyhow;
+#[cfg(target_os = "linux")]
+use anyhow::Context;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
@@ -33,6 +35,7 @@ use subprocess::Redirection as SubprocessRedirection;
 use toml::value::Value;
 
 use crate::checkout::EdenFsCheckout;
+use crate::instance::EdenFsInstance;
 use crate::mounttable::read_mount_table;
 
 pub(crate) const REPO_SOURCE: &str = ".eden-redirections";
@@ -232,6 +235,12 @@ impl Redirection {
         Ok(())
     }
 
+    #[cfg(target_os = "linux")]
+    async fn _bind_unmount_linux(&self, checkout: &EdenFsCheckout) -> Result<()> {
+        _remove_bind_mount_thrift_call(&checkout.path(), &self.repo_path).await?;
+        Ok(())
+    }
+
     pub fn expand_repo_path(&self, checkout: &EdenFsCheckout) -> PathBuf {
         checkout.path().join(&self.repo_path)
     }
@@ -271,6 +280,11 @@ impl Redirection {
     #[cfg(target_os = "macos")]
     async fn _bind_unmount(&self, checkout: &EdenFsCheckout) -> Result<()> {
         self._bind_unmount_darwin(checkout)
+    }
+
+    #[cfg(target_os = "linux")]
+    async fn _bind_unmount(&self, checkout: &EdenFsCheckout) -> Result<()> {
+        self._bind_unmount_linux(checkout).await
     }
 
     /// Attempts to create a symlink at checkout_path/self.repo_path that points to target.
@@ -406,6 +420,26 @@ where
     }
 
     Ok(map)
+}
+
+#[cfg(target_os = "linux")]
+async fn _remove_bind_mount_thrift_call(mount_path: &Path, repo_path: &Path) -> Result<()> {
+    let client = EdenFsInstance::global().connect(None).await?;
+    let co_path = mount_path
+        .to_str()
+        .context("failed to get mount point as str")?
+        .as_bytes()
+        .to_vec();
+    let repo_path = repo_path
+        .to_str()
+        .context("failed to get mount point as str")?
+        .as_bytes()
+        .to_vec();
+    client
+        .removeBindMount(&co_path, &repo_path)
+        .await
+        .with_context(|| "failed remove bind mount thrift call")?;
+    Ok(())
 }
 
 /// Returns the explicitly configured redirection configuration.
