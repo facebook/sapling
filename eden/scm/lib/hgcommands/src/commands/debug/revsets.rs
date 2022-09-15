@@ -31,7 +31,7 @@ pub fn run(ctx: ReqCtx<DebugRevsetOpts>, repo: &mut Repo) -> Result<u8> {
     Ok(0)
 }
 
-pub fn name() -> &'static str {
+pub fn aliases() -> &'static str {
     "debugrevset"
 }
 
