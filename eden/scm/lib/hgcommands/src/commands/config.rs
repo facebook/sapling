@@ -6,7 +6,6 @@
  */
 
 use std::collections::BTreeSet;
-use std::io::Write;
 
 use anyhow::bail;
 use clidispatch::abort;
@@ -77,6 +76,7 @@ pub fn run(ctx: ReqCtx<ConfigOpts>, repo: &mut OptionalRepo) -> Result<u8> {
 
     let config = repo.config();
     let mut formatter = get_formatter(
+        config,
         short_name(),
         &ctx.opts.formatter_opts.template,
         ctx.global_opts(),
@@ -121,7 +121,7 @@ impl<'a> Formattable for ConfigItem<'a> {
     fn format_plain(
         &self,
         options: &FormatOptions,
-        writer: &mut dyn Write,
+        writer: &mut dyn formatter::StyleWrite,
     ) -> std::result::Result<(), anyhow::Error> {
         let source_section = if options.debug {
             format!("{}: ", self.source)

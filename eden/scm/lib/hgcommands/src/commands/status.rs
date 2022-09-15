@@ -195,6 +195,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
     let cwd = std::env::current_dir()?;
     let relativizer = RepoPathRelativizer::new(cwd, repo.path());
     let formatter = get_formatter(
+        repo.config(),
         "status",
         ctx.opts.formatter_opts.template.as_str(),
         ctx.global_opts(),

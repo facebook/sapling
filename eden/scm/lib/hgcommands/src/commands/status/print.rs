@@ -122,7 +122,7 @@ impl<'a> Formattable for StatusEntry<'a> {
     fn format_plain(
         &self,
         _options: &formatter::formatter::FormatOptions,
-        writer: &mut dyn std::io::Write,
+        writer: &mut dyn formatter::StyleWrite,
     ) -> Result<(), anyhow::Error> {
         let status = if self.print_config.no_status {
             "".to_owned()
@@ -257,6 +257,7 @@ impl Default for PrintConfig {
 
 #[cfg(test)]
 mod test {
+    use std::collections::BTreeMap;
     use std::str;
 
     use clidispatch::io::IO;
@@ -305,7 +306,14 @@ mod test {
             verbose: false,
             quiet: false,
         };
-        let fm = get_formatter("status", "", options, Box::new(io.output())).unwrap();
+        let fm = get_formatter(
+            &BTreeMap::<&str, &str>::new(),
+            "status",
+            "",
+            options,
+            Box::new(io.output()),
+        )
+        .unwrap();
         print_status(
             fm,
             relativizer,

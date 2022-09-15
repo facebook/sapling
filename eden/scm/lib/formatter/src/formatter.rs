@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::io::Write;
 
 use serde::Serialize;
@@ -32,11 +33,43 @@ impl<S: Serialize> JsonFormattable for S {
     }
 }
 
+pub trait StyleWrite: Write {
+    fn write_styled(&mut self, style: &str, text: &str) -> anyhow::Result<()>;
+}
+
+struct PlainWriter<'a> {
+    w: &'a mut dyn Write,
+    styler: &'a mut termstyle::Styler,
+    styles: &'a HashMap<String, String>,
+}
+
+impl Write for PlainWriter<'_> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.w.write(buf)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.w.flush()
+    }
+}
+
+impl StyleWrite for PlainWriter<'_> {
+    fn write_styled(&mut self, style: &str, text: &str) -> anyhow::Result<()> {
+        let style = style
+            .split_ascii_whitespace()
+            .map(|s| self.styles.get(s).map_or(s, |s| s.as_ref()))
+            .collect::<Vec<&str>>()
+            .join(" ");
+        self.styler.render(self.w, &style, text)?;
+        Ok(())
+    }
+}
+
 pub trait Formattable: JsonFormattable {
     fn format_plain(
         &self,
         options: &FormatOptions,
-        writer: &mut dyn Write,
+        writer: &mut dyn StyleWrite,
     ) -> Result<(), anyhow::Error>;
 }
 
@@ -49,6 +82,8 @@ pub trait ListFormatter {
 pub struct PlainFormatter {
     writer: Box<dyn Write>,
     options: FormatOptions,
+    styles: HashMap<String, String>,
+    styler: termstyle::Styler,
 }
 
 pub struct JsonFormatter {
@@ -58,11 +93,18 @@ pub struct JsonFormatter {
 
 impl ListFormatter for PlainFormatter {
     fn format_item(&mut self, item: &dyn Formattable) -> FormatResult<()> {
-        item.format_plain(&self.options, self.writer.as_mut())
-            .map_err(|err| match err.downcast::<std::io::Error>() {
-                Ok(io_err) => FormattingError::WriterError(io_err),
-                Err(err) => FormattingError::PlainFormattingError(err),
-            })
+        item.format_plain(
+            &self.options,
+            &mut PlainWriter {
+                w: self.writer.as_mut(),
+                styler: &mut self.styler,
+                styles: &self.styles,
+            },
+        )
+        .map_err(|err| match err.downcast::<std::io::Error>() {
+            Ok(io_err) => FormattingError::WriterError(io_err),
+            Err(err) => FormattingError::PlainFormattingError(err),
+        })
     }
 
     fn begin_list(&mut self) -> FormatResult<()> {
@@ -99,24 +141,48 @@ impl ListFormatter for JsonFormatter {
 }
 
 pub fn get_formatter(
+    config: &dyn configmodel::Config,
     _topic: &str,
     template: &str,
     options: FormatOptions,
     writer: Box<dyn Write>,
-) -> Result<Box<dyn ListFormatter>, FormatterNotFound> {
+) -> anyhow::Result<Box<dyn ListFormatter>> {
     match template {
-        "" => Ok(Box::new(PlainFormatter { writer, options })),
+        "" => {
+            let styles: HashMap<String, String> = config
+                .keys("color")
+                .into_iter()
+                .filter_map(|k| {
+                    if !k.contains('.') || k.starts_with("color.") {
+                        None
+                    } else {
+                        Some((
+                            k.to_string(),
+                            config.get("color", &k).unwrap_or_default().to_string(),
+                        ))
+                    }
+                })
+                .collect();
+
+            Ok(Box::new(PlainFormatter {
+                writer,
+                options,
+                styles,
+                styler: termstyle::Styler::new()?,
+            }))
+        }
         "json" => Ok(Box::new(JsonFormatter {
             writer,
             first_item_formatted: false,
         })),
-        _ => Err(FormatterNotFound(template.into())),
+        _ => Err(FormatterNotFound(template.into()).into()),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use std::cell::RefCell;
+    use std::collections::BTreeMap;
     use std::io::Result as IoResult;
     use std::rc::Rc;
 
@@ -136,7 +202,7 @@ mod tests {
         fn format_plain(
             &self,
             _options: &FormatOptions,
-            writer: &mut dyn Write,
+            writer: &mut dyn StyleWrite,
         ) -> Result<(), anyhow::Error> {
             write!(writer, "{}: {}", self.url, self.result)?;
             Ok(())
@@ -163,7 +229,7 @@ mod tests {
         fn format_plain(
             &self,
             _options: &FormatOptions,
-            _writer: &mut dyn Write,
+            _writer: &mut dyn StyleWrite,
         ) -> Result<(), anyhow::Error> {
             bail!("Nope")
         }
@@ -198,8 +264,12 @@ mod tests {
     fn get_trivial_formatter(
         template: &str,
         buffer: Rc<RefCell<Vec<u8>>>,
-    ) -> Result<Box<dyn ListFormatter>, FormatterNotFound> {
+    ) -> anyhow::Result<Box<dyn ListFormatter>> {
+        let mut colors: BTreeMap<&str, &str> = BTreeMap::new();
+        colors.insert("color.foo.bar", "green");
+
         get_formatter(
+            &colors,
             "",
             template,
             FormatOptions {
@@ -217,7 +287,6 @@ mod tests {
         let err = get_trivial_formatter("{node|short}", buf.clone())
             .err()
             .unwrap();
-        assert!(matches!(err, FormatterNotFound(_)));
         assert_eq!(
             err.to_string(),
             "unable to find formatter for template {node|short}"
@@ -232,6 +301,38 @@ mod tests {
         assert_eq!(
             String::from_utf8(buf.as_ref().borrow().clone()).unwrap(),
             "foo://bar: 200".to_string()
+        );
+    }
+
+    #[derive(Serialize, Deserialize)]
+    struct ColorfulItem {}
+
+    impl Formattable for ColorfulItem {
+        fn format_plain(
+            &self,
+            _options: &FormatOptions,
+            writer: &mut dyn StyleWrite,
+        ) -> Result<(), anyhow::Error> {
+            writer.write_all(b"no style\n")?;
+            writer.write_styled("unknown-style", "unknown style\n")?;
+            writer.write_styled("red", "red\n")?;
+            writer.write_styled("foo.bar", "green\n")?;
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn test_colors() {
+        let buf = Rc::new(RefCell::new(Vec::<u8>::new()));
+        let mut fm = get_trivial_formatter("", buf.clone()).unwrap();
+        fm.format_item(&ColorfulItem {}).unwrap();
+        assert_eq!(
+            String::from_utf8(buf.as_ref().borrow().clone()).unwrap(),
+            "no style
+unknown style
+\x1b[31mred\x1b[39m
+\x1b[32mgreen\x1b[39m
+",
         );
     }
 
@@ -296,6 +397,7 @@ mod tests {
     fn test_errors() {
         let buf: [u8; 0] = [0; 0];
         let mut fm = get_formatter(
+            &BTreeMap::<&str, &str>::new(),
             "",
             "",
             FormatOptions {

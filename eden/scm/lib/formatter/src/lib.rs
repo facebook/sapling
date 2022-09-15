@@ -7,3 +7,8 @@
 
 pub mod errors;
 pub mod formatter;
+
+pub use formatter::FormatOptions;
+pub use formatter::Formattable;
+pub use formatter::ListFormatter;
+pub use formatter::StyleWrite;

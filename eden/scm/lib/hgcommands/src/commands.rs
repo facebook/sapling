@@ -48,12 +48,14 @@ use formatter::formatter;
 pub use repo::repo::Repo;
 
 fn get_formatter(
+    config: &dyn configmodel::Config,
     command_name: &'static str,
     template: &str,
     options: &HgGlobalOpts,
     writer: Box<dyn Write>,
 ) -> Result<Box<dyn formatter::ListFormatter>, FallbackToPython> {
     formatter::get_formatter(
+        config,
         command_name,
         template,
         formatter::FormatOptions {
