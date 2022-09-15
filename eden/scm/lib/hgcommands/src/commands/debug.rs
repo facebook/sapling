@@ -23,6 +23,7 @@ commands! {
     mod networkdoctor;
     mod python;
     mod racyoutput;
+    mod revsets;
     mod runlog;
     mod scmstore;
     mod scmstorereplay;

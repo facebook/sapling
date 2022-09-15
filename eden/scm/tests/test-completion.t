@@ -179,6 +179,7 @@ Show debug commands if there are no other candidates
   debugresetheads
   debugrevlog
   debugrevlogclone
+  debugrevset
   debugrevspec
   debugrunlog
   debugrunshell
@@ -500,6 +501,7 @@ Show all commands + options
   debugresetheads: 
   debugrevlog: changelog, manifest, dir, dump
   debugrevlogclone: 
+  debugrevset: 
   debugrevspec: optimize, show-revs, show-set, show-stage, no-optimized, verify-optimized
   debugrunlog: ended, template
   debugrunshell: cmd

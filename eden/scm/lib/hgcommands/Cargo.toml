@@ -52,6 +52,7 @@ pytracing = { path = "../../edenscmnative/bindings/modules/pytracing", default-f
 rand = { version = "0.8", features = ["small_rng"] }
 repo = { version = "0.1.0", path = "../repo" }
 revisionstore = { version = "0.1.0", path = "../revisionstore" }
+revsets = { version = "0.1.0", path = "../revsets" }
 runlog = { version = "0.1.0", path = "../runlog" }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }

@@ -1060,6 +1060,7 @@ Test list of internal help commands
    debugrevlog   show data and statistics about a revlog
    debugrevlogclone
                  download revlog and bookmarks into a newly initialized repo
+   debugrevset   resolves a single revset and outputs its commit hash
    debugrevspec  parse and apply a revision specification
    debugrunlog   display runlog entries
    debugrunshell
