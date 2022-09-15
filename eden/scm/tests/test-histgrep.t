@@ -40,9 +40,9 @@ simple with color
 
   $ hg --config extensions.color= histgrep --config color.mode=ansi \
   >     --color=always port port
-  \x1b[0;35mport\x1b[0m\x1b[0;36m:\x1b[0m914fa752cdea\x1b[0;36m:\x1b[0mex\x1b[0;31;1mport\x1b[0m (esc)
-  \x1b[0;35mport\x1b[0m\x1b[0;36m:\x1b[0m914fa752cdea\x1b[0;36m:\x1b[0mva\x1b[0;31;1mport\x1b[0might (esc)
-  \x1b[0;35mport\x1b[0m\x1b[0;36m:\x1b[0m914fa752cdea\x1b[0;36m:\x1b[0mim\x1b[0;31;1mport\x1b[0m/ex\x1b[0;31;1mport\x1b[0m (esc)
+  \x1b[35mport\x1b[39m\x1b[36m:\x1b[39m914fa752cdea\x1b[36m:\x1b[39mex\x1b[0m\x1b[1m\x1b[31mport\x1b[0m (esc)
+  \x1b[35mport\x1b[39m\x1b[36m:\x1b[39m914fa752cdea\x1b[36m:\x1b[39mva\x1b[0m\x1b[1m\x1b[31mport\x1b[0might (esc)
+  \x1b[35mport\x1b[39m\x1b[36m:\x1b[39m914fa752cdea\x1b[36m:\x1b[39mim\x1b[0m\x1b[1m\x1b[31mport\x1b[0m/ex\x1b[0m\x1b[1m\x1b[31mport\x1b[0m (esc)
 
 simple templated
 

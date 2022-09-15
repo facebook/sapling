@@ -862,28 +862,28 @@
 # log -p -l2 --color=always
 
   $ hg --config 'extensions.color=' --config 'color.mode=ansi' log -p -l2 '--color=always'
-  [0;93mcommit:      *[0m (glob)
+  \x1b[0m\x1b[1m\x1b[93mcommit:      2404bbcab562\x1b[0m (esc)
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     b1.1
   
-  [0;1mdiff -r * -r * b1[0m (glob)
-  [0;31;1m--- a/b1	Thu Jan 01 00:00:01 1970 +0000[0m
-  [0;32;1m+++ b/b1	Thu Jan 01 00:00:01 1970 +0000[0m
-  [0;35m@@ -1,1 +1,2 @@[0m
+  \x1b[0m\x1b[1mdiff -r 302e9dd6890d -r 2404bbcab562 b1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[31m--- a/b1	Thu Jan 01 00:00:01 1970 +0000\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32m+++ b/b1	Thu Jan 01 00:00:01 1970 +0000\x1b[0m (esc)
+  \x1b[35m@@ -1,1 +1,2 @@\x1b[39m (esc)
    b1
-  [0;92m+postm[0m
+  \x1b[92m+postm\x1b[39m (esc)
   
-  [0;93mcommit:      *[0m (glob)
+  \x1b[0m\x1b[1m\x1b[93mcommit:      302e9dd6890d\x1b[0m (esc)
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     m12
   
-  [0;1mdiff -r * -r * b2[0m (glob)
-  [0;31;1m--- /dev/null	Thu Jan 01 00:00:00 1970 +0000[0m
-  [0;32;1m+++ b/b2	Thu Jan 01 00:00:01 1970 +0000[0m
-  [0;35m@@ -0,0 +1,1 @@[0m
-  [0;92m+b2[0m
+  \x1b[0m\x1b[1mdiff -r e62f78d544b4 -r 302e9dd6890d b2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[31m--- /dev/null	Thu Jan 01 00:00:00 1970 +0000\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32m+++ b/b2	Thu Jan 01 00:00:01 1970 +0000\x1b[0m (esc)
+  \x1b[35m@@ -0,0 +1,1 @@\x1b[39m (esc)
+  \x1b[92m+b2\x1b[39m (esc)
 
 # log -r tip --stat
 
@@ -1795,8 +1795,8 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a bunch of weird directories
   $ hg --config 'extensions.names=../names.py' --config 'extensions.color=' --config 'color.log.barcolor=red' '--color=always' log -r 0
-  [0;93mcommit:      *[0m (glob)
-  [0;31mbarlog:      foo[0m
+  \x1b[0m\x1b[1m\x1b[93mcommit:      07c07884437f\x1b[0m (esc)
+  \x1b[31mbarlog:      foo\x1b[39m (esc)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a bunch of weird directories

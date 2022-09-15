@@ -13,12 +13,12 @@ Terminfo codes compatibility fix
 hg status in repo root:
 
   $ hg status
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4ma/1/in_a_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4ma/in_a\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/1/in_b_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/2/in_b_2\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/in_b\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_root\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35ma/1/in_a_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35ma/in_a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35mb/1/in_b_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35mb/2/in_b_2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35mb/in_b\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_root\x1b[0m (esc)
 
   $ hg status --color=debug
   [status.unknown|? ][status.unknown|a/1/in_a_1]
@@ -56,90 +56,90 @@ hg status with template
 hg status . in repo root:
 
   $ hg status .
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4ma/1/in_a_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4ma/in_a\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/1/in_b_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/2/in_b_2\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/in_b\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_root\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35ma/1/in_a_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35ma/in_a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35mb/1/in_b_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35mb/2/in_b_2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35mb/in_b\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_root\x1b[0m (esc)
 
   $ hg status --cwd a
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m1/in_a_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_a\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../b/1/in_b_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../b/2/in_b_2\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../b/in_b\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_root\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m1/in_a_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../b/1/in_b_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../b/2/in_b_2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../b/in_b\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_root\x1b[0m (esc)
   $ hg status --cwd a .
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m1/in_a_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m1/in_a_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_a\x1b[0m (esc)
   $ hg status --cwd a ..
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m1/in_a_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_a\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../b/1/in_b_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../b/2/in_b_2\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../b/in_b\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_root\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m1/in_a_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../b/1/in_b_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../b/2/in_b_2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../b/in_b\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_root\x1b[0m (esc)
 
   $ hg status --cwd b
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../a/1/in_a_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../a/in_a\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m1/in_b_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m2/in_b_2\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_b\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_root\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../a/1/in_a_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../a/in_a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m1/in_b_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m2/in_b_2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_root\x1b[0m (esc)
   $ hg status --cwd b .
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m1/in_b_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m2/in_b_2\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_b\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m1/in_b_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m2/in_b_2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b\x1b[0m (esc)
   $ hg status --cwd b ..
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../a/1/in_a_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../a/in_a\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m1/in_b_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m2/in_b_2\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_b\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_root\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../a/1/in_a_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../a/in_a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m1/in_b_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m2/in_b_2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_root\x1b[0m (esc)
 
   $ hg status --cwd a/1
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_a_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_a\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../b/1/in_b_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../b/2/in_b_2\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../b/in_b\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../in_root\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_a_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../b/1/in_b_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../b/2/in_b_2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../b/in_b\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../in_root\x1b[0m (esc)
   $ hg status --cwd a/1 .
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_a_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_a_1\x1b[0m (esc)
   $ hg status --cwd a/1 ..
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_a_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_a_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_a\x1b[0m (esc)
 
   $ hg status --cwd b/1
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../a/1/in_a_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../a/in_a\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_b_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../2/in_b_2\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_b\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../in_root\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../a/1/in_a_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../a/in_a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../2/in_b_2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_b\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../in_root\x1b[0m (esc)
   $ hg status --cwd b/1 .
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_b_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b_1\x1b[0m (esc)
   $ hg status --cwd b/1 ..
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_b_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../2/in_b_2\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_b\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../2/in_b_2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_b\x1b[0m (esc)
 
   $ hg status --cwd b/2
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../a/1/in_a_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../a/in_a\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../1/in_b_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_b_2\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_b\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../in_root\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../a/1/in_a_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../a/in_a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../1/in_b_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b_2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_b\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../in_root\x1b[0m (esc)
   $ hg status --cwd b/2 .
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_b_2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b_2\x1b[0m (esc)
   $ hg status --cwd b/2 ..
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../1/in_b_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_b_2\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_b\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../1/in_b_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b_2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_b\x1b[0m (esc)
 
 Make sure --color=never works
   $ hg status --color=never
@@ -193,44 +193,44 @@ templates should be.
 hg status:
 
   $ hg status
-  \x1b[0;32;1mA \x1b[0m\x1b[0;32;1madded\x1b[0m (esc)
-  \x1b[0;31;1mR \x1b[0m\x1b[0;31;1mremoved\x1b[0m (esc)
-  \x1b[0;36;1;4m! \x1b[0m\x1b[0;36;1;4mdeleted\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4munknown\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32mA \x1b[0m\x1b[0m\x1b[1m\x1b[32madded\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[31mR \x1b[0m\x1b[0m\x1b[1m\x1b[31mremoved\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[36m! \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[36mdeleted\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35munknown\x1b[0m (esc)
 
 hg status modified added removed deleted unknown never-existed ignored:
 
   $ hg status modified added removed deleted unknown never-existed ignored
   never-existed: * (glob)
-  \x1b[0;32;1mA \x1b[0m\x1b[0;32;1madded\x1b[0m (esc)
-  \x1b[0;31;1mR \x1b[0m\x1b[0;31;1mremoved\x1b[0m (esc)
-  \x1b[0;36;1;4m! \x1b[0m\x1b[0;36;1;4mdeleted\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4munknown\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32mA \x1b[0m\x1b[0m\x1b[1m\x1b[32madded\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[31mR \x1b[0m\x1b[0m\x1b[1m\x1b[31mremoved\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[36m! \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[36mdeleted\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35munknown\x1b[0m (esc)
 
   $ hg copy modified copied
 
 hg status -C:
 
   $ hg status -C
-  \x1b[0;32;1mA \x1b[0m\x1b[0;32;1madded\x1b[0m (esc)
-  \x1b[0;32;1mA \x1b[0m\x1b[0;32;1mcopied\x1b[0m (esc)
-  \x1b[0;0m  modified\x1b[0m (esc)
-  \x1b[0;31;1mR \x1b[0m\x1b[0;31;1mremoved\x1b[0m (esc)
-  \x1b[0;36;1;4m! \x1b[0m\x1b[0;36;1;4mdeleted\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4munknown\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32mA \x1b[0m\x1b[0m\x1b[1m\x1b[32madded\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32mA \x1b[0m\x1b[0m\x1b[1m\x1b[32mcopied\x1b[0m (esc)
+    modified
+  \x1b[0m\x1b[1m\x1b[31mR \x1b[0m\x1b[0m\x1b[1m\x1b[31mremoved\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[36m! \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[36mdeleted\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35munknown\x1b[0m (esc)
 
 hg status -A:
 
   $ hg status -A
-  \x1b[0;32;1mA \x1b[0m\x1b[0;32;1madded\x1b[0m (esc)
-  \x1b[0;32;1mA \x1b[0m\x1b[0;32;1mcopied\x1b[0m (esc)
-  \x1b[0;0m  modified\x1b[0m (esc)
-  \x1b[0;31;1mR \x1b[0m\x1b[0;31;1mremoved\x1b[0m (esc)
-  \x1b[0;36;1;4m! \x1b[0m\x1b[0;36;1;4mdeleted\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4munknown\x1b[0m (esc)
-  \x1b[0;30;1mI \x1b[0m\x1b[0;30;1mignored\x1b[0m (esc)
-  \x1b[0;0mC \x1b[0m\x1b[0;0m.gitignore\x1b[0m (esc)
-  \x1b[0;0mC \x1b[0m\x1b[0;0mmodified\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32mA \x1b[0m\x1b[0m\x1b[1m\x1b[32madded\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32mA \x1b[0m\x1b[0m\x1b[1m\x1b[32mcopied\x1b[0m (esc)
+    modified
+  \x1b[0m\x1b[1m\x1b[31mR \x1b[0m\x1b[0m\x1b[1m\x1b[31mremoved\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[36m! \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[36mdeleted\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35munknown\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[30mI \x1b[0m\x1b[0m\x1b[1m\x1b[30mignored\x1b[0m (esc)
+  C .gitignore
+  C modified
 
 
   $ echo "ignoreddir" > .gitignore
@@ -244,7 +244,7 @@ hg status ignoreddir/file:
 hg status -i ignoreddir/file:
 
   $ hg status -i ignoreddir/file
-  \x1b[0;30;1mI \x1b[0m\x1b[0;30;1mignoreddir/file\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[30mI \x1b[0m\x1b[0m\x1b[1m\x1b[30mignoreddir/file\x1b[0m (esc)
   $ cd ..
 
 check 'status -q' and some combinations
@@ -272,11 +272,11 @@ test unknown color
   ignoring unknown color/effect 'periwinkle' (configured in color.status.modified)
   ignoring unknown color/effect 'periwinkle' (configured in color.status.modified)
   M modified
-  \x1b[0;32;1mA \x1b[0m\x1b[0;32;1madded\x1b[0m (esc)
-  \x1b[0;32;1mA \x1b[0m\x1b[0;32;1mcopied\x1b[0m (esc)
-  \x1b[0;31;1mR \x1b[0m\x1b[0;31;1mremoved\x1b[0m (esc)
-  \x1b[0;36;1;4m! \x1b[0m\x1b[0;36;1;4mdeleted\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4munknown\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32mA \x1b[0m\x1b[0m\x1b[1m\x1b[32madded\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32mA \x1b[0m\x1b[0m\x1b[1m\x1b[32mcopied\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[31mR \x1b[0m\x1b[0m\x1b[1m\x1b[31mremoved\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[36m! \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[36mdeleted\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35munknown\x1b[0m (esc)
 
 Run status with 2 different flags.
 Check if result is the same or different.
@@ -343,8 +343,8 @@ test 'resolve -l'
 hg resolve with one unresolved, one resolved:
 
   $ hg resolve -l
-  \x1b[0;31;1mU \x1b[0m\x1b[0;31;1ma\x1b[0m (esc)
-  \x1b[0;32;1mR \x1b[0m\x1b[0;32;1mb\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[31mU \x1b[0m\x1b[0m\x1b[1m\x1b[31ma\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32mR \x1b[0m\x1b[0m\x1b[1m\x1b[32mb\x1b[0m (esc)
 
 color coding of error message with current availability of curses
 

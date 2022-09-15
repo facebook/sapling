@@ -15,9 +15,11 @@ from __future__ import absolute_import
 import re
 from typing import Dict, List, Optional, Pattern, Union
 
+import bindings
+
 from . import encoding, pycompat, util
 from .i18n import _
-from .pycompat import encodeutf8
+from .pycompat import decodeutf8, encodeutf8
 
 
 try:
@@ -370,6 +372,18 @@ def colorlabel(ui, msg, label, usebytes: bool = False) -> Union[bytes, str]:
                 else:
                     msg = "[%s|%s]" % (label, msg)
     elif ui._colormode is not None:
+        if ui.configbool("color", "use-rust", default=True):
+            if not ui._styler:
+                ui._styler = bindings.io.styler(supportedcolors(ui))
+
+            style = " ".join(ui._styles.get(l, l) for l in label.split())
+            if usebytes:
+                msg = decodeutf8(msg)
+            styled = ui._styler.renderbytes(style, msg)
+            if not usebytes:
+                styled = styled.decode()
+            return styled
+
         effects = []
         for l in label.split():
             s = ui._styles.get(l, "")

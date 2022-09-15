@@ -35,15 +35,15 @@ Setup
 default context
 
   $ hg diff --nodates
-  \x1b[0;1mdiff -r cf9f4ba66af2 a\x1b[0m (esc)
-  \x1b[0;31;1m--- a/a\x1b[0m (esc)
-  \x1b[0;32;1m+++ b/a\x1b[0m (esc)
-  \x1b[0;35m@@ -2,7 +2,7 @@\x1b[0m (esc)
+  \x1b[0m\x1b[1mdiff -r cf9f4ba66af2 a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[31m--- a/a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32m+++ b/a\x1b[0m (esc)
+  \x1b[35m@@ -2,7 +2,7 @@\x1b[39m (esc)
    c
    a
    a
-  \x1b[0;91m-b\x1b[0m (esc)
-  \x1b[0;92m+dd\x1b[0m (esc)
+  \x1b[91m-b\x1b[39m (esc)
+  \x1b[92m+dd\x1b[39m (esc)
    a
    a
    c
@@ -83,15 +83,15 @@ default context
 (check that 'ui.color=always' force color)
 
   $ hg diff --nodates --config ui.color=always
-  \x1b[0;1mdiff -r cf9f4ba66af2 a\x1b[0m (esc)
-  \x1b[0;31;1m--- a/a\x1b[0m (esc)
-  \x1b[0;32;1m+++ b/a\x1b[0m (esc)
-  \x1b[0;35m@@ -2,7 +2,7 @@\x1b[0m (esc)
+  \x1b[0m\x1b[1mdiff -r cf9f4ba66af2 a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[31m--- a/a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32m+++ b/a\x1b[0m (esc)
+  \x1b[35m@@ -2,7 +2,7 @@\x1b[39m (esc)
    c
    a
    a
-  \x1b[0;91m-b\x1b[0m (esc)
-  \x1b[0;92m+dd\x1b[0m (esc)
+  \x1b[91m-b\x1b[39m (esc)
+  \x1b[92m+dd\x1b[39m (esc)
    a
    a
    c
@@ -99,21 +99,21 @@ default context
 --unified=2
 
   $ hg diff --nodates -U 2
-  \x1b[0;1mdiff -r cf9f4ba66af2 a\x1b[0m (esc)
-  \x1b[0;31;1m--- a/a\x1b[0m (esc)
-  \x1b[0;32;1m+++ b/a\x1b[0m (esc)
-  \x1b[0;35m@@ -3,5 +3,5 @@\x1b[0m (esc)
+  \x1b[0m\x1b[1mdiff -r cf9f4ba66af2 a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[31m--- a/a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32m+++ b/a\x1b[0m (esc)
+  \x1b[35m@@ -3,5 +3,5 @@\x1b[39m (esc)
    a
    a
-  \x1b[0;91m-b\x1b[0m (esc)
-  \x1b[0;92m+dd\x1b[0m (esc)
+  \x1b[91m-b\x1b[39m (esc)
+  \x1b[92m+dd\x1b[39m (esc)
    a
    a
 
 diffstat
 
   $ hg diff --stat
-   a |  2 \x1b[0;32m+\x1b[0m\x1b[0;31m-\x1b[0m (esc)
+   a |  2 \x1b[32m+\x1b[39m\x1b[31m-\x1b[39m (esc)
    1 files changed, 1 insertions(+), 1 deletions(-)
   $ cat <<EOF >> $HGRCPATH
   > [ui]

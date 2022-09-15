@@ -35,10 +35,12 @@
 # Test colors
 
   $ hg log '--color=always' -l 1
-  [0;*mcommit:      cb9a9f314b8b[0m (glob)
+  \x1b[33mcommit:      cb9a9f314b8b\x1b[39m (esc)
   bookmark:    local
-  [0;33mbookmark:    default/bm2[0m (?)
-  [0;34mhoistedname: bm2[0m (?)
+  \x1b[0;33mbookmark:    default/bm2\x1b[0m (esc) (?)
+  \x1b[0;34mhoistedname: bm2\x1b[0m (esc) (?)
+  \x1b[33mbookmark:    default/bm2\x1b[39m (esc)
+  \x1b[34mhoistedname: bm2\x1b[39m (esc)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a

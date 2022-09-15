@@ -192,6 +192,7 @@ class ui(object):
         self.insecureconnections = False
         # color mode: see color.py for possible value
         self._colormode = None
+        self._styler = None
         self._styles = {}
         # Whether the output stream is known to be a terminal.
         self._terminaloutput = None
@@ -220,6 +221,7 @@ class ui(object):
             self.callhooks = src.callhooks
             self.insecureconnections = src.insecureconnections
             self._colormode = src._colormode
+            self._styler = src._styler
             self._styles = src._styles.copy()
 
             self.httppasswordmgrdb = src.httppasswordmgrdb

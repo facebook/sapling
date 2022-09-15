@@ -232,14 +232,14 @@
   # Parent  f3acbafac161ec68f1598af38f794f28847ca5d3
    !"#$%&(,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~
   
-  [0;1mdiff -r f3acbafac161 -r 197ecd81a57f foo[0m
-  [0;31;1m--- a/foo[0m
-  [0;32;1m+++ b/foo[0m
-  [0;35m@@ -10,3 +10,4 @@[0m
+  \x1b[0m\x1b[1mdiff -r f3acbafac161 -r 197ecd81a57f foo\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[31m--- a/foo\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32m+++ b/foo\x1b[0m (esc)
+  \x1b[35m@@ -10,3 +10,4 @@\x1b[39m (esc)
    foo-9
    foo-10
    foo-11
-  [0;92m+line[0m
+  \x1b[92m+line\x1b[39m (esc)
 
 # Test exporting a subset of files
 

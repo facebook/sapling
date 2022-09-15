@@ -91,8 +91,12 @@ pub struct Styler {
 
 impl Styler {
     pub fn new(level: ColorLevel) -> termwiz::Result<Styler> {
-        let caps = Capabilities::new_with_hints(ProbeHints::default().color_level(Some(level)))?;
-        let renderer = TerminfoRenderer::new(caps);
+        let mut hints = ProbeHints::default().color_level(Some(level));
+        if cfg!(test) || std::env::var("TESTTMP").is_ok() {
+            // Use a consistent (and non-existent) terminal to avoid differences in tests.
+            hints = hints.term(Some("fake-term".to_string()));
+        }
+        let renderer = TerminfoRenderer::new(Capabilities::new_with_hints(hints)?);
         Ok(Styler { level, renderer })
     }
 

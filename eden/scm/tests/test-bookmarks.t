@@ -31,7 +31,7 @@ list bookmarks with color
 
   $ hg --config extensions.color= --config color.mode=ansi \
   >    bookmarks --color=always
-  \x1b[0;32m * \x1b[0m\x1b[0;32mX\x1b[0m\x1b[0;32m                         000000000000\x1b[0m (esc)
+  \x1b[32m * \x1b[39m\x1b[32mX\x1b[39m\x1b[32m                         000000000000\x1b[39m (esc)
 
   $ echo a > a
   $ hg add a
