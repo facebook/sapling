@@ -17,7 +17,7 @@ pub fn run(ctx: ReqCtx<NoOpts>, _config: &mut ConfigSet) -> Result<u8> {
     Ok(0)
 }
 
-pub fn name() -> &'static str {
+pub fn aliases() -> &'static str {
     "version|vers|versi|versio"
 }
 

@@ -37,7 +37,7 @@ pub fn run(ctx: ReqCtx<DebugArgsOpts>, _config: &mut ConfigSet) -> Result<u8> {
     Ok(0)
 }
 
-pub fn name() -> &'static str {
+pub fn aliases() -> &'static str {
     "debugdumpindexedlog|debugindexedlogdump"
 }
 

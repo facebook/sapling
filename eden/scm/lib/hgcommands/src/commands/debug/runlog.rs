@@ -67,7 +67,7 @@ pub fn run(ctx: ReqCtx<DebugRunlogOpts>, repo: &mut Repo) -> Result<u8> {
     Ok(0)
 }
 
-pub fn name() -> &'static str {
+pub fn aliases() -> &'static str {
     "debugrunlog"
 }
 

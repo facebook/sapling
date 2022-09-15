@@ -248,12 +248,12 @@ fn dispatch_command(
         if let Some(command) = command {
             let hooks_with_prefix =
                 |prefix: String| -> Vec<minibytes::Text> { config.keys_prefixed("hooks", &prefix) };
-            let mut hooks = hooks_with_prefix(format!("pre-{}.", command.name()));
+            let mut hooks = hooks_with_prefix(format!("pre-{}.", command.aliases()));
             if exit_code > 0 {
-                let mut names = hooks_with_prefix(format!("fail-{}.", command.name()));
+                let mut names = hooks_with_prefix(format!("fail-{}.", command.aliases()));
                 hooks.append(&mut names);
             } else {
-                let mut names = hooks_with_prefix(format!("post-{}.", command.name()));
+                let mut names = hooks_with_prefix(format!("post-{}.", command.aliases()));
                 hooks.append(&mut names);
             }
 

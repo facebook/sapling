@@ -298,9 +298,9 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
                 .synopsis()
                 .map(|s| Str::from(Bytes::from(s.to_string())))
             {
-                py_table.set_item(py, def.name(), (doc, def.flags(), synopsis))?;
+                py_table.set_item(py, def.aliases(), (doc, def.flags(), synopsis))?;
             } else {
-                py_table.set_item(py, def.name(), (doc, def.flags()))?;
+                py_table.set_item(py, def.aliases(), (doc, def.flags()))?;
             }
         }
         Ok(py_table)

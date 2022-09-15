@@ -62,7 +62,7 @@ pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>, config: &mut ConfigSet) -> Result<u
     Ok(0)
 }
 
-pub fn name() -> &'static str {
+pub fn aliases() -> &'static str {
     "debugdumpdynamicconfig"
 }
 

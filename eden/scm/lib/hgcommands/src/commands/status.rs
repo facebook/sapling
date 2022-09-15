@@ -110,7 +110,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
         || !ctx.opts.walk_opts.exclude.is_empty()
         || !args_check
     {
-        return Err(errors::FallbackToPython(name()).into());
+        return Err(errors::FallbackToPython(aliases()).into());
     }
 
     let StatusOpts {
@@ -202,7 +202,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
     Ok(0)
 }
 
-pub fn name() -> &'static str {
+pub fn aliases() -> &'static str {
     "status|st|sta|stat|statu"
 }
 

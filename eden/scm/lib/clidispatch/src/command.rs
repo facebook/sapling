@@ -28,7 +28,7 @@ pub enum CommandFunc {
 }
 
 pub struct CommandDefinition {
-    name: String,
+    aliases: String,
     doc: String,
     flags_func: fn() -> Vec<Flag>,
     func: CommandFunc,
@@ -37,14 +37,14 @@ pub struct CommandDefinition {
 
 impl CommandDefinition {
     pub fn new(
-        name: impl ToString,
+        aliases: impl ToString,
         doc: impl ToString,
         flags_func: fn() -> Vec<Flag>,
         func: CommandFunc,
         synopsis: Option<impl ToString>,
     ) -> Self {
         CommandDefinition {
-            name: name.to_string(),
+            aliases: aliases.to_string(),
             doc: doc.to_string(),
             flags_func,
             func,
@@ -56,8 +56,8 @@ impl CommandDefinition {
         (self.flags_func)()
     }
 
-    pub fn name(&self) -> &str {
-        &self.name
+    pub fn aliases(&self) -> &str {
+        &self.aliases
     }
 
     pub fn doc(&self) -> &str {
@@ -90,12 +90,12 @@ impl CommandTable {
     ///
     /// For example, `insert_aliases("config|cfg")` will insert
     /// `{"config": "config|cfg", "cfg": "config|cfg"}` to `alias`.
-    fn insert_aliases<'a>(&mut self, names: &'a str) {
-        if !names.contains("|") {
+    fn insert_aliases<'a>(&mut self, aliases: &'a str) {
+        if !aliases.contains('|') {
             return;
         }
-        for name in names.split("|") {
-            self.alias.insert(name.to_string(), names.to_string());
+        for name in aliases.split('|') {
+            self.alias.insert(name.to_string(), aliases.to_string());
         }
     }
 
@@ -115,7 +115,7 @@ impl Deref for CommandTable {
 }
 
 pub trait Register<FN, T> {
-    fn register(&mut self, f: FN, name: &str, doc: &str, synopsis: Option<&str>);
+    fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>);
 }
 
 // OptionalRepo commands.
@@ -124,14 +124,14 @@ where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
     FN: Fn(ReqCtx<S>, &mut OptionalRepo) -> Result<u8> + 'static,
 {
-    fn register(&mut self, f: FN, name: &str, doc: &str, synopsis: Option<&str>) {
-        self.insert_aliases(name);
+    fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>) {
+        self.insert_aliases(aliases);
         let func = move |opts: ParseOutput, io: &IO, repo: &mut OptionalRepo| {
             f(ReqCtx::new(opts, io.clone())?, repo)
         };
         let func = CommandFunc::OptionalRepo(Box::new(func));
-        let def = CommandDefinition::new(name, doc, S::flags, func, synopsis);
-        self.commands.insert(name.to_string(), def);
+        let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis);
+        self.commands.insert(aliases.to_string(), def);
     }
 }
 
@@ -141,14 +141,14 @@ where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
     FN: Fn(ReqCtx<S>, &mut Repo) -> Result<u8> + 'static,
 {
-    fn register(&mut self, f: FN, name: &str, doc: &str, synopsis: Option<&str>) {
-        self.insert_aliases(name);
+    fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>) {
+        self.insert_aliases(aliases);
         let func = move |opts: ParseOutput, io: &IO, repo: &mut Repo| {
             f(ReqCtx::new(opts, io.clone())?, repo)
         };
         let func = CommandFunc::Repo(Box::new(func));
-        let def = CommandDefinition::new(name, doc, S::flags, func, synopsis);
-        self.commands.insert(name.to_string(), def);
+        let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis);
+        self.commands.insert(aliases.to_string(), def);
     }
 }
 
@@ -158,14 +158,14 @@ where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
     FN: Fn(ReqCtx<S>, &mut ConfigSet) -> Result<u8> + 'static,
 {
-    fn register(&mut self, f: FN, name: &str, doc: &str, synopsis: Option<&str>) {
-        self.insert_aliases(name);
+    fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>) {
+        self.insert_aliases(aliases);
         let func = move |opts: ParseOutput, io: &IO, config: &mut ConfigSet| {
             f(ReqCtx::new(opts, io.clone())?, config)
         };
         let func = CommandFunc::NoRepo(Box::new(func));
-        let def = CommandDefinition::new(name, doc, S::flags, func, synopsis);
-        self.commands.insert(name.to_string(), def);
+        let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis);
+        self.commands.insert(aliases.to_string(), def);
     }
 }
 
@@ -175,14 +175,14 @@ where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
     FN: Fn(ReqCtx<S>, &mut Repo, &mut WorkingCopy) -> Result<u8> + 'static,
 {
-    fn register(&mut self, f: FN, name: &str, doc: &str, synopsis: Option<&str>) {
-        self.insert_aliases(name);
+    fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>) {
+        self.insert_aliases(aliases);
         let func =
             move |opts: ParseOutput, io: &IO, repo: &mut Repo, working_copy: &mut WorkingCopy| {
                 f(ReqCtx::new(opts, io.clone())?, repo, working_copy)
             };
         let func = CommandFunc::WorkingCopy(Box::new(func));
-        let def = CommandDefinition::new(name, doc, S::flags, func, synopsis);
-        self.commands.insert(name.to_string(), def);
+        let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis);
+        self.commands.insert(aliases.to_string(), def);
     }
 }

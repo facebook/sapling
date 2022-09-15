@@ -33,7 +33,7 @@ pub fn run(ctx: ReqCtx<NoOpts>, repo: &mut OptionalRepo) -> Result<u8> {
     Ok(0)
 }
 
-pub fn name() -> &'static str {
+pub fn aliases() -> &'static str {
     "debugnetworkdoctor"
 }
 

@@ -24,7 +24,7 @@ pub fn run(_ctx: ReqCtx<DebugPythonOpts>, _config: &mut ConfigSet) -> Result<u8>
     Err(e.into())
 }
 
-pub fn name() -> &'static str {
+pub fn aliases() -> &'static str {
     "debugpython|debugpy"
 }
 

@@ -127,7 +127,7 @@ fn sleep_random_ms(max_ms: u64) {
     thread::sleep(Duration::from_millis(rand::random::<u64>() % max_ms));
 }
 
-pub fn name() -> &'static str {
+pub fn aliases() -> &'static str {
     "debugracyoutput"
 }
 

@@ -43,7 +43,7 @@ enum FetchMode {
 
 pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &mut Repo) -> Result<u8> {
     if ctx.opts.python {
-        return Err(errors::FallbackToPython(name()).into());
+        return Err(errors::FallbackToPython(aliases()).into());
     }
 
     let mode = match ctx.opts.mode.as_ref() {
@@ -110,7 +110,7 @@ fn fetch_trees(io: &IO, config: &ConfigSet, keys: Vec<Key>) -> Result<()> {
     Ok(())
 }
 
-pub fn name() -> &'static str {
+pub fn aliases() -> &'static str {
     "debugscmstore"
 }
 

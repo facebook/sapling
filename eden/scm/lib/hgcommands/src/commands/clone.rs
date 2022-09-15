@@ -125,7 +125,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
 
     let force_rust = config
         .get_or_default::<Vec<String>>("commands", "force-rust")?
-        .contains(&name().to_owned());
+        .contains(&"clone".to_owned());
     let use_rust = force_rust || config.get_or_default("clone", "use-rust")?;
     if !use_rust {
         abort_if!(
@@ -134,7 +134,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
         );
 
         logger.verbose("Falling back to Python clone (config not enabled)");
-        return Err(errors::FallbackToPython(name()).into());
+        return Err(errors::FallbackToPython(aliases()).into());
     }
 
     let supported_url = match url::Url::parse(&ctx.opts.source) {
@@ -156,7 +156,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
         );
 
         logger.verbose("Falling back to Python clone (incompatible options)");
-        return Err(errors::FallbackToPython(name()).into());
+        return Err(errors::FallbackToPython(aliases()).into());
     }
 
     config.set(
@@ -471,7 +471,7 @@ fn get_update_target(
     }
 }
 
-pub fn name() -> &'static str {
+pub fn aliases() -> &'static str {
     "clone"
 }
 

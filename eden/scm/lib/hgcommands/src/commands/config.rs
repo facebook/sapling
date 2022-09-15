@@ -261,7 +261,7 @@ fn show_configs(
     Ok(0)
 }
 
-pub fn name() -> &'static str {
+pub fn aliases() -> &'static str {
     "config|showconfig|debugconfig|conf|confi"
 }
 

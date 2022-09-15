@@ -14,10 +14,10 @@ macro_rules! commands {
             $(
             {
                 use self::$module as m;
-                let command_name = m::name();
+                let command_aliases = m::aliases();
                 let doc = m::doc();
                 let synopsis = m::synopsis();
-                ::clidispatch::command::Register::register(table, m::run, &command_name, &doc, synopsis.as_deref());
+                ::clidispatch::command::Register::register(table, m::run, &command_aliases, &doc, synopsis.as_deref());
             }
             )*
         }
