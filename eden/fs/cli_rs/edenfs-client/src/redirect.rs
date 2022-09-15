@@ -17,7 +17,6 @@ use std::process::Stdio;
 use std::str::FromStr;
 
 use anyhow::anyhow;
-#[cfg(target_os = "linux")]
 use anyhow::Context;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
@@ -85,6 +84,61 @@ impl FromStr for RedirectionType {
                 s
             )))
         }
+    }
+}
+#[derive(PartialEq, Debug)]
+pub enum RepoPathDisposition {
+    DoesNotExist,
+    IsSymlink,
+    IsBindMount,
+    IsEmptyDir,
+    IsNonEmptyDir,
+    IsFile,
+}
+
+impl RepoPathDisposition {
+    pub fn analyze(path: &Path) -> Result<RepoPathDisposition> {
+        // We can't simply check path.exists() since that follows symlinks and checks whether the
+        // symlink target exists (not the symlink itself). We want to know whether a symlink exists
+        // regardless of whether the target exists or not.
+        //
+        // fs::symlink_metadata() returns an error type if the path DNE and it returns the file
+        // metadata otherwise. We can leverage this to tell whether or not the file exists, and
+        // whether it's a symlink if it does exist.
+        if let Ok(file_type) = fs::symlink_metadata(&path).map(|m| m.file_type()) {
+            if file_type.is_symlink() {
+                return Ok(RepoPathDisposition::IsSymlink);
+            }
+            if file_type.is_dir() {
+                if is_bind_mount(path.into())? {
+                    return Ok(RepoPathDisposition::IsBindMount);
+                }
+                if is_empty_dir(path)? {
+                    return Ok(RepoPathDisposition::IsEmptyDir);
+                }
+                return Ok(RepoPathDisposition::IsNonEmptyDir);
+            }
+            Ok(RepoPathDisposition::IsFile)
+        } else {
+            Ok(RepoPathDisposition::DoesNotExist)
+        }
+    }
+}
+
+impl fmt::Display for RepoPathDisposition {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match *self {
+                Self::DoesNotExist => "does-not-exist",
+                Self::IsSymlink => "is-symlink",
+                Self::IsBindMount => "is-bind-mount",
+                Self::IsEmptyDir => "is-empty-dir",
+                Self::IsNonEmptyDir => "is-non-empty-dir",
+                Self::IsFile => "is-file",
+            }
+        )
     }
 }
 
@@ -534,6 +588,15 @@ fn is_bind_mount(path: PathBuf) -> Result<bool> {
     }
 }
 
+pub fn is_empty_dir(path: &Path) -> Result<bool> {
+    let mut dir_iter = path
+        .read_dir()
+        .with_context(|| anyhow!("failed to read directory {}", path.display()))?;
+    // read_dir returns a directory iter that skips . and ..
+    // Therefore, if .next() -> None, we know the dir is empty
+    Ok(dir_iter.next().is_none())
+}
+
 #[derive(Deserialize)]
 struct RedirectionsConfigInner {
     #[serde(flatten, deserialize_with = "deserialize_redirections")]
@@ -762,8 +825,9 @@ pub fn get_effective_redirections(
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
-
+mod tests {
+    use std::fs;
+    use std::path::Path;
     use std::path::PathBuf;
 
     use rand::distributions::Alphanumeric;
@@ -772,6 +836,7 @@ pub(crate) mod tests {
 
     use crate::redirect::Redirection;
     use crate::redirect::RedirectionType;
+    use crate::redirect::RepoPathDisposition;
     use crate::redirect::REPO_SOURCE;
 
     #[test]
@@ -798,5 +863,96 @@ pub(crate) mod tests {
             ._apply_symlink(fake_checkout_path, &symlink_path)
             .expect("Failed to create symlink");
         assert!(symlink_path.is_symlink())
+    }
+
+    /// returns true if we succeeded in removing the existing file/dir
+    fn try_remove(path: &Path) -> bool {
+        if path.is_file() {
+            std::fs::remove_file(path).ok();
+        } else if path.is_dir() {
+            std::fs::remove_dir_all(path).ok();
+        }
+        !path.exists()
+    }
+
+    fn check_empty_dir_and_non_empty_dir_and_file(dir_path: &Path) {
+        std::fs::create_dir_all(dir_path).ok();
+        assert_eq!(
+            RepoPathDisposition::analyze(dir_path).expect("failed to analyze RepoPathDisposition"),
+            RepoPathDisposition::IsEmptyDir
+        );
+        let test_file = dir_path.join("test_file");
+        std::fs::File::create(&test_file).ok();
+        assert_eq!(
+            RepoPathDisposition::analyze(&test_file)
+                .expect("failed to analyze RepoPathDisposition"),
+            RepoPathDisposition::IsFile
+        );
+        assert_eq!(
+            RepoPathDisposition::analyze(dir_path).expect("failed to analyze RepoPathDisposition"),
+            RepoPathDisposition::IsNonEmptyDir
+        );
+    }
+
+    /// We will test DNE, Empty dir, Non-empty dir, file, and symlink dispositions. We skip bind
+    /// mounts since those are tough to test
+    #[test]
+    fn test_analyze() {
+        // test non-existent path
+        let dne_dir = tempdir().expect("couldn't create temporary directory for testing");
+        let dne_path = dne_dir
+            .path()
+            .join(Alphanumeric.sample_string(&mut rand::thread_rng(), 16));
+        #[allow(clippy::if_same_then_else)]
+        if !dne_path.exists() {
+            assert_eq!(
+                RepoPathDisposition::analyze(&dne_path)
+                    .expect("failed to analyze RepoPathDisposition"),
+                RepoPathDisposition::DoesNotExist
+            );
+        // we were unlucky enough to somehow collide with an existing file. Let's try removing
+        // it. If that fails, just skip this case
+        } else if try_remove(&dne_path) {
+            assert_eq!(
+                RepoPathDisposition::analyze(&dne_path)
+                    .expect("failed to analyze RepoPathDisposition"),
+                RepoPathDisposition::DoesNotExist
+            );
+        }
+
+        // empty dir, non-empty dir, and file
+        let tmp_dir = tempdir().expect("couldn't create temp directory for testing");
+        let dir_path = tmp_dir
+            .path()
+            .join(Alphanumeric.sample_string(&mut rand::thread_rng(), 16));
+        #[allow(clippy::if_same_then_else)]
+        if !dir_path.exists() {
+            check_empty_dir_and_non_empty_dir_and_file(&dir_path);
+        } else if try_remove(&dir_path) {
+            check_empty_dir_and_non_empty_dir_and_file(&dir_path);
+        }
+
+        // symlink
+        let symlink_dir = tempdir().expect("couldn't create temp directory for testing");
+        let symlink_path = symlink_dir
+            .path()
+            .join(Alphanumeric.sample_string(&mut rand::thread_rng(), 16));
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_file(&dir_path, &symlink_path).ok();
+        #[cfg(not(windows))]
+        std::os::unix::fs::symlink(&dir_path, &symlink_path).ok();
+
+        if fs::symlink_metadata(&symlink_path)
+            .map(|m| m.file_type().is_symlink())
+            .unwrap_or(false)
+        {
+            // we actually created a symlink, so we can test if disposition detects the symlink
+            assert_eq!(
+                RepoPathDisposition::analyze(&symlink_path)
+                    .expect("failed to analyze RepoPathDisposition"),
+                RepoPathDisposition::IsSymlink
+            );
+        }
+        // if we failed to make the symlink, skip this test case
     }
 }
