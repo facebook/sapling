@@ -219,7 +219,7 @@ impl Dispatcher {
                 if let Ok(config) =
                     configparser::hg::load(None, &global_opts.config, &global_opts.configfile)
                 {
-                    Err(errors::triage_error(&config, err))
+                    Err(errors::triage_error(&config, err, None))
                 } else {
                     Err(err)
                 }

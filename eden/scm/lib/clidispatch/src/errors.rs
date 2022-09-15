@@ -83,7 +83,11 @@ pub fn print_error(err: &anyhow::Error, io: &crate::io::IO, _args: &[String]) {
 }
 
 /// Optionally transform an error into something more friendly to the user.
-pub fn triage_error(config: &ConfigSet, cmd_err: anyhow::Error) -> anyhow::Error {
+pub fn triage_error(
+    config: &ConfigSet,
+    cmd_err: anyhow::Error,
+    command_name: Option<&str>,
+) -> anyhow::Error {
     if types::errors::is_network_error(&cmd_err)
         && config
             .get_or_default("experimental", "network-doctor")
@@ -103,10 +107,11 @@ pub fn triage_error(config: &ConfigSet, cmd_err: anyhow::Error) -> anyhow::Error
             }
         }
     } else {
-        if let Some(FallbackToPython(command_name)) = cmd_err.downcast_ref::<FallbackToPython>() {
-            if config
-                .get_or_default::<Vec<String>>("commands", "force-rust")
-                .map_or(false, |config| config.contains(&command_name.to_string()))
+        if let Some(command_name) = command_name {
+            if cmd_err.is::<FallbackToPython>()
+                && config
+                    .get_or_default::<Vec<String>>("commands", "force-rust")
+                    .map_or(false, |config| config.contains(&command_name.to_string()))
             {
                 return anyhow::Error::new(FailedFallbackToPython);
             }

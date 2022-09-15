@@ -210,7 +210,9 @@ fn dispatch_command(
     let config = dispatcher.config();
 
     let mut fell_back = false;
-    let exit_code = match dispatch_res.map_err(|err| errors::triage_error(config, err)) {
+    let exit_code = match dispatch_res
+        .map_err(|err| errors::triage_error(config, err, command.map(|c| c.main_alias())))
+    {
         Ok(exit_code) => exit_code as i32,
         Err(err) => {
             let should_fallback = err.is::<errors::FallbackToPython>() ||
@@ -248,12 +250,12 @@ fn dispatch_command(
         if let Some(command) = command {
             let hooks_with_prefix =
                 |prefix: String| -> Vec<minibytes::Text> { config.keys_prefixed("hooks", &prefix) };
-            let mut hooks = hooks_with_prefix(format!("pre-{}.", command.aliases()));
+            let mut hooks = hooks_with_prefix(format!("pre-{}.", command.main_alias()));
             if exit_code > 0 {
-                let mut names = hooks_with_prefix(format!("fail-{}.", command.aliases()));
+                let mut names = hooks_with_prefix(format!("fail-{}.", command.main_alias()));
                 hooks.append(&mut names);
             } else {
-                let mut names = hooks_with_prefix(format!("post-{}.", command.aliases()));
+                let mut names = hooks_with_prefix(format!("post-{}.", command.main_alias()));
                 hooks.append(&mut names);
             }
 

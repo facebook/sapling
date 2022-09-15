@@ -71,6 +71,14 @@ impl CommandDefinition {
     pub fn synopsis(&self) -> Option<&str> {
         self.synopsis.as_deref()
     }
+
+    pub fn main_alias(&self) -> &str {
+        if let Some(name) = self.aliases.split('|').next() {
+            name
+        } else {
+            ""
+        }
+    }
 }
 
 #[derive(Default)]
