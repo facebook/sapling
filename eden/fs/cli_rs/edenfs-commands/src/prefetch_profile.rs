@@ -189,8 +189,8 @@ pub enum PrefetchCmd {
 }
 
 impl PrefetchCmd {
-    async fn finish(&self, instance: EdenFsInstance, output_path: &PathBuf) -> Result<ExitCode> {
-        let client = instance.connect(None).await?;
+    async fn finish(&self, output_path: &PathBuf) -> Result<ExitCode> {
+        let client = EdenFsInstance::global().connect(None).await?;
         let files = client.stopRecordingBackingStoreFetch().await?;
         let fetched_files = files
             .fetchedFilePaths
@@ -208,13 +208,14 @@ impl PrefetchCmd {
         Ok(0)
     }
 
-    async fn record(&self, instance: EdenFsInstance) -> Result<ExitCode> {
-        let client = instance.connect(None).await?;
+    async fn record(&self) -> Result<ExitCode> {
+        let client = EdenFsInstance::global().connect(None).await?;
         client.startRecordingBackingStoreFetch().await?;
         Ok(0)
     }
 
-    async fn list(&self, instance: EdenFsInstance, checkout: &Path) -> Result<ExitCode> {
+    async fn list(&self, checkout: &Path) -> Result<ExitCode> {
+        let instance = EdenFsInstance::global();
         let client_name = instance.client_name(checkout)?;
         let config_dir = instance.config_directory(&client_name);
         let checkout_config = CheckoutConfig::parse_config(config_dir);
@@ -233,11 +234,11 @@ impl PrefetchCmd {
 
     async fn activate(
         &self,
-        instance: EdenFsInstance,
         options: &ActivationOptions,
         profile_name: &str,
         force_fetch: &bool,
     ) -> Result<ExitCode> {
+        let instance = EdenFsInstance::global();
         let client_name = instance.client_name(&options.checkout)?;
 
         #[cfg(fbcode_build)]
@@ -267,10 +268,10 @@ impl PrefetchCmd {
         send(sample.builder);
 
         if !options.skip_prefetch {
-            let checkout = find_checkout(&instance, &options.checkout)?;
+            let checkout = find_checkout(instance, &options.checkout)?;
             let result_globs = checkout
                 .prefetch_profiles(
-                    &instance,
+                    instance,
                     &vec![profile_name.to_string()],
                     !options.foreground,
                     true,
@@ -298,10 +299,10 @@ impl PrefetchCmd {
 
     async fn activate_predictive(
         &self,
-        instance: EdenFsInstance,
         options: &ActivationOptions,
         num_dirs: u32,
     ) -> Result<ExitCode> {
+        let instance = EdenFsInstance::global();
         let client_name = instance.client_name(&options.checkout)?;
 
         #[cfg(fbcode_build)]
@@ -332,7 +333,7 @@ impl PrefetchCmd {
         send(sample.builder);
 
         if !options.skip_prefetch {
-            let checkout = find_checkout(&instance, &options.checkout)?;
+            let checkout = find_checkout(instance, &options.checkout)?;
             let result_globs = checkout
                 .prefetch_profiles(
                     &instance,
@@ -363,10 +364,10 @@ impl PrefetchCmd {
 
     async fn deactivate(
         &self,
-        instance: EdenFsInstance,
         options: &ActivationOptions,
         profile_name: &str,
     ) -> Result<ExitCode> {
+        let instance = EdenFsInstance::global();
         let client_name = instance.client_name(&options.checkout)?;
 
         #[cfg(fbcode_build)]
@@ -396,11 +397,8 @@ impl PrefetchCmd {
         Ok(0)
     }
 
-    async fn deactivate_predictive(
-        &self,
-        instance: EdenFsInstance,
-        options: &ActivationOptions,
-    ) -> Result<ExitCode> {
+    async fn deactivate_predictive(&self, options: &ActivationOptions) -> Result<ExitCode> {
+        let instance = EdenFsInstance::global();
         let client_name = instance.client_name(&options.checkout)?;
 
         #[cfg(fbcode_build)]
@@ -429,12 +427,8 @@ impl PrefetchCmd {
         Ok(0)
     }
 
-    async fn fetch(
-        &self,
-        instance: EdenFsInstance,
-        profile_names: &Vec<String>,
-        options: &FetchOptions,
-    ) -> Result<ExitCode> {
+    async fn fetch(&self, profile_names: &Vec<String>, options: &FetchOptions) -> Result<ExitCode> {
+        let instance = EdenFsInstance::global();
         let checkout_path = &options.options.checkout;
         let client_name = instance.client_name(&checkout_path)?;
         let config_dir = instance.config_directory(&client_name);
@@ -460,10 +454,10 @@ impl PrefetchCmd {
             return Ok(0);
         }
 
-        let checkout = find_checkout(&instance, &checkout_path)?;
+        let checkout = find_checkout(instance, checkout_path)?;
         let result_globs = checkout
             .prefetch_profiles(
-                &instance,
+                instance,
                 profiles_to_prefetch,
                 !options.options.foreground,
                 !options.options.skip_prefetch,
@@ -490,11 +484,11 @@ impl PrefetchCmd {
 
     async fn fetch_predictive(
         &self,
-        instance: EdenFsInstance,
         options: &FetchOptions,
         num_dirs: u32,
         if_active: bool,
     ) -> Result<ExitCode> {
+        let instance = EdenFsInstance::global();
         let checkout_path = &options.options.checkout;
         let client_name = instance.client_name(checkout_path)?;
         let config_dir = instance.config_directory(&client_name);
@@ -520,10 +514,10 @@ impl PrefetchCmd {
             0
         };
 
-        let checkout = find_checkout(&instance, checkout_path)?;
+        let checkout = find_checkout(instance, checkout_path)?;
         let result_globs = checkout
             .prefetch_profiles(
-                &instance,
+                instance,
                 &vec![],
                 !options.options.foreground,
                 !options.options.skip_prefetch,
@@ -552,41 +546,33 @@ impl PrefetchCmd {
 
 #[async_trait]
 impl Subcommand for PrefetchCmd {
-    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
+    async fn run(&self) -> Result<ExitCode> {
         match self {
-            Self::Finish { output_path } => self.finish(instance, output_path).await,
-            Self::Record {} => self.record(instance).await,
-            Self::List { checkout } => self.list(instance, checkout).await,
+            Self::Finish { output_path } => self.finish(output_path).await,
+            Self::Record {} => self.record().await,
+            Self::List { checkout } => self.list(checkout).await,
             Self::Activate {
                 options,
                 profile_name,
                 force_fetch,
-            } => {
-                self.activate(instance, options, profile_name, force_fetch)
-                    .await
-            }
+            } => self.activate(options, profile_name, force_fetch).await,
             Self::ActivatePredictive { options, num_dirs } => {
-                self.activate_predictive(instance, options, *num_dirs).await
+                self.activate_predictive(options, *num_dirs).await
             }
             Self::Deactivate {
                 options,
                 profile_name,
-            } => self.deactivate(instance, options, profile_name).await,
-            Self::DeactivatePredictive { options } => {
-                self.deactivate_predictive(instance, options).await
-            }
+            } => self.deactivate(options, profile_name).await,
+            Self::DeactivatePredictive { options } => self.deactivate_predictive(options).await,
             Self::Fetch {
                 profile_names,
                 options,
-            } => self.fetch(instance, profile_names, options).await,
+            } => self.fetch(profile_names, options).await,
             Self::FetchPredictive {
                 options,
                 num_dirs,
                 if_active,
-            } => {
-                self.fetch_predictive(instance, options, *num_dirs, *if_active)
-                    .await
-            }
+            } => self.fetch_predictive(options, *num_dirs, *if_active).await,
         }
     }
 }

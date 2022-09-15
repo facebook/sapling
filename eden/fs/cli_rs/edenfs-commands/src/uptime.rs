@@ -24,7 +24,8 @@ pub struct UptimeCmd {}
 
 #[async_trait]
 impl crate::Subcommand for UptimeCmd {
-    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
+    async fn run(&self) -> Result<ExitCode> {
+        let instance = EdenFsInstance::global();
         let health = instance.get_health(None).await;
 
         match health {

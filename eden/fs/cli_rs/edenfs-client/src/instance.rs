@@ -23,6 +23,7 @@ use edenfs_utils::get_executable;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
 use fbthrift_socket::SocketTransport;
+use once_cell::sync::OnceCell;
 use thrift_types::edenfs::client::EdenService;
 use thrift_types::edenfs::types::DaemonInfo;
 use thrift_types::fb303_core::types::fb303_status;
@@ -32,6 +33,11 @@ use tracing::event;
 use tracing::Level;
 
 use crate::EdenFsClient;
+
+// We should create a single EdenFsInstance when parsing EdenFs commands and utilize
+// EdenFsInstance::global() whenever we need to access it. This way we can avoid passing an
+// EdenFsInstance through every subcommand
+static INSTANCE: OnceCell<EdenFsInstance> = OnceCell::new();
 
 /// These paths are relative to the user's client directory.
 const CLIENTS_DIR: &str = "clients";
@@ -45,7 +51,11 @@ pub struct EdenFsInstance {
 }
 
 impl EdenFsInstance {
-    pub fn new(config_dir: PathBuf, etc_eden_dir: PathBuf, home_dir: Option<PathBuf>) -> Self {
+    pub fn global() -> &'static EdenFsInstance {
+        INSTANCE.get().expect("EdenFsInstance is not initialized")
+    }
+
+    pub fn init(config_dir: PathBuf, etc_eden_dir: PathBuf, home_dir: Option<PathBuf>) {
         event!(
             Level::TRACE,
             ?config_dir,
@@ -53,11 +63,13 @@ impl EdenFsInstance {
             ?home_dir,
             "Creating EdenFsInstance"
         );
-        Self {
-            config_dir,
-            etc_eden_dir,
-            home_dir,
-        }
+        INSTANCE
+            .set(Self {
+                config_dir,
+                etc_eden_dir,
+                home_dir,
+            })
+            .expect("should be able to initialize EdenfsInstance")
     }
 
     pub fn get_config(&self) -> Result<EdenFsConfig> {

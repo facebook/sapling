@@ -10,7 +10,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use edenfs_client::EdenFsInstance;
 
 use crate::ExitCode;
 use crate::Subcommand;
@@ -36,12 +35,12 @@ pub enum DebugSubcommand {
 
 #[async_trait]
 impl Subcommand for DebugCmd {
-    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
+    async fn run(&self) -> Result<ExitCode> {
         use DebugSubcommand::*;
         let sc: &(dyn Subcommand + Send + Sync) = match &self.subcommand {
             ClearLocalCaches(cmd) => cmd,
             CompactLocalStorage(cmd) => cmd,
         };
-        sc.run(instance).await
+        sc.run().await
     }
 }

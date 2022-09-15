@@ -24,8 +24,8 @@ pub struct ListCmd {
 
 #[async_trait]
 impl crate::Subcommand for ListCmd {
-    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
-        let mounts = get_mounts(&instance).await?;
+    async fn run(&self) -> Result<ExitCode> {
+        let mounts = get_mounts(EdenFsInstance::global()).await?;
         if self.json {
             println!("{}", serde_json::to_string_pretty(&mounts)?);
         } else {

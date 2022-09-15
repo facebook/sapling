@@ -100,8 +100,9 @@ impl RedirectCmd {
         Ok(0)
     }
 
-    async fn list(&self, instance: EdenFsInstance, mount: &Path, json: bool) -> Result<ExitCode> {
-        let checkout = find_checkout(&instance, mount)?;
+    async fn list(&self, mount: &Path, json: bool) -> Result<ExitCode> {
+        let instance = EdenFsInstance::global();
+        let checkout = find_checkout(instance, mount)?;
         let mut redirections = get_effective_redirections(&checkout).with_context(|| {
             anyhow!(
                 "Unable to retrieve redirections for checkout '{}'",
@@ -124,7 +125,6 @@ impl RedirectCmd {
 
     async fn add(
         &self,
-        _instance: EdenFsInstance,
         _mount: &Path,
         _repo_path: &Path,
         _redir_type: &str,
@@ -138,9 +138,9 @@ impl RedirectCmd {
 
 #[async_trait]
 impl Subcommand for RedirectCmd {
-    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
+    async fn run(&self) -> Result<ExitCode> {
         match self {
-            Self::List { mount, json } => self.list(instance, mount, *json).await,
+            Self::List { mount, json } => self.list(mount, *json).await,
             Self::Add {
                 mount,
                 repo_path,
@@ -149,7 +149,6 @@ impl Subcommand for RedirectCmd {
                 strict,
             } => {
                 self.add(
-                    instance,
                     mount,
                     repo_path,
                     redir_type,

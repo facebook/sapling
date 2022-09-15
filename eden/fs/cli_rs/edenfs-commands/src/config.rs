@@ -20,8 +20,8 @@ pub struct ConfigCmd {}
 
 #[async_trait]
 impl crate::Subcommand for ConfigCmd {
-    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
-        let config = match instance.get_config() {
+    async fn run(&self) -> Result<ExitCode> {
+        let config = match EdenFsInstance::global().get_config() {
             Ok(config) => config,
             Err(e) => {
                 eprintln!("{}", e);

@@ -417,8 +417,8 @@ impl Cursor {
 
 #[async_trait]
 impl crate::Subcommand for MinitopCmd {
-    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
-        let client = instance.connect(None).await?;
+    async fn run(&self) -> Result<ExitCode> {
+        let client = EdenFsInstance::global().connect(None).await?;
         let mut tracked_processes = TrackedProcesses::new();
 
         let mut system = System::new();

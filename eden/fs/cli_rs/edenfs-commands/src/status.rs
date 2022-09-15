@@ -30,7 +30,8 @@ pub struct StatusCmd {
 }
 
 impl StatusCmd {
-    async fn get_status(&self, instance: &EdenFsInstance) -> Result<i32> {
+    async fn get_status(&self) -> Result<i32> {
+        let instance = EdenFsInstance::global();
         let timeout = Duration::from_secs(self.timeout);
         let health = instance.get_health(Some(timeout));
         let health = time::timeout(timeout, health).await;
@@ -63,8 +64,8 @@ impl StatusCmd {
 
 #[async_trait]
 impl crate::Subcommand for StatusCmd {
-    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
-        let status = self.get_status(&instance).await;
+    async fn run(&self) -> Result<ExitCode> {
+        let status = self.get_status().await;
 
         Ok(match status {
             Ok(pid) => {

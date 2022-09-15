@@ -23,8 +23,8 @@ pub struct GcCmd {}
 
 #[async_trait]
 impl crate::Subcommand for GcCmd {
-    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
-        let client = instance.connect(None).await?;
+    async fn run(&self) -> Result<ExitCode> {
+        let client = EdenFsInstance::global().connect(None).await?;
 
         // TODO: unload inodes
 

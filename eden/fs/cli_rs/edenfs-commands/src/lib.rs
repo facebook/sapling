@@ -75,7 +75,7 @@ pub struct MainCommand {
 /// The first level of edenfsctl subcommands.
 #[async_trait]
 pub trait Subcommand: Send + Sync {
-    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode>;
+    async fn run(&self) -> Result<ExitCode>;
 }
 
 /**
@@ -102,7 +102,7 @@ pub enum TopLevelSubcommand {
 
 #[async_trait]
 impl Subcommand for TopLevelSubcommand {
-    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
+    async fn run(&self) -> Result<ExitCode> {
         use TopLevelSubcommand::*;
         let sc: &(dyn Subcommand) = match self {
             Status(cmd) => cmd,
@@ -118,7 +118,7 @@ impl Subcommand for TopLevelSubcommand {
             PrefetchProfile(cmd) => cmd,
             // Redirect(cmd) => cmd,
         };
-        sc.run(instance).await
+        sc.run().await
     }
 }
 
@@ -145,14 +145,6 @@ impl MainCommand {
         } else {
             dirs::home_dir()
         }
-    }
-
-    fn get_instance(&self) -> EdenFsInstance {
-        EdenFsInstance::new(
-            self.get_config_dir(),
-            self.get_etc_eden_dir(),
-            self.get_home_dir(),
-        )
     }
 
     fn set_working_directory(&self) -> Result<()> {
@@ -185,7 +177,12 @@ impl MainCommand {
     async fn dispatch(self) -> Result<ExitCode> {
         event!(Level::TRACE, cmd = ?self, "Dispatching");
 
-        let instance = self.get_instance();
-        self.subcommand.run(instance).await
+        EdenFsInstance::init(
+            self.get_config_dir(),
+            self.get_etc_eden_dir(),
+            self.get_home_dir(),
+        );
+        // Use EdenFsInstance::global() to access the instance from now on
+        self.subcommand.run().await
     }
 }

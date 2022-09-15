@@ -674,7 +674,8 @@ fn clean_buck_redirections(buck_redirections: HashSet<PathBuf>) -> Result<()> {
 
 #[async_trait]
 impl crate::Subcommand for DiskUsageCmd {
-    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
+    async fn run(&self) -> Result<ExitCode> {
+        let instance = EdenFsInstance::global();
         let client = instance.connect(None).await?;
 
         let mounts = self

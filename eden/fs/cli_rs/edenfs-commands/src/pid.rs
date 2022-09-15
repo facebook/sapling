@@ -20,8 +20,8 @@ pub struct PidCmd {}
 
 #[async_trait]
 impl crate::Subcommand for PidCmd {
-    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
-        let health = instance.get_health(None).await;
+    async fn run(&self) -> Result<ExitCode> {
+        let health = EdenFsInstance::global().get_health(None).await;
 
         Ok(match health {
             Ok(health) => {

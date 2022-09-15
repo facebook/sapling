@@ -15,7 +15,6 @@ use std::time::Duration;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use edenfs_client::EdenFsInstance;
 use once_cell::sync::Lazy;
 use termwiz::caps::Capabilities;
 use termwiz::color::ColorAttribute;
@@ -400,7 +399,7 @@ impl TopCmd {
 
 #[async_trait]
 impl crate::Subcommand for TopCmd {
-    async fn run(&self, _instance: EdenFsInstance) -> Result<ExitCode> {
+    async fn run(&self) -> Result<ExitCode> {
         match self.main_loop() {
             Ok(_) => Ok(0),
             Err(cause) => {
