@@ -9,13 +9,16 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.56"
+async-recursion = "0.3.2"
 atomicfile = { version = "0.1.0", path = "../../../scm/lib/atomicfile" }
 byteorder = "1.3"
 edenfs-config = { version = "0.1.0", path = "../edenfs-config" }
 edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
 edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift_socket = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 once_cell = "1.12"
+pathdiff = "0.2"
 regex = "1.5.4"
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
@@ -26,11 +29,15 @@ tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tokio-uds-compat = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 toml = "=0.5.8"
 tracing = "0.1.35"
+util = { version = "0.1.0", path = "../../../scm/lib/util" }
 uuid = { version = "0.8.1", features = ["serde", "v4", "v5"] }
 
 [dev-dependencies]
 rand = { version = "0.8", features = ["small_rng"] }
 tempfile = "3.3"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+nix = "0.23"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 nix = "0.23"

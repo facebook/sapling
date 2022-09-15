@@ -18,23 +18,34 @@ use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Context;
+use async_recursion::async_recursion;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
+#[cfg(fbcode_build)]
+use edenfs_telemetry::redirect::RedirectionOverwriteSample;
+#[cfg(fbcode_build)]
+use edenfs_telemetry::send;
+use edenfs_utils::is_buckd_running_for_path;
 use edenfs_utils::metadata::MetadataExt;
-#[cfg(target_os = "windows")]
 use edenfs_utils::remove_symlink;
+use edenfs_utils::stop_buckd_for_path;
+#[cfg(fbcode_build)]
+use fbinit::expect_init;
 #[cfg(target_os = "windows")]
 use mkscratch::zzencode;
 #[cfg(target_os = "macos")]
 use nix::sys::stat::stat;
+use pathdiff::diff_paths;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
 use subprocess::Exec;
 use subprocess::Redirection as SubprocessRedirection;
 use toml::value::Value;
+use util::path::absolute;
 
+use crate::checkout::CheckoutConfig;
 use crate::checkout::EdenFsCheckout;
 use crate::instance::EdenFsInstance;
 use crate::mounttable::read_mount_table;
@@ -142,7 +153,7 @@ impl fmt::Display for RepoPathDisposition {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, PartialEq)]
 pub enum RedirectionState {
     #[serde(rename = "ok")]
     /// Matches the expectations of our configuration as far as we can tell
@@ -196,7 +207,7 @@ impl Redirection {
 
     /// Determine if the APFS volume helper is installed with appropriate
     /// permissions such that we can use it to mount things
-    fn have_apfs_helper() -> Result<bool> {
+    pub fn have_apfs_helper() -> Result<bool> {
         match fs::symlink_metadata(APFS_HELPER) {
             Ok(metadata) => Ok(metadata.is_setuid_set()),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
@@ -557,13 +568,116 @@ impl Redirection {
         }
         Ok(())
     }
+
+    #[async_recursion]
+    pub async fn remove_existing(
+        &self,
+        checkout: &EdenFsCheckout,
+        fail_if_bind_mount: bool,
+    ) -> Result<RepoPathDisposition> {
+        let repo_path = self.expand_repo_path(checkout);
+        let disposition = RepoPathDisposition::analyze(&repo_path)?;
+        if disposition == RepoPathDisposition::DoesNotExist {
+            return Ok(disposition);
+        }
+
+        // If this redirect was setup by buck, we should stop buck
+        // prior to unmounting it, as it doesn't currently have a
+        // great way to detect that the directories have gone away.
+        if let Some(possible_buck_project) = repo_path.parent() {
+            if is_buckd_running_for_path(possible_buck_project) {
+                stop_buckd_for_path(possible_buck_project)?
+            }
+        }
+
+        if disposition == RepoPathDisposition::IsSymlink {
+            remove_symlink(&repo_path)?;
+            return Ok(RepoPathDisposition::DoesNotExist);
+        }
+
+        if disposition == RepoPathDisposition::IsBindMount {
+            if fail_if_bind_mount {
+                return Err(EdenFsError::Other(anyhow!(
+                    "Failed to remove {} since the bind unmount failed",
+                    repo_path.display()
+                )));
+            }
+            self._bind_unmount(checkout).await?;
+
+            // Now that it is unmounted, re-assess and ideally
+            // remove the empty directory that was the mount point
+            // To avoid infinite recursion, tell the next call to fail if
+            // the disposition is still a bind mount
+            return self.remove_existing(checkout, true).await;
+        }
+
+        if disposition == RepoPathDisposition::IsEmptyDir {
+            match std::fs::remove_dir(repo_path) {
+                Ok(_) => return Ok(RepoPathDisposition::DoesNotExist),
+                Err(_) => return Ok(disposition),
+            }
+        }
+        Ok(disposition)
+    }
+
+    async fn apply(&self, checkout: &EdenFsCheckout) -> Result<()> {
+        let disposition = self.remove_existing(checkout, false).await?;
+        // Check for non-empty directory. We only care about this if we are creating a symlink type redirection or bind type redirection on Windows.
+        if disposition == RepoPathDisposition::IsNonEmptyDir
+            && (self.redir_type == RedirectionType::Symlink
+                || (self.redir_type == RedirectionType::Bind && cfg!(windows)))
+        {
+            // Part of me would like to show this error even if we're going
+            // to mount something over the top, but on macOS the act of mounting
+            // disk image can leave marker files like `.automounted` in the
+            // directory that we mount over, so let's only treat this as a hard
+            // error if we want to redirect using a symlink.
+            return Err(EdenFsError::Other(anyhow!(
+                "Cannot redirect {} because it is a non-empty directory.  Review its contents and \
+                remove it if that is appropriate and then try again.",
+                self.repo_path.display()
+            )));
+        }
+
+        if disposition == RepoPathDisposition::IsFile {
+            return Err(EdenFsError::Other(anyhow!(
+                "Cannot redirect {} because it is a file",
+                self.repo_path.display()
+            )));
+        }
+
+        if self.redir_type == RedirectionType::Bind {
+            let target = self.expand_target_abspath(checkout)?;
+            match target {
+                Some(t) => self._bind_mount(&checkout.path(), &t).await,
+                None => Err(EdenFsError::Other(anyhow!(
+                    "failed to expand target abspath for checkout {}",
+                    &checkout.path().to_string_lossy()
+                ))),
+            }
+        } else if self.redir_type == RedirectionType::Symlink {
+            let target = self.expand_target_abspath(checkout)?;
+            match target {
+                Some(t) => self._apply_symlink(&checkout.path(), &t),
+                None => Err(EdenFsError::Other(anyhow!(
+                    "failed to expand target abspath for checkout {}",
+                    &checkout.path().to_string_lossy()
+                ))),
+            }
+        } else {
+            Err(EdenFsError::Other(anyhow!(
+                "Unsupported redirection type {}",
+                self.redir_type
+            )))
+        }
+    }
 }
 
 /// Detect the most common form of a bind mount in the repo;
 /// its parent directory will have a different device number than
 /// the mount point itself.  This won't detect something funky like
 /// bind mounting part of the repo to a different part.
-fn is_bind_mount(path: PathBuf) -> Result<bool> {
+pub(crate) fn is_bind_mount(path: PathBuf) -> Result<bool> {
     let parent = path.parent();
     if let Some(parent_path) = parent {
         let path_metadata = match fs::symlink_metadata(&path) {
@@ -693,7 +807,7 @@ async fn _remove_bind_mount_thrift_call(mount_path: &Path, repo_path: &Path) -> 
 /// Returns the explicitly configured redirection configuration.
 /// This does not take into account how things are currently mounted;
 /// use `get_effective_redirections` for that purpose.
-fn get_configured_redirections(
+pub fn get_configured_redirections(
     checkout: &EdenFsCheckout,
 ) -> Result<BTreeMap<PathBuf, Redirection>> {
     let mut redirs = BTreeMap::new();
@@ -739,7 +853,7 @@ fn get_configured_redirections(
 fn is_symlink_correct(redir: &Redirection, checkout: &EdenFsCheckout) -> Result<bool> {
     if let Some(expected_target) = redir.expand_target_abspath(checkout)? {
         let expected_target = fs::canonicalize(expected_target).from_err()?;
-        let symlink_path = checkout.path().join(redir.repo_path.clone());
+        let symlink_path = checkout.path().join(&redir.repo_path);
         let target = fs::canonicalize(fs::read_link(symlink_path).from_err()?).from_err()?;
         Ok(target == expected_target)
     } else {
@@ -822,6 +936,211 @@ pub fn get_effective_redirections(
     }
 
     Ok(redirs)
+}
+
+/// We should return success early iff:
+/// 1) we're adding a symlink redirection
+/// 2) the symlink already exists
+/// 3) the symlink is already a redirection that's managed by EdenFS
+fn _should_return_success_early(
+    redir_type: RedirectionType,
+    configured_redirections: &BTreeMap<PathBuf, Redirection>,
+    checkout_path: &Path,
+    repo_path: &Path,
+) -> Result<bool> {
+    if redir_type == RedirectionType::Symlink {
+        // We cannot use resolve_repo_relative_path() because it will essentially
+        // attempt to resolve any existing symlinks twice. This causes us to never
+        // return the correct path for existing symlinks. Instead, we skip resolving
+        // and simply check if the absolute path is relative to the checkout path
+        // and if any relative paths are pre-existing configured redirections.
+        let mut relative_path = repo_path.to_owned();
+        if repo_path.is_absolute() {
+            let canonical_repo_path = repo_path;
+            if !canonical_repo_path.starts_with(checkout_path) {
+                return Err(EdenFsError::Other(anyhow!(
+                    "The redirection path `{}` doesn't resolve \
+                    to a path inside the repo `{}`",
+                    repo_path.display(),
+                    checkout_path.display()
+                )));
+            }
+            relative_path = diff_paths(canonical_repo_path, checkout_path).unwrap_or_default();
+        }
+        if let Some(redir) = configured_redirections.get(&relative_path) {
+            return Ok(
+                redir.redir_type == RedirectionType::Symlink && redir.repo_path == relative_path
+            );
+        }
+    }
+    Ok(false)
+}
+
+/// Given a path, verify that it is an appropriate repo-root-relative path
+/// and return the resolved form of that path.
+///
+/// The ideal is that they pass in `foo` and we return `foo`, but we also
+/// allow for the path to be absolute path to `foo`, in which case we resolve
+/// it and verify that it falls with the repo and then return the relative
+/// path to `foo`.
+fn resolve_repo_relative_path(checkout: &EdenFsCheckout, repo_rel_path: &Path) -> Result<PathBuf> {
+    let checkout_path = checkout.path();
+    if repo_rel_path.is_absolute() {
+        // Well, the original intent was to only interpret paths as relative
+        // to the repo root, but it's a bit burdensome to require the caller
+        // to correctly relativize for that case, so we'll allow an absolute
+        // path to be specified.
+        if repo_rel_path.starts_with(&checkout_path) {
+            return Ok(repo_rel_path.into());
+        } else {
+            return Err(EdenFsError::Other(anyhow!(
+                "The path `{}` doesn't resolve to a path inside the repo `{}`",
+                repo_rel_path.to_string_lossy(),
+                checkout_path.to_string_lossy()
+            )));
+        };
+    }
+
+    // Otherwise, the path must be interpreted as being relative to the repo
+    // root, so let's resolve that and verify that it lies within the repo
+    let candidate_path = checkout_path.join(repo_rel_path);
+    let candidate = absolute(candidate_path).from_err()?;
+
+    if !candidate.starts_with(&checkout_path) {
+        return Err(EdenFsError::Other(anyhow!(
+            "The redirection  path `{}` doesn't resolve \
+            to a path inside the repo `{}`",
+            repo_rel_path.to_string_lossy(),
+            checkout_path.to_string_lossy()
+        )));
+    }
+    let relative_path = diff_paths(candidate, &checkout_path).unwrap_or_default();
+
+    // If the resolved and relativized path doesn't match the user-specified
+    // path then it means that they either used `..` or a path that resolved
+    // through a symlink.  The former is ambiguous, especially because it likely
+    // implies that the user is assuming that the path is current working directory
+    // relative instead of repo root relative, and the latter is problematic for
+    // all of the usual symlink reasons.
+    if relative_path != repo_rel_path {
+        Err(EdenFsError::Other(anyhow!(
+            "The redirection path `{}` resolves to `{}` but must be a canonical \
+            repo-root-relative path. Specify either a canonical absolute path \
+            to the redirection, or a canonical (without `..` components) path \
+            relative to the repository root at `{}`.",
+            repo_rel_path.to_string_lossy(),
+            relative_path.to_string_lossy(),
+            checkout_path.display(),
+        )))
+    } else {
+        Ok(repo_rel_path.to_owned())
+    }
+}
+
+pub async fn try_add_redirection(
+    checkout: &EdenFsCheckout,
+    config_dir: &Path,
+    repo_path: &Path,
+    redir_type: RedirectionType,
+    force_remount_bind_mounts: bool,
+    strict: bool,
+) -> Result<i32> {
+    // Get only the explicitly configured entries for the purposes of the
+    // add command, so that we avoid writing out any of the effective list
+    // of redirections to the local configuration.  That doesn't matter so
+    // much at this stage, but when we add loading in profile(s) later we
+    // don't want to scoop those up and write them out to this branch of
+    // the configuration.
+    let mut configured_redirs = get_configured_redirections(checkout)?;
+
+    // We are only checking for pre-existing symlinks in this method, so we
+    // can use the configured mounts instead of the effective mounts. This is
+    // because the symlinks contained in these lists should be the same. I.e.
+    // if a symlink is configured, it is also effective.
+    if _should_return_success_early(redir_type, &configured_redirs, &checkout.path(), repo_path)? {
+        println!("EdenFS managed symlink redirection already exists.");
+        return Ok(0);
+    }
+
+    // We need to query the status of the mounts to catch things like
+    // a redirect being configured but unmounted.  This improves the
+    // UX in the case where eg: buck is adding a redirect.  Without this
+    // we'd hit the skip case below because it is configured, but we wouldn't
+    // bring the redirection back online.
+    // However, we keep this separate from the `redirs` list below for
+    // the reasons stated in the comment above.
+    let effective_redirs = get_effective_redirections(checkout)?;
+
+    let resolved_repo_path = resolve_repo_relative_path(checkout, repo_path)?;
+
+    let redir = Redirection {
+        repo_path: resolved_repo_path.clone(),
+        redir_type,
+        target: None,
+        source: USER_REDIRECTION_SOURCE.to_string(),
+        state: Some(RedirectionState::MatchesConfiguration),
+    };
+
+    if let Some(existing_redir) = effective_redirs.get(&resolved_repo_path) {
+        if let Some(existing_redir_state) = &existing_redir.state {
+            if existing_redir.repo_path == redir.repo_path
+                && !force_remount_bind_mounts
+                && *existing_redir_state != RedirectionState::NotMounted
+            {
+                println!(
+                    "Skipping {}; it is already configured. (use \
+                    --force-remount-bind-mounts to force reconfiguring this \
+                    redirection.",
+                    resolved_repo_path.display(),
+                );
+                return Ok(0);
+            }
+        }
+    }
+    // We should prevent users from accidentally overwriting existing
+    // directories. We only need to check this condition for bind mounts
+    // because symlinks should already fail if the target dir exists.
+    if redir_type == RedirectionType::Bind && redir.repo_path().is_dir() {
+        if !strict {
+            println!(
+                "WARNING: {} already exists.\nMounting over \
+                an existing directory will overwrite its contents.\nYou can \
+                use --strict to prevent overwriting existing directories.\n",
+                redir.repo_path.display()
+            );
+            #[cfg(fbcode_build)]
+            {
+                let sample = RedirectionOverwriteSample::build(
+                    expect_init(),
+                    &redir.repo_path.to_string_lossy(),
+                    &checkout.path().to_string_lossy(),
+                );
+                send(sample.builder);
+            }
+        } else {
+            println!(
+                "Not adding redirection {} because \
+                the --strict option was used.\nIf you would like \
+                to add this redirection (not recommended), then \
+                rerun this command without --strict.",
+                redir.repo_path.display()
+            );
+            return Ok(1);
+        }
+    }
+
+    redir.apply(checkout).await?;
+
+    // We expressly allow replacing an existing configuration in order to
+    // support a user with a local ad-hoc override for global- or profile-
+    // specified configuration.
+    configured_redirs.insert(repo_path.to_owned(), redir);
+    let mut checkout_config = CheckoutConfig::parse_config(config_dir.into())?;
+    // and persist the configuration so that we can re-apply it in a subsequent
+    // call to `edenfsctl redirect fixup`
+    checkout_config.update_redirections(config_dir, &configured_redirs)?;
+
+    Ok(0)
 }
 
 #[cfg(test)]
