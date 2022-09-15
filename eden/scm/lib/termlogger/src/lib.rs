@@ -16,7 +16,6 @@ pub struct TermLogger {
     error: io::IOError,
     quiet: bool,
     verbose: bool,
-    debug: bool,
 }
 
 impl TermLogger {
@@ -26,7 +25,6 @@ impl TermLogger {
             error: io.error(),
             quiet: false,
             verbose: false,
-            debug: false,
         }
     }
 
@@ -37,11 +35,6 @@ impl TermLogger {
 
     pub fn with_verbose(mut self, verbose: bool) -> Self {
         self.verbose = verbose;
-        self
-    }
-
-    pub fn with_debug(mut self, debug: bool) -> Self {
-        self.debug = debug;
         self
     }
 

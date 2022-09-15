@@ -14,5 +14,4 @@ pub fn new_logger(io: &IO, opts: &HgGlobalOpts) -> TermLogger {
     TermLogger::new(io)
         .with_quiet(opts.quiet)
         .with_verbose(opts.verbose)
-        .with_debug(opts.debug)
 }
