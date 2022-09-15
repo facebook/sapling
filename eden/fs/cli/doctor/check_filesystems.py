@@ -396,6 +396,14 @@ class DuplicateInodes(PathsProblem):
         )
 
 
+class DebugInodeStatusFailure(Problem):
+    def __init__(self, ex: str) -> None:
+        super().__init__(
+            f"EdenFS's in-memory file state couldn't be collected: {ex}",
+            severity=ProblemSeverity.ERROR,
+        )
+
+
 def check_materialized_are_accessible(
     tracker: ProblemTracker,
     instance: EdenInstance,
@@ -415,12 +423,16 @@ def check_materialized_are_accessible(
     duplicate_inodes = []
 
     with instance.get_thrift_client_legacy() as client:
-        materialized = client.debugInodeStatus(
-            bytes(checkout.path),
-            b"",
-            flags=DIS_REQUIRE_MATERIALIZED,
-            sync=SyncBehavior(),
-        )
+        try:
+            materialized = client.debugInodeStatus(
+                bytes(checkout.path),
+                b"",
+                flags=DIS_REQUIRE_MATERIALIZED,
+                sync=SyncBehavior(),
+            )
+        except Exception as ex:
+            tracker.add_problem(DebugInodeStatusFailure(str(ex)))
+            return
 
     for materialized_dir in materialized:
         materialized_name = os.fsdecode(materialized_dir.path)
@@ -510,6 +522,24 @@ class LoadedFileHasDifferentContentOnDisk(Problem):
         )
 
 
+class LoadedInodesAreInaccessible(PathsProblem):
+    def __init__(self, errors: List[Tuple[Path, str]]) -> None:
+        super().__init__(
+            self.omitPathsDescriptionWithException(
+                errors, " is inaccessible despite EdenFS believing it should be"
+            ),
+            severity=ProblemSeverity.ERROR,
+        )
+
+
+class SHA1ComputationFailedForLoadedInode(PathsProblem):
+    def __init__(self, errors: List[Path]) -> None:
+        super().__init__(
+            self.omitPathsDescription(errors, " cannot be read to compute its SHA1"),
+            severity=ProblemSeverity.ERROR,
+        )
+
+
 def _compute_file_sha1(path: Path) -> bytes:
     hasher = hashlib.sha1()
     with open(path, "rb") as f:
@@ -521,74 +551,96 @@ def _compute_file_sha1(path: Path) -> bytes:
     return hasher.digest()
 
 
-def _validate_loaded_content(
-    client: EdenClient,
-    checkout_path: Path,
-    query_prjfs_file: Callable[[Path], PRJ_FILE_STATE],
-) -> Tuple[List[Tuple[Path, bytes, bytes]], List[Path]]:
-    # {path | path is a child of a directory on disk where that directory is a loaded inode inside EdenFS and the child does not exist inside EdenFS}
-    missing_inodes = []
-
-    loaded = client.debugInodeStatus(
-        bytes(checkout_path),
-        b"",
-        flags=DIS_REQUIRE_LOADED,
-        sync=SyncBehavior(),
-    )
-
-    errors = []
-    for loaded_dir in loaded:
-        path = Path(os.fsdecode(loaded_dir.path))
-
-        osPath = checkout_path / path
-        missing_path_names = set()
-        refcount = loaded_dir.refcount or 0
-        if not loaded_dir.materialized and refcount > 0:
-            missing_path_names = set(os.listdir(osPath))
-
-        for dirent in loaded_dir.entries:
-            name = os.fsdecode(dirent.name)
-            if name in missing_path_names:
-                missing_path_names.remove(name)
-            if not stat.S_ISREG(dirent.mode) or dirent.materialized:
-                continue
-
-            dirent_path = path / Path(name)
-            filestate = query_prjfs_file(checkout_path / dirent_path)
-            if (
-                filestate & PRJ_FILE_STATE.HydratedPlaceholder
-            ) != PRJ_FILE_STATE.HydratedPlaceholder:
-                # We should only compute the sha1 of files that have been read.
-                continue
-
-            sha1 = client.getSHA1(
-                bytes(checkout_path), [bytes(dirent_path)], sync=SyncBehavior()
-            )[0].get_sha1()
-            on_disk_sha1 = _compute_file_sha1(checkout_path / dirent_path)
-            if sha1 != on_disk_sha1:
-                errors += [(dirent_path, sha1, on_disk_sha1)]
-
-        missing_inodes += [path / name for name in missing_path_names]
-
-    return errors, missing_inodes
-
-
 def check_loaded_content(
     tracker: ProblemTracker,
     instance: EdenInstance,
     checkout: EdenCheckout,
     query_prjfs_file: Callable[[Path], PRJ_FILE_STATE],
 ) -> None:
+
     with instance.get_thrift_client_legacy() as client:
-        errors, missing_inodes = _validate_loaded_content(
-            client, checkout.path, query_prjfs_file
-        )
+        try:
+            loaded = client.debugInodeStatus(
+                bytes(checkout.path),
+                b"",
+                flags=DIS_REQUIRE_LOADED,
+                sync=SyncBehavior(),
+            )
+        except Exception as ex:
+            tracker.add_problem(DebugInodeStatusFailure(str(ex)))
+            return
+
+        # List of files whose on disk sha1 differs from EdenFS
+        errors: List[Tuple[Path, bytes, bytes]] = []
+        # List of files present on disk but not known by EdenFS
+        missing_inodes: List[Path] = []
+        # List of files that couldn't be queried
+        inaccessible: List[Tuple[Path, str]] = []
+        # List of files that aren't present on disk
+        not_found: List[Path] = []
+        # List of files where SHA1 couldn't be computed on
+        sha1_errors: List[Path] = []
+        for loaded_dir in loaded:
+            path = Path(os.fsdecode(loaded_dir.path))
+
+            osPath = checkout.path / path
+            missing_path_names = set()
+            refcount = loaded_dir.refcount or 0
+            if not loaded_dir.materialized and refcount > 0:
+                missing_path_names = set(os.listdir(osPath))
+
+            for dirent in loaded_dir.entries:
+                name = os.fsdecode(dirent.name)
+                if name in missing_path_names:
+                    missing_path_names.remove(name)
+                if not stat.S_ISREG(dirent.mode) or dirent.materialized:
+                    continue
+
+                dirent_path = path / Path(name)
+                try:
+                    filestate = query_prjfs_file(checkout.path / dirent_path)
+                except FileNotFoundError:
+                    not_found += [dirent_path]
+                    continue
+                except Exception as ex:
+                    inaccessible += [(dirent_path, str(ex))]
+                    continue
+
+                if (
+                    filestate & PRJ_FILE_STATE.HydratedPlaceholder
+                ) != PRJ_FILE_STATE.HydratedPlaceholder:
+                    # We should only compute the sha1 of files that have been read.
+                    continue
+
+                sha1 = client.getSHA1(
+                    bytes(checkout.path), [bytes(dirent_path)], sync=SyncBehavior()
+                )[0].get_sha1()
+
+                try:
+                    on_disk_sha1 = _compute_file_sha1(checkout.path / dirent_path)
+                except Exception:
+                    sha1_errors += [dirent_path]
+                    continue
+
+                if sha1 != on_disk_sha1:
+                    errors += [(dirent_path, sha1, on_disk_sha1)]
+
+            missing_inodes += [path / name for name in missing_path_names]
 
     if errors:
         tracker.add_problem(LoadedFileHasDifferentContentOnDisk(errors))
 
     if missing_inodes:
         tracker.add_problem(MissingInodesForFiles(missing_inodes))
+
+    if not_found:
+        tracker.add_problem(MissingFilesForInodes(checkout.path, not_found))
+
+    if inaccessible:
+        tracker.add_problem(LoadedInodesAreInaccessible(inaccessible))
+
+    if sha1_errors:
+        tracker.add_problem(SHA1ComputationFailedForLoadedInode(sha1_errors))
 
 
 class HighInodeCountProblem(Problem):
