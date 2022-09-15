@@ -13,7 +13,6 @@ pub mod checkout;
 pub mod instance;
 mod mounttable;
 pub mod redirect;
-mod utils;
 
 pub use instance::DaemonHealthy;
 pub use instance::EdenFsInstance;

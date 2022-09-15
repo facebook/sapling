@@ -19,6 +19,7 @@ use edenfs_config::EdenFsConfig;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
+use edenfs_utils::get_executable;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
 use fbthrift_socket::SocketTransport;
@@ -30,7 +31,6 @@ use tokio_uds_compat::UnixStream;
 use tracing::event;
 use tracing::Level;
 
-use crate::utils::get_executable;
 use crate::EdenFsClient;
 
 /// These paths are relative to the user's client directory.

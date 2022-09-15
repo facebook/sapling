@@ -11,6 +11,8 @@ license = "GPLv2+"
 anyhow = "1.0.56"
 edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
 subprocess = "0.2.7"
+sysinfo = "0.20.4"
+tracing = "0.1.35"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 nix = "0.23"

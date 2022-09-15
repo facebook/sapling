@@ -7,9 +7,13 @@
 
 //! EdenFS utils
 
+use std::env::var;
 use std::ffi::OsString;
+use std::fs::read_to_string;
 use std::path::Path;
 use std::path::PathBuf;
+use std::process::Command;
+use std::process::Output;
 
 use anyhow::anyhow;
 use edenfs_error::EdenFsError;
@@ -17,6 +21,9 @@ use edenfs_error::Result;
 use edenfs_error::ResultExt;
 use subprocess::Exec;
 use subprocess::Redirection;
+use sysinfo::ProcessExt;
+use sysinfo::SystemExt;
+use tracing::trace;
 
 pub mod humantime;
 pub mod metadata;
@@ -65,9 +72,10 @@ pub fn get_environment_suitable_for_subprocess() -> Vec<(OsString, OsString)> {
 /// this will be in the SOURCE_BUILT_BUCK environment variable. Otherwise we use
 /// the default buck in our path.
 pub fn get_buck_command() -> String {
-    match std::env::vars().find(|(k, _)| k == "SOURCE_BUILT_BUCK") {
-        Some((_, v)) => v,
-        None => "buck".to_string(),
+    if let Ok(buck_cmd) = var("SOURCE_BUILT_BUCK") {
+        buck_cmd
+    } else {
+        "buck".to_string()
     }
 }
 
@@ -112,6 +120,86 @@ pub fn get_env_with_buck_version(path: &Path) -> Result<Vec<(OsString, OsString)
         env.push((OsString::from("BUCKVERSION"), OsString::from(buck_version)));
     }
     Ok(env)
+}
+
+pub fn get_executable(pid: sysinfo::Pid) -> Option<PathBuf> {
+    let mut system = sysinfo::System::new();
+
+    if system.refresh_process(pid) {
+        if let Some(process) = system.process(pid) {
+            let executable = process.exe();
+            trace!(pid, ?executable, "found process executable");
+
+            #[cfg(unix)]
+            {
+                // We may get a path ends with (deleted) if the executable is deleted on UNIX.
+                let path = executable
+                    .to_str()
+                    .unwrap_or("")
+                    .trim_end_matches(" (deleted)");
+                return Some(path.into());
+            }
+            #[cfg(not(unix))]
+            {
+                return Some(executable.into());
+            }
+        } else {
+            trace!(pid, "unable to find process");
+        }
+    } else {
+        trace!("unable to load process information");
+    }
+
+    None
+}
+
+pub fn is_process_running(pid: sysinfo::Pid) -> bool {
+    let mut system = sysinfo::System::new();
+
+    if system.refresh_process(pid) {
+        system.process(pid).is_some()
+    } else {
+        false
+    }
+}
+
+pub fn is_buckd_running_for_path(path: &Path) -> bool {
+    let pid_file = path.join(".buckd").join("pid");
+    let file_contents = read_to_string(&pid_file).unwrap_or_default();
+    #[cfg(windows)]
+    let buck_pid_parse = file_contents.trim().parse::<usize>();
+    #[cfg(not(windows))]
+    let buck_pid_parse = file_contents.trim().parse::<i32>();
+
+    if let Ok(buck_pid) = buck_pid_parse {
+        is_process_running(buck_pid)
+    } else {
+        eprintln!(
+            "Failed to parse pid from buckd pid file {}",
+            pid_file.display()
+        );
+        false
+    }
+}
+
+/// Buck is sensitive to many environment variables, so we need to set them up
+/// properly before calling into buck. Use this function to guarantee environment
+/// variables are set up correctly.
+pub fn run_buck_command(buck_command: &mut Command, path: &Path) -> Result<Output> {
+    let buck_envs = get_env_with_buck_version(path)?;
+    buck_command
+        .envs(buck_envs)
+        .current_dir(path)
+        .output()
+        .from_err()
+}
+
+pub fn stop_buckd_for_path(path: &Path) -> Result<()> {
+    println!("Stopping buck in {}...", path.display());
+    let mut kill_cmd = Command::new(get_buck_command());
+    kill_cmd.arg("kill");
+    run_buck_command(&mut kill_cmd, path)?;
+    Ok(())
 }
 
 #[cfg(windows)]
