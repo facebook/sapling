@@ -64,11 +64,15 @@ pub fn run(ctx: ReqCtx<ConfigOpts>, repo: &mut OptionalRepo) -> Result<u8> {
     let use_rust = force_rust || config.get_or_default("config", "use-rust")?;
 
     if !use_rust {
-        bail!(errors::FallbackToPython(short_name()));
+        bail!(errors::FallbackToPython(
+            "config.use-rust not set to True".to_owned()
+        ));
     }
 
     if ctx.opts.edit || ctx.opts.local || ctx.opts.global {
-        bail!(errors::FallbackToPython(short_name()));
+        bail!(errors::FallbackToPython(
+            "config edit options not supported in Rust".to_owned()
+        ));
     }
 
     let config = repo.config();

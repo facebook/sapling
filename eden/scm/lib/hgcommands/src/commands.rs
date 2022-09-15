@@ -63,7 +63,7 @@ fn get_formatter(
         },
         writer,
     )
-    .map_err(|_| FallbackToPython(command_name))
+    .map_err(|_| FallbackToPython("template not supported in Rust".to_owned()))
 }
 
 #[allow(dead_code)]

@@ -110,7 +110,10 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
         || !ctx.opts.walk_opts.exclude.is_empty()
         || !args_check
     {
-        return Err(errors::FallbackToPython(aliases()).into());
+        return Err(errors::FallbackToPython(
+            "one or more unsupported options in Rust status".to_owned(),
+        )
+        .into());
     }
 
     let StatusOpts {
@@ -174,13 +177,18 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
                 .map_err(|e| match e
                     .downcast_ref::<edenfs_client::status::OperationNotSupported>()
                 {
-                    Some(_) => anyhow!(errors::FallbackToPython("status")),
+                    Some(_) => anyhow!(errors::FallbackToPython(
+                        "unsupported edenfs operation".to_owned()
+                    )),
                     None => e,
                 })?;
                 (status, copymap)
             }
             #[cfg(not(feature = "eden"))]
-            return Err(errors::FallbackToPython(name()).into());
+            return Err(errors::FallbackToPython(
+                "EdenFS disabled for Rust status and status.use-rust not set to True",
+            )
+            .into());
         }
     };
 

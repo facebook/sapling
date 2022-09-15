@@ -96,7 +96,7 @@ fn last_chance_to_abort(opts: &HgGlobalOpts) -> Result<()> {
     }
 
     if opts.help {
-        return Err(errors::FallbackToPython("help").into());
+        return Err(errors::FallbackToPython("--help option requested".to_owned()).into());
     }
 
     Ok(())
@@ -412,7 +412,7 @@ impl Dispatcher {
                     if !repo.config().get_or_default("workingcopy", "use-rust")? {
                         // TODO(T131699257): Migrate all tests to use Rust
                         // workingcopy and removed fallback to Python.
-                        return Err(errors::FallbackToPython("workingcopy").into());
+                        return Err(errors::FallbackToPython("requested command that uses working copy but workingcopy.use-rust not set to True".to_owned()).into());
                     }
                     let path = repo.path().to_owned();
                     let mut wc = repo.working_copy(&path)?;

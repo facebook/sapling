@@ -43,7 +43,7 @@ enum FetchMode {
 
 pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &mut Repo) -> Result<u8> {
     if ctx.opts.python {
-        return Err(errors::FallbackToPython(aliases()).into());
+        return Err(errors::FallbackToPython("--python option selected".to_owned()).into());
     }
 
     let mode = match ctx.opts.mode.as_ref() {

@@ -27,8 +27,8 @@ pub struct UnknownCommand(pub String);
 ///
 /// Ideally this does not exist.
 #[derive(Debug, Error)]
-#[error("{0}")]
-pub struct FallbackToPython(pub &'static str);
+#[error("Feature not supported in Rust implementation; falling back to Python due to: {0}")]
+pub struct FallbackToPython(pub String);
 
 #[derive(Debug, Error)]
 #[error("")]

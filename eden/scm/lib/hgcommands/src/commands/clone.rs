@@ -134,7 +134,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
         );
 
         logger.verbose("Falling back to Python clone (config not enabled)");
-        return Err(errors::FallbackToPython(aliases()).into());
+        return Err(errors::FallbackToPython("clone.use-rust not set to True".to_owned()).into());
     }
 
     let supported_url = match url::Url::parse(&ctx.opts.source) {
@@ -156,7 +156,10 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
         );
 
         logger.verbose("Falling back to Python clone (incompatible options)");
-        return Err(errors::FallbackToPython(aliases()).into());
+        return Err(errors::FallbackToPython(
+            "one or more unsupported options in Rust clone".to_owned(),
+        )
+        .into());
     }
 
     config.set(
