@@ -6,10 +6,6 @@ version = "0.1.0"
 authors = ["Source Control Oncall oncall+source_control@xmail.facebook.com"]
 edition = "2021"
 
-[[bin]]
-name = "scratch"
-path = "src/main.rs"
-
 [dependencies]
 anyhow = "1.0.56"
 clap = { version = "3.2.17", features = ["derive", "regex", "unicode", "wrap_help"] }
