@@ -17,6 +17,8 @@ use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
 use edenfs_utils::metadata::MetadataExt;
+#[cfg(windows)]
+use mkscratch::zzencode;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
@@ -227,6 +229,67 @@ impl Redirection {
     pub fn expand_repo_path(&self, checkout: &EdenFsCheckout) -> PathBuf {
         checkout.path().join(&self.repo_path)
     }
+
+    /// Attempts to create a symlink at checkout_path/self.repo_path that points to target.
+    /// This will fail if checkout_path/self.repo_path already exists
+    fn _apply_symlink(&self, checkout_path: &Path, target: &Path) -> Result<()> {
+        let symlink_path = checkout_path.join(&self.repo_path);
+
+        // If .parent() resolves to None or parent().exists() == true, we skip directory creation
+        if !symlink_path.parent().map_or(true, |parent| parent.exists()) {
+            symlink_path.parent().map(std::fs::create_dir_all);
+        }
+
+        #[cfg(not(windows))]
+        std::os::unix::fs::symlink(target, &symlink_path).from_err()?;
+
+        #[cfg(windows)]
+        {
+            // Creating a symlink on Windows is non-atomic, and thus when EdenFS
+            // gets the notification about a file being created and then goes on
+            // testing what's on disk, it may either find a symlink, or a directory.
+            //
+            // This is bad for EdenFS for a number of reason. The main one being
+            // that EdenFS will attempt to recursively add all the childrens of
+            // that directory to the inode hierarchy. If the symlinks points to
+            // a very large directory, this can be extremely slow, leading to a
+            // very poor user experience.
+            //
+            // Since these symlinks are created for redirections, we can expect
+            // the above to be true.
+            //
+            // To fix this in a generic way is hard to impossible. One of the
+            // approach would be to hack in the PrjfsDispatcherImpl.cpp and
+            // sleep a bit when we detect a directory, to make sure that we
+            // retest it if this was a symlink. This wouldn't work if the system
+            // is overloaded, and it would add a small delay to update/status
+            // operation due to these waiting on all pending notifications to be
+            // handled.
+            //
+            // Instead, we chose here to handle it in a local way by forcing the
+            // redirection to be created atomically. We first create the symlink
+            // in the parent directory of the repository, and then move it
+            // inside, which is atomic.
+            let repo_and_symlink_path = checkout_path.join(&self.repo_path);
+            if let Some(temp_symlink_path) = checkout_path.parent().and_then(|co_parent| {
+                Some(co_parent.join(zzencode(&repo_and_symlink_path.to_string_lossy())))
+            }) {
+                // These files should be created by EdenFS only, let's just remove
+                // it if it's there.
+                if temp_symlink_path.exists() {
+                    std::fs::remove_file(&temp_symlink_path).from_err()?;
+                }
+                std::os::windows::fs::symlink_dir(target, &temp_symlink_path).from_err()?;
+                std::fs::rename(&temp_symlink_path, symlink_path).from_err()?;
+            } else {
+                return Err(EdenFsError::Other(anyhow!(
+                    "failed to create symlink for {}",
+                    self.repo_path.display()
+                )));
+            }
+        }
+        Ok(())
+    }
 }
 
 /// Detect the most common form of a bind mount in the repo;
@@ -434,4 +497,44 @@ pub fn get_effective_redirections(
     }
 
     Ok(redirs)
+}
+
+#[cfg(test)]
+pub(crate) mod tests {
+
+    use std::path::PathBuf;
+
+    use rand::distributions::Alphanumeric;
+    use rand::distributions::DistString;
+    use tempfile::tempdir;
+
+    use crate::redirect::Redirection;
+    use crate::redirect::RedirectionType;
+    use crate::redirect::REPO_SOURCE;
+
+    #[test]
+    fn test_apply_symlink() {
+        // The symlink creation will fail if we try to create a symlink where there's an existing
+        // file. So let's try to prevent collisions by making the filename random.
+        // TODO(@Cuev): Is there a better way to do this?
+        let rand_file = format!(
+            "test_path_{}",
+            Alphanumeric.sample_string(&mut rand::thread_rng(), 16)
+        );
+        let redir1 = Redirection {
+            repo_path: PathBuf::from(rand_file),
+            redir_type: RedirectionType::Symlink,
+            target: None,
+            source: REPO_SOURCE.into(),
+            state: None,
+        };
+        let fake_checkout = tempdir().expect("failed to create fake checkout");
+        let fake_checkout_path = fake_checkout.path();
+
+        let symlink_path = fake_checkout_path.join(&redir1.repo_path());
+        redir1
+            ._apply_symlink(fake_checkout_path, &symlink_path)
+            .expect("Failed to create symlink");
+        assert!(symlink_path.is_symlink())
+    }
 }
