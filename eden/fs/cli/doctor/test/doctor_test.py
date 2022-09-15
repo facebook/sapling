@@ -1065,9 +1065,52 @@ Checking {mount}
 {Path("a/d")} is not present on disk despite EdenFS believing it should be
 {Path("a/b/c")} is not present on disk despite EdenFS believing it should be""",
                 f"{Path('a/d')} is duplicated in EdenFS",
-                f"{Path('a/b')} is known to EdenFS as a file, but is a directory on disk",
+                f"{Path('a/b')} has an unexpected file type: known to EdenFS as a file, but is a directory on disk",
             },
         )
+
+    @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
+    def test_materialized_different_mode_fixer(self, mock_debugInodeStatus) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+        mount = checkout.path
+
+        # Just create a/b/c folders
+        os.makedirs(mount / "a" / "b")
+
+        mock_debugInodeStatus.return_value = [
+            # Pretend that a/b is a file (it's a directory)
+            TreeInodeDebugInfo(
+                1,
+                b"a",
+                True,
+                b"abcd",
+                [
+                    TreeInodeEntryDebugInfo(
+                        b"b", 2, stat.S_IFREG, False, True, b"dcba"
+                    ),
+                ],
+                1,
+            ),
+        ]
+
+        fixer, output = self.create_fixer(dry_run=False)
+        check_materialized_are_accessible(
+            fixer,
+            typing.cast(EdenInstance, instance),
+            checkout,
+            lambda p: os.lstat(p).st_mode,
+        )
+
+        self.assertEqual(
+            f"""<yellow>- Found problem:<reset>
+{Path("a/b")} has an unexpected file type: known to EdenFS as a file, but is a directory on disk
+Fixing mismatched files/directories in {Path(mount)}...<green>fixed<reset>
+
+""",
+            output.getvalue(),
+        )
+        self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
 
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.getSHA1")
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")

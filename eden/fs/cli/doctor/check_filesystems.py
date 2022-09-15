@@ -7,6 +7,7 @@
 import hashlib
 import os
 import platform
+import random
 import stat
 import subprocess
 import sys
@@ -15,7 +16,13 @@ from pathlib import Path
 from typing import Callable, List, Set, Tuple
 
 from eden.fs.cli.config import EdenCheckout, EdenInstance
-from eden.fs.cli.doctor.problem import Problem, ProblemSeverity, ProblemTracker
+from eden.fs.cli.doctor.problem import (
+    FixableProblem,
+    Problem,
+    ProblemSeverity,
+    ProblemTracker,
+    RemediationError,
+)
 from eden.fs.cli.doctor.util import CheckoutInfo
 from eden.fs.cli.filesystem import FsUtil
 from eden.fs.cli.prjfs import PRJ_FILE_STATE
@@ -217,31 +224,6 @@ def check_disk_usage(
                 )
 
 
-def mode_to_str(mode: int) -> str:
-    if stat.S_ISDIR(mode):
-        return "directory"
-    elif stat.S_ISREG(mode):
-        return "file"
-    elif stat.S_ISLNK(mode):
-        return "symlink"
-    else:
-        return "unknown"
-
-
-class MaterializedInodesHaveDifferentModeOnDisk(Problem):
-    def __init__(self, errors: List[Tuple[Path, int, int]]) -> None:
-        super().__init__(
-            "\n".join(
-                [
-                    f"{error[0]} is known to EdenFS as a {mode_to_str(error[2])}, "
-                    f"but is a {mode_to_str(error[1])} on disk"
-                    for error in errors
-                ]
-            ),
-            severity=ProblemSeverity.ERROR,
-        )
-
-
 class PathsProblem(Problem):
     @staticmethod
     def omitPathsDescription(paths: List[Path], pathSuffix: str) -> str:
@@ -260,6 +242,86 @@ class PathsProblem(Problem):
         if len(paths) > 10:
             pathDescriptions.append(f"{len(paths) - 10} more paths omitted")
         return "\n".join(pathDescriptions)
+
+
+def mode_to_str(mode: int) -> str:
+    if stat.S_ISDIR(mode):
+        return "directory"
+    elif stat.S_ISREG(mode):
+        return "file"
+    elif stat.S_ISLNK(mode):
+        return "symlink"
+    else:
+        return "unknown"
+
+
+class MaterializedInodesHaveDifferentModeOnDisk(PathsProblem, FixableProblem):
+    def __init__(self, mount: Path, errors: List[Tuple[Path, int, int]]) -> None:
+        self._mount = mount
+        self._errors = errors
+
+        formatted_error = [
+            (
+                error[0],
+                f"known to EdenFS as a {mode_to_str(error[2])}, "
+                f"but is a {mode_to_str(error[1])} on disk",
+            )
+            for error in errors
+        ]
+        super().__init__(
+            self.omitPathsDescriptionWithException(
+                formatted_error, " has an unexpected file type"
+            ),
+            severity=ProblemSeverity.ERROR,
+        )
+
+    def dry_run_msg(self) -> str:
+        return f"Would fix mismatched files/directories in {self._mount}"
+
+    def start_msg(self) -> str:
+        return f"Fixing mismatched files/directories in {self._mount}"
+
+    def perform_fix(self) -> None:
+        """Attempt to remediate all the files/directories.
+
+        Renaming files/directories forces EdenFS to re-evaluate them, thus this
+        simply tries to rename the file/directory to a randomly named
+        file/directory in the same directory and then to its original name.
+        """
+
+        rand_int: int = random.randint(1, 256)
+
+        def do_rename(path: Path) -> None:
+            new_basename = f"{path.name}-{rand_int}"
+            new_path = path.parent / new_basename
+            if path.exists():
+                path.rename(new_path)
+            if new_path.exists():
+                new_path.rename(path)
+
+        failed = []
+        for path, _, _ in self._errors:
+            try:
+                tries = 0
+                while True:
+                    try:
+                        do_rename(self._mount / path)
+                        break
+                    except Exception:
+                        if tries == 3:
+                            raise
+                        tries += 1
+                        continue
+            except Exception as ex:
+                failed.append(f"{path}: {ex}")
+
+        if failed != []:
+            errors = "\n".join(failed)
+            raise RemediationError(
+                f"""Failed to remediate paths:
+{errors}
+"""
+            )
 
 
 class MaterializedInodesAreInaccessible(PathsProblem):
@@ -396,7 +458,9 @@ def check_materialized_are_accessible(
         tracker.add_problem(MaterializedInodesAreInaccessible(inaccessible_inodes))
 
     if mismatched_mode:
-        tracker.add_problem(MaterializedInodesHaveDifferentModeOnDisk(mismatched_mode))
+        tracker.add_problem(
+            MaterializedInodesHaveDifferentModeOnDisk(checkout.path, mismatched_mode)
+        )
 
 
 class LoadedFileHasDifferentContentOnDisk(Problem):
