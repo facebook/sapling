@@ -186,7 +186,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
             }
             #[cfg(not(feature = "eden"))]
             return Err(errors::FallbackToPython(
-                "EdenFS disabled for Rust status and status.use-rust not set to True",
+                "EdenFS disabled for Rust status and status.use-rust not set to True".to_owned(),
             )
             .into());
         }
