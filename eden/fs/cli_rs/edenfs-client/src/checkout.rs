@@ -48,7 +48,9 @@ use toml::value::Value;
 use uuid::Uuid;
 
 use crate::redirect::deserialize_redirections;
+use crate::redirect::Redirection;
 use crate::redirect::RedirectionType;
+use crate::redirect::REPO_SOURCE;
 use crate::EdenFsInstance;
 
 // files in the client directory (aka data_dir aka state_dir)
@@ -263,6 +265,21 @@ impl CheckoutConfig {
                 self.save_config(config_dir)?;
             }
         };
+        Ok(())
+    }
+
+    pub fn update_redirections(
+        &mut self,
+        config_dir: &Path,
+        redirs: &BTreeMap<PathBuf, Redirection>,
+    ) -> Result<()> {
+        for (_, redir) in redirs.iter() {
+            if redir.source != REPO_SOURCE {
+                self.redirections
+                    .insert(redir.repo_path(), redir.redir_type);
+            }
+        }
+        self.save_config(config_dir.into())?;
         Ok(())
     }
 
@@ -975,5 +992,157 @@ pub fn find_checkout(instance: &EdenFsInstance, path: &Path) -> Result<EdenFsChe
             checkout_state_dir.as_ref().unwrap().clone(),
             CheckoutConfig::parse_config(checkout_state_dir.unwrap())?,
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+    use std::fs::File;
+    use std::io::Write;
+    use std::path::Path;
+    use std::path::PathBuf;
+
+    use anyhow::anyhow;
+    use anyhow::Context;
+    use edenfs_error::EdenFsError;
+    use edenfs_error::Result;
+    use edenfs_error::ResultExt;
+    use tempfile::tempdir;
+    use tempfile::TempDir;
+
+    use crate::checkout::CheckoutConfig;
+    use crate::checkout::RedirectionType;
+    use crate::checkout::MOUNT_CONFIG;
+    use crate::checkout::REPO_SOURCE;
+    use crate::redirect::Redirection;
+
+    // path and type are required... /tmp/ is probably the safest place to use as the path
+    const DEFAULT_CHECKOUT_CONFIG: &str = r#"
+    [repository]
+    path = "/tmp/"
+    type = "hg"
+
+    [redirections]
+
+    [profiles]
+
+    [predictive-prefetch]"#;
+
+    /// creates a checkout config and returns the tempdir in which the config is located
+    fn create_test_checkout_config() -> Result<TempDir> {
+        let temp_dir = tempdir().context("couldn't create temp dir")?;
+        let mut config_file = File::create(temp_dir.path().join(MOUNT_CONFIG)).from_err()?;
+        config_file
+            .write_all(DEFAULT_CHECKOUT_CONFIG.as_bytes())
+            .from_err()?;
+        Ok(temp_dir)
+    }
+
+    /// Takes a (repo_path, redir_type) pair and checks if a checkout config contains that redirection
+    fn checkout_config_contains_redirection(
+        repo_path: &Path,
+        redir_type: RedirectionType,
+        config_dir: &Path,
+    ) -> Result<()> {
+        let config = CheckoutConfig::parse_config(config_dir.into())?;
+        let config_redir_type = config.redirections.get(repo_path);
+        match config_redir_type {
+            Some(r_type) => {
+                if *r_type != redir_type {
+                    Err(EdenFsError::Other(anyhow!(
+                        "Redirection type did not match the redirection type in the config"
+                    )))
+                } else {
+                    Ok(())
+                }
+            }
+            None => Err(EdenFsError::Other(anyhow!(
+                "Did not find redirection in checkout config"
+            ))),
+        }
+    }
+
+    fn update_and_test_redirection(
+        redir: Redirection,
+        config_dir: &Path,
+        should_be_inserted: bool,
+    ) -> Result<()> {
+        // parse config from test_path
+        let mut config = CheckoutConfig::parse_config(config_dir.into())?;
+
+        // create map of redirections we want to add to the checkout config
+        let mut redir_map: BTreeMap<PathBuf, Redirection> = BTreeMap::new();
+
+        // We need to track repo_path and redir type to confirm the redirection was added correctly
+        let repo_path = redir.repo_path();
+        let redir_type = redir.redir_type;
+
+        // insert the redirection and update the checkout config
+        redir_map.insert(repo_path.clone(), redir);
+        config
+            .update_redirections(config_dir, &redir_map)
+            .expect("failed to update checkout config");
+
+        // check if redirection was inserted (or not inserted) correctly
+        if should_be_inserted {
+            checkout_config_contains_redirection(&repo_path, redir_type, config_dir)
+        } else {
+            // In some cases, we don't want the checkout to be inserted (when source == REPO_SOURCE)
+            // In that case, we should fail if we find the redirection in the checkout config
+            match checkout_config_contains_redirection(&repo_path, redir_type, config_dir) {
+                Ok(_) => Err(EdenFsError::Other(anyhow!(
+                    "Redirection was present in config when it shouldn't have been present"
+                ))),
+                Err(_) => Ok(()),
+            }
+        }
+    }
+
+    #[test]
+    fn test_update_redirections() {
+        let config_test_dir =
+            create_test_checkout_config().expect("failed to create test checkout config");
+        let config_dir = config_test_dir.path();
+
+        // test inserting a sylink redirection (this should be inserted because source != REPO_SOURCE)
+        let redir1 = Redirection {
+            repo_path: PathBuf::from("test_path"),
+            redir_type: RedirectionType::Symlink,
+            target: None,
+            source: "NotARepoSource".into(),
+            state: None,
+        };
+        assert!(update_and_test_redirection(redir1, config_dir, true).is_ok());
+
+        // test inserting a symlink redirection whose source == REPO_SOURCE
+        let redir2 = Redirection {
+            repo_path: PathBuf::from("test_path2"),
+            redir_type: RedirectionType::Symlink,
+            target: None,
+            source: REPO_SOURCE.into(),
+            state: None,
+        };
+        assert!(update_and_test_redirection(redir2, config_dir, false).is_ok());
+
+        // test inserting a bind redirection whose source != REPO_SOURCE
+        let redir3 = Redirection {
+            repo_path: PathBuf::from("test_path3"),
+            redir_type: RedirectionType::Bind,
+            target: None,
+            source: "NotARepoSource".into(),
+            state: None,
+        };
+        assert!(update_and_test_redirection(redir3, config_dir, true).is_ok());
+
+        // test inserting a bind redirection whose source == REPO_SOURCE
+        let redir4 = Redirection {
+            repo_path: PathBuf::from("test_path4"),
+            redir_type: RedirectionType::Bind,
+            target: None,
+            source: REPO_SOURCE.into(),
+            state: None,
+        };
+        assert!(update_and_test_redirection(redir4, config_dir, false).is_ok());
     }
 }

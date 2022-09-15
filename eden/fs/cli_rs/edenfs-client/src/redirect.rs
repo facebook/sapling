@@ -27,7 +27,7 @@ use toml::value::Value;
 use crate::checkout::EdenFsCheckout;
 use crate::mounttable::read_mount_table;
 
-const REPO_SOURCE: &str = ".eden-redirections";
+pub(crate) const REPO_SOURCE: &str = ".eden-redirections";
 const USER_REDIRECTION_SOURCE: &str = ".eden/client/config.toml:redirections";
 const APFS_HELPER: &str = "/usr/local/libexec/eden/eden_apfs_mount_helper";
 

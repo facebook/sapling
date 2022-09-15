@@ -27,3 +27,6 @@ tokio-uds-compat = { version = "0.1.0", git = "https://github.com/facebookexperi
 toml = "=0.5.8"
 tracing = "0.1.35"
 uuid = { version = "0.8.1", features = ["serde", "v4", "v5"] }
+
+[dev-dependencies]
+tempfile = "3.3"
