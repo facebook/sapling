@@ -1393,46 +1393,11 @@ cmdclass = {
 }
 
 packages = [
-    "edenscm",
-    "edenscm.hgdemandimport",
-    "edenscm.ext",
-    "edenscm.ext.absorb",
-    "edenscm.ext.amend",
-    "edenscm.ext.commitcloud",
-    "edenscm.ext.extlib",
-    "edenscm.ext.extlib.phabricator",
-    "edenscm.ext.extlib.pywatchman",
-    "edenscm.ext.extlib.watchmanclient",
-    "edenscm.ext.fastannotate",
-    "edenscm.ext.fsmonitor",
-    "edenscm.ext.hgevents",
-    "edenscm.ext.highlight",
-    "edenscm.ext.infinitepush",
-    "edenscm.ext.lfs",
-    "edenscm.ext.memcommit",
-    "edenscm.ext.pushrebase",
-    "edenscm.ext.remotefilelog",
-    "edenscm.ext.snapshot",
-    "edenscm.ext.treemanifest",
-    "edenscm",
-    "edenscm.cffi",
-    "edenscm.commands",
-    "edenscm.hgweb",
-    "edenscm.httpclient",
-    "edenscm.pure",
-    "edenscm.thirdparty",
-    "edenscm.thirdparty.attr",
-    "edenscm.utils",
-    "edenscm.testing",
-    "edenscm.testing.ext",
-    "edenscm.testing.sh",
-    "edenscm.testing.t",
+    os.path.dirname(p).replace("/", ".").replace("\\", ".")
+    for p in glob.glob("edenscm/**/__init__.py", recursive=True)
+] + [
     "edenscmnative",
 ]
-
-if havefb:
-    packages.append("edenscm.fb")
-    packages.append("edenscm.fb.mergedriver")
 
 common_depends = [
     "edenscm/bitmanipulation.h",
