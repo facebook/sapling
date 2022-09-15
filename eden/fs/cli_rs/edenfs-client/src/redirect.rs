@@ -346,9 +346,19 @@ impl Redirection {
         }
     }
 
+    #[cfg(target_os = "windows")]
+    fn _bind_mount_windows(&self, checkout_path: &Path, target: &Path) -> Result<()> {
+        self._apply_symlink(checkout_path, target)
+    }
+
     #[cfg(target_os = "macos")]
     async fn _bind_mount(&self, checkout: &Path, target: &Path) -> Result<()> {
         self._bind_mount_darwin(checkout, target)
+    }
+
+    #[cfg(target_os = "windows")]
+    async fn _bind_mount(&self, checkout: &Path, target: &Path) -> Result<()> {
+        self._bind_mount_windows(checkout, target)
     }
 
     #[cfg(all(not(unix), not(windows)))]
