@@ -5,13 +5,21 @@
  * GNU General Public License version 2.
  */
 
-use termwiz::caps::ColorLevel;
+use std::io;
+use std::io::Write;
+
+use termwiz::caps::Capabilities;
+pub use termwiz::caps::ColorLevel;
+use termwiz::caps::ProbeHints;
 use termwiz::cell::CellAttributes;
 use termwiz::cell::Intensity;
 use termwiz::cell::Underline;
 use termwiz::color::AnsiColor;
 use termwiz::color::ColorSpec;
 use termwiz::color::RgbColor;
+use termwiz::render::terminfo::TerminfoRenderer;
+use termwiz::render::RenderTty;
+use termwiz::surface::Change;
 
 /// Evaluate style specs given supported color level, yielding a
 /// CellAttributes object with corresponding fields filled in.
@@ -53,6 +61,68 @@ pub fn eval_style(level: ColorLevel, style_specs: &str) -> CellAttributes {
     }
 
     attrs
+}
+
+struct DumbTty<'a> {
+    buf: &'a mut Vec<u8>,
+}
+
+impl RenderTty for DumbTty<'_> {
+    fn get_size_in_cells(&mut self) -> termwiz::Result<(usize, usize)> {
+        Ok((80, 26))
+    }
+}
+
+impl io::Write for DumbTty<'_> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.buf.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.buf.flush()
+    }
+}
+
+// The main purpose of this object is to cache the Capabilities.
+pub struct Styler {
+    level: ColorLevel,
+    renderer: TerminfoRenderer,
+}
+
+impl Styler {
+    pub fn new(level: ColorLevel) -> termwiz::Result<Styler> {
+        let caps = Capabilities::new_with_hints(ProbeHints::default().color_level(Some(level)))?;
+        let renderer = TerminfoRenderer::new(caps);
+        Ok(Styler { level, renderer })
+    }
+
+    pub fn render_bytes(&mut self, style_specs: &str, text: &str) -> termwiz::Result<Vec<u8>> {
+        let mut buf: Vec<u8> = Vec::new();
+        let mut tty = DumbTty { buf: &mut buf };
+
+        // Line breaks within escape sequences don't look right, so
+        // process each line's contents separately.
+        for (idx, line) in text.split('\n').enumerate() {
+            if idx > 0 {
+                tty.write_all(b"\n")?;
+            }
+
+            if line.is_empty() {
+                continue;
+            }
+
+            self.renderer.render_to(
+                &[
+                    Change::AllAttributes(eval_style(self.level, style_specs)),
+                    Change::Text(line.to_string()),
+                    Change::AllAttributes(CellAttributes::blank()),
+                ],
+                &mut tty,
+            )?;
+        }
+
+        Ok(buf)
+    }
 }
 
 /// Apply given effects to attrs iff all effects are valid.
@@ -181,13 +251,10 @@ fn ansi_color(name: &str) -> Option<AnsiColor> {
 
 #[cfg(test)]
 mod test {
-    use std::io;
-
     use termwiz::caps::Capabilities;
     use termwiz::caps::ColorLevel::*;
     use termwiz::caps::ProbeHints;
     use termwiz::render::terminfo::TerminfoRenderer;
-    use termwiz::render::RenderTty;
     use termwiz::surface::Change;
 
     use super::*;
@@ -230,6 +297,16 @@ mod test {
         );
     }
 
+    #[test]
+    fn test_render_bytes() {
+        let mut styler = Styler::new(TwoFiftySix).unwrap();
+
+        assert_eq!(
+            styler.render_bytes("red", "hello\nthere\n").unwrap(),
+            b"\x1B[31mhello\x1B[39m\n\x1B[31mthere\x1B[39m\n"
+        );
+    }
+
     fn specs_to_bytes(level: ColorLevel, specs: &str) -> Vec<u8> {
         let cell_attrs = eval_style(level, specs);
         let mut buf: Vec<u8> = Vec::new();
@@ -245,25 +322,5 @@ mod test {
             .unwrap();
 
         buf
-    }
-
-    struct DumbTty<'a> {
-        buf: &'a mut Vec<u8>,
-    }
-
-    impl RenderTty for DumbTty<'_> {
-        fn get_size_in_cells(&mut self) -> termwiz::Result<(usize, usize)> {
-            Ok((80, 26))
-        }
-    }
-
-    impl io::Write for DumbTty<'_> {
-        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-            self.buf.write(buf)
-        }
-
-        fn flush(&mut self) -> io::Result<()> {
-            self.buf.flush()
-        }
     }
 }
