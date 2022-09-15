@@ -344,14 +344,48 @@ class MissingInodesForFiles(PathsProblem):
         )
 
 
-class MissingFilesForInodes(PathsProblem):
-    def __init__(self, paths: List[Path]) -> None:
+class MissingFilesForInodes(PathsProblem, FixableProblem):
+    def __init__(self, mount: Path, paths: List[Path]) -> None:
+        self._mount = mount
+        self._paths = paths
         super().__init__(
             self.omitPathsDescription(
                 paths, " is not present on disk despite EdenFS believing it should be"
             ),
             severity=ProblemSeverity.ERROR,
         )
+
+    def dry_run_msg(self) -> str:
+        return (
+            f"Would fix files known to EdenFS but not present on disk in {self._mount}"
+        )
+
+    def start_msg(self) -> str:
+        return f"Fixing files known to EdenFS but not present on disk in {self._mount}"
+
+    def perform_fix(self) -> None:
+        """Attempt to remediate all the phantom files
+
+        For some reason, EdenFS thinks these files should be on disk, but
+        aren't. Creating a file and removing it should be sufficient to have
+        EdenFS detect this and self remediate.
+        """
+        failed = []
+        for path in self._paths:
+            abspath = self._mount / path
+            try:
+                abspath.touch(exist_ok=False)
+                abspath.unlink(missing_ok=True)
+            except Exception as ex:
+                failed.append(f"{path}: {ex}")
+
+        if failed != []:
+            errors = "\n".join(failed)
+            raise RemediationError(
+                f"""Failed to remediate paths:
+{errors}
+"""
+            )
 
 
 class DuplicateInodes(PathsProblem):
@@ -452,7 +486,7 @@ def check_materialized_are_accessible(
         tracker.add_problem(MissingInodesForFiles(missing_inodes))
 
     if nonexistent_inodes:
-        tracker.add_problem(MissingFilesForInodes(nonexistent_inodes))
+        tracker.add_problem(MissingFilesForInodes(checkout.path, nonexistent_inodes))
 
     if inaccessible_inodes:
         tracker.add_problem(MaterializedInodesAreInaccessible(inaccessible_inodes))

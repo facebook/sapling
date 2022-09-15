@@ -1112,6 +1112,49 @@ Fixing mismatched files/directories in {Path(mount)}...<green>fixed<reset>
         )
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
 
+    @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
+    def test_materialized_missing_file_fixer(self, mock_debugInodeStatus) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+        mount = checkout.path
+
+        # Just create a folders
+        os.makedirs(mount / "a")
+
+        mock_debugInodeStatus.return_value = [
+            # Pretend that a/d is a file (it doesn't exist)
+            TreeInodeDebugInfo(
+                1,
+                b"a",
+                True,
+                b"abcd",
+                [
+                    TreeInodeEntryDebugInfo(
+                        b"d", 4, stat.S_IFREG, False, False, b"efgh"
+                    ),
+                ],
+                1,
+            ),
+        ]
+
+        fixer, output = self.create_fixer(dry_run=False)
+        check_materialized_are_accessible(
+            fixer,
+            typing.cast(EdenInstance, instance),
+            checkout,
+            lambda p: os.lstat(p).st_mode,
+        )
+
+        self.assertEqual(
+            f"""<yellow>- Found problem:<reset>
+{Path("a/d")} is not present on disk despite EdenFS believing it should be
+Fixing files known to EdenFS but not present on disk in {Path(mount)}...<green>fixed<reset>
+
+""",
+            output.getvalue(),
+        )
+        self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
+
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.getSHA1")
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
     def test_loaded_content(self, mock_debugInodeStatus, mock_getSHA1) -> None:
