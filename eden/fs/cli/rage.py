@@ -508,7 +508,7 @@ def print_crashed_edenfs_logs(processor: str, out: IO[bytes]) -> None:
     else:
         return
 
-    section_title("EdenFS crashes:", out)
+    section_title("EdenFS crashes and dumps:", out)
     num_uploads = 0
     for crashes_path in crashes_paths:
         if not crashes_path.exists():
