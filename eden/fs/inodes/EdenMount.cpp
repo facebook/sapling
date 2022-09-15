@@ -297,7 +297,11 @@ Overlay::OverlayType EdenMount::getOverlayType(
       }
     }
     if (getEdenConfig()->overlaySynchronousMode.getValue() == "off") {
-      return Overlay::OverlayType::TreeSynchronousOff;
+      if (getEdenConfig()->overlayBuffered.getValue()) {
+        return Overlay::OverlayType::TreeSynchronousOffBuffered;
+      } else {
+        return Overlay::OverlayType::TreeSynchronousOff;
+      }
     }
     if (getEdenConfig()->overlayBuffered.getValue()) {
       return Overlay::OverlayType::TreeBuffered;

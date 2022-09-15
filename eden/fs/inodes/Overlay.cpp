@@ -58,6 +58,11 @@ std::unique_ptr<IOverlay> makeOverlay(
         << "In-memory buffered overlay requested. This will cause data loss.";
     return std::make_unique<BufferedTreeOverlay>(
         std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory), config);
+  } else if (overlayType == Overlay::OverlayType::TreeSynchronousOffBuffered) {
+    XLOG(DBG2)
+        << "Buffered tree overlay being used with synchronous-mode = off";
+    return std::make_unique<BufferedTreeOverlay>(
+        localDir, config, TreeOverlayStore::SynchronousMode::Off);
   }
 #ifdef _WIN32
   if (overlayType == Overlay::OverlayType::Legacy) {
