@@ -26,7 +26,7 @@ log: logging.Logger = logging.getLogger(__name__)
 
 _session_id: Optional[int] = None
 
-_TelemetryTypes = Union[bool, int, str, float, Set[str], List[str]]
+TelemetryTypes = Union[bool, int, str, float, Set[str], List[str]]
 
 
 class TelemetrySample(abc.ABC):
@@ -77,7 +77,7 @@ class TelemetrySample(abc.ABC):
     def add_bool(self, name: str, value: bool) -> "TelemetrySample":
         return self.add_int(name, int(value))
 
-    def add_fields(self, **kwargs: _TelemetryTypes) -> "TelemetrySample":
+    def add_fields(self, **kwargs: TelemetryTypes) -> "TelemetrySample":
         for name, value in kwargs.items():
             if isinstance(value, bool):
                 self.add_bool(name, value)
@@ -157,7 +157,7 @@ class TelemetryLogger(abc.ABC):
             log.warning(f"error determining EdenFS version for telemetry logging: {ex}")
             self.eden_version = ""
 
-    def new_sample(self, event_type: str, **kwargs: _TelemetryTypes) -> TelemetrySample:
+    def new_sample(self, event_type: str, **kwargs: TelemetryTypes) -> TelemetrySample:
         sample = self._create_sample()
         sample.add_string("type", event_type)
         sample.add_int("session_id", self.session_id)
@@ -169,7 +169,7 @@ class TelemetryLogger(abc.ABC):
         sample.add_fields(**kwargs)
         return sample
 
-    def log(self, event_type: str, **kwargs: _TelemetryTypes) -> None:
+    def log(self, event_type: str, **kwargs: TelemetryTypes) -> None:
         self.new_sample(event_type, **kwargs).log()
 
     @abc.abstractmethod
@@ -315,7 +315,7 @@ class NullTelemetrySample(TelemetrySample):
         #  value of `None`.
         pass
 
-    def add_fields(self, **kwargs: _TelemetryTypes) -> "NullTelemetrySample":
+    def add_fields(self, **kwargs: TelemetryTypes) -> "NullTelemetrySample":
         # pyre-fixme[7]: Expected `NullTelemetrySample` but got implicit return
         #  value of `None`.
         pass

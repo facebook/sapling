@@ -344,6 +344,7 @@ class EdenDoctor(EdenDoctorChecker):
                 "eden_doctor",
                 num_problems=fixer.num_problems,
                 problems=fixer.problem_types,
+                problem_description=fixer.problem_description,
             )
 
         if fixer.num_problems == 0:

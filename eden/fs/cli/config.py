@@ -360,9 +360,7 @@ class EdenInstance(AbstractEdenInstance):
     ) -> telemetry.TelemetrySample:
         return self.get_telemetry_logger().new_sample(log_type, **kwargs)
 
-    def log_sample(
-        self, log_type: str, **kwargs: Union[bool, int, str, float, Set[str]]
-    ) -> None:
+    def log_sample(self, log_type: str, **kwargs: telemetry.TelemetryTypes) -> None:
         self.get_telemetry_logger().log(log_type, **kwargs)
 
     def get_running_version_parts(self) -> Tuple[str, str]:
