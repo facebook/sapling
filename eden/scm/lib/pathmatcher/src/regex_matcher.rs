@@ -10,6 +10,9 @@ use regex_automata::dense::Builder;
 use regex_automata::DenseDFA;
 use regex_automata::Error;
 use regex_automata::DFA;
+use regex_syntax::ast::parse;
+use regex_syntax::ast::AssertionKind;
+use regex_syntax::ast::Ast;
 use types::RepoPath;
 
 use crate::DirectoryMatch;
@@ -19,15 +22,20 @@ use crate::Matcher;
 ///
 /// The regular expression syntax is same as regex crate with below limitations
 /// due to the underlying RE lib (regex_automata):
-///     1. Anchors such ^, &, \A and \Z
-///     2. Word boundary assertions such as \b and \B
+///     1. Anchors such ^, \A and \z. RegexMatcher checks for a match only at the beginning
+///        of the string by default, so there is no need for '^'.
+///     2. Word boundary assertions such as \b and \B.
 ///
 /// The [RegexMatcher::match_prefix] method can be used to rule out
 /// unnecessary directory visit early.
 #[derive(Clone, Debug)]
 #[allow(dead_code)]
 pub struct RegexMatcher {
-    // Original regular expression.
+    // Transformed regular expression pattern after replacing '$' (End-Of-Line) with '\0'.
+    //
+    // The underlying regex engine doesn't support '$' (EOL), we workaround this limitation
+    // by replacing '$' with '\0' (which cannot occur in a path) in the pattern. Then have
+    // `matches` API add a '\0' for testing when needed.
     pattern: String,
 
     // A table-based deterministic finite automaton (DFA) constructed by regular
@@ -43,16 +51,15 @@ pub struct RegexMatcher {
 
 impl RegexMatcher {
     pub fn new(pattern: &str) -> Result<Self, Error> {
+        let pattern = replace_eol(pattern);
+
         // The RE library doesn't support ^, we use this `Builder::anchored` to
         // make the search anchored at the beginning of the input. By default,
         // the regex will act as if the pattern started with a .*?, which enables
         // a match to appear anywhere.
-        let dfa = Builder::new().anchored(true).build(pattern)?;
+        let dfa = Builder::new().anchored(true).build(&pattern)?;
 
-        Ok(RegexMatcher {
-            pattern: pattern.to_string(),
-            dfa,
-        })
+        Ok(RegexMatcher { pattern, dfa })
     }
 
     /// Return `Some(bool)` if the end state of the DFA is 'match' or 'dead' state.
@@ -83,8 +90,74 @@ impl RegexMatcher {
 
     /// Return if `path` matches with the matcher.
     pub fn matches(&self, path: &str) -> bool {
-        self.dfa.is_match(path.as_bytes())
+        let bytes = path.as_bytes();
+        let mut state = self.dfa.start_state();
+
+        // This handles two special cases:
+        // 1. empty regex pattern (""), which describes the empty language. The empty language is
+        //    a sub-language of every other language. So it will true without checking the input.
+        // 2. it is possible to write a regex that is the opposite of the empty set, i.e., one that
+        //    will not match anything. You could write it like so: [a&&b] -- intersection of a and b,
+        //    which is empty. Currently though, such patterns won't compile in Rust Regex parser.
+        if self.dfa.is_match_or_dead_state(state) {
+            return self.dfa.is_match_state(state);
+        }
+
+        for &b in bytes {
+            // We are using `next_state_unchecked` method here for speed, this follows
+            // the implementation of DFA.is_match_at API:
+            // https://github.com/BurntSushi/regex-automata/blob/0.1.10/src/dfa.rs#L220
+            state = unsafe { self.dfa.next_state_unchecked(state, b) };
+            if self.dfa.is_match_or_dead_state(state) {
+                return self.dfa.is_match_state(state);
+            }
+        }
+
+        // At this point, it means we are not in 'match' or 'dead' state, then
+        // we add '\0' to check if the pattern is expecting EOL. Check the
+        // comment of [RegexMatcher.pattern] for more details.
+        state = unsafe { self.dfa.next_state_unchecked(state, b'\0') };
+        self.dfa.is_match_state(state)
     }
+}
+
+/// Replace eol ('$') with '\0', since regex-automata doesn't support '$'.
+fn replace_eol(pattern: &str) -> String {
+    // Find the positions of eol ('$') by traversing the Ast tree, then replace
+    // eol with '\0'
+    fn traverse_ast(ast: &Ast, output: &mut String) {
+        match ast {
+            Ast::Group(group) => traverse_ast(&group.ast, output),
+            Ast::Assertion(assertion) => {
+                if assertion.kind == AssertionKind::EndLine {
+                    let start = assertion.span.start.offset;
+                    let end = assertion.span.end.offset;
+                    assert_eq!(start + 1, end, "$ (end of line) should be 1 char");
+                    output.replace_range(start..end, "\0");
+                }
+            }
+            Ast::Repetition(repeat) => {
+                traverse_ast(&repeat.ast, output);
+            }
+            Ast::Alternation(alternation) => {
+                for t in &alternation.asts {
+                    traverse_ast(t, output);
+                }
+            }
+            Ast::Concat(concat) => {
+                for t in &concat.asts {
+                    traverse_ast(t, output);
+                }
+            }
+            // Ast::Empty, Ast::Flags, Ast::Literal, Ast::Dot, Ast::Class
+            _ => {}
+        }
+    }
+
+    let ast = parse::Parser::new().parse(pattern).unwrap();
+    let mut new_pattern = pattern.to_string();
+    traverse_ast(&ast, &mut new_pattern);
+    new_pattern
 }
 
 impl Matcher for RegexMatcher {
@@ -105,6 +178,14 @@ impl Matcher for RegexMatcher {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_re_empty_pattern() {
+        let m = RegexMatcher::new("").unwrap();
+        assert!(m.matches(""));
+        assert!(m.matches("a"));
+        assert!(m.matches("abc"));
+    }
 
     #[test]
     fn test_re_literal_path() {
@@ -147,7 +228,7 @@ mod tests {
     }
 
     #[test]
-    fn test_re_ending() {
+    fn test_re_without_eol() {
         let m = RegexMatcher::new(r"a/t\d+.py").unwrap();
         assert_eq!(m.match_prefix("a"), None);
         assert_eq!(m.match_prefix("b"), Some(false));
@@ -155,5 +236,30 @@ mod tests {
         assert!(!m.matches("a/tt.py"));
         assert!(m.matches("a/t1.py"));
         assert!(m.matches("a/t1.pyc"));
+    }
+
+    #[test]
+    fn test_re_with_eol() {
+        let m = RegexMatcher::new(r"(:?a/t\d+.py$|a\d*.txt)").unwrap();
+        assert_eq!(m.match_prefix("a"), None);
+        assert_eq!(m.match_prefix("b"), Some(false));
+
+        assert!(m.matches("a/t123.py"));
+        assert!(m.matches("a.txt"));
+        assert!(m.matches("a1.txt"));
+        assert!(m.matches("a1.txt1"));
+        assert!(!m.matches("a/tt.py"));
+        assert!(!m.matches("a/t123.pyc"));
+    }
+
+    #[test]
+    fn test_re_replace_eol() {
+        assert_eq!(replace_eol(r"a.py"), "a.py");
+        assert_eq!(replace_eol(r"a.py\$"), r"a.py\$");
+        assert_eq!(replace_eol(r"a.py$"), "a.py\0");
+        assert_eq!(replace_eol(r"a.py$|a.txt"), "a.py\0|a.txt");
+        assert_eq!(replace_eol(r"a.py$|a.txt$"), "a.py\0|a.txt\0");
+        assert_eq!(replace_eol(r"(a.py$|a.txt$)|b.py"), "(a.py\0|a.txt\0)|b.py");
+        assert_eq!(replace_eol(r"(a$[b$]c$|d\$)e$"), "(a\0[b$]c\0|d\\$)e\0");
     }
 }
