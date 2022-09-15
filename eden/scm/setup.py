@@ -1826,7 +1826,7 @@ if not ossbuild:
         )
     ]
     rustextbinaries += [
-        RustBinary("scratch", rename="mkscratch", manifest="exec/scratch/Cargo.toml"),
+        RustBinary("mkscratch", manifest="exec/scratch/Cargo.toml"),
         RustBinary("scm_daemon", manifest="exec/scm_daemon/Cargo.toml"),
     ]
 
