@@ -165,7 +165,13 @@ fn wrapper_main() -> Result<i32> {
         fallback()
     } else {
         match edenfs_commands::MainCommand::try_parse() {
-            Ok(cmd) => rust_main(cmd),
+            Ok(cmd) => {
+                if cmd.is_enabled() {
+                    rust_main(cmd)
+                } else {
+                    fallback()
+                }
+            }
             // If we get a help message, we don't want to fallback to the Python version. The
             // help flag has been disabled for the main command and debug subcommand so they
             // will fallback correct while we still show help message for enabled commands

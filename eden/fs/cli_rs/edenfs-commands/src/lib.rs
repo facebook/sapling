@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+use std::fs::File;
+use std::io::BufReader;
 use std::path::PathBuf;
 
 use anyhow::Context;
@@ -40,6 +43,10 @@ const DEFAULT_CONFIG_DIR: &str = "~\\.eden";
 #[cfg(windows)]
 const DEFAULT_ETC_EDEN_DIR: &str = "C:\\ProgramData\\facebook\\eden";
 
+// Used to determine whether we should gate off certain oxidized edenfsctl commands
+const ROLLOUT_JSON: &str = "edenfsctl_rollout.json";
+const EXPERIMENTAL_COMMANDS: &[&str] = &["redirect"];
+
 type ExitCode = i32;
 
 #[derive(Parser, Debug)]
@@ -69,7 +76,7 @@ pub struct MainCommand {
     pub debug: bool,
 
     #[clap(subcommand)]
-    subcommand: TopLevelSubcommand,
+    pub subcommand: TopLevelSubcommand,
 }
 
 /// The first level of edenfsctl subcommands.
@@ -122,6 +129,29 @@ impl Subcommand for TopLevelSubcommand {
     }
 }
 
+impl fmt::Display for TopLevelSubcommand {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match *self {
+                TopLevelSubcommand::Status(_) => "status",
+                TopLevelSubcommand::Pid(_) => "pid",
+                TopLevelSubcommand::Uptime(_) => "uptime",
+                //TopLevelSubcommand::Gc(_) => "gc",
+                TopLevelSubcommand::Config(_) => "config",
+                TopLevelSubcommand::Debug(_) => "debug",
+                //TopLevelSubcommand::Top(_) => "top",
+                TopLevelSubcommand::Minitop(_) => "minitop",
+                TopLevelSubcommand::Du(_) => "du",
+                TopLevelSubcommand::List(_) => "list",
+                TopLevelSubcommand::PrefetchProfile(_) => "prefetch-profile",
+                TopLevelSubcommand::Redirect(_) => "redirect",
+            }
+        )
+    }
+}
+
 impl MainCommand {
     fn get_etc_eden_dir(&self) -> PathBuf {
         if let Some(etc_eden_dir) = &self.etc_eden_dir {
@@ -159,6 +189,27 @@ impl MainCommand {
         Ok(())
     }
 
+    pub fn is_enabled_in_json(&self, name: &str) -> Option<bool> {
+        let rollout_json_path = self.get_etc_eden_dir().join(ROLLOUT_JSON);
+        if !rollout_json_path.exists() {
+            return None;
+        }
+
+        // Open the file in read-only mode with buffer.
+        let file = File::open(rollout_json_path).ok()?;
+        let reader = BufReader::new(file);
+        let json: serde_json::Value = serde_json::from_reader(reader).ok()?;
+        let map = json.as_object()?;
+
+        map.get(name).and_then(|v| v.as_bool())
+    }
+
+    /// For experimental commands, we should check whether Chef enabled the command for our shard. If not, fall back to python cli
+    pub fn is_enabled(&self) -> bool {
+        let name = self.subcommand.to_string();
+        self.is_enabled_in_json(&name)
+            .unwrap_or_else(|| !EXPERIMENTAL_COMMANDS.contains(&name.as_ref()))
+    }
     pub fn run(self) -> Result<ExitCode> {
         self.set_working_directory()?;
 
