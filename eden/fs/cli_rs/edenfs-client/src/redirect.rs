@@ -223,6 +223,10 @@ impl Redirection {
         self.target = self.expand_target_abspath(checkout)?;
         Ok(())
     }
+
+    pub fn expand_repo_path(&self, checkout: &EdenFsCheckout) -> PathBuf {
+        checkout.path().join(&self.repo_path)
+    }
 }
 
 /// Detect the most common form of a bind mount in the repo;
