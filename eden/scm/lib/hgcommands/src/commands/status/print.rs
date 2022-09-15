@@ -8,8 +8,8 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use formatter::formatter::Formattable;
-use formatter::formatter::ListFormatter;
+use formatter::Formattable;
+use formatter::ListFormatter;
 use serde::Serialize;
 use types::path::RepoPathRelativizer;
 use types::RepoPath;
@@ -91,17 +91,6 @@ impl HgStatusPathRelativizer {
     }
 }
 
-const RED: &str = "\u{001B}[31m";
-const BLUE: &str = "\u{001B}[34m";
-const MAGENTA: &str = "\u{001B}[35m";
-const GREEN: &str = "\u{001B}[32m";
-const CYAN: &str = "\u{001B}[36m";
-const BRIGHT_BLACK: &str = "\u{001B}[30;1m"; // Effectively grey.
-
-const BOLD: &str = "\u{001B}[1m";
-const UNDERLINE: &str = "\u{001b}[4m";
-const RESET: &str = "\u{001B}[0m";
-
 #[derive(Serialize)]
 struct StatusEntry<'a> {
     path: String,
@@ -112,7 +101,7 @@ struct StatusEntry<'a> {
     copy: Option<String>,
 
     #[serde(skip_serializing)]
-    ansi_color_prefix: &'a str,
+    style: &'a str,
 
     #[serde(skip_serializing)]
     print_config: &'a PrintConfig,
@@ -129,21 +118,23 @@ impl<'a> Formattable for StatusEntry<'a> {
         } else {
             format!("{} ", self.status)
         };
-        let (colorized_status, ansi_suffix) = if self.print_config.use_color {
-            (
-                format!("{}{}", self.ansi_color_prefix, status),
-                RESET.to_string(),
-            )
-        } else {
-            (status.to_owned(), "".to_owned())
-        };
-        write!(
-            writer,
-            "{}{}{}{}",
-            colorized_status, self.path, ansi_suffix, self.print_config.endl
+
+        let mut style = self.style;
+        if !self.print_config.use_color {
+            style = "";
+        }
+
+        writer.write_styled(
+            style,
+            &format!("{}{}{}", status, self.path, self.print_config.endl),
         )?;
+
         if let Some(p) = &self.copy {
-            write!(writer, "  {}{}", p, self.print_config.endl)?;
+            let mut style = "status.copied";
+            if !self.print_config.use_color {
+                style = "";
+            }
+            writer.write_styled(style, &format!("  {}{}", p, self.print_config.endl))?;
         }
         Ok(())
     }
@@ -168,14 +159,14 @@ pub fn print_status(
             // `hg config | grep color` did not yield the entries for color.status listed on
             // https://www.mercurial-scm.org/wiki/ColorExtension. At Meta, we seem to match
             // the defaults listed on the wiki page, except we don't change the background color.
-            let (status, ansi_color_prefix) = match print_group {
-                PrintGroup::Modified => ("M", format!("{}{}", BLUE, BOLD)),
-                PrintGroup::Added => ("A", format!("{}{}", GREEN, BOLD)),
-                PrintGroup::Removed => ("R", format!("{}{}", RED, BOLD)),
-                PrintGroup::Deleted => ("!", format!("{}{}{}", CYAN, BOLD, UNDERLINE)),
-                PrintGroup::Unknown => ("?", format!("{}{}{}", MAGENTA, BOLD, UNDERLINE)),
-                PrintGroup::Ignored => ("I", format!("{}{}", BRIGHT_BLACK, BOLD)),
-                PrintGroup::Clean => ("C", "".to_owned()),
+            let (status, style) = match print_group {
+                PrintGroup::Modified => ("M", "status.modified"),
+                PrintGroup::Added => ("A", "status.added"),
+                PrintGroup::Removed => ("R", "status.removed"),
+                PrintGroup::Deleted => ("!", "status.deleted"),
+                PrintGroup::Unknown => ("?", "status.unknown"),
+                PrintGroup::Ignored => ("I", "status.ignored"),
+                PrintGroup::Clean => ("C", "status.clean"),
             };
 
             let mut group = group.collect::<Vec<_>>();
@@ -185,7 +176,7 @@ pub fn print_status(
                     path: relativizer.relativize(path),
                     status,
                     copy: copymap.get(path).map(|p| relativizer.relativize(p)),
-                    ansi_color_prefix: ansi_color_prefix.as_str(),
+                    style,
                     print_config,
                 })?;
             }
@@ -306,14 +297,16 @@ mod test {
             verbose: false,
             quiet: false,
         };
-        let fm = get_formatter(
-            &BTreeMap::<&str, &str>::new(),
-            "status",
-            "",
-            options,
-            Box::new(io.output()),
-        )
-        .unwrap();
+
+        let mut config: BTreeMap<&str, &str> = BTreeMap::new();
+        config.insert("color.status.added", "green");
+        config.insert("color.status.deleted", "cyan");
+        config.insert("color.status.ignored", "black");
+        config.insert("color.status.modified", "blue");
+        config.insert("color.status.removed", "red");
+        config.insert("color.status.unknown", "magenta");
+
+        let fm = get_formatter(&config, "status", "", options, Box::new(io.output())).unwrap();
         print_status(
             fm,
             relativizer,
@@ -339,8 +332,6 @@ mod test {
         });
     }
 
-    // XXX: PathRelativizer is problematic on OSX.
-    #[cfg(target_os = "linux")]
     #[test]
     fn test_print_status() {
         let status = status::StatusBuilder::new()
@@ -402,15 +393,15 @@ I ignored.txt
         });
 
         let mardui_color_stdout = concat!(
-            "\u{001B}[34m\u{001B}[1mM modified.txt\u{001B}[0m\n",
-            "\u{001B}[32m\u{001B}[1mA added.txt\u{001B}[0m\n",
-            "\u{001B}[32m\u{001B}[1mA added_even_though_normally_ignored.txt\u{001B}[0m\n",
-            "\u{001B}[32m\u{001B}[1mA added_other_parent.txt\u{001B}[0m\n",
-            "\u{001B}[31m\u{001B}[1mR modified_and_marked_for_removal.txt\u{001B}[0m\n",
-            "\u{001B}[31m\u{001B}[1mR removed.txt\u{001B}[0m\n",
-            "\u{001B}[36m\u{001B}[1m\u{001b}[4m! removed_but_not_marked_for_removal.txt\u{001B}[0m\n",
-            "\u{001B}[35m\u{001B}[1m\u{001b}[4m? unknown.txt\u{001B}[0m\n",
-            "\u{001B}[30;1m\u{001B}[1mI ignored.txt\u{001B}[0m\n",
+            "\x1b[34mM modified.txt\x1b[39m\n",
+            "\x1b[32mA added.txt\x1b[39m\n",
+            "\x1b[32mA added_even_though_normally_ignored.txt\x1b[39m\n",
+            "\x1b[32mA added_other_parent.txt\x1b[39m\n",
+            "\x1b[31mR modified_and_marked_for_removal.txt\x1b[39m\n",
+            "\x1b[31mR removed.txt\x1b[39m\n",
+            "\x1b[36m! removed_but_not_marked_for_removal.txt\x1b[39m\n",
+            "\x1b[35m? unknown.txt\x1b[39m\n",
+            "\x1b[30mI ignored.txt\x1b[39m\n",
         );
         let mut print_config = PrintConfig::default();
         print_config.status_types.ignored = true;
