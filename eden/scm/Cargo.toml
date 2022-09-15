@@ -64,6 +64,7 @@ members = [
   "lib/indexedlog",
   "lib/insta_ext",
   "lib/io",
+  "lib/io/term/style",
   "lib/lazystr",
   "lib/lz4-pyframe",
   "lib/manifest",
