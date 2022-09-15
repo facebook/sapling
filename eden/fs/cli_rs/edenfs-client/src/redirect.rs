@@ -241,6 +241,24 @@ impl Redirection {
         target.join("image.dmg.sparseimage")
     }
 
+    #[cfg(target_os = "linux")]
+    async fn _bind_mount_linux(&self, checkout_path: &Path, target: &Path) -> Result<()> {
+        let abs_mount_path_in_repo = checkout_path.join(target);
+        if abs_mount_path_in_repo.exists() {
+            // To deal with the case where someone has manually unmounted
+            // a bind mount and left the privhelper confused about the
+            // list of bind mounts, we first speculatively try asking the
+            // eden daemon to unmount it first, ignoring any error that
+            // might raise.
+            _remove_bind_mount_thrift_call(checkout_path, &self.repo_path).await?;
+        }
+        // Ensure that the client directory exists before we try to mount over it
+        std::fs::create_dir_all(abs_mount_path_in_repo).from_err()?;
+        std::fs::create_dir_all(target).from_err()?;
+        _add_bind_mount_thrift_call(checkout_path, &self.repo_path, target).await?;
+        Ok(())
+    }
+
     #[cfg(target_os = "macos")]
     /// Attempt to use an APFS volume for a bind redirection.
     /// The heavy lifting is part of the APFS_HELPER utility found
@@ -349,6 +367,11 @@ impl Redirection {
     #[cfg(target_os = "windows")]
     fn _bind_mount_windows(&self, checkout_path: &Path, target: &Path) -> Result<()> {
         self._apply_symlink(checkout_path, target)
+    }
+
+    #[cfg(target_os = "linux")]
+    async fn _bind_mount(&self, checkout: &Path, target: &Path) -> Result<()> {
+        self._bind_mount_linux(checkout, target).await
     }
 
     #[cfg(target_os = "macos")]
@@ -553,6 +576,35 @@ where
     }
 
     Ok(map)
+}
+
+#[cfg(target_os = "linux")]
+async fn _add_bind_mount_thrift_call(
+    mount_path: &Path,
+    repo_path: &Path,
+    target: &Path,
+) -> Result<()> {
+    let client = EdenFsInstance::global().connect(None).await?;
+    let co_path = mount_path
+        .to_str()
+        .context("failed to get mount point as str")?
+        .as_bytes()
+        .to_vec();
+    let repo_path = repo_path
+        .to_str()
+        .context("failed to get mount point as str")?
+        .as_bytes()
+        .to_vec();
+    let target_path = target
+        .to_str()
+        .context("failed to get mount point as str")?
+        .as_bytes()
+        .to_vec();
+    client
+        .addBindMount(&co_path, &repo_path, &target_path)
+        .await
+        .with_context(|| "failed add bind mount thrift call")?;
+    Ok(())
 }
 
 #[cfg(target_os = "linux")]
