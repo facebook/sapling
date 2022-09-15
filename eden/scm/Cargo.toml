@@ -95,6 +95,7 @@ members = [
   "lib/revisionstore",
   "lib/revisionstore/types",
   "lib/revlogindex",
+  "lib/revsets",
   "lib/runlog",
   "lib/sparse",
   "lib/spawn-ext",
