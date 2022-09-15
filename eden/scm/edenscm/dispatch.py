@@ -288,6 +288,7 @@ def _preimportmodules():
         "fbhistedit",
         "fsmonitor",
         "githelp",
+        "github",
         "grpcheck",
         "hgevents",
         "histedit",
