@@ -139,7 +139,7 @@ impl RedirectCmd {
         let client_name = instance.client_name(&mount)?;
         let config_dir = instance.config_directory(&client_name);
         let checkout = find_checkout(instance, mount)?;
-        match try_add_redirection(
+        try_add_redirection(
             &checkout,
             &config_dir,
             repo_path,
@@ -148,17 +148,14 @@ impl RedirectCmd {
             strict,
         )
         .await
-        {
-            Ok(_) => Ok(0),
-            Err(e) => {
-                eprintln!("{}", e);
-                Err(anyhow!(
-                    "Could not add redirection {} of type {}",
-                    repo_path.display(),
-                    redir_type,
-                ))
-            }
-        }
+        .with_context(|| {
+            format!(
+                "Could not add redirection {} of type {}",
+                repo_path.display(),
+                redir_type,
+            )
+        })?;
+        Ok(0)
     }
 }
 
