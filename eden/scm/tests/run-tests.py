@@ -1601,6 +1601,8 @@ class Test(unittest.TestCase):
             hgrc.write("enablerustwalker=True\n")
             hgrc.write("[config]\n")
             hgrc.write("use-rust=true\n")
+            hgrc.write("[commands]\n")
+            hgrc.write("status.relative=true\n")
 
             # treemanifest
             hgrc.write("[extensions]\n")

@@ -64,12 +64,12 @@ hg status . in repo root:
   \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_root\x1b[0m (esc)
 
   $ hg status --cwd a
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4ma/1/in_a_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4ma/in_a\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/1/in_b_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/2/in_b_2\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/in_b\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_root\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m1/in_a_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_a\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../b/1/in_b_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../b/2/in_b_2\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../b/in_b\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_root\x1b[0m (esc)
   $ hg status --cwd a .
   \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m1/in_a_1\x1b[0m (esc)
   \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_a\x1b[0m (esc)
@@ -82,12 +82,12 @@ hg status . in repo root:
   \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_root\x1b[0m (esc)
 
   $ hg status --cwd b
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4ma/1/in_a_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4ma/in_a\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/1/in_b_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/2/in_b_2\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/in_b\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_root\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../a/1/in_a_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../a/in_a\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m1/in_b_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m2/in_b_2\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_b\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_root\x1b[0m (esc)
   $ hg status --cwd b .
   \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m1/in_b_1\x1b[0m (esc)
   \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m2/in_b_2\x1b[0m (esc)
@@ -101,12 +101,12 @@ hg status . in repo root:
   \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_root\x1b[0m (esc)
 
   $ hg status --cwd a/1
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4ma/1/in_a_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4ma/in_a\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/1/in_b_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/2/in_b_2\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/in_b\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_root\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_a_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_a\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../b/1/in_b_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../b/2/in_b_2\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../b/in_b\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../in_root\x1b[0m (esc)
   $ hg status --cwd a/1 .
   \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_a_1\x1b[0m (esc)
   $ hg status --cwd a/1 ..
@@ -114,12 +114,12 @@ hg status . in repo root:
   \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_a\x1b[0m (esc)
 
   $ hg status --cwd b/1
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4ma/1/in_a_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4ma/in_a\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/1/in_b_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/2/in_b_2\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/in_b\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_root\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../a/1/in_a_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../a/in_a\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_b_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../2/in_b_2\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_b\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../in_root\x1b[0m (esc)
   $ hg status --cwd b/1 .
   \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_b_1\x1b[0m (esc)
   $ hg status --cwd b/1 ..
@@ -128,12 +128,12 @@ hg status . in repo root:
   \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_b\x1b[0m (esc)
 
   $ hg status --cwd b/2
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4ma/1/in_a_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4ma/in_a\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/1/in_b_1\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/2/in_b_2\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/in_b\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_root\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../a/1/in_a_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../a/in_a\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../1/in_b_1\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_b_2\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_b\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../../in_root\x1b[0m (esc)
   $ hg status --cwd b/2 .
   \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_b_2\x1b[0m (esc)
   $ hg status --cwd b/2 ..

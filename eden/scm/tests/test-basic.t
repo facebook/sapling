@@ -8,6 +8,7 @@ Create a repository:
   $ setconfig format.use-segmented-changelog=1
 
   $ hg config
+  commands.status.relative=true
   config.use-rust=true
   devel.all-warnings=true
   devel.collapse-traceback=true

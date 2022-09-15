@@ -32,12 +32,12 @@ hg status . in repo root:
   ? in_root
 
   $ hg status --cwd a
-  ? a/1/in_a_1
-  ? a/in_a
-  ? b/1/in_b_1
-  ? b/2/in_b_2
-  ? b/in_b
-  ? in_root
+  ? 1/in_a_1
+  ? in_a
+  ? ../b/1/in_b_1
+  ? ../b/2/in_b_2
+  ? ../b/in_b
+  ? ../in_root
   $ hg status --cwd a .
   ? 1/in_a_1
   ? in_a
@@ -50,12 +50,12 @@ hg status . in repo root:
   ? ../in_root
 
   $ hg status --cwd b
-  ? a/1/in_a_1
-  ? a/in_a
-  ? b/1/in_b_1
-  ? b/2/in_b_2
-  ? b/in_b
-  ? in_root
+  ? ../a/1/in_a_1
+  ? ../a/in_a
+  ? 1/in_b_1
+  ? 2/in_b_2
+  ? in_b
+  ? ../in_root
   $ hg status --cwd b .
   ? 1/in_b_1
   ? 2/in_b_2
@@ -69,12 +69,12 @@ hg status . in repo root:
   ? ../in_root
 
   $ hg status --cwd a/1
-  ? a/1/in_a_1
-  ? a/in_a
-  ? b/1/in_b_1
-  ? b/2/in_b_2
-  ? b/in_b
-  ? in_root
+  ? in_a_1
+  ? ../in_a
+  ? ../../b/1/in_b_1
+  ? ../../b/2/in_b_2
+  ? ../../b/in_b
+  ? ../../in_root
   $ hg status --cwd a/1 .
   ? in_a_1
   $ hg status --cwd a/1 ..
@@ -82,12 +82,12 @@ hg status . in repo root:
   ? ../in_a
 
   $ hg status --cwd b/1
-  ? a/1/in_a_1
-  ? a/in_a
-  ? b/1/in_b_1
-  ? b/2/in_b_2
-  ? b/in_b
-  ? in_root
+  ? ../../a/1/in_a_1
+  ? ../../a/in_a
+  ? in_b_1
+  ? ../2/in_b_2
+  ? ../in_b
+  ? ../../in_root
   $ hg status --cwd b/1 .
   ? in_b_1
   $ hg status --cwd b/1 ..
@@ -96,12 +96,12 @@ hg status . in repo root:
   ? ../in_b
 
   $ hg status --cwd b/2
-  ? a/1/in_a_1
-  ? a/in_a
-  ? b/1/in_b_1
-  ? b/2/in_b_2
-  ? b/in_b
-  ? in_root
+  ? ../../a/1/in_a_1
+  ? ../../a/in_a
+  ? ../1/in_b_1
+  ? in_b_2
+  ? ../in_b
+  ? ../../in_root
   $ hg status --cwd b/2 .
   ? in_b_2
   $ hg status --cwd b/2 ..
@@ -114,32 +114,6 @@ combining patterns with root and patterns without a root works
   $ hg st a/in_a re:.*b$
   ? a/in_a
   ? b/in_b
-
-relative paths can be requested
-
-  $ cat >> $HGRCPATH <<EOF
-  > [commands]
-  > status.relative = True
-  > EOF
-  $ hg status --cwd a
-  ? 1/in_a_1
-  ? in_a
-  ? ../b/1/in_b_1
-  ? ../b/2/in_b_2
-  ? ../b/in_b
-  ? ../in_root
-  $ HGPLAIN=1 hg status --cwd a
-  ? a/1/in_a_1 (glob)
-  ? a/in_a (glob)
-  ? b/1/in_b_1 (glob)
-  ? b/2/in_b_2 (glob)
-  ? b/in_b (glob)
-  ? in_root
-
-  $ cat >> $HGRCPATH <<EOF
-  > [commands]
-  > status.relative = False
-  > EOF
 
   $ newclientrepo repo2
   $ touch modified removed deleted ignored
@@ -264,15 +238,15 @@ Test templater support:
   abort: "status" not in template map
   [255]
   $ hg status --cwd ignoreddir -AT "{status}: {path} :: {relpath(path)}\n"
-  M: .gitignore :: ../.gitignore
-  A: added :: ../added
-  A: copied :: ../copied
-  R: removed :: ../removed
-  !: deleted :: ../deleted
-  ?: ignored :: ../ignored
-  ?: unknown :: ../unknown
-  I: ignoreddir/file :: file
-  C: modified :: ../modified
+  M: ../.gitignore :: ../../.gitignore
+  A: ../added :: ../../added
+  A: ../copied :: ../../copied
+  R: ../removed :: ../../removed
+  !: ../deleted :: ../../deleted
+  ?: ../ignored :: ../../ignored
+  ?: ../unknown :: ../../unknown
+  I: file :: ../file
+  C: ../modified :: ../../modified
 
 hg status ignoreddir/file:
 

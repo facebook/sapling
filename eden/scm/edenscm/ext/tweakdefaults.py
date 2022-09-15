@@ -659,7 +659,8 @@ def statuscmd(orig, ui, repo, *pats, **opts):
     """
     Make status relative by default for interactive usage
     """
-    if opts.get("root_relative"):
+    rootrel = opts.get("root_relative")
+    if rootrel:
         del opts["root_relative"]
         if pats:
             # Ugh. So, if people pass a pattern and --root-relative,
@@ -682,7 +683,11 @@ def statuscmd(orig, ui, repo, *pats, **opts):
     # Also set pats to [''] if pats is empty because that makes status relative.
     elif not pats or (len(pats) == 1 and pats[0] == "re:"):
         pats = [""]
-    return orig(ui, repo, *pats, **opts)
+
+    with ui.configoverride(
+        {("commands", "status.relative"): "false"}
+    ) if rootrel else util.nullcontextmanager():
+        return orig(ui, repo, *pats, **opts)
 
 
 def unfilteredcmd(orig, *args, **opts):

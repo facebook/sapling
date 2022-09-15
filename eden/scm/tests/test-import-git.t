@@ -701,12 +701,12 @@ prefix with default strip
   > EOF
   applying patch from stdin
   $ hg st --copies
-  M dir/dir2/c
-  A dir/a
-  A dir/dir2/b2
-    dir/dir2/b
-  R dir/d
-  R dir/dir2/b
+  M ../dir/dir2/c
+  A ../dir/a
+  A ../dir/dir2/b2
+    ../dir/dir2/b
+  R ../dir/d
+  R ../dir/dir2/b
   $ cd ..
 
 Renames, similarity and git diff

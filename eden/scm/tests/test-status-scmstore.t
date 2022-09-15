@@ -31,12 +31,12 @@ hg status . in repo root:
   ? in_root
 
   $ hg status --cwd a
-  ? a/1/in_a_1
-  ? a/in_a
-  ? b/1/in_b_1
-  ? b/2/in_b_2
-  ? b/in_b
-  ? in_root
+  ? 1/in_a_1
+  ? in_a
+  ? ../b/1/in_b_1
+  ? ../b/2/in_b_2
+  ? ../b/in_b
+  ? ../in_root
   $ hg status --cwd a .
   ? 1/in_a_1
   ? in_a
@@ -49,12 +49,12 @@ hg status . in repo root:
   ? ../in_root
 
   $ hg status --cwd b
-  ? a/1/in_a_1
-  ? a/in_a
-  ? b/1/in_b_1
-  ? b/2/in_b_2
-  ? b/in_b
-  ? in_root
+  ? ../a/1/in_a_1
+  ? ../a/in_a
+  ? 1/in_b_1
+  ? 2/in_b_2
+  ? in_b
+  ? ../in_root
   $ hg status --cwd b .
   ? 1/in_b_1
   ? 2/in_b_2
@@ -68,12 +68,12 @@ hg status . in repo root:
   ? ../in_root
 
   $ hg status --cwd a/1
-  ? a/1/in_a_1
-  ? a/in_a
-  ? b/1/in_b_1
-  ? b/2/in_b_2
-  ? b/in_b
-  ? in_root
+  ? in_a_1
+  ? ../in_a
+  ? ../../b/1/in_b_1
+  ? ../../b/2/in_b_2
+  ? ../../b/in_b
+  ? ../../in_root
   $ hg status --cwd a/1 .
   ? in_a_1
   $ hg status --cwd a/1 ..
@@ -81,12 +81,12 @@ hg status . in repo root:
   ? ../in_a
 
   $ hg status --cwd b/1
-  ? a/1/in_a_1
-  ? a/in_a
-  ? b/1/in_b_1
-  ? b/2/in_b_2
-  ? b/in_b
-  ? in_root
+  ? ../../a/1/in_a_1
+  ? ../../a/in_a
+  ? in_b_1
+  ? ../2/in_b_2
+  ? ../in_b
+  ? ../../in_root
   $ hg status --cwd b/1 .
   ? in_b_1
   $ hg status --cwd b/1 ..
@@ -95,12 +95,12 @@ hg status . in repo root:
   ? ../in_b
 
   $ hg status --cwd b/2
-  ? a/1/in_a_1
-  ? a/in_a
-  ? b/1/in_b_1
-  ? b/2/in_b_2
-  ? b/in_b
-  ? in_root
+  ? ../../a/1/in_a_1
+  ? ../../a/in_a
+  ? ../1/in_b_1
+  ? in_b_2
+  ? ../in_b
+  ? ../../in_root
   $ hg status --cwd b/2 .
   ? in_b_2
   $ hg status --cwd b/2 ..
