@@ -10,6 +10,7 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -18,8 +19,10 @@ use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::redirect::get_effective_redirections;
+use edenfs_client::redirect::try_add_redirection;
 use edenfs_client::redirect::Redirection;
 use edenfs_client::redirect::RedirectionState;
+use edenfs_client::redirect::RedirectionType;
 use edenfs_client::EdenFsInstance;
 use hg_util::path::expand_path;
 use tabular::row;
@@ -125,14 +128,37 @@ impl RedirectCmd {
 
     async fn add(
         &self,
-        _mount: &Path,
-        _repo_path: &Path,
-        _redir_type: &str,
-        _force_remount_bind_mounts: bool,
-        _strict: bool,
+        mount: &Path,
+        repo_path: &Path,
+        redir_type: &str,
+        force_remount_bind_mounts: bool,
+        strict: bool,
     ) -> Result<ExitCode> {
-        eprintln!("Using Rust version of `eden redirect add` which is unimplemented.");
-        Ok(0)
+        let redir_type = RedirectionType::from_str(redir_type)?;
+        let instance = EdenFsInstance::global();
+        let client_name = instance.client_name(&mount)?;
+        let config_dir = instance.config_directory(&client_name);
+        let checkout = find_checkout(instance, mount)?;
+        match try_add_redirection(
+            &checkout,
+            &config_dir,
+            repo_path,
+            redir_type,
+            force_remount_bind_mounts,
+            strict,
+        )
+        .await
+        {
+            Ok(_) => Ok(0),
+            Err(e) => {
+                eprintln!("{}", e);
+                Err(anyhow!(
+                    "Could not add redirection {} of type {}",
+                    repo_path.display(),
+                    redir_type,
+                ))
+            }
+        }
     }
 }
 
