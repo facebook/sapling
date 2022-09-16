@@ -170,14 +170,13 @@ void LocalStore::putBlob(const ObjectId& id, const Blob* blob) {
   }
 }
 
-BlobMetadata LocalStore::putBlobMetadata(const ObjectId& id, const Blob* blob) {
-  BlobMetadata metadata{Hash20::sha1(blob->getContents()), blob->getSize()};
+void LocalStore::putBlobMetadata(
+    const ObjectId& id,
+    const BlobMetadata& metadata) {
   auto hashBytes = id.getBytes();
   SerializedBlobMetadata metadataBytes(metadata);
 
   put(KeySpace::BlobMetaDataFamily, hashBytes, metadataBytes.slice());
-
-  return metadata;
 }
 
 void LocalStore::put(

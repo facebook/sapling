@@ -172,7 +172,7 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
   /**
    * Store a blob metadata.
    */
-  BlobMetadata putBlobMetadata(const ObjectId& id, const Blob* blob);
+  void putBlobMetadata(const ObjectId& id, const BlobMetadata& metadata);
 
   /**
    * Put arbitrary data in the store.

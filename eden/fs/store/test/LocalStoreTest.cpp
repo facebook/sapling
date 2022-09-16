@@ -62,7 +62,6 @@ TEST_P(LocalStoreTest, testReadAndWriteBlob) {
   StringPiece contents("{\n  \"breakConfig\": true\n}\n");
   auto buf =
       folly::IOBuf{folly::IOBuf::WRAP_BUFFER, folly::ByteRange{contents}};
-  auto sha1 = Hash20::sha1(buf);
 
   auto inBlob = Blob{hash, std::move(buf)};
   store_->putBlob(hash, &inBlob);
@@ -76,14 +75,20 @@ TEST_P(LocalStoreTest, testReadAndWriteBlob) {
     auto retrievedMetadata = store_->getBlobMetadata(hash).get(10s);
     ASSERT_FALSE(retrievedMetadata.has_value());
   }
+}
 
-  store_->putBlobMetadata(hash, &inBlob);
+TEST_P(LocalStoreTest, testReadAndWriteMetadata) {
+  ObjectId id = ObjectId::fromHex("3a8f8eb91101860fd8484154885838bf322964d0");
+  auto sha1 = Hash20::sha1("foobar");
+  size_t size = 6;
+  BlobMetadata metadata{sha1, size};
+  store_->putBlobMetadata(id, metadata);
 
-  auto retrievedMetadata = store_->getBlobMetadata(hash).get(10s);
+  auto retrievedMetadata = store_->getBlobMetadata(id).get(10s);
   ASSERT_TRUE(retrievedMetadata.has_value());
 
   EXPECT_EQ(sha1, retrievedMetadata.value().sha1);
-  EXPECT_EQ(contents.size(), retrievedMetadata.value().size);
+  EXPECT_EQ(size, retrievedMetadata.value().size);
 }
 
 TEST_P(LocalStoreTest, testReadNonexistent) {

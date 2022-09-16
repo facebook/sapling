@@ -158,6 +158,11 @@ std::shared_ptr<const Tree> changeCaseSensitivity(
         std::move(treeEntries), tree->getHash());
   }
 }
+
+BlobMetadata computeBlobMetadata(const Blob& blob) {
+  return BlobMetadata{Hash20::sha1(blob.getContents()), blob.getSize()};
+}
+
 } // namespace
 
 ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getRootTree(
@@ -275,8 +280,8 @@ ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
             // not compute it in this case.
             if (!self->edenConfig_->useAuxMetadata.getValue() &&
                 !self->metadataCache_.rlock()->exists(id)) {
-              auto metadata =
-                  self->localStore_->putBlobMetadata(id, result.blob.get());
+              auto metadata = computeBlobMetadata(*result.blob);
+              self->localStore_->putBlobMetadata(id, metadata);
               self->metadataCache_.wlock()->set(id, metadata);
             }
             self->updateProcessFetch(fetchContext);
@@ -305,7 +310,6 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
     }
   }
 
-  // The BackingStore may have prefetched metadata for this blob.
   auto localMetadata = backingStore_->getLocalBlobMetadata(id, context);
   if (localMetadata) {
     stats_->getObjectStoreStatsForCurrentThread()
@@ -364,8 +368,8 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
                     self->stats_->getObjectStoreStatsForCurrentThread()
                         .getBlobFromBackingStore.addValue(1);
                     self->localStore_->putBlob(id, result.blob.get());
-                    auto metadata = self->localStore_->putBlobMetadata(
-                        id, result.blob.get());
+                    auto metadata = computeBlobMetadata(*result.blob);
+                    self->localStore_->putBlobMetadata(id, metadata);
                     self->metadataCache_.wlock()->set(id, metadata);
                     // I could see an argument for recording this fetch with
                     // type Blob instead of BlobMetadata, but it's probably more
