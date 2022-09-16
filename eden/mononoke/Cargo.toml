@@ -72,7 +72,7 @@ blobstore_factory = { version = "0.1.0", path = "blobstore/factory" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bulkops = { version = "0.1.0", path = "bulkops" }
 bytes = { version = "1.1", features = ["serde"] }
-bytesize = "1.0"
+bytesize = "1.1"
 cacheblob = { version = "0.1.0", path = "blobstore/cacheblob" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 changesets = { version = "0.1.0", path = "changesets" }
