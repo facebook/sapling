@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+  $ setconfig workingcopy.ruststatus=False
+
   $ enable sparse
   $ newrepo
   $ hg sparse include a/b

@@ -8,6 +8,7 @@
 mod diff;
 mod iter;
 mod link;
+mod matcher;
 mod namecmp;
 mod store;
 #[cfg(any(test, feature = "for-tests"))]
@@ -54,6 +55,7 @@ use crate::link::Durable;
 use crate::link::DurableEntry;
 use crate::link::Ephemeral;
 use crate::link::Leaf;
+pub use crate::matcher::ManifestMatcher;
 use crate::store::InnerStore;
 
 /// The Tree implementation of a Manifest dedicates an inner node for each directory in the

@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+  $ setconfig workingcopy.ruststatus=False
+
 # test sparse interaction with other extensions
 
   $ hg init myrepo
@@ -15,7 +17,6 @@
   > simplecache=
   > [simplecache]
   > showdebug=true
-  > cachedir=$TESTTMP/hgsimplecache
   > EOF
 
 # Test integration with simplecache for profile reads

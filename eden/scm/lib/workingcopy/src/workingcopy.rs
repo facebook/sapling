@@ -158,7 +158,13 @@ impl WorkingCopy {
     }
 
     pub fn status(&self, matcher: Arc<dyn Matcher + Send + Sync + 'static>) -> Result<Status> {
-        let matcher = Arc::new(DifferenceMatcher::new(matcher, self.ignore_matcher.clone()));
+        let matcher = Arc::new(DifferenceMatcher::new(
+            matcher,
+            DifferenceMatcher::new(
+                self.ignore_matcher.clone(),
+                manifest_tree::ManifestMatcher::new(self.manifest.clone()),
+            ),
+        ));
         let pending_changes = self
             .filesystem
             .pending_changes(matcher.clone())?
