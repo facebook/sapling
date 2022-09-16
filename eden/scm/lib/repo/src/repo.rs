@@ -246,6 +246,7 @@ impl Repo {
                 let eden_api = Builder::from_config(&self.config)?
                     .correlator(Some(correlator))
                     .build()?;
+                tracing::info!(url=eden_api.url(), path=?self.path, "EdenApi built");
                 self.eden_api = Some(eden_api.clone());
                 Ok(eden_api)
             }
