@@ -133,14 +133,20 @@ impl<A, B> DifferenceMatcher<A, B> {
 impl<A: Matcher, B: Matcher> Matcher for DifferenceMatcher<A, B> {
     fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
         let include = self.include.matches_directory(path)?;
-        let exclude = self.exclude.matches_directory(path)?;
 
-        Ok(match exclude {
-            DirectoryMatch::Nothing => include,
-            DirectoryMatch::Everything => DirectoryMatch::Nothing,
-            DirectoryMatch::ShouldTraverse => match include {
-                DirectoryMatch::Everything => DirectoryMatch::ShouldTraverse,
-                _ => include,
+        // Don't execute the exclude ahead of time, since in some cases we can avoid executing it
+        // entirely. This is useful when the exclude side is expensive, like in the status case
+        // where the exclude side may inspect a manifest or the treestate.
+        Ok(match include {
+            DirectoryMatch::Nothing => DirectoryMatch::Nothing,
+            DirectoryMatch::Everything => match self.exclude.matches_directory(path)? {
+                DirectoryMatch::Nothing => DirectoryMatch::Everything,
+                DirectoryMatch::Everything => DirectoryMatch::Nothing,
+                DirectoryMatch::ShouldTraverse => DirectoryMatch::ShouldTraverse,
+            },
+            DirectoryMatch::ShouldTraverse => match self.exclude.matches_directory(path)? {
+                DirectoryMatch::Everything => DirectoryMatch::Nothing,
+                _ => DirectoryMatch::ShouldTraverse,
             },
         })
     }
