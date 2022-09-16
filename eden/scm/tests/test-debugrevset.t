@@ -32,8 +32,11 @@ Test hash prefix lookup:
   $ hg debugrevset 431
   43195508e3bb704c08d24c40375bdd826789dd72
   $ hg debugrevset 4
-  abort: ambiguous identifier for '4': , , , ,  available
+  abort: ambiguous identifier for '4': 426bada5c67598ca65036d57d9e4b64b0c1ce7a0, 43195508e3bb704c08d24c40375bdd826789dd72 available
   [255]
   $ hg debugrevset 6
   abort: unknown revision '6'
+  [255]
+  $ hg debugrevset thisshóuldnótbéfoünd
+  abort: unknown revision 'thisshóuldnótbéfoünd'
   [255]

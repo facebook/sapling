@@ -14,6 +14,13 @@ pub fn resolve_single(
     change_id: &str,
     id_map: &dyn IdConvert,
 ) -> Result<VertexName, RevsetLookupError> {
+    if !change_id
+        .chars()
+        .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+    {
+        return Err(RevsetLookupError::RevsetNotFound(change_id.to_owned()));
+    }
+
     let mut vertices = async_runtime::block_on(async {
         id_map.vertexes_by_hex_prefix(change_id.as_bytes(), 5).await
     })?
