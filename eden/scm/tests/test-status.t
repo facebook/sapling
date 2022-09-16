@@ -1,11 +1,15 @@
 #chg-compatible
 
-#testcases pythonstatus ruststatus rustcommand
+#testcases pythonstatus ruststatus rustcommand scmstore
 #if pythonstatus
   $ setconfig workingcopy.ruststatus=false 
 #endif
 #if rustcommand
   $ setconfig status.use-rust=True workingcopy.use-rust=True
+#endif
+#if scmstore
+  $ setconfig scmstore.auxindexedlog=true
+  $ setconfig scmstore.status=true
 #endif
 
   $ export HG_NO_DEFAULT_CONFIG=true
