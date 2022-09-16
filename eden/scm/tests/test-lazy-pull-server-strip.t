@@ -59,7 +59,7 @@ Explicitly lookup the removed commit via edenapi:
 Lookup commits that are removed:
 
   $ hg log -r $D -T '{desc}\n'
-  error.HttpError: Server responded 404 Not Found for eagerepo://get_sha1_blob_for_api: f585351a92f85104bff7c284233c338b10eb1df7 cannot be found. Headers: {}
+  error.HttpError: Server responded 404 Not Found for eager://$TESTTMP/e2/commit_revlog_data: f585351a92f85104bff7c284233c338b10eb1df7 cannot be found. Headers: {}
   [255]
 
 Pull from the new server:

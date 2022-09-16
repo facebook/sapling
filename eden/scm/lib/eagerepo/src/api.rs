@@ -74,7 +74,7 @@ impl EdenApi for EagerRepo {
         let mut values = Vec::with_capacity(keys.len());
         for key in keys {
             let id = key.hgid;
-            let data = self.get_sha1_blob_for_api(id)?;
+            let data = self.get_sha1_blob_for_api(id, "files")?;
             let (p1, p2) = extract_p1_p2(&data);
             let parents = Parents::new(p1, p2);
             let entry = FileEntry {
@@ -102,7 +102,7 @@ impl EdenApi for EagerRepo {
         for spec in reqs {
             let key = spec.key;
             let id = key.hgid;
-            let data = self.get_sha1_blob_for_api(id)?;
+            let data = self.get_sha1_blob_for_api(id, "files_attrs")?;
             let (p1, p2) = extract_p1_p2(&data);
             let parents = Parents::new(p1, p2);
             // TODO(meyer): Actually implement aux data here.
@@ -138,7 +138,7 @@ impl EdenApi for EagerRepo {
             if !visited.insert(key.clone()) {
                 continue;
             }
-            let data = self.get_sha1_blob_for_api(key.hgid)?;
+            let data = self.get_sha1_blob_for_api(key.hgid, "history")?;
             // NOTE: Order of p1, p2 are not preserved, unlike revlog hg.
             // It should be okay correctness-wise.
             let (p1, p2) = extract_p1_p2(&data);
@@ -184,13 +184,13 @@ impl EdenApi for EagerRepo {
         let mut values = Vec::new();
         let attributes = attributes.unwrap_or_default();
         if attributes.child_metadata {
-            return Err(not_implemented_error(
+            return Err(self.not_implemented_error(
                 "EagerRepo does not support child_metadata for trees".to_string(),
-                "trees".to_string(),
+                "trees",
             ));
         }
         for key in keys {
-            let data = self.get_sha1_blob_for_api(key.hgid)?;
+            let data = self.get_sha1_blob_for_api(key.hgid, "trees")?;
             let mut entry = TreeEntry::default();
             entry.key = key;
             if attributes.manifest_blob {
@@ -215,7 +215,7 @@ impl EdenApi for EagerRepo {
         debug!("revlog_data {}", debug_hgid_list(&hgids));
         let mut values = Vec::new();
         for id in hgids {
-            let data = self.get_sha1_blob_for_api(id)?;
+            let data = self.get_sha1_blob_for_api(id, "commit_revlog_data")?;
             let data = CommitRevlogData {
                 hgid: id,
                 // PERF: to_vec().into() converts minibytes::Bytes to bytes::Bytes.
@@ -451,7 +451,7 @@ impl EdenApi for EagerRepo {
 }
 
 impl EagerRepo {
-    fn get_sha1_blob_for_api(&self, id: HgId) -> edenapi::Result<minibytes::Bytes> {
+    fn get_sha1_blob_for_api(&self, id: HgId, handler: &str) -> edenapi::Result<minibytes::Bytes> {
         // Emulate the HTTP errors.
         match self.get_sha1_blob(id) {
             Ok(None) => {
@@ -460,7 +460,7 @@ impl EagerRepo {
                     status: StatusCode::NOT_FOUND,
                     message: format!("{} cannot be found", id.to_hex()),
                     headers: Default::default(),
-                    url: "eagerepo://get_sha1_blob_for_api".to_string(),
+                    url: self.url(handler),
                 })
             }
             Ok(Some(data)) => {
@@ -471,9 +471,24 @@ impl EagerRepo {
                 status: StatusCode::INTERNAL_SERVER_ERROR,
                 message: format!("{:?}", e),
                 headers: Default::default(),
-                url: "eagerepo://get_sha1_blob_for_api".to_string(),
+                url: self.url(handler),
             }),
         }
+    }
+
+    /// Not implement error.
+    fn not_implemented_error(&self, message: String, handler: &str) -> EdenApiError {
+        EdenApiError::HttpError {
+            status: StatusCode::NOT_IMPLEMENTED,
+            message,
+            headers: Default::default(),
+            url: self.url(handler),
+        }
+    }
+
+    /// Provide the URL for HTTP error reporting.
+    fn url(&self, handler: &str) -> String {
+        format!("eager://{}/{}", self.dir.display(), handler)
     }
 }
 
@@ -549,16 +564,6 @@ fn convert_to_response<T: Send + Sync + 'static>(values: Vec<edenapi::Result<T>>
     Response {
         stats: Box::pin(async { Ok(Default::default()) }),
         entries: Box::pin(futures::stream::iter(values)),
-    }
-}
-
-/// Not implement error.
-fn not_implemented_error(message: String, handler: String) -> EdenApiError {
-    EdenApiError::HttpError {
-        status: StatusCode::NOT_IMPLEMENTED,
-        message,
-        headers: Default::default(),
-        url: format!("eagerepo://{}", handler),
     }
 }
 

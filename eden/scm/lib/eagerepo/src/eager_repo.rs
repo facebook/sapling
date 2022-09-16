@@ -60,6 +60,7 @@ pub struct EagerRepo {
     pub(crate) dag: Dag,
     store: EagerRepoStore,
     metalog: MetaLog,
+    pub(crate) dir: PathBuf,
 }
 
 /// Storage used by `EagerRepo`. Wrapped by `Arc<RwLock>` for easier sharing.
@@ -151,6 +152,7 @@ impl EagerRepo {
             dag,
             store,
             metalog,
+            dir: dir.to_path_buf(),
         };
         Ok(repo)
     }
