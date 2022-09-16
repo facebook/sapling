@@ -277,6 +277,39 @@ Check 'status -q' and some combinations
   $ rm deleted
   $ hg copy modified copied
 
+Ignored but tracked files show up in hg status
+
+  $ hg status ignored
+  $ hg add ignored
+  $ hg status
+  M modified
+  A added
+  A copied
+  A ignored
+  R removed
+  ! deleted
+  ? unknown
+  $ hg commit -m 'add ignored' ignored
+  $ echo >> ignored
+  $ hg status
+  M ignored
+  M modified
+  A added
+  A copied
+  R removed
+  ! deleted
+  ? unknown
+  $ hg rm ignored -f
+  $ hg commit -m 'remove ignored' ignored
+  $ touch ignored
+  $ hg status
+  M modified
+  A added
+  A copied
+  R removed
+  ! deleted
+  ? unknown
+
 Specify working directory revision explicitly, that should be the same as
 "hg status"
 

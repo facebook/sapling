@@ -22,9 +22,11 @@ use parking_lot::RwLock;
 use pathmatcher::DifferenceMatcher;
 use pathmatcher::GitignoreMatcher;
 use pathmatcher::Matcher;
+use pathmatcher::UnionMatcher;
 use status::Status;
 use storemodel::ReadFileContents;
 use treestate::filestate::StateFlags;
+use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
 use types::RepoPathBuf;
 
@@ -157,12 +159,45 @@ impl WorkingCopy {
             .into_inner()
     }
 
+    fn added_files(&self) -> Result<Vec<RepoPathBuf>> {
+        let mut added_files: Vec<RepoPathBuf> = vec![];
+        self.treestate.borrow_mut().visit(
+            &mut |components, _| {
+                let path = components.concat();
+                let path = RepoPathBuf::from_utf8(path)?;
+                added_files.push(path);
+                Ok(VisitorResult::NotChanged)
+            },
+            &|_path, dir| match dir.get_aggregated_state() {
+                None => true,
+                Some(state) => {
+                    let any_not_exists_parent = !state
+                        .intersection
+                        .intersects(StateFlags::EXIST_P1 | StateFlags::EXIST_P2);
+                    let any_exists_next = state.union.intersects(StateFlags::EXIST_NEXT);
+                    any_not_exists_parent && any_exists_next
+                }
+            },
+            &|_path, file| {
+                !file
+                    .state
+                    .intersects(StateFlags::EXIST_P1 | StateFlags::EXIST_P2)
+                    && file.state.intersects(StateFlags::EXIST_NEXT)
+            },
+        )?;
+        Ok(added_files)
+    }
+
     pub fn status(&self, matcher: Arc<dyn Matcher + Send + Sync + 'static>) -> Result<Status> {
+        let added_files = self.added_files()?;
         let matcher = Arc::new(DifferenceMatcher::new(
             matcher,
             DifferenceMatcher::new(
                 self.ignore_matcher.clone(),
-                manifest_tree::ManifestMatcher::new(self.manifest.clone()),
+                UnionMatcher::new(vec![
+                    Arc::new(manifest_tree::ManifestMatcher::new(self.manifest.clone())),
+                    Arc::new(pathmatcher::ExactMatcher::new(added_files.iter())),
+                ]),
             ),
         ));
         let pending_changes = self
