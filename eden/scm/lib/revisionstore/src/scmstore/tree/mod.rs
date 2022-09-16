@@ -109,6 +109,7 @@ impl TreeStore {
         let indexedlog_local = self.indexedlog_local.clone();
         let memcache = self.memcache.clone();
         let edenapi = self.edenapi.clone();
+
         let contentstore = self.contentstore.clone();
         let creation_time = self.creation_time;
         let cache_to_memcache = self.cache_to_memcache;
@@ -126,6 +127,7 @@ impl TreeStore {
                     .collect();
                 for key in pending.into_iter() {
                     if let Some(entry) = indexedlog_cache.get_entry(key)? {
+                        tracing::trace!("{:?} found in cache", &entry.key());
                         common.found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
                     }
                 }
@@ -138,6 +140,7 @@ impl TreeStore {
                     .collect();
                 for key in pending.into_iter() {
                     if let Some(entry) = indexedlog_local.get_entry(key)? {
+                        tracing::trace!("{:?} found in local", &entry.key());
                         common.found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
                     }
                 }
@@ -160,6 +163,7 @@ impl TreeStore {
                                     indexedlog_cache.as_ref().unwrap().put_entry(entry)?;
                                 }
                             }
+                            tracing::trace!("{:?} found in memcache", &key);
                             common.found(key, entry.into());
                         }
                     }
@@ -182,6 +186,11 @@ impl TreeStore {
                         download_speed = field::Empty,
                     );
                     let _enter = span.enter();
+                    tracing::debug!(
+                        "attempt to fetch {} keys from edenapi ({:?})",
+                        pending.len(),
+                        edenapi.url()
+                    );
                     let attributes = if aux_local.is_some() {
                         Some(edenapi_types::TreeAttributes {
                             child_metadata: true,
@@ -246,6 +255,8 @@ impl TreeStore {
                     }
                     util::record_edenapi_stats(&span, &response.stats);
                 }
+            } else {
+                tracing::debug!("no EdenApi associated with TreeStore");
             }
 
             if let Some(ref contentstore) = contentstore {
@@ -254,6 +265,7 @@ impl TreeStore {
                     .map(|(key, _attrs)| StoreKey::HgId(key.clone()))
                     .collect();
                 if !pending.is_empty() {
+                    tracing::debug!("attempt to fetch {} keys from contentstore", pending.len());
                     contentstore.prefetch(&pending)?;
 
                     let pending = pending.into_iter().map(|key| match key {
@@ -277,6 +289,7 @@ impl TreeStore {
                         if let (Some(blob), Some(meta)) = (blob, meta) {
                             // We don't write to local indexedlog or memcache for contentstore fallbacks because
                             // contentstore handles that internally.
+                            tracing::trace!("{:?} found in contentstore", &key);
                             common.found(key, LazyTree::ContentStore(blob.into(), meta).into());
                         }
                     }

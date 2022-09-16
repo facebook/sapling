@@ -72,6 +72,11 @@ impl<T: EdenApiStoreKind> EdenApiRemoteStore<T> {
             _phantom: PhantomData,
         })
     }
+
+    /// Obtain the URL from the EdenApi client.
+    pub fn url(&self) -> Option<String> {
+        self.client.url()
+    }
 }
 
 impl HgIdRemoteStore for EdenApiRemoteStore<File> {
