@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.56"
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
-thiserror = "1.0.34"
+thiserror = "=1.0.30"
 types = { version = "0.1.0", path = "../types" }
 
 [dev-dependencies]

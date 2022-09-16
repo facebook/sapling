@@ -58,7 +58,7 @@ slog-term = "2.8"
 slog_ext = { version = "0.1.0", path = "../../common/rust/slog_ext" }
 sshrelay = { version = "0.1.0", path = "../../sshrelay" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "1.0.34"
+thiserror = "=1.0.30"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tokio-openssl = "0.6"

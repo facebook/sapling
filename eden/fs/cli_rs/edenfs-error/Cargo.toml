@@ -9,4 +9,4 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.56"
-thiserror = "1.0.34"
+thiserror = "=1.0.30"

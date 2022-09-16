@@ -17,7 +17,7 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 repo_bookmark_attrs = { version = "0.1.0", path = "../repo_attributes/repo_bookmark_attrs" }
 repo_permission_checker = { version = "0.1.0", path = "../repo_attributes/repo_permission_checker" }
-thiserror = "1.0.34"
+thiserror = "=1.0.30"
 
 [dev-dependencies]
 async-trait = "0.1.56"

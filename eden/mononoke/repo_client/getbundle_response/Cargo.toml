@@ -43,7 +43,7 @@ revset = { version = "0.1.0", path = "../../revset" }
 sha-1 = "0.10"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "1.0.34"
+thiserror = "=1.0.30"
 tunables = { version = "0.1.0", path = "../../tunables" }
 uniqueheap = { version = "0.1.0", path = "../../common/uniqueheap" }
 

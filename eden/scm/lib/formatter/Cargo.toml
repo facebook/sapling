@@ -12,4 +12,4 @@ configmodel = { version = "0.1.0", path = "../config/model" }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 termstyle = { version = "0.1.0", path = "../io/term/style" }
-thiserror = "1.0.34"
+thiserror = "=1.0.30"

@@ -9,4 +9,4 @@ edition = "2021"
 [dependencies]
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
 dag = { version = "0.1.0", path = "../dag" }
-thiserror = "1.0.34"
+thiserror = "=1.0.30"

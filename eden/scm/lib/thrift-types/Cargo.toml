@@ -13,4 +13,4 @@ fb303_core = { version = "0.0.0", git = "https://github.com/facebook/fb303.git",
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 hgclient_conf = { package = "config", version = "0.1.0", path = "../../../../configerator/structs/scm/hg/hgclientconf" }
-thiserror = "1.0.34"
+thiserror = "=1.0.30"

@@ -11,4 +11,4 @@ license = "GPLv2+"
 anyhow = "1.0.56"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 source_control = { version = "0.1.0", path = "../../scs/if" }
-thiserror = "1.0.34"
+thiserror = "=1.0.30"

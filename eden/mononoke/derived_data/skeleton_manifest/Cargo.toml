@@ -27,7 +27,7 @@ manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "1.0.34"
+thiserror = "=1.0.30"
 
 [dev-dependencies]
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }

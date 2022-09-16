@@ -21,7 +21,7 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 pushredirect_enable = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/pushredirect" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-thiserror = "1.0.34"
+thiserror = "=1.0.30"
 
 [dev-dependencies]
 context = { version = "0.1.0", path = "../../server/context" }

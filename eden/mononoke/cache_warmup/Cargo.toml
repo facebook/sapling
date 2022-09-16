@@ -31,5 +31,5 @@ microwave = { version = "0.1.0", path = "../microwave" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 revset = { version = "0.1.0", path = "../revset" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-thiserror = "1.0.34"
+thiserror = "=1.0.30"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }

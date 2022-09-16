@@ -23,7 +23,7 @@ memmap = "0.7"
 mercurial_types = { version = "0.1.0", path = "../types" }
 mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
 nom = { version = "3", features = ["verbose-errors"] }
-thiserror = "1.0.34"
+thiserror = "=1.0.30"
 
 [dev-dependencies]
 assert_matches = "1.5"

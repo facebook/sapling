@@ -24,7 +24,7 @@ manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
-thiserror = "1.0.34"
+thiserror = "=1.0.30"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 unodes = { version = "0.1.0", path = "../unodes" }
 
