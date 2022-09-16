@@ -1,4 +1,5 @@
   $ setconfig workingcopy.ruststatus=False
+  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ disable treemanifest
   $ setconfig experimental.allowfilepeer=True
 # Initial setup

@@ -1,4 +1,5 @@
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ cat >> fakepager.py <<EOF
   > import sys
   > printed = False

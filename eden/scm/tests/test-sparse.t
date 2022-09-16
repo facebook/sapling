@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ export HG_NO_DEFAULT_CONFIG=true
   $ setconfig workingcopy.ruststatus=False
   $ configure modernclient

@@ -1,6 +1,7 @@
 #chg-compatible
 
 
+  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ setconfig workingcopy.ruststatus=False
   $ cat <<EOF > merge
   > from __future__ import print_function

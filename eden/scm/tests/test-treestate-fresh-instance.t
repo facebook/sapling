@@ -1,8 +1,9 @@
 #require fsmonitor
 
-  $ setconfig workingcopy.ruststatus=False
+  $ configure modernclient
+  $ setconfig status.use-rust=False
   $ setconfig format.dirstate=2
-  $ newrepo
+  $ newclientrepo repo
   $ touch x
   $ hg status
   ? x

@@ -1,7 +1,8 @@
 #require fsmonitor
 
-  $ setconfig workingcopy.ruststatus=False
-  $ newrepo
+  $ configure modernclient
+  $ setconfig status.use-rust=False
+  $ newclientrepo repo
   $ enable fsmonitor
   $ touch a b c d e f
   $ hg ci -m init -A a b c d e f

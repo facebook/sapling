@@ -3,6 +3,7 @@
 test for old histedit issue #6:
 editing a changeset without any actual change would corrupt the repository
 
+  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable histedit

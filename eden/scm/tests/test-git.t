@@ -2,6 +2,7 @@
 #require git no-windows
 
   $ . $TESTDIR/git.sh
+  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ setconfig diff.git=true ui.allowemptycommit=true
 
 Prepare a git repo:

@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
   $ setconfig format.use-segmented-changelog=true

@@ -1,8 +1,9 @@
 #require fsmonitor
 
-  $ setconfig workingcopy.ruststatus=False
+  $ configure modernclient
   $ setconfig fsmonitor.detectrace=1
-  $ newrepo
+  $ setconfig status.use-rust=False
+  $ newclientrepo repo
 
 No races for common operations
 

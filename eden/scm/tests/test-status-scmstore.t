@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig workingcopy.ruststatus=False
   $ newserver server

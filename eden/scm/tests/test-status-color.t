@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ setconfig workingcopy.ruststatus=False
   $ setconfig ui.color=always color.mode=ansi
 Terminfo codes compatibility fix

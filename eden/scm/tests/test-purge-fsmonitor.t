@@ -1,7 +1,8 @@
 #require fsmonitor
 
-  $ setconfig workingcopy.ruststatus=False
-  $ newrepo
+  $ configure modernclient
+  $ setconfig status.use-rust=False
+  $ newclientrepo repo
   $ touch x
 
 Watchman clock is set after "status"

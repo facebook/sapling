@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ hg init repo
   $ cd repo
 

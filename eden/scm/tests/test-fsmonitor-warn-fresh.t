@@ -1,8 +1,9 @@
 #require fsmonitor
 
-  $ setconfig workingcopy.ruststatus=False
+  $ configure modernclient
+  $ setconfig status.use-rust=False
   $ setconfig fsmonitor.warn-fresh-instance=true
-  $ newrepo
+  $ newclientrepo repo
 
 A warning is printed for the first use
 

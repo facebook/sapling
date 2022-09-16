@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig status.use-rust=False workingcopy.use-rust=False
 
 Set up a base, local, and remote changeset, as well as the working copy state.
 Files names are of the form base_remote_local_working-copy. For example,

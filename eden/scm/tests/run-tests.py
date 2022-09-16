@@ -1597,12 +1597,19 @@ class Test(unittest.TestCase):
             hgrc.write("[web]\n")
             hgrc.write("address = localhost\n")
             hgrc.write("ipv6 = %s\n" % str(self._useipv6))
-            hgrc.write("[workingcopy]\n")
-            hgrc.write("enablerustwalker=True\n")
-            hgrc.write("[config]\n")
-            hgrc.write("use-rust=true\n")
             hgrc.write("[commands]\n")
             hgrc.write("status.relative=true\n")
+
+            # Rust config
+            hgrc.write("[config]\n")
+            hgrc.write("use-rust=true\n")
+
+            # Rust status
+            hgrc.write("[workingcopy]\n")
+            hgrc.write("enablerustwalker=True\n")
+            hgrc.write("use-rust=true\n")
+            hgrc.write("[status]\n")
+            hgrc.write("use-rust=true\n")
 
             # treemanifest
             hgrc.write("[extensions]\n")

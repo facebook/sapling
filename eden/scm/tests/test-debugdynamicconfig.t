@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ configure modern
 
   $ hg help > /dev/null

@@ -6,6 +6,7 @@
   $ enable logginghelper
   $ enable sampling
   $ setconfig sampling.key.logginghelper=logginghelper
+  $ setconfig status.use-rust=False workingcopy.use-rust=False
 
   $ hg init repo123
   $ cd repo123

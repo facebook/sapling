@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ setconfig workingcopy.ruststatus=False
   $ disable treemanifest
 
@@ -20,6 +21,7 @@ Create a repository:
   remotefilelog.cachepath=$TESTTMP/default-hgcache
   remotefilelog.localdatarepack=True
   remotefilelog.reponame=reponame-default
+  status.use-rust=False
   treemanifest.rustmanifest=True
   treemanifest.sendtrees=False
   treemanifest.treeonly=False
@@ -32,6 +34,7 @@ Create a repository:
   web\.ipv6=(?:True|False) (re)
   workingcopy.enablerustwalker=True
   workingcopy.ruststatus=False
+  workingcopy.use-rust=False
   $ hg init t
   $ cd t
 

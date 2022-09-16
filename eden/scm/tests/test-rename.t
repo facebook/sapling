@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ hg init repo
   $ cd repo
   $ mkdir d1 d1/d11 d2
