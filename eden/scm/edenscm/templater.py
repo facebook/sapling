@@ -1169,7 +1169,7 @@ def revset(context, mapping, args):
 
     def query(expr):
         m = revsetmod.match(repo.ui, expr, repo=repo)
-        # support template like: ifcontains(rev, revset('{rev} and age(\'<10m\')'), ...)
+        # support template like: ifcontains(rev, revset('{node} and age(\'<10m\')'), ...)
         with repo.ui.configoverride({("ui", "ignorerevnum"): False}):
             return m(repo)
 
