@@ -177,7 +177,7 @@ impl<'a> FileStoreBuilder<'a> {
         Ok(if let Some(use_edenapi) = self.override_edenapi {
             use_edenapi
         } else {
-            use_edenapi_via_config(self.config)?
+            self.edenapi.is_some() || use_edenapi_via_config(self.config)?
         })
     }
 
@@ -506,7 +506,7 @@ impl<'a> TreeStoreBuilder<'a> {
         Ok(if let Some(use_edenapi) = self.override_edenapi {
             use_edenapi
         } else {
-            use_edenapi_via_config(self.config)?
+            self.edenapi.is_some() || use_edenapi_via_config(self.config)?
         })
     }
 
