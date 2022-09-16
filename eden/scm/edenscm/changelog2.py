@@ -28,7 +28,7 @@ from . import (
 )
 from .changelog import changelogrevision, gitcommittext, hgcommittext, readfiles
 from .i18n import _
-from .node import hex, nullid, nullrev, wdirid, wdirrev
+from .node import bin, hex, nullid, nullrev, wdirid, wdirrev
 
 
 SEGMENTS_DIR = "segments/v1"
@@ -419,6 +419,8 @@ class changelog(object):
             parents = [p for p in (p1, p2) if p != nullid]
             basetext = textmap.get(deltabase) or self.revision(deltabase)
             rawtext = bytes(mdiff.patch(basetext, delta))
+            if b"stepparents:" in rawtext:
+                parents += parse_stepparents(changelogrevision(rawtext).extra)
             textmap[node] = rawtext
             commits.append((node, parents, rawtext))
             # Attempt to make memory usage bound for large pulls.
@@ -690,6 +692,32 @@ class nodemap(object):
 
     def destroying(self):
         pass
+
+
+# Old storage (revlog) and protocols (bundle2 - aka. addgroup()) use
+# "stepparents" extras to store >2 parents. This needs to be converted
+# back to real parents for newer backends.
+#
+# "stepparents" contains hex nodes joined by ",".
+#
+#                   | >2 parents  | >2 parents via |
+#                   | via parents | commit extra   |
+# --------------------------------------------------
+# storage: dag      | yes         | no             |
+# storage: revlog   | no [1]      | yes            |
+# protocol: bundle2 | no          | yes            |
+# protocol: edenapi | yes         | ignore         |
+#
+# [1]: support >2 parents in memory, but discard on flush
+#
+# See also D30686450.
+def parse_stepparents(extras):
+    """parse extra parent nodes from commit extras -> [node]"""
+    if extras:
+        stepparents = extras.get("stepparents")
+        if stepparents:
+            return [bin(h) for h in stepparents.split(",")]
+    return []
 
 
 def migrateto(repo, name):

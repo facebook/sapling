@@ -71,7 +71,7 @@ Test land stack
 
 Inspect results
   $ hgedenapi pull -q
-  $ hgedenapi log -G -T '{node} {desc}\n' -r "all()"
+  $ hgedenapi log -G -T '{node} {desc}\n' -r "sort(all(),topo)"
   o  cee85bb77dff9258b0b36fbe83501f3fd953fc4d E
   │
   o  c5ef64ddf563718659b4c9777f0110de43055135 D
@@ -80,13 +80,13 @@ Inspect results
   │
   │ o  a22ebc2f5947b439a77147f07f4f3fe43355bfa3 H
   ├─╯
+  o  181938a6b0e46aedfaf17b5866659716bf974efa G
+  │
+  o  33441538d4aad7db588e456862f21997f3bc7a04 F
+  │
   │ o  9bc730a19041f9ec7cb33c626e811aa233efb18c E
   │ │
-  o │  181938a6b0e46aedfaf17b5866659716bf974efa G
-  │ │
   │ o  f585351a92f85104bff7c284233c338b10eb1df7 D
-  │ │
-  o │  33441538d4aad7db588e456862f21997f3bc7a04 F
   │ │
   │ o  26805aba1e600a82e93661149f2313866a221a7b C
   ├─╯

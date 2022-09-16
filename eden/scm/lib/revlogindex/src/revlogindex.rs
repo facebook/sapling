@@ -853,7 +853,7 @@ impl RevlogIndex {
 
             let mut parent_revs: [i32; 2] = [-1, -1];
             let parents = &parent_map[node.as_ref()];
-            for (p_id, p_node) in parents.iter().enumerate() {
+            for (p_id, p_node) in parents.iter().take(2).enumerate() {
                 parent_revs[p_id] = get_rev(&existing_nodes, p_node)? as i32;
             }
 

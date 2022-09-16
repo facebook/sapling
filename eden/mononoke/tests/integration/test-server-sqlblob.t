@@ -50,6 +50,7 @@ Init treemanifest and remotefilelog
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
    (re)
+  $ hg bookmark -r . master_bookmark
   $ cd $TESTTMP
 
 setup repo2
@@ -116,7 +117,7 @@ setup repo2
 
 setup master bookmarks
 
-  $ hg bookmark master_bookmark -r e635b24c95f7
+  $ hg bookmark master_bookmark -fr e635b24c95f7
   $ hg bookmark master_bookmark2 -r 9f8e7242d9fa
 
 blobimport

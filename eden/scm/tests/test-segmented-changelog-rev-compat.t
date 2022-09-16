@@ -1,7 +1,5 @@
 #debugruntest-compatible
 
-  $ setconfig format.use-segmented-changelog=1
-
   $ log_fixture() {
   >   newrepo '' "$@"
   >   drawdag "$@" << 'EOS'

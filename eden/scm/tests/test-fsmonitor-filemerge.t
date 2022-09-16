@@ -24,9 +24,9 @@
   [1]
 
   $ hg blackbox --no-timestamp --no-sid --pattern '{"watchman":"_"}' | egrep '(watchman.*state.*)'
-  [watchman] command ["state-enter",{"metadata":{"distance":3,"merge":false,"partial":false,"rev":"0000000000000000000000000000000000000000","status":"ok"},"name":"hg.update"}] finished in 0 ms
-  [watchman] command ["state-leave",{"metadata":{"distance":3,"merge":false,"partial":false,"rev":"2e2f27616b65209eecd4710c454df0f678f271d9","status":"ok"},"name":"hg.update"}] finished in 0 ms
-  [watchman] command ["state-enter",{"metadata":{"distance":3,"merge":true,"partial":false,"rev":"2e2f27616b65209eecd4710c454df0f678f271d9","status":"ok"},"name":"hg.update"}] finished in 0 ms
+  [watchman] command ["state-enter",{"metadata":{"distance":2,"merge":false,"partial":false,"rev":"0000000000000000000000000000000000000000","status":"ok"},"name":"hg.update"}] finished in 0 ms
+  [watchman] command ["state-leave",{"metadata":{"distance":2,"merge":false,"partial":false,"rev":"2e2f27616b65209eecd4710c454df0f678f271d9","status":"ok"},"name":"hg.update"}] finished in 0 ms
+  [watchman] command ["state-enter",{"metadata":{"distance":2,"merge":true,"partial":false,"rev":"2e2f27616b65209eecd4710c454df0f678f271d9","status":"ok"},"name":"hg.update"}] finished in 0 ms
   [watchman] command ["state-enter",{"metadata":{"path":"2"},"name":"hg.filemerge"}] finished in 0 ms
   [watchman] command ["state-leave",{"metadata":{"path":"2"},"name":"hg.filemerge"}] finished in 0 ms
-  [watchman] command ["state-leave",{"metadata":{"distance":3,"merge":true,"partial":false,"rev":"65f3e88a53bc0f5183deea0cdbc46738777ec005","status":"ok"},"name":"hg.update"}] finished in 0 ms
+  [watchman] command ["state-leave",{"metadata":{"distance":2,"merge":true,"partial":false,"rev":"65f3e88a53bc0f5183deea0cdbc46738777ec005","status":"ok"},"name":"hg.update"}] finished in 0 ms

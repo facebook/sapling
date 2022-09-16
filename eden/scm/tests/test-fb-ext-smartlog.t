@@ -6,8 +6,6 @@
   $ disable treemanifest
   $ enable smartlog
   $ readconfig <<EOF
-  > [format]
-  > use-segmented-changelog=1
   > [experimental]
   > graphstyle.grandparent=|
   > graphstyle.missing=|

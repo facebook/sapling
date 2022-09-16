@@ -1,5 +1,4 @@
 #debugruntest-compatible
-  $ setconfig format.use-segmented-changelog=1
   $ enable absorb remotefilelog
 
 Create repo

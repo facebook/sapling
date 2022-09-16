@@ -2,7 +2,6 @@
 #debugruntest-compatible
 
   $ configure modern
-  $ setconfig format.use-segmented-changelog=1
   $ enable smartlog rebase
   $ disable commitcloud
 

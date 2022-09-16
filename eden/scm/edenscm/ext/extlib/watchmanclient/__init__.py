@@ -333,9 +333,16 @@ class client(object):
 
 # Estimate the distance between two nodes
 def calcdistance(repo, oldnode, newnode):
-    anc = repo.changelog.ancestor(oldnode, newnode)
-    ancrev = repo[anc].rev()
-    distance = abs(repo[oldnode].rev() - ancrev) + abs(repo[newnode].rev() - ancrev)
+    cl = repo.changelog
+    if cl.algorithmbackend == "segments":
+        only = cl.dag.only
+        distance1 = len(only([oldnode], [newnode]))
+        distance2 = len(only([newnode], [oldnode]))
+        distance = distance1 + distance2
+    else:
+        anc = repo.changelog.ancestor(oldnode, newnode)
+        ancrev = repo[anc].rev()
+        distance = abs(repo[oldnode].rev() - ancrev) + abs(repo[newnode].rev() - ancrev)
     return distance
 
 

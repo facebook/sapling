@@ -140,7 +140,7 @@ fn write_store_requirements(path: &Path, config: &ConfigSet) -> Result<(), InitE
     create_dir(store_path)?;
     let mut requirements = HashSet::from(["visibleheads"]);
     if config
-        .get_or("format", "use-segmented-changelog", || false)
+        .get_or("format", "use-segmented-changelog", is_test)
         .unwrap_or(false)
     {
         requirements.insert("invalidatelinkrev");
@@ -155,6 +155,10 @@ fn write_store_requirements(path: &Path, config: &ConfigSet) -> Result<(), InitE
     }
 
     write_requirements_file(store_path, requirements)
+}
+
+fn is_test() -> bool {
+    std::env::var_os("TESTTMP").is_some()
 }
 
 #[cfg(test)]

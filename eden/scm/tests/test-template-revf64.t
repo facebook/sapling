@@ -1,5 +1,4 @@
   $ configure modern
-  $ setconfig format.use-segmented-changelog=1
 
   $ newrepo
   $ drawdag << 'EOS'

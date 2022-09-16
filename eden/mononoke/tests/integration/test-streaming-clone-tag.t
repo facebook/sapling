@@ -6,6 +6,7 @@
 #require slow
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ setconfig format.use-segmented-changelog=false
 
 setup configuration
   $ default_setup_blobimport "blob_files"

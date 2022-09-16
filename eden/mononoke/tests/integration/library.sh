@@ -526,6 +526,8 @@ function setup_common_hg_configs {
   cat >> "$HGRCPATH" <<EOF
 [ui]
 ssh="$DUMMYSSH"
+[devel]
+segmented-changelog-rev-compat=True
 [extensions]
 remotefilelog=
 [remotefilelog]
