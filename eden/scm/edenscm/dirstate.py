@@ -950,8 +950,7 @@ class dirstate(object):
         else:
             filesystem = "normal"
 
-        # TODO: Fix deadlock in normal filesystem crawler
-        if ignored or clean or filesystem == "normal":
+        if ignored or clean:
             raise self.FallbackToPythonStatus
 
         if filesystem == "eden":
@@ -972,10 +971,6 @@ class dirstate(object):
             #  treedirstatemap, treestatemap]` has no attribute `_tree`.
             tree = self._map._tree
 
-        # TODO: Handle the case that a file is ignored but is still tracked
-        # in p1.
-        match = matchmod.differencematcher(match, self._ignore)
-
         return bindings.workingcopy.status.status(
             self._root,
             self._repo[self.p1()].manifest(),
@@ -985,6 +980,7 @@ class dirstate(object):
             match,
             unknown,
             filesystem,
+            self._ui._uiconfig._rcfg,
         )
 
     @perftrace.tracefunc("Status")

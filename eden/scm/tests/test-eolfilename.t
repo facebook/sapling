@@ -5,6 +5,8 @@
 
 #require eol-in-paths
 
+  $ setconfig workingcopy.ruststatus=False
+
 https://bz.mercurial-scm.org/352
 
 test issue352

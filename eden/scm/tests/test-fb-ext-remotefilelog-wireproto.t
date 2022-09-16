@@ -5,9 +5,7 @@
 # GNU General Public License version 2.
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-#if fsmonitor
   $ setconfig workingcopy.ruststatus=False
-#endif
 
   $ setconfig extensions.treemanifest=! treemanifest.sendtrees=False treemanifest.treeonly=False
   $ setconfig experimental.allowfilepeer=True

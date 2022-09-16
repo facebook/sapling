@@ -20,6 +20,7 @@ use cpython_ext::convert::ImplInto;
 use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyPathBuf;
 use pathmatcher::Matcher;
+use pyconfigparser::config as PyConfig;
 use pymanifest::treemanifest;
 use pypathmatcher::extract_matcher;
 use pypathmatcher::extract_option_matcher;
@@ -94,6 +95,7 @@ py_class!(class status |py| {
         pymatcher: Option<PyObject>,
         listunknown: bool,
         filesystem: &str,
+        config: PyConfig,
     ) -> PyResult<PyObject> {
         let root = pyroot.to_path_buf();
         let manifest = pymanifest.get_underlying(py);
@@ -119,6 +121,7 @@ py_class!(class status |py| {
         let mut option = state.lock();
         let treestate = option.take().expect("TreeState is never taken outside of lock");
 
+        let config = config.get_cfg(py);
         let (treestate, status) = py.allow_threads(|| workingcopy::status::status(
             root,
             filesystem,
@@ -128,6 +131,7 @@ py_class!(class status |py| {
             last_write,
             matcher,
             listunknown,
+            &config,
         ));
 
         option.replace(treestate);

@@ -6,6 +6,7 @@
  */
 
 use std::cell::RefCell;
+use std::path::Path;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -14,8 +15,12 @@ use std::time::SystemTime;
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use configmodel::Config;
+use configparser::config::ConfigSet;
 use manifest_tree::TreeManifest;
 use parking_lot::RwLock;
+use pathmatcher::DifferenceMatcher;
+use pathmatcher::GitignoreMatcher;
 use pathmatcher::Matcher;
 use status::Status;
 use storemodel::ReadFileContents;
@@ -40,6 +45,7 @@ pub struct WorkingCopy {
     treestate: Rc<RefCell<TreeState>>,
     manifest: Arc<RwLock<TreeManifest>>,
     filesystem: FileSystem,
+    ignore_matcher: Arc<GitignoreMatcher>,
 }
 
 impl WorkingCopy {
@@ -51,12 +57,13 @@ impl WorkingCopy {
         manifest: TreeManifest,
         store: ArcReadFileContents,
         last_write: SystemTime,
+        config: &ConfigSet,
     ) -> std::result::Result<Self, (TreeState, Error)> {
         let treestate = Rc::new(RefCell::new(treestate));
         let manifest = Arc::new(RwLock::new(manifest));
 
         let filesystem: Result<FileSystem> = Self::construct_file_system(
-            root,
+            root.clone(),
             file_system_type,
             treestate.clone(),
             manifest.clone(),
@@ -74,11 +81,34 @@ impl WorkingCopy {
             }
         };
 
+        let ignore_matcher = Arc::new(GitignoreMatcher::new(
+            &root,
+            WorkingCopy::global_ignore_paths(&root, config)
+                .iter()
+                .map(|i| i.as_path())
+                .collect(),
+        ));
+
         Ok(WorkingCopy {
             treestate,
             manifest,
             filesystem,
+            ignore_matcher,
         })
+    }
+
+    fn global_ignore_paths(root: &Path, config: &ConfigSet) -> Vec<PathBuf> {
+        let mut ignore_paths = vec![];
+        if let Some(value) = config.get("ui", "ignore") {
+            let path = Path::new(value.as_ref());
+            ignore_paths.push(root.join(path));
+        }
+        for name in config.keys_prefixed("ui", "ignore.") {
+            let value = config.get("ui", &name).unwrap();
+            let path = Path::new(value.as_ref());
+            ignore_paths.push(root.join(path));
+        }
+        ignore_paths
     }
 
     fn construct_file_system(
@@ -128,6 +158,7 @@ impl WorkingCopy {
     }
 
     pub fn status(&self, matcher: Arc<dyn Matcher + Send + Sync + 'static>) -> Result<Status> {
+        let matcher = Arc::new(DifferenceMatcher::new(matcher, self.ignore_matcher.clone()));
         let pending_changes = self
             .filesystem
             .pending_changes(matcher.clone())?

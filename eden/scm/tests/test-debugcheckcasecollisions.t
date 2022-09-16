@@ -8,7 +8,6 @@
 #if fsmonitor
   $ setconfig workingcopy.ruststatus=False
 #endif
-  $ setconfig 'extensions.treemanifest=!'
   $ newrepo
   $ mkdir -p dirA/subdirA dirA/subdirB dirB
   $ touch dirA/subdirA/file1 dirA/subdirB/file2 dirB/file3 file4
@@ -17,13 +16,8 @@
 # Check basic case collisions
 
   $ hg debugcheckcasecollisions DIRA/subdira/FILE1 DIRA/SUBDIRB/file2 DIRB/FILE3
-  DIRA/subdira/FILE1 conflicts with dirA/subdirA/file1
-  DIRA/subdira (directory for DIRA/subdira/FILE1) conflicts with dirA/subdirA (directory for dirA/subdirA/file1)
-  DIRA (directory for DIRA/SUBDIRB/file2) conflicts with dirA (directory for dirA/subdirA/file1)
-  DIRA/SUBDIRB/file2 conflicts with dirA/subdirB/file2
-  DIRA/SUBDIRB (directory for DIRA/SUBDIRB/file2) conflicts with dirA/subdirB (directory for dirA/subdirB/file2)
-  DIRB/FILE3 conflicts with dirB/file3
-  DIRB (directory for DIRB/FILE3) conflicts with dirB (directory for dirB/file3)
+  DIRA (directory for DIRA/SUBDIRB/file2) conflicts with dirA
+  DIRB (directory for DIRB/FILE3) conflicts with dirB
   [1]
 
 # Check a dir that collides with a file
@@ -35,7 +29,7 @@
 # Check a file that collides with a dir
 
   $ hg debugcheckcasecollisions DIRb
-  DIRb conflicts with dirB (directory for dirB/file3)
+  DIRb conflicts with dirB
   [1]
 
 # Check self-conflicts

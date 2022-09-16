@@ -602,7 +602,7 @@ coreconfigitem("worker", "numcpus", default=None)
 coreconfigitem("workingcopy", "enablerustwalker", default=False)
 coreconfigitem("workingcopy", "rustwalkerthreads", default=0)
 coreconfigitem("workingcopy", "rustpendingchanges", default=False)
-coreconfigitem("workingcopy", "ruststatus", default=util.istest())
+coreconfigitem("workingcopy", "ruststatus", default=False)
 coreconfigitem("workingcopy", "use-rust", default=True)
 
 # Rebase related configuration moved to core because other extension are doing

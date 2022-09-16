@@ -378,6 +378,7 @@ impl Repo {
             manifest,
             file_store,
             SystemTime::UNIX_EPOCH,
+            &self.config,
         )
         .map_err(|(_treestate, err)| err)
     }

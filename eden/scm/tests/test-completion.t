@@ -1,7 +1,6 @@
 #chg-compatible
 #debugruntest-compatible
 
-  $ disable treemanifest
 #require no-fsmonitor
 
 Show all commands except debug commands
@@ -137,6 +136,7 @@ Show debug commands if there are no other candidates
   debugfsinfo
   debugfsync
   debuggetbundle
+  debuggetroottree
   debughistorypack
   debughttp
   debugignore
@@ -459,6 +459,7 @@ Show all commands + options
   debugfsinfo: 
   debugfsync: 
   debuggetbundle: head, common, type
+  debuggetroottree: 
   debughistorypack: long
   debughttp: 
   debugignore: 

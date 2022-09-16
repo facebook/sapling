@@ -14,6 +14,7 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 use anyhow::Result;
+use configparser::config::ConfigSet;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use parking_lot::RwLock;
@@ -41,6 +42,7 @@ pub fn status(
     last_write: SystemTime,
     matcher: Arc<dyn Matcher + Send + Sync + 'static>,
     _list_unknown: bool,
+    config: &ConfigSet,
 ) -> (TreeState, Result<Status>) {
     let manifest = manifest.read().clone();
     let result = WorkingCopy::new(
@@ -50,6 +52,7 @@ pub fn status(
         manifest,
         store,
         last_write,
+        config,
     );
     let working_copy = match result {
         Ok(wc) => wc,
