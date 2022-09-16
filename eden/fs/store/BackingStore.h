@@ -73,7 +73,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   /**
    * Return the root Tree corresponding to the passed in RootId.
    */
-  virtual folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(
+  virtual ImmediateFuture<std::unique_ptr<Tree>> getRootTree(
       const RootId& rootId,
       ObjectFetchContext& context) = 0;
 

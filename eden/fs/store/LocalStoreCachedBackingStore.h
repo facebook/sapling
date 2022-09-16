@@ -37,7 +37,7 @@ class LocalStoreCachedBackingStore : public BackingStore {
   ObjectComparison compareObjectsById(const ObjectId& one, const ObjectId& two)
       override;
 
-  folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(
+  ImmediateFuture<std::unique_ptr<Tree>> getRootTree(
       const RootId& rootId,
       ObjectFetchContext& context) override;
 

@@ -64,7 +64,7 @@ class HgBackingStore {
 
   ~HgBackingStore();
 
-  folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(const RootId& rootId);
+  ImmediateFuture<std::unique_ptr<Tree>> getRootTree(const RootId& rootId);
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const std::shared_ptr<HgImportRequest>& request);
 

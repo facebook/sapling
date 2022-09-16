@@ -59,7 +59,7 @@ FakeBackingStore::getTreeEntryForObjectId(
       std::make_unique<TreeEntry>(commitID, treeEntryType));
 }
 
-SemiFuture<unique_ptr<Tree>> FakeBackingStore::getRootTree(
+ImmediateFuture<unique_ptr<Tree>> FakeBackingStore::getRootTree(
     const RootId& commitID,
     ObjectFetchContext& /*context*/) {
   StoredHash* storedTreeHash;
@@ -76,8 +76,8 @@ SemiFuture<unique_ptr<Tree>> FakeBackingStore::getRootTree(
     storedTreeHash = commitIter->second.get();
   }
 
-  return storedTreeHash->getFuture().thenValue(
-      [this, commitID](const std::unique_ptr<ObjectId>& hash) {
+  return storedTreeHash->getFuture()
+      .thenValue([this, commitID](const std::unique_ptr<ObjectId>& hash) {
         auto data = data_.rlock();
         auto treeIter = data->trees.find(*hash);
         if (treeIter == data->trees.end()) {
@@ -87,7 +87,8 @@ SemiFuture<unique_ptr<Tree>> FakeBackingStore::getRootTree(
         }
 
         return treeIter->second->getFuture();
-      });
+      })
+      .semi();
 }
 
 SemiFuture<BackingStore::GetTreeRes> FakeBackingStore::getTree(

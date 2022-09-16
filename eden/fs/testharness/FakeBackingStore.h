@@ -51,7 +51,7 @@ class FakeBackingStore final : public BackingStore {
   ObjectId parseObjectId(folly::StringPiece objectId) override;
   std::string renderObjectId(const ObjectId& objectId) override;
 
-  folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(
+  ImmediateFuture<std::unique_ptr<Tree>> getRootTree(
       const RootId& commitID,
       ObjectFetchContext& context) override;
   ImmediateFuture<std::unique_ptr<TreeEntry>> getTreeEntryForObjectId(

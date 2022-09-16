@@ -155,7 +155,7 @@ class HgQueuedBackingStore final : public BackingStore {
   static ObjectId staticParseObjectId(folly::StringPiece objectId);
   static std::string staticRenderObjectId(const ObjectId& objectId);
 
-  folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(
+  ImmediateFuture<std::unique_ptr<Tree>> getRootTree(
       const RootId& rootId,
       ObjectFetchContext& context) override;
   ImmediateFuture<std::unique_ptr<TreeEntry>> getTreeEntryForObjectId(

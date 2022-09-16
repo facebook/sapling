@@ -19,6 +19,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 using namespace facebook::eden;
+using namespace std::literals::chrono_literals;
 using folly::io::Cursor;
 
 namespace {
@@ -229,8 +230,7 @@ TEST_F(FakeBackingStoreTest, getRootTree) {
   commit1->trigger();
   EXPECT_FALSE(future1.isReady());
   dir1->trigger();
-  ASSERT_TRUE(future1.isReady());
-  EXPECT_EQ(dir1Hash, std::move(future1).get()->getHash());
+  EXPECT_EQ(dir1Hash, std::move(future1).get(0ms)->getHash());
 
   // future2 should still be pending
   EXPECT_FALSE(future2.isReady());
@@ -246,16 +246,14 @@ TEST_F(FakeBackingStoreTest, getRootTree) {
   commit1->trigger();
   EXPECT_FALSE(future3.isReady());
   dir1->trigger();
-  ASSERT_TRUE(future3.isReady());
-  EXPECT_EQ(dir1Hash, std::move(future3).get()->getHash());
+  EXPECT_EQ(dir1Hash, std::move(future3).get(0ms)->getHash());
 
   // Try triggering errors
   auto future4 =
       store_->getRootTree(RootId{"1"}, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future4.isReady());
   commit1->triggerError(std::runtime_error("bad luck"));
-  ASSERT_TRUE(future4.isReady());
-  EXPECT_THROW_RE(std::move(future4).get(), std::runtime_error, "bad luck");
+  EXPECT_THROW_RE(std::move(future4).get(0ms), std::runtime_error, "bad luck");
 
   auto future5 =
       store_->getRootTree(RootId{"1"}, ObjectFetchContext::getNullContext());
@@ -263,16 +261,14 @@ TEST_F(FakeBackingStoreTest, getRootTree) {
   commit1->trigger();
   EXPECT_FALSE(future5.isReady());
   dir1->triggerError(std::runtime_error("PC Load Letter"));
-  ASSERT_TRUE(future5.isReady());
   EXPECT_THROW_RE(
-      std::move(future5).get(), std::runtime_error, "PC Load Letter");
+      std::move(future5).get(0ms), std::runtime_error, "PC Load Letter");
 
   // Now trigger commit2.
   // This should trigger future2 to fail since the tree does not actually exist.
   commit2->trigger();
-  ASSERT_TRUE(future2.isReady());
   EXPECT_THROW_RE(
-      std::move(future2).get(),
+      std::move(future2).get(0ms),
       std::domain_error,
       "tree .* for commit .* not found");
 }

@@ -212,7 +212,8 @@ HgBackingStore::HgBackingStore(
 
 HgBackingStore::~HgBackingStore() = default;
 
-SemiFuture<unique_ptr<Tree>> HgBackingStore::getRootTree(const RootId& rootId) {
+ImmediateFuture<unique_ptr<Tree>> HgBackingStore::getRootTree(
+    const RootId& rootId) {
   ObjectId commitId = hashFromRootId(rootId);
 
   return localStore_
@@ -237,8 +238,7 @@ SemiFuture<unique_ptr<Tree>> HgBackingStore::getRootTree(const RootId& rootId) {
             auto rootTreeHash = HgProxyHash::load(
                 localStore_.get(), ObjectId{result.bytes()}, "getRootTree");
             return importTreeManifestImpl(rootTreeHash.revHash());
-          })
-      .semi();
+          });
 }
 
 SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(

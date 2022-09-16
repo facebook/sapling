@@ -83,13 +83,11 @@ TEST_F(HgQueuedBackingStoreTest, getTree) {
   auto queuedStore = makeQueuedStore();
   auto tree1 =
       queuedStore->getRootTree(commit1, ObjectFetchContext::getNullContext())
-          .via(&folly::QueuedImmediateExecutor::instance())
           .get(kTestTimeout);
 
   auto [tree2, origin2] =
       queuedStore
           ->getTree(tree1->getHash(), ObjectFetchContext::getNullContext())
-          .via(&folly::QueuedImmediateExecutor::instance())
           .get(kTestTimeout);
 
   EXPECT_TRUE(*tree1 == *tree2);
@@ -99,7 +97,6 @@ TEST_F(HgQueuedBackingStoreTest, getBlob) {
   auto queuedStore = makeQueuedStore();
   auto tree =
       queuedStore->getRootTree(commit1, ObjectFetchContext::getNullContext())
-          .via(&folly::QueuedImmediateExecutor::instance())
           .get(kTestTimeout);
 
   for (auto& entry : *tree) {
@@ -108,7 +105,6 @@ TEST_F(HgQueuedBackingStoreTest, getBlob) {
           queuedStore
               ->getBlob(
                   entry.second.getHash(), ObjectFetchContext::getNullContext())
-              .via(&folly::QueuedImmediateExecutor::instance())
               .get(kTestTimeout);
 
       EXPECT_EQ(blob->getContents().cloneAsValue().moveToFbString(), "foo\n");
@@ -117,7 +113,6 @@ TEST_F(HgQueuedBackingStoreTest, getBlob) {
           queuedStore
               ->getBlob(
                   entry.second.getHash(), ObjectFetchContext::getNullContext())
-              .via(&folly::QueuedImmediateExecutor::instance())
               .get(kTestTimeout);
 
       EXPECT_EQ(blob->getContents().cloneAsValue().moveToFbString(), "bar\n");

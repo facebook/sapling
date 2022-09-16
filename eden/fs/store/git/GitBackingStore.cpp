@@ -90,7 +90,7 @@ std::string GitBackingStore::renderObjectId(const ObjectId& objectId) {
   return objectId.asHexString();
 }
 
-SemiFuture<unique_ptr<Tree>> GitBackingStore::getRootTree(
+ImmediateFuture<unique_ptr<Tree>> GitBackingStore::getRootTree(
     const RootId& rootId,
     ObjectFetchContext& /*context*/) {
   // TODO: Use a separate thread pool to do the git I/O

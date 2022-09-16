@@ -514,7 +514,7 @@ folly::SemiFuture<BackingStore::GetBlobRes> HgQueuedBackingStore::getBlobImpl(
       });
 }
 
-folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getRootTree(
+ImmediateFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getRootTree(
     const RootId& rootId,
     ObjectFetchContext& /*context*/) {
   return backingStore_->getRootTree(rootId);

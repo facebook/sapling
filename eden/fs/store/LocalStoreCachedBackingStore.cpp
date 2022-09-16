@@ -30,12 +30,14 @@ ObjectComparison LocalStoreCachedBackingStore::compareObjectsById(
   return backingStore_->compareObjectsById(one, two);
 }
 
-folly::SemiFuture<std::unique_ptr<Tree>>
+ImmediateFuture<std::unique_ptr<Tree>>
 LocalStoreCachedBackingStore::getRootTree(
     const RootId& rootId,
     ObjectFetchContext& context) {
   return backingStore_->getRootTree(rootId, context)
-      .deferValue([localStore = localStore_](std::unique_ptr<Tree> tree) {
+      .thenValue([localStore = localStore_](std::unique_ptr<Tree> tree) {
+        // TODO: perhaps this callback should use toUnsafeFuture() to ensure the
+        // tree is cached whether or not the caller consumes the future.
         if (tree) {
           localStore->putTree(*tree);
         }

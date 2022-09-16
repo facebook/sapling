@@ -39,7 +39,7 @@ std::string EmptyBackingStore::renderObjectId(const ObjectId& /*objectId*/) {
   throw std::domain_error("empty backing store");
 }
 
-SemiFuture<unique_ptr<Tree>> EmptyBackingStore::getRootTree(
+ImmediateFuture<unique_ptr<Tree>> EmptyBackingStore::getRootTree(
     const RootId& /* rootId */,
     ObjectFetchContext& /* context */) {
   return makeSemiFuture<unique_ptr<Tree>>(
