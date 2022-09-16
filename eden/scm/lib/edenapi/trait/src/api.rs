@@ -54,6 +54,12 @@ use crate::response::ResponseMeta;
 
 #[async_trait]
 pub trait EdenApi: Send + Sync + 'static {
+    /// Returns the URL to describe the EdenApi. The URL is intended
+    /// to match configs like `paths.default`.
+    fn url(&self) -> Option<String> {
+        None
+    }
+
     async fn health(&self) -> Result<ResponseMeta, EdenApiError> {
         Err(EdenApiError::NotSupported)
     }

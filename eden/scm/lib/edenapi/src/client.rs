@@ -545,6 +545,10 @@ impl Client {
 
 #[async_trait]
 impl EdenApi for Client {
+    fn url(&self) -> Option<String> {
+        Some(self.config().server_url.to_string())
+    }
+
     async fn health(&self) -> Result<ResponseMeta, EdenApiError> {
         let url = self.build_url_repoless(paths::HEALTH_CHECK)?;
 

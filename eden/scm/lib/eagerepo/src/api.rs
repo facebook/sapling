@@ -61,6 +61,10 @@ use crate::EagerRepo;
 
 #[async_trait::async_trait]
 impl EdenApi for EagerRepo {
+    fn url(&self) -> Option<String> {
+        Some(format!("eager:{}", self.dir.display()))
+    }
+
     async fn health(&self) -> edenapi::Result<ResponseMeta> {
         Ok(default_response_meta())
     }

@@ -86,6 +86,11 @@ py_class!(pub class client |py| {
         client::create_instance(py, inner)
     }
 
+    /// The URL that is intended to match `paths.default`.
+    def url(&self) -> PyResult<Option<String>> {
+        Ok(self.inner(py).url())
+    }
+
     def health(&self) -> PyResult<PyDict> {
         self.inner(py).as_ref().health_py(py)
     }
