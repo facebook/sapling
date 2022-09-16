@@ -31,7 +31,6 @@ use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
 use types::HgId;
-use types::RepoPath;
 use types::RepoPathBuf;
 
 #[cfg(feature = "eden")]
@@ -50,7 +49,7 @@ type FileSystem = Box<dyn PendingChanges>;
 
 pub struct WorkingCopy {
     treestate: Rc<RefCell<TreeState>>,
-    manifest: Arc<RwLock<TreeManifest>>,
+    manifests: Vec<Arc<RwLock<TreeManifest>>>,
     filesystem: FileSystem,
     ignore_matcher: Arc<GitignoreMatcher>,
 }
@@ -72,17 +71,17 @@ impl WorkingCopy {
                 return Err((treestate, e));
             }
         };
-        // Currently we assume we will always be able to resolve the treestate parent. Later we'll
-        // refactor this.
-        let manifest = manifests.into_iter().next().unwrap();
 
         let treestate = Rc::new(RefCell::new(treestate));
+
+        // We assume there will be at least one manifest, even if it's the null manifest.
+        let p1_manifest = manifests[0].clone();
 
         let filesystem: Result<FileSystem> = Self::construct_file_system(
             root.clone(),
             file_system_type,
             treestate.clone(),
-            manifest.clone(),
+            p1_manifest,
             filestore,
             last_write,
         );
@@ -107,7 +106,7 @@ impl WorkingCopy {
 
         Ok(WorkingCopy {
             treestate,
-            manifest,
+            manifests,
             filesystem,
             ignore_matcher,
         })
@@ -224,14 +223,19 @@ impl WorkingCopy {
 
     pub fn status(&self, matcher: Arc<dyn Matcher + Send + Sync + 'static>) -> Result<Status> {
         let added_files = self.added_files()?;
+        let mut non_ignore_matchers: Vec<Arc<dyn Matcher + Send + Sync + 'static>> =
+            Vec::with_capacity(self.manifests.len());
+        for manifest in self.manifests.iter() {
+            non_ignore_matchers.push(Arc::new(manifest_tree::ManifestMatcher::new(
+                manifest.clone(),
+            )));
+        }
+        non_ignore_matchers.push(Arc::new(pathmatcher::ExactMatcher::new(added_files.iter())));
         let matcher = Arc::new(DifferenceMatcher::new(
             matcher,
             DifferenceMatcher::new(
                 self.ignore_matcher.clone(),
-                UnionMatcher::new(vec![
-                    Arc::new(manifest_tree::ManifestMatcher::new(self.manifest.clone())),
-                    Arc::new(pathmatcher::ExactMatcher::new(added_files.iter())),
-                ]),
+                UnionMatcher::new(non_ignore_matchers),
             ),
         ));
         let pending_changes = self
@@ -249,8 +253,9 @@ impl WorkingCopy {
                 _ => None,
             });
 
+        let p1_manifest = &*self.manifests[0].read();
         compute_status(
-            &*self.manifest.read(),
+            p1_manifest,
             self.treestate.clone(),
             pending_changes,
             matcher.clone(),

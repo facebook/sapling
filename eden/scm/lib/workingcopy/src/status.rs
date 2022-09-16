@@ -79,7 +79,7 @@ pub fn status(
 /// Compute the status of the working copy relative to the current commit.
 #[allow(unused_variables)]
 pub fn compute_status(
-    manifest: &impl Manifest,
+    p1_manifest: &impl Manifest,
     treestate: Rc<RefCell<TreeState>>,
     pending_changes: impl Iterator<Item = Result<ChangeType>>,
     matcher: Arc<dyn Matcher + Send + Sync + 'static>,
@@ -132,7 +132,7 @@ pub fn compute_status(
         }
     }
     // Handle changed files we didn't find in the TreeState.
-    manifest
+    p1_manifest
         .files(ExactMatcher::new(manifest_files.keys()))
         .filter_map(Result::ok)
         .for_each(|file| {
