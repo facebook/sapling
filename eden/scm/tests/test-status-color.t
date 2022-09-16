@@ -2,12 +2,12 @@
 
   $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ setconfig workingcopy.ruststatus=False
+  $ configure modernclient
   $ setconfig ui.color=always color.mode=ansi
 Terminfo codes compatibility fix
   $ setconfig color.color.none=0
 
-  $ hg init repo1
-  $ cd repo1
+  $ newclientrepo repo1
   $ mkdir a b a/1 b/1 b/2
   $ touch in_root a/in_a b/in_b a/1/in_a_1 b/1/in_b_1 b/2/in_b_2
 
@@ -160,10 +160,7 @@ Make sure ui.formatted=False works
   ? b/in_b
   ? in_root
 
-  $ cd ..
-
-  $ hg init repo2
-  $ cd repo2
+  $ newclientrepo repo2
   $ touch modified removed deleted ignored
   $ echo "ignored" > .gitignore
   $ hg ci -A -m 'initial checkin'
@@ -250,8 +247,7 @@ hg status -i ignoreddir/file:
 
 check 'status -q' and some combinations
 
-  $ hg init repo3
-  $ cd repo3
+  $ newclientrepo repo3
   $ touch modified removed deleted ignored
   $ echo "ignored" > .gitignore
   $ hg commit -A -m 'initial checkin'
@@ -317,8 +313,7 @@ assert flag1 flag2 [0-same | 1-different]
 
 test 'resolve -l'
 
-  $ hg init repo4
-  $ cd repo4
+  $ newclientrepo repo4
   $ echo "file a" > a
   $ echo "file b" > b
   $ hg add a b
