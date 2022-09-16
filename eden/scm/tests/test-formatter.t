@@ -4,7 +4,7 @@
   $ setconfig workingcopy.use-rust=True
   $ setconfig status.use-rust=True
 We need to set edenapi.url for now since working copy at the moment requires this to be set
-  $ setconfig edenapi.url=https://test_fail/foo
+  $ configure modernclient
 
 Test config:
   $ setconfig testsection.subsection1=foo
@@ -80,8 +80,7 @@ Test config:
   ]
 
 Test status:
-  $ hg init testrepo
-  $ cd testrepo
+  $ newclientrepo testrepo
   $ touch file0
   $ hg add
   adding file0
