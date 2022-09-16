@@ -164,7 +164,7 @@ TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
   // Clear backing store
   objectStore = ObjectStore::create(
       localStore,
-      nullptr,
+      backingStore,
       treeCache,
       stats,
       std::make_shared<ProcessNameCache>(),

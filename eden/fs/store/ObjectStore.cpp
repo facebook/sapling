@@ -72,7 +72,10 @@ ObjectStore::ObjectStore(
       processNameCache_(processNameCache),
       structuredLogger_(structuredLogger),
       edenConfig_(edenConfig),
-      caseSensitive_{caseSensitive} {}
+      caseSensitive_{caseSensitive} {
+  XCHECK(localStore_);
+  XCHECK(backingStore_);
+}
 
 ObjectStore::~ObjectStore() {}
 
@@ -301,20 +304,18 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
     }
   }
 
-  if (backingStore_ && edenConfig_->useAuxMetadata.getValue()) {
-    // if configured, check hg cache for aux metadata
-    auto localMetadata = backingStore_->getLocalBlobMetadata(id, context);
-    if (localMetadata) {
-      stats_->getObjectStoreStatsForCurrentThread()
-          .getLocalBlobMetadataFromBackingStore.addValue(1);
-      metadataCache_.wlock()->set(id, *localMetadata);
-      context.didFetch(
-          ObjectFetchContext::BlobMetadata,
-          id,
-          ObjectFetchContext::FromDiskCache);
-      updateProcessFetch(context);
-      return *localMetadata;
-    }
+  // The BackingStore may have prefetched metadata for this blob.
+  auto localMetadata = backingStore_->getLocalBlobMetadata(id, context);
+  if (localMetadata) {
+    stats_->getObjectStoreStatsForCurrentThread()
+        .getLocalBlobMetadataFromBackingStore.addValue(1);
+    metadataCache_.wlock()->set(id, *localMetadata);
+    context.didFetch(
+        ObjectFetchContext::BlobMetadata,
+        id,
+        ObjectFetchContext::FromDiskCache);
+    updateProcessFetch(context);
+    return *localMetadata;
   }
 
   auto self = shared_from_this();
