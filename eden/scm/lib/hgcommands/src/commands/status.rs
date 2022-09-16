@@ -109,6 +109,8 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
         || !ctx.opts.walk_opts.include.is_empty()
         || !ctx.opts.walk_opts.exclude.is_empty()
         || !args_check
+        || ctx.opts.ignored
+        || ctx.opts.clean
     {
         return Err(errors::FallbackToPython(
             "one or more unsupported options in Rust status".to_owned(),
@@ -144,14 +146,17 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
             removed: true,
             deleted: true,
             clean: false,
-            unknown: true,
+            unknown: !ctx.global_opts().quiet,
             ignored: false,
         }
     };
     let print_config = PrintConfig {
         status_types,
         no_status: ctx.opts.no_status,
-        copies: ctx.opts.copies,
+        copies: ctx.opts.copies
+            || repo
+                .config()
+                .get_or::<bool>("ui", "statuscopies", || false)?,
         endl: if ctx.opts.print0 { '\0' } else { '\n' },
         root_relative: ctx.opts.root_relative,
         use_color: ctx.io().output().can_color(),

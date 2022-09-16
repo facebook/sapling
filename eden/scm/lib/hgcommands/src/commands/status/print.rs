@@ -129,12 +129,14 @@ impl<'a> Formattable for StatusEntry<'a> {
             &format!("{}{}{}", status, self.path, self.print_config.endl),
         )?;
 
-        if let Some(p) = &self.copy {
-            let mut style = "status.copied";
-            if !self.print_config.use_color {
-                style = "";
+        if self.print_config.copies {
+            if let Some(p) = &self.copy {
+                let mut style = "status.copied";
+                if !self.print_config.use_color {
+                    style = "";
+                }
+                writer.write_styled(style, &format!("  {}{}", p, self.print_config.endl))?;
             }
-            writer.write_styled(style, &format!("  {}{}", p, self.print_config.endl))?;
         }
         Ok(())
     }

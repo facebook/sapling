@@ -1,8 +1,11 @@
 #chg-compatible
 
-#testcases pythonstatus ruststatus
+#testcases pythonstatus ruststatus rustcommand
 #if pythonstatus
   $ setconfig workingcopy.ruststatus=false 
+#endif
+#if rustcommand
+  $ setconfig status.use-rust=True workingcopy.use-rust=True
 #endif
 
   $ export HG_NO_DEFAULT_CONFIG=true

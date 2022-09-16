@@ -27,12 +27,18 @@ impl ReadRootTreeIds for ArcReadCommitText {
             .iter()
             .map(|c| Vertex::copy_from(c.as_ref()))
             .collect();
-        let texts = self.0.get_commit_raw_text_list(&vertexes).await?;
-        let tree_ids = texts
+        commits
             .into_iter()
-            .map(|t| extract_tree_root_id_from_raw_hg_text(t.as_ref()))
-            .collect::<anyhow::Result<Vec<_>>>()?;
-        Ok(commits.into_iter().zip(tree_ids).collect())
+            .zip(self.0.get_commit_raw_text_list(&vertexes).await?)
+            .map(|(c, t)| {
+                // `t` is an empty string for the null commit, so return the nullid as the tree id.
+                if c == *HgId::null_id() {
+                    Ok((c, *HgId::null_id()))
+                } else {
+                    Ok((c, extract_tree_root_id_from_raw_hg_text(t.as_ref())?))
+                }
+            })
+            .collect::<anyhow::Result<Vec<_>>>()
     }
 }
 
