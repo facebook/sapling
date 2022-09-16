@@ -1307,7 +1307,12 @@ class localrepository(object):
         from edenscm import hgdemandimport
 
         with hgdemandimport.deactivated():
-            from . import eden_dirstate as dirstate_reimplementation
+            try:
+                from . import eden_dirstate as dirstate_reimplementation
+            except ImportError:
+                raise errormod.Abort(
+                    _("edenfs support was not available in this build")
+                )
 
         return dirstate_reimplementation.eden_dirstate(self, self.ui, self.root)
 
