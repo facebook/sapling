@@ -9,6 +9,7 @@ use std::cell::RefCell;
 use std::path::Path;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::SystemTime;
 
@@ -17,6 +18,7 @@ use anyhow::Error;
 use anyhow::Result;
 use configmodel::Config;
 use configparser::config::ConfigSet;
+use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use parking_lot::RwLock;
 use pathmatcher::DifferenceMatcher;
@@ -28,6 +30,8 @@ use storemodel::ReadFileContents;
 use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
+use types::HgId;
+use types::RepoPath;
 use types::RepoPathBuf;
 
 #[cfg(feature = "eden")]
@@ -41,6 +45,7 @@ use crate::status::compute_status;
 use crate::watchmanfs::WatchmanFileSystem;
 
 type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
+type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
 type FileSystem = Box<dyn PendingChanges>;
 
 pub struct WorkingCopy {
@@ -56,20 +61,29 @@ impl WorkingCopy {
         // TODO: Have constructor figure out FileSystemType
         file_system_type: FileSystemType,
         treestate: TreeState,
-        manifest: TreeManifest,
-        store: ArcReadFileContents,
+        tree_resolver: ArcReadTreeManifest,
+        filestore: ArcReadFileContents,
         last_write: SystemTime,
         config: &ConfigSet,
     ) -> std::result::Result<Self, (TreeState, Error)> {
+        let manifests = match WorkingCopy::current_manifests(&treestate, &tree_resolver) {
+            Ok(manifests) => manifests,
+            Err(e) => {
+                return Err((treestate, e));
+            }
+        };
+        // Currently we assume we will always be able to resolve the treestate parent. Later we'll
+        // refactor this.
+        let manifest = manifests.into_iter().next().unwrap();
+
         let treestate = Rc::new(RefCell::new(treestate));
-        let manifest = Arc::new(RwLock::new(manifest));
 
         let filesystem: Result<FileSystem> = Self::construct_file_system(
             root.clone(),
             file_system_type,
             treestate.clone(),
             manifest.clone(),
-            store,
+            filestore,
             last_write,
         );
 
@@ -97,6 +111,26 @@ impl WorkingCopy {
             filesystem,
             ignore_matcher,
         })
+    }
+
+    fn current_manifests(
+        treestate: &TreeState,
+        tree_resolver: &ArcReadTreeManifest,
+    ) -> Result<Vec<Arc<RwLock<TreeManifest>>>> {
+        let mut parents = vec![];
+        let mut i = 1;
+        loop {
+            match treestate.get_metadata_by_key(format!("p{}", i).as_str())? {
+                Some(s) => parents.push(HgId::from_str(&s)?),
+                None => break,
+            };
+            i += 1;
+        }
+        if parents.is_empty() {
+            parents.push(*HgId::null_id());
+        }
+
+        parents.iter().map(|p| tree_resolver.get(p)).collect()
     }
 
     fn global_ignore_paths(root: &Path, config: &ConfigSet) -> Vec<PathBuf> {

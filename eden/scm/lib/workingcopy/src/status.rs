@@ -16,6 +16,7 @@ use std::time::SystemTime;
 use anyhow::Result;
 use configparser::config::ConfigSet;
 use manifest::Manifest;
+use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use parking_lot::RwLock;
 use pathmatcher::ExactMatcher;
@@ -25,6 +26,7 @@ use status::StatusBuilder;
 use storemodel::ReadFileContents;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
+use types::HgId;
 use types::RepoPathBuf;
 
 use crate::filesystem::ChangeType;
@@ -32,6 +34,16 @@ use crate::filesystem::FileSystemType;
 use crate::workingcopy::WorkingCopy;
 
 type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
+
+struct FakeTreeResolver {
+    pub manifest: Arc<RwLock<TreeManifest>>,
+}
+
+impl ReadTreeManifest for FakeTreeResolver {
+    fn get(&self, _commit_id: &HgId) -> Result<Arc<RwLock<TreeManifest>>> {
+        Ok(self.manifest.clone())
+    }
+}
 
 pub fn status(
     root: PathBuf,
@@ -44,12 +56,12 @@ pub fn status(
     _list_unknown: bool,
     config: &ConfigSet,
 ) -> (TreeState, Result<Status>) {
-    let manifest = manifest.read().clone();
+    let manifest_resolver = Arc::new(FakeTreeResolver { manifest });
     let result = WorkingCopy::new(
         root,
         file_system_type,
         treestate,
-        manifest,
+        manifest_resolver,
         store,
         last_write,
         config,

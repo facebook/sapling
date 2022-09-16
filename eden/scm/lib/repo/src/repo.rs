@@ -10,7 +10,6 @@ use std::fs;
 use std::fs::File;
 use std::path::Path;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
 use std::time::SystemTime;
 
@@ -22,7 +21,6 @@ use edenapi::Builder;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
 use hgcommits::DagCommits;
-use manifest_tree::TreeManifest;
 use metalog::MetaLog;
 use parking_lot::RwLock;
 use revisionstore::scmstore::FileStoreBuilder;
@@ -45,6 +43,7 @@ use crate::commits::open_dag_commits;
 use crate::errors;
 use crate::init;
 use crate::requirements::Requirements;
+use crate::trees::TreeManifestResolver;
 
 pub struct Repo {
     path: PathBuf,
@@ -362,20 +361,16 @@ impl Repo {
         };
 
         let file_store = self.file_store()?;
-        let tree_store = self.tree_store()?;
-
-        let p1 = match treestate.get_metadata_by_key("p1")? {
-            Some(s) => HgId::from_str(&s)?,
-            None => *HgId::null_id(),
-        };
-        let p1_tree_id = async_runtime::block_on(self.get_root_tree_id(p1))?;
-        let manifest = TreeManifest::durable(tree_store, p1_tree_id);
+        let tree_resolver = Arc::new(TreeManifestResolver::new(
+            self.dag_commits()?,
+            self.tree_store()?,
+        ));
 
         WorkingCopy::new(
             path.to_path_buf(),
             filesystem,
             treestate,
-            manifest,
+            tree_resolver,
             file_store,
             SystemTime::UNIX_EPOCH,
             &self.config,

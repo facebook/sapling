@@ -30,6 +30,7 @@ use manifest::List;
 pub use manifest::Manifest;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
+use parking_lot::RwLock;
 use pathmatcher::Matcher;
 use sha1::Digest;
 use sha1::Sha1;
@@ -586,6 +587,10 @@ impl TreeManifest {
         }
         Ok(Some(cursor))
     }
+}
+
+pub trait ReadTreeManifest {
+    fn get(&self, commit_id: &HgId) -> Result<Arc<RwLock<TreeManifest>>>;
 }
 
 /// The purpose of this function is to provide compatible behavior with the C++ implementation
