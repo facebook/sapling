@@ -86,7 +86,7 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
         for (const auto& treeEntry : *tree) {
           if (treeEntry.second.isTree()) {
             ret.emplace_back(
-                treeEntry.first, true, ImmediateFuture<uint64_t>(0));
+                treeEntry.first, true, ImmediateFuture<uint64_t>(0ull));
           } else {
             auto sizeFut =
                 objectStore->getBlobSize(treeEntry.second.getHash(), *context)
@@ -97,7 +97,7 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
 
         if (isRoot) {
           ret.emplace_back(
-              kDotEdenPathComponent, true, ImmediateFuture<uint64_t>(0));
+              kDotEdenPathComponent, true, ImmediateFuture<uint64_t>(0ull));
         }
 
         return ret;
@@ -139,7 +139,7 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
             treeOrTreeEntry);
         auto pathFut = mount_->canonicalizePathFromTree(path, *context);
         auto sizeFut = isDir
-            ? ImmediateFuture<uint64_t>{0}
+            ? ImmediateFuture<uint64_t>{0ull}
             : mount_->getObjectStore()->getBlobSize(
                   std::get<TreeEntry>(treeOrTreeEntry).getHash(), *context);
 
@@ -663,7 +663,6 @@ ImmediateFuture<folly::Unit> fileNotification(
        path,
        receivedAt,
        context = std::move(context),
-
        watch]() mutable {
         auto fault = ImmediateFuture{
             mount.getServerState()->getFaultInjector().checkAsync(

@@ -375,7 +375,7 @@ TEST(ImmediateFuture, makeImmediateFutureError) {
 
 TEST(ImmediateFuture, collectAllTuple) {
   auto f1 = ImmediateFuture<int>{42};
-  auto f2 = ImmediateFuture<float>{42.};
+  auto f2 = ImmediateFuture<float>{42.f};
 
   auto future = collectAll(std::move(f1), std::move(f2));
   EXPECT_TRUE(future.isReady() ^ detail::kImmediateFutureAlwaysDefer);
@@ -388,7 +388,7 @@ TEST(ImmediateFuture, collectAllTuple) {
 TEST(ImmediateFuture, collectAllTupleSemi) {
   auto [promise, semiFut] = folly::makePromiseContract<int>();
   auto f1 = ImmediateFuture<int>{std::move(semiFut)};
-  auto f2 = ImmediateFuture<float>{42.};
+  auto f2 = ImmediateFuture<float>{42.f};
 
   auto future = collectAll(std::move(f1), std::move(f2));
   EXPECT_FALSE(future.isReady());
@@ -452,14 +452,14 @@ TEST(ImmediateFuture, collectAllSafeTupleError) {
 
 TEST(ImmediateFuture, collectAllSafeTupleValid) {
   auto f1 = ImmediateFuture<int>{42};
-  auto f2 = ImmediateFuture<float>{42.};
+  auto f2 = ImmediateFuture<float>{42.f};
 
   auto future = collectAllSafe(std::move(f1), std::move(f2));
   EXPECT_TRUE(future.isReady() ^ detail::kImmediateFutureAlwaysDefer);
 
   auto res = std::move(future).get();
   EXPECT_EQ(std::get<int>(res), 42);
-  EXPECT_EQ(std::get<float>(res), 42.);
+  EXPECT_EQ(std::get<float>(res), 42.f);
 }
 
 TEST(ImmediateFuture, collectAllSafeVector) {
