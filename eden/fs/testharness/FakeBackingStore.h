@@ -59,10 +59,10 @@ class FakeBackingStore final : public BackingStore {
       TreeEntryType /* treeEntryType */,
       ObjectFetchContext& /* context */) override;
 
-  folly::SemiFuture<BackingStore::GetTreeRes> getTree(
+  folly::SemiFuture<GetTreeResult> getTree(
       const ObjectId& id,
       ObjectFetchContext& context) override;
-  folly::SemiFuture<BackingStore::GetBlobRes> getBlob(
+  folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
       ObjectFetchContext& context) override;
 

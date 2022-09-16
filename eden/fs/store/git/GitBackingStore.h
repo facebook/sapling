@@ -54,10 +54,10 @@ class GitBackingStore final : public BijectiveBackingStore {
       ObjectFetchContext& /* context */) override {
     throw std::domain_error("unimplemented");
   }
-  folly::SemiFuture<BackingStore::GetTreeRes> getTree(
+  folly::SemiFuture<BackingStore::GetTreeResult> getTree(
       const ObjectId& id,
       ObjectFetchContext& context) override;
-  folly::SemiFuture<BackingStore::GetBlobRes> getBlob(
+  folly::SemiFuture<BackingStore::GetBlobResult> getBlob(
       const ObjectId& id,
       ObjectFetchContext& context) override;
 

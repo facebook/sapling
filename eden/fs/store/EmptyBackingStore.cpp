@@ -46,17 +46,17 @@ ImmediateFuture<unique_ptr<Tree>> EmptyBackingStore::getRootTree(
       std::domain_error("empty backing store"));
 }
 
-SemiFuture<BackingStore::GetTreeRes> EmptyBackingStore::getTree(
+SemiFuture<BackingStore::GetTreeResult> EmptyBackingStore::getTree(
     const ObjectId& /* id */,
     ObjectFetchContext& /* context */) {
-  return makeSemiFuture<BackingStore::GetTreeRes>(
+  return makeSemiFuture<GetTreeResult>(
       std::domain_error("empty backing store"));
 }
 
-SemiFuture<BackingStore::GetBlobRes> EmptyBackingStore::getBlob(
+SemiFuture<BackingStore::GetBlobResult> EmptyBackingStore::getBlob(
     const ObjectId& /* id */,
     ObjectFetchContext& /* context */) {
-  return makeSemiFuture<BackingStore::GetBlobRes>(
+  return makeSemiFuture<GetBlobResult>(
       std::domain_error("empty backing store"));
 }
 

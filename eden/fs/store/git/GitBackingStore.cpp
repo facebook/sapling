@@ -117,11 +117,11 @@ ImmediateFuture<unique_ptr<Tree>> GitBackingStore::getRootTree(
   return getTreeImpl(treeID);
 }
 
-SemiFuture<BackingStore::GetTreeRes> GitBackingStore::getTree(
+SemiFuture<BackingStore::GetTreeResult> GitBackingStore::getTree(
     const ObjectId& id,
     ObjectFetchContext& /*context*/) {
   // TODO: Use a separate thread pool to do the git I/O
-  return makeSemiFuture(BackingStore::GetTreeRes{
+  return makeSemiFuture(BackingStore::GetTreeResult{
       getTreeImpl(id), ObjectFetchContext::Origin::FromDiskCache});
 }
 
@@ -169,11 +169,11 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const ObjectId& id) {
   return make_unique<Tree>(std::move(entries), id);
 }
 
-SemiFuture<BackingStore::GetBlobRes> GitBackingStore::getBlob(
+SemiFuture<BackingStore::GetBlobResult> GitBackingStore::getBlob(
     const ObjectId& id,
     ObjectFetchContext& /*context*/) {
   // TODO: Use a separate thread pool to do the git I/O
-  return makeSemiFuture(BackingStore::GetBlobRes{
+  return makeSemiFuture(BackingStore::GetBlobResult{
       getBlobImpl(id), ObjectFetchContext::Origin::FromDiskCache});
 }
 

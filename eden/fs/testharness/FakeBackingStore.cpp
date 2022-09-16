@@ -91,7 +91,7 @@ ImmediateFuture<unique_ptr<Tree>> FakeBackingStore::getRootTree(
       .semi();
 }
 
-SemiFuture<BackingStore::GetTreeRes> FakeBackingStore::getTree(
+SemiFuture<BackingStore::GetTreeResult> FakeBackingStore::getTree(
     const ObjectId& id,
     ObjectFetchContext& /*context*/) {
   auto data = data_.wlock();
@@ -108,12 +108,12 @@ SemiFuture<BackingStore::GetTreeRes> FakeBackingStore::getTree(
   }
 
   return it->second->getFuture().thenValue([](std::unique_ptr<Tree> tree) {
-    return BackingStore::GetTreeRes{
+    return GetTreeResult{
         std::move(tree), ObjectFetchContext::Origin::FromNetworkFetch};
   });
 }
 
-SemiFuture<BackingStore::GetBlobRes> FakeBackingStore::getBlob(
+SemiFuture<BackingStore::GetBlobResult> FakeBackingStore::getBlob(
     const ObjectId& id,
     ObjectFetchContext& /*context*/) {
   auto data = data_.wlock();
@@ -125,7 +125,7 @@ SemiFuture<BackingStore::GetBlobRes> FakeBackingStore::getBlob(
   }
 
   return it->second->getFuture().thenValue([](std::unique_ptr<Blob> blob) {
-    return BackingStore::GetBlobRes{
+    return GetBlobResult{
         std::move(blob), ObjectFetchContext::Origin::FromNetworkFetch};
   });
 }

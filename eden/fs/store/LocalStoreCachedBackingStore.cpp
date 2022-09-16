@@ -54,31 +54,34 @@ LocalStoreCachedBackingStore::getTreeEntryForObjectId(
       objectId, treeEntryType, context);
 }
 
-folly::SemiFuture<BackingStore::GetTreeRes>
+folly::SemiFuture<BackingStore::GetTreeResult>
 LocalStoreCachedBackingStore::getTree(
     const ObjectId& id,
     ObjectFetchContext& context) {
   return localStore_->getTree(id)
-      .thenValue(
-          [id = id,
-           &context,
-           localStore = localStore_,
-           backingStore = backingStore_](std::unique_ptr<Tree> tree) mutable {
-            if (tree) {
-              return folly::makeSemiFuture(BackingStore::GetTreeRes{
-                  std::move(tree), ObjectFetchContext::FromDiskCache});
-            }
+      .thenValue([id = id,
+                  &context,
+                  localStore = localStore_,
+                  backingStore =
+                      backingStore_](std::unique_ptr<Tree> tree) mutable {
+        if (tree) {
+          return folly::makeSemiFuture(GetTreeResult{
+              std::move(tree), ObjectFetchContext::FromDiskCache});
+        }
 
-            return backingStore->getTree(id, context)
-                .deferValue([localStore = std::move(localStore)](
-                                BackingStore::GetTreeRes result) {
+        return backingStore
+            ->getTree(id, context)
+            // TODO: This is a good use for toUnsafeFuture to ensure the tree is
+            // cached even if the resulting future is never consumed.
+            .deferValue(
+                [localStore = std::move(localStore)](GetTreeResult result) {
                   if (result.tree) {
                     localStore->putTree(*result.tree);
                   }
 
                   return result;
                 });
-          })
+      })
       .semi();
 }
 
@@ -89,7 +92,7 @@ LocalStoreCachedBackingStore::getLocalBlobMetadata(
   return backingStore_->getLocalBlobMetadata(id, context);
 }
 
-folly::SemiFuture<BackingStore::GetBlobRes>
+folly::SemiFuture<BackingStore::GetBlobResult>
 LocalStoreCachedBackingStore::getBlob(
     const ObjectId& id,
     ObjectFetchContext& context) {
@@ -102,14 +105,17 @@ LocalStoreCachedBackingStore::getBlob(
         if (blob) {
           stats->getObjectStoreStatsForCurrentThread()
               .getBlobFromLocalStore.addValue(1);
-          return folly::makeSemiFuture(BackingStore::GetBlobRes{
+          return folly::makeSemiFuture(GetBlobResult{
               std::move(blob), ObjectFetchContext::FromDiskCache});
         }
 
-        return backingStore->getBlob(id, context)
+        return backingStore
+            ->getBlob(id, context)
+            // TODO: This is a good use for toUnsafeFuture to ensure the tree is
+            // cached even if the resulting future is never consumed.
             .deferValue([localStore = std::move(localStore),
                          stats = std::move(stats),
-                         id](BackingStore::GetBlobRes result) {
+                         id](GetBlobResult result) {
               if (result.blob) {
                 localStore->putBlob(id, result.blob.get());
                 stats->getObjectStoreStatsForCurrentThread()

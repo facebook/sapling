@@ -219,7 +219,7 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
 
   return ImmediateFuture{backingStore_->getTree(id, fetchContext)}.thenValue(
       [self = shared_from_this(), id, &fetchContext](
-          BackingStore::GetTreeRes result) {
+          BackingStore::GetTreeResult result) {
         if (!result.tree) {
           // TODO: Perhaps we should do some short-term negative
           // caching?
@@ -257,11 +257,12 @@ ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
     const ObjectId& id,
     ObjectFetchContext& fetchContext) const {
   deprioritizeWhenFetchHeavy(fetchContext);
-  return ImmediateFuture<BackingStore::GetBlobRes>{
+  return ImmediateFuture<BackingStore::GetBlobResult>{
       backingStore_->getBlob(id, fetchContext)}
       .thenValue(
           [self = shared_from_this(), id, &fetchContext](
-              BackingStore::GetBlobRes result) -> std::shared_ptr<const Blob> {
+              BackingStore::GetBlobResult result)
+              -> std::shared_ptr<const Blob> {
             if (!result.blob) {
               // TODO: Perhaps we should do some short-term negative caching?
               XLOG(DBG2) << "unable to find blob " << id;
@@ -354,31 +355,32 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
             // rather than waiting for callbacks to be scheduled on the
             // consuming thread.
             .toUnsafeFuture()
-            .thenValue([self, id, &context](BackingStore::GetBlobRes result) {
-              if (result.blob) {
-                self->stats_->getObjectStoreStatsForCurrentThread()
-                    .getBlobMetadataFromBackingStore.addValue(1);
-                // we retrived the full blob data
-                self->stats_->getObjectStoreStatsForCurrentThread()
-                    .getBlobFromBackingStore.addValue(1);
-                self->localStore_->putBlob(id, result.blob.get());
-                auto metadata =
-                    self->localStore_->putBlobMetadata(id, result.blob.get());
-                self->metadataCache_.wlock()->set(id, metadata);
-                // I could see an argument for recording this fetch with
-                // type Blob instead of BlobMetadata, but it's probably more
-                // useful in context to know how many metadata fetches
-                // occurred. Also, since backing stores don't directly
-                // support fetching metadata, it should be clear.
-                context.didFetch(
-                    ObjectFetchContext::BlobMetadata, id, result.origin);
+            .thenValue(
+                [self, id, &context](BackingStore::GetBlobResult result) {
+                  if (result.blob) {
+                    self->stats_->getObjectStoreStatsForCurrentThread()
+                        .getBlobMetadataFromBackingStore.addValue(1);
+                    // we retrived the full blob data
+                    self->stats_->getObjectStoreStatsForCurrentThread()
+                        .getBlobFromBackingStore.addValue(1);
+                    self->localStore_->putBlob(id, result.blob.get());
+                    auto metadata = self->localStore_->putBlobMetadata(
+                        id, result.blob.get());
+                    self->metadataCache_.wlock()->set(id, metadata);
+                    // I could see an argument for recording this fetch with
+                    // type Blob instead of BlobMetadata, but it's probably more
+                    // useful in context to know how many metadata fetches
+                    // occurred. Also, since backing stores don't directly
+                    // support fetching metadata, it should be clear.
+                    context.didFetch(
+                        ObjectFetchContext::BlobMetadata, id, result.origin);
 
-                self->updateProcessFetch(context);
-                return makeFuture(metadata);
-              }
+                    self->updateProcessFetch(context);
+                    return makeFuture(metadata);
+                  }
 
-              throwf<std::domain_error>("blob {} not found", id);
-            });
+                  throwf<std::domain_error>("blob {} not found", id);
+                });
       })
       .semi();
 }

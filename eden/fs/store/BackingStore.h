@@ -85,7 +85,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   /**
    * Return value of the getTree method.
    */
-  struct GetTreeRes {
+  struct GetTreeResult {
     /** The retrieved tree. */
     std::unique_ptr<Tree> tree;
     /** The fetch origin of the tree. */
@@ -97,14 +97,14 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    *
    * Return the tree and where it was found.
    */
-  virtual folly::SemiFuture<GetTreeRes> getTree(
+  virtual folly::SemiFuture<GetTreeResult> getTree(
       const ObjectId& id,
       ObjectFetchContext& context) = 0;
 
   /**
    * Return value of the getBlob method.
    */
-  struct GetBlobRes {
+  struct GetBlobResult {
     /** The retrieved blob. */
     std::unique_ptr<Blob> blob;
     /** The fetch origin of the tree. */
@@ -116,7 +116,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    *
    * Return the blob and where it was found.
    */
-  virtual folly::SemiFuture<GetBlobRes> getBlob(
+  virtual folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
       ObjectFetchContext& context) = 0;
 

@@ -45,10 +45,10 @@ class LocalStoreCachedBackingStore : public BackingStore {
       const ObjectId& objectId,
       TreeEntryType treeEntryType,
       ObjectFetchContext& context) override;
-  folly::SemiFuture<GetTreeRes> getTree(
+  folly::SemiFuture<GetTreeResult> getTree(
       const ObjectId& id,
       ObjectFetchContext& context) override;
-  folly::SemiFuture<GetBlobRes> getBlob(
+  folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
       ObjectFetchContext& context) override;
 

@@ -360,7 +360,7 @@ std::string HgQueuedBackingStore::staticRenderObjectId(
   return fmt::format("proxy-{}", folly::hexlify(objectId.getBytes()));
 }
 
-folly::SemiFuture<BackingStore::GetTreeRes> HgQueuedBackingStore::getTree(
+folly::SemiFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTree(
     const ObjectId& id,
     ObjectFetchContext& context) {
   HgProxyHash proxyHash;
@@ -380,7 +380,7 @@ folly::SemiFuture<BackingStore::GetTreeRes> HgQueuedBackingStore::getTree(
           id, proxyHash, *localStore_)) {
     XLOG(DBG5) << "imported tree of '" << proxyHash.path() << "', "
                << proxyHash.revHash().toString() << " from hgcache";
-    return folly::makeSemiFuture(BackingStore::GetTreeRes{
+    return folly::makeSemiFuture(GetTreeResult{
         std::move(tree), ObjectFetchContext::Origin::FromDiskCache});
   }
 
@@ -402,7 +402,8 @@ std::unique_ptr<BlobMetadata> HgQueuedBackingStore::getLocalBlobMetadata(
       proxyHash.revHash());
 }
 
-folly::SemiFuture<BackingStore::GetTreeRes> HgQueuedBackingStore::getTreeImpl(
+folly::SemiFuture<BackingStore::GetTreeResult>
+HgQueuedBackingStore::getTreeImpl(
     const ObjectId& id,
     const HgProxyHash& proxyHash,
     ObjectFetchContext& context) {
@@ -439,12 +440,12 @@ folly::SemiFuture<BackingStore::GetTreeRes> HgQueuedBackingStore::getTreeImpl(
       .thenTry([this, id](folly::Try<std::unique_ptr<Tree>>&& result) {
         this->queue_.markImportAsFinished<Tree>(id, result);
         auto tree = std::move(result).value();
-        return BackingStore::GetTreeRes{
+        return GetTreeResult{
             std::move(tree), ObjectFetchContext::Origin::FromNetworkFetch};
       });
 }
 
-folly::SemiFuture<BackingStore::GetBlobRes> HgQueuedBackingStore::getBlob(
+folly::SemiFuture<BackingStore::GetBlobResult> HgQueuedBackingStore::getBlob(
     const ObjectId& id,
     ObjectFetchContext& context) {
   HgProxyHash proxyHash;
@@ -462,14 +463,15 @@ folly::SemiFuture<BackingStore::GetBlobRes> HgQueuedBackingStore::getBlob(
 
   if (auto blob =
           backingStore_->getDatapackStore().getBlobLocal(id, proxyHash)) {
-    return folly::makeSemiFuture(BackingStore::GetBlobRes{
+    return folly::makeSemiFuture(GetBlobResult{
         std::move(blob), ObjectFetchContext::Origin::FromDiskCache});
   }
 
   return getBlobImpl(id, proxyHash, context);
 }
 
-folly::SemiFuture<BackingStore::GetBlobRes> HgQueuedBackingStore::getBlobImpl(
+folly::SemiFuture<BackingStore::GetBlobResult>
+HgQueuedBackingStore::getBlobImpl(
     const ObjectId& id,
     const HgProxyHash& proxyHash,
     ObjectFetchContext& context) {
@@ -509,7 +511,7 @@ folly::SemiFuture<BackingStore::GetBlobRes> HgQueuedBackingStore::getBlobImpl(
       .thenTry([this, id](folly::Try<std::unique_ptr<Blob>>&& result) {
         this->queue_.markImportAsFinished<Blob>(id, result);
         auto blob = std::move(result).value();
-        return BackingStore::GetBlobRes{
+        return GetBlobResult{
             std::move(blob), ObjectFetchContext::Origin::FromNetworkFetch};
       });
 }
@@ -543,7 +545,7 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
         // oriented ones. Mercurial will anyway not re-fetch a blob that is
         // already present locally, so the check for local blob is pure overhead
         // when prefetching.
-        std::vector<folly::SemiFuture<BackingStore::GetBlobRes>> futures;
+        std::vector<folly::SemiFuture<GetBlobResult>> futures;
         futures.reserve(ids.size());
 
         for (size_t i = 0; i < ids.size(); i++) {
