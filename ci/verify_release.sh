@@ -59,10 +59,11 @@ ENV TZ=Etc/UTC
 RUN apt update -y
 RUN apt install -y /root/sapling.deb
 RUN which sl
-RUN sl clone --git https://github.com/bolinfest/opensnoop-native
+RUN sl clone https://github.com/bolinfest/opensnoop-native
+RUN cd /opensnoop-native && sl isl --no-open --json
 EOF
 
 IMAGE_ID=$(echo $RANDOM | shasum | head -c 8)
 IMAGE_NAME="sapling-test-${IMAGE_ID}"
-docker build -t "$IMAGE_NAME" .
+docker build --progress=plain -t "$IMAGE_NAME" .
 docker run -it "$IMAGE_NAME" /bin/bash
