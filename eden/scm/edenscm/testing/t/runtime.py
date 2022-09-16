@@ -377,7 +377,11 @@ class TestTmp:
         self._teardown()
 
     def _setup(self, tmpprefix):
-        tmp = tempfile.mkdtemp(prefix=tmpprefix or "ttesttmp")
+        # If TESTTMP is defined (ex. by run-tests.py), just create a
+        # sub-directory in it and do not auto-delete. Expect whoever creating
+        # TESTTMP to decide whether to delete it.
+        existing_testtmp = os.getenv("TESTTMP")
+        tmp = tempfile.mkdtemp(prefix=tmpprefix or "ttesttmp", dir=existing_testtmp)
         path = Path(os.path.realpath(tmp))
 
         fs = OSFS()
@@ -406,6 +410,7 @@ class TestTmp:
         }
 
         self.path = path
+        self.should_delete_path = not existing_testtmp
         self.shenv = shenv
         self.pyenv = pyenv
         self.substitutions = [(re.escape(str(path)), "$TESTTMP")]
@@ -432,7 +437,8 @@ class TestTmp:
             for func in reversed(self._atexit):
                 func()
         finally:
-            shutil.rmtree(str(self.path), ignore_errors=True)
+            if self.should_delete_path:
+                shutil.rmtree(str(self.path), ignore_errors=True)
 
     def _initialshellcmdtable(self):
         cmdtable = dict(sh.stdlib.cmdtable)
