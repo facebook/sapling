@@ -1,14 +1,12 @@
 #chg-compatible
+  $ export HG_NO_DEFAULT_CONFIG=true
   $ setconfig workingcopy.ruststatus=False
-  $ setconfig experimental.allowfilepeer=True
-
-  $ setconfig experimental.nativecheckout=true
-  $ newserver server
+  $ configure modernclient
 
 test sparse
 
   $ enable sparse
-  $ newremoterepo myrepo
+  $ newclientrepo myrepo
   $ enable sparse
 
   $ echo a > show
@@ -380,19 +378,11 @@ Make sure to match whole directory names, not prefixes
   $ cd ..
 
 Test non-sparse repos work while sparse is loaded
-  $ hg init sparserepo
-  $ hg init nonsparserepo
-  $ cd sparserepo
-  $ cat > .hg/hgrc <<EOF
-  > [extensions]
-  > sparse=
-  > EOF
+  $ newclientrepo nonsparserepo
+  $ newclientrepo sparserepo
+  $ enable sparse
   $ cd ../nonsparserepo
   $ echo x > x && hg add x && hg commit -qAm x
-  $ cd ../sparserepo
-  $ hg clone ../nonsparserepo ../nonsparserepo2
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Test debugrebuilddirstate
   $ cd ../sparserepo
@@ -523,7 +513,7 @@ We need to disable the SCM_SAMPLING_FILEPATH env var because arcanist may set it
   > EOF
 
 Verify regular expressions are no longer supported
-  $ newremoterepo rerepo
+  $ newclientrepo rerepo
   $ enable sparse
 
   $ echo a > show
