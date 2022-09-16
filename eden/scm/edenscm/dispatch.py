@@ -201,7 +201,6 @@ def _preimportmodules():
         "dirstate",
         "dirstateguard",
         "discovery",
-        "eden_dirstate",
         "exchange",
         "filelog",
         "filemerge",
@@ -333,6 +332,18 @@ def _preimportmodules():
     ]
     for name in modnames:
         __import__(name)
+    # Modules below are optional - expected to cause ImportError
+    # in some build modes.
+    optional_modnames = [
+        # Cannot be imported if edenfs Thrift logic is not present
+        # (ex. in `make oss` build).
+        "edenscm.eden_dirstate"
+    ]
+    for name in optional_modnames:
+        try:
+            __import__(name)
+        except ImportError:
+            pass
     for extname in extmods:
         extensions.preimport(extname)
 
