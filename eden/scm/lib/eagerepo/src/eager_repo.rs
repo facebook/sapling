@@ -6,6 +6,7 @@
  */
 
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::fs;
 use std::io;
@@ -323,11 +324,13 @@ fn hg_sha1_text(parents: &[Vertex], raw_text: &[u8]) -> Vec<u8> {
 }
 
 /// Write "requires" in the given directory, if it does not exist already.
-fn write_requires(dir: &Path, requires: &[&'static str]) -> io::Result<()> {
+/// If "requires" exists and does not match the given content, raise an error.
+fn write_requires(dir: &Path, requires: &[&'static str]) -> Result<()> {
+    let path = dir.join("requires");
     match fs::OpenOptions::new()
         .create_new(true)
         .write(true)
-        .open(dir.join("requires"))
+        .open(&path)
     {
         Ok(mut f) => {
             let mut requires: String = requires.join("\n");
@@ -335,8 +338,25 @@ fn write_requires(dir: &Path, requires: &[&'static str]) -> io::Result<()> {
             f.write_all(requires.as_bytes())?;
             Ok(())
         }
-        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => Ok(()),
-        Err(e) => Err(e),
+        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
+            let actual: BTreeSet<String> = fs::read_to_string(&path)?
+                .lines()
+                .map(|l| l.to_string())
+                .collect();
+            let expected: BTreeSet<String> = requires.iter().map(|r| r.to_string()).collect();
+            let unsupported: Vec<String> = actual.difference(&expected).cloned().collect();
+            let missing: Vec<String> = expected.difference(&actual).cloned().collect();
+            if unsupported.is_empty() && missing.is_empty() {
+                Ok(())
+            } else {
+                Err(crate::Error::RequirementsMismatch(
+                    path.display().to_string(),
+                    unsupported,
+                    missing,
+                ))
+            }
+        }
+        Err(e) => Err(e.into()),
     }
 }
 
@@ -424,5 +444,32 @@ mod tests {
     "stable": HgId("35e7525ce3a48913275d7061dd9a867ffef1e34d"),
 }"#
         );
+    }
+
+    #[test]
+    fn test_requires_mismatch() {
+        let dir = tempfile::tempdir().unwrap();
+        let dir = dir.path();
+
+        let repo = EagerRepo::open(dir).unwrap();
+        drop(repo);
+
+        let ident = identity::sniff_dir(dir)
+            .unwrap()
+            .unwrap_or_else(identity::sniff_env);
+        fs::write(
+            dir.join(ident.dot_dir()).join("requires"),
+            "store\nremotefilelog\n",
+        )
+        .unwrap();
+
+        let err = EagerRepo::open(dir).map(|_| ()).unwrap_err();
+        match err {
+            crate::Error::RequirementsMismatch(_, unsupported, missing) => {
+                assert_eq!(unsupported, ["remotefilelog"]);
+                assert_eq!(missing, ["treestate"]);
+            }
+            _ => panic!("expect RequirementsMismatch, got {:?}", err),
+        }
     }
 }

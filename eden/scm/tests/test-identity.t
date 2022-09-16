@@ -28,13 +28,15 @@ Init can create a ".sl" repo.
 
   $ cd ..
 
-  $ newremoterepo clone_me
+  $ newremoterepo clone_me_client
   $ setconfig paths.default=test:clone_me
   $ touch foo
   $ hg commit -Aq -m foo
   $ hg push -r . --to master --create -q
 
 Clone can create a ".sl" repo.
+
+  $ cd
   $ HGIDENTITY=sl hg clone -q test:clone_me cloned
   $ find cloned
   cloned/foo
@@ -55,5 +57,5 @@ Clone can create a ".sl" repo.
   $ cd cloned
 Status works in ".sl" repo
   $ LOG=configparser::hg=info hg status -A
-   INFO configparser::hg: loading config repo_path=$TESTTMP/clone_me/cloned
+   INFO configparser::hg: loading config repo_path=$TESTTMP/cloned
   C foo

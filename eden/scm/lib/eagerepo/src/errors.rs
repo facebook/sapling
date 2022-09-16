@@ -15,6 +15,11 @@ pub enum Error {
 
     #[error("hash mismatch ({0:?} != {1:?})")]
     HashMismatch(Vertex, Vertex),
+
+    #[error(
+        "EagerRepo detected unsupported requires at {0}:\n  Unsupported: {1:?}\n  Missing: {2:?}\n(is there a non-EagerRepo created accidentally at the same location?)"
+    )]
+    RequirementsMismatch(String, Vec<String>, Vec<String>),
 }
 
 impl From<std::io::Error> for Error {
