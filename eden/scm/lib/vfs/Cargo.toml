@@ -10,7 +10,7 @@ anyhow = "1.0.56"
 crossbeam = "0.8"
 dashmap = { version = "4.0.2", features = ["rayon", "serde"] }
 fsinfo = { version = "0.1.0", path = "../fsinfo" }
-libc = "=0.2.125"
+libc = "0.2.132"
 minibytes = { version = "0.1.0", path = "../minibytes" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 types = { version = "0.1.0", path = "../types" }
