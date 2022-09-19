@@ -433,6 +433,7 @@ mod test {
         let added_source = SourceName::new("added_source");
         let unchanged_source = SourceName::new("unchanged_source");
         let changed_source = SourceName::new("changed_source");
+        let branch_name_changed_source = SourceName::new("branch_name_changed_source");
         let version_old = "version_old".to_string();
         let version_new = "version_old".to_string();
         let config_old = SyncTargetConfigBuilder::new(repo_id, target.clone(), version_old)
@@ -440,6 +441,9 @@ mod test {
             .set_prefix_bookmark_to_source_name()
             .build_source()?
             .source_builder(unchanged_source.clone())
+            .set_prefix_bookmark_to_source_name()
+            .build_source()?
+            .source_builder(branch_name_changed_source.clone())
             .set_prefix_bookmark_to_source_name()
             .build_source()?
             .source_builder(changed_source.clone())
@@ -451,6 +455,7 @@ mod test {
             removed_source => ONES_CSID,
             changed_source.clone() =>ONES_CSID,
             unchanged_source.clone() =>ONES_CSID,
+            branch_name_changed_source.clone() => ONES_CSID,
         };
 
         let config_new = SyncTargetConfigBuilder::new(repo_id, target, version_new)
@@ -464,23 +469,36 @@ mod test {
             .set_prefix_bookmark_to_source_name()
             .linkfile("first", "linkfiles/first")
             .build_source()?
+            .source_builder(branch_name_changed_source.clone())
+            .default_prefix(branch_name_changed_source.clone())
+            .bookmark("branch_named_changed_source-V2")
+            .build_source()?
             .no_storage_build();
 
         let new_changesets = btreemap! {
             added_source => TWOS_CSID,
             changed_source => THREES_CSID,
             unchanged_source => ONES_CSID,
+            branch_name_changed_source => ONES_CSID,
         };
 
         let diff = diff_configs(&config_old, &old_changesets, &config_new, &new_changesets)?;
 
         assert_eq!(
             source_names(&diff.added),
-            vec!["added_source", "changed_source"]
+            vec![
+                "added_source",
+                "branch_name_changed_source",
+                "changed_source"
+            ]
         );
         assert_eq!(
             source_names(&diff.removed),
-            vec!["changed_source", "removed_source"]
+            vec![
+                "branch_name_changed_source",
+                "changed_source",
+                "removed_source"
+            ]
         );
         Ok(())
     }
