@@ -280,7 +280,7 @@ def _readactive(repo, marks):
     return mark
 
 
-def activate(repo, mark):
+def activate(repo, mark) -> None:
     """
     Set the given bookmark to be 'active', meaning that this bookmark will
     follow new commits that are made.
@@ -290,7 +290,7 @@ def activate(repo, mark):
     repo._bookmarks._writeactive()
 
 
-def deactivate(repo):
+def deactivate(repo) -> None:
     """
     Unset the active bookmark in this repository.
     """
@@ -366,7 +366,7 @@ def calculateupdate(ui, repo, checkout):
     return (checkout, movemarkfrom)
 
 
-def update(repo, parents, node):
+def update(repo, parents, node) -> bool:
     deletefrom = parents
     marks = repo._bookmarks
     active = marks.active
@@ -416,7 +416,7 @@ def listbookmarks(repo):
     return d
 
 
-def pushbookmark(repo, key, old, new):
+def pushbookmark(repo, key, old, new) -> bool:
     w = l = tr = None
     try:
         w = repo.wlock()
@@ -516,7 +516,7 @@ def comparebookmarks(repo, srcmarks, dstmarks, targets=None):
     return results
 
 
-def _diverge(ui, b, path, localmarks, remotenode):
+def _diverge(ui, b: str, path, localmarks, remotenode) -> typing.Optional[str]:
     """Return appropriate diverged bookmark for specified ``path``
 
     This returns None, if it is failed to assign any divergent
@@ -611,7 +611,7 @@ def binarydecode(stream):
     return books
 
 
-def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()):
+def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()) -> None:
     ui.debug("checking for updated bookmarks\n")
     localmarks = repo._bookmarks
     (addsrc, adddst, advsrc, advdst, diverge, differ, invalid, same) = comparebookmarks(
@@ -684,7 +684,7 @@ def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()):
         localmarks.applychanges(repo, tr, changes)
 
 
-def incoming(ui, repo, other):
+def incoming(ui, repo, other) -> int:
     """Show bookmarks incoming from other to repo"""
     ui.status(_("searching for changed bookmarks\n"))
 
@@ -730,7 +730,7 @@ def incoming(ui, repo, other):
     return 0
 
 
-def outgoing(ui, repo, other):
+def outgoing(ui, repo, other) -> int:
     """Show bookmarks outgoing from repo to other"""
     ui.status(_("searching for changed bookmarks\n"))
 
@@ -779,7 +779,7 @@ def outgoing(ui, repo, other):
     return 0
 
 
-def summary(repo, other):
+def summary(repo, other) -> typing.Tuple[int, int]:
     """Compare bookmarks between repo and other for "hg summary" output
 
     This returns "(# of incoming, # of outgoing)" tuple.
@@ -818,7 +818,7 @@ def checkformat(repo, mark):
     return mark
 
 
-def delete(repo, tr, names):
+def delete(repo, tr, names) -> None:
     """remove a mark from the bookmark store
 
     Raises an abort error if mark does not exist.
@@ -834,7 +834,7 @@ def delete(repo, tr, names):
     marks.applychanges(repo, tr, changes)
 
 
-def rename(repo, tr, old, new, force=False, inactive=False):
+def rename(repo, tr, old, new, force: bool = False, inactive: bool = False) -> None:
     """rename a bookmark from old to new
 
     If force is specified, then the new name can overwrite an existing
@@ -857,7 +857,9 @@ def rename(repo, tr, old, new, force=False, inactive=False):
         activate(repo, mark)
 
 
-def addbookmarks(repo, tr, names, rev=None, force=False, inactive=False):
+def addbookmarks(
+    repo, tr, names, rev=None, force: bool = False, inactive: bool = False
+) -> None:
     """add a list of bookmarks
 
     If force is specified, then the new name can overwrite an existing
@@ -888,11 +890,12 @@ def addbookmarks(repo, tr, names, rev=None, force=False, inactive=False):
     marks.applychanges(repo, tr, changes)
     if not inactive and cur == marks[newact] and not rev:
         activate(repo, newact)
+    # pyre-fixme[61]: `tgt` is undefined, or not always defined.
     elif cur != tgt and newact == repo._activebookmark:
         deactivate(repo)
 
 
-def _printbookmarks(ui, repo, bmarks, **opts):
+def _printbookmarks(ui, repo, bmarks: typing.Sized, **opts) -> None:
     """private method to print bookmarks
 
     Provides a way for extensions to control how bookmarks are printed (e.g.
@@ -924,7 +927,7 @@ def _printbookmarks(ui, repo, bmarks, **opts):
     fm.end()
 
 
-def printbookmarks(ui, repo, **opts):
+def printbookmarks(ui, repo, **opts) -> None:
     """print bookmarks to a formatter
 
     Provides a way for extensions to control how bookmarks are printed.
@@ -942,7 +945,7 @@ def printbookmarks(ui, repo, **opts):
     _printbookmarks(ui, repo, bmarks, **opts)
 
 
-def preparehookargs(name, old, new):
+def preparehookargs(name, old: bytes, new: bytes) -> typing.Dict[str, typing.Any]:
     if new is None:
         new = b""
     if old is None:
@@ -1066,7 +1069,7 @@ class remotenames(dict):
         return self._changecount
 
 
-def saveremotenames(repo, remotebookmarks, override=True):
+def saveremotenames(repo, remotebookmarks, override: bool = True) -> None:
     """
     remotebookmarks has the format {name: {name: hexnode | None}}.
     For example: {"remote": {"master": "0" * 40}}
@@ -1270,7 +1273,7 @@ class lazyremotenamedict(pycompat.Mapping):
         return len(list(self.keys()))
 
 
-def transition(repo, ui):
+def transition(repo, ui) -> None:
     """
     Help with transitioning to using a remotenames workflow.
 
@@ -1332,7 +1335,7 @@ def selectivepullinitbookmarknames(repo):
     return repo.ui.configlist("remotenames", "selectivepulldefault")
 
 
-def selectivepullinitbookmarkfullnames(repo):
+def selectivepullinitbookmarkfullnames(repo) -> typing.List[str]:
     """Returns set of initial remote bookmarks full names"""
     return [
         "%s/%s" % (repo.ui.config("remotenames", "hoist"), name)
@@ -1406,7 +1409,7 @@ def cleanupremotenames(repo):
     return removednames
 
 
-def _recordbookmarksupdate(repo, changes):
+def _recordbookmarksupdate(repo, changes) -> None:
     """writes remotebookmarks changes to the journal
 
     'changes' - is a list of tuples '(remotebookmark, oldnode, newnode)''"""
@@ -1414,7 +1417,7 @@ def _recordbookmarksupdate(repo, changes):
         repo.journal.recordmany(journalremotebookmarktype, changes)
 
 
-def joinremotename(remote, ref):
+def joinremotename(remote: str, ref):
     if ref:
         remote += "/" + ref
     return remote
