@@ -1,8 +1,7 @@
 #chg-compatible
 
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
-  $ hg init repo
-  $ cd repo
+  $ configure modernclient
+  $ newclientrepo repo
   $ mkdir d1 d1/d11 d2
   $ echo d1/a > d1/a
   $ echo d1/ba > d1/ba

@@ -1,10 +1,9 @@
 #chg-compatible
 
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
+  $ configure modernclient
   $ enable dirsync
 
-  $ hg init repo
-  $ cd repo
+  $ newclientrepo repo
   $ setconfig ui.verbose=true
   $ readconfig <<EOF
   > [dirsync]
@@ -206,7 +205,6 @@ Test amending a change where there has already been a sync before
   dir2/subdir/b
   committing manifest
   committing changelog
-  committed * (glob)
   $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/b
   rename from dir1/a
@@ -229,8 +227,7 @@ Test amending a change where there has already been a sync before
 
 Test syncing multiple mirror groups across more than 2 directories
   $ rm -rf repo
-  $ hg init repo
-  $ cd repo
+  $ newclientrepo repo
   $ readconfig <<EOF
   > [dirsync]
   > group1.dir1 = dir1/
@@ -284,8 +281,7 @@ Test syncing multiple mirror groups across more than 2 directories
 
 Test that rebasing applies the same change to both
   $ rm -rf repo
-  $ hg init repo
-  $ cd repo
+  $ newclientrepo repo
   $ readconfig <<EOF
   > [dirsync]
   > group1.dir1 = dir1/
@@ -347,8 +343,7 @@ The same test as the above. But uses in-memory rebase
 
 Test committing part of the working copy
   $ rm -rf repo
-  $ hg init repo
-  $ cd repo
+  $ newclientrepo repo
   $ readconfig <<EOF
   > [dirsync]
   > group1.dir1 = dir1/
@@ -451,8 +446,7 @@ Test quiet non-conflicting edits
 
 Test deleting file with missing mirror
   $ rm -rf repo
-  $ hg init repo
-  $ cd repo
+  $ newclientrepo repo
   $ mkdir dir1
   $ echo a > dir1/a
   $ hg add dir1
@@ -480,8 +474,7 @@ Test deleting file with missing mirror
 
 Test modifying file with missing mirror
   $ rm -rf repo
-  $ hg init repo
-  $ cd repo
+  $ newclientrepo repo
   $ mkdir dir1
   $ echo a > dir1/a
   $ hg add dir1
@@ -517,8 +510,7 @@ Test modifying file with missing mirror
 
 Test updating missing mirror
   $ rm -rf repo
-  $ hg init repo
-  $ cd repo
+  $ newclientrepo repo
   $ mkdir dir1
   $ echo a > dir1/a
   $ hg add dir1
@@ -555,8 +547,7 @@ Test updating missing mirror
 
 Dont mirror during shelve
   $ rm -rf repo
-  $ hg init repo
-  $ cd repo
+  $ newclientrepo repo
   $ enable shelve
   $ readconfig <<EOF
   > [dirsync]
@@ -584,8 +575,7 @@ Dont mirror during shelve
 Test .hgdirsync in the working copy
 
   $ rm -rf repo
-  $ hg init repo
-  $ cd repo
+  $ newclientrepo repo
   $ readconfig <<EOF
   > [dirsync]
   > group1.dir1 = dir1/
@@ -673,8 +663,7 @@ Only the ".hgdirsync" at the top of the repo is effective
 
 Rule order matters. Only the first one gets executed.
 
-  $ hg init $TESTTMP/repo-order1
-  $ cd $TESTTMP/repo-order1
+  $ newclientrepo repo-order1
   $ cat >> .hgdirsync <<'EOF'
   > a.dir1 = a/
   > a.dir2 = b/
@@ -687,8 +676,7 @@ Rule order matters. Only the first one gets executed.
   adding a/c/1
   mirrored adding 'a/c/1' to 'b/c/1'
 
-  $ hg init $TESTTMP/repo-order2
-  $ cd $TESTTMP/repo-order2
+  $ newclientrepo repo-order2
   $ cat >> .hgdirsync <<'EOF'
   > c.dir1 = a/c/
   > c.dir2 = c/
@@ -702,8 +690,7 @@ Rule order matters. Only the first one gets executed.
   mirrored adding 'a/c/1' to 'c/1'
 
 Test excluding a subdirectory from dirsync
-  $ hg init $TESTTMP/exclusion
-  $ cd $TESTTMP/exclusion
+  $ newclientrepo exclusion
   $ cat >> .hgdirsync <<'EOF'
   > a.dir1 = a/
   > exclude.a.dir1 = a/excl
@@ -720,8 +707,7 @@ Test excluding a subdirectory from dirsync
   mirrored adding 'a/c/1' to 'b/c/1'
 
 Test that excludes override all other rules
-  $ hg init $TESTTMP/exclusion-override
-  $ cd $TESTTMP/exclusion-override
+  $ newclientrepo exclusion-override
   $ cat >> .hgdirsync <<'EOF'
   > a.dir1 = a/
   > exclude.a.dir1 = a/excl
@@ -742,8 +728,7 @@ Test that excludes override all other rules
   mirrored adding 'a/c/1' to 'b/c/1'
 
 Test that excludes only work when specified for every destination
-  $ hg init $TESTTMP/exclusion-total
-  $ cd $TESTTMP/exclusion-total
+  $ newclientrepo exclusion-total
   $ cat >> .hgdirsync <<'EOF'
   > a.dir1 = a/
   > a.dir2 = b/

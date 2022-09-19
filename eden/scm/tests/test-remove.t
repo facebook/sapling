@@ -1,7 +1,5 @@
 #chg-compatible
 
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
-  $ setconfig workingcopy.ruststatus=False
   $ remove() {
   >     hg rm $@
   >     echo "exit code: $?"
@@ -11,8 +9,8 @@
   >     hg up -C
   > }
 
-  $ hg init a
-  $ cd a
+  $ configure modernclient
+  $ newclientrepo a
   $ echo a > foo
 
 file not managed
