@@ -124,7 +124,7 @@ impl RepoPathDisposition {
                 if is_bind_mount(path.into()).with_context(|| {
                     format!(
                         "failed to determine whether {} is a bind mount",
-                        path.to_string_lossy()
+                        path.display()
                     )
                 })? {
                     return Ok(RepoPathDisposition::IsBindMount);
@@ -132,7 +132,7 @@ impl RepoPathDisposition {
                 if is_empty_dir(path).with_context(|| {
                     format!(
                         "failed to determine whether {} is an empty dir",
-                        path.to_string_lossy()
+                        path.display()
                     )
                 })? {
                     return Ok(RepoPathDisposition::IsEmptyDir);
@@ -318,7 +318,7 @@ impl Redirection {
         self.target = self.expand_target_abspath(checkout).with_context(|| {
             format!(
                 "Failed to update target abspath for redirection: {}",
-                self.repo_path.to_string_lossy()
+                self.repo_path.display()
             )
         })?;
         Ok(())
@@ -342,8 +342,8 @@ impl Redirection {
                 .with_context(|| {
                     format!(
                         "remove_bind_mount thrift call failed for '{}' in checkout '{}'",
-                        &self.repo_path.to_string_lossy(),
-                        checkout_path.to_string_lossy()
+                        &self.repo_path.display(),
+                        checkout_path.display()
                     )
                 })?;
         }
@@ -353,19 +353,19 @@ impl Redirection {
             .with_context(|| {
                 format!(
                     "Failed to create directory {}",
-                    abs_mount_path_in_repo.to_string_lossy()
+                    abs_mount_path_in_repo.display()
                 )
             })?;
         std::fs::create_dir_all(target)
             .from_err()
-            .with_context(|| format!("Failed to create directory {}", target.to_string_lossy()))?;
+            .with_context(|| format!("Failed to create directory {}", target.display()))?;
         _add_bind_mount_thrift_call(checkout_path, &self.repo_path, target)
             .await
             .with_context(|| {
                 format!(
                     "add_bind_mount thrift call failed for target '{}' in checkout '{}'",
-                    target.to_string_lossy(),
-                    checkout_path.to_string_lossy()
+                    target.display(),
+                    checkout_path.display()
                 )
             })?;
         Ok(())
@@ -379,12 +379,7 @@ impl Redirection {
         let mount_path = checkout_path.join(&self.repo_path);
         std::fs::create_dir_all(&mount_path)
             .from_err()
-            .with_context(|| {
-                format!(
-                    "Failed to create directory {}",
-                    &mount_path.to_string_lossy()
-                )
-            })?;
+            .with_context(|| format!("Failed to create directory {}", &mount_path.display()))?;
         let mount_path = checkout_path.join(&self.repo_path);
         let args = &["mount", &mount_path.to_string_lossy()];
         let status = Exec::cmd(APFS_HELPER)
@@ -419,7 +414,7 @@ impl Redirection {
         let image_file_path = self._dmg_file_name(target);
         let target_stat = stat(target)
             .from_err()
-            .with_context(|| format!("Failed to stat target {}", target.to_string_lossy()))?;
+            .with_context(|| format!("Failed to stat target {}", target.display()))?;
 
         // Specify the size in kb because the disk utilities have weird
         // defaults if the units are unspecified, and `b` doesn't mean
@@ -535,8 +530,8 @@ impl Redirection {
             .with_context(|| {
                 format!(
                     "remove_bind_mount thrift call failed for '{}' in checkout '{}'",
-                    &self.repo_path.to_string_lossy(),
-                    &checkout.path().to_string_lossy()
+                    &self.repo_path.display(),
+                    &checkout.path().display()
                 )
             })?;
         Ok(())
@@ -572,7 +567,7 @@ impl Redirection {
     fn _bind_unmount_windows(&self, checkout: &EdenFsCheckout) -> Result<()> {
         let repo_path = self.expand_repo_path(checkout);
         remove_symlink(&repo_path)
-            .with_context(|| format!("Failed to remove symlink {}", repo_path.to_string_lossy()))?;
+            .with_context(|| format!("Failed to remove symlink {}", repo_path.display()))?;
         Ok(())
     }
 
@@ -607,8 +602,8 @@ impl Redirection {
             .with_context(|| {
                 format!(
                     "Failed to create symlink {} with target {}",
-                    &symlink_path.to_string_lossy(),
-                    target.to_string_lossy()
+                    &symlink_path.display(),
+                    target.display()
                 )
             })?;
 
@@ -651,7 +646,7 @@ impl Redirection {
                         .with_context(|| {
                             format!(
                                 "Failed to remove existing file {}",
-                                temp_symlink_path.to_string_lossy()
+                                temp_symlink_path.display()
                             )
                         })?;
                 }
@@ -660,8 +655,8 @@ impl Redirection {
                     .with_context(|| {
                         format!(
                             "Failed to create symlink {} with target {}",
-                            &temp_symlink_path.to_string_lossy(),
-                            target.to_string_lossy()
+                            &temp_symlink_path.display(),
+                            target.display()
                         )
                     })?;
                 std::fs::rename(&temp_symlink_path, &symlink_path)
@@ -669,8 +664,8 @@ impl Redirection {
                     .with_context(|| {
                         format!(
                             "Failed to rename symlink {} to {}",
-                            &temp_symlink_path.to_string_lossy(),
-                            &symlink_path.to_string_lossy()
+                            &temp_symlink_path.display(),
+                            &symlink_path.display()
                         )
                     })?;
             } else {
@@ -691,7 +686,7 @@ impl Redirection {
     ) -> Result<RepoPathDisposition> {
         let repo_path = self.expand_repo_path(checkout);
         let disposition = RepoPathDisposition::analyze(&repo_path)
-            .with_context(|| format!("Failed to analyze path {}", repo_path.to_string_lossy()))?;
+            .with_context(|| format!("Failed to analyze path {}", repo_path.display()))?;
         if disposition == RepoPathDisposition::DoesNotExist {
             return Ok(disposition);
         }
@@ -704,16 +699,15 @@ impl Redirection {
                 stop_buckd_for_path(possible_buck_project).with_context(|| {
                     format!(
                         "Failed to stop buckd for project {}",
-                        possible_buck_project.to_string_lossy()
+                        possible_buck_project.display()
                     )
                 })?
             }
         }
 
         if disposition == RepoPathDisposition::IsSymlink {
-            remove_symlink(&repo_path).with_context(|| {
-                format!("Failed to remove symlink {}", repo_path.to_string_lossy())
-            })?;
+            remove_symlink(&repo_path)
+                .with_context(|| format!("Failed to remove symlink {}", repo_path.display()))?;
             return Ok(RepoPathDisposition::DoesNotExist);
         }
 
@@ -725,10 +719,7 @@ impl Redirection {
                 )));
             }
             self._bind_unmount(checkout).await.with_context(|| {
-                format!(
-                    "Failed to unmount bind mount {}",
-                    self.repo_path.to_string_lossy()
-                )
+                format!("Failed to unmount bind mount {}", self.repo_path.display())
             })?;
 
             // Now that it is unmounted, re-assess and ideally
@@ -755,7 +746,7 @@ impl Redirection {
             .with_context(|| {
                 format!(
                     "Failed to remove existing redirection {}",
-                    self.repo_path.to_string_lossy()
+                    self.repo_path.display()
                 )
             })?;
         if disposition == RepoPathDisposition::IsNonEmptyDir
@@ -787,7 +778,7 @@ impl Redirection {
                 Some(t) => self._bind_mount(&checkout.path(), &t).await,
                 None => Err(EdenFsError::Other(anyhow!(
                     "failed to expand target abspath for checkout {}",
-                    &checkout.path().to_string_lossy()
+                    &checkout.path().display()
                 ))),
             }
         } else if self.redir_type == RedirectionType::Symlink {
@@ -797,15 +788,15 @@ impl Redirection {
                     self.target
                         .as_ref()
                         .unwrap_or(&PathBuf::from("DoesNotExist"))
-                        .to_string_lossy(),
-                    checkout.path().to_string_lossy()
+                        .display(),
+                    checkout.path().display()
                 )
             })?;
             match target {
                 Some(t) => self._apply_symlink(&checkout.path(), &t),
                 None => Err(EdenFsError::Other(anyhow!(
                     "failed to expand target abspath for checkout {}",
-                    &checkout.path().to_string_lossy()
+                    &checkout.path().display()
                 ))),
             }
         } else {
@@ -830,12 +821,7 @@ pub(crate) fn is_bind_mount(path: PathBuf) -> Result<bool> {
             Err(e) => Err(e),
         }
         .from_err()
-        .with_context(|| {
-            format!(
-                "Failed to get symlink metadata for path {}",
-                path.to_string_lossy()
-            )
-        })?;
+        .with_context(|| format!("Failed to get symlink metadata for path {}", path.display()))?;
         let parent_metadata = match fs::symlink_metadata(parent_path) {
             Ok(metadata) => Ok(Some(metadata)),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
@@ -845,7 +831,7 @@ pub(crate) fn is_bind_mount(path: PathBuf) -> Result<bool> {
         .with_context(|| {
             format!(
                 "Failed to get symlink metadata for path {}",
-                parent_path.to_string_lossy()
+                parent_path.display()
             )
         })?;
 
@@ -926,24 +912,19 @@ async fn _add_bind_mount_thrift_call(
         .with_context(|| {
             format!(
                 "Failed to get mount point '{}' as str",
-                mount_path.to_string_lossy()
+                mount_path.display()
             )
         })?
         .as_bytes()
         .to_vec();
     let repo_path = repo_path
         .to_str()
-        .with_context(|| {
-            format!(
-                "Failed to get repo path '{}' as str",
-                repo_path.to_string_lossy()
-            )
-        })?
+        .with_context(|| format!("Failed to get repo path '{}' as str", repo_path.display()))?
         .as_bytes()
         .to_vec();
     let target_path = target
         .to_str()
-        .with_context(|| format!("Failed to get target '{}' as str", target.to_string_lossy()))?
+        .with_context(|| format!("Failed to get target '{}' as str", target.display()))?
         .as_bytes()
         .to_vec();
     client
@@ -964,19 +945,14 @@ async fn _remove_bind_mount_thrift_call(mount_path: &Path, repo_path: &Path) -> 
         .with_context(|| {
             format!(
                 "Failed to get mount point '{}' as str",
-                mount_path.to_string_lossy()
+                mount_path.display()
             )
         })?
         .as_bytes()
         .to_vec();
     let repo_path = repo_path
         .to_str()
-        .with_context(|| {
-            format!(
-                "Failed to get repo path '{}' as str",
-                repo_path.to_string_lossy()
-            )
-        })?
+        .with_context(|| format!("Failed to get repo path '{}' as str", repo_path.display()))?
         .as_bytes()
         .to_vec();
     client
@@ -1042,31 +1018,22 @@ fn is_symlink_correct(redir: &Redirection, checkout: &EdenFsCheckout) -> Result<
                 .target
                 .as_ref()
                 .unwrap_or(&PathBuf::from("DoesNotExist"))
-                .to_string_lossy(),
-            checkout.path().to_string_lossy()
+                .display(),
+            checkout.path().display()
         )
     })? {
         let expected_target = fs::canonicalize(&expected_target)
             .from_err()
             .with_context(|| {
-                format!(
-                    "Failed to canonicalize path {}",
-                    expected_target.to_string_lossy()
-                )
+                format!("Failed to canonicalize path {}", expected_target.display())
             })?;
         let symlink_path = checkout.path().join(&redir.repo_path);
         let target_path = fs::read_link(&symlink_path).with_context(|| {
-            format!(
-                "Failed to read link for symlink {}",
-                symlink_path.to_string_lossy()
-            )
+            format!("Failed to read link for symlink {}", symlink_path.display())
         })?;
-        let target = fs::canonicalize(&target_path).from_err().with_context(|| {
-            format!(
-                "Failed to canonicalize path {}",
-                target_path.to_string_lossy()
-            )
-        })?;
+        let target = fs::canonicalize(&target_path)
+            .from_err()
+            .with_context(|| format!("Failed to canonicalize path {}", target_path.display()))?;
         Ok(target == expected_target)
     } else {
         Ok(false)
@@ -1103,7 +1070,7 @@ pub fn get_effective_redirections(
                 is_bind_mount(mount_info.mount_point()).with_context(|| {
                     format!(
                         "Failed to check if mount point '{}' is a bind mount",
-                        mount_info.mount_point().to_string_lossy()
+                        mount_info.mount_point().display()
                     )
                 })?;
             if path_prefix != mount_point && is_mnt_path_a_bind_mount {
@@ -1124,7 +1091,7 @@ pub fn get_effective_redirections(
     let configured_redirections = get_configured_redirections(checkout).with_context(|| {
         format!(
             "Failed to get configured redirections for checkout {}",
-            checkout.path().to_string_lossy()
+            checkout.path().display()
         )
     })?;
     for (rel_path, mut redir) in configured_redirections {
@@ -1221,8 +1188,8 @@ fn resolve_repo_relative_path(checkout: &EdenFsCheckout, repo_rel_path: &Path) -
         } else {
             return Err(EdenFsError::Other(anyhow!(
                 "The path `{}` doesn't resolve to a path inside the repo `{}`",
-                repo_rel_path.to_string_lossy(),
-                checkout_path.to_string_lossy()
+                repo_rel_path.display(),
+                checkout_path.display()
             )));
         };
     }
@@ -1233,7 +1200,7 @@ fn resolve_repo_relative_path(checkout: &EdenFsCheckout, repo_rel_path: &Path) -
     let candidate = absolute(&candidate_path).from_err().with_context(|| {
         format!(
             "Failed to get absolute path for {}",
-            candidate_path.to_string_lossy()
+            candidate_path.display()
         )
     })?;
 
@@ -1241,8 +1208,8 @@ fn resolve_repo_relative_path(checkout: &EdenFsCheckout, repo_rel_path: &Path) -
         return Err(EdenFsError::Other(anyhow!(
             "The redirection  path `{}` doesn't resolve \
             to a path inside the repo `{}`",
-            repo_rel_path.to_string_lossy(),
-            checkout_path.to_string_lossy()
+            repo_rel_path.display(),
+            checkout_path.display()
         )));
     }
     let relative_path = diff_paths(candidate, &checkout_path).unwrap_or_default();
@@ -1259,8 +1226,8 @@ fn resolve_repo_relative_path(checkout: &EdenFsCheckout, repo_rel_path: &Path) -
             repo-root-relative path. Specify either a canonical absolute path \
             to the redirection, or a canonical (without `..` components) path \
             relative to the repository root at `{}`.",
-            repo_rel_path.to_string_lossy(),
-            relative_path.to_string_lossy(),
+            repo_rel_path.display(),
+            relative_path.display(),
             checkout_path.display(),
         )))
     } else {
@@ -1285,7 +1252,7 @@ pub async fn try_add_redirection(
     let mut configured_redirs = get_configured_redirections(checkout).with_context(|| {
         format!(
             "Failed to get configured redirections for checkout {}",
-            checkout.path().to_string_lossy()
+            checkout.path().display()
         )
     })?;
 
@@ -1308,7 +1275,7 @@ pub async fn try_add_redirection(
     let effective_redirs = get_effective_redirections(checkout).with_context(|| {
         format!(
             "Failed to get effective redirections for checkout {}",
-            checkout.path().to_string_lossy()
+            checkout.path().display()
         )
     })?;
 
@@ -1316,8 +1283,8 @@ pub async fn try_add_redirection(
         resolve_repo_relative_path(checkout, repo_path).with_context(|| {
             format!(
                 "Failed to resolve repo relative path for '{}' in checkout {}",
-                repo_path.to_string_lossy(),
-                checkout.path().to_string_lossy()
+                repo_path.display(),
+                checkout.path().display()
             )
         })?;
 
@@ -1380,8 +1347,8 @@ pub async fn try_add_redirection(
     redir.apply(checkout).await.with_context(|| {
         format!(
             "Failed to apply redirection '{}' for checkout {}",
-            redir.repo_path.to_string_lossy(),
-            checkout.path().to_string_lossy()
+            redir.repo_path.display(),
+            checkout.path().display()
         )
     })?;
 
@@ -1393,7 +1360,7 @@ pub async fn try_add_redirection(
         CheckoutConfig::parse_config(config_dir.into()).with_context(|| {
             format!(
                 "Failed to parse checkout config using config dir {}",
-                config_dir.to_string_lossy()
+                config_dir.display()
             )
         })?;
     // and persist the configuration so that we can re-apply it in a subsequent
@@ -1403,7 +1370,7 @@ pub async fn try_add_redirection(
         .with_context(|| {
             format!(
                 "Failed to get update redirections for checkout {}",
-                checkout.path().to_string_lossy()
+                checkout.path().display()
             )
         })?;
 
