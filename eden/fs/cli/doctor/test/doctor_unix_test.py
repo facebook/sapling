@@ -11,6 +11,9 @@ import eden.fs.cli.doctor as doctor
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
 from eden.fs.cli.doctor.test.lib.fake_kerberos_checker import FakeKerberosChecker
+from eden.fs.cli.doctor.test.lib.fake_vscode_extensions_checker import (
+    getFakeVSCodeExtensionsChecker,
+)
 from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
 from eden.fs.cli.test.lib.output import TestOutput
 
@@ -41,6 +44,7 @@ class DoctorUnixTest(DoctorTestBase):
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
 

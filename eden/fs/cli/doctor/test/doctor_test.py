@@ -27,6 +27,9 @@ from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
 from eden.fs.cli.doctor.test.lib.fake_hg_repo import FakeHgRepo
 from eden.fs.cli.doctor.test.lib.fake_kerberos_checker import FakeKerberosChecker
 from eden.fs.cli.doctor.test.lib.fake_mount_table import FakeMountTable
+from eden.fs.cli.doctor.test.lib.fake_vscode_extensions_checker import (
+    getFakeVSCodeExtensionsChecker,
+)
 from eden.fs.cli.doctor.test.lib.problem_collector import ProblemCollector
 from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
 from eden.fs.cli.prjfs import PRJ_FILE_STATE
@@ -141,6 +144,7 @@ class DoctorTest(DoctorTestBase):
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
 
@@ -198,6 +202,7 @@ Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
 
@@ -227,6 +232,7 @@ Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
 
@@ -251,6 +257,7 @@ Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
 
@@ -287,6 +294,7 @@ Ask in the EdenFS (Windows )?Users group if you need help fixing issues with Ede
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
 
@@ -323,6 +331,7 @@ Ask in the EdenFS (Windows )?Users group if you need help fixing issues with Ede
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
 
@@ -801,6 +810,7 @@ Would remount {mounts[1]}
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
         return exit_code, out.getvalue(), mounts
@@ -824,6 +834,7 @@ Would remount {mounts[1]}
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
 
@@ -899,6 +910,7 @@ Checking {mount}
                 fs_util=FakeFsUtil(),
                 proc_utils=self.make_proc_utils(),
                 kerberos_checker=FakeKerberosChecker(),
+                vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
                 out=out,
             )
             return exit_code, out.getvalue()
@@ -926,6 +938,7 @@ Checking {mount}
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
 
@@ -1240,6 +1253,7 @@ Fixing files known to EdenFS but not present on disk in {Path(mount)}...<green>f
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
 
@@ -1283,6 +1297,7 @@ https://fb.workplace.com/groups/edenfswindows
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
 

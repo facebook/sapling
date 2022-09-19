@@ -17,6 +17,19 @@ from eden.fs.cli.doctor.test.lib.fake_kerberos_checker import FakeKerberosChecke
 from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
 from eden.fs.cli.test.lib.output import TestOutput
 
+try:
+    from eden.fs.cli.doctor.facebook.lib.fake_vscode_extensions_checker import (
+        FakeVSCodeExtensionsChecker,
+    )
+
+    def getFakeVSCodeExtensionsChecker() -> FakeVSCodeExtensionsChecker:
+        return FakeVSCodeExtensionsChecker()
+
+except ImportError:
+
+    def getFakeVSCodeExtensionsChecker() -> None:
+        return None
+
 
 class CorruptHgUnixTest(DoctorTestBase):
     """Corrupt hg tests relevant to only Unix-like platforms"""
@@ -46,6 +59,7 @@ class CorruptHgUnixTest(DoctorTestBase):
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
         return out

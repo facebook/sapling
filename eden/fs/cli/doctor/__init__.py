@@ -62,6 +62,18 @@ except ImportError:
         pass
 
 
+try:
+    from .facebook.check_vscode_extensions import VSCodeExtensionsChecker
+except ImportError:
+    from typing import Any
+
+    class VSCodeExtensionsChecker:
+        def check_problematic_vscode_extensions(
+            self, *_args: Any, **_kwargs: Any
+        ) -> None:
+            pass
+
+
 # working_directory_was_stale may be set to True by the CLI main module
 # if the original working directory referred to a stale eden mount point.
 working_directory_was_stale = False
@@ -76,6 +88,7 @@ def cure_what_ails_you(
     fs_util: Optional[filesystem.FsUtil] = None,
     proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
     kerberos_checker: Optional[check_kerberos.KerberosChecker] = None,
+    vscode_extensions_checker: Optional[VSCodeExtensionsChecker] = None,
     out: Optional[ui.Output] = None,
 ) -> int:
     return EdenDoctor(
@@ -86,6 +99,7 @@ def cure_what_ails_you(
         fs_util,
         proc_utils,
         kerberos_checker,
+        vscode_extensions_checker,
         out,
     ).cure_what_ails_you()
 
@@ -110,6 +124,7 @@ class EdenDoctorChecker:
     fs_util: filesystem.FsUtil
     proc_utils: proc_utils_mod.ProcUtils
     kerberos_checker: check_kerberos.KerberosChecker
+    vscode_extensions_checker: VSCodeExtensionsChecker
     tracker: ProblemTracker
     out: ui.Output
     # Setting run_system_wide_checks to False causes EdenDoctor to skip checks that
@@ -128,6 +143,7 @@ class EdenDoctorChecker:
         fs_util: Optional[filesystem.FsUtil] = None,
         proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
         kerberos_checker: Optional[check_kerberos.KerberosChecker] = None,
+        vscode_extensions_checker: Optional[VSCodeExtensionsChecker] = None,
         out: Optional[ui.Output] = None,
     ) -> None:
         self.instance = instance
@@ -140,6 +156,11 @@ class EdenDoctorChecker:
             kerberos_checker
             if kerberos_checker is not None
             else check_kerberos.KerberosChecker()
+        )
+        self.vscode_extensions_checker = (
+            vscode_extensions_checker
+            if vscode_extensions_checker is not None
+            else VSCodeExtensionsChecker()
         )
         self.out = out if out is not None else ui.get_output()
 
@@ -276,6 +297,7 @@ class EdenDoctorChecker:
                     checkout.get_checkout().get_config().mount_protocol == "fuse"
                     for checkout in checkouts.values()
                 ),
+                vscode_extensions_checker=self.vscode_extensions_checker,
             )
 
         watchman_info = check_watchman.pre_check()
@@ -311,6 +333,7 @@ class EdenDoctor(EdenDoctorChecker):
         fs_util: Optional[filesystem.FsUtil] = None,
         proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
         kerberos_checker: Optional[check_kerberos.KerberosChecker] = None,
+        vscode_extensions_checker: Optional[VSCodeExtensionsChecker] = None,
         out: Optional[ui.Output] = None,
     ) -> None:
         self.dry_run = dry_run
@@ -328,6 +351,7 @@ class EdenDoctor(EdenDoctorChecker):
             fs_util=fs_util,
             proc_utils=proc_utils,
             kerberos_checker=kerberos_checker,
+            vscode_extensions_checker=vscode_extensions_checker,
             out=out,
         )
 

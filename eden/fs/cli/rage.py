@@ -46,13 +46,14 @@ except ImportError:
 
 try:
     from eden.fs.cli.doctor.facebook.check_vscode_extensions import (
-        find_problematic_vscode_extensions,
+        VSCodeExtensionsChecker,
     )
 
 except ImportError:
 
-    def find_problematic_vscode_extensions() -> None:
-        return
+    class VSCodeExtensionsChecker:
+        def find_problematic_vscode_extensions(self) -> None:
+            return
 
 
 try:
@@ -612,7 +613,9 @@ def print_sample_trace(pid: int, sink: IO[bytes]) -> None:
 
 
 def print_third_party_vscode_extensions(out: IO[bytes]) -> None:
-    problematic_extensions = find_problematic_vscode_extensions()
+    problematic_extensions = (
+        VSCodeExtensionsChecker().find_problematic_vscode_extensions()
+    )
 
     if problematic_extensions is None:
         return
