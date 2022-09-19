@@ -112,7 +112,12 @@ fn diff_configs(
                             &new_source.source_name
                         ))
                     })?;
-                if old_source != new_source || old_cs_id != new_cs_id {
+                if old_source.source_name != new_source.source_name
+                    || old_source.repo_id != new_source.repo_id
+                    || old_source.name != new_source.name
+                    || old_source.mapping != new_source.mapping
+                    || old_cs_id != new_cs_id
+                {
                     removed.push((old_source, *old_cs_id));
                     added.push((new_source, *new_cs_id));
                 }
@@ -486,19 +491,11 @@ mod test {
 
         assert_eq!(
             source_names(&diff.added),
-            vec![
-                "added_source",
-                "branch_name_changed_source",
-                "changed_source"
-            ]
+            vec!["added_source", "changed_source"]
         );
         assert_eq!(
             source_names(&diff.removed),
-            vec![
-                "branch_name_changed_source",
-                "changed_source",
-                "removed_source"
-            ]
+            vec!["changed_source", "removed_source"]
         );
         Ok(())
     }
