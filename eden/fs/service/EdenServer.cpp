@@ -1801,7 +1801,7 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
                   if (err.errorCode_ref() == ENOENT) {
                     XLOG(DBG3)
                         << "Callback to clear inodes: Mount cannot be found. "
-                        << err.get_message();
+                        << (*err.message());
                   } else {
                     throw;
                   }

@@ -62,8 +62,8 @@ TEST(
           .getVia(executor);
   EXPECT_EQ(1, result.conflicts.size());
   // There will be a conflict, but force will succeed.
-  EXPECT_EQ(ConflictType::MODIFIED_MODIFIED, result.conflicts[0].get_type());
-  EXPECT_EQ("a/test.txt", result.conflicts[0].get_path());
+  EXPECT_EQ(ConflictType::MODIFIED_MODIFIED, *result.conflicts[0].type());
+  EXPECT_EQ("a/test.txt", *result.conflicts[0].path());
 
   // Checkout replaces the inode, so we need to look up the file again.
 

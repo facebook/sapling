@@ -107,7 +107,7 @@ struct ActiveHgRequest {
 };
 
 std::string formatFuseOpcode(const FuseCall& call) {
-  std::string name = call.get_opcodeName();
+  std::string name = *call.opcodeName();
   auto mutableName = folly::MutableStringPiece(name.data(), name.size());
   (void)mutableName.removePrefix("FUSE_");
   folly::toLowerAscii(mutableName);
@@ -118,20 +118,20 @@ std::string formatFuseCall(
     const FuseCall& call,
     const std::string& arguments = "",
     const std::string& result = "") {
-  auto* processNamePtr = call.get_processName();
+  auto* processNamePtr = apache::thrift::get_pointer(call.processName());
   std::string processNameString = processNamePtr
-      ? fmt::format("{}({})", processNamePtr->c_str(), call.get_pid())
-      : std::to_string(call.get_pid());
+      ? fmt::format("{}({})", processNamePtr->c_str(), *call.pid())
+      : std::to_string(*call.pid());
 
   std::string argString = arguments.empty()
-      ? fmt::format("{}", call.get_nodeid())
-      : fmt::format("{}, {}", call.get_nodeid(), arguments);
+      ? fmt::format("{}", *call.nodeid())
+      : fmt::format("{}, {}", *call.nodeid(), arguments);
   std::string resultString =
       result.empty() ? result : fmt::format(" = {}", result);
 
   return fmt::format(
       "{} from {}: {}({}){}",
-      call.get_unique(),
+      *call.unique(),
       processNameString,
       formatFuseOpcode(call),
       argString,
@@ -143,9 +143,9 @@ std::string formatNfsCall(
     const std::string& arguments = std::string{}) {
   return fmt::format(
       "{}: {}({}) {}",
-      static_cast<uint32_t>(call.get_xid()),
-      call.get_procName(),
-      call.get_procNumber(),
+      static_cast<uint32_t>(*call.xid()),
+      *call.procName(),
+      *call.procNumber(),
       arguments);
 }
 
@@ -155,9 +155,9 @@ std::string formatPrjfsCall(
   if (arguments.empty()) {
     return fmt::format(
         "{} from {}: {}",
-        call.get_commandId(),
-        call.get_pid(),
-        apache::thrift::util::enumName(call.get_callType(), "(unknown)"));
+        *call.commandId(),
+        *call.pid(),
+        apache::thrift::util::enumName(*call.callType(), "(unknown)"));
   } else {
     return arguments;
   }
@@ -408,10 +408,12 @@ int trace_fs(
 
     FsEvent& evt = event.value();
 
-    const FsEventType eventType = evt.get_type();
-    const FuseCall* fuseRequest = evt.get_fuseRequest();
-    const NfsCall* nfsRequest = evt.get_nfsRequest();
-    const PrjfsCall* prjfsRequest = evt.get_prjfsRequest();
+    const FsEventType eventType = *evt.type();
+    const FuseCall* fuseRequest =
+        apache::thrift::get_pointer(evt.fuseRequest());
+    const NfsCall* nfsRequest = apache::thrift::get_pointer(evt.nfsRequest());
+    const PrjfsCall* prjfsRequest =
+        apache::thrift::get_pointer(evt.prjfsRequest());
     if (!fuseRequest && !nfsRequest && !prjfsRequest) {
       fprintf(stderr, "Error: trace event must have a non-null *Request\n");
       return;
@@ -419,11 +421,11 @@ int trace_fs(
 
     uint64_t unique = 0;
     if (fuseRequest) {
-      unique = fuseRequest->get_unique();
+      unique = *fuseRequest->unique();
     } else if (nfsRequest) {
-      unique = static_cast<uint32_t>(nfsRequest->get_xid());
+      unique = static_cast<uint32_t>(*nfsRequest->xid());
     } else {
-      unique = prjfsRequest->get_commandId();
+      unique = *prjfsRequest->commandId();
     }
 
     switch (eventType) {
@@ -433,14 +435,17 @@ int trace_fs(
         activeRequests[unique] = evt;
         std::string callString;
         if (fuseRequest) {
-          callString =
-              formatFuseCall(*evt.get_fuseRequest(), evt.get_arguments());
+          callString = formatFuseCall(
+              *apache::thrift::get_pointer(evt.fuseRequest()),
+              (*evt.arguments()));
         } else if (nfsRequest) {
-          callString =
-              formatNfsCall(*evt.get_nfsRequest(), evt.get_arguments());
+          callString = formatNfsCall(
+              *apache::thrift::get_pointer(evt.nfsRequest()),
+              (*evt.arguments()));
         } else {
-          callString =
-              formatPrjfsCall(*evt.get_prjfsRequest(), evt.get_arguments());
+          callString = formatPrjfsCall(
+              *apache::thrift::get_pointer(evt.prjfsRequest()),
+              (*evt.arguments()));
         }
         fmt::print("+ {}\n", callString);
         break;
@@ -449,21 +454,25 @@ int trace_fs(
         std::string formattedCall;
         if (fuseRequest) {
           formattedCall = formatFuseCall(
-              *evt.get_fuseRequest(),
+              *apache::thrift::get_pointer(evt.fuseRequest()),
               "" /* arguments */,
-              evt.get_result() ? std::to_string(*evt.get_result()) : "");
+              apache::thrift::get_pointer(evt.result())
+                  ? std::to_string(*apache::thrift::get_pointer(evt.result()))
+                  : "");
         } else if (nfsRequest) {
-          formattedCall =
-              formatNfsCall(*evt.get_nfsRequest(), evt.get_arguments());
+          formattedCall = formatNfsCall(
+              *apache::thrift::get_pointer(evt.nfsRequest()),
+              (*evt.arguments()));
         } else {
-          formattedCall =
-              formatPrjfsCall(*evt.get_prjfsRequest(), evt.get_arguments());
+          formattedCall = formatPrjfsCall(
+              *apache::thrift::get_pointer(evt.prjfsRequest()),
+              (*evt.arguments()));
         }
         const auto it = activeRequests.find(unique);
         if (it != activeRequests.end()) {
           auto& record = it->second;
           uint64_t elapsedTime =
-              evt.get_monotonic_time_ns() - record.get_monotonic_time_ns();
+              *evt.monotonic_time_ns() - *record.monotonic_time_ns();
           fmt::print(
               "- {} in {}\n",
               formattedCall,
@@ -515,21 +524,21 @@ std::string stripAsyncThriftMethodPrefix(const std::string& method) {
 
 std::string formatThriftRequestMetadata(const ThriftRequestMetadata& request) {
   std::string clientPidString;
-  if (request.get_clientPid()) {
-    clientPidString = fmt::format(" from {}", request.get_clientPid());
+  if (*request.clientPid()) {
+    clientPidString = fmt::format(" from {}", (*request.clientPid()));
   }
   return fmt::format(
       "{}{}: {}",
-      request.get_requestId(),
+      *request.requestId(),
       clientPidString,
-      stripAsyncThriftMethodPrefix(request.get_method()));
+      stripAsyncThriftMethodPrefix(*request.method()));
 }
 
 void print_thrift_event(
     const ThriftRequestEvent& event,
     std::unordered_map<int64_t, int64_t>& startTimesNs) {
-  const auto requestId = event.get_requestMetadata().get_requestId();
-  const int64_t eventNs = event.get_times().get_monotonic_time_ns();
+  const auto requestId = (*event.requestMetadata()).get_requestId();
+  const int64_t eventNs = (*event.times()).get_monotonic_time_ns();
 
   std::string latencyString;
   switch (*event.eventType()) {

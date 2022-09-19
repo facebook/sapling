@@ -1584,7 +1584,7 @@ TEST(Checkout, diffFailsOnInProgressCheckout) {
     FAIL()
         << "diff should have failed with EdenErrorType::CHECKOUT_IN_PROGRESS";
   } catch (const EdenError& exception) {
-    ASSERT_EQ(exception.get_errorType(), EdenErrorType::CHECKOUT_IN_PROGRESS);
+    ASSERT_EQ(*exception.errorType(), EdenErrorType::CHECKOUT_IN_PROGRESS);
   }
 
   // Unblock checkout
@@ -1658,7 +1658,7 @@ TEST(Checkout, checkoutFailsOnInProgressCheckout) {
     FAIL() << "checkout should have failed with "
               "EdenErrorType::CHECKOUT_IN_PROGRESS";
   } catch (const EdenError& exception) {
-    ASSERT_EQ(exception.get_errorType(), EdenErrorType::CHECKOUT_IN_PROGRESS);
+    ASSERT_EQ(*exception.errorType(), EdenErrorType::CHECKOUT_IN_PROGRESS);
   }
 
   // Unblock original checkout and make sure it completes

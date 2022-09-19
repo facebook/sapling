@@ -176,7 +176,7 @@ void BufferedTreeOverlay::saveOverlayDir(
 
   size_t captureSize = estimateIndirectMemoryUsage<
       overlay::PathComponent,
-      overlay::OverlayEntry>(odir.get_entries());
+      overlay::OverlayEntry>(*odir.entries());
 
   process(
       [this, inodeNumber, odir = std::move(odir)]() mutable {
@@ -207,7 +207,7 @@ void BufferedTreeOverlay::addChild(
     overlay::OverlayEntry entry) {
   PathComponent name_copy = name.copy();
   size_t captureSize = estimateIndirectMemoryUsage(name_copy.value());
-  if (auto* entryHash = entry.get_hash()) {
+  if (auto* entryHash = apache::thrift::get_pointer(entry.hash())) {
     captureSize += estimateIndirectMemoryUsage(*entryHash);
   }
   process(

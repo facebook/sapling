@@ -83,7 +83,7 @@ char scmStatusCodeChar(ScmFileStatus code) {
 
 std::ostream& operator<<(std::ostream& os, const ScmStatus& status) {
   os << "{";
-  for (const auto& pair : status.get_entries()) {
+  for (const auto& pair : *status.entries()) {
     os << scmStatusCodeChar(pair.second) << " " << pair.first << "; ";
   }
   os << "}";

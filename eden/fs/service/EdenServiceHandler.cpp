@@ -501,7 +501,7 @@ EdenServiceHandler::getProcessor() {
 }
 
 void EdenServiceHandler::mount(std::unique_ptr<MountArgument> argument) {
-  auto helper = INSTRUMENT_THRIFT_CALL(INFO, argument->get_mountPoint());
+  auto helper = INSTRUMENT_THRIFT_CALL(INFO, (*argument->mountPoint()));
   try {
     auto initialConfig = CheckoutConfig::loadFromClientDirectory(
         AbsolutePathPiece{*argument->mountPoint_ref()},
@@ -2029,15 +2029,15 @@ DirListAttributeDataOrError serializeEntryAttributes(
 
 folly::SemiFuture<std::unique_ptr<ReaddirResult>>
 EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
-  auto mountPoint = params->get_mountPoint();
+  auto mountPoint = *params->mountPoint();
   auto mountPath = AbsolutePathPiece{mountPoint};
-  auto paths = params->get_directoryPaths();
+  auto paths = *params->directoryPaths();
   // Get requested attributes for each path
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3, mountPoint, getSyncTimeout(*params->sync()), toLogArg(paths));
   auto& fetchContext = helper->getFetchContext();
   auto requestedAttributes =
-      EntryAttributeFlags::raw(params->get_requestedAttributes());
+      EntryAttributeFlags::raw(*params->requestedAttributes());
   return wrapImmediateFuture(
              std::move(helper),
              waitForPendingNotifications(
@@ -2119,10 +2119,10 @@ EdenServiceHandler::getEntryAttributes(
 folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResult>>
 EdenServiceHandler::semifuture_getAttributesFromFiles(
     std::unique_ptr<GetAttributesFromFilesParams> params) {
-  auto mountPoint = params->get_mountPoint();
+  auto mountPoint = *params->mountPoint();
   auto mountPath = AbsolutePathPiece{mountPoint};
   std::vector<std::string>& paths = params->paths_ref().value();
-  auto reqBitmask = EntryAttributeFlags::raw(params->get_requestedAttributes());
+  auto reqBitmask = EntryAttributeFlags::raw(*params->requestedAttributes());
   // Get requested attributes for each path
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3, mountPoint, getSyncTimeout(*params->sync()), toLogArg(paths));
@@ -2222,9 +2222,9 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
 folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResultV2>>
 EdenServiceHandler::semifuture_getAttributesFromFilesV2(
     std::unique_ptr<GetAttributesFromFilesParams> params) {
-  auto mountPoint = params->get_mountPoint();
+  auto mountPoint = *params->mountPoint();
   auto mountPath = AbsolutePathPiece{mountPoint};
-  auto reqBitmask = EntryAttributeFlags::raw(params->get_requestedAttributes());
+  auto reqBitmask = EntryAttributeFlags::raw(*params->requestedAttributes());
   std::vector<std::string>& paths = params->paths().value();
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3, mountPoint, getSyncTimeout(*params->sync()), toLogArg(paths));
@@ -2263,7 +2263,7 @@ folly::SemiFuture<std::unique_ptr<SetPathObjectIdResult>>
 EdenServiceHandler::semifuture_setPathObjectId(
     std::unique_ptr<SetPathObjectIdParams> params) {
 #ifndef _WIN32
-  auto mountPoint = params->get_mountPoint();
+  auto mountPoint = *params->mountPoint();
   auto mountPath = AbsolutePathPiece{mountPoint};
   auto edenMount = server_->getMount(mountPath);
   std::vector<SetPathObjectIdObjectAndPath> objects;
@@ -2306,7 +2306,7 @@ EdenServiceHandler::semifuture_setPathObjectId(
              std::move(helper),
              edenMount
                  ->setPathsToObjectIds(
-                     std::move(objects), params->get_mode(), fetchContext)
+                     std::move(objects), (*params->mode()), fetchContext)
                  .thenValue([](auto&& resultAndTimes) {
                    return std::make_unique<SetPathObjectIdResult>(
                        std::move(resultAndTimes.result));
@@ -2320,8 +2320,8 @@ EdenServiceHandler::semifuture_setPathObjectId(
 
 folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeRecursively(
     std::unique_ptr<RemoveRecursivelyParams> params) {
-  auto mountPoint = params->get_mountPoint();
-  auto repoPath = params->get_path();
+  auto mountPoint = *params->mountPoint();
+  auto repoPath = *params->path();
 
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2, mountPoint, repoPath);
   auto mountPath = AbsolutePathPiece{mountPoint};
@@ -2398,9 +2398,9 @@ folly::SemiFuture<folly::Unit>
 EdenServiceHandler::semifuture_ensureMaterialized(
     std::unique_ptr<EnsureMaterializedParams> params) {
 #ifndef _WIN32
-  auto mountPoint = params->get_mountPoint();
+  auto mountPoint = *params->mountPoint();
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG4, mountPoint, folly::join(",", params->get_paths()));
+      DBG4, mountPoint, folly::join(",", (*params->paths())));
 
   auto edenMount = server_->getMount(AbsolutePathPiece{mountPoint});
   // The background mode is not fully running on background, instead, it will
@@ -2409,7 +2409,7 @@ EdenServiceHandler::semifuture_ensureMaterialized(
   // effecient way for the local execution of virtualized buck-out as avoid
   // cache exchange by materializing smaller random reads, and not prevent
   // execution starting by read large files on the background.
-  bool background = params->get_background();
+  bool background = *params->background();
 
   auto waitForPendingNotificationsFuture =
       waitForPendingNotifications(*edenMount, *params->sync());
@@ -2420,9 +2420,9 @@ EdenServiceHandler::semifuture_ensureMaterialized(
                       helper = std::move(helper)](auto&&) mutable {
             return ensureMaterializedImpl(
                 std::move(edenMount),
-                params->get_paths(),
+                (*params->paths()),
                 std::move(helper),
-                params->get_followSymlink());
+                (*params->followSymlink()));
           })
           .semi();
 
@@ -3239,7 +3239,7 @@ int64_t EdenServiceHandler::unloadInodeForPath(
 void EdenServiceHandler::getStatInfo(
     InternalStats& result,
     std::unique_ptr<GetStatInfoParams> params) {
-  int64_t statsMask = params->get_statsMask();
+  int64_t statsMask = *params->statsMask();
   // return all stats when mask not provided
   // TODO: remove when no old clients exists
   if (0 == statsMask) {
@@ -3492,7 +3492,7 @@ void EdenServiceHandler::getRetroactiveThriftRequestEvents(
 void EdenServiceHandler::getRetroactiveHgEvents(
     GetRetroactiveHgEventsResult& result,
     std::unique_ptr<GetRetroactiveHgEventsParams> params) {
-  auto mountPoint = params->get_mountPoint();
+  auto mountPoint = *params->mountPoint();
   auto mountPath = AbsolutePathPiece{mountPoint};
   auto edenMount = server_->getMount(mountPath);
   auto backingStore = edenMount->getObjectStore()->getBackingStore();
@@ -3521,7 +3521,7 @@ void EdenServiceHandler::getRetroactiveHgEvents(
 void EdenServiceHandler::getRetroactiveInodeEvents(
     GetRetroactiveInodeEventsResult& result,
     std::unique_ptr<GetRetroactiveInodeEventsParams> params) {
-  auto mountPoint = params->get_mountPoint();
+  auto mountPoint = *params->mountPoint();
   auto mountPath = AbsolutePathPiece{mountPoint};
   auto edenMount = server_->getMount(mountPath);
 
