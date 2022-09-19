@@ -7,6 +7,8 @@
 
 use std::sync::Arc;
 
+#[cfg(fbcode_build)]
+use thrift_streaming::client::StreamingEdenService;
 use thrift_types::edenfs::client::EdenService;
 
 pub mod checkout;
@@ -18,3 +20,6 @@ pub use instance::DaemonHealthy;
 pub use instance::EdenFsInstance;
 
 pub type EdenFsClient = Arc<dyn EdenService + Sync>;
+
+#[cfg(fbcode_build)]
+pub type StreamingEdenFsClient = Arc<dyn StreamingEdenService + Sync>;

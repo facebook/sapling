@@ -22,17 +22,27 @@ use edenfs_error::ResultExt;
 use edenfs_utils::get_executable;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
+#[cfg(fbcode_build)]
+use fbinit::expect_init;
 use fbthrift_socket::SocketTransport;
 use once_cell::sync::OnceCell;
+#[cfg(fbcode_build)]
+use thrift_streaming_thriftclients::build_StreamingEdenService_client;
 use thrift_types::edenfs::client::EdenService;
 use thrift_types::edenfs::types::DaemonInfo;
 use thrift_types::fb303_core::types::fb303_status;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
+#[cfg(fbcode_build)]
+use thriftclient::ThriftChannelBuilder;
+#[cfg(fbcode_build)]
+use thriftclient::TransportType;
 use tokio_uds_compat::UnixStream;
 use tracing::event;
 use tracing::Level;
 
 use crate::EdenFsClient;
+#[cfg(fbcode_build)]
+use crate::StreamingEdenFsClient;
 
 // We should create a single EdenFsInstance when parsing EdenFs commands and utilize
 // EdenFsInstance::global() whenever we need to access it. This way we can avoid passing an
@@ -120,6 +130,33 @@ impl EdenFsInstance {
         };
 
         res
+    }
+
+    #[cfg(fbcode_build)]
+    pub async fn _connect_streaming(&self, socket_path: &PathBuf) -> Result<StreamingEdenFsClient> {
+        let client = build_StreamingEdenService_client(
+            ThriftChannelBuilder::from_path(expect_init(), socket_path)?
+                .with_transport_type(TransportType::Rocket)
+                .with_secure(false),
+        )?;
+        Ok(client)
+    }
+
+    #[cfg(fbcode_build)]
+    pub async fn connect_streaming(
+        &self,
+        timeout: Option<Duration>,
+    ) -> Result<StreamingEdenFsClient> {
+        let socket_path = self.config_dir.join("socket");
+        let client = self._connect_streaming(&socket_path);
+
+        if let Some(timeout) = timeout {
+            tokio::time::timeout(timeout, client)
+                .await
+                .map_err(|_| EdenFsError::ThriftConnectionTimeout(socket_path))?
+        } else {
+            client.await
+        }
     }
 
     #[cfg(windows)]
