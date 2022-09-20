@@ -492,8 +492,10 @@ async fn run<'a>(
     let config_store = matches.config_store();
     let mut scuba_sample = get_scuba_sample(ctx.clone(), matches);
 
-    let source_repo_id = args::get_source_repo_id(config_store, matches)?;
-    let target_repo_id = args::get_target_repo_id(config_store, matches)?;
+    let source_repo_id =
+        args::not_shardmanager_compatible::get_source_repo_id(config_store, matches)?;
+    let target_repo_id =
+        args::not_shardmanager_compatible::get_target_repo_id(config_store, matches)?;
 
     let logger = ctx.logger();
     let source_repo = args::open_repo_with_repo_id(fb, logger, source_repo_id, matches);

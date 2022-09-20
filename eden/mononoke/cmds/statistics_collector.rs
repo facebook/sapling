@@ -438,7 +438,7 @@ async fn run_statistics<'a>(
     repo_name: String,
     bookmark: BookmarkName,
 ) -> Result<(), Error> {
-    let repo = args::open_repo(fb, logger, matches).await?;
+    let repo = args::not_shardmanager_compatible::open_repo(fb, logger, matches).await?;
 
     if let (SUBCOMMAND_STATISTICS_FROM_FILE, Some(sub_m)) = matches.subcommand() {
         // Both arguments are set to be required
@@ -543,7 +543,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         None => String::from("master"),
     };
     let bookmark = BookmarkName::new(bookmark)?;
-    let repo_name = args::get_repo_name(config_store, &matches)?;
+    let repo_name = args::not_shardmanager_compatible::get_repo_name(config_store, &matches)?;
     let scuba_logger = if matches.is_present("log-to-scuba") {
         MononokeScubaSampleBuilder::new(fb, SCUBA_DATASET_NAME)
     } else {

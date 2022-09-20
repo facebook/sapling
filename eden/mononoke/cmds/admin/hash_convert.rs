@@ -68,7 +68,7 @@ pub async fn subcommand_hash_convert<'a>(
         return Err(anyhow!("source and target should be different").into());
     }
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo: BlobRepo = args::open_repo(fb, &logger, matches).await?;
+    let repo: BlobRepo = args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
 
     let cs_id = convert_to_bonsai(&ctx, &repo, &source, &source_hash).await?;
     println!("{}", convert_from_bonsai(&ctx, &repo, cs_id, target).await?);

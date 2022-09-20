@@ -110,8 +110,8 @@ async fn get_things_from_matches(
     let (source_repo_id, target_repo_id) = match repo_pair {
         Some((source_repo_id, target_repo_id)) => (source_repo_id, target_repo_id),
         None => (
-            args::get_source_repo_id(config_store, matches)?,
-            args::get_target_repo_id(config_store, matches)?,
+            args::not_shardmanager_compatible::get_source_repo_id(config_store, matches)?,
+            args::not_shardmanager_compatible::get_target_repo_id(config_store, matches)?,
         ),
     };
 

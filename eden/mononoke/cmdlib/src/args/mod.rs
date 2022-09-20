@@ -55,16 +55,6 @@ pub use self::matches::MononokeMatches;
 use crate::helpers::setup_repo_dir;
 use crate::helpers::CreateStorage;
 
-fn get_repo_id_and_name_from_values<'a>(
-    config_store: &ConfigStore,
-    matches: &'a MononokeMatches<'a>,
-    option_repo_name: &str,
-    option_repo_id: &str,
-) -> Result<(RepositoryId, String)> {
-    let resolved = resolve_repo(config_store, matches, option_repo_name, option_repo_id)?;
-    Ok((resolved.id, resolved.name))
-}
-
 pub struct ResolvedRepo {
     pub id: RepositoryId,
     pub name: String,
@@ -89,67 +79,344 @@ pub fn resolve_repo_by_id<'a>(
     resolve_repo_given_id(RepositoryId::new(repo_id), &configs)
 }
 
-pub fn resolve_repo<'a>(
-    config_store: &ConfigStore,
-    matches: &'a MononokeMatches<'a>,
-    option_repo_name: &str,
-    option_repo_id: &str,
-) -> Result<ResolvedRepo> {
-    let repo_name = matches.value_of(option_repo_name);
-    let repo_id = matches.value_of(option_repo_id);
-    let configs = load_repo_configs(config_store, matches)?;
-    match (repo_name, repo_id) {
-        (Some(_), Some(_)) => bail!("both repo-name and repo-id parameters set"),
-        (None, None) => bail!("neither repo-name nor repo-id parameter set"),
-        (None, Some(repo_id)) => resolve_repo_given_id(RepositoryId::from_str(repo_id)?, &configs),
-        (Some(repo_name), None) => resolve_repo_given_name(repo_name, &configs),
-    }
-}
+/// The following functions assume a repo is provided locally via CLI args, and thus
+/// is not compatible with prod jobs that use SM. Moving them to a separate module
+/// to make usage clearer.
+pub mod not_shardmanager_compatible {
+    use super::*;
 
-pub fn resolve_repos<'a>(
-    config_store: &ConfigStore,
-    matches: &'a MononokeMatches<'a>,
-) -> Result<Vec<ResolvedRepo>> {
-    resolve_repos_from_args(config_store, matches, REPO_NAME, REPO_ID)
-}
-
-fn resolve_repos_from_args<'a>(
-    config_store: &ConfigStore,
-    matches: &'a MononokeMatches<'a>,
-    option_repo_name: &str,
-    option_repo_id: &str,
-) -> Result<Vec<ResolvedRepo>> {
-    if matches.app_data().repo_required == Some(RepoRequirement::ExactlyOne) {
-        return resolve_repo(config_store, matches, option_repo_name, option_repo_id)
-            .map(|r| vec![r]);
+    fn get_repo_id_and_name_from_values<'a>(
+        config_store: &ConfigStore,
+        matches: &'a MononokeMatches<'a>,
+        option_repo_name: &str,
+        option_repo_id: &str,
+    ) -> Result<(RepositoryId, String)> {
+        let resolved = resolve_repo(config_store, matches, option_repo_name, option_repo_id)?;
+        Ok((resolved.id, resolved.name))
     }
 
-    let repo_names = matches.values_of(option_repo_name);
-    let repo_ids = matches.values_of(option_repo_id);
-    let configs = load_repo_configs(config_store, matches)?;
-
-    let mut repos = Vec::new();
-    let mut names = HashSet::new();
-    if let Some(repo_ids) = repo_ids {
-        for i in repo_ids {
-            let resolved = resolve_repo_given_id(RepositoryId::from_str(i)?, &configs)?;
-            if names.insert(resolved.name.clone()) {
-                repos.push(resolved);
+    pub fn resolve_repo<'a>(
+        config_store: &ConfigStore,
+        matches: &'a MononokeMatches<'a>,
+        option_repo_name: &str,
+        option_repo_id: &str,
+    ) -> Result<ResolvedRepo> {
+        let repo_name = matches.value_of(option_repo_name);
+        let repo_id = matches.value_of(option_repo_id);
+        let configs = load_repo_configs(config_store, matches)?;
+        match (repo_name, repo_id) {
+            (Some(_), Some(_)) => bail!("both repo-name and repo-id parameters set"),
+            (None, None) => bail!("neither repo-name nor repo-id parameter set"),
+            (None, Some(repo_id)) => {
+                resolve_repo_given_id(RepositoryId::from_str(repo_id)?, &configs)
             }
+            (Some(repo_name), None) => resolve_repo_given_name(repo_name, &configs),
         }
     }
-    if let Some(repo_names) = repo_names {
-        for n in repo_names {
-            let resolved = resolve_repo_given_name(n, &configs)?;
-            if names.insert(n.to_string()) {
-                repos.push(resolved)
+
+    pub fn resolve_repos<'a>(
+        config_store: &ConfigStore,
+        matches: &'a MononokeMatches<'a>,
+    ) -> Result<Vec<ResolvedRepo>> {
+        resolve_repos_from_args(config_store, matches, REPO_NAME, REPO_ID)
+    }
+
+    fn resolve_repos_from_args<'a>(
+        config_store: &ConfigStore,
+        matches: &'a MononokeMatches<'a>,
+        option_repo_name: &str,
+        option_repo_id: &str,
+    ) -> Result<Vec<ResolvedRepo>> {
+        if matches.app_data().repo_required == Some(RepoRequirement::ExactlyOne) {
+            return resolve_repo(config_store, matches, option_repo_name, option_repo_id)
+                .map(|r| vec![r]);
+        }
+
+        let repo_names = matches.values_of(option_repo_name);
+        let repo_ids = matches.values_of(option_repo_id);
+        let configs = load_repo_configs(config_store, matches)?;
+
+        let mut repos = Vec::new();
+        let mut names = HashSet::new();
+        if let Some(repo_ids) = repo_ids {
+            for i in repo_ids {
+                let resolved = resolve_repo_given_id(RepositoryId::from_str(i)?, &configs)?;
+                if names.insert(resolved.name.clone()) {
+                    repos.push(resolved);
+                }
             }
         }
+        if let Some(repo_names) = repo_names {
+            for n in repo_names {
+                let resolved = resolve_repo_given_name(n, &configs)?;
+                if names.insert(n.to_string()) {
+                    repos.push(resolved)
+                }
+            }
+        }
+        if repos.is_empty() {
+            bail!("neither repo-name nor repo-id parameters set");
+        }
+        Ok(repos)
     }
-    if repos.is_empty() {
-        bail!("neither repo-name nor repo-id parameters set");
+
+    pub fn get_repo_id<'a>(
+        config_store: &ConfigStore,
+        matches: &'a MononokeMatches<'a>,
+    ) -> Result<RepositoryId> {
+        let (repo_id, _) =
+            get_repo_id_and_name_from_values(config_store, matches, REPO_NAME, REPO_ID)?;
+        Ok(repo_id)
     }
-    Ok(repos)
+
+    pub fn get_repo_name<'a>(
+        config_store: &ConfigStore,
+        matches: &'a MononokeMatches<'a>,
+    ) -> Result<String> {
+        let (_, repo_name) =
+            get_repo_id_and_name_from_values(config_store, matches, REPO_NAME, REPO_ID)?;
+        Ok(repo_name)
+    }
+
+    pub fn get_source_repo_id<'a>(
+        config_store: &ConfigStore,
+        matches: &'a MononokeMatches<'a>,
+    ) -> Result<RepositoryId> {
+        let (repo_id, _) = get_repo_id_and_name_from_values(
+            config_store,
+            matches,
+            SOURCE_REPO_NAME,
+            SOURCE_REPO_ID,
+        )?;
+        Ok(repo_id)
+    }
+
+    pub fn get_source_repo_id_opt<'a>(
+        config_store: &ConfigStore,
+        matches: &'a MononokeMatches<'a>,
+    ) -> Result<Option<RepositoryId>> {
+        if matches.is_present(SOURCE_REPO_NAME) || matches.is_present(SOURCE_REPO_ID) {
+            let (repo_id, _) = get_repo_id_and_name_from_values(
+                config_store,
+                matches,
+                SOURCE_REPO_NAME,
+                SOURCE_REPO_ID,
+            )?;
+            Ok(Some(repo_id))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn get_target_repo_id<'a>(
+        config_store: &ConfigStore,
+        matches: &'a MononokeMatches<'a>,
+    ) -> Result<RepositoryId> {
+        let (repo_id, _) = get_repo_id_and_name_from_values(
+            config_store,
+            matches,
+            TARGET_REPO_NAME,
+            TARGET_REPO_ID,
+        )?;
+        Ok(repo_id)
+    }
+
+    pub fn get_repo_id_from_value<'a>(
+        config_store: &ConfigStore,
+        matches: &'a MononokeMatches<'a>,
+        repo_id_arg: &str,
+        repo_name_arg: &str,
+    ) -> Result<RepositoryId> {
+        let (repo_id, _) =
+            get_repo_id_and_name_from_values(config_store, matches, repo_name_arg, repo_id_arg)?;
+        Ok(repo_id)
+    }
+
+    pub fn open_source_sql<'a, T>(
+        fb: FacebookInit,
+        config_store: &ConfigStore,
+        matches: &'a MononokeMatches<'a>,
+    ) -> Result<T, Error>
+    where
+        T: SqlConstructFromMetadataDatabaseConfig,
+    {
+        let source_repo_id = get_source_repo_id(config_store, matches)?;
+        let (_, config) = get_config_by_repoid(config_store, matches, source_repo_id)?;
+        T::with_metadata_database_config(
+            fb,
+            &config.storage_config.metadata,
+            matches.mysql_options(),
+            matches.readonly_storage().0,
+        )
+    }
+
+    pub async fn open_source_repo<'a, R: 'a>(
+        _: FacebookInit,
+        logger: &'a Logger,
+        matches: &'a MononokeMatches<'a>,
+    ) -> Result<R, Error>
+    where
+        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        let config_store = matches.config_store();
+        let source_repo_id = get_source_repo_id(config_store, matches)?;
+        let repo_factory = get_repo_factory(matches)?;
+
+        open_repo_internal_with_repo_id(
+            logger,
+            RepoIdentifier::Id(source_repo_id),
+            matches,
+            false, // use CreateStorage::ExistingOnly when creating blobstore
+            None,  // do not override redaction config
+            repo_factory,
+        )
+        .await
+    }
+
+    pub async fn open_target_repo<'a, R: 'a>(
+        _: FacebookInit,
+        logger: &'a Logger,
+        matches: &'a MononokeMatches<'a>,
+    ) -> Result<R, Error>
+    where
+        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        let config_store = matches.config_store();
+        let source_repo_id = get_target_repo_id(config_store, matches)?;
+        let repo_factory = get_repo_factory(matches)?;
+
+        open_repo_internal_with_repo_id(
+            logger,
+            RepoIdentifier::Id(source_repo_id),
+            matches,
+            false, // use CreateStorage::ExistingOnly when creating blobstore
+            None,  // do not override redaction config
+            repo_factory,
+        )
+        .await
+    }
+
+    pub fn get_config<'a>(
+        config_store: &ConfigStore,
+        matches: &'a MononokeMatches<'a>,
+    ) -> Result<(String, RepoConfig)> {
+        let repo_id = get_repo_id(config_store, matches)?;
+        get_config_by_repoid(config_store, matches, repo_id)
+    }
+
+    async fn open_repo_internal<R>(
+        _: FacebookInit,
+        logger: &Logger,
+        matches: &MononokeMatches<'_>,
+        create: bool,
+        redaction_override: Option<Redaction>,
+        maybe_repo_factory: Option<RepoFactory>,
+    ) -> Result<R, Error>
+    where
+        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        let config_store = matches.config_store();
+        let repo_id = get_repo_id(config_store, matches)?;
+
+        let repo_factory = match maybe_repo_factory {
+            Some(repo_factory) => repo_factory,
+            None => get_repo_factory(matches)?,
+        };
+
+        open_repo_internal_with_repo_id(
+            logger,
+            RepoIdentifier::Id(repo_id),
+            matches,
+            create,
+            redaction_override,
+            repo_factory,
+        )
+        .await
+    }
+
+    pub fn open_sql<'a, T>(
+        fb: FacebookInit,
+        config_store: &ConfigStore,
+        matches: &'a MononokeMatches<'a>,
+    ) -> Result<T, Error>
+    where
+        T: SqlConstructFromMetadataDatabaseConfig,
+    {
+        let (_, config) = get_config(config_store, matches)?;
+        T::with_metadata_database_config(
+            fb,
+            &config.storage_config.metadata,
+            matches.mysql_options(),
+            matches.readonly_storage().0,
+        )
+    }
+
+    /// Create a new repo object -- for local instances, expect its contents to be empty.
+    #[inline]
+    pub fn create_repo<'a, R: 'a>(
+        fb: FacebookInit,
+        logger: &'a Logger,
+        matches: &'a MononokeMatches<'a>,
+    ) -> impl Future<Output = Result<R, Error>> + 'a
+    where
+        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        open_repo_internal(fb, logger, matches, true, None, None)
+    }
+
+    /// Create a new repo object -- for local instances, expect its contents to be empty.
+    /// Make sure that the opened repo has redaction disabled
+    #[inline]
+    pub fn create_repo_unredacted<'a, R: 'a>(
+        fb: FacebookInit,
+        logger: &'a Logger,
+        matches: &'a MononokeMatches<'a>,
+    ) -> impl Future<Output = Result<R, Error>> + 'a
+    where
+        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        open_repo_internal(fb, logger, matches, true, Some(Redaction::Disabled), None)
+    }
+
+    /// Open an existing repo object -- for local instances, expect contents to already be there.
+    #[inline]
+    pub fn open_repo<'a, R: 'a>(
+        fb: FacebookInit,
+        logger: &'a Logger,
+        matches: &'a MononokeMatches<'a>,
+    ) -> impl Future<Output = Result<R, Error>> + 'a
+    where
+        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        open_repo_internal(fb, logger, matches, false, None, None)
+    }
+
+    #[inline]
+    pub fn open_repo_with_factory<'a, R: 'a>(
+        fb: FacebookInit,
+        logger: &'a Logger,
+        matches: &'a MononokeMatches<'a>,
+        repo_factory: RepoFactory,
+    ) -> impl Future<Output = Result<R, Error>> + 'a
+    where
+        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        open_repo_internal(fb, logger, matches, false, None, Some(repo_factory))
+    }
+
+    /// Open an existing repo object -- for local instances, expect contents to already be there.
+    /// Make sure that the opened repo has redaction disabled
+    #[inline]
+    pub fn open_repo_unredacted<'a, R: 'a>(
+        fb: FacebookInit,
+        logger: &'a Logger,
+        matches: &'a MononokeMatches<'a>,
+    ) -> impl Future<Output = Result<R, Error>> + 'a
+    where
+        R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        open_repo_internal(fb, logger, matches, false, Some(Redaction::Disabled), None)
+    }
 }
 
 fn resolve_repo_given_id(id: RepositoryId, configs: &RepoConfigs) -> Result<ResolvedRepo> {
@@ -187,86 +454,6 @@ fn resolve_repo_given_name(name: &str, configs: &RepoConfigs) -> Result<Resolved
     }
 }
 
-pub fn get_repo_id<'a>(
-    config_store: &ConfigStore,
-    matches: &'a MononokeMatches<'a>,
-) -> Result<RepositoryId> {
-    let (repo_id, _) = get_repo_id_and_name_from_values(config_store, matches, REPO_NAME, REPO_ID)?;
-    Ok(repo_id)
-}
-
-pub fn get_repo_name<'a>(
-    config_store: &ConfigStore,
-    matches: &'a MononokeMatches<'a>,
-) -> Result<String> {
-    let (_, repo_name) =
-        get_repo_id_and_name_from_values(config_store, matches, REPO_NAME, REPO_ID)?;
-    Ok(repo_name)
-}
-
-pub fn get_source_repo_id<'a>(
-    config_store: &ConfigStore,
-    matches: &'a MononokeMatches<'a>,
-) -> Result<RepositoryId> {
-    let (repo_id, _) =
-        get_repo_id_and_name_from_values(config_store, matches, SOURCE_REPO_NAME, SOURCE_REPO_ID)?;
-    Ok(repo_id)
-}
-
-pub fn get_source_repo_id_opt<'a>(
-    config_store: &ConfigStore,
-    matches: &'a MononokeMatches<'a>,
-) -> Result<Option<RepositoryId>> {
-    if matches.is_present(SOURCE_REPO_NAME) || matches.is_present(SOURCE_REPO_ID) {
-        let (repo_id, _) = get_repo_id_and_name_from_values(
-            config_store,
-            matches,
-            SOURCE_REPO_NAME,
-            SOURCE_REPO_ID,
-        )?;
-        Ok(Some(repo_id))
-    } else {
-        Ok(None)
-    }
-}
-
-pub fn get_target_repo_id<'a>(
-    config_store: &ConfigStore,
-    matches: &'a MononokeMatches<'a>,
-) -> Result<RepositoryId> {
-    let (repo_id, _) =
-        get_repo_id_and_name_from_values(config_store, matches, TARGET_REPO_NAME, TARGET_REPO_ID)?;
-    Ok(repo_id)
-}
-
-pub fn get_repo_id_from_value<'a>(
-    config_store: &ConfigStore,
-    matches: &'a MononokeMatches<'a>,
-    repo_id_arg: &str,
-    repo_name_arg: &str,
-) -> Result<RepositoryId> {
-    let (repo_id, _) =
-        get_repo_id_and_name_from_values(config_store, matches, repo_name_arg, repo_id_arg)?;
-    Ok(repo_id)
-}
-
-pub fn open_sql<'a, T>(
-    fb: FacebookInit,
-    config_store: &ConfigStore,
-    matches: &'a MononokeMatches<'a>,
-) -> Result<T, Error>
-where
-    T: SqlConstructFromMetadataDatabaseConfig,
-{
-    let (_, config) = get_config(config_store, matches)?;
-    T::with_metadata_database_config(
-        fb,
-        &config.storage_config.metadata,
-        matches.mysql_options(),
-        matches.readonly_storage().0,
-    )
-}
-
 pub fn open_sql_with_config<'a, T>(
     fb: FacebookInit,
     matches: &'a MononokeMatches<'a>,
@@ -283,64 +470,6 @@ where
     )
 }
 
-pub fn open_source_sql<'a, T>(
-    fb: FacebookInit,
-    config_store: &ConfigStore,
-    matches: &'a MononokeMatches<'a>,
-) -> Result<T, Error>
-where
-    T: SqlConstructFromMetadataDatabaseConfig,
-{
-    let source_repo_id = get_source_repo_id(config_store, matches)?;
-    let (_, config) = get_config_by_repoid(config_store, matches, source_repo_id)?;
-    T::with_metadata_database_config(
-        fb,
-        &config.storage_config.metadata,
-        matches.mysql_options(),
-        matches.readonly_storage().0,
-    )
-}
-
-/// Create a new repo object -- for local instances, expect its contents to be empty.
-#[inline]
-pub fn create_repo<'a, R: 'a>(
-    fb: FacebookInit,
-    logger: &'a Logger,
-    matches: &'a MononokeMatches<'a>,
-) -> impl Future<Output = Result<R, Error>> + 'a
-where
-    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
-{
-    open_repo_internal(fb, logger, matches, true, None, None)
-}
-
-/// Create a new repo object -- for local instances, expect its contents to be empty.
-/// Make sure that the opened repo has redaction disabled
-#[inline]
-pub fn create_repo_unredacted<'a, R: 'a>(
-    fb: FacebookInit,
-    logger: &'a Logger,
-    matches: &'a MononokeMatches<'a>,
-) -> impl Future<Output = Result<R, Error>> + 'a
-where
-    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
-{
-    open_repo_internal(fb, logger, matches, true, Some(Redaction::Disabled), None)
-}
-
-/// Open an existing repo object -- for local instances, expect contents to already be there.
-#[inline]
-pub fn open_repo<'a, R: 'a>(
-    fb: FacebookInit,
-    logger: &'a Logger,
-    matches: &'a MononokeMatches<'a>,
-) -> impl Future<Output = Result<R, Error>> + 'a
-where
-    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
-{
-    open_repo_internal(fb, logger, matches, false, None, None)
-}
-
 #[inline]
 pub fn open_repo_by_name<'a, R: 'a>(
     fb: FacebookInit,
@@ -352,33 +481,6 @@ where
     R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
 {
     open_repo_by_name_internal(fb, logger, matches, false, None, None, repo_name)
-}
-
-#[inline]
-pub fn open_repo_with_factory<'a, R: 'a>(
-    fb: FacebookInit,
-    logger: &'a Logger,
-    matches: &'a MononokeMatches<'a>,
-    repo_factory: RepoFactory,
-) -> impl Future<Output = Result<R, Error>> + 'a
-where
-    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
-{
-    open_repo_internal(fb, logger, matches, false, None, Some(repo_factory))
-}
-
-/// Open an existing repo object -- for local instances, expect contents to already be there.
-/// Make sure that the opened repo has redaction disabled
-#[inline]
-pub fn open_repo_unredacted<'a, R: 'a>(
-    fb: FacebookInit,
-    logger: &'a Logger,
-    matches: &'a MononokeMatches<'a>,
-) -> impl Future<Output = Result<R, Error>> + 'a
-where
-    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
-{
-    open_repo_internal(fb, logger, matches, false, Some(Redaction::Disabled), None)
 }
 
 /// Open the repo corresponding to the provided repo-name.
@@ -429,52 +531,6 @@ where
     open_repo_internal_with_repo_id(
         logger,
         RepoIdentifier::Id(repo_id),
-        matches,
-        false, // use CreateStorage::ExistingOnly when creating blobstore
-        None,  // do not override redaction config
-        repo_factory,
-    )
-    .await
-}
-
-pub async fn open_source_repo<'a, R: 'a>(
-    _: FacebookInit,
-    logger: &'a Logger,
-    matches: &'a MononokeMatches<'a>,
-) -> Result<R, Error>
-where
-    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
-{
-    let config_store = matches.config_store();
-    let source_repo_id = get_source_repo_id(config_store, matches)?;
-    let repo_factory = get_repo_factory(matches)?;
-
-    open_repo_internal_with_repo_id(
-        logger,
-        RepoIdentifier::Id(source_repo_id),
-        matches,
-        false, // use CreateStorage::ExistingOnly when creating blobstore
-        None,  // do not override redaction config
-        repo_factory,
-    )
-    .await
-}
-
-pub async fn open_target_repo<'a, R: 'a>(
-    _: FacebookInit,
-    logger: &'a Logger,
-    matches: &'a MononokeMatches<'a>,
-) -> Result<R, Error>
-where
-    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
-{
-    let config_store = matches.config_store();
-    let source_repo_id = get_target_repo_id(config_store, matches)?;
-    let repo_factory = get_repo_factory(matches)?;
-
-    open_repo_internal_with_repo_id(
-        logger,
-        RepoIdentifier::Id(source_repo_id),
         matches,
         false, // use CreateStorage::ExistingOnly when creating blobstore
         None,  // do not override redaction config
@@ -535,14 +591,6 @@ pub fn load_storage_configs<'a>(
     metaconfig_parser::load_storage_configs(get_config_path(matches)?, config_store)
 }
 
-pub fn get_config<'a>(
-    config_store: &ConfigStore,
-    matches: &'a MononokeMatches<'a>,
-) -> Result<(String, RepoConfig)> {
-    let repo_id = get_repo_id(config_store, matches)?;
-    get_config_by_repoid(config_store, matches, repo_id)
-}
-
 pub fn get_config_by_repoid<'a>(
     config_store: &ConfigStore,
     matches: &'a MononokeMatches<'a>,
@@ -571,36 +619,6 @@ pub fn get_config_by_name<'a>(
 enum RepoIdentifier {
     Id(RepositoryId),
     Name(String),
-}
-
-async fn open_repo_internal<R>(
-    _: FacebookInit,
-    logger: &Logger,
-    matches: &MononokeMatches<'_>,
-    create: bool,
-    redaction_override: Option<Redaction>,
-    maybe_repo_factory: Option<RepoFactory>,
-) -> Result<R, Error>
-where
-    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
-{
-    let config_store = matches.config_store();
-    let repo_id = get_repo_id(config_store, matches)?;
-
-    let repo_factory = match maybe_repo_factory {
-        Some(repo_factory) => repo_factory,
-        None => get_repo_factory(matches)?,
-    };
-
-    open_repo_internal_with_repo_id(
-        logger,
-        RepoIdentifier::Id(repo_id),
-        matches,
-        create,
-        redaction_override,
-        repo_factory,
-    )
-    .await
 }
 
 async fn open_repo_by_name_internal<R>(

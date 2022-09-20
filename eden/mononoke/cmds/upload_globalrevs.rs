@@ -92,10 +92,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let run = async {
-        let repo: BlobRepo = args::open_repo(fb, logger, &matches).await?;
+        let repo: BlobRepo =
+            args::not_shardmanager_compatible::open_repo(fb, logger, &matches).await?;
         let globalrevs_store = Arc::new(
-            args::open_sql::<SqlBonsaiGlobalrevMappingBuilder>(fb, config_store, &matches)?
-                .build(repo.get_repoid()),
+            args::not_shardmanager_compatible::open_sql::<SqlBonsaiGlobalrevMappingBuilder>(
+                fb,
+                config_store,
+                &matches,
+            )?
+            .build(repo.get_repoid()),
         );
         let in_filename = matches.value_of("IN_FILENAME").unwrap();
         upload(ctx, repo, in_filename, globalrevs_store)

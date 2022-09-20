@@ -154,8 +154,10 @@ pub async fn get_source_target_repos_and_mapping<'a>(
 ) -> Result<(BlobRepo, BlobRepo, SqlSyncedCommitMapping), Error> {
     let config_store = matches.config_store();
 
-    let source_repo_id = args::get_source_repo_id(config_store, matches)?;
-    let target_repo_id = args::get_target_repo_id(config_store, matches)?;
+    let source_repo_id =
+        args::not_shardmanager_compatible::get_source_repo_id(config_store, matches)?;
+    let target_repo_id =
+        args::not_shardmanager_compatible::get_target_repo_id(config_store, matches)?;
 
     let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, matches);
     let target_repo = args::open_repo_with_repo_id(fb, &logger, target_repo_id, matches);
@@ -163,7 +165,11 @@ pub async fn get_source_target_repos_and_mapping<'a>(
     // It'll be nice to verify it
     let (source_repo, target_repo) = try_join!(source_repo, target_repo)?;
 
-    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(fb, config_store, matches)?;
+    let mapping = args::not_shardmanager_compatible::open_source_sql::<SqlSyncedCommitMapping>(
+        fb,
+        config_store,
+        matches,
+    )?;
 
     Ok((source_repo, target_repo, mapping))
 }

@@ -164,8 +164,8 @@ pub async fn subcommand_blobstore_fetch<'a>(
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), SubcommandError> {
     let config_store = matches.config_store();
-    let repo_id = args::get_repo_id(config_store, matches)?;
-    let (_, config) = args::get_config(config_store, matches)?;
+    let repo_id = args::not_shardmanager_compatible::get_repo_id(config_store, matches)?;
+    let (_, config) = args::not_shardmanager_compatible::get_config(config_store, matches)?;
     let redaction = config.redaction;
     let storage_config = config.storage_config;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, "inner-blobstore-id");
@@ -205,8 +205,9 @@ pub async fn subcommand_blobstore_fetch<'a>(
         match redaction {
             Redaction::Enabled => {
                 let redacted_blobs = if tunables().get_redaction_config_from_xdb() {
-                    let redacted_blobs_db =
-                        args::open_sql::<SqlRedactedContentStore>(fb, config_store, matches)?;
+                    let redacted_blobs_db = args::not_shardmanager_compatible::open_sql::<
+                        SqlRedactedContentStore,
+                    >(fb, config_store, matches)?;
                     redacted_blobs_db.get_all_redacted_blobs().await?
                 } else {
                     let redaction_config_blobstore = Arc::new(RedactionConfigBlobstore::new(

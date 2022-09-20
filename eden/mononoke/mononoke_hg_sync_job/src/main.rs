@@ -1024,7 +1024,7 @@ async fn run<'a>(
             Some(backup_repo)
         }
         (true, _) => {
-            let backup_repo_id = args::get_repo_id_from_value(
+            let backup_repo_id = args::not_shardmanager_compatible::get_repo_id_from_value(
                 config_store,
                 matches,
                 ARG_DARKSTORM_BACKUP_REPO_ID,
@@ -1411,7 +1411,8 @@ fn main(fb: FacebookInit) -> Result<()> {
         None => {
             let matches = process.matches.clone();
             let config_store = matches.config_store();
-            let (repo_name, _) = args::get_config(config_store, &matches)?;
+            let (repo_name, _) =
+                args::not_shardmanager_compatible::get_config(config_store, &matches)?;
             let ctx = CoreContext::new_with_logger(fb, matches.logger().clone())
                 .clone_with_repo_name(&repo_name);
             let fut = run(&ctx, &matches, repo_name, Arc::new(AtomicBool::new(false)));

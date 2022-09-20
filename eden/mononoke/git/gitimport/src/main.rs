@@ -190,7 +190,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         import_direct::ReuploadCommits::Never
     };
 
-    let repo = args::create_repo(fb, logger, &matches);
+    let repo = args::not_shardmanager_compatible::create_repo(fb, logger, &matches);
     block_execute(
         async {
             let repo: BlobRepo = repo.await?;

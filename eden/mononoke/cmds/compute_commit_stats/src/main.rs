@@ -37,7 +37,8 @@ async fn run<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'a>) -> Result<(
     let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let repo: BlobRepo = args::open_repo(fb, ctx.logger(), matches).await?;
+    let repo: BlobRepo =
+        args::not_shardmanager_compatible::open_repo(fb, ctx.logger(), matches).await?;
     let fetcher;
 
     let csids = {

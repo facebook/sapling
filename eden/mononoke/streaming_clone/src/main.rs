@@ -72,7 +72,7 @@ pub async fn streaming_clone<'a>(
     matches: &'a MononokeMatches<'a>,
 ) -> Result<(), Error> {
     let mut scuba = matches.scuba_sample_builder();
-    let repo: Repo = args::open_repo(fb, &logger, matches).await?;
+    let repo: Repo = args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
     scuba.add("reponame", repo.repo_identity().name());
 
     let res = match matches.subcommand() {

@@ -427,8 +427,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let logger = process.matches.logger().clone();
             let matches = process.matches.clone();
             let config_store = matches.config_store();
-            let source_repo_id = args::get_source_repo_id(config_store, &matches)?;
-            let target_repo_id = args::get_target_repo_id(config_store, &matches)?;
+            let source_repo_id =
+                args::not_shardmanager_compatible::get_source_repo_id(config_store, &matches)?;
+            let target_repo_id =
+                args::not_shardmanager_compatible::get_target_repo_id(config_store, &matches)?;
             let (source_repo_name, _) =
                 args::get_config_by_repoid(config_store, &matches, source_repo_id)?;
             let (target_repo_name, _) =

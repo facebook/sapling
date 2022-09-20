@@ -51,7 +51,7 @@ pub async fn subcommand_content_fetch<'a>(
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let repo = args::open_repo(fb, &logger, matches).await?;
+    let repo = args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
     let entry = fetch_entry(&ctx, &repo, &rev, &path).await?;
 
     match entry {

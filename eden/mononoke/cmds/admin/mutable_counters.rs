@@ -78,11 +78,16 @@ pub async fn subcommand_mutable_counters<'a>(
 ) -> Result<(), SubcommandError> {
     let config_store = matches.config_store();
 
-    let repo_id = args::get_repo_id(config_store, matches)?;
+    let repo_id = args::not_shardmanager_compatible::get_repo_id(config_store, matches)?;
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let mutable_counters = args::open_sql::<SqlMutableCountersBuilder>(fb, config_store, matches)
+    let mutable_counters =
+        args::not_shardmanager_compatible::open_sql::<SqlMutableCountersBuilder>(
+            fb,
+            config_store,
+            matches,
+        )
         .context("While opening SqlMutableCounters")?
         .build(repo_id);
 

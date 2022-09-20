@@ -128,7 +128,8 @@ async fn run<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'a>) -> Result<(
     ctx.session_mut()
         .override_session_class(SessionClass::Background);
 
-    let source_repo_id = args::get_source_repo_id(matches.config_store(), matches)?;
+    let source_repo_id =
+        args::not_shardmanager_compatible::get_source_repo_id(matches.config_store(), matches)?;
     let source_inner_blobstore_id = args::get_u64_opt(matches, ARG_SOURCE_INNER_BLOBSTORE_ID);
 
     let source_repo = open_repo(
@@ -138,7 +139,8 @@ async fn run<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'a>) -> Result<(
         matches,
     );
 
-    let target_repo_id = args::get_target_repo_id(matches.config_store(), matches)?;
+    let target_repo_id =
+        args::not_shardmanager_compatible::get_target_repo_id(matches.config_store(), matches)?;
     let target_inner_blobstore_id = args::get_u64_opt(matches, ARG_TARGET_INNER_BLOBSTORE_ID);
 
     let target_repo = open_repo(

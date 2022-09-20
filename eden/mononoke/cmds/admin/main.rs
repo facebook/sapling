@@ -120,7 +120,8 @@ fn main(fb: FacebookInit) -> ExitCode {
             }
             (bookmarks_manager::BOOKMARKS, Some(sub_m)) => {
                 let ctx = CoreContext::new_with_logger(fb, logger.clone());
-                let repo = args::open_repo(fb, &logger, &matches).await?;
+                let repo =
+                    args::not_shardmanager_compatible::open_repo(fb, &logger, &matches).await?;
                 bookmarks_manager::handle_command(ctx, repo, sub_m, logger.clone()).await
             }
             (hg_changeset::HG_CHANGESET, Some(sub_m)) => {

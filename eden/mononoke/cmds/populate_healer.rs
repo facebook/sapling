@@ -187,7 +187,7 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
     let logger = matches.logger();
     let config_store = matches.config_store();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo_id = args::get_repo_id(config_store, &matches)?;
+    let repo_id = args::not_shardmanager_compatible::get_repo_id(config_store, &matches)?;
 
     let storage_id = matches
         .value_of("storage-id")

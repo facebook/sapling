@@ -86,7 +86,7 @@ pub async fn subcommand_skeleton_manifests<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let repo: BlobRepo = args::open_repo(fb, &logger, matches).await?;
+    let repo: BlobRepo = args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     match sub_matches.subcommand() {

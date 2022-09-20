@@ -54,7 +54,8 @@ pub async fn list_ancestors<'a>(
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo: BlobRepo = args::open_repo(fb, ctx.logger(), matches).await?;
+    let repo: BlobRepo =
+        args::not_shardmanager_compatible::open_repo(fb, ctx.logger(), matches).await?;
     let rev = sub_m
         .value_of(ARG_CHANGESET)
         .ok_or_else(|| anyhow!("{} is not set", ARG_CHANGESET))?;

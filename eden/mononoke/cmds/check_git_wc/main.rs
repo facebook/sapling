@@ -85,7 +85,7 @@ async fn run_check_git_wc(
         std::iter::empty::<std::ffi::OsString>(),
     )?;
 
-    let blobrepo = args::open_repo(fb, ctx.logger(), matches).await?;
+    let blobrepo = args::not_shardmanager_compatible::open_repo(fb, ctx.logger(), matches).await?;
     let scheduled_max = args::get_usize_opt(matches, ARG_SCHEDULED_MAX).unwrap_or(100) as usize;
 
     check_git_wc(

@@ -211,7 +211,7 @@ async fn run_config_sub_subcommand<'a>(
 ) -> Result<(), SubcommandError> {
     let config_store = matches.config_store();
 
-    let repo_id = args::get_repo_id(config_store, matches)?;
+    let repo_id = args::not_shardmanager_compatible::get_repo_id(config_store, matches)?;
 
     match config_subcommand_matches.subcommand() {
         (SUBCOMMAND_BY_VERSION, Some(sub_m)) => {

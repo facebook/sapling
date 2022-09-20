@@ -117,7 +117,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let logger = matches.logger();
     let rt = matches.runtime();
 
-    let repo_fut = args::open_repo(fb, logger, &matches);
+    let repo_fut = args::not_shardmanager_compatible::open_repo(fb, logger, &matches);
     let repo = rt.block_on(repo_fut).unwrap();
 
     let ctx = CoreContext::test_mock(fb);

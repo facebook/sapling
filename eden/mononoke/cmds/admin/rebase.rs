@@ -108,7 +108,7 @@ pub async fn subcommand_rebase<'a>(
     }
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo: BlobRepo = args::open_repo(fb, &logger, matches).await?;
+    let repo: BlobRepo = args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
 
     let dest = sub_matches
         .value_of(ARG_DEST)

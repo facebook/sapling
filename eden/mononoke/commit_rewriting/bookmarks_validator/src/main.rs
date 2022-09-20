@@ -252,7 +252,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let runtime = matches.runtime();
             let ctx = create_core_context(fb, logger.clone());
             let config_store = matches.config_store();
-            let source_repo_id = args::get_source_repo_id(config_store, &matches)?;
+            let source_repo_id =
+                args::not_shardmanager_compatible::get_source_repo_id(config_store, &matches)?;
             let syncers =
                 runtime.block_on(create_commit_syncers_from_matches(&ctx, &matches, None))?;
             if syncers.large_to_small.get_large_repo().get_repoid() != source_repo_id {

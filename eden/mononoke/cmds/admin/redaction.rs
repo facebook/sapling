@@ -284,7 +284,8 @@ async fn get_ctx_blobrepo_cs_id<'a>(
         None => return Err(SubcommandError::InvalidArgs),
     };
 
-    let blobrepo: BlobRepo = args::open_repo(fb, &logger, matches).await?;
+    let blobrepo: BlobRepo =
+        args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
 
     let ctx = CoreContext::new_with_logger(fb, logger);
 
@@ -419,9 +420,12 @@ async fn redaction_add<'a, 'b>(
 ) -> Result<(), SubcommandError> {
     let (task, paths) = task_and_paths_parser(sub_m)?;
     let (ctx, blobrepo, cs_id) = get_ctx_blobrepo_cs_id(fb, logger.clone(), matches, sub_m).await?;
-    let redacted_blobs =
-        args::open_sql::<SqlRedactedContentStore>(fb, matches.config_store(), matches)
-            .context("While opening SqlRedactedContentStore")?;
+    let redacted_blobs = args::not_shardmanager_compatible::open_sql::<SqlRedactedContentStore>(
+        fb,
+        matches.config_store(),
+        matches,
+    )
+    .context("While opening SqlRedactedContentStore")?;
 
     let content_ids =
         content_ids_for_paths(ctx.clone(), logger.clone(), blobrepo.clone(), cs_id, paths).await?;
@@ -462,9 +466,12 @@ async fn redaction_list<'a>(
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     let (ctx, blobrepo, cs_id) = get_ctx_blobrepo_cs_id(fb, logger.clone(), matches, sub_m).await?;
-    let redacted_blobs =
-        args::open_sql::<SqlRedactedContentStore>(fb, matches.config_store(), matches)
-            .context("While opening SqlRedactedContentStore")?;
+    let redacted_blobs = args::not_shardmanager_compatible::open_sql::<SqlRedactedContentStore>(
+        fb,
+        matches.config_store(),
+        matches,
+    )
+    .context("While opening SqlRedactedContentStore")?;
     info!(
         logger,
         "Listing redacted files for ChangesetId: {:?}", cs_id
@@ -508,9 +515,12 @@ async fn redaction_remove<'a>(
 ) -> Result<(), SubcommandError> {
     let paths = paths_parser(sub_m)?;
     let (ctx, blobrepo, cs_id) = get_ctx_blobrepo_cs_id(fb, logger.clone(), matches, sub_m).await?;
-    let redacted_blobs =
-        args::open_sql::<SqlRedactedContentStore>(fb, matches.config_store(), matches)
-            .context("While opening SqlRedactedContentStore")?;
+    let redacted_blobs = args::not_shardmanager_compatible::open_sql::<SqlRedactedContentStore>(
+        fb,
+        matches.config_store(),
+        matches,
+    )
+    .context("While opening SqlRedactedContentStore")?;
     let content_ids = content_ids_for_paths(ctx, logger, blobrepo, cs_id, paths).await?;
     let blobstore_keys: Vec<_> = content_ids
         .into_iter()

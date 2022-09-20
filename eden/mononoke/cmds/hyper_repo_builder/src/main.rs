@@ -67,7 +67,8 @@ async fn subcommand_tail<'a>(
     let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let hyper_repo: BlobRepo = args::open_repo(ctx.fb, ctx.logger(), matches).await?;
+    let hyper_repo: BlobRepo =
+        args::not_shardmanager_compatible::open_repo(ctx.fb, ctx.logger(), matches).await?;
 
     let (source_bookmark, hyper_repo_bookmark) = parse_bookmarks(matches)?;
 
@@ -82,7 +83,7 @@ async fn subcommand_tail<'a>(
     // config should be present. If it's present then something might be wrong, and we
     // might be accidentally syncing data to a prod repo.
     let config_store = matches.config_store();
-    let (_, config) = args::get_config(config_store, matches)?;
+    let (_, config) = args::not_shardmanager_compatible::get_config(config_store, matches)?;
     if config.backup_repo_config.is_some() {
         return Err(anyhow!(
             "hyper repo unexpectedly has a backup repo. \
@@ -122,7 +123,7 @@ async fn subcommand_add_source_repo<'a>(
     let source_repo =
         args::open_repo_with_repo_name(ctx.fb, ctx.logger(), source_repo_name.to_string(), matches);
 
-    let hyper_repo = args::open_repo(ctx.fb, ctx.logger(), matches);
+    let hyper_repo = args::not_shardmanager_compatible::open_repo(ctx.fb, ctx.logger(), matches);
 
     let (source_repo, hyper_repo): (BlobRepo, BlobRepo) = try_join(source_repo, hyper_repo).await?;
 
@@ -153,7 +154,8 @@ async fn subcommand_validate<'a>(
     let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let hyper_repo: BlobRepo = args::open_repo(ctx.fb, ctx.logger(), matches).await?;
+    let hyper_repo: BlobRepo =
+        args::not_shardmanager_compatible::open_repo(ctx.fb, ctx.logger(), matches).await?;
 
     let hyper_cs_id = sub_m
         .value_of(ARG_CHANGESET)

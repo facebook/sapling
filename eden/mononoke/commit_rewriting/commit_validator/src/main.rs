@@ -182,7 +182,7 @@ async fn run<'a>(
     matches: &'a MononokeMatches<'a>,
 ) -> Result<(), Error> {
     let config_store = matches.config_store();
-    let repo_id = args::get_repo_id(config_store, matches)?;
+    let repo_id = args::not_shardmanager_compatible::get_repo_id(config_store, matches)?;
     let (_, repo_config) = args::get_config_by_repoid(config_store, matches, repo_id)?;
 
     let logger = ctx.logger();

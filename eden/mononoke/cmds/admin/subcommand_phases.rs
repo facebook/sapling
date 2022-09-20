@@ -103,7 +103,7 @@ pub async fn subcommand_phases<'a>(
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), SubcommandError> {
-    let repo = args::open_repo(fb, &logger, matches).await?;
+    let repo = args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     match sub_m.subcommand() {

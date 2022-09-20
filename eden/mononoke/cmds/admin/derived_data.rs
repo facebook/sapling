@@ -216,7 +216,7 @@ pub async fn subcommand_derived_data<'a>(
 
     match sub_m.subcommand() {
         (SUBCOMMAND_EXISTS, Some(arg_matches)) => {
-            let repo = args::open_repo(fb, &logger, matches).await?;
+            let repo = args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
             let hashes_or_bookmarks: Vec<_> = arg_matches
                 .values_of(ARG_HASH_OR_BOOKMARK)
                 .map(|matches| matches.map(|cs| cs.to_string()).collect())
@@ -244,7 +244,8 @@ pub async fn subcommand_derived_data<'a>(
             .await
         }
         (SUBCOMMAND_COUNT_UNDERIVED, Some(arg_matches)) => {
-            let repo: BlobRepo = args::open_repo(fb, &logger, matches).await?;
+            let repo: BlobRepo =
+                args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
             let hashes_or_bookmarks: Vec<_> = arg_matches
                 .values_of(ARG_HASH_OR_BOOKMARK)
                 .map(|matches| matches.map(|cs| cs.to_string()).collect())
@@ -272,7 +273,7 @@ pub async fn subcommand_derived_data<'a>(
             .await
         }
         (SUBCOMMAND_VERIFY_MANIFESTS, Some(arg_matches)) => {
-            let repo = args::open_repo(fb, &logger, matches).await?;
+            let repo = args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
             let hash_or_bookmark = arg_matches
                 .value_of(ARG_HASH_OR_BOOKMARK)
                 .map(|m| m.to_string())
@@ -306,8 +307,13 @@ pub async fn subcommand_derived_data<'a>(
                 repo_factory.with_bonsai_hg_mapping_override();
             }
 
-            let repo: BlobRepo =
-                args::open_repo_with_factory(fb, &logger, matches, repo_factory).await?;
+            let repo: BlobRepo = args::not_shardmanager_compatible::open_repo_with_factory(
+                fb,
+                &logger,
+                matches,
+                repo_factory,
+            )
+            .await?;
             let repo = repo.dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>);
             let ty = arg_matches
                 .value_of(ARG_TYPE)

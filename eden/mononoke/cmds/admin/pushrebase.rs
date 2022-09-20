@@ -57,7 +57,7 @@ pub async fn subcommand_pushrebase<'a>(
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo: BlobRepo = args::open_repo(fb, &logger, matches).await?;
+    let repo: BlobRepo = args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
 
     let cs_id = sub_matches
         .value_of(ARG_CSID)
@@ -70,7 +70,7 @@ pub async fn subcommand_pushrebase<'a>(
         .ok_or_else(|| anyhow!("{} arg is not specified", ARG_BOOKMARK))?;
 
     let config_store = matches.config_store();
-    let (_, repo_config) = args::get_config(config_store, matches)?;
+    let (_, repo_config) = args::not_shardmanager_compatible::get_config(config_store, matches)?;
     let bookmark = BookmarkName::new(bookmark)?;
 
     let pushrebase_flags = repo_config.pushrebase.flags;

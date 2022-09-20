@@ -113,7 +113,7 @@ pub async fn subcommand_skiplist<'a>(
             // completes fully.
             ctx.session_mut()
                 .override_session_class(SessionClass::Background);
-            let repo = args::open_repo(fb, &logger, matches).await?;
+            let repo = args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
             build_skiplist_index(&ctx, &repo, key, &logger, rebuild, exponent)
                 .await
                 .map_err(SubcommandError::Error)
@@ -125,7 +125,7 @@ pub async fn subcommand_skiplist<'a>(
                 .to_string();
 
             let ctx = CoreContext::test_mock(fb);
-            let repo = args::open_repo(fb, &logger, matches).await?;
+            let repo = args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
             let maybe_index = read_skiplist_index(ctx.clone(), repo, key, logger.clone()).await?;
             match maybe_index {
                 Some(index) => {

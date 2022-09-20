@@ -109,7 +109,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::new_for_bulk_processing(fb, logger.clone());
     let blobstore_options = matches.blobstore_options();
     let readonly_storage = matches.readonly_storage();
-    let blobconfig = args::get_config(config_store, &matches)?
+    let blobconfig = args::not_shardmanager_compatible::get_config(config_store, &matches)?
         .1
         .storage_config
         .blobstore;
@@ -129,7 +129,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .unwrap_or(false);
 
     let repo_prefix = {
-        let repo_id = args::get_repo_id(config_store, &matches)?;
+        let repo_id = args::not_shardmanager_compatible::get_repo_id(config_store, &matches)?;
         repo_id.prefix()
     };
 

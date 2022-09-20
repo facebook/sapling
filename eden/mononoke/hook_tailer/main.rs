@@ -79,7 +79,8 @@ fn main(fb: FacebookInit) -> Result<()> {
     let matches = setup_app().get_matches(fb)?;
     let logger = matches.logger();
     let config_store = matches.config_store();
-    let (repo_name, config) = cmdlib::args::get_config(config_store, &matches)?;
+    let (repo_name, config) =
+        cmdlib::args::not_shardmanager_compatible::get_config(config_store, &matches)?;
     info!(logger, "Hook tailer is starting");
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());

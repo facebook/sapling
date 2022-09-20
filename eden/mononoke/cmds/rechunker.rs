@@ -70,7 +70,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         })
         .collect();
 
-    let blobrepo = args::open_repo(fb, logger, &matches);
+    let blobrepo = args::not_shardmanager_compatible::open_repo(fb, logger, &matches);
     let rechunk = async move {
         let blobrepo: BlobRepo = blobrepo.await?;
         stream::iter(filenode_ids)

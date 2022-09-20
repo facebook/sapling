@@ -602,15 +602,18 @@ fn main(fb: FacebookInit) -> Result<()> {
         None => {
             let process = Arc::new(process);
             let all_repo_derivation = stream::iter(
-                args::resolve_repos(process.matches.config_store(), &process.matches)?
-                    .into_iter()
-                    .map(|repo| {
-                        let process = Arc::clone(&process);
-                        async move {
-                            let executor = process.setup(&repo.name).await?;
-                            executor.execute().await
-                        }
-                    }),
+                args::not_shardmanager_compatible::resolve_repos(
+                    process.matches.config_store(),
+                    &process.matches,
+                )?
+                .into_iter()
+                .map(|repo| {
+                    let process = Arc::clone(&process);
+                    async move {
+                        let executor = process.setup(&repo.name).await?;
+                        executor.execute().await
+                    }
+                }),
             )
             // Each item is a repo. Don't need to derive data for more than 10 repos
             // at a time when executing in non-sharded setting.
@@ -902,7 +905,9 @@ async fn parse_repo_and_derived_data_types(
     let derived_data_types = sub_m.values_of(ARG_DERIVED_DATA_TYPE);
     let (repo, types): (_, Vec<String>) = match (all, derived_data_types) {
         (true, None) => {
-            let repo: BlobRepo = args::open_repo_unredacted(fb, logger, matches).await?;
+            let repo: BlobRepo =
+                args::not_shardmanager_compatible::open_repo_unredacted(fb, logger, matches)
+                    .await?;
             let types = repo
                 .get_active_derived_data_types_config()
                 .types

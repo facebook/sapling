@@ -214,7 +214,7 @@ pub async fn subcommand_filenodes<'a>(
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo = args::open_repo(fb, ctx.logger(), matches).await?;
+    let repo = args::not_shardmanager_compatible::open_repo(fb, ctx.logger(), matches).await?;
     let log_envelope = sub_m.is_present(ARG_ENVELOPE);
 
     match sub_m.subcommand() {

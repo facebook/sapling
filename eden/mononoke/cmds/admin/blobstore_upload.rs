@@ -54,7 +54,7 @@ pub async fn subcommand_blobstore_upload<'a>(
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), SubcommandError> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo: BlobRepo = args::open_repo(fb, &logger, matches).await?;
+    let repo: BlobRepo = args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
 
     let key = sub_m
         .value_of(KEY_ARG)

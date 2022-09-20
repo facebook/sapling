@@ -368,25 +368,29 @@ async fn run_blobimport<'a>(
 
     let has_globalrev = matches.is_present("has-globalrev");
 
-    let (_repo_name, repo_config) = args::get_config(config_store, matches)?;
+    let (_repo_name, repo_config) =
+        args::not_shardmanager_compatible::get_config(config_store, matches)?;
     let populate_git_mapping = repo_config.pushrebase.populate_git_mapping.clone();
 
-    let small_repo_id = args::get_source_repo_id_opt(config_store, matches)?;
+    let small_repo_id =
+        args::not_shardmanager_compatible::get_source_repo_id_opt(config_store, matches)?;
 
-    let globalrevs_store_builder =
-        args::open_sql::<SqlBonsaiGlobalrevMappingBuilder>(fb, config_store, matches)?;
-    let synced_commit_mapping =
-        args::open_sql::<SqlSyncedCommitMapping>(fb, config_store, matches)?;
+    let globalrevs_store_builder = args::not_shardmanager_compatible::open_sql::<
+        SqlBonsaiGlobalrevMappingBuilder,
+    >(fb, config_store, matches)?;
+    let synced_commit_mapping = args::not_shardmanager_compatible::open_sql::<
+        SqlSyncedCommitMapping,
+    >(fb, config_store, matches)?;
 
     let blobrepo: BlobRepo = if matches.is_present("no-create") {
-        args::open_repo_unredacted(fb, ctx.logger(), matches).await?
+        args::not_shardmanager_compatible::open_repo_unredacted(fb, ctx.logger(), matches).await?
     } else {
-        args::create_repo_unredacted(fb, ctx.logger(), matches).await?
+        args::not_shardmanager_compatible::create_repo_unredacted(fb, ctx.logger(), matches).await?
     };
 
     let origin_repo: Option<BlobRepo> =
         if matches.is_present(BACKUP_FROM_REPO_ID) || matches.is_present(BACKUP_FROM_REPO_NAME) {
-            let repo_id = args::get_repo_id_from_value(
+            let repo_id = args::not_shardmanager_compatible::get_repo_id_from_value(
                 config_store,
                 matches,
                 BACKUP_FROM_REPO_ID,

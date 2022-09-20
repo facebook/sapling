@@ -129,7 +129,8 @@ pub async fn subcommand_blame<'a>(
 
     match sub_matches.subcommand() {
         (COMMAND_DERIVE, Some(matches)) => {
-            let repo = args::open_repo(fb, &logger, toplevel_matches).await?;
+            let repo =
+                args::not_shardmanager_compatible::open_repo(fb, &logger, toplevel_matches).await?;
             let line_number = matches.is_present(ARG_LINE);
             with_changeset_and_path(ctx, repo, matches, move |ctx, repo, csid, path| {
                 subcommand_show_blame(ctx, repo, csid, path, line_number)
@@ -137,11 +138,13 @@ pub async fn subcommand_blame<'a>(
             .await
         }
         (COMMAND_DIFF, Some(matches)) => {
-            let repo = args::open_repo(fb, &logger, toplevel_matches).await?;
+            let repo =
+                args::not_shardmanager_compatible::open_repo(fb, &logger, toplevel_matches).await?;
             with_changeset_and_path(ctx, repo, matches, subcommand_show_diffs).await
         }
         (COMMAND_COMPUTE, Some(matches)) => {
-            let repo = args::open_repo(fb, &logger, toplevel_matches).await?;
+            let repo =
+                args::not_shardmanager_compatible::open_repo(fb, &logger, toplevel_matches).await?;
             let line_number = matches.is_present(ARG_LINE);
             let blame_v2 = matches.is_present(ARG_BLAME_V2);
             with_changeset_and_path(ctx, repo, matches, move |ctx, repo, csid, path| {
@@ -152,7 +155,8 @@ pub async fn subcommand_blame<'a>(
         (COMMAND_FIND_REJECTED, Some(matches)) => {
             let print_errors = matches.is_present(ARG_PRINT_ERRORS);
             let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
-            let repo: BlobRepo = args::open_repo(fb, &logger, toplevel_matches).await?;
+            let repo: BlobRepo =
+                args::not_shardmanager_compatible::open_repo(fb, &logger, toplevel_matches).await?;
             let cs_id = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
 
             let derived_unode = RootUnodeManifestId::derive(&ctx, &repo, cs_id)

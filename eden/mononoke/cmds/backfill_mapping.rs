@@ -128,7 +128,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     };
 
     let run = async {
-        let repo = args::open_repo(fb, logger, &matches).await?;
+        let repo = args::not_shardmanager_compatible::open_repo(fb, logger, &matches).await?;
         let in_filename = matches.value_of("IN_FILENAME").unwrap();
         backfill(ctx, repo, in_filename, mode).await
     };
