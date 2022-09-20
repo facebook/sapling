@@ -15,7 +15,7 @@ Name: sapling
 Version: %version
 Release: %{os_release}
 
-License: GPLv2+
+License: GPLv2
 Group: Development/Tools
 
 Requires: python%{py_version}
