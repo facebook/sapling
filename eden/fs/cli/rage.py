@@ -147,7 +147,7 @@ def print_diagnostic_info(
         )
     watchman_log_path = get_watchman_log_path()
 
-    if watchman_log_path:
+    if not dry_run and watchman_log_path:
         section_title("Watchman logs:", out)
         out.write(b"Logs from: %s\n" % str(watchman_log_path).encode())
         paste_output(
