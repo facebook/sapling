@@ -85,6 +85,7 @@ https://fb.facebook.com/groups/eden.users/
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
 

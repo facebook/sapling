@@ -14,6 +14,9 @@ from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
 from eden.fs.cli.doctor.test.lib.fake_kerberos_checker import FakeKerberosChecker
+from eden.fs.cli.doctor.test.lib.fake_vscode_extensions_checker import (
+    getFakeVSCodeExtensionsChecker,
+)
 from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
 from eden.fs.cli.test.lib.output import TestOutput
 
@@ -45,6 +48,7 @@ class NfsTest(DoctorTestBase):
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
         expected = f"""<yellow>- Found problem:<reset>
@@ -140,6 +144,7 @@ The Mercurial data directory for {v.client_path}/.hg/sharedpath is at {v.shared_
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             kerberos_checker=FakeKerberosChecker(),
+            vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
         return NfsDoctorResult(
