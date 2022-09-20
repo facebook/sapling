@@ -1417,7 +1417,7 @@ def _recordbookmarksupdate(repo, changes) -> None:
         repo.journal.recordmany(journalremotebookmarktype, changes)
 
 
-def joinremotename(remote: str, ref):
+def joinremotename(remote: str, ref) -> str:
     if ref:
         remote += "/" + ref
     return remote
