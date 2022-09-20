@@ -25,6 +25,9 @@ from .i18n import _
 from .pycompat import decodeutf8
 
 
+MAX_RE_SIZE = 20000
+
+
 allpatternkinds = (
     "re",
     "glob",
@@ -1591,7 +1594,7 @@ def _buildregexmatch(kindpats: List, globsuffix):
     return regexp string and a matcher function."""
     regex = _buildregex(kindpats, globsuffix)
     try:
-        if len(regex) > 20000:
+        if len(regex) > MAX_RE_SIZE:
             raise OverflowError
         return regex, _rematcher(regex)
     except OverflowError:
