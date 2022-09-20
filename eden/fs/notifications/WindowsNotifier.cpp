@@ -575,6 +575,11 @@ void WindowsNotifier::signalCheckout(size_t numActive) {
       static_cast<LPARAM>(numActive));
 }
 
+void WindowsNotifier::registerInodePopulationReportCallback(
+    std::function<std::vector<InodePopulationReport>()> callback) {
+  inodePopulationReportsCallback_ = callback;
+}
+
 void WindowsNotifier::updateIconColor(size_t numActive) {
   // In-progress checkouts (orange) take priority over unhealthy EdenFS mounts
   // (red). Default to white if we're healthy and have no in-progress checkouts.
@@ -643,6 +648,51 @@ void WindowsNotifier::appendOptionsMenu(HMENU hMenu) {
       L"Options");
 }
 
+void WindowsNotifier::appendInodePopulationReportMenu(HMENU hMenu) {
+  appendMenuEntry(hMenu, MF_SEPARATOR, 0, NULL);
+  std::string titleString = "Active Mounts:";
+  appendMenuEntry(
+      hMenu,
+      MF_BYPOSITION | MF_STRING | MF_GRAYED,
+      NULL,
+      std::wstring(titleString.begin(), titleString.end()).c_str());
+
+  std::vector<std::string> menuEntrys;
+  if (inodePopulationReportsCallback_) {
+    const std::vector<InodePopulationReport> reports =
+        inodePopulationReportsCallback_();
+
+    for (const auto& report : reports) {
+      std::string menuEntry = report.mountName;
+
+      static constexpr size_t MOUNT_NAME_CHAR_LIMIT = 61;
+      if (menuEntry.length() > MOUNT_NAME_CHAR_LIMIT) {
+        menuEntry.resize(MOUNT_NAME_CHAR_LIMIT);
+        menuEntry += "...";
+      }
+
+      menuEntry +=
+          " (tracked inodes: " + std::to_string(report.inodeCount) + ")";
+      menuEntrys.push_back(menuEntry);
+    }
+  }
+
+  if (menuEntrys.empty()) {
+    appendMenuEntry(
+        hMenu, MF_BYPOSITION | MF_STRING | MF_GRAYED, NULL, L"None");
+  }
+
+  for (auto& menuEntry : menuEntrys) {
+    appendMenuEntry(
+        hMenu,
+        MF_BYPOSITION | MF_STRING | MF_GRAYED,
+        NULL,
+        std::wstring(menuEntry.begin(), menuEntry.end()).c_str());
+  }
+
+  appendMenuEntry(hMenu, MF_SEPARATOR, 0, NULL);
+}
+
 void WindowsNotifier::appendActionsMenu(HMENU hMenu) {
   MenuHandle actionMenu{
       checkNonZero(CreatePopupMenu(), "CreatePopupMenu failed"), &DestroyMenu};
@@ -688,6 +738,7 @@ MenuHandle WindowsNotifier::createEdenMenu() {
       MF_BYPOSITION | MF_STRING | MF_GRAYED,
       NULL,
       L"Welcome to the E-Menu");
+  appendInodePopulationReportMenu(hMenu.get());
   appendMenuEntry(
       hMenu.get(), MF_BYPOSITION | MF_STRING, IDM_INFO, kMenuAboutStr);
   appendOptionsMenu(hMenu.get());

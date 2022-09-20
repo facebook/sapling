@@ -13,6 +13,13 @@
 
 namespace facebook::eden {
 
+/* A user issued command (currently only in windows) generates a per mount
+ * vector of InodePopulationReports. */
+struct InodePopulationReport {
+  std::string mountName;
+  size_t inodeCount;
+};
+
 class ReloadableConfig;
 
 /* The intent is that that class will allow us to show a desktop "toast"
@@ -49,6 +56,12 @@ class Notifier {
    * changed.
    */
   virtual void signalCheckout(size_t numActive) = 0;
+
+  /**
+   * Register InodePopulationReport callback with the notifier.
+   */
+  virtual void registerInodePopulationReportCallback(
+      std::function<std::vector<InodePopulationReport>()> callback) = 0;
 
  protected:
   bool updateLastShown();

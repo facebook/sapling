@@ -12,6 +12,7 @@
 namespace facebook::eden {
 
 class ReloadableConfig;
+struct InodePopulationReport;
 
 /**
  * Show a generic "something went wrong" notification to the interactive
@@ -34,6 +35,10 @@ class CommandNotifier : public Notifier {
   void showNetworkNotification(const std::exception& err) override;
 
   void signalCheckout(size_t /*numActive*/) override {}
+
+  void registerInodePopulationReportCallback(
+      std::function<std::vector<InodePopulationReport>()> /*callback*/)
+      override {}
 };
 
 } // namespace facebook::eden

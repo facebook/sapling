@@ -72,6 +72,7 @@ class MountInfo;
 struct SessionInfo;
 class StartupLogger;
 class UserInfo;
+struct INodePopulationReport;
 
 #ifndef _WIN32
 class TakeoverServer;
@@ -449,7 +450,7 @@ class EdenServer : private TakeoverHandler {
    */
   size_t enumerateInProgressCheckouts() {
     size_t numActive = 0;
-    auto mountPoints = mountPoints_.rlock();
+    auto mountPoints = mountPoints_->rlock();
     for (auto& entry : *mountPoints) {
       auto& info = entry.second;
       numActive += info.edenMount->isCheckoutInProgress() ? 1 : 0;
@@ -589,6 +590,10 @@ class EdenServer : private TakeoverHandler {
   void registerStats(std::shared_ptr<EdenMount> edenMount);
   void unregisterStats(EdenMount* edenMount);
 
+  // Registers inode population reports callback with the notifier.
+  void registerInodePopulationReportsCallback();
+  void unregisterInodePopulationReportsCallback();
+
   // Report memory usage statistics to ServiceData.
   void reportMemoryStats();
 
@@ -641,8 +646,7 @@ class EdenServer : private TakeoverHandler {
   std::shared_ptr<TreeCache> treeCache_;
   std::shared_ptr<ReloadableConfig> config_;
 
-  folly::Synchronized<MountMap> mountPoints_{
-      MountMap{kPathMapDefaultCaseSensitive}};
+  std::shared_ptr<folly::Synchronized<MountMap>> mountPoints_;
 
 #ifndef _WIN32
   /**

@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <folly/Synchronized.h>
+
 #include "eden/fs/notifications/Notifier.h"
 #include "eden/fs/utils/Guid.h"
 
@@ -19,6 +21,7 @@ constexpr size_t WIN32_MAX_BODY_LEN = 255;
 constexpr size_t kNotificationsEnabledBit = 0;
 
 class ReloadableConfig;
+struct InodePopulationReport;
 
 struct WindowDeleter {
   void operator()(HWND hwnd) {
@@ -111,9 +114,13 @@ class WindowsNotifier : public Notifier {
 
   void signalCheckout(size_t numActive) override;
 
+  void registerInodePopulationReportCallback(
+      std::function<std::vector<InodePopulationReport>()> callback) override;
+
   void updateIconColor(size_t numActive);
 
  private:
+  void appendInodePopulationReportMenu(HMENU hMenu);
   void appendOptionsMenu(HMENU hMenu);
   void appendActionsMenu(HMENU hMenu);
   MenuHandle createEdenMenu();
@@ -124,6 +131,8 @@ class WindowsNotifier : public Notifier {
   std::chrono::time_point<std::chrono::steady_clock> startTime_;
   std::thread eventThread_;
   std::queue<std::unique_ptr<WindowsNotification>> notifQ_;
+  std::function<std::vector<InodePopulationReport>()>
+      inodePopulationReportsCallback_;
   // Should only be updated from event loop thread using
   // toggleNotificationsEnabled() to avoid potential race
   uint8_t notificationStatus_;

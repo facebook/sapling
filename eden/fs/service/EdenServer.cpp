@@ -351,6 +351,8 @@ EdenServer::EdenServer(
           FLAGS_maximumBlobCacheSize,
           FLAGS_minimumBlobCacheEntryCount)},
       config_{std::make_shared<ReloadableConfig>(edenConfig)},
+      mountPoints_{std::make_shared<folly::Synchronized<MountMap>>(
+          MountMap{kPathMapDefaultCaseSensitive})},
       // Store a pointer to the EventBase that will be used to drive
       // the main thread.  The runServer() code will end up driving this
       // EventBase.
@@ -376,6 +378,8 @@ EdenServer::EdenServer(
   counters->registerCallback(kBlobCacheMemory, [this] {
     return this->getBlobCache()->getStats().totalSizeInBytes;
   });
+
+  registerInodePopulationReportsCallback();
 
   for (auto stage : RequestMetricsScope::requestStages) {
     for (auto metric : RequestMetricsScope::requestMetrics) {
@@ -413,6 +417,8 @@ EdenServer::EdenServer(
 EdenServer::~EdenServer() {
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
   counters->unregisterCallback(kBlobCacheMemory);
+
+  unregisterInodePopulationReportsCallback();
 
   for (auto stage : RequestMetricsScope::requestStages) {
     for (auto metric : RequestMetricsScope::requestMetrics) {
@@ -521,7 +527,7 @@ size_t EdenServer::ProgressManager::registerEntry(
 Future<Unit> EdenServer::unmountAll() {
   std::vector<Future<Unit>> futures;
   {
-    const auto mountPoints = mountPoints_.wlock();
+    const auto mountPoints = mountPoints_->wlock();
     for (auto& entry : *mountPoints) {
       auto& info = entry.second;
 
@@ -559,7 +565,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
     folly::Promise<std::optional<TakeoverData>>&& takeoverPromise) {
   std::vector<Future<optional<TakeoverData::MountInfo>>> futures;
   {
-    const auto mountPoints = mountPoints_.wlock();
+    const auto mountPoints = mountPoints_->wlock();
     for (auto& entry : *mountPoints) {
       const auto& mountPath = entry.first;
       auto& info = entry.second;
@@ -758,7 +764,7 @@ void EdenServer::unloadInodes() {
   };
   std::vector<Root> roots;
   {
-    const auto mountPoints = mountPoints_.wlock();
+    const auto mountPoints = mountPoints_->wlock();
     for (auto& entry : *mountPoints) {
       roots.emplace_back(Root{
           entry.first,
@@ -1276,7 +1282,7 @@ void EdenServer::addToMountPoints(std::shared_ptr<EdenMount> edenMount) {
   auto& mountPath = edenMount->getPath();
 
   {
-    const auto mountPoints = mountPoints_.wlock();
+    const auto mountPoints = mountPoints_->wlock();
     const auto ret = mountPoints->emplace(mountPath, EdenMountInfo(edenMount));
     if (!ret.second) {
       throw newEdenError(
@@ -1400,6 +1406,34 @@ void EdenServer::unregisterStats(EdenMount* edenMount) {
         edenMount));
   }
 #endif // __linux__
+}
+
+void EdenServer::registerInodePopulationReportsCallback() {
+  getServerState()->getNotifier()->registerInodePopulationReportCallback(
+      [mountPoints = mountPoints_]() -> std::vector<InodePopulationReport> {
+        std::vector<InodePopulationReport> inodePopulationReports;
+
+        {
+          const auto lockedMountPoints = mountPoints->rlock();
+          for (const auto& [_, info] : *lockedMountPoints) {
+            const auto& mount = info.edenMount;
+
+            auto counts = mount->getInodeMap()->getInodeCounts();
+
+            inodePopulationReports.push_back(
+                {mount->getCheckoutConfig()->getMountPath().c_str(),
+                 counts.fileCount + counts.treeCount +
+                     counts.unloadedInodeCount});
+          }
+        }
+
+        return inodePopulationReports;
+      });
+}
+
+void EdenServer::unregisterInodePopulationReportsCallback() {
+  getServerState()->getNotifier()->registerInodePopulationReportCallback(
+      nullptr);
 }
 
 folly::Future<folly::Unit> EdenServer::performFreshStart(
@@ -1598,7 +1632,7 @@ Future<Unit> EdenServer::unmount(AbsolutePathPiece mountPath) {
            auto future = Future<Unit>::makeEmpty();
            auto mount = std::shared_ptr<EdenMount>{};
            {
-             const auto mountPoints = mountPoints_.wlock();
+             const auto mountPoints = mountPoints_->wlock();
              const auto it = mountPoints->find(mountPath);
              if (it == mountPoints->end()) {
                return makeFuture<Unit>(std::out_of_range(
@@ -1632,7 +1666,7 @@ void EdenServer::mountFinished(
   folly::SharedPromise<Unit> unmountPromise;
   std::optional<folly::Promise<TakeoverData::MountInfo>> takeoverPromise;
   {
-    const auto mountPoints = mountPoints_.wlock();
+    const auto mountPoints = mountPoints_->wlock();
     const auto it = mountPoints->find(mountPath);
     XCHECK(it != mountPoints->end());
     unmountPromise = std::move(it->second.unmountPromise);
@@ -1663,7 +1697,7 @@ void EdenServer::mountFinished(
       })
       .ensure([this, mountPath] {
         // Erase the EdenMount from our mountPoints_ map
-        const auto mountPoints = mountPoints_.wlock();
+        const auto mountPoints = mountPoints_->wlock();
         const auto it = mountPoints->find(mountPath);
         if (it != mountPoints->end()) {
           mountPoints->erase(it);
@@ -1674,7 +1708,7 @@ void EdenServer::mountFinished(
 EdenServer::MountList EdenServer::getMountPoints() const {
   MountList results;
   {
-    const auto mountPoints = mountPoints_.rlock();
+    const auto mountPoints = mountPoints_->rlock();
     for (const auto& entry : *mountPoints) {
       const auto& mount = entry.second.edenMount;
       // Avoid returning mount points that are still initializing and are
@@ -1691,7 +1725,7 @@ EdenServer::MountList EdenServer::getMountPoints() const {
 EdenServer::MountList EdenServer::getAllMountPoints() const {
   MountList results;
   {
-    const auto mountPoints = mountPoints_.rlock();
+    const auto mountPoints = mountPoints_->rlock();
     for (const auto& entry : *mountPoints) {
       results.emplace_back(entry.second.edenMount);
     }
@@ -1713,7 +1747,7 @@ shared_ptr<EdenMount> EdenServer::getMount(AbsolutePathPiece mountPath) const {
 
 shared_ptr<EdenMount> EdenServer::getMountUnsafe(
     AbsolutePathPiece mountPath) const {
-  const auto mountPoints = mountPoints_.rlock();
+  const auto mountPoints = mountPoints_->rlock();
   const auto it = mountPoints->find(mountPath);
   if (it == mountPoints->end()) {
     throw newEdenError(
@@ -2093,7 +2127,7 @@ void EdenServer::shutdownSubscribers() {
   // those down now, otherwise they will block the server_->stop() call
   // below
   XLOG(DBG1) << "cancel all subscribers prior to stopping thrift";
-  auto mountPoints = mountPoints_.wlock();
+  auto mountPoints = mountPoints_->wlock();
   for (auto& entry : *mountPoints) {
     auto& info = entry.second;
     info.edenMount->getJournal().cancelAllSubscribers();
@@ -2143,7 +2177,7 @@ void EdenServer::refreshBackingStore() {
 }
 
 void EdenServer::manageOverlay() {
-  const auto mountPoints = mountPoints_.rlock();
+  const auto mountPoints = mountPoints_->rlock();
   for (const auto& [_, info] : *mountPoints) {
     const auto& mount = info.edenMount;
 
