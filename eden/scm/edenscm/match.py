@@ -1586,14 +1586,11 @@ def _buildmatch(ctx, kindpats, globsuffix, root):
         return regex, lambda f: any(mf(f) for mf in matchfuncs)
 
 
-def _buildregexmatch(kindpats: Sized, globsuffix):
+def _buildregexmatch(kindpats: List, globsuffix):
     """Build a match function from a list of kinds and kindpats,
     return regexp string and a matcher function."""
+    regex = _buildregex(kindpats, globsuffix)
     try:
-        regex = "(?:%s)" % "|".join(
-            # pyre-fixme[16]: `Sized` has no attribute `__iter__`.
-            [_regex(k, p, globsuffix) for (k, p, s) in kindpats]
-        )
         if len(regex) > 20000:
             raise OverflowError
         return regex, _rematcher(regex)
@@ -1604,10 +1601,8 @@ def _buildregexmatch(kindpats: Sized, globsuffix):
         l = len(kindpats)
         if l < 2:
             raise
-        # pyre-fixme[16]: `Sized` has no attribute `__getitem__`.
         regexa, a = _buildregexmatch(kindpats[: l // 2], globsuffix)
         regexb, b = _buildregexmatch(kindpats[l // 2 :], globsuffix)
-        # pyre-fixme[61]: `regex` is undefined, or not always defined.
         return regex, lambda s: a(s) or b(s)
     except re.error:
         for k, p, s in kindpats:
@@ -1619,6 +1614,14 @@ def _buildregexmatch(kindpats: Sized, globsuffix):
                 else:
                     raise error.Abort(_("invalid pattern (%s): %s") % (k, p))
         raise error.Abort(_("invalid pattern"))
+
+
+def _buildregex(kindpats: List, globsuffix: str) -> str:
+    """Convert a (normalized) patterns of any kind into a regular expression.
+
+    globsuffix is appended to the regexp of globs.
+    """
+    return "(?:%s)" % "|".join([_regex(k, p, globsuffix) for (k, p, _) in kindpats])
 
 
 def _patternrootsanddirs(kindpats):
