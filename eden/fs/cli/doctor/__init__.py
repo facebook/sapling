@@ -298,6 +298,7 @@ class EdenDoctorChecker:
                     for checkout in checkouts.values()
                 ),
                 vscode_extensions_checker=self.vscode_extensions_checker,
+                eden_instance=self.instance,
             )
 
         watchman_info = check_watchman.pre_check()
