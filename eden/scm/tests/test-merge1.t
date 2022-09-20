@@ -1,8 +1,6 @@
 #chg-compatible
 
-
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
-  $ setconfig workingcopy.ruststatus=False
+  $ configure modernclient
   $ cat <<EOF > merge
   > from __future__ import print_function
   > import sys, os
@@ -18,8 +16,7 @@
   > EOF
   $ HGMERGE="$PYTHON ../merge"; export HGMERGE
 
-  $ hg init t
-  $ cd t
+  $ newclientrepo t
   $ echo This is file a1 > a
   $ hg add a
   $ hg commit -m "commit #0"
@@ -84,8 +81,7 @@ no merges expected
   M b
   $ cd ..; rm -r t
 
-  $ hg init t
-  $ cd t
+  $ newclientrepo t
   $ echo This is file a1 > a
   $ hg add a
   $ hg commit -m "commit #0"
@@ -137,6 +133,7 @@ this merge should fail
   [255]
 
 this merge should warn
+  $ cp b b.orig
   $ hg merge b8bb4a988f252d4b5d47afa4be3465dbca46f10a --config merge.checkunknown=warn
   b: replacing untracked file
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -184,11 +181,15 @@ remote .gitignore shouldn't be used for determining whether a file is ignored
   merging for .gitignore
   3 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
+  $ cat .gitignore
+  localignored
+  $ hg status
+  M .gitignore
+  M b
+  M localignored
+  M remoteignored
   $ cat remoteignored
   This is file remoteignored3
-  $ cat remoteignored.orig
-  This is file remoteignored4
-  $ rm remoteignored.orig
 
 local .gitignore should be used for that
   $ hg up --clean 'max(desc(commit))'
@@ -209,6 +210,8 @@ also test other conflicting files to see we output the full set of warnings
   b: untracked file differs
   abort: untracked files in working directory differ from files in requested revision
   [255]
+  $ cp localignored localignored.orig
+  $ cp b b.orig
   $ hg merge 6db90fb1646115381a8965d310fb1a3dddaee4a3 --config merge.checkignored=warn --config merge.checkunknown=warn
   b: replacing untracked file
   localignored: replacing untracked file
@@ -246,8 +249,7 @@ this merge of b should work
   M b
   $ cd ..; rm -r t
 
-  $ hg init t
-  $ cd t
+  $ newclientrepo t
   $ echo This is file a1 > a
   $ hg add a
   $ hg commit -m "commit #0"
@@ -287,8 +289,7 @@ merge expected!
   M b
   $ cd ..; rm -r t
 
-  $ hg init t
-  $ cd t
+  $ newclientrepo t
   $ echo This is file a1 > a
   $ hg add a
   $ hg commit -m "commit #0"

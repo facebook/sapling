@@ -182,20 +182,30 @@ pub fn compute_status(
     )?;
 
     // Pending changes shows changes in the working copy with respect to P1.
-    // Thus, we need to specially handle files that are in P2 but not P1:
-    //   If they exist in the filesystem, they'll be in pending changes as "modified".
-    //   Otherwise, if they don't exist in the filesystem (which we determine by checking if they
-    //   were in pending changes), they're either "deleted" or "removed" (based on EXIST_NEXT).
+    // Thus, we need to specially handle files that are in P2.
     walk_treestate(
         &treestate,
         StateFlags::EXIST_P2,
-        StateFlags::EXIST_P1,
+        StateFlags::empty(),
         |path, state| {
+            // If we saw it in the pending_changes loop earlier, then it's already processed and
+            // done.
             if matcher.matches_file(&path)? && !seen.contains(&path) {
-                if state.contains(StateFlags::EXIST_NEXT) {
-                    deleted.push(path);
+                // If it's in P1 but we didn't see it earlier, that means it didn't change with
+                // respect to P1. But since it is marked EXIST_P2, that means P2 changed it and
+                // therefore we should report it as changed.
+                if state.contains(StateFlags::EXIST_P1) {
+                    modified.push(path);
                 } else {
-                    removed.push(path);
+                    // Since pending changes is with respect to P1, then if it's not in P1
+                    // we either saw it in the pending changes loop earlier (in which case
+                    // it is in `seen` and was handled), or we didn't see it and therefore
+                    // it doesn't exist and is either deleted or removed.
+                    if state.contains(StateFlags::EXIST_NEXT) {
+                        deleted.push(path);
+                    } else {
+                        removed.push(path);
+                    }
                 }
             }
             Ok(())
