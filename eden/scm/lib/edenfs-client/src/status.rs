@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::fs::read_link;
 use std::fs::symlink_metadata;
 use std::fs::File;
 use std::io;
@@ -31,6 +30,7 @@ use eden::GetScmStatusResult;
 use eden::ScmFileStatus;
 use eden::ScmStatus;
 use fbthrift_socket::SocketTransport;
+use serde::Deserialize;
 use sha2::Digest;
 use sha2::Sha256;
 use status::StatusBuilder;
@@ -76,24 +76,8 @@ pub fn maybe_status_fastpath(
     ))
 }
 
-fn get_eden_root(repo_root: &Path) -> Result<String> {
-    // Look up the mount point name where Eden thinks this repository is
-    // located.  This may be different from repo_root if a parent directory
-    // of the Eden mount has been bind mounted to another location, resulting
-    // in the Eden mount appearing at multiple separate locations.
-    let eden_root = repo_root.join(".eden").join("root");
-    let eden_root = read_link(eden_root)?;
-    eden_root
-        .into_os_string()
-        .into_string()
-        .map_err(|_| anyhow!("Failed to get eden root"))
-}
-
-async fn get_socket_transport(repo_root: &Path) -> Result<SocketTransport<UnixStream>> {
-    // Look up Eden's socket address.
-    let sock_addr = repo_root.join(".eden").join("socket");
-    let sock_addr = read_link(sock_addr)?;
-    let sock = UnixStream::connect(&sock_addr).await?;
+async fn get_socket_transport(sock_path: &Path) -> Result<SocketTransport<UnixStream>> {
+    let sock = UnixStream::connect(&sock_path).await?;
     Ok(SocketTransport::new(sock))
 }
 
@@ -104,17 +88,71 @@ pub fn get_status(repo_root: &Path) -> Result<GetScmStatusResult> {
 }
 
 async fn get_status_internal(repo_root: &Path) -> Result<GetScmStatusResult> {
-    let eden_root = get_eden_root(repo_root)?;
+    let eden_config = EdenConfig::from_root(repo_root)?;
 
-    let transport = get_socket_transport(repo_root).await?;
+    let transport = get_socket_transport(&eden_config.socket).await?;
     let client = <dyn EdenService>::new(BinaryProtocol, transport);
 
-    let transport = get_socket_transport(repo_root).await?;
+    let transport = get_socket_transport(&eden_config.socket).await?;
     let fb303_client = <dyn BaseService>::new(BinaryProtocol, transport);
 
-    let dirstate_data = read_hg_dirstate(repo_root)?;
+    let dirstate_data = read_hg_dirstate(eden_config.root.as_ref())?;
 
-    get_status_helper(&client, &fb303_client, &eden_root, dirstate_data.p1, false).await
+    get_status_helper(
+        &client,
+        &fb303_client,
+        &eden_config.root,
+        dirstate_data.p1,
+        false,
+    )
+    .await
+}
+
+#[derive(Deserialize)]
+struct EdenConfig {
+    root: String,
+    socket: PathBuf,
+}
+
+impl EdenConfig {
+    fn from_root(root: &Path) -> Result<Self> {
+        let dot_eden = root.join(".eden");
+
+        // Look up the mount point name where Eden thinks this repository is
+        // located.  This may be different from repo_root if a parent directory
+        // of the Eden mount has been bind mounted to another location, resulting
+        // in the Eden mount appearing at multiple separate locations.
+
+        // Windows uses a toml .eden/config file due to lack of symlink support.
+        if cfg!(windows) {
+            let toml_path = dot_eden.join("config");
+
+            match util::file::read_to_string(&toml_path) {
+                Ok(toml_contents) => {
+                    #[derive(Deserialize)]
+                    struct Outer {
+                        #[serde(rename = "Config")]
+                        config: EdenConfig,
+                    }
+
+                    let outer: Outer = toml::from_str(&toml_contents)?;
+                    return Ok(outer.config);
+                }
+                // Fallthrough and try symlinks just in case.
+                Err(err) if err.is_not_found() => {}
+                Err(err) => return Err(err.into()),
+            }
+        }
+
+        let root = util::file::read_link(dot_eden.join("root"))?
+            .into_os_string()
+            .into_string()
+            .map_err(|path| anyhow!("couldn't stringify path {:?}", path))?;
+        Ok(Self {
+            root,
+            socket: util::file::read_link(dot_eden.join("socket"))?,
+        })
+    }
 }
 
 async fn maybe_status_fastpath_internal(
@@ -127,20 +165,20 @@ async fn maybe_status_fastpath_internal(
         None => bail!("invalid dot dir {}", repo_dot_path.display()),
     };
 
-    let eden_root = get_eden_root(repo_root).map_err(|_| OperationNotSupported)?;
+    let eden_config = EdenConfig::from_root(repo_root).map_err(|_| OperationNotSupported)?;
 
-    let transport = get_socket_transport(repo_root)
+    let transport = get_socket_transport(&eden_config.socket)
         .await
         .map_err(|_| OperationNotSupported)?;
     let client = <dyn EdenService>::new(BinaryProtocol, transport);
 
-    let transport = get_socket_transport(repo_root)
+    let transport = get_socket_transport(&eden_config.socket)
         .await
         .map_err(|_| OperationNotSupported)?;
     let fb303_client = <dyn BaseService>::new(BinaryProtocol, transport);
 
     // TODO(mbolin): Run read_hg_dirstate() and core.run() in parallel.
-    let dirstate_data = read_hg_dirstate(&repo_root)?;
+    let dirstate_data = read_hg_dirstate(eden_config.root.as_ref())?;
 
     // If any of the files are present that should trigger the 'morestatus' extension, bail out of
     // the wrapper here and default to the Python implementation. D9025269 has a prototype
@@ -155,7 +193,7 @@ async fn maybe_status_fastpath_internal(
     let status = get_status_helper(
         &client,
         &fb303_client,
-        &eden_root,
+        &eden_config.root,
         dirstate_data.p1,
         list_ignored,
     )

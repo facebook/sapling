@@ -9,6 +9,7 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io;
 use std::path::Path;
+use std::path::PathBuf;
 
 #[cfg(unix)]
 use once_cell::sync::Lazy;
@@ -81,6 +82,10 @@ pub fn exists(path: impl AsRef<Path>) -> IOResult<Option<std::fs::Metadata>> {
         Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
         Err(err) => Err(err).path_context("error reading file", path.as_ref()),
     }
+}
+
+pub fn read_link(path: impl AsRef<Path>) -> IOResult<PathBuf> {
+    std::fs::read_link(path.as_ref()).path_context("error reading link", path.as_ref())
 }
 
 #[cfg(test)]

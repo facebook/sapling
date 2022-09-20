@@ -38,6 +38,10 @@ impl IOError {
     pub fn kind(&self) -> std::io::ErrorKind {
         self.source.kind()
     }
+
+    pub fn is_not_found(&self) -> bool {
+        self.source.kind() == std::io::ErrorKind::NotFound
+    }
 }
 
 pub trait IOContext<T> {
