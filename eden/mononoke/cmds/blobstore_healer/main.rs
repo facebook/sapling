@@ -40,7 +40,6 @@ use futures::future;
 use futures_03_ext::BufferedParams;
 use healer::Healer;
 use metaconfig_types::BlobConfig;
-use metaconfig_types::DatabaseConfig;
 use metaconfig_types::StorageConfig;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
@@ -49,12 +48,8 @@ use mononoke_types::DateTime;
 use slog::info;
 use slog::o;
 use sql_construct::SqlConstructFromDatabaseConfig;
-#[cfg(fbcode_build)]
-use sql_ext::facebook::MyAdmin;
 use sql_ext::facebook::MysqlOptions;
-use sql_ext::replication::NoReplicaLagMonitor;
-use sql_ext::replication::ReplicaLagMonitor;
-use sql_ext::replication::WaitForReplicationConfig;
+use wait_for_replication::WaitForReplication;
 
 #[derive(Parser)]
 #[clap(about = "Monitors blobstore_sync_queue to heal blobstores with missing data")]
@@ -108,7 +103,7 @@ async fn maybe_schedule_healer_for_storage(
     config_store: &ConfigStore,
 ) -> Result<(), Error> {
     let (blobstore_configs, multiplex_id, queue_db, scuba_table, scuba_sample_rate) =
-        match storage_config.blobstore {
+        match storage_config.clone().blobstore {
             BlobConfig::Multiplexed {
                 blobstores,
                 multiplex_id,
@@ -179,21 +174,7 @@ async fn maybe_schedule_healer_for_storage(
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-    let lag_monitor: Box<dyn ReplicaLagMonitor> = match queue_db {
-        DatabaseConfig::Local(_) => Box::new(NoReplicaLagMonitor()),
-        DatabaseConfig::Remote(remote) => {
-            #[cfg(fbcode_build)]
-            {
-                let myadmin = MyAdmin::new(fb)?;
-                Box::new(myadmin.single_shard_lag_monitor(remote.db_address))
-            }
-            #[cfg(not(fbcode_build))]
-            {
-                let _ = remote;
-                unimplemented!("Remote DB is not yet implemented for non fbcode builds");
-            }
-        }
-    };
+    let wait_for_replication = WaitForReplication::new(fb, config_store, storage_config, "healer")?;
 
     let multiplex_healer = Healer::new(
         blobstore_sync_queue_limit,
@@ -205,19 +186,25 @@ async fn maybe_schedule_healer_for_storage(
         drain_only,
     );
 
-    schedule_healing(ctx, multiplex_healer, lag_monitor, iter_limit, heal_min_age).await
+    schedule_healing(
+        ctx,
+        multiplex_healer,
+        wait_for_replication,
+        iter_limit,
+        heal_min_age,
+    )
+    .await
 }
 
 // Pass None as iter_limit for never ending run
 async fn schedule_healing(
     ctx: &CoreContext,
     multiplex_healer: Healer,
-    lag_monitor: Box<dyn ReplicaLagMonitor>,
+    wait_for_replication: WaitForReplication,
     iter_limit: Option<u64>,
     heal_min_age: ChronoDuration,
 ) -> Result<(), Error> {
     let mut count = 0;
-    let wait_config = WaitForReplicationConfig::default().with_logger(ctx.logger());
     let healing_start_time = Instant::now();
     let mut total_deleted_rows = 0;
 
@@ -230,8 +217,8 @@ async fn schedule_healing(
             }
         }
 
-        lag_monitor
-            .wait_for_replication(&wait_config)
+        wait_for_replication
+            .wait_for_replication(ctx.logger())
             .await
             .context("While waiting for replication")?;
 

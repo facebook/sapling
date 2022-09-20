@@ -20,7 +20,6 @@ setup configuration
 
 Drain the healer queue
   $ mononoke_blobstore_healer -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 | strip_glog | sed -re '/^(Could not connect to a replica in)|(Monitoring regions:)|(Discovered regions:)/d'
-  Replication lag is * (glob)
   Fetched 60 queue entires (before building healing futures)
   Out of them 30 distinct blobstore keys, 30 distinct operation keys
   Found 30 blobs to be healed... Doing it with weight limit 10000000000, max concurrency: 100
