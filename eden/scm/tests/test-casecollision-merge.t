@@ -9,6 +9,8 @@ test for rename awareness of case-folding collision check:
 (1) colliding file is one renamed from collided file:
 this is also case for issue3370.
 
+  $ setconfig devel.segmented-changelog-rev-compat=True
+  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ hg init branch_merge_renaming
   $ cd branch_merge_renaming
 

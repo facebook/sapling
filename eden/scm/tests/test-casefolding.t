@@ -5,6 +5,8 @@
 
 test file addition with bad case
 
+  $ setconfig devel.segmented-changelog-rev-compat=True
+  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ hg init repo1
   $ cd repo1
   $ echo a > a
