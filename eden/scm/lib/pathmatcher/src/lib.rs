@@ -205,6 +205,50 @@ impl Matcher for UnionMatcher {
     }
 }
 
+pub struct IntersectMatcher {
+    matchers: Vec<Arc<dyn 'static + Matcher + Send + Sync>>,
+}
+
+impl IntersectMatcher {
+    pub fn new(matchers: Vec<Arc<dyn 'static + Matcher + Send + Sync>>) -> Self {
+        Self { matchers }
+    }
+}
+
+impl Matcher for IntersectMatcher {
+    fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
+        if self.matchers.is_empty() {
+            return Ok(DirectoryMatch::Nothing);
+        }
+
+        let mut traverse = false;
+        for matcher in &self.matchers {
+            match matcher.matches_directory(path)? {
+                DirectoryMatch::Nothing => return Ok(DirectoryMatch::Nothing),
+                DirectoryMatch::ShouldTraverse => traverse = true,
+                DirectoryMatch::Everything => {}
+            };
+        }
+
+        if traverse {
+            Ok(DirectoryMatch::ShouldTraverse)
+        } else {
+            Ok(DirectoryMatch::Everything)
+        }
+    }
+
+    fn matches_file(&self, path: &RepoPath) -> Result<bool> {
+        let mut matched = false;
+        for matcher in &self.matchers {
+            if !matcher.matches_file(path)? {
+                return Ok(false);
+            }
+            matched = true;
+        }
+        Ok(matched)
+    }
+}
+
 pub use exact_matcher::ExactMatcher;
 pub use gitignore_matcher::GitignoreMatcher;
 pub use regex_matcher::RegexMatcher;
@@ -212,3 +256,46 @@ pub use tree_matcher::TreeMatcher;
 pub use utils::expand_curly_brackets;
 pub use utils::normalize_glob;
 pub use utils::plain_to_glob;
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_intersection_matcher() -> Result<()> {
+        let empty = IntersectMatcher::new(Vec::new());
+        assert_eq!(
+            empty.matches_directory("something".try_into()?)?,
+            DirectoryMatch::Nothing
+        );
+        assert!(!empty.matches_file("something".try_into()?)?);
+
+        let matcher = IntersectMatcher::new(vec![
+            Arc::new(ExactMatcher::new(
+                [RepoPath::from_str("both/both")?, RepoPath::from_str("a/a")?].iter(),
+            )),
+            Arc::new(ExactMatcher::new(
+                [RepoPath::from_str("both/both")?, RepoPath::from_str("b/b")?].iter(),
+            )),
+        ]);
+
+        assert_eq!(
+            matcher.matches_directory("both".try_into()?)?,
+            DirectoryMatch::ShouldTraverse
+        );
+        assert_eq!(
+            matcher.matches_directory("neither".try_into()?)?,
+            DirectoryMatch::Nothing
+        );
+        assert_eq!(
+            matcher.matches_directory("a".try_into()?)?,
+            DirectoryMatch::Nothing
+        );
+
+        assert!(matcher.matches_file("both/both".try_into()?)?);
+        assert!(!matcher.matches_file("neither".try_into()?)?);
+        assert!(!matcher.matches_file("a/a".try_into()?)?);
+
+        Ok(())
+    }
+}
