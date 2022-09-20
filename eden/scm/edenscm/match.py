@@ -191,7 +191,7 @@ def match(
         if _kindpatsalwaysmatch(kindpats):
             m = alwaysmatcher(root, cwd, badfn, relativeuipath=True)
         else:
-            m = patternmatcher(root, cwd, kindpats, ctx=ctx, badfn=badfn)
+            m = _buildpatternmatcher(root, cwd, kindpats, ctx=ctx, badfn=badfn)
     else:
         # It's a little strange that no patterns means to match everything.
         # Consider changing this to match nothing (probably using nevermatcher).
@@ -962,27 +962,37 @@ def _convertretoglobs(repat) -> Optional[List[str]]:
     return None
 
 
+def _buildpatternmatcher(root, cwd, kindpats, ctx=None, badfn=None):
+    """This is a factory function for creating different pattern matchers.
+
+    1. If all patterns can be converted globs, we will try to use treematcher.
+    2. Fallback to default patternmatcher.
+    """
+    # kindpats are already normalized to be relative to repo-root.
+
+    # 1
+    rules = _kindpatstoglobs(kindpats, recursive=False)
+    if rules is not None:
+        try:
+            m = treematcher(root, cwd, badfn=badfn, rules=rules)
+            m._files = _explicitfiles(kindpats)
+            return m
+        except ValueError:
+            # for example, Regex("Compiled regex exceeds size limit of 10485760 bytes.")
+            # treematcher does not work with many patterns, it turns out globset has
+            # a hard-coded regex size limit (10MB).
+            pass
+
+    # 2
+    return patternmatcher(root, cwd, kindpats, ctx=ctx, badfn=badfn)
+
+
 class patternmatcher(basematcher):
     def __init__(self, root, cwd, kindpats, ctx=None, badfn=None):
         super(patternmatcher, self).__init__(root, cwd, badfn)
         # kindpats are already normalized to be relative to repo-root.
-        # Can we use tree matcher?
-        rules = _kindpatstoglobs(kindpats, recursive=False)
-        fallback = True
-        if rules is not None:
-            try:
-                matcher = treematcher(root, cwd, badfn=badfn, rules=rules)
-                # Replace self to 'matcher'.
-                self.__dict__ = matcher.__dict__
-                self.__class__ = matcher.__class__
-                fallback = False
-            except ValueError:
-                # for example, Regex("Compiled regex exceeds size limit of 10485760 bytes.")
-                pass
-        if fallback:
-            self._prefix = _prefix(kindpats)
-            self._pats, self.matchfn = _buildmatch(ctx, kindpats, "$", root)
-
+        self._prefix = _prefix(kindpats)
+        self._pats, self.matchfn = _buildmatch(ctx, kindpats, "$", root)
         self._files = _explicitfiles(kindpats)
 
     @propertycache
