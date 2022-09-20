@@ -75,6 +75,14 @@ pub fn read_to_string(path: impl AsRef<Path>) -> IOResult<String> {
     std::fs::read_to_string(path.as_ref()).path_context("error reading file", path.as_ref())
 }
 
+pub fn exists(path: impl AsRef<Path>) -> IOResult<Option<std::fs::Metadata>> {
+    match std::fs::metadata(path.as_ref()) {
+        Ok(m) => Ok(Some(m)),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
+        Err(err) => Err(err).path_context("error reading file", path.as_ref()),
+    }
+}
+
 #[cfg(test)]
 mod test {
     use anyhow::Result;

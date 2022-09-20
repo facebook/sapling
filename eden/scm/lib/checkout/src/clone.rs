@@ -6,7 +6,6 @@
  */
 
 use std::collections::BTreeMap;
-use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::sync::Arc;
@@ -41,8 +40,6 @@ use crate::file_state;
 use crate::ActionMap;
 use crate::Checkout;
 use crate::CheckoutPlan;
-
-static CONFIG_OVERRIDE_CACHE: &str = "sparseprofileconfigs";
 
 pub struct CheckoutStats {
     pub updated: usize,
@@ -130,24 +127,21 @@ impl CheckoutState {
 
         let mut sparse_overrides = None;
 
-        let matcher: Box<dyn Matcher> = match util::file::read_to_string(dot_path.join("sparse")) {
-            Ok(contents) => {
+        let matcher: Box<dyn Matcher> = match util::file::exists(dot_path.join("sparse"))? {
+            Some(_) => {
                 let overrides = sparse::config_overrides(config);
                 sparse_overrides = Some(overrides.clone());
-                Box::new(sparse::sparse_matcher(
-                    sparse::Root::from_bytes(contents.as_bytes(), ".hg/sparse".to_string())?,
+                sparse::repo_matcher_with_overrides(
+                    dot_path,
                     target_mf.clone(),
                     file_store.clone(),
                     overrides,
-                )?)
+                )?
+                .map(|m| Box::new(m) as Box<dyn Matcher>)
             }
-            Err(e) if e.kind() == io::ErrorKind::NotFound => {
-                Box::new(pathmatcher::AlwaysMatcher::new())
-            }
-            Err(e) => {
-                return Err(e.into());
-            }
-        };
+            None => None,
+        }
+        .unwrap_or_else(|| Box::new(pathmatcher::AlwaysMatcher::new()));
 
         let diff =
             Diff::new(source_mf, target_mf, &matcher).context("error creating checkout diff")?;
@@ -160,7 +154,7 @@ impl CheckoutState {
         // Write out overrides first so they don't change when resuming
         // this checkout.
         if let Some(sparse_overrides) = sparse_overrides {
-            atomic_write(&dot_path.join(CONFIG_OVERRIDE_CACHE), |f| {
+            atomic_write(&dot_path.join(sparse::CONFIG_OVERRIDE_CACHE), |f| {
                 serde_json::to_writer(f, &sparse_overrides)?;
                 Ok(())
             })?;

@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -22,7 +23,35 @@ use storemodel::ReadFileContents;
 use types::Key;
 use types::RepoPathBuf;
 
-pub fn sparse_matcher(
+pub static CONFIG_OVERRIDE_CACHE: &str = "sparseprofileconfigs";
+
+pub fn repo_matcher(
+    dot_path: &Path,
+    manifest: impl Manifest + Send + Sync + 'static,
+    store: impl ReadFileContents<Error = anyhow::Error> + Send + Sync,
+) -> anyhow::Result<Option<sparse::Matcher>> {
+    repo_matcher_with_overrides(dot_path, manifest, store, disk_overrides(dot_path)?)
+}
+
+pub fn repo_matcher_with_overrides(
+    dot_path: &Path,
+    manifest: impl Manifest + Send + Sync + 'static,
+    store: impl ReadFileContents<Error = anyhow::Error> + Send + Sync,
+    overrides: HashMap<String, String>,
+) -> anyhow::Result<Option<sparse::Matcher>> {
+    let prof = match util::file::read(dot_path.join("sparse")) {
+        Ok(contents) => sparse::Root::from_bytes(contents, ".hg/sparse".to_string())?,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(None);
+        }
+        Err(e) => {
+            return Err(e.into());
+        }
+    };
+    Ok(Some(build_matcher(prof, manifest, store, overrides)?))
+}
+
+fn build_matcher(
     prof: sparse::Root,
     manifest: impl Manifest + Send + Sync + 'static,
     store: impl ReadFileContents<Error = anyhow::Error> + Send + Sync,
@@ -113,6 +142,14 @@ pub fn config_overrides(config: impl Config) -> HashMap<String, String> {
     overrides
 }
 
+fn disk_overrides(dot_path: &Path) -> anyhow::Result<HashMap<String, String>> {
+    match util::file::open(dot_path.join(CONFIG_OVERRIDE_CACHE), "r") {
+        Ok(f) => Ok(serde_json::from_reader(f)?),
+        Err(err) if err.kind() != std::io::ErrorKind::NotFound => Err(err.into()),
+        _ => Ok(HashMap::new()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
@@ -126,7 +163,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_config_overrides() {
+    fn test_config_overrides() -> anyhow::Result<()> {
         let mut conf = BTreeMap::new();
 
         conf.insert("sparseprofile.include.foo.someprof", "inca,incb");
@@ -135,8 +172,9 @@ mod tests {
 
         conf.insert("sparseprofile.include.foo.otherprof", "inca");
 
+        let overrides = config_overrides(&conf);
         assert_eq!(
-            config_overrides(&conf),
+            overrides,
             HashMap::from([
                 (
                     "someprof".to_string(),
@@ -172,10 +210,22 @@ inca
                 ),
             ])
         );
+
+        let dir = tempfile::tempdir()?;
+
+        {
+            let f = util::file::create(dir.path().join(CONFIG_OVERRIDE_CACHE))?;
+            serde_json::to_writer(f, &overrides)?;
+        }
+
+        let roundtrip_overrides = disk_overrides(dir.path())?;
+        assert_eq!(roundtrip_overrides, overrides);
+
+        Ok(())
     }
 
     #[test]
-    fn test_sparse_matcher() {
+    fn test_build_matcher() -> anyhow::Result<()> {
         let mut config = BTreeMap::new();
 
         config.insert("sparseprofile.exclude.blah.tools/sparse/base", "inc/exc");
@@ -196,33 +246,34 @@ inc
 exc",
         );
 
-        let matcher = sparse_matcher(
-            sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string()).unwrap(),
+        let matcher = build_matcher(
+            sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
             commit.clone(),
             commit.clone(),
             config_overrides(&config),
-        )
-        .unwrap();
+        )?;
 
         assert_eq!(
-            matcher.explain("inc/banana".try_into().unwrap()).unwrap(),
+            matcher.explain("inc/banana".try_into()?)?,
             (true, "root -> tools/sparse/base".to_string())
         );
 
         assert_eq!(
-            matcher.explain("exc/banana".try_into().unwrap()).unwrap(),
+            matcher.explain("exc/banana".try_into()?)?,
             (false, "root -> tools/sparse/base".to_string())
         );
 
         // Test the config override.
         assert_eq!(
-            matcher.explain("inc/exc/foo".try_into().unwrap()).unwrap(),
+            matcher.explain("inc/exc/foo".try_into()?)?,
             (
                 false,
                 r#"root -> tools/sparse/base (hgrc.dynamic "exclude.blah.tools/sparse/base")"#
                     .to_string()
             )
         );
+
+        Ok(())
     }
 
     #[derive(Clone)]
