@@ -21,8 +21,11 @@ use configparser::config::ConfigSet;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use parking_lot::RwLock;
+use pathmatcher::AlwaysMatcher;
 use pathmatcher::DifferenceMatcher;
+use pathmatcher::ExactMatcher;
 use pathmatcher::GitignoreMatcher;
+use pathmatcher::IntersectMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::UnionMatcher;
 use status::Status;
@@ -52,6 +55,7 @@ pub struct WorkingCopy {
     manifests: Vec<Arc<RwLock<TreeManifest>>>,
     filesystem: FileSystem,
     ignore_matcher: Arc<GitignoreMatcher>,
+    sparse_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
 }
 
 impl WorkingCopy {
@@ -65,6 +69,8 @@ impl WorkingCopy {
         last_write: SystemTime,
         config: &ConfigSet,
     ) -> std::result::Result<Self, (TreeState, Error)> {
+        tracing::debug!(target: "dirstate_size", dirstate_size=treestate.len());
+
         let manifests = match WorkingCopy::current_manifests(&treestate, &tree_resolver) {
             Ok(manifests) => manifests,
             Err(e) => {
@@ -72,9 +78,40 @@ impl WorkingCopy {
             }
         };
 
-        let treestate = Rc::new(RefCell::new(treestate));
+        let ignore_matcher = Arc::new(GitignoreMatcher::new(
+            &root,
+            WorkingCopy::global_ignore_paths(&root, config)
+                .iter()
+                .map(|i| i.as_path())
+                .collect(),
+        ));
 
         // We assume there will be at least one manifest, even if it's the null manifest.
+        assert!(!manifests.is_empty());
+
+        let ident = match identity::must_sniff_dir(&root) {
+            Ok(ident) => ident,
+            Err(err) => return Err((treestate, err)),
+        };
+        let mut sparse_matchers: Vec<Arc<dyn Matcher + Send + Sync + 'static>> = Vec::new();
+        for manifest in manifests.iter() {
+            match crate::sparse::repo_matcher(
+                &root.join(ident.dot_dir()),
+                manifest.read().clone(),
+                filestore.clone(),
+            ) {
+                Ok(Some(matcher)) => {
+                    sparse_matchers.push(Arc::new(matcher));
+                }
+                Ok(None) => {
+                    sparse_matchers.push(Arc::new(AlwaysMatcher::new()));
+                }
+                Err(err) => return Err((treestate, err)),
+            };
+        }
+
+        let treestate = Rc::new(RefCell::new(treestate));
+
         let p1_manifest = manifests[0].clone();
 
         let filesystem: Result<FileSystem> = Self::construct_file_system(
@@ -96,19 +133,12 @@ impl WorkingCopy {
             }
         };
 
-        let ignore_matcher = Arc::new(GitignoreMatcher::new(
-            &root,
-            WorkingCopy::global_ignore_paths(&root, config)
-                .iter()
-                .map(|i| i.as_path())
-                .collect(),
-        ));
-
         Ok(WorkingCopy {
             treestate,
             manifests,
             filesystem,
             ignore_matcher,
+            sparse_matcher: Arc::new(UnionMatcher::new(sparse_matchers)),
         })
     }
 
@@ -230,7 +260,13 @@ impl WorkingCopy {
                 manifest.clone(),
             )));
         }
-        non_ignore_matchers.push(Arc::new(pathmatcher::ExactMatcher::new(added_files.iter())));
+        non_ignore_matchers.push(Arc::new(ExactMatcher::new(added_files.iter())));
+
+        let matcher = Arc::new(IntersectMatcher::new(vec![
+            matcher,
+            self.sparse_matcher.clone(),
+        ]));
+
         let matcher = Arc::new(DifferenceMatcher::new(
             matcher,
             DifferenceMatcher::new(

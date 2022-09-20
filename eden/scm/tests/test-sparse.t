@@ -2,6 +2,7 @@
   $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ export HG_NO_DEFAULT_CONFIG=true
   $ setconfig workingcopy.ruststatus=False
+  $ setconfig status.use-rust=True workingcopy.use-rust=True
   $ configure modernclient
 
 test sparse
@@ -462,7 +463,7 @@ We need to disable the SCM_SAMPLING_FILEPATH env var because arcanist may set it
   > sampling=
   > EOF
   $ rm -f $LOGDIR/samplingpath.txt
-  $ hg status
+  $ EDENSCM_TRACE_LEVEL=info hg status
   >>> import json
   >>> with open("$LOGDIR/samplingpath.txt") as f:
   ...     data = f.read()
