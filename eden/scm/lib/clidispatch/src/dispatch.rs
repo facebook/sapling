@@ -265,7 +265,7 @@ impl Dispatcher {
     fn default_command(&self) -> Result<String, UnknownCommand> {
         // Passing in --verbose also disables this behavior,
         // but that option is handled somewhere else
-        if self.global_opts.help || configparser::hg::is_plain(None) {
+        if self.global_opts.help || hgplain::is_plain(None) {
             return Err(errors::UnknownCommand(String::new()));
         }
         Ok(if let OptionalRepo::Some(repo) = &self.optional_repo {

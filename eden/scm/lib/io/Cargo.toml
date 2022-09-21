@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 atty = "0.2"
 configmodel = { version = "0.1.0", path = "../config/model" }
-configparser = { version = "0.1.0", path = "../config/parser" }
+hgplain = { version = "0.1.0", path = "../util/hgplain" }
 once_cell = "1.12"
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 pipe = "0.2"

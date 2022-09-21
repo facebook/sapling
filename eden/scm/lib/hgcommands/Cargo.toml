@@ -30,6 +30,7 @@ flate2 = { version = "1.0.22", features = ["rust_backend", "tokio"], default-fea
 formatter = { version = "0.1.0", path = "../formatter" }
 fsyncglob = { version = "0.1.0", path = "../fsyncglob" }
 hg-http = { version = "0.1.0", path = "../hg-http" }
+hgplain = { version = "0.1.0", path = "../util/hgplain" }
 hgtime = { version = "0.1.0", path = "../hgtime" }
 hostname = "0.3"
 identity = { version = "0.1.0", path = "../identity" }

@@ -12,6 +12,7 @@ blackbox = { version = "0.1.0", path = "../blackbox" }
 cliparser = { version = "0.1.0", path = "../cliparser" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 configparser = { version = "0.1.0", path = "../config/parser" }
+hgplain = { version = "0.1.0", path = "../util/hgplain" }
 identity = { version = "0.1.0", path = "../identity" }
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
 io = { version = "0.1.0", path = "../io" }

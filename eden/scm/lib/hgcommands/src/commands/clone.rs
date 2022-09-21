@@ -196,7 +196,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
         Some(dest) => absolute(dest).with_context(|| "Cannot get absolute destination path")?,
         None => {
             abort_if!(
-                configparser::hg::is_plain(Some("default_clone_dir")),
+                hgplain::is_plain(Some("default_clone_dir")),
                 "DEST must be specified because HGPLAIN is enabled",
             );
 

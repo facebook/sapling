@@ -92,8 +92,7 @@ struct Inner {
 static MAIN_IO_REF: Lazy<RwLock<Option<Weak<Mutex<Inner>>>>> = Lazy::new(Default::default);
 
 fn colors_disabled_via_env() -> bool {
-    configparser::hg::is_plain(Some("color"))
-        || std::env::var("TERM").ok().as_deref() == Some("dumb")
+    hgplain::is_plain(Some("color")) || std::env::var("TERM").ok().as_deref() == Some("dumb")
 }
 
 pub trait IsTty {

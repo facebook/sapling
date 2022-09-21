@@ -17,6 +17,7 @@ anyhow = "1.0.56"
 configmodel = { version = "0.1.0", path = "../model" }
 dirs = "2.0"
 filetime = { version = "0.2.9", optional = true }
+hgplain = { version = "0.1.0", path = "../../util/hgplain" }
 hgtime = { version = "0.1.0", path = "../../hgtime", optional = true }
 hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hostname = "0.3"

@@ -114,6 +114,7 @@ members = [
   "lib/treestate",
   "lib/types",
   "lib/util",
+  "lib/util/hgplain",
   "lib/version",
   "lib/vfs",
   "lib/vlqencoding",

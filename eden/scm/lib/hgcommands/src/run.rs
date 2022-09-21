@@ -405,7 +405,7 @@ fn spawn_progress_thread(
         disable_rendering = true;
     }
 
-    if global_opts.quiet || global_opts.debug || configparser::hg::is_plain(Some("progress")) {
+    if global_opts.quiet || global_opts.debug || hgplain::is_plain(Some("progress")) {
         disable_rendering = true;
     }
 

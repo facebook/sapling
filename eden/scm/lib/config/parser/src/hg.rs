@@ -23,6 +23,8 @@ use std::path::PathBuf;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use hgplain::HGPLAIN;
+use hgplain::HGPLAINEXCEPT;
 use minibytes::Text;
 use url::Url;
 use util::path::expand_path;
@@ -35,8 +37,6 @@ use crate::error::Errors;
 #[cfg(not(feature = "fb"))]
 use crate::opensource;
 
-pub const HGPLAIN: &str = "HGPLAIN";
-pub const HGPLAINEXCEPT: &str = "HGPLAINEXCEPT";
 pub const HGRCPATH: &str = "HGRCPATH";
 
 pub trait OptionsHgExt {
@@ -866,25 +866,6 @@ pub fn read_repo_name_from_disk(shared_dot_hg_path: &Path) -> io::Result<String>
     }
 }
 
-/// Return whether plain mode is active, similar to python ui.plain().
-pub fn is_plain(feature: Option<&str>) -> bool {
-    let plain = env::var(HGPLAIN);
-    let plain_except = env::var(HGPLAINEXCEPT);
-
-    if plain.is_err() && plain_except.is_err() {
-        return false;
-    }
-
-    if let Some(feature) = feature {
-        !plain_except
-            .unwrap_or_default()
-            .split(',')
-            .any(|s| s == feature)
-    } else {
-        true
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use tempdir::TempDir;
@@ -949,6 +930,8 @@ mod tests {
     #[test]
     fn test_is_plain() {
         let mut env = lock_env();
+
+        use hgplain::is_plain;
 
         env.set(HGPLAIN, None);
         env.set(HGPLAINEXCEPT, None);
