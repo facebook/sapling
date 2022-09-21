@@ -291,6 +291,7 @@ mod test {
             verbose: false,
             quiet: false,
             color: test_case.color,
+            debug_color: false,
         };
 
         let mut config: BTreeMap<&str, &str> = BTreeMap::new();

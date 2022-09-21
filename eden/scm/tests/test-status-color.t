@@ -22,28 +22,28 @@ hg status in repo root:
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? in_root\x1b[0m (esc)
 
   $ hg status --color=debug
+  [? a/1/in_a_1|status.unknown]
+  [? a/in_a|status.unknown]
+  [? b/1/in_b_1|status.unknown]
+  [? b/2/in_b_2|status.unknown]
+  [? b/in_b|status.unknown]
+  [? in_root|status.unknown]
+HGPLAIN disables color
+  $ HGPLAIN=1 hg status --color=debug
   ? a/1/in_a_1
   ? a/in_a
   ? b/1/in_b_1
   ? b/2/in_b_2
   ? b/in_b
-  ? in_root
-HGPLAIN disables color
-  $ HGPLAIN=1 hg status --color=debug
-  ? a/1/in_a_1 (glob)
-  ? a/in_a (glob)
-  ? b/1/in_b_1 (glob)
-  ? b/2/in_b_2 (glob)
-  ? b/in_b (glob)
   ? in_root
 HGPLAINEXCEPT=color does not disable color
   $ HGPLAINEXCEPT=color hg status --color=debug
-  ? a/1/in_a_1
-  ? a/in_a
-  ? b/1/in_b_1
-  ? b/2/in_b_2
-  ? b/in_b
-  ? in_root
+  [? a/1/in_a_1|status.unknown]
+  [? a/in_a|status.unknown]
+  [? b/1/in_b_1|status.unknown]
+  [? b/2/in_b_2|status.unknown]
+  [? b/in_b|status.unknown]
+  [? in_root|status.unknown]
 
 hg status with template
   $ hg status -T "{label('red', path)}\n" --color=debug

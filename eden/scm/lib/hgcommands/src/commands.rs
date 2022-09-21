@@ -62,6 +62,8 @@ fn get_formatter(
             verbose: options.verbose,
             quiet: options.quiet,
             color: termstyle::should_color(config, writer.as_mut()),
+            debug_color: config.get("ui", "color") == Some("debug".into())
+                && !hgplain::is_plain(Some("color")),
         },
         Box::new(writer),
     )

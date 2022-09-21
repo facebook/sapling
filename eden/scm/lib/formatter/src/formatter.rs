@@ -22,6 +22,7 @@ pub struct FormatOptions {
     pub verbose: bool,
     pub quiet: bool,
     pub color: bool,
+    pub debug_color: bool,
 }
 
 pub trait JsonFormattable {
@@ -44,6 +45,7 @@ struct PlainWriter<'a> {
     styler: &'a mut termstyle::Styler,
     styles: &'a HashMap<String, String>,
     should_color: bool,
+    debug: bool,
 }
 
 impl Write for PlainWriter<'_> {
@@ -57,7 +59,17 @@ impl Write for PlainWriter<'_> {
 }
 
 impl StyleWrite for PlainWriter<'_> {
-    fn write_styled(&mut self, style: &str, text: &str) -> anyhow::Result<()> {
+    fn write_styled(&mut self, style: &str, mut text: &str) -> anyhow::Result<()> {
+        if self.debug {
+            let mut end = "";
+            if let Some(stripped) = text.strip_suffix('\n') {
+                text = stripped;
+                end = "\n";
+            }
+            write!(self.w, "[{text}|{style}]{end}")?;
+            return Ok(());
+        }
+
         if !self.should_color {
             self.w.write_all(text.as_bytes())?;
             return Ok(());
@@ -108,6 +120,7 @@ impl ListFormatter for PlainFormatter {
                 styler: &mut self.styler,
                 styles: &self.styles,
                 should_color: self.options.color,
+                debug: self.options.debug_color,
             },
         )
         .map_err(|err| match err.downcast::<std::io::Error>() {
