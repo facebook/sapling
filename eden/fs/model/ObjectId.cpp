@@ -36,6 +36,11 @@ std::string ObjectId::asString() const {
 }
 
 size_t ObjectId::getHashCode() const noexcept {
+  if (bytes_.size() > sizeof(size_t) + 1) {
+    size_t ret;
+    memcpy(&ret, bytes_.data() + 1, sizeof(size_t));
+    return ret;
+  }
   return std::hash<folly::fbstring>{}(bytes_);
 }
 
