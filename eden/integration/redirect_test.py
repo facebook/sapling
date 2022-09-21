@@ -313,3 +313,29 @@ via-profile = "bind"
                 }
             ],
         )
+
+    def test_redirect_no_config_dir(self) -> None:
+        profile_path = scratch_path(
+            self.mount, os.path.join("edenfs", "redirections", "via-profile")
+        )
+
+        output = self.eden.run_cmd(
+            "redirect",
+            "list",
+            "--json",
+            "--mount",
+            self.mount,
+            config_dir=False,
+        )
+        self.assertEqual(
+            json.loads(output),
+            [
+                {
+                    "repo_path": "via-profile",
+                    "type": "bind",
+                    "target": profile_path,
+                    "source": ".eden-redirections",
+                    "state": "ok",
+                }
+            ],
+        )

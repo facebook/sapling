@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::env;
 use std::fmt;
 use std::fs::File;
 use std::io::BufReader;
@@ -165,6 +166,22 @@ impl MainCommand {
         if let Some(config_dir) = &self.config_dir {
             config_dir.clone()
         } else {
+            // Check whether we're in an Eden mount. If we are, some parent directory will contain
+            // a .eden dir that contains a socket file. This socket file is symlinked to the
+            // socket file contained in the config dir we should use for this mount.
+            if let Ok(expanded_path) = env::current_dir().and_then(|cwd| cwd.canonicalize()) {
+                for ancestor in expanded_path.ancestors() {
+                    let socket = ancestor.join(".eden").join("socket");
+                    if socket.exists() {
+                        if let Ok(resolved_socket) = socket.canonicalize() {
+                            if let Some(parent) = resolved_socket.parent() {
+                                return parent.to_path_buf();
+                            }
+                        }
+                    }
+                }
+            }
+            // If we aren't in an eden mount, simply use the default config dir
             expand_path(DEFAULT_CONFIG_DIR)
         }
     }

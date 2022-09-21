@@ -155,6 +155,7 @@ class EdenFS(object):
         cwd: Optional[str] = None,
         capture_stderr: bool = False,
         encoding: str = "utf-8",
+        config_dir: bool = True,
     ) -> str:
         """
         Run the specified eden command.
@@ -163,7 +164,7 @@ class EdenFS(object):
         Usage example: run_cmd('mount', 'my_eden_client')
         Throws a subprocess.CalledProcessError if eden exits unsuccessfully.
         """
-        cmd, env = self.get_edenfsctl_cmd_env(command, *args)
+        cmd, env = self.get_edenfsctl_cmd_env(command, *args, config_dir=config_dir)
         try:
             stderr = subprocess.STDOUT if capture_stderr else subprocess.PIPE
             # TODO(T37669726): Re-enable LSAN.
@@ -201,7 +202,10 @@ class EdenFS(object):
         return subprocess.run(cmd, **kwargs)
 
     def get_edenfsctl_cmd_env(
-        self, command: str, *args: str
+        self,
+        command: str,
+        *args: str,
+        config_dir: bool = True,
     ) -> Tuple[List[str], Dict[str, str]]:
         """Combines the specified eden command args with the appropriate
         defaults.
@@ -216,13 +220,13 @@ class EdenFS(object):
         edenfsctl, env = FindExe.get_edenfsctl_env()
         cmd = [
             edenfsctl,
-            "--config-dir",
-            str(self._eden_dir),
             "--etc-eden-dir",
             str(self._etc_eden_dir),
             "--home-dir",
             str(self._home_dir),
         ]
+        if config_dir:
+            cmd += ["--config-dir", str(self._eden_dir)]
         cmd.append(command)
         cmd.extend(args)
         return cmd, env
