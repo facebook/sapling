@@ -101,7 +101,7 @@ impl WorkingCopy {
                 filestore.clone(),
             ) {
                 Ok(Some(matcher)) => {
-                    sparse_matchers.push(Arc::new(matcher));
+                    sparse_matchers.push(matcher);
                 }
                 Ok(None) => {
                     sparse_matchers.push(Arc::new(AlwaysMatcher::new()));

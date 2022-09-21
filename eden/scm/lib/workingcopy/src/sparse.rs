@@ -17,19 +17,24 @@ use configmodel::ConfigExt;
 use manifest::FileMetadata;
 use manifest::FsNodeMetadata;
 use manifest::Manifest;
+use pathmatcher::ExactMatcher;
+use pathmatcher::Matcher;
+use pathmatcher::UnionMatcher;
 pub use sparse::Root;
 use storemodel::futures::StreamExt;
 use storemodel::ReadFileContents;
 use types::Key;
+use types::RepoPath;
 use types::RepoPathBuf;
 
 pub static CONFIG_OVERRIDE_CACHE: &str = "sparseprofileconfigs";
+pub static MERGE_FILE_OVERRIDES: &str = "tempsparse";
 
 pub fn repo_matcher(
     dot_path: &Path,
     manifest: impl Manifest + Send + Sync + 'static,
     store: impl ReadFileContents<Error = anyhow::Error> + Send + Sync,
-) -> anyhow::Result<Option<sparse::Matcher>> {
+) -> anyhow::Result<Option<Arc<dyn Matcher + Send + Sync + 'static>>> {
     repo_matcher_with_overrides(dot_path, manifest, store, disk_overrides(dot_path)?)
 }
 
@@ -38,7 +43,7 @@ pub fn repo_matcher_with_overrides(
     manifest: impl Manifest + Send + Sync + 'static,
     store: impl ReadFileContents<Error = anyhow::Error> + Send + Sync,
     overrides: HashMap<String, String>,
-) -> anyhow::Result<Option<sparse::Matcher>> {
+) -> anyhow::Result<Option<Arc<dyn Matcher + Send + Sync + 'static>>> {
     let prof = match util::file::read(dot_path.join("sparse")) {
         Ok(contents) => sparse::Root::from_bytes(contents, ".hg/sparse".to_string())?,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
@@ -48,15 +53,18 @@ pub fn repo_matcher_with_overrides(
             return Err(e.into());
         }
     };
-    Ok(Some(build_matcher(prof, manifest, store, overrides)?))
+    Ok(Some(build_matcher(
+        dot_path, prof, manifest, store, overrides,
+    )?))
 }
 
 fn build_matcher(
+    dot_path: &Path,
     prof: sparse::Root,
     manifest: impl Manifest + Send + Sync + 'static,
     store: impl ReadFileContents<Error = anyhow::Error> + Send + Sync,
     overrides: HashMap<String, String>,
-) -> anyhow::Result<sparse::Matcher> {
+) -> anyhow::Result<Arc<dyn Matcher + Send + Sync + 'static>> {
     let manifest = Arc::new(manifest);
 
     let matcher = try_block_unless_interrupted(prof.matcher(|path| async {
@@ -105,6 +113,22 @@ fn build_matcher(
             None => Err(anyhow!("no contents for {}", repo_path)),
         }
     }))?;
+
+    let mut matcher: Arc<dyn Matcher + Send + Sync + 'static> = Arc::new(matcher);
+
+    match util::file::read_to_string(dot_path.join(MERGE_FILE_OVERRIDES)) {
+        Ok(temp) => {
+            let exact = ExactMatcher::new(
+                temp.split('\n')
+                    .map(|p| p.try_into())
+                    .collect::<Result<Vec<&RepoPath>, _>>()?
+                    .iter(),
+            );
+            matcher = Arc::new(UnionMatcher::new(vec![Arc::new(exact), matcher]));
+        }
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
+        Err(err) => return Err(err.into()),
+    }
 
     Ok(matcher)
 }
@@ -226,6 +250,8 @@ inca
 
     #[test]
     fn test_build_matcher() -> anyhow::Result<()> {
+        let root_dir = tempfile::tempdir()?;
+
         let mut config = BTreeMap::new();
 
         config.insert("sparseprofile.exclude.blah.tools/sparse/base", "inc/exc");
@@ -247,31 +273,36 @@ exc",
         );
 
         let matcher = build_matcher(
+            root_dir.path(),
             sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
             commit.clone(),
             commit.clone(),
             config_overrides(&config),
         )?;
 
-        assert_eq!(
-            matcher.explain("inc/banana".try_into()?)?,
-            (true, "root -> tools/sparse/base".to_string())
-        );
-
-        assert_eq!(
-            matcher.explain("exc/banana".try_into()?)?,
-            (false, "root -> tools/sparse/base".to_string())
-        );
+        assert!(matcher.matches_file("inc/banana".try_into()?)?);
+        assert!(!matcher.matches_file("exc/banana".try_into()?)?);
+        assert!(!matcher.matches_file("merge/a".try_into()?)?);
 
         // Test the config override.
-        assert_eq!(
-            matcher.explain("inc/exc/foo".try_into()?)?,
-            (
-                false,
-                r#"root -> tools/sparse/base (hgrc.dynamic "exclude.blah.tools/sparse/base")"#
-                    .to_string()
-            )
-        );
+        assert!(!matcher.matches_file("inc/exc/foo".try_into()?)?);
+
+        std::fs::write(
+            root_dir.path().join(MERGE_FILE_OVERRIDES),
+            "merge/a\nmerge/b",
+        )?;
+
+        let matcher = build_matcher(
+            root_dir.path(),
+            sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
+            commit.clone(),
+            commit.clone(),
+            config_overrides(&config),
+        )?;
+
+        assert!(matcher.matches_file("merge/a".try_into()?)?);
+        assert!(matcher.matches_file("merge/b".try_into()?)?);
+        assert!(!matcher.matches_file("merge/abc".try_into()?)?);
 
         Ok(())
     }

@@ -127,7 +127,7 @@ impl CheckoutState {
 
         let mut sparse_overrides = None;
 
-        let matcher: Box<dyn Matcher> = match util::file::exists(dot_path.join("sparse"))? {
+        let matcher: Arc<dyn Matcher> = match util::file::exists(dot_path.join("sparse"))? {
             Some(_) => {
                 let overrides = sparse::config_overrides(config);
                 sparse_overrides = Some(overrides.clone());
@@ -137,11 +137,10 @@ impl CheckoutState {
                     file_store.clone(),
                     overrides,
                 )?
-                .map(|m| Box::new(m) as Box<dyn Matcher>)
             }
             None => None,
         }
-        .unwrap_or_else(|| Box::new(pathmatcher::AlwaysMatcher::new()));
+        .unwrap_or_else(|| Arc::new(pathmatcher::AlwaysMatcher::new()));
 
         let diff =
             Diff::new(source_mf, target_mf, &matcher).context("error creating checkout diff")?;
