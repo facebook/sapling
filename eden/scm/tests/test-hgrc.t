@@ -75,6 +75,7 @@ issue1829: wrong indentation
 make sure global options given on the cmdline take precedence
 
   $ hg showconfig --config ui.verbose=True --quiet ui
+  ui.color=auto
   ui.debug=false
   ui.interactive=False
   ui.mergemarkers=detailed

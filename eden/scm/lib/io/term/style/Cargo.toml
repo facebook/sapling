@@ -6,5 +6,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+configmodel = { version = "0.1.0", path = "../../../config/model" }
+hgplain = { version = "0.1.0", path = "../../../util/hgplain" }
+io = { version = "0.1.0", path = "../.." }
 termwiz = { version = "0.15", features = ["widgets"] }
 tracing = "0.1.35"
+util = { version = "0.1.0", path = "../../../util" }
