@@ -17,7 +17,7 @@ fail = { version = "0.4", features = ["failpoints"] }
 fs2 = { version = "0.4", optional = true }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 indexedlog = { version = "0.1.0", path = "../indexedlog", optional = true }
-indexmap = { version = "1.8.0", features = ["rayon", "serde-1"] }
+indexmap = { version = "1.9.1", features = ["rayon", "serde-1"] }
 itertools = "0.10.3"
 mincode = { version = "0.1.0", path = "../mincode" }
 minibytes = { version = "0.1.0", path = "../minibytes" }

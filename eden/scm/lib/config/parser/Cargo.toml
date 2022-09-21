@@ -23,7 +23,7 @@ hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 hostname = "0.3"
 http-client = { version = "0.1.0", path = "../../http-client", optional = true }
 identity = { version = "0.1.0", path = "../../identity" }
-indexmap = { version = "1.8.0", features = ["rayon", "serde-1"] }
+indexmap = { version = "1.9.1", features = ["rayon", "serde-1"] }
 minibytes = { version = "0.1.0", path = "../../minibytes" }
 pest-hgrc = { version = "0.1.0", path = "../pest-hgrc" }
 regex = { version = "1.5.4", optional = true }
