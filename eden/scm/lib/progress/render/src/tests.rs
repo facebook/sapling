@@ -17,7 +17,7 @@ fn test_simple_render() {
     let reg = example();
     let mut config = RenderingConfig::for_testing();
     assert_eq!(
-        format!("\n{}", crate::simple::render_string(&reg, &config)),
+        format!("\r\n{}", crate::simple::render_string(&reg, &config)),
         r#"
        Files  110 (9% miss)
        Trees  110 (9% miss)
@@ -29,11 +29,12 @@ fn test_simple_render() {
        Files  [=======>       ]  5KB/10KB  ./foo/Files/文…
        Trees  [     <=>       ]  5KB  ./foo/Trees/文件名
               and 4 more"#
+            .replace('\n', "\r\n")
     );
 
     config.term_width = 80;
     assert_eq!(
-        format!("\n{}", crate::simple::render_string(&reg, &config)),
+        format!("\r\n{}", crate::simple::render_string(&reg, &config)),
         r#"
            Files  110 (9% miss)
            Trees  110 (9% miss)
@@ -45,6 +46,7 @@ Defragging disks  [=======>       ]  5KB/10KB
            Files  [=======>       ]  5KB/10KB  ./foo/Files/文件名
            Trees  [     <=>       ]  5KB  ./foo/Trees/文件名
                   and 4 more"#
+            .replace('\n', "\r\n")
     );
 }
 

@@ -40,7 +40,7 @@ pub fn render_string(registry: &Registry, config: &RenderingConfig) -> String {
         *line = config.truncate_line(&line).to_string();
     }
 
-    lines.join("\n")
+    lines.join("\r\n")
 }
 
 fn render_time_series(

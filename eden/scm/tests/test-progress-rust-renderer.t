@@ -18,28 +18,28 @@ test nested topics
   $ hg progresstest --nested 2 2
    (clear) (no-eol)
      Progress test  [>              ]  0/2 cycles  loop 0\x1b[55D (clear) (no-eol) (esc)
-     Progress test  [>              ]  0/2 cycles  loop 0
-   Nested progress  [>              ]  0/2   nest 0\x1b[2A\x1b[24D (clear) (no-eol) (esc)
-     Progress test  [>              ]  0/2 cycles  loop 0
-   Nested progress  [=======>       ]  1/2   nest 1\x1b[2A\x1b[24D (clear) (no-eol) (esc)
-     Progress test  [>              ]  0/2 cycles  loop 0
-   Nested progress  [===============]  2/2   nest 2\x1b[2A\x1b[24D (clear) (no-eol) (esc)
-     Progress test  [=======>       ]  1/2 cycles  loop 1
-   Nested progress  [===============]  2/2   nest 2\x1b[2A\x1b[24D (clear) (no-eol) (esc)
-     Progress test  [=======>       ]  1/2 cycles  loop 1
-   Nested progress  [>              ]  0/2   nest 0\x1b[2A\x1b[24D (clear) (no-eol) (esc)
-     Progress test  [=======>       ]  1/2 cycles  loop 1
-   Nested progress  [=======>       ]  1/2   nest 1\x1b[2A\x1b[24D (clear) (no-eol) (esc)
-     Progress test  [=======>       ]  1/2 cycles  loop 1
-   Nested progress  [===============]  2/2   nest 2\x1b[2A\x1b[24D (clear) (no-eol) (esc)
-     Progress test  [===============]  2/2 cycles  loop 2
-   Nested progress  [===============]  2/2   nest 2\x1b[2A\x1b[24D (clear) (no-eol) (esc)
-     Progress test  [===============]  2/2 cycles  loop 2
-   Nested progress  [>              ]  0/2   nest 0\x1b[2A\x1b[24D (clear) (no-eol) (esc)
-     Progress test  [===============]  2/2 cycles  loop 2
-   Nested progress  [=======>       ]  1/2   nest 1\x1b[2A\x1b[24D (clear) (no-eol) (esc)
-     Progress test  [===============]  2/2 cycles  loop 2
-   Nested progress  [===============]  2/2   nest 2\x1b[2A\x1b[24D (clear) (no-eol) (esc)
+     Progress test  [>              ]  0/2 cycles  loop 0\r (esc)
+   Nested progress  [>              ]  0/2   nest 0\x1b[A\x1b[49D (clear) (no-eol) (esc)
+     Progress test  [>              ]  0/2 cycles  loop 0\r (esc)
+   Nested progress  [=======>       ]  1/2   nest 1\x1b[A\x1b[49D (clear) (no-eol) (esc)
+     Progress test  [>              ]  0/2 cycles  loop 0\r (esc)
+   Nested progress  [===============]  2/2   nest 2\x1b[A\x1b[49D (clear) (no-eol) (esc)
+     Progress test  [=======>       ]  1/2 cycles  loop 1\r (esc)
+   Nested progress  [===============]  2/2   nest 2\x1b[A\x1b[49D (clear) (no-eol) (esc)
+     Progress test  [=======>       ]  1/2 cycles  loop 1\r (esc)
+   Nested progress  [>              ]  0/2   nest 0\x1b[A\x1b[49D (clear) (no-eol) (esc)
+     Progress test  [=======>       ]  1/2 cycles  loop 1\r (esc)
+   Nested progress  [=======>       ]  1/2   nest 1\x1b[A\x1b[49D (clear) (no-eol) (esc)
+     Progress test  [=======>       ]  1/2 cycles  loop 1\r (esc)
+   Nested progress  [===============]  2/2   nest 2\x1b[A\x1b[49D (clear) (no-eol) (esc)
+     Progress test  [===============]  2/2 cycles  loop 2\r (esc)
+   Nested progress  [===============]  2/2   nest 2\x1b[A\x1b[49D (clear) (no-eol) (esc)
+     Progress test  [===============]  2/2 cycles  loop 2\r (esc)
+   Nested progress  [>              ]  0/2   nest 0\x1b[A\x1b[49D (clear) (no-eol) (esc)
+     Progress test  [===============]  2/2 cycles  loop 2\r (esc)
+   Nested progress  [=======>       ]  1/2   nest 1\x1b[A\x1b[49D (clear) (no-eol) (esc)
+     Progress test  [===============]  2/2 cycles  loop 2\r (esc)
+   Nested progress  [===============]  2/2   nest 2\x1b[A\x1b[49D (clear) (no-eol) (esc)
 
 
 test count over total
