@@ -162,8 +162,15 @@ union FileSpecifier {
 
 /// Returned objects
 
+/// This structure should be small and contain very basic repository info.
 struct Repo {
   1: string name;
+}
+
+/// This structure can be bigger and contain more detailed repository info.
+struct RepoInfo {
+  1: string name;
+  2: CommitIdentityScheme default_commit_identity_scheme;
 }
 
 struct CommitInfo {
@@ -593,6 +600,8 @@ struct SparseProfileDeltaSizes {
 }
 
 /// Method parameters structures
+
+struct RepoInfoParams {}
 
 struct ListReposParams {}
 
@@ -1809,6 +1818,12 @@ service SourceControlService extends fb303_core.BaseService {
 
   /// Repository methods
   /// ==================
+
+  /// Get repo info
+  RepoInfo repo_info(1: RepoSpecifier repo, 2: RepoInfoParams params) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+  );
 
   /// Resolve a bookmark
   /// The return value may be slightly stale, the served value is only updated

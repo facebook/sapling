@@ -17,6 +17,7 @@ use futures::stream::FuturesOrdered;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use maplit::btreemap;
+use metaconfig_types::CommitIdentityScheme;
 use mononoke_api::BookmarkFreshness;
 use mononoke_api::ChangesetPrefixSpecifier;
 use mononoke_api::ChangesetSpecifier;
@@ -46,6 +47,34 @@ use crate::source_control_impl::SourceControlServiceImpl;
 mod land_stack;
 
 impl SourceControlServiceImpl {
+    /// Detailed repo info.
+    ///
+    /// Returns detailed information about a repository.
+    pub(crate) async fn repo_info(
+        &self,
+        ctx: CoreContext,
+        repo: thrift::RepoSpecifier,
+        _params: thrift::RepoInfoParams,
+    ) -> Result<thrift::RepoInfo, errors::ServiceError> {
+        let repo = self.repo(ctx, &repo).await?;
+        let repo_name = repo.name();
+
+        let default_commit_identity_scheme_conf = &repo.config().default_commit_identity_scheme;
+
+        let default_commit_identity_scheme = match default_commit_identity_scheme_conf {
+            CommitIdentityScheme::HG => thrift::CommitIdentityScheme::HG,
+            CommitIdentityScheme::GIT => thrift::CommitIdentityScheme::GIT,
+            CommitIdentityScheme::BONSAI => thrift::CommitIdentityScheme::BONSAI,
+            CommitIdentityScheme::UNKNOWN => thrift::CommitIdentityScheme::UNKNOWN,
+        };
+
+        Ok(thrift::RepoInfo {
+            name: repo_name.to_string(),
+            default_commit_identity_scheme,
+            ..Default::default()
+        })
+    }
+
     /// Resolve a bookmark to a changeset.
     ///
     /// Returns whether the bookmark exists, and the IDs of the changeset in

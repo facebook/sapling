@@ -223,6 +223,28 @@ pub struct RepoConfig {
     pub deep_sharded: bool,
     /// Scribe category we log new commits to
     pub bookmark_scribe_category: Option<String>,
+
+    /// Default commit identity scheme. Some repos can be hg-mirrored git repos.
+    pub default_commit_identity_scheme: CommitIdentityScheme,
+}
+
+/// Indicates types of commit hashes used in a repo context.
+#[derive(Eq, Clone, Debug, PartialEq)]
+pub enum CommitIdentityScheme {
+    /// Hashes are Mercurial hashes.
+    HG,
+    /// Hashes are Git hashes.
+    GIT,
+    /// Hashes are Bonsai hashes.
+    BONSAI,
+    /// Hashes are of unknown scheme.
+    UNKNOWN,
+}
+
+impl Default for CommitIdentityScheme {
+    fn default() -> Self {
+        Self::HG
+    }
 }
 
 /// Backup repo configuration

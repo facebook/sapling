@@ -21,6 +21,8 @@ impl AddScubaResponse for bool {}
 
 impl AddScubaResponse for Vec<thrift::Repo> {}
 
+impl AddScubaResponse for thrift::RepoInfo {}
+
 impl AddScubaResponse for thrift::RepoCreateCommitResponse {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
         if let Some(id) = self.ids.get(&thrift::CommitIdentityScheme::BONSAI) {

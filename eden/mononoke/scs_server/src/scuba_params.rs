@@ -305,6 +305,8 @@ impl AddScubaParams for thrift::CommitPathExistsParams {}
 
 impl AddScubaParams for thrift::CommitPathInfoParams {}
 
+impl AddScubaParams for thrift::RepoInfoParams {}
+
 impl AddScubaParams for thrift::CommitMultiplePathInfoParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_paths", self.paths.iter().collect::<ScubaValue>());

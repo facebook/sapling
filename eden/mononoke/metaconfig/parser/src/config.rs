@@ -120,7 +120,12 @@ fn parse_with_repo_definition(
         needs_backup: _,
         external_repo_id: _,
         acl_region_config,
+        default_commit_identity_scheme,
     } = repo_definition;
+
+    let default_commit_identity_scheme = default_commit_identity_scheme
+        .convert()?
+        .unwrap_or_default();
 
     let named_repo_config_name = repo_config
         .ok_or_else(|| ConfigurationError::InvalidConfig("No named_repo_config".to_string()))?;
@@ -338,6 +343,7 @@ fn parse_with_repo_definition(
         backup_hg_sync_config,
         deep_sharded,
         bookmark_scribe_category,
+        default_commit_identity_scheme,
     })
 }
 
@@ -461,6 +467,7 @@ mod test {
     use metaconfig_types::BookmarkParams;
     use metaconfig_types::BubbleDeletionMode;
     use metaconfig_types::CacheWarmupParams;
+    use metaconfig_types::CommitIdentityScheme;
     use metaconfig_types::CommitSyncConfig;
     use metaconfig_types::CommitSyncConfigVersion;
     use metaconfig_types::CrossRepoCommitValidation;
@@ -1016,6 +1023,7 @@ mod test {
             "fbsource".to_string(),
             RepoConfig {
                 enabled: true,
+                default_commit_identity_scheme: CommitIdentityScheme::default(),
                 deep_sharded: true,
                 storage_config: main_storage_config.clone(),
                 generation_cache_size: 1024 * 1024,
@@ -1227,6 +1235,7 @@ mod test {
         repos.insert(
             "www".to_string(),
             RepoConfig {
+                default_commit_identity_scheme: CommitIdentityScheme::default(),
                 enabled: true,
                 storage_config: StorageConfig {
                     metadata: MetadataDatabaseConfig::Local(LocalDatabaseConfig {

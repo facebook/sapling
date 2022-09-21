@@ -18,6 +18,7 @@ use metaconfig_types::BlameVersion;
 use metaconfig_types::BookmarkOrRegex;
 use metaconfig_types::BookmarkParams;
 use metaconfig_types::CacheWarmupParams;
+use metaconfig_types::CommitIdentityScheme;
 use metaconfig_types::ComparableRegex;
 use metaconfig_types::CrossRepoCommitValidation;
 use metaconfig_types::DerivedDataConfig;
@@ -51,6 +52,7 @@ use mononoke_types::PrefixTrie;
 use regex::Regex;
 use repos::RawBookmarkConfig;
 use repos::RawCacheWarmupConfig;
+use repos::RawCommitIdentityScheme;
 use repos::RawCrossRepoCommitValidationConfig;
 use repos::RawDerivedDataConfig;
 use repos::RawDerivedDataTypesConfig;
@@ -215,6 +217,21 @@ impl Convert for RawPushParams {
             pure_push_allowed: self.pure_push_allowed.unwrap_or(default.pure_push_allowed),
             commit_scribe_category: self.commit_scribe_category,
         })
+    }
+}
+
+impl Convert for RawCommitIdentityScheme {
+    type Output = CommitIdentityScheme;
+
+    fn convert(self) -> Result<Self::Output> {
+        let converted = match self {
+            RawCommitIdentityScheme::HG => CommitIdentityScheme::HG,
+            RawCommitIdentityScheme::GIT => CommitIdentityScheme::GIT,
+            RawCommitIdentityScheme::BONSAI => CommitIdentityScheme::BONSAI,
+            RawCommitIdentityScheme::UNKNOWN => CommitIdentityScheme::UNKNOWN,
+            v => return Err(anyhow!("Invalid value {} for enum CommitIdentityScheme", v)),
+        };
+        Ok(converted)
     }
 }
 

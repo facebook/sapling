@@ -652,6 +652,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::ListReposParams,
         ) -> Result<Vec<thrift::Repo>, service::ListReposExn>;
 
+        async fn repo_info(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoInfoParams,
+        ) -> Result<thrift::RepoInfo, service::RepoInfoExn>;
+
         async fn repo_resolve_bookmark(
             repo: thrift::RepoSpecifier,
             params: thrift::RepoResolveBookmarkParams,
