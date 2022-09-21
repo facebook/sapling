@@ -87,8 +87,6 @@ def showhistory(ui, repo, reponame, workspacename, template, **opts) -> None:
                 self.flags.append("ADD_REMOTE_BOOKMARKS")
             if ui.configbool("commitcloud", "sl_showallbookmarks"):
                 self.flags.append("ADD_ALL_BOOKMARKS")
-            if opts.get("force_original_backend"):
-                self.flags.append("USE_ORIGINAL_BACKEND")
 
         def prevversion(self):
             if self.cur_index > 0:

@@ -547,13 +547,6 @@ cloudsmartlogopts = [
         None,
         "show interactive view for historical versions of smartlog",
     ),
-    ("", "all", None, "show all history in interactive history view"),
-    (
-        "",
-        "force-original-backend",
-        None,
-        "serve the smartlog from original mercurial backup infrastructure, rather than from the Mononoke backend regardless of the configuration (ADVANCED)",
-    ),
 ]
 
 
@@ -606,9 +599,6 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
 
     if ui.configbool("commitcloud", "sl_showallbookmarks"):
         flags.append("ADD_ALL_BOOKMARKS")
-
-    if opts.get("force_original_backend"):
-        flags.append("USE_ORIGINAL_BACKEND")
 
     if parseddate is None and not version:
         with progress.spinner(ui, _("fetching")):
@@ -1604,32 +1594,6 @@ def isbackedup(ui, repo, **opts):
     'hg isbackedup' is deprecated in favour of 'hg cloud check'.
     """
     return cloudcheck(ui, repo, **opts)
-
-
-@subcmd(
-    "getfrombackup",
-    [
-        ("r", "rev", [], _("revisions to lookup and pull (full hashes only)")),
-    ],
-)
-def getfrombackup(ui, repo, **opts):
-    """Downloading and applying mercurial bundles directly for list of given heads
-
-    Backup store stores commits as mercurial bundles that can be fetched directly from the store and applied.
-
-    The command could be useful when we migrate our server from one backend to another (Mononoke) and some commits can be missing in Mononoke.
-    """
-    revs = opts.get("rev")
-    if not revs:
-        raise error.Abort(
-            _(
-                "no revision specified, please run with `hg cloud getfrombackup -r <revs>`"
-            )
-        )
-
-    service.get(ui, tokenmod.TokenLocator(ui).token).getheadsfrombackupbundlestore(
-        repo, revs
-    )
 
 
 @subcmd(
