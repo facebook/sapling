@@ -17,6 +17,7 @@ import platform
 import shlex
 import shutil
 import signal
+import socket
 import subprocess
 import sys
 import traceback
@@ -2020,6 +2021,9 @@ class RageCmd(Subcmd):
         instance = get_eden_instance(args)
         instance.log_sample("eden_rage")
         rage_processor = instance.get_config_value("rage.reporter", default="")
+
+        # Allow "{hostname}" substitution in rage.reporter config.
+        rage_processor = rage_processor.format(hostname=socket.getfqdn())
 
         if args.report:
             rage_mod.report_edenfs_bug(instance, rage_processor)
