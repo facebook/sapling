@@ -9,6 +9,7 @@
 import os
 import os.path
 import subprocess
+from typing import List
 
 from .. import error
 from ..i18n import _
@@ -57,20 +58,7 @@ def isl_cmd(ui, repo, *args, **opts):
 def launch_server(
     ui, *, cwd, port=DEFAULT_PORT, open_isl=True, json_output=False, foreground=False
 ):
-    if iswindows:
-        # TODO(T125822314): Fix packaging issue so isl works on Windows.
-        raise error.Abort(_("isl is not currently supported on Windows"))
-
-    this_dir = os.path.dirname(__file__)
-    isl_bin = os.path.join(this_dir, "isl")
-    if os.path.isfile(isl_bin):
-        # This is the path to ISL in the Buck-built release.
-        isl_args = ["dotslash", isl_bin]
-    else:
-        # This is the path to ISL in the Make-built release.
-        script = "run-isl.bat" if iswindows else "run-isl"
-        isl_args = [os.path.join(this_dir, "..", "..", "edenscm-isl", script)]
-
+    isl_args = get_isl_args()
     ui.status_err(_("launching web server for Interactive Smartlog...\n"))
     args = ["--port", str(port)]
     if not open_isl:
@@ -80,3 +68,26 @@ def launch_server(
     if foreground:
         args.append("--foreground")
     subprocess.call(isl_args + args, cwd=cwd)
+
+
+def get_isl_args() -> List[str]:
+    if iswindows:
+        return get_isl_args_on_windows()
+
+    this_dir = os.path.dirname(__file__)
+    isl_bin = os.path.join(this_dir, "isl")
+    if os.path.isfile(isl_bin):
+        # This is the path to ISL in the Buck-built release.
+        return ["dotslash", isl_bin]
+    else:
+        # This is the path to ISL in the Make-built release.
+        script = "run-isl.bat" if iswindows else "run-isl"
+        return [os.path.join(this_dir, "..", "..", "edenscm-isl", script)]
+
+
+def get_isl_args_on_windows() -> List[str]:
+    # @fb-only: isl_bin = "C:/Tools/hg/isl/isl" 
+    # @fb-only: if os.path.isfile(isl_bin): 
+        # @fb-only: return ["dotslash", isl_bin] 
+    # TODO(T125822314): Fix packaging issue so isl works on Windows.
+    raise error.Abort(_("isl is not currently supported on Windows"))
