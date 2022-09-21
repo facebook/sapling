@@ -16,10 +16,12 @@ use crate::errors::FormattingError;
 
 pub type FormatResult<T> = std::result::Result<T, FormattingError>;
 
+#[derive(Default)]
 pub struct FormatOptions {
     pub debug: bool,
     pub verbose: bool,
     pub quiet: bool,
+    pub color: bool,
 }
 
 pub trait JsonFormattable {
@@ -41,6 +43,7 @@ struct PlainWriter<'a> {
     w: &'a mut dyn Write,
     styler: &'a mut termstyle::Styler,
     styles: &'a HashMap<String, String>,
+    should_color: bool,
 }
 
 impl Write for PlainWriter<'_> {
@@ -55,6 +58,11 @@ impl Write for PlainWriter<'_> {
 
 impl StyleWrite for PlainWriter<'_> {
     fn write_styled(&mut self, style: &str, text: &str) -> anyhow::Result<()> {
+        if !self.should_color {
+            self.w.write_all(text.as_bytes())?;
+            return Ok(());
+        }
+
         let style = style
             .split_ascii_whitespace()
             .map(|s| self.styles.get(s).map_or(s, |s| s.as_ref()))
@@ -99,6 +107,7 @@ impl ListFormatter for PlainFormatter {
                 w: self.writer.as_mut(),
                 styler: &mut self.styler,
                 styles: &self.styles,
+                should_color: self.options.color,
             },
         )
         .map_err(|err| match err.downcast::<std::io::Error>() {
@@ -273,9 +282,8 @@ mod tests {
             "",
             template,
             FormatOptions {
-                debug: false,
-                verbose: false,
-                quiet: false,
+                color: true,
+                ..Default::default()
             },
             Box::new(Buffer { writer: buffer }),
         )
@@ -400,11 +408,7 @@ unknown style
             &BTreeMap::<&str, &str>::new(),
             "",
             "",
-            FormatOptions {
-                debug: false,
-                verbose: false,
-                quiet: false,
-            },
+            FormatOptions::default(),
             Box::new(FaultyBuffer { buf }),
         )
         .unwrap();

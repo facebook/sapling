@@ -29,8 +29,6 @@ pub struct PrintConfig {
     /// If true, paths are printed relative to the root of the repository; otherwise, they are
     /// printed relative to getcwd(2).
     pub root_relative: bool,
-    /// Whether ANSI color codes should be used in the output.
-    pub use_color: bool,
 }
 
 /// This struct covers the possible set of values for `hg status`. Used in conjunction with
@@ -119,23 +117,17 @@ impl<'a> Formattable for StatusEntry<'a> {
             format!("{} ", self.status)
         };
 
-        let mut style = self.style;
-        if !self.print_config.use_color {
-            style = "";
-        }
-
         writer.write_styled(
-            style,
+            self.style,
             &format!("{}{}{}", status, self.path, self.print_config.endl),
         )?;
 
         if self.print_config.copies {
             if let Some(p) = &self.copy {
-                let mut style = "status.copied";
-                if !self.print_config.use_color {
-                    style = "";
-                }
-                writer.write_styled(style, &format!("  {}{}", p, self.print_config.endl))?;
+                writer.write_styled(
+                    "status.copied",
+                    &format!("  {}{}", p, self.print_config.endl),
+                )?;
             }
         }
         Ok(())
@@ -243,7 +235,6 @@ impl Default for PrintConfig {
             copies: false,
             endl: '\n',
             root_relative: false,
-            use_color: false,
         }
     }
 }
@@ -285,6 +276,7 @@ mod test {
         copymap: HashMap<RepoPathBuf, RepoPathBuf>,
         stdout: String,
         stderr: String,
+        color: bool,
     }
 
     /// Helper function for testing `print_status`.
@@ -298,6 +290,7 @@ mod test {
             debug: false,
             verbose: false,
             quiet: false,
+            color: test_case.color,
         };
 
         let mut config: BTreeMap<&str, &str> = BTreeMap::new();
@@ -407,11 +400,11 @@ I ignored.txt
         );
         let mut print_config = PrintConfig::default();
         print_config.status_types.ignored = true;
-        print_config.use_color = true;
         test_print(PrintTestCase {
             status,
             print_config,
             stdout: mardui_color_stdout.to_string(),
+            color: true,
             ..Default::default()
         });
     }

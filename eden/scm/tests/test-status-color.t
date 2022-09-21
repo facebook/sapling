@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
+  $ setconfig status.use-rust=True workingcopy.use-rust=True
   $ setconfig workingcopy.ruststatus=False
   $ configure modernclient
   $ setconfig ui.color=always color.mode=ansi
@@ -14,20 +14,20 @@ Terminfo codes compatibility fix
 hg status in repo root:
 
   $ hg status
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35ma/1/in_a_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35ma/in_a\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35mb/1/in_b_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35mb/2/in_b_2\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35mb/in_b\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_root\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? a/1/in_a_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? a/in_a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? b/1/in_b_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? b/2/in_b_2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? b/in_b\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? in_root\x1b[0m (esc)
 
   $ hg status --color=debug
-  [status.unknown|? ][status.unknown|a/1/in_a_1]
-  [status.unknown|? ][status.unknown|a/in_a]
-  [status.unknown|? ][status.unknown|b/1/in_b_1]
-  [status.unknown|? ][status.unknown|b/2/in_b_2]
-  [status.unknown|? ][status.unknown|b/in_b]
-  [status.unknown|? ][status.unknown|in_root]
+  ? a/1/in_a_1
+  ? a/in_a
+  ? b/1/in_b_1
+  ? b/2/in_b_2
+  ? b/in_b
+  ? in_root
 HGPLAIN disables color
   $ HGPLAIN=1 hg status --color=debug
   ? a/1/in_a_1 (glob)
@@ -38,12 +38,12 @@ HGPLAIN disables color
   ? in_root
 HGPLAINEXCEPT=color does not disable color
   $ HGPLAINEXCEPT=color hg status --color=debug
-  [status.unknown|? ][status.unknown|a/1/in_a_1] (glob)
-  [status.unknown|? ][status.unknown|a/in_a] (glob)
-  [status.unknown|? ][status.unknown|b/1/in_b_1] (glob)
-  [status.unknown|? ][status.unknown|b/2/in_b_2] (glob)
-  [status.unknown|? ][status.unknown|b/in_b] (glob)
-  [status.unknown|? ][status.unknown|in_root]
+  ? a/1/in_a_1
+  ? a/in_a
+  ? b/1/in_b_1
+  ? b/2/in_b_2
+  ? b/in_b
+  ? in_root
 
 hg status with template
   $ hg status -T "{label('red', path)}\n" --color=debug
@@ -65,12 +65,12 @@ hg status . in repo root:
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_root\x1b[0m (esc)
 
   $ hg status --cwd a
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m1/in_a_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_a\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../b/1/in_b_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../b/2/in_b_2\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../b/in_b\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_root\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? 1/in_a_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? in_a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../b/1/in_b_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../b/2/in_b_2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../b/in_b\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../in_root\x1b[0m (esc)
   $ hg status --cwd a .
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m1/in_a_1\x1b[0m (esc)
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_a\x1b[0m (esc)
@@ -83,12 +83,12 @@ hg status . in repo root:
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_root\x1b[0m (esc)
 
   $ hg status --cwd b
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../a/1/in_a_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../a/in_a\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m1/in_b_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m2/in_b_2\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_root\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../a/1/in_a_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../a/in_a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? 1/in_b_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? 2/in_b_2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? in_b\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../in_root\x1b[0m (esc)
   $ hg status --cwd b .
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m1/in_b_1\x1b[0m (esc)
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m2/in_b_2\x1b[0m (esc)
@@ -102,12 +102,12 @@ hg status . in repo root:
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_root\x1b[0m (esc)
 
   $ hg status --cwd a/1
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_a_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_a\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../b/1/in_b_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../b/2/in_b_2\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../b/in_b\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../in_root\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? in_a_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../in_a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../../b/1/in_b_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../../b/2/in_b_2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../../b/in_b\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../../in_root\x1b[0m (esc)
   $ hg status --cwd a/1 .
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_a_1\x1b[0m (esc)
   $ hg status --cwd a/1 ..
@@ -115,12 +115,12 @@ hg status . in repo root:
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_a\x1b[0m (esc)
 
   $ hg status --cwd b/1
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../a/1/in_a_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../a/in_a\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../2/in_b_2\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_b\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../in_root\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../../a/1/in_a_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../../a/in_a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? in_b_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../2/in_b_2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../in_b\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../../in_root\x1b[0m (esc)
   $ hg status --cwd b/1 .
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b_1\x1b[0m (esc)
   $ hg status --cwd b/1 ..
@@ -129,12 +129,12 @@ hg status . in repo root:
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_b\x1b[0m (esc)
 
   $ hg status --cwd b/2
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../a/1/in_a_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../a/in_a\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../1/in_b_1\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b_2\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../in_b\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35m../../in_root\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../../a/1/in_a_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../../a/in_a\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../1/in_b_1\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? in_b_2\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../in_b\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? ../../in_root\x1b[0m (esc)
   $ hg status --cwd b/2 .
   \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35min_b_2\x1b[0m (esc)
   $ hg status --cwd b/2 ..
@@ -191,10 +191,10 @@ templates should be.
 hg status:
 
   $ hg status
-  \x1b[0m\x1b[1m\x1b[32mA \x1b[0m\x1b[0m\x1b[1m\x1b[32madded\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[31mR \x1b[0m\x1b[0m\x1b[1m\x1b[31mremoved\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[36m! \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[36mdeleted\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35munknown\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32mA added\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[31mR removed\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[36m! deleted\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? unknown\x1b[0m (esc)
 
 hg status modified added removed deleted unknown never-existed ignored:
 
@@ -210,12 +210,12 @@ hg status modified added removed deleted unknown never-existed ignored:
 hg status -C:
 
   $ hg status -C
-  \x1b[0m\x1b[1m\x1b[32mA \x1b[0m\x1b[0m\x1b[1m\x1b[32madded\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[32mA \x1b[0m\x1b[0m\x1b[1m\x1b[32mcopied\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32mA added\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32mA copied\x1b[0m (esc)
     modified
-  \x1b[0m\x1b[1m\x1b[31mR \x1b[0m\x1b[0m\x1b[1m\x1b[31mremoved\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[36m! \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[36mdeleted\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35munknown\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[31mR removed\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[36m! deleted\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? unknown\x1b[0m (esc)
 
 hg status -A:
 
@@ -264,16 +264,15 @@ check 'status -q' and some combinations
 
 test unknown color
 
-  $ hg --config color.status.modified=periwinkle status
-  ignoring unknown color/effect 'periwinkle' (configured in color.status.modified)
-  ignoring unknown color/effect 'periwinkle' (configured in color.status.modified)
-  ignoring unknown color/effect 'periwinkle' (configured in color.status.modified)
+  $ EDENSCM_LOG=termstyle=warn hg --config color.status.modified=periwinkle status
+   WARN termstyle::effects: unknown style effect effect="periwinkle"
+   WARN termstyle::effects: couldn't apply style spec spec="periwinkle"
   M modified
-  \x1b[0m\x1b[1m\x1b[32mA \x1b[0m\x1b[0m\x1b[1m\x1b[32madded\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[32mA \x1b[0m\x1b[0m\x1b[1m\x1b[32mcopied\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[31mR \x1b[0m\x1b[0m\x1b[1m\x1b[31mremoved\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[36m! \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[36mdeleted\x1b[0m (esc)
-  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? \x1b[0m\x1b[0m\x1b[1m\x1b[4m\x1b[35munknown\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32mA added\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[32mA copied\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[31mR removed\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[36m! deleted\x1b[0m (esc)
+  \x1b[0m\x1b[1m\x1b[4m\x1b[35m? unknown\x1b[0m (esc)
 
 Run status with 2 different flags.
 Check if result is the same or different.

@@ -35,12 +35,11 @@ commands! {
     mod whereami;
 }
 
-use std::io::Write;
-
 pub use anyhow::Result;
 use clidispatch::command::CommandTable;
 use clidispatch::errors::FallbackToPython;
 use clidispatch::global_flags::HgGlobalOpts;
+use clidispatch::io::Write;
 pub use clidispatch::io::IO;
 pub use cliparser::define_flags;
 pub use configparser::config::ConfigSet;
@@ -52,7 +51,7 @@ fn get_formatter(
     command_name: &'static str,
     template: &str,
     options: &HgGlobalOpts,
-    writer: Box<dyn Write>,
+    mut writer: Box<dyn Write>,
 ) -> Result<Box<dyn formatter::ListFormatter>, FallbackToPython> {
     formatter::get_formatter(
         config,
@@ -62,8 +61,9 @@ fn get_formatter(
             debug: options.debug,
             verbose: options.verbose,
             quiet: options.quiet,
+            color: termstyle::should_color(config, writer.as_mut()),
         },
-        writer,
+        Box::new(writer),
     )
     .map_err(|_| FallbackToPython("template not supported in Rust".to_owned()))
 }
