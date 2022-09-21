@@ -16,7 +16,7 @@ use std::path::PathBuf;
 use std::str;
 use std::sync::Arc;
 
-use ::io::CanColor;
+use ::io::IsTty;
 use ::io::IO;
 use anyhow::anyhow;
 use anyhow::bail;

@@ -11,7 +11,6 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use clidispatch::errors;
-use clidispatch::io::CanColor;
 use clidispatch::io::IsTty;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;

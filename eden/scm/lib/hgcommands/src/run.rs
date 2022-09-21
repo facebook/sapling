@@ -29,7 +29,6 @@ use clidispatch::dispatch;
 use clidispatch::dispatch::Dispatcher;
 use clidispatch::errors;
 use clidispatch::global_flags::HgGlobalOpts;
-use clidispatch::io::CanColor;
 use clidispatch::io::IsTty;
 use clidispatch::io::IO;
 use configmodel::Config;

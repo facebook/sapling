@@ -91,6 +91,11 @@ struct Inner {
 /// to obtain the "main" `IO`.
 static MAIN_IO_REF: Lazy<RwLock<Option<Weak<Mutex<Inner>>>>> = Lazy::new(Default::default);
 
+fn colors_disabled_via_env() -> bool {
+    configparser::hg::is_plain(Some("color"))
+        || std::env::var("TERM").ok().as_deref() == Some("dumb")
+}
+
 pub trait IsTty {
     fn is_tty(&self) -> bool;
 
@@ -103,15 +108,13 @@ pub trait IsTty {
     fn is_stderr(&self) -> bool {
         false
     }
-}
 
-pub trait CanColor: IsTty {
+    /// Whether this connection is capable of colors, ignoring whether
+    /// the user has enabled colors.
     fn can_color(&self) -> bool {
-        self.is_tty() && !configparser::hg::is_plain(Some("color"))
+        self.is_tty() && !colors_disabled_via_env()
     }
 }
-
-impl<T: IsTty> CanColor for T {}
 
 pub trait Read: io::Read + IsTty + Any + Send + Sync {
     fn as_any(&self) -> &dyn Any;
