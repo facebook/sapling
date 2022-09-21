@@ -11,6 +11,7 @@ pub use pendingchanges::ChangeType;
 pub use pendingchanges::PendingChangeResult;
 pub use pendingchanges::PendingChanges;
 
+#[derive(PartialEq)]
 pub enum FileSystemType {
     Normal,
     Watchman,

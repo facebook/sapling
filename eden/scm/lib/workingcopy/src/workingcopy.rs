@@ -89,25 +89,29 @@ impl WorkingCopy {
         // We assume there will be at least one manifest, even if it's the null manifest.
         assert!(!manifests.is_empty());
 
-        let ident = match identity::must_sniff_dir(&root) {
-            Ok(ident) => ident,
-            Err(err) => return Err((treestate, err)),
-        };
         let mut sparse_matchers: Vec<Arc<dyn Matcher + Send + Sync + 'static>> = Vec::new();
-        for manifest in manifests.iter() {
-            match crate::sparse::repo_matcher(
-                &root.join(ident.dot_dir()),
-                manifest.read().clone(),
-                filestore.clone(),
-            ) {
-                Ok(Some(matcher)) => {
-                    sparse_matchers.push(matcher);
-                }
-                Ok(None) => {
-                    sparse_matchers.push(Arc::new(AlwaysMatcher::new()));
-                }
+        if file_system_type == FileSystemType::Eden {
+            sparse_matchers.push(Arc::new(AlwaysMatcher::new()));
+        } else {
+            let ident = match identity::must_sniff_dir(&root) {
+                Ok(ident) => ident,
                 Err(err) => return Err((treestate, err)),
             };
+            for manifest in manifests.iter() {
+                match crate::sparse::repo_matcher(
+                    &root.join(ident.dot_dir()),
+                    manifest.read().clone(),
+                    filestore.clone(),
+                ) {
+                    Ok(Some(matcher)) => {
+                        sparse_matchers.push(matcher);
+                    }
+                    Ok(None) => {
+                        sparse_matchers.push(Arc::new(AlwaysMatcher::new()));
+                    }
+                    Err(err) => return Err((treestate, err)),
+                };
+            }
         }
 
         let treestate = Rc::new(RefCell::new(treestate));
