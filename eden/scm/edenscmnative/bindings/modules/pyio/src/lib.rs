@@ -22,6 +22,11 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
     m.add_class::<IO>(py)?;
     m.add_class::<styler>(py)?;
+    m.add(
+        py,
+        "shouldcolor",
+        py_fn!(py, should_color(config: PyConfig)),
+    )?;
     Ok(m)
 }
 
@@ -145,3 +150,11 @@ py_class!(class styler |py| {
         ))
     }
 });
+
+fn should_color(py: Python, config: PyConfig) -> PyResult<bool> {
+    let config = &config.get_cfg(py);
+    Ok(termstyle::should_color(
+        config,
+        &RustIO::main().map_pyerr(py)?.output(),
+    ))
+}

@@ -158,42 +158,12 @@ def setup(ui) -> None:
 
 
 def _modesetup(ui) -> Optional[str]:
-    if ui.plain("color"):
-        return None
-    config = ui.config("ui", "color")
-    if config == "debug":
+    if ui.config("ui", "color") == "debug" and not ui.plain("color"):
         return "debug"
-
-    auto = config == "auto"
-    always = False
-    if not auto and util.parsebool(config):
-        # We want the config to behave like a boolean, "on" is actually auto,
-        # but "always" value is treated as a special case to reduce confusion.
-        if ui.configsource("ui", "color") == "--color" or config == "always":
-            always = True
-        else:
-            auto = True
-
-    if not always and not auto:
-        return None
-
-    havecolors = always or (
-        encoding.environ.get("TERM") != "dumb" and ui.terminaloutput()
-    )
-
-    if pycompat.iswindows:
-        from . import win32
-
-        if not (util.istest() or win32.enablevtmode()):
-            if not ui.pageractive:
-                if havecolors and not always:
-                    ui.debug("couldn't enable VT mode, disabling colors\n")
-                if not always:
-                    return None
-
-    if always or (auto and havecolors):
+    elif bindings.io.shouldcolor(ui._rcfg):
         return "ansi"
-    return None
+    else:
+        return None
 
 
 def normalizestyle(ui, style):

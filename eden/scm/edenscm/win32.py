@@ -647,30 +647,6 @@ def termsize():
     return width, height
 
 
-def enablevtmode():
-    """Enable virtual terminal mode for the associated console.  Return True if
-    enabled, else False."""
-
-    ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x4
-
-    handle = _kernel32.GetStdHandle(_STD_OUTPUT_HANDLE)  # don't close the handle
-    if handle == _INVALID_HANDLE_VALUE:
-        return False
-
-    mode = _DWORD(0)
-
-    if not _kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
-        return False
-
-    if (mode.value & ENABLE_VIRTUAL_TERMINAL_PROCESSING) == 0:
-        mode.value |= ENABLE_VIRTUAL_TERMINAL_PROCESSING
-
-        if not _kernel32.SetConsoleMode(handle, mode):
-            return False
-
-    return True
-
-
 def unlink(f):
     """try to implement POSIX' unlink semantics on Windows"""
 
