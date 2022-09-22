@@ -46,9 +46,9 @@ from .extlib.phabricator import graphql
 
 conduit = None
 
-FASTLOG_MAX = 500
+FASTLOG_MAX = 100
 FASTLOG_QUEUE_SIZE = 1000
-FASTLOG_TIMEOUT = 20
+FASTLOG_TIMEOUT = 50
 
 
 def extsetup(ui) -> None:
@@ -512,6 +512,7 @@ class FastLogThread(Thread):
                     skip=skip,
                     number=todo,
                     use_mutable_history=usemutablehistory,
+                    timeout=FASTLOG_TIMEOUT,
                 )
             except Exception as e:
                 if self.ui.config("fastlog", "debug"):
