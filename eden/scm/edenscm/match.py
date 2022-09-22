@@ -15,7 +15,7 @@ from __future__ import absolute_import, print_function
 import copy
 import os
 import re
-from typing import List, Optional, Pattern, Sized
+from typing import List, Optional, Pattern, Sized, Tuple
 
 from bindings import pathmatcher
 from edenscm.pathutil import pathauditor
@@ -867,20 +867,27 @@ def normalizerootdir(dir: str, funcname) -> str:
     return dir
 
 
-def _kindpatstoglobs(kindpats, recursive: bool = False):
-    """Attempt to convert 'kindpats' to glob patterns that can be used in a
-    treematcher.
+def _kindpatstoglobs(kindpats, recursive: bool = False) -> Optional[List[str]]:
+    "Attempt to convert kindpats to globs that can be used in a treematcher."
+    if _usetreematcher:
+        res = _kindpatstoglobsregexs(kindpats, recursive)
+        if res and not res[1]:
+            return res[0]
+
+
+def _kindpatstoglobsregexs(
+    kindpats, recursive: bool = False
+) -> Optional[Tuple[List, List]]:
+    """Attempt to convert 'kindpats' to (glob patterns, regex patterns).
 
     kindpats should be already normalized to be relative to repo root.
 
     If recursive is True, `glob:a*` will match both `a1/b` and `a1`, otherwise
     `glob:a*` will only match `a1` but not `a1/b`.
 
-    Return None if there are unsupported patterns (ex. regular expressions).
+    Return None if there are unsupported patterns (ex. set expressions).
     """
-    if not _usetreematcher:
-        return None
-    globs = []
+    globs, regexs = [], []
     for kindpat in kindpats:
         kind, pat = kindpat[0:2]
         subkindpats = [(kind, pat)]
@@ -898,7 +905,7 @@ def _kindpatstoglobs(kindpats, recursive: bool = False):
                 if reglobs is not None:
                     globs += reglobs
                 else:
-                    return None
+                    regexs.append(pat)
             elif kind == "glob":
                 # The treematcher (man gitignore) does not support csh-style
                 # brackets (ex. "{a,b,c}"). Expand the brackets to patterns.
@@ -917,7 +924,7 @@ def _kindpatstoglobs(kindpats, recursive: bool = False):
                 globs.append(pat)
             else:
                 return None
-    return globs
+    return globs, regexs
 
 
 def _makeglobrecursive(pat):
