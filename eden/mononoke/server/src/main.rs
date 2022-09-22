@@ -101,6 +101,12 @@ struct MononokeServerArgs {
     /// corresponds to.
     #[clap(long, requires = "sharded-service-name")]
     sharded_scope_name: Option<String>,
+    /// Path to a file with land service client certificate
+    #[clap(long)]
+    land_service_client_cert: Option<String>,
+    /// Path to a file with land service client private key
+    #[clap(long, requires = "land-service-client-cert")]
+    land_service_client_private_key: Option<String>,
 }
 
 /// Struct representing the Mononoke API process.
@@ -240,9 +246,26 @@ fn main(fb: FacebookInit) -> Result<()> {
     info!(root_log, "Starting up");
 
     #[cfg(fbcode_build)]
-    if let (Some(cert_path), Some(key_path)) = (&args.scs_client_cert, &args.scs_client_private_key)
+    if let (Some(scs_cert_path), Some(scs_key_path)) =
+        (&args.scs_client_cert, &args.scs_client_private_key)
     {
-        pushrebase_client::override_certificate_paths(cert_path, key_path, &args.ca_pem);
+        pushrebase_client::scs_override_certificate_paths(
+            scs_cert_path,
+            scs_key_path,
+            &args.ca_pem,
+        );
+    }
+
+    #[cfg(fbcode_build)]
+    if let (Some(land_service_cert_path), Some(land_service_key_path)) = (
+        &args.land_service_client_cert,
+        &args.land_service_client_private_key,
+    ) {
+        pushrebase_client::land_service_override_certificate_paths(
+            land_service_cert_path,
+            land_service_key_path,
+            &args.ca_pem,
+        );
     }
 
     let configs = app.repo_configs().clone();
