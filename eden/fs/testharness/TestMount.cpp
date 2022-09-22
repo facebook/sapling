@@ -202,9 +202,9 @@ void TestMount::initialize(
     const RootId& initialCommitHash,
     FakeTreeBuilder& rootBuilder,
     bool startReady,
-    Overlay::OverlayType overlayType) {
+    Overlay::TreeOverlayType treeOverlayType) {
   createMountWithoutInitializing(
-      initialCommitHash, rootBuilder, startReady, overlayType);
+      initialCommitHash, rootBuilder, startReady, treeOverlayType);
   initializeEdenMount();
 }
 
@@ -216,7 +216,7 @@ void TestMount::createMountWithoutInitializing(
     const RootId& initialCommitHash,
     FakeTreeBuilder& rootBuilder,
     bool startReady,
-    Overlay::OverlayType overlayType) {
+    Overlay::TreeOverlayType treeOverlayType) {
   // Finalize rootBuilder and get the root Tree
   rootBuilder.finalize(backingStore_, startReady);
   auto rootTree = rootBuilder.getRoot();
@@ -228,10 +228,10 @@ void TestMount::createMountWithoutInitializing(
   setInitialCommit(initialCommitHash, rootTree->get().getHash());
 
   // Create edenMount_
-  createMount(overlayType);
+  createMount(treeOverlayType);
 }
 
-void TestMount::createMount(Overlay::OverlayType overlayType) {
+void TestMount::createMount(Overlay::TreeOverlayType treeOverlayType) {
   shared_ptr<ObjectStore> objectStore = ObjectStore::create(
       localStore_,
       backingStore_,
@@ -248,7 +248,7 @@ void TestMount::createMount(Overlay::OverlayType overlayType) {
       blobCache_,
       serverState_,
       std::move(journal),
-      overlayType);
+      treeOverlayType);
 #ifndef _WIN32
   dispatcher_ = EdenDispatcherFactory::makeFuseDispatcher(edenMount_.get());
 #endif
@@ -271,8 +271,9 @@ void TestMount::initialize(FakeTreeBuilder& rootBuilder, bool startReady) {
 
 void TestMount::initialize(
     FakeTreeBuilder& rootBuilder,
-    Overlay::OverlayType overlayType) {
-  initialize(nextCommitHash(), rootBuilder, /* startReady */ true, overlayType);
+    Overlay::TreeOverlayType treeOverlayType) {
+  initialize(
+      nextCommitHash(), rootBuilder, /* startReady */ true, treeOverlayType);
 }
 
 void TestMount::createMountWithoutInitializing(

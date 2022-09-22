@@ -29,9 +29,10 @@
 namespace facebook::eden {
 
 #ifdef _WIN32
-class TreeOverlayTest : public ::testing::TestWithParam<Overlay::OverlayType> {
+class TreeOverlayTest
+    : public ::testing::TestWithParam<Overlay::TreeOverlayType> {
  protected:
-  Overlay::OverlayType overlayType() const {
+  Overlay::TreeOverlayType overlayType() const {
     return GetParam();
   }
 
@@ -79,8 +80,8 @@ INSTANTIATE_TEST_SUITE_P(
     TreeOverlayTest,
     TreeOverlayTest,
     ::testing::Values(
-        Overlay::OverlayType::Tree,
-        Overlay::OverlayType::TreeBuffered));
+        Overlay::TreeOverlayType::Tree,
+        Overlay::TreeOverlayType::TreeBuffered));
 
 #endif
 
@@ -89,7 +90,7 @@ TEST(PlainTreeOverlayTest, new_overlay_is_clean) {
   auto overlay = Overlay::create(
       AbsolutePath{testDir.path().string()},
       kPathMapDefaultCaseSensitive,
-      Overlay::OverlayType::Tree,
+      Overlay::TreeOverlayType::Tree,
       std::make_shared<NullStructuredLogger>(),
       *EdenConfig::createTestEdenConfig());
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
@@ -101,7 +102,7 @@ TEST(PlainTreeOverlayTest, new_overlay_is_clean_buffered) {
   auto overlay = Overlay::create(
       AbsolutePath{testDir.path().string()},
       kPathMapDefaultCaseSensitive,
-      Overlay::OverlayType::TreeBuffered,
+      Overlay::TreeOverlayType::TreeBuffered,
       std::make_shared<NullStructuredLogger>(),
       *EdenConfig::createTestEdenConfig());
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
@@ -114,7 +115,7 @@ TEST(PlainTreeOverlayTest, reopened_overlay_is_clean) {
     auto overlay = Overlay::create(
         AbsolutePath{testDir.path().string()},
         kPathMapDefaultCaseSensitive,
-        Overlay::OverlayType::Tree,
+        Overlay::TreeOverlayType::Tree,
         std::make_shared<NullStructuredLogger>(),
         *EdenConfig::createTestEdenConfig());
     overlay->initialize(EdenConfig::createTestEdenConfig()).get();
@@ -122,7 +123,7 @@ TEST(PlainTreeOverlayTest, reopened_overlay_is_clean) {
   auto overlay = Overlay::create(
       AbsolutePath{testDir.path().string()},
       kPathMapDefaultCaseSensitive,
-      Overlay::OverlayType::Tree,
+      Overlay::TreeOverlayType::Tree,
       std::make_shared<NullStructuredLogger>(),
       *EdenConfig::createTestEdenConfig());
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
@@ -135,7 +136,7 @@ TEST(PlainTreeOverlayTest, reopened_overlay_is_clean_buffered) {
     auto overlay = Overlay::create(
         AbsolutePath{testDir.path().string()},
         kPathMapDefaultCaseSensitive,
-        Overlay::OverlayType::TreeBuffered,
+        Overlay::TreeOverlayType::TreeBuffered,
         std::make_shared<NullStructuredLogger>(),
         *EdenConfig::createTestEdenConfig());
     overlay->initialize(EdenConfig::createTestEdenConfig()).get();
@@ -143,7 +144,7 @@ TEST(PlainTreeOverlayTest, reopened_overlay_is_clean_buffered) {
   auto overlay = Overlay::create(
       AbsolutePath{testDir.path().string()},
       kPathMapDefaultCaseSensitive,
-      Overlay::OverlayType::TreeBuffered,
+      Overlay::TreeOverlayType::TreeBuffered,
       std::make_shared<NullStructuredLogger>(),
       *EdenConfig::createTestEdenConfig());
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
@@ -157,7 +158,7 @@ TEST(PlainTreeOverlayTest, close_overlay_with_no_capacity_buffered) {
   auto overlay = Overlay::create(
       AbsolutePath{testDir.path().string()},
       kPathMapDefaultCaseSensitive,
-      Overlay::OverlayType::TreeBuffered,
+      Overlay::TreeOverlayType::TreeBuffered,
       std::make_shared<NullStructuredLogger>(),
       *config);
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
@@ -172,7 +173,7 @@ TEST(PlainTreeOverlayTest, small_capacity_write_multiple_directories_buffered) {
   auto overlay = Overlay::create(
       AbsolutePath{testDir.path().string()},
       kPathMapDefaultCaseSensitive,
-      Overlay::OverlayType::TreeBuffered,
+      Overlay::TreeOverlayType::TreeBuffered,
       std::make_shared<NullStructuredLogger>(),
       *config);
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
@@ -194,13 +195,13 @@ TEST(PlainTreeOverlayTest, small_capacity_write_multiple_directories_buffered) {
 }
 
 class RawTreeOverlayTest
-    : public ::testing::TestWithParam<Overlay::OverlayType> {
+    : public ::testing::TestWithParam<Overlay::TreeOverlayType> {
  public:
   RawTreeOverlayTest() : testDir_{makeTempDir("eden_raw_overlay_test_")} {
     loadOverlay();
   }
 
-  Overlay::OverlayType overlayType() const {
+  Overlay::TreeOverlayType overlayType() const {
     return GetParam();
   }
 
@@ -318,13 +319,13 @@ INSTANTIATE_TEST_SUITE_P(
     RawTreeOverlayTest,
     RawTreeOverlayTest,
     ::testing::Values(
-        Overlay::OverlayType::Tree,
-        Overlay::OverlayType::TreeBuffered));
+        Overlay::TreeOverlayType::Tree,
+        Overlay::TreeOverlayType::TreeBuffered));
 
 class DebugDumpTreeOverlayInodesTest
-    : public ::testing::TestWithParam<Overlay::OverlayType> {
+    : public ::testing::TestWithParam<Overlay::TreeOverlayType> {
  public:
-  Overlay::OverlayType overlayType() const {
+  Overlay::TreeOverlayType overlayType() const {
     return GetParam();
   }
 
@@ -437,7 +438,7 @@ INSTANTIATE_TEST_SUITE_P(
     DebugDumpTreeOverlayInodesTest,
     DebugDumpTreeOverlayInodesTest,
     ::testing::Values(
-        Overlay::OverlayType::Tree,
-        Overlay::OverlayType::TreeBuffered));
+        Overlay::TreeOverlayType::Tree,
+        Overlay::TreeOverlayType::TreeBuffered));
 
 } // namespace facebook::eden

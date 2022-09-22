@@ -39,33 +39,35 @@ constexpr uint64_t ioClosedMask = 1ull << 63;
 
 std::unique_ptr<IOverlay> makeOverlay(
     AbsolutePathPiece localDir,
-    Overlay::OverlayType overlayType,
+    Overlay::TreeOverlayType treeOverlayType,
     const EdenConfig& config) {
-  if (overlayType == Overlay::OverlayType::Tree) {
+  if (treeOverlayType == Overlay::TreeOverlayType::Tree) {
     return std::make_unique<TreeOverlay>(localDir);
-  } else if (overlayType == Overlay::OverlayType::TreeInMemory) {
+  } else if (treeOverlayType == Overlay::TreeOverlayType::TreeInMemory) {
     XLOG(WARN) << "In-memory overlay requested. This will cause data loss.";
     return std::make_unique<TreeOverlay>(
         std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory));
-  } else if (overlayType == Overlay::OverlayType::TreeSynchronousOff) {
+  } else if (treeOverlayType == Overlay::TreeOverlayType::TreeSynchronousOff) {
     return std::make_unique<TreeOverlay>(
         localDir, TreeOverlayStore::SynchronousMode::Off);
-  } else if (overlayType == Overlay::OverlayType::TreeBuffered) {
+  } else if (treeOverlayType == Overlay::TreeOverlayType::TreeBuffered) {
     XLOG(DBG4) << "Buffered tree overlay being used";
     return std::make_unique<BufferedTreeOverlay>(localDir, config);
-  } else if (overlayType == Overlay::OverlayType::TreeInMemoryBuffered) {
+  } else if (
+      treeOverlayType == Overlay::TreeOverlayType::TreeInMemoryBuffered) {
     XLOG(WARN)
         << "In-memory buffered overlay requested. This will cause data loss.";
     return std::make_unique<BufferedTreeOverlay>(
         std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory), config);
-  } else if (overlayType == Overlay::OverlayType::TreeSynchronousOffBuffered) {
+  } else if (
+      treeOverlayType == Overlay::TreeOverlayType::TreeSynchronousOffBuffered) {
     XLOG(DBG2)
         << "Buffered tree overlay being used with synchronous-mode = off";
     return std::make_unique<BufferedTreeOverlay>(
         localDir, config, TreeOverlayStore::SynchronousMode::Off);
   }
 #ifdef _WIN32
-  if (overlayType == Overlay::OverlayType::Legacy) {
+  if (treeOverlayType == Overlay::TreeOverlayType::Legacy) {
     throw std::runtime_error(
         "Legacy overlay type is not supported. Please reclone.");
   }
@@ -82,7 +84,7 @@ using std::optional;
 std::shared_ptr<Overlay> Overlay::create(
     AbsolutePathPiece localDir,
     CaseSensitivity caseSensitive,
-    OverlayType overlayType,
+    TreeOverlayType treeOverlayType,
     std::shared_ptr<StructuredLogger> logger,
     const EdenConfig& config) {
   // This allows us to access the private constructor.
@@ -90,22 +92,22 @@ std::shared_ptr<Overlay> Overlay::create(
     explicit MakeSharedEnabler(
         AbsolutePathPiece localDir,
         CaseSensitivity caseSensitive,
-        OverlayType overlayType,
+        TreeOverlayType treeOverlayType,
         std::shared_ptr<StructuredLogger> logger,
         const EdenConfig& config)
-        : Overlay(localDir, caseSensitive, overlayType, logger, config) {}
+        : Overlay(localDir, caseSensitive, treeOverlayType, logger, config) {}
   };
   return std::make_shared<MakeSharedEnabler>(
-      localDir, caseSensitive, overlayType, logger, config);
+      localDir, caseSensitive, treeOverlayType, logger, config);
 }
 
 Overlay::Overlay(
     AbsolutePathPiece localDir,
     CaseSensitivity caseSensitive,
-    OverlayType overlayType,
+    TreeOverlayType treeOverlayType,
     std::shared_ptr<StructuredLogger> logger,
     const EdenConfig& config)
-    : backingOverlay_{makeOverlay(localDir, overlayType, config)},
+    : backingOverlay_{makeOverlay(localDir, treeOverlayType, config)},
       supportsSemanticOperations_{
           backingOverlay_->supportsSemanticOperations()},
       caseSensitive_{caseSensitive},

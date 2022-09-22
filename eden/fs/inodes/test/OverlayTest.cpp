@@ -42,7 +42,8 @@ using namespace folly::string_piece_literals;
 
 namespace facebook::eden {
 
-constexpr Overlay::OverlayType kOverlayType = Overlay::OverlayType::Legacy;
+constexpr Overlay::TreeOverlayType kOverlayType =
+    Overlay::TreeOverlayType::Legacy;
 
 TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   // eden/test-data/overlay-v2.tgz contains a saved copy of an overlay

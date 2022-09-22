@@ -70,7 +70,7 @@ class OverlayFile;
  */
 class Overlay : public std::enable_shared_from_this<Overlay> {
  public:
-  enum class OverlayType : uint8_t {
+  enum class TreeOverlayType : uint8_t {
     Legacy = 0,
     Tree = 1,
     TreeInMemory = 2,
@@ -89,7 +89,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   static std::shared_ptr<Overlay> create(
       AbsolutePathPiece localDir,
       CaseSensitivity caseSensitive,
-      OverlayType overlayType,
+      TreeOverlayType treeOverlayType,
       std::shared_ptr<StructuredLogger> logger,
       const EdenConfig& config);
 
@@ -287,7 +287,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   explicit Overlay(
       AbsolutePathPiece localDir,
       CaseSensitivity caseSensitive,
-      OverlayType overlayType,
+      TreeOverlayType treeOverlayType,
       std::shared_ptr<StructuredLogger> logger,
       const EdenConfig& config);
 
@@ -397,9 +397,9 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   friend class IORequest;
 };
 
-constexpr Overlay::OverlayType kDefaultOverlayType = folly::kIsWindows
-    ? Overlay::OverlayType::Tree
-    : Overlay::OverlayType::Legacy;
+constexpr Overlay::TreeOverlayType kDefaultOverlayType = folly::kIsWindows
+    ? Overlay::TreeOverlayType::Tree
+    : Overlay::TreeOverlayType::Legacy;
 
 /**
  * Used to reference count IO requests. In any place that there

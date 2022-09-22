@@ -279,7 +279,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       std::shared_ptr<BlobCache> blobCache,
       std::shared_ptr<ServerState> serverState,
       std::unique_ptr<Journal> journal,
-      std::optional<Overlay::OverlayType> overlayType = std::nullopt);
+      std::optional<Overlay::TreeOverlayType> treeOverlayType = std::nullopt);
 
   /**
    * Asynchronous EdenMount initialization - post instantiation.
@@ -1035,8 +1035,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   /**
    * Returns overlay type based on settings.
    */
-  Overlay::OverlayType getOverlayType(
-      std::optional<Overlay::OverlayType> overlayType);
+  Overlay::TreeOverlayType getTreeOverlayType(
+      std::optional<Overlay::TreeOverlayType> treeOverlayType);
 
   EdenMount(
       std::unique_ptr<CheckoutConfig> checkoutConfig,
@@ -1044,7 +1044,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       std::shared_ptr<BlobCache> blobCache,
       std::shared_ptr<ServerState> serverState,
       std::unique_ptr<Journal> journal,
-      std::optional<Overlay::OverlayType> overlayType = std::nullopt);
+      std::optional<Overlay::TreeOverlayType> treeOverlayType = std::nullopt);
 
   // Forbidden copy constructor and assignment operator
   EdenMount(EdenMount const&) = delete;

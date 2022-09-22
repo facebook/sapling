@@ -226,7 +226,7 @@ std::shared_ptr<EdenMount> EdenMount::create(
     std::shared_ptr<BlobCache> blobCache,
     std::shared_ptr<ServerState> serverState,
     std::unique_ptr<Journal> journal,
-    std::optional<Overlay::OverlayType> overlayType) {
+    std::optional<Overlay::TreeOverlayType> treeOverlayType) {
   return std::shared_ptr<EdenMount>{
       new EdenMount{
           std::move(config),
@@ -234,7 +234,7 @@ std::shared_ptr<EdenMount> EdenMount::create(
           std::move(blobCache),
           std::move(serverState),
           std::move(journal),
-          std::move(overlayType)},
+          std::move(treeOverlayType)},
       EdenMountDeleter{}};
 }
 
@@ -244,7 +244,7 @@ EdenMount::EdenMount(
     std::shared_ptr<BlobCache> blobCache,
     std::shared_ptr<ServerState> serverState,
     std::unique_ptr<Journal> journal,
-    std::optional<Overlay::OverlayType> overlayType)
+    std::optional<Overlay::TreeOverlayType> treeOverlayType)
     : checkoutConfig_{std::move(checkoutConfig)},
       serverState_{std::move(serverState)},
 #ifdef _WIN32
@@ -263,7 +263,7 @@ EdenMount::EdenMount(
       overlay_{Overlay::create(
           checkoutConfig_->getOverlayPath(),
           checkoutConfig_->getCaseSensitive(),
-          getOverlayType(overlayType),
+          getTreeOverlayType(treeOverlayType),
           serverState_->getStructuredLogger(),
           *serverState_->getEdenConfig())},
 #ifndef _WIN32
@@ -282,33 +282,33 @@ EdenMount::EdenMount(
   subscribeInodeActivityBuffer();
 }
 
-Overlay::OverlayType EdenMount::getOverlayType(
-    std::optional<Overlay::OverlayType> overlayType) {
-  if (overlayType.has_value()) {
-    return overlayType.value();
+Overlay::TreeOverlayType EdenMount::getTreeOverlayType(
+    std::optional<Overlay::TreeOverlayType> treeOverlayType) {
+  if (treeOverlayType.has_value()) {
+    return treeOverlayType.value();
   }
 
   if (checkoutConfig_->getEnableTreeOverlay()) {
     if (getEdenConfig()->unsafeInMemoryOverlay.getValue()) {
       if (getEdenConfig()->overlayBuffered.getValue()) {
-        return Overlay::OverlayType::TreeInMemoryBuffered;
+        return Overlay::TreeOverlayType::TreeInMemoryBuffered;
       } else {
-        return Overlay::OverlayType::TreeInMemory;
+        return Overlay::TreeOverlayType::TreeInMemory;
       }
     }
     if (getEdenConfig()->overlaySynchronousMode.getValue() == "off") {
       if (getEdenConfig()->overlayBuffered.getValue()) {
-        return Overlay::OverlayType::TreeSynchronousOffBuffered;
+        return Overlay::TreeOverlayType::TreeSynchronousOffBuffered;
       } else {
-        return Overlay::OverlayType::TreeSynchronousOff;
+        return Overlay::TreeOverlayType::TreeSynchronousOff;
       }
     }
     if (getEdenConfig()->overlayBuffered.getValue()) {
-      return Overlay::OverlayType::TreeBuffered;
+      return Overlay::TreeOverlayType::TreeBuffered;
     }
-    return Overlay::OverlayType::Tree;
+    return Overlay::TreeOverlayType::Tree;
   } else {
-    return Overlay::OverlayType::Legacy;
+    return Overlay::TreeOverlayType::Legacy;
   }
 }
 
