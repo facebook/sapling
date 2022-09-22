@@ -65,6 +65,10 @@ impl RegexMatcher {
     /// Return `Some(bool)` if the end state of the DFA is 'match' or 'dead' state.
     /// Return `None` otherwise.
     pub fn match_prefix(&self, dir: &str) -> Option<bool> {
+        // empty dir is for testing the "root" dir
+        if dir.is_empty() {
+            return None;
+        }
         let bytes = dir.as_bytes();
         let mut state = self.dfa.start_state();
 
@@ -190,6 +194,7 @@ mod tests {
     #[test]
     fn test_re_literal_path() {
         let m = RegexMatcher::new(r"(?:a/.*|b/.*)").unwrap();
+        assert_eq!(m.match_prefix(""), None);
         assert_eq!(m.match_prefix("a"), Some(true));
         assert_eq!(m.match_prefix("a/"), Some(true));
         assert_eq!(m.match_prefix("b"), Some(true));
@@ -205,6 +210,7 @@ mod tests {
     #[test]
     fn test_re_dir_boundary() {
         let m = RegexMatcher::new(r"aa/t\d+").unwrap();
+        assert_eq!(m.match_prefix(""), None);
         assert_eq!(m.match_prefix("a"), Some(false));
         assert_eq!(m.match_prefix("aa"), None);
         assert_eq!(m.match_prefix("aa/t123"), Some(true));
@@ -214,6 +220,7 @@ mod tests {
     #[test]
     fn test_re_simple_pattern() {
         let m = RegexMatcher::new(r"a/t\d+/").unwrap();
+        assert_eq!(m.match_prefix(""), None);
         assert_eq!(m.match_prefix("a"), None);
         assert_eq!(m.match_prefix("a/t123"), Some(true));
         assert_eq!(m.match_prefix("a/t123/"), Some(true));
@@ -230,6 +237,7 @@ mod tests {
     #[test]
     fn test_re_without_eol() {
         let m = RegexMatcher::new(r"a/t\d+.py").unwrap();
+        assert_eq!(m.match_prefix(""), None);
         assert_eq!(m.match_prefix("a"), None);
         assert_eq!(m.match_prefix("b"), Some(false));
 
@@ -241,6 +249,7 @@ mod tests {
     #[test]
     fn test_re_with_eol() {
         let m = RegexMatcher::new(r"(:?a/t\d+.py$|a\d*.txt)").unwrap();
+        assert_eq!(m.match_prefix(""), None);
         assert_eq!(m.match_prefix("a"), None);
         assert_eq!(m.match_prefix("b"), Some(false));
 
