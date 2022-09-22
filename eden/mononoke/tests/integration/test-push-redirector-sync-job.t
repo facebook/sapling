@@ -70,7 +70,6 @@
   $ REPOID="$REPOIDSMALL" mononoke_hg_sync small-hg-srv 2 2>&1 | grep "successful sync"
   * successful sync of entries [4]* (glob)
 
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "delete from bundle_replay_data where bookmark_update_log_id = 6"
   $ REPOID="$REPOIDSMALL" mononoke_hg_sync small-hg-srv 5 2>&1 | grep "successful sync"
   * successful sync of entries [6]* (glob)
   $ cd small-hg-srv
