@@ -24,9 +24,9 @@ define_flags! {
 pub fn run(ctx: ReqCtx<DebugRevsetOpts>, repo: &mut Repo) -> Result<u8> {
     let changelog = repo.dag_commits()?;
     let id_map = changelog.read().id_map_snapshot()?;
-    let resolved_revset = resolve_single(&ctx.opts.rev, id_map.as_ref())?;
+    let resolved_revset = resolve_single(&ctx.opts.rev, id_map.as_ref(), &repo.metalog()?.read())?;
 
-    write!(ctx.io().output(), "{}\n", resolved_revset.to_hex())?;
+    write!(ctx.io().output(), "{}\n", resolved_revset)?;
 
     Ok(0)
 }

@@ -5,22 +5,42 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+
 use dag::ops::IdConvert;
 use dag::VertexName;
+use metalog::MetaLog;
+use refencode::decode_bookmarks;
+use refencode::decode_remotenames;
+use types::HgId;
 
 use crate::errors::RevsetLookupError;
 
 pub fn resolve_single(
     change_id: &str,
     id_map: &dyn IdConvert,
-) -> Result<VertexName, RevsetLookupError> {
+    metalog: &MetaLog,
+) -> Result<String, RevsetLookupError> {
+    if let Some(bookmark) = resolve_bookmark(change_id, metalog)? {
+        return Ok(bookmark.to_hex());
+    }
+    if let Some(vertex) = resolve_hash_prefix(change_id, id_map)? {
+        return Ok(vertex.to_hex());
+    }
+
+    Err(RevsetLookupError::RevsetNotFound(change_id.to_owned()))
+}
+
+pub fn resolve_hash_prefix(
+    change_id: &str,
+    id_map: &dyn IdConvert,
+) -> Result<Option<VertexName>, RevsetLookupError> {
     if !change_id
         .chars()
         .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
     {
-        return Err(RevsetLookupError::RevsetNotFound(change_id.to_owned()));
+        return Ok(None);
     }
-
     let mut vertices = async_runtime::block_on(async {
         id_map.vertexes_by_hex_prefix(change_id.as_bytes(), 5).await
     })?
@@ -29,7 +49,7 @@ pub fn resolve_single(
     let vertex = if let Some(v) = vertices.next() {
         v
     } else {
-        return Err(RevsetLookupError::RevsetNotFound(change_id.to_owned()));
+        return Ok(None);
     };
 
     if let Some(vertex2) = vertices.next() {
@@ -43,5 +63,36 @@ pub fn resolve_single(
         ));
     }
 
-    Ok(vertex)
+    Ok(Some(vertex))
+}
+
+fn resolve_bookmark(change_id: &str, metalog: &MetaLog) -> Result<Option<HgId>, RevsetLookupError> {
+    if let Some(hash) = resolve_metalog_bookmark(change_id, metalog, "bookmarks", decode_bookmarks)?
+    {
+        return Ok(Some(hash));
+    }
+    if let Some(hash) =
+        resolve_metalog_bookmark(change_id, metalog, "remotenames", decode_remotenames)?
+    {
+        return Ok(Some(hash));
+    }
+    Ok(None)
+}
+
+fn resolve_metalog_bookmark(
+    change_id: &str,
+    metalog: &MetaLog,
+    bookmark_type: &str,
+    decoder: fn(&[u8]) -> std::io::Result<BTreeMap<String, HgId>>,
+) -> Result<Option<HgId>, RevsetLookupError> {
+    let raw_bookmarks = match metalog.get(bookmark_type)? {
+        None => {
+            return Ok(None);
+        }
+        Some(raw_bookmarks) => raw_bookmarks.into_vec(),
+    };
+    let mut bookmark_map = decoder(raw_bookmarks.as_slice()).map_err(|err| {
+        RevsetLookupError::BookmarkDecodeError(change_id.to_owned(), bookmark_type.to_owned(), err)
+    })?;
+    Ok(bookmark_map.remove(change_id))
 }

@@ -38,5 +38,15 @@ Test hash prefix lookup:
   abort: unknown revision '6'
   [255]
   $ hg debugrevset thisshóuldnótbéfoünd
-  abort: unknown revision 'thisshóuldnótbéfoünd'
+  abort: unknown revision 'thissh*' (glob)
   [255]
+
+Test bookmark lookup
+  $ hg book -r 'desc(C)' mybookmark
+  $ hg debugrevset mybookmark
+  26805aba1e600a82e93661149f2313866a221a7b
+
+Test resolution priority
+  $ hg book -r 'desc(A)' f
+  $ hg debugrevset f
+  426bada5c67598ca65036d57d9e4b64b0c1ce7a0

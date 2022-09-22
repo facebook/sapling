@@ -15,6 +15,12 @@ pub enum RevsetLookupError {
     #[error(transparent)]
     DagError(#[from] dag::Error),
 
+    #[error(transparent)]
+    MetalogError(#[from] metalog::Error),
+
+    #[error("unable to decode '{0}' from '{1}': {2}")]
+    BookmarkDecodeError(String, String, std::io::Error),
+
     #[error("unknown revision '{0}'")]
     RevsetNotFound(String),
 }
