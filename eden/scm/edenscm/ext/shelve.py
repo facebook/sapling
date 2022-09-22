@@ -27,6 +27,7 @@ import collections
 import errno
 import itertools
 import time
+from typing import Optional
 
 from edenscm import (
     bookmarks,
@@ -315,7 +316,7 @@ class shelvedstate(object):
         _hidenodes(repo, self.nodestoremove)
 
 
-def cleanupoldbackups(repo):
+def cleanupoldbackups(repo) -> None:
     vfs = vfsmod.vfs(repo.localvfs.join(backupdir))
     maxbackups = repo.ui.configint("shelve", "maxbackups")
     hgfiles = [f for f in vfs.listdir() if f.endswith("." + patchextension)]
@@ -340,12 +341,12 @@ def _backupactivebookmark(repo):
     return activebookmark
 
 
-def _restoreactivebookmark(repo, mark):
+def _restoreactivebookmark(repo, mark) -> None:
     if mark:
         bookmarks.activate(repo, mark)
 
 
-def _aborttransaction(repo):
+def _aborttransaction(repo) -> None:
     """Abort current transaction for shelve/unshelve, but keep dirstate"""
     tr = repo.currenttransaction()
     repo.dirstate.savebackup(tr, "dirstate.shelve")
@@ -415,7 +416,7 @@ def mutableancestors(ctx):
                     visit.append(parent)
 
 
-def getcommitfunc(extra, interactive, editor=False):
+def getcommitfunc(extra, interactive, editor: bool = False):
     def commitfunc(ui, repo, message, match, opts):
         editor_ = False
         if editor:
@@ -432,7 +433,7 @@ def getcommitfunc(extra, interactive, editor=False):
     return interactivecommitfunc if interactive else commitfunc
 
 
-def _nothingtoshelvemessaging(ui, repo, pats, opts):
+def _nothingtoshelvemessaging(ui, repo, pats, opts) -> None:
     stat = repo.status(match=scmutil.match(repo[None], pats, opts))
     if stat.deleted:
         ui.status(
@@ -443,7 +444,7 @@ def _nothingtoshelvemessaging(ui, repo, pats, opts):
         ui.status(_("nothing changed\n"))
 
 
-def _shelvecreatedcommit(ui, repo, node, name):
+def _shelvecreatedcommit(ui, repo, node, name) -> None:
     shelvedfile(repo, name, "oshelve").writeobsshelveinfo({"node": nodemod.hex(node)})
     cmdutil.export(
         repo,
@@ -453,14 +454,14 @@ def _shelvecreatedcommit(ui, repo, node, name):
     )
 
 
-def _includeunknownfiles(repo, pats, opts, extra):
+def _includeunknownfiles(repo, pats, opts, extra) -> None:
     s = repo.status(match=scmutil.match(repo[None], pats, opts), unknown=True)
     if s.unknown:
         extra["shelve_unknown"] = "\0".join(s.unknown)
         repo[None].add(s.unknown)
 
 
-def _docreatecmd(ui, repo, pats, opts):
+def _docreatecmd(ui, repo, pats, opts) -> Optional[int]:
     wctx = repo[None]
     parents = wctx.parents()
     if len(parents) > 1:
@@ -544,7 +545,7 @@ def _docreatecmd(ui, repo, pats, opts):
             bookmarks.activate(repo, activebookmark)
 
 
-def _isbareshelve(pats, opts):
+def _isbareshelve(pats, opts) -> bool:
     return (
         not pats
         and not opts.get("interactive", False)
@@ -557,7 +558,7 @@ def _iswctxonnewbranch(repo):
     return repo[None].branch() != repo["."].branch()
 
 
-def cleanupcmd(ui, repo):
+def cleanupcmd(ui, repo) -> None:
     """subcommand that deletes all shelves"""
 
     with repo.wlock():
@@ -568,7 +569,7 @@ def cleanupcmd(ui, repo):
             cleanupoldbackups(repo)
 
 
-def deletecmd(ui, repo, pats):
+def deletecmd(ui, repo, pats) -> None:
     """subcommand that deletes a specific shelve"""
     if not pats:
         raise error.Abort(_("no shelved changes specified!"))
@@ -588,6 +589,7 @@ def deletecmd(ui, repo, pats):
         except OSError as err:
             if err.errno != errno.ENOENT:
                 raise
+            # pyre-fixme[61]: `name` is undefined, or not always defined.
             raise error.Abort(_("shelved change '%s' not found") % name)
 
 
@@ -609,7 +611,7 @@ def listshelves(repo):
     return sorted(info, reverse=True)
 
 
-def listcmd(ui, repo, pats, opts):
+def listcmd(ui, repo, pats, opts) -> None:
     """subcommand that displays the list of shelves"""
     pats = set(pats)
     width = 80
@@ -660,7 +662,7 @@ def listshelvesfiles(repo):
     return [util.split(filetuple[1])[1] for filetuple in listshelves(repo)]
 
 
-def patchcmds(ui, repo, pats, opts, subcommand):
+def patchcmds(ui, repo, pats, opts, subcommand) -> None:
     """subcommand that displays shelves"""
     if len(pats) == 0:
         shelved = listshelves(repo)
@@ -675,7 +677,7 @@ def patchcmds(ui, repo, pats, opts, subcommand):
     listcmd(ui, repo, pats, opts)
 
 
-def checkparents(repo, state):
+def checkparents(repo, state) -> None:
     """check parent while resuming an unshelve"""
     if state.parents != repo.dirstate.parents():
         raise error.Abort(_("working directory parents do not match unshelve " "state"))
@@ -686,7 +688,7 @@ def pathtofiles(repo, files):
     return [repo.pathto(f, cwd) for f in files]
 
 
-def unshelveabort(ui, repo, state, opts):
+def unshelveabort(ui, repo, state, opts) -> None:
     """subcommand that abort an in-progress unshelve"""
     with repo.lock():
         try:
@@ -706,7 +708,7 @@ def unshelveabort(ui, repo, state, opts):
             ui.warn(_("unshelve of '%s' aborted\n") % state.name)
 
 
-def mergefiles(ui, repo, wctx, shelvectx):
+def mergefiles(ui, repo, wctx, shelvectx) -> None:
     """updates to wctx and merges the changes from shelvectx into the
     dirstate."""
     with ui.configoverride({("ui", "quiet"): True}):
@@ -731,13 +733,13 @@ def mergefiles(ui, repo, wctx, shelvectx):
         ui.popbuffer()
 
 
-def restorebranch(ui, repo, branchtorestore):
+def restorebranch(ui, repo, branchtorestore) -> None:
     if branchtorestore and branchtorestore != repo.dirstate.branch():
         repo.dirstate.setbranch(branchtorestore)
         ui.status(_("marked working directory as branch %s\n") % branchtorestore)
 
 
-def unshelvecleanup(ui, repo, name, opts):
+def unshelvecleanup(ui, repo, name, opts) -> None:
     """remove related files after an unshelve"""
     if not opts.get("keep"):
         for filetype in shelvefileextensions:
@@ -750,7 +752,7 @@ def unshelvecleanup(ui, repo, name, opts):
     util.unlinkpath(repo.localvfs.join("rebasestate"), ignoremissing=True)
 
 
-def unshelvecontinue(ui, repo, state, opts):
+def unshelvecontinue(ui, repo, state, opts) -> None:
     """subcommand to continue an in-progress unshelve"""
     # We're finishing off a merge. First parent is our original
     # parent, second is the temporary "fake" commit we're unshelving.
@@ -919,7 +921,7 @@ def _rebaserestoredcommit(
     return shelvectx
 
 
-def _forgetunknownfiles(repo, shelvectx, addedbefore):
+def _forgetunknownfiles(repo, shelvectx, addedbefore) -> None:
     # Forget any files that were unknown before the shelve, unknown before
     # unshelve started, but are now added.
     shelveunknown = shelvectx.extra().get("shelve_unknown")
@@ -931,13 +933,13 @@ def _forgetunknownfiles(repo, shelvectx, addedbefore):
     repo[None].forget(toforget)
 
 
-def _finishunshelve(repo, tr, activebookmark):
+def _finishunshelve(repo, tr, activebookmark) -> None:
     _restoreactivebookmark(repo, activebookmark)
     tr.close()
     return
 
 
-def _checkunshelveuntrackedproblems(ui, repo, shelvectx):
+def _checkunshelveuntrackedproblems(ui, repo, shelvectx) -> None:
     """Check potential problems which may result from working
     copy having untracked changes."""
     wcdeleted = set(repo.status().deleted)
@@ -949,7 +951,7 @@ def _checkunshelveuntrackedproblems(ui, repo, shelvectx):
         raise error.Abort(m, hint=hint)
 
 
-def _hideredundantnodes(repo, tr, pctx, shelvectx, tmpwctx):
+def _hideredundantnodes(repo, tr, pctx, shelvectx, tmpwctx) -> None:
     # order is important in the list of [shelvectx, tmpwctx] below
     # some nodes may already be obsolete
     tohide = []
@@ -960,7 +962,7 @@ def _hideredundantnodes(repo, tr, pctx, shelvectx, tmpwctx):
     _hidenodes(repo, [ctx.node() for ctx in tohide])
 
 
-def _hidenodes(repo, nodes):
+def _hidenodes(repo, nodes) -> None:
     if visibility.tracking(repo):
         visibility.remove(repo, nodes)
 
@@ -1238,7 +1240,7 @@ def shelvecmd(ui, repo, *pats, **opts):
         return createcmd(ui, repo, pats, opts)
 
 
-def extsetup(ui):
+def extsetup(ui) -> None:
     cmdutil.unfinishedstates.append(
         [
             shelvedstate._filename,
