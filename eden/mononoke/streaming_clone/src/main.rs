@@ -12,17 +12,15 @@ use std::path::PathBuf;
 
 use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::Result;
 use blake2::Blake2b;
 use blake2::Digest;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
 use borrowed::borrowed;
-use clap::App;
-use clap::Arg;
-use clap::ArgMatches;
-use clap::SubCommand;
-use cmdlib::args;
-use cmdlib::args::MononokeMatches;
+use clap::Args;
+use clap::Parser;
+use clap::Subcommand;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future;
@@ -32,6 +30,9 @@ use futures::TryStreamExt;
 use mercurial_revlog::revlog::Entry;
 use mercurial_revlog::revlog::RevIdx;
 use mercurial_revlog::revlog::Revlog;
+use mononoke_app::args::RepoArgs;
+use mononoke_app::MononokeApp;
+use mononoke_app::MononokeAppBuilder;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentity;
@@ -44,15 +45,48 @@ use streaming_clone::StreamingCloneRef;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncSeekExt;
 
-pub const CREATE_SUB_CMD: &str = "create";
-pub const DEFAULT_MAX_DATA_CHUNK_SIZE: u32 = 950 * 1024;
-pub const DOT_HG_PATH_ARG: &str = "dot-hg-path";
-pub const MAX_DATA_CHUNK_SIZE: &str = "max-data-chunk-size";
-pub const SKIP_LAST_CHUNK_ARG: &str = "skip-last-chunk";
-pub const STREAMING_CLONE: &str = "streaming-clone";
-pub const TAG_ARG: &str = "tag";
-pub const NO_UPLOAD_IF_LESS_THAN_CHUNKS_ARG: &str = "no-upload-if-less-than-chunks";
-pub const UPDATE_SUB_CMD: &str = "update";
+/// Tool to manage streaming clone chunks
+#[derive(Parser)]
+struct StreamingCloneArgs {
+    #[clap(flatten, next_help_heading = "REPO OPTIONS")]
+    repo: RepoArgs,
+
+    #[clap(subcommand)]
+    subcmd: StreamingCloneSubCommand,
+}
+
+#[derive(Subcommand)]
+enum StreamingCloneSubCommand {
+    /// Create new streaming clone
+    Create {
+        #[clap(flatten)]
+        create_args: StreamingCloneSubCommandArgs,
+    },
+    /// Update existing streaming changelog
+    Update {
+        #[clap(flatten)]
+        update_args: StreamingCloneSubCommandArgs,
+    },
+}
+
+#[derive(Args)]
+struct StreamingCloneSubCommandArgs {
+    /// Path to .hg folder with changelog
+    #[clap(long, forbid_empty_values = true)]
+    dot_hg_path: String,
+    /// Max size of the data entry that we'll write to the blobstore
+    #[clap(long, default_value_t = 950 * 1024)]
+    max_data_chunk_size: u32,
+    /// Which tag to use when preparing the changelog
+    #[clap(long)]
+    tag: Option<String>,
+    /// Skip uploading last chunk
+    #[clap(long, action)]
+    skip_last_chunk: bool,
+    /// Do not do anything if we have less than that number of chunks to upload
+    #[clap(long, conflicts_with = "skip-last-chunk")]
+    no_upload_if_less_than_chunks: Option<usize>,
+}
 
 #[facet::container]
 struct Repo {
@@ -66,18 +100,23 @@ struct Repo {
     streaming_clone: StreamingClone,
 }
 
-pub async fn streaming_clone<'a>(
-    fb: FacebookInit,
-    logger: Logger,
-    matches: &'a MononokeMatches<'a>,
-) -> Result<(), Error> {
-    let mut scuba = matches.scuba_sample_builder();
-    let repo: Repo = args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
+async fn streaming_clone<'a>(fb: FacebookInit, app: &MononokeApp) -> Result<(), Error> {
+    let args: StreamingCloneArgs = app.args()?;
+    let logger = app.logger();
+    let repo: Repo = app.open_repo(&args.repo).await?;
+    info!(
+        logger,
+        "using repo \"{}\" repoid {:?}",
+        repo.repo_identity().name(),
+        repo.repo_identity().id()
+    );
+    let env = app.environment();
+    let mut scuba = env.scuba_sample_builder.clone();
     scuba.add("reponame", repo.repo_identity().name());
 
-    let res = match matches.subcommand() {
-        (CREATE_SUB_CMD, Some(sub_m)) => {
-            let tag: Option<&str> = sub_m.value_of(TAG_ARG);
+    let res = match args.subcmd {
+        StreamingCloneSubCommand::Create { create_args } => {
+            let tag: Option<&str> = create_args.tag.as_deref();
             scuba.add_opt("tag", tag);
             let ctx = build_context(fb, &logger, &repo, &tag);
             // This command works only if there are no streaming chunks at all for a give repo.
@@ -88,16 +127,14 @@ pub async fn streaming_clone<'a>(
                     "cannot create new streaming clone chunks because they already exists"
                 ));
             }
-
-            update_streaming_changelog(&ctx, &repo, sub_m, tag).await
+            update_streaming_changelog(&ctx, &repo, &create_args, tag).await
         }
-        (UPDATE_SUB_CMD, Some(sub_m)) => {
-            let tag: Option<&str> = sub_m.value_of(TAG_ARG);
+        StreamingCloneSubCommand::Update { update_args } => {
+            let tag: Option<&str> = update_args.tag.as_deref();
             scuba.add_opt("tag", tag);
             let ctx = build_context(fb, &logger, &repo, &tag);
-            update_streaming_changelog(&ctx, &repo, sub_m, tag).await
+            update_streaming_changelog(&ctx, &repo, &update_args, tag).await
         }
-        _ => Err(anyhow!("unknown subcommand")),
     };
 
     match res {
@@ -135,27 +172,24 @@ fn build_context(
 async fn update_streaming_changelog(
     ctx: &CoreContext,
     repo: &Repo,
-    sub_m: &ArgMatches<'_>,
+    args: &StreamingCloneSubCommandArgs,
     tag: Option<&str>,
 ) -> Result<usize, Error> {
-    let max_data_chunk_size: u32 =
-        args::get_and_parse(sub_m, MAX_DATA_CHUNK_SIZE, DEFAULT_MAX_DATA_CHUNK_SIZE);
-    let (idx, data) = get_revlog_paths(sub_m)?;
+    let max_data_chunk_size: u32 = args.max_data_chunk_size;
+    let (idx, data) = get_revlog_paths(args)?;
 
     let revlog = Revlog::from_idx_with_data(idx.clone(), None as Option<String>)?;
     let rev_idx_to_skip =
         find_latest_rev_id_in_streaming_changelog(ctx, repo, &revlog, tag).await?;
 
-    let skip_last_chunk = sub_m.is_present(SKIP_LAST_CHUNK_ARG);
     let chunks = split_into_chunks(
         &revlog,
         Some(rev_idx_to_skip),
         max_data_chunk_size,
-        skip_last_chunk,
+        args.skip_last_chunk,
     )?;
 
-    let no_upload_if_less_than_chunks: Option<usize> =
-        args::get_and_parse_opt(sub_m, NO_UPLOAD_IF_LESS_THAN_CHUNKS_ARG);
+    let no_upload_if_less_than_chunks: Option<usize> = args.no_upload_if_less_than_chunks;
 
     if let Some(at_least_chunks) = no_upload_if_less_than_chunks {
         if chunks.len() < at_least_chunks {
@@ -190,11 +224,8 @@ async fn update_streaming_changelog(
     Ok(chunks_num)
 }
 
-fn get_revlog_paths(sub_m: &ArgMatches<'_>) -> Result<(PathBuf, PathBuf), Error> {
-    let p = sub_m
-        .value_of(DOT_HG_PATH_ARG)
-        .ok_or_else(|| anyhow!("{} is not set", DOT_HG_PATH_ARG))?;
-    let mut idx = PathBuf::from(p);
+fn get_revlog_paths(args: &StreamingCloneSubCommandArgs) -> Result<(PathBuf, PathBuf), Error> {
+    let mut idx = PathBuf::from(&args.dot_hg_path);
     idx.push("store");
     idx.push("00changelog.i");
     let data = idx.with_extension("d");
@@ -453,61 +484,9 @@ impl Chunk {
     }
 }
 
-fn add_common_args<'a, 'b>(sub_cmd: App<'a, 'b>) -> App<'a, 'b> {
-    sub_cmd
-        .arg(
-            Arg::with_name(DOT_HG_PATH_ARG)
-                .long(DOT_HG_PATH_ARG)
-                .takes_value(true)
-                .required(true)
-                .help("path to .hg folder with changelog"),
-        )
-        .arg(
-            Arg::with_name(MAX_DATA_CHUNK_SIZE)
-                .long(MAX_DATA_CHUNK_SIZE)
-                .takes_value(true)
-                .required(false)
-                .help("max size of the data entry that we'll write to the blobstore"),
-        )
-        .arg(
-            Arg::with_name(TAG_ARG)
-                .long(TAG_ARG)
-                .takes_value(true)
-                .required(false)
-                .help("which tag to use when preparing the changelog"),
-        )
-        .arg(
-            Arg::with_name(SKIP_LAST_CHUNK_ARG)
-                .long(SKIP_LAST_CHUNK_ARG)
-                .takes_value(false)
-                .required(false)
-                .help("skip uploading last chunk. "),
-        )
-        .arg(
-            Arg::with_name(NO_UPLOAD_IF_LESS_THAN_CHUNKS_ARG)
-                .long(NO_UPLOAD_IF_LESS_THAN_CHUNKS_ARG)
-                .takes_value(true)
-                .required(false)
-                .conflicts_with(SKIP_LAST_CHUNK_ARG)
-                .help("Do not do anything if we have less than that number of chunks to upload"),
-        )
-}
-
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let matches = args::MononokeAppBuilder::new("Tool to manage streaming clone chunks")
-        .with_advanced_args_hidden()
-        .with_scuba_logging_args()
-        .build()
-        .subcommand(add_common_args(
-            SubCommand::with_name(CREATE_SUB_CMD).about("create new streaming clone"),
-        ))
-        .subcommand(add_common_args(
-            SubCommand::with_name(UPDATE_SUB_CMD).about("update existing streaming changelog"),
-        ))
-        .get_matches(fb)?;
-
-    let logger = matches.logger();
-    let runtime = matches.runtime();
-    runtime.block_on(streaming_clone(fb, logger.clone(), &matches))
+    let app = MononokeAppBuilder::new(fb).build::<StreamingCloneArgs>()?;
+    let runtime = tokio::runtime::Runtime::new()?;
+    runtime.block_on(streaming_clone(fb, &app))
 }
