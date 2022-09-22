@@ -30,11 +30,13 @@ if [[ -n "$DB_SHARD_NAME" ]]; then
   MONONOKE_DEFAULT_START_TIMEOUT=600
   MONONOKE_LFS_DEFAULT_START_TIMEOUT=60
   MONONOKE_SCS_DEFAULT_START_TIMEOUT=120
+  MONONOKE_LAND_SERVICE_DEFAULT_START_TIMEOUT=120
 else
   MONONOKE_DEFAULT_START_TIMEOUT=60
   MONONOKE_LFS_DEFAULT_START_TIMEOUT=60
   # First scsc call takes a while as scs server is doing derivation
   MONONOKE_SCS_DEFAULT_START_TIMEOUT=120
+  MONONOKE_LAND_SERVICE_DEFAULT_START_TIMEOUT=120
   MONONOKE_DDS_DEFAULT_START_TIMEOUT=60
 fi
 VI_SERVICE_DEFAULT_START_TIMEOUT=60
@@ -126,6 +128,10 @@ function mononoke_address {
 
 function scs_address {
   echo -n "$(mononoke_host):$SCS_PORT"
+}
+
+function land_service_address {
+  echo -n "$(mononoke_host):$LAND_SERVICE_PORT"
 }
 
 # return random value from [1, max_value]
@@ -1285,6 +1291,24 @@ function scs {
   echo "$SCS_SERVER_PID" >> "$DAEMON_PIDS"
 }
 
+function land_service {
+  rm -f "$TESTTMP/land_service_addr.txt"
+  GLOG_minloglevel=5 \
+    THRIFT_TLS_SRV_CERT="$TEST_CERTDIR/localhost.crt" \
+    THRIFT_TLS_SRV_KEY="$TEST_CERTDIR/localhost.key" \
+    THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
+    THRIFT_TLS_TICKETS="$TEST_CERTDIR/server.pem.seeds" \
+    "$LAND_SERVICE" "$@" \
+    --host "$LOCALIP" \
+    --port 0 \
+    --log-level DEBUG \
+    --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --bound-address-file "$TESTTMP/land_service_addr.txt" \
+    "${COMMON_ARGS[@]}" >> "$TESTTMP/land_service.out" 2>&1 &
+  export LAND_SERVICE_PID=$!
+  echo "$LAND_SERVICE_PID" >> "$DAEMON_PIDS"
+}
+
 function wait_for_scs {
   export SCS_PORT
   wait_for_server "SCS server" SCS_PORT "$TESTTMP/scs_server.out" \
@@ -1292,9 +1316,21 @@ function wait_for_scs {
     scsc repos
 }
 
+function wait_for_land_service {
+  export LAND_SERVICE_PORT
+  wait_for_server "Land service" LAND_SERVICE_PORT "$TESTTMP/land_service.out" \
+    "${MONONOKE_LAND_SERVICE_START_TIMEOUT:-"$MONONOKE_LAND_SERVICE_DEFAULT_START_TIMEOUT"}" "$TESTTMP/land_service_addr.txt" \
+    sleep 5
+}
+
 function start_and_wait_for_scs_server {
   scs "$@"
   wait_for_scs
+}
+
+function start_and_wait_for_land_service {
+  land_service "$@"
+  wait_for_land_service
 }
 
 function megarepo_async_worker {

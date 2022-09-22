@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::fs::File;
+use std::io::Write;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
@@ -20,6 +22,7 @@ use mononoke_app::MononokeAppBuilder;
 use signal_hook::consts::signal::SIGINT;
 use signal_hook::consts::signal::SIGTERM;
 use signal_hook_tokio::Signals;
+use slog::info;
 use srserver::service_framework::BuildModule;
 use srserver::service_framework::Fb303Module;
 use srserver::service_framework::ServiceFramework;
@@ -41,6 +44,9 @@ struct LandServiceServerArgs {
     /// Thrift port
     #[clap(long, short = 'p', default_value_t = 8485)]
     port: u16,
+    /// Path for file in which to write the bound tcp address in rust std::net::SocketAddr format
+    #[clap(long)]
+    bound_address_file: Option<String>,
 }
 
 #[fbinit::main]
@@ -78,7 +84,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let thrift: ThriftServer = ThriftServerBuilder::new(fb)
         .with_name(SERVICE_NAME)
         .expect("failed to set name")
-        .with_port(args.port)
+        .with_address(&args.host, args.port, false)?
         .with_tls()
         .expect("failed to enable TLS")
         .with_cancel_if_client_disconnected()
@@ -93,17 +99,33 @@ fn main(fb: FacebookInit) -> Result<()> {
     service_framework.add_module(ThriftStatsModule)?;
     service_framework.add_module(Fb303Module)?;
 
-    println!("Starting LandService Thrift service on port: {}", args.port);
+    service_framework
+        .serve_background()
+        .expect("failed to start thrift service");
+
+    let bound_addr = format!(
+        "{}:{}",
+        &args.host,
+        service_framework.get_address()?.get_port()?
+    );
+
+    info!(logger, "Listening on {}", bound_addr);
+
+    // Write out the bound address if requested, this is helpful in tests when using automatic binding with :0
+    if let Some(bound_addr_path) = args.bound_address_file {
+        let mut writer = File::create(bound_addr_path)?;
+        writer.write_all(bound_addr.as_bytes())?;
+        writer.write_all(b"\n")?;
+    }
+
     // Start a task to spin up a thrift service
     let thrift_service_handle = runtime.spawn(run_thrift_service(service_framework));
     // Have the runtime wait for thrift service to finish
     runtime.block_on(thrift_service_handle)?
 }
 
-async fn run_thrift_service(mut service: ServiceFramework) -> Result<()> {
+async fn run_thrift_service(service: ServiceFramework) -> Result<()> {
     let mut signals = Signals::new(&[SIGTERM, SIGINT])?;
-
-    service.serve_background()?;
 
     signals.next().await;
     println!("Shutting down...");
