@@ -654,16 +654,10 @@ pub enum PushrebaseRemoteMode {
     RemoteScs(Address),
     /// Call SCS and do pushrebase remotely, retrying errors locally
     RemoteScsWithLocalFallback(Address),
-}
-
-impl PushrebaseRemoteMode {
-    /// SCS address used for pushrebase, if any
-    pub fn scs_address(&self) -> Option<&Address> {
-        match self {
-            Self::RemoteScs(address) | Self::RemoteScsWithLocalFallback(address) => Some(address),
-            Self::Local => None,
-        }
-    }
+    /// Call LandService and do pushrebase remotely, forwarding errors
+    RemoteLandService(Address),
+    /// Call LandService and do pushrebase remotely, retrying errors locally
+    RemoteLandServiceWithLocalFallback(Address),
 }
 
 /// Pushrebase configuration options

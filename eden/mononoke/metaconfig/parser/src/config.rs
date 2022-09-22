@@ -806,7 +806,7 @@ mod test {
             casefolding_check = false
             emit_obsmarkers = false
             allow_change_xrepo_mapping_extra = true
-            
+
             [pushrebase.remote_mode]
             remote_scs = { tier = "my-tier" }
 

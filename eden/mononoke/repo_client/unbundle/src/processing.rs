@@ -25,6 +25,7 @@ use bytes::Bytes;
 use context::CoreContext;
 use hooks::HookManager;
 use mercurial_mutation::HgMutationStoreRef;
+use metaconfig_types::Address;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::PushParams;
 use metaconfig_types::PushrebaseParams;
@@ -32,6 +33,8 @@ use metaconfig_types::PushrebaseRemoteMode;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use pushrebase::PushrebaseError;
+#[cfg(fbcode_build)]
+use pushrebase_client::LandServicePushrebaseClient;
 use pushrebase_client::LocalPushrebaseClient;
 use pushrebase_client::PushrebaseClient;
 #[cfg(fbcode_build)]
@@ -497,6 +500,70 @@ async fn convert_bookmark_movement_err(
     })
 }
 
+pub fn maybe_client_from_address<'a>(
+    remote_mode: &'a PushrebaseRemoteMode,
+    ctx: &'a CoreContext,
+    repo: &'a impl Repo,
+) -> Option<Box<dyn PushrebaseClient + 'a>> {
+    match remote_mode {
+        PushrebaseRemoteMode::RemoteScs(address)
+        | PushrebaseRemoteMode::RemoteScsWithLocalFallback(address) => {
+            address_from_scs(address, ctx, repo)
+        }
+        PushrebaseRemoteMode::RemoteLandService(address)
+        | PushrebaseRemoteMode::RemoteLandServiceWithLocalFallback(address) => {
+            address_from_land_service(address, ctx, repo)
+        }
+        PushrebaseRemoteMode::Local => None,
+    }
+}
+
+fn address_from_scs<'a>(
+    address: &'a Address,
+    ctx: &'a CoreContext,
+    repo: &'a impl Repo,
+) -> Option<Box<dyn PushrebaseClient + 'a>> {
+    #[cfg(fbcode_build)]
+    {
+        match address {
+            metaconfig_types::Address::Tier(tier) => Some(Box::new(
+                ScsPushrebaseClient::from_tier(ctx, tier.clone(), repo).ok()?,
+            )),
+            metaconfig_types::Address::HostPort(host_port) => Some(Box::new(
+                ScsPushrebaseClient::from_host_port(ctx, host_port.clone(), repo).ok()?,
+            )),
+        }
+    }
+    #[cfg(not(fbcode_build))]
+    {
+        let _ = (address, ctx, repo);
+        unreachable!()
+    }
+}
+
+fn address_from_land_service<'a>(
+    address: &'a Address,
+    ctx: &'a CoreContext,
+    repo: &'a impl Repo,
+) -> Option<Box<dyn PushrebaseClient + 'a>> {
+    #[cfg(fbcode_build)]
+    {
+        match address {
+            metaconfig_types::Address::Tier(tier) => Some(Box::new(
+                LandServicePushrebaseClient::from_tier(ctx, tier.clone(), repo).ok()?,
+            )),
+            metaconfig_types::Address::HostPort(host_port) => Some(Box::new(
+                LandServicePushrebaseClient::from_host_port(ctx, host_port.clone(), repo).ok()?,
+            )),
+        }
+    }
+    #[cfg(not(fbcode_build))]
+    {
+        let _ = (address, ctx, repo);
+        unreachable!()
+    }
+}
+
 async fn normal_pushrebase<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
@@ -516,18 +583,12 @@ async fn normal_pushrebase<'a>(
     } else {
         &pushrebase_params.remote_mode
     };
-    let maybe_fallback_scuba: Option<(MononokeScubaSampleBuilder, BookmarkMovementError)> =
-        if let Some(address) = remote_mode.scs_address() {
-            #[cfg(fbcode_build)]
-            {
-                let result = match address {
-                    metaconfig_types::Address::Tier(tier) => {
-                        ScsPushrebaseClient::from_tier(ctx, tier.clone(), repo)?
-                    }
-                    metaconfig_types::Address::HostPort(host_port) => {
-                        ScsPushrebaseClient::from_host_port(ctx, host_port.clone(), repo)?
-                    }
-                }
+    let maybe_fallback_scuba: Option<(MononokeScubaSampleBuilder, BookmarkMovementError)> = {
+        let maybe_client: Option<Box<dyn PushrebaseClient>> =
+            maybe_client_from_address(&pushrebase_params.remote_mode, ctx, repo);
+
+        if let Some(client) = maybe_client {
+            let result = client
                 .pushrebase(
                     bookmark,
                     changesets.clone(),
@@ -536,43 +597,40 @@ async fn normal_pushrebase<'a>(
                     bookmark_restriction,
                 )
                 .await;
-                match (result, remote_mode) {
-                    (Ok(outcome), _) => {
-                        return Ok((outcome.head, outcome.rebased_changesets));
-                    }
-                    // No fallback, propagate error
-                    (Err(err), metaconfig_types::PushrebaseRemoteMode::RemoteScs(..)) => {
-                        return Err(
-                            convert_bookmark_movement_err(err, hook_rejection_remapper).await?
-                        );
-                    }
-                    (Err(err), _) => {
-                        slog::warn!(
-                            ctx.logger(),
-                            "Failed to pushrebase remotely, falling back to local. Error: {}",
-                            err
-                        );
-                        let mut scuba = ctx.scuba().clone();
-                        scuba.add("bookmark_name", bookmark.as_str());
-                        scuba.add(
-                            "changeset_id",
-                            changesets
-                                .iter()
-                                .next()
-                                .map(|b| b.get_changeset_id().to_string()),
-                        );
-                        Some((scuba, err))
-                    }
+            match (result, remote_mode) {
+                (Ok(outcome), _) => {
+                    return Ok((outcome.head, outcome.rebased_changesets));
                 }
-            }
-            #[cfg(not(fbcode_build))]
-            {
-                let _ignore_only_this_unused_variable = address;
-                unreachable!()
+                // No fallback, propagate error
+                (
+                    Err(err),
+                    metaconfig_types::PushrebaseRemoteMode::RemoteScs(..)
+                    | metaconfig_types::PushrebaseRemoteMode::RemoteLandService(..),
+                ) => {
+                    return Err(convert_bookmark_movement_err(err, hook_rejection_remapper).await?);
+                }
+                (Err(err), _) => {
+                    slog::warn!(
+                        ctx.logger(),
+                        "Failed to pushrebase remotely, falling back to local. Error: {}",
+                        err
+                    );
+                    let mut scuba = ctx.scuba().clone();
+                    scuba.add("bookmark_name", bookmark.as_str());
+                    scuba.add(
+                        "changeset_id",
+                        changesets
+                            .iter()
+                            .next()
+                            .map(|b| b.get_changeset_id().to_string()),
+                    );
+                    Some((scuba, err))
+                }
             }
         } else {
             None
-        };
+        }
+    };
     let authz = AuthorizationContext::new(ctx);
     let result = LocalPushrebaseClient {
         ctx,

@@ -257,6 +257,12 @@ impl Convert for RawPushrebaseRemoteMode {
             Self::remote_scs_local_fallback(addr) => Ok(
                 PushrebaseRemoteMode::RemoteScsWithLocalFallback(addr.convert()?),
             ),
+            Self::remote_land_service(addr) => {
+                Ok(PushrebaseRemoteMode::RemoteLandService(addr.convert()?))
+            }
+            Self::remote_land_service_local_fallback(addr) => Ok(
+                PushrebaseRemoteMode::RemoteLandServiceWithLocalFallback(addr.convert()?),
+            ),
             Self::UnknownField(e) => anyhow::bail!("Unknown field: {}", e),
         }
     }

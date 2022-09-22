@@ -38,6 +38,9 @@ struct LandChangesetRequest {
 
   /// What kind of bookmark can be pushed.
   5: BookmarkKindRestrictions bookmark_restrictions = BookmarkKindRestrictions.ANY_KIND;
+
+  /// The name of the repository.
+  6: string repo_name;
 } (rust.exhaustive)
 
 struct BonsaiHashPairs {
