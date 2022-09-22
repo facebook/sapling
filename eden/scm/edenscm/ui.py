@@ -935,10 +935,6 @@ class ui(object):
             # If pager encoding is set, update the output encoding
             if pagerencoding:
                 encoding.outputencoding = pagerencoding
-
-            # If pagermode differs from color.mode, reconfigure color now that
-            # pageractive is set.
-            color.setup(self)
         else:
             # If the pager can't be spawned in dispatch when --pager=on is
             # given, don't try again when the command runs, to avoid a duplicate
