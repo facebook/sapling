@@ -858,6 +858,35 @@ class treematcher(basematcher):
         return "<treematcher rules=%r>" % self._rules
 
 
+class regexmatcher(basematcher):
+    """Match regex patterns."""
+
+    def __init__(self, root, cwd, pattern, badfn=None):
+        super(regexmatcher, self).__init__(root, cwd, badfn)
+        self._matcher = pathmatcher.regexmatcher(pattern)
+        self._pattern = pattern
+
+    def matchfn(self, f):
+        return self._matcher.matches(f)
+
+    def visitdir(self, dir):
+        matched = self._matcher.match_prefix(dir)
+        if matched is None:
+            return True
+        elif matched is True:
+            return "all"
+        else:
+            assert matched is False, f"expected False, but got {matched}"
+            return False
+
+    def explain(self, f):
+        if self._matcher.matches(f):
+            return self._pattern
+
+    def __repr__(self):
+        return f"<regexmatcher pattern={self._pattern!r}>"
+
+
 def normalizerootdir(dir: str, funcname) -> str:
     if dir == ".":
         util.nouideprecwarn(
