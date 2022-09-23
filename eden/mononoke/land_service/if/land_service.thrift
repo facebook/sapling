@@ -56,7 +56,7 @@ struct PushrebaseOutcome {
   1: ChangesetId head;
 
   /// A list of bonsai hash (changeset) pairs represeting old and new ids.
-  2: list<BonsaiHashPairs> rebased_commits;
+  2: list<BonsaiHashPairs> rebased_changesets;
 
   /// How far away was the commit rebased.
   3: i64 pushrebase_distance;
@@ -81,7 +81,7 @@ safe permanent client exception PushrebaseConflictsException {
   1: string reason;
   /// Always non-empty
   2: list<PushrebaseConflicts> conflicts;
-} (message = "reason")
+} (message = "reason", rust.exhaustive)
 
 struct HookRejection {
   /// The hook that rejected the output
@@ -90,7 +90,7 @@ struct HookRejection {
   2: ChangesetId cs_id;
   /// Why the hook rejected the changeset.
   3: HookOutcomeRejected reason;
-}
+} (rust.exhaustive)
 
 struct HookOutcomeRejected {
   /// A short description for summarizing this failure with similar failures
@@ -103,7 +103,13 @@ safe stateful client exception HookRejectionsException {
   1: string reason;
   /// Always non-empty
   2: list<HookRejection> rejections;
-} (message = "reason")
+} (message = "reason", rust.exhaustive)
+
+safe client exception InternalError {
+  1: string reason;
+  2: optional string backtrace;
+  3: list<string> source_chain;
+} (message = "reason", rust.exhaustive)
 
 service LandService extends fb303_core.BaseService {
   /// Land a stack of commits via land_changesets.
@@ -112,5 +118,6 @@ service LandService extends fb303_core.BaseService {
   ) throws (
     2: PushrebaseConflictsException pushrebase_conflicts,
     3: HookRejectionsException hook_rejections,
+    4: InternalError internal_error,
   );
-}
+} (rust.request_context)

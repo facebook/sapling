@@ -14,10 +14,12 @@ use anyhow::Context;
 use anyhow::Result;
 use clap::Parser;
 use cloned::cloned;
+use cmdlib_logging::ScribeLoggingArgs;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
 use futures::StreamExt;
 use land_service_if::server::*;
+use mononoke_api::Mononoke;
 use mononoke_app::MononokeAppBuilder;
 use signal_hook::consts::signal::SIGINT;
 use signal_hook::consts::signal::SIGTERM;
@@ -33,11 +35,14 @@ use LandService_metadata_sys::create_metadata;
 
 const SERVICE_NAME: &str = "mononoke_land_service_server";
 
+mod errors;
 mod facebook;
 mod land_service_impl;
 
 #[derive(Debug, Parser)]
 struct LandServiceServerArgs {
+    #[clap(flatten)]
+    scribe_logging_args: ScribeLoggingArgs,
     /// Thrift host
     #[clap(long, short = 'H', default_value = "::")]
     host: String,
@@ -59,6 +64,10 @@ fn main(fb: FacebookInit) -> Result<()> {
     let logger = app.logger();
     let runtime = app.runtime();
     let exec = runtime.clone();
+    let env = app.environment();
+
+    let scuba_builder = env.scuba_sample_builder.clone();
+    let mononoke = Arc::new(runtime.block_on(Mononoke::new(Arc::clone(&app)))?);
 
     let will_exit = Arc::new(AtomicBool::new(false));
 
@@ -69,7 +78,13 @@ fn main(fb: FacebookInit) -> Result<()> {
         }
     };
 
-    let land_service_server = land_service_impl::LandServiceImpl::new(fb, logger.clone());
+    let land_service_server = land_service_impl::LandServiceImpl::new(
+        fb,
+        logger.clone(),
+        mononoke,
+        scuba_builder,
+        args.scribe_logging_args.get_scribe(fb)?,
+    );
 
     let service = {
         move |proto| {
