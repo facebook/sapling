@@ -105,17 +105,23 @@ pub mod derived_data_service {
     use mononoke_types::RepositoryId;
     use repo_blobstore::RepoBlobstore;
     use scuba_ext::MononokeScubaSampleBuilder;
+    use slog::Logger;
 
     use super::DerivedDataManager;
 
     #[facet::facet]
     pub struct DerivedDataManagerSet {
+        logger: Logger,
         configs: HashMap<String, DerivedDataManager>,
     }
 
     impl DerivedDataManagerSet {
         pub fn get_mananger(&self, config_name: impl Into<String>) -> Option<&DerivedDataManager> {
             self.configs.get(&config_name.into())
+        }
+
+        pub fn logger(&self) -> &Logger {
+            &self.logger
         }
     }
 
@@ -134,7 +140,8 @@ pub mod derived_data_service {
             filenodes: Arc<dyn Filenodes>,
             repo_blobstore: RepoBlobstore,
             lease: Arc<dyn LeaseOps>,
-            scuba: MononokeScubaSampleBuilder,
+            logger: Logger,
+            derived_data_scuba: MononokeScubaSampleBuilder,
             config: DerivedDataConfig,
             derivation_service_client: Option<Arc<dyn DerivationClient>>,
         ) -> Result<Self> {
@@ -146,7 +153,7 @@ pub mod derived_data_service {
                 filenodes,
                 repo_blobstore,
                 lease,
-                scuba,
+                derived_data_scuba,
                 String::default(),
                 DerivedDataTypesConfig::default(),
                 derivation_service_client,
@@ -162,7 +169,7 @@ pub mod derived_data_service {
                 })
                 .collect();
 
-            Ok(Self { configs })
+            Ok(Self { logger, configs })
         }
     }
 }

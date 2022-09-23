@@ -1112,7 +1112,9 @@ impl RepoFactory {
     ) -> Result<ArcDerivedDataManagerSet> {
         let config = repo_config.derived_data_config.clone();
         let lease = lease_init(self.env.fb, self.env.caching, DERIVED_DATA_LEASE)?;
-        let scuba = build_scuba(
+        let ctx = self.ctx(Some(repo_identity));
+        let logger = ctx.logger().clone();
+        let derived_data_scuba = build_scuba(
             self.env.fb,
             config.scuba_table.clone(),
             repo_identity.name(),
@@ -1127,7 +1129,8 @@ impl RepoFactory {
             filenodes.clone(),
             repo_blobstore.as_ref().clone(),
             lease,
-            scuba,
+            logger,
+            derived_data_scuba,
             config,
             derivation_service_client,
         )?))
