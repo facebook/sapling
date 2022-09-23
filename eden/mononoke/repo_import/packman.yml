@@ -2,6 +2,7 @@ packages:
   fb-repo_import:
     summary: A tool to automate repo imports
     packager: source_control
+    build_architectures: [x86_64, aarch64]
     rules:
       buck:eden/mononoke/repo_import:repo_import:
         eden/mononoke/repo_import/repo_import#binary/repo_import:
