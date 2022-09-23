@@ -13,6 +13,7 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::Context;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
@@ -49,6 +50,7 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_types::FileType;
 use mononoke_types::RepositoryId;
+use redactedblobstore::ErrorKind as RedactedBlobstoreError;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::info;
 use slog::Logger;
@@ -161,6 +163,18 @@ pub async fn number_of_lines(
         .await
 }
 
+pub async fn number_of_lines_unless_redacted(
+    bytes_stream: impl Stream<Item = Result<FileBytes, Error>>,
+) -> Result<i64, Error> {
+    match number_of_lines(bytes_stream).await {
+        Ok(lines) => Ok(lines),
+        Err(e) => match e.downcast_ref::<RedactedBlobstoreError>() {
+            Some(RedactedBlobstoreError::Censored(..)) => Ok(0),
+            _ => Err(e),
+        },
+    }
+}
+
 pub async fn get_manifest_from_changeset(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -187,13 +201,18 @@ pub async fn get_statistics_from_entry(
 ) -> Result<RepoStatistics, Error> {
     match entry {
         Entry::Leaf((file_type, filenode_id)) => {
-            let envelope = filenode_id.load(ctx, repo.blobstore()).await?;
+            let envelope = filenode_id
+                .load(ctx, repo.blobstore())
+                .await
+                .context("Failed to load envelope")?;
             let size = envelope.content_size();
             let content_id = envelope.content_id();
             let lines = if FileType::Regular == file_type && size < BIG_FILE_THRESHOLD {
                 let content = filestore::fetch_stream(repo.blobstore(), ctx.clone(), content_id)
                     .map_ok(FileBytes);
-                number_of_lines(content).await?
+                number_of_lines_unless_redacted(content)
+                    .await
+                    .context("Failed to compute number of lines")?
             } else {
                 0
             };
