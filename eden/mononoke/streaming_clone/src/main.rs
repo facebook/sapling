@@ -118,7 +118,7 @@ async fn streaming_clone<'a>(fb: FacebookInit, app: &MononokeApp) -> Result<(), 
         StreamingCloneSubCommand::Create { create_args } => {
             let tag: Option<&str> = create_args.tag.as_deref();
             scuba.add_opt("tag", tag);
-            let ctx = build_context(fb, &logger, &repo, &tag);
+            let ctx = build_context(fb, logger, &repo, &tag);
             // This command works only if there are no streaming chunks at all for a give repo.
             // So exit quickly if database is not empty
             let count = repo.streaming_clone().count_chunks(&ctx, tag).await?;
@@ -132,7 +132,7 @@ async fn streaming_clone<'a>(fb: FacebookInit, app: &MononokeApp) -> Result<(), 
         StreamingCloneSubCommand::Update { update_args } => {
             let tag: Option<&str> = update_args.tag.as_deref();
             scuba.add_opt("tag", tag);
-            let ctx = build_context(fb, &logger, &repo, &tag);
+            let ctx = build_context(fb, logger, &repo, &tag);
             update_streaming_changelog(&ctx, &repo, &update_args, tag).await
         }
     };
