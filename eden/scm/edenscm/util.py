@@ -4662,6 +4662,9 @@ def smarttraceback(frameortb=None, skipboring=True, shortfilename=False):
             line = line.strip()
             # Different from traceback.extract_stack. Try to get more information.
             for argname in sorted(set(remod.findall("[a-z][a-z0-9_]*", line))):
+                if issensitiveargname(argname):
+                    continue
+
                 # argname is potentially an interesting local variable
                 value = frame.f_locals.get(argname, None)
                 try:
@@ -4697,6 +4700,27 @@ def smarttraceback(frameortb=None, skipboring=True, shortfilename=False):
     result.append("Traceback (most recent call last):\n")
     result.reverse()
     return "".join(result)
+
+
+def issensitiveargname(argname: str) -> bool:
+    """Whether the value of this argname should be considered "sensitive"
+    such that it should not be included when printing the traceback.
+
+    >>> issensitiveargname("username")
+    False
+    >>> issensitiveargname("token")
+    True
+    >>> issensitiveargname("TOKEN")
+    True
+    >>> issensitiveargname("gh_auth")
+    True
+    >>> issensitiveargname("user_secret")
+    True
+    >>> issensitiveargname("s3cr3t")
+    False
+    """
+    name = argname.lower()
+    return "token" in name or "auth" in name or "secret" in name
 
 
 def smartformatexc(exc=None, skipboring=True, shortfilename=False):
