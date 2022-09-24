@@ -390,6 +390,8 @@ folly::SemiFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTree(
 std::unique_ptr<BlobMetadata> HgQueuedBackingStore::getLocalBlobMetadata(
     const ObjectId& id,
     ObjectFetchContext& /*context*/) {
+  folly::stop_watch<> watch;
+
   HgProxyHash proxyHash;
   try {
     proxyHash =
@@ -398,8 +400,12 @@ std::unique_ptr<BlobMetadata> HgQueuedBackingStore::getLocalBlobMetadata(
     logMissingProxyHash();
     throw;
   }
-  return backingStore_->getDatapackStore().getLocalBlobMetadata(
+
+  auto metadata = backingStore_->getDatapackStore().getLocalBlobMetadata(
       proxyHash.revHash());
+  stats_->getHgBackingStoreStatsForCurrentThread()
+      .hgBackingStoreGetBlobMetadata.addDuration(watch.elapsed());
+  return metadata;
 }
 
 folly::SemiFuture<BackingStore::GetTreeResult>

@@ -249,6 +249,7 @@ class HgBackingStoreThreadStats : public EdenThreadStatsBase {
   DurationStat hgBackingStoreImportBlob{"store.hg.import_blob_us"};
   DurationStat hgBackingStoreGetTree{"store.hg.get_tree_us"};
   DurationStat hgBackingStoreImportTree{"store.hg.import_tree_us"};
+  DurationStat hgBackingStoreGetBlobMetadata{"store.hg.get_blob_metadata_us"};
 };
 
 /**
