@@ -160,6 +160,10 @@ pub enum PrefetchCmd {
         #[clap(flatten)]
         options: ActivationOptions,
     },
+    #[clap(
+        about = "Prefetch all the active prefetch profiles or specified prefetch profiles. \
+        This is intended for use after checkout and pull."
+    )]
     Fetch {
         #[clap(flatten)]
         options: FetchOptions,
