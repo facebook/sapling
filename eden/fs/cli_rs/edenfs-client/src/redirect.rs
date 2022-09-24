@@ -9,7 +9,6 @@ use std::collections::BTreeMap;
 #[cfg(unix)]
 use std::ffi::OsString;
 use std::fmt;
-use std::fs;
 #[cfg(unix)]
 use std::os::unix::ffi::OsStringExt;
 use std::path::Path;
@@ -46,6 +45,7 @@ use util::path::absolute;
 
 use crate::checkout::CheckoutConfig;
 use crate::checkout::EdenFsCheckout;
+#[cfg(target_os = "linux")]
 use crate::instance::EdenFsInstance;
 use crate::mounttable::read_mount_table;
 
@@ -112,10 +112,10 @@ impl RepoPathDisposition {
         // symlink target exists (not the symlink itself). We want to know whether a symlink exists
         // regardless of whether the target exists or not.
         //
-        // fs::symlink_metadata() returns an error type if the path DNE and it returns the file
+        // symlink_metadata() returns an error type if the path DNE and it returns the file
         // metadata otherwise. We can leverage this to tell whether or not the file exists, and
         // whether it's a symlink if it does exist.
-        if let Ok(file_type) = fs::symlink_metadata(&path).map(|m| m.file_type()) {
+        if let Ok(file_type) = std::fs::symlink_metadata(&path).map(|m| m.file_type()) {
             if file_type.is_symlink() {
                 return Ok(RepoPathDisposition::IsSymlink);
             }
@@ -217,7 +217,7 @@ impl Redirection {
     /// Determine if the APFS volume helper is installed with appropriate
     /// permissions such that we can use it to mount things
     pub fn have_apfs_helper() -> Result<bool> {
-        match fs::symlink_metadata(APFS_HELPER) {
+        match std::fs::symlink_metadata(APFS_HELPER) {
             Ok(metadata) => Ok(metadata.is_setuid_set()),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
             Err(e) => Err(e),
@@ -809,14 +809,14 @@ impl Redirection {
 pub(crate) fn is_bind_mount(path: PathBuf) -> Result<bool> {
     let parent = path.parent();
     if let Some(parent_path) = parent {
-        let path_metadata = match fs::symlink_metadata(&path) {
+        let path_metadata = match std::fs::symlink_metadata(&path) {
             Ok(metadata) => Ok(Some(metadata)),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
             Err(e) => Err(e),
         }
         .from_err()
         .with_context(|| format!("Failed to get symlink metadata for path {}", path.display()))?;
-        let parent_metadata = match fs::symlink_metadata(parent_path) {
+        let parent_metadata = match std::fs::symlink_metadata(parent_path) {
             Ok(metadata) => Ok(Some(metadata)),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
             Err(e) => Err(e),
@@ -1016,16 +1016,16 @@ fn is_symlink_correct(redir: &Redirection, checkout: &EdenFsCheckout) -> Result<
             checkout.path().display()
         )
     })? {
-        let expected_target = fs::canonicalize(&expected_target)
+        let expected_target = std::fs::canonicalize(&expected_target)
             .from_err()
             .with_context(|| {
                 format!("Failed to canonicalize path {}", expected_target.display())
             })?;
         let symlink_path = checkout.path().join(&redir.repo_path);
-        let target_path = fs::read_link(&symlink_path).with_context(|| {
+        let target_path = std::fs::read_link(&symlink_path).with_context(|| {
             format!("Failed to read link for symlink {}", symlink_path.display())
         })?;
-        let target = fs::canonicalize(&target_path)
+        let target = std::fs::canonicalize(&target_path)
             .from_err()
             .with_context(|| format!("Failed to canonicalize path {}", target_path.display()))?;
         Ok(target == expected_target)
@@ -1373,7 +1373,6 @@ pub async fn try_add_redirection(
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
     use std::path::Path;
     use std::path::PathBuf;
 
@@ -1489,7 +1488,7 @@ mod tests {
         #[cfg(not(windows))]
         std::os::unix::fs::symlink(&dir_path, &symlink_path).ok();
 
-        if fs::symlink_metadata(&symlink_path)
+        if std::fs::symlink_metadata(&symlink_path)
             .map(|m| m.file_type().is_symlink())
             .unwrap_or(false)
         {
