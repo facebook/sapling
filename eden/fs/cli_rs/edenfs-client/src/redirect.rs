@@ -6,14 +6,15 @@
  */
 
 use std::collections::BTreeMap;
+#[cfg(unix)]
+use std::ffi::OsString;
 use std::fmt;
 use std::fs;
+#[cfg(unix)]
+use std::os::unix::ffi::OsStringExt;
 use std::path::Path;
 use std::path::PathBuf;
-#[cfg(target_os = "macos")]
 use std::process::Command;
-#[cfg(target_os = "macos")]
-use std::process::Stdio;
 use std::str::FromStr;
 
 use anyhow::anyhow;
@@ -40,8 +41,6 @@ use pathdiff::diff_paths;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
-use subprocess::Exec;
-use subprocess::Redirection as SubprocessRedirection;
 use toml::value::Value;
 use util::path::absolute;
 
@@ -250,11 +249,9 @@ impl Redirection {
             .to_string_lossy()
             .into_owned();
         let args = &["path", &checkout_path_str, "--subdir", &subdir];
-        let output = Exec::cmd(&mkscratch)
+        let output = Command::new(&mkscratch)
             .args(args)
-            .stdout(SubprocessRedirection::Pipe)
-            .stderr(SubprocessRedirection::Pipe)
-            .capture()
+            .output()
             .from_err()
             .with_context(|| {
                 format!(
@@ -263,15 +260,20 @@ impl Redirection {
                     args.join(" ")
                 )
             })?;
-        if output.success() {
-            Ok(PathBuf::from(output.stdout_str().trim()))
+        if output.status.success() {
+            #[cfg(unix)]
+            return Ok(PathBuf::from(OsString::from_vec(output.stdout)));
+            #[cfg(windows)]
+            return Ok(PathBuf::from(
+                std::str::from_utf8(&output.stdout).from_err()?,
+            ));
         } else {
             Err(EdenFsError::Other(anyhow!(
                 "Failed to execute `{} {}`, stderr: {}, exit status: {:?}",
                 &mkscratch.display(),
                 args.join(" "),
-                output.stderr_str(),
-                output.exit_status,
+                String::from_utf8_lossy(&output.stderr),
+                output.status,
             )))
         }
     }
@@ -382,11 +384,9 @@ impl Redirection {
             .with_context(|| format!("Failed to create directory {}", &mount_path.display()))?;
         let mount_path = checkout_path.join(&self.repo_path);
         let args = &["mount", &mount_path.to_string_lossy()];
-        let status = Exec::cmd(APFS_HELPER)
+        let output = Command::new(APFS_HELPER)
             .args(args)
-            .stdout(SubprocessRedirection::Pipe)
-            .stderr(SubprocessRedirection::Pipe)
-            .capture()
+            .output()
             .from_err()
             .with_context(|| {
                 format!(
@@ -395,14 +395,14 @@ impl Redirection {
                     args.join(" ")
                 )
             })?;
-        if status.success() {
+        if output.status.success() {
             Ok(())
         } else {
             Err(EdenFsError::Other(anyhow!(
                 "failed to add bind mount for mount {}. stderr: {}\n stdout: {}",
                 checkout_path.display(),
-                status.stderr_str(),
-                status.stdout_str()
+                String::from_utf8_lossy(&output.stderr),
+                String::from_utf8_lossy(&output.stdout)
             )))
         }
     }
@@ -439,22 +439,20 @@ impl Redirection {
                 &format!("EdenFS redirection for {}", &mount_name),
                 &image_file_name,
             ];
-            let create_status = Exec::cmd("hdiutil")
+            let create_output = Command::new("hdiutil")
                 .args(args)
-                .stdout(SubprocessRedirection::Pipe)
-                .stderr(SubprocessRedirection::Pipe)
-                .capture()
+                .output()
                 .from_err()
                 .with_context(|| {
                     format!("Failed to execute command `hdiutil {}`", args.join(" "))
                 })?;
-            if !create_status.success() {
+            if !create_output.status.success() {
                 return Err(EdenFsError::Other(anyhow!(
                     "failed to create dmg volume {} for mount {}. stderr: {}\n stdout: {}",
                     &image_file_name,
                     &mount_name,
-                    create_status.stderr_str(),
-                    create_status.stdout_str()
+                    String::from_utf8_lossy(&create_output.stderr),
+                    String::from_utf8_lossy(&create_output.stdout)
                 )));
             }
 
@@ -465,22 +463,20 @@ impl Redirection {
                 "--mountpoint",
                 &mount_name,
             ];
-            let attach_status = Exec::cmd("hdiutil")
+            let attach_output = Command::new("hdiutil")
                 .args(args)
-                .stdout(SubprocessRedirection::Pipe)
-                .stderr(SubprocessRedirection::Pipe)
-                .capture()
+                .output()
                 .from_err()
                 .with_context(|| {
                     format!("Failed to execute command `hdiutil {}`", args.join(" "))
                 })?;
-            if !attach_status.success() {
+            if !attach_output.status.success() {
                 return Err(EdenFsError::Other(anyhow!(
                     "failed to attach dmg volume {} for mount {}. stderr: {}\n stdout: {}",
                     &image_file_name,
                     &mount_name,
-                    attach_status.stderr_str(),
-                    attach_status.stdout_str()
+                    String::from_utf8_lossy(&attach_output.stderr),
+                    String::from_utf8_lossy(&attach_output.stdout)
                 )));
             }
         }
@@ -545,20 +541,18 @@ impl Redirection {
     fn _bind_unmount_darwin(&self, checkout: &EdenFsCheckout) -> Result<()> {
         let mount_path = checkout.path().join(&self.repo_path);
         let args = &["unmount", "force", &mount_path.to_string_lossy()];
-        let status = Exec::cmd("diskutil")
+        let output = Command::new("diskutil")
             .args(args)
-            .stdout(SubprocessRedirection::Pipe)
-            .stderr(SubprocessRedirection::Pipe)
-            .capture()
+            .output()
             .from_err()
             .with_context(|| format!("Failed to execute command `diskutil {}`", args.join(" ")))?;
-        if status.success() {
+        if output.status.success() {
             Ok(())
         } else {
             Err(EdenFsError::Other(anyhow!(format!(
                 "failed to remove bind mount. stderr: {}\n stdout: {}",
-                status.stderr_str(),
-                status.stdout_str()
+                String::from_utf8_lossy(&output.stderr),
+                String::from_utf8_lossy(&output.stdout)
             ))))
         }
     }
