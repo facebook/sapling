@@ -18,7 +18,7 @@ namespace facebook::eden {
 
 void RequestContext::startRequest(
     EdenStats* stats,
-    ChannelThreadStats::StatPtr stat,
+    FsChannelThreadStats::DurationPtr stat,
     std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>&
         requestWatches) {
   startTime_ = steady_clock::now();
@@ -39,7 +39,7 @@ void RequestContext::finishRequest() noexcept {
     const auto diff_ns = duration_cast<nanoseconds>(diff);
 
     if (stats_ != nullptr) {
-      (stats_->getChannelStatsForCurrentThread().*latencyStat_)
+      (stats_->getFsChannelStatsForCurrentThread().*latencyStat_)
           .addDuration(diff);
       latencyStat_ = nullptr;
       stats_ = nullptr;

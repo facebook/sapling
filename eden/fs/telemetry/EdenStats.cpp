@@ -12,8 +12,8 @@
 
 namespace facebook::eden {
 
-ChannelThreadStats& EdenStats::getChannelStatsForCurrentThread() {
-  return *threadLocalChannelStats_.get();
+FsChannelThreadStats& EdenStats::getFsChannelStatsForCurrentThread() {
+  return *threadLocalFsChannelStats_.get();
 }
 
 ObjectStoreThreadStats& EdenStats::getObjectStoreStatsForCurrentThread() {
@@ -44,13 +44,7 @@ void EdenStats::flush() {
   fb303::ServiceData::get()->getQuantileStatMap()->flushAll();
 }
 
-std::shared_ptr<HgImporterThreadStats> getSharedHgImporterStatsForCurrentThread(
-    std::shared_ptr<EdenStats> stats) {
-  return std::shared_ptr<HgImporterThreadStats>(
-      stats, &stats->getHgImporterStatsForCurrentThread());
-}
-
-EdenThreadStatsBase::DurationStat::DurationStat(std::string_view name)
+EdenThreadStatsBase::Duration::Duration(std::string_view name)
     : Stat{
           name,
           fb303::ExportTypeConsts::kSumCountAvgRate,
@@ -64,7 +58,7 @@ EdenThreadStatsBase::DurationStat::DurationStat(std::string_view name)
       "duration stats must end in _us");
 }
 
-void EdenThreadStatsBase::DurationStat::addDuration(
+void EdenThreadStatsBase::Duration::addDuration(
     std::chrono::microseconds elapsed) {
   addValue(elapsed.count());
 }

@@ -16,7 +16,7 @@
 
 namespace facebook::eden {
 
-class ChannelThreadStats;
+class FsChannelThreadStats;
 class ObjectStoreThreadStats;
 class HgBackingStoreThreadStats;
 class HgImporterThreadStats;
@@ -30,7 +30,7 @@ class EdenStats {
    *
    * The returned object can be used only on the current thread.
    */
-  ChannelThreadStats& getChannelStatsForCurrentThread();
+  FsChannelThreadStats& getFsChannelStatsForCurrentThread();
 
   /**
    * This function can be called on any thread.
@@ -75,8 +75,8 @@ class EdenStats {
  private:
   class ThreadLocalTag {};
 
-  folly::ThreadLocal<ChannelThreadStats, ThreadLocalTag, void>
-      threadLocalChannelStats_;
+  folly::ThreadLocal<FsChannelThreadStats, ThreadLocalTag, void>
+      threadLocalFsChannelStats_;
   folly::ThreadLocal<ObjectStoreThreadStats, ThreadLocalTag, void>
       threadLocalObjectStoreStats_;
   folly::ThreadLocal<HgBackingStoreThreadStats, ThreadLocalTag, void>
@@ -89,9 +89,6 @@ class EdenStats {
       threadLocalThriftStats_;
 };
 
-std::shared_ptr<HgImporterThreadStats> getSharedHgImporterStatsForCurrentThread(
-    std::shared_ptr<EdenStats>);
-
 /**
  * EdenThreadStatsBase is a base class for a group of thread-local stats
  * structures.
@@ -101,12 +98,25 @@ std::shared_ptr<HgImporterThreadStats> getSharedHgImporterStatsForCurrentThread(
  * for each thread that needs to access/update the stats.
  */
 class EdenThreadStatsBase {
- public:
+ protected:
+  // TODO: make this private when ActivityRecorder uses Duration instead.
   using Stat = fb303::detail::QuantileStatWrapper;
 
-  class DurationStat : private Stat {
+ public:
+  /**
+   * Counter is used to record events.
+   */
+  using Counter = Stat;
+
+  /**
+   * Duration is used for stats that measure elapsed times.
+   *
+   * In general, EdenFS measures latencies in units of microseconds.
+   * Duration enforces that its stat names end in "_us".
+   */
+  class Duration : private Stat {
    public:
-    explicit DurationStat(std::string_view name);
+    explicit Duration(std::string_view name);
 
     /**
      * Record a duration in microseconds to the QuantileStatWrapper. Also
@@ -128,156 +138,161 @@ class EdenThreadStatsBase {
   Stat createStat(std::string_view name);
 };
 
-class ChannelThreadStats : public EdenThreadStatsBase {
+template <typename T>
+class EdenThreadStats : public EdenThreadStatsBase {
  public:
-  // We track latency in units of microseconds, hence the _us suffix in the
-  // stat names below.
+  /**
+   * Statistics are often updated on a thread separate from the thread that
+   * started a request. Since stat objects are thread-local, we cannot hold
+   * pointers directly to them. Instead, we store a pointer-to-member.
+   */
+  using DurationPtr = Duration T::*;
+};
 
+class FsChannelThreadStats : public EdenThreadStats<FsChannelThreadStats> {
+ public:
 #ifndef _WIN32
-  DurationStat lookup{"fuse.lookup_us"};
-  DurationStat forget{"fuse.forget_us"};
-  DurationStat getattr{"fuse.getattr_us"};
-  DurationStat setattr{"fuse.setattr_us"};
-  DurationStat readlink{"fuse.readlink_us"};
-  DurationStat mknod{"fuse.mknod_us"};
-  DurationStat mkdir{"fuse.mkdir_us"};
-  DurationStat unlink{"fuse.unlink_us"};
-  DurationStat rmdir{"fuse.rmdir_us"};
-  DurationStat symlink{"fuse.symlink_us"};
-  DurationStat rename{"fuse.rename_us"};
-  DurationStat link{"fuse.link_us"};
-  DurationStat open{"fuse.open_us"};
-  DurationStat read{"fuse.read_us"};
-  DurationStat write{"fuse.write_us"};
-  DurationStat flush{"fuse.flush_us"};
-  DurationStat release{"fuse.release_us"};
-  DurationStat fsync{"fuse.fsync_us"};
-  DurationStat opendir{"fuse.opendir_us"};
-  DurationStat readdir{"fuse.readdir_us"};
-  DurationStat releasedir{"fuse.releasedir_us"};
-  DurationStat fsyncdir{"fuse.fsyncdir_us"};
-  DurationStat statfs{"fuse.statfs_us"};
-  DurationStat setxattr{"fuse.setxattr_us"};
-  DurationStat getxattr{"fuse.getxattr_us"};
-  DurationStat listxattr{"fuse.listxattr_us"};
-  DurationStat removexattr{"fuse.removexattr_us"};
-  DurationStat access{"fuse.access_us"};
-  DurationStat create{"fuse.create_us"};
-  DurationStat bmap{"fuse.bmap_us"};
-  DurationStat ioctl{"fuse.ioctl_us"};
-  DurationStat poll{"fuse.poll_us"};
-  DurationStat forgetmulti{"fuse.forgetmulti_us"};
-  DurationStat fallocate{"fuse.fallocate_us"};
+  Duration lookup{"fuse.lookup_us"};
+  Duration forget{"fuse.forget_us"};
+  Duration getattr{"fuse.getattr_us"};
+  Duration setattr{"fuse.setattr_us"};
+  Duration readlink{"fuse.readlink_us"};
+  Duration mknod{"fuse.mknod_us"};
+  Duration mkdir{"fuse.mkdir_us"};
+  Duration unlink{"fuse.unlink_us"};
+  Duration rmdir{"fuse.rmdir_us"};
+  Duration symlink{"fuse.symlink_us"};
+  Duration rename{"fuse.rename_us"};
+  Duration link{"fuse.link_us"};
+  Duration open{"fuse.open_us"};
+  Duration read{"fuse.read_us"};
+  Duration write{"fuse.write_us"};
+  Duration flush{"fuse.flush_us"};
+  Duration release{"fuse.release_us"};
+  Duration fsync{"fuse.fsync_us"};
+  Duration opendir{"fuse.opendir_us"};
+  Duration readdir{"fuse.readdir_us"};
+  Duration releasedir{"fuse.releasedir_us"};
+  Duration fsyncdir{"fuse.fsyncdir_us"};
+  Duration statfs{"fuse.statfs_us"};
+  Duration setxattr{"fuse.setxattr_us"};
+  Duration getxattr{"fuse.getxattr_us"};
+  Duration listxattr{"fuse.listxattr_us"};
+  Duration removexattr{"fuse.removexattr_us"};
+  Duration access{"fuse.access_us"};
+  Duration create{"fuse.create_us"};
+  Duration bmap{"fuse.bmap_us"};
+  Duration ioctl{"fuse.ioctl_us"};
+  Duration poll{"fuse.poll_us"};
+  Duration forgetmulti{"fuse.forgetmulti_us"};
+  Duration fallocate{"fuse.fallocate_us"};
 
-  DurationStat nfsNull{"nfs.null_us"};
-  DurationStat nfsGetattr{"nfs.getattr_us"};
-  DurationStat nfsSetattr{"nfs.setattr_us"};
-  DurationStat nfsLookup{"nfs.lookup_us"};
-  DurationStat nfsAccess{"nfs.access_us"};
-  DurationStat nfsReadlink{"nfs.readlink_us"};
-  DurationStat nfsRead{"nfs.read_us"};
-  DurationStat nfsWrite{"nfs.write_us"};
-  DurationStat nfsCreate{"nfs.create_us"};
-  DurationStat nfsMkdir{"nfs.mkdir_us"};
-  DurationStat nfsSymlink{"nfs.symlink_us"};
-  DurationStat nfsMknod{"nfs.mknod_us"};
-  DurationStat nfsRemove{"nfs.remove_us"};
-  DurationStat nfsRmdir{"nfs.rmdir_us"};
-  DurationStat nfsRename{"nfs.rename_us"};
-  DurationStat nfsLink{"nfs.link_us"};
-  DurationStat nfsReaddir{"nfs.readdir_us"};
-  DurationStat nfsReaddirplus{"nfs.readdirplus_us"};
-  DurationStat nfsFsstat{"nfs.fsstat_us"};
-  DurationStat nfsFsinfo{"nfs.fsinfo_us"};
-  DurationStat nfsPathconf{"nfs.pathconf_us"};
-  DurationStat nfsCommit{"nfs.commit_us"};
+  Duration nfsNull{"nfs.null_us"};
+  Duration nfsGetattr{"nfs.getattr_us"};
+  Duration nfsSetattr{"nfs.setattr_us"};
+  Duration nfsLookup{"nfs.lookup_us"};
+  Duration nfsAccess{"nfs.access_us"};
+  Duration nfsReadlink{"nfs.readlink_us"};
+  Duration nfsRead{"nfs.read_us"};
+  Duration nfsWrite{"nfs.write_us"};
+  Duration nfsCreate{"nfs.create_us"};
+  Duration nfsMkdir{"nfs.mkdir_us"};
+  Duration nfsSymlink{"nfs.symlink_us"};
+  Duration nfsMknod{"nfs.mknod_us"};
+  Duration nfsRemove{"nfs.remove_us"};
+  Duration nfsRmdir{"nfs.rmdir_us"};
+  Duration nfsRename{"nfs.rename_us"};
+  Duration nfsLink{"nfs.link_us"};
+  Duration nfsReaddir{"nfs.readdir_us"};
+  Duration nfsReaddirplus{"nfs.readdirplus_us"};
+  Duration nfsFsstat{"nfs.fsstat_us"};
+  Duration nfsFsinfo{"nfs.fsinfo_us"};
+  Duration nfsPathconf{"nfs.pathconf_us"};
+  Duration nfsCommit{"nfs.commit_us"};
 #else
-  Stat outOfOrderCreate{createStat("prjfs.out_of_order_create")};
-  DurationStat queuedFileNotification{"prjfs.queued_file_notification_us"};
+  Counter outOfOrderCreate{createStat("prjfs.out_of_order_create")};
+  Duration queuedFileNotification{"prjfs.queued_file_notification_us"};
 
-  DurationStat newFileCreated{"prjfs.newFileCreated_us"};
-  DurationStat fileOverwritten{"prjfs.fileOverwritten_us"};
-  DurationStat fileHandleClosedFileModified{
+  Duration newFileCreated{"prjfs.newFileCreated_us"};
+  Duration fileOverwritten{"prjfs.fileOverwritten_us"};
+  Duration fileHandleClosedFileModified{
       "prjfs.fileHandleClosedFileModified_us"};
-  DurationStat fileRenamed{"prjfs.fileRenamed_us"};
-  DurationStat preDelete{"prjfs.preDelete_us"};
-  DurationStat preRenamed{"prjfs.preRenamed_us"};
-  DurationStat fileHandleClosedFileDeleted{
-      "prjfs.fileHandleClosedFileDeleted_us"};
-  DurationStat preSetHardlink{"prjfs.preSetHardlink_us"};
+  Duration fileRenamed{"prjfs.fileRenamed_us"};
+  Duration preDelete{"prjfs.preDelete_us"};
+  Duration preRenamed{"prjfs.preRenamed_us"};
+  Duration fileHandleClosedFileDeleted{"prjfs.fileHandleClosedFileDeleted_us"};
+  Duration preSetHardlink{"prjfs.preSetHardlink_us"};
 
-  DurationStat openDir{"prjfs.opendir_us"};
-  DurationStat readDir{"prjfs.readdir_us"};
-  DurationStat lookup{"prjfs.lookup_us"};
-  DurationStat access{"prjfs.access_us"};
-  DurationStat read{"prjfs.read_us"};
+  Duration openDir{"prjfs.opendir_us"};
+  Duration readDir{"prjfs.readdir_us"};
+  Duration lookup{"prjfs.lookup_us"};
+  Duration access{"prjfs.access_us"};
+  Duration read{"prjfs.read_us"};
 #endif
-
-  using StatPtr = DurationStat ChannelThreadStats::*;
 };
 
 /**
  * @see ObjectStore
  */
-class ObjectStoreThreadStats : public EdenThreadStatsBase {
+class ObjectStoreThreadStats : public EdenThreadStats<ObjectStoreThreadStats> {
  public:
-  Stat getBlobFromLocalStore{createStat("object_store.get_blob.local_store")};
-  Stat getBlobFromBackingStore{
+  Counter getBlobFromLocalStore{
+      createStat("object_store.get_blob.local_store")};
+  Counter getBlobFromBackingStore{
       createStat("object_store.get_blob.backing_store")};
 
-  Stat getBlobMetadataFromMemory{
+  Counter getBlobMetadataFromMemory{
       createStat("object_store.get_blob_metadata.memory")};
-  Stat getBlobMetadataFromLocalStore{
+  Counter getBlobMetadataFromLocalStore{
       createStat("object_store.get_blob_metadata.local_store")};
-  Stat getBlobMetadataFromBackingStore{
+  Counter getBlobMetadataFromBackingStore{
       createStat("object_store.get_blob_metadata.backing_store")};
-  Stat getLocalBlobMetadataFromBackingStore{
+  Counter getLocalBlobMetadataFromBackingStore{
       createStat("object_store.get_blob_metadata.backing_store_cache")};
 
-  Stat getBlobSizeFromLocalStore{
+  Counter getBlobSizeFromLocalStore{
       createStat("object_store.get_blob_size.local_store")};
-  Stat getBlobSizeFromBackingStore{
+  Counter getBlobSizeFromBackingStore{
       createStat("object_store.get_blob_size.backing_store")};
 };
 
 /**
  * @see HgBackingStore
  */
-class HgBackingStoreThreadStats : public EdenThreadStatsBase {
+class HgBackingStoreThreadStats
+    : public EdenThreadStats<HgBackingStoreThreadStats> {
  public:
-  DurationStat hgBackingStoreGetBlob{"store.hg.get_blob_us"};
-  DurationStat hgBackingStoreImportBlob{"store.hg.import_blob_us"};
-  DurationStat hgBackingStoreGetTree{"store.hg.get_tree_us"};
-  DurationStat hgBackingStoreImportTree{"store.hg.import_tree_us"};
-  DurationStat hgBackingStoreGetBlobMetadata{"store.hg.get_blob_metadata_us"};
+  Duration hgBackingStoreGetBlob{"store.hg.get_blob_us"};
+  Duration hgBackingStoreImportBlob{"store.hg.import_blob_us"};
+  Duration hgBackingStoreGetTree{"store.hg.get_tree_us"};
+  Duration hgBackingStoreImportTree{"store.hg.import_tree_us"};
+  Duration hgBackingStoreGetBlobMetadata{"store.hg.get_blob_metadata_us"};
 };
 
 /**
  * @see HgImporter
  * @see HgBackingStore
  */
-class HgImporterThreadStats : public EdenThreadStatsBase {
+class HgImporterThreadStats : public EdenThreadStats<HgImporterThreadStats> {
  public:
-  Stat catFile{createStat("hg_importer.cat_file")};
-  Stat fetchTree{createStat("hg_importer.fetch_tree")};
-  Stat manifest{createStat("hg_importer.manifest")};
-  Stat manifestNodeForCommit{
+  Counter catFile{createStat("hg_importer.cat_file")};
+  Counter fetchTree{createStat("hg_importer.fetch_tree")};
+  Counter manifest{createStat("hg_importer.manifest")};
+  Counter manifestNodeForCommit{
       createStat("hg_importer.manifest_node_for_commit")};
-  Stat prefetchFiles{createStat("hg_importer.prefetch_files")};
+  Counter prefetchFiles{createStat("hg_importer.prefetch_files")};
 };
 
-class JournalThreadStats : public EdenThreadStatsBase {
+class JournalThreadStats : public EdenThreadStats<JournalThreadStats> {
  public:
-  Stat truncatedReads{createStat("journal.truncated_reads")};
-  Stat filesAccumulated{createStat("journal.files_accumulated")};
+  Counter truncatedReads{createStat("journal.truncated_reads")};
+  Counter filesAccumulated{createStat("journal.files_accumulated")};
 };
 
-class ThriftThreadStats : public EdenThreadStatsBase {
+class ThriftThreadStats : public EdenThreadStats<ThriftThreadStats> {
  public:
-  DurationStat streamChangesSince{
+  Duration streamChangesSince{
       "thrift.StreamingEdenService.streamChangesSince.streaming_time_us"};
-
-  using StatPtr = DurationStat ThriftThreadStats::*;
 };
 
 } // namespace facebook::eden

@@ -238,7 +238,7 @@ class ThriftLogHelper {
       folly::StringPiece itcFileName,
       uint32_t itcLineNumber,
       std::shared_ptr<EdenStats> edenStats,
-      ThriftThreadStats::StatPtr statPtr,
+      ThriftThreadStats::DurationPtr statPtr,
       std::optional<pid_t> pid)
       : traceBus_{std::move(traceBus)},
         requestId_(generateUniqueID()),
@@ -294,7 +294,7 @@ class ThriftLogHelper {
   folly::StringPiece itcFileName_;
   uint32_t itcLineNumber_;
   std::shared_ptr<EdenStats> edenStats_;
-  ThriftThreadStats::StatPtr statPtr_;
+  ThriftThreadStats::DurationPtr statPtr_;
   folly::LogLevel level_;
   folly::Logger itcLogger_;
   folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
