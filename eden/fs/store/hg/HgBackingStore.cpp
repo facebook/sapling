@@ -279,8 +279,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
                   config = config_](std::unique_ptr<Tree>&& result) mutable {
         auto& currentThreadStats =
             stats_->getHgBackingStoreStatsForCurrentThread();
-        currentThreadStats.hgBackingStoreGetTree.addValue(
-            watch.elapsed().count());
+        currentThreadStats.hgBackingStoreGetTree.addDuration(watch.elapsed());
         return std::move(result);
       });
 }
@@ -313,32 +312,31 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
     ObjectId edenTreeID,
     RelativePath path,
     std::shared_ptr<LocalStore::WriteBatch> writeBatch) {
-  auto fut =
-      folly::via(
-          importThreadPool_.get(),
-          [this,
-           path,
-           manifestNode,
-           stats = stats_,
-           &liveImportTreeWatches = liveImportTreeWatches_] {
-            Importer& importer = getThreadLocalImporter();
-            folly::stop_watch<std::chrono::milliseconds> watch;
-            RequestMetricsScope queueTracker{&liveImportTreeWatches};
-            if (useEdenApi_ && logger_) {
-              logger_->logEvent(EdenApiMiss{
-                  repoName_,
-                  EdenApiMiss::Tree,
-                  path.stringPiece().toString(),
-                  manifestNode.toString(),
-              });
-            }
-            auto serializedTree = importer.fetchTree(path, manifestNode);
-            stats->getHgBackingStoreStatsForCurrentThread()
-                .hgBackingStoreImportTree.addValue(watch.elapsed().count());
+  auto fut = folly::via(
+                 importThreadPool_.get(),
+                 [this,
+                  path,
+                  manifestNode,
+                  stats = stats_,
+                  &liveImportTreeWatches = liveImportTreeWatches_] {
+                   Importer& importer = getThreadLocalImporter();
+                   folly::stop_watch<std::chrono::milliseconds> watch;
+                   RequestMetricsScope queueTracker{&liveImportTreeWatches};
+                   if (useEdenApi_ && logger_) {
+                     logger_->logEvent(EdenApiMiss{
+                         repoName_,
+                         EdenApiMiss::Tree,
+                         path.stringPiece().toString(),
+                         manifestNode.toString(),
+                     });
+                   }
+                   auto serializedTree = importer.fetchTree(path, manifestNode);
+                   stats->getHgBackingStoreStatsForCurrentThread()
+                       .hgBackingStoreImportTree.addDuration(watch.elapsed());
 
-            return serializedTree;
-          })
-          .via(serverThreadPool_);
+                   return serializedTree;
+                 })
+                 .via(serverThreadPool_);
 
   return std::move(fut).thenTry([this,
                                  ownedPath = std::move(path),
@@ -600,7 +598,7 @@ SemiFuture<std::unique_ptr<Blob>> HgBackingStore::fetchBlobFromHgImporter(
         auto blob =
             importer.importFileContents(hgInfo.path(), hgInfo.revHash());
         stats->getHgBackingStoreStatsForCurrentThread()
-            .hgBackingStoreImportBlob.addValue(watch.elapsed().count());
+            .hgBackingStoreImportBlob.addDuration(watch.elapsed());
         return blob;
       });
 }

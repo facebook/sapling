@@ -245,10 +245,10 @@ class ObjectStoreThreadStats : public EdenThreadStatsBase {
  */
 class HgBackingStoreThreadStats : public EdenThreadStatsBase {
  public:
-  Stat hgBackingStoreGetBlob{createStat("store.hg.get_blob")};
-  Stat hgBackingStoreImportBlob{createStat("store.hg.import_blob")};
-  Stat hgBackingStoreGetTree{createStat("store.hg.get_tree")};
-  Stat hgBackingStoreImportTree{createStat("store.hg.import_tree")};
+  DurationStat hgBackingStoreGetBlob{"store.hg.get_blob_us"};
+  DurationStat hgBackingStoreImportBlob{"store.hg.import_blob_us"};
+  DurationStat hgBackingStoreGetTree{"store.hg.get_tree_us"};
+  DurationStat hgBackingStoreImportTree{"store.hg.import_tree_us"};
 };
 
 /**

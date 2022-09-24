@@ -55,7 +55,14 @@ EdenThreadStatsBase::DurationStat::DurationStat(std::string_view name)
           name,
           fb303::ExportTypeConsts::kSumCountAvgRate,
           fb303::QuantileConsts::kP1_P10_P50_P90_P99,
-          fb303::SlidingWindowPeriodConsts::kOneMinTenMinHour} {}
+          fb303::SlidingWindowPeriodConsts::kOneMinTenMinHour} {
+  // This should be a compile-time check but I don't know how to spell that in a
+  // convenient way. :)
+  assert(name.size() > 3 && "duration name too short");
+  assert(
+      (std::string_view{name.data() + name.size() - 3, 3}) == "_us" &&
+      "duration stats must end in _us");
+}
 
 void EdenThreadStatsBase::DurationStat::addDuration(
     std::chrono::microseconds elapsed) {

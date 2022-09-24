@@ -129,15 +129,15 @@ class HgBackingStoreStatsTest(testcase.EdenRepoTest):
         counters_after = self.get_counters()
 
         self.assertEqual(
-            counters_after.get("store.hg.get_blob.count", 0),
-            counters_before.get("store.hg.get_blob.count", 0) + 1,
-            f"Reading {path} should increment store.hg.get_blob.count",
+            counters_after.get("store.hg.get_blob_us.count", 0),
+            counters_before.get("store.hg.get_blob_us.count", 0) + 1,
+            f"Reading {path} should increment store.hg.get_blob_us.count",
         )
 
         self.assertEqual(
-            counters_after.get("store.hg.import_blob.count", 0),
-            counters_before.get("store.hg.import_blob.count", 0) + 1,
-            f"Reading {path} should increment store.hg.import_blob.count",
+            counters_after.get("store.hg.import_blob_us.count", 0),
+            counters_before.get("store.hg.import_blob_us.count", 0) + 1,
+            f"Reading {path} should increment store.hg.import_blob_us.count",
         )
 
     def test_pending_import_counters_available(self) -> None:
