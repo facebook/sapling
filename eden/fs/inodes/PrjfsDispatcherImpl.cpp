@@ -679,7 +679,7 @@ ImmediateFuture<folly::Unit> fileNotification(
             .get();
         mount.getStats()
             ->getChannelStatsForCurrentThread()
-            .queuedFileNotification.addValue(watch.elapsed().count());
+            .queuedFileNotification.addDuration(watch.elapsed());
       })
       .thenError([path](const folly::exception_wrapper& ew) {
         // These should in theory never happen, but they sometimes happen

@@ -36,12 +36,11 @@ void RequestContext::finishRequest() noexcept {
     const auto now = steady_clock::now();
 
     const auto diff = now - startTime_;
-    const auto diff_us = duration_cast<microseconds>(diff);
     const auto diff_ns = duration_cast<nanoseconds>(diff);
 
     if (stats_ != nullptr) {
-      stats_->getChannelStatsForCurrentThread().recordLatency(
-          latencyStat_, diff_us);
+      (stats_->getChannelStatsForCurrentThread().*latencyStat_)
+          .addDuration(diff);
       latencyStat_ = nullptr;
       stats_ = nullptr;
     }

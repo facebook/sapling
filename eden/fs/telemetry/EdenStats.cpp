@@ -50,28 +50,26 @@ std::shared_ptr<HgImporterThreadStats> getSharedHgImporterStatsForCurrentThread(
       stats, &stats->getHgImporterStatsForCurrentThread());
 }
 
-EdenThreadStatsBase::EdenThreadStatsBase() {}
+EdenThreadStatsBase::DurationStat::DurationStat(std::string_view name)
+    : Stat{
+          name,
+          fb303::ExportTypeConsts::kSumCountAvgRate,
+          fb303::QuantileConsts::kP1_P10_P50_P90_P99,
+          fb303::SlidingWindowPeriodConsts::kOneMinTenMinHour} {}
+
+void EdenThreadStatsBase::DurationStat::addDuration(
+    std::chrono::microseconds elapsed) {
+  addValue(elapsed.count());
+}
 
 EdenThreadStatsBase::Stat EdenThreadStatsBase::createStat(
-    const std::string& name) {
+    std::string_view name) {
   return Stat{
       name,
       fb303::ExportTypeConsts::kSumCountAvgRate,
       fb303::QuantileConsts::kP1_P10_P50_P90_P99,
       fb303::SlidingWindowPeriodConsts::kOneMinTenMinHour,
   };
-}
-
-void ChannelThreadStats::recordLatency(
-    StatPtr item,
-    std::chrono::microseconds elapsed) {
-  (this->*item).addValue(elapsed.count());
-}
-
-void ThriftThreadStats::recordLatency(
-    StatPtr item,
-    std::chrono::microseconds elapsed) {
-  (this->*item).addValue(elapsed.count());
 }
 
 } // namespace facebook::eden

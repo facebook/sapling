@@ -104,10 +104,28 @@ class EdenThreadStatsBase {
  public:
   using Stat = fb303::detail::QuantileStatWrapper;
 
-  explicit EdenThreadStatsBase();
+  class DurationStat : private Stat {
+   public:
+    explicit DurationStat(std::string_view name);
+
+    /**
+     * Record a duration in microseconds to the QuantileStatWrapper. Also
+     * increments the .count statistic.
+     */
+    template <typename Rep, typename Period>
+    void addDuration(std::chrono::duration<Rep, Period> elapsed) {
+      // TODO: Implement a general overflow check when converting from seconds
+      // or milliseconds to microseconds. Fortunately, this use case deals with
+      // short durations.
+      addDuration(
+          std::chrono::duration_cast<std::chrono::microseconds>(elapsed));
+    }
+
+    void addDuration(std::chrono::microseconds elapsed);
+  };
 
  protected:
-  Stat createStat(const std::string& name);
+  Stat createStat(std::string_view name);
 };
 
 class ChannelThreadStats : public EdenThreadStatsBase {
@@ -116,97 +134,86 @@ class ChannelThreadStats : public EdenThreadStatsBase {
   // stat names below.
 
 #ifndef _WIN32
-  Stat lookup{createStat("fuse.lookup_us")};
-  Stat forget{createStat("fuse.forget_us")};
-  Stat getattr{createStat("fuse.getattr_us")};
-  Stat setattr{createStat("fuse.setattr_us")};
-  Stat readlink{createStat("fuse.readlink_us")};
-  Stat mknod{createStat("fuse.mknod_us")};
-  Stat mkdir{createStat("fuse.mkdir_us")};
-  Stat unlink{createStat("fuse.unlink_us")};
-  Stat rmdir{createStat("fuse.rmdir_us")};
-  Stat symlink{createStat("fuse.symlink_us")};
-  Stat rename{createStat("fuse.rename_us")};
-  Stat link{createStat("fuse.link_us")};
-  Stat open{createStat("fuse.open_us")};
-  Stat read{createStat("fuse.read_us")};
-  Stat write{createStat("fuse.write_us")};
-  Stat flush{createStat("fuse.flush_us")};
-  Stat release{createStat("fuse.release_us")};
-  Stat fsync{createStat("fuse.fsync_us")};
-  Stat opendir{createStat("fuse.opendir_us")};
-  Stat readdir{createStat("fuse.readdir_us")};
-  Stat releasedir{createStat("fuse.releasedir_us")};
-  Stat fsyncdir{createStat("fuse.fsyncdir_us")};
-  Stat statfs{createStat("fuse.statfs_us")};
-  Stat setxattr{createStat("fuse.setxattr_us")};
-  Stat getxattr{createStat("fuse.getxattr_us")};
-  Stat listxattr{createStat("fuse.listxattr_us")};
-  Stat removexattr{createStat("fuse.removexattr_us")};
-  Stat access{createStat("fuse.access_us")};
-  Stat create{createStat("fuse.create_us")};
-  Stat bmap{createStat("fuse.bmap_us")};
-  Stat ioctl{createStat("fuse.ioctl_us")};
-  Stat poll{createStat("fuse.poll_us")};
-  Stat forgetmulti{createStat("fuse.forgetmulti_us")};
-  Stat fallocate{createStat("fuse.fallocate_us")};
+  DurationStat lookup{"fuse.lookup_us"};
+  DurationStat forget{"fuse.forget_us"};
+  DurationStat getattr{"fuse.getattr_us"};
+  DurationStat setattr{"fuse.setattr_us"};
+  DurationStat readlink{"fuse.readlink_us"};
+  DurationStat mknod{"fuse.mknod_us"};
+  DurationStat mkdir{"fuse.mkdir_us"};
+  DurationStat unlink{"fuse.unlink_us"};
+  DurationStat rmdir{"fuse.rmdir_us"};
+  DurationStat symlink{"fuse.symlink_us"};
+  DurationStat rename{"fuse.rename_us"};
+  DurationStat link{"fuse.link_us"};
+  DurationStat open{"fuse.open_us"};
+  DurationStat read{"fuse.read_us"};
+  DurationStat write{"fuse.write_us"};
+  DurationStat flush{"fuse.flush_us"};
+  DurationStat release{"fuse.release_us"};
+  DurationStat fsync{"fuse.fsync_us"};
+  DurationStat opendir{"fuse.opendir_us"};
+  DurationStat readdir{"fuse.readdir_us"};
+  DurationStat releasedir{"fuse.releasedir_us"};
+  DurationStat fsyncdir{"fuse.fsyncdir_us"};
+  DurationStat statfs{"fuse.statfs_us"};
+  DurationStat setxattr{"fuse.setxattr_us"};
+  DurationStat getxattr{"fuse.getxattr_us"};
+  DurationStat listxattr{"fuse.listxattr_us"};
+  DurationStat removexattr{"fuse.removexattr_us"};
+  DurationStat access{"fuse.access_us"};
+  DurationStat create{"fuse.create_us"};
+  DurationStat bmap{"fuse.bmap_us"};
+  DurationStat ioctl{"fuse.ioctl_us"};
+  DurationStat poll{"fuse.poll_us"};
+  DurationStat forgetmulti{"fuse.forgetmulti_us"};
+  DurationStat fallocate{"fuse.fallocate_us"};
 
-  Stat nfsNull{createStat("nfs.null_us")};
-  Stat nfsGetattr{createStat("nfs.getattr_us")};
-  Stat nfsSetattr{createStat("nfs.setattr_us")};
-  Stat nfsLookup{createStat("nfs.lookup_us")};
-  Stat nfsAccess{createStat("nfs.access_us")};
-  Stat nfsReadlink{createStat("nfs.readlink_us")};
-  Stat nfsRead{createStat("nfs.read_us")};
-  Stat nfsWrite{createStat("nfs.write_us")};
-  Stat nfsCreate{createStat("nfs.create_us")};
-  Stat nfsMkdir{createStat("nfs.mkdir_us")};
-  Stat nfsSymlink{createStat("nfs.symlink_us")};
-  Stat nfsMknod{createStat("nfs.mknod_us")};
-  Stat nfsRemove{createStat("nfs.remove_us")};
-  Stat nfsRmdir{createStat("nfs.rmdir_us")};
-  Stat nfsRename{createStat("nfs.rename_us")};
-  Stat nfsLink{createStat("nfs.link_us")};
-  Stat nfsReaddir{createStat("nfs.readdir_us")};
-  Stat nfsReaddirplus{createStat("nfs.readdirplus_us")};
-  Stat nfsFsstat{createStat("nfs.fsstat_us")};
-  Stat nfsFsinfo{createStat("nfs.fsinfo_us")};
-  Stat nfsPathconf{createStat("nfs.pathconf_us")};
-  Stat nfsCommit{createStat("nfs.commit_us")};
+  DurationStat nfsNull{"nfs.null_us"};
+  DurationStat nfsGetattr{"nfs.getattr_us"};
+  DurationStat nfsSetattr{"nfs.setattr_us"};
+  DurationStat nfsLookup{"nfs.lookup_us"};
+  DurationStat nfsAccess{"nfs.access_us"};
+  DurationStat nfsReadlink{"nfs.readlink_us"};
+  DurationStat nfsRead{"nfs.read_us"};
+  DurationStat nfsWrite{"nfs.write_us"};
+  DurationStat nfsCreate{"nfs.create_us"};
+  DurationStat nfsMkdir{"nfs.mkdir_us"};
+  DurationStat nfsSymlink{"nfs.symlink_us"};
+  DurationStat nfsMknod{"nfs.mknod_us"};
+  DurationStat nfsRemove{"nfs.remove_us"};
+  DurationStat nfsRmdir{"nfs.rmdir_us"};
+  DurationStat nfsRename{"nfs.rename_us"};
+  DurationStat nfsLink{"nfs.link_us"};
+  DurationStat nfsReaddir{"nfs.readdir_us"};
+  DurationStat nfsReaddirplus{"nfs.readdirplus_us"};
+  DurationStat nfsFsstat{"nfs.fsstat_us"};
+  DurationStat nfsFsinfo{"nfs.fsinfo_us"};
+  DurationStat nfsPathconf{"nfs.pathconf_us"};
+  DurationStat nfsCommit{"nfs.commit_us"};
 #else
   Stat outOfOrderCreate{createStat("prjfs.out_of_order_create")};
-  Stat queuedFileNotification{createStat("prjfs.queued_file_notification_us")};
+  DurationStat queuedFileNotification{"prjfs.queued_file_notification_us"};
 
-  Stat newFileCreated{createStat("prjfs.newFileCreated_us")};
-  Stat fileOverwritten{createStat("prjfs.fileOverwritten_us")};
-  Stat fileHandleClosedFileModified{
-      createStat("prjfs.fileHandleClosedFileModified_us")};
-  Stat fileRenamed{createStat("prjfs.fileRenamed_us")};
-  Stat preDelete{createStat("prjfs.preDelete_us")};
-  Stat preRenamed{createStat("prjfs.preRenamed_us")};
-  Stat fileHandleClosedFileDeleted{
-      createStat("prjfs.fileHandleClosedFileDeleted_us")};
-  Stat preSetHardlink{createStat("prjfs.preSetHardlink_us")};
+  DurationStat newFileCreated{"prjfs.newFileCreated_us"};
+  DurationStat fileOverwritten{"prjfs.fileOverwritten_us"};
+  DurationStat fileHandleClosedFileModified{
+      "prjfs.fileHandleClosedFileModified_us"};
+  DurationStat fileRenamed{"prjfs.fileRenamed_us"};
+  DurationStat preDelete{"prjfs.preDelete_us"};
+  DurationStat preRenamed{"prjfs.preRenamed_us"};
+  DurationStat fileHandleClosedFileDeleted{
+      "prjfs.fileHandleClosedFileDeleted_us"};
+  DurationStat preSetHardlink{"prjfs.preSetHardlink_us"};
 
-  Stat openDir{createStat("prjfs.opendir_us")};
-  Stat readDir{createStat("prjfs.readdir_us")};
-  Stat lookup{createStat("prjfs.lookup_us")};
-  Stat access{createStat("prjfs.access_us")};
-  Stat read{createStat("prjfs.read_us")};
+  DurationStat openDir{"prjfs.opendir_us"};
+  DurationStat readDir{"prjfs.readdir_us"};
+  DurationStat lookup{"prjfs.lookup_us"};
+  DurationStat access{"prjfs.access_us"};
+  DurationStat read{"prjfs.read_us"};
 #endif
 
-  // Since we can potentially finish a request in a different thread from the
-  // one used to initiate it, we use StatPtr as a helper for referencing the
-  // pointer-to-member that we want to update at the end of the request.
-  using StatPtr = Stat ChannelThreadStats::*;
-
-  /**
-   * Record a the latency for an operation.
-   *
-   * item is the pointer-to-member for one of the stats defined above.
-   * elapsed is the duration of the operation, measured in microseconds.
-   */
-  void recordLatency(StatPtr item, std::chrono::microseconds elapsed);
+  using StatPtr = DurationStat ChannelThreadStats::*;
 };
 
 /**
@@ -266,11 +273,10 @@ class JournalThreadStats : public EdenThreadStatsBase {
 
 class ThriftThreadStats : public EdenThreadStatsBase {
  public:
-  Stat streamChangesSince{createStat(
-      "thrift.StreamingEdenService.streamChangesSince.streaming_time_us")};
+  DurationStat streamChangesSince{
+      "thrift.StreamingEdenService.streamChangesSince.streaming_time_us"};
 
-  using StatPtr = Stat ThriftThreadStats::*;
-  void recordLatency(StatPtr item, std::chrono::microseconds elapsed);
+  using StatPtr = DurationStat ThriftThreadStats::*;
 };
 
 } // namespace facebook::eden
