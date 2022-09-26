@@ -25,6 +25,7 @@ default = []
 eden = ["clidispatch/eden", "hgcommands/eden"]
 fb = ["hgcommands/fb"]
 python3 = ["hgcommands/python3"]
+sl_only = ["clidispatch/sl_only"]
 with_chg = ["dirs"]
 
 [profile.release]

@@ -28,3 +28,4 @@ workingcopy = { version = "0.1.0", path = "../workingcopy" }
 
 [features]
 eden = ["thrift-types", "workingcopy/eden"]
+sl_only = ["identity/sl_only"]

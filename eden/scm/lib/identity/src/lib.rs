@@ -88,15 +88,28 @@ const TEST: Identity = Identity {
     config_name: "testrc",
 };
 
-const DEFAULT: Identity = HG;
+#[cfg(all(not(feature = "sl_only"), not(test)))]
+mod idents {
+    use super::*;
+    pub const DEFAULT: Identity = HG;
+    pub static ALL_IDENTITIES: &[Identity] = &[HG, SL];
+}
 
-#[cfg(not(test))]
-static ALL_IDENTITIES: &[Identity] = &[HG, SL];
+#[cfg(feature = "sl_only")]
+mod idents {
+    use super::*;
+    pub const DEFAULT: Identity = SL;
+    pub static ALL_IDENTITIES: &[Identity] = &[SL];
+}
 
 #[cfg(test)]
-static ALL_IDENTITIES: &[Identity] = &[HG, SL, TEST];
+mod idents {
+    use super::*;
+    pub const DEFAULT: Identity = HG;
+    pub static ALL_IDENTITIES: &[Identity] = &[HG, SL, TEST];
+}
 
-static IDENTITY: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(DEFAULT));
+static IDENTITY: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(idents::DEFAULT));
 
 /// CLI name to be used in user facing messaging.
 pub fn cli_name() -> &'static str {
@@ -107,7 +120,7 @@ pub fn cli_name() -> &'static str {
 /// "{path}/.sl" directories, yielding the sniffed Identity, if any.
 /// Only permissions errors are propagated.
 pub fn sniff_dir(path: &Path) -> Result<Option<Identity>> {
-    for id in ALL_IDENTITIES {
+    for id in idents::ALL_IDENTITIES {
         let test_path = path.join(id.dot_dir);
         tracing::trace!(path=%path.display(), "sniffing dir");
         match fs::metadata(&test_path) {
@@ -165,7 +178,7 @@ fn try_env_var(var_suffix: &str) -> Result<String, VarError> {
     }
 
     // Backwards compat for old env vars.
-    for id in ALL_IDENTITIES {
+    for id in idents::ALL_IDENTITIES {
         if *current_id == *id {
             continue;
         }
@@ -180,7 +193,7 @@ fn try_env_var(var_suffix: &str) -> Result<String, VarError> {
 
 pub fn sniff_env() -> Identity {
     if let Ok(id_name) = try_env_var("IDENTITY") {
-        for id in ALL_IDENTITIES {
+        for id in idents::ALL_IDENTITIES {
             if id.cli_name == id_name {
                 tracing::info!(identity = id.cli_name, "sniffed identity from env");
                 return id.clone();
@@ -190,7 +203,7 @@ pub fn sniff_env() -> Identity {
 
     // TODO: sniff executable name for hg vs sl.
 
-    DEFAULT
+    idents::DEFAULT
 }
 
 #[cfg(test)]
@@ -207,9 +220,9 @@ mod test {
 
         {
             let root = dir.path().join("default");
-            fs::create_dir_all(root.join(DEFAULT.dot_dir()))?;
+            fs::create_dir_all(root.join(idents::DEFAULT.dot_dir()))?;
 
-            assert_eq!(sniff_dir(&root)?.unwrap(), DEFAULT);
+            assert_eq!(sniff_dir(&root)?.unwrap(), idents::DEFAULT);
         }
 
         {
@@ -230,7 +243,7 @@ mod test {
         #[cfg(unix)]
         {
             let root = dir.path().join("bad_perms");
-            let dot_dir = root.join(DEFAULT.dot_dir());
+            let dot_dir = root.join(idents::DEFAULT.dot_dir());
             fs::create_dir_all(&dot_dir)?;
 
             // Sanity.

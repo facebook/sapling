@@ -1801,6 +1801,7 @@ hgmainfeatures = (
                 "with_chg" if not iswindows else None,
                 "fb" if havefb else None,
                 "eden" if not ossbuild else None,
+                "sl_only" if ossbuild else None,
             ],
         )
     ).strip()
