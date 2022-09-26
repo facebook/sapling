@@ -29,7 +29,7 @@ mime = "0.3.14"
 openssl = "0.10.35"
 percent-encoding = "2.1"
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
-pin-project = "0.4.29"
+pin-project = "0.4.30"
 quiet_stream = { version = "0.1.0", path = "../quiet_stream" }
 rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }

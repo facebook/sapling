@@ -10,5 +10,5 @@ license = "GPLv2+"
 [dependencies]
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 maybe-owned = "0.3.4"
-pin-project = "0.4.29"
+pin-project = "0.4.30"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

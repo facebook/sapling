@@ -41,7 +41,7 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 obsolete = { version = "0.1.0", path = "../obsolete" }
-pin-project = "0.4.29"
+pin-project = "0.4.30"
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_client = { version = "0.1.0", path = "../../pushrebase/client" }
 quickcheck = "1.0"

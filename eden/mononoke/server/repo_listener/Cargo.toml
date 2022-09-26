@@ -42,7 +42,7 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 openssl = "0.10.35"
 percent-encoding = "2.1"
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
-pin-project = "0.4.29"
+pin-project = "0.4.30"
 qps = { version = "0.1.0", path = "../qps" }
 quiet_stream = { version = "0.1.0", path = "../../quiet_stream" }
 rate_limiting = { version = "0.1.0", path = "../../rate_limiting" }
