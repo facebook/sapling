@@ -5,9 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use cpython::PyResult;
-use cpython::Python;
-use cpython::*;
+use cpython::py_module_initializer;
 use hgcommands::prepare_builtin_modules;
 
 py_module_initializer!(bindings, initbindings, PyInit_bindings, |py, m| {

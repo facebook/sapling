@@ -195,6 +195,8 @@ impl LandService for LandServiceThriftImpl {
         req_ctxt: &RequestContext,
         _land_changesets: LandChangesetRequest,
     ) -> Result<LandChangesetsResponse, LandChangesetsExn> {
+        #![allow(unreachable_code)]
+
         let ctx = self.0.create_ctx("land_changesets", req_ctxt).await;
         let _authz = AuthorizationContext::new(&ctx?);
 

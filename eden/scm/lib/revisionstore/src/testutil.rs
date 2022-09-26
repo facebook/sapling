@@ -383,6 +383,7 @@ pub fn make_config(dir: impl AsRef<Path>) -> BTreeMap<String, String> {
     .collect()
 }
 
+#[cfg(test)]
 pub(crate) fn empty_config() -> BTreeMap<String, String> {
     BTreeMap::new()
 }
@@ -567,6 +568,7 @@ mod lfs_mocks {
     }
 }
 
+#[cfg(test)]
 pub(crate) fn setconfig(
     config: &mut BTreeMap<String, String>,
     section: &str,

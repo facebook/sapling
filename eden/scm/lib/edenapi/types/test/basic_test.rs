@@ -8,8 +8,6 @@
 use edenapi_types::ToApi;
 use edenapi_types::ToWire;
 use edenapi_types::WireToApiConversionError;
-use quickcheck::Arbitrary;
-use quickcheck::Gen;
 use quickcheck_arbitrary_derive::Arbitrary;
 use type_macros::auto_wire;
 

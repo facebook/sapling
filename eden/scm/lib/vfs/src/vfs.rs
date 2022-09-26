@@ -342,7 +342,6 @@ impl VFS {
 #[cfg(test)]
 mod unix_tests {
     use std::fs;
-    use std::thread;
 
     use super::*;
 
