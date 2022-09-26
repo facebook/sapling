@@ -1004,26 +1004,93 @@ def _convertretoglobs(repat) -> Optional[List[str]]:
 def _buildpatternmatcher(root, cwd, kindpats, ctx=None, badfn=None):
     """This is a factory function for creating different pattern matchers.
 
-    1. If all patterns can be converted globs, we will try to use treematcher.
+    1. If all patterns can be converted globs and regexs, we will try to
+       use either treematcher, regexmatcher or union of them.
     2. Fallback to default patternmatcher.
+
+    >>> _buildpatternmatcher("", "", [('re', 'fbcode/.*', '')])
+    <regexmatcher pattern='(?:fbcode/.*)'>
+    >>> _buildpatternmatcher("", "", [('re', 'fbcode/.*', ''), ('glob', 'fbandroid/**', '')])
+    <unionmatcher matchers=[<treematcher rules=['fbandroid/**']>, <regexmatcher pattern='(?:fbcode/.*)'>]>
+    >>> _buildpatternmatcher("", "", [('re', 'a/.*', '')])
+    <regexmatcher pattern='(?:a/.*)'>
+    >>> _buildpatternmatcher("", "", [('re', 'a/.*', ''), ('glob', 'b/**', '')])
+    <unionmatcher matchers=[<treematcher rules=['b/**']>, <regexmatcher pattern='(?:a/.*)'>]>
+    >>> _buildpatternmatcher("", "", [('glob', 'b/**', '')])
+    <treematcher rules=['b/**']>
+    >>> _buildpatternmatcher("", "", [])
+    <nevermatcher>
+
+    # regexmatcher doesn't support '^', fallback to patternmatcher
+    >>> _buildpatternmatcher("", "", [('re', '^abc', '')])
+    <patternmatcher patterns='(?:^abc)'>
+
+    # treematcher doesn't support large glob patterns, fallback to patternmatcher
+    >>> kindpats  = [("glob", f"a/b/*/c/d/e/f/g/{i}/**", "") for i in range(10000)]
+    >>> p = _buildpatternmatcher("", "", kindpats)
+    >>> isinstance(p, patternmatcher)
+    True
     """
     # kindpats are already normalized to be relative to repo-root.
 
     # 1
-    rules = _kindpatstoglobs(kindpats, recursive=False)
-    if rules is not None:
-        try:
-            m = treematcher(root, cwd, badfn=badfn, rules=rules)
-            m._files = _explicitfiles(kindpats)
-            return m
-        except ValueError:
-            # for example, Regex("Compiled regex exceeds size limit of 10485760 bytes.")
-            # treematcher does not work with many patterns, it turns out globset has
-            # a hard-coded regex size limit (10MB).
-            pass
+    if _usetreematcher or _useregexmatcher:
+        res = _kindpatstoglobsregexs(kindpats, recursive=False)
+        if res:
+            globs, regexs = res
+            try:
+                m1 = _buildtreematcher(root, cwd, globs, badfn=badfn)
+                m2 = _buildregexmatcher(root, cwd, regexs, badfn=badfn)
+            except (error.RustError, ValueError):
+                # just fallback to patternmatcher.
+                # possible exceptions:
+                #   * disable XXX matcher, but their coresponding pats are not empty
+                #   * treematcher: Regex("Compiled regex exceeds size limit of 10485760 bytes.")
+                #   * regexmatcher: doesn't support '^' etc.
+                pass
+            else:
+                m = union([m1, m2], root, cwd)
+                m._files = _explicitfiles(kindpats)
+                return m
 
     # 2
     return patternmatcher(root, cwd, kindpats, ctx=ctx, badfn=badfn)
+
+
+def _buildtreematcher(root, cwd, rules, badfn) -> Optional[treematcher]:
+    """build treematcher.
+
+    >>> _buildtreematcher('', '', ['a**'], '')
+    <treematcher rules=['a**']>
+
+    >>> rules = ['a/b/*/c/d/e/f/g/%s/**' % i for i in range(10000)]
+    >>> try:
+    ...     _buildtreematcher('', '', rules, None)
+    ... except error.RustError as e:
+    ...     print("got expected exception")
+    got expected exception
+    """
+    if not _usetreematcher and rules:
+        raise ValueError("disabled treematcher, but rules is not empty")
+    return treematcher(root, cwd, rules=rules, badfn=badfn) if rules else None
+
+
+def _buildregexmatcher(root, cwd, regexs, badfn) -> Optional[regexmatcher]:
+    """build regexmatcher.
+
+    >>> _buildregexmatcher('', '', ['a/.*'], '')
+    <regexmatcher pattern='(?:a/.*)'>
+
+    >>> try:
+    ...     _buildregexmatcher('', '', '^abc', '')
+    ... except error.RustError as e:
+    ...     print("got expected exception")
+    got expected exception
+    """
+    if not _useregexmatcher and regexs:
+        raise ValueError("disabled regexmatcher, but regexs is not empty")
+    pattern = f"(?:{'|'.join(regexs)})"
+    return regexmatcher(root, cwd, pattern, badfn) if regexs else None
 
 
 class patternmatcher(basematcher):
@@ -1835,8 +1902,11 @@ def readpatternfile(filepath, warn, sourceinfo: bool = False):
 
 
 _usetreematcher = True
+_useregexmatcher = True
 
 
 def init(ui) -> None:
     global _usetreematcher
     _usetreematcher = ui.configbool("experimental", "treematcher")
+    global _useregexmatcher
+    _useregexmatcher = ui.configbool("experimental", "regexmatcher")

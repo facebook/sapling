@@ -400,7 +400,7 @@ Test patterns:
   f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
 
   $ hg debugwalk 're:.*[kb]$'
-  matcher: <patternmatcher patterns='(?:.*[kb]$)'>
+  matcher: <regexmatcher pattern='(?:.*[kb]$)'>
   f  beans/black    beans/black
   f  fenugreek      fenugreek
   f  mammals/skunk  mammals/skunk
