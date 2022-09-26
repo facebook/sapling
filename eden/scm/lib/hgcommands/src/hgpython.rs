@@ -81,23 +81,32 @@ impl HgPython {
         //   $PREFIX/usr/local/lib/python3.8/site-packages/edenscm
         let py_version: (i32, i32, i32, String, i32) =
             sys.get(py, "version_info").unwrap().extract(py).unwrap();
-        let rel_path = PathBuf::from(format!(
-            "lib/python{}.{}/site-packages",
-            py_version.0, py_version.1
-        ));
-        let site_packages_path = std::env::current_exe()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .join(rel_path)
-            .into_os_string()
-            .into_string()
-            .unwrap();
 
+        let path_for_prefix = |prefix: &str| -> String {
+            let rel_path = PathBuf::from(format!(
+                "{}/python{}.{}/site-packages",
+                prefix, py_version.0, py_version.1
+            ));
+            std::env::current_exe()
+                .unwrap()
+                .parent()
+                .unwrap()
+                .parent()
+                .unwrap()
+                .join(rel_path)
+                .into_os_string()
+                .into_string()
+                .unwrap()
+        };
         let py_path: PyList = sys.get(py, "path").unwrap().extract(py).unwrap();
-        py_path.append(py, PyUnicode::new(py, &site_packages_path).into_object());
+        py_path.append(
+            py,
+            PyUnicode::new(py, &path_for_prefix("lib")).into_object(),
+        );
+        py_path.append(
+            py,
+            PyUnicode::new(py, &path_for_prefix("lib64")).into_object(),
+        );
     }
 
     fn prepare_args(args: &[String]) -> Vec<String> {
