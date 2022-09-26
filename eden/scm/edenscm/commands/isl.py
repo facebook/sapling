@@ -59,7 +59,12 @@ def launch_server(
     ui, *, cwd, port=DEFAULT_PORT, open_isl=True, json_output=False, foreground=False
 ):
     isl_args = get_isl_args()
-    ui.status_err(_("launching web server for Interactive Smartlog...\n"))
+    if isl_args[0] == "dotslash":
+        ui.status_err(
+            _(
+                "launching web server for Interactive Smartlog... (check VPN if it fails to start)\n"
+            )
+        )
     args = ["--port", str(port)]
     if not open_isl:
         args.append("--no-open")
