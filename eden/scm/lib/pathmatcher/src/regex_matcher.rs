@@ -8,7 +8,6 @@
 use anyhow::Result;
 use regex_automata::dense::Builder;
 use regex_automata::DenseDFA;
-use regex_automata::Error;
 use regex_automata::DFA;
 use regex_syntax::ast::parse;
 use regex_syntax::ast::AssertionKind;
@@ -50,8 +49,8 @@ pub struct RegexMatcher {
 }
 
 impl RegexMatcher {
-    pub fn new(pattern: &str) -> Result<Self, Error> {
-        let pattern = replace_eol(pattern);
+    pub fn new(pattern: &str) -> Result<Self> {
+        let pattern = replace_eol(pattern)?;
 
         // The RE library doesn't support ^, we use this `Builder::anchored` to
         // make the search anchored at the beginning of the input. By default,
@@ -126,7 +125,7 @@ impl RegexMatcher {
 }
 
 /// Replace eol ('$') with '\0', since regex-automata doesn't support '$'.
-fn replace_eol(pattern: &str) -> String {
+fn replace_eol(pattern: &str) -> Result<String> {
     // Find the positions of eol ('$') by traversing the Ast tree, then replace
     // eol with '\0'
     fn traverse_ast(ast: &Ast, output: &mut String) {
@@ -158,10 +157,10 @@ fn replace_eol(pattern: &str) -> String {
         }
     }
 
-    let ast = parse::Parser::new().parse(pattern).unwrap();
+    let ast = parse::Parser::new().parse(pattern)?;
     let mut new_pattern = pattern.to_string();
     traverse_ast(&ast, &mut new_pattern);
-    new_pattern
+    Ok(new_pattern)
 }
 
 impl Matcher for RegexMatcher {
@@ -263,12 +262,19 @@ mod tests {
 
     #[test]
     fn test_re_replace_eol() {
-        assert_eq!(replace_eol(r"a.py"), "a.py");
-        assert_eq!(replace_eol(r"a.py\$"), r"a.py\$");
-        assert_eq!(replace_eol(r"a.py$"), "a.py\0");
-        assert_eq!(replace_eol(r"a.py$|a.txt"), "a.py\0|a.txt");
-        assert_eq!(replace_eol(r"a.py$|a.txt$"), "a.py\0|a.txt\0");
-        assert_eq!(replace_eol(r"(a.py$|a.txt$)|b.py"), "(a.py\0|a.txt\0)|b.py");
-        assert_eq!(replace_eol(r"(a$[b$]c$|d\$)e$"), "(a\0[b$]c\0|d\\$)e\0");
+        assert_eq!(replace_eol(r"*").unwrap_or("err".to_string()), "err");
+        assert_eq!(replace_eol(r"a.py").unwrap(), "a.py");
+        assert_eq!(replace_eol(r"a.py\$").unwrap(), r"a.py\$");
+        assert_eq!(replace_eol(r"a.py$").unwrap(), "a.py\0");
+        assert_eq!(replace_eol(r"a.py$|a.txt").unwrap(), "a.py\0|a.txt");
+        assert_eq!(replace_eol(r"a.py$|a.txt$").unwrap(), "a.py\0|a.txt\0");
+        assert_eq!(
+            replace_eol(r"(a.py$|a.txt$)|b.py").unwrap(),
+            "(a.py\0|a.txt\0)|b.py"
+        );
+        assert_eq!(
+            replace_eol(r"(a$[b$]c$|d\$)e$").unwrap(),
+            "(a\0[b$]c\0|d\\$)e\0"
+        );
     }
 }
