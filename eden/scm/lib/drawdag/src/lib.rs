@@ -77,8 +77,7 @@ pub fn parse(text: &str) -> BTreeMap<String, BTreeSet<String>> {
             lines
                 .get(y as usize)
                 .cloned()
-                .map(|line| line.get(x as usize).cloned().unwrap_or(' '))
-                .unwrap_or(' ')
+                .map_or(' ', |line| line.get(x as usize).cloned().unwrap_or(' '))
         }
     };
 
@@ -213,12 +212,18 @@ pub fn parse(text: &str) -> BTreeMap<String, BTreeSet<String>> {
                     } else {
                         // Insert a chain of name -> parent. For example,
                         // name="D", parent="A", insert D -> C -> B -> A.
-                        assert!(parent < name, "empty range: {:?} to {:?}", parent, name);
+
+                        assert!(
+                            succ::is_successor(&parent, &name),
+                            "empty range: {:?} to {:?}",
+                            parent,
+                            name
+                        );
                         let mut parent: String = parent;
                         loop {
                             let next = succ::str_succ(&parent);
                             edges.entry(next.clone()).or_default().insert(parent);
-                            if next >= name {
+                            if next == name {
                                 break;
                             }
                             parent = next;
@@ -338,6 +343,20 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
+    fn test_drawdag_mismatched_range1() {
+        let mut log = CommitLog::new();
+        drawdag("0..A", |n, p| log.commit(n, p));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_drawdag_mismatched_range2() {
+        let mut log = CommitLog::new();
+        drawdag("(09)..(A0)", |n, p| log.commit(n, p));
+    }
+
+    #[test]
     fn test_drawdag() {
         assert_drawdag(
             "A-C-B",
@@ -416,6 +435,17 @@ I D C F
         assert_eq!(p("A..D"), ["A -> []", "B -> [A]", "C -> [B]", "D -> [C]"]);
         assert_eq!(
             p(r"
+             A1A,B23z,(9z)..A1A,B23z,(10c)
+            "),
+            [
+                "A1A,B23z,(10a) -> [A1A,B23z,(9z)]",
+                "A1A,B23z,(10b) -> [A1A,B23z,(10a)]",
+                "A1A,B23z,(10c) -> [A1A,B23z,(10b)]",
+                "A1A,B23z,(9z) -> []"
+            ]
+        );
+        assert_eq!(
+            p(r"
             B08
              :
             B04"),
@@ -443,6 +473,27 @@ I D C F
                 "B09 -> [B08]",
                 "B10 -> [B09, C]",
                 "C -> [B08]"
+            ]
+        );
+        assert_eq!(
+            p(r"
+             AE
+             | \
+             :  C
+             | /
+             AB
+             :
+             X"),
+            [
+                "AA -> [Z]",
+                "AB -> [AA]",
+                "AC -> [AB]",
+                "AD -> [AC]",
+                "AE -> [AD, C]",
+                "C -> [AB]",
+                "X -> []",
+                "Y -> [X]",
+                "Z -> [Y]"
             ]
         );
     }
