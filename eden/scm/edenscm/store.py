@@ -16,7 +16,7 @@ import errno
 import hashlib
 import os
 import stat
-from typing import Optional
+from typing import Optional, Sized
 
 import bindings
 
@@ -303,10 +303,10 @@ def _auxencode(path, dotencode):
 
 _maxstorepathlen = 120
 _dirprefixlen = 8
-_maxshortdirslen = 8 * (_dirprefixlen + 1) - 4
+_maxshortdirslen: int = 8 * (_dirprefixlen + 1) - 4
 
 
-def _hashencode(path, dotencode):
+def _hashencode(path, dotencode) -> str:
     digest = hashlib.sha1(encodeutf8(path)).hexdigest()
     le = lowerencode(path[5:]).split("/")  # skips prefix 'data/' or 'meta/'
     parts = _auxencode(le, dotencode)
@@ -377,7 +377,7 @@ def _hybridencode(path, dotencode):
     return res
 
 
-def _pathencode(path):
+def _pathencode(path: Sized):
     de = encodedir(path)
     if len(path) > _maxstorepathlen:
         return _hashencode(de, True)
@@ -415,7 +415,7 @@ _data = (
 )
 
 
-def setvfsmode(vfs):
+def setvfsmode(vfs) -> None:
     vfs.createmode = _calcmode(vfs)
 
 
@@ -764,7 +764,7 @@ class fncachestore(basicstore):
         return False
 
 
-def store(requirements, path, vfstype, uiconfig=None):
+def store(requirements, path, vfstype, uiconfig=None) -> fncachestore:
     store = fncachestore(path, vfstype, "dotencode" in requirements)
     # Change remotenames and visibleheads to be backed by metalog,
     # so they can be atomically read or written.
