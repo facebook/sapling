@@ -863,7 +863,7 @@ async fn move_bookmark(
     prev_value: ChangesetId,
     new_value: ChangesetId,
 ) -> Result<(), Error> {
-    let mut book_txn = repo.update_bookmark_transaction(ctx.clone());
+    let mut book_txn = repo.bookmarks().create_transaction(ctx.clone());
 
     info!(
         ctx.logger(),
@@ -1079,7 +1079,7 @@ async fn update_large_repo_bookmarks(
         "found {} inconsistencies, trying to update them...",
         diff.len()
     );
-    let mut book_txn = large_repo.update_bookmark_transaction(ctx.clone());
+    let mut book_txn = large_repo.bookmarks().create_transaction(ctx.clone());
 
     let bookmark_renamer =
         get_small_to_large_renamer(common_commit_sync_config, small_repo.get_repoid())?;

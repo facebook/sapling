@@ -359,7 +359,7 @@ async fn handle_set(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
         ctx.logger(),
         "Current position of {:?} is {:?}", bookmark, maybe_old_bcs_id
     );
-    let mut transaction = repo.update_bookmark_transaction(ctx);
+    let mut transaction = repo.bookmarks().create_transaction(ctx);
     match maybe_old_bcs_id {
         Some(old_bcs_id) => {
             transaction.update(
@@ -395,7 +395,7 @@ async fn handle_delete(
     );
     match maybe_bcs_id {
         Some(bcs_id) => {
-            let mut transaction = repo.update_bookmark_transaction(ctx);
+            let mut transaction = repo.bookmarks().create_transaction(ctx);
             transaction.delete(&bookmark, bcs_id, BookmarkUpdateReason::ManualMove)?;
             transaction.commit().await?;
             Ok(())

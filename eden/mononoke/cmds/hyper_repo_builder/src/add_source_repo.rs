@@ -110,7 +110,7 @@ pub async fn add_source_repo(
     .await?;
 
     // ... and move bookmark to point to this commit.
-    let mut txn = hyper_repo.update_bookmark_transaction(ctx.clone());
+    let mut txn = hyper_repo.bookmarks().create_transaction(ctx.clone());
     match parent {
         Some(parent) => {
             txn.update(

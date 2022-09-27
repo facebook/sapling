@@ -112,7 +112,7 @@ where
     )
     .await?;
 
-    let mut txn = target_repo.update_bookmark_transaction(ctx.clone());
+    let mut txn = target_repo.bookmarks().create_transaction(ctx.clone());
     txn.force_set(
         &bookmark_name,
         target_bcs.get_changeset_id(),

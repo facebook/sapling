@@ -1355,7 +1355,7 @@ mod tests {
             .await?
             .ok_or_else(|| Error::msg(format_err!("Head not found: {:?}", cs_id)))?;
 
-        let mut txn = repo.update_bookmark_transaction(ctx);
+        let mut txn = repo.bookmarks().create_transaction(ctx);
         txn.force_set(book, head, BookmarkUpdateReason::TestMove)?;
         txn.commit().await?;
         Ok(())

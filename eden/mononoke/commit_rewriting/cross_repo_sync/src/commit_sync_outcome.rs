@@ -986,7 +986,7 @@ mod tests {
         bcs_id: ChangesetId,
         book: &BookmarkName,
     ) -> Result<(), Error> {
-        let mut txn = blob_repo.update_bookmark_transaction(ctx.clone());
+        let mut txn = blob_repo.bookmarks().create_transaction(ctx.clone());
         txn.force_set(book, bcs_id, BookmarkUpdateReason::TestMove)
             .unwrap();
         txn.commit().await?;

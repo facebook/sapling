@@ -215,7 +215,7 @@ pub async fn do_sync_diamond_merge(
     )
     .await?;
 
-    let mut book_txn = large_repo.update_bookmark_transaction(ctx.clone());
+    let mut book_txn = large_repo.bookmarks().create_transaction(ctx.clone());
     book_txn.force_set(
         &onto_bookmark,
         new_merge_cs_id,

@@ -35,7 +35,7 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, C
         "##,
     )
     .await?;
-    let mut txn = blob_repo.update_bookmark_transaction(ctx.clone());
+    let mut txn = blob_repo.bookmarks().create_transaction(ctx.clone());
     txn.force_set(
         &BookmarkName::new("trunk")?,
         changesets["C"],

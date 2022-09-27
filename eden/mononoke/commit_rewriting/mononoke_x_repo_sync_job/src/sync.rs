@@ -588,7 +588,7 @@ async fn delete_bookmark(
     repo: &BlobRepo,
     bookmark: &BookmarkName,
 ) -> Result<(), Error> {
-    let mut book_txn = repo.update_bookmark_transaction(ctx.clone());
+    let mut book_txn = repo.bookmarks().create_transaction(ctx.clone());
     let maybe_bookmark_val = repo.bookmarks().get(ctx.clone(), bookmark).await?;
     if let Some(bookmark_value) = maybe_bookmark_val {
         book_txn.delete(bookmark, bookmark_value, BookmarkUpdateReason::XRepoSync)?;
@@ -616,7 +616,7 @@ async fn move_or_create_bookmark(
 ) -> Result<(), Error> {
     let maybe_bookmark_val = repo.bookmarks().get(ctx.clone(), bookmark).await?;
 
-    let mut book_txn = repo.update_bookmark_transaction(ctx.clone());
+    let mut book_txn = repo.bookmarks().create_transaction(ctx.clone());
     match maybe_bookmark_val {
         Some(old_bookmark_val) => {
             book_txn.update(

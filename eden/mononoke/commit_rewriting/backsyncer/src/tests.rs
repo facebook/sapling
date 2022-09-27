@@ -1914,7 +1914,7 @@ async fn move_bookmark(
     bookmark: &BookmarkName,
     bcs_id: ChangesetId,
 ) -> Result<(), Error> {
-    let mut txn = repo.update_bookmark_transaction(ctx.clone());
+    let mut txn = repo.bookmarks().create_transaction(ctx.clone());
 
     let prev_bcs_id = repo.bookmarks().get(ctx, bookmark).await?;
 

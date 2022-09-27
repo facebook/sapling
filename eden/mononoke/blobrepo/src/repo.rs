@@ -19,7 +19,6 @@ use bonsai_svnrev_mapping::ArcBonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
-use bookmarks::BookmarkTransaction;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
 use cacheblob::LeaseOps;
@@ -60,7 +59,6 @@ define_stats! {
     prefix = "mononoke.blobrepo";
     get_changeset_parents_by_bonsai: timeseries(Rate, Sum),
     get_generation_number: timeseries(Rate, Sum),
-    update_bookmark_transaction: timeseries(Rate, Sum),
 }
 
 // NOTE: this structure and its fields are public to enable `DangerousOverride` functionality
@@ -220,11 +218,6 @@ impl BlobRepo {
 
     pub fn pushrebase_mutation_mapping(&self) -> &ArcPushrebaseMutationMapping {
         &self.inner.pushrebase_mutation_mapping
-    }
-
-    pub fn update_bookmark_transaction(&self, ctx: CoreContext) -> Box<dyn BookmarkTransaction> {
-        STATS::update_bookmark_transaction.add_value(1);
-        self.bookmarks().create_transaction(ctx)
     }
 
     // Returns the generation number of a changeset

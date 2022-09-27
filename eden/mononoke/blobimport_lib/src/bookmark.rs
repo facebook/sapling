@@ -142,7 +142,7 @@ pub fn upload_bookmarks(
             let blobrepo = blobrepo;
             let mononoke_bookmarks: HashMap<_, _> = mononoke_bookmarks.into_iter().collect();
             move |vec| {
-                let mut transaction = blobrepo.update_bookmark_transaction(ctx.clone());
+                let mut transaction = blobrepo.bookmarks().create_transaction(ctx.clone());
 
                 let mut count = 0;
                 for (key, value) in vec {

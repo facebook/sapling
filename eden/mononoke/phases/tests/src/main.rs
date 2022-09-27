@@ -36,7 +36,7 @@ async fn delete_all_publishing_bookmarks(ctx: &CoreContext, repo: &BlobRepo) -> 
         .try_collect::<Vec<_>>()
         .await?;
 
-    let mut txn = repo.update_bookmark_transaction(ctx.clone());
+    let mut txn = repo.bookmarks().create_transaction(ctx.clone());
 
     for (bookmark, _) in bookmarks {
         txn.force_delete(bookmark.name(), BookmarkUpdateReason::TestMove)
@@ -63,7 +63,7 @@ async fn set_bookmark(
         .await?
         .ok_or_else(|| Error::msg("cs does not exit"))?;
 
-    let mut txn = repo.update_bookmark_transaction(ctx.clone());
+    let mut txn = repo.bookmarks().create_transaction(ctx.clone());
     txn.force_set(book, head, BookmarkUpdateReason::TestMove)?;
 
     let ok = txn.commit().await?;
