@@ -101,11 +101,7 @@ class treestatemap(object):
     and an offset.
     """
 
-    # Filenames (uuid) that are currently in use. Useful for gc.
-    fileinuse = set()
-
     def __init__(self, ui, vfs, root, importdirstate=None):
-        self._filename = None
         self._ui = ui
         self._vfs = vfs
         self._root = root
@@ -142,12 +138,10 @@ class treestatemap(object):
 
     def clear(self):
         self._threshold = 0
-        self._rootid = 0
         self._parents = (node.nullid, node.nullid)
 
         # use a new file
-        path = self._setfilename()
-        self._tree = treestate.treestate(path, self._rootid)
+        self._rootid = self._tree.reset(self._vfs.join("treestate"))
 
     def iteritems(self):
         return ((k, self[k]) for k in self.keys())
@@ -341,7 +335,7 @@ class treestatemap(object):
             except (KeyError, ValueError):
                 raise error.Abort(_("working directory state appears damaged!"))
         else:
-            filename = _random_filename()
+            filename = None
             rootid = 0
             threshold = 0
 
@@ -363,9 +357,13 @@ class treestatemap(object):
         self._threshold = threshold
         self._rootid = rootid
 
-        path = self._setfilename(filename)
         try:
-            tree = treestate.treestate(path, rootid)
+            if rootid == 0:
+                tree = treestate.treestate.new(self._vfs.join("treestate"))
+            else:
+                tree = treestate.treestate.open(
+                    self._vfs.join("treestate", filename), rootid
+                )
         except IOError:
             if not rootid:
                 # treestate.treestate is read-only if rootid is not None.
@@ -392,25 +390,15 @@ class treestatemap(object):
                 )
         self._tree = tree
 
-    def _setfilename(self, filename=None):
-        """Return absolute path to the raw treestate file.
-        If filename is None, generate it randomly.
-        """
-        if filename is None:
-            filename = _random_filename()
-            assert self._filename != filename
-        self.fileinuse.add(filename)
-        self._filename = filename
-        path = self._vfs.join("treestate", self._filename)
-        return path
-
     def _gc(self):
         """Remove unreferenced treestate files"""
+        fileinuse = set()
+        fileinuse.add(self._tree.filename())
         for name in ["dirstate", "undo.dirstate", "undo.backup.dirstate"]:
             try:
                 content = self._vfs.tryread(name)
                 _p1, _p2, filename = self._parsedirstate(content)[:3]
-                self.fileinuse.add(filename)
+                fileinuse.add(filename)
             except Exception:
                 # dirstate file does not exist, or is in an incompatible
                 # format.
@@ -420,7 +408,7 @@ class treestatemap(object):
         fsnow = dirstate._getfsnow(self._vfs)
         maxmtime = fsnow - self._ui.configint("treestate", "mingcage")
         for name in self._vfs.listdir("treestate"):
-            if name in self.fileinuse:
+            if name in fileinuse:
                 continue
             try:
                 if self._vfs.stat("treestate/%s" % name).st_mtime > maxmtime:
@@ -446,11 +434,10 @@ class treestatemap(object):
 
         # repack and gc (with wlock acquired by parent functions)
         if self._threshold > 0 and self._rootid > self._threshold:
-            path = self._setfilename()
-            self._ui.debug("creating treestate/%s\n" % (self._filename,))
             # recalculate threshold
             self._threshold = 0
-            rootid = self._tree.saveas(path)
+            rootid = self._tree.saveas(self._vfs.join("treestate"))
+            self._ui.debug("created treestate/%s\n" % (self._tree.filename(),))
             self._gc()
         else:
             rootid = self._tree.flush()
@@ -471,7 +458,7 @@ class treestatemap(object):
         st.write(
             _packmetadata(
                 {
-                    "filename": self._filename,
+                    "filename": self._tree.filename(),
                     "rootid": rootid,
                     "threshold": self._threshold,
                 }
@@ -528,7 +515,7 @@ class treestatemap(object):
 
     @property
     def identity(self):
-        return "%s-%s" % (self._filename, self._rootid)
+        return "%s-%s" % (self._tree.filename(), self._rootid)
 
     @property
     def dirfoldmap(self):
@@ -732,8 +719,3 @@ def automigrate(repo):
             % version
         )
     migrate(repo.ui, repo, version)
-
-
-def _random_filename():
-    """generate a file name that is likely unique"""
-    return node.hex(os.urandom(20))

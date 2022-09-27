@@ -30,9 +30,7 @@ use util::errors::IOContext;
 use util::errors::IOError;
 use util::file::atomic_write;
 use util::path::absolute;
-use util::path::create_shared_dir;
 use util::path::expand_path;
-use uuid::Uuid;
 
 pub fn get_default_destination_directory(config: &dyn Config) -> Result<PathBuf> {
     Ok(absolute(
@@ -90,7 +88,7 @@ pub fn init_working_copy(
         Some(t) => t,
         None => {
             // Nothing to check out - init empty dirstate and bail.
-            let mut ts = open_treestate(repo.dot_hg_path())?;
+            let mut ts = create_treestate(repo.dot_hg_path())?;
             checkout::clone::flush_dirstate(
                 repo.config(),
                 &mut ts,
@@ -126,7 +124,7 @@ pub fn init_working_copy(
         }
     }
 
-    let mut ts = open_treestate(repo.dot_hg_path())?;
+    let mut ts = create_treestate(repo.dot_hg_path())?;
 
     match checkout::clone::checkout(
         repo.config(),
@@ -155,12 +153,9 @@ pub fn init_working_copy(
     }
 }
 
-fn open_treestate(dot_hg_path: &Path) -> Result<TreeState> {
+fn create_treestate(dot_hg_path: &Path) -> Result<TreeState> {
     let ts_dir = dot_hg_path.join("treestate");
-    create_shared_dir(&ts_dir)?;
-
-    let ts_path = ts_dir.join(format!("{:x}", Uuid::new_v4()));
-    TreeState::open(&ts_path, None)
+    Ok(TreeState::new(&ts_dir)?.0)
 }
 
 #[derive(Debug, thiserror::Error)]

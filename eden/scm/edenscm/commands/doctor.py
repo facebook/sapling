@@ -332,7 +332,7 @@ def repairtreestate(ui, vfs, root, cl):
                 if data[rootpos : rootpos + 1] != b"\0":
                     continue
                 try:
-                    rawtree = rawtreestate.treestate(path, rootpos)
+                    rawtree = rawtreestate.treestate.open(path, rootpos)
                 except Exception:
                     # Root deserialization failed xxhash check. Try next.
                     continue

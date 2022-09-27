@@ -449,18 +449,19 @@ impl treestate {
 py_class!(pub class treestate |py| {
     data state: Arc<Mutex<TreeState>>;
 
-    def __new__(
-        _cls,
+    @staticmethod
+    def open(
         path: &PyPath,
         root_id: u64
     ) -> PyResult<treestate> {
-        let root_id = if root_id == 0 {
-            None
-        } else {
-            Some(BlockId(root_id))
-        };
-        let state = convert_result(py, TreeState::open(path, root_id))?;
-        treestate::create_instance(py, Arc::new(Mutex::new(state)))
+        treestate::create_instance(py, Arc::new(Mutex::new(
+            TreeState::open(path.as_path(), BlockId(root_id)).map_pyerr(py)?)))
+    }
+
+    @staticmethod
+    def new(directory: &PyPath) -> PyResult<treestate> {
+        treestate::create_instance(py, Arc::new(Mutex::new(
+            TreeState::new(directory.as_path()).map_pyerr(py)?.0)))
     }
 
     def flush(&self) -> PyResult<u64> {
@@ -470,10 +471,21 @@ py_class!(pub class treestate |py| {
         Ok(root_id.0)
     }
 
-    def saveas(&self, path: &PyPath) -> PyResult<u64> {
+    def reset(&self, directory: PyPathBuf) -> PyResult<u64> {
+        let mut treestate = self.state(py).lock();
+        let (new_treestate, root_id) = convert_result(py, TreeState::new(directory.as_path()))?;
+        *treestate = new_treestate;
+        Ok(root_id.0)
+    }
+
+    def filename(&self) -> PyResult<String> {
+        convert_result(py, self.state(py).lock().file_name())
+    }
+
+    def saveas(&self, directory: &PyPath) -> PyResult<u64> {
         // Save as a new file. Return `BlockId` that can be used in constructor.
         let mut state = self.state(py).lock();
-        let root_id = convert_result(py, state.write_as(path))?;
+        let root_id = convert_result(py, state.write_new(directory))?;
         Ok(root_id.0)
     }
 

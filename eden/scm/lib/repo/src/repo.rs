@@ -375,7 +375,7 @@ impl Repo {
                     .join(self.ident.dot_dir())
                     .join("treestate")
                     .join(fields.tree_filename);
-                TreeState::open(treestate_path, Some(fields.tree_root_id))?
+                TreeState::open(treestate_path, fields.tree_root_id)?
             }
         };
         let treestate = Arc::new(Mutex::new(treestate));

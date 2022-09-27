@@ -3909,7 +3909,7 @@ def debugtreestate(ui, repo, cmd: str = "status", **opts) -> None:
         elif "treestate" in repo.requirements:
             ui.status(
                 _("dirstate v2 (using treestate/%s, offset %s, %s files tracked)\n")
-                % (dmap._filename, dmap._rootid, len(dmap))
+                % (dmap._tree.filename(), dmap._rootid, len(dmap))
             )
         else:
             ui.status(_("dirstate v0 (flat dirstate, %s files tracked)\n") % len(dmap))
