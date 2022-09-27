@@ -7,23 +7,11 @@ from __future__ import absolute_import
 
 # Standard Library
 import gzip
-import os
 import socket
 import ssl
-import tempfile
 import time
-from subprocess import PIPE, Popen
 
-from edenscm import (
-    commands,
-    error,
-    httpclient,
-    httpconnection,
-    json,
-    perftrace,
-    pycompat,
-    util,
-)
+from edenscm import error, httpclient, httpconnection, json, perftrace, pycompat, util
 from edenscm.i18n import _
 
 from . import baseservice, error as ccerror, util as ccutil
