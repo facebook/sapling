@@ -295,11 +295,20 @@ impl Repo {
             return Ok(fs.clone());
         }
 
-        let eden_api = self.eden_api()?;
+        let eden_api = match self.eden_api() {
+            Ok(eden_api) => Some(eden_api),
+            // For tests, don't error if edenapi.url isn't set.
+            Err(_) if std::env::var("TESTTMP").is_ok() => None,
+            Err(e) => return Err(e.into()),
+        };
+
         let mut file_builder = FileStoreBuilder::new(self.config())
-            .edenapi(EdenApiFileStore::new(eden_api))
             .local_path(self.store_path())
             .correlator(edenapi::DEFAULT_CORRELATOR.as_str());
+
+        if let Some(eden_api) = eden_api {
+            file_builder = file_builder.edenapi(EdenApiFileStore::new(eden_api));
+        }
 
         if self.config.get_or_default("scmstore", "auxindexedlog")? {
             file_builder = file_builder.store_aux_data();
@@ -325,11 +334,20 @@ impl Repo {
             return Ok(ts.clone());
         }
 
-        let eden_api = self.eden_api()?;
-        let tree_builder = TreeStoreBuilder::new(self.config())
-            .edenapi(EdenApiTreeStore::new(eden_api))
+        let eden_api = match self.eden_api() {
+            Ok(eden_api) => Some(eden_api),
+            // For tests, don't error if edenapi.url isn't set.
+            Err(_) if std::env::var("TESTTMP").is_ok() => None,
+            Err(e) => return Err(e.into()),
+        };
+
+        let mut tree_builder = TreeStoreBuilder::new(self.config())
             .local_path(self.store_path())
             .suffix("manifests");
+
+        if let Some(eden_api) = eden_api {
+            tree_builder = tree_builder.edenapi(EdenApiTreeStore::new(eden_api));
+        }
         let ts = Arc::new(tree_builder.build()?);
         self.tree_store = Some(ts.clone());
         Ok(ts)
