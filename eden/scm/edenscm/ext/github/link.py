@@ -9,6 +9,8 @@ from typing import Optional
 from edenscm import error, scmutil
 from edenscm.i18n import _
 
+from . import github_repo_util
+
 from .pullrequeststore import PullRequest, PullRequestStore
 
 
@@ -78,26 +80,9 @@ def try_find_upstream(ui) -> Optional[str]:
 
 
 def normalize_github_repo_url(url: str) -> Optional[str]:
-    """parses the following URL formats:
-
-    https://github.com/bolinfest/escoria-demo-game
-    https://github.com/bolinfest/escoria-demo-game.git
-    git@github.com:bolinfest/escoria-demo-game.git
-
-    and returns:
-
-    https://github.com/bolinfest/escoria-demo-game
-
-    which is suitable for constructing URLs to pull requests.
-    """
-    https_pattern = r"^https://github.com/([^/]+)/([^/]+?)(?:\.git)?$"
-    https_match = re.match(https_pattern, url)
-    if https_match:
-        return f"https://github.com/{https_match[1]}/{https_match[2]}"
-
-    ssh_pattern = r"^git@github.com:([^/]+)/([^/]+?)(?:\.git)?$"
-    ssh_match = re.match(ssh_pattern, url)
-    if ssh_match:
-        return f"https://github.com/{ssh_match[1]}/{ssh_match[2]}"
-
-    return None
+    pair = github_repo_util.parse_owner_and_name_from_github_url(url)
+    if pair:
+        owner, name = pair
+        return f"https://github.com/{owner}/{name}"
+    else:
+        return None

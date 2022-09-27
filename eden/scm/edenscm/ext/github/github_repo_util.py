@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 import re
-from typing import Optional
+from typing import Optional, Tuple
 
 from edenscm import git
 
@@ -62,3 +62,36 @@ def parse_github_pull_request_url(descr: str) -> Optional[GitHubPullRequest]:
         return None
     owner, name, number = match.groups()
     return GitHubPullRequest(repo_owner=owner, repo_name=name, number=int(number))
+
+
+def parse_owner_and_name_from_github_url(url: str) -> Optional[Tuple[str, str]]:
+    """parses the following URL formats:
+
+    https://github.com/bolinfest/escoria-demo-game
+    https://github.com/bolinfest/escoria-demo-game.git
+    git@github.com:bolinfest/escoria-demo-game.git
+
+    and returns:
+
+    https://github.com/bolinfest/escoria-demo-game
+
+    which is suitable for constructing URLs to pull requests.
+
+    >>> parse_owner_and_name_from_github_url("https://github.com/bolinfest/escoria-demo-game")
+    ('bolinfest', 'escoria-demo-game')
+    >>> parse_owner_and_name_from_github_url("https://github.com/bolinfest/escoria-demo-game.git")
+    ('bolinfest', 'escoria-demo-game')
+    >>> parse_owner_and_name_from_github_url("git@github.com:bolinfest/escoria-demo-game.git")
+    ('bolinfest', 'escoria-demo-game')
+    """
+    https_pattern = r"^https://github.com/([^/]+)/([^/]+?)(?:\.git)?$"
+    https_match = re.match(https_pattern, url)
+    if https_match:
+        return (https_match[1], https_match[2])
+
+    ssh_pattern = r"^git@github.com:([^/]+)/([^/]+?)(?:\.git)?$"
+    ssh_match = re.match(ssh_pattern, url)
+    if ssh_match:
+        return (ssh_match[1], ssh_match[2])
+
+    return None
