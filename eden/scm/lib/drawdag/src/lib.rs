@@ -214,19 +214,31 @@ pub fn parse(text: &str) -> BTreeMap<String, BTreeSet<String>> {
                         // name="D", parent="A", insert D -> C -> B -> A.
 
                         assert!(
-                            succ::is_successor(&parent, &name),
+                            parent.len() < name.len()
+                                || (parent.len() == name.len() && parent < name),
                             "empty range: {:?} to {:?}",
                             parent,
                             name
                         );
-                        let mut parent: String = parent;
+
+                        let mut current: String = parent.clone();
                         loop {
-                            let next = succ::str_succ(&parent);
-                            edges.entry(next.clone()).or_default().insert(parent);
+                            let next = succ::str_succ(&current);
+                            edges.entry(next.clone()).or_default().insert(current);
+
                             if next == name {
                                 break;
                             }
-                            parent = next;
+
+                            assert!(
+                                next.len() < name.len()
+                                    || (next.len() == name.len() && next < name),
+                                "mismatched range endpoints: {:?} to {:?}",
+                                parent,
+                                name
+                            );
+
+                            current = next;
                         }
                     }
                 }
