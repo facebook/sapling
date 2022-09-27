@@ -1610,6 +1610,9 @@ class Test(unittest.TestCase):
             hgrc.write("use-rust=true\n")
             hgrc.write("[status]\n")
             hgrc.write("use-rust=true\n")
+            hgrc.write("[scmstore]\n")
+            hgrc.write("enableshim=True\n")
+            hgrc.write("contentstorefallback=True\n")
 
             # treemanifest
             hgrc.write("[extensions]\n")

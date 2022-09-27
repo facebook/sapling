@@ -21,6 +21,8 @@ Create a repository:
   remotefilelog.cachepath=$TESTTMP/default-hgcache
   remotefilelog.localdatarepack=True
   remotefilelog.reponame=reponame-default
+  scmstore.contentstorefallback=True
+  scmstore.enableshim=True
   status.use-rust=False
   treemanifest.rustmanifest=True
   treemanifest.sendtrees=False
