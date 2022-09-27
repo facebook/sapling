@@ -34,6 +34,7 @@ def testmod(name, optionflags=0, testtarget=None):
     runner.summarize()
 
 
+testmod("edenscm.ext.github.github_repo_util")
 testmod("edenscm.ext.github.graphql")
 testmod("edenscm.ext.github.templates")
 testmod("edenscm.changegroup")

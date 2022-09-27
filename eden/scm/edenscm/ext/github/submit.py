@@ -25,20 +25,14 @@ def find_commits_on_branch(ui, repo):
         # Root commit?
         return
 
-    pr_store = pullrequeststore.PullRequestStore(repo)
-    for node in repo.nodes("sort(. %% public(), -rev)"):
-        # TODO(mbolin): Partition the nodes in this iterator into subgraphs
-        # of commits that belong to a pull request. There can be one subgraph
-        # (starting from the tip) that has no associated pull request:
-        # - If there is a subgraph with no PR, decide whether it should be
-        #   merged into an existing PR or if it should be the basis for a new
-        #   PR.
-        # - For all other subgraphs, update the PRs on GitHub, if appropriate.
-        #   Note that the PR commit data and/or the PR body may need updating.
-        pr = pr_store.find_pull_request(node)
-        url = (
-            f"https://github.com/{pr.owner}/{pr.name}/pull/{pr.number}"
-            if pr
-            else "None"
-        )
+    store = pullrequeststore.PullRequestStore(repo)
+    commits_to_process = [
+        (node, github_repo_util.get_pull_request_for_node(node, store, repo[node]))
+        for node in repo.nodes("sort(. %% public(), -rev)")
+    ]
+
+    # TODO: Take the list of commits_to_process and create/update pull requests,
+    # as appropriate.
+    for node, pr in commits_to_process:
+        url = pr.as_url() if pr else "None"
         ui.status(f"{hex(node)}: {url}\n")

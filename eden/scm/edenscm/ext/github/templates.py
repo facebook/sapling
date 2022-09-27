@@ -6,10 +6,9 @@
 """templates to use when the GitHub extension is enabled
 """
 
-import re
 from typing import Optional
 
-from . import graphql
+from . import github_repo_util, graphql
 from .graphql import GitHubPullRequest
 from .pullrequeststore import PullRequestStore
 
@@ -52,30 +51,6 @@ def github_pull_request_number(repo, ctx, **args) -> Optional[int]:
     return pull_request.number if pull_request else None
 
 
-def parse_github_pull_request_url(descr: str) -> Optional[GitHubPullRequest]:
-    r"""If the commit message has a comment in a special format that indicates
-    it is associated with a GitHub pull request, returns the corresponding
-    GitHubPullRequest.
-
-    >>> descr = 'foo\nPull Request resolved: https://github.com/bolinfest/ghstack-testing/pull/71\nbar'
-    >>> parse_github_pull_request_url(descr)
-    GitHubPullRequest(repo_owner='bolinfest', repo_name='ghstack-testing', number=71)
-    >>> parse_github_pull_request_url('') is None
-    True
-    """
-    # This is the format used by ghstack, though other variants may be supported
-    # in the future.
-    match = re.search(
-        r"^Pull Request resolved: https://github.com/([^/]*)/([^/]*)/pull/([1-9][0-9]*)$",
-        descr,
-        re.MULTILINE,
-    )
-    if not match:
-        return None
-    owner, name, number = match.groups()
-    return GitHubPullRequest(repo_owner=owner, repo_name=name, number=int(number))
-
-
 # Special value to use as the second argument to Dict.get() to distinguish
 # between "no mapping" and "mapping with a value of None".
 _NO_ENTRY = {}
@@ -92,14 +67,9 @@ def get_pull_request_url_for_rev(repo, ctx, **args) -> Optional[GitHubPullReques
     if pull_request_url is not _NO_ENTRY:
         return pull_request_url
 
-    # Check the metalog first. If not in the metalog, look for special patterns
-    # in the commit message.
     store = get_pull_request_store(repo, args["cache"])
-    pr = store.find_pull_request(ctx.node())
-    pull_request_url = (
-        GitHubPullRequest(repo_owner=pr.owner, repo_name=pr.name, number=int(pr.number))
-        if pr
-        else parse_github_pull_request_url(ctx.description())
+    pull_request_url = github_repo_util.get_pull_request_for_node(
+        ctx.node(), store, ctx
     )
 
     revcache[_GITHUB_PULL_REQUEST_URL_REVCACHE_KEY] = (
