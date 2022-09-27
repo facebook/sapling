@@ -997,6 +997,7 @@ class basetreemanifestlog(object):
                 remotestore,
                 None,
                 edenapistore,
+                None,
                 "manifests",
                 correlator=correlator,
             )

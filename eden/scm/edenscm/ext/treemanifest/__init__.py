@@ -578,17 +578,20 @@ class basetreemanifestlog(object):
         correlator = clienttelemetry.correlator(self._repo.ui)
         edenapistore = self.edenapistore(self._repo)
 
+        if self.ui.configbool("treemanifest", "fetchauxdata"):
+            filestore = self._repo.fileslog.filescmstore
+        else:
+            filestore = None
+
         mask = os.umask(0o002)
         try:
-            # TODO(meyer): Is there a reason no edenapi is used here?
-            # Do all reads fall back through _httpgetdesignatednodes instead
-            # Of the normal contentstore fallback path?
             self.treescmstore = revisionstore.treescmstore(
                 self._repo.svfs.vfs.base,
                 self.ui._rcfg,
                 remotestore,
                 None,
                 edenapistore,
+                filestore,
                 "manifests",
                 correlator=correlator,
             )

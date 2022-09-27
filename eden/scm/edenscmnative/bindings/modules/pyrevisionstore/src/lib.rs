@@ -1444,6 +1444,7 @@ fn make_treescmstore<'a>(
     remote: Arc<PyHgIdRemoteStore>,
     memcache: Option<Arc<MemcacheStore>>,
     edenapi_treestore: Option<Arc<EdenApiTreeStore>>,
+    filestore: Option<Arc<FileStore>>,
     suffix: Option<String>,
     correlator: Option<String>,
 ) -> Result<(Arc<TreeStore>, Arc<ContentStore>)> {
@@ -1474,6 +1475,10 @@ fn make_treescmstore<'a>(
     } else {
         builder.remotestore(remote)
     };
+
+    if let Some(filestore) = filestore {
+        treestore_builder = treestore_builder.filestore(filestore);
+    }
 
     let indexedlog_local = treestore_builder.build_indexedlog_local()?;
     let indexedlog_cache = treestore_builder.build_indexedlog_cache()?;
@@ -1523,6 +1528,7 @@ py_class!(pub class treescmstore |py| {
         remote: pyremotestore,
         memcache: Option<memcachestore>,
         edenapi: Option<edenapitreestore> = None,
+        filestore: Option<filescmstore> = None,
         suffix: Option<String> = None,
         correlator: Option<String> = None
     ) -> PyResult<treescmstore> {
@@ -1532,8 +1538,9 @@ py_class!(pub class treescmstore |py| {
         let remote = remote.extract_inner(py);
         let memcache = memcache.map(|v| v.extract_inner(py));
         let edenapi = edenapi.map(|v| v.extract_inner(py));
+        let filestore = filestore.map(|v| v.extract_inner(py));
 
-        let (treestore, contentstore) = make_treescmstore(path, &config, remote, memcache, edenapi, suffix, correlator).map_pyerr(py)?;
+        let (treestore, contentstore) = make_treescmstore(path, &config, remote, memcache, edenapi, filestore, suffix, correlator).map_pyerr(py)?;
 
         treescmstore::create_instance(py, treestore, contentstore)
     }
