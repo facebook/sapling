@@ -82,7 +82,8 @@ async fn find_latest_synced_commits(
     bookmark_name: &Target<BookmarkName>,
 ) -> Result<Vec<(InnerRepo, ChangesetId)>, Error> {
     let hyper_repo_tip_cs_id = hyper_repo
-        .get_bonsai_bookmark(ctx.clone(), bookmark_name)
+        .bookmarks()
+        .get(ctx.clone(), bookmark_name)
         .await?
         .ok_or_else(|| anyhow!("{} bookmark not found in hyper repo", bookmark_name))?;
 
@@ -117,7 +118,8 @@ async fn find_commits_to_replay(
 ) -> Result<Vec<ChangesetId>, Error> {
     let source_repo_tip_cs_id = source_repo
         .blob_repo
-        .get_bonsai_bookmark(ctx.clone(), bookmark_name)
+        .bookmarks()
+        .get(ctx.clone(), bookmark_name)
         .await?
         .ok_or_else(|| anyhow!("{} bookmark not found in source repo", bookmark_name))?;
 
@@ -180,7 +182,8 @@ async fn sync_commits(
     }
 
     let hyper_repo_tip_cs_id = hyper_repo
-        .get_bonsai_bookmark(ctx.clone(), bookmark_name)
+        .bookmarks()
+        .get(ctx.clone(), bookmark_name)
         .await?
         .ok_or_else(|| anyhow!("{} bookmark not found in hyper repo", bookmark_name))?;
 

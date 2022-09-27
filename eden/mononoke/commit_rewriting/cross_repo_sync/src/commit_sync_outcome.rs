@@ -147,7 +147,8 @@ impl CandidateSelectionHint {
                 // Bookmark absence is not a failure, see doctring
                 let maybe_target_cs_id: Option<Target<ChangesetId>> = target_repo
                     .0
-                    .get_bonsai_bookmark(ctx.clone(), &bookmark.0)
+                    .bookmarks()
+                    .get(ctx.clone(), &bookmark.0)
                     .await?
                     .map(Target);
 
@@ -159,7 +160,8 @@ impl CandidateSelectionHint {
                 // Bookmark absence is not a failure, see doctring
                 let maybe_target_cs_id: Option<Target<ChangesetId>> = target_repo
                     .0
-                    .get_bonsai_bookmark(ctx.clone(), &bookmark.0)
+                    .bookmarks()
+                    .get(ctx.clone(), &bookmark.0)
                     .await?
                     .map(Target);
 

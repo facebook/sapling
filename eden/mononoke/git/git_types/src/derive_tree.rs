@@ -218,7 +218,8 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
 
         let bcs_id = repo
-            .get_bonsai_bookmark(ctx.clone(), &("master".try_into()?))
+            .bookmarks()
+            .get(ctx.clone(), &("master".try_into()?))
             .await?
             .ok_or_else(|| format_err!("no master"))?;
 

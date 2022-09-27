@@ -328,7 +328,7 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
         let target_repo = commit_syncer.get_target_repo();
         let mut book_values = vec![];
         for common_bookmark in common_pushrebase_bookmarks {
-            book_values.push(target_repo.get_bonsai_bookmark(ctx.clone(), common_bookmark));
+            book_values.push(target_repo.bookmarks().get(ctx.clone(), common_bookmark));
         }
 
         let book_values = try_join_all(book_values).await?;
@@ -589,7 +589,7 @@ async fn delete_bookmark(
     bookmark: &BookmarkName,
 ) -> Result<(), Error> {
     let mut book_txn = repo.update_bookmark_transaction(ctx.clone());
-    let maybe_bookmark_val = repo.get_bonsai_bookmark(ctx.clone(), bookmark).await?;
+    let maybe_bookmark_val = repo.bookmarks().get(ctx.clone(), bookmark).await?;
     if let Some(bookmark_value) = maybe_bookmark_val {
         book_txn.delete(bookmark, bookmark_value, BookmarkUpdateReason::XRepoSync)?;
         let res = book_txn.commit().await?;
@@ -614,7 +614,7 @@ async fn move_or_create_bookmark(
     bookmark: &BookmarkName,
     cs_id: ChangesetId,
 ) -> Result<(), Error> {
-    let maybe_bookmark_val = repo.get_bonsai_bookmark(ctx.clone(), bookmark).await?;
+    let maybe_bookmark_val = repo.bookmarks().get(ctx.clone(), bookmark).await?;
 
     let mut book_txn = repo.update_bookmark_transaction(ctx.clone());
     match maybe_bookmark_val {

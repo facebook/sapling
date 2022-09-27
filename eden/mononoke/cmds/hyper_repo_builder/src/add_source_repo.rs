@@ -44,7 +44,8 @@ pub async fn add_source_repo(
     per_commit_file_changes_limit: Option<usize>,
 ) -> Result<(), Error> {
     let source_bcs_id = source_repo
-        .get_bonsai_bookmark(ctx.clone(), source_bookmark)
+        .bookmarks()
+        .get(ctx.clone(), source_bookmark)
         .await?
         .ok_or_else(|| anyhow!("{} not found", source_bookmark))?;
 
@@ -61,7 +62,8 @@ pub async fn add_source_repo(
         .await?;
 
     let parent = hyper_repo
-        .get_bonsai_bookmark(ctx.clone(), hyper_repo_bookmark)
+        .bookmarks()
+        .get(ctx.clone(), hyper_repo_bookmark)
         .await?;
     if let Some(parent) = parent {
         ensure_no_file_intersection(ctx, hyper_repo, parent, &leaf_entries).await?;

@@ -270,7 +270,8 @@ async fn find_mapping_version(
 ) -> Result<Option<CommitSyncConfigVersion>, Error> {
     let bookmark_val = large_to_small_syncer
         .get_large_repo()
-        .get_bonsai_bookmark(ctx.clone(), dest_bookmark)
+        .bookmarks()
+        .get(ctx.clone(), dest_bookmark)
         .await?
         .ok_or_else(|| format_err!("{} not found", dest_bookmark))?;
 

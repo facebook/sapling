@@ -352,7 +352,7 @@ async fn handle_set(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
     let rev = args.value_of("HG_CHANGESET_ID").unwrap().to_string();
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
     let new_bcs = fetch_bonsai_changeset(ctx.clone(), &rev, &repo, repo.repo_blobstore()).await?;
-    let maybe_old_bcs_id = repo.get_bonsai_bookmark(ctx.clone(), &bookmark).await?;
+    let maybe_old_bcs_id = repo.bookmarks().get(ctx.clone(), &bookmark).await?;
     info!(
         ctx.logger(),
         "Current position of {:?} is {:?}", bookmark, maybe_old_bcs_id
@@ -386,7 +386,7 @@ async fn handle_delete(
 ) -> Result<(), Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
-    let maybe_bcs_id = repo.get_bonsai_bookmark(ctx.clone(), &bookmark).await?;
+    let maybe_bcs_id = repo.bookmarks().get(ctx.clone(), &bookmark).await?;
     info!(
         ctx.logger(),
         "Current position of {:?} is {:?}", bookmark, maybe_bcs_id

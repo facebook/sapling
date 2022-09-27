@@ -659,7 +659,8 @@ impl ValidationHelpers {
             .large_repo
             .0
             .blob_repo
-            .get_bonsai_bookmark(ctx, &self.large_repo_master_bookmark)
+            .bookmarks()
+            .get(ctx, &self.large_repo_master_bookmark)
             .await?;
         maybe_cs_id.ok_or_else(|| format_err!("No master in the large repo"))
     }

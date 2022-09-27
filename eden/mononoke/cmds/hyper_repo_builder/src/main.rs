@@ -73,7 +73,8 @@ async fn subcommand_tail<'a>(
     let (source_bookmark, hyper_repo_bookmark) = parse_bookmarks(matches)?;
 
     let hyper_repo_tip_cs_id = hyper_repo
-        .get_bonsai_bookmark(ctx.clone(), &hyper_repo_bookmark)
+        .bookmarks()
+        .get(ctx.clone(), &hyper_repo_bookmark)
         .await?
         .ok_or_else(|| anyhow!("{} bookmark not found in hyper repo", hyper_repo_bookmark))?;
 

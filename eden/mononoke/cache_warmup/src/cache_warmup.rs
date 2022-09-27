@@ -196,7 +196,8 @@ async fn do_cache_warmup(
 
     let bcs_id = match target {
         CacheWarmupTarget::Bookmark(bookmark) => repo
-            .get_bonsai_bookmark(ctx.clone(), &bookmark)
+            .bookmarks()
+            .get(ctx.clone(), &bookmark)
             .await?
             .ok_or(errors::ErrorKind::BookmarkNotFound(bookmark))?,
         CacheWarmupTarget::Changeset(bcs_id) => bcs_id,

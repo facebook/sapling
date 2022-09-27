@@ -286,7 +286,8 @@ mod tests {
         // phases to have any data
         let master = BookmarkName::new("master")?;
         let master = blobrepo
-            .get_bonsai_bookmark(ctx.clone(), &master)
+            .bookmarks()
+            .get(ctx.clone(), &master)
             .await?
             .unwrap();
         blobrepo

@@ -98,7 +98,8 @@ async fn move_bookmark(ctx: &CoreContext, repo: &BlobRepo, bookmark: &str, cs_id
 
 async fn get_bookmark(ctx: &CoreContext, repo: &BlobRepo, bookmark: &str) -> ChangesetId {
     let bookmark = BookmarkName::new(bookmark).unwrap();
-    repo.get_bonsai_bookmark(ctx.clone(), &bookmark)
+    repo.bookmarks()
+        .get(ctx.clone(), &bookmark)
         .await
         .unwrap()
         .unwrap()
@@ -171,7 +172,8 @@ async fn create_initial_commit_with_contents<'a>(
 async fn create_empty_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
     let bookmark = BookmarkName::new("master").unwrap();
     let p1 = repo
-        .get_bonsai_bookmark(ctx.clone(), &bookmark)
+        .bookmarks()
+        .get(ctx.clone(), &bookmark)
         .await
         .unwrap()
         .unwrap();
@@ -497,7 +499,8 @@ async fn create_commit_from_parent_and_changes<'a>(
 async fn update_master_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
     let bookmark = BookmarkName::new("master").unwrap();
     let p1 = repo
-        .get_bonsai_bookmark(ctx.clone(), &bookmark)
+        .bookmarks()
+        .get(ctx.clone(), &bookmark)
         .await
         .unwrap()
         .unwrap();
@@ -666,7 +669,8 @@ async fn megarepo_copy_file(
 ) -> ChangesetId {
     let bookmark = BookmarkName::new("master").unwrap();
     let p1 = repo
-        .get_bonsai_bookmark(ctx.clone(), &bookmark)
+        .bookmarks()
+        .get(ctx.clone(), &bookmark)
         .await
         .unwrap()
         .unwrap();
@@ -749,7 +753,8 @@ async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
     let linear_master_bcs_id = {
         let bookmark = BookmarkName::new("master").unwrap();
         linear
-            .get_bonsai_bookmark(ctx.clone(), &bookmark)
+            .bookmarks()
+            .get(ctx.clone(), &bookmark)
             .await?
             .unwrap()
     };
@@ -921,7 +926,8 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
 async fn update_linear_1_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
     let bookmark = BookmarkName::new("master").unwrap();
     let p1 = repo
-        .get_bonsai_bookmark(ctx.clone(), &bookmark)
+        .bookmarks()
+        .get(ctx.clone(), &bookmark)
         .await
         .unwrap()
         .unwrap();

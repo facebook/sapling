@@ -1624,7 +1624,8 @@ mod tests {
             &ctx,
             &repo.blob_repo,
             repo.blob_repo
-                .get_bonsai_bookmark(ctx.clone(), &BookmarkName::new("master")?)
+                .bookmarks()
+                .get(ctx.clone(), &BookmarkName::new("master")?)
                 .await?
                 .unwrap(),
         )

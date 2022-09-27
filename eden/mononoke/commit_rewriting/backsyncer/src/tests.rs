@@ -1347,7 +1347,8 @@ async fn init_repos(
 
     let master = BookmarkName::new("master")?;
     let master_val = source_repo
-        .get_bonsai_bookmark(ctx.clone(), &master)
+        .bookmarks()
+        .get(ctx.clone(), &master)
         .await?
         .unwrap();
 
@@ -1911,7 +1912,7 @@ async fn move_bookmark(
 ) -> Result<(), Error> {
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
 
-    let prev_bcs_id = repo.get_bonsai_bookmark(ctx, bookmark).await?;
+    let prev_bcs_id = repo.bookmarks().get(ctx, bookmark).await?;
 
     match prev_bcs_id {
         Some(prev_bcs_id) => {

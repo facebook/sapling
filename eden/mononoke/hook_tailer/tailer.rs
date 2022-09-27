@@ -128,7 +128,8 @@ impl Tailer {
         async move {
             let bm_rev = self
                 .repo
-                .get_bonsai_bookmark(self.ctx.clone(), &self.bookmark)
+                .bookmarks()
+                .get(self.ctx.clone(), &self.bookmark)
                 .await?
                 .ok_or_else(|| ErrorKind::NoSuchBookmark(self.bookmark.clone()))?;
 

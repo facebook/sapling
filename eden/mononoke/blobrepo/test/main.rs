@@ -910,7 +910,8 @@ async fn test_hg_commit_generation_many_diamond(fb: FacebookInit) {
     let repo = fixtures::ManyDiamonds::getrepo(fb).await;
     let book = bookmarks::BookmarkName::new("master").unwrap();
     let bcs_id = repo
-        .get_bonsai_bookmark(ctx.clone(), &book)
+        .bookmarks()
+        .get(ctx.clone(), &book)
         .await
         .unwrap()
         .unwrap();

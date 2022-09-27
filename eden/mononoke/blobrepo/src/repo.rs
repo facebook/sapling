@@ -21,7 +21,6 @@ use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
 use bookmarks::Bookmark;
 use bookmarks::BookmarkKind;
-use bookmarks::BookmarkName;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarkTransaction;
@@ -41,7 +40,6 @@ use ephemeral_blobstore::Bubble;
 use filenodes::ArcFilenodes;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
-use futures::future::BoxFuture;
 use futures::Stream;
 use futures::TryStreamExt;
 use mercurial_mutation::ArcHgMutationStore;
@@ -71,8 +69,6 @@ define_stats! {
     prefix = "mononoke.blobrepo";
     get_bonsai_heads_maybe_stale: timeseries(Rate, Sum),
     get_bonsai_publishing_bookmarks_maybe_stale: timeseries(Rate, Sum),
-    get_bookmark: timeseries(Rate, Sum),
-    get_bookmarks_by_prefix_maybe_stale: timeseries(Rate, Sum),
     get_changeset_parents_by_bonsai: timeseries(Rate, Sum),
     get_generation_number: timeseries(Rate, Sum),
     update_bookmark_transaction: timeseries(Rate, Sum),
@@ -250,7 +246,6 @@ impl BlobRepo {
         prefix: &BookmarkPrefix,
         max: u64,
     ) -> impl Stream<Item = Result<(Bookmark, ChangesetId), Error>> {
-        STATS::get_bookmarks_by_prefix_maybe_stale.add_value(1);
         self.bookmarks().list(
             ctx,
             Freshness::MaybeStale,
@@ -272,15 +267,6 @@ impl BlobRepo {
             .ok_or_else(|| format_err!("Commit {} does not exist in the repo", changesetid))?
             .parents;
         Ok(parents)
-    }
-
-    pub fn get_bonsai_bookmark(
-        &self,
-        ctx: CoreContext,
-        name: &BookmarkName,
-    ) -> BoxFuture<'static, Result<Option<ChangesetId>, Error>> {
-        STATS::get_bookmark.add_value(1);
-        self.bookmarks().get(ctx, name)
     }
 
     pub fn bonsai_git_mapping(&self) -> &ArcBonsaiGitMapping {

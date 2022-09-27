@@ -575,7 +575,7 @@ impl Repo {
         let repo = self.blob_repo();
 
         let maybe_bcs_id_from_service = self.warm_bookmarks_cache.get(ctx, bookmark).await?;
-        let maybe_bcs_id_from_blobrepo = repo.get_bonsai_bookmark(ctx.clone(), bookmark).await?;
+        let maybe_bcs_id_from_blobrepo = repo.bookmarks().get(ctx.clone(), bookmark).await?;
 
         if maybe_bcs_id_from_blobrepo.is_none() {
             self.report_bookmark_missing_from_repo(ctx, bookmark);
@@ -954,7 +954,8 @@ impl RepoContext {
         if cs_id.is_none() {
             cs_id = self
                 .blob_repo()
-                .get_bonsai_bookmark(self.ctx.clone(), &bookmark)
+                .bookmarks()
+                .get(self.ctx.clone(), &bookmark)
                 .await?
         }
 

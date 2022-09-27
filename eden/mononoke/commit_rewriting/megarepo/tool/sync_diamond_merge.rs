@@ -185,7 +185,8 @@ pub async fn do_sync_diamond_merge(
     }
 
     let maybe_onto_value = large_repo
-        .get_bonsai_bookmark(ctx.clone(), &onto_bookmark)
+        .bookmarks()
+        .get(ctx.clone(), &onto_bookmark)
         .await?;
 
     let onto_value =

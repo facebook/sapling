@@ -851,7 +851,7 @@ async fn get_bookmark_value(
     repo: &BlobRepo,
     bookmark: &BookmarkName,
 ) -> Result<ChangesetId, Error> {
-    let maybe_bookmark_value = repo.get_bonsai_bookmark(ctx.clone(), bookmark).await?;
+    let maybe_bookmark_value = repo.bookmarks().get(ctx.clone(), bookmark).await?;
 
     maybe_bookmark_value.ok_or_else(|| format_err!("{} is not found in {}", bookmark, repo.name()))
 }
@@ -1445,7 +1445,7 @@ mod test {
         let large_repo = commit_syncer.get_large_repo();
 
         let master = BookmarkName::new("master")?;
-        let maybe_master_val = small_repo.get_bonsai_bookmark(ctx.clone(), &master).await?;
+        let maybe_master_val = small_repo.bookmarks().get(ctx.clone(), &master).await?;
         let master_val = maybe_master_val.ok_or_else(|| Error::msg("master not found"))?;
 
         // Everything is identical - no diff at all
@@ -1557,7 +1557,7 @@ mod test {
         let large_repo = Linear::getrepo_with_id(fb, RepositoryId::new(1)).await;
 
         let master = BookmarkName::new("master")?;
-        let maybe_master_val = small_repo.get_bonsai_bookmark(ctx.clone(), &master).await?;
+        let maybe_master_val = small_repo.bookmarks().get(ctx.clone(), &master).await?;
 
         let master_val = maybe_master_val.ok_or_else(|| Error::msg("master not found"))?;
         let changesets: Vec<_> =
