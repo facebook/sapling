@@ -10,7 +10,7 @@ import os
 import re
 from pathlib import Path
 from sys import platform
-from typing import Optional
+from typing import Optional, Tuple
 
 from bindings import github
 from edenscm import pycompat
@@ -24,9 +24,10 @@ def get_pull_request_data(token: str, pr: PullRequestId) -> GraphQLPullRequest:
 
 
 def get_github_oauth_token() -> Optional[str]:
-    oauth_token = try_parse_oauth_token_from_gh_config()
-    if oauth_token:
-        return oauth_token
+    username_and_token = try_parse_oauth_token_from_gh_config()
+    if username_and_token:
+        _username, token = username_and_token
+        return token
 
     # Fallback: try reading the OAuth token from .ghstackrc.
     # This is a simplified version of the logic ghstack uses to read its own
@@ -35,8 +36,10 @@ def get_github_oauth_token() -> Optional[str]:
     return try_parse_oauth_token_from_ghstack()
 
 
-def try_parse_oauth_token_from_gh_config() -> Optional[str]:
-    """This function is very defensive, as we do not want to throw an exception
+def try_parse_oauth_token_from_gh_config() -> Optional[Tuple[str, str]]:
+    """Returns (username, token), if found.
+
+    This function is very defensive, as we do not want to throw an exception
     if we cannot extract an OAuth token. We leave it to the caller to decide
     whether a missing OAuth token needs to be communicated to the user.
     """
@@ -60,8 +63,10 @@ def try_parse_oauth_token_from_gh_config() -> Optional[str]:
     return try_parse_oath_token_from_hosts_yml(contents)
 
 
-def try_parse_oath_token_from_hosts_yml(contents: str) -> Optional[str]:
-    r"""Because we do not want to incur the cost of a third-party YAML parser,
+def try_parse_oath_token_from_hosts_yml(contents: str) -> Optional[Tuple[str, str]]:
+    r"""Returns (username, token), if found.
+
+    Because we do not want to incur the cost of a third-party YAML parser,
     we exploit the fact that, in practice, we expect hosts.yml to be formatted
     in a simple way that we can parse using regular expressions.
 
@@ -73,14 +78,14 @@ def try_parse_oath_token_from_hosts_yml(contents: str) -> Optional[str]:
     ...     user: bolinfest
     ...     git_protocol: https
     ... ''')
-    'ListTheTokenFirst'
+    ('bolinfest', 'ListTheTokenFirst')
     >>> try_parse_oath_token_from_hosts_yml('''
     ... github.com:
     ...     user: bolinfest
     ...     oauth_token: ListTheTokenSecond
     ...     git_protocol: https
     ... ''')
-    'ListTheTokenSecond'
+    ('bolinfest', 'ListTheTokenSecond')
     """
     username = None
     token = None
@@ -96,7 +101,7 @@ def try_parse_oath_token_from_hosts_yml(contents: str) -> Optional[str]:
                 elif key == "oauth_token" and not token:
                     token = match.group(2)
                 if token and username:
-                    return token
+                    return (username, token)
             elif not line and re.match(r"^\S", line):
                 # Must be the start of a new section.
                 in_github_dot_com_section = False
