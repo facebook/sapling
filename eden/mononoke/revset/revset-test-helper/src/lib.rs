@@ -10,6 +10,7 @@ use std::str::FromStr;
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use changesets::ChangesetsRef;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::Stream01CompatExt;
@@ -29,12 +30,17 @@ pub fn single_changeset_id(
     repo: &BlobRepo,
 ) -> impl Stream<Item = ChangesetId, Error = Error> {
     let repo = repo.clone();
-    async move { repo.changeset_exists_by_bonsai(ctx, cs_id).await }
-        .boxed()
-        .compat()
-        .map(move |exists| if exists { Some(cs_id) } else { None })
-        .into_stream()
-        .filter_map(|maybenode| maybenode)
+    async move {
+        repo.changesets()
+            .get(ctx, cs_id)
+            .await
+            .map(|cs_id| cs_id.is_some())
+    }
+    .boxed()
+    .compat()
+    .map(move |exists| if exists { Some(cs_id) } else { None })
+    .into_stream()
+    .filter_map(|maybenode| maybenode)
 }
 
 pub fn string_to_nodehash(hash: &str) -> HgNodeHash {

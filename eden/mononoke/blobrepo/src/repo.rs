@@ -69,7 +69,6 @@ use stats::prelude::*;
 
 define_stats! {
     prefix = "mononoke.blobrepo";
-    changeset_exists_by_bonsai: timeseries(Rate, Sum),
     get_bonsai_heads_maybe_stale: timeseries(Rate, Sum),
     get_bonsai_publishing_bookmarks_maybe_stale: timeseries(Rate, Sum),
     get_bookmark: timeseries(Rate, Sum),
@@ -260,16 +259,6 @@ impl BlobRepo {
             &BookmarkPagination::FromStart,
             max,
         )
-    }
-
-    pub async fn changeset_exists_by_bonsai(
-        &self,
-        ctx: CoreContext,
-        changesetid: ChangesetId,
-    ) -> Result<bool, Error> {
-        STATS::changeset_exists_by_bonsai.add_value(1);
-        let changeset = self.inner.changesets.get(ctx, changesetid).await?;
-        Ok(changeset.is_some())
     }
 
     pub async fn get_changeset_parents_by_bonsai(

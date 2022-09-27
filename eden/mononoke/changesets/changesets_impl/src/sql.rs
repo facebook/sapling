@@ -42,7 +42,7 @@ use stats::prelude::*;
 use thiserror::Error;
 
 define_stats! {
-    prefix = "mononoke.changesets";
+    prefix = "mononoke.changesets.sql";
     gets: timeseries(Rate, Sum),
     gets_master: timeseries(Rate, Sum),
     get_many_by_prefix: timeseries(Rate, Sum),

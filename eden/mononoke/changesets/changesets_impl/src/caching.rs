@@ -43,6 +43,14 @@ use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::RepositoryId;
 use ref_cast::RefCast;
+use stats::prelude::*;
+
+define_stats! {
+    prefix = "mononoke.changesets.caching";
+    gets: timeseries(Rate, Sum),
+    get_many_by_prefix: timeseries(Rate, Sum),
+    adds: timeseries(Rate, Sum),
+}
 
 pub fn get_cache_key(repo_id: RepositoryId, cs_id: &ChangesetId) -> String {
     format!("{}.{}", repo_id.prefix(), cs_id)
@@ -145,6 +153,7 @@ impl Changesets for CachingChangesets {
         ctx: CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEntry>, Error> {
+        STATS::gets.add_value(1);
         let ctx = (&ctx, self);
         let mut map = get_or_fill(ctx, hashset![cs_id]).await?;
         Ok(map.remove(&cs_id).map(|entry| entry.0))
@@ -155,6 +164,7 @@ impl Changesets for CachingChangesets {
         ctx: CoreContext,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetEntry>, Error> {
+        STATS::gets.add_value(1);
         let ctx = (&ctx, self);
         let res = get_or_fill_chunked(ctx, cs_ids.into_iter().collect(), 1000, 2)
             .await?
@@ -171,6 +181,7 @@ impl Changesets for CachingChangesets {
         cs_prefix: ChangesetIdPrefix,
         limit: usize,
     ) -> Result<ChangesetIdsResolvedFromPrefix, Error> {
+        STATS::get_many_by_prefix.add_value(1);
         if let Some(id) = cs_prefix.into_changeset_id() {
             let res = self.get(ctx, id).await?;
             return match res {
