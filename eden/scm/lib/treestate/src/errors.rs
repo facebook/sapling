@@ -7,12 +7,14 @@
 
 //! Errors.
 
+use std::path::PathBuf;
+
 use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[error("the provided store file is not a valid store file")]
-    NotAStoreFile,
+    #[error("the provided store file is not a valid store file: {0}")]
+    NotAStoreFile(PathBuf),
     #[error("tree version not supported: {0}")]
     UnsupportedTreeVersion(u32),
     #[error("store file version not supported: {0}")]

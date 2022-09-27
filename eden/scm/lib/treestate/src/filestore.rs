@@ -128,9 +128,9 @@ impl FileStore {
         // Check the file header is as expected.
         let mut buffer = [0; MAGIC_LEN];
         file.read_exact(&mut buffer)
-            .map_err(|_e| ErrorKind::NotAStoreFile)?;
+            .map_err(|_e| ErrorKind::NotAStoreFile(path.as_ref().to_path_buf()))?;
         if buffer != MAGIC {
-            bail!(ErrorKind::NotAStoreFile);
+            bail!(ErrorKind::NotAStoreFile(path.as_ref().to_path_buf()));
         }
         let version = file.read_u32::<BigEndian>()?;
         if version != VERSION {
@@ -327,12 +327,12 @@ mod tests {
             .open(&p)
             .unwrap();
         drop(file);
-        assert_eq!(
+        assert!(
             FileStore::open(&p)
                 .err()
                 .expect("file should not be opened")
-                .to_string(),
-            "the provided store file is not a valid store file"
+                .to_string()
+                .starts_with("the provided store file is not a valid store file: ")
         );
     }
 
@@ -348,12 +348,12 @@ mod tests {
             .unwrap();
         file.write(b"not a store file").unwrap();
         drop(file);
-        assert_eq!(
+        assert!(
             FileStore::open(&p)
                 .err()
                 .expect("file should not be opened")
-                .to_string(),
-            "the provided store file is not a valid store file"
+                .to_string()
+                .starts_with("the provided store file is not a valid store file")
         );
     }
 
