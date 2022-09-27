@@ -8,12 +8,15 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::io::Cursor;
+use std::iter::Iterator;
 use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use types::HgId;
 use util::path::create_dir;
 
 use crate::filestate::FileStateV2;
@@ -244,6 +247,17 @@ impl TreeState {
         let mut metadata_buf = self.get_metadata();
         let metadata = Metadata::deserialize(&mut metadata_buf)?;
         Ok(metadata.0.get(key).cloned())
+    }
+
+    pub fn parents<'a>(&'a self) -> impl Iterator<Item = Result<HgId>> + 'a {
+        (1..).map_while(|i| {
+            self.get_metadata_by_key(&format!("p{}", i)).map_or_else(
+                |err| Some(Err(err)),
+                |metadata| {
+                    metadata.map(|parent_hash| HgId::from_str(&parent_hash).map_err(|e| e.into()))
+                },
+            )
+        })
     }
 
     pub fn has_dir<P: AsRef<[u8]>>(&mut self, path: P) -> Result<bool> {

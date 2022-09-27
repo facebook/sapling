@@ -7,7 +7,6 @@
 
 use std::path::Path;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
 use std::time::SystemTime;
 
@@ -105,24 +104,24 @@ impl WorkingCopy {
         })
     }
 
+    pub fn treestate(&self) -> Arc<Mutex<TreeState>> {
+        self.treestate.clone()
+    }
+
     pub(crate) fn current_manifests(
         treestate: &TreeState,
         tree_resolver: &ArcReadTreeManifest,
     ) -> Result<Vec<Arc<RwLock<TreeManifest>>>> {
-        let mut parents = vec![];
-        let mut i = 1;
-        loop {
-            match treestate.get_metadata_by_key(format!("p{}", i).as_str())? {
-                Some(s) => parents.push(HgId::from_str(&s)?),
-                None => break,
-            };
-            i += 1;
+        let mut parents = treestate.parents().peekable();
+        if parents.peek_mut().is_some() {
+            parents
+                .into_iter()
+                .map(|p| tree_resolver.get(&p?))
+                .collect()
+        } else {
+            let null_commit = HgId::null_id().clone();
+            Ok(vec![tree_resolver.get(&null_commit)?])
         }
-        if parents.is_empty() {
-            parents.push(*HgId::null_id());
-        }
-
-        parents.iter().map(|p| tree_resolver.get(p)).collect()
     }
 
     fn global_ignore_paths(root: &Path, config: &ConfigSet) -> Vec<PathBuf> {
