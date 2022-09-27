@@ -3,11 +3,21 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from edenscm import error
+import asyncio
+import re
+import subprocess
+from dataclasses import dataclass
+from typing import Any, List, Optional, Tuple, TypeVar
+
+from edenscm import error, git
 from edenscm.i18n import _
 from edenscm.node import hex, nullid
 
-from . import github_repo_util, pullrequeststore
+from . import gh_submit, github_repo_util
+from .gh_submit import PullRequestDetails, Repository
+
+from .pullrequest import PullRequestId
+from .pullrequeststore import PullRequestStore
 
 
 def submit(ui, repo, *args, **opts):
@@ -15,24 +25,339 @@ def submit(ui, repo, *args, **opts):
     if not github_repo_util.is_github_repo(repo):
         raise error.Abort(_("not a Git repo"))
 
-    find_commits_on_branch(ui, repo)
+    return asyncio.run(update_commits_in_stack(ui, repo))
+
+
+DEPENDENCY_PATTERN = re.compile(r"^\[reviewstack-dep\]\s*$", re.MULTILINE)
+
+
+@dataclass
+class CommitData:
+    """The data we need about each commit to support `submit`."""
+
+    # Commit ID.
+    node: bytes
+    # If present, the existing pull request this commit (and possibly some of
+    # its immediate ancestors) is associated with.
+    pr: Optional[PullRequestDetails]
+    # The context for the node.
+    ctx: Any
+    # Whether this commit should be part of another pull request rather than
+    # the head of its own pull request.
+    is_dep: bool
+    # Description of the commit, set lazily.
+    msg: Optional[str] = None
+
+    def get_msg(self) -> str:
+        if self.msg is None:
+            self.msg = self.ctx.description()
+        return self.msg
+
+
+async def update_commits_in_stack(ui, repo) -> int:
+    parents = repo.dirstate.parents()
+    if parents[0] == nullid:
+        ui.status_err(_("commit has no parent: currently unsupported\n"))
+        return 1
+
+    store = PullRequestStore(repo)
+    commits_to_process = await asyncio.gather(
+        *[
+            derive_commit_data(node, repo, store)
+            for node in repo.nodes("sort(. %% public(), -rev)")
+        ]
+    )
+
+    if not commits_to_process:
+        ui.status_err(_("no commits to submit\n"))
+        return 0
+
+    # Partition the chain.
+    partitions: List[List[CommitData]] = []
+    for commit in commits_to_process:
+        if commit.is_dep:
+            if partitions:
+                partitions[-1].append(commit)
+            else:
+                # If the top of the stack is a "dep commit", then do not
+                # submit it.
+                continue
+        else:
+            partitions.append([commit])
+
+    if not partitions:
+        # It is possible that all of the commits_to_process were tagged with
+        # [reviewstack-dep].
+        ui.status_err(_("no commits to submit\n"))
+        return 0
+
+    origin = get_origin(ui)
+
+    # git push --force any heads that need updating, creating new branch names,
+    # if necessary.
+    refs_to_update = []
+    pull_requests_to_create = []
+
+    # These are set lazily because they require GraphQL calls.
+    next_pull_request_number = None
+    repository = None
+
+    for partition in partitions:
+        top = partition[0]
+        pr = top.pr
+        if pr:
+            if pr.head_oid == hex(top.node):
+                ui.status_err(_("#%d is up-to-date\n") % pr.number)
+            else:
+                refs_to_update.append(
+                    f"{hex(top.node)}:refs/heads/{pr.head_branch_name}"
+                )
+        else:
+            # top.node will become the head of a new PR, so it needs a branch
+            # name.
+            if next_pull_request_number is None:
+                repository = await get_repository_for_origin(origin)
+                upstream_owner, upstream_name = repository.get_upstream_owner_and_name()
+                result = await gh_submit.guess_next_pull_request_number(
+                    upstream_owner, upstream_name
+                )
+                if result.is_error():
+                    raise error.Abort(
+                        _(
+                            "could not determine the next pull request number for %s/%s: %s"
+                        )
+                        % (upstream_owner, upstream_name, result.error)
+                    )
+                else:
+                    next_pull_request_number = result.ok
+            else:
+                next_pull_request_number += 1
+            # Consider including username in branch_name?
+            branch_name = f"pr{next_pull_request_number}"
+            refs_to_update.append(f"{hex(top.node)}:refs/heads/{branch_name}")
+            pull_requests_to_create.append((top, branch_name))
+
+    if refs_to_update:
+        gitdir = git.readgitdir(repo)
+        if not gitdir:
+            raise error.Abort(_("could not find gitdir"))
+
+        git_push_args = ["push", "--force", origin] + refs_to_update
+        ui.status_err(_("pushing %d to %s\n") % (len(refs_to_update), origin))
+        run_git_command(git_push_args, gitdir)
+    else:
+        ui.status_err(_("no pull requests to update\n"))
+        return 0
+
+    if pull_requests_to_create:
+        assert repository is not None
+        await create_pull_requests(pull_requests_to_create, repository, store, ui)
+
+    # Now that each pull request has a named branch pushed to GitHub, we can
+    # create/update the pull request title and body, as appropriate.
+    pr_numbers = [none_throws(p[0].pr).number for p in partitions]
+
+    rewrite_requests = [
+        rewrite_pull_request_body(partition, index, pr_numbers, ui)
+        for index, partition in enumerate(partitions)
+    ]
+    await asyncio.gather(*rewrite_requests)
+
+    # TODO: Add the head of the stack to the reviewstack-archive branch.
     return 0
 
 
-def find_commits_on_branch(ui, repo):
-    parents = repo.dirstate.parents()
-    if parents[0] == nullid:
-        # Root commit?
-        return
+async def rewrite_pull_request_body(
+    partition: List[CommitData], index: int, pr_numbers: List[int], ui
+):
+    head_commit_data = partition[0]
+    title, body = create_pull_request_title_and_body(
+        head_commit_data, pr_numbers, index
+    )
+    pr = head_commit_data.pr
+    assert pr
+    result = await gh_submit.update_pull_request(pr.node_id, title, body)
+    if result.is_error():
+        ui.status_err(
+            _("warning, updating #%d may not have succeeded: %s\n")
+            % (pr.number, result.error)
+        )
+    else:
+        ui.status_err(_("updated body for %s\n") % pr.url)
 
-    store = pullrequeststore.PullRequestStore(repo)
-    commits_to_process = [
-        (node, github_repo_util.get_pull_request_for_node(node, store, repo[node]))
-        for node in repo.nodes("sort(. %% public(), -rev)")
-    ]
 
-    # TODO: Take the list of commits_to_process and create/update pull requests,
-    # as appropriate.
-    for node, pr in commits_to_process:
-        url = pr.as_url() if pr else "None"
-        ui.status(f"{hex(node)}: {url}\n")
+async def create_pull_requests(
+    commits: List[Tuple[CommitData, str]],
+    repository: Repository,
+    store: PullRequestStore,
+    ui,
+):
+    """Creates a new pull request for each entry in the `commits` list.
+
+    Each CommitData in `commits` will be updated such that its `.pr` field is
+    set appropriately.
+    """
+    head_ref_prefix = f"{repository.owner}:" if repository.is_fork else ""
+    owner, name = repository.get_upstream_owner_and_name()
+    # Because these will be "overlapping" pull requests, all share the same
+    # base.
+    base = repository.get_base_branch()
+
+    # Create the pull requests in order serially to give us the best chance of
+    # the number in the branch name matching that of the actual pull request.
+    commits_to_update = []
+    for commit, branch_name in commits:
+        body = commit.get_msg()
+        title = firstline(body)
+        response = await gh_submit.create_pull_request(
+            owner=owner,
+            name=name,
+            base=base,
+            head=f"{head_ref_prefix}{branch_name}",
+            title=title,
+            body=body,
+        )
+
+        if response.is_error():
+            raise error.Abort(
+                _("error creating pull request for %s: %s")
+                % (hex(commit.node), response.error)
+            )
+
+        # Because create_pull_request() uses the REST API instead of the
+        # GraphQL API [where we would have to enumerate the fields we
+        # want in the response], the response JSON appears to contain
+        # "anything" we might want, but we only care about the number and URL.
+        data = response.ok
+        url = data["html_url"]
+        ui.status_err(_("created new pull request: %s\n") % url)
+        number = data["number"]
+        pr_id = PullRequestId(owner=owner, name=name, number=number)
+        store.map_commit_to_pull_request(commit.node, pr_id)
+        commits_to_update.append((commit, pr_id))
+
+    # Now that all of the pull requests have been created, update the .pr field
+    # on each CommitData. We prioritize the create_pull_request() calls to try
+    # to get the pull request numbers to match up.
+    prs = await asyncio.gather(
+        *[get_pull_request_details_or_throw(c[1]) for c in commits_to_update]
+    )
+    for (commit, _pr_id), pr in zip(commits_to_update, prs):
+        commit.pr = pr
+
+
+def create_pull_request_title_and_body(
+    commit_data: CommitData, pr_numbers: List[int], pr_numbers_index: int
+) -> Tuple[str, str]:
+    """Returns (title, body)"""
+    # TODO, for each item in the list, indicate if it has more than one commit.
+    bulleted_list = "\n".join(
+        [
+            f"* #{item}" if index != pr_numbers_index else f"* __->__ #{item}"
+            for index, item in enumerate(pr_numbers)
+        ]
+    )
+    commit_message = commit_data.get_msg()
+    title = firstline(commit_message)
+    body = f"""Stack created with [Sapling]
+{bulleted_list}
+
+{commit_message}
+"""
+    return title, body
+
+
+async def get_repository_for_origin(origin: str) -> Repository:
+    origin_owner, origin_name = get_owner_and_name(origin)
+    return await get_repo(origin_owner, origin_name)
+
+
+def get_origin(ui) -> str:
+    origin = ui.config("paths", "default")
+    if origin:
+        return origin
+    else:
+        raise error.Abort(_("paths.default not set in config"))
+
+
+def get_owner_and_name(origin: str) -> Tuple[str, str]:
+    owner_and_name = github_repo_util.parse_owner_and_name_from_github_url(origin)
+    if owner_and_name:
+        return owner_and_name
+    else:
+        raise error.Abort(_("could not parse GitHub owner and name from %s") % origin)
+
+
+async def get_repo(owner: str, name: str) -> Repository:
+    repo_result = await gh_submit.get_repository(owner, name)
+    repository = repo_result.ok
+    if repository:
+        return repository
+    else:
+        raise error.Abort(_("failed to fetch repo id: %s") % repo_result.error)
+
+
+async def derive_commit_data(node: bytes, repo, store: PullRequestStore) -> CommitData:
+    ctx = repo[node]
+    pr_id = github_repo_util.get_pull_request_for_node(node, store, ctx)
+    pr = await get_pull_request_details_or_throw(pr_id) if pr_id else None
+    msg = None
+    if pr:
+        is_dep = False
+    else:
+        msg = ctx.description()
+        is_dep = DEPENDENCY_PATTERN.search(ctx.description()) is not None
+    return CommitData(node=node, pr=pr, ctx=ctx, is_dep=is_dep, msg=msg)
+
+
+async def get_pull_request_details_or_throw(pr_id: PullRequestId) -> PullRequestDetails:
+    result = await gh_submit.get_pull_request_details(pr_id)
+    if result.is_error():
+        raise error.Abort(_("error fetching %s: %s") % (pr_id.as_url(), result.error))
+    else:
+        return none_throws(result.ok)
+
+
+def run_git_command(args: List[str], gitdir: str):
+    full_args = ["git", "--git-dir", gitdir] + args
+    proc = subprocess.run(full_args, capture_output=True)
+    if proc.returncode != 0:
+        raise error.Abort(
+            _("`%s` failed with exit code %d: %s")
+            % (
+                " ".join(full_args),
+                proc.returncode,
+                f"stdout: {proc.stdout}\nstderr: {proc.stderr}\n",
+            )
+        )
+
+
+EOL_PATTERN = re.compile(r"\r?\n")
+MAX_FIRSTLINE_LEN = 120
+
+
+def firstline(msg: str) -> str:
+    r"""Returns the "first line" of a commit message to use for the title of a
+    pull request.
+
+    >>> firstline("foobar")
+    'foobar'
+    >>> firstline("foo\nbar")
+    'foo'
+    >>> firstline("foo\r\nbar")
+    'foo'
+    >>> firstline("x" * (MAX_FIRSTLINE_LEN + 1)) == "x" * MAX_FIRSTLINE_LEN
+    True
+    """
+    match = EOL_PATTERN.search(msg)
+    end = match.start() if match else len(msg)
+    end = min(end, MAX_FIRSTLINE_LEN)
+    return msg[:end]
+
+
+_T = TypeVar("_T")
+
+
+def none_throws(optional: Optional[_T], msg: str = "Unexpected None") -> _T:
+    assert optional is not None, msg
+    return optional
