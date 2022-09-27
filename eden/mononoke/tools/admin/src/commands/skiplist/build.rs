@@ -99,7 +99,7 @@ pub async fn build_skiplist(
         }
     };
 
-    let heads = get_bonsai_heads_maybe_stale(repo, ctx.clone()).try_collect::<Vec<_>>();
+    let heads = get_heads_maybe_stale(repo, ctx.clone()).try_collect::<Vec<_>>();
 
     let (heads, (cs_fetcher, skiplist_index)) = try_join(heads, cs_fetcher_skiplist_func).await?;
 
@@ -162,7 +162,7 @@ async fn fetch_all_public_changesets_and_build_changeset_fetcher(
 
 /// Get Bonsai changesets for Mercurial heads, which we approximate as Publishing Bonsai
 /// Bookmarks. Those will be served from cache, so they might be stale.
-pub fn get_bonsai_heads_maybe_stale(
+pub fn get_heads_maybe_stale(
     repo: &Repo,
     ctx: CoreContext,
 ) -> impl Stream<Item = Result<ChangesetId, Error>> {

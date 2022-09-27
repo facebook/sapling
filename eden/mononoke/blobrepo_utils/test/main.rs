@@ -32,7 +32,10 @@ mod test {
                     let ctx = CoreContext::test_mock(fb);
 
                     let repo = $repo::getrepo(fb).await;
-                    let heads = repo.get_heads_maybe_stale(ctx.clone()).compat().collect();
+                    let heads = repo
+                        .get_hg_heads_maybe_stale(ctx.clone())
+                        .compat()
+                        .collect();
 
                     let verify = BonsaiMFVerify {
                         ctx: ctx.clone(),

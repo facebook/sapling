@@ -185,7 +185,7 @@ async fn build_skiplist_index<'a, S: ToString>(
     };
 
     let heads = repo
-        .get_bonsai_heads_maybe_stale(ctx.clone())
+        .get_heads_maybe_stale(ctx.clone())
         .try_collect::<Vec<_>>();
 
     let (heads, (cs_fetcher, skiplist_index)) = try_join(heads, cs_fetcher_skiplist_func).await?;

@@ -70,7 +70,7 @@ mod test {
     async fn get_changesets_from_repo(ctx: CoreContext, repo: &BlobRepo) -> Vec<ChangesetId> {
         let changeset_fetcher = repo.get_changeset_fetcher();
         let mut all_changesets_stream = repo
-            .get_bonsai_heads_maybe_stale(ctx.clone())
+            .get_heads_maybe_stale(ctx.clone())
             .compat() // conversion is needed as AncestorsNodeStream is an OldStream
             .map({
                 cloned!(ctx);
@@ -514,7 +514,7 @@ mod test {
             cloned!(repo, ctx);
             async move {
                 let heads = repo
-                    .get_bonsai_heads_maybe_stale(ctx.clone())
+                    .get_heads_maybe_stale(ctx.clone())
                     .try_collect::<Vec<_>>()
                     .await?;
                 try_join_all(heads.into_iter().map(|head| {

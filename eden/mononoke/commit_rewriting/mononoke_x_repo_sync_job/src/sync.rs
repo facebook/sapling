@@ -1035,7 +1035,7 @@ mod test {
         assert_eq!(&actually_missing, should_be_missing,);
 
         let heads: Vec<_> = smallrepo
-            .get_bonsai_heads_maybe_stale(ctx.clone())
+            .get_heads_maybe_stale(ctx.clone())
             .try_collect()
             .await?;
         for head in heads {

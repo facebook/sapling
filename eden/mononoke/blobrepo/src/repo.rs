@@ -67,7 +67,7 @@ use stats::prelude::*;
 
 define_stats! {
     prefix = "mononoke.blobrepo";
-    get_bonsai_heads_maybe_stale: timeseries(Rate, Sum),
+    get_heads_maybe_stale: timeseries(Rate, Sum),
     get_bonsai_publishing_bookmarks_maybe_stale: timeseries(Rate, Sum),
     get_changeset_parents_by_bonsai: timeseries(Rate, Sum),
     get_generation_number: timeseries(Rate, Sum),
@@ -206,11 +206,11 @@ impl BlobRepo {
 
     /// Get Bonsai changesets for Mercurial heads, which we approximate as Publishing Bonsai
     /// Bookmarks. Those will be served from cache, so they might be stale.
-    pub fn get_bonsai_heads_maybe_stale(
+    pub fn get_heads_maybe_stale(
         &self,
         ctx: CoreContext,
     ) -> impl Stream<Item = Result<ChangesetId, Error>> {
-        STATS::get_bonsai_heads_maybe_stale.add_value(1);
+        STATS::get_heads_maybe_stale.add_value(1);
         self.bookmarks()
             .list(
                 ctx,

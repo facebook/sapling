@@ -922,7 +922,7 @@ async fn verify_mapping_and_all_wc(
     verify_bookmarks(ctx.clone(), commit_syncer.clone()).await?;
 
     let heads: Vec<_> = source_repo
-        .get_bonsai_heads_maybe_stale(ctx.clone())
+        .get_heads_maybe_stale(ctx.clone())
         .try_collect()
         .await?;
 

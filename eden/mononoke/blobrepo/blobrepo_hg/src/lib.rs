@@ -74,7 +74,7 @@ pub trait BlobRepoHg: Send + Sync {
     where
         Self: ChangesetsRef + RepoDerivedDataRef + BonsaiHgMappingRef;
 
-    fn get_heads_maybe_stale(
+    fn get_hg_heads_maybe_stale(
         &self,
         ctx: CoreContext,
     ) -> BoxStream<'_, Result<HgChangesetId, Error>>
@@ -183,7 +183,7 @@ define_stats! {
     get_bookmark: timeseries(Rate, Sum),
     get_bookmarks_by_prefix_maybe_stale: timeseries(Rate, Sum),
     get_changeset_parents: timeseries(Rate, Sum),
-    get_heads_maybe_stale: timeseries(Rate, Sum),
+    get_hg_heads_maybe_stale: timeseries(Rate, Sum),
     get_hg_bonsai_mapping: timeseries(Rate, Sum),
     get_publishing_bookmarks_maybe_stale: timeseries(Rate, Sum),
     get_pull_default_bookmarks_maybe_stale: timeseries(Rate, Sum),
@@ -268,11 +268,14 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
     }
 
     /// Get Mercurial heads, which we approximate as publishing Bonsai Bookmarks.
-    fn get_heads_maybe_stale(&self, ctx: CoreContext) -> BoxStream<'_, Result<HgChangesetId, Error>>
+    fn get_hg_heads_maybe_stale(
+        &self,
+        ctx: CoreContext,
+    ) -> BoxStream<'_, Result<HgChangesetId, Error>>
     where
         Self: BookmarksRef + RepoDerivedDataRef + Send + Sync,
     {
-        STATS::get_heads_maybe_stale.add_value(1);
+        STATS::get_hg_heads_maybe_stale.add_value(1);
 
         self.bookmarks()
             .list(

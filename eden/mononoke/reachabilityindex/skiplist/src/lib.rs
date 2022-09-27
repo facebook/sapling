@@ -1566,7 +1566,7 @@ mod test {
                     let sli = SkiplistIndex::new();
                     {
                         let heads = repo
-                            .get_bonsai_heads_maybe_stale(ctx.clone())
+                            .get_heads_maybe_stale(ctx.clone())
                             .try_collect::<Vec<_>>()
                             .await
                             .unwrap();
