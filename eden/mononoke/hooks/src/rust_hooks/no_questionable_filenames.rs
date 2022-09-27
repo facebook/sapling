@@ -30,21 +30,11 @@ pub struct NoQuestionableFilenamesBuilder<'a> {
 impl<'a> NoQuestionableFilenamesBuilder<'a> {
     pub fn set_from_config(mut self, config: &'a HookConfig) -> Self {
         if let Some(v) = config.strings.get("allowlist_for_braces") {
-            self = self.allowlist_for_braces(v)
+            self.allowlist_for_braces = Some(v);
         }
         if let Some(v) = config.strings.get("allowlist_for_cmd_line") {
-            self = self.allowlist_for_cmd_line(v)
+            self.allowlist_for_cmd_line = Some(v);
         }
-        self
-    }
-
-    pub fn allowlist_for_braces(mut self, regex: &'a str) -> Self {
-        self.allowlist_for_braces = Some(regex);
-        self
-    }
-
-    pub fn allowlist_for_cmd_line(mut self, regex: &'a str) -> Self {
-        self.allowlist_for_cmd_line = Some(regex);
         self
     }
 
