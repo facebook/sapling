@@ -7,12 +7,12 @@ from edenscm import error
 from edenscm.i18n import _
 from edenscm.node import hex, nullid
 
-from . import github_repo, pullrequeststore
+from . import github_repo_util, pullrequeststore
 
 
 def submit(ui, repo, *args, **opts):
     """Create or update GitHub pull requests."""
-    if not github_repo.is_github_repo(repo):
+    if not github_repo_util.is_github_repo(repo):
         raise error.Abort(_("not a Git repo"))
 
     find_commits_on_branch(ui, repo)

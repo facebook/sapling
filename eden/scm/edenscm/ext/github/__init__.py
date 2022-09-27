@@ -11,7 +11,7 @@ from typing import Optional
 from edenscm import registrar
 from edenscm.i18n import _
 
-from . import github_repo as gh_repo, link, submit, templates
+from . import github_repo_util, link, submit, templates
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -83,7 +83,7 @@ def unlink_cmd(ui, repo, *args, **opts):
 
 @templatekeyword("github_repo")
 def github_repo(repo, ctx, templ, **args) -> bool:
-    return gh_repo.is_github_repo(repo)
+    return github_repo_util.is_github_repo(repo)
 
 
 def _get_pull_request_field(field_name: str, repo, ctx, **args):
