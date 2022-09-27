@@ -105,20 +105,6 @@ pub trait BlobRepoHg: Send + Sync {
     where
         Self: BookmarksRef + RepoDerivedDataRef;
 
-    fn get_pull_default_bookmarks_maybe_stale(
-        &self,
-        ctx: CoreContext,
-    ) -> BoxStream<'_, Result<(Bookmark, HgChangesetId), Error>>
-    where
-        Self: ChangesetsRef
-            + BonsaiHgMappingRef
-            + RepoDerivedDataRef
-            + BlobRepoHg
-            + BookmarksRef
-            + Clone
-            + Send
-            + Sync;
-
     fn get_publishing_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
@@ -127,22 +113,6 @@ pub trait BlobRepoHg: Send + Sync {
         Self: ChangesetsRef
             + BonsaiHgMappingRef
             + RepoDerivedDataRef
-            + BookmarksRef
-            + Clone
-            + Send
-            + Sync;
-
-    fn get_bookmarks_by_prefix_maybe_stale(
-        &self,
-        ctx: CoreContext,
-        prefix: &BookmarkPrefix,
-        max: u64,
-    ) -> BoxStream<'_, Result<(Bookmark, HgChangesetId), Error>>
-    where
-        Self: ChangesetsRef
-            + BonsaiHgMappingRef
-            + RepoDerivedDataRef
-            + BlobRepoHg
             + BookmarksRef
             + Clone
             + Send
@@ -181,12 +151,10 @@ define_stats! {
     hg_changeset_exists: timeseries(Rate, Sum),
     get_all_filenodes: timeseries(Rate, Sum),
     get_bookmark_hg: timeseries(Rate, Sum),
-    get_bookmarks_by_prefix_maybe_stale: timeseries(Rate, Sum),
     get_hg_changeset_parents: timeseries(Rate, Sum),
     get_hg_heads_maybe_stale: timeseries(Rate, Sum),
     get_hg_bonsai_mapping: timeseries(Rate, Sum),
     get_publishing_bookmarks_maybe_stale: timeseries(Rate, Sum),
-    get_pull_default_bookmarks_maybe_stale: timeseries(Rate, Sum),
 }
 
 #[async_trait]
@@ -363,34 +331,6 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
         }
     }
 
-    /// Get Pull-Default (Pull-Default is a Mercurial concept) bookmarks by prefix, they will be
-    /// read from cache or a replica, so they might be stale.
-    fn get_pull_default_bookmarks_maybe_stale(
-        &self,
-        ctx: CoreContext,
-    ) -> BoxStream<'_, Result<(Bookmark, HgChangesetId), Error>>
-    where
-        Self: ChangesetsRef
-            + BonsaiHgMappingRef
-            + RepoDerivedDataRef
-            + BlobRepoHg
-            + BookmarksRef
-            + Clone
-            + Send
-            + Sync,
-    {
-        STATS::get_pull_default_bookmarks_maybe_stale.add_value(1);
-        let stream = self.bookmarks().list(
-            ctx.clone(),
-            Freshness::MaybeStale,
-            &BookmarkPrefix::empty(),
-            &[BookmarkKind::PullDefaultPublishing][..],
-            &BookmarkPagination::FromStart,
-            std::u64::MAX,
-        );
-        to_hg_bookmark_stream(self, &ctx, stream)
-    }
-
     /// Get Publishing (Publishing is a Mercurial concept) bookmarks by prefix, they will be read
     /// from cache or a replica, so they might be stale.
     fn get_publishing_bookmarks_maybe_stale(
@@ -415,35 +355,6 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
             BookmarkKind::ALL_PUBLISHING,
             &BookmarkPagination::FromStart,
             std::u64::MAX,
-        );
-        to_hg_bookmark_stream(self, &ctx, stream)
-    }
-
-    /// Get bookmarks by prefix, they will be read from replica, so they might be stale.
-    fn get_bookmarks_by_prefix_maybe_stale(
-        &self,
-        ctx: CoreContext,
-        prefix: &BookmarkPrefix,
-        max: u64,
-    ) -> BoxStream<'_, Result<(Bookmark, HgChangesetId), Error>>
-    where
-        Self: ChangesetsRef
-            + BonsaiHgMappingRef
-            + RepoDerivedDataRef
-            + BlobRepoHg
-            + BookmarksRef
-            + Clone
-            + Send
-            + Sync,
-    {
-        STATS::get_bookmarks_by_prefix_maybe_stale.add_value(1);
-        let stream = self.bookmarks().list(
-            ctx.clone(),
-            Freshness::MaybeStale,
-            prefix,
-            BookmarkKind::ALL,
-            &BookmarkPagination::FromStart,
-            max,
         );
         to_hg_bookmark_stream(self, &ctx, stream)
     }
