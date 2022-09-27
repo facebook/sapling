@@ -19,6 +19,24 @@ templatekeyword = registrar.templatekeyword()
 
 
 @command(
+    "pr",
+    [],
+    _("SUBCOMMAND ..."),
+)
+def pull_request_command(ui, repo, *pats, **opts) -> None:
+    """exchange local commit data with GitHub pull requests"""
+    pass
+
+
+subcmd = pull_request_command.subcommand(
+    categories=[
+        ("Create or update pull requests", ["submit"]),
+        ("Manually manage associations with pull requests", ["link", "unlink"]),
+    ]
+)
+
+
+@subcmd(
     "submit",
     [
         (
@@ -35,7 +53,7 @@ def submit_cmd(ui, repo, *args, **opts):
     return submit.submit(ui, repo, *args, **opts)
 
 
-@command(
+@subcmd(
     "link",
     [("r", "rev", "", _("revision to link"), _("REV"))],
     _("[-r REV] PULL_REQUEST"),
@@ -51,6 +69,16 @@ def link_cmd(ui, repo, *args, **opts):
         if specified; otherwise, falls back to 'paths.default'.
     """
     return link.link(ui, repo, *args, **opts)
+
+
+@subcmd(
+    "unlink",
+    [("r", "rev", "", _("revision to unlink"), _("REV"))],
+    _("[-r REV]"),
+)
+def unlink_cmd(ui, repo, *args, **opts):
+    """remove a commit's association with a GitHub pull request"""
+    return link.unlink(ui, repo, *args, **opts)
 
 
 @templatekeyword("github_repo")

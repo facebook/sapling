@@ -26,6 +26,12 @@ def link(ui, repo, *args, **opts):
     pr_store.map_commit_to_pull_request(ctx.node(), pull_request)
 
 
+def unlink(ui, repo, *args, **opts):
+    ctx = scmutil.revsingle(repo, opts.get("rev"), None)
+    pr_store = PullRequestStore(repo)
+    pr_store.unlink(ctx.node())
+
+
 def resolve_pr_arg(pr_arg: str, ui) -> Optional[PullRequest]:
     num = try_parse_int(pr_arg)
     if num:
