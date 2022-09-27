@@ -14,6 +14,10 @@ import json
 from edenscm import mutation
 from edenscm.node import hex
 
+# Special value to indicate that there is explicitly no pull request associated
+# with this commit and therefore its predecessors should not be consulted.
+NO_ASSOC = "none"
+
 
 class PullRequest:
     __slots__ = ("owner", "name", "number")
@@ -35,13 +39,20 @@ class PullRequestStore:
         return json.dumps(self._get_pr_data(), indent=2)
 
     def map_commit_to_pull_request(self, node, pull_request: PullRequest):
-        pr_data = self._get_pr_data()
-        commits = pr_data[ML_COMMITS_PROPERTY]
-        commits[hex(node)] = {
+        pr = {
             "owner": pull_request.owner,
             "name": pull_request.name,
             "number": pull_request.number,
         }
+        self._write_mapping(node, pr)
+
+    def unlink(self, node):
+        self._write_mapping(node, NO_ASSOC)
+
+    def _write_mapping(self, node, json_serializable_value):
+        pr_data = self._get_pr_data()
+        commits = pr_data[ML_COMMITS_PROPERTY]
+        commits[hex(node)] = json_serializable_value
         with self._repo.lock(), self._repo.transaction("github"):
             ml = self._repo.metalog()
             blob = encode_pr_data(pr_data)
@@ -51,7 +62,9 @@ class PullRequestStore:
         commits = self._get_commits()
         for n in mutation.allpredecessors(self._repo, [node]):
             pr = commits.get(hex(n))
-            if pr:
+            if pr == NO_ASSOC:
+                return None
+            elif pr:
                 pull_request = PullRequest()
                 pull_request.owner = pr["owner"]
                 pull_request.name = pr["name"]
