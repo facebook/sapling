@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 source_control = { version = "0.1.0", path = "../../scs/if" }
-thiserror = "=1.0.30"
+thiserror = "1.0.36"

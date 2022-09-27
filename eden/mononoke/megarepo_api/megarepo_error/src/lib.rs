@@ -6,7 +6,10 @@
  */
 
 #![feature(backtrace)]
+#![feature(error_generic_member_access)]
+#![feature(provide_any)]
 
+use std::any::Demand;
 use std::backtrace::Backtrace;
 use std::backtrace::BacktraceStatus;
 use std::convert::Infallible;
@@ -28,6 +31,12 @@ macro_rules! cloneable_error {
         #[derive(Clone, Debug)]
         pub struct $name(pub ::std::sync::Arc<Error>);
 
+        impl $name {
+            pub fn backtrace(&self) -> &Backtrace {
+                self.0.backtrace()
+            }
+        }
+
         impl fmt::Display for $name {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 self.0.fmt(f)
@@ -45,8 +54,8 @@ macro_rules! cloneable_error {
                 Some(&**self.0)
             }
 
-            fn backtrace(&self) -> Option<&Backtrace> {
-                Some(self.0.backtrace())
+            fn provide<'a>(&'a self, demand: &mut Demand<'a>) {
+                demand.provide_ref::<Backtrace>(self.0.backtrace());
             }
         }
     };
@@ -128,12 +137,10 @@ impl From<MegarepoError> for scs_thrift::MegarepoAsynchronousRequestError {
             }),
             MegarepoError::InternalError(error) => {
                 let reason = error.to_string();
-                let backtrace = error
-                    .backtrace()
-                    .and_then(|backtrace| match backtrace.status() {
-                        BacktraceStatus::Captured => Some(backtrace.to_string()),
-                        _ => None,
-                    });
+                let backtrace = match error.backtrace().status() {
+                    BacktraceStatus::Captured => Some(error.backtrace().to_string()),
+                    _ => None,
+                };
                 let mut source_chain = Vec::new();
                 let mut error: &dyn StdError = &error;
                 while let Some(source) = error.source() {

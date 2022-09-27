@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 acl_regions = { version = "0.1.0", path = "../acl_regions" }
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 async_once_cell = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }
@@ -69,7 +69,7 @@ sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sqlphases = { version = "0.1.0", path = "../phases/sqlphases" }
 streaming_clone = { version = "0.1.0", path = "../repo_client/streaming_clone" }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../tunables" }
 virtually_sharded_blobstore = { version = "0.1.0", path = "../blobstore/virtually_sharded_blobstore" }

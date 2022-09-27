@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 changesets = { version = "0.1.0", path = "../../changesets" }

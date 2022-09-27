@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
@@ -20,7 +20,7 @@ maplit = "1.0"
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 uniqueheap = { version = "0.1.0", path = "../common/uniqueheap" }
 
 [dev-dependencies]

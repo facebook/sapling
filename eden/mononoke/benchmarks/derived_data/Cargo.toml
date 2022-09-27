@@ -12,7 +12,7 @@ name = "benchmark_large_directory"
 path = "benchmark_large_directory.rs"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 context = { version = "0.1.0", path = "../../server/context" }
 deleted_manifest = { version = "0.1.0", path = "../../derived_data/deleted_manifest" }

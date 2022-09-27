@@ -18,7 +18,7 @@ description = '''
 '''
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 eventsource = "0.5"
 filetime = "0.2.9"
 hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -29,7 +29,7 @@ reqwest = { version = "0.11.11", features = ["blocking", "json", "multipart", "r
 rust-ini = { version = "0.17", features = ["inline-comment"] }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 
 [dev-dependencies]
 tempfile = "3.3"

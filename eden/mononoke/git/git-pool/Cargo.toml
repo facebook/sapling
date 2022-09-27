@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 git2 = "0.13"
 num_cpus = "1.11"
 r2d2 = "0.8.8"

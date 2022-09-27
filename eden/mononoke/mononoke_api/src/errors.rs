@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::any::Demand;
+use std::any::Provider;
 use std::backtrace::Backtrace;
 use std::convert::Infallible;
 use std::error::Error as StdError;
@@ -29,6 +31,12 @@ use crate::path::MononokePath;
 #[derive(Clone, Debug)]
 pub struct InternalError(Arc<Error>);
 
+impl InternalError {
+    pub fn backtrace(&self) -> &Backtrace {
+        self.0.backtrace()
+    }
+}
+
 impl fmt::Display for InternalError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
@@ -46,8 +54,8 @@ impl StdError for InternalError {
         Some(&**self.0)
     }
 
-    fn backtrace(&self) -> Option<&Backtrace> {
-        Some(self.0.backtrace())
+    fn provide<'a>(&'a self, demand: &mut Demand<'a>) {
+        demand.provide_ref::<Backtrace>(self.0.backtrace());
     }
 }
 
@@ -75,6 +83,23 @@ pub enum MononokeError {
     AuthorizationError(String),
     #[error("internal error: {0}")]
     InternalError(#[source] InternalError),
+}
+
+impl Provider for MononokeError {
+    fn provide<'a>(&'a self, demand: &mut Demand<'a>) {
+        match self {
+            Self::InvalidRequest(..)
+            | Self::MergeConflicts { .. }
+            | Self::PushrebaseConflicts(..)
+            | Self::ServicePermissionDenied { .. }
+            | Self::HookFailure(..)
+            | Self::NotAvailable(..)
+            | Self::AuthorizationError(..) => {}
+            Self::InternalError(error) => {
+                demand.provide_ref::<Backtrace>(error.backtrace());
+            }
+        }
+    }
 }
 
 impl From<Error> for MononokeError {

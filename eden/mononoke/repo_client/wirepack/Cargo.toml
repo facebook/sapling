@@ -8,14 +8,14 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 bytes = { version = "1.1", features = ["serde"] }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
 mercurial_bundles = { version = "0.1.0", path = "../../mercurial/bundles" }
 mercurial_revlog = { version = "0.1.0", path = "../../mercurial/revlog" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 
 [dev-dependencies]
 maplit = "1.0"

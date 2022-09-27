@@ -12,7 +12,7 @@ name = "megarepotool"
 path = "tool/main.rs"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_utils = { version = "0.1.0", path = "../../blobrepo_utils" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }

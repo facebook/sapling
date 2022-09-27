@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 alpn = { version = "0.1.0", path = "../alpn" }
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 async-trait = "0.1.56"
 cache_warmup = { version = "0.1.0", path = "../cache_warmup" }
 clap = { version = "3.2.17", features = ["derive", "regex", "unicode", "wrap_help"] }

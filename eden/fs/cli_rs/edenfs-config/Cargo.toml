@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 stack-config = { version = "0.1.0", path = "../stack-config" }

@@ -12,7 +12,7 @@ name = "blobrepo_utils_test"
 path = "test/main.rs"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobrepo_override = { version = "0.1.0", path = "../blobrepo/override" }
@@ -30,7 +30,7 @@ mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]

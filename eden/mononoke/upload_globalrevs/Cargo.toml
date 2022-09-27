@@ -12,7 +12,7 @@ name = "upload_globalrevs"
 path = "../cmds/upload_globalrevs.rs"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapping" }

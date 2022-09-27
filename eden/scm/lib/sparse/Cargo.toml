@@ -6,13 +6,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 globset = "0.4.7"
 once_cell = "1.12"
 pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 regex = "1.5.4"
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 tracing = "0.1.35"
 types = { version = "0.1.0", path = "../types" }
 

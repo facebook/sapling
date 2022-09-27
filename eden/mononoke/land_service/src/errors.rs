@@ -90,12 +90,6 @@ impl From<LandChangesetsError> for LandChangesetsExn {
 
 pub(crate) fn internal_error(error: &dyn StdError) -> land_service_if::InternalError {
     let _reason = format!("{:#}", error);
-    let _backtrace = error
-        .backtrace()
-        .and_then(|backtrace| match backtrace.status() {
-            BacktraceStatus::Captured => Some(backtrace.to_string()),
-            _ => None,
-        });
     let mut source_chain = Vec::new();
     let mut error: &dyn StdError = &error;
     while let Some(source) = error.source() {

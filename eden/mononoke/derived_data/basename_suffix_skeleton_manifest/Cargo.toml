@@ -11,7 +11,7 @@ license = "GPLv2+"
 path = "lib.rs"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 async-trait = "0.1.56"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

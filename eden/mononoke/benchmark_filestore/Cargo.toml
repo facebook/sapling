@@ -13,7 +13,7 @@ path = "../cmds/benchmark_filestore.rs"
 test = false
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }
 bytes = { version = "1.1", features = ["serde"] }

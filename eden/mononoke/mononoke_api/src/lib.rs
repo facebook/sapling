@@ -6,6 +6,8 @@
  */
 
 #![feature(backtrace)]
+#![feature(error_generic_member_access)]
+#![feature(provide_any)]
 
 use std::sync::Arc;
 use std::time::Instant;

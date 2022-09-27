@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
 changesets = { version = "0.1.0", path = "../changesets" }
 context = { version = "0.1.0", path = "../server/context" }

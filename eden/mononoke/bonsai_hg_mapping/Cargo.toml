@@ -14,7 +14,7 @@ path = "test/main.rs"
 [dependencies]
 abomonation = "0.7"
 abomonation_derive = "0.5"
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 async-trait = "0.1.56"
 auto_impl = "0.4"
 bonsai_hg_mapping_entry_thrift = { version = "0.1.0", path = "if" }
@@ -36,7 +36,7 @@ sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-s
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 tunables = { version = "0.1.0", path = "../tunables" }
 
 [dev-dependencies]

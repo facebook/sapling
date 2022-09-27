@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 libc = "0.2.132"
 
 [target.'cfg(target_os = "windows")'.dependencies]

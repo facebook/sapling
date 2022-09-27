@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 async-trait = "0.1.56"
 base64 = "0.11.0"
 blobstore = { version = "0.1.0", path = "../blobstore" }
@@ -48,7 +48,7 @@ serde_cbor = "0.11"
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 tunables = { version = "0.1.0", path = "../tunables" }
 types = { version = "0.1.0", path = "../../scm/lib/types" }
 

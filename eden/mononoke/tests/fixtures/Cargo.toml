@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 async-trait = "0.1.56"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }

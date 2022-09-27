@@ -6,14 +6,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
 checkout = { version = "0.1.0", path = "../checkout" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 repo = { version = "0.1.0", path = "../repo" }
 termlogger = { version = "0.1.0", path = "../io/term/logger" }
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 tracing = "0.1.35"
 treestate = { version = "0.1.0", path = "../treestate" }
 types = { version = "0.1.0", path = "../types" }

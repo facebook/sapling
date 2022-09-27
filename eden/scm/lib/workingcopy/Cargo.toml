@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 configparser = { version = "0.1.0", path = "../config/parser" }
@@ -23,7 +23,7 @@ serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_dep
 sparse = { version = "0.1.0", path = "../sparse" }
 status = { version = "0.1.0", path = "../status" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 thrift-types = { version = "0.1.0", path = "../thrift-types", optional = true }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tracing = "0.1.35"

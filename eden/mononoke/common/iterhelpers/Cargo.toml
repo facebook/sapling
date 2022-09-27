@@ -8,4 +8,4 @@ edition = "2021"
 license = "GPLv2+"
 
 [dev-dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"

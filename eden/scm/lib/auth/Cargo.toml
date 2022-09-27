@@ -6,13 +6,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 configmodel = { version = "0.1.0", path = "../config/model" }
 indexmap = { version = "1.9.1", features = ["rayon", "serde-1"] }
 pem = "0.8"
 simple_asn1 = "0.4"
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 tracing = "0.1.35"
 url = "2.2.2"
 util = { version = "0.1.0", path = "../util" }

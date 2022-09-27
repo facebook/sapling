@@ -11,7 +11,7 @@ license = "GPLv2+"
 path = "lib.rs"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 async-recursion = "0.3.2"
 async-trait = "0.1.56"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
@@ -37,7 +37,7 @@ repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }

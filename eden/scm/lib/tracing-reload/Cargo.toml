@@ -7,7 +7,7 @@ authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 once_cell = "1.12"
 tracing = "0.1.35"
 tracing-subscriber = { version = "0.3.14", features = ["ansi", "env-filter", "fmt", "json", "local-time", "parking_lot", "registry"] }

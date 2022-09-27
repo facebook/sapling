@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 async-trait = "0.1.56"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
@@ -24,7 +24,7 @@ mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 
 [dev-dependencies]

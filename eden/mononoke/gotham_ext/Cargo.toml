@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 async-compression = { version = "0.3.14", features = ["all-implementations", "brotli", "bzip2", "deflate", "gzip", "zlib", "zstd"] }
 async-trait = "0.1.56"
 bytes = { version = "1.1", features = ["serde"] }

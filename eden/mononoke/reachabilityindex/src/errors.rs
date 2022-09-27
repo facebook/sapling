@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::backtrace::Backtrace;
+use std::any::Demand;
 use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
@@ -38,10 +38,9 @@ impl Error for BlobRepoErrorCause {
         }
     }
 
-    fn backtrace(&self) -> Option<&Backtrace> {
-        match self.cause {
-            Some(ref error) => error.backtrace(),
-            None => None,
+    fn provide<'a>(&'a self, demand: &mut Demand<'a>) {
+        if let Some(error) = &self.cause {
+            error.provide(demand);
         }
     }
 }

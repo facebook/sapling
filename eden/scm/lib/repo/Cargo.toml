@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 configparser = { version = "0.1.0", path = "../config/parser" }
@@ -19,7 +19,7 @@ parking_lot = { version = "0.11.2", features = ["send_guard"] }
 refencode = { version = "0.1.0", path = "../refencode" }
 revisionstore = { version = "0.1.0", path = "../revisionstore" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 tracing = "0.1.35"
 treestate = { version = "0.1.0", path = "../treestate" }
 types = { version = "0.1.0", path = "../types" }

@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 clap = { version = "3.2.17", features = ["derive", "regex", "unicode", "wrap_help"] }
 environment = { version = "0.1.0", path = "../environment" }

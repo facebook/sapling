@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
@@ -23,7 +23,7 @@ getbundle_response = { version = "0.1.0", path = "../getbundle_response" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
 revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 tunables = { version = "0.1.0", path = "../../tunables" }
 
 [dev-dependencies]

@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 async-trait = "0.1.56"
 auto_impl = "0.4"
 blobrepo_errors = { version = "0.1.0", path = "../blobrepo/errors" }
@@ -16,5 +16,5 @@ changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" 
 context = { version = "0.1.0", path = "../server/context" }
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 uniqueheap = { version = "0.1.0", path = "../common/uniqueheap" }

@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 configmodel = { version = "0.1.0", path = "../config/model" }
 fs2 = "0.4"

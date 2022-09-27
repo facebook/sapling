@@ -7,11 +7,11 @@ authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 bitflags = "1.3"
 byteorder = "1.3"
 sha2 = "0.10"
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 twox-hash = "1.6.1"
 types = { version = "0.1.0", path = "../types" }
 util = { version = "0.1.0", path = "../util" }

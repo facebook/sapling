@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 async-trait = "0.1.56"
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -16,4 +16,4 @@ permission_checker = { version = "0.1.0", path = "../permission_checker" }
 rate_limiting_config = { version = "0.1.0", path = "../../../configerator/structs/scm/mononoke/ratelimiting" }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "=1.0.30"
+thiserror = "1.0.36"

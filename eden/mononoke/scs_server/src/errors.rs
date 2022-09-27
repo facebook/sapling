@@ -113,12 +113,10 @@ impl From<MegarepoError> for ServiceError {
             }),
             MegarepoError::InternalError(error) => {
                 let reason = error.to_string();
-                let backtrace = error
-                    .backtrace()
-                    .and_then(|backtrace| match backtrace.status() {
-                        BacktraceStatus::Captured => Some(backtrace.to_string()),
-                        _ => None,
-                    });
+                let backtrace = match error.backtrace().status() {
+                    BacktraceStatus::Captured => Some(error.backtrace().to_string()),
+                    _ => None,
+                };
                 let mut source_chain = Vec::new();
                 let mut error: &dyn StdError = &error;
                 while let Some(source) = error.source() {
@@ -179,12 +177,10 @@ impl From<MononokeError> for ServiceError {
             }),
             MononokeError::InternalError(error) => {
                 let reason = format!("{:#}", error);
-                let backtrace = error
-                    .backtrace()
-                    .and_then(|backtrace| match backtrace.status() {
-                        BacktraceStatus::Captured => Some(backtrace.to_string()),
-                        _ => None,
-                    });
+                let backtrace = match error.backtrace().status() {
+                    BacktraceStatus::Captured => Some(error.backtrace().to_string()),
+                    _ => None,
+                };
                 let mut source_chain = Vec::new();
                 let mut error: &dyn StdError = &error;
                 while let Some(source) = error.source() {

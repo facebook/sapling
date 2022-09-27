@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 async-trait = "0.1.56"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bytes = { version = "1.1", features = ["serde"] }
@@ -57,7 +57,7 @@ serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 time_window_counter = { version = "0.1.0", path = "../time_window_counter" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }

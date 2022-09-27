@@ -14,12 +14,12 @@ path = "tests/src/main.rs"
 [dependencies]
 abomonation = "0.7"
 abomonation_derive = "0.5"
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 async-trait = "0.1.56"
 context = { version = "0.1.0", path = "../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 
 [dev-dependencies]
 blobrepo = { version = "0.1.0", path = "../blobrepo" }

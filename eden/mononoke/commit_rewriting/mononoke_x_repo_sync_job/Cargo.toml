@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 backsyncer = { version = "0.1.0", path = "../backsyncer" }
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }

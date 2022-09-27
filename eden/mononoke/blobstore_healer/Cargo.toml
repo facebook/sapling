@@ -12,7 +12,7 @@ name = "blobstore_healer"
 path = "../cmds/blobstore_healer/main.rs"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 async-trait = "0.1.56"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }

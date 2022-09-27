@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 async-recursion = "0.3.2"
 atomicfile = { version = "0.1.0", path = "../../../scm/lib/atomicfile" }
 byteorder = "1.3"

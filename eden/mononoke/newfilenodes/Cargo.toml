@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 abomonation = "0.7"
 abomonation_derive = "0.5"
-anyhow = "1.0.56"
+anyhow = "1.0.65"
 async-trait = "0.1.56"
 bytes = { version = "1.1", features = ["serde"] }
 cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -33,7 +33,7 @@ sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-s
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "=1.0.30"
+thiserror = "1.0.36"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../tunables" }
