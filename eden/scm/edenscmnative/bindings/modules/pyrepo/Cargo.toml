@@ -14,6 +14,8 @@ pyconfigparser = { path = "../pyconfigparser" }
 pydag = { path = "../pydag" }
 pyedenapi = { path = "../pyedenapi" }
 pymetalog = { path = "../pymetalog" }
+pyworkingcopy = { path = "../pyworkingcopy" }
+workingcopy = { path = "../../../../lib/workingcopy" }
 
 [features]
 python3 = ["cpython/python3-sys", "cpython_ext/python3"]

@@ -21,6 +21,10 @@ pub struct InvalidSharedPath(pub String);
 #[error("remotenames key is not initalized in metalog")]
 pub struct RemotenamesMetalogKeyError;
 
+#[derive(Debug, Error)]
+#[error("working copy is missing information or corrupt: {0}")]
+pub struct InvalidWorkingCopy(#[from] anyhow::Error);
+
 #[derive(Error, Debug)]
 pub enum InitError {
     #[error("repository `{0}` already exists")]

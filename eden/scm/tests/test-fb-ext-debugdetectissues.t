@@ -5,8 +5,8 @@
   $ newserver master
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
-  > cachelimit = 0B
-  > manifestlimit = 0B
+  > cachelimit = 100B
+  > manifestlimit = 100B
   > EOF
   $ hg debugdetectissues
   ran issue detector 'cachesizeexceedslimit', found 0 issues
@@ -19,10 +19,10 @@
   $ cd shallow
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
-  > cachelimit = 0B
-  > manifestlimit = 0B
+  > cachelimit = 100B
+  > manifestlimit = 100B
   > EOF
   $ hg debugdetectissues
   ran issue detector 'cachesizeexceedslimit', found 2 issues
-  'cache_size_exceeds_limit': 'cache size of * exceeds configured limit of 0. 0 files skipped.' (glob)
-  'manifest_size_exceeds_limit': 'manifest cache size of * exceeds configured limit of 0. 0 files skipped.' (glob)
+  'cache_size_exceeds_limit': 'cache size of * exceeds configured limit of 100. 0 files skipped.' (glob)
+  'manifest_size_exceeds_limit': 'manifest cache size of * exceeds configured limit of 100. 0 files skipped.' (glob)

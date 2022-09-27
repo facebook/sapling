@@ -8,6 +8,10 @@
 #![allow(non_camel_case_types)]
 
 extern crate repo as rsrepo;
+extern crate workingcopy as rsworkingcopy;
+
+use std::cell::RefCell;
+use std::sync::Arc;
 
 use cpython::*;
 use cpython_ext::error::ResultPyErrExt;
@@ -18,7 +22,9 @@ use pyconfigparser::config;
 use pydag::commits::commits as PyCommits;
 use pyedenapi::PyClient as PyEdenApi;
 use pymetalog::metalog as PyMetaLog;
+use pyworkingcopy::workingcopy as PyWorkingCopy;
 use rsrepo::repo::Repo;
+use rsworkingcopy::workingcopy::WorkingCopy;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "repo"].join(".");
@@ -29,6 +35,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
 py_class!(pub class repo |py| {
     data inner: RwLock<Repo>;
+    data inner_wc: RefCell<Option<Arc<RwLock<WorkingCopy>>>>;
 
     @staticmethod
     def initialize(path: PyPathBuf, config: &config) -> PyResult<PyNone> {
@@ -39,8 +46,18 @@ py_class!(pub class repo |py| {
     def __new__(_cls, path: PyPathBuf, config: &config) -> PyResult<Self> {
         let config = config.get_cfg(py);
         let abs_path = util::path::absolute(path.as_path()).map_pyerr(py)?;
-        let repo = Repo::load_with_config(abs_path, config).map_pyerr(py)?;
-        Self::create_instance(py, RwLock::new(repo))
+        let repo = Repo::load_with_config(&abs_path, config).map_pyerr(py)?;
+        Self::create_instance(py, RwLock::new(repo), RefCell::new(None))
+    }
+
+    def workingcopy(&self) -> PyResult<PyWorkingCopy> {
+        let mut wc_option = self.inner_wc(py).borrow_mut();
+        if wc_option.is_none() {
+            let mut repo = self.inner(py).write();
+            let path = repo.path().to_path_buf();
+            wc_option.replace(Arc::new(RwLock::new(repo.working_copy(&path).map_pyerr(py)?)));
+        }
+        PyWorkingCopy::create_instance(py, wc_option.as_ref().unwrap().clone())
     }
 
     def metalog(&self) -> PyResult<PyMetaLog> {

@@ -7,6 +7,8 @@
 
 #![allow(non_camel_case_types)]
 
+extern crate workingcopy as rsworkingcopy;
+
 use std::cell::RefCell;
 use std::sync::Arc;
 use std::time::Duration;
@@ -19,15 +21,17 @@ use cpython::*;
 use cpython_ext::convert::ImplInto;
 use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyPathBuf;
+use parking_lot::RwLock;
 use pathmatcher::Matcher;
 use pyconfigparser::config as PyConfig;
 use pymanifest::treemanifest;
 use pypathmatcher::extract_matcher;
 use pypathmatcher::extract_option_matcher;
 use pytreestate::treestate;
+use rsworkingcopy::walker::WalkError;
+use rsworkingcopy::walker::Walker;
+use rsworkingcopy::workingcopy::WorkingCopy;
 use storemodel::ReadFileContents;
-use workingcopy::walker::WalkError;
-use workingcopy::walker::Walker;
 
 type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
 
@@ -106,13 +110,13 @@ py_class!(class status |py| {
         let matcher = extract_option_matcher(py, pymatcher)?;
         let filesystem = match filesystem {
             "normal" => {
-                workingcopy::filesystem::FileSystemType::Normal
+                rsworkingcopy::filesystem::FileSystemType::Normal
             },
             "watchman" => {
-                workingcopy::filesystem::FileSystemType::Watchman
+                rsworkingcopy::filesystem::FileSystemType::Watchman
             },
             "eden" => {
-                workingcopy::filesystem::FileSystemType::Eden
+                rsworkingcopy::filesystem::FileSystemType::Eden
             },
             _ => return Err(anyhow!("Unsupported filesystem type: {}", filesystem)).map_pyerr(py),
         };
@@ -120,7 +124,7 @@ py_class!(class status |py| {
         let treestate = pytreestate.get_state(py);
 
         let config = config.get_cfg(py);
-        let status = py.allow_threads(|| workingcopy::status::status(
+        let status = py.allow_threads(|| rsworkingcopy::status::status(
             root,
             filesystem,
             manifest,
@@ -135,4 +139,8 @@ py_class!(class status |py| {
         let status = status.map_pyerr(py)?;
         pystatus::to_python_status(py, &status)
     }
+});
+
+py_class!(pub class workingcopy |py| {
+    data inner_wc: Arc<RwLock<WorkingCopy>>;
 });

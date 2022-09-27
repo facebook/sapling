@@ -285,6 +285,8 @@ def callcatch(ui, req, func):
         ui.warn(_("%s\n") % inst, error=_("abort"))
     except error.NonUTF8PathError as inst:
         ui.warn(_("%s\n") % str(inst), error=_("abort"))
+    except error.WorkingCopyError as inst:
+        ui.warn(_("%s\n") % str(inst), error=_("abort"))
     except ImportError as inst:
         ui.warn(_("%s!\n") % inst, error=_("abort"))
         m = str(inst).split()[-1]

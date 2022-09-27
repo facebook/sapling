@@ -1,8 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
   $ configure dummyssh modernclient
-  $ hg init repo
-  $ cd repo
+  $ newclientrepo repo
 
 Empty
   $ hg log --configfile
@@ -49,14 +48,16 @@ Attribution works
 
 Cloning adds --configfile values to .hg/hgrc
   $ cd ..
-  $ hg clone ssh://user@dummy/repo repo2 --configfile $TESTTMP/simple.rc --configfile $TESTTMP/other.rc
-  no changes found
+  $ hg clone test:repo_server repo2 --configfile $TESTTMP/simple.rc --configfile $TESTTMP/other.rc
+  fetching lazy changelog
+  populating main commit graph
+  fetching selected remote bookmarks
   updating to branch default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ dos2unix repo2/.hg/hgrc
   # example repository config (see 'hg help config' for more info)
   [paths]
-  default = ssh://user@dummy/repo
+  default = test:repo_server
   
   # path aliases to other clones of this repo in URLs or filesystem paths
   # (see 'hg help config.paths' for more info)

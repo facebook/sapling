@@ -276,22 +276,24 @@
   > [templates]
   > changeset = "{a}\n"
   > [templatealias]
-  > a = rev
+  > a = desc
   > EOF
   $ hg log -l1 -T./map-simple
-  8
+  third
 
 #  so it can be included in hgrc
 
-  $ cat > myhgrc << 'EOF'
-  > %include map-simple
+  $ cp .hg/hgrc .hg/orig.hgrc
+  $ cat >> .hg/hgrc << 'EOF'
+  > %include ../map-simple
   > [templates]
-  > foo = "{changeset}"
+  > foo = "{desc}\n"
   > EOF
-  $ HGRCPATH=./myhgrc hg log -l1 -Tfoo
-  8
-  $ HGRCPATH=./myhgrc hg log -l1 '-T{a}\n'
-  8
+  $ hg log -l1 -Tfoo
+  third
+  $ hg log -l1 '-T{a}\n'
+  third
+  $ cp .hg/orig.hgrc .hg/hgrc
 
 # Test template map inheritance
 

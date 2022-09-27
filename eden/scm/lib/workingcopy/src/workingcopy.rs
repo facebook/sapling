@@ -63,7 +63,7 @@ impl AsRef<Box<dyn PendingChanges + Send>> for FileSystem {
 pub struct WorkingCopy {
     treestate: Arc<Mutex<TreeState>>,
     tree_resolver: ArcReadTreeManifest,
-    filesystem: FileSystem,
+    filesystem: Mutex<FileSystem>,
     ignore_matcher: Arc<GitignoreMatcher>,
 }
 
@@ -88,14 +88,14 @@ impl WorkingCopy {
                 .collect(),
         ));
 
-        let filesystem = Self::construct_file_system(
+        let filesystem = Mutex::new(Self::construct_file_system(
             root.clone(),
             file_system_type,
             treestate.clone(),
             tree_resolver.clone(),
             filestore,
             last_write,
-        )?;
+        )?);
 
         Ok(WorkingCopy {
             treestate,
@@ -213,7 +213,7 @@ impl WorkingCopy {
         &self,
         manifests: &Vec<Arc<RwLock<TreeManifest>>>,
     ) -> Result<Arc<dyn Matcher + Send + Sync + 'static>> {
-        let fs = &self.filesystem;
+        let fs = &self.filesystem.lock();
 
         let mut sparse_matchers: Vec<Arc<dyn Matcher + Send + Sync + 'static>> = Vec::new();
         if fs.file_system_type == FileSystemType::Eden {
@@ -268,6 +268,7 @@ impl WorkingCopy {
         ));
         let pending_changes = self
             .filesystem
+            .lock()
             .inner
             .pending_changes(matcher.clone())?
             .filter_map(|result| match result {

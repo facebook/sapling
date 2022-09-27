@@ -7,12 +7,12 @@
 
 use std::collections::BTreeMap;
 use std::fs;
-use std::fs::File;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::SystemTime;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use configmodel::ConfigExt;
 use configparser::config::ConfigSet;
@@ -33,6 +33,7 @@ use revisionstore::MemcacheStore;
 use storemodel::ReadFileContents;
 use storemodel::TreeStore;
 use treestate::dirstate::Dirstate;
+use treestate::dirstate::TreeStateFields;
 use treestate::serialization::Serializable;
 use treestate::treestate::TreeState;
 use types::HgId;
@@ -353,7 +354,7 @@ impl Repo {
         Ok(ts)
     }
 
-    pub fn working_copy(&mut self, path: &Path) -> Result<WorkingCopy> {
+    pub fn working_copy(&mut self, path: &Path) -> Result<WorkingCopy, errors::InvalidWorkingCopy> {
         let is_eden = self.requirements.contains("eden");
         let is_watchman = self.config.get_nonempty("fsmonitor", "mode") == Some("on".into());
         let filesystem = match (is_eden, is_watchman) {
@@ -366,16 +367,41 @@ impl Repo {
         let treestate = match filesystem {
             FileSystemType::Eden => TreeState::from_eden_dirstate(dirstate_path)?,
             _ => {
-                let mut buf = File::open(dirstate_path)?;
-                let dirstate = Dirstate::deserialize(&mut buf)?;
-                let fields = dirstate.tree_state.expect(
-                    "Dirstate must contain tree state fields necessary to construct treestate",
-                );
-                let treestate_path = path
-                    .join(self.ident.dot_dir())
-                    .join("treestate")
-                    .join(fields.tree_filename);
-                TreeState::open(treestate_path, fields.tree_root_id)?
+                let treestate_path = path.join(self.ident.dot_dir()).join("treestate");
+                if util::file::exists(&dirstate_path)
+                    .map_err(anyhow::Error::from)?
+                    .is_some()
+                {
+                    let mut buf =
+                        util::file::open(dirstate_path, "r").map_err(anyhow::Error::from)?;
+                    let dirstate = Dirstate::deserialize(&mut buf)?;
+                    let fields = dirstate
+                        .tree_state
+                        .ok_or_else(|| anyhow!("missing treestate fields on dirstate"))?;
+
+                    TreeState::open(
+                        treestate_path.join(fields.tree_filename),
+                        fields.tree_root_id,
+                    )?
+                } else {
+                    let (treestate, root_id) = TreeState::new(&treestate_path)?;
+
+                    let dirstate = Dirstate {
+                        p0: *HgId::null_id(),
+                        p1: *HgId::null_id(),
+                        tree_state: Some(TreeStateFields {
+                            tree_filename: treestate.file_name()?,
+                            tree_root_id: root_id,
+                            // TODO: set threshold
+                            repack_threshold: None,
+                        }),
+                    };
+
+                    let mut file =
+                        util::file::create(dirstate_path).map_err(anyhow::Error::from)?;
+                    dirstate.serialize(&mut file)?;
+                    treestate
+                }
             }
         };
         let treestate = Arc::new(Mutex::new(treestate));
@@ -386,7 +412,7 @@ impl Repo {
             self.tree_store()?,
         ));
 
-        WorkingCopy::new(
+        Ok(WorkingCopy::new(
             path.to_path_buf(),
             filesystem,
             treestate,
@@ -394,8 +420,7 @@ impl Repo {
             file_store,
             SystemTime::UNIX_EPOCH,
             &self.config,
-        )
-        .map_err(|err| err)
+        )?)
     }
 
     async fn get_root_tree_id(&mut self, commit_id: HgId) -> Result<HgId> {

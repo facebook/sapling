@@ -33,8 +33,9 @@ LockContendedError = bindings.error.LockContendedError
 MetaLogError = bindings.error.MetaLogError
 NeedSlowPathError = bindings.error.NeedSlowPathError
 NonUTF8PathError = bindings.error.NonUTF8Path
-RustError = bindings.error.RustError
+WorkingCopyError = bindings.error.WorkingCopyError
 RevisionstoreError = bindings.error.RevisionstoreError
+RustError = bindings.error.RustError
 TlsError = bindings.error.TlsError
 
 

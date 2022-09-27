@@ -2,8 +2,8 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
-  $ hg init repo
-  $ cd repo
+  $ configure modernclient
+  $ newclientrepo repo
   $ export EDENSCM_LOG=auth=debug
 
 No credentials
@@ -13,7 +13,8 @@ No credentials
 
 Single credential
 
-  $ cat > "$HGRCPATH" << EOF
+  $ cp $HGRCPATH $TESTTMP/orig.hrc
+  $ cat >> "$HGRCPATH" << EOF
   > [auth]
   > first.prefix=example.com
   > first.schemes=https
@@ -25,7 +26,8 @@ Single credential
 
 Non-existent credentials are ignored
 
-  $ cat > "$HGRCPATH" << EOF
+  $ cp $TESTTMP/orig.hrc $HGRCPATH
+  $ cat >> "$HGRCPATH" << EOF
   > [auth]
   > first.cert=foocert
   > first.prefix=example.com
@@ -43,7 +45,8 @@ Non-existent credentials are ignored
 Valid credentials are used
 
   $ touch foocert
-  $ cat > "$HGRCPATH" << EOF
+  $ cp $TESTTMP/orig.hrc $HGRCPATH
+  $ cat >> "$HGRCPATH" << EOF
   > [auth]
   > first.cert=foocert
   > first.prefix=example.com
@@ -57,7 +60,8 @@ Valid credentials are used
 
 Valid credentials are preferred
 
-  $ cat > "$HGRCPATH" << EOF
+  $ cp $TESTTMP/orig.hrc $HGRCPATH
+  $ cat >> "$HGRCPATH" << EOF
   > [auth]
   > first.cert=foocert
   > first.prefix=example.com
@@ -76,7 +80,8 @@ Valid credentials are preferred
 
 Longest prefixes are used
 
-  $ cat > "$HGRCPATH" << EOF
+  $ cp $TESTTMP/orig.hrc $HGRCPATH
+  $ cat >> "$HGRCPATH" << EOF
   > [auth]
   > first.prefix=example.com/foo
   > first.schemes=https
@@ -90,7 +95,8 @@ Longest prefixes are used
 
 Prefixes take precedence over priorities
 
-  $ cat > "$HGRCPATH" << EOF
+  $ cp $TESTTMP/orig.hrc $HGRCPATH
+  $ cat >> "$HGRCPATH" << EOF
   > [auth]
   > first.prefix=example.com/foo
   > first.schemes=https
@@ -105,7 +111,8 @@ Prefixes take precedence over priorities
 
 Priorities take precedence over user names
 
-  $ cat > "$HGRCPATH" << EOF
+  $ cp $TESTTMP/orig.hrc $HGRCPATH
+  $ cat >> "$HGRCPATH" << EOF
   > [auth]
   > first.prefix=example.com
   > first.schemes=https
@@ -122,7 +129,8 @@ Priorities take precedence over user names
 
 User names are used if everything else matches
 
-  $ cat > "$HGRCPATH" << EOF
+  $ cp $TESTTMP/orig.hrc $HGRCPATH
+  $ cat >> "$HGRCPATH" << EOF
   > [auth]
   > first.prefix=example.com
   > first.schemes=https

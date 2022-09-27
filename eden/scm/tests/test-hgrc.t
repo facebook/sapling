@@ -100,18 +100,17 @@ username expansion
 
   $ FAKEUSER='John Doe'
   $ export FAKEUSER
-  $ echo '[ui]' > $HGRC
+  $ echo '[ui]' >> $HGRC
   $ echo 'username = $FAKEUSER' >> $HGRC
 
-  $ hg init usertest
-  $ cd usertest
+  $ newclientrepo usertest
   $ touch bar
   $ hg commit --addremove --quiet -m "added bar"
   $ hg log --template "{author}\n"
   John Doe
   $ cd ..
 
-  $ hg showconfig
+  $ hg showconfig | grep ui.username
   ui.username=$FAKEUSER
 
   $ unset FAKEUSER
