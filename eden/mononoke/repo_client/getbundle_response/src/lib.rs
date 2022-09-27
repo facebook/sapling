@@ -1107,7 +1107,7 @@ async fn diff_with_parents(
     let (mf_id, parent_mf_ids) = try_join!(
         fetch_manifest(ctx, repo.repo_blobstore(), &hg_cs_id),
         async {
-            let parents = repo.get_changeset_parents(ctx.clone(), hg_cs_id).await?;
+            let parents = repo.get_hg_changeset_parents(ctx.clone(), hg_cs_id).await?;
 
             future::try_join_all(
                 parents

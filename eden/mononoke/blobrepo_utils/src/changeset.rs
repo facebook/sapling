@@ -188,7 +188,7 @@ where
         let parents_fut = {
             let repo = shared.repo.clone();
             cloned!(ctx);
-            async move { repo.get_changeset_parents(ctx, changeset_id).await }
+            async move { repo.get_hg_changeset_parents(ctx, changeset_id).await }
         }
         .boxed()
         .compat()

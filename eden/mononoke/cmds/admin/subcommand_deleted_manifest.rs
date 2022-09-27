@@ -193,7 +193,7 @@ async fn get_file_changes(
 
     let parent_manifests_fut = async {
         let hg_cs_id = repo.derive_hg_changeset(&ctx, cs_id).await?;
-        let parents = repo.get_changeset_parents(ctx.clone(), hg_cs_id).await?;
+        let parents = repo.get_hg_changeset_parents(ctx.clone(), hg_cs_id).await?;
         let parents_futs = parents.into_iter().map(|csid| {
             cloned!(ctx, repo);
             async move {
