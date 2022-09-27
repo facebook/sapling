@@ -12,6 +12,7 @@ use dag::VertexName;
 use metalog::MetaLog;
 use refencode::decode_bookmarks;
 use refencode::decode_remotenames;
+use treestate::treestate::TreeState;
 use types::HgId;
 
 use crate::errors::RevsetLookupError;
@@ -20,7 +21,11 @@ pub fn resolve_single(
     change_id: &str,
     id_map: &dyn IdConvert,
     metalog: &MetaLog,
+    treestate: &TreeState,
 ) -> Result<String, RevsetLookupError> {
+    if let Some(vertex) = resolve_dot(change_id, treestate)? {
+        return Ok(vertex.to_hex());
+    }
     if let Some(bookmark) = resolve_bookmark(change_id, metalog)? {
         return Ok(bookmark.to_hex());
     }
@@ -31,7 +36,25 @@ pub fn resolve_single(
     Err(RevsetLookupError::RevsetNotFound(change_id.to_owned()))
 }
 
-pub fn resolve_hash_prefix(
+pub fn resolve_dot(
+    change_id: &str,
+    treestate: &TreeState,
+) -> Result<Option<HgId>, RevsetLookupError> {
+    if change_id != "." && !change_id.is_empty() {
+        return Ok(None);
+    }
+    treestate.parents().next().map_or_else(
+        || Ok(Some(HgId::null_id().clone())),
+        |first_commit| {
+            first_commit.map_or_else(
+                |err| Err(RevsetLookupError::TreeStateError(err)),
+                |c| Ok(Some(c)),
+            )
+        },
+    )
+}
+
+fn resolve_hash_prefix(
     change_id: &str,
     id_map: &dyn IdConvert,
 ) -> Result<Option<VertexName>, RevsetLookupError> {

@@ -6,10 +6,12 @@
  */
 
 use std::io::Write;
+use std::ops::Deref;
 
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use revsets::utils::resolve_single;
+use workingcopy::workingcopy::WorkingCopy;
 
 use super::Repo;
 use super::Result;
@@ -21,10 +23,15 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugRevsetOpts>, repo: &mut Repo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugRevsetOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Result<u8> {
     let changelog = repo.dag_commits()?;
     let id_map = changelog.read().id_map_snapshot()?;
-    let resolved_revset = resolve_single(&ctx.opts.rev, id_map.as_ref(), &repo.metalog()?.read())?;
+    let resolved_revset = resolve_single(
+        &ctx.opts.rev,
+        id_map.as_ref(),
+        &repo.metalog()?.read(),
+        wc.treestate().lock().deref(),
+    )?;
 
     write!(ctx.io().output(), "{}\n", resolved_revset)?;
 
