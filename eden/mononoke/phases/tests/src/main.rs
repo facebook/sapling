@@ -13,6 +13,7 @@ use anyhow::Result;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks::BookmarksMaybeStaleExt;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
@@ -30,7 +31,8 @@ use phases::PhasesRef;
 
 async fn delete_all_publishing_bookmarks(ctx: &CoreContext, repo: &BlobRepo) -> Result<(), Error> {
     let bookmarks = repo
-        .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+        .bookmarks()
+        .get_publishing_bookmarks_maybe_stale(ctx.clone())
         .try_collect::<Vec<_>>()
         .await?;
 

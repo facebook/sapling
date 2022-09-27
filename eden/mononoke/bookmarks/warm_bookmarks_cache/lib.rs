@@ -1076,6 +1076,7 @@ mod tests {
     use anyhow::anyhow;
     use bookmarks::BookmarkUpdateLogArc;
     use bookmarks::BookmarksArc;
+    use bookmarks::BookmarksMaybeStaleExt;
     use cloned::cloned;
     use delayblob::DelayedBlobstore;
     use derived_data::BonsaiDerived;
@@ -1344,7 +1345,8 @@ mod tests {
 
         let bookmarks = repo
             .blob_repo
-            .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+            .bookmarks()
+            .get_publishing_bookmarks_maybe_stale(ctx.clone())
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
                 (book.into_name(), (cs_id, kind))
@@ -1402,7 +1404,8 @@ mod tests {
 
         let bookmarks = repo
             .blob_repo
-            .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+            .bookmarks()
+            .get_publishing_bookmarks_maybe_stale(ctx.clone())
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
                 (book.into_name(), (cs_id, kind))
@@ -1495,7 +1498,8 @@ mod tests {
 
         let bookmarks = repo
             .blob_repo
-            .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+            .bookmarks()
+            .get_publishing_bookmarks_maybe_stale(ctx.clone())
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
                 (book.into_name(), (cs_id, kind))
@@ -1669,7 +1673,8 @@ mod tests {
 
         let bookmarks = repo
             .blob_repo
-            .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+            .bookmarks()
+            .get_publishing_bookmarks_maybe_stale(ctx.clone())
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
                 (book.into_name(), (cs_id, kind))
@@ -1727,7 +1732,8 @@ mod tests {
 
         let bookmarks = repo
             .blob_repo
-            .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+            .bookmarks()
+            .get_publishing_bookmarks_maybe_stale(ctx.clone())
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
                 (book.into_name(), (cs_id, kind))

@@ -24,6 +24,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bonsai_globalrev_mapping::bulk_import_globalrevs;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+use bookmarks::BookmarksMaybeStaleExt;
 pub use consts::HIGHEST_IMPORTED_GEN_NUM;
 use context::CoreContext;
 use derived_data_utils::derive_data_for_csids;
@@ -179,7 +180,8 @@ impl<'a> Blobimport<'a> {
         // Blobimport does not see scratch bookmarks in Mercurial, so we use
         // PublishingOrPullDefaultPublishing here, which is the non-scratch set in Mononoke.
         let mononoke_bookmarks_fut = blobrepo
-            .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+            .bookmarks()
+            .get_publishing_bookmarks_maybe_stale(ctx.clone())
             .map_ok(|(bookmark, changeset_id)| (bookmark.into_name(), changeset_id))
             .try_collect::<Vec<_>>();
 

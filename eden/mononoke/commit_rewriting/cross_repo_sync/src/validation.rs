@@ -14,6 +14,7 @@ use anyhow::format_err;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
+use bookmarks::BookmarksMaybeStaleExt;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
@@ -375,7 +376,8 @@ pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static>(
     let target_repo = commit_syncer.get_target_repo();
 
     let target_bookmarks = target_repo
-        .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+        .bookmarks()
+        .get_publishing_bookmarks_maybe_stale(ctx.clone())
         .map_ok(|(bookmark, cs_id)| (bookmark.name().clone(), cs_id))
         .try_collect::<HashMap<_, _>>()
         .await?;
@@ -384,7 +386,8 @@ pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static>(
     // the commits.
     let (renamed_source_bookmarks, no_sync_outcome) = {
         let source_bookmarks: Vec<_> = source_repo
-            .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+            .bookmarks()
+            .get_publishing_bookmarks_maybe_stale(ctx.clone())
             .map_ok(|(bookmark, cs_id)| (bookmark.name().clone(), cs_id))
             .try_collect()
             .await?;

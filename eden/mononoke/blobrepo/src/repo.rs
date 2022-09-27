@@ -19,10 +19,6 @@ use bonsai_svnrev_mapping::ArcBonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
-use bookmarks::Bookmark;
-use bookmarks::BookmarkKind;
-use bookmarks::BookmarkPagination;
-use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarkTransaction;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogEntry;
@@ -66,7 +62,6 @@ use stats::prelude::*;
 
 define_stats! {
     prefix = "mononoke.blobrepo";
-    get_bonsai_publishing_bookmarks_maybe_stale: timeseries(Rate, Sum),
     get_changeset_parents_by_bonsai: timeseries(Rate, Sum),
     get_generation_number: timeseries(Rate, Sum),
     update_bookmark_transaction: timeseries(Rate, Sum),
@@ -200,22 +195,6 @@ impl BlobRepo {
     #[inline]
     pub fn hg_mutation_store(&self) -> &ArcHgMutationStore {
         &self.inner.hg_mutation_store
-    }
-
-    /// List all publishing Bonsai bookmarks.
-    pub fn get_bonsai_publishing_bookmarks_maybe_stale(
-        &self,
-        ctx: CoreContext,
-    ) -> impl Stream<Item = Result<(Bookmark, ChangesetId), Error>> {
-        STATS::get_bonsai_publishing_bookmarks_maybe_stale.add_value(1);
-        self.bookmarks().list(
-            ctx,
-            Freshness::MaybeStale,
-            &BookmarkPrefix::empty(),
-            BookmarkKind::ALL_PUBLISHING,
-            &BookmarkPagination::FromStart,
-            std::u64::MAX,
-        )
     }
 
     pub async fn get_changeset_parents_by_bonsai(

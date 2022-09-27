@@ -11,6 +11,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks::BookmarksMaybeStaleExt;
 use bookmarks::Freshness;
 use clap_old::App;
 use clap_old::Arg;
@@ -329,7 +330,8 @@ async fn handle_log(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
 async fn handle_list(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> Result<(), Error> {
     match args.value_of(ARG_KIND) {
         Some("publishing") => {
-            repo.get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+            repo.bookmarks()
+                .get_publishing_bookmarks_maybe_stale(ctx.clone())
                 .try_for_each_concurrent(100, {
                     cloned!(repo, ctx);
                     move |(bookmark, bonsai_cs_id)| {
