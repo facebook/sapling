@@ -664,10 +664,14 @@ async fn run_subcmd<'a>(
     let config_store = matches.config_store();
     let storage_config =
         args::get_config_by_name(config_store, matches, repo_name.clone())?.storage_config;
-    let wait_for_replication =
-        WaitForReplication::new(fb, config_store, storage_config, "backfill")?;
     match matches.subcommand() {
         (SUBCOMMAND_BACKFILL_ALL, Some(sub_m)) => {
+            let wait_for_replication = WaitForReplication::new(
+                fb,
+                config_store,
+                storage_config,
+                "derived_data_backfiller",
+            )?;
             let repo: InnerRepo =
                 args::open_repo_by_name_unredacted(fb, logger, matches, repo_name).await?;
 
@@ -795,6 +799,8 @@ async fn run_subcmd<'a>(
             .await
         }
         (SUBCOMMAND_TAIL, Some(sub_m)) => {
+            let wait_for_replication =
+                WaitForReplication::new(fb, config_store, storage_config, "derived_data_tailer")?;
             let config_store = matches.config_store();
             let use_shared_leases = sub_m.is_present(ARG_USE_SHARED_LEASES);
             let stop_on_idle = sub_m.is_present(ARG_STOP_ON_IDLE);

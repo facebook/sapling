@@ -873,7 +873,7 @@ EOF
   export REPLICATION_LAG_CONF
   REPLICATION_LAG_CONF="${LOCAL_CONFIGERATOR_PATH}/scm/mononoke/mysql/replication_lag/config"
   mkdir -p "$REPLICATION_LAG_CONF"
-  for CONF in "healer" "backfill"; do
+  for CONF in "healer" "derived_data_backfiller" "derived_data_tailer"; do
     if [[ ! -f "$REPLICATION_LAG_CONF/$CONF" ]]; then
       cat >> "$REPLICATION_LAG_CONF/$CONF" <<EOF
  {
