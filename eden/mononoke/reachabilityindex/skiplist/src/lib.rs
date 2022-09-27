@@ -1144,6 +1144,7 @@ mod test {
     use async_trait::async_trait;
     use blobrepo::BlobRepo;
     use bookmarks::BookmarkName;
+    use bookmarks::BookmarksMaybeStaleExt;
     use cloned::cloned;
     use context::CoreContext;
     use dashmap::DashMap;
@@ -1566,6 +1567,8 @@ mod test {
                     let sli = SkiplistIndex::new();
                     {
                         let heads = repo
+                            .bookmarks()
+                            .as_ref()
                             .get_heads_maybe_stale(ctx.clone())
                             .try_collect::<Vec<_>>()
                             .await

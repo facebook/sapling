@@ -641,6 +641,7 @@ async fn move_or_create_bookmark(
 
 #[cfg(test)]
 mod test {
+    use bookmarks::BookmarksMaybeStaleExt;
     use bookmarks::Freshness;
     use cross_repo_sync::validation;
     use cross_repo_sync_test_utils::init_small_large_repo;
@@ -1035,6 +1036,8 @@ mod test {
         assert_eq!(&actually_missing, should_be_missing,);
 
         let heads: Vec<_> = smallrepo
+            .bookmarks()
+            .as_ref()
             .get_heads_maybe_stale(ctx.clone())
             .try_collect()
             .await?;

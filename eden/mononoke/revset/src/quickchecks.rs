@@ -14,6 +14,7 @@ mod test {
 
     use anyhow::Error;
     use blobrepo::BlobRepo;
+    use bookmarks::BookmarksMaybeStaleExt;
     use changeset_fetcher::ArcChangesetFetcher;
     use cloned::cloned;
     use context::CoreContext;
@@ -70,6 +71,8 @@ mod test {
     async fn get_changesets_from_repo(ctx: CoreContext, repo: &BlobRepo) -> Vec<ChangesetId> {
         let changeset_fetcher = repo.get_changeset_fetcher();
         let mut all_changesets_stream = repo
+            .bookmarks()
+            .as_ref()
             .get_heads_maybe_stale(ctx.clone())
             .compat() // conversion is needed as AncestorsNodeStream is an OldStream
             .map({
@@ -514,6 +517,8 @@ mod test {
             cloned!(repo, ctx);
             async move {
                 let heads = repo
+                    .bookmarks()
+                    .as_ref()
                     .get_heads_maybe_stale(ctx.clone())
                     .try_collect::<Vec<_>>()
                     .await?;

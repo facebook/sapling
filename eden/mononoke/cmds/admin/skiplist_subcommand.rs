@@ -14,6 +14,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
+use bookmarks::BookmarksMaybeStaleExt;
 use bulkops::Direction;
 use bulkops::PublicChangesetBulkFetch;
 use changeset_fetcher::ArcChangesetFetcher;
@@ -185,6 +186,8 @@ async fn build_skiplist_index<'a, S: ToString>(
     };
 
     let heads = repo
+        .bookmarks()
+        .as_ref()
         .get_heads_maybe_stale(ctx.clone())
         .try_collect::<Vec<_>>();
 

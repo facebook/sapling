@@ -41,7 +41,6 @@ use filenodes::ArcFilenodes;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use futures::Stream;
-use futures::TryStreamExt;
 use mercurial_mutation::ArcHgMutationStore;
 use mercurial_mutation::HgMutationStore;
 use metaconfig_types::DerivedDataConfig;
@@ -67,7 +66,6 @@ use stats::prelude::*;
 
 define_stats! {
     prefix = "mononoke.blobrepo";
-    get_heads_maybe_stale: timeseries(Rate, Sum),
     get_bonsai_publishing_bookmarks_maybe_stale: timeseries(Rate, Sum),
     get_changeset_parents_by_bonsai: timeseries(Rate, Sum),
     get_generation_number: timeseries(Rate, Sum),
@@ -204,25 +202,6 @@ impl BlobRepo {
         &self.inner.hg_mutation_store
     }
 
-    /// Get Bonsai changesets for Mercurial heads, which we approximate as Publishing Bonsai
-    /// Bookmarks. Those will be served from cache, so they might be stale.
-    pub fn get_heads_maybe_stale(
-        &self,
-        ctx: CoreContext,
-    ) -> impl Stream<Item = Result<ChangesetId, Error>> {
-        STATS::get_heads_maybe_stale.add_value(1);
-        self.bookmarks()
-            .list(
-                ctx,
-                Freshness::MaybeStale,
-                &BookmarkPrefix::empty(),
-                BookmarkKind::ALL_PUBLISHING,
-                &BookmarkPagination::FromStart,
-                std::u64::MAX,
-            )
-            .map_ok(|(_, cs_id)| cs_id)
-    }
-
     /// List all publishing Bonsai bookmarks.
     pub fn get_bonsai_publishing_bookmarks_maybe_stale(
         &self,
@@ -236,23 +215,6 @@ impl BlobRepo {
             BookmarkKind::ALL_PUBLISHING,
             &BookmarkPagination::FromStart,
             std::u64::MAX,
-        )
-    }
-
-    /// Get bookmarks by prefix, they will be read from replica, so they might be stale.
-    pub fn get_bonsai_bookmarks_by_prefix_maybe_stale(
-        &self,
-        ctx: CoreContext,
-        prefix: &BookmarkPrefix,
-        max: u64,
-    ) -> impl Stream<Item = Result<(Bookmark, ChangesetId), Error>> {
-        self.bookmarks().list(
-            ctx,
-            Freshness::MaybeStale,
-            prefix,
-            BookmarkKind::ALL,
-            &BookmarkPagination::FromStart,
-            max,
         )
     }
 

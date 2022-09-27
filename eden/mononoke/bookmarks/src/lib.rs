@@ -16,6 +16,7 @@ use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::stream::BoxStream;
 use futures::stream::TryStreamExt;
+use futures::StreamExt;
 use mononoke_types::ChangesetId;
 
 mod cache;
@@ -93,6 +94,47 @@ pub trait Bookmarks: Send + Sync + 'static {
     /// Drop any caches held by this instance of Bookmarks.
     fn drop_caches(&self) {
         // No-op by default.
+    }
+}
+
+#[async_trait]
+pub trait BookmarksMaybeStaleExt: Send + Sync + 'static {
+    fn get_heads_maybe_stale(&self, ctx: CoreContext) -> BoxStream<'static, Result<ChangesetId>>;
+    fn get_publishing_bookmarks_maybe_stale(
+        &self,
+        ctx: CoreContext,
+    ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>>;
+}
+
+impl<B> BookmarksMaybeStaleExt for B
+where
+    B: Bookmarks + ?Sized + Send + Sync + 'static,
+{
+    fn get_heads_maybe_stale(&self, ctx: CoreContext) -> BoxStream<'static, Result<ChangesetId>> {
+        self.list(
+            ctx,
+            Freshness::MaybeStale,
+            &BookmarkPrefix::empty(),
+            BookmarkKind::ALL_PUBLISHING,
+            &BookmarkPagination::FromStart,
+            std::u64::MAX,
+        )
+        .map_ok(|(_, cs_id)| cs_id)
+        .boxed()
+    }
+
+    fn get_publishing_bookmarks_maybe_stale(
+        &self,
+        ctx: CoreContext,
+    ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
+        self.list(
+            ctx,
+            Freshness::MaybeStale,
+            &BookmarkPrefix::empty(),
+            BookmarkKind::ALL_PUBLISHING,
+            &BookmarkPagination::FromStart,
+            std::u64::MAX,
+        )
     }
 }
 

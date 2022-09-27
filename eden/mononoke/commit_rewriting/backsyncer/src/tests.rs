@@ -21,6 +21,7 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks::BookmarksMaybeStaleExt;
 use bookmarks::Freshness;
 use cloned::cloned;
 use commit_transformation::upload_commits;
@@ -922,6 +923,7 @@ async fn verify_mapping_and_all_wc(
     verify_bookmarks(ctx.clone(), commit_syncer.clone()).await?;
 
     let heads: Vec<_> = source_repo
+        .bookmarks()
         .get_heads_maybe_stale(ctx.clone())
         .try_collect()
         .await?;
