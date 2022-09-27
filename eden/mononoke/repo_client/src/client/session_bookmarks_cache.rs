@@ -261,7 +261,7 @@ where
     ) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> + '_ {
         self.repo
             .blobrepo()
-            .get_publishing_bookmarks_maybe_stale(ctx)
+            .get_publishing_bookmarks_maybe_stale_hg(ctx)
             .try_fold(HashMap::new(), |mut map, item| {
                 map.insert(item.0, item.1);
                 future::ready(Ok(map))

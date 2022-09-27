@@ -1006,7 +1006,7 @@ async fn verify_bookmarks(
     let bookmark_renamer = commit_syncer.get_bookmark_renamer().await?;
 
     let bookmarks: Vec<_> = source_repo
-        .get_publishing_bookmarks_maybe_stale(ctx.clone())
+        .get_publishing_bookmarks_maybe_stale_hg(ctx.clone())
         .try_collect()
         .await?;
 
