@@ -68,7 +68,7 @@ def try_parse_pull_request_url(url: str) -> Optional[PullRequest]:
 def try_find_upstream(ui) -> Optional[str]:
     """checks [paths] in .hgrc for an upstream GitHub repo"""
     for remote in ["upstream", "default"]:
-        url = ui.config("paths", "upstream")
+        url = ui.config("paths", remote)
         if url:
             repo_url = normalize_github_repo_url(url)
             if repo_url:
