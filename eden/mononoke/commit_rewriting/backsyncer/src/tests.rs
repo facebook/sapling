@@ -177,6 +177,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
         let source_repo = commit_syncer.get_source_repo();
 
         let next_log_entries: Vec<_> = source_repo
+            .bookmark_update_log()
             .read_next_bookmark_log_entries(ctx.clone(), 0, 1000, Freshness::MostRecent)
             .try_collect()
             .await?;
@@ -879,6 +880,7 @@ async fn backsync_and_verify_master_wc(
     let ctx = CoreContext::test_mock(fb);
     let next_log_entries: Vec<_> = commit_syncer
         .get_source_repo()
+        .bookmark_update_log()
         .read_next_bookmark_log_entries(ctx.clone(), 0, 1000, Freshness::MaybeStale)
         .try_collect()
         .await?;

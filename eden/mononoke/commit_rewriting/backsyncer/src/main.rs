@@ -366,10 +366,12 @@ where
     let counter = maybe_counter.ok_or_else(|| format_err!("{} counter not found", counter_name))?;
     let source_repo = commit_syncer.get_source_repo();
     let next_entry = source_repo
+        .bookmark_update_log()
         .read_next_bookmark_log_entries(ctx.clone(), counter as u64, 1, Freshness::MostRecent)
         .try_collect::<Vec<_>>();
-    let remaining_entries =
-        source_repo.count_further_bookmark_log_entries(ctx.clone(), counter as u64, None);
+    let remaining_entries = source_repo
+        .bookmark_update_log()
+        .count_further_bookmark_log_entries(ctx.clone(), counter as u64, None);
 
     let (next_entry, remaining_entries) = try_join!(next_entry, remaining_entries)?;
     let delay_secs = next_entry

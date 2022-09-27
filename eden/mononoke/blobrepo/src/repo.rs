@@ -21,10 +21,7 @@ use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
 use bookmarks::BookmarkTransaction;
 use bookmarks::BookmarkUpdateLog;
-use bookmarks::BookmarkUpdateLogEntry;
-use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
-use bookmarks::Freshness;
 use cacheblob::LeaseOps;
 use changeset_fetcher::ArcChangesetFetcher;
 use changeset_fetcher::ChangesetFetcher;
@@ -36,7 +33,6 @@ use ephemeral_blobstore::Bubble;
 use filenodes::ArcFilenodes;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
-use futures::Stream;
 use mercurial_mutation::ArcHgMutationStore;
 use mercurial_mutation::HgMutationStore;
 use metaconfig_types::DerivedDataConfig;
@@ -224,28 +220,6 @@ impl BlobRepo {
 
     pub fn pushrebase_mutation_mapping(&self) -> &ArcPushrebaseMutationMapping {
         &self.inner.pushrebase_mutation_mapping
-    }
-
-    pub fn read_next_bookmark_log_entries(
-        &self,
-        ctx: CoreContext,
-        id: u64,
-        limit: u64,
-        freshness: Freshness,
-    ) -> impl Stream<Item = Result<BookmarkUpdateLogEntry, Error>> {
-        self.bookmark_update_log()
-            .read_next_bookmark_log_entries(ctx, id, limit, freshness)
-    }
-
-    pub async fn count_further_bookmark_log_entries(
-        &self,
-        ctx: CoreContext,
-        id: u64,
-        exclude_reason: Option<BookmarkUpdateReason>,
-    ) -> Result<u64, Error> {
-        self.bookmark_update_log()
-            .count_further_bookmark_log_entries(ctx, id, exclude_reason)
-            .await
     }
 
     pub fn update_bookmark_transaction(&self, ctx: CoreContext) -> Box<dyn BookmarkTransaction> {

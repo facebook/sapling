@@ -1067,6 +1067,7 @@ mod test {
         println!("start from: {}", start_from);
         let read_all = 65536;
         let log_entries: Vec<_> = smallrepo
+            .bookmark_update_log()
             .read_next_bookmark_log_entries(
                 ctx.clone(),
                 start_from as u64,

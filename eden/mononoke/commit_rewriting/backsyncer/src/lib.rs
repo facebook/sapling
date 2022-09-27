@@ -144,6 +144,7 @@ where
     };
     let next_entries: Vec<_> = commit_syncer
         .get_source_repo()
+        .bookmark_update_log()
         .read_next_bookmark_log_entries(
             ctx.clone(),
             counter as u64,

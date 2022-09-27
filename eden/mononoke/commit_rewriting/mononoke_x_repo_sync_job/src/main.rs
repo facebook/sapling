@@ -339,6 +339,7 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static>(
 
     let remaining_entries = commit_syncer
         .get_source_repo()
+        .bookmark_update_log()
         .count_further_bookmark_log_entries(ctx.clone(), start_id as u64, None)
         .await?;
 
