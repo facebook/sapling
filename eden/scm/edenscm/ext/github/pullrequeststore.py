@@ -10,25 +10,16 @@ ML_VERSION_PROPERTY = "version"
 ML_COMMITS_PROPERTY = "commits"
 
 import json
+from typing import Optional
 
 from edenscm import mutation
 from edenscm.node import hex
 
+from .pullrequest import PullRequestId
+
 # Special value to indicate that there is explicitly no pull request associated
 # with this commit and therefore its predecessors should not be consulted.
 NO_ASSOC = "none"
-
-
-class PullRequest:
-    __slots__ = ("owner", "name", "number")
-
-    def __init__(self):
-        # "owner" is what the GitHub API calls the "GitHub organization."
-        self.owner = None
-        # name of the GitHub repo within the organization.
-        self.name = None
-        # integer value of the pull request.
-        self.number = None
 
 
 class PullRequestStore:
@@ -38,13 +29,8 @@ class PullRequestStore:
     def __str__(self):
         return json.dumps(self._get_pr_data(), indent=2)
 
-    def map_commit_to_pull_request(self, node, pull_request: PullRequest):
-        pr = {
-            "owner": pull_request.owner,
-            "name": pull_request.name,
-            "number": pull_request.number,
-        }
-        self._write_mapping(node, pr)
+    def map_commit_to_pull_request(self, node, pull_request: PullRequestId):
+        self._write_mapping(node, pull_request.as_dict())
 
     def unlink(self, node):
         self._write_mapping(node, NO_ASSOC)
@@ -58,18 +44,16 @@ class PullRequestStore:
             blob = encode_pr_data(pr_data)
             ml.set(METALOG_KEY, blob)
 
-    def find_pull_request(self, node):
+    def find_pull_request(self, node) -> Optional[PullRequestId]:
         commits = self._get_commits()
         for n in mutation.allpredecessors(self._repo, [node]):
             pr = commits.get(hex(n))
             if pr == NO_ASSOC:
                 return None
             elif pr:
-                pull_request = PullRequest()
-                pull_request.owner = pr["owner"]
-                pull_request.name = pr["name"]
-                pull_request.number = pr["number"]
-                return pull_request
+                return PullRequestId(
+                    owner=pr["owner"], name=pr["name"], number=pr["number"]
+                )
         return None
 
     def _get_pr_data(self):

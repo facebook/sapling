@@ -9,7 +9,7 @@
 from typing import Optional
 
 from . import github_repo_util, graphql
-from .graphql import GitHubPullRequest
+from .pullrequest import GraphQLPullRequest, PullRequestId
 from .pullrequeststore import PullRequestStore
 
 
@@ -22,7 +22,7 @@ def github_pull_request_repo_owner(repo, ctx, **args) -> Optional[str]:
     'bolinfest'
     """
     pull_request = get_pull_request_url_for_rev(repo, ctx, **args)
-    return pull_request.repo_owner if pull_request else None
+    return pull_request.owner if pull_request else None
 
 
 def github_pull_request_repo_name(repo, ctx, **args) -> Optional[str]:
@@ -35,7 +35,7 @@ def github_pull_request_repo_name(repo, ctx, **args) -> Optional[str]:
     'ghstack-testing'
     """
     pull_request = get_pull_request_url_for_rev(repo, ctx, **args)
-    return pull_request.repo_name if pull_request else None
+    return pull_request.name if pull_request else None
 
 
 def github_pull_request_number(repo, ctx, **args) -> Optional[int]:
@@ -61,7 +61,7 @@ _GITHUB_PULL_REQUEST_DATA_REVCACHE_KEY = "github_pr_data"
 _GITHUB_PULL_REQUEST_STORE_KEY = "github_pr_store"
 
 
-def get_pull_request_url_for_rev(repo, ctx, **args) -> Optional[GitHubPullRequest]:
+def get_pull_request_url_for_rev(repo, ctx, **args) -> Optional[PullRequestId]:
     revcache = args["revcache"]
     pull_request_url = revcache.get(_GITHUB_PULL_REQUEST_URL_REVCACHE_KEY, _NO_ENTRY)
     if pull_request_url is not _NO_ENTRY:
@@ -78,7 +78,7 @@ def get_pull_request_url_for_rev(repo, ctx, **args) -> Optional[GitHubPullReques
     return pull_request_url
 
 
-def get_pull_request_data_for_rev(repo, ctx, **args):
+def get_pull_request_data_for_rev(repo, ctx, **args) -> GraphQLPullRequest:
     revcache = args["revcache"]
     pull_request_data = revcache.get(_GITHUB_PULL_REQUEST_DATA_REVCACHE_KEY, _NO_ENTRY)
 

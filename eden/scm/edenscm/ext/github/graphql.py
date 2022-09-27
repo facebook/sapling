@@ -8,7 +8,6 @@
 
 import os
 import re
-from dataclasses import dataclass
 from pathlib import Path
 from sys import platform
 from typing import Optional
@@ -16,22 +15,12 @@ from typing import Optional
 from bindings import github
 from edenscm import pycompat
 
-
-@dataclass
-class GitHubPullRequest:
-    # In GitHub, a "RepositoryOwner" is either an "Organization" or a "User":
-    # https://docs.github.com/en/graphql/reference/interfaces#repositoryowner
-    repo_owner: str
-    repo_name: str
-    number: int
-
-    def as_url(self, domain=None) -> str:
-        domain = domain or "github.com"
-        return f"https://{domain}/{self.repo_owner}/{self.repo_name}/pull/{self.number}"
+from .pullrequest import GraphQLPullRequest, PullRequestId
 
 
-def get_pull_request_data(token: str, pr: GitHubPullRequest):
-    return github.get_pull_request(token, pr.repo_owner, pr.repo_name, pr.number)
+def get_pull_request_data(token: str, pr: PullRequestId) -> GraphQLPullRequest:
+    data = github.get_pull_request(token, pr.owner, pr.name, pr.number)
+    return GraphQLPullRequest(data)
 
 
 def get_github_oauth_token() -> Optional[str]:

@@ -10,8 +10,9 @@ from edenscm import error, scmutil
 from edenscm.i18n import _
 
 from . import github_repo_util
+from .pullrequest import PullRequestId
 
-from .pullrequeststore import PullRequest, PullRequestStore
+from .pullrequeststore import PullRequestStore
 
 
 def link(ui, repo, *args, **opts):
@@ -34,7 +35,7 @@ def unlink(ui, repo, *args, **opts):
     pr_store.unlink(ctx.node())
 
 
-def resolve_pr_arg(pr_arg: str, ui) -> Optional[PullRequest]:
+def resolve_pr_arg(pr_arg: str, ui) -> Optional[PullRequestId]:
     num = try_parse_int(pr_arg)
     if num:
         upstream = try_find_upstream(ui)
@@ -53,16 +54,12 @@ def try_parse_int(s: str) -> Optional[int]:
     return int(match[0]) if match else None
 
 
-def try_parse_pull_request_url(url: str) -> Optional[PullRequest]:
+def try_parse_pull_request_url(url: str) -> Optional[PullRequestId]:
     """parses the url into a PullRequest if it is in the expected format"""
     pattern = r"^https://github.com/([^/]+)/([^/]+)/pull/([1-9][0-9]+)$"
     match = re.match(pattern, url)
     if match:
-        pull_request = PullRequest()
-        pull_request.owner = match[1]
-        pull_request.name = match[2]
-        pull_request.number = int(match[3])
-        return pull_request
+        return PullRequestId(owner=match[1], name=match[2], number=int(match[3]))
     else:
         return None
 
