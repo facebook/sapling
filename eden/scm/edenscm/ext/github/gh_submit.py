@@ -1,0 +1,302 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
+"""logic for submit.py implemented by shelling out to the GitHub CLI.
+
+Ultimately, we expect to replace this with a Rust implementation that makes
+the API calls directly so we can (1) avoid spawning so many processes, and
+(2) do more work in parallel.
+"""
+
+import asyncio
+import itertools
+import json
+from dataclasses import dataclass
+from typing import Dict, Generic, Optional, Tuple, TypeVar, Union
+
+from .pullrequest import PullRequestId
+
+T = TypeVar("T")
+
+
+@dataclass
+class Result(Generic[T]):
+    ok: Optional[T] = None
+    error: Optional[str] = None
+
+    def is_error(self) -> bool:
+        return self.error is not None
+
+
+@dataclass
+class Repository:
+    # ID for the repository for use with other GitHub API calls.
+    id: str
+    # In GitHub, a "RepositoryOwner" is either an "Organization" or a "User":
+    # https://docs.github.com/en/graphql/reference/interfaces#repositoryowner
+    owner: str
+    # Name of the GitHub repo within the organization.
+    name: str
+    # Name of the default branch.
+    default_branch: str
+    # True if this is a fork.
+    is_fork: bool
+    # Should be set if is_fork is True, though if this is a fork of a fork,
+    # then we only traverse one link in the chain, so this could still be None.
+    upstream: Optional["Repository"] = None
+
+    def get_base_branch(self) -> str:
+        """If this is a fork, returns the default_branch of the upstream repo."""
+        if self.upstream:
+            return self.upstream.default_branch
+        else:
+            return self.default_branch
+
+    def get_upstream_owner_and_name(self) -> Tuple[str, str]:
+        """owner and name to use when creating a pull request"""
+        if self.upstream:
+            return (self.upstream.owner, self.upstream.name)
+        else:
+            return (self.owner, self.name)
+
+
+async def get_repository(owner: str, name: str) -> Result[Repository]:
+    """Returns an "ID!" for the repository that is necessary in other
+    GitHub API calls.
+    """
+    query = """
+query ($owner: String!, $name: String!) {
+  repository(name: $name, owner: $owner) {
+    id
+    owner {
+      id
+      login
+    }
+    name
+    isFork
+    defaultBranchRef {
+      name
+    }
+    parent {
+      id
+      owner {
+        id
+      }
+      name
+      isFork
+      defaultBranchRef {
+        name
+      }
+    }
+  }
+}
+"""
+    params: Dict[str, Union[str, int]] = {"query": query, "owner": owner, "name": name}
+    result = await make_request(params)
+    if result.is_error():
+        return result
+
+    data = result.ok["data"]
+    repo = data["repository"]
+    parent = repo["parent"]
+    upstream = _parse_repository_from_dict(parent) if parent else None
+    repository = _parse_repository_from_dict(repo, upstream=upstream)
+    return Result(ok=repository)
+
+
+@dataclass
+class PullRequestDetails:
+    node_id: str
+    number: int
+    url: str
+    head_oid: str
+    head_branch_name: str
+
+
+async def get_pull_request_details(
+    pr: PullRequestId,
+) -> Result[PullRequestDetails]:
+    query = """
+query ($owner: String!, $name: String!, $number: Int!) {
+  repository(name: $name, owner: $owner) {
+    pullRequest(number: $number) {
+      id
+      url
+      headRefOid
+      headRefName
+    }
+  }
+}
+"""
+    params = {
+        "query": query,
+        "owner": pr.owner,
+        "name": pr.name,
+        "number": pr.number,
+    }
+    result = await make_request(params)
+    if result.is_error():
+        return result
+
+    data = result.ok["data"]["repository"]["pullRequest"]
+    return Result(
+        ok=PullRequestDetails(
+            node_id=data["id"],
+            number=pr.number,
+            url=data["url"],
+            head_oid=data["headRefOid"],
+            head_branch_name=data["headRefName"],
+        )
+    )
+
+
+def _parse_repository_from_dict(repo_obj, upstream=None) -> Repository:
+    return Repository(
+        id=repo_obj["id"],
+        owner=repo_obj["owner"]["login"],
+        name=repo_obj["name"],
+        default_branch=repo_obj["defaultBranchRef"]["name"],
+        is_fork=repo_obj["isFork"],
+        upstream=upstream,
+    )
+
+
+async def guess_next_pull_request_number(owner: str, name: str) -> Result[int]:
+    """Returns our best guess as to the number that will be assigned to the next
+    pull request for the specified repo. It is a "guess" because it is based
+    on the largest number for either issues or pull requests seen thus far and
+    adds 1 to it. This "guess" can be wrong if:
+
+    - The most recent pull request/issue has been deleted, in which case the
+      next number would be one more than that.
+    - If an issue/pull request is created between the time this function is
+      called and the pull request is created, the guess will also be wrong.
+
+    Note that the only reason we bother to do this is because, at least at the
+    time of this writing, we cannot rename  the branch used for the head of a
+    pull request [programmatically] without closing the pull request.
+
+    While there is an official GitHub API for renaming a branch, it closes all
+    pull requests that have their `head` set to the old branch name!
+    Unfortunately, this is not documented on:
+
+    https://docs.github.com/en/rest/branches/branches#rename-a-branch
+
+    Support for renaming a branch WITHOUT closing all of the pull requests was
+    introduced in Jan 2021, but it only appears to be available via the Web UI:
+
+    https://github.blog/changelog/2021-01-19-support-for-renaming-an-existing-branch/
+
+    The endpoint the web UI hits is on github.com, not api.github.com, so it
+    does not appear to be accessible to us.
+    """
+    query = """
+query ($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+    issues(orderBy: {field: CREATED_AT, direction: ASC}, last: 1) {
+      nodes {
+        number
+      }
+    }
+    pullRequests(orderBy: {field: CREATED_AT, direction: ASC}, last: 1) {
+      nodes {
+        number
+      }
+    }
+  }
+}
+"""
+    params: Dict[str, Union[str, int]] = {"query": query, "owner": owner, "name": name}
+    result = await make_request(params)
+    if result.is_error():
+        return result
+
+    # Find the max value of the fields, though note that it is possible no
+    # issues or pull requests have ever been filed.
+    repository = result.ok["data"]["repository"]
+
+    def get_value(field):
+        nodes = repository[field]["nodes"]
+        return nodes[0]["number"] if nodes else 0
+
+    values = [get_value(field) for field in ["issues", "pullRequests"]]
+    next_number = max(*values) + 1
+    return Result(ok=next_number)
+
+
+async def create_pull_request(
+    owner: str, name: str, base: str, head: str, title: str, body: str
+) -> Result:
+    endpoint = f"repos/{owner}/{name}/pulls"
+    params: Dict[str, Union[str, int]] = {
+        "base": base,
+        "head": head,
+        "title": title,
+        "body": body,
+    }
+    return await make_request(params, endpoint=endpoint)
+
+
+async def update_pull_request(node_id: str, title: str, body: str) -> Result[str]:
+    """Returns an "ID!" for the pull request, which should match the node_id
+    that was passed in.
+    """
+    query = """
+mutation ($pullRequestId: ID!, $title: String!, $body: String!) {
+  updatePullRequest(
+    input: {pullRequestId: $pullRequestId, title: $title, body: $body}
+  ) {
+    pullRequest {
+      id
+    }
+  }
+}
+"""
+    params: Dict[str, Union[str, int]] = {
+        "query": query,
+        "pullRequestId": node_id,
+        "title": title,
+        "body": body,
+    }
+    result = await make_request(params)
+    if result.is_error():
+        return result
+    else:
+        return Result(ok=result.ok["data"]["updatePullRequest"]["pullRequest"]["id"])
+
+
+async def make_request(
+    params: Dict[str, Union[str, int]], endpoint="graphql"
+) -> Result:
+    """If successful, returns a Result whose value is parsed JSON returned by
+    the request.
+    """
+    args = ["gh", "api", endpoint] + list(
+        itertools.chain(
+            *[
+                ["-f" if k != "number" else "-F", f"{k}={v}"]
+                for (k, v) in params.items()
+            ]
+        )
+    )
+    proc = await asyncio.create_subprocess_exec(
+        *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await proc.communicate()
+
+    if proc.returncode != 0:
+        return Result(
+            error=f"Failure running {' '.join(args)}\nstdout: {stdout}\nstderr: {stderr}\n"
+        )
+
+    return check_stdout(stdout)
+
+
+def check_stdout(stdout: bytes) -> Result:
+    response = json.loads(stdout)
+    if "errors" in response:
+        return Result(error=json.dumps(response, indent=1))
+    else:
+        return Result(ok=response)
