@@ -469,7 +469,7 @@ async fn run_statistics<'a>(
 
     let blobstore = Arc::new(repo.get_blobstore());
     let mut changeset = repo
-        .get_bookmark(ctx.clone(), &bookmark)
+        .get_bookmark_hg(ctx.clone(), &bookmark)
         .await?
         .ok_or_else(|| Error::msg("cannot load bookmark"))?;
 
@@ -494,7 +494,7 @@ async fn run_statistics<'a>(
     loop {
         let prev_changeset = changeset;
         changeset = repo
-            .get_bookmark(ctx.clone(), &bookmark)
+            .get_bookmark_hg(ctx.clone(), &bookmark)
             .await?
             .ok_or_else(|| Error::msg("cannot load bookmark"))?;
 

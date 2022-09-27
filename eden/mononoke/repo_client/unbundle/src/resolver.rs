@@ -1345,7 +1345,7 @@ async fn build_changegroup_push(
                 Ok(maybe_name) => match maybe_name {
                     None => None,
                     Some(name) => {
-                        let old = repo.get_bookmark(ctx.clone(), &name).await?;
+                        let old = repo.get_bookmark_hg(ctx.clone(), &name).await?;
                         // NOTE: We do not validate that the bookmarknode selected (i.e. the
                         // changeset we should update our bookmark to) is part of the
                         // changegroup being pushed. We do however validate at a later point

@@ -203,7 +203,7 @@ where
             }
         }
 
-        self.repo.blobrepo().get_bookmark(ctx, &bookmark).await
+        self.repo.blobrepo().get_bookmark_hg(ctx, &bookmark).await
     }
 
     async fn get_publishing_bookmarks_maybe_stale_updating_cache(

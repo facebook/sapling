@@ -1464,7 +1464,7 @@ impl HgCommands for RepoClient {
                         match (outcome, bookmark) {
                             (LookupOutcome::HighPriority(res), _) => res,
                             (LookupOutcome::LowPriority(res), Some(bookmark)) => {
-                                async move { repo.get_bookmark(ctx.clone(), &bookmark).await }
+                                async move { repo.get_bookmark_hg(ctx.clone(), &bookmark).await }
                                     .boxed()
                                     .compat()
                                     .and_then(move |maybe_csid| {

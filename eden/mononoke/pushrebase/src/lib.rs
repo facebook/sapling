@@ -2272,7 +2272,7 @@ mod tests {
             .ok_or_else(|| Error::msg("ancestor not found"))?;
 
         let descendant = repo
-            .get_bookmark(ctx.clone(), &descendant)
+            .get_bookmark_hg(ctx.clone(), &descendant)
             .await?
             .ok_or_else(|| Error::msg("bookmark not found"))?;
 

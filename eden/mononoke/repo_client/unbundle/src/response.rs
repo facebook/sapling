@@ -141,7 +141,7 @@ impl UnbundleResponse {
         // should be the same, however they might be different if bookmark
         // suddenly moved before current pushrebase finished.
         let common = commonheads.heads;
-        let maybe_onto_head = repo.get_bookmark(ctx.clone(), &onto);
+        let maybe_onto_head = repo.get_bookmark_hg(ctx.clone(), &onto);
         let pushrebased_hg_rev = repo.derive_hg_changeset(ctx, pushrebased_rev);
 
         let bookmark_reply_part = match bookmark_push_part_id {

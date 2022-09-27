@@ -334,7 +334,7 @@ async fn backsync_linear_bookmark_renamer_only_master(fb: FacebookInit) -> Resul
     assert_eq!(
         commit_syncer
             .get_target_repo()
-            .get_bookmark(ctx, &BookmarkName::new("anotherbookmark")?)
+            .get_bookmark_hg(ctx, &BookmarkName::new("anotherbookmark")?)
             .await?,
         None
     );
@@ -354,7 +354,7 @@ async fn backsync_linear_bookmark_renamer_remove_all(fb: FacebookInit) -> Result
     assert_eq!(
         commit_syncer
             .get_target_repo()
-            .get_bookmark(ctx.clone(), &BookmarkName::new("master")?)
+            .get_bookmark_hg(ctx.clone(), &BookmarkName::new("master")?)
             .await?,
         None
     );
@@ -362,7 +362,7 @@ async fn backsync_linear_bookmark_renamer_remove_all(fb: FacebookInit) -> Result
     assert_eq!(
         commit_syncer
             .get_target_repo()
-            .get_bookmark(ctx, &BookmarkName::new("anotherbookmark")?)
+            .get_bookmark_hg(ctx, &BookmarkName::new("anotherbookmark")?)
             .await?,
         None
     );
@@ -1018,13 +1018,13 @@ async fn verify_bookmarks(
                 if &renamed_book != bookmark.name() {
                     assert!(
                         target_repo
-                            .get_bookmark(ctx.clone(), bookmark.name())
+                            .get_bookmark_hg(ctx.clone(), bookmark.name())
                             .await?
                             .is_none()
                     );
                 }
                 let target_hg_cs_id = target_repo
-                    .get_bookmark(ctx.clone(), &renamed_book)
+                    .get_bookmark_hg(ctx.clone(), &renamed_book)
                     .await?
                     .unwrap_or_else(|| {
                         panic!("{} bookmark doesn't exist in target repo!", bookmark.name())
@@ -1070,7 +1070,7 @@ async fn verify_bookmarks(
                 // Make sure we don't have this bookmark in target repo
                 assert!(
                     target_repo
-                        .get_bookmark(ctx.clone(), bookmark.name())
+                        .get_bookmark_hg(ctx.clone(), bookmark.name())
                         .await?
                         .is_none()
                 );

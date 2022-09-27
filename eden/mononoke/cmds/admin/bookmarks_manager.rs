@@ -187,7 +187,7 @@ async fn handle_get(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
 
     match changeset_type {
         "hg" => {
-            let cs = repo.get_bookmark(ctx, &bookmark).await?;
+            let cs = repo.get_bookmark_hg(ctx, &bookmark).await?;
             let changeset_id_str = cs.expect("bookmark could not be found").to_string();
             let output = format_output(json_flag, changeset_id_str, "hg");
             println!("{}", output);

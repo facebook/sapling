@@ -97,7 +97,7 @@ pub trait BlobRepoHg: Send + Sync {
     where
         Self: BonsaiHgMappingRef + ChangesetsRef + RepoDerivedDataRef;
 
-    async fn get_bookmark(
+    async fn get_bookmark_hg(
         &self,
         ctx: CoreContext,
         name: &BookmarkName,
@@ -180,7 +180,7 @@ define_stats! {
     prefix = "mononoke.blobrepo";
     hg_changeset_exists: timeseries(Rate, Sum),
     get_all_filenodes: timeseries(Rate, Sum),
-    get_bookmark: timeseries(Rate, Sum),
+    get_bookmark_hg: timeseries(Rate, Sum),
     get_bookmarks_by_prefix_maybe_stale: timeseries(Rate, Sum),
     get_hg_changeset_parents: timeseries(Rate, Sum),
     get_hg_heads_maybe_stale: timeseries(Rate, Sum),
@@ -344,7 +344,7 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
         Ok(future::try_join_all(parents).await?)
     }
 
-    async fn get_bookmark(
+    async fn get_bookmark_hg(
         &self,
         ctx: CoreContext,
         name: &BookmarkName,
@@ -352,7 +352,7 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
     where
         Self: BookmarksRef + RepoDerivedDataRef,
     {
-        STATS::get_bookmark.add_value(1);
+        STATS::get_bookmark_hg.add_value(1);
         let cs_opt = self.bookmarks().get(ctx.clone(), name).await?;
         match cs_opt {
             None => Ok(None),
