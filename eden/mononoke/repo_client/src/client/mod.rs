@@ -1380,7 +1380,7 @@ impl HgCommands for RepoClient {
             let node_fut = match HgChangesetId::from_str(&key) {
                 Ok(csid) => {
                     cloned!(ctx, repo);
-                    async move { repo.changeset_exists(ctx, csid).await }
+                    async move { repo.hg_changeset_exists(ctx, csid).await }
                 }
                 .boxed()
                 .compat()

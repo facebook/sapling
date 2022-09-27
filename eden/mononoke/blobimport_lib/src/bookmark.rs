@@ -81,7 +81,7 @@ pub fn upload_bookmarks(
                 stream::futures_unordered(bookmarks.into_iter().map(|(key, cs_id)| {
                     {
                         cloned!(ctx, blobrepo);
-                        async move { blobrepo.changeset_exists(ctx, cs_id).await }
+                        async move { blobrepo.hg_changeset_exists(ctx, cs_id).await }
                     }
                     .boxed()
                     .compat()
@@ -101,7 +101,7 @@ pub fn upload_bookmarks(
                                         );
 
                                         async move {
-                                            let exists = blobrepo.changeset_exists(ctx, stale_cs_id).await?;
+                                            let exists = blobrepo.hg_changeset_exists(ctx, stale_cs_id).await?;
                                             Ok((key, stale_cs_id, exists))
                                         }
                                         .boxed()

@@ -81,7 +81,7 @@ pub trait BlobRepoHg: Send + Sync {
     where
         Self: BookmarksRef + RepoDerivedDataRef + Send + Sync;
 
-    async fn changeset_exists(
+    async fn hg_changeset_exists(
         &self,
         ctx: CoreContext,
         changesetid: HgChangesetId,
@@ -178,7 +178,7 @@ pub trait BlobRepoHg: Send + Sync {
 
 define_stats! {
     prefix = "mononoke.blobrepo";
-    changeset_exists: timeseries(Rate, Sum),
+    hg_changeset_exists: timeseries(Rate, Sum),
     get_all_filenodes: timeseries(Rate, Sum),
     get_bookmark: timeseries(Rate, Sum),
     get_bookmarks_by_prefix_maybe_stale: timeseries(Rate, Sum),
@@ -294,7 +294,7 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
             .boxed()
     }
 
-    async fn changeset_exists(
+    async fn hg_changeset_exists(
         &self,
         ctx: CoreContext,
         changesetid: HgChangesetId,
@@ -302,7 +302,7 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
     where
         Self: BonsaiHgMappingRef + ChangesetsRef,
     {
-        STATS::changeset_exists.add_value(1);
+        STATS::hg_changeset_exists.add_value(1);
         let csid = self
             .bonsai_hg_mapping()
             .get_bonsai_from_hg(&ctx, changesetid)

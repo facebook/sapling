@@ -281,7 +281,7 @@ impl HgRepoContext {
         hg_changeset_id: HgChangesetId,
     ) -> Result<bool, MononokeError> {
         self.blob_repo()
-            .changeset_exists(self.ctx().clone(), hg_changeset_id)
+            .hg_changeset_exists(self.ctx().clone(), hg_changeset_id)
             .await
             .map_err(MononokeError::from)
     }
