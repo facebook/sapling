@@ -6,9 +6,9 @@
  */
 
 use std::collections::BTreeMap;
+use std::str::FromStr;
 
 use dag::ops::IdConvert;
-use dag::VertexName;
 use metalog::MetaLog;
 use refencode::decode_bookmarks;
 use refencode::decode_remotenames;
@@ -17,33 +17,64 @@ use types::HgId;
 
 use crate::errors::RevsetLookupError;
 
+struct LookupArgs<'a> {
+    change_id: &'a str,
+    id_map: &'a dyn IdConvert,
+    metalog: &'a MetaLog,
+    treestate: &'a TreeState,
+}
+
 pub fn resolve_single(
     change_id: &str,
     id_map: &dyn IdConvert,
     metalog: &MetaLog,
     treestate: &TreeState,
-) -> Result<String, RevsetLookupError> {
-    if let Some(vertex) = resolve_dot(change_id, treestate)? {
-        return Ok(vertex.to_hex());
-    }
-    if let Some(bookmark) = resolve_bookmark(change_id, metalog)? {
-        return Ok(bookmark.to_hex());
-    }
-    if let Some(vertex) = resolve_hash_prefix(change_id, id_map)? {
-        return Ok(vertex.to_hex());
+) -> Result<HgId, RevsetLookupError> {
+    let args = LookupArgs {
+        change_id,
+        id_map,
+        metalog,
+        treestate,
+    };
+    let fns = [
+        resolve_special,
+        resolve_dot,
+        resolve_bookmark,
+        resolve_hash_prefix,
+    ];
+
+    for f in fns.iter() {
+        if let Some(r) = f(&args)? {
+            return Ok(r);
+        }
     }
 
     Err(RevsetLookupError::RevsetNotFound(change_id.to_owned()))
 }
 
-pub fn resolve_dot(
-    change_id: &str,
-    treestate: &TreeState,
-) -> Result<Option<HgId>, RevsetLookupError> {
-    if change_id != "." && !change_id.is_empty() {
+fn resolve_special(args: &LookupArgs) -> Result<Option<HgId>, RevsetLookupError> {
+    if args.change_id == "null" {
+        return Ok(Some(HgId::null_id().clone()));
+    }
+    if args.change_id != "tip" {
         return Ok(None);
     }
-    treestate.parents().next().map_or_else(
+    args.metalog
+        .get(args.change_id)?
+        .map(|tip| {
+            HgId::from_slice(&tip).map_err(|err| {
+                let tip = String::from_utf8_lossy(&tip).to_string();
+                RevsetLookupError::CommitHexParseError(tip, err.into())
+            })
+        })
+        .transpose()
+}
+
+fn resolve_dot(args: &LookupArgs) -> Result<Option<HgId>, RevsetLookupError> {
+    if args.change_id != "." && !args.change_id.is_empty() {
+        return Ok(None);
+    }
+    args.treestate.parents().next().map_or_else(
         || Ok(Some(HgId::null_id().clone())),
         |first_commit| {
             first_commit.map_or_else(
@@ -54,49 +85,55 @@ pub fn resolve_dot(
     )
 }
 
-fn resolve_hash_prefix(
-    change_id: &str,
-    id_map: &dyn IdConvert,
-) -> Result<Option<VertexName>, RevsetLookupError> {
-    if !change_id
+fn resolve_hash_prefix(args: &LookupArgs) -> Result<Option<HgId>, RevsetLookupError> {
+    if !args
+        .change_id
         .chars()
         .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
     {
         return Ok(None);
     }
     let mut vertices = async_runtime::block_on(async {
-        id_map.vertexes_by_hex_prefix(change_id.as_bytes(), 5).await
+        args.id_map
+            .vertexes_by_hex_prefix(args.change_id.as_bytes(), 5)
+            .await
     })?
     .into_iter();
 
     let vertex = if let Some(v) = vertices.next() {
-        v
+        v.to_hex()
     } else {
         return Ok(None);
     };
 
     if let Some(vertex2) = vertices.next() {
-        let mut possible_identifiers = vec![vertex.to_hex(), vertex2.to_hex()];
+        let mut possible_identifiers = vec![vertex, vertex2.to_hex()];
         for vertex in vertices {
             possible_identifiers.push(vertex.to_hex());
         }
         return Err(RevsetLookupError::AmbiguousIdentifier(
-            change_id.to_owned(),
+            args.change_id.to_owned(),
             possible_identifiers.join(", "),
         ));
     }
 
-    Ok(Some(vertex))
+    Ok(Some(HgId::from_str(&vertex).map_err(|err| {
+        RevsetLookupError::CommitHexParseError(vertex, err.into())
+    })?))
 }
 
-fn resolve_bookmark(change_id: &str, metalog: &MetaLog) -> Result<Option<HgId>, RevsetLookupError> {
-    if let Some(hash) = resolve_metalog_bookmark(change_id, metalog, "bookmarks", decode_bookmarks)?
+fn resolve_bookmark(args: &LookupArgs) -> Result<Option<HgId>, RevsetLookupError> {
+    if let Some(hash) =
+        resolve_metalog_bookmark(args.change_id, args.metalog, "bookmarks", decode_bookmarks)?
     {
         return Ok(Some(hash));
     }
-    if let Some(hash) =
-        resolve_metalog_bookmark(change_id, metalog, "remotenames", decode_remotenames)?
-    {
+    if let Some(hash) = resolve_metalog_bookmark(
+        args.change_id,
+        args.metalog,
+        "remotenames",
+        decode_remotenames,
+    )? {
         return Ok(Some(hash));
     }
     Ok(None)

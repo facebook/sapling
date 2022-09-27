@@ -58,7 +58,17 @@ Test dot revset lookup
   $ hg debugrevset ""
   43195508e3bb704c08d24c40375bdd826789dd72
 
+Test misc revsets
+  $ hg debugrevset tip
+  43195508e3bb704c08d24c40375bdd826789dd72
+  $ hg debugrevset null
+  0000000000000000000000000000000000000000
+
 Test resolution priority
   $ hg book -r 'desc(A)' f
   $ hg debugrevset f
   426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+  $ hg debugrevset tip
+  43195508e3bb704c08d24c40375bdd826789dd72
+  $ hg debugrevset null
+  0000000000000000000000000000000000000000

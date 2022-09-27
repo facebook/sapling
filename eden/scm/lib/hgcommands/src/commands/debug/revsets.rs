@@ -33,7 +33,7 @@ pub fn run(ctx: ReqCtx<DebugRevsetOpts>, repo: &mut Repo, wc: &mut WorkingCopy) 
         wc.treestate().lock().deref(),
     )?;
 
-    write!(ctx.io().output(), "{}\n", resolved_revset)?;
+    write!(ctx.io().output(), "{}\n", resolved_revset.to_hex())?;
 
     Ok(0)
 }
