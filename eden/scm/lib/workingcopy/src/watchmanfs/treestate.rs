@@ -5,11 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use parking_lot::Mutex;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::metadata::Metadata;
@@ -33,12 +33,12 @@ pub trait WatchmanTreeStateRead {
 }
 
 pub struct WatchmanTreeState {
-    pub treestate: Rc<RefCell<TreeState>>,
+    pub treestate: Arc<Mutex<TreeState>>,
 }
 
 impl WatchmanTreeStateWrite for WatchmanTreeState {
     fn mark_needs_check(&mut self, path: &RepoPathBuf) -> Result<()> {
-        let mut treestate = self.treestate.borrow_mut();
+        let mut treestate = self.treestate.lock();
 
         let state = treestate.get(path)?;
         let filestate = match state {
@@ -62,7 +62,7 @@ impl WatchmanTreeStateWrite for WatchmanTreeState {
     }
 
     fn clear_needs_check(&mut self, path: &RepoPathBuf) -> Result<()> {
-        let mut treestate = self.treestate.borrow_mut();
+        let mut treestate = self.treestate.lock();
 
         let state = treestate.get(path)?;
         if let Some(filestate) = state {
@@ -77,7 +77,7 @@ impl WatchmanTreeStateWrite for WatchmanTreeState {
     }
 
     fn set_clock(&mut self, clock: Clock) -> Result<()> {
-        let mut treestate = self.treestate.borrow_mut();
+        let mut treestate = self.treestate.lock();
 
         let clock_string = match clock {
             Clock::Spec(ClockSpec::StringClock(string)) => Ok(string),
@@ -102,7 +102,7 @@ impl WatchmanTreeStateRead for WatchmanTreeState {
     fn list_needs_check(&mut self) -> Result<Vec<Result<RepoPathBuf>>> {
         Ok(self
             .treestate
-            .borrow_mut()
+            .lock()
             .visit_by_state(StateFlags::NEED_CHECK)?
             .into_iter()
             .map(|(path, _state)| RepoPathBuf::from_utf8(path).map_err(|e| anyhow!(e)))
@@ -110,7 +110,7 @@ impl WatchmanTreeStateRead for WatchmanTreeState {
     }
 
     fn get_clock(&self) -> Result<Option<Clock>> {
-        let treestate = self.treestate.borrow();
+        let treestate = self.treestate.lock();
 
         let mut metadata_buf = treestate.get_metadata();
         let metadata = Metadata::deserialize(&mut metadata_buf)?;

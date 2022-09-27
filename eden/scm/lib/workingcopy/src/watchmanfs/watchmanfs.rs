@@ -5,13 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use std::cell::RefCell;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::sync::Arc;
 
 use anyhow::Result;
 use manifest_tree::TreeManifest;
+use parking_lot::Mutex;
 use parking_lot::RwLock;
 use pathmatcher::Matcher;
 use treestate::treestate::TreeState;
@@ -29,7 +28,7 @@ use crate::filesystem::PendingChanges;
 
 pub struct WatchmanFileSystem {
     vfs: VFS,
-    treestate: Rc<RefCell<TreeState>>,
+    treestate: Arc<Mutex<TreeState>>,
     manifest: Arc<RwLock<TreeManifest>>,
     store: ArcReadFileContents,
     last_write: HgModifiedTime,
@@ -38,7 +37,7 @@ pub struct WatchmanFileSystem {
 impl WatchmanFileSystem {
     pub fn new(
         root: PathBuf,
-        treestate: Rc<RefCell<TreeState>>,
+        treestate: Arc<Mutex<TreeState>>,
         manifest: Arc<RwLock<TreeManifest>>,
         store: ArcReadFileContents,
         last_write: HgModifiedTime,

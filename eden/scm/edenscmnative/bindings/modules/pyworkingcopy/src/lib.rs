@@ -117,12 +117,10 @@ py_class!(class status |py| {
             _ => return Err(anyhow!("Unsupported filesystem type: {}", filesystem)).map_pyerr(py),
         };
 
-        let state = pytreestate.get_state(py);
-        let mut option = state.lock();
-        let treestate = option.take().expect("TreeState is never taken outside of lock");
+        let treestate = pytreestate.get_state(py);
 
         let config = config.get_cfg(py);
-        let (treestate, status) = py.allow_threads(|| workingcopy::status::status(
+        let status = py.allow_threads(|| workingcopy::status::status(
             root,
             filesystem,
             manifest,
@@ -134,7 +132,6 @@ py_class!(class status |py| {
             &config,
         ));
 
-        option.replace(treestate);
         let status = status.map_pyerr(py)?;
         pystatus::to_python_status(py, &status)
     }

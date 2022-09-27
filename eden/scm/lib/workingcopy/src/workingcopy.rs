@@ -5,21 +5,19 @@
  * GNU General Public License version 2.
  */
 
-use std::cell::RefCell;
 use std::path::Path;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::SystemTime;
 
 use anyhow::anyhow;
-use anyhow::Error;
 use anyhow::Result;
 use configmodel::Config;
 use configparser::config::ConfigSet;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
+use parking_lot::Mutex;
 use parking_lot::RwLock;
 use pathmatcher::AlwaysMatcher;
 use pathmatcher::DifferenceMatcher;
@@ -51,7 +49,7 @@ type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
 type FileSystem = Box<dyn PendingChanges>;
 
 pub struct WorkingCopy {
-    treestate: Rc<RefCell<TreeState>>,
+    treestate: Arc<Mutex<TreeState>>,
     manifests: Vec<Arc<RwLock<TreeManifest>>>,
     filesystem: FileSystem,
     ignore_matcher: Arc<GitignoreMatcher>,
@@ -63,19 +61,16 @@ impl WorkingCopy {
         root: PathBuf,
         // TODO: Have constructor figure out FileSystemType
         file_system_type: FileSystemType,
-        treestate: TreeState,
+        treestate: Arc<Mutex<TreeState>>,
         tree_resolver: ArcReadTreeManifest,
         filestore: ArcReadFileContents,
         last_write: SystemTime,
         config: &ConfigSet,
-    ) -> std::result::Result<Self, (TreeState, Error)> {
-        tracing::debug!(target: "dirstate_size", dirstate_size=treestate.len());
-
-        let manifests = match WorkingCopy::current_manifests(&treestate, &tree_resolver) {
-            Ok(manifests) => manifests,
-            Err(e) => {
-                return Err((treestate, e));
-            }
+    ) -> Result<Self> {
+        let manifests = {
+            let treestate = treestate.lock();
+            tracing::debug!(target: "dirstate_size", dirstate_size=treestate.len());
+            WorkingCopy::current_manifests(&treestate, &tree_resolver)?
         };
 
         let ignore_matcher = Arc::new(GitignoreMatcher::new(
@@ -93,49 +88,33 @@ impl WorkingCopy {
         if file_system_type == FileSystemType::Eden {
             sparse_matchers.push(Arc::new(AlwaysMatcher::new()));
         } else {
-            let ident = match identity::must_sniff_dir(&root) {
-                Ok(ident) => ident,
-                Err(err) => return Err((treestate, err)),
-            };
+            let ident = identity::must_sniff_dir(&root)?;
             for manifest in manifests.iter() {
                 match crate::sparse::repo_matcher(
                     &root.join(ident.dot_dir()),
                     manifest.read().clone(),
                     filestore.clone(),
-                ) {
-                    Ok(Some(matcher)) => {
+                )? {
+                    Some(matcher) => {
                         sparse_matchers.push(matcher);
                     }
-                    Ok(None) => {
+                    None => {
                         sparse_matchers.push(Arc::new(AlwaysMatcher::new()));
                     }
-                    Err(err) => return Err((treestate, err)),
                 };
             }
         }
 
-        let treestate = Rc::new(RefCell::new(treestate));
-
         let p1_manifest = manifests[0].clone();
 
-        let filesystem: Result<FileSystem> = Self::construct_file_system(
+        let filesystem = Self::construct_file_system(
             root.clone(),
             file_system_type,
             treestate.clone(),
             p1_manifest,
             filestore,
             last_write,
-        );
-
-        let filesystem = match filesystem {
-            Ok(fs) => fs,
-            Err(e) => {
-                let treestate = Rc::try_unwrap(treestate)
-                    .expect("No clones created yet")
-                    .into_inner();
-                return Err((treestate, e));
-            }
-        };
+        )?;
 
         Ok(WorkingCopy {
             treestate,
@@ -183,7 +162,7 @@ impl WorkingCopy {
     fn construct_file_system(
         root: PathBuf,
         file_system_type: FileSystemType,
-        treestate: Rc<RefCell<TreeState>>,
+        treestate: Arc<Mutex<TreeState>>,
         manifest: Arc<RwLock<TreeManifest>>,
         store: ArcReadFileContents,
         last_write: SystemTime,
@@ -216,19 +195,9 @@ impl WorkingCopy {
         })
     }
 
-    // TODO: Remove this method once the pyworkingcopy status bindings have been
-    // deleted. It's only necessary to be able to transfer TreeState ownership
-    // Python -> Rust -> Python.
-    pub fn destroy(self) -> TreeState {
-        drop(self.filesystem);
-        Rc::try_unwrap(self.treestate)
-            .expect("Only a single reference to treestate left")
-            .into_inner()
-    }
-
     fn added_files(&self) -> Result<Vec<RepoPathBuf>> {
         let mut added_files: Vec<RepoPathBuf> = vec![];
-        self.treestate.borrow_mut().visit(
+        self.treestate.lock().visit(
             &mut |components, _| {
                 let path = components.concat();
                 let path = RepoPathBuf::from_utf8(path)?;
@@ -304,7 +273,7 @@ impl WorkingCopy {
 
     pub fn copymap(&self) -> Result<Vec<(RepoPathBuf, RepoPathBuf)>> {
         self.treestate
-            .borrow_mut()
+            .lock()
             .visit_by_state(StateFlags::COPIED)?
             .into_iter()
             .map(|(path, state)| {

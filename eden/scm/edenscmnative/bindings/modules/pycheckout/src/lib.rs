@@ -108,8 +108,7 @@ py_class!(class checkoutplan |py| {
         let store = store.into();
         let status = status.extract_inner_ref(py);
         let unknown = py.allow_threads(move || -> Result<_> {
-            let mut option = state.lock();
-            let mut state = option.as_mut().expect("Attempted to operate on treestate from Python while Rust currently has ownership");
+            let mut state = state.lock();
             let manifest = manifest.read();
             try_block_unless_interrupted(
             plan.check_unknown_files(&*manifest, store.as_ref(), &mut state, status))
@@ -157,8 +156,7 @@ py_class!(class checkoutplan |py| {
         py.allow_threads(move || -> Result<()> {
             let bar = ProgressBar::register_new("recording", plan.all_files().count() as u64, "files");
 
-            let mut option = state.lock();
-            let state = option.as_mut().expect("Attempted to operate on treestate from Python while Rust currently has ownership");
+            let mut state = state.lock();
 
             for removed in plan.removed_files() {
                 state.remove(removed)?;

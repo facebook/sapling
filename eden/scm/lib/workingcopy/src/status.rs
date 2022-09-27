@@ -5,11 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::sync::Arc;
 use std::time::SystemTime;
 
@@ -18,6 +16,7 @@ use configparser::config::ConfigSet;
 use manifest::Manifest;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
+use parking_lot::Mutex;
 use parking_lot::RwLock;
 use pathmatcher::ExactMatcher;
 use pathmatcher::Matcher;
@@ -50,14 +49,14 @@ pub fn status(
     file_system_type: FileSystemType,
     manifest: Arc<RwLock<TreeManifest>>,
     store: ArcReadFileContents,
-    treestate: TreeState,
+    treestate: Arc<Mutex<TreeState>>,
     last_write: SystemTime,
     matcher: Arc<dyn Matcher + Send + Sync + 'static>,
     _list_unknown: bool,
     config: &ConfigSet,
-) -> (TreeState, Result<Status>) {
+) -> Result<Status> {
     let manifest_resolver = Arc::new(FakeTreeResolver { manifest });
-    let result = WorkingCopy::new(
+    let working_copy = WorkingCopy::new(
         root,
         file_system_type,
         treestate,
@@ -65,22 +64,16 @@ pub fn status(
         store,
         last_write,
         config,
-    );
-    let working_copy = match result {
-        Ok(wc) => wc,
-        Err((treestate, e)) => return (treestate, Err(e)),
-    };
+    )?;
 
-    let status = working_copy.status(matcher);
-    let treestate = working_copy.destroy();
-    (treestate, status)
+    working_copy.status(matcher)
 }
 
 /// Compute the status of the working copy relative to the current commit.
 #[allow(unused_variables)]
 pub fn compute_status(
     p1_manifest: &impl Manifest,
-    treestate: Rc<RefCell<TreeState>>,
+    treestate: Arc<Mutex<TreeState>>,
     pending_changes: impl Iterator<Item = Result<ChangeType>>,
     matcher: Arc<dyn Matcher + Send + Sync + 'static>,
 ) -> Result<Status> {
@@ -104,7 +97,7 @@ pub fn compute_status(
             Err(e) => return Err(e),
         };
 
-        match treestate.borrow_mut().get(&path)? {
+        match treestate.lock().get(&path)? {
             Some(state) => {
                 let exist_parent = state
                     .state
@@ -167,10 +160,12 @@ pub fn compute_status(
         .cloned()
         .collect::<HashSet<RepoPathBuf>>();
 
+    let mut treestate = treestate.lock();
+
     // A file that's "added" in the tree (doesn't exist in a parent, but exists in the next
     // commit) but isn't in "pending changes" must have been deleted on the filesystem.
     walk_treestate(
-        &treestate,
+        &mut treestate,
         StateFlags::EXIST_NEXT,
         StateFlags::EXIST_P1 | StateFlags::EXIST_P2,
         |path, state| {
@@ -184,7 +179,7 @@ pub fn compute_status(
     // Pending changes shows changes in the working copy with respect to P1.
     // Thus, we need to specially handle files that are in P2.
     walk_treestate(
-        &treestate,
+        &mut treestate,
         StateFlags::EXIST_P2,
         StateFlags::empty(),
         |path, state| {
@@ -217,7 +212,7 @@ pub fn compute_status(
     // pending changes (e.g. even if the file still exists). Files that are in P2 but
     // not P1 are handled above, so we only need to handle files in P1 here.
     walk_treestate(
-        &treestate,
+        &mut treestate,
         StateFlags::EXIST_P1,
         StateFlags::EXIST_NEXT,
         |path, state| {
@@ -231,7 +226,7 @@ pub fn compute_status(
     // Handle "retroactive copies": when a clean file is marked as having been copied
     // from another file. These files should be marked as "modified".
     walk_treestate(
-        &treestate,
+        &mut treestate,
         StateFlags::COPIED,
         StateFlags::empty(),
         |path, state| {
@@ -254,13 +249,13 @@ pub fn compute_status(
 /// Walk the TreeState, calling the callback for files that have all flags in [`state_all`]
 /// and none of the flags in [`state_none`].
 fn walk_treestate(
-    treestate: &Rc<RefCell<TreeState>>,
+    treestate: &mut TreeState,
     state_all: StateFlags,
     state_none: StateFlags,
     mut callback: impl FnMut(RepoPathBuf, StateFlags) -> Result<()>,
 ) -> Result<()> {
     let file_mask = state_all | state_none;
-    treestate.borrow_mut().visit(
+    treestate.visit(
         &mut |components, state| {
             let path = RepoPathBuf::from_utf8(components.concat())?;
             (callback)(path, state.state)?;
@@ -381,7 +376,7 @@ mod tests {
                 state.insert(path, &file_state).expect("insert");
             }
         }
-        let treestate = Rc::new(RefCell::new(state));
+        let treestate = Arc::new(Mutex::new(state));
         let manifest = DummyManifest {
             files: manifest_files,
         };

@@ -22,6 +22,7 @@ use edenapi::EdenApi;
 use edenapi::EdenApiError;
 use hgcommits::DagCommits;
 use metalog::MetaLog;
+use parking_lot::Mutex;
 use parking_lot::RwLock;
 use revisionstore::scmstore::FileStoreBuilder;
 use revisionstore::scmstore::TreeStoreBuilder;
@@ -359,6 +360,7 @@ impl Repo {
                 TreeState::open(treestate_path, Some(fields.tree_root_id))?
             }
         };
+        let treestate = Arc::new(Mutex::new(treestate));
 
         let file_store = self.file_store()?;
         let tree_resolver = Arc::new(TreeManifestResolver::new(
@@ -375,7 +377,7 @@ impl Repo {
             SystemTime::UNIX_EPOCH,
             &self.config,
         )
-        .map_err(|(_treestate, err)| err)
+        .map_err(|err| err)
     }
 
     async fn get_root_tree_id(&mut self, commit_id: HgId) -> Result<HgId> {

@@ -5,14 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use std::cell::RefCell;
 use std::collections::HashSet;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::sync::Arc;
 
 use anyhow::Result;
 use manifest_tree::TreeManifest;
+use parking_lot::Mutex;
 use parking_lot::RwLock;
 use pathmatcher::Matcher;
 use storemodel::ReadFileContents;
@@ -38,7 +37,7 @@ pub struct PhysicalFileSystem {
     vfs: VFS,
     manifest: Arc<RwLock<TreeManifest>>,
     store: ArcReadFileContents,
-    treestate: Rc<RefCell<TreeState>>,
+    treestate: Arc<Mutex<TreeState>>,
     include_directories: bool,
     last_write: HgModifiedTime,
     num_threads: u8,
@@ -49,7 +48,7 @@ impl PhysicalFileSystem {
         root: PathBuf,
         manifest: Arc<RwLock<TreeManifest>>,
         store: ArcReadFileContents,
-        treestate: Rc<RefCell<TreeState>>,
+        treestate: Arc<Mutex<TreeState>>,
         include_directories: bool,
         last_write: HgModifiedTime,
         num_threads: u8,
@@ -105,7 +104,7 @@ impl PendingChangesTrait for PhysicalFileSystem {
 pub struct PendingChanges<M: Matcher + Clone + Send + Sync + 'static> {
     walker: Walker<M>,
     matcher: M,
-    treestate: Rc<RefCell<TreeState>>,
+    treestate: Arc<Mutex<TreeState>>,
     stage: PendingChangesStage,
     include_directories: bool,
     seen: HashSet<RepoPathBuf>,
@@ -225,7 +224,7 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
         let mut result = Vec::new();
         let mask = StateFlags::EXIST_P1;
 
-        self.treestate.borrow_mut().visit(
+        self.treestate.lock().visit(
             &mut |components, _| {
                 let path = components.concat();
                 let path = RepoPathBuf::from_utf8(path)?;
