@@ -10,9 +10,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
-use manifest_tree::TreeManifest;
+use manifest_tree::ReadTreeManifest;
 use parking_lot::Mutex;
-use parking_lot::RwLock;
 use pathmatcher::Matcher;
 use storemodel::ReadFileContents;
 use treestate::filestate::StateFlags;
@@ -30,12 +29,15 @@ use crate::filesystem::PendingChangeResult;
 use crate::filesystem::PendingChanges as PendingChangesTrait;
 use crate::walker::WalkEntry;
 use crate::walker::Walker;
+use crate::workingcopy::WorkingCopy;
 
 type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
+type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
+
 pub struct PhysicalFileSystem {
     // TODO: Make this an Arc<Mutex<VFS>> so we can persist the vfs pathauditor cache
     vfs: VFS,
-    manifest: Arc<RwLock<TreeManifest>>,
+    tree_resolver: ArcReadTreeManifest,
     store: ArcReadFileContents,
     treestate: Arc<Mutex<TreeState>>,
     include_directories: bool,
@@ -46,7 +48,7 @@ pub struct PhysicalFileSystem {
 impl PhysicalFileSystem {
     pub fn new(
         root: PathBuf,
-        manifest: Arc<RwLock<TreeManifest>>,
+        tree_resolver: ArcReadTreeManifest,
         store: ArcReadFileContents,
         treestate: Arc<Mutex<TreeState>>,
         include_directories: bool,
@@ -55,7 +57,7 @@ impl PhysicalFileSystem {
     ) -> Result<Self> {
         Ok(PhysicalFileSystem {
             vfs: VFS::new(root)?,
-            manifest,
+            tree_resolver,
             store,
             treestate,
             include_directories,
@@ -79,11 +81,13 @@ impl PendingChangesTrait for PhysicalFileSystem {
             false,
             self.num_threads,
         )?;
+        let manifests =
+            WorkingCopy::current_manifests(&self.treestate.lock(), &self.tree_resolver)?;
         let file_change_detector = FileChangeDetector::new(
             self.treestate.clone(),
             self.vfs.clone(),
             self.last_write.clone(),
-            self.manifest.clone(),
+            manifests[0].clone(),
             self.store.clone(),
         );
         let pending_changes = PendingChanges {

@@ -46,14 +46,25 @@ use crate::watchmanfs::WatchmanFileSystem;
 
 type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
 type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
-type FileSystem = Box<dyn PendingChanges>;
+
+struct FileSystem {
+    root: PathBuf,
+    file_store: ArcReadFileContents,
+    file_system_type: FileSystemType,
+    inner: Box<dyn PendingChanges + Send>,
+}
+
+impl AsRef<Box<dyn PendingChanges + Send>> for FileSystem {
+    fn as_ref(&self) -> &Box<dyn PendingChanges + Send> {
+        &self.inner
+    }
+}
 
 pub struct WorkingCopy {
     treestate: Arc<Mutex<TreeState>>,
-    manifests: Vec<Arc<RwLock<TreeManifest>>>,
+    tree_resolver: ArcReadTreeManifest,
     filesystem: FileSystem,
     ignore_matcher: Arc<GitignoreMatcher>,
-    sparse_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
 }
 
 impl WorkingCopy {
@@ -67,11 +78,7 @@ impl WorkingCopy {
         last_write: SystemTime,
         config: &ConfigSet,
     ) -> Result<Self> {
-        let manifests = {
-            let treestate = treestate.lock();
-            tracing::debug!(target: "dirstate_size", dirstate_size=treestate.len());
-            WorkingCopy::current_manifests(&treestate, &tree_resolver)?
-        };
+        tracing::debug!(target: "dirstate_size", dirstate_size=treestate.lock().len());
 
         let ignore_matcher = Arc::new(GitignoreMatcher::new(
             &root,
@@ -81,51 +88,24 @@ impl WorkingCopy {
                 .collect(),
         ));
 
-        // We assume there will be at least one manifest, even if it's the null manifest.
-        assert!(!manifests.is_empty());
-
-        let mut sparse_matchers: Vec<Arc<dyn Matcher + Send + Sync + 'static>> = Vec::new();
-        if file_system_type == FileSystemType::Eden {
-            sparse_matchers.push(Arc::new(AlwaysMatcher::new()));
-        } else {
-            let ident = identity::must_sniff_dir(&root)?;
-            for manifest in manifests.iter() {
-                match crate::sparse::repo_matcher(
-                    &root.join(ident.dot_dir()),
-                    manifest.read().clone(),
-                    filestore.clone(),
-                )? {
-                    Some(matcher) => {
-                        sparse_matchers.push(matcher);
-                    }
-                    None => {
-                        sparse_matchers.push(Arc::new(AlwaysMatcher::new()));
-                    }
-                };
-            }
-        }
-
-        let p1_manifest = manifests[0].clone();
-
         let filesystem = Self::construct_file_system(
             root.clone(),
             file_system_type,
             treestate.clone(),
-            p1_manifest,
+            tree_resolver.clone(),
             filestore,
             last_write,
         )?;
 
         Ok(WorkingCopy {
             treestate,
-            manifests,
+            tree_resolver,
             filesystem,
             ignore_matcher,
-            sparse_matcher: Arc::new(UnionMatcher::new(sparse_matchers)),
         })
     }
 
-    fn current_manifests(
+    pub(crate) fn current_manifests(
         treestate: &TreeState,
         tree_resolver: &ArcReadTreeManifest,
     ) -> Result<Vec<Arc<RwLock<TreeManifest>>>> {
@@ -163,35 +143,40 @@ impl WorkingCopy {
         root: PathBuf,
         file_system_type: FileSystemType,
         treestate: Arc<Mutex<TreeState>>,
-        manifest: Arc<RwLock<TreeManifest>>,
+        tree_resolver: ArcReadTreeManifest,
         store: ArcReadFileContents,
         last_write: SystemTime,
     ) -> Result<FileSystem> {
         let last_write: HgModifiedTime = last_write.try_into()?;
-
-        Ok(match file_system_type {
+        let inner: Box<dyn PendingChanges + Send> = match file_system_type {
             FileSystemType::Normal => Box::new(PhysicalFileSystem::new(
-                root,
-                manifest.clone(),
-                store,
+                root.clone(),
+                tree_resolver,
+                store.clone(),
                 treestate.clone(),
                 false,
                 last_write,
                 8,
             )?),
             FileSystemType::Watchman => Box::new(WatchmanFileSystem::new(
-                root,
+                root.clone(),
                 treestate.clone(),
-                manifest.clone(),
-                store,
+                tree_resolver,
+                store.clone(),
                 last_write,
             )?),
             FileSystemType::Eden => {
                 #[cfg(not(feature = "eden"))]
                 panic!("cannot use EdenFS in a non-EdenFS build");
                 #[cfg(feature = "eden")]
-                Box::new(EdenFileSystem::new(root)?)
+                Box::new(EdenFileSystem::new(root.clone())?)
             }
+        };
+        Ok(FileSystem {
+            root,
+            file_store: store,
+            file_system_type,
+            inner,
         })
     }
 
@@ -224,11 +209,45 @@ impl WorkingCopy {
         Ok(added_files)
     }
 
+    fn sparse_matcher(
+        &self,
+        manifests: &Vec<Arc<RwLock<TreeManifest>>>,
+    ) -> Result<Arc<dyn Matcher + Send + Sync + 'static>> {
+        let fs = &self.filesystem;
+
+        let mut sparse_matchers: Vec<Arc<dyn Matcher + Send + Sync + 'static>> = Vec::new();
+        if fs.file_system_type == FileSystemType::Eden {
+            sparse_matchers.push(Arc::new(AlwaysMatcher::new()));
+        } else {
+            let ident = identity::must_sniff_dir(&fs.root)?;
+            for manifest in manifests.iter() {
+                match crate::sparse::repo_matcher(
+                    &fs.root.join(ident.dot_dir()),
+                    manifest.read().clone(),
+                    fs.file_store.clone(),
+                )? {
+                    Some(matcher) => {
+                        sparse_matchers.push(matcher);
+                    }
+                    None => {
+                        sparse_matchers.push(Arc::new(AlwaysMatcher::new()));
+                    }
+                };
+            }
+        }
+
+        Ok(Arc::new(UnionMatcher::new(sparse_matchers)))
+    }
+
     pub fn status(&self, matcher: Arc<dyn Matcher + Send + Sync + 'static>) -> Result<Status> {
         let added_files = self.added_files()?;
+
+        let manifests =
+            WorkingCopy::current_manifests(&self.treestate.lock(), &self.tree_resolver)?;
         let mut non_ignore_matchers: Vec<Arc<dyn Matcher + Send + Sync + 'static>> =
-            Vec::with_capacity(self.manifests.len());
-        for manifest in self.manifests.iter() {
+            Vec::with_capacity(manifests.len());
+
+        for manifest in manifests.iter() {
             non_ignore_matchers.push(Arc::new(manifest_tree::ManifestMatcher::new(
                 manifest.clone(),
             )));
@@ -237,7 +256,7 @@ impl WorkingCopy {
 
         let matcher = Arc::new(IntersectMatcher::new(vec![
             matcher,
-            self.sparse_matcher.clone(),
+            self.sparse_matcher(&manifests)?,
         ]));
 
         let matcher = Arc::new(DifferenceMatcher::new(
@@ -249,6 +268,7 @@ impl WorkingCopy {
         ));
         let pending_changes = self
             .filesystem
+            .inner
             .pending_changes(matcher.clone())?
             .filter_map(|result| match result {
                 Ok(PendingChangeResult::File(change_type)) => {
@@ -262,7 +282,7 @@ impl WorkingCopy {
                 _ => None,
             });
 
-        let p1_manifest = &*self.manifests[0].read();
+        let p1_manifest = &*manifests[0].read();
         compute_status(
             p1_manifest,
             self.treestate.clone(),

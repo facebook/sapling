@@ -9,9 +9,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
-use manifest_tree::TreeManifest;
+use manifest_tree::ReadTreeManifest;
 use parking_lot::Mutex;
-use parking_lot::RwLock;
 use pathmatcher::Matcher;
 use treestate::treestate::TreeState;
 use vfs::VFS;
@@ -25,11 +24,14 @@ use crate::filechangedetector::FileChangeDetector;
 use crate::filechangedetector::HgModifiedTime;
 use crate::filesystem::PendingChangeResult;
 use crate::filesystem::PendingChanges;
+use crate::workingcopy::WorkingCopy;
+
+type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
 
 pub struct WatchmanFileSystem {
     vfs: VFS,
     treestate: Arc<Mutex<TreeState>>,
-    manifest: Arc<RwLock<TreeManifest>>,
+    tree_resolver: ArcReadTreeManifest,
     store: ArcReadFileContents,
     last_write: HgModifiedTime,
 }
@@ -38,14 +40,14 @@ impl WatchmanFileSystem {
     pub fn new(
         root: PathBuf,
         treestate: Arc<Mutex<TreeState>>,
-        manifest: Arc<RwLock<TreeManifest>>,
+        tree_resolver: ArcReadTreeManifest,
         store: ArcReadFileContents,
         last_write: HgModifiedTime,
     ) -> Result<Self> {
         Ok(WatchmanFileSystem {
             vfs: VFS::new(root)?,
             treestate,
-            manifest,
+            tree_resolver,
             store,
             last_write,
         })
@@ -89,11 +91,14 @@ impl PendingChanges for WatchmanFileSystem {
 
         let result = async_runtime::block_on(self.query_result(&state))?;
 
+        let manifests =
+            WorkingCopy::current_manifests(&self.treestate.lock(), &self.tree_resolver)?;
+
         let file_change_detector = FileChangeDetector::new(
             self.treestate.clone(),
             self.vfs.clone(),
             self.last_write.clone(),
-            self.manifest.clone(),
+            manifests[0].clone(),
             self.store.clone(),
         );
         let mut pending_changes = state.merge(result, file_change_detector)?;
