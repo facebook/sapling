@@ -1,6 +1,7 @@
 query PullRequestQuery($owner: String!, $name: String!, $number: Int!) {
   repository(name: $name, owner: $owner) {
     pullRequest(number: $number) {
+      id
       url
       title
       body

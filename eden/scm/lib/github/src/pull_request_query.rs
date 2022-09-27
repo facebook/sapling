@@ -27,6 +27,8 @@ struct PullRequestQuery;
 
 #[derive(Debug, Serialize)]
 pub struct PullRequest {
+    pub number: u32,
+    pub id: String,
     pub url: String,
     pub title: String,
     pub body: String,
@@ -110,13 +112,14 @@ pub fn get_pull_request(
         pull_request_query::ResponseData,
         pull_request_query::Variables,
     >(github_api_token, query)?;
-    Ok(convert(response_data))
+    Ok(convert(number, response_data))
 }
 
-fn convert(response_data: pull_request_query::ResponseData) -> Option<PullRequest> {
+fn convert(number: u32, response_data: pull_request_query::ResponseData) -> Option<PullRequest> {
     let repo = response_data.repository?;
     let pull_request = repo.pull_request?;
     let pull_request_query::PullRequestQueryRepositoryPullRequest {
+        id,
         url,
         title,
         body,
@@ -139,6 +142,8 @@ fn convert(response_data: pull_request_query::ResponseData) -> Option<PullReques
     let base_owner_name = base_repository.name_with_owner.split_once('/')?;
     let head_owner_name = head_repository.name_with_owner.split_once('/')?;
     Some(PullRequest {
+        id,
+        number,
         url,
         title,
         body,

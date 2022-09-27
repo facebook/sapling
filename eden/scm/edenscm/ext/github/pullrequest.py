@@ -51,3 +51,18 @@ class GraphQLPullRequest:
 
     def __getitem__(self, key):
         return self.graphql_data[key]
+
+    def node_id(self) -> str:
+        return self.graphql_data["id"]
+
+    def number(self) -> int:
+        return self.graphql_data["number"]
+
+    def url(self) -> str:
+        return self.graphql_data["url"]
+
+    def get_head_oid(self) -> str:
+        return self.graphql_data["head"]["ref_oid"]
+
+    def get_head_branch_name(self) -> str:
+        return self.graphql_data["head"]["ref_name"]
