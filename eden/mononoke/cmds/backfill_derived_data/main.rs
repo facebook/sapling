@@ -13,6 +13,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
@@ -34,6 +35,7 @@ use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarksSubscription;
 use bookmarks::Freshness;
+use borrowed::borrowed;
 use bytes::Bytes;
 use cacheblob::dummy::DummyLease;
 use cacheblob::InProcessLease;
@@ -1410,7 +1412,7 @@ async fn tail_batch_iteration<'a>(
         STATS::derivation_idle_time_ms.add_value(SLEEP_TIME as i64, (repo.name().to_string(),));
         tokio::time::sleep(Duration::from_millis(SLEEP_TIME)).await;
     } else {
-        info!(ctx.logger(), "deriving data {}", size);
+        info!(ctx.logger(), "Deriving data for {} commits", size);
         // Find all the commits that we need to derive, and fetch gen number
         // so that we can sort them lexicographically
         let commits = derive_graph.commits();
@@ -1423,6 +1425,10 @@ async fn tail_batch_iteration<'a>(
         .buffer_unordered(100)
         .try_collect::<Vec<_>>()
         .await?;
+
+        let changesets_derived = AtomicUsize::new(0);
+        borrowed!(changesets_derived);
+        let before_derivation = Instant::now();
 
         // We are using `bounded_traversal_dag` directly instead of `DeriveGraph::derive`
         // so we could use `warmup::warmup` on each node.
@@ -1463,13 +1469,19 @@ async fn tail_batch_iteration<'a>(
                         let (stats, _) = tokio::spawn(job).await??;
 
                         if let (Some(first), Some(last)) = (node.csids.first(), node.csids.last()) {
+                            changesets_derived.fetch_add(node.csids.len(), Ordering::Relaxed);
+                            let changesets_derived = changesets_derived.load(Ordering::Relaxed);
+                            let estimated_duration = before_derivation
+                                .elapsed()
+                                .mul_f64((size as f64) / (changesets_derived as f64) - 1.0);
                             slog::info!(
                                 ctx.logger(),
-                                "[{}:{}] count:{} time:{:.2?} start:{} end:{}",
+                                "[{}:{}] count:{} time:{:.2?} batch estimation:{} start:{} end:{}",
                                 deriver.name(),
                                 node.id,
                                 node.csids.len(),
                                 timestamp.elapsed(),
+                                humantime::format_duration(truncate_duration(estimated_duration)),
                                 first,
                                 last
                             );
