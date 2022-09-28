@@ -11,10 +11,7 @@ use std::ops::Deref;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicI64;
 use std::sync::Arc;
-use std::sync::Mutex;
-use std::thread;
 use std::thread_local;
-use std::time::Duration;
 
 use anyhow::Result;
 use arc_swap::ArcSwap;
@@ -24,14 +21,15 @@ use futures::Future;
 use futures::FutureExt;
 use once_cell::sync::OnceCell;
 use slog::debug;
+use slog::error;
 use slog::warn;
 use slog::Logger;
+use tokio::runtime::Handle;
 use tunables_derive::Tunables;
 use tunables_structs::Tunables as TunablesStruct;
 
 static TUNABLES: OnceCell<MononokeTunables> = OnceCell::new();
-static TUNABLES_WORKER_STATE: OnceCell<Mutex<TunablesWorkerState>> = OnceCell::new();
-const REFRESH_INTERVAL: Duration = Duration::from_secs(5);
+static TUNABLES_WORKER_STATE: OnceCell<TunablesWorkerState> = OnceCell::new();
 
 thread_local! {
     static TUNABLES_OVERRIDE: RefCell<Option<Arc<MononokeTunables>>> = RefCell::new(None);
@@ -333,6 +331,7 @@ fn log_tunables(tunables: &TunablesStruct) -> String {
 pub fn init_tunables_worker(
     logger: Logger,
     config_handle: ConfigHandle<TunablesStruct>,
+    runtime_handle: Handle,
 ) -> Result<()> {
     let init_tunables = config_handle.get();
     debug!(
@@ -343,75 +342,65 @@ pub fn init_tunables_worker(
     update_tunables(init_tunables.clone())?;
 
     if TUNABLES_WORKER_STATE
-        .set(Mutex::new(TunablesWorkerState {
+        .set(TunablesWorkerState {
             config_handle,
-            old_tunables: Some(init_tunables),
             logger,
-        }))
+        })
         .is_err()
     {
         panic!("Two or more tunables update threads exist at the same time");
     }
-
-    thread::Builder::new()
-        .name("mononoke-tunables".into())
-        .spawn(worker)
-        .expect("Can't spawn tunables updater");
+    runtime_handle.spawn(wait_and_update());
 
     Ok(())
 }
 
-/// Tunables are updated in loop with sleeps. Call this to force update them.
+/// Tunables are updated when the underlying config source notifies of a change.
+/// Call this to force update them to the latest value provided by the config source.
 /// Meant to be used in tests.
 /// NOTE: if tunables are fetched from Configerator, you need to force update it as well.
 pub fn force_update_tunables() {
-    worker_iteration();
+    let state = TUNABLES_WORKER_STATE
+        .get()
+        .expect("Tunables worker state uninitialised");
+    wait_and_update_iteration(state.config_handle.get(), &state.logger);
 }
 
 struct TunablesWorkerState {
     config_handle: ConfigHandle<TunablesStruct>,
-    // Previous value of the tunables.  If we fail to update tunables,
-    // this will be `None`.
-    old_tunables: Option<Arc<TunablesStruct>>,
     logger: Logger,
 }
 
-fn worker() {
+async fn wait_and_update() {
+    let state = TUNABLES_WORKER_STATE
+        .get()
+        .expect("Tunables worker state uninitialised");
+    let mut config_watcher = state
+        .config_handle
+        .watcher()
+        .expect("Tunable backed by static config source");
     loop {
-        // TODO: Instead of refreshing tunables every loop iteration,
-        // update cached_config to notify us when our config has changed.
-        worker_iteration();
-        thread::sleep(REFRESH_INTERVAL);
+        match config_watcher.wait_for_next().await {
+            Ok(new_tunables) => wait_and_update_iteration(new_tunables, &state.logger),
+            Err(e) => {
+                error!(
+                    state.logger,
+                    "Error in fetching latest config for tunable: {}.\n Exiting tunable updater", e
+                );
+                return;
+            }
+        }
     }
 }
 
-fn worker_iteration() {
-    let mut state = TUNABLES_WORKER_STATE
-        .get()
-        .expect("Tunables worker state uninitialised")
-        .lock()
-        .expect("Poisoned lock");
-
-    let new_tunables = state.config_handle.get();
-    if Some(&new_tunables) != state.old_tunables.as_ref() {
-        debug!(
-            state.logger,
-            "Updating tunables, old: {}, new: {}",
-            state
-                .old_tunables
-                .as_deref()
-                .map_or_else(|| String::from("unknown"), log_tunables),
-            log_tunables(&new_tunables),
-        );
-        match update_tunables(new_tunables.clone()) {
-            Ok(_) => {
-                state.old_tunables = Some(new_tunables);
-            }
-            Err(e) => {
-                warn!(state.logger, "Failed to refresh tunables: {}", e);
-                state.old_tunables = None;
-            }
-        }
+fn wait_and_update_iteration(new_tunables: Arc<TunablesStruct>, logger: &Logger) {
+    debug!(
+        logger,
+        "Updating tunables to new: {}",
+        log_tunables(&new_tunables),
+    );
+    if let Err(e) = update_tunables(new_tunables) {
+        warn!(logger, "Failed to refresh tunables: {}", e);
     }
 }
 

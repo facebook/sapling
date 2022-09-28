@@ -193,8 +193,13 @@ impl<'a> MononokeMatches<'a> {
 
         let runtime = init_runtime(&matches).context("Failed to create Tokio runtime")?;
 
-        init_tunables(&matches, &config_store, logger.clone())
-            .context("Failed to initialize tunables")?;
+        init_tunables(
+            &matches,
+            &config_store,
+            logger.clone(),
+            runtime.handle().clone(),
+        )
+        .context("Failed to initialize tunables")?;
 
         let mysql_options =
             parse_mysql_options(&matches, &app_data).context("Failed to parse MySQL options")?;
@@ -906,6 +911,7 @@ fn init_tunables<'a>(
     matches: &'a ArgMatches<'a>,
     config_store: &'a ConfigStore,
     logger: Logger,
+    handle: Handle,
 ) -> Result<()> {
     if matches.is_present(DISABLE_TUNABLES) {
         debug!(logger, "Tunables are disabled");
@@ -917,7 +923,7 @@ fn init_tunables<'a>(
             .with_context(|| format!("failed to open tunables path {}", tunables_local_path))?;
         let config_handle = ConfigHandle::from_json(&value)
             .with_context(|| format!("failed to parse tunables at path {}", tunables_local_path))?;
-        return init_tunables_worker(logger, config_handle);
+        return init_tunables_worker(logger, config_handle, handle);
     }
 
     let tunables_spec = matches
@@ -927,7 +933,7 @@ fn init_tunables<'a>(
     let config_handle =
         config_store.get_config_handle(parse_config_spec_to_path(tunables_spec)?)?;
 
-    init_tunables_worker(logger, config_handle)
+    init_tunables_worker(logger, config_handle, handle)
 }
 
 /// Initialize a new `Runtime` with thread number parsed from the CLI

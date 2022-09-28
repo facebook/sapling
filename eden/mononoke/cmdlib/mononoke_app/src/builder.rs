@@ -55,6 +55,7 @@ use sql_ext::facebook::MysqlOptions;
 use sql_ext::facebook::PoolConfig;
 use sql_ext::facebook::ReadConnectionType;
 use sql_ext::facebook::SharedConnectionPool;
+use tokio::runtime::Handle;
 use tokio::runtime::Runtime;
 
 use crate::app::MononokeApp;
@@ -353,7 +354,12 @@ impl MononokeAppBuilder {
         let acl_provider =
             create_acl_provider(self.fb, &acl_args).context("Failed to create ACL provider")?;
 
-        init_tunables_worker(&tunables_args, &config_store, logger.clone())?;
+        init_tunables_worker(
+            &tunables_args,
+            &config_store,
+            logger.clone(),
+            runtime.handle().clone(),
+        )?;
 
         Ok(MononokeEnvironment {
             fb: self.fb,
@@ -521,6 +527,7 @@ fn init_tunables_worker(
     tunables_args: &TunablesArgs,
     config_store: &ConfigStore,
     logger: Logger,
+    handle: Handle,
 ) -> Result<()> {
     if tunables_args.disable_tunables {
         debug!(logger, "Tunables are disabled");
@@ -532,14 +539,14 @@ fn init_tunables_worker(
             .with_context(|| format!("failed to open tunables path {}", tunables_local_path))?;
         let config_handle = ConfigHandle::from_json(&value)
             .with_context(|| format!("failed to parse tunables at path {}", tunables_local_path))?;
-        return tunables::init_tunables_worker(logger, config_handle);
+        return tunables::init_tunables_worker(logger, config_handle, handle);
     }
 
     let tunables_config = tunables_args.tunables_config_or_default();
     let config_handle =
         config_store.get_config_handle(parse_config_spec_to_path(&tunables_config)?)?;
 
-    tunables::init_tunables_worker(logger, config_handle)
+    tunables::init_tunables_worker(logger, config_handle, handle)
 }
 
 fn create_acl_provider(fb: FacebookInit, acl_args: &AclArgs) -> Result<Arc<dyn AclProvider>> {
