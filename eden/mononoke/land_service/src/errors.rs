@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::backtrace::BacktraceStatus;
 use std::error::Error as StdError;
 
 use anyhow::Error;

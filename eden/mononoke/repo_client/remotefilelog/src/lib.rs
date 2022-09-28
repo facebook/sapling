@@ -266,7 +266,7 @@ async fn prepare_blob(
     let envelope = node.load(ctx, repo.blobstore()).await?;
 
     let inline_file = match lfs_params.threshold {
-        Some(lfs_threshold) => (envelope.content_size() <= lfs_threshold),
+        Some(lfs_threshold) => envelope.content_size() <= lfs_threshold,
         None => true,
     };
 

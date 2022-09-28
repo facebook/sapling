@@ -60,7 +60,7 @@ queries! {
         "
         SELECT globalrev
         FROM bonsai_globalrev_mapping
-        WHERE repo_id = {}
+        WHERE repo_id = {repo_id}
         ORDER BY globalrev DESC
         LIMIT 1
         "
