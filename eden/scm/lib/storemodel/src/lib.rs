@@ -48,6 +48,10 @@ pub trait ReadFileContents {
     ) -> BoxStream<Result<(minibytes::Bytes, Key), Self::Error>>;
 }
 
+pub trait RefreshableReadFileContents: ReadFileContents {
+    fn refresh(&self) -> Result<(), Self::Error>;
+}
+
 #[async_trait]
 pub trait ReadRootTreeIds {
     /// Read root tree nodes of given commits.
@@ -58,6 +62,7 @@ pub trait ReadRootTreeIds {
 /// The `TreeStore` is an abstraction layer for the tree manifest that decouples how or where the
 /// data is stored. This allows more easy iteration on serialization format. It also simplifies
 /// writing storage migration.
+#[auto_impl::auto_impl(Arc)]
 pub trait TreeStore {
     fn get(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<minibytes::Bytes>;
 
@@ -76,6 +81,10 @@ pub trait TreeStore {
     fn format(&self) -> TreeFormat {
         TreeFormat::Hg
     }
+}
+
+pub trait RefreshableTreeStore: TreeStore {
+    fn refresh(&self) -> anyhow::Result<()>;
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]

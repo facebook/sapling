@@ -380,6 +380,13 @@ impl TreeStore {
 
         result
     }
+
+    pub fn refresh(&self) -> Result<()> {
+        if let Some(contentstore) = self.contentstore.as_ref() {
+            contentstore.refresh()?;
+        }
+        self.flush()
+    }
 }
 
 fn use_memcache(creation_time: Instant) -> bool {
@@ -494,10 +501,7 @@ impl HgIdDataStore for TreeStore {
     }
 
     fn refresh(&self) -> Result<()> {
-        if let Some(contentstore) = self.contentstore.as_ref() {
-            contentstore.refresh()?;
-        }
-        self.flush()
+        self.refresh()
     }
 }
 
@@ -610,5 +614,11 @@ impl storemodel::TreeStore for TreeStore {
 
     fn insert(&self, _path: &RepoPath, _node: Node, _data: Bytes) -> Result<()> {
         unimplemented!("not needed yet");
+    }
+}
+
+impl storemodel::RefreshableTreeStore for TreeStore {
+    fn refresh(&self) -> Result<()> {
+        self.refresh()
     }
 }

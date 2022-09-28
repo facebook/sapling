@@ -400,6 +400,14 @@ impl FileStore {
         result
     }
 
+    pub fn refresh(&self) -> Result<()> {
+        self.metrics.write().api.hg_refresh.call(0);
+        if let Some(contentstore) = self.contentstore.as_ref() {
+            contentstore.refresh()?;
+        }
+        self.flush()
+    }
+
     pub fn metrics(&self) -> Vec<(String, usize)> {
         self.metrics.read().metrics().collect()
     }
@@ -583,11 +591,7 @@ impl HgIdDataStore for FileStore {
     }
 
     fn refresh(&self) -> Result<()> {
-        self.metrics.write().api.hg_refresh.call(0);
-        if let Some(contentstore) = self.contentstore.as_ref() {
-            contentstore.refresh()?;
-        }
-        self.flush()
+        self.refresh()
     }
 }
 

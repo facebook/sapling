@@ -30,6 +30,8 @@ use revisionstore::EdenApiFileStore;
 use revisionstore::EdenApiTreeStore;
 use revisionstore::MemcacheStore;
 use storemodel::ReadFileContents;
+use storemodel::RefreshableReadFileContents;
+use storemodel::RefreshableTreeStore;
 use storemodel::TreeStore;
 use treestate::dirstate::Dirstate;
 use treestate::dirstate::TreeStateFields;
@@ -61,8 +63,8 @@ pub struct Repo {
     metalog: Option<Arc<RwLock<MetaLog>>>,
     eden_api: Option<Arc<dyn EdenApi>>,
     dag_commits: Option<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
-    file_store: Option<Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>>,
-    tree_store: Option<Arc<dyn TreeStore + Send + Sync>>,
+    file_store: Option<Arc<dyn RefreshableReadFileContents<Error = anyhow::Error> + Send + Sync>>,
+    tree_store: Option<Arc<dyn RefreshableTreeStore + Send + Sync>>,
 }
 
 impl Repo {
@@ -292,7 +294,7 @@ impl Repo {
         &mut self,
     ) -> Result<Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>> {
         if let Some(fs) = &self.file_store {
-            return Ok(fs.clone());
+            return Ok(Arc::new(fs.clone()));
         }
 
         let eden_api = match self.eden_api() {
@@ -331,7 +333,7 @@ impl Repo {
 
     pub fn tree_store(&mut self) -> Result<Arc<dyn TreeStore + Send + Sync>> {
         if let Some(ts) = &self.tree_store {
-            return Ok(ts.clone());
+            return Ok(Arc::new(ts.clone()));
         }
 
         let eden_api = match self.eden_api() {
@@ -351,6 +353,16 @@ impl Repo {
         let ts = Arc::new(tree_builder.build()?);
         self.tree_store = Some(ts.clone());
         Ok(ts)
+    }
+
+    pub fn invalidate_stores(&mut self) -> Result<()> {
+        if let Some(file_store) = &self.file_store {
+            file_store.refresh()?;
+        }
+        if let Some(tree_store) = &self.tree_store {
+            tree_store.refresh()?;
+        }
+        Ok(())
     }
 
     pub fn working_copy(&mut self, path: &Path) -> Result<WorkingCopy, errors::InvalidWorkingCopy> {

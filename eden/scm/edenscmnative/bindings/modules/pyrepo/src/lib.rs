@@ -104,6 +104,12 @@ py_class!(pub class repo |py| {
         Ok(PyNone)
     }
 
+    def invalidatestores(&self) -> PyResult<PyNone> {
+        let mut repo_ref = self.inner(py).write();
+        repo_ref.invalidate_stores().map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
     def dotpath(&self) -> PyResult<PyPathBuf> {
         self.inner(py).read().dot_hg_path().try_into().map_pyerr(py)
     }

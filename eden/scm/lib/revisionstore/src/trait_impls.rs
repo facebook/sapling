@@ -19,6 +19,7 @@ use futures::Stream;
 use futures::StreamExt;
 use minibytes::Bytes;
 use storemodel::ReadFileContents;
+use storemodel::RefreshableReadFileContents;
 use tokio::runtime::Handle;
 use types::Key;
 
@@ -53,6 +54,12 @@ impl ReadFileContents for ArcFileStore {
 
     async fn read_file_contents(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
         stream_data_from_scmstore(self.0.clone(), keys).boxed()
+    }
+}
+
+impl RefreshableReadFileContents for ArcFileStore {
+    fn refresh(&self) -> Result<()> {
+        FileStore::refresh(&self.0)
     }
 }
 

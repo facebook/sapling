@@ -1807,6 +1807,11 @@ class localrepository(object):
                 # transaction running
                 repo.dirstate.write(None)
                 repo._txnreleased = True
+
+                # Rust may use it's own copies of stores, so we need to
+                # invalidate those when a transaction commits successfully.
+                repo._rsrepo.invalidatestores()
+                self._rsrepo.invalidatechangelog()
             else:
                 # discard all changes (including ones already written
                 # out) in this transaction
@@ -2169,6 +2174,8 @@ class localrepository(object):
             # causes inconsistency. We should make in-memory store
             # changes detectable, and abort if changed.
             self.store.invalidatecaches()
+
+        self._rsrepo.invalidatestores()
 
     def invalidatechangelog(self):
         """Invalidates the changelog. Discard pending changes."""
