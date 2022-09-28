@@ -43,14 +43,18 @@ pub trait ReplicaLagMonitor: Send + Sync {
 
     /// Will poll periodically until the all replicas are below the given threshold of delay from
     /// the primary instance.
-    async fn wait_for_replication(&self, config: &WaitForReplicationConfig<'_>) -> Result<()> {
+    /// Returns the last replica lag.
+    async fn wait_for_replication(
+        &self,
+        config: &WaitForReplicationConfig<'_>,
+    ) -> Result<ReplicaLag> {
         loop {
             let max_lag = self.get_max_replica_lag().await?;
             if let Some(logger) = config.logger {
                 info!(logger, "{}", max_lag);
             }
             if max_lag.delay < config.max_replication_lag_allowed {
-                return Ok(());
+                return Ok(max_lag);
             }
             // Wait before polling again.
             time::sleep(config.poll_interval).await;

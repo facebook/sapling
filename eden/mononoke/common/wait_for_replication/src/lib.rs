@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::ops::DerefMut;
 use std::sync::Arc;
 use std::time::Duration;
+use std::time::Instant;
 
 use anyhow::Result;
 use cached_config::ConfigHandle;
@@ -26,12 +28,20 @@ use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::NoReplicaLagMonitor;
 use sql_ext::replication::ReplicaLagMonitor;
 use sql_ext::replication::WaitForReplicationConfig;
+use tokio::sync::Mutex;
+
+#[derive(Default)]
+struct State {
+    last_sync_queue_lag: Option<(Instant, Duration)>,
+    last_xdb_blobstore_lag: Option<(Instant, Duration)>,
+}
 
 #[derive(Clone)]
 pub struct WaitForReplication {
     config_handle: ConfigHandle<ReplicationLagBlobstoreConfig>,
     sync_queue_monitor: Arc<dyn ReplicaLagMonitor>,
     xdb_blobstore_monitor: Arc<dyn ReplicaLagMonitor>,
+    state: Arc<Mutex<State>>,
 }
 
 const CONFIGS_PATH: &str = "scm/mononoke/mysql/replication_lag/config";
@@ -88,21 +98,29 @@ impl WaitForReplication {
             config_handle,
             sync_queue_monitor,
             xdb_blobstore_monitor,
+            state: Arc::new(Mutex::new(State::default())),
         })
     }
 
     pub async fn wait_for_replication(&self, logger: &Logger) -> Result<()> {
         let config = self.config_handle.get();
+        let mut state_lock = self.state.lock().await;
+        let State {
+            last_sync_queue_lag,
+            last_xdb_blobstore_lag,
+        } = state_lock.deref_mut();
         try_join!(
             self.wait_for_table(
                 logger,
                 "sync queue",
+                last_sync_queue_lag,
                 &self.sync_queue_monitor,
                 config.sync_queue.as_ref()
             ),
             self.wait_for_table(
                 logger,
                 "XDB blobstore",
+                last_xdb_blobstore_lag,
                 &self.xdb_blobstore_monitor,
                 config.xdb_blobstore.as_ref()
             ),
@@ -114,6 +132,7 @@ impl WaitForReplication {
         &'a self,
         logger: &'a Logger,
         name: &'static str,
+        last_lag: &'a mut Option<(Instant, Duration)>,
         monitor: &'a Arc<dyn ReplicaLagMonitor>,
         config: Option<&'a ReplicationLagTableConfig>,
     ) -> Result<()> {
@@ -121,6 +140,22 @@ impl WaitForReplication {
             let max_replication_lag_allowed =
                 Duration::from_millis(raw_config.max_replication_lag_allowed_ms.try_into()?);
             let poll_interval = Duration::from_millis(raw_config.poll_interval_ms.try_into()?);
+            match last_lag.as_mut() {
+                // If queried too recently, just assume it's all ok.
+                Some((instant, duration))
+                    if instant.elapsed() < poll_interval
+                        && *duration < max_replication_lag_allowed =>
+                {
+                    return Ok(());
+                }
+                // If impossible to have surpassed replication_lag, don't query
+                Some((instant, duration))
+                    if *duration + instant.elapsed() < max_replication_lag_allowed =>
+                {
+                    return Ok(());
+                }
+                _ => {}
+            }
             info!(
                 logger,
                 "Waiting for replication lag on {} to drop below {:?}",
@@ -129,7 +164,8 @@ impl WaitForReplication {
             );
             let config =
                 WaitForReplicationConfig::new(max_replication_lag_allowed, poll_interval, logger);
-            monitor.wait_for_replication(&config).await?;
+            let new_last_lag = monitor.wait_for_replication(&config).await?;
+            *last_lag = Some((Instant::now(), new_last_lag.delay));
         }
         Ok(())
     }
