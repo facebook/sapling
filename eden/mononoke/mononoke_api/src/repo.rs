@@ -897,11 +897,11 @@ impl RepoContext {
             ChangesetSpecifier::Bonsai(cs_id) => self
                 .changeset_exists(cs_id, StorageLocation::Persistent)
                 .await?
-                .then(|| cs_id),
+                .then_some(cs_id),
             ChangesetSpecifier::EphemeralBonsai(cs_id, bubble_id) => self
                 .changeset_exists(cs_id, StorageLocation::ephemeral(bubble_id))
                 .await?
-                .then(|| cs_id),
+                .then_some(cs_id),
             ChangesetSpecifier::Hg(hg_cs_id) => {
                 self.blob_repo()
                     .bonsai_hg_mapping()

@@ -186,7 +186,7 @@ async fn get_file_changes(
             .into_mut()
             .file_changes
             .into_iter()
-            .filter_map(|(path, change)| change.is_changed().then(|| path))
+            .filter_map(|(path, change)| change.is_changed().then_some(path))
             .collect::<Vec<_>>();
         Ok::<_, Error>(paths)
     };

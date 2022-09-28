@@ -392,7 +392,7 @@ impl SourceControlServiceImpl {
         let authors = authors.into_items();
         let titles = Some(titles.into_items()).filter(|titles| !titles.is_empty());
         let messages = Some(messages.into_items()).filter(|messages| !messages.is_empty());
-        let commit_numbers = option_include_commit_numbers.then(|| commit_numbers);
+        let commit_numbers = option_include_commit_numbers.then_some(commit_numbers);
         let dates = dates
             .into_items()
             .into_iter()

@@ -117,7 +117,7 @@ impl LandServiceImpl {
             pushrebase_params: &repo.config().pushrebase,
             lca_hint: &lca_hint,
             infinitepush_params: &repo.config().infinitepush,
-            hook_manager: &repo.hook_manager().as_ref(),
+            hook_manager: repo.hook_manager().as_ref(),
         }
         .pushrebase(
             &bookmark,
@@ -247,7 +247,7 @@ async fn convert_bonsai_changesets(
     let blobstore = repo.blob_repo().blobstore();
     let changeset_ids = changesets
         .into_iter()
-        .map(|cs| convert_changeset_id_from_bytes(cs))
+        .map(convert_changeset_id_from_bytes)
         .collect::<Result<HashSet<_>, LandChangesetsError>>()?;
 
     let changesets: HashSet<BonsaiChangeset> = stream::iter(changeset_ids)

@@ -236,8 +236,8 @@ mod test {
             mem::swap(&mut p1, &mut p2);
         }
 
-        let pid1: Option<HgNodeHash> = Some((&p1).nodeid());
-        let pid2: Option<HgNodeHash> = Some((&p2).nodeid());
+        let pid1: Option<HgNodeHash> = Some(p1.nodeid());
+        let pid2: Option<HgNodeHash> = Some(p2.nodeid());
 
         let node1 = {
             let n = HgBlobNode::new(HgBlob::from(Bytes::from(&b"bar"[..])), pid1, pid2);

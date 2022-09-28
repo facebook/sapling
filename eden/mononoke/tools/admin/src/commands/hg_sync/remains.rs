@@ -47,7 +47,7 @@ pub async fn remains(
 
     let exclude_reason = remains_args
         .without_blobimport
-        .then(|| BookmarkUpdateReason::Blobimport);
+        .then_some(BookmarkUpdateReason::Blobimport);
 
     let remaining = repo
         .bookmark_update_log()

@@ -623,7 +623,7 @@ pub trait MegarepoOp {
                     .moved
                     .file_changes()
                     // Do not check deleted files
-                    .filter_map(|(path, fc)| fc.is_changed().then(|| path)),
+                    .filter_map(|(path, fc)| fc.is_changed().then_some(path)),
             )?;
         }
 

@@ -362,10 +362,7 @@ async fn find_nodes_to_index(
 
     check_if_node_exists(ctx, changeset_fetcher, start_node).await?;
     loop {
-        bfs_layer = bfs_layer
-            .into_iter()
-            .filter(|(hash, _gen)| !skip_list_edges.mapping.contains_key(hash))
-            .collect();
+        bfs_layer.retain(|(hash, _gen)| !skip_list_edges.mapping.contains_key(hash));
 
         if curr_depth == 0 || bfs_layer.is_empty() {
             break;

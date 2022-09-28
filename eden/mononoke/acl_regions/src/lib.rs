@@ -146,7 +146,7 @@ impl AclRegions for AclRegionsImpl {
                     anyhow::Ok(
                         self.is_commit_in_region(ctx, cs_id, region)
                             .await?
-                            .then(|| (name, rule)),
+                            .then_some((name, rule)),
                     )
                 })
                 .buffered(10)
