@@ -323,7 +323,7 @@ impl SourceControlServiceImpl {
             .await
     }
 
-    async fn repo_impl<F, R>(
+    pub async fn repo_impl<F, R>(
         &self,
         ctx: CoreContext,
         repo: &thrift::RepoSpecifier,

@@ -36,6 +36,7 @@ use mononoke_api::MononokePath;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
+use repo_authorization::AuthorizationContext;
 use repo_derived_data::RepoDerivedDataRef;
 use source_control as thrift;
 
@@ -62,7 +63,10 @@ impl SourceControlServiceImpl {
         repo: thrift::RepoSpecifier,
         _params: thrift::RepoInfoParams,
     ) -> Result<thrift::RepoInfo, errors::ServiceError> {
-        let repo = self.repo(ctx, &repo).await?;
+        let authz = AuthorizationContext::new_bypass_access_control();
+        let repo = self
+            .repo_impl(ctx, &repo, authz, |_| async { Ok(None) })
+            .await?;
         let repo_name = repo.name();
 
         let default_commit_identity_scheme_conf = &repo.config().default_commit_identity_scheme;
