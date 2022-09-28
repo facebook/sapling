@@ -267,8 +267,13 @@ impl Repo {
         }
     }
 
-    pub fn invalidate_dag_commits(&mut self) {
-        self.dag_commits = None;
+    pub fn invalidate_dag_commits(&mut self) -> Result<()> {
+        if let Some(dag_commits) = &mut self.dag_commits {
+            let dag_commits = dag_commits.clone();
+            let mut dag_commits = dag_commits.write();
+            *dag_commits = open_dag_commits(self)?;
+        }
+        Ok(())
     }
 
     pub fn remote_bookmarks(&mut self) -> Result<BTreeMap<String, HgId>> {

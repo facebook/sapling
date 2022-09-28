@@ -100,7 +100,7 @@ py_class!(pub class repo |py| {
 
     def invalidatechangelog(&self) -> PyResult<PyNone> {
         let mut repo_ref = self.inner(py).write();
-        repo_ref.invalidate_dag_commits();
+        repo_ref.invalidate_dag_commits().map_pyerr(py)?;
         Ok(PyNone)
     }
 
