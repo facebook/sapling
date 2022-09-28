@@ -2870,7 +2870,7 @@ def debugrebuilddirstate(ui, repo, rev, **opts) -> None:
         # Force the dirstate to read so that we can catch the case where they
         # dirstate is so corrupt that it can't be read.
         repo.dirstate["_"]
-    except (error.Abort, struct.error, ValueError, IOError):
+    except (error.Abort, struct.error, ValueError, IOError, error.WorkingCopyError):
         # This can happen if the dirstate file is so corrupt that creating a
         # context fails. Remove it entirely and retry.
         # IOError can be raised by the Rust bridge.

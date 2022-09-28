@@ -25,6 +25,7 @@ Initialize test repo.
 import testing repo
   $ cd ..
   $ blobimport repo-hg/.hg repo
+  warning: failed to inspect working copy parent
 
 Start up EdenAPI server.
   $ SEGMENTED_CHANGELOG_ENABLE=1 setup_mononoke_config

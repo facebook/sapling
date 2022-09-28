@@ -62,29 +62,6 @@ def _unpackmetadata(data):
     return dict(entry.split("=", 1) for entry in data.split("\0") if "=" in entry)
 
 
-def _fixed(value):
-    """Return a function that returns a fixed return value"""
-
-    def func(*args, **kwargs):
-        return value
-
-    return func
-
-
-def _error(self, *args, **kwargs):
-    raise IOError("dirstate is readonly")
-
-
-class emptytree(object):
-    """an empty, read-only treestate"""
-
-    setmetadata = remove = insert = saveas = flush = _error
-    getmetadata = _fixed("")
-    pathcomplete = invalidatemtime = get = _fixed(None)
-    hasdir = __contains__ = _fixed(False)
-    getfiltered = tracked = walk = _fixed([])
-
-
 class treestatemap(object):
     """a drop-in replacement for dirstate._map, with more abilities like also
     track fsmonitor state.
@@ -101,10 +78,11 @@ class treestatemap(object):
     and an offset.
     """
 
-    def __init__(self, ui, vfs, root, importdirstate=None):
+    def __init__(self, ui, vfs, root, rusttreestate, importdirstate=None):
         self._ui = ui
         self._vfs = vfs
         self._root = root
+        self._read(rusttreestate)
         if importdirstate:
             # Import from an old dirstate
             self.clear()
@@ -114,11 +92,6 @@ class treestatemap(object):
             copymap = importdirstate.copies()
             for dest, src in pycompat.iteritems(copymap):
                 self.copy(src, dest)
-        else:
-            # The original dirstate lazily reads content for performance.
-            # But our dirstate map is lazy anyway. So "_read" during init
-            # should be fine.
-            self._read()
         assert len(self._parents) == 2
 
     @property
@@ -315,7 +288,7 @@ class treestatemap(object):
     def setparents(self, p1, p2):
         self._parents = (p1, p2)
 
-    def _parsedirstate(self, content):
+    def _parsedirstate(content):
         """Parse given dirstate metadata file"""
         f = util.stringio(content)
         p1 = f.read(20) or node.nullid
@@ -341,7 +314,7 @@ class treestatemap(object):
 
         return p1, p2, filename, rootid, threshold
 
-    def _read(self):
+    def _read(self, tree):
         """Read every metadata automatically"""
         content = b""
         try:
@@ -351,36 +324,30 @@ class treestatemap(object):
         except IOError as ex:
             if ex.errno != errno.ENOENT:
                 raise
-        p1, p2, filename, rootid, threshold = self._parsedirstate(content)
+        metadata = _unpackmetadata(tree.getmetadata())
+
+        self._tree = tree
+
+        p1, p2, filename, rootid, threshold = treestatemap._parsedirstate(content)
+        if filename is None:
+            filename = metadata["filename"]
+        if filename != self._tree.filename():
+            raise error.Abort(
+                _(
+                    "dirstate metadata treestate name {:?} "
+                    "does not match loaded name {:?}"
+                )
+                % (filename, self._tree.filename())
+            )
 
         self._parents = (p1, p2)
         self._threshold = threshold
         self._rootid = rootid
 
-        try:
-            if rootid == 0:
-                tree = treestate.treestate.new(self._vfs.join("treestate"))
-            else:
-                tree = treestate.treestate.open(
-                    self._vfs.join("treestate", filename), rootid
-                )
-        except IOError:
-            if not rootid:
-                # treestate.treestate is read-only if rootid is not None.
-                # If rootid is None, treestate transparently creates an empty
-                # tree (ex. right after "hg init").  IOError can happen if
-                # treestate cannot write such an empty tree. It's hard to make
-                # the Rust land support read-only operation in this case. So
-                # just use a read-only, empty tree.
-                tree = emptytree()
-            else:
-                raise
-
         # Double check p1 p2 against metadata stored in the tree. This is
         # redundant but many things depend on "dirstate" file format.
         # The metadata here contains (watchman) "clock" which does not exist
         # in "dirstate".
-        metadata = _unpackmetadata(tree.getmetadata())
         if metadata:
             if metadata.get("p1", node.nullhex) != node.hex(p1) or metadata.get(
                 "p2", node.nullhex
@@ -388,7 +355,6 @@ class treestatemap(object):
                 raise error.Abort(
                     _("working directory state appears damaged (metadata mismatch)!")
                 )
-        self._tree = tree
 
     def _gc(self):
         """Remove unreferenced treestate files"""
@@ -397,7 +363,7 @@ class treestatemap(object):
         for name in ["dirstate", "undo.dirstate", "undo.backup.dirstate"]:
             try:
                 content = self._vfs.tryread(name)
-                _p1, _p2, filename = self._parsedirstate(content)[:3]
+                _p1, _p2, filename = treestatemap._parsedirstate(content)[:3]
                 fileinuse.add(filename)
             except Exception:
                 # dirstate file does not exist, or is in an incompatible
@@ -651,7 +617,13 @@ def migrate(ui, repo, version):
         elif wanted == 2 and current in [0, 1]:
             # to treestate
             vfs.makedirs("treestate")
-            newmap = treestatemap(ui, vfs, repo.root, importdirstate=repo.dirstate)
+            newmap = treestatemap(
+                ui,
+                vfs,
+                repo.root,
+                repo._rsrepo().workingcopy().treestate(),
+                importdirstate=repo.dirstate,
+            )
             repo.requirements.add("treestate")
         elif wanted == 0 and current == 1:
             # treedirstate -> flat dirstate

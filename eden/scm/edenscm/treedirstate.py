@@ -90,7 +90,7 @@ class treedirstatemapiterator(object):
 
 
 class treedirstatemap(object):
-    def __init__(self, ui, opener, root, importmap=None):
+    def __init__(self, ui, opener, root, rusttreestate=None, importmap=None):
         self._ui = ui
         self._opener = opener
         self._root = root

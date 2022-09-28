@@ -294,7 +294,7 @@ Try other kinds of dirstate corruptions:
   ...     x = f.write(b"x" * 1024)
   $ hg log -r . -T '{desc}\n'
   warning: failed to inspect working copy parent
-  abort: working directory state appears damaged!
+  abort: working copy is missing information or corrupt: missing treestate fields on dirstate
   [255]
 
   $ hg doctor

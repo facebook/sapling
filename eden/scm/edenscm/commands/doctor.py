@@ -282,7 +282,15 @@ def repairtreestate(ui, vfs, root, cl):
         return
     needrebuild = False
     try:
-        tmap = treestate.treestatemap(ui, vfs, root)
+        with vfs.open("dirstate") as fp:
+            content = fp.read()
+        p1, p2, filename, rootid, threshold = treestate.treestatemap._parsedirstate(
+            content
+        )
+
+        path = vfs.join("treestate", filename)
+        ts = rawtreestate.treestate.openraw(path, rootid)
+        tmap = treestate.treestatemap(ui, vfs, root, ts)
         p1node = tmap.p1()
         if p1node not in cl.nodemap:
             needrebuild = True
@@ -332,7 +340,7 @@ def repairtreestate(ui, vfs, root, cl):
                 if data[rootpos : rootpos + 1] != b"\0":
                     continue
                 try:
-                    rawtree = rawtreestate.treestate.open(path, rootpos)
+                    rawtree = rawtreestate.treestate.openraw(path, rootpos)
                 except Exception:
                     # Root deserialization failed xxhash check. Try next.
                     continue

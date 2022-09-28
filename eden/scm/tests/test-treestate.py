@@ -155,7 +155,7 @@ class testtreestate(unittest.TestCase):
                 check(bit, 0)
             check(treestate.EXIST_P1, treestate.EXIST_P2)
             rootid = tree.flush()
-            tree = treestate.treestate.open(treepath, rootid)
+            tree = treestate.treestate.openraw(treepath, rootid)
 
     def testdirfilter(self):
         tree = treestate.treestate.new(testtmp)
@@ -180,12 +180,12 @@ class testtreestate(unittest.TestCase):
         tree.setmetadata(b"2")
         rootid2 = tree.flush()
 
-        tree = treestate.treestate.open(treepath, rootid1)
+        tree = treestate.treestate.openraw(treepath, rootid1)
         self.assertTrue("a" in tree)
         self.assertFalse("b" in tree)
         self.assertEqual(tree.getmetadata(), b"1")
 
-        tree = treestate.treestate.open(treepath, rootid2)
+        tree = treestate.treestate.openraw(treepath, rootid2)
         self.assertFalse("a" in tree)
         self.assertTrue("b" in tree)
         self.assertEqual(tree.getmetadata(), b"2")
@@ -203,7 +203,7 @@ class testtreestate(unittest.TestCase):
         rootid = tree.saveas(testtmp)
         treepath = os.path.join(testtmp, tree.filename())
 
-        tree = treestate.treestate.open(treepath, rootid)
+        tree = treestate.treestate.openraw(treepath, rootid)
         self.assertFalse("a" in tree)
         self.assertTrue("b" in tree)
         self.assertEqual(tree.getmetadata(), b"2")

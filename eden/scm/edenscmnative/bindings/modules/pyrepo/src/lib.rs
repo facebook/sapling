@@ -60,6 +60,17 @@ py_class!(pub class repo |py| {
         PyWorkingCopy::create_instance(py, wc_option.as_ref().unwrap().clone())
     }
 
+    def invalidateworkingcopy(&self) -> PyResult<PyNone> {
+        let wc_option = self.inner_wc(py).borrow_mut();
+        if wc_option.is_some() {
+            let mut repo = self.inner(py).write();
+            let path = repo.path().to_path_buf();
+            let mut wc = wc_option.as_ref().unwrap().write();
+            *wc = repo.working_copy(&path).map_pyerr(py)?;
+        }
+        Ok(PyNone)
+    }
+
     def metalog(&self) -> PyResult<PyMetaLog> {
         let mut repo_ref = self.inner(py).write();
         let path = String::from(repo_ref.metalog_path().to_string_lossy());

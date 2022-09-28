@@ -170,7 +170,16 @@ class dirstate(object):
         self._istreedirstate = istreedirstate
         if istreestate:
             opener.makedirs("treestate")
-            self._mapcls: "DirstateMapClassType" = treestate.treestatemap
+
+            def make_treestate(
+                ui: "ui_mod.ui", opener: "vfs.abstractvfs", root: str
+            ) -> "treestate.treestatemap":
+                return treestate.treestatemap(
+                    ui, opener, root, self._repo._rsrepo.workingcopy().treestate()
+                )
+
+            # pyre-ignore
+            self._mapcls = make_treestate
         elif istreedirstate:
             ui.deprecate("treedirstate", "treedirstate is replaced by treestate")
             self._mapcls: "DirstateMapClassType" = treedirstate.treedirstatemap
@@ -231,6 +240,7 @@ class dirstate(object):
     @util.propertycache
     def _map(self) -> "DirstateMapType":
         """Return the dirstate contents (see documentation for dirstatemap)."""
+        # pyre-ignore
         self._map = self._mapcls(self._ui, self._opener, self._root)
         return self._map
 
@@ -457,7 +467,7 @@ class dirstate(object):
         This is different from localrepo.invalidatedirstate() because it always
         rereads the dirstate. Use localrepo.invalidatedirstate() if you want to
         check whether the dirstate has changed before rereading it."""
-
+        self._repo._rsrepo.invalidateworkingcopy()
         for a in ("_map", "_branch", "_ignore"):
             if a in self.__dict__:
                 delattr(self, a)
@@ -953,23 +963,7 @@ class dirstate(object):
         if ignored or clean:
             raise self.FallbackToPythonStatus
 
-        if filesystem == "eden":
-            # EdenFS repos still use an old dirstate to track working copy
-            # changes. We need a TreeState for Rust status, so if the map
-            # doesn't have a tree, we create a temporary read-only one.
-            # Note: this TreeState won't track clean files, only added/removed/etc.
-            # TODO: get rid of this when EdenFS migrates to TreeState.
-            tempdir = tempfile.TemporaryDirectory()
-            tempvfs = vfs.vfs(tempdir.name)
-            tempvfs.makedir("treestate")
-            tempmap = treestate.treestatemap(
-                self._ui, tempvfs, tempdir.name, importdirstate=self
-            )
-            tree = tempmap._tree
-        else:
-            # pyre-fixme[16]: Item `dirstatemap` of `Union[dirstatemap,
-            #  treedirstatemap, treestatemap]` has no attribute `_tree`.
-            tree = self._map._tree
+        tree = self._repo._rsrepo.workingcopy().treestate()
 
         return bindings.workingcopy.status.status(
             self._root,

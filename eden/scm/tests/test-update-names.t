@@ -4,15 +4,13 @@
 Test update logic when there are renames or weird same-name cases between dirs
 and files
 
+  $ configure modernclient
   $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ setconfig experimental.nativecheckout=true
 
-Setup server
-  $ newserver server
-
 Update with local changes across a file rename
 
-  $ newremoterepo r1
+  $ newclientrepo r1
 
   $ echo a > a
   $ hg add a
@@ -37,7 +35,7 @@ Update with local changes across a file rename
 
 Test update when local untracked directory exists with the same name as a
 tracked file in a commit we are updating to
-  $ newremoterepo r2
+  $ newclientrepo r2
   $ echo root > root && hg ci -Am root  # rev 0
   adding root
   $ echo text > name && hg ci -Am "name is a file"  # rev 1
@@ -65,7 +63,7 @@ make sure that this does not erase untracked data
 #if symlink
 
 Test update when two commits have symlinks that point to different folders
-  $ newremoterepo r3
+  $ newclientrepo r3
   $ echo root > root && hg ci -Am root
   adding root
   $ mkdir folder1 && mkdir folder2
@@ -84,7 +82,7 @@ Test update when two commits have symlinks that point to different folders
 #if rmcwd
 
 Test that warning is printed if cwd is deleted during update
-  $ newremoterepo r4
+  $ newclientrepo r4
   $ mkdir dir
   $ cd dir
   $ echo a > a

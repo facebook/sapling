@@ -19,6 +19,7 @@ Broken by having an incomplete p2
 # Assign to 'x' to hide the return value output in Python 3
   >>> x = open('.hg/dirstate', 'a').truncate(25)
   $ hg debugrebuilddirstate
+  warning: failed to inspect working copy parent
   $ hg log -r . -T '{desc}\n'
   B
 

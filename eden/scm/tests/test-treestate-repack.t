@@ -17,14 +17,14 @@ Make some commits
   $ newrepo
   $ touch -t 200001010000 a b c d e
   $ hg ci -m init -A a b c d e -q --debug 2>&1 | grep treestate
-  treestate repack threshold set to 555
+  treestate repack threshold set to 507
   $ hg debugtreestate
-  dirstate v2 (using treestate/*, offset 185, 5 files tracked) (glob)
+  dirstate v2 (using treestate/*, offset 169, 5 files tracked) (glob)
   $ echo 1 > a
   $ touch -t 200001010000 a
   $ hg ci -m modify
   $ hg debugtreestate
-  dirstate v2 (using treestate/*, offset 316, 5 files tracked) (glob)
+  dirstate v2 (using treestate/*, offset 300, 5 files tracked) (glob)
 
 Repack makes the file smaller
 

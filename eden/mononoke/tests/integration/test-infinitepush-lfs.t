@@ -11,7 +11,7 @@ Setup configuration
   $ cd "$TESTTMP"
 
 Setup repo
-  $ hginit_treemanifest "${TESTTMP}/repo-hg"
+  $ hginit_treemanifest repo-hg
   $ cd repo-hg
   $ touch a && hg addremove && hg ci -q -ma
   adding a

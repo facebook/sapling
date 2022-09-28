@@ -449,19 +449,21 @@ impl treestate {
 py_class!(pub class treestate |py| {
     data state: Arc<Mutex<TreeState>>;
 
+    // This should only be used for hg doctor.
     @staticmethod
-    def open(
-        path: &PyPath,
-        root_id: u64
-    ) -> PyResult<treestate> {
-        treestate::create_instance(py, Arc::new(Mutex::new(
-            TreeState::open(path.as_path(), BlockId(root_id)).map_pyerr(py)?)))
+    def openraw(path: PyPathBuf, root_id: u64) -> PyResult<treestate> {
+        let treestate = TreeState::open(
+            path.as_path(),
+            BlockId(root_id),
+        ).map_pyerr(py)?;
+        Self::create_instance(py, Arc::new(Mutex::new(treestate)))
     }
 
+    // This should only be used for tests.
     @staticmethod
-    def new(directory: &PyPath) -> PyResult<treestate> {
-        treestate::create_instance(py, Arc::new(Mutex::new(
-            TreeState::new(directory.as_path()).map_pyerr(py)?.0)))
+    def new(directory: PyPathBuf) -> PyResult<treestate> {
+        let treestate = TreeState::new(directory.as_path()).map_pyerr(py)?.0;
+        Self::create_instance(py, Arc::new(Mutex::new(treestate)))
     }
 
     def flush(&self) -> PyResult<u64> {

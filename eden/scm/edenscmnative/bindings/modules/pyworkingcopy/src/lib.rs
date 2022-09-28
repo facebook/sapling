@@ -143,4 +143,8 @@ py_class!(class status |py| {
 
 py_class!(pub class workingcopy |py| {
     data inner_wc: Arc<RwLock<WorkingCopy>>;
+
+    def treestate(&self) -> PyResult<treestate> {
+        treestate::create_instance(py, self.inner_wc(py).read().treestate())
+    }
 });

@@ -5,8 +5,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-  $ setconfig experimental.allowfilepeer=True
-  $ setconfig 'extensions.treemanifest=!'
+  $ configure modernclient
+  $ setconfig commands.update.requiredest=True
 
 #if fsmonitor
   $ setconfig workingcopy.ruststatus=False
@@ -14,13 +14,8 @@
 
 # Test update.requiredest
 
-  $ cd "$TESTTMP"
-  $ cat >> $HGRCPATH << 'EOF'
-  > [commands]
-  > update.requiredest = True
-  > EOF
-  $ hg init repo
-  $ cd repo
+
+  $ newclientrepo repo
   $ echo a >> a
   $ hg commit -qAm aa
   $ hg up
@@ -33,17 +28,16 @@
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --config 'commands.update.requiredest=False' up
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-
-  $ cd ..
+  $ hg push -q --to master --create
 
 # Check update.requiredest interaction with pull --update
 
-  $ hg clone repo clone
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd repo
+  $ newclientrepo clone test:repo_server
+
+  $ cd ../repo
   $ echo a >> a
   $ hg commit -qAm aa
+  $ hg push -q --to master
   $ cd ../clone
   $ hg pull --update
   abort: update destination required by configuration

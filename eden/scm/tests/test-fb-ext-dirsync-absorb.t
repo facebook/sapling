@@ -1,7 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
-  $ configure modern
+  $ configure modernclient
   $ enable dirsync absorb
 
 Prepare the repo
@@ -10,7 +10,7 @@ B: in 2nd commit, modified at the top
 C: in both commits, modified at the top
 D: in both commits, partially absorbed
 
-  $ newrepo
+  $ newclientrepo
   $ readconfig <<EOF
   > [dirsync]
   > sync1.1=dir1/
@@ -213,6 +213,7 @@ Only changes the 1st commit:
 
   $ hg status
   $ hg log -p -T '{desc}\n' --config diff.git=1 dir2/A dir1/A
+  warning: file log can be slow on large repos - use -f to speed it up
   A
   diff --git a/dir1/A b/dir1/A
   new file mode 100644
@@ -226,7 +227,6 @@ Only changes the 1st commit:
   +++ b/dir2/A
   @@ -0,0 +1,1 @@
   +A2
-  
 
   $ hg debugmutation -r .
    *  * absorb by test at 1970-01-01T00:00:00 from: (glob)
@@ -235,7 +235,7 @@ Only changes the 1st commit:
   
 Changes the 1st commit but restores at the top:
 
-  $ newrepo
+  $ newclientrepo
   $ readconfig <<EOF
   > [dirsync]
   > sync1.1=dir1/
@@ -287,6 +287,7 @@ and status is clean
   $ hg status
   ? editortext
   $ hg log -p -T '{desc}\n' --config diff.git=1 dir2/A
+  warning: file log can be slow on large repos - use -f to speed it up
   A3
   diff --git a/dir2/A b/dir2/A
   --- a/dir2/A
@@ -310,4 +311,3 @@ and status is clean
   +++ b/dir2/A
   @@ -0,0 +1,1 @@
   +3
-  
