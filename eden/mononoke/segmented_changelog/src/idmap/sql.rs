@@ -303,9 +303,10 @@ impl IdMap for SqlIdMap {
         // transactions.
         for (i, chunk) in mappings.chunks(INSERT_MAX).enumerate() {
             if i > 0 {
-                let wait_config = WaitForReplicationConfig::default().with_logger(ctx.logger());
                 self.replica_lag_monitor
-                    .wait_for_replication(&wait_config)
+                    .wait_for_replication(&|| {
+                        WaitForReplicationConfig::default().with_logger(ctx.logger())
+                    })
                     .await?;
             }
             let mut to_insert = Vec::with_capacity(chunk.len());

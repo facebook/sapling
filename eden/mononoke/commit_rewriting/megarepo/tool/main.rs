@@ -1161,7 +1161,7 @@ async fn process_stream_and_wait_for_replication<'a>(
         info!(ctx.logger(), "processed {} changesets", total);
         batch %= 100;
         replica_lag_monitor
-            .wait_for_replication(&wait_config)
+            .wait_for_replication(&|| wait_config.clone())
             .await?;
     }
 

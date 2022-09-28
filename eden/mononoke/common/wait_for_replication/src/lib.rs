@@ -103,7 +103,6 @@ impl WaitForReplication {
     }
 
     pub async fn wait_for_replication(&self, logger: &Logger) -> Result<()> {
-        let config = self.config_handle.get();
         let mut state_lock = self.state.lock().await;
         let State {
             last_sync_queue_lag,
@@ -115,14 +114,14 @@ impl WaitForReplication {
                 "sync queue",
                 last_sync_queue_lag,
                 &self.sync_queue_monitor,
-                config.sync_queue.as_ref()
+                || self.config_handle.get().sync_queue.clone(),
             ),
             self.wait_for_table(
                 logger,
                 "XDB blobstore",
                 last_xdb_blobstore_lag,
                 &self.xdb_blobstore_monitor,
-                config.xdb_blobstore.as_ref()
+                || self.config_handle.get().xdb_blobstore.clone(),
             ),
         )?;
         Ok(())
@@ -134,9 +133,9 @@ impl WaitForReplication {
         name: &'static str,
         last_lag: &'a mut Option<(Instant, Duration)>,
         monitor: &'a Arc<dyn ReplicaLagMonitor>,
-        config: Option<&'a ReplicationLagTableConfig>,
+        config_getter: impl Fn() -> Option<ReplicationLagTableConfig> + Sync,
     ) -> Result<()> {
-        if let Some(raw_config) = config {
+        if let Some(raw_config) = config_getter() {
             let max_replication_lag_allowed =
                 Duration::from_millis(raw_config.max_replication_lag_allowed_ms.try_into()?);
             let poll_interval = Duration::from_millis(raw_config.poll_interval_ms.try_into()?);
@@ -162,9 +161,32 @@ impl WaitForReplication {
                 name,
                 max_replication_lag_allowed
             );
-            let config =
-                WaitForReplicationConfig::new(max_replication_lag_allowed, poll_interval, logger);
-            let new_last_lag = monitor.wait_for_replication(&config).await?;
+            let new_last_lag = monitor
+                .wait_for_replication(&|| {
+                    // Get the most up to date config, but default to the previous one
+                    // in case of errors.
+                    let (max_replication_lag_allowed, poll_interval) =
+                        if let Some(raw_config) = config_getter() {
+                            (
+                                raw_config
+                                    .max_replication_lag_allowed_ms
+                                    .try_into()
+                                    .map_or(max_replication_lag_allowed, Duration::from_millis),
+                                raw_config
+                                    .poll_interval_ms
+                                    .try_into()
+                                    .map_or(poll_interval, Duration::from_millis),
+                            )
+                        } else {
+                            (max_replication_lag_allowed, poll_interval)
+                        };
+                    WaitForReplicationConfig::new(
+                        max_replication_lag_allowed,
+                        poll_interval,
+                        logger,
+                    )
+                })
+                .await?;
             *last_lag = Some((Instant::now(), new_last_lag.delay));
         }
         Ok(())

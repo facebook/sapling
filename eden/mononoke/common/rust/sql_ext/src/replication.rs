@@ -46,10 +46,11 @@ pub trait ReplicaLagMonitor: Send + Sync {
     /// Returns the last replica lag.
     async fn wait_for_replication(
         &self,
-        config: &WaitForReplicationConfig<'_>,
+        config_getter: &(dyn Fn() -> WaitForReplicationConfig<'_> + Sync),
     ) -> Result<ReplicaLag> {
         loop {
             let max_lag = self.get_max_replica_lag().await?;
+            let config = config_getter();
             if let Some(logger) = config.logger {
                 info!(logger, "{}", max_lag);
             }
@@ -110,6 +111,7 @@ impl fmt::Debug for ReplicaLag {
     }
 }
 
+#[derive(Clone)]
 pub struct WaitForReplicationConfig<'a> {
     logger: Option<&'a Logger>,
     max_replication_lag_allowed: Duration,
