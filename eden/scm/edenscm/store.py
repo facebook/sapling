@@ -338,7 +338,7 @@ def _hashencode(path, dotencode) -> str:
     return res
 
 
-def _hybridencode(path, dotencode):
+def _hybridencode(path, dotencode) -> str:
     """encodes path with a length limit
 
     Encodes all paths that begin with 'data/', according to the following.
@@ -377,7 +377,7 @@ def _hybridencode(path, dotencode):
     return res
 
 
-def _pathencode(path: Sized):
+def _pathencode(path: Sized) -> str:
     de = encodedir(path)
     if len(path) > _maxstorepathlen:
         return _hashencode(de, True)
