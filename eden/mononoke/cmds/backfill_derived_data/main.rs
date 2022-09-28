@@ -176,6 +176,8 @@ where
 
 const SM_SERVICE_SCOPE: &str = "global";
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
+const BACKFILLER_WAIT_CONFIG: &str = "derived_data_backfiller";
+const TAILER_WAIT_CONFIG: &str = "derived_data_tailer";
 
 /// Struct representing the Derived Data BP.
 pub struct DerivedDataProcess {
@@ -666,12 +668,8 @@ async fn run_subcmd<'a>(
         args::get_config_by_name(config_store, matches, repo_name.clone())?.storage_config;
     match matches.subcommand() {
         (SUBCOMMAND_BACKFILL_ALL, Some(sub_m)) => {
-            let wait_for_replication = WaitForReplication::new(
-                fb,
-                config_store,
-                storage_config,
-                "derived_data_backfiller",
-            )?;
+            let wait_for_replication =
+                WaitForReplication::new(fb, config_store, storage_config, BACKFILLER_WAIT_CONFIG)?;
             let repo: InnerRepo =
                 args::open_repo_by_name_unredacted(fb, logger, matches, repo_name).await?;
 
@@ -728,6 +726,8 @@ async fn run_subcmd<'a>(
             .await
         }
         (SUBCOMMAND_BACKFILL, Some(sub_m)) => {
+            let wait_for_replication =
+                WaitForReplication::new(fb, config_store, storage_config, BACKFILLER_WAIT_CONFIG)?;
             let derived_data_type = sub_m
                 .value_of(ARG_DERIVED_DATA_TYPE)
                 .ok_or_else(|| format_err!("missing required argument: {}", ARG_DERIVED_DATA_TYPE))?
@@ -795,12 +795,13 @@ async fn run_subcmd<'a>(
                 gap_size,
                 changesets,
                 backfill_config_name,
+                wait_for_replication,
             )
             .await
         }
         (SUBCOMMAND_TAIL, Some(sub_m)) => {
             let wait_for_replication =
-                WaitForReplication::new(fb, config_store, storage_config, "derived_data_tailer")?;
+                WaitForReplication::new(fb, config_store, storage_config, TAILER_WAIT_CONFIG)?;
             let config_store = matches.config_store();
             let use_shared_leases = sub_m.is_present(ARG_USE_SHARED_LEASES);
             let stop_on_idle = sub_m.is_present(ARG_STOP_ON_IDLE);
@@ -1077,6 +1078,7 @@ async fn subcommand_backfill(
     gap_size: Option<usize>,
     changesets: Vec<ChangesetId>,
     config_name: &str,
+    wait_for_replication: WaitForReplication,
 ) -> Result<()> {
     let derived_utils =
         &derived_data_utils_for_config(ctx.fb, &repo.blob_repo, derived_data_type, config_name)?;
@@ -1104,6 +1106,9 @@ async fn subcommand_backfill(
             chunk.first().unwrap()
         );
         let (stats, chunk_size) = async {
+            wait_for_replication
+                .wait_for_replication(ctx.logger())
+                .await?;
             let chunk = derived_utils
                 .pending(
                     ctx.clone(),
