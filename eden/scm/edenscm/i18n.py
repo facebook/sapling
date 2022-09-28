@@ -17,6 +17,8 @@ import locale
 import os
 import sys
 
+import bindings
+
 from . import encoding, identity, pycompat
 
 
@@ -146,9 +148,12 @@ _plain = True
 
 
 def _getplain():
-    if "HGPLAIN" not in encoding.environ and "HGPLAINEXCEPT" not in encoding.environ:
+    plain = bindings.identity.envvar("PLAIN")
+    plainexcept = bindings.identity.envvar("PLAINEXCEPT")
+
+    if plain is None and plainexcept is None:
         return False
-    exceptions = encoding.environ.get("HGPLAINEXCEPT", "").strip().split(",")
+    exceptions = (plainexcept or "").strip().split(",")
     return "i18n" not in exceptions
 
 

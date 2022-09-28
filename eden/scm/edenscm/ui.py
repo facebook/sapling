@@ -558,11 +558,13 @@ class ui(object):
         - False if feature is disabled by default and not included in HGPLAIN
         - True otherwise
         """
-        if "HGPLAIN" not in os.environ and "HGPLAINEXCEPT" not in os.environ:
+        plain = bindings.identity.envvar("PLAIN")
+        plainexcept = bindings.identity.envvar("PLAINEXCEPT")
+        if plain is None and plainexcept is None:
             return False
-        exceptions = encoding.environ.get("HGPLAINEXCEPT", "").strip().split(",")
+        exceptions = (plainexcept or "").strip().split(",")
         # TODO: add support for HGPLAIN=+feature,-feature syntax
-        if "+strictflags" not in encoding.environ.get("HGPLAIN", "").split(","):
+        if "+strictflags" not in (plain or "").split(","):
             exceptions.append("strictflags")
         if feature and exceptions:
             return feature not in exceptions

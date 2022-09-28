@@ -24,6 +24,8 @@ pub struct Identity {
     dot_dir: &'static str,
     env_prefix: &'static str,
     config_name: &'static str,
+    scripting_env_var: &'static str,
+    scripting_except_env_var: &'static str,
 }
 
 impl Identity {
@@ -47,8 +49,12 @@ impl Identity {
         self.env_prefix
     }
 
-    fn env_var(&self, suffix: &str) -> Option<Result<String, VarError>> {
-        let var_name = format!("{}{}", self.env_prefix, suffix);
+    pub fn env_var(&self, suffix: &str) -> Option<Result<String, VarError>> {
+        let var_name = match suffix {
+            "PLAIN" => self.scripting_env_var.to_string(),
+            "PLAINEXCEPT" => self.scripting_except_env_var.to_string(),
+            _ => format!("{}{}", self.env_prefix, suffix),
+        };
         match std::env::var(var_name) {
             Err(err) if err == VarError::NotPresent => None,
             Err(err) => Some(Err(err)),
@@ -69,6 +75,8 @@ const HG: Identity = Identity {
     dot_dir: ".hg",
     env_prefix: "HG",
     config_name: "hgrc",
+    scripting_env_var: "HGPLAIN",
+    scripting_except_env_var: "HGPLAINEXCEPT",
 };
 
 const SL: Identity = Identity {
@@ -77,6 +85,8 @@ const SL: Identity = Identity {
     dot_dir: ".sl",
     env_prefix: "SL",
     config_name: "slconfig",
+    scripting_env_var: "SL_AUTOMATION",
+    scripting_except_env_var: "SL_AUTOMATION_EXCEPT",
 };
 
 #[cfg(test)]
@@ -86,6 +96,8 @@ const TEST: Identity = Identity {
     dot_dir: ".test",
     env_prefix: "TEST",
     config_name: "testrc",
+    scripting_env_var: "TEST_SCRIPT",
+    scripting_except_env_var: "TEST_SCRIPT_EXCEPT",
 };
 
 #[cfg(all(not(feature = "sl_only"), not(test)))]
@@ -169,12 +181,12 @@ pub fn sniff_root(path: &Path) -> Result<Option<(PathBuf, Identity)>> {
     Ok(None)
 }
 
-fn try_env_var(var_suffix: &str) -> Result<String, VarError> {
+pub fn env_var(var_suffix: &str) -> Option<Result<String, VarError>> {
     let current_id = IDENTITY.read();
 
     // Always prefer current identity.
     if let Some(res) = current_id.env_var(var_suffix) {
-        return res;
+        return Some(res);
     }
 
     // Backwards compat for old env vars.
@@ -184,11 +196,18 @@ fn try_env_var(var_suffix: &str) -> Result<String, VarError> {
         }
 
         if let Some(res) = id.env_var(var_suffix) {
-            return res;
+            return Some(res);
         }
     }
 
-    Err(VarError::NotPresent)
+    None
+}
+
+pub fn try_env_var(var_suffix: &str) -> Result<String, VarError> {
+    match env_var(var_suffix) {
+        Some(result) => result,
+        None => Err(VarError::NotPresent),
+    }
 }
 
 pub fn sniff_env() -> Identity {

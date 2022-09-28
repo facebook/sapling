@@ -21,6 +21,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(py, "sniffenv", py_fn!(py, sniff_env()))?;
     m.add(py, "sniffroot", py_fn!(py, sniff_root(path: PyPathBuf)))?;
     m.add(py, "sniffdir", py_fn!(py, sniff_dir(path: PyPathBuf)))?;
+    m.add(py, "envvar", py_fn!(py, try_env_var(suffix: PyString)))?;
 
     Ok(m)
 }
@@ -52,4 +53,10 @@ fn sniff_dir(py: Python, path: PyPathBuf) -> PyResult<Option<identity>> {
         None => None,
         Some(ident) => Some(identity::create_instance(py, ident)?),
     })
+}
+
+fn try_env_var(py: Python, suffix: PyString) -> PyResult<Option<String>> {
+    rsident::env_var(suffix.to_string(py)?.as_ref())
+        .transpose()
+        .map_pyerr(py)
 }

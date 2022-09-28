@@ -5,15 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use std::env;
-
-pub const HGPLAIN: &str = "HGPLAIN";
-pub const HGPLAINEXCEPT: &str = "HGPLAINEXCEPT";
+use std::collections::HashSet;
 
 /// Return whether plain mode is active, similar to python ui.plain().
 pub fn is_plain(feature: Option<&str>) -> bool {
-    let plain = env::var(HGPLAIN);
-    let plain_except = env::var(HGPLAINEXCEPT);
+    let plain = identity::try_env_var("PLAIN");
+    let plain_except = identity::try_env_var("PLAINEXCEPT");
 
     if plain.is_err() && plain_except.is_err() {
         return false;
@@ -26,5 +23,12 @@ pub fn is_plain(feature: Option<&str>) -> bool {
             .any(|s| s == feature)
     } else {
         true
+    }
+}
+
+pub fn exceptions() -> HashSet<String> {
+    match identity::try_env_var("PLAINEXCEPT") {
+        Ok(value) => value.split(',').map(|s| s.to_string()).collect(),
+        Err(_) => HashSet::new(),
     }
 }

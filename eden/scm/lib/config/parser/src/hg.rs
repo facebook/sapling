@@ -23,8 +23,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use hgplain::HGPLAIN;
-use hgplain::HGPLAINEXCEPT;
+use hgplain;
 use minibytes::Text;
 use url::Url;
 use util::path::expand_path;
@@ -134,15 +133,9 @@ pub fn load(
 
 impl OptionsHgExt for Options {
     fn process_hgplain(self) -> Self {
-        let plain_set = env::var(HGPLAIN).is_ok();
-        let plain_except = env::var(HGPLAINEXCEPT);
-        if plain_set || plain_except.is_ok() {
+        if hgplain::is_plain(None) {
             let (section_exclude_list, ui_exclude_list) = {
-                let plain_exceptions: HashSet<String> = plain_except
-                    .unwrap_or_else(|_| "".to_string())
-                    .split(',')
-                    .map(|s| s.to_string())
-                    .collect();
+                let plain_exceptions = hgplain::exceptions();
 
                 // [defaults] and [commands] are always excluded.
                 let mut section_exclude_list: HashSet<Text> =
@@ -873,6 +866,9 @@ mod tests {
     use super::*;
     use crate::config::tests::write_file;
     use crate::lock_env;
+
+    const HGPLAIN: &str = "HGPLAIN";
+    const HGPLAINEXCEPT: &str = "HGPLAINEXCEPT";
 
     #[test]
     fn test_basic_hgplain() {

@@ -22,6 +22,7 @@ anyhow = "1.0.65"
 eventsource = "0.5"
 filetime = "0.2.9"
 hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+identity = { version = "0.1.0", path = "../identity" }
 lazy_static = "1.4"
 log = { version = "0.4.14", features = ["kv_unstable", "kv_unstable_std"] }
 regex = "1.5.4"

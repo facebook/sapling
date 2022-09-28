@@ -671,7 +671,7 @@ def statuscmd(orig, ui, repo, *pats, **opts):
             message = _("--root-relative not supported with patterns")
             hint = _("run from the repo root instead")
             raise error.Abort(message, hint=hint)
-    elif encoding.environ.get("HGPLAIN"):  # don't break automation
+    elif ui.plain():
         pass
     # Here's an ugly hack! If users are passing "re:" to make status relative,
     # hgwatchman will never refresh the full state and status will become and
