@@ -49,6 +49,8 @@ impl AddScubaResponse for thrift::RepoBookmarkInfoResponse {}
 
 impl AddScubaResponse for thrift::RepoStackInfoResponse {}
 
+impl AddScubaResponse for thrift::RepoPrepareCommitsResponse {}
+
 impl AddScubaResponse for thrift::CommitCompareResponse {}
 
 impl AddScubaResponse for thrift::CommitFileDiffsResponse {}

@@ -70,6 +70,7 @@ DISABLE_ALL_NETWORK_ACCESS_SKIPLIST: Set[str] = {
     "test-scs-modify-bookmarks.t",
     "test-scs-path-acls.t",
     "test-scs-post-move-logging.t",
+    "test-scs-prepare-commits.t",
     "test-scs-pushrebase-remote-cross-repo.t",
     "test-scs-pushrebase-remote.t",
     "test-scs-run-hooks.t",

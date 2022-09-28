@@ -25,6 +25,7 @@ base_app::subcommands! {
     mod lookup;
     mod ls;
     mod move_bookmark if "SCSC_WRITES_ENABLED";
+    mod prepare_commits if "SCSC_WRITES_ENABLED";
     mod pushrebase_history;
     mod repos;
     mod run_hooks;

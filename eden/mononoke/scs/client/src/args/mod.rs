@@ -6,6 +6,7 @@
  */
 
 pub(crate) mod commit_id;
+pub(crate) mod derived_data_type;
 pub(crate) mod path;
 pub(crate) mod progress;
 pub(crate) mod pushvars;

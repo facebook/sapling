@@ -223,6 +223,7 @@ impl_into_thrift_error!(service::RepoDeleteBookmarkExn);
 impl_into_thrift_error!(service::RepoLandStackExn);
 impl_into_thrift_error!(service::RepoBookmarkInfoExn);
 impl_into_thrift_error!(service::RepoStackInfoExn);
+impl_into_thrift_error!(service::RepoPrepareCommitsExn);
 impl_into_thrift_error!(service::CommitCommonBaseWithExn);
 impl_into_thrift_error!(service::CommitFileDiffsExn);
 impl_into_thrift_error!(service::CommitLookupExn);
@@ -350,6 +351,14 @@ pub(crate) fn diff_input_too_many_paths(path_count: usize) -> thrift::RequestErr
 pub(crate) fn not_available(reason: String) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::NOT_AVAILABLE,
+        reason,
+        ..Default::default()
+    }
+}
+
+pub(crate) fn not_implemented(reason: String) -> thrift::RequestError {
+    thrift::RequestError {
+        kind: thrift::RequestErrorKind::NOT_IMPLEMENTED,
         reason,
         ..Default::default()
     }

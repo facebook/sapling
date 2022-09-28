@@ -12,6 +12,10 @@ use chrono::DateTime;
 use chrono::FixedOffset;
 use chrono::Local;
 use context::CoreContext;
+use derived_data_manager::manager::derive::BatchDeriveOptions;
+use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivedDataManager;
+use fsnodes::RootFsnodeId;
 use futures::future::try_join_all;
 use futures::stream::FuturesOrdered;
 use futures::stream::TryStreamExt;
@@ -19,6 +23,7 @@ use futures::try_join;
 use maplit::btreemap;
 use metaconfig_types::CommitIdentityScheme;
 use mononoke_api::BookmarkFreshness;
+use mononoke_api::ChangesetId;
 use mononoke_api::ChangesetPrefixSpecifier;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_api::ChangesetSpecifierPrefixResolution;
@@ -31,6 +36,7 @@ use mononoke_api::MononokePath;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
+use repo_derived_data::RepoDerivedDataRef;
 use source_control as thrift;
 
 use crate::commit_id::map_commit_identities;
@@ -635,5 +641,79 @@ impl SourceControlServiceImpl {
         Ok(thrift::RepoDeleteBookmarkResponse {
             ..Default::default()
         })
+    }
+
+    /// Prepare commits for future operations.
+    ///
+    /// Perform any necessary pre-processing on the mononoke side to ensure that the commits
+    /// are ready to be used later without incurring a performance penalty for repeated
+    /// preparation.
+    ///
+    /// For now, concretely, "preparing" means deriving the fsnode data for a batch of commits.
+    ///
+    /// * The provided batch of commits must be in topological order.
+    /// * The dependencies and ancestors of all commits in the batch must have already been derived.
+    ///
+    /// If these conditions are not met, an error will be returned.
+    pub(crate) async fn repo_prepare_commits(
+        &self,
+        ctx: CoreContext,
+        repo: thrift::RepoSpecifier,
+        params: thrift::RepoPrepareCommitsParams,
+    ) -> Result<thrift::RepoPrepareCommitsResponse, errors::ServiceError> {
+        let repo = self.repo(ctx, &repo).await?;
+        // Convert thrift commit ids to bonsai changeset ids
+        let changesets = try_join_all(
+            params
+                .commits
+                .iter()
+                .map(ChangesetSpecifier::from_request)
+                .collect::<Result<Vec<_>, _>>()?
+                .into_iter()
+                .map(|specifier| repo.changeset(specifier)),
+        )
+        .await?;
+        let cs_ids = std::iter::zip(params.commits, changesets)
+            .into_iter()
+            .map(|(commit, cs)| {
+                cs.map(|cs| cs.id())
+                    .ok_or_else(|| errors::commit_not_found(commit.to_string()))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        // Derive data of the requested type for the batch of desired commits
+        let manager = repo.inner_repo().repo_derived_data().manager();
+        match params.derived_data_type {
+            thrift::DerivedDataType::FSNODE => {
+                Self::derive_batch_data::<RootFsnodeId>(manager, repo.ctx(), cs_ids).await?;
+            }
+            _ => {
+                return Err(errors::not_implemented(format!(
+                    "The derived data type: {} is not supported",
+                    params.derived_data_type
+                ))
+                .into());
+            }
+        };
+        Ok(thrift::RepoPrepareCommitsResponse {
+            ..Default::default()
+        })
+    }
+
+    async fn derive_batch_data<Derivable: BonsaiDerivable>(
+        manager: &DerivedDataManager,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<(), errors::ServiceError> {
+        manager
+            .backfill_batch::<Derivable>(
+                ctx,
+                cs_ids,
+                BatchDeriveOptions::Parallel { gap_size: None },
+                None,
+            )
+            .await
+            .map_err(|e| errors::internal_error(format!("{e}")))?;
+        Ok(())
     }
 }

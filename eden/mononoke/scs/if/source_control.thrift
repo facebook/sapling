@@ -881,6 +881,22 @@ struct RepoLandStackParams {
   9: BookmarkKindRestrictions bookmark_restrictions = BookmarkKindRestrictions.ANY_KIND;
 }
 
+/// Only support the types of derived data that we wish to expose to SCS clients.
+/// This can be extended later if other usecases arrise.
+/// See https://www.internalfb.com/code/fbsource/[f84d7f31d5e251d6b1a4dcacce880e4b29a73652]/fbcode/eden/mononoke/derived_data/remote/if/derived_data_service.thrift?lines=40
+/// for an exhaustive list of derived data types.
+enum DerivedDataType {
+  /// Derive fsnode data
+  FSNODE = 0,
+}
+
+struct RepoPrepareCommitsParams {
+  /// The list of commits for which data must be derived
+  1: list<CommitId> commits;
+  /// The type of data that we want to derive
+  2: DerivedDataType derived_data_type;
+}
+
 struct CommitLookupParams {
   /// Commit identity schemes to return.
   1: set<CommitIdentityScheme> identity_schemes;
@@ -1475,6 +1491,8 @@ struct RepoLandStackResponse {
   1: PushrebaseOutcome pushrebase_outcome;
 }
 
+struct RepoPrepareCommitsResponse {}
+
 struct CommitCompareResponse {
   /// List of the files that are different between commits with their metadata
   /// Can be used for subsequent `commit_path_diff` calls for file-level diffs.
@@ -1896,6 +1914,12 @@ service SourceControlService extends fb303_core.BaseService {
     3: PushrebaseConflictsException pushrebase_conflicts,
     4: HookRejectionsException hook_rejections,
   );
+
+  /// Derive data for commits in a repo
+  RepoPrepareCommitsResponse repo_prepare_commits(
+    1: RepoSpecifier repo,
+    2: RepoPrepareCommitsParams params,
+  ) throws (1: RequestError request_error, 2: InternalError internal_error);
 
   /// Commit methods
   /// ==============

@@ -842,6 +842,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::RepoLandStackParams,
         ) -> Result<thrift::RepoLandStackResponse, service::RepoLandStackExn>;
 
+        async fn repo_prepare_commits(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoPrepareCommitsParams,
+        ) -> Result<thrift::RepoPrepareCommitsResponse, service::RepoPrepareCommitsExn>;
+
         async fn megarepo_add_sync_target_config(
             params: thrift::MegarepoAddConfigParams,
         ) -> Result<thrift::MegarepoAddConfigResponse, service::MegarepoAddSyncTargetConfigExn>;
