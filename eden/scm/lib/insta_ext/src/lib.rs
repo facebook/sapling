@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+// for macros
+pub use insta;
+
 pub fn setup() {
     const WORKSPACE: &str = "INSTA_WORKSPACE_ROOT";
     const UPDATE: &str = "INSTA_UPDATE";
@@ -24,6 +27,7 @@ pub fn run(
     is_cargo: bool,
     snapshot: &str,
     file: &str,
+    function_name: &str,
     module: &str,
     line: u32,
     expr: &str,
@@ -45,6 +49,7 @@ pub fn run(
         test_name.into(),
         snapshot,
         "unused",
+        function_name,
         // buck builds have a _unittest module suffix which cargo doesn't
         // this makes the snapshot location consistent on both
         &module.replacen("_unittest", "", 1),
@@ -67,6 +72,7 @@ macro_rules! assert_json {
             option_env!("CARGO_MANIFEST_DIR").is_some(),
             &serde_json::to_string(&$value).unwrap(),
             file!(),
+            $crate::insta::_function_name!(),
             module_path!(),
             line!(),
             stringify!($value),

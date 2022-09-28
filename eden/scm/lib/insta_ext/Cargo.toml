@@ -6,4 +6,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-insta = { git = "https://github.com/mitsuhiko/insta.git", tag = "1.8.0" }
+insta = "1.16.0"
