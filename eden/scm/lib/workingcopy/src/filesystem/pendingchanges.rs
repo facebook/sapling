@@ -6,6 +6,7 @@
  */
 
 use std::sync::Arc;
+use std::time::SystemTime;
 
 use anyhow::Result;
 use pathmatcher::Matcher;
@@ -37,5 +38,6 @@ pub trait PendingChanges {
     fn pending_changes(
         &self,
         matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        last_write: SystemTime,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>>;
 }

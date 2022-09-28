@@ -7,6 +7,7 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::SystemTime;
 
 use anyhow::anyhow;
 use anyhow::Result;
@@ -32,6 +33,7 @@ impl PendingChanges for EdenFileSystem {
     fn pending_changes(
         &self,
         _matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        _last_write: SystemTime,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         let result = edenfs_client::status::get_status(&self.root)?;
         Ok(Box::new(result.status.entries.into_iter().filter_map(

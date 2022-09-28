@@ -953,29 +953,10 @@ class dirstate(object):
     def _ruststatus(
         self, match: "Callable[[str], bool]", ignored: bool, clean: bool, unknown: bool
     ) -> "scmutil.status":
-        if util.safehasattr(self._fs, "_fsmonitorstate"):
-            filesystem = "watchman"
-        elif "eden" in self._repo.requirements:
-            filesystem = "eden"
-        else:
-            filesystem = "normal"
-
         if ignored or clean:
             raise self.FallbackToPythonStatus
 
-        tree = self._repo._rsrepo.workingcopy().treestate()
-
-        return bindings.workingcopy.status.status(
-            self._root,
-            self._repo[self.p1()].manifest(),
-            self._repo.fileslog.filescmstore,
-            tree,
-            self._lastnormaltime,
-            match,
-            unknown,
-            filesystem,
-            self._ui._uiconfig._rcfg,
-        )
+        return self._repo._rsrepo.workingcopy().status(match, self._lastnormaltime)
 
     @perftrace.tracefunc("Status")
     def status(

@@ -8,6 +8,7 @@
 mod print;
 
 use std::sync::Arc;
+use std::time::SystemTime;
 
 use anyhow::Result;
 use clidispatch::errors;
@@ -163,7 +164,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
     let (status, copymap) = match repo.config().get_or_default("status", "use-rust")? {
         true => {
             let matcher = Arc::new(AlwaysMatcher::new());
-            let status = wc.status(matcher)?;
+            let status = wc.status(matcher, SystemTime::UNIX_EPOCH)?;
             let copymap = wc.copymap()?.into_iter().collect();
             (status, copymap)
         }

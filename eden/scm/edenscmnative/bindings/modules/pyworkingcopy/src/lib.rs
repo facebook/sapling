@@ -18,28 +18,22 @@ use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use cpython::*;
-use cpython_ext::convert::ImplInto;
 use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyPathBuf;
 use parking_lot::RwLock;
 use pathmatcher::Matcher;
-use pyconfigparser::config as PyConfig;
-use pymanifest::treemanifest;
 use pypathmatcher::extract_matcher;
 use pypathmatcher::extract_option_matcher;
 use pytreestate::treestate;
 use rsworkingcopy::walker::WalkError;
 use rsworkingcopy::walker::Walker;
 use rsworkingcopy::workingcopy::WorkingCopy;
-use storemodel::ReadFileContents;
-
-type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "workingcopy"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<walker>(py)?;
-    m.add_class::<status>(py)?;
+    m.add_class::<workingcopy>(py)?;
     Ok(m)
 }
 
@@ -88,63 +82,27 @@ py_class!(class walker |py| {
 
 });
 
-py_class!(class status |py| {
-    @staticmethod
-    def status(
-        pyroot: PyPathBuf,
-        pymanifest: treemanifest,
-        pystore: ImplInto<ArcReadFileContents>,
-        pytreestate: treestate,
-        last_write: u32,
-        pymatcher: Option<PyObject>,
-        listunknown: bool,
-        filesystem: &str,
-        config: PyConfig,
-    ) -> PyResult<PyObject> {
-        let root = pyroot.to_path_buf();
-        let manifest = pymanifest.get_underlying(py);
-        let store = pystore.into();
-        let last_write = SystemTime::UNIX_EPOCH.checked_add(
-            Duration::from_secs(last_write.into())).ok_or_else(|| anyhow!("Failed to convert {} to SystemTime", last_write)
-        ).map_pyerr(py)?;
-        let matcher = extract_option_matcher(py, pymatcher)?;
-        let filesystem = match filesystem {
-            "normal" => {
-                rsworkingcopy::filesystem::FileSystemType::Normal
-            },
-            "watchman" => {
-                rsworkingcopy::filesystem::FileSystemType::Watchman
-            },
-            "eden" => {
-                rsworkingcopy::filesystem::FileSystemType::Eden
-            },
-            _ => return Err(anyhow!("Unsupported filesystem type: {}", filesystem)).map_pyerr(py),
-        };
-
-        let treestate = pytreestate.get_state(py);
-
-        let config = config.get_cfg(py);
-        let status = py.allow_threads(|| rsworkingcopy::status::status(
-            root,
-            filesystem,
-            manifest,
-            store,
-            treestate,
-            last_write,
-            matcher,
-            listunknown,
-            &config,
-        ));
-
-        let status = status.map_pyerr(py)?;
-        pystatus::to_python_status(py, &status)
-    }
-});
-
 py_class!(pub class workingcopy |py| {
-    data inner_wc: Arc<RwLock<WorkingCopy>>;
+    data inner: Arc<RwLock<WorkingCopy>>;
 
     def treestate(&self) -> PyResult<treestate> {
-        treestate::create_instance(py, self.inner_wc(py).read().treestate())
+        treestate::create_instance(py, self.inner(py).read().treestate())
+    }
+
+    def status(
+        &self,
+        pymatcher: Option<PyObject>,
+        lastwrite: u32,
+    ) -> PyResult<PyObject> {
+        let wc = self.inner(py).write();
+        let matcher = extract_option_matcher(py, pymatcher)?;
+        let last_write = SystemTime::UNIX_EPOCH.checked_add(
+            Duration::from_secs(lastwrite.into())).ok_or_else(|| anyhow!("Failed to convert {} to SystemTime", lastwrite)
+        ).map_pyerr(py)?;
+        pystatus::to_python_status(py,
+            &py.allow_threads(|| {
+                wc.status(matcher, last_write)
+            }).map_pyerr(py)?
+        )
     }
 });

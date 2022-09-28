@@ -10,7 +10,6 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::SystemTime;
 
 use anyhow::anyhow;
 use anyhow::Result;
@@ -418,7 +417,6 @@ impl Repo {
             treestate,
             tree_resolver,
             file_store,
-            SystemTime::UNIX_EPOCH,
             &self.config,
         )?)
     }

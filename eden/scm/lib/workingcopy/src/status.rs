@@ -7,12 +7,9 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::SystemTime;
 
 use anyhow::Result;
-use configparser::config::ConfigSet;
 use manifest::Manifest;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
@@ -22,17 +19,12 @@ use pathmatcher::ExactMatcher;
 use pathmatcher::Matcher;
 use status::Status;
 use status::StatusBuilder;
-use storemodel::ReadFileContents;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
 use types::HgId;
 use types::RepoPathBuf;
 
 use crate::filesystem::ChangeType;
-use crate::filesystem::FileSystemType;
-use crate::workingcopy::WorkingCopy;
-
-type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
 
 struct FakeTreeResolver {
     pub manifest: Arc<RwLock<TreeManifest>>,
@@ -42,31 +34,6 @@ impl ReadTreeManifest for FakeTreeResolver {
     fn get(&self, _commit_id: &HgId) -> Result<Arc<RwLock<TreeManifest>>> {
         Ok(self.manifest.clone())
     }
-}
-
-pub fn status(
-    root: PathBuf,
-    file_system_type: FileSystemType,
-    manifest: Arc<RwLock<TreeManifest>>,
-    store: ArcReadFileContents,
-    treestate: Arc<Mutex<TreeState>>,
-    last_write: SystemTime,
-    matcher: Arc<dyn Matcher + Send + Sync + 'static>,
-    _list_unknown: bool,
-    config: &ConfigSet,
-) -> Result<Status> {
-    let manifest_resolver = Arc::new(FakeTreeResolver { manifest });
-    let working_copy = WorkingCopy::new(
-        root,
-        file_system_type,
-        treestate,
-        manifest_resolver,
-        store,
-        last_write,
-        config,
-    )?;
-
-    working_copy.status(matcher)
 }
 
 /// Compute the status of the working copy relative to the current commit.

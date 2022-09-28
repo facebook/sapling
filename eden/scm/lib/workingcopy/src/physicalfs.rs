@@ -8,6 +8,7 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::SystemTime;
 
 use anyhow::Result;
 use manifest_tree::ReadTreeManifest;
@@ -23,7 +24,6 @@ use vfs::VFS;
 use crate::filechangedetector::FileChangeDetector;
 use crate::filechangedetector::FileChangeDetectorTrait;
 use crate::filechangedetector::FileChangeResult;
-use crate::filechangedetector::HgModifiedTime;
 use crate::filechangedetector::ResolvedFileChangeResult;
 use crate::filesystem::PendingChangeResult;
 use crate::filesystem::PendingChanges as PendingChangesTrait;
@@ -41,7 +41,6 @@ pub struct PhysicalFileSystem {
     store: ArcReadFileContents,
     treestate: Arc<Mutex<TreeState>>,
     include_directories: bool,
-    last_write: HgModifiedTime,
     num_threads: u8,
 }
 
@@ -52,7 +51,6 @@ impl PhysicalFileSystem {
         store: ArcReadFileContents,
         treestate: Arc<Mutex<TreeState>>,
         include_directories: bool,
-        last_write: HgModifiedTime,
         num_threads: u8,
     ) -> Result<Self> {
         Ok(PhysicalFileSystem {
@@ -61,7 +59,6 @@ impl PhysicalFileSystem {
             store,
             treestate,
             include_directories,
-            last_write,
             num_threads,
         })
     }
@@ -71,6 +68,7 @@ impl PendingChangesTrait for PhysicalFileSystem {
     fn pending_changes(
         &self,
         matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        last_write: SystemTime,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         let root = self.vfs.root().to_path_buf();
         let ident = identity::must_sniff_dir(&root)?;
@@ -86,7 +84,7 @@ impl PendingChangesTrait for PhysicalFileSystem {
         let file_change_detector = FileChangeDetector::new(
             self.treestate.clone(),
             self.vfs.clone(),
-            self.last_write.clone(),
+            last_write.try_into()?,
             manifests[0].clone(),
             self.store.clone(),
         );

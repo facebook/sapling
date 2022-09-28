@@ -35,7 +35,6 @@ use types::RepoPathBuf;
 
 #[cfg(feature = "eden")]
 use crate::edenfs::EdenFileSystem;
-use crate::filechangedetector::HgModifiedTime;
 use crate::filesystem::FileSystemType;
 use crate::filesystem::PendingChangeResult;
 use crate::filesystem::PendingChanges;
@@ -74,7 +73,6 @@ impl WorkingCopy {
         treestate: Arc<Mutex<TreeState>>,
         tree_resolver: ArcReadTreeManifest,
         filestore: ArcReadFileContents,
-        last_write: SystemTime,
         config: &ConfigSet,
     ) -> Result<Self> {
         tracing::debug!(target: "dirstate_size", dirstate_size=treestate.lock().len());
@@ -93,7 +91,6 @@ impl WorkingCopy {
             treestate.clone(),
             tree_resolver.clone(),
             filestore,
-            last_write,
         )?);
 
         Ok(WorkingCopy {
@@ -144,9 +141,7 @@ impl WorkingCopy {
         treestate: Arc<Mutex<TreeState>>,
         tree_resolver: ArcReadTreeManifest,
         store: ArcReadFileContents,
-        last_write: SystemTime,
     ) -> Result<FileSystem> {
-        let last_write: HgModifiedTime = last_write.try_into()?;
         let inner: Box<dyn PendingChanges + Send> = match file_system_type {
             FileSystemType::Normal => Box::new(PhysicalFileSystem::new(
                 root.clone(),
@@ -154,7 +149,6 @@ impl WorkingCopy {
                 store.clone(),
                 treestate.clone(),
                 false,
-                last_write,
                 8,
             )?),
             FileSystemType::Watchman => Box::new(WatchmanFileSystem::new(
@@ -162,7 +156,6 @@ impl WorkingCopy {
                 treestate.clone(),
                 tree_resolver,
                 store.clone(),
-                last_write,
             )?),
             FileSystemType::Eden => {
                 #[cfg(not(feature = "eden"))]
@@ -238,7 +231,11 @@ impl WorkingCopy {
         Ok(Arc::new(UnionMatcher::new(sparse_matchers)))
     }
 
-    pub fn status(&self, matcher: Arc<dyn Matcher + Send + Sync + 'static>) -> Result<Status> {
+    pub fn status(
+        &self,
+        matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        last_write: SystemTime,
+    ) -> Result<Status> {
         let added_files = self.added_files()?;
 
         let manifests =
@@ -269,7 +266,7 @@ impl WorkingCopy {
             .filesystem
             .lock()
             .inner
-            .pending_changes(matcher.clone())?
+            .pending_changes(matcher.clone(), last_write)?
             .filter_map(|result| match result {
                 Ok(PendingChangeResult::File(change_type)) => {
                     match matcher.matches_file(change_type.get_path()) {
