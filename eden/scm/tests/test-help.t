@@ -361,7 +361,6 @@ Test extension help:
        sparse        allow sparse checkouts of the working directory
        sshaskpass    ssh-askpass implementation that works with chg
        stablerev     provide a way to expose the "stable" commit via a revset
-       stat          (no help text available)
        traceprof     (no help text available)
        treemanifestserver
        tweakdefaults

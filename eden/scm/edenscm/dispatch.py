@@ -321,7 +321,6 @@ def _preimportmodules():
         "sparse",
         "sshaskpass",
         "stablerev",
-        "stat",
         "traceprof",
         "treemanifest",
         "tweakdefaults",

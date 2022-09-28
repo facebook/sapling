@@ -70,6 +70,7 @@ _ignoreextensions = {
     "releasenotes",
     "relink",
     "remoteid",
+    "stat",
     "strip",
     "treedirstate",
     "uncommit",
