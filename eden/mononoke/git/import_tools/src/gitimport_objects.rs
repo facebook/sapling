@@ -298,6 +298,15 @@ fn format_signature(sig: git_actor::SignatureRef) -> String {
     format!("{} <{}>", sig.name, sig.email)
 }
 
+/// See https://stackoverflow.com/questions/28169745/what-are-the-options-to-convert-iso-8859-1-latin-1-to-a-string-utf-8/28175593#28175593
+///
+/// The first 256 codepoints of unicode match ISO-8859-1 (a.k.a Latin1).
+/// However Codepoints 128-255 are encoded differently in UTF-8.
+/// They are represented by a single byte when encoded as ISO-8859-1, while they turn into two bytes encoded in UTF-8.
+fn string_from_latin1(bs: &[u8]) -> String {
+    bs.iter().map(|&b| b as char).collect()
+}
+
 impl ExtractedCommit {
     pub async fn new(oid: ObjectId, reader: &GitRepoReader) -> Result<Self, Error> {
         let Commit {
@@ -323,15 +332,24 @@ impl ExtractedCommit {
 
         let author_date = convert_time_to_datetime(&author.time)?;
         let committer_date = convert_time_to_datetime(&committer.time)?;
-
-        if encoding.map_or(false, |bs| bs.to_ascii_lowercase() != b"utf-8") {
-            bail!("Do not know how to handle non-UTF8")
-        }
-
         let author = format_signature(author.to_ref());
         let committer = format_signature(committer.to_ref());
-
-        let message = String::from_utf8(message.to_vec())?;
+        let lowercase_encoding = encoding.as_ref().map_or_else(
+            || "utf-8".to_string(),
+            |e| {
+                e.to_ascii_lowercase()
+                    .into_iter()
+                    .map(|b| b as char)
+                    .collect::<String>()
+            },
+        );
+        let message = match lowercase_encoding.as_str() {
+            "utf-8" => String::from_utf8(message.to_vec())?,
+            "iso-8895-1" => string_from_latin1(&message),
+            _ => {
+                bail!("Commit: {oid} is encoded with {encoding:?} which is not currently supported")
+            }
+        };
 
         let parents = parents.into_vec();
 
