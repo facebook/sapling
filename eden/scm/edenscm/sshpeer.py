@@ -347,11 +347,20 @@ def _popen4testhgserve(path, env=None, newlines: bool = False, bufsize: int = -1
     cmdargs = util.hgcmd() + ["-R", path, "serve", "--stdio"]
     testtmp = os.getenv("TESTTMP")
 
+    def _isbashscript(file):
+        if cmdargs[0].endswith(".sh"):
+            return True
+
+        with open(file, "rb") as file:
+            start = file.read(12)
+            return (b"#!/bin/bash" in start) or (b"#!/bin/sh" in start)
+        return False
+
     # Append "defpath" (ex. /bin) to PATH.  Needed for buck test (the main hg
     # binary is a _bash_ script setting up a bunch of things instead of a
     # standalone single executable), combined with debugruntest (where PATH does
     # not include /bin to force external dependencies to be explicit).
-    if cmdargs[0].endswith(".sh") and env:
+    if _isbashscript(cmdargs[0]) and env:
         path = env.get("PATH")
         if path:
             env["PATH"] = os.pathsep.join([path, os.path.defpath])
