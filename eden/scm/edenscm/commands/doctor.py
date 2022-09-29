@@ -132,6 +132,7 @@ def repairsvfs(ui, svfs, name: str, fixobj) -> None:
     path = svfs.join(name)
     repair(ui, name, path, fixobj.repair)
     if callable(fixobj):
+        # pyre-fixme[7]: Expected `None` but got `object`.
         return fixobj(path)
 
 
