@@ -31,6 +31,7 @@ from eden.fs.cli.buck import get_buck_command, run_buck_command
 from eden.fs.cli.telemetry import TelemetrySample
 from eden.fs.cli.util import (
     check_health_using_lockfile,
+    EdenStartError,
     get_protocol,
     is_apple_silicon,
     wait_for_instance_healthy,
@@ -852,7 +853,15 @@ want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n.""
 
         # Attempt to start the daemon if it is not already running.
         health_info = instance.check_health()
-        if not health_info.is_healthy():
+        if health_info.is_starting():
+            print("EdenFS daemon is still starting. Waiting for EdenFS to start ...")
+            try:
+                wait_for_instance_healthy(instance, 600)
+            except EdenStartError as error:
+                print(error)
+                return 1
+            print("EdenFS started.")
+        elif not health_info.is_healthy():
             print("edenfs daemon is not currently running. Starting...")
             # Sometimes this returns a non-zero exit code if it does not finish
             # startup within the default timeout.
