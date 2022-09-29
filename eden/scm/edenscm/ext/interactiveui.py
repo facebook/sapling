@@ -151,21 +151,21 @@ def view(viewobj):
     sys.stdout.write(s)
     while not done:
         output = getchar(sys.stdin.fileno())
-        if repr(output) == "'q'":
+        if output == b"q":
             done = True
             break
-        if repr(output) == "'\\r'":
+        if output == b"\r":
             # \r = return
             viewobj.enter()
             done = True
             break
-        if repr(output) == "'\\x1b[C'":
+        if output == b"\x1b[C":
             viewobj.rightarrow()
-        if repr(output) == "'\\x1b[D'":
+        if output == b"\x1b[D":
             viewobj.leftarrow()
-        if repr(output) == "'a'":
+        if output == b"a":
             viewobj.apress()
-        if repr(output) == "'d'":
+        if output == b"d":
             viewobj.dpress()
         linecount = s.count("\n")
         s = viewobj.render()

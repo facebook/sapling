@@ -651,7 +651,7 @@ templatefunc = registrar.templatefunc()
 
 
 def _undonehexnodes(repo, reverseindex):
-    revstring = revsetlang.formatspec("olddraft(0) - olddraft(%d)", reverseindex)
+    revstring = "olddraft(0) - olddraft(%d)" % reverseindex
     return list(repo.nodes(revstring))
 
 
@@ -672,7 +672,7 @@ def showundonecommits(context, mapping, args):
 
 
 def _donehexnodes(repo, reverseindex):
-    revstring = revsetlang.formatspec("olddraft(%d)", reverseindex)
+    revstring = "olddraft(%d)" % reverseindex
     return list(repo.nodes(revstring))
 
 
@@ -756,7 +756,7 @@ def oldworkingparenttemplate(context, mapping, args):
     )
     repo = mapping["ctx"]._repo
     ctx = mapping["ctx"]
-    revstring = revsetlang.formatspec("oldworkingcopyparent(%d)", reverseindex)
+    revstring = "oldworkingcopyparent(%d)" % reverseindex
     nodes = list(repo.nodes(revstring))
     if ctx.node() in nodes:
         result = ctx.hex()
@@ -1077,8 +1077,8 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
                     dirstate.remove(filename)
 
     # visible changesets
-    addedrevs = revsetlang.formatspec("olddraft(0) - olddraft(%d)", reverseindex)
-    removedrevs = revsetlang.formatspec("olddraft(%d) - olddraft(0)", reverseindex)
+    addedrevs = "olddraft(0) - olddraft(%d)" % reverseindex
+    removedrevs = "olddraft(%d) - olddraft(0)" % reverseindex
     if not branch:
         if repo.ui.configbool("experimental", "narrow-heads"):
             # Assuming mutation and visibility are used. Restore visibility heads
@@ -1090,10 +1090,11 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
             revealcommits(repo, removedrevs)
     else:
         localadds = revsetlang.formatspec(
-            "(olddraft(0) - olddraft(%d)) and" " _localbranch(%s)", reverseindex, branch
+            "(olddraft(0) - olddraft(%d)) and _localbranch(%%s)" % reverseindex, branch
         )
         localremoves = revsetlang.formatspec(
-            "(olddraft(%d) - olddraft(0)) and" " _localbranch(%s)", reverseindex, branch
+            "(olddraft(%d) - olddraft(0)) and" " _localbranch(%%s)" % reverseindex,
+            branch,
         )
         smarthide(repo, localadds, removedrevs)
         smarthide(repo, addedrevs, localremoves, local=True)
@@ -1240,13 +1241,9 @@ def _findnextdelta(repo, reverseindex, branch, direction):
         # disjunctive union of present and old = changes
         # intersection of changes and local = localchanges
         localctxchanges = revsetlang.formatspec(
-            "((olddraft(%d) + olddraft(%d)) -"
-            "(olddraft(%d) and olddraft(%d)))"
-            " and _localbranch(%s)",
-            incrementalindex,
-            reverseindex,
-            incrementalindex,
-            reverseindex,
+            ("((olddraft(%d) + olddraft(%d)) -" % (incrementalindex, reverseindex))
+            + ("(olddraft(%d) and olddraft(%d)))" % (incrementalindex, reverseindex))
+            + " and _localbranch(%s)",
             branch,
         )
         done = done or repo.revs(localctxchanges)
@@ -1375,15 +1372,11 @@ def _preview(ui, repo, reverseindex):
         bookdiffs += kv[0]
 
     revstring = revsetlang.formatspec(
-        "ancestor(olddraft(0), olddraft(%s)) +"
-        "(draft() & ::((olddraft(0) - olddraft(%s)) + "
-        "(olddraft(%s) - olddraft(0)) + %ls + '.' + "
-        "oldworkingcopyparent(%s)))",
-        reverseindex,
-        reverseindex,
-        reverseindex,
+        ("ancestor(olddraft(0), olddraft(%s)) +" % reverseindex)
+        + ("(draft() & ::((olddraft(0) - olddraft(%s)) + " % reverseindex)
+        + ("(olddraft(%s) - olddraft(0)) + %%ls + '.' + " % reverseindex)
+        + ("oldworkingcopyparent(%s)))" % reverseindex),
         bookdiffs,
-        reverseindex,
     )
 
     opts["rev"] = [revstring]
