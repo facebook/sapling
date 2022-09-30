@@ -11,6 +11,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Stdio;
 
+use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
@@ -19,9 +20,11 @@ use async_trait::async_trait;
 use blobstore::LoadableError;
 use bytes::Bytes;
 use context::CoreContext;
+use encoding_rs::Encoding;
 use futures::stream::Stream;
 use futures::stream::TryStreamExt;
 use git_hash::ObjectId;
+use git_object::bstr::BString;
 use git_object::tree;
 use git_object::Commit;
 use git_object::Tree;
@@ -34,6 +37,7 @@ use mononoke_types::DateTime;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use slog::debug;
 use sorted_vector_map::SortedVectorMap;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncWriteExt;
@@ -298,17 +302,12 @@ fn format_signature(sig: git_actor::SignatureRef) -> String {
     format!("{} <{}>", sig.name, sig.email)
 }
 
-/// See https://stackoverflow.com/questions/28169745/what-are-the-options-to-convert-iso-8859-1-latin-1-to-a-string-utf-8/28175593#28175593
-///
-/// The first 256 codepoints of unicode match ISO-8859-1 (a.k.a Latin1).
-/// However Codepoints 128-255 are encoded differently in UTF-8.
-/// They are represented by a single byte when encoded as ISO-8859-1, while they turn into two bytes encoded in UTF-8.
-fn string_from_latin1(bs: &[u8]) -> String {
-    bs.iter().map(|&b| b as char).collect()
-}
-
 impl ExtractedCommit {
-    pub async fn new(oid: ObjectId, reader: &GitRepoReader) -> Result<Self, Error> {
+    pub async fn new(
+        ctx: &CoreContext,
+        oid: ObjectId,
+        reader: &GitRepoReader,
+    ) -> Result<Self, Error> {
         let Commit {
             tree,
             parents,
@@ -334,23 +333,24 @@ impl ExtractedCommit {
         let committer_date = convert_time_to_datetime(&committer.time)?;
         let author = format_signature(author.to_ref());
         let committer = format_signature(committer.to_ref());
-        let lowercase_encoding = encoding.as_ref().map_or_else(
-            || "utf-8".to_string(),
-            |e| {
-                e.to_ascii_lowercase()
-                    .into_iter()
-                    .map(|b| b as char)
-                    .collect::<String>()
-            },
-        );
-        let message = match lowercase_encoding.as_str() {
-            "utf-8" => String::from_utf8(message.to_vec())?,
-            "iso-8895-1" => string_from_latin1(&message),
-            _ => {
-                bail!("Commit: {oid} is encoded with {encoding:?} which is not currently supported")
-            }
-        };
-
+        let encoding =
+            Encoding::for_label(&encoding.clone().unwrap_or_else(|| BString::from("utf-8")))
+                .ok_or_else(|| anyhow!("Failed to parse git commit encoding: {encoding:?}"))?;
+        let (decoded, actual_encoding, replacement) = encoding.decode(&message);
+        let message = decoded.to_string();
+        if actual_encoding != encoding {
+            // Decode performs BOM sniffing to detect the actual encoding for this byte string.
+            // We expect it to match the encoding declared in the commit metadata.
+            bail!("Unexpected encoding: expected {encoding:?}, got {actual_encoding:?}");
+        } else if replacement {
+            // If the input string contains malformed sequences, they get replaced with the
+            // REPLACEMENT CHARACTER.
+            // In this situation, don't fail but log the occurrence.
+            debug!(
+                ctx.logger(),
+                "Failed to decode git commit message:\n{message:?}\nwith encoding: {encoding:?}.\nThe offending characters were replaced"
+            );
+        }
         let parents = parents.into_vec();
 
         Result::<_, Error>::Ok(ExtractedCommit {

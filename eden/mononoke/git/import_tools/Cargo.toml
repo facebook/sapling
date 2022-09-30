@@ -14,6 +14,7 @@ blobstore = { version = "0.1.0", path = "../../blobstore" }
 bytes = { version = "1.1", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
+encoding_rs = "0.8"
 filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 git-actor = "0.10"

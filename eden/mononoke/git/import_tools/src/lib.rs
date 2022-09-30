@@ -204,7 +204,7 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator, Uploader: GitUploader>(
                             metadata,
                             tree,
                             parent_trees,
-                        } = ExtractedCommit::new(oid, &reader)
+                        } = ExtractedCommit::new(&ctx, oid, &reader)
                             .await
                             .with_context(|| format!("While extracting {}", oid))?;
 
@@ -343,7 +343,7 @@ pub async fn import_tree_as_single_bonsai_changeset(
 
     let sha1 = oid_to_sha1(&git_cs_id)?;
 
-    let ExtractedCommit { tree, metadata, .. } = ExtractedCommit::new(git_cs_id, &reader)
+    let ExtractedCommit { tree, metadata, .. } = ExtractedCommit::new(ctx, git_cs_id, &reader)
         .await
         .with_context(|| format!("While extracting {}", git_cs_id))?;
 
