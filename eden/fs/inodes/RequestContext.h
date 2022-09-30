@@ -83,7 +83,7 @@ class RequestContext : public ObjectFetchContext {
 
   void startRequest(
       EdenStats* stats,
-      FsChannelThreadStats::DurationPtr stat,
+      FsChannelStats::DurationPtr stat,
       std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>&
           requestWatches);
 
@@ -110,7 +110,7 @@ class RequestContext : public ObjectFetchContext {
 
   // Needed to track stats
   std::chrono::time_point<std::chrono::steady_clock> startTime_;
-  FsChannelThreadStats::DurationPtr latencyStat_ = nullptr;
+  FsChannelStats::DurationPtr latencyStat_ = nullptr;
   EdenStats* stats_ = nullptr;
   RequestMetricsScope requestMetricsScope_;
   std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>

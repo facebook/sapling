@@ -17,80 +17,12 @@
 
 namespace facebook::eden {
 
-struct FsChannelThreadStats;
-struct ObjectStoreThreadStats;
-struct HgBackingStoreThreadStats;
-struct HgImporterThreadStats;
-struct JournalThreadStats;
-struct ThriftThreadStats;
-
-class EdenStats {
- public:
-  /**
-   * Returns a thread-local stats group.
-   *
-   * The returned object must only be used on the current thread.
-   */
-  template <typename T>
-  T& getStatsForCurrentThread() = delete;
-
-  /**
-   * This function can be called on any thread.
-   */
-  void flush();
-
- private:
-  class ThreadLocalTag {};
-
-  folly::ThreadLocal<FsChannelThreadStats, ThreadLocalTag, void>
-      threadLocalFsChannelStats_;
-  folly::ThreadLocal<ObjectStoreThreadStats, ThreadLocalTag, void>
-      threadLocalObjectStoreStats_;
-  folly::ThreadLocal<HgBackingStoreThreadStats, ThreadLocalTag, void>
-      threadLocalHgBackingStoreStats_;
-  folly::ThreadLocal<HgImporterThreadStats, ThreadLocalTag, void>
-      threadLocalHgImporterStats_;
-  folly::ThreadLocal<JournalThreadStats, ThreadLocalTag, void>
-      threadLocalJournalStats_;
-  folly::ThreadLocal<ThriftThreadStats, ThreadLocalTag, void>
-      threadLocalThriftStats_;
-};
-
-template <>
-inline FsChannelThreadStats&
-EdenStats::getStatsForCurrentThread<FsChannelThreadStats>() {
-  return *threadLocalFsChannelStats_.get();
-}
-
-template <>
-inline ObjectStoreThreadStats&
-EdenStats::getStatsForCurrentThread<ObjectStoreThreadStats>() {
-  return *threadLocalObjectStoreStats_.get();
-}
-
-template <>
-inline HgBackingStoreThreadStats&
-EdenStats::getStatsForCurrentThread<HgBackingStoreThreadStats>() {
-  return *threadLocalHgBackingStoreStats_.get();
-}
-
-template <>
-inline HgImporterThreadStats&
-EdenStats::getStatsForCurrentThread<HgImporterThreadStats>() {
-  return *threadLocalHgImporterStats_.get();
-}
-
-template <>
-inline JournalThreadStats&
-EdenStats::getStatsForCurrentThread<JournalThreadStats>() {
-  return *threadLocalJournalStats_.get();
-}
-
-template <>
-inline ThriftThreadStats&
-EdenStats::getStatsForCurrentThread<ThriftThreadStats>() {
-  return *threadLocalThriftStats_.get();
-}
+struct FsChannelStats;
+struct ObjectStoreStats;
+struct HgBackingStoreStats;
+struct HgImporterStats;
+struct JournalStats;
+struct ThriftStats;
 
 /**
  * StatsGroupBase is a base class for a group of thread-local stats
@@ -109,7 +41,12 @@ class StatsGroupBase {
   /**
    * Counter is used to record events.
    */
-  using Counter = Stat;
+  class Counter : private Stat {
+   public:
+    explicit Counter(std::string_view name);
+
+    using Stat::addValue;
+  };
 
   /**
    * Duration is used for stats that measure elapsed times.
@@ -138,8 +75,83 @@ class StatsGroupBase {
   };
 
  protected:
+  // TODO: delete this when ActivityRecorded is fixed
   Stat createStat(std::string_view name);
 };
+
+class EdenStats {
+ public:
+  /**
+   * Records a specified elapsed duration. Updates thread-local storage, and
+   * aggregates into the fb303 ServiceData in the background and on reads.
+   */
+  template <typename T, typename Rep, typename Period>
+  void addDuration(
+      StatsGroupBase::Duration T::*duration,
+      std::chrono::duration<Rep, Period> elapsed) {
+    (getStatsForCurrentThread<T>().*duration).addDuration(elapsed);
+  }
+
+  template <typename T>
+  void increment(StatsGroupBase::Counter T::*counter, double value = 1.0) {
+    (getStatsForCurrentThread<T>().*counter).addValue(value);
+  }
+
+  /**
+   * Aggregates thread-locals into fb303's ServiceData.
+   *
+   * This function can be called on any thread.
+   */
+  void flush();
+
+ private:
+  template <typename T>
+  T& getStatsForCurrentThread() = delete;
+
+  class ThreadLocalTag {};
+
+  template <typename T>
+  using ThreadLocal = folly::ThreadLocal<T, ThreadLocalTag, void>;
+
+  ThreadLocal<FsChannelStats> threadLocalFsChannelStats_;
+  ThreadLocal<ObjectStoreStats> threadLocalObjectStoreStats_;
+  ThreadLocal<HgBackingStoreStats> threadLocalHgBackingStoreStats_;
+  ThreadLocal<HgImporterStats> threadLocalHgImporterStats_;
+  ThreadLocal<JournalStats> threadLocalJournalStats_;
+  ThreadLocal<ThriftStats> threadLocalThriftStats_;
+};
+
+template <>
+inline FsChannelStats& EdenStats::getStatsForCurrentThread<FsChannelStats>() {
+  return *threadLocalFsChannelStats_.get();
+}
+
+template <>
+inline ObjectStoreStats&
+EdenStats::getStatsForCurrentThread<ObjectStoreStats>() {
+  return *threadLocalObjectStoreStats_.get();
+}
+
+template <>
+inline HgBackingStoreStats&
+EdenStats::getStatsForCurrentThread<HgBackingStoreStats>() {
+  return *threadLocalHgBackingStoreStats_.get();
+}
+
+template <>
+inline HgImporterStats& EdenStats::getStatsForCurrentThread<HgImporterStats>() {
+  return *threadLocalHgImporterStats_.get();
+}
+
+template <>
+inline JournalStats& EdenStats::getStatsForCurrentThread<JournalStats>() {
+  return *threadLocalJournalStats_.get();
+}
+
+template <>
+inline ThriftStats& EdenStats::getStatsForCurrentThread<ThriftStats>() {
+  return *threadLocalThriftStats_.get();
+}
 
 template <typename T>
 class StatsGroup : public StatsGroupBase {
@@ -153,7 +165,7 @@ class StatsGroup : public StatsGroupBase {
   using DurationPtr = Duration T::*;
 };
 
-struct FsChannelThreadStats : StatsGroup<FsChannelThreadStats> {
+struct FsChannelStats : StatsGroup<FsChannelStats> {
 #ifndef _WIN32
   Duration lookup{"fuse.lookup_us"};
   Duration forget{"fuse.forget_us"};
@@ -213,7 +225,7 @@ struct FsChannelThreadStats : StatsGroup<FsChannelThreadStats> {
   Duration nfsPathconf{"nfs.pathconf_us"};
   Duration nfsCommit{"nfs.commit_us"};
 #else
-  Counter outOfOrderCreate{createStat("prjfs.out_of_order_create")};
+  Counter outOfOrderCreate{"prjfs.out_of_order_create"};
   Duration queuedFileNotification{"prjfs.queued_file_notification_us"};
 
   Duration newFileCreated{"prjfs.newFileCreated_us"};
@@ -237,35 +249,31 @@ struct FsChannelThreadStats : StatsGroup<FsChannelThreadStats> {
 /**
  * @see ObjectStore
  */
-struct ObjectStoreThreadStats : StatsGroup<ObjectStoreThreadStats> {
+struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
   Duration getTree{"store.get_tree_us"};
   Duration getBlob{"store.get_blob_us"};
   Duration getBlobMetadata{"store.get_blob_metadata_us"};
 
-  Counter getBlobFromLocalStore{
-      createStat("object_store.get_blob.local_store")};
-  Counter getBlobFromBackingStore{
-      createStat("object_store.get_blob.backing_store")};
+  Counter getBlobFromLocalStore{"object_store.get_blob.local_store"};
+  Counter getBlobFromBackingStore{"object_store.get_blob.backing_store"};
 
-  Counter getBlobMetadataFromMemory{
-      createStat("object_store.get_blob_metadata.memory")};
+  Counter getBlobMetadataFromMemory{"object_store.get_blob_metadata.memory"};
   Counter getBlobMetadataFromLocalStore{
-      createStat("object_store.get_blob_metadata.local_store")};
+      "object_store.get_blob_metadata.local_store"};
   Counter getBlobMetadataFromBackingStore{
-      createStat("object_store.get_blob_metadata.backing_store")};
+      "object_store.get_blob_metadata.backing_store"};
   Counter getLocalBlobMetadataFromBackingStore{
-      createStat("object_store.get_blob_metadata.backing_store_cache")};
+      "object_store.get_blob_metadata.backing_store_cache"};
 
-  Counter getBlobSizeFromLocalStore{
-      createStat("object_store.get_blob_size.local_store")};
+  Counter getBlobSizeFromLocalStore{"object_store.get_blob_size.local_store"};
   Counter getBlobSizeFromBackingStore{
-      createStat("object_store.get_blob_size.backing_store")};
+      "object_store.get_blob_size.backing_store"};
 };
 
 /**
  * @see HgBackingStore
  */
-struct HgBackingStoreThreadStats : StatsGroup<HgBackingStoreThreadStats> {
+struct HgBackingStoreStats : StatsGroup<HgBackingStoreStats> {
   Duration hgBackingStoreGetBlob{"store.hg.get_blob_us"};
   Duration hgBackingStoreImportBlob{"store.hg.import_blob_us"};
   Duration hgBackingStoreGetTree{"store.hg.get_tree_us"};
@@ -277,21 +285,20 @@ struct HgBackingStoreThreadStats : StatsGroup<HgBackingStoreThreadStats> {
  * @see HgImporter
  * @see HgBackingStore
  */
-struct HgImporterThreadStats : StatsGroup<HgImporterThreadStats> {
-  Counter catFile{createStat("hg_importer.cat_file")};
-  Counter fetchTree{createStat("hg_importer.fetch_tree")};
-  Counter manifest{createStat("hg_importer.manifest")};
-  Counter manifestNodeForCommit{
-      createStat("hg_importer.manifest_node_for_commit")};
-  Counter prefetchFiles{createStat("hg_importer.prefetch_files")};
+struct HgImporterStats : StatsGroup<HgImporterStats> {
+  Counter catFile{"hg_importer.cat_file"};
+  Counter fetchTree{"hg_importer.fetch_tree"};
+  Counter manifest{"hg_importer.manifest"};
+  Counter manifestNodeForCommit{"hg_importer.manifest_node_for_commit"};
+  Counter prefetchFiles{"hg_importer.prefetch_files"};
 };
 
-struct JournalThreadStats : StatsGroup<JournalThreadStats> {
-  Counter truncatedReads{createStat("journal.truncated_reads")};
-  Counter filesAccumulated{createStat("journal.files_accumulated")};
+struct JournalStats : StatsGroup<JournalStats> {
+  Counter truncatedReads{"journal.truncated_reads"};
+  Counter filesAccumulated{"journal.files_accumulated"};
 };
 
-struct ThriftThreadStats : StatsGroup<ThriftThreadStats> {
+struct ThriftStats : StatsGroup<ThriftStats> {
   Duration streamChangesSince{
       "thrift.StreamingEdenService.streamChangesSince.streaming_time_us"};
 };
@@ -315,7 +322,7 @@ class DurationScope {
         // libc++, or Microsoft STL. All three have a couple pointers
         // worth of small buffer inline storage.
         updateScope_{[duration](EdenStats& stats, StopWatch::duration elapsed) {
-          (stats.getStatsForCurrentThread<T>().*duration).addDuration(elapsed);
+          stats.addDuration(duration, elapsed);
         }} {
     assert(edenStats_);
   }

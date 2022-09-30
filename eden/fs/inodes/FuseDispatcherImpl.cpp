@@ -80,7 +80,7 @@ ImmediateFuture<uint64_t> FuseDispatcherImpl::opendir(
         ENOSYS, "Eden opendir() calls are stateless and not required");
   }
 #endif
-  return 0;
+  return 0ull;
 }
 
 ImmediateFuture<folly::Unit> FuseDispatcherImpl::releasedir(
@@ -218,7 +218,7 @@ ImmediateFuture<uint64_t> FuseDispatcherImpl::open(
         ENOSYS, "Eden open() calls are stateless and not required");
   }
 #endif
-  return 0;
+  return 0ull;
 }
 
 ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::create(

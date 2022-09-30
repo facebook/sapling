@@ -199,7 +199,7 @@ ObjectStore::getTreeEntryForObjectId(
 ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
     const ObjectId& id,
     ObjectFetchContext& fetchContext) const {
-  DurationScope statScope{stats_, &ObjectStoreThreadStats::getTree};
+  DurationScope statScope{stats_, &ObjectStoreStats::getTree};
 
   // Check in the LocalStore first
 
@@ -266,7 +266,7 @@ ImmediateFuture<folly::Unit> ObjectStore::prefetchBlobs(
 ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
     const ObjectId& id,
     ObjectFetchContext& fetchContext) const {
-  DurationScope statScope{stats_, &ObjectStoreThreadStats::getBlob};
+  DurationScope statScope{stats_, &ObjectStoreStats::getBlob};
 
   deprioritizeWhenFetchHeavy(fetchContext);
   return ImmediateFuture<BackingStore::GetBlobResult>{
@@ -302,15 +302,14 @@ ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
 ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
     const ObjectId& id,
     ObjectFetchContext& context) const {
-  DurationScope statScope{stats_, &ObjectStoreThreadStats::getBlobMetadata};
+  DurationScope statScope{stats_, &ObjectStoreStats::getBlobMetadata};
 
   // Check in-memory cache
   {
     auto metadataCache = metadataCache_.wlock();
     auto cacheIter = metadataCache->find(id);
     if (cacheIter != metadataCache->end()) {
-      stats_->getStatsForCurrentThread<ObjectStoreThreadStats>()
-          .getBlobMetadataFromMemory.addValue(1);
+      stats_->increment(&ObjectStoreStats::getBlobMetadataFromMemory);
       context.didFetch(
           ObjectFetchContext::BlobMetadata,
           id,
@@ -330,8 +329,8 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
               std::optional<BlobMetadata>&& metadata) mutable
           -> ImmediateFuture<BlobMetadata> {
             if (metadata) {
-              self->stats_->getStatsForCurrentThread<ObjectStoreThreadStats>()
-                  .getBlobMetadataFromLocalStore.addValue(1);
+              self->stats_->increment(
+                  &ObjectStoreStats::getBlobMetadataFromLocalStore);
               self->metadataCache_.wlock()->set(id, *metadata);
               context.didFetch(
                   ObjectFetchContext::BlobMetadata,
@@ -347,8 +346,8 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
             auto localMetadata =
                 self->backingStore_->getLocalBlobMetadata(id, context);
             if (localMetadata) {
-              self->stats_->getStatsForCurrentThread<ObjectStoreThreadStats>()
-                  .getLocalBlobMetadataFromBackingStore.addValue(1);
+              self->stats_->increment(
+                  &ObjectStoreStats::getLocalBlobMetadataFromBackingStore);
               self->metadataCache_.wlock()->set(id, *localMetadata);
               self->localStore_->putBlobMetadata(id, *localMetadata);
               context.didFetch(
@@ -378,13 +377,11 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
                             id,
                             &context](BackingStore::GetBlobResult result) {
                   if (result.blob) {
-                    self->stats_
-                        ->getStatsForCurrentThread<ObjectStoreThreadStats>()
-                        .getBlobMetadataFromBackingStore.addValue(1);
-                    // we retrived the full blob data
-                    self->stats_
-                        ->getStatsForCurrentThread<ObjectStoreThreadStats>()
-                        .getBlobFromBackingStore.addValue(1);
+                    self->stats_->increment(
+                        &ObjectStoreStats::getBlobMetadataFromBackingStore);
+                    // we retrieved the full blob data
+                    self->stats_->increment(
+                        &ObjectStoreStats::getBlobFromBackingStore);
                     self->localStore_->putBlob(id, result.blob.get());
                     auto metadata = computeBlobMetadata(*result.blob);
                     self->localStore_->putBlobMetadata(id, metadata);

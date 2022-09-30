@@ -21,6 +21,17 @@ void EdenStats::flush() {
   fb303::ServiceData::get()->getQuantileStatMap()->flushAll();
 }
 
+StatsGroupBase::Counter::Counter(std::string_view name)
+    : Stat{
+          name,
+          fb303::ExportTypeConsts::kSumCountAvgRate,
+          // TODO: do percentiles make sense for counters?
+          fb303::QuantileConsts::kP1_P10_P50_P90_P99,
+          fb303::SlidingWindowPeriodConsts::kOneMinTenMinHour,
+      } {
+  // TODO: enforce the name matches the StatsGroup prefix.
+}
+
 StatsGroupBase::Duration::Duration(std::string_view name)
     : Stat{
           name,
@@ -32,6 +43,7 @@ StatsGroupBase::Duration::Duration(std::string_view name)
   XCHECK_GT(name.size(), size_t{3}) << "duration name too short";
   XCHECK_EQ("_us", std::string_view(name.data() + name.size() - 3, 3))
       << "duration stats must end in _us";
+  // TODO: enforce the name matches the StatsGroup prefix.
 }
 
 void StatsGroupBase::Duration::addDuration(std::chrono::microseconds elapsed) {

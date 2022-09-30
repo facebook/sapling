@@ -22,7 +22,7 @@
 namespace facebook::eden {
 
 /** Contains statistics about the current state of the journal */
-struct JournalStats {
+struct InternalJournalStats {
   size_t entryCount = 0;
   std::chrono::steady_clock::time_point earliestTimestamp;
   std::chrono::steady_clock::time_point latestTimestamp;
@@ -152,9 +152,9 @@ class Journal {
 
   /**
    * Returns an option that is nullopt if the Journal is empty or an option
-   * that contains valid JournalStats if the Journal is non-empty.
+   * that contains valid InternalJournalStats if the Journal is non-empty.
    */
-  std::optional<JournalStats> getStats();
+  std::optional<InternalJournalStats> getStats();
 
   /** Gets a vector of the modifications (newer deltas having lower indices)
    * done by the latest 'limit' deltas, if the
@@ -202,7 +202,7 @@ class Journal {
     std::deque<RootUpdateJournalDelta> hashUpdateDeltas;
     RootId currentHash;
     /// The stats about this Journal up to the latest delta.
-    std::optional<JournalStats> stats;
+    std::optional<InternalJournalStats> stats;
     size_t memoryLimit = kDefaultJournalMemoryLimit;
     size_t deltaMemoryUsage = 0;
 

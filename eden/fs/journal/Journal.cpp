@@ -99,8 +99,7 @@ void Journal::DeltaState::appendDelta(RootUpdateJournalDelta&& delta) {
 Journal::Journal(std::shared_ptr<EdenStats> edenStats)
     : edenStats_{std::move(edenStats)} {
   // Add 0 so that this counter shows up in ODS
-  edenStats_->getStatsForCurrentThread<JournalThreadStats>()
-      .truncatedReads.addValue(0);
+  edenStats_->increment(&JournalStats::truncatedReads, 0);
 }
 
 void Journal::recordCreated(RelativePathPiece fileName) {
@@ -208,7 +207,7 @@ bool Journal::addDeltaBeforeNotifying(T&& delta, DeltaState& deltaState) {
       ++(deltaState.stats->entryCount);
       deltaState.deltaMemoryUsage += delta.estimateMemoryUsage();
     } else {
-      deltaState.stats = JournalStats();
+      deltaState.stats = InternalJournalStats();
       deltaState.stats->entryCount = 1;
       deltaState.deltaMemoryUsage = delta.estimateMemoryUsage();
     }
@@ -316,7 +315,7 @@ bool Journal::isSubscriberValid(uint64_t id) const {
   return subscribers.find(id) != subscribers.end();
 }
 
-std::optional<JournalStats> Journal::getStats() {
+std::optional<InternalJournalStats> Journal::getStats() {
   return deltaState_.lock()->stats;
 }
 
@@ -463,11 +462,9 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
   if (result) {
     if (edenStats_) {
       if (result->isTruncated) {
-        edenStats_->getStatsForCurrentThread<JournalThreadStats>()
-            .truncatedReads.addValue(1);
+        edenStats_->increment(&JournalStats::truncatedReads);
       }
-      edenStats_->getStatsForCurrentThread<JournalThreadStats>()
-          .filesAccumulated.addValue(filesAccumulated);
+      edenStats_->increment(&JournalStats::filesAccumulated, filesAccumulated);
     }
     if (deltaState->stats) {
       deltaState->stats->maxFilesAccumulated =

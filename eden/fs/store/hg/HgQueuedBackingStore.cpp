@@ -163,8 +163,8 @@ void HgQueuedBackingStore::processBlobImportRequests(
     for (auto& request : requests) {
       auto* promise = request->getPromise<std::unique_ptr<Blob>>();
       if (promise->isFulfilled()) {
-        stats_->getStatsForCurrentThread<HgBackingStoreThreadStats>()
-            .hgBackingStoreGetBlob.addDuration(watch.elapsed());
+        stats_->addDuration(
+            &HgBackingStoreStats::hgBackingStoreGetBlob, watch.elapsed());
         continue;
       }
 
@@ -180,8 +180,9 @@ void HgQueuedBackingStore::processBlobImportRequests(
                 XLOG(DBG4)
                     << "Imported blob from HgImporter for "
                     << request->getRequest<HgImportRequest::BlobImport>()->hash;
-                stats->getStatsForCurrentThread<HgBackingStoreThreadStats>()
-                    .hgBackingStoreGetBlob.addDuration(watch.elapsed());
+                stats->addDuration(
+                    &HgBackingStoreStats::hgBackingStoreGetBlob,
+                    watch.elapsed());
                 request->getPromise<HgImportRequest::BlobImport::Response>()
                     ->setTry(std::forward<decltype(result)>(result));
               }));
@@ -220,8 +221,8 @@ void HgQueuedBackingStore::processTreeImportRequests(
     for (auto& request : requests) {
       auto* promise = request->getPromise<std::unique_ptr<Tree>>();
       if (promise->isFulfilled()) {
-        stats_->getStatsForCurrentThread<HgBackingStoreThreadStats>()
-            .hgBackingStoreGetTree.addDuration(watch.elapsed());
+        stats_->addDuration(
+            &HgBackingStoreStats::hgBackingStoreGetTree, watch.elapsed());
         continue;
       }
 
@@ -237,8 +238,9 @@ void HgQueuedBackingStore::processTreeImportRequests(
                 XLOG(DBG4)
                     << "Imported tree from HgImporter for "
                     << request->getRequest<HgImportRequest::TreeImport>()->hash;
-                stats->getStatsForCurrentThread<HgBackingStoreThreadStats>()
-                    .hgBackingStoreGetTree.addDuration(watch.elapsed());
+                stats->addDuration(
+                    &HgBackingStoreStats::hgBackingStoreGetTree,
+                    watch.elapsed());
                 request->getPromise<HgImportRequest::TreeImport::Response>()
                     ->setTry(std::forward<decltype(result)>(result));
               }));
@@ -403,8 +405,8 @@ std::unique_ptr<BlobMetadata> HgQueuedBackingStore::getLocalBlobMetadata(
 
   auto metadata = backingStore_->getDatapackStore().getLocalBlobMetadata(
       proxyHash.revHash());
-  stats_->getStatsForCurrentThread<HgBackingStoreThreadStats>()
-      .hgBackingStoreGetBlobMetadata.addDuration(watch.elapsed());
+  stats_->addDuration(
+      &HgBackingStoreStats::hgBackingStoreGetBlobMetadata, watch.elapsed());
   return metadata;
 }
 

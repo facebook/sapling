@@ -1598,7 +1598,7 @@ struct HandlerEntry {
       folly::StringPiece n,
       Handler h,
       FormatArgs format,
-      FsChannelThreadStats::DurationPtr s,
+      FsChannelStats::DurationPtr s,
       AccessType at = AccessType::FsChannelOther,
       SamplingGroup samplingGroup = SamplingGroup::DropAll)
       : name(n),
@@ -1611,7 +1611,7 @@ struct HandlerEntry {
   folly::StringPiece name;
   Handler handler = nullptr;
   FormatArgs formatArgs = nullptr;
-  FsChannelThreadStats::DurationPtr stat = nullptr;
+  FsChannelStats::DurationPtr stat = nullptr;
   AccessType accessType = AccessType::FsChannelOther;
   SamplingGroup samplingGroup = SamplingGroup::DropAll;
 };
@@ -1625,131 +1625,131 @@ constexpr auto kNfs3dHandlers = [] {
       "NULL",
       &Nfsd3ServerProcessor::null,
       formatNull,
-      &FsChannelThreadStats::nfsNull};
+      &FsChannelStats::nfsNull};
   handlers[folly::to_underlying(nfsv3Procs::getattr)] = {
       "GETATTR",
       &Nfsd3ServerProcessor::getattr,
       formatGetattr,
-      &FsChannelThreadStats::nfsGetattr,
+      &FsChannelStats::nfsGetattr,
       Read};
   handlers[folly::to_underlying(nfsv3Procs::setattr)] = {
       "SETATTR",
       &Nfsd3ServerProcessor::setattr,
       formatSetattr,
-      &FsChannelThreadStats::nfsSetattr,
+      &FsChannelStats::nfsSetattr,
       Write};
   handlers[folly::to_underlying(nfsv3Procs::lookup)] = {
       "LOOKUP",
       &Nfsd3ServerProcessor::lookup,
       formatLookup,
-      &FsChannelThreadStats::nfsLookup,
+      &FsChannelStats::nfsLookup,
       Read};
   handlers[folly::to_underlying(nfsv3Procs::access)] = {
       "ACCESS",
       &Nfsd3ServerProcessor::access,
       formatAccess,
-      &FsChannelThreadStats::nfsAccess,
+      &FsChannelStats::nfsAccess,
       Read};
   handlers[folly::to_underlying(nfsv3Procs::readlink)] = {
       "READLINK",
       &Nfsd3ServerProcessor::readlink,
       formatReadlink,
-      &FsChannelThreadStats::nfsReadlink,
+      &FsChannelStats::nfsReadlink,
       Read};
   handlers[folly::to_underlying(nfsv3Procs::read)] = {
       "READ",
       &Nfsd3ServerProcessor::read,
       formatRead,
-      &FsChannelThreadStats::nfsRead,
+      &FsChannelStats::nfsRead,
       Read,
       SamplingGroup::Three};
   handlers[folly::to_underlying(nfsv3Procs::write)] = {
       "WRITE",
       &Nfsd3ServerProcessor::write,
       formatWrite,
-      &FsChannelThreadStats::nfsWrite,
+      &FsChannelStats::nfsWrite,
       Write,
       SamplingGroup::Two};
   handlers[folly::to_underlying(nfsv3Procs::create)] = {
       "CREATE",
       &Nfsd3ServerProcessor::create,
       formatCreate,
-      &FsChannelThreadStats::nfsCreate,
+      &FsChannelStats::nfsCreate,
       Write};
   handlers[folly::to_underlying(nfsv3Procs::mkdir)] = {
       "MKDIR",
       &Nfsd3ServerProcessor::mkdir,
       formatMkdir,
-      &FsChannelThreadStats::nfsMkdir,
+      &FsChannelStats::nfsMkdir,
       Write};
   handlers[folly::to_underlying(nfsv3Procs::symlink)] = {
       "SYMLINK",
       &Nfsd3ServerProcessor::symlink,
       formatSymlink,
-      &FsChannelThreadStats::nfsSymlink,
+      &FsChannelStats::nfsSymlink,
       Write};
   handlers[folly::to_underlying(nfsv3Procs::mknod)] = {
       "MKNOD",
       &Nfsd3ServerProcessor::mknod,
       formatMknod,
-      &FsChannelThreadStats::nfsMknod,
+      &FsChannelStats::nfsMknod,
       Write};
   handlers[folly::to_underlying(nfsv3Procs::remove)] = {
       "REMOVE",
       &Nfsd3ServerProcessor::remove,
       formatRemove,
-      &FsChannelThreadStats::nfsRemove,
+      &FsChannelStats::nfsRemove,
       Write};
   handlers[folly::to_underlying(nfsv3Procs::rmdir)] = {
       "RMDIR",
       &Nfsd3ServerProcessor::rmdir,
       formatRmdir,
-      &FsChannelThreadStats::nfsRmdir,
+      &FsChannelStats::nfsRmdir,
       Write};
   handlers[folly::to_underlying(nfsv3Procs::rename)] = {
       "RENAME",
       &Nfsd3ServerProcessor::rename,
       formatRename,
-      &FsChannelThreadStats::nfsRename,
+      &FsChannelStats::nfsRename,
       Write};
   handlers[folly::to_underlying(nfsv3Procs::link)] = {
       "LINK",
       &Nfsd3ServerProcessor::link,
       formatLink,
-      &FsChannelThreadStats::nfsLink,
+      &FsChannelStats::nfsLink,
       Write};
   handlers[folly::to_underlying(nfsv3Procs::readdir)] = {
       "READDIR",
       &Nfsd3ServerProcessor::readdir,
       formatReaddir,
-      &FsChannelThreadStats::nfsReaddir,
+      &FsChannelStats::nfsReaddir,
       Read};
   handlers[folly::to_underlying(nfsv3Procs::readdirplus)] = {
       "READDIRPLUS",
       &Nfsd3ServerProcessor::readdirplus,
       formatReaddirplus,
-      &FsChannelThreadStats::nfsReaddirplus,
+      &FsChannelStats::nfsReaddirplus,
       Read};
   handlers[folly::to_underlying(nfsv3Procs::fsstat)] = {
       "FSSTAT",
       &Nfsd3ServerProcessor::fsstat,
       formatFsstat,
-      &FsChannelThreadStats::nfsFsstat};
+      &FsChannelStats::nfsFsstat};
   handlers[folly::to_underlying(nfsv3Procs::fsinfo)] = {
       "FSINFO",
       &Nfsd3ServerProcessor::fsinfo,
       formatFsinfo,
-      &FsChannelThreadStats::nfsFsinfo};
+      &FsChannelStats::nfsFsinfo};
   handlers[folly::to_underlying(nfsv3Procs::pathconf)] = {
       "PATHCONF",
       &Nfsd3ServerProcessor::pathconf,
       formatPathconf,
-      &FsChannelThreadStats::nfsPathconf};
+      &FsChannelStats::nfsPathconf};
   handlers[folly::to_underlying(nfsv3Procs::commit)] = {
       "COMMIT",
       &Nfsd3ServerProcessor::commit,
       formatCommit,
-      &FsChannelThreadStats::nfsCommit,
+      &FsChannelStats::nfsCommit,
       Write};
 
   return handlers;

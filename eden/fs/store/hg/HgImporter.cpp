@@ -456,8 +456,7 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader(
 
 HgImporter::TransactionID HgImporter::sendManifestRequest(
     folly::StringPiece revName) {
-  stats_->getStatsForCurrentThread<HgImporterThreadStats>().manifest.addValue(
-      1);
+  stats_->increment(&HgImporterStats::manifest);
 
   auto txnID = nextRequestID_++;
   ChunkHeader header;
@@ -478,8 +477,7 @@ HgImporter::TransactionID HgImporter::sendManifestRequest(
 
 HgImporter::TransactionID HgImporter::sendManifestNodeRequest(
     folly::StringPiece revName) {
-  stats_->getStatsForCurrentThread<HgImporterThreadStats>()
-      .manifestNodeForCommit.addValue(1);
+  stats_->increment(&HgImporterStats::manifestNodeForCommit);
 
   auto txnID = nextRequestID_++;
   ChunkHeader header;
@@ -501,7 +499,7 @@ HgImporter::TransactionID HgImporter::sendManifestNodeRequest(
 HgImporter::TransactionID HgImporter::sendFileRequest(
     RelativePathPiece path,
     Hash20 revHash) {
-  stats_->getStatsForCurrentThread<HgImporterThreadStats>().catFile.addValue(1);
+  stats_->increment(&HgImporterStats::catFile);
 
   auto txnID = nextRequestID_++;
   ChunkHeader header;
@@ -529,8 +527,7 @@ HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
     RelativePathPiece path,
     Hash20 pathManifestNode,
     StringPiece context) {
-  stats_->getStatsForCurrentThread<HgImporterThreadStats>().fetchTree.addValue(
-      1);
+  stats_->increment(&HgImporterStats::fetchTree);
 
   auto txnID = nextRequestID_++;
   ChunkHeader header;

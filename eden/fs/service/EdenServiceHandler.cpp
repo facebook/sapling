@@ -238,7 +238,7 @@ class ThriftLogHelper {
       folly::StringPiece itcFileName,
       uint32_t itcLineNumber,
       std::shared_ptr<EdenStats> edenStats,
-      ThriftThreadStats::DurationPtr statPtr,
+      ThriftStats::DurationPtr statPtr,
       std::optional<pid_t> pid)
       : traceBus_{std::move(traceBus)},
         requestId_(generateUniqueID()),
@@ -268,8 +268,7 @@ class ThriftLogHelper {
     TLOG(itcLogger_, level, itcFileName_, itcLineNumber_) << fmt::format(
         "{}() took {} {}", itcFunctionName_, elapsed.count(), EDEN_MICRO);
     if (edenStats_) {
-      (edenStats_->getStatsForCurrentThread<ThriftThreadStats>().*statPtr_)
-          .addDuration(elapsed);
+      edenStats_->addDuration(statPtr_, elapsed);
     }
     traceBus_->publish(ThriftRequestTraceEvent::finish(
         requestId_, itcFunctionName_, fetchContext_.getClientPid()));
@@ -294,7 +293,7 @@ class ThriftLogHelper {
   folly::StringPiece itcFileName_;
   uint32_t itcLineNumber_;
   std::shared_ptr<EdenStats> edenStats_;
-  ThriftThreadStats::DurationPtr statPtr_;
+  ThriftStats::DurationPtr statPtr_;
   folly::LogLevel level_;
   folly::Logger itcLogger_;
   folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
@@ -1518,7 +1517,7 @@ apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
 EdenServiceHandler::streamChangesSince(
     std::unique_ptr<StreamChangesSinceParams> params) {
   auto helper = INSTRUMENT_THRIFT_CALL_WITH_STAT(
-      DBG3, &ThriftThreadStats::streamChangesSince, *params->mountPoint_ref());
+      DBG3, &ThriftStats::streamChangesSince, *params->mountPoint_ref());
   auto mountPath = AbsolutePathPiece{*params->mountPoint_ref()};
   auto edenMount = server_->getMount(mountPath);
   const auto& fromPosition = *params->fromPosition_ref();
