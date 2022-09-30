@@ -7,6 +7,7 @@
 
 #ifndef _WIN32
 
+#include "eden/fs/nfs/DirList.h"
 #include <folly/portability/GTest.h>
 #include "eden/fs/nfs/NfsdRpc.h"
 #include "eden/fs/nfs/testharness/XdrTestUtils.h"
@@ -22,10 +23,10 @@ size_t computeInitialOverhead() {
 } // namespace
 
 TEST(DirListTest, size) {
-  // Verify that the computeInitialOverhead in DirList.cpp is correct.
-  // If this fails, do not modify the value below! It means that the XDR
+  // Verify that the computeInitialOverhead in DirList.cpp is correct.  If this
+  // fails, do not modify the constant referenced below! It means that the XDR
   // datastructures have changed and no longer have the correct size.
-  EXPECT_EQ(computeInitialOverhead(), 104);
+  EXPECT_EQ(computeInitialOverhead(), kNfsDirListInitialOverhead);
 }
 
 } // namespace facebook::eden

@@ -19,6 +19,7 @@
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/nfs/DirList.h"
 #include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -209,6 +210,44 @@ TEST(TreeInode, fuseReaddirIgnoresWildOffsets) {
                         ObjectFetchContext::getNullContext())
                     .extract();
   EXPECT_EQ(0, result.size());
+}
+
+TEST(TreeInode, nfsReaddirEofIsCorrect) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"foo", ""}, {"bar", ""}, {"baz", ""}});
+  TestMount mount{builder};
+
+  auto root = mount.getEdenMount()->getRootInode();
+
+  uint32_t kMaxCount = 4096;
+
+  // Assert correct EOF behavior across a range of buffer sizes, including when
+  // we have only enough buffer space to return all but the final directory
+  // entry.
+  std::unordered_set<size_t> listingSizesReturned{};
+  for (uint32_t bufSize = kNfsDirListInitialOverhead; bufSize <= kMaxCount;
+       ++bufSize) {
+    auto [list, isEof] = root->nfsReaddir(
+        NfsDirList{bufSize, nfsv3Procs::readdir},
+        0,
+        ObjectFetchContext::getNullContext());
+
+    auto listingSize = list.extractList<entry3>().list.size();
+    listingSizesReturned.insert(listingSize);
+
+    // We should return EOF iff we're returning the entire directory listing,
+    // which has six entries: ".", "..", ".eden", "foo", "bar", and "baz".
+    ASSERT_EQ(listingSize == 6, isEof);
+  }
+
+  // To prevent a regression of S298201 we especially want to cover the case
+  // where there's exactly one more directory entry we couldn't fit into the
+  // response.  If we know that we've returned at least one response without an
+  // entire directory listing (buffer too small), and at least one with an
+  // entire listing (buffer big enough) while iterating over buffer sizes above,
+  // then we know we've covered that case.
+  ASSERT_NE(listingSizesReturned.count(5), 0);
+  ASSERT_NE(listingSizesReturned.count(6), 0);
 }
 
 namespace {

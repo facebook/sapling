@@ -2318,11 +2318,11 @@ bool TreeInode::readdirImpl(off_t off, ObjectFetchContext& context, Fn add) {
     indices.pop_back();
 
     if (!add(name.stringPiece(), entry, entry.getInodeNumber().get() + 2)) {
-      break;
+      return false;
     }
   }
 
-  return indices.size() == 0;
+  return true;
 }
 
 FuseDirList TreeInode::fuseReaddir(

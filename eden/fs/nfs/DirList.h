@@ -15,6 +15,14 @@
 namespace facebook::eden {
 
 /**
+ * Hardcoded static overhead of READDIR3resok before adding any entries.
+ * Ideally we should make XdrTrait<T>::serializedSize a constexpr, but some
+ * compiler (gcc) don't seem to be able to then compile the code. Thus, this
+ * value is hardcoded here and verified in the DirListTest.
+ */
+constexpr size_t kNfsDirListInitialOverhead = 104u;
+
+/**
  * Abstraction to only add as many directory entries that can fit into a given
  * amount of memory.
  */

@@ -16,24 +16,16 @@ namespace facebook::eden {
 namespace {
 
 /**
- * Hardcoded static overhead of READDIR3resok before adding any entries.
- * Ideally we should make XdrTrait<T>::serializedSize a constexpr, but some
- * compiler (gcc) don't seem to be able to then compile the code. Thus, this
- * value is hardcoded here and verified in the DirListTest.
- */
-constexpr size_t kInitialOverhead = 104u;
-
-/**
  * NFS is weird, it specifies the maximum amount of entries to be returned by
  * passing the total size of the READDIR3resok structure, therefore we need to
  * account for all the overhead.
  */
 uint32_t computeInitialRemaining(uint32_t count) {
-  if (kInitialOverhead > count) {
+  if (kNfsDirListInitialOverhead > count) {
     throw std::length_error(
         "NFS READDIR overhead is bigger than the passed in size");
   }
-  return count - kInitialOverhead;
+  return count - kNfsDirListInitialOverhead;
 }
 
 std::variant<XdrList<entry3>, XdrList<entryplus3>> computeListType(
