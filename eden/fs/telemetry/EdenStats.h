@@ -33,8 +33,6 @@ struct ThriftStats;
  * for each thread that needs to access/update the stats.
  */
 class StatsGroupBase {
- protected:
-  // TODO: make this private when ActivityRecorder uses Duration instead.
   using Stat = fb303::detail::QuantileStatWrapper;
 
  public:
@@ -73,10 +71,6 @@ class StatsGroupBase {
 
     void addDuration(std::chrono::microseconds elapsed);
   };
-
- protected:
-  // TODO: delete this when ActivityRecorded is fixed
-  Stat createStat(std::string_view name);
 };
 
 class EdenStats {

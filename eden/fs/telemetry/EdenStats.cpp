@@ -50,15 +50,6 @@ void StatsGroupBase::Duration::addDuration(std::chrono::microseconds elapsed) {
   addValue(elapsed.count());
 }
 
-StatsGroupBase::Stat StatsGroupBase::createStat(std::string_view name) {
-  return Stat{
-      name,
-      fb303::ExportTypeConsts::kSumCountAvgRate,
-      fb303::QuantileConsts::kP1_P10_P50_P90_P99,
-      fb303::SlidingWindowPeriodConsts::kOneMinTenMinHour,
-  };
-}
-
 DurationScope::~DurationScope() noexcept {
   if (edenStats_ && updateScope_) {
     try {
