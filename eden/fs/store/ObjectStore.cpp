@@ -75,6 +75,7 @@ ObjectStore::ObjectStore(
       caseSensitive_{caseSensitive} {
   XCHECK(localStore_);
   XCHECK(backingStore_);
+  XCHECK(stats_);
 }
 
 ObjectStore::~ObjectStore() {}
@@ -198,6 +199,8 @@ ObjectStore::getTreeEntryForObjectId(
 ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
     const ObjectId& id,
     ObjectFetchContext& fetchContext) const {
+  DurationScope statScope{stats_, &ObjectStoreThreadStats::getTree};
+
   // Check in the LocalStore first
 
   // TODO: We should consider checking if we have in flight BackingStore
@@ -223,8 +226,10 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
   deprioritizeWhenFetchHeavy(fetchContext);
 
   return ImmediateFuture{backingStore_->getTree(id, fetchContext)}.thenValue(
-      [self = shared_from_this(), id, &fetchContext](
-          BackingStore::GetTreeResult result) {
+      [self = shared_from_this(),
+       statScope = std::move(statScope),
+       id,
+       &fetchContext](BackingStore::GetTreeResult result) {
         if (!result.tree) {
           // TODO: Perhaps we should do some short-term negative
           // caching?
@@ -261,12 +266,16 @@ ImmediateFuture<folly::Unit> ObjectStore::prefetchBlobs(
 ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
     const ObjectId& id,
     ObjectFetchContext& fetchContext) const {
+  DurationScope statScope{stats_, &ObjectStoreThreadStats::getBlob};
+
   deprioritizeWhenFetchHeavy(fetchContext);
   return ImmediateFuture<BackingStore::GetBlobResult>{
       backingStore_->getBlob(id, fetchContext)}
       .thenValue(
-          [self = shared_from_this(), id, &fetchContext](
-              BackingStore::GetBlobResult result)
+          [self = shared_from_this(),
+           statScope = std::move(statScope),
+           id,
+           &fetchContext](BackingStore::GetBlobResult result)
               -> std::shared_ptr<const Blob> {
             if (!result.blob) {
               // TODO: Perhaps we should do some short-term negative caching?
@@ -293,6 +302,8 @@ ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
 ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
     const ObjectId& id,
     ObjectFetchContext& context) const {
+  DurationScope statScope{stats_, &ObjectStoreThreadStats::getBlobMetadata};
+
   // Check in-memory cache
   {
     auto metadataCache = metadataCache_.wlock();
@@ -329,7 +340,8 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
   return localStore_->getBlobMetadata(id)
       .semi()
       .via(&folly::QueuedImmediateExecutor::instance())
-      .thenValue([self, id, &context](std::optional<BlobMetadata>&& metadata) {
+      .thenValue([self, statScope = std::move(statScope), id, &context](
+                     std::optional<BlobMetadata>&& metadata) mutable {
         if (metadata) {
           self->stats_->getObjectStoreStatsForCurrentThread()
               .getBlobMetadataFromLocalStore.addValue(1);
@@ -359,32 +371,32 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
             // rather than waiting for callbacks to be scheduled on the
             // consuming thread.
             .toUnsafeFuture()
-            .thenValue(
-                [self, id, &context](BackingStore::GetBlobResult result) {
-                  if (result.blob) {
-                    self->stats_->getObjectStoreStatsForCurrentThread()
-                        .getBlobMetadataFromBackingStore.addValue(1);
-                    // we retrived the full blob data
-                    self->stats_->getObjectStoreStatsForCurrentThread()
-                        .getBlobFromBackingStore.addValue(1);
-                    self->localStore_->putBlob(id, result.blob.get());
-                    auto metadata = computeBlobMetadata(*result.blob);
-                    self->localStore_->putBlobMetadata(id, metadata);
-                    self->metadataCache_.wlock()->set(id, metadata);
-                    // I could see an argument for recording this fetch with
-                    // type Blob instead of BlobMetadata, but it's probably more
-                    // useful in context to know how many metadata fetches
-                    // occurred. Also, since backing stores don't directly
-                    // support fetching metadata, it should be clear.
-                    context.didFetch(
-                        ObjectFetchContext::BlobMetadata, id, result.origin);
+            .thenValue([self, statScope = std::move(statScope), id, &context](
+                           BackingStore::GetBlobResult result) {
+              if (result.blob) {
+                self->stats_->getObjectStoreStatsForCurrentThread()
+                    .getBlobMetadataFromBackingStore.addValue(1);
+                // we retrived the full blob data
+                self->stats_->getObjectStoreStatsForCurrentThread()
+                    .getBlobFromBackingStore.addValue(1);
+                self->localStore_->putBlob(id, result.blob.get());
+                auto metadata = computeBlobMetadata(*result.blob);
+                self->localStore_->putBlobMetadata(id, metadata);
+                self->metadataCache_.wlock()->set(id, metadata);
+                // I could see an argument for recording this fetch with
+                // type Blob instead of BlobMetadata, but it's probably more
+                // useful in context to know how many metadata fetches
+                // occurred. Also, since backing stores don't directly
+                // support fetching metadata, it should be clear.
+                context.didFetch(
+                    ObjectFetchContext::BlobMetadata, id, result.origin);
 
-                    self->updateProcessFetch(context);
-                    return makeFuture(metadata);
-                  }
+                self->updateProcessFetch(context);
+                return makeFuture(metadata);
+              }
 
-                  throwf<std::domain_error>("blob {} not found", id);
-                });
+              throwf<std::domain_error>("blob {} not found", id);
+            });
       })
       .semi();
 }

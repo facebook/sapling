@@ -7,6 +7,7 @@
 
 #include "eden/fs/telemetry/EdenStats.h"
 
+#include <folly/logging/xlog.h>
 #include <chrono>
 #include <memory>
 
@@ -51,11 +52,10 @@ EdenThreadStatsBase::Duration::Duration(std::string_view name)
           fb303::QuantileConsts::kP1_P10_P50_P90_P99,
           fb303::SlidingWindowPeriodConsts::kOneMinTenMinHour} {
   // This should be a compile-time check but I don't know how to spell that in a
-  // convenient way. :)
-  assert(name.size() > 3 && "duration name too short");
-  assert(
-      (std::string_view{name.data() + name.size() - 3, 3}) == "_us" &&
-      "duration stats must end in _us");
+  // convenient way. :) Asserting at startup in debug mode should be sufficient.
+  XCHECK_GT(name.size(), size_t{3}) << "duration name too short";
+  XCHECK_EQ("_us", std::string_view(name.data() + name.size() - 3, 3))
+      << "duration stats must end in _us";
 }
 
 void EdenThreadStatsBase::Duration::addDuration(
@@ -71,6 +71,16 @@ EdenThreadStatsBase::Stat EdenThreadStatsBase::createStat(
       fb303::QuantileConsts::kP1_P10_P50_P90_P99,
       fb303::SlidingWindowPeriodConsts::kOneMinTenMinHour,
   };
+}
+
+DurationScope::~DurationScope() noexcept {
+  if (edenStats_ && updateScope_) {
+    try {
+      updateScope_(*edenStats_, stopWatch_.elapsed());
+    } catch (const std::exception& e) {
+      XLOG(ERR) << "error recording duration: " << e.what();
+    }
+  }
 }
 
 } // namespace facebook::eden

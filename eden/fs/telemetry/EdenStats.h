@@ -11,6 +11,7 @@
 
 #include <fb303/detail/QuantileStatWrappers.h>
 #include <folly/ThreadLocal.h>
+#include <folly/stop_watch.h>
 
 #include "eden/fs/eden-config.h"
 
@@ -68,6 +69,14 @@ class EdenStats {
   ThriftThreadStats& getThriftStatsForCurrentThread();
 
   /**
+   * Returns a thread-local stats group.
+   *
+   * The returned object must only be used on the current thread.
+   */
+  template <typename T>
+  T& getStatsForCurrentThread() = delete;
+
+  /**
    * This function can be called on any thread.
    */
   void flush();
@@ -88,6 +97,42 @@ class EdenStats {
   folly::ThreadLocal<ThriftThreadStats, ThreadLocalTag, void>
       threadLocalThriftStats_;
 };
+
+template <>
+inline FsChannelThreadStats&
+EdenStats::getStatsForCurrentThread<FsChannelThreadStats>() {
+  return *threadLocalFsChannelStats_.get();
+}
+
+template <>
+inline ObjectStoreThreadStats&
+EdenStats::getStatsForCurrentThread<ObjectStoreThreadStats>() {
+  return *threadLocalObjectStoreStats_.get();
+}
+
+template <>
+inline HgBackingStoreThreadStats&
+EdenStats::getStatsForCurrentThread<HgBackingStoreThreadStats>() {
+  return *threadLocalHgBackingStoreStats_.get();
+}
+
+template <>
+inline HgImporterThreadStats&
+EdenStats::getStatsForCurrentThread<HgImporterThreadStats>() {
+  return *threadLocalHgImporterStats_.get();
+}
+
+template <>
+inline JournalThreadStats&
+EdenStats::getStatsForCurrentThread<JournalThreadStats>() {
+  return *threadLocalJournalStats_.get();
+}
+
+template <>
+inline ThriftThreadStats&
+EdenStats::getStatsForCurrentThread<ThriftThreadStats>() {
+  return *threadLocalThriftStats_.get();
+}
 
 /**
  * EdenThreadStatsBase is a base class for a group of thread-local stats
@@ -236,6 +281,10 @@ class FsChannelThreadStats : public EdenThreadStats<FsChannelThreadStats> {
  */
 class ObjectStoreThreadStats : public EdenThreadStats<ObjectStoreThreadStats> {
  public:
+  Duration getTree{"store.get_tree_us"};
+  Duration getBlob{"store.get_blob_us"};
+  Duration getBlobMetadata{"store.get_blob_metadata_us"};
+
   Counter getBlobFromLocalStore{
       createStat("object_store.get_blob.local_store")};
   Counter getBlobFromBackingStore{
@@ -293,6 +342,45 @@ class ThriftThreadStats : public EdenThreadStats<ThriftThreadStats> {
  public:
   Duration streamChangesSince{
       "thrift.StreamingEdenService.streamChangesSince.streaming_time_us"};
+};
+
+/**
+ * On construction, notes the current time. On destruction, records the elapsed
+ * time in the specified EdenStats Duration.
+ *
+ * Moveable, but not copyable.
+ */
+class DurationScope {
+ public:
+  DurationScope() = delete;
+
+  template <typename T>
+  DurationScope(
+      std::shared_ptr<EdenStats> edenStats,
+      EdenThreadStatsBase::Duration T::*duration)
+      : edenStats_{std::move(edenStats)},
+        // This use of std::function won't allocate on libstdc++,
+        // libc++, or Microsoft STL. All three have a couple pointers
+        // worth of small buffer inline storage.
+        updateScope_{[duration](EdenStats& stats, StopWatch::duration elapsed) {
+          (stats.getStatsForCurrentThread<T>().*duration).addDuration(elapsed);
+        }} {
+    assert(edenStats_);
+  }
+
+  ~DurationScope() noexcept;
+
+  DurationScope(DurationScope&& that) = default;
+  DurationScope& operator=(DurationScope&& that) = default;
+
+  DurationScope(const DurationScope&) = delete;
+  DurationScope& operator=(const DurationScope&) = delete;
+
+ private:
+  using StopWatch = folly::stop_watch<>;
+  StopWatch stopWatch_;
+  std::shared_ptr<EdenStats> edenStats_;
+  std::function<void(EdenStats& stats, StopWatch::duration)> updateScope_;
 };
 
 } // namespace facebook::eden
