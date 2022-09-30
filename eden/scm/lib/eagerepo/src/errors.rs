@@ -20,6 +20,14 @@ pub enum Error {
         "EagerRepo detected unsupported requires at {0}:\n  Unsupported: {1:?}\n  Missing: {2:?}\n(is there a non-EagerRepo created accidentally at the same location?)"
     )]
     RequirementsMismatch(String, Vec<String>, Vec<String>),
+
+    #[error(
+        "when adding commit {0:?} with root tree {1:?}, referenced paths {2:?} are not present"
+    )]
+    CommitMissingPaths(Vertex, Vertex, Vec<String>),
+
+    #[error("when moving bookmark {0:?} to {1:?}, the commit does not exist")]
+    BookmarkMissingCommit(String, Vertex),
 }
 
 impl From<std::io::Error> for Error {

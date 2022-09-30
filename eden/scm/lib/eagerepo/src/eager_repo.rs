@@ -8,6 +8,7 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
+use std::fmt;
 use std::fs;
 use std::io;
 use std::io::Write;
@@ -21,10 +22,14 @@ use dag::Dag;
 use dag::Group;
 use dag::Vertex;
 use dag::VertexListWithOptions;
+use manifest_tree::FileType;
+use manifest_tree::Flag;
+use manifest_tree::TreeEntry;
 use metalog::CommitOptions;
 use metalog::MetaLog;
 use minibytes::Bytes;
 use parking_lot::RwLock;
+use storemodel::TreeFormat;
 use zstore::Id20;
 use zstore::Zstore;
 
@@ -124,6 +129,79 @@ impl EagerRepoStore {
             None => Ok(None),
             Some(data) => Ok(Some(data.slice(HG_SHA1_PREFIX..))),
         }
+    }
+
+    /// Check files and trees referenced by the `id` are present.
+    /// Missing paths are pushed to `missing`.
+    fn find_missing_references<'a>(
+        &self,
+        id: Id20,
+        flag: Flag,
+        path: PathInfo,
+        missing: &mut Vec<PathInfo>,
+    ) -> Result<()> {
+        // Cannot check submodule reference.
+        if matches!(flag, Flag::File(FileType::GitSubmodule)) {
+            return Ok(());
+        }
+        // Check file or tree reference.
+        let content = match self.get_content(id)? {
+            Some(content) => content,
+            None => {
+                missing.push(path);
+                return Ok(());
+            }
+        };
+        // Check subfiles or subtrees.
+        if matches!(flag, Flag::Directory) {
+            let entry = TreeEntry(content, TreeFormat::Hg);
+            for element in entry.elements() {
+                let element = element?;
+                let name = element.component.into_string();
+                let path = path.join(name);
+                self.find_missing_references(element.hgid, element.flag, path, missing)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Used by `check_tree`, `check_file` to report missing path.
+#[derive(Clone)]
+struct PathInfo(Arc<PathInfoInner>);
+struct PathInfoInner {
+    name: String,
+    parent: Option<PathInfo>,
+}
+
+impl fmt::Display for PathInfo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let inner = &self.0;
+        if let Some(parent) = inner.parent.as_ref() {
+            parent.fmt(f)?;
+        }
+        if !inner.name.is_empty() {
+            write!(f, "/{}", inner.name)?;
+        }
+        Ok(())
+    }
+}
+
+impl PathInfo {
+    fn root() -> Self {
+        let inner = PathInfoInner {
+            name: String::new(),
+            parent: None,
+        };
+        Self(Arc::new(inner))
+    }
+
+    fn join(&self, name: String) -> Self {
+        let inner = PathInfoInner {
+            name,
+            parent: Some(self.clone()),
+        };
+        Self(Arc::new(inner))
     }
 }
 
@@ -232,6 +310,31 @@ impl EagerRepo {
             self.add_sha1_blob(&data)?
         };
         let vertex: Vertex = { Vertex::copy_from(id.as_ref()) };
+
+        // Check paths referred by the commit are present.
+        //
+        // PERF: This is sub-optimal for large working copies.
+        // Ideally we check per tree insertion and only checks
+        // the root tree without recursion. But that requires
+        // new APIs to insert trees, and insert trees in a
+        // certain order.
+        if let Some(hex_tree_id) = raw_text.get(0..Id20::hex_len()) {
+            if let Ok(tree_id) = Id20::from_hex(hex_tree_id) {
+                let mut missing = Vec::new();
+                let path = PathInfo::root();
+                self.store
+                    .find_missing_references(tree_id, Flag::Directory, path, &mut missing)?;
+                if !missing.is_empty() {
+                    let paths = missing.into_iter().map(|p| p.to_string()).collect();
+                    return Err(crate::Error::CommitMissingPaths(
+                        vertex,
+                        Vertex::copy_from(tree_id.as_ref()),
+                        paths,
+                    ));
+                }
+            }
+        }
+
         let parent_map: HashMap<Vertex, Vec<Vertex>> =
             vec![(vertex.clone(), parents)].into_iter().collect();
         self.dag
@@ -277,6 +380,14 @@ impl EagerRepo {
 
     /// Set bookmarks.
     pub fn set_bookmarks_map(&mut self, map: BTreeMap<String, Id20>) -> Result<()> {
+        for (name, id) in map.iter() {
+            if self.store.get_content(*id)?.is_none() {
+                return Err(crate::Error::BookmarkMissingCommit(
+                    name.to_string(),
+                    Vertex::copy_from(id.as_ref()),
+                ));
+            }
+        }
         let text = map
             .into_iter()
             .map(|(name, id)| format!("{} {}\n", id.to_hex(), name))
@@ -362,6 +473,9 @@ fn write_requires(dir: &Path, requires: &[&'static str]) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use manifest_tree::PathComponentBuf;
+    use manifest_tree::TreeElement;
+
     use super::*;
 
     #[tokio::test]
@@ -471,5 +585,77 @@ mod tests {
             }
             _ => panic!("expect RequirementsMismatch, got {:?}", err),
         }
+    }
+
+    #[tokio::test]
+    async fn test_add_commit_find_missing_referencess() {
+        let dir = tempfile::tempdir().unwrap();
+        let dir = dir.path();
+
+        let mut repo = EagerRepo::open(dir).unwrap();
+        let missing_id = missing_id();
+
+        // Root tree missing.
+        let err = repo
+            .add_commit(&[], missing_id.to_hex().as_bytes())
+            .await
+            .unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "when adding commit e9644aa7950f61cfe12d510c623692698fee0e4c with root tree 35e7525ce3a48913275d7061dd9a867ffef1e34d, referenced paths [\"\"] are not present"
+        );
+
+        // Subdir or subfile missing.
+        let p =
+            |s: &str| -> PathComponentBuf { PathComponentBuf::from_string(s.to_string()).unwrap() };
+        let subtree_content = TreeEntry::from_elements(
+            vec![
+                TreeElement::new(p("a"), missing_id, Flag::Directory),
+                TreeElement::new(p("b"), missing_id, Flag::File(FileType::Regular)),
+            ],
+            TreeFormat::Hg,
+        )
+        .to_bytes();
+        let subtree_id = repo
+            .add_sha1_blob(&hg_sha1_text(&[], &subtree_content))
+            .unwrap();
+        let root_tree_content = TreeEntry::from_elements(
+            vec![
+                TreeElement::new(p("c"), subtree_id, Flag::Directory),
+                TreeElement::new(p("d"), missing_id, Flag::File(FileType::Regular)),
+            ],
+            TreeFormat::Hg,
+        )
+        .to_bytes();
+        let root_tree_id = repo
+            .add_sha1_blob(&hg_sha1_text(&[], &root_tree_content))
+            .unwrap();
+        let err = repo
+            .add_commit(&[], root_tree_id.to_hex().as_bytes())
+            .await
+            .unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "when adding commit 6870320ce60748a99108dd1be33b52b58b277baa with root tree 5a725b18a26fd10416fd93c5bd26fa0265ac2579, referenced paths [\"/c/a\", \"/c/b\", \"/d\"] are not present"
+        );
+    }
+
+    #[test]
+    fn test_set_bookmark_missing_commit() {
+        let dir = tempfile::tempdir().unwrap();
+        let dir = dir.path();
+
+        let mut repo = EagerRepo::open(dir).unwrap();
+        let missing_id = missing_id();
+
+        let err = repo.set_bookmark("a", Some(missing_id)).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "when moving bookmark \"a\" to 35e7525ce3a48913275d7061dd9a867ffef1e34d, the commit does not exist"
+        );
+    }
+
+    fn missing_id() -> Id20 {
+        Id20::from_hex(b"35e7525ce3a48913275d7061dd9a867ffef1e34d").unwrap()
     }
 }

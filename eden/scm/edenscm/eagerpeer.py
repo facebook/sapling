@@ -216,7 +216,10 @@ class eagerpeer(repository.peer):
         if namespace == "bookmarks":
             existing = self.listkeyspatterns(namespace, [key]).get(key, b"")
             if new != existing:
-                self._inner.setbookmark(key, bin(new))
+                newnode = bin(new)
+                if newnode == nullid:
+                    newnode = None
+                self._inner.setbookmark(key, newnode)
                 self._flush()
                 changed = True
         tracing.debug(

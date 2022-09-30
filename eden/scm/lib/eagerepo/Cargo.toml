@@ -14,6 +14,7 @@ fail = { version = "0.4", features = ["failpoints"] }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 http = "0.2"
 identity = { version = "0.1.0", path = "../identity" }
+manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 metalog = { version = "0.1.0", path = "../metalog" }
 minibytes = { version = "0.1.0", path = "../minibytes" }
 nonblocking = { version = "0.1.0", path = "../nonblocking" }
