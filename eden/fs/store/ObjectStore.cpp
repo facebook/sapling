@@ -309,7 +309,7 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
     auto metadataCache = metadataCache_.wlock();
     auto cacheIter = metadataCache->find(id);
     if (cacheIter != metadataCache->end()) {
-      stats_->getObjectStoreStatsForCurrentThread()
+      stats_->getStatsForCurrentThread<ObjectStoreThreadStats>()
           .getBlobMetadataFromMemory.addValue(1);
       context.didFetch(
           ObjectFetchContext::BlobMetadata,
@@ -330,7 +330,7 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
               std::optional<BlobMetadata>&& metadata) mutable
           -> ImmediateFuture<BlobMetadata> {
             if (metadata) {
-              self->stats_->getObjectStoreStatsForCurrentThread()
+              self->stats_->getStatsForCurrentThread<ObjectStoreThreadStats>()
                   .getBlobMetadataFromLocalStore.addValue(1);
               self->metadataCache_.wlock()->set(id, *metadata);
               context.didFetch(
@@ -347,7 +347,7 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
             auto localMetadata =
                 self->backingStore_->getLocalBlobMetadata(id, context);
             if (localMetadata) {
-              self->stats_->getObjectStoreStatsForCurrentThread()
+              self->stats_->getStatsForCurrentThread<ObjectStoreThreadStats>()
                   .getLocalBlobMetadataFromBackingStore.addValue(1);
               self->metadataCache_.wlock()->set(id, *localMetadata);
               self->localStore_->putBlobMetadata(id, *localMetadata);
@@ -378,10 +378,12 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
                             id,
                             &context](BackingStore::GetBlobResult result) {
                   if (result.blob) {
-                    self->stats_->getObjectStoreStatsForCurrentThread()
+                    self->stats_
+                        ->getStatsForCurrentThread<ObjectStoreThreadStats>()
                         .getBlobMetadataFromBackingStore.addValue(1);
                     // we retrived the full blob data
-                    self->stats_->getObjectStoreStatsForCurrentThread()
+                    self->stats_
+                        ->getStatsForCurrentThread<ObjectStoreThreadStats>()
                         .getBlobFromBackingStore.addValue(1);
                     self->localStore_->putBlob(id, result.blob.get());
                     auto metadata = computeBlobMetadata(*result.blob);

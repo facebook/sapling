@@ -99,7 +99,8 @@ void Journal::DeltaState::appendDelta(RootUpdateJournalDelta&& delta) {
 Journal::Journal(std::shared_ptr<EdenStats> edenStats)
     : edenStats_{std::move(edenStats)} {
   // Add 0 so that this counter shows up in ODS
-  edenStats_->getJournalStatsForCurrentThread().truncatedReads.addValue(0);
+  edenStats_->getStatsForCurrentThread<JournalThreadStats>()
+      .truncatedReads.addValue(0);
 }
 
 void Journal::recordCreated(RelativePathPiece fileName) {
@@ -462,11 +463,11 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
   if (result) {
     if (edenStats_) {
       if (result->isTruncated) {
-        edenStats_->getJournalStatsForCurrentThread().truncatedReads.addValue(
-            1);
+        edenStats_->getStatsForCurrentThread<JournalThreadStats>()
+            .truncatedReads.addValue(1);
       }
-      edenStats_->getJournalStatsForCurrentThread().filesAccumulated.addValue(
-          filesAccumulated);
+      edenStats_->getStatsForCurrentThread<JournalThreadStats>()
+          .filesAccumulated.addValue(filesAccumulated);
     }
     if (deltaState->stats) {
       deltaState->stats->maxFilesAccumulated =

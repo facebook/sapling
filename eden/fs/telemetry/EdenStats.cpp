@@ -13,30 +13,6 @@
 
 namespace facebook::eden {
 
-FsChannelThreadStats& EdenStats::getFsChannelStatsForCurrentThread() {
-  return *threadLocalFsChannelStats_.get();
-}
-
-ObjectStoreThreadStats& EdenStats::getObjectStoreStatsForCurrentThread() {
-  return *threadLocalObjectStoreStats_.get();
-}
-
-HgBackingStoreThreadStats& EdenStats::getHgBackingStoreStatsForCurrentThread() {
-  return *threadLocalHgBackingStoreStats_.get();
-}
-
-HgImporterThreadStats& EdenStats::getHgImporterStatsForCurrentThread() {
-  return *threadLocalHgImporterStats_.get();
-}
-
-JournalThreadStats& EdenStats::getJournalStatsForCurrentThread() {
-  return *threadLocalJournalStats_.get();
-}
-
-ThriftThreadStats& EdenStats::getThriftStatsForCurrentThread() {
-  return *threadLocalThriftStats_.get();
-}
-
 void EdenStats::flush() {
   // This method is only really useful while testing to ensure that the service
   // data singleton instance has the latest stats. Since all our stats are now
@@ -45,7 +21,7 @@ void EdenStats::flush() {
   fb303::ServiceData::get()->getQuantileStatMap()->flushAll();
 }
 
-EdenThreadStatsBase::Duration::Duration(std::string_view name)
+StatsGroupBase::Duration::Duration(std::string_view name)
     : Stat{
           name,
           fb303::ExportTypeConsts::kSumCountAvgRate,
@@ -58,13 +34,11 @@ EdenThreadStatsBase::Duration::Duration(std::string_view name)
       << "duration stats must end in _us";
 }
 
-void EdenThreadStatsBase::Duration::addDuration(
-    std::chrono::microseconds elapsed) {
+void StatsGroupBase::Duration::addDuration(std::chrono::microseconds elapsed) {
   addValue(elapsed.count());
 }
 
-EdenThreadStatsBase::Stat EdenThreadStatsBase::createStat(
-    std::string_view name) {
+StatsGroupBase::Stat StatsGroupBase::createStat(std::string_view name) {
   return Stat{
       name,
       fb303::ExportTypeConsts::kSumCountAvgRate,

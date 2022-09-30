@@ -39,7 +39,7 @@ void RequestContext::finishRequest() noexcept {
     const auto diff_ns = duration_cast<nanoseconds>(diff);
 
     if (stats_ != nullptr) {
-      (stats_->getFsChannelStatsForCurrentThread().*latencyStat_)
+      (stats_->getStatsForCurrentThread<FsChannelThreadStats>().*latencyStat_)
           .addDuration(diff);
       latencyStat_ = nullptr;
       stats_ = nullptr;

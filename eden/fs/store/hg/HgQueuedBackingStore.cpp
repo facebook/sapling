@@ -163,7 +163,7 @@ void HgQueuedBackingStore::processBlobImportRequests(
     for (auto& request : requests) {
       auto* promise = request->getPromise<std::unique_ptr<Blob>>();
       if (promise->isFulfilled()) {
-        stats_->getHgBackingStoreStatsForCurrentThread()
+        stats_->getStatsForCurrentThread<HgBackingStoreThreadStats>()
             .hgBackingStoreGetBlob.addDuration(watch.elapsed());
         continue;
       }
@@ -180,7 +180,7 @@ void HgQueuedBackingStore::processBlobImportRequests(
                 XLOG(DBG4)
                     << "Imported blob from HgImporter for "
                     << request->getRequest<HgImportRequest::BlobImport>()->hash;
-                stats->getHgBackingStoreStatsForCurrentThread()
+                stats->getStatsForCurrentThread<HgBackingStoreThreadStats>()
                     .hgBackingStoreGetBlob.addDuration(watch.elapsed());
                 request->getPromise<HgImportRequest::BlobImport::Response>()
                     ->setTry(std::forward<decltype(result)>(result));
@@ -220,7 +220,7 @@ void HgQueuedBackingStore::processTreeImportRequests(
     for (auto& request : requests) {
       auto* promise = request->getPromise<std::unique_ptr<Tree>>();
       if (promise->isFulfilled()) {
-        stats_->getHgBackingStoreStatsForCurrentThread()
+        stats_->getStatsForCurrentThread<HgBackingStoreThreadStats>()
             .hgBackingStoreGetTree.addDuration(watch.elapsed());
         continue;
       }
@@ -237,7 +237,7 @@ void HgQueuedBackingStore::processTreeImportRequests(
                 XLOG(DBG4)
                     << "Imported tree from HgImporter for "
                     << request->getRequest<HgImportRequest::TreeImport>()->hash;
-                stats->getHgBackingStoreStatsForCurrentThread()
+                stats->getStatsForCurrentThread<HgBackingStoreThreadStats>()
                     .hgBackingStoreGetTree.addDuration(watch.elapsed());
                 request->getPromise<HgImportRequest::TreeImport::Response>()
                     ->setTry(std::forward<decltype(result)>(result));
@@ -403,7 +403,7 @@ std::unique_ptr<BlobMetadata> HgQueuedBackingStore::getLocalBlobMetadata(
 
   auto metadata = backingStore_->getDatapackStore().getLocalBlobMetadata(
       proxyHash.revHash());
-  stats_->getHgBackingStoreStatsForCurrentThread()
+  stats_->getStatsForCurrentThread<HgBackingStoreThreadStats>()
       .hgBackingStoreGetBlobMetadata.addDuration(watch.elapsed());
   return metadata;
 }

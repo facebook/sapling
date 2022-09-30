@@ -256,7 +256,7 @@ ImmediateFuture<TreeInodePtr> createDirInode(
         if (auto* exc = result.tryGetExceptionObject<std::system_error>();
             exc && isEnoent(*exc)) {
           mount.getStats()
-              ->getFsChannelStatsForCurrentThread()
+              ->getStatsForCurrentThread<FsChannelThreadStats>()
               .outOfOrderCreate.addValue(1);
           XLOG_EVERY_MS(DBG2, 1000)
               << "Out of order directory creation notification for: " << path;
@@ -678,7 +678,7 @@ ImmediateFuture<folly::Unit> fileNotification(
             })
             .get();
         mount.getStats()
-            ->getFsChannelStatsForCurrentThread()
+            ->getStatsForCurrentThread<FsChannelThreadStats>()
             .queuedFileNotification.addDuration(watch.elapsed());
       })
       .thenError([path](const folly::exception_wrapper& ew) {

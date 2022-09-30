@@ -268,7 +268,7 @@ class ThriftLogHelper {
     TLOG(itcLogger_, level, itcFileName_, itcLineNumber_) << fmt::format(
         "{}() took {} {}", itcFunctionName_, elapsed.count(), EDEN_MICRO);
     if (edenStats_) {
-      (edenStats_->getThriftStatsForCurrentThread().*statPtr_)
+      (edenStats_->getStatsForCurrentThread<ThriftThreadStats>().*statPtr_)
           .addDuration(elapsed);
     }
     traceBus_->publish(ThriftRequestTraceEvent::finish(

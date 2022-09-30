@@ -27,48 +27,6 @@ class ThriftThreadStats;
 class EdenStats {
  public:
   /**
-   * This function can be called on any thread.
-   *
-   * The returned object can be used only on the current thread.
-   */
-  FsChannelThreadStats& getFsChannelStatsForCurrentThread();
-
-  /**
-   * This function can be called on any thread.
-   *
-   * The returned object can be used only on the current thread.
-   */
-  ObjectStoreThreadStats& getObjectStoreStatsForCurrentThread();
-
-  /**
-   * This function can be called on any thread.
-   *
-   * The returned object can be used only on the current thread.
-   */
-  HgBackingStoreThreadStats& getHgBackingStoreStatsForCurrentThread();
-
-  /**
-   * This function can be called on any thread.
-   *
-   * The returned object can be used only on the current thread.
-   */
-  HgImporterThreadStats& getHgImporterStatsForCurrentThread();
-
-  /**
-   * This function can be called on any thread.
-   *
-   * The returned object can be used only on the current thread.
-   */
-  JournalThreadStats& getJournalStatsForCurrentThread();
-
-  /**
-   * This function can be called on any thread.
-   *
-   * The returned object can be used only on the current thread.
-   */
-  ThriftThreadStats& getThriftStatsForCurrentThread();
-
-  /**
    * Returns a thread-local stats group.
    *
    * The returned object must only be used on the current thread.
@@ -135,14 +93,14 @@ EdenStats::getStatsForCurrentThread<ThriftThreadStats>() {
 }
 
 /**
- * EdenThreadStatsBase is a base class for a group of thread-local stats
+ * StatsGroupBase is a base class for a group of thread-local stats
  * structures.
  *
- * Each EdenThreadStatsBase object should only be used from a single thread. The
- * EdenStats object should be used to maintain one EdenThreadStatsBase object
+ * Each StatsGroupBase object should only be used from a single thread. The
+ * EdenStats object should be used to maintain one StatsGroupBase object
  * for each thread that needs to access/update the stats.
  */
-class EdenThreadStatsBase {
+class StatsGroupBase {
  protected:
   // TODO: make this private when ActivityRecorder uses Duration instead.
   using Stat = fb303::detail::QuantileStatWrapper;
@@ -184,7 +142,7 @@ class EdenThreadStatsBase {
 };
 
 template <typename T>
-class EdenThreadStats : public EdenThreadStatsBase {
+class StatsGroup : public StatsGroupBase {
  public:
   /**
    * Statistics are often updated on a thread separate from the thread that
@@ -194,7 +152,7 @@ class EdenThreadStats : public EdenThreadStatsBase {
   using DurationPtr = Duration T::*;
 };
 
-class FsChannelThreadStats : public EdenThreadStats<FsChannelThreadStats> {
+class FsChannelThreadStats : public StatsGroup<FsChannelThreadStats> {
  public:
 #ifndef _WIN32
   Duration lookup{"fuse.lookup_us"};
@@ -279,7 +237,7 @@ class FsChannelThreadStats : public EdenThreadStats<FsChannelThreadStats> {
 /**
  * @see ObjectStore
  */
-class ObjectStoreThreadStats : public EdenThreadStats<ObjectStoreThreadStats> {
+class ObjectStoreThreadStats : public StatsGroup<ObjectStoreThreadStats> {
  public:
   Duration getTree{"store.get_tree_us"};
   Duration getBlob{"store.get_blob_us"};
@@ -308,8 +266,7 @@ class ObjectStoreThreadStats : public EdenThreadStats<ObjectStoreThreadStats> {
 /**
  * @see HgBackingStore
  */
-class HgBackingStoreThreadStats
-    : public EdenThreadStats<HgBackingStoreThreadStats> {
+class HgBackingStoreThreadStats : public StatsGroup<HgBackingStoreThreadStats> {
  public:
   Duration hgBackingStoreGetBlob{"store.hg.get_blob_us"};
   Duration hgBackingStoreImportBlob{"store.hg.import_blob_us"};
@@ -322,7 +279,7 @@ class HgBackingStoreThreadStats
  * @see HgImporter
  * @see HgBackingStore
  */
-class HgImporterThreadStats : public EdenThreadStats<HgImporterThreadStats> {
+class HgImporterThreadStats : public StatsGroup<HgImporterThreadStats> {
  public:
   Counter catFile{createStat("hg_importer.cat_file")};
   Counter fetchTree{createStat("hg_importer.fetch_tree")};
@@ -332,13 +289,13 @@ class HgImporterThreadStats : public EdenThreadStats<HgImporterThreadStats> {
   Counter prefetchFiles{createStat("hg_importer.prefetch_files")};
 };
 
-class JournalThreadStats : public EdenThreadStats<JournalThreadStats> {
+class JournalThreadStats : public StatsGroup<JournalThreadStats> {
  public:
   Counter truncatedReads{createStat("journal.truncated_reads")};
   Counter filesAccumulated{createStat("journal.files_accumulated")};
 };
 
-class ThriftThreadStats : public EdenThreadStats<ThriftThreadStats> {
+class ThriftThreadStats : public StatsGroup<ThriftThreadStats> {
  public:
   Duration streamChangesSince{
       "thrift.StreamingEdenService.streamChangesSince.streaming_time_us"};
@@ -357,7 +314,7 @@ class DurationScope {
   template <typename T>
   DurationScope(
       std::shared_ptr<EdenStats> edenStats,
-      EdenThreadStatsBase::Duration T::*duration)
+      StatsGroupBase::Duration T::*duration)
       : edenStats_{std::move(edenStats)},
         // This use of std::function won't allocate on libstdc++,
         // libc++, or Microsoft STL. All three have a couple pointers

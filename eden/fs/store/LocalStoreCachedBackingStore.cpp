@@ -103,7 +103,7 @@ LocalStoreCachedBackingStore::getBlob(
                   backingStore = backingStore_,
                   stats = stats_](std::unique_ptr<Blob> blob) mutable {
         if (blob) {
-          stats->getObjectStoreStatsForCurrentThread()
+          stats->getStatsForCurrentThread<ObjectStoreThreadStats>()
               .getBlobFromLocalStore.addValue(1);
           return folly::makeSemiFuture(GetBlobResult{
               std::move(blob), ObjectFetchContext::FromDiskCache});
@@ -118,7 +118,7 @@ LocalStoreCachedBackingStore::getBlob(
                          id](GetBlobResult result) {
               if (result.blob) {
                 localStore->putBlob(id, result.blob.get());
-                stats->getObjectStoreStatsForCurrentThread()
+                stats->getStatsForCurrentThread<ObjectStoreThreadStats>()
                     .getBlobFromBackingStore.addValue(1);
               }
               return result;
