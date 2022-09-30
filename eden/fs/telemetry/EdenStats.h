@@ -268,13 +268,13 @@ struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
  * @see HgBackingStore
  */
 struct HgBackingStoreStats : StatsGroup<HgBackingStoreStats> {
-  Duration hgBackingStoreGetBlob{"store.hg.get_blob_us"};
-  Duration hgBackingStoreImportBlob{"store.hg.import_blob_us"};
-  Duration hgBackingStoreGetTree{"store.hg.get_tree_us"};
-  Duration hgBackingStoreImportTree{"store.hg.import_tree_us"};
-  Duration hgBackingStoreGetBlobMetadata{"store.hg.get_blob_metadata_us"};
-  Counter hgBackingStoreLoadProxyHash{"store.hg.load_proxy_hash"};
-  Counter hgBackingStoreAuxMetadataMiss{"store.hg.aux_metadata_miss"};
+  Duration getBlob{"store.hg.get_blob_us"};
+  Duration importBlob{"store.hg.import_blob_us"};
+  Duration getTree{"store.hg.get_tree_us"};
+  Duration importTree{"store.hg.import_tree_us"};
+  Duration getBlobMetadata{"store.hg.get_blob_metadata_us"};
+  Counter loadProxyHash{"store.hg.load_proxy_hash"};
+  Counter auxMetadataMiss{"store.hg.aux_metadata_miss"};
 };
 
 /**

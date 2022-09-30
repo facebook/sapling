@@ -82,8 +82,7 @@ folly::Future<std::vector<HgProxyHash>> HgProxyHash::getBatch(
   if (byteRanges.empty()) {
     return folly::Future<std::vector<HgProxyHash>>{std::move(embedded_results)};
   }
-  edenStats.increment(
-      &HgBackingStoreStats::hgBackingStoreLoadProxyHash, byteRanges.size());
+  edenStats.increment(&HgBackingStoreStats::loadProxyHash, byteRanges.size());
   return store->getBatch(KeySpace::HgProxyHashFamily, byteRanges)
       .thenValue([embedded_results,
                   byteRanges](std::vector<StoreResult>&& data) {
@@ -106,7 +105,7 @@ HgProxyHash HgProxyHash::load(
   if (auto embedded = tryParseEmbeddedProxyHash(edenObjectId)) {
     return *embedded;
   }
-  edenStats.increment(&HgBackingStoreStats::hgBackingStoreLoadProxyHash);
+  edenStats.increment(&HgBackingStoreStats::loadProxyHash);
   // Read the path name and file rev hash
   auto infoResult = store->get(KeySpace::HgProxyHashFamily, edenObjectId);
   if (!infoResult.isValid()) {

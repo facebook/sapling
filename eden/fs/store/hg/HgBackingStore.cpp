@@ -280,8 +280,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
                   watch,
                   treeMetadataFuture = std::move(treeMetadataFuture),
                   config = config_](std::unique_ptr<Tree>&& result) mutable {
-        stats_->addDuration(
-            &HgBackingStoreStats::hgBackingStoreGetTree, watch.elapsed());
+        stats_->addDuration(&HgBackingStoreStats::getTree, watch.elapsed());
         return std::move(result);
       });
 }
@@ -334,8 +333,7 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
                    }
                    auto serializedTree = importer.fetchTree(path, manifestNode);
                    stats_->addDuration(
-                       &HgBackingStoreStats::hgBackingStoreImportTree,
-                       watch.elapsed());
+                       &HgBackingStoreStats::importTree, watch.elapsed());
                    return serializedTree;
                  })
                  .via(serverThreadPool_);
@@ -599,8 +597,7 @@ SemiFuture<std::unique_ptr<Blob>> HgBackingStore::fetchBlobFromHgImporter(
         }
         auto blob =
             importer.importFileContents(hgInfo.path(), hgInfo.revHash());
-        stats_->addDuration(
-            &HgBackingStoreStats::hgBackingStoreImportBlob, watch.elapsed());
+        stats_->addDuration(&HgBackingStoreStats::importBlob, watch.elapsed());
         return blob;
       });
 }

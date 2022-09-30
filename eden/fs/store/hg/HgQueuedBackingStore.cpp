@@ -163,8 +163,7 @@ void HgQueuedBackingStore::processBlobImportRequests(
     for (auto& request : requests) {
       auto* promise = request->getPromise<std::unique_ptr<Blob>>();
       if (promise->isFulfilled()) {
-        stats_->addDuration(
-            &HgBackingStoreStats::hgBackingStoreGetBlob, watch.elapsed());
+        stats_->addDuration(&HgBackingStoreStats::getBlob, watch.elapsed());
         continue;
       }
 
@@ -181,8 +180,7 @@ void HgQueuedBackingStore::processBlobImportRequests(
                     << "Imported blob from HgImporter for "
                     << request->getRequest<HgImportRequest::BlobImport>()->hash;
                 stats->addDuration(
-                    &HgBackingStoreStats::hgBackingStoreGetBlob,
-                    watch.elapsed());
+                    &HgBackingStoreStats::getBlob, watch.elapsed());
                 request->getPromise<HgImportRequest::BlobImport::Response>()
                     ->setTry(std::forward<decltype(result)>(result));
               }));
@@ -221,8 +219,7 @@ void HgQueuedBackingStore::processTreeImportRequests(
     for (auto& request : requests) {
       auto* promise = request->getPromise<std::unique_ptr<Tree>>();
       if (promise->isFulfilled()) {
-        stats_->addDuration(
-            &HgBackingStoreStats::hgBackingStoreGetTree, watch.elapsed());
+        stats_->addDuration(&HgBackingStoreStats::getTree, watch.elapsed());
         continue;
       }
 
@@ -239,8 +236,7 @@ void HgQueuedBackingStore::processTreeImportRequests(
                     << "Imported tree from HgImporter for "
                     << request->getRequest<HgImportRequest::TreeImport>()->hash;
                 stats->addDuration(
-                    &HgBackingStoreStats::hgBackingStoreGetTree,
-                    watch.elapsed());
+                    &HgBackingStoreStats::getTree, watch.elapsed());
                 request->getPromise<HgImportRequest::TreeImport::Response>()
                     ->setTry(std::forward<decltype(result)>(result));
               }));
@@ -392,8 +388,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTree(
 std::unique_ptr<BlobMetadata> HgQueuedBackingStore::getLocalBlobMetadata(
     const ObjectId& id,
     ObjectFetchContext& /*context*/) {
-  DurationScope scope{
-      stats_, &HgBackingStoreStats::hgBackingStoreGetBlobMetadata};
+  DurationScope scope{stats_, &HgBackingStoreStats::getBlobMetadata};
 
   HgProxyHash proxyHash;
   try {
@@ -407,7 +402,7 @@ std::unique_ptr<BlobMetadata> HgQueuedBackingStore::getLocalBlobMetadata(
   auto metadata = backingStore_->getDatapackStore().getLocalBlobMetadata(
       proxyHash.revHash());
   if (!metadata) {
-    stats_->increment(&HgBackingStoreStats::hgBackingStoreAuxMetadataMiss);
+    stats_->increment(&HgBackingStoreStats::auxMetadataMiss);
   }
   return metadata;
 }
