@@ -124,6 +124,31 @@ macro_rules! _define_flags_impl {
     // Match a field like:
     //
     //    /// description
+    //    #[argtype("type")]
+    //    #[short('s')]
+    //    name: type,
+    ( input [ #[doc=$doc:expr] #[argtype($argtype:literal)] #[short($short:literal)] $field:ident : $type:ty, $($rest:tt)* ]
+      flags [ $( $flags:tt )* ]
+      arg0 $arg0:tt
+      args $args:tt
+      varargs $varargs:tt
+      subflags $subflags:tt
+      misc $misc:tt
+    ) => {
+        $crate::_define_flags_impl!(
+            input [ $( $rest )* ]
+            flags [ $( $flags )* ($short, $field, $doc, $type, (<$type>::default()), $argtype) ]
+            arg0 $arg0
+            args $args
+            varargs $varargs
+            subflags $subflags
+            misc $misc
+        );
+    };
+
+    // Match a field like:
+    //
+    //    /// description
     //    name: type = default,
     ( input [ #[doc=$doc:expr] $field:ident : $type:ty = $default:tt, $($rest:tt)* ]
       flags [ $( $flags:tt )* ]
