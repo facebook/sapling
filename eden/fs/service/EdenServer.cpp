@@ -1490,6 +1490,8 @@ BackingStoreType toBackingStoreType(const std::string& type) {
     return BackingStoreType::HG;
   } else if (type == "recas") {
     return BackingStoreType::RECAS;
+  } else if (type == "http") {
+    return BackingStoreType::HTTP;
   } else if (type == "") {
     return BackingStoreType::EMPTY;
   } else {

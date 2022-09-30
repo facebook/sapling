@@ -409,6 +409,21 @@ class ReCasRepo(Repo):
         )
 
 
+class HttpRepo(Repo):
+    HEAD = "HEAD"
+
+    def __init__(self, source: str, working_dir: Optional[str] = None) -> None:
+        super(HttpRepo, self).__init__("http", source, working_dir)
+
+    def __repr__(self) -> str:
+        return f"HttpRepo(source={self.source!r})"
+
+    def get_commit_hash(self, commit: str) -> str:
+        raise NotImplementedError(
+            "get_commit_hash is not supposed to be called for HttpRepo"
+        )
+
+
 def mkscratch_bin() -> Path:
     # mkscratch is provided by the hg deployment at facebook, which has a
     # different installation prefix on macOS vs Linux, so we need to resolve
@@ -476,10 +491,22 @@ def get_recas_repo(path: str) -> Optional[ReCasRepo]:
     return ReCasRepo(path)
 
 
+def get_http_repo(path: str) -> Optional[HttpRepo]:
+    """
+    Return a HttpRepo object, with the source path.
+    """
+    return HttpRepo(path)
+
+
 def get_repo(path: str, backing_store_type: Optional[str] = None) -> Optional[Repo]:
     """
     Given a path inside a repository, return the repository source and type.
     """
+    if backing_store_type == "http":
+        # The repository for http is the server backend (host:port).
+        # Skip checking if the local path exists with the repo source name.
+        return get_http_repo(path)
+
     path = os.path.realpath(path)
     if not os.path.exists(path):
         return None

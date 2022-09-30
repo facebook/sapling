@@ -79,6 +79,7 @@ DEFAULT_REVISION = {  # supported repo name -> default bookmark
     "git": "refs/heads/master",
     "hg": "first(present(master) + .)",
     "recas": "",
+    "http": "",
 }
 
 SUPPORTED_REPOS: KeysView[str] = DEFAULT_REVISION.keys()

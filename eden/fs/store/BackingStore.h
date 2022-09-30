@@ -31,7 +31,7 @@ class Tree;
 class TreeEntry;
 enum class TreeEntryType : uint8_t;
 
-enum BackingStoreType : uint8_t { EMPTY, GIT, HG, RECAS };
+enum BackingStoreType : uint8_t { EMPTY, GIT, HG, RECAS, HTTP };
 
 enum class ObjectComparison : uint8_t {
   /// Given the IDs alone, it's not possible to know whether the contents are

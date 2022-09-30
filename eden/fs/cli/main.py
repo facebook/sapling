@@ -727,7 +727,7 @@ class CloneCmd(Subcmd):
 
         parser.add_argument(
             "--backing-store",
-            help="Clone path as backing store instead of a source control repository. Currently only support 'recas' (Linux and MacOs only).",
+            help="Clone path as backing store instead of a source control repository. Currently only support 'recas' (Linux and MacOs only) and 'http' (Linux only)",
         )
 
     def run(self, args: argparse.Namespace) -> int:
@@ -848,6 +848,22 @@ want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n.""
                 NULL_REVISION = "0" * 40
                 # A special digest for RE CAS representing an empty folder
                 commit = f"{NULL_REVISION}:0"
+        elif args.backing_store == "http":
+            if sys.platform != "linux":
+                print_stderr(
+                    "error: http backing store was passed but this feature is only available on Linux"
+                )
+                return 1
+            if args.rev is None:
+                commit = "/"
+            else:
+                if args.rev.startswith("/") and args.rev.endswith("/"):
+                    commit = args.rev
+                else:
+                    print_stderr(
+                        "error: http backing store revision (root path) should begin and end with '/'"
+                    )
+                    return 1
         else:
             raise RepoError(f"Unsupported backing store {args.backing_store}.")
 
