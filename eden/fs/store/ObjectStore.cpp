@@ -285,10 +285,10 @@ ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
             // Quick check in-memory cache first, before doing expensive
             // calculations. If metadata is present in cache, it most certainly
             // exists in local store too.
-            // Additionally check if we use aux metadata from mercurial, and do
-            // not compute it in this case.
-            if (!self->edenConfig_->useAuxMetadata.getValue() &&
-                !self->metadataCache_.rlock()->exists(id)) {
+            // We always cache metadata in LocalStore because it's faster to
+            // query than the BackingStore, and metadata is very small (~28
+            // bytes per blob).
+            if (!self->metadataCache_.rlock()->exists(id)) {
               auto metadata = computeBlobMetadata(*result.blob);
               self->localStore_->putBlobMetadata(id, metadata);
               self->metadataCache_.wlock()->set(id, metadata);
@@ -321,83 +321,88 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
     }
   }
 
-  auto localMetadata = backingStore_->getLocalBlobMetadata(id, context);
-  if (localMetadata) {
-    stats_->getObjectStoreStatsForCurrentThread()
-        .getLocalBlobMetadataFromBackingStore.addValue(1);
-    metadataCache_.wlock()->set(id, *localMetadata);
-    context.didFetch(
-        ObjectFetchContext::BlobMetadata,
-        id,
-        ObjectFetchContext::FromDiskCache);
-    updateProcessFetch(context);
-    return *localMetadata;
-  }
-
   auto self = shared_from_this();
 
   // Check local store
   return localStore_->getBlobMetadata(id)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenValue([self, statScope = std::move(statScope), id, &context](
-                     std::optional<BlobMetadata>&& metadata) mutable {
-        if (metadata) {
-          self->stats_->getObjectStoreStatsForCurrentThread()
-              .getBlobMetadataFromLocalStore.addValue(1);
-          self->metadataCache_.wlock()->set(id, *metadata);
-          context.didFetch(
-              ObjectFetchContext::BlobMetadata,
-              id,
-              ObjectFetchContext::FromDiskCache);
+      .thenValue(
+          [self, statScope = std::move(statScope), id, &context](
+              std::optional<BlobMetadata>&& metadata) mutable
+          -> ImmediateFuture<BlobMetadata> {
+            if (metadata) {
+              self->stats_->getObjectStoreStatsForCurrentThread()
+                  .getBlobMetadataFromLocalStore.addValue(1);
+              self->metadataCache_.wlock()->set(id, *metadata);
+              context.didFetch(
+                  ObjectFetchContext::BlobMetadata,
+                  id,
+                  ObjectFetchContext::FromDiskCache);
 
-          self->updateProcessFetch(context);
-          return makeFuture(*metadata);
-        }
+              self->updateProcessFetch(context);
+              return *metadata;
+            }
 
-        self->deprioritizeWhenFetchHeavy(context);
+            self->deprioritizeWhenFetchHeavy(context);
 
-        // Check backing store
-        //
-        // TODO: It would be nice to add a smarter API to the BackingStore so
-        // that we can query it just for the blob metadata if it supports
-        // getting that without retrieving the full blob data.
-        //
-        // TODO: This should probably check the LocalStore for the blob first,
-        // especially when we begin to expire entries in RocksDB.
-        return self->backingStore_
-            ->getBlob(id, context)
-            // Non-blocking statistics and cache updates should happen ASAP
-            // rather than waiting for callbacks to be scheduled on the
-            // consuming thread.
-            .toUnsafeFuture()
-            .thenValue([self, statScope = std::move(statScope), id, &context](
-                           BackingStore::GetBlobResult result) {
-              if (result.blob) {
-                self->stats_->getObjectStoreStatsForCurrentThread()
-                    .getBlobMetadataFromBackingStore.addValue(1);
-                // we retrived the full blob data
-                self->stats_->getObjectStoreStatsForCurrentThread()
-                    .getBlobFromBackingStore.addValue(1);
-                self->localStore_->putBlob(id, result.blob.get());
-                auto metadata = computeBlobMetadata(*result.blob);
-                self->localStore_->putBlobMetadata(id, metadata);
-                self->metadataCache_.wlock()->set(id, metadata);
-                // I could see an argument for recording this fetch with
-                // type Blob instead of BlobMetadata, but it's probably more
-                // useful in context to know how many metadata fetches
-                // occurred. Also, since backing stores don't directly
-                // support fetching metadata, it should be clear.
-                context.didFetch(
-                    ObjectFetchContext::BlobMetadata, id, result.origin);
+            auto localMetadata =
+                self->backingStore_->getLocalBlobMetadata(id, context);
+            if (localMetadata) {
+              self->stats_->getObjectStoreStatsForCurrentThread()
+                  .getLocalBlobMetadataFromBackingStore.addValue(1);
+              self->metadataCache_.wlock()->set(id, *localMetadata);
+              self->localStore_->putBlobMetadata(id, *localMetadata);
+              context.didFetch(
+                  ObjectFetchContext::BlobMetadata,
+                  id,
+                  ObjectFetchContext::FromDiskCache);
+              self->updateProcessFetch(context);
+              return *localMetadata;
+            }
 
-                self->updateProcessFetch(context);
-                return makeFuture(metadata);
-              }
+            // Check backing store
+            //
+            // TODO: It would be nice to add a smarter API to the BackingStore
+            // so that we can query it just for the blob metadata if it supports
+            // getting that without retrieving the full blob data.
+            //
+            // TODO: This should probably check the LocalStore for the blob
+            // first, especially when we begin to expire entries in RocksDB.
+            return self->backingStore_
+                ->getBlob(id, context)
+                // Non-blocking statistics and cache updates should happen ASAP
+                // rather than waiting for callbacks to be scheduled on the
+                // consuming thread.
+                .toUnsafeFuture()
+                .thenValue([self,
+                            statScope = std::move(statScope),
+                            id,
+                            &context](BackingStore::GetBlobResult result) {
+                  if (result.blob) {
+                    self->stats_->getObjectStoreStatsForCurrentThread()
+                        .getBlobMetadataFromBackingStore.addValue(1);
+                    // we retrived the full blob data
+                    self->stats_->getObjectStoreStatsForCurrentThread()
+                        .getBlobFromBackingStore.addValue(1);
+                    self->localStore_->putBlob(id, result.blob.get());
+                    auto metadata = computeBlobMetadata(*result.blob);
+                    self->localStore_->putBlobMetadata(id, metadata);
+                    self->metadataCache_.wlock()->set(id, metadata);
+                    // I could see an argument for recording this fetch with
+                    // type Blob instead of BlobMetadata, but it's probably more
+                    // useful in context to know how many metadata fetches
+                    // occurred. Also, since backing stores don't directly
+                    // support fetching metadata, it should be clear.
+                    context.didFetch(
+                        ObjectFetchContext::BlobMetadata, id, result.origin);
 
-              throwf<std::domain_error>("blob {} not found", id);
-            });
-      })
+                    self->updateProcessFetch(context);
+                    return makeFuture(metadata);
+                  }
+
+                  throwf<std::domain_error>("blob {} not found", id);
+                })
+                .semi();
+          })
       .semi();
 }
 
