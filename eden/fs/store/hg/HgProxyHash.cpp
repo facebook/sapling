@@ -14,6 +14,7 @@
 
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/StoreResult.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Throw.h"
 
@@ -67,7 +68,8 @@ std::optional<HgProxyHash> HgProxyHash::tryParseEmbeddedProxyHash(
 
 folly::Future<std::vector<HgProxyHash>> HgProxyHash::getBatch(
     LocalStore* store,
-    ObjectIdRange blobHashes) {
+    ObjectIdRange blobHashes,
+    EdenStats& edenStats) {
   std::vector<HgProxyHash> embedded_results;
   std::vector<ByteRange> byteRanges;
   for (const auto& hash : blobHashes) {
@@ -80,6 +82,8 @@ folly::Future<std::vector<HgProxyHash>> HgProxyHash::getBatch(
   if (byteRanges.empty()) {
     return folly::Future<std::vector<HgProxyHash>>{std::move(embedded_results)};
   }
+  edenStats.increment(
+      &HgBackingStoreStats::hgBackingStoreLoadProxyHash, byteRanges.size());
   return store->getBatch(KeySpace::HgProxyHashFamily, byteRanges)
       .thenValue([embedded_results,
                   byteRanges](std::vector<StoreResult>&& data) {
@@ -97,10 +101,12 @@ folly::Future<std::vector<HgProxyHash>> HgProxyHash::getBatch(
 HgProxyHash HgProxyHash::load(
     LocalStore* store,
     const ObjectId& edenObjectId,
-    StringPiece context) {
+    StringPiece context,
+    EdenStats& edenStats) {
   if (auto embedded = tryParseEmbeddedProxyHash(edenObjectId)) {
     return *embedded;
   }
+  edenStats.increment(&HgBackingStoreStats::hgBackingStoreLoadProxyHash);
   // Read the path name and file rev hash
   auto infoResult = store->get(KeySpace::HgProxyHashFamily, edenObjectId);
   if (!infoResult.isValid()) {

@@ -236,7 +236,10 @@ ImmediateFuture<unique_ptr<Tree>> HgBackingStore::getRootTree(
             }
 
             auto rootTreeHash = HgProxyHash::load(
-                localStore_.get(), ObjectId{result.bytes()}, "getRootTree");
+                localStore_.get(),
+                ObjectId{result.bytes()},
+                "getRootTree",
+                *stats_);
             return importTreeManifestImpl(rootTreeHash.revHash());
           });
 }

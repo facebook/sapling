@@ -21,6 +21,8 @@ class Future;
 
 namespace facebook::eden {
 
+class EdenStats;
+
 /**
  * HgProxyHash is a derived index allowing us to map EdenFS's fixed-size hashes
  * onto Mercurial's (revHash, path) pairs.
@@ -108,9 +110,8 @@ class HgProxyHash {
    * The caller is responsible for keeping the ObjectIdRange alive for the
    * duration of the future.
    */
-  static folly::Future<std::vector<HgProxyHash>> getBatch(
-      LocalStore* store,
-      ObjectIdRange blobHashes);
+  static folly::Future<std::vector<HgProxyHash>>
+  getBatch(LocalStore* store, ObjectIdRange blobHashes, EdenStats& stats);
 
   /**
    * Load HgProxyHash data for the given eden blob hash from the LocalStore.
@@ -118,7 +119,8 @@ class HgProxyHash {
   static HgProxyHash load(
       LocalStore* store,
       const ObjectId& edenObjectId,
-      folly::StringPiece context);
+      folly::StringPiece context,
+      EdenStats& stats);
 
   /**
    * Store HgProxyHash data in the LocalStore.

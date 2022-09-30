@@ -284,10 +284,10 @@ ObjectComparison HgQueuedBackingStore::compareObjectsById(
   }
 
   // Now parse the object IDs and read their rev hashes.
-  auto oneProxy =
-      HgProxyHash::load(localStore_.get(), one, "areObjectIdsEquivalent");
-  auto twoProxy =
-      HgProxyHash::load(localStore_.get(), two, "areObjectIdsEquivalent");
+  auto oneProxy = HgProxyHash::load(
+      localStore_.get(), one, "areObjectIdsEquivalent", *stats_);
+  auto twoProxy = HgProxyHash::load(
+      localStore_.get(), two, "areObjectIdsEquivalent", *stats_);
 
   // If the rev hashes are the same, we know the contents are the same.
   if (oneProxy.revHash() == twoProxy.revHash()) {
@@ -367,7 +367,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTree(
     ObjectFetchContext& context) {
   HgProxyHash proxyHash;
   try {
-    proxyHash = HgProxyHash::load(localStore_.get(), id, "getTree");
+    proxyHash = HgProxyHash::load(localStore_.get(), id, "getTree", *stats_);
   } catch (const std::exception&) {
     logMissingProxyHash();
     throw;
@@ -396,8 +396,8 @@ std::unique_ptr<BlobMetadata> HgQueuedBackingStore::getLocalBlobMetadata(
 
   HgProxyHash proxyHash;
   try {
-    proxyHash =
-        HgProxyHash::load(localStore_.get(), id, "getLocalBlobMetadata");
+    proxyHash = HgProxyHash::load(
+        localStore_.get(), id, "getLocalBlobMetadata", *stats_);
   } catch (const std::exception&) {
     logMissingProxyHash();
     throw;
@@ -458,7 +458,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> HgQueuedBackingStore::getBlob(
     ObjectFetchContext& context) {
   HgProxyHash proxyHash;
   try {
-    proxyHash = HgProxyHash::load(localStore_.get(), id, "getBlob");
+    proxyHash = HgProxyHash::load(localStore_.get(), id, "getBlob", *stats_);
   } catch (const std::exception&) {
     logMissingProxyHash();
     throw;
@@ -533,7 +533,7 @@ ImmediateFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getRootTree(
 folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
     ObjectIdRange ids,
     ObjectFetchContext& context) {
-  return HgProxyHash::getBatch(localStore_.get(), ids)
+  return HgProxyHash::getBatch(localStore_.get(), ids, *stats_)
       // The caller guarantees that ids will live at least longer than this
       // future, thus we don't need to deep-copy it.
       .thenTry([&context, this, ids](
