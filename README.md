@@ -113,7 +113,7 @@ This script is used by many of Meta's OSS tools.  It will download and build all
 
 It's written in python so you'll need python3.6 or later on your PATH.  It works on Linux, macOS and Windows.
 
-The settings for eden's cmake builds are held in its getdeps manifests: Eden CLI: `build/fbcode_builder/manifests/eden_scm`, EdenFS:  `build/fbcode_builder/manifests/eden`, and Mononoke: `build/fbcode_builder/manifests/mononoke` which you can edit locally if desired.  Most getdeps commands take the manifest name as a paramenter (example below).
+The settings for eden's cmake builds are held in its getdeps manifests: Eden CLI: `build/fbcode_builder/manifests/eden_scm`, EdenFS:  `build/fbcode_builder/manifests/eden`, and Mononoke: `build/fbcode_builder/manifests/mononoke` which you can edit locally if desired.  Most getdeps commands take the manifest name as a parameter (example below).
 
 ### Dependencies
 
