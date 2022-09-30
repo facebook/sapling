@@ -23,7 +23,7 @@ class StructuredLogger;
 /** An implementation of LocalStore that uses RocksDB for the underlying
  * storage.
  */
-class RocksDbLocalStore : public LocalStore {
+class RocksDbLocalStore final : public LocalStore {
  public:
   /**
    * The given FaultInjector must be valid during the lifetime of this

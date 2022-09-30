@@ -16,7 +16,7 @@ namespace facebook::eden {
  * SqliteLocalStore is thread safe, allowing reads and writes from
  * any thread.
  * */
-class SqliteLocalStore : public LocalStore {
+class SqliteLocalStore final : public LocalStore {
  public:
   explicit SqliteLocalStore(AbsolutePathPiece pathToDb);
   void open() override;

@@ -18,7 +18,7 @@ namespace facebook::eden {
  * MemoryLocalStore is thread safe, allowing concurrent reads and
  * writes from any thread.
  * */
-class MemoryLocalStore : public LocalStore {
+class MemoryLocalStore final : public LocalStore {
  public:
   explicit MemoryLocalStore();
   void open() override;
