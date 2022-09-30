@@ -17,12 +17,12 @@
 
 namespace facebook::eden {
 
-class FsChannelThreadStats;
-class ObjectStoreThreadStats;
-class HgBackingStoreThreadStats;
-class HgImporterThreadStats;
-class JournalThreadStats;
-class ThriftThreadStats;
+struct FsChannelThreadStats;
+struct ObjectStoreThreadStats;
+struct HgBackingStoreThreadStats;
+struct HgImporterThreadStats;
+struct JournalThreadStats;
+struct ThriftThreadStats;
 
 class EdenStats {
  public:
@@ -147,13 +147,13 @@ class StatsGroup : public StatsGroupBase {
   /**
    * Statistics are often updated on a thread separate from the thread that
    * started a request. Since stat objects are thread-local, we cannot hold
-   * pointers directly to them. Instead, we store a pointer-to-member.
+   * pointers directly to them. Instead, we store a pointer-to-member and look
+   * up the calling thread's object.
    */
   using DurationPtr = Duration T::*;
 };
 
-class FsChannelThreadStats : public StatsGroup<FsChannelThreadStats> {
- public:
+struct FsChannelThreadStats : StatsGroup<FsChannelThreadStats> {
 #ifndef _WIN32
   Duration lookup{"fuse.lookup_us"};
   Duration forget{"fuse.forget_us"};
@@ -237,8 +237,7 @@ class FsChannelThreadStats : public StatsGroup<FsChannelThreadStats> {
 /**
  * @see ObjectStore
  */
-class ObjectStoreThreadStats : public StatsGroup<ObjectStoreThreadStats> {
- public:
+struct ObjectStoreThreadStats : StatsGroup<ObjectStoreThreadStats> {
   Duration getTree{"store.get_tree_us"};
   Duration getBlob{"store.get_blob_us"};
   Duration getBlobMetadata{"store.get_blob_metadata_us"};
@@ -266,8 +265,7 @@ class ObjectStoreThreadStats : public StatsGroup<ObjectStoreThreadStats> {
 /**
  * @see HgBackingStore
  */
-class HgBackingStoreThreadStats : public StatsGroup<HgBackingStoreThreadStats> {
- public:
+struct HgBackingStoreThreadStats : StatsGroup<HgBackingStoreThreadStats> {
   Duration hgBackingStoreGetBlob{"store.hg.get_blob_us"};
   Duration hgBackingStoreImportBlob{"store.hg.import_blob_us"};
   Duration hgBackingStoreGetTree{"store.hg.get_tree_us"};
@@ -279,8 +277,7 @@ class HgBackingStoreThreadStats : public StatsGroup<HgBackingStoreThreadStats> {
  * @see HgImporter
  * @see HgBackingStore
  */
-class HgImporterThreadStats : public StatsGroup<HgImporterThreadStats> {
- public:
+struct HgImporterThreadStats : StatsGroup<HgImporterThreadStats> {
   Counter catFile{createStat("hg_importer.cat_file")};
   Counter fetchTree{createStat("hg_importer.fetch_tree")};
   Counter manifest{createStat("hg_importer.manifest")};
@@ -289,14 +286,12 @@ class HgImporterThreadStats : public StatsGroup<HgImporterThreadStats> {
   Counter prefetchFiles{createStat("hg_importer.prefetch_files")};
 };
 
-class JournalThreadStats : public StatsGroup<JournalThreadStats> {
- public:
+struct JournalThreadStats : StatsGroup<JournalThreadStats> {
   Counter truncatedReads{createStat("journal.truncated_reads")};
   Counter filesAccumulated{createStat("journal.files_accumulated")};
 };
 
-class ThriftThreadStats : public StatsGroup<ThriftThreadStats> {
- public:
+struct ThriftThreadStats : StatsGroup<ThriftThreadStats> {
   Duration streamChangesSince{
       "thrift.StreamingEdenService.streamChangesSince.streaming_time_us"};
 };
