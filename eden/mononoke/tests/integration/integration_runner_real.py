@@ -80,6 +80,7 @@ DISABLE_ALL_NETWORK_ACCESS_SKIPLIST: Set[str] = {
     "test-scs-x-repo-mapping-change.t",
     "test-scs-x-repo.t",
     "test-scs.t",
+    "test-land-service-pushrebase-remote.t",
     "test-snapshot.t",
 }
 

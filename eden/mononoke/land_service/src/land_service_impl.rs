@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::net::IpAddr;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -23,9 +24,12 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use hooks::CrossRepoPushSource;
+use identity::Identity;
 use land_service_if::server::LandService;
 use land_service_if::services::land_service::LandChangesetsExn;
 use land_service_if::types::*;
+use login_objects_thrift::EnvironmentType;
+use metaconfig_types::CommonConfig;
 use metadata::Metadata;
 use mononoke_api::CoreContext;
 use mononoke_api::Mononoke;
@@ -35,6 +39,7 @@ use mononoke_api::SessionContainer;
 use mononoke_types::private::Bytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 use pushrebase::PushrebaseChangesetPair;
 use pushrebase_client::LocalPushrebaseClient;
@@ -50,6 +55,11 @@ use srserver::RequestContext;
 use crate::errors;
 use crate::errors::LandChangesetsError;
 
+const FORWARDED_IDENTITIES_HEADER: &str = "scm_forwarded_identities";
+const FORWARDED_CLIENT_IP_HEADER: &str = "scm_forwarded_client_ip";
+const FORWARDED_CLIENT_DEBUG_HEADER: &str = "scm_forwarded_client_debug";
+const FORWARDED_OTHER_CATS_HEADER: &str = "scm_forwarded_other_cats";
+
 #[derive(Clone)]
 pub(crate) struct LandServiceImpl {
     pub(crate) fb: FacebookInit,
@@ -57,6 +67,7 @@ pub(crate) struct LandServiceImpl {
     pub(crate) scuba_builder: MononokeScubaSampleBuilder,
     pub(crate) mononoke: Arc<Mononoke>,
     pub(crate) scribe: Scribe,
+    pub(crate) identity: Identity,
 }
 
 pub(crate) struct LandServiceThriftImpl(LandServiceImpl);
@@ -68,6 +79,7 @@ impl LandServiceImpl {
         mononoke: Arc<Mononoke>,
         mut scuba_builder: MononokeScubaSampleBuilder,
         scribe: Scribe,
+        common_config: &CommonConfig,
     ) -> Self {
         scuba_builder.add_common_server_data();
 
@@ -77,6 +89,10 @@ impl LandServiceImpl {
             mononoke,
             scuba_builder,
             scribe,
+            identity: Identity::new(
+                common_config.internal_identity.id_type.as_str(),
+                common_config.internal_identity.id_data.as_str(),
+            ),
         }
     }
 
@@ -90,13 +106,14 @@ impl LandServiceImpl {
         land_changesets: LandChangesetRequest,
     ) -> Result<LandChangesetsResponse, LandChangesetsError> {
         let ctx: CoreContext = self.create_ctx("land_changesets", req_ctxt).await?;
-        //TODO: we should get the authorization context properly (T132854099)
-        let authz = AuthorizationContext::new_bypass_access_control();
+        let authz = AuthorizationContext::new(&ctx);
 
         //TODO: Avoid using RepoContext, build a leaner Repo type if possible (T132600441)
         let repo: RepoContext = self
             .get_repo_context(land_changesets.repo_name, ctx.clone(), authz.clone())
             .await?;
+
+        self.assert_internal_identity(&repo)?;
 
         let lca_hint: Arc<dyn LeastCommonAncestorsHint> = repo.skiplist_index_arc();
 
@@ -107,6 +124,7 @@ impl LandServiceImpl {
 
         let cross_repo_push_source =
             convert_cross_repo_push_source(land_changesets.cross_repo_push_source)?;
+
         let bookmark_restrictions =
             convert_bookmark_restrictions(land_changesets.bookmark_restrictions)?;
 
@@ -197,11 +215,62 @@ impl LandServiceImpl {
 
     async fn create_metadata(
         &self,
-        _req_ctxt: &RequestContext,
+        req_ctxt: &RequestContext,
     ) -> Result<Metadata, LandChangesetsError> {
+        let header = |h: &str| {
+            req_ctxt
+                .header(h)
+                .map_err(|e| errors::internal_error(e.as_ref()))
+        };
+
+        let tls_identities: MononokeIdentitySet = req_ctxt
+            .identities()?
+            .entries()
+            .into_iter()
+            .map(MononokeIdentity::from_identity_ref)
+            .collect();
+
+        // Get any valid CAT identities.
+        let cats_identities: MononokeIdentitySet = req_ctxt
+            .identities_cats(
+                &self.identity,
+                &[EnvironmentType::PROD, EnvironmentType::CORP],
+            )?
+            .entries()
+            .into_iter()
+            .map(MononokeIdentity::from_identity_ref)
+            .collect();
+
+        if let (Some(forwarded_identities), Some(forwarded_ip)) = (
+            header(FORWARDED_IDENTITIES_HEADER)?,
+            header(FORWARDED_CLIENT_IP_HEADER)?,
+        ) {
+            let mut header_identities: MononokeIdentitySet =
+                serde_json::from_str(forwarded_identities.as_str())
+                    .map_err(|e| errors::internal_error(&e))?;
+            let client_ip = Some(
+                forwarded_ip
+                    .parse::<IpAddr>()
+                    .map_err(|e| errors::internal_error(&e))?,
+            );
+            let client_debug = header(FORWARDED_CLIENT_DEBUG_HEADER)?.is_some();
+
+            header_identities.extend(cats_identities.into_iter());
+            let mut metadata =
+                Metadata::new(None, header_identities, client_debug, client_ip).await;
+
+            metadata.add_original_identities(tls_identities);
+
+            if let Some(other_cats) = header(FORWARDED_OTHER_CATS_HEADER)? {
+                metadata.add_raw_encoded_cats(other_cats);
+            }
+
+            return Ok(metadata);
+        }
+
         Ok(Metadata::new(
             None,
-            BTreeSet::new(), //TODO: tls_identities.union(&cats_identities).cloned().collect(),
+            tls_identities.union(&cats_identities).cloned().collect(),
             false,
             None,
         )
@@ -235,6 +304,25 @@ impl LandServiceImpl {
             .with_authorization_context(authz)
             .build()
             .await?)
+    }
+
+    // Check for the scm_service_identity
+    fn assert_internal_identity(&self, repo: &RepoContext) -> Result<(), LandChangesetsError> {
+        let original_identities = repo.ctx().metadata().original_identities();
+        if !original_identities.map_or(false, |ids| {
+            ids.contains(&MononokeIdentity::from_identity(&self.identity))
+        }) {
+            return Err(errors::internal_error(
+                anyhow!(
+                    "Insufficient permissions, internal options only. Identities: {}",
+                    original_identities
+                        .map_or_else(|| "<none>".to_string(), permission_checker::pretty_print)
+                )
+                .as_ref(),
+            )
+            .into());
+        }
+        Ok(())
     }
 }
 

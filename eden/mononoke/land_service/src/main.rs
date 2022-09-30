@@ -86,6 +86,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         mononoke,
         scuba_builder,
         args.scribe_logging_args.get_scribe(fb)?,
+        &app.repo_configs().common,
     );
 
     let service = {
