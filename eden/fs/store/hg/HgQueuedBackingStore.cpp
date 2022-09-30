@@ -392,7 +392,8 @@ folly::SemiFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTree(
 std::unique_ptr<BlobMetadata> HgQueuedBackingStore::getLocalBlobMetadata(
     const ObjectId& id,
     ObjectFetchContext& /*context*/) {
-  folly::stop_watch<> watch;
+  DurationScope scope{
+      stats_, &HgBackingStoreStats::hgBackingStoreGetBlobMetadata};
 
   HgProxyHash proxyHash;
   try {
@@ -405,8 +406,9 @@ std::unique_ptr<BlobMetadata> HgQueuedBackingStore::getLocalBlobMetadata(
 
   auto metadata = backingStore_->getDatapackStore().getLocalBlobMetadata(
       proxyHash.revHash());
-  stats_->addDuration(
-      &HgBackingStoreStats::hgBackingStoreGetBlobMetadata, watch.elapsed());
+  if (!metadata) {
+    stats_->increment(&HgBackingStoreStats::hgBackingStoreAuxMetadataMiss);
+  }
   return metadata;
 }
 

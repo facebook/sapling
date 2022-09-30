@@ -274,6 +274,7 @@ struct HgBackingStoreStats : StatsGroup<HgBackingStoreStats> {
   Duration hgBackingStoreImportTree{"store.hg.import_tree_us"};
   Duration hgBackingStoreGetBlobMetadata{"store.hg.get_blob_metadata_us"};
   Counter hgBackingStoreLoadProxyHash{"store.hg.load_proxy_hash"};
+  Counter hgBackingStoreAuxMetadataMiss{"store.hg.aux_metadata_miss"};
 };
 
 /**
