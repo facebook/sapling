@@ -43,7 +43,7 @@ macro_rules! _define_flags_impl {
         impl $crate::parser::StructFlags for $name {
             fn flags() -> Vec<$crate::parser::Flag> {
                 let flags: Vec<(char, String, String, $crate::parser::Value, String)> = vec![
-                    $( ($short, stringify!($field).replace("_", "-"), $doc.trim().to_string(), $crate::parser::Value::from($default), $argtype.to_string()), )*
+                    $( ($short, stringify!($field).replace("r#", "").replace("_", "-"), $doc.trim().to_string(), $crate::parser::Value::from($default), $argtype.to_string()), )*
                 ];
                 #[allow(unused_mut)]
                 let mut result: Vec<$crate::parser::Flag> = flags.into_iter().map(Into::into).collect();
@@ -64,7 +64,7 @@ macro_rules! _define_flags_impl {
                 }
 
                 Ok(Self {
-                    $( $field : out.pick::<$type>(&stringify!($field).replace("_", "-")), )*
+                    $( $field : out.pick::<$type>(&stringify!($field).replace("r#", "").replace("_", "-")), )*
                     $( $varargs: out.args.get($varargs_offset..).map(|v| v.to_vec()).unwrap_or_default(), )?
                     $( $arg0: out.args.get(0).cloned().unwrap_or_default(), )?
                     $( $arg: out.args[$arg_index].clone(), )*
