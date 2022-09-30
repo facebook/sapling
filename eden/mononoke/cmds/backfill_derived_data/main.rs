@@ -1124,7 +1124,7 @@ async fn subcommand_backfill(
             info!(ctx.logger(), "warmup of {} changesets complete", chunk_size);
 
             derived_utils
-                .backfill_batch_dangerous(
+                .derive_exactly_batch(
                     get_batch_ctx(ctx, parallel || gap_size.is_some()).await,
                     repo.repo_derived_data_arc(),
                     chunk,
@@ -1458,7 +1458,7 @@ async fn tail_batch_iteration<'a>(
                         let timestamp = Instant::now();
 
                         let job = deriver
-                            .backfill_batch_dangerous(
+                            .derive_exactly_batch(
                                 get_batch_ctx(&ctx, parallel || gap_size.is_some()).await,
                                 repo.repo_derived_data_arc(),
                                 node.csids.clone(),
@@ -1753,7 +1753,7 @@ mod tests {
         // error.
         assert!(
             derived_utils
-                .backfill_batch_dangerous(
+                .derive_exactly_batch(
                     ctx.clone(),
                     repo.repo_derived_data_arc(),
                     vec![bcs_id],
@@ -1776,7 +1776,7 @@ mod tests {
 
         // Now the parent is derived, we can backfill a batch.
         derived_utils
-            .backfill_batch_dangerous(
+            .derive_exactly_batch(
                 ctx.clone(),
                 repo.repo_derived_data_arc(),
                 vec![bcs_id],
@@ -1822,7 +1822,7 @@ mod tests {
             .await?;
         assert_eq!(pending.len(), hg_cs_ids.len());
         derived_utils
-            .backfill_batch_dangerous(
+            .derive_exactly_batch(
                 ctx.clone(),
                 repo.repo_derived_data_arc(),
                 batch.clone(),
@@ -1859,7 +1859,7 @@ mod tests {
 
         let derived_utils = derived_data_utils(fb, &repo, RootUnodeManifestId::NAME)?;
         let res = derived_utils
-            .backfill_batch_dangerous(
+            .derive_exactly_batch(
                 ctx.clone(),
                 repo.repo_derived_data_arc(),
                 vec![first_bcs_id],
@@ -1889,7 +1889,7 @@ mod tests {
             batch,
         );
         derived_utils
-            .backfill_batch_dangerous(ctx, repo.repo_derived_data_arc(), batch, false, None)
+            .derive_exactly_batch(ctx, repo.repo_derived_data_arc(), batch, false, None)
             .await?;
 
         Ok(())

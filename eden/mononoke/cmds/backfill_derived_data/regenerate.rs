@@ -119,7 +119,7 @@ pub async fn regenerate_derived_data(
 
     for utils in &derived_utils {
         // For benchmark we want all commits to be derived already - in that case we know that
-        // we can use `backfill_batch_dangerous()` function (because all dependent derive data
+        // we can use `derive_exactly_batch_dangerous()` function (because all dependent derive data
         // types are derived) and also we know that all ancestors of `csids` are derived.
         let pending = utils
             .pending(ctx.clone(), repo.repo_derived_data_arc(), csids.clone())

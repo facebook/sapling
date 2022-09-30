@@ -48,7 +48,7 @@
 //! let value: DerivedDataType = repo.repo_derived_data().derive(ctx, cs_id).await?;
 //! // Batch derivation
 //! let manager = repo.repo_derived_data().manager();
-//! manager.backfill_batch::<DerivedDataType>(ctx, cs_ids.clone(), BatchDeriveOptions, None).await?;
+//! manager.derive_exactly_batch::<DerivedDataType>(ctx, cs_ids.clone(), BatchDeriveOptions, None).await?;
 //! let values: Vec<DerivedDataType> = manager.fetch_derived_batch(ctx, cs_ids, None).await?;
 //! ```
 

@@ -568,17 +568,17 @@ impl DerivedDataManager {
     }
 
     #[async_recursion]
-    /// Backfill derived data for a batch of changesets.
+    /// Derive data for exactly a batch of changesets.
     ///
     /// The provided batch of changesets must be in topological
     /// order.
     ///
-    /// The difference between "backfill" and "derive", is that for
-    /// backfilling, the caller must have arranged for the dependencies
+    /// The difference between "derive_exactly" and "derive", is that for
+    /// deriving exactly, the caller must have arranged for the dependencies
     /// and ancestors of the batch to have already been derived.  If
     /// any dependency or ancestor is not already derived, an error
     /// will be returned.
-    pub async fn backfill_batch<Derivable>(
+    pub async fn derive_exactly_batch<Derivable>(
         &self,
         ctx: &CoreContext,
         csids: Vec<ChangesetId>,
@@ -596,7 +596,12 @@ impl DerivedDataManager {
                 async move {
                     secondary_data
                         .manager
-                        .backfill_batch::<Derivable>(ctx, secondary, batch_options, rederivation)
+                        .derive_exactly_batch::<Derivable>(
+                            ctx,
+                            secondary,
+                            batch_options,
+                            rederivation,
+                        )
                         .await
                 }
                 .left_future()
@@ -697,7 +702,10 @@ impl DerivedDataManager {
 
         try_join(ancestor_checks, dependency_checks)
             .await
-            .context("backfill batch pre-conditions not satisfied")?;
+            .context(concat!(
+                "derive exactly batch pre-condition not satisfied: ",
+                "all ancestors' and dependencies' data must already have been derived",
+            ))?;
 
         let ctx = ctx.clone_and_reset();
         let ctx = self.set_derivation_session_class(ctx.clone());
@@ -708,7 +716,7 @@ impl DerivedDataManager {
             let last_csid = last.get_changeset_id();
             debug!(
                 ctx.logger(),
-                "backfill {} batch from {} to {}",
+                "derive exactly {} batch from {} to {}",
                 Derivable::NAME,
                 first_csid,
                 last_csid,

@@ -32,7 +32,7 @@ use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data::DerivedDataTypesConfig;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BatchDeriveOptions;
-use derived_data_manager::BatchDeriveStats;
+pub use derived_data_manager::BatchDeriveStats;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use derived_data_manager::DerivedDataManager;
 use derived_data_manager::Rederivation;
@@ -175,14 +175,18 @@ pub trait DerivedUtils: Send + Sync + 'static {
         csid: ChangesetId,
     ) -> BoxFuture<'static, Result<String, Error>>;
 
-    fn backfill_batch_dangerous(
+    /// Derive data for exactly a batch of changeset
+    ///
+    /// "exactly" means that all ancestors must already have had their data derive,
+    /// or this fn will return an error
+    fn derive_exactly_batch(
         &self,
         ctx: CoreContext,
         repo: Arc<RepoDerivedData>,
         csids: Vec<ChangesetId>,
         parallel: bool,
         gap_size: Option<usize>,
-    ) -> BoxFuture<'static, Result<BackfillDeriveStats, Error>>;
+    ) -> BoxFuture<'static, Result<BatchDeriveStats, Error>>;
 
     /// Find pending changeset (changesets for which data have not been derived)
     async fn pending(
@@ -222,8 +226,6 @@ pub trait DerivedUtils: Send + Sync + 'static {
 
     async fn is_derived(&self, ctx: &CoreContext, csid: ChangesetId) -> Result<bool, Error>;
 }
-
-pub type BackfillDeriveStats = BatchDeriveStats;
 
 #[derive(Clone)]
 struct DerivedUtilsFromManager<Derivable> {
@@ -299,14 +301,14 @@ where
         .boxed()
     }
 
-    fn backfill_batch_dangerous(
+    fn derive_exactly_batch(
         &self,
         ctx: CoreContext,
         _repo: Arc<RepoDerivedData>,
         csids: Vec<ChangesetId>,
         parallel: bool,
         gap_size: Option<usize>,
-    ) -> BoxFuture<'static, Result<BackfillDeriveStats, Error>> {
+    ) -> BoxFuture<'static, Result<BatchDeriveStats, Error>> {
         let options = if parallel || gap_size.is_some() {
             BatchDeriveOptions::Parallel { gap_size }
         } else {
@@ -316,7 +318,7 @@ where
         async move {
             let stats = utils
                 .manager
-                .backfill_batch::<Derivable>(&ctx, csids, options, Some(utils.clone()))
+                .derive_exactly_batch::<Derivable>(&ctx, csids, options, Some(utils.clone()))
                 .await?;
             Ok(stats)
         }
@@ -597,7 +599,7 @@ impl DeriveGraph {
                 async move {
                     if let Some(deriver) = &node.deriver {
                         let job = deriver
-                            .backfill_batch_dangerous(
+                            .derive_exactly_batch(
                                 ctx.clone(),
                                 repo.repo_derived_data_arc(),
                                 node.csids.clone(),
@@ -1167,16 +1169,16 @@ mod tests {
             self.deriver.derive(ctx, repo, csid)
         }
 
-        fn backfill_batch_dangerous(
+        fn derive_exactly_batch(
             &self,
             ctx: CoreContext,
             repo: Arc<RepoDerivedData>,
             csids: Vec<ChangesetId>,
             parallel: bool,
             gap_size: Option<usize>,
-        ) -> BoxFuture<'static, Result<BackfillDeriveStats, Error>> {
+        ) -> BoxFuture<'static, Result<BatchDeriveStats, Error>> {
             self.deriver
-                .backfill_batch_dangerous(ctx, repo, csids, parallel, gap_size)
+                .derive_exactly_batch(ctx, repo, csids, parallel, gap_size)
         }
 
         async fn pending(

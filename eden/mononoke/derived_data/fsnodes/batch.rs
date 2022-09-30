@@ -240,7 +240,7 @@ mod test {
             let manager = repo.repo_derived_data().manager();
 
             manager
-                .backfill_batch::<RootFsnodeId>(
+                .derive_exactly_batch::<RootFsnodeId>(
                     &ctx,
                     cs_ids,
                     BatchDeriveOptions::Parallel { gap_size: None },
@@ -285,7 +285,7 @@ mod test {
 
             let manager = repo.repo_derived_data().manager();
             manager
-                .backfill_batch::<RootFsnodeId>(
+                .derive_exactly_batch::<RootFsnodeId>(
                     &ctx,
                     cs_ids,
                     BatchDeriveOptions::Parallel { gap_size: None },
@@ -373,7 +373,7 @@ mod test {
         cs_ids.reverse();
         let manager = repo.repo_derived_data().manager();
         manager
-            .backfill_batch::<RootFsnodeId>(
+            .derive_exactly_batch::<RootFsnodeId>(
                 ctx,
                 cs_ids.clone(),
                 BatchDeriveOptions::Parallel {

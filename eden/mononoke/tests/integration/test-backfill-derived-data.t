@@ -39,7 +39,7 @@ backfill derived data
   * starting deriving data for 1 changesets* (glob)
   * starting batch of 1 from 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec* (glob)
   * warmup of 1 changesets complete* (glob)
-  *] backfill fsnodes batch from 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec to 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec* (glob)
+  *] derive exactly fsnodes batch from 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec to 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec* (glob)
   * 1/1 * (glob)
   *] Finished derived data command execution for repo repo* (glob)
   $ hg log -r "min(all())" -T '{node}'
@@ -61,7 +61,7 @@ backfill derived data
   * starting deriving data for 2 changesets* (glob)
   * starting batch of 2 from 459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66* (glob)
   * warmup of 2 changesets complete* (glob)
-  *] backfill fsnodes batch from 459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66 to c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd* (glob)
+  *] derive exactly fsnodes batch from 459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66 to c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd* (glob)
   * 2/2 * (glob)
   *] Finished derived data command execution for repo repo* (glob)
 

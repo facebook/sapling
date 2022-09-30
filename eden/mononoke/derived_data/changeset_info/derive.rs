@@ -179,7 +179,7 @@ mod test {
                 .await?;
         cs_ids.reverse();
         manager
-            .backfill_batch::<ChangesetInfo>(
+            .derive_exactly_batch::<ChangesetInfo>(
                 &ctx,
                 cs_ids.clone(),
                 BatchDeriveOptions::Parallel { gap_size: None },

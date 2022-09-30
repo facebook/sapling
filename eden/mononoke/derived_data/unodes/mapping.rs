@@ -379,7 +379,7 @@ mod test {
         let manager = repo.repo_derived_data().manager();
 
         manager
-            .backfill_batch::<RootUnodeManifestId>(ctx, csids.clone(), options, None)
+            .derive_exactly_batch::<RootUnodeManifestId>(ctx, csids.clone(), options, None)
             .await
             .unwrap();
         let batch_derived = manager

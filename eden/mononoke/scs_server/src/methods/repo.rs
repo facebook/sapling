@@ -689,7 +689,8 @@ impl SourceControlServiceImpl {
         let manager = repo.inner_repo().repo_derived_data().manager();
         match params.derived_data_type {
             thrift::DerivedDataType::FSNODE => {
-                Self::derive_batch_data::<RootFsnodeId>(manager, repo.ctx(), cs_ids).await?;
+                Self::derive_exactly_batch_data::<RootFsnodeId>(manager, repo.ctx(), cs_ids)
+                    .await?;
             }
             _ => {
                 return Err(errors::not_implemented(format!(
@@ -704,13 +705,13 @@ impl SourceControlServiceImpl {
         })
     }
 
-    async fn derive_batch_data<Derivable: BonsaiDerivable>(
+    async fn derive_exactly_batch_data<Derivable: BonsaiDerivable>(
         manager: &DerivedDataManager,
         ctx: &CoreContext,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<(), errors::ServiceError> {
         manager
-            .backfill_batch::<Derivable>(
+            .derive_exactly_batch::<Derivable>(
                 ctx,
                 cs_ids,
                 BatchDeriveOptions::Parallel { gap_size: None },

@@ -603,7 +603,7 @@ mod tests {
 
         let manager1 = repo1.repo_derived_data().manager();
         manager1
-            .backfill_batch::<FilenodesOnlyPublic>(
+            .derive_exactly_batch::<FilenodesOnlyPublic>(
                 &ctx,
                 cs_ids.clone(),
                 BatchDeriveOptions::Parallel { gap_size: None },
@@ -665,7 +665,7 @@ mod tests {
         let manager = repo.repo_derived_data().manager();
 
         match manager
-            .backfill_batch::<FilenodesOnlyPublic>(
+            .derive_exactly_batch::<FilenodesOnlyPublic>(
                 &ctx,
                 cs_ids.clone(),
                 BatchDeriveOptions::Parallel { gap_size: None },

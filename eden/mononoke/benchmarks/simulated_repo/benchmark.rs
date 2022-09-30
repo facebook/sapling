@@ -73,7 +73,7 @@ async fn run(
 
     let (stats2, result) = if use_backfill_mode {
         derive_utils
-            .backfill_batch_dangerous(
+            .derive_exactly_batch(
                 ctx,
                 repo.repo_derived_data_arc(),
                 vec![csid],

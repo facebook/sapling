@@ -483,7 +483,7 @@ async fn derive<D: BonsaiDerivable>(
     csids: &[ChangesetId],
 ) -> Result<()> {
     let mgr = repo.repo_derived_data().manager();
-    mgr.backfill_batch::<D>(
+    mgr.derive_exactly_batch::<D>(
         ctx,
         csids.to_vec(),
         BatchDeriveOptions::Parallel { gap_size: None },

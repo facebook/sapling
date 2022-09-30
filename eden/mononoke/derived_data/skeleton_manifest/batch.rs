@@ -219,7 +219,7 @@ mod test {
             let manager = repo.repo_derived_data().manager();
 
             manager
-                .backfill_batch::<RootSkeletonManifestId>(
+                .derive_exactly_batch::<RootSkeletonManifestId>(
                     &ctx,
                     cs_ids,
                     BatchDeriveOptions::Parallel { gap_size: None },
@@ -264,7 +264,7 @@ mod test {
             let manager = repo.repo_derived_data().manager();
 
             manager
-                .backfill_batch::<RootSkeletonManifestId>(
+                .derive_exactly_batch::<RootSkeletonManifestId>(
                     &ctx,
                     cs_ids,
                     BatchDeriveOptions::Parallel { gap_size: None },
@@ -354,7 +354,7 @@ mod test {
         let manager = repo.repo_derived_data().manager();
 
         manager
-            .backfill_batch::<RootSkeletonManifestId>(
+            .derive_exactly_batch::<RootSkeletonManifestId>(
                 ctx,
                 cs_ids.clone(),
                 BatchDeriveOptions::Parallel {

@@ -346,7 +346,7 @@ mod test {
         let manager = repo.repo_derived_data().manager();
 
         manager
-            .backfill_batch::<MappedHgChangesetId>(ctx, csids.clone(), options, None)
+            .derive_exactly_batch::<MappedHgChangesetId>(ctx, csids.clone(), options, None)
             .await?;
         let batch_derived = manager
             .fetch_derived_batch::<MappedHgChangesetId>(ctx, csids, None)
