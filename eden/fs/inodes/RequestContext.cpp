@@ -18,13 +18,13 @@ namespace facebook::eden {
 
 void RequestContext::startRequest(
     EdenStats* stats,
-    FsChannelStats::DurationPtr stat,
+    DurationFn stat,
     std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>&
         requestWatches) {
   startTime_ = steady_clock::now();
-  XDCHECK(latencyStat_ == nullptr);
-  latencyStat_ = stat;
+  XDCHECK(!latencyStat_);
   stats_ = stats;
+  latencyStat_ = std::move(stat);
   channelThreadLocalStats_ = requestWatches;
   if (channelThreadLocalStats_) {
     requestMetricsScope_ = RequestMetricsScope(channelThreadLocalStats_.get());
@@ -39,7 +39,7 @@ void RequestContext::finishRequest() noexcept {
     const auto diff_ns = duration_cast<nanoseconds>(diff);
 
     if (stats_) {
-      stats_->addDuration(latencyStat_, diff);
+      latencyStat_(*stats_).addDuration(diff);
       latencyStat_ = nullptr;
       stats_ = nullptr;
     }

@@ -255,7 +255,7 @@ ImmediateFuture<TreeInodePtr> createDirInode(
                    folly::Try<TreeInodePtr> result) {
         if (auto* exc = result.tryGetExceptionObject<std::system_error>();
             exc && isEnoent(*exc)) {
-          mount.getStats()->increment(&FsChannelStats::outOfOrderCreate);
+          mount.getStats()->increment(&PrjfsStats::outOfOrderCreate);
           XLOG_EVERY_MS(DBG2, 1000)
               << "Out of order directory creation notification for: " << path;
 
@@ -676,7 +676,7 @@ ImmediateFuture<folly::Unit> fileNotification(
             })
             .get();
         mount.getStats()->addDuration(
-            &FsChannelStats::queuedFileNotification, watch.elapsed());
+            &PrjfsStats::queuedFileNotification, watch.elapsed());
       })
       .thenError([path](const folly::exception_wrapper& ew) {
         // These should in theory never happen, but they sometimes happen

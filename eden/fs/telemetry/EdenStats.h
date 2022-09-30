@@ -17,7 +17,9 @@
 
 namespace facebook::eden {
 
-struct FsChannelStats;
+struct FuseStats;
+struct NfsStats;
+struct PrjfsStats;
 struct ObjectStoreStats;
 struct HgBackingStoreStats;
 struct HgImporterStats;
@@ -98,53 +100,65 @@ class EdenStats {
    */
   void flush();
 
- private:
   template <typename T>
   T& getStatsForCurrentThread() = delete;
 
+ private:
   class ThreadLocalTag {};
 
   template <typename T>
   using ThreadLocal = folly::ThreadLocal<T, ThreadLocalTag, void>;
 
-  ThreadLocal<FsChannelStats> threadLocalFsChannelStats_;
-  ThreadLocal<ObjectStoreStats> threadLocalObjectStoreStats_;
-  ThreadLocal<HgBackingStoreStats> threadLocalHgBackingStoreStats_;
-  ThreadLocal<HgImporterStats> threadLocalHgImporterStats_;
-  ThreadLocal<JournalStats> threadLocalJournalStats_;
-  ThreadLocal<ThriftStats> threadLocalThriftStats_;
+  ThreadLocal<FuseStats> fuseStats_;
+  ThreadLocal<NfsStats> nfsStats_;
+  ThreadLocal<PrjfsStats> prjfsStats_;
+  ThreadLocal<ObjectStoreStats> objectStoreStats_;
+  ThreadLocal<HgBackingStoreStats> hgBackingStoreStats_;
+  ThreadLocal<HgImporterStats> hgImporterStats_;
+  ThreadLocal<JournalStats> journalStats_;
+  ThreadLocal<ThriftStats> thriftStats_;
 };
 
 template <>
-inline FsChannelStats& EdenStats::getStatsForCurrentThread<FsChannelStats>() {
-  return *threadLocalFsChannelStats_.get();
+inline FuseStats& EdenStats::getStatsForCurrentThread<FuseStats>() {
+  return *fuseStats_.get();
+}
+
+template <>
+inline NfsStats& EdenStats::getStatsForCurrentThread<NfsStats>() {
+  return *nfsStats_.get();
+}
+
+template <>
+inline PrjfsStats& EdenStats::getStatsForCurrentThread<PrjfsStats>() {
+  return *prjfsStats_.get();
 }
 
 template <>
 inline ObjectStoreStats&
 EdenStats::getStatsForCurrentThread<ObjectStoreStats>() {
-  return *threadLocalObjectStoreStats_.get();
+  return *objectStoreStats_.get();
 }
 
 template <>
 inline HgBackingStoreStats&
 EdenStats::getStatsForCurrentThread<HgBackingStoreStats>() {
-  return *threadLocalHgBackingStoreStats_.get();
+  return *hgBackingStoreStats_.get();
 }
 
 template <>
 inline HgImporterStats& EdenStats::getStatsForCurrentThread<HgImporterStats>() {
-  return *threadLocalHgImporterStats_.get();
+  return *hgImporterStats_.get();
 }
 
 template <>
 inline JournalStats& EdenStats::getStatsForCurrentThread<JournalStats>() {
-  return *threadLocalJournalStats_.get();
+  return *journalStats_.get();
 }
 
 template <>
 inline ThriftStats& EdenStats::getStatsForCurrentThread<ThriftStats>() {
-  return *threadLocalThriftStats_.get();
+  return *thriftStats_.get();
 }
 
 template <typename T>
@@ -159,8 +173,7 @@ class StatsGroup : public StatsGroupBase {
   using DurationPtr = Duration T::*;
 };
 
-struct FsChannelStats : StatsGroup<FsChannelStats> {
-#ifndef _WIN32
+struct FuseStats : StatsGroup<FuseStats> {
   Duration lookup{"fuse.lookup_us"};
   Duration forget{"fuse.forget_us"};
   Duration getattr{"fuse.getattr_us"};
@@ -195,7 +208,9 @@ struct FsChannelStats : StatsGroup<FsChannelStats> {
   Duration poll{"fuse.poll_us"};
   Duration forgetmulti{"fuse.forgetmulti_us"};
   Duration fallocate{"fuse.fallocate_us"};
+};
 
+struct NfsStats : StatsGroup<NfsStats> {
   Duration nfsNull{"nfs.null_us"};
   Duration nfsGetattr{"nfs.getattr_us"};
   Duration nfsSetattr{"nfs.setattr_us"};
@@ -218,7 +233,9 @@ struct FsChannelStats : StatsGroup<FsChannelStats> {
   Duration nfsFsinfo{"nfs.fsinfo_us"};
   Duration nfsPathconf{"nfs.pathconf_us"};
   Duration nfsCommit{"nfs.commit_us"};
-#else
+};
+
+struct PrjfsStats : StatsGroup<PrjfsStats> {
   Counter outOfOrderCreate{"prjfs.out_of_order_create"};
   Duration queuedFileNotification{"prjfs.queued_file_notification_us"};
 
@@ -237,7 +254,6 @@ struct FsChannelStats : StatsGroup<FsChannelStats> {
   Duration lookup{"prjfs.lookup_us"};
   Duration access{"prjfs.access_us"};
   Duration read{"prjfs.read_us"};
-#endif
 };
 
 /**

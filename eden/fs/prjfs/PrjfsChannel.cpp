@@ -342,7 +342,7 @@ HRESULT PrjfsChannelInner::startEnumeration(
                                       path = std::move(path)]() mutable {
     auto requestWatch =
         std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
-    auto stat = &FsChannelStats::openDir;
+    auto stat = &PrjfsStats::openDir;
     context->startRequest(dispatcher_->getStats(), stat, requestWatch);
 
     FB_LOGF(
@@ -419,7 +419,7 @@ HRESULT PrjfsChannelInner::getEnumerationData(
                                       buffer = dirEntryBufferHandle] {
     auto requestWatch =
         std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
-    auto stat = &FsChannelStats::readDir;
+    auto stat = &PrjfsStats::readDir;
     context->startRequest(dispatcher_->getStats(), stat, requestWatch);
 
     // TODO(xavierd): there is a potential quadratic cost to the following code
@@ -495,7 +495,7 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
                                       virtualizationContext]() mutable {
     auto requestWatch =
         std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
-    auto stat = &FsChannelStats::lookup;
+    auto stat = &PrjfsStats::lookup;
     context->startRequest(dispatcher_->getStats(), stat, requestWatch);
 
     FB_LOGF(getStraceLogger(), DBG7, "lookup({})", path);
@@ -554,7 +554,7 @@ HRESULT PrjfsChannelInner::queryFileName(
                                       path = std::move(path)]() mutable {
     auto requestWatch =
         std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
-    auto stat = &FsChannelStats::access;
+    auto stat = &PrjfsStats::access;
     context->startRequest(dispatcher_->getStats(), stat, requestWatch);
     FB_LOGF(getStraceLogger(), DBG7, "access({})", path);
     return dispatcher_->access(std::move(path), context)
@@ -671,7 +671,7 @@ HRESULT PrjfsChannelInner::getFileData(
         auto requestWatch =
             std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
                 nullptr);
-        auto stat = &FsChannelStats::read;
+        auto stat = &PrjfsStats::read;
         context->startRequest(dispatcher_->getStats(), stat, requestWatch);
 
         FB_LOGF(
@@ -798,12 +798,12 @@ struct NotificationHandlerEntry {
   constexpr NotificationHandlerEntry(
       NotificationHandler h,
       NotificationArgRenderer r,
-      FsChannelStats::DurationPtr s)
+      PrjfsStats::DurationPtr s)
       : handler{h}, renderer{r}, stat{s} {}
 
   NotificationHandler handler;
   NotificationArgRenderer renderer;
-  FsChannelStats::DurationPtr stat;
+  PrjfsStats::DurationPtr stat;
 };
 
 std::string newFileCreatedRenderer(
@@ -871,49 +871,49 @@ const std::unordered_map<PRJ_NOTIFICATION, NotificationHandlerEntry>
             PRJ_NOTIFICATION_NEW_FILE_CREATED,
             {&PrjfsChannelInner::newFileCreated,
              newFileCreatedRenderer,
-             &FsChannelStats::newFileCreated},
+             &PrjfsStats::newFileCreated},
         },
         {
             PRJ_NOTIFICATION_PRE_DELETE,
             {&PrjfsChannelInner::preDelete,
              preDeleteRenderer,
-             &FsChannelStats::preDelete},
+             &PrjfsStats::preDelete},
         },
         {
             PRJ_NOTIFICATION_FILE_OVERWRITTEN,
             {&PrjfsChannelInner::fileOverwritten,
              fileOverwrittenRenderer,
-             &FsChannelStats::fileOverwritten},
+             &PrjfsStats::fileOverwritten},
         },
         {
             PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED,
             {&PrjfsChannelInner::fileHandleClosedFileModified,
              fileHandleClosedFileModifiedRenderer,
-             &FsChannelStats::fileHandleClosedFileModified},
+             &PrjfsStats::fileHandleClosedFileModified},
         },
         {
             PRJ_NOTIFICATION_FILE_RENAMED,
             {&PrjfsChannelInner::fileRenamed,
              fileRenamedRenderer,
-             &FsChannelStats::fileRenamed},
+             &PrjfsStats::fileRenamed},
         },
         {
             PRJ_NOTIFICATION_PRE_RENAME,
             {&PrjfsChannelInner::preRename,
              preRenameRenderer,
-             &FsChannelStats::preRenamed},
+             &PrjfsStats::preRenamed},
         },
         {
             PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED,
             {&PrjfsChannelInner::fileHandleClosedFileDeleted,
              fileHandleClosedFileDeletedRenderer,
-             &FsChannelStats::fileHandleClosedFileDeleted},
+             &PrjfsStats::fileHandleClosedFileDeleted},
         },
         {
             PRJ_NOTIFICATION_PRE_SET_HARDLINK,
             {&PrjfsChannelInner::preSetHardlink,
              preSetHardlinkRenderer,
-             &FsChannelStats::preSetHardlink},
+             &PrjfsStats::preSetHardlink},
         },
 };
 } // namespace

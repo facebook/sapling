@@ -81,13 +81,36 @@ class RequestContext : public ObjectFetchContext {
     return nullptr;
   }
 
+  template <typename T>
   void startRequest(
       EdenStats* stats,
-      FsChannelStats::DurationPtr stat,
+      StatsGroupBase::Duration T::*stat,
+      std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>&
+          requestWatches) {
+    return startRequest(
+        stats,
+        [stat](EdenStats& stats) -> StatsGroupBase::Duration& {
+          return stats.getStatsForCurrentThread<T>().*stat;
+        },
+        requestWatches);
+  }
+
+ private:
+  // RequestContext is used for every FsChannel implementation, each of which
+  // has its own statistics. If non-empty, this function returns a Duration
+  // object corresponding to the current request. The closure captured contains
+  // a single pointer-to-member which will fit, without allocation, in
+  // std::function's small buffer optimization on all mainstream standard
+  // library implementations. In effect, std::function is a convenient
+  // expression of an existential type.
+  using DurationFn = std::function<StatsGroupBase::Duration&(EdenStats&)>;
+
+  void startRequest(
+      EdenStats* stats,
+      DurationFn stat,
       std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>&
           requestWatches);
 
- private:
   void finishRequest() noexcept;
 
   struct EdenTopStats {
@@ -110,8 +133,9 @@ class RequestContext : public ObjectFetchContext {
 
   // Needed to track stats
   std::chrono::time_point<std::chrono::steady_clock> startTime_;
-  FsChannelStats::DurationPtr latencyStat_ = nullptr;
   EdenStats* stats_ = nullptr;
+  DurationFn latencyStat_;
+
   RequestMetricsScope requestMetricsScope_;
   std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
       channelThreadLocalStats_;
