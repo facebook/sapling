@@ -38,7 +38,7 @@ rand = { version = "0.8", features = ["small_rng"] }
 tempfile = "3.3"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-nix = "0.23"
+nix = "0.25"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 mkscratch = { version = "0.1.0", path = "../../../scm/exec/scratch" }
