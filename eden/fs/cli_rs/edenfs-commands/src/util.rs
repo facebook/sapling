@@ -11,6 +11,8 @@ use anyhow::Context;
 use anyhow::Result;
 use hg_util::path::expand_path;
 
+pub mod jsonrpc;
+
 /// Expand the path if the user has supplied anything. Otherwise, use the current working directory instead.
 ///
 /// Usage:
