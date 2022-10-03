@@ -24,7 +24,6 @@ futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_repos = { version = "0.1.0", path = "../mononoke_repos" }
-once_cell = "1.12"
 openssl = "0.10.35"
 pushrebase_client = { version = "0.1.0", path = "../pushrebase/client" }
 repo_listener = { version = "0.1.0", path = "repo_listener" }

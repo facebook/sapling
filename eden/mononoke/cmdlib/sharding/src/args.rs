@@ -16,8 +16,6 @@ use tokio::runtime::Handle;
 use crate::RepoShardedProcess;
 use crate::ShardedProcessExecutor;
 
-const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;
-
 /// Command line arguments for sharded executor
 #[derive(Args, Debug)]
 pub struct ShardedExecutorArgs {
@@ -38,6 +36,7 @@ impl ShardedExecutorArgs {
         logger: &Logger,
         process_fn: impl FnOnce() -> Arc<dyn RepoShardedProcess>,
         shard_healing: bool,
+        cleanup_timeout_secs: u64,
     ) -> Result<Option<ShardedProcessExecutor>> {
         if let Some((sharded_service_name, sharded_scope_name)) =
             self.sharded_service_name.zip(self.sharded_scope_name)
@@ -50,7 +49,7 @@ impl ShardedExecutorArgs {
                 // The service name & scope needs to be 'static to satisfy SM contract
                 Box::leak(Box::new(sharded_service_name)),
                 Box::leak(Box::new(sharded_scope_name)),
-                SM_CLEANUP_TIMEOUT_SECS,
+                cleanup_timeout_secs,
                 process,
                 shard_healing,
             )?))

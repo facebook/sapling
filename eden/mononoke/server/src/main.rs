@@ -12,7 +12,6 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
@@ -22,9 +21,9 @@ use clap::Parser;
 use cloned::cloned;
 use cmdlib_logging::ScribeLoggingArgs;
 use environment::WarmBookmarksCacheDerivedData;
+use executor_lib::args::ShardedExecutorArgs;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
-use executor_lib::ShardedProcessExecutor;
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
 use futures::stream;
@@ -44,7 +43,6 @@ use mononoke_app::fb303::ReadyFlagService;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_repos::MononokeRepos;
-use once_cell::sync::OnceCell;
 use openssl::ssl::AlpnError;
 use slog::error;
 use slog::info;
@@ -92,15 +90,8 @@ struct MononokeServerArgs {
     cslb_config: Option<String>,
     #[clap(flatten)]
     readonly: ReadonlyArgs,
-    /// The name of the ShardManager service corresponding to this Mononoke API
-    /// region instance. If this argument isn't provided, the service will operate
-    /// in non-sharded mode.
-    #[clap(long, requires = "sharded-scope-name")]
-    sharded_service_name: Option<String>,
-    /// The scope of the ShardManager service that this Mononoke API instance
-    /// corresponds to.
-    #[clap(long, requires = "sharded-service-name")]
-    sharded_scope_name: Option<String>,
+    #[clap(flatten)]
+    sharded_executor_args: ShardedExecutorArgs,
     /// Path to a file with land service client certificate
     #[clap(long)]
     land_service_client_cert: Option<String>,
@@ -337,31 +328,18 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .try_collect()
                 .await?;
             info!(&root_log, "Cache warmup completed");
-            if let Some(sharded_service_name) = args.sharded_service_name {
-                let mononoke_process = MononokeApiProcess::new(app.clone(), mononoke.repos.clone());
-                let logger = mononoke_process.app.logger().clone();
-                let scope = args.sharded_scope_name.ok_or_else(|| {
-                    anyhow!(
-                        "sharded-scope-name must be provided when sharded-service-name is provided"
-                    )
-                })?;
-                // The service name & scope needs to be 'static to satisfy SM contract
-                static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
-                static SM_SERVICE_SCOPE: OnceCell<String> = OnceCell::new();
-                let mut executor = ShardedProcessExecutor::new(
-                    app.fb,
-                    runtime.clone(),
-                    &logger,
-                    SM_SERVICE_NAME.get_or_init(|| sharded_service_name),
-                    SM_SERVICE_SCOPE.get_or_init(|| scope),
-                    SM_CLEANUP_TIMEOUT_SECS,
-                    Arc::new(mononoke_process),
-                    false, // disable shard (repo) level healing
-                )?;
+            if let Some(mut executor) = args.sharded_executor_args.build_executor(
+                app.fb,
+                runtime.clone(),
+                app.logger(),
+                || Arc::new(MononokeApiProcess::new(app.clone(), mononoke.repos.clone())),
+                false, // disable shard (repo) level healing
+                SM_CLEANUP_TIMEOUT_SECS,
+            )? {
                 // The Sharded Process Executor needs to branch off and execute
                 // on its own dedicated task spawned off the common tokio runtime.
                 runtime.spawn({
-                    let logger = logger.clone();
+                    let logger = app.logger().clone();
                     async move { executor.block_and_execute(&logger).await }
                 });
             }

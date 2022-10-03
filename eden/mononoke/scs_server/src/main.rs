@@ -69,6 +69,7 @@ mod source_control_impl;
 mod specifiers;
 
 const SERVICE_NAME: &str = "mononoke_scs_server";
+const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;
 
 /// Mononoke Source Control Service Server
 #[derive(Parser)]
@@ -296,6 +297,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         app.logger(),
         || Arc::new(SCSProcess::new(app.clone(), mononoke_repos)),
         false, // disable shard (repo) level healing
+        SM_CLEANUP_TIMEOUT_SECS,
     )? {
         // The Sharded Process Executor needs to branch off and execute
         // on its own dedicated task spawned off the common tokio runtime.
