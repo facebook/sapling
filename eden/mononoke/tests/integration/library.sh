@@ -1098,6 +1098,7 @@ write_infinitepush_config "$reponame"
 cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
   [derived_data_config]
   enabled_config_name = "default"
+  scuba_table = "file://$TESTTMP/derived_data_scuba.json"
 CONFIG
 
 if [[ -n "${ENABLED_DERIVED_DATA:-}" ]]; then

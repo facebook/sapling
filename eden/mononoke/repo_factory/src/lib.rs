@@ -489,7 +489,7 @@ impl RepoFactory {
         let mut builder = MononokeScubaSampleBuilder::with_opt_table(
             self.env.fb,
             self.censored_scuba_params.table.clone(),
-        );
+        )?;
         builder.add_common_server_data();
         if let Some(scuba_log_file) = &self.censored_scuba_params.local_path {
             builder = builder.with_log_file(scuba_log_file)?;
@@ -983,7 +983,7 @@ impl RepoFactory {
             self.env.fb,
             config.scuba_table.clone(),
             repo_identity.name(),
-        );
+        )?;
         let derivation_service_client =
             get_derivation_client(self.env.fb, self.env.remote_derivation_options.clone())?;
         Ok(Arc::new(RepoDerivedData::new(
@@ -1118,7 +1118,7 @@ impl RepoFactory {
             self.env.fb,
             config.scuba_table.clone(),
             repo_identity.name(),
-        );
+        )?;
         let derivation_service_client =
             get_derivation_client(self.env.fb, self.env.remote_derivation_options.clone())?;
         anyhow::Ok(Arc::new(DerivedDataManagerSet::new(
@@ -1217,7 +1217,7 @@ impl RepoFactory {
         let mut hooks_scuba = MononokeScubaSampleBuilder::with_opt_table(
             self.env.fb,
             repo_config.scuba_table_hooks.clone(),
-        );
+        )?;
 
         hooks_scuba.add("repo", name);
 
@@ -1456,11 +1456,11 @@ fn build_scuba(
     fb: FacebookInit,
     scuba_table: Option<String>,
     reponame: &str,
-) -> MononokeScubaSampleBuilder {
-    let mut scuba = MononokeScubaSampleBuilder::with_opt_table(fb, scuba_table);
+) -> Result<MononokeScubaSampleBuilder> {
+    let mut scuba = MononokeScubaSampleBuilder::with_opt_table(fb, scuba_table)?;
     scuba.add_common_server_data();
     scuba.add("reponame", reponame);
-    scuba
+    Ok(scuba)
 }
 
 fn get_derivation_client(

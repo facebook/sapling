@@ -43,6 +43,7 @@ pub fn get_scuba_sample<'a>(
     let log_to_scuba = matches.is_present(ARG_LOG_TO_SCUBA);
     let mut scuba_sample = if log_to_scuba {
         MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)
+            .expect("Couldn't create scuba sample builder")
     } else {
         MononokeScubaSampleBuilder::with_discard()
     };

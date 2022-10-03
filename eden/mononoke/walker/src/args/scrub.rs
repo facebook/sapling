@@ -60,7 +60,7 @@ impl ScrubPackLogArgs {
 
         if !log_node_types.is_empty() {
             let mut scuba_builder =
-                MononokeScubaSampleBuilder::with_opt_table(fb, self.pack_log_scuba_table.clone());
+                MononokeScubaSampleBuilder::with_opt_table(fb, self.pack_log_scuba_table.clone())?;
             if let Some(scuba_log_file) = &self.pack_log_scuba_file {
                 scuba_builder = scuba_builder.with_log_file(scuba_log_file)?;
             }

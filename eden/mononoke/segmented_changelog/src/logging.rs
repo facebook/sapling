@@ -56,7 +56,7 @@ fn new_sample_builder(ctx: &CoreContext) -> Option<MononokeScubaSampleBuilder> {
     if ctx.scuba().is_discard() {
         return None;
     }
-    let mut sample_builder = MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE);
+    let mut sample_builder = MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE).ok()?;
     sample_builder.add_common_server_data();
     Some(sample_builder)
 }

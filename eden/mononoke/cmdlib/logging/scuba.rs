@@ -43,12 +43,12 @@ impl ScubaLoggingArgs {
         default_scuba_set: &Option<String>,
     ) -> Result<MononokeScubaSampleBuilder> {
         let mut scuba_logger = if let Some(scuba_dataset) = &self.scuba_dataset {
-            MononokeScubaSampleBuilder::new(fb, scuba_dataset.as_str())
+            MononokeScubaSampleBuilder::new(fb, scuba_dataset.as_str())?
         } else if let Some(default_scuba_dataset) = default_scuba_set {
             if self.no_default_scuba_dataset {
                 MononokeScubaSampleBuilder::with_discard()
             } else {
-                MononokeScubaSampleBuilder::new(fb, default_scuba_dataset)
+                MononokeScubaSampleBuilder::new(fb, default_scuba_dataset)?
             }
         } else {
             MononokeScubaSampleBuilder::with_discard()
@@ -85,6 +85,6 @@ impl ScubaLoggingArgs {
             None => None,
         };
 
-        Ok(MononokeScubaSampleBuilder::with_opt_table(fb, maybe_scuba))
+        MononokeScubaSampleBuilder::with_opt_table(fb, maybe_scuba)
     }
 }

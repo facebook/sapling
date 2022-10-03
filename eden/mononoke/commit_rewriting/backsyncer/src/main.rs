@@ -534,7 +534,7 @@ async fn run(
                 .await?,
             );
 
-            let mut scuba_sample = MononokeScubaSampleBuilder::new(fb, SCUBA_TABLE);
+            let mut scuba_sample = MononokeScubaSampleBuilder::new(fb, SCUBA_TABLE)?;
             scuba_sample.add("source_repo", source_repo.id.id());
             scuba_sample.add("source_repo_name", source_repo.name.clone());
             scuba_sample.add("target_repo", target_repo.id.id());

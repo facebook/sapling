@@ -484,12 +484,12 @@ fn create_scuba_sample_builder(
     observability_context: &ObservabilityContext,
 ) -> Result<MononokeScubaSampleBuilder> {
     let mut scuba_logger = if let Some(scuba_dataset) = matches.value_of(SCUBA_DATASET_ARG) {
-        MononokeScubaSampleBuilder::new(fb, scuba_dataset)
+        MononokeScubaSampleBuilder::new(fb, scuba_dataset)?
     } else if let Some(default_scuba_dataset) = app_data.default_scuba_dataset.as_ref() {
         if matches.is_present(NO_DEFAULT_SCUBA_DATASET_ARG) {
             MononokeScubaSampleBuilder::with_discard()
         } else {
-            MononokeScubaSampleBuilder::new(fb, default_scuba_dataset)
+            MononokeScubaSampleBuilder::new(fb, default_scuba_dataset)?
         }
     } else {
         MononokeScubaSampleBuilder::with_discard()
@@ -530,7 +530,7 @@ fn create_warm_bookmark_cache_scuba_sample_builder(
         None => None,
     };
 
-    Ok(MononokeScubaSampleBuilder::with_opt_table(fb, maybe_scuba))
+    MononokeScubaSampleBuilder::with_opt_table(fb, maybe_scuba)
 }
 
 fn parse_readonly_storage(matches: &ArgMatches<'_>) -> Result<ReadOnlyStorage, Error> {

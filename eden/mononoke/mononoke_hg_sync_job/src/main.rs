@@ -976,7 +976,7 @@ async fn run<'a>(
 
     let log_to_scuba = matches.is_present("log-to-scuba");
     let mut scuba_sample = if log_to_scuba {
-        MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)
+        MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)?
     } else {
         MononokeScubaSampleBuilder::with_discard()
     };

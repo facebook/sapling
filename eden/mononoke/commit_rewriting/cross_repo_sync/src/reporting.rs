@@ -104,7 +104,8 @@ pub fn get_scuba_sample(
     source_repo: impl AsRef<str>,
     target_repo: impl AsRef<str>,
 ) -> MononokeScubaSampleBuilder {
-    let mut scuba_sample = MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE);
+    let mut scuba_sample = MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)
+        .expect("Couldn't create scuba sample builder");
     scuba_sample
         .add_common_server_data()
         .add(SOURCE_REPO, source_repo.as_ref().to_string())

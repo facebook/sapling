@@ -104,7 +104,7 @@ impl HookManager {
             scuba_ext::MononokeScubaSampleBuilder::with_opt_table(
                 fb,
                 hook_manager_params.bypassed_commits_scuba_table,
-            );
+            )?;
 
         Ok(HookManager {
             repo_name,

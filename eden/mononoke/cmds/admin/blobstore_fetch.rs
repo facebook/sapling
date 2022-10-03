@@ -186,7 +186,7 @@ pub async fn subcommand_blobstore_fetch<'a>(
     let common_config = args::load_common_config(config_store, matches)?;
     let censored_scuba_params = common_config.censored_scuba_params;
     let mut scuba_redaction_builder =
-        MononokeScubaSampleBuilder::with_opt_table(fb, censored_scuba_params.table);
+        MononokeScubaSampleBuilder::with_opt_table(fb, censored_scuba_params.table)?;
 
     if let Some(scuba_log_file) = censored_scuba_params.local_path {
         scuba_redaction_builder = scuba_redaction_builder

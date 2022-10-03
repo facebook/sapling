@@ -614,7 +614,7 @@ impl MononokeApp {
     fn redaction_scuba_builder(&self) -> Result<MononokeScubaSampleBuilder> {
         let params = &self.repo_configs.common.censored_scuba_params;
         let mut builder =
-            MononokeScubaSampleBuilder::with_opt_table(self.env.fb, params.table.clone());
+            MononokeScubaSampleBuilder::with_opt_table(self.env.fb, params.table.clone())?;
         if let Some(file) = &params.local_path {
             builder = builder
                 .with_log_file(file)

@@ -592,9 +592,9 @@ fn make_blobstore_put_ops<'a>(
                 .await?;
 
                 let scuba = scuba_table
-                    .map_or(MononokeScubaSampleBuilder::with_discard(), |table| {
+                    .map_or(Ok(MononokeScubaSampleBuilder::with_discard()), |table| {
                         MononokeScubaSampleBuilder::new(fb, &table)
-                    });
+                    })?;
                 Arc::new(LogBlob::new(store, scuba, scuba_sample_rate)) as Arc<dyn BlobstorePutOps>
             }
             Pack { .. } => {
@@ -763,12 +763,13 @@ async fn make_blobstore_multiplexed<'a>(
             minimum_successful_writes,
             not_present_read_quorum,
             Arc::new(queue),
-            scuba_table.map_or(MononokeScubaSampleBuilder::with_discard(), |table| {
+            scuba_table.map_or(Ok(MononokeScubaSampleBuilder::with_discard()), |table| {
                 MononokeScubaSampleBuilder::new(fb, &table)
-            }),
-            multiplex_scuba_table.map_or(MononokeScubaSampleBuilder::with_discard(), |table| {
-                MononokeScubaSampleBuilder::new(fb, &table)
-            }),
+            })?,
+            multiplex_scuba_table
+                .map_or(Ok(MononokeScubaSampleBuilder::with_discard()), |table| {
+                    MononokeScubaSampleBuilder::new(fb, &table)
+                })?,
             scuba_sample_rate,
             scrub_options.clone(),
             scrub_handler.clone(),
@@ -780,12 +781,13 @@ async fn make_blobstore_multiplexed<'a>(
             minimum_successful_writes,
             not_present_read_quorum,
             Arc::new(queue),
-            scuba_table.map_or(MononokeScubaSampleBuilder::with_discard(), |table| {
+            scuba_table.map_or(Ok(MononokeScubaSampleBuilder::with_discard()), |table| {
                 MononokeScubaSampleBuilder::new(fb, &table)
-            }),
-            multiplex_scuba_table.map_or(MononokeScubaSampleBuilder::with_discard(), |table| {
-                MononokeScubaSampleBuilder::new(fb, &table)
-            }),
+            })?,
+            multiplex_scuba_table
+                .map_or(Ok(MononokeScubaSampleBuilder::with_discard()), |table| {
+                    MononokeScubaSampleBuilder::new(fb, &table)
+                })?,
             scuba_sample_rate,
         )) as Arc<dyn BlobstorePutOps>,
     };

@@ -564,7 +564,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let bookmark = BookmarkName::new(bookmark)?;
     let repo_name = args::not_shardmanager_compatible::get_repo_name(config_store, &matches)?;
     let scuba_logger = if matches.is_present("log-to-scuba") {
-        MononokeScubaSampleBuilder::new(fb, SCUBA_DATASET_NAME)
+        MononokeScubaSampleBuilder::new(fb, SCUBA_DATASET_NAME)?
     } else {
         MononokeScubaSampleBuilder::with_discard()
     };

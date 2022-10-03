@@ -11,6 +11,7 @@ use std::num::NonZeroU64;
 use std::path::Path;
 use std::time::Duration;
 
+use anyhow::Result;
 use fbinit::FacebookInit;
 use futures_stats::FutureStats;
 use futures_stats::StreamStats;
@@ -29,6 +30,8 @@ pub use scuba::ScubaValue;
 use time_ext::DurationExt;
 use tunables::tunables;
 
+const FILE_PREFIX: &str = "file://";
+
 /// An extensible wrapper struct around `ScubaSampleBuilder`
 #[derive(Clone)]
 pub struct MononokeScubaSampleBuilder {
@@ -45,13 +48,26 @@ impl std::fmt::Debug for MononokeScubaSampleBuilder {
     }
 }
 
+enum ScubaLoggingType<'a> {
+    ScubaTable(&'a str),
+    LocalFile(&'a str),
+}
+
+fn get_scuba_logging_type(arg: &str) -> ScubaLoggingType {
+    if let Some(path) = arg.strip_prefix(FILE_PREFIX) {
+        ScubaLoggingType::LocalFile(path)
+    } else {
+        ScubaLoggingType::ScubaTable(arg)
+    }
+}
+
 impl MononokeScubaSampleBuilder {
-    pub fn new(fb: FacebookInit, scuba_table: &str) -> Self {
-        Self {
-            inner: ScubaSampleBuilder::new(fb, scuba_table),
+    pub fn new(fb: FacebookInit, scuba_table: &str) -> Result<Self> {
+        Ok(Self {
+            inner: Self::get_scuba_sample_builder(fb, get_scuba_logging_type(scuba_table))?,
             maybe_observability_context: None,
             fallback_sampled_out_to_verbose: false,
-        }
+        })
     }
 
     pub fn with_discard() -> Self {
@@ -62,9 +78,9 @@ impl MononokeScubaSampleBuilder {
         }
     }
 
-    pub fn with_opt_table(fb: FacebookInit, scuba_table: Option<String>) -> Self {
+    pub fn with_opt_table(fb: FacebookInit, scuba_table: Option<String>) -> Result<Self> {
         match scuba_table {
-            None => Self::with_discard(),
+            None => Ok(Self::with_discard()),
             Some(scuba_table) => Self::new(fb, &scuba_table),
         }
     }
@@ -74,6 +90,18 @@ impl MononokeScubaSampleBuilder {
             maybe_observability_context: Some(octx),
             ..self
         }
+    }
+
+    fn get_scuba_sample_builder(
+        fb: FacebookInit,
+        scuba_logging_type: ScubaLoggingType,
+    ) -> Result<ScubaSampleBuilder, IoError> {
+        Ok(match scuba_logging_type {
+            ScubaLoggingType::ScubaTable(scuba_table) => ScubaSampleBuilder::new(fb, scuba_table),
+            ScubaLoggingType::LocalFile(path) => {
+                ScubaSampleBuilder::with_discard().with_log_file(path)?
+            }
+        })
     }
 
     fn get_logging_decision_fields(&self) -> ScubaLoggingDecisionFields {

@@ -112,7 +112,8 @@ impl RequestDumper {
     }
 
     pub fn new(fb: FacebookInit) -> Self {
-        let scuba = MononokeScubaSampleBuilder::new(fb, "mononoke_replay_logged_edenapi_requests");
+        let scuba = MononokeScubaSampleBuilder::new(fb, "mononoke_replay_logged_edenapi_requests")
+            .expect("Couldn't create scuba sample builder");
         Self {
             logger: scuba,
             log_action: LogAction::Log,
