@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Context;
@@ -25,4 +26,9 @@ pub fn expand_path_or_cwd(input: &str) -> Result<PathBuf> {
     } else {
         Ok(expand_path(input))
     }
+}
+
+/// Traverse up and locate the repository root
+pub fn locate_repo_root(path: &Path) -> Option<&Path> {
+    path.ancestors().find(|p| p.join(".hg").is_dir())
 }

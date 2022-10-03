@@ -19,6 +19,7 @@ edenfs-client = { version = "0.1.0", path = "../edenfs-client" }
 edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
+hex = "0.4.3"
 hg_util = { package = "util", version = "0.1.0", path = "../../../scm/lib/util" }
 once_cell = "1.12"
 serde = { version = "1.0.136", features = ["derive", "rc"] }

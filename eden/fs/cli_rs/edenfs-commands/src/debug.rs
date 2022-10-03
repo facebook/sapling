@@ -16,6 +16,7 @@ use crate::Subcommand;
 
 mod clear_local_caches;
 mod compact_local_storage;
+mod subscribe;
 
 #[derive(Parser, Debug)]
 #[clap(
@@ -31,6 +32,7 @@ pub struct DebugCmd {
 pub enum DebugSubcommand {
     ClearLocalCaches(clear_local_caches::ClearLocalCachesCmd),
     CompactLocalStorage(compact_local_storage::CompactLocalStorageCmd),
+    Subscribe(subscribe::SubscribeCmd),
 }
 
 #[async_trait]
@@ -40,6 +42,7 @@ impl Subcommand for DebugCmd {
         let sc: &(dyn Subcommand + Send + Sync) = match &self.subcommand {
             ClearLocalCaches(cmd) => cmd,
             CompactLocalStorage(cmd) => cmd,
+            Subscribe(cmd) => cmd,
         };
         sc.run().await
     }
