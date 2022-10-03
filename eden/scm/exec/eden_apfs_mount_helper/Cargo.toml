@@ -3,8 +3,12 @@
 [package]
 name = "eden_apfs_mount_helper"
 version = "0.1.0"
-authors = ["Wez Furlong"]
+authors = ["Wez Furlong", "Mark Shroyer"]
 edition = "2021"
+
+[lib]
+name = "eden_apfs"
+path = "src/eden_apfs/eden_apfs.rs"
 
 [dependencies]
 anyhow = "1.0.65"
