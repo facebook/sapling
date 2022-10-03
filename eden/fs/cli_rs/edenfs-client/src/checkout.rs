@@ -940,7 +940,7 @@ fn get_checkout_root_state(path: &Path) -> Result<(Option<PathBuf>, Option<PathB
 }
 
 /// If the path provided is an eden checkout, this returns an object representing that checkout.
-/// Otherwise, if the path provided is not an eden checkout, this returns None.
+/// Otherwise, if the path provided is not an eden checkout, this returns an EdenFsError.
 pub fn find_checkout(instance: &EdenFsInstance, path: &Path) -> Result<EdenFsCheckout> {
     // Resolve symlinks and get absolute path
     let path = path.canonicalize().from_err()?;
