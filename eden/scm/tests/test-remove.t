@@ -299,12 +299,11 @@ handling of untracked directories and missing files
   removing d1/a
 
   $ hg rm --after nosuch
-  nosuch: * (glob)
   [1]
 
 handling root path in remove with matcher
 
-  $ newrepo
+  $ newclientrepo
   $ mkdir dir
   $ echo abc > dir/abc.txt
   $ hg ci -m "abc" -Aq

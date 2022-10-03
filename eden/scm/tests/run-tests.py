@@ -1607,6 +1607,7 @@ class Test(unittest.TestCase):
             # Rust status
             hgrc.write("[workingcopy]\n")
             hgrc.write("enablerustwalker=True\n")
+            hgrc.write("ruststatus=True\n")
             hgrc.write("use-rust=true\n")
             hgrc.write("[status]\n")
             hgrc.write("use-rust=true\n")

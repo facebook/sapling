@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
   $ configure mutation
   $ setconfig extensions.bruterebase="$TESTDIR/bruterebase.py"
   $ init() {

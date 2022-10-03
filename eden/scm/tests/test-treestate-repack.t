@@ -2,6 +2,8 @@
 
 Fsmonitor makes the size numbers less predicatable.
 
+  $ setconfig workingcopy.ruststatus=False
+
 #require no-fsmonitor
 
   $ setconfig format.dirstate=2

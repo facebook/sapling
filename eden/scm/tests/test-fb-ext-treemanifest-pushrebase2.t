@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
   $ setconfig format.use-segmented-changelog=true
   $ setconfig devel.segmented-changelog-rev-compat=true
 Push merge commits from a treeonly shallow repo to a hybrid treemanifest server

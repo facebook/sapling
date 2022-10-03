@@ -4,6 +4,7 @@
 To run this test against other shells, use the shell argument, eg:
 run-tests.py --shell=zsh test-scm-prompt*
 
+  $ setconfig workingcopy.ruststatus=False
   $ configure mutation-norecord
 
 Initialize scm prompt

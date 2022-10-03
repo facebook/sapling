@@ -1,6 +1,7 @@
 #chg-compatible
 #require git no-windows
 
+  $ setconfig workingcopy.ruststatus=False
   $ . $TESTDIR/git.sh
   $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ setconfig diff.git=true ui.allowemptycommit=true

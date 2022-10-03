@@ -2,6 +2,7 @@
 
 (Run this test using HGFSMONITOR_TESTS=1)
 
+  $ setconfig status.use-rust=False workingcopy.ruststatus=False
   $ newrepo
 
   $ hg debugdrawdag << EOS

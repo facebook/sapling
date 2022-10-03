@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
 Tests for the journal extension integration with remotenames.

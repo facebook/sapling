@@ -1,7 +1,7 @@
 #require fsmonitor
 
   $ configure modernclient
-  $ setconfig status.use-rust=False
+  $ setconfig status.use-rust=False workingcopy.ruststatus=False
   $ newclientrepo repo
   $ touch x
 

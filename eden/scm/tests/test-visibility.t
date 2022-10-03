@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
   $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ enable amend rebase undo directaccess shelve
   $ setconfig experimental.evolution=obsolete

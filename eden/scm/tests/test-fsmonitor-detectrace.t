@@ -2,7 +2,7 @@
 
   $ configure modernclient
   $ setconfig fsmonitor.detectrace=1
-  $ setconfig status.use-rust=False
+  $ setconfig status.use-rust=False workingcopy.ruststatus=False
   $ newclientrepo repo
 
 No races for common operations

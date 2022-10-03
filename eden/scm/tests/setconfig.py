@@ -13,6 +13,8 @@ if os.path.exists(".hg"):
     hgrcpath = ".hg/hgrc"
 else:
     hgrcpath = os.getenv("HGRCPATH")
+    if os.pathsep in hgrcpath:
+        hgrcpath = hgrcpath.split(os.pathsep)[-1]
 
 content = ""
 

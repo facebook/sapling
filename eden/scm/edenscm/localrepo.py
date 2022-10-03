@@ -2108,7 +2108,6 @@ class localrepository(object):
         rereads the dirstate. Use dirstate.invalidate() if you want to
         explicitly read the dirstate again (i.e. restoring it to a previous
         known good state)."""
-        self._rsrepo.invalidateworkingcopy()
         # eden_dirstate has its own invalidation logic.
         if edenfs.requirement in self.requirements:
             self.dirstate.invalidate()

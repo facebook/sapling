@@ -1,7 +1,7 @@
 #require fsmonitor
 
   $ configure modernclient
-  $ setconfig status.use-rust=False
+  $ setconfig status.use-rust=False workingcopy.ruststatus=False
   $ . "$TESTDIR/histedit-helpers.sh"
   $ enable histedit fsmonitor rebase hgevents sparse
   $ setconfig fsmonitor.warn-fresh-instance=true

@@ -2,6 +2,7 @@
 
 test sparse
 
+  $ setconfig workingcopy.ruststatus=False
   $ enable sparse rebase
   $ hg init myrepo
   $ cd myrepo

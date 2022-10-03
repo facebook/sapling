@@ -1,6 +1,7 @@
 #chg-compatible
 
 
+  $ setconfig workingcopy.ruststatus=False
   $ enable rebase
   $ setconfig phases.publish=false
   $ echo "[merge]" >> $HGRCPATH

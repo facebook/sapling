@@ -1,6 +1,7 @@
 #chg-compatible
 #require no-fsmonitor
 
+  $ setconfig workingcopy.ruststatus=False
   $ setconfig status.use-rust=False workingcopy.use-rust=False
 
 Setup. SCM_SAMPLING_FILEPATH needs to be cleared as some environments may

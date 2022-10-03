@@ -2,9 +2,10 @@
 
 test sparse
 
+  $ configure modernclient
+
   $ enable sparse rebase
-  $ hg init myrepo
-  $ cd myrepo
+  $ newclientrepo myrepo
 
   $ echo z > file.txt
   $ mkdir exc
@@ -122,7 +123,7 @@ Test that multiple profiles do not clobber each others includes
 
 # Test explain with multiple matches
 
-  $ newrepo
+  $ newclientrepo
   $ cat > s1.sparse << 'EOF'
   > !glob:a*.sparse
   > [metadata]
@@ -161,7 +162,7 @@ Test that multiple profiles do not clobber each others includes
     !*b.sparse/** ($TESTTMP/repo1/.hg/sparse -> s4.sparse) (overridden by rules above)
 
 
-  $ newrepo
+  $ newclientrepo
   $ hg debugsparseexplainmatch something
   abort: --sparse-profile is required
   [255]

@@ -2,6 +2,7 @@
 
 Crash in histpack code path where the amend destination already exists
 
+  $ setconfig workingcopy.ruststatus=False
   $ configure mutation-norecord
   $ enable undo treemanifest remotefilelog
   $ setconfig treemanifest.treeonly=1 remotefilelog.reponame=foo remotefilelog.cachepath=$TESTTMP/cache

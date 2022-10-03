@@ -372,7 +372,13 @@ impl Repo {
 
     pub fn working_copy(&mut self, path: &Path) -> Result<WorkingCopy, errors::InvalidWorkingCopy> {
         let is_eden = self.requirements.contains("eden");
-        let is_watchman = self.config.get_nonempty("fsmonitor", "mode") == Some("on".into());
+        let fsmonitor_ext = self.config.get("extensions", "fsmonitor");
+        let fsmonitor_mode = self.config.get_nonempty("fsmonitor", "mode");
+        let is_watchman = if fsmonitor_ext.is_none() || fsmonitor_ext == Some("!".into()) {
+            false
+        } else {
+            fsmonitor_mode.is_none() || fsmonitor_mode == Some("on".into())
+        };
         let filesystem = match (is_eden, is_watchman) {
             (true, _) => FileSystemType::Eden,
             (false, true) => FileSystemType::Watchman,

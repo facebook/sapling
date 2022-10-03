@@ -3,6 +3,7 @@
   $ configure modern
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig clone.nativecheckout=True
+  $ setconfig workingcopy.ruststatus=False
   $ newserver server
 
 Create a repo that touches a few files

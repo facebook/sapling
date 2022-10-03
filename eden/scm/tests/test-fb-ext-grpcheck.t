@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
   $ enable grpcheck
   $ setconfig config.use-rust=false
 

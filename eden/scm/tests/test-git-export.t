@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ setconfig workingcopy.ruststatus=False
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ hg init repo
   $ cd repo

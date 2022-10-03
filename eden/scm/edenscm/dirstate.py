@@ -174,6 +174,9 @@ class dirstate(object):
             def make_treestate(
                 ui: "ui_mod.ui", opener: "vfs.abstractvfs", root: str
             ) -> "treestate.treestatemap":
+                # Each time we load the treestate, make sure we have the latest
+                # version.
+                self._repo._rsrepo.invalidateworkingcopy()
                 return treestate.treestatemap(
                     ui, opener, root, self._repo._rsrepo.workingcopy().treestate()
                 )
@@ -467,7 +470,6 @@ class dirstate(object):
         This is different from localrepo.invalidatedirstate() because it always
         rereads the dirstate. Use localrepo.invalidatedirstate() if you want to
         check whether the dirstate has changed before rereading it."""
-        self._repo._rsrepo.invalidateworkingcopy()
         for a in ("_map", "_branch", "_ignore"):
             if a in self.__dict__:
                 delattr(self, a)

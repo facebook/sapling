@@ -1,6 +1,7 @@
 #chg-compatible
 
   $ setconfig status.use-rust=False workingcopy.use-rust=False
+  $ setconfig workingcopy.ruststatus=False
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ mkdir -p t
   $ cd t

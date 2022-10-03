@@ -5,6 +5,7 @@
 Setup the extension
 
   $ setconfig status.use-rust=False workingcopy.use-rust=False
+  $ setconfig workingcopy.ruststatus=False
   $ enable simplecache
   $ setconfig simplecache.showdebug=true simplecache.cachedir="$TESTTMP/hgsimplecache"
 

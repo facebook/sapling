@@ -1,5 +1,6 @@
 #chg-compatible
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig workingcopy.ruststatus=False
 
 Set up extension and repos
   $ enable remotenames
