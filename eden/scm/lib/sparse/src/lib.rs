@@ -442,44 +442,23 @@ impl Matcher {
     }
 }
 
-static ALL_PATTERN_KINDS: &[&str] = &[
-    "re",
-    "glob",
-    "path",
-    "relglob",
-    "relpath",
-    "relre",
-    "listfile",
-    "listfile0",
-    "set",
-    "include",
-    "subinclude",
-    "rootfilesin",
-];
-
 // Convert a sparse profile pattern into what the tree matcher
 // expects. We only support "glob" and "path" pattern types.
 fn sparse_pat_to_matcher_rule(pat: &Pattern) -> Result<Vec<String>, Error> {
     static DEFAULT_TYPE: &str = "glob";
 
-    let (pat_type, pat_text) = match pat.as_str().split_once(':') {
-        Some((t, p)) => match t {
-            "glob" | "path" => (t, p),
-            "re" => match convert_regex_to_glob(p) {
-                Some(globs) => {
-                    return Ok(globs);
-                }
-                None => return Err(Error::UnsupportedPattern(t.to_string())),
-            },
-            _ => {
-                if ALL_PATTERN_KINDS.contains(&t) {
-                    return Err(Error::UnsupportedPattern(t.to_string()));
-                } else {
-                    (DEFAULT_TYPE, pat.as_str())
-                }
+    let (pat_type, pat_text) = pathmatcher::split_pattern(pat.as_str(), DEFAULT_TYPE);
+    match pat_type {
+        "glob" | "path" => {} // empty
+        "re" => match convert_regex_to_glob(pat_text) {
+            Some(globs) => {
+                return Ok(globs);
             }
+            None => return Err(Error::UnsupportedPattern(pat_type.to_string())),
         },
-        None => (DEFAULT_TYPE, pat.as_str()),
+        _ => {
+            return Err(Error::UnsupportedPattern(pat_type.to_string()));
+        }
     };
 
     let pats = match pat_type {
@@ -726,6 +705,11 @@ title = grand_child
 
     #[test]
     fn test_sparse_pat_to_matcher_rule() {
+        assert_eq!(
+            sparse_pat_to_matcher_rule(&Pattern::Include("a_valid:path/bar".to_string())).unwrap(),
+            vec!["a_valid:path/bar/**"]
+        );
+
         assert_eq!(
             sparse_pat_to_matcher_rule(&Pattern::Include("path:/foo/bar".to_string())).unwrap(),
             vec!["/foo/bar/**"]
