@@ -11,6 +11,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 
+pub mod args;
 #[cfg(fbcode_build)]
 mod facebook;
 #[cfg(not(fbcode_build))]

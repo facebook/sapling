@@ -6,7 +6,6 @@
  */
 
 #![feature(backtrace)]
-#![deny(unused)]
 #![type_length_limit = "2097152"]
 
 use std::fs::File;
@@ -15,7 +14,6 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -25,9 +23,9 @@ use cmdlib::helpers::serve_forever;
 use cmdlib_logging::ScribeLoggingArgs;
 use connection_security_checker::ConnectionSecurityChecker;
 use environment::WarmBookmarksCacheDerivedData;
+use executor_lib::args::ShardedExecutorArgs;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
-use executor_lib::ShardedProcessExecutor;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
 use futures::future::FutureExt;
@@ -41,7 +39,6 @@ use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_repos::MononokeRepos;
-use once_cell::sync::OnceCell;
 use panichandler::Fate;
 use permission_checker::DefaultAclProvider;
 use slog::info;
@@ -72,7 +69,6 @@ mod source_control_impl;
 mod specifiers;
 
 const SERVICE_NAME: &str = "mononoke_scs_server";
-const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;
 
 /// Mononoke Source Control Service Server
 #[derive(Parser)]
@@ -90,13 +86,8 @@ struct ScsServerArgs {
     /// Path for file in which to write the bound tcp address in rust std::net::SocketAddr format
     #[clap(long)]
     bound_address_file: Option<String>,
-    /// The name of the ShardManager service corresponding to this SCS region instance.
-    /// If this argument isn't provided, the service will operate in non-sharded mode.
-    #[clap(long, requires = "sharded-scope-name")]
-    sharded_service_name: Option<String>,
-    /// The scope of the ShardManager service that this SCS instance corresponds to.
-    #[clap(long, requires = "sharded-service-name")]
-    sharded_scope_name: Option<String>,
+    #[clap(flatten)]
+    sharded_executor_args: ShardedExecutorArgs,
 }
 
 /// Struct representing the Source Control Service process.
@@ -299,25 +290,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         writer.write_all(b"\n")?;
     }
 
-    if let Some(sharded_service_name) = args.sharded_service_name {
-        let scs_process = SCSProcess::new(app.clone(), mononoke_repos);
-        let logger = scs_process.app.logger().clone();
-        let scope = args.sharded_scope_name.ok_or_else(|| {
-            anyhow!("sharded-scope-name must be provided when sharded-service-name is provided")
-        })?;
-        // The service name & scope needs to be 'static to satisfy SM contract
-        static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
-        static SM_SERVICE_SCOPE: OnceCell<String> = OnceCell::new();
-        let mut executor = ShardedProcessExecutor::new(
-            app.fb,
-            runtime.clone(),
-            &logger,
-            SM_SERVICE_NAME.get_or_init(|| sharded_service_name),
-            SM_SERVICE_SCOPE.get_or_init(|| scope),
-            SM_CLEANUP_TIMEOUT_SECS,
-            Arc::new(scs_process),
-            false, // disable shard (repo) level healing
-        )?;
+    if let Some(mut executor) = args.sharded_executor_args.build_executor(
+        fb,
+        runtime.clone(),
+        app.logger(),
+        || Arc::new(SCSProcess::new(app.clone(), mononoke_repos)),
+        false, // disable shard (repo) level healing
+    )? {
         // The Sharded Process Executor needs to branch off and execute
         // on its own dedicated task spawned off the common tokio runtime.
         runtime.spawn({
