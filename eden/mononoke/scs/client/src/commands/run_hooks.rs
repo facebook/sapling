@@ -105,9 +105,6 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 name,
                 match outcome {
                     thrift::HookOutcome::accepted(_) => HookOutcome::Accepted,
-                    thrift::HookOutcome::rejected(rej) => HookOutcome::Rejected {
-                        reason: rej.long_description,
-                    },
                     thrift::HookOutcome::rejections(rejs) => HookOutcome::Rejected {
                         reason: rejs
                             .into_iter()

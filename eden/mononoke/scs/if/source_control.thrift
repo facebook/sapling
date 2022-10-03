@@ -1571,7 +1571,6 @@ struct HookOutcomeRejected {
 
 union HookOutcome {
   1: HookOutcomeAccepted accepted;
-  2: HookOutcomeRejected rejected;
   3: list<HookOutcomeRejected> rejections;
 }
 
