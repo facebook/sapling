@@ -194,8 +194,14 @@ pub enum PrefetchCmd {
 
 impl PrefetchCmd {
     async fn finish(&self, output_path: &PathBuf) -> Result<ExitCode> {
-        let client = EdenFsInstance::global().connect(None).await?;
-        let files = client.stopRecordingBackingStoreFetch().await?;
+        let client = EdenFsInstance::global()
+            .connect(None)
+            .await
+            .with_context(|| anyhow!("Could not connect to EdenFS server"))?;
+        let files = client
+            .stopRecordingBackingStoreFetch()
+            .await
+            .with_context(|| anyhow!("stopRecordingBackingStoreFetch thrift call failed"))?;
         let fetched_files = files
             .fetchedFilePaths
             .get("HgQueuedBackingStore")
@@ -214,13 +220,21 @@ impl PrefetchCmd {
 
     async fn record(&self) -> Result<ExitCode> {
         let client = EdenFsInstance::global().connect(None).await?;
-        client.startRecordingBackingStoreFetch().await?;
+        client
+            .startRecordingBackingStoreFetch()
+            .await
+            .with_context(|| anyhow!("startRecordingBackingStoreFetch thrift call failed"))?;
         Ok(0)
     }
 
     async fn list(&self, checkout: &Path) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let client_name = instance.client_name(checkout)?;
+        let client_name = instance.client_name(checkout).with_context(|| {
+            anyhow!(
+                "Failed to get client name for checkout {}",
+                checkout.display()
+            )
+        })?;
         let config_dir = instance.config_directory(&client_name);
         let checkout_config = CheckoutConfig::parse_config(config_dir);
         match checkout_config {
@@ -243,7 +257,12 @@ impl PrefetchCmd {
         force_fetch: &bool,
     ) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let client_name = instance.client_name(&options.checkout)?;
+        let client_name = instance.client_name(&options.checkout).with_context(|| {
+            anyhow!(
+                "Failed to get client name for checkout {}",
+                &options.checkout.display()
+            )
+        })?;
 
         #[cfg(fbcode_build)]
         let mut sample = {
@@ -272,7 +291,12 @@ impl PrefetchCmd {
         send(sample.builder);
 
         if !options.skip_prefetch {
-            let checkout = find_checkout(instance, &options.checkout)?;
+            let checkout = find_checkout(instance, &options.checkout).with_context(|| {
+                anyhow!(
+                    "Failed to find checkout with path {}",
+                    &options.checkout.display()
+                )
+            })?;
             let result_globs = checkout
                 .prefetch_profiles(
                     instance,
@@ -307,7 +331,12 @@ impl PrefetchCmd {
         num_dirs: u32,
     ) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let client_name = instance.client_name(&options.checkout)?;
+        let client_name = instance.client_name(&options.checkout).with_context(|| {
+            anyhow!(
+                "Failed to get client name for checkout {}",
+                &options.checkout.display()
+            )
+        })?;
 
         #[cfg(fbcode_build)]
         let mut sample = {
@@ -337,7 +366,12 @@ impl PrefetchCmd {
         send(sample.builder);
 
         if !options.skip_prefetch {
-            let checkout = find_checkout(instance, &options.checkout)?;
+            let checkout = find_checkout(instance, &options.checkout).with_context(|| {
+                anyhow!(
+                    "Failed to find checkout with path {}",
+                    &options.checkout.display()
+                )
+            })?;
             let result_globs = checkout
                 .prefetch_profiles(
                     &instance,
@@ -372,7 +406,12 @@ impl PrefetchCmd {
         profile_name: &str,
     ) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let client_name = instance.client_name(&options.checkout)?;
+        let client_name = instance.client_name(&options.checkout).with_context(|| {
+            anyhow!(
+                "Failed to get client name for checkout {}",
+                &options.checkout.display()
+            )
+        })?;
 
         #[cfg(fbcode_build)]
         let mut sample = {
@@ -403,7 +442,12 @@ impl PrefetchCmd {
 
     async fn deactivate_predictive(&self, options: &ActivationOptions) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let client_name = instance.client_name(&options.checkout)?;
+        let client_name = instance.client_name(&options.checkout).with_context(|| {
+            anyhow!(
+                "Failed to get client name for checkout {}",
+                &options.checkout.display()
+            )
+        })?;
 
         #[cfg(fbcode_build)]
         let mut sample = {
@@ -434,9 +478,20 @@ impl PrefetchCmd {
     async fn fetch(&self, profile_names: &Vec<String>, options: &FetchOptions) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
         let checkout_path = &options.options.checkout;
-        let client_name = instance.client_name(&checkout_path)?;
+        let client_name = instance.client_name(checkout_path).with_context(|| {
+            anyhow!(
+                "Failed to get client name for checkout {}",
+                checkout_path.display()
+            )
+        })?;
         let config_dir = instance.config_directory(&client_name);
-        let checkout_config = CheckoutConfig::parse_config(config_dir.clone())?;
+        let checkout_config =
+            CheckoutConfig::parse_config(config_dir.clone()).with_context(|| {
+                anyhow!(
+                    "Failed to parse config located in config_dir: {}",
+                    &config_dir.display()
+                )
+            })?;
         let profiles_to_prefetch = if profile_names.is_empty() {
             match checkout_config.get_prefetch_profiles() {
                 Ok(res) => res,
@@ -458,7 +513,12 @@ impl PrefetchCmd {
             return Ok(0);
         }
 
-        let checkout = find_checkout(instance, checkout_path)?;
+        let checkout = find_checkout(instance, checkout_path).with_context(|| {
+            anyhow!(
+                "Failed to find checkout with path {}",
+                checkout_path.display()
+            )
+        })?;
         let result_globs = checkout
             .prefetch_profiles(
                 instance,
@@ -494,9 +554,20 @@ impl PrefetchCmd {
     ) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
         let checkout_path = &options.options.checkout;
-        let client_name = instance.client_name(checkout_path)?;
+        let client_name = instance.client_name(checkout_path).with_context(|| {
+            anyhow!(
+                "Failed to get client name for checkout {}",
+                checkout_path.display()
+            )
+        })?;
         let config_dir = instance.config_directory(&client_name);
-        let checkout_config = CheckoutConfig::parse_config(config_dir.clone())?;
+        let checkout_config =
+            CheckoutConfig::parse_config(config_dir.clone()).with_context(|| {
+                anyhow!(
+                    "Failed to parse config located in config_dir: {}",
+                    &config_dir.display()
+                )
+            })?;
 
         if if_active && !checkout_config.predictive_prefetch_is_active() {
             if options.options.verbose {
@@ -518,7 +589,12 @@ impl PrefetchCmd {
             0
         };
 
-        let checkout = find_checkout(instance, checkout_path)?;
+        let checkout = find_checkout(instance, checkout_path).with_context(|| {
+            anyhow!(
+                "Failed to find checkout with path {}",
+                checkout_path.display()
+            )
+        })?;
         let result_globs = checkout
             .prefetch_profiles(
                 instance,
