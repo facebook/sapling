@@ -422,11 +422,11 @@ pub trait GitUploader: Clone + Send + Sync + 'static {
         dry_run: bool,
     ) -> Result<(Self::IntermediateChangeset, ChangesetId), Error>;
 
-    /// Save a block of generated changesets. The supplied block is
-    /// toposorted so that parents are all present before children
-    /// If you did not save the changeset in generate_changeset,
+    /// Finalize a batch of generated changesets. The supplied batch is
+    /// topologically sorted so that parents are all present before children
+    /// If you did not finalize the changeset in generate_changeset,
     /// you must do so here.
-    async fn save_changesets_bulk(
+    async fn finalize_batch(
         &self,
         ctx: &CoreContext,
         dry_run: bool,

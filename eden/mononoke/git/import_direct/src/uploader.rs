@@ -153,7 +153,7 @@ impl GitUploader for DirectUploader {
         Ok((bcs, bcs_id))
     }
 
-    async fn save_changesets_bulk(
+    async fn finalize_batch(
         &self,
         ctx: &CoreContext,
         dry_run: bool,

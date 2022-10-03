@@ -261,8 +261,7 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator, Uploader: GitUploader>(
         .map(|v| v.into_iter().collect::<Result<Vec<_>, Error>>())
         .try_for_each(|v| async {
             cloned!(ctx, uploader);
-            task::spawn(async move { uploader.save_changesets_bulk(&ctx, dry_run, v).await })
-                .await?
+            task::spawn(async move { uploader.finalize_batch(&ctx, dry_run, v).await }).await?
         })
         .await?;
 
@@ -360,7 +359,7 @@ pub async fn import_tree_as_single_bonsai_changeset(
         .generate_changeset(ctx, vec![], metadata, file_changes, prefs.dry_run)
         .and_then(|(cs, id)| {
             uploader
-                .save_changesets_bulk(ctx, prefs.dry_run, vec![(cs, sha1)])
+                .finalize_batch(ctx, prefs.dry_run, vec![(cs, sha1)])
                 .map_ok(move |_| id)
         })
         .await
