@@ -90,7 +90,22 @@ impl VFS {
     }
 
     pub fn metadata(&self, path: &RepoPath) -> Result<Metadata> {
-        self.join(path).symlink_metadata().map_err(|e| e.into())
+        self.join(path).symlink_metadata().map_err(|e| {
+            // If `path` contains a directory that doesn't actually exist on disk, it surfaces as a
+            // NotADirectory error. This error type is unstable and can't actually be matched on.
+            // See https://github.com/rust-lang/rust/issues/86442
+            // For now, let's convert it to a NotFound error, users of vfs probably want to
+            // treat it as such.
+            #[cfg(unix)]
+            const NOTDIR: i32 = 20; // ENOTDIR
+            #[cfg(windows)]
+            const NOTDIR: i32 = 267; // ERROR_DIRECTORY
+
+            match e.raw_os_error() {
+                Some(errno) if errno == NOTDIR => io::Error::from(ErrorKind::NotFound).into(),
+                _ => e.into(),
+            }
+        })
     }
 
     pub fn is_file(&self, path: &RepoPath) -> Result<bool> {
