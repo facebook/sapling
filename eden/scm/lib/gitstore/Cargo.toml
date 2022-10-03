@@ -13,7 +13,7 @@ harness = false
 anyhow = "1.0.65"
 async-trait = "0.1.56"
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
-git2 = "0.13"
+git2 = "0.14"
 minibytes = { version = "0.1.0", path = "../minibytes" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
 types = { version = "0.1.0", path = "../types" }

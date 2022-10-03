@@ -94,7 +94,7 @@ filestore = { version = "0.1.0", path = "filestore" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
 futures-util = "0.3.7"
-git2 = "0.13"
+git2 = "0.14"
 itertools = "0.10.3"
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 manifest = { version = "0.1.0", path = "manifest" }
