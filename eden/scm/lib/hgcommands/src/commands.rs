@@ -29,6 +29,7 @@ mod debug;
 commands! {
     mod clone;
     mod config;
+    mod goto;
     mod root;
     mod status;
     mod version;
@@ -98,6 +99,12 @@ define_flags! {
         #[short('T')]
         #[argtype("TEMPLATE")]
         template: String,
+    }
+
+    pub struct MergeToolOpts {
+        /// specify merge tool
+        #[short('t')]
+        tool: String,
     }
 
     pub struct NoOpts {}
