@@ -262,7 +262,12 @@ impl CheckoutConfig {
         if let Some(profiles) = &mut self.profiles {
             if profiles.active.iter().any(|x| x == profile) {
                 profiles.active.retain(|x| *x != *profile);
-                self.save_config(config_dir)?;
+                self.save_config(config_dir.clone()).with_context(|| {
+                    anyhow!(
+                        "failed to save config in the given config_dir: {}",
+                        &config_dir.display()
+                    )
+                })?;
             }
         };
         Ok(())
@@ -330,7 +335,12 @@ impl CheckoutConfig {
                 )));
             }
             profiles.push(profile);
-            self.save_config(config_dir)?;
+            self.save_config(config_dir.clone()).with_context(|| {
+                anyhow!(
+                    "failed to save config in the given config_dir: {}",
+                    &config_dir.display()
+                )
+            })?;
         }
         Ok(())
     }
@@ -355,7 +365,12 @@ impl CheckoutConfig {
             }
             profiles.predictive_prefetch_active = true;
             profiles.predictive_prefetch_num_dirs = num_dirs;
-            self.save_config(config_dir)?;
+            self.save_config(config_dir.clone()).with_context(|| {
+                anyhow!(
+                    "failed to save config in the given config_dir: {}",
+                    &config_dir.display()
+                )
+            })?;
         }
         Ok(())
     }
@@ -371,7 +386,12 @@ impl CheckoutConfig {
                 )));
             }
             profiles.active.retain(|x| *x != *profile);
-            self.save_config(config_dir)?;
+            self.save_config(config_dir.clone()).with_context(|| {
+                anyhow!(
+                    "failed to save config in the given config_dir: {}",
+                    &config_dir.display()
+                )
+            })?;
         };
         Ok(())
     }
@@ -389,7 +409,12 @@ impl CheckoutConfig {
             }
             profiles.predictive_prefetch_active = false;
             profiles.predictive_prefetch_num_dirs = 0;
-            self.save_config(config_dir)?;
+            self.save_config(config_dir.clone()).with_context(|| {
+                anyhow!(
+                    "failed to save config in the given config_dir: {}",
+                    &config_dir.display()
+                )
+            })?;
         };
         Ok(())
     }
@@ -775,7 +800,8 @@ impl EdenFsCheckout {
                         predictive,
                         predictive_num_dirs,
                     )
-                    .await?;
+                    .await
+                    .with_context(|| anyhow!("make_prefetch_request() failed, returning early"))?;
                 glob_results.push(blob_res);
                 if profiles_to_fetch.is_empty() {
                     return Ok(glob_results);
@@ -783,7 +809,11 @@ impl EdenFsCheckout {
             }
 
             for profile in profiles_to_fetch {
-                let res = self.get_contents_for_profile(&profile, silent)?;
+                let res = self
+                    .get_contents_for_profile(&profile, silent)
+                    .with_context(|| {
+                        anyhow!("failed to get contents of prefetch profile {}", &profile)
+                    })?;
                 profile_contents.extend(res);
             }
         }
@@ -799,7 +829,8 @@ impl EdenFsCheckout {
                 predictive,
                 predictive_num_dirs,
             )
-            .await?;
+            .await
+            .with_context(|| anyhow!("make_prefetch_request() failed, returning early"))?;
         glob_results.push(blob_res);
         Ok(glob_results)
     }
