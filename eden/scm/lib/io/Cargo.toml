@@ -15,4 +15,4 @@ parking_lot = { version = "0.11.2", features = ["send_guard"] }
 pipe = "0.2"
 streampager = { version = "0.10.3", default-features = false }
 terminal_size = "0.1"
-termwiz = { version = "0.15", features = ["widgets"] }
+termwiz = { version = "0.18", features = ["widgets"] }
