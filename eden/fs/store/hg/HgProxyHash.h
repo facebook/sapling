@@ -36,6 +36,10 @@ class EdenStats;
  * blob hash in EdenFS.  We store the eden_blob_hash --> (path, hgRevHash)
  * mapping in the LocalStore.  The HgProxyHash class helps store and
  * retrieve these mappings.
+ *
+ * NOTE: This class is deprecated. When support for reading the hgproxyhash
+ * table in LocalStore is removed, it should be replaced with a simple
+ * (hgRevHash, path) pair.
  */
 class HgProxyHash {
  public:
@@ -123,37 +127,12 @@ class HgProxyHash {
       EdenStats& stats);
 
   /**
-   * Store HgProxyHash data in the LocalStore.
-   *
-   * Returns an eden blob hash that can be used to retrieve the data later
-   * (using the HgProxyHash constructor defined above).
+   * Encode an ObjectId from path, manifest ID, and format.
    */
   static ObjectId store(
       RelativePathPiece path,
       const Hash20& hgRevHash,
-      HgObjectIdFormat hgObjectIdFormat,
-      LocalStore::WriteBatch* FOLLY_NULLABLE writeBatch);
-
-  /**
-   * Compute the proxy hash information, but do not store it.
-   *
-   * This is useful when you need the proxy hash but don't want to commit
-   * the data until after you have written an associated data item.
-   * Returns the proxy hash and the data that should be written;
-   * the caller is responsible for passing the pair to the HgProxyHash::store()
-   * method below at the appropriate time.
-   */
-  static std::pair<ObjectId, std::string> prepareToStoreLegacy(
-      RelativePathPiece path,
-      Hash20 hgRevHash);
-
-  /**
-   * Store precomputed proxy hash information.
-   * Stores the data computed by prepareToStore().
-   */
-  static void storeLegacy(
-      const std::pair<ObjectId, std::string>& computedPair,
-      LocalStore::WriteBatch* writeBatch);
+      HgObjectIdFormat hgObjectIdFormat);
 
   /**
    * Generate an ObjectId that contains both the hgRevHash and a path.

@@ -43,8 +43,7 @@ TreeEntryType fromRawTreeEntryType(RustTreeEntryType type) {
 Tree::value_type fromRawTreeEntry(
     RustTreeEntry entry,
     RelativePathPiece path,
-    HgObjectIdFormat hgObjectIdFormat,
-    LocalStore::WriteBatch* FOLLY_NULLABLE writeBatch) {
+    HgObjectIdFormat hgObjectIdFormat) {
   std::optional<uint64_t> size;
   std::optional<Hash20> contentSha1;
 
@@ -60,8 +59,7 @@ Tree::value_type fromRawTreeEntry(
   auto hash = Hash20{entry.hash};
 
   auto fullPath = path + name;
-  auto proxyHash =
-      HgProxyHash::store(fullPath, hash, hgObjectIdFormat, writeBatch);
+  auto proxyHash = HgProxyHash::store(fullPath, hash, hgObjectIdFormat);
 
   auto treeEntry = TreeEntry{
       proxyHash, fromRawTreeEntryType(entry.ttype), size, contentSha1};
@@ -72,22 +70,17 @@ std::unique_ptr<Tree> fromRawTree(
     const RustTree* tree,
     const ObjectId& edenTreeId,
     RelativePathPiece path,
-    HgObjectIdFormat hgObjectIdFormat,
-    LocalStore::WriteBatch* FOLLY_NULLABLE writeBatch) {
+    HgObjectIdFormat hgObjectIdFormat) {
   Tree::container entries{kPathMapDefaultCaseSensitive};
 
   entries.reserve(tree->length);
   for (uintptr_t i = 0; i < tree->length; i++) {
     try {
-      auto entry = fromRawTreeEntry(
-          tree->entries[i], path, hgObjectIdFormat, writeBatch);
+      auto entry = fromRawTreeEntry(tree->entries[i], path, hgObjectIdFormat);
       entries.emplace(entry.first, std::move(entry.second));
     } catch (const PathComponentContainsDirectorySeparator& ex) {
       XLOG(WARN) << "Ignoring directory entry: " << ex.what();
     }
-  }
-  if (writeBatch) {
-    writeBatch->flush();
   }
   return std::make_unique<Tree>(std::move(entries), edenTreeId);
 }
@@ -107,19 +100,12 @@ std::unique_ptr<Blob> HgDatapackStore::getBlobLocal(
 
 std::unique_ptr<Tree> HgDatapackStore::getTreeLocal(
     const ObjectId& edenTreeId,
-    const HgProxyHash& proxyHash,
-    LocalStore& localStore) {
+    const HgProxyHash& proxyHash) {
   auto tree = store_.getTree(proxyHash.byteHash(), /*local=*/true);
   auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
   if (tree) {
     return fromRawTree(
-        tree.get(),
-        edenTreeId,
-        proxyHash.path(),
-        hgObjectIdFormat,
-        (hgObjectIdFormat != HgObjectIdFormat::ProxyHash)
-            ? nullptr
-            : localStore.beginWrite().get());
+        tree.get(), edenTreeId, proxyHash.path(), hgObjectIdFormat);
   }
 
   return nullptr;
@@ -170,8 +156,7 @@ void HgDatapackStore::getBlobBatch(
 }
 
 void HgDatapackStore::getTreeBatch(
-    const std::vector<std::shared_ptr<HgImportRequest>>& importRequests,
-    LocalStore::WriteBatch* writeBatch) {
+    const std::vector<std::shared_ptr<HgImportRequest>>& importRequests) {
   auto count = importRequests.size();
 
   std::vector<std::pair<folly::ByteRange, folly::ByteRange>> requests;
@@ -196,11 +181,8 @@ void HgDatapackStore::getTreeBatch(
       requests,
       false,
       // store_.getTreeBatch is blocking, hence we can take these by reference.
-      [hgObjectIdFormat,
-       &requests,
-       &importRequests,
-       &requestsWatches,
-       writeBatch](size_t index, std::shared_ptr<RustTree> content) mutable {
+      [hgObjectIdFormat, &requests, &importRequests, &requestsWatches](
+          size_t index, std::shared_ptr<RustTree> content) mutable {
         XLOGF(
             DBG4,
             "Imported tree name={} node={}",
@@ -214,9 +196,7 @@ void HgDatapackStore::getTreeBatch(
             content.get(),
             treeRequest->hash,
             treeRequest->proxyHash.path(),
-            hgObjectIdFormat,
-            (hgObjectIdFormat != HgObjectIdFormat::ProxyHash) ? nullptr
-                                                              : writeBatch);
+            hgObjectIdFormat);
 
         importRequest->getPromise<std::unique_ptr<Tree>>()->setValue(
             std::move(tree));
@@ -229,8 +209,7 @@ void HgDatapackStore::getTreeBatch(
 std::unique_ptr<Tree> HgDatapackStore::getTree(
     const RelativePath& path,
     const Hash20& manifestId,
-    const ObjectId& edenTreeId,
-    LocalStore::WriteBatch* writeBatch) {
+    const ObjectId& edenTreeId) {
   // For root trees we will try getting the tree locally first.  This allows
   // us to catch when Mercurial might have just written a tree to the store,
   // and refresh the store so that the store can pick it up.  We don't do
@@ -248,13 +227,7 @@ std::unique_ptr<Tree> HgDatapackStore::getTree(
   if (tree) {
     auto hgObjectIdFormat =
         config_->getEdenConfig()->hgObjectIdFormat.getValue();
-    return fromRawTree(
-        tree.get(),
-        edenTreeId,
-        path,
-        hgObjectIdFormat,
-        (hgObjectIdFormat != HgObjectIdFormat::ProxyHash) ? nullptr
-                                                          : writeBatch);
+    return fromRawTree(tree.get(), edenTreeId, path, hgObjectIdFormat);
   }
   return nullptr;
 }

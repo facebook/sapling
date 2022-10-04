@@ -291,8 +291,7 @@ HgBackingStore::fetchTreeFromHgCacheOrImporter(
     ObjectId edenTreeID,
     RelativePath path) {
   auto writeBatch = localStore_->beginWrite();
-  if (auto tree = datapackStore_.getTree(
-          path, manifestNode, edenTreeID, writeBatch.get())) {
+  if (auto tree = datapackStore_.getTree(path, manifestNode, edenTreeID)) {
     XLOG(DBG4) << "imported tree node=" << manifestNode << " path=" << path
                << " from Rust hgcache";
     return folly::makeFuture(std::move(tree));
@@ -474,12 +473,7 @@ std::unique_ptr<Tree> HgBackingStore::processTree(
                << " node: " << entry.node << " flag: " << entry.type;
 
     auto relPath = path + entry.name;
-    auto proxyHash = HgProxyHash::store(
-        relPath,
-        entry.node,
-        hgObjectIdFormat,
-        (hgObjectIdFormat != HgObjectIdFormat::ProxyHash) ? nullptr
-                                                          : writeBatch);
+    auto proxyHash = HgProxyHash::store(relPath, entry.node, hgObjectIdFormat);
 
     entries.emplace(entry.name, proxyHash, entry.type);
   }
@@ -543,14 +537,8 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifestImpl(
   auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
 
   ObjectId objectId;
-  std::optional<std::pair<ObjectId, std::string>> computedPair;
 
   switch (hgObjectIdFormat) {
-    case HgObjectIdFormat::ProxyHash:
-      computedPair = HgProxyHash::prepareToStoreLegacy(path, manifestNode);
-      objectId = computedPair->first;
-      break;
-
     case HgObjectIdFormat::WithPath:
       objectId = HgProxyHash::makeEmbeddedProxyHash1(manifestNode, path);
       break;
@@ -560,20 +548,7 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifestImpl(
       break;
   }
 
-  auto futTree = importTreeImpl(manifestNode, objectId, path);
-  if (!computedPair) {
-    return futTree;
-  } else {
-    return std::move(futTree).thenValue(
-        [computedPair = std::move(computedPair.value()),
-         batch = localStore_->beginWrite()](auto tree) {
-          // Only write the proxy hash value for this once we've imported
-          // the root.
-          HgProxyHash::storeLegacy(computedPair, batch.get());
-          batch->flush();
-          return tree;
-        });
-  }
+  return importTreeImpl(manifestNode, objectId, path);
 }
 
 SemiFuture<std::unique_ptr<Blob>> HgBackingStore::fetchBlobFromHgImporter(

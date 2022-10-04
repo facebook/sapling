@@ -10,18 +10,20 @@
 #include <folly/Range.h>
 #include <folly/futures/Promise.h>
 
-#include "eden/fs/model/Blob.h"
-#include "eden/fs/model/BlobMetadata.h"
-#include "eden/fs/store/LocalStore.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/scm/lib/backingstore/c_api/HgNativeBackingStore.h"
 
 namespace facebook::eden {
 
+class Blob;
+class BlobMetadata;
+class Hash20;
 class HgProxyHash;
 class HgImportRequest;
+class ObjectId;
 class ReloadableConfig;
+class Tree;
 
 class HgDatapackStore {
  public:
@@ -48,8 +50,7 @@ class HgDatapackStore {
    */
   std::unique_ptr<Tree> getTreeLocal(
       const ObjectId& edenTreeId,
-      const HgProxyHash& proxyHash,
-      LocalStore& localStore);
+      const HgProxyHash& proxyHash);
 
   /**
    * Import multiple blobs at once. The vector parameters have to be the same
@@ -60,14 +61,12 @@ class HgDatapackStore {
       const std::vector<std::shared_ptr<HgImportRequest>>& requests);
 
   void getTreeBatch(
-      const std::vector<std::shared_ptr<HgImportRequest>>& requests,
-      LocalStore::WriteBatch* writeBatch);
+      const std::vector<std::shared_ptr<HgImportRequest>>& requests);
 
   std::unique_ptr<Tree> getTree(
       const RelativePath& path,
       const Hash20& manifestId,
-      const ObjectId& edenTreeId,
-      LocalStore::WriteBatch* writeBatch);
+      const ObjectId& edenTreeId);
 
   /**
    * Reads blob metadata from hg cache.

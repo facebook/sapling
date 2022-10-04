@@ -120,20 +120,11 @@ HgProxyHash HgProxyHash::load(
 ObjectId HgProxyHash::store(
     RelativePathPiece path,
     const Hash20& hgRevHash,
-    HgObjectIdFormat hgObjectIdFormat,
-    LocalStore::WriteBatch* FOLLY_NULLABLE writeBatch) {
+    HgObjectIdFormat hgObjectIdFormat) {
   switch (hgObjectIdFormat) {
-    case HgObjectIdFormat::ProxyHash: {
-      XCHECK(writeBatch) << "ProxyHash requires LocalStore writes";
-      auto computedPair = prepareToStoreLegacy(path, hgRevHash);
-      HgProxyHash::storeLegacy(computedPair, writeBatch);
-      return computedPair.first;
-    }
     case HgObjectIdFormat::WithPath:
-      XCHECK(!writeBatch) << "non-ProxyHash does not need a WriteBatch";
       return makeEmbeddedProxyHash1(hgRevHash, path);
     case HgObjectIdFormat::HashOnly:
-      XCHECK(!writeBatch) << "non-ProxyHash does not need a WriteBatch";
       return makeEmbeddedProxyHash2(hgRevHash);
   }
   EDEN_BUG() << "Unsupported hgObjectIdFormat: " << hgObjectIdFormat;
@@ -160,27 +151,6 @@ ObjectId HgProxyHash::makeEmbeddedProxyHash2(const Hash20& hgRevHash) {
   auto bytes = folly::StringPiece{hgRevHash.getBytes()};
   str.append(bytes.data(), bytes.size());
   return ObjectId{std::move(str)};
-}
-
-std::pair<ObjectId, std::string> HgProxyHash::prepareToStoreLegacy(
-    RelativePathPiece path,
-    Hash20 hgRevHash) {
-  // Serialize the (path, hgRevHash) tuple into a buffer.
-  auto buf = serialize(path, hgRevHash);
-
-  // Compute the hash of the serialized buffer
-  auto edenBlobHash = ObjectId::sha1(buf);
-
-  return std::make_pair(edenBlobHash, std::move(buf));
-}
-
-void HgProxyHash::storeLegacy(
-    const std::pair<ObjectId, std::string>& computedPair,
-    LocalStore::WriteBatch* writeBatch) {
-  writeBatch->put(
-      KeySpace::HgProxyHashFamily,
-      computedPair.first,
-      ByteRange{StringPiece{computedPair.second}});
 }
 
 HgProxyHash::HgProxyHash(

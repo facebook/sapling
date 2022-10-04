@@ -207,10 +207,7 @@ void HgQueuedBackingStore::processTreeImportRequests(
     XLOGF(DBG4, "Processing tree request for {}", treeImport->hash);
   }
 
-  {
-    auto writeBatch = localStore_->beginWrite();
-    backingStore_->getDatapackStore().getTreeBatch(requests, writeBatch.get());
-  }
+  backingStore_->getDatapackStore().getTreeBatch(requests);
 
   {
     std::vector<folly::SemiFuture<folly::Unit>> futures;
@@ -374,8 +371,8 @@ folly::SemiFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTree(
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::Tree);
 
-  if (auto tree = backingStore_->getDatapackStore().getTreeLocal(
-          id, proxyHash, *localStore_)) {
+  if (auto tree =
+          backingStore_->getDatapackStore().getTreeLocal(id, proxyHash)) {
     XLOG(DBG5) << "imported tree of '" << proxyHash.path() << "', "
                << proxyHash.revHash().toString() << " from hgcache";
     return folly::makeSemiFuture(GetTreeResult{
