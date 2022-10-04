@@ -5633,6 +5633,11 @@ def status(ui, repo, *pats, **opts):
     change = opts.get("change")
     terse = opts.get("terse")
 
+    ui.log(
+        "status_info",
+        status_mode="python",
+    )
+
     if revs and change:
         msg = _("cannot specify --rev and --change at the same time")
         raise error.Abort(msg)

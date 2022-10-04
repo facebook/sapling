@@ -112,6 +112,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
         || ctx.opts.ignored
         || ctx.opts.clean
     {
+        tracing::debug!(target: "status_info", status_detail="unsupported_args");
         return Err(errors::FallbackToPython(
             "one or more unsupported options in Rust status".to_owned(),
         )
@@ -163,6 +164,8 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
 
     let (status, copymap) = match repo.config().get_or_default("status", "use-rust")? {
         true => {
+            tracing::debug!(target: "status_info", status_mode="rust");
+
             let matcher = Arc::new(AlwaysMatcher::new());
             let status = wc.status(matcher, SystemTime::UNIX_EPOCH)?;
             let copymap = wc.copymap()?.into_iter().collect();
@@ -172,6 +175,9 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
             #[cfg(feature = "eden")]
             {
                 use anyhow::anyhow;
+
+                tracing::debug!(target: "status_info", status_mode="fastpath");
+
                 // Attempt to fetch status information from EdenFS.
                 let (status, copymap) = edenfs_client::status::maybe_status_fastpath(
                     repo.dot_hg_path(),
@@ -181,18 +187,25 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
                 .map_err(|e| match e
                     .downcast_ref::<edenfs_client::status::OperationNotSupported>()
                 {
-                    Some(_) => anyhow!(errors::FallbackToPython(
-                        "unsupported edenfs operation".to_owned()
-                    )),
+                    Some(_) => {
+                        tracing::debug!(target: "status_info", status_detail="fastpath_edenfs_error");
+                        anyhow!(errors::FallbackToPython(
+                            "unsupported edenfs operation".to_owned()
+                        ))
+                    },
                     None => e,
                 })?;
                 (status, copymap)
             }
             #[cfg(not(feature = "eden"))]
-            return Err(errors::FallbackToPython(
-                "EdenFS disabled for Rust status and status.use-rust not set to True".to_owned(),
-            )
-            .into());
+            {
+                tracing::debug!(target: "status_info", status_detail="fastpath_edenfs_disabled");
+                return Err(errors::FallbackToPython(
+                    "EdenFS disabled for Rust status and status.use-rust not set to True"
+                        .to_owned(),
+                )
+                .into());
+            }
         }
     };
 
