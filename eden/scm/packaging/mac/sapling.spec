@@ -4,14 +4,14 @@ AutoReqProv: no
 
 %define py_version 3.8
 %define py_version_num 38
-%define py_usr_dir /opt/sapling
+%define py_usr_dir %{_prefix}
 %define __python python3.8
 
 %undefine __brp_mangle_shebangs
 
 
-Summary: Sapling
-Name: sapling
+Summary: Sapling Beta
+Name: sapling-beta
 Version: %version
 Release: darwin
 
@@ -40,7 +40,7 @@ mv "$RPM_BUILD_ROOT%{_bindir}/sl" "$RPM_BUILD_ROOT%{_bindir}/slb"
 
 %post
 umask 022
-%{_bindir}/slb debugpython -c "import compileall, sys; sys.exit(not compileall.compile_dir('/opt/sapling/', ddir='/', force=True, quiet=1))"
+%{_bindir}/slb debugpython -c "import compileall, sys; sys.exit(not compileall.compile_dir('%{_prefix}', ddir='/', force=True, quiet=1))"
 
 %clean
 rm -rf "$RPM_BUILD_ROOT"
@@ -51,6 +51,6 @@ rm -rf "$RPM_BUILD_ROOT"
 %{_prefix}
 %{_bindir}
 %{_libdir}
-%{_sysconfdir}/paths.d/sapling
+%{_sysconfdir}/paths.d/sapling-beta
 
 %changelog
