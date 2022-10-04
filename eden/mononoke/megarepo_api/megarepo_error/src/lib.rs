@@ -33,7 +33,12 @@ macro_rules! cloneable_error {
 
         impl $name {
             pub fn backtrace(&self) -> &Backtrace {
-                self.0.backtrace()
+                #[cfg(fbcode_build)] // FIXME(T133530635)
+                return self.0.backtrace();
+
+                static BACKTRACE: Backtrace = Backtrace::disabled();
+                #[allow(unreachable_code)]
+                &BACKTRACE
             }
         }
 
@@ -55,7 +60,7 @@ macro_rules! cloneable_error {
             }
 
             fn provide<'a>(&'a self, demand: &mut Demand<'a>) {
-                demand.provide_ref::<Backtrace>(self.0.backtrace());
+                demand.provide_ref::<Backtrace>(self.backtrace());
             }
         }
     };
