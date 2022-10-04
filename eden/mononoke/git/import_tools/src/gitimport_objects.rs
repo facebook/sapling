@@ -38,6 +38,7 @@ use mononoke_types::FileType;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use slog::debug;
+use slog::Logger;
 use sorted_vector_map::SortedVectorMap;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncWriteExt;
@@ -302,6 +303,46 @@ fn format_signature(sig: git_actor::SignatureRef) -> String {
     format!("{} <{}>", sig.name, sig.email)
 }
 
+/// Decode a git commit message
+///
+/// Git choses to keep the raw user-provided bytes for the commit message.
+/// That is to avoid a possibly lossy conversion to UTF-8.
+/// Git provides an option to set the encoding by setting i18n.commitEncoding in .git/config.
+/// See [the git documentation](https://git-scm.com/docs/git-commit#_discussion) for a discussion
+/// of that design choice.
+///
+/// In contrast, mononoke stores commit messages in UTF-8.
+///
+/// This means that importing a git commit message can be lossy. For instance, if a git user used a
+/// non-UTF-8 compatible encoding such as latin1, but didn't set the `commitEncoding` setting
+/// accordingly, the conversion will be lossy.
+/// These latin1-encoded bytes: `b"Hello, R\xe9mi-\xc9tienne!"` will convert to `"Hello, R�mi-�tienne!"`
+/// if the encoding is not specified (so it will default to UTF-8).
+fn decode_commit_message(
+    message: &[u8],
+    encoding: &Option<BString>,
+    logger: &Logger,
+) -> Result<String, Error> {
+    let encoding = Encoding::for_label(&encoding.clone().unwrap_or_else(|| BString::from("utf-8")))
+        .ok_or_else(|| anyhow!("Failed to parse git commit encoding: {encoding:?}"))?;
+    let (decoded, actual_encoding, replacement) = encoding.decode(message);
+    let message = decoded.to_string();
+    if actual_encoding != encoding {
+        // Decode performs BOM sniffing to detect the actual encoding for this byte string.
+        // We expect it to match the encoding declared in the commit metadata.
+        bail!("Unexpected encoding: expected {encoding:?}, got {actual_encoding:?}");
+    } else if replacement {
+        // If the input string contains malformed sequences, they get replaced with the
+        // REPLACEMENT CHARACTER.
+        // In this situation, don't fail but log the occurrence.
+        debug!(
+            logger,
+            "Failed to decode git commit message:\n{message:?}\nwith encoding: {encoding:?}.\nThe offending characters were replaced"
+        );
+    }
+    Ok(message)
+}
+
 impl ExtractedCommit {
     pub async fn new(
         ctx: &CoreContext,
@@ -333,24 +374,7 @@ impl ExtractedCommit {
         let committer_date = convert_time_to_datetime(&committer.time)?;
         let author = format_signature(author.to_ref());
         let committer = format_signature(committer.to_ref());
-        let encoding =
-            Encoding::for_label(&encoding.clone().unwrap_or_else(|| BString::from("utf-8")))
-                .ok_or_else(|| anyhow!("Failed to parse git commit encoding: {encoding:?}"))?;
-        let (decoded, actual_encoding, replacement) = encoding.decode(&message);
-        let message = decoded.to_string();
-        if actual_encoding != encoding {
-            // Decode performs BOM sniffing to detect the actual encoding for this byte string.
-            // We expect it to match the encoding declared in the commit metadata.
-            bail!("Unexpected encoding: expected {encoding:?}, got {actual_encoding:?}");
-        } else if replacement {
-            // If the input string contains malformed sequences, they get replaced with the
-            // REPLACEMENT CHARACTER.
-            // In this situation, don't fail but log the occurrence.
-            debug!(
-                ctx.logger(),
-                "Failed to decode git commit message:\n{message:?}\nwith encoding: {encoding:?}.\nThe offending characters were replaced"
-            );
-        }
+        let message = decode_commit_message(&message, &encoding, ctx.logger())?;
         let parents = parents.into_vec();
 
         Result::<_, Error>::Ok(ExtractedCommit {
@@ -432,4 +456,83 @@ pub trait GitUploader: Clone + Send + Sync + 'static {
         dry_run: bool,
         changesets: Vec<(Self::IntermediateChangeset, hash::GitSha1)>,
     ) -> Result<(), Error>;
+}
+
+#[cfg(test)]
+mod tests {
+    use slog::o;
+
+    use super::decode_commit_message;
+    use super::BString;
+    use super::Logger;
+
+    const ASCII_BSTR: &[u8] = b"Hello, World!".as_slice();
+    const ASCII_STR: &str = "Hello, World!";
+    const UTF8_UNICODE_BSTR: &[u8] =
+        b"Hello, \xce\xba\xe1\xbd\xb9\xcf\x83\xce\xbc\xce\xB5!".as_slice();
+    const UTF8_UNICODE_STR: &str = "Hello, κόσμε!";
+    const LATIN1_ACCENTED_BSTR: &[u8] = b"Hello, R\xe9mi-\xc9tienne!".as_slice();
+    const UTF8_ACCENTED_BSTR: &[u8] = b"Hello, R\xc3\xa9mi-\xc3\x89tienne!".as_slice();
+    const BROKEN_LATIN1_FROM_UTF8_ACCENTED_STR: &str = "Hello, RÃ©mi-Ã‰tienne!";
+    const UTF8_ACCENTED_STR: &str = "Hello, Rémi-Étienne!";
+    const UTF8_ACCENTED_STR_WITH_REPLACEMENT_CHARACTER: &str = "Hello, R�mi-�tienne!";
+
+    fn should_decode_into(message: &[u8], encoding: &Option<BString>, expected: &str) {
+        let logger = Logger::root(slog::Discard, o!());
+        let m = decode_commit_message(message, encoding, &logger);
+        assert!(m.is_ok());
+        assert_eq!(expected, &m.unwrap())
+    }
+    fn should_fail_to_decode(message: &[u8], encoding: &Option<BString>) {
+        let logger = Logger::root(slog::Discard, o!());
+        let m = decode_commit_message(message, encoding, &logger);
+        assert!(m.is_err());
+    }
+
+    #[test]
+    fn test_decode_commit_message_given_invalid_encoding_should_fail() {
+        should_fail_to_decode(
+            ASCII_BSTR,
+            &Some(BString::from("not a valid encoding label")),
+        );
+    }
+    #[test]
+    fn test_decode_commit_message_given_ascii_as_utf8() {
+        for encoding in [None, Some(BString::from("utf-8"))] {
+            should_decode_into(ASCII_BSTR, &encoding, ASCII_STR);
+        }
+    }
+    #[test]
+    fn test_decode_commit_message_given_valid_utf8() {
+        for encoding in [None, Some(BString::from("utf-8"))] {
+            should_decode_into(UTF8_UNICODE_BSTR, &encoding, UTF8_UNICODE_STR);
+            should_decode_into(UTF8_ACCENTED_BSTR, &encoding, UTF8_ACCENTED_STR);
+        }
+    }
+    #[test]
+    fn test_decode_commit_message_given_malformed_utf8() {
+        for encoding in [None, Some(BString::from("utf-8"))] {
+            should_decode_into(
+                LATIN1_ACCENTED_BSTR,
+                &encoding,
+                UTF8_ACCENTED_STR_WITH_REPLACEMENT_CHARACTER,
+            );
+        }
+    }
+    #[test]
+    fn test_decode_commit_message_given_valid_latin1() {
+        should_decode_into(
+            LATIN1_ACCENTED_BSTR,
+            &Some(BString::from("iso-8859-1")),
+            UTF8_ACCENTED_STR,
+        );
+    }
+    #[test]
+    fn test_decode_commit_message_given_malformed_latin1() {
+        should_decode_into(
+            UTF8_ACCENTED_BSTR,
+            &Some(BString::from("iso-8859-1")),
+            BROKEN_LATIN1_FROM_UTF8_ACCENTED_STR,
+        );
+    }
 }
