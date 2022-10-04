@@ -19,12 +19,48 @@ use parking_lot::RwLock;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Identity {
+    /// Name of the binary. Used for showing help messages
+    ///
+    /// Example: `Checkout failed. Resume with 'sl checkout --continue'`
     cli_name: &'static str,
+
+    /// Full name of the product
     product_name: &'static str,
+
+    /// Metadata directory of the current identity. If this directory exists in the current repo, it
+    /// implies that the repo is using this identity.
     dot_dir: &'static str,
+
+    /// Prefix of environment variables related to current repo. To be used in the future.
     env_prefix: &'static str,
+
+    /// Main config file for some identities. Located inside of home directory (e.g. `/home/alice/.hgrc`)
     config_name: &'static str,
+
+    /// Subdirectory of user's cache directory used for config. The parent of this directory can change
+    /// depending on the operating system
+    ///
+    /// | OS       | Value of parent directory           | Example of parent + config_directory     |
+    /// |----------|-------------------------------------|------------------------------------------|
+    /// | Linux    | `$XDG_CACHE_HOME` or `$HOME`/.cache | /home/alice/.config/sapling              |
+    /// | macOS    | `$HOME`/Library/Caches              | /Users/Alice/Library/Preferences/sapling |
+    /// | Windows  | `{FOLDERID_LocalAppData}`           | C:\Users\Alice\AppData\Local\sapling     |
+    config_directory: &'static str,
+
+    /// Main or secondary config file (depends on the identity); located inside of `config_directory`
+    config_main_file: &'static str,
+
+    /// Disables any configuration settings that might change the default output, including but not
+    /// being limited to encoding, defaults, verbose mode, debug mode, quiet mode, and tracebacks
+    ///
+    /// See `<cli_name> help scripting`` for more details
     scripting_env_var: &'static str,
+
+    /// If this environment variable is set, its value is considered the only file to look into for
+    /// system and user configs
+    scripting_config_env_var: &'static str,
+
+    /// Comma-separated list of features to preserve if `scripting_env_var` is enabled
     scripting_except_env_var: &'static str,
 }
 
@@ -41,8 +77,16 @@ impl Identity {
         self.dot_dir
     }
 
+    pub fn config_directory(&self) -> &'static str {
+        self.config_directory
+    }
+
     pub fn config_name(&self) -> &'static str {
         self.config_name
+    }
+
+    pub fn config_main_file(&self) -> &'static str {
+        self.config_main_file
     }
 
     pub fn env_prefix(&self) -> &'static str {
@@ -51,6 +95,7 @@ impl Identity {
 
     pub fn env_var(&self, suffix: &str) -> Option<Result<String, VarError>> {
         let var_name = match suffix {
+            "CONFIG" => self.scripting_config_env_var.to_string(),
             "PLAIN" => self.scripting_env_var.to_string(),
             "PLAINEXCEPT" => self.scripting_except_env_var.to_string(),
             _ => format!("{}{}", self.env_prefix, suffix),
@@ -75,7 +120,10 @@ const HG: Identity = Identity {
     dot_dir: ".hg",
     env_prefix: "HG",
     config_name: "hgrc",
+    config_directory: "hg",
+    config_main_file: "hgrc",
     scripting_env_var: "HGPLAIN",
+    scripting_config_env_var: "HGRCPATH",
     scripting_except_env_var: "HGPLAINEXCEPT",
 };
 
@@ -85,7 +133,10 @@ const SL: Identity = Identity {
     dot_dir: ".sl",
     env_prefix: "SL",
     config_name: "slconfig",
+    config_directory: "sapling",
+    config_main_file: "sapling.conf",
     scripting_env_var: "SL_AUTOMATION",
+    scripting_config_env_var: "SL_CONFIG_PATH",
     scripting_except_env_var: "SL_AUTOMATION_EXCEPT",
 };
 
@@ -96,7 +147,10 @@ const TEST: Identity = Identity {
     dot_dir: ".test",
     env_prefix: "TEST",
     config_name: "testrc",
+    config_directory: "test",
+    config_main_file: "test.conf",
     scripting_env_var: "TEST_SCRIPT",
+    scripting_config_env_var: "TEST_RC_PATH",
     scripting_except_env_var: "TEST_SCRIPT_EXCEPT",
 };
 
