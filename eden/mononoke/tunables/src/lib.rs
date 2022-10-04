@@ -24,9 +24,15 @@ use slog::debug;
 use slog::error;
 use slog::warn;
 use slog::Logger;
+use stats::prelude::*;
 use tokio::runtime::Handle;
 use tunables_derive::Tunables;
 use tunables_structs::Tunables as TunablesStruct;
+
+define_stats! {
+    prefix = "mononoke.tunables";
+    refresh_failure_count: timeseries(Average, Sum, Count),
+}
 
 static TUNABLES: OnceCell<MononokeTunables> = OnceCell::new();
 static TUNABLES_WORKER_STATE: OnceCell<TunablesWorkerState> = OnceCell::new();
@@ -387,6 +393,9 @@ async fn wait_and_update() {
                     state.logger,
                     "Error in fetching latest config for tunable: {}.\n Exiting tunable updater", e
                 );
+                // Set the refresh failure count counter so that the oncall can be alerted
+                // based on this metric
+                STATS::refresh_failure_count.add_value(1);
                 return;
             }
         }
