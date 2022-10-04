@@ -28,7 +28,7 @@ validate, expecting all valid
 
 
 validate, check route is logged on unexpected error (forced with chaos blob)
-  $ mononoke_walker --scuba-log-file scuba-error.json --blobstore-read-chaos-rate=1 --blobstore-cachelib-only -l validate validate -q -I deep -b master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker --scuba-dataset file://scuba-error.json --blobstore-read-chaos-rate=1 --blobstore-cachelib-only -l validate validate -q -I deep -b master_bookmark 2>&1 | strip_glog
   Performing check types [HgLinkNodePopulated]
   Execution error: Could not step to OutgoingEdge { label: BookmarkToChangeset, target: Changeset(ChangesetKey { inner: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd)), filenode_known_derived: false }), path: None } via Some(ValidateRoute { src_node: Bookmark(BookmarkName { bookmark: "master_bookmark" }), via: [] }) in repo repo
   
@@ -46,7 +46,7 @@ Remove all filenodes
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM filenodes where linknode=x'112478962961147124EDD43549AEDD1A335E44BF'";
 
 validate, expecting validation fails
-  $ mononoke_walker --scuba-log-file scuba.json -l validate validate -q -I deep -b master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker --scuba-dataset file://scuba.json -l validate validate -q -I deep -b master_bookmark 2>&1 | strip_glog
   Performing check types [HgLinkNodePopulated]
   Validation failed: *hg_link_node_populated* (glob)
   Nodes,Pass,Fail:39,2,1; EdgesChecked:7; CheckType:Pass,Fail Total:2,1 HgLinkNodePopulated:2,1

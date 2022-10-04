@@ -9,7 +9,7 @@
 Start up EdenAPI server.
   $ SCUBA="$TESTTMP/scuba.json"
   $ setup_common_config
-  $ mononoke --scuba-log-file "$SCUBA"
+  $ mononoke --scuba-dataset "file://$SCUBA"
   $ wait_for_mononoke
 
 Send a request

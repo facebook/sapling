@@ -77,7 +77,7 @@ Check can walk fine on the multiplex remaining side
   Seen,Loaded: 40,40
 
 Check can walk fine on the multiplex with scrub-blobstore enabled in ReportOnly mode, should log the scrub repairs needed
-  $ mononoke_walker -l loaded --blobstore-scrub-action=ReportOnly --scuba-log-file scuba-reportonly.json scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker -l loaded --blobstore-scrub-action=ReportOnly --scuba-dataset file://scuba-reportonly.json scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   * scrub: blobstore_id BlobstoreId(0) not repaired for repo0000. (glob)
   1 Seen,Loaded: 40,40
 
@@ -115,13 +115,13 @@ Note - we might get duplicate reports, we just expect that there should not be a
   1,"scrub_repair","repo0000.hgmanifest.sha1.eb79886383871977bccdb3000c275a279f0d4c99","repo","scrub",1* (glob)
 
 Check that walking with a grace period does not report the errors as the keys are too new
-  $ mononoke_walker -l loaded --blobstore-scrub-grace=3600 --blobstore-scrub-action=ReportOnly --scuba-log-file scuba-reportonly-grace.json scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker -l loaded --blobstore-scrub-grace=3600 --blobstore-scrub-action=ReportOnly --scuba-dataset file://scuba-reportonly-grace.json scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   1 Seen,Loaded: 40,40
   $ LINES="$(wc -l < scuba-reportonly-grace.json)"
   $ [[ $LINES -lt 1 ]]
 
 Check can walk fine on the multiplex with scrub-blobstore enabled in Repair mode, should also log the scrub repairs done
-  $ mononoke_walker -l loaded --blobstore-scrub-action=Repair --scuba-log-file scuba-repair.json scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker -l loaded --blobstore-scrub-action=Repair --scuba-dataset file://scuba-repair.json scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   * scrub: blobstore_id BlobstoreId(0) repaired for repo0000. (glob)
   1 Seen,Loaded: 40,40
 

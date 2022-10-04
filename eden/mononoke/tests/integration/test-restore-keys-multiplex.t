@@ -42,7 +42,7 @@ Check that walker fails on the corrupted blobstore
   Error: Execution failed
 
 Check that walker detects keys, which need to be repaired
-  $ mononoke_walker --scuba-log-file scuba-reportonly.json -l loaded --blobstore-scrub-action=ReportOnly scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker --scuba-dataset file://scuba-reportonly.json -l loaded --blobstore-scrub-action=ReportOnly scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   1 Execution error: Could not step to OutgoingEdge { label: HgManifestToHgFileEnvelope, target: HgFileEnvelope(HgFileNodeId(HgNodeHash(Sha1(005d992c5dcf32993668f7cede29d296c494a5d9)))), path: None } via Some(EmptyRoute) in repo repo
   1 
   1 Caused by:

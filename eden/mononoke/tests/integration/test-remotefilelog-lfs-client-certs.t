@@ -14,7 +14,7 @@ Setup a Mononoke repo.
 Start Mononoke & LFS. Require TLS certs in LFS.
 
   $ start_and_wait_for_mononoke_server
-  $ lfs_url="$(lfs_server --tls --scuba-log-file "$TESTTMP/scuba.json")/repo"
+  $ lfs_url="$(lfs_server --tls --scuba-dataset "file://$TESTTMP/scuba.json")/repo"
 
 Create a repo
 

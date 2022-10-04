@@ -69,7 +69,7 @@ Now test without head option (tailer will fetch it from config) and with prefetc
   > ]
   > CONFIG
   $ quiet mononoke_newadmin dump-changesets -R repo --out-filename "$TESTTMP/prefetched_commits" fetch-public
-  $ quiet segmented_changelog_tailer_reseed  --scuba-dataset dataset --scuba-log-file "$LOG_FILE" --repo repo --prefetched-commits-path "$TESTTMP/prefetched_commits"
+  $ quiet segmented_changelog_tailer_reseed --scuba-dataset "file://$LOG_FILE" --repo repo --prefetched-commits-path "$TESTTMP/prefetched_commits"
   $ grep -e "repo_id: 0" -e "segmented_changelog_tailer" "$TESTTMP/quiet.last.log"
   * reading prefetched commits from $TESTTMP/prefetched_commits (glob)
   * repo name 'repo' translates to id 0 (glob)
@@ -93,7 +93,7 @@ Add a new commit, and see the tailer tail it in properly
   $ hg bookmark -f master_bookmark -r tip
   $ cd ..
   $ blobimport repo-hg/.hg repo --derived-data-type fsnodes
-  $ quiet segmented_changelog_tailer_once  --scuba-dataset dataset --scuba-log-file "$LOG_FILE"  --repo repo
+  $ quiet segmented_changelog_tailer_once --scuba-dataset "file://$LOG_FILE"  --repo repo
   $ grep "repo_id: 0" "$TESTTMP/quiet.last.log"
   * Using the following segmented changelog heads: [AllPublicBookmarksExcept([BookmarkName { bookmark: "master_bookmark" }]), Bookmark(BookmarkName { bookmark: "master_bookmark" })], repo_id: 0 (glob)
   * SegmentedChangelogTailer initialized, repo_id: 0 (glob)

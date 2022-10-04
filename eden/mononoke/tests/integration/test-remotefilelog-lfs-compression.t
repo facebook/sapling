@@ -14,7 +14,7 @@ Setup a Mononoke repo.
 Start Mononoke & LFS.
 
   $ start_and_wait_for_mononoke_server
-  $ lfs_url="$(lfs_server --scuba-log-file "$TESTTMP/scuba.json")/repo"
+  $ lfs_url="$(lfs_server --scuba-dataset "file://$TESTTMP/scuba.json")/repo"
 
 Create a repo. Add a large file. Make it actually large to make sure we surface
 any block size boundaries or such.

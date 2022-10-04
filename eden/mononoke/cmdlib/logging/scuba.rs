@@ -21,11 +21,9 @@ use tunables::tunables;
 #[derive(Args, Debug)]
 pub struct ScubaLoggingArgs {
     /// The name of the scuba dataset to log to
+    /// Prefix `file://` will direct logging to local file
     #[clap(long)]
     pub scuba_dataset: Option<String>,
-    /// A log file to write JSON Scuba logs to (primarily useful in testing)
-    #[clap(long)]
-    pub scuba_log_file: Option<String>,
     /// Do not use the default scuba dataset for this app
     #[clap(long)]
     pub no_default_scuba_dataset: bool,
@@ -53,9 +51,6 @@ impl ScubaLoggingArgs {
         } else {
             MononokeScubaSampleBuilder::with_discard()
         };
-        if let Some(scuba_log_file) = &self.scuba_log_file {
-            scuba_logger = scuba_logger.with_log_file(scuba_log_file.clone())?;
-        }
         let mut scuba_logger = scuba_logger
             .with_observability_context(observability_context.clone())
             .with_seq("seq");

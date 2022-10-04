@@ -46,7 +46,7 @@ blobimport
 
 start mononoke
 
-  $ mononoke --scuba-log-file "$SCUBA_LOGGING_PATH"
+  $ mononoke --scuba-dataset "file://$SCUBA_LOGGING_PATH"
   $ wait_for_mononoke
 
 
@@ -63,4 +63,3 @@ Do infinitepush (aka commit cloud) push
 At least once infinitepush was performed
   $ jq '.normal | contains({log_tag: "Unbundle resolved", msg: "infinitepush"})' < "$SCUBA_LOGGING_PATH" | grep true
   true
-

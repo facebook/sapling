@@ -44,7 +44,7 @@ Run sqlblob_gc mark
   Completed marking generation 1
 
 Run sqlblob_gc generation size report again, just to check mark has not broken it
-  $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 --scuba-log-file scuba.json generation-size 2>&1 | strip_glog
+  $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 --scuba-dataset file://scuba.json generation-size 2>&1 | strip_glog
   Generation | Size
   -----------------
            2 | 199 B

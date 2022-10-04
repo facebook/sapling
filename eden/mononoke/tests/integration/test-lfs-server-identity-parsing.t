@@ -25,7 +25,7 @@
 # Start an LFS server for this repository
   $ SCUBA="$TESTTMP/scuba.json"
   $ LFS_LOG="$TESTTMP/lfs.log"
-  $ LFS_URI="$(lfs_server --log "$LFS_LOG" --tls --scuba-log-file "$SCUBA"  --live-config "$(get_configerator_relative_path "${LIVE_CONFIG}")")"
+  $ LFS_URI="$(lfs_server --log "$LFS_LOG" --tls --scuba-dataset "file://$SCUBA"  --live-config "$(get_configerator_relative_path "${LIVE_CONFIG}")")"
   $ LFS_URI_REPO1="$LFS_URI/repo1"
   $ LFS_URI_HEALTH_CHECK="$LFS_URI/health_check"
 

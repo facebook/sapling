@@ -20,7 +20,7 @@
 # Start a LFS server
   $ scuba_proxy="$TESTTMP/scuba.json"
   $ log_proxy="$TESTTMP/lfs_proxy.log"
-  $ lfs_proxy="$(lfs_server --upstream "$upstream" --log "$log_proxy" --scuba-log-file "$scuba_proxy")/lfs_repo"
+  $ lfs_proxy="$(lfs_server --upstream "$upstream" --log "$log_proxy" --scuba-dataset "file://$scuba_proxy")/lfs_repo"
 
 # Import a blob
   $ LFS_HELPER="$(realpath "${TESTTMP}/lfs")"

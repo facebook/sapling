@@ -19,8 +19,8 @@
   $ log_proxy="$TESTTMP/lfs_proxy.log"
   $ log_upstream="$TESTTMP/lfs_upstream.log"
 
-  $ lfs_upstream="$(lfs_server --log "$log_upstream" --scuba-log-file "$scuba_upstream")"
-  $ lfs_proxy="$(lfs_server --always-wait-for-upstream --upstream "${lfs_upstream}/lfs1" --log "$log_proxy" --scuba-log-file "$scuba_proxy")"
+  $ lfs_upstream="$(lfs_server --log "$log_upstream" --scuba-dataset "file://$scuba_upstream")"
+  $ lfs_proxy="$(lfs_server --always-wait-for-upstream --upstream "${lfs_upstream}/lfs1" --log "$log_proxy" --scuba-dataset "file://$scuba_proxy")"
 
 # Put content in lfs1 and lfs2
 

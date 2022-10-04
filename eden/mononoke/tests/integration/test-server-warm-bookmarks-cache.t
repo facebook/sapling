@@ -14,7 +14,7 @@ Setup repository
   $ BLOB_TYPE="blob_files" quiet default_setup_pre_blobimport
 
   $ blobimport repo-hg/.hg repo
-  $ mononoke --scuba-log-file "$SCUBA_LOGGING_PATH"
+  $ mononoke --scuba-dataset "file://$SCUBA_LOGGING_PATH"
   $ wait_for_mononoke "$TESTTMP/repo"
   $ cd "$TESTTMP"
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames= -q

@@ -14,7 +14,7 @@
 # Start an LFS server for this repository
   $ SCUBA="$TESTTMP/scuba.json"
   $ LFS_LOG="$TESTTMP/lfs.log"
-  $ LFS_URI="$(lfs_server --log "$LFS_LOG" --tls --scuba-log-file "$SCUBA")/repo1"
+  $ LFS_URI="$(lfs_server --log "$LFS_LOG" --tls --scuba-dataset "file://$SCUBA")/repo1"
 
 # Setup constants
   $ ALLOWED_IDENT="x-fb-validated-client-encoded-identity: %7B%22ai%22%3A%20%22%22%2C%20%22ch%22%3A%20%22%22%2C%20%22it%22%3A%20%22user%22%2C%20%22id%22%3A%20%22test%22%7D"

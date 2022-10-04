@@ -1343,7 +1343,7 @@ function megarepo_async_worker {
   GLOG_minloglevel=5 "$ASYNC_REQUESTS_WORKER" "$@" \
     --log-level INFO \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --scuba-log-file "$TESTTMP/async-worker.json" \
+    --scuba-dataset "file://$TESTTMP/async-worker.json" \
     "${COMMON_ARGS[@]}" >> "$TESTTMP/megarepo_async_worker.out" 2>&1 &
   export MEGAREPO_ASYNC_WORKER_PID=$!
   echo "$MEGAREPO_ASYNC_WORKER_PID" >> "$DAEMON_PIDS"
@@ -1430,7 +1430,7 @@ function lfs_server {
       opts=("${opts[@]}" "$1")
       shift
     elif
-      [[ "$1" = "--scuba-log-file" ]] ||
+      [[ "$1" = "--scuba-dataset" ]] ||
       [[ "$1" = "--max-upload-size" ]]
     then
       opts=("${opts[@]}" "$1" "$2")

@@ -23,7 +23,7 @@
 # Start an LFS server for this repository
   $ SCUBA="$TESTTMP/scuba.json"
   $ lfs_log="$TESTTMP/lfs.log"
-  $ lfs_root="$(lfs_server --log "$lfs_log" --scuba-log-file "$SCUBA" --live-config "$(get_configerator_relative_path "${LIVE_CONFIG}")")"
+  $ lfs_root="$(lfs_server --log "$lfs_log" --scuba-dataset "file://$SCUBA" --live-config "$(get_configerator_relative_path "${LIVE_CONFIG}")")"
 
 # Get the config
   $ curl -fs "${lfs_root}/config" | jq -S .

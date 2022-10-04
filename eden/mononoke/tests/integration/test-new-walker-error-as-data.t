@@ -48,7 +48,7 @@ Check error as data fails if not in readonly-storage mode
   Error: Execution failed
 
 Check counts with error-as-data-node-type
-  $ mononoke_walker --scuba-log-file=scuba.json -l loaded scrub -q --error-as-data-node-type AliasContentMapping -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(Could not step to).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker --scuba-dataset file://scuba.json -l loaded scrub -q --error-as-data-node-type AliasContentMapping -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(Could not step to).*/\1/' | uniq -c | sed 's/^ *//'
   1 Error as data enabled, walk results may not be complete. Errors as data enabled for node types [AliasContentMapping] edge types []
   1 Could not step to
   1 Seen,Loaded: 40,39

@@ -85,7 +85,7 @@ Check we dont walk filenodes on a non-public commit.  Because filenodes is the o
   * Type:Walked,Checks,Children HgChangeset:1,* HgFileEnvelope:1,* HgFileNode:1,* HgManifest:1,* (glob)
 
 validate, expect failures on phase info, and linknode as we now point to a non-public commit
-  $ mononoke_walker --scuba-log-file scuba.json -l validate validate -q -I deep -I marker -b master_bookmark 2>&1 | strip_glog  | grep 'Validation failed:' | sed 's/.*"check_type":"\([^"]*\)".*/\1/' | sort
+  $ mononoke_walker --scuba-dataset file://scuba.json -l validate validate -q -I deep -I marker -b master_bookmark 2>&1 | strip_glog  | grep 'Validation failed:' | sed 's/.*"check_type":"\([^"]*\)".*/\1/' | sort
   bonsai_phase_is_public
   hg_link_node_populated
 

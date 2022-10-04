@@ -16,7 +16,7 @@
   $ log_upstream="$TESTTMP/lfs_upstream.log"
   $ SCUBA="$TESTTMP/scuba.json"
 
-  $ lfs_upstream="$(lfs_server --log "$log_upstream" --scuba-log-file "$SCUBA")/lfs_upstream"
+  $ lfs_upstream="$(lfs_server --log "$log_upstream" --scuba-dataset "file://$SCUBA")/lfs_upstream"
   $ lfs_proxy="$(lfs_server --always-wait-for-upstream --upstream "$lfs_upstream" --log "$log_proxy")/lfs_proxy"
 
 # Upload data to upstream only

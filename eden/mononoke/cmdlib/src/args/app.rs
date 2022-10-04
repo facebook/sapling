@@ -133,7 +133,7 @@ pub enum ArgType {
     SourceRepo,
     /// Adds --shutdown-grace-period and --shutdown-timeout for graceful shutdown.
     ShutdownTimeouts,
-    /// Adds --scuba-dataset and --scuba-log-file for scuba logging.
+    /// Adds --scuba-dataset for scuba logging.
     ScubaLogging,
     /// Adds --disabled-hooks for disabling hooks.
     DisableHooks,

@@ -7,7 +7,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ setconfig ui.ignorerevnum=false
-  $ BLOB_TYPE="blob_files" default_setup --scuba-log-file "$TESTTMP/log.json"
+  $ BLOB_TYPE="blob_files" default_setup --scuba-dataset "file://$TESTTMP/log.json"
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   │

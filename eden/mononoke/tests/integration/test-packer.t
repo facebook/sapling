@@ -42,13 +42,13 @@
   107649 1 '$TESTTMP/blobstore/0/blobs/blob-repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09.pack'
   107653 1 '$TESTTMP/blobstore/0/blobs/blob-repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a.pack'
 # Pack content individually, to show recompression effect
-  $ packer --zstd-level 10 --inner-blobstore-id 0 --scuba-log-file pack-individually.json << EOF
+  $ packer --zstd-level 10 --inner-blobstore-id 0 --scuba-dataset file://pack-individually.json << EOF
   > repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd
   > EOF
-  $ packer --zstd-level 10 --inner-blobstore-id 0 --scuba-log-file pack-individually.json << EOF
+  $ packer --zstd-level 10 --inner-blobstore-id 0 --scuba-dataset file://pack-individually.json << EOF
   > repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09
   > EOF
-  $ packer --zstd-level 10 --inner-blobstore-id 0 --scuba-log-file pack-individually.json << EOF
+  $ packer --zstd-level 10 --inner-blobstore-id 0 --scuba-dataset file://pack-individually.json << EOF
   > repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a
   > EOF
 
@@ -71,7 +71,7 @@
   $TESTTMP/blobstore/0/blobs/blob-repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09.pack
 
 # Pack content into a pack
-  $ packer --zstd-level 19 --inner-blobstore-id 0 --scuba-log-file packed.json << EOF
+  $ packer --zstd-level 19 --inner-blobstore-id 0 --scuba-dataset file://packed.json << EOF
   > repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd
   > repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09
   > repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a
