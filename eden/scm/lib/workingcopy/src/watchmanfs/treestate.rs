@@ -5,11 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::io::Write;
+use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use configmodel::Config;
 use parking_lot::Mutex;
+use treestate::dirstate::Dirstate;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::metadata::Metadata;
@@ -24,6 +28,8 @@ pub trait WatchmanTreeStateWrite {
     fn clear_needs_check(&mut self, path: &RepoPathBuf) -> Result<()>;
 
     fn set_clock(&mut self, clock: Clock) -> Result<()>;
+
+    fn flush(self, config: &dyn Config) -> Result<()>;
 }
 
 pub trait WatchmanTreeStateRead {
@@ -32,11 +38,12 @@ pub trait WatchmanTreeStateRead {
     fn get_clock(&self) -> Result<Option<Clock>>;
 }
 
-pub struct WatchmanTreeState {
+pub struct WatchmanTreeState<'a> {
     pub treestate: Arc<Mutex<TreeState>>,
+    pub root: &'a Path,
 }
 
-impl WatchmanTreeStateWrite for WatchmanTreeState {
+impl WatchmanTreeStateWrite for WatchmanTreeState<'_> {
     fn mark_needs_check(&mut self, path: &RepoPathBuf) -> Result<()> {
         let mut treestate = self.treestate.lock();
 
@@ -96,9 +103,35 @@ impl WatchmanTreeStateWrite for WatchmanTreeState {
 
         Ok(())
     }
+
+    fn flush(self, config: &dyn Config) -> Result<()> {
+        let id = identity::must_sniff_dir(self.root)?;
+        let dot_dir = self.root.join(id.dot_dir());
+        let dirstate_path = dot_dir.join("dirstate");
+
+        let _locked = repolock::lock_working_copy(config, &dot_dir)?;
+
+        let dirstate_input = util::file::read(&dirstate_path).map_err(|e| anyhow!(e))?;
+        let mut dirstate = Dirstate::deserialize(&mut dirstate_input.as_slice())?;
+        let treestate_fields = dirstate.tree_state.as_mut().ok_or_else(|| {
+            anyhow!(
+                "Unable to flush treestate because dirstate is missing required treestate fields"
+            )
+        })?;
+
+        let mut treestate = self.treestate.lock();
+        let root_id = treestate.flush()?;
+        treestate_fields.tree_root_id = root_id;
+
+        let mut dirstate_output: Vec<u8> = Vec::new();
+        dirstate.serialize(&mut dirstate_output).unwrap();
+        util::file::atomic_write(&dirstate_path, |file| file.write_all(&dirstate_output))
+            .map_err(|e| anyhow!(e))
+            .map(|_| ())
+    }
 }
 
-impl WatchmanTreeStateRead for WatchmanTreeState {
+impl WatchmanTreeStateRead for WatchmanTreeState<'_> {
     fn list_needs_check(&mut self) -> Result<Vec<Result<RepoPathBuf>>> {
         Ok(self
             .treestate

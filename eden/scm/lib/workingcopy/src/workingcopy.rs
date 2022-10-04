@@ -235,6 +235,7 @@ impl WorkingCopy {
         &self,
         matcher: Arc<dyn Matcher + Send + Sync + 'static>,
         last_write: SystemTime,
+        config: &dyn Config,
     ) -> Result<Status> {
         let added_files = self.added_files()?;
 
@@ -266,7 +267,7 @@ impl WorkingCopy {
             .filesystem
             .lock()
             .inner
-            .pending_changes(matcher.clone(), last_write)?
+            .pending_changes(matcher.clone(), last_write, config)?
             .filter_map(|result| match result {
                 Ok(PendingChangeResult::File(change_type)) => {
                     match matcher.matches_file(change_type.get_path()) {

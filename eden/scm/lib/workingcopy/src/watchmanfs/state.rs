@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use configmodel::Config;
 use serde::Deserialize;
 use types::RepoPathBuf;
 use watchman_client::prelude::*;
@@ -135,7 +136,11 @@ pub struct WatchmanPendingChanges {
 }
 
 impl WatchmanPendingChanges {
-    pub fn persist(&mut self, mut treestate: impl WatchmanTreeStateWrite) -> Result<()> {
+    pub fn persist(
+        &mut self,
+        mut treestate: impl WatchmanTreeStateWrite,
+        config: &dyn Config,
+    ) -> Result<()> {
         for path in self.needs_clear.iter() {
             if let Err(e) = treestate.clear_needs_check(&path) {
                 // We can still build a valid result if we fail to clear the
@@ -150,7 +155,8 @@ impl WatchmanPendingChanges {
         }
 
         treestate.set_clock(self.clock.clone())?;
-        Ok(())
+
+        treestate.flush(config)
     }
 }
 
@@ -168,6 +174,7 @@ mod tests {
     use std::collections::HashSet;
 
     use anyhow::Result;
+    use configmodel::Config;
     use types::RepoPathBuf;
     use watchman_client::prelude::*;
 
@@ -225,6 +232,10 @@ mod tests {
         }
 
         fn set_clock(&mut self, _clock: Clock) -> Result<()> {
+            Ok(())
+        }
+
+        fn flush(self, _config: &dyn Config) -> Result<()> {
             Ok(())
         }
     }

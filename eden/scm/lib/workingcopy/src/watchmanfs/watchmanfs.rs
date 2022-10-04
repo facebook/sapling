@@ -10,6 +10,7 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 use anyhow::Result;
+use configmodel::Config;
 use manifest_tree::ReadTreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::Matcher;
@@ -82,9 +83,11 @@ impl PendingChanges for WatchmanFileSystem {
         &self,
         _matcher: Arc<dyn Matcher + Send + Sync + 'static>,
         last_write: SystemTime,
+        config: &dyn Config,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         let state = WatchmanState::new(WatchmanTreeState {
             treestate: self.treestate.clone(),
+            root: self.vfs.root(),
         })?;
 
         let result = async_runtime::block_on(self.query_result(&state))?;
@@ -101,9 +104,13 @@ impl PendingChanges for WatchmanFileSystem {
         );
         let mut pending_changes = state.merge(result, file_change_detector)?;
 
-        pending_changes.persist(WatchmanTreeState {
-            treestate: self.treestate.clone(),
-        })?;
+        pending_changes.persist(
+            WatchmanTreeState {
+                treestate: self.treestate.clone(),
+                root: self.vfs.root(),
+            },
+            config,
+        )?;
 
         Ok(Box::new(pending_changes.into_iter()))
     }

@@ -22,6 +22,7 @@ use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyPathBuf;
 use parking_lot::RwLock;
 use pathmatcher::Matcher;
+use pyconfigparser::config;
 use pypathmatcher::extract_matcher;
 use pypathmatcher::extract_option_matcher;
 use pytreestate::treestate;
@@ -93,15 +94,17 @@ py_class!(pub class workingcopy |py| {
         &self,
         pymatcher: Option<PyObject>,
         lastwrite: u32,
+        config: &config,
     ) -> PyResult<PyObject> {
         let wc = self.inner(py).write();
         let matcher = extract_option_matcher(py, pymatcher)?;
         let last_write = SystemTime::UNIX_EPOCH.checked_add(
             Duration::from_secs(lastwrite.into())).ok_or_else(|| anyhow!("Failed to convert {} to SystemTime", lastwrite)
         ).map_pyerr(py)?;
+        let config = config.get_cfg(py);
         pystatus::to_python_status(py,
             &py.allow_threads(|| {
-                wc.status(matcher, last_write)
+                wc.status(matcher, last_write, &config)
             }).map_pyerr(py)?
         )
     }

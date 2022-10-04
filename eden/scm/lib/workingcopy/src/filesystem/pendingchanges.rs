@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 use anyhow::Result;
+use configmodel::Config;
 use pathmatcher::Matcher;
 use serde::Serialize;
 use types::RepoPathBuf;
@@ -39,5 +40,6 @@ pub trait PendingChanges {
         &self,
         matcher: Arc<dyn Matcher + Send + Sync + 'static>,
         last_write: SystemTime,
+        config: &dyn Config,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>>;
 }

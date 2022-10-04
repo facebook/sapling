@@ -18,6 +18,7 @@ manifest = { version = "0.1.0", path = "../manifest" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
+repolock = { version = "0.1.0", path = "../repolock" }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 sparse = { version = "0.1.0", path = "../sparse" }

@@ -958,7 +958,9 @@ class dirstate(object):
         if ignored or clean:
             raise self.FallbackToPythonStatus
 
-        return self._repo._rsrepo.workingcopy().status(match, self._lastnormaltime)
+        return self._repo._rsrepo.workingcopy().status(
+            match, self._lastnormaltime, self._ui._rcfg
+        )
 
     @perftrace.tracefunc("Status")
     def status(
