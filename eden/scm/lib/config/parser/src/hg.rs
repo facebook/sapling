@@ -526,6 +526,7 @@ impl ConfigSetHgExt for ConfigSet {
         self.load_path(path, &opts)
     }
 
+    #[cfg(feature = "fb")]
     fn validate_dynamic(&mut self) -> Result<SupersetVerification, Error> {
         let superset_location: String = "hgrc.dynamic".to_string();
         let subset_locations: Vec<String> =
@@ -548,6 +549,11 @@ impl ConfigSetHgExt for ConfigSet {
                 }))
             }),
         ))
+    }
+
+    #[cfg(not(feature = "fb"))]
+    fn validate_dynamic(&mut self) -> Result<SupersetVerification, Error> {
+        Ok(SupersetVerification::new())
     }
 }
 

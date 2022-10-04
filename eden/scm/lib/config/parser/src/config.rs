@@ -6,6 +6,7 @@
  */
 
 use std::borrow::Cow;
+#[cfg(any(feature = "fb", test))]
 use std::collections::hash_map::RandomState;
 use std::collections::HashSet;
 use std::fs;
@@ -378,6 +379,7 @@ impl ConfigSet {
         result
     }
 
+    #[cfg(any(feature = "fb", test))]
     /// Ensures that every value set by `superset_location` matches the final value set by one of
     /// `subset_locations`. This is used during config migrations to ensure the final config
     /// location contains the exact same configs as the original locations.
