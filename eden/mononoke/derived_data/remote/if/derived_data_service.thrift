@@ -19,11 +19,14 @@ struct DerivedDataType {
 union DerivationType {
   1: DeriveSingle derive_single;
   2: DeriveUnderived derive_underived;
+  3: Rederivation rederive;
 } (rust.ord)
 
 struct DeriveSingle {} (rust.exhaustive)
 
 struct DeriveUnderived {} (rust.exhaustive)
+
+struct Rederivation {} (rust.exhaustive)
 
 struct DeriveRequest {
   1: string repo_name;
@@ -153,11 +156,11 @@ union RequestErrorReason {
   6: DisabledDerivation disabled_derivation;
 }
 
-exception RequestError {
+safe permanent client exception RequestError {
   1: RequestErrorReason reason;
 } (rust.exhaustive)
 
-exception InternalError {
+safe permanent server exception InternalError {
   1: string reason;
 } (rust.exhaustive)
 
