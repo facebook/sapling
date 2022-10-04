@@ -100,7 +100,7 @@ async def update_commits_in_stack(ui, repo) -> int:
 
     # These are set lazily because they require GraphQL calls.
     next_pull_request_number = None
-    repository = None
+    repository: Optional[Repository] = None
 
     for partition in partitions:
         top = partition[0]
@@ -157,13 +157,14 @@ async def update_commits_in_stack(ui, repo) -> int:
     # create/update the pull request title and body, as appropriate.
     pr_numbers = [none_throws(p[0].pr).number for p in partitions]
 
-    rewrite_requests = [
+    # Add the head of the stack to the sapling-pr-archive branch.
+    tip = hex(partitions[0][0].node)
+
+    rewrite_and_archive_requests = [
         rewrite_pull_request_body(partition, index, pr_numbers, ui)
         for index, partition in enumerate(partitions)
-    ]
-    await asyncio.gather(*rewrite_requests)
-
-    # TODO: Add the head of the stack to the reviewstack-archive branch.
+    ] + [add_pr_head_to_archives(origin=origin, repository=repository, tip=tip)]
+    await asyncio.gather(*rewrite_and_archive_requests)
     return 0
 
 
@@ -316,6 +317,156 @@ async def get_pull_request_details_or_throw(pr_id: PullRequestId) -> PullRequest
         raise error.Abort(_("error fetching %s: %s") % (pr_id.as_url(), result.error))
     else:
         return none_throws(result.ok)
+
+
+async def add_pr_head_to_archives(
+    *, origin: str, repository: Optional[Repository], tip: str
+):
+    """Takes the specified commit (tip) and merges it into the appropriate
+    archive branch for the (repo, username). GitHub will periodically garbage
+    collect commits that are no longer part of a public branch, but we want to
+    prevent this to ensure previous version of a PR can be viewed later, even
+    after it has been updated via a force-push.
+
+    tip is the hex version of the commit hash to be merged into the archive branch.
+    """
+    username = await get_username()
+    if not username:
+        raise error.Abort(_("could not determine GitHub username"))
+
+    if not repository:
+        repository = await get_repository_for_origin(origin)
+    branch_name = f"sapling-pr-archive-{username}"
+    # Try to merge the tip directly, though this may fail if tip has already
+    # been merged or if the branch has not been created before. We try to merge
+    # without checking for the existence of the branch to try to avoid a TOCTOU
+    # error.
+    result = await gh_submit.merge_into_branch(
+        repo_id=repository.id, oid_to_merge=tip, branch_name=branch_name
+    )
+    if not result.is_error():
+        return
+
+    import json
+
+    # TODO: Store Result.error as Dict so we don't have to parse it again.
+    err = none_throws(result.error)
+    response = None
+    try:
+        response = json.loads(err)
+    except json.JSONDecodeError:
+        # response is not guaranteed to be valid JSON.
+        pass
+
+    if response and is_already_merged_error(response):
+        # Nothing to do!
+        return
+    elif response and is_branch_does_not_exist_error(response):
+        # Archive branch does not exist yet, so initialize it with the current
+        # tip.
+        result = await gh_submit.create_branch(
+            repo_id=repository.id, branch_name=branch_name, oid=tip
+        )
+        if result.is_error():
+            raise error.Abort(
+                _("unexpected error when trying to create branch %s with commit %s: %s")
+                % (branch_name, tip, result.error)
+            )
+    else:
+        raise error.Abort(
+            _("unexpected error when trying to merge %s into %s: %s")
+            % (tip, branch_name, err)
+        )
+
+
+def is_already_merged_error(response) -> bool:
+    r"""
+    >>> response = {
+    ...   "data": {
+    ...     "mergeBranch": None
+    ...   },
+    ...   "errors": [
+    ...     {
+    ...       "type": "UNPROCESSABLE",
+    ...       "path": [
+    ...         "mergeBranch"
+    ...       ],
+    ...       "locations": [
+    ...         {
+    ...           "line": 2,
+    ...           "column": 3
+    ...         }
+    ...       ],
+    ...       "message": "Failed to merge: \"Already merged\""
+    ...     }
+    ...   ]
+    ... }
+    >>> is_already_merged_error(response)
+    True
+    """
+    errors = response.get("errors")
+    if not errors or not isinstance(errors, list):
+        return False
+    for err in errors:
+        if err.get("type") != "UNPROCESSABLE":
+            continue
+        message = err.get("message")
+        if isinstance(message, str) and "Already merged" in message:
+            return True
+    return False
+
+
+def is_branch_does_not_exist_error(response) -> bool:
+    r"""
+    >>> response = {
+    ...   "data": {
+    ...     "mergeBranch": None
+    ...   },
+    ...   "errors": [
+    ...     {
+    ...       "type": "NOT_FOUND",
+    ...       "path": [
+    ...         "mergeBranch"
+    ...       ],
+    ...       "locations": [
+    ...         {
+    ...           "line": 2,
+    ...           "column": 3
+    ...         }
+    ...       ],
+    ...       "message": "No such base."
+    ...     }
+    ...   ]
+    ... }
+    """
+    errors = response.get("errors")
+    if not errors or not isinstance(errors, list):
+        return False
+    for err in errors:
+        if err.get("type") != "NOT_FOUND":
+            continue
+        message = err.get("message")
+        if isinstance(message, str) and "No such base." in message:
+            return True
+    return False
+
+
+async def get_username() -> Optional[str]:
+    """Returns the username associated with the GitHub personal access token."""
+    # First we try to parse the hosts.yml file directly, as that is faster,
+    # but we fall back to GraphQL, as it is more reliable, if parsing hosts.yml
+    # fails for some reason.
+    from .graphql import try_parse_oauth_token_from_gh_config
+
+    username_and_token = try_parse_oauth_token_from_gh_config()
+    if username_and_token:
+        return username_and_token[0]
+    else:
+        result = await gh_submit.get_username()
+        if result.is_error():
+            return None
+        else:
+            return none_throws(result.ok)
 
 
 def run_git_command(args: List[str], gitdir: str):

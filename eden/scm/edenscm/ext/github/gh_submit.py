@@ -267,6 +267,80 @@ mutation ($pullRequestId: ID!, $title: String!, $body: String!) {
         return Result(ok=result.ok["data"]["updatePullRequest"]["pullRequest"]["id"])
 
 
+async def create_branch(*, repo_id: str, branch_name: str, oid: str) -> Result[str]:
+    """Attempts to create the branch. If successful, returns the ID of the newly
+    created Ref.
+    """
+    query = """
+mutation ($repositoryId: ID!, $name: String!, $oid: GitObjectID!) {
+  createRef(input: {repositoryId: $repositoryId, name: $name, oid: $oid}) {
+    ref {
+      id
+    }
+  }
+}
+"""
+    params: Dict[str, Union[str, int]] = {
+        "query": query,
+        "repositoryId": repo_id,
+        "name": f"refs/heads/{branch_name}",
+        "oid": oid,
+    }
+    result = await make_request(params)
+    if result.is_error():
+        return result
+    else:
+        return Result(ok=result.ok["data"]["createRef"]["ref"]["id"])
+
+
+async def merge_into_branch(
+    *, repo_id: str, oid_to_merge: str, branch_name: str
+) -> Result[str]:
+    """Takes the hash, oid_to_merge, and merges it into the specified branch_name."""
+    query = """
+mutation ($repositoryId: ID!, $base: String!, $head: String!) {
+  mergeBranch(input: {repositoryId: $repositoryId, base: $base, head: $head}) {
+    mergeCommit {
+      oid
+    }
+  }
+}
+"""
+    params: Dict[str, Union[str, int]] = {
+        "query": query,
+        "repositoryId": repo_id,
+        "base": branch_name,
+        "head": oid_to_merge,
+    }
+    result = await make_request(params)
+    if result.is_error():
+        return result
+    else:
+        return Result(ok=result.ok["data"]["mergeBranch"]["mergeCommit"]["oid"])
+
+
+async def get_username() -> Result[str]:
+    """Returns the username associated with the auth token. Note that it is
+    slightly faster to call graphql.try_parse_oath_token_from_hosts_yml() and
+    read the value from hosts.yml.
+    """
+    query = """
+query {
+  viewer {
+    login
+  }
+}
+"""
+    params: Dict[str, Union[str, int]] = {
+        "query": query,
+    }
+    result = await make_request(params)
+    if result.is_error():
+        return result
+    else:
+        return Result(ok=result.ok["data"]["viewer"]["login"])
+
+
 async def make_request(
     params: Dict[str, Union[str, int]], endpoint="graphql"
 ) -> Result:
@@ -286,17 +360,20 @@ async def make_request(
     )
     stdout, stderr = await proc.communicate()
 
-    if proc.returncode != 0:
-        return Result(
-            error=f"Failure running {' '.join(args)}\nstdout: {stdout}\nstderr: {stderr}\n"
-        )
+    # If proc exits with a non-zero exit code, the stdout may still
+    # be valid JSON, but we expect it to have an "errors" property defined.
+    try:
+        response = json.loads(stdout)
+    except json.JSONDecodeError:
+        response = None
 
-    return check_stdout(stdout)
-
-
-def check_stdout(stdout: bytes) -> Result:
-    response = json.loads(stdout)
-    if "errors" in response:
-        return Result(error=json.dumps(response, indent=1))
-    else:
+    if proc.returncode == 0:
+        assert response is not None
+        assert "errors" not in response
         return Result(ok=response)
+    elif response is None:
+        return Result(
+            error=f"exit({proc.returncode}) Failure running {' '.join(args)}\nstdout: {stdout}\nstderr: {stderr}\n"
+        )
+    else:
+        return Result(error=json.dumps(response, indent=1))
