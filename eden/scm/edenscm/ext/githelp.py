@@ -46,7 +46,7 @@ class GitUnknownError(error.Abort):
         super(GitUnknownError, self).__init__(msg)
 
 
-def convert(s):
+def convert(s: str) -> str:
     if s.startswith("origin/"):
         return s[7:]
     if "HEAD" in s:
@@ -161,7 +161,7 @@ class AndCommand(object):
         return AndCommand(self, other)
 
 
-def add(ui, repo, *args, **kwargs):
+def add(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [("A", "all", None, ""), ("p", "patch", None, "")]
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -199,7 +199,7 @@ def add(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def am(ui, repo, *args, **kwargs):
+def am(ui, repo, *args, **kwargs) -> None:
     cmdoptions = []
     args, opts = parseoptions(ui, cmdoptions, args)
     cmd = Command("mimport -m")
@@ -207,7 +207,7 @@ def am(ui, repo, *args, **kwargs):
     ui.status(_("note: requires the MboxExtension and the MqExtension.\n"))
 
 
-def apply(ui, repo, *args, **kwargs):
+def apply(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [("p", "p", 0, "")]
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -219,11 +219,11 @@ def apply(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def bisect(ui, repo, *args, **kwargs):
+def bisect(ui, repo, *args, **kwargs) -> None:
     ui.status(_("See 'hg help bisect' for how to use bisect.\n\n"))
 
 
-def blame(ui, repo, *args, **kwargs):
+def blame(ui, repo, *args, **kwargs) -> None:
     cmdoptions = []
     args, opts = parseoptions(ui, cmdoptions, args)
     try:
@@ -237,7 +237,7 @@ def blame(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def branch(ui, repo, *args, **kwargs):
+def branch(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [
         ("", "set-upstream", None, ""),
         ("", "set-upstream-to", "", ""),
@@ -269,6 +269,7 @@ def branch(ui, repo, *args, **kwargs):
                 # revision
                 old = '`hg log -T"{activebookmark}" -r .`'
         new = args[0]
+        # pyre-fixme[61]: `old` is undefined, or not always defined.
         cmd["-m"] = old
         cmd.append(new)
     else:
@@ -309,7 +310,7 @@ def ispath(repo, string):
     return didexist
 
 
-def checkout(ui, repo, *args, **kwargs):
+def checkout(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [
         ("b", "branch", "", ""),
         ("B", "branch", "", ""),
@@ -373,7 +374,7 @@ def checkout(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def cherrypick(ui, repo, *args, **kwargs):
+def cherrypick(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [
         ("", "continue", None, ""),
         ("", "abort", None, ""),
@@ -395,7 +396,7 @@ def cherrypick(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def clean(ui, repo, *args, **kwargs):
+def clean(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [("d", "d", None, ""), ("f", "force", None, ""), ("x", "x", None, "")]
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -407,7 +408,7 @@ def clean(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def clone(ui, repo, *args, **kwargs):
+def clone(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [
         ("", "bare", None, ""),
         ("n", "checkout", True, ""),
@@ -442,7 +443,7 @@ def clone(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def commit(ui, repo, *args, **kwargs):
+def commit(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [
         ("a", "all", None, ""),
         ("m", "message", "", ""),
@@ -495,7 +496,7 @@ def commit(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def deprecated(ui, repo, *args, **kwargs):
+def deprecated(ui, repo, *args, **kwargs) -> None:
     ui.warn(
         _(
             "This command has been deprecated in the git project, "
@@ -504,7 +505,7 @@ def deprecated(ui, repo, *args, **kwargs):
     )
 
 
-def diff(ui, repo, *args, **kwargs):
+def diff(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [
         ("a", "all", None, ""),
         ("", "cached", None, ""),
@@ -536,7 +537,7 @@ def diff(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def difftool(ui, repo, *args, **kwargs):
+def difftool(ui, repo, *args, **kwargs) -> None:
     ui.status(
         _(
             "Mercurial does not enable external difftool by default. You "
@@ -550,7 +551,7 @@ def difftool(ui, repo, *args, **kwargs):
     )
 
 
-def fetch(ui, repo, *args, **kwargs):
+def fetch(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [("", "all", None, ""), ("f", "force", None, "")]
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -576,7 +577,7 @@ def fetch(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def grep(ui, repo, *args, **kwargs):
+def grep(ui, repo, *args, **kwargs) -> None:
     cmdoptions = []
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -589,7 +590,7 @@ def grep(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def init(ui, repo, *args, **kwargs):
+def init(ui, repo, *args, **kwargs) -> None:
     cmdoptions = []
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -601,7 +602,7 @@ def init(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def log(ui, repo, *args, **kwargs):
+def log(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [
         ("", "follow", None, ""),
         ("", "decorate", None, ""),
@@ -672,7 +673,7 @@ def log(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def lsfiles(ui, repo, *args, **kwargs):
+def lsfiles(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [
         ("c", "cached", None, ""),
         ("d", "deleted", None, ""),
@@ -714,7 +715,7 @@ def lsfiles(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def merge(ui, repo, *args, **kwargs):
+def merge(ui, repo, *args, **kwargs) -> None:
     cmdoptions = []
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -726,7 +727,7 @@ def merge(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def mergebase(ui, repo, *args, **kwargs):
+def mergebase(ui, repo, *args, **kwargs) -> None:
     cmdoptions = []
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -742,7 +743,7 @@ def mergebase(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def mergetool(ui, repo, *args, **kwargs):
+def mergetool(ui, repo, *args, **kwargs) -> None:
     cmdoptions = []
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -754,7 +755,7 @@ def mergetool(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def mv(ui, repo, *args, **kwargs):
+def mv(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [("f", "force", None, "")]
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -767,7 +768,7 @@ def mv(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def pull(ui, repo, *args, **kwargs):
+def pull(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [
         ("", "all", None, ""),
         ("f", "force", None, ""),
@@ -798,7 +799,7 @@ def pull(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def push(ui, repo, *args, **kwargs):
+def push(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [("", "all", None, ""), ("f", "force", None, "")]
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -827,7 +828,7 @@ def push(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def rebase(ui, repo, *args, **kwargs):
+def rebase(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [
         ("", "all", None, ""),
         ("i", "interactive", None, ""),
@@ -887,7 +888,7 @@ def rebase(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def restore(ui, repo, *args, **kwargs):
+def restore(ui, repo, *args, **kwargs) -> None:
     cmdoptions = []
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -897,7 +898,7 @@ def restore(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def reflog(ui, repo, *args, **kwargs):
+def reflog(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [("", "all", None, "")]
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -918,7 +919,7 @@ def reflog(ui, repo, *args, **kwargs):
     )
 
 
-def reset(ui, repo, *args, **kwargs):
+def reset(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [
         ("", "soft", None, ""),
         ("", "hard", None, ""),
@@ -945,7 +946,7 @@ def reset(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def revert(ui, repo, *args, **kwargs):
+def revert(ui, repo, *args, **kwargs) -> None:
     cmdoptions = []
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -959,7 +960,7 @@ def revert(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def revparse(ui, repo, *args, **kwargs):
+def revparse(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [("", "show-cdup", None, ""), ("", "show-toplevel", None, "")]
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -972,7 +973,7 @@ def revparse(ui, repo, *args, **kwargs):
         ui.status(_("note: see hg help revset for how to refer to commits\n"))
 
 
-def rm(ui, repo, *args, **kwargs):
+def rm(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [("f", "force", None, ""), ("n", "dry-run", None, "")]
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -987,7 +988,7 @@ def rm(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def show(ui, repo, *args, **kwargs):
+def show(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [
         ("", "name-status", None, ""),
         ("", "pretty", "", ""),
@@ -1016,7 +1017,7 @@ def show(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def stash(ui, repo, *args, **kwargs):
+def stash(ui, repo, *args, **kwargs) -> None:
     cmdoptions = []
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -1057,7 +1058,7 @@ def stash(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def status(ui, repo, *args, **kwargs):
+def status(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [("", "ignored", None, "")]
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -1079,7 +1080,7 @@ def svn(ui, repo, *args, **kwargs):
     return gitsvncommands[svncmd](ui, repo, *args, **kwargs)
 
 
-def svndcommit(ui, repo, *args, **kwargs):
+def svndcommit(ui, repo, *args, **kwargs) -> None:
     cmdoptions = []
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -1088,7 +1089,7 @@ def svndcommit(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def svnfetch(ui, repo, *args, **kwargs):
+def svnfetch(ui, repo, *args, **kwargs) -> None:
     cmdoptions = []
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -1098,7 +1099,7 @@ def svnfetch(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def svnfindrev(ui, repo, *args, **kwargs):
+def svnfindrev(ui, repo, *args, **kwargs) -> None:
     cmdoptions = []
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -1108,7 +1109,7 @@ def svnfindrev(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def svnrebase(ui, repo, *args, **kwargs):
+def svnrebase(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [("l", "local", None, "")]
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -1122,7 +1123,7 @@ def svnrebase(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
-def tag(ui, repo, *args, **kwargs):
+def tag(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [
         ("f", "force", None, ""),
         ("l", "list", None, ""),
