@@ -155,21 +155,21 @@ const TEST: Identity = Identity {
 };
 
 #[cfg(all(not(feature = "sl_only"), not(test)))]
-mod idents {
+pub mod idents {
     use super::*;
     pub const DEFAULT: Identity = HG;
     pub static ALL_IDENTITIES: &[Identity] = &[HG, SL];
 }
 
 #[cfg(feature = "sl_only")]
-mod idents {
+pub mod idents {
     use super::*;
     pub const DEFAULT: Identity = SL;
     pub static ALL_IDENTITIES: &[Identity] = &[SL];
 }
 
 #[cfg(test)]
-mod idents {
+pub mod idents {
     use super::*;
     pub const DEFAULT: Identity = HG;
     pub static ALL_IDENTITIES: &[Identity] = &[HG, SL, TEST];

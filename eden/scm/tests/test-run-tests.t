@@ -908,6 +908,7 @@ test --tmpdir support
   
   Set up config environment by:
     export HGRCPATH=* (glob)
+    export SL_CONFIG_PATH=* (glob)
   .
   ----------------------------------------------------------------------
   # Ran 1 tests, 0 skipped, 0 failed.
@@ -922,7 +923,8 @@ test --record support
   Keeping threadtmp dir: $TESTTMP/record/child1 
   
   Set up config environment by:
-    export HGRCPATH=$TESTTMP/record/child1/.hgrc 
+    export HGRCPATH=$TESTTMP/record/child1/.hgrc
+    export SL_CONFIG_PATH=$TESTTMP/record/child1/.hgrc 
   .
   ----------------------------------------------------------------------
   # Ran 1 tests, 0 skipped, 0 failed.

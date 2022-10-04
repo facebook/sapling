@@ -1340,7 +1340,8 @@ class Test(unittest.TestCase):
             )
             log(
                 "\nSet up config environment by:\n"
-                "  export HGRCPATH=%s" % s(self._gethgrcpath())
+                "  export HGRCPATH=%s\n  export SL_CONFIG_PATH=%s"
+                % (s(self._gethgrcpath()), s(self._gethgrcpath()))
             )
         else:
             shutil.rmtree(self._testtmp, True)
@@ -1511,6 +1512,7 @@ class Test(unittest.TestCase):
             # This list should be parallel to _portmap in _getreplacements
             defineport(port)
         env["HGRCPATH"] = self._gethgrcpath()
+        env["SL_CONFIG_PATH"] = self._gethgrcpath()
         env["DAEMON_PIDS"] = os.path.join(self._threadtmp, "daemon.pids")
         env["HGEDITOR"] = "internal:none"
         env["HGMERGE"] = "internal:merge"

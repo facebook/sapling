@@ -101,6 +101,7 @@ def testsetup(t: TestTmp):
         "LANGUAGE": "en_US.UTF-8",
         "LC_ALL": "en_US.UTF-8",
         "LOCALIP": "127.0.0.1",
+        "SL_CONFIG_PATH": str(hgrcpath),
         "TZ": "GMT",
     }
 

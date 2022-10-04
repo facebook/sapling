@@ -24,6 +24,9 @@ use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use hgplain;
+#[cfg(feature = "fb")]
+use identity::idents::ALL_IDENTITIES;
+use identity::Identity;
 use minibytes::Text;
 use url::Url;
 use util::path::expand_path;
@@ -35,8 +38,6 @@ use crate::error::Error;
 use crate::error::Errors;
 #[cfg(not(feature = "fb"))]
 use crate::opensource;
-
-pub const HGRCPATH: &str = "HGRCPATH";
 
 pub trait OptionsHgExt {
     /// Drop configs according to `$HGPLAIN` and `$HGPLAINEXCEPT`.
@@ -65,18 +66,23 @@ pub trait ConfigSetHgExt {
         readonly_items: Option<Vec<(S, N)>>,
     ) -> Result<SupersetVerification, Errors>;
 
-    /// Load system config files if `$HGRCPATH` is not set.
+    /// Load system config files if config environment variable is not set.
     /// Return errors parsing files.
-    fn load_system(&mut self, opts: Options) -> Vec<Error>;
+    fn load_system(&mut self, opts: Options, identity: &Identity) -> Vec<Error>;
 
     /// Load the dynamic config files for the given repo path.
     /// Returns errors parsing, generating, or fetching the configs.
-    fn load_dynamic(&mut self, repo_path: Option<&Path>, opts: Options) -> Result<Vec<Error>>;
+    fn load_dynamic(
+        &mut self,
+        repo_path: Option<&Path>,
+        opts: Options,
+        identity: &Identity,
+    ) -> Result<Vec<Error>>;
 
-    /// Load user config files (and environment variables).  If `$HGRCPATH` is
+    /// Load user config files (and environment variables).  If config environment variable is
     /// set, load files listed in that environment variable instead.
     /// Return errors parsing files.
-    fn load_user(&mut self, opts: Options) -> Vec<Error>;
+    fn load_user(&mut self, opts: Options, identity: &Identity) -> Vec<Error>;
 
     /// Load repo config files.
     fn load_repo(&mut self, repo_path: &Path, opts: Options) -> Vec<Error>;
@@ -276,19 +282,19 @@ impl ConfigSetHgExt for ConfigSet {
 
         errors.append(&mut self.parse(HG_PY_CORE_CONFIG, &opts.clone().source("builtin.rc")));
 
-        // Only load builtin configs if HGRCPATH is not set.
-        if std::env::var(HGRCPATH).is_err() {
+        // Only load builtin configs if config env var is not set.
+        if ident.env_var("CONFIG").is_none() {
             errors.append(
                 &mut self.parse(MERGE_TOOLS_CONFIG, &opts.clone().source("merge-tools.rc")),
             );
         }
         errors.append(
             &mut self
-                .load_dynamic(repo_path.as_deref(), opts.clone())
+                .load_dynamic(repo_path.as_deref(), opts.clone(), &ident)
                 .map_err(|e| Errors(vec![Error::Other(e)]))?,
         );
-        errors.append(&mut self.load_system(opts.clone()));
-        errors.append(&mut self.load_user(opts.clone()));
+        errors.append(&mut self.load_system(opts.clone(), &ident));
+        errors.append(&mut self.load_user(opts.clone(), &ident));
 
         if let Some(repo_path) = repo_path.as_deref() {
             errors.append(&mut self.load_repo(repo_path, opts));
@@ -304,12 +310,12 @@ impl ConfigSetHgExt for ConfigSet {
         self.validate_dynamic().map_err(|err| Errors(vec![err]))
     }
 
-    fn load_system(&mut self, opts: Options) -> Vec<Error> {
+    fn load_system(&mut self, opts: Options, identity: &Identity) -> Vec<Error> {
         let opts = opts.source("system").process_hgplain();
         let mut errors = Vec::new();
 
         // If $HGRCPATH is set, use it instead.
-        if let Ok(rcpath) = env::var("HGRCPATH") {
+        if let Some(Ok(rcpath)) = identity.env_var("CONFIG") {
             #[cfg(unix)]
             let paths = rcpath.split(':');
             #[cfg(windows)]
@@ -344,7 +350,12 @@ impl ConfigSetHgExt for ConfigSet {
     }
 
     #[cfg(feature = "fb")]
-    fn load_dynamic(&mut self, repo_path: Option<&Path>, opts: Options) -> Result<Vec<Error>> {
+    fn load_dynamic(
+        &mut self,
+        repo_path: Option<&Path>,
+        opts: Options,
+        identity: &Identity,
+    ) -> Result<Vec<Error>> {
         use std::process::Command;
         use std::time::Duration;
         use std::time::SystemTime;
@@ -374,7 +385,7 @@ impl ConfigSetHgExt for ConfigSet {
             tracing::info!(?dynamic_path, file_version=?version, my_version=%this_version, "regenerating dynamic config (version mismatch)");
             let (repo_name, user_name) = {
                 let mut temp_config = ConfigSet::new();
-                if !temp_config.load_user(opts.clone()).is_empty() {
+                if !temp_config.load_user(opts.clone(), identity).is_empty() {
                     bail!("unable to read user config to get user name");
                 }
 
@@ -483,7 +494,12 @@ impl ConfigSetHgExt for ConfigSet {
     }
 
     #[cfg(not(feature = "fb"))]
-    fn load_dynamic(&mut self, _repo_path: Option<&Path>, opts: Options) -> Result<Vec<Error>> {
+    fn load_dynamic(
+        &mut self,
+        _repo_path: Option<&Path>,
+        opts: Options,
+        _identity: &Identity,
+    ) -> Result<Vec<Error>> {
         if env::var("HG_NO_DEFAULT_CONFIG").is_ok() {
             Ok(vec![])
         } else {
@@ -491,20 +507,21 @@ impl ConfigSetHgExt for ConfigSet {
         }
     }
 
-    fn load_user(&mut self, opts: Options) -> Vec<Error> {
-        // If HGRCPATH is set, don't load user configs
+    fn load_user(&mut self, opts: Options, identity: &Identity) -> Vec<Error> {
+        // If scripting config env var is set, don't load user configs
         let mut paths = Vec::new();
-        if env::var("HGRCPATH").is_err() {
-            if let Some(home_dir) = dirs::home_dir() {
-                paths.push(home_dir.join(".hgrc"));
-
-                #[cfg(windows)]
-                {
-                    paths.push(home_dir.join("mercurial.ini"));
+        if identity.env_var("CONFIG").is_none() {
+            load_identity_paths(&mut paths, identity);
+            #[cfg(feature = "fb")]
+            {
+                // Internally we need to support the other identity config file if the user has not yet migrated
+                if !paths.iter().any(|p| p.exists()) {
+                    for alt_identity in ALL_IDENTITIES.iter() {
+                        if alt_identity != identity {
+                            load_identity_paths(&mut paths, alt_identity);
+                        }
+                    }
                 }
-            }
-            if let Some(config_dir) = dirs::config_dir() {
-                paths.push(config_dir.join("hg/hgrc"))
             }
         }
         self.load_user_internal(&paths, opts)
@@ -554,6 +571,26 @@ impl ConfigSetHgExt for ConfigSet {
     #[cfg(not(feature = "fb"))]
     fn validate_dynamic(&mut self) -> Result<SupersetVerification, Error> {
         Ok(SupersetVerification::new())
+    }
+}
+
+fn load_identity_paths(paths: &mut Vec<PathBuf>, identity: &Identity) {
+    if identity.product_name() == "Mercurial" {
+        // ~/.hgrc and ~/mercurial.ini are legacy paths that we support only when the current identity is HG
+        if let Some(home_dir) = dirs::home_dir() {
+            paths.push(home_dir.join(format!(".{}", identity.config_name())));
+            #[cfg(windows)]
+            {
+                paths.push(home_dir.join("mercurial.ini"));
+            }
+        }
+    }
+    if let Some(config_dir) = dirs::config_dir() {
+        paths.push(
+            config_dir
+                .join(identity.config_directory())
+                .join(identity.config_main_file()),
+        )
     }
 }
 
@@ -867,12 +904,14 @@ pub fn read_repo_name_from_disk(shared_dot_hg_path: &Path) -> io::Result<String>
 
 #[cfg(test)]
 mod tests {
+    use identity::idents;
     use tempdir::TempDir;
 
     use super::*;
     use crate::config::tests::write_file;
     use crate::lock_env;
 
+    const CONFIG_ENV_VAR: &str = "HGRCPATH";
     const HGPLAIN: &str = "HGPLAIN";
     const HGPLAINEXCEPT: &str = "HGPLAINEXCEPT";
 
@@ -951,10 +990,10 @@ mod tests {
     }
 
     #[test]
-    fn test_hgrcpath() {
+    fn test_config_path() {
         let mut env = crate::lock_env();
 
-        let dir = TempDir::new("test_hgrcpath").unwrap();
+        let dir = TempDir::new("test_config_path").unwrap();
 
         write_file(dir.path().join("1.rc"), "[x]\na=1");
         write_file(dir.path().join("2.rc"), "[y]\nb=2");
@@ -969,18 +1008,20 @@ mod tests {
         env.set("HGPROF", None);
 
         env.set("T", Some(dir.path().to_str().unwrap()));
-        env.set(HGRCPATH, Some(hgrcpath));
+        env.set(CONFIG_ENV_VAR, Some(hgrcpath));
 
         let mut cfg = ConfigSet::new();
 
-        cfg.load_user(Options::new());
+        let identity = idents::DEFAULT.clone();
+        cfg.load_user(Options::new(), &identity);
         assert!(
             cfg.sections().is_empty(),
             "sections {:?} is not empty",
             cfg.sections()
         );
 
-        cfg.load_system(Options::new());
+        let identity = idents::DEFAULT.clone();
+        cfg.load_system(Options::new(), &identity);
         assert_eq!(cfg.get("x", "a"), Some("1".into()));
         assert_eq!(cfg.get("y", "b"), Some("2".into()));
     }
