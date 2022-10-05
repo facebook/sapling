@@ -17,7 +17,7 @@ use anyhow::Result;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Identity {
     /// Name of the binary. Used for showing help messages
     ///
@@ -192,7 +192,7 @@ pub fn sniff_dir(path: &Path) -> Result<Option<Identity>> {
         match fs::metadata(&test_path) {
             Ok(md) if md.is_dir() => {
                 tracing::debug!(id=%id, path=%path.display(), "sniffed repo dir");
-                return Ok(Some(id.clone()));
+                return Ok(Some(*id));
             }
             Err(err) if err.kind() == io::ErrorKind::PermissionDenied => {
                 // Propagate permission error checking dot dir so we
@@ -269,7 +269,7 @@ pub fn sniff_env() -> Identity {
         for id in idents::ALL_IDENTITIES {
             if id.cli_name == id_name {
                 tracing::info!(identity = id.cli_name, "sniffed identity from env");
-                return id.clone();
+                return *id;
             }
         }
     }
