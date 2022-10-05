@@ -478,59 +478,6 @@ class casecollisionauditor(object):
         self._newfiles.add(f)
 
 
-def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
-    """yield every hg repository under path, always recursively.
-    The recurse flag will only control recursion into repo working dirs"""
-
-    def errhandler(err):
-        if err.filename == path:
-            raise err
-
-    samestat = getattr(os.path, "samestat", None)
-    if followsym and samestat is not None:
-
-        def adddir(dirlst, dirname):
-            match = False
-            dirstat = util.stat(dirname)
-            for lstdirstat in dirlst:
-                if samestat(dirstat, lstdirstat):
-                    match = True
-                    break
-            if not match:
-                dirlst.append(dirstat)
-            return not match
-
-    else:
-        followsym = False
-
-    if (seen_dirs is None) and followsym:
-        seen_dirs = []
-        adddir(seen_dirs, path)
-    for root, dirs, files in os.walk(path, topdown=True, onerror=errhandler):
-        dirs.sort()
-        if ".hg" in dirs:
-            yield root  # found a repository
-            qroot = os.path.join(root, ".hg", "patches")
-            if os.path.isdir(os.path.join(qroot, ".hg")):
-                yield qroot  # we have a patch queue repo here
-            if recurse:
-                # avoid recursing inside the .hg directory
-                dirs.remove(".hg")
-            else:
-                dirs[:] = []  # don't descend further
-        elif followsym:
-            newdirs = []
-            for d in dirs:
-                fname = os.path.join(root, d)
-                if adddir(seen_dirs, fname):
-                    if os.path.islink(fname):
-                        for hgname in walkrepos(fname, True, seen_dirs):
-                            yield hgname
-                    else:
-                        newdirs.append(d)
-            dirs[:] = newdirs
-
-
 def binnode(ctx):
     """Return binary node id for a given basectx"""
     node = ctx.node()
