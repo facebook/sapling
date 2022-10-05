@@ -103,7 +103,7 @@
   matcher: <intersectionmatcher m1=<patternmatcher patterns='(?:mammals(?:/|$))'>, m2=<includematcher includes='(?:(?:|.*/)[^/]*k(?:/|$))'>>
   f  mammals/skunk  skunk
   $ hg debugwalk -I 're:.*k$'
-  matcher: <includematcher includes='(?:.*k$)'>
+  matcher: <regexmatcher pattern='(?:.*k$)'>
   f  beans/black    ../beans/black
   f  fenugreek      ../fenugreek
   f  mammals/skunk  skunk

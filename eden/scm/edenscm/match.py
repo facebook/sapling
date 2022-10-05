@@ -205,11 +205,15 @@ def match(
 
     if include:
         kindpats = normalize(include, "glob", root, cwd, auditor, warn)
-        im = includematcher(root, cwd, kindpats, ctx=ctx, badfn=None)
+        im = _buildpatternmatcher(
+            root, cwd, kindpats, ctx=ctx, badfn=None, fallbackmatcher=includematcher
+        )
         m = intersectmatchers(m, im)
     if exclude:
         kindpats = normalize(exclude, "glob", root, cwd, auditor, warn)
-        em = includematcher(root, cwd, kindpats, ctx=ctx, badfn=None)
+        em = _buildpatternmatcher(
+            root, cwd, kindpats, ctx=ctx, badfn=None, fallbackmatcher=includematcher
+        )
         m = differencematcher(m, em)
     return m
 
@@ -1036,41 +1040,27 @@ class includematcher(basematcher):
     def __init__(self, root, cwd, kindpats, ctx=None, badfn=None):
         super(includematcher, self).__init__(root, cwd, badfn)
 
-        # Can we use tree matcher?
-        rules = _kindpatstoglobs(kindpats, recursive=True)
-        fallback = True
-        if rules is not None:
-            try:
-                matcher = treematcher(root, cwd, badfn=badfn, rules=rules)
-                # Replace self to 'matcher'.
-                self.__dict__ = matcher.__dict__
-                self.__class__ = matcher.__class__
-                fallback = False
-            except ValueError:
-                # for example, Regex("Compiled regex exceeds size limit of 10485760 bytes.")
-                pass
-        if fallback:
-            self._pats, self.matchfn = _buildmatch(ctx, kindpats, "(?:/|$)", root)
-            # prefix is True if all patterns are recursive, so certain fast paths
-            # can be enabled. Unfortunately, it's too easy to break it (ex. by
-            # using "glob:*.c", "re:...", etc).
-            self._prefix = _prefix(kindpats)
-            roots, dirs = _rootsanddirs(kindpats)
-            # roots are directories which are recursively included.
-            # If self._prefix is True, then _roots can have a fast path for
-            # visitdir to return "all", marking things included unconditionally.
-            # If self._prefix is False, then that optimization is unsound because
-            # "roots" might contain entries that is not recursive (ex. roots will
-            # include "foo/bar" for pattern "glob:foo/bar/*.c").
-            self._roots = set(roots)
-            # dirs are directories which are non-recursively included.
-            # That is, files under that directory are included. But not
-            # subdirectories.
-            self._dirs = set(dirs)
-            # Try to use a more efficient visitdir implementation
-            visitdir = _buildvisitdir(kindpats)
-            if visitdir:
-                self.visitdir = visitdir
+        self._pats, self.matchfn = _buildmatch(ctx, kindpats, "(?:/|$)", root)
+        # prefix is True if all patterns are recursive, so certain fast paths
+        # can be enabled. Unfortunately, it's too easy to break it (ex. by
+        # using "glob:*.c", "re:...", etc).
+        self._prefix = _prefix(kindpats)
+        roots, dirs = _rootsanddirs(kindpats)
+        # roots are directories which are recursively included.
+        # If self._prefix is True, then _roots can have a fast path for
+        # visitdir to return "all", marking things included unconditionally.
+        # If self._prefix is False, then that optimization is unsound because
+        # "roots" might contain entries that is not recursive (ex. roots will
+        # include "foo/bar" for pattern "glob:foo/bar/*.c").
+        self._roots = set(roots)
+        # dirs are directories which are non-recursively included.
+        # That is, files under that directory are included. But not
+        # subdirectories.
+        self._dirs = set(dirs)
+        # Try to use a more efficient visitdir implementation
+        visitdir = _buildvisitdir(kindpats)
+        if visitdir:
+            self.visitdir = visitdir
 
     def visitdir(self, dir):
         dir = normalizerootdir(dir, "visitdir")
@@ -1086,12 +1076,14 @@ class includematcher(basematcher):
         return "<includematcher includes=%r>" % self._pats
 
 
-def _buildpatternmatcher(root, cwd, kindpats, ctx=None, badfn=None):
+def _buildpatternmatcher(
+    root, cwd, kindpats, ctx=None, badfn=None, fallbackmatcher=patternmatcher
+):
     """This is a factory function for creating different pattern matchers.
 
     1. If all patterns can be converted globs and regexs, we will try to
        use either treematcher, regexmatcher or union of them.
-    2. Fallback to default patternmatcher.
+    2. Fallback to fallbackmatcher.
 
     >>> _buildpatternmatcher("", "", [('re', 'fbcode/.*', '')])
     <regexmatcher pattern='(?:fbcode/.*)'>
@@ -1105,6 +1097,10 @@ def _buildpatternmatcher(root, cwd, kindpats, ctx=None, badfn=None):
     <treematcher rules=['b/**']>
     >>> _buildpatternmatcher("", "", [])
     <nevermatcher>
+
+    # includematcher
+    >>> _buildpatternmatcher("", "", [('re', 'a/.*', ''), ('glob', 'b', '')], fallbackmatcher=includematcher)
+    <unionmatcher matchers=[<treematcher rules=['b/**']>, <regexmatcher pattern='(?:a/.*)'>]>
 
     # regexmatcher doesn't support '^', fallback to patternmatcher
     >>> _buildpatternmatcher("", "", [('re', '^abc', '')])
@@ -1120,7 +1116,8 @@ def _buildpatternmatcher(root, cwd, kindpats, ctx=None, badfn=None):
 
     # 1
     if _usetreematcher or _useregexmatcher:
-        res = _kindpatstoglobsregexs(kindpats, recursive=False)
+        isincludematcher = fallbackmatcher is includematcher
+        res = _kindpatstoglobsregexs(kindpats, recursive=isincludematcher)
         if res:
             globs, regexs = res
             try:
@@ -1135,11 +1132,13 @@ def _buildpatternmatcher(root, cwd, kindpats, ctx=None, badfn=None):
                 pass
             else:
                 m = union([m1, m2], root, cwd)
-                m._files = _explicitfiles(kindpats)
+                # includematcher are only for filtering files, so we skip explicit files for it
+                if not isincludematcher:
+                    m._files = _explicitfiles(kindpats)
                 return m
 
     # 2
-    return patternmatcher(root, cwd, kindpats, ctx=ctx, badfn=badfn)
+    return fallbackmatcher(root, cwd, kindpats, ctx=ctx, badfn=badfn)
 
 
 def _buildtreematcher(root, cwd, rules, badfn) -> Optional[treematcher]:
