@@ -5471,20 +5471,6 @@ def rollback(ui, repo, **opts):
             _("name to show in web pages (default: working directory)"),
             _("NAME"),
         ),
-        (
-            "",
-            "web-conf",
-            "",
-            _("name of the hgweb config file (see 'hg help hgweb')"),
-            _("FILE"),
-        ),
-        (
-            "",
-            "webdir-conf",
-            "",
-            _("name of the hgweb config file (DEPRECATED)"),
-            _("FILE"),
-        ),
         ("", "pid-file", "", _("name of file to write process ID to"), _("FILE")),
         (
             "",

@@ -140,17 +140,3 @@
   ./map-inside-gettext.py:6: don't use % inside _() --> print(_("mapping operation in different line %s"
   ./map-inside-gettext.py:9: don't use % inside _() --> print(_(
   [1]
-
-web templates
-
-  $ mkdir -p mercurial/templates
-  $ cat > mercurial/templates/example.tmpl <<EOF
-  > {desc}
-  > {desc|escape}
-  > {desc|firstline}
-  > {desc|websub}
-  > EOF
-
-  $ run_check_code --warnings mercurial/templates/example.tmpl
-  mercurial/templates/example.tmpl:2: warning: follow desc keyword with either firstline or websub --> {desc|escape}
-  [1]

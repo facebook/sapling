@@ -1843,9 +1843,7 @@ class ui(object):
         self.develwarn(msg, stacklevel=2, config="deprec-warn")
 
     def exportableenviron(self):
-        """The environment variables that are safe to export, e.g. through
-        hgweb.
-        """
+        """The environment variables that are safe to export."""
         return self._exportableenviron
 
     @contextlib.contextmanager

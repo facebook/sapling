@@ -3,7 +3,6 @@ test-add.t
 test-init.t
 test-clone.t
 test-contrib.t
-test-hgweb-raw.t
 test-walk.t
 
 # no sockets or fifos

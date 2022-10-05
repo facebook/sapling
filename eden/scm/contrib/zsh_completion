@@ -357,7 +357,7 @@ _hg_clone_dest() {
 }
 
 _hg_add_help_topics=(
-    config dates diffs environment extensions filesets glossary hgignore hgweb
+    config dates diffs environment extensions filesets glossary hgignore
     merge-tools multirevs obsolescence patterns phases revisions revsets
     subrepos templating urls
 )
@@ -852,7 +852,6 @@ _hg_cmd_serve() {
   '(--address -a)'{-a+,--address=}'[interface address]:interface address:' \
   '--prefix[prefix path to serve from]:directory:_files' \
   '(--name -n)'{-n+,--name=}'[name to show in web pages]:repository name:' \
-  '--web-conf[name of the hgweb config file]:webconf_file:_files' \
   '--pid-file[name of file to write process ID to]:pid_file:_files' \
   '--cmdserver[cmdserver mode]:mode:' \
   '(--templates -t)'{-t,--templates}'[web template directory]:template dir:_files -/' \

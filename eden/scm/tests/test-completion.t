@@ -299,7 +299,6 @@ Show the options for the "serve" command
   --traceback
   --verbose
   --version
-  --web-conf
   -6
   -A
   -E
@@ -572,7 +571,7 @@ Show all commands + options
   revert: all, date, rev, no-backup, interactive, include, exclude, dry-run
   rollback: dry-run, force
   root: shared
-  serve: accesslog, daemon, daemon-postexec, errorlog, port, address, prefix, name, web-conf, webdir-conf, pid-file, port-file, stdio, cmdserver, templates, style, ipv6, certificate, read-only
+  serve: accesslog, daemon, daemon-postexec, errorlog, port, address, prefix, name, pid-file, port-file, stdio, cmdserver, templates, style, ipv6, certificate, read-only
   show: nodates, noprefix, stat, git, unified, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, style, template, include, exclude
   status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, terse, copies, print0, rev, change, include, exclude, template
   summary: remote

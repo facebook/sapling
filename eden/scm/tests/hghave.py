@@ -555,17 +555,6 @@ def has_jshint():
     return matchoutput("jshint --version 2>&1", rb"jshint v")
 
 
-@check("pygments", "Pygments source highlighting library")
-def has_pygments():
-    try:
-        import pygments
-
-        pygments.highlight  # silence unused import warning
-        return True
-    except ImportError:
-        return False
-
-
 @check("outer-repo", "outer repo")
 def has_outer_repo():
     # failing for other reasons than 'no repo' imply that there is a repo

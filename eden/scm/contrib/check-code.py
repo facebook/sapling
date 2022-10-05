@@ -459,17 +459,6 @@ inrevlogpats = [
     [],
 ]
 
-webtemplatefilters = []
-
-webtemplatepats = [
-    [],
-    [
-        (
-            r"{desc(\|(?!websub|firstline)[^\|]*)+}",
-            "follow desc keyword with either firstline or websub",
-        )
-    ],
-]
 
 allfilesfilters = []
 
@@ -524,13 +513,6 @@ checks = [
     ),
     ("layering violation ui in util", r"mercurial/util\.py", "", pyfilters, inutilpats),
     ("txt", r".*\.txt$", "", txtfilters, txtpats),
-    (
-        "web template",
-        r"mercurial/templates/.*\.tmpl",
-        "",
-        webtemplatefilters,
-        webtemplatepats,
-    ),
     ("all except for .po", r".*(?<!\.po)$", "", allfilesfilters, allfilespats),
 ]
 

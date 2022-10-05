@@ -3,11 +3,11 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# support: fastannotate support for hgweb, and filectx
+# support: fastannotate support filectx
 
 from __future__ import absolute_import
 
-from edenscm import context as hgcontext, extensions, hgweb, patch, util
+from edenscm import context as hgcontext, extensions, util
 
 from . import context, revmap
 
@@ -90,13 +90,6 @@ def _doannotate(fctx, follow: bool = True, diffopts=None):
     return _convertoutputs(fctx._repo, annotated, contents)
 
 
-def _hgwebannotate(orig, fctx, ui):
-    diffopts = patch.difffeatureopts(
-        ui, untrusted=True, section="annotate", whitespace=True
-    )
-    return _doannotate(fctx, diffopts=diffopts)
-
-
 def _fctxannotate(
     orig,
     self,
@@ -138,10 +131,6 @@ def _remotefctxannotate(
         diffopts=diffopts,
         prefetchskip=skipset,
     )
-
-
-def replacehgwebannotate() -> None:
-    extensions.wrapfunction(hgweb.webutil, "annotate", _hgwebannotate)
 
 
 def replacefctxannotate() -> None:

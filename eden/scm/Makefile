@@ -173,7 +173,6 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 	  edenscm/templatefilters.py edenscm/templatekw.py \
 	  edenscm/templater.py \
 	  edenscm/filemerge.py \
-	  edenscm/hgweb/webcommands.py \
 	  edenscm/util.py \
 	  $(DOCFILES) > i18n/hg.pot.tmp
         # All strings marked for translation in Mercurial contain

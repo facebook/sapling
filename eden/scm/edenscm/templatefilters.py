@@ -488,16 +488,6 @@ def xmlescape(text):
     return re.sub("[\x00-\x08\x0B\x0C\x0E-\x1F]", " ", text)
 
 
-def websub(text, websubtable):
-    """:websub: Any text. Only applies to hgweb. Applies the regular
-    expression replacements defined in the websub section.
-    """
-    if websubtable:
-        for regexp, format in websubtable:
-            text = regexp.sub(format, text)
-    return text
-
-
 def loadfilter(ui, extname, registrarobj):
     """Load template filter from specified registrarobj"""
     for name, func in pycompat.iteritems(registrarobj._table):

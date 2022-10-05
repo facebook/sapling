@@ -325,7 +325,6 @@ Test extension help:
        grpcheck      check if the user is in specified groups
        hgevents      publishes state-enter and state-leave events to Watchman
        hgsql         sync hg repos with MySQL
-       highlight     syntax highlighting for hgweb (requires Pygments)
        histedit      interactive history editing
        infinitepush  store draft commits in the cloud
        infinitepushbackup

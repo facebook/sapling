@@ -36,8 +36,6 @@ annotate cache greatly. Run "debugbuildlinkrevcache" before
     #     a. it is less efficient than the "fastannotate" command
     #     b. it will make it practically impossible to access the old (disk
     #        side-effect free) annotate implementation
-    #     c. it implies "hgweb".
-    # - hgweb: replace hgweb's annotate implementation. conflict with "fctx".
     # (default: fastannotate)
     modes = fastannotate
 
@@ -122,15 +120,9 @@ def _flockavailable():
 
 def uisetup(ui):
     modes = set(ui.configlist("fastannotate", "modes", ["fastannotate"]))
-    if "fctx" in modes:
-        modes.discard("hgweb")
     for name in modes:
         if name == "fastannotate":
             commands.registercommand()
-        elif name == "hgweb":
-            from . import support
-
-            support.replacehgwebannotate()
         elif name == "fctx":
             from . import support
 

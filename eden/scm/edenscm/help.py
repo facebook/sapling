@@ -34,7 +34,6 @@ from . import (
     templater,
     util,
 )
-from .hgweb import webcommands
 from .i18n import _, gettext
 
 
@@ -177,7 +176,6 @@ helptable = sorted(
         ),
         (["urls"], _("URL Paths"), loaddoc("urls")),
         (["extensions"], _("Using Additional Features"), extshelp),
-        (["hgweb"], _("Configuring hgweb"), loaddoc("hgweb")),
         (["glossary"], _("Common Terms"), loaddoc("glossary")),
         (["phases"], _("Working with Phases"), loaddoc("phases")),
         (
@@ -306,7 +304,6 @@ addtopicsymbols("revisions", ".. predicatesmarker", revset.symbols)
 addtopicsymbols("templates", ".. keywordsmarker", templatekw.keywords)
 addtopicsymbols("templates", ".. filtersmarker", templatefilters.filters)
 addtopicsymbols("templates", ".. functionsmarker", templater.funcs)
-addtopicsymbols("hgweb", ".. webcommandsmarker", webcommands.commands, dedent=True)
 
 helphomecommands = [
     ("Get the latest commits from the server", ["pull"]),

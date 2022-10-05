@@ -25,7 +25,6 @@ from edenscm import (
     wireproto,
 )
 from edenscm.extensions import wrapfunction
-from edenscm.hgweb import protocol as httpprotocol
 from edenscm.i18n import _
 from edenscm.node import bin, hex, nullid
 from edenscm.pycompat import range
@@ -160,13 +159,6 @@ def onetimesetup(ui):
         return orig(self, *args, **kwargs)
 
     wrapfunction(context.basefilectx, "_adjustlinkrev", _adjustlinkrev)
-
-    def _iscmd(orig, cmd):
-        if cmd == "getfiles":
-            return False
-        return orig(cmd)
-
-    wrapfunction(httpprotocol, "iscmd", _iscmd)
 
 
 class trivialserializer(object):

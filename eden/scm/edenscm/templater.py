@@ -1802,45 +1802,6 @@ def templatepath(name):
     return None
 
 
-def stylemap(styles, paths=None):
-    """Return path to mapfile for a given style.
-
-    Searches mapfile in the following locations:
-    1. templatepath/style/map
-    2. templatepath/map-style
-    3. templatepath/map
-    """
-
-    if paths is None:
-        paths = templatepaths()
-    elif isinstance(paths, str):
-        paths = [paths]
-
-    if isinstance(styles, str):
-        styles = [styles]
-
-    for style in styles:
-        # only plain name is allowed to honor template paths
-        if (
-            not style
-            or style in (os.curdir, os.pardir)
-            or pycompat.ossep in style
-            or pycompat.osaltsep
-            and pycompat.osaltsep in style
-        ):
-            continue
-        locations = [os.path.join(style, "map"), "map-" + style]
-        locations.append("map")
-
-        for path in paths:
-            for location in locations:
-                mapfile = os.path.join(path, location)
-                if os.path.isfile(mapfile):
-                    return style, mapfile
-
-    raise RuntimeError("No hgweb templates found in %r" % paths)
-
-
 def loadfunction(ui, extname, registrarobj):
     """Load template function from specified registrarobj"""
     for name, func in pycompat.iteritems(registrarobj._table):
