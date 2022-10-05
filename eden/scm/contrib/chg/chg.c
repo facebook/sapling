@@ -166,7 +166,7 @@ static hgclient_t* retryconnectcmdserver(
 
   debugmsg("try connect to %s repeatedly", opts->initsockname);
 
-  unsigned int timeoutsec = 60; /* default: 60 seconds */
+  unsigned int timeoutsec = 3600; /* default: 1 hour */
   const char* timeoutenv = getenv("CHGTIMEOUT");
   if (timeoutenv)
     sscanf(timeoutenv, "%u", &timeoutsec);
