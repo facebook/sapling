@@ -5,25 +5,17 @@
 
 """reset the active bookmark and working copy to a desired revision"""
 
-import glob
-import os
-
 from edenscm import (
-    bundlerepo,
     error,
-    exchange,
     extensions,
-    hg,
     lock as lockmod,
     merge,
-    phases,
     pycompat,
     registrar,
     scmutil,
     visibility,
 )
 from edenscm.i18n import _, _n
-from edenscm.node import hex
 
 
 cmdtable = {}
@@ -87,75 +79,11 @@ def _revive(repo, rev):
     else:
         visibility.add(repo, [ctx.node()])
 
-    try:
-        revs = scmutil.revrange(repo, [rev])
-        if len(revs) > 1:
-            raise error.Abort(_("exactly one revision must be specified"))
-        if len(revs) == 1:
-            return repo[revs.first()]
-    except error.RepoLookupError:
-        revs = []
-
-    return _pullbundle(repo, rev)
-
-
-def _pullbundle(repo, rev):
-    """Find the given rev in a backup bundle and pull it back into the
-    repository.
-    """
-    other, rev = _findbundle(repo, rev)
-    if not other:
-        raise error.Abort(
-            "could not find '%s' in the repo or the backup" " bundles" % rev
-        )
-    lock = repo.lock()
-    try:
-        oldtip = len(repo)
-        exchange.pull(repo, other, heads=[rev])
-
-        tr = repo.transaction("phase")
-        nodes = (c.node() for c in repo.set("%d:", oldtip))
-        phases.retractboundary(repo, tr, 1, nodes)
-        tr.close()
-    finally:
-        lock.release()
-
-    if rev not in repo:
-        raise error.Abort("unable to get rev %s from repo" % rev)
-
-    return repo[rev]
-
-
-def _findbundle(repo, rev):
-    """Returns the backup bundle that contains the given rev. If found, it
-    returns the bundle peer and the full rev hash. If not found, it return None
-    and the given rev value.
-    """
-    ui = repo.ui
-    backuppath = repo.localvfs.join("strip-backup")
-    backups = list(filter(os.path.isfile, glob.glob(backuppath + "/*.hg")))
-    backups.sort(key=lambda x: os.path.getmtime(x), reverse=True)
-    for backup in backups:
-        # Much of this is copied from the hg incoming logic
-        source = os.path.relpath(backup, pycompat.getcwd())
-        source = ui.expandpath(source)
-        source, branches = hg.parseurl(source)
-        other = hg.peer(repo, {}, source)
-
-        quiet = ui.quiet
-        try:
-            ui.quiet = True
-            ret = bundlerepo.getremotechanges(ui, repo, other, None, None, None)
-            localother, chlist, cleanupfn = ret
-            for node in chlist:
-                if hex(node).startswith(rev):
-                    return other, node
-        except error.LookupError:
-            continue
-        finally:
-            ui.quiet = quiet
-
-    return None, rev
+    revs = scmutil.revrange(repo, [rev])
+    if len(revs) > 1:
+        raise error.Abort(_("exactly one revision must be specified"))
+    if len(revs) == 1:
+        return repo[revs.first()]
 
 
 def _moveto(repo, bookmark, ctx, clean=False):
