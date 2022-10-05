@@ -129,6 +129,7 @@ subcmd = cloud.subcommand(
             ["backup", "check"],
         ),
         ("Manage automatic backup or sync", ["disable", "enable"]),
+        ("Enable sharing for a cloud workspace", ["share"]),
     ]
 )
 
@@ -1460,6 +1461,19 @@ def backupdisable(ui, repo, **opts):
                 notice=_("warning"),
             )
     return 0
+
+
+@subcmd("share")
+def shareworkspace(ui, repo, **opts):
+    """Marks the given workspace for sharing and prints out the corresponding ACL"""
+    workspacename = workspace.currentworkspace(repo)
+    if workspacename is None:
+        ui.write(_("You are not connected to any workspace\n"))
+        return
+    sharing_data = service.get(ui, tokenmod.TokenLocator(ui).token).shareworkspace(
+        ccutil.getreponame(repo), workspacename
+    )
+    ui.write(sharing_data["sharing_message"] + "\n")
 
 
 @subcmd("status")

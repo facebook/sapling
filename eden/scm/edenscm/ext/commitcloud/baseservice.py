@@ -256,6 +256,10 @@ class BaseService(pycompat.ABC):
     def renameworkspace(self, reponame, workspace, new_workspace):
         """Rename the given workspace"""
 
+    @abstractmethod
+    def shareworkspace(self, reponame, workspace):
+        """Enable sharing for the given workspace"""
+
     @staticmethod
     def _makesmartloginfo(data):
         """Returns a SmartlogInfo that supports DAG operations like heads, parents,

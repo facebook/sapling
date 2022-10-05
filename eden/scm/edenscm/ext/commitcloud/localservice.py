@@ -326,6 +326,10 @@ class _LocalService(baseservice.BaseService):
         else:
             raise error.Abort(_("unknown workspace: %s") % workspace)
 
+    def shareworkspace(self, reponame, workspace):
+        """Enable sharing for the given workspace"""
+        raise NotImplementedError  # Since auth is disabled in tests
+
 
 # Make sure that the LocalService is a singleton
 LocalService = baseservice.SingletonDecorator(_LocalService)

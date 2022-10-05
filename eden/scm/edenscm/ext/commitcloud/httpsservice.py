@@ -523,6 +523,18 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         }
         self._timedsend(path, data)
 
+    @perftrace.tracefunc("Share Workspace")
+    def shareworkspace(self, reponame, workspace):
+        """Enable sharing for the given workspace"""
+        self.ui.debug("sending 'share_workspace' request\n", component="commitcloud")
+        path = "/commit_cloud/share_workspace"
+        data = {
+            "repo_name": reponame,
+            "workspace": workspace,
+        }
+        response = self._timedsend(path, data)
+        return response["sharing_data"]
+
 
 # Make sure that the HttpsCommitCloudService is a singleton
 HttpsCommitCloudService = baseservice.SingletonDecorator(_HttpsCommitCloudService)
