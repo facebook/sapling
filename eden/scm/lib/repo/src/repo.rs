@@ -175,6 +175,12 @@ impl Repo {
         })
     }
 
+    pub fn reload_requires(&mut self) -> Result<()> {
+        self.requirements = Requirements::open(&self.dot_hg_path.join("requires"))?;
+        self.store_requirements = Requirements::open(&self.store_path.join("requires"))?;
+        Ok(())
+    }
+
     /// Return the store path.
     pub fn store_path(&self) -> &Path {
         &self.store_path

@@ -851,6 +851,7 @@ class localrepository(object):
 
     def _writerequirements(self):
         scmutil.writerequires(self.localvfs, self.requirements)
+        self._rsrepo.invalidaterequires()
 
     def _writestorerequirements(self):
         if "store" in self.requirements:
@@ -859,6 +860,7 @@ class localrepository(object):
                 requirements=" ".join(sorted(self.storerequirements)),
             )
             scmutil.writerequires(self.svfs, self.storerequirements)
+            self._rsrepo.invalidaterequires()
 
     def peer(self):
         return localpeer(self)  # not cached to avoid reference cycle
