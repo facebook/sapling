@@ -308,11 +308,15 @@ impl Repo {
             return Ok(Arc::new(fs.clone()));
         }
 
-        let eden_api = match self.eden_api() {
-            Ok(eden_api) => Some(eden_api),
-            // For tests, don't error if edenapi.url isn't set.
-            Err(_) if std::env::var("TESTTMP").is_ok() => None,
-            Err(e) => return Err(e.into()),
+        let eden_api = if self.store_requirements.contains("git") {
+            None
+        } else {
+            match self.eden_api() {
+                Ok(eden_api) => Some(eden_api),
+                // For tests, don't error if edenapi.url isn't set.
+                Err(_) if std::env::var("TESTTMP").is_ok() => None,
+                Err(e) => return Err(e.into()),
+            }
         };
 
         let mut file_builder = FileStoreBuilder::new(self.config())
@@ -347,11 +351,15 @@ impl Repo {
             return Ok(Arc::new(ts.clone()));
         }
 
-        let eden_api = match self.eden_api() {
-            Ok(eden_api) => Some(eden_api),
-            // For tests, don't error if edenapi.url isn't set.
-            Err(_) if std::env::var("TESTTMP").is_ok() => None,
-            Err(e) => return Err(e.into()),
+        let eden_api = if self.store_requirements.contains("git") {
+            None
+        } else {
+            match self.eden_api() {
+                Ok(eden_api) => Some(eden_api),
+                // For tests, don't error if edenapi.url isn't set.
+                Err(_) if std::env::var("TESTTMP").is_ok() => None,
+                Err(e) => return Err(e.into()),
+            }
         };
 
         let mut tree_builder = TreeStoreBuilder::new(self.config())
