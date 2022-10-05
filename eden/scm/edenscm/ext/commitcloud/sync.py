@@ -548,6 +548,13 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
         lastsyncstate.remotebookmarks,
         newremotebookmarks,
     )
+
+    # For a new join or a workspace switch, record cloudrefs.heads as backed up, not only the pulled commits that are missing locally.
+    if lastsyncstate.version == 0:
+        state.update(
+            [nodemod.bin(head) for head in cloudrefs.heads if head in repo], tr
+        )
+
     lastsyncstate.update(
         tr,
         newversion=cloudrefs.version,
