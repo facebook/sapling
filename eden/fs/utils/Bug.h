@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <folly/Conv.h>
 #include <folly/CppAttributes.h>
 #include <folly/futures/Future.h>
 #include <atomic>
@@ -75,9 +74,8 @@ class EdenBug {
    * Append to the bug message.
    */
   template <typename T>
-  EdenBug&& operator<<(T&& t) && {
-    using folly::toAppend;
-    toAppend(std::forward<T>(t), &message_);
+  EdenBug&& operator<<(const T& t) && {
+    fmt::format_to(std::back_inserter(message_), "{}", t);
     return std::move(*this);
   }
 
