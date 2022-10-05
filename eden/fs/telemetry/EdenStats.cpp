@@ -25,8 +25,9 @@ StatsGroupBase::Counter::Counter(std::string_view name)
     : Stat{
           name,
           fb303::ExportTypeConsts::kSumCountAvgRate,
-          // TODO: do percentiles make sense for counters?
-          fb303::QuantileConsts::kP1_P10_P50_P90_P99,
+          // Don't record quantiles for counters. Usually "1" is the only value
+          // added. Usually we care about counts and rates.
+          {},
           fb303::SlidingWindowPeriodConsts::kOneMinTenMinHour,
       } {
   // TODO: enforce the name matches the StatsGroup prefix.
