@@ -38,6 +38,7 @@ from . import (
     encoding,
     error,
     formatter,
+    identity,
     json,
     metrics,
     perftrace,
@@ -254,7 +255,7 @@ class ui(object):
 
             self.metrics = metrics.metrics(self)
 
-            self.identity = bindings.identity.sniffenv()
+            self.identity = identity.sniffenv()
 
         allowed = self.configlist("experimental", "exportableenviron")
         if "*" in allowed:
@@ -279,7 +280,8 @@ class ui(object):
     def loadrepoconfig(self, repopath):
         """Load repofull config from repopath if not already loaded."""
 
-        ident = bindings.identity.sniffdir(repopath)
+        # Update identity as we transition from repoless to repofull ui object.
+        ident = identity.sniffdir(repopath)
         if ident:
             self.identity = ident
 

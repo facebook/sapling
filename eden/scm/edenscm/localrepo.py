@@ -46,6 +46,7 @@ from . import (
     filelog,
     git,
     hook,
+    identity,
     lock as lockmod,
     manifest,
     match as matchmod,
@@ -404,10 +405,16 @@ class localrepository(object):
     _lockfreeprefix = set()
 
     def __init__(self, baseui, path, create=False):
+        # Simplify things by keepning identity cache scoped at max to
+        # a single repo's lifetime. In particular this is necessary
+        # wrt git submodules.
+        identity.sniffdir.cache_clear()
+
         if create:
             bindings.repo.repo.initialize(path, baseui._rcfg)
 
-        if not bindings.identity.sniffdir(path):
+        # Make sure repo dot dir exists.
+        if not identity.sniffdir(path):
             raise errormod.RepoError(_("repository %s not found") % path)
 
         self._containscount = 0

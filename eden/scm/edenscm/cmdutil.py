@@ -20,7 +20,7 @@ import stat
 import tempfile
 from typing import Dict
 
-from bindings import identity, renderdag
+from bindings import renderdag
 from edenscm import tracing
 
 from . import (
@@ -36,6 +36,7 @@ from . import (
     formatter,
     git,
     graphmod,
+    identity,
     json,
     match as matchmod,
     mdiff,

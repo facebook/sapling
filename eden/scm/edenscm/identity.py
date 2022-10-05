@@ -10,11 +10,18 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import functools
+
+from bindings import identity
+
 prog = "hg"
 product = "Mercurial"
 longproduct = "Mercurial Distributed SCM"
 
 templatemap = {"@prog@": prog, "@Product@": product, "@LongProduct@": longproduct}
+
+sniffroot = identity.sniffroot
+sniffenv = identity.sniffenv
 
 
 def replace(s):
@@ -23,3 +30,8 @@ def replace(s):
         for template, replacement in templatemap.items():
             s = s.replace(template, replacement)
     return s
+
+
+@functools.lru_cache
+def sniffdir(path):
+    return identity.sniffdir(path)
