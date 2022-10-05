@@ -9,9 +9,16 @@
 
 #include "eden/fs/model/git/GlobMatcher.h"
 
+namespace {
+
 using namespace facebook::eden;
 using folly::ByteRange;
 using folly::StringPiece;
+
+template <size_t N>
+StringPiece literal(const char (&str)[N]) {
+  return StringPiece{str, str + N - 1};
+}
 
 // Unfortunately we can't just say EXPECT_EQ(expected, match(...)) below,
 // due to a gcc / gtest bug: https://github.com/google/googletest/issues/322
@@ -370,3 +377,11 @@ TEST(Glob, testCharClasses) {
   testCharClass("upper", isupper);
   testCharClass("xdigit", isxdigit);
 }
+
+TEST(Glob, fuzz_examples) {
+  EXPECT_NOMATCH("aa", "[a]");
+  EXPECT_NOMATCH("[[", "[\\[]");
+  EXPECT_NOMATCH(literal("\0\0"), literal("[\0]"));
+}
+
+} // namespace

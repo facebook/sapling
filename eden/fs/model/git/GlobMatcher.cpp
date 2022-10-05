@@ -678,8 +678,11 @@ bool GlobMatcher::tryMatchAt(
         ++patternIdx;
       } else {
         // Unknown opcode.  This should never happen.
-        XLOG(FATAL) << "bug processing glob pattern buffer at index "
-                    << patternIdx;
+        XLOGF(
+            FATAL,
+            "unknown opcode {} in glob pattern buffer at index {}",
+            pattern_[patternIdx],
+            patternIdx);
       }
     }
   }
@@ -699,7 +702,7 @@ bool GlobMatcher::charClassMatch(uint8_t ch, size_t* patternIdx) const {
       XDCHECK_LT(idx + 2, pattern_.size());
       uint8_t lowBound = pattern_[idx + 1];
       uint8_t highBound = pattern_[idx + 2];
-      idx += 2;
+      idx += 3;
       if (lowBound <= ch && ch <= highBound) {
         // Found a match
         break;
