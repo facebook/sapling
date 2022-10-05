@@ -17,6 +17,7 @@
 #include <folly/FileUtil.h>
 #include <folly/SocketAddress.h>
 #include <folly/String.h>
+#include <folly/Utility.h>
 #include <folly/init/Init.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
@@ -1188,7 +1189,8 @@ UnixSocket::Message PrivHelperServer::processMessage(
       break;
   }
 
-  throw_<std::runtime_error>("unexpected privhelper message type: ", msgType);
+  throw_<std::runtime_error>(
+      "unexpected privhelper message type: ", folly::to_underlying(msgType));
 }
 
 void PrivHelperServer::eofReceived() noexcept {

@@ -706,11 +706,11 @@ void EdenMount::transitionState(State expected, State newState) {
         "unable to transition mount ",
         getPath(),
         " to state ",
-        newState,
+        apache::thrift::util::enumNameSafe(newState),
         ": expected to be in state ",
-        expected,
+        apache::thrift::util::enumNameSafe(expected),
         " but actually in ",
-        found);
+        apache::thrift::util::enumNameSafe(found));
   }
 }
 

@@ -1386,7 +1386,8 @@ NfsArgsDetails formatWrite(folly::io::Cursor deser) {
       case stable_how::FILE_SYNC:
         return "FILE_SYNC";
     }
-    throw_<std::domain_error>("unexpected stable_how ", stable);
+    throw_<std::domain_error>(
+        "unexpected stable_how ", folly::to_underlying(stable));
   };
   return {
       fmt::format(
@@ -1409,7 +1410,8 @@ NfsArgsDetails formatCreate(folly::io::Cursor deser) {
       case createmode3::EXCLUSIVE:
         return "EXCLUSIVE";
     }
-    throw_<std::domain_error>("unexpected createmode3 ", createmode);
+    throw_<std::domain_error>(
+        "unexpected createmode3 ", folly::to_underlying(createmode));
   };
   return {
       fmt::format(
@@ -1467,7 +1469,7 @@ NfsArgsDetails formatMknod(folly::io::Cursor deser) {
       case ftype3::NF3FIFO:
         return "FIFO";
     }
-    throw_<std::domain_error>("unexpected ftype3 ", type);
+    throw_<std::domain_error>("unexpected ftype3 ", folly::to_underlying(type));
   };
   auto formatWhat = [](const mknoddata3& data) {
     return std::visit(
