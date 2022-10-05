@@ -337,7 +337,7 @@ def colorlabel(ui, msg, label, usebytes: bool = False) -> Union[bytes, str]:
     elif ui._colormode is not None:
         if ui.configbool("color", "use-rust", default=True):
             if not ui._styler:
-                ui._styler = bindings.io.styler(supportedcolors(ui))
+                ui._styler = bindings.io.styler(supportedcolors(ui), ui.pageractive)
 
             style = " ".join(ui._styles.get(l, l) for l in label.split())
             if usebytes:

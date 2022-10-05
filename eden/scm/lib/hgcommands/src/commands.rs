@@ -65,6 +65,7 @@ fn get_formatter(
             color: termstyle::should_color(config, writer.as_mut()),
             debug_color: config.get("ui", "color") == Some("debug".into())
                 && !hgplain::is_plain(Some("color")),
+            pager_active: writer.pager_active(),
         },
         Box::new(writer),
     )

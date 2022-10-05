@@ -287,11 +287,8 @@ mod test {
         let terr = Vec::new();
         let io = IO::new(tin, tout, Some(terr));
         let options = FormatOptions {
-            debug: false,
-            verbose: false,
-            quiet: false,
             color: test_case.color,
-            debug_color: false,
+            ..Default::default()
         };
 
         let mut config: BTreeMap<&str, &str> = BTreeMap::new();

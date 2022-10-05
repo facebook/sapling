@@ -23,6 +23,7 @@ pub struct FormatOptions {
     pub quiet: bool,
     pub color: bool,
     pub debug_color: bool,
+    pub pager_active: bool,
 }
 
 pub trait JsonFormattable {
@@ -186,11 +187,12 @@ pub fn get_formatter(
                 })
                 .collect();
 
+            let styler = termstyle::Styler::new(options.pager_active)?;
             Ok(Box::new(PlainFormatter {
                 writer,
                 options,
                 styles,
-                styler: termstyle::Styler::new()?,
+                styler,
             }))
         }
         "json" => Ok(Box::new(JsonFormatter {

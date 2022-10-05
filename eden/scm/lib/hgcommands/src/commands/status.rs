@@ -209,6 +209,10 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
         }
     };
 
+    if ctx.io().output().is_tty() {
+        ctx.io().start_pager(repo.config())?;
+    }
+
     let cwd = std::env::current_dir()?;
     let relativizer = RepoPathRelativizer::new(cwd, repo.path());
     let formatter = get_formatter(
@@ -218,10 +222,6 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
         ctx.global_opts(),
         Box::new(ctx.io().output()),
     )?;
-
-    if ctx.io().output().is_tty() {
-        ctx.io().start_pager(repo.config())?;
-    }
 
     print::print_status(formatter, relativizer, &print_config, &status, &copymap)?;
 
