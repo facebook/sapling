@@ -260,7 +260,7 @@ treestate
     fn test_init_hg_repo() {
         let tmp = tempfile::tempdir().unwrap();
         let repo_path = tmp.path().join("somerepo");
-        let hg_path = repo_path.join(".hg");
+        let hg_path = repo_path.join(".sl");
 
         init_hg_repo(repo_path.as_path(), &mut ConfigSet::new(), None).unwrap();
         assert!(repo_path.exists());

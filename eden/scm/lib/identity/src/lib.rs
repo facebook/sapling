@@ -157,25 +157,55 @@ const TEST: Identity = Identity {
 #[cfg(all(not(feature = "sl_only"), not(test)))]
 pub mod idents {
     use super::*;
-    pub const DEFAULT: Identity = HG;
     pub static ALL_IDENTITIES: &[Identity] = &[HG, SL];
+
+    /// Default `Identity` based on the current executable name.
+    pub static DEFAULT: Lazy<Identity> = Lazy::new(|| {
+        let path = std::env::current_exe().expect("current_exe() should not fail");
+        let file_name = path
+            .file_name()
+            .expect("file_name() on current_exe() should not fail");
+        let file_name = file_name.to_string_lossy();
+        let (ident, reason) = (|| {
+            for ident in ALL_IDENTITIES {
+                if file_name.contains(ident.cli_name) {
+                    return (*ident, "contains");
+                }
+            }
+            // Special case: for fbcode/eden/testlib/ tests the "current_exe"
+            // could be "python3.8". Use "hg" to maintain test compatibility.
+            // If we updated the tests, the special case can be dropped.
+            if file_name.starts_with("python") {
+                return (HG, "python");
+            }
+            // Fallback to SL if current_exe does not provide information.
+            (SL, "fallback")
+        })();
+        tracing::info!(
+            id = SL.cli_name,
+            argv0 = file_name.as_ref(),
+            reason = reason,
+            "identity from argv0"
+        );
+        ident
+    });
 }
 
 #[cfg(feature = "sl_only")]
 pub mod idents {
     use super::*;
-    pub const DEFAULT: Identity = SL;
+    pub static DEFAULT: Lazy<Identity> = Lazy::new(|| SL);
     pub static ALL_IDENTITIES: &[Identity] = &[SL];
 }
 
 #[cfg(test)]
 pub mod idents {
     use super::*;
-    pub const DEFAULT: Identity = HG;
+    pub static DEFAULT: Lazy<Identity> = Lazy::new(|| HG);
     pub static ALL_IDENTITIES: &[Identity] = &[HG, SL, TEST];
 }
 
-pub static IDENTITY: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(idents::DEFAULT));
+pub static IDENTITY: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(*idents::DEFAULT));
 
 /// CLI name to be used in user facing messaging.
 pub fn cli_name() -> &'static str {
@@ -274,9 +304,7 @@ pub fn sniff_env() -> Identity {
         }
     }
 
-    // TODO: sniff executable name for hg vs sl.
-
-    idents::DEFAULT
+    *idents::DEFAULT
 }
 
 #[cfg(test)]
@@ -295,7 +323,7 @@ mod test {
             let root = dir.path().join("default");
             fs::create_dir_all(root.join(idents::DEFAULT.dot_dir()))?;
 
-            assert_eq!(sniff_dir(&root)?.unwrap(), idents::DEFAULT);
+            assert_eq!(sniff_dir(&root)?.unwrap(), *idents::DEFAULT);
         }
 
         {
