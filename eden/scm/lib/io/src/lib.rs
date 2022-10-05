@@ -113,6 +113,10 @@ pub trait IsTty {
     fn can_color(&self) -> bool {
         self.is_tty() && !colors_disabled_via_env()
     }
+
+    fn pager_active(&self) -> bool {
+        false
+    }
 }
 
 pub trait Read: io::Read + IsTty + Any + Send + Sync {

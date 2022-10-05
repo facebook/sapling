@@ -72,6 +72,14 @@ impl IsTty for crate::IOOutput {
         let inner = inner.lock();
         inner.output.is_stdout()
     }
+    fn pager_active(&self) -> bool {
+        let inner = match Weak::upgrade(&self.0) {
+            Some(inner) => inner,
+            None => return false,
+        };
+        let inner = inner.lock();
+        inner.output.pager_active()
+    }
 }
 
 impl IsTty for crate::IOError {
@@ -95,6 +103,18 @@ impl IsTty for crate::IOError {
         let inner = inner.lock();
         if let Some(error) = inner.error.as_ref() {
             error.is_stderr()
+        } else {
+            false
+        }
+    }
+    fn pager_active(&self) -> bool {
+        let inner = match Weak::upgrade(&self.0) {
+            Some(inner) => inner,
+            None => return false,
+        };
+        let inner = inner.lock();
+        if let Some(error) = inner.error.as_ref() {
+            error.pager_active()
         } else {
             false
         }
@@ -123,6 +143,9 @@ impl IsTty for PipeWriterWithTty {
     }
     fn is_stdout(&self) -> bool {
         self.pretend_stdout
+    }
+    fn pager_active(&self) -> bool {
+        true
     }
 }
 
