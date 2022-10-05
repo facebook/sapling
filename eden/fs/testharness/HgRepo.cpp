@@ -97,7 +97,7 @@ void HgRepo::hgInit(std::vector<std::string> extraArgs) {
 }
 
 void HgRepo::enableTreeManifest(AbsolutePathPiece cacheDirectory) {
-  appendToHgrc(
+  appendToHgrc(fmt::format(
       "[extensions]\n"
       "remotefilelog =\n"
       "remotenames =\n"
@@ -106,8 +106,8 @@ void HgRepo::enableTreeManifest(AbsolutePathPiece cacheDirectory) {
       "treeonly = true\n"
       "[remotefilelog]\n"
       "reponame = test\n"
-      "cachepath = " +
-      cacheDirectory.value().str() + "\n");
+      "cachepath = {}\n",
+      cacheDirectory));
 }
 
 void HgRepo::cloneFrom(
@@ -177,7 +177,7 @@ void HgRepo::writeFile(
 void HgRepo::symlink(StringPiece contents, RelativePathPiece path) {
   auto fullPath = path_ + path;
   auto rc = ::symlink(contents.str().c_str(), fullPath.value().c_str());
-  checkUnixError(rc, "error creating symlink at ", path);
+  folly::checkUnixError(rc, "error creating symlink at ", path);
 }
 
 bool testEnvironmentSupportsHg() {

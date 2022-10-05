@@ -190,7 +190,7 @@ folly::Expected<RelativePath, int> joinAndNormalize(
     return folly::makeUnexpected(EPERM);
   }
   const std::string joined = base.value().empty() ? path.str()
-      : path.empty()                              ? base.value().str()
+      : path.empty()                              ? std::string{base.value()}
                      : folly::to<std::string>(base, kDirSeparator, path);
   const CanonicalData cdata{canonicalPathData(joined)};
   const auto& parts{cdata.components};

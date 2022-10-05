@@ -167,7 +167,7 @@ void TimestampLogRotation::removeOldLogFiles() {
       filesToKeep;
 
   auto prefix = path_.value() + "-";
-  fs::path dirname(path_.dirname().value());
+  fs::path dirname(folly::StringPiece{path_.dirname().value()});
   XLOG(DBG4) << "removing old rotated log files in " << dirname;
   for (const auto& entry : fs::directory_iterator(dirname)) {
     // Only match files that start with our log file prefix

@@ -59,7 +59,8 @@ GitBackingStore::GitBackingStore(AbsolutePathPiece repository) {
   // called once for each call to git_libgit2_init().)
   git_libgit2_init();
 
-  auto error = git_repository_open(&repo_, repository.value().str().c_str());
+  auto error =
+      git_repository_open(&repo_, std::string{repository.value()}.c_str());
   gitCheckError(error, "error opening git repository", repository);
 }
 

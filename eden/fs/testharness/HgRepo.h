@@ -135,7 +135,7 @@ class HgRepo {
       std::vector<std::string>& cmd,
       RelativePathPiece path,
       const Args&... args) {
-    cmd.push_back(path.value().str());
+    cmd.push_back(std::string{path.value()});
     buildHgArgs(cmd, args...);
   }
   template <typename... Args>
@@ -143,7 +143,7 @@ class HgRepo {
       std::vector<std::string>& cmd,
       AbsolutePathPiece path,
       const Args&... args) {
-    cmd.push_back(path.value().str());
+    cmd.push_back(std::string{path.value()});
     buildHgArgs(cmd, args...);
   }
 

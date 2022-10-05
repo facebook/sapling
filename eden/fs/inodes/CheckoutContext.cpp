@@ -116,7 +116,7 @@ void CheckoutContext::addConflict(ConflictType type, RelativePathPiece path) {
       << "attempted to add error using addConflict(): " << path;
 
   CheckoutConflict conflict;
-  *conflict.path_ref() = path.value().str();
+  *conflict.path_ref() = std::string{path.value()};
   *conflict.type_ref() = type;
   conflicts_.wlock()->push_back(std::move(conflict));
 }

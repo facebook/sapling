@@ -217,13 +217,13 @@ class PathComponentNotUtf8 : public PathComponentValidationError {
 // PathComponent and the fact that folly::fbstring is 24 bytes and std::string
 // is 32 bytes adds up.
 using PathComponent = detail::PathComponentBase<folly::fbstring>;
-using PathComponentPiece = detail::PathComponentBase<folly::StringPiece>;
+using PathComponentPiece = detail::PathComponentBase<std::string_view>;
 
 using RelativePath = detail::RelativePathBase<std::string>;
-using RelativePathPiece = detail::RelativePathBase<folly::StringPiece>;
+using RelativePathPiece = detail::RelativePathBase<std::string_view>;
 
 using AbsolutePath = detail::AbsolutePathBase<std::string>;
-using AbsolutePathPiece = detail::AbsolutePathBase<folly::StringPiece>;
+using AbsolutePathPiece = detail::AbsolutePathBase<std::string_view>;
 
 enum class CompareResult {
   EQUAL,
