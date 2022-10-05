@@ -84,6 +84,9 @@ pub(super) struct CommandArgs {
     #[clap(long)]
     /// Do not show commit ids
     no_commit_id: bool,
+    #[clap(long)]
+    /// Follow mutable overrides to the history that make it more user friendly and 'correct'
+    follow_mutable_history: bool,
 }
 
 struct BlameOut {
@@ -417,6 +420,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     };
 
     let identity_schemes = args.scheme_args.clone().into_request_schemes();
+    let follow_mutable_file_history = Some(args.follow_mutable_history);
 
     let params = thrift::CommitPathBlameParams {
         format: thrift::BlameFormat::COMPACT,
@@ -427,6 +431,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             thrift::BlameFormatOption::INCLUDE_PARENT,
             thrift::BlameFormatOption::INCLUDE_COMMIT_NUMBERS,
         }),
+        follow_mutable_file_history,
         ..Default::default()
     };
     let response = app
