@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 from collections import defaultdict
+from typing import Dict, Optional
 
 from bindings import mutationstore
 
@@ -15,7 +16,7 @@ from . import error, node as nodemod, perftrace, phases, util
 from .node import nullid
 
 
-def identfromnode(node):
+def identfromnode(node) -> str:
     return "hg/%s" % nodemod.hex(node)
 
 
@@ -25,7 +26,7 @@ def nodefromident(ident):
     raise error.Abort("Unrecognised commit identifier: %s" % ident)
 
 
-def record(repo, extra, prednodes, op=None, splitting=None):
+def record(repo, extra, prednodes, op=None, splitting=None) -> Optional[Dict[str, str]]:
     mutinfo = None
     for key in "mutpred", "mutuser", "mutdate", "mutop", "mutsplit":
         if key in extra:
@@ -142,7 +143,7 @@ def createsyntheticentry(
     )
 
 
-def recordentries(repo, entries, skipexisting=True, raw=False):
+def recordentries(repo, entries, skipexisting: bool = True, raw: bool = False) -> int:
     count = 0
     with repo.transaction("record-mutation") as tr:
         ms = repo._mutationstore
@@ -355,7 +356,7 @@ def obsoletenodes(repo):
     return repo._mutationobsolete.obsoletenodes(repo)
 
 
-def clearobsoletecache(repo):
+def clearobsoletecache(repo) -> None:
     if util.safehasattr(repo, "_mutationobsolete"):
         del repo._mutationobsolete
 
@@ -391,7 +392,7 @@ def fate(repo, node):
     return fate
 
 
-def predecessorsset(repo, startnode, closest=False):
+def predecessorsset(repo, startnode, closest: bool = False):
     """Return a list of the commits that were replaced by the startnode.
 
     If there are no such commits, returns a list containing the startnode.
@@ -493,7 +494,7 @@ def _succproduct(succsetlist):
     return product
 
 
-def successorssets(repo, startnode, closest=False, cache=None):
+def successorssets(repo, startnode, closest: bool = False, cache=None):
     """Return a list of lists of commits that replace the startnode.
 
     If there are no such commits, returns a list containing a single list
@@ -669,7 +670,7 @@ def toposort(repo, items, nodefn=None):
     return [items[revmap[r]] for r in sortedrevs]
 
 
-def unbundle(repo, bundledata):
+def unbundle(repo, bundledata) -> None:
     if enabled(repo):
         entries = mutationstore.unbundle(bundledata)
         recordentries(repo, entries, skipexisting=True, raw=True)
