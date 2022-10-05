@@ -131,12 +131,12 @@ def resolvefctx(repo, rev, path, resolverev=False, adjustctx=None):
 
 
 # like mercurial.store.encodedir, but use linelog suffixes: .m, .l, .lock
-def encodedir(path):
+def encodedir(path, dotdir):
     return (
-        path.replace(".hg/", ".hg.hg/")
-        .replace(".l/", ".l.hg/")
-        .replace(".m/", ".m.hg/")
-        .replace(".lock/", ".lock.hg/")
+        path.replace(f"{dotdir}/", f"{dotdir}{dotdir}/")
+        .replace(".l/", f".l{dotdir}/")
+        .replace(".m/", f".m{dotdir}/")
+        .replace(".lock/", f".lock{dotdir}/")
     )
 
 
@@ -755,7 +755,10 @@ class pathhelper(object):
 
     def __init__(self, repo, path, opts=defaultopts):
         # different options use different directories
-        self._vfspath = os.path.join("fastannotate", opts.shortstr, encodedir(path))
+        ident = repo.ui.identity
+        self._vfspath = os.path.join(
+            "fastannotate", opts.shortstr, encodedir(path, ident.dotdir())
+        )
         self._repo = repo
 
     @property

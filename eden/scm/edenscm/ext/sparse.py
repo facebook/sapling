@@ -1242,6 +1242,7 @@ def getsparsepatterns(
 
     includes = set()
     excludes = set()
+    # This is for files such as .hgignore and .hgsparse-base, unrelated to the .hg directory.
     rules = ["glob:.hg*"]
     ruleorigins = ["sparse.py"]
     profiles = []

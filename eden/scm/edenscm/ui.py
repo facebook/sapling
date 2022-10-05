@@ -2063,7 +2063,11 @@ def _normalize_rawloc(rawloc: str) -> str:
     """
     if os.path.isabs(rawloc):
         try:
-            with open(os.path.join(rawloc, ".hg", "store", "requires")) as f:
+            ident = identity.sniffdir(rawloc)
+            if not ident:
+                return rawloc
+
+            with open(os.path.join(rawloc, ident.dotdir(), "store", "requires")) as f:
                 from .eagerepo import EAGEREPO_REQUIREMENT
 
                 if EAGEREPO_REQUIREMENT in f.read().split():

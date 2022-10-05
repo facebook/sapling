@@ -33,6 +33,10 @@ py_class!(pub class identity |py| {
     def dotdir(&self) -> PyResult<String> {
         Ok(self.ident(py).dot_dir().to_string())
     }
+
+    def __str__(&self) -> PyResult<String> {
+        Ok(format!("{}", self.ident(py)))
+    }
 });
 
 fn sniff_env(py: Python) -> PyResult<identity> {

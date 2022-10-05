@@ -26,6 +26,7 @@ from .. import (
     error,
     extensions,
     hg,
+    identity,
     localrepo,
     progress,
     revlog,
@@ -63,7 +64,8 @@ def doctor(ui, **opts) -> typing.Optional[int]:
         runedenfsdoctor(ui)
         return
 
-    repohgpath = os.path.join(repopath, ".hg")
+    ident = identity.sniffdir(repopath) or identity.current()
+    repohgpath = os.path.join(repopath, ident.dotdir())
     vfs = vfsmod.vfs(repohgpath)
     sharedhgpath = vfs.tryreadutf8("sharedpath").rstrip("\n") or repohgpath
     svfs = vfsmod.vfs(os.path.join(sharedhgpath, "store"))

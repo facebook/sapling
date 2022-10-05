@@ -744,9 +744,12 @@ def match(
     # Test some rare dirs that probably wouldn't match unless the
     # matcher matches everything. Test for "visitdir is True" which
     # indicates the lack of a traversal fast path.
-    if all(m.visitdir(d) is True for d in (".hg/foo", "a/a/a", "z/z/z")):
+    ui = ctx.repo().ui
+    if all(
+        m.visitdir(d) is True for d in (f"{ui.identity.dotdir()}/foo", "a/a/a", "z/z/z")
+    ):
         hintutil.triggershow(
-            ctx.repo().ui,
+            ui,
             "match-full-traversal",
             ", ".join([*pats, *opts.get("include", ())]),
         )

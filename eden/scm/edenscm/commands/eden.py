@@ -890,9 +890,8 @@ def _open_repo(orig_ui: ui.ui, repo_path: str) -> localrepo.localrepository:
 
     # Create a fresh copy of the UI object, and load the repository's
     # config into it.  Then load extensions specified by this config.
-    hgrc = os.path.join(repo_path, ".hg", "hgrc")
     local_ui = ui.copy()
-    local_ui.readconfig(hgrc, repo_path)
+    local_ui.loadrepoconfig(repo_path)
     extensions.loadall(local_ui)
 
     # Create the repository using the original clean UI object that has not

@@ -30,7 +30,7 @@ import bindings
 
 from edenscmnative import osutil
 
-from . import encoding, error, fscap, pycompat
+from . import encoding, error, fscap, identity, pycompat
 from .i18n import _
 from .pycompat import encodeutf8
 
@@ -425,7 +425,8 @@ def _checkexec(path: str) -> bool:
 
     try:
         EXECFLAGS = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
-        cachedir = os.path.join(path, ".hg", "cache")
+        ident = identity.sniffdir(path) or identity.current()
+        cachedir = os.path.join(path, ident.dotdir(), "cache")
         if os.path.isdir(cachedir):
             checkisexec = os.path.join(cachedir, "checkisexec")
             checknoexec = os.path.join(cachedir, "checknoexec")
@@ -492,7 +493,8 @@ def _checklink(path: str) -> bool:
     # mktemp is not racy because symlink creation will fail if the
     # file already exists
     while True:
-        cachedir = os.path.join(path, ".hg", "cache")
+        ident = identity.sniffdir(path) or identity.current()
+        cachedir = os.path.join(path, ident.dotdir(), "cache")
         checklink = os.path.join(cachedir, "checklink")
         # try fast path, read only
         if os.path.islink(checklink):

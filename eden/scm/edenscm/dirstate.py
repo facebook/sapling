@@ -48,6 +48,7 @@ from . import (
     encoding,
     error,
     filesystem,
+    identity,
     match as matchmod,
     pathutil,
     perftrace,
@@ -124,7 +125,11 @@ def fastreadp1(repopath):
     Return None if p1 cannot be read.
     """
     try:
-        with open(os.path.join(repopath, ".hg", "dirstate"), "rb") as f:
+        ident = identity.sniffdir(repopath)
+        if not ident:
+            return None
+
+        with open(os.path.join(repopath, ident.dotdir(), "dirstate"), "rb") as f:
             node = f.read(len(nullid))
             return node
     except IOError:
