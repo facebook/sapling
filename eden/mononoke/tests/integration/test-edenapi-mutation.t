@@ -34,7 +34,6 @@ Set up local hgrc and Mononoke config, with commit cloud, http pull and upload.
   > hostname = testhost
   > servicetype = local
   > servicelocation = $TESTTMP
-  > token_enforced = False
   > owner_team = The Test Team
   > usehttpupload = True
   > [visibility]

@@ -71,9 +71,6 @@ class _LocalService(baseservice.BaseService):
                         data["head_dates"][node["node"]] = node["date"][0]
         return data
 
-    def requiresauthentication(self):
-        return False
-
     def check(self):
         return True
 

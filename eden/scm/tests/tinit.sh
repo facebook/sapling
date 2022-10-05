@@ -196,7 +196,7 @@ configure() {
       commitcloud)
         enable commitcloud infinitepush
         setconfig commitcloud.hostname=testhost
-        setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
+        setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
         setconfig commitcloud.remotebookmarkssync=True
         COMMITCLOUD=1
         ;;

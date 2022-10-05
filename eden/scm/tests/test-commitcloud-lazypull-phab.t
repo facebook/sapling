@@ -38,7 +38,6 @@ Make shared part of config
   > [commitcloud]
   > servicetype = local
   > servicelocation = $TESTTMP
-  > token_enforced = False
   > EOF
 
 Make the first clone of the server

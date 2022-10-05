@@ -36,7 +36,6 @@ from . import (
     service,
     subscription,
     syncstate,
-    token,
     upload,
     util as ccutil,
     workspace,
@@ -161,8 +160,7 @@ def _sync(
         return (1, None)
 
     # Connect to the commit cloud service.
-    tokenlocator = token.TokenLocator(ui)
-    serv = service.get(ui, tokenlocator.token)
+    serv = service.get(ui)
 
     ui.status(
         _("synchronizing '%s' with '%s'\n") % (reponame, workspacename),

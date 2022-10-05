@@ -13,7 +13,7 @@ from bindings import sptui
 from edenscm import cmdutil, error, progress, util
 from edenscm.i18n import _
 
-from . import service, token as tokenmod
+from . import service
 
 
 def showhistory(ui, repo, reponame, workspacename, template, **opts) -> None:
@@ -24,7 +24,7 @@ def showhistory(ui, repo, reponame, workspacename, template, **opts) -> None:
             self.reponame = reponame
             self.workspacename = workspacename
             self.opts = opts
-            self.serv = service.get(ui, tokenmod.TokenLocator(ui).token)
+            self.serv = service.get(ui)
             self.servlock = threading.Lock()
             self.renderevent = threading.Event()
             self.running = True

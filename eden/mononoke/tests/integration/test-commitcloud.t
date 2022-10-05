@@ -39,7 +39,6 @@ mononoke + local commit cloud backend
   > hostname = testhost
   > servicetype = local
   > servicelocation = $TESTTMP
-  > token_enforced = False
   > owner_team = The Test Team
   > updateonmove = true
   > EOF

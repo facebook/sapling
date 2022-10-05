@@ -48,9 +48,8 @@ class _HttpsCommitCloudService(baseservice.BaseService):
     the commit cloud service
     """
 
-    def __init__(self, ui, token=None):
+    def __init__(self, ui):
         self.ui = ui
-        self.token = token if token != ccutil.FAKE_TOKEN else None
         self.debugrequests = ui.config("commitcloud", "debugrequests")
         self.url = ui.config("commitcloud", "url")
         self._sockettimeout = DEFAULT_TIMEOUT
@@ -84,9 +83,6 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             "User-Agent": self.user_agent,
         }
 
-        if self.token:
-            self.headers["Authorization"] = "OAuth %s" % self.token
-
         u = util.url(self.url, parsequery=False, parsefragment=False)
 
         if u.scheme != "https" or not u.host or u.passwd is not None:
@@ -102,9 +98,9 @@ class _HttpsCommitCloudService(baseservice.BaseService):
 
         sslcontext = ssl.create_default_context()
 
-        # if the token is not set, use the same TLS auth to connect to the Commit Cloud service
+        # use the same TLS auth to connect to the Commit Cloud service
         # as it is used to connect to the default path
-        if not self.token and not self._unix_socket_proxy:
+        if not self._unix_socket_proxy:
             path = ccutil.getremotepath(self.ui)
             authdata = httpconnection.readauthforuri(self.ui, path, u.user)
             if authdata:
@@ -147,9 +143,6 @@ class _HttpsCommitCloudService(baseservice.BaseService):
                 "will be connecting to %s:%d\n" % (remotehost, remoteport),
                 component="commitcloud",
             )
-
-    def requiresauthentication(self):
-        return True
 
     def _getheader(self, s):
         return self.headers.get(s)

@@ -9,7 +9,7 @@ import socket
 
 from edenscm import perftrace, util
 
-from . import service, token, util as ccutil, workspace
+from . import service, util as ccutil, workspace
 
 
 @perftrace.tracefunc("Checkout Locations Sync")
@@ -24,8 +24,7 @@ def send(ui, repo, parent1, **kwargs):
             workspacename = workspace.defaultworkspace(ui)
         if workspacename is None:
             return
-        tokenlocator = token.TokenLocator(ui)
-        serv = service.get(ui, tokenlocator.token)
+        serv = service.get(ui)
         hostname = socket.gethostname()
         sharedpath = repo.sharedpath
         checkoutpath = repo.path

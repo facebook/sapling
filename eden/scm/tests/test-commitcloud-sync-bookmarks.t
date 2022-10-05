@@ -29,7 +29,7 @@ Configure arc
 Client 1
   $ hg clone ssh://user@dummy/server client1 -q
   $ cd client1
-  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
@@ -46,7 +46,7 @@ Client 1
 
   $ hg clone ssh://user@dummy/server client2 -q
   $ cd client2
-  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'

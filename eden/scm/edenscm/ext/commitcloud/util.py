@@ -15,7 +15,6 @@ from . import error as ccerror
 
 SERVICE = "commitcloud"
 ACCOUNT = "commitcloud"
-FAKE_TOKEN = "fake_token"
 
 
 def getuserconfigpath(ui, overrideconfig):

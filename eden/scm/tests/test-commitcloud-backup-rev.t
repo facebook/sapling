@@ -96,7 +96,6 @@ Check that backup doesn't interfere with commit cloud
   > [commitcloud]
   > servicetype = local
   > servicelocation = $TESTTMP
-  > token_enforced = False
   > education_page = https://someurl.com/wiki/CommitCloud
   > EOF
 

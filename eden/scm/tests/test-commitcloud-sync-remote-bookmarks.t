@@ -60,7 +60,7 @@ Setup first client repo and subscribe to the bookmarks "stable" and "warm".
   $ cd client1
   $ hg pull -B stable -B warm -q
   $ hg up 'desc(a2)' -q
-  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
   $ hg cloud join -q
   $ showgraph
   @  a2: public  default/master
@@ -78,7 +78,7 @@ The repo should be subscribed the "stable" and "warm" bookmark because the clien
   $ cd ..
   $ hg clone -q ssh://user@dummy/remoterepo client2
   $ cd client2
-  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
   $ hg cloud join -q
   $ showgraph
   @  a2: public  default/master
@@ -96,7 +96,7 @@ Setup third client repo but do not enable remote bookmarks sync
   $ cd ..
   $ hg clone -q ssh://user@dummy/remoterepo client3
   $ cd client3
-  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
   $ setconfig commitcloud.remotebookmarkssync=False
   $ hg cloud join -q
   $ showgraph

@@ -199,10 +199,6 @@ class BaseService(pycompat.ABC):
         }
 
     @abstractmethod
-    def requiresauthentication(self):
-        """Returns True if the service requires authentication tokens"""
-
-    @abstractmethod
     def check(self):
         """Returns True if the connection to the service is ok"""
 

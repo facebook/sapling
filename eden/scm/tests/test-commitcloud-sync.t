@@ -46,7 +46,6 @@ Make shared part of config
   > [commitcloud]
   > servicetype = local
   > servicelocation = $TESTTMP
-  > user_token_path = $TESTTMP
   > auth_help = visit https://localhost/oauth to generate a registration token
   > education_page = https://someurl.com/wiki/CommitCloud
   > EOF
@@ -55,27 +54,6 @@ Make the first clone of the server
   $ hg clone ssh://user@dummy/server client1 -q
   $ cd client1
   $ cat ../shared.rc >> .hg/hgrc
-
-Test registration with the different settings
-  $ hg cloud auth
-  abort: commitcloud: registration error: authentication with commit cloud required
-  authentication instructions:
-  visit https://localhost/oauth to generate a registration token
-  (please contact the Source Control Team if you are unable to authenticate)
-  [255]
-  $ hg cloud auth -t xxxxxx
-  setting authentication token
-  token has been validated
-  authentication successful
-  $ hg cloud auth -t xxxxxx --config "commitcloud.user_token_path=$TESTTMP/somedir"
-  abort: commitcloud: config error: invalid commitcloud.user_token_path '$TESTTMP/somedir'
-  [255]
-  $ hg cloud auth -t xxxxxx --config commitcloud.token_enforced=False
-  setting authentication token
-  token will be set but not used in the current configuration
-  authentication successful for the current configuration
-  $ hg cloud auth --config commitcloud.token_enforced=False
-  authentication successful for the current configuration
 
 Joining:
   $ hg cloud sync
@@ -121,15 +99,6 @@ Make the second clone of the server
   $ hg clone ssh://user@dummy/server client2 -q
   $ cd client2
   $ cat ../shared.rc >> .hg/hgrc
-Registration:
-  $ hg cloud auth
-  using existing authentication token
-  authentication successful
-  $ hg cloud auth -t yyyyy
-  updating authentication token
-  token has been validated
-  authentication successful
-Joining:
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
@@ -1190,14 +1159,6 @@ Rejoin
   $ hg clone ssh://user@dummy/server client2 -q
   $ cd client2
   $ cat ../shared.rc >> .hg/hgrc
-
-Attempt to reconnect with an invalid token.  This should fail, but print a nice error
-message.
-
-  $ hg cloud reconnect --config "commitcloud.user_token_path=$TESTTMP/othertokenlocation"
-  commitcloud: attempting to connect to the 'user/test/default' workspace for the 'server' repo
-  commitcloud: unable to connect: not authenticated with Commit Cloud on this host
-  learn more about Commit Cloud at https://someurl.com/wiki/CommitCloud
 
 Reconnect to a service where the workspace is brand new.  This should work.
 

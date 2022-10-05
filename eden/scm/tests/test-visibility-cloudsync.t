@@ -24,7 +24,7 @@ Create a client with some initial commits and sync them to the cloud workspace.
   $ cd $TESTTMP
   $ hg clone ssh://user@dummy/server client1 -q
   $ cd client1
-  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
@@ -66,7 +66,7 @@ Create another client and use it to modify the commits and create some new ones.
   $ cd $TESTTMP
   $ hg clone ssh://user@dummy/server client2 -q
   $ cd client2
-  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'

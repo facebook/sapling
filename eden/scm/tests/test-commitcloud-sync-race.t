@@ -23,7 +23,7 @@
 
   $ hg clone ssh://user@dummy/server client1 -q
   $ cd client1
-  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
   $ setconfig extensions.extralog="$TESTDIR/extralog.py"
   $ setconfig extralog.events="visibility, commitcloud_sync"
   $ setconfig extensions.lockdelay="$TESTDIR/lockdelay.py"
@@ -38,7 +38,7 @@
 
   $ hg clone ssh://user@dummy/server client2 -q
   $ cd client2
-  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
   $ setconfig extensions.extralog="$TESTDIR/extralog.py"
   $ setconfig extralog.events="visibility, commitcloud_sync"
   $ setconfig extensions.lockdelay="$TESTDIR/lockdelay.py"

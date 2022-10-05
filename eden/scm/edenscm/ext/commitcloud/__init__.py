@@ -21,15 +21,8 @@ Configs::
     # url of the endpoint serving commit cloud requests (for servicetype = remote)
     url = https://example.commitcloud.com
 
-    # set false if TLS certs should be used to authenticate with the commit cloud service instead
-    token_enforced = True
-
-    # help message to provide instruction on registration process
-    auth_help = please obtain an authentication token from https://example.com/
-
-    # custom path to store authentication token (may be used for testing)
-    # the path should exist
-    user_token_path = /tmp
+    # help message to provide instruction on authentication process
+    auth_help = please check authentication instructions at https://example.com/
 
     # education page
     education_page = https://someurl.com/wiki/CommitCloud
@@ -147,7 +140,6 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem("commitcloud", "servicetype", default="remote")
-configitem("commitcloud", "token_enforced", default=True)
 configitem("commitcloud", "scm_daemon_tcp_port", default=15432)
 configitem("commitcloud", "automigrate", default=False)
 configitem("commitcloud", "automigratehostworkspace", default=False)

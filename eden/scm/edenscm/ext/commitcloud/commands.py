@@ -40,7 +40,6 @@ from . import (
     subscription,
     sync,
     syncstate,
-    token as tokenmod,
     upload,
     util as ccutil,
     workspace,
@@ -155,8 +154,7 @@ def cloudjoin(ui, repo, **opts):
     Use `hg cloud sync` to trigger a new backup and synchronization.
     """
 
-    tokenlocator = tokenmod.TokenLocator(ui)
-    checkauthenticated(ui, repo, tokenlocator)
+    checkauthenticated(ui, repo)
 
     workspacename = workspace.parseworkspace(ui, opts)
     if workspacename is None:
@@ -203,7 +201,7 @@ def cloudjoin(ui, repo, **opts):
             )
             return 1
 
-        serv = service.get(ui, tokenmod.TokenLocator(ui).token)
+        serv = service.get(ui)
         reponame = ccutil.getreponame(repo)
         # check that the workspace exists if the destination workspace
         # doesn't equal to the default workspace for the current user
@@ -374,7 +372,7 @@ def cloudrejoin(ui, repo, **opts):
             # The specific hostname workspace will be preferred over the default workspace.
             reponame = ccutil.getreponame(repo)
             hostnameworkspace = workspace.hostnameworkspace(ui)
-            winfos = service.get(ui, tokenmod.TokenLocator(ui).token).getworkspaces(
+            winfos = service.get(ui).getworkspaces(
                 reponame, workspace.userworkspaceprefix(ui)
             )
 
@@ -473,58 +471,6 @@ def cloudleave(ui, repo, **opts):
     )
 
 
-@subcmd("authenticate|auth", [("t", "token", "", _("set or update token"))])
-def cloudauth(ui, repo, **opts):
-    """authenticate this host with the commit cloud service and validate the authentication
-
-    Token may not be required by the configuration but it is still possible to set it with -t option.
-    Commit Cloud token may still be required for SCM Daemon to authenticate.
-    """
-    tokenlocator = tokenmod.TokenLocator(ui)
-
-    token = opts.get("token")
-    if token:
-        if tokenlocator.tokenenforced and tokenlocator.token:
-            ui.status(_("updating authentication token\n"))
-        else:
-            ui.status(_("setting authentication token\n"))
-
-        if tokenlocator.tokenenforced:
-            # check authentication
-            service.get(ui, token).check()
-            ui.status(_("token has been validated\n"))
-            tokenlocator.settoken(token)
-            ui.status(_("authentication successful\n"))
-        else:
-            ui.status(
-                _("token will be set but not used in the current configuration\n")
-            )
-            tokenlocator.settoken(token)
-            # check authentication
-            service.get(ui, token).check()
-            ui.status(_("authentication successful for the current configuration\n"))
-    else:
-
-        if not tokenlocator.tokenenforced:
-            service.get(ui).check()
-            ui.status(_("authentication successful for the current configuration\n"))
-            return
-
-        token = tokenlocator.token
-        if token:
-            try:
-                service.get(ui, token).check()
-            except ccerror.RegistrationError:
-                token = None
-            else:
-                ui.status(_("using existing authentication token\n"))
-        if token:
-            ui.status(_("authentication successful\n"))
-        else:
-            # Run through interactive authentication to obtain a token
-            authenticate(ui, repo, tokenlocator)
-
-
 cloudsmartlogopts = [
     (
         "d",
@@ -592,7 +538,7 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
         % (workspacename, reponame),
         component="commitcloud",
     )
-    serv = service.get(ui, tokenmod.TokenLocator(ui).token)
+    serv = service.get(ui)
 
     flags = []
     if ui.configbool("commitcloud", "sl_showremotebookmarks"):
@@ -664,7 +610,7 @@ def cloudhide(ui, repo, *revs, **opts):
         workspacename = workspace.defaultworkspace(ui)
 
     with progress.spinner(ui, _("fetching commit cloud workspace")):
-        serv = service.get(ui, tokenmod.TokenLocator(ui).token)
+        serv = service.get(ui)
         slinfo = serv.getsmartlog(reponame, workspacename, repo, 0)
         firstpublic, revdag = serv.makedagwalker(slinfo, repo)
         cloudrefs = serv.getreferences(reponame, workspacename, 0)
@@ -788,42 +734,9 @@ def cloudhide(ui, repo, *revs, **opts):
         ui.status(_("nothing to change\n"))
 
 
-def authenticate(ui, repo, tokenlocator):
-    """interactive authentication"""
-    if not ui.interactive() or not tokenlocator.tokenenforced:
-        msg = _("authentication with commit cloud required")
-        raise ccerror.RegistrationError(ui, msg)
-
-    authhelp = ui.config("commitcloud", "auth_help")
-    if authhelp:
-        ui.status(authhelp + "\n")
-
-    # ui.prompt doesn't set up the prompt correctly, so pasting long lines
-    # wraps incorrectly in the terminal.  Print the prompt on its own line
-    # to avoid this.
-    prompt = _(
-        "paste your commit cloud authentication token below or run `hg cloud auth -t <token>` to set the token:\n"
-    )
-    ui.write(ui.label(prompt, "ui.prompt"))
-    token = ui.prompt("", default="").strip()
-    if token:
-        ui.status(_("checking the token '%s'\n") % token)
-        service.get(ui, token).check()
-        tokenlocator.settoken(token)
-        ui.status(_("authentication successful\n"))
-
-
-def checkauthenticated(ui, repo, tokenlocator):
-    """check if authentication is needed"""
-    token = tokenlocator.token
-    if token:
-        try:
-            service.get(ui, token).check()
-        except ccerror.RegistrationError:
-            pass
-        else:
-            return
-    authenticate(ui, repo, tokenlocator)
+def checkauthenticated(ui, repo):
+    """check if authentication works by sending an empty request"""
+    service.get(ui).check()
 
 
 @subcmd(
@@ -926,7 +839,7 @@ def cloudlistworspaces(ui, repo, **opts):
         component="commitcloud",
     )
 
-    serv = service.get(ui, tokenmod.TokenLocator(ui).token)
+    serv = service.get(ui)
     winfos = serv.getworkspaces(reponame, workspacenameprefix)
     if not winfos:
         ui.write(_("no workspaces found with the prefix %s\n") % workspacenameprefix)
@@ -1006,9 +919,7 @@ def clouddeleteworkspace(ui, repo, **opts):
         return
 
     reponame = ccutil.getreponame(repo)
-    service.get(ui, tokenmod.TokenLocator(ui).token).updateworkspacearchive(
-        reponame, workspacename, True
-    )
+    service.get(ui).updateworkspacearchive(reponame, workspacename, True)
     ui.status(
         _("workspace %s has been deleted\n") % workspacename, component="commitcloud"
     )
@@ -1023,9 +934,7 @@ def cloudundeleteworkspace(ui, repo, **opts):
         raise error.Abort(_("workspace name should be provided\n"))
 
     reponame = ccutil.getreponame(repo)
-    service.get(ui, tokenmod.TokenLocator(ui).token).updateworkspacearchive(
-        reponame, workspacename, False
-    )
+    service.get(ui).updateworkspacearchive(reponame, workspacename, False)
     ui.status(
         _("workspace %s has been restored\n") % workspacename, component="commitcloud"
     )
@@ -1133,9 +1042,7 @@ def cloudrenameworkspace(ui, repo, skipconfirmation=False, **opts):
         component="commitcloud",
     )
 
-    service.get(ui, tokenmod.TokenLocator(ui).token).renameworkspace(
-        reponame, source, destination
-    )
+    service.get(ui).renameworkspace(reponame, source, destination)
 
     if source == currentworkspace:
         with backuplock.lock(repo), repo.wlock(), repo.lock():
@@ -1197,11 +1104,7 @@ def cloudreclaimworkspaces(ui, repo, **opts):
         )
         return 1
 
-    formerworkspaces = list(
-        service.get(ui, tokenmod.TokenLocator(ui).token).getworkspaces(
-            reponame, formeruserprefix
-        )
-    )
+    formerworkspaces = list(service.get(ui).getworkspaces(reponame, formeruserprefix))
 
     if not formerworkspaces:
         ui.status(_("nothing to reclaim\n"), component="commitcloud")
@@ -1488,9 +1391,7 @@ def cloudstatus(ui, repo, **opts):
     userworkspaceprefix = workspace.userworkspaceprefix(ui)
     if workspacename.startswith(userworkspaceprefix):
         # check it with the server
-        if not service.get(ui, tokenmod.TokenLocator(ui).token).getworkspaces(
-            ccutil.getreponame(repo), workspacename
-        ):
+        if not service.get(ui).getworkspaces(ccutil.getreponame(repo), workspacename):
             ui.write(
                 _(
                     "Workspace: %s (renamed or removed) (run `hg cloud list` and switch to a different one)\n"
