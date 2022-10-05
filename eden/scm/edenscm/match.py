@@ -1001,6 +1001,91 @@ def _convertretoglobs(repat) -> Optional[List[str]]:
     return None
 
 
+class patternmatcher(basematcher):
+    def __init__(self, root, cwd, kindpats, ctx=None, badfn=None):
+        super(patternmatcher, self).__init__(root, cwd, badfn)
+        # kindpats are already normalized to be relative to repo-root.
+        self._prefix = _prefix(kindpats)
+        self._pats, self.matchfn = _buildmatch(ctx, kindpats, "$", root)
+        self._files = _explicitfiles(kindpats)
+
+    @propertycache
+    def _dirs(self):
+        return set(util.dirs(self._fileset))
+
+    def visitdir(self, dir):
+        dir = normalizerootdir(dir, "visitdir")
+        if self._prefix and dir in self._fileset:
+            return "all"
+        if not self._prefix:
+            return True
+        return (
+            dir in self._fileset
+            or dir in self._dirs
+            or any(parentdir in self._fileset for parentdir in util.finddirs(dir))
+        )
+
+    def prefix(self):
+        return self._prefix
+
+    def __repr__(self):
+        return "<patternmatcher patterns=%r>" % self._pats
+
+
+class includematcher(basematcher):
+    def __init__(self, root, cwd, kindpats, ctx=None, badfn=None):
+        super(includematcher, self).__init__(root, cwd, badfn)
+
+        # Can we use tree matcher?
+        rules = _kindpatstoglobs(kindpats, recursive=True)
+        fallback = True
+        if rules is not None:
+            try:
+                matcher = treematcher(root, cwd, badfn=badfn, rules=rules)
+                # Replace self to 'matcher'.
+                self.__dict__ = matcher.__dict__
+                self.__class__ = matcher.__class__
+                fallback = False
+            except ValueError:
+                # for example, Regex("Compiled regex exceeds size limit of 10485760 bytes.")
+                pass
+        if fallback:
+            self._pats, self.matchfn = _buildmatch(ctx, kindpats, "(?:/|$)", root)
+            # prefix is True if all patterns are recursive, so certain fast paths
+            # can be enabled. Unfortunately, it's too easy to break it (ex. by
+            # using "glob:*.c", "re:...", etc).
+            self._prefix = _prefix(kindpats)
+            roots, dirs = _rootsanddirs(kindpats)
+            # roots are directories which are recursively included.
+            # If self._prefix is True, then _roots can have a fast path for
+            # visitdir to return "all", marking things included unconditionally.
+            # If self._prefix is False, then that optimization is unsound because
+            # "roots" might contain entries that is not recursive (ex. roots will
+            # include "foo/bar" for pattern "glob:foo/bar/*.c").
+            self._roots = set(roots)
+            # dirs are directories which are non-recursively included.
+            # That is, files under that directory are included. But not
+            # subdirectories.
+            self._dirs = set(dirs)
+            # Try to use a more efficient visitdir implementation
+            visitdir = _buildvisitdir(kindpats)
+            if visitdir:
+                self.visitdir = visitdir
+
+    def visitdir(self, dir):
+        dir = normalizerootdir(dir, "visitdir")
+        if self._prefix and dir in self._roots:
+            return "all"
+        return (
+            dir in self._roots
+            or dir in self._dirs
+            or any(parentdir in self._roots for parentdir in util.finddirs(dir))
+        )
+
+    def __repr__(self):
+        return "<includematcher includes=%r>" % self._pats
+
+
 def _buildpatternmatcher(root, cwd, kindpats, ctx=None, badfn=None):
     """This is a factory function for creating different pattern matchers.
 
@@ -1091,91 +1176,6 @@ def _buildregexmatcher(root, cwd, regexs, badfn) -> Optional[regexmatcher]:
         raise ValueError("disabled regexmatcher, but regexs is not empty")
     pattern = f"(?:{'|'.join(regexs)})"
     return regexmatcher(root, cwd, pattern, badfn) if regexs else None
-
-
-class patternmatcher(basematcher):
-    def __init__(self, root, cwd, kindpats, ctx=None, badfn=None):
-        super(patternmatcher, self).__init__(root, cwd, badfn)
-        # kindpats are already normalized to be relative to repo-root.
-        self._prefix = _prefix(kindpats)
-        self._pats, self.matchfn = _buildmatch(ctx, kindpats, "$", root)
-        self._files = _explicitfiles(kindpats)
-
-    @propertycache
-    def _dirs(self):
-        return set(util.dirs(self._fileset))
-
-    def visitdir(self, dir):
-        dir = normalizerootdir(dir, "visitdir")
-        if self._prefix and dir in self._fileset:
-            return "all"
-        if not self._prefix:
-            return True
-        return (
-            dir in self._fileset
-            or dir in self._dirs
-            or any(parentdir in self._fileset for parentdir in util.finddirs(dir))
-        )
-
-    def prefix(self):
-        return self._prefix
-
-    def __repr__(self):
-        return "<patternmatcher patterns=%r>" % self._pats
-
-
-class includematcher(basematcher):
-    def __init__(self, root, cwd, kindpats, ctx=None, badfn=None):
-        super(includematcher, self).__init__(root, cwd, badfn)
-
-        # Can we use tree matcher?
-        rules = _kindpatstoglobs(kindpats, recursive=True)
-        fallback = True
-        if rules is not None:
-            try:
-                matcher = treematcher(root, cwd, badfn=badfn, rules=rules)
-                # Replace self to 'matcher'.
-                self.__dict__ = matcher.__dict__
-                self.__class__ = matcher.__class__
-                fallback = False
-            except ValueError:
-                # for example, Regex("Compiled regex exceeds size limit of 10485760 bytes.")
-                pass
-        if fallback:
-            self._pats, self.matchfn = _buildmatch(ctx, kindpats, "(?:/|$)", root)
-            # prefix is True if all patterns are recursive, so certain fast paths
-            # can be enabled. Unfortunately, it's too easy to break it (ex. by
-            # using "glob:*.c", "re:...", etc).
-            self._prefix = _prefix(kindpats)
-            roots, dirs = _rootsanddirs(kindpats)
-            # roots are directories which are recursively included.
-            # If self._prefix is True, then _roots can have a fast path for
-            # visitdir to return "all", marking things included unconditionally.
-            # If self._prefix is False, then that optimization is unsound because
-            # "roots" might contain entries that is not recursive (ex. roots will
-            # include "foo/bar" for pattern "glob:foo/bar/*.c").
-            self._roots = set(roots)
-            # dirs are directories which are non-recursively included.
-            # That is, files under that directory are included. But not
-            # subdirectories.
-            self._dirs = set(dirs)
-            # Try to use a more efficient visitdir implementation
-            visitdir = _buildvisitdir(kindpats)
-            if visitdir:
-                self.visitdir = visitdir
-
-    def visitdir(self, dir):
-        dir = normalizerootdir(dir, "visitdir")
-        if self._prefix and dir in self._roots:
-            return "all"
-        return (
-            dir in self._roots
-            or dir in self._dirs
-            or any(parentdir in self._roots for parentdir in util.finddirs(dir))
-        )
-
-    def __repr__(self):
-        return "<includematcher includes=%r>" % self._pats
 
 
 class exactmatcher(basematcher):
