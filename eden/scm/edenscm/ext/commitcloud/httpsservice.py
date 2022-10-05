@@ -229,6 +229,15 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         )
         return response
 
+    def _addheads(self, refs):
+        """Create list of heads from head_dates data
+
+        Server may omit heads to reduce data transmission.
+        """
+        if not refs.get("heads") and refs.get("head_dates"):
+            refs["heads"] = refs.get("head_dates", {}).keys()
+        return refs
+
     @perftrace.tracefunc("Check Commit Cloud Authentication")
     def check(self):
         # send a check request.  Currently this is an empty 'get_references'
@@ -281,7 +290,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             % (version, baseversion),
             component="commitcloud",
         )
-        return self._makereferences(response["ref"])
+        return self._makereferences(self._addheads(response["ref"]))
 
     @perftrace.tracefunc("Update Commit Cloud References")
     def updatereferences(
@@ -355,7 +364,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
                 "client needs to sync to version %d first\n" % (version, newversion),
                 component="commitcloud",
             )
-            return False, self._makereferences(data)
+            return False, self._makereferences(self._addheads(data))
 
         self.ui.debug(
             "'update_references' accepted update, old version is %d, new version is %d\n"
