@@ -254,7 +254,9 @@ def share(
     sharedpath = srcrepo.sharedpath  # if our source is already sharing
 
     destwvfs = vfsmod.vfs(dest, realpath=True)
-    destvfs = vfsmod.vfs(os.path.join(destwvfs.base, ".hg"), realpath=True)
+    destvfs = vfsmod.vfs(
+        os.path.join(destwvfs.base, ui.identity.dotdir()), realpath=True
+    )
 
     if destvfs.lexists():
         raise error.Abort(_("destination already exists"))
@@ -536,7 +538,7 @@ def clone(
             shutil.rmtree(dest, True)
         else:
             # Clean up just the .hg directory we made.
-            shutil.rmtree(os.path.join(dest, ".hg"), True)
+            shutil.rmtree(os.path.join(dest, ui.identity.dotdir()), True)
         raise
 
     branch = (None, [])
@@ -573,7 +575,7 @@ def clone(
             clonecodepath = "copy"
 
             srcrepo.hook("preoutgoing", throw=True, source="clone")
-            hgdir = os.path.realpath(os.path.join(dest, ".hg"))
+            hgdir = os.path.realpath(os.path.join(dest, ui.identity.dotdir()))
             if not os.path.exists(dest):
                 os.mkdir(dest)
             else:

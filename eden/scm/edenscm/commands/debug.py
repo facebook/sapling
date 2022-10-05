@@ -1347,7 +1347,7 @@ def debugexportrevlog(ui, repo, path, **opts) -> None:
             self.append_raw(revlog_i_path, data)
             return node
 
-    lite_repo = LiteRevlogRepo(os.path.join(path, ".hg"))
+    lite_repo = LiteRevlogRepo(os.path.join(path, ui.identity.dotdir()))
 
     from .. import exchange
 

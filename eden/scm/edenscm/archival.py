@@ -80,7 +80,7 @@ def _rootctx(repo):
 
 
 def buildmetadata(ctx):
-    """build content of .hg_archival.txt"""
+    """build content of .sl_archival.txt"""
     repo = ctx.repo()
 
     default = (
@@ -296,7 +296,7 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None, prefix="", mtime=
     archiver = archivers[kind](dest, mtime or ctx.date()[0])
 
     if repo.ui.configbool("ui", "archivemeta"):
-        name = ".hg_archival.txt"
+        name = f"{repo.ui.identity.dotdir()}_archival.txt"
         if not matchfn or matchfn(name):
             write(name, 0o644, False, lambda: buildmetadata(ctx))
 

@@ -96,7 +96,9 @@ def writechunks(
                 # small (4k is common on Linux).
                 fh = open(filename, "wb", 131072)
         else:
-            fd, filename = tempfile.mkstemp(prefix="hg-bundle-", suffix=".hg")
+            fd, filename = tempfile.mkstemp(
+                prefix="hg-bundle-", suffix=ui.identity.dotdir()
+            )
             fh = util.fdopen(fd, "wb")
         cleanup = filename
         for c in chunks:
