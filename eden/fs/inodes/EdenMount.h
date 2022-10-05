@@ -1397,13 +1397,17 @@ class EdenMountCancelled : public std::runtime_error {
 
 } // namespace facebook::eden
 
-namespace fmt {
 template <>
-struct formatter<facebook::eden::InodeTraceEvent> : formatter<std::string> {
-  auto format(
-      const facebook::eden::InodeTraceEvent& event,
-      format_context& ctx) {
-    std::string eventInfo = fmt::format(
+struct fmt::formatter<facebook::eden::InodeTraceEvent> {
+  constexpr auto parse(format_parse_context& ctx) {
+    return ctx.begin();
+  }
+
+  template <typename Context>
+  auto format(const facebook::eden::InodeTraceEvent& event, Context& ctx)
+      const {
+    return fmt::format_to(
+        ctx.out(),
         "Inode Trace Event: {} {} {} {} {} {} {}",
         event.systemTime.time_since_epoch().count(),
         event.eventType == facebook::eden::InodeEventType::MATERIALIZE ? "M"
@@ -1417,7 +1421,5 @@ struct formatter<facebook::eden::InodeTraceEvent> : formatter<std::string> {
         event.ino.getRawValue(),
         event.inodeType == facebook::eden::InodeType::TREE ? "Tree" : "File",
         event.getPath());
-    return formatter<std::string>::format(eventInfo, ctx);
   }
 };
-} // namespace fmt

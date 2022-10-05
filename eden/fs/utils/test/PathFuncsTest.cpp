@@ -720,6 +720,19 @@ TEST(PathFuncs, fmt) {
   EXPECT_EQ("x(src/abc.def)", fmt::format("x({})", relPiece));
 }
 
+namespace {
+template <typename T>
+std::string fmt_to_string(const T& value) {
+  return fmt::to_string(value);
+}
+} // namespace
+
+TEST(PathFuncs, fmt_const_ref) {
+  EXPECT_EQ("foo", fmt_to_string(PathComponentPiece{"foo"}));
+  EXPECT_EQ("foo", fmt_to_string(RelativePathPiece{"foo"}));
+  EXPECT_EQ("/foo", fmt_to_string(AbsolutePathPiece{"/foo"}));
+}
+
 TEST(PathFuncs, splitFirst) {
   using SplitResult = decltype(splitFirst(std::declval<RelativePath>()));
 

@@ -81,3 +81,11 @@ struct hash<facebook::eden::RootId> {
 };
 
 } // namespace std
+
+template <>
+struct fmt::formatter<facebook::eden::RootId> : formatter<std::string> {
+  template <typename Context>
+  auto format(const facebook::eden::RootId& id, Context& ctx) const {
+    return formatter<std::string>::format(id.value(), ctx);
+  }
+};

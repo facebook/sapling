@@ -609,6 +609,11 @@ class PathBase :
     return folly::StringPiece{path_};
   }
 
+  /// Return the path as a std::string_view
+  std::string_view view() const {
+    return std::string_view{path_};
+  }
+
   /// Return a stored copy of this path
   Stored copy() const {
     return Stored(stringPiece(), SkipPathSanityCheck());
@@ -2198,34 +2203,35 @@ struct hash<facebook::eden::detail::AbsolutePathBase<A>> {
 };
 } // namespace std
 
-namespace fmt {
 template <typename Storage>
-struct formatter<facebook::eden::detail::PathComponentBase<Storage>>
+struct fmt::formatter<facebook::eden::detail::PathComponentBase<Storage>>
     : formatter<string_view> {
   using Path = facebook::eden::detail::PathComponentBase<Storage>;
-  auto format(const Path& p, format_context& ctx) {
-    auto sp = p.stringPiece();
-    return formatter<string_view>::format({sp.data(), sp.size()}, ctx);
+
+  template <typename Context>
+  auto format(const Path& p, Context& ctx) const {
+    return formatter<string_view>::format(p.view(), ctx);
   }
 };
 
 template <typename Storage>
-struct formatter<facebook::eden::detail::AbsolutePathBase<Storage>>
+struct fmt::formatter<facebook::eden::detail::AbsolutePathBase<Storage>>
     : formatter<string_view> {
   using Path = facebook::eden::detail::AbsolutePathBase<Storage>;
-  auto format(const Path& p, format_context& ctx) {
-    auto sp = p.stringPiece();
-    return formatter<string_view>::format({sp.data(), sp.size()}, ctx);
+
+  template <typename Context>
+  auto format(const Path& p, Context& ctx) const {
+    return formatter<string_view>::format(p.view(), ctx);
   }
 };
 
 template <typename Storage>
-struct formatter<facebook::eden::detail::RelativePathBase<Storage>>
+struct fmt::formatter<facebook::eden::detail::RelativePathBase<Storage>>
     : formatter<string_view> {
   using Path = facebook::eden::detail::RelativePathBase<Storage>;
-  auto format(const Path& p, format_context& ctx) {
-    auto sp = p.stringPiece();
-    return formatter<string_view>::format({sp.data(), sp.size()}, ctx);
+
+  template <typename Context>
+  auto format(const Path& p, Context& ctx) const {
+    return formatter<string_view>::format(p.view(), ctx);
   }
 };
-} // namespace fmt

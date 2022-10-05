@@ -240,11 +240,10 @@ struct hash<facebook::eden::ObjectId> {
 
 } // namespace std
 
-namespace fmt {
 template <>
-struct formatter<facebook::eden::ObjectId> : formatter<std::string> {
-  auto format(const facebook::eden::ObjectId& id, format_context& ctx) {
+struct fmt::formatter<facebook::eden::ObjectId> : formatter<std::string> {
+  template <typename Context>
+  auto format(const facebook::eden::ObjectId& id, Context& ctx) const {
     return formatter<std::string>::format(id.toLogString(), ctx);
   }
 };
-} // namespace fmt

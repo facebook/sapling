@@ -84,14 +84,12 @@ struct hash<facebook::eden::Guid> {
 };
 } // namespace std
 
-namespace fmt {
 template <>
-struct formatter<facebook::eden::Guid> : formatter<string_view> {
-  auto format(const facebook::eden::Guid& guid, format_context& ctx) {
-    auto s = guid.toString();
-    return formatter<string_view>::format(s, ctx);
+struct fmt::formatter<facebook::eden::Guid> : formatter<string_view> {
+  template <typename Context>
+  auto format(const facebook::eden::Guid& guid, Context& ctx) const {
+    return formatter<string_view>::format(guid.toString(), ctx);
   }
 };
-} // namespace fmt
 
 #endif

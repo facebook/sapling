@@ -127,11 +127,10 @@ struct hash<facebook::eden::InodeNumber> {
 };
 } // namespace std
 
-namespace fmt {
 template <>
-struct formatter<facebook::eden::InodeNumber> : formatter<uint64_t> {
-  auto format(facebook::eden::InodeNumber n, format_context& ctx) {
+struct fmt::formatter<facebook::eden::InodeNumber> : formatter<uint64_t> {
+  template <typename Context>
+  auto format(facebook::eden::InodeNumber n, Context& ctx) const {
     return formatter<uint64_t>::format(n.getRawValue(), ctx);
   }
 };
-} // namespace fmt
