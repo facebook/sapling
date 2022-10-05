@@ -18,13 +18,13 @@ use std::time::SystemTime;
 
 use anyhow::bail;
 use anyhow::Result;
-use eventsource::reqwest::Client;
 use log::error;
 use log::info;
 use reqwest::Url;
 use serde::Deserialize;
 
 use crate::action::CloudSyncTrigger;
+use crate::client::Client;
 use crate::config::CommitCloudConfig;
 use crate::error::*;
 use crate::receiver::CommandName;

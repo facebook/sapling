@@ -6,7 +6,9 @@
  */
 
 use lazy_static::lazy_static;
+use mime::Mime;
 use regex::Regex;
+use reqwest::StatusCode;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -19,6 +21,12 @@ pub enum ErrorKind {
     CommitCloudHttpError(String),
     #[error("Unexpected error: {0}")]
     CommitCloudUnexpectedError(String),
+    #[error("EventSource: HTTP status code: {0}")]
+    EventSourceHttp(StatusCode),
+    #[error("EventSource: unexpected Content-Type: {0}")]
+    EventSourceInvalidContentType(Mime),
+    #[error("EventSource: Content-Type missing")]
+    EventSourceNoContentType(),
 }
 
 lazy_static! {
