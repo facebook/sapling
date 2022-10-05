@@ -562,22 +562,12 @@ Move the bookmark locally - this still gets synced ok.
 A full sync pulls the old commits in
   $ cd ../client3
   $ hgfakedate 1990-03-05T12:01Z cloud sync --full
-  commitcloud: latest 2 years of commits will be attempted to synchronize first
   commitcloud: synchronizing 'server' with 'user/test/default'
   pulling d133b886da68 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  commitcloud: commits synchronized
-  finished in * (glob)
-  commitcloud: latest 2 years of commits synchronized
-  commitcloud: latest 3 years of commits will be attempted to synchronize first
-  commitcloud: synchronizing 'server' with 'user/test/default'
-  commitcloud: commits synchronized
-  finished in * (glob)
-  commitcloud: latest 3 years of commits synchronized
-  commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
   finished in * (glob)
 

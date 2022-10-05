@@ -147,36 +147,7 @@ def _sync(
     start = util.timer()
 
     startnode = repo["."].node()
-
-    if full:
-        # split the full sync into few passes:
-        #   sync the first 2 years of commits (commits should be present on the server)
-        #   sync the first 3 years of commits (commits should be probably present on the server for most of repos)
-        #   sync the rest of commits (some commits could be missing, haven't been migrated from the old backend)
-        for years in [2, 3]:
-            with ui.configoverride({("commitcloud", "max_sync_age"): years * 365}):
-                ui.status(
-                    _(
-                        "latest %d years of commits will be attempted to synchronize first\n"
-                    )
-                    % years,
-                    component="commitcloud",
-                )
-                _sync(
-                    repo,
-                    cloudrefs=cloudrefs,
-                    full=False,
-                    cloudversion=cloudversion,
-                    cloudworkspace=cloudworkspace,
-                    connect_opts=connect_opts,
-                )
-                ui.status(
-                    _("latest %d years of commits synchronized\n") % years,
-                    component="commitcloud",
-                )
-        maxage = None
-    else:
-        maxage = ui.configint("commitcloud", "max_sync_age", None)
+    maxage = None if full else ui.configint("commitcloud", "max_sync_age", None)
 
     # Work out which repo and workspace we are synchronizing with.
     reponame = ccutil.getreponame(repo)
