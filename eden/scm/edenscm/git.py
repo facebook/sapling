@@ -19,7 +19,7 @@ from dataclasses import dataclass
 import bindings
 from edenscm import tracing
 
-from . import bookmarks as bookmod, error, progress, util
+from . import bookmarks as bookmod, error, identity, progress, util
 from .i18n import _
 from .node import bin, hex, nullid
 
@@ -602,11 +602,11 @@ class Submodule:
         """
         urldigest = hashlib.sha1(self.url.encode("utf-8")).hexdigest()
         repopath = self.gitmodulesvfs.join("gitmodules", urldigest)
-        if os.path.isdir(os.path.join(repopath, ".hg")):
+        ident = identity.sniffdir(repopath)
+        if ident:
             from . import hg
 
             repo = hg.repository(self.parentrepo.baseui, repopath)
-
         else:
             # create the repo but do not fetch anything
             repo = clone(
@@ -633,8 +633,8 @@ class Submodule:
         from . import hg
 
         repopath = self.parentrepo.wvfs.join(self.path)
-        if os.path.isdir(os.path.join(repopath, ".hg")):
-
+        ident = identity.sniffdir(repopath)
+        if ident:
             repo = hg.repository(self.parentrepo.baseui, repopath)
         else:
             if self.parentrepo.wvfs.isfile(self.path):
