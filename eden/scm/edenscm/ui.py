@@ -2080,6 +2080,8 @@ def _normalize_rawloc(rawloc: str) -> str:
 class path(object):
     """Represents an individual path and its configuration."""
 
+    _all_dotdirs = [ident.dotdir() for ident in bindings.identity.all()]
+
     def __init__(self, ui, name, rawloc=None, suboptions=None):
         """Construct a path from its config options.
 
@@ -2139,7 +2141,7 @@ class path(object):
         # objects/: potentially a bare git repo
         return any(
             os.path.isdir(os.path.join(path, name))
-            for name in (".hg", ".git", "objects")
+            for name in (*self.__class__._all_dotdirs, ".git", "objects")
         )
 
     @property
