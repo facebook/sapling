@@ -15,7 +15,7 @@ import os
 import posixpath
 import stat
 
-from . import encoding, error, pycompat, util
+from . import encoding, error, identity, pycompat, util
 from .i18n import _
 
 
@@ -50,6 +50,12 @@ class pathauditor(object):
         self.audited = set()
         self.auditeddir = set()
         self.root = root
+
+        # Fall back to global identity for doc tests.
+        ident = identity.sniffdir(root) or identity.current()
+        self.dotdir = ident.dotdir()
+        self.dotdirdot = self.dotdir + "."
+
         self._realfs = realfs
         self._cached = cached
         self.callback = callback
@@ -72,7 +78,7 @@ class pathauditor(object):
         parts = util.splitpath(path)
         if (
             os.path.splitdrive(path)[0]
-            or _lowerclean(parts[0]) in (".hg", ".hg.", "")
+            or _lowerclean(parts[0]) in (self.dotdir, self.dotdirdot, "")
             or os.pardir in parts
         ):
             raise error.Abort(_("path contains illegal component: %s") % path)
@@ -82,9 +88,9 @@ class pathauditor(object):
                 first, last = p.split("~", 1)
                 if last.isdigit() and first.upper() in ["HG", "HG8B6C"]:
                     raise error.Abort(_("path contains illegal component: %s") % path)
-        if ".hg" in _lowerclean(path):
+        if self.dotdir in _lowerclean(path):
             lparts = [_lowerclean(p.lower()) for p in parts]
-            for p in ".hg", ".hg.":
+            for p in self.dotdir, self.dotdirdot:
                 if p in lparts[1:]:
                     pos = lparts.index(p)
                     base = os.path.join(*parts[:pos])
@@ -131,7 +137,7 @@ class pathauditor(object):
                 msg = _("path %r traverses symbolic link %r") % (path, prefix)
                 raise error.Abort(msg)
             elif stat.S_ISDIR(st.st_mode) and os.path.isdir(
-                os.path.join(curpath, ".hg")
+                os.path.join(curpath, self.dotdir)
             ):
                 if not self.callback or not self.callback(curpath):
                     msg = _("path '%s' is inside nested repo %r")

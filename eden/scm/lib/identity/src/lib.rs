@@ -175,7 +175,7 @@ pub mod idents {
     pub static ALL_IDENTITIES: &[Identity] = &[HG, SL, TEST];
 }
 
-static IDENTITY: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(idents::DEFAULT));
+pub static IDENTITY: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(idents::DEFAULT));
 
 /// CLI name to be used in user facing messaging.
 pub fn cli_name() -> &'static str {

@@ -22,6 +22,7 @@ templatemap = {"@prog@": prog, "@Product@": product, "@LongProduct@": longproduc
 
 sniffroot = identity.sniffroot
 sniffenv = identity.sniffenv
+current = identity.current
 
 
 def replace(s):

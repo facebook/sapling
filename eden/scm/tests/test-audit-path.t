@@ -231,3 +231,10 @@ a symlink.
   $ ls ../update-symlink-out
 
 #endif
+
+Works for .sl repos also
+
+  $ HGIDENTITY=sl newrepo
+  $ hg add .sl/00changelog.i
+  abort: path contains illegal component: .sl/00changelog.i
+  [255]

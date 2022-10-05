@@ -18,6 +18,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "identity"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<identity>(py)?;
+    m.add(py, "current", py_fn!(py, current()))?;
     m.add(py, "sniffenv", py_fn!(py, sniff_env()))?;
     m.add(py, "sniffroot", py_fn!(py, sniff_root(path: PyPathBuf)))?;
     m.add(py, "sniffdir", py_fn!(py, sniff_dir(path: PyPathBuf)))?;
@@ -59,4 +60,8 @@ fn try_env_var(py: Python, suffix: PyString) -> PyResult<Option<String>> {
     rsident::env_var(suffix.to_string(py)?.as_ref())
         .transpose()
         .map_pyerr(py)
+}
+
+fn current(py: Python) -> PyResult<identity> {
+    identity::create_instance(py, rsident::IDENTITY.read().clone())
 }
