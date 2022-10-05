@@ -281,10 +281,14 @@ fn get_current_user() -> String {
 }
 
 /// Given an absolute path, locate the repository root.
-fn locate_repo_root(path: &Path) -> Option<&Path> {
-    path.ancestors()
-        .filter(|p| p.join(".hg").is_dir() || p.join(".git").exists())
-        .nth(0)
+fn locate_repo_root(path: &Path) -> Result<Option<&Path>> {
+    for p in path.ancestors() {
+        if identity::sniff_dir(p)?.is_some() || p.join(".git").exists() {
+            return Ok(Some(p));
+        }
+    }
+
+    Ok(None)
 }
 
 #[cfg(unix)]
@@ -503,7 +507,7 @@ fn path_command(
 
     // Resolve the path to the corresponding repo root.
     // If the path is not a repo then we use the provided path.
-    let repo_root = locate_repo_root(&path).unwrap_or(&path);
+    let repo_root = locate_repo_root(&path)?.unwrap_or(&path);
 
     // Get the base scratch path for this repo
     let mut result = scratch_root(&config, repo_root)?;
