@@ -117,12 +117,16 @@ fn should_call_chg(args: &[String]) -> (bool, &'static str) {
         }
     }
 
-    if let Some(home_decision) = file_decision(dirs::home_dir().map(|d| d.join(".usechg"))) {
-        return (home_decision, "~/.usechg");
-    }
+    if cfg!(fbcode_build) {
+        if let Some(home_decision) = file_decision(dirs::home_dir().map(|d| d.join(".usechg"))) {
+            return (home_decision, "~/.usechg");
+        }
 
-    if let Some(etc_decision) = file_decision(Some("/etc/mercurial/usechg")) {
-        return (etc_decision, "/etc/mercurial/usechg");
+        if let Some(etc_decision) = file_decision(Some("/etc/mercurial/usechg")) {
+            return (etc_decision, "/etc/mercurial/usechg");
+        }
+    } else if cfg!(unix) {
+        return (true, "unix");
     }
 
     (false, "(default fallthrough)")
