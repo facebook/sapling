@@ -27,3 +27,7 @@ CREATE TABLE IF NOT EXISTS bookmarks_update_log (
   reason VARCHAR(32) NOT NULL, -- enum is used in mysql
   timestamp BIGINT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS bookmarks_update_log_lock (
+  id INTEGER PRIMARY KEY NOT NULL
+);
