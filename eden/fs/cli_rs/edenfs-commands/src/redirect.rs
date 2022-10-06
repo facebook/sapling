@@ -25,6 +25,7 @@ use edenfs_client::redirect::try_add_redirection;
 use edenfs_client::redirect::Redirection;
 use edenfs_client::redirect::RedirectionState;
 use edenfs_client::redirect::RedirectionType;
+use edenfs_client::redirect::REPO_SOURCE;
 use edenfs_client::EdenFsInstance;
 use hg_util::path::expand_path;
 use tabular::row;
@@ -60,15 +61,14 @@ pub enum RedirectCmd {
         redir_type: String,
         #[clap(
             long,
-            help = "Unmount and re-bind mount any bind mount redirections to \
-            ensure that they are pointing to the right place. This is not the \
-            default behavior in the interest of preserving kernel caches."
+            help = "Unmount and re-bind mount any bind mount redirections to ensure that they are \
+            pointing to the right place. This is not the default behavior in the interest of \
+            preserving kernel caches."
         )]
         force_remount_bind_mounts: bool,
         #[clap(
             long,
-            help = "force the bind mount to fail if it would overwrite a \
-            pre-existing directory"
+            help = "force the bind mount to fail if it would overwrite a pre-existing directory"
         )]
         strict: bool,
     },
@@ -86,6 +86,27 @@ pub enum RedirectCmd {
         mount: PathBuf,
         #[clap(parse(from_str = expand_path), index = 1, help = "The path in the repo which should no longer be redirected")]
         repo_path: PathBuf,
+    },
+    #[clap(
+        about = "Fixup redirection configuration; redirect things that should be redirected and \
+        remove things that should not be redirected"
+    )]
+    Fixup {
+        #[clap(long, parse(try_from_str = expand_path_or_cwd), default_value = "", help = "The EdenFS mount point path.")]
+        mount: PathBuf,
+        #[clap(
+            long,
+            help = "Unmount and re-bind mount any bind mount redirections to ensure that they are \
+            pointing to the right place. This is not the default behavior in the interest of \
+            preserving kernel caches"
+        )]
+        force_remount_bind_mounts: bool,
+        #[clap(
+            long,
+            help = "By default, paths with source of .eden-redirections will be fixed. Setting \
+            this flag to true will fix paths from all sources."
+        )]
+        all_sources: bool,
     },
 }
 
@@ -280,6 +301,77 @@ impl RedirectCmd {
         println!("{} is not a known redirection", repo_path.display());
         Ok(1)
     }
+
+    async fn fixup(
+        &self,
+        mount: &Path,
+        force_remount_bind_mounts: bool,
+        all_sources: bool,
+    ) -> Result<ExitCode> {
+        let instance = EdenFsInstance::global();
+        let checkout = find_checkout(instance, mount)?;
+        let redirs = get_effective_redirections(&checkout).with_context(|| {
+            anyhow!(
+                "Could not get configured redirections for checkout {}",
+                checkout.path().display()
+            )
+        })?;
+
+        for redir in redirs.values() {
+            if redir.state == Some(RedirectionState::MatchesConfiguration)
+                && !force_remount_bind_mounts
+                && redir.redir_type == RedirectionType::Bind
+            {
+                tracing::debug!(
+                    ?redir,
+                    "not fixing since it's already matching configuration"
+                );
+                continue;
+            }
+
+            if redir.source != REPO_SOURCE && !all_sources {
+                tracing::debug!(?redir, "not fixing due to not from repo source");
+                continue;
+            }
+
+            eprintln!("Fixing {}", redir.repo_path.display());
+            if let Err(e) = redir.remove_existing(&checkout, false).await {
+                eprintln!(
+                    "Unable to remove redirection {}... this isn't necessarily an error: {}",
+                    redir.repo_path.display(),
+                    e
+                )
+            }
+
+            if redir.redir_type == RedirectionType::Unknown {
+                tracing::debug!(?redir, "not fixing due to unknown redirection type");
+                continue;
+            }
+
+            if let Err(e) = redir.apply(&checkout).await {
+                eprintln!(
+                    "Unable to apply redirection {}: {}",
+                    redir.repo_path.display(),
+                    e
+                );
+            }
+        }
+
+        let effective_redirs = get_effective_redirections(&checkout).with_context(|| {
+            anyhow!(
+                "Failed to get effective redirections for checkout {}",
+                checkout.path().display()
+            )
+        })?;
+        for redir in effective_redirs.values() {
+            if let Some(state) = &redir.state {
+                if *state != RedirectionState::MatchesConfiguration {
+                    return Ok(1);
+                }
+            }
+        }
+        Ok(0)
+    }
 }
 
 #[async_trait]
@@ -305,6 +397,14 @@ impl Subcommand for RedirectCmd {
             }
             Self::Unmount { mount } => self.mount(mount).await,
             Self::Del { mount, repo_path } => self.del(mount, repo_path).await,
+            Self::Fixup {
+                mount,
+                force_remount_bind_mounts,
+                all_sources,
+            } => {
+                self.fixup(mount, *force_remount_bind_mounts, *all_sources)
+                    .await
+            }
         }
     }
 }
