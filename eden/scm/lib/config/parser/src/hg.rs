@@ -85,7 +85,7 @@ pub trait ConfigSetHgExt {
     fn load_user(&mut self, opts: Options, identity: &Identity) -> Vec<Error>;
 
     /// Load repo config files.
-    fn load_repo(&mut self, repo_path: &Path, opts: Options) -> Vec<Error>;
+    fn load_repo(&mut self, repo_path: &Path, opts: Options, identity: &Identity) -> Vec<Error>;
 
     /// Load a specified config file. Respect HGPLAIN environment variables.
     /// Return errors parsing files.
@@ -297,7 +297,7 @@ impl ConfigSetHgExt for ConfigSet {
         errors.append(&mut self.load_user(opts.clone(), &ident));
 
         if let Some(repo_path) = repo_path.as_deref() {
-            errors.append(&mut self.load_repo(repo_path, opts));
+            errors.append(&mut self.load_repo(repo_path, opts, &ident));
             if let Err(e) = read_set_repo_name(self, repo_path) {
                 errors.push(e);
             }
@@ -527,13 +527,13 @@ impl ConfigSetHgExt for ConfigSet {
         self.load_user_internal(&paths, opts)
     }
 
-    fn load_repo(&mut self, repo_path: &Path, opts: Options) -> Vec<Error> {
+    fn load_repo(&mut self, repo_path: &Path, opts: Options, identity: &Identity) -> Vec<Error> {
         let mut errors = Vec::new();
 
         let opts = opts.source("repo").process_hgplain();
 
-        let hgrc_path = repo_path.join("hgrc");
-        errors.append(&mut self.load_path(hgrc_path, &opts));
+        let repo_config_path = repo_path.join(identity.config_repo_file());
+        errors.append(&mut self.load_path(repo_config_path, &opts));
 
         errors
     }

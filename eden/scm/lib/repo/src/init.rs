@@ -15,6 +15,7 @@ use std::path::PathBuf;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use configparser::config::ConfigSet;
+use identity::Identity;
 
 use crate::constants::*;
 use crate::errors::InitError;
@@ -22,7 +23,7 @@ use crate::errors::InitError;
 pub fn init_hg_repo(
     root_path: &Path,
     config: &ConfigSet,
-    hgrc_contents: Option<String>,
+    repo_config_contents: Option<String>,
 ) -> Result<(), InitError> {
     if !root_path.exists() {
         create_dir(root_path)?;
@@ -38,7 +39,7 @@ pub fn init_hg_repo(
 
     write_reponame(&hg_path, config)?;
     write_changelog(&hg_path)?;
-    write_hgrc(&hg_path, hgrc_contents)?;
+    write_repo_config(&hg_path, repo_config_contents, &ident)?;
     write_requirements(&hg_path, config)?;
     write_store_requirements(&hg_path, config)?;
     // TODO(sggutier): Add cleanup for the .hg directory in the event of an error
@@ -92,10 +93,14 @@ fn write_changelog(path: &Path) -> Result<(), InitError> {
     )
 }
 
-fn write_hgrc(path: &Path, hgrc_contents: Option<String>) -> Result<(), InitError> {
-    if let Some(hgrc_contents) = hgrc_contents {
-        let hgrc_path = path.join(HGRC_FILE);
-        create_file(hgrc_path.as_path(), hgrc_contents.as_bytes())?;
+fn write_repo_config(
+    path: &Path,
+    repo_config_contents: Option<String>,
+    identity: &Identity,
+) -> Result<(), InitError> {
+    if let Some(repo_config_contents) = repo_config_contents {
+        let repo_config_path = path.join(identity.config_repo_file());
+        create_file(repo_config_path.as_path(), repo_config_contents.as_bytes())?;
     };
     Ok(())
 }

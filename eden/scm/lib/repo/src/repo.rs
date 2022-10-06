@@ -71,11 +71,11 @@ impl Repo {
     pub fn init(
         root_path: &Path,
         config: &ConfigSet,
-        hgrc_contents: Option<String>,
+        repo_config_contents: Option<String>,
         extra_config_values: &[String],
     ) -> Result<Repo> {
         let root_path = absolute(root_path)?;
-        init::init_hg_repo(&root_path, config, hgrc_contents)?;
+        init::init_hg_repo(&root_path, config, repo_config_contents)?;
         let mut repo = Self::load(&root_path, extra_config_values, &[])?;
         repo.metalog()?.write().init_tracked()?;
         Ok(repo)

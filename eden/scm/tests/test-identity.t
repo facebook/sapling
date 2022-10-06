@@ -43,8 +43,8 @@ Clone can create a ".sl" repo.
   $ ls cloned/.hg
   $ ls cloned/.sl
   00changelog.i
+  config
   dirstate
-  hgrc
   hgrc.dynamic
   reponame
   requires
@@ -58,4 +58,31 @@ Clone can create a ".sl" repo.
 Status works in ".sl" repo
   $ LOG=configparser::hg=info hg status -A
    INFO configparser::hg: loading config repo_path=$TESTTMP/cloned
+   INFO configparser::hg: loading config repo_path=$TESTTMP/cloned
+   INFO configparser::hg: loading config repo_path=$TESTTMP/cloned
   C foo
+  $ cd ..
+
+Test repo config loading
+  $ mkdir for_testing_dothg_hgrc
+  $ cd for_testing_dothg_hgrc
+  $ hg init
+  $ cat >> .hg/hgrc <<EOF
+  > [foo]
+  > bar=baz
+  > EOF
+  $ hg config foo.bar --debug
+  $TESTTMP/for_testing_dothg_hgrc/.hg/hgrc:2: baz
+  $ mv .hg/hgrc .hg/config
+  $ hg config foo.bar --debug
+  [1]
+  $ cd ..
+  $ mkdir for_testing_dotsl_config
+  $ cd for_testing_dotsl_config
+  $ HGIDENTITY=sl hg init
+  $ cp ../for_testing_dothg_hgrc/.hg/config .sl/config
+  $ hg config foo.bar --debug
+  $TESTTMP/for_testing_dotsl_config/.sl/config:2: baz
+  $ mv .sl/config .sl/hgrc
+  $ hg config foo.bar --debug
+  [1]

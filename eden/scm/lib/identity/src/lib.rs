@@ -50,6 +50,11 @@ pub struct Identity {
     /// Main or secondary config file (depends on the identity); located inside of `config_directory`
     config_main_file: &'static str,
 
+    /// Config file for the repo; located inside of `dot_dir`.
+    ///
+    /// Examples: `.sl/config`, `.hg/hgrc`
+    config_repo_file: &'static str,
+
     /// Disables any configuration settings that might change the default output, including but not
     /// being limited to encoding, defaults, verbose mode, debug mode, quiet mode, and tracebacks
     ///
@@ -89,6 +94,10 @@ impl Identity {
         self.config_main_file
     }
 
+    pub fn config_repo_file(&self) -> &'static str {
+        self.config_repo_file
+    }
+
     pub fn env_prefix(&self) -> &'static str {
         self.env_prefix
     }
@@ -122,6 +131,7 @@ const HG: Identity = Identity {
     config_name: "hgrc",
     config_directory: "hg",
     config_main_file: "hgrc",
+    config_repo_file: "hgrc",
     scripting_env_var: "HGPLAIN",
     scripting_config_env_var: "HGRCPATH",
     scripting_except_env_var: "HGPLAINEXCEPT",
@@ -135,6 +145,7 @@ const SL: Identity = Identity {
     config_name: "slconfig",
     config_directory: "sapling",
     config_main_file: "sapling.conf",
+    config_repo_file: "config",
     scripting_env_var: "SL_AUTOMATION",
     scripting_config_env_var: "SL_CONFIG_PATH",
     scripting_except_env_var: "SL_AUTOMATION_EXCEPT",
@@ -149,6 +160,7 @@ const TEST: Identity = Identity {
     config_name: "testrc",
     config_directory: "test",
     config_main_file: "test.conf",
+    config_repo_file: "config",
     scripting_env_var: "TEST_SCRIPT",
     scripting_config_env_var: "TEST_RC_PATH",
     scripting_except_env_var: "TEST_SCRIPT_EXCEPT",
