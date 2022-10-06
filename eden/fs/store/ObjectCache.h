@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/IntrusiveList.h>
 #include <folly/Synchronized.h>
 #include <folly/container/F14Map.h>
 #include <folly/synchronization/DistributedMutex.h>
@@ -149,7 +150,9 @@ class ObjectCache
   static std::shared_ptr<ObjectCache<ObjectType, Flavor>> create(
       size_t maximumCacheSizeBytes,
       size_t minimumEntryCount);
-  ~ObjectCache() {}
+  ~ObjectCache() {
+    clear();
+  }
 
   /**
    * If a object for the given hash is in cache, return it. If the object is not
@@ -243,9 +246,16 @@ class ObjectCache
     // constructed.
     explicit CacheItem(ObjectPtr b) : object{std::move(b)} {}
 
-    ObjectPtr object;
+    // The folly::SafeIntrusiveListHook needs special handling to be
+    // copied/moved, removing the move/copy constructor and assignement to
+    // avoid unexpected copies/moves.
+    CacheItem(CacheItem&&) = delete;
+    CacheItem(const CacheItem&) = delete;
+    CacheItem& operator=(CacheItem&&) = delete;
+    CacheItem& operator=(const CacheItem&) = delete;
 
-    typename std::list<CacheItem*>::iterator index;
+    ObjectPtr object;
+    folly::SafeIntrusiveListHook hook;
 
     /// Incremented on every LikelyNeededAgain or WantInterestHandle.
     /// Decremented on every dropInterestHandle. Evicted if it reaches zero.
@@ -258,12 +268,10 @@ class ObjectCache
 
   struct State {
     size_t totalSize{0};
-    // A F14FastMap cannot be used as it moves elements on insertion/removal,
-    // but the evictionQueue below relies on moves not occuring.
     folly::F14NodeMap<ObjectId, CacheItem> items;
 
     /// Entries are evicted from the front of the queue.
-    std::list<CacheItem*> evictionQueue;
+    folly::CountedIntrusiveList<CacheItem, &CacheItem::hook> evictionQueue;
 
     uint64_t hitCount{0};
     uint64_t missCount{0};
@@ -294,7 +302,7 @@ class ObjectCache
 
   void evictUntilFits(State& state) noexcept;
   void evictOne(State& state) noexcept;
-  void evictItem(State&, CacheItem* item) noexcept;
+  void evictItem(State&, const CacheItem& item) noexcept;
 
   const size_t maximumCacheSizeBytes_;
   const size_t minimumEntryCount_;

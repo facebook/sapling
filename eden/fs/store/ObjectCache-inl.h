@@ -152,7 +152,9 @@ ObjectCache<ObjectType, Flavor>::getImpl(const ObjectId& hash, State& state) {
     // TODO: Should we avoid promoting if interest is UnlikelyNeededAgain?
     // For now, we'll try not to be too clever.
     state.evictionQueue.splice(
-        state.evictionQueue.end(), state.evictionQueue, item->index);
+        state.evictionQueue.end(),
+        state.evictionQueue,
+        state.evictionQueue.iterator_to(*item));
     ++state.hitCount;
   }
 
@@ -237,17 +239,18 @@ ObjectCache<ObjectType, Flavor>::insertImpl(ObjectPtr object, State& state) {
   auto* itemPtr = &iter->second;
   if (inserted) {
     try {
-      state.evictionQueue.push_back(itemPtr);
+      state.evictionQueue.push_back(*itemPtr);
     } catch (const std::exception&) {
       state.items.erase(iter);
       throw;
     }
-    iter->second.index = std::prev(state.evictionQueue.end());
     state.totalSize += size;
     evictUntilFits(state);
   } else {
     state.evictionQueue.splice(
-        state.evictionQueue.end(), state.evictionQueue, itemPtr->index);
+        state.evictionQueue.end(),
+        state.evictionQueue,
+        state.evictionQueue.iterator_to(*itemPtr));
   }
   return std::make_pair(itemPtr, inserted);
 }
@@ -263,8 +266,8 @@ void ObjectCache<ObjectType, Flavor>::clear() {
   XLOG(DBG6) << "ObjectCache::clear";
   auto state = state_.lock();
   state->totalSize = 0;
-  state->items.clear();
   state->evictionQueue.clear();
+  state->items.clear();
 }
 
 template <typename ObjectType, ObjectCacheFlavor Flavor>
@@ -308,9 +311,9 @@ void ObjectCache<ObjectType, Flavor>::dropInterestHandle(
   }
 
   if (--item->referenceCount == 0) {
-    state->evictionQueue.erase(item->index);
+    state->evictionQueue.erase(state->evictionQueue.iterator_to(*item));
     ++state->dropCount;
-    evictItem(*state, item);
+    evictItem(*state, *item);
   }
 }
 
@@ -329,7 +332,7 @@ void ObjectCache<ObjectType, Flavor>::evictUntilFits(State& state) noexcept {
 
 template <typename ObjectType, ObjectCacheFlavor Flavor>
 void ObjectCache<ObjectType, Flavor>::evictOne(State& state) noexcept {
-  CacheItem* front = state.evictionQueue.front();
+  const auto& front = state.evictionQueue.front();
   state.evictionQueue.pop_front();
   ++state.evictionCount;
   evictItem(state, front);
@@ -338,17 +341,17 @@ void ObjectCache<ObjectType, Flavor>::evictOne(State& state) noexcept {
 template <typename ObjectType, ObjectCacheFlavor Flavor>
 void ObjectCache<ObjectType, Flavor>::evictItem(
     State& state,
-    CacheItem* item) noexcept {
+    const CacheItem& item) noexcept {
   XLOG(DBG6) << "ObjectCache::evictItem "
-             << "evicting " << item->object->getHash()
-             << " generation=" << item->generation;
-  auto size = item->object->getSizeBytes();
+             << "evicting " << item.object->getHash()
+             << " generation=" << item.generation;
+  auto size = item.object->getSizeBytes();
   // TODO: Releasing this ObjectPtr here can run arbitrary deleters which
   // could, in theory, try to reacquire the ObjectCache's lock. The object
   // could be scheduled for deletion in a deletion queue but then it's hard to
   // ensure that scheduling is noexcept. Instead, ObjectPtr should be replaced
   // with an refcounted pointer that doesn't allow running custom deleters.
-  state.items.erase(item->object->getHash());
+  state.items.erase(item.object->getHash());
   state.totalSize -= size;
 }
 } // namespace facebook::eden
