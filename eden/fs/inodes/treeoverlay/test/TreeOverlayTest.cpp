@@ -7,6 +7,7 @@
 
 #include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
 #include "eden/fs/inodes/test/OverlayTestUtil.h"
+#include "eden/fs/inodes/treeoverlay/BufferedTreeOverlay.h"
 
 #include <iomanip>
 
@@ -370,6 +371,13 @@ TEST_P(
 
   overlay->saveOverlayDir(subdirIno, DirContents(kPathMapDefaultCaseSensitive));
 
+  // The results can be different if the overlay is read from the write queue or
+  // from disk since we don't store mode, the flush here makes the tests
+  // deterministic
+  if (overlayType() == Overlay::TreeOverlayType::TreeBuffered) {
+    static_cast<BufferedTreeOverlay*>(overlay->getRawBackingOverlay())->flush();
+  }
+
   // At the time of writing, the TreeOverlay does not store mode, which is why
   // it is zero here
   EXPECT_EQ(
@@ -395,6 +403,13 @@ TEST_P(
   root.emplace(
       "directory_does_not_exist"_pc, S_IFDIR | 0755, directoryDoesNotExistIno);
   overlay->saveOverlayDir(rootIno, root);
+
+  // The results can be different if the overlay is read from the write queue or
+  // from disk since we don't store mode, the flush here makes the tests
+  // deterministic
+  if (overlayType() == Overlay::TreeOverlayType::TreeBuffered) {
+    static_cast<BufferedTreeOverlay*>(overlay->getRawBackingOverlay())->flush();
+  }
 
   // At the time of writing, the TreeOverlay does not store mode, which is why
   // it is zero here
@@ -423,6 +438,13 @@ TEST_P(
       S_IFREG | 0644,
       regularFileDoesNotExistIno);
   overlay->saveOverlayDir(rootIno, root);
+
+  // The results can be different if the overlay is read from the write queue or
+  // from disk since we don't store mode, the flush here makes the tests
+  // deterministic
+  if (overlayType() == Overlay::TreeOverlayType::TreeBuffered) {
+    static_cast<BufferedTreeOverlay*>(overlay->getRawBackingOverlay())->flush();
+  }
 
   // At the time of writing, the TreeOverlay does not store mode, which is why
   // it is zero here

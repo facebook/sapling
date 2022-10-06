@@ -11,6 +11,7 @@
 #include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
+#include <cstddef>
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/InodeNumber.h"
@@ -51,7 +52,8 @@ void BufferedTreeOverlay::stopWorkerThread() {
     state->workerThreadStopRequested = true;
     // Manually insert the shutdown request to avoid waiting for the enforced
     // size limit.
-    state->work.push_back(std::make_pair([]() { return true; }, 0));
+    state->work.push_back(
+        std::make_unique<Work>([]() { return true; }, std::nullopt, 0));
     workCV_.notify_one();
     fullCV_.notify_all();
   }
@@ -71,13 +73,17 @@ void BufferedTreeOverlay::close(std::optional<InodeNumber> inodeNumber) {
 }
 
 void BufferedTreeOverlay::processOnWorkerThread() {
-  std::vector<std::pair<folly::Function<bool()>, size_t>> work;
+  // This vector should be considered read-only outside of the state_ lock. The
+  // inflightOperation map contains raw pointers to the Work objects owned by
+  // this vector, and other threads can read from that map, so we should not
+  // modify the work vector without the state lock held.
+  std::vector<std::unique_ptr<Work>> work;
 
   for (;;) {
-    work.clear();
-
     {
       auto state = state_.lock();
+      state->inflightOperation.clear();
+      work.clear();
 
       workCV_.wait(state.as_lock(), [&] { return !state->work.empty(); });
 
@@ -86,11 +92,16 @@ void BufferedTreeOverlay::processOnWorkerThread() {
       // We don't want to exit early because we want to ensure all requests
       // prior to the shutdown request are processed before cleaning up.
 
+      // Move the state work into the thread local work structure. The
+      // thread local work structure will be cleared after processing.
       work.swap(state->work);
+      // Move the waitingOperation into the inflightOperation structure. The
+      // inflightOperation structure will be cleared after processing.
+      state->inflightOperation.swap(state->waitingOperation);
 
       size_t workSize = 0;
       for (auto& event : work) {
-        workSize += event.second;
+        workSize += event->estimateIndirectMemoryUsage;
       }
       bool shouldNotify = state->totalSize >= bufferSize_;
       XCHECK_EQ(state->totalSize, workSize)
@@ -99,16 +110,16 @@ void BufferedTreeOverlay::processOnWorkerThread() {
       if (shouldNotify) {
         fullCV_.notify_all();
       }
-      //  In the worst case, it's possible twice the overlay memory could be
-      //  used. When the lock is released and waiters are notified, the new
-      //  buffer could be filled to capacity while the current one is being
-      //  processed
+      // In the worst case, it's possible twice the overlay memory could be
+      // used. When the lock is released and waiters are notified, the new
+      // buffer could be filled to capacity while the current one is being
+      // processed
     }
 
     for (auto& event : work) {
       // event will return true if it was a stopping event, in which case the
       // thread should exit
-      if (event.first()) {
+      if (event->operation()) {
         return;
       }
     }
@@ -117,9 +128,16 @@ void BufferedTreeOverlay::processOnWorkerThread() {
 
 void BufferedTreeOverlay::process(
     folly::Function<bool()> fn,
-    size_t captureSize) {
-  auto state = state_.lock();
+    size_t captureSize,
+    InodeNumber operationKey,
+    OperationType operationType,
+    std::optional<overlay::OverlayDir>&& odir) {
+  size_t size = captureSize + sizeof(fn) + fn.heapAllocatedMemory();
+  std::unique_ptr<Work> work =
+      std::make_unique<Work>(std::move(fn), std::move(odir), size);
+  Operation operation = Operation{operationType, work.get()};
 
+  auto state = state_.lock();
   fullCV_.wait(state.as_lock(), [&] {
     return state->totalSize < bufferSize_ || state->workerThreadStopRequested;
   });
@@ -129,8 +147,21 @@ void BufferedTreeOverlay::process(
     return;
   }
 
-  size_t size = captureSize + sizeof(fn) + fn.heapAllocatedMemory();
-  state->work.push_back(std::make_pair(std::move(fn), size));
+  state->work.push_back(std::move(work));
+
+  try {
+    state->waitingOperation[operationKey] = operation;
+  } catch (const std::exception& e) {
+    XLOG(ERR) << "Failed to push work onto overlay buffer for inode "
+              << operationKey << ": " << e.what();
+    state->work.pop_back(); // no-throw guarantee since state->work is not empty
+    // Immediately rethrow in the case of a failed enqueue. We don't need to
+    // notify a waiting thread since there is no new waiting work.
+    // The ISO C++ standard [container.requirements.general.11.1] states: If an
+    // exception is thrown by a insert(), that function has no effects.
+    throw;
+  }
+
   state->totalSize += size;
   workCV_.notify_one();
 }
@@ -141,26 +172,76 @@ void BufferedTreeOverlay::flush() {
   folly::Promise<folly::Unit> promise;
   auto result = promise.getFuture();
 
-  process(
-      [promise = std::move(promise)]() mutable {
-        promise.setValue(folly::unit);
-        return false;
-      },
-      0);
+  {
+    auto state = state_.lock();
+    state->work.push_back(std::make_unique<Work>(
+        [promise = std::move(promise)]() mutable {
+          promise.setValue(folly::unit);
+          return false;
+        },
+        std::nullopt,
+        0));
+  }
 
   std::move(result).wait();
 }
 
 std::optional<overlay::OverlayDir> BufferedTreeOverlay::loadOverlayDir(
     InodeNumber inodeNumber) {
-  flush();
+  {
+    auto state = state_.lock();
+    // check waiting work
+    auto operationIter = state->waitingOperation.find(inodeNumber);
+    if (operationIter != state->waitingOperation.end()) {
+      if (operationIter->second.operationType == OperationType::Write) {
+        return operationIter->second.work->odir.value();
+      } else {
+        return std::nullopt;
+      }
+    }
+    // check inflight work
+    operationIter = state->inflightOperation.find(inodeNumber);
+    if (operationIter != state->inflightOperation.end()) {
+      if (operationIter->second.operationType == OperationType::Write) {
+        return operationIter->second.work->odir.value();
+      } else {
+        return std::nullopt;
+      }
+    }
+  }
 
   return TreeOverlay::loadOverlayDir(inodeNumber);
 }
 
 std::optional<overlay::OverlayDir> BufferedTreeOverlay::loadAndRemoveOverlayDir(
     InodeNumber inodeNumber) {
-  flush();
+  {
+    auto state = state_.lock();
+    // check waiting work
+    auto operationIter = state->waitingOperation.find(inodeNumber);
+    if (operationIter != state->waitingOperation.end()) {
+      if (operationIter->second.operationType == OperationType::Write) {
+        overlay::OverlayDir odir = operationIter->second.work->odir.value();
+        state.unlock();
+        removeOverlayData(inodeNumber);
+        return std::move(odir);
+      } else {
+        return std::nullopt;
+      }
+    }
+    // check inflight work
+    operationIter = state->inflightOperation.find(inodeNumber);
+    if (operationIter != state->inflightOperation.end()) {
+      if (operationIter->second.operationType == OperationType::Write) {
+        overlay::OverlayDir odir = operationIter->second.work->odir.value();
+        state.unlock();
+        removeOverlayData(inodeNumber);
+        return std::move(odir);
+      } else {
+        return std::nullopt;
+      }
+    }
+  }
 
   return TreeOverlay::loadAndRemoveOverlayDir(inodeNumber);
 }
@@ -174,16 +255,24 @@ void BufferedTreeOverlay::saveOverlayDir(
   // using `/usr/bin/time -v`. If memory usage becomes an issue, it may be
   // worth serializing instead of moving the structure
 
+  // captureSize is multiplied here since odir is copied to store both in the
+  // folly::function and directly in the Work struct
   size_t captureSize = estimateIndirectMemoryUsage<
-      overlay::PathComponent,
-      overlay::OverlayEntry>(*odir.entries());
+                           overlay::PathComponent,
+                           overlay::OverlayEntry>(*odir.entries()) *
+      2;
+
+  overlay::OverlayDir odirTemp = odir;
 
   process(
-      [this, inodeNumber, odir = std::move(odir)]() mutable {
+      [this, inodeNumber, odir = std::move(odirTemp)]() mutable {
         TreeOverlay::saveOverlayDir(inodeNumber, std::move(odir));
         return false;
       },
-      captureSize);
+      captureSize,
+      inodeNumber,
+      OperationType::Write,
+      std::move(odir));
 }
 
 void BufferedTreeOverlay::removeOverlayData(InodeNumber inodeNumber) {
@@ -192,71 +281,27 @@ void BufferedTreeOverlay::removeOverlayData(InodeNumber inodeNumber) {
         TreeOverlay::removeOverlayData(inodeNumber);
         return false;
       },
-      0);
+      0,
+      inodeNumber,
+      OperationType::Remove);
 }
 
 bool BufferedTreeOverlay::hasOverlayData(InodeNumber inodeNumber) {
-  flush();
+  {
+    auto state = state_.lock();
+    // check waiting work
+    auto operationIter = state->waitingOperation.find(inodeNumber);
+    if (operationIter != state->waitingOperation.end()) {
+      return operationIter->second.operationType == OperationType::Write;
+    }
+    // check inflight work
+    operationIter = state->inflightOperation.find(inodeNumber);
+    if (operationIter != state->inflightOperation.end()) {
+      return operationIter->second.operationType == OperationType::Write;
+    }
+  }
 
   return TreeOverlay::hasOverlayData(inodeNumber);
 }
 
-void BufferedTreeOverlay::addChild(
-    InodeNumber parent,
-    PathComponentPiece name,
-    overlay::OverlayEntry entry) {
-  PathComponent name_copy = name.copy();
-  size_t captureSize = estimateIndirectMemoryUsage(name_copy.value());
-  if (auto* entryHash = apache::thrift::get_pointer(entry.hash())) {
-    captureSize += estimateIndirectMemoryUsage(*entryHash);
-  }
-  process(
-      [this, parent, name = std::move(name_copy), entry = std::move(entry)]() {
-        TreeOverlay::addChild(parent, name, entry);
-        return false;
-      },
-      captureSize);
-}
-
-void BufferedTreeOverlay::removeChild(
-    InodeNumber parent,
-    PathComponentPiece childName) {
-  PathComponent childName_copy = childName.copy();
-  size_t captureSize = estimateIndirectMemoryUsage(childName_copy.value());
-  process(
-      [this, parent, childName = std::move(childName_copy)]() {
-        TreeOverlay::removeChild(parent, childName);
-        return false;
-      },
-      captureSize);
-}
-
-bool BufferedTreeOverlay::hasChild(
-    InodeNumber parent,
-    PathComponentPiece childName) {
-  flush();
-
-  return TreeOverlay::hasChild(parent, childName);
-}
-
-void BufferedTreeOverlay::renameChild(
-    InodeNumber src,
-    InodeNumber dst,
-    PathComponentPiece srcName,
-    PathComponentPiece dstName) {
-  PathComponent srcName_copy = srcName.copy();
-  PathComponent dstName_copy = dstName.copy();
-  size_t captureSize = estimateIndirectMemoryUsage(srcName_copy.value()) +
-      estimateIndirectMemoryUsage(dstName_copy.value());
-  process(
-      [this,
-       src,
-       dst,
-       srcName = std::move(srcName_copy),
-       dstName = std::move(dstName_copy)]() {
-        TreeOverlay::renameChild(src, dst, srcName, dstName);
-        return false;
-      },
-      captureSize);
-}
 } // namespace facebook::eden
