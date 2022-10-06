@@ -74,8 +74,6 @@ class IOverlay {
    */
   virtual bool initialized() const = 0;
 
-  virtual const AbsolutePath& getLocalDir() const = 0;
-
   /**
    * Load the directory content associated with the given `InodeNumber`
    */

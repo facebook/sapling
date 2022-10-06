@@ -63,8 +63,6 @@ class TreeOverlay : public IOverlay {
     return initialized_;
   }
 
-  const AbsolutePath& getLocalDir() const override;
-
   std::optional<overlay::OverlayDir> loadOverlayDir(
       InodeNumber inodeNumber) override;
   std::optional<overlay::OverlayDir> loadAndRemoveOverlayDir(
@@ -126,8 +124,6 @@ class TreeOverlay : public IOverlay {
   }
 
  private:
-  AbsolutePath path_;
-
   TreeOverlayStore store_;
 
   bool initialized_ = false;

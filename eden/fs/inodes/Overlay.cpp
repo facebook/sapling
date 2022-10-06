@@ -110,6 +110,7 @@ Overlay::Overlay(
     : backingOverlay_{makeOverlay(localDir, treeOverlayType, config)},
       supportsSemanticOperations_{
           backingOverlay_->supportsSemanticOperations()},
+      localDir_{localDir},
       caseSensitive_{caseSensitive},
       structuredLogger_{logger} {}
 
@@ -187,8 +188,8 @@ folly::SemiFuture<Unit> Overlay::initialize(
           progressCallback,
           lookupCallback);
     } catch (std::exception& ex) {
-      XLOG(ERR) << "overlay initialization failed for "
-                << backingOverlay_->getLocalDir() << ": " << ex.what();
+      XLOG(ERR) << "overlay initialization failed for " << localDir_ << ": "
+                << ex.what();
       promise.setException(
           folly::exception_wrapper(std::current_exception(), ex));
       return;
@@ -216,7 +217,7 @@ void Overlay::initOverlay(
     //
     // Use OverlayChecker to scan the overlay for any issues, and also compute
     // correct next inode number as it does so.
-    XLOG(WARN) << "Overlay " << backingOverlay_->getLocalDir()
+    XLOG(WARN) << "Overlay " << localDir_
                << " was not shut down cleanly.  Performing fsck scan.";
 
     // TODO(zeyi): `OverlayCheck` should be associated with the specific
@@ -272,10 +273,8 @@ void Overlay::initOverlay(
 #ifndef _WIN32
   // Open after infoFile_'s lock is acquired because the InodeTable acquires
   // its own lock, which should be released prior to infoFile_.
-  inodeMetadataTable_ =
-      InodeMetadataTable::open((backingOverlay_->getLocalDir() +
-                                PathComponentPiece{FsOverlay::kMetadataFile})
-                                   .c_str());
+  inodeMetadataTable_ = InodeMetadataTable::open(
+      (localDir_ + PathComponentPiece{FsOverlay::kMetadataFile}).c_str());
 #endif // !_WIN32
 }
 

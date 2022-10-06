@@ -70,7 +70,12 @@ class FsOverlay : public IOverlay {
     return bool(infoFile_);
   }
 
-  const AbsolutePath& getLocalDir() const override {
+  /**
+   * This entrypoint is used by the OverlayChecker which needs the localDir
+   * value but only has a pointer to the backing FsOverlay object. In most cases
+   * one should get the localDir by calling `Overlay::getLocalDir` instead.
+   */
+  const AbsolutePath& getLocalDir() const {
     return localDir_;
   }
 

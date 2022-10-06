@@ -283,6 +283,10 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       InodeNumber inodeNumber,
       const DirContents& dir);
 
+  const AbsolutePath& getLocalDir() const {
+    return localDir_;
+  }
+
  private:
   explicit Overlay(
       AbsolutePathPiece localDir,
@@ -352,6 +356,8 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    * `IOverlay::supportsSemanticOperations` for more information.
    */
   bool supportsSemanticOperations_;
+
+  const AbsolutePath localDir_;
 
 #ifndef _WIN32
   /**
