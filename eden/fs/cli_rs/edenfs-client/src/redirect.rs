@@ -690,12 +690,14 @@ impl Redirection {
         // great way to detect that the directories have gone away.
         if let Some(possible_buck_project) = repo_path.parent() {
             if is_buckd_running_for_path(possible_buck_project) {
-                stop_buckd_for_path(possible_buck_project).with_context(|| {
+                if let Err(_) = stop_buckd_for_path(possible_buck_project).with_context(|| {
                     format!(
                         "Failed to stop buckd for project {}",
                         possible_buck_project.display()
                     )
-                })?
+                }) {
+                    // TODO(@cuev): fix this once we look for buck pids in the correct place
+                }
             }
         }
 
@@ -708,7 +710,7 @@ impl Redirection {
         if disposition == RepoPathDisposition::IsBindMount {
             if fail_if_bind_mount {
                 return Err(EdenFsError::Other(anyhow!(
-                    "Failed to remove {} since the bind unmount failed",
+                    "Failed to remove bind mount {}",
                     repo_path.display()
                 )));
             }
@@ -1363,7 +1365,7 @@ pub async fn try_add_redirection(
         .update_redirections(config_dir, &configured_redirs)
         .with_context(|| {
             format!(
-                "Failed to get update redirections for checkout {}",
+                "Failed to update redirections for checkout {}",
                 checkout.path().display()
             )
         })?;

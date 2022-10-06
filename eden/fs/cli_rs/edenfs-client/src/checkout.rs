@@ -278,6 +278,7 @@ impl CheckoutConfig {
         config_dir: &Path,
         redirs: &BTreeMap<PathBuf, Redirection>,
     ) -> Result<()> {
+        self.redirections.clear();
         for (_, redir) in redirs.iter() {
             if redir.source != REPO_SOURCE {
                 self.redirections

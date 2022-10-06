@@ -18,6 +18,8 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::checkout::find_checkout;
+use edenfs_client::checkout::CheckoutConfig;
+use edenfs_client::redirect::get_configured_redirections;
 use edenfs_client::redirect::get_effective_redirections;
 use edenfs_client::redirect::try_add_redirection;
 use edenfs_client::redirect::Redirection;
@@ -71,6 +73,12 @@ pub enum RedirectCmd {
     Unmount {
         #[clap(long, parse(try_from_str = expand_path_or_cwd), default_value = "", help = "The EdenFS mount point path.")]
         mount: PathBuf,
+    },
+    Del {
+        #[clap(long, parse(try_from_str = expand_path_or_cwd), default_value = "", help = "The EdenFS mount point path.")]
+        mount: PathBuf,
+        #[clap(parse(from_str = expand_path), index = 1, help = "The path in the repo which should no longer be redirected")]
+        repo_path: PathBuf,
     },
 }
 
@@ -199,6 +207,72 @@ impl RedirectCmd {
         }
         if ok { Ok(0) } else { Ok(1) }
     }
+
+    async fn del(&self, mount: &Path, repo_path: &Path) -> Result<ExitCode> {
+        let instance = EdenFsInstance::global();
+        let checkout = find_checkout(instance, mount)?;
+        let client_name = instance.client_name(&mount)?;
+        let config_dir = instance.config_directory(&client_name);
+        let mut redirs = get_configured_redirections(&checkout).with_context(|| {
+            anyhow!(
+                "Could not get configured redirections for checkout {}",
+                checkout.path().display()
+            )
+        })?;
+
+        // Note that we're deliberately not using the same validation logic
+        // for args.repo_path that we do for the add case for now so that we
+        // provide a way to remove bogus redirection paths.  After we've deployed
+        // the improved `add` validation for a while, we can use it here also.
+        if let Some(redir) = redirs.get(repo_path) {
+            redir
+                .remove_existing(&checkout, false)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Failed to remove existing redirection {}",
+                        repo_path.display()
+                    )
+                })?;
+            redirs.remove(repo_path);
+            let mut checkout_config = CheckoutConfig::parse_config(config_dir.clone())
+                .with_context(|| {
+                    format!(
+                        "Failed to parse checkout config using config dir {}",
+                        &config_dir.display()
+                    )
+                })?;
+            checkout_config
+                .update_redirections(&config_dir, &redirs)
+                .with_context(|| {
+                    format!(
+                        "Failed to update redirections for checkout {}",
+                        checkout.path().display()
+                    )
+                })?;
+            return Ok(0);
+        }
+
+        let effective_redirs = get_effective_redirections(&checkout).with_context(|| {
+            anyhow!(
+                "Could not get configured redirections for checkout {}",
+                checkout.path().display()
+            )
+        })?;
+        if let Some(effective_redir) = effective_redirs.get(repo_path) {
+            // This path isn't possible to trigger until we add profiles,
+            // but let's be ready for it anyway.
+            println!(
+                "error: {} is defined by {} and cannot be removed using `edenfsctl redirect del {}`",
+                repo_path.display(),
+                &effective_redir.source,
+                repo_path.display()
+            );
+            return Ok(1);
+        }
+        println!("{} is not a known redirection", repo_path.display());
+        Ok(1)
+    }
 }
 
 #[async_trait]
@@ -223,6 +297,7 @@ impl Subcommand for RedirectCmd {
                 .await
             }
             Self::Unmount { mount } => self.mount(mount).await,
+            Self::Del { mount, repo_path } => self.del(mount, repo_path).await,
         }
     }
 }

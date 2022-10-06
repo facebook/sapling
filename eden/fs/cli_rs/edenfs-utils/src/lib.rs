@@ -174,10 +174,13 @@ pub fn is_buckd_running_for_path(path: &Path) -> bool {
     if let Ok(buck_pid) = buck_pid_parse {
         is_process_running(buck_pid)
     } else {
-        eprintln!(
-            "Failed to parse pid from buckd pid file {}",
-            pid_file.display()
-        );
+        // TODO(@cuev): we are currently looking in the wrong directories for .buckd files.
+        // We should fix .buckd locating so that this error message isn't so noisy
+
+        // eprintln!(
+        //     "Failed to parse pid from buckd pid file {}",
+        //     pid_file.display()
+        // );
         false
     }
 }
