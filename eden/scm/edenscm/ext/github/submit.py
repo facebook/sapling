@@ -28,9 +28,6 @@ def submit(ui, repo, *args, **opts):
     return asyncio.run(update_commits_in_stack(ui, repo))
 
 
-DEPENDENCY_PATTERN = re.compile(r"^\[reviewstack-dep\]\s*$", re.MULTILINE)
-
-
 @dataclass
 class CommitData:
     """The data we need about each commit to support `submit`."""
@@ -86,8 +83,8 @@ async def update_commits_in_stack(ui, repo) -> int:
             partitions.append([commit])
 
     if not partitions:
-        # It is possible that all of the commits_to_process were tagged with
-        # [reviewstack-dep].
+        # It is possible that all of the commits_to_process were marked as
+        # followers.
         ui.status_err(_("no commits to submit\n"))
         return 0
 
@@ -307,7 +304,7 @@ async def derive_commit_data(node: bytes, repo, store: PullRequestStore) -> Comm
         is_dep = False
     else:
         msg = ctx.description()
-        is_dep = DEPENDENCY_PATTERN.search(ctx.description()) is not None
+        is_dep = store.is_follower(node)
     return CommitData(node=node, pr=pr, ctx=ctx, is_dep=is_dep, msg=msg)
 
 

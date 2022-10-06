@@ -29,10 +29,11 @@ def link(ui, repo, *args, **opts):
     pr_store.map_commit_to_pull_request(ctx.node(), pull_request)
 
 
-def unlink(ui, repo, *args, **opts):
-    ctx = scmutil.revsingle(repo, opts.get("rev"), None)
+def unlink(ui, repo, *revs):
     pr_store = PullRequestStore(repo)
-    pr_store.unlink(ctx.node())
+    revs = set(scmutil.revrange(repo, revs))
+    nodes = [repo[r].node() for r in revs]
+    pr_store.unlink_all(nodes)
 
 
 def resolve_pr_arg(pr_arg: str, ui) -> Optional[PullRequestId]:

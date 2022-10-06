@@ -294,7 +294,11 @@ sl_signal_okay="✓"
 sl_signal_failed="✗"
 sl_signal_warning="‼"
 sl_signal_in_progress="⋯"
-github_sl_difflink="{if(github_pull_request_url, hyperlink(github_pull_request_url, '#{github_pull_request_number}'))}"
+github_sl_difflink="{
+  if(github_pull_request_url,
+    hyperlink(github_pull_request_url, '#{github_pull_request_number}'),
+    if(sapling_pr_follower, label('ssl.unpublished', 'follower'))
+  )}"
 phab_sl_difflink="{hyperlink(separate('', 'https://our.intern.facebook.com/intern/diff/', phabdiff, '/'), phabdiff)}"
 sl_difflink="{if(github_repo, github_sl_difflink, phab_sl_difflink)}"
 github_sl_diffsignal=""

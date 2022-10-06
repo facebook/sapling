@@ -11,7 +11,7 @@ from typing import Optional
 from edenscm import registrar
 from edenscm.i18n import _
 
-from . import github_repo_util, link, submit, templates
+from . import follow, github_repo_util, link, submit, templates
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -31,7 +31,10 @@ def pull_request_command(ui, repo, *pats, **opts) -> None:
 subcmd = pull_request_command.subcommand(
     categories=[
         ("Create or update pull requests", ["submit"]),
-        ("Manually manage associations with pull requests", ["link", "unlink"]),
+        (
+            "Manually manage associations with pull requests",
+            ["follow", "link", "unlink"],
+        ),
     ]
 )
 
@@ -73,12 +76,34 @@ def link_cmd(ui, repo, *args, **opts):
 
 @subcmd(
     "unlink",
-    [("r", "rev", "", _("revision to unlink"), _("REV"))],
-    _("[-r REV]"),
+    [
+        ("r", "rev", [], _("revisions to unlink")),
+    ],
+    _("[OPTION]... [-r] REV..."),
 )
-def unlink_cmd(ui, repo, *args, **opts):
+def unlink_cmd(ui, repo, *revs, **opts):
     """remove a commit's association with a GitHub pull request"""
-    return link.unlink(ui, repo, *args, **opts)
+    revs = list(revs) + opts.pop("rev", [])
+    return link.unlink(ui, repo, *revs)
+
+
+@subcmd(
+    "follow",
+    [
+        ("r", "rev", [], _("revisions to follow the next pull request")),
+    ],
+    _("[OPTION]... [-r] REV..."),
+)
+def follow_cmd(ui, repo, *revs, **opts):
+    """join the nearest desecendant's pull request
+
+    Marks commits to become part of their nearest desecendant's pull request
+    instead of starting as the head of a new pull request.
+
+    Use `pr unlink` to undo.
+    """
+    revs = list(revs) + opts.pop("rev", [])
+    return follow.follow(ui, repo, *revs)
 
 
 @templatekeyword("github_repo")
@@ -161,3 +186,10 @@ def github_pull_request_number(repo, ctx, templ, **args) -> Optional[int]:
     number for the pull request.
     """
     return templates.github_pull_request_number(repo, ctx, **args)
+
+
+@templatekeyword("sapling_pr_follower")
+def sapling_pr_follower(repo, ctx, templ, **args) -> bool:
+    """Indicates if this commit is part of a pull request, but not the head commit."""
+    store = templates.get_pull_request_store(repo, args["cache"])
+    return store.is_follower(ctx.node())

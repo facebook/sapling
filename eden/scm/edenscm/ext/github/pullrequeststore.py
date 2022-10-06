@@ -7,7 +7,7 @@
 METALOG_KEY = "github-experimental-pr-store"
 
 import json
-from typing import Dict, Literal, Optional, TypedDict, Union
+from typing import Dict, List, Literal, Optional, Tuple, TypedDict, Union
 
 from edenscm import mutation
 from edenscm.node import hex
@@ -18,7 +18,10 @@ from .pullrequest import PullRequestId, PullRequestIdDict
 # with this commit and therefore its predecessors should not be consulted.
 _NoAssoc = Literal["none"]
 
-_CommitEntry = Union[PullRequestIdDict, _NoAssoc]
+# Marker to indicate the commit has been used with `pr follow REV`.
+_Follow = Literal["follow"]
+
+_CommitEntry = Union[PullRequestIdDict, _Follow, _NoAssoc]
 
 
 class _MetalogData(TypedDict):
@@ -34,32 +37,60 @@ class PullRequestStore:
         return json.dumps(self._get_pr_data(), indent=2)
 
     def map_commit_to_pull_request(self, node: bytes, pull_request: PullRequestId):
-        self._write_mapping(node, pull_request.as_dict())
+        mappings: List[Tuple[bytes, _CommitEntry]] = [(node, pull_request.as_dict())]
+        self._write_mappings(mappings)
 
-    def unlink(self, node: bytes):
-        self._write_mapping(node, "none")
+    def unlink_all(self, nodes: List[bytes]):
+        mappings: List[Tuple[bytes, _CommitEntry]] = []
+        for n in nodes:
+            t: Tuple[bytes, _CommitEntry] = (n, "none")
+            mappings.append(t)
+        self._write_mappings(mappings)
 
-    def _write_mapping(self, node: bytes, json_serializable_value: _CommitEntry):
+    def follow_all(self, nodes: List[bytes]):
+        mappings: List[Tuple[bytes, _CommitEntry]] = []
+        for n in nodes:
+            t: Tuple[bytes, _CommitEntry] = (n, "follow")
+            mappings.append(t)
+        self._write_mappings(mappings)
+
+    def _write_mappings(
+        self,
+        mappings: List[Tuple[bytes, _CommitEntry]],
+    ):
         pr_data = self._get_pr_data()
         commits = pr_data["commits"]
-        commits[hex(node)] = json_serializable_value
+        for node, entry in mappings:
+            commits[hex(node)] = entry
         with self._repo.lock(), self._repo.transaction("github"):
             ml = self._repo.metalog()
             blob = encode_pr_data(pr_data)
             ml.set(METALOG_KEY, blob)
 
+    def is_follower(self, node: bytes) -> bool:
+        entry = self._find_entry(node)
+        return entry == "follow"
+
     def find_pull_request(self, node: bytes) -> Optional[PullRequestId]:
+        entry = self._find_entry(node)
+        if entry is None or isinstance(entry, str):
+            return None
+        else:
+            return PullRequestId(
+                owner=entry["owner"], name=entry["name"], number=entry["number"]
+            )
+
+    def _find_entry(self, node: bytes) -> Optional[_CommitEntry]:
         commits = self._get_commits()
         for n in mutation.allpredecessors(self._repo, [node]):
             entry: Optional[_CommitEntry] = commits.get(hex(n))
             if isinstance(entry, str):
-                assert entry == "none"
-                return None
+                assert entry == "none" or entry == "follow"
+                return entry
             elif entry:
                 pr: PullRequestIdDict = entry
-                return PullRequestId(
-                    owner=pr["owner"], name=pr["name"], number=pr["number"]
-                )
+                return pr
+
         return None
 
     def _get_pr_data(self) -> _MetalogData:
