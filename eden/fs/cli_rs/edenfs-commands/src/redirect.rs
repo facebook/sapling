@@ -208,7 +208,7 @@ impl RedirectCmd {
         Ok(0)
     }
 
-    async fn mount(&self, mount: &Path) -> Result<ExitCode> {
+    async fn unmount(&self, mount: &Path) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
         let checkout = find_checkout(instance, mount)?;
         let redirs = get_effective_redirections(&checkout).with_context(|| {
@@ -229,21 +229,25 @@ impl RedirectCmd {
                 })?;
         }
 
-        // recompute and display the current state
+        // recompute the current state and catch any failures
         let recomputed_redirs = get_effective_redirections(&checkout).with_context(|| {
             anyhow!(
                 "Could not get effective redirections for checkout {}",
                 checkout.path().display()
             )
         })?;
-        let mut ok = true;
+
         for redir in recomputed_redirs.values() {
-            ok = redir
+            if !redir
                 .state
                 .as_ref()
-                .map_or(true, |v| RedirectionState::MatchesConfiguration != *v);
+                .map_or(true, |v| RedirectionState::MatchesConfiguration != *v)
+            {
+                eprintln!("error: at least one redirection does not match its configuration");
+                return Ok(1);
+            }
         }
-        if ok { Ok(0) } else { Ok(1) }
+        Ok(0)
     }
 
     async fn del(&self, mount: &Path, repo_path: &Path) -> Result<ExitCode> {
@@ -514,7 +518,7 @@ impl Subcommand for RedirectCmd {
                 )
                 .await
             }
-            Self::Unmount { mount } => self.mount(mount).await,
+            Self::Unmount { mount } => self.unmount(mount).await,
             Self::Del { mount, repo_path } => self.del(mount, repo_path).await,
             Self::Fixup {
                 mount,
