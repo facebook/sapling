@@ -64,6 +64,9 @@ pub struct AddArgs {
     #[clap(long)]
     /// Do not actually do the database change; just list the work that would be done
     dry_run: bool,
+
+    #[clap(long, hide = true)]
+    no_preserve_root: bool,
 }
 
 pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()> {
@@ -71,6 +74,13 @@ pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()
     let src_path = MPath::new_opt(&add_args.src_path)?;
     let dst_cs_id = parse_commit_id(ctx, repo, &add_args.dst_commit_id).await?;
     let dst_path = MPath::new_opt(&add_args.dst_path)?;
+
+    if (src_path.is_none() || dst_path.is_none()) && !add_args.no_preserve_root {
+        bail!(concat!(
+            "Source or destination is root folder of repository. If ",
+            "this is on purpose, use the --no-preserve-root option."
+        ))
+    }
 
     // If we don't have mutable renames on a commit already, copy over the
     // immutable renames before adding new ones
