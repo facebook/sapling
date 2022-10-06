@@ -366,7 +366,7 @@ static void readhello(hgclient_t* hgc) {
 
 static void updateprocname(hgclient_t* hgc) {
   int r = snprintf(
-      hgc->ctx.data, hgc->ctx.maxdatasize, "chg[worker/%d]", (int)getpid());
+      hgc->ctx.data, hgc->ctx.maxdatasize, "pfc[worker/%d]", (int)getpid());
   if (r < 0 || (size_t)r >= hgc->ctx.maxdatasize)
     abortmsg("insufficient buffer to write procname (r = %d)", r);
   hgc->ctx.datasize = (size_t)r;

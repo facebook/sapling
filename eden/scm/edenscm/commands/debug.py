@@ -2698,13 +2698,13 @@ def debugprocesstree(ui, *pids, **opts) -> None:
         parentchild.setdefault(ppid, []).append(pid)
 
     # Find out hg processes.
-    cmdre = util.re.compile(r"(^(.*[\\/])?(hg|chg)[ \.])|^chg\[worker")
+    cmdre = util.re.compile(r"(^(.*[\\/])?(hg|sl)[ \.])|^pfc\[worker")
     if not pids:
         hgpids = {pid for pid, p in pidprocess.items() if cmdre.search(p["cmdline"])}
     else:
         hgpids = {pid for pid in pids if pid in pidprocess}
-        # Extend selection so if "chg[worker/x]" is selected, also select "x"
-        chgpidre = util.re.compile(r"chg\[worker/(\d+)\]")
+        # Extend selection so if "pfc[worker/x]" is selected, also select "x"
+        chgpidre = util.re.compile(r"pfc\[worker/(\d+)\]")
         for pid in list(hgpids):
             match = chgpidre.match(pidprocess[pid]["cmdline"])
             if match:
