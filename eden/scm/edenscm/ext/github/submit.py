@@ -152,13 +152,15 @@ async def update_commits_in_stack(ui, repo) -> int:
 
     # Now that each pull request has a named branch pushed to GitHub, we can
     # create/update the pull request title and body, as appropriate.
-    pr_numbers = [none_throws(p[0].pr).number for p in partitions]
+    pr_numbers_and_num_commits = [
+        (none_throws(p[0].pr).number, len(p)) for p in partitions
+    ]
 
     # Add the head of the stack to the sapling-pr-archive branch.
     tip = hex(partitions[0][0].node)
 
     rewrite_and_archive_requests = [
-        rewrite_pull_request_body(partition, index, pr_numbers, ui)
+        rewrite_pull_request_body(partition, index, pr_numbers_and_num_commits, ui)
         for index, partition in enumerate(partitions)
     ] + [add_pr_head_to_archives(origin=origin, repository=repository, tip=tip)]
     await asyncio.gather(*rewrite_and_archive_requests)
@@ -166,11 +168,15 @@ async def update_commits_in_stack(ui, repo) -> int:
 
 
 async def rewrite_pull_request_body(
-    partition: List[CommitData], index: int, pr_numbers: List[int], ui
+    partition: List[CommitData],
+    index: int,
+    pr_numbers_and_num_commits: List[Tuple[int, int]],
+    ui,
 ):
     head_commit_data = partition[0]
+    commit_msg = head_commit_data.get_msg()
     title, body = create_pull_request_title_and_body(
-        head_commit_data, pr_numbers, index
+        commit_msg, pr_numbers_and_num_commits, index
     )
     pr = head_commit_data.pr
     assert pr
@@ -245,24 +251,54 @@ async def create_pull_requests(
 
 
 def create_pull_request_title_and_body(
-    commit_data: CommitData, pr_numbers: List[int], pr_numbers_index: int
+    commit_msg: str,
+    pr_numbers_and_num_commits: List[Tuple[int, int]],
+    pr_numbers_index: int,
 ) -> Tuple[str, str]:
-    """Returns (title, body)"""
-    # TODO, for each item in the list, indicate if it has more than one commit.
+    r"""Returns (title, body) for the pull request.
+
+    >>> commit_msg = 'The original commit message.\nSecond line of message.'
+    >>> pr_numbers_and_num_commits = [(1, 1), (2, 2), (3, 1), (4, 1)]
+    >>> pr_numbers_index = 2
+    >>> title, body = create_pull_request_title_and_body(
+    ...     commit_msg,
+    ...     pr_numbers_and_num_commits,
+    ...     pr_numbers_index,
+    ... )
+    >>> title == 'The original commit message.'
+    True
+    >>> body == 'Stack created with [Sapling]\n* #1\n* #2 (2 commits)\n* __->__ #3\n* #4\n\nThe original commit message.\nSecond line of message.\n'
+    True
+    """
     bulleted_list = "\n".join(
         [
-            f"* #{item}" if index != pr_numbers_index else f"* __->__ #{item}"
-            for index, item in enumerate(pr_numbers)
+            format_stack_entry(pr_number, index, pr_numbers_index, num_commits)
+            for index, (pr_number, num_commits) in enumerate(pr_numbers_and_num_commits)
         ]
     )
-    commit_message = commit_data.get_msg()
-    title = firstline(commit_message)
+    title = firstline(commit_msg)
     body = f"""Stack created with [Sapling]
 {bulleted_list}
 
-{commit_message}
+{commit_msg}
 """
     return title, body
+
+
+def format_stack_entry(
+    pr_number: int,
+    pr_number_index: int,
+    current_pr_index: int,
+    num_commits: int,
+) -> str:
+    line = (
+        f"* #{pr_number}"
+        if current_pr_index != pr_number_index
+        else f"* __->__ #{pr_number}"
+    )
+    if num_commits > 1:
+        line += f" ({num_commits} commits)"
+    return line
 
 
 async def get_repository_for_origin(origin: str) -> Repository:
