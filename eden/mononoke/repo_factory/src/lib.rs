@@ -88,14 +88,12 @@ use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use mercurial_mutation::ArcHgMutationStore;
 use mercurial_mutation::CachedHgMutationStore;
 use mercurial_mutation::SqlHgMutationStoreBuilder;
+use metaconfig_types::ArcCommonConfig;
 use metaconfig_types::ArcRepoConfig;
 use metaconfig_types::BlobConfig;
-use metaconfig_types::CensoredScubaParams;
 use metaconfig_types::CommonConfig;
-use metaconfig_types::Identity;
 use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::Redaction;
-use metaconfig_types::RedactionConfig;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoReadOnly;
 use mutable_counters::ArcMutableCounters;
@@ -213,8 +211,6 @@ pub trait RepoFactoryOverride<T> = Fn(T) -> T + Send + Sync + 'static;
 #[derive(Clone)]
 pub struct RepoFactory {
     pub env: Arc<MononokeEnvironment>,
-    censored_scuba_params: CensoredScubaParams,
-    redaction_config: RedactionConfig,
     sql_factories: RepoFactoryCache<MetadataDatabaseConfig, Arc<MetadataSqlFactory>>,
     sql_connections: RepoFactoryCache<MetadataDatabaseConfig, SqlConnectionsWithSchema>,
     blobstores: RepoFactoryCache<BlobConfig, Arc<dyn Blobstore>>,
@@ -223,13 +219,11 @@ pub struct RepoFactory {
     scrub_handler: Arc<dyn ScrubHandler>,
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
     bonsai_hg_mapping_overwrite: bool,
-    global_allowlist: Vec<Identity>,
 }
 
 impl RepoFactory {
-    pub fn new(env: Arc<MononokeEnvironment>, common: &CommonConfig) -> RepoFactory {
+    pub fn new(env: Arc<MononokeEnvironment>) -> RepoFactory {
         RepoFactory {
-            censored_scuba_params: common.censored_scuba_params.clone(),
             sql_factories: RepoFactoryCache::new(),
             sql_connections: RepoFactoryCache::new(),
             blobstores: RepoFactoryCache::new(),
@@ -237,8 +231,6 @@ impl RepoFactory {
             blobstore_override: None,
             scrub_handler: default_scrub_handler(),
             blobstore_component_sampler: None,
-            redaction_config: common.redaction_config.clone(),
-            global_allowlist: common.global_allowlist.clone(),
             bonsai_hg_mapping_overwrite: false,
             env,
         }
@@ -347,6 +339,7 @@ impl RepoFactory {
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
         blobstore: &Arc<dyn Blobstore>,
+        common_config: &ArcCommonConfig,
     ) -> Result<RepoBlobstore> {
         let mut blobstore = blobstore.clone();
         if self.env.readonly_storage.0 {
@@ -356,14 +349,18 @@ impl RepoFactory {
         let redacted_blobs = match repo_config.redaction {
             Redaction::Enabled => {
                 let redacted_blobs = self
-                    .redacted_blobs(self.ctx(None), &repo_config.storage_config.metadata)
+                    .redacted_blobs(
+                        self.ctx(None),
+                        &repo_config.storage_config.metadata,
+                        common_config,
+                    )
                     .await?;
                 Some(redacted_blobs)
             }
             Redaction::Disabled => None,
         };
 
-        let censored_scuba_builder = self.censored_scuba_builder()?;
+        let censored_scuba_builder = self.censored_scuba_builder(common_config)?;
 
         let repo_blobstore = RepoBlobstore::new(
             blobstore,
@@ -430,6 +427,7 @@ impl RepoFactory {
         &self,
         ctx: CoreContext,
         db_config: &MetadataDatabaseConfig,
+        common_config: &ArcCommonConfig,
     ) -> Result<Arc<RedactedBlobs>> {
         self.redacted_blobs
             .get_or_try_init(db_config, || async move {
@@ -443,10 +441,10 @@ impl RepoFactory {
                     })
                     .await??
                 } else {
-                    let blobstore = self.redaction_config_blobstore().await?;
+                    let blobstore = self.redaction_config_blobstore(common_config).await?;
                     RedactedBlobs::from_configerator(
                         &self.env.config_store,
-                        &self.redaction_config.redaction_sets_location,
+                        &common_config.redaction_config.redaction_sets_location,
                         ctx,
                         blobstore,
                     )
@@ -485,13 +483,17 @@ impl RepoFactory {
         }
     }
 
-    fn censored_scuba_builder(&self) -> Result<MononokeScubaSampleBuilder> {
+    fn censored_scuba_builder(
+        &self,
+        config: &ArcCommonConfig,
+    ) -> Result<MononokeScubaSampleBuilder> {
+        let censored_scuba_params = &config.censored_scuba_params;
         let mut builder = MononokeScubaSampleBuilder::with_opt_table(
             self.env.fb,
-            self.censored_scuba_params.table.clone(),
+            censored_scuba_params.table.clone(),
         )?;
         builder.add_common_server_data();
-        if let Some(scuba_log_file) = &self.censored_scuba_params.local_path {
+        if let Some(scuba_log_file) = &censored_scuba_params.local_path {
             builder = builder.with_log_file(scuba_log_file)?;
         }
         Ok(builder)
@@ -621,10 +623,14 @@ pub enum RepoFactoryError {
     RepoHandlerBase,
 }
 
-#[facet::factory(name: String, config: RepoConfig)]
+#[facet::factory(name: String, repo_config_param: RepoConfig, common_config_param: CommonConfig)]
 impl RepoFactory {
-    pub fn repo_config(&self, config: &RepoConfig) -> ArcRepoConfig {
-        Arc::new(config.clone())
+    pub fn repo_config(&self, repo_config_param: &RepoConfig) -> ArcRepoConfig {
+        Arc::new(repo_config_param.clone())
+    }
+
+    pub fn common_config(&self, common_config_param: &CommonConfig) -> ArcCommonConfig {
+        Arc::new(common_config_param.clone())
     }
 
     pub fn repo_identity(&self, name: &str, repo_config: &ArcRepoConfig) -> ArcRepoIdentity {
@@ -822,6 +828,7 @@ impl RepoFactory {
         &self,
         repo_config: &ArcRepoConfig,
         repo_identity: &ArcRepoIdentity,
+        common_config: &ArcCommonConfig,
     ) -> Result<ArcRepoPermissionChecker> {
         let repo_name = repo_identity.name();
         let permission_checker = ProdRepoPermissionChecker::new(
@@ -844,7 +851,7 @@ impl RepoFactory {
                 })
                 .unwrap_or_default(),
             repo_name,
-            &self.global_allowlist,
+            &common_config.global_allowlist,
         )
         .await?;
         Ok(Arc::new(permission_checker))
@@ -1004,6 +1011,7 @@ impl RepoFactory {
         &self,
         repo_config: &ArcRepoConfig,
         repo_identity: &ArcRepoIdentity,
+        common_config: &ArcCommonConfig,
     ) -> Result<ArcSkiplistIndex> {
         let blobstore_without_cache = self
             .repo_blobstore_from_blobstore(
@@ -1012,6 +1020,7 @@ impl RepoFactory {
                 &self
                     .blobstore_no_cache(&repo_config.storage_config.blobstore)
                     .await?,
+                common_config,
             )
             .await?;
 
@@ -1033,13 +1042,19 @@ impl RepoFactory {
         &self,
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
+        common_config: &ArcCommonConfig,
     ) -> Result<ArcRepoBlobstore> {
         let blobstore = self
             .blobstore(&repo_config.storage_config.blobstore)
             .await?;
         Ok(Arc::new(
-            self.repo_blobstore_from_blobstore(repo_identity, repo_config, &blobstore)
-                .await?,
+            self.repo_blobstore_from_blobstore(
+                repo_identity,
+                repo_config,
+                &blobstore,
+                common_config,
+            )
+            .await?,
         ))
     }
 
@@ -1054,8 +1069,11 @@ impl RepoFactory {
         Arc::new(filestore_config)
     }
 
-    pub async fn redaction_config_blobstore(&self) -> Result<ArcRedactionConfigBlobstore> {
-        self.redaction_config_blobstore_from_config(&self.redaction_config.blobstore)
+    pub async fn redaction_config_blobstore(
+        &self,
+        common_config: &ArcCommonConfig,
+    ) -> Result<ArcRedactionConfigBlobstore> {
+        self.redaction_config_blobstore_from_config(&common_config.redaction_config.blobstore)
             .await
     }
 

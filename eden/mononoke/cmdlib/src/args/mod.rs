@@ -507,12 +507,7 @@ where
 }
 
 pub fn get_repo_factory<'a>(matches: &'a MononokeMatches<'a>) -> Result<RepoFactory, Error> {
-    let config_store = matches.config_store();
-    let common_config = load_common_config(config_store, matches)?;
-    Ok(RepoFactory::new(
-        matches.environment().clone(),
-        &common_config,
-    ))
+    Ok(RepoFactory::new(matches.environment().clone()))
 }
 
 /// Open an existing repo object by ID -- for local instances, expect contents to already be there.
@@ -661,7 +656,7 @@ where
     R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
 {
     let config_store = matches.config_store();
-
+    let common_config = load_common_config(config_store, matches)?;
     let (reponame, repo_id, mut config) = match repo_id {
         RepoIdentifier::Id(repo_id) => {
             let (reponame, config) = get_config_by_repoid(config_store, matches, repo_id)?;
@@ -691,7 +686,7 @@ where
         config.redaction = redaction_override;
     }
 
-    let repo = repo_factory.build(reponame, config).await?;
+    let repo = repo_factory.build(reponame, config, common_config).await?;
 
     Ok(repo)
 }

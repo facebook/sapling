@@ -40,7 +40,7 @@ impl ScubaLoggingArgs {
         observability_context: &ObservabilityContext,
         default_scuba_set: &Option<String>,
     ) -> Result<MononokeScubaSampleBuilder> {
-        let mut scuba_logger = if let Some(scuba_dataset) = &self.scuba_dataset {
+        let scuba_logger = if let Some(scuba_dataset) = &self.scuba_dataset {
             MononokeScubaSampleBuilder::new(fb, scuba_dataset.as_str())?
         } else if let Some(default_scuba_dataset) = default_scuba_set {
             if self.no_default_scuba_dataset {

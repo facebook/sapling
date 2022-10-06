@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::format_err;
@@ -321,15 +322,20 @@ async fn redaction_create_key_list_impl<'a, 'b>(
     ctx: &'a CoreContext,
     blobstore_keys: Vec<String>,
 ) -> Result<(), SubcommandError> {
-    let common = args::load_common_config(matches.config_store(), matches)?;
-    let factory = RepoFactory::new(matches.environment().clone(), &common);
+    let common_config = args::load_common_config(matches.config_store(), matches)?;
+    let factory = RepoFactory::new(matches.environment().clone());
 
-    let blobstore = factory.redaction_config_blobstore().await?;
+    let blobstore = factory
+        .redaction_config_blobstore(&Arc::new(common_config.clone()))
+        .await?;
     let darkstorm_blobstore = factory
         .redaction_config_blobstore_from_config(
-            &common.redaction_config.darkstorm_blobstore.ok_or_else(|| {
-                anyhow!("Admin tier config must have darkstorm_blobstore field set")
-            })?,
+            &common_config
+                .redaction_config
+                .darkstorm_blobstore
+                .ok_or_else(|| {
+                    anyhow!("Admin tier config must have darkstorm_blobstore field set")
+                })?,
         )
         .await?;
 

@@ -37,6 +37,7 @@ use megarepo_mapping::MegarepoMapping;
 use megarepo_mapping::SourceName;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::ArcRepoConfig;
+use metaconfig_types::CommonConfig;
 use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
@@ -163,6 +164,10 @@ impl MegarepoApi {
     /// Get megarepo configs
     pub fn configs(&self) -> &dyn MononokeMegarepoConfigs {
         self.megarepo_configs.as_ref()
+    }
+
+    fn common_config(&self) -> &CommonConfig {
+        &self.repo_configs.common
     }
 
     /// Get megarepo config and remapping state for given commit in target
@@ -343,9 +348,10 @@ impl MegarepoApi {
             "Instantiating a MegarepoApi blobstore for {}",
             repo_identity.name()
         );
+        let common_config = Arc::new(self.common_config().clone());
         let repo_blobstore = self
             .repo_factory
-            .repo_blobstore(&repo_identity, repo_config)
+            .repo_blobstore(&repo_identity, repo_config, &common_config)
             .await?;
         let blobstore = repo_blobstore.boxed();
         info!(

@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -99,9 +100,10 @@ pub async fn list(
     // SqlRedactedBlobs are removed, we need to know the metadata database
     // config for this.
     let db_config = &repo.repo_config().storage_config.metadata;
+    let common_config = Arc::new(app.common_config().clone());
     let redacted_blobs = app
         .repo_factory()
-        .redacted_blobs(ctx.clone(), db_config)
+        .redacted_blobs(ctx.clone(), db_config, &common_config)
         .await?;
     let redacted_map = redacted_blobs.redacted();
     let keys = redacted_map.keys().cloned().collect();

@@ -107,6 +107,7 @@ pub struct RedactionConfig {
 }
 
 /// Configuration for all repos
+#[facet::facet]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CommonConfig {
     /// Hipster tier that is permitted to act as a trusted proxy.

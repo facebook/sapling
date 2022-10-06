@@ -20,6 +20,7 @@ use blobstore_factory::ScrubHandler;
 use cloned::cloned;
 use cmdlib::args::ResolvedRepo;
 use fbinit::FacebookInit;
+use metaconfig_types::CommonConfig;
 use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::Redaction;
 use metaconfig_types::RepoConfig;
@@ -215,10 +216,7 @@ pub async fn setup_common<'a>(
             name: repo,
             config: repo_conf,
         };
-        // For some reason the repos are initialized sequentially in the original
-        // walker_commands_impl::setup::setup_common, he behaviour is preserved in here too.
-        //
-        // TODO(aida): Init repos in parallel.
+        let common_config = app.common_config().clone();
         let one_repo = setup_repo(
             walk_stats_key,
             app.fb,
@@ -235,6 +233,7 @@ pub async fn setup_common<'a>(
             included_nodes,
             hash_validation_node_types.clone(),
             progress_options,
+            common_config,
         )
         .await?;
         per_repo.push(one_repo);
@@ -403,6 +402,7 @@ async fn setup_repo<'a>(
     mut include_node_types: HashSet<NodeType>,
     hash_validation_node_types: HashSet<NodeType>,
     progress_options: ProgressOptions,
+    common_config: CommonConfig,
 ) -> Result<(RepoSubcommandParams, RepoWalkParams), Error> {
     let logger = if repo_count > 1 {
         logger.new(o!("repo" => resolved.name.clone()))
@@ -469,7 +469,11 @@ async fn setup_repo<'a>(
     ));
 
     let repo: BlobRepo = repo_factory
-        .build(resolved.name.clone(), resolved.config.clone())
+        .build(
+            resolved.name.clone(),
+            resolved.config.clone(),
+            common_config,
+        )
         .await?;
 
     Ok((

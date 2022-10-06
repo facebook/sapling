@@ -104,15 +104,13 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         }
         Commands::Blobstore => SnapshotLocation::Blobstore,
     };
-
+    let common_config = app.common_config();
     let futs = repos
         .into_iter()
         .map(|(name, config)| {
-            cloned!(repo_factory, mut scuba);
-
+            cloned!(repo_factory, mut scuba, common_config);
             async move {
                 let logger = logger.new(o!("repo" => name.clone()));
-
                 let ctx = {
                     scuba.add("reponame", name.clone());
                     let session = SessionContainer::new_with_defaults(app.fb);
@@ -125,7 +123,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
 
                 let warmup = async move {
                     let cache_warmup = config.cache_warmup.clone();
-                    let repo: InnerRepo = repo_factory.build(name, config).await?;
+                    let repo: InnerRepo = repo_factory.build(name, config, common_config).await?;
 
                     // Rewind bookmarks to the point where we have derived data. Cache
                     // warmup requires filenodes and hg changesets to be present.

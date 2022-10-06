@@ -141,9 +141,11 @@ async fn run_hook_tailer<'a>(
 
     let disabled_hooks = cmdlib::args::parse_disabled_hooks_no_repo_prefix(matches, logger);
 
-    let repo_factory = RepoFactory::new(matches.environment().clone(), &common_config);
+    let repo_factory = RepoFactory::new(matches.environment().clone());
 
-    let blobrepo = repo_factory.build(repo_name, config.clone()).await?;
+    let blobrepo = repo_factory
+        .build(repo_name, config.clone(), common_config)
+        .await?;
 
     let (exclusions, inclusions) = future::try_join(
         get_changesets(matches, "exclude", "exclude_file", ctx, &blobrepo),

@@ -345,7 +345,7 @@ pub fn init_tunables_worker(
         "Initializing tunables: {}",
         log_tunables(&init_tunables)
     );
-    update_tunables(init_tunables.clone())?;
+    update_tunables(init_tunables)?;
 
     if TUNABLES_WORKER_STATE
         .set(TunablesWorkerState {

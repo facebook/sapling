@@ -252,9 +252,9 @@ async fn open_repo<'a>(
         _ => {}
     };
 
-    let repo_factory = RepoFactory::new(matches.environment().clone(), &common_config);
+    let repo_factory = RepoFactory::new(matches.environment().clone());
 
-    let repo = repo_factory.build(reponame, config).await?;
+    let repo = repo_factory.build(reponame, config, common_config).await?;
 
     Ok(repo)
 }
