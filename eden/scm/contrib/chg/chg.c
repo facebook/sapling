@@ -80,17 +80,17 @@ static int checkruntimedir(const char* sockdir) {
 
 static void getdefaultsockdir(char sockdir[], size_t size) {
   /* by default, put socket file in secure directory
-   * (${XDG_RUNTIME_DIR}/chg, or /${TMPDIR:-tmp}/chg$UID)
+   * (${XDG_RUNTIME_DIR}/pfc, or /${TMPDIR:-tmp}/pfc$UID)
    * (permission of socket file may be ignored on some Unices) */
   const char* runtimedir = getenv("XDG_RUNTIME_DIR");
   int r;
   if (runtimedir && checkruntimedir(runtimedir)) {
-    r = snprintf(sockdir, size, "%s/chg", runtimedir);
+    r = snprintf(sockdir, size, "%s/pfc", runtimedir);
   } else {
     const char* tmpdir = getenv("TMPDIR");
     if (!tmpdir)
       tmpdir = "/tmp";
-    r = snprintf(sockdir, size, "%s/chg%d", tmpdir, geteuid());
+    r = snprintf(sockdir, size, "%s/pfc%d", tmpdir, geteuid());
   }
   if (r < 0 || (size_t)r >= size)
     abortmsg("too long TMPDIR (r = %d)", r);
