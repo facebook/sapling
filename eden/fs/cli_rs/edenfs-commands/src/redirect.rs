@@ -38,6 +38,7 @@ use crate::Subcommand;
 #[clap(name = "redirect")]
 #[clap(about = "List and manipulate redirected paths")]
 pub enum RedirectCmd {
+    #[clap(about = "List redirections")]
     List {
         #[clap(
             long,
@@ -49,6 +50,7 @@ pub enum RedirectCmd {
         #[clap(long, help = "output in json rather than human readable text")]
         json: bool,
     },
+    #[clap(about = "Add or change a redirection")]
     Add {
         #[clap(long, parse(try_from_str = expand_path_or_cwd), default_value = "", help = "The EdenFS mount point path.")]
         mount: PathBuf,
@@ -70,10 +72,15 @@ pub enum RedirectCmd {
         )]
         strict: bool,
     },
+    #[clap(
+        about = "Unmount all effective redirection configuration, but preserve the configuration \
+        so that a subsequent fixup will restore it"
+    )]
     Unmount {
         #[clap(long, parse(try_from_str = expand_path_or_cwd), default_value = "", help = "The EdenFS mount point path.")]
         mount: PathBuf,
     },
+    #[clap(about = "Delete a redirection")]
     Del {
         #[clap(long, parse(try_from_str = expand_path_or_cwd), default_value = "", help = "The EdenFS mount point path.")]
         mount: PathBuf,
