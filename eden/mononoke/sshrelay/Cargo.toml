@@ -16,4 +16,4 @@ metadata = { version = "0.1.0", path = "../server/metadata" }
 netstring = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio-util = { version = "0.6", features = ["full"] }
 zstd = "0.11.1+zstd.1.5.2"
-zstd-safe = "5.0.1+zstd.1.5.2"
+zstd-safe = { version = "5.0.1+zstd.1.5.2", features = ["std"] }
