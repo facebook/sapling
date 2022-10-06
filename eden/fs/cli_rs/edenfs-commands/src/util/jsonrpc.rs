@@ -69,6 +69,7 @@ impl ResponseBuilder {
         }
     }
 
+    #[allow(unused)]
     pub fn with_id(mut self, id: Option<String>) -> Self {
         self.id = id;
         self
