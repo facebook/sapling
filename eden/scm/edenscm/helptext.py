@@ -552,9 +552,7 @@ related options for the diff command.
 
 Authentication credentials and other authentication-like configuration
 for HTTP connections. This section allows you to store usernames and
-passwords for use when logging *into* HTTP servers. See
-:hg:`help config.web` if you want to configure *who* can login to
-your HTTP server.
+passwords for use when logging *into* HTTP servers.
 
 The following options apply to all hosts.
 
