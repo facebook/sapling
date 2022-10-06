@@ -1,5 +1,6 @@
 #require no-symlink
   $ disable treemanifest
+  $ setconfig workingcopy.ruststatus=False
 
 # The following script was used to create the bundle:
 #
