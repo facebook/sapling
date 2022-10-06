@@ -51,7 +51,7 @@ use crate::mounttable::read_mount_table;
 
 pub const REPO_SOURCE: &str = ".eden-redirections";
 const USER_REDIRECTION_SOURCE: &str = ".eden/client/config.toml:redirections";
-const APFS_HELPER: &str = "/usr/local/libexec/eden/eden_apfs_mount_helper";
+pub const APFS_HELPER: &str = "/usr/local/libexec/eden/eden_apfs_mount_helper";
 
 #[derive(Clone, Serialize, Copy, Debug, PartialEq, PartialOrd)]
 #[serde(rename_all = "lowercase")]

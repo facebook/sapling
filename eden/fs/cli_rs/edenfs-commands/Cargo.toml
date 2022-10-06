@@ -36,3 +36,8 @@ tracing = "0.1.35"
 
 [dev-dependencies]
 tempfile = "3.3"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+atty = "0.2"
+dialoguer = "0.8"
+nix = "0.25"

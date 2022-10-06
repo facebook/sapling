@@ -8,8 +8,12 @@
 //! edenfsctl redirect
 
 use std::collections::BTreeMap;
+#[cfg(target_os = "macos")]
+use std::ffi::OsStr;
 use std::path::Path;
 use std::path::PathBuf;
+#[cfg(target_os = "macos")]
+use std::process::Command;
 use std::str::FromStr;
 
 use anyhow::anyhow;
@@ -17,6 +21,8 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+#[cfg(target_os = "macos")]
+use dialoguer::Confirm;
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::checkout::CheckoutConfig;
 use edenfs_client::redirect::get_configured_redirections;
@@ -25,6 +31,8 @@ use edenfs_client::redirect::try_add_redirection;
 use edenfs_client::redirect::Redirection;
 use edenfs_client::redirect::RedirectionState;
 use edenfs_client::redirect::RedirectionType;
+#[cfg(target_os = "macos")]
+use edenfs_client::redirect::APFS_HELPER;
 use edenfs_client::redirect::REPO_SOURCE;
 use edenfs_client::EdenFsInstance;
 use hg_util::path::expand_path;
@@ -108,6 +116,8 @@ pub enum RedirectCmd {
         )]
         all_sources: bool,
     },
+    #[clap(about = "Delete stale apfs volumes")]
+    CleanupApfs {},
 }
 
 impl RedirectCmd {
@@ -372,6 +382,115 @@ impl RedirectCmd {
         }
         Ok(0)
     }
+
+    #[cfg(not(target_os = "macos"))]
+    async fn cleanup_apfs(&self) -> Result<ExitCode> {
+        Err(anyhow!("Cannot run cleanup-apfs: Unsupported Platform"))
+    }
+
+    #[cfg(target_os = "macos")]
+    async fn cleanup_apfs(&self) -> Result<ExitCode> {
+        match Redirection::have_apfs_helper() {
+            Err(e) => return Err(anyhow!("Cannot run cleanup-apfs: {}", e)),
+            Ok(res) => {
+                if !res {
+                    return Err(anyhow!(
+                        "Cannot run cleanup-apfs: {} does not exist",
+                        APFS_HELPER
+                    ));
+                }
+            }
+        }
+
+        let instance = EdenFsInstance::global();
+        let mounts = instance
+            .get_configured_mounts_map()
+            .with_context(|| anyhow!("could not get configured mounts map for EdenFS instance"))?;
+
+        let mut args: Vec<&OsStr> = vec!["list-stale-volumes", "--json"]
+            .into_iter()
+            .map(OsStr::new)
+            .collect::<Vec<_>>();
+        args.extend(mounts.keys().map(|m| m.as_os_str()));
+        let output = Command::new(APFS_HELPER)
+            .args(&args)
+            .output()
+            .with_context(|| {
+                format!(
+                    "Failed to execute apfs_helper cmd: `{} {:?}`.",
+                    APFS_HELPER,
+                    args.join(OsStr::new(" ")),
+                )
+            })?;
+        if !output.status.success() {
+            return Err(anyhow!(
+                "failed to fetch stale volumes. stderr: {}\n stdout: {}",
+                String::from_utf8_lossy(&output.stderr),
+                String::from_utf8_lossy(&output.stdout)
+            ));
+        }
+
+        let stale_output = std::str::from_utf8(&output.stdout).with_context(|| {
+            anyhow!("Failed to convert list-stale-volumes output to utf8 string")
+        })?;
+        let stale_json: serde_json::Value = serde_json::from_str(stale_output)
+            .with_context(|| anyhow!("Failed to parse list-stale-volumes output as JSON"))?;
+
+        let default_v = vec![];
+        let stale_volumes = stale_json.as_array().unwrap_or(&default_v);
+        if stale_volumes.is_empty() {
+            println!("No stale volumes detected");
+            return Ok(0);
+        }
+
+        if atty::is(atty::Stream::Stdin) {
+            println!("Warning: this operation will permanently delete the following volumes:");
+            for volume in stale_volumes.iter() {
+                println!("    {}", volume.as_str().unwrap_or(""));
+            }
+
+            if !Confirm::new()
+                .with_prompt("Do you want to continue?")
+                .interact()?
+            {
+                println!("Not deleting volumes");
+                return Ok(2);
+            }
+        }
+
+        let mut res = 0;
+        for vol in stale_volumes {
+            if let Some(vol_str) = vol.as_str() {
+                let args = &["delete-volume", vol_str];
+                let output = Command::new(APFS_HELPER)
+                    .args(args)
+                    .output()
+                    .with_context(|| {
+                        format!(
+                            "Failed to execute apfs_helper cmd: `{} {}`.",
+                            APFS_HELPER,
+                            args.join(" "),
+                        )
+                    })?;
+                if !output.status.success() {
+                    res = 1;
+                    eprintln!(
+                        "Failed to delete volume {} due to {}",
+                        vol_str,
+                        String::from_utf8_lossy(&output.stderr)
+                    );
+                } else {
+                    println!("Deleted volume {}", vol_str);
+                }
+            } else {
+                eprintln!(
+                    "Could not convert serde_json::Value object to string: {}",
+                    vol
+                );
+            }
+        }
+        Ok(res)
+    }
 }
 
 #[async_trait]
@@ -405,6 +524,7 @@ impl Subcommand for RedirectCmd {
                 self.fixup(mount, *force_remount_bind_mounts, *all_sources)
                     .await
             }
+            Self::CleanupApfs {} => self.cleanup_apfs().await,
         }
     }
 }
