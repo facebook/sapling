@@ -39,6 +39,7 @@ struct cmdserveropts {
   char sockname[PATH_MAX];
   char initsockname[PATH_MAX];
   char redirectsockname[PATH_MAX];
+  const char* cli_name;
 };
 
 static void initcmdserveropts(struct cmdserveropts* opts) {
@@ -96,7 +97,7 @@ static void getdefaultsockdir(char sockdir[], size_t size) {
     abortmsg("too long TMPDIR (r = %d)", r);
 }
 
-static void setcmdserveropts(struct cmdserveropts* opts) {
+static void setcmdserveropts(struct cmdserveropts* opts, const char* cli_name) {
   int r;
   char sockdir[PATH_MAX];
   const char* envsockname = getenv("CHGSOCKNAME");
@@ -105,9 +106,12 @@ static void setcmdserveropts(struct cmdserveropts* opts) {
     preparesockdir(sockdir);
   }
 
+  opts->cli_name = cli_name;
+
   const char* basename = (envsockname) ? envsockname : sockdir;
-  const char* sockfmt = (envsockname) ? "%s" : "%s/server3";
-  r = snprintf(opts->sockname, sizeof(opts->sockname), sockfmt, basename);
+  const char* sockfmt = (envsockname) ? "%s-%s" : "%s/server-%s";
+  r = snprintf(
+      opts->sockname, sizeof(opts->sockname), sockfmt, basename, cli_name);
   if (r < 0 || (size_t)r >= sizeof(opts->sockname))
     abortmsg("too long TMPDIR or CHGSOCKNAME (r = %d)", r);
   r = snprintf(
@@ -120,7 +124,7 @@ static void setcmdserveropts(struct cmdserveropts* opts) {
     abortmsg("too long TMPDIR or CHGSOCKNAME (r = %d)", r);
 }
 
-static const char* gethgcmd(void) {
+static const char* gethgcmd(const char* cli_name) {
   static const char* hgcmd = NULL;
   if (!hgcmd) {
     hgcmd = getenv("CHGHG");
@@ -130,14 +134,16 @@ static const char* gethgcmd(void) {
 #ifdef HGPATH
       hgcmd = (HGPATH);
 #else
-      hgcmd = "hg";
+      hgcmd = cli_name;
 #endif
+    if (!hgcmd || hgcmd[0] == '\0')
+      abortmsg("unknown cmd to execute\n");
   }
   return hgcmd;
 }
 
 static void execcmdserver(const struct cmdserveropts* opts) {
-  const char* hgcmd = gethgcmd();
+  const char* hgcmd = gethgcmd(opts->cli_name);
 
   const char* argv[] = {
       hgcmd,
@@ -286,9 +292,9 @@ static int isstdiomissing() {
       fcntl(STDERR_FILENO, F_GETFD) == -1);
 }
 
-static void execoriginalhg(const char* argv[]) {
+static void execoriginalhg(const char* argv[], const char* cli_name) {
   debugmsg("execute original hg");
-  if (execvp(gethgcmd(), (char**)argv) < 0)
+  if (execvp(gethgcmd(cli_name), (char**)argv) < 0)
     abortmsgerrno("failed to exec original hg");
 }
 
@@ -301,7 +307,11 @@ static int configint(const char* name, int fallback) {
   return value;
 }
 
-int chg_main(int argc, const char* argv[], const char* envp[]) {
+int chg_main(
+    int argc,
+    const char* argv[],
+    const char* envp[],
+    const char* cli_name) {
   if (configint("CHGDEBUG", 0))
     enabledebugmsg();
 
@@ -326,12 +336,12 @@ int chg_main(int argc, const char* argv[], const char* envp[]) {
     // since the user wants the process to have a lower
     // priority.
     setenv("CHGDISABLE", "1", 1);
-    execoriginalhg(argv);
+    execoriginalhg(argv, cli_name);
   }
 
   struct cmdserveropts opts;
   initcmdserveropts(&opts);
-  setcmdserveropts(&opts);
+  setcmdserveropts(&opts, cli_name);
 
   if (argc == 2) {
     if (strcmp(argv[1], "--kill-chg-daemon") == 0) {
@@ -375,7 +385,7 @@ int chg_main(int argc, const char* argv[], const char* envp[]) {
           "changes sensitive environment variables "
           "before executing hg. If you have to use a "
           "wrapper, wrap chg instead of hg.",
-          gethgcmd());
+          gethgcmd(cli_name));
   }
 
   setupsignalhandler(hgc_peerpid(hgc), hgc_peerpgid(hgc));

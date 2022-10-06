@@ -15,6 +15,12 @@ hgcommands = { version = "0.1.0", path = "../../lib/hgcommands", default-feature
 libc = "0.2.132"
 pyblackbox = { path = "../../edenscmnative/bindings/modules/pyblackbox" }
 
+[target.'cfg(target_os = "linux")'.dependencies]
+identity = { version = "0.1.0", path = "../../lib/identity" }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+identity = { version = "0.1.0", path = "../../lib/identity" }
+
 [target.'cfg(target_os = "windows")'.dependencies]
 anyhow = "1.0.65"
 winapi = { version = "0.3", features = ["everything"] }

@@ -16,7 +16,12 @@ use libc::c_int;
 
 #[cfg_attr(not(fb_buck_build), link(name = "chg", kind = "static"))]
 extern "C" {
-    fn chg_main(argc: c_int, argv: *mut *mut c_char, envp: *mut *mut c_char) -> c_int;
+    fn chg_main(
+        argc: c_int,
+        argv: *mut *mut c_char,
+        envp: *mut *mut c_char,
+        cli_name: *const c_char,
+    ) -> c_int;
 }
 
 /// Call `chg_main` with given environment and arguments
@@ -25,11 +30,14 @@ fn chg_main_wrapper(args: Vec<CString>, envs: Vec<CString>) -> i32 {
     argv.push(std::ptr::null_mut());
     let mut envp: Vec<_> = envs.into_iter().map(|x| x.into_raw()).collect();
     envp.push(std::ptr::null_mut());
+    let name = identity::sniff_env().cli_name();
+    let name = CString::new(name).unwrap();
     let rc = unsafe {
         chg_main(
             (argv.len() - 1) as c_int,
             argv.as_mut_ptr(),
             envp.as_mut_ptr(),
+            name.as_c_str().as_ptr(),
         )
     } as i32;
     rc
