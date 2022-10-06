@@ -286,7 +286,9 @@ class ui(object):
             self.identity = ident
 
         loadedfiles = self._rcfg.files()
-        repohgrc = os.path.join(repopath, self.identity.dotdir(), "hgrc")
+        repohgrc = os.path.join(
+            repopath, self.identity.dotdir(), self.identity.configrepofile()
+        )
 
         # Check if our repo hgrc path (or Windows UNC flavor) have already been loaded.
         if not any(lf in {repohgrc, f"\\\\?\\{repohgrc}"} for lf in loadedfiles):

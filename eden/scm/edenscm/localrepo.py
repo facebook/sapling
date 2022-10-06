@@ -382,6 +382,7 @@ class localrepository(object):
         # two, but pretty much all the existing code assume
         # wlock is not needed so we keep them excluded for
         # now.
+        "config",
         "hgrc",
         "requires",
         # XXX cache is a complicated business someone

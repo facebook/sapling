@@ -331,7 +331,7 @@ def postshare(sourcerepo, destrepo, bookmarks=True, defaultpath=None):
     """
     default = defaultpath or sourcerepo.ui.config("paths", "default")
     if default:
-        fp = destrepo.localvfs("hgrc", "w", text=True)
+        fp = destrepo.localvfs(destrepo.ui.identity.configrepofile(), "w", text=True)
         fp.write("[paths]\n")
         fp.write("default = %s\n" % default)
         fp.close()
@@ -792,7 +792,7 @@ def clone(
 def _writehgrc(repo, abspath, configfiles):
     with repo.wlock(), repo.lock():
         template = uimod.samplehgrcs["cloned"]
-        with repo.localvfs("hgrc", "wb") as fp:
+        with repo.localvfs(repo.ui.identity.configrepofile(), "wb") as fp:
             u = util.url(abspath)
             u.passwd = None
             defaulturl = str(u)

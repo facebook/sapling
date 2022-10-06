@@ -268,9 +268,11 @@ def _clonetotmp(repo, tmprepopath: str):
         tmprepo._writerequirements()
         tmprepo.storerequirements.add("rustrevlogchangelog")
         tmprepo._writestorerequirements()
-        with tmprepo.localvfs.open("hgrc", "a") as f:
+        ident = repo.ui.identity
+        with tmprepo.localvfs.open(ident.configrepofile(), "a") as f:
             f.write(
-                b"\n%%include %s\n" % pycompat.encodeutf8(repo.localvfs.join("hgrc"))
+                b"\n%%include %s\n"
+                % pycompat.encodeutf8(repo.localvfs.join(ident.configerpofile()))
             )
     tmprepo = hg.repository(repo.ui, path=tmprepopath)
     clone.revlogclone("default", tmprepo)

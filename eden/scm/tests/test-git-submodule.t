@@ -6,6 +6,7 @@
   $ . $TESTDIR/git.sh
   $ setconfig diff.git=true ui.allowemptycommit=true
   $ enable rebase
+  $ export HGIDENTITY=sl
 
 Prepare smaller submodules
 
@@ -30,8 +31,8 @@ Prepare git repo with submodules
 
   $ git init -q -b main parent-repo-git
   $ cd parent-repo-git
-  $ git submodule --quiet add -b main file://$TESTTMP/sub1/.hg/store/git mod/1
-  $ git submodule --quiet add -b main file://$TESTTMP/sub2/.hg/store/git mod/2
+  $ git submodule --quiet add -b main file://$TESTTMP/sub1/.sl/store/git mod/1
+  $ git submodule --quiet add -b main file://$TESTTMP/sub2/.sl/store/git mod/2
   $ git commit -qm 'add .gitmodules'
 
   $ cd mod/1
@@ -95,7 +96,7 @@ Make changes to submodules via working copy
 
   $ cat >> .gitmodules << EOF
   > [submodule "sub3"]
-  > url = file://$TESTTMP/sub1/.hg/store/git
+  > url = file://$TESTTMP/sub1/.sl/store/git
   > path = mod/3
   > EOF
 
@@ -104,7 +105,7 @@ Make changes to submodules via working copy
   M mod/1
   R mod/2
 
-  $ hg clone -q --git "$TESTTMP/sub1/.hg/store/git" mod/3
+  $ hg clone -q --git "$TESTTMP/sub1/.sl/store/git" mod/3
   $ hg status
   M .gitmodules
   M mod/1
@@ -156,10 +157,10 @@ Diff committed changes
   +++ b/.gitmodules
   @@ -6,3 +6,6 @@
    	path = mod/2
-   	url = file:/*/$TESTTMP/sub2/.hg/store/git (glob)
+   	url = file:/*/$TESTTMP/sub2/.sl/store/git (glob)
    	branch = main
   +[submodule "sub3"]
-  +url = file:/*/$TESTTMP/sub1/.hg/store/git (glob)
+  +url = file:/*/$TESTTMP/sub1/.sl/store/git (glob)
   +path = mod/3
   diff --git a/mod/1 b/mod/1
   --- a/mod/1
@@ -204,7 +205,7 @@ Nested submodules can share submodules with same URLs
   $ cd
   $ git init -q -b main grandparent-repo-git
   $ cd grandparent-repo-git
-  $ git submodule --quiet add -b main file://$TESTTMP/sub1/.hg/store/git mod/1
+  $ git submodule --quiet add -b main file://$TESTTMP/sub1/.sl/store/git mod/1
   $ git submodule --quiet add -b main file://$TESTTMP/parent-repo-git/.git mod/p
   $ git commit -qm 'add .gitmodules'
 
@@ -221,7 +222,7 @@ Nested submodules can share submodules with same URLs
   $ echo mod/* mod/*/mod/*
   mod/1 mod/p mod/p/mod/1 mod/p/mod/2
 
-  $ cd .hg/store/gitmodules
+  $ cd .sl/store/gitmodules
   $ find . | grep gitmodules
   [1]
 
@@ -230,8 +231,8 @@ Rebase submodule change
   $ cd
   $ git init -q -b main rebase-git
   $ cd rebase-git
-  $ git submodule --quiet add -b main file://$TESTTMP/sub1/.hg/store/git m1
-  $ git submodule --quiet add -b main file://$TESTTMP/sub2/.hg/store/git m2
+  $ git submodule --quiet add -b main file://$TESTTMP/sub1/.sl/store/git m1
+  $ git submodule --quiet add -b main file://$TESTTMP/sub2/.sl/store/git m2
   $ git commit -qm A
 
   $ cd
@@ -277,7 +278,7 @@ Revert submodule change
   $ cd
   $ git init -q -b main revert-git
   $ cd revert-git
-  $ git submodule --quiet add -b main file://$TESTTMP/sub1/.hg/store/git m1
+  $ git submodule --quiet add -b main file://$TESTTMP/sub1/.sl/store/git m1
   $ git commit -qm A
   $ cd m1
   $ git -c advice.detachedHead=false checkout -q 'HEAD^'

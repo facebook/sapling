@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.65"
+dirs = "2.0"
 once_cell = "1.12"
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 tracing = "0.1.35"

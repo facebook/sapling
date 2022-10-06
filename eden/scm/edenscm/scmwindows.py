@@ -52,16 +52,5 @@ def systemrcpath():
     return rcpath
 
 
-def userrcpath():
-    """return os-specific hgrc search path to the user dir"""
-    home = os.path.expanduser("~")
-    path = [os.path.join(home, "mercurial.ini"), os.path.join(home, ".hgrc")]
-    userprofile = encoding.environ.get("USERPROFILE")
-    if userprofile and userprofile != home:
-        path.append(os.path.join(userprofile, "mercurial.ini"))
-        path.append(os.path.join(userprofile, ".hgrc"))
-    return path
-
-
 def termsize(ui):
     return win32.termsize()

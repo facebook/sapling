@@ -115,6 +115,28 @@ impl Identity {
             Ok(val) => Some(Ok(val)),
         }
     }
+
+    pub fn user_config_paths(&self) -> Vec<PathBuf> {
+        let mut paths = vec![];
+        if self.product_name() == "Mercurial" {
+            // ~/.hgrc and ~/mercurial.ini are legacy paths that we support only when the current identity is HG
+            if let Some(home_dir) = dirs::home_dir() {
+                paths.push(home_dir.join(format!(".{}", self.config_name())));
+                #[cfg(windows)]
+                {
+                    paths.push(home_dir.join("mercurial.ini"));
+                }
+            }
+        }
+        if let Some(config_dir) = dirs::config_dir() {
+            paths.push(
+                config_dir
+                    .join(self.config_directory())
+                    .join(self.config_main_file()),
+            )
+        }
+        paths
+    }
 }
 
 impl std::fmt::Display for Identity {

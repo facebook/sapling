@@ -130,9 +130,9 @@ def initgit(repo, gitdir, giturl=None):
     """
     from . import visibility
 
-    hgrc = "%include builtin:git.rc\n"
+    repo_config = "%include builtin:git.rc\n"
     if giturl:
-        hgrc += "\n[paths]\ndefault = %s\n" % giturl
+        repo_config += "\n[paths]\ndefault = %s\n" % giturl
 
     with repo.lock(), repo.transaction("initgit"):
         repo.svfs.writeutf8(GIT_DIR_FILE, gitdir)
@@ -141,7 +141,7 @@ def initgit(repo, gitdir, giturl=None):
         repo._writestorerequirements()
         repo.invalidatechangelog()
         visibility.add(repo, repo.changelog.dageval(lambda: heads(all())))
-        repo.sharedvfs.writeutf8("hgrc", hgrc)
+        repo.sharedvfs.writeutf8(repo.ui.identity.configrepofile(), repo_config)
         repo.ui.reloadconfigs(repo.root)
 
 

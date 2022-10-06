@@ -418,14 +418,15 @@ def expaths(orig, ui, repo, *args, **opts):
     """
     delete = opts.get("delete")
     add = opts.get("add")
+    configrepofile = ui.identity.configrepofile()
     if delete:
         # find the first section and remote path that matches, and delete that
         foundpaths = False
-        if not repo.localvfs.isfile("hgrc"):
-            raise error.Abort(_("could not find hgrc file"))
-        oldhgrc = repo.localvfs.readutf8("hgrc").splitlines(True)
-        f = repo.localvfs("hgrc", "w", atomictemp=True)
-        for line in oldhgrc:
+        if not repo.localvfs.isfile(configrepofile):
+            raise error.Abort(_("could not find repo config file"))
+        oldrepoconfigfile = repo.localvfs.readutf8(configrepofile).splitlines(True)
+        f = repo.localvfs(configrepofile, "w", atomictemp=True)
+        for line in oldrepoconfigfile:
             if "[paths]" in line:
                 foundpaths = True
             if not (foundpaths and line.strip().startswith(delete)):
@@ -439,12 +440,12 @@ def expaths(orig, ui, repo, *args, **opts):
         # find the first section that matches, then look for previous value; if
         # not found add a new entry
         foundpaths = False
-        oldhgrc = []
-        if repo.localvfs.isfile("hgrc"):
-            oldhgrc = repo.localvfs.readutf8("hgrc").splitlines(True)
-        f = repo.localvfs("hgrc", "w", atomictemp=True)
+        oldrepoconfigfile = []
+        if repo.localvfs.isfile(configrepofile):
+            oldrepoconfigfile = repo.localvfs.readutf8(configrepofile).splitlines(True)
+        f = repo.localvfs(configrepofile, "w", atomictemp=True)
         done = False
-        for line in oldhgrc:
+        for line in oldrepoconfigfile:
             if "[paths]" in line:
                 foundpaths = True
             if foundpaths and line.strip().startswith(add):

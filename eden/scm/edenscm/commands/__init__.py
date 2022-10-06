@@ -1749,11 +1749,11 @@ def config(ui, repo, *values, **opts):
         if opts.get("local"):
             if not repo:
                 raise error.Abort(_("can't use --local outside a repository"))
-            paths = [repo.localvfs.join("hgrc")]
+            paths = [repo.localvfs.join(ui.identity.configrepofile())]
         elif opts.get("global"):
             paths = rcutil.systemrcpath()
         else:
-            paths = rcutil.userrcpath()
+            paths = ui.identity.userconfigpaths()
 
         for f in paths:
             if os.path.exists(f):

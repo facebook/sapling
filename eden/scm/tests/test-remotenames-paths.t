@@ -29,7 +29,7 @@ Delete .hg/hgrc fil
 Check that a path cannot be deleted when no .hg/hgrc file exists
 
   $ hg paths -d stairwaytoheaven
-  abort: could not find hgrc file
+  abort: could not find repo config file
   [255]
 
 Check that a path can be added when no .hg/hgrc file exists

@@ -511,14 +511,14 @@ impl ConfigSetHgExt for ConfigSet {
         // If scripting config env var is set, don't load user configs
         let mut paths = Vec::new();
         if identity.env_var("CONFIG").is_none() {
-            load_identity_paths(&mut paths, identity);
+            paths.append(&mut identity.user_config_paths());
             #[cfg(feature = "fb")]
             {
                 // Internally we need to support the other identity config file if the user has not yet migrated
                 if !paths.iter().any(|p| p.exists()) {
                     for alt_identity in ALL_IDENTITIES.iter() {
                         if alt_identity != identity {
-                            load_identity_paths(&mut paths, alt_identity);
+                            paths.append(&mut alt_identity.user_config_paths());
                         }
                     }
                 }
@@ -571,26 +571,6 @@ impl ConfigSetHgExt for ConfigSet {
     #[cfg(not(feature = "fb"))]
     fn validate_dynamic(&mut self) -> Result<SupersetVerification, Error> {
         Ok(SupersetVerification::new())
-    }
-}
-
-fn load_identity_paths(paths: &mut Vec<PathBuf>, identity: &Identity) {
-    if identity.product_name() == "Mercurial" {
-        // ~/.hgrc and ~/mercurial.ini are legacy paths that we support only when the current identity is HG
-        if let Some(home_dir) = dirs::home_dir() {
-            paths.push(home_dir.join(format!(".{}", identity.config_name())));
-            #[cfg(windows)]
-            {
-                paths.push(home_dir.join("mercurial.ini"));
-            }
-        }
-    }
-    if let Some(config_dir) = dirs::config_dir() {
-        paths.push(
-            config_dir
-                .join(identity.config_directory())
-                .join(identity.config_main_file()),
-        )
     }
 }
 

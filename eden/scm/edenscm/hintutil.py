@@ -107,7 +107,7 @@ def show(ui):
 
 def silence(ui, names):
     """Silence given hints"""
-    paths = rcutil.userrcpath()
+    paths = ui.identity.userconfigpaths()
     # In case there are multiple candidate paths, pick the one that exists.
     # Otherwise, use the first one.
     path = ([p for p in paths if os.path.exists(p)] + [paths[0]])[0]

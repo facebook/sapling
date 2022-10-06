@@ -24,7 +24,6 @@ else:
     from . import scmposix as scmplatform
 
 systemrcpath = scmplatform.systemrcpath
-userrcpath = scmplatform.userrcpath
 
 
 def defaultpagerenv():

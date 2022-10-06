@@ -337,16 +337,17 @@ fn clone_metadata(
         }
     }
 
-    let mut hgrc_content = includes
+    let mut repo_config_file_content = includes
         .into_iter()
         .map(|file| format!("%include {}\n", file))
         .collect::<String>();
-    hgrc_content.push_str(format!("\n[paths]\ndefault = {}\n", ctx.opts.source).as_str());
+    repo_config_file_content
+        .push_str(format!("\n[paths]\ndefault = {}\n", ctx.opts.source).as_str());
 
     let mut repo = Repo::init(
         destination,
         config,
-        Some(hgrc_content),
+        Some(repo_config_file_content),
         &ctx.global_opts().config,
     )?;
     repo.add_requirement("remotefilelog")?;

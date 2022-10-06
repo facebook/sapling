@@ -120,7 +120,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, config: &mut ConfigSet) -> Result<u8> {
     .context("error writing to hg store requires")?;
 
     fs::write(
-        dot_path.join("hgrc"),
+        dot_path.join(ident.config_repo_file()),
         format!(
             "[paths]\n\
              default = ssh://hg.vip.facebook.com//data/scm/{0}\n\

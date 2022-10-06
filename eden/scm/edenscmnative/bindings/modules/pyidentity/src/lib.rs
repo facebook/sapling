@@ -10,6 +10,7 @@
 extern crate identity as rsident;
 
 use cpython::*;
+use cpython_ext::error::Result;
 use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyPathBuf;
 use rsident::Identity;
@@ -37,6 +38,14 @@ py_class!(pub class identity |py| {
 
     def __str__(&self) -> PyResult<String> {
         Ok(format!("{}", self.ident(py)))
+    }
+
+    def configrepofile(&self) -> PyResult<String> {
+        Ok(self.ident(py).config_repo_file().to_string())
+    }
+
+    def userconfigpaths(&self) -> PyResult<Vec<PyPathBuf>> {
+        self.ident(py).user_config_paths().iter().map(|p| p.as_path().try_into()).collect::<Result<Vec<PyPathBuf>>>().map_pyerr(py)
     }
 });
 
