@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+
 use anyhow::Result;
 use regex_automata::dense::Builder;
 use regex_automata::DenseDFA;
@@ -21,9 +23,10 @@ use crate::Matcher;
 ///
 /// The regular expression syntax is same as regex crate with below limitations
 /// due to the underlying RE lib (regex_automata):
-///     1. Anchors such ^, \A and \z. RegexMatcher checks for a match only at the beginning
-///        of the string by default, so there is no need for '^'.
+///     1. Anchors \A, \z. RegexMatcher checks for a match only at the beginning
+///        of the string by default, so '^' is not required.
 ///     2. Word boundary assertions such as \b and \B.
+///     3. Lacks a few features like look around and backreferences (e.g. '?!').
 ///
 /// The [RegexMatcher::match_prefix] method can be used to rule out
 /// unnecessary directory visit early.
@@ -50,7 +53,7 @@ pub struct RegexMatcher {
 
 impl RegexMatcher {
     pub fn new(pattern: &str) -> Result<Self> {
-        let pattern = replace_eol(pattern)?;
+        let pattern = handle_sol_eol(pattern)?;
 
         // The RE library doesn't support ^, we use this `Builder::anchored` to
         // make the search anchored at the beginning of the input. By default,
@@ -124,32 +127,37 @@ impl RegexMatcher {
     }
 }
 
-/// Replace eol ('$') with '\0', since regex-automata doesn't support '$'.
-fn replace_eol(pattern: &str) -> Result<String> {
-    // Find the positions of eol ('$') by traversing the Ast tree, then replace
-    // eol with '\0'
-    fn traverse_ast(ast: &Ast, output: &mut String) {
+/// Handle sol (start-of-line) and eol (end-of-line) since regex-automata doesn't support '^' and '$'.
+///   1. sol ('^'), we just remove it, RegexMatcher will only match at the beginning of the string.
+///   2. eol ('$'), we replace it with '\0'
+fn handle_sol_eol(pattern: &str) -> Result<String> {
+    fn traverse_ast(ast: &Ast, pattern: &mut String, sol_indices: &mut HashSet<usize>) {
         match ast {
-            Ast::Group(group) => traverse_ast(&group.ast, output),
+            Ast::Group(group) => traverse_ast(&group.ast, pattern, sol_indices),
             Ast::Assertion(assertion) => {
                 if assertion.kind == AssertionKind::EndLine {
                     let start = assertion.span.start.offset;
                     let end = assertion.span.end.offset;
                     assert_eq!(start + 1, end, "$ (end of line) should be 1 char");
-                    output.replace_range(start..end, "\0");
+                    pattern.replace_range(start..end, "\0");
+                } else if assertion.kind == AssertionKind::StartLine {
+                    let start = assertion.span.start.offset;
+                    let end = assertion.span.end.offset;
+                    assert_eq!(start + 1, end, "^ (start of line) should be 1 char");
+                    sol_indices.insert(start);
                 }
             }
             Ast::Repetition(repeat) => {
-                traverse_ast(&repeat.ast, output);
+                traverse_ast(&repeat.ast, pattern, sol_indices);
             }
             Ast::Alternation(alternation) => {
                 for t in &alternation.asts {
-                    traverse_ast(t, output);
+                    traverse_ast(t, pattern, sol_indices);
                 }
             }
             Ast::Concat(concat) => {
                 for t in &concat.asts {
-                    traverse_ast(t, output);
+                    traverse_ast(t, pattern, sol_indices);
                 }
             }
             // Ast::Empty, Ast::Flags, Ast::Literal, Ast::Dot, Ast::Class
@@ -159,8 +167,22 @@ fn replace_eol(pattern: &str) -> Result<String> {
 
     let ast = parse::Parser::new().parse(pattern)?;
     let mut new_pattern = pattern.to_string();
-    traverse_ast(&ast, &mut new_pattern);
-    Ok(new_pattern)
+    let mut sol_indices = HashSet::new();
+
+    traverse_ast(&ast, &mut new_pattern, &mut sol_indices);
+
+    if sol_indices.is_empty() {
+        Ok(new_pattern)
+    } else {
+        let bytes = new_pattern
+            .as_bytes()
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| !sol_indices.contains(i))
+            .map(|(_, e)| *e)
+            .collect::<Vec<u8>>();
+        Ok(String::from_utf8(bytes)?)
+    }
 }
 
 impl Matcher for RegexMatcher {
@@ -261,20 +283,42 @@ mod tests {
     }
 
     #[test]
-    fn test_re_replace_eol() {
-        assert_eq!(replace_eol(r"*").unwrap_or("err".to_string()), "err");
-        assert_eq!(replace_eol(r"a.py").unwrap(), "a.py");
-        assert_eq!(replace_eol(r"a.py\$").unwrap(), r"a.py\$");
-        assert_eq!(replace_eol(r"a.py$").unwrap(), "a.py\0");
-        assert_eq!(replace_eol(r"a.py$|a.txt").unwrap(), "a.py\0|a.txt");
-        assert_eq!(replace_eol(r"a.py$|a.txt$").unwrap(), "a.py\0|a.txt\0");
+    fn test_re_with_sol() {
+        let m = RegexMatcher::new(r"(:?^a/t.py$|^a\^.txt)").unwrap();
+        assert_eq!(m.match_prefix(""), None);
+        assert_eq!(m.match_prefix("a"), None);
+        assert_eq!(m.match_prefix("b"), Some(false));
+
+        assert!(m.matches("a/t.py"));
+        assert!(!m.matches("ba/t.py"));
+        assert!(!m.matches("a/t.pyc"));
+        assert!(m.matches(r"a^.txt"));
+        assert!(m.matches(r"a^.txt1"));
+    }
+
+    #[test]
+    fn test_re_handle_sol_eol() {
+        assert!(handle_sol_eol(r"*").is_err());
+        assert_eq!(handle_sol_eol(r"a.py").unwrap(), "a.py");
+        assert_eq!(handle_sol_eol(r"a.py\$").unwrap(), r"a.py\$");
+        assert_eq!(handle_sol_eol(r"a.py$").unwrap(), "a.py\0");
+        assert_eq!(handle_sol_eol(r"a.py$|a.txt").unwrap(), "a.py\0|a.txt");
+        assert_eq!(handle_sol_eol(r"a.py$|a.txt$").unwrap(), "a.py\0|a.txt\0");
         assert_eq!(
-            replace_eol(r"(a.py$|a.txt$)|b.py").unwrap(),
+            handle_sol_eol(r"(a.py$|a.txt$)|b.py").unwrap(),
             "(a.py\0|a.txt\0)|b.py"
         );
         assert_eq!(
-            replace_eol(r"(a$[b$]c$|d\$)e$").unwrap(),
+            handle_sol_eol(r"(a$[b$]c$|d\$)e$").unwrap(),
             "(a\0[b$]c\0|d\\$)e\0"
         );
+
+        assert_eq!(
+            handle_sol_eol(r"(?:^a[^xyz]\^b$|^abc)").unwrap(),
+            "(?:a[^xyz]\\^b\0|abc)"
+        );
+        // this is the edge case of current implementation of '^' support, which
+        // should be rare since the regular expression is actually "wrong".
+        assert_eq!(handle_sol_eol(r"^ab^c").unwrap(), "abc");
     }
 }

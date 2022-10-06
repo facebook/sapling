@@ -1102,9 +1102,9 @@ def _buildpatternmatcher(
     >>> _buildpatternmatcher("", "", [('re', 'a/.*', ''), ('glob', 'b', '')], fallbackmatcher=includematcher)
     <unionmatcher matchers=[<treematcher rules=['b/**']>, <regexmatcher pattern='(?:a/.*)'>]>
 
-    # regexmatcher doesn't support '^', fallback to patternmatcher
+    # regexmatcher supports '^'
     >>> _buildpatternmatcher("", "", [('re', '^abc', '')])
-    <patternmatcher patterns='(?:^abc)'>
+    <regexmatcher pattern='(?:^abc)'>
 
     # treematcher doesn't support large glob patterns, fallback to patternmatcher
     >>> kindpats  = [("glob", f"a/b/*/c/d/e/f/g/{i}/**", "") for i in range(10000)]
@@ -1165,11 +1165,8 @@ def _buildregexmatcher(root, cwd, regexs, badfn) -> Optional[regexmatcher]:
     >>> _buildregexmatcher('', '', ['a/.*'], '')
     <regexmatcher pattern='(?:a/.*)'>
 
-    >>> try:
-    ...     _buildregexmatcher('', '', '^abc', '')
-    ... except error.RustError as e:
-    ...     print("got expected exception")
-    got expected exception
+    >>> _buildregexmatcher('', '', ['^abc'], '')
+    <regexmatcher pattern='(?:^abc)'>
     """
     if not _useregexmatcher and regexs:
         raise ValueError("disabled regexmatcher, but regexs is not empty")
