@@ -71,7 +71,7 @@ def run(args=None, fin=None, fout=None, ferr=None, config=None):
     if args is None:
         args = sys.argv
 
-    if args[1:4] == ["serve", "--cmdserver", "chgunix2"]:
+    if args[1:2] == ["start-pfc-server"]:
         # chgserver code path
 
         # Disable tracing as early as possible. Any use of Rust
@@ -83,7 +83,7 @@ def run(args=None, fin=None, fout=None, ferr=None, config=None):
         # no demandimport, since chgserver wants to preimport everything.
         from . import dispatch
 
-        dispatch.runchgserver()
+        dispatch.runchgserver(args[2:])
     else:
         # non-chgserver code path
         # - no chg in use: hgcommands::run -> HgPython::run_hg -> here

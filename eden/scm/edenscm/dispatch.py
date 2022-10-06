@@ -350,7 +350,7 @@ def _preimportmodules():
 ischgserver = False
 
 
-def runchgserver():
+def runchgserver(args):
     """start the chg server, pre-import bundled extensions"""
     global ischgserver
     ischgserver = True
@@ -358,7 +358,7 @@ def runchgserver():
     _initstdio()
     ui = uimod.ui()
     repo = None
-    args = sys.argv[1:]
+    args = ["serve", "--cmdserver", "chgunix2"] + args
     cmd, func, args, globalopts, cmdopts, _foundaliases = _parse(ui, args)
     if not (cmd == "serve" and cmdopts["cmdserver"] == "chgunix2"):
         raise error.ProgrammingError("runchgserver called without chg command")

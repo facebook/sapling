@@ -147,9 +147,7 @@ static void execcmdserver(const struct cmdserveropts* opts) {
 
   const char* argv[] = {
       hgcmd,
-      "serve",
-      "--cmdserver",
-      "chgunix2",
+      "start-pfc-server",
       "--address",
       opts->initsockname,
       "--daemon-postexec",

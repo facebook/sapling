@@ -60,12 +60,9 @@ use crate::HgPython;
 pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     let now = SystemTime::now();
 
-    // The chgserver does not want tracing or blackbox setup, or going through
+    // The pfcserver does not want tracing or blackbox setup, or going through
     // the Rust command table. Bypass them.
-    if args.get(1).map(|s| s.as_ref()) == Some("serve")
-        && args.get(2).map(|s| s.as_ref()) == Some("--cmdserver")
-        && args.get(3).map(|s| s.as_ref()) == Some("chgunix2")
-    {
+    if args.get(1).map(|s| s.as_ref()) == Some("start-pfc-server") {
         return HgPython::new(&args).run_hg(args, io, &ConfigSet::new());
     }
     // Skip initialization for debugpython. Make it closer to vanilla Python.
