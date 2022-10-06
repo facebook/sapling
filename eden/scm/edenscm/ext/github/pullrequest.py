@@ -4,7 +4,13 @@
 # GNU General Public License version 2.
 
 from dataclasses import dataclass
-from typing import Dict, Union
+from typing import TypedDict
+
+
+class PullRequestIdDict(TypedDict):
+    owner: str
+    name: str
+    number: int
 
 
 @dataclass
@@ -25,7 +31,7 @@ class PullRequestId:
         domain = domain or "github.com"
         return f"https://{domain}/{self.owner}/{self.name}/pull/{self.number}"
 
-    def as_dict(self) -> Dict[str, Union[str, int]]:
+    def as_dict(self) -> PullRequestIdDict:
         """Returns this PullRequestId as a Dict that can be serialized as JSON."""
         return {
             "owner": self.owner,
