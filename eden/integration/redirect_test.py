@@ -284,24 +284,52 @@ via-profile = "bind"
             self.mount, os.path.join("edenfs", "redirections", "via-profile")
         )
 
+        # setup new symlink redirection
+        repo_path = os.path.join("a", "new-one")
+        output = self.eden.run_cmd(
+            "redirect", "add", "--mount", self.mount, repo_path, "symlink"
+        )
+        self.assertEqual(
+            output, "", msg="we believe we set up a new symlink redirection"
+        )
+        target_path = scratch_path(
+            self.mount, os.path.join("edenfs", "redirections", "a", "new-one")
+        )
+
+        # assert both redirections exist and are mounted
         output = self.eden.run_cmd("redirect", "list", "--json", "--mount", self.mount)
         self.assertEqual(
             json.loads(output),
             [
+                {
+                    "repo_path": repo_path,
+                    "type": "symlink",
+                    "target": target_path,
+                    "source": ".eden/client/config.toml:redirections",
+                    "state": "ok",
+                },
                 {
                     "repo_path": "via-profile",
                     "type": "bind",
                     "target": profile_path,
                     "source": ".eden-redirections",
                     "state": "ok",
-                }
+                },
             ],
         )
+
         self.eden.run_cmd("redirect", "unmount", "--mount", self.mount)
         output = self.eden.run_cmd("redirect", "list", "--json", "--mount", self.mount)
         self.assertEqual(
             json.loads(output),
             [
+                {
+                    "repo_path": repo_path,
+                    "type": "symlink",
+                    "target": target_path,
+                    "source": ".eden/client/config.toml:redirections",
+                    "state": "symlink-missing",
+                },
                 {
                     "repo_path": "via-profile",
                     "type": "bind",
@@ -310,7 +338,7 @@ via-profile = "bind"
                     "state": "not-mounted"
                     if sys.platform != "win32"
                     else "symlink-missing",
-                }
+                },
             ],
         )
 

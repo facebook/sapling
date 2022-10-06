@@ -68,6 +68,10 @@ pub enum RedirectCmd {
         )]
         strict: bool,
     },
+    Unmount {
+        #[clap(long, parse(try_from_str = expand_path_or_cwd), default_value = "", help = "The EdenFS mount point path.")]
+        mount: PathBuf,
+    },
 }
 
 impl RedirectCmd {
@@ -157,6 +161,44 @@ impl RedirectCmd {
         })?;
         Ok(0)
     }
+
+    async fn mount(&self, mount: &Path) -> Result<ExitCode> {
+        let instance = EdenFsInstance::global();
+        let checkout = find_checkout(instance, mount)?;
+        let redirs = get_effective_redirections(&checkout).with_context(|| {
+            anyhow!(
+                "Could not get effective redirections for checkout {}",
+                checkout.path().display()
+            )
+        })?;
+        for redir in redirs.values() {
+            redir
+                .remove_existing(&checkout, false)
+                .await
+                .with_context(|| {
+                    anyhow!(
+                        "failed to remove existing redirection {}",
+                        redir.repo_path.display()
+                    )
+                })?;
+        }
+
+        // recompute and display the current state
+        let recomputed_redirs = get_effective_redirections(&checkout).with_context(|| {
+            anyhow!(
+                "Could not get effective redirections for checkout {}",
+                checkout.path().display()
+            )
+        })?;
+        let mut ok = true;
+        for redir in recomputed_redirs.values() {
+            ok = redir
+                .state
+                .as_ref()
+                .map_or(true, |v| RedirectionState::MatchesConfiguration != *v);
+        }
+        if ok { Ok(0) } else { Ok(1) }
+    }
 }
 
 #[async_trait]
@@ -180,6 +222,7 @@ impl Subcommand for RedirectCmd {
                 )
                 .await
             }
+            Self::Unmount { mount } => self.mount(mount).await,
         }
     }
 }
