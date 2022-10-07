@@ -159,7 +159,9 @@ impl MemcacheOps {
         match self.memcache.get(mc_key.clone()).await {
             Ok(opt_blob) => {
                 let blob = opt_blob?;
-                let state = compact_protocol::deserialize(Vec::from(blob)).ok()?;
+                #[cfg(fbcode_build)]
+                let blob = Vec::from(blob);
+                let state = compact_protocol::deserialize(blob).ok()?;
                 if let LockState::uploaded_key(ref up_key) = state {
                     if key != *up_key {
                         // The lock state is invalid - fix it up by dropping the lock
@@ -332,7 +334,9 @@ impl LeaseOps for MemcacheOps {
                 Err(_) => return,
             };
 
-            let state: LockState = match compact_protocol::deserialize(Vec::from(bytes)) {
+            #[cfg(fbcode_build)]
+            let bytes = Vec::from(bytes);
+            let state: LockState = match compact_protocol::deserialize(bytes) {
                 Ok(state) => state,
                 Err(_) => {
                     LEASE_STATS::release_bad_key.add_value(1, (lease_type,));
