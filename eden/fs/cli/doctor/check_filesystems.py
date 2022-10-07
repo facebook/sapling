@@ -15,6 +15,7 @@ import tempfile
 from pathlib import Path
 from typing import Callable, List, Set, Tuple
 
+from eden.fs.cli import hg_util
 from eden.fs.cli.config import EdenCheckout, EdenInstance
 from eden.fs.cli.doctor.problem import (
     FixableProblem,
@@ -64,7 +65,7 @@ def check_eden_directory(tracker: ProblemTracker, instance: EdenInstance) -> Non
 
 
 def get_shared_path(mount_path: Path) -> Path:
-    return mount_path / ".hg" / "sharedpath"
+    return mount_path / hg_util.sniff_dot_dir(mount_path) / "sharedpath"
 
 
 class UnreadableSharedpath(Problem):

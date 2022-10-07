@@ -1105,6 +1105,9 @@ class EdenCheckout:
     def __init__(self, instance: EdenInstance, path: Path, state_dir: Path) -> None:
         self.instance = instance
         self.path = path
+        from . import hg_util
+
+        self.hg_dot_path: Path = path / hg_util.sniff_dot_dir(path)
         self.state_dir = state_dir
         self._config: Optional[CheckoutConfig] = None
 

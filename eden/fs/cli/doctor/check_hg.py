@@ -64,11 +64,11 @@ class HgFileChecker(HgChecker):
 
     @property
     def path(self) -> Path:
-        return self.checkout.path / ".hg" / self.name
+        return self.checkout.hg_dot_path / self.name
 
     @property
     def short_path(self) -> str:
-        return os.path.join(".hg", self.name)
+        return os.path.join(self.checkout.hg_dot_path.name, self.name)
 
     def check_for_error(self) -> List[str]:
         try:
@@ -263,7 +263,9 @@ class RequiresChecker(HgFileChecker):
     def check_data(self, data: bytes) -> List[str]:
         requirements = data.splitlines()
         if b"eden" not in requirements:
-            return [".hg/requires file does not include eden as a requirement"]
+            return [
+                f"{self.checkout.hg_dot_path.name}/requires file does not include eden as a requirement"
+            ]
         return []
 
     def repair(self) -> None:
@@ -325,7 +327,8 @@ class AbandonedTransactionChecker(HgChecker):
         self.backing_repo = self.checkout.get_backing_repo()
 
     def check_for_error(self) -> List[str]:
-        hg_dir = Path(self.backing_repo.source) / ".hg"
+        backing_repo = Path(self.backing_repo.source)
+        hg_dir = backing_repo / hg_util.sniff_dot_dir(backing_repo)
 
         if (hg_dir / "store" / "journal").exists():
             return [
@@ -381,9 +384,9 @@ def check_hg(tracker: ProblemTracker, checkout: EdenCheckout) -> None:
         for checker_class in other_checker_classes
     ]
 
-    hg_path = checkout.path / ".hg"
+    hg_path = checkout.hg_dot_path
     if not os.path.exists(hg_path):
-        description = f"Missing hg directory: {checkout.path}/.hg"
+        description = f"Missing hg directory: {hg_path}"
         tracker.add_problem(HgDirectoryError(checkout, checkers, description))
         return
 
@@ -402,7 +405,7 @@ def check_hg(tracker: ProblemTracker, checkout: EdenCheckout) -> None:
         # if all the file checkers fail, it indicates we are seeing an empty
         # `.hg` directory
         msg = (
-            f"No contents present in hg directory: {checkout.path}/.hg"
+            f"No contents present in hg directory: {checkout.hg_dot_path}"
             if len(bad_checkers) == len(file_checkers)
             else None
         )
@@ -428,7 +431,7 @@ class HgDirectoryError(FixableProblem):
             all_errors.extend(checker.errors)
         problems = "\n  ".join(all_errors)
         return (
-            f"Found inconsistent/missing data in {self._checkout.path}/.hg:\n  "
+            f"Found inconsistent/missing data in {self._checkout.hg_dot_path}:\n  "
             + problems
         )
 
@@ -439,7 +442,7 @@ class HgDirectoryError(FixableProblem):
         return f"Repairing hg directory contents for {self._checkout.path}"
 
     def perform_fix(self) -> None:
-        hg_path = self._checkout.path / ".hg"
+        hg_path = self._checkout.hg_dot_path
 
         # Make sure the hg directory exists
         hg_path.mkdir(exist_ok=True)

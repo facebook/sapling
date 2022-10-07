@@ -48,6 +48,7 @@ from . import (
     daemon_util,
     debug as debug_mod,
     doctor as doctor_mod,
+    hg_util,
     mtab,
     prefetch as prefetch_mod,
     prefetch_profile as prefetch_profile_mod,
@@ -473,14 +474,13 @@ space by running:
 
         self.usage_for_dir(backing_repo, "backing")
 
-        top_dirs = os.listdir(backing_repo)
-        if ".hg" in top_dirs:
-            hg_dir = backing_repo / ".hg"
+        hg_dir = backing_repo / hg_util.sniff_dot_dir(backing_repo)
+        if hg_dir.exists():
             lfs_dir = hg_dir / "store" / "lfs"
             if os.path.exists(lfs_dir):
                 lfs_repos.add(backing_repo)
 
-            if len(top_dirs) > 1:
+            if len(os.listdir(backing_repo)) > 1:
                 backed_working_copy_repos.add(backing_repo)
 
     def shared_usage(self, instance: EdenInstance, clean: bool) -> None:

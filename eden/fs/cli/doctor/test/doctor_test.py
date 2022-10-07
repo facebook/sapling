@@ -103,6 +103,7 @@ class DoctorTest(DoctorTestBase):
             dirstate_parent=edenfs_path1_dirstate_parent,
         )
         edenfs_path1 = str(checkout.path)
+        edenfs_dot_hg_path1 = str(checkout.hg_dot_path)
 
         # In edenfs_path2, we will break the inotify check and the Nuclide
         # subscriptions check.
@@ -111,7 +112,9 @@ class DoctorTest(DoctorTestBase):
         )
 
         # In edenfs_path3, we do not create the .hg directory
-        edenfs_path3 = str(instance.create_test_mount("path3", setup_path=False).path)
+        edenfs_path3 = instance.create_test_mount("path3", setup_path=False).path
+        edenfs_dot_hg_path3 = edenfs_path3 / ".hg"
+        edenfs_path3 = str(edenfs_path3)
         os.makedirs(edenfs_path3)
 
         calls.append(call(["watch-list"]))
@@ -152,7 +155,7 @@ class DoctorTest(DoctorTestBase):
             f"""\
 Checking {edenfs_path1}
 <yellow>- Found problem:<reset>
-Found inconsistent/missing data in {edenfs_path1}/.hg:
+Found inconsistent/missing data in {edenfs_dot_hg_path1}:
   mercurial's parent commit is {edenfs_path1_dirstate_parent}, \
 but Eden's internal parent commit is {edenfs_path1_snapshot}
 Repairing hg directory contents for {edenfs_path1}...<green>fixed<reset>
@@ -165,7 +168,7 @@ Fixing watchman watch for {edenfs_path2}...<green>fixed<reset>
 
 Checking {edenfs_path3}
 <yellow>- Found problem:<reset>
-Missing hg directory: {edenfs_path3}/.hg
+Missing hg directory: {edenfs_dot_hg_path3}
 Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
 
 <yellow>Successfully fixed 3 problems.<reset>
@@ -464,7 +467,7 @@ Ask in the EdenFS (Windows )?Users group if you need help fixing issues with Ede
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
-Found inconsistent/missing data in {checkout.path}/.hg:
+Found inconsistent/missing data in {checkout.hg_dot_path}:
   mercurial's parent commit is 1200000012000000120000001200000012000000, \
 but Eden's internal parent commit is \
 1234567812345678123456781234567812345678
@@ -496,7 +499,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
-Found inconsistent/missing data in {checkout.path}/.hg:
+Found inconsistent/missing data in {checkout.hg_dot_path}:
   Eden's snapshot file points to a bad commit: {snapshot_hex}
 Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
 
@@ -541,7 +544,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
-Found inconsistent/missing data in {checkout.path}/.hg:
+Found inconsistent/missing data in {checkout.hg_dot_path}:
   mercurial's p0 commit points to a bad commit: {dirstate_hash_hex}
   Eden's snapshot file points to a bad commit: {snapshot_hex}
 Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
@@ -589,7 +592,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
-Found inconsistent/missing data in {checkout.path}/.hg:
+Found inconsistent/missing data in {checkout.hg_dot_path}:
   mercurial's p0 commit points to a bad commit: {dirstate_hash_hex}
   mercurial's p1 commit points to a bad commit: {dirstate_parent2_hash_hex}
   Eden's snapshot file points to a bad commit: {snapshot_hex}
@@ -631,7 +634,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
-Found inconsistent/missing data in {checkout.path}/.hg:
+Found inconsistent/missing data in {checkout.hg_dot_path}:
   mercurial's p0 commit points to a bad commit: {dirstate_hash_hex}
 Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
 

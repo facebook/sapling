@@ -54,6 +54,7 @@ from thrift.util import Serializer
 
 from . import (
     cmd_util,
+    hg_util,
     prefetch_profile as prefetch_profile_mod,
     rage as rage_mod,
     stats_print,
@@ -553,7 +554,7 @@ def _get_dirstate_data(
     """Returns a tuple of (parents, dirstate_tuples, copymap).
     On error, returns None.
     """
-    filename = checkout.path.joinpath(".hg", "dirstate")
+    filename = checkout.hg_dot_path.joinpath("dirstate")
     with filename.open("rb") as f:
         return eden.dirstate.read(f, str(filename))
 

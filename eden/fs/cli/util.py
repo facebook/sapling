@@ -29,7 +29,6 @@ from facebook.eden.ttypes import TreeInodeDebugInfo
 from fb303_core.ttypes import fb303_status
 from thrift import Thrift
 
-
 if TYPE_CHECKING:
     from .config import EdenInstance
 
@@ -462,7 +461,9 @@ def get_hg_repo(path: str) -> Optional[HgRepo]:
     """
     repo_path = path
     working_dir = path
-    hg_dir = os.path.join(repo_path, ".hg")
+    from . import hg_util
+
+    hg_dir = os.path.join(repo_path, hg_util.sniff_dot_dir(Path(path)))
     if not os.path.isdir(hg_dir):
         return None
 
@@ -563,7 +564,9 @@ def get_eden_mount_name(path_arg: str) -> str:
         while path != parent:
             if os.path.isdir(os.path.join(path, ".eden")):
                 return os.path.realpath(path)
-            if os.path.exists(os.path.join(path, ".hg")):
+            from . import hg_util
+
+            if os.path.exists(os.path.join(path, hg_util.sniff_dot_dir(Path(path)))):
                 break
             path = parent
             parent = os.path.dirname(path)

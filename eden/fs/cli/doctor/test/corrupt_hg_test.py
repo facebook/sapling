@@ -41,7 +41,7 @@ class CorruptHgTest(DoctorTestBase):
             f"""\
 Checking {self.checkout.path}
 <yellow>- Found problem:<reset>
-Found inconsistent/missing data in {self.checkout.path}/.hg:
+Found inconsistent/missing data in {self.checkout.hg_dot_path}:
   error parsing .hg{os.sep}dirstate: Reached EOF while reading checksum \
 hash in {self.checkout.path}{os.sep}.hg{os.sep}dirstate.
 
@@ -63,7 +63,7 @@ Would repair hg directory contents for {self.checkout.path}
             f"""\
 Checking {self.checkout.path}
 <yellow>- Found problem:<reset>
-Found inconsistent/missing data in {self.checkout.path}/.hg:
+Found inconsistent/missing data in {self.checkout.hg_dot_path}:
   error reading .hg{os.sep}requires: [Errno 2] No such file or directory: \
 {str(requires_path)!r}
   error reading .hg{os.sep}sharedpath: [Errno 2] No such file or directory: \
@@ -86,7 +86,7 @@ Repairing hg directory contents for {self.checkout.path}...<green>fixed<reset>
             f"""\
 Checking {self.checkout.path}
 <yellow>- Found problem:<reset>
-Missing hg directory: {self.checkout.path}/.hg
+Missing hg directory: {self.checkout.hg_dot_path}
 Repairing hg directory contents for {self.checkout.path}...<green>fixed<reset>
 
 <yellow>Successfully fixed 1 problem.<reset>
@@ -105,7 +105,7 @@ Repairing hg directory contents for {self.checkout.path}...<green>fixed<reset>
             f"""\
 Checking {self.checkout.path}
 <yellow>- Found problem:<reset>
-No contents present in hg directory: {self.checkout.path}/.hg
+No contents present in hg directory: {self.checkout.hg_dot_path}
 Repairing hg directory contents for {self.checkout.path}...<green>fixed<reset>
 
 <yellow>Successfully fixed 1 problem.<reset>
@@ -124,7 +124,7 @@ Repairing hg directory contents for {self.checkout.path}...<green>fixed<reset>
             f"""\
 Checking {self.checkout.path}
 <yellow>- Found problem:<reset>
-Found inconsistent/missing data in {self.checkout.path}/.hg:
+Found inconsistent/missing data in {self.checkout.hg_dot_path}:
   Found a journal file in backing repo, might have an interrupted transaction
 Repairing hg directory contents for {self.checkout.path}...<green>fixed<reset>
 

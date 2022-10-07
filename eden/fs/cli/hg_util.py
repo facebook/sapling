@@ -7,6 +7,7 @@
 # pyre-strict
 
 import binascii
+import os
 import typing
 from pathlib import Path
 from typing import BinaryIO, Dict, Tuple
@@ -27,7 +28,7 @@ portablefilenames = ignore
 
 
 def setup_hg_dir(checkout: EdenCheckout, commit_id: str) -> None:
-    checkout_hg_dir = checkout.path / ".hg"
+    checkout_hg_dir = checkout.hg_dot_path
     try:
         checkout_hg_dir.mkdir()
     except FileExistsError:
@@ -73,7 +74,8 @@ def get_backing_hg_dir(checkout: EdenCheckout) -> Path:
 
     This is the path that .hg/sharedpath should point to.
     """
-    return checkout.get_config().backing_repo / ".hg"
+    backing_repo = checkout.get_config().backing_repo
+    return backing_repo / sniff_dot_dir(backing_repo)
 
 
 def get_hgrc_data(checkout: EdenCheckout) -> str:
@@ -115,3 +117,18 @@ def get_requires_data(checkout: EdenCheckout) -> str:
     requires.discard("treedirstate")
 
     return "\n".join(sorted(requires)) + "\n"
+
+
+_possible_dot_dirs = (".hg", ".sl")
+
+
+def sniff_dot_dir(repo_root: Path) -> str:
+    for dot_dir in _possible_dot_dirs:
+        if (repo_root / dot_dir).exists():
+            return dot_dir
+
+    env_ident = os.environ.get("HGIDENTITY", os.environ.get("SLIDENTITY", None))
+    if env_ident in {"hg", "sl"}:
+        return "." + env_ident
+
+    return _possible_dot_dirs[0]

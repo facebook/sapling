@@ -4,8 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import os
 import subprocess
-import sys
 from pathlib import Path
 
 from eden.integration.lib import hgrepo
@@ -107,11 +107,10 @@ class DoctorTest(EdenHgTestCase):
 
         cmd_result = self.run_doctor(dry_run=True)
         doctor_out = cmd_result.stdout.decode("utf-8")
-        self.assertIn(f"Found inconsistent/missing data in {repo_path}/.hg", doctor_out)
-        if sys.platform == "win32":
-            self.assertIn("error parsing .hg\\dirstate", doctor_out)
-        else:
-            self.assertIn("error parsing .hg/dirstate", doctor_out)
+        self.assertIn(
+            f"Found inconsistent/missing data in {repo_path / '.hg'}", doctor_out
+        )
+        self.assertIn(f"error parsing .hg{os.sep}dirstate", doctor_out)
 
         fixed_result = self.run_doctor(dry_run=False)
         self.assertIn(b"Successfully fixed 1 problem", fixed_result.stdout)
