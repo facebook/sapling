@@ -524,6 +524,7 @@ fn make_blobstore_put_ops<'a>(
                     let _ = (
                         bucket,
                         keychain_group,
+                        secret_name,
                         region_name,
                         endpoint,
                         num_concurrent_operations,

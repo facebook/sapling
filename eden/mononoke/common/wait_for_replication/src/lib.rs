@@ -17,6 +17,7 @@ use fbinit::FacebookInit;
 use futures::try_join;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::DatabaseConfig;
+#[cfg(fbcode_build)]
 use metaconfig_types::ShardableRemoteDatabaseConfig;
 use metaconfig_types::StorageConfig;
 use replication_lag_config::ReplicationLagBlobstoreConfig;
@@ -85,7 +86,7 @@ impl WaitForReplication {
                 }
                 #[cfg(not(fbcode_build))]
                 {
-                    let _ = (remote, blobstores);
+                    let _ = (fb, remote, blobstores);
                     unimplemented!()
                 }
             }
