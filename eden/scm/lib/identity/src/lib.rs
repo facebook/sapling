@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Cow;
 use std::env::VarError;
 use std::fs;
 use std::io;
@@ -102,14 +103,27 @@ impl Identity {
         self.env_prefix
     }
 
+    pub const fn env_name_static(&self, suffix: &str) -> Option<&'static str> {
+        // Use byte slice to workaround const_fn limitation.
+        let bsuffix = suffix.as_bytes();
+        match bsuffix {
+            b"CONFIG" => Some(self.scripting_config_env_var),
+            b"PLAIN" => Some(self.scripting_env_var),
+            b"PLAINEXCEPT" => Some(self.scripting_except_env_var),
+            _ => None,
+        }
+    }
+
+    pub fn env_name(&self, suffix: &str) -> Cow<'static, str> {
+        match self.env_name_static(suffix) {
+            Some(name) => Cow::Borrowed(name),
+            None => Cow::Owned([self.env_prefix, suffix].concat()),
+        }
+    }
+
     pub fn env_var(&self, suffix: &str) -> Option<Result<String, VarError>> {
-        let var_name = match suffix {
-            "CONFIG" => self.scripting_config_env_var.to_string(),
-            "PLAIN" => self.scripting_env_var.to_string(),
-            "PLAINEXCEPT" => self.scripting_except_env_var.to_string(),
-            _ => format!("{}{}", self.env_prefix, suffix),
-        };
-        match std::env::var(var_name) {
+        let var_name = self.env_name(suffix);
+        match std::env::var(var_name.as_ref()) {
             Err(err) if err == VarError::NotPresent => None,
             Err(err) => Some(Err(err)),
             Ok(val) => Some(Ok(val)),
