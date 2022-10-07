@@ -62,7 +62,11 @@ def editconfig(path, section, name, value):
             # the line should start with "NAME ="
             and lines[index].split("=")[0].rstrip() == name
             # the next line should not be indented (a multi-line value)
-            and (index + 1 >= len(lines) or not lines[index + 1][:1].isspace())
+            # but an empty line is okay
+            and (
+                not next_line or not next_line[:1].isspace()
+                for next_line in lines[index + 1 : index + 2]
+            )
         ):
             edited = True
             # edit the line

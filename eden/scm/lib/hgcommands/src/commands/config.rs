@@ -280,9 +280,12 @@ pub fn doc() -> &'static str {
     With multiple arguments, print names and values of all config
     items with matching section names.
 
-    With --edit, start an editor on the user-level config file. With
-    --global, edit the system-wide config file. With --local, edit the
-    repository-level config file.
+    With --edit, edit the user-level config file. With --global,
+    edit the system-wide config file. With --local, edit the
+    repository-level config file. If there are no arguments, spawn
+    an editor to edit the config file. If there are arguments in
+    `section.name=value` format, the related config files will be
+    updated directly without spawning an editor.
 
     With --debug, the source (filename and line number) is printed
     for each config item.

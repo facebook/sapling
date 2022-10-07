@@ -222,3 +222,31 @@ reponame is set from paths.default
   repo-myrepo1
   $ cat .hg/reponame
   repo-myrepo1 (no-eol)
+
+config editing without an editor
+
+  $ newrepo
+
+ invalid pattern
+  $ hg config --edit invalid.syntax
+  abort: invalid argument: 'invalid.syntax'
+  (try section.name=value)
+  [255]
+
+ append configs
+  $ hg config --local aa.bb.cc=dd ee.fff=gggg
+  $ tail -5 .hg/hgrc
+  [aa]
+  bb.cc = dd
+  
+  [ee]
+  fff = gggg
+
+ update config in-place without appending
+  $ hg config --local aa.bb.cc=new_value aa.bb.cc=new_value2
+  $ tail -5 .hg/hgrc
+  [aa]
+  bb.cc = new_value2
+  
+  [ee]
+  fff = gggg

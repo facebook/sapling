@@ -1771,13 +1771,26 @@ def config(ui, repo, *values, **opts):
             fp.write(pycompat.encodeutf8(util.tonativeeol(samplehgrc)))
             fp.close()
 
-        editor = ui.geteditor()
-        ui.system(
-            '%s "%s"' % (editor, f),
-            onerr=error.Abort,
-            errprefix=_("edit failed"),
-            blockedtag="config_edit",
-        )
+        if values:
+            for value in values:
+                try:
+                    section_name, value = value.split("=", 1)
+                    section, name = section_name.split(".", 1)
+                except ValueError:
+                    # ex. not enough values to unpack
+                    raise error.Abort(
+                        _("invalid argument: %r") % value,
+                        hint=("try section.name=value"),
+                    )
+                rcutil.editconfig(f, section, name, value)
+        else:
+            editor = ui.geteditor()
+            ui.system(
+                '%s "%s"' % (editor, f),
+                onerr=error.Abort,
+                errprefix=_("edit failed"),
+                blockedtag="config_edit",
+            )
         return
     ui.pager("config")
     fm = ui.formatter("config", opts)
