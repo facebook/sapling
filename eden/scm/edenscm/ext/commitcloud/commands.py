@@ -1373,7 +1373,7 @@ def shareworkspace(ui, repo, **opts):
     if workspacename is None:
         ui.write(_("You are not connected to any workspace\n"))
         return
-    sharing_data = service.get(ui, tokenmod.TokenLocator(ui).token).shareworkspace(
+    sharing_data = service.get(ui).shareworkspace(
         ccutil.getreponame(repo), workspacename
     )
     ui.write(sharing_data["sharing_message"] + "\n")
