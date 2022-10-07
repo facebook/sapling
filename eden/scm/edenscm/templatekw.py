@@ -153,7 +153,7 @@ def unwrapvalue(thing):
     return thing._value
 
 
-def wraphybridvalue(container, key, value) -> _mappable:
+def wraphybridvalue(container, key, value: _mappable) -> _mappable:
     """Wrap an element of hybrid container to be mappable
 
     The key is passed to the makemap function of the given container, which
@@ -177,13 +177,15 @@ def showdict(
     value: str = "value",
     fmt: str = "%s=%s",
     separator: str = " ",
-):
+) -> _hybrid:
     c = [{key: k, value: v} for k, v in pycompat.iteritems(data)]
     f = _showlist(name, c, mapping, plural, separator)
     return hybriddict(data, key=key, value=value, fmt=fmt, gen=f)
 
 
-def showlist(name, values, mapping, plural=None, element=None, separator: str = " "):
+def showlist(
+    name, values: Sized, mapping, plural=None, element=None, separator: str = " "
+) -> _hybrid:
     if not element:
         element = name
     f = _showlist(name, values, mapping, plural, separator)
