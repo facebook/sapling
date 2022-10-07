@@ -15,7 +15,9 @@ from __future__ import absolute_import
 import errno
 import os
 
-from . import config, pycompat, util
+import bindings
+
+from . import pycompat, util
 
 
 if pycompat.iswindows:
@@ -46,39 +48,27 @@ def editconfig(path, section, name, value):
     except IOError as ex:
         if ex.errno != errno.ENOENT:
             raise
-    cfg = config.config()
-    cfg.parse("", content, include=lambda *args, **kwargs: None)
-    source = cfg.source(section, name)
-    edited = False
+    cfg = bindings.configparser.config()
+    cfg.parse(content, source="editconfig")
+    sources = cfg.sources(section, name)
 
-    # in-place edit if possible
-    if source.startswith(":"):
-        # line index
-        index = int(source[1:]) - 1
-        lines = content.splitlines(True)
-        # for simple case, we can edit the line in-place
-        if (  # config line should still exist
-            index < len(lines)
-            # the line should start with "NAME ="
-            and lines[index].split("=")[0].rstrip() == name
-            # the next line should not be indented (a multi-line value)
-            # but an empty line is okay
-            and (
-                not next_line or not next_line[:1].isspace()
-                for next_line in lines[index + 1 : index + 2]
-            )
-        ):
-            edited = True
-            # edit the line
-            content = "".join(
-                lines[:index]
-                + ["%s = %s%s" % (name, value, os.linesep)]
-                + lines[index + 1 :]
-            )
-    if not edited:
+    # add necessary indentation to multi-line value
+    if "\n" in value:
+        value = value.rstrip("\n").replace("\n", "\n  ")
+
+    bcontent = content.encode()
+    for _value, (_filepath, start, end, _line), _source in sources:
+        # in-place edit
+        # start end are using bytes offset
+        bcontent = b"%s%s%s" % (bcontent[:start], value.encode(), bcontent[end:])
+        break
+    else:
         # append as new config
-        if content:
-            content += os.linesep
-        content += "[%s]%s%s = %s%s" % (section, os.linesep, name, value, os.linesep)
+        if bcontent:
+            bcontent += os.linesep.encode()
+        bcontent += (
+            "[%s]%s%s = %s%s" % (section, os.linesep, name, value, os.linesep)
+        ).encode()
+
     with util.atomictempfile(path) as f:
-        f.write(pycompat.encodeutf8(content))
+        f.write(bcontent)

@@ -234,19 +234,53 @@ config editing without an editor
   [255]
 
  append configs
-  $ hg config --local aa.bb.cc=dd ee.fff=gggg
-  $ tail -5 .hg/hgrc
+  $ hg config --local "aa.bb.cc.字=配
+  > 置" ee.fff=gggg
+  $ tail -6 .hg/hgrc
   [aa]
-  bb.cc = dd
+  bb.cc.字 = 配
+    置
   
   [ee]
   fff = gggg
 
  update config in-place without appending
-  $ hg config --local aa.bb.cc=new_value aa.bb.cc=new_value2
-  $ tail -5 .hg/hgrc
+  $ hg config --local aa.bb.cc.字=new_值 "aa.bb.cc.字=新值
+  > 测
+  > 试
+  > "
+  $ tail -7 .hg/hgrc
   [aa]
-  bb.cc = new_value2
+  bb.cc.字 = 新值
+    测
+    试
   
   [ee]
   fff = gggg
+
+  $ hg config aa.bb.cc.字
+  新值\n测\n试
+
+ with comments
+  $ newrepo
+  $ cat > .hg/hgrc << 'EOF'
+  > [a]
+  > # b = 1
+  > b = 2
+  >   second line
+  > # b = 3
+  > EOF
+
+  $ hg config --local a.b=4
+  $ cat .hg/hgrc
+  [a]
+  # b = 1
+  b = 4
+  # b = 3
+
+ user config
+  $ hg config --edit a.b=1
+  $ tail -2 ~/.hgrc
+  [a]
+  b = 1
+
