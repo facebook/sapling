@@ -1374,8 +1374,36 @@ class RemoveCmd(Subcmd):
                 elif self.is_prjfs_path(path):
                     remove_type = RemoveType.CLEANUP_ONLY
                 else:
-                    print(f"error: {ex}")
-                    return 1
+                    # This is not located in the config file either, but it
+                    # may be leftover from a failed `eden rm` attempt. The
+                    # user may want us to delete it anyway, so let's ask.
+                    if args.prompt and sys.stdin.isatty():
+                        prompt = f"""\
+Warning: The following is not an EdenFS Mount: {path}. Any files in this \
+directory will be lost forever. Do you stil want to delete {path}?"""
+                        if not prompt_confirmation(prompt):
+                            return 2
+                        else:
+                            try:
+                                path = Path(path)
+                                path.chmod(0o755)
+                                for child in path.iterdir():
+                                    if child.is_dir():
+                                        shutil.rmtree(child)
+                                    else:
+                                        child.unlink()
+                                if not args.preserve_mount_point:
+                                    path.rmdir()
+                                return 0
+                            except Exception as ex:
+                                print(f"error: cannot remove contents of {path}: {ex}")
+                                return 1
+                    else:
+                        # We can't ask the user what their true intentions are,
+                        # so let's fail by default.
+                        print(f"error: {ex}")
+                        return 1
+
             except Exception as ex:
                 print(f"error: cannot determine mount point for {path}: {ex}")
                 return 1
