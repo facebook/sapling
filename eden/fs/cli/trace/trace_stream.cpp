@@ -537,8 +537,8 @@ std::string formatThriftRequestMetadata(const ThriftRequestMetadata& request) {
 void print_thrift_event(
     const ThriftRequestEvent& event,
     std::unordered_map<int64_t, int64_t>& startTimesNs) {
-  const auto requestId = (*event.requestMetadata()).get_requestId();
-  const int64_t eventNs = (*event.times()).get_monotonic_time_ns();
+  const auto requestId = (*event.requestMetadata()).requestId().value();
+  const int64_t eventNs = (*event.times()).monotonic_time_ns().value();
 
   std::string latencyString;
   switch (*event.eventType()) {
