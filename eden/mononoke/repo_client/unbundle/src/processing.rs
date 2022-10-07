@@ -505,6 +505,19 @@ pub fn maybe_client_from_address<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
 ) -> Option<Box<dyn PushrebaseClient + 'a>> {
+    #[cfg(fbcode_build)]
+    {
+        if should_use_land_service() {
+            return Some(Box::new(
+                LandServicePushrebaseClient::from_tier(
+                    ctx,
+                    "mononoke-land-service".to_string(),
+                    repo,
+                )
+                .ok()?,
+            ));
+        }
+    }
     match remote_mode {
         PushrebaseRemoteMode::RemoteScs(address)
         | PushrebaseRemoteMode::RemoteScsWithLocalFallback(address) => {
@@ -564,6 +577,14 @@ fn address_from_land_service<'a>(
     }
 }
 
+fn should_use_land_service() -> bool {
+    rand::random::<f64>()
+        < tunables()
+            .get_pushrebase_redirect_to_land_service_pct()
+            .clamp(0, 100) as f64
+            / 100.0
+}
+
 async fn normal_pushrebase<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
@@ -585,7 +606,7 @@ async fn normal_pushrebase<'a>(
     };
     let maybe_fallback_scuba: Option<(MononokeScubaSampleBuilder, BookmarkMovementError)> = {
         let maybe_client: Option<Box<dyn PushrebaseClient>> =
-            maybe_client_from_address(&pushrebase_params.remote_mode, ctx, repo);
+            maybe_client_from_address(remote_mode, ctx, repo);
 
         if let Some(client) = maybe_client {
             let result = client

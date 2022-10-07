@@ -282,8 +282,8 @@ pub struct MononokeTunables {
     // Control whether the BYPASS_READONLY pushvar is restricted by an ACL
     enforce_bypass_readonly_acl: AtomicBool,
 
-    // Percentage of wireproto unbundle pushrebase requests redirected to SCS
-    pushrebase_redirect_to_scs_pct: AtomicI64,
+    // Percentage of wireproto unbundle pushrebase requests redirected to Land Service
+    pushrebase_redirect_to_land_service_pct: AtomicI64,
 
     // Which region writes should be done to, in order to minimise latency.
     // This should align with underlying storage (SQL/Manifold) write regions.
@@ -315,7 +315,7 @@ pub struct MononokeTunables {
     // If set the `draft` ACL action will be used for `draft` access.
     enforce_draft_acl: AtomicBool,
 
-    // Force local pushrebase instead of talking to SCS
+    // Force local pushrebase instead of talking to SCS or Land Service
     force_local_pushrebase: AtomicBool,
 
     // Enable usage of basename_suffix_skeleton_manifest in commit_find_files
