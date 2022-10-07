@@ -3,8 +3,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from __future__ import absolute_import
-
 
 def _fixsys():
     """Fix sys.path so core edenscm modules (edenscmnative, and 3rd party
@@ -30,10 +28,7 @@ def _fixsys():
     # Note: On Windows, the released version of hg uses python27.zip for all
     # pure Python modules including edenscm and everything in edenscmdeps.zip,
     # so not being able to locate edenscmdeps.zip is not fatal.
-    if sys.version_info[0] == 3:
-        name = "edenscmdeps3.zip"
-    else:
-        name = "edenscmdeps.zip"
+    name = "edenscmdeps3.zip"
     for candidate in [libdir, os.path.join(libdir, "build")]:
         depspath = os.path.join(candidate, name)
         if os.path.exists(depspath) and depspath not in sys.path:
@@ -52,7 +47,7 @@ def _fixsys():
     # On Windows, the system time zone setting, if does not match the time
     # zone from the package building machine, can cause pyc to be invalidated
     # in a zip file. Workaround it by bypassing the mtime check.
-    if os.name == "nt" and sys.version_info[0] == 3:
+    if os.name == "nt":
         import zipimport
 
         zipimport._get_mtime_and_size_of_source = lambda _s, _p: (0, 0)
