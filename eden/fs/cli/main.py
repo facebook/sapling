@@ -1456,7 +1456,9 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
                     # unmounting could still timeout, though we unmount with -f,
                     # so should this theoretically should not happen.
                 try:
-                    print(f"Unmounting {mount}...")
+                    print(
+                        f"Unmounting `{mount}`. Please be patient: this can take up to 1 minute!"
+                    )
                     instance.unmount(mount)
                 except EdenNotRunningError:
                     # Its fine if we could not tell the daemon to unmount

@@ -773,7 +773,7 @@ Do you want to run `eden mount %s` instead?"""
         #
         # For now at least time out here so the CLI commands do not hang in this
         # case.
-        with self.get_thrift_client_legacy(timeout=15) as client:
+        with self.get_thrift_client_legacy(timeout=60) as client:
             client.unmount(os.fsencode(path))
 
     def get_handle_path(self) -> Optional[Path]:
