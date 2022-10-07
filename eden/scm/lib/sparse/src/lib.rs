@@ -185,6 +185,7 @@ impl Root {
             rules.push_front((Pattern::Include("**".to_string()), "(builtin)".to_string()))
         }
 
+        // This is for files such as .hgignore and .hgsparse-base, unrelated to the .hg directory.
         rules.push_front((
             Pattern::Include("glob:.hg*".to_string()),
             "(builtin)".to_string(),

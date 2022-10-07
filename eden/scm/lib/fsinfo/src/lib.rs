@@ -167,8 +167,7 @@ mod windows {
             path = path.parent().unwrap();
         }
         loop {
-            let dot_hg = path.join(".hg");
-            if dot_hg.exists() {
+            if identity::must_sniff_dir(path).is_ok() {
                 // The .eden directory is at the root of the repo, don't recurse further if it's
                 // not there.
                 let dot_eden = path.join(".eden");
