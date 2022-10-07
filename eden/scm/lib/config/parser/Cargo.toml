@@ -42,6 +42,7 @@ zstd = { version = "0.11.1+zstd.1.5.2", optional = true }
 [dev-dependencies]
 lazy_static = "1.4"
 minibench = { version = "0.1.0", path = "../../minibench" }
+once_cell = "1.12"
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 tempdir = "0.3"
 tempfile = "3.3"

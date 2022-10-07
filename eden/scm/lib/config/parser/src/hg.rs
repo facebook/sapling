@@ -885,22 +885,25 @@ pub fn read_repo_name_from_disk(shared_dot_hg_path: &Path) -> io::Result<String>
 #[cfg(test)]
 mod tests {
     use identity::idents;
+    use idents::DEFAULT as IDENTITY;
+    use once_cell::sync::Lazy;
     use tempdir::TempDir;
 
     use super::*;
     use crate::config::tests::write_file;
     use crate::lock_env;
 
-    const CONFIG_ENV_VAR: &str = "HGRCPATH";
-    const HGPLAIN: &str = "HGPLAIN";
-    const HGPLAINEXCEPT: &str = "HGPLAINEXCEPT";
+    static CONFIG_ENV_VAR: Lazy<&str> = Lazy::new(|| IDENTITY.env_name_static("CONFIG").unwrap());
+    static HGPLAIN: Lazy<&str> = Lazy::new(|| IDENTITY.env_name_static("PLAIN").unwrap());
+    static HGPLAINEXCEPT: Lazy<&str> =
+        Lazy::new(|| IDENTITY.env_name_static("PLAINEXCEPT").unwrap());
 
     #[test]
     fn test_basic_hgplain() {
         let mut env = lock_env();
 
-        env.set(HGPLAIN, Some("1"));
-        env.set(HGPLAINEXCEPT, None);
+        env.set(*HGPLAIN, Some("1"));
+        env.set(*HGPLAINEXCEPT, None);
 
         let opts = Options::new().process_hgplain();
         let mut cfg = ConfigSet::new();
@@ -925,8 +928,8 @@ mod tests {
     fn test_hgplainexcept() {
         let mut env = lock_env();
 
-        env.set(HGPLAIN, None);
-        env.set(HGPLAINEXCEPT, Some("alias,revsetalias"));
+        env.set(*HGPLAIN, None);
+        env.set(*HGPLAINEXCEPT, Some("alias,revsetalias"));
 
         let opts = Options::new().process_hgplain();
         let mut cfg = ConfigSet::new();
@@ -954,18 +957,18 @@ mod tests {
 
         use hgplain::is_plain;
 
-        env.set(HGPLAIN, None);
-        env.set(HGPLAINEXCEPT, None);
+        env.set(*HGPLAIN, None);
+        env.set(*HGPLAINEXCEPT, None);
         assert!(!is_plain(None));
 
-        env.set(HGPLAIN, Some("1"));
+        env.set(*HGPLAIN, Some("1"));
         assert!(is_plain(None));
         assert!(is_plain(Some("banana")));
 
-        env.set(HGPLAINEXCEPT, Some("dog,banana,tree"));
+        env.set(*HGPLAINEXCEPT, Some("dog,banana,tree"));
         assert!(!is_plain(Some("banana")));
 
-        env.set(HGPLAIN, None);
+        env.set(*HGPLAIN, None);
         assert!(!is_plain(Some("banana")));
     }
 
@@ -988,7 +991,7 @@ mod tests {
         env.set("HGPROF", None);
 
         env.set("T", Some(dir.path().to_str().unwrap()));
-        env.set(CONFIG_ENV_VAR, Some(hgrcpath));
+        env.set(*CONFIG_ENV_VAR, Some(hgrcpath));
 
         let mut cfg = ConfigSet::new();
 
@@ -1058,8 +1061,8 @@ mod tests {
 
         let mut env = lock_env();
 
-        env.set(HGPLAIN, Some("1"));
-        env.set(HGPLAINEXCEPT, None);
+        env.set(*HGPLAIN, Some("1"));
+        env.set(*HGPLAINEXCEPT, None);
 
         let mut cfg = ConfigSet::new();
         cfg.load_hgrc(&path, "hgrc");
@@ -1068,7 +1071,7 @@ mod tests {
         assert!(cfg.get("alias", "b").is_none());
         assert_eq!(cfg.get("x", "a").unwrap(), "1");
 
-        env.set(HGPLAIN, None);
+        env.set(*HGPLAIN, None);
         cfg.load_hgrc(&path, "hgrc");
 
         assert_eq!(cfg.get("alias", "b").unwrap(), "c");
