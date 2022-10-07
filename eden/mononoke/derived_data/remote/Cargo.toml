@@ -13,6 +13,6 @@ path = "lib.rs"
 [dependencies]
 anyhow = "1.0.65"
 async-trait = "0.1.56"
-clap = { version = "3.2.17", features = ["derive", "regex", "unicode", "wrap_help"] }
+clap = { version = "3.2.17", features = ["derive", "env", "regex", "unicode", "wrap_help"] }
 derived_data_service_if = { version = "0.1.0", path = "if" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
