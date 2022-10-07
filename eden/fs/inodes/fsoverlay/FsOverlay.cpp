@@ -23,6 +23,7 @@
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
+#include "eden/fs/inodes/fsoverlay/InodePath.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/utils/EdenError.h"
 #include "eden/fs/utils/FileUtils.h"
@@ -645,20 +646,6 @@ bool FsOverlay::hasOverlayData(InodeNumber inodeNumber) {
   } else {
     return false;
   }
-}
-
-InodePath::InodePath() noexcept : path_{'\0'} {}
-
-const char* InodePath::c_str() const noexcept {
-  return path_.data();
-}
-
-InodePath::operator RelativePathPiece() const noexcept {
-  return RelativePathPiece{folly::StringPiece{c_str()}};
-}
-
-std::array<char, InodePath::kMaxPathLength>& InodePath::rawData() noexcept {
-  return path_;
 }
 
 } // namespace facebook::eden
