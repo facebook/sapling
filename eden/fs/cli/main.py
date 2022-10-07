@@ -103,6 +103,23 @@ except AttributeError:  # On a non-unix system
     EX_OSFILE: int = 72
 
 
+# We have different mitigations on different platforms due to cmd differences
+def _get_unmount_timeout_suggestions(path: str) -> str:
+    UNMOUNT_TIMEOUT_SUGGESTIONS = """\
+    * `eden stop` -> retry `eden rm`
+    * `eden doctor` -> retry `eden rm`
+    * Reboot your machine -> retry `eden rm`
+    """
+    if sys.platform != "win32":
+        return (
+            f"""\
+    * `sudo umount -f {path}` -> retry `eden rm`\n"""
+            + UNMOUNT_TIMEOUT_SUGGESTIONS
+        )
+    else:
+        return UNMOUNT_TIMEOUT_SUGGESTIONS
+
+
 def do_version(args: argparse.Namespace, format_json: bool = False) -> int:
     instance = get_eden_instance(args)
     installed_version = version_mod.get_current_version()
@@ -1467,12 +1484,17 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
                     # the clean up and this will remove the mount as expected.
                     pass
                 except Exception as ex:
-                    print_stderr(f"error unmounting {mount}: {ex}")
-                    exit_code = 1
-                    # We intentionally fall through here and remove the mount point
-                    # from the config file.  The most likely cause of failure is if
-                    # edenfs times out performing the unmount.  We still want to go
-                    # ahead delete the mount from the config in this case.
+                    # We used to intentionally fall through here and remove the
+                    # mount point from the config file. The most likely cause
+                    # of failure is if edenfs times out performing the unmount.
+                    # In this case, we don't want to start modifying state and
+                    # configs underneath a running EdenFS mount, so let's return
+                    # early and give possible mitigations for unmount timeouts.
+                    print_stderr(f"\nerror unmounting {mount}: {ex}\n\n")
+                    print_stderr(
+                        f"For unmount timeouts, you can try:\n{_get_unmount_timeout_suggestions(mount)}"
+                    )
+                    return 1
 
             try:
                 if remove_type != RemoveType.CLEANUP_ONLY:
