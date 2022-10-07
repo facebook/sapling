@@ -20,6 +20,7 @@
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/testharness/FakeClock.h"
+#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -80,7 +81,9 @@ class TestMount {
    * reference counts might be inaccurate if paths to store in the
    * ActivityBuffer are calculated concurrently), so we must turn it off then.
    */
-  TestMount(bool enableActivityBuffer = true);
+  TestMount(
+      bool enableActivityBuffer = true,
+      CaseSensitivity caseSensitivity = kPathMapDefaultCaseSensitive);
 
   /**
    * Create a new TestMount
@@ -103,16 +106,19 @@ class TestMount {
   explicit TestMount(
       FakeTreeBuilder& rootBuilder,
       bool startReady = true,
-      bool enableActivityBuffer = true);
+      bool enableActivityBuffer = true,
+      CaseSensitivity caseSensitivity = kPathMapDefaultCaseSensitive);
   explicit TestMount(
       FakeTreeBuilder&& rootBuilder,
-      bool enableActivityBuffer = true);
+      bool enableActivityBuffer = true,
+      CaseSensitivity caseSensitivity = kPathMapDefaultCaseSensitive);
   TestMount(
       const RootId& initialCommitHash,
       FakeTreeBuilder& rootBuilder,
       bool startReady = true,
-      bool enableActivityBuffer = true);
-
+      bool enableActivityBuffer = true,
+      CaseSensitivity caseSensitivity = kPathMapDefaultCaseSensitive);
+  explicit TestMount(CaseSensitivity caseSensitivity);
   ~TestMount();
 
   /**
@@ -368,7 +374,7 @@ class TestMount {
  private:
   void createMount(
       Overlay::TreeOverlayType treeOverlayType = kDefaultOverlayType);
-  void initTestDirectory();
+  void initTestDirectory(CaseSensitivity caseSensitivity);
   void setInitialCommit(const RootId& commitHash);
   void setInitialCommit(const RootId& commitHash, ObjectId rootTreeHash);
 

@@ -60,6 +60,7 @@ using folly::Future;
 using folly::makeFuture;
 using folly::Unit;
 using namespace std::chrono_literals;
+using namespace std::string_literals;
 using std::make_shared;
 using std::make_unique;
 using std::shared_ptr;
@@ -82,7 +83,7 @@ bool TestMountFile::operator==(const TestMountFile& other) const {
       type == other.type;
 }
 
-TestMount::TestMount(bool enableActivityBuffer)
+TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
     : blobCache_{BlobCache::create(
           kBlobCacheMaximumSize,
           kBlobCacheMinimumEntries)},
@@ -90,7 +91,7 @@ TestMount::TestMount(bool enableActivityBuffer)
       serverExecutor_{make_shared<folly::ManualExecutor>()} {
   // Initialize the temporary directory.
   // This sets both testDir_, config_, localStore_, and backingStore_
-  initTestDirectory();
+  initTestDirectory(caseSensitivity);
 
   edenConfig_ = make_shared<EdenConfig>(
       /*userName=*/folly::StringPiece{"bob"},
@@ -130,8 +131,9 @@ TestMount::TestMount(bool enableActivityBuffer)
 TestMount::TestMount(
     FakeTreeBuilder& rootBuilder,
     bool startReady,
-    bool enableActivityBuffer)
-    : TestMount(enableActivityBuffer) {
+    bool enableActivityBuffer,
+    CaseSensitivity caseSensitivity)
+    : TestMount(enableActivityBuffer, caseSensitivity) {
   // Create treeCache
   edenConfig_ = EdenConfig::createTestEdenConfig();
 
@@ -141,8 +143,15 @@ TestMount::TestMount(
   initialize(rootBuilder, startReady);
 }
 
-TestMount::TestMount(FakeTreeBuilder&& rootBuilder, bool enableActivityBuffer)
-    : TestMount(rootBuilder, /*startReady=*/true, enableActivityBuffer) {
+TestMount::TestMount(
+    FakeTreeBuilder&& rootBuilder,
+    bool enableActivityBuffer,
+    CaseSensitivity caseSensitivity)
+    : TestMount(
+          rootBuilder,
+          /*startReady=*/true,
+          enableActivityBuffer,
+          caseSensitivity) {
   XCHECK_NE(edenConfig_, nullptr);
   XCHECK_NE(treeCache_, nullptr);
 }
@@ -151,8 +160,9 @@ TestMount::TestMount(
     const RootId& initialCommitHash,
     FakeTreeBuilder& rootBuilder,
     bool startReady,
-    bool enableActivityBuffer)
-    : TestMount(enableActivityBuffer) {
+    bool enableActivityBuffer,
+    CaseSensitivity caseSensitivity)
+    : TestMount(enableActivityBuffer, caseSensitivity) {
   edenConfig_ = EdenConfig::createTestEdenConfig();
 
   // Create treeCache
@@ -161,6 +171,9 @@ TestMount::TestMount(
   treeCache_ = TreeCache::create(edenConfig);
   initialize(initialCommitHash, rootBuilder, startReady);
 }
+
+TestMount::TestMount(CaseSensitivity caseSensitivity)
+    : TestMount(/*enableActivityBuffer=*/true, caseSensitivity) {}
 
 TestMount::~TestMount() {
   // The ObjectStore's futures can have a strong reference to an Inode which
@@ -282,7 +295,7 @@ void TestMount::createMountWithoutInitializing(
   createMountWithoutInitializing(nextCommitHash(), rootBuilder, startReady);
 }
 
-void TestMount::initTestDirectory() {
+void TestMount::initTestDirectory(CaseSensitivity caseSensitivity) {
   // Create the temporary directory
   testDir_ = std::make_unique<folly::test::TemporaryDirectory>(makeTempDir());
 
@@ -294,9 +307,17 @@ void TestMount::initTestDirectory() {
   ensureDirectoryExists(clientDirectory + "local"_pc);
   auto mountPath = testDirPath + "mount"_pc;
   ensureDirectoryExists(mountPath);
+  auto configPath = clientDirectory + "config.toml"_pc;
+  auto configData =
+      "[repository]\n"s
+      "path = \"/test\"\n"
+      "type = \"test\"\n"
+      "case-sensitive = " +
+      (caseSensitivity == CaseSensitivity::Sensitive ? "true" : "false") + "\n";
+  writeFile(configPath, folly::ByteRange{configData}).value();
 
   // Create the CheckoutConfig using our newly-populated client directory
-  config_ = make_unique<CheckoutConfig>(mountPath, clientDirectory);
+  config_ = CheckoutConfig::loadFromClientDirectory(mountPath, clientDirectory);
 
   // Create localStore_ and backingStore_
   localStore_ = make_shared<MemoryLocalStore>();

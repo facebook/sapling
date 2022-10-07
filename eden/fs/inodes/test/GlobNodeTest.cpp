@@ -444,3 +444,26 @@ TEST_P(GlobNodeTest, testCommitHashSet) {
     EXPECT_EQ(expectHashes, getPrefetchHashes());
   }
 }
+
+TEST(GlobNodeTest, testCaseInsensitive) {
+  auto mount = TestMount{CaseSensitivity::Insensitive};
+  auto builder = FakeTreeBuilder{};
+  builder.setFiles({{"case/MIXEDcase", "a"}});
+  mount.initialize(builder, /*startReady=*/true);
+
+  GlobNode globRoot(/*includeDotfiles=*/false);
+  globRoot.parse("Case");
+  globRoot.parse("CASE/MixedCase");
+
+  auto matches = std::vector<GlobResult>{};
+  auto fut =
+      evaluateGlob(mount, globRoot, /*prefetchHashes=*/nullptr, kZeroRootId);
+  mount.drainServerExecutor();
+  matches = std::move(fut).get(kSmallTimeout);
+
+  std::vector<GlobResult> expect{
+      GlobResult("case"_relpath, dtype_t::Dir, kZeroRootId),
+      GlobResult("case/MIXEDcase"_relpath, dtype_t::Regular, kZeroRootId),
+  };
+  EXPECT_EQ(expect, matches);
+}

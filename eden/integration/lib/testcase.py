@@ -399,6 +399,9 @@ class EdenRepoTest(EdenTestCase):
 
     enable_logview: bool = False
 
+    # See eden/fs/cli/main.py
+    is_case_sensitive: bool = sys.platform == "linux"
+
     def setup_eden_test(self) -> None:
         super().setup_eden_test()
 

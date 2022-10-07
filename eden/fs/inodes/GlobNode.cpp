@@ -45,11 +45,11 @@ struct TreeInodePtrRoot {
    * return a pointer to the child with that name, or nullptr
    * if there is no match */
   template <typename CONTENTS>
-  const DirEntry* FOLLY_NULLABLE
+  typename DirContents::const_pointer FOLLY_NULLABLE
   lookupEntry(CONTENTS& contents, PathComponentPiece name) {
     auto it = contents->entries.find(name);
     if (it != contents->entries.end()) {
-      return &it->second;
+      return &*it;
     }
     return nullptr;
   }
@@ -125,11 +125,11 @@ struct TreeRoot {
     return false;
   }
 
-  const TreeEntry* FOLLY_NULLABLE
+  typename Tree::container::const_pointer FOLLY_NULLABLE
   lookupEntry(const Tree& tree, PathComponentPiece name) {
     auto it = tree.find(name);
     if (it != tree.cend()) {
-      return &it->second;
+      return &*it;
     }
     return nullptr;
   }
@@ -282,21 +282,27 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateImpl(
     for (auto& node : children_) {
       if (!node->hasSpecials_) {
         // We can try a lookup for the exact name
-        auto name = PathComponentPiece(node->pattern_);
+        PathComponentPiece name{node->pattern_};
         auto entry = root.lookupEntry(contents, name);
         if (entry) {
           // Matched!
+
+          // Update the name to reflect the entry's actual case
+          name = entry->first;
+
           if (node->isLeaf_) {
             globResult.wlock()->emplace_back(
-                rootPath + name, entry->getDtype(), originRootId);
+                rootPath + name, entry->second.getDtype(), originRootId);
 
-            if (fileBlobsToPrefetch && root.entryShouldPrefetch(entry)) {
-              fileBlobsToPrefetch->wlock()->emplace_back(entry->getHash());
+            if (fileBlobsToPrefetch &&
+                root.entryShouldPrefetch(&entry->second)) {
+              fileBlobsToPrefetch->wlock()->emplace_back(
+                  entry->second.getHash());
             }
           }
 
           // Not the leaf of a pattern; if this is a dir, we need to recurse
-          recurseIfNecessary(name, node.get(), entry);
+          recurseIfNecessary(name, node.get(), &entry->second);
         }
       } else {
         // We need to match it out of the entries in this inode

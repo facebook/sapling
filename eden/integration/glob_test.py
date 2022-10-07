@@ -41,6 +41,8 @@ class GlobTest(testcase.EdenRepoTest):
 
         self.repo.write_file("other/exclude.java", "")
 
+        self.repo.write_file("case/MIXEDcase", "")
+
         self.commit1 = self.repo.commit("Commit 1.")
 
     def setUp(self) -> None:
@@ -299,6 +301,16 @@ class GlobTest(testcase.EdenRepoTest):
         )
         # The glob above returns immediately, we need to wait so it completes.
         time.sleep(1)
+
+    def test_case_preserving(self) -> None:
+        self.assert_glob(
+            ["case/MixedCase"],
+            expected_matches=[] if self.is_case_sensitive else [b"case/MIXEDcase"],
+        )
+        self.assert_glob(
+            ["CASE/mixedcase"],
+            expected_matches=[] if self.is_case_sensitive else [b"case/MIXEDcase"],
+        )
 
     def assert_glob(
         self,
