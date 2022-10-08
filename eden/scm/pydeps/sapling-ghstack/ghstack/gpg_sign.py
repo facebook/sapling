@@ -30,7 +30,8 @@ def gpg_args_if_necessary(
             # Why the complicated compare
             # https://git-scm.com/docs/git-config#Documentation/git-config.txt-boolean
             _should_sign = shell.git("config", "--get", "commit.gpgsign") in ("yes", "on", "true", "1")
-        except subprocess.CalledProcessError:
+        except (subprocess.CalledProcessError, RuntimeError):
+            # Note shell.git() raises RuntimeError for a non-zero exit code.
             _should_sign = False
 
     return ("-S",) if _should_sign else ()
