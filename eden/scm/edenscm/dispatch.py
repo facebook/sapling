@@ -286,6 +286,7 @@ def _preimportmodules():
         "fbscmquery",
         "fbhistedit",
         "fsmonitor",
+        "ghstack",
         "githelp",
         "github",
         "grpcheck",

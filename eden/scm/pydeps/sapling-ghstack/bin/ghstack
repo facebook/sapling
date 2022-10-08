@@ -1,0 +1,6 @@
+#!/bin/bash
+
+THIS_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+export PYTHONPATH=$( dirname "$THIS_DIR" )
+
+python3 -m ghstack.__main__ "$@"

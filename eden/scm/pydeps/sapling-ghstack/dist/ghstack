@@ -1,0 +1,61 @@
+#!/usr/bin/env dotslash
+
+// @generated SignedSource<<279c27d1e0ba41b23728624275af9d46>>
+// MSDK schedule URL: https://our.intern.facebook.com/intern/msdk/bump/?action=view&schedule_fbid=593637285697153
+// sandcastle build trigger URL: https://our.intern.facebook.com/intern/sandcastle/job/13510799668754650/
+
+{
+    "name": "ghstack",
+    "oncall": "oncall+eden_oss@xmail.facebook.com",
+    "build_info": {
+        "config_script": "xplat/scm/ghstack-0.6.0/ghstack.dotslash.py",
+        "commit_repo": "fbsource",
+        "commit_hash": "8e184f2ad5cc9f0ef9ea15474efe7230142dce9a",
+        "commit_date": "2022-10-04 07:52:04 PDT",
+        "commit_timestamp": 1664895124,
+        "msdk_package_fbid": "1176345963314232"
+    },
+    "signatures": {
+        "msdk": "<<crypto.managed_sdk.mac:AeUyj0ehkpX_GfYoicjSDC_guIec4sOybGflNhB4S1v6hqEg>>"
+    },
+    "platforms": {
+        "linux": {
+            "scheme": "everstore",
+            "handle": "GMDOhRL7ZTeqyXsEAFjOpPD1591WblMqAAAA",
+            "extract": {
+                "path": "bin/ghstack",
+                "decompress": "tar.gz"
+            },
+            "metadata": {
+                "build_inputs": {
+                    "ghstack": {
+                        "cwd": "fbcode",
+                        "flags": [
+                            "@fbsource//fbcode/mode/opt"
+                        ],
+                        "target": "fbsource//xplat/scm/ghstack-0.6.0:ghstack_dotslash_artifact"
+                    }
+                }
+            }
+        },
+        "macos": {
+            "scheme": "everstore",
+            "handle": "GN4afRJy3PntdTkHAJDTjpXLMVV-blMqAAAA",
+            "extract": {
+                "path": "bin/ghstack",
+                "decompress": "tar.gz"
+            },
+            "metadata": {
+                "build_inputs": {
+                    "ghstack": {
+                        "cwd": "fbcode",
+                        "flags": [
+                            "@fbsource//fbcode/mode/opt"
+                        ],
+                        "target": "fbsource//xplat/scm/ghstack-0.6.0:ghstack_dotslash_artifact"
+                    }
+                }
+            }
+        }
+    }
+}
