@@ -1,3 +1,4 @@
+#debugruntest-compatible
 #chg-compatible
 
 hide outer repo
@@ -10,7 +11,7 @@ Invalid syntax: no value
   > novaluekey
   > EOF
   $ hg showconfig
-  hg: parse errors: "$TESTTMP*hgrc": (glob)
+  hg: parse errors: "*hgrc": (glob)
    --> 1:11
     |
   1 | novaluekey\xe2\x90\x8a (esc)
@@ -26,7 +27,7 @@ Invalid syntax: no key
   > =nokeyvalue
   > EOF
   $ hg showconfig
-  hg: parse errors: "$TESTTMP*hgrc": (glob)
+  hg: parse errors: "*hgrc": (glob)
    --> 1:1
     |
   1 | =nokeyvalue\xe2\x90\x8a (esc)
@@ -42,7 +43,7 @@ Test hint about invalid syntax from leading white space
   >  key=value
   > EOF
   $ hg showconfig
-  hg: parse errors: "$TESTTMP*hgrc": (glob)
+  hg: parse errors: "*hgrc": (glob)
    --> 1:2
     |
   1 |  key=value\xe2\x90\x8a (esc)
@@ -57,7 +58,7 @@ Test hint about invalid syntax from leading white space
   > key=value
   > EOF
   $ hg showconfig
-  hg: parse errors: "$TESTTMP*hgrc": (glob)
+  hg: parse errors: "*hgrc": (glob)
    --> 1:2
     |
   1 |  [section]\xe2\x90\x8a (esc)
@@ -85,32 +86,32 @@ Test case sensitive configuration
 
   $ hg showconfig Section -Tjson
   [
-  {
+   {
     "name": "Section.KeY",
     "source": "*", (glob)
     "value": "Case Sensitive"
-  },
-  {
+   },
+   {
     "name": "Section.key",
     "source": "*", (glob)
     "value": "lower case"
-  }
+   }
   ]
   $ hg showconfig Section.KeY -Tjson
   [
-  {
+   {
     "name": "Section.KeY",
     "source": "*", (glob)
     "value": "Case Sensitive"
-  }
+   }
   ]
   $ hg showconfig -Tjson | tail -7
-  },
-  {
+   },
+   {
     "name": "*", (glob)
     "source": "*", (glob)
     "value": "*" (glob)
-  }
+   }
   ]
 
 Test "%unset"
@@ -159,7 +160,7 @@ sub-options in [paths] aren't expanded
   > EOF
 
   $ hg showconfig paths
-  paths.foo=~/foo
+  paths.foo=$TESTTMP/foo
   paths.foo:suboption=~/foo
 
 edit failure
@@ -236,7 +237,7 @@ config editing without an editor
  append configs
   $ hg config --local "aa.bb.cc.字=配
   > 置" ee.fff=gggg
-  $ tail -6 .hg/hgrc
+  $ tail -6 .hg/hgrc | dos2unix
   [aa]
   bb.cc.字 = 配
     置
@@ -249,7 +250,7 @@ config editing without an editor
   > 测
   > 试
   > "
-  $ tail -7 .hg/hgrc
+  $ tail -7 .hg/hgrc | dos2unix
   [aa]
   bb.cc.字 = 新值
     测
@@ -278,9 +279,12 @@ config editing without an editor
   b = 4
   # b = 3
 
+#if no-windows
  user config
+ (FIXME: windows implementation currently updates the real user's hgrc outside TESTTMP)
   $ hg config --edit a.b=1
   $ tail -2 ~/.hgrc
   [a]
   b = 1
 
+#endif
