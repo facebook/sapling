@@ -358,7 +358,7 @@ def showbranch(**args):
 
 
 @templatekeyword("branches")
-def showbranches(**args):
+def showbranches(**args) -> _hybrid:
     """List of strings. The name of the branch on which the
     changeset was committed. Will be empty if the branch name was
     default. (DEPRECATED)
@@ -385,7 +385,7 @@ def showbookmarks(**args) -> _hybrid:
 
 
 @templatekeyword("children")
-def showchildren(**args):
+def showchildren(**args) -> _hybrid:
     """List of strings. The children of the changeset."""
     args = args
     ctx = args["ctx"]
@@ -441,7 +441,7 @@ def showdiffstat(repo, ctx, templ, **args) -> str:
 
 
 @templatekeyword("envvars")
-def showenvvars(repo, **args):
+def showenvvars(repo, **args) -> _hybrid:
     """A dictionary of environment variables. (EXPERIMENTAL)"""
     args = args
     env = repo.ui.exportableenviron()
@@ -465,7 +465,7 @@ def showextras(**args) -> _hybrid:
 
 
 @templatekeyword("file_adds")
-def showfileadds(**args):
+def showfileadds(**args) -> _hybrid:
     """List of strings. Files added by this changeset."""
     args = args
     repo, ctx, revcache = args["repo"], args["ctx"], args["revcache"]
@@ -473,7 +473,7 @@ def showfileadds(**args):
 
 
 @templatekeyword("file_copies")
-def showfilecopies(**args):
+def showfilecopies(**args) -> _hybrid:
     """List of strings. Files copied in this changeset with
     their sources.
     """
@@ -506,7 +506,7 @@ def showfilecopies(**args):
 # provided before calling the templater, usually with a --copies
 # command line switch.
 @templatekeyword("file_copies_switch")
-def showfilecopiesswitch(**args):
+def showfilecopiesswitch(**args) -> _hybrid:
     """List of strings. Like "file_copies" but displayed
     only if the --copied switch is set.
     """
@@ -525,7 +525,7 @@ def showfilecopiesswitch(**args):
 
 
 @templatekeyword("file_dels")
-def showfiledels(**args):
+def showfiledels(**args) -> _hybrid:
     """List of strings. Files removed by this changeset."""
     args = args
     repo, ctx, revcache = args["repo"], args["ctx"], args["revcache"]
@@ -533,7 +533,7 @@ def showfiledels(**args):
 
 
 @templatekeyword("file_mods")
-def showfilemods(**args):
+def showfilemods(**args) -> _hybrid:
     """List of strings. Files modified by this changeset."""
     args = args
     repo, ctx, revcache = args["repo"], args["ctx"], args["revcache"]
@@ -541,7 +541,7 @@ def showfilemods(**args):
 
 
 @templatekeyword("files")
-def showfiles(**args):
+def showfiles(**args) -> _hybrid:
     """List of strings. All files modified, added, or removed by this
     changeset.
     """
@@ -634,7 +634,7 @@ def showmanifest(**args) -> Optional[_mappable]:
 
 
 @templatekeyword("nodechanges")
-def shownodechanges(nodereplacements, **args):
+def shownodechanges(nodereplacements, **args) -> _hybrid:
     """List. Rewritten nodes after a command."""
     hexmapping = util.sortdict()
     for oldnode, newnodes in nodereplacements.items():
@@ -651,7 +651,7 @@ def shownodechanges(nodereplacements, **args):
     )
 
 
-def shownames(namespace, **args):
+def shownames(namespace, **args) -> _hybrid:
     """helper method to generate a template keyword for a namespace"""
     args = args
     ctx = args["ctx"]
@@ -926,7 +926,7 @@ def showverbosity(ui, **args) -> str:
 
 
 @templatekeyword("remotenames")
-def remotenameskw(**args):
+def remotenameskw(**args) -> _hybrid:
     """:remotenames: List of strings. List of remote names associated with the
     changeset.
     """
