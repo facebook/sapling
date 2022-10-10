@@ -64,6 +64,7 @@ builtins =
   children,
   draft,
   gcaall,
+  gcaone,
   heads,
   headsancestors,
   obsolete,
