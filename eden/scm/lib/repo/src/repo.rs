@@ -325,6 +325,8 @@ impl Repo {
 
         if let Some(eden_api) = eden_api {
             file_builder = file_builder.edenapi(EdenApiFileStore::new(eden_api));
+        } else {
+            file_builder = file_builder.override_edenapi(false);
         }
 
         if self.config.get_or_default("scmstore", "auxindexedlog")? {
@@ -368,6 +370,8 @@ impl Repo {
 
         if let Some(eden_api) = eden_api {
             tree_builder = tree_builder.edenapi(EdenApiTreeStore::new(eden_api));
+        } else {
+            tree_builder = tree_builder.override_edenapi(false);
         }
         let ts = Arc::new(tree_builder.build()?);
         self.tree_store = Some(ts.clone());
