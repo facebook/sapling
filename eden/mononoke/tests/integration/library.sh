@@ -922,12 +922,6 @@ scuba_local_path="$SCUBA_LOGGING_PATH"
 CONFIG
 fi
 
-if [[ -n "${BOOKMARK_SCRIBE_CATEGORY:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
-bookmark_scribe_category = "$BOOKMARK_SCRIBE_CATEGORY"
-CONFIG
-fi
-
 if [[ -n "${ENFORCE_LFS_ACL_CHECK:-}" ]]; then
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 enforce_lfs_acl_check=true
@@ -1159,6 +1153,13 @@ if [[ -n "${SPARSE_PROFILES_LOCATION}" ]]; then
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [sparse_profiles_config]
 sparse_profiles_location="$SPARSE_PROFILES_LOCATION"
+CONFIG
+fi
+
+if [[ -n "${BOOKMARK_SCRIBE_CATEGORY:-}" ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+[update_logging_config]
+bookmark_logging_destination = { scribe = { scribe_category = "$BOOKMARK_SCRIBE_CATEGORY" } }
 CONFIG
 fi
 }

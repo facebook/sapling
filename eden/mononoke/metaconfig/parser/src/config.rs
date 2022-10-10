@@ -190,7 +190,6 @@ fn parse_with_repo_definition(
         hg_sync_config,
         backup_hg_sync_config,
         deep_sharded,
-        bookmark_scribe_category,
         update_logging_config,
         ..
     } = named_repo_config;
@@ -345,7 +344,6 @@ fn parse_with_repo_definition(
         hg_sync_config,
         backup_hg_sync_config,
         deep_sharded,
-        bookmark_scribe_category,
         update_logging_config,
         default_commit_identity_scheme,
     })
@@ -1237,7 +1235,6 @@ mod test {
                     lock_on_failure: false,
                     darkstorm_backup_repo_id: Some(1001),
                 }),
-                bookmark_scribe_category: None,
                 update_logging_config: UpdateLoggingConfig {
                     bookmark_logging_destination: None,
                     public_commit_logging_destination: Some(LoggingDestination::Scribe {
@@ -1318,7 +1315,6 @@ mod test {
                 hg_sync_config: None,
                 backup_hg_sync_config: None,
                 deep_sharded: false,
-                bookmark_scribe_category: None,
                 update_logging_config: UpdateLoggingConfig::default(),
             },
         );

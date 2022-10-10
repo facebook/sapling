@@ -222,8 +222,6 @@ pub struct RepoConfig {
     /// deep-sharded: In addition to requests, repo is also sharded, i.e. present
     /// on select servers.
     pub deep_sharded: bool,
-    /// Scribe category we log new commits to
-    pub bookmark_scribe_category: Option<String>,
     /// Configuration for update logging.
     pub update_logging_config: UpdateLoggingConfig,
     /// Default commit identity scheme. Some repos can be hg-mirrored git repos.

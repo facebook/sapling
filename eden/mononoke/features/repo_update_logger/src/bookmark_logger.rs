@@ -7,17 +7,18 @@
 
 use std::fmt;
 
-use anyhow::anyhow;
+use anyhow::Result;
+use async_trait::async_trait;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKind;
 use bookmarks_types::BookmarkName;
 use context::CoreContext;
+use logger_ext::Loggable;
 use metaconfig_types::RepoConfigRef;
 #[cfg(fbcode_build)]
 use mononoke_bookmark_rust_logger::MononokeBookmarkLogger;
 use mononoke_types::ChangesetId;
 use repo_identity::RepoIdentityRef;
-use scribe_ext::Scribe;
 use serde_derive::Serialize;
 
 #[derive(Serialize)]
@@ -104,55 +105,29 @@ impl PlainBookmarkInfo {
     }
 }
 
-async fn log_bookmark_operation_to_raw_scribe(
-    info: &PlainBookmarkInfo,
-    repo: &impl RepoConfigRef,
-    scribe: &Scribe,
-) -> anyhow::Result<()> {
-    if let Some(category) = &repo.repo_config().bookmark_scribe_category {
-        scribe
-            .offer(
-                category,
-                &serde_json::to_string(&info).map_err(|e| anyhow!("{}", e))?,
-            )
-            .map_err(|e| anyhow!("{}", e))?;
-    }
-    Ok(())
-}
+#[async_trait]
+impl Loggable for PlainBookmarkInfo {
+    #[cfg(fbcode_build)]
+    async fn log_to_logger(&self, ctx: &CoreContext) -> Result<()> {
+        let mut logger = MononokeBookmarkLogger::new(ctx.fb);
+        logger
+            .set_repo_name(self.repo_name.clone())
+            .set_bookmark_name(self.bookmark_name.clone())
+            .set_bookmark_kind(self.bookmark_kind.clone());
+        if let Some(v) = &self.old_bookmark_value {
+            logger.set_old_bookmark_value(v.clone());
+        }
+        if let Some(v) = &self.new_bookmark_value {
+            logger.set_new_bookmark_value(v.clone());
+        }
+        logger
+            .set_operation(self.operation.clone())
+            .set_update_reason(self.update_reason.clone());
 
-#[cfg(fbcode_build)]
-async fn log_bookmark_operation_to_file_if_appropriate(
-    info: &PlainBookmarkInfo,
-    repo: &impl RepoConfigRef,
-    scribe: &Scribe,
-) -> anyhow::Result<()> {
-    if let Scribe::LogToFile(_) = scribe {
-        log_bookmark_operation_to_raw_scribe(info, repo, scribe).await?;
-    }
-    Ok(())
-}
+        logger.log_async()?;
 
-#[cfg(fbcode_build)]
-async fn log_bookmark_operation_to_logger(
-    info: &PlainBookmarkInfo,
-    ctx: &CoreContext,
-) -> anyhow::Result<()> {
-    let mut logger = MononokeBookmarkLogger::new(ctx.fb);
-    logger
-        .set_repo_name(info.repo_name.clone())
-        .set_bookmark_name(info.bookmark_name.clone())
-        .set_bookmark_kind(info.bookmark_kind.clone());
-    if let Some(v) = &info.old_bookmark_value {
-        logger.set_old_bookmark_value(v.clone());
+        Ok(())
     }
-    if let Some(v) = &info.new_bookmark_value {
-        logger.set_new_bookmark_value(v.clone());
-    }
-    logger
-        .set_operation(info.operation.clone())
-        .set_update_reason(info.update_reason.clone());
-
-    logger.log_async().map_err(|err| anyhow!("{}", err))
 }
 
 pub async fn log_bookmark_operation(
@@ -160,41 +135,13 @@ pub async fn log_bookmark_operation(
     repo: &(impl RepoIdentityRef + RepoConfigRef),
     info: &BookmarkInfo,
 ) {
-    let data = PlainBookmarkInfo::new(repo, info);
-    #[cfg(fbcode_build)]
+    if let Some(bookmark_logging_destination) = &repo
+        .repo_config()
+        .update_logging_config
+        .bookmark_logging_destination
     {
-        let res = log_bookmark_operation_to_logger(&data, ctx).await;
-        if let Err(err) = res {
-            ctx.scuba().clone().log_with_msg(
-                "Failed to log bookmark operation to logger",
-                Some(format!("{}", err)),
-            );
-        } else {
-            // Logger doesn't respect Mononoke's LogToFile scribe setting,
-            // so when scribe is set to log to file, issue a raw scribe call.
-            // This allows us to write integration tests that can read the file
-            // content to be sure that the data is and remain correct-looking.
-            log_bookmark_operation_to_file_if_appropriate(&data, repo, ctx.scribe())
-                .await
-                .unwrap_or_else(|err| {
-                    ctx.scuba().clone().log_with_msg(
-                        "Failed to log bookmark operation to file",
-                        Some(format!("{}", err)),
-                    );
-                });
-        }
-    }
-    // When building in oss, we don't have access to the logger framework, so fallback to raw
-    // scribe call.
-    #[cfg(not(fbcode_build))]
-    {
-        log_bookmark_operation_to_raw_scribe(&data, repo, ctx.scribe())
-            .await
-            .unwrap_or_else(|err| {
-                ctx.scuba().clone().log_with_msg(
-                    "Failed to log bookmark operation to scribe",
-                    Some(format!("{}", err)),
-                );
-            });
+        PlainBookmarkInfo::new(repo, info)
+            .log(ctx, bookmark_logging_destination)
+            .await;
     }
 }
