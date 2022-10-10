@@ -25,8 +25,11 @@ pub struct Identity {
     /// Example: `Checkout failed. Resume with 'sl checkout --continue'`
     cli_name: &'static str,
 
-    /// Full name of the product
+    /// Name of the product
     product_name: &'static str,
+
+    /// Full name of the product
+    long_product_name: &'static str,
 
     /// Metadata directory of the current identity. If this directory exists in the current repo, it
     /// implies that the repo is using this identity.
@@ -77,6 +80,10 @@ impl Identity {
 
     pub fn product_name(&self) -> &'static str {
         self.product_name
+    }
+
+    pub fn long_product_name(&self) -> &'static str {
+        self.long_product_name
     }
 
     pub fn dot_dir(&self) -> &'static str {
@@ -162,6 +169,7 @@ impl std::fmt::Display for Identity {
 const HG: Identity = Identity {
     cli_name: "hg",
     product_name: "Mercurial",
+    long_product_name: "Mercurial Distributed SCM",
     dot_dir: ".hg",
     env_prefix: "HG",
     config_name: "hgrc",
@@ -176,6 +184,7 @@ const HG: Identity = Identity {
 const SL: Identity = Identity {
     cli_name: "sl",
     product_name: "Sapling",
+    long_product_name: "Sapling SCM",
     dot_dir: ".sl",
     env_prefix: "SL",
     config_name: "slconfig",
@@ -191,6 +200,7 @@ const SL: Identity = Identity {
 const TEST: Identity = Identity {
     cli_name: "test",
     product_name: "Test",
+    long_product_name: "Testing SCM",
     dot_dir: ".test",
     env_prefix: "TEST",
     config_name: "testrc",

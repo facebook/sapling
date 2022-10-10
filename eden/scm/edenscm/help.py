@@ -427,9 +427,9 @@ class _helpdispatch(object):
             if entry[2].startswith("hg"):
                 rst.append("%s\n" % entry[2])
             else:
-                rst.append("%s %s %s\n" % (identity.prog, cmd, entry[2]))
+                rst.append("%s %s %s\n" % (identity.default().cliname(), cmd, entry[2]))
         else:
-            rst.append("%s %s\n" % (identity.prog, cmd))
+            rst.append("%s %s\n" % (identity.default().cliname(), cmd))
         # aliases
         # try to simplify aliases, ex. compress ['ab', 'abc', 'abcd', 'abcde']
         # to ['ab', 'abcde']

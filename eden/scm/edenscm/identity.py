@@ -14,21 +14,25 @@ import functools
 
 from bindings import identity
 
-prog = "hg"
-product = "Mercurial"
-longproduct = "Mercurial Distributed SCM"
-
-templatemap = {"@prog@": prog, "@Product@": product, "@LongProduct@": longproduct}
-
 sniffroot = identity.sniffroot
 sniffenv = identity.sniffenv
 current = identity.current
+default = identity.default
+
+
+def templatemap():
+    currident = default()
+    return {
+        "@prog@": currident.cliname(),
+        "@Product@": currident.productname(),
+        "@LongProduct@": currident.longproductname(),
+    }
 
 
 def replace(s):
     """Replace template instances in the given string"""
     if s is not None:
-        for template, replacement in templatemap.items():
+        for template, replacement in templatemap().items():
             s = s.replace(template, replacement)
     return s
 

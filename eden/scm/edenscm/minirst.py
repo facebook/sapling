@@ -410,18 +410,19 @@ def inlineliterals(blocks):
 
 
 def hgrole(blocks):
+    unisubst = list(identity.templatemap().items())
     substs = [
-        (":hg:`", "'%s " % identity.prog),
-        (":prog:`", "'%s " % identity.prog),
+        (":hg:`", "'%s " % identity.default().cliname()),
+        (":prog:`", "'%s " % identity.default().cliname()),
         ("`", "'"),
-    ]
+    ] + unisubst
     for b in blocks:
-        if b["type"] in ("paragraph", "section"):
-            # Turn :hg:`command` into "hg command". This also works
-            # when there is a line break in the command and relies on
-            # the fact that we have no stray back-quotes in the input
-            # (run the blocks through inlineliterals first).
-            b["lines"] = [replace(l, substs) for l in b["lines"]]
+        stype = substs if b["type"] in ("paragraph", "section") else unisubst
+        # Turn :hg:`command` into "hg command". This also works
+        # when there is a line break in the command and relies on
+        # the fact that we have no stray back-quotes in the input
+        # (run the blocks through inlineliterals first).
+        b["lines"] = [replace(l, stype) for l in b["lines"]]
     return blocks
 
 

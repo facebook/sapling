@@ -21,6 +21,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<identity>(py)?;
     m.add(py, "all", py_fn!(py, all()))?;
     m.add(py, "current", py_fn!(py, current()))?;
+    m.add(py, "default", py_fn!(py, default()))?;
     m.add(py, "sniffenv", py_fn!(py, sniff_env()))?;
     m.add(py, "sniffroot", py_fn!(py, sniff_root(path: PyPathBuf)))?;
     m.add(py, "sniffdir", py_fn!(py, sniff_dir(path: PyPathBuf)))?;
@@ -40,12 +41,24 @@ py_class!(pub class identity |py| {
         Ok(format!("{}", self.ident(py)))
     }
 
+    def cliname(&self) -> PyResult<String> {
+        Ok(self.ident(py).cli_name().to_string())
+    }
+
     def configrepofile(&self) -> PyResult<String> {
         Ok(self.ident(py).config_repo_file().to_string())
     }
 
     def userconfigpaths(&self) -> PyResult<Vec<PyPathBuf>> {
         self.ident(py).user_config_paths().iter().map(|p| p.as_path().try_into()).collect::<Result<Vec<PyPathBuf>>>().map_pyerr(py)
+    }
+
+    def productname(&self) -> PyResult<String> {
+        Ok(self.ident(py).product_name().to_string())
+    }
+
+    def longproductname(&self) -> PyResult<String> {
+        Ok(self.ident(py).long_product_name().to_string())
     }
 });
 
@@ -78,6 +91,10 @@ fn try_env_var(py: Python, suffix: PyString) -> PyResult<Option<String>> {
 
 fn current(py: Python) -> PyResult<identity> {
     identity::create_instance(py, rsident::IDENTITY.read().clone())
+}
+
+fn default(py: Python) -> PyResult<identity> {
+    identity::create_instance(py, rsident::idents::DEFAULT.clone())
 }
 
 fn all(py: Python) -> PyResult<Vec<identity>> {
