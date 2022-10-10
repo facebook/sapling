@@ -27,7 +27,6 @@ use hooks::HookManager;
 use mercurial_mutation::HgMutationStoreRef;
 use metaconfig_types::Address;
 use metaconfig_types::InfinitepushParams;
-use metaconfig_types::PushParams;
 use metaconfig_types::PushrebaseParams;
 use metaconfig_types::PushrebaseRemoteMode;
 use mononoke_types::BonsaiChangeset;
@@ -87,7 +86,6 @@ pub async fn run_post_resolve_action(
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
-    push_params: &PushParams,
     hook_manager: &HookManager,
     action: PostResolveAction,
     cross_repo_push_source: CrossRepoPushSource,
@@ -105,7 +103,6 @@ pub async fn run_post_resolve_action(
             infinitepush_params,
             pushrebase_params,
             action,
-            push_params,
             cross_repo_push_source,
         )
         .await
@@ -174,7 +171,6 @@ async fn run_push(
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
     action: PostResolvePush,
-    push_params: &PushParams,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<UnbundlePushResponse, BundleResolverError> {
     debug!(ctx.logger(), "unbundle processing: running push.");
@@ -246,7 +242,7 @@ async fn run_push(
         repo,
         maybe_bookmark.as_ref(),
         changesets_to_log,
-        push_params.commit_scribe_category.as_deref(),
+        repo.repo_config().push.commit_scribe_category.as_deref(),
     )
     .await;
 

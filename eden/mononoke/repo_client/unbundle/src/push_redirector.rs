@@ -167,7 +167,6 @@ impl PushRedirector {
         let lca_hint: Arc<dyn LeastCommonAncestorsHint> = large_repo.skiplist_index_arc();
         let infinitepush_params = large_repo.repo_config().infinitepush.clone();
         let pushrebase_params = large_repo.repo_config().pushrebase.clone();
-        let push_params = large_repo.repo_config().push.clone();
 
         let large_repo_action = self
             .convert_post_resolve_action(ctx, action)
@@ -179,7 +178,6 @@ impl PushRedirector {
             &lca_hint,
             &infinitepush_params,
             &pushrebase_params,
-            &push_params,
             self.repo.hook_manager(),
             large_repo_action,
             CrossRepoPushSource::PushRedirected,

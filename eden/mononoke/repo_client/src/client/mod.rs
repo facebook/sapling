@@ -1734,8 +1734,7 @@ impl HgCommands for RepoClient {
                     let infinitepush_params = repo.repo_config().infinitepush.clone();
                     let infinitepush_writes_allowed = infinitepush_params.allow_writes;
                     let pushrebase_params = repo.repo_config().pushrebase.clone();
-                    let push_params = repo.repo_config().push.clone();
-                    let pure_push_allowed = push_params.pure_push_allowed;
+                    let pure_push_allowed = repo.repo_config().push.pure_push_allowed;
                     let reponame = repo.repo_identity().name().to_string();
                     let maybe_backup_repo_source = client.maybe_backup_repo_source.clone();
 
@@ -1795,7 +1794,6 @@ impl HgCommands for RepoClient {
                                     &lca_hint,
                                     &infinitepush_params,
                                     &pushrebase_params,
-                                    &push_params,
                                     hook_manager.as_ref(),
                                     action,
                                     CrossRepoPushSource::NativeToThisRepo,
