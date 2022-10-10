@@ -143,7 +143,8 @@ def minusset(mctx, x, y):
 
 def listset(mctx, a, b):
     raise error.ParseError(
-        _("can't use a list in this context"), hint=_('see hg help "filesets.x or y"')
+        _("can't use a list in this context"),
+        hint=_('see @prog@ help "filesets.x or y"'),
     )
 
 

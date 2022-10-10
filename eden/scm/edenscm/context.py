@@ -62,7 +62,7 @@ propertycache = util.propertycache
 nonascii = re.compile(r"[^\x21-\x7f]").search
 
 slowstatuswarning = _(
-    "(status will still be slow next time; try to complete or abort other source control operations and then run 'hg status' again)\n"
+    "(status will still be slow next time; try to complete or abort other source control operations and then run '@prog@ status' again)\n"
 )
 
 

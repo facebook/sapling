@@ -57,7 +57,7 @@ def purge(ui, repo, *dirs, **opts):
     """delete untracked files
 
     Delete all untracked files in your checkout. Untracked files are files
-    that are unknown to Mercurial. They are marked with "?" when you run
+    that are unknown to @Product@. They are marked with "?" when you run
     :hg:`status`.
 
     By default, :hg:`purge` does not affect::

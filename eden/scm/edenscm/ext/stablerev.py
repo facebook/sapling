@@ -114,7 +114,7 @@ def _lookup(ui, repo, revspec, trypull=False):
         else:
             raise error.Abort(
                 _("stable commit (%s) not in the repo") % revspec,
-                hint="try hg pull first",
+                hint=_("try @prog@ pull first"),
             )
 
 

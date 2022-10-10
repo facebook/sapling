@@ -28,8 +28,8 @@ def wrappreprocess(orig, repo, ms, wctx, labels=None):
         ui.warn(_("warning: merge driver failed to preprocess files\n"))
         ui.warn(
             _(
-                "(hg resolve --all to retry, or "
-                "hg resolve --all --skip to skip merge driver)\n"
+                "(@prog@ resolve --all to retry, or "
+                "@prog@ resolve --all --skip to skip merge driver)\n"
             )
         )
         return False
@@ -56,8 +56,8 @@ def wrapconclude(orig, repo, ms, wctx, labels=None):
         ui.warn(_("warning: merge driver failed to resolve files\n"))
         ui.warn(
             _(
-                "(hg resolve --all to retry, or "
-                "hg resolve --all --skip to skip merge driver)\n"
+                "(@prog@ resolve --all to retry, or "
+                "@prog@ resolve --all --skip to skip merge driver)\n"
             )
         )
         return False

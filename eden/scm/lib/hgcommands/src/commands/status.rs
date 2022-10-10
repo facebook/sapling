@@ -298,25 +298,25 @@ pub fn doc() -> &'static str {
       - show changes in the working directory relative to a
         changeset::
 
-          hg status --rev 9353
+          @prog@ status --rev 9353
 
       - show changes in the working directory relative to the
         current directory (see :hg:`help patterns` for more information)::
 
-          hg status re:
+          @prog@ status re:
 
       - show all changes including copies in an existing changeset::
 
-          hg status --copies --change 9353
+          @prog@ status --copies --change 9353
 
       - get a NUL separated list of added files, suitable for xargs::
 
-          hg status -an0
+          @prog@ status -an0
 
       - show more information about the repository status, abbreviating
         added, removed, modified, deleted, and untracked paths::
 
-          hg status -v -t mardu
+          @prog@ status -v -t mardu
 
     Returns 0 on success."#
 }

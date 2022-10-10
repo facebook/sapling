@@ -12,7 +12,7 @@ Automatic backups are enabled by setting the 'infinitepushbackup.autobackup'
 config option to true.
 
 Automatic backups can be temporarily disabled by setting
-'infinitepushbackup.disableduntil' to a unix timestamp, or by running 'hg cloud
+'infinitepushbackup.disableduntil' to a unix timestamp, or by running '@prog@ cloud
 disable', which stores the disable time in the autobackup state file
 ('commitcloud/autobackup'). If both of these are set then backups are disabled
 until both of them have expired.
@@ -82,7 +82,7 @@ def autobackupdisableduntil(repo):
     """returns the timestamp that backup disable expires at
 
     Backup can be disabled by the user, either in config, or by running
-    'hg cloud disable', which stores its state in the autobackup state.
+    '@prog@ cloud disable', which stores its state in the autobackup state.
     """
     # developer config: infinitepushbackup.disableduntil
     disableduntilconf = repo.ui.configint("infinitepushbackup", "disableduntil", None)

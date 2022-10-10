@@ -5,7 +5,7 @@
 
 """track previous positions of bookmarks (EXPERIMENTAL)
 
-This extension adds a new command: `hg journal`, which shows you where
+This extension adds a new command: `@prog@ journal`, which shows you where
 bookmarks were previously located.
 
 """
@@ -202,7 +202,7 @@ class journalentry(
 
     * timestamp: a mercurial (time, timezone) tuple
     * user: the username that ran the command
-    * command: the hg command that triggered this record
+    * command: the @prog@ command that triggered this record
     * namespace: the entry namespace, an opaque string
     * name: the name of the changed item, opaque string with meaning in the
       namespace
@@ -300,7 +300,7 @@ class journalstorage(object):
 
     @classmethod
     def recordcommand(cls, *fullargs):
-        """Set the current hg arguments, stored with recorded entries"""
+        """Set the current @prog@ arguments, stored with recorded entries"""
         # Set the current command on the class because we may have started
         # with a non-local repo (cloning for example).
         cls._currentcommand = fullargs

@@ -62,7 +62,7 @@ class lockinfo(object):
             hint = ""
             if path is not None:
                 msg += " (%s)" % path
-                hint = _("run hg debuglocks")
+                hint = _("run @prog@ debuglocks")
             raise error.MalformedLock(msg, hint=hint)
         ns, uid = fromstr.strip().split(":", 1)
 
@@ -135,7 +135,7 @@ class lockinfo(object):
         msg = _("waiting for lock on %s held by process %r on host %r\n")
         msg %= (l.desc, self.pid, self.host)
         hintmsg = _(
-            "(hint: run 'hg debugprocesstree %s' to see related processes)\n"
+            "(hint: run '@prog@ debugprocesstree %s' to see related processes)\n"
         ) % (self.pid,)
         return msg + hintmsg
 

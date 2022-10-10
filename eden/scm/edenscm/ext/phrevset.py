@@ -7,7 +7,7 @@
 
 """provides support for Phabricator revsets
 
-Allows for queries such as `hg log -r D1234567` to find the commit which
+Allows for queries such as `@prog@ log -r D1234567` to find the commit which
 corresponds to a specific Differential revision.
 Automatically handles commits already in subversion, or whose hash has
 changed since submitting to Differential (due to amends or rebasing).

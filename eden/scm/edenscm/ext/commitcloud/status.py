@@ -36,7 +36,7 @@ def summary(repo):
                 _(
                     "background backup is currently disabled until %s\n"
                     "so your commits are not being backed up.\n"
-                    "(run 'hg cloud enable' to turn automatic backups back on)\n"
+                    "(run '@prog@ cloud enable' to turn automatic backups back on)\n"
                 )
                 % util.datestr(util.makedate(int(timestamp))),
                 notice=_("note"),
@@ -86,9 +86,9 @@ def summary(repo):
                 notice=_("note"),
             )
         if workspacename:
-            ui.warn(_("(run 'hg cloud sync' to synchronize your workspace)\n"))
+            ui.warn(_("(run '@prog@ cloud sync' to synchronize your workspace)\n"))
         else:
-            ui.warn(_("(run 'hg cloud backup' to perform a backup)\n"))
+            ui.warn(_("(run '@prog@ cloud backup' to perform a backup)\n"))
         ui.warn(
             _("(if this fails, please report to %s)\n") % ccerror.getsupportcontact(ui)
         )

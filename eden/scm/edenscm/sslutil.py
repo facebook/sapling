@@ -373,7 +373,7 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
             raise error.Abort(
                 _("certificate file (%s) does not exist; " "cannot connect to %s")
                 % (f, serverhostname),
-                hint=_("restore missing file or fix references " "in Mercurial config"),
+                hint=_("restore missing file or fix references " "in @Product@ config"),
             )
 
     settings = _hostsettings(ui, pycompat.ensurestr(serverhostname))
@@ -535,7 +535,7 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
                 ui.warn(
                     _(
                         "(the full certificate chain may not be available "
-                        'locally; see "hg help debugssl")\n'
+                        'locally; see "@prog@ help debugssl")\n'
                     )
                 )
         raise

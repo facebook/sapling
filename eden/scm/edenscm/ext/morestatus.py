@@ -62,7 +62,7 @@ def conflictsmsg(repo, ui):
 
 %s
 
-To mark files as resolved:  hg resolve --mark FILE"""
+To mark files as resolved:  @prog@ resolve --mark FILE"""
             )
             % mergeliststr
         )
@@ -81,7 +81,7 @@ def helpmessage(ui, continuecmd, abortcmd):
 
 
 def rebasemsg(repo, ui):
-    helpmessage(ui, "hg rebase --continue", "hg rebase --abort")
+    helpmessage(ui, _("@prog@ rebase --continue"), _("@prog@ rebase --abort"))
     dstnode, srcnode = repo.dirstate.parents()
     if srcnode != nodeutil.nullid:
         src = repo[srcnode]
@@ -96,47 +96,47 @@ def rebasemsg(repo, ui):
 
 
 def histeditmsg(repo, ui):
-    helpmessage(ui, "hg histedit --continue", "hg histedit --abort")
+    helpmessage(ui, _("@prog@ histedit --continue"), _("@prog@ histedit --abort"))
 
 
 def unshelvemsg(repo, ui):
-    helpmessage(ui, "hg unshelve --continue", "hg unshelve --abort")
+    helpmessage(ui, _("@prog@ unshelve --continue"), _("@prog@ unshelve --abort"))
 
 
 def updatecleanmsg(dest=None):
     warning = _("warning: this will discard uncommitted changes")
-    return "hg update --clean %s    (%s)" % (dest or ".", warning)
+    return _("@prog@ update --clean %s    (%s)") % (dest or ".", warning)
 
 
 def graftmsg(repo, ui):
     # tweakdefaults requires `update` to have a rev hence the `.`
-    helpmessage(ui, "hg graft --continue", updatecleanmsg())
+    helpmessage(ui, _("@prog@ graft --continue"), updatecleanmsg())
 
 
 def updatemsg(repo, ui):
     previousargs = repo.localvfs.tryreadutf8(UPDATEARGS)
     if previousargs:
-        continuecmd = "hg " + previousargs
+        continuecmd = _("@prog@ ") + previousargs
     else:
-        continuecmd = "hg update " + repo.localvfs.readutf8("updatestate")[:12]
+        continuecmd = _("@prog@ update ") + repo.localvfs.readutf8("updatestate")[:12]
     abortcmd = updatecleanmsg(repo._activebookmark)
     helpmessage(ui, continuecmd, abortcmd)
 
 
 def updatemergemsg(repo, ui):
-    helpmessage(ui, "hg update --continue", updatecleanmsg())
+    helpmessage(ui, _("@prog@ update --continue"), updatecleanmsg())
 
 
 def mergemsg(repo, ui):
     # tweakdefaults requires `update` to have a rev hence the `.`
-    helpmessage(ui, "hg commit", updatecleanmsg())
+    helpmessage(ui, _("@prog@ commit"), updatecleanmsg())
 
 
 def bisectmsg(repo, ui):
     msg = _(
-        "To mark the changeset good:    hg bisect --good\n"
-        "To mark the changeset bad:     hg bisect --bad\n"
-        "To abort:                      hg bisect --reset\n"
+        "To mark the changeset good:    @prog@ bisect --good\n"
+        "To mark the changeset bad:     @prog@ bisect --bad\n"
+        "To abort:                      @prog@ bisect --reset\n"
     )
 
     state = hbisect.load_state(repo)

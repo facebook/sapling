@@ -99,7 +99,7 @@ def debugancestor(ui, repo, *args) -> None:
     elif len(args) == 2:
         if not repo:
             raise error.Abort(
-                _("there is no Mercurial repository here " "(.hg not found)")
+                _("there is no @Product@ repository here " "(.hg not found)")
             )
         rev1, rev2 = args
         r = repo.changelog
@@ -1840,10 +1840,10 @@ def debuginstall(ui, **opts) -> int:
 
     # hg version
     hgver = util.version()
-    fm.write("hgver", _("checking Mercurial version (%s)\n"), hgver.split("+")[0])
+    fm.write("hgver", _("checking @Product@ version (%s)\n"), hgver.split("+")[0])
     fm.write(
         "hgverextra",
-        _("checking Mercurial custom build (%s)\n"),
+        _("checking @Product@ custom build (%s)\n"),
         "+".join(hgver.split("+")[1:]),
     )
 
@@ -3420,7 +3420,7 @@ def debugssl(ui, repo, source=None, **opts) -> None:
     if not source:
         if not repo:
             raise error.Abort(
-                _("there is no Mercurial repository here, and no " "server specified")
+                _("there is no @Product@ repository here, and no " "server specified")
             )
         source = "default"
 
@@ -3558,7 +3558,7 @@ def debugtemplate(ui, repo, tmpl, **opts) -> None:
     if opts[r"rev"]:
         if repo is None:
             raise error.RepoError(
-                _("there is no Mercurial repository here " "(.hg not found)")
+                _("there is no @Product@ repository here " "(.hg not found)")
             )
         revs = scmutil.revrange(repo, opts[r"rev"])
 

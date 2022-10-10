@@ -7,14 +7,14 @@
 
 """extends the existing commit amend functionality
 
-Adds an hg amend command that amends the current parent changeset with the
-changes in the working copy.  Similar to the existing hg commit --amend
+Adds an @prog@ amend command that amends the current parent changeset with the
+changes in the working copy.  Similar to the existing @prog@ commit --amend
 except it doesn't prompt for the commit message unless --edit is provided.
 
 Allows amending changesets that have children and can automatically rebase
 the children onto the new version of the changeset.
 
-To make `hg previous` and `hg next` always pick the newest commit at
+To make `@prog@ previous` and `@prog@ next` always pick the newest commit at
 each step of walking up or down the stack instead of aborting when
 encountering non-linearity (equivalent to the --newest flag), enable
 the following config option::
@@ -41,7 +41,7 @@ following advice for resolution will be shown::
     [split]
     phabricatoradvice = edit the commit messages to remove the association
 
-    To make `hg next` prefer draft commits in case of ambiguity, enable the following config option:
+    To make `@prog@ next` prefer draft commits in case of ambiguity, enable the following config option:
 
     [update]
     nextpreferdraft = true
@@ -130,21 +130,23 @@ RESTACK_DEFAULT = RESTACK_ONLY_TRIVIAL
 
 @hint("strip-hide")
 def hinthide():
-    return _("'hg strip' may be deprecated in the future - " "use 'hg hide' instead")
+    return _(
+        "'@prog@ strip' may be deprecated in the future - " "use '@prog@ hide' instead"
+    )
 
 
 @hint("strip-uncommit")
 def hintstrip():
     return _(
-        "'hg strip' may be deprecated in the future - "
-        "use 'hg uncommit' or 'hg undo -k' to undo commits"
+        "'@prog@ strip' may be deprecated in the future - "
+        "use '@prog@ uncommit' or '@prog@ undo -k' to undo commits"
     )
 
 
 @hint("amend-restack")
 def hintrestack(node):
     return _(
-        "descendants of %s are left behind - use 'hg restack' to rebase " "them"
+        "descendants of %s are left behind - use '@prog@ restack' to rebase " "them"
     ) % short(node)
 
 
@@ -159,7 +161,7 @@ def hintautorebase():
 
 @hint("update-prev")
 def hintprev():
-    return _("use 'hg prev' to move to the parent changeset")
+    return _("use '@prog@ prev' to move to the parent changeset")
 
 
 @hint("split-phabricator")
@@ -193,7 +195,7 @@ def uisetup(ui):
         + commands.walkopts
         + commands.commitopts
         + commands.commitopts2,
-        _("hg amend [OPTION]... [FILE]..."),
+        _("@prog@ amend [OPTION]... [FILE]..."),
     )(amend)
 
     def has_automv(loaded):
@@ -272,20 +274,20 @@ def amend(ui, repo, *pats, **opts):
     Replaces your current commit with a new commit that contains the contents
     of the original commit, plus any pending changes.
 
-    By default, all pending changes (in other words, those reported by 'hg
+    By default, all pending changes (in other words, those reported by '@prog@
     status') are committed. To commit only some of your changes,
     you can:
 
     - Specify an exact list of files for which you want changes committed.
 
     - Use the -I or -X flags to pattern match file names to exclude or
-      include by using a fileset. See 'hg help filesets' for more
+      include by using a fileset. See '@prog@ help filesets' for more
       information.
 
     - Specify the --interactive flag to open a UI that will enable you
       to select individual insertions or deletions.
 
-    By default, hg amend reuses your existing commit message and does not
+    By default, @prog@ amend reuses your existing commit message and does not
     prompt you for changes. To change your commit message, you can:
 
     - Specify --edit / -e to open your configured editor to update the
@@ -303,7 +305,7 @@ def amend(ui, repo, *pats, **opts):
 
     When you amend a commit that has descendants, those descendants are
     rebased on top of the amended version of the commit, unless doing so
-    would result in merge conflicts. If this happens, run 'hg restack'
+    would result in merge conflicts. If this happens, run '@prog@ restack'
     to manually trigger the rebase so that you can go through the merge
     conflict resolution process.  You can also:
 
@@ -360,7 +362,7 @@ def amend(ui, repo, *pats, **opts):
     if fixup:
         ui.warn(
             _(
-                "warning: --fixup is deprecated and WILL BE REMOVED. use 'hg restack' instead.\n"
+                "warning: --fixup is deprecated and WILL BE REMOVED. use '@prog@ restack' instead.\n"
             )
         )
         fixupamend(ui, repo)
@@ -470,7 +472,7 @@ def amend(ui, repo, *pats, **opts):
 
         if rebase and haschildren:
             noconflictmsg = _(
-                "restacking would create conflicts (%s in %s), so you must run it manually\n(run `hg restack` manually to restack this commit's children)"
+                "restacking would create conflicts (%s in %s), so you must run it manually\n(run `@prog@ restack` manually to restack this commit's children)"
             )
             revs = [c.hex() for c in repo.set("(%n::)-%n", old.node(), old.node())]
             with ui.configoverride({("rebase", "noconflictmsg"): noconflictmsg}):
@@ -620,10 +622,10 @@ def mirrorwithmetadata(ctx, pctx, op):
 
 
 def wraprebase(orig, ui, repo, *pats, **opts):
-    """Wrapper around `hg rebase` adding the `--restack` option, which rebases
+    """Wrapper around `@prog@ rebase` adding the `--restack` option, which rebases
     all "unstable" descendants of an obsolete changeset onto the latest
     version of that changeset. This is similar to (and intended as a
-    replacement for) the `hg evolve --all` command.
+    replacement for) the `@prog@ evolve --all` command.
     """
     if opts["restack"]:
         # We can't abort if --dest is passed because some extensions

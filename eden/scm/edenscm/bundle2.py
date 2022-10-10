@@ -810,7 +810,7 @@ def getunbundler(ui, fp, magicstring=None):
         ui.debug(
             "error: invalid magic: %r (version %r), should be 'HG'\n" % (magic, version)
         )
-        raise error.Abort(_("not a Mercurial bundle"))
+        raise error.Abort(_("not a @Product@ bundle"))
     unbundlerclass = formatmap.get(version)
     if unbundlerclass is None:
         raise error.Abort(_("unknown bundle version %s") % version)

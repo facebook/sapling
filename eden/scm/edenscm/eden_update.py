@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-"""accelerated hg functionality in Eden checkouts
+"""accelerated @prog@ functionality in Eden checkouts
 
 This overrides the dirstate to check with the eden daemon for modifications,
 instead of doing a normal scan of the filesystem.

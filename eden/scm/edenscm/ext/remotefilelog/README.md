@@ -75,7 +75,7 @@ Usage
 Once you have configured the server, you can get a shallow clone by doing:
 
     :::bash
-    hg clone --shallow ssh://server//path/repo
+    @prog@ clone --shallow ssh://server//path/repo
 
 After that, all normal mercurial commands should work.
 
@@ -90,7 +90,7 @@ Limitations
 
 4. Tags are not supported in completely shallow repos. If you use tags in your repo you will have to specify `excludepattern=.hgtags` in your client configuration to ensure that file is downloaded. The include/excludepattern settings are experimental at the moment and have yet to be deployed in a production environment.
 
-5. A few commands will be slower. `hg log <filename>` will be much slower since it has to walk the entire commit history instead of just the filelog. Use `hg log -f <filename>` instead, which remains very fast.
+5. A few commands will be slower. `@prog@ log <filename>` will be much slower since it has to walk the entire commit history instead of just the filelog. Use `@prog@ log -f <filename>` instead, which remains very fast.
 
 Contributing
 ============

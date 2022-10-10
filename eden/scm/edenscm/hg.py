@@ -884,7 +884,7 @@ def update(repo, node, quietempty=False, updatecheck=None):
     stats = updaterepo(repo, node, False, updatecheck=updatecheck)
     _showstats(repo, stats, quietempty)
     if stats[3]:
-        repo.ui.status(_("use 'hg resolve' to retry unresolved file merges\n"))
+        repo.ui.status(_("use '@prog@ resolve' to retry unresolved file merges\n"))
     return stats[3] > 0
 
 
@@ -990,8 +990,8 @@ def merge(repo, node, force=None, remind=True, mergeforce=False, labels=None):
     if stats[3]:
         repo.ui.status(
             _(
-                "use 'hg resolve' to retry unresolved file merges "
-                "or 'hg update -C .' to abandon\n"
+                "use '@prog@ resolve' to retry unresolved file merges "
+                "or '@prog@ update -C .' to abandon\n"
             )
         )
     elif remind:

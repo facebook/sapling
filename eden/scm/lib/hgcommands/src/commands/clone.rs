@@ -515,8 +515,8 @@ pub fn doc() -> &'static str {
     especially for larger repositories. A side-effect of --stream clones is
     that storage settings and requirements on the remote are applied locally:
     a modern client may inherit legacy or inefficient storage used by the
-    remote or a legacy Mercurial client may not be able to clone from a
-    modern Mercurial remote.
+    remote or a legacy @Product@ client may not be able to clone from a
+    modern @Product@ remote.
 
     .. container:: verbose
 
@@ -527,7 +527,7 @@ pub fn doc() -> &'static str {
       incorrectly, but do not report errors. In these cases, use the
       --pull option to avoid hardlinking.
 
-      Mercurial will update the working directory to the first applicable
+      @Product@ will update the working directory to the first applicable
       revision from this list:
 
       a) null if -U or the source repository has no changesets
@@ -542,7 +542,7 @@ pub fn doc() -> &'static str {
       h) the tipmost head of the default branch
       i) tip
 
-      When cloning from servers that support it, Mercurial may fetch
+      When cloning from servers that support it, @Product@ may fetch
       pre-generated data from a server-advertised URL. When this is done,
       hooks operating on incoming changesets and changegroups may fire twice,
       once for the bundle fetched from the URL and another for any additional
@@ -554,27 +554,27 @@ pub fn doc() -> &'static str {
 
       - clone a remote repository to a new directory named hg/::
 
-          hg clone https://www.mercurial-scm.org/repo/hg/
+          @prog@ clone https://www.mercurial-scm.org/repo/hg/
 
       - create a lightweight local clone::
 
-          hg clone project/ project-feature/
+          @prog@ clone project/ project-feature/
 
       - clone from an absolute path on an ssh server (note double-slash)::
 
-          hg clone ssh://user@server//home/projects/alpha/
+          @prog@ clone ssh://user@server//home/projects/alpha/
 
       - do a streaming clone while checking out a specified version::
 
-          hg clone --stream http://server/repo -u 1.5
+          @prog@ clone --stream http://server/repo -u 1.5
 
       - create a repository without changesets after a particular revision::
 
-          hg clone -r 04e544 experimental/ good/
+          @prog@ clone -r 04e544 experimental/ good/
 
       - clone (and track) a particular named branch::
 
-          hg clone https://www.mercurial-scm.org/repo/hg/#stable
+          @prog@ clone https://www.mercurial-scm.org/repo/hg/#stable
 
     See :hg:`help urls` for details on specifying URLs.
 

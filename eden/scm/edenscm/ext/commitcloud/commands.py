@@ -99,15 +99,15 @@ def cloud(ui, repo, **opts):
     different copies of the same repository if they are connected to the same commit cloud workspace.
     This may be useful, for example, to keep your laptop and desktop computers in sync.
 
-    Use 'hg cloud join' to connect your repository to the default commit cloud workspace and get started.
+    Use '@command@ cloud join' to connect your repository to the default commit cloud workspace and get started.
 
-    Use 'hg cloud sync' to trigger a new backup and synchronization. Backups and synchronizations
+    Use '@command@ cloud sync' to trigger a new backup and synchronization. Backups and synchronizations
     also happen automatically in the background as you create and modify commits.
 
-    Use 'hg cloud switch' to change which workspace you are connected to.
-    Use 'hg cloud list' to see your workspaces.
+    Use '@command@ cloud switch' to change which workspace you are connected to.
+    Use '@command@ cloud list' to see your workspaces.
 
-    Use 'hg cloud leave' to stop using commit cloud workspaces.
+    Use '@command@ cloud leave' to stop using commit cloud workspaces.
     """
     raise error.Abort(
         "you need to specify a subcommand (run with --help to see a list of subcommands)"
@@ -151,7 +151,7 @@ def cloudjoin(ui, repo, **opts):
     synchronized between all repositories that have been connected
     to the same commit cloud workspace
 
-    Use `hg cloud sync` to trigger a new backup and synchronization.
+    Use `@prog@ cloud sync` to trigger a new backup and synchronization.
     """
 
     checkauthenticated(ui, repo)
@@ -194,7 +194,7 @@ def cloudjoin(ui, repo, **opts):
         if not switch and not merge:
             ui.status(
                 _(
-                    "this repository is already connected to the '%s' workspace, run `hg cloud join --help`\n"
+                    "this repository is already connected to the '%s' workspace, run `@prog@ cloud join --help`\n"
                 )
                 % currentworkspace,
                 component="commitcloud",
@@ -227,7 +227,7 @@ def cloudjoin(ui, repo, **opts):
                         raise error.Abort(
                             _(
                                 "the current workspace '%s' has been renamed or removed, please use '--force' option to skip the sync step\n"
-                                "note: using --force will discard the local view of commits but you can add commits back with `hg unhide`\n"
+                                "note: using --force will discard the local view of commits but you can add commits back with `@prog@ unhide`\n"
                             )
                             % currentworkspace
                         )
@@ -270,7 +270,7 @@ def cloudjoin(ui, repo, **opts):
                         raise error.Abort(
                             _(
                                 "this repository can not be switched to the '%s' workspace\n"
-                                "please update your location to a public commit first like `hg up %s`"
+                                "please update your location to a public commit first like `@prog@ up %s`"
                             )
                             % (workspacename, mainbookmark)
                         )
@@ -359,7 +359,7 @@ def cloudrejoin(ui, repo, **opts):
     If connection is successful, then commits and bookmarks will be synchronized
     between all repositories that have been connected to the same commit cloud workspace.
 
-    Use `hg cloud sync` to trigger a new synchronization.
+    Use `@prog@ cloud sync` to trigger a new synchronization.
     """
     if workspace.currentworkspace(repo):
         return
@@ -884,17 +884,19 @@ def cloudlistworspaces(ui, repo, **opts):
             % ui.label(currentworkspace[len(workspacenameprefix) :], "bold")
         )
 
-    ui.status(_("run `hg cloud sl -w <workspace name>` to view the commits\n"))
+    ui.status(_("run `@prog@ cloud sl -w <workspace name>` to view the commits\n"))
 
     ui.status(
         _(
-            "run `hg cloud switch -w <workspace name>` to switch to a different workspace\n"
+            "run `@prog@ cloud switch -w <workspace name>` to switch to a different workspace\n"
         )
     )
 
     if activeonly and archived:
         ui.status(
-            _("run `hg cloud list --all` to list all workspaces, including deleted\n")
+            _(
+                "run `@prog@ cloud list --all` to list all workspaces, including deleted\n"
+            )
         )
 
 
@@ -1305,7 +1307,7 @@ def cloudcheck(ui, repo, **opts):
 def cloudenable(ui, repo, **opts):
     """enable automatic backup or sync
 
-    Enables backup or sync that has previously been disabled by ``hg cloud disable``.
+    Enables backup or sync that has previously been disabled by ``@prog@ cloud disable``.
     """
 
     if background.autobackupenabled(repo):
@@ -1394,7 +1396,7 @@ def cloudstatus(ui, repo, **opts):
         if not service.get(ui).getworkspaces(ccutil.getreponame(repo), workspacename):
             ui.write(
                 _(
-                    "Workspace: %s (renamed or removed) (run `hg cloud list` and switch to a different one)\n"
+                    "Workspace: %s (renamed or removed) (run `@prog@ cloud list` and switch to a different one)\n"
                 )
                 % ui.label(workspacename[len(userworkspaceprefix) :], "bold")
             )
@@ -1489,7 +1491,7 @@ def pushbackup(ui, repo, *revs, **opts):
 
     If no revision is specified, backs up all visible commits.
 
-    'hg pushbackup' is deprecated in favour of 'hg cloud backup'.
+    '@command@ pushbackup' is deprecated in favour of '@command@ cloud backup'.
     """
     return cloudbackup(ui, repo, *revs, **opts)
 
@@ -1506,7 +1508,7 @@ def isbackedup(ui, repo, **opts):
 
     If no revision are specified then it checks working copy parent.
 
-    'hg isbackedup' is deprecated in favour of 'hg cloud check'.
+    '@command@ isbackedup' is deprecated in favour of '@command@ cloud check'.
     """
     return cloudcheck(ui, repo, **opts)
 

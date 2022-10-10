@@ -68,7 +68,9 @@ def extsetup(ui):
     rebasemod = _checkextension("rebase", ui)
 
 
-@command("drop", [("r", "rev", [], _("revision to drop"))], _("hg drop [OPTION] [REV]"))
+@command(
+    "drop", [("r", "rev", [], _("revision to drop"))], _("@prog@ drop [OPTION] [REV]")
+)
 def drop(ui, repo, *revs, **opts):
     """drop changeset from stack"""
     if not rebasemod:
@@ -112,8 +114,8 @@ def drop(ui, repo, *revs, **opts):
                             _(
                                 "conflict occurred during drop: "
                                 + "please fix it by running "
-                                + "'hg rebase --continue', "
-                                + "and then re-run 'hg drop'\n"
+                                + "'@prog@ rebase --continue', "
+                                + "and then re-run '@prog@ drop'\n"
                             )
                         )
                         raise

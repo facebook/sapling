@@ -66,7 +66,7 @@ def split(ui, repo, *revs, **opts):
     revarg = (list(revs) + opts.get("rev")) or ["."]
     if len(revarg) != 1:
         msg = _("more than one revset is given")
-        hnt = _("use either `hg split <rs>` or `hg split --rev <rs>`, not both")
+        hnt = _("use either `@prog@ split <rs>` or `@prog@ split --rev <rs>`, not both")
         raise error.Abort(msg, hint=hnt)
 
     rev = scmutil.revsingle(repo, revarg[0])

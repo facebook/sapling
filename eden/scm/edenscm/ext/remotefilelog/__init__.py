@@ -836,10 +836,10 @@ def openrepo(ui, repopath):
             repo.close()
 
 
-@command("gc", [], _("hg gc"), optionalrepo=True)
+@command("gc", [], _("@prog@ gc"), optionalrepo=True)
 def gc(ui, repo, *args, **opts):
     """garbage collect the client caches"""
-    ui.warn(_("hg gc is no longer supported."))
+    ui.warn(_("@prog@ gc is no longer supported."))
 
     if not sysplatform.startswith("win"):
         cachepath = ui.config("remotefilelog", "cachepath")
@@ -1001,7 +1001,7 @@ def _revertprefetch(orig, repo, ctx, *files):
 @command(
     "debugremotefilelog",
     [("d", "decompress", None, _("decompress the filelog first"))],
-    _("hg debugremotefilelog <path>"),
+    _("@prog@ debugremotefilelog <path>"),
     norepo=True,
 )
 def debugremotefilelog(ui, path, **opts):
@@ -1011,7 +1011,7 @@ def debugremotefilelog(ui, path, **opts):
 @command(
     "verifyremotefilelog",
     [("d", "decompress", None, _("decompress the filelogs first"))],
-    _("hg verifyremotefilelogs <directory>"),
+    _("@prog@ verifyremotefilelogs <directory>"),
     norepo=True,
 )
 def verifyremotefilelog(ui, path, **opts):
@@ -1025,7 +1025,7 @@ def verifyremotefilelog(ui, path, **opts):
         ("", "node", "", _("dump the contents of node"), "NODE"),
         ("", "node-delta", "", _("dump the delta chain info of node"), "NODE"),
     ],
-    _("hg debugdatapack <paths>"),
+    _("@prog@ debugdatapack <paths>"),
     norepo=True,
 )
 def debugdatapack(ui, *paths, **opts):
@@ -1039,7 +1039,7 @@ def debugdatapack(ui, *paths, **opts):
         ("", "node", "", _("dump the contents of node"), "NODE"),
         ("", "node-delta", "", _("dump the delta chain info of node"), "NODE"),
     ],
-    _("hg debugindexedlogdatastore <paths>"),
+    _("@prog@ debugindexedlogdatastore <paths>"),
     norepo=True,
 )
 def debugindexedlogdatastore(ui, *paths, **opts):
@@ -1049,7 +1049,7 @@ def debugindexedlogdatastore(ui, *paths, **opts):
 @command(
     "debughistorypack",
     [("", "long", None, _("print the long hashes"))],
-    _("hg debughistorypack <path>"),
+    _("@prog@ debughistorypack <path>"),
     norepo=True,
 )
 def debughistorypack(ui, *paths, **opts):
@@ -1059,19 +1059,19 @@ def debughistorypack(ui, *paths, **opts):
 @command(
     "debugindexedloghistorystore",
     [("", "long", None, _("print the long hashes"))],
-    _("hg debugindexedloghistorystore <path>"),
+    _("@prog@ debugindexedloghistorystore <path>"),
     norepo=True,
 )
 def debugindexedloghistorystore(ui, *paths, **opts):
     return debugcommands.debugindexedloghistorystore(ui, paths, **opts)
 
 
-@command("debugwaitonrepack", [], _("hg debugwaitonrepack"))
+@command("debugwaitonrepack", [], _("@prog@ debugwaitonrepack"))
 def debugwaitonrepack(ui, repo, **opts):
     return debugcommands.debugwaitonrepack(repo)
 
 
-@command("debugwaitonprefetch", [], _("hg debugwaitonprefetch"))
+@command("debugwaitonprefetch", [], _("@prog@ debugwaitonprefetch"))
 def debugwaitonprefetch(ui, repo, **opts):
     return debugcommands.debugwaitonprefetch(repo)
 
@@ -1104,7 +1104,7 @@ def resolveprefetchopts(ui, opts):
         ("b", "base", "", _("rev that is assumed to already be local")),
     ]
     + commands.walkopts,
-    _("hg prefetch [OPTIONS] [FILE...]"),
+    _("@prog@ prefetch [OPTIONS] [FILE...]"),
 )
 def prefetch(ui, repo, *pats, **opts):
     """prefetch file revisions from the server
@@ -1121,7 +1121,7 @@ def prefetch(ui, repo, *pats, **opts):
     fullrepo = not (pats or opts.get("include") or opts.get("exclude"))
     if "eden" in repo.requirements and fullrepo:
         raise error.Abort(
-            _("`hg prefetch` must be called with paths in an EdenFS repository!"),
+            _("`@prog@ prefetch` must be called with paths in an EdenFS repository!"),
             hint="Specify exact paths you want to fetch i.e. run `hg prefetch DIR/**`",
         )
 
@@ -1141,7 +1141,7 @@ def prefetch(ui, repo, *pats, **opts):
         ("", "background", None, _("run in a background process"), None),
         ("", "incremental", None, _("do an incremental repack"), None),
     ],
-    _("hg repack [OPTIONS]"),
+    _("@prog@ repack [OPTIONS]"),
 )
 def repack(ui, repo, *pats, **opts):
     if opts.get("background"):

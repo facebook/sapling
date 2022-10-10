@@ -698,8 +698,8 @@ def _setupdirstate(ui) -> None:
     # Prevent adding files that are outside the sparse checkout
     editfuncs = ["normal", "add", "normallookup", "copy", "remove", "merge"]
     hint = _(
-        "include file with `hg sparse include <pattern>` or use "
-        + "`hg add -s <file>` to include file directory while adding"
+        "include file with `@prog@ sparse include <pattern>` or use "
+        + "`@prog@ add -s <file>` to include file directory while adding"
     )
     for func in editfuncs:
 
@@ -1525,7 +1525,7 @@ def _warnfullcheckout(repo) -> None:
     if warnlevel == "hardblock":
         raise error.Abort(
             _("full checkouts are not supported for this repository"),
-            hint=_("use EdenFS or hg sparse"),
+            hint=_("use EdenFS or @prog@ sparse"),
         )
     if warnlevel == "softblock":
         if repo.ui.configbool("sparse", "bypassfullcheckoutwarn", False):
@@ -1533,7 +1533,7 @@ def _warnfullcheckout(repo) -> None:
         else:
             raise error.Abort(
                 _("full checkouts are not supported for this repository"),
-                hint=_("use EdenFS or hg sparse"),
+                hint=_("use EdenFS or @prog@ sparse"),
             )
     if warnlevel == "hint":
         hintutil.trigger("sparse-fullcheckout")
@@ -1541,7 +1541,7 @@ def _warnfullcheckout(repo) -> None:
         repo.ui.warn(
             _(
                 "warning: full checkouts will soon be disabled in "
-                "this repository. Use EdenFS or hg sparse to get a "
+                "this repository. Use EdenFS or @prog@ sparse to get a "
                 "smaller repository.\n"
             )
         )
@@ -1758,7 +1758,7 @@ def hintsparseunsafeprofile(file, repo, ui) -> str:
 @hint("sparse-explain-verbose")
 def hintexplainverbose(*profiles) -> str:
     return _(
-        "use 'hg sparse explain --verbose %s' to include the total file "
+        "use '@prog@ sparse explain --verbose %s' to include the total file "
         "size for a give profile"
     ) % " ".join(profiles)
 
@@ -1782,7 +1782,7 @@ def hintlistverbose(profiles, filters, load_matcher) -> Optional[str]:
 def hintwarnfullcheckout() -> str:
     return _(
         "warning: full checkouts will eventually be disabled in "
-        "this repository. Use EdenFS or hg sparse to get a "
+        "this repository. Use EdenFS or @prog@ sparse to get a "
         "smaller repository."
     )
 
@@ -2939,7 +2939,7 @@ def _checknonexistingprofiles(ui, repo, profiles) -> None:
                     "current commit, it will only take effect "
                     "when you check out a commit containing a "
                     "profile with that name\n"
-                    "(if the path is a typo, use 'hg sparse disableprofile' to remove it)\n"
+                    "(if the path is a typo, use '@prog@ sparse disableprofile' to remove it)\n"
                 )
                 % p
             )

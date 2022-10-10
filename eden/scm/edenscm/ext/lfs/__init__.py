@@ -214,7 +214,7 @@ def _adhocstores(ui, url):
     return blobstoremod.memlocal(), blobstore.remote(ui)
 
 
-@command("debuglfssend", [], _("hg debuglfssend [URL]"), norepo=True)
+@command("debuglfssend", [], _("@prog@ debuglfssend [URL]"), norepo=True)
 def debuglfssend(ui, url=None):
     """read from stdin, send it as a single file to LFS server
 
@@ -236,7 +236,7 @@ def debuglfssend(ui, url=None):
 @command(
     "debuglfsreceive|debuglfsrecv",
     [],
-    _("hg debuglfsreceive OID SIZE [URL]"),
+    _("@prog@ debuglfsreceive OID SIZE [URL]"),
     norepo=True,
 )
 def debuglfsreceive(ui, oid, size, url=None):
@@ -253,7 +253,7 @@ def debuglfsreceive(ui, oid, size, url=None):
 @command(
     "debuglfsreceiveall|debuglfsrecvall",
     [],
-    _("hg debuglfsreceiveall URL OID SIZE [OID SIZE]"),
+    _("@prog@ debuglfsreceiveall URL OID SIZE [OID SIZE]"),
     norepo=True,
 )
 def debuglfsreceiveall(ui, url, *objs):
@@ -286,7 +286,7 @@ def debuglfsreceiveall(ui, url, *objs):
             _("respect sparse profile, " "(otherwise check all files)"),
         ),
     ],
-    _("hg debuglfsdownload -r REV1 -r REV2"),
+    _("@prog@ debuglfsdownload -r REV1 -r REV2"),
     norepo=False,
 )
 def debuglfsdownload(ui, repo, *pats, **opts):

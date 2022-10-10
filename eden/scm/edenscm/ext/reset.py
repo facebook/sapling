@@ -30,7 +30,7 @@ testedwith = "ships-with-fb-ext"
         ("k", "keep", None, _("keeps the old changesets the bookmark pointed" " to")),
         ("r", "rev", "", _("revision to reset to")),
     ],
-    _("hg reset [REV]"),
+    _("@prog@ reset [REV]"),
 )
 def reset(ui, repo, *args, **opts):
     """moves the active bookmark and working copy parent to the desired rev

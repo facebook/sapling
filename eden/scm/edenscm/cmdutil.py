@@ -337,7 +337,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
         merge = len(wctx.parents()) > 1
         if merge:
             raise error.Abort(
-                _("cannot partially commit a merge " '(use "hg commit" instead)')
+                _("cannot partially commit a merge " '(use "@prog@ commit" instead)')
             )
 
         def fail(f, msg):
@@ -699,37 +699,37 @@ def _helpmessage(continuecmd, abortcmd):
 
 
 def _rebasemsg():
-    return _helpmessage("hg rebase --continue", "hg rebase --abort")
+    return _helpmessage(_("@prog@ rebase --continue"), _("@prog@ rebase --abort"))
 
 
 def _histeditmsg():
-    return _helpmessage("hg histedit --continue", "hg histedit --abort")
+    return _helpmessage(_("@prog@ histedit --continue"), _("@prog@ histedit --abort"))
 
 
 def _unshelvemsg():
-    return _helpmessage("hg unshelve --continue", "hg unshelve --abort")
+    return _helpmessage(_("@prog@ unshelve --continue"), _("@prog@ unshelve --abort"))
 
 
 def _updatecleanmsg(dest=None):
     warning = _("warning: this will discard uncommitted changes")
-    return "hg update --clean %s    (%s)" % (dest or ".", warning)
+    return _("@prog@ update --clean %s    (%s)") % (dest or ".", warning)
 
 
 def _graftmsg():
     # tweakdefaults requires `update` to have a rev hence the `.`
-    return _helpmessage("hg graft --continue", _updatecleanmsg())
+    return _helpmessage(_("@prog@ graft --continue"), _updatecleanmsg())
 
 
 def _mergemsg():
     # tweakdefaults requires `update` to have a rev hence the `.`
-    return _helpmessage("hg commit", _updatecleanmsg())
+    return _helpmessage(_("@prog@ commit"), _updatecleanmsg())
 
 
 def _bisectmsg():
     msg = _(
-        "To mark the changeset good:    hg bisect --good\n"
-        "To mark the changeset bad:     hg bisect --bad\n"
-        "To abort:                      hg bisect --reset\n"
+        "To mark the changeset good:    @prog@ bisect --good\n"
+        "To mark the changeset bad:     @prog@ bisect --bad\n"
+        "To abort:                      @prog@ bisect --reset\n"
     )
     return _commentlines(msg)
 
@@ -1268,7 +1268,7 @@ def copy(ui, repo, pats, opts, rename=False):
                     if rename:
                         hint = (
                             _(
-                                "(hg rename %s to replace the file by "
+                                "(@prog@ rename %s to replace the file by "
                                 "recording a rename)\n"
                             )
                             % flags
@@ -1276,7 +1276,7 @@ def copy(ui, repo, pats, opts, rename=False):
                     else:
                         hint = (
                             _(
-                                "(hg copy %s to replace the file by "
+                                "(@prog@ copy %s to replace the file by "
                                 "recording a copy)\n"
                             )
                             % flags
@@ -1284,9 +1284,9 @@ def copy(ui, repo, pats, opts, rename=False):
                 else:
                     msg = _("%s: not overwriting - file exists\n")
                     if rename:
-                        hint = _("(hg rename --after to record the rename)\n")
+                        hint = _("(@prog@ rename --after to record the rename)\n")
                     else:
-                        hint = _("(hg copy --after to record the copy)\n")
+                        hint = _("(@prog@ copy --after to record the copy)\n")
                 ui.warn(msg % reltarget)
                 ui.warn(hint)
                 return
@@ -1541,7 +1541,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
             parents.append(repo[nullid])
         if opts.get("exact"):
             if not nodeid or not p1:
-                raise error.Abort(_("not a Mercurial patch"))
+                raise error.Abort(_("not a @Product@ patch"))
             p1 = repo[p1]
             p2 = repo[p2 or nullid]
         elif p2:
@@ -3445,7 +3445,7 @@ def remove(ui, repo, m, prefix, after, force, warnings=None):
                 warnings.append(
                     _(
                         "not removing %s: file has been marked for"
-                        " add (use 'hg forget' to undo add)\n"
+                        " add (use '@prog@ forget' to undo add)\n"
                     )
                     % m.rel(f)
                 )
@@ -4398,14 +4398,14 @@ unfinishedstates = [
         True,
         False,
         _("graft in progress"),
-        _("use 'hg graft --continue' or 'hg graft --abort' to abort"),
+        _("use '@prog@ graft --continue' or '@prog@ graft --abort' to abort"),
     ),
     (
         "updatemergestate",
         True,
         True,
         _("update --merge in progress"),
-        _("use 'hg update --continue' to continue"),
+        _("use '@prog@ update --continue' to continue"),
     ),
     (
         "updatestate",
@@ -4446,8 +4446,8 @@ def clearunfinished(repo):
 
 
 afterresolvedstates = [
-    ("graftstate", "hg graft --continue"),
-    ("updatemergestate", "hg update --continue"),
+    ("graftstate", _("@prog@ graft --continue")),
+    ("updatemergestate", _("@prog@ update --continue")),
 ]
 
 
@@ -4466,7 +4466,7 @@ def howtocontinue(repo):
         if repo.localvfs.exists(f):
             return contmsg % msg, True
     if repo[None].dirty(missing=True, merge=False, branch=False):
-        return contmsg % _("hg commit"), False
+        return contmsg % _("@prog@ commit"), False
     return None, None
 
 

@@ -45,7 +45,7 @@ command = registrar.command(cmdtable)
         ("", "to", "", _("destination parents"), _("TO")),
         ("", "pushrebase", False, _("pushrebase commit")),
     ],
-    _("hg debugserializecommit -r REV -d DEST"),
+    _("@prog@ debugserializecommit -r REV -d DEST"),
 )
 def debugserializecommit(ui, repo, *args, **opts):
     """serialize commit in format consumable by 'memcommit' command
@@ -95,7 +95,7 @@ def debugserializecommit(ui, repo, *args, **opts):
     ui.writebytes(serialization.serialize(params.todict()))
 
 
-@command("memcommit", [], _("hg memcommit"))
+@command("memcommit", [], _("@prog@ memcommit"))
 def memcommit(ui, repo, *args, **opts):
     """make commits without a working copy
 

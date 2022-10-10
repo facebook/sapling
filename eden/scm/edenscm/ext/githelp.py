@@ -7,8 +7,8 @@
 
 Tries to map a given git command to a Mercurial command:
 
-  $ hg githelp -- git checkout master
-  hg update master
+  $ @prog@ githelp -- git checkout master
+  @prog@ update master
 
 If an unknown command or parameter combination is detected, an error is
 produced, followed by a footer with instructions on how to contact the
@@ -60,12 +60,12 @@ def convert(s: str) -> str:
 def githelp(ui, repo, *args, **kwargs):
     """suggests the Mercurial equivalent of the given git command
 
-    Usage: hg githelp -- <git command>
+    Usage: @prog@ githelp -- <git command>
     """
 
     if len(args) == 0 or (len(args) == 1 and args[0] == "git"):
         raise error.Abort(
-            _("missing git command - " "usage: hg githelp -- <git command>")
+            _("missing git command - " "usage: @prog@ githelp -- <git command>")
         )
 
     if args[0] == "git":
@@ -166,7 +166,7 @@ def add(ui, repo, *args, **kwargs) -> None:
     args, opts = parseoptions(ui, cmdoptions, args)
 
     if opts.get("patch"):
-        ui.status(_("note: hg crecord has a better UI to record changes\n"))
+        ui.status(_("note: @prog@ crecord has a better UI to record changes\n"))
         ui.status(
             _(
                 "note: record and crecord will commit when complete, "
@@ -182,7 +182,7 @@ def add(ui, repo, *args, **kwargs) -> None:
         else:
             ui.status(
                 _(
-                    "note: use hg addremove to remove files that have "
+                    "note: use @prog@ addremove to remove files that have "
                     "been deleted.\n\n"
                 )
             )
@@ -191,7 +191,7 @@ def add(ui, repo, *args, **kwargs) -> None:
         else:
             ui.status(
                 _(
-                    "note: use hg addremove to remove files that have "
+                    "note: use @prog@ addremove to remove files that have "
                     "been deleted.\n\n"
                 )
             )
@@ -220,7 +220,7 @@ def apply(ui, repo, *args, **kwargs) -> None:
 
 
 def bisect(ui, repo, *args, **kwargs) -> None:
-    ui.status(_("See 'hg help bisect' for how to use bisect.\n\n"))
+    ui.status(_("See '@prog@ help bisect' for how to use bisect.\n\n"))
 
 
 def blame(ui, repo, *args, **kwargs) -> None:
@@ -251,7 +251,7 @@ def branch(ui, repo, *args, **kwargs) -> None:
     cmd = Command("bookmark")
 
     if opts.get("set_upstream") or opts.get("set_upstream_to"):
-        ui.status(_("Mercurial has no concept of upstream branches\n"))
+        ui.status(_("@Product@ has no concept of upstream branches\n"))
         return
     elif opts.get("delete"):
         cmd = Command("hide")
@@ -545,7 +545,7 @@ def difftool(ui, repo, *args, **kwargs) -> None:
             "extdiff =\n"
             "to the [extensions] section and then running\n\n"
             "hg extdiff -p <program>\n\n"
-            "See 'hg help extdiff' and 'hg help -e extdiff' for more "
+            "See '@prog@ help extdiff' and '@prog@ help -e extdiff' for more "
             "information.\n"
         )
     )
@@ -624,7 +624,7 @@ def log(ui, repo, *args, **kwargs) -> None:
     )
     ui.status(
         _(
-            "note: see hg help revset for information on how to filter "
+            "note: see @prog@ help revset for information on how to filter "
             + "log output.\n\n"
         )
     )
@@ -649,7 +649,7 @@ def log(ui, repo, *args, **kwargs) -> None:
             ui.status(
                 _(
                     "note: --format format:??? equates to Mercurial's "
-                    + "--template. See hg help templates for more info.\n\n"
+                    + "--template. See @prog@ help templates for more info.\n\n"
                 )
             )
             cmd["--template"] = "???"
@@ -657,7 +657,7 @@ def log(ui, repo, *args, **kwargs) -> None:
             ui.status(
                 _(
                     "note: --pretty/format/oneline equate to Mercurial's "
-                    + "--style or --template. See hg help templates for more info."
+                    + "--style or --template. See @prog@ help templates for more info."
                     + "\n\n"
                 )
             )
@@ -704,7 +704,7 @@ def lsfiles(ui, repo, *args, **kwargs) -> None:
         cmd = Command("files")
     if opts.get("stage"):
         ui.status(
-            _("note: Mercurial doesn't have a staging area, ignoring " "--stage\n")
+            _("note: @Product@ doesn't have a staging area, ignoring " "--stage\n")
         )
     if opts.get("_zero"):
         cmd["-0"] = None
@@ -738,7 +738,7 @@ def mergebase(ui, repo, *args, **kwargs) -> None:
 
     ui.status(
         _("NOTE: ancestors() is part of the revset language.\n"),
-        _("Learn more about revsets with 'hg help revsets'\n\n"),
+        _("Learn more about revsets with '@prog@ help revsets'\n\n"),
     )
     ui.status((str(cmd)), "\n")
 
@@ -849,14 +849,14 @@ def rebase(ui, repo, *args, **kwargs) -> None:
         cmd["--interactive"] = None
         ui.status(
             _(
-                "note: if you don't need to rebase use 'hg histedit'. "
+                "note: if you don't need to rebase use '@prog@ histedit'. "
                 + "It just edits history.\n\n"
             )
         )
         if len(args) > 0:
             ui.status(
                 _(
-                    "also note: 'hg histedit' will automatically detect"
+                    "also note: '@prog@ histedit' will automatically detect"
                     " your stack, so no second argument is necessary.\n\n"
                 )
             )
@@ -870,7 +870,7 @@ def rebase(ui, repo, *args, **kwargs) -> None:
         ui.status(
             _(
                 "note: if you're trying to lift a commit off one branch, "
-                + "try hg rebase -d <destination commit> -s <commit to be lifted>"
+                + "try @prog@ rebase -d <destination commit> -s <commit to be lifted>"
                 + "\n\n"
             )
         )
@@ -911,9 +911,9 @@ def reflog(ui, repo, *args, **kwargs) -> None:
     ui.status(str(cmd), "\n\n")
     ui.status(
         _(
-            "note: in hg commits can be deleted from repo but we always"
+            "note: in @prog@ commits can be deleted from repo but we always"
             " have backups.\n"
-            "Please use 'hg backups --restore' or 'hg reset'"
+            "Please use '@prog@ backups --restore' or 'hg reset'"
             + " to restore from backups.\n"
         )
     )
@@ -951,7 +951,9 @@ def revert(ui, repo, *args, **kwargs) -> None:
     args, opts = parseoptions(ui, cmdoptions, args)
 
     if len(args) > 1:
-        ui.status(_("note: hg backout doesn't support multiple commits at once\n\n"))
+        ui.status(
+            _("note: @prog@ backout doesn't support multiple commits at once\n\n")
+        )
 
     cmd = Command("backout")
     if args:
@@ -967,10 +969,10 @@ def revparse(ui, repo, *args, **kwargs) -> None:
     if opts.get("show_cdup") or opts.get("show_toplevel"):
         cmd = Command("root")
         if opts.get("show_cdup"):
-            ui.status(_("note: hg root prints the root of the repository\n\n"))
+            ui.status(_("note: @prog@ root prints the root of the repository\n\n"))
         ui.status((str(cmd)), "\n")
     else:
-        ui.status(_("note: see hg help revset for how to refer to commits\n"))
+        ui.status(_("note: see @prog@ help revset for how to refer to commits\n"))
 
 
 def rm(ui, repo, *args, **kwargs) -> None:

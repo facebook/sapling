@@ -198,7 +198,7 @@ def readbundle(ui, fh, fname, vfs=None):
     magic, version = header[0:2], header[2:4]
 
     if magic != "HG":
-        raise error.Abort(_("%s: not a Mercurial bundle") % fname)
+        raise error.Abort(_("%s: not a @Product@ bundle") % fname)
     if version == "10":
         if alg is None:
             alg = pycompat.decodeutf8(changegroup.readexactly(fh, 2))
@@ -251,7 +251,7 @@ def getbundlespec(ui, fh):
                     raise error.Abort(
                         _("changegroup version %s does not have " "a known bundlespec")
                         % version,
-                        hint=_("try upgrading your Mercurial " "client"),
+                        hint=_("try upgrading your @Product@ " "client"),
                     )
 
         if not version:

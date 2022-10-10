@@ -225,7 +225,7 @@ def _smartlog(orig, ui, repo, **opts):
 def _smartlogusernamemigrationmsg(repo):
     return _(
         "username configuration has been changed\n"
-        "please, run `hg cloud reclaim` to migrate your commit cloud workspaces\n"
+        "please, run `@prog@ cloud reclaim` to migrate your commit cloud workspaces\n"
     )
 
 
@@ -233,9 +233,9 @@ def _smartlogusernamemigrationmsg(repo):
 def _smartlogomittedcommitsmsg(repo):
     return _(
         "some older commits or bookmarks have not been synced to this repo\n"
-        "(run 'hg cloud sl' to see all of the commits in your workspace)\n"
-        "(run 'hg pull -r HASH' to fetch commits by hash)\n"
-        "(run 'hg cloud sync --full' to fetch everything - this may be slow)\n"
+        "(run '@prog@ cloud sl' to see all of the commits in your workspace)\n"
+        "(run '@prog@ pull -r HASH' to fetch commits by hash)\n"
+        "(run '@prog@ cloud sync --full' to fetch everything - this may be slow)\n"
     )
 
 
@@ -272,7 +272,7 @@ def hintcommitcloudswitch(ui, active):
         % wliststr,
         "bold",
     ) + _(
-        "run `hg cloud list` inside the repo to see all your workspaces,\n"
+        "run `@prog@ cloud list` inside the repo to see all your workspaces,\n"
         "find the one the repo is connected to and learn how to switch between them\n"
     )
 

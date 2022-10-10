@@ -1698,7 +1698,7 @@ class localrepository(object):
                 # Non-empty transaction already exists - bail.
                 raise errormod.AbandonedTransactionFoundError(
                     _("abandoned transaction found"),
-                    hint=_("run 'hg recover' to clean up transaction"),
+                    hint=_("run '@prog@ recover' to clean up transaction"),
                 )
             else:
                 self.ui.status(_("cleaning up empty abandoned transaction\n"))

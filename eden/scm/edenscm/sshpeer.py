@@ -225,7 +225,7 @@ class sshpeer(stdiopeer.stdiopeer):
         self.ui.metrics.gauge("ssh_connections")
 
         def badresponse(errortext):
-            msg = _("no suitable response from remote hg")
+            msg = _("no suitable response from remote @prog@")
             if errortext:
                 msg += ": '%s'" % errortext
             hint = self.ui.config("ui", "ssherrorhint")

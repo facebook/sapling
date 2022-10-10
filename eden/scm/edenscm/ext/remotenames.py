@@ -925,7 +925,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         other = hg.peer(repo, opts, dest)
     except error.RepoError:
         if dest == "default-push":
-            hint = _('see the "path" section in "hg help config"')
+            hint = _('see the "path" section in "@prog@ help config"')
             raise error.Abort(_("default repository not configured!"), hint=hint)
         else:
             raise

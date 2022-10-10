@@ -41,7 +41,7 @@ hex = node.hex
         ("M", "reuse-message", "", _("reuse commit message from REV"), _("REV")),
     ]
     + (commands.commitopts + commands.commitopts2 + commands.formatteropts),
-    _("hg fold [OPTION]... (--from [-r] REV | --exact [-r] REV...)"),
+    _("@prog@ fold [OPTION]... (--from [-r] REV | --exact [-r] REV...)"),
 )
 def fold(ui, repo, *revs, **opts):
     """combine multiple commits into a single commit
@@ -59,26 +59,26 @@ def fold(ui, repo, *revs, **opts):
 
      - Fold from the current revision to its parent::
 
-         hg fold --from .^
+         @prog@ fold --from .^
 
      - Fold all draft revisions into the current revision::
 
-         hg fold --from 'draft()'
+         @prog@ fold --from 'draft()'
 
        See :hg:`help phases` for more about draft revisions and
        :hg:`help revsets` for more about the `draft()` keyword
 
      - Fold revisions between 3 and 6 into the current revision::
 
-         hg fold --from 3::6
+         @prog@ fold --from 3::6
 
      - Fold revisions 3 and 4:
 
-        hg fold "3 + 4" --exact
+        @prog@ fold "3 + 4" --exact
 
      - Only fold revisions linearly between foo and @::
 
-         hg fold foo::@ --exact
+         @prog@ fold foo::@ --exact
     """
     revs = list(revs)
     revs.extend(opts["rev"])

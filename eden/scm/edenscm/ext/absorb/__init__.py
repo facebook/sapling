@@ -995,7 +995,7 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
     + commands.dryrunopts
     + commands.templateopts
     + commands.walkopts,
-    _("hg absorb [OPTION] [FILE]..."),
+    _("@prog@ absorb [OPTION] [FILE]..."),
 )
 def absorbcmd(ui, repo, *pats, **opts):
     """apply pending corrections into a stack of commits
@@ -1046,7 +1046,7 @@ def _wrapamend(flag):
             options = entry[1]
             msg = _(
                 "incorporate corrections into stack. "
-                "see 'hg help absorb' for details"
+                "see '@prog@ help absorb' for details"
             )
             options.append(("", flag, None, msg))
             return

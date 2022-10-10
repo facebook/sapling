@@ -21,7 +21,7 @@ For example, given the following input::
     a
 
 4 changesets and 4 local tags will be created.
-`hg log -G -T "{rev} {desc} (tag: {tags})"` will output::
+`@prog@ log -G -T "{rev} {desc} (tag: {tags})"` will output::
 
     o  3 d (tag: d tip)
     |
@@ -42,7 +42,7 @@ following ASCII graph as input::
      |     /          |    |
     ancestor(c,d)     a   baz
 
-The result (`hg log -G -T "{desc}"`) will look like::
+The result (`@prog log -G -T "{desc}"`) will look like::
 
     o    foo
     |\

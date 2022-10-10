@@ -7,12 +7,12 @@
 
 This extension changes defaults to be more user friendly.
 
-  hg bookmarks  always use unfiltered repo (--hidden)
-  hg log        always follows history (-f)
-  hg rebase     aborts without arguments
-  hg update     aborts without arguments
-  hg grep       greps the working directory instead of history
-  hg histgrep   renamed from grep
+  @prog@ bookmarks  always use unfiltered repo (--hidden)
+  @prog@ log        always follows history (-f)
+  @prog@ rebase     aborts without arguments
+  @prog@ update     aborts without arguments
+  @prog@ grep       greps the working directory instead of history
+  @prog@ histgrep   renamed from grep
 
 Config::
 
@@ -111,7 +111,7 @@ configitem(
     "tweakdefaults",
     "bmnodesthint",
     default=_(
-        "set up tracking with `hg book -t <destination>` "
+        "set up tracking with `@prog@ book -t <destination>` "
         "or manually supply --dest / -d"
     ),
 )
@@ -120,7 +120,7 @@ configitem(
     "tweakdefaults",
     "nodesthint",
     default=_(
-        "set up tracking with `hg book <name> -t <destination>` "
+        "set up tracking with `@prog@ book <name> -t <destination>` "
         "or manually supply --dest / -d"
     ),
 )
@@ -325,7 +325,7 @@ def pull(orig, ui, repo, *args, **opts):
             hint = ui.config("tweakdefaults", "nodesthint")
         elif not opts.get("bookmark") and not opts.get("rev"):  # update
             mess = _("you must specify a destination for the update")
-            hint = _("use `hg pull --update --dest <destination>`")
+            hint = _("use `@prog@ pull --update --dest <destination>`")
         if mess is not None:
             raise error.Abort(mess, hint=hint)
 

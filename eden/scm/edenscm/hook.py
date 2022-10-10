@@ -249,7 +249,7 @@ def runhooks(ui, repo, htype, hooks, throw=False, **args):
                 if throw:
                     raise error.HookAbort(
                         _("untrusted hook %s not executed") % hname,
-                        hint=_("see 'hg help config.trusted'"),
+                        hint=_("see '@prog@ help config.trusted'"),
                     )
                 ui.warn(_("warning: untrusted hook %s not executed\n") % hname)
                 r = 1

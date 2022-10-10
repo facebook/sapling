@@ -73,7 +73,7 @@ dirstatetuple = parsers.dirstatetuple
 
 slowstatuswarning: str = _(
     "(status will still be slow next time; try to complete or abort "
-    "other source control operations and then run 'hg status' again)\n"
+    "other source control operations and then run '@prog@ status' again)\n"
 )
 
 

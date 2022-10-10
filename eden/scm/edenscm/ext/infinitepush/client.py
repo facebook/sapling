@@ -179,14 +179,14 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
         if not path:
             raise error.Abort(
                 _("default repository not configured!"),
-                hint=_("see 'hg help config.paths'"),
+                hint=_("see '@prog@ help config.paths'"),
             )
 
         realdest = path.pushloc or path.loc
         if realdest.startswith("svn+") and scratchpush:
             raise error.Abort(
                 "infinite push does not work with svn repo",
-                hint="did you forget to `hg push default`?",
+                hint="did you forget to `@prog@ push default`?",
             )
 
         if scratchpush:
@@ -237,7 +237,7 @@ def _bookmarks(orig, ui, repo, *names, **opts):
         if not names:
             raise error.Abort(
                 "--list-remote requires a bookmark pattern",
-                hint='use "hg book" to get a list of your local bookmarks',
+                hint=_('use "@prog@ book" to get a list of your local bookmarks'),
             )
         else:
             # prefix bookmark listing is not yet supported by Edenapi.

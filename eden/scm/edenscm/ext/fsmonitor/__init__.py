@@ -11,7 +11,7 @@ Integrates the file-watching program Watchman with Mercurial to produce faster
 status results.
 
 On a particular Linux system, for a real-world repository with over 400,000
-files hosted on ext4, vanilla `hg status` takes 1.3 seconds. On the same
+files hosted on ext4, vanilla `@prog@ status` takes 1.3 seconds. On the same
 system, with fsmonitor it takes about 0.3 seconds.
 
 fsmonitor requires no configuration -- it will tell Watchman about your
@@ -1270,7 +1270,7 @@ def debugrefreshwatchmanclock(ui, repo):
         - At t2: Restore the snapshot to path/repo2
           - Since c1 is no longer a valid watchman clock in repo2, watchman
             would do a re-crawl for correctness.
-        - At t3: Run 'hg debugrefreshwatchmanclock' before doing anything else
+        - At t3: Run '@prog@ debugrefreshwatchmanclock' before doing anything else
           in repo2, to update the watchman clock to a valid value (c2).
           - Correctness: changes between c1 (t0) and c2 (t3) are missed.
             - Application can make sure there are no changes by using the

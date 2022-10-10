@@ -604,7 +604,7 @@ class ui(object):
         if not user:
             raise error.Abort(
                 _("no username supplied"),
-                hint=_("use 'hg config --edit' " "to set your username"),
+                hint=_("use '@prog@ config --edit' " "to set your username"),
             )
         if "\n" in user:
             raise error.Abort(_("username %s contains a newline\n") % repr(user))

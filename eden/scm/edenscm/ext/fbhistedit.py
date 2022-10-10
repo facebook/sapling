@@ -55,7 +55,7 @@ def defineactions():
             raise error.InterventionRequired(
                 _(
                     "Changes committed as %s. You may amend the changeset now.\n"
-                    "When you are done, run hg histedit --continue to resume"
+                    "When you are done, run @prog@ histedit --continue to resume"
                 )
                 % parentctx
             )

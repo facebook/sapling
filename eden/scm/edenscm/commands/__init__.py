@@ -196,7 +196,7 @@ debugrevlogopts = cmdutil.debugrevlogopts
 def add(ui, repo, *pats, **opts):
     """start tracking the specified files
 
-    Specify files to be tracked by Mercurial. The files will be added to
+    Specify files to be tracked by @Product@. The files will be added to
     the repository at the next commit.
 
     To undo an add before files have been committed, use :hg:`forget`.
@@ -214,22 +214,22 @@ def add(ui, repo, *pats, **opts):
 
              $ ls
              foo.c
-             $ hg status
+             $ @prog@ status
              ? foo.c
-             $ hg add
+             $ @prog@ add
              adding foo.c
-             $ hg status
+             $ @prog@ status
              A foo.c
 
          - Specific files to be added can be specified::
 
              $ ls
              bar.c  foo.c
-             $ hg status
+             $ @prog@ status
              ? bar.c
              ? foo.c
-             $ hg add bar.c
-             $ hg status
+             $ @prog@ add bar.c
+             $ @prog@ status
              A bar.c
              ? foo.c
 
@@ -277,15 +277,15 @@ def addremove(ui, repo, *pats, **opts):
 
              $ ls
              bar.c foo.c
-             $ hg status
+             $ @prog@ status
              ! foobar.c
              ? bar.c
              ? foo.c
-             $ hg addremove
+             $ @prog@ addremove
              adding bar.c
              adding foo.c
              removing foobar.c
-             $ hg status
+             $ @prog@ status
              A bar.c
              A foo.c
              R foobar.c
@@ -295,14 +295,14 @@ def addremove(ui, repo, *pats, **opts):
 
              $ ls
              foo.c
-             $ hg status
+             $ @prog@ status
              ! foobar.c
              ? foo.c
-             $ hg addremove --similarity 90
+             $ @prog@ addremove --similarity 90
              removing foobar.c
              adding foo.c
              recording removal of foobar.c as rename to foo.c (94% similar)
-             $ hg status -C
+             $ @prog@ status -C
              A foo.c
                foobar.c
              R foobar.c
@@ -550,11 +550,11 @@ def archive(ui, repo, dest, **opts):
 
       - create a zip file containing the 1.0 release::
 
-          hg archive -r 1.0 project-1.0.zip
+          @prog@ archive -r 1.0 project-1.0.zip
 
       - create a tarball excluding .hg files::
 
-          hg archive project.tar.gz -X ".hg*"
+          @prog@ archive project.tar.gz -X ".hg*"
 
     Valid types are:
 
@@ -652,17 +652,17 @@ def backout(ui, repo, node=None, rev=None, **opts):
       - Reverse the effect of the parent of the working directory.
         This backout will be committed immediately::
 
-          hg backout -r .
+          @prog@ backout -r .
 
       - Reverse the effect of previous bad revision 23::
 
-          hg backout -r 23
+          @prog@ backout -r 23
 
       - Reverse the effect of previous bad revision 23 and
         leave changes uncommitted::
 
-          hg backout -r 23 --no-commit
-          hg commit -m "Backout revision 23"
+          @prog@ backout -r 23 --no-commit
+          @prog@ commit -m "Backout revision 23"
 
       By default, the pending changeset will have one parent,
       maintaining a linear history. With --merge, the pending
@@ -788,7 +788,7 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
             hg._showstats(repo, stats)
             if stats[3]:
                 repo.ui.status(
-                    _("use 'hg resolve' to retry unresolved " "file merges\n")
+                    _("use '@prog@ resolve' to retry unresolved " "file merges\n")
                 )
                 return 1
         finally:
@@ -902,54 +902,54 @@ def bisect(
 
       - start a bisection with known bad revision 34, and good revision 12::
 
-          hg bisect --bad 34
-          hg bisect --good 12
+          @prog@ bisect --bad 34
+          @prog@ bisect --good 12
 
       - advance the current bisection by marking current revision as good or
         bad::
 
-          hg bisect --good
-          hg bisect --bad
+          @prog@ bisect --good
+          @prog@ bisect --bad
 
       - mark the current revision, or a known revision, to be skipped (e.g. if
         that revision is not usable because of another issue)::
 
-          hg bisect --skip
-          hg bisect --skip 23
+          @prog@ bisect --skip
+          @prog@ bisect --skip 23
 
       - skip all revisions that do not touch directories ``foo`` or ``bar``::
 
-          hg bisect --skip "!( file('path:foo') & file('path:bar') )"
+          @prog@ bisect --skip "!( file('path:foo') & file('path:bar') )"
 
       - forget the current bisection::
 
-          hg bisect --reset
+          @prog@ bisect --reset
 
       - use 'make && make tests' to automatically find the first broken
         revision::
 
-          hg bisect --reset
-          hg bisect --bad 34
-          hg bisect --good 12
-          hg bisect --command "make && make tests"
+          @prog@ bisect --reset
+          @prog@ bisect --bad 34
+          @prog@ bisect --good 12
+          @prog@ bisect --command "make && make tests"
 
       - see all changesets whose states are already known in the current
         bisection::
 
-          hg log -r "bisect(pruned)"
+          @prog@ log -r "bisect(pruned)"
 
       - see the changeset currently being bisected (especially useful
         if running with -U/--noupdate)::
 
-          hg log -r "bisect(current)"
+          @prog@ log -r "bisect(current)"
 
       - see all changesets that took part in the current bisection::
 
-          hg log -r "bisect(range)"
+          @prog@ log -r "bisect(range)"
 
       - you can even get a nice graph::
 
-          hg log --graph -r "bisect(range)"
+          @prog@ log --graph -r "bisect(range)"
 
       See :hg:`help revisions.bisect` for more about the `bisect()` predicate.
 
@@ -957,7 +957,7 @@ def bisect(
     """
     # backward compatibility
     if rev in "good bad reset init".split():
-        ui.warn(_("(use of 'hg bisect <cmd>' is deprecated)\n"))
+        ui.warn(_("(use of '@prog@ bisect <cmd>' is deprecated)\n"))
         cmd, rev, extra = rev, extra, None
         if cmd == "good":
             good = True
@@ -1179,7 +1179,7 @@ the sparse profile from the known %s changeset %s\n"
         ("i", "inactive", False, _("mark a bookmark inactive")),
     ]
     + formatteropts,
-    _("hg bookmarks [OPTIONS]... [NAME]..."),
+    _("@prog@ bookmarks [OPTIONS]... [NAME]..."),
 )
 def bookmark(ui, repo, *names, **opts):
     """create a new bookmark or list existing bookmarks
@@ -1211,23 +1211,23 @@ def bookmark(ui, repo, *names, **opts):
 
       - create an active bookmark for a new line of development::
 
-          hg book new-feature
+          @prog@ book new-feature
 
       - create an inactive bookmark as a place marker::
 
-          hg book -i reviewed
+          @prog@ book -i reviewed
 
       - create an inactive bookmark on another changeset::
 
-          hg book -r .^ tested
+          @prog@ book -r .^ tested
 
       - rename bookmark turkey to dinner::
 
-          hg book -m turkey dinner
+          @prog@ book -m turkey dinner
 
       - move the '@' bookmark from another branch::
 
-          hg book -f @
+          @prog@ book -f @
     """
     force = opts.get(r"force")
     rev = opts.get(r"rev")
@@ -1301,7 +1301,7 @@ def bookmark(ui, repo, *names, **opts):
     _("[-fC] [NAME]"),
 )
 def branch(ui, repo, label=None, **opts):
-    """(deprecated. use 'hg bookmark' instead)
+    """(deprecated. use '@prog@ bookmark' instead)
 
     This command does nothing meaningful and will be removed in the future.
 
@@ -1350,7 +1350,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
     Generate a bundle file containing data to be added to a repository.
 
     To create a bundle containing all changesets, use -a/--all
-    (or --base null). Otherwise, hg assumes the destination will have
+    (or --base null). Otherwise, @prog@ assumes the destination will have
     all the nodes you specify with --base parameters. Otherwise, hg
     will assume the repository has all the nodes in destination, or
     default-push/default if no destination is specified.
@@ -1385,14 +1385,14 @@ def bundle(ui, repo, fname, dest=None, **opts):
     except error.UnsupportedBundleSpecification as e:
         raise error.Abort(
             str(e),
-            hint=_("see 'hg help bundlespec' for supported " "values for --type"),
+            hint=_("see '@prog@ help bundlespec' for supported " "values for --type"),
         )
 
     # Packed bundles are a pseudo bundle format for now.
     if cgversion == "s1":
         raise error.Abort(
             _('packed bundles cannot be produced by "hg bundle"'),
-            hint=_("use 'hg debugcreatestreamclonebundle'"),
+            hint=_("use '@prog@ debugcreatestreamclonebundle'"),
         )
 
     if opts.get("all"):
@@ -1601,24 +1601,24 @@ def commit(ui, repo, *pats, **opts):
     Commit changes to the given files to your local repository.
 
     By default, all pending changes (in other words, those reported by
-    'hg status') are committed. If you want to commit only some of your
+    '@prog@ status') are committed. If you want to commit only some of your
     changes, choose one of the following options:
 
     - Specify an exact list of files for which you want changes committed.
 
     - Use the -I or -X flags to pattern match file names to exclude or
-      include by using a fileset. See 'hg help filesets' for more
+      include by using a fileset. See '@prog@ help filesets' for more
       information.
 
     - Specify the --interactive flag to open a UI that will enable you
       to select individual insertions or deletions.
 
     If you are committing the result of a merge, such as when merge
-    conflicts occur during 'hg checkout', commit all pending changes.
+    conflicts occur during '@prog@ checkout', commit all pending changes.
     Do not specify files or use -I, -X, or -i.
 
     Specify the -m flag to include a free-form commit message. If you do
-    not specify -m, Mercurial opens your configured editor where you can
+    not specify -m, @Product@ opens your configured editor where you can
     enter a message based on a pre-loaded commit template.
 
     Returns 0 on success, 1 if nothing changed.
@@ -1631,27 +1631,27 @@ def commit(ui, repo, *pats, **opts):
       You can use --amend to replace your current commit with a new commit
       that contains the contents of the original commit, plus any pending
       changes. Specify -m to provide a new commit message. If you do not
-      specify -m, Mercurial opens your configured editor where you can
+      specify -m, @Product@ opens your configured editor where you can
       enter a message based on a pre-loaded commit template.
 
       .. note::
 
-         'hg commit --amend' is not recommended. Use 'hg amend' instead.
-         See 'hg help amend' for more information.
+         '@prog@ commit --amend' is not recommended. Use '@prog@ amend' instead.
+         See '@prog@ help amend' for more information.
 
       Examples:
 
       - commit all files ending in .py::
 
-          hg commit --include "set:**.py"
+          @prog@ commit --include "set:**.py"
 
       - commit all non-binary files::
 
-          hg commit --exclude "set:binary()"
+          @prog@ commit --exclude "set:binary()"
 
       - amend the current commit and set the date to now::
 
-          hg commit --amend --date now
+          @prog@ commit --amend --date now
     """
     wlock = lock = None
     try:
@@ -1719,7 +1719,7 @@ def _docommit(ui, repo, *pats, **opts):
             stat = cmdutil.postcommitstatus(repo, pats, opts)
             if stat[3]:
                 ui.status(
-                    _("nothing changed (%d missing files, see " "'hg status')\n")
+                    _("nothing changed (%d missing files, see " "'@prog@ status')\n")
                     % len(stat[3])
                 )
             else:
@@ -1854,7 +1854,7 @@ def continuecmd(ui, repo):
                 raise error.Abort(
                     _("outstanding merge conflicts"),
                     hint=_(
-                        "use 'hg resolve -l' to see a list of conflicted files, 'hg resolve -m' to mark files as resolved"
+                        "use '@prog@ resolve -l' to see a list of conflicted files, '@prog@ resolve -m' to mark files as resolved"
                     ),
                 )
         else:
@@ -2017,25 +2017,25 @@ def diff(ui, repo, *pats, **opts):
 
       - compare a file in the current working directory to its parent::
 
-          hg diff foo.c
+          @prog@ diff foo.c
 
       - compare two historical versions of a directory, with rename info::
 
-          hg diff --git -r 1.0:1.2 lib/
+          @prog@ diff --git -r 1.0:1.2 lib/
 
       - get change stats relative to the last change on some date::
 
-          hg diff --stat -r "date('may 2')"
+          @prog@ diff --stat -r "date('may 2')"
 
       - diff all newly-added files that contain a keyword::
 
-          hg diff "set:added() and grep(GNU)"
+          @prog@ diff "set:added() and grep(GNU)"
 
       - compare a revision and its parents::
 
-          hg diff -c 9353         # compare against first parent
-          hg diff -r 9353^:9353   # same using revset syntax
-          hg diff -r 9353^2:9353  # compare against the second parent
+          @prog@ diff -c 9353         # compare against first parent
+          @prog@ diff -r 9353^:9353   # same using revset syntax
+          @prog@ diff -r 9353^2:9353  # compare against the second parent
 
     Returns 0 on success.
     """
@@ -2130,17 +2130,17 @@ def export(ui, repo, *changesets, **opts):
       - use export and import to transplant a bugfix to the current
         branch::
 
-          hg export -r 9353 | hg import -
+          @prog@ export -r 9353 | @prog@ import -
 
       - export all the changesets between two revisions to a file with
         rename information::
 
-          hg export --git -r 123:150 > changes.txt
+          @prog@ export --git -r 123:150 > changes.txt
 
       - split outgoing changes into a series of patches with
         descriptive names::
 
-          hg export -r "outgoing()" -o "%n-%m.patch"
+          @prog@ export -r "outgoing()" -o "%n-%m.patch"
 
     Returns 0 on success.
     """
@@ -2180,12 +2180,12 @@ def export(ui, repo, *changesets, **opts):
 def files(ui, repo, *pats, **opts):
     """list tracked files
 
-    Print files under Mercurial control in the working directory or
+    Print files under @Product@ control in the working directory or
     specified revision for given files (excluding removed files).
     Files can be specified as filenames or filesets.
 
     If no files are given to match, this command prints the names
-    of all files under Mercurial control.
+    of all files under @Product@ control.
 
     .. container:: verbose
 
@@ -2193,27 +2193,27 @@ def files(ui, repo, *pats, **opts):
 
       - list all files under the current directory::
 
-          hg files .
+          @prog@ files .
 
       - shows sizes and flags for current revision::
 
-          hg files -vr .
+          @prog@ files -vr .
 
       - list all files named README::
 
-          hg files -I "**/README"
+          @prog@ files -I "**/README"
 
       - list all binary files::
 
-          hg files "set:binary()"
+          @prog@ files "set:binary()"
 
       - find files containing a regular expression::
 
-          hg files "set:grep('bob')"
+          @prog@ files "set:grep('bob')"
 
       - search tracked file contents with xargs and grep::
 
-          hg files -0 | xargs -0 grep foo
+          @prog@ files -0 | xargs -0 grep foo
 
     See :hg:`help patterns` and :hg:`help filesets` for more information
     on specifying file patterns.
@@ -2259,11 +2259,11 @@ def forget(ui, repo, *pats, **opts):
 
       - forget newly-added binary files::
 
-          hg forget "set:added() and binary()"
+          @prog@ forget "set:added() and binary()"
 
       - forget files that would be excluded by .gitignore::
 
-          hg forget "set:gitignore()"
+          @prog@ forget "set:gitignore()"
 
     Returns 0 on success.
     """
@@ -2302,7 +2302,7 @@ def forget(ui, repo, *pats, **opts):
 def graft(ui, repo, *revs, **opts):
     """copy commits from a different location
 
-    This command uses Mercurial's merge logic to copy individual
+    This command uses @Product@'s merge logic to copy individual
     changes from other branches without merging branches in the
     history graph. This is sometimes known as 'backporting' or
     'cherry-picking'. By default, graft will copy user, date, and
@@ -2336,28 +2336,28 @@ def graft(ui, repo, *revs, **opts):
 
       - copy a single change to the stable branch and edit its description::
 
-          hg update stable
-          hg graft --edit 9393
+          @prog@ update stable
+          @prog@ graft --edit 9393
 
       - graft a range of changesets with one exception, updating dates::
 
-          hg graft -D "2085::2093 and not 2091"
+          @prog@ graft -D "2085::2093 and not 2091"
 
       - continue a graft after resolving conflicts::
 
-          hg graft -c
+          @prog@ graft -c
 
       - abort an interrupted graft::
 
-          hg graft --abort
+          @prog@ graft --abort
 
       - show the source of a grafted changeset::
 
-          hg log --debug -r .
+          @prog@ log --debug -r .
 
       - show revisions sorted by date::
 
-          hg log -r "sort(all(), date)"
+          @prog@ log -r "sort(all(), date)"
 
     See :hg:`help revisions` for more about specifying revisions.
 
@@ -2490,7 +2490,7 @@ def _dograft(ui, repo, *revs, **opts):
                     extra += " --date %s" % util.shellquote(opts["date"])
                 if opts.get("log"):
                     extra += " --log"
-                hint = _("use 'hg resolve' and 'hg graft --continue%s'") % extra
+                hint = _("use '@prog@ resolve' and '@prog@ graft --continue%s'") % extra
                 raise error.Abort(_("unresolved conflicts, can't continue"), hint=hint)
         else:
             cont = False
@@ -2547,7 +2547,7 @@ def grep(ui, repo, pattern, *pats, **opts):
     The default regexp style is POSIX basic regexps. If no FILE parameters are
     passed in, the current directory and its subdirectories will be searched.
 
-    For the old 'hg grep', which searches through history, see 'histgrep'."""
+    For the old '@prog@ grep', which searches through history, see 'histgrep'."""
     # XXX: The current implementation heavily depends on external programs like
     # grep, xargs and biggrep.  Command-line flag support is a bit messy.  It
     # does not look like a source control command (ex. no --rev support).
@@ -2818,7 +2818,7 @@ def grep(ui, repo, pattern, *pats, **opts):
                     _(
                         "The results above are based on revision %s\n"
                         "which is not available locally and thus may be inaccurate.\n"
-                        "To get accurate results, run `hg pull` and re-run "
+                        "To get accurate results, run `@prog@ pull` and re-run "
                         "your grep.\n"
                     )
                     % corpusrev
@@ -2935,7 +2935,7 @@ def heads(ui, repo, *branchrevs, **opts):
     """
     if not util.istest():
         ui.deprecate(
-            "hg-heads", "heads is deprecated - use `hg log -r 'head()'` instead"
+            "@prog@-heads", "heads is deprecated - use `@prog@ log -r 'head()'` instead"
         )
 
     start = None
@@ -3031,7 +3031,7 @@ def help_(ui, *names, **opts):
 def hint(ui, *names, **opts):
     """acknowledge hints
 
-    ``hg hint --ack NAME`` modifies hgrc to silence hints starting with
+    ``@prog hint --ack NAME`` modifies hgrc to silence hints starting with
     ``hint[NAME]``.
     """
     if opts.get("ack") and names:
@@ -3369,7 +3369,7 @@ def identify(
     When REV is not given, print a summary of the current state of the
     repository.
 
-    Specifying a path to a repository root or Mercurial bundle will
+    Specifying a path to a repository root or @Product@ bundle will
     cause lookup to operate on that repository/bundle.
 
     .. container:: verbose
@@ -3378,11 +3378,11 @@ def identify(
 
       - generate a build identifier for the working directory::
 
-          hg id --id > build-id.dat
+          @prog@ id --id > build-id.dat
 
       - check the most recent revision of a remote repository::
 
-          hg id -r tip https://www.mercurial-scm.org/repo/hg/
+          @prog@ id -r tip https://www.mercurial-scm.org/repo/hg/
 
     See :hg:`log` for generating more information about specific revisions,
     including full hash identifiers.
@@ -3391,10 +3391,10 @@ def identify(
     """
     if not util.istest():
         ui.deprecate(
-            "hg-identify", "identify is deprecated - use `hg whereami` instead"
+            "hg-identify", "identify is deprecated - use `@prog@ whereami` instead"
         )
     if not repo and not source:
-        raise error.Abort(_("there is no Mercurial repository here " "(.hg not found)"))
+        raise error.Abort(_("there is no @Product@ repository here " "(.hg not found)"))
 
     if ui.debugflag:
         hexfunc = hex
@@ -3575,7 +3575,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     the parent of each patch before applying it, and will abort if the
     resulting changeset has a different ID than the one recorded in
     the patch. This will guard against various ways that portable
-    patch formats and mail systems might fail to transfer Mercurial
+    patch formats and mail systems might fail to transfer @Product@
     data or metadata. See :hg:`bundle` for lossless transmission.
 
     Use --partial to ensure a changeset will be created from the patch
@@ -3591,7 +3591,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
        When no hunks apply cleanly, :hg:`import --partial` will create
        an empty changeset, importing only the patch metadata.
 
-    With -s/--similarity, hg will attempt to discover renames and
+    With -s/--similarity, @prog@ will attempt to discover renames and
     copies in the patch in the same way as :hg:`addremove`.
 
     It is possible to use external patch programs to perform the patch
@@ -3608,33 +3608,33 @@ def import_(ui, repo, patch1=None, *patches, **opts):
 
       - import a traditional patch from a website and detect renames::
 
-          hg import -s 80 http://example.com/bugfix.patch
+          @prog@ import -s 80 http://example.com/bugfix.patch
 
       - import a changeset from an hgweb server::
 
-          hg import https://www.mercurial-scm.org/repo/hg/rev/5ca8c111e9aa
+          @prog@ import https://www.mercurial-scm.org/repo/hg/rev/5ca8c111e9aa
 
       - import all the patches in an Unix-style mbox::
 
-          hg import incoming-patches.mbox
+          @prog@ import incoming-patches.mbox
 
       - import patches from stdin::
 
-          hg import -
+          @prog@ import -
 
       - attempt to exactly restore an exported changeset (not always
         possible)::
 
-          hg import --exact proposed-fix.patch
+          @prog@ import --exact proposed-fix.patch
 
       - use an external tool to apply a patch which is too fuzzy for
         the default internal tool.
 
-          hg import --config ui.patch="patch --merge" fuzzy.patch
+          @prog@ import --config ui.patch="patch --merge" fuzzy.patch
 
       - change the default fuzzing from 2 to a less strict 7
 
-          hg import --config ui.fuzz=7 fuzz.patch
+          @prog@ import --config ui.fuzz=7 fuzz.patch
 
     Returns 0 on success, 1 on partial success (see --partial).
     """
@@ -3710,7 +3710,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                 if rej:
                     ui.write_err(_("patch applied partially\n"))
                     ui.write_err(
-                        _("(fix the .rej files and run " "`hg commit --amend`)\n")
+                        _("(fix the .rej files and run " "`@prog@ commit --amend`)\n")
                     )
                     ret = 1
                     break
@@ -3777,7 +3777,7 @@ def init(ui, dest=".", **opts):
 def locate(ui, repo, *pats, **opts):
     """locate files matching specific patterns (DEPRECATED)
 
-    Print files under Mercurial control in the working directory whose
+    Print files under @Product@ control in the working directory whose
     names match the given patterns.
 
     By default, this command searches all directories in the working
@@ -3785,7 +3785,7 @@ def locate(ui, repo, *pats, **opts):
     subdirectories, use "--include .".
 
     If no patterns are given to match, this command prints the names
-    of all files under Mercurial control in the working directory.
+    of all files under @Product@ control in the working directory.
 
     If you want to feed the output of this command into the "xargs"
     command, use the -0 option to both this command and "xargs". This
@@ -3934,52 +3934,52 @@ def log(ui, repo, *pats, **opts):
 
       - changesets with full descriptions and file lists::
 
-          hg log -v
+          @prog@ log -v
 
       - changesets ancestral to the working directory::
 
-          hg log -f
+          @prog@ log -f
 
       - last 10 commits on the current branch::
 
-          hg log -l 10 -b .
+          @prog@ log -l 10 -b .
 
       - changesets showing all modifications of a file, including removals::
 
-          hg log --removed file.c
+          @prog@ log --removed file.c
 
       - all changesets that touch a directory, with diffs, excluding merges::
 
-          hg log -Mp lib/
+          @prog@ log -Mp lib/
 
       - all revision numbers that match a keyword::
 
-          hg log -k bug --template "{rev}\\n"
+          @prog@ log -k bug --template "{rev}\\n"
 
       - the full hash identifier of the working directory parent::
 
-          hg log -r . --template "{node}\\n"
+          @prog@ log -r . --template "{node}\\n"
 
       - list available log templates::
 
-          hg log -T list
+          @prog@ log -T list
 
       - check if a given changeset is included in a bookmarked release::
 
-          hg log -r "a21ccf and ancestor(release_1.9)"
+          @prog@ log -r "a21ccf and ancestor(release_1.9)"
 
       - find all changesets by some user in a date range::
 
-          hg log -k alice -d "may 2008 to jul 2008"
+          @prog@ log -k alice -d "may 2008 to jul 2008"
 
       - changesets touching lines 13 to 23 for file.c::
 
-          hg log -L file.c,13:23
+          @prog@ log -L file.c,13:23
 
       - changesets touching lines 13 to 23 for file.c and lines 2 to 6 of
         main.c with patch::
 
-          hg log -L file.c,13:23 -L main.c,2:6 -p
+          @prog@ log -L file.c,13:23 -L main.c,2:6 -p
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
@@ -4243,10 +4243,10 @@ def parents(ui, repo, file_=None, **opts):
 
     This command is equivalent to::
 
-        hg log -r "p1()+p2()" or
-        hg log -r "p1(REV)+p2(REV)" or
-        hg log -r "max(::p1() and file(FILE))+max(::p2() and file(FILE))" or
-        hg log -r "max(::p1(REV) and file(FILE))+max(::p2(REV) and file(FILE))"
+        @prog@ log -r "p1()+p2()" or
+        @prog@ log -r "p1(REV)+p2(REV)" or
+        @prog@ log -r "max(::p1() and file(FILE))+max(::p2() and file(FILE))" or
+        @prog@ log -r "max(::p1(REV) and file(FILE))+max(::p2(REV) and file(FILE))"
 
     See :hg:`summary` and :hg:`help revsets` for related information.
 
@@ -4254,7 +4254,8 @@ def parents(ui, repo, file_=None, **opts):
     """
     if not util.istest():
         ui.deprecate(
-            "hg-parents", "parents is deprecated - use `hg log -r 'parents(.)'` instead"
+            "@prog@-parents",
+            "parents is deprecated - use `@prog@ log -r 'parents(.)'` instead",
         )
 
     ctx = scmutil.revsingle(repo, opts.get("rev"), None)
@@ -4510,7 +4511,7 @@ def pull(ui, repo, source="default", **opts):
 
     if ui.configbool("commands", "update.requiredest") and opts.get("update"):
         msg = _("update destination required by configuration")
-        hint = _("use hg pull followed by hg update DEST")
+        hint = _("use @prog@ pull followed by @prog@ update DEST")
         raise error.Abort(msg, hint=hint)
 
     # Allows us to announce larger changes affecting all the users by displaying
@@ -4823,7 +4824,7 @@ def push(ui, repo, dest=None, **opts):
     if not path:
         raise error.Abort(
             _("default repository not configured!"),
-            hint=_("see 'hg help config.paths'"),
+            hint=_("see '@prog@ help config.paths'"),
         )
     dest = path.pushloc or path.loc
     branches = (path.branch, [])
@@ -4908,7 +4909,7 @@ def push(ui, repo, dest=None, **opts):
     + commitopts2
     + diffwsopts
     + walkopts,
-    _("hg record [OPTION]... [FILE]..."),
+    _("@prog@ record [OPTION]... [FILE]..."),
 )
 def record(ui, repo, *pats, **opts):
     """interactively select changes to commit
@@ -4939,7 +4940,9 @@ def record(ui, repo, *pats, **opts):
 
     This command is not available when committing a merge."""
     if not util.istest():
-        ui.deprecate("hg-record", "record is deprecated - use `hg commit -i` instead")
+        ui.deprecate(
+            "@prog@-record", "record is deprecated - use `@prog@ commit -i` instead"
+        )
 
     if not ui.interactive():
         raise error.Abort(_("running non-interactively, use %s instead") % "commit")
@@ -4957,7 +4960,7 @@ def recover(ui, repo):
     Recover from an interrupted commit or pull.
 
     This command tries to fix the repository status after an
-    interrupted operation. It should only be necessary when Mercurial
+    interrupted operation. It should only be necessary when @Product@
     suggests it.
 
     Returns 0 if successful, 1 if nothing to recover.
@@ -5106,7 +5109,7 @@ def resolve(ui, repo, *pats, **opts):
 
     .. note::
 
-       Mercurial will not let you commit files with unresolved merge
+       @Product@ will not let you commit files with unresolved merge
        conflicts. You must use :hg:`resolve -m ...` before you can
        commit after a conflicting merge.
 
@@ -5278,7 +5281,7 @@ def resolve(ui, repo, *pats, **opts):
                     if not m(f):
                         continue
                     flags = "".join(["-%s " % o[0] for o in flaglist if opts.get(o)])
-                    hint = _("(try: hg resolve %s%s)\n") % (flags, " ".join(pats))
+                    hint = _("(try: @prog@ resolve %s%s)\n") % (flags, " ".join(pats))
                     break
             ui.warn(_("arguments do not match paths that need resolving\n"))
             if hint:
@@ -5305,7 +5308,10 @@ def resolve(ui, repo, *pats, **opts):
         cmdutil.checkafterresolved(repo)
     elif not unresolvedf:
         ui.status(
-            _("(no more unresolved files -- " 'run "hg resolve --all" to conclude)\n')
+            _(
+                "(no more unresolved files -- "
+                'run "@prog@ resolve --all" to conclude)\n'
+            )
         )
 
     return ret
@@ -5340,10 +5346,10 @@ def revert(ui, repo, *pats, **opts):
 
     Revert causes files to match their contents in another commit. If
     instead you want to undo a specific landed commit, use :hg:`backout`
-    instead. Run `hg help backout` for more information.
+    instead. Run `@prog help backout` for more information.
 
     Modified files are saved with an .orig suffix before reverting.
-    To disable these backups, use --no-backup. You can configure Mercurial
+    To disable these backups, use --no-backup. You can configure @Product@
     to store these backup files in a custom directory relative to the root
     of the repository by setting the ``ui.origbackuppath`` configuration
     option.
@@ -5361,7 +5367,7 @@ def revert(ui, repo, *pats, **opts):
         # revert after merge is a trap for new users (issue2915)
         raise error.Abort(
             _("uncommitted merge with no revision specified"),
-            hint=_("use 'hg update' or see 'hg help revert'"),
+            hint=_("use '@prog@ update' or see '@prog@ help revert'"),
         )
 
     ctx = scmutil.revsingle(repo, opts.get("rev"))
@@ -5377,7 +5383,7 @@ def revert(ui, repo, *pats, **opts):
         if p2 != nullid:
             hint = _(
                 "uncommitted merge, use --all to discard all changes,"
-                " or 'hg update -C .' to abort the merge"
+                " or '@prog@ update -C .' to abort the merge"
             )
             raise error.Abort(msg, hint=hint)
         dirty = any(repo.status())
@@ -5387,13 +5393,16 @@ def revert(ui, repo, *pats, **opts):
                 hint = (
                     _(
                         "uncommitted changes, use --all to discard all"
-                        " changes, or 'hg update %s' to update"
+                        " changes, or '@prog@ update %s' to update"
                     )
                     % ctx.rev()
                 )
             else:
                 hint = (
-                    _("use --all to revert all files," " or 'hg update %s' to update")
+                    _(
+                        "use --all to revert all files,"
+                        " or '@prog@ update %s' to update"
+                    )
                     % ctx.rev()
                 )
         elif dirty:
@@ -5534,7 +5543,7 @@ def serve(ui, repo, **opts):
     if opts["stdio"]:
         if repo is None:
             raise error.RepoError(
-                _("there is no Mercurial repository here" " (.hg not found)")
+                _("there is no @Product@ repository here" " (.hg not found)")
             )
         s = sshserver.sshserver(ui, repo)
         s.serve_forever()
@@ -5577,7 +5586,7 @@ def show(ui, repo, *args, **opts):
 
     This behaves similarly to :hg:`log -vp -r REV [OPTION]... [FILE]...`, or
     if called without a REV, :hg:`log -vp -r . [OPTION]...` Use
-    :hg:`log` for more powerful operations than supported by hg show.
+    :hg:`log` for more powerful operations than supported by @prog@ show.
 
     """
     ui.pager("show")
@@ -5588,7 +5597,7 @@ def show(ui, repo, *args, **opts):
         opts["rev"] = [args[0]]
         pats = args[1:]
         if not scmutil.revrange(repo, opts["rev"]):
-            h = _("if %s is a file, try `hg show . %s`") % (args[0], args[0])
+            h = _("if %s is a file, try `@prog@ show . %s`") % (args[0], args[0])
             raise error.Abort(_("unknown revision %s") % args[0], hint=h)
 
     opts["patch"] = not opts["stat"]
@@ -5735,7 +5744,8 @@ def summary(ui, repo, **opts):
     """
     if not util.istest():
         ui.deprecate(
-            "hg-summary", "summary is deprecated - use `hg sl` and `hg status` instead"
+            "@prog@-summary",
+            "summary is deprecated - use `@prog@ sl` and `@prog@ status` instead",
         )
 
     ui.pager("summary")
@@ -6063,7 +6073,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
 
                 if isinstance(gen, streamclone.streamcloneapplier):
                     raise error.Abort(
-                        _("packed bundles cannot be applied with " '"hg unbundle"'),
+                        _("packed bundles cannot be applied with " '"@prog@ unbundle"'),
                         hint=_('use "hg debugapplystreamclonebundle"'),
                     )
                 url = "bundle:" + fname
@@ -6156,7 +6166,7 @@ def update(
                     raise error.Abort(
                         _("outstanding merge conflicts"),
                         hint=_(
-                            "use 'hg resolve --list' to list, 'hg resolve --mark FILE' to mark resolved"
+                            "use '@prog@ resolve --list' to list, '@prog@ resolve --mark FILE' to mark resolved"
                         ),
                     )
                 repo.localvfs.unlink("updatemergestate")
@@ -6183,7 +6193,7 @@ def update(
         if not node and not rev and not date:
             raise error.Abort(
                 _("you must specify a destination"),
-                hint=_('for example: hg update ".::"'),
+                hint=_('for example: @prog@ update ".::"'),
             )
 
     if rev is None or rev == "":

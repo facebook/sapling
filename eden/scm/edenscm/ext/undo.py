@@ -53,15 +53,15 @@ hint = registrar.hint()
 
 @hint("undo")
 def hintundo():
-    return _("you can undo this using the `hg undo` command")
+    return _("you can undo this using the `@prog@ undo` command")
 
 
 @hint("undo-uncommit-unamend")
 def hintuncommit(command, oldhash):
     return _(
         "undoing %ss discards their changes.\n"
-        "to restore the changes to the working copy, run 'hg revert -r %s --all'\n"
-        "in the future, you can use 'hg un%s' instead of 'hg undo' to keep changes"
+        "to restore the changes to the working copy, run '@prog@ revert -r %s --all'\n"
+        "in the future, you can use '@prog@ un%s' instead of '@prog@ undo' to keep changes"
     ) % (command, oldhash, command)
 
 
@@ -822,7 +822,7 @@ def undo(ui, repo, *args, **opts):
 
        For hybrid commands that result in both local and remote changes,
        :hg:`undo` will undo the local changes, but not the remote changes.
-       For example, `hg pull --rebase` might move remote/master and also
+       For example, `@prog pull --rebase` might move remote/master and also
        rebase local commits. In this situation, :hg:`undo` will revert the
        rebase, but not the change to remote/master.
 

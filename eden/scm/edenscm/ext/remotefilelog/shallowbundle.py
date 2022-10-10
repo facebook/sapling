@@ -203,7 +203,7 @@ class shallowcg1packer(changegroup.cg1packer):
                 if repo._cgfilespos:
                     raise error.Abort(
                         "cannot pull from full bundles",
-                        hint="use `hg unbundle` instead",
+                        hint=_("use `@prog@ unbundle` instead"),
                     )
                 return []
             filestosend = self.shouldaddfilegroups(source)

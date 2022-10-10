@@ -331,7 +331,7 @@ extdiffopts = [
 @command(
     "extdiff|extd|extdi|extdif",
     [("p", "program", "", _("comparison program to run"), _("CMD"))] + extdiffopts,
-    _("hg extdiff [OPT]... [FILE]..."),
+    _("@prog@ extdiff [OPT]... [FILE]..."),
     inferrepo=True,
 )
 def extdiff(ui, repo, *pats, **opts):
@@ -424,7 +424,10 @@ def uisetup(ui):
             if args:
                 cmdline += " " + args
         command(
-            cmd, extdiffopts[:], _("hg %s [OPTION]... [FILE]...") % cmd, inferrepo=True
+            cmd,
+            extdiffopts[:],
+            _("@prog@ %s [OPTION]... [FILE]...") % cmd,
+            inferrepo=True,
         )(savedcmd(path, cmdline))
 
 

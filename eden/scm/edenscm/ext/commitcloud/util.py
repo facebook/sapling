@@ -74,7 +74,7 @@ def getremotepath(ui):
     if not path:
         raise error.Abort(
             _("'default' repository isn't configured!"),
-            hint=_("see 'hg help config.paths'"),
+            hint=_("see '@prog@ help config.paths'"),
         )
     return path
 

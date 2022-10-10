@@ -91,7 +91,7 @@ def _warn_service_not_running(ui):
     ui.status(
         _(
             "scm daemon is not running and automatic synchronization may not work\n"
-            "(run 'hg cloud sync' manually if your workspace is not synchronized)\n"
+            "(run '@prog@ cloud sync' manually if your workspace is not synchronized)\n"
             "(please contact %s if this warning persists)\n"
         )
         % ccerror.getsupportcontact(ui),

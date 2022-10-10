@@ -238,7 +238,7 @@ def blocknonpushrebase(ui, repo, **kwargs):
             _(
                 "this repository requires that you enable the "
                 "pushrebase extension and push using "
-                "'hg push --to'"
+                "'@prog@ push --to'"
             )
         )
 

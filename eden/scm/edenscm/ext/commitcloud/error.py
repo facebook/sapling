@@ -51,7 +51,7 @@ class WorkspaceError(error.Abort):
     def __init__(self, ui, message, *args):
         details = _(
             "(your repo is not connected to any workspace)\n"
-            "(use 'hg cloud join --help' for more details)"
+            "(use '@prog@ cloud join --help' for more details)"
         )
         message = "workspace error: %s\n%s" % (message, details)
         ui.log("commitcloud_error", commitcloud_sync_error="workspace error")
@@ -98,7 +98,7 @@ class ServiceError(error.Abort):
 
 class InvalidWorkspaceDataError(error.Abort):
     def __init__(self, ui, message, *args):
-        details = _("(please run 'hg cloud recover')")
+        details = _("(please run '@prog@ cloud recover')")
         message = "invalid workspace data: '%s'\n%s" % (message, details)
         ui.log("commitcloud_error", commitcloud_sync_error="invalid workspace data")
         super(InvalidWorkspaceDataError, self).__init__(
@@ -108,7 +108,7 @@ class InvalidWorkspaceDataError(error.Abort):
 
 class SynchronizationError(error.Abort):
     def __init__(self, ui, message, *args):
-        details = _("(please retry 'hg cloud sync')")
+        details = _("(please retry '@prog@ cloud sync')")
         contact = _("(please contact %s if this error persists)") % getsupportcontact(
             ui
         )

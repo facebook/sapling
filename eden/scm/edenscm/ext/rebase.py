@@ -12,7 +12,7 @@
 
 """command to move sets of revisions to a different ancestor
 
-This extension lets you rebase changesets in an existing Mercurial
+This extension lets you rebase changesets in an existing @Product@
 repository.
 
 For more information:
@@ -488,7 +488,7 @@ class rebaseruntime(object):
             if not self.keepf and not root.mutable():
                 raise error.Abort(
                     _("can't rebase public changeset %s") % root,
-                    hint=_("see 'hg help phases' for details"),
+                    hint=_("see '@prog@ help phases' for details"),
                 )
 
         (self.originalwd, destmap, state) = result
@@ -840,8 +840,8 @@ class rebaseruntime(object):
                     else:
                         raise error.InterventionRequired(
                             _(
-                                "unresolved conflicts (see hg "
-                                "resolve, then hg rebase --continue)"
+                                "unresolved conflicts (see @prog@ "
+                                "resolve, then @prog@ rebase --continue)"
                             )
                         )
             finally:
@@ -980,7 +980,7 @@ class rebaseruntime(object):
                     firstline = templatefilters.firstline(newctx.description())
                     ui.warn(
                         _(
-                            "important: run `hg up %s` to get the new "
+                            "important: run `@prog@ up %s` to get the new "
                             'version of your current commit ("%s")\n'
                             "(this was not done automatically because you "
                             "made working copy changes during the "
@@ -1139,7 +1139,7 @@ def rebase(ui, repo, templ=None, **opts):
     other words, they are rebased out).
 
     Sometimes conflicts can occur when you rebase. When this happens, by
-    default, Mercurial launches an editor for every conflict. Conflict markers
+    default, @Product@ launches an editor for every conflict. Conflict markers
     are inserted into affected files, like::
 
         <<<<
@@ -1156,9 +1156,9 @@ def rebase(ui, repo, templ=None, **opts):
     can resolve conflicts in manual resolution mode. See :hg:`help resolve` for
     details.
 
-    After manually resolving conflicts, resume the rebase with ``hg rebase
+    After manually resolving conflicts, resume the rebase with ``@prog@ rebase
     --continue`` (``-c``). If you are not able to successfully resolve all
-    conflicts, run ``hg rebase --abort`` (``-a``) to abort the
+    conflicts, run ``@prog@ rebase --abort`` (``-a``) to abort the
     rebase.
 
     Alternatively, you can use a custom merge tool to automate conflict
@@ -1172,19 +1172,19 @@ def rebase(ui, repo, templ=None, **opts):
 
       - Move a single commit to master::
 
-          hg rebase -r 5f493448 -d master
+          @prog@ rebase -r 5f493448 -d master
 
       - Move a commit and all its descendants to another part of the commit graph::
 
-          hg rebase --source c0c3 --dest 4cf9
+          @prog@ rebase --source c0c3 --dest 4cf9
 
       - Rebase everything on a local branch marked by a bookmark to master::
 
-          hg rebase --base myfeature --dest master
+          @prog@ rebase --base myfeature --dest master
 
       - Rebase orphaned commits onto the latest version of their parents::
 
-          hg rebase --restack
+          @prog@ rebase --restack
 
       Configuration Options:
 
@@ -1369,7 +1369,7 @@ def _definedestmap(
 
     if ui.configbool("commands", "rebase.requiredest") and not destf:
         raise error.Abort(
-            _("you must specify a destination"), hint=_("use: hg rebase -d REV")
+            _("you must specify a destination"), hint=_("use: @prog@ rebase -d REV")
         )
 
     dest = None
@@ -1387,7 +1387,7 @@ def _definedestmap(
         rebaseset = repo.revs("(%ld)::", src)
         if not rebaseset:
             ui.status(_('"source" revision set is invisible - nothing to rebase\n'))
-            ui.status(_("(hint: use 'hg unhide' to make commits visible first)\n"))
+            ui.status(_("(hint: use '@prog@ unhide' to make commits visible first)\n"))
             return None
     else:
         base = scmutil.revrange(repo, [basef or "."])
@@ -2074,7 +2074,7 @@ def abort(repo, originalwd, destmap, state, activebookmark=None):
             repo.ui.warn(
                 _("warning: can't clean up public changesets %s\n")
                 % ", ".join(str(repo[r]) for r in immutable),
-                hint=_("see 'hg help phases' for details"),
+                hint=_("see '@prog@ help phases' for details"),
             )
             cleanup = False
 
@@ -2239,7 +2239,7 @@ def pullrebase(orig, ui, repo, *args, **opts):
     if opts.get(r"rebase"):
         if ui.configbool("commands", "rebase.requiredest"):
             msg = _("rebase destination required by configuration")
-            hint = _("use hg pull followed by hg rebase -d DEST")
+            hint = _("use @prog@ pull followed by @prog@ rebase -d DEST")
             raise error.Abort(msg, hint=hint)
 
         with repo.wlock(), repo.lock():
@@ -2397,7 +2397,7 @@ def uisetup(ui):
             False,
             False,
             _("rebase in progress"),
-            _("use 'hg rebase --continue' or 'hg rebase --abort'"),
+            _("use '@prog@ rebase --continue' or '@prog@ rebase --abort'"),
         ]
     )
-    cmdutil.afterresolvedstates.append(("rebasestate", "hg rebase --continue"))
+    cmdutil.afterresolvedstates.append(("rebasestate", _("@prog@ rebase --continue")))

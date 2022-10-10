@@ -38,7 +38,7 @@ command = registrar.command(cmdtable)
         ("", "obsolete", False, "add obsolete markers related to the given revisions"),
         ("", "nobinary", False, "do not dump binary files"),
     ],
-    _("hg debugcrdump [OPTION]... [-r] [REV]"),
+    _("@prog@ debugcrdump [OPTION]... [-r] [REV]"),
 )
 def crdump(ui, repo, *revs, **opts):
     """

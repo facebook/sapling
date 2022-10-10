@@ -16,7 +16,7 @@ templatekeyword = registrar.templatekeyword()
 
 @templatekeyword("phabdiff")
 def showphabdiff(repo, ctx, templ, **args):
-    """String. Return the phabricator diff id for a given hg rev."""
+    """String. Return the phabricator diff id for a given @prog@ rev."""
     descr = ctx.description()
     revision = diffprops.parserevfromcommitmsg(descr)
     return "D" + revision if revision else ""
@@ -24,7 +24,7 @@ def showphabdiff(repo, ctx, templ, **args):
 
 @templatekeyword("tasks")
 def showtasks(**args):
-    """String. Return the tasks associated with given hg rev."""
+    """String. Return the tasks associated with given @prog@ rev."""
     tasks = []
     descr = args["ctx"].description()
     match = re.search(r"Tasks?([\s-]?ID)?:\s*?[tT\d ,]+", descr)
@@ -44,7 +44,7 @@ def singlepublicbase(repo, ctx, templ, **args):
 
 @templatekeyword("reviewers")
 def showreviewers(repo, ctx, templ, **args):
-    """String. Return the phabricator diff id for a given hg rev."""
+    """String. Return the phabricator diff id for a given @prog@ rev."""
     if ctx.node() is None:
         # working copy - use committemplate.reviewers, which can be found at
         # templ.t.cache.

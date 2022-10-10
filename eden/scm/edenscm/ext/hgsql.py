@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 # no-check-code
-"""sync hg repos with MySQL
+"""sync @prog@ repos with MySQL
 
 Config::
 
@@ -1423,7 +1423,7 @@ def wraprepo(repo) -> None:
 
             if self.sqlconn is None:
                 raise util.Abort(
-                    "invalid repo change - only hg push and pull are allowed"
+                    _("invalid repo change - only @prog@ push and pull are allowed")
                 )
 
             if not self.pendingrevs and not "bookmark_moved" in tr.hookargs:
@@ -2135,7 +2135,7 @@ def pushkey(orig, repo, proto, namespace, key, old, new):
         ("f", "force", "", _("strips as far back as necessary"), ""),
         ("", "no-backup", None, _("does not produce backup bundles for strips")),
     ],
-    _("hg sqlrecover"),
+    _("@prog@ sqlrecover"),
     norepo=True,
 )
 def sqlrecover(ui, *args, **opts) -> None:
@@ -2212,7 +2212,7 @@ def sqlrecover(ui, *args, **opts) -> None:
             _("only run sqltreestrip if you know exactly what you're doing"),
         ),
     ],
-    _("hg sqltreestrip REV"),
+    _("@prog@ sqltreestrip REV"),
 )
 def sqltreestrip(ui, repo, rev: int, *args, **opts) -> Optional[int]:
     """Strips trees from local and sql history"""
@@ -2379,7 +2379,7 @@ def _discoverrevisions(repo, startrev):
             ),
         ),
     ],
-    _("hg sqlrefill REV"),
+    _("@prog@ sqlrefill REV"),
     norepo=True,
 )
 def sqlrefill(ui, startrev: int, **opts) -> None:
@@ -2452,7 +2452,7 @@ def sqlrefill(ui, startrev: int, **opts) -> None:
             _("does not produce backup bundles (for use with corrupt revlogs)"),
         ),
     ],
-    _("hg sqlstrip [OPTIONS] REV"),
+    _("@prog@ sqlstrip [OPTIONS] REV"),
     norepo=True,
 )
 def sqlstrip(ui, rev: int, *args, **opts) -> None:
@@ -2547,7 +2547,7 @@ def sqlstrip(ui, rev: int, *args, **opts) -> None:
         ("", "start", "", _("the rev to start with"), ""),
         ("", "end", "", _("the rev to end with"), ""),
     ],
-    _("hg sqlreplay"),
+    _("@prog@ sqlreplay"),
 )
 def sqlreplay(ui, repo, *args, **opts) -> None:
     """goes through the entire sql history and performs missing revlog writes
@@ -2613,7 +2613,7 @@ def _sqlreplay(repo, startrev, endrev) -> None:
 @command(
     "sqlverify",
     [("", "earliest-rev", "", _("the earliest rev to process"), "")],
-    _("hg sqlverify"),
+    _("@prog@ sqlverify"),
 )
 def sqlverify(ui, repo, *args, **opts) -> None:
     """verifies the current revlog indexes match the data in mysql

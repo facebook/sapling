@@ -31,14 +31,14 @@ def verifyexisting(ui, remote, name, hash):
     if location.strip() != hash.strip():
         ui.warn(
             _(
-                "hg server does not have an expected bookmark location. "
+                "@prog@ server does not have an expected bookmark location. "
                 + "book: %s, server: %s; expected %s\n"
             )
             % (name, location, hash)
         )
         return 1
     ui.warn(
-        _("hg server has expected bookmark location. book: %s, hash: %s\n")
+        _("@prog@ server has expected bookmark location. book: %s, hash: %s\n")
         % (name, hash)
     )
     return 0
@@ -48,18 +48,20 @@ def verifydeleted(ui, remote, name):
     serverkeys = runlistkeys(ui, remote)
     if name in serverkeys:
         ui.warn(
-            _("hg server has bookmark, which is expected to have been deleted: %s\n")
+            _(
+                "@prog@ server has bookmark, which is expected to have been deleted: %s\n"
+            )
             % (name,)
         )
         return 1
-    ui.warn(_("hg server expectedly does not have a bookmark: %s\n") % (name,))
+    ui.warn(_("@prog@ server expectedly does not have a bookmark: %s\n") % (name,))
     return 0
 
 
 @command(
     "checkserverbookmark",
     [
-        ("", "path", "", _("hg server remotepath (ssh)"), ""),
+        ("", "path", "", _("@prog@ server remotepath (ssh)"), ""),
         ("", "name", "", _("bookmark name to check"), ""),
         ("", "hash", "", _("hash to verify against the bookmark"), ""),
         (
@@ -73,7 +75,7 @@ def verifydeleted(ui, remote, name):
     norepo=True,
 )
 def checkserverbookmark(ui, **opts):
-    """Verify whether the bookmark on hg server points to a given hash"""
+    """Verify whether the bookmark on @prog@ server points to a given hash"""
     name = opts["name"]
     path = opts["path"]
     hash = opts["hash"]

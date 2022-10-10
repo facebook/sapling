@@ -88,14 +88,14 @@ def next_(ui, repo, *args, **opts):
 
 def _moverelative(ui, repo, args, opts, reverse=False):
     """Update to a changeset relative to the current changeset.
-    Implements both `hg previous` and `hg next`.
+    Implements both `@prog@ previous` and `@prog@ next`.
 
     Takes in a list of positional arguments and a dict of command line
-    options. (See help for `hg previous` and `hg next` to see which
+    options. (See help for `@prog@ previous` and `@prog@ next` to see which
     arguments and flags are supported.)
 
-    Moves forward through history by default -- the behavior of `hg next`.
-    Setting reverse=True will change the behavior to that of `hg previous`.
+    Moves forward through history by default -- the behavior of `@prog@ next`.
+    Setting reverse=True will change the behavior to that of `@prog@ previous`.
     """
     # Parse positional argument.
     try:
@@ -174,8 +174,8 @@ def _moverelative(ui, repo, args, opts, reverse=False):
 
 
 def _findtarget(ui, repo, n, opts, reverse):
-    """Find the appropriate target changeset for `hg previous` and
-    `hg next` based on the provided options. May rebase the traversed
+    """Find the appropriate target changeset for `@prog@ previous` and
+    `@prog@ next` based on the provided options. May rebase the traversed
     changesets if the rebase option is given in the opts dict.
     """
     towards = opts.get("towards")

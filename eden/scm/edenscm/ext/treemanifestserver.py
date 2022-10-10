@@ -1397,7 +1397,7 @@ def debuggetroottree(ui, repo, rootnode):
         ),
         ("", "verify", None, _("verify consistency of tree data")),
     ],
-    _("hg debuggentrees FIRSTREV LASTREV"),
+    _("@prog@ debuggentrees FIRSTREV LASTREV"),
 )
 def debuggentrees(ui, repo, rev1, rev2, *args, **opts):
     rev1 = repo.revs(rev1).first()
@@ -1417,7 +1417,7 @@ def debuggentrees(ui, repo, rev1, rev2, *args, **opts):
             )
 
 
-@command("backfillmanifestrevlog", [], _("hg backfillmanifestrevlog"))
+@command("backfillmanifestrevlog", [], _("@prog@ backfillmanifestrevlog"))
 def backfillmanifestrevlog(ui, repo, *args, **opts):
     """Download any missing manifest revlog entries. This is useful when
     transitioning back from a treeonly repo to a flat+tree hybrid repo."""
@@ -1457,7 +1457,9 @@ def backfillmanifestrevlog(ui, repo, *args, **opts):
 
 
 @command(
-    "backfilltree", [("l", "limit", "10000000", _(""))], _("hg backfilltree [OPTIONS]")
+    "backfilltree",
+    [("l", "limit", "10000000", _(""))],
+    _("@prog@ backfilltree [OPTIONS]"),
 )
 def backfilltree(ui, repo, *args, **opts):
     if isinstance(repo.manifestlog, treemanifestlog):

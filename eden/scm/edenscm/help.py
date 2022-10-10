@@ -180,7 +180,7 @@ helptable = sorted(
         (["phases"], _("Working with Phases"), loaddoc("phases")),
         (
             ["scripting"],
-            _("Using Mercurial from scripts and automation"),
+            _("Using @Product@ from scripts and automation"),
             loaddoc("scripting"),
         ),
         (["pager"], _("Pager Support"), loaddoc("pager")),
@@ -282,7 +282,7 @@ def makesubcmdlist(cmd, categories, subcommands, verbose, quiet):
 
     if not quiet:
         rst.append(
-            _("\n(use 'hg help %s SUBCOMMAND' to show complete subcommand help)\n")
+            _("\n(use '@prog@ help %s SUBCOMMAND' to show complete subcommand help)\n")
             % cmd
         )
     return rst
@@ -368,7 +368,7 @@ class _helpdispatch(object):
                 raise error.UnknownCommand(name)
             else:
                 msg = _("no such help topic: %s") % name
-                hint = _("try 'hg help --keyword %s'") % name
+                hint = _("try '@prog@ help --keyword %s'") % name
                 raise error.Abort(msg, hint=hint)
 
     def helpcmd(self, name, subtopic=None):
@@ -407,7 +407,7 @@ class _helpdispatch(object):
         except error.UnknownSubcommand as inst:
             cmd, subcmd = inst.args[:2]
             msg = _("'%s' has no such subcommand: %s") % (cmd, subcmd)
-            hint = _("run 'hg help %s' to see available subcommands") % cmd
+            hint = _("run '@prog@ help %s' to see available subcommands") % cmd
             raise error.Abort(msg, hint=hint)
 
         rst = []
@@ -472,7 +472,7 @@ class _helpdispatch(object):
                     source,
                 )
             else:
-                doc = _("%salias for: hg %s\n\n%s\n\ndefined by: %s\n") % (
+                doc = _("%salias for: @prog@ %s\n\n%s\n\ndefined by: %s\n") % (
                     aliasdoc,
                     entry[0].definition,
                     doc,
@@ -491,7 +491,9 @@ class _helpdispatch(object):
             mod = extensions.find(name)
             doc = gettext(pycompat.getdoc(mod)) or ""
             if "\n" in doc.strip():
-                msg = _("(use 'hg help -e %s' to show help for the %s extension)") % (
+                msg = _(
+                    "(use '@prog@ help -e %s' to show help for the %s extension)"
+                ) % (
                     name,
                     name,
                 )
@@ -522,7 +524,7 @@ class _helpdispatch(object):
 
         if not self.ui.verbose:
             if not self.full:
-                rst.append(_("\n(use 'hg %s -h' to show more help)\n") % name)
+                rst.append(_("\n(use '@prog@ %s -h' to show more help)\n") % name)
             elif not self.ui.quiet:
                 rst.append(
                     _("\n(some details hidden, use --verbose to show complete help)")
@@ -589,8 +591,8 @@ class _helpdispatch(object):
             "\n",
             "hg COMMAND [OPTIONS]\n",
             "\n",
-            "These are some common Mercurial commands.  Use 'hg help commands' to list all "
-            "commands, and 'hg help COMMAND' to get help on a specific command.\n",
+            "These are some common Mercurial commands.  Use '@prog@ help commands' to list all "
+            "commands, and '@prog@ help COMMAND' to get help on a specific command.\n",
             "\n",
         ]
 
@@ -653,7 +655,7 @@ class _helpdispatch(object):
         try:
             cmdutil.findcmd(name, self.commandshelptable)
             rst.append(
-                _("\nuse 'hg help -c %s' to see help for the %s command\n")
+                _("\nuse '@prog@ help -c %s' to see help for the %s command\n")
                 % (name, name)
             )
         except error.UnknownCommand:
@@ -692,7 +694,7 @@ class _helpdispatch(object):
         else:
             rst.append(
                 _(
-                    "(use 'hg help extensions' for information on enabling"
+                    "(use '@prog@ help extensions' for information on enabling"
                     " extensions)\n"
                 )
             )
@@ -714,7 +716,7 @@ class _helpdispatch(object):
         )
         rst.append("\n")
         rst.append(
-            _("(use 'hg help extensions' for information on enabling extensions)\n")
+            _("(use '@prog@ help extensions' for information on enabling extensions)\n")
         )
         return rst
 
@@ -817,7 +819,7 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None, **opts
                 rst.append("\n")
         if not rst:
             msg = _("no matches")
-            hint = _("try 'hg help' for a list of topics")
+            hint = _("try '@prog@ help' for a list of topics")
             raise error.Abort(msg, hint=hint)
     elif name == "commands":
         if not ui.quiet:

@@ -1147,7 +1147,7 @@ def _addchangegroupfiles(repo, source, revmap, trp, needfiles):
                 fl.rev(n)
             except error.LookupError:
                 raise error.Abort(
-                    _("missing file data for %s:%s - run hg verify") % (f, hex(n))
+                    _("missing file data for %s:%s - run @prog@ verify") % (f, hex(n))
                 )
 
     return revisions, files

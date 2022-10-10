@@ -53,7 +53,7 @@ def hide(ui, repo, *revs, **opts):
     """hide commits and their descendants
 
     Mark the specified commits as hidden. Hidden commits are not included in
-    the output of most Mercurial commands, including :hg:`log` and
+    the output of most @Product@ commands, including :hg:`log` and
     :hg:`smartlog.` Any descendants of the specified commits will also be
     hidden.
 
@@ -140,7 +140,7 @@ def hide(ui, repo, *revs, **opts):
             if not ctx.mutable():
                 raise error.Abort(
                     _("cannot hide immutable changeset: %s") % ctx,
-                    hint="see 'hg help phases' for details",
+                    hint=_("see '@prog@ help phases' for details"),
                 )
             if not ui.quiet:
                 ui.status(

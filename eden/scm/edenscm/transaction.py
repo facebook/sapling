@@ -710,7 +710,7 @@ class transaction(util.transactional):
                 )
                 self.report(_("rollback completed\n"))
             except BaseException:
-                self.report(_("rollback failed - please run hg recover\n"))
+                self.report(_("rollback failed - please run @prog@ recover\n"))
         finally:
             self.journal = None
             self.releasefn(self, False)  # notify failure of transaction
@@ -770,7 +770,7 @@ def rollback(opener, vfsmap, file, report, checkambigfiles=None):
                         backupentries.append((l, f, b, bool(c)))
             else:
                 report(
-                    _("journal was created by a different version of " "Mercurial\n")
+                    _("journal was created by a different version of " "@Product@\n")
                 )
 
     _playback(

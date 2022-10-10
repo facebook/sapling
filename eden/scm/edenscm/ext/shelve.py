@@ -437,7 +437,7 @@ def _nothingtoshelvemessaging(ui, repo, pats, opts) -> None:
     stat = repo.status(match=scmutil.match(repo[None], pats, opts))
     if stat.deleted:
         ui.status(
-            _("nothing changed (%d missing files, see " "'hg status')\n")
+            _("nothing changed (%d missing files, see " "'@prog@ status')\n")
             % len(stat.deleted)
         )
     else:
@@ -762,7 +762,7 @@ def unshelvecontinue(ui, repo, state, opts) -> None:
         if [f for f in ms if ms[f] == "u"]:
             raise error.Abort(
                 _("unresolved conflicts, can't continue"),
-                hint=_("see 'hg resolve', then 'hg unshelve --continue'"),
+                hint=_("see '@prog@ resolve', then '@prog@ unshelve --continue'"),
             )
 
         repo.localvfs.rename("unshelverebasestate", "rebasestate")
@@ -806,7 +806,7 @@ def _commitworkingcopychanges(ui, repo, opts, tmpwctx):
     ui.status(
         _(
             "temporarily committing pending changes "
-            "(restore with 'hg unshelve --abort')\n"
+            "(restore with '@prog@ unshelve --abort')\n"
         )
     )
     commitfunc = getcommitfunc(extra=None, interactive=False, editor=False)
@@ -906,8 +906,8 @@ def _rebaserestoredcommit(
         repo.localvfs.rename("rebasestate", "unshelverebasestate")
         raise error.InterventionRequired(
             _(
-                "unresolved conflicts (see 'hg resolve', then "
-                "'hg unshelve --continue')"
+                "unresolved conflicts (see '@prog@ resolve', then "
+                "'@prog@ unshelve --continue')"
             )
         )
 
@@ -947,7 +947,7 @@ def _checkunshelveuntrackedproblems(ui, repo, shelvectx) -> None:
     intersection = wcdeleted.intersection(shelvetouched)
     if intersection:
         m = _("shelved change touches missing files")
-        hint = _("run hg status to see which files are missing")
+        hint = _("run @prog@ status to see which files are missing")
         raise error.Abort(m, hint=hint)
 
 
@@ -977,7 +977,7 @@ def _hidenodes(repo, nodes) -> None:
         ("t", "tool", "", _("specify merge tool")),
         ("", "date", "", _("set date for temporary commits (DEPRECATED)"), _("DATE")),
     ],
-    _("hg unshelve [[-n] SHELVED]"),
+    _("@prog@ unshelve [[-n] SHELVED]"),
 )
 def unshelve(ui, repo, *shelved, **opts):
     """restore a shelved change to the working directory
@@ -1165,7 +1165,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
         ("", "stat", None, _("output diffstat-style summary of changes")),
     ]
     + cmdutil.walkopts,
-    _("hg shelve [OPTION]... [FILE]..."),
+    _("@prog@ shelve [OPTION]... [FILE]..."),
 )
 def shelvecmd(ui, repo, *pats, **opts):
     """save pending changes and revert checkout to a clean state
@@ -1247,7 +1247,7 @@ def extsetup(ui) -> None:
             False,
             False,
             _("unshelve already in progress"),
-            _("use 'hg unshelve --continue' or 'hg unshelve --abort'"),
+            _("use '@prog@ unshelve --continue' or '@prog@ unshelve --abort'"),
         ]
     )
     cmdutil.afterresolvedstates.append(

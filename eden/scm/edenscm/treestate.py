@@ -684,9 +684,9 @@ def automigrate(repo):
         repo.ui.debug("downgrading dirstate format...\n")
     elif current < version:
         repo.ui.debug(
-            (
+            _(
                 "please wait while we migrate dirstate format to version %s\n"
-                "this will make your hg commands faster...\n"
+                "this will make your @prog@ commands faster...\n"
             )
             % version
         )

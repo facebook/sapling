@@ -342,7 +342,8 @@ def subscriptset(repo, subset, x, y, order):
 
 def listset(repo, subset, *xs, **opts):
     raise error.ParseError(
-        _("can't use a list in this context"), hint=_('see hg help "revsets.x or y"')
+        _("can't use a list in this context"),
+        hint=_('see @prog@ help "revsets.x or y"'),
     )
 
 
@@ -1783,7 +1784,7 @@ def outgoing(repo, subset, x):
     if not path:
         raise error.Abort(
             _("default repository not configured!"),
-            hint=_("see 'hg help config.paths'"),
+            hint=_("see '@prog@ help config.paths'"),
         )
     dest = path.pushloc or path.loc
     branches = path.branch, []

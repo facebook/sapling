@@ -260,7 +260,7 @@ class bmstore(dict):
                 self._repo.ui.warn(
                     _(
                         "bookmark %s matches a changeset hash\n"
-                        "(did you leave a -r out of an 'hg bookmark' "
+                        "(did you leave a -r out of an '@prog@ bookmark' "
                         "command?)\n"
                     )
                     % mark

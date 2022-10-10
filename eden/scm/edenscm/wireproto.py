@@ -44,7 +44,7 @@ from .pycompat import decodeutf8, range
 urlerr = util.urlerr
 urlreq = util.urlreq
 
-bundle2requiredmain = _("incompatible Mercurial client; bundle2 required")
+bundle2requiredmain = _("incompatible @Product@ client; bundle2 required")
 bundle2requiredhint = _("see https://www.mercurial-scm.org/wiki/" "IncompatibleClient")
 bundle2required = "%s\n(%s)\n" % (bundle2requiredmain, bundle2requiredhint)
 
@@ -1083,7 +1083,7 @@ def getbundle(repo, proto, others):
             if not common and clheads == heads:
                 raise error.Abort(
                     _("server has pull-based clones disabled"),
-                    hint=_("remove --pull if specified or upgrade Mercurial"),
+                    hint=_("remove --pull if specified or upgrade @Product@"),
                 )
 
         chunks = exchange.getbundlechunks(repo, "serve", **opts)

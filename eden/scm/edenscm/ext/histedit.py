@@ -26,7 +26,7 @@ is as follows, assuming the following history::
  o  0   d8d2fcd0e319   2009-04-27 18:04 -0500   durin42
       Add alpha
 
-If you were to run ``hg histedit c561b4e977df``, you would see the following
+If you were to run ``@prog@ histedit c561b4e977df``, you would see the following
 file open in your editor::
 
  pick c561b4e977df Add beta
@@ -101,9 +101,9 @@ so you might need to be a little patient. You can choose to keep the original
 revisions by passing the ``--keep`` flag.
 
 The ``edit`` operation will drop you back to a command prompt,
-allowing you to edit files freely, or even use ``hg record`` to commit
+allowing you to edit files freely, or even use ``@prog@ record`` to commit
 some changes as a separate commit. When you're done, any remaining
-uncommitted changes will be committed as well. When done, run ``hg
+uncommitted changes will be committed as well. When done, run ``@prog@
 histedit --continue`` to finish this step. If there are uncommitted
 changes, you'll be prompted for a new commit message, but the default
 commit message will be the original message for the ``edit`` ed
@@ -111,14 +111,14 @@ revision, and the date of the original commit will be preserved.
 
 The ``message`` operation will give you a chance to revise a commit
 message without changing the contents. It's a shortcut for doing
-``edit`` immediately followed by `hg histedit --continue``.
+``edit`` immediately followed by `@prog@ histedit --continue``.
 
 If ``histedit`` encounters a conflict when moving a revision (while
 handling ``pick`` or ``fold``), it'll stop in a similar manner to
 ``edit`` with the difference that it won't prompt you for a commit
 message when done. If you decide at this point that you don't like how
 much work it will be to rearrange history, or that you made a mistake,
-you can use ``hg histedit --abort`` to abandon the new changes you
+you can use ``@prog@ histedit --abort`` to abandon the new changes you
 have made and return to the state before you attempted to edit your
 history.
 
@@ -167,7 +167,7 @@ For example, given the following history:
  o  0   d8d2fcd0e319   2009-04-27 18:04 -0500   durin42
       Add alpha
 
-``hg histedit c561b4e977df`` would construct the histedit plan below and
+``@prog@ histedit c561b4e977df`` would construct the histedit plan below and
 present it to you for final fixes before you close the editor:
 
  pick c561b4e977df Add beta
@@ -188,8 +188,8 @@ present it to you for final fixes before you close the editor:
  #  b, base = checkout changeset and apply further changesets from there
  #
 
-This lets you use ordinary ``hg commit`` commands to build up a set of changes
-to histedit into place, then ``hg histedit`` when you are done.
+This lets you use ordinary ``@prog@ commit`` commands to build up a set of changes
+to histedit into place, then ``@prog@ histedit`` when you are done.
 
 Config
 ------
@@ -201,7 +201,7 @@ configuration file::
   [histedit]
   linelen = 120      # truncate rule lines at 120 characters
 
-``hg histedit`` attempts to automatically choose an appropriate base
+``@prog@ histedit`` attempts to automatically choose an appropriate base
 revision to use. To change which base revision is used, define a
 revset in your configuration file::
 
@@ -563,7 +563,7 @@ class histeditaction(object):
             repo.ui.write(*buf)
             raise error.InterventionRequired(
                 _("Fix up the change (%s %s)") % (self.verb, node.short(self.node)),
-                hint=_("hg histedit --continue to resume"),
+                hint=_("@prog@ histedit --continue to resume"),
             )
         else:
             repo.ui.popbuffer()
@@ -785,7 +785,7 @@ class edit(histeditaction):
         raise error.InterventionRequired(
             _("Editing (%s), you may commit or record as needed now.")
             % node.short(self.node),
-            hint=_("hg histedit --continue to resume"),
+            hint=_("@prog@ histedit --continue to resume"),
         )
 
     def commiteditor(self):
@@ -1043,7 +1043,7 @@ def histedit(ui, repo, *freeargs, **opts):
 
            Start history editing from revision 3::
 
-             hg histedit -r 3
+             @prog@ histedit -r 3
 
            An editor opens, containing the list of revisions,
            with specific actions specified::
@@ -1068,7 +1068,7 @@ def histedit(ui, repo, *freeargs, **opts):
 
            Start history editing from revision 2::
 
-             hg histedit -r 2
+             @prog@ histedit -r 2
 
            An editor opens, containing the list of revisions,
            with specific actions specified::
@@ -1438,7 +1438,7 @@ def between(repo, old, new, keep):
         if not root.mutable():
             raise error.Abort(
                 _("cannot edit public changeset: %s") % root,
-                hint=_("see 'hg help phases' for details"),
+                hint=_("see '@prog@ help phases' for details"),
             )
     return [c.node() for c in ctxs]
 
@@ -1572,7 +1572,8 @@ def verifyactions(actions, state, ctxs):
         raise error.ParseError(
             _("missing rules for changeset %s") % node.short(missing[0]),
             hint=_(
-                'use "drop %s" to discard, see also: ' "'hg help -e histedit.config'"
+                'use "drop %s" to discard, see also: '
+                "'@prog@ help -e histedit.config'"
             )
             % node.short(missing[0]),
         )
@@ -1729,7 +1730,9 @@ def extsetup(ui):
             False,
             True,
             _("histedit in progress"),
-            _("use 'hg histedit --continue' or 'hg histedit --abort'"),
+            _("use '@prog@ histedit --continue' or '@prog@ histedit --abort'"),
         ]
     )
-    cmdutil.afterresolvedstates.append(("histedit-state", "hg histedit --continue"))
+    cmdutil.afterresolvedstates.append(
+        ("histedit-state", _("@prog@ histedit --continue"))
+    )

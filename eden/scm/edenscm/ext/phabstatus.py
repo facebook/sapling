@@ -155,7 +155,7 @@ templatekeyword = registrar.templatekeyword()
 
 @templatekeyword("phabstatus")
 def showphabstatus(repo, ctx, templ, **args):
-    """String. Return the diff approval status for a given hg rev"""
+    """String. Return the diff approval status for a given @prog@ rev"""
     diffnum = getdiffnum(repo, ctx)
     if diffnum is None:
         return None
@@ -181,7 +181,7 @@ def showphabstatus(repo, ctx, templ, **args):
 
 @templatekeyword("phabsignalstatus")
 def showphabsignalstatus(repo, ctx, templ, **args):
-    """String. Return the diff Signal status for a given hg rev"""
+    """String. Return the diff Signal status for a given @prog@ rev"""
     diffnum = getdiffnum(repo, ctx)
     if diffnum is None:
         return None

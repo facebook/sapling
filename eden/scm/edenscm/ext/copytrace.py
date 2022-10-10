@@ -112,7 +112,7 @@ def extsetup(ui):
     filemerge._otherchangedlocaldeletedmsg = _(
         "other%(o)s changed %(fd)s which local%(l)s deleted\n"
         "hint: if this is due to a renamed file, you can manually input the renamed path, or "
-        "re-run the command using --config=experimental.copytrace=on to make hg figure out "
+        "re-run the command using --config=experimental.copytrace=on to make @prog@ figure out "
         "renamed path automatically (which is very slow, and you will need to be patient)\n"
         "use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path?"
         "$$ &Changed $$ &Deleted $$ &Unresolved $$ &Renamed"

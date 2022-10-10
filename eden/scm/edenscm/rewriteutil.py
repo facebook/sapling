@@ -33,5 +33,5 @@ def precheck(repo, revs, action="rewrite"):
 
     if publicrevs:
         msg = _("cannot %s public changesets") % action
-        hint = _("see 'hg help phases' for details")
+        hint = _("see '@prog@ help phases' for details")
         raise error.Abort(msg, hint=hint)

@@ -162,14 +162,14 @@ msgdestmerge: Dict[
                 "multiple matching bookmarks to merge -"
                 " please merge with an explicit rev or bookmark"
             ),
-            _("run 'hg heads' to see all heads"),
+            _("run '@prog@ heads' to see all heads"),
         ),
         "rebase": (
             _(
                 "multiple matching bookmarks to rebase -"
                 " please rebase to an explicit rev or bookmark"
             ),
-            _("run 'hg heads' to see all heads"),
+            _("run '@prog@ heads' to see all heads"),
         ),
     },
     # no other matching divergent bookmark
@@ -179,47 +179,47 @@ msgdestmerge: Dict[
                 "no matching bookmark to merge - "
                 "please merge with an explicit rev or bookmark"
             ),
-            _("run 'hg heads' to see all heads"),
+            _("run '@prog@ heads' to see all heads"),
         ),
         "rebase": (
             _(
                 "no matching bookmark to rebase - "
                 "please rebase to an explicit rev or bookmark"
             ),
-            _("run 'hg heads' to see all heads"),
+            _("run '@prog@ heads' to see all heads"),
         ),
     },
     # branch have too many unbookmarked heads, no obvious destination
     "toomanyheads": {
         "merge": (
             _("branch '%s' has %d heads - please merge with an explicit rev"),
-            _("run 'hg heads .' to see heads"),
+            _("run '@prog@ heads .' to see heads"),
         ),
         "rebase": (
             _("branch '%s' has %d heads - please rebase to an explicit rev"),
-            _("run 'hg heads .' to see heads"),
+            _("run '@prog@ heads .' to see heads"),
         ),
     },
     # branch have no other unbookmarked heads
     "bookmarkedheads": {
         "merge": (
             _("heads are bookmarked - please merge with an explicit rev"),
-            _("run 'hg heads' to see all heads"),
+            _("run '@prog@ heads' to see all heads"),
         ),
         "rebase": (
             _("heads are bookmarked - please rebase to an explicit rev"),
-            _("run 'hg heads' to see all heads"),
+            _("run '@prog@ heads' to see all heads"),
         ),
     },
     # branch have just a single heads, but there is other branches
     "nootherbranchheads": {
         "merge": (
             _("branch '%s' has one head - please merge with an explicit rev"),
-            _("run 'hg heads' to see all heads"),
+            _("run '@prog@ heads' to see all heads"),
         ),
         "rebase": (
             _("branch '%s' has one head - please rebase to an explicit rev"),
-            _("run 'hg heads' to see all heads"),
+            _("run '@prog@ heads' to see all heads"),
         ),
     },
     # repository have a single head
@@ -229,18 +229,18 @@ msgdestmerge: Dict[
     },
     # repository have a single head and we are not on it
     "nootherheadsbehind": {
-        "merge": (_("nothing to merge"), _("use 'hg update' instead")),
-        "rebase": (_("nothing to rebase"), _("use 'hg update' instead")),
+        "merge": (_("nothing to merge"), _("use '@prog@ update' instead")),
+        "rebase": (_("nothing to rebase"), _("use '@prog@ update' instead")),
     },
     # We are not on a head
     "notatheads": {
         "merge": (
             _("working directory not at a head revision"),
-            _("use 'hg update' or merge with an explicit revision"),
+            _("use '@prog@ update' or merge with an explicit revision"),
         ),
         "rebase": (
             _("working directory not at a head revision"),
-            _("use 'hg update' or rebase to an explicit revision"),
+            _("use '@prog@ update' or rebase to an explicit revision"),
         ),
     },
     "emptysourceset": {
@@ -388,7 +388,7 @@ histeditdefaultrevset = "reverse(only(.) - public() - ::merge() - null)"
 
 
 def desthistedit(ui, repo):
-    """Default base revision to edit for `hg histedit`."""
+    """Default base revision to edit for `@prog@ histedit`."""
     default = ui.config("histedit", "defaultrev", histeditdefaultrevset)
     if default:
         revs = scmutil.revrange(repo, [default])
@@ -446,7 +446,7 @@ def _statusotherbranchheads(ui, repo) -> None:
                 ui.warn(
                     _(
                         "(committing will reopen the head, "
-                        "use 'hg heads .' to see %i other heads)\n"
+                        "use '@prog@ heads .' to see %i other heads)\n"
                     )
                     % (len(otherheads))
                 )

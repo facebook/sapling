@@ -136,11 +136,11 @@ def metaedit(ui, repo, templ, *revs, **opts):
 
      - Edit the commit message for the current commit::
 
-         hg metaedit
+         @prog@ metaedit
 
      - Change the username for the current commit::
 
-         hg metaedit --user 'New User <new-email@example.com>'
+         @prog@ metaedit --user 'New User <new-email@example.com>'
 
     """
     revs = list(revs)

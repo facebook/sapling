@@ -23,7 +23,7 @@ hinttable = {
         % path
     ),
     "branch-command-deprecate": lambda: _(
-        "'hg branch' command does not do what you want, and is being removed. "
+        "'@prog@ branch' command does not do what you want, and is being removed. "
         "It always prints 'default' for now. "
         "Check fburl.com/why-no-named-branches for details."
     ),
@@ -99,7 +99,7 @@ def show(ui):
             write("%s\n" % msg.rstrip(), notice=_("hint[%s]") % name)
             names.append(name)
     if names and not isacked(ui, "hint-ack"):
-        msg = _("use 'hg hint --ack %s' to silence these hints\n") % " ".join(names)
+        msg = _("use '@prog@ hint --ack %s' to silence these hints\n") % " ".join(names)
         write(msg, notice=_("hint[%s]") % "hint-ack")
     messages[:] = []
     triggered.clear()

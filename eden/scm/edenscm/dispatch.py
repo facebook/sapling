@@ -396,11 +396,11 @@ def _formatparse(write, inst):
         # make sure to check fileset first, as revset can invoke fileset
         similar = _getsimilar(inst.symbols, inst.function)
     if len(inst.args) > 1:
-        write(_("hg: parse error at %s: %s\n") % (inst.args[1], inst.args[0]))
+        write(_("@prog@: parse error at %s: %s\n") % (inst.args[1], inst.args[0]))
         if inst.args[0][0] == " ":
             write(_("unexpected leading whitespace\n"))
     else:
-        write(_("hg: parse error: %s\n") % inst.args[0])
+        write(_("@prog@: parse error: %s\n") % inst.args[0])
         _reportsimilar(write, similar)
     if inst.hint:
         write(_("(%s)\n") % inst.hint)
@@ -721,7 +721,7 @@ def _callcatch(ui, req, func):
         return scmutil.callcatch(ui, req, func)
     except error.AmbiguousCommand as inst:
 
-        ui.warn(_("hg: command '%s' is ambiguous:\n") % inst.args[0])
+        ui.warn(_("@prog@: command '%s' is ambiguous:\n") % inst.args[0])
 
         for match in inst.args[1]:
             cmds = match.split(" or ")
@@ -735,22 +735,24 @@ def _callcatch(ui, req, func):
     except error.CommandError as inst:
         if inst.args[0]:
             msgbytes = pycompat.bytestr(inst.args[1])
-            ui.warn(_("hg %s: %s\n") % (inst.args[0], msgbytes))
-            ui.warn(_("(use 'hg %s -h' to get help)\n") % (inst.args[0],))
+            ui.warn(_("@prog@ %s: %s\n") % (inst.args[0], msgbytes))
+            ui.warn(_("(use '@prog@ %s -h' to get help)\n") % (inst.args[0],))
         else:
-            ui.warn(_("hg: %s\n") % inst.args[1])
-            ui.warn(_("(use 'hg -h' to get help)\n"))
+            ui.warn(_("@prog@: %s\n") % inst.args[1])
+            ui.warn(_("(use '@prog@ -h' to get help)\n"))
     except error.ParseError as inst:
         _formatparse(ui.warn, inst)
         return -1
     except error.UnknownCommand as inst:
-        ui.warn(_("unknown command %r\n(use 'hg help' to get help)\n") % inst.args[0])
+        ui.warn(
+            _("unknown command %r\n(use '@prog@ help' to get help)\n") % inst.args[0]
+        )
     except error.UnknownSubcommand as inst:
         cmd, subcmd = inst.args[:2]
         if subcmd is not None:
-            nosubcmdmsg = _("hg %s: unknown subcommand '%s'\n") % (cmd, subcmd)
+            nosubcmdmsg = _("@prog@ %s: unknown subcommand '%s'\n") % (cmd, subcmd)
         else:
-            nosubcmdmsg = _("hg %s: subcommand required\n") % cmd
+            nosubcmdmsg = _("@prog@ %s: subcommand required\n") % cmd
         ui.warn(nosubcmdmsg)
     except IOError:
         raise

@@ -245,7 +245,7 @@ def callcatch(ui, req, func):
         # certificate, so print the configured remediation message.
         helptext = ui.config("help", "tlsauthhelp")
         if helptext is None:
-            helptext = _("(run 'hg config auth' to see configured certificates)")
+            helptext = _("(run '@prog@ config auth' to see configured certificates)")
         ui.warn(
             _("%s!\n\n%s\n") % (inst.args[0], helptext),
             error=_("certificate error"),
@@ -1063,7 +1063,7 @@ def readrequires(opener, supported=None):
     missings.sort()
     if missings:
         raise error.RequirementError(
-            _("repository requires features unknown to this Mercurial: %s")
+            _("repository requires features unknown to this @Product@: %s")
             % " ".join(missings),
             hint=_(
                 "see https://mercurial-scm.org/wiki/MissingRequirement"

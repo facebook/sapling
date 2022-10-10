@@ -86,10 +86,10 @@ Use one of the following flags to modify this behavior:
 if the destination commit is not an ancestor or descendant of the current
 commit
 
-If merge conflicts occur during checkout, Mercurial enters an unfinished
+If merge conflicts occur during checkout, @Product@ enters an unfinished
 merge state. If this happens, fix the conflicts manually and then run
-hg commit to exit the unfinished merge state and save your changes in a
-new commit. Alternatively, run hg checkout --clean to discard your pending
+@prog@ commit to exit the unfinished merge state and save your changes in a
+new commit. Alternatively, run @prog@ checkout --clean to discard your pending
 changes.
 
 Specify null as the destination commit to get an empty checkout (sometimes

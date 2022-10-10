@@ -1723,7 +1723,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 s(_("the local file has been renamed to %s\n") % f1)
             else:
                 s(_("the remote file has been renamed to %s\n") % f1)
-            s(_("resolve manually then use 'hg resolve --mark %s'\n") % f)
+            s(_("resolve manually then use '@prog@ resolve --mark %s'\n") % f)
             ms.addpath(f, f1, fo)
             z += 1
             prog.value = (z, f)
@@ -2463,11 +2463,12 @@ def update(
                 if not mergeancestor and wc.branch() == p2.branch():
                     raise error.Abort(
                         _("nothing to merge"),
-                        hint=_("use 'hg update' " "or check 'hg heads'"),
+                        hint=_("use '@prog@ update' " "or check '@prog@ heads'"),
                     )
             if not force and (wc.files() or wc.deleted()):
                 raise error.Abort(
-                    _("uncommitted changes"), hint=_("use 'hg status' to list changes")
+                    _("uncommitted changes"),
+                    hint=_("use '@prog@ status' to list changes"),
                 )
 
         elif not overwrite:

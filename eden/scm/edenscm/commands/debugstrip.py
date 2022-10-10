@@ -87,7 +87,7 @@ def strip(ui, repo, revs, update=True, backup=True, force=None, bookmarks=None):
         ("k", "keep", None, _("do not modify working directory during strip")),
         ("B", "bookmark", [], _("remove revs only reachable from given bookmark")),
     ],
-    _("hg strip [-k] [-f] [-B bookmark] [-r] REV..."),
+    _("@prog@ strip [-k] [-f] [-B bookmark] [-r] REV..."),
 )
 def stripcmd(ui, repo, *revs, **opts):
     """strip commits and all their descendants from the repository

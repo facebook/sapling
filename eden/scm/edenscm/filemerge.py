@@ -571,7 +571,7 @@ def _describefailure(r, repo, mynode, orig, fcd, fco, fca):
 
     relpath = repo.pathto(fcd.path())
     msg = _(
-        "warning: %d conflicts while merging %s! (edit, then use 'hg resolve --mark')\n"
+        "warning: %d conflicts while merging %s! (edit, then use '@prog@ resolve --mark')\n"
     ) % (r, relpath)
 
     if repo.ui.configbool("merge", "printcandidatecommmits"):
@@ -640,7 +640,10 @@ def _imerge3(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
 @internaltool(
     "mergediff",
     fullmerge,
-    _("warning: conflicts while merging %s! " "(edit, then use 'hg resolve --mark')\n"),
+    _(
+        "warning: conflicts while merging %s! "
+        "(edit, then use '@prog@ resolve --mark')\n"
+    ),
     precheck=_mergecheck,
 )
 def _imergediff(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
@@ -1056,7 +1059,7 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
 
 
 def _haltmerge():
-    msg = _("merge halted after failed merge (see hg resolve)")
+    msg = _("merge halted after failed merge (see @prog@ resolve)")
     raise error.InterventionRequired(msg)
 
 
