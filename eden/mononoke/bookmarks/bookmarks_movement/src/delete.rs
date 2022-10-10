@@ -7,9 +7,6 @@
 
 use std::collections::HashMap;
 
-use blobrepo::logger::log_bookmark_operation;
-use blobrepo::logger::BookmarkInfo;
-use blobrepo::logger::BookmarkOperation;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKind;
 use bookmarks_types::BookmarkName;
@@ -19,6 +16,9 @@ use metaconfig_types::InfinitepushParams;
 use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
 use repo_authorization::RepoWriteOperation;
+use repo_update_logger::log_bookmark_operation;
+use repo_update_logger::BookmarkInfo;
+use repo_update_logger::BookmarkOperation;
 
 use crate::repo_lock::check_repo_lock;
 use crate::restrictions::check_bookmark_sync_config;

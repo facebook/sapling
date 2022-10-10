@@ -46,6 +46,7 @@ repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_deri
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 repo_lock = { version = "0.1.0", path = "../../repo_attributes/repo_lock/repo_lock" }
 repo_permission_checker = { version = "0.1.0", path = "../../repo_attributes/repo_permission_checker" }
+repo_update_logger = { version = "0.1.0", path = "../../features/repo_update_logger" }
 revset = { version = "0.1.0", path = "../../revset" }
 scribe_commit_queue = { version = "0.1.0", path = "../../repo_client/scribe_commit_queue" }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }

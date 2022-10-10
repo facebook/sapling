@@ -10,9 +10,6 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use blobrepo::logger::log_bookmark_operation;
-use blobrepo::logger::BookmarkInfo;
-use blobrepo::logger::BookmarkOperation;
 use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
 use bookmarks::BookmarkUpdateReason;
@@ -34,6 +31,9 @@ use repo_authorization::AuthorizationContext;
 use repo_authorization::RepoWriteOperation;
 use repo_bookmark_attrs::RepoBookmarkAttrsRef;
 use repo_identity::RepoIdentityRef;
+use repo_update_logger::log_bookmark_operation;
+use repo_update_logger::BookmarkInfo;
+use repo_update_logger::BookmarkOperation;
 
 use crate::affected_changesets::AdditionalChangesets;
 use crate::affected_changesets::AffectedChangesets;

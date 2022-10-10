@@ -9,9 +9,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
-use blobrepo::logger::log_bookmark_operation;
-use blobrepo::logger::BookmarkInfo;
-use blobrepo::logger::BookmarkOperation;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKind;
 use bookmarks_types::BookmarkName;
@@ -26,6 +23,9 @@ use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_authorization::AuthorizationContext;
 use repo_authorization::RepoWriteOperation;
+use repo_update_logger::log_bookmark_operation;
+use repo_update_logger::BookmarkInfo;
+use repo_update_logger::BookmarkOperation;
 
 use crate::affected_changesets::find_draft_ancestors;
 use crate::affected_changesets::log_bonsai_commits_to_scribe;
