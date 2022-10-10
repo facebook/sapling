@@ -1731,8 +1731,7 @@ impl HgCommands for RepoClient {
                         .map_err(|err| BundleResolverError::Error(err.into()))?;
 
                     let lca_hint: Arc<dyn LeastCommonAncestorsHint> = repo.skiplist_index_arc();
-                    let infinitepush_params = repo.repo_config().infinitepush.clone();
-                    let infinitepush_writes_allowed = infinitepush_params.allow_writes;
+                    let infinitepush_writes_allowed = repo.repo_config().infinitepush.allow_writes;
                     let pushrebase_params = repo.repo_config().pushrebase.clone();
                     let pure_push_allowed = repo.repo_config().push.pure_push_allowed;
                     let reponame = repo.repo_identity().name().to_string();
@@ -1792,7 +1791,6 @@ impl HgCommands for RepoClient {
                                     &ctx,
                                     repo,
                                     &lca_hint,
-                                    &infinitepush_params,
                                     &pushrebase_params,
                                     hook_manager.as_ref(),
                                     action,

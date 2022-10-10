@@ -165,7 +165,6 @@ impl PushRedirector {
     ) -> Result<UnbundleResponse, BundleResolverError> {
         let large_repo = self.repo.inner_repo();
         let lca_hint: Arc<dyn LeastCommonAncestorsHint> = large_repo.skiplist_index_arc();
-        let infinitepush_params = large_repo.repo_config().infinitepush.clone();
         let pushrebase_params = large_repo.repo_config().pushrebase.clone();
 
         let large_repo_action = self
@@ -176,7 +175,6 @@ impl PushRedirector {
             ctx,
             large_repo,
             &lca_hint,
-            &infinitepush_params,
             &pushrebase_params,
             self.repo.hook_manager(),
             large_repo_action,

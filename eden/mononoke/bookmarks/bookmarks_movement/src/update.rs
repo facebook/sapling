@@ -16,7 +16,6 @@ use bytes::Bytes;
 use context::CoreContext;
 use hooks::CrossRepoPushSource;
 use hooks::HookManager;
-use metaconfig_types::InfinitepushParams;
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -171,13 +170,10 @@ impl<'op> UpdateBookmarkOp<'op> {
         authz: &'op AuthorizationContext,
         repo: &'op impl Repo,
         lca_hint: &'op Arc<dyn LeastCommonAncestorsHint>,
-        infinitepush_params: &'op InfinitepushParams,
         pushrebase_params: &'op PushrebaseParams,
         hook_manager: &'op HookManager,
     ) -> Result<(), BookmarkMovementError> {
-        let kind = self
-            .kind_restrictions
-            .check_kind(infinitepush_params, self.bookmark)?;
+        let kind = self.kind_restrictions.check_kind(repo, self.bookmark)?;
 
         if self.only_log_acl_checks {
             if authz
@@ -311,7 +307,6 @@ impl<'op> UpdateBookmarkOp<'op> {
                 Some(self.bookmark),
                 commits_to_log.clone(),
                 kind,
-                infinitepush_params,
                 pushrebase_params,
             )
             .await;

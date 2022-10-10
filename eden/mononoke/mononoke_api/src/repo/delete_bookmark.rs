@@ -52,13 +52,8 @@ impl RepoContext {
         )
         .with_pushvars(pushvars);
 
-        op.run(
-            self.ctx(),
-            self.authorization_context(),
-            self.inner_repo(),
-            &self.config().infinitepush,
-        )
-        .await?;
+        op.run(self.ctx(), self.authorization_context(), self.inner_repo())
+            .await?;
 
         Ok(())
     }

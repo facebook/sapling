@@ -21,7 +21,6 @@ use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
 use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
 use hooks::CrossRepoPushSource;
 use hooks::HookManager;
-use metaconfig_types::InfinitepushParams;
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::BonsaiChangeset;
 use pushrebase_hook::PushrebaseHook;
@@ -108,13 +107,10 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         authz: &'op AuthorizationContext,
         repo: &'op impl Repo,
         lca_hint: &'op Arc<dyn LeastCommonAncestorsHint>,
-        infinitepush_params: &'op InfinitepushParams,
         pushrebase_params: &'op PushrebaseParams,
         hook_manager: &'op HookManager,
     ) -> Result<pushrebase::PushrebaseOutcome, BookmarkMovementError> {
-        let kind = self
-            .bookmark_restrictions
-            .check_kind(infinitepush_params, self.bookmark)?;
+        let kind = self.bookmark_restrictions.check_kind(repo, self.bookmark)?;
 
         if self.only_log_acl_checks {
             if authz

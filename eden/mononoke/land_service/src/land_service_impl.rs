@@ -134,7 +134,6 @@ impl LandServiceImpl {
             repo: &repo.inner_repo().clone(),
             pushrebase_params: &repo.config().pushrebase,
             lca_hint: &lca_hint,
-            infinitepush_params: &repo.config().infinitepush,
             hook_manager: repo.hook_manager().as_ref(),
         }
         .pushrebase(

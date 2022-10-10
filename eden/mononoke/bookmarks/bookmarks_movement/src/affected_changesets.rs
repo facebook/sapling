@@ -32,7 +32,6 @@ use futures_ext::FbStreamExt;
 use hooks::CrossRepoPushSource;
 use hooks::HookManager;
 use hooks::PushAuthoredBy;
-use metaconfig_types::InfinitepushParams;
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -576,13 +575,16 @@ pub(crate) async fn log_bonsai_commits_to_scribe(
     bookmark: Option<&BookmarkName>,
     commits_to_log: Vec<BonsaiChangeset>,
     kind: BookmarkKind,
-    infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
 ) {
     let commit_scribe_category = match kind {
-        BookmarkKind::Scratch => &infinitepush_params.commit_scribe_category,
+        BookmarkKind::Scratch => repo
+            .repo_config()
+            .infinitepush
+            .commit_scribe_category
+            .as_deref(),
         BookmarkKind::Publishing | BookmarkKind::PullDefaultPublishing => {
-            &pushrebase_params.commit_scribe_category
+            pushrebase_params.commit_scribe_category.as_deref()
         }
     };
 
@@ -598,7 +600,7 @@ pub(crate) async fn log_bonsai_commits_to_scribe(
                 changed_files: ChangedFilesInfo::new(bcs),
             })
             .collect(),
-        commit_scribe_category.as_deref(),
+        commit_scribe_category,
     )
     .await;
 }

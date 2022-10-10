@@ -12,7 +12,6 @@ use bookmarks_types::BookmarkKind;
 use bookmarks_types::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
-use metaconfig_types::InfinitepushParams;
 use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
 use repo_authorization::RepoWriteOperation;
@@ -77,11 +76,8 @@ impl<'op> DeleteBookmarkOp<'op> {
         ctx: &'op CoreContext,
         authz: &'op AuthorizationContext,
         repo: &'op impl Repo,
-        infinitepush_params: &'op InfinitepushParams,
     ) -> Result<(), BookmarkMovementError> {
-        let kind = self
-            .kind_restrictions
-            .check_kind(infinitepush_params, self.bookmark)?;
+        let kind = self.kind_restrictions.check_kind(repo, self.bookmark)?;
 
         if self.only_log_acl_checks {
             if authz

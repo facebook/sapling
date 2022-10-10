@@ -99,7 +99,6 @@ impl RepoContext {
             repo: self.inner_repo(),
             pushrebase_params: &self.config().pushrebase,
             lca_hint: &lca_hint,
-            infinitepush_params: &self.config().infinitepush,
             hook_manager: self.hook_manager().as_ref(),
         }
         .pushrebase(

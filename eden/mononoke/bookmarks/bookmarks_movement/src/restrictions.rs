@@ -12,8 +12,8 @@ use context::CoreContext;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use metaconfig_types::InfinitepushParams;
 use metaconfig_types::PushrebaseParams;
+use metaconfig_types::RepoConfigRef;
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_authorization::AuthorizationContext;
@@ -43,9 +43,10 @@ pub enum BookmarkKindRestrictions {
 impl BookmarkKindRestrictions {
     pub(crate) fn check_kind(
         &self,
-        infinitepush_params: &InfinitepushParams,
+        repo: &impl RepoConfigRef,
         name: &BookmarkName,
     ) -> Result<BookmarkKind, BookmarkMovementError> {
+        let infinitepush_params = &repo.repo_config().infinitepush;
         match (self, &infinitepush_params.namespace) {
             (Self::OnlyScratch, None) => Err(BookmarkMovementError::ScratchBookmarksDisabled {
                 bookmark: name.clone(),
