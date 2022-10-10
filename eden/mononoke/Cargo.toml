@@ -252,6 +252,7 @@ members = [
   "common/dedupmap",
   "common/futures_watchdog",
   "common/iterhelpers",
+  "common/logger_ext",
   "common/path_hash",
   "common/reloader",
   "common/rendezvous",
