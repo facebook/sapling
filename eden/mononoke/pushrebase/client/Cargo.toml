@@ -21,7 +21,6 @@ bytes = { version = "1.1", features = ["serde"] }
 context = { version = "0.1.0", path = "../../server/context" }
 hooks = { version = "0.1.0", path = "../../hooks" }
 iterhelpers = { version = "0.1.0", path = "../../common/iterhelpers" }
-metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 pushrebase = { version = "0.1.0", path = ".." }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }

@@ -15,7 +15,6 @@ use bytes::Bytes;
 use context::CoreContext;
 use hooks::CrossRepoPushSource;
 use hooks::HookManager;
-use metaconfig_types::PushrebaseParams;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -113,7 +112,6 @@ impl<'op> CreateBookmarkOp<'op> {
         authz: &'op AuthorizationContext,
         repo: &'op impl Repo,
         lca_hint: &'op Arc<dyn LeastCommonAncestorsHint>,
-        pushrebase_params: &'op PushrebaseParams,
         hook_manager: &'op HookManager,
     ) -> Result<(), BookmarkMovementError> {
         let kind = self.kind_restrictions.check_kind(repo, self.bookmark)?;
@@ -145,7 +143,6 @@ impl<'op> CreateBookmarkOp<'op> {
                 authz,
                 repo,
                 lca_hint,
-                pushrebase_params,
                 hook_manager,
                 self.bookmark,
                 self.pushvars,
@@ -178,7 +175,6 @@ impl<'op> CreateBookmarkOp<'op> {
                     ctx,
                     repo,
                     self.bookmark,
-                    pushrebase_params,
                     lca_hint,
                     self.target,
                 )
@@ -187,7 +183,6 @@ impl<'op> CreateBookmarkOp<'op> {
                 let txn_hook_fut = crate::git_mapping::populate_git_mapping_txn_hook(
                     ctx,
                     repo,
-                    pushrebase_params,
                     self.target,
                     self.affected_changesets.new_changesets(),
                 );
@@ -232,15 +227,8 @@ impl<'op> CreateBookmarkOp<'op> {
         }
 
         if self.log_new_public_commits_to_scribe {
-            log_bonsai_commits_to_scribe(
-                ctx,
-                repo,
-                Some(self.bookmark),
-                commits_to_log,
-                kind,
-                pushrebase_params,
-            )
-            .await;
+            log_bonsai_commits_to_scribe(ctx, repo, Some(self.bookmark), commits_to_log, kind)
+                .await;
         }
 
         let info = BookmarkInfo {

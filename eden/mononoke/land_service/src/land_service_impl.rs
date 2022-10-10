@@ -132,7 +132,6 @@ impl LandServiceImpl {
             ctx: &ctx,
             authz: &authz,
             repo: &repo.inner_repo().clone(),
-            pushrebase_params: &repo.config().pushrebase,
             lca_hint: &lca_hint,
             hook_manager: repo.hook_manager().as_ref(),
         }

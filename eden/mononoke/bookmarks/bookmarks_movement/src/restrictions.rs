@@ -12,7 +12,6 @@ use context::CoreContext;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use metaconfig_types::PushrebaseParams;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -73,7 +72,6 @@ pub(crate) async fn check_restriction_ensure_ancestor_of(
     ctx: &CoreContext,
     repo: &impl Repo,
     bookmark_to_move: &BookmarkName,
-    pushrebase_params: &PushrebaseParams,
     lca_hint: &dyn LeastCommonAncestorsHint,
     target: ChangesetId,
 ) -> Result<(), BookmarkMovementError> {
@@ -87,7 +85,8 @@ pub(crate) async fn check_restriction_ensure_ancestor_of(
         }
     }
 
-    if let Some(descendant_bookmark) = &pushrebase_params.globalrevs_publishing_bookmark {
+    if let Some(descendant_bookmark) = &repo.repo_config().pushrebase.globalrevs_publishing_bookmark
+    {
         descendant_bookmarks.push(descendant_bookmark);
     }
 

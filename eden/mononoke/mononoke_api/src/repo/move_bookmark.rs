@@ -78,7 +78,6 @@ impl RepoContext {
             self.authorization_context(),
             self.inner_repo(),
             &lca_hint,
-            &self.config().pushrebase,
             self.hook_manager().as_ref(),
         )
         .await?;

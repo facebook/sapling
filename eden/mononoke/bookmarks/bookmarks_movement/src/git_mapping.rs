@@ -27,7 +27,6 @@ use futures::future::FutureExt;
 use futures::future::TryFutureExt;
 use futures::stream::FuturesOrdered;
 use futures::stream::StreamExt;
-use metaconfig_types::PushrebaseParams;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 
@@ -206,11 +205,10 @@ fn upload_mapping_entries_bookmark_txn_hook(
 pub(crate) async fn populate_git_mapping_txn_hook(
     ctx: &CoreContext,
     repo: &impl Repo,
-    pushrebase_params: &PushrebaseParams,
     new_head: ChangesetId,
     new_changesets: &HashMap<ChangesetId, BonsaiChangeset>,
 ) -> Result<Option<BookmarkTransactionHook>, BookmarkMovementError> {
-    if pushrebase_params.populate_git_mapping {
+    if repo.repo_config().pushrebase.populate_git_mapping {
         let entries = new_mapping_entries(ctx, repo, new_head, new_changesets).await?;
         Ok(Some(upload_mapping_entries_bookmark_txn_hook(
             repo.bonsai_git_mapping_arc(),

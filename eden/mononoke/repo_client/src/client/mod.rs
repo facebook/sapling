@@ -1791,7 +1791,6 @@ impl HgCommands for RepoClient {
                                     &ctx,
                                     repo,
                                     &lca_hint,
-                                    &pushrebase_params,
                                     hook_manager.as_ref(),
                                     action,
                                     CrossRepoPushSource::NativeToThisRepo,

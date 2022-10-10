@@ -97,7 +97,6 @@ impl RepoContext {
             ctx: self.ctx(),
             authz: self.authorization_context(),
             repo: self.inner_repo(),
-            pushrebase_params: &self.config().pushrebase,
             lca_hint: &lca_hint,
             hook_manager: self.hook_manager().as_ref(),
         }

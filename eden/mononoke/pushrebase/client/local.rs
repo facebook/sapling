@@ -18,7 +18,6 @@ use bytes::Bytes;
 use context::CoreContext;
 use hooks::CrossRepoPushSource;
 use hooks::HookManager;
-use metaconfig_types::PushrebaseParams;
 use mononoke_types::BonsaiChangeset;
 use pushrebase::PushrebaseOutcome;
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -30,7 +29,6 @@ pub struct LocalPushrebaseClient<'a, R: Repo> {
     pub ctx: &'a CoreContext,
     pub authz: &'a AuthorizationContext,
     pub repo: &'a R,
-    pub pushrebase_params: &'a PushrebaseParams,
     pub lca_hint: &'a Arc<dyn LeastCommonAncestorsHint>,
     pub hook_manager: &'a HookManager,
 }
@@ -54,7 +52,6 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
                 self.authz,
                 self.repo,
                 self.lca_hint,
-                self.pushrebase_params,
                 self.hook_manager,
             )
             .await

@@ -32,7 +32,6 @@ use futures_ext::FbStreamExt;
 use hooks::CrossRepoPushSource;
 use hooks::HookManager;
 use hooks::PushAuthoredBy;
-use metaconfig_types::PushrebaseParams;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -247,7 +246,6 @@ impl AffectedChangesets {
         authz: &AuthorizationContext,
         repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
-        pushrebase_params: &PushrebaseParams,
         hook_manager: &HookManager,
         bookmark: &BookmarkName,
         pushvars: Option<&HashMap<String, Bytes>>,
@@ -256,27 +254,11 @@ impl AffectedChangesets {
         additional_changesets: AdditionalChangesets,
         cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<(), BookmarkMovementError> {
-        self.check_extras(
-            ctx,
-            repo,
-            lca_hint,
-            bookmark,
-            kind,
-            additional_changesets,
-            pushrebase_params,
-        )
-        .await?;
+        self.check_extras(ctx, repo, lca_hint, bookmark, kind, additional_changesets)
+            .await?;
 
-        self.check_case_conflicts(
-            ctx,
-            repo,
-            lca_hint,
-            pushrebase_params,
-            bookmark,
-            kind,
-            additional_changesets,
-        )
-        .await?;
+        self.check_case_conflicts(ctx, repo, lca_hint, bookmark, kind, additional_changesets)
+            .await?;
 
         self.check_hooks(
             ctx,
@@ -307,10 +289,12 @@ impl AffectedChangesets {
         bookmark: &BookmarkName,
         kind: BookmarkKind,
         additional_changesets: AdditionalChangesets,
-        pushrebase_params: &PushrebaseParams,
     ) -> Result<(), BookmarkMovementError> {
         if (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
-            && !pushrebase_params.allow_change_xrepo_mapping_extra
+            && !repo
+                .repo_config()
+                .pushrebase
+                .allow_change_xrepo_mapping_extra
         {
             self.load_additional_changesets(ctx, repo, lca_hint, bookmark, additional_changesets)
                 .await
@@ -344,13 +328,12 @@ impl AffectedChangesets {
         ctx: &CoreContext,
         repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
-        pushrebase_params: &PushrebaseParams,
         bookmark: &BookmarkName,
         kind: BookmarkKind,
         additional_changesets: AdditionalChangesets,
     ) -> Result<(), BookmarkMovementError> {
         if (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
-            && pushrebase_params.flags.casefolding_check
+            && repo.repo_config().pushrebase.flags.casefolding_check
         {
             self.load_additional_changesets(ctx, repo, lca_hint, bookmark, additional_changesets)
                 .await
@@ -575,7 +558,6 @@ pub(crate) async fn log_bonsai_commits_to_scribe(
     bookmark: Option<&BookmarkName>,
     commits_to_log: Vec<BonsaiChangeset>,
     kind: BookmarkKind,
-    pushrebase_params: &PushrebaseParams,
 ) {
     let commit_scribe_category = match kind {
         BookmarkKind::Scratch => repo
@@ -583,9 +565,11 @@ pub(crate) async fn log_bonsai_commits_to_scribe(
             .infinitepush
             .commit_scribe_category
             .as_deref(),
-        BookmarkKind::Publishing | BookmarkKind::PullDefaultPublishing => {
-            pushrebase_params.commit_scribe_category.as_deref()
-        }
+        BookmarkKind::Publishing | BookmarkKind::PullDefaultPublishing => repo
+            .repo_config()
+            .pushrebase
+            .commit_scribe_category
+            .as_deref(),
     };
 
     log_commits_to_scribe_raw(

@@ -34,7 +34,6 @@ use hooks::HookManagerRef;
 use hooks::HookRejection;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use mercurial_derived_data::DeriveHgChangeset;
-use metaconfig_types::RepoConfigRef;
 use mononoke_api::Repo;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -165,7 +164,6 @@ impl PushRedirector {
     ) -> Result<UnbundleResponse, BundleResolverError> {
         let large_repo = self.repo.inner_repo();
         let lca_hint: Arc<dyn LeastCommonAncestorsHint> = large_repo.skiplist_index_arc();
-        let pushrebase_params = large_repo.repo_config().pushrebase.clone();
 
         let large_repo_action = self
             .convert_post_resolve_action(ctx, action)
@@ -175,7 +173,6 @@ impl PushRedirector {
             ctx,
             large_repo,
             &lca_hint,
-            &pushrebase_params,
             self.repo.hook_manager(),
             large_repo_action,
             CrossRepoPushSource::PushRedirected,

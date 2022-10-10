@@ -107,7 +107,6 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         authz: &'op AuthorizationContext,
         repo: &'op impl Repo,
         lca_hint: &'op Arc<dyn LeastCommonAncestorsHint>,
-        pushrebase_params: &'op PushrebaseParams,
         hook_manager: &'op HookManager,
     ) -> Result<pushrebase::PushrebaseOutcome, BookmarkMovementError> {
         let kind = self.bookmark_restrictions.check_kind(repo, self.bookmark)?;
@@ -134,7 +133,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
 
         check_bookmark_sync_config(repo, self.bookmark, kind)?;
 
-        if pushrebase_params.block_merges {
+        if repo.repo_config().pushrebase.block_merges {
             let any_merges = self
                 .affected_changesets
                 .source_changesets()
@@ -157,7 +156,6 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
                 authz,
                 repo,
                 lca_hint,
-                pushrebase_params,
                 hook_manager,
                 self.bookmark,
                 self.pushvars,
@@ -169,7 +167,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             .await?;
 
         let mut pushrebase_hooks =
-            get_pushrebase_hooks(ctx, repo, self.bookmark, pushrebase_params)?;
+            get_pushrebase_hooks(ctx, repo, self.bookmark, &repo.repo_config().pushrebase)?;
 
         // For pushrebase, we check the repo lock once at the beginning of the
         // pushrebase operation, and then once more as part of the pushrebase
@@ -189,7 +187,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             pushrebase_hooks.push(hook);
         }
 
-        let mut flags = pushrebase_params.flags.clone();
+        let mut flags = repo.repo_config().pushrebase.flags.clone();
         if let Some(rewritedates) = repo
             .repo_bookmark_attrs()
             .should_rewrite_dates(self.bookmark)
@@ -254,11 +252,11 @@ pub fn get_pushrebase_hooks(
          + RepoIdentityRef
      ),
     bookmark: &BookmarkName,
-    params: &PushrebaseParams,
+    pushrebase_params: &PushrebaseParams,
 ) -> Result<Vec<Box<dyn PushrebaseHook>>, BookmarkMovementError> {
     let mut pushrebase_hooks = Vec::new();
 
-    match params.globalrevs_publishing_bookmark.as_ref() {
+    match pushrebase_params.globalrevs_publishing_bookmark.as_ref() {
         Some(globalrevs_publishing_bookmark) if globalrevs_publishing_bookmark == bookmark => {
             let hook = GlobalrevPushrebaseHook::new(
                 ctx.clone(),
@@ -289,7 +287,7 @@ pub fn get_pushrebase_hooks(
         }
     }
 
-    if params.populate_git_mapping {
+    if pushrebase_params.populate_git_mapping {
         let hook = GitMappingPushrebaseHook::new(repo.bonsai_git_mapping_arc().clone());
         pushrebase_hooks.push(hook);
     }
