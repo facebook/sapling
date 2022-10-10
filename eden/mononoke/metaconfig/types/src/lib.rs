@@ -224,7 +224,8 @@ pub struct RepoConfig {
     pub deep_sharded: bool,
     /// Scribe category we log new commits to
     pub bookmark_scribe_category: Option<String>,
-
+    /// Configuration for update logging.
+    pub update_logging_config: UpdateLoggingConfig,
     /// Default commit identity scheme. Some repos can be hg-mirrored git repos.
     pub default_commit_identity_scheme: CommitIdentityScheme,
 }
@@ -1680,4 +1681,27 @@ pub struct HgSyncConfig {
     pub lock_on_failure: bool,
     /// The darkstorm backup repo-id to be used as target for sync
     pub darkstorm_backup_repo_id: Option<i32>,
+}
+
+/// Destination for telemetry logging.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum LoggingDestination {
+    /// Logs should be sent to the default logger for this type.
+    Logger,
+    /// Logs show be sent raw to scribe
+    Scribe {
+        /// Scribe category logs should be sent to
+        scribe_category: String,
+    },
+}
+
+/// Configuration for logging updates to the repo to external telemetry
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct UpdateLoggingConfig {
+    /// Destination where bookmark updates are logged to
+    pub bookmark_logging_destination: Option<LoggingDestination>,
+    /// Destination where new public commits are logged to
+    pub public_commit_logging_destination: Option<LoggingDestination>,
+    /// Destination where new draft commits are logged to
+    pub draft_commit_logging_destination: Option<LoggingDestination>,
 }

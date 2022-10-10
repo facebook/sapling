@@ -191,6 +191,7 @@ fn parse_with_repo_definition(
         backup_hg_sync_config,
         deep_sharded,
         bookmark_scribe_category,
+        update_logging_config,
         ..
     } = named_repo_config;
 
@@ -303,6 +304,8 @@ fn parse_with_repo_definition(
     let hg_sync_config = hg_sync_config.convert()?;
     let backup_hg_sync_config = backup_hg_sync_config.convert()?;
 
+    let update_logging_config = update_logging_config.convert()?.unwrap_or_default();
+
     Ok(RepoConfig {
         enabled,
         storage_config,
@@ -343,6 +346,7 @@ fn parse_with_repo_definition(
         backup_hg_sync_config,
         deep_sharded,
         bookmark_scribe_category,
+        update_logging_config,
         default_commit_identity_scheme,
     })
 }
@@ -487,6 +491,7 @@ mod test {
     use metaconfig_types::InfinitepushParams;
     use metaconfig_types::LfsParams;
     use metaconfig_types::LocalDatabaseConfig;
+    use metaconfig_types::LoggingDestination;
     use metaconfig_types::MetadataDatabaseConfig;
     use metaconfig_types::MultiplexId;
     use metaconfig_types::MultiplexedStoreType;
@@ -506,6 +511,7 @@ mod test {
     use metaconfig_types::SourceControlServiceParams;
     use metaconfig_types::SparseProfilesConfig;
     use metaconfig_types::UnodeVersion;
+    use metaconfig_types::UpdateLoggingConfig;
     use metaconfig_types::WalkerConfig;
     use mononoke_types::MPath;
     use mononoke_types_mocks::changesetid::ONES_CSID;
@@ -864,6 +870,9 @@ mod test {
             batch_size = 20
             lock_on_failure = false
             darkstorm_backup_repo_id = 1001
+
+            [update_logging_config]
+            public_commit_logging_destination = { scribe = { scribe_category = "cat" } }
         "#;
         let fbsource_repo_def = r#"
             repo_id=0
@@ -1229,6 +1238,13 @@ mod test {
                     darkstorm_backup_repo_id: Some(1001),
                 }),
                 bookmark_scribe_category: None,
+                update_logging_config: UpdateLoggingConfig {
+                    bookmark_logging_destination: None,
+                    public_commit_logging_destination: Some(LoggingDestination::Scribe {
+                        scribe_category: "cat".to_string(),
+                    }),
+                    draft_commit_logging_destination: None,
+                },
             },
         );
 
@@ -1303,6 +1319,7 @@ mod test {
                 backup_hg_sync_config: None,
                 deep_sharded: false,
                 bookmark_scribe_category: None,
+                update_logging_config: UpdateLoggingConfig::default(),
             },
         );
         assert_eq!(

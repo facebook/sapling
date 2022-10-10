@@ -31,6 +31,7 @@ use metaconfig_types::HookParams;
 use metaconfig_types::InfinitepushNamespace;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::LfsParams;
+use metaconfig_types::LoggingDestination;
 use metaconfig_types::PushParams;
 use metaconfig_types::PushrebaseFlags;
 use metaconfig_types::PushrebaseParams;
@@ -43,6 +44,7 @@ use metaconfig_types::SourceControlServiceMonitoring;
 use metaconfig_types::SourceControlServiceParams;
 use metaconfig_types::SparseProfilesConfig;
 use metaconfig_types::UnodeVersion;
+use metaconfig_types::UpdateLoggingConfig;
 use metaconfig_types::WalkerConfig;
 use metaconfig_types::WalkerJobParams;
 use metaconfig_types::WalkerJobType;
@@ -61,6 +63,8 @@ use repos::RawHookConfig;
 use repos::RawHookManagerParams;
 use repos::RawInfinitepushParams;
 use repos::RawLfsParams;
+use repos::RawLoggingDestination;
+use repos::RawLoggingDestinationScribe;
 use repos::RawPushParams;
 use repos::RawPushrebaseParams;
 use repos::RawPushrebaseRemoteMode;
@@ -72,6 +76,7 @@ use repos::RawServiceWriteRestrictions;
 use repos::RawSourceControlServiceMonitoring;
 use repos::RawSourceControlServiceParams;
 use repos::RawSparseProfilesConfig;
+use repos::RawUpdateLoggingConfig;
 use repos::RawWalkerConfig;
 use repos::RawWalkerJobParams;
 use repos::RawWalkerJobType;
@@ -651,6 +656,35 @@ impl Convert for RawHgSyncConfig {
             batch_size: self.batch_size,
             lock_on_failure: self.lock_on_failure,
             darkstorm_backup_repo_id: self.darkstorm_backup_repo_id,
+        })
+    }
+}
+
+impl Convert for RawLoggingDestination {
+    type Output = LoggingDestination;
+
+    fn convert(self) -> Result<Self::Output> {
+        let dest = match self {
+            Self::logger(_) => LoggingDestination::Logger,
+            Self::scribe(RawLoggingDestinationScribe { scribe_category }) => {
+                LoggingDestination::Scribe { scribe_category }
+            }
+            Self::UnknownField(f) => {
+                return Err(anyhow!("Unknown variant {} of RawLoggingDestination", f));
+            }
+        };
+        Ok(dest)
+    }
+}
+
+impl Convert for RawUpdateLoggingConfig {
+    type Output = UpdateLoggingConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        Ok(UpdateLoggingConfig {
+            bookmark_logging_destination: self.bookmark_logging_destination.convert()?,
+            public_commit_logging_destination: self.public_commit_logging_destination.convert()?,
+            draft_commit_logging_destination: self.draft_commit_logging_destination.convert()?,
         })
     }
 }
