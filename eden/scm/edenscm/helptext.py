@@ -11,7 +11,7 @@
 # GNU General Public License version 2 or any later version.
 
 
-bundlespec = r"""Mercurial supports generating standalone "bundle" files that hold repository
+bundlespec = r"""@Product@ supports generating standalone "bundle" files that hold repository
 data. These "bundles" are typically saved locally and used later or exchanged
 between different repositories, possibly on different machines. Example
 commands using bundles are :hg:`bundle` and :hg:`unbundle`.
@@ -52,7 +52,7 @@ The following bundle <type> strings are available:
 v1
     Produces a legacy "changegroup" version 1 bundle.
 
-    This format is compatible with nearly all Mercurial clients because it is
+    This format is compatible with nearly all @Product@ clients because it is
     the oldest. However, it has some limitations, which is why it is no longer
     the default for new repositories.
 
@@ -98,7 +98,7 @@ Examples
 """
 
 
-color = r"""Mercurial colorizes output from several commands.
+color = r"""@Product@ colorizes output from several commands.
 
 For example, the diff command shows additions in green and deletions
 in red, while the status command shows modified files in magenta. Many
@@ -120,7 +120,7 @@ See :hg:`help config.ui.color` for details.
 Mode
 ====
 
-Mercurial can use various systems to display color. The supported modes are
+@Product@ can use various systems to display color. The supported modes are
 ``ansi``, ``win32``, and ``terminfo``.  See :hg:`help config.color` for details
 about how to control the mode.
 
@@ -153,7 +153,7 @@ Labels
 ======
 
 Text receives color effects depending on the labels that it has. Many
-default Mercurial commands emit labelled text. You can also define
+default @Product@ commands emit labelled text. You can also define
 your own labels in templates using the label function, see :hg:`help
 templates`. A single portion of text may have more than one label. In
 that case, effects given to the last label will override any other
@@ -226,7 +226,7 @@ effects may be overridden from your configuration file::
 Custom colors
 =============
 
-Because there are only eight standard colors, Mercurial allows you
+Because there are only eight standard colors, @Product@ allows you
 to define color names for other color slots which might be available
 for your terminal type, assuming terminfo mode.  For instance::
 
@@ -251,7 +251,7 @@ common = r""".. Common link and substitution definitions.
 """
 
 
-config = r"""The Mercurial system uses a set of configuration files to control
+config = r"""The @Product@ system uses a set of configuration files to control
 aspects of its behavior.
 
 Troubleshooting
@@ -281,7 +281,7 @@ The above entries will be referred to as ``ui.username`` and
 Files
 =====
 
-Mercurial reads configuration data from several files, if they exist.
+@Product@ reads configuration data from several files, if they exist.
 These files do not exist by default and you will have to create the
 appropriate configuration files yourself:
 
@@ -297,7 +297,7 @@ Global configuration like the username setting is typically put into:
 
   - ``$HOME/.hgrc`` (on Unix, Plan9)
 
-The names of these files depend on the system on which Mercurial is
+The names of these files depend on the system on which @Product@ is
 installed. ``*.rc`` files from a single directory are read in
 alphabetical order, later ones overriding earlier ones. Where multiple
 paths are given below, settings from earlier paths override later
@@ -319,8 +319,8 @@ ones.
 
   - ``<repo>/.hg/hgrc`` (per-repository)
   - ``%USERPROFILE%\.hgrc`` (per-user)
-  - ``%USERPROFILE%\Mercurial.ini`` (per-user)
-  - ``%PROGRAMDATA%\Facebook\Mercurial`` (per-installation)
+  - ``%USERPROFILE%\@Product@.ini`` (per-user)
+  - ``%PROGRAMDATA%\Facebook\@Product@`` (per-installation)
   - ``<builtin>`` (builtin)
 
 Per-repository configuration options only apply in a
@@ -328,43 +328,43 @@ particular repository. This file is not version-controlled, and
 will not get transferred during a "clone" operation. Options in
 this file override options in all other configuration files.
 
-Per-user configuration file(s) are for the user running Mercurial.  Options
-in these files apply to all Mercurial commands executed by this user in any
+Per-user configuration file(s) are for the user running @Product@.  Options
+in these files apply to all @Product@ commands executed by this user in any
 directory. Options in these files override per-system and per-installation
 options.
 
 Per-installation configuration files are searched for in the
-directory where Mercurial is installed. ``<install-root>`` is the
+directory where @Product@ is installed. ``<install-root>`` is the
 parent directory of the **hg** executable (or symlink) being run.
 
 .. container:: unix.plan9
 
-  For example, if installed in ``/shared/tools/bin/hg``, Mercurial
+  For example, if installed in ``/shared/tools/bin/hg``, @Product@
   will look in ``/shared/tools/etc/mercurial/hgrc``. Options in these
-  files apply to all Mercurial commands executed by any user in any
+  files apply to all @Product@ commands executed by any user in any
   directory.
 
 Per-installation configuration files are for the system on
-which Mercurial is running. Options in these files apply to all
-Mercurial commands executed by any user in any directory. Registry
+which @Product@ is running. Options in these files apply to all
+@Product@ commands executed by any user in any directory. Registry
 keys contain PATH-like strings, every part of which must reference
-a ``Mercurial.ini`` file or be a directory where ``*.rc`` files will
-be read.  Mercurial checks each of these locations in the specified
+a ``@Product@.ini`` file or be a directory where ``*.rc`` files will
+be read.  @Product@ checks each of these locations in the specified
 order until one or more configuration files are detected.
 
-Per-system configuration files are for the system on which Mercurial
-is running. Options in these files apply to all Mercurial commands
+Per-system configuration files are for the system on which @Product@
+is running. Options in these files apply to all @Product@ commands
 executed by any user in any directory. Options in these files
 override per-installation options.
 
-Mercurial comes with some default configuration. The default configuration
-files are installed with Mercurial and will be overwritten on upgrades. Default
+@Product@ comes with some default configuration. The default configuration
+files are installed with @Product@ and will be overwritten on upgrades. Default
 configuration files should never be edited by users or administrators but can
 be overridden in other configuration files. So far the directory only contains
 merge tool configuration but packagers can also put other default configuration
 there.
 
-Warning: Running hg inside, pushing to, pulling from, or cloning local
+Warning: Running @prog@ inside, pushing to, pulling from, or cloning local
 repositories owned by other users will load the their config files. That could
 be potentially harmful. A config file can run arbitrary code by defining
 extensions or hooks.
@@ -386,7 +386,7 @@ they are treated as continuations of that entry. Leading whitespace is
 removed from values. Empty lines are skipped. Lines beginning with
 ``#`` or ``;`` are ignored and may be used to provide comments.
 
-Configuration keys can be set multiple times, in which case Mercurial
+Configuration keys can be set multiple times, in which case @Product@
 will use the value that was configured last. As an example::
 
     [spam]
@@ -458,7 +458,7 @@ Sections
 ========
 
 This section describes the different sections that may appear in a
-Mercurial configuration file, the purpose of each section, its possible
+@Product@ configuration file, the purpose of each section, its possible
 keys, and their possible values.
 
 ``alias``
@@ -469,7 +469,7 @@ Defines command aliases.
 Aliases allow you to define your own commands in terms of other
 commands (or aliases), optionally including arguments. Positional
 arguments in the form of ``$1``, ``$2``, etc. in the alias definition
-are expanded by Mercurial before execution. Positional arguments not
+are expanded by @Product@ before execution. Positional arguments not
 already used by ``$N`` in the definition are put at the end of the
 command to be executed.
 
@@ -498,12 +498,12 @@ run arbitrary commands. As an example, ::
 
    echo = !echo $@
 
-will let you do ``hg echo foo`` to have ``foo`` printed in your
+will let you do ``@prog@ echo foo`` to have ``foo`` printed in your
 terminal. A better example might be::
 
    purge = !$HG status --no-status --unknown -0 re: | xargs -0 rm -f
 
-which will make ``hg purge`` delete all unknown files in the
+which will make ``@prog@ purge`` delete all unknown files in the
 repository in the same manner as the purge extension.
 
 Positional arguments like ``$1``, ``$2``, etc. in the alias definition
@@ -514,10 +514,10 @@ arguments quoted individually and separated by a space. These expansions
 happen before the command is passed to the shell.
 
 Shell aliases are executed in an environment where ``$HG`` expands to
-the path of the Mercurial that was used to execute the alias. This is
-useful when you want to call further Mercurial commands in a shell
+the path of the @Product@ that was used to execute the alias. This is
+useful when you want to call further @Product@ commands in a shell
 alias, as was done above for the purge alias. In addition,
-``$HG_ARGS`` expands to the arguments given to Mercurial. In the ``hg
+``$HG_ARGS`` expands to the arguments given to @Product@. In the ``hg
 echo foo`` call above, ``$HG_ARGS`` would expand to ``echo foo``.
 
 .. note::
@@ -634,12 +634,12 @@ for credentials as usual if required by the remote.
 ``color``
 ---------
 
-Configure the Mercurial color mode. For details about how to define your custom
+Configure the @Product@ color mode. For details about how to define your custom
 effect and style see :hg:`help color`.
 
 ``mode``
     String: control the method used to output color. One of ``auto``, ``ansi``,
-    ``win32``, or ``debug``. In auto mode, Mercurial will use ANSI mode by
+    ``win32``, or ``debug``. In auto mode, @Product@ will use ANSI mode by
     default (or win32 mode prior to Windows 10) if it detects a terminal. Any
     invalid value will disable color.
 
@@ -717,7 +717,7 @@ one shown by default::
 
 Sometimes it is helpful to show the diff of the changeset in the editor without
 having to prefix 'HG: ' to each line so that highlighting works correctly. For
-this, Mercurial provides a special string which will ignore everything below
+this, @Product@ provides a special string which will ignore everything below
 it::
 
      HG: ------------------------ >8 ------------------------
@@ -1006,7 +1006,7 @@ Email example::
 ``extensions``
 --------------
 
-Mercurial has an extension mechanism for adding new features. To
+@Product@ has an extension mechanism for adding new features. To
 enable an extension, create an entry for it in this section.
 
 If you know that the extension is already in Python's search path,
@@ -1024,7 +1024,7 @@ or ``foo = !`` when path is not supplied.
 Example for ``~/.hgrc``::
 
   [extensions]
-  # (the amend extension will get loaded from Mercurial's path)
+  # (the amend extension will get loaded from @Product@'s path)
   amend =
   # (this extension will get loaded from the file specified)
   myfeature = ~/.ext/myfeature.py
@@ -1039,7 +1039,7 @@ Example for ``~/.hgrc``::
     revision instead of the previous stored one. This provides significant
     improvement for repositories with branches.
 
-    Repositories with this on-disk format require Mercurial version 1.9.
+    Repositories with this on-disk format require @Product@ version 1.9.
 
     Enabled by default.
 
@@ -1091,16 +1091,16 @@ Supported arguments:
 --------
 
 ``localhelp``
-    Additional information to display at the end of ``hg help``.
+    Additional information to display at the end of ``@prog@ help``.
 
 ``hint``
 --------
 
 Some commands show hints about features, like::
 
-    hint[import]: use 'hg import' to import commits exported by 'hg export'
+    hint[import]: use '@prog@ import' to import commits exported by '@prog@ export'
 
-They can be silenced by ``hg hint --ack import``, which writes the
+They can be silenced by ``@prog@ hint --ack import``, which writes the
 ``hint.ack`` config in user hgrc.
 
 ``ack``
@@ -1122,7 +1122,7 @@ Example ``.hg/hgrc``::
 
   [hooks]
   # update working directory after adding changesets
-  changegroup.update = hg update
+  changegroup.update = @prog@ update
   # do not use the site-wide hook
   incoming =
   incoming.email = /my/email/hook
@@ -1183,7 +1183,7 @@ be ``$HG_HOOKTYPE=incoming`` and ``$HG_HOOKNAME=incoming.email``.
   representations of the data internally passed to <command>. ``$HG_OPTS``
   is a dictionary of options (with unspecified options set to their
   defaults). ``$HG_PATS`` is a list of arguments. If the hook returns
-  failure, the command doesn't execute and Mercurial returns the failure
+  failure, the command doesn't execute and @Product@ returns the failure
   code.
 
 ``prechangegroup``
@@ -1358,7 +1358,7 @@ The syntax for Python hooks is as follows::
   hookname = python:modulename.submodule.callable
   hookname = python:/path/to/python/module.py:callable
 
-Python hooks are run within the Mercurial process. Each hook is
+Python hooks are run within the @Product@ process. Each hook is
 called with at least three keyword arguments: a ui object (keyword
 ``ui``), a repository object (keyword ``repo``), and a ``hooktype``
 keyword that tells what kind of hook is used. Arguments listed as
@@ -1451,9 +1451,9 @@ The following per-host settings can be defined.
     Use of ``sha256`` or ``sha512`` is preferred.
 
     If a fingerprint is specified, the CA chain is not validated for this
-    host and Mercurial will require the remote certificate to match one
+    host and @Product@ will require the remote certificate to match one
     of the fingerprints specified. This means if the server updates its
-    certificate, Mercurial will abort until a new fingerprint is defined.
+    certificate, @Product@ will abort until a new fingerprint is defined.
     This can provide stronger security than traditional CA-based validation
     at the expense of convenience.
 
@@ -1506,7 +1506,7 @@ when connecting to ``hg.example.com``::
 ``http_proxy``
 --------------
 
-Used to access web-based Mercurial repositories through a HTTP
+Used to access web-based @Product@ repositories through a HTTP
 proxy.
 
 ``host``
@@ -1714,7 +1714,7 @@ Supported arguments:
 
   ``regkey``
     Windows registry key which describes install location of this
-    tool. Mercurial will search for this key first under
+    tool. @Product@ will search for this key first under
     ``HKEY_CURRENT_USER`` and then under ``HKEY_LOCAL_MACHINE``.
     (default: None)
 
@@ -1781,7 +1781,7 @@ Setting used to control when to paginate and with what external tool. See
 ``stderr``
     Whether to redirect error messages to the pager.
 
-    If set to false, Mercurial will continue to output error messages and
+    If set to false, @Product@ will continue to output error messages and
     progress bars to stderr while the pager is running.  Depending on the
     pager, this may overlay the pager display.
 
@@ -1838,7 +1838,7 @@ Setting used to control when to paginate and with what external tool. See
 ---------
 
 Settings used when applying patches, for instance through the 'import'
-command or with Mercurial Queues extension.
+command or with @Product@ Queues extension.
 
 ``eol``
     When set to 'strict' patch content and patched files end of lines
@@ -2044,7 +2044,7 @@ order. The first one with ``enabled`` set to true will be used.
 ``progress``
 ------------
 
-Mercurial commands can draw progress bars that are as informative as
+@Product@ commands can draw progress bars that are as informative as
 possible. Some progress bars only offer indeterminate information, while others
 have a definite end point.
 
@@ -2137,7 +2137,7 @@ Controls generic server settings.
     :hg:`debuginstall` to list available compression engines and their
     default wire protocol priority.
 
-    Older Mercurial clients only support zlib compression and this setting
+    Older @Product@ clients only support zlib compression and this setting
     has no effect for legacy clients.
 
 ``uncompressed``
@@ -2354,7 +2354,7 @@ User interface controls.
     type and compression format. This option is used to prefer a particular
     bundle over another.
 
-    The following keys are defined by Mercurial:
+    The following keys are defined by @Product@:
 
     BUNDLESPEC
        A bundle type specifier. These are strings passed to :hg:`bundle -t`.
@@ -2479,8 +2479,8 @@ User interface controls.
   for details.
 
 ``patch``
-    An optional external tool that ``hg import`` and some extensions
-    will use for applying patches. By default Mercurial uses an
+    An optional external tool that ``@prog@ import`` and some extensions
+    will use for applying patches. By default @Product@ uses an
     internal patch utility. The external tool must work as the common
     Unix ``patch`` program. In particular, it must accept a ``-p``
     argument to strip patch headers, a ``-d`` argument to specify the
@@ -2557,13 +2557,13 @@ User interface controls.
     Name of style to use for command output.
 
 ``supportcontact``
-    A URL where users should report a Mercurial traceback. Use this if you are a
-    large organisation with its own Mercurial deployment process and crash
+    A URL where users should report a @Product@ traceback. Use this if you are a
+    large organisation with its own @Product@ deployment process and crash
     reports should be addressed to your internal support.
 
 ``textwidth``
-    Maximum width of help text. A longer line generated by ``hg help`` or
-    ``hg subcommand --help`` will be broken after white space to get this
+    Maximum width of help text. A longer line generated by ``@prog@ help`` or
+    ``@prog@ subcommand --help`` will be broken after white space to get this
     width or the terminal width, whichever comes first.
     A non-positive value will disable this and the terminal width will be
     used. (default: 78)
@@ -2577,17 +2577,17 @@ User interface controls.
     value means no warning. (default: 0)
 
 ``traceback``
-    Mercurial always prints a traceback when an unknown exception
-    occurs. Setting this to True will make Mercurial print a traceback
-    on all exceptions, even those recognized by Mercurial (such as
+    @Product@ always prints a traceback when an unknown exception
+    occurs. Setting this to True will make @Product@ print a traceback
+    on all exceptions, even those recognized by @Product@ (such as
     IOError or MemoryError). (default: False)
 
 ``tweakdefaults``
 
-    By default Mercurial's behavior changes very little from release
+    By default @Product@'s behavior changes very little from release
     to release, but over time the recommended config settings
     shift. Enable this config to opt in to get automatic tweaks to
-    Mercurial's behavior over time. This config setting will have no
+    @Product@'s behavior over time. This config setting will have no
     effet if ``HGPLAIN` is set or ``HGPLAINEXCEPT`` is set and does
     not include ``tweakdefaults``. (default: False)
 
@@ -2609,7 +2609,7 @@ User interface controls.
 ``visibility``
 --------------
 
-Controls how Mercurial determines commit visibility.  Mercurial
+Controls how @Product@ determines commit visibility.  @Product@
 can optionally track which commits are visible explicitly, or it
 can determine them implicitly from obsolescence markers.
 
@@ -2710,7 +2710,7 @@ Many date formats are valid. Here are some examples:
 - ``yesterday`` (midnight)
 - ``now`` - right now
 
-Lastly, there is Mercurial's internal format:
+Lastly, there is @Product@'s internal format:
 
 - ``1165411109 0`` (Wed Dec 6 13:18:29 2006 UTC)
 
@@ -2728,7 +2728,7 @@ The log command also accepts date ranges:
 """
 
 
-diffs = r"""Mercurial's default format for showing changes between two versions of
+diffs = r"""@Product@'s default format for showing changes between two versions of
 a file is compatible with the unified format of GNU diff, which can be
 used by GNU patch and many other standard tools.
 
@@ -2740,20 +2740,20 @@ following information:
 - changes in binary files
 - creation or deletion of empty files
 
-Mercurial also supports the extended diff format from the git VCS
+@Product@ also supports the extended diff format from the git VCS
 which addresses these limitations. The git diff format is not produced
 by default because a few widespread tools still do not understand this
 format.
 
-This means that when generating diffs from a Mercurial repository
+This means that when generating diffs from a @Product@ repository
 (e.g. with :hg:`export`), you should be careful about things like file
 copies and renames or other things mentioned above, because when
 applying a standard diff to a different repository, this extra
-information is lost. Mercurial's internal operations (like push and
+information is lost. @Product@'s internal operations (like push and
 pull) are not affected by this, because they use an internal binary
 format for communicating changes.
 
-To make Mercurial produce the git extended diff format, use the --git
+To make @Product@ produce the git extended diff format, use the --git
 option available for many commands, or set 'git = True' in the [diff]
 section of your configuration file.
 """
@@ -2762,7 +2762,7 @@ section of your configuration file.
 environment = r"""HG
     Path to the 'hg' executable, automatically passed when running
     hooks, extensions or external tools. If unset or empty, this is
-    the hg executable's name if it's frozen, or an executable named
+    the @prog@ executable's name if it's frozen, or an executable named
     'hg' (with %PATHEXT% [defaulting to COM/EXE/BAT/CMD] extensions on
     Windows) is searched.
 
@@ -2772,23 +2772,23 @@ HGEDITOR
     (deprecated, see :hg:`help config.ui.editor`)
 
 HGENCODING
-    This overrides the default locale setting detected by Mercurial.
+    This overrides the default locale setting detected by @Product@.
     This setting is used to convert data including usernames,
     changeset descriptions, tag names, and branches. This setting can
     be overridden with the --encoding command-line option.
 
 HGENCODINGMODE
-    This sets Mercurial's behavior for handling unknown characters
+    This sets @Product@'s behavior for handling unknown characters
     while transcoding user input. The default is "strict", which
-    causes Mercurial to abort if it can't map a character. Other
+    causes @Product@ to abort if it can't map a character. Other
     settings include "replace", which replaces unknown characters, and
     "ignore", which drops them. This setting can be overridden with
     the --encodingmode command-line option.
 
 HGENCODINGAMBIGUOUS
-    This sets Mercurial's behavior for handling characters with
+    This sets @Product@'s behavior for handling characters with
     "ambiguous" widths like accented Latin characters with East Asian
-    fonts. By default, Mercurial assumes ambiguous characters are
+    fonts. By default, @Product@ assumes ambiguous characters are
     narrow, set this variable to "wide" if such characters cause
     formatting problems.
 
@@ -2812,9 +2812,9 @@ HGRCPATH
 
 HGPLAIN
     When set, this disables any configuration settings that might
-    change Mercurial's default output. This includes encoding,
+    change @Product@'s default output. This includes encoding,
     defaults, verbose mode, debug mode, quiet mode, tracebacks, and
-    localization. This can be useful when scripting against Mercurial
+    localization. This can be useful when scripting against @Product@
     in the face of existing user configuration.
 
     In addition to the features disabled by ``HGPLAIN=``, the following
@@ -2870,7 +2870,7 @@ VISUAL
     This is the name of the editor to use when committing. See EDITOR.
 
 EDITOR
-    Sometimes Mercurial needs to open a text file in an editor for a
+    Sometimes @Product@ needs to open a text file in an editor for a
     user to modify, for example when writing commit messages. The
     editor it uses is determined by looking at the environment
     variables HGEDITOR, VISUAL and EDITOR, in that order. The first
@@ -2879,16 +2879,16 @@ EDITOR
 
 PYTHONPATH
     This is used by Python to find imported modules and may need to be
-    set appropriately if this Mercurial is not installed system-wide.
+    set appropriately if this @Product@ is not installed system-wide.
 """
 
 
-extensions = r"""Mercurial has the ability to add new features through the use of
+extensions = r"""@Product@ has the ability to add new features through the use of
 extensions. Extensions may add new commands, add options to
 existing commands, change the default behavior of commands, or
 implement hooks.
 
-To enable the "foo" extension, either shipped with Mercurial or in the
+To enable the "foo" extension, either shipped with @Product@ or in the
 Python search path, create an entry for it in your configuration file,
 like this::
 
@@ -2907,7 +2907,7 @@ they can increase startup overhead; they may be meant for advanced
 usage only; they may provide potentially dangerous abilities (such
 as letting you destroy or modify history); they might not be ready
 for prime time; or they may alter some usual behaviors of stock
-Mercurial. It is thus up to the user to activate extensions as
+@Product@. It is thus up to the user to activate extensions as
 needed.
 
 To explicitly disable an extension enabled in a configuration file of
@@ -2921,7 +2921,7 @@ broader scope, prepend its path with !::
 """
 
 
-filesets = r"""Mercurial supports a functional language for selecting a set of
+filesets = r"""@Product@ supports a functional language for selecting a set of
 files.
 
 Like other file patterns, this pattern type is indicated by a prefix,
@@ -2974,35 +2974,35 @@ Some sample queries:
 
 - Show status of files that appear to be binary in the working directory::
 
-    hg status -A "set:binary()"
+    @prog@ status -A "set:binary()"
 
 - Forget files that are in .gitignore but are already tracked::
 
-    hg forget "set:gitignore() and not ignored()"
+    @prog@ forget "set:gitignore() and not ignored()"
 
 - Find text files that contain a string::
 
-    hg files "set:grep(magic) and not binary()"
+    @prog@ files "set:grep(magic) and not binary()"
 
 - Find C files in a non-standard encoding::
 
-    hg files "set:**.c and not encoding('UTF-8')"
+    @prog@ files "set:**.c and not encoding('UTF-8')"
 
 - Revert copies of large binary files::
 
-    hg revert "set:copied() and binary() and size('>1M')"
+    @prog@ revert "set:copied() and binary() and size('>1M')"
 
 - Revert files that were added to the working directory::
 
-    hg revert "set:revs('wdir()', added())"
+    @prog@ revert "set:revs('wdir()', added())"
 
 - Remove files listed in foo.lst that contain the letter a or b::
 
-    hg remove "set: 'listfile:foo.lst' and (**a* or **b*)"
+    @prog@ remove "set: 'listfile:foo.lst' and (**a* or **b*)"
 """
 
 
-flags = r"""Most Mercurial commands accept various flags.
+flags = r"""Most @Product@ commands accept various flags.
 
 Flag names
 ==========
@@ -3019,17 +3019,17 @@ name is equivalent and has the same effect.
 Flags that have a short name can also be bundled together - for instance, to
 specify both --edit (short -e) and --interactive (short -i), one could use::
 
-    hg commit -ei
+    @prog@ commit -ei
 
 If any of the bundled flags takes a value (i.e. is not a boolean), it must be
 last, followed by the value::
 
-    hg commit -im 'Message'
+    @prog@ commit -im 'Message'
 
 Flag types
 ==========
 
-Mercurial command-line flags can be strings, numbers, booleans, or lists of
+@Product@ command-line flags can be strings, numbers, booleans, or lists of
 strings.
 
 Specifying flag values
@@ -3052,15 +3052,15 @@ Boolean flags do not take a value parameter. To specify a boolean, use the flag
 name to set it to true, or the same name prefixed with 'no-' to set it to
 false::
 
-    hg commit --interactive
-    hg commit --no-interactive
+    @prog@ commit --interactive
+    @prog@ commit --no-interactive
 
 Specifying list flags
 =====================
 
 List flags take multiple values. To specify them, pass the flag multiple times::
 
-    hg files --include mercurial --include tests
+    @prog@ files --include mercurial --include tests
 
 Setting flag defaults
 =====================
@@ -3079,7 +3079,7 @@ Overriding flags on the command line
 If the same non-list flag is specified multiple times on the command line, the
 latest specification is used::
 
-    hg commit -m "Ignored value" -m "Used value"
+    @prog@ commit -m "Ignored value" -m "Used value"
 
 This includes the use of aliases - e.g., if one has::
 
@@ -3088,7 +3088,7 @@ This includes the use of aliases - e.g., if one has::
 
 then the following command will override that -m::
 
-    hg committemp -m "Used value"
+    @prog@ committemp -m "Used value"
 
 Overriding flag defaults
 ========================
@@ -3105,7 +3105,7 @@ Some flags are not shown in a command's help by default - specifically, those
 that are deemed to be experimental, deprecated or advanced. To show all flags,
 add the --verbose flag for the help command::
 
-    hg help --verbose commit
+    @prog@ help --verbose commit
 """
 
 
@@ -3119,7 +3119,7 @@ glossary = r"""Ancestor
 Bookmark
     Bookmarks are pointers to certain commits that move when
     committing. They are similar to tags in that it is possible to use
-    bookmark names in all places where Mercurial expects a changeset
+    bookmark names in all places where @Product@ expects a changeset
     ID, e.g., with :hg:`update`. Unlike tags, bookmarks move along
     when you make a commit.
 
@@ -3252,7 +3252,7 @@ Commit
     Example: "Is the bug fixed in your recent commit?"
 
     (Verb) The act of recording changes to a repository. When files
-    are committed in a working directory, Mercurial finds the
+    are committed in a working directory, @Product@ finds the
     differences between the committed files and their parent
     changeset, creating a new changeset in the repository.
 
@@ -3272,7 +3272,7 @@ DAG
     consisting of nodes and edges, where nodes correspond to
     changesets and edges imply a parent -> child relation. This graph
     can be visualized by graphical tools such as :hg:`log --graph`. In
-    Mercurial, the DAG is limited by the requirement for children to
+    @Product@, the DAG is limited by the requirement for children to
     have at most two parents.
 
 Deprecated
@@ -3306,7 +3306,7 @@ Diff
 
 Directory, working
     The working directory represents the state of the files tracked by
-    Mercurial, that will be recorded in the next commit. The working
+    @Product@, that will be recorded in the next commit. The working
     directory initially corresponds to the snapshot at an existing
     changeset, known as the parent of the working directory. See
     'Parent, working directory'. The state may be modified by changes
@@ -3359,7 +3359,7 @@ History, immutable
 
 History, rewriting
     The changesets in a repository are immutable. However, extensions
-    to Mercurial can be used to alter the repository, usually in such
+    to @Product@ can be used to alter the repository, usually in such
     a way as to preserve changeset contents.
 
 Immutable history
@@ -3462,7 +3462,7 @@ Revision number
     'Changeset id'.
 
 Revlog
-    History storage mechanism used by Mercurial. It is a form of delta
+    History storage mechanism used by @Product@. It is a form of delta
     encoding, with occasional full revision of data followed by delta
     of each successive revision. It includes data and an index
     pointing to the data.
@@ -3480,7 +3480,7 @@ Secret
 
 Tag
     An alternative name given to a changeset. Tags can be used in all
-    places where Mercurial expects a changeset ID, e.g., with
+    places where @Product@ expects a changeset ID, e.g., with
     :hg:`update`. The creation of a tag is stored in the history and
     will thus automatically be shared with other using push and pull.
 
@@ -3516,7 +3516,7 @@ Working directory parent
 
 globals()[
     "merge-tools"
-] = r"""To merge files Mercurial uses merge tools.
+] = r"""To merge files @Product@ uses merge tools.
 
 A merge tool combines two different versions of a file into a merged
 file. Merge tools are given the two files and the greatest common
@@ -3531,7 +3531,7 @@ combining all non-overlapping changes that occurred separately in
 the two different evolutions of the same initial base file. Furthermore, some
 interactive merge programs make it easier to manually resolve
 conflicting merges, either in a graphical way, or by inserting some
-conflict markers. Mercurial does not include any interactive merge
+conflict markers. @Product@ does not include any interactive merge
 programs but relies on external tools for that.
 
 Available merge tools
@@ -3560,7 +3560,7 @@ not handle symlinks or binary files.
 Choosing a merge tool
 =====================
 
-Mercurial uses these rules when deciding which merge tool to use:
+@Product@ uses these rules when deciding which merge tool to use:
 
 1. If a tool has been specified with the --tool option to merge or resolve, it
    is used.  If it is the name of a tool in the merge-tools configuration, its
@@ -3592,9 +3592,9 @@ Mercurial uses these rules when deciding which merge tool to use:
 
 .. note::
 
-   After selecting a merge program, Mercurial will by default attempt
+   After selecting a merge program, @Product@ will by default attempt
    to merge the files using a simple merge algorithm first. Only if it doesn't
-   succeed because of conflicting changes will Mercurial actually execute the
+   succeed because of conflicting changes will @Product@ actually execute the
    merge program. Whether to use the simple merge algorithm first can be
    controlled by the premerge setting of the merge tool. Premerge is enabled by
    default unless the file is binary or a symlink.
@@ -3604,7 +3604,7 @@ configuration of merge tools.
 """
 
 
-pager = r"""Some Mercurial commands can produce a lot of output, and Mercurial will
+pager = r"""Some @Product@ commands can produce a lot of output, and @Product@ will
 attempt to use a pager to make those commands more pleasant.
 
 To set the pager that should be used, set the application variable::
@@ -3612,7 +3612,7 @@ To set the pager that should be used, set the application variable::
   [pager]
   pager = less -FRX
 
-If no pager is set in the user or repository configuration, Mercurial uses the
+If no pager is set in the user or repository configuration, @Product@ uses the
 builtin streampager, which renders stderr and progress bars properly.
 
 You can disable the pager for certain commands by adding them to the
@@ -3643,10 +3643,10 @@ For more config options, check :hg:`help config.pager`.
 """
 
 
-patterns = r"""Mercurial accepts several notations for identifying one or more files
+patterns = r"""@Product@ accepts several notations for identifying one or more files
 at a time.
 
-By default, Mercurial treats filenames as shell-style extended glob
+By default, @Product@ treats filenames as shell-style extended glob
 patterns.
 
 Alternate pattern notations must be specified explicitly.
@@ -3793,7 +3793,7 @@ See :hg:`help config` for more information on configuration files.
 
 .. note::
 
-  Servers running older versions of Mercurial are treated as
+  Servers running older versions of @Product@ are treated as
   publishing.
 
 .. note::
@@ -3809,29 +3809,29 @@ Examples
 
  - list changesets in draft or secret phase::
 
-     hg log -r "not public()"
+     @prog@ log -r "not public()"
 
  - change all secret changesets to draft::
 
-     hg phase --draft "secret()"
+     @prog@ phase --draft "secret()"
 
  - forcibly move the current changeset and descendants from public to draft::
 
-     hg phase --force --draft .
+     @prog@ phase --force --draft .
 
  - show a list of changeset revisions and each corresponding phase::
 
-     hg log --template "{rev} {phase}\n"
+     @prog@ log --template "{rev} {phase}\n"
 
  - resynchronize draft changesets relative to a remote repository::
 
-     hg phase -fd "outgoing(URL)"
+     @prog@ phase -fd "outgoing(URL)"
 
 See :hg:`help phase` for more information on manually manipulating phases.
 """
 
 
-revisions = r"""Mercurial supports several ways to specify revisions.
+revisions = r"""@Product@ supports several ways to specify revisions.
 
 Specifying single revisions
 ===========================
@@ -3858,16 +3858,16 @@ working directory is checked out, it is equivalent to null. If an
 uncommitted merge is in progress, "." is the revision of the first
 parent.
 
-Finally, commands that expect a single revision (like ``hg update``) also
+Finally, commands that expect a single revision (like ``@prog@ update``) also
 accept revsets (see below for details). When given a revset, they use the
 last revision of the revset. A few commands accept two single revisions
-(like ``hg diff``). When given a revset, they use the first and the last
+(like ``@prog@ diff``). When given a revset, they use the first and the last
 revisions of the revset.
 
 Specifying multiple revisions
 =============================
 
-Mercurial supports a functional language for selecting a set of
+@Product@ supports a functional language for selecting a set of
 revisions. Expressions in this language are called revsets.
 
 The language supports a number of predicates which are joined by infix
@@ -3980,7 +3980,7 @@ existing predicates or other aliases. An alias definition looks like::
 
   <alias> = <definition>
 
-in the ``revsetalias`` section of a Mercurial configuration file. Arguments
+in the ``revsetalias`` section of a @Product@ configuration file. Arguments
 of the form `a1`, `a2`, etc. are substituted from the alias into the
 definition.
 
@@ -4017,50 +4017,50 @@ Some sample queries:
 
 - Changesets on the default branch::
 
-    hg log -r "branch(default)"
+    @prog@ log -r "branch(default)"
 
 - Changesets on the default branch since tag 1.5 (excluding merges)::
 
-    hg log -r "branch(default) and 1.5:: and not merge()"
+    @prog@ log -r "branch(default) and 1.5:: and not merge()"
 
 - Open branch heads::
 
-    hg log -r "head() and not closed()"
+    @prog@ log -r "head() and not closed()"
 
 - Changesets between tags 1.3 and 1.5 mentioning "bug" that affect
   ``ext/*``::
 
-    hg log -r "1.3::1.5 and keyword(bug) and file('ext/*')"
+    @prog@ log -r "1.3::1.5 and keyword(bug) and file('ext/*')"
 
 - Changesets committed in May 2008, sorted by user::
 
-    hg log -r "sort(date('May 2008'), user)"
+    @prog@ log -r "sort(date('May 2008'), user)"
 
 - Changesets mentioning "bug" or "issue" that are not in a tagged
   release::
 
-    hg log -r "(keyword(bug) or keyword(issue)) and not ancestors(tag())"
+    @prog@ log -r "(keyword(bug) or keyword(issue)) and not ancestors(tag())"
 
 - Update to the commit that bookmark @ is pointing to, without activating the
   bookmark (this works because the last revision of the revset is used)::
 
-    hg update :@
+    @prog@ update :@
 
 - Show diff between tags 1.3 and 1.5 (this works because the first and the
   last revisions of the revset are used)::
 
-    hg diff -r 1.3::1.5
+    @prog@ diff -r 1.3::1.5
 """
 
 
-scripting = r"""It is common for machines (as opposed to humans) to consume Mercurial.
+scripting = r"""It is common for machines (as opposed to humans) to consume @Product@.
 This help topic describes some of the considerations for interfacing
-machines with Mercurial.
+machines with @Product@.
 
 Choosing an Interface
 =====================
 
-Machines have a choice of several methods to interface with Mercurial.
+Machines have a choice of several methods to interface with @Product@.
 These include:
 
 - Executing the ``hg`` process
@@ -4068,10 +4068,10 @@ These include:
 - Calling out to a command server
 
 Executing ``hg`` processes is very similar to how humans interact with
-Mercurial in the shell. It should already be familiar to you.
+@Product@ in the shell. It should already be familiar to you.
 
 :hg:`serve` can be used to start a "command server." Clients can connect
-to this server and issue Mercurial commands over a special protocol.
+to this server and issue @Product@ commands over a special protocol.
 For more details on the command server, including links to client
 libraries, see https://www.mercurial-scm.org/wiki/CommandServer.
 
@@ -4090,20 +4090,20 @@ Environment Variables
 =====================
 
 As documented in :hg:`help environment`, various environment variables
-influence the operation of Mercurial. The following are particularly
-relevant for machines consuming Mercurial:
+influence the operation of @Product@. The following are particularly
+relevant for machines consuming @Product@:
 
 HGPLAIN
-    If not set, Mercurial's output could be influenced by configuration
+    If not set, @Product@'s output could be influenced by configuration
     settings that impact its encoding, verbose mode, localization, etc.
 
     It is highly recommended for machines to set this variable when
     invoking ``hg`` processes.
 
 HGENCODING
-    If not set, the locale used by Mercurial will be detected from the
+    If not set, the locale used by @Product@ will be detected from the
     environment. If the determined locale does not support display of
-    certain characters, Mercurial may render these character sequences
+    certain characters, @Product@ may render these character sequences
     incorrectly (often by using "?" as a placeholder for invalid
     characters in the current locale).
 
@@ -4112,11 +4112,11 @@ HGENCODING
     environments.
 
 HGRCPATH
-    If not set, Mercurial will inherit config options from config files
+    If not set, @Product@ will inherit config options from config files
     using the process described in :hg:`help config`. This includes
     inheriting user or system-wide config files.
 
-    When utmost control over the Mercurial configuration is desired, the
+    When utmost control over the @Product@ configuration is desired, the
     value of ``HGRCPATH`` can be set to an explicit file with known good
     configs. In rare cases, the value can be set to an empty file or the
     null device (often ``/dev/null``) to bypass loading of any user or
@@ -4128,33 +4128,33 @@ HGRCPATH
 Command-line Flags
 ==================
 
-Mercurial's default command-line parser is designed for humans, and is not
+@Product@'s default command-line parser is designed for humans, and is not
 robust against malicious input. For instance, you can start a debugger by
 passing ``--debugger`` as an option value::
 
-    $ REV=--debugger sh -c 'hg log -r "$REV"'
+    $ REV=--debugger sh -c '@prog@ log -r "$REV"'
 
 This happens because several command-line flags need to be scanned without
 using a concrete command table, which may be modified while loading repository
 settings and extensions.
 
-Since Mercurial 4.4.2, the parsing of such flags may be restricted by setting
+Since @Product@ 4.4.2, the parsing of such flags may be restricted by setting
 ``HGPLAIN=+strictflags``. When this feature is enabled, all early options
 (e.g. ``-R/--repository``, ``--cwd``, ``--config``) must be specified first
 amongst the other global options, and cannot be injected to an arbitrary
 location::
 
-    $ HGPLAIN=+strictflags hg -R "$REPO" log -r "$REV"
+    $ HGPLAIN=+strictflags @prog@ -R "$REPO" log -r "$REV"
 
-In earlier Mercurial versions where ``+strictflags`` isn't available, you
+In earlier @Product@ versions where ``+strictflags`` isn't available, you
 can mitigate the issue by concatenating an option value with its flag::
 
-    $ hg log -r"$REV" --keyword="$KEYWORD"
+    $ @prog@ log -r"$REV" --keyword="$KEYWORD"
 
 Consuming Command Output
 ========================
 
-It is common for machines to need to parse the output of Mercurial
+It is common for machines to need to parse the output of @Product@
 commands for relevant data. This section describes the various
 techniques for doing so.
 
@@ -4169,7 +4169,7 @@ The output of many commands can easily be parsed with tools like
 ``grep``, ``sed``, and ``awk``.
 
 A potential downside with parsing command output is that the output
-of commands can change when Mercurial is upgraded. While Mercurial
+of commands can change when @Product@ is upgraded. While @Product@
 does generally strive for strong backwards compatibility, command
 output does occasionally change. Having tests for your automated
 interactions with ``hg`` commands is generally recommended, but is
@@ -4193,7 +4193,7 @@ output containing authors, dates, descriptions, etc.
    using templates to make your life easier.
 
 The ``-T/--template`` argument allows specifying pre-defined styles.
-Mercurial ships with the machine-readable styles ``json`` and ``xml``,
+@Product@ ships with the machine-readable styles ``json`` and ``xml``,
 which provide JSON and XML output, respectively. These are useful for
 producing output that is machine readable as-is.
 
@@ -4204,14 +4204,14 @@ producing output that is machine readable as-is.
    output, their behavior may change in subsequent versions.
 
    These styles may also exhibit unexpected results when dealing with
-   certain encodings. Mercurial treats things like filenames as a
+   certain encodings. @Product@ treats things like filenames as a
    series of bytes and normalizing certain byte sequences to JSON
    or XML with certain encoding settings can lead to surprises.
 
 Command Server Output
 ---------------------
 
-If using the command server to interact with Mercurial, you are likely
+If using the command server to interact with @Product@, you are likely
 using an existing library/API that abstracts implementation details of
 the command server. If so, this interface layer may perform parsing for
 you, saving you the work of implementing it yourself.
@@ -4222,7 +4222,7 @@ Output Verbosity
 Commands often have varying output verbosity, even when machine
 readable styles are being used (e.g. ``-T json``). Adding
 ``-v/--verbose`` and ``--debug`` to the command's arguments can
-increase the amount of data exposed by Mercurial.
+increase the amount of data exposed by @Product@.
 
 An alternate way to get the data you need is by explicitly specifying
 a template.
@@ -4232,7 +4232,7 @@ Other Topics
 
 revsets
    Revisions sets is a functional query language for selecting a set
-   of revisions. Think of it as SQL for Mercurial repositories. Revsets
+   of revisions. Think of it as SQL for @Product@ repositories. Revsets
    are useful for querying repositories for specific data.
 
    See :hg:`help revsets` for more.
@@ -4252,22 +4252,22 @@ share extension
 """
 
 
-templates = r"""Mercurial allows you to customize output of commands through
+templates = r"""@Product@ allows you to customize output of commands through
 templates. You can either pass in a template or select an existing
 template-style from the command line, via the --template option.
 
 You can customize output for any "log-like" command: log,
 outgoing, incoming, tip, parents, and heads.
 
-Some built-in styles are packaged with Mercurial. These can be listed
+Some built-in styles are packaged with @Product@. These can be listed
 with :hg:`log --template list`. Example usage::
 
-    $ hg log -r1.0::1.1 --template changelog
+    $ @prog@ log -r1.0::1.1 --template changelog
 
 A template is a piece of text, with markup to invoke variable
 expansion::
 
-    $ hg log -r1 --template "{node}\n"
+    $ @prog@ log -r1 --template "{node}\n"
     b56ce7b07c52de7d5fd79fb89701ea538af65746
 
 Keywords
@@ -4286,7 +4286,7 @@ variable. Be sure to use the stringify filter first when you're
 applying a string-input filter to a list-like input variable.
 You can also use a chain of filters to get the desired output::
 
-   $ hg tip --template "{date|isodate}\n"
+   $ @prog@ tip --template "{date|isodate}\n"
    2008-08-21 18:22 +0000
 
 Filters
@@ -4336,7 +4336,7 @@ Aliases
 ========
 
 New keywords and functions can be defined in the ``templatealias`` section of
-a Mercurial configuration file::
+a @Product@ configuration file::
 
   <alias> = <definition>
 
@@ -4367,12 +4367,12 @@ For example,
 
 defines a template, ``nodedate``, which can be called like::
 
-  $ hg log -r . -Tnodedate
+  $ @prog@ log -r . -Tnodedate
 
 A template defined in ``templates`` section can also be referenced from
 another template::
 
-  $ hg log -r . -T "{rev} {nodedate}"
+  $ @prog@ log -r . -T "{rev} {nodedate}"
 
 but be aware that the keywords cannot be overridden by templates. For example,
 a template defined as ``templates.rev`` cannot be referenced as ``{rev}``.
@@ -4393,80 +4393,80 @@ Some sample command line templates:
 
 - Format lists, e.g. files::
 
-   $ hg log -r 0 --template "files:\n{files % '  {file}\n'}"
+   $ @prog@ log -r 0 --template "files:\n{files % '  {file}\n'}"
 
 - Join the list of files with a ", "::
 
-   $ hg log -r 0 --template "files: {join(files, ', ')}\n"
+   $ @prog@ log -r 0 --template "files: {join(files, ', ')}\n"
 
 - Join the list of files ending with ".py" with a ", "::
 
-   $ hg log -r 0 --template "pythonfiles: {join(files('**.py'), ', ')}\n"
+   $ @prog@ log -r 0 --template "pythonfiles: {join(files('**.py'), ', ')}\n"
 
 - Separate non-empty arguments by a " "::
 
-   $ hg log -r 0 --template "{separate(' ', node, bookmarks, tags}\n"
+   $ @prog@ log -r 0 --template "{separate(' ', node, bookmarks, tags}\n"
 
 - Modify each line of a commit description::
 
-   $ hg log --template "{splitlines(desc) % '**** {line}\n'}"
+   $ @prog@ log --template "{splitlines(desc) % '**** {line}\n'}"
 
 - Format date::
 
-   $ hg log -r 0 --template "{date(date, '%Y')}\n"
+   $ @prog@ log -r 0 --template "{date(date, '%Y')}\n"
 
 - Display date in UTC::
 
-   $ hg log -r 0 --template "{localdate(date, 'UTC')|date}\n"
+   $ @prog@ log -r 0 --template "{localdate(date, 'UTC')|date}\n"
 
 - Output the description set to a fill-width of 30::
 
-   $ hg log -r 0 --template "{fill(desc, 30)}"
+   $ @prog@ log -r 0 --template "{fill(desc, 30)}"
 
 - Use a conditional to test for the default branch::
 
-   $ hg log -r 0 --template "{ifeq(branch, 'default', 'on the main branch',
+   $ @prog@ log -r 0 --template "{ifeq(branch, 'default', 'on the main branch',
    'on branch {branch}')}\n"
 
 - Append a newline if not empty::
 
-   $ hg tip --template "{if(author, '{author}\n')}"
+   $ @prog@ tip --template "{if(author, '{author}\n')}"
 
 - Label the output for use with the color extension::
 
-   $ hg log -r 0 --template "{label('changeset.{phase}', node|short)}\n"
+   $ @prog@ log -r 0 --template "{label('changeset.{phase}', node|short)}\n"
 
 - Invert the firstline filter, i.e. everything but the first line::
 
-   $ hg log -r 0 --template "{sub(r'^.*\n?\n?', '', desc)}\n"
+   $ @prog@ log -r 0 --template "{sub(r'^.*\n?\n?', '', desc)}\n"
 
 - Display the contents of the 'extra' field, one per line::
 
-   $ hg log -r 0 --template "{join(extras, '\n')}\n"
+   $ @prog@ log -r 0 --template "{join(extras, '\n')}\n"
 
 - Mark the active bookmark with '*'::
 
-   $ hg log --template "{bookmarks % '{bookmark}{ifeq(bookmark, active, '*')} '}\n"
+   $ @prog@ log --template "{bookmarks % '{bookmark}{ifeq(bookmark, active, '*')} '}\n"
 
 - Find the previous release candidate tag, the distance and changes since the tag::
 
-   $ hg log -r . --template "{latesttag('re:^.*-rc$') % '{tag}, {changes}, {distance}'}\n"
+   $ @prog@ log -r . --template "{latesttag('re:^.*-rc$') % '{tag}, {changes}, {distance}'}\n"
 
 - Mark the working copy parent with '@'::
 
-   $ hg log --template "{ifcontains(rev, revset('.'), '@')}\n"
+   $ @prog@ log --template "{ifcontains(rev, revset('.'), '@')}\n"
 
 - Show details of parent revisions::
 
-   $ hg log --template "{revset('parents(%d)', rev) % '{desc|firstline}\n'}"
+   $ @prog@ log --template "{revset('parents(%d)', rev) % '{desc|firstline}\n'}"
 
 - Show only commit descriptions that start with "template"::
 
-   $ hg log --template "{startswith('template', firstline(desc))}\n"
+   $ @prog@ log --template "{startswith('template', firstline(desc))}\n"
 
 - Print the first word of each line of a commit message::
 
-   $ hg log --template "{word(0, desc)}\n"
+   $ @prog@ log --template "{word(0, desc)}\n"
 """
 
 
@@ -4478,7 +4478,7 @@ urls = r"""Valid URLs are of the form::
   https://[user[:pass]@]host[:port]/[path][#revision]
   ssh://[user@]host[:port]/[path][#revision]
 
-Paths in the local filesystem can either point to Mercurial
+Paths in the local filesystem can either point to @Product@
 repositories or to bundle files (as created by :hg:`bundle` or
 :hg:`incoming --bundle`). See also :hg:`help paths`.
 
@@ -4487,22 +4487,22 @@ changeset to use from the remote repository. See also :hg:`help
 revisions`.
 
 Some features, such as pushing to http:// and https:// URLs are only
-possible if the feature is explicitly enabled on the remote Mercurial
+possible if the feature is explicitly enabled on the remote @Product@
 server.
 
 Note that the security of HTTPS URLs depends on proper configuration of
 web.cacerts.
 
-Some notes about using SSH with Mercurial:
+Some notes about using SSH with @Product@:
 
 - SSH requires an accessible shell account on the destination machine
-  and a copy of hg in the remote path or specified with as remotecmd.
+  and a copy of @prog@ in the remote path or specified with as remotecmd.
 - path is relative to the remote user's home directory by default. Use
   an extra slash at the start of a path to specify an absolute path::
 
     ssh://example.com//tmp/repository
 
-- Mercurial doesn't use its own compression via SSH; the right thing
+- @Product@ doesn't use its own compression via SSH; the right thing
   to do is to configure it in your ~/.ssh/config, e.g.::
 
     Host *.mylocalnetwork.example.com
@@ -4528,7 +4528,7 @@ Two path aliases are special because they are used as defaults when
 you do not provide the URL to a command:
 
 default:
-  When you create a repository with hg clone, the clone command saves
+  When you create a repository with @prog@ clone, the clone command saves
   the location of the source repository as the new repository's
   'default' path. This is then used when you omit path from push- and
   pull-like commands (including incoming and outgoing).

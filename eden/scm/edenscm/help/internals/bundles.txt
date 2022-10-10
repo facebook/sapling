@@ -69,7 +69,7 @@ in ``mercurial/exchange.py`` for now.
 Initial ``HG20`` support was added in Mercurial 3.0 (released May
 2014). However, bundle2 bundles were hidden behind an experimental flag
 until version 3.5 (released August 2015), when they were enabled in the
-wire protocol. Various commands (including ``hg bundle``) did not
+wire protocol. Various commands (including ``@prog@ bundle``) did not
 support generating bundle2 files until Mercurial 3.6 (released November
 2015).
 

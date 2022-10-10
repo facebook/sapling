@@ -118,10 +118,10 @@ SSH Transport
 The SSH transport is a custom text-based protocol suitable for use over any
 bi-directional stream transport. It is most commonly used with SSH.
 
-A SSH transport server can be started with ``hg serve --stdio``. The stdin,
+A SSH transport server can be started with ``@prog@ serve --stdio``. The stdin,
 stderr, and stdout file descriptors of the started process are used to exchange
 data. When Mercurial connects to a remote server over SSH, it actually starts
-a ``hg serve --stdio`` process on the remote server.
+a ``@prog@ serve --stdio`` process on the remote server.
 
 Commands are issued by sending the command name followed by a trailing newline
 ``\n`` to the server. e.g. ``capabilities\n``.
@@ -394,7 +394,7 @@ stream-preferred
 ----------------
 
 If present the server prefers that clients clone using the streaming clone
-protocol (``hg clone --stream``) rather than the standard
+protocol (``@prog@ clone --stream``) rather than the standard
 changegroup/bundle based protocol.
 
 This capability was introduced in Mercurial 2.2 (released May 2012).
