@@ -539,6 +539,14 @@ fn address_from_land_service<'a>(
     }
 }
 
+fn should_use_land_service() -> bool {
+    rand::random::<f64>()
+        < tunables()
+            .get_pushrebase_redirect_to_land_service_pct()
+            .clamp(0, 100) as f64
+            / 100.0
+}
+
 async fn normal_pushrebase<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
@@ -552,13 +560,24 @@ async fn normal_pushrebase<'a>(
 ) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
     let bookmark_restriction = BookmarkKindRestrictions::OnlyPublishing;
     let remote_mode = if tunables().get_force_local_pushrebase() {
-        &PushrebaseRemoteMode::Local
+        PushrebaseRemoteMode::Local
+    } else if should_use_land_service() {
+        #[cfg(fbcode_build)]
+        {
+            PushrebaseRemoteMode::RemoteLandServiceWithLocalFallback(Address::Tier(
+                "mononoke-land-service".to_string(),
+            ))
+        }
+        #[cfg(not(fbcode_build))]
+        {
+            panic!("land service not implemented outside fbcode")
+        }
     } else {
-        &repo.repo_config().pushrebase.remote_mode
+        repo.repo_config().pushrebase.remote_mode.clone()
     };
     let maybe_fallback_scuba: Option<(MononokeScubaSampleBuilder, BookmarkMovementError)> = {
         let maybe_client: Option<Box<dyn PushrebaseClient>> =
-            maybe_client_from_address(&repo.repo_config().pushrebase.remote_mode, ctx, repo);
+            maybe_client_from_address(&remote_mode, ctx, repo);
 
         if let Some(client) = maybe_client {
             let result = client
@@ -570,7 +589,7 @@ async fn normal_pushrebase<'a>(
                     bookmark_restriction,
                 )
                 .await;
-            match (result, remote_mode) {
+            match (result, &remote_mode) {
                 (Ok(outcome), _) => {
                     return Ok((outcome.head, outcome.rebased_changesets));
                 }

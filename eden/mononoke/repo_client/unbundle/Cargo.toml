@@ -45,6 +45,7 @@ pin-project = "0.4.30"
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_client = { version = "0.1.0", path = "../../pushrebase/client" }
 quickcheck = "1.0"
+rand = { version = "0.8", features = ["small_rng"] }
 rate_limiting = { version = "0.1.0", path = "../../rate_limiting" }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 remotefilelog = { version = "0.1.0", path = "../remotefilelog" }
