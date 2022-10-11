@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import difflib
 import errno
 import os
+import pathlib
 import re
 import shlex
 import subprocess
@@ -1753,7 +1754,7 @@ def config(ui, repo, *values, **opts):
         elif opts.get("global"):
             paths = rcutil.systemrcpath()
         else:
-            paths = ui.identity.userconfigpaths()
+            paths = bindings.identity.default().userconfigpaths()
 
         for f in paths:
             if os.path.exists(f):
@@ -1767,6 +1768,7 @@ def config(ui, repo, *values, **opts):
                 samplehgrc = uimod.samplehgrcs["user"]
 
             f = paths[0]
+            os.makedirs(pathlib.Path(f).parent.absolute(), exist_ok=True)
             fp = open(f, "wb")
             fp.write(pycompat.encodeutf8(util.tonativeeol(samplehgrc)))
             fp.close()
