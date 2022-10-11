@@ -54,9 +54,7 @@ pullopts = [
         "",
         "full",
         None,
-        _(
-            "pull all workspace commits into the local repository, don't omit old ones. (ADVANCED)"
-        ),
+        _("pull all workspace commits into the local repository, don't omit old ones."),
     )
 ]
 
