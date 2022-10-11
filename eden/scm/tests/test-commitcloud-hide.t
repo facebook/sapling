@@ -101,7 +101,9 @@ Remove by hash with two related commits removes both of them
   $ hg cloud hide $P $R
   removing heads:
       0d5fa5021fb8  S
-  $ hg cloud sync -q
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in * (glob)
   $ showgraph
   o  F: draft
   │
@@ -140,7 +142,9 @@ Remove by hash removes commit, all descendants and their bookmarks
       n-bookmark: d3adf05d12fa
       n-bookmark2: d3adf05d12fa
       o-bookmark: 7f49e3f0c6cd
-  $ hg cloud sync -q
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in * (glob)
   $ showgraph
   o  F: draft
   │
@@ -169,7 +173,9 @@ Remove when other heads keep ancestors alive, removing it just removes the head
   $ hg cloud hide $C
   removing heads:
       f6a18bc998c9  C
-  $ hg cloud sync -q
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in * (glob)
   $ showgraph
   o  F: draft
   │
@@ -196,7 +202,9 @@ Remove by bookmark leaves commits alone if there are other bookmarks
   $ hg cloud hide -B d-bookmark
   removing bookmarks:
       d-bookmark: fa9d7a2f38d1
-  $ hg cloud sync -q
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in * (glob)
   $ showgraph
   o  F: draft
   │
@@ -226,7 +234,9 @@ But removing all of the bookmarks pointing to a head removes the head
   removing bookmarks:
       d-bookmark2: fa9d7a2f38d1
       d-bookmark3: fa9d7a2f38d1
-  $ hg cloud sync -q
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in * (glob)
   $ showgraph
   o  F: draft
   │
@@ -251,7 +261,9 @@ Removing a bookmark in the stack doesn't hide the commit
   $ hg cloud hide -B b-bookmark
   removing bookmarks:
       b-bookmark: 9272e7e427bf
-  $ hg cloud sync -q
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in * (glob)
   $ showgraph
   o  F: draft
   │
@@ -276,7 +288,9 @@ Removing a bookmark on a public commit just removes it
   $ hg cloud hide -B x-bookmark
   removing bookmarks:
       x-bookmark: 8a0aebad5927
-  $ hg cloud sync -q
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in * (glob)
   $ showgraph
   o  F: draft
   │
@@ -301,7 +315,9 @@ Removing a lone commit just removes that head
   $ hg cloud hide $M
   removing heads:
       9c4fc22fed7c  M
-  $ hg cloud sync -q
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in * (glob)
   $ showgraph
   o  F: draft
   │
@@ -324,7 +340,9 @@ Removing a remote bookmark works
   $ hg cloud hide --remotebookmark remote/other
   removing remote bookmarks:
       remote/other: 1cab361770de
-  $ hg cloud sync -q
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in * (glob)
   $ showgraph
   o  F: draft
   │
@@ -383,7 +401,9 @@ Merge commits can be removed
   adding heads:
       080f94b3ed7f  F
       e59c81d53e06  G
-  $ hg cloud sync -q
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in * (glob)
   $ showgraph
   o  G: draft
   │

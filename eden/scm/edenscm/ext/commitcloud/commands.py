@@ -609,6 +609,8 @@ def cloudhide(ui, repo, *revs, **opts):
     if workspacename is None:
         workspacename = workspace.defaultworkspace(ui)
 
+    repo.ignoreautobackup = True
+
     with progress.spinner(ui, _("fetching commit cloud workspace")):
         serv = service.get(ui)
         slinfo = serv.getsmartlog(reponame, workspacename, repo, 0)
@@ -730,6 +732,9 @@ def cloudhide(ui, repo, *revs, **opts):
                 oldbookmarks=list(removebookmarks),
                 oldremotebookmarks=list(removeremotes),
             )
+        if workspacename == workspace.currentworkspace(repo):
+            # call cloud sync to apply the changes locally in foreground rather than in background
+            cloudsync(ui, repo, **opts)
     else:
         ui.status(_("nothing to change\n"))
 
