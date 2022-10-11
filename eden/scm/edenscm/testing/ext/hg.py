@@ -102,6 +102,9 @@ def testsetup(t: TestTmp):
         "LC_ALL": "en_US.UTF-8",
         "LOCALIP": "127.0.0.1",
         "SL_CONFIG_PATH": str(hgrcpath),
+        # Normalize TERM to avoid control sequence variations.
+        # We use a non-existent terminal to avoid any terminfo dependency.
+        "TERM": "fake-term",
         "TZ": "GMT",
     }
 

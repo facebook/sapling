@@ -1535,6 +1535,9 @@ class Test(unittest.TestCase):
 
         # Claim that 256 colors is not supported.
         env["HGCOLORS"] = "16"
+        # Normalize TERM to avoid control sequence variations.
+        # We use a non-existent terminal to avoid any terminfo dependency.
+        env["TERM"] = "fake-term"
 
         # Do not log to scuba (fb).
         env["FB_SCM_DIAGS_NO_SCUBA"] = "1"
