@@ -33,8 +33,8 @@ fn get_blobconfig(
     inner_blobstore_id: Option<u64>,
 ) -> Result<BlobConfig> {
     let blob_config = {
-        let storage_config = app
-            .storage_configs()
+        let storage_configs = app.storage_configs();
+        let storage_config = storage_configs
             .storage
             .get(&storage_config_name)
             .context("Requested storage config not found")?;

@@ -1521,7 +1521,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 ctx,
                 repo,
                 &check_additional_setup_steps_args,
-                configs,
+                &configs,
                 env,
             )
             .await?;
@@ -1535,7 +1535,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         _ => return Err(format_err!("Invalid subcommand")),
     };
 
-    match repo_import(&app, ctx, repo, &mut recovery_fields, configs, env).await {
+    match repo_import(&app, ctx, repo, &mut recovery_fields, &configs, env).await {
         Ok(()) => Ok(()),
         Err(e) => {
             save_importing_state(&recovery_fields).await?;

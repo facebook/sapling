@@ -38,7 +38,6 @@ use metaconfig_parser::RepoConfigs;
 use metaconfig_parser::StorageConfigs;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::BlobstoreId;
-use metaconfig_types::CommonConfig;
 use metaconfig_types::Redaction;
 use metaconfig_types::RepoConfig;
 use mononoke_repos::MononokeRepos;
@@ -89,8 +88,8 @@ pub struct MononokeApp {
     args: ArgMatches,
     env: Arc<MononokeEnvironment>,
     extension_args: HashMap<TypeId, Box<dyn BoxedAppExtensionArgs>>,
-    storage_configs: StorageConfigs,
-    repo_configs: RepoConfigs,
+    storage_configs: Arc<StorageConfigs>,
+    repo_configs: Arc<RepoConfigs>,
     repo_factory: RepoFactory,
 }
 
@@ -112,8 +111,14 @@ impl MononokeApp {
         let config_path = ConfigArgs::from_arg_matches(&args)?.config_path();
 
         let config_store = &env.as_ref().config_store;
-        let storage_configs = metaconfig_parser::load_storage_configs(&config_path, config_store)?;
-        let repo_configs = metaconfig_parser::load_repo_configs(&config_path, config_store)?;
+        let storage_configs = Arc::new(metaconfig_parser::load_storage_configs(
+            &config_path,
+            config_store,
+        )?);
+        let repo_configs = Arc::new(metaconfig_parser::load_repo_configs(
+            &config_path,
+            config_store,
+        )?);
 
         let repo_factory = RepoFactory::new(env.clone());
 
@@ -221,18 +226,13 @@ impl MononokeApp {
     }
 
     /// The repo configs for this app.
-    pub fn repo_configs(&self) -> &RepoConfigs {
-        &self.repo_configs
-    }
-
-    /// The common config for this app.
-    pub fn common_config(&self) -> &CommonConfig {
-        &self.repo_configs.common
+    pub fn repo_configs(&self) -> Arc<RepoConfigs> {
+        self.repo_configs.clone()
     }
 
     /// The storage configs for this app.
-    pub fn storage_configs(&self) -> &StorageConfigs {
-        &self.storage_configs
+    pub fn storage_configs(&self) -> Arc<StorageConfigs> {
+        self.storage_configs.clone()
     }
 
     /// The logger for this app.
@@ -344,7 +344,7 @@ impl MononokeApp {
         }
 
         let repos: HashMap<_, _> = repos.into_iter().collect();
-        let common_config = self.common_config().clone();
+        let common_config = self.repo_configs().common.clone();
         let repos: Vec<_> = stream::iter(repos)
             .map(|(repo_name, repo_config)| {
                 let repo_factory = self.repo_factory.clone();
@@ -369,7 +369,7 @@ impl MononokeApp {
     {
         let repo_arg = repo_args.id_or_name()?;
         let (repo_name, repo_config) = self.repo_config(repo_arg)?;
-        let common_config = self.common_config().clone();
+        let common_config = self.repo_configs().common.clone();
         let repo = self
             .repo_factory
             .build(repo_name, repo_config, common_config)
@@ -394,7 +394,7 @@ impl MononokeApp {
                     let start = Instant::now();
                     let logger = self.logger();
                     let repo_config = self.repo_config_by_name(&repo_name)?;
-                    let common_config = self.common_config().clone();
+                    let common_config = self.repo_configs().common.clone();
                     let repo_id = repo_config.repoid.id();
                     info!(logger, "Initializing repo: {}", &repo_name);
                     let repo = repo_factory
@@ -451,7 +451,7 @@ impl MononokeApp {
     {
         let repo_config = self.repo_config_by_name(repo_name)?;
         let repo_id = repo_config.repoid.id();
-        let common_config = self.common_config();
+        let common_config = &self.repo_configs().common;
         let repo = self
             .repo_factory
             .build(
@@ -496,7 +496,7 @@ impl MononokeApp {
         let target_repo_arg = repos.target_repo;
         let (source_repo_name, source_repo_config) = self.repo_config(source_repo_arg)?;
         let (target_repo_name, target_repo_config) = self.repo_config(target_repo_arg)?;
-        let common_config = self.common_config().clone();
+        let common_config = self.repo_configs().common.clone();
         let source_repo_fut =
             self.repo_factory
                 .build(source_repo_name, source_repo_config, common_config.clone());
@@ -600,7 +600,7 @@ impl MononokeApp {
                 .redacted_blobs(
                     self.new_basic_context(),
                     &storage_config.metadata,
-                    &Arc::new(self.common_config().clone()),
+                    &Arc::new(self.repo_configs().common.clone()),
                 )
                 .await?;
             RedactedBlobstore::new(
@@ -618,7 +618,7 @@ impl MononokeApp {
     pub async fn redaction_config_blobstore(&self) -> Result<Arc<RedactionConfigBlobstore>> {
         self.repo_factory
             .redaction_config_blobstore_from_config(
-                &self.common_config().redaction_config.blobstore,
+                &self.repo_configs().common.redaction_config.blobstore,
             )
             .await
     }
@@ -627,18 +627,19 @@ impl MononokeApp {
         &self,
     ) -> Result<Arc<RedactionConfigBlobstore>> {
         let blobstore_config = self
-            .common_config()
+            .repo_configs()
+            .common
             .redaction_config
             .darkstorm_blobstore
-            .as_ref()
+            .clone()
             .ok_or_else(|| anyhow!("Configuration must have darkstorm blobstore"))?;
         self.repo_factory
-            .redaction_config_blobstore_from_config(blobstore_config)
+            .redaction_config_blobstore_from_config(&blobstore_config)
             .await
     }
 
     fn redaction_scuba_builder(&self) -> Result<MononokeScubaSampleBuilder> {
-        let params = &self.common_config().censored_scuba_params;
+        let params = &self.repo_configs().common.censored_scuba_params;
         let mut builder =
             MononokeScubaSampleBuilder::with_opt_table(self.env.fb, params.table.clone())?;
         if let Some(file) = &params.local_path {

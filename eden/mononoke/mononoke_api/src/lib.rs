@@ -103,7 +103,7 @@ pub struct Mononoke {
 impl Mononoke {
     /// Create a Mononoke instance.
     pub async fn new(app: Arc<MononokeApp>) -> Result<Self, Error> {
-        let configs = app.repo_configs().clone();
+        let configs = (*app.repo_configs()).clone();
         let logger = app.logger().clone();
         let start = Instant::now();
         let repo_filter = app.environment().filter_repos.clone();

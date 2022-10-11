@@ -33,7 +33,6 @@ hyper-openssl = "0.9"
 lfs_protocol = { version = "0.1.0", path = "../lfs_protocol" }
 lfs_server_config = { version = "0.1.0", path = "../../../configerator/structs/scm/mononoke/lfs_server" }
 maplit = "1.0"
-metaconfig_parser = { version = "0.1.0", path = "../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 metadata = { version = "0.1.0", path = "../server/metadata" }
 mime = "0.3.14"

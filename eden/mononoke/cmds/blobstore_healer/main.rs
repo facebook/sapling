@@ -273,8 +273,8 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let mysql_options = &env.mysql_options;
     let readonly_storage = env.readonly_storage;
     let blobstore_options = &env.blobstore_options;
-    let storage_config = app
-        .storage_configs()
+    let storage_configs = app.storage_configs();
+    let storage_config = storage_configs
         .storage
         .get(&storage_id)
         .ok_or_else(|| format_err!("Storage id `{}` not found", storage_id))?;

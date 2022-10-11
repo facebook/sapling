@@ -34,7 +34,6 @@ use fbinit::FacebookInit;
 use futures::channel::mpsc;
 use futures::future;
 use mercurial_derived_data::MappedHgChangesetId;
-use metaconfig_parser::RepoConfigs;
 use metaconfig_types::CacheWarmupParams;
 use microwave::Snapshot;
 use microwave::SnapshotLocation;
@@ -93,8 +92,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let repo_factory = Arc::new(app.repo_factory());
     let scuba = env.scuba_sample_builder.clone();
 
-    let repo_configs = app.repo_configs().clone();
-    let RepoConfigs { repos, .. } = repo_configs;
+    let repos = app.repo_configs().repos.clone();
 
     let location = match &args.command {
         Commands::LocalPath(local_path_args) => {
@@ -104,7 +102,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         }
         Commands::Blobstore => SnapshotLocation::Blobstore,
     };
-    let common_config = app.common_config();
+    let common_config = &app.repo_configs().common;
     let futs = repos
         .into_iter()
         .map(|(name, config)| {

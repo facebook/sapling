@@ -65,7 +65,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         app.environment(),
         app.logger(),
         app.runtime(),
-        app.repo_configs(),
+        (*app.repo_configs()).clone(),
         app.repo_factory(),
     );
 
@@ -73,12 +73,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let ctx = session.new_context(logger.clone(), env.scuba_sample_builder.clone());
 
     let mononoke = Arc::new(runtime.block_on(Mononoke::new(Arc::clone(&app)))?);
-    let megarepo = Arc::new(runtime.block_on(MegarepoApi::new(
-        env,
-        repo_configs.clone(),
-        repo_factory,
-        mononoke,
-    ))?);
+    let megarepo =
+        Arc::new(runtime.block_on(MegarepoApi::new(env, repo_configs, repo_factory, mononoke))?);
 
     let tw_job_cluster = std::env::var("TW_JOB_CLUSTER");
     let tw_job_name = std::env::var("TW_JOB_NAME");

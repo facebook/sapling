@@ -29,7 +29,6 @@ filenodes = { version = "0.1.0", path = "../../filenodes" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercurial_derived_data" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
-metaconfig_parser = { version = "0.1.0", path = "../../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 microwave = { version = "0.1.0", path = ".." }
 mononoke_api_types = { version = "0.1.0", path = "../../mononoke_api/types" }

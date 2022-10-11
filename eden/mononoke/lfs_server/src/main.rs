@@ -45,7 +45,6 @@ use gotham_ext::middleware::TimerMiddleware;
 use gotham_ext::middleware::TlsSessionDataMiddleware;
 use gotham_ext::serve;
 use hyper::header::HeaderValue;
-use metaconfig_parser::RepoConfigs;
 use metaconfig_types::RepoConfig;
 use mononoke_app::args::parse_config_spec_to_path;
 use mononoke_app::args::ReadonlyArgs;
@@ -263,7 +262,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         LogMiddleware::slog(logger.clone())
     };
 
-    let RepoConfigs { repos: _, common } = app.repo_configs().clone();
+    let common = &app.repo_configs().common;
     let internal_identity = common.internal_identity.clone();
     let server = {
         cloned!(acl_provider, common, logger, will_exit, app);

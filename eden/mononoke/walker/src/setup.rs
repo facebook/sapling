@@ -216,7 +216,7 @@ pub async fn setup_common<'a>(
             name: repo,
             config: repo_conf,
         };
-        let common_config = app.common_config().clone();
+        let common_config = app.repo_configs().common.clone();
         let one_repo = setup_repo(
             walk_stats_key,
             app.fb,

@@ -100,7 +100,7 @@ pub async fn list(
     // SqlRedactedBlobs are removed, we need to know the metadata database
     // config for this.
     let db_config = &repo.repo_config().storage_config.metadata;
-    let common_config = Arc::new(app.common_config().clone());
+    let common_config = Arc::new(app.repo_configs().common.clone());
     let redacted_blobs = app
         .repo_factory()
         .redacted_blobs(ctx.clone(), db_config, &common_config)

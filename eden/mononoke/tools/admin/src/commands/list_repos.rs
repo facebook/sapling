@@ -26,7 +26,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         .transpose()
         .context("Failed to parse pattern")?;
 
-    let mut repos = app.repo_configs().repos.iter().collect::<Vec<_>>();
+    let configs = app.repo_configs();
+    let mut repos = configs.repos.iter().collect::<Vec<_>>();
     repos.sort_unstable_by_key(|(_repo_name, repo_config)| repo_config.repoid);
 
     for (repo_name, repo_config) in repos.into_iter() {

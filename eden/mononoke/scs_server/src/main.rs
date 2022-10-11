@@ -208,7 +208,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let mononoke = Arc::new(runtime.block_on(Mononoke::new(Arc::clone(&app)))?);
     let megarepo_api = Arc::new(runtime.block_on(MegarepoApi::new(
         env,
-        app.repo_configs().clone(),
+        (*app.repo_configs()).clone(),
         repo_factory,
         mononoke.clone(),
     ))?);
