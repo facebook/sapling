@@ -17,6 +17,7 @@ restack:doc=automatically restack commits
  "    orphaned commits onto the newest versions of their ancestors, making"
  "    the stack linear again."
 sl=smartlog -T '{sl}'
+ssl=smartlog -T '{ssl}'
 
 [automv]
 similarity=75
