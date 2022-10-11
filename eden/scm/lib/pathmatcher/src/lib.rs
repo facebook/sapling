@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+mod error;
 mod exact_matcher;
 mod gitignore_matcher;
 mod pattern;
@@ -250,10 +251,11 @@ impl Matcher for IntersectMatcher {
     }
 }
 
+pub use error::Error;
 pub use exact_matcher::ExactMatcher;
 pub use gitignore_matcher::GitignoreMatcher;
 pub use pattern::split_pattern;
-pub use pattern::ALL_PATTERN_KINDS;
+pub use pattern::PatternKind;
 pub use regex_matcher::RegexMatcher;
 pub use tree_matcher::TreeMatcher;
 pub use utils::expand_curly_brackets;

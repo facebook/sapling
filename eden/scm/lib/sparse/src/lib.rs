@@ -16,6 +16,7 @@ use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::Future;
 use once_cell::sync::Lazy;
+use pathmatcher::PatternKind;
 use regex::Regex;
 use types::RepoPath;
 
@@ -448,26 +449,26 @@ impl Matcher {
 fn sparse_pat_to_matcher_rule(pat: &Pattern) -> Result<Vec<String>, Error> {
     static DEFAULT_TYPE: &str = "glob";
 
-    let (pat_type, pat_text) = pathmatcher::split_pattern(pat.as_str(), DEFAULT_TYPE);
+    let (pat_type, pat_text) = pathmatcher::split_pattern(pat.as_str(), PatternKind::Glob);
     match pat_type {
-        "glob" | "path" => {} // empty
-        "re" => match convert_regex_to_glob(pat_text) {
+        PatternKind::Glob | PatternKind::Path => {} // empty
+        PatternKind::RE => match convert_regex_to_glob(pat_text) {
             Some(globs) => {
                 return Ok(globs);
             }
-            None => return Err(Error::UnsupportedPattern(pat_type.to_string())),
+            None => return Err(Error::UnsupportedPattern(pat_type.name().to_string())),
         },
         _ => {
-            return Err(Error::UnsupportedPattern(pat_type.to_string()));
+            return Err(Error::UnsupportedPattern(pat_type.name().to_string()));
         }
     };
 
     let pats = match pat_type {
-        "glob" => pathmatcher::expand_curly_brackets(pat_text)
+        PatternKind::Glob => pathmatcher::expand_curly_brackets(pat_text)
             .iter()
             .map(|s| pathmatcher::normalize_glob(s))
             .collect(),
-        "path" => vec![pathmatcher::normalize_glob(
+        PatternKind::Path => vec![pathmatcher::normalize_glob(
             pathmatcher::plain_to_glob(pat_text).as_str(),
         )],
         _ => unreachable!(),

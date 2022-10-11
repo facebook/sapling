@@ -13,6 +13,7 @@ ignore = "0.4"
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 regex-automata = "0.1"
 regex-syntax = "0.6.27"
+thiserror = "1.0.36"
 types = { version = "0.1.0", path = "../types" }
 
 [dev-dependencies]
