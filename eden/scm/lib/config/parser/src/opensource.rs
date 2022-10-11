@@ -131,6 +131,7 @@ extorder=
 fastpartialmatch=
 fbhistedit=
 fsmonitor=
+ghstack=
 githelp=
 github=
 gitlookup=!
