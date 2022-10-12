@@ -98,15 +98,15 @@ def cloud(ui, repo, **opts):
     different copies of the same repository if they are connected to the same commit cloud workspace.
     This may be useful, for example, to keep your laptop and desktop computers in sync.
 
-    Use '@command@ cloud join' to connect your repository to the default commit cloud workspace and get started.
+    Use '@prog@ cloud join' to connect your repository to the default commit cloud workspace and get started.
 
-    Use '@command@ cloud sync' to trigger a new backup and synchronization. Backups and synchronizations
+    Use '@prog@ cloud sync' to trigger a new backup and synchronization. Backups and synchronizations
     also happen automatically in the background as you create and modify commits.
 
-    Use '@command@ cloud switch' to change which workspace you are connected to.
-    Use '@command@ cloud list' to see your workspaces.
+    Use '@prog@ cloud switch' to change which workspace you are connected to.
+    Use '@prog@ cloud list' to see your workspaces.
 
-    Use '@command@ cloud leave' to stop using commit cloud workspaces.
+    Use '@prog@ cloud leave' to stop using commit cloud workspaces.
     """
     raise error.Abort(
         "you need to specify a subcommand (run with --help to see a list of subcommands)"
@@ -1536,7 +1536,7 @@ def pushbackup(ui, repo, *revs, **opts):
 
     If no revision is specified, backs up all visible commits.
 
-    '@command@ pushbackup' is deprecated in favour of '@command@ cloud backup'.
+    '@prog@ pushbackup' is deprecated in favour of '@prog@ cloud backup'.
     """
     return cloudbackup(ui, repo, *revs, **opts)
 
@@ -1553,7 +1553,7 @@ def isbackedup(ui, repo, **opts):
 
     If no revision are specified then it checks working copy parent.
 
-    '@command@ isbackedup' is deprecated in favour of '@command@ cloud check'.
+    '@prog@ isbackedup' is deprecated in favour of '@prog@ cloud check'.
     """
     return cloudcheck(ui, repo, **opts)
 
