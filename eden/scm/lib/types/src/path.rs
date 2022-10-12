@@ -40,6 +40,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::str::Utf8Error;
 
+use ref_cast::ref_cast_custom;
+use ref_cast::RefCastCustom;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use thiserror::Error;
@@ -65,7 +67,8 @@ pub struct RepoPathBuf(String);
 /// characters and reseved words.
 ///
 /// It should be noted that `RepoPathBuf` and `RepoPath` implement `AsRef<RepoPath>`.
-#[derive(Debug, Eq, PartialEq, Hash, Serialize)]
+#[derive(Debug, Eq, PartialEq, Hash, RefCastCustom, Serialize)]
+#[repr(transparent)]
 pub struct RepoPath(str);
 
 /// An owned version of a `PathComponent`. Not intended for mutation. RepoPathBuf is probably
@@ -75,7 +78,8 @@ pub struct PathComponentBuf(String);
 
 /// A `RepoPath` is a series of `PathComponent`s joined together by a separator (`/`).
 /// Names for directories or files.
-#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash, RefCastCustom)]
+#[repr(transparent)]
 pub struct PathComponent(str);
 
 /// The One. The One Character We Use To Separate Paths Into Components.
@@ -226,7 +230,7 @@ impl PartialOrd for RepoPathBuf {
 impl Deref for RepoPathBuf {
     type Target = RepoPath;
     fn deref(&self) -> &Self::Target {
-        unsafe { &*(&*self.0 as *const str as *const RepoPath) }
+        RepoPath::from_str_unchecked(&self.0)
     }
 }
 
@@ -289,9 +293,8 @@ impl RepoPath {
         Ok(RepoPath::from_str_unchecked(s))
     }
 
-    fn from_str_unchecked(s: &str) -> &RepoPath {
-        unsafe { &*(s as *const str as *const RepoPath) }
-    }
+    #[ref_cast_custom]
+    fn from_str_unchecked(s: &str) -> &RepoPath;
 
     /// Returns the underlying bytes of the `RepoPath`.
     pub fn as_byte_slice(&self) -> &[u8] {
@@ -473,7 +476,7 @@ impl PathComponentBuf {
 impl Deref for PathComponentBuf {
     type Target = PathComponent;
     fn deref(&self) -> &Self::Target {
-        unsafe { &*(&*self.0 as *const str as *const PathComponent) }
+        PathComponent::from_str_unchecked(&self.0)
     }
 }
 
@@ -511,9 +514,8 @@ impl PathComponent {
         Ok(PathComponent::from_str_unchecked(s))
     }
 
-    fn from_str_unchecked(s: &str) -> &PathComponent {
-        unsafe { &*(s as *const str as *const PathComponent) }
-    }
+    #[ref_cast_custom]
+    fn from_str_unchecked(s: &str) -> &PathComponent;
 
     /// Returns the underlying bytes of the `PathComponent`.
     pub fn as_byte_slice(&self) -> &[u8] {
@@ -534,7 +536,7 @@ impl AsRef<PathComponent> for PathComponent {
 
 impl AsRef<RepoPath> for PathComponent {
     fn as_ref(&self) -> &RepoPath {
-        unsafe { &*(&self.0 as *const str as *const RepoPath) }
+        RepoPath::from_str_unchecked(&self.0)
     }
 }
 
