@@ -25,6 +25,7 @@
 from __future__ import absolute_import
 
 import collections
+import collections.abc
 import errno
 import math
 import select
@@ -36,7 +37,7 @@ from .. import pycompat
 
 
 namedtuple = collections.namedtuple
-Mapping = collections.Mapping
+Mapping = collections.abc.Mapping
 
 try:
     monotonic = time.monotonic
