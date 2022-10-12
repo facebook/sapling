@@ -206,7 +206,7 @@ def cloudjoin(ui, repo, **opts):
         # check that the workspace exists if the destination workspace
         # doesn't equal to the default workspace for the current user
         if not create and workspace != workspace.defaultworkspace(ui):
-            if not serv.getworkspaces(reponame, workspacename):
+            if not serv.getworkspace(reponame, workspacename):
                 raise error.Abort(
                     _(
                         "this repository can not be switched to the '%s' workspace\n"
@@ -223,7 +223,7 @@ def cloudjoin(ui, repo, **opts):
                 except ccerror.BadRequestError:
                     # the sync error can happen if the current workspace is missing on the server
                     # if it has been renamed or removed
-                    if not serv.getworkspaces(reponame, currentworkspace):
+                    if not serv.getworkspace(reponame, currentworkspace):
                         raise error.Abort(
                             _(
                                 "the current workspace '%s' has been renamed or removed, please use '--force' option to skip the sync step\n"
@@ -671,8 +671,7 @@ def cloudmove(ui, repo, *revs, **opts):
 
     # Validate source workspace
     if sourceworkspace != currentworkspace:
-        srcinfos = serv.getworkspaces(reponame, sourceworkspace)
-        if not srcinfos:
+        if not serv.getworkspace(reponame, sourceworkspace):
             raise error.Abort(
                 _(
                     "can't move anything from the '%s' workspace\n"
@@ -680,13 +679,9 @@ def cloudmove(ui, repo, *revs, **opts):
                 )
                 % sourceworkspace
             )
-        if len(srcinfos) > 1:
-            raise error.Abort(_("unexpected ambiguous source workspace"))
 
     # Validate or create destination workspace
-    dstinfos = serv.getworkspaces(reponame, destinationworkspace)
-
-    if not dstinfos:
+    if not serv.getworkspace(reponame, destinationworkspace):
         confirmed = opts.get("create")
 
         if ui.interactive() and not confirmed:
@@ -717,9 +712,6 @@ def cloudmove(ui, repo, *revs, **opts):
                 0,
                 newremotebookmarks=addremotes,
             )
-    else:
-        if len(dstinfos) > 1:
-            raise error.Abort(_("unexpected ambiguous destination workspace"))
 
     ui.status(
         _(
@@ -1438,7 +1430,7 @@ def cloudstatus(ui, repo, **opts):
     userworkspaceprefix = workspace.userworkspaceprefix(ui)
     if workspacename.startswith(userworkspaceprefix):
         # check it with the server
-        if not service.get(ui).getworkspaces(ccutil.getreponame(repo), workspacename):
+        if not service.get(ui).getworkspace(ccutil.getreponame(repo), workspacename):
             ui.write(
                 _(
                     "Workspace: %s (renamed or removed) (run `@prog@ cloud list` and switch to a different one)\n"

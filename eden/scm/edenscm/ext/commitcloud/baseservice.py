@@ -245,6 +245,13 @@ class BaseService(pycompat.ABC):
         """Gets the list of workspaces for the given prefix"""
 
     @abstractmethod
+    def getworkspace(self, reponame, workspacename):
+        """Gets the workspace information if it exists for the given full workspacename name.
+
+        Return type is Optional[WorkspaceInfo]
+        """
+
+    @abstractmethod
     def updateworkspacearchive(self, reponame, workspace, archive):
         """Archive or Restore the given workspace"""
 

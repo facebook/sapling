@@ -533,3 +533,9 @@ Clean the repository and try again. Disconnected but clean repo should be allowe
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
   finished in * (glob)
+
+Switch to non existing workspace that is a prefix of an existing one
+  $ hg cloud switch -w defaul
+  abort: this repository can not be switched to the 'user/test/defaul' workspace
+  the workspace doesn't exist (please use --create option to create the workspace)
+  [255]

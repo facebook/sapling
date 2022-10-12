@@ -134,6 +134,18 @@ Try the same source and destination workspaces
   abort: the source workspace 'user/test/default' and the destination workspace 'user/test/default' are the same
   [255]
 
+Try moving to a workspace that doesn't exist without --create option but it a prefix of a workspace that does exist
+  $ hg cloud move -d defaul $P $R
+  abort: can't move anything to the 'user/test/defaul' workspace
+  the workspace doesn't exist
+  [255]
+
+Try moving from a workspace that doesn't exist but it a prefix of a workspace that does exist
+  $ hg cloud move -s defaul -d whatever --create $P $R
+  abort: can't move anything from the 'user/test/defaul' workspace
+  the workspace doesn't exist
+  [255]
+
 Create 'other' workspace
   $ export CURRENT_REV=$(hg id)
   $ hg cloud switch -w other --force --create -q

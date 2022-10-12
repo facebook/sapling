@@ -243,6 +243,13 @@ class _LocalService(baseservice.BaseService):
         except Exception as e:
             raise ccerror.UnexpectedError(self._ui, e)
 
+    def getworkspace(self, reponame, workspacename):
+        winfos = self.getworkspaces(reponame, workspacename)
+        match = [winfo for winfo in winfos if winfo.name == workspacename]
+        if not match:
+            return None
+        return match[0]
+
     def _saveworkspaces(self, data):
         filename = os.path.join(self.path, "workspacesdata")
         with open(filename, "wb") as f:

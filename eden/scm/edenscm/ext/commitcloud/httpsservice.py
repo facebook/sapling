@@ -484,7 +484,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         self._timedsend(path, data)
         self.ui.debug("'update_checkout_locations' successful", component="commitcloud")
 
-    @perftrace.tracefunc("Get Commit Cloud Workspaces")
+    @perftrace.tracefunc("Get Commit Cloud Workspaces By Prefix")
     def getworkspaces(self, reponame, prefix):
         """Fetch Commit Cloud workspaces for the given prefix"""
         self.ui.debug("sending 'get_workspaces' request\n", component="commitcloud")
@@ -493,6 +493,17 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         response = self._timedsend(path, data)
         workspaces = response["workspaces_data"]
         return self._makeworkspacesinfo(workspaces)
+
+    @perftrace.tracefunc("Get Commit Cloud Workspace By Name")
+    def getworkspace(self, reponame, workspacename):
+        """Fetch Commit Cloud workspace by its full name"""
+        # Use the existing prefix lookup.
+        # TODO(liubovd): change to use "/commit_cloud/get_workspace" API once it is fixed
+        winfos = self.getworkspaces(reponame, workspacename)
+        match = [winfo for winfo in winfos if winfo.name == workspacename]
+        if not match:
+            return None
+        return match[0]
 
     @perftrace.tracefunc("Archive/Restore Workspace")
     def updateworkspacearchive(self, reponame, workspace, archived):
