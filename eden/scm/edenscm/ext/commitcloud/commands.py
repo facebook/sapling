@@ -35,6 +35,7 @@ from . import (
     dependencies,
     error as ccerror,
     interactivehistory,
+    move,
     scmdaemon,
     service,
     subscription,
@@ -127,6 +128,7 @@ subcmd = cloud.subcommand(
         ),
         ("Manage automatic backup or sync", ["disable", "enable"]),
         ("Enable sharing for a cloud workspace", ["share"]),
+        ("Manage commits and bookmarks in workspaces", ["move", "hide"]),
     ]
 )
 
@@ -589,152 +591,192 @@ def cloudsupersmartlog(ui, repo, **opts):
 
 
 @subcmd(
-    "hide",
+    "move",
     [
-        ("r", "rev", [], _("revisions to hide (hash or prefix only)")),
-        ("B", "bookmark", [], _("bookmarks to remove")),
-        ("", "remotebookmark", [], _("remote bookmarks to remove")),
+        ("s", "source", "", _("short name for the source user workspace")),
+        ("d", "destination", "", _("short name for the destination user workspace")),
+        (
+            "",
+            "raw-source",
+            "",
+            _(
+                "raw source workspace name (e.g. 'user/<username>/<workspace>') (ADVANCED)"
+            ),
+        ),
+        (
+            "",
+            "raw-destination",
+            "",
+            _(
+                "raw destination workspace name (e.g. 'user/<username>/<workspace>') (ADVANCED)"
+            ),
+        ),
     ]
-    + workspace.workspaceopts
-    + cmdutil.dryrunopts,
+    + move.moveopts
+    + createopts,
+)
+def cloudmove(ui, repo, *revs, **opts):
+    """move commits or bookmarks to another commit cloud workspace"""
+
+    repo.ignoreautobackup = True
+
+    destination = opts.get("destination")
+    rawdestination = opts.get("raw_destination")
+
+    if destination and rawdestination:
+        raise error.Abort(
+            "conflicting 'destination' and 'raw-destination' options provided"
+        )
+
+    if destination:
+        destinationworkspace = workspace.userworkspaceprefix(ui) + destination
+    else:
+        if rawdestination:
+            destinationworkspace = rawdestination
+        else:
+            raise error.Abort("'destination' workspace must be provided")
+
+    source = opts.get("source")
+    rawsource = opts.get("raw_source")
+
+    if source and rawsource:
+        raise error.Abort("conflicting 'source' and 'raw-source' options provided")
+
+    if source:
+        sourceworkspace = workspace.userworkspaceprefix(ui) + source
+    else:
+        if rawsource:
+            sourceworkspace = rawsource
+        else:
+            sourceworkspace = workspace.currentworkspace(repo)
+
+    if not sourceworkspace:
+        raise error.Abort(
+            _(
+                "the repo is not connected to any workspace and 'source' workspace is not specified"
+            )
+        )
+
+    if sourceworkspace == destinationworkspace:
+        raise error.Abort(
+            _(
+                "the source workspace '%s' and the destination workspace '%s' are the same"
+            )
+            % (sourceworkspace, destinationworkspace)
+        )
+
+    serv = service.get(ui)
+    reponame = ccutil.getreponame(repo)
+    currentworkspace = workspace.currentworkspace(repo)
+
+    # Validate source workspace
+    if sourceworkspace != currentworkspace:
+        srcinfos = serv.getworkspaces(reponame, sourceworkspace)
+        if not srcinfos:
+            raise error.Abort(
+                _(
+                    "can't move anything from the '%s' workspace\n"
+                    "the workspace doesn't exist"
+                )
+                % sourceworkspace
+            )
+        if len(srcinfos) > 1:
+            raise error.Abort(_("unexpected ambiguous source workspace"))
+
+    # Validate or create destination workspace
+    dstinfos = serv.getworkspaces(reponame, destinationworkspace)
+
+    if not dstinfos:
+        confirmed = opts.get("create")
+
+        if ui.interactive() and not confirmed:
+            prompt = _(
+                "the destination workspace doesn't exists, would you like to create the '%s' workspace for the repo '%s'[yn]:\n"
+            ) % (destinationworkspace, reponame)
+            ui.write(ui.label(prompt, "ui.prompt"))
+            confirmed = ui.prompt("", default="").strip().lower().startswith("y")
+
+        if not confirmed:
+            raise error.Abort(
+                _(
+                    "can't move anything to the '%s' workspace\n"
+                    "the workspace doesn't exist"
+                )
+                % destinationworkspace
+            )
+
+        with progress.spinner(ui, _("creating destination workspace")):
+            local = sync._getremotebookmarks(repo)
+            protected = set(sync._getprotectedremotebookmarks(repo))
+            addremotes = {
+                name: node for name, node in local.items() if name in protected
+            }
+            synced, cloudrefs = serv.updatereferences(
+                reponame,
+                destinationworkspace,
+                0,
+                newremotebookmarks=addremotes,
+            )
+    else:
+        if len(dstinfos) > 1:
+            raise error.Abort(_("unexpected ambiguous destination workspace"))
+
+    ui.status(
+        _(
+            "moving requested commits and bookmarks from '%s' to '%s' workspace for the '%s' repo\n"
+        )
+        % (sourceworkspace, destinationworkspace, reponame),
+        component="commitcloud",
+    )
+
+    revs = list(revs) + opts.get("rev", [])
+    bookmarks = opts.get("bookmark", [])
+    remotebookmarks = opts.get("remotebookmark", [])
+
+    if move.moveorhide(
+        repo,
+        sourceworkspace,
+        revs,
+        bookmarks,
+        remotebookmarks,
+        destination=destinationworkspace,
+    ):
+        if (
+            sourceworkspace == currentworkspace
+            or destinationworkspace == currentworkspace
+        ):
+            return cloudsync(ui, repo, **opts)
+
+
+@subcmd(
+    "hide",
+    [] + move.moveopts + workspace.workspaceopts + cmdutil.dryrunopts,
 )
 def cloudhide(ui, repo, *revs, **opts):
     """remove commits or bookmarks from the cloud workspace"""
-    reponame = ccutil.getreponame(repo)
+
+    repo.ignoreautobackup = True
+
     workspacename = workspace.parseworkspace(ui, opts)
     if workspacename is None:
         workspacename = workspace.currentworkspace(repo)
     if workspacename is None:
         workspacename = workspace.defaultworkspace(ui)
 
-    repo.ignoreautobackup = True
+    revs = list(revs) + opts.get("rev", [])
+    bookmarks = opts.get("bookmark", [])
+    remotebookmarks = opts.get("remotebookmark", [])
 
-    with progress.spinner(ui, _("fetching commit cloud workspace")):
-        serv = service.get(ui)
-        slinfo = serv.getsmartlog(reponame, workspacename, repo, 0)
-        firstpublic, revdag = serv.makedagwalker(slinfo, repo)
-        cloudrefs = serv.getreferences(reponame, workspacename, 0)
-
-    nodeinfos = slinfo.nodeinfos
-    dag = slinfo.dag
-    drafts = set(slinfo.draft)
-    hexdrafts = set(nodemod.hex(d) for d in slinfo.draft)
-
-    removenodes = set()
-
-    for rev in list(revs) + opts.get("rev", []):
-        if rev in hexdrafts:
-            removenodes.add(nodemod.bin(rev))
-        else:
-            candidate = None
-            for hexdraft in hexdrafts:
-                if hexdraft.startswith(rev):
-                    if candidate is None:
-                        candidate = hexdraft
-                    else:
-                        raise error.Abort(_("ambiguous commit hash prefix: %s") % rev)
-            if candidate is None:
-                raise error.Abort(_("commit not in workspace: %s") % rev)
-            removenodes.add(nodemod.bin(candidate))
-
-    # Find the bookmarks we need to remove
-    removebookmarks = set()
-    for bookmark in opts.get("bookmark", []):
-        kind, pattern, matcher = util.stringmatcher(bookmark)
-        if kind == "literal":
-            if pattern not in cloudrefs.bookmarks:
-                raise error.Abort(_("bookmark not in workspace: %s") % pattern)
-            removebookmarks.add(pattern)
-        else:
-            for bookmark in cloudrefs.bookmarks:
-                if matcher(bookmark):
-                    removebookmarks.add(bookmark)
-
-    # Find the remote bookmarks we need to remove
-    removeremotes = set()
-    for remote in opts.get("remotebookmark", []):
-        kind, pattern, matcher = util.stringmatcher(remote)
-        if kind == "literal":
-            if pattern not in cloudrefs.remotebookmarks:
-                raise error.Abort(_("remote bookmark not in workspace: %s") % pattern)
-            removeremotes.add(remote)
-        else:
-            for remote in cloudrefs.remotebookmarks:
-                if matcher(remote):
-                    removeremotes.add(remote)
-
-    # Find the heads and bookmarks we need to remove
-    allremovenodes = dag.descendants(removenodes)
-    removeheads = set(allremovenodes & map(nodemod.bin, cloudrefs.heads))
-    for node in allremovenodes:
-        removebookmarks.update(nodeinfos[node].bookmarks)
-
-    # Find the heads we need to remove because we are removing the last bookmark
-    # to it.
-    remainingheads = set(
-        set(map(nodemod.bin, cloudrefs.heads)) & dag.all() - removeheads
-    )
-    for bookmark in removebookmarks:
-        node = nodemod.bin(cloudrefs.bookmarks[bookmark])
-        info = nodeinfos.get(node)
-        if node in remainingheads and info:
-            if removebookmarks.issuperset(set(info.bookmarks)):
-                remainingheads.discard(node)
-                removeheads.add(node)
-
-    # Find the heads we need to add to keep other commits visible
-    addheads = (
-        dag.parents(removenodes) - allremovenodes - dag.ancestors(remainingheads)
-    ) & drafts
-
-    if removeheads:
-        ui.status(_("removing heads:\n"))
-        for head in sorted(removeheads):
-            hexhead = nodemod.hex(head)
-            ui.status(
-                "    %s  %s\n"
-                % (hexhead[:12], templatefilters.firstline(nodeinfos[head].message))
-            )
-    if addheads:
-        ui.status(_("adding heads:\n"))
-        for head in sorted(addheads):
-            hexhead = nodemod.hex(head)
-            ui.status(
-                "    %s  %s\n"
-                % (hexhead[:12], templatefilters.firstline(nodeinfos[head].message))
-            )
-    if removebookmarks:
-        ui.status(_("removing bookmarks:\n"))
-        for bookmark in sorted(removebookmarks):
-            ui.status("    %s: %s\n" % (bookmark, cloudrefs.bookmarks[bookmark][:12]))
-    if removeremotes:
-        ui.status(_("removing remote bookmarks:\n"))
-        for remote in sorted(removeremotes):
-            ui.status("    %s: %s\n" % (remote, cloudrefs.remotebookmarks[remote][:12]))
-
-    # Hexify all the head, as cloudrefs works with hex strings.
-    removeheads = list(map(nodemod.hex, removeheads))
-    addheads = list(map(nodemod.hex, addheads))
-
-    if removeheads or addheads or removebookmarks or removeremotes:
-        if opts.get("dry_run"):
-            ui.status(_("not updating cloud workspace: --dry-run specified\n"))
-            return 0
-        with progress.spinner(ui, _("updating commit cloud workspace")):
-            serv.updatereferences(
-                reponame,
-                workspacename,
-                cloudrefs.version,
-                oldheads=list(removeheads),
-                newheads=list(addheads),
-                oldbookmarks=list(removebookmarks),
-                oldremotebookmarks=list(removeremotes),
-            )
+    if move.moveorhide(
+        repo,
+        workspacename,
+        revs,
+        bookmarks,
+        remotebookmarks,
+        dry_run=opts.get("dry_run"),
+    ):
         if workspacename == workspace.currentworkspace(repo):
-            # call cloud sync to apply the changes locally in foreground rather than in background
-            cloudsync(ui, repo, **opts)
-    else:
-        ui.status(_("nothing to change\n"))
+            return cloudsync(ui, repo, **opts)
 
 
 def checkauthenticated(ui, repo):

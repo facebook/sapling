@@ -27,6 +27,7 @@ ignorerevnumincompatiblelist = """
     test-clone-r.t
     test-command-template.t
     test-commitcloud-hide.t
+    test-commitcloud-move.t
     test-commitcloud-switch-workspace.t
     test-commit-interactive.t
     test-confused-revert.t

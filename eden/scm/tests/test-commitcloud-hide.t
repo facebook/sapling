@@ -136,12 +136,12 @@ Remove by hash removes commit, all descendants and their bookmarks
   $ hg cloud hide $N
   removing heads:
       7f49e3f0c6cd  O
-  adding heads:
-      9c4fc22fed7c  M
   removing bookmarks:
       n-bookmark: d3adf05d12fa
       n-bookmark2: d3adf05d12fa
       o-bookmark: 7f49e3f0c6cd
+  adding heads:
+      9c4fc22fed7c  M
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
   finished in * (glob)
@@ -360,7 +360,7 @@ Removing a remote bookmark works
   ├─╯
   o  Z: public
 
-BUG! Commit Y is now draft - it should've been hidden
+BUG! Commit Y is now draft - it should've been hidden. (Actually it will disappear if we update to another commit)
 
 Merge commits can be removed
   $ drawdag <<EOS
