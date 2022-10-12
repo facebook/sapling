@@ -6,17 +6,18 @@
  */
 
 #pragma once
+
 #include <optional>
+#include <string_view>
 #include <unordered_map>
 
-#include <folly/Range.h>
+#include <folly/portability/SysTypes.h>
 
 #include "eden/fs/store/ImportPriority.h"
 
 namespace facebook::eden {
 
 class ObjectId;
-class Hash20;
 
 /**
  * ObjectStore calls methods on this context when fetching objects.
@@ -54,11 +55,11 @@ class ObjectFetchContext {
   };
 
   /**
-   * Which interface caused this object fetch
+   * Why did EdenFS fetch these objects?
    */
   enum Cause : uint8_t { Unknown, Fs, Thrift, Prefetch };
 
-  ObjectFetchContext() {}
+  ObjectFetchContext() = default;
 
   virtual ~ObjectFetchContext() = default;
 
@@ -68,11 +69,12 @@ class ObjectFetchContext {
     return std::nullopt;
   }
 
-  virtual Cause getCause() const {
-    return ObjectFetchContext::Cause::Unknown;
-  }
+  /**
+   * If known, returns the reason these objects were fetched.
+   */
+  virtual Cause getCause() const = 0;
 
-  virtual std::optional<folly::StringPiece> getCauseDetail() const {
+  virtual std::optional<std::string_view> getCauseDetail() const {
     return std::nullopt;
   }
 
@@ -109,7 +111,7 @@ class ObjectFetchContext {
    * auto ptr = ObjectFetchContext::getNullContextWithCauseDetail("someval");
    */
   static ObjectFetchContext* getNullContextWithCauseDetail(
-      folly::StringPiece causeDetail);
+      std::string_view causeDetail);
 
  private:
   ObjectFetchContext(const ObjectFetchContext&) = delete;

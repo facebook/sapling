@@ -167,7 +167,7 @@ class ThriftFetchContext : public ObjectFetchContext {
     return ObjectFetchContext::Cause::Thrift;
   }
 
-  std::optional<folly::StringPiece> getCauseDetail() const override {
+  std::optional<std::string_view> getCauseDetail() const override {
     return endpoint_;
   }
 
@@ -188,7 +188,7 @@ class ThriftFetchContext : public ObjectFetchContext {
 
  private:
   std::optional<pid_t> pid_;
-  folly::StringPiece endpoint_;
+  std::string_view endpoint_;
   std::unordered_map<std::string, std::string> requestInfo_;
 };
 
@@ -196,7 +196,7 @@ class PrefetchFetchContext : public ObjectFetchContext {
  public:
   explicit PrefetchFetchContext(
       std::optional<pid_t> pid,
-      folly::StringPiece endpoint)
+      std::string_view endpoint)
       : pid_(pid), endpoint_(endpoint) {}
 
   std::optional<pid_t> getClientPid() const override {
@@ -207,7 +207,7 @@ class PrefetchFetchContext : public ObjectFetchContext {
     return ObjectFetchContext::Cause::Prefetch;
   }
 
-  std::optional<folly::StringPiece> getCauseDetail() const override {
+  std::optional<std::string_view> getCauseDetail() const override {
     return endpoint_;
   }
 
@@ -218,7 +218,7 @@ class PrefetchFetchContext : public ObjectFetchContext {
 
  private:
   std::optional<pid_t> pid_;
-  folly::StringPiece endpoint_;
+  std::string_view endpoint_;
 };
 
 constexpr size_t kTraceBusCapacity = 25000;

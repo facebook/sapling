@@ -220,12 +220,16 @@ TEST_F(ObjectStoreTest, get_size_and_sha1_only_imports_blob_once) {
   EXPECT_EQ(1, fakeBackingStore->getAccessCount(readyBlobId));
 }
 
-class PidFetchContext : public ObjectFetchContext {
+class PidFetchContext final : public ObjectFetchContext {
  public:
   PidFetchContext(pid_t pid) : ObjectFetchContext{}, pid_{pid} {}
 
   std::optional<pid_t> getClientPid() const override {
     return pid_;
+  }
+
+  Cause getCause() const override {
+    return Cause::Unknown;
   }
 
   const std::unordered_map<std::string, std::string>* FOLLY_NULLABLE

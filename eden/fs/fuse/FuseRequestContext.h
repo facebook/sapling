@@ -44,7 +44,7 @@ class FuseRequestContext : public RequestContext {
   }
 
   // Override of `ObjectFetchContext`
-  std::optional<folly::StringPiece> getCauseDetail() const override {
+  std::optional<std::string_view> getCauseDetail() const override {
     return fuseOpcodeName(fuseHeader_.opcode);
   }
 

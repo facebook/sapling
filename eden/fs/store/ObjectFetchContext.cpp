@@ -6,17 +6,24 @@
  */
 
 #include "eden/fs/store/ObjectFetchContext.h"
+#include <folly/CppAttributes.h>
 
 namespace {
+
 using namespace facebook::eden;
 
 class NullObjectFetchContext : public ObjectFetchContext {
  public:
   NullObjectFetchContext() = default;
-  explicit NullObjectFetchContext(std::optional<folly::StringPiece> causeDetail)
+
+  explicit NullObjectFetchContext(std::optional<std::string_view> causeDetail)
       : causeDetail_(causeDetail) {}
 
-  std::optional<folly::StringPiece> getCauseDetail() const override {
+  Cause getCause() const override {
+    return Cause::Unknown;
+  }
+
+  std::optional<std::string_view> getCauseDetail() const override {
     return causeDetail_;
   }
 
@@ -26,8 +33,9 @@ class NullObjectFetchContext : public ObjectFetchContext {
   }
 
  private:
-  std::optional<folly::StringPiece> causeDetail_;
+  std::optional<std::string_view> causeDetail_;
 };
+
 } // namespace
 
 namespace facebook::eden {
@@ -38,8 +46,8 @@ ObjectFetchContext& ObjectFetchContext::getNullContext() {
 }
 
 ObjectFetchContext* ObjectFetchContext::getNullContextWithCauseDetail(
-    folly::StringPiece causeDetail) {
-  return new NullObjectFetchContext(folly::StringPiece{causeDetail});
+    std::string_view causeDetail) {
+  return new NullObjectFetchContext(causeDetail);
 }
 
 } // namespace facebook::eden

@@ -12,7 +12,7 @@ namespace facebook::eden {
 
 NfsRequestContext::NfsRequestContext(
     uint32_t xid,
-    folly::StringPiece causeDetail,
+    std::string_view causeDetail,
     ProcessAccessLog& processAccessLog)
     : RequestContext(processAccessLog), xid_(xid), causeDetail_(causeDetail) {}
 } // namespace facebook::eden

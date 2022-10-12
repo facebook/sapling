@@ -13,7 +13,7 @@ namespace facebook::eden {
 StatsFetchContext::StatsFetchContext(
     std::optional<pid_t> pid,
     Cause cause,
-    folly::StringPiece causeDetail,
+    std::string_view causeDetail,
     const std::unordered_map<std::string, std::string>* requestInfo)
     : clientPid_{pid}, cause_{cause}, causeDetail_{std::move(causeDetail)} {
   if (requestInfo) {
@@ -122,7 +122,7 @@ ObjectFetchContext::Cause StatsFetchContext::getCause() const {
   return cause_;
 }
 
-std::optional<folly::StringPiece> StatsFetchContext::getCauseDetail() const {
+std::optional<std::string_view> StatsFetchContext::getCauseDetail() const {
   return causeDetail_;
 }
 

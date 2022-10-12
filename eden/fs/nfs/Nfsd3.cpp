@@ -1851,7 +1851,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
       .thenTry([&contextRef = contextRef](folly::Try<folly::Unit>&& res) {
         if (res.hasException()) {
           if (auto* err = res.exception().get_exception<RpcParsingError>()) {
-            err->setProcedureContext(contextRef.getCauseDetail().value().str());
+            err->setProcedureContext(
+                std::string{contextRef.getCauseDetail().value()});
           }
         }
         return std::move(res);

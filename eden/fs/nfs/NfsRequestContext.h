@@ -23,7 +23,7 @@ class NfsRequestContext : public RequestContext {
    */
   explicit NfsRequestContext(
       uint32_t xid,
-      folly::StringPiece causeDetail,
+      std::string_view causeDetail,
       ProcessAccessLog& processAccessLog);
 
   NfsRequestContext(const NfsRequestContext&) = delete;
@@ -31,7 +31,7 @@ class NfsRequestContext : public RequestContext {
   NfsRequestContext(NfsRequestContext&&) = delete;
   NfsRequestContext& operator=(NfsRequestContext&&) = delete;
 
-  std::optional<folly::StringPiece> getCauseDetail() const override {
+  std::optional<std::string_view> getCauseDetail() const override {
     return std::make_optional(causeDetail_);
   }
 
@@ -41,7 +41,7 @@ class NfsRequestContext : public RequestContext {
 
  private:
   uint32_t xid_;
-  folly::StringPiece causeDetail_;
+  std::string_view causeDetail_;
 };
 
 } // namespace facebook::eden
