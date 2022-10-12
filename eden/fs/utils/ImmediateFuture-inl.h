@@ -115,9 +115,9 @@ makeImmediateFutureFromImmediate(Func&& func, Args... args) {
     } else {
       return func(std::forward<Args>(args)...);
     }
-  } catch (std::exception& ex) {
+  } catch (...) {
     return folly::Try<NewType>(
-        folly::exception_wrapper(std::current_exception(), ex));
+        folly::exception_wrapper{std::current_exception()});
   }
 }
 } // namespace detail

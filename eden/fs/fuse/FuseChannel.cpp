@@ -1229,12 +1229,11 @@ void FuseChannel::initWorkerThread() noexcept {
 
     // Start the other FUSE worker threads.
     startWorkerThreads();
-  } catch (const std::exception& ex) {
-    XLOG(ERR) << "Error performing FUSE channel initialization: "
-              << exceptionStr(ex);
+  } catch (...) {
+    auto ew = folly::exception_wrapper(std::current_exception());
+    XLOG(ERR) << "Error performing FUSE channel initialization: " << ew;
     // Indicate that initialization failed.
-    initPromise_.setException(
-        folly::exception_wrapper(std::current_exception(), ex));
+    initPromise_.setException(std::move(ew));
     return;
   }
 

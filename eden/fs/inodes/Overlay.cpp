@@ -187,11 +187,11 @@ folly::SemiFuture<Unit> Overlay::initialize(
           std::move(mountPath),
           progressCallback,
           lookupCallback);
-    } catch (std::exception& ex) {
+    } catch (...) {
+      auto ew = folly::exception_wrapper{std::current_exception()};
       XLOG(ERR) << "overlay initialization failed for " << localDir_ << ": "
-                << ex.what();
-      promise.setException(
-          folly::exception_wrapper(std::current_exception(), ex));
+                << ew;
+      promise.setException(std::move(ew));
       return;
     }
     promise.setValue();

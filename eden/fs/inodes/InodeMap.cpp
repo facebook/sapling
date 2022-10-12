@@ -497,10 +497,9 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
     }
     mount_->publishInodeTraceEvent(std::move(endLoadEvent.value()));
     return promises;
-  } catch (const std::exception& ex) {
-    XLOG(ERR) << "error marking inode " << number
-              << " loaded: " << folly::exceptionStr(ex);
-    auto ew = folly::exception_wrapper{std::current_exception(), ex};
+  } catch (...) {
+    auto ew = folly::exception_wrapper{std::current_exception()};
+    XLOG(ERR) << "error marking inode " << number << " loaded: " << ew;
     for (auto& promise : promises) {
       promise.setException(ew);
     }

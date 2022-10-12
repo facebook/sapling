@@ -204,8 +204,8 @@ void UnixSocket::connect(
     auto connector = new Connector(callback, eventBase, std::move(socketFile));
     connector->start(timeout);
     return;
-  } catch (const std::exception& ex) {
-    auto ew = exception_wrapper{std::current_exception(), ex};
+  } catch (...) {
+    auto ew = exception_wrapper{std::current_exception()};
     return callback->connectError(std::move(ew));
   }
 }
@@ -354,9 +354,9 @@ void UnixSocket::send(Message&& message, SendCallback* callback) noexcept {
   SendQueuePtr queueEntry;
   try {
     queueEntry = createSendQueueEntry(std::move(message), callback);
-  } catch (const std::exception& ex) {
-    auto ew = exception_wrapper{std::current_exception(), ex};
-    XLOG(ERR) << "error allocating a send queue entry: " << ew.what();
+  } catch (...) {
+    auto ew = exception_wrapper{std::current_exception()};
+    XLOG(ERR) << "error allocating a send queue entry: " << ew;
     callback->sendError(make_exception_wrapper<std::runtime_error>(
         "cannot send a message on a closed UnixSocket"));
     return;
@@ -381,10 +381,10 @@ void UnixSocket::send(Message&& message, SendCallback* callback) noexcept {
 
     try {
       trySend();
-    } catch (const std::exception& ex) {
-      auto ew = exception_wrapper{std::current_exception(), ex};
-      XLOG(ERR) << "unix socket error during send(): " << ew.what();
-      socketError(ew);
+    } catch (...) {
+      auto ew = exception_wrapper{std::current_exception()};
+      XLOG(ERR) << "unix socket error during send(): " << ew;
+      socketError(std::move(ew));
     }
   }
 }
@@ -1014,10 +1014,10 @@ void UnixSocket::handlerReady(uint16_t events) noexcept {
     if (events & EventHandler::WRITE) {
       trySend();
     }
-  } catch (const std::exception& ex) {
-    auto ew = exception_wrapper{std::current_exception(), ex};
-    XLOG(ERR) << "unix socket I/O handler error: " << ew.what();
-    socketError(ew);
+  } catch (...) {
+    auto ew = exception_wrapper{std::current_exception()};
+    XLOG(ERR) << "unix socket I/O handler error: " << ew;
+    socketError(std::move(ew));
   }
 }
 

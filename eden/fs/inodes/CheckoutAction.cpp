@@ -127,10 +127,9 @@ Future<InvalidationRequired> CheckoutAction::run(
             })
             .semi()
             .via(&folly::QueuedImmediateExecutor::instance())
-            .thenError(
-                [rc = LoadingRefcount(this)](const exception_wrapper& ew) {
-                  rc->error("error getting old tree", ew);
-                });
+            .thenError([rc = LoadingRefcount(this)](exception_wrapper&& ew) {
+              rc->error("error getting old tree", std::move(ew));
+            });
       } else {
         store->getBlobSha1(oldEntry.second.getHash(), ctx->getFetchContext())
             .thenValue([rc = LoadingRefcount(this)](Hash20 oldBlobSha1) {
@@ -138,10 +137,9 @@ Future<InvalidationRequired> CheckoutAction::run(
             })
             .semi()
             .via(&folly::QueuedImmediateExecutor::instance())
-            .thenError(
-                [rc = LoadingRefcount(this)](const exception_wrapper& ew) {
-                  rc->error("error getting old blob Sha1", ew);
-                });
+            .thenError([rc = LoadingRefcount(this)](exception_wrapper&& ew) {
+              rc->error("error getting old blob Sha1", std::move(ew));
+            });
       }
     }
 
@@ -156,10 +154,9 @@ Future<InvalidationRequired> CheckoutAction::run(
             })
             .semi()
             .via(&folly::QueuedImmediateExecutor::instance())
-            .thenError(
-                [rc = LoadingRefcount(this)](const exception_wrapper& ew) {
-                  rc->error("error getting new tree", ew);
-                });
+            .thenError([rc = LoadingRefcount(this)](exception_wrapper&& ew) {
+              rc->error("error getting new tree", std::move(ew));
+            });
       } else {
         // We don't actually compare the new blob to anything, so we don't need
         // to fetch it. This just marks that the new inode will be a file.
@@ -174,13 +171,14 @@ Future<InvalidationRequired> CheckoutAction::run(
           .thenValue([rc = LoadingRefcount(this)](InodePtr inode) {
             rc->setInode(std::move(inode));
           })
-          .thenError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {
-            rc->error("error getting inode", ew);
+          .thenError([rc = LoadingRefcount(this)](exception_wrapper&& ew) {
+            rc->error("error getting inode", std::move(ew));
           });
     }
-  } catch (const std::exception& ex) {
-    exception_wrapper ew{std::current_exception(), ex};
-    refcount->error("error preparing to load data for checkout action", ew);
+  } catch (...) {
+    auto ew = exception_wrapper{std::current_exception()};
+    refcount->error(
+        "error preparing to load data for checkout action", std::move(ew));
   }
 
   return promise_.getFuture();
@@ -217,10 +215,9 @@ void CheckoutAction::setInode(InodePtr inode) {
 
 void CheckoutAction::error(
     folly::StringPiece msg,
-    const folly::exception_wrapper& ew) {
-  XLOG(ERR) << "error performing checkout action: " << msg << ": "
-            << folly::exceptionStr(ew);
-  errors_.push_back(ew);
+    folly::exception_wrapper&& ew) {
+  XLOG(ERR) << "error performing checkout action: " << msg << ": " << ew;
+  errors_.push_back(std::move(ew));
 }
 
 void CheckoutAction::allLoadsComplete() noexcept {
@@ -233,9 +230,9 @@ void CheckoutAction::allLoadsComplete() noexcept {
     doAction().thenTry([this](folly::Try<InvalidationRequired>&& t) {
       this->promise_.setTry(std::move(t));
     });
-  } catch (const std::exception& ex) {
-    exception_wrapper ew{std::current_exception(), ex};
-    promise_.setException(ew);
+  } catch (...) {
+    auto ew = exception_wrapper{std::current_exception()};
+    promise_.setException(std::move(ew));
   }
 }
 

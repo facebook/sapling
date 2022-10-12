@@ -299,8 +299,8 @@ HgBackingStore::fetchTreeFromHgCacheOrImporter(
     // Data for this tree was not present locally.
     // Fall through and fetch the data from the server below.
     if (!FLAGS_hg_fetch_missing_trees) {
-      auto ew = folly::exception_wrapper(std::current_exception());
-      return folly::makeFuture<unique_ptr<Tree>>(ew);
+      auto ew = folly::exception_wrapper{std::current_exception()};
+      return folly::makeFuture<unique_ptr<Tree>>(std::move(ew));
     }
     return fetchTreeFromImporter(
         manifestNode, edenTreeID, std::move(path), std::move(writeBatch));

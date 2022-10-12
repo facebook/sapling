@@ -186,9 +186,8 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
                 return sendTakeoverData(std::move(data.value()));
               }
             }));
-  } catch (const std::exception& ex) {
-    return makeFuture<Unit>(
-        folly::exception_wrapper{std::current_exception(), ex});
+  } catch (...) {
+    return makeFuture<Unit>(folly::exception_wrapper{std::current_exception()});
   }
 }
 
@@ -260,8 +259,8 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
     for (auto& file : msg.files) {
       XLOG(DBG7) << "sending fd for takeover: " << file.fd();
     }
-  } catch (const std::exception& ex) {
-    auto ew = folly::exception_wrapper{std::current_exception(), ex};
+  } catch (...) {
+    auto ew = folly::exception_wrapper{std::current_exception()};
     data.takeoverComplete.setException(ew);
     return socket_.send(
         TakeoverData::serializeError(protocolCapabilities_, ew));

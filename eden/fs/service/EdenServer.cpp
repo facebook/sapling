@@ -620,11 +620,12 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
                     return std::move(takeover);
                   });
             }));
-      } catch (const std::exception& ex) {
+      } catch (...) {
+        auto ew = folly::exception_wrapper{std::current_exception()};
         XLOG(ERR) << "Error while stopping \"" << mountPath
-                  << "\" for takeover: " << folly::exceptionStr(ex);
-        futures.push_back(makeFuture<optional<TakeoverData::MountInfo>>(
-            folly::exception_wrapper(std::current_exception(), ex)));
+                  << "\" for takeover: " << ew;
+        futures.push_back(
+            makeFuture<optional<TakeoverData::MountInfo>>(std::move(ew)));
       }
     }
   }
@@ -1101,14 +1102,14 @@ std::vector<Future<Unit>> EdenServer::prepareMounts(
   folly::dynamic dirs = folly::dynamic::object();
   try {
     dirs = CheckoutConfig::loadClientDirectoryMap(edenDir_.getPath());
-  } catch (const std::exception& ex) {
+  } catch (...) {
+    auto ew = folly::exception_wrapper{std::current_exception()};
     incrementStartupMountFailures();
     logger->warn(
         "Could not parse config.json file: ",
-        ex.what(),
+        ew.what(),
         "\nSkipping remount step.");
-    mountFutures.emplace_back(
-        folly::exception_wrapper(std::current_exception(), ex));
+    mountFutures.emplace_back(std::move(ew));
     return mountFutures;
   }
 

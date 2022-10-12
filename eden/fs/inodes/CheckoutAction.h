@@ -117,7 +117,7 @@ class CheckoutAction {
   void setNewTree(std::shared_ptr<const Tree> tree);
   void setNewBlob();
   void setInode(InodePtr inode);
-  void error(folly::StringPiece msg, const folly::exception_wrapper& ew);
+  void error(folly::StringPiece msg, folly::exception_wrapper&& ew);
 
   void allLoadsComplete() noexcept;
   bool ensureDataReady() noexcept;
