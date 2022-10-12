@@ -60,7 +60,7 @@ void CheckoutContext::start(
 
     // Save the new snapshot hash to the config
     if (!oldParent.has_value()) {
-      config->setCheckedOutCommit(std::move(newSnapshot));
+      config->setCheckedOutCommit(newSnapshot);
     } else {
       config->setCheckoutInProgress(oldParent.value(), newSnapshot);
     }
