@@ -188,7 +188,7 @@ def moveorhide(
             ]
 
             with progress.spinner(ui, _("updating destination workspace")):
-                serv.updatereferences(
+                res, _refs = serv.updatereferences(
                     reponame,
                     destination,
                     destcloudrefs.version,
@@ -199,9 +199,16 @@ def moveorhide(
                     newremotebookmarks=newremotebookmarks,
                     oldremotebookmarks=oldremotebookmarks,
                 )
+                if not res:
+                    raise error.Abort(
+                        _(
+                            "conflict: the workspace '%s' was modified at the same time by another operation, please retry"
+                        )
+                        % destination
+                    )
 
         with progress.spinner(ui, _("updating commit cloud workspace")):
-            serv.updatereferences(
+            res, _refs = serv.updatereferences(
                 reponame,
                 workspacename,
                 cloudrefs.version,
@@ -210,6 +217,14 @@ def moveorhide(
                 oldbookmarks=list(removebookmarks),
                 oldremotebookmarks=list(removeremotes),
             )
+            if not res:
+                raise error.Abort(
+                    _(
+                        "conflict: the workspace '%s' has been modified during this operation by another participant\n"
+                        "please, retry!"
+                    )
+                    % destination
+                )
         return 1
     else:
         ui.status(_("nothing to change\n"))
