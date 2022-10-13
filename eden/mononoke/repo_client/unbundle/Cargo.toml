@@ -38,7 +38,6 @@ mercurial_mutation = { version = "0.1.0", path = "../../mercurial/mutation" }
 mercurial_revlog = { version = "0.1.0", path = "../../mercurial/revlog" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
-mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 obsolete = { version = "0.1.0", path = "../obsolete" }
 pin-project = "0.4.30"

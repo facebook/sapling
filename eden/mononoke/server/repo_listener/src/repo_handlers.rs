@@ -23,7 +23,7 @@ pub struct RepoHandler {
     pub logger: Logger,
     pub scuba: MononokeScubaSampleBuilder,
     pub repo: Arc<Repo>,
-    pub maybe_push_redirector_args: Option<PushRedirectorArgs>,
+    pub maybe_push_redirector_args: Option<PushRedirectorArgs<Repo>>,
     pub repo_client_knobs: RepoClientKnobs,
     pub maybe_backup_repo_source: Option<BackupSourceRepo>,
 }

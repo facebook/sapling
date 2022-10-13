@@ -463,7 +463,7 @@ pub struct RepoClient {
     // We currently fix it by caching bookmarks at the beginning of discovery.
     // TODO: T45411456 Fix this by teaching the client to expect extra commits to correspond to the bookmarks.
     session_bookmarks_cache: Arc<SessionBookmarkCache>,
-    maybe_push_redirector_args: Option<PushRedirectorArgs>,
+    maybe_push_redirector_args: Option<PushRedirectorArgs<Repo>>,
     force_lfs: Arc<AtomicBool>,
     unhydrated_commits: Arc<AtomicBool>,
     knobs: RepoClientKnobs,
@@ -478,7 +478,7 @@ impl RepoClient {
         repo: Arc<Repo>,
         session: SessionContainer,
         logging: LoggingContainer,
-        maybe_push_redirector_args: Option<PushRedirectorArgs>,
+        maybe_push_redirector_args: Option<PushRedirectorArgs<Repo>>,
         knobs: RepoClientKnobs,
         maybe_backup_repo_source: Option<BackupSourceRepo>,
     ) -> Self {
@@ -1020,7 +1020,7 @@ impl RepoClient {
         &self,
         ctx: &CoreContext,
         action: &unbundle::PostResolveAction,
-    ) -> Result<Option<PushRedirector>> {
+    ) -> Result<Option<PushRedirector<Repo>>> {
         let push_redirector_args = match self.maybe_push_redirector_args.clone() {
             Some(push_redirector_args) => push_redirector_args,
             None => {

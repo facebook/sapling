@@ -34,7 +34,6 @@ use hooks::HookManagerRef;
 use hooks::HookRejection;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use mercurial_derived_data::DeriveHgChangeset;
-use mononoke_api::Repo;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use pushrebase::PushrebaseChangesetPair;
@@ -43,6 +42,7 @@ use skiplist::SkiplistIndexArc;
 use slog::debug;
 use synced_commit_mapping::SyncedCommitMapping;
 use topo_sort::sort_topological;
+use trait_alias::trait_alias;
 use wireproto_handler::TargetRepoDbs;
 
 use crate::hook_running::HookRejectionRemapper;
@@ -64,23 +64,39 @@ use crate::UnbundlePushResponse;
 use crate::UnbundleResponse;
 use crate::UploadedBonsais;
 
+#[trait_alias]
+pub trait Repo = crate::processing::Repo + SkiplistIndexArc + HookManagerRef;
+
 /// An auxillary struct, which contains nearly
 /// everything needed to create a full `PushRedirector`
 /// This is intended to be used to create a new
 /// `PushRedirector` at the start of every `unbundle`
 /// request.
-#[derive(Clone)]
-pub struct PushRedirectorArgs {
-    target_repo: Arc<Repo>,
-    source_repo: Arc<Repo>,
+pub struct PushRedirectorArgs<R> {
+    target_repo: Arc<R>,
+    source_repo: Arc<R>,
     synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
     target_repo_dbs: Arc<TargetRepoDbs>,
 }
 
-impl PushRedirectorArgs {
+// Implement clone manually because a derived implementation would require
+// `R: Clone`, which we do not have.
+// https://github.com/rust-lang/rust/issues/26925
+impl<R> Clone for PushRedirectorArgs<R> {
+    fn clone(&self) -> Self {
+        Self {
+            target_repo: self.target_repo.clone(),
+            source_repo: self.source_repo.clone(),
+            synced_commit_mapping: self.synced_commit_mapping.clone(),
+            target_repo_dbs: self.target_repo_dbs.clone(),
+        }
+    }
+}
+
+impl<R: Repo> PushRedirectorArgs<R> {
     pub fn new(
-        target_repo: Arc<Repo>,
-        source_repo: Arc<Repo>,
+        target_repo: Arc<R>,
+        source_repo: Arc<R>,
         synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
         target_repo_dbs: Arc<TargetRepoDbs>,
     ) -> Self {
@@ -98,7 +114,7 @@ impl PushRedirectorArgs {
         ctx: &CoreContext,
         live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
         x_repo_sync_lease: Arc<dyn LeaseOps>,
-    ) -> Result<PushRedirector, Error> {
+    ) -> Result<PushRedirector<R>, Error> {
         // TODO: This function needs to be extended
         //       and query configerator for the fresh
         //       value of `commit_sync_config`
@@ -110,8 +126,8 @@ impl PushRedirectorArgs {
             ..
         } = self;
 
-        let small_repo = source_repo.blob_repo().clone();
-        let large_repo = target_repo.blob_repo().clone();
+        let small_repo = source_repo.as_blob_repo().clone();
+        let large_repo = target_repo.as_blob_repo().clone();
         let syncers = create_commit_syncers(
             ctx,
             small_repo,
@@ -134,13 +150,12 @@ impl PushRedirectorArgs {
     }
 }
 
-#[derive(Clone)]
 /// Core push redirector struct. Performs conversions of pushes
 /// to be processed by the large repo, and conversions of results
 /// to be presented as if the pushes were processed by the small repo
-pub struct PushRedirector {
+pub struct PushRedirector<R> {
     // target (large) repo to sync into
-    pub repo: Arc<Repo>,
+    pub repo: Arc<R>,
     // `CommitSyncer` struct to do push redirecion
     pub small_to_large_commit_syncer: CommitSyncer<Arc<dyn SyncedCommitMapping>>,
     // `CommitSyncer` struct for the backsyncer
@@ -149,7 +164,7 @@ pub struct PushRedirector {
     pub target_repo_dbs: Arc<TargetRepoDbs>,
 }
 
-impl PushRedirector {
+impl<R: Repo> PushRedirector<R> {
     /// To the external observer, this fn is just like `run_post_resolve_action`
     /// in that it will result in the repo having the action processed.
     /// Under the hood it will:
@@ -162,8 +177,7 @@ impl PushRedirector {
         ctx: &CoreContext,
         action: PostResolveAction,
     ) -> Result<UnbundleResponse, BundleResolverError> {
-        let large_repo = self.repo.inner_repo();
-        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = large_repo.skiplist_index_arc();
+        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.repo.skiplist_index_arc();
 
         let large_repo_action = self
             .convert_post_resolve_action(ctx, action)
@@ -171,7 +185,7 @@ impl PushRedirector {
             .map_err(BundleResolverError::from)?;
         let large_repo_response = run_post_resolve_action(
             ctx,
-            large_repo,
+            self.repo.as_ref(),
             &lca_hint,
             self.repo.hook_manager(),
             large_repo_action,
@@ -852,7 +866,7 @@ impl PushRedirector {
             Some(bookmark) => CandidateSelectionHint::OnlyOrAncestorOfBookmark(
                 Target(bookmark.clone()),
                 Target(self.small_to_large_commit_syncer.get_target_repo().clone()),
-                Target(self.repo.inner_repo().skiplist_index_arc()),
+                Target(self.repo.skiplist_index_arc()),
             ),
             None => CandidateSelectionHint::Only,
         };
