@@ -570,7 +570,7 @@ Show all commands + options
   resolve: all, list, mark, unmark, no-status, root-relative, tool, include, exclude, template, skip
   revert: all, date, rev, no-backup, interactive, include, exclude, dry-run
   rollback: dry-run, force
-  root: shared
+  root: shared, dotdir
   serve: accesslog, daemon, daemon-postexec, errorlog, port, address, prefix, name, pid-file, port-file, stdio, cmdserver, templates, style, ipv6, certificate, read-only
   show: nodates, noprefix, stat, git, unified, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, style, template, include, exclude
   status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, terse, copies, print0, rev, change, include, exclude, template

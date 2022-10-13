@@ -6,6 +6,7 @@
 
 # make shared repo
 
+  $ export HGIDENTITY=sl
   $ enable share
   $ newrepo repo1
   $ echo a > a
@@ -19,10 +20,16 @@
   $ hg root
   $TESTTMP/repo2
 
+  $ hg root --dotdir
+  $TESTTMP/repo2/.sl
+
 # test root --shared
 
   $ hg root --shared
   $TESTTMP/repo1
+
+  $ hg root --shared --dotdir
+  $TESTTMP/repo1/.sl
 
 # test error message
 

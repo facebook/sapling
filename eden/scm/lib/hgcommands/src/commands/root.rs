@@ -15,14 +15,18 @@ define_flags! {
     pub struct RootOpts {
         /// show root of the shared repo
         shared: bool,
+
+        /// join root with the repo dot dir (e.g. ".sl") (EXPERIMENTAL)
+        dotdir: bool,
     }
 }
 
 pub fn run(ctx: ReqCtx<RootOpts>, repo: &mut Repo) -> Result<u8> {
-    let path = if ctx.opts.shared {
-        repo.shared_path()
-    } else {
-        repo.path()
+    let path = match (ctx.opts.shared, ctx.opts.dotdir) {
+        (false, false) => repo.path(),
+        (false, true) => repo.dot_hg_path(),
+        (true, false) => repo.shared_path(),
+        (true, true) => repo.shared_dot_hg_path(),
     };
 
     ctx.io().write(format!(
