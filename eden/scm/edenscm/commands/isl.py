@@ -31,6 +31,18 @@ DEFAULT_PORT = 3011
         ("", "json", False, _("output machine-readable JSON")),
         ("", "open", True, _("open ISL in a local browser")),
         ("f", "foreground", False, _("keep the server process in the foreground")),
+        (
+            "",
+            "kill",
+            False,
+            _("kill any running server process, but do not start a new server"),
+        ),
+        (
+            "",
+            "force",
+            False,
+            _("kill any running server process, then start a new server"),
+        ),
     ],
 )
 def isl_cmd(ui, repo, *args, **opts):
@@ -45,6 +57,8 @@ def isl_cmd(ui, repo, *args, **opts):
     open_isl = opts.get("open")
     json_output = opts.get("json")
     foreground = opts.get("foreground")
+    kill = opts.get("kill")
+    force = opts.get("force")
     return launch_server(
         ui,
         cwd=repo.root,
@@ -52,11 +66,21 @@ def isl_cmd(ui, repo, *args, **opts):
         open_isl=open_isl,
         json_output=json_output,
         foreground=foreground,
+        force=force,
+        kill=kill,
     )
 
 
 def launch_server(
-    ui, *, cwd, port=DEFAULT_PORT, open_isl=True, json_output=False, foreground=False
+    ui,
+    *,
+    cwd,
+    port=DEFAULT_PORT,
+    open_isl=True,
+    json_output=False,
+    foreground=False,
+    kill=False,
+    force=False,
 ):
     isl_args = get_isl_args()
     if isl_args[0] == "dotslash":
@@ -69,6 +93,10 @@ def launch_server(
         args.append("--json")
     if foreground:
         args.append("--foreground")
+    if force:
+        args.append("--force")
+    if kill:
+        args.append("--kill")
     subprocess.call(isl_args + args, cwd=cwd)
 
 

@@ -550,7 +550,7 @@ Show all commands + options
   identify: rev, num, id, branch, tags, bookmarks, template
   import: strip, base, edit, force, no-commit, bypass, partial, exact, prefix, message, logfile, date, user, similarity
   init: git
-  isl: port, json, open, foreground
+  isl: port, json, open, foreground, kill, force
   locate: rev, print0, fullpath, include, exclude
   log: follow, follow-first, date, copies, keyword, rev, line-range, removed, only-merges, user, branch, prune, patch, git, limit, no-merges, stat, graph, style, template, include, exclude
   manifest: rev, all, template
