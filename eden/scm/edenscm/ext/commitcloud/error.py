@@ -123,31 +123,6 @@ class SynchronizationError(error.Abort):
         )
 
 
-class SubprocessError(error.Abort):
-    def __init__(self, ui, rc, stderrdata, *args):
-        message = _("process exited with status %d") % rc
-        contact = _("(please contact %s to report the error)") % getsupportcontact(ui)
-        message = "subprocess error: '%s'\n%s\n%s" % (
-            message,
-            stderrdata.strip(),
-            contact,
-        )
-        ui.log("commitcloud_error", commitcloud_sync_error="subprocess error")
-        super(SubprocessError, self).__init__(message, *args, component="commitcloud")
-
-
-class KeychainAccessError(error.Abort):
-    def __init__(self, ui, reason, solution, *args):
-        contact = _("(please contact %s if this error persists)") % getsupportcontact(
-            ui
-        )
-        message = "keychain access error: '%s'\n%s\n%s" % (reason, solution, contact)
-        ui.log("commitcloud_error", commitcloud_sync_error="keychain access error")
-        super(KeychainAccessError, self).__init__(
-            message, *args, component="commitcloud"
-        )
-
-
 class TLSAccessError(error.Abort):
     def __init__(self, ui, reason, *args):
         # internal config: help.tlshelp
