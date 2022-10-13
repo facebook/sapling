@@ -49,8 +49,6 @@ rm -rf "$RPM_BUILD_ROOT"
 %defattr(-,root,wheel,-)
 
 %{_prefix}
-%{_bindir}
-%{_libdir}
 %{_sysconfdir}/paths.d/sapling-beta
 
 %changelog
