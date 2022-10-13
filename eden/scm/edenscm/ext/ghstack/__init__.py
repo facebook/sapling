@@ -6,7 +6,7 @@
 """ghstack for Sapling (EXPERIMENTAL)
 """
 
-from edenscm import error, registrar
+from edenscm import error, registrar, util
 from edenscm.i18n import _
 
 cmdtable = {}
@@ -198,7 +198,7 @@ def action_cmd(ui, repo, *args, **opts) -> None:
 
 def _create_ghstack_context():
     conf = ghstack.config.read_config()
-    sh = ghstack.eden_shell.EdenShell(conf=conf)
+    sh = ghstack.eden_shell.EdenShell(conf=conf, sapling_cli=util.hgcmd()[0])
     github = ghstack.github_real.RealGitHubEndpoint(
         oauth_token=conf.github_oauth,
         proxy=conf.proxy,

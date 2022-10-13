@@ -7,7 +7,6 @@ import ghstack
 import ghstack.config
 from ghstack.shell import _SHELL_RET
 
-EDEN_CLI = "hg"
 EDEN_PLAIN_ENV_VAR = "HGPLAIN"
 
 WILDCARD_ARG = {}
@@ -17,9 +16,11 @@ class EdenShell(ghstack.shell.Shell):
                  conf: ghstack.config.Config,
                  quiet: bool = False,
                  cwd: Optional[str] = None,
-                 testing: bool = False):
+                 testing: bool = False,
+                 sapling_cli: str = "sl"):
         super().__init__(quiet=quiet, cwd=cwd, testing=testing)
         self.conf = conf
+        self.sapling_cli = sapling_cli
 
         self.git_dir = self._run_eden_command([
             'debugshell',
@@ -79,7 +80,7 @@ class EdenShell(ghstack.shell.Shell):
     def _run_eden_command(self, args: List[str]) -> str:
         env = dict(os.environ)
         env[EDEN_PLAIN_ENV_VAR] = "1"
-        full_args = [EDEN_CLI] + args
+        full_args = [self.sapling_cli] + args
         stdout = self.sh(*full_args, env=env)
         assert isinstance(stdout, str)
         # pyre-ignore[7]
