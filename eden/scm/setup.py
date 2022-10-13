@@ -825,18 +825,6 @@ class fetchbuilddeps(Command):
             ]
         )
 
-    pyassets += [
-        fbsourcepylibrary(
-            "ghstack",
-            "./pydeps/sapling-ghstack/ghstack",
-            excludes=[
-                "ghstack/__main__.py",
-                "ghstack/github_schema.graphql",
-                "ghstack/py.typed",
-            ],
-        )
-    ]
-
     assets = pyassets
 
     def initialize_options(self):
@@ -1412,6 +1400,7 @@ packages = [
     for p in glob.glob("edenscm/**/__init__.py", recursive=True)
 ] + [
     "edenscmnative",
+    "ghstack",
 ]
 
 common_depends = [

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Final, List, NamedTuple, Optional, Set, Tuple
 
 import ghstack
+import ghstack.diff
 import ghstack.eden
 import ghstack.git
 import ghstack.github

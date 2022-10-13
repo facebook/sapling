@@ -11,5 +11,5 @@ works with Python 3.6+). By avoiding third-party deps, the code can be run
 directly via:
 
 ```
-PYTHONPATH=path/to/sapling-ghstack python3 -m ghstack.__main__
+PYTHONPATH=path/to/ghstack python3 -m ghstack.__main__
 ```
