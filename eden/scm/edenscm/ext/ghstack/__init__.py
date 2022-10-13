@@ -6,8 +6,11 @@
 """ghstack for Sapling (EXPERIMENTAL)
 """
 
+import logging
+
 from edenscm import error, registrar, util
 from edenscm.i18n import _
+
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -19,6 +22,7 @@ import ghstack.config
 import ghstack.eden_shell
 import ghstack.github_real
 import ghstack.land
+import ghstack.logs
 import ghstack.submit
 import ghstack.unlink
 
@@ -95,7 +99,7 @@ subcmd = ghstack_command.subcommand(
 )
 def submit_cmd(ui, repo, *args, **opts) -> None:
     """submit stack of commits to GitHub"""
-    conf, sh, github = _create_ghstack_context()
+    conf, sh, github = _create_ghstack_context(ui)
     ghstack.submit.main(
         msg=opts.get("message"),
         username=conf.github_username,
@@ -118,7 +122,7 @@ def submit_cmd(ui, repo, *args, **opts) -> None:
 )
 def unlink_cmd(ui, repo, *args, **opts) -> None:
     """remove the association of a commit with a pull request"""
-    conf, sh, github = _create_ghstack_context()
+    conf, sh, github = _create_ghstack_context(ui)
     commits = list(args)
     ghstack.unlink.main(
         commits=commits,
@@ -136,7 +140,7 @@ def unlink_cmd(ui, repo, *args, **opts) -> None:
 )
 def land_cmd(ui, repo, *args, **opts) -> None:
     """lands the stack for the specified pull request URL"""
-    conf, sh, github = _create_ghstack_context()
+    conf, sh, github = _create_ghstack_context(ui)
     if len(args) != 1:
         raise error.Abort(_("must specify a URL for a pull request"))
 
@@ -157,7 +161,7 @@ def land_cmd(ui, repo, *args, **opts) -> None:
 )
 def checkout_cmd(ui, repo, *args, **opts) -> None:
     """goto the stack for the specified pull request URL"""
-    conf, sh, github = _create_ghstack_context()
+    conf, sh, github = _create_ghstack_context(ui)
     if len(args) != 1:
         raise error.Abort(_("must specify a URL for a pull request"))
 
@@ -184,7 +188,7 @@ def checkout_cmd(ui, repo, *args, **opts) -> None:
 )
 def action_cmd(ui, repo, *args, **opts) -> None:
     """goto the stack for the specified pull request URL"""
-    conf, sh, github = _create_ghstack_context()
+    conf, sh, github = _create_ghstack_context(ui)
     if len(args) != 1:
         raise error.Abort(_("must specify a URL for a pull request"))
 
@@ -196,7 +200,19 @@ def action_cmd(ui, repo, *args, **opts) -> None:
     )
 
 
-def _create_ghstack_context():
+def _create_ghstack_context(ui):
+    stderr_level = logging.WARN
+    if ui.debugflag:
+        stderr_level = logging.DEBUG
+    elif ui.verbose:
+        stderr_level = logging.INFO
+
+    ghstack.logs.setup(
+        stderr_level=stderr_level,
+    )
+
+    ghstack.logs.rotate()
+
     conf = ghstack.config.read_config()
     sh = ghstack.eden_shell.EdenShell(conf=conf, sapling_cli=util.hgcmd()[0])
     github = ghstack.github_real.RealGitHubEndpoint(
