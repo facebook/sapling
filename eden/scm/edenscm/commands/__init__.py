@@ -1772,17 +1772,38 @@ def config(ui, repo, *values, **opts):
             fp.close()
 
         if values:
-            for value in values:
+            section_name = value = None
+            to_edit = []
+
+            for arg in values:
+                if section_name is None:
+                    if "=" in arg:
+                        section_name, value = arg.split("=", 1)
+                    else:
+                        section_name = arg
+                else:
+                    value = arg
+                if value is None:
+                    continue
                 try:
-                    section_name, value = value.split("=", 1)
                     section, name = section_name.split(".", 1)
                 except ValueError:
                     # ex. not enough values to unpack
                     raise error.Abort(
-                        _("invalid argument: %r") % value,
+                        _("invalid argument: %r") % section_name,
                         hint=("try section.name=value"),
                     )
+                to_edit.append((section, name, value))
+                section_name = value = None
+
+            if section_name is not None:
+                raise error.Abort(
+                    _("missing config value for %r") % section_name,
+                )
+
+            for section, name, value in to_edit:
                 rcutil.editconfig(f, section, name, value)
+
         else:
             editor = ui.geteditor()
             ui.system(

@@ -229,13 +229,17 @@ config editing without an editor
   $ newrepo
 
  invalid pattern
-  $ hg config --edit invalid.syntax
-  abort: invalid argument: 'invalid.syntax'
+  $ hg config --edit missing.value
+  abort: missing config value for 'missing.value'
+  [255]
+
+  $ hg config --edit missing=name
+  abort: invalid argument: 'missing'
   (try section.name=value)
   [255]
 
  append configs
-  $ hg config --local "aa.bb.cc.字=配
+  $ hg config --local aa.bb.cc.字 "配
   > 置" ee.fff=gggg
   $ tail -6 .hg/hgrc | dos2unix
   [aa]
@@ -246,7 +250,7 @@ config editing without an editor
   fff = gggg
 
  update config in-place without appending
-  $ hg config --local aa.bb.cc.字=new_值 "aa.bb.cc.字=新值
+  $ hg config --local aa.bb.cc.字 new_值 "aa.bb.cc.字=新值
   > 测
   > 试
   > "
@@ -272,7 +276,7 @@ config editing without an editor
   > # b = 3
   > EOF
 
-  $ hg config --local a.b=4
+  $ hg config --local a.b 4
   $ cat .hg/hgrc
   [a]
   # b = 1
