@@ -7,8 +7,6 @@ import ghstack
 import ghstack.config
 from ghstack.shell import _SHELL_RET
 
-EDEN_PLAIN_ENV_VAR = "HGPLAIN"
-
 WILDCARD_ARG = {}
 
 class EdenShell(ghstack.shell.Shell):
@@ -79,7 +77,7 @@ class EdenShell(ghstack.shell.Shell):
 
     def _run_eden_command(self, args: List[str]) -> str:
         env = dict(os.environ)
-        env[EDEN_PLAIN_ENV_VAR] = "1"
+        env["SL_AUTOMATION"] = "true"
         full_args = [self.sapling_cli] + args
         stdout = self.sh(*full_args, env=env)
         assert isinstance(stdout, str)

@@ -140,10 +140,14 @@ def base_dir() -> str:
             encoding='utf-8'
         ).stdout.rstrip()
     except subprocess.CalledProcessError:
+        env = dict(os.environ)
+        env["SL_AUTOMATION"] = "true"
+
         meta_dir = subprocess.run(
             (_sapling_cli, "root", "--dotdir"), stdout=subprocess.PIPE,
             encoding='utf-8',
-            check=True
+            check=True,
+            env=env,
         ).stdout.rstrip()
 
     base_dir = os.path.join(meta_dir, "ghstack", "log")
