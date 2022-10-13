@@ -4,7 +4,7 @@ import re
 import ghstack.eden_shell
 import ghstack.github
 import ghstack.github_utils
-from ghstack.types import GitCommitHash
+from ghstack.ghs_types import GitCommitHash
 
 
 def main(pull_request: str,

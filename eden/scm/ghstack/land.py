@@ -6,7 +6,7 @@ import ghstack.git
 import ghstack.github
 import ghstack.github_utils
 import ghstack.shell
-from ghstack.types import GitCommitHash
+from ghstack.ghs_types import GitCommitHash
 
 
 def main(pull_request: str,

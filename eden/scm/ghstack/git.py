@@ -3,7 +3,7 @@ from typing import List, Pattern
 
 import ghstack.diff
 import ghstack.shell
-from ghstack.types import GitCommitHash, GitTreeHash
+from ghstack.ghs_types import GitCommitHash, GitTreeHash
 
 RE_RAW_COMMIT_ID = re.compile(r'^(?P<commit>[a-f0-9]+)$', re.MULTILINE)
 RE_RAW_AUTHOR = re.compile(r'^author (?P<author>(?P<name>[^<]+?) <(?P<email>[^>]+)>)',

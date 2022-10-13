@@ -13,7 +13,7 @@ import ghstack.github_utils
 import ghstack.gpg_sign
 import ghstack.logs
 import ghstack.shell
-from ghstack.types import (GhNumber, GitCommitHash, GitHubNumber,
+from ghstack.ghs_types import (GhNumber, GitCommitHash, GitHubNumber,
                            GitHubRepositoryId, GitTreeHash)
 
 # Either "base", "head" or "orig"; which of the ghstack generated

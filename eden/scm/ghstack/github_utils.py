@@ -3,7 +3,7 @@ from typing import List, Optional, TypedDict
 
 import ghstack.github
 import ghstack.shell
-from ghstack.types import GitCommitHash, GhNumber, GitHubRepositoryId, GitTreeHash
+from ghstack.ghs_types import GitCommitHash, GhNumber, GitHubRepositoryId, GitTreeHash
 
 GitHubRepoNameWithOwner = TypedDict('GitHubRepoNameWithOwner', {
     'owner': str,

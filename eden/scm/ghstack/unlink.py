@@ -11,7 +11,7 @@ import ghstack.github
 import ghstack.github_utils
 import ghstack.gpg_sign
 import ghstack.shell
-from ghstack.types import GitCommitHash, GitTreeHash
+from ghstack.ghs_types import GitCommitHash, GitTreeHash
 
 
 RE_GHSTACK_SOURCE_ID = re.compile(r'^ghstack-source-id: (.+)\n?', re.MULTILINE)
