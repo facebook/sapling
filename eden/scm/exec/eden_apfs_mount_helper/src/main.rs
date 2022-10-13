@@ -25,7 +25,6 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
 use eden_apfs::*;
-use serde::*;
 use structopt::StructOpt;
 
 #[cfg(feature = "fb")]
