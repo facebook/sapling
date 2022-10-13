@@ -211,6 +211,10 @@ class PrefetchFetchContext : public ObjectFetchContext {
     return endpoint_;
   }
 
+  virtual ImportPriority getPriority() const override {
+    return ImportPriority::kLow();
+  }
+
   const std::unordered_map<std::string, std::string>* FOLLY_NULLABLE
   getRequestInfo() const override {
     return nullptr;
@@ -2359,6 +2363,19 @@ ImmediateFuture<std::unique_ptr<Glob>> detachIfBackgrounded(
     return ImmediateFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>());
   }
 }
+
+ImmediateFuture<folly::Unit> detachIfBackgrounded(
+    ImmediateFuture<folly::Unit> globFuture,
+    const std::shared_ptr<ServerState>& serverState,
+    bool background) {
+  if (!background) {
+    return globFuture;
+  } else {
+    folly::futures::detachOn(
+        serverState->getThreadPool().get(), std::move(globFuture).semi());
+    return ImmediateFuture<folly::Unit>(folly::unit);
+  }
+}
 } // namespace
 
 #ifndef _WIN32
@@ -2544,7 +2561,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
       *params->mountPoint_ref(),
       toLogArg(*params->globs_ref()),
       globber.logString());
-  auto& context = helper->getPrefetchFetchContext();
+  auto& context = helper->getFetchContext();
   auto isBackground = *params->background();
 
   ImmediateFuture<folly::Unit> backgroundFuture;
@@ -2562,6 +2579,40 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                       &context](auto&&) mutable {
             return globber.glob(mount, serverState, std::move(globs), context);
           });
+  globFut = std::move(globFut).ensure(
+      [helper = std::move(helper), params = std::move(params)] {});
+  return detachIfBackgrounded(
+             std::move(globFut), server_->getServerState(), isBackground)
+      .semi();
+}
+
+folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_prefetchFiles(
+    std::unique_ptr<PrefetchParams> params) {
+  ThriftGlobImpl globber{*params};
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG3,
+      *params->mountPoint_ref(),
+      toLogArg(*params->globs_ref()),
+      globber.logString());
+  auto& context = helper->getPrefetchFetchContext();
+  auto isBackground = *params->background();
+
+  ImmediateFuture<folly::Unit> backgroundFuture;
+  if (isBackground) {
+    backgroundFuture = makeNotReadyImmediateFuture();
+  }
+
+  auto globFut =
+      std::move(backgroundFuture)
+          .thenValue([mount = server_->getMount(
+                          AbsolutePathPiece{*params->mountPoint()}),
+                      serverState = server_->getServerState(),
+                      globs = std::move(*params->globs()),
+                      globber = std::move(globber),
+                      &context](auto&&) mutable {
+            return globber.glob(mount, serverState, std::move(globs), context);
+          })
+          .thenValue([](std::unique_ptr<Glob>) { return folly::unit; });
   globFut = std::move(globFut).ensure(
       [helper = std::move(helper), params = std::move(params)] {});
   return detachIfBackgrounded(

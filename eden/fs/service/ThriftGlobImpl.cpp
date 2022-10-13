@@ -32,6 +32,12 @@ ThriftGlobImpl::ThriftGlobImpl(const GlobParams& params)
       rootHashes_{*params.revisions_ref()},
       searchRootUser_{*params.searchRoot_ref()} {}
 
+ThriftGlobImpl::ThriftGlobImpl(const PrefetchParams& params)
+    : includeDotfiles_{true},
+      prefetchFiles_{!*params.directoriesOnly_ref()},
+      rootHashes_{*params.revisions_ref()},
+      searchRootUser_{*params.searchRoot_ref()} {}
+
 ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
     std::shared_ptr<EdenMount> edenMount,
     std::shared_ptr<ServerState> serverState,

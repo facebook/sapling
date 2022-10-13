@@ -39,11 +39,14 @@ use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
+use thrift_types::edenfs::errors::eden_service::PrefetchFilesError;
 use thrift_types::edenfs::types::Glob;
 use thrift_types::edenfs::types::GlobParams;
 use thrift_types::edenfs::types::MountInfo;
 use thrift_types::edenfs::types::MountState;
 use thrift_types::edenfs::types::PredictiveFetch;
+use thrift_types::edenfs::types::PrefetchParams;
+use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 use toml::value::Value;
 use uuid::Uuid;
 
@@ -435,6 +438,14 @@ impl SnapshotState {
     }
 }
 
+fn is_unknown_method_error(error: &PrefetchFilesError) -> bool {
+    if let PrefetchFilesError::ApplicationException(ref e) = error {
+        e.type_ == ApplicationExceptionErrorCode::UnknownMethod
+    } else {
+        false
+    }
+}
+
 /// Represents an edenfs checkout with mount information as well as information from configuration
 #[derive(Serialize)]
 pub struct EdenFsCheckout {
@@ -611,7 +622,7 @@ impl EdenFsCheckout {
         &self,
         instance: &EdenFsInstance,
         all_profile_contents: HashSet<String>,
-        enable_prefetch: bool,
+        directories_only: bool,
         silent: bool,
         revisions: Option<&Vec<String>>,
         predict_revisions: bool,
@@ -715,7 +726,7 @@ impl EdenFsCheckout {
             let glob_params = GlobParams {
                 mountPoint: mnt_pt,
                 includeDotfiles: false,
-                prefetchFiles: enable_prefetch,
+                prefetchFiles: !directories_only,
                 suppressFileList: silent,
                 revisions: commit_vec,
                 background,
@@ -726,18 +737,37 @@ impl EdenFsCheckout {
             Ok(res.context("Failed predictiveGlobFiles() thrift call")?)
         } else {
             let profile_set = all_profile_contents.into_iter().collect::<Vec<_>>();
-            let glob_params = GlobParams {
-                mountPoint: mnt_pt,
-                globs: profile_set,
-                includeDotfiles: false,
-                prefetchFiles: enable_prefetch,
-                suppressFileList: silent,
-                revisions: commit_vec,
+            let prefetch_params = PrefetchParams {
+                mountPoint: mnt_pt.clone(),
+                globs: profile_set.clone(),
+                directoriesOnly: directories_only,
+                revisions: commit_vec.clone(),
                 background,
                 ..Default::default()
             };
-            let res = client.globFiles(&glob_params).await;
-            Ok(res.context("Failed globFiles() thrift call")?)
+            let res = client.prefetchFiles(&prefetch_params).await;
+
+            match res {
+                Ok(_) => Ok(Glob::default()),
+                Err(error) => {
+                    if is_unknown_method_error(&error) {
+                        let glob_params = GlobParams {
+                            mountPoint: mnt_pt,
+                            globs: profile_set,
+                            includeDotfiles: false,
+                            prefetchFiles: !directories_only,
+                            suppressFileList: silent,
+                            revisions: commit_vec,
+                            background,
+                            ..Default::default()
+                        };
+                        let glob_res = client.globFiles(&glob_params).await;
+                        Ok(glob_res.context("Failed globFiles() thrift call")?)
+                    } else {
+                        Err(EdenFsError::Other(error.into()))
+                    }
+                }
+            }
         }
     }
 
@@ -746,7 +776,7 @@ impl EdenFsCheckout {
         instance: &EdenFsInstance,
         profiles: &Vec<String>,
         background: bool,
-        enable_prefetch: bool,
+        directories_only: bool,
         silent: bool,
         revisions: Option<&Vec<String>>,
         predict_revisions: bool,
@@ -793,7 +823,7 @@ impl EdenFsCheckout {
                     .make_prefetch_request(
                         instance,
                         profile_set,
-                        false, // don't pass enablePrefetch here since we just want to evaluate the **/* glob which will indirectly fetch all of the trees
+                        true, // only prefetch directories
                         silent,
                         revisions.clone(),
                         predict_revisions,
@@ -822,7 +852,7 @@ impl EdenFsCheckout {
             .make_prefetch_request(
                 instance,
                 profile_contents,
-                enable_prefetch,
+                directories_only,
                 silent,
                 revisions,
                 predict_revisions,

@@ -12,7 +12,8 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional, Set
 
-from facebook.eden.ttypes import Glob, GlobParams, PredictiveFetch
+from facebook.eden.ttypes import Glob, GlobParams, PredictiveFetch, PrefetchParams
+from thrift.Thrift import TApplicationException
 
 from . import subcmd as subcmd_mod, tabulate
 from .cmd_util import get_eden_instance, require_checkout
@@ -63,7 +64,7 @@ def make_prefetch_request(
     checkout: EdenCheckout,
     instance: EdenInstance,
     all_profile_contents: Set[str],
-    enable_prefetch: bool,
+    directories_only: bool,
     silent: bool,
     revisions: Optional[List[str]],
     predict_revisions: bool,
@@ -149,7 +150,7 @@ def make_prefetch_request(
                 GlobParams(
                     mountPoint=bytes(checkout.path),
                     includeDotfiles=False,
-                    prefetchFiles=enable_prefetch,
+                    prefetchFiles=not directories_only,
                     suppressFileList=silent,
                     revisions=byte_revisions,
                     background=background,
@@ -157,17 +158,35 @@ def make_prefetch_request(
                 )
             )
         else:
-            return client.globFiles(
-                GlobParams(
-                    mountPoint=bytes(checkout.path),
-                    globs=list(all_profile_contents),
-                    includeDotfiles=False,
-                    prefetchFiles=enable_prefetch,
-                    suppressFileList=silent,
-                    revisions=byte_revisions,
-                    background=background,
+            try:
+                client.prefetchFiles(
+                    PrefetchParams(
+                        mountPoint=bytes(checkout.path),
+                        globs=list(all_profile_contents),
+                        directoriesOnly=directories_only,
+                        revisions=byte_revisions,
+                        background=background,
+                    )
                 )
-            )
+                return None
+            except TApplicationException as e:
+                # Fallback to globFiles in the case that this is running
+                # against an older version of EdenFS in which prefetchFiles is
+                # not known
+                if e.type == TApplicationException.UNKNOWN_METHOD:
+                    return client.globFiles(
+                        GlobParams(
+                            mountPoint=bytes(checkout.path),
+                            globs=list(all_profile_contents),
+                            includeDotfiles=False,
+                            prefetchFiles=not directories_only,
+                            suppressFileList=silent,
+                            revisions=byte_revisions,
+                            background=background,
+                        )
+                    )
+                else:
+                    raise
 
 
 # prefetch all of the files specified by a profile in the given checkout
@@ -176,13 +195,13 @@ def prefetch_profiles(
     instance: EdenInstance,
     profiles: List[str],
     background: bool,
-    enable_prefetch: bool,
+    directories_only: bool,
     silent: bool,
     revisions: Optional[List[str]],
     predict_revisions: bool,
     predictive: bool,
     predictive_num_dirs: int,
-) -> Optional[List[Glob]]:
+) -> Optional[List[Optional[Glob]]]:
 
     if predictive and not should_prefetch_predictive_profiles(instance):
         if not silent:
@@ -215,7 +234,7 @@ def prefetch_profiles(
                     checkout=checkout,
                     instance=instance,
                     all_profile_contents={"**/*"},
-                    enable_prefetch=False,
+                    directories_only=True,
                     silent=silent,
                     revisions=revisions,
                     predict_revisions=predict_revisions,
@@ -235,7 +254,7 @@ def prefetch_profiles(
             checkout=checkout,
             instance=instance,
             all_profile_contents=all_profile_contents,
-            enable_prefetch=enable_prefetch,
+            directories_only=directories_only,
             silent=silent,
             revisions=revisions,
             predict_revisions=predict_revisions,
@@ -348,6 +367,13 @@ def add_common_args(
         action="store_true",
     )
     parser.add_argument(
+        "--directories-only",
+        help="Do not prefetch files, only fetch corresponding directories. "
+        "This will still activate the profile when running `activate`.",
+        default=False,
+        action="store_true",
+    )
+    parser.add_argument(
         "--foreground",
         help="Run the prefetch in the main thread rather than in the"
         " background. Normally this command will return once the prefetch"
@@ -381,13 +407,15 @@ class ActivateProfileCmd(Subcmd):
 
         instance, checkout, _rel_path = require_checkout(args, checkout)
 
+        directories_only = args.directories_only or args.skip_prefetch
+
         with instance.get_telemetry_logger().new_sample(
             "prefetch_profile"
         ) as telemetry_sample:
             telemetry_sample.add_string("action", "activate")
             telemetry_sample.add_string("name", args.profile_name)
             telemetry_sample.add_string("checkout", args.checkout)
-            telemetry_sample.add_bool("skip_prefetch", args.skip_prefetch)
+            telemetry_sample.add_bool("directories_only", directories_only)
 
             activation_result = checkout.activate_profile(
                 args.profile_name, telemetry_sample, args.force_fetch
@@ -397,24 +425,24 @@ class ActivateProfileCmd(Subcmd):
             if activation_result:
                 return activation_result
 
-            if not args.skip_prefetch:
-                results = prefetch_profiles(
-                    checkout,
-                    instance,
-                    [args.profile_name],
-                    background=not args.foreground,
-                    enable_prefetch=True,
-                    silent=not args.verbose,
-                    revisions=None,
-                    predict_revisions=False,
-                    predictive=False,
-                    predictive_num_dirs=0,
-                )
-                # there will only every be one commit used to query globFiles here,
-                # so no need to list which commit a file is fetched for, it will
-                # be the current commit.
-                if args.verbose and results is not None:
-                    for result in results:
+            results = prefetch_profiles(
+                checkout,
+                instance,
+                [args.profile_name],
+                background=not args.foreground,
+                directories_only=directories_only,
+                silent=not args.verbose,
+                revisions=None,
+                predict_revisions=False,
+                predictive=False,
+                predictive_num_dirs=0,
+            )
+            # there will only every be one commit used to query globFiles here,
+            # so no need to list which commit a file is fetched for, it will
+            # be the current commit.
+            if args.verbose and results is not None:
+                for result in results:
+                    if result is not None:
                         for name in result.matchingFiles:
                             _println(os.fsdecode(name))
             return 0
@@ -441,12 +469,14 @@ class ActivatePredictiveProfileCmd(Subcmd):
 
         instance, checkout, _rel_path = require_checkout(args, checkout)
 
+        directories_only = args.directories_only or args.skip_prefetch
+
         with instance.get_telemetry_logger().new_sample(
             "prefetch_profile"
         ) as telemetry_sample:
             telemetry_sample.add_string("action", "activate-predictive")
             telemetry_sample.add_string("checkout", args.checkout)
-            telemetry_sample.add_bool("skip_prefetch", args.skip_prefetch)
+            telemetry_sample.add_bool("directories_only", directories_only)
             if args.num_dirs:
                 telemetry_sample.add_bool("num_dirs", args.num_dirs)
 
@@ -458,35 +488,35 @@ class ActivatePredictiveProfileCmd(Subcmd):
             if activation_result:
                 return activation_result
 
-            if not args.skip_prefetch:
-                try:
-                    results = prefetch_profiles(
-                        checkout,
-                        instance,
-                        [],
-                        background=not args.foreground,
-                        enable_prefetch=True,
-                        silent=not args.verbose,
-                        revisions=None,
-                        predict_revisions=False,
-                        predictive=True,
-                        predictive_num_dirs=args.num_dirs,
-                    )
-                    if args.verbose and results is not None:
-                        for result in results:
+            try:
+                results = prefetch_profiles(
+                    checkout,
+                    instance,
+                    [],
+                    background=not args.foreground,
+                    directories_only=directories_only,
+                    silent=not args.verbose,
+                    revisions=None,
+                    predict_revisions=False,
+                    predictive=True,
+                    predictive_num_dirs=args.num_dirs,
+                )
+                if args.verbose and results is not None:
+                    for result in results:
+                        if result is not None:
                             for name in result.matchingFiles:
                                 _println(os.fsdecode(name))
-                    return 0
-                except Exception as error:
-                    # in case of a timeout or other error sending a request to the smartservice
-                    # for predictive prefetch profiles, the config will be updated but fetch
-                    # may not run
-                    if args.verbose:
-                        print(
-                            "Error in predictive fetch: " + str(error) + "\n"
-                            "Predictive prefetch is activated but fetch did not run. To retry, run: "
-                            "`eden prefetch-profile fetch-predictive`"
-                        )
+                return 0
+            except Exception as error:
+                # in case of a timeout or other error sending a request to the smartservice
+                # for predictive prefetch profiles, the config will be updated but fetch
+                # may not run
+                if args.verbose:
+                    print(
+                        "Error in predictive fetch: " + str(error) + "\n"
+                        "Predictive prefetch is activated but fetch did not run. To retry, run: "
+                        "`eden prefetch-profile fetch-predictive`"
+                    )
             return 0
 
 
@@ -600,12 +630,14 @@ class FetchProfileCmd(Subcmd):
                 print("No profiles to fetch.")
             return 0
 
+        directories_only = args.directories_only or args.skip_prefetch
+
         results = prefetch_profiles(
             checkout,
             instance,
             profiles_to_fetch,
             background=not args.foreground,
-            enable_prefetch=not args.skip_prefetch,
+            directories_only=directories_only,
             silent=not args.verbose,
             revisions=args.commits,
             predict_revisions=args.predict_commits,
@@ -615,8 +647,9 @@ class FetchProfileCmd(Subcmd):
 
         if args.verbose and results is not None:
             for result in results:
-                for name in result.matchingFiles:
-                    _println(os.fsdecode(name))
+                if result is not None:
+                    for name in result.matchingFiles:
+                        _println(os.fsdecode(name))
 
         return 0
 
@@ -664,6 +697,8 @@ class FetchPredictiveProfileCmd(Subcmd):
                 )
             return 0
 
+        directories_only = args.directories_only or args.skip_prefetch
+
         # If num_dirs is given, use the specified num_dirs. If num_dirs is not given
         # (args.num_dirs == 0), predictive fetch with default num dirs unless there
         # is an active num dirs saved in the checkout config.
@@ -679,7 +714,7 @@ class FetchPredictiveProfileCmd(Subcmd):
                 instance,
                 [],
                 background=not args.foreground,
-                enable_prefetch=not args.skip_prefetch,
+                directories_only=directories_only,
                 silent=not args.verbose,
                 revisions=args.commits,
                 predict_revisions=args.predict_commits,
@@ -688,8 +723,9 @@ class FetchPredictiveProfileCmd(Subcmd):
             )
             if args.verbose and results is not None:
                 for result in results:
-                    for name in result.matchingFiles:
-                        _println(os.fsdecode(name))
+                    if result is not None:
+                        for name in result.matchingFiles:
+                            _println(os.fsdecode(name))
         except Exception as error:
             # in case of a timeout or other error sending a request to the smartplatform
             # service for predictive prefetch profiles

@@ -20,11 +20,13 @@ class EdenMount;
 class ServerState;
 class Glob;
 class GlobParams;
+class PrefetchParams;
 class ObjectFetchContext;
 
 class ThriftGlobImpl {
  public:
   explicit ThriftGlobImpl(const GlobParams& params);
+  explicit ThriftGlobImpl(const PrefetchParams& params);
 
   ImmediateFuture<std::unique_ptr<Glob>> glob(
       std::shared_ptr<EdenMount> edenMount,

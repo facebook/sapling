@@ -51,12 +51,19 @@ pub struct ActivationOptions {
     #[clap(
         short,
         long,
-        help = "Do not prefetch profiles only find all the files that match \
+        help = "DEPRECATED: Do not prefetch profiles only find all the files that match \
     them. This will still list the names of matching files when the \
     verbose flag is also used, and will activate the profile when running \
     `activate`."
     )]
     skip_prefetch: bool,
+    #[clap(
+        short,
+        long,
+        help = "Do not prefetch files, only fetch corresponding directories. \
+    This will still activate the profile when running `activate`."
+    )]
+    directories_only: bool,
     #[clap(
         short,
         long,
@@ -264,13 +271,15 @@ impl PrefetchCmd {
             )
         })?;
 
+        let directories_only = options.directories_only || options.skip_prefetch;
+
         #[cfg(fbcode_build)]
         let mut sample = {
             let sample = PrefetchProfileSample::activate_event(
                 expect_init(),
                 profile_name,
                 client_name.as_str(),
-                options.skip_prefetch,
+                directories_only,
             );
             sample
         };
@@ -290,34 +299,32 @@ impl PrefetchCmd {
         #[cfg(fbcode_build)]
         send(sample.builder);
 
-        if !options.skip_prefetch {
-            let checkout = find_checkout(instance, &options.checkout).with_context(|| {
-                anyhow!(
-                    "Failed to find checkout with path {}",
-                    &options.checkout.display()
-                )
-            })?;
-            let result_globs = checkout
-                .prefetch_profiles(
-                    instance,
-                    &vec![profile_name.to_string()],
-                    !options.foreground,
-                    true,
-                    !options.verbose,
-                    None,
-                    false,
-                    false,
-                    0,
-                )
-                .await?;
-            // there will only every be one commit used to query globFiles here,
-            // so no need to list which commit a file is fetched for, it will
-            // be the current commit.
-            if options.verbose {
-                for result in result_globs {
-                    for name in result.matchingFiles {
-                        println!("{}", String::from_utf8_lossy(&name));
-                    }
+        let checkout = find_checkout(instance, &options.checkout).with_context(|| {
+            anyhow!(
+                "Failed to find checkout with path {}",
+                &options.checkout.display()
+            )
+        })?;
+        let result_globs = checkout
+            .prefetch_profiles(
+                instance,
+                &vec![profile_name.to_string()],
+                !options.foreground,
+                directories_only,
+                !options.verbose,
+                None,
+                false,
+                false,
+                0,
+            )
+            .await?;
+        // there will only every be one commit used to query globFiles here,
+        // so no need to list which commit a file is fetched for, it will
+        // be the current commit.
+        if options.verbose {
+            for result in result_globs {
+                for name in result.matchingFiles {
+                    println!("{}", String::from_utf8_lossy(&name));
                 }
             }
         }
@@ -338,12 +345,14 @@ impl PrefetchCmd {
             )
         })?;
 
+        let directories_only = options.directories_only || options.skip_prefetch;
+
         #[cfg(fbcode_build)]
         let mut sample = {
             let sample = PrefetchProfileSample::activate_predictive_event(
                 expect_init(),
                 client_name.as_str(),
-                options.skip_prefetch,
+                directories_only,
                 num_dirs,
             );
             sample
@@ -365,34 +374,32 @@ impl PrefetchCmd {
         #[cfg(fbcode_build)]
         send(sample.builder);
 
-        if !options.skip_prefetch {
-            let checkout = find_checkout(instance, &options.checkout).with_context(|| {
-                anyhow!(
-                    "Failed to find checkout with path {}",
-                    &options.checkout.display()
-                )
-            })?;
-            let result_globs = checkout
-                .prefetch_profiles(
-                    &instance,
-                    &vec![],
-                    !options.foreground,
-                    true,
-                    !options.verbose,
-                    None,
-                    false,
-                    true,
-                    num_dirs,
-                )
-                .await?;
-            // there will only every be one commit used to query globFiles here,
-            // so no need to list which commit a file is fetched for, it will
-            // be the current commit.
-            if options.verbose {
-                for result in result_globs {
-                    for name in result.matchingFiles {
-                        println!("{}", String::from_utf8_lossy(&name));
-                    }
+        let checkout = find_checkout(instance, &options.checkout).with_context(|| {
+            anyhow!(
+                "Failed to find checkout with path {}",
+                &options.checkout.display()
+            )
+        })?;
+        let result_globs = checkout
+            .prefetch_profiles(
+                instance,
+                &vec![],
+                !options.foreground,
+                directories_only,
+                !options.verbose,
+                None,
+                false,
+                true,
+                num_dirs,
+            )
+            .await?;
+        // there will only every be one commit used to query globFiles here,
+        // so no need to list which commit a file is fetched for, it will
+        // be the current commit.
+        if options.verbose {
+            for result in result_globs {
+                for name in result.matchingFiles {
+                    println!("{}", String::from_utf8_lossy(&name));
                 }
             }
         }
@@ -513,6 +520,8 @@ impl PrefetchCmd {
             return Ok(0);
         }
 
+        let directories_only = options.options.directories_only || options.options.skip_prefetch;
+
         let checkout = find_checkout(instance, checkout_path).with_context(|| {
             anyhow!(
                 "Failed to find checkout with path {}",
@@ -524,7 +533,7 @@ impl PrefetchCmd {
                 instance,
                 profiles_to_prefetch,
                 !options.options.foreground,
-                !options.options.skip_prefetch,
+                directories_only,
                 !options.options.verbose,
                 Some(&options.commits),
                 options.predict_commits,
@@ -589,6 +598,8 @@ impl PrefetchCmd {
             0
         };
 
+        let directories_only = options.options.directories_only || options.options.skip_prefetch;
+
         let checkout = find_checkout(instance, checkout_path).with_context(|| {
             anyhow!(
                 "Failed to find checkout with path {}",
@@ -600,7 +611,7 @@ impl PrefetchCmd {
                 instance,
                 &vec![],
                 !options.options.foreground,
-                !options.options.skip_prefetch,
+                directories_only,
                 !options.options.verbose,
                 Some(&options.commits),
                 options.predict_commits,
