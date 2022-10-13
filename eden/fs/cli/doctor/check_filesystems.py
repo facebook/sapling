@@ -480,12 +480,27 @@ def check_materialized_are_accessible(
                     inaccessible_inodes.append((dirent_path, str(ex)))
                     continue
 
-                # TODO(xavierd): Symlinks are for now recognized as files.
-                dirent_mode = (
-                    stat.S_IFREG
-                    if stat.S_ISLNK(dirent_mode)
-                    else stat.S_IFMT(dirent_mode)
-                )
+                if sys.platform == "win32":
+                    if stat.S_ISLNK(dirent_mode):
+                        # TODO(xavierd): Symlinks are for now recognized as files.
+                        dirent_mode = stat.S_IFREG
+                    elif stat.S_ISDIR(dirent_mode):
+                        # Python considers junctions as directory.
+                        import ctypes
+
+                        FILE_ATTRIBUTE_REPARSE_POINT = 0x0400
+                        is_reparse = (
+                            ctypes.windll.kernel32.GetFileAttributesW(str(path))
+                            & FILE_ATTRIBUTE_REPARSE_POINT
+                            == FILE_ATTRIBUTE_REPARSE_POINT
+                        )
+                        if is_reparse:
+                            dirent_mode = stat.S_IFREG
+                        else:
+                            dirent_mode = stat.S_IFDIR
+
+                dirent_mode = stat.S_IFMT(dirent_mode)
+
                 if dirent_mode != stat.S_IFMT(dirent.mode):
                     mismatched_mode += [(dirent_path, dirent_mode, dirent.mode)]
 

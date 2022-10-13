@@ -8,6 +8,7 @@ import binascii
 import os
 import stat
 import struct
+import subprocess
 import sys
 import typing
 from pathlib import Path
@@ -1170,6 +1171,78 @@ Fixing files known to EdenFS but not present on disk in {Path(mount)}...<green>f
             output.getvalue(),
         )
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
+
+    if sys.platform == "win32":
+
+        @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
+        def test_materialized_junction(self, mock_debugInodeStatus) -> None:
+            instance = FakeEdenInstance(self.make_temporary_directory())
+            checkout = instance.create_test_mount("path1")
+            mount = checkout.path
+
+            # Just create a folders
+            os.makedirs(mount / "a" / "b")
+            subprocess.run(
+                f"cmd.exe /c mklink /J {mount}\\a\\c {mount}\\a\\b", check=True
+            )
+            subprocess.run(
+                f"cmd.exe /c mklink /J {mount}\\a\\d {mount}\\a\\b", check=True
+            )
+
+            mock_debugInodeStatus.return_value = [
+                TreeInodeDebugInfo(
+                    1,
+                    b"a",
+                    True,
+                    b"abcd",
+                    [
+                        TreeInodeEntryDebugInfo(
+                            b"c", 4, stat.S_IFREG, False, True, b"12ef"
+                        ),
+                        TreeInodeEntryDebugInfo(
+                            b"b", 2, stat.S_IFDIR, False, False, b"12ef"
+                        ),
+                        TreeInodeEntryDebugInfo(
+                            b"d", 3, stat.S_IFDIR, False, True, b"12ef"
+                        ),
+                    ],
+                    1,
+                ),
+                TreeInodeDebugInfo(
+                    2,
+                    b"a/b",
+                    True,
+                    b"dcba",
+                    [],
+                    1,
+                ),
+                TreeInodeDebugInfo(
+                    2,
+                    b"a/d",
+                    True,
+                    b"dcba",
+                    [],
+                    1,
+                ),
+            ]
+
+            tracker = ProblemCollector()
+            check_materialized_are_accessible(
+                tracker,
+                typing.cast(EdenInstance, instance),
+                checkout,
+                lambda p: os.lstat(p).st_mode,
+            )
+
+            problemDescriptions = {
+                problem.description() for problem in tracker.problems
+            }
+            self.assertEqual(
+                problemDescriptions,
+                {
+                    f"{Path('a/d')} has an unexpected file type: known to EdenFS as a directory, but is a file on disk",
+                },
+            )
 
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.getSHA1")
     @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
