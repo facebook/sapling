@@ -65,36 +65,8 @@ def manager(*, debug: bool = False) -> Iterator[None]:
     # TCB code to setup logging.  If a failure starts here we won't
     # be able to save the user in a reasonable way.
 
-    # Logging structure: there is one logger (the root logger)
-    # and in processes all events.  There are two handlers:
-    # stderr (INFO) and file handler (DEBUG).
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
-
-    console_handler = logging.StreamHandler()
-    if debug:
-        console_handler.setLevel(logging.DEBUG)
-    else:
-        console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(formatter)
-    root_logger.addHandler(console_handler)
-
-    log_file = os.path.join(run_dir(), "ghstack.log")
-
-    file_handler = logging.FileHandler(log_file)
-    # TODO: Hypothetically, it is better if we log the timestamp.
-    # But I personally feel the timestamps gunk up the log info
-    # for not much benefit (since we're not really going to be
-    # in the business of debugging performance bugs, for which
-    # timestamps would really be helpful.)  Perhaps reconsider
-    # at some point based on how useful this information actually is.
-    #
-    # If you ever switch this, make sure to preserve redaction
-    # logic...
-    file_handler.setFormatter(formatter)
-    # file_handler.setFormatter(logging.Formatter(
-    #    fmt="[%(asctime)s] [%(levelname)8s] %(message)s"))
-    root_logger.addHandler(file_handler)
+    setup(stderr_level=logging.DEBUG if debug else logging.INFO,
+          file_level=logging.DEBUG)
 
     record_argv()
 
@@ -116,6 +88,37 @@ def manager(*, debug: bool = False) -> Iterator[None]:
         logging.info("", exc_info=True)
         record_exception(e)
         sys.exit(1)
+
+def setup(stderr_level: int = logging.WARN,
+          file_level: int = logging.DEBUG):
+    # Logging structure: there is one logger (the root logger) and in
+    # processes all events. There are two handlers: stderr and file
+    # handler.
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(stderr_level)
+    console_handler.setFormatter(formatter)
+    root_logger.addHandler(console_handler)
+
+    log_file = os.path.join(run_dir(), "ghstack.log")
+
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(file_level)
+    # TODO: Hypothetically, it is better if we log the timestamp.
+    # But I personally feel the timestamps gunk up the log info
+    # for not much benefit (since we're not really going to be
+    # in the business of debugging performance bugs, for which
+    # timestamps would really be helpful.)  Perhaps reconsider
+    # at some point based on how useful this information actually is.
+    #
+    # If you ever switch this, make sure to preserve redaction
+    # logic...
+    file_handler.setFormatter(formatter)
+    # file_handler.setFormatter(logging.Formatter(
+    #    fmt="[%(asctime)s] [%(levelname)8s] %(message)s"))
+    root_logger.addHandler(file_handler)
 
 
 @functools.lru_cache()
