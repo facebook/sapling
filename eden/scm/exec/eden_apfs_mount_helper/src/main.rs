@@ -25,6 +25,8 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
 use eden_apfs::*;
+#[cfg(target_os = "macos")]
+use serde::*;
 use structopt::StructOpt;
 
 #[cfg(feature = "fb")]
