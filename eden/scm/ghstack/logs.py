@@ -130,11 +130,11 @@ def base_dir() -> str:
             encoding='utf-8'
         ).stdout.rstrip()
     except subprocess.CalledProcessError:
-        meta_dir = os.path.join(subprocess.run(
-            ("hg", "root"), stdout=subprocess.PIPE,
+        meta_dir = subprocess.run(
+            ("hg", "root", "--dotdir"), stdout=subprocess.PIPE,
             encoding='utf-8',
             check=True
-        ).stdout.rstrip(), '.hg')
+        ).stdout.rstrip()
 
     base_dir = os.path.join(meta_dir, "ghstack", "log")
 
