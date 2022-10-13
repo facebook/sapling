@@ -151,8 +151,19 @@ def maybegiturl(url):
     For now url schemes "git", "git+file", "git+ftp", "git+http", "git+https",
     "git+ssh" are considered git urls. The "git+" part will be stripped.
 
+    scp-like path "user@host:path" will be converted to "ssh://user@host/path".
+
     git:// and https:// urls are considered git unconditionally.
     """
+    # See https://git-scm.com/docs/git-clone#_git_urls
+    # user@host.xz:path/to/repo => ssh://user@host.xz/path/to/repo
+    if ":" in url and "//" not in url:
+        before, after = url.split(":", 1)
+        from . import hg
+
+        if "/" not in before and before not in hg.schemes:
+            url = f"git+ssh://{before}/{after}"
+
     parsed = util.url(url)
     if parsed.scheme in {"git", "https"}:
         return url

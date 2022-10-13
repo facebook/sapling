@@ -265,6 +265,26 @@ Test clone with flags (--noupdate, --updaterev):
   4899b7b71a9c remote/foo alpha3
   $ cd ..
 
+Test clone using scp-like path:
+
+#if execbit no-windows
+  $ cat > "$TESTTMP/ssh.sh" << 'EOF'
+  > #!/bin/sh
+  > # $GIT_SSH host "git-upload-pack '/path/to/repo'"
+  > ssh() {
+  >   local cmd=$1
+  >   local path=$(eval echo $2)  # unquote '/path' to /path
+  >   $cmd "$TESTTMP$path"
+  > }
+  > ssh $2
+  > EOF
+  $ chmod +x "$TESTTMP/ssh.sh"
+  $ GIT_SSH="$TESTTMP/ssh.sh" hg clone localhost:gitrepo2 cloned-gitrepo2
+  $ hg status --cwd cloned-gitrepo2
+  $ hg paths --cwd cloned-gitrepo2
+  default = ssh://localhost/gitrepo2
+#endif
+
 Test push:
 
   $ cd "$TESTTMP/clonetest/cloned1"
