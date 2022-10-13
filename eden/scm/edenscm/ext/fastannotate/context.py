@@ -38,7 +38,7 @@ def _getflog(repo, path):
 
 
 # extracted from mercurial.context.basefilectx.annotate
-def _parents(f, follow=True):
+def _parents(f, follow: bool = True):
     # Cut _descendantrev here to mitigate the penalty of lazy linkrev
     # adjustment. Otherwise, p._adjustlinkrev() would walk changelog
     # from the topmost introrev (= srcrev) down to p.linkrev() if it
@@ -86,7 +86,7 @@ def _pair(parent, child, blocks):
 _revsingle = util.lrucachefunc(scmutil.revsingle)
 
 
-def resolvefctx(repo, rev, path, resolverev=False, adjustctx=None):
+def resolvefctx(repo, rev: int, path, resolverev: bool = False, adjustctx=None):
     """(repo, str, str) -> fctx
 
     get the filectx object from repo, rev, path, in an efficient way.
@@ -140,7 +140,7 @@ def encodedir(path, dotdir):
     )
 
 
-def hashdiffopts(diffopts):
+def hashdiffopts(diffopts) -> str:
     diffoptstr = str(
         sorted((k, getattr(diffopts, k)) for k in mdiff.diffopts.defaults.keys())
     ).encode("utf-8")
@@ -741,7 +741,7 @@ class _annotatecontext(object):
         return resolvefctx(self.repo, rev, (path or self.path), **kwds)
 
 
-def _unlinkpaths(paths):
+def _unlinkpaths(paths) -> None:
     """silent, best-effort unlink"""
     for path in paths:
         try:
@@ -796,7 +796,9 @@ class pathhelper(object):
 
 
 @contextlib.contextmanager
-def annotatecontext(repo, path, opts=defaultopts, rebuild=False):
+def annotatecontext(
+    repo, path, opts: annotateopts = defaultopts, rebuild: bool = False
+):
     """context needed to perform (fast) annotate on a file
 
     an annotatecontext of a single file consists of two structures: the
@@ -832,7 +834,9 @@ def annotatecontext(repo, path, opts=defaultopts, rebuild=False):
             actx.close()
 
 
-def fctxannotatecontext(fctx, follow=True, diffopts=None, rebuild=False):
+def fctxannotatecontext(
+    fctx, follow: bool = True, diffopts=None, rebuild: bool = False
+):
     """like annotatecontext but get the context from a fctx. convenient when
     used in fctx.annotate
     """
