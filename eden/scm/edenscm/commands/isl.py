@@ -14,6 +14,8 @@ from typing import List
 from .. import error
 from ..i18n import _
 from ..pycompat import iswindows
+
+from . import util
 from .cmdtable import command
 
 DEFAULT_PORT = 3011
@@ -87,6 +89,8 @@ def launch_server(
         ui.status_err(_("launching web server for Interactive Smartlog...\n"))
         ui.status_err(_("re-run with --foreground and check VPN if slow to start.\n"))
     args = ["--port", str(port)]
+    args.append("--command")
+    args.append(util.hgcmd()[0])
     if not open_isl:
         args.append("--no-open")
     if json_output:
