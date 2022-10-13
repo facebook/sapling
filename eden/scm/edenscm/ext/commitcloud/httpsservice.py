@@ -175,10 +175,10 @@ class _HttpsCommitCloudService(baseservice.BaseService):
                 if resp.status == int(httplib.FORBIDDEN):
                     raise ccerror.RegistrationError(self.ui, _("forbidden client"))
                 if resp.status == int(httplib.BAD_REQUEST):
-                    raise ccerror.BadRequestError(self.ui, resp.reason)
+                    raise ccerror.BadRequestError(self.ui, resp.reason.decode("utf-8"))
                 if resp.status != int(httplib.OK):
                     raise ccerror.ServiceError(
-                        self.ui, "%d %s" % (resp.status, resp.reason)
+                        self.ui, "%d %s" % (resp.status, resp.reason.decode("utf-8"))
                     )
                 if resp.getheader("Content-Encoding") == "gzip":
                     resp = gzip.GzipFile(fileobj=util.stringio(resp.read()))
