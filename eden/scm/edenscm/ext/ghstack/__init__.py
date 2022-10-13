@@ -207,14 +207,17 @@ def _create_ghstack_context(ui):
     elif ui.verbose:
         stderr_level = logging.INFO
 
+    cli = util.hgcmd()[0]
+
     ghstack.logs.setup(
         stderr_level=stderr_level,
+        sapling_cli=cli,
     )
 
     ghstack.logs.rotate()
 
     conf = ghstack.config.read_config()
-    sh = ghstack.eden_shell.EdenShell(conf=conf, sapling_cli=util.hgcmd()[0])
+    sh = ghstack.eden_shell.EdenShell(conf=conf, sapling_cli=cli)
     github = ghstack.github_real.RealGitHubEndpoint(
         oauth_token=conf.github_oauth,
         proxy=conf.proxy,

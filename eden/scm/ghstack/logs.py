@@ -89,8 +89,15 @@ def manager(*, debug: bool = False) -> Iterator[None]:
         record_exception(e)
         sys.exit(1)
 
+_sapling_cli = "sl"
+
 def setup(stderr_level: int = logging.WARN,
-          file_level: int = logging.DEBUG):
+          file_level: int = logging.DEBUG,
+          sapling_cli: str = _sapling_cli):
+
+    global _sapling_cli
+    _sapling_cli = sapling_cli
+
     # Logging structure: there is one logger (the root logger) and in
     # processes all events. There are two handlers: stderr and file
     # handler.
@@ -134,7 +141,7 @@ def base_dir() -> str:
         ).stdout.rstrip()
     except subprocess.CalledProcessError:
         meta_dir = subprocess.run(
-            ("hg", "root", "--dotdir"), stdout=subprocess.PIPE,
+            (_sapling_cli, "root", "--dotdir"), stdout=subprocess.PIPE,
             encoding='utf-8',
             check=True
         ).stdout.rstrip()
