@@ -30,6 +30,7 @@ from .. import (
     bookmarks,
     bundle2,
     changegroup,
+    cloneuri,
     cmdutil,
     context,
     copies,
@@ -1543,17 +1544,14 @@ def cat(ui, repo, file1, *pats, **opts):
             True,
             _("use remotefilelog (only turn it off in legacy tests) (ADVANCED)"),
         ),
-        ("", "git", False, _("use git protocol (EXPERIMENTAL)")),
+        ("", "git", None, _("use git protocol (EXPERIMENTAL)")),
     ],
     norepo=True,
 )
 def clone(ui, source, dest=None, **opts):
     if opts.get("noupdate") and opts.get("updaterev"):
         raise error.Abort(_("cannot specify both --noupdate and --updaterev"))
-    if opts.get("git"):
-        giturl = source
-    else:
-        giturl = git.maybegiturl(source)
+    giturl = cloneuri.determine_git_uri(opts.get("git"), source)
     if giturl is not None:
         if opts.get("noupdate"):
             update = False

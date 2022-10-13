@@ -134,6 +134,7 @@ from edenscm import (
     bundle2,
     changegroup,
     changelog2,
+    cloneuri,
     cmdutil,
     commands,
     context,
@@ -141,7 +142,6 @@ from edenscm import (
     error,
     exchange,
     extensions,
-    git,
     hg,
     localrepo,
     match,
@@ -286,10 +286,7 @@ def wrappackers():
 
 def cloneshallow(orig, ui, source, *args, **opts):
     # skip for (full) git repos
-    if opts.get("git"):
-        giturl = source
-    else:
-        giturl = git.maybegiturl(source)
+    giturl = cloneuri.determine_git_uri(opts.get("git"), source)
     if opts.get("shallow") and giturl is None:
         repos = []
 
