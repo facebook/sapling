@@ -12,7 +12,6 @@ use std::sync::Arc;
 
 use bytes::Bytes;
 use context::CoreContext;
-use futures::future;
 use futures::stream;
 use futures::stream::FuturesOrdered;
 use futures::stream::StreamExt;
@@ -29,6 +28,7 @@ use mononoke_api::ChangesetDiffItem;
 use mononoke_api::ChangesetFileOrdering;
 use mononoke_api::ChangesetHistoryOptions;
 use mononoke_api::ChangesetId;
+use mononoke_api::ChangesetPathContentContext;
 use mononoke_api::ChangesetPathDiffContext;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_api::CopyInfo;
@@ -198,6 +198,28 @@ impl CommitFileDiffsItem {
             base_path: self.path_diff_context.base().map(|p| p.path().to_string()),
             other_path: self.path_diff_context.other().map(|p| p.path().to_string()),
             ..Default::default()
+        }
+    }
+
+    async fn total_size(&self) -> Result<u64, errors::ServiceError> {
+        if self.placeholder {
+            Ok(0)
+        } else {
+            async fn file_size(
+                path: Option<&ChangesetPathContentContext>,
+            ) -> Result<u64, errors::ServiceError> {
+                if let Some(path) = path {
+                    if let Some(file) = path.file().await? {
+                        return Ok(file.metadata().await?.total_size);
+                    }
+                }
+                Ok(0)
+            }
+            let (base_size, other_size) = try_join!(
+                file_size(self.path_diff_context.base()),
+                file_size(self.path_diff_context.other())
+            )?;
+            Ok(base_size.saturating_add(other_size))
         }
     }
 
@@ -445,32 +467,17 @@ impl SourceControlServiceImpl {
             .collect::<Result<Vec<_>, errors::ServiceError>>()?;
 
         // Check the total file size limit
-        let non_placeholder_paths = items.iter().flat_map(|item| {
-            if item.placeholder {
-                Vec::new()
-            } else {
-                item.path_diff_context
-                    .base()
-                    .into_iter()
-                    .chain(item.path_diff_context.other())
-                    .collect()
-            }
-        });
+        let total_input_size = stream::iter(items.iter())
+            .map(|item| item.total_size())
+            .boxed() // Prevents compiler error
+            .buffered(100)
+            .try_fold(
+                0u64,
+                |acc, size| async move { Ok(acc.saturating_add(size)) },
+            )
+            .await?;
 
-        let total_input_size: u64 =
-            future::try_join_all(non_placeholder_paths.map(|path| async move {
-                let r: Result<_, errors::ServiceError> = if let Some(file) = path.file().await? {
-                    Ok(file.metadata().await?.total_size)
-                } else {
-                    Ok(0)
-                };
-                r
-            }))
-            .await?
-            .into_iter()
-            .sum();
-
-        if total_input_size as i64 > thrift::consts::COMMIT_FILE_DIFFS_SIZE_LIMIT {
+        if total_input_size > thrift::consts::COMMIT_FILE_DIFFS_SIZE_LIMIT as u64 {
             Err(errors::diff_input_too_big(total_input_size))?;
         }
 
