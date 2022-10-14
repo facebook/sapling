@@ -285,6 +285,13 @@ Test clone using scp-like path:
   default = ssh://localhost/gitrepo2
 #endif
 
+Test clone when repo already exists:
+
+  $ touch "$TESTTMP/already_exists"
+  $ hg clone -q --git "$TESTTMP/gitrepo" "$TESTTMP/already_exists"
+  abort: destination '$TESTTMP/already_exists' already exists
+  [255]
+
 Test push:
 
   $ cd "$TESTTMP/clonetest/cloned1"
