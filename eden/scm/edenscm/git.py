@@ -114,7 +114,7 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
             if pullnames is None:
                 pullnames = bookmod.selectivepullbookmarknames(repo)
             pull(repo, "default", names=pullnames)
-    except Exception:
+    except (Exception, KeyboardInterrupt):
         repo = None
         shutil.rmtree(destpath, ignore_errors=True)
         raise

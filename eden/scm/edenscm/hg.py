@@ -532,7 +532,7 @@ def clone(
             if len(mayberevs) == 1:
                 rev = rev or mayberevs[0]
             srcpeer = peer(destrepo.ui if destrepo else ui, peeropts, source)
-    except Exception:
+    except (Exception, KeyboardInterrupt):
         if destcreated:
             # Clean up the entire repo directory we made.
             shutil.rmtree(dest, True)
