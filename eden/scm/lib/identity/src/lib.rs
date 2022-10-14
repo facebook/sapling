@@ -226,7 +226,7 @@ pub mod idents {
     pub static ALL_IDENTITIES: &[Identity] = &[HG, SL];
 
     /// Default `Identity` based on the current executable name.
-    pub static DEFAULT: Lazy<Identity> = Lazy::new(|| {
+    pub static DEFAULT: Lazy<RwLock<Identity>> = Lazy::new(|| {
         let path = std::env::current_exe().expect("current_exe() should not fail");
         let file_name = path
             .file_name()
@@ -253,29 +253,33 @@ pub mod idents {
             reason,
             "identity from argv0"
         );
-        ident
+        RwLock::new(ident)
     });
 }
 
 #[cfg(feature = "sl_only")]
 pub mod idents {
     use super::*;
-    pub static DEFAULT: Lazy<Identity> = Lazy::new(|| SL);
+    pub static DEFAULT: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(SL));
     pub static ALL_IDENTITIES: &[Identity] = &[SL];
 }
 
 #[cfg(test)]
 pub mod idents {
     use super::*;
-    pub static DEFAULT: Lazy<Identity> = Lazy::new(|| HG);
+    pub static DEFAULT: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(HG));
     pub static ALL_IDENTITIES: &[Identity] = &[HG, SL, TEST];
 }
 
-pub static IDENTITY: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(*idents::DEFAULT));
+use idents::DEFAULT;
+
+pub fn default() -> Identity {
+    *DEFAULT.read()
+}
 
 /// CLI name to be used in user facing messaging.
 pub fn cli_name() -> &'static str {
-    IDENTITY.read().cli_name()
+    DEFAULT.read().cli_name()
 }
 
 /// Sniff the given path for the existence of "{path}/.hg" or
@@ -332,7 +336,7 @@ pub fn sniff_root(path: &Path) -> Result<Option<(PathBuf, Identity)>> {
 }
 
 pub fn env_var(var_suffix: &str) -> Option<Result<String, VarError>> {
-    let current_id = IDENTITY.read();
+    let current_id = DEFAULT.read();
 
     // Always prefer current identity.
     if let Some(res) = current_id.env_var(var_suffix) {
@@ -370,7 +374,7 @@ pub fn sniff_env() -> Identity {
         }
     }
 
-    *idents::DEFAULT
+    *DEFAULT.read()
 }
 
 #[cfg(test)]
@@ -387,9 +391,9 @@ mod test {
 
         {
             let root = dir.path().join("default");
-            fs::create_dir_all(root.join(idents::DEFAULT.dot_dir()))?;
+            fs::create_dir_all(root.join(DEFAULT.read().dot_dir()))?;
 
-            assert_eq!(sniff_dir(&root)?.unwrap(), *idents::DEFAULT);
+            assert_eq!(sniff_dir(&root)?.unwrap(), *DEFAULT.read());
         }
 
         {
@@ -410,7 +414,7 @@ mod test {
         #[cfg(unix)]
         {
             let root = dir.path().join("bad_perms");
-            let dot_dir = root.join(idents::DEFAULT.dot_dir());
+            let dot_dir = root.join(DEFAULT.read().dot_dir());
             fs::create_dir_all(&dot_dir)?;
 
             // Sanity.

@@ -20,7 +20,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
     m.add_class::<identity>(py)?;
     m.add(py, "all", py_fn!(py, all()))?;
-    m.add(py, "current", py_fn!(py, current()))?;
     m.add(py, "default", py_fn!(py, default()))?;
     m.add(py, "sniffenv", py_fn!(py, sniff_env()))?;
     m.add(py, "sniffroot", py_fn!(py, sniff_root(path: PyPathBuf)))?;
@@ -89,12 +88,8 @@ fn try_env_var(py: Python, suffix: PyString) -> PyResult<Option<String>> {
         .map_pyerr(py)
 }
 
-fn current(py: Python) -> PyResult<identity> {
-    identity::create_instance(py, rsident::IDENTITY.read().clone())
-}
-
 fn default(py: Python) -> PyResult<identity> {
-    identity::create_instance(py, rsident::idents::DEFAULT.clone())
+    identity::create_instance(py, rsident::default())
 }
 
 fn all(py: Python) -> PyResult<Vec<identity>> {

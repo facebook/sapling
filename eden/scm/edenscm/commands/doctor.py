@@ -64,7 +64,7 @@ def doctor(ui, **opts) -> typing.Optional[int]:
         runedenfsdoctor(ui)
         return
 
-    ident = identity.sniffdir(repopath) or identity.current()
+    ident = identity.sniffdir(repopath) or identity.default()
     repohgpath = os.path.join(repopath, ident.dotdir())
     vfs = vfsmod.vfs(repohgpath)
     sharedhgpath = vfs.tryreadutf8("sharedpath").rstrip("\n") or repohgpath

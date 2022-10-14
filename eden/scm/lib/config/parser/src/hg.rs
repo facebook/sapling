@@ -884,8 +884,6 @@ pub fn read_repo_name_from_disk(shared_dot_hg_path: &Path) -> io::Result<String>
 
 #[cfg(test)]
 mod tests {
-    use identity::idents;
-    use idents::DEFAULT as IDENTITY;
     use once_cell::sync::Lazy;
     use tempdir::TempDir;
 
@@ -893,10 +891,12 @@ mod tests {
     use crate::config::tests::write_file;
     use crate::lock_env;
 
-    static CONFIG_ENV_VAR: Lazy<&str> = Lazy::new(|| IDENTITY.env_name_static("CONFIG").unwrap());
-    static HGPLAIN: Lazy<&str> = Lazy::new(|| IDENTITY.env_name_static("PLAIN").unwrap());
+    static CONFIG_ENV_VAR: Lazy<&str> =
+        Lazy::new(|| identity::default().env_name_static("CONFIG").unwrap());
+    static HGPLAIN: Lazy<&str> =
+        Lazy::new(|| identity::default().env_name_static("PLAIN").unwrap());
     static HGPLAINEXCEPT: Lazy<&str> =
-        Lazy::new(|| IDENTITY.env_name_static("PLAINEXCEPT").unwrap());
+        Lazy::new(|| identity::default().env_name_static("PLAINEXCEPT").unwrap());
 
     #[test]
     fn test_basic_hgplain() {
@@ -995,7 +995,7 @@ mod tests {
 
         let mut cfg = ConfigSet::new();
 
-        let identity = idents::DEFAULT.clone();
+        let identity = identity::default().clone();
         cfg.load_user(Options::new(), &identity);
         assert!(
             cfg.sections().is_empty(),
@@ -1003,7 +1003,7 @@ mod tests {
             cfg.sections()
         );
 
-        let identity = idents::DEFAULT.clone();
+        let identity = identity::default().clone();
         cfg.load_system(Options::new(), &identity);
         assert_eq!(cfg.get("x", "a"), Some("1".into()));
         assert_eq!(cfg.get("y", "b"), Some("2".into()));

@@ -52,7 +52,7 @@ class pathauditor(object):
         self.root = root
 
         # Fall back to global identity for doc tests.
-        ident = identity.sniffdir(root) or identity.current()
+        ident = identity.sniffdir(root) or identity.default()
         self.dotdir = ident.dotdir()
         self.dotdirdot = self.dotdir + "."
 

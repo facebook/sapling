@@ -425,7 +425,7 @@ def _checkexec(path: str) -> bool:
 
     try:
         EXECFLAGS = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
-        ident = identity.sniffdir(path) or identity.current()
+        ident = identity.sniffdir(path) or identity.default()
         cachedir = os.path.join(path, ident.dotdir(), "cache")
         if os.path.isdir(cachedir):
             checkisexec = os.path.join(cachedir, "checkisexec")
@@ -493,7 +493,7 @@ def _checklink(path: str) -> bool:
     # mktemp is not racy because symlink creation will fail if the
     # file already exists
     while True:
-        ident = identity.sniffdir(path) or identity.current()
+        ident = identity.sniffdir(path) or identity.default()
         cachedir = os.path.join(path, ident.dotdir(), "cache")
         checklink = os.path.join(cachedir, "checklink")
         # try fast path, read only

@@ -16,7 +16,6 @@ from bindings import identity
 
 sniffroot = identity.sniffroot
 sniffenv = identity.sniffenv
-current = identity.current
 default = identity.default
 
 
