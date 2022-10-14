@@ -20,6 +20,12 @@ use parking_lot::RwLock;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Identity {
+    user: UserIdentity,
+    repo: RepoIdentity,
+}
+
+#[derive(PartialEq, Debug, Clone, Copy)]
+struct UserIdentity {
     /// Name of the binary. Used for showing help messages
     ///
     /// Example: `Checkout failed. Resume with 'sl checkout --continue'`
@@ -30,10 +36,6 @@ pub struct Identity {
 
     /// Full name of the product
     long_product_name: &'static str,
-
-    /// Metadata directory of the current identity. If this directory exists in the current repo, it
-    /// implies that the repo is using this identity.
-    dot_dir: &'static str,
 
     /// Prefix of environment variables related to current repo. To be used in the future.
     env_prefix: &'static str,
@@ -52,11 +54,6 @@ pub struct Identity {
     /// User config file names to look for inside of `config_directory`.
     config_user_files: &'static [&'static str],
 
-    /// Config file for the repo; located inside of `dot_dir`.
-    ///
-    /// Examples: `.sl/config`, `.hg/hgrc`
-    config_repo_file: &'static str,
-
     /// Disables any configuration settings that might change the default output, including but not
     /// being limited to encoding, defaults, verbose mode, debug mode, quiet mode, and tracebacks
     ///
@@ -71,38 +68,50 @@ pub struct Identity {
     scripting_except_env_var: &'static str,
 }
 
+#[derive(PartialEq, Debug, Clone, Copy)]
+struct RepoIdentity {
+    /// Metadata directory of the current identity. If this directory exists in the current repo, it
+    /// implies that the repo is using this identity.
+    dot_dir: &'static str,
+
+    /// Config file for the repo; located inside of `dot_dir`.
+    ///
+    /// Examples: `.sl/config`, `.hg/hgrc`
+    config_repo_file: &'static str,
+}
+
 impl Identity {
     pub fn cli_name(&self) -> &'static str {
-        self.cli_name
+        self.user.cli_name
     }
 
     pub fn product_name(&self) -> &'static str {
-        self.product_name
+        self.user.product_name
     }
 
     pub fn long_product_name(&self) -> &'static str {
-        self.long_product_name
+        self.user.long_product_name
     }
 
     pub fn dot_dir(&self) -> &'static str {
-        self.dot_dir
+        self.repo.dot_dir
     }
 
     pub fn config_repo_file(&self) -> &'static str {
-        self.config_repo_file
+        self.repo.config_repo_file
     }
 
     pub fn env_prefix(&self) -> &'static str {
-        self.env_prefix
+        self.user.env_prefix
     }
 
     pub const fn env_name_static(&self, suffix: &str) -> Option<&'static str> {
         // Use byte slice to workaround const_fn limitation.
         let bsuffix = suffix.as_bytes();
         match bsuffix {
-            b"CONFIG" => Some(self.scripting_config_env_var),
-            b"PLAIN" => Some(self.scripting_env_var),
-            b"PLAINEXCEPT" => Some(self.scripting_except_env_var),
+            b"CONFIG" => Some(self.user.scripting_config_env_var),
+            b"PLAIN" => Some(self.user.scripting_env_var),
+            b"PLAINEXCEPT" => Some(self.user.scripting_except_env_var),
             _ => None,
         }
     }
@@ -110,7 +119,7 @@ impl Identity {
     pub fn env_name(&self, suffix: &str) -> Cow<'static, str> {
         match self.env_name_static(suffix) {
             Some(name) => Cow::Borrowed(name),
-            None => Cow::Owned([self.env_prefix, suffix].concat()),
+            None => Cow::Owned([self.user.env_prefix, suffix].concat()),
         }
     }
 
@@ -124,7 +133,7 @@ impl Identity {
     }
 
     pub fn user_config_paths(&self) -> Vec<PathBuf> {
-        let config_dir = match self.config_directory {
+        let config_dir = match self.user.config_directory {
             None => match dirs::home_dir() {
                 None => return Vec::new(),
                 Some(hd) => hd,
@@ -135,7 +144,8 @@ impl Identity {
             },
         };
 
-        self.config_user_files
+        self.user
+            .config_user_files
             .iter()
             .map(|f| config_dir.join(f))
             .collect()
@@ -144,55 +154,70 @@ impl Identity {
 
 impl std::fmt::Display for Identity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.cli_name)
+        write!(f, "{}", self.user.cli_name)
     }
 }
 
 const HG: Identity = Identity {
-    cli_name: "hg",
-    product_name: "Mercurial",
-    long_product_name: "Mercurial Distributed SCM",
-    dot_dir: ".hg",
-    env_prefix: "HG",
-    config_directory: None,
-    config_user_files: &[
-        ".hgrc",
-        #[cfg(windows)]
-        "mercurial.ini",
-    ],
-    config_repo_file: "hgrc",
-    scripting_env_var: "HGPLAIN",
-    scripting_config_env_var: "HGRCPATH",
-    scripting_except_env_var: "HGPLAINEXCEPT",
+    user: UserIdentity {
+        cli_name: "hg",
+        product_name: "Mercurial",
+        long_product_name: "Mercurial Distributed SCM",
+        env_prefix: "HG",
+        config_directory: None,
+        config_user_files: &[
+            ".hgrc",
+            #[cfg(windows)]
+            "mercurial.ini",
+        ],
+        scripting_env_var: "HGPLAIN",
+        scripting_config_env_var: "HGRCPATH",
+        scripting_except_env_var: "HGPLAINEXCEPT",
+    },
+
+    repo: RepoIdentity {
+        dot_dir: ".hg",
+        config_repo_file: "hgrc",
+    },
 };
 
 const SL: Identity = Identity {
-    cli_name: "sl",
-    product_name: "Sapling",
-    long_product_name: "Sapling SCM",
-    dot_dir: ".sl",
-    env_prefix: "SL",
-    config_directory: Some("sapling"),
-    config_user_files: &["sapling.conf"],
-    config_repo_file: "config",
-    scripting_env_var: "SL_AUTOMATION",
-    scripting_config_env_var: "SL_CONFIG_PATH",
-    scripting_except_env_var: "SL_AUTOMATION_EXCEPT",
+    user: UserIdentity {
+        cli_name: "sl",
+        product_name: "Sapling",
+        long_product_name: "Sapling SCM",
+        env_prefix: "SL",
+        config_directory: Some("sapling"),
+        config_user_files: &["sapling.conf"],
+        scripting_env_var: "SL_AUTOMATION",
+        scripting_config_env_var: "SL_CONFIG_PATH",
+        scripting_except_env_var: "SL_AUTOMATION_EXCEPT",
+    },
+
+    repo: RepoIdentity {
+        dot_dir: ".sl",
+        config_repo_file: "config",
+    },
 };
 
 #[cfg(test)]
 const TEST: Identity = Identity {
-    cli_name: "test",
-    product_name: "Test",
-    long_product_name: "Testing SCM",
-    dot_dir: ".test",
-    env_prefix: "TEST",
-    config_directory: None,
-    config_user_files: &["test.conf"],
-    config_repo_file: "config",
-    scripting_env_var: "TEST_SCRIPT",
-    scripting_config_env_var: "TEST_RC_PATH",
-    scripting_except_env_var: "TEST_SCRIPT_EXCEPT",
+    user: UserIdentity {
+        cli_name: "test",
+        product_name: "Test",
+        long_product_name: "Testing SCM",
+        env_prefix: "TEST",
+        config_directory: None,
+        config_user_files: &["test.conf"],
+        scripting_env_var: "TEST_SCRIPT",
+        scripting_config_env_var: "TEST_RC_PATH",
+        scripting_except_env_var: "TEST_SCRIPT_EXCEPT",
+    },
+
+    repo: RepoIdentity {
+        dot_dir: ".test",
+        config_repo_file: "config",
+    },
 };
 
 #[cfg(all(not(feature = "sl_only"), not(test)))]
@@ -209,7 +234,7 @@ pub mod idents {
         let file_name = file_name.to_string_lossy();
         let (ident, reason) = (|| {
             for ident in ALL_IDENTITIES {
-                if file_name.contains(ident.cli_name) {
+                if file_name.contains(ident.user.cli_name) {
                     return (*ident, "contains");
                 }
             }
@@ -223,7 +248,7 @@ pub mod idents {
             (SL, "fallback")
         })();
         tracing::info!(
-            identity = ident.cli_name,
+            identity = ident.user.cli_name,
             argv0 = file_name.as_ref(),
             reason,
             "identity from argv0"
@@ -250,7 +275,7 @@ pub static IDENTITY: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(*idents::
 
 /// CLI name to be used in user facing messaging.
 pub fn cli_name() -> &'static str {
-    IDENTITY.read().cli_name
+    IDENTITY.read().cli_name()
 }
 
 /// Sniff the given path for the existence of "{path}/.hg" or
@@ -258,7 +283,7 @@ pub fn cli_name() -> &'static str {
 /// Only permissions errors are propagated.
 pub fn sniff_dir(path: &Path) -> Result<Option<Identity>> {
     for id in idents::ALL_IDENTITIES {
-        let test_path = path.join(id.dot_dir);
+        let test_path = path.join(id.repo.dot_dir);
         tracing::trace!(path=%path.display(), "sniffing dir");
         match fs::metadata(&test_path) {
             Ok(md) if md.is_dir() => {
@@ -338,8 +363,8 @@ pub fn try_env_var(var_suffix: &str) -> Result<String, VarError> {
 pub fn sniff_env() -> Identity {
     if let Ok(id_name) = try_env_var("IDENTITY") {
         for id in idents::ALL_IDENTITIES {
-            if id.cli_name == id_name {
-                tracing::info!(identity = id.cli_name, "sniffed identity from env");
+            if id.user.cli_name == id_name {
+                tracing::info!(identity = id.user.cli_name, "sniffed identity from env");
                 return *id;
             }
         }
