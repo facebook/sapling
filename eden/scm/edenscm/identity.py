@@ -15,7 +15,6 @@ import functools
 from bindings import identity
 
 sniffroot = identity.sniffroot
-sniffenv = identity.sniffenv
 default = identity.default
 
 

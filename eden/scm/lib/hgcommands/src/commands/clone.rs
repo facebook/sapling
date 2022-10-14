@@ -306,7 +306,7 @@ fn try_clone_metadata(
     match clone_metadata(ctx, logger, config, reponame, destination) {
         Err(e) => {
             let removal_dir = if dest_preexists {
-                let ident = identity::sniff_dir(destination)?.unwrap_or_else(identity::sniff_env);
+                let ident = identity::sniff_dir(destination)?.unwrap_or_else(identity::default);
                 destination.join(ident.dot_dir())
             } else {
                 destination.to_path_buf()

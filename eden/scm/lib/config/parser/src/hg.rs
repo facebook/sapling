@@ -269,7 +269,7 @@ impl ConfigSetHgExt for ConfigSet {
         let ident = repo_path
             .map(|p| identity::must_sniff_dir(p).map_err(|e| Errors(vec![Error::Other(e)])))
             .transpose()?;
-        let ident = ident.unwrap_or_else(identity::sniff_env);
+        let ident = ident.unwrap_or_else(identity::default);
 
         let repo_path = repo_path.map(|p| p.join(ident.dot_dir()));
 

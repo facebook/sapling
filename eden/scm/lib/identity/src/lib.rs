@@ -261,6 +261,18 @@ fn compute_default() -> Identity {
         .expect("file_name() on current_exe() should not fail");
     let file_name = file_name.to_string_lossy();
     let (ident, reason) = (|| {
+        let env_override = idents::ALL_IDENTITIES
+            .iter()
+            .find_map(|id| id.env_var("IDENTITY"))
+            .map(|v| v.ok())
+            .flatten();
+
+        for ident in idents::ALL_IDENTITIES {
+            if Some(ident.user.cli_name) == env_override.as_deref() {
+                return (*ident, "env var");
+            }
+        }
+
         for ident in idents::ALL_IDENTITIES {
             if file_name.contains(ident.user.cli_name) {
                 return (*ident, "contains");
@@ -373,19 +385,6 @@ pub fn try_env_var(var_suffix: &str) -> Result<String, VarError> {
         Some(result) => result,
         None => Err(VarError::NotPresent),
     }
-}
-
-pub fn sniff_env() -> Identity {
-    if let Ok(id_name) = try_env_var("IDENTITY") {
-        for id in idents::ALL_IDENTITIES {
-            if id.user.cli_name == id_name {
-                tracing::info!(identity = id.user.cli_name, "sniffed identity from env");
-                return *id;
-            }
-        }
-    }
-
-    *DEFAULT.read()
 }
 
 #[cfg(test)]

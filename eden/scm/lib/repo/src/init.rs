@@ -29,7 +29,7 @@ pub fn init_hg_repo(
         create_dir(root_path)?;
     }
 
-    let ident = identity::sniff_env();
+    let ident = identity::default();
 
     let hg_path = root_path.join(ident.dot_dir());
     if hg_path.exists() {

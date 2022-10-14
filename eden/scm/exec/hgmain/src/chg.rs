@@ -30,7 +30,7 @@ fn chg_main_wrapper(args: Vec<CString>, envs: Vec<CString>) -> i32 {
     argv.push(std::ptr::null_mut());
     let mut envp: Vec<_> = envs.into_iter().map(|x| x.into_raw()).collect();
     envp.push(std::ptr::null_mut());
-    let name = identity::sniff_env().cli_name();
+    let name = identity::default().cli_name();
     let name = CString::new(name).unwrap();
     let rc = unsafe {
         chg_main(

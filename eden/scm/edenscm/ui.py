@@ -255,7 +255,7 @@ class ui(object):
 
             self.metrics = metrics.metrics(self)
 
-            self.identity = identity.sniffenv()
+            self.identity = identity.default()
 
         allowed = self.configlist("experimental", "exportableenviron")
         if "*" in allowed:

@@ -208,7 +208,7 @@ impl PathInfo {
 impl EagerRepo {
     /// Open an [`EagerRepo`] at the given directory. Create an empty repo on demand.
     pub fn open(dir: &Path) -> Result<Self> {
-        let ident = identity::sniff_dir(dir)?.unwrap_or_else(identity::sniff_env);
+        let ident = identity::sniff_dir(dir)?.unwrap_or_else(identity::default);
         // Attempt to match directory layout of a real client repo.
         let hg_dir = dir.join(ident.dot_dir());
         let store_dir = hg_dir.join("store");
@@ -570,7 +570,7 @@ mod tests {
 
         let ident = identity::sniff_dir(dir)
             .unwrap()
-            .unwrap_or_else(identity::sniff_env);
+            .unwrap_or_else(identity::default);
         fs::write(
             dir.join(ident.dot_dir()).join("requires"),
             "store\nremotefilelog\n",

@@ -62,7 +62,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, config: &mut ConfigSet) -> Result<u8> {
     }
     .context("error cloning segmented changelog")?;
 
-    let ident = identity::sniff_env();
+    let ident = identity::default();
     let dot_path = destination.join(ident.dot_dir());
     let namedag_path = IndexedLogNameDagPath(dot_path.join("store/segments/v1"));
     let mut namedag = namedag_path

@@ -23,7 +23,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(py, "default", py_fn!(py, default()))?;
     m.add(py, "envvar", py_fn!(py, try_env_var(suffix: PyString)))?;
     m.add(py, "resetdefault", py_fn!(py, reset_default()))?;
-    m.add(py, "sniffenv", py_fn!(py, sniff_env()))?;
     m.add(py, "sniffroot", py_fn!(py, sniff_root(path: PyPathBuf)))?;
     m.add(py, "sniffdir", py_fn!(py, sniff_dir(path: PyPathBuf)))?;
 
@@ -61,10 +60,6 @@ py_class!(pub class identity |py| {
         Ok(self.ident(py).long_product_name().to_string())
     }
 });
-
-fn sniff_env(py: Python) -> PyResult<identity> {
-    identity::create_instance(py, rsident::sniff_env())
-}
 
 fn sniff_root(py: Python, path: PyPathBuf) -> PyResult<Option<(PyPathBuf, identity)>> {
     Ok(match rsident::sniff_root(path.as_path()).map_pyerr(py)? {
