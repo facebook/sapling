@@ -474,53 +474,41 @@ impl SourceControlServiceImpl {
             Err(errors::diff_input_too_big(total_input_size))?;
         }
 
-        if let Some(diff_size_limit) = params.diff_size_limit {
-            let mut stopped_at_pair = None;
+        let context = check_range_and_convert("context", params.context, 0..)?;
+        let diff_size_limit: Option<usize> = params
+            .diff_size_limit
+            .map(|limit| check_range_and_convert("diff_size_limit", limit, 0..))
+            .transpose()?;
+        let mut size_so_far = 0usize;
+        let mut stopped_at_pair = None;
 
-            let path_diffs = stream::iter(items)
-                .map(|item| async move {
-                    let element = item
-                        .response_element(params.format, params.context as usize)
-                        .await?;
-                    Ok::<_, errors::ServiceError>((item, element))
-                })
-                .boxed() // Prevents compiler error
-                .buffered(20)
-                .scan(0i64, |size_so_far, response| match response {
-                    Ok((item, element)) => {
-                        *size_so_far += element.size() as i64;
-
-                        if *size_so_far > diff_size_limit {
-                            stopped_at_pair = Some(item.to_stopped_at_pair());
-                            future::ready(None)
-                        } else {
-                            future::ready(Some(Ok(element.into_response_for_item(&item))))
-                        }
-                    }
-                    Err(e) => future::ready(Some(Err(e))),
-                })
-                .try_collect()
-                .await?;
-
-            Ok(thrift::CommitFileDiffsResponse {
-                path_diffs,
-                stopped_at_pair,
-                ..Default::default()
+        let path_diffs = stream::iter(items)
+            .map(|item| async move {
+                let element = item.response_element(params.format, context).await?;
+                Ok::<_, errors::ServiceError>((item, element))
             })
-        } else {
-            let path_diffs = future::try_join_all(items.into_iter().map(|item| async move {
-                let element = item
-                    .response_element(params.format, params.context as usize)
-                    .await?;
-                Ok::<_, errors::ServiceError>(element.into_response_for_item(&item))
-            }))
+            .boxed() // Prevents compiler error
+            .buffered(20)
+            .try_take_while(|(item, element)| {
+                let mut limit_reached = false;
+                if let Some(diff_size_limit) = diff_size_limit {
+                    size_so_far = size_so_far.saturating_add(element.size());
+                    if size_so_far > diff_size_limit {
+                        limit_reached = true;
+                        stopped_at_pair = Some(item.to_stopped_at_pair());
+                    }
+                }
+                async move { Ok(!limit_reached) }
+            })
+            .map_ok(|(item, element)| element.into_response_for_item(&item))
+            .try_collect()
             .await?;
 
-            Ok(thrift::CommitFileDiffsResponse {
-                path_diffs,
-                ..Default::default()
-            })
-        }
+        Ok(thrift::CommitFileDiffsResponse {
+            path_diffs,
+            stopped_at_pair,
+            ..Default::default()
+        })
     }
 
     /// Get commit info.
