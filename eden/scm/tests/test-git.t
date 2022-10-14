@@ -292,6 +292,13 @@ Test clone when repo already exists:
   abort: destination '$TESTTMP/already_exists' already exists
   [255]
 
+Make sure we clean up if repo init fails:
+
+  $ FAILPOINTS=repo-init=panic hg clone -q --git "$TESTTMP/gitrepo" "$TESTTMP/init_fails" &> /dev/null
+  [1]
+  $ test -d "$TESTTMP/init_fails"
+  [1]
+
 Test push:
 
   $ cd "$TESTTMP/clonetest/cloned1"

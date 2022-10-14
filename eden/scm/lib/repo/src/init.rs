@@ -44,6 +44,8 @@ pub fn init_hg_repo(
     write_store_requirements(&hg_path, config)?;
     // TODO(sggutier): Add cleanup for the .hg directory in the event of an error
 
+    fail::fail_point!("repo-init");
+
     Ok(())
 }
 

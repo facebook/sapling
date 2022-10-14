@@ -11,6 +11,7 @@ async-runtime = { version = "0.1.0", path = "../async-runtime" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 configparser = { version = "0.1.0", path = "../config/parser" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
+fail = { version = "0.4", features = ["failpoints"] }
 hgcommits = { version = "0.1.0", path = "../hgcommits" }
 identity = { version = "0.1.0", path = "../identity" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }

@@ -104,8 +104,8 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
     if os.path.lexists(destpath):
         raise error.Abort(_("destination '%s' already exists") % destpath)
 
-    repo = hg.repository(ui, destpath, create=True).local()
     try:
+        repo = hg.repository(ui, destpath, create=True).local()
         ret = initgitbare(ui, repo.svfs.join("git"))
         if ret != 0:
             raise error.Abort(_("git clone was not successful"))
