@@ -35,7 +35,7 @@ hgtime = { version = "0.1.0", path = "../hgtime" }
 hostname = "0.3"
 identity = { version = "0.1.0", path = "../identity" }
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
-libc = "0.2.132"
+libc = "0.2.135"
 metrics-render = { version = "0.1.0", path = "../metrics/render" }
 migration = { version = "0.1.0", path = "../migration" }
 mincode = { version = "0.1.0", path = "../mincode" }

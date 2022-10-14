@@ -10,7 +10,7 @@ anyhow = "1.0.65"
 clap = "2.33"
 commitcloudsubscriber = { version = "0.1.0", path = "../../lib/commitcloudsubscriber" }
 env_logger = "0.7"
-libc = "0.2.132"
+libc = "0.2.135"
 log = { version = "0.4.17", features = ["kv_unstable", "kv_unstable_std"] }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 thiserror = "1.0.36"

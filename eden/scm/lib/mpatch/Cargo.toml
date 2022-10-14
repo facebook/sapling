@@ -6,5 +6,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-libc = "0.2.132"
+libc = "0.2.135"
 mpatch-sys = { version = "0.1.0", path = "../mpatch-sys" }

@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.65"
-libc = "0.2.132"
+libc = "0.2.135"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 identity = { version = "0.1.0", path = "../identity" }
