@@ -23,6 +23,9 @@ use futures::future::TryFutureExt;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use futures_ext::future::FbFutureExt;
+use futures_stats::FutureStats;
+use futures_stats::TimedFutureExt;
 use hooks::CrossRepoPushSource;
 use identity::Identity;
 use land_service_if::server::LandService;
@@ -54,6 +57,7 @@ use srserver::RequestContext;
 
 use crate::errors;
 use crate::errors::LandChangesetsError;
+use crate::scuba_response::AddScubaResponse;
 
 const FORWARDED_IDENTITIES_HEADER: &str = "scm_forwarded_identities";
 const FORWARDED_CLIENT_IP_HEADER: &str = "scm_forwarded_client_ip";
@@ -106,61 +110,16 @@ impl LandServiceImpl {
         land_changesets: LandChangesetRequest,
     ) -> Result<LandChangesetsResponse, LandChangesetsError> {
         let ctx: CoreContext = self.create_ctx("land_changesets", req_ctxt).await?;
-        let authz = AuthorizationContext::new(&ctx);
 
-        //TODO: Avoid using RepoContext, build a leaner Repo type if possible (T132600441)
-        let repo: RepoContext = self
-            .get_repo_context(land_changesets.repo_name, ctx.clone(), authz.clone())
-            .await?;
+        ctx.scuba().clone().log_with_msg("Request start", None);
 
-        self.assert_internal_identity(&repo)?;
-
-        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = repo.skiplist_index_arc();
-
-        let bookmark = BookmarkName::new(land_changesets.bookmark)?;
-        let changesets: HashSet<BonsaiChangeset> =
-            convert_bonsai_changesets(land_changesets.changesets, &ctx, &repo).await?;
-        let pushvars = convert_pushvars(land_changesets.pushvars.unwrap_or_default());
-
-        let cross_repo_push_source =
-            convert_cross_repo_push_source(land_changesets.cross_repo_push_source)?;
-
-        let bookmark_restrictions =
-            convert_bookmark_restrictions(land_changesets.bookmark_restrictions)?;
-
-        let outcome = LocalPushrebaseClient {
-            ctx: &ctx,
-            authz: &authz,
-            repo: &repo.inner_repo().clone(),
-            lca_hint: &lca_hint,
-            hook_manager: repo.hook_manager().as_ref(),
-        }
-        .pushrebase(
-            &bookmark,
-            changesets,
-            Some(&pushvars),
-            cross_repo_push_source,
-            bookmark_restrictions,
-        )
-        .await?;
-
-        Ok(LandChangesetsResponse {
-            pushrebase_outcome: PushrebaseOutcome {
-                head: outcome.head.as_ref().to_vec(),
-                rebased_changesets: outcome
-                    .rebased_changesets
-                    .into_iter()
-                    .map(|rebased_changeset| {
-                        convert_rebased_changesets_into_pairs(rebased_changeset)
-                    })
-                    .collect(),
-                pushrebase_distance: convert_to_i64(outcome.pushrebase_distance.0)?,
-                retry_num: convert_to_i64(outcome.retry_num.0)?,
-                old_bookmark_value: outcome
-                    .old_bookmark_value
-                    .map(convert_changeset_id_to_vec_binary),
-            },
-        })
+        let (stats, res) = self
+            .process_land_changesets_request(&ctx, land_changesets)
+            .timed()
+            .on_cancel_with_data(|stats| log_canceled(&ctx, &stats))
+            .await;
+        log_result(ctx, &stats, &res);
+        res
     }
 
     // Create context from given name and request context
@@ -322,6 +281,98 @@ impl LandServiceImpl {
         }
         Ok(())
     }
+
+    async fn process_land_changesets_request(
+        &self,
+        ctx: &CoreContext,
+        land_changesets: LandChangesetRequest,
+    ) -> Result<LandChangesetsResponse, LandChangesetsError> {
+        let authz = AuthorizationContext::new(ctx);
+        //TODO: Avoid using RepoContext, build a leaner Repo type if possible (T132600441)
+        let repo: RepoContext = self
+            .get_repo_context(land_changesets.repo_name, ctx.clone(), authz.clone())
+            .await?;
+
+        self.assert_internal_identity(&repo)?;
+
+        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = repo.skiplist_index_arc();
+
+        let bookmark = BookmarkName::new(land_changesets.bookmark)?;
+        let changesets: HashSet<BonsaiChangeset> =
+            convert_bonsai_changesets(land_changesets.changesets, ctx, &repo).await?;
+        let pushvars = convert_pushvars(land_changesets.pushvars.unwrap_or_default());
+
+        let cross_repo_push_source =
+            convert_cross_repo_push_source(land_changesets.cross_repo_push_source)?;
+
+        let bookmark_restrictions =
+            convert_bookmark_restrictions(land_changesets.bookmark_restrictions)?;
+
+        let outcome = LocalPushrebaseClient {
+            ctx,
+            authz: &authz,
+            repo: &repo.inner_repo().clone(),
+            lca_hint: &lca_hint,
+            hook_manager: repo.hook_manager().as_ref(),
+        }
+        .pushrebase(
+            &bookmark,
+            changesets,
+            Some(&pushvars),
+            cross_repo_push_source,
+            bookmark_restrictions,
+        )
+        .await?;
+
+        Ok(LandChangesetsResponse {
+            pushrebase_outcome: PushrebaseOutcome {
+                head: outcome.head.as_ref().to_vec(),
+                rebased_changesets: outcome
+                    .rebased_changesets
+                    .into_iter()
+                    .map(|rebased_changeset| {
+                        convert_rebased_changesets_into_pairs(rebased_changeset)
+                    })
+                    .collect(),
+                pushrebase_distance: convert_to_i64(outcome.pushrebase_distance.0)?,
+                retry_num: convert_to_i64(outcome.retry_num.0)?,
+                old_bookmark_value: outcome
+                    .old_bookmark_value
+                    .map(convert_changeset_id_to_vec_binary),
+            },
+        })
+    }
+}
+
+fn log_result<T: AddScubaResponse>(
+    ctx: CoreContext,
+    stats: &FutureStats,
+    result: &Result<T, LandChangesetsError>,
+) {
+    let mut scuba = ctx.scuba().clone();
+
+    match result {
+        Ok(response) => {
+            response.add_scuba_response(&mut scuba);
+            scuba.add("status", "SUCCESS");
+        }
+        Err(err) => {
+            scuba.add("status", "INTERNAL_ERROR");
+            scuba.add("error", err.to_string());
+        }
+    };
+
+    ctx.perf_counters().insert_perf_counters(&mut scuba);
+    scuba.add_future_stats(stats);
+    scuba.log_with_msg("Request complete", None);
+}
+
+fn log_canceled(ctx: &CoreContext, stats: &FutureStats) {
+    let mut scuba = ctx.scuba().clone();
+    ctx.perf_counters().insert_perf_counters(&mut scuba);
+    scuba.add_future_stats(stats);
+    scuba.add("status", "CANCELED");
+    scuba.log_with_msg("Request canceled", None);
 }
 
 /// Convert BTreeSet of ChangetSetIds to a Hashset of BonsaiChangeset
@@ -365,6 +416,10 @@ pub(crate) fn convert_pushvars(pushvars: BTreeMap<String, Vec<u8>>) -> HashMap<S
         .collect()
 }
 
+pub(crate) fn convert_hex_to_str(changeset: &[u8]) -> String {
+    faster_hex::hex_string(changeset)
+}
+
 /// Convert bookmark restrictions from the bookmark in the request
 fn convert_bookmark_restrictions(
     bookmark_restrictions: land_service_if::BookmarkKindRestrictions,
@@ -380,7 +435,7 @@ fn convert_bookmark_restrictions(
             Ok(BookmarkKindRestrictions::OnlyPublishing)
         }
         other => Err(LandChangesetsError::InternalError(errors::internal_error(
-            anyhow!(format!("Unknown BookmarkKindRestrictions: {}", other)).as_ref(),
+            anyhow!("Unknown BookmarkKindRestrictions: {}", other).as_ref(),
         ))),
     }
 }

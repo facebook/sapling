@@ -16,10 +16,15 @@ use land_service_if::InternalError;
 use mononoke_api::MononokeError;
 use pushrebase::PushrebaseConflict;
 use pushrebase::PushrebaseError;
+use thiserror::Error as ThisError;
 
+#[derive(ThisError, Debug)]
 pub enum LandChangesetsError {
+    #[error("Internal error: {0}")]
     InternalError(land_service_if::InternalError),
-    PushrebaseConflicts(Vec<PushrebaseConflict>),
+    #[error("Conflicts while pushrebasing: {0:?}")]
+    PushrebaseConflicts(Vec<pushrebase::PushrebaseConflict>),
+    #[error("Hooks failed:\n{}", describe_hook_rejections(.0.as_slice()))]
     HookRejections(Vec<HookRejection>),
 }
 

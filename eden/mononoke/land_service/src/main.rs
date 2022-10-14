@@ -35,11 +35,13 @@ use srserver::ThriftServer;
 use srserver::ThriftServerBuilder;
 use LandService_metadata_sys::create_metadata;
 
-const SERVICE_NAME: &str = "mononoke_land_service_server";
+const SERVICE_NAME: &str = "mononoke_land_service";
 
 mod errors;
 mod facebook;
 mod land_service_impl;
+mod scuba_request;
+mod scuba_response;
 
 #[derive(Debug, Parser)]
 struct LandServiceServerArgs {
