@@ -232,7 +232,7 @@ TEST(ImmediateFuture, makeImmediateFutureWith) {
       [sf = std::move(sf)]() mutable { return std::move(sf); });
   EXPECT_FALSE(fut4.isReady());
   p.setValue(42);
-  EXPECT_FALSE(fut4.isReady());
+  EXPECT_TRUE(fut4.isReady() ^ detail::kImmediateFutureAlwaysDefer);
   EXPECT_EQ(std::move(fut4).get(), 42);
 }
 
@@ -410,7 +410,7 @@ TEST(ImmediateFuture, collectAllTupleSemiReady) {
   promise2.setValue(43);
 
   auto future = collectAll(std::move(f1), std::move(f2));
-  EXPECT_FALSE(future.isReady());
+  EXPECT_TRUE(future.isReady() ^ detail::kImmediateFutureAlwaysDefer);
 
   auto res = std::move(future).get(1ms);
   EXPECT_EQ(std::get<0>(res).value(), 42);

@@ -194,8 +194,10 @@ bool ImmediateFuture<T>::isReady() const {
     case Kind::Immediate:
       return true;
     case Kind::SemiFuture:
-      // TODO: This could return semi_.isReady() if we also changed thenTry to
-      // check semi_.isReady() and call .get() instead of .defer().
+      if (detail::kImmediateFutureAlwaysDefer) {
+        return false;
+      }
+      return semi_.isReady();
     case Kind::LazySemiFuture:
       return false;
     case Kind::Nothing:
@@ -210,27 +212,21 @@ ImmediateFuture<detail::continuation_result_t<Func, folly::Try<T>>>
 ImmediateFuture<T>::thenTry(Func&& func) && {
   using FuncRetType = std::invoke_result_t<Func, folly::Try<T>>;
 
-  switch (kind_) {
-    case Kind::Immediate:
-      return detail::makeImmediateFutureFromImmediate(
-          std::forward<Func>(func), std::move(immediate_));
-    case Kind::LazySemiFuture:
-    case Kind::SemiFuture: {
-      // In the case where Func returns an ImmediateFuture, we need to
-      // transform that return value into a SemiFuture so that the return
-      // type is a SemiFuture<> and not a SemiFuture<ImmediateFuture<>>.
-      auto semiFut = std::move(semi_).defer(std::forward<Func>(func));
-      if constexpr (detail::isImmediateFuture<FuncRetType>::value) {
-        return std::move(semiFut).deferValue(
-            [](auto&& immFut) { return std::move(immFut).semi(); });
-      } else {
-        return semiFut;
-      }
+  if (isReady()) {
+    return detail::makeImmediateFutureFromImmediate(
+        std::forward<Func>(func), std::move(*this).getTry());
+  } else {
+    // In the case where Func returns an ImmediateFuture, we need to
+    // transform that return value into a SemiFuture so that the return
+    // type is a SemiFuture<> and not a SemiFuture<ImmediateFuture<>>.
+    auto semiFut = std::move(*this).semi().defer(std::forward<Func>(func));
+    if constexpr (detail::isImmediateFuture<FuncRetType>::value) {
+      return std::move(semiFut).deferValue(
+          [](auto&& immFut) { return std::move(immFut).semi(); });
+    } else {
+      return semiFut;
     }
-    case Kind::Nothing:
-      throw DestroyedImmediateFutureError();
   }
-  folly::assume_unreachable();
 }
 
 template <typename T>
