@@ -21,10 +21,11 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<identity>(py)?;
     m.add(py, "all", py_fn!(py, all()))?;
     m.add(py, "default", py_fn!(py, default()))?;
+    m.add(py, "envvar", py_fn!(py, try_env_var(suffix: PyString)))?;
+    m.add(py, "resetdefault", py_fn!(py, reset_default()))?;
     m.add(py, "sniffenv", py_fn!(py, sniff_env()))?;
     m.add(py, "sniffroot", py_fn!(py, sniff_root(path: PyPathBuf)))?;
     m.add(py, "sniffdir", py_fn!(py, sniff_dir(path: PyPathBuf)))?;
-    m.add(py, "envvar", py_fn!(py, try_env_var(suffix: PyString)))?;
 
     Ok(m)
 }
@@ -90,6 +91,11 @@ fn try_env_var(py: Python, suffix: PyString) -> PyResult<Option<String>> {
 
 fn default(py: Python) -> PyResult<identity> {
     identity::create_instance(py, rsident::default())
+}
+
+fn reset_default(_py: Python) -> PyResult<PyNone> {
+    rsident::reset_default();
+    Ok(PyNone)
 }
 
 fn all(py: Python) -> PyResult<Vec<identity>> {

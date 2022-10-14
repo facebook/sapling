@@ -207,6 +207,8 @@ def hg(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> int:
         with shellenv(
             env, stdin=stdin, stdout=stdout, stderr=stderr
         ), extensions.wrappedfunction(util, "rawsystem", rawsystem):
+            bindings.identity.resetdefault()
+
             encoding.setfromenviron()
             pycompat.stdin = stdin
             pycompat.stdout = stdout

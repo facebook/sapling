@@ -249,6 +249,10 @@ pub fn default() -> Identity {
     *DEFAULT.read()
 }
 
+pub fn reset_default() {
+    *DEFAULT.write() = compute_default();
+}
+
 /// Default `Identity` based on the current executable name.
 fn compute_default() -> Identity {
     let path = std::env::current_exe().expect("current_exe() should not fail");
