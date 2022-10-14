@@ -38,21 +38,19 @@ pub struct Identity {
     /// Prefix of environment variables related to current repo. To be used in the future.
     env_prefix: &'static str,
 
-    /// Main config file for some identities. Located inside of home directory (e.g. `/home/alice/.hgrc`)
-    config_name: &'static str,
-
-    /// Subdirectory of user's cache directory used for config. The parent of this directory can change
-    /// depending on the operating system
+    /// Subdirectory below user's config directory. The user's config directory depends on platform:
     ///
-    /// | OS       | Value of parent directory           | Example of parent + config_directory     |
-    /// |----------|-------------------------------------|------------------------------------------|
-    /// | Linux    | `$XDG_CACHE_HOME` or `$HOME`/.cache | /home/alice/.config/sapling              |
-    /// | macOS    | `$HOME`/Library/Caches              | /Users/Alice/Library/Preferences/sapling |
-    /// | Windows  | `{FOLDERID_LocalAppData}`           | C:\Users\Alice\AppData\Local\sapling     |
-    config_directory: &'static str,
+    /// |Platform | Value                                 | Example                                  |
+    /// | ------- | ------------------------------------- | ---------------------------------------- |
+    /// | Linux   | `$XDG_CONFIG_HOME` or `$HOME`/.config | /home/alice/.config/sapling              |
+    /// | macOS   | `$HOME`/Library/Preferences           | /Users/Alice/Library/Preferences/sapling |
+    /// | Windows | `{FOLDERID_RoamingAppData}`           | C:\Users\Alice\AppData\Roaming\sapling   |
+    ///
+    /// If None, config file is directly in home directory.
+    config_directory: Option<&'static str>,
 
-    /// Main or secondary config file (depends on the identity); located inside of `config_directory`
-    config_main_file: &'static str,
+    /// User config file names to look for inside of `config_directory`.
+    config_user_files: &'static [&'static str],
 
     /// Config file for the repo; located inside of `dot_dir`.
     ///
@@ -88,18 +86,6 @@ impl Identity {
 
     pub fn dot_dir(&self) -> &'static str {
         self.dot_dir
-    }
-
-    pub fn config_directory(&self) -> &'static str {
-        self.config_directory
-    }
-
-    pub fn config_name(&self) -> &'static str {
-        self.config_name
-    }
-
-    pub fn config_main_file(&self) -> &'static str {
-        self.config_main_file
     }
 
     pub fn config_repo_file(&self) -> &'static str {
@@ -138,25 +124,21 @@ impl Identity {
     }
 
     pub fn user_config_paths(&self) -> Vec<PathBuf> {
-        let mut paths = vec![];
-        if self.product_name() == "Mercurial" {
-            // ~/.hgrc and ~/mercurial.ini are legacy paths that we support only when the current identity is HG
-            if let Some(home_dir) = dirs::home_dir() {
-                paths.push(home_dir.join(format!(".{}", self.config_name())));
-                #[cfg(windows)]
-                {
-                    paths.push(home_dir.join("mercurial.ini"));
-                }
-            }
-        }
-        if let Some(config_dir) = dirs::config_dir() {
-            paths.push(
-                config_dir
-                    .join(self.config_directory())
-                    .join(self.config_main_file()),
-            )
-        }
-        paths
+        let config_dir = match self.config_directory {
+            None => match dirs::home_dir() {
+                None => return Vec::new(),
+                Some(hd) => hd,
+            },
+            Some(subdir) => match dirs::config_dir() {
+                None => return Vec::new(),
+                Some(config_dir) => config_dir.join(subdir),
+            },
+        };
+
+        self.config_user_files
+            .iter()
+            .map(|f| config_dir.join(f))
+            .collect()
     }
 }
 
@@ -172,9 +154,12 @@ const HG: Identity = Identity {
     long_product_name: "Mercurial Distributed SCM",
     dot_dir: ".hg",
     env_prefix: "HG",
-    config_name: "hgrc",
-    config_directory: "hg",
-    config_main_file: "hgrc",
+    config_directory: None,
+    config_user_files: &[
+        ".hgrc",
+        #[cfg(windows)]
+        "mercurial.ini",
+    ],
     config_repo_file: "hgrc",
     scripting_env_var: "HGPLAIN",
     scripting_config_env_var: "HGRCPATH",
@@ -187,9 +172,8 @@ const SL: Identity = Identity {
     long_product_name: "Sapling SCM",
     dot_dir: ".sl",
     env_prefix: "SL",
-    config_name: "slconfig",
-    config_directory: "sapling",
-    config_main_file: "sapling.conf",
+    config_directory: Some("sapling"),
+    config_user_files: &["sapling.conf"],
     config_repo_file: "config",
     scripting_env_var: "SL_AUTOMATION",
     scripting_config_env_var: "SL_CONFIG_PATH",
@@ -203,9 +187,8 @@ const TEST: Identity = Identity {
     long_product_name: "Testing SCM",
     dot_dir: ".test",
     env_prefix: "TEST",
-    config_name: "testrc",
-    config_directory: "test",
-    config_main_file: "test.conf",
+    config_directory: None,
+    config_user_files: &["test.conf"],
     config_repo_file: "config",
     scripting_env_var: "TEST_SCRIPT",
     scripting_config_env_var: "TEST_RC_PATH",
@@ -240,9 +223,9 @@ pub mod idents {
             (SL, "fallback")
         })();
         tracing::info!(
-            id = SL.cli_name,
+            identity = ident.cli_name,
             argv0 = file_name.as_ref(),
-            reason = reason,
+            reason,
             "identity from argv0"
         );
         ident
