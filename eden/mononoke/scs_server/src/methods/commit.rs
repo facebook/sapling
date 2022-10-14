@@ -85,87 +85,34 @@ impl CommitComparePath {
                 }),
         }
     }
-}
 
-// helper used by commit_compare
-async fn into_compare_path(
-    path_diff: ChangesetPathDiffContext,
-) -> Result<CommitComparePath, errors::ServiceError> {
-    let mut file: Option<(
-        Option<thrift::FilePathInfo>,
-        Option<thrift::FilePathInfo>,
-        thrift::CopyInfo,
-    )> = None;
-    let mut tree: Option<(Option<thrift::TreePathInfo>, Option<thrift::TreePathInfo>)> = None;
-    match path_diff {
-        ChangesetPathDiffContext::Added(base_context) => {
-            if base_context.is_file().await? {
-                let entry = base_context.into_response().await?;
-                file = Some((None, entry, thrift::CopyInfo::NONE));
-            } else {
-                let entry = base_context.into_response().await?;
-                tree = Some((None, entry));
-            }
+    async fn from_path_diff(
+        path_diff: ChangesetPathDiffContext,
+    ) -> Result<Self, errors::ServiceError> {
+        if path_diff.path().is_file().await? {
+            let (base_file, other_file) = try_join!(
+                path_diff.base().into_response(),
+                path_diff.other().into_response()
+            )?;
+            let copy_info = path_diff.copy_info().into_response();
+            Ok(CommitComparePath::File(thrift::CommitCompareFile {
+                base_file,
+                other_file,
+                copy_info,
+                ..Default::default()
+            }))
+        } else {
+            let (base_tree, other_tree) = try_join!(
+                path_diff.base().into_response(),
+                path_diff.other().into_response()
+            )?;
+            Ok(CommitComparePath::Tree(thrift::CommitCompareTree {
+                base_tree,
+                other_tree,
+                ..Default::default()
+            }))
         }
-        ChangesetPathDiffContext::Removed(other_context) => {
-            if other_context.is_file().await? {
-                let entry = other_context.into_response().await?;
-                file = Some((entry, None, thrift::CopyInfo::NONE));
-            } else {
-                let entry = other_context.into_response().await?;
-                tree = Some((entry, None));
-            }
-        }
-        ChangesetPathDiffContext::Changed(base_context, other_context) => {
-            if other_context.is_file().await? {
-                let (other_entry, base_entry) =
-                    try_join!(other_context.into_response(), base_context.into_response(),)?;
-                file = Some((other_entry, base_entry, thrift::CopyInfo::NONE));
-            } else {
-                let (other_entry, base_entry) =
-                    try_join!(other_context.into_response(), base_context.into_response(),)?;
-                tree = Some((other_entry, base_entry));
-            }
-        }
-        ChangesetPathDiffContext::Copied(base_context, other_context) => {
-            if other_context.is_file().await? {
-                let (other_entry, base_entry) =
-                    try_join!(other_context.into_response(), base_context.into_response(),)?;
-                file = Some((other_entry, base_entry, thrift::CopyInfo::COPY));
-            } else {
-                let (other_entry, base_entry) =
-                    try_join!(other_context.into_response(), base_context.into_response(),)?;
-                tree = Some((other_entry, base_entry));
-            }
-        }
-        ChangesetPathDiffContext::Moved(base_context, other_context) => {
-            if other_context.is_file().await? {
-                let (other_entry, base_entry) =
-                    try_join!(other_context.into_response(), base_context.into_response(),)?;
-                file = Some((other_entry, base_entry, thrift::CopyInfo::MOVE));
-            } else {
-                let (other_entry, base_entry) =
-                    try_join!(other_context.into_response(), base_context.into_response(),)?;
-                tree = Some((other_entry, base_entry));
-            }
-        }
-    };
-    if let Some((other_file, base_file, copy_info)) = file {
-        return Ok(CommitComparePath::File(thrift::CommitCompareFile {
-            base_file,
-            other_file,
-            copy_info,
-            ..Default::default()
-        }));
     }
-    if let Some((other_tree, base_tree)) = tree {
-        return Ok(CommitComparePath::Tree(thrift::CommitCompareTree {
-            base_tree,
-            other_tree,
-            ..Default::default()
-        }));
-    }
-    Err(errors::internal_error("programming error, diff is neither tree nor file").into())
 }
 
 /// Helper for commit_compare to add mutable rename information if appropriate
@@ -654,7 +601,7 @@ impl SourceControlServiceImpl {
                     }
                 };
                 stream::iter(diff)
-                    .map(into_compare_path)
+                    .map(CommitComparePath::from_path_diff)
                     .buffer_unordered(CONCURRENCY_LIMIT)
                     .try_collect::<Vec<_>>()
                     .await?
@@ -707,7 +654,7 @@ impl SourceControlServiceImpl {
                 };
                 let diff_items = diff
                     .into_iter()
-                    .map(into_compare_path)
+                    .map(CommitComparePath::from_path_diff)
                     .collect::<FuturesOrdered<_>>()
                     .try_collect::<Vec<_>>()
                     .await?;

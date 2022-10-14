@@ -102,6 +102,19 @@ impl ChangesetPathDiffContext {
         }
     }
 
+    /// Return the main path for this difference.  This is the added or
+    /// removed path, or the base (destination) in the case of modifications,
+    /// copies, or moves.
+    pub fn path(&self) -> &ChangesetPathContentContext {
+        match self {
+            Self::Added(base)
+            | Self::Changed(base, _)
+            | Self::Copied(base, _)
+            | Self::Moved(base, _) => base,
+            Self::Removed(other) => other,
+        }
+    }
+
     /// Return the copy information for this difference.
     pub fn copy_info(&self) -> CopyInfo {
         match self {

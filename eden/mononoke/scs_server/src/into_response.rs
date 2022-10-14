@@ -18,6 +18,7 @@ use mononoke_api::BookmarkInfo;
 use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetId;
 use mononoke_api::ChangesetPathContentContext;
+use mononoke_api::CopyInfo;
 use mononoke_api::FileMetadata;
 use mononoke_api::FileType;
 use mononoke_api::HeaderlessUnifiedDiff;
@@ -59,6 +60,16 @@ pub(crate) trait AsyncIntoResponseWith<T> {
         self,
         additional: &Self::Additional,
     ) -> Result<T, errors::ServiceError>;
+}
+
+#[async_trait]
+impl<T, A: AsyncIntoResponse<T> + Send> AsyncIntoResponse<Option<T>> for Option<A> {
+    async fn into_response(self) -> Result<Option<T>, errors::ServiceError> {
+        match self {
+            Some(value) => Ok(Some(value.into_response().await?)),
+            None => Ok(None),
+        }
+    }
 }
 
 impl IntoResponse<thrift::EntryType> for FileType {
@@ -142,6 +153,16 @@ impl IntoResponse<thrift::TreeInfo> for (TreeId, TreeSummary) {
     }
 }
 
+impl IntoResponse<thrift::CopyInfo> for CopyInfo {
+    fn into_response(self) -> thrift::CopyInfo {
+        match self {
+            CopyInfo::None => thrift::CopyInfo::NONE,
+            CopyInfo::Copy => thrift::CopyInfo::COPY,
+            CopyInfo::Move => thrift::CopyInfo::MOVE,
+        }
+    }
+}
+
 impl IntoResponse<thrift::Diff> for UnifiedDiff {
     fn into_response(self) -> thrift::Diff {
         thrift::Diff::raw_diff(thrift::RawDiff {
@@ -163,48 +184,49 @@ impl IntoResponse<thrift::Diff> for HeaderlessUnifiedDiff {
 }
 
 #[async_trait]
-impl AsyncIntoResponse<Option<thrift::FilePathInfo>> for ChangesetPathContentContext {
-    async fn into_response(self) -> Result<Option<thrift::FilePathInfo>, errors::ServiceError> {
+impl AsyncIntoResponse<thrift::FilePathInfo> for &ChangesetPathContentContext {
+    async fn into_response(self) -> Result<thrift::FilePathInfo, errors::ServiceError> {
         let (meta, type_) = try_join!(
             async {
-                let file = self.file().await?;
-                match file {
-                    Some(file) => Ok(Some(file.metadata().await?)),
-                    None => Ok(None),
-                }
+                Ok::<_, errors::ServiceError>(
+                    self.file()
+                        .await?
+                        .ok_or_else(|| errors::internal_error("programming error: not a file"))?
+                        .metadata()
+                        .await?,
+                )
             },
-            self.file_type()
+            async {
+                Ok::<_, errors::ServiceError>(
+                    self.file_type()
+                        .await?
+                        .ok_or_else(|| errors::internal_error("programming error: not a file"))?,
+                )
+            },
         )?;
-        if let (Some(meta), Some(type_)) = (meta, type_) {
-            Ok(Some(thrift::FilePathInfo {
-                path: self.path().to_string(),
-                r#type: type_.into_response(),
-                info: meta.into_response(),
-                ..Default::default()
-            }))
-        } else {
-            Ok(None)
-        }
+        Ok(thrift::FilePathInfo {
+            path: self.path().to_string(),
+            r#type: type_.into_response(),
+            info: meta.into_response(),
+            ..Default::default()
+        })
     }
 }
 
 #[async_trait]
-impl AsyncIntoResponse<Option<thrift::TreePathInfo>> for ChangesetPathContentContext {
-    async fn into_response(self) -> Result<Option<thrift::TreePathInfo>, errors::ServiceError> {
-        let tree = self.tree().await?;
-        let summary = match tree {
-            Some(tree) => Some((tree.id().clone(), tree.summary().await?)),
-            None => None,
-        };
-        if let Some(summary) = summary {
-            Ok(Some(thrift::TreePathInfo {
-                path: self.path().to_string(),
-                info: summary.into_response(),
-                ..Default::default()
-            }))
-        } else {
-            Ok(None)
-        }
+impl AsyncIntoResponse<thrift::TreePathInfo> for &ChangesetPathContentContext {
+    async fn into_response(self) -> Result<thrift::TreePathInfo, errors::ServiceError> {
+        let tree = self
+            .tree()
+            .await?
+            .ok_or_else(|| errors::internal_error("programming error: not a tree"))?;
+
+        let summary = (tree.id().clone(), tree.summary().await?);
+        Ok(thrift::TreePathInfo {
+            path: self.path().to_string(),
+            info: summary.into_response(),
+            ..Default::default()
+        })
     }
 }
 
