@@ -23,7 +23,6 @@ use hooks::HookOutcome;
 use itertools::Either;
 use itertools::Itertools;
 use maplit::btreeset;
-use mononoke_api::unified_diff;
 use mononoke_api::CandidateSelectionHintArgs;
 use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetDiffItem;
@@ -36,6 +35,7 @@ use mononoke_api::CopyInfo;
 use mononoke_api::MononokeError;
 use mononoke_api::MononokePath;
 use mononoke_api::RepoContext;
+use mononoke_api::UnifiedDiff;
 use mononoke_api::UnifiedDiffMode;
 use source_control as thrift;
 
@@ -187,6 +187,76 @@ async fn add_mutable_renames(
     Ok(())
 }
 
+struct CommitFileDiffsItem {
+    path_diff_context: ChangesetPathDiffContext,
+    placeholder: bool,
+}
+
+impl CommitFileDiffsItem {
+    fn to_stopped_at_pair(&self) -> thrift::CommitFileDiffsStoppedAtPair {
+        thrift::CommitFileDiffsStoppedAtPair {
+            base_path: self.path_diff_context.base().map(|p| p.path().to_string()),
+            other_path: self.path_diff_context.other().map(|p| p.path().to_string()),
+            ..Default::default()
+        }
+    }
+
+    async fn response_element(
+        &self,
+        format: thrift::DiffFormat,
+        context_lines: usize,
+    ) -> Result<CommitFileDiffsResponseElement, errors::ServiceError> {
+        match format {
+            thrift::DiffFormat::RAW_DIFF => self.raw_diff(context_lines).await,
+            unknown => {
+                Err(errors::invalid_request(format!("invalid diff format: {:?}", unknown)).into())
+            }
+        }
+    }
+
+    async fn raw_diff(
+        &self,
+        context_lines: usize,
+    ) -> Result<CommitFileDiffsResponseElement, errors::ServiceError> {
+        let mode = if self.placeholder {
+            UnifiedDiffMode::OmitContent
+        } else {
+            UnifiedDiffMode::Inline
+        };
+        let diff = self
+            .path_diff_context
+            .unified_diff(context_lines, mode)
+            .await?;
+        Ok(CommitFileDiffsResponseElement::RawDiff { diff })
+    }
+}
+
+enum CommitFileDiffsResponseElement {
+    RawDiff { diff: UnifiedDiff },
+}
+
+impl CommitFileDiffsResponseElement {
+    fn size(&self) -> usize {
+        match self {
+            Self::RawDiff { diff } => diff.raw_diff.len(),
+        }
+    }
+
+    fn into_response_for_item(
+        self,
+        item: &CommitFileDiffsItem,
+    ) -> thrift::CommitFileDiffsResponseElement {
+        match self {
+            Self::RawDiff { diff } => thrift::CommitFileDiffsResponseElement {
+                base_path: item.path_diff_context.base().map(|p| p.path().to_string()),
+                other_path: item.path_diff_context.other().map(|p| p.path().to_string()),
+                diff: diff.into_response(),
+                ..Default::default()
+            },
+        }
+    }
+}
+
 impl SourceControlServiceImpl {
     /// Returns the lowest common ancestor of two commits.
     ///
@@ -248,8 +318,6 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitFileDiffsParams,
     ) -> Result<thrift::CommitFileDiffsResponse, errors::ServiceError> {
-        let context_lines = params.context as usize;
-
         // Check the path count limit
         if params.paths.len() as i64 > thrift::consts::COMMIT_FILE_DIFFS_PATH_COUNT_LIMIT {
             Err(errors::diff_input_too_many_paths(params.paths.len()))?;
@@ -269,7 +337,7 @@ impl SourceControlServiceImpl {
             }
         };
 
-        // Resolve the path into ChangesetPathContentContext
+        // Resolve the paths into ChangesetPathContentContext
         // To make it more efficient we do a batch request
         // to resolve all paths into path contexts
         let mut base_commit_paths = vec![];
@@ -278,11 +346,6 @@ impl SourceControlServiceImpl {
             .paths
             .into_iter()
             .map(|path_pair| {
-                let mode = if path_pair.generate_placeholder_diff.unwrap_or(false) {
-                    UnifiedDiffMode::OmitContent
-                } else {
-                    UnifiedDiffMode::Inline
-                };
                 Ok((
                     match path_pair.base_path {
                         Some(path) => {
@@ -306,7 +369,7 @@ impl SourceControlServiceImpl {
                         None => None,
                     },
                     CopyInfo::from_request(&path_pair.copy_info)?,
-                    mode,
+                    path_pair.generate_placeholder_diff.unwrap_or(false),
                 ))
             })
             .collect::<Result<Vec<_>, errors::ServiceError>>()?;
@@ -339,9 +402,9 @@ impl SourceControlServiceImpl {
             }
         )?;
 
-        let paths = paths
+        let items = paths
             .into_iter()
-            .map(|(base_path, other_path, copy_info, mode)| {
+            .map(|(base_path, other_path, copy_info, placeholder)| {
                 let base_path = match base_path {
                     Some(base_path) => {
                         Some(base_commit_contexts.get(&base_path).ok_or_else(|| {
@@ -369,30 +432,43 @@ impl SourceControlServiceImpl {
                     None => None,
                 };
 
-                Ok((base_path, other_path, copy_info, mode))
+                let path_diff_context = ChangesetPathDiffContext::new(
+                    base_path.cloned(),
+                    other_path.cloned(),
+                    copy_info,
+                )?;
+                Ok(CommitFileDiffsItem {
+                    path_diff_context,
+                    placeholder,
+                })
             })
             .collect::<Result<Vec<_>, errors::ServiceError>>()?;
 
         // Check the total file size limit
-        let flat_paths = paths
-            .iter()
-            .filter_map(|(base_path, other_path, _, mode)| match mode {
-                UnifiedDiffMode::OmitContent => None,
-                UnifiedDiffMode::Inline => Some((base_path, other_path)),
-            })
-            .flat_map(|(base_path, other_path)| vec![base_path, other_path])
-            .filter_map(|x| x.as_ref());
-        let total_input_size: u64 = future::try_join_all(flat_paths.map(|path| async move {
-            let r: Result<_, errors::ServiceError> = if let Some(file) = path.file().await? {
-                Ok(file.metadata().await?.total_size)
+        let non_placeholder_paths = items.iter().flat_map(|item| {
+            if item.placeholder {
+                Vec::new()
             } else {
-                Ok(0)
-            };
-            r
-        }))
-        .await?
-        .into_iter()
-        .sum();
+                item.path_diff_context
+                    .base()
+                    .into_iter()
+                    .chain(item.path_diff_context.other())
+                    .collect()
+            }
+        });
+
+        let total_input_size: u64 =
+            future::try_join_all(non_placeholder_paths.map(|path| async move {
+                let r: Result<_, errors::ServiceError> = if let Some(file) = path.file().await? {
+                    Ok(file.metadata().await?.total_size)
+                } else {
+                    Ok(0)
+                };
+                r
+            }))
+            .await?
+            .into_iter()
+            .sum();
 
         if total_input_size as i64 > thrift::consts::COMMIT_FILE_DIFFS_SIZE_LIMIT {
             Err(errors::diff_input_too_big(total_input_size))?;
@@ -401,37 +477,24 @@ impl SourceControlServiceImpl {
         if let Some(diff_size_limit) = params.diff_size_limit {
             let mut stopped_at_pair = None;
 
-            let path_diffs = stream::iter(paths)
-                .map(|(base_path, other_path, copy_info, mode)| async move {
-                    let diff =
-                        unified_diff(other_path, base_path, copy_info, context_lines, mode).await?;
-                    let r: Result<_, errors::ServiceError> = Ok((
-                        base_path.map(|p| p.path().to_string()),
-                        other_path.map(|p| p.path().to_string()),
-                        diff,
-                    ));
-                    r
+            let path_diffs = stream::iter(items)
+                .map(|item| async move {
+                    let element = item
+                        .response_element(params.format, params.context as usize)
+                        .await?;
+                    Ok::<_, errors::ServiceError>((item, element))
                 })
                 .boxed() // Prevents compiler error
                 .buffered(20)
                 .scan(0i64, |size_so_far, response| match response {
-                    Ok((base_path, other_path, diff)) => {
-                        *size_so_far += diff.raw_diff.len() as i64;
+                    Ok((item, element)) => {
+                        *size_so_far += element.size() as i64;
 
                         if *size_so_far > diff_size_limit {
-                            stopped_at_pair = Some(thrift::CommitFileDiffsStoppedAtPair {
-                                base_path,
-                                other_path,
-                                ..Default::default()
-                            });
+                            stopped_at_pair = Some(item.to_stopped_at_pair());
                             future::ready(None)
                         } else {
-                            future::ready(Some(Ok(thrift::CommitFileDiffsResponseElement {
-                                base_path,
-                                other_path,
-                                diff: diff.into_response(),
-                                ..Default::default()
-                            })))
+                            future::ready(Some(Ok(element.into_response_for_item(&item))))
                         }
                     }
                     Err(e) => future::ready(Some(Err(e))),
@@ -445,20 +508,12 @@ impl SourceControlServiceImpl {
                 ..Default::default()
             })
         } else {
-            let path_diffs = future::try_join_all(paths.into_iter().map(
-                |(base_path, other_path, copy_info, mode)| async move {
-                    let diff =
-                        unified_diff(other_path, base_path, copy_info, context_lines, mode).await?;
-                    let r: Result<_, errors::ServiceError> =
-                        Ok(thrift::CommitFileDiffsResponseElement {
-                            base_path: base_path.map(|p| p.path().to_string()),
-                            other_path: other_path.map(|p| p.path().to_string()),
-                            diff: diff.into_response(),
-                            ..Default::default()
-                        });
-                    r
-                },
-            ))
+            let path_diffs = future::try_join_all(items.into_iter().map(|item| async move {
+                let element = item
+                    .response_element(params.format, params.context as usize)
+                    .await?;
+                Ok::<_, errors::ServiceError>(element.into_response_for_item(&item))
+            }))
             .await?;
 
             Ok(thrift::CommitFileDiffsResponse {
