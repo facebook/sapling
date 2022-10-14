@@ -186,7 +186,7 @@ const SL: Identity = Identity {
         cli_name: "sl",
         product_name: "Sapling",
         long_product_name: "Sapling SCM",
-        env_prefix: "SL",
+        env_prefix: "SL_",
         config_directory: Some("sapling"),
         config_user_files: &["sapling.conf"],
         scripting_env_var: "SL_AUTOMATION",

@@ -17,7 +17,7 @@
   $ mkdir sapling
   $ cd sapling
 Init can create a ".sl" repo.
-  $ HGIDENTITY=sl hg init
+  $ SL_IDENTITY=sl hg init
   $ ls .hg
   $ ls .sl
   00changelog.i
