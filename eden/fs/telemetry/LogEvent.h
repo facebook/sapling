@@ -71,6 +71,18 @@ struct Fsck {
   }
 };
 
+struct StarGlob {
+  static constexpr const char* type = "star_glob";
+
+  std::string glob_request;
+  std::string client_cmdline;
+
+  void populate(DynamicEvent& event) const {
+    event.addString("glob_request", glob_request);
+    event.addString("client_cmdline", client_cmdline);
+  }
+};
+
 struct MissingProxyHash {
   static constexpr const char* type = "missing_proxy_hash";
 

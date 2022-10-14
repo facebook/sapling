@@ -2376,6 +2376,47 @@ ImmediateFuture<folly::Unit> detachIfBackgrounded(
     return ImmediateFuture<folly::Unit>(folly::unit);
   }
 }
+
+// string_view::starts_with() is not available until C++20
+// As a workaround, we provide our own implementation of starts_with().
+bool string_view_starts_with(std::string_view str, std::string_view prefix) {
+  return prefix == str.substr(0, prefix.size());
+}
+
+void maybeLogExpensiveGlob(
+    const std::vector<std::string>& globs,
+    const folly::StringPiece searchRoot,
+    const ThriftGlobImpl& globber,
+    const ObjectFetchContext& context,
+    const std::shared_ptr<ServerState>& serverState) {
+  bool shouldLogExpensiveGlob = false;
+
+  if (searchRoot.empty()) {
+    for (const auto& glob : globs) {
+      if (string_view_starts_with(glob, "**")) {
+        shouldLogExpensiveGlob = true;
+      }
+    }
+  }
+
+  if (shouldLogExpensiveGlob) {
+    auto logString = globber.logString(globs);
+    std::string client_cmdline;
+    std::optional<pid_t> clientPid = context.getClientPid();
+    if (clientPid) {
+      // TODO: we should look up client scope here instead of command line
+      // since it will give move context into the overarching process or
+      // system producing the expensive query
+      client_cmdline =
+          serverState->getProcessNameCache()->lookup(clientPid.value()).get();
+    }
+
+    XLOG(WARN) << "EdenFS asked to evaluate expensive glob by caller "
+               << client_cmdline << " : " << logString;
+    serverState->getStructuredLogger()->logEvent(
+        StarGlob{std::move(logString), std::move(client_cmdline)});
+  }
+}
 } // namespace
 
 #ifndef _WIN32
@@ -2569,6 +2610,13 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
     backgroundFuture = makeNotReadyImmediateFuture();
   }
 
+  maybeLogExpensiveGlob(
+      *params->globs(),
+      *params->searchRoot_ref(),
+      globber,
+      context,
+      server_->getServerState());
+
   auto globFut =
       std::move(backgroundFuture)
           .thenValue([mount = server_->getMount(
@@ -2601,6 +2649,13 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_prefetchFiles(
   if (isBackground) {
     backgroundFuture = makeNotReadyImmediateFuture();
   }
+
+  maybeLogExpensiveGlob(
+      *params->globs(),
+      *params->searchRoot_ref(),
+      globber,
+      context,
+      server_->getServerState());
 
   auto globFut =
       std::move(backgroundFuture)

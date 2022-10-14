@@ -35,6 +35,7 @@ class ThriftGlobImpl {
       ObjectFetchContext& fetchContext);
 
   std::string logString();
+  std::string logString(const std::vector<std::string>& globs) const;
 
  private:
   bool includeDotfiles_{false};

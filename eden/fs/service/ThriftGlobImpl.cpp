@@ -250,4 +250,18 @@ std::string ThriftGlobImpl::logString() {
       searchRootUser_);
 }
 
+std::string ThriftGlobImpl::logString(
+    const std::vector<std::string>& globs) const {
+  return fmt::format(
+      "ThriftGlobImpl {{ globs={}, includeDotFiles={}, prefetchFiles={}, suppressFileList={}, wantDtype={}, listOnlyFiles={}, rootHashes={}, searchRootUser={} }}",
+      fmt::join(globs, ", "),
+      includeDotfiles_,
+      prefetchFiles_,
+      suppressFileList_,
+      wantDtype_,
+      listOnlyFiles_,
+      fmt::join(rootHashes_, ", "),
+      searchRootUser_);
+}
+
 } // namespace facebook::eden
