@@ -24,9 +24,9 @@ use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use hgplain;
-#[cfg(feature = "fb")]
-use identity::idents::ALL_IDENTITIES;
 use identity::Identity;
+#[cfg(feature = "fb")]
+use identity::ALL_IDENTITIES;
 use minibytes::Text;
 use url::Url;
 use util::path::expand_path;
@@ -995,7 +995,7 @@ mod tests {
 
         let mut cfg = ConfigSet::new();
 
-        let identity = identity::default().clone();
+        let identity = identity::default();
         cfg.load_user(Options::new(), &identity);
         assert!(
             cfg.sections().is_empty(),
@@ -1003,7 +1003,7 @@ mod tests {
             cfg.sections()
         );
 
-        let identity = identity::default().clone();
+        let identity = identity::default();
         cfg.load_system(Options::new(), &identity);
         assert_eq!(cfg.get("x", "a"), Some("1".into()));
         assert_eq!(cfg.get("y", "b"), Some("2".into()));

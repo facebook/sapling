@@ -221,7 +221,7 @@ const TEST: Identity = Identity {
 };
 
 #[cfg(all(not(feature = "sl_only"), not(test)))]
-pub mod idents {
+mod idents {
     use super::*;
     pub static ALL_IDENTITIES: &[Identity] = &[HG, SL];
 
@@ -258,7 +258,7 @@ pub mod idents {
 }
 
 #[cfg(feature = "sl_only")]
-pub mod idents {
+mod idents {
     use super::*;
     pub static DEFAULT: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(SL));
     pub static ALL_IDENTITIES: &[Identity] = &[SL];
@@ -271,6 +271,7 @@ pub mod idents {
     pub static ALL_IDENTITIES: &[Identity] = &[HG, SL, TEST];
 }
 
+pub use idents::ALL_IDENTITIES;
 use idents::DEFAULT;
 
 pub fn default() -> Identity {

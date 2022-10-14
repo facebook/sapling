@@ -93,7 +93,7 @@ fn default(py: Python) -> PyResult<identity> {
 }
 
 fn all(py: Python) -> PyResult<Vec<identity>> {
-    rsident::idents::ALL_IDENTITIES
+    rsident::ALL_IDENTITIES
         .iter()
         .map(|id| identity::create_instance(py, id.clone()))
         .collect()
