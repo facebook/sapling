@@ -10,22 +10,23 @@
 use std::fs::File;
 use std::io::Write;
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use anyhow::Context;
+use anyhow::Error;
 use anyhow::Result;
 use clap::Parser;
 use cloned::cloned;
+use cmdlib::helpers::serve_forever;
 use cmdlib_logging::ScribeLoggingArgs;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
-use futures::StreamExt;
+use futures::future;
 use land_service_if::server::*;
 use mononoke_api::Mononoke;
+use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::MononokeAppBuilder;
-use signal_hook::consts::signal::SIGINT;
-use signal_hook::consts::signal::SIGTERM;
-use signal_hook_tokio::Signals;
 use slog::info;
 use srserver::service_framework::BuildModule;
 use srserver::service_framework::Fb303Module;
@@ -33,6 +34,7 @@ use srserver::service_framework::ServiceFramework;
 use srserver::service_framework::ThriftStatsModule;
 use srserver::ThriftServer;
 use srserver::ThriftServerBuilder;
+use tokio::task;
 use LandService_metadata_sys::create_metadata;
 
 const SERVICE_NAME: &str = "mononoke_land_service";
@@ -45,6 +47,8 @@ mod scuba_response;
 
 #[derive(Debug, Parser)]
 struct LandServiceServerArgs {
+    #[clap(flatten)]
+    shutdown_timeout_args: ShutdownTimeoutArgs,
     #[clap(flatten)]
     scribe_logging_args: ScribeLoggingArgs,
     /// Thrift host
@@ -59,7 +63,7 @@ struct LandServiceServerArgs {
 }
 
 #[fbinit::main]
-fn main(fb: FacebookInit) -> Result<()> {
+fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = Arc::new(MononokeAppBuilder::new(fb).build::<LandServiceServerArgs>()?);
 
     // Process commandline flags
@@ -138,18 +142,22 @@ fn main(fb: FacebookInit) -> Result<()> {
         writer.write_all(b"\n")?;
     }
 
-    // Start a task to spin up a thrift service
-    let thrift_service_handle = runtime.spawn(run_thrift_service(service_framework));
-    // Have the runtime wait for thrift service to finish
-    runtime.block_on(thrift_service_handle)?
-}
-
-async fn run_thrift_service(service: ServiceFramework) -> Result<()> {
-    let mut signals = Signals::new(&[SIGTERM, SIGINT])?;
-
-    signals.next().await;
-    println!("Shutting down...");
-    service.stop();
-    signals.handle().close();
+    serve_forever(
+        runtime,
+        future::pending(),
+        logger,
+        move || will_exit.store(true, Ordering::Relaxed),
+        args.shutdown_timeout_args.shutdown_grace_period,
+        async {
+            // Note that async blocks are lazy, so this isn't called until first poll
+            let _ = task::spawn_blocking(move || {
+                // Calling `stop` blocks until the service has completed all requests.
+                service_framework.stop();
+            })
+            .await;
+        },
+        args.shutdown_timeout_args.shutdown_timeout,
+    )?;
+    info!(logger, "Exiting...");
     Ok(())
 }

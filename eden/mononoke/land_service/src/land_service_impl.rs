@@ -54,6 +54,8 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
 use slog::Logger;
 use srserver::RequestContext;
+use stats::prelude::*;
+use time_ext::DurationExt;
 
 use crate::errors;
 use crate::errors::LandChangesetsError;
@@ -63,6 +65,17 @@ const FORWARDED_IDENTITIES_HEADER: &str = "scm_forwarded_identities";
 const FORWARDED_CLIENT_IP_HEADER: &str = "scm_forwarded_client_ip";
 const FORWARDED_CLIENT_DEBUG_HEADER: &str = "scm_forwarded_client_debug";
 const FORWARDED_OTHER_CATS_HEADER: &str = "scm_forwarded_other_cats";
+
+define_stats! {
+    prefix = "mononoke.land_service";
+    total_request_start: timeseries(Rate, Sum),
+    total_request_success: timeseries(Rate, Sum),
+    total_request_internal_failure: timeseries(Rate, Sum),
+    total_request_canceled: timeseries(Rate, Sum),
+
+    // Duration per changesets landed
+    method_completion_time_ms: dynamic_histogram("method.{}.completion_time_ms", (method: String); 10, 0, 1_000, Average, Sum, Count; P 5; P 50 ; P 90),
+}
 
 #[derive(Clone)]
 pub(crate) struct LandServiceImpl {
@@ -112,6 +125,7 @@ impl LandServiceImpl {
         let ctx: CoreContext = self.create_ctx("land_changesets", req_ctxt).await?;
 
         ctx.scuba().clone().log_with_msg("Request start", None);
+        STATS::total_request_start.add_value(1);
 
         let (stats, res) = self
             .process_land_changesets_request(&ctx, land_changesets)
@@ -119,6 +133,10 @@ impl LandServiceImpl {
             .on_cancel_with_data(|stats| log_canceled(&ctx, &stats))
             .await;
         log_result(ctx, &stats, &res);
+        STATS::method_completion_time_ms.add_value(
+            stats.completion_time.as_millis_unchecked() as i64,
+            ("impl_land_changesets".to_string(),),
+        );
         res
     }
 
@@ -354,9 +372,11 @@ fn log_result<T: AddScubaResponse>(
     match result {
         Ok(response) => {
             response.add_scuba_response(&mut scuba);
+            STATS::total_request_success.add_value(1);
             scuba.add("status", "SUCCESS");
         }
         Err(err) => {
+            STATS::total_request_internal_failure.add_value(1);
             scuba.add("status", "INTERNAL_ERROR");
             scuba.add("error", err.to_string());
         }
@@ -368,6 +388,7 @@ fn log_result<T: AddScubaResponse>(
 }
 
 fn log_canceled(ctx: &CoreContext, stats: &FutureStats) {
+    STATS::total_request_canceled.add_value(1);
     let mut scuba = ctx.scuba().clone();
     ctx.perf_counters().insert_perf_counters(&mut scuba);
     scuba.add_future_stats(stats);
