@@ -9,11 +9,8 @@
 
 namespace facebook::eden {
 ImmediateFuture<folly::Unit> makeNotReadyImmediateFuture() {
-  // A promise is necessary to prevent the ImmediateFuture constructor from
-  // detecting that the SemiFuture is immediately ready and unwrapping it.
-  auto [promise, semi] = folly::makePromiseContract<folly::Unit>();
-  auto ret = ImmediateFuture{std::move(semi)};
-  promise.setValue(folly::unit);
-  return ret;
+  return ImmediateFuture{
+      folly::SemiFuture<folly::Unit>{folly::unit},
+      ImmediateFuture<folly::Unit>::SemiFutureReadiness::LazySemiFuture};
 }
 } // namespace facebook::eden

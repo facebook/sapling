@@ -19,6 +19,7 @@ void ImmediateFuture<T>::destroy() {
       immediate_.~TryType();
       break;
     case Kind::SemiFuture:
+    case Kind::LazySemiFuture:
       using SemiFutureType = folly::SemiFuture<T>;
       semi_.~SemiFutureType();
       break;
@@ -41,9 +42,15 @@ ImmediateFuture<T>::ImmediateFuture(folly::Try<T>&& value) noexcept(
 }
 
 template <typename T>
-ImmediateFuture<T>::ImmediateFuture(folly::SemiFuture<T>&& fut) noexcept(
-    std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>) {
-  if (!fut.isReady() || detail::kImmediateFutureAlwaysDefer) {
+ImmediateFuture<T>::ImmediateFuture(
+    folly::SemiFuture<T>&& fut,
+    SemiFutureReadiness readiness) noexcept(std::
+                                                is_nothrow_move_constructible_v<
+                                                    folly::SemiFuture<T>>) {
+  if (readiness == SemiFutureReadiness::LazySemiFuture) {
+    kind_ = Kind::LazySemiFuture;
+    new (&semi_) folly::SemiFuture<T>{std::move(fut)};
+  } else if (!fut.isReady() || detail::kImmediateFutureAlwaysDefer) {
     kind_ = Kind::SemiFuture;
     new (&semi_) folly::SemiFuture<T>{std::move(fut)};
   } else {
@@ -67,6 +74,7 @@ ImmediateFuture<T>::ImmediateFuture(ImmediateFuture<T>&& other) noexcept(
       new (&immediate_) folly::Try<T>(std::move(other.immediate_));
       break;
     case Kind::SemiFuture:
+    case Kind::LazySemiFuture:
       new (&semi_) folly::SemiFuture<T>(std::move(other.semi_));
       break;
     case Kind::Nothing:
@@ -89,6 +97,7 @@ ImmediateFuture<T>::operator=(ImmediateFuture<T>&& other) noexcept(
       new (&immediate_) folly::Try<T>(std::move(other.immediate_));
       break;
     case Kind::SemiFuture:
+    case Kind::LazySemiFuture:
       new (&semi_) folly::SemiFuture<T>(std::move(other.semi_));
       break;
     case Kind::Nothing:
@@ -187,6 +196,7 @@ bool ImmediateFuture<T>::isReady() const {
     case Kind::SemiFuture:
       // TODO: This could return semi_.isReady() if we also changed thenTry to
       // check semi_.isReady() and call .get() instead of .defer().
+    case Kind::LazySemiFuture:
       return false;
     case Kind::Nothing:
       throw DestroyedImmediateFutureError{};
@@ -204,6 +214,7 @@ ImmediateFuture<T>::thenTry(Func&& func) && {
     case Kind::Immediate:
       return detail::makeImmediateFutureFromImmediate(
           std::forward<Func>(func), std::move(immediate_));
+    case Kind::LazySemiFuture:
     case Kind::SemiFuture: {
       // In the case where Func returns an ImmediateFuture, we need to
       // transform that return value into a SemiFuture so that the return
@@ -228,6 +239,7 @@ T ImmediateFuture<T>::get() && {
     case Kind::Immediate:
       return std::move(immediate_).value();
     case Kind::SemiFuture:
+    case Kind::LazySemiFuture:
       return std::move(semi_).get();
     case Kind::Nothing:
       throw DestroyedImmediateFutureError();
@@ -241,6 +253,7 @@ folly::Try<T> ImmediateFuture<T>::getTry() && {
     case Kind::Immediate:
       return std::move(immediate_);
     case Kind::SemiFuture:
+    case Kind::LazySemiFuture:
       return std::move(semi_).getTry();
     case Kind::Nothing:
       throw DestroyedImmediateFutureError();
@@ -254,6 +267,7 @@ T ImmediateFuture<T>::get(folly::HighResDuration timeout) && {
     case Kind::Immediate:
       return std::move(immediate_).value();
     case Kind::SemiFuture:
+    case Kind::LazySemiFuture:
       return std::move(semi_).get(timeout);
     case Kind::Nothing:
       throw DestroyedImmediateFutureError();
@@ -267,6 +281,7 @@ folly::Try<T> ImmediateFuture<T>::getTry(folly::HighResDuration timeout) && {
     case Kind::Immediate:
       return std::move(immediate_);
     case Kind::SemiFuture:
+    case Kind::LazySemiFuture:
       return std::move(semi_).getTry(timeout);
     case Kind::Nothing:
       throw DestroyedImmediateFutureError();
@@ -280,6 +295,7 @@ folly::SemiFuture<T> ImmediateFuture<T>::semi() && {
     case Kind::Immediate:
       return std::move(immediate_);
     case Kind::SemiFuture:
+    case Kind::LazySemiFuture:
       return std::move(semi_);
     case Kind::Nothing:
       throw DestroyedImmediateFutureError();

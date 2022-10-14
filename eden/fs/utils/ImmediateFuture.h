@@ -72,11 +72,14 @@ class ImmediateFuture {
    * If the given SemiFuture is ready, the resulting value is moved into and
    * stored inline in this ImmediateFuture.
    *
-   * If lazy evaluation of SemiFuture's callbacks is intentional, an unfulfilled
-   * SemiFuture can be created with `.defer()` and passed in.
+   * If lazy evaluation of SemiFuture's callbacks is intentional,
+   * SemiFutureReadiness::LazySemiFuture can be set to defeat the optimization
+   * described above as well as ensuring that ImmediateFuture::isReady always
+   * returns false.
    */
   /* implicit */ ImmediateFuture(folly::SemiFuture<T>&& fut) noexcept(
-      std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>);
+      std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>)
+      : ImmediateFuture{std::move(fut), SemiFutureReadiness::EagerSemiFuture} {}
 
   ~ImmediateFuture();
 
@@ -229,7 +232,35 @@ class ImmediateFuture {
 
  private:
   /**
-   * Destroy this ImmediatureFuture.
+   * Define the behavior of the SemiFuture constructor and continuation when
+   * dealing with ready SemiFuture.
+   */
+  enum class SemiFutureReadiness {
+    /**
+     * At construction time, and at continuation time, the SemiFuture readiness
+     * is tested, a ready one will be treated as if the ImmediateFuture was
+     * holding an immediate value.
+     */
+    EagerSemiFuture,
+    /**
+     * The SemiFuture is never considered ready even if it is. This can be used
+     * to force lazyness by ImmediateFuture users. Prefer using
+     * makeNotReadyImmediateFuture to obtain a lazy behavior.
+     */
+    LazySemiFuture,
+  };
+
+  ImmediateFuture(
+      folly::SemiFuture<T>&& fut,
+      SemiFutureReadiness
+          readiness) noexcept(std::
+                                  is_nothrow_move_constructible_v<
+                                      folly::SemiFuture<T>>);
+
+  friend ImmediateFuture<folly::Unit> makeNotReadyImmediateFuture();
+
+  /**
+   * Destroy this ImmediateFuture.
    *
    * Any subsequent access to it will throw a DestroyedImmediateFutureError.
    */
@@ -245,6 +276,9 @@ class ImmediateFuture {
     Immediate,
     /** Holds a SemiFuture, semi_ is valid. */
     SemiFuture,
+    /** Holds a SemiFuture, ImmediateFuture::isReady will always return false,
+       semi_ is valid */
+    LazySemiFuture,
     /** Doesn't hold anything, neither immediate_ nor semi_ are valid. */
     Nothing,
   };
