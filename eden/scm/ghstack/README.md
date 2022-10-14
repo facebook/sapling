@@ -1,7 +1,7 @@
 # sapling-ghstack
 
 This is a fork of https://github.com/ezyang/ghstack that includes changes to
-support Git-on-Hg.
+support Sapling.
 
 ## Building and Running the Code
 
