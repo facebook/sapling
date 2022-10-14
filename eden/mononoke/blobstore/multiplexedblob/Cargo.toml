@@ -29,7 +29,7 @@ strum = "0.21"
 strum_macros = "0.21"
 thiserror = "1.0.36"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../../tunables" }
 twox-hash = "1.6.1"
 

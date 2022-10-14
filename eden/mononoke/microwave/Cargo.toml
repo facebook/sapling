@@ -20,4 +20,4 @@ mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 microwave_if = { version = "0.1.0", path = "if" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }

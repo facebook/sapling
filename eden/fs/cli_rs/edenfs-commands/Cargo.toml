@@ -30,7 +30,7 @@ sysinfo = "0.20.4"
 tabular = "0.2.0"
 termwiz = { version = "0.18", features = ["widgets"] }
 thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 toml = "=0.5.8"
 tracing = "0.1.35"
 

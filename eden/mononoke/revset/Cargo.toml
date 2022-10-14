@@ -36,4 +36,4 @@ quickcheck = "1.0"
 rand = { version = "0.8", features = ["small_rng"] }
 revset_test_helper = { version = "0.1.0", path = "revset-test-helper" }
 skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }

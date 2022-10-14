@@ -14,7 +14,7 @@ futures = { version = "0.3.22", features = ["async-await", "compat"] }
 itertools = "0.10.3"
 
 [dev-dependencies]
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 
 [features]
 default = ["python3"]

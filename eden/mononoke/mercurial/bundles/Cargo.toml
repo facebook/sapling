@@ -33,7 +33,7 @@ quickcheck = "1.0"
 revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 thiserror = "1.0.36"
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 tokio-codec = "0.1"
 tokio-io = "0.1"
 tunables = { version = "0.1.0", path = "../../tunables" }

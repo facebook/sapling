@@ -26,4 +26,4 @@ zstore = { version = "0.1.0", path = "../zstore" }
 
 [dev-dependencies]
 tempfile = "3.3"
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }

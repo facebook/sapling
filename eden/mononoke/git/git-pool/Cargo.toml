@@ -12,5 +12,5 @@ anyhow = "1.0.65"
 git2 = "0.14"
 num_cpus = "1.11"
 r2d2 = "0.8.8"
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 tokio_shim = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

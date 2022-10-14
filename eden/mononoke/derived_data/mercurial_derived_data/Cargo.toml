@@ -31,7 +31,7 @@ repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_deri
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }

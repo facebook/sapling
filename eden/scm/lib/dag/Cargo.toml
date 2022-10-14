@@ -38,7 +38,7 @@ fs2 = "0.4"
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
 once_cell = "1.12"
 quickcheck = "1.0"
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 unicode-width = "0.1"
 
 [features]

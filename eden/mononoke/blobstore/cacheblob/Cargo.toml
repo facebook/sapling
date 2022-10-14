@@ -29,7 +29,7 @@ prefixblob = { version = "0.1.0", path = "../prefixblob" }
 redactedblobstore = { version = "0.1.0", path = "../redactedblobstore" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../../tunables" }
 
 [dev-dependencies]

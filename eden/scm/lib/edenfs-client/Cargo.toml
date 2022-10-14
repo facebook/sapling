@@ -17,7 +17,7 @@ sha2 = "0.10"
 status = { version = "0.1.0", path = "../status" }
 thiserror = "1.0.36"
 thrift-types = { version = "0.1.0", path = "../thrift-types" }
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 tokio-uds-compat = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 toml = "=0.5.8"
 types = { version = "0.1.0", path = "../types" }

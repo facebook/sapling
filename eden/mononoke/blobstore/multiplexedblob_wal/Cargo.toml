@@ -21,7 +21,7 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 thiserror = "1.0.36"
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 blobstore_test_utils = { version = "0.1.0", path = "../test_utils" }

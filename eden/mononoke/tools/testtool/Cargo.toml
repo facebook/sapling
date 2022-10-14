@@ -37,6 +37,6 @@ serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_dep
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }

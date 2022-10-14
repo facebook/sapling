@@ -46,4 +46,4 @@ revset = { version = "0.1.0", path = "../../revset" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }

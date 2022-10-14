@@ -23,4 +23,4 @@ rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }

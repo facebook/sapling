@@ -28,7 +28,7 @@ reachabilityindex = { version = "0.1.0", path = ".." }
 reloader = { version = "0.1.0", path = "../../common/reloader" }
 skiplist_thrift = { version = "0.1.0", path = "../if" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../../tunables" }
 
 [dev-dependencies]

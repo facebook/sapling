@@ -16,4 +16,4 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 replication_lag_config = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/mysql/replication_lag" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql_ext = { version = "0.1.0", path = "../rust/sql_ext" }
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }

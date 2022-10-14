@@ -17,7 +17,7 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 phases = { version = "0.1.0", path = "../phases" }
 strum = "0.21"
 strum_macros = "0.21"
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 blobrepo = { version = "0.1.0", path = "../blobrepo" }

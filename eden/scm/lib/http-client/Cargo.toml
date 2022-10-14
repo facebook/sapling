@@ -31,7 +31,7 @@ serde_cbor = "0.11"
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 structopt = "0.3.23"
 thiserror = "1.0.36"
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.6", features = ["full"] }
 tracing = "0.1.35"
 url = "2.2.2"

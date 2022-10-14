@@ -21,4 +21,4 @@ maplit = "1.0"
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 quickcheck = "1.0"
 quickcheck_async = "0.1.1"
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }

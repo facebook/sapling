@@ -18,4 +18,4 @@ sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 
 [dev-dependencies]
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }

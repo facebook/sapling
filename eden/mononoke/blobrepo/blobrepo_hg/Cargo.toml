@@ -33,6 +33,6 @@ repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_deri
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 uuid = { version = "0.8.1", features = ["serde", "v4", "v5"] }
 wireproto_handler = { version = "0.1.0", path = "../../wireproto_handler" }

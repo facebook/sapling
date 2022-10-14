@@ -29,4 +29,4 @@ fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 maplit = "1.0"
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 quickcheck = "1.0"
-tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
