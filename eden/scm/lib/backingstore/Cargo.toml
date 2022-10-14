@@ -26,7 +26,7 @@ parking_lot = { version = "0.11.2", features = ["send_guard"] }
 revisionstore = { version = "0.1.0", path = "../revisionstore" }
 tracing = "0.1.35"
 tracing-collector = { version = "0.1.0", path = "../tracing-collector" }
-tracing-subscriber = { version = "0.3.14", features = ["ansi", "env-filter", "fmt", "json", "local-time", "parking_lot", "registry"] }
+tracing-subscriber = { version = "0.3.16", features = ["ansi", "env-filter", "fmt", "json", "local-time", "parking_lot", "registry"] }
 types = { version = "0.1.0", path = "../types" }
 
 [features]

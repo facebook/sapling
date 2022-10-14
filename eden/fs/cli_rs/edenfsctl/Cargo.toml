@@ -13,7 +13,7 @@ clap = { version = "3.2.17", features = ["derive", "env", "regex", "unicode", "w
 edenfs-commands = { version = "0.1.0", path = "../edenfs-commands" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tracing = "0.1.35"
-tracing-subscriber = { version = "0.3.14", features = ["ansi", "env-filter", "fmt", "json", "local-time", "parking_lot", "registry"] }
+tracing-subscriber = { version = "0.3.16", features = ["ansi", "env-filter", "fmt", "json", "local-time", "parking_lot", "registry"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }

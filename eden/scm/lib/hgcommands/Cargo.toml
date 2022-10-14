@@ -63,7 +63,7 @@ tracing = "0.1.35"
 tracing-collector = { version = "0.1.0", path = "../tracing-collector" }
 tracing-reload = { version = "0.1.0", path = "../tracing-reload" }
 tracing-sampler = { version = "0.1.0", path = "../tracing-sampler" }
-tracing-subscriber = { version = "0.3.14", features = ["ansi", "env-filter", "fmt", "json", "local-time", "parking_lot", "registry"] }
+tracing-subscriber = { version = "0.3.16", features = ["ansi", "env-filter", "fmt", "json", "local-time", "parking_lot", "registry"] }
 treestate = { version = "0.1.0", path = "../treestate" }
 types = { version = "0.1.0", path = "../types" }
 url = "2.2.2"
