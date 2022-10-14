@@ -447,8 +447,6 @@ impl Matcher {
 // Convert a sparse profile pattern into what the tree matcher
 // expects. We only support "glob" and "path" pattern types.
 fn sparse_pat_to_matcher_rule(pat: &Pattern) -> Result<Vec<String>, Error> {
-    static DEFAULT_TYPE: &str = "glob";
-
     let (pat_type, pat_text) = pathmatcher::split_pattern(pat.as_str(), PatternKind::Glob);
     match pat_type {
         PatternKind::Glob | PatternKind::Path => {} // empty
