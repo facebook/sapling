@@ -120,7 +120,7 @@ pub fn triage_error(
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "eden"))]
 mod tests {
     use std::io::Cursor;
 

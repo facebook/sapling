@@ -315,7 +315,12 @@ pub fn sniff_dir(path: &Path) -> Result<Option<Identity>> {
         match fs::metadata(&test_path) {
             Ok(md) if md.is_dir() => {
                 tracing::debug!(id=%id, path=%path.display(), "sniffed repo dir");
-                return Ok(Some(*id));
+
+                // Combine DEFAULT's user facing attributes w/ id's repo attributes.
+                let mut mix = *DEFAULT.read();
+                mix.repo = id.repo;
+
+                return Ok(Some(mix));
             }
             Err(err) if err.kind() == io::ErrorKind::PermissionDenied => {
                 // Propagate permission error checking dot dir so we
@@ -401,16 +406,18 @@ mod test {
 
         {
             let root = dir.path().join("default");
-            fs::create_dir_all(root.join(DEFAULT.read().dot_dir()))?;
+            fs::create_dir_all(root.join(default().dot_dir()))?;
 
-            assert_eq!(sniff_dir(&root)?.unwrap(), *DEFAULT.read());
+            assert_eq!(sniff_dir(&root)?.unwrap(), default());
         }
 
         {
             let root = dir.path().join("test1");
             fs::create_dir_all(root.join(TEST.dot_dir()))?;
 
-            assert_eq!(sniff_dir(&root)?.unwrap(), TEST);
+            let sniffed = sniff_dir(&root)?.unwrap();
+            assert_eq!(sniffed.repo, TEST.repo);
+            assert_eq!(sniffed.user, default().user);
         }
 
         // Make sure we don't error out on bundle file (e.g. "hg -R some_bundle ...").
@@ -424,7 +431,7 @@ mod test {
         #[cfg(unix)]
         {
             let root = dir.path().join("bad_perms");
-            let dot_dir = root.join(DEFAULT.read().dot_dir());
+            let dot_dir = root.join(default().dot_dir());
             fs::create_dir_all(&dot_dir)?;
 
             // Sanity.
@@ -451,12 +458,18 @@ mod test {
         let dot_dir = root.join(TEST.dot_dir());
         fs::create_dir_all(&dot_dir)?;
 
-        assert_eq!(sniff_root(&root)?.unwrap(), (root.clone(), TEST));
+        let (sniffed_root, sniffed_ident) = sniff_root(&root)?.unwrap();
+        assert_eq!(sniffed_root, root);
+        assert_eq!(sniffed_ident.repo, TEST.repo);
+        assert_eq!(sniffed_ident.user, default().user);
 
         let abc = root.join("a/b/c");
         fs::create_dir_all(&abc)?;
 
-        assert_eq!(sniff_root(&abc)?.unwrap(), (root, TEST));
+        let (sniffed_root, sniffed_ident) = sniff_root(&root)?.unwrap();
+        assert_eq!(sniffed_root, root);
+        assert_eq!(sniffed_ident.repo, TEST.repo);
+        assert_eq!(sniffed_ident.user, default().user);
 
         Ok(())
     }
