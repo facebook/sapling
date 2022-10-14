@@ -490,7 +490,9 @@ def check_materialized_are_accessible(
 
                         FILE_ATTRIBUTE_REPARSE_POINT = 0x0400
                         is_reparse = (
-                            ctypes.windll.kernel32.GetFileAttributesW(str(path))
+                            ctypes.windll.kernel32.GetFileAttributesW(
+                                str(checkout.path / dirent_path)
+                            )
                             & FILE_ATTRIBUTE_REPARSE_POINT
                             == FILE_ATTRIBUTE_REPARSE_POINT
                         )
