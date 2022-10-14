@@ -225,36 +225,7 @@ mod idents {
     use super::*;
     pub static ALL_IDENTITIES: &[Identity] = &[HG, SL];
 
-    /// Default `Identity` based on the current executable name.
-    pub static DEFAULT: Lazy<RwLock<Identity>> = Lazy::new(|| {
-        let path = std::env::current_exe().expect("current_exe() should not fail");
-        let file_name = path
-            .file_name()
-            .expect("file_name() on current_exe() should not fail");
-        let file_name = file_name.to_string_lossy();
-        let (ident, reason) = (|| {
-            for ident in ALL_IDENTITIES {
-                if file_name.contains(ident.user.cli_name) {
-                    return (*ident, "contains");
-                }
-            }
-            // Special case: for fbcode/eden/testlib/ tests the "current_exe"
-            // could be "python3.8". Use "hg" to maintain test compatibility.
-            // If we updated the tests, the special case can be dropped.
-            if file_name.starts_with("python") {
-                return (HG, "python");
-            }
-            // Fallback to SL if current_exe does not provide information.
-            (SL, "fallback")
-        })();
-        tracing::info!(
-            identity = ident.user.cli_name,
-            argv0 = file_name.as_ref(),
-            reason,
-            "identity from argv0"
-        );
-        RwLock::new(ident)
-    });
+    pub static DEFAULT: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(compute_default()));
 }
 
 #[cfg(feature = "sl_only")]
@@ -276,6 +247,41 @@ use idents::DEFAULT;
 
 pub fn default() -> Identity {
     *DEFAULT.read()
+}
+
+/// Default `Identity` based on the current executable name.
+fn compute_default() -> Identity {
+    let path = std::env::current_exe().expect("current_exe() should not fail");
+    let file_name = path
+        .file_name()
+        .expect("file_name() on current_exe() should not fail");
+    let file_name = file_name.to_string_lossy();
+    let (ident, reason) = (|| {
+        for ident in idents::ALL_IDENTITIES {
+            if file_name.contains(ident.user.cli_name) {
+                return (*ident, "contains");
+            }
+        }
+
+        // Special case: for fbcode/eden/testlib/ tests the "current_exe"
+        // could be "python3.8". Use "hg" to maintain test compatibility.
+        // If we updated the tests, the special case can be dropped.
+        if file_name.starts_with("python") {
+            return (HG, "python");
+        }
+
+        // Fallback to SL if current_exe does not provide information.
+        (SL, "fallback")
+    })();
+
+    tracing::info!(
+        identity = ident.user.cli_name,
+        argv0 = file_name.as_ref(),
+        reason,
+        "identity from argv0"
+    );
+
+    ident
 }
 
 /// CLI name to be used in user facing messaging.
