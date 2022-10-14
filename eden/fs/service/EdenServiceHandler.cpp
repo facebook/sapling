@@ -2598,7 +2598,7 @@ folly::SemiFuture<std::unique_ptr<Glob>>
 EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
   ThriftGlobImpl globber{*params};
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3,
+      DBG2,
       *params->mountPoint_ref(),
       toLogArg(*params->globs_ref()),
       globber.logString());
