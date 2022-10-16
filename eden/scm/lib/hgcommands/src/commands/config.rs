@@ -32,10 +32,6 @@ use crate::commands::FormatterOpts;
 
 define_flags! {
     pub struct ConfigOpts {
-        /// show untrusted configuration options
-        #[short('u')]
-        untrusted: bool,
-
         /// edit user config
         #[short('e')]
         edit: bool,

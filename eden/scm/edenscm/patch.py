@@ -2475,12 +2475,11 @@ class GitDiffRequired(Exception):
     pass
 
 
-def diffallopts(ui, opts=None, untrusted=False, section="diff"):
+def diffallopts(ui, opts=None, section="diff"):
     """return diffopts with all features supported and parsed"""
     return difffeatureopts(
         ui,
         opts=opts,
-        untrusted=untrusted,
         section=section,
         git=True,
         whitespace=True,
@@ -2494,7 +2493,6 @@ diffopts = diffallopts
 def difffeatureopts(
     ui,
     opts=None,
-    untrusted=False,
     section="diff",
     git=False,
     whitespace=False,
@@ -2523,7 +2521,7 @@ def difffeatureopts(
                 return v
         if forceplain is not None and ui.plain("diffopts"):
             return forceplain
-        return getter(section, name or key, untrusted=untrusted)
+        return getter(section, name or key)
 
     # core options, expected to be understood by every diff parser
     buildopts = {

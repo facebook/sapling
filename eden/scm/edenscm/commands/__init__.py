@@ -1731,7 +1731,6 @@ def _docommit(ui, repo, *pats, **opts):
 @command(
     "config|showconfig|debugconfig|conf|confi",
     [
-        ("u", "untrusted", None, _("show untrusted configuration options")),
         ("e", "edit", None, _("edit user config")),
         ("l", "local", None, _("edit repository config")),
         ("g", "global", None, _("edit global config")),
@@ -1815,15 +1814,14 @@ def config(ui, repo, *values, **opts):
         return
     ui.pager("config")
     fm = ui.formatter("config", opts)
-    untrusted = bool(opts.get("untrusted"))
     if values:
         sections = [v for v in values if "." not in v]
         items = [v for v in values if "." in v]
         if len(items) > 1 or items and sections:
             raise error.Abort(_("only one config item permitted"))
     matched = False
-    for section, name, value in ui.walkconfig(untrusted=untrusted):
-        source = ui.configsource(section, name, untrusted)
+    for section, name, value in ui.walkconfig():
+        source = ui.configsource(section, name)
         value = pycompat.bytestr(value)
         if fm.isplain():
             source = source or "none"

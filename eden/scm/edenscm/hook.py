@@ -167,23 +167,13 @@ _fromuntrusted = object()
 def _allhooks(ui):
     """return a list of (hook-id, cmd) pairs sorted by priority"""
     hooks = _hookitems(ui)
-    # Be careful in this section, propagating the real commands from untrusted
-    # sources would create a security vulnerability, make sure anything altered
-    # in that section uses "_fromuntrusted" as its command.
-    untrustedhooks = _hookitems(ui, _untrusted=True)
-    for name, value in untrustedhooks.items():
-        trustedvalue = hooks.get(name, (None, None, name, _fromuntrusted))
-        if value != trustedvalue:
-            (lp, lo, lk, lv) = trustedvalue
-            hooks[name] = (lp, lo, lk, _fromuntrusted)
-    # (end of the security sensitive section)
     return [(k, v) for p, o, k, v in sorted(hooks.values())]
 
 
-def _hookitems(ui, _untrusted=False):
+def _hookitems(ui):
     """return all hooks items ready to be sorted"""
     hooks = {}
-    for name, cmd in ui.configitems("hooks", untrusted=_untrusted):
+    for name, cmd in ui.configitems("hooks"):
         if not name.startswith("priority"):
             priority = ui.configint("hooks", "priority.%s" % name, 0)
             # TODO: check whether the hook item is trusted or not

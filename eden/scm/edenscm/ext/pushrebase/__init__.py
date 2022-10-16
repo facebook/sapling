@@ -891,7 +891,7 @@ def _exchangesetup():
                     bundle.close()
 
         # Move public phase forward
-        publishing = op.repo.ui.configbool("phases", "publish", untrusted=True)
+        publishing = op.repo.ui.configbool("phases", "publish")
         if publishing:
             phasesmod.advanceboundary(op.repo, tr, phasesmod.public, [added[-1]])
 

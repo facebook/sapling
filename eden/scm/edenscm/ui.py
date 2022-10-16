@@ -395,14 +395,14 @@ class ui(object):
     def configtostring(self):
         return self._uiconfig.configtostring()
 
-    def configsource(self, section, name, untrusted=False):
-        return self._uiconfig.configsource(section, name, untrusted)
+    def configsource(self, section, name):
+        return self._uiconfig.configsource(section, name)
 
-    def config(self, section, name, default=_unset, untrusted=False):
+    def config(self, section, name, default=_unset):
         """return the plain string version of a config"""
-        return self._uiconfig.config(section, name, default, untrusted)
+        return self._uiconfig.config(section, name, default)
 
-    def configsuboptions(self, section, name, default=_unset, untrusted=False):
+    def configsuboptions(self, section, name, default=_unset):
         """Get a config option and all sub-options.
 
         Some config options have sub-options that are declared with the
@@ -412,13 +412,13 @@ class ui(object):
         Returns a 2-tuple of ``(option, sub-options)``, where `sub-options``
         is a dict of defined sub-options where keys and values are strings.
         """
-        return self._uiconfig.configsuboptions(section, name, default, untrusted)
+        return self._uiconfig.configsuboptions(section, name, default)
 
-    def configpath(self, section, name, default=_unset, untrusted=False):
+    def configpath(self, section, name, default=_unset):
         "get a path config item, expanded relative to repo root or config file"
-        return self._uiconfig.configpath(section, name, default, untrusted)
+        return self._uiconfig.configpath(section, name, default)
 
-    def configbool(self, section, name, default=_unset, untrusted=False):
+    def configbool(self, section, name, default=_unset):
         """parse a configuration element as a boolean
 
         >>> u = ui(); s = 'foo'
@@ -437,11 +437,9 @@ class ui(object):
         ... except Exception as e: print(e)
         foo.invalid is not a boolean ('somevalue')
         """
-        return self._uiconfig.configbool(section, name, default, untrusted)
+        return self._uiconfig.configbool(section, name, default)
 
-    def configwith(
-        self, convert, section, name, default=_unset, desc=None, untrusted=False
-    ):
+    def configwith(self, convert, section, name, default=_unset, desc=None):
         """parse a configuration element with a conversion function
 
         >>> u = ui(); s = 'foo'
@@ -461,11 +459,9 @@ class ui(object):
         ... except Exception as e: print(e)
         foo.invalid is not a valid womble ('somevalue')
         """
-        return self._uiconfig.configwith(
-            convert, section, name, default, desc, untrusted
-        )
+        return self._uiconfig.configwith(convert, section, name, default, desc)
 
-    def configint(self, section, name, default=_unset, untrusted=False):
+    def configint(self, section, name, default=_unset):
         """parse a configuration element as an integer
 
         >>> u = ui(); s = 'foo'
@@ -482,9 +478,9 @@ class ui(object):
         ... except Exception as e: print(e)
         foo.invalid is not a valid integer ('somevalue')
         """
-        return self._uiconfig.configint(section, name, default, untrusted)
+        return self._uiconfig.configint(section, name, default)
 
-    def configbytes(self, section, name, default=_unset, untrusted=False):
+    def configbytes(self, section, name, default=_unset):
         """parse a configuration element as a quantity in bytes
 
         Units can be specified as b (bytes), k or kb (kilobytes), m or
@@ -504,9 +500,9 @@ class ui(object):
         ... except Exception as e: print(e)
         foo.invalid is not a byte quantity ('somevalue')
         """
-        return self._uiconfig.configbytes(section, name, default, untrusted)
+        return self._uiconfig.configbytes(section, name, default)
 
-    def configlist(self, section, name, default=_unset, untrusted=False):
+    def configlist(self, section, name, default=_unset):
         """parse a configuration element as a list of comma/space separated
         strings
 
@@ -518,9 +514,9 @@ class ui(object):
         >>> u.configlist(s, 'list2')
         ['this', 'is', 'a small', 'test']
         """
-        return self._uiconfig.configlist(section, name, default, untrusted)
+        return self._uiconfig.configlist(section, name, default)
 
-    def configdate(self, section, name, default=_unset, untrusted=False):
+    def configdate(self, section, name, default=_unset):
         """parse a configuration element as a tuple of ints
 
         >>> u = ui(); s = 'foo'
@@ -528,23 +524,23 @@ class ui(object):
         >>> u.configdate(s, 'date')
         (0, 0)
         """
-        return self._uiconfig.configdate(section, name, default, untrusted)
+        return self._uiconfig.configdate(section, name, default)
 
-    def hasconfig(self, section, name, untrusted=False):
-        return self._uiconfig.hasconfig(section, name, untrusted)
+    def hasconfig(self, section, name):
+        return self._uiconfig.hasconfig(section, name)
 
-    def has_section(self, section, untrusted=False):
+    def has_section(self, section):
         """tell whether section exists in config."""
-        return self._uiconfig.has_section(section, untrusted)
+        return self._uiconfig.has_section(section)
 
     def configsections(self):
         return self._uiconfig.configsections()
 
-    def configitems(self, section, untrusted=False, ignoresub=False):
-        return self._uiconfig.configitems(section, untrusted, ignoresub)
+    def configitems(self, section, ignoresub=False):
+        return self._uiconfig.configitems(section, ignoresub)
 
-    def walkconfig(self, untrusted=False):
-        return self._uiconfig.walkconfig(untrusted)
+    def walkconfig(self):
+        return self._uiconfig.walkconfig()
 
     def plain(self, feature=None):
         """is plain mode active?

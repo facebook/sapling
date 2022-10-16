@@ -186,7 +186,7 @@ class uiconfig(object):
     def configtostring(self):
         return self._rcfg.tostring()
 
-    def configsource(self, section, name, untrusted=False):
+    def configsource(self, section, name):
         sources = self._rcfg.sources(section, name)
         if sources:
             # Skip "ui.fixconfig" sources
@@ -200,14 +200,14 @@ class uiconfig(object):
                     return strsource
         return ""
 
-    def config(self, section, name, default=_unset, untrusted=False):
+    def config(self, section, name, default=_unset):
         """return the plain string version of a config"""
-        value = self._config(section, name, default=default, untrusted=untrusted)
+        value = self._config(section, name, default=default)
         if value is _unset:
             return None
         return value
 
-    def _config(self, section, name, default=_unset, untrusted=False):
+    def _config(self, section, name, default=_unset):
         value = itemdefault = default
         item = self._knownconfig.get(section, {}).get(name)
         alternates = [(section, name)]
@@ -257,7 +257,7 @@ class uiconfig(object):
 
         return value
 
-    def configsuboptions(self, section, name, default=_unset, untrusted=False):
+    def configsuboptions(self, section, name, default=_unset):
         """Get a config option and all sub-options.
 
         Some config options have sub-options that are declared with the
@@ -267,7 +267,7 @@ class uiconfig(object):
         Returns a 2-tuple of ``(option, sub-options)``, where `sub-options``
         is a dict of defined sub-options where keys and values are strings.
         """
-        main = self.config(section, name, default, untrusted=untrusted)
+        main = self.config(section, name, default)
         cfg = self._rcfg
         sub = {}
         prefix = "%s:" % name
@@ -278,19 +278,19 @@ class uiconfig(object):
                 sub[k[len(prefix) :]] = v
         return main, sub
 
-    def configpath(self, section, name, default=_unset, untrusted=False):
+    def configpath(self, section, name, default=_unset):
         "get a path config item, expanded relative to repo root or config file"
-        v = self.config(section, name, default, untrusted)
+        v = self.config(section, name, default)
         if v is None:
             return None
         if not os.path.isabs(v) or "://" not in v:
-            src = self.configsource(section, name, untrusted)
+            src = self.configsource(section, name)
             if ":" in src:
                 base = os.path.dirname(src.rsplit(":")[0])
                 v = os.path.join(base, os.path.expanduser(v))
         return v
 
-    def configbool(self, section, name, default=_unset, untrusted=False):
+    def configbool(self, section, name, default=_unset):
         """parse a configuration element as a boolean
 
         >>> u = uiconfig(); s = 'foo'
@@ -310,7 +310,7 @@ class uiconfig(object):
         foo.invalid is not a boolean ('somevalue')
         """
 
-        v = self._config(section, name, default, untrusted=untrusted)
+        v = self._config(section, name, default)
         if v is None:
             return v
         if v is _unset:
@@ -326,9 +326,7 @@ class uiconfig(object):
             )
         return b
 
-    def configwith(
-        self, convert, section, name, default=_unset, desc=None, untrusted=False
-    ):
+    def configwith(self, convert, section, name, default=_unset, desc=None):
         """parse a configuration element with a conversion function
 
         >>> u = uiconfig(); s = 'foo'
@@ -349,7 +347,7 @@ class uiconfig(object):
         foo.invalid is not a valid womble ('somevalue')
         """
 
-        v = self.config(section, name, default, untrusted)
+        v = self.config(section, name, default)
         if v is None:
             return v  # do not attempt to convert None
         try:
@@ -361,7 +359,7 @@ class uiconfig(object):
                 _("%s.%s is not a valid %s ('%s')") % (section, name, desc, v)
             )
 
-    def configint(self, section, name, default=_unset, untrusted=False):
+    def configint(self, section, name, default=_unset):
         """parse a configuration element as an integer
 
         >>> u = uiconfig(); s = 'foo'
@@ -379,9 +377,9 @@ class uiconfig(object):
         foo.invalid is not a valid integer ('somevalue')
         """
 
-        return self.configwith(int, section, name, default, "integer", untrusted)
+        return self.configwith(int, section, name, default, "integer")
 
-    def configbytes(self, section, name, default=_unset, untrusted=False):
+    def configbytes(self, section, name, default=_unset):
         """parse a configuration element as a quantity in bytes
 
         Units can be specified as b (bytes), k or kb (kilobytes), m or
@@ -402,7 +400,7 @@ class uiconfig(object):
         foo.invalid is not a byte quantity ('somevalue')
         """
 
-        value = self._config(section, name, default, untrusted)
+        value = self._config(section, name, default)
         if value is _unset:
             if default is _unset:
                 default = 0
@@ -416,7 +414,7 @@ class uiconfig(object):
                 _("%s.%s is not a byte quantity ('%s')") % (section, name, value)
             )
 
-    def configlist(self, section, name, default=_unset, untrusted=False):
+    def configlist(self, section, name, default=_unset):
         """parse a configuration element as a list of comma/space separated
         strings
 
@@ -429,14 +427,14 @@ class uiconfig(object):
         ['this', 'is', 'a small', 'test']
         """
         # default is not always a list
-        v = self.configwith(parselist, section, name, default, "list", untrusted)
+        v = self.configwith(parselist, section, name, default, "list")
         if isinstance(v, str):
             return parselist(v)
         elif v is None:
             return []
         return v
 
-    def configdate(self, section, name, default=_unset, untrusted=False):
+    def configdate(self, section, name, default=_unset):
         """parse a configuration element as a tuple of ints
 
         >>> u = uiconfig(); s = 'foo'
@@ -444,25 +442,23 @@ class uiconfig(object):
         >>> u.configdate(s, 'date')
         (0, 0)
         """
-        if self.config(section, name, default, untrusted):
-            return self.configwith(
-                util.parsedate, section, name, default, "date", untrusted
-            )
+        if self.config(section, name, default):
+            return self.configwith(util.parsedate, section, name, default, "date")
         if default is _unset:
             return None
         return default
 
-    def hasconfig(self, section, name, untrusted=False):
+    def hasconfig(self, section, name):
         return self._rcfg.get(section, name) is not None
 
-    def has_section(self, section, untrusted=False):
+    def has_section(self, section):
         """tell whether section exists in config."""
         return section in self._rcfg.sections()
 
     def configsections(self):
         return self._rcfg.sections()
 
-    def configitems(self, section, untrusted=False, ignoresub=False):
+    def configitems(self, section, ignoresub=False):
         cfg = self._rcfg
         items = []
         for name in cfg.names(section):
@@ -473,7 +469,7 @@ class uiconfig(object):
                     items.append((name, value))
         return items
 
-    def walkconfig(self, untrusted=False):
+    def walkconfig(self):
         cfg = self._rcfg
         for section in sorted(cfg.sections()):
             for name in cfg.names(section):

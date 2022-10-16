@@ -65,8 +65,8 @@ warning does not affect write action (commit)
 
 config overrides
 
-  $ HGPLAIN=1 hg config --untrusted chgserver.idletimeout
+  $ HGPLAIN=1 hg config chgserver.idletimeout
   3
   $ cd .. # use repo ui
-  $ HGPLAIN=1 hg config --untrusted ui.foo
+  $ HGPLAIN=1 hg config ui.foo
   bar
