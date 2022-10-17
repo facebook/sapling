@@ -127,11 +127,14 @@ impl CheckoutState {
 
         let mut sparse_overrides = None;
 
+        let vfs = VFS::new(wc_path.to_path_buf())?;
+
         let matcher: Arc<dyn Matcher> = match util::file::exists(dot_path.join("sparse"))? {
             Some(_) => {
                 let overrides = sparse::config_overrides(config);
                 sparse_overrides = Some(overrides.clone());
                 sparse::repo_matcher_with_overrides(
+                    &vfs,
                     dot_path,
                     target_mf.clone(),
                     file_store.clone(),
@@ -146,7 +149,6 @@ impl CheckoutState {
             Diff::new(source_mf, target_mf, &matcher).context("error creating checkout diff")?;
         let actions = ActionMap::from_diff(diff).context("error creating checkout action map")?;
 
-        let vfs = VFS::new(wc_path.to_path_buf())?;
         let checkout = Checkout::from_config(vfs.clone(), config)?;
         let mut plan = checkout.plan_action_map(actions);
 

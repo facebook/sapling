@@ -7,6 +7,7 @@
 
 //! Pattern matcher that matches an exact set of paths.
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use anyhow::Result;
@@ -16,7 +17,7 @@ use crate::DirectoryMatch;
 use crate::Matcher;
 
 /// A [Matcher] that only matches an exact list of file paths.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct ExactMatcher {
     root: Node,
 }
@@ -25,8 +26,8 @@ impl ExactMatcher {
     /// Create [ExactMatcher] using an exact list of file paths.
     ///
     /// The matcher will only match files explicitly listed.
-    pub fn new(paths: impl Iterator<Item = impl AsRef<RepoPath>>) -> Self {
-        let mut root = Node::default();
+    pub fn new(paths: impl Iterator<Item = impl AsRef<RepoPath>>, case_sensitive: bool) -> Self {
+        let mut root = Node::new(case_sensitive);
         for path in paths {
             root.insert(path.as_ref());
         }
@@ -62,16 +63,32 @@ struct Node {
 
     /// Whether this node represents a specific file.
     is_file: bool,
+
+    /// True if it should do case insensitive comparisons.
+    case_sensitive: bool,
 }
 
 impl Node {
+    fn new(case_sensitive: bool) -> Self {
+        Node {
+            children: HashMap::new(),
+            is_file: false,
+            case_sensitive,
+        }
+    }
+
     /// Find the node corresponding to the given path (rooted at this directory),
     /// or [`None`] if there is no node.
     fn find(&self, path: &RepoPath) -> Option<&Node> {
         let mut node = self;
         let mut components = path.components();
         while let Some(component) = components.next() {
-            node = node.children.get(component.as_str())?;
+            let component: Cow<str> = if node.case_sensitive {
+                Cow::Borrowed(component.as_str())
+            } else {
+                Cow::Owned(component.as_str().to_lowercase())
+            };
+            node = node.children.get(component.as_ref())?;
         }
         Some(node)
     }
@@ -82,8 +99,13 @@ impl Node {
 
         let mut components = path.components().peekable();
         while let Some(component) = components.next() {
-            let entry = node.children.entry(component.as_str().to_string());
-            let new_node = entry.or_default();
+            let component = if node.case_sensitive {
+                component.as_str().to_string()
+            } else {
+                component.as_str().to_lowercase()
+            };
+            let entry = node.children.entry(component);
+            let new_node = entry.or_insert_with(|| Node::new(node.case_sensitive));
             // If this is the final path component, then this component represents a file.
             let is_file = components.peek().is_none();
 
@@ -93,16 +115,6 @@ impl Node {
             } else {
                 node = new_node;
             }
-        }
-    }
-}
-
-impl Default for Node {
-    fn default() -> Self {
-        // A new empty node that doesn't represent a file.
-        Node {
-            children: HashMap::new(),
-            is_file: false,
         }
     }
 }
@@ -117,7 +129,7 @@ mod tests {
         let paths = paths
             .iter()
             .map(|p| RepoPath::from_str(p).unwrap().to_owned());
-        let m = ExactMatcher::new(paths);
+        let m = ExactMatcher::new(paths, true);
 
         // Test regular file matching.
         let cases = [
@@ -155,6 +167,24 @@ mod tests {
                 .matches_directory(RepoPath::from_str(path).unwrap())
                 .unwrap();
             assert_eq!(expected, actual, "Directory match {:?}", path);
+        }
+    }
+
+    #[test]
+    fn test_case_insensitive() {
+        let paths = ["dir/file"];
+        let paths = paths
+            .iter()
+            .map(|p| RepoPath::from_str(p).unwrap().to_owned());
+        let case_sensitive = [true, false];
+        for sensitive in case_sensitive {
+            let m = ExactMatcher::new(paths.clone(), sensitive);
+            let cases = ["dir/file", "DIR/file", "dir/FILE", "DIR/FILE"];
+            for path in cases {
+                let matches = m.matches_file(RepoPath::from_str(path).unwrap()).unwrap();
+                let expected = path == "dir/file" || !sensitive;
+                assert_eq!(expected, matches, "Matching {:?}", path);
+            }
         }
     }
 }

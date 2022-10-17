@@ -97,7 +97,10 @@ pub fn compute_status(
     }
     // Handle changed files we didn't find in the TreeState.
     p1_manifest
-        .files(ExactMatcher::new(manifest_files.keys()))
+        .files(ExactMatcher::new(
+            manifest_files.keys(),
+            true, // case_sensitive = true
+        ))
         .filter_map(Result::ok)
         .for_each(|file| {
             if let Some(entry) = manifest_files.get_mut(&file.path) {

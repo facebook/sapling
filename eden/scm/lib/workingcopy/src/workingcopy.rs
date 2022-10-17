@@ -60,6 +60,7 @@ impl AsRef<Box<dyn PendingChanges + Send>> for FileSystem {
 }
 
 pub struct WorkingCopy {
+    vfs: VFS,
     treestate: Arc<Mutex<TreeState>>,
     tree_resolver: ArcReadTreeManifest,
     filesystem: Mutex<FileSystem>,
@@ -95,6 +96,7 @@ impl WorkingCopy {
         )?);
 
         Ok(WorkingCopy {
+            vfs,
             treestate,
             tree_resolver,
             filesystem,
@@ -215,6 +217,7 @@ impl WorkingCopy {
             let ident = identity::must_sniff_dir(&fs.vfs.root())?;
             for manifest in manifests.iter() {
                 match crate::sparse::repo_matcher(
+                    &self.vfs,
                     &fs.vfs.root().join(ident.dot_dir()),
                     manifest.read().clone(),
                     fs.file_store.clone(),
@@ -250,7 +253,10 @@ impl WorkingCopy {
                 manifest.clone(),
             )));
         }
-        non_ignore_matchers.push(Arc::new(ExactMatcher::new(added_files.iter())));
+        non_ignore_matchers.push(Arc::new(ExactMatcher::new(
+            added_files.iter(),
+            self.vfs.case_sensitive(),
+        )));
 
         let matcher = Arc::new(IntersectMatcher::new(vec![
             matcher,

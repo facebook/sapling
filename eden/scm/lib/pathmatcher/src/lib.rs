@@ -278,9 +278,11 @@ mod test {
         let matcher = IntersectMatcher::new(vec![
             Arc::new(ExactMatcher::new(
                 [RepoPath::from_str("both/both")?, RepoPath::from_str("a/a")?].iter(),
+                true,
             )),
             Arc::new(ExactMatcher::new(
                 [RepoPath::from_str("both/both")?, RepoPath::from_str("b/b")?].iter(),
+                true,
             )),
         ]);
 

@@ -257,7 +257,7 @@ impl FileChangeDetectorTrait for FileChangeDetector {
         let mut results = Vec::<Result<ResolvedFileChangeResult>>::new();
 
         // First, get the keys for the paths from the current manifest.
-        let matcher = ExactMatcher::new(self.lookups.iter());
+        let matcher = ExactMatcher::new(self.lookups.iter(), self.vfs.case_sensitive());
         let keys = self
             .manifest
             .read()

@@ -26,19 +26,22 @@ use storemodel::ReadFileContents;
 use types::Key;
 use types::RepoPath;
 use types::RepoPathBuf;
+use vfs::VFS;
 
 pub static CONFIG_OVERRIDE_CACHE: &str = "sparseprofileconfigs";
 pub static MERGE_FILE_OVERRIDES: &str = "tempsparse";
 
 pub fn repo_matcher(
+    vfs: &VFS,
     dot_path: &Path,
     manifest: impl Manifest + Send + Sync + 'static,
     store: impl ReadFileContents<Error = anyhow::Error> + Send + Sync,
 ) -> anyhow::Result<Option<Arc<dyn Matcher + Send + Sync + 'static>>> {
-    repo_matcher_with_overrides(dot_path, manifest, store, disk_overrides(dot_path)?)
+    repo_matcher_with_overrides(vfs, dot_path, manifest, store, disk_overrides(dot_path)?)
 }
 
 pub fn repo_matcher_with_overrides(
+    vfs: &VFS,
     dot_path: &Path,
     manifest: impl Manifest + Send + Sync + 'static,
     store: impl ReadFileContents<Error = anyhow::Error> + Send + Sync,
@@ -54,11 +57,12 @@ pub fn repo_matcher_with_overrides(
         }
     };
     Ok(Some(build_matcher(
-        dot_path, prof, manifest, store, overrides,
+        vfs, dot_path, prof, manifest, store, overrides,
     )?))
 }
 
 fn build_matcher(
+    vfs: &VFS,
     dot_path: &Path,
     prof: sparse::Root,
     manifest: impl Manifest + Send + Sync + 'static,
@@ -123,6 +127,7 @@ fn build_matcher(
                     .map(|p| p.try_into())
                     .collect::<Result<Vec<&RepoPath>, _>>()?
                     .iter(),
+                vfs.case_sensitive(),
             );
             matcher = Arc::new(UnionMatcher::new(vec![Arc::new(exact), matcher]));
         }
@@ -251,6 +256,7 @@ inca
     #[test]
     fn test_build_matcher() -> anyhow::Result<()> {
         let root_dir = tempfile::tempdir()?;
+        let vfs = VFS::new(root_dir.path().to_path_buf())?;
 
         let mut config = BTreeMap::new();
 
@@ -273,6 +279,7 @@ exc",
         );
 
         let matcher = build_matcher(
+            &vfs,
             root_dir.path(),
             sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
             commit.clone(),
@@ -293,6 +300,7 @@ exc",
         )?;
 
         let matcher = build_matcher(
+            &vfs,
             root_dir.path(),
             sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
             commit.clone(),
