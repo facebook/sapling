@@ -175,6 +175,7 @@ mod tests {
 
     use anyhow::Result;
     use configmodel::Config;
+    use types::RepoPath;
     use types::RepoPathBuf;
     use watchman_client::prelude::*;
 
@@ -246,13 +247,13 @@ mod tests {
     }
 
     impl FileChangeDetectorTrait for WatchmanStateTestFileChangeDetector {
-        fn has_changed(&mut self, path: &RepoPathBuf) -> Result<FileChangeResult> {
+        fn has_changed(&mut self, path: &RepoPath) -> Result<FileChangeResult> {
             if self.changed_files.contains(path) {
-                return Ok(FileChangeResult::Yes(ChangeType::Changed(path.clone())));
+                return Ok(FileChangeResult::Yes(ChangeType::Changed(path.to_owned())));
             }
 
             if self.deleted_files.contains(path) {
-                return Ok(FileChangeResult::Yes(ChangeType::Deleted(path.clone())));
+                return Ok(FileChangeResult::Yes(ChangeType::Deleted(path.to_owned())));
             }
 
             Ok(FileChangeResult::No)

@@ -22,6 +22,7 @@ use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
 use types::Key;
+use types::RepoPath;
 use types::RepoPathBuf;
 use vfs::is_executable;
 use vfs::is_symlink;
@@ -77,7 +78,7 @@ pub enum ResolvedFileChangeResult {
 }
 
 pub trait FileChangeDetectorTrait {
-    fn has_changed(&mut self, path: &RepoPathBuf) -> Result<FileChangeResult>;
+    fn has_changed(&mut self, path: &RepoPath) -> Result<FileChangeResult>;
 
     fn resolve_maybes(&self) -> Box<dyn Iterator<Item = Result<ResolvedFileChangeResult>> + Send>;
 }
@@ -114,7 +115,7 @@ impl FileChangeDetector {
 impl FileChangeDetector {
     pub fn has_changed_with_fresh_metadata(
         &mut self,
-        path: &RepoPathBuf,
+        path: &RepoPath,
         metadata: Metadata,
     ) -> Result<FileChangeResult> {
         let file_type = metadata.file_type();
@@ -204,24 +205,24 @@ impl FileChangeDetector {
         Ok(FileChangeResult::No)
     }
 
-    fn get_treestate(&self, path: &RepoPathBuf) -> Result<Option<FileStateV2>> {
+    fn get_treestate(&self, path: &RepoPath) -> Result<Option<FileStateV2>> {
         self.treestate
             .lock()
             .get(path)
             .map(|option| option.map(|state| state.clone()))
     }
 
-    fn changed(path: &RepoPathBuf) -> FileChangeResult {
-        FileChangeResult::Yes(ChangeType::Changed(path.clone()))
+    fn changed(path: &RepoPath) -> FileChangeResult {
+        FileChangeResult::Yes(ChangeType::Changed(path.to_owned()))
     }
 
-    fn deleted(path: &RepoPathBuf) -> FileChangeResult {
-        FileChangeResult::Yes(ChangeType::Deleted(path.clone()))
+    fn deleted(path: &RepoPath) -> FileChangeResult {
+        FileChangeResult::Yes(ChangeType::Deleted(path.to_owned()))
     }
 }
 
 impl FileChangeDetectorTrait for FileChangeDetector {
-    fn has_changed(&mut self, path: &RepoPathBuf) -> Result<FileChangeResult> {
+    fn has_changed(&mut self, path: &RepoPath) -> Result<FileChangeResult> {
         let metadata = match self.vfs.metadata(path) {
             Ok(metadata) => Some(metadata),
             Err(e) => match e.downcast_ref::<std::io::Error>() {

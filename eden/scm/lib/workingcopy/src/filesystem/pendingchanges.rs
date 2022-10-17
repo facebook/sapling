@@ -14,7 +14,7 @@ use pathmatcher::Matcher;
 use serde::Serialize;
 use types::RepoPathBuf;
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub enum ChangeType {
     Changed(RepoPathBuf),
     Deleted(RepoPathBuf),
