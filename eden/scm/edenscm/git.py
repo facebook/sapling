@@ -161,7 +161,9 @@ def maybegiturl(url):
     """
     # See https://git-scm.com/docs/git-clone#_git_urls
     # user@host.xz:path/to/repo => ssh://user@host.xz/path/to/repo
-    if ":" in url and "//" not in url:
+    #
+    # Be careful to exclude Windows file paths like "C:\foo\bar"
+    if ":" in url and "//" not in url and not os.path.exists(url):
         before, after = url.split(":", 1)
         from . import hg
 
