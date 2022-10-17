@@ -16,7 +16,11 @@ use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::Future;
 use once_cell::sync::Lazy;
+use pathmatcher::DirectoryMatch;
+use pathmatcher::Matcher as MatcherTrait;
 use pathmatcher::PatternKind;
+use pathmatcher::TreeMatcher;
+use pathmatcher::UnionMatcher;
 use regex::Regex;
 use types::RepoPath;
 
@@ -112,7 +116,7 @@ impl Root {
             return Ok(Matcher::always());
         }
 
-        let mut matchers: Vec<pathmatcher::TreeMatcher> = Vec::new();
+        let mut matchers: Vec<TreeMatcher> = Vec::new();
 
         // List of rule origins per-matcher.
         let mut rule_origins: Vec<Vec<String>> = Vec::new();
@@ -171,7 +175,7 @@ impl Root {
                         only_v1 = false;
 
                         let (matcher_rules, origins) = prepare_rules(child_rules)?;
-                        matchers.push(pathmatcher::TreeMatcher::from_rules(
+                        matchers.push(TreeMatcher::from_rules(
                             matcher_rules.iter(),
                             self.0.case_sensitive,
                         )?);
@@ -198,7 +202,7 @@ impl Root {
         ));
 
         let (matcher_rules, origins) = prepare_rules(rules)?;
-        matchers.push(pathmatcher::TreeMatcher::from_rules(
+        matchers.push(TreeMatcher::from_rules(
             matcher_rules.iter(),
             self.0.case_sensitive,
         )?);
@@ -383,7 +387,7 @@ fn join_source(main_source: String, opt_source: Option<&str>) -> String {
 
 pub struct Matcher {
     always: bool,
-    matchers: Vec<pathmatcher::TreeMatcher>,
+    matchers: Vec<TreeMatcher>,
     // List of rule origins per-matcher.
     rule_origins: Vec<Vec<String>>,
 }
@@ -393,7 +397,7 @@ impl Matcher {
         if self.always {
             Ok(true)
         } else {
-            let result = pathmatcher::UnionMatcher::matches_file(self.matchers.iter(), path);
+            let result = UnionMatcher::matches_file(self.matchers.iter(), path);
             tracing::trace!(%path, ?result, "matches");
             result
         }
@@ -419,12 +423,12 @@ impl Matcher {
     }
 }
 
-impl pathmatcher::Matcher for Matcher {
-    fn matches_directory(&self, path: &RepoPath) -> anyhow::Result<pathmatcher::DirectoryMatch> {
+impl MatcherTrait for Matcher {
+    fn matches_directory(&self, path: &RepoPath) -> anyhow::Result<DirectoryMatch> {
         if self.always {
-            Ok(pathmatcher::DirectoryMatch::Everything)
+            Ok(DirectoryMatch::Everything)
         } else {
-            let result = pathmatcher::UnionMatcher::matches_directory(self.matchers.iter(), path);
+            let result = UnionMatcher::matches_directory(self.matchers.iter(), path);
             tracing::trace!(%path, ?result, "matches_directory");
             result
         }
@@ -436,7 +440,7 @@ impl pathmatcher::Matcher for Matcher {
 }
 
 impl Matcher {
-    fn new(matchers: Vec<pathmatcher::TreeMatcher>, rule_origins: Vec<Vec<String>>) -> Self {
+    fn new(matchers: Vec<TreeMatcher>, rule_origins: Vec<Vec<String>>) -> Self {
         Self {
             always: false,
             matchers,
