@@ -49,9 +49,9 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 py_class!(class gitignorematcher |py| {
     data matcher: Arc<GitignoreMatcher>;
 
-    def __new__(_cls, root: &PyPath, global_paths: Vec<PyPathBuf>) -> PyResult<gitignorematcher> {
+    def __new__(_cls, root: &PyPath, global_paths: Vec<PyPathBuf>, case_sensitive: bool) -> PyResult<gitignorematcher> {
         let global_paths: Vec<&Path> = global_paths.iter().map(PyPathBuf::as_path).collect();
-        let matcher = GitignoreMatcher::new(root, global_paths);
+        let matcher = GitignoreMatcher::new(root, global_paths, case_sensitive);
         Self::create_instance(py, Arc::new(matcher))
     }
 

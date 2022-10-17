@@ -765,7 +765,9 @@ class gitignorematcher(basematcher):
     def __init__(self, root, cwd, badfn=None, gitignorepaths=None):
         super(gitignorematcher, self).__init__(root, cwd, badfn)
         gitignorepaths = gitignorepaths or []
-        self._matcher = pathmatcher.gitignorematcher(root, gitignorepaths)
+        self._matcher = pathmatcher.gitignorematcher(
+            root, gitignorepaths, util.fscasesensitive(root)
+        )
 
     def matchfn(self, f):
         return self._matcher.match_relative(f, False)

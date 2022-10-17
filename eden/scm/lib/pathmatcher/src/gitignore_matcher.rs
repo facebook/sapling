@@ -31,6 +31,8 @@ pub struct GitignoreMatcher {
 
     // Whether this directory is ignored or not.
     ignored: bool,
+
+    case_sensitive: bool,
 }
 
 /// Return (next_component, remaining_path), or None if remaining_path is empty.
@@ -76,9 +78,17 @@ impl GitignoreMatcher {
     ///
     /// `global_gitignore_paths` is an additional list of gitignore files
     /// to be parsed.
-    pub fn new<P: AsRef<Path>>(root: P, global_gitignore_paths: Vec<&Path>) -> Self {
+    pub fn new<P: AsRef<Path>>(
+        root: P,
+        global_gitignore_paths: Vec<&Path>,
+        case_sensitive: bool,
+    ) -> Self {
         let root = root.as_ref();
         let mut builder = gitignore::GitignoreBuilder::new(root);
+
+        // It's safe to ignore the Result, since it's always Ok().
+        let _ = builder.case_insensitive(!case_sensitive);
+
         for path in global_gitignore_paths {
             builder.add(path);
         }
@@ -92,6 +102,7 @@ impl GitignoreMatcher {
             ignore,
             submatchers,
             ignored: false,
+            case_sensitive,
         }
     }
 
@@ -103,12 +114,22 @@ impl GitignoreMatcher {
         let (ignored, ignore) = if root.match_relative(dir_root_relative, true) {
             (true, gitignore::Gitignore::empty())
         } else {
-            (false, gitignore::Gitignore::new(dir.join(".gitignore")).0)
+            let mut builder = gitignore::GitignoreBuilder::new(dir);
+            // It's safe to ignore the Result, since it's always Ok().
+            let _ = builder.case_insensitive(!root.case_sensitive);
+            builder.add(dir.join(".gitignore"));
+            (
+                false,
+                builder
+                    .build()
+                    .unwrap_or_else(|_| gitignore::Gitignore::empty()),
+            )
         };
         GitignoreMatcher {
             ignore,
             ignored,
             submatchers,
+            case_sensitive: root.case_sensitive,
         }
     }
 
@@ -347,7 +368,7 @@ mod tests {
         let dir = tempdir().unwrap();
         write(dir.path().join(".gitignore"), b"FILE\nDIR/\n");
 
-        let m = GitignoreMatcher::new(dir.path(), Vec::new());
+        let m = GitignoreMatcher::new(dir.path(), Vec::new(), true);
         assert!(m.match_relative("x/FILE", false));
         assert!(m.match_relative("x/FILE", true));
         assert!(!m.match_relative("x/DIR", false));
@@ -375,7 +396,7 @@ mod tests {
         write(dir.path().join("c/.gitignore"), b"d/e\n!d/f");
         write(dir.path().join("c/d/.gitignore"), b"!e\nf");
 
-        let m = GitignoreMatcher::new(dir.path(), Vec::new());
+        let m = GitignoreMatcher::new(dir.path(), Vec::new(), true);
         assert!(m.match_relative("a/b", false));
         assert!(m.match_relative("a/b/c", false));
         assert!(m.match_relative("a/b/d", false));
@@ -429,7 +450,7 @@ c/d/e: unignored by rule !e from c/d/.gitignore (overrides previous rules)
         write(&ignore1_path, b"a*");
         write(&ignore2_path, b"b*");
 
-        let m = GitignoreMatcher::new(dir.path(), vec![&ignore1_path, &ignore2_path]);
+        let m = GitignoreMatcher::new(dir.path(), vec![&ignore1_path, &ignore2_path], true);
         assert!(m.match_relative("a1", true));
         assert!(m.match_relative("b1", true));
 
@@ -456,7 +477,7 @@ c/d/e: unignored by rule !e from c/d/.gitignore (overrides previous rules)
         write(dir.path().join("c/.gitignore"), b"!g/");
         write(dir.path().join("c/f/.gitignore"), b"g/");
 
-        let m = GitignoreMatcher::new(dir.path(), Vec::new());
+        let m = GitignoreMatcher::new(dir.path(), Vec::new(), true);
         assert_eq!(
             m.explain("1.pyc", true),
             "1.pyc: ignored by rule *.pyc from .gitignore\n"
@@ -517,5 +538,24 @@ c/f/g: ignored by rule g/ from c/f/.gitignore (overrides previous rules)
             .expect("create")
             .write_all(contents.as_ref())
             .expect("write");
+    }
+
+    #[test]
+    fn test_case_insensitive() {
+        let dir = tempdir().unwrap();
+        write(dir.path().join(".gitignore"), b"FILE\nDIR/\n");
+
+        let case_sensitive = [true, false];
+        for sensitive in case_sensitive {
+            let m = GitignoreMatcher::new(dir.path(), Vec::new(), sensitive);
+            assert_eq!(true, m.match_relative("x/FILE", false));
+            assert_eq!(!sensitive, m.match_relative("x/file", false));
+            assert_eq!(true, m.match_relative("x/FILE", true));
+            assert_eq!(!sensitive, m.match_relative("x/file", true));
+            assert_eq!(false, m.match_relative("x/DIR", false));
+            assert_eq!(false, m.match_relative("x/dir", false));
+            assert_eq!(true, m.match_relative("x/DIR", true));
+            assert_eq!(!sensitive, m.match_relative("x/dir", true));
+        }
     }
 }

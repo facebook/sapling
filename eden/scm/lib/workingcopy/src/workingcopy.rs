@@ -85,6 +85,7 @@ impl WorkingCopy {
                 .iter()
                 .map(|i| i.as_path())
                 .collect(),
+            vfs.case_sensitive(),
         ));
 
         let filesystem = Mutex::new(Self::construct_file_system(
