@@ -312,6 +312,16 @@ class GlobTest(testcase.EdenRepoTest):
             expected_matches=[] if self.is_case_sensitive else [b"case/MIXEDcase"],
         )
 
+    def test_case_insensitive(self) -> None:
+        self.assert_glob(
+            ["case/M*C*"],
+            expected_matches=[] if self.is_case_sensitive else [b"case/MIXEDcase"],
+        )
+        self.assert_glob(
+            ["CA*/?ixedcase"],
+            expected_matches=[] if self.is_case_sensitive else [b"case/MIXEDcase"],
+        )
+
     def assert_glob(
         self,
         globs: List[str],

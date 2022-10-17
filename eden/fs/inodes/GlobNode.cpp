@@ -145,7 +145,11 @@ struct TreeRoot {
 };
 } // namespace
 
-GlobNode::GlobNode(StringPiece pattern, bool includeDotfiles, bool hasSpecials)
+GlobNode::GlobNode(
+    StringPiece pattern,
+    bool includeDotfiles,
+    bool hasSpecials,
+    CaseSensitivity caseSensitive)
     : pattern_(pattern.str()),
       includeDotfiles_(includeDotfiles),
       hasSpecials_(hasSpecials) {
@@ -154,6 +158,9 @@ GlobNode::GlobNode(StringPiece pattern, bool includeDotfiles, bool hasSpecials)
   } else {
     auto options =
         includeDotfiles ? GlobOptions::DEFAULT : GlobOptions::IGNORE_DOTFILES;
+    if (caseSensitive == CaseSensitivity::Insensitive) {
+      options |= GlobOptions::CASE_INSENSITIVE;
+    }
     auto compiled = GlobMatcher::create(pattern, options);
     if (compiled.hasError()) {
       throw std::system_error(
@@ -204,8 +211,8 @@ void GlobNode::parse(StringPiece pattern) {
 
     auto node = lookupToken(container, token);
     if (!node) {
-      container->emplace_back(
-          std::make_unique<GlobNode>(token, includeDotfiles_, hasSpecials));
+      container->emplace_back(std::make_unique<GlobNode>(
+          token, includeDotfiles_, hasSpecials, caseSensitive_));
       node = container->back().get();
     }
 

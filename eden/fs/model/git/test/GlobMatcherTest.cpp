@@ -36,14 +36,21 @@ StringPiece literal(const char (&str)[N]) {
       EXPECT_FALSE(matcher.value().match(text));           \
     }                                                      \
   } while (0)
-#define EXPECT_MATCH(text, glob) \
-  EXPECT_MATCH_IMPL(text, glob, GlobOptions::DEFAULT, true)
+#define EXPECT_MATCH(text, glob)                                        \
+  do {                                                                  \
+    EXPECT_MATCH_IMPL(text, glob, GlobOptions::DEFAULT, true);          \
+    EXPECT_MATCH_IMPL(text, glob, GlobOptions::CASE_INSENSITIVE, true); \
+  } while (0)
 #define EXPECT_NOMATCH(text, glob) \
   EXPECT_MATCH_IMPL(text, glob, GlobOptions::DEFAULT, false)
 #define EXPECT_IGNORE_DOTFILES_MATCH(text, glob) \
   EXPECT_MATCH_IMPL(text, glob, GlobOptions::IGNORE_DOTFILES, true)
 #define EXPECT_IGNORE_DOTFILES_NOMATCH(text, glob) \
   EXPECT_MATCH_IMPL(text, glob, GlobOptions::IGNORE_DOTFILES, false)
+#define EXPECT_CASE_INSENSITIVE_MATCH(text, glob) \
+  EXPECT_MATCH_IMPL(text, glob, GlobOptions::CASE_INSENSITIVE, true)
+#define EXPECT_CASE_INSENSITIVE_NOMATCH(text, glob) \
+  EXPECT_MATCH_IMPL(text, glob, GlobOptions::CASE_INSENSITIVE, false)
 #define EXPECT_BADGLOB(glob) \
   EXPECT_TRUE(GlobMatcher::create(glob, GlobOptions::DEFAULT).hasError())
 
@@ -382,6 +389,108 @@ TEST(Glob, fuzz_examples) {
   EXPECT_NOMATCH("aa", "[a]");
   EXPECT_NOMATCH("[[", "[\\[]");
   EXPECT_NOMATCH(literal("\0\0"), literal("[\0]"));
+}
+
+TEST(Glob, testRangeMerging) {
+  EXPECT_MATCH("a", "[a-ca-c]");
+  EXPECT_MATCH("b", "[a-ca-c]");
+  EXPECT_MATCH("c", "[a-ca-c]");
+  EXPECT_NOMATCH("d", "[a-ca-c]");
+  EXPECT_NOMATCH("A", "[a-ca-c]");
+
+  EXPECT_MATCH("a", "[a-bb-c]");
+  EXPECT_MATCH("b", "[a-bb-c]");
+  EXPECT_MATCH("c", "[a-bb-c]");
+  EXPECT_NOMATCH("d", "[a-bb-c]");
+  EXPECT_NOMATCH("A", "[a-bb-c]");
+
+  EXPECT_MATCH("a", "[a-db-c]");
+  EXPECT_MATCH("b", "[a-db-c]");
+  EXPECT_MATCH("c", "[a-db-c]");
+  EXPECT_MATCH("d", "[a-db-c]");
+  EXPECT_NOMATCH("e", "[a-db-c]");
+  EXPECT_NOMATCH("A", "[a-db-c]");
+
+  EXPECT_MATCH("a", "[b-ca-d]");
+  EXPECT_MATCH("b", "[b-ca-d]");
+  EXPECT_MATCH("c", "[b-ca-d]");
+  EXPECT_MATCH("d", "[b-ca-d]");
+  EXPECT_NOMATCH("e", "[b-ca-d]");
+  EXPECT_NOMATCH("A", "[b-ca-d]");
+
+  EXPECT_NOMATCH("c", "[a-bd-e]");
+  EXPECT_NOMATCH("c", "[d-ea-b]");
+  EXPECT_MATCH("c", "[a-db-e]");
+  EXPECT_MATCH("c", "[b-ea-d]");
+  EXPECT_MATCH("c", "[b-ed-d]");
+  EXPECT_MATCH("c", "[d-db-e]");
+
+  EXPECT_MATCH("a", "[a-ba-c]");
+  EXPECT_MATCH("b", "[a-ba-c]");
+  EXPECT_MATCH("c", "[a-ba-c]");
+  EXPECT_NOMATCH("d", "[a-ba-c]");
+  EXPECT_NOMATCH("A", "[a-ba-c]");
+
+  EXPECT_MATCH("a", "[b-ca-c]");
+  EXPECT_MATCH("b", "[b-ca-c]");
+  EXPECT_MATCH("c", "[b-ca-c]");
+  EXPECT_NOMATCH("d", "[b-ca-c]");
+  EXPECT_NOMATCH("A", "[b-ca-c]");
+}
+
+TEST(Glob, testCaseInsensitive) {
+  EXPECT_CASE_INSENSITIVE_MATCH("a", "[A-Z]");
+  EXPECT_CASE_INSENSITIVE_MATCH("A", "[a-z]");
+  EXPECT_CASE_INSENSITIVE_MATCH("a", "[[:upper:]]");
+  EXPECT_CASE_INSENSITIVE_MATCH("A", "[[:lower:]]");
+  EXPECT_CASE_INSENSITIVE_MATCH("d", "[0-D]");
+  EXPECT_CASE_INSENSITIVE_NOMATCH("e", "[0-D]");
+  EXPECT_CASE_INSENSITIVE_MATCH("0", "[0-D]");
+  EXPECT_CASE_INSENSITIVE_NOMATCH("0", "[1-D]");
+
+  EXPECT_CASE_INSENSITIVE_MATCH("A", "[B-Za]");
+  EXPECT_CASE_INSENSITIVE_MATCH("A", "[B-a]");
+  EXPECT_CASE_INSENSITIVE_MATCH("z", "[Z-y]");
+
+  EXPECT_CASE_INSENSITIVE_MATCH("abc", "ABC");
+  EXPECT_CASE_INSENSITIVE_MATCH("Abc", "a*");
+  EXPECT_CASE_INSENSITIVE_MATCH("ABC", "A?c");
+  EXPECT_CASE_INSENSITIVE_MATCH("ABC", "A[b]c");
+
+  EXPECT_CASE_INSENSITIVE_MATCH("A", "[Abc]");
+  EXPECT_CASE_INSENSITIVE_MATCH("a", "[Abc]");
+  EXPECT_CASE_INSENSITIVE_MATCH("B", "[Abc]");
+  EXPECT_CASE_INSENSITIVE_MATCH("C", "[Abc]");
+
+  EXPECT_CASE_INSENSITIVE_NOMATCH("foo", "bar");
+  EXPECT_CASE_INSENSITIVE_NOMATCH("foo", "fo");
+  EXPECT_NOMATCH("foo/bar", "foo[/]bar");
+
+  EXPECT_CASE_INSENSITIVE_MATCH("d", "[0-D]");
+  EXPECT_CASE_INSENSITIVE_NOMATCH("e", "[0-D]");
+  EXPECT_CASE_INSENSITIVE_MATCH("b", "[B-Y]");
+  EXPECT_CASE_INSENSITIVE_MATCH("c", "[B-Y]");
+  EXPECT_CASE_INSENSITIVE_NOMATCH("a", "[B-Y]");
+
+  EXPECT_CASE_INSENSITIVE_MATCH("a.txt", "*.TXT");
+  EXPECT_CASE_INSENSITIVE_MATCH("a.TXT", "*.txt");
+
+  // Mixed alpha and non-alpha ranges
+  EXPECT_MATCH("b", "[a-c1-2]");
+  EXPECT_CASE_INSENSITIVE_MATCH("B", "[a-c1-2]");
+  EXPECT_MATCH("2", "[a-c1-2]");
+  EXPECT_NOMATCH("3", "[a-c1-2]");
+
+  // Spelling out case-insensitive alpha classes always works
+  EXPECT_MATCH("a", "[A-Fa-f]");
+  EXPECT_MATCH("A", "[A-Fa-f]");
+  EXPECT_NOMATCH("!", "[A-Fa-f]");
+  EXPECT_CASE_INSENSITIVE_NOMATCH("!", "[A-Fa-f]");
+
+  EXPECT_MATCH("z", "[Zz]");
+  EXPECT_MATCH("Z", "[Zz]");
+  EXPECT_NOMATCH("!", "[Zz]");
+  EXPECT_CASE_INSENSITIVE_NOMATCH("!", "[Zz]");
 }
 
 } // namespace

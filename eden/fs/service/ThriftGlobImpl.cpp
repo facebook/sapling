@@ -44,7 +44,11 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
     std::vector<std::string> globs,
     ObjectFetchContext& fetchContext) {
   // Compile the list of globs into a tree
-  auto globRoot = std::make_shared<GlobNode>(includeDotfiles_);
+  auto globRoot = std::make_shared<GlobNode>(
+      includeDotfiles_,
+      serverState->getEdenConfig()->globUseMountCaseSensitivity.getValue()
+          ? edenMount->getCheckoutConfig()->getCaseSensitive()
+          : CaseSensitivity::Sensitive);
   try {
     for (auto& globString : globs) {
       try {

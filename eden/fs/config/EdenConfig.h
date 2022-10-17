@@ -932,6 +932,19 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<uint64_t> fsckLogFrequency{"fsck:log-frequency", 10000, this};
 
+  // [glob]
+
+  /**
+   * Whether glob requests should use the mount's case sensitivity setting (i.e.
+   * interpret patterns as case-insensitive on case-insensitive systems). If
+   * false, globs are always case-sensitive.
+   * TODO: Remove this killswitch after the feature proves to be safe.
+   */
+  ConfigSetting<bool> globUseMountCaseSensitivity{
+      "glob:use-mount-case-sensitivity",
+      true,
+      this};
+
   // [facebook]
   // Facebook internal
 

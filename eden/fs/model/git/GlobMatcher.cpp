@@ -6,8 +6,11 @@
  */
 
 #include "eden/fs/model/git/GlobMatcher.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 #include <folly/logging/xlog.h>
+#include <algorithm>
+#include <limits>
 
 using folly::ByteRange;
 using folly::Expected;
@@ -71,9 +74,103 @@ enum : uint8_t {
   GLOB_FALSE = 'F',
 };
 
+/// A set of character intervals. This is used during parsing to deduplicate
+/// ranges within a character class.
+class CharIntervalSet {
+ public:
+  /// A closed interval (inclusive on both sides)
+  using Interval = std::pair</*lo*/ uint8_t, /*hi*/ uint8_t>;
+
+  /// Insert a non-empty interval into the set. \param lo and \param hi are both
+  /// inclusive.
+  void insert(uint8_t lo, uint8_t hi) {
+    XDCHECK_GE(hi, lo);
+    bounds_.push_back({lo, /*isEnd=*/false});
+    bounds_.push_back({hi, /*isEnd=*/true});
+  }
+
+  /// Returns an optimized version of the interval set; that is, a list of
+  /// non-overlapping intervals that are included in the set.
+  std::vector<Interval> optimize() {
+    std::sort(bounds_.begin(), bounds_.end(), [](const auto& a, const auto& b) {
+      // Sort the bounds in ascending order, and ensure start bounds precede end
+      // bounds.
+      return (a.value < b.value) ||
+          ((a.value == b.value) && !a.isEnd && b.isEnd);
+    });
+    XDCHECK(bounds_.empty() || bounds_.back().isEnd);
+    std::vector<Interval> intervals;
+    int depth = 0;
+    for (const auto& bound : bounds_) {
+      if (!bound.isEnd) {
+        ++depth;
+        if (depth == 1) {
+          // Start a new interval before this character. Its end will be set
+          // later.
+          intervals.push_back(
+              {bound.value, std::numeric_limits<uint8_t>::max()});
+        }
+      } else {
+        --depth;
+        if (depth == 0) {
+          XDCHECK(!intervals.empty());
+          // End the current interval after this character
+          // @lint-ignore CLANGTIDY facebook-hte-LocalUncheckedArrayBounds
+          intervals.back().second = bound.value;
+        }
+      }
+    }
+    XDCHECK_EQ(depth, 0);
+    XDCHECK(bounds_.empty() || !intervals.empty());
+    return intervals;
+  }
+
+ private:
+  struct Bound {
+    uint8_t value;
+
+    /// If true, an interval ends after this character.
+    /// If false, an interval starts before this character.
+    bool isEnd;
+  };
+  std::vector<Bound> bounds_;
+};
 } // namespace
 
 namespace facebook::eden {
+
+namespace {
+
+bool isStringPieceEqual(
+    StringPiece left,
+    StringPiece right,
+    CaseSensitivity caseSensitive) {
+  if (caseSensitive == CaseSensitivity::Sensitive) {
+    return left == right;
+  } else {
+    return std::equal(
+        left.begin(),
+        left.end(),
+        right.begin(),
+        right.end(),
+        folly::AsciiCaseInsensitive{});
+  }
+}
+
+char toLower(char c) {
+  if (c >= 'A' && c <= 'Z') {
+    c += 'a' - 'A';
+  }
+  return c;
+}
+
+char toUpper(char c) {
+  if (c >= 'a' && c <= 'z') {
+    c -= 'a' - 'A';
+  }
+  return c;
+}
+} // namespace
 
 GlobOptions operator|(GlobOptions a, GlobOptions b) {
   return static_cast<GlobOptions>(
@@ -89,8 +186,8 @@ bool operator&(GlobOptions a, GlobOptions b) {
   return (static_cast<uint32_t>(a) & static_cast<uint32_t>(b)) != 0;
 }
 
-GlobMatcher::GlobMatcher(vector<uint8_t> pattern)
-    : pattern_(std::move(pattern)) {}
+GlobMatcher::GlobMatcher(vector<uint8_t> pattern, CaseSensitivity caseSensitive)
+    : pattern_(std::move(pattern)), caseSensitive_(caseSensitive) {}
 
 GlobMatcher::GlobMatcher() {}
 
@@ -114,6 +211,9 @@ GlobMatcher::~GlobMatcher() {}
 Expected<GlobMatcher, string> GlobMatcher::create(
     StringPiece glob,
     GlobOptions options) {
+  CaseSensitivity caseSensitive = options & GlobOptions::CASE_INSENSITIVE
+      ? CaseSensitivity::Insensitive
+      : CaseSensitivity::Sensitive;
   vector<uint8_t> result;
   // Make a guess at how big the pattern buffer will be.
   // We require 2 extra bytes for each literal chunk.  We save a byte for "**"
@@ -216,7 +316,7 @@ Expected<GlobMatcher, string> GlobMatcher::create(
       // Translate a bracket expression
       prevOpcodeIdx = curOpcodeIdx;
       curOpcodeIdx = result.size();
-      auto newIdx = parseBracketExpr(glob, idx, &result);
+      auto newIdx = parseBracketExpr(glob, idx, caseSensitive, &result);
       if (!newIdx.hasValue()) {
         return folly::makeUnexpected<string>(std::move(newIdx).error());
       }
@@ -247,12 +347,13 @@ Expected<GlobMatcher, string> GlobMatcher::create(
     result[prevOpcodeIdx] = GLOB_ENDS_WITH;
   }
 
-  return GlobMatcher(std::move(result));
+  return GlobMatcher(std::move(result), caseSensitive);
 }
 
 Expected<size_t, string> GlobMatcher::parseBracketExpr(
     StringPiece glob,
     size_t idx,
+    CaseSensitivity caseSensitive,
     vector<uint8_t>* pattern) {
   XDCHECK_LT(idx, glob.size());
   XDCHECK_EQ(glob[idx], '[');
@@ -271,6 +372,8 @@ Expected<size_t, string> GlobMatcher::parseBracketExpr(
     pattern->push_back(GLOB_CHAR_CLASS);
   }
 
+  CharIntervalSet charIntervals;
+
   // Set NO_PREV_CHAR to something outside of the range [-128, 255]
   // We want to make sure it can't possibly correspond to a valid char value,
   // regardless of whether char types are signed or unsigned on this platform.
@@ -282,11 +385,20 @@ Expected<size_t, string> GlobMatcher::parseBracketExpr(
     } else if (
         prevChar == GLOB_CHAR_CLASS_END || prevChar == GLOB_CHAR_CLASS_RANGE) {
       // Escape these characters by turning them into ranges.
-      pattern->push_back(GLOB_CHAR_CLASS_RANGE);
-      pattern->push_back(prevChar);
-      pattern->push_back(prevChar);
+      charIntervals.insert(prevChar, prevChar);
     } else {
       pattern->push_back(prevChar);
+      if (caseSensitive == CaseSensitivity::Insensitive) {
+        // For case-insensitive matching of alpha characters, add the
+        // opposite-case version of the character to the class.
+        auto asLower = toLower(prevChar);
+        auto asUpper = toUpper(prevChar);
+        if (asLower != prevChar) {
+          pattern->push_back(asLower);
+        } else if (asUpper != prevChar) {
+          pattern->push_back(asUpper);
+        }
+      }
     }
   };
 
@@ -348,9 +460,24 @@ Expected<size_t, string> GlobMatcher::parseBracketExpr(
           // though.  We just ignore this one range, since it can never match
           // anything.)
           if (prevChar <= highBound) {
-            pattern->push_back(GLOB_CHAR_CLASS_RANGE);
-            pattern->push_back(prevChar);
-            pattern->push_back(highBound);
+            charIntervals.insert(prevChar, highBound);
+
+            if (caseSensitive == CaseSensitivity::Insensitive) {
+              // If the range intersects with ['A', 'Z'], add the lowercase
+              // counterpart of the intersection.
+              if (highBound >= 'A' && prevChar <= 'Z') {
+                charIntervals.insert(
+                    toLower(std::clamp<uint8_t>(prevChar, 'A', 'Z')),
+                    toLower(std::clamp<uint8_t>(highBound, 'A', 'Z')));
+              }
+              // If the range intersects with ['a', 'z'], add the uppercase
+              // counterpart of the intersection.
+              if (highBound >= 'a' && prevChar <= 'z') {
+                charIntervals.insert(
+                    toUpper(std::clamp<uint8_t>(prevChar, 'a', 'z')),
+                    toUpper(std::clamp<uint8_t>(highBound, 'a', 'z')));
+              }
+            }
           }
           prevChar = NO_PREV_CHAR;
         }
@@ -363,7 +490,7 @@ Expected<size_t, string> GlobMatcher::parseBracketExpr(
         for (auto end = classStart; end + 1 < glob.size(); ++end) {
           if (glob[end] == ':' && glob[end + 1] == ']') {
             StringPiece charClass(glob.data() + classStart, glob.data() + end);
-            if (!addCharClass(charClass, pattern)) {
+            if (!addCharClass(charClass, caseSensitive, pattern)) {
               return folly::makeUnexpected<string>(
                   "unknown character class \"" + charClass.str() + "\"");
             }
@@ -386,30 +513,45 @@ Expected<size_t, string> GlobMatcher::parseBracketExpr(
   }
 
   addPrevChar();
+
+  // Add any user-specified ranges we collected along the way, with no
+  // duplicates
+  for (auto& interval : charIntervals.optimize()) {
+    addCharClassRange(interval.first, interval.second, pattern);
+  }
   pattern->push_back(GLOB_CHAR_CLASS_END);
   return idx;
 }
 
+void GlobMatcher::addCharClassRange(
+    uint8_t low,
+    uint8_t high,
+    std::vector<uint8_t>* pattern) {
+  XDCHECK_LE(low, high);
+  pattern->push_back(GLOB_CHAR_CLASS_RANGE);
+  pattern->push_back(low);
+  pattern->push_back(high);
+}
+
 bool GlobMatcher::addCharClass(
     StringPiece charClass,
+    CaseSensitivity caseSensitive,
     vector<uint8_t>* pattern) {
-  auto addRange = [&](uint8_t low, uint8_t high) {
-    XDCHECK_LE(low, high);
-    pattern->push_back(GLOB_CHAR_CLASS_RANGE);
-    pattern->push_back(low);
-    pattern->push_back(high);
-  };
-
   // Character class definitions.
   // These match the POSIX Standard Locale as defined in ISO/IEC 9945-2:1993
   if (charClass == "alnum") {
-    addRange('a', 'z');
-    addRange('A', 'Z');
-    addRange('0', '9');
+    addCharClassRange('a', 'z', pattern);
+    addCharClassRange('A', 'Z', pattern);
+    addCharClassRange('0', '9', pattern);
     return true;
-  } else if (charClass == "alpha") {
-    addRange('a', 'z');
-    addRange('A', 'Z');
+  } else if (
+      charClass == "alpha" ||
+      // "upper" and "lower" with case-insensitive matching are equivalent to
+      // "alpha".
+      (caseSensitive == CaseSensitivity::Insensitive &&
+       (charClass == "lower" || charClass == "upper"))) {
+    addCharClassRange('a', 'z', pattern);
+    addCharClassRange('A', 'Z', pattern);
     return true;
   } else if (charClass == "blank") {
     pattern->push_back(' ');
@@ -418,32 +560,32 @@ bool GlobMatcher::addCharClass(
   } else if (charClass == "cntrl") {
     // POSIX locale cntrl definitions:
     // 0x00-0x1f,0x7f
-    addRange(0x00, 0x1f);
+    addCharClassRange(0x00, 0x1f, pattern);
     pattern->push_back(0x7f);
     return true;
   } else if (charClass == "digit") {
-    addRange('0', '9');
+    addCharClassRange('0', '9', pattern);
     return true;
   } else if (charClass == "graph") {
     // POSIX locale graph definition: alnum + punct
     // This is everything from 0x21 - 0x7e
-    addRange(0x21, 0x7e);
+    addCharClassRange(0x21, 0x7e, pattern);
     return true;
   } else if (charClass == "lower") {
-    addRange('a', 'z');
+    addCharClassRange('a', 'z', pattern);
     return true;
   } else if (charClass == "print") {
     // POSIX locale print definition: alnum + punct + ' '
     // This is everything from 0x20 - 0x7e
-    addRange(0x20, 0x7e);
+    addCharClassRange(0x20, 0x7e, pattern);
     return true;
   } else if (charClass == "punct") {
     // POSIX locale punct definitions:
     // 0x21-0x2f, 0x3a-0x40, 0x5b-0x60, 0x7b-0x7e
-    addRange(0x21, 0x2f);
-    addRange(0x3a, 0x40);
-    addRange(0x5b, 0x60);
-    addRange(0x7b, 0x7e);
+    addCharClassRange(0x21, 0x2f, pattern);
+    addCharClassRange(0x3a, 0x40, pattern);
+    addCharClassRange(0x5b, 0x60, pattern);
+    addCharClassRange(0x7b, 0x7e, pattern);
     return true;
   } else if (charClass == "space") {
     pattern->push_back(' ');
@@ -454,12 +596,12 @@ bool GlobMatcher::addCharClass(
     pattern->push_back('\v');
     return true;
   } else if (charClass == "upper") {
-    addRange('A', 'Z');
+    addCharClassRange('A', 'Z', pattern);
     return true;
   } else if (charClass == "xdigit") {
-    addRange('0', '9');
-    addRange('a', 'f');
-    addRange('A', 'F');
+    addCharClassRange('0', '9', pattern);
+    addCharClassRange('a', 'f', pattern);
+    addCharClassRange('A', 'F', pattern);
     return true;
   }
 
@@ -498,14 +640,20 @@ bool GlobMatcher::tryMatchAt(
         if (text.size() - textIdx != length) {
           return false;
         }
-        return 0 == memcmp(text.data() + textIdx, literal, length);
+        return isStringPieceEqual(
+            text.subpiece(textIdx, length),
+            StringPiece{ByteRange(literal, length)},
+            caseSensitive_);
       }
       // Not the final piece of the pattern.  We have to do the string compare
       // (unless the text remaining is too short).
       if (text.size() - textIdx < length) {
         return false;
       }
-      if (0 != memcmp(text.data() + textIdx, literal, length)) {
+      if (!isStringPieceEqual(
+              text.subpiece(textIdx, length),
+              StringPiece{ByteRange(literal, length)},
+              caseSensitive_)) {
         return false;
       }
       // Matched so far, keep going.
@@ -538,11 +686,15 @@ bool GlobMatcher::tryMatchAt(
         patternIdx += 2 + literalLength;
         auto nextSlash = text.find('/', textIdx);
         while (true) {
-          auto literalIdx = text.find(literalPattern, textIdx);
+          auto textPiece = text.subpiece(textIdx);
+          auto literalIdx = caseSensitive_ == CaseSensitivity::Sensitive
+              ? qfind(textPiece, literalPattern, folly::AsciiCaseSensitive{})
+              : qfind(textPiece, literalPattern, folly::AsciiCaseInsensitive{});
           if (literalIdx == StringPiece::npos) {
             // No match.
             return false;
           }
+          literalIdx += textIdx;
           if (nextSlash < literalIdx) {
             return false;
           }
@@ -592,7 +744,10 @@ bool GlobMatcher::tryMatchAt(
       if (text.size() - textIdx < length) {
         return false;
       }
-      if (0 != memcmp(text.end() - length, literal, length)) {
+      if (!isStringPieceEqual(
+              text.subpiece(text.size() - length),
+              StringPiece{ByteRange(literal, length)},
+              caseSensitive_)) {
         return false;
       }
       // The end of the text matched the desired literal.

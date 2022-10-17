@@ -98,7 +98,9 @@ class GlobNodeTest : public ::testing::TestWithParam<
       folly::StringPiece pattern,
       bool includeDotfiles,
       const RootId& commitHash) {
-    GlobNode globRoot(/*includeDotfiles=*/includeDotfiles);
+    GlobNode globRoot(
+        /*includeDotfiles=*/includeDotfiles,
+        mount_.getConfig()->getCaseSensitive());
     globRoot.parse(pattern);
     return doGlob(globRoot, commitHash);
   }
@@ -257,7 +259,8 @@ TEST_P(GlobNodeTest, recursiveTxtWithChanges) {
 #endif
 
 TEST_P(GlobNodeTest, matchGlobDirectoryAndDirectoryChild) {
-  GlobNode globRoot(/*includeDotfiles=*/false);
+  GlobNode globRoot(
+      /*includeDotfiles=*/false, mount_.getConfig()->getCaseSensitive());
   globRoot.parse("dir/*");
   globRoot.parse("dir/*/*");
 
@@ -271,7 +274,8 @@ TEST_P(GlobNodeTest, matchGlobDirectoryAndDirectoryChild) {
 }
 
 TEST_P(GlobNodeTest, matchGlobDirectoryAndDirectoryRecursiveChildren) {
-  GlobNode globRoot(/*includeDotfiles=*/false);
+  GlobNode globRoot(
+      /*includeDotfiles=*/false, mount_.getConfig()->getCaseSensitive());
   globRoot.parse("dir/*");
   globRoot.parse("dir/*/**");
 
@@ -285,7 +289,8 @@ TEST_P(GlobNodeTest, matchGlobDirectoryAndDirectoryRecursiveChildren) {
 }
 
 TEST_P(GlobNodeTest, matchLiteralDirectoryAndDirectoryChild) {
-  GlobNode globRoot(/*includeDotfiles=*/false);
+  GlobNode globRoot(
+      /*includeDotfiles=*/false, mount_.getConfig()->getCaseSensitive());
   globRoot.parse("dir");
   globRoot.parse("dir/a.txt");
 
@@ -298,7 +303,8 @@ TEST_P(GlobNodeTest, matchLiteralDirectoryAndDirectoryChild) {
 }
 
 TEST_P(GlobNodeTest, matchLiteralDirectoryAndDirectoryRecursiveChildren) {
-  GlobNode globRoot(/*includeDotfiles=*/false);
+  GlobNode globRoot(
+      /*includeDotfiles=*/false, mount_.getConfig()->getCaseSensitive());
   globRoot.parse("dir");
   globRoot.parse("dir/**");
 
@@ -340,7 +346,8 @@ TEST(GlobNodeTest, matchingDirectoryDoesNotLoadTree) {
 
   for (folly::StringPiece pattern : {"dir/*"_sp, "dir/subdir"_sp}) {
     SCOPED_TRACE(folly::to<std::string>("pattern = ", pattern));
-    GlobNode globRoot(/*includeDotfiles=*/false);
+    GlobNode globRoot(
+        /*includeDotfiles=*/false, mount.getConfig()->getCaseSensitive());
     globRoot.parse("dir/*");
     globRoot.debugDump();
 
@@ -387,7 +394,8 @@ TEST(GlobNodeTest, treeLoadError) {
   builder.setReady("dir/a");
 
   {
-    GlobNode globRoot(/*includeDotfiles=*/false);
+    GlobNode globRoot(
+        /*includeDotfiles=*/false, mount.getConfig()->getCaseSensitive());
     globRoot.parse("dir/**/a.txt");
 
     auto globFuture =
@@ -448,12 +456,15 @@ TEST_P(GlobNodeTest, testCommitHashSet) {
 TEST(GlobNodeTest, testCaseInsensitive) {
   auto mount = TestMount{CaseSensitivity::Insensitive};
   auto builder = FakeTreeBuilder{};
-  builder.setFiles({{"case/MIXEDcase", "a"}});
+  builder.setFiles({{"case/MIXEDcase", "a"}, {"Foo/Bar", ""}, {"Foo/Baz", ""}});
   mount.initialize(builder, /*startReady=*/true);
 
-  GlobNode globRoot(/*includeDotfiles=*/false);
+  GlobNode globRoot(
+      /*includeDotfiles=*/false, mount.getConfig()->getCaseSensitive());
   globRoot.parse("Case");
   globRoot.parse("CASE/MixedCase");
+  globRoot.parse("CASE/MixedCase");
+  globRoot.parse("f*/b?z");
 
   auto matches = std::vector<GlobResult>{};
   auto fut =
@@ -464,6 +475,7 @@ TEST(GlobNodeTest, testCaseInsensitive) {
   std::vector<GlobResult> expect{
       GlobResult("case"_relpath, dtype_t::Dir, kZeroRootId),
       GlobResult("case/MIXEDcase"_relpath, dtype_t::Regular, kZeroRootId),
+      GlobResult("Foo/Baz"_relpath, dtype_t::Regular, kZeroRootId),
   };
   EXPECT_EQ(expect, matches);
 }

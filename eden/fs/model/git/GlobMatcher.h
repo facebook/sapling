@@ -12,6 +12,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "eden/fs/utils/CaseSensitivity.h"
+
 namespace facebook::eden {
 
 /**
@@ -21,6 +23,7 @@ namespace facebook::eden {
 enum class GlobOptions : uint32_t {
   DEFAULT = 0x00,
   IGNORE_DOTFILES = 0x01,
+  CASE_INSENSITIVE = 0x02,
 };
 
 GlobOptions operator|(GlobOptions a, GlobOptions b);
@@ -76,15 +79,21 @@ class GlobMatcher {
   bool match(folly::StringPiece text) const;
 
  private:
-  explicit GlobMatcher(std::vector<uint8_t> pattern);
+  explicit GlobMatcher(
+      std::vector<uint8_t> pattern,
+      CaseSensitivity caseSensitive);
 
   static folly::Expected<size_t, std::string> parseBracketExpr(
       folly::StringPiece glob,
       size_t idx,
+      CaseSensitivity caseSensitive,
       std::vector<uint8_t>* pattern);
   static bool addCharClass(
       folly::StringPiece charClass,
+      CaseSensitivity caseSensitive,
       std::vector<uint8_t>* pattern);
+  static void
+  addCharClassRange(uint8_t low, uint8_t high, std::vector<uint8_t>* pattern);
 
   /**
    * Returns true if the trailing section of the input text (starting at
@@ -116,6 +125,8 @@ class GlobMatcher {
    * rather than heap-allocating them in a vector.
    */
   std::vector<uint8_t> pattern_;
+
+  CaseSensitivity caseSensitive_;
 };
 
 } // namespace facebook::eden

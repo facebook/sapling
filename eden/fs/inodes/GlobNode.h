@@ -11,6 +11,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GlobMatcher.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -28,13 +29,18 @@ namespace facebook::eden {
  */
 class GlobNode {
  public:
-  // Single parameter constructor is intended to create the root of a set of
+  // Two-parameter constructor is intended to create the root of a set of
   // globs that will be parsed into the overall glob tree.
-  explicit GlobNode(bool includeDotfiles) : includeDotfiles_(includeDotfiles) {}
+  explicit GlobNode(bool includeDotfiles, CaseSensitivity caseSensitive)
+      : caseSensitive_(caseSensitive), includeDotfiles_(includeDotfiles) {}
 
   using PrefetchList = folly::Synchronized<std::vector<ObjectId>>;
 
-  GlobNode(folly::StringPiece pattern, bool includeDotfiles, bool hasSpecials);
+  GlobNode(
+      folly::StringPiece pattern,
+      bool includeDotfiles,
+      bool hasSpecials,
+      CaseSensitivity caseSensitive);
 
   struct GlobResult {
     RelativePath name;
@@ -177,6 +183,9 @@ class GlobNode {
   std::vector<std::unique_ptr<GlobNode>> children_;
   // List of ** child rules
   std::vector<std::unique_ptr<GlobNode>> recursiveChildren_;
+
+  // The case sensitivity of this glob node.
+  CaseSensitivity caseSensitive_;
 
   // For a child GlobNode that is added to this GlobNode (presumably via
   // parse()), the GlobMatcher pattern associated with the child node should use

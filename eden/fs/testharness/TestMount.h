@@ -198,8 +198,10 @@ class TestMount {
    * The CheckoutConfig object provides methods to get the paths to the mount
    * point, the client directory, etc.
    */
-  CheckoutConfig* getConfig() const {
-    return config_.get();
+  const CheckoutConfig* getConfig() const {
+    // Ownership of the config varies - we own it first and then move it into
+    // edenMount_.
+    return edenMount_ ? edenMount_->getCheckoutConfig() : config_.get();
   }
 
   /**
