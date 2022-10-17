@@ -399,8 +399,19 @@ class EdenRepoTest(EdenTestCase):
 
     enable_logview: bool = False
 
-    # See eden/fs/cli/main.py
-    is_case_sensitive: bool = sys.platform == "linux"
+    # Override is_case_sensitive to True in subclasses to force a case-sensitive
+    # clone regardless of the OS, or to False to force a case-insensitive clone.
+    # Leave this as None to get the current OS's default case-sensitivity
+    # setting.
+    #
+    # The easiest way to use this is to decorate your test class with
+    #
+    #   @testcase.eden_repo_test(case_sensitivity_dependent=True)
+    #
+    # which will generate multiple variants of the test with different
+    # is_case_sensitive settings - thus allowing you to easily test multiple
+    # case sensitivities on a single platform.
+    is_case_sensitive: Optional[bool] = None
 
     def setup_eden_test(self) -> None:
         super().setup_eden_test()
@@ -410,8 +421,15 @@ class EdenRepoTest(EdenTestCase):
         self.populate_repo()
         self.report_time("repository setup done")
 
-        self.eden.clone(self.repo.path, self.mount)
+        self.eden.clone(
+            self.repo.path, self.mount, case_sensitive=self.is_case_sensitive
+        )
         self.report_time("eden clone done")
+        actual_case_sensitive = self.eden.is_case_sensitive(self.mount)
+        if self.is_case_sensitive is None:
+            self.is_case_sensitive = actual_case_sensitive
+        else:
+            self.assertEqual(self.is_case_sensitive, actual_case_sensitive)
 
     def populate_repo(self) -> None:
         raise NotImplementedError(
@@ -568,32 +586,47 @@ def _replicate_eden_nfs_repo_test(
 # decorator.
 eden_nfs_repo_test = test_replicator(_replicate_eden_nfs_repo_test)
 
+MixinList = List[Tuple[str, List[Type[Any]]]]
+
 
 def _replicate_eden_repo_test(
     test_class: Type[EdenRepoTest],
     run_on_nfs: bool = True,
+    case_sensitivity_dependent: bool = False,
 ) -> Iterable[Tuple[str, Type[EdenRepoTest]]]:
-    class HgRepoTest(HgRepoTestMixin, test_class):
-        pass
-
-    class NFSHgRepoTest(NFSTestMixin, HgRepoTestMixin, test_class):
-        pass
-
-    class GitRepoTest(GitRepoTestMixin, test_class):
-        pass
-
-    class NFSGitRepoTest(NFSTestMixin, GitRepoTestMixin, test_class):
-        pass
-
-    variants = [("Hg", typing.cast(Type[EdenRepoTest], HgRepoTest))]
+    nfs_variants: MixinList = [("", [])]
     if run_on_nfs and eden.config.HAVE_NFS:
-        variants.append(("NFSHg", typing.cast(Type[EdenRepoTest], NFSHgRepoTest)))
+        nfs_variants.append(("NFS", [NFSTestMixin]))
 
+    scm_variants: MixinList = [("Hg", [HgRepoTestMixin])]
     # Only run the git tests if EdenFS was built with git support.
     if eden.config.HAVE_GIT:
-        variants.append(("Git", typing.cast(Type[EdenRepoTest], GitRepoTest)))
-        if run_on_nfs and eden.config.HAVE_NFS:
-            variants.append(("NFSGit", typing.cast(Type[EdenRepoTest], NFSGitRepoTest)))
+        scm_variants.append(("Git", [GitRepoTestMixin]))
+
+    case_variants: MixinList = [("", [])]
+    if case_sensitivity_dependent:
+        case_variants = [
+            ("SystemCaseSensitivity", []),
+            ("CaseSensitive", [CaseSensitiveTestMixin]),
+            ("CaseInsensitive", [CaseInsensitiveTestMixin]),
+        ]
+
+    variants = []
+    for nfs_label, nfs_mixins in nfs_variants:
+        for scm_label, scm_mixins in scm_variants:
+            for case_label, case_mixins in case_variants:
+
+                class VariantRepoTest(
+                    *nfs_mixins, *scm_mixins, *case_mixins, test_class
+                ):
+                    pass
+
+                variants.append(
+                    (
+                        f"{nfs_label}{scm_label}{case_label}",
+                        typing.cast(Type[EdenRepoTest], VariantRepoTest),
+                    )
+                )
     return variants
 
 
@@ -626,6 +659,14 @@ class GitRepoTestMixin:
 class NFSTestMixin:
     def use_nfs(self) -> bool:
         return True
+
+
+class CaseSensitiveTestMixin:
+    is_case_sensitive = True
+
+
+class CaseInsensitiveTestMixin:
+    is_case_sensitive = False
 
 
 def _replicate_eden_test(

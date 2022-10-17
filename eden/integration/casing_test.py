@@ -5,12 +5,11 @@
 # GNU General Public License version 2.
 
 import os
-import sys
 
 from .lib import testcase
 
 
-@testcase.eden_repo_test
+@testcase.eden_repo_test(case_sensitivity_dependent=True)
 class CasingTest(testcase.EdenRepoTest):
     """Verify that EdenFS behave properly when configured to be case
     insensitive and case preserving.

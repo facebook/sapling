@@ -13,8 +13,7 @@ from facebook.eden.ttypes import EdenError, EdenErrorType, GlobParams
 from .lib import testcase
 
 
-@testcase.eden_repo_test
-class GlobTest(testcase.EdenRepoTest):
+class GlobTestBase(testcase.EdenRepoTest):
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "bonjour\n")
         self.repo.write_file("hola", "hello\n")
@@ -57,6 +56,61 @@ class GlobTest(testcase.EdenRepoTest):
         self.client.open()
         self.addCleanup(self.client.close)
 
+    def assert_glob(
+        self,
+        globs: List[str],
+        expected_matches: List[bytes],
+        include_dotfiles: bool = False,
+        msg: Optional[str] = None,
+        commits: Optional[List[bytes]] = None,
+        prefetching: bool = False,
+        expected_commits: Optional[List[bytes]] = None,
+        search_root: Optional[bytes] = None,
+        list_only_files: bool = False,
+        background: bool = False,
+    ) -> None:
+        params = GlobParams(
+            mountPoint=self.mount_path_bytes,
+            globs=globs,
+            includeDotfiles=include_dotfiles,
+            prefetchFiles=prefetching,
+            revisions=commits,
+            searchRoot=search_root,
+            listOnlyFiles=list_only_files,
+            background=background,
+        )
+        result = self.client.globFiles(params)
+        self.assertEqual(expected_matches, sorted(result.matchingFiles), msg=msg)
+        self.assertFalse(result.dtypes)
+
+        if expected_commits:
+            self.assertCountEqual(
+                expected_commits, self.client.globFiles(params).originHashes, msg=msg
+            )
+
+    def assert_glob_with_dtypes(
+        self,
+        globs: List[str],
+        expected_matches: List[Tuple[bytes, str]],
+        include_dotfiles: bool = False,
+        msg: Optional[str] = None,
+    ) -> None:
+        params = GlobParams(
+            self.mount_path_bytes,
+            globs,
+            includeDotfiles=include_dotfiles,
+            wantDtype=True,
+        )
+        result = self.client.globFiles(params)
+        actual_results = zip(
+            result.matchingFiles,
+            (_dtype_to_str(dtype) for dtype in result.dtypes),
+        )
+        self.assertEqual(expected_matches, sorted(actual_results), msg=msg)
+
+
+@testcase.eden_repo_test
+class GlobTest(GlobTestBase, testcase.EdenRepoTest):
     def test_exact_path_component_match(self) -> None:
         self.assert_glob(["hello"], [b"hello"])
         self.assert_glob(["ddir/subdir/.dotfile"], [b"ddir/subdir/.dotfile"])
@@ -302,6 +356,9 @@ class GlobTest(testcase.EdenRepoTest):
         # The glob above returns immediately, we need to wait so it completes.
         time.sleep(1)
 
+
+@testcase.eden_repo_test(case_sensitivity_dependent=True)
+class GlobCaseDependentTest(GlobTestBase, testcase.EdenRepoTest):
     def test_case_preserving(self) -> None:
         self.assert_glob(
             ["case/MixedCase"],
@@ -321,58 +378,6 @@ class GlobTest(testcase.EdenRepoTest):
             ["CA*/?ixedcase"],
             expected_matches=[] if self.is_case_sensitive else [b"case/MIXEDcase"],
         )
-
-    def assert_glob(
-        self,
-        globs: List[str],
-        expected_matches: List[bytes],
-        include_dotfiles: bool = False,
-        msg: Optional[str] = None,
-        commits: Optional[List[bytes]] = None,
-        prefetching: bool = False,
-        expected_commits: Optional[List[bytes]] = None,
-        search_root: Optional[bytes] = None,
-        list_only_files: bool = False,
-        background: bool = False,
-    ) -> None:
-        params = GlobParams(
-            mountPoint=self.mount_path_bytes,
-            globs=globs,
-            includeDotfiles=include_dotfiles,
-            prefetchFiles=prefetching,
-            revisions=commits,
-            searchRoot=search_root,
-            listOnlyFiles=list_only_files,
-            background=background,
-        )
-        result = self.client.globFiles(params)
-        self.assertEqual(expected_matches, sorted(result.matchingFiles), msg=msg)
-        self.assertFalse(result.dtypes)
-
-        if expected_commits:
-            self.assertCountEqual(
-                expected_commits, self.client.globFiles(params).originHashes, msg=msg
-            )
-
-    def assert_glob_with_dtypes(
-        self,
-        globs: List[str],
-        expected_matches: List[Tuple[bytes, str]],
-        include_dotfiles: bool = False,
-        msg: Optional[str] = None,
-    ) -> None:
-        params = GlobParams(
-            self.mount_path_bytes,
-            globs,
-            includeDotfiles=include_dotfiles,
-            wantDtype=True,
-        )
-        result = self.client.globFiles(params)
-        actual_results = zip(
-            result.matchingFiles,
-            (_dtype_to_str(dtype) for dtype in result.dtypes),
-        )
-        self.assertEqual(expected_matches, sorted(actual_results), msg=msg)
 
 
 # Mac and Linux fortunately appear to share the same dtype definitions
