@@ -15,6 +15,7 @@ use configmodel::Config;
 use pathmatcher::Matcher;
 use thrift_types::edenfs::ScmFileStatus;
 use types::RepoPathBuf;
+use vfs::VFS;
 
 use crate::filesystem::ChangeType;
 use crate::filesystem::PendingChangeResult;
@@ -25,8 +26,10 @@ pub struct EdenFileSystem {
 }
 
 impl EdenFileSystem {
-    pub fn new(root: PathBuf) -> Result<Self> {
-        Ok(EdenFileSystem { root })
+    pub fn new(vfs: VFS) -> Result<Self> {
+        Ok(EdenFileSystem {
+            root: vfs.root().to_path_buf(),
+        })
     }
 }
 

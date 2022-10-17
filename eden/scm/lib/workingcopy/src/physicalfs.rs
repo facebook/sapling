@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashSet;
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::SystemTime;
 
@@ -47,7 +46,7 @@ pub struct PhysicalFileSystem {
 
 impl PhysicalFileSystem {
     pub fn new(
-        root: PathBuf,
+        vfs: VFS,
         tree_resolver: ArcReadTreeManifest,
         store: ArcReadFileContents,
         treestate: Arc<Mutex<TreeState>>,
@@ -55,7 +54,7 @@ impl PhysicalFileSystem {
         num_threads: u8,
     ) -> Result<Self> {
         Ok(PhysicalFileSystem {
-            vfs: VFS::new(root)?,
+            vfs,
             tree_resolver,
             store,
             treestate,

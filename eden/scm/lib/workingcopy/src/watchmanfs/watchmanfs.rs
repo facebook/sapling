@@ -38,13 +38,13 @@ pub struct WatchmanFileSystem {
 
 impl WatchmanFileSystem {
     pub fn new(
-        root: PathBuf,
+        vfs: VFS,
         treestate: Arc<Mutex<TreeState>>,
         tree_resolver: ArcReadTreeManifest,
         store: ArcReadFileContents,
     ) -> Result<Self> {
         Ok(WatchmanFileSystem {
-            vfs: VFS::new(root)?,
+            vfs,
             treestate,
             tree_resolver,
             store,

@@ -32,6 +32,7 @@ use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
 use types::HgId;
 use types::RepoPathBuf;
+use vfs::VFS;
 
 #[cfg(feature = "eden")]
 use crate::edenfs::EdenFileSystem;
@@ -46,7 +47,7 @@ type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Sen
 type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
 
 struct FileSystem {
-    root: PathBuf,
+    vfs: VFS,
     file_store: ArcReadFileContents,
     file_system_type: FileSystemType,
     inner: Box<dyn PendingChanges + Send>,
@@ -67,7 +68,7 @@ pub struct WorkingCopy {
 
 impl WorkingCopy {
     pub fn new(
-        root: PathBuf,
+        vfs: VFS,
         // TODO: Have constructor figure out FileSystemType
         file_system_type: FileSystemType,
         treestate: Arc<Mutex<TreeState>>,
@@ -78,15 +79,15 @@ impl WorkingCopy {
         tracing::debug!(target: "dirstate_size", dirstate_size=treestate.lock().len());
 
         let ignore_matcher = Arc::new(GitignoreMatcher::new(
-            &root,
-            WorkingCopy::global_ignore_paths(&root, config)
+            vfs.root(),
+            WorkingCopy::global_ignore_paths(vfs.root(), config)
                 .iter()
                 .map(|i| i.as_path())
                 .collect(),
         ));
 
         let filesystem = Mutex::new(Self::construct_file_system(
-            root.clone(),
+            vfs.clone(),
             file_system_type,
             treestate.clone(),
             tree_resolver.clone(),
@@ -136,7 +137,7 @@ impl WorkingCopy {
     }
 
     fn construct_file_system(
-        root: PathBuf,
+        vfs: VFS,
         file_system_type: FileSystemType,
         treestate: Arc<Mutex<TreeState>>,
         tree_resolver: ArcReadTreeManifest,
@@ -144,7 +145,7 @@ impl WorkingCopy {
     ) -> Result<FileSystem> {
         let inner: Box<dyn PendingChanges + Send> = match file_system_type {
             FileSystemType::Normal => Box::new(PhysicalFileSystem::new(
-                root.clone(),
+                vfs.clone(),
                 tree_resolver,
                 store.clone(),
                 treestate.clone(),
@@ -152,7 +153,7 @@ impl WorkingCopy {
                 8,
             )?),
             FileSystemType::Watchman => Box::new(WatchmanFileSystem::new(
-                root.clone(),
+                vfs.clone(),
                 treestate.clone(),
                 tree_resolver,
                 store.clone(),
@@ -161,11 +162,11 @@ impl WorkingCopy {
                 #[cfg(not(feature = "eden"))]
                 panic!("cannot use EdenFS in a non-EdenFS build");
                 #[cfg(feature = "eden")]
-                Box::new(EdenFileSystem::new(root.clone())?)
+                Box::new(EdenFileSystem::new(vfs.clone())?)
             }
         };
         Ok(FileSystem {
-            root,
+            vfs,
             file_store: store,
             file_system_type,
             inner,
@@ -211,10 +212,10 @@ impl WorkingCopy {
         if fs.file_system_type == FileSystemType::Eden {
             sparse_matchers.push(Arc::new(AlwaysMatcher::new()));
         } else {
-            let ident = identity::must_sniff_dir(&fs.root)?;
+            let ident = identity::must_sniff_dir(&fs.vfs.root())?;
             for manifest in manifests.iter() {
                 match crate::sparse::repo_matcher(
-                    &fs.root.join(ident.dot_dir()),
+                    &fs.vfs.root().join(ident.dot_dir()),
                     manifest.read().clone(),
                     fs.file_store.clone(),
                 )? {

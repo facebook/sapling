@@ -25,6 +25,7 @@ tracing = "0.1.35"
 treestate = { version = "0.1.0", path = "../treestate" }
 types = { version = "0.1.0", path = "../types" }
 util = { version = "0.1.0", path = "../util" }
+vfs = { version = "0.1.0", path = "../vfs" }
 workingcopy = { version = "0.1.0", path = "../workingcopy" }
 
 [dev-dependencies]

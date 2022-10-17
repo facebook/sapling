@@ -39,6 +39,7 @@ use treestate::serialization::Serializable;
 use treestate::treestate::TreeState;
 use types::HgId;
 use util::path::absolute;
+use vfs::VFS;
 use workingcopy::filesystem::FileSystemType;
 use workingcopy::workingcopy::WorkingCopy;
 
@@ -403,6 +404,8 @@ impl Repo {
             (false, false) => FileSystemType::Normal,
         };
 
+        let vfs = VFS::new(path.to_path_buf())?;
+
         let dirstate_path = path.join(self.ident.dot_dir()).join("dirstate");
         let treestate = match filesystem {
             FileSystemType::Eden => TreeState::from_eden_dirstate(dirstate_path)?,
@@ -453,7 +456,7 @@ impl Repo {
         ));
 
         Ok(WorkingCopy::new(
-            path.to_path_buf(),
+            vfs,
             filesystem,
             treestate,
             tree_resolver,
