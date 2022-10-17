@@ -830,7 +830,7 @@ class treematcher(basematcher):
     def __init__(self, root, cwd, badfn=None, rules=[], ruledetails=None):
         super(treematcher, self).__init__(root, cwd, badfn)
         rules = list(rules)
-        self._matcher = pathmatcher.treematcher(rules)
+        self._matcher = pathmatcher.treematcher(rules, util.fscasesensitive(root))
         self._rules = rules
         self._ruledetails = ruledetails
 

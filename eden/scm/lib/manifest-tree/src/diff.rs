@@ -749,7 +749,7 @@ mod tests {
             ],
         );
 
-        let matcher = TreeMatcher::from_rules(["d1/**"].iter()).unwrap();
+        let matcher = TreeMatcher::from_rules(["d1/**"].iter(), true).unwrap();
         let diff = Diff::new(&ltree, &rtree, &matcher).unwrap();
         let entries = diff
             .collect::<Result<Vec<_>>>()
@@ -952,7 +952,7 @@ mod tests {
             Diff::new(
                 &left,
                 &right,
-                &TreeMatcher::from_rules(["a1/b1/**"].iter()).unwrap()
+                &TreeMatcher::from_rules(["a1/b1/**"].iter(), true).unwrap()
             )
             .unwrap()
             .collect::<Result<Vec<_>>>()
@@ -966,7 +966,7 @@ mod tests {
             Diff::new(
                 &left,
                 &right,
-                &TreeMatcher::from_rules(["a1/b2"].iter()).unwrap()
+                &TreeMatcher::from_rules(["a1/b2"].iter(), true).unwrap()
             )
             .unwrap()
             .collect::<Result<Vec<_>>>()
@@ -980,7 +980,7 @@ mod tests {
             Diff::new(
                 &left,
                 &right,
-                &TreeMatcher::from_rules(["a2/b2/**"].iter()).unwrap()
+                &TreeMatcher::from_rules(["a2/b2/**"].iter(), true).unwrap()
             )
             .unwrap()
             .collect::<Result<Vec<_>>>()
@@ -994,7 +994,7 @@ mod tests {
             Diff::new(
                 &left,
                 &right,
-                &TreeMatcher::from_rules(["*/b2/**"].iter()).unwrap()
+                &TreeMatcher::from_rules(["*/b2/**"].iter(), true).unwrap()
             )
             .unwrap()
             .collect::<Result<Vec<_>>>()
@@ -1014,7 +1014,7 @@ mod tests {
             Diff::new(
                 &left,
                 &right,
-                &TreeMatcher::from_rules(["a3/**"].iter()).unwrap()
+                &TreeMatcher::from_rules(["a3/**"].iter(), true).unwrap()
             )
             .unwrap()
             .next()

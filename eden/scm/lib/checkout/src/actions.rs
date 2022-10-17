@@ -236,8 +236,8 @@ mod tests {
         let a = (rp("a"), FileMetadata::regular(hgid(1)));
         let b = (rp("b"), FileMetadata::regular(hgid(2)));
         let c = (rp("c"), FileMetadata::regular(hgid(3)));
-        let ab_profile = Arc::new(TreeMatcher::from_rules(["a", "b"].iter())?);
-        let ac_profile = Arc::new(TreeMatcher::from_rules(["a", "c"].iter())?);
+        let ab_profile = Arc::new(TreeMatcher::from_rules(["a", "b"].iter(), true)?);
+        let ac_profile = Arc::new(TreeMatcher::from_rules(["a", "c"].iter(), true)?);
         let old_manifest = make_tree_manifest_from_meta(store.clone(), vec![]);
         let manifest = make_tree_manifest_from_meta(store, vec![a, b, c]);
 

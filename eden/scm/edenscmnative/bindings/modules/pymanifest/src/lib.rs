@@ -603,7 +603,10 @@ fn insert(
         }
         manifest_tree::InsertErrorCause::DirectoryExistsForPath => {
             let files: Vec<File> = tree
-                .files(TreeMatcher::from_rules([format!("{}/**", path)].iter())?)
+                .files(TreeMatcher::from_rules(
+                    [format!("{}/**", path)].iter(),
+                    true, // case_sensitive=true
+                )?)
                 .collect::<Result<_>>()?;
             for file in files {
                 tree.remove(&file.path)?;

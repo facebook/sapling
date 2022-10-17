@@ -82,13 +82,13 @@ impl SparseProfileMonitoring {
             )
             .collect();
         let profiles_location_with_excludes_matcher =
-            pathmatcher::TreeMatcher::from_rules(rules.iter()).context(format!(
+            pathmatcher::TreeMatcher::from_rules(rules.iter(), true).context(format!(
                 "Couldn't create profiles config matcher for repo {} from rules {:?}",
                 repo_name, rules,
             ))?;
         let exact_profiles_matcher = match monitoring_profiles {
             MonitoringProfiles::Exact { ref profiles } => {
-                pathmatcher::TreeMatcher::from_rules(profiles.iter()).context(format!(
+                pathmatcher::TreeMatcher::from_rules(profiles.iter(), true).context(format!(
                     "Couldn't create exact profiles matcher for repo {} from rules {:?}",
                     repo_name, rules,
                 ))?
@@ -106,6 +106,7 @@ impl SparseProfileMonitoring {
                         .monitored_profiles
                         .iter()
                         .map(|p| format!("{}/{}", sparse_config.sparse_profiles_location, p)),
+                    true,
                 )
                 .context(format!(
                     "Couldn't create monitored profiles matcher for repo {} from rules {:?}",

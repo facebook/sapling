@@ -104,8 +104,8 @@ impl ExtractInnerRef for regexmatcher {
 py_class!(pub class treematcher |py| {
     data matcher: Arc<TreeMatcher>;
 
-    def __new__(_cls, rules: Vec<String>) -> PyResult<Self> {
-        let matcher = TreeMatcher::from_rules(rules.into_iter()).map_pyerr(py)?;
+    def __new__(_cls, rules: Vec<String>, case_sensitive: bool) -> PyResult<Self> {
+        let matcher = TreeMatcher::from_rules(rules.into_iter(), case_sensitive).map_pyerr(py)?;
         Self::create_instance(py, Arc::new(matcher))
     }
 

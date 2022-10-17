@@ -175,7 +175,7 @@ def configstomatcher(configs):
         for mirror in mirrors:
             assert mirror.endswith("/"), "getconfigs() ensures this"
             rules.add("%s**" % mirror)
-    m = bindings.pathmatcher.treematcher(sorted(rules))
+    m = bindings.pathmatcher.treematcher(sorted(rules), case_sensitive=True)
     return m
 
 

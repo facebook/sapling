@@ -33,6 +33,8 @@ pub struct Profile {
     description: Option<String>,
     hidden: Option<String>,
     version: Option<String>,
+
+    case_sensitive: bool,
 }
 
 /// Root represents the root sparse profile (usually .hg/sparse).
@@ -169,7 +171,10 @@ impl Root {
                         only_v1 = false;
 
                         let (matcher_rules, origins) = prepare_rules(child_rules)?;
-                        matchers.push(pathmatcher::TreeMatcher::from_rules(matcher_rules.iter())?);
+                        matchers.push(pathmatcher::TreeMatcher::from_rules(
+                            matcher_rules.iter(),
+                            self.0.case_sensitive,
+                        )?);
                         rule_origins.push(origins);
                     } else {
                         for rule in child_rules {
@@ -193,7 +198,10 @@ impl Root {
         ));
 
         let (matcher_rules, origins) = prepare_rules(rules)?;
-        matchers.push(pathmatcher::TreeMatcher::from_rules(matcher_rules.iter())?);
+        matchers.push(pathmatcher::TreeMatcher::from_rules(
+            matcher_rules.iter(),
+            self.0.case_sensitive,
+        )?);
         rule_origins.push(origins);
 
         Ok(Matcher::new(matchers, rule_origins))

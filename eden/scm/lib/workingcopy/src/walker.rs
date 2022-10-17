@@ -548,7 +548,7 @@ mod tests {
         let walker = SingleWalker::new(
             root_path,
             ".hg".to_string(),
-            TreeMatcher::from_rules(["foo/bar/**"].iter()).unwrap(),
+            TreeMatcher::from_rules(["foo/bar/**"].iter(), true).unwrap(),
             false,
         )?;
         let walked_files: Result<Vec<_>> = walker.collect();
@@ -682,7 +682,7 @@ mod tests {
         let walker = MultiWalker::new(
             root_path,
             ".hg".to_string(),
-            TreeMatcher::from_rules(["foo/bar/**"].iter()).unwrap(),
+            TreeMatcher::from_rules(["foo/bar/**"].iter(), true).unwrap(),
             false,
             NonZeroU8::new(4).unwrap(),
         )?;
