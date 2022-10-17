@@ -64,7 +64,11 @@ pub fn compute_status(
             Err(e) => return Err(e),
         };
 
-        match treestate.lock().get(&path)? {
+        let mut treestate = treestate.lock();
+
+        let normalized = treestate.normalize(path.as_ref())?;
+        let path = RepoPathBuf::from_utf8(normalized.to_vec())?;
+        match treestate.get(&normalized)? {
             Some(state) => {
                 let exist_parent = state
                     .state

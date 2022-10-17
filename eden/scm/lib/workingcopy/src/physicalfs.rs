@@ -18,6 +18,7 @@ use storemodel::ReadFileContents;
 use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
+use types::RepoPath;
 use types::RepoPathBuf;
 use vfs::VFS;
 
@@ -136,35 +137,33 @@ impl PendingChangesStage {
 }
 
 impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
-    fn next_walk(&mut self) -> Option<Result<PendingChangeResult>> {
+    fn next_walk(&mut self) -> Result<Option<PendingChangeResult>> {
         loop {
             match self.walker.next() {
                 Some(Ok(WalkEntry::File(file, metadata))) => {
-                    let file = normalize(file);
-                    self.seen.insert(file.to_owned());
-                    let changed = match self
+                    // On case insensitive systems, normalize the path so duplicate paths with
+                    // different case can be detected in the seen set.
+                    let file = self.treestate.lock().normalize(file.as_ref())?;
+                    let path = RepoPath::from_utf8(file.as_ref())?;
+                    self.seen.insert(path.to_owned());
+                    let changed = self
                         .file_change_detector
-                        .has_changed_with_fresh_metadata(&file, metadata)
-                    {
-                        Ok(result) => result,
-                        Err(e) => return Some(Err(e)),
-                    };
+                        .has_changed_with_fresh_metadata(path, metadata)?;
 
                     if let FileChangeResult::Yes(change_type) = changed {
-                        return Some(Ok(PendingChangeResult::File(change_type)));
+                        return Ok(Some(PendingChangeResult::File(change_type)));
                     }
                 }
                 Some(Ok(WalkEntry::Directory(dir))) => {
                     if self.include_directories {
-                        let dir = normalize(dir);
-                        return Some(Ok(PendingChangeResult::SeenDirectory(dir)));
+                        return Ok(Some(PendingChangeResult::SeenDirectory(dir)));
                     }
                 }
                 Some(Err(e)) => {
-                    return Some(Err(e));
+                    return Err(e);
                 }
                 None => {
-                    return None;
+                    return Ok(None);
                 }
             };
         }
@@ -188,11 +187,25 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
         let tracked = tracked.unwrap();
 
         for path in tracked.into_iter() {
+            let cow_path = match self.treestate.lock().normalize(path.as_ref()) {
+                Ok(path) => path,
+                Err(e) => {
+                    results.push(Err(e));
+                    continue;
+                }
+            };
+            let path: &RepoPath = match RepoPath::from_utf8(cow_path.as_ref()) {
+                Ok(path) => path,
+                Err(e) => {
+                    results.push(Err(e.into()));
+                    continue;
+                }
+            };
             // Skip this path if we've seen it or it doesn't match the matcher.
-            if self.seen.contains(&path) {
+            if self.seen.contains(path) {
                 continue;
             } else {
-                match self.matcher.matches_file(&path) {
+                match self.matcher.matches_file(path) {
                     Err(e) => {
                         results.push(Err(e));
                         continue;
@@ -202,7 +215,7 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                 }
             }
 
-            let changed = match self.file_change_detector.has_changed(&path) {
+            let changed = match self.file_change_detector.has_changed(path) {
                 Ok(result) => result,
                 Err(e) => {
                     results.push(Err(e));
@@ -269,7 +282,7 @@ impl<M: Matcher + Clone + Send + Sync + 'static> Iterator for PendingChanges<M> 
         // TODO: Try to make this into a chain instead of a manual state machine
         loop {
             let change = match self.stage {
-                PendingChangesStage::Walk => self.next_walk(),
+                PendingChangesStage::Walk => self.next_walk().transpose(),
                 PendingChangesStage::IterateTree => self.next_tree(),
                 PendingChangesStage::Lookups => self.next_lookup(),
                 PendingChangesStage::Finished => None,
@@ -285,9 +298,4 @@ impl<M: Matcher + Clone + Send + Sync + 'static> Iterator for PendingChanges<M> 
             }
         }
     }
-}
-
-fn normalize(path: RepoPathBuf) -> RepoPathBuf {
-    // TODO: Support path normalization on case insensitive file systems
-    path
 }

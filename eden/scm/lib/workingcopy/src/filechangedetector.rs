@@ -206,9 +206,10 @@ impl FileChangeDetector {
     }
 
     fn get_treestate(&self, path: &RepoPath) -> Result<Option<FileStateV2>> {
-        self.treestate
-            .lock()
-            .get(path)
+        let mut treestate = self.treestate.lock();
+        let normalized = treestate.normalize(path.as_ref())?;
+        treestate
+            .get(normalized.as_ref())
             .map(|option| option.map(|state| state.clone()))
     }
 
