@@ -4,7 +4,8 @@
 
 Updating across a rename
 
-  $ newrepo
+  $ configure modernclient
+  $ newclientrepo
 
   $ echo >> a
   $ hg commit -Aqm "add a"

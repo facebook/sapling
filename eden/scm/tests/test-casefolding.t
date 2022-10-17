@@ -1,15 +1,13 @@
 #require icasefs
 
+  $ configure modernclient
   $ hg debugfsinfo | grep 'case-sensitive:'
   case-sensitive: no
 
 test file addition with bad case
 
   $ setconfig devel.segmented-changelog-rev-compat=True
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
-  $ setconfig workingcopy.ruststatus=False
-  $ hg init repo1
-  $ cd repo1
+  $ newclientrepo repo1
   $ echo a > a
   $ hg add A
   $ hg st
@@ -21,8 +19,7 @@ test file addition with bad case
 
 test case collision on rename (issue750)
 
-  $ hg init repo2
-  $ cd repo2
+  $ newclientrepo repo2
   $ echo a > a
   $ hg --debug ci -Am adda
   adding a
@@ -67,10 +64,14 @@ test changing case of path components
   $ hg revert -aq
   $ rm d/c
   $ echo c > D/c
-  $ hg add D/c
+  $ hg add "glob:**/c"
+  adding d/c (no-fsmonitor !)
+  warning: possible case-folding collision for D/c (fsmonitor !)
+  adding D/c (fsmonitor !)
   $ hg st
-  A D/c
-  $ hg ci -m addc D/c
+  A d/c (no-fsmonitor !)
+  A D/c (fsmonitor !)
+  $ hg ci -m addc "glob:**/c"
   $ hg mv d/b d/e
   $ hg st
   A D/e
@@ -85,8 +86,7 @@ test changing case of path components
 
 test case collision between revisions (issue912)
 
-  $ hg init repo3
-  $ cd repo3
+  $ newclientrepo repo3
   $ echo a > a
   $ hg ci -Am adda
   adding a
@@ -127,8 +127,7 @@ no clobbering of untracked files with wrong casing
 
 issue 3342: file in nested directory causes unexpected abort
 
-  $ hg init issue3342
-  $ cd issue3342
+  $ newclientrepo issue3342
 
   $ mkdir -p a/B/c/D
   $ echo e > a/B/c/D/e
@@ -140,7 +139,7 @@ issue 4481: revert across case only renames
   $ hg ci -m "uppercase E"
   $ echo 'foo' > a/B/c/D/E
   $ hg ci -m 'e content change'
-  $ hg revert --all -r 0
+  $ hg revert --all -r .~2
   removing a/B/c/D/E
   adding a/B/c/D/e
   $ find * | sort
