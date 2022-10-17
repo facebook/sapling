@@ -325,7 +325,7 @@ mod tests {
     fn status_helper(treestate: &[(&str, StateFlags)], changes: &[(&str, bool)]) -> Result<Status> {
         // Build the TreeState.
         let dir = TempDir::new("treestate").expect("tempdir");
-        let mut state = TreeState::new(dir.path()).expect("open").0;
+        let mut state = TreeState::new(dir.path(), true).expect("open").0;
         let mut manifest_files = vec![];
         for (path, flags) in treestate {
             if *flags == (StateFlags::EXIST_P1 | StateFlags::EXIST_NEXT) {

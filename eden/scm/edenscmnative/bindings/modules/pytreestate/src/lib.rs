@@ -45,6 +45,7 @@ use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
 use pypathmatcher::PythonMatcher;
 use types::RepoPathBuf;
+use vfs::VFS;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -455,6 +456,7 @@ py_class!(pub class treestate |py| {
         let treestate = TreeState::open(
             path.as_path(),
             BlockId(root_id),
+            VFS::new(path.as_path().to_path_buf()).map_pyerr(py)?.case_sensitive(),
         ).map_pyerr(py)?;
         Self::create_instance(py, Arc::new(Mutex::new(treestate)))
     }
@@ -462,7 +464,10 @@ py_class!(pub class treestate |py| {
     // This should only be used for tests.
     @staticmethod
     def new(directory: PyPathBuf) -> PyResult<treestate> {
-        let treestate = TreeState::new(directory.as_path()).map_pyerr(py)?.0;
+        let treestate = TreeState::new(
+            directory.as_path(),
+            VFS::new(directory.as_path().to_path_buf()).map_pyerr(py)?.case_sensitive(),
+        ).map_pyerr(py)?.0;
         Self::create_instance(py, Arc::new(Mutex::new(treestate)))
     }
 
@@ -475,7 +480,10 @@ py_class!(pub class treestate |py| {
 
     def reset(&self, directory: PyPathBuf) -> PyResult<u64> {
         let mut treestate = self.state(py).lock();
-        let (new_treestate, root_id) = convert_result(py, TreeState::new(directory.as_path()))?;
+        let (new_treestate, root_id) = convert_result(py, TreeState::new(
+            directory.as_path(),
+            VFS::new(directory.as_path().to_path_buf()).map_pyerr(py)?.case_sensitive(),
+        ))?;
         *treestate = new_treestate;
         Ok(root_id.0)
     }

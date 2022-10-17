@@ -12,6 +12,7 @@ pathmatcher = { path = "../../../../lib/pathmatcher" }
 pypathmatcher = { path = "../pypathmatcher" }
 treestate = { path = "../../../../lib/treestate" }
 types = { path = "../../../../lib/types" }
+vfs = { path = "../../../../lib/vfs" }
 
 [features]
 python3 = ["cpython/python3-sys", "cpython_ext/python3"]

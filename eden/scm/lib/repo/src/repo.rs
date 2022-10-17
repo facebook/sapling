@@ -408,7 +408,9 @@ impl Repo {
 
         let dirstate_path = path.join(self.ident.dot_dir()).join("dirstate");
         let treestate = match filesystem {
-            FileSystemType::Eden => TreeState::from_eden_dirstate(dirstate_path)?,
+            FileSystemType::Eden => {
+                TreeState::from_eden_dirstate(dirstate_path, vfs.case_sensitive())?
+            }
             _ => {
                 let treestate_path = path.join(self.ident.dot_dir()).join("treestate");
                 if util::file::exists(&dirstate_path)
@@ -425,9 +427,11 @@ impl Repo {
                     TreeState::open(
                         treestate_path.join(fields.tree_filename),
                         fields.tree_root_id,
+                        vfs.case_sensitive(),
                     )?
                 } else {
-                    let (treestate, root_id) = TreeState::new(&treestate_path)?;
+                    let (treestate, root_id) =
+                        TreeState::new(&treestate_path, vfs.case_sensitive())?;
 
                     let dirstate = Dirstate {
                         p0: *HgId::null_id(),
