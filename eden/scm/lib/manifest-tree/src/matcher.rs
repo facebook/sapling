@@ -20,17 +20,27 @@ use crate::TreeManifest;
 
 pub struct ManifestMatcher {
     manifest: Arc<RwLock<TreeManifest>>,
+    case_sensitive: bool,
 }
 
 impl ManifestMatcher {
-    pub fn new(manifest: Arc<RwLock<TreeManifest>>) -> Self {
-        ManifestMatcher { manifest }
+    pub fn new(manifest: Arc<RwLock<TreeManifest>>, case_sensitive: bool) -> Self {
+        ManifestMatcher {
+            manifest,
+            case_sensitive,
+        }
     }
 }
 
 impl Matcher for ManifestMatcher {
     fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
-        Ok(match self.manifest.read().get(path)? {
+        let manifest = self.manifest.read();
+        let result = if self.case_sensitive {
+            manifest.get(path)?
+        } else {
+            manifest.get_ignore_case(path)?
+        };
+        Ok(match result {
             Some(File(_)) => DirectoryMatch::Nothing,
             Some(Directory(_)) => DirectoryMatch::ShouldTraverse,
             None => DirectoryMatch::Nothing,
@@ -38,7 +48,13 @@ impl Matcher for ManifestMatcher {
     }
 
     fn matches_file(&self, path: &RepoPath) -> Result<bool> {
-        Ok(match self.manifest.read().get(path)? {
+        let manifest = self.manifest.read();
+        let result = if self.case_sensitive {
+            manifest.get(path)?
+        } else {
+            manifest.get_ignore_case(path)?
+        };
+        Ok(match result {
             Some(File(_)) => true,
             Some(Directory(_)) => false,
             None => false,

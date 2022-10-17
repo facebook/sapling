@@ -124,6 +124,11 @@ impl Manifest for TreeManifest {
         Ok(result)
     }
 
+    fn get_ignore_case(&self, path: &RepoPath) -> Result<Option<FsNodeMetadata>> {
+        let result = self.get_link(path)?.map(|link| link.to_fs_node());
+        Ok(result)
+    }
+
     fn list(&self, path: &RepoPath) -> Result<List> {
         let directory = match self.get_link(path)? {
             None => return Ok(List::NotFound),

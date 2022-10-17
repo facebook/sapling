@@ -249,14 +249,17 @@ impl WorkingCopy {
         let mut non_ignore_matchers: Vec<Arc<dyn Matcher + Send + Sync + 'static>> =
             Vec::with_capacity(manifests.len());
 
+        let case_sensitive = self.vfs.case_sensitive();
+
         for manifest in manifests.iter() {
             non_ignore_matchers.push(Arc::new(manifest_tree::ManifestMatcher::new(
                 manifest.clone(),
+                case_sensitive,
             )));
         }
         non_ignore_matchers.push(Arc::new(ExactMatcher::new(
             added_files.iter(),
-            self.vfs.case_sensitive(),
+            case_sensitive,
         )));
 
         let matcher = Arc::new(IntersectMatcher::new(vec![

@@ -269,6 +269,10 @@ mod tests {
             unimplemented!()
         }
 
+        fn get_ignore_case(&self, path: &RepoPath) -> Result<Option<manifest::FsNodeMetadata>> {
+            unimplemented!("get_ignore_case not implemented for StubCommit")
+        }
+
         fn list(&self, path: &RepoPath) -> Result<manifest::List> {
             unimplemented!()
         }

@@ -47,6 +47,8 @@ pub trait Manifest {
     // TODO: add default implementation
     fn get(&self, path: &RepoPath) -> Result<Option<FsNodeMetadata>>;
 
+    fn get_ignore_case(&self, path: &RepoPath) -> Result<Option<FsNodeMetadata>>;
+
     /// Lists the immediate contents of directory in a manifest (non-recursive).
     /// Given a path, the manifest will return:
     /// * List::NotFound when the path is not present in the manifest
