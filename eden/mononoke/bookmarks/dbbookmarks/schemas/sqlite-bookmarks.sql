@@ -19,13 +19,14 @@ CREATE TABLE IF NOT EXISTS bookmarks (
 CREATE INDEX IF NOT EXISTS repo_id_hg_kind ON bookmarks (repo_id, hg_kind);
 
 CREATE TABLE IF NOT EXISTS bookmarks_update_log (
-  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  id INTEGER NOT NULL,
   repo_id INT UNSIGNED NOT NULL,
   name VARCHAR(512) NOT NULL,
   from_changeset_id VARBINARY(32),
   to_changeset_id VARBINARY(32),
   reason VARCHAR(32) NOT NULL, -- enum is used in mysql
-  timestamp BIGINT NOT NULL
+  timestamp BIGINT NOT NULL,
+  PRIMARY KEY (repo_id, id)
 );
 
 CREATE TABLE IF NOT EXISTS bookmarks_update_log_lock (
