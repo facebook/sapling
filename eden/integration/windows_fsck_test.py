@@ -6,6 +6,7 @@
 
 import os
 import shutil
+import subprocess
 import sys
 import unittest
 from typing import Dict, List, Optional, Set, Tuple, Union
@@ -36,7 +37,10 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         return {"eden.fs.inodes.treeoverlay": "DBG9"}
 
     def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
-        return {"overlay": ["enable_tree_overlay=true"]}
+        return {
+            "overlay": ["enable_tree_overlay=true"],
+            "fsck": ["use-thorough-fsck=true"],
+        }
 
     def _eden_status(self, listIgnored: bool = False):
         with self.eden.get_thrift_client_legacy() as client:
@@ -170,6 +174,17 @@ class WindowsFsckTest(testcase.EdenRepoTest):
                 b"subdir/foo.txt": 0,
             },
         )
+
+    def test_fsck_junctions(self) -> None:
+        subprocess.run(
+            f"cmd.exe /c mklink /J {self.mount_path}\\bdir {self.mount_path}\\adir",
+            check=True,
+        )
+
+        self.eden.shutdown()
+        self.eden.start()
+
+        self.assertEqual(self._eden_status(), {b"bdir": 0})
 
 
 MATERIALIZED = True

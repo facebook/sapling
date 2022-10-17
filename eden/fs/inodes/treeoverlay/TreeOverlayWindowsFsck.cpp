@@ -439,7 +439,7 @@ std::optional<InodeNumber> fixup(
       // in a previous checkout operation. We should probably call it here or
       // as a post-PrjfsChannel initialization.
 
-      XLOGF(ERR, "Placeholder present on disk but not in SCM - {}", path);
+      XLOGF(DFATAL, "Placeholder present on disk but not in SCM - {}", path);
       return std::nullopt;
     } else {
       state.desiredDtype = state.diskDtype;
