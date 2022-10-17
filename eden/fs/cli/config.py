@@ -434,7 +434,7 @@ class EdenInstance(AbstractEdenInstance):
 
     def get_checkout_info(
         self, path: Union[Path, str]
-    ) -> "collections.OrderedDict[str, str]":
+    ) -> "collections.OrderedDict[str, Union[str, bool]]":
         """
         Given a path to a checkout, return a dictionary containing diagnostic
         information about it.
@@ -446,7 +446,7 @@ class EdenInstance(AbstractEdenInstance):
 
     def get_checkout_info_from_checkout(
         self, checkout: "EdenCheckout"
-    ) -> "collections.OrderedDict[str, str]":
+    ) -> "collections.OrderedDict[str, Union[str, bool]]":
         checkout_config = checkout.get_config()
 
         error = None
@@ -462,6 +462,7 @@ class EdenInstance(AbstractEdenInstance):
                 ("scm_type", checkout_config.scm_type),
                 ("state_dir", str(checkout.state_dir)),
                 ("mount_protocol", checkout_config.mount_protocol),
+                ("case_sensitive", checkout_config.case_sensitive),
             ]
         )
 

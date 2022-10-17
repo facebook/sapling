@@ -29,6 +29,11 @@ class InfoTest(testcase.EdenRepoTest):
             self.eden_dir, "clients", os.path.basename(self.mount)
         )
 
+        # We don't care about the exact case sensitivity value here; it's
+        # tested elsewhere.
+        self.assertIs(bool, type(client_info["case_sensitive"]))
+        del client_info["case_sensitive"]
+
         self.assertEqual(
             {
                 "state_dir": client_dir,

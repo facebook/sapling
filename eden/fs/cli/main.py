@@ -744,7 +744,22 @@ class CloneCmd(Subcmd):
 
         parser.add_argument(
             "--backing-store",
-            help="Clone path as backing store instead of a source control repository. Currently only support 'recas' (Linux and MacOs only) and 'http' (Linux only)",
+            help="Clone path as backing store instead of a source control repository. Currently only support 'recas' (Linux and macOS only) and 'http' (Linux only)",
+        )
+
+        case_group = parser.add_mutually_exclusive_group()
+        case_group.add_argument(
+            "--case-sensitive",
+            action="store_true",
+            default=sys.platform == "linux",
+            help=argparse.SUPPRESS,
+        )
+        case_group.add_argument(
+            "--case-insensitive",
+            action="store_false",
+            dest="case_sensitive",
+            default=sys.platform != "linux",
+            help=argparse.SUPPRESS,
         )
 
     def run(self, args: argparse.Namespace) -> int:
@@ -805,6 +820,18 @@ want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n.""
                 )
                 return 1
 
+        if args.case_sensitive and sys.platform != "linux":
+            print(
+                """\
+Warning: Creating a case-sensitive checkout on a platform where the default is
+case-insensitive. This is not recommended and is intended only for testing."""
+            )
+        if not args.case_sensitive and sys.platform == "linux":
+            print(
+                """\
+Warning: Creating a case-insensitive checkout on a platform where the default
+is case-sensitive. This is not recommended and is intended only for testing."""
+            )
         # Find the repository information
         try:
             repo, repo_config = self._get_repo_info(
@@ -812,6 +839,7 @@ want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n.""
                 args.repo,
                 args.rev,
                 args.nfs,
+                args.case_sensitive,
                 args.overlay_type,
                 args.backing_store,
             )
@@ -932,6 +960,7 @@ want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n.""
         repo_arg: str,
         rev: Optional[str],
         nfs: bool,
+        case_sensitive: bool,
         overlay_type: Optional[str],
         backing_store_type: Optional[str] = None,
     ) -> Tuple[util.Repo, config_mod.CheckoutConfig]:
@@ -955,9 +984,6 @@ want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n.""
         mount_protocol = get_protocol(nfs)
 
         enable_tree_overlay = self._get_enable_tree_overlay(instance, overlay_type)
-
-        # New clones on macOS and Windows are case insensitive.
-        case_sensitive = sys.platform == "linux"
 
         # This is a valid repository path.
         # Prepare a CheckoutConfig object for it.

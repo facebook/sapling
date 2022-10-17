@@ -291,6 +291,32 @@ class CloneTest(testcase.EdenRepoTest):
         self.assertFalse((new_mount / "hello").exists())
         self.assertEqual(custom_readme_text, readme_path.read_text())
 
+    def test_default_case_sensitivity(self) -> None:
+        tmp = self.make_temporary_directory()
+        empty_dir = os.path.join(tmp, "foo/bar/baz")
+        os.makedirs(empty_dir)
+        self.eden.clone(self.repo.path, empty_dir)
+
+        self.assertEqual(
+            self.eden.is_case_sensitive(empty_dir), sys.platform == "linux"
+        )
+
+    def test_force_case_sensitive(self) -> None:
+        tmp = self.make_temporary_directory()
+        empty_dir = os.path.join(tmp, "foo/bar/baz")
+        os.makedirs(empty_dir)
+        self.eden.clone(self.repo.path, empty_dir, case_sensitive=True)
+
+        self.assertTrue(self.eden.is_case_sensitive(empty_dir))
+
+    def test_force_case_insensitive(self) -> None:
+        tmp = self.make_temporary_directory()
+        empty_dir = os.path.join(tmp, "foo/bar/baz")
+        os.makedirs(empty_dir)
+        self.eden.clone(self.repo.path, empty_dir, case_sensitive=False)
+
+        self.assertFalse(self.eden.is_case_sensitive(empty_dir))
+
 
 class CloneFakeEdenFSTestBase(ServiceTestCaseBase):
     def setUp(self) -> None:

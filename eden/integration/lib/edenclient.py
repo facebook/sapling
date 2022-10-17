@@ -569,6 +569,7 @@ class EdenFS(object):
         repo: str,
         path: Union[str, os.PathLike],
         allow_empty: bool = False,
+        case_sensitive: Optional[bool] = None,
     ) -> None:
         """
         Run "eden clone"
@@ -576,7 +577,19 @@ class EdenFS(object):
         params = ["clone", repo, str(path)]
         if allow_empty:
             params.append("--allow-empty-repo")
+        if case_sensitive:
+            params.append("--case-sensitive")
+        elif case_sensitive is False:  # Can also be None
+            params.append("--case-insensitive")
         self.run_cmd(*params)
+
+    def is_case_sensitive(self, path: Union[str, os.PathLike]) -> bool:
+        """
+        Return a checkout's case-sensitivity setting.
+        """
+        data = json.loads(self.run_cmd("info", str(path)))
+        assert type(data["case_sensitive"]) is bool
+        return data["case_sensitive"]
 
     def remove(self, path: str) -> None:
         """
