@@ -75,8 +75,8 @@ impl ExtractInnerRef for gitignorematcher {
 py_class!(pub class regexmatcher |py| {
     data matcher: Arc<RegexMatcher>;
 
-    def __new__(_cls, pattern: &str) -> PyResult<Self> {
-        let matcher = RegexMatcher::new(pattern).map_pyerr(py)?;
+    def __new__(_cls, pattern: &str, case_sensitive: bool) -> PyResult<Self> {
+        let matcher = RegexMatcher::new(pattern, case_sensitive).map_pyerr(py)?;
         Self::create_instance(py, Arc::new(matcher))
     }
 

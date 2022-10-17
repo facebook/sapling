@@ -52,14 +52,17 @@ pub struct RegexMatcher {
 }
 
 impl RegexMatcher {
-    pub fn new(pattern: &str) -> Result<Self> {
+    pub fn new(pattern: &str, case_sensitive: bool) -> Result<Self> {
         let pattern = handle_sol_eol(pattern)?;
 
         // The RE library doesn't support ^, we use this `Builder::anchored` to
         // make the search anchored at the beginning of the input. By default,
         // the regex will act as if the pattern started with a .*?, which enables
         // a match to appear anywhere.
-        let dfa = Builder::new().anchored(true).build(&pattern)?;
+        let dfa = Builder::new()
+            .anchored(true)
+            .case_insensitive(!case_sensitive)
+            .build(&pattern)?;
 
         Ok(RegexMatcher { pattern, dfa })
     }
@@ -206,7 +209,7 @@ mod tests {
 
     #[test]
     fn test_re_empty_pattern() {
-        let m = RegexMatcher::new("").unwrap();
+        let m = RegexMatcher::new("", true).unwrap();
         assert!(m.matches(""));
         assert!(m.matches("a"));
         assert!(m.matches("abc"));
@@ -214,7 +217,7 @@ mod tests {
 
     #[test]
     fn test_re_literal_path() {
-        let m = RegexMatcher::new(r"(?:a/.*|b/.*)").unwrap();
+        let m = RegexMatcher::new(r"(?:a/.*|b/.*)", true).unwrap();
         assert_eq!(m.match_prefix(""), None);
         assert_eq!(m.match_prefix("a"), Some(true));
         assert_eq!(m.match_prefix("a/"), Some(true));
@@ -230,7 +233,7 @@ mod tests {
 
     #[test]
     fn test_re_dir_boundary() {
-        let m = RegexMatcher::new(r"aa/t\d+").unwrap();
+        let m = RegexMatcher::new(r"aa/t\d+", true).unwrap();
         assert_eq!(m.match_prefix(""), None);
         assert_eq!(m.match_prefix("a"), Some(false));
         assert_eq!(m.match_prefix("aa"), None);
@@ -240,7 +243,7 @@ mod tests {
 
     #[test]
     fn test_re_simple_pattern() {
-        let m = RegexMatcher::new(r"a/t\d+/").unwrap();
+        let m = RegexMatcher::new(r"a/t\d+/", true).unwrap();
         assert_eq!(m.match_prefix(""), None);
         assert_eq!(m.match_prefix("a"), None);
         assert_eq!(m.match_prefix("a/t123"), Some(true));
@@ -257,7 +260,7 @@ mod tests {
 
     #[test]
     fn test_re_without_eol() {
-        let m = RegexMatcher::new(r"a/t\d+.py").unwrap();
+        let m = RegexMatcher::new(r"a/t\d+.py", true).unwrap();
         assert_eq!(m.match_prefix(""), None);
         assert_eq!(m.match_prefix("a"), None);
         assert_eq!(m.match_prefix("b"), Some(false));
@@ -269,7 +272,7 @@ mod tests {
 
     #[test]
     fn test_re_with_eol() {
-        let m = RegexMatcher::new(r"(:?a/t\d+.py$|a\d*.txt)").unwrap();
+        let m = RegexMatcher::new(r"(:?a/t\d+.py$|a\d*.txt)", true).unwrap();
         assert_eq!(m.match_prefix(""), None);
         assert_eq!(m.match_prefix("a"), None);
         assert_eq!(m.match_prefix("b"), Some(false));
@@ -284,7 +287,7 @@ mod tests {
 
     #[test]
     fn test_re_with_sol() {
-        let m = RegexMatcher::new(r"(:?^a/t.py$|^a\^.txt)").unwrap();
+        let m = RegexMatcher::new(r"(:?^a/t.py$|^a\^.txt)", true).unwrap();
         assert_eq!(m.match_prefix(""), None);
         assert_eq!(m.match_prefix("a"), None);
         assert_eq!(m.match_prefix("b"), Some(false));
@@ -320,5 +323,22 @@ mod tests {
         // this is the edge case of current implementation of '^' support, which
         // should be rare since the regular expression is actually "wrong".
         assert_eq!(handle_sol_eol(r"^ab^c").unwrap(), "abc");
+    }
+
+    #[test]
+    fn test_case_insensitive() {
+        let case_sensitive = [true, false];
+        for sensitive in case_sensitive {
+            let m = RegexMatcher::new(r"(?:a/.*|b/.*)", sensitive).unwrap();
+            assert_eq!(m.match_prefix(""), None);
+            assert_eq!(m.match_prefix("A"), Some(!sensitive));
+            assert_eq!(m.match_prefix("A/"), Some(!sensitive));
+            assert_eq!(m.match_prefix("B"), Some(!sensitive));
+            assert_eq!(m.match_prefix("B/"), Some(!sensitive));
+
+            assert_eq!(m.matches("A/c"), !sensitive);
+            assert_eq!(m.matches("A/b/c"), !sensitive);
+            assert_eq!(m.matches("B/c"), !sensitive);
+        }
     }
 }
