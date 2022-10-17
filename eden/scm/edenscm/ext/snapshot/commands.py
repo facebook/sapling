@@ -50,6 +50,13 @@ subcmd = snapshot.subcommand(
         ),
         (
             "",
+            "max-file-count",
+            1000,
+            _("maximum allowed total number of files in a snapshot"),
+            _("MAX_FILE_COUNT"),
+        ),
+        (
+            "",
             "reuse-storage",
             None,
             _(
@@ -59,7 +66,11 @@ subcmd = snapshot.subcommand(
     ],
 )
 def createremotecmd(*args, **kwargs):
-    """upload to the server a snapshot of the current uncommitted changes"""
+    """
+    upload to the server a snapshot of the current uncommitted changes.
+
+    exits with code 2 if the file count in the snapshot will exceed max-file-count.
+    """
     createremote.createremote(*args, **kwargs)
 
 

@@ -46,6 +46,13 @@ def parsemaxuntracked(opts):
         return None
 
 
+def parsemaxfilecount(opts):
+    if opts["max_file_count"] != "":
+        return opts["max_file_count"]
+    else:
+        return None
+
+
 def parentsfromwctx(ui, wctx):
     p1 = wctx.p1().node()
     p2 = wctx.p2().node()
@@ -71,6 +78,15 @@ class workingcopy(object):
 
     def all(self):
         return self.untracked + self.removed + self.modified + self.added + self.missing
+
+    def filecount(self):
+        return (
+            len(self.untracked)
+            + len(self.removed)
+            + len(self.modified)
+            + len(self.added)
+            + len(self.missing)
+        )
 
     @staticmethod
     @perftrace.tracefunc("Create working copy")
@@ -141,6 +157,7 @@ def uploadsnapshot(
 def createremote(ui, repo, **opts):
     lifetime = _parselifetime(opts)
     maxuntrackedsize = parsemaxuntracked(opts)
+    maxfilecount = parsemaxfilecount(opts)
     reusestorage = opts.get("reuse_storage") is True
     overrides = {}
     if ui.plain():
@@ -155,6 +172,15 @@ def createremote(ui, repo, **opts):
         (time, tz) = wctx.date()
 
         wc = workingcopy.fromrepo(repo, maxuntrackedsize)
+        filecount = wc.filecount()
+
+        if filecount > maxfilecount:
+            raise error.AbortSnapshotFileCountLimit(
+                _(
+                    "snapshot file count limit exceeded: file count is {}, limit is {}"
+                ).format(filecount, maxfilecount)
+            )
+
         previousbubble = fetchlatestbubble(repo.metalog())
 
         response = uploadsnapshot(

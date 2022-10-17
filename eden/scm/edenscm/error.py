@@ -529,6 +529,12 @@ class RetryFileMerge(Exception):
         )
 
 
+class AbortSnapshotFileCountLimit(Abort):
+    """Raised when a snapshot is not allowed to be created due to exceeding the file count limit."""
+
+    exitcode = 2
+
+
 def addcontext(ex, messageorfunc):
     if isinstance(ex, Context):
         ex.addcontext(messageorfunc)
