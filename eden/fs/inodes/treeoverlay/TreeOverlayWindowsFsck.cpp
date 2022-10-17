@@ -127,7 +127,8 @@ dtype_t dtypeFromAttrs(const wchar_t* path, DWORD dwFileAttributes) {
 
     auto reparse_data = reinterpret_cast<const REPARSE_DATA_BUFFER*>(buffer);
 
-    if (reparse_data->ReparseTag == IO_REPARSE_TAG_SYMLINK) {
+    if (reparse_data->ReparseTag == IO_REPARSE_TAG_SYMLINK ||
+        reparse_data->ReparseTag == IO_REPARSE_TAG_MOUNT_POINT) {
       return dtype_t::Symlink;
     } else if (reparse_data->ReparseTag == IO_REPARSE_TAG_SOCKET) {
       return dtype_t::Socket;
