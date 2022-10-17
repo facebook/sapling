@@ -26,7 +26,7 @@
 
 -- start mononoke
   $ start_and_wait_for_mononoke_server
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_2', 2)";
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_2', 0)";
   $ mononoke_x_repo_sync 2 0 tail --catch-up-once |& grep -E '(processing|skipping)'
   * processing log entry * (glob)
 
@@ -48,8 +48,8 @@
   $ REPONAME=ovr-mon hgmn push -r . --to somebookmark -q --create
 
   $ mononoke_x_repo_sync 2 0 tail --bookmark-regex "master_bookmark" --catch-up-once |& grep -E '(processing|skipping)'
-  * skipping log entry #4 for somebookmark (glob)
+  * skipping log entry #2 for somebookmark (glob)
   * processing log entry * (glob)
-  * skipping log entry #6 for somebookmark (glob)
+  * skipping log entry #4 for somebookmark (glob)
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters where name = 'xreposync_from_2'";
-  0|xreposync_from_2|6
+  0|xreposync_from_2|4

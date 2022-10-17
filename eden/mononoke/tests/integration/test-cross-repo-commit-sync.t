@@ -73,7 +73,7 @@
   $ REPONAME=ovr-mon hgmn push -r . --to master_bookmark -q
 
 -- sync fbsource
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_1', 2)";
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_1', 1)";
   $ mononoke_x_repo_sync 1 0 tail --catch-up-once |& grep processing
   * processing log entry * (glob)
   * processing log entry * (glob)
@@ -83,7 +83,7 @@
   $ REPOIDLARGE=0 REPOIDSMALL=1 verify_wc fbsource/somebook
 
 -- sync ovrsource
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_2', 2)";
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_2', 0)";
   $ mononoke_x_repo_sync 2 0 tail --catch-up-once |& grep processing
   * processing log entry * (glob)
   * processing log entry * (glob)
@@ -120,17 +120,17 @@
   default/master_bookmark 8d01dd2e0e909e21d3131b7929787db006de999e fbsource commit resume
 
 -- Validate the synced entries
-  $ REPOIDLARGE=0 validate_commit_sync 17 |& grep "Validated entry"
-  * Validated entry: Entry 17(0/1) (glob)
+  $ REPOIDLARGE=0 validate_commit_sync 10 |& grep "Validated entry"
+  * Validated entry: Entry 10(0/1) (glob)
 
-  $ REPOIDLARGE=0 validate_commit_sync 18 |& grep "Validated entry"
-  * Validated entry: Entry 18(0/1) (glob)
+  $ REPOIDLARGE=0 validate_commit_sync 11 |& grep "Validated entry"
+  * Validated entry: Entry 11(0/1) (glob)
 
-  $ REPOIDLARGE=0 validate_commit_sync 19 |& grep "Validated entry"
-  * Validated entry: Entry 19(0/1) (glob)
+  $ REPOIDLARGE=0 validate_commit_sync 12 |& grep "Validated entry"
+  * Validated entry: Entry 12(0/1) (glob)
 
-  $ REPOIDLARGE=0 validate_commit_sync 21 |& grep "Validated entry"
-  * Validated entry: Entry 21(0/1) (glob)
+  $ REPOIDLARGE=0 validate_commit_sync 13 |& grep "Validated entry"
+  * Validated entry: Entry 13(0/1) (glob)
 
 Query synced commit mapping, check that automatically inserted mappings have version_name
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" << EOQ

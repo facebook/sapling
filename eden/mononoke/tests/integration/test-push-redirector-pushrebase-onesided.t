@@ -213,7 +213,7 @@ start mononoke server
 Make sure mapping is set up and we know what we don't have to sync initial entries
   $ add_synced_commit_mapping_entry $REPOIDSMALL1 $SMALL1_MASTER_BONSAI $REPOIDLARGE $LARGE_MASTER_BONSAI TEST_VERSION_NAME_LIVE
   $ add_synced_commit_mapping_entry $REPOIDSMALL2 $SMALL2_MASTER_BONSAI $REPOIDLARGE $LARGE_MASTER_BONSAI TEST_VERSION_NAME_LIVE
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES ($REPOIDSMALL1, 'backsync_from_$REPOIDLARGE', 2)";
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES ($REPOIDSMALL1, 'backsync_from_$REPOIDLARGE', 1)";
 
 Normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client-1"

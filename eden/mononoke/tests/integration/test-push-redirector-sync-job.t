@@ -67,11 +67,11 @@
   * syncing bookmark master_bookmark to * (glob)
 
   $ cd "$TESTTMP"
-  $ REPOID="$REPOIDSMALL" mononoke_hg_sync small-hg-srv 2 2>&1 | grep "successful sync"
-  * successful sync of entries [4]* (glob)
+  $ REPOID="$REPOIDSMALL" mononoke_hg_sync small-hg-srv 1 2>&1 | grep "successful sync"
+  * successful sync of entries [2]* (glob)
 
-  $ REPOID="$REPOIDSMALL" mononoke_hg_sync small-hg-srv 5 2>&1 | grep "successful sync"
-  * successful sync of entries [6]* (glob)
+  $ REPOID="$REPOIDSMALL" mononoke_hg_sync small-hg-srv 2 2>&1 | grep "successful sync"
+  * successful sync of entries [3]* (glob)
   $ cd small-hg-srv
   $ log -r :
   o  empty [draft;rev=3;*] (glob)

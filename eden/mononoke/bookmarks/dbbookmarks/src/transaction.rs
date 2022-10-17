@@ -93,8 +93,8 @@ queries! {
            AND changeset_id = {changeset_id}"
     }
 
-    read FindMaxBookmarkLogId() -> (Option<u64>) {
-        "SELECT MAX(id) FROM bookmarks_update_log"
+    read FindMaxBookmarkLogId(repo_id: RepositoryId) -> (Option<u64>) {
+        "SELECT MAX(id) FROM bookmarks_update_log WHERE repo_id = {repo_id}"
     }
 
     read FindMaxBookmarkLogLockId() -> (Option<u64>) {
@@ -215,8 +215,12 @@ impl SqlBookmarksTransactionPayload {
         }
     }
 
-    async fn find_next_update_log_id(txn: SqlTransaction) -> Result<(SqlTransaction, u64)> {
-        let (txn, max_id_entries) = FindMaxBookmarkLogId::query_with_transaction(txn).await?;
+    async fn find_next_update_log_id(
+        txn: SqlTransaction,
+        repo_id: RepositoryId,
+    ) -> Result<(SqlTransaction, u64)> {
+        let (txn, max_id_entries) =
+            FindMaxBookmarkLogId::query_with_transaction(txn, &repo_id).await?;
 
         let next_id = match &max_id_entries[..] {
             [(None,)] => 1,
@@ -398,7 +402,7 @@ impl SqlBookmarksTransactionPayload {
         &self,
         txn: SqlTransaction,
     ) -> Result<SqlTransaction, BookmarkTransactionError> {
-        let (mut txn, next_id) = Self::find_next_update_log_id(txn).await?;
+        let (mut txn, next_id) = Self::find_next_update_log_id(txn, self.repo_id).await?;
         let next_lock_id;
         (txn, next_lock_id) = Self::find_next_update_log_lock_id(txn).await?;
 

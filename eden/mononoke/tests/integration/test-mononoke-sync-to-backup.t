@@ -97,6 +97,8 @@ Sync it to another client
   $ cd $TESTTMP
 
 Sync a pushrebase bookmark move
+  $ mononoke_backup_sync backup sync-once 1 2>&1 | grep 'successful sync'
+  * successful sync of entries [2]* (glob)
 
   $ mononoke_backup_sync backup sync-once 2 2>&1 | grep 'successful sync'
   * successful sync of entries [3]* (glob)
@@ -104,13 +106,10 @@ Sync a pushrebase bookmark move
   $ mononoke_backup_sync backup sync-once 3 2>&1 | grep 'successful sync'
   * successful sync of entries [4]* (glob)
 
-  $ mononoke_backup_sync backup sync-once 4 2>&1 | grep 'successful sync'
+  $ mononoke_backup_sync backup sync-loop 4 2>&1 | grep 'successful sync'
   * successful sync of entries [5]* (glob)
-
-  $ mononoke_backup_sync backup sync-loop 5 2>&1 | grep 'successful sync'
   * successful sync of entries [6]* (glob)
   * successful sync of entries [7]* (glob)
-  * successful sync of entries [8]* (glob)
 
 
 Do a manual move
@@ -122,8 +121,8 @@ Do a manual move
   $ REPOID=0 mononoke_admin bookmarks set master_bookmark "$NODE" &> /dev/null
 
   $ cd "$TESTTMP"
-  $ mononoke_backup_sync backup sync-loop 7 --bookmark-move-any-direction 2>&1 | grep 'successful sync'
-  * successful sync of entries [15]* (glob)
+  $ mononoke_backup_sync backup sync-loop 2 --bookmark-move-any-direction 2>&1 | grep 'successful sync'
+  * successful sync of entries [8]* (glob)
 
   $ cd "$TESTTMP/backup"
   $ REPONAME=backup
@@ -139,4 +138,4 @@ Do a manual move
 
 Make sure correct mutable counter is used (it should be repoid = 1)
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters" | grep latest
-  1|latest-replayed-request|15
+  1|latest-replayed-request|8

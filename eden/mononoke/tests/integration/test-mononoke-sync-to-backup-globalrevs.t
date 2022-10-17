@@ -67,14 +67,14 @@ Sync to backup repos
   0|1000147971
   0|1000147972
 
-  $ mononoke_backup_sync backup sync-loop 2 2>&1 | grep 'successful sync'
+  $ mononoke_backup_sync backup sync-loop 1 2>&1 | grep 'successful sync'
+  * successful sync of entries [2]* (glob)
   * successful sync of entries [3]* (glob)
-  * successful sync of entries [4]* (glob)
 
 
 Make sure correct mutable counter is used (it should be repoid = 1)
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters" | grep latest
-  1|latest-replayed-request|4
+  1|latest-replayed-request|3
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select repo_id, globalrev from bonsai_globalrev_mapping"
   0|1000147970
   0|1000147971

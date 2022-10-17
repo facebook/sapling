@@ -105,7 +105,7 @@ Setup commit sync mapping
   $ add_synced_commit_mapping_entry $FBS_REPOID $FBSOURCE_MASTER_BONSAI $MEG_REPOID $MEGAREPO_MERGE_BONSAI TEST_VERSION_NAME
   $ add_synced_commit_mapping_entry $OVR_REPOID $OVRSOURCE_MASTER_BONSAI $MEG_REPOID $MEGAREPO_MERGE_BONSAI TEST_VERSION_NAME
 -- tell backsyncer that we're all caught up in ovrsource
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES ($OVR_REPOID, 'backsync_from_$MEG_REPOID', 3)";
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES ($OVR_REPOID, 'backsync_from_$MEG_REPOID', 1)";
 
 
 Perform ovrsource pushrebase, make sure it is push-redirected into Megarepo

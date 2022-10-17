@@ -96,7 +96,7 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
   $ REPONAME=fbs-mon hgmn push -r . --to master_bookmark -q
 
 -- sync things to Megarepo
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_1', 2)";
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_1', 1)";
   $ mononoke_x_repo_sync 1 0 tail --catch-up-once |& grep processing
   * processing log entry * (glob)
   * processing log entry * (glob)
@@ -125,7 +125,7 @@ Check that we validate the file type
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE synced_commit_mapping SET large_bcs_id = X'$MEGAREPO_EXECUTABLE_BONSAI' WHERE small_bcs_id = X'$FBSOURCE_MASTER_BONSAI'"
 
 -- run the validator one more time, expect to fail and say it's because of filetypes
-  $ REPOIDLARGE=0 validate_commit_sync 7 |& grep "Different filetype"
+  $ REPOIDLARGE=0 validate_commit_sync 4 |& grep "Different filetype"
   * Different filetype for path MPath("fbcode/fbcodefile3_fbsource"): meg-mon: Executable fbs-mon: Regular (glob)
 
 -- restore the original commit mapping
@@ -146,7 +146,7 @@ Check that we validate the file contents
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE synced_commit_mapping SET large_bcs_id = X'$MEGAREPO_CORRUPTED_BONSAI' WHERE small_bcs_id = X'$FBSOURCE_MASTER_BONSAI'"
 
 -- run the validator one more time, expect to fail and say it's because of contents
-  $ REPOIDLARGE=0 validate_commit_sync 8 |& grep 'Different contents'
+  $ REPOIDLARGE=0 validate_commit_sync 5 |& grep 'Different contents'
   * Different contents for path MPath("fbcode/fbcodefile3_fbsource"): meg-mon: * fbs-mon: * (glob)
 
 -- restore the original commit mapping
@@ -167,7 +167,7 @@ Check that we pay attention to missing files in small repo, but present in large
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE synced_commit_mapping SET large_bcs_id = X'$MEGAREPO_EXTRAFILE_BONSAI' WHERE small_bcs_id = X'$FBSOURCE_MASTER_BONSAI'"
 
 -- run the validator one more time, expect to fail and say it's because of contents
-  $ REPOIDLARGE=0 validate_commit_sync 9 |& grep "is present in meg-mon" 
+  $ REPOIDLARGE=0 validate_commit_sync 6 |& grep "is present in meg-mon"
   * A change to MPath("fbcode/fbcodefile4_fbsource") is present in meg-mon, but missing in fbs-mon * (glob)
 
 -- restore the original commit mapping
@@ -195,7 +195,7 @@ Check that we pay attention to missing files in large repo, but present in small
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO synced_commit_mapping (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id, sync_map_version_name) VALUES (1, X'$FBSOURCE_MISSING_IN_LARGE_BONSAI', 0, X'$MEGAREPO_MISSING_IN_LARGE_BONSAI', 'TEST_VERSION_NAME')"
 
 -- run the validator one more time, expect to fail and say it's because of contents
-  $ REPOIDLARGE=0 validate_commit_sync 10 |& grep "present in fbs-mon, but missing in meg-mon"
+  $ REPOIDLARGE=0 validate_commit_sync 7 |& grep "present in fbs-mon, but missing in meg-mon"
   * A change to MPath("fbcode/fbcodefile6") is present in fbs-mon, but missing in meg-mon * (glob)
 
 Check that for bookmarks_update_log entries, which touch >1 commit in master, we pay
@@ -242,7 +242,7 @@ attention to more than just the last commit (successful validation of many commi
   > ENDOFINSERT
 
 -- run the validator, check that commits are eqiuvalent
-  $ REPOIDLARGE=0 validate_commit_sync 11 |& grep "Validated entry"
+  $ REPOIDLARGE=0 validate_commit_sync 8 |& grep "Validated entry"
   * Validated entry: Entry *(0/3) (glob)
   * Validated entry: Entry *(1/3) (glob)
   * Validated entry: Entry *(2/3) (glob)
@@ -291,7 +291,7 @@ attention to more than just the last commit (failed validation of inner commit)
   > ENDOFINSERT
 
 -- run the validator, check that commits are eqiuvalent
-  $ REPOIDLARGE=0 validate_commit_sync 13 |& grep -E "(Preparing entry|Different contents)"
+  $ REPOIDLARGE=0 validate_commit_sync 9 |& grep -E "(Preparing entry|Different contents)"
   * Preparing entry Entry *(0/3); book: master_bookmark; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
   * Preparing entry Entry *(1/3); book: master_bookmark; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
   * Different contents for path MPath("arvr/tripple_2"): meg-mon: ContentId(Blake2(*)) fbs-mon: ContentId(Blake2(*)) (glob)
@@ -328,7 +328,7 @@ Check that we validate the topological order
   > ENDOFINSERT
 
 -- run the validator, check that commits are eqiuvalent
-  $ REPOIDLARGE=0 validate_commit_sync 15 |& grep -E "(topological order|is not an ancestor)"
+  $ REPOIDLARGE=0 validate_commit_sync 10 |& grep -E "(topological order|is not an ancestor)"
   * validating topological order for *<->* (glob)
   * Error while verifying against TEST_VERSION_NAME: * (remapping of parent * of * in 1) is not an ancestor of * in 0 (glob)
   * Execution error: * (remapping of parent * of * in 1) is not an ancestor of * in 0 (glob)
@@ -357,7 +357,7 @@ Check that we validate the newly-added root commits
   > ENDOFINSERT
 
 -- run the validator, check that commits are (1) validated (2) different
-  $ REPOIDLARGE=0 validate_commit_sync 17 |& grep -E '(is a root|Validated entry)'
+  $ REPOIDLARGE=0 validate_commit_sync 11 |& grep -E '(is a root|Validated entry)'
   * is a root cs. Grabbing its entire manifest (glob)
   * is a root cs. Grabbing its entire manifest (glob)
   * Validated entry: * (glob)
