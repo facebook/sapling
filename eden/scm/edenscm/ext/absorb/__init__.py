@@ -35,6 +35,7 @@ from edenscm import (
     crecord,
     error,
     extensions,
+    identity,
     mdiff,
     mutation,
     node,
@@ -427,13 +428,10 @@ class filefixupstate(object):
         """() -> [str]. prompt all lines for edit"""
         alllines = self.linelog.getalllines()
         # header
-        editortext = (
-            _(
-                'HG: editing %s\nHG: "y" means the line to the right '
-                "exists in the changeset to the top\nHG:\n"
-            )
-            % self.fctxs[-1].path()
-        )
+        editortext = _(
+            '{0}: editing {1}\n{0}: "y" means the line to the right '
+            "exists in the changeset to the top\n{0}:\n"
+        ).format(identity.tmplprefix(), self.fctxs[-1].path())
         # [(idx, fctx)]. hide the dummy emptyfilecontext
         visiblefctxs = [
             (i, f)
@@ -441,13 +439,14 @@ class filefixupstate(object):
             if not isinstance(f, emptyfilecontext)
         ]
         for i, (j, f) in enumerate(visiblefctxs):
-            editortext += _("HG: %s/%s %s %s\n") % (
+            editortext += _("%s: %s/%s %s %s\n") % (
+                identity.tmplprefix(),
                 "|" * i,
                 "-" * (len(visiblefctxs) - i + 1),
                 node.short(f.node()),
                 f.description().split("\n", 1)[0],
             )
-        editortext += _("HG: %s\n") % ("|" * len(visiblefctxs))
+        editortext += _("%s: %s\n") % (identity.tmplprefix(), "|" * len(visiblefctxs))
         # figure out the lifetime of a line, this is relatively inefficient,
         # but probably fine
         lineset = defaultdict(lambda: set())  # {(llrev, linenum): {llrev}}
@@ -470,7 +469,7 @@ class filefixupstate(object):
         leftpadpos = 4
         colonpos = leftpadpos + len(visiblefctxs) + 1
         for l in editedtext.splitlines(True):
-            if l.startswith("HG:"):
+            if l.startswith(f"{identity.tmplprefix()}:"):
                 continue
             if l[colonpos - 1 : colonpos + 2] != " : ":
                 raise error.Abort(_("malformed line: %s") % l)

@@ -27,6 +27,10 @@ def templatemap():
     }
 
 
+def tmplprefix():
+    return default().cliname().upper()
+
+
 def replace(s):
     """Replace template instances in the given string"""
     if s is not None:

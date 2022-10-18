@@ -20,6 +20,7 @@ import stat
 import tempfile
 from typing import Dict
 
+import bindings
 from bindings import renderdag
 from edenscm import tracing
 
@@ -203,7 +204,9 @@ debugrevlogopts = [
 
 # special string such that everything below this line will be ingored in the
 # editor text
-_linebelow = "^HG: ------------------------ >8 ------------------------$"
+_linebelow = (
+    f"^{identity.tmplprefix()}: ------------------------ >8 ------------------------$"
+)
 
 
 def ishunk(x):
@@ -1704,7 +1707,7 @@ def _exportsingle(
     else:
         prev = nullid
 
-    writestr("# HG changeset patch\n")
+    writestr(f"# {identity.tmplprefix()} changeset patch\n")
     writestr("# User %s\n" % ctx.user())
     writestr("# Date %d %d\n" % ctx.date())
     writestr("#      %s\n" % util.datestr(ctx.date()))
@@ -3816,7 +3819,10 @@ def commitforceeditor(
     if stripbelow:
         text = text[: stripbelow.start()]
 
-    text = re.sub("(?m)^HG:.*(\n|$)", "", text)
+    all_prefixes = "|".join(
+        ident.cliname().upper() for ident in bindings.identity.all()
+    )
+    text = re.sub(f"(?m)^({all_prefixes}):.*(\n|$)", "", text)
     os.chdir(olddir)
 
     if finishdesc:
@@ -3847,7 +3853,7 @@ def buildcommittemplate(repo, ctx, extramsg, ref):
 
 
 def hgprefix(msg):
-    return "\n".join(["HG: %s" % a for a in msg.split("\n") if a])
+    return "\n".join([f"{identity.tmplprefix()}: {a}" for a in msg.split("\n") if a])
 
 
 def buildcommittext(repo, ctx, extramsg):
@@ -3858,10 +3864,15 @@ def buildcommittext(repo, ctx, extramsg):
     edittext.append("")
     edittext.append("")  # Empty line between message and comments.
     edittext.append(
-        hgprefix(_("Enter commit message." "  Lines beginning with 'HG:' are removed."))
+        hgprefix(
+            _(
+                "Enter commit message."
+                f"  Lines beginning with '{identity.tmplprefix()}:' are removed."
+            )
+        )
     )
     edittext.append(hgprefix(extramsg))
-    edittext.append("HG: --")
+    edittext.append(f"{identity.tmplprefix()}: --")
     edittext.append(hgprefix(_("user: %s") % ctx.user()))
     if ctx.p2():
         edittext.append(hgprefix(_("branch merge")))

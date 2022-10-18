@@ -127,8 +127,8 @@ def split(ui, repo, *revs, **opts):
             return chunks, newopts
 
         msg = (
-            "HG: This is the original pre-split commit message. "
-            "Edit it as appropriate.\n\n"
+            cmdutil.hgprefix("This is the original pre-split commit message. ")
+            + "Edit it as appropriate.\n\n"
         )
         msg += ctx.description()
         opts["message"] = msg

@@ -3,6 +3,7 @@
 
 
   $ enable absorb
+  $ export HGIDENTITY=sl
 
   $ hg init repo1
   $ cd repo1
@@ -20,13 +21,13 @@ absorb --edit-lines will run the editor if filename is provided:
   nothing applied
   [1]
   $ HGEDITOR=cat hg absorb --apply-changes --edit-lines a
-  HG: editing a
-  HG: "y" means the line to the right exists in the changeset to the top
-  HG:
-  HG: /---- 4ec16f85269a commit 1
-  HG: |/--- 5c5f95224a50 commit 2
-  HG: ||/-- 43f0a75bede7 commit 3
-  HG: |||
+  SL: editing a
+  SL: "y" means the line to the right exists in the changeset to the top
+  SL:
+  SL: /---- 4ec16f85269a commit 1
+  SL: |/--- 5c5f95224a50 commit 2
+  SL: ||/-- 43f0a75bede7 commit 3
+  SL: |||
       yyy : 1
        yy : 2
         y : 3

@@ -4,6 +4,7 @@
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ configure mutation-norecord
   $ enable amend rebase
+  $ export HGIDENTITY=sl
   $ readconfig <<EOF
   > [defaults]
   > fold=--date "0 0"
@@ -123,24 +124,24 @@ Test
   foobar
 
   $ HGEDITOR=cat hg metaedit '.^::.' --fold
-  HG: This is a fold of 2 changesets.
-  HG: Commit message of c2bd843aa246.
+  SL: This is a fold of 2 changesets.
+  SL: Commit message of c2bd843aa246.
   
   E
   
-  HG: Commit message of 212b2a2b87cd.
+  SL: Commit message of 212b2a2b87cd.
   
   F
   
   
   
-  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
-  HG: Leave message empty to abort commit.
-  HG: --
-  HG: user: test
-  HG: branch 'default'
-  HG: added E
-  HG: added F
+  SL: Enter commit message.  Lines beginning with 'SL:' are removed.
+  SL: Leave message empty to abort commit.
+  SL: --
+  SL: user: test
+  SL: branch 'default'
+  SL: added E
+  SL: added F
   2 changesets folded
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -157,20 +158,20 @@ Test
 
 no new commit is created here because the date is the same
   $ HGEDITOR=cat hg metaedit
-  HG: Commit message of changeset a08d35fd7d9d
+  SL: Commit message of changeset a08d35fd7d9d
   E
   
   
   F
   
   
-  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
-  HG: Leave message empty to abort commit.
-  HG: --
-  HG: user: test
-  HG: branch 'default'
-  HG: added E
-  HG: added F
+  SL: Enter commit message.  Lines beginning with 'SL:' are removed.
+  SL: Leave message empty to abort commit.
+  SL: --
+  SL: user: test
+  SL: branch 'default'
+  SL: added E
+  SL: added F
   nothing changed
   [1]
 
@@ -285,7 +286,7 @@ test histedit compat
   $ echo "histedit=" >> $HGRCPATH
 
   $ hg export -r .
-  # HG changeset patch
+  # SL changeset patch
   # User debugbuilddag
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
@@ -475,34 +476,34 @@ option
 Editing a single commit using `--batch` uses the single-commit template
 
   $ HGEDITOR=cat hg metaedit --batch -r 'tip'
-  HG: Commit message of changeset dad6906767c0
+  SL: Commit message of changeset dad6906767c0
   A3
   
   
-  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
-  HG: Leave message empty to abort commit.
-  HG: --
-  HG: user: test
-  HG: branch 'default'
-  HG: added A3
+  SL: Enter commit message.  Lines beginning with 'SL:' are removed.
+  SL: Leave message empty to abort commit.
+  SL: --
+  SL: user: test
+  SL: branch 'default'
+  SL: added A3
   nothing changed
   [1]
 
 Test editing mutiple commits in a batch (--batch)
 
   $ HGEDITOR=cat hg metaedit --batch -r 'all()'
-  HG: Editing 3 commits in batch. Do not change lines starting with 'HG:'.
-  HG: Begin of commit b008d5d798a3
+  SL: Editing 3 commits in batch. Do not change lines starting with 'SL:'.
+  SL: Begin of commit b008d5d798a3
   A1
-  HG: End of commit b008d5d798a3
-  HG: -----------------------------------------------------------------------------
-  HG: Begin of commit 9083513d0ea9
+  SL: End of commit b008d5d798a3
+  SL: -----------------------------------------------------------------------------
+  SL: Begin of commit 9083513d0ea9
   A2
-  HG: End of commit 9083513d0ea9
-  HG: -----------------------------------------------------------------------------
-  HG: Begin of commit dad6906767c0
+  SL: End of commit 9083513d0ea9
+  SL: -----------------------------------------------------------------------------
+  SL: Begin of commit dad6906767c0
   A3
-  HG: End of commit dad6906767c0
+  SL: End of commit dad6906767c0
   nothing changed
   [1]
   $ hg log -Gr 'all()' -T '{desc}'
@@ -617,8 +618,8 @@ Test reusing commit message from another commit
   
 Test commit template.
 
-  $ setconfig committemplate.changeset='HG: ParentCount={parents|count}\n'
+  $ setconfig committemplate.changeset='SL: ParentCount={parents|count}\n'
   $ HGEDITOR=cat hg metaedit -r 'max(all())'
-  HG: ParentCount=1
+  SL: ParentCount=1
   abort: empty commit message
   [255]

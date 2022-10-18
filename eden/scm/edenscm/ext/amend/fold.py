@@ -15,7 +15,7 @@
 
 from __future__ import absolute_import
 
-from edenscm import commands, error, hg, node, phases, registrar, scmutil
+from edenscm import commands, error, hg, identity, node, phases, registrar, scmutil
 from edenscm.i18n import _
 
 from . import common
@@ -134,10 +134,13 @@ def fold(ui, repo, *revs, **opts):
             ):
                 commitopts["edit"] = False
             else:
-                msgs = ["HG: This is a fold of %d changesets." % len(allctx)]
+                msgs = [
+                    _("%s: This is a fold of %d changesets.")
+                    % (identity.tmplprefix(), len(allctx))
+                ]
                 msgs += [
-                    "HG: Commit message of %s.\n\n%s\n"
-                    % (node.short(c.node()), c.description())
+                    "%s: Commit message of %s.\n\n%s\n"
+                    % (identity.tmplprefix(), node.short(c.node()), c.description())
                     for c in allctx
                 ]
                 commitopts["message"] = "\n".join(msgs)

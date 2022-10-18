@@ -21,6 +21,7 @@ from edenscm import (
     encoding,
     error,
     hg,
+    identity,
     json,
     mutation,
     node as nodemod,
@@ -58,9 +59,9 @@ def editmessages(repo, revs):
             editortext += (
                 cmdutil.hgprefix(
                     _(
-                        "Editing %s commits in batch. Do not change lines starting with 'HG:'."
+                        "Editing %s commits in batch. Do not change lines starting with '%s:'."
                     )
-                    % len(revs)
+                    % (len(revs), identity.tmplprefix()),
                 )
                 + "\n"
             )
@@ -179,10 +180,17 @@ def metaedit(ui, repo, templ, *revs, **opts):
                 commitopts["edit"] = False
             else:
                 if opts["fold"]:
-                    msgs = [_("HG: This is a fold of %d changesets.") % len(allctx)]
+                    msgs = [
+                        cmdutil.hgprefix(_("This is a fold of %d changesets."))
+                        % len(allctx)
+                    ]
                     msgs += [
-                        _("HG: Commit message of %s.\n\n%s\n")
-                        % (nodemod.short(c.node()), c.description())
+                        _("%s: Commit message of %s.\n\n%s\n")
+                        % (
+                            identity.tmplprefix(),
+                            nodemod.short(c.node()),
+                            c.description(),
+                        )
                         for c in allctx
                     ]
                 else:
@@ -277,7 +285,8 @@ def metaedit(ui, repo, templ, *revs, **opts):
                     if user is not None:
                         _commitopts["user"] = user
                     if _commitopts.get("edit", False):
-                        msg = "HG: Commit message of changeset %s\n%s" % (
+                        msg = "%s: Commit message of changeset %s\n%s" % (
+                            identity.tmplprefix(),
                             str(c),
                             c.description(),
                         )
