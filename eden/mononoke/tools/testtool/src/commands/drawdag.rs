@@ -123,6 +123,9 @@ enum ChangeAction {
     Message {
         message: String,
     },
+    Author {
+        author: String,
+    },
     Copy {
         path: Vec<u8>,
         content: Vec<u8>,
@@ -153,6 +156,14 @@ impl Action {
                     Ok(Action::Change {
                         name,
                         change: ChangeAction::Message { message },
+                    })
+                }
+                ("author", [name, author]) => {
+                    let name = name.to_string()?;
+                    let author = author.to_string()?;
+                    Ok(Action::Change {
+                        name,
+                        change: ChangeAction::Author { author },
                     })
                 }
                 ("modify", [name, path, content]) => {
@@ -469,6 +480,7 @@ fn apply_changes<'a>(
             ChangeAction::Forget { path, .. } => c = c.forget_file(path.as_slice()),
             ChangeAction::Extra { key, value, .. } => c = c.add_extra(key, value),
             ChangeAction::Message { message } => c = c.set_message(message),
+            ChangeAction::Author { author } => c = c.set_author(author),
             ChangeAction::Copy {
                 path,
                 content,
