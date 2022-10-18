@@ -25,7 +25,6 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use hgplain;
 use identity::Identity;
-use identity::ALL_IDENTITIES;
 use minibytes::Text;
 use url::Url;
 use util::path::expand_path;
@@ -323,7 +322,7 @@ impl ConfigSetHgExt for ConfigSet {
                 errors.append(&mut self.load_path(expand_path(path), &opts));
             }
         } else {
-            for ident in Some(ident).into_iter().chain(ALL_IDENTITIES) {
+            for ident in Some(ident).into_iter().chain(identity::all()) {
                 if let Some(system_path) = ident.system_config_path() {
                     if system_path.exists() {
                         errors.append(&mut self.load_path(system_path, &opts));
@@ -496,12 +495,10 @@ impl ConfigSetHgExt for ConfigSet {
 
     fn load_user(&mut self, opts: Options, ident: &Identity) -> Vec<Error> {
         // If scripting config env var is set, don't load user configs
-        if ident.env_var("CONFIG").is_none() {
-            for ident in Some(ident).into_iter().chain(ALL_IDENTITIES) {
-                let paths = ident.user_config_paths();
-                if paths.iter().any(|p| p.exists()) {
-                    return self.load_user_internal(&paths, opts);
-                }
+        for ident in Some(ident).into_iter().chain(identity::all()) {
+            let paths = ident.user_config_paths();
+            if paths.iter().any(|p| p.exists()) {
+                return self.load_user_internal(&paths, opts);
             }
         }
 

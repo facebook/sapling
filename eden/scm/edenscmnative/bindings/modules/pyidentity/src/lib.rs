@@ -94,7 +94,7 @@ fn reset_default(_py: Python) -> PyResult<PyNone> {
 }
 
 fn all(py: Python) -> PyResult<Vec<identity>> {
-    rsident::ALL_IDENTITIES
+    rsident::all()
         .iter()
         .map(|id| identity::create_instance(py, id.clone()))
         .collect()

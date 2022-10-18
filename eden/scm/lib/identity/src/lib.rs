@@ -246,27 +246,37 @@ const TEST: Identity = Identity {
 #[cfg(all(not(feature = "sl_only"), not(test)))]
 mod idents {
     use super::*;
-    pub static ALL_IDENTITIES: &[Identity] = &[HG, SL];
 
-    pub static DEFAULT: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(compute_default()));
+    pub fn all() -> &'static [Identity] {
+        &[HG, SL]
+    }
 }
 
 #[cfg(feature = "sl_only")]
 mod idents {
     use super::*;
-    pub static DEFAULT: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(SL));
-    pub static ALL_IDENTITIES: &[Identity] = &[SL];
+
+    pub fn all() -> &'static [Identity] {
+        if std::env::var("TESTTMP").is_ok() {
+            &[HG, SL]
+        } else {
+            &[SL]
+        }
+    }
 }
 
 #[cfg(test)]
 pub mod idents {
     use super::*;
-    pub static DEFAULT: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(HG));
-    pub static ALL_IDENTITIES: &[Identity] = &[HG, SL, TEST];
+
+    pub fn all() -> &'static [Identity] {
+        &[HG, SL, TEST]
+    }
 }
 
-pub use idents::ALL_IDENTITIES;
-use idents::DEFAULT;
+static DEFAULT: Lazy<RwLock<Identity>> = Lazy::new(|| RwLock::new(compute_default()));
+
+pub use idents::all;
 
 pub fn default() -> Identity {
     *DEFAULT.read()
@@ -284,19 +294,19 @@ fn compute_default() -> Identity {
         .expect("file_name() on current_exe() should not fail");
     let file_name = file_name.to_string_lossy();
     let (ident, reason) = (|| {
-        let env_override = idents::ALL_IDENTITIES
+        let env_override = all()
             .iter()
             .find_map(|id| id.env_var("IDENTITY"))
             .map(|v| v.ok())
             .flatten();
 
-        for ident in idents::ALL_IDENTITIES {
+        for ident in all() {
             if Some(ident.user.cli_name) == env_override.as_deref() {
                 return (*ident, "env var");
             }
         }
 
-        for ident in idents::ALL_IDENTITIES {
+        for ident in all() {
             if file_name.contains(ident.user.cli_name) {
                 return (*ident, "contains");
             }
@@ -332,7 +342,7 @@ pub fn cli_name() -> &'static str {
 /// "{path}/.sl" directories, yielding the sniffed Identity, if any.
 /// Only permissions errors are propagated.
 pub fn sniff_dir(path: &Path) -> Result<Option<Identity>> {
-    for id in idents::ALL_IDENTITIES {
+    for id in all() {
         let test_path = path.join(id.repo.dot_dir);
         tracing::trace!(path=%path.display(), "sniffing dir");
         match fs::metadata(&test_path) {
@@ -395,11 +405,7 @@ pub fn env_var(var_suffix: &str) -> Option<Result<String, VarError>> {
     }
 
     // Backwards compat for old env vars.
-    for id in idents::ALL_IDENTITIES {
-        if *current_id == *id {
-            continue;
-        }
-
+    for id in all() {
         if let Some(res) = id.env_var(var_suffix) {
             return Some(res);
         }
