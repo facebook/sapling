@@ -28,15 +28,18 @@ use blobstore_sync_queue::BlobstoreWalEntry;
 use blobstore_sync_queue::OperationKey;
 use cloned::cloned;
 use context::CoreContext;
+use context::PerfCounterType;
 use futures::stream::FuturesUnordered;
 use futures::Future;
 use futures::StreamExt;
+use futures_stats::TimedFutureExt;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::MultiplexId;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::Timestamp;
 use scuba_ext::MononokeScubaSampleBuilder;
 use thiserror::Error;
+use time_ext::DurationExt;
 
 use crate::timed::with_timed_stores;
 use crate::timed::MultiplexTimeout;
@@ -99,8 +102,6 @@ impl Scuba {
     }
 }
 
-// TODO(aida):
-// - Add perf counters
 #[derive(Clone)]
 pub struct WalMultiplexedBlobstore {
     /// Multiplexed blobstore configuration.
@@ -176,6 +177,9 @@ impl WalMultiplexedBlobstore {
         value: BlobstoreBytes,
         put_behaviour: Option<PutBehaviour>,
     ) -> Result<OverwriteStatus> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::BlobPuts);
+
         // Unique id associated with the put operation for this multiplexed blobstore.
         let operation_key = OperationKey::gen();
         let blob_size = value.len() as u64;
@@ -209,46 +213,58 @@ impl WalMultiplexedBlobstore {
         // Wait for the quorum successful writes
         let mut quorum: usize = self.quorum.write.get();
         let mut put_errors = HashMap::new();
-        while let Some(result) = put_futs.next().await {
-            match result {
-                Ok(_overwrite_status) => {
-                    quorum = quorum.saturating_sub(1);
-                    if quorum == 0 {
-                        // Quorum blobstore writes succeeded, we can spawn the rest
-                        // of the writes and not wait for them.
-                        spawn_stream_completion(put_futs);
+        let (stats, result) = async move {
+            while let Some(result) = put_futs.next().await {
+                match result {
+                    Ok(_overwrite_status) => {
+                        quorum = quorum.saturating_sub(1);
+                        if quorum == 0 {
+                            // Quorum blobstore writes succeeded, we can spawn the rest
+                            // of the writes and not wait for them.
+                            spawn_stream_completion(put_futs);
 
-                        // Spawn the write-mostly blobstore writes, we don't want to wait for them
-                        let write_mostly_puts = inner_multi_put(
-                            ctx,
-                            self.write_mostly_blobstores.clone(),
-                            key,
-                            value,
-                            put_behaviour,
-                            &self.scuba,
-                        );
-                        spawn_stream_completion(write_mostly_puts);
+                            // Spawn the write-mostly blobstore writes, we don't want to wait for them
+                            let write_mostly_puts = inner_multi_put(
+                                ctx,
+                                self.write_mostly_blobstores.clone(),
+                                key,
+                                value,
+                                put_behaviour,
+                                &self.scuba,
+                            );
+                            spawn_stream_completion(write_mostly_puts);
 
-                        return Ok(OverwriteStatus::NotChecked);
+                            return Ok(OverwriteStatus::NotChecked);
+                        }
+                    }
+                    Err((bs_id, err)) => {
+                        put_errors.insert(bs_id, err);
                     }
                 }
-                Err((bs_id, err)) => {
-                    put_errors.insert(bs_id, err);
-                }
             }
+            Err(put_errors)
         }
+        .timed()
+        .await;
 
-        // At this point the multiplexed put failed: we didn't get the quorum of successes.
-        let errors = Arc::new(put_errors);
-        let result_err = if errors.len() == self.blobstores.len() {
-            // all main writes failed
-            ErrorKind::AllFailed(errors)
-        } else {
-            // some main writes failed
-            ErrorKind::SomePutsFailed(errors)
-        };
+        ctx.perf_counters().set_max_counter(
+            PerfCounterType::BlobPutsMaxLatency,
+            stats.completion_time.as_millis_unchecked() as i64,
+        );
+        ctx.perf_counters()
+            .add_to_counter(PerfCounterType::BlobPutsTotalSize, blob_size as i64);
 
-        Err(result_err.into())
+        result.map_err(|put_errors| {
+            let errors = Arc::new(put_errors);
+            let result_err = if errors.len() == self.blobstores.len() {
+                // all main writes failed
+                ErrorKind::AllFailed(errors)
+            } else {
+                // some main writes failed
+                ErrorKind::SomePutsFailed(errors)
+            };
+            result_err.into()
+        })
     }
 
     async fn get_impl<'a>(
@@ -256,6 +272,9 @@ impl WalMultiplexedBlobstore {
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::BlobGets);
+
         let mut scuba = self.scuba.clone();
         // the read requests are sampled unless they fail
         scuba.sampled();
@@ -267,41 +286,59 @@ impl WalMultiplexedBlobstore {
         // returning Ok(None).
         let mut quorum: usize = self.quorum.read.get();
         let mut get_errors = HashMap::with_capacity(get_futs.len());
-        while let Some(result) = get_futs.next().await {
-            match result {
-                Ok(Some(get_data)) => {
-                    return Ok(Some(get_data));
-                }
-                Ok(None) => {
-                    quorum = quorum.saturating_sub(1);
-                    if quorum == 0 {
-                        // quorum blobstores couldn't find the given key in the blobstores
-                        // let's trust them
-                        return Ok(None);
+        let (stats, result) = async move {
+            while let Some(result) = get_futs.next().await {
+                match result {
+                    Ok(Some(get_data)) => {
+                        return Ok(Some(get_data));
+                    }
+                    Ok(None) => {
+                        quorum = quorum.saturating_sub(1);
+                        if quorum == 0 {
+                            // quorum blobstores couldn't find the given key in the blobstores
+                            // let's trust them
+                            return Ok(None);
+                        }
+                    }
+                    Err((bs_id, err)) => {
+                        get_errors.insert(bs_id, err);
                     }
                 }
-                Err((bs_id, err)) => {
-                    get_errors.insert(bs_id, err);
-                }
             }
+            Err(get_errors)
         }
+        .timed()
+        .await;
 
-        // TODO(aida): read from write-mostly blobstores once in a while, but don't use
-        // those in the quorum.
+        ctx.perf_counters().set_max_counter(
+            PerfCounterType::BlobGetsMaxLatency,
+            stats.completion_time.as_millis_unchecked() as i64,
+        );
 
-        // At this point the multiplexed get failed:
-        // - we couldn't find the blob
-        // - and there was no quorum on "not found" result
-        let errors = Arc::new(get_errors);
-        let result_err = if errors.len() == self.blobstores.len() {
-            // all main reads failed
-            ErrorKind::AllFailed(errors)
-        } else {
-            // some main reads failed
-            ErrorKind::SomeGetsFailed(errors)
-        };
+        let result = result.map_err(|get_errors| {
+            let errors = Arc::new(get_errors);
+            let result_err = if errors.len() == self.blobstores.len() {
+                // all main reads failed
+                ErrorKind::AllFailed(errors)
+            } else {
+                // some main reads failed
+                ErrorKind::SomeGetsFailed(errors)
+            };
+            result_err.into()
+        });
 
-        Err(result_err.into())
+        match result {
+            Ok(Some(ref data)) => {
+                ctx.perf_counters()
+                    .add_to_counter(PerfCounterType::BlobGetsTotalSize, data.len() as i64);
+            }
+            Ok(None) => {
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::BlobGetsNotFound);
+            }
+            _ => {}
+        }
+        result
     }
 
     // TODO(aida): comprehensive lookup (D30839608)
@@ -310,6 +347,9 @@ impl WalMultiplexedBlobstore {
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<BlobstoreIsPresent> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::BlobPresenceChecks);
+
         let mut scuba = self.scuba.clone();
         // the read requests are sampled unless they fail
         scuba.sampled();
@@ -320,33 +360,47 @@ impl WalMultiplexedBlobstore {
         // returning Ok(None).
         let mut quorum: usize = self.quorum.read.get();
         let mut errors = HashMap::with_capacity(futs.len());
-        while let Some(result) = futs.next().await {
-            match result {
-                (_, Ok(BlobstoreIsPresent::Present)) => {
-                    return Ok(BlobstoreIsPresent::Present);
-                }
-                (_, Ok(BlobstoreIsPresent::Absent)) => {
-                    quorum = quorum.saturating_sub(1);
-                    if quorum == 0 {
-                        // quorum blobstores couldn't find the given key in the blobstores
-                        // let's trust them
-                        return Ok(BlobstoreIsPresent::Absent);
+        let (stats, result) = async move {
+            while let Some(result) = futs.next().await {
+                match result {
+                    (_, Ok(BlobstoreIsPresent::Present)) => {
+                        return Ok(BlobstoreIsPresent::Present);
+                    }
+                    (_, Ok(BlobstoreIsPresent::Absent)) => {
+                        quorum = quorum.saturating_sub(1);
+                        if quorum == 0 {
+                            // quorum blobstores couldn't find the given key in the blobstores
+                            // let's trust them
+                            return Ok(BlobstoreIsPresent::Absent);
+                        }
+                    }
+                    (bs_id, Ok(BlobstoreIsPresent::ProbablyNotPresent(err))) => {
+                        // Treat this like an error from the underlying blobstore.
+                        // In reality, this won't happen as multiplexed operates over sinle
+                        // standard blobstores, which always can answer if the blob is present.
+                        errors.insert(bs_id, err);
+                    }
+                    (bs_id, Err(err)) => {
+                        errors.insert(bs_id, err);
                     }
                 }
-                (bs_id, Ok(BlobstoreIsPresent::ProbablyNotPresent(err))) => {
-                    // Treat this like an error from the underlying blobstore.
-                    // In reality, this won't happen as multiplexed operates over sinle
-                    // standard blobstores, which always can answer if the blob is present.
-                    errors.insert(bs_id, err);
-                }
-                (bs_id, Err(err)) => {
-                    errors.insert(bs_id, err);
-                }
             }
+            Err(errors)
         }
+        .timed()
+        .await;
 
-        // TODO(aida): read from write-mostly blobstores once in a while, but don't use
-        // those in the quorum.
+        ctx.perf_counters().set_max_counter(
+            PerfCounterType::BlobPresenceChecksMaxLatency,
+            stats.completion_time.as_millis_unchecked() as i64,
+        );
+
+        let errors = match result {
+            Ok(is_present) => {
+                return Ok(is_present);
+            }
+            Err(errs) => errs,
+        };
 
         // At this point the multiplexed is_present either failed or cannot say for sure
         // if the blob is present:
