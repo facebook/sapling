@@ -24,6 +24,8 @@ use blobstore_sync_queue::SqlBlobstoreWal;
 use blobstore_test_utils::Tickable;
 use bytes::Bytes;
 use context::CoreContext;
+use context::SessionClass;
+use context::SessionContainer;
 use fbinit::FacebookInit;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
@@ -709,6 +711,126 @@ async fn test_is_present_existing(fb: FacebookInit) -> Result<()> {
                 BlobstoreIsPresent::ProbablyNotPresent(anyhow!("some failed!")),
             );
         }
+    }
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_is_present_comprehensive(fb: FacebookInit) -> Result<()> {
+    let mut session = SessionContainer::new_with_defaults(fb);
+    session.override_session_class(SessionClass::ComprehensiveLookup);
+    let ctx = CoreContext::test_mock_session(session);
+
+    let (tickable_queue, tickable_blobstores, multiplex) = setup_multiplex(3, 2, None)?;
+
+    let k = "missing";
+
+    // o - missing, * - existing, x - failed
+    // All blobstores failed: [x] [x] [x]
+    {
+        let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+        assert_pending(&mut fut).await;
+
+        for (id, store) in &tickable_blobstores {
+            store.tick(Some(format!("bs{} failed", id).as_str()));
+        }
+
+        // is_present call should fail
+        assert!(fut.await.is_err());
+    }
+
+    // None of the blobstores has the blob: [o] [o] [o]
+    {
+        let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+        assert_pending(&mut fut).await;
+
+        for (_id, store) in &tickable_blobstores {
+            store.tick(None);
+        }
+
+        assert_is_present_ok(fut.await, BlobstoreIsPresent::Absent);
+    }
+
+    // One blobstore has the blob, the rest either failed or missing: [*] [o] [x]
+    {
+        let v = make_value("value");
+        let k = "key";
+
+        let mut put_fut = multiplex.put(&ctx, k.to_owned(), v).map_err(|_| ()).boxed();
+        assert_pending(&mut put_fut).await;
+
+        // wal queue write succeeds
+        tickable_queue.tick(None);
+        assert_pending(&mut put_fut).await;
+
+        tickable_blobstores[0].1.tick(None);
+        tickable_blobstores[1].1.tick(Some("bs1 failed"));
+        tickable_blobstores[2].1.tick(None);
+
+        // multiplexed put succeeds: write quorum achieved
+        assert!(put_fut.await.is_ok());
+
+        let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+        assert_pending(&mut fut).await;
+
+        tickable_blobstores[0].1.tick(None);
+        tickable_blobstores[1].1.tick(None);
+        tickable_blobstores[2].1.tick(Some("bs1 failed"));
+
+        // the blob is missing at least in one of the blobstores
+        assert_is_present_ok(fut.await, BlobstoreIsPresent::Absent);
+    }
+
+    // Prepare the blob for the next tests
+
+    let v = make_value("exists in 0 and 1");
+    let k01 = "k01";
+
+    let mut put_fut = multiplex
+        .put(&ctx, k01.to_owned(), v)
+        .map_err(|_| ())
+        .boxed();
+    assert_pending(&mut put_fut).await;
+
+    // wal queue write succeeds
+    tickable_queue.tick(None);
+    assert_pending(&mut put_fut).await;
+
+    tickable_blobstores[0].1.tick(None);
+    tickable_blobstores[1].1.tick(None);
+    tickable_blobstores[2].1.tick(Some("bs2 failed"));
+
+    // multiplexed put succeeds: write quorum achieved
+    assert!(put_fut.await.is_ok());
+
+    // Some blobstores have the blob, others don't: [*] [*] [o]
+    {
+        let mut fut = multiplex.is_present(&ctx, k01).map_err(|_| ()).boxed();
+        assert_pending(&mut fut).await;
+
+        for (_id, store) in &tickable_blobstores {
+            store.tick(None);
+        }
+
+        // is_present returns Absent because the blob doesn't exist in all of the stores
+        assert_is_present_ok(fut.await, BlobstoreIsPresent::Absent);
+    }
+
+    // Some of the blobstores have the blob, others failed: [*] [*] [x]
+    {
+        let mut fut = multiplex.is_present(&ctx, k01).map_err(|_| ()).boxed();
+        assert_pending(&mut fut).await;
+
+        tickable_blobstores[0].1.tick(None);
+        tickable_blobstores[1].1.tick(None);
+        tickable_blobstores[2].1.tick(Some("bs2 failed"));
+
+        // we don't know for sure that the blob is present everywhere
+        assert_is_present_ok(
+            fut.await,
+            BlobstoreIsPresent::ProbablyNotPresent(anyhow!("some failed!")),
+        );
     }
 
     Ok(())
