@@ -1229,6 +1229,9 @@ folly::Try<folly::Unit> PrjfsChannel::removeCachedFile(RelativePathPiece path) {
         result == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) ||
         result == HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND)) {
       // The file or a directory in the path is not cached, ignore.
+    } else if (result == HRESULT_FROM_WIN32(ERROR_DIR_NOT_EMPTY)) {
+      return folly::Try<folly::Unit>{
+          std::system_error(ENOTEMPTY, std::generic_category())};
     } else {
       return folly::Try<folly::Unit>{makeHResultErrorExplicit(
           result,

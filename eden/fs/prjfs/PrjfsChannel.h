@@ -461,7 +461,7 @@ class PrjfsChannel {
       Guid guid,
       std::shared_ptr<Notifier> notifier);
 
-  ~PrjfsChannel();
+  virtual ~PrjfsChannel();
 
   void start(bool readOnly, bool useNegativePathCaching);
 
@@ -504,7 +504,7 @@ class PrjfsChannel {
    * This can fail when the underlying file cannot be evicted from ProjectedFS,
    * one example is when the user has locked the file.
    */
-  FOLLY_NODISCARD folly::Try<folly::Unit> removeCachedFile(
+  FOLLY_NODISCARD virtual folly::Try<folly::Unit> removeCachedFile(
       RelativePathPiece path);
 
   /**
@@ -513,7 +513,7 @@ class PrjfsChannel {
    * This particularly matters for directories that were created by the user to
    * later be committed.
    */
-  FOLLY_NODISCARD folly::Try<folly::Unit> addDirectoryPlaceholder(
+  FOLLY_NODISCARD virtual folly::Try<folly::Unit> addDirectoryPlaceholder(
       RelativePathPiece path);
 
   void flushNegativePathCache();

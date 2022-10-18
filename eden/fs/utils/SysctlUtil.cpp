@@ -9,7 +9,7 @@
 
 #ifdef __APPLE__
 
-#include <sys/sysctl.h>
+#include <sys/sysctl.h> // @manual
 #include <sys/types.h>
 
 #include <folly/Exception.h>

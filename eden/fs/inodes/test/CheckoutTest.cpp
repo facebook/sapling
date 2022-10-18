@@ -14,6 +14,7 @@
 #include <folly/test/TestUtils.h>
 
 #include "eden/fs/config/CheckoutConfig.h"
+#include "eden/fs/inodes/EdenDispatcherFactory.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"
@@ -31,6 +32,7 @@
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/EdenError.h"
 #include "eden/fs/utils/FaultInjector.h"
+#include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/StatTimes.h"
 #include "eden/fs/utils/TimeUtil.h"
 
@@ -1715,6 +1717,90 @@ TEST(Checkout, changing_hash_scheme_does_not_conflict_if_contents_are_same) {
                .getVia(executor);
   EXPECT_EQ(0, result.conflicts.size());
 }
+
+#ifdef _WIN32
+using ActionMap = std::
+    unordered_map<RelativePathPiece, std::function<void(RelativePathPiece)>>;
+
+class FakePrjfsChannel : public PrjfsChannel {
+ public:
+  FakePrjfsChannel(
+      ActionMap actions,
+      AbsolutePathPiece mountPath,
+      std::unique_ptr<PrjfsDispatcher> dispatcher,
+      const folly::Logger* straceLogger,
+      std::shared_ptr<ProcessNameCache> processNameCache,
+      Guid guid)
+      : PrjfsChannel(
+            mountPath,
+            std::move(dispatcher),
+            straceLogger,
+            std::move(processNameCache),
+            guid,
+            nullptr),
+        actions_{std::move(actions)} {}
+
+  folly::Try<folly::Unit> removeCachedFile(RelativePathPiece path) override {
+    if (auto it = actions_.find(path); it != actions_.end()) {
+      it->second(path);
+    }
+    return PrjfsChannel::removeCachedFile(path);
+  }
+
+ private:
+  ActionMap actions_;
+};
+
+TEST(Checkout, concurrent_crawl_during_checkout) {
+  TestMount mount;
+  auto backingStore = mount.getBackingStore();
+
+  auto builder1 = FakeTreeBuilder();
+  builder1.setFile("a/1.txt"_relpath, "content1", false);
+
+  mount.initialize(RootId{"1"}, builder1);
+
+  auto builder2 = builder1.clone();
+  builder2.setFile("a/2.txt"_relpath, "content2", false);
+  builder2.finalize(backingStore, /*setReady=*/true);
+  auto commit2 = backingStore->putCommit("2", builder2);
+  commit2->setReady();
+
+  ActionMap actions;
+  actions["a"_relpath] = [&](RelativePathPiece path) {
+    auto oneTxt = mount.getEdenMount()->getPath() + path + "1.txt"_pc;
+    // Read a file to force removeCachedFile to fail.
+    readFile(oneTxt).throwUnlessValue();
+  };
+
+  auto fsChannel = std::make_unique<FakePrjfsChannel>(
+      std::move(actions),
+      mount.getEdenMount()->getPath(),
+      EdenDispatcherFactory::makePrjfsDispatcher(mount.getEdenMount().get()),
+      &mount.getEdenMount()->getStraceLogger(),
+      mount.getEdenMount()->getServerState()->getProcessNameCache(),
+      mount.getEdenMount()->getCheckoutConfig()->getRepoGuid());
+
+  fsChannel->start(false, false);
+
+  mount.getEdenMount()->setTestPrjfsChannel(std::move(fsChannel));
+
+  auto fut = mount.getEdenMount()
+                 ->checkout(RootId{"2"}, std::nullopt, __func__)
+                 .via(mount.getServerExecutor().get());
+
+  // Several executors are involved in checkout, some of which aren't the
+  // server executor, thus we need to loop several times to make sure they all
+  // executed and pushed work to each other.
+  while (!fut.isReady()) {
+    mount.drainServerExecutor();
+  }
+  auto result = std::move(fut).get(0ms);
+  EXPECT_THAT(result.conflicts, UnorderedElementsAre());
+
+  mount.getEdenMount()->getPrjfsChannel()->stop();
+}
+#endif
 
 } // namespace
 

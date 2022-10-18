@@ -1133,6 +1133,10 @@ Nfsd3* FOLLY_NULLABLE EdenMount::getNfsdChannel() const {
 PrjfsChannel* FOLLY_NULLABLE EdenMount::getPrjfsChannel() const {
   return channel_.get();
 }
+
+void EdenMount::setTestPrjfsChannel(std::unique_ptr<PrjfsChannel> channel) {
+  channel_ = std::move(channel);
+}
 #endif
 
 bool EdenMount::fsChannelIsInitialized() const {

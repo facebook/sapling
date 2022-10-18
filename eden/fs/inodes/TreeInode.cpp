@@ -50,6 +50,7 @@
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/SystemError.h"
 #include "eden/fs/utils/TimeUtil.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/utils/XAttr.h"
@@ -3433,6 +3434,28 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   // write lock is held and before the contents are updated.
   auto success = invalidateChannelEntryCache(state, name, oldEntryInodeNumber);
   if (success.hasException()) {
+    if (folly::kIsWindows) {
+      // On Windows, reads aren't being done on the inodes, but on the Trees
+      // directly, when a file/directory is looked up, the dispatcher will
+      // first return the data to ProjectedFS and then in the background update
+      // the inodes hierarchy to ensure that the fsRefcount is set.
+      //
+      // Unfortunately, this means that the inode hierarchy can be slightly out
+      // of date. This is one case. A recursive `grep` running concurrently
+      // with checkout would populate the working copy without immediately
+      // loading inodes. In that case, the invalidateChannelEntryCache will
+      // fail with an ENOTEMPTY error. Let's catch this and recurse down as if
+      // the directory was already loaded.
+      if (auto* exc = success.tryGetExceptionObject<std::system_error>();
+          exc && isEnotempty(*exc)) {
+        XLOG(DBG6) << "loading child inode after invalidation failed: inode="
+                   << getNodeId() << " child=" << name;
+        auto inodeFuture = loadChildLocked(
+            contents, name, entry, pendingLoads, ctx->getFetchContext());
+        return make_unique<CheckoutAction>(
+            ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
+      }
+    }
     ctx->addError(this, name, success.exception());
     return nullptr;
   }

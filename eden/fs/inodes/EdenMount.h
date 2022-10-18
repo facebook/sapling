@@ -385,6 +385,13 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
 #ifdef _WIN32
   PrjfsChannel* FOLLY_NULLABLE getPrjfsChannel() const;
+
+  /**
+   * Set a test channel for this mount point.
+   *
+   * This should only be used in test to set a fake channel.
+   */
+  void setTestPrjfsChannel(std::unique_ptr<PrjfsChannel> channel);
 #else
   FuseChannel* FOLLY_NULLABLE getFuseChannel() const;
   Nfsd3* FOLLY_NULLABLE getNfsdChannel() const;

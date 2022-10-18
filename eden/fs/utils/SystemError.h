@@ -38,4 +38,8 @@ inline bool isEnoent(const std::system_error& ex) {
   return ret;
 }
 
+inline bool isEnotempty(const std::system_error& ex) {
+  return isErrnoError(ex) && ex.code().value() == ENOTEMPTY;
+}
+
 } // namespace facebook::eden
