@@ -421,6 +421,23 @@ function mononoke_x_repo_sync_forever() {
   echo "$XREPOSYNC_PID" >> "$DAEMON_PIDS"
 }
 
+# Wait for xrepo sync (15s at most)
+function wait_for_xrepo_sync {
+  bookmark_update_log_entry="$1"
+  local attempts=150
+  for _ in $(seq 1 $attempts); do
+    grep -q "successful sync bookmark update log #$bookmark_update_log_entry" "$TESTTMP/xreposync.out" && break
+    sleep 0.1
+  done
+
+  if ! grep -q "successful sync bookmark update log #$bookmark_update_log_entry" "$TESTTMP/xreposync.out"; then
+    echo "xrepo sync of bookmark update log entry $1 did not finish" >&2
+    cat "$TESTTMP/xreposync.out"
+    exit 1
+  fi
+}
+
+
 function init_two_small_one_large_repo() {
   # setup configuration
   # Disable bookmarks cache because bookmarks are modified by two separate processes

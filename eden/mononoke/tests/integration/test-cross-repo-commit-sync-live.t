@@ -45,7 +45,7 @@ Before the change
   ~
 
 -- wait a little to give sync job some time to catch up
-  $ sleep 10
+  $ wait_for_xrepo_sync 2
   $ flush_mononoke_bookmarks
 
 -- check the same commit in the large repo
@@ -103,7 +103,7 @@ After the change
   ~
 
 -- wait a little to give sync job some time to catch up
-  $ sleep 8
+  $ wait_for_xrepo_sync 4
   $ flush_mononoke_bookmarks
 
 -- check the same commit in the large repo
