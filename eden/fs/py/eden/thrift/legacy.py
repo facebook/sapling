@@ -98,32 +98,8 @@ class EdenClient(EdenService.Client):
             self._transport.close()
             self._transport = None
 
-    def getDaemonInfo(self) -> "DaemonInfo":
-        try:
-            info = super(EdenClient, self).getDaemonInfo()
-        except TApplicationException as ex:
-            if ex.type != TApplicationException.UNKNOWN_METHOD:
-                raise
-            # Older versions of EdenFS did not have a getDaemonInfo() method
-            pid = super(EdenClient, self).getPid()
-            info = DaemonInfo(pid=pid, status=None)
-
-        # Older versions of EdenFS did not return status information in the
-        # getDaemonInfo() response.
-        if info.status is None:
-            info.status = super(EdenClient, self).getStatus()
-        return info
-
     def getPid(self) -> int:
-        try:
-            return self.getDaemonInfo().pid
-        except TApplicationException as ex:
-            if ex.type == TApplicationException.UNKNOWN_METHOD:
-                # Running on an older server build, fall back to the
-                # old getPid() method.
-                return super(EdenClient, self).getPid()
-            else:
-                raise
+        return self.getDaemonInfo().pid
 
 
 def create_thrift_client(
