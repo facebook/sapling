@@ -482,41 +482,28 @@ verify=False
 
 [committemplate]
 changeset={if(desc, desc, emptymsg)}\n
- HG: Enter commit message.  Lines beginning with 'HG:' are removed.
- HG: {extramsg}
- HG: --
- HG: user: {author}\n{ifgt(parents|count, 1,
- "HG: merging:\n{parents % 'HG:   {node|short}: {desc|firstline}\n'}")
+ SL: Enter commit message.  Lines beginning with 'SL:' are removed.
+ SL: {extramsg}
+ SL: --
+ SL: user: {author}\n{ifgt(parents|count, 1,
+ "SL: merging:\n{parents % 'SL:   {node|short}: {desc|firstline}\n'}")
  }{if(currentbookmark,
- "HG: bookmark '{currentbookmark}'\n")}{
- filechanges}{
- if(advice, advice, defaultadvice)}
+ "SL: bookmark '{currentbookmark}'\n")}{
+ filechanges}
 defaulttitle=<Replace this line with a title. Use 1 line only, 67 chars or less>
-defaultadvice=HG: --
- HG: Consider onboarding Jellyfish in this repo to speed up your workflow.
- HG: Learn how at https://fburl.com/jf-onboard\n
 emptymsg={if(title, title, defaulttitle)}\n
  Summary: {summary}\n
  Test Plan: {testplan}\n
- Reviewers: {reviewers}\n
- Subscribers: {subscribers}\n
- Tasks: {tasknum}\n
- Tags: {fbtags}
 filechanges={ifgt(parents|count, 1, filechangesmerge,
  ifgt(files|count, filechangethreshold, filechangesplain, filechangesdetailed))}
 filechangesmerge=
 filechangethreshold=100
 filechangesplain={
- file_adds % "HG: added {file}\n"}{
- file_mods % "HG: changed {file}\n"}{
- file_dels % "HG: removed {file}\n"}{
- if(files, "", "HG: no files changed\n")}
+ file_adds % "SL: added {file}\n"}{
+ file_mods % "SL: changed {file}\n"}{
+ file_dels % "SL: removed {file}\n"}{
+ if(files, "", "SL: no files changed\n")}
 filechangesdetailed={ifeq(verbosity,"verbose",diff()|hgprefix,stat("status")|hgprefix)}\n
-tasknum={sub('^((?:[tT][0-9]+)?).*$', '\\1', activebookmark)}
-advice=HG: --
- HG: This repository supports Jellyfish!
- HG: You can use 'jf submit' to send your commit for review more quickly.
- HG: Learn more at https://fburl.com/jellyfish\n
 
 [copytrace]
 fastcopytrace=True
