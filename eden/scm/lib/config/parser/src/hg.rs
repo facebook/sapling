@@ -25,7 +25,6 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use hgplain;
 use identity::Identity;
-#[cfg(feature = "fb")]
 use identity::ALL_IDENTITIES;
 use minibytes::Text;
 use url::Url;
@@ -310,12 +309,12 @@ impl ConfigSetHgExt for ConfigSet {
         self.validate_dynamic().map_err(|err| Errors(vec![err]))
     }
 
-    fn load_system(&mut self, opts: Options, identity: &Identity) -> Vec<Error> {
+    fn load_system(&mut self, opts: Options, ident: &Identity) -> Vec<Error> {
         let opts = opts.source("system").process_hgplain();
         let mut errors = Vec::new();
 
         // If $HGRCPATH is set, use it instead.
-        if let Some(Ok(rcpath)) = identity.env_var("CONFIG") {
+        if let Some(Ok(rcpath)) = ident.env_var("CONFIG") {
             #[cfg(unix)]
             let paths = rcpath.split(':');
             #[cfg(windows)]
@@ -324,16 +323,12 @@ impl ConfigSetHgExt for ConfigSet {
                 errors.append(&mut self.load_path(expand_path(path), &opts));
             }
         } else {
-            #[cfg(unix)]
-            {
-                errors.append(&mut self.load_path("/etc/mercurial/system.rc", &opts));
-            }
-
-            #[cfg(windows)]
-            {
-                if let Ok(program_data_path) = env::var("PROGRAMDATA") {
-                    let hgrc_dir = Path::new(&program_data_path).join("Facebook\\Mercurial");
-                    errors.append(&mut self.load_path(hgrc_dir.join("system.rc"), &opts));
+            for ident in Some(ident).into_iter().chain(ALL_IDENTITIES) {
+                if let Some(system_path) = ident.system_config_path() {
+                    if system_path.exists() {
+                        errors.append(&mut self.load_path(system_path, &opts));
+                        break;
+                    }
                 }
             }
         }
@@ -499,24 +494,19 @@ impl ConfigSetHgExt for ConfigSet {
         }
     }
 
-    fn load_user(&mut self, opts: Options, identity: &Identity) -> Vec<Error> {
+    fn load_user(&mut self, opts: Options, ident: &Identity) -> Vec<Error> {
         // If scripting config env var is set, don't load user configs
-        let mut paths = Vec::new();
-        if identity.env_var("CONFIG").is_none() {
-            paths.append(&mut identity.user_config_paths());
-            #[cfg(feature = "fb")]
-            {
-                // Internally we need to support the other identity config file if the user has not yet migrated
-                if !paths.iter().any(|p| p.exists()) {
-                    for alt_identity in ALL_IDENTITIES.iter() {
-                        if alt_identity != identity {
-                            paths.append(&mut alt_identity.user_config_paths());
-                        }
-                    }
+        if ident.env_var("CONFIG").is_none() {
+            for ident in Some(ident).into_iter().chain(ALL_IDENTITIES) {
+                let paths = ident.user_config_paths();
+                if paths.iter().any(|p| p.exists()) {
+                    return self.load_user_internal(&paths, opts);
                 }
             }
         }
-        self.load_user_internal(&paths, opts)
+
+        // Call with emtpy paths for side effects.
+        self.load_user_internal(&[], opts)
     }
 
     fn load_repo(&mut self, repo_path: &Path, opts: Options, identity: &Identity) -> Vec<Error> {

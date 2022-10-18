@@ -49,10 +49,14 @@ struct UserIdentity {
     /// | Windows | `{FOLDERID_RoamingAppData}`           | C:\Users\Alice\AppData\Roaming\sapling   |
     ///
     /// If None, config file is directly in home directory.
-    config_directory: Option<&'static str>,
+    config_user_directory: Option<&'static str>,
 
     /// User config file names to look for inside of `config_directory`.
     config_user_files: &'static [&'static str],
+
+    /// System config file path, typically installed by package or system administrator.
+    /// On Windows, `config_system_path` is a path fragment that gets appended to %PROGRAMDATA%.
+    config_system_path: &'static str,
 
     /// Disables any configuration settings that might change the default output, including but not
     /// being limited to encoding, defaults, verbose mode, debug mode, quiet mode, and tracebacks
@@ -133,7 +137,7 @@ impl Identity {
     }
 
     pub fn user_config_paths(&self) -> Vec<PathBuf> {
-        let config_dir = match self.user.config_directory {
+        let config_dir = match self.user.config_user_directory {
             None => match dirs::home_dir() {
                 None => return Vec::new(),
                 Some(hd) => hd,
@@ -150,6 +154,16 @@ impl Identity {
             .map(|f| config_dir.join(f))
             .collect()
     }
+
+    pub fn system_config_path(&self) -> Option<PathBuf> {
+        if cfg!(windows) {
+            std::env::var("PROGRAMDATA")
+                .ok()
+                .map(|p| PathBuf::from(p).join(self.user.config_system_path))
+        } else {
+            Some(self.user.config_system_path.into())
+        }
+    }
 }
 
 impl std::fmt::Display for Identity {
@@ -164,12 +178,16 @@ const HG: Identity = Identity {
         product_name: "Mercurial",
         long_product_name: "Mercurial Distributed SCM",
         env_prefix: "HG",
-        config_directory: None,
+        config_user_directory: None,
         config_user_files: &[
             ".hgrc",
             #[cfg(windows)]
             "mercurial.ini",
         ],
+        #[cfg(windows)]
+        config_system_path: r"Facebook\Mercurial\system.rc",
+        #[cfg(not(windows))]
+        config_system_path: "/etc/mercurial/system.rc",
         scripting_env_var: "HGPLAIN",
         scripting_config_env_var: "HGRCPATH",
         scripting_except_env_var: "HGPLAINEXCEPT",
@@ -187,8 +205,12 @@ const SL: Identity = Identity {
         product_name: "Sapling",
         long_product_name: "Sapling SCM",
         env_prefix: "SL_",
-        config_directory: Some("sapling"),
+        config_user_directory: Some("sapling"),
         config_user_files: &["sapling.conf"],
+        #[cfg(windows)]
+        config_system_path: r"Sapling\system.conf",
+        #[cfg(not(windows))]
+        config_system_path: "/etc/sapling/system.conf",
         scripting_env_var: "SL_AUTOMATION",
         scripting_config_env_var: "SL_CONFIG_PATH",
         scripting_except_env_var: "SL_AUTOMATION_EXCEPT",
@@ -207,8 +229,9 @@ const TEST: Identity = Identity {
         product_name: "Test",
         long_product_name: "Testing SCM",
         env_prefix: "TEST",
-        config_directory: None,
+        config_user_directory: None,
         config_user_files: &["test.conf"],
+        config_system_path: "test",
         scripting_env_var: "TEST_SCRIPT",
         scripting_config_env_var: "TEST_RC_PATH",
         scripting_except_env_var: "TEST_SCRIPT_EXCEPT",
