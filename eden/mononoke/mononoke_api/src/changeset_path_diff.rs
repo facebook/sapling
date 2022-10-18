@@ -53,6 +53,16 @@ pub enum UnifiedDiffMode {
     OmitContent,
 }
 
+/// Metadata about the differences between two files that is useful to
+/// Phabricator.
+pub struct MetadataDiff {
+    /// The file type before the change.
+    pub old_file_type: Option<FileType>,
+
+    /// The file type after the change.
+    pub new_file_type: Option<FileType>,
+}
+
 impl ChangesetPathDiffContext {
     /// Create a new path diff context that compares the contents of two
     /// changeset paths.
@@ -189,6 +199,21 @@ impl ChangesetPathDiffContext {
         Ok(UnifiedDiff {
             raw_diff,
             is_binary,
+        })
+    }
+
+    pub async fn metadata_diff(&self) -> Result<MetadataDiff, MononokeError> {
+        let new_file_type = match self.base() {
+            Some(path) => path.file_type().await?,
+            None => None,
+        };
+        let old_file_type = match self.other() {
+            Some(path) => path.file_type().await?,
+            None => None,
+        };
+        Ok(MetadataDiff {
+            old_file_type,
+            new_file_type,
         })
     }
 }

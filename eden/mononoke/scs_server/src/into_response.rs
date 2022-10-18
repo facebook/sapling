@@ -22,6 +22,7 @@ use mononoke_api::CopyInfo;
 use mononoke_api::FileMetadata;
 use mononoke_api::FileType;
 use mononoke_api::HeaderlessUnifiedDiff;
+use mononoke_api::MetadataDiff;
 use mononoke_api::MononokeError;
 use mononoke_api::PushrebaseOutcome;
 use mononoke_api::RepoContext;
@@ -78,6 +79,17 @@ impl IntoResponse<thrift::EntryType> for FileType {
             FileType::Regular => thrift::EntryType::FILE,
             FileType::Executable => thrift::EntryType::EXEC,
             FileType::Symlink => thrift::EntryType::LINK,
+        }
+    }
+}
+
+impl IntoResponse<Option<thrift::MetadataDiffFileType>> for Option<FileType> {
+    fn into_response(self) -> Option<thrift::MetadataDiffFileType> {
+        match self {
+            None => None,
+            Some(FileType::Regular) => Some(thrift::MetadataDiffFileType::FILE),
+            Some(FileType::Executable) => Some(thrift::MetadataDiffFileType::EXEC),
+            Some(FileType::Symlink) => Some(thrift::MetadataDiffFileType::LINK),
         }
     }
 }
@@ -160,6 +172,18 @@ impl IntoResponse<thrift::CopyInfo> for CopyInfo {
             CopyInfo::Copy => thrift::CopyInfo::COPY,
             CopyInfo::Move => thrift::CopyInfo::MOVE,
         }
+    }
+}
+
+impl IntoResponse<thrift::Diff> for MetadataDiff {
+    fn into_response(self) -> thrift::Diff {
+        let old_file_type = self.old_file_type.into_response();
+        let new_file_type = self.new_file_type.into_response();
+        thrift::Diff::metadata_diff(thrift::MetadataDiff {
+            old_file_type,
+            new_file_type,
+            ..Default::default()
+        })
     }
 }
 

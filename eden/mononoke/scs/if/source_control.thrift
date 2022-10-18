@@ -342,12 +342,14 @@ enum CommitCompareItem {
 enum DiffFormat {
   /// Raw diff (unified diff format with some of the "git diff" improvements)
   RAW_DIFF = 0,
+  /// Metadata diff (file types, summaries of added and removed lines, etc.)
+  METADATA_DIFF = 1,
 }
 
 /// The formats in which we can render the diff.
-/// Just one now, but we want to return more structured diffs in the future.
 union Diff {
   1: RawDiff raw_diff;
+  2: MetadataDiff metadata_diff;
 }
 
 /// Raw diff (unified diff format with some of the "git diff" improvements).
@@ -356,6 +358,45 @@ struct RawDiff {
   1: optional binary raw_diff;
   /// One of the files is binary, raw diff contains just a placeholder.
   2: bool is_binary;
+}
+
+/// Metadata diff (file types, summaries of added and removed lines, etc.).
+struct MetadataDiff {
+  /// File type (file, exec, or link) of the file before the change.
+  1: optional MetadataDiffFileType old_file_type;
+
+  /// File type (file, exec, or link) of the file after the change.
+  2: optional MetadataDiffFileType new_file_type;
+
+  /// File content type (text, non-utf8, or binary) of the file before the change.
+  /// Not yet implemented.
+  3: optional MetadataDiffFileContentType old_file_content_type;
+
+  /// File content type (text, non-utf8, or binary) of the file after the change.
+  /// Not yet implemented.
+  4: optional MetadataDiffFileContentType new_file_content_type;
+}
+
+enum MetadataDiffFileType {
+  /// An ordinary file (equivalent to mode "100644")
+  FILE = 1,
+
+  /// An executable file (equivalent to mode "100755")
+  EXEC = 2,
+
+  /// A symbolic link (equivalent to mode "120000")
+  LINK = 3,
+}
+
+enum MetadataDiffFileContentType {
+  /// File content is entirely valid UTF-8 text
+  TEXT = 1,
+
+  /// File content contains no NUL bytes, but is not valid UTF-8
+  NON_UTF8 = 2,
+
+  /// File content includes NUL bytes, thus is likely to be binary
+  BINARY = 3,
 }
 
 /// Indicates whether the file was copied or moved
@@ -983,7 +1024,9 @@ struct CommitFileDiffsParams {
   3: DiffFormat format;
   /// Number of lines of unified context around differences (default: 3)
   4: i64 context = 3;
-  /// Limit the total size in bytes of returned diffs
+  /// Limit the size of the returned diff.  The meaning of this value depends on the
+  /// diff format.  For raw diffs, it is the total size in bytes of the returned diffs.
+  /// For phabricator diff metadata, it is the number of entries.
   5: optional i64 diff_size_limit;
 }
 

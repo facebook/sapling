@@ -32,6 +32,7 @@ use mononoke_api::ChangesetPathContentContext;
 use mononoke_api::ChangesetPathDiffContext;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_api::CopyInfo;
+use mononoke_api::MetadataDiff;
 use mononoke_api::MononokeError;
 use mononoke_api::MononokePath;
 use mononoke_api::RepoContext;
@@ -177,6 +178,7 @@ impl CommitFileDiffsItem {
     ) -> Result<CommitFileDiffsResponseElement, errors::ServiceError> {
         match format {
             thrift::DiffFormat::RAW_DIFF => self.raw_diff(context_lines).await,
+            thrift::DiffFormat::METADATA_DIFF => self.metadata_diff().await,
             unknown => {
                 Err(errors::invalid_request(format!("invalid diff format: {:?}", unknown)).into())
             }
@@ -198,16 +200,23 @@ impl CommitFileDiffsItem {
             .await?;
         Ok(CommitFileDiffsResponseElement::RawDiff { diff })
     }
+
+    async fn metadata_diff(&self) -> Result<CommitFileDiffsResponseElement, errors::ServiceError> {
+        let metadata_diff = self.path_diff_context.metadata_diff().await?;
+        Ok(CommitFileDiffsResponseElement::MetadataDiff { metadata_diff })
+    }
 }
 
 enum CommitFileDiffsResponseElement {
     RawDiff { diff: UnifiedDiff },
+    MetadataDiff { metadata_diff: MetadataDiff },
 }
 
 impl CommitFileDiffsResponseElement {
     fn size(&self) -> usize {
         match self {
             Self::RawDiff { diff } => diff.raw_diff.len(),
+            Self::MetadataDiff { .. } => 1,
         }
     }
 
@@ -220,6 +229,12 @@ impl CommitFileDiffsResponseElement {
                 base_path: item.path_diff_context.base().map(|p| p.path().to_string()),
                 other_path: item.path_diff_context.other().map(|p| p.path().to_string()),
                 diff: diff.into_response(),
+                ..Default::default()
+            },
+            Self::MetadataDiff { metadata_diff } => thrift::CommitFileDiffsResponseElement {
+                base_path: item.path_diff_context.base().map(|p| p.path().to_string()),
+                other_path: item.path_diff_context.other().map(|p| p.path().to_string()),
+                diff: metadata_diff.into_response(),
                 ..Default::default()
             },
         }

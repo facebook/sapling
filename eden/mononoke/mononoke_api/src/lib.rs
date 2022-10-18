@@ -53,6 +53,7 @@ pub use crate::changeset_path::ChangesetPathHistoryOptions;
 pub use crate::changeset_path::PathEntry;
 pub use crate::changeset_path_diff::ChangesetPathDiffContext;
 pub use crate::changeset_path_diff::CopyInfo;
+pub use crate::changeset_path_diff::MetadataDiff;
 pub use crate::changeset_path_diff::UnifiedDiff;
 pub use crate::changeset_path_diff::UnifiedDiffMode;
 pub use crate::errors::MononokeError;
