@@ -3545,6 +3545,16 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
       auto success = invalidateChannelEntryCache(
           *contents, it->first, it->second.getInodeNumber());
       if (success.hasException()) {
+        if (folly::kIsWindows) {
+          if (auto* exc = success.tryGetExceptionObject<std::system_error>();
+              exc && isEnotempty(*exc)) {
+            XLOG(DBG6) << "entry changed on disk from a file to a "
+                       << "non-empty directory while checkout is in progress: "
+                       << inode->getLogPath();
+            ctx->addConflict(ConflictType::MODIFIED_MODIFIED, this, it->first);
+            return InvalidationRequired::No;
+          }
+        }
         ctx->addError(this, it->first, success.exception());
         return InvalidationRequired::No;
       }

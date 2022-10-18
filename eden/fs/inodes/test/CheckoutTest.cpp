@@ -1740,6 +1740,20 @@ class FakePrjfsChannel : public PrjfsChannel {
             nullptr),
         actions_{std::move(actions)} {}
 
+  static void initializeFakePrjfsChannel(
+      ActionMap actions,
+      std::shared_ptr<EdenMount> mount) {
+    auto channel = std::make_unique<FakePrjfsChannel>(
+        std::move(actions),
+        mount->getPath(),
+        EdenDispatcherFactory::makePrjfsDispatcher(mount.get()),
+        &mount->getStraceLogger(),
+        mount->getServerState()->getProcessNameCache(),
+        mount->getCheckoutConfig()->getRepoGuid());
+    channel->start(false, false);
+    mount->setTestPrjfsChannel(std::move(channel));
+  }
+
   folly::Try<folly::Unit> removeCachedFile(RelativePathPiece path) override {
     if (auto it = actions_.find(path); it != actions_.end()) {
       it->second(path);
@@ -1773,17 +1787,8 @@ TEST(Checkout, concurrent_crawl_during_checkout) {
     readFile(oneTxt).throwUnlessValue();
   };
 
-  auto fsChannel = std::make_unique<FakePrjfsChannel>(
-      std::move(actions),
-      mount.getEdenMount()->getPath(),
-      EdenDispatcherFactory::makePrjfsDispatcher(mount.getEdenMount().get()),
-      &mount.getEdenMount()->getStraceLogger(),
-      mount.getEdenMount()->getServerState()->getProcessNameCache(),
-      mount.getEdenMount()->getCheckoutConfig()->getRepoGuid());
-
-  fsChannel->start(false, false);
-
-  mount.getEdenMount()->setTestPrjfsChannel(std::move(fsChannel));
+  FakePrjfsChannel::initializeFakePrjfsChannel(
+      std::move(actions), mount.getEdenMount());
 
   auto fut = mount.getEdenMount()
                  ->checkout(RootId{"2"}, std::nullopt, __func__)
@@ -1800,6 +1805,57 @@ TEST(Checkout, concurrent_crawl_during_checkout) {
 
   mount.getEdenMount()->getPrjfsChannel()->stop();
 }
+
+TEST(Checkout, concurrent_file_to_directory_during_checkout) {
+  TestMount mount;
+  auto backingStore = mount.getBackingStore();
+
+  auto builder1 = FakeTreeBuilder();
+  builder1.setFile("a/1.txt"_relpath, "content1", false);
+  builder1.setFile("b.txt"_relpath, "content1", false);
+
+  mount.initialize(RootId{"1"}, builder1);
+
+  auto builder2 = builder1.clone();
+  builder2.removeFile("b.txt"_relpath);
+  builder2.finalize(backingStore, /*setReady=*/true);
+  auto commit2 = backingStore->putCommit("2", builder2);
+  commit2->setReady();
+
+  auto bTxt = mount.getEdenMount()->getPath() + "b.txt"_pc;
+
+  ActionMap actions;
+  actions["b.txt"_relpath] = [&](RelativePathPiece) {
+    // Replace the file by a directory.
+    removeFileWithAbsolutePath(bTxt);
+    ensureDirectoryExists(bTxt);
+    writeFile(bTxt + "2.txt"_pc, folly::StringPiece{"2"}).throwUnlessValue();
+  };
+
+  FakePrjfsChannel::initializeFakePrjfsChannel(
+      std::move(actions), mount.getEdenMount());
+
+  readFile(bTxt).throwUnlessValue();
+
+  auto fut = mount.getEdenMount()
+                 ->checkout(RootId{"2"}, std::nullopt, __func__)
+                 .via(mount.getServerExecutor().get());
+
+  // Several executors are involved in checkout, some of which aren't the
+  // server executor, thus we need to loop several times to make sure they all
+  // executed and pushed work to each other.
+  while (!fut.isReady()) {
+    mount.drainServerExecutor();
+  }
+  auto result = std::move(fut).get(0ms);
+  EXPECT_THAT(
+      result.conflicts,
+      UnorderedElementsAre(
+          makeConflict(ConflictType::MODIFIED_MODIFIED, "b.txt")));
+
+  mount.getEdenMount()->getPrjfsChannel()->stop();
+}
+
 #endif
 
 } // namespace
