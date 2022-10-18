@@ -1810,7 +1810,13 @@ hgmainfeatures = (
     or None
 )
 
-rustextmodules = []
+rustextmodules = [
+    RustExtension(
+        "conch_parser",
+        package="",
+        manifest="edenscmnative/conch_parser/Cargo.toml",
+    )
+]
 
 rustextbinaries = [
     RustBinary(
@@ -1823,13 +1829,6 @@ rustextbinaries = [
 ]
 
 if not ossbuild:
-    rustextmodules += [
-        RustExtension(
-            "conch_parser",
-            package="",
-            manifest="edenscmnative/conch_parser/Cargo.toml",
-        )
-    ]
     rustextbinaries += [
         RustBinary("mkscratch", manifest="exec/scratch/Cargo.toml"),
         RustBinary("scm_daemon", manifest="exec/scm_daemon/Cargo.toml"),
