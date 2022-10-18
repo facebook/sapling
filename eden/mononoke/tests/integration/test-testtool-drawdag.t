@@ -94,14 +94,15 @@ need to match the previous graph (although it's probably a good idea).
   W2=28354dd9e37c4b5aadd24f3e8eb4699f9a01b6e4b48554f3808fb432da0fafc4
   XX=f6509cec643ab922cf4dbd0583f8c8683701259daf535b4e80da448c1810d6d4
 
-Test HG hashes:
+Test HG hashes and setting the commit message:
   $ testtool_drawdag -R repo --print-hg-hashes <<'EOF'
   > AA-BB-CC
   > # modify: AA file "content"
+  > # message: CC "just a commit message"
   > EOF
   AA=73a53b07af3d15928010e8d72630750e98875c4a
   BB=d005ae50b8698478630ac396568f337d3c24063c
-  CC=2cdf9bb5479e17e147a64e3f443011873bf7347a
+  CC=09a0a685beb4b6219039863c0c3f36be33f913b8
 
   $ mononoke_newadmin fetch -R repo --hg-id $AA -p file
   File-Type: regular
@@ -112,3 +113,11 @@ Test HG hashes:
   Git-Sha1: 6b584e8ece562ebffc15d38808cd6b98fc3d97ea
   
   content
+
+  $ mononoke_newadmin fetch -R repo --hg-id $CC
+  BonsaiChangesetId: 82eb078bddeef2e9c64fde25243198ee8eb60861595964a5e3e73a896945a9b9
+  Author: author
+  Message: just a commit message
+  FileChanges:
+  	 ADDED/MODIFIED: CC 151a580a9eacb832365f854fabde6941930ddf5baa1cef1bfb0e411bdde2df94
+  

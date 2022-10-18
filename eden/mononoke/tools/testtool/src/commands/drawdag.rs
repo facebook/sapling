@@ -120,6 +120,9 @@ enum ChangeAction {
         key: String,
         value: Vec<u8>,
     },
+    Message {
+        message: String,
+    },
     Copy {
         path: Vec<u8>,
         content: Vec<u8>,
@@ -143,6 +146,14 @@ impl Action {
                     let name = name.to_string()?;
                     let bookmark = bookmark.to_string()?.parse()?;
                     Ok(Action::Bookmark { name, bookmark })
+                }
+                ("message", [name, message]) => {
+                    let name = name.to_string()?;
+                    let message = message.to_string()?;
+                    Ok(Action::Change {
+                        name,
+                        change: ChangeAction::Message { message },
+                    })
                 }
                 ("modify", [name, path, content]) => {
                     let name = name.to_string()?;
@@ -457,6 +468,7 @@ fn apply_changes<'a>(
             ChangeAction::Delete { path, .. } => c = c.delete_file(path.as_slice()),
             ChangeAction::Forget { path, .. } => c = c.forget_file(path.as_slice()),
             ChangeAction::Extra { key, value, .. } => c = c.add_extra(key, value),
+            ChangeAction::Message { message } => c = c.set_message(message),
             ChangeAction::Copy {
                 path,
                 content,
