@@ -1,14 +1,13 @@
 #require fsmonitor
 
   $ configure modernclient
-  $ setconfig status.use-rust=False workingcopy.ruststatus=False
   $ . "$TESTDIR/histedit-helpers.sh"
   $ enable histedit fsmonitor rebase hgevents sparse
   $ setconfig fsmonitor.warn-fresh-instance=true
   $ newclientrepo repo
   $ hg status --debug
   warning: watchman has recently started (pid *) - operation will be slower than usual (glob)
-  poststatusfixup decides to wait for wlock since watchman reported fresh instance
+  poststatusfixup decides to wait for wlock since watchman reported fresh instance (?)
 
   $ drawdag << 'EOS'
   > D

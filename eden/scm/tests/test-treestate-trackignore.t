@@ -1,6 +1,8 @@
 #require fsmonitor
 
   $ configure modernclient
+# trackignore functionality is not used in production anymore, so we can
+# probably delete this test once we fully migrated to Rust status.
   $ setconfig status.use-rust=False workingcopy.ruststatus=False
   $ newclientrepo repo
   $ cat >> .gitignore << EOF

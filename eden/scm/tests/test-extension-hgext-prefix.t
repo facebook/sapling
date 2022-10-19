@@ -2,8 +2,6 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
-  $ setconfig workingcopy.ruststatus=False
-
 Using 'ext.' prefix triggers the warning.
 
   $ hg init --config extensions.ext.rebase=

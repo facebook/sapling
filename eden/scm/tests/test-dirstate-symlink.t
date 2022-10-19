@@ -6,8 +6,6 @@
 
 #require symlink
 
-  $ setconfig workingcopy.ruststatus=False
-
   $ cd $TESTTMP
 
   $ newrepo
