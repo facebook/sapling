@@ -335,6 +335,7 @@ members = [
   "mononoke_api",
   "mononoke_api/types",
   "mononoke_api_hg",
+  "mononoke_configs",
   "mononoke_hg_sync_job",
   "mononoke_repos",
   "mononoke_types",
