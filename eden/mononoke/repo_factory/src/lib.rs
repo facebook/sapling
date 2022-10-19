@@ -64,8 +64,6 @@ use dbbookmarks::ArcSqlBookmarks;
 use dbbookmarks::SqlBookmarksBuilder;
 #[cfg(fbcode_build)]
 use derived_data_client_library::Client as DerivationServiceClient;
-use derived_data_manager::ArcDerivedDataManagerSet;
-use derived_data_manager::DerivedDataManagerSet;
 use derived_data_remote::DerivationClient;
 use derived_data_remote::RemoteDerivationOptions;
 use environment::Caching;
@@ -120,6 +118,8 @@ use repo_cross_repo::ArcRepoCrossRepo;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::ArcRepoDerivedData;
 use repo_derived_data::RepoDerivedData;
+use repo_derived_data_service::ArcDerivedDataManagerSet;
+use repo_derived_data_service::DerivedDataManagerSet;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
 use repo_lock::AlwaysLockedRepoLock;

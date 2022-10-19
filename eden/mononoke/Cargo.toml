@@ -366,6 +366,7 @@ members = [
   "repo_attributes/repo_bookmark_attrs",
   "repo_attributes/repo_cross_repo",
   "repo_attributes/repo_derived_data",
+  "repo_attributes/repo_derived_data_service",
   "repo_attributes/repo_identity",
   "repo_attributes/repo_lock/repo_lock",
   "repo_attributes/repo_permission_checker",
