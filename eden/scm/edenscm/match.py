@@ -869,7 +869,7 @@ class regexmatcher(basematcher):
 
     def __init__(self, root, cwd, pattern, badfn=None):
         super(regexmatcher, self).__init__(root, cwd, badfn)
-        self._matcher = pathmatcher.regexmatcher(pattern)
+        self._matcher = pathmatcher.regexmatcher(pattern, util.fscasesensitive(root))
         self._pattern = pattern
 
     def matchfn(self, f):
@@ -1333,8 +1333,9 @@ class subdirmatcher(basematcher):
 
     The paths are remapped to remove/insert the path as needed:
 
+    >>> import os
     >>> from . import pycompat
-    >>> m1 = match('root', '', ['a.txt', 'sub/b.txt'])
+    >>> m1 = match(os.getcwd(), '', ['a.txt', 'sub/b.txt'])
     >>> m2 = subdirmatcher('sub', m1)
     >>> bool(m2('a.txt'))
     False
