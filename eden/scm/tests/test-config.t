@@ -169,6 +169,14 @@ edit failure
   abort: edit failed: false exited with status 1
   [255]
 
+  $ HGEDITOR=false hg config --user
+  abort: edit failed: false exited with status 1
+  [255]
+
+  $ hg config --user --local
+  abort: please specify exactly one config location
+  [255]
+
 config affected by environment variables
 
   $ EDITOR=e1 hg config --debug | grep 'ui\.editor'
@@ -290,5 +298,10 @@ config editing without an editor
   $ tail -2 ~/.hgrc
   [a]
   b = 1
+
+  $ hg config --user a.b 2
+  $ tail -2 ~/.hgrc
+  [a]
+  b = 2
 
 #endif

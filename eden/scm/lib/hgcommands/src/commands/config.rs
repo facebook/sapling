@@ -32,17 +32,25 @@ use crate::commands::FormatterOpts;
 
 define_flags! {
     pub struct ConfigOpts {
-        /// edit user config
+        /// edit config, implying --user if no other flags set (DEPRECATED)
         #[short('e')]
         edit: bool,
 
-        /// edit repository config
+        /// edit user config, opening in editor if no args given
+        #[short('u')]
+        user: bool,
+
+        /// edit repository config, opening in editor if no args given
         #[short('l')]
         local: bool,
 
-        /// edit global config
+        /// edit system config, opening in editor if no args given (DEPRECATED)
         #[short('g')]
         global: bool,
+
+        /// edit system config, opening in editor if no args given
+        #[short('s')]
+        system: bool,
 
         formatter_opts: FormatterOpts,
 
@@ -64,7 +72,7 @@ pub fn run(ctx: ReqCtx<ConfigOpts>, repo: &mut OptionalRepo) -> Result<u8> {
         ));
     }
 
-    if ctx.opts.edit || ctx.opts.local || ctx.opts.global {
+    if ctx.opts.edit || ctx.opts.local || ctx.opts.global || ctx.opts.user || ctx.opts.system {
         bail!(errors::FallbackToPython(
             "config edit options not supported in Rust".to_owned()
         ));
@@ -276,12 +284,12 @@ pub fn doc() -> &'static str {
     With multiple arguments, print names and values of all config
     items with matching section names.
 
-    With --edit, edit the user-level config file. With --global,
+    With --user, edit the user-level config file. With --system,
     edit the system-wide config file. With --local, edit the
     repository-level config file. If there are no arguments, spawn
     an editor to edit the config file. If there are arguments in
-    `section.name=value` format, the related config files will be
-    updated directly without spawning an editor.
+    `section.name=value` or `section.name value` format, the appropriate
+    config file will be updated directly without spawning an editor.
 
     With --debug, the source (filename and line number) is printed
     for each config item.

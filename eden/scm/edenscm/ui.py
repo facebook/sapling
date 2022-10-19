@@ -106,7 +106,7 @@ default = %s
 # name and email (local to this repository, optional), e.g.
 # username = Jane Doe <jdoe@example.com>
 """,
-    "global": """# example system-wide hg config (see 'hg help config' for more info)
+    "system": """# example system-wide hg config (see 'hg help config' for more info)
 
 [ui]
 # uncomment to disable color in command output

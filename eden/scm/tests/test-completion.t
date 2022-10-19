@@ -408,7 +408,7 @@ Show all commands + options
   cat: output, rev, decode, include, exclude, template
   clone: noupdate, updaterev, rev, pull, stream, shallow, git
   commit: addremove, amend, edit, interactive, reuse-message, include, exclude, message, logfile, date, user
-  config: edit, local, global, template
+  config: edit, user, local, system, global, template
   continue: 
   copy: after, force, include, exclude, dry-run
   debug-args: 
