@@ -75,7 +75,7 @@ pub fn upload<P: AsRef<Path>>(
                     let ctx = ctx.clone();
                     let store = globalrevs_store.clone();
 
-                    async move { bulk_import_globalrevs(&ctx, &store, chunk.iter()).await }
+                    async move { bulk_import_globalrevs(&ctx, store.as_ref(), chunk.iter()).await }
                         .boxed()
                         .compat()
                 })

@@ -30,17 +30,16 @@ type Cache = (
     HashMap<HgChangesetId, ChangesetId>,
 );
 
-#[derive(Clone)]
-pub struct MemWritesBonsaiHgMapping<T: BonsaiHgMapping + Clone + 'static> {
-    inner: T,
+pub struct MemWritesBonsaiHgMapping {
+    inner: Arc<dyn BonsaiHgMapping>,
     cache: Arc<Mutex<Cache>>,
     no_access_to_inner: Arc<AtomicBool>,
     readonly: Arc<AtomicBool>,
     save_noop_writes: Arc<AtomicBool>,
 }
 
-impl<T: BonsaiHgMapping + Clone + 'static> MemWritesBonsaiHgMapping<T> {
-    pub fn new(inner: T) -> Self {
+impl MemWritesBonsaiHgMapping {
+    pub fn new(inner: Arc<dyn BonsaiHgMapping>) -> Self {
         Self {
             inner,
             cache: Default::default(),
@@ -65,7 +64,7 @@ impl<T: BonsaiHgMapping + Clone + 'static> MemWritesBonsaiHgMapping<T> {
     }
 }
 
-impl<T: BonsaiHgMapping + Clone + 'static> MemWritesBonsaiHgMapping<T> {
+impl MemWritesBonsaiHgMapping {
     async fn get_from_cache_and_inner<I, O>(
         &self,
         ctx: &CoreContext,
@@ -101,7 +100,7 @@ impl<T: BonsaiHgMapping + Clone + 'static> MemWritesBonsaiHgMapping<T> {
 }
 
 #[async_trait]
-impl<T: BonsaiHgMapping + Clone + 'static> BonsaiHgMapping for MemWritesBonsaiHgMapping<T> {
+impl BonsaiHgMapping for MemWritesBonsaiHgMapping {
     fn repo_id(&self) -> RepositoryId {
         self.inner.repo_id()
     }

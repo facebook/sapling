@@ -77,7 +77,6 @@ queries! {
     }
 }
 
-#[derive(Clone)]
 pub struct SqlBonsaiGlobalrevMapping {
     connections: SqlConnections,
     repo_id: RepositoryId,
@@ -266,7 +265,7 @@ async fn select_mapping(
 /// they are correct. Don't use this to assign new Globalrevs.
 pub async fn bulk_import_globalrevs<'a>(
     ctx: &'a CoreContext,
-    globalrevs_store: &'a impl BonsaiGlobalrevMapping,
+    globalrevs_store: &'a dyn BonsaiGlobalrevMapping,
     changesets: impl IntoIterator<Item = &'a BonsaiChangeset>,
 ) -> Result<(), Error> {
     let mut entries = vec![];

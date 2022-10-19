@@ -221,21 +221,17 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
 
     // Inserting duplicates fails
     let txn = conn.start_transaction().await?;
-    let res = {
-        let ctx = ctx.clone();
-        let mapping = mapping.clone();
-        async move {
-            let entry_conflict = BonsaiGitMappingEntry {
-                bcs_id: bonsai::TWOS_CSID,
-                git_sha1: THREES_GIT_SHA1,
-            };
-            mapping
-                .bulk_add_git_mapping_in_transaction(&ctx, &[entry_conflict], txn)
-                .await?
-                .commit()
-                .await?;
-            Result::<_, AddGitMappingErrorKind>::Ok(())
-        }
+    let res = async {
+        let entry_conflict = BonsaiGitMappingEntry {
+            bcs_id: bonsai::TWOS_CSID,
+            git_sha1: THREES_GIT_SHA1,
+        };
+        mapping
+            .bulk_add_git_mapping_in_transaction(&ctx, &[entry_conflict], txn)
+            .await?
+            .commit()
+            .await?;
+        Result::<_, AddGitMappingErrorKind>::Ok(())
     }
     .await;
     assert_matches!(

@@ -17,7 +17,6 @@ use anyhow::Result;
 use blobrepo::scribe::log_commit_to_scribe;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use bonsai_hg_mapping::BonsaiHgMappingRef;

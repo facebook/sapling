@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use abomonation_derive::Abomonation;
 use anyhow::anyhow;
@@ -79,16 +80,20 @@ impl BonsaiSvnrevMappingCacheEntry {
         }
     }
 }
-#[derive(Clone)]
-pub struct CachingBonsaiSvnrevMapping<T> {
+
+pub struct CachingBonsaiSvnrevMapping {
     cachelib: CachelibHandler<BonsaiSvnrevMappingCacheEntry>,
     memcache: MemcacheHandler,
     keygen: KeyGen,
-    inner: T,
+    inner: Arc<dyn BonsaiSvnrevMapping>,
 }
 
-impl<T> CachingBonsaiSvnrevMapping<T> {
-    pub fn new(fb: FacebookInit, inner: T, cachelib: VolatileLruCachePool) -> Self {
+impl CachingBonsaiSvnrevMapping {
+    pub fn new(
+        fb: FacebookInit,
+        inner: Arc<dyn BonsaiSvnrevMapping>,
+        cachelib: VolatileLruCachePool,
+    ) -> Self {
         Self {
             inner,
             cachelib: cachelib.into(),
@@ -99,7 +104,7 @@ impl<T> CachingBonsaiSvnrevMapping<T> {
         }
     }
 
-    pub fn new_test(inner: T) -> Self {
+    pub fn new_test(inner: Arc<dyn BonsaiSvnrevMapping>) -> Self {
         Self {
             inner,
             cachelib: CachelibHandler::create_mock(),
@@ -124,12 +129,9 @@ impl<T> CachingBonsaiSvnrevMapping<T> {
 }
 
 #[async_trait]
-impl<T> BonsaiSvnrevMapping for CachingBonsaiSvnrevMapping<T>
-where
-    T: BonsaiSvnrevMapping + Clone + Sync + Send + 'static,
-{
+impl BonsaiSvnrevMapping for CachingBonsaiSvnrevMapping {
     fn repo_id(&self) -> RepositoryId {
-        self.inner.repo_id()
+        self.inner.as_ref().repo_id()
     }
 
     async fn bulk_import(
@@ -137,7 +139,7 @@ where
         ctx: &CoreContext,
         entries: &[BonsaiSvnrevMappingEntry],
     ) -> Result<(), Error> {
-        self.inner.bulk_import(ctx, entries).await
+        self.inner.as_ref().bulk_import(ctx, entries).await
     }
 
     async fn get(
@@ -208,9 +210,9 @@ impl MemcacheEntity for BonsaiSvnrevMappingCacheEntry {
     }
 }
 
-type CacheRequest<'a, T> = (&'a CoreContext, &'a CachingBonsaiSvnrevMapping<T>);
+type CacheRequest<'a> = (&'a CoreContext, &'a CachingBonsaiSvnrevMapping);
 
-impl<T> EntityStore<BonsaiSvnrevMappingCacheEntry> for CacheRequest<'_, T> {
+impl EntityStore<BonsaiSvnrevMappingCacheEntry> for CacheRequest<'_> {
     fn cachelib(&self) -> &CachelibHandler<BonsaiSvnrevMappingCacheEntry> {
         let (_, mapping) = self;
         &mapping.cachelib
@@ -234,10 +236,7 @@ impl<T> EntityStore<BonsaiSvnrevMappingCacheEntry> for CacheRequest<'_, T> {
 }
 
 #[async_trait]
-impl<T> KeyedEntityStore<ChangesetId, BonsaiSvnrevMappingCacheEntry> for CacheRequest<'_, T>
-where
-    T: BonsaiSvnrevMapping + Clone + Send + Sync + 'static,
-{
+impl KeyedEntityStore<ChangesetId, BonsaiSvnrevMappingCacheEntry> for CacheRequest<'_> {
     fn get_cache_key(&self, key: &ChangesetId) -> String {
         let (_, mapping) = self;
         format!("{}.bonsai.{}", mapping.repo_id(), key)
@@ -252,6 +251,7 @@ where
 
         let res = mapping
             .inner
+            .as_ref()
             .get(ctx, BonsaisOrSvnrevs::Bonsai(keys.into_iter().collect()))
             .await
             .with_context(|| "Error fetching svnrevs from bonsais from SQL")?;
@@ -270,10 +270,7 @@ where
 }
 
 #[async_trait]
-impl<T> KeyedEntityStore<Svnrev, BonsaiSvnrevMappingCacheEntry> for CacheRequest<'_, T>
-where
-    T: BonsaiSvnrevMapping + Clone + Send + Sync + 'static,
-{
+impl KeyedEntityStore<Svnrev, BonsaiSvnrevMappingCacheEntry> for CacheRequest<'_> {
     fn get_cache_key(&self, key: &Svnrev) -> String {
         let (_, mapping) = self;
         format!("{}.svnrev.{}", mapping.repo_id(), key.id())
@@ -288,6 +285,7 @@ where
 
         let res = mapping
             .inner
+            .as_ref()
             .get(ctx, BonsaisOrSvnrevs::Svnrev(keys.into_iter().collect()))
             .await
             .with_context(|| "Error fetching bonsais from svnrevs from SQL")?;

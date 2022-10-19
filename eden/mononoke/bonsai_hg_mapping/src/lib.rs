@@ -10,7 +10,6 @@ use std::sync::Arc;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
-use auto_impl::auto_impl;
 use context::CoreContext;
 use context::PerfCounterType;
 use fbinit::FacebookInit;
@@ -95,7 +94,6 @@ impl From<Vec<HgChangesetId>> for BonsaiOrHgChangesetIds {
 
 #[facet::facet]
 #[async_trait]
-#[auto_impl(&, Arc, Box)]
 pub trait BonsaiHgMapping: Send + Sync {
     fn repo_id(&self) -> RepositoryId;
 
@@ -186,7 +184,6 @@ impl RendezVousConnection {
     }
 }
 
-#[derive(Clone)]
 pub struct SqlBonsaiHgMapping {
     write_connection: Connection,
     read_connection: RendezVousConnection,

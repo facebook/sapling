@@ -36,7 +36,6 @@ define_stats! {
     adds: timeseries(Rate, Sum),
 }
 
-#[derive(Clone)]
 pub struct SqlBonsaiGitMapping {
     connections: SqlConnections,
     repo_id: RepositoryId,

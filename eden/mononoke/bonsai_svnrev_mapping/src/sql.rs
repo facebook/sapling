@@ -56,7 +56,6 @@ queries! {
     }
 }
 
-#[derive(Clone)]
 pub struct SqlBonsaiSvnrevMapping {
     connections: SqlConnections,
     repo_id: RepositoryId,

@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use abomonation_derive::Abomonation;
 use anyhow::anyhow;
@@ -75,16 +76,19 @@ impl BonsaiGlobalrevMappingCacheEntry {
     }
 }
 
-#[derive(Clone)]
-pub struct CachingBonsaiGlobalrevMapping<T> {
+pub struct CachingBonsaiGlobalrevMapping {
     cachelib: CachelibHandler<BonsaiGlobalrevMappingCacheEntry>,
     memcache: MemcacheHandler,
     keygen: KeyGen,
-    inner: T,
+    inner: Arc<dyn BonsaiGlobalrevMapping>,
 }
 
-impl<T> CachingBonsaiGlobalrevMapping<T> {
-    pub fn new(fb: FacebookInit, inner: T, cachelib: VolatileLruCachePool) -> Self {
+impl CachingBonsaiGlobalrevMapping {
+    pub fn new(
+        fb: FacebookInit,
+        inner: Arc<dyn BonsaiGlobalrevMapping>,
+        cachelib: VolatileLruCachePool,
+    ) -> Self {
         Self {
             inner,
             cachelib: cachelib.into(),
@@ -95,7 +99,7 @@ impl<T> CachingBonsaiGlobalrevMapping<T> {
         }
     }
 
-    pub fn new_test(inner: T) -> Self {
+    pub fn new_test(inner: Arc<dyn BonsaiGlobalrevMapping>) -> Self {
         Self {
             inner,
             cachelib: CachelibHandler::create_mock(),
@@ -120,12 +124,9 @@ impl<T> CachingBonsaiGlobalrevMapping<T> {
 }
 
 #[async_trait]
-impl<T> BonsaiGlobalrevMapping for CachingBonsaiGlobalrevMapping<T>
-where
-    T: BonsaiGlobalrevMapping + Clone + Sync + Send + 'static,
-{
+impl BonsaiGlobalrevMapping for CachingBonsaiGlobalrevMapping {
     fn repo_id(&self) -> RepositoryId {
-        self.inner.repo_id()
+        self.inner.as_ref().repo_id()
     }
 
     async fn bulk_import(
@@ -133,7 +134,7 @@ where
         ctx: &CoreContext,
         entries: &[BonsaiGlobalrevMappingEntry],
     ) -> Result<(), Error> {
-        self.inner.bulk_import(ctx, entries).await
+        self.inner.as_ref().bulk_import(ctx, entries).await
     }
 
     async fn get(
@@ -171,11 +172,14 @@ where
         ctx: &CoreContext,
         globalrev: Globalrev,
     ) -> Result<Option<Globalrev>, Error> {
-        self.inner.get_closest_globalrev(ctx, globalrev).await
+        self.inner
+            .as_ref()
+            .get_closest_globalrev(ctx, globalrev)
+            .await
     }
 
     async fn get_max(&self, ctx: &CoreContext) -> Result<Option<Globalrev>, Error> {
-        self.inner.get_max(ctx).await
+        self.inner.as_ref().get_max(ctx).await
     }
 }
 
@@ -216,9 +220,9 @@ impl MemcacheEntity for BonsaiGlobalrevMappingCacheEntry {
     }
 }
 
-type CacheRequest<'a, T> = (&'a CoreContext, &'a CachingBonsaiGlobalrevMapping<T>);
+type CacheRequest<'a> = (&'a CoreContext, &'a CachingBonsaiGlobalrevMapping);
 
-impl<T> EntityStore<BonsaiGlobalrevMappingCacheEntry> for CacheRequest<'_, T> {
+impl EntityStore<BonsaiGlobalrevMappingCacheEntry> for CacheRequest<'_> {
     fn cachelib(&self) -> &CachelibHandler<BonsaiGlobalrevMappingCacheEntry> {
         let (_, mapping) = self;
         &mapping.cachelib
@@ -242,10 +246,7 @@ impl<T> EntityStore<BonsaiGlobalrevMappingCacheEntry> for CacheRequest<'_, T> {
 }
 
 #[async_trait]
-impl<T> KeyedEntityStore<ChangesetId, BonsaiGlobalrevMappingCacheEntry> for CacheRequest<'_, T>
-where
-    T: BonsaiGlobalrevMapping + Send + Sync + Clone + 'static,
-{
+impl KeyedEntityStore<ChangesetId, BonsaiGlobalrevMappingCacheEntry> for CacheRequest<'_> {
     fn get_cache_key(&self, key: &ChangesetId) -> String {
         let (_, mapping) = self;
         format!("{}.bonsai.{}", mapping.repo_id(), key)
@@ -260,6 +261,7 @@ where
 
         let res = mapping
             .inner
+            .as_ref()
             .get(ctx, BonsaisOrGlobalrevs::Bonsai(keys.into_iter().collect()))
             .await
             .with_context(|| "Error fetching globalrevs from bonsais from SQL")?;
@@ -278,10 +280,7 @@ where
 }
 
 #[async_trait]
-impl<T> KeyedEntityStore<Globalrev, BonsaiGlobalrevMappingCacheEntry> for CacheRequest<'_, T>
-where
-    T: BonsaiGlobalrevMapping + Send + Sync + Clone + 'static,
-{
+impl KeyedEntityStore<Globalrev, BonsaiGlobalrevMappingCacheEntry> for CacheRequest<'_> {
     fn get_cache_key(&self, key: &Globalrev) -> String {
         let (_, mapping) = self;
         format!("{}.globalrev.{}", mapping.repo_id(), key.id())
@@ -296,6 +295,7 @@ where
 
         let res = mapping
             .inner
+            .as_ref()
             .get(
                 ctx,
                 BonsaisOrGlobalrevs::Globalrev(keys.into_iter().collect()),

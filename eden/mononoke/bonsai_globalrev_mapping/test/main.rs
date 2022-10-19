@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::Error;
 use assert_matches::assert_matches;
 use bonsai_globalrev_mapping::add_globalrevs;
@@ -228,7 +230,8 @@ async fn test_closest_globalrev(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_caching(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mapping = SqlBonsaiGlobalrevMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let mapping =
+        Arc::new(SqlBonsaiGlobalrevMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO));
     let caching = CachingBonsaiGlobalrevMapping::new_test(mapping.clone());
     let store = caching
         .cachelib()

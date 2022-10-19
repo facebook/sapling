@@ -131,7 +131,6 @@ impl From<HgChangesetId> for BonsaiOrHgChangesetId {
     }
 }
 
-#[derive(Clone)]
 pub struct CachingBonsaiHgMapping {
     mapping: Arc<dyn BonsaiHgMapping>,
     cache_pool: CachelibHandler<BonsaiHgMappingCacheEntry>,

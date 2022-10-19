@@ -10,7 +10,6 @@ mod sql;
 
 use anyhow::Error;
 use async_trait::async_trait;
-use auto_impl::auto_impl;
 use context::CoreContext;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -76,7 +75,6 @@ impl From<Vec<Svnrev>> for BonsaisOrSvnrevs {
 
 #[facet::facet]
 #[async_trait]
-#[auto_impl(&, Arc, Box)]
 pub trait BonsaiSvnrevMapping: Send + Sync {
     fn repo_id(&self) -> RepositoryId;
 
