@@ -12,7 +12,6 @@ use std::sync::Arc;
 use anyhow::format_err;
 use anyhow::Error;
 use async_trait::async_trait;
-use auto_impl::auto_impl;
 use changesets::Changesets;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
@@ -29,7 +28,6 @@ mod tests;
 /// Concrete implementation may add more efficient caching logic to make request faster
 #[facet::facet]
 #[async_trait]
-#[auto_impl(&, Arc, Box)]
 pub trait ChangesetFetcher: Send + Sync + 'static {
     async fn get_generation_number(
         &self,

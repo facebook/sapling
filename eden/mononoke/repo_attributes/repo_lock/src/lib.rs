@@ -9,7 +9,6 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
-use auto_impl::auto_impl;
 use mononoke_types::RepositoryId;
 use sql::queries;
 use sql::Connection;
@@ -28,7 +27,6 @@ pub enum RepoLockState {
 
 #[facet::facet]
 #[async_trait]
-#[auto_impl(&, Arc, Box)]
 pub trait RepoLock: Send + Sync {
     /// Check whether a repo is locked, which will prevent new commits being pushed.
     async fn check_repo_lock(&self) -> Result<RepoLockState, Error>;

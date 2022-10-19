@@ -17,7 +17,6 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use changeset_fetcher::ArcChangesetFetcher;
-use changeset_fetcher::ChangesetFetcher;
 use cloned::cloned;
 use common::advance_bfs_layer;
 use common::changesets_with_generation_numbers;
@@ -1142,6 +1141,7 @@ mod test {
     use blobrepo::BlobRepo;
     use bookmarks::BookmarkName;
     use bookmarks::BookmarksMaybeStaleExt;
+    use changeset_fetcher::ChangesetFetcher;
     use cloned::cloned;
     use context::CoreContext;
     use dashmap::DashMap;

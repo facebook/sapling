@@ -16,7 +16,6 @@ use anyhow::Result;
 use ascii::AsciiString;
 use async_trait::async_trait;
 use changeset_fetcher::ArcChangesetFetcher;
-use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use futures::future::try_join;
 use futures::future::BoxFuture;

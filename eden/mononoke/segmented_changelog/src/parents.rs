@@ -6,7 +6,6 @@
  */
 
 use changeset_fetcher::ArcChangesetFetcher;
-use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 
 use crate::dag::errors::BackendError;

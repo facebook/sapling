@@ -9,7 +9,6 @@ use std::fmt;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use auto_impl::auto_impl;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
@@ -71,7 +70,6 @@ pub trait CacheBlobstoreExt: Blobstore {
 /// No state is permitted to demote to Leased.
 /// Caches that do not support LeaseOps do not have the Leased state.
 #[async_trait]
-#[auto_impl(Arc)]
 pub trait CacheOps: fmt::Display + fmt::Debug + Send + Sync {
     const HIT_COUNTER: Option<PerfCounterType> = None;
     const MISS_COUNTER: Option<PerfCounterType> = None;
@@ -98,7 +96,6 @@ pub trait CacheOps: fmt::Display + fmt::Debug + Send + Sync {
 /// Leased to Empty, thus letting another writer that shares the same cache through to the backing
 /// store.
 #[async_trait]
-#[auto_impl(Arc)]
 pub trait LeaseOps: fmt::Display + fmt::Debug + Send + Sync {
     /// Ask the cache to attempt to lock out other users of this cache for a particular key.
     /// This is an atomic test-and-set of the cache entry; it tests that the entry is Empty, and if

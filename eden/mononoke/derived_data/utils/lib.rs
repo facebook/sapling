@@ -22,7 +22,6 @@ use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use blame::BlameRoot;
 use blame::RootBlameV2;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
-use changeset_fetcher::ChangesetFetcher;
 use changeset_fetcher::ChangesetFetcherArc;
 use changeset_info::ChangesetInfo;
 use changesets::ChangesetsArc;

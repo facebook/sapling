@@ -14,6 +14,8 @@ use futures::stream;
 use futures::stream::Stream;
 use futures::stream::TryStreamExt;
 
+// Auto-impl for Box so that render streams can contain either R: Render
+// or Box<dyn Render>.
 #[auto_impl(Box)]
 /// A renderable item.  This trait should be implemented by anything that can
 /// be output from a command.

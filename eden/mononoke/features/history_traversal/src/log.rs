@@ -19,7 +19,6 @@ use async_trait::async_trait;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use changeset_fetcher::ArcChangesetFetcher;
-use changeset_fetcher::ChangesetFetcher;
 use cloned::cloned;
 use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
@@ -1212,6 +1211,7 @@ mod test {
     use blobrepo::BlobRepo;
     use bonsai_hg_mapping::BonsaiHgMapping;
     use bookmarks::Bookmarks;
+    use changeset_fetcher::ChangesetFetcher;
     use changeset_fetcher::ChangesetFetcherArc;
     use changesets::Changesets;
     use changesets::ChangesetsRef;

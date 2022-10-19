@@ -32,7 +32,6 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use changeset_fetcher::ArcChangesetFetcher;
-use changeset_fetcher::ChangesetFetcher;
 use cloned::cloned;
 use context::CoreContext;
 use futures_ext::BoxFuture;

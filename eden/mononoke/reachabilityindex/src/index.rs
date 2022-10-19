@@ -13,7 +13,6 @@ use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use changeset_fetcher::ArcChangesetFetcher;
-use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use maplit::hashmap;
 use maplit::hashset;
