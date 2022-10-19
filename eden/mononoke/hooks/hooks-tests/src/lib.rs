@@ -1425,7 +1425,7 @@ async fn hook_manager_repo(fb: FacebookInit, repo: &BasicTestRepo) -> HookManage
     let content_manager = RepoFileContentManager::new(&repo);
     HookManager::new(
         ctx.fb,
-        DefaultAclProvider::new(fb),
+        DefaultAclProvider::new(fb).as_ref(),
         Box::new(content_manager),
         HookManagerParams {
             disable_acl_checker: true,
@@ -1456,7 +1456,7 @@ async fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
 
     HookManager::new(
         ctx.fb,
-        DefaultAclProvider::new(fb),
+        DefaultAclProvider::new(fb).as_ref(),
         Box::new(content_manager),
         HookManagerParams {
             disable_acl_checker: true,
@@ -1494,7 +1494,7 @@ async fn test_verify_integrity_fast_failure(fb: FacebookInit) {
     let mut hm = hook_manager_many_files_dirs_repo(fb).await;
     load_hooks(
         fb,
-        &DefaultAclProvider::new(fb),
+        DefaultAclProvider::new(fb).as_ref(),
         &mut hm,
         &config,
         &hashset![],
@@ -1527,7 +1527,7 @@ async fn test_load_hooks_bad_rust_hook(fb: FacebookInit) {
 
     match load_hooks(
         fb,
-        &DefaultAclProvider::new(fb),
+        DefaultAclProvider::new(fb).as_ref(),
         &mut hm,
         &config,
         &hashset![],
@@ -1556,7 +1556,7 @@ async fn test_load_disabled_hooks(fb: FacebookInit) {
 
     load_hooks(
         fb,
-        &DefaultAclProvider::new(fb),
+        DefaultAclProvider::new(fb).as_ref(),
         &mut hm,
         &config,
         &hashset!["hook1".to_string()],
@@ -1590,7 +1590,7 @@ async fn test_load_disabled_hooks_referenced_by_bookmark(fb: FacebookInit) {
 
     load_hooks(
         fb,
-        &DefaultAclProvider::new(fb),
+        DefaultAclProvider::new(fb).as_ref(),
         &mut hm,
         &config,
         &hashset!["hook1".to_string()],
@@ -1606,7 +1606,7 @@ async fn test_load_disabled_hooks_hook_does_not_exist(fb: FacebookInit) {
 
     match load_hooks(
         fb,
-        &DefaultAclProvider::new(fb),
+        DefaultAclProvider::new(fb).as_ref(),
         &mut hm,
         &config,
         &hashset!["hook1".to_string()],

@@ -219,7 +219,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     };
     let acl_provider = DefaultAclProvider::new(fb);
     let security_checker = runtime.block_on(ConnectionSecurityChecker::new(
-        acl_provider,
+        acl_provider.as_ref(),
         &app.repo_configs().common,
     ))?;
     let source_control_server = source_control_impl::SourceControlServiceImpl::new(

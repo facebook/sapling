@@ -7,7 +7,6 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use auto_impl::auto_impl;
 
 use crate::BoxMembershipChecker;
 use crate::BoxPermissionChecker;
@@ -17,7 +16,6 @@ use crate::BoxPermissionChecker;
 /// These lists and groups control permissions to access various aspects of
 /// Mononoke.
 #[async_trait]
-#[auto_impl(&, Arc, Box)]
 pub trait AclProvider: Send + Sync {
     /// Returns a permission checker for the access control list that
     /// controls the named repository.

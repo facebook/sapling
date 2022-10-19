@@ -355,7 +355,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
             if let Some(tls_acceptor) = tls_acceptor {
                 let connection_security_checker =
-                    ConnectionSecurityChecker::new(acl_provider, &common).await?;
+                    ConnectionSecurityChecker::new(acl_provider.as_ref(), &common).await?;
 
                 serve::https(
                     logger,

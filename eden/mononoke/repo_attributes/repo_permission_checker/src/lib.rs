@@ -117,7 +117,7 @@ pub struct ProdRepoPermissionChecker {
 impl ProdRepoPermissionChecker {
     pub async fn new(
         logger: &Logger,
-        acl_provider: impl AclProvider,
+        acl_provider: &dyn AclProvider,
         repo_hipster_acl: Option<&str>,
         service_hipster_acl: Option<&str>,
         repo_region_hipster_acls: Vec<&str>,

@@ -78,7 +78,7 @@ pub struct HookManager {
 impl HookManager {
     pub async fn new(
         fb: FacebookInit,
-        acl_provider: impl AclProvider,
+        acl_provider: &dyn AclProvider,
         content_manager: Box<dyn FileContentManager>,
         hook_manager_params: HookManagerParams,
         mut scuba: MononokeScubaSampleBuilder,

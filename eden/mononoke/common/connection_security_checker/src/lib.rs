@@ -19,7 +19,7 @@ pub struct ConnectionSecurityChecker {
 }
 
 impl ConnectionSecurityChecker {
-    pub async fn new(acl_provider: impl AclProvider, common_config: &CommonConfig) -> Result<Self> {
+    pub async fn new(acl_provider: &dyn AclProvider, common_config: &CommonConfig) -> Result<Self> {
         let mut builder = PermissionCheckerBuilder::new();
 
         if let Some(tier) = &common_config.trusted_parties_hipster_tier {
