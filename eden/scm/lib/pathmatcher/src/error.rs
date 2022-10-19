@@ -9,4 +9,7 @@
 pub enum Error {
     #[error("unsuppported pattern kind {0}")]
     UnsupportedPatternKind(String),
+
+    #[error(transparent)]
+    IOError(#[from] util::errors::IOError),
 }
