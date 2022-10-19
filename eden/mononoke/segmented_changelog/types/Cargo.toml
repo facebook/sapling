@@ -13,7 +13,6 @@ path = "lib.rs"
 [dependencies]
 anyhow = "1.0.65"
 async-trait = "0.1.56"
-auto_impl = "0.4"
 context = { version = "0.1.0", path = "../../server/context" }
 dag = { version = "0.1.0", path = "../../../scm/lib/dag", features = ["for-tests"] }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

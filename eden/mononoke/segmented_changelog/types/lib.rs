@@ -12,7 +12,6 @@ use std::collections::HashMap;
 use anyhow::format_err;
 use anyhow::Result;
 use async_trait::async_trait;
-use auto_impl::auto_impl;
 use context::CoreContext;
 pub use dag;
 pub use dag::CloneData;
@@ -31,7 +30,6 @@ use thiserror::Error;
 
 #[facet::facet]
 #[async_trait]
-#[auto_impl(Arc)]
 pub trait SegmentedChangelog: Send + Sync {
     /// Get the identifier of a commit given it's commit graph location.
     ///

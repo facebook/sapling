@@ -943,7 +943,7 @@ impl RepoFactory {
         )
         .await
         .context(RepoFactoryError::SegmentedChangelog)?;
-        Ok(Arc::new(segmented_changelog))
+        Ok(segmented_changelog)
     }
 
     pub async fn segmented_changelog_manager(
