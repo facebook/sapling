@@ -21,13 +21,10 @@
 #include <optional>
 #include <type_traits>
 
+#include "eden/common/utils/StringConv.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/Throw.h"
 #include "eden/fs/utils/Utf8.h"
-
-#ifdef _WIN32
-#include <eden/common/utils/StringConv.h>
-#endif
 
 namespace facebook::eden {
 
