@@ -47,7 +47,7 @@ std::vector<std::string> fullnameCorpus = {
 class RE2Impl {
  public:
   RE2Impl() {}
-  void init(folly::StringPiece regex, CaseSensitivity caseSensitive) {
+  void init(std::string_view regex, CaseSensitivity caseSensitive) {
     re2::RE2::Options options;
     options.set_encoding(re2::RE2::Options::EncodingLatin1);
     options.set_never_nl(false);
@@ -58,7 +58,7 @@ class RE2Impl {
     regex_.reset(new re2::RE2(re2str, options));
   }
 
-  bool match(folly::StringPiece input) {
+  bool match(std::string_view input) {
     return re2::RE2::FullMatchN(
         re2::StringPiece(input.begin(), input.size()), *regex_, nullptr, 0);
   }
@@ -70,7 +70,7 @@ class RE2Impl {
 class GlobMatcherImpl {
  public:
   GlobMatcherImpl() {}
-  void init(folly::StringPiece glob, CaseSensitivity caseSensitive) {
+  void init(std::string_view glob, CaseSensitivity caseSensitive) {
     matcher_ = GlobMatcher::create(
                    glob,
                    caseSensitive == CaseSensitivity::Insensitive
@@ -90,8 +90,8 @@ class GlobMatcherImpl {
 class WildmatchImpl {
  public:
   WildmatchImpl() {}
-  void init(folly::StringPiece glob, CaseSensitivity caseSensitive) {
-    pattern_ = glob.str();
+  void init(std::string_view glob, CaseSensitivity caseSensitive) {
+    pattern_ = glob;
     flags_ = WM_PATHNAME |
         ((caseSensitive == CaseSensitivity::Insensitive) ? WM_CASEFOLD : 0);
   }
@@ -108,8 +108,8 @@ class WildmatchImpl {
 class FixedStringImpl {
  public:
   FixedStringImpl() {}
-  void init(folly::StringPiece match, CaseSensitivity caseSensitive) {
-    pattern_ = match.str();
+  void init(std::string_view match, CaseSensitivity caseSensitive) {
+    pattern_ = match;
     assert(caseSensitive == CaseSensitivity::Sensitive);
     (void)caseSensitive;
   }
@@ -126,13 +126,13 @@ class FixedStringImpl {
 class EndsWithImpl {
  public:
   EndsWithImpl() {}
-  void init(folly::StringPiece match, CaseSensitivity caseSensitive) {
-    pattern_ = match.str();
+  void init(std::string_view match, CaseSensitivity caseSensitive) {
+    pattern_ = match;
     assert(caseSensitive == CaseSensitivity::Sensitive);
     (void)caseSensitive;
   }
 
-  bool match(folly::StringPiece input) {
+  bool match(std::string_view input) {
     // Check that the end of the input matches the pattern
     if (input.size() > pattern_.size()) {
       return false;

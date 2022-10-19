@@ -8,8 +8,8 @@
 #pragma once
 
 #include <folly/Expected.h>
-#include <folly/Range.h>
-#include <cstdint>
+#include <stdint.h>
+#include <string_view>
 #include <vector>
 
 #include "eden/fs/utils/CaseSensitivity.h"
@@ -66,7 +66,7 @@ class GlobMatcher {
    * fails.
    */
   static folly::Expected<GlobMatcher, std::string> create(
-      folly::StringPiece glob,
+      std::string_view glob,
       GlobOptions options);
 
   /**
@@ -76,7 +76,7 @@ class GlobMatcher {
    * The entire text must match the pattern.  (If a only substring matches the
    * pattern this method will still return false.)
    */
-  bool match(folly::StringPiece text) const;
+  bool match(std::string_view text) const;
 
  private:
   explicit GlobMatcher(
@@ -84,12 +84,12 @@ class GlobMatcher {
       CaseSensitivity caseSensitive);
 
   static folly::Expected<size_t, std::string> parseBracketExpr(
-      folly::StringPiece glob,
+      std::string_view glob,
       size_t idx,
       CaseSensitivity caseSensitive,
       std::vector<uint8_t>* pattern);
   static bool addCharClass(
-      folly::StringPiece charClass,
+      std::string_view charClass,
       CaseSensitivity caseSensitive,
       std::vector<uint8_t>* pattern);
   static void
@@ -100,7 +100,7 @@ class GlobMatcher {
    * textIdx) is a mattern for the trailing portion of the pattern buffer
    * (starting at patternIdx).
    */
-  bool tryMatchAt(folly::StringPiece text, size_t textIdx, size_t patternIdx)
+  bool tryMatchAt(std::string_view text, size_t textIdx, size_t patternIdx)
       const;
 
   /**

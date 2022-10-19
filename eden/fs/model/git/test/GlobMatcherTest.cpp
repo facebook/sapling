@@ -5,20 +5,15 @@
  * GNU General Public License version 2.
  */
 
-#include <folly/portability/GTest.h>
-
 #include "eden/fs/model/git/GlobMatcher.h"
+
+#include <fmt/core.h>
+#include <folly/portability/GTest.h>
 
 namespace {
 
 using namespace facebook::eden;
-using folly::ByteRange;
-using folly::StringPiece;
-
-template <size_t N>
-StringPiece literal(const char (&str)[N]) {
-  return StringPiece{str, str + N - 1};
-}
+using namespace std::literals::string_view_literals;
 
 // Unfortunately we can't just say EXPECT_EQ(expected, match(...)) below,
 // due to a gcc / gtest bug: https://github.com/google/googletest/issues/322
@@ -342,13 +337,13 @@ TEST(Glob, testOther) {
   EXPECT_NOMATCH("foo\x9atest", "foo[\xa0-\xaf]test");
 }
 
-void testCharClass(StringPiece name, int (*libcFn)(int)) {
+void testCharClass(std::string_view name, int (*libcFn)(int)) {
   auto matcher =
-      GlobMatcher::create("[[:" + name.str() + ":]]", GlobOptions::DEFAULT)
+      GlobMatcher::create(fmt::format("[[:{}:]]", name), GlobOptions::DEFAULT)
           .value();
 
   uint8_t ch = 0;
-  StringPiece text{ByteRange(&ch, 1)};
+  std::string_view text{reinterpret_cast<char*>(&ch), 1};
   while (true) {
     // '/' is special, and never matches.
     // Anything outside of the ASCII range should also always return false.
@@ -388,7 +383,7 @@ TEST(Glob, testCharClasses) {
 TEST(Glob, fuzz_examples) {
   EXPECT_NOMATCH("aa", "[a]");
   EXPECT_NOMATCH("[[", "[\\[]");
-  EXPECT_NOMATCH(literal("\0\0"), literal("[\0]"));
+  EXPECT_NOMATCH("\0\0"sv, "[\0]"sv);
 }
 
 TEST(Glob, testRangeMerging) {

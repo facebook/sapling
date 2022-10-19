@@ -6,15 +6,13 @@
  */
 
 #include "eden/fs/model/git/GlobMatcher.h"
-#include "eden/fs/utils/PathFuncs.h"
 
+#include <fmt/core.h>
 #include <folly/logging/xlog.h>
 #include <algorithm>
 #include <limits>
 
-using folly::ByteRange;
 using folly::Expected;
-using folly::StringPiece;
 using std::string;
 using std::vector;
 
@@ -142,8 +140,8 @@ namespace facebook::eden {
 namespace {
 
 bool isStringPieceEqual(
-    StringPiece left,
-    StringPiece right,
+    std::string_view left,
+    std::string_view right,
     CaseSensitivity caseSensitive) {
   if (caseSensitive == CaseSensitivity::Sensitive) {
     return left == right;
@@ -209,7 +207,7 @@ GlobMatcher::~GlobMatcher() {}
  * - About 27% are simple "ends with" patterns (e.g., "*.txt")
  */
 Expected<GlobMatcher, string> GlobMatcher::create(
-    StringPiece glob,
+    std::string_view glob,
     GlobOptions options) {
   CaseSensitivity caseSensitive = options & GlobOptions::CASE_INSENSITIVE
       ? CaseSensitivity::Insensitive
@@ -351,7 +349,7 @@ Expected<GlobMatcher, string> GlobMatcher::create(
 }
 
 Expected<size_t, string> GlobMatcher::parseBracketExpr(
-    StringPiece glob,
+    std::string_view glob,
     size_t idx,
     CaseSensitivity caseSensitive,
     vector<uint8_t>* pattern) {
@@ -489,10 +487,11 @@ Expected<size_t, string> GlobMatcher::parseBracketExpr(
         auto classStart = idx + 2;
         for (auto end = classStart; end + 1 < glob.size(); ++end) {
           if (glob[end] == ':' && glob[end + 1] == ']') {
-            StringPiece charClass(glob.data() + classStart, glob.data() + end);
+            std::string_view charClass{
+                glob.data() + classStart, end - classStart};
             if (!addCharClass(charClass, caseSensitive, pattern)) {
               return folly::makeUnexpected<string>(
-                  "unknown character class \"" + charClass.str() + "\"");
+                  fmt::format("unknown character class \"{}\"", charClass));
             }
             idx = end + 1;
             isClass = true;
@@ -534,7 +533,7 @@ void GlobMatcher::addCharClassRange(
 }
 
 bool GlobMatcher::addCharClass(
-    StringPiece charClass,
+    std::string_view charClass,
     CaseSensitivity caseSensitive,
     vector<uint8_t>* pattern) {
   // Character class definitions.
@@ -608,12 +607,12 @@ bool GlobMatcher::addCharClass(
   return false;
 }
 
-bool GlobMatcher::match(StringPiece text) const {
+bool GlobMatcher::match(std::string_view text) const {
   return tryMatchAt(text, 0, 0);
 }
 
 bool GlobMatcher::tryMatchAt(
-    StringPiece text,
+    std::string_view text,
     size_t textIdx,
     size_t patternIdx) const {
   // Loop through all opcodes in the pattern buffer.
@@ -641,8 +640,8 @@ bool GlobMatcher::tryMatchAt(
           return false;
         }
         return isStringPieceEqual(
-            text.subpiece(textIdx, length),
-            StringPiece{ByteRange(literal, length)},
+            text.substr(textIdx, length),
+            std::string_view{reinterpret_cast<const char*>(literal), length},
             caseSensitive_);
       }
       // Not the final piece of the pattern.  We have to do the string compare
@@ -651,8 +650,8 @@ bool GlobMatcher::tryMatchAt(
         return false;
       }
       if (!isStringPieceEqual(
-              text.subpiece(textIdx, length),
-              StringPiece{ByteRange(literal, length)},
+              text.substr(textIdx, length),
+              std::string_view{reinterpret_cast<const char*>(literal), length},
               caseSensitive_)) {
         return false;
       }
@@ -681,16 +680,23 @@ bool GlobMatcher::tryMatchAt(
         // Jump ahead to the next place where we find this literal.  Make sure
         // we don't cross a '/'
         auto literalLength = pattern_[patternIdx + 1];
-        StringPiece literalPattern{
-            ByteRange(pattern_.data() + patternIdx + 2, literalLength)};
+        std::string_view literalPattern{
+            reinterpret_cast<const char*>(pattern_.data()) + patternIdx + 2,
+            literalLength};
         patternIdx += 2 + literalLength;
         auto nextSlash = text.find('/', textIdx);
         while (true) {
-          auto textPiece = text.subpiece(textIdx);
+          auto textPiece = text.substr(textIdx);
           auto literalIdx = caseSensitive_ == CaseSensitivity::Sensitive
-              ? qfind(textPiece, literalPattern, folly::AsciiCaseSensitive{})
-              : qfind(textPiece, literalPattern, folly::AsciiCaseInsensitive{});
-          if (literalIdx == StringPiece::npos) {
+              ? qfind(
+                    folly::StringPiece{textPiece},
+                    folly::StringPiece{literalPattern},
+                    folly::AsciiCaseSensitive{})
+              : qfind(
+                    folly::StringPiece{textPiece},
+                    folly::StringPiece{literalPattern},
+                    folly::AsciiCaseInsensitive{});
+          if (literalIdx == std::string_view::npos) {
             // No match.
             return false;
           }
@@ -745,8 +751,8 @@ bool GlobMatcher::tryMatchAt(
         return false;
       }
       if (!isStringPieceEqual(
-              text.subpiece(text.size() - length),
-              StringPiece{ByteRange(literal, length)},
+              text.substr(text.size() - length),
+              std::string_view{reinterpret_cast<const char*>(literal), length},
               caseSensitive_)) {
         return false;
       }
@@ -773,7 +779,7 @@ bool GlobMatcher::tryMatchAt(
       // slash, so we can start from the previous character and scan the
       // remaining text for "/." If we find one, then this is not a match.
       auto searchIndex = textIdx == 0 ? 0 : textIdx - 1;
-      return text.find("/.", searchIndex) == StringPiece::npos;
+      return text.find("/.", searchIndex) == std::string_view::npos;
     } else if (pattern_[patternIdx] == GLOB_STAR_STAR_SLASH) {
       ++patternIdx;
       auto pathComponentInMatchCannotStartWithDot =
@@ -790,7 +796,7 @@ bool GlobMatcher::tryMatchAt(
 
         auto prevTextIdx = textIdx;
         textIdx = text.find('/', prevTextIdx + 1);
-        if (textIdx == StringPiece::npos) {
+        if (textIdx == std::string_view::npos) {
           // No match.
           return false;
         } else if (
