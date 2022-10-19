@@ -167,7 +167,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
             tracing::debug!(target: "status_info", status_mode="rust");
 
             let matcher = Arc::new(AlwaysMatcher::new());
-            let status = wc.status(matcher, SystemTime::UNIX_EPOCH, repo.config())?;
+            let status = wc.status(matcher, SystemTime::UNIX_EPOCH, repo.config(), ctx.io())?;
             let copymap = wc.copymap()?.into_iter().collect();
             (status, copymap)
         }

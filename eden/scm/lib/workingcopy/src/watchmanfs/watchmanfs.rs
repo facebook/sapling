@@ -5,12 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::SystemTime;
 
 use anyhow::Result;
 use configmodel::Config;
+use configmodel::ConfigExt;
+use io::IO;
 use manifest_tree::ReadTreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::Matcher;
@@ -84,6 +87,7 @@ impl PendingChanges for WatchmanFileSystem {
         _matcher: Arc<dyn Matcher + Send + Sync + 'static>,
         last_write: SystemTime,
         config: &dyn Config,
+        io: &IO,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         let state = WatchmanState::new(WatchmanTreeState {
             treestate: self.treestate.clone(),
@@ -91,6 +95,35 @@ impl PendingChanges for WatchmanFileSystem {
         })?;
 
         let result = async_runtime::block_on(self.query_result(&state))?;
+
+        let should_warn = config.get_or_default("fsmonitor", "warn-fresh-instance")?;
+        if result.is_fresh_instance && should_warn {
+            let old_pid = parse_watchman_pid(state.get_clock().as_ref());
+            let new_pid = parse_watchman_pid(Some(&result.clock));
+            let mut output = io.output();
+            match (old_pid, new_pid) {
+                (Some(old_pid), Some(new_pid)) if old_pid != new_pid => {
+                    writeln!(
+                        &mut output,
+                        "warning: watchman has recently restarted (old pid {}, new pid {}) - operation will be slower than usual",
+                        old_pid, new_pid
+                    )?;
+                }
+                (None, Some(new_pid)) => {
+                    writeln!(
+                        &mut output,
+                        "warning: watchman has recently started (pid {}) - operation will be slower than usual",
+                        new_pid
+                    )?;
+                }
+                _ => {
+                    writeln!(
+                        &mut output,
+                        "warning: watchman failed to catch up with file change events and requires a full scan - operation will be slower than usual"
+                    )?;
+                }
+            }
+        }
 
         let manifests =
             WorkingCopy::current_manifests(&self.treestate.lock(), &self.tree_resolver)?;
@@ -113,5 +146,15 @@ impl PendingChanges for WatchmanFileSystem {
         )?;
 
         Ok(Box::new(pending_changes.into_iter()))
+    }
+}
+
+fn parse_watchman_pid(clock: Option<&Clock>) -> Option<u32> {
+    match clock {
+        Some(Clock::Spec(ClockSpec::StringClock(clock_str))) => match clock_str.split(':').nth(2) {
+            None => None,
+            Some(pid) => pid.parse().ok(),
+        },
+        _ => None,
     }
 }

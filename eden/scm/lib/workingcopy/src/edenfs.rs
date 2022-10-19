@@ -12,6 +12,7 @@ use std::time::SystemTime;
 use anyhow::anyhow;
 use anyhow::Result;
 use configmodel::Config;
+use io::IO;
 use pathmatcher::Matcher;
 use thrift_types::edenfs::ScmFileStatus;
 use types::RepoPathBuf;
@@ -39,6 +40,7 @@ impl PendingChanges for EdenFileSystem {
         _matcher: Arc<dyn Matcher + Send + Sync + 'static>,
         _last_write: SystemTime,
         _config: &dyn Config,
+        _io: &IO,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         let result = edenfs_client::status::get_status(&self.root)?;
         Ok(Box::new(result.status.entries.into_iter().filter_map(

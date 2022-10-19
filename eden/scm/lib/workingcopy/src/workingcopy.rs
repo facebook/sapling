@@ -14,6 +14,7 @@ use anyhow::anyhow;
 use anyhow::Result;
 use configmodel::Config;
 use configparser::config::ConfigSet;
+use io::IO;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
@@ -241,6 +242,7 @@ impl WorkingCopy {
         matcher: Arc<dyn Matcher + Send + Sync + 'static>,
         last_write: SystemTime,
         config: &dyn Config,
+        io: &IO,
     ) -> Result<Status> {
         let added_files = self.added_files()?;
 
@@ -278,7 +280,7 @@ impl WorkingCopy {
             .filesystem
             .lock()
             .inner
-            .pending_changes(matcher.clone(), last_write, config)?
+            .pending_changes(matcher.clone(), last_write, config, io)?
             .filter_map(|result| match result {
                 Ok(PendingChangeResult::File(change_type)) => {
                     match matcher.matches_file(change_type.get_path()) {

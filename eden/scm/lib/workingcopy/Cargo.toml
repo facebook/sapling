@@ -14,6 +14,7 @@ crossbeam = "0.8"
 edenfs_client = { version = "0.1.0", path = "../edenfs-client", optional = true }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 identity = { version = "0.1.0", path = "../identity" }
+io = { version = "0.1.0", path = "../io" }
 manifest = { version = "0.1.0", path = "../manifest" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 parking_lot = { version = "0.11.2", features = ["send_guard"] }

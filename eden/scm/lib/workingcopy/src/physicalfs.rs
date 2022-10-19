@@ -11,6 +11,7 @@ use std::time::SystemTime;
 
 use anyhow::Result;
 use configmodel::Config;
+use io::IO;
 use manifest_tree::ReadTreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::Matcher;
@@ -71,6 +72,7 @@ impl PendingChangesTrait for PhysicalFileSystem {
         matcher: Arc<dyn Matcher + Send + Sync + 'static>,
         last_write: SystemTime,
         _config: &dyn Config,
+        _io: &IO,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         let root = self.vfs.root().to_path_buf();
         let ident = identity::must_sniff_dir(&root)?;

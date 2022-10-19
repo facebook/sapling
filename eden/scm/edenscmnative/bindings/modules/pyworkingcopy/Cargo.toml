@@ -7,6 +7,7 @@ edition = "2021"
 anyhow = "1.0.20"
 cpython = { version = "0.7", default-features = false }
 cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+io = { path = "../../../../lib/io" }
 parking_lot = "0.11.2"
 pathmatcher = { path = "../../../../lib/pathmatcher" }
 pyconfigparser = { path = "../pyconfigparser" }
