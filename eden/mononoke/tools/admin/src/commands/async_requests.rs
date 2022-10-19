@@ -17,9 +17,7 @@ use anyhow::Result;
 use clap::Parser;
 use clap::Subcommand;
 use context::SessionContainer;
-use maplit::hashmap;
 use megarepo_api::MegarepoApi;
-use metaconfig_parser::RepoConfigs;
 use mononoke_api::Mononoke;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
@@ -57,20 +55,12 @@ pub enum AsyncRequestsSubcommand {
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let app = Arc::new(app);
-    let (repo_name, repo_config) = app.repo_config(args.repo.id_or_name()?)?;
-    let repo_configs = RepoConfigs {
-        repos: hashmap! {
-            repo_name => repo_config
-        },
-        common: app.repo_configs().common.clone(),
-    };
-    let repo_factory = app.repo_factory();
     let mononoke = Arc::new(
         Mononoke::new(Arc::clone(&app))
             .await
             .context("Failed to initialize Mononoke API")?,
     );
-    let megarepo = MegarepoApi::new(app.environment(), repo_configs, repo_factory, mononoke)
+    let megarepo = MegarepoApi::new(app.clone(), mononoke)
         .await
         .context("Failed to initialize MegarepoApi")?;
     let session = SessionContainer::new_with_defaults(app.environment().fb);

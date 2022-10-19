@@ -21,7 +21,6 @@ commit_transformation = { version = "0.1.0", path = "commit_transformation" }
 context = { version = "0.1.0", path = "../server/context" }
 derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
-environment = { version = "0.1.0", path = "../cmdlib/environment" }
 filestore = { version = "0.1.0", path = "../filestore" }
 fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
@@ -32,15 +31,15 @@ megarepo_error = { version = "0.1.0", path = "megarepo_error" }
 megarepo_mapping = { version = "0.1.0", path = "mapping" }
 mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
-metaconfig_parser = { version = "0.1.0", path = "../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
+mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_renames = { version = "0.1.0", path = "../mutable_renames" }
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 repo_authorization = { version = "0.1.0", path = "../repo_authorization" }
+repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
-repo_factory = { version = "0.1.0", path = "../repo_factory" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 requests_table = { version = "0.1.0", path = "requests_table" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

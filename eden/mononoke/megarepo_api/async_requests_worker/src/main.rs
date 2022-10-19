@@ -61,20 +61,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let args: AsyncRequestsWorkerArgs = app.args()?;
     let request_limit = args.request_limit;
     let jobs_limit = args.jobs;
-    let (env, logger, runtime, repo_configs, repo_factory) = (
-        app.environment(),
-        app.logger(),
-        app.runtime(),
-        (*app.repo_configs()).clone(),
-        app.repo_factory(),
-    );
+    let (env, logger, runtime) = (app.environment(), app.logger(), app.runtime());
 
     let session = SessionContainer::new_with_defaults(env.fb);
     let ctx = session.new_context(logger.clone(), env.scuba_sample_builder.clone());
 
     let mononoke = Arc::new(runtime.block_on(Mononoke::new(Arc::clone(&app)))?);
-    let megarepo =
-        Arc::new(runtime.block_on(MegarepoApi::new(env, repo_configs, repo_factory, mononoke))?);
+    let megarepo = Arc::new(runtime.block_on(MegarepoApi::new(app.clone(), mononoke))?);
 
     let tw_job_cluster = std::env::var("TW_JOB_CLUSTER");
     let tw_job_name = std::env::var("TW_JOB_NAME");

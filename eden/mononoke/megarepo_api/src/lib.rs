@@ -22,7 +22,6 @@ use async_requests::AsyncMethodRequestQueue;
 use blobstore::Blobstore;
 use change_target_config::ChangeTargetConfig;
 use context::CoreContext;
-use environment::MononokeEnvironment;
 use futures::future::try_join_all;
 use megarepo_config::CfgrMononokeMegarepoConfigs;
 use megarepo_config::MononokeMegarepoConfigs;
@@ -35,19 +34,21 @@ use megarepo_error::MegarepoError;
 use megarepo_mapping::CommitRemappingState;
 use megarepo_mapping::MegarepoMapping;
 use megarepo_mapping::SourceName;
-use metaconfig_parser::RepoConfigs;
 use metaconfig_types::ArcRepoConfig;
-use metaconfig_types::CommonConfig;
+use metaconfig_types::RepoConfigArc;
 use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
+use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mutable_renames::MutableRenames;
 use parking_lot::Mutex;
 use remerge_source::RemergeSource;
-use repo_factory::RepoFactory;
+use repo_authorization::AuthorizationContext;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
+use repo_identity::RepoIdentityArc;
 use requests_table::LongRunningRequestsQueue;
 use slog::info;
 use slog::o;
@@ -111,21 +112,18 @@ impl<K: Clone + Eq + Hash, V: Clone> Cache<K, V> {
 
 pub struct MegarepoApi {
     megarepo_configs: Arc<dyn MononokeMegarepoConfigs>,
-    repo_configs: RepoConfigs,
-    repo_factory: RepoFactory,
     queue_cache: Cache<ArcRepoIdentity, AsyncMethodRequestQueue>,
     megarepo_mapping_cache: Cache<ArcRepoIdentity, Arc<MegarepoMapping>>,
-    mutable_renames_cache: Cache<ArcRepoIdentity, Arc<MutableRenames>>,
     mononoke: Arc<Mononoke>,
+    app: Arc<MononokeApp>,
 }
 
 impl MegarepoApi {
     pub async fn new(
-        env: &Arc<MononokeEnvironment>,
-        repo_configs: RepoConfigs,
-        repo_factory: RepoFactory,
+        app: Arc<MononokeApp>,
         mononoke: Arc<Mononoke>,
     ) -> Result<Self, MegarepoError> {
+        let env = app.environment();
         let fb = env.fb;
         let logger = env.logger.new(o!("megarepo" => ""));
 
@@ -152,22 +150,16 @@ impl MegarepoApi {
 
         Ok(Self {
             megarepo_configs,
-            repo_configs,
-            repo_factory,
             queue_cache: Cache::new(),
             megarepo_mapping_cache: Cache::new(),
-            mutable_renames_cache: Cache::new(),
             mononoke,
+            app,
         })
     }
 
     /// Get megarepo configs
     pub fn configs(&self) -> &dyn MononokeMegarepoConfigs {
         self.megarepo_configs.as_ref()
-    }
-
-    fn common_config(&self) -> &CommonConfig {
-        &self.repo_configs.common
     }
 
     /// Get megarepo config and remapping state for given commit in target
@@ -199,15 +191,8 @@ impl MegarepoApi {
         ctx: &CoreContext,
         target: &Target,
     ) -> Result<Arc<MutableRenames>, MegarepoError> {
-        let (repo_config, repo_identity) = self.target_repo_config_and_id(ctx, target).await?;
-        let mutable_renames = self
-            .mutable_renames_cache
-            .get_or_try_init(&repo_identity.clone(), || async move {
-                let mutable_renames = self.repo_factory.mutable_renames(&repo_config).await?;
-                Ok(mutable_renames)
-            })
-            .await?;
-        Ok(mutable_renames)
+        let repo = self.target_repo(ctx, target).await?;
+        Ok(repo.mutable_renames())
     }
 
     /// Get an `AsyncMethodRequestQueue` for a given target
@@ -232,9 +217,7 @@ impl MegarepoApi {
             .queue_cache
             .get_or_try_init(&repo_identity.clone(), || async move {
                 let table = self.requests_table(ctx, repo_identity, repo_config).await?;
-                let blobstore = self
-                    .blobstore(ctx, repo_identity.clone(), repo_config)
-                    .await?;
+                let blobstore = self.blobstore(repo_identity.clone()).await?;
                 Ok(AsyncMethodRequestQueue::new(table, blobstore))
             })
             .await?;
@@ -282,7 +265,8 @@ impl MegarepoApi {
             repo_identity.name()
         );
         let table = self
-            .repo_factory
+            .app
+            .repo_factory()
             .long_running_requests_queue(repo_config)
             .await?;
         info!(
@@ -301,9 +285,8 @@ impl MegarepoApi {
         target: &Target,
     ) -> Result<(ArcRepoConfig, ArcRepoIdentity), Error> {
         let repo_id: i32 = TryFrom::<i64>::try_from(target.repo_id)?;
-        let repo_id = RepositoryId::new(repo_id);
-        let (name, cfg) = match self.repo_configs.get_repo_config(repo_id) {
-            Some((name, cfg)) => (name, cfg),
+        let repo = match self.mononoke.raw_repo_by_id(repo_id) {
+            Some(repo) => repo,
             None => {
                 warn!(
                     ctx.logger(),
@@ -312,10 +295,7 @@ impl MegarepoApi {
                 bail!("unknown repo in the target: {}", repo_id)
             }
         };
-
-        let cfg = self.repo_factory.repo_config(cfg);
-        let repo_identity = self.repo_factory.repo_identity(name, &cfg);
-        Ok((cfg, repo_identity))
+        Ok((repo.repo_config_arc(), repo.repo_identity_arc()))
     }
 
     /// Get Mononoke repo context by terget
@@ -329,37 +309,24 @@ impl MegarepoApi {
         let repo = self
             .mononoke
             .repo_by_id(ctx.clone(), repo_id)
-            .await?
+            .await
+            .map_err(MegarepoError::internal)?
             .ok_or_else(|| MegarepoError::request(anyhow!("repo not found {}", repo_id)))?
+            .with_authorization_context(AuthorizationContext::new_bypass_access_control())
             .build()
             .await?;
         Ok(repo)
     }
 
     /// Build a blobstore to be embedded into `AsyncMethodRequestQueue`
-    async fn blobstore(
-        &self,
-        ctx: &CoreContext,
-        repo_identity: ArcRepoIdentity,
-        repo_config: &ArcRepoConfig,
-    ) -> Result<Arc<dyn Blobstore>, Error> {
-        info!(
-            ctx.logger(),
-            "Instantiating a MegarepoApi blobstore for {}",
-            repo_identity.name()
-        );
-        let common_config = Arc::new(self.common_config().clone());
-        let repo_blobstore = self
-            .repo_factory
-            .repo_blobstore(&repo_identity, repo_config, &common_config)
-            .await?;
-        let blobstore = repo_blobstore.boxed();
-        info!(
-            ctx.logger(),
-            "Done instantiating a MegarepoApi blobstore for {}",
-            repo_identity.name()
-        );
-        Ok(blobstore)
+    async fn blobstore(&self, repo_identity: ArcRepoIdentity) -> Result<Arc<dyn Blobstore>, Error> {
+        let repo = self
+            .mononoke
+            .raw_repo(repo_identity.name())
+            .ok_or_else(|| {
+                MegarepoError::request(anyhow!("repo not found {}", repo_identity.name()))
+            })?;
+        Ok(repo.repo_blobstore_arc())
     }
 
     /// Build MegarepoMapping
@@ -374,7 +341,8 @@ impl MegarepoApi {
             .megarepo_mapping_cache
             .get_or_try_init(&repo_identity.clone(), || async move {
                 let megarepo_mapping = self
-                    .repo_factory
+                    .app
+                    .repo_factory()
                     .sql_factory(&repo_config.storage_config.metadata)
                     .await?
                     .open::<MegarepoMapping>()?;
