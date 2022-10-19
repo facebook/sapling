@@ -1741,77 +1741,9 @@ def _docommit(ui, repo, *pats, **opts):
 )
 def config(ui, repo, *values, **opts):
     if opts.get("edit") or opts.get("local") or opts.get("global"):
-        if opts.get("local") and opts.get("global"):
-            raise error.Abort(_("can't use --local and --global together"))
-
-        if opts.get("local"):
-            if not repo:
-                raise error.Abort(_("can't use --local outside a repository"))
-            paths = [repo.localvfs.join(ui.identity.configrepofile())]
-        elif opts.get("global"):
-            paths = rcutil.systemrcpath()
-        else:
-            paths = bindings.identity.default().userconfigpaths()
-
-        for f in paths:
-            if os.path.exists(f):
-                break
-        else:
-            if opts.get("global"):
-                samplehgrc = uimod.samplehgrcs["global"]
-            elif opts.get("local"):
-                samplehgrc = uimod.samplehgrcs["local"]
-            else:
-                samplehgrc = uimod.samplehgrcs["user"]
-
-            f = paths[0]
-            os.makedirs(pathlib.Path(f).parent.absolute(), exist_ok=True)
-            fp = open(f, "wb")
-            fp.write(pycompat.encodeutf8(util.tonativeeol(samplehgrc)))
-            fp.close()
-
-        if values:
-            section_name = value = None
-            to_edit = []
-
-            for arg in values:
-                if section_name is None:
-                    if "=" in arg:
-                        section_name, value = arg.split("=", 1)
-                    else:
-                        section_name = arg
-                else:
-                    value = arg
-                if value is None:
-                    continue
-                try:
-                    section, name = section_name.split(".", 1)
-                except ValueError:
-                    # ex. not enough values to unpack
-                    raise error.Abort(
-                        _("invalid argument: %r") % section_name,
-                        hint=("try section.name=value"),
-                    )
-                to_edit.append((section, name, value))
-                section_name = value = None
-
-            if section_name is not None:
-                raise error.Abort(
-                    _("missing config value for %r") % section_name,
-                )
-
-            for section, name, value in to_edit:
-                rcutil.editconfig(f, section, name, value)
-
-        else:
-            editor = ui.geteditor()
-            ui.system(
-                '%s "%s"' % (editor, f),
-                onerr=error.Abort,
-                errprefix=_("edit failed"),
-                blockedtag="config_edit",
-            )
+        editconfig(ui, repo, *values, **opts)
         return
+
     ui.pager("config")
     fm = ui.formatter("config", opts)
     if values:
@@ -1851,6 +1783,79 @@ def config(ui, repo, *values, **opts):
     if matched:
         return 0
     return 1
+
+
+def editconfig(ui, repo, *values, **opts):
+    if opts.get("local") and opts.get("global"):
+        raise error.Abort(_("can't use --local and --global together"))
+
+    if opts.get("local"):
+        if not repo:
+            raise error.Abort(_("can't use --local outside a repository"))
+        paths = [repo.localvfs.join(ui.identity.configrepofile())]
+    elif opts.get("global"):
+        paths = rcutil.systemrcpath()
+    else:
+        paths = bindings.identity.default().userconfigpaths()
+
+    for f in paths:
+        if os.path.exists(f):
+            break
+    else:
+        if opts.get("global"):
+            samplehgrc = uimod.samplehgrcs["global"]
+        elif opts.get("local"):
+            samplehgrc = uimod.samplehgrcs["local"]
+        else:
+            samplehgrc = uimod.samplehgrcs["user"]
+
+        f = paths[0]
+        os.makedirs(pathlib.Path(f).parent.absolute(), exist_ok=True)
+        fp = open(f, "wb")
+        fp.write(pycompat.encodeutf8(util.tonativeeol(samplehgrc)))
+        fp.close()
+
+    if values:
+        section_name = value = None
+        to_edit = []
+
+        for arg in values:
+            if section_name is None:
+                if "=" in arg:
+                    section_name, value = arg.split("=", 1)
+                else:
+                    section_name = arg
+            else:
+                value = arg
+            if value is None:
+                continue
+            try:
+                section, name = section_name.split(".", 1)
+            except ValueError:
+                # ex. not enough values to unpack
+                raise error.Abort(
+                    _("invalid argument: %r") % section_name,
+                    hint=("try section.name=value"),
+                )
+            to_edit.append((section, name, value))
+            section_name = value = None
+
+        if section_name is not None:
+            raise error.Abort(
+                _("missing config value for %r") % section_name,
+            )
+
+        for section, name, value in to_edit:
+            rcutil.editconfig(f, section, name, value)
+
+    else:
+        editor = ui.geteditor()
+        ui.system(
+            '%s "%s"' % (editor, f),
+            onerr=error.Abort,
+            errprefix=_("edit failed"),
+            blockedtag="config_edit",
+        )
 
 
 @command("continue|cont")
