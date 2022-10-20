@@ -402,9 +402,9 @@ impl SqlBookmarksTransactionPayload {
         &self,
         txn: SqlTransaction,
     ) -> Result<SqlTransaction, BookmarkTransactionError> {
-        let (mut txn, next_id) = Self::find_next_update_log_id(txn, self.repo_id).await?;
-        let next_lock_id;
-        (txn, next_lock_id) = Self::find_next_update_log_lock_id(txn).await?;
+        let next_id;
+        let (mut txn, next_lock_id) = Self::find_next_update_log_lock_id(txn).await?;
+        (txn, next_id) = Self::find_next_update_log_id(txn, self.repo_id).await?;
 
         let mut log = TransactionLogUpdates::new(next_id);
 
