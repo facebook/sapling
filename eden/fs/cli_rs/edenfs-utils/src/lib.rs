@@ -19,6 +19,7 @@ use anyhow::anyhow;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
+use glob::glob;
 use subprocess::Exec;
 use subprocess::Redirection;
 use sysinfo::ProcessExt;
@@ -166,6 +167,41 @@ pub fn is_process_running(pid: sysinfo::Pid) -> bool {
     } else {
         false
     }
+}
+
+pub fn find_second_level_buck_projects(path: &Path) -> Result<Vec<PathBuf>> {
+    /*
+     * While repos usually have a top level buckconfig, in some cases projects have
+     * their own configuration files one level down.  This glob() finds those directories for us.
+     */
+    let buck_configs = glob(&format!("{}/*/.buckconfig", path.to_string_lossy())).from_err()?;
+    let buck_projects = buck_configs
+        .filter_map(|c| match c {
+            Ok(project) => {
+                if project.is_file() {
+                    Some(project)
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        })
+        .collect();
+    Ok(buck_projects)
+}
+
+/// Stop the major buckd instances that are likely to be running for path
+pub fn stop_buckd_for_repo(path: &Path) {
+    match find_second_level_buck_projects(path) {
+        Ok(projects) => {
+            for project in projects {
+                if is_buckd_running_for_path(&project) {
+                    stop_buckd_for_path(&project).ok();
+                }
+            }
+        }
+        Err(_) => {}
+    };
 }
 
 pub fn is_buckd_running_for_path(path: &Path) -> bool {
