@@ -48,8 +48,8 @@ tunables = { version = "0.1.0", path = "../../tunables" }
 uniqueheap = { version = "0.1.0", path = "../../common/uniqueheap" }
 
 [dev-dependencies]
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 maplit = "1.0"
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
 skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }

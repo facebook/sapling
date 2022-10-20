@@ -27,7 +27,7 @@ derived_data = { version = "0.1.0", path = ".." }
 derived_data_filenodes = { version = "0.1.0", path = "../filenodes" }
 derived_data_manager = { version = "0.1.0", path = "../manager" }
 fastlog = { version = "0.1.0", path = "../fastlog" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../../filenodes" }
 fsnodes = { version = "0.1.0", path = "../fsnodes" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
@@ -52,7 +52,7 @@ unodes = { version = "0.1.0", path = "../unodes" }
 [dev-dependencies]
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 maplit = "1.0"

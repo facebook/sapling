@@ -24,7 +24,7 @@ derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes"
 derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
 derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
 failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 mercurial_revlog = { version = "0.1.0", path = "../mercurial/revlog" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
@@ -35,4 +35,4 @@ synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_
 wireproto_handler = { version = "0.1.0", path = "../wireproto_handler" }
 
 [dev-dependencies]
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

@@ -33,8 +33,8 @@ zstd = "0.11.1+zstd.1.5.2"
 [dev-dependencies]
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cacheblob = { version = "0.1.0", path = "cacheblob" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fileblob = { version = "0.1.0", path = "fileblob" }
 memblob = { version = "0.1.0", path = "memblob" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }

@@ -16,7 +16,7 @@ cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
 derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }

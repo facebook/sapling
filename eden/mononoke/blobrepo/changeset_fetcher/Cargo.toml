@@ -18,8 +18,8 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 
 [dev-dependencies]
 changesets_impl = { version = "0.1.0", path = "../../changesets/changesets_impl" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }

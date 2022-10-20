@@ -22,7 +22,7 @@ caching_ext = { version = "0.1.0", path = "../../common/rust/caching_ext" }
 context = { version = "0.1.0", path = "../../server/context" }
 edenapi_types = { version = "0.1.0", path = "../../../scm/lib/edenapi/types" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 hg_mutation_entry_thrift = { version = "0.1.0", path = "if" }
@@ -40,7 +40,7 @@ tunables = { version = "0.1.0", path = "../../tunables" }
 types = { version = "0.1.0", path = "../../../scm/lib/types" }
 
 [dev-dependencies]
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 maplit = "1.0"
 mercurial_types-mocks = { version = "0.1.0", path = "../types/mocks" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }

@@ -16,7 +16,7 @@ cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimen
 cats = { version = "0.1.0", path = "../cats" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 connection_security_checker = { version = "0.1.0", path = "../common/connection_security_checker" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 gotham = { version = "0.6.0", default-features = false }
 gotham_derive = "0.6.0"

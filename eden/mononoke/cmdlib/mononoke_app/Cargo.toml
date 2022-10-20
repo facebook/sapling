@@ -23,7 +23,7 @@ context = { version = "0.1.0", path = "../../server/context" }
 derived_data_remote = { version = "0.1.0", path = "../../derived_data/remote" }
 environment = { version = "0.1.0", path = "../environment" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 futures-util = "0.3.7"
 itertools = "0.10.3"

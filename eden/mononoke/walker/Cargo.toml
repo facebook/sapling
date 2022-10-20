@@ -40,7 +40,7 @@ derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes"
 derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
 executor_lib = { version = "0.1.0", path = "../cmdlib/sharding" }
 fastlog = { version = "0.1.0", path = "../derived_data/fastlog" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../filenodes" }
 filestore = { version = "0.1.0", path = "../filestore" }
 filetime = "0.2.9"
@@ -81,5 +81,5 @@ tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 
 [dev-dependencies]
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }

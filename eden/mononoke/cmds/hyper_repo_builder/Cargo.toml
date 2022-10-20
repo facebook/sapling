@@ -18,7 +18,7 @@ commit_transformation = { version = "0.1.0", path = "../../megarepo_api/commit_t
 context = { version = "0.1.0", path = "../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../../commit_rewriting/cross_repo_sync" }
 derived_data = { version = "0.1.0", path = "../../derived_data" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
@@ -32,7 +32,7 @@ sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexper
 tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 maplit = "1.0"
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

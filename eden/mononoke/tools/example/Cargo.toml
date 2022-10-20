@@ -11,6 +11,6 @@ license = "GPLv2+"
 anyhow = "1.0.65"
 clap = { version = "3.2.17", features = ["derive", "env", "regex", "unicode", "wrap_help"] }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }

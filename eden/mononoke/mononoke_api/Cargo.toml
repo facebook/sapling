@@ -38,7 +38,7 @@ derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
 edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../filestore" }
 fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
@@ -104,7 +104,7 @@ xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }
 assert_matches = "1.5"
 cross_repo_sync_test_utils = { version = "0.1.0", path = "../commit_rewriting/cross_repo_sync/test_utils" }
 derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }

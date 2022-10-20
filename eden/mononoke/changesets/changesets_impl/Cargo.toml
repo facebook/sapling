@@ -18,7 +18,7 @@ caching_ext = { version = "0.1.0", path = "../../common/rust/caching_ext" }
 changeset_entry_thrift = { version = "0.1.0", path = "../if" }
 changesets = { version = "0.1.0", path = ".." }
 context = { version = "0.1.0", path = "../../server/context" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 maplit = "1.0"
@@ -35,5 +35,5 @@ thiserror = "1.0.36"
 
 [dev-dependencies]
 assert_matches = "1.5"
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }

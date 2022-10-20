@@ -58,7 +58,7 @@ version = { version = "0.1.0", path = "../version" }
 vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 
 [dev-dependencies]
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 lazy_static = "1.4"
 maplit = "1.0"
 mockito = "0.25"

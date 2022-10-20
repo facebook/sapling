@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 context = { version = "0.1.0", path = "../../server/context" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
@@ -18,4 +18,4 @@ reachabilityindex = { version = "0.1.0", path = ".." }
 
 [dev-dependencies]
 common = { version = "0.1.0", path = "../common" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

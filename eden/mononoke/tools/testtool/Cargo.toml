@@ -22,7 +22,7 @@ derived_data_filenodes = { version = "0.1.0", path = "../../derived_data/filenod
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fastlog = { version = "0.1.0", path = "../../derived_data/fastlog" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }

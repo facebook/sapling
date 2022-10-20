@@ -29,8 +29,8 @@ vec1 = { version = "1", features = ["serde"] }
 [dev-dependencies]
 async-recursion = "0.3.2"
 changesets = { version = "0.1.0", path = "../../changesets" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 quickcheck = "1.0"
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
