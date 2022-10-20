@@ -102,7 +102,6 @@ narrow-heads=True
 new-clone-path=True
 rebase.multidest=True
 samplestatus=3
-scubalog.evolution=experimental.evolution
 updatecheck=noconflict
 verifyhiddencache=False
 worddiff=True
@@ -183,8 +182,6 @@ use-symlink-atomic-write=False
 
 [fsmonitor]
 mode=on
-scubalog.fsmonitor_ext=extensions.fsmonitor
-scubalog.fsmonitor_mode=fsmonitor.mode
 timeout=600
 track-ignore-files=False
 walk_on_invalidate=False
@@ -223,7 +220,6 @@ cleanoldpacks=True
 fastdatapack=True
 historypackv1=True
 localdatarepack=True
-scubalog.fastdatapack=remotefilelog.fastdatapack
 useruststore=True
 reponame=fbsource
 manifestlimit=4GB
