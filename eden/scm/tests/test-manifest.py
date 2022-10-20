@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import binascii
 import itertools
+import os
 import unittest
 
 import silenttestrunner
@@ -178,7 +179,7 @@ class basemanifesttests(object):
         m["foo"] = want + b"+"
         self.assertEqual(want, m["foo"])
         # make sure the suffix survives a copy
-        match = matchmod.match("", "", ["re:foo"])
+        match = matchmod.match(os.getcwd(), "", ["re:foo"])
         m2 = m.matches(match)
         self.assertEqual(want, m2["foo"])
         self.assertEqual(1, len(m2))
@@ -195,7 +196,7 @@ class basemanifesttests(object):
 
     def testMatchException(self):
         m = self.parsemanifest(A_SHORT_MANIFEST)
-        match = matchmod.match("", "", ["re:.*"])
+        match = matchmod.match(os.getcwd(), "", ["re:.*"])
 
         def filt(path):
             if path == "foo":

@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import os
 import unittest
 
 import silenttestrunner
@@ -9,7 +10,7 @@ from hghave import require
 
 class NeverMatcherTests(unittest.TestCase):
     def testVisitdir(self):
-        m = matchmod.nevermatcher("", "")
+        m = matchmod.nevermatcher(os.getcwd(), "")
         self.assertFalse(m.visitdir(""))
         self.assertFalse(m.visitdir("dir"))
 
@@ -18,12 +19,12 @@ class NeverMatcherTests(unittest.TestCase):
         rules = ["a/b/*/c/d/e/f/g/%s/**" % i for i in range(n)]
         with self.assertRaises(Exception):
             # "Compiled regex exceeds size limit of 10485760 bytes."
-            matchmod.treematcher("", "", rules=rules)
+            matchmod.treematcher(os.getcwd(), "", rules=rules)
 
     def testManyPrefixes(self):
         n = 10000
         rules = ["a/b/c/d/e/f/g/%s/**" % i for i in range(n)]
-        m = matchmod.treematcher("", "", rules=rules)
+        m = matchmod.treematcher("/", "", rules=rules)
         self.assertTrue(m.visitdir("a"))
         self.assertTrue(m.visitdir("a/b"))
         self.assertEqual(m.visitdir("a/b/c/d/e/f/g/1"), "all")

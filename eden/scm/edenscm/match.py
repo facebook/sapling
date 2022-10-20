@@ -1087,30 +1087,31 @@ def _buildpatternmatcher(
        use either treematcher, regexmatcher or union of them.
     2. Fallback to fallbackmatcher.
 
-    >>> _buildpatternmatcher("", "", [('re', 'fbcode/.*', '')])
+    >>> import os
+    >>> _buildpatternmatcher(os.getcwd(), "", [('re', 'fbcode/.*', '')])
     <regexmatcher pattern='(?:fbcode/.*)'>
-    >>> _buildpatternmatcher("", "", [('re', 'fbcode/.*', ''), ('glob', 'fbandroid/**', '')])
+    >>> _buildpatternmatcher(os.getcwd(), "", [('re', 'fbcode/.*', ''), ('glob', 'fbandroid/**', '')])
     <unionmatcher matchers=[<treematcher rules=['fbandroid/**']>, <regexmatcher pattern='(?:fbcode/.*)'>]>
-    >>> _buildpatternmatcher("", "", [('re', 'a/.*', '')])
+    >>> _buildpatternmatcher(os.getcwd(), "", [('re', 'a/.*', '')])
     <regexmatcher pattern='(?:a/.*)'>
-    >>> _buildpatternmatcher("", "", [('re', 'a/.*', ''), ('glob', 'b/**', '')])
+    >>> _buildpatternmatcher(os.getcwd(), "", [('re', 'a/.*', ''), ('glob', 'b/**', '')])
     <unionmatcher matchers=[<treematcher rules=['b/**']>, <regexmatcher pattern='(?:a/.*)'>]>
-    >>> _buildpatternmatcher("", "", [('glob', 'b/**', '')])
+    >>> _buildpatternmatcher(os.getcwd(), "", [('glob', 'b/**', '')])
     <treematcher rules=['b/**']>
-    >>> _buildpatternmatcher("", "", [])
+    >>> _buildpatternmatcher(os.getcwd(), "", [])
     <nevermatcher>
 
     # includematcher
-    >>> _buildpatternmatcher("", "", [('re', 'a/.*', ''), ('glob', 'b', '')], fallbackmatcher=includematcher)
+    >>> _buildpatternmatcher(os.getcwd(), "", [('re', 'a/.*', ''), ('glob', 'b', '')], fallbackmatcher=includematcher)
     <unionmatcher matchers=[<treematcher rules=['b/**']>, <regexmatcher pattern='(?:a/.*)'>]>
 
     # regexmatcher supports '^'
-    >>> _buildpatternmatcher("", "", [('re', '^abc', '')])
+    >>> _buildpatternmatcher(os.getcwd(), "", [('re', '^abc', '')])
     <regexmatcher pattern='(?:^abc)'>
 
     # treematcher doesn't support large glob patterns, fallback to patternmatcher
     >>> kindpats  = [("glob", f"a/b/*/c/d/e/f/g/{i}/**", "") for i in range(10000)]
-    >>> p = _buildpatternmatcher("", "", kindpats)
+    >>> p = _buildpatternmatcher(os.getcwd(), "", kindpats)
     >>> isinstance(p, patternmatcher)
     True
     """
@@ -1146,12 +1147,13 @@ def _buildpatternmatcher(
 def _buildtreematcher(root, cwd, rules, badfn) -> Optional[treematcher]:
     """build treematcher.
 
-    >>> _buildtreematcher('', '', ['a**'], '')
+    >>> import os
+    >>> _buildtreematcher(os.getcwd(), '', ['a**'], '')
     <treematcher rules=['a**']>
 
     >>> rules = ['a/b/*/c/d/e/f/g/%s/**' % i for i in range(10000)]
     >>> try:
-    ...     _buildtreematcher('', '', rules, None)
+    ...     _buildtreematcher(os.getcwd(), '', rules, None)
     ... except error.RustError as e:
     ...     print("got expected exception")
     got expected exception
@@ -1164,10 +1166,11 @@ def _buildtreematcher(root, cwd, rules, badfn) -> Optional[treematcher]:
 def _buildregexmatcher(root, cwd, regexs, badfn) -> Optional[regexmatcher]:
     """build regexmatcher.
 
-    >>> _buildregexmatcher('', '', ['a/.*'], '')
+    >>> import os
+    >>> _buildregexmatcher(os.getcwd(), '', ['a/.*'], '')
     <regexmatcher pattern='(?:a/.*)'>
 
-    >>> _buildregexmatcher('', '', ['^abc'], '')
+    >>> _buildregexmatcher(os.getcwd(), '', ['^abc'], '')
     <regexmatcher pattern='(?:^abc)'>
     """
     if not _useregexmatcher and regexs:
