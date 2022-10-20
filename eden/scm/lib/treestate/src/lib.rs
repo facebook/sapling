@@ -19,6 +19,7 @@ pub mod filestate;
 pub mod filestore;
 mod legacy_eden_dirstate;
 pub mod metadata;
+pub mod root;
 pub mod serialization;
 pub mod store;
 pub mod tree;

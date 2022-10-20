@@ -34,6 +34,7 @@ use crate::filestate::FileState;
 use crate::filestate::FileStateV2;
 use crate::filestate::StateFlags;
 use crate::metadata::Metadata;
+use crate::root::TreeStateRoot;
 use crate::store::BlockId;
 use crate::tree::AggregatedState;
 use crate::tree::Key;
@@ -41,7 +42,6 @@ use crate::tree::Node;
 use crate::tree::NodeEntry;
 use crate::tree::NodeEntryMap;
 use crate::treedirstate::TreeDirstateRoot;
-use crate::treestate::TreeStateRoot;
 
 pub trait Serializable
 where
@@ -288,20 +288,20 @@ impl Serializable for TreeStateRoot {
         let file_count = cur.read_vlq()?;
         let metadata = Box::<[u8]>::deserialize(&mut cur)?;
 
-        Ok(TreeStateRoot {
+        Ok(TreeStateRoot::new(
             version,
-            tree_block_id,
             file_count,
+            tree_block_id,
             metadata,
-        })
+        ))
     }
 
     fn serialize(&self, w: &mut dyn Write) -> Result<()> {
         let mut buf = Vec::new();
-        buf.write_vlq(self.version)?;
-        buf.write_vlq(self.tree_block_id.0)?;
-        buf.write_vlq(self.file_count)?;
-        self.metadata.serialize(&mut buf)?;
+        buf.write_vlq(self.version())?;
+        buf.write_vlq(self.tree_block_id().0)?;
+        buf.write_vlq(self.file_count())?;
+        self.metadata().serialize(&mut buf)?;
         w.write_u64::<BigEndian>(xxhash(&buf))?;
         w.write_all(&buf)?;
         Ok(())

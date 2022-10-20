@@ -26,6 +26,7 @@ use crate::filestore::FileStore;
 use crate::legacy_eden_dirstate::read_eden_dirstate;
 use crate::legacy_eden_dirstate::write_eden_dirstate;
 use crate::metadata::Metadata;
+use crate::root::TreeStateRoot;
 use crate::serialization::Serializable;
 use crate::store::BlockId;
 use crate::store::Store;
@@ -52,15 +53,6 @@ pub struct TreeState {
     case_sensitive: bool,
 }
 
-/// `TreeStateRoot` contains block id to the root `Tree`, and other metadata.
-#[derive(Default)]
-pub(crate) struct TreeStateRoot {
-    pub version: u32,
-    pub file_count: u32,
-    pub tree_block_id: BlockId,
-    pub metadata: Box<[u8]>,
-}
-
 impl fmt::Debug for TreeState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "TreeState")
@@ -75,7 +67,7 @@ impl TreeState {
             let mut root_buf = Cursor::new(store.read(root_id)?);
             TreeStateRoot::deserialize(&mut root_buf)?
         };
-        let tree = Tree::open(root.tree_block_id, root.file_count);
+        let tree = Tree::open(root.tree_block_id(), root.file_count());
         Ok(TreeState {
             store,
             tree,
@@ -120,7 +112,7 @@ impl TreeState {
         let (metadata, entries) = read_eden_dirstate(eden_dirstate_path.as_ref())?;
         let mut buf = Vec::new();
         metadata.serialize(&mut buf)?;
-        root.metadata = buf.into_boxed_slice();
+        root.set_metadata(buf.into_boxed_slice());
 
         let path = eden_dirstate_path.as_ref().to_path_buf();
         let mut treestate = TreeState {
@@ -170,8 +162,8 @@ impl TreeState {
     }
 
     fn write_root(&mut self, tree_block_id: BlockId) -> Result<BlockId> {
-        self.root.tree_block_id = tree_block_id;
-        self.root.file_count = self.len() as u32;
+        self.root.set_tree_block_id(tree_block_id);
+        self.root.set_file_count(self.len() as u32);
 
         let mut root_buf = Vec::new();
         self.root.serialize(&mut root_buf)?;
@@ -275,11 +267,12 @@ impl TreeState {
     }
 
     pub fn set_metadata<T: AsRef<[u8]>>(&mut self, metadata: T) {
-        self.root.metadata = Vec::from(metadata.as_ref()).into_boxed_slice();
+        self.root
+            .set_metadata(Vec::from(metadata.as_ref()).into_boxed_slice());
     }
 
     pub fn get_metadata(&self) -> &[u8] {
-        self.root.metadata.deref()
+        self.root.metadata().deref()
     }
 
     pub fn get_metadata_by_key(&self, key: &str) -> Result<Option<String>> {
