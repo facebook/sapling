@@ -144,6 +144,10 @@ impl TreeState {
             .to_string())
     }
 
+    pub fn dirty(&self) -> bool {
+        self.tree.dirty() || self.root.dirty()
+    }
+
     /// Flush dirty entries. Return new `root_id` that can be passed to `open`.
     pub fn flush(&mut self) -> Result<BlockId> {
         let tree_block_id = { self.tree.write_delta(&mut self.store)? };

@@ -140,21 +140,31 @@ impl WatchmanPendingChanges {
         &mut self,
         mut treestate: impl WatchmanTreeStateWrite,
         config: &dyn Config,
+        should_update_clock: bool,
     ) -> Result<()> {
+        let mut wrote = false;
         for path in self.needs_clear.iter() {
-            if let Err(e) = treestate.clear_needs_check(&path) {
+            match treestate.clear_needs_check(&path) {
+                Ok(v) => wrote |= v,
+                Err(e) =>
                 // We can still build a valid result if we fail to clear the
                 // needs check flag. Propagate the error to the caller but allow
                 // the persist to continue.
-                self.pending_changes.push(Err(e));
+                {
+                    self.pending_changes.push(Err(e))
+                }
             }
         }
 
         for path in self.needs_mark.iter() {
-            treestate.mark_needs_check(&path)?;
+            wrote |= treestate.mark_needs_check(&path)?;
         }
 
-        treestate.set_clock(self.clock.clone())?;
+        // If the treestate is already dirty, we're going to write it anyway, so let's go ahead and
+        // update the clock while we're at it.
+        if should_update_clock || wrote {
+            treestate.set_clock(self.clock.clone())?;
+        }
 
         treestate.flush(config)
     }
@@ -224,12 +234,12 @@ mod tests {
     }
 
     impl WatchmanTreeStateWrite for WatchmanStateTestTreeState {
-        fn mark_needs_check(&mut self, _path: &RepoPathBuf) -> Result<()> {
-            Ok(())
+        fn mark_needs_check(&mut self, _path: &RepoPathBuf) -> Result<bool> {
+            Ok(true)
         }
 
-        fn clear_needs_check(&mut self, _path: &RepoPathBuf) -> Result<()> {
-            Ok(())
+        fn clear_needs_check(&mut self, _path: &RepoPathBuf) -> Result<bool> {
+            Ok(true)
         }
 
         fn set_clock(&mut self, _clock: Clock) -> Result<()> {

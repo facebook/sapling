@@ -915,6 +915,10 @@ where
         self.root.id
     }
 
+    pub fn dirty(&self) -> bool {
+        self.root.id.is_none()
+    }
+
     pub fn file_count(&self) -> u32 {
         self.file_count
     }

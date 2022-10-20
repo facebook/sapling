@@ -23,9 +23,9 @@ use types::RepoPathBuf;
 use watchman_client::prelude::*;
 
 pub trait WatchmanTreeStateWrite {
-    fn mark_needs_check(&mut self, path: &RepoPathBuf) -> Result<()>;
+    fn mark_needs_check(&mut self, path: &RepoPathBuf) -> Result<bool>;
 
-    fn clear_needs_check(&mut self, path: &RepoPathBuf) -> Result<()>;
+    fn clear_needs_check(&mut self, path: &RepoPathBuf) -> Result<bool>;
 
     fn set_clock(&mut self, clock: Clock) -> Result<()>;
 
@@ -44,13 +44,18 @@ pub struct WatchmanTreeState<'a> {
 }
 
 impl WatchmanTreeStateWrite for WatchmanTreeState<'_> {
-    fn mark_needs_check(&mut self, path: &RepoPathBuf) -> Result<()> {
+    fn mark_needs_check(&mut self, path: &RepoPathBuf) -> Result<bool> {
         let mut treestate = self.treestate.lock();
 
         let state = treestate.get(path)?;
         let filestate = match state {
             Some(filestate) => {
                 let filestate = filestate.clone();
+                if filestate.state.intersects(StateFlags::NEED_CHECK) {
+                    // It's already marked need_check, so return early so we don't mutate the
+                    // treestate.
+                    return Ok(false);
+                }
                 FileStateV2 {
                     state: filestate.state | StateFlags::NEED_CHECK,
                     ..filestate
@@ -65,22 +70,28 @@ impl WatchmanTreeStateWrite for WatchmanTreeState<'_> {
                 copied: None,
             },
         };
-        treestate.insert(path, &filestate)
+        treestate.insert(path, &filestate)?;
+        Ok(true)
     }
 
-    fn clear_needs_check(&mut self, path: &RepoPathBuf) -> Result<()> {
+    fn clear_needs_check(&mut self, path: &RepoPathBuf) -> Result<bool> {
         let mut treestate = self.treestate.lock();
 
         let state = treestate.get(path)?;
         if let Some(filestate) = state {
             let filestate = filestate.clone();
+            if !filestate.state.intersects(StateFlags::NEED_CHECK) {
+                // It's already clear.
+                return Ok(false);
+            }
             let filestate = FileStateV2 {
                 state: filestate.state & !StateFlags::NEED_CHECK,
                 ..filestate
             };
             treestate.insert(path, &filestate)?;
+            return Ok(true);
         }
-        Ok(())
+        Ok(false)
     }
 
     fn set_clock(&mut self, clock: Clock) -> Result<()> {
@@ -105,29 +116,35 @@ impl WatchmanTreeStateWrite for WatchmanTreeState<'_> {
     }
 
     fn flush(self, config: &dyn Config) -> Result<()> {
-        let id = identity::must_sniff_dir(self.root)?;
-        let dot_dir = self.root.join(id.dot_dir());
-        let dirstate_path = dot_dir.join("dirstate");
-
-        let _locked = repolock::lock_working_copy(config, &dot_dir)?;
-
-        let dirstate_input = util::file::read(&dirstate_path).map_err(|e| anyhow!(e))?;
-        let mut dirstate = Dirstate::deserialize(&mut dirstate_input.as_slice())?;
-        let treestate_fields = dirstate.tree_state.as_mut().ok_or_else(|| {
-            anyhow!(
-                "Unable to flush treestate because dirstate is missing required treestate fields"
-            )
-        })?;
-
         let mut treestate = self.treestate.lock();
-        let root_id = treestate.flush()?;
-        treestate_fields.tree_root_id = root_id;
+        if treestate.dirty() {
+            tracing::debug!("flushing dirty treestate");
+            let id = identity::must_sniff_dir(self.root)?;
+            let dot_dir = self.root.join(id.dot_dir());
+            let dirstate_path = dot_dir.join("dirstate");
 
-        let mut dirstate_output: Vec<u8> = Vec::new();
-        dirstate.serialize(&mut dirstate_output).unwrap();
-        util::file::atomic_write(&dirstate_path, |file| file.write_all(&dirstate_output))
-            .map_err(|e| anyhow!(e))
-            .map(|_| ())
+            let _locked = repolock::lock_working_copy(config, &dot_dir)?;
+
+            let dirstate_input = util::file::read(&dirstate_path).map_err(|e| anyhow!(e))?;
+            let mut dirstate = Dirstate::deserialize(&mut dirstate_input.as_slice())?;
+            let treestate_fields = dirstate.tree_state.as_mut().ok_or_else(|| {
+                anyhow!(
+                    "Unable to flush treestate because dirstate is missing required treestate fields"
+                )
+            })?;
+
+            let root_id = treestate.flush()?;
+            treestate_fields.tree_root_id = root_id;
+
+            let mut dirstate_output: Vec<u8> = Vec::new();
+            dirstate.serialize(&mut dirstate_output).unwrap();
+            util::file::atomic_write(&dirstate_path, |file| file.write_all(&dirstate_output))
+                .map_err(|e| anyhow!(e))
+                .map(|_| ())
+        } else {
+            tracing::debug!("skipping treestate flush - it is not dirty");
+            Ok(())
+        }
     }
 }
 

@@ -125,6 +125,14 @@ impl PendingChanges for WatchmanFileSystem {
             }
         }
 
+        let file_change_threshold =
+            config.get_or("fsmonitor", "watchman-changed-file-threshold", || 200)?;
+        let should_update_clock = result.is_fresh_instance
+            || result
+                .files
+                .as_ref()
+                .map_or(false, |f| f.len() > file_change_threshold);
+
         let manifests =
             WorkingCopy::current_manifests(&self.treestate.lock(), &self.tree_resolver)?;
 
@@ -143,6 +151,7 @@ impl PendingChanges for WatchmanFileSystem {
                 root: self.vfs.root(),
             },
             config,
+            should_update_clock,
         )?;
 
         Ok(Box::new(pending_changes.into_iter()))
