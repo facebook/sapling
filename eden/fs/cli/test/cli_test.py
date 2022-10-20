@@ -76,7 +76,7 @@ class ListTest(unittest.TestCase):
         )
         checkout1.set_config(
             CheckoutConfig(
-                backing_repo=Path("/home/johndoe/eden-repos/mercurial"),
+                backing_repo=Path("/home/johndoe/.eden-backing-repos/mercurial"),
                 scm_type="hg",
                 guid="123",
                 mount_protocol="fuse",
@@ -99,7 +99,7 @@ class ListTest(unittest.TestCase):
         )
         checkout2.set_config(
             CheckoutConfig(
-                backing_repo=Path("/home/johndoe/eden-repos/git"),
+                backing_repo=Path("/home/johndoe/.eden-backing-repos/git"),
                 scm_type="git",
                 guid="456",
                 mount_protocol="fuse",
@@ -122,7 +122,7 @@ class ListTest(unittest.TestCase):
         )
         checkout3.set_config(
             CheckoutConfig(
-                backing_repo=Path("/home/johndoe/eden-repos/linux"),
+                backing_repo=Path("/home/johndoe/.eden-backing-repos/linux"),
                 scm_type="git",
                 guid="789",
                 mount_protocol="fuse",
@@ -145,7 +145,7 @@ class ListTest(unittest.TestCase):
         )
         checkout4.set_config(
             CheckoutConfig(
-                backing_repo=Path("/home/johndoe/eden-repos/linux"),
+                backing_repo=Path("/home/johndoe/.eden-backing-repos/linux"),
                 scm_type="git",
                 guid="012",
                 mount_protocol="fuse",
@@ -168,7 +168,7 @@ class ListTest(unittest.TestCase):
         )
         checkout5.set_config(
             CheckoutConfig(
-                backing_repo=Path("/home/johndoe/eden-repos/www"),
+                backing_repo=Path("/home/johndoe/.eden-backing-repos/www"),
                 scm_type="hg",
                 guid="345",
                 mount_protocol="fuse",
@@ -227,31 +227,31 @@ class ListTest(unittest.TestCase):
     "state": "INITIALIZING"
   },
   "/data/users/johndoe/git": {
-    "backing_repo": "/home/johndoe/eden-repos/git",
+    "backing_repo": "/home/johndoe/.eden-backing-repos/git",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/git",
     "state": "SHUTTING_DOWN"
   },
   "/data/users/johndoe/mercurial": {
-    "backing_repo": "/home/johndoe/eden-repos/mercurial",
+    "backing_repo": "/home/johndoe/.eden-backing-repos/mercurial",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/mercurial",
     "state": "RUNNING"
   },
   "/data/users/johndoe/other_repos/linux": {
-    "backing_repo": "/home/johndoe/eden-repos/linux",
+    "backing_repo": "/home/johndoe/.eden-backing-repos/linux",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/linux2",
     "state": "RUNNING"
   },
   "/data/users/johndoe/repos/linux": {
-    "backing_repo": "/home/johndoe/eden-repos/linux",
+    "backing_repo": "/home/johndoe/.eden-backing-repos/linux",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/linux",
     "state": "RUNNING"
   },
   "/data/users/johndoe/www": {
-    "backing_repo": "/home/johndoe/eden-repos/www",
+    "backing_repo": "/home/johndoe/.eden-backing-repos/www",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/www",
     "state": "NOT_RUNNING"
@@ -292,7 +292,7 @@ class ListTest(unittest.TestCase):
         )
         checkout1.set_config(
             CheckoutConfig(
-                backing_repo=Path("/home/johndoe/eden-repos/mercurial"),
+                backing_repo=Path("/home/johndoe/.eden-backing-repos/mercurial"),
                 scm_type="hg",
                 guid="789",
                 mount_protocol="fuse",
@@ -315,7 +315,7 @@ class ListTest(unittest.TestCase):
         )
         checkout2.set_config(
             CheckoutConfig(
-                backing_repo=Path("/home/johndoe/eden-repos/git"),
+                backing_repo=Path("/home/johndoe/.eden-backing-repos/git"),
                 scm_type="git",
                 guid="321",
                 mount_protocol="fuse",
@@ -338,7 +338,7 @@ class ListTest(unittest.TestCase):
         )
         checkout3.set_config(
             CheckoutConfig(
-                backing_repo=Path("/home/johndoe/eden-repos/www"),
+                backing_repo=Path("/home/johndoe/.eden-backing-repos/www"),
                 scm_type="hg",
                 guid="654",
                 mount_protocol="fuse",
@@ -386,19 +386,19 @@ class ListTest(unittest.TestCase):
     "state": "RUNNING"
   },
   "/data/users/johndoe/git": {
-    "backing_repo": "/home/johndoe/eden-repos/git",
+    "backing_repo": "/home/johndoe/.eden-backing-repos/git",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/git",
     "state": "RUNNING"
   },
   "/data/users/johndoe/mercurial": {
-    "backing_repo": "/home/johndoe/eden-repos/mercurial",
+    "backing_repo": "/home/johndoe/.eden-backing-repos/mercurial",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/mercurial",
     "state": "RUNNING"
   },
   "/data/users/johndoe/www": {
-    "backing_repo": "/home/johndoe/eden-repos/www",
+    "backing_repo": "/home/johndoe/.eden-backing-repos/www",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/www",
     "state": "NOT_RUNNING"
@@ -416,7 +416,7 @@ class ListTest(unittest.TestCase):
                 mountPoint=b"/data/users/johndoe/mercurial",
                 edenClientPath=b"/home/johndoe/.eden/clients/mercurial",
                 state=MountState.RUNNING,
-                backingRepoPath=b"/home/johndoe/eden-repos/mercurial",
+                backingRepoPath=b"/home/johndoe/.eden-backing-repos/mercurial",
             ),
             MountInfo(
                 mountPoint=b"/data/users/johndoe/git",
@@ -428,7 +428,7 @@ class ListTest(unittest.TestCase):
                 mountPoint=b"/data/users/johndoe/apache",
                 edenClientPath=b"/home/johndoe/.eden/clients/apache",
                 state=MountState.RUNNING,
-                backingRepoPath=b"/home/johndoe/eden-repos/apache",
+                backingRepoPath=b"/home/johndoe/.eden-backing-repos/apache",
             ),
             MountInfo(
                 mountPoint=b"/data/users/johndoe/configs",
@@ -453,7 +453,7 @@ class ListTest(unittest.TestCase):
                 # daemon and client, but for the sake of testing that the
                 # backing repo will be taken from the daemon we make them
                 # different
-                backing_repo=Path("/home/johndoe/eden-repos/mercurial1"),
+                backing_repo=Path("/home/johndoe/.eden-backing-repos/mercurial1"),
                 scm_type="hg",
                 guid="123",
                 mount_protocol="fuse",
@@ -476,7 +476,7 @@ class ListTest(unittest.TestCase):
         )
         checkout2.set_config(
             CheckoutConfig(
-                backing_repo=Path("/home/johndoe/eden-repos/git"),
+                backing_repo=Path("/home/johndoe/.eden-backing-repos/git"),
                 scm_type="git",
                 guid="456",
                 mount_protocol="fuse",
@@ -517,7 +517,7 @@ class ListTest(unittest.TestCase):
             """\
 {
   "/data/users/johndoe/apache": {
-    "backing_repo": "/home/johndoe/eden-repos/apache",
+    "backing_repo": "/home/johndoe/.eden-backing-repos/apache",
     "configured": false,
     "data_dir": "/home/johndoe/.eden/clients/apache",
     "state": "RUNNING"
@@ -529,13 +529,13 @@ class ListTest(unittest.TestCase):
     "state": "INITIALIZING"
   },
   "/data/users/johndoe/git": {
-    "backing_repo": "/home/johndoe/eden-repos/git",
+    "backing_repo": "/home/johndoe/.eden-backing-repos/git",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/git",
     "state": "SHUTTING_DOWN"
   },
   "/data/users/johndoe/mercurial": {
-    "backing_repo": "/home/johndoe/eden-repos/mercurial",
+    "backing_repo": "/home/johndoe/.eden-backing-repos/mercurial",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/mercurial",
     "state": "RUNNING"

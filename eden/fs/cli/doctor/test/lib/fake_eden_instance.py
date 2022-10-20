@@ -61,7 +61,9 @@ class FakeEdenInstance(AbstractEdenInstance):
         self._eden_dir.mkdir()
         self.clients_path = self._eden_dir / "clients"
         self.clients_path.mkdir()
-        self.default_backing_repo = Path(self._tmp_dir) / "eden-repos" / "main_repo"
+        self.default_backing_repo = (
+            Path(self._tmp_dir) / ".eden-backing-repos" / "main_repo"
+        )
         (self.default_backing_repo / ".hg").mkdir(parents=True)
 
         # A map from mount path --> FakeCheckout
