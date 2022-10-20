@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.65"
-async-trait = "0.1.56"
+async-trait = "0.1.58"
 blobstore = { version = "0.1.0", path = ".." }
 context = { version = "0.1.0", path = "../../server/context" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }

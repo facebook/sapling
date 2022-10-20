@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.65"
-async-trait = "0.1.56"
+async-trait = "0.1.58"
 blobrepo = { version = "0.1.0", path = ".." }
 blobrepo_common = { version = "0.1.0", path = "../common" }
 blobrepo_errors = { version = "0.1.0", path = "../errors" }

@@ -13,7 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.65"
-async-trait = "0.1.56"
+async-trait = "0.1.58"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }

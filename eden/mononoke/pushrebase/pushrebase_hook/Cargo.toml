@@ -12,7 +12,7 @@ path = "lib.rs"
 
 [dependencies]
 anyhow = "1.0.65"
-async-trait = "0.1.56"
+async-trait = "0.1.58"
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 context = { version = "0.1.0", path = "../../server/context" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

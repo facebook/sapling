@@ -12,7 +12,7 @@ path = "lib.rs"
 
 [dependencies]
 anyhow = "1.0.65"
-async-trait = "0.1.56"
+async-trait = "0.1.58"
 bonsai_git_mapping = { version = "0.1.0", path = ".." }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 context = { version = "0.1.0", path = "../../server/context" }

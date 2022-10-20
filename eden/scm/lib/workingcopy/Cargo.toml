@@ -36,7 +36,7 @@ vfs = { version = "0.1.0", path = "../vfs" }
 watchman_client = { version = "0.8.0", git = "https://github.com/facebook/watchman.git", branch = "main" }
 
 [dev-dependencies]
-async-trait = "0.1.56"
+async-trait = "0.1.58"
 tempdir = "0.3"
 tempfile = "3.3"
 

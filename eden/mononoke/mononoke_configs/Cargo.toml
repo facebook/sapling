@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.65"
 arc-swap = "1.5"
-async-trait = "0.1.56"
+async-trait = "0.1.58"
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 metaconfig_parser = { version = "0.1.0", path = "../metaconfig/parser" }
 tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }

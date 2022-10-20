@@ -11,7 +11,7 @@ license = "GPLv2+"
 ahash = "0.7.4"
 anyhow = "1.0.65"
 array-init = "0.1"
-async-trait = "0.1.56"
+async-trait = "0.1.58"
 async_compression = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 auto_impl = "0.4"
 basename_suffix_skeleton_manifest = { version = "0.1.0", path = "../derived_data/basename_suffix_skeleton_manifest" }

@@ -13,7 +13,7 @@ path = "test/main.rs"
 
 [dependencies]
 anyhow = "1.0.65"
-async-trait = "0.1.56"
+async-trait = "0.1.58"
 changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }
 context = { version = "0.1.0", path = "../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

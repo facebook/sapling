@@ -13,7 +13,7 @@ path = "lib.rs"
 [dependencies]
 anyhow = "1.0.65"
 async-recursion = "0.3.2"
-async-trait = "0.1.56"
+async-trait = "0.1.58"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

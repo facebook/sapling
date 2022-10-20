@@ -20,7 +20,7 @@ repo_permission_checker = { version = "0.1.0", path = "../repo_attributes/repo_p
 thiserror = "1.0.36"
 
 [dev-dependencies]
-async-trait = "0.1.56"
+async-trait = "0.1.58"
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

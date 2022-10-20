@@ -15,7 +15,7 @@ doctest = false
 
 [dependencies]
 anyhow = "1.0.65"
-async-trait = "0.1.56"
+async-trait = "0.1.58"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 const-cstr = "0.3.0"
 derived_data_thrift = { version = "0.1.0", path = "../../changeset_info/if" }

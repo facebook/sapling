@@ -12,7 +12,7 @@ path = "../test/derived_generation/lib.rs"
 
 [dependencies]
 anyhow = "1.0.65"
-async-trait = "0.1.56"
+async-trait = "0.1.58"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bytes = { version = "1.1", features = ["serde"] }
 context = { version = "0.1.0", path = "../../server/context" }
