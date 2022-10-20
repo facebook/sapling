@@ -9,6 +9,7 @@
   $ echo 'username = foobar' >> xdgconf/sapling/sapling.conf
   $ XDG_CONFIG_HOME="`pwd`/xdgconf" ; export XDG_CONFIG_HOME
   $ unset HGRCPATH
+  $ unset SL_CONFIG_PATH
   $ hg config ui.username 2>/dev/null
   foobar
 

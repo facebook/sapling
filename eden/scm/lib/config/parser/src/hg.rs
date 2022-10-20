@@ -495,14 +495,16 @@ impl ConfigSetHgExt for ConfigSet {
 
     fn load_user(&mut self, opts: Options, ident: &Identity) -> Vec<Error> {
         // If scripting config env var is set, don't load user configs
-        for ident in Some(ident).into_iter().chain(identity::all()) {
-            let paths = ident.user_config_paths();
-            if paths.iter().any(|p| p.exists()) {
-                return self.load_user_internal(&paths, opts);
+        if identity::env_var("CONFIG").is_none() {
+            for ident in Some(ident).into_iter().chain(identity::all()) {
+                let paths = ident.user_config_paths();
+                if paths.iter().any(|p| p.exists()) {
+                    return self.load_user_internal(&paths, opts);
+                }
             }
         }
 
-        // Call with emtpy paths for side effects.
+        // Call with empty paths for side effects.
         self.load_user_internal(&[], opts)
     }
 
