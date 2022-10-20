@@ -86,10 +86,15 @@ pub fn get_env_with_buck_version(path: &Path) -> Result<Vec<(OsString, OsString)
     // If we are going to use locally built buck we don't need to set a buck
     // version. The locally build buck will only use the locally built
     // version
-    if env
-        .iter()
-        .find(|&(k, _)| k == "SOURCE_BUILT_BUCK")
-        .is_none()
+
+    // TODO(T135622175): setting `BUCKVERSION=last` has caused issues with repos that are checked
+    // out to commits that are more than a few days old. For now, let's disable this code path.
+    // This will hinder performance a bit, but it should make `buck kill` more reliable.
+    if false
+        && env
+            .iter()
+            .find(|&(k, _)| k == "SOURCE_BUILT_BUCK")
+            .is_none()
     {
         // Using BUCKVERSION=last here to avoid triggering a download of a new
         // version of buck just to kill off buck.  This is specific to Facebook's

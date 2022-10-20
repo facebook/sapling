@@ -37,17 +37,22 @@ def get_env_with_buck_version(path: str) -> Dict[str, str]:
     # deployment of buck, and has no impact on the behavior of the opensource
     # buck executable.
     # On Windows, "last" doesn't work, fallback to reading the .buck-java11 file.
-    if sys.platform != "win32":
-        buckversion = "last"
-    else:
-        buckversion = subprocess.run(
-            [get_buck_command(), "--version-fast"],
-            stdout=subprocess.PIPE,
-            cwd=path,
-            encoding="utf-8",
-        ).stdout.strip()
 
-    env["BUCKVERSION"] = buckversion
+    # TODO(T135622175): setting `BUCKVERSION=last` has caused issues with repos that are checked
+    # out to commits that are more than a few days old. For now, let's disable this code path.
+    # This will hinder performance a bit, but it should make `buck kill` more reliable.
+    if False:
+        if sys.platform != "win32":
+            buckversion = "last"
+        else:
+            buckversion = subprocess.run(
+                [get_buck_command(), "--version-fast"],
+                stdout=subprocess.PIPE,
+                cwd=path,
+                encoding="utf-8",
+            ).stdout.strip()
+
+        env["BUCKVERSION"] = buckversion
 
     return env
 
