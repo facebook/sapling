@@ -10,6 +10,7 @@ import binascii
 import collections
 import datetime
 import errno
+import functools
 import json
 import logging
 import os
@@ -1106,9 +1107,7 @@ class EdenCheckout:
     def __init__(self, instance: EdenInstance, path: Path, state_dir: Path) -> None:
         self.instance = instance
         self.path = path
-        from . import hg_util
 
-        self.hg_dot_path: Path = path / hg_util.sniff_dot_dir(path)
         self.state_dir = state_dir
         self._config: Optional[CheckoutConfig] = None
 
@@ -1223,6 +1222,12 @@ class EdenCheckout:
 
         # Update our local config cache
         self._config = checkout_config
+
+    @functools.cached_property
+    def hg_dot_path(self) -> Path:
+        from . import hg_util
+
+        return self.path / hg_util.sniff_dot_dir(self.path)
 
     def _config_path(self) -> Path:
         return self.state_dir / MOUNT_CONFIG
