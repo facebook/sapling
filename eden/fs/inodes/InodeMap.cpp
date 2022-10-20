@@ -242,7 +242,7 @@ void InodeMap::initializeFromOverlay(TreeInodePtr root, Overlay& overlay) {
         // have a corresponding Overlay entry. Note that since Overlay
         // entries are also created for files that aren't on disk, this will
         // load inodes with no corresponding on-disk files.
-        if (!overlay.hasOverlayData(ino)) {
+        if (!overlay.hasOverlayDir(ino)) {
           continue;
         }
         pending.emplace_back(std::move(entryPath), ino);

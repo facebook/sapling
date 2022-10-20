@@ -100,11 +100,16 @@ class IOverlay {
   virtual void removeOverlayData(InodeNumber inodeNumber) = 0;
 
   /**
-   * Return if the overlay has a record of given InodeNumber.
+   * Return if the overlay has a directory record of given InodeNumber.
    */
-  virtual bool hasOverlayData(InodeNumber inodeNumber) = 0;
+  virtual bool hasOverlayDir(InodeNumber inodeNumber) = 0;
 
 #ifndef _WIN32
+  /**
+   * Return if the overlay has a file record of given InodeNumber.
+   */
+  virtual bool hasOverlayFile(InodeNumber inodeNumber) = 0;
+
   /**
    * Helper function that creates an overlay file for a new FileInode.
    */

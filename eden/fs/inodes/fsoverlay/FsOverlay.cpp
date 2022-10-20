@@ -648,6 +648,14 @@ bool FsOverlay::hasOverlayData(InodeNumber inodeNumber) {
   }
 }
 
+bool FsOverlay::hasOverlayDir(InodeNumber inodeNumber) {
+  return hasOverlayData(inodeNumber);
+}
+
+bool FsOverlay::hasOverlayFile(InodeNumber inodeNumber) {
+  return hasOverlayData(inodeNumber);
+}
+
 } // namespace facebook::eden
 
 #endif

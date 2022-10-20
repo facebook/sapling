@@ -286,7 +286,7 @@ void BufferedTreeOverlay::removeOverlayData(InodeNumber inodeNumber) {
       OperationType::Remove);
 }
 
-bool BufferedTreeOverlay::hasOverlayData(InodeNumber inodeNumber) {
+bool BufferedTreeOverlay::hasOverlayDir(InodeNumber inodeNumber) {
   {
     auto state = state_.lock();
     // check waiting work
@@ -301,7 +301,7 @@ bool BufferedTreeOverlay::hasOverlayData(InodeNumber inodeNumber) {
     }
   }
 
-  return TreeOverlay::hasOverlayData(inodeNumber);
+  return TreeOverlay::hasOverlayDir(inodeNumber);
 }
 
 } // namespace facebook::eden

@@ -67,7 +67,7 @@ class BufferedTreeOverlay : public TreeOverlay {
 
   void removeOverlayData(InodeNumber inodeNumber) override;
 
-  bool hasOverlayData(InodeNumber inodeNumber) override;
+  bool hasOverlayDir(InodeNumber inodeNumber) override;
 
   /**
    * For testing purposes only. This function returns only once all writes prior

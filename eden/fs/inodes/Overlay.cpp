@@ -432,12 +432,18 @@ folly::Future<folly::Unit> Overlay::flushPendingAsync() {
 }
 #endif // !_WIN32
 
-bool Overlay::hasOverlayData(InodeNumber inodeNumber) {
+bool Overlay::hasOverlayDir(InodeNumber inodeNumber) {
   IORequest req{this};
-  return backingOverlay_->hasOverlayData(inodeNumber);
+  return backingOverlay_->hasOverlayDir(inodeNumber);
 }
 
 #ifndef _WIN32
+
+bool Overlay::hasOverlayFile(InodeNumber inodeNumber) {
+  IORequest req{this};
+  return backingOverlay_->hasOverlayFile(inodeNumber);
+}
+
 // Helper function to open,validate,
 // get file pointer of an overlay file
 OverlayFile Overlay::openFile(

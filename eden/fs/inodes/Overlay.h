@@ -210,9 +210,11 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    */
   folly::Future<folly::Unit> flushPendingAsync();
 
-  bool hasOverlayData(InodeNumber inodeNumber);
+  bool hasOverlayDir(InodeNumber inodeNumber);
 
 #ifndef _WIN32
+  bool hasOverlayFile(InodeNumber inodeNumber);
+
   /**
    * Helper function that opens an existing overlay file,
    * checks if the file has valid header, and returns the file.

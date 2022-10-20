@@ -509,18 +509,18 @@ TEST(Fsck, testTruncatedDirData) {
 
   // No inodes from the orphaned subtree should be present in the
   // overlay any more.
-  EXPECT_FALSE(overlay->fs().hasOverlayData(layout.src_readmeTxt.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayData(layout.src_todoTxt.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayData(layout.src_foo.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayData(layout.src_foo_testTxt.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayData(layout.src_foo_barTxt.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayData(layout.src_foo_x.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayData(layout.src_foo_x_y.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayData(layout.src_foo_x_y_zTxt.number()));
+  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_readmeTxt.number()));
+  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_todoTxt.number()));
+  EXPECT_FALSE(overlay->fs().hasOverlayDir(layout.src_foo.number()));
+  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_foo_testTxt.number()));
+  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_foo_barTxt.number()));
+  EXPECT_FALSE(overlay->fs().hasOverlayDir(layout.src_foo_x.number()));
+  EXPECT_FALSE(overlay->fs().hasOverlayDir(layout.src_foo_x_y.number()));
+  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_foo_x_y_zTxt.number()));
   EXPECT_FALSE(
-      overlay->fs().hasOverlayData(layout.src_foo_x_y_abcTxt.number()));
+      overlay->fs().hasOverlayFile(layout.src_foo_x_y_abcTxt.number()));
   EXPECT_FALSE(
-      overlay->fs().hasOverlayData(layout.src_foo_x_y_defTxt.number()));
+      overlay->fs().hasOverlayFile(layout.src_foo_x_y_defTxt.number()));
 
   overlay->fs().close(checker.getNextInodeNumber());
 }
@@ -599,18 +599,18 @@ TEST(Fsck, testMissingDirData) {
 
   // No inodes from the orphaned subtree should be present in the
   // overlay any more.
-  EXPECT_FALSE(overlay->fs().hasOverlayData(layout.src_readmeTxt.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayData(layout.src_todoTxt.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayData(layout.src_foo.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayData(layout.src_foo_testTxt.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayData(layout.src_foo_barTxt.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayData(layout.src_foo_x.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayData(layout.src_foo_x_y.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayData(layout.src_foo_x_y_zTxt.number()));
+  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_readmeTxt.number()));
+  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_todoTxt.number()));
+  EXPECT_FALSE(overlay->fs().hasOverlayDir(layout.src_foo.number()));
+  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_foo_testTxt.number()));
+  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_foo_barTxt.number()));
+  EXPECT_FALSE(overlay->fs().hasOverlayDir(layout.src_foo_x.number()));
+  EXPECT_FALSE(overlay->fs().hasOverlayDir(layout.src_foo_x_y.number()));
+  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_foo_x_y_zTxt.number()));
   EXPECT_FALSE(
-      overlay->fs().hasOverlayData(layout.src_foo_x_y_abcTxt.number()));
+      overlay->fs().hasOverlayFile(layout.src_foo_x_y_abcTxt.number()));
   EXPECT_FALSE(
-      overlay->fs().hasOverlayData(layout.src_foo_x_y_defTxt.number()));
+      overlay->fs().hasOverlayFile(layout.src_foo_x_y_defTxt.number()));
 
   overlay->fs().close(checker.getNextInodeNumber());
 }

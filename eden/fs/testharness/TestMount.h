@@ -355,9 +355,9 @@ class TestMount {
       bool setReady);
 
   /**
-   * Returns true if the overlay contains a file for this inode.
+   * Returns true if the overlay contains a directory record for this inode.
    */
-  bool hasOverlayData(InodeNumber inodeNumber) const;
+  bool hasOverlayDir(InodeNumber inodeNumber) const;
 
   /**
    * Returns true if the inode metadata table has an entry for this inode.

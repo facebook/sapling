@@ -3360,7 +3360,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   if (entry.isMaterialized() ||
       getInodeMap()->isInodeRemembered(entry.getInodeNumber()) ||
       (kPreciseInodeNumberMemory && entry.isDirectory() &&
-       getOverlay()->hasOverlayData(entry.getInodeNumber()))) {
+       getOverlay()->hasOverlayDir(entry.getInodeNumber()))) {
     XLOG(DBG6) << "must load child: inode=" << getNodeId() << " child=" << name;
     // This child is potentially modified (or has saved state that must be
     // updated), but is not currently loaded. Start loading it and create a

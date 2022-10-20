@@ -49,6 +49,10 @@ void TreeOverlay::saveOverlayDir(
 }
 
 #ifndef _WIN32
+bool TreeOverlay::hasOverlayFile(InodeNumber /*inodeNumber*/) {
+  EDEN_BUG() << "UNIMPLEMENTED";
+}
+
 folly::File TreeOverlay::createOverlayFile(
     InodeNumber /*inodeNumber*/,
     folly::ByteRange /*contents*/) {
@@ -80,7 +84,7 @@ void TreeOverlay::removeOverlayData(InodeNumber inodeNumber) {
   store_.removeTree(inodeNumber);
 }
 
-bool TreeOverlay::hasOverlayData(InodeNumber inodeNumber) {
+bool TreeOverlay::hasOverlayDir(InodeNumber inodeNumber) {
   return store_.hasTree(inodeNumber);
 }
 

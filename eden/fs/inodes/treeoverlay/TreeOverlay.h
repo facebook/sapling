@@ -72,6 +72,8 @@ class TreeOverlay : public IOverlay {
       override;
 
 #ifndef _WIN32
+  bool hasOverlayFile(InodeNumber inodeNumber) override;
+
   folly::File createOverlayFile(
       InodeNumber inodeNumber,
       folly::ByteRange contents) override;
@@ -90,7 +92,7 @@ class TreeOverlay : public IOverlay {
 
   void removeOverlayData(InodeNumber inodeNumber) override;
 
-  bool hasOverlayData(InodeNumber inodeNumber) override;
+  bool hasOverlayDir(InodeNumber inodeNumber) override;
 
   void addChild(
       InodeNumber parent,

@@ -449,8 +449,8 @@ void TestMount::resetCommit(
   edenMount_->resetParent(commitHash);
 }
 
-bool TestMount::hasOverlayData(InodeNumber ino) const {
-  return edenMount_->getOverlay()->hasOverlayData(ino);
+bool TestMount::hasOverlayDir(InodeNumber ino) const {
+  return edenMount_->getOverlay()->hasOverlayDir(ino);
 }
 
 bool TestMount::hasMetadata(FOLLY_MAYBE_UNUSED InodeNumber ino) const {

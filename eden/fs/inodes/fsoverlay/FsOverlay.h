@@ -196,7 +196,9 @@ class FsOverlay : public IOverlay {
    */
   AbsolutePath getAbsoluteFilePath(InodeNumber inodeNumber) const;
 
-  bool hasOverlayData(InodeNumber inodeNumber) override;
+  bool hasOverlayDir(InodeNumber inodeNumber) override;
+
+  bool hasOverlayFile(InodeNumber inodeNumber) override;
 
   void maintenance() override {}
 
@@ -221,6 +223,8 @@ class FsOverlay : public IOverlay {
  private:
   FRIEND_TEST(OverlayTest, getFilePath);
   friend class RawOverlayTest;
+
+  bool hasOverlayData(InodeNumber inodeNumber);
 
   /**
    * Creates header for the files stored in Overlay

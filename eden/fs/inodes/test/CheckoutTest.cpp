@@ -1025,7 +1025,7 @@ TEST(Checkout, checkoutRemovingDirectoryDeletesOverlayFile) {
   // Allocated inode numbers are saved during takeover.
   testMount.remountGracefully();
 
-  EXPECT_TRUE(testMount.hasOverlayData(subInodeNumber));
+  EXPECT_TRUE(testMount.hasOverlayDir(subInodeNumber));
   EXPECT_TRUE(testMount.hasMetadata(subInodeNumber));
   EXPECT_TRUE(testMount.hasMetadata(fileInodeNumber));
 
@@ -1040,7 +1040,7 @@ TEST(Checkout, checkoutRemovingDirectoryDeletesOverlayFile) {
   // complete.
   testMount.getEdenMount()->getOverlay()->flushPendingAsync().get(60s);
 
-  EXPECT_FALSE(testMount.hasOverlayData(subInodeNumber));
+  EXPECT_FALSE(testMount.hasOverlayDir(subInodeNumber));
   EXPECT_FALSE(testMount.hasMetadata(subInodeNumber));
   EXPECT_FALSE(testMount.hasMetadata(fileInodeNumber));
 }
