@@ -36,7 +36,6 @@ import testing repo to mononoke
   $ echo $HG_HASH_1 > hash_list
   $ echo $HG_HASH_2 > hash_list
   $ backfill_mapping --git hash_list
-  * using repo "repo" repoid RepositoryId(0) (glob)
 
 check that mapping is populated
   $ echo ${HG_HASH_1^^}

@@ -11,15 +11,14 @@ use std::io::BufRead;
 use std::path::Path;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Error;
-use args::MononokeClapApp;
 use ascii::AsciiStr;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use clap_old::Arg;
-use clap_old::ArgGroup;
+use clap::ArgGroup;
+use clap::Parser;
 use cloned::cloned;
-use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream;
@@ -27,20 +26,29 @@ use futures_util::future::TryFutureExt;
 use futures_util::stream::StreamExt;
 use futures_util::stream::TryStreamExt;
 use mercurial_types::HgChangesetId;
+use mononoke_app::args::RepoArgs;
+use mononoke_app::MononokeAppBuilder;
 
-fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
-    args::MononokeAppBuilder::new("Tool to backfill git mappings for given commits")
-        .build()
-        .arg(Arg::with_name("git").long("git"))
-        .arg(Arg::with_name("svnrev").long("svnrev"))
-        .group(
-            ArgGroup::with_name("mode")
-                .args(&["git", "svnrev"])
-                .required(true),
-        )
-        .arg(Arg::from_usage(
-            "<IN_FILENAME>  'file with hg changeset ids (separated by newlines)'",
-        ))
+#[derive(Parser)]
+#[clap(about = "Tool to backfill git mappings for given commits")]
+#[clap(group(
+    ArgGroup::new("mode")
+        .required(true)
+        .args(&["git", "svnrev"]),
+))]
+
+struct BackFillArgs {
+    #[clap(flatten)]
+    repo: RepoArgs,
+    #[clap(long, action)]
+    git: bool,
+    #[clap(long, action)]
+    svnrev: bool,
+    #[clap(
+        value_parser,
+        help = " file with hg changeset ids (separated by newlines) "
+    )]
+    in_filename: Option<String>,
 }
 
 fn parse_input<P: AsRef<Path>>(
@@ -112,24 +120,29 @@ pub async fn backfill<P: AsRef<Path>>(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let matches = setup_app().get_matches(fb)?;
+    let app = MononokeAppBuilder::new(fb).build::<BackFillArgs>()?;
 
-    let logger = matches.logger();
-    let runtime = matches.runtime();
+    let args: BackFillArgs = app.args()?;
+
+    let logger = app.logger();
+    let runtime = app.runtime();
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let mode = if matches.is_present("git") {
+    let mode = if args.git {
         BackfillMode::Git
-    } else if matches.is_present("svnrev") {
+    } else if args.svnrev {
         BackfillMode::Svnrev
     } else {
         panic!("backfill mode not specified");
     };
 
     let run = async {
-        let repo = args::not_shardmanager_compatible::open_repo(fb, logger, &matches).await?;
-        let in_filename = matches.value_of("IN_FILENAME").unwrap();
+        let repo = app
+            .open_repo(&args.repo)
+            .await
+            .context("Failed to open repo")?;
+        let in_filename = args.in_filename.unwrap();
         backfill(ctx, repo, in_filename, mode).await
     };
 

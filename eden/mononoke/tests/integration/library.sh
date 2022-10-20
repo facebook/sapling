@@ -1228,7 +1228,7 @@ CONF
 }
 
 function backfill_mapping {
-  GLOG_minloglevel=5 "$MONONOKE_BACKFILL_MAPPING" --repo_id "$REPOID" \
+  GLOG_minloglevel=5 "$MONONOKE_BACKFILL_MAPPING" --repo-id "$REPOID" \
   --mononoke-config-path "$TESTTMP/mononoke-config" "${COMMON_ARGS[@]}" "$@"
 }
 
