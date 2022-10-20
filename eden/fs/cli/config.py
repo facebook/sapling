@@ -488,6 +488,7 @@ class EdenInstance(AbstractEdenInstance):
                 ("state_dir", str(checkout.state_dir)),
                 ("mount_protocol", checkout_config.mount_protocol),
                 ("case_sensitive", checkout_config.case_sensitive),
+                ("backing_repo", str(checkout.get_backing_repo_path())),
             ]
         )
 
@@ -1450,6 +1451,9 @@ class EdenCheckout:
     def get_backing_repo(self) -> util.HgRepo:
         repo_path = self.get_config().backing_repo
         return self.instance.get_hg_repo(repo_path)
+
+    def get_backing_repo_path(self) -> Path:
+        return self.get_config().backing_repo
 
     def activate_profile(
         self,

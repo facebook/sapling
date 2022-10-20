@@ -28,6 +28,7 @@ class InfoTest(testcase.EdenRepoTest):
         client_dir = os.path.join(
             self.eden_dir, "clients", os.path.basename(self.mount)
         )
+        backing_repo = str(self.get_backing_dir(self.repo_name, self.repo.get_type()))
 
         # We don't care about the exact case sensitivity value here; it's
         # tested elsewhere.
@@ -40,6 +41,7 @@ class InfoTest(testcase.EdenRepoTest):
                 "scm_type": self.repo.get_type(),
                 "mount": self.mount,
                 "mount_protocol": get_protocol(self.use_nfs()),
+                "backing_repo": backing_repo,
                 "checked_out_revision": self.repo.get_head_hash(),
                 "working_copy_parent": self.repo.get_head_hash(),
             },

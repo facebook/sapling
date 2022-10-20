@@ -40,6 +40,8 @@ except ImportError:
     # Thrift-py3 is not supported in the CMake build yet.
     pass
 
+from pathlib import Path
+
 from facebook.eden.ttypes import SourceControlType
 
 from . import edenclient, gitrepo, hgrepo, repobase, skip
@@ -210,6 +212,12 @@ class EdenTestCase(EdenTestCaseBase):
         with self.get_thrift_client_legacy() as thrift_client:
             thrift_client.flushStatsNow()
             return thrift_client.getCounters()
+
+    def get_backing_dir(self, reponame: str, repo_type: str) -> Path:
+        backing_dir_location = Path(self.repos_dir) / reponame
+        return (
+            backing_dir_location if repo_type == "hg" else backing_dir_location / ".git"
+        )
 
     def edenfs_logging_settings(self) -> Optional[Dict[str, str]]:
         """
