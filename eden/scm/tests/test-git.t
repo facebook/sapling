@@ -477,6 +477,28 @@ Rebase merging conflicts
   rebasing e03992db70e4 "B"
   merging f
 
+Rebasing an add conflict
+  $ cd
+  $ hg init --git rebase-add
+  $ cd rebase-add
+  $ enable rebase
+  $ touch base
+  $ hg commit -Aqm base
+  $ echo 2 > file1
+  $ hg commit -Aqm file1.a
+  $ hg book dest
+  $ hg up .^
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark dest)
+  $ echo 1 > file1
+  $ hg commit -Aqm file1.b
+  $ hg rebase -d dest
+  rebasing ce2d49965394 "file1.b"
+  merging file1
+  warning: 1 conflicts while merging file1! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+
 Test amend:
 
   $ cd

@@ -47,7 +47,6 @@ from .node import (
     modifiednodeid,
     nullhex,
     nullid,
-    nullrev,
     short,
     wdirid,
     wdirnodes,
@@ -266,13 +265,13 @@ class basectx(object):
         p = self.parents()
         if p:
             return p[0]
-        return changectx(self._repo, nullrev)
+        return changectx(self._repo, nullid)
 
     def p2(self):
         parents = self._parents
         if len(parents) == 2:
             return parents[1]
-        return changectx(self._repo, nullrev)
+        return changectx(self._repo, nullid)
 
     def _fileinfo(self, path):
         if r"_manifest" in self.__dict__:
@@ -1050,7 +1049,7 @@ class basefilectx(object):
         p = self.parents()
         if len(p) == 2:
             return p[1]
-        return filectx(self._repo, self._path, fileid=-1, filelog=self._filelog)
+        return filectx(self._repo, self._path, fileid=nullid, filelog=self._filelog)
 
     def annotate(self, follow=False, linenumber=False, skiprevs=None, diffopts=None):
         """returns a list of tuples of ((ctx, number), line) for each line

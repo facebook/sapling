@@ -44,7 +44,7 @@ from . import (
     worker,
 )
 from .i18n import _
-from .node import addednodeid, bin, hex, nullhex, nullid, nullrev
+from .node import addednodeid, bin, hex, nullhex, nullid
 from .pycompat import decodeutf8, encodeutf8
 
 _pack = struct.pack
@@ -1685,7 +1685,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             fca = actx[fa]
         else:
             # TODO: move to absentfilectx
-            fca = repo.filectx(f1, fileid=nullrev)
+            fca = repo.filectx(f1, changeid=nullid, fileid=nullid)
         ms.add(fcl, fco, fca, f)
         if f1 != f and move:
             moves.append(f1)
