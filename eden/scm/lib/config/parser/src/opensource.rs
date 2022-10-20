@@ -170,13 +170,6 @@ undo=
 fsmonitor=sqldirstate, sparse
 journal=eden
 
-[fastmanifest]
-cacheonchange=True
-relevantremotenames=master,fbobjc/stable,fbandroid/stable,fbcode/warm,fbsource/stable
-scubalog.fastmanifest=extensions.fastmanifest
-usetree=True
-usecache=False
-
 [format]
 aggressivemergedeltas=True
 generaldelta=True
