@@ -11,6 +11,7 @@ import glob
 import os
 import subprocess
 import sys
+from subprocess import CalledProcessError
 from typing import Dict, List
 
 from . import proc_utils
@@ -99,14 +100,20 @@ def run_buck_command(
 ) -> "subprocess.CompletedProcess[bytes]":
 
     env = get_env_with_buck_version(path)
-    return subprocess.run(
-        buck_command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        cwd=path,
-        env=env,
-        check=True,
-    )
+    try:
+        return subprocess.run(
+            buck_command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=path,
+            env=env,
+            check=True,
+        )
+    except CalledProcessError as e:
+        print(
+            f"{e}\n\nFailed to kill buck. Please manually run `buck kill` in `{path}`"
+        )
+        raise e
 
 
 def stop_buckd_for_path(path: str) -> None:

@@ -23,7 +23,7 @@ from typing import Dict, Iterable, Optional, Set
 from thrift.Thrift import TApplicationException
 
 from . import cmd_util, mtab, subcmd as subcmd_mod, tabulate
-from .buck import is_buckd_running_for_path, stop_buckd_for_path
+from .buck import is_buckd_running_for_path, stop_buckd_for_path, stop_buckd_for_repo
 from .config import CheckoutConfig, EdenCheckout, EdenInstance, load_toml_config
 from .subcmd import Subcmd
 from .util import mkscratch_bin
@@ -393,6 +393,12 @@ class Redirection:
         maybe_buck_project = str(repo_path.parent)
         if is_buckd_running_for_path(maybe_buck_project):
             stop_buckd_for_path(maybe_buck_project)
+
+        # We have encountered issues with buck daemons holding references to files underneath the
+        # redirection we're trying to remove. We should kill all buck instances for the repo to
+        # guard against these cases and avoid `redirect fixup` failures.
+        checkout_path = str(checkout.path)
+        stop_buckd_for_repo(checkout_path)
 
         if disposition == RepoPathDisposition.IS_SYMLINK:
             repo_path.unlink()

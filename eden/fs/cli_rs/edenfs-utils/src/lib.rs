@@ -179,7 +179,7 @@ pub fn find_second_level_buck_projects(path: &Path) -> Result<Vec<PathBuf>> {
         .filter_map(|c| match c {
             Ok(project) => {
                 if project.is_file() {
-                    Some(project)
+                    project.parent().map(|p| p.to_owned())
                 } else {
                     None
                 }
@@ -196,7 +196,13 @@ pub fn stop_buckd_for_repo(path: &Path) {
         Ok(projects) => {
             for project in projects {
                 if is_buckd_running_for_path(&project) {
-                    stop_buckd_for_path(&project).ok();
+                    if let Err(e) = stop_buckd_for_path(&project) {
+                        eprintln!(
+                            "Failed to kill buck. Please manually run `buck kill` in `{}`\n{:?}\n\n",
+                            &project.display(),
+                            e
+                        )
+                    }
                 }
             }
         }
@@ -215,13 +221,6 @@ pub fn is_buckd_running_for_path(path: &Path) -> bool {
     if let Ok(buck_pid) = buck_pid_parse {
         is_process_running(buck_pid)
     } else {
-        // TODO(@cuev): we are currently looking in the wrong directories for .buckd files.
-        // We should fix .buckd locating so that this error message isn't so noisy
-
-        // eprintln!(
-        //     "Failed to parse pid from buckd pid file {}",
-        //     pid_file.display()
-        // );
         false
     }
 }
@@ -242,8 +241,17 @@ pub fn stop_buckd_for_path(path: &Path) -> Result<()> {
     println!("Stopping buck in {}...", path.display());
     let mut kill_cmd = Command::new(get_buck_command());
     kill_cmd.arg("kill");
-    run_buck_command(&mut kill_cmd, path)?;
-    Ok(())
+    let can_path = path.canonicalize().from_err()?;
+    let out = run_buck_command(&mut kill_cmd, &can_path)?;
+    if out.status.success() {
+        Ok(())
+    } else {
+        Err(EdenFsError::Other(anyhow!(
+            "Failed to kill buck, stderr: {}, exit status: {:?}",
+            String::from_utf8_lossy(&out.stderr),
+            out.status,
+        )))
+    }
 }
 
 #[cfg(windows)]
