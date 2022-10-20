@@ -223,7 +223,7 @@ std::optional<overlay::OverlayDir> BufferedTreeOverlay::loadAndRemoveOverlayDir(
       if (operationIter->second.operationType == OperationType::Write) {
         overlay::OverlayDir odir = operationIter->second.work->odir.value();
         state.unlock();
-        removeOverlayData(inodeNumber);
+        removeOverlayDir(inodeNumber);
         return std::move(odir);
       } else {
         return std::nullopt;
@@ -235,7 +235,7 @@ std::optional<overlay::OverlayDir> BufferedTreeOverlay::loadAndRemoveOverlayDir(
       if (operationIter->second.operationType == OperationType::Write) {
         overlay::OverlayDir odir = operationIter->second.work->odir.value();
         state.unlock();
-        removeOverlayData(inodeNumber);
+        removeOverlayDir(inodeNumber);
         return std::move(odir);
       } else {
         return std::nullopt;
@@ -275,10 +275,10 @@ void BufferedTreeOverlay::saveOverlayDir(
       std::move(odir));
 }
 
-void BufferedTreeOverlay::removeOverlayData(InodeNumber inodeNumber) {
+void BufferedTreeOverlay::removeOverlayDir(InodeNumber inodeNumber) {
   process(
       [this, inodeNumber]() {
-        TreeOverlay::removeOverlayData(inodeNumber);
+        TreeOverlay::removeOverlayDir(inodeNumber);
         return false;
       },
       0,

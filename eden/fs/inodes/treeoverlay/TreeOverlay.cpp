@@ -53,6 +53,10 @@ bool TreeOverlay::hasOverlayFile(InodeNumber /*inodeNumber*/) {
   EDEN_BUG() << "UNIMPLEMENTED";
 }
 
+void TreeOverlay::removeOverlayFile(InodeNumber /*inodeNumber*/) {
+  EDEN_BUG() << "UNIMPLEMENTED";
+}
+
 folly::File TreeOverlay::createOverlayFile(
     InodeNumber /*inodeNumber*/,
     folly::ByteRange /*contents*/) {
@@ -80,7 +84,7 @@ struct statfs TreeOverlay::statFs() const {
 }
 #endif
 
-void TreeOverlay::removeOverlayData(InodeNumber inodeNumber) {
+void TreeOverlay::removeOverlayDir(InodeNumber inodeNumber) {
   store_.removeTree(inodeNumber);
 }
 

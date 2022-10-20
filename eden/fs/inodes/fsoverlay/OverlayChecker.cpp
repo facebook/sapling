@@ -537,7 +537,7 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
       archiveDirectoryEntry(repair, childInfo, childEntry.second, childPath);
     }
 
-    tryRemoveInode(repair, number);
+    tryRemoveDirInode(repair, number);
   }
 
   void archiveDirectoryEntry(
@@ -646,7 +646,7 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
     }
 
     // Now remove the orphan inode file
-    tryRemoveInode(repair, number);
+    tryRemoveFileInode(repair, number);
   }
 
   void processOrphanedError(RepairState& repair, InodeNumber number) const {
@@ -659,18 +659,30 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
     // The InodeDataError::repair() code will have replaced the broken inode
     // contents with an empty file or directory.  We just need to remove that
     // here if it is part of an orphan subtree.
-    tryRemoveInode(repair, number);
+    tryRemoveFileInode(repair, number);
   }
 
-  void tryRemoveInode(RepairState& repair, InodeNumber number) const {
+  void tryRemoveDirInode(RepairState& repair, InodeNumber number) const {
     try {
-      repair.fs()->removeOverlayData(number);
+      repair.fs()->removeOverlayDir(number);
     } catch (const std::system_error& ex) {
       // If we fail to remove the file log an error, but proceed with the rest
       // of the fsck repairs rather than letting the exception propagate up
       // to our caller.
-      XLOG(ERR) << "error removing overlay file for orphaned inode " << number
-                << " after archiving it: " << ex.what();
+      XLOG(ERR) << "error removing overlay file for orphaned directory inode "
+                << number << " after archiving it: " << ex.what();
+    }
+  }
+
+  void tryRemoveFileInode(RepairState& repair, InodeNumber number) const {
+    try {
+      repair.fs()->removeOverlayFile(number);
+    } catch (const std::system_error& ex) {
+      // If we fail to remove the file log an error, but proceed with the rest
+      // of the fsck repairs rather than letting the exception propagate up
+      // to our caller.
+      XLOG(ERR) << "error removing overlay file for orphaned file inode "
+                << number << " after archiving it: " << ex.what();
     }
   }
 

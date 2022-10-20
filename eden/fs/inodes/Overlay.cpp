@@ -398,20 +398,31 @@ void Overlay::freeInodeFromMetadataTable(InodeNumber ino) {
 #endif
 }
 
-void Overlay::removeOverlayData(InodeNumber inodeNumber) {
+void Overlay::removeOverlayFile(InodeNumber inodeNumber) {
+#ifndef _WIN32
   IORequest req{this};
 
   freeInodeFromMetadataTable(inodeNumber);
-  backingOverlay_->removeOverlayData(inodeNumber);
+  backingOverlay_->removeOverlayFile(inodeNumber);
+#else
+  (void)inodeNumber;
+#endif
 }
 
-void Overlay::recursivelyRemoveOverlayData(InodeNumber inodeNumber) {
+void Overlay::removeOverlayDir(InodeNumber inodeNumber) {
+  IORequest req{this};
+
+  freeInodeFromMetadataTable(inodeNumber);
+  backingOverlay_->removeOverlayDir(inodeNumber);
+}
+
+void Overlay::recursivelyRemoveOverlayDir(InodeNumber inodeNumber) {
   IORequest req{this};
   freeInodeFromMetadataTable(inodeNumber);
 
   // This inode's data must be removed from the overlay before
-  // recursivelyRemoveOverlayData returns to avoid a race condition if
-  // recursivelyRemoveOverlayData(I) is called immediately prior to
+  // recursivelyRemoveOverlayDir returns to avoid a race condition if
+  // recursivelyRemoveOverlayDir(I) is called immediately prior to
   // saveOverlayDir(I).  There's also no risk of violating our durability
   // guarantees if the process dies after this call but before the thread could
   // remove this data.
@@ -584,12 +595,12 @@ void Overlay::handleGCRequest(GCRequest& request) {
   // TODO: For better throughput on large tree collections, it might make
   // sense to split this into two threads: one for traversing the tree and
   // another that makes the actual unlink calls.
-  auto safeRemoveOverlayData = [&](InodeNumber inodeNumber) {
+  auto safeRemoveOverlayFile = [&](InodeNumber inodeNumber) {
     try {
-      removeOverlayData(inodeNumber);
+      removeOverlayFile(inodeNumber);
     } catch (const std::exception& e) {
-      XLOG(ERR) << "Failed to remove overlay data for inode " << inodeNumber
-                << ": " << e.what();
+      XLOG(ERR) << "Failed to remove overlay data for file inode "
+                << inodeNumber << ": " << e.what();
     }
   };
 
@@ -610,7 +621,7 @@ void Overlay::handleGCRequest(GCRequest& request) {
         // under normal operation, there should be nothing at this path
         // because files are only written into the overlay if they're
         // materialized.
-        safeRemoveOverlayData(ino);
+        safeRemoveOverlayFile(ino);
       }
     }
   };

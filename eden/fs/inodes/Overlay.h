@@ -194,7 +194,9 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    */
   DirContents loadOverlayDir(InodeNumber inodeNumber);
 
-  void removeOverlayData(InodeNumber inodeNumber);
+  void removeOverlayFile(InodeNumber inodeNumber);
+
+  void removeOverlayDir(InodeNumber inodeNumber);
 
   /**
    * Remove the overlay data for the given tree inode and recursively remove
@@ -202,11 +204,11 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    *
    * Must only be called on trees.
    */
-  void recursivelyRemoveOverlayData(InodeNumber inodeNumber);
+  void recursivelyRemoveOverlayDir(InodeNumber inodeNumber);
 
   /**
    * Returns a future that completes once all previously-issued async
-   * operations, namely recursivelyRemoveOverlayData, finish.
+   * operations, namely recursivelyRemoveOverlayDir, finish.
    */
   folly::Future<folly::Unit> flushPendingAsync();
 

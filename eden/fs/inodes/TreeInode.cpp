@@ -1467,9 +1467,9 @@ void TreeInode::removeAllChildrenRecursively(
     it = contents->entries.erase(it);
 
     if (isDir) {
-      getOverlay()->recursivelyRemoveOverlayData(inodeNum);
+      getOverlay()->recursivelyRemoveOverlayDir(inodeNum);
     } else {
-      getOverlay()->removeOverlayData(inodeNum);
+      getOverlay()->removeOverlayFile(inodeNum);
     }
   }
 
@@ -1512,9 +1512,9 @@ InodePtr TreeInode::tryRemoveUnloadedChild(
 
   updateMtimeAndCtimeLocked(contents->entries, getNow());
   if (it->second.isDirectory()) {
-    getOverlay()->recursivelyRemoveOverlayData(inodeNumber);
+    getOverlay()->recursivelyRemoveOverlayDir(inodeNumber);
   } else {
-    getOverlay()->removeOverlayData(inodeNumber);
+    getOverlay()->removeOverlayFile(inodeNumber);
   }
   getOverlay()->removeChild(getNodeId(), name, contents->entries);
   return nullptr;
@@ -3486,7 +3486,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     XLOG(DBG5) << "recursively removing overlay data for "
                << oldEntryInodeNumber << "(" << getLogPath() << " / " << name
                << ")";
-    getOverlay()->recursivelyRemoveOverlayData(oldEntryInodeNumber);
+    getOverlay()->recursivelyRemoveOverlayDir(oldEntryInodeNumber);
   }
 
   // TODO: contents have changed: we probably should propagate

@@ -95,9 +95,9 @@ class IOverlay {
       overlay::OverlayDir&& odir) = 0;
 
   /**
-   * Remove the overlay record associated with the passed InodeNumber.
+   * Remove the overlay directory record associated with the passed InodeNumber.
    */
-  virtual void removeOverlayData(InodeNumber inodeNumber) = 0;
+  virtual void removeOverlayDir(InodeNumber inodeNumber) = 0;
 
   /**
    * Return if the overlay has a directory record of given InodeNumber.
@@ -109,6 +109,11 @@ class IOverlay {
    * Return if the overlay has a file record of given InodeNumber.
    */
   virtual bool hasOverlayFile(InodeNumber inodeNumber) = 0;
+
+  /**
+   * Remove the overlay file record associated with the passed InodeNumber.
+   */
+  virtual void removeOverlayFile(InodeNumber inodeNumber) = 0;
 
   /**
    * Helper function that creates an overlay file for a new FileInode.

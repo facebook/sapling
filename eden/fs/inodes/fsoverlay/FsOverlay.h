@@ -159,9 +159,14 @@ class FsOverlay : public IOverlay {
       const folly::IOBuf& contents) override;
 
   /**
-   * Remove the overlay data associated with the passed InodeNumber.
+   * Remove the overlay directory data associated with the passed InodeNumber.
    */
-  void removeOverlayData(InodeNumber inodeNumber) override;
+  void removeOverlayDir(InodeNumber inodeNumber) override;
+
+  /**
+   * Remove the overlay file associated with the passed InodeNumber.
+   */
+  void removeOverlayFile(InodeNumber inodeNumber) override;
 
   /**
    * Validates an entry's header.
@@ -225,6 +230,8 @@ class FsOverlay : public IOverlay {
   friend class RawOverlayTest;
 
   bool hasOverlayData(InodeNumber inodeNumber);
+
+  void removeOverlayData(InodeNumber inodeNumber);
 
   /**
    * Creates header for the files stored in Overlay

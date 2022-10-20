@@ -494,7 +494,7 @@ TEST_P(RawOverlayTest, cannot_remove_overlay_file_when_closed) {
   overlay->close();
 
   EXPECT_THROW_RE(
-      overlay->removeOverlayData(ino2),
+      overlay->removeOverlayFile(ino2),
       std::system_error,
       "cannot access overlay after it is closed");
 }

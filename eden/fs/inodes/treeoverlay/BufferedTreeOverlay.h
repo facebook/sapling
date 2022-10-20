@@ -65,7 +65,7 @@ class BufferedTreeOverlay : public TreeOverlay {
   void saveOverlayDir(InodeNumber inodeNumber, overlay::OverlayDir&& odir)
       override;
 
-  void removeOverlayData(InodeNumber inodeNumber) override;
+  void removeOverlayDir(InodeNumber inodeNumber) override;
 
   bool hasOverlayDir(InodeNumber inodeNumber) override;
 

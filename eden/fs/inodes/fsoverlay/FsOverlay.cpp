@@ -298,7 +298,7 @@ optional<overlay::OverlayDir> FsOverlay::loadOverlayDir(
 std::optional<overlay::OverlayDir> FsOverlay::loadAndRemoveOverlayDir(
     InodeNumber inodeNumber) {
   auto result = loadOverlayDir(inodeNumber);
-  removeOverlayData(inodeNumber);
+  removeOverlayDir(inodeNumber);
   return result;
 }
 
@@ -633,6 +633,14 @@ void FsOverlay::removeOverlayData(InodeNumber inodeNumber) {
     folly::throwSystemError(
         "error unlinking overlay file: ", RelativePathPiece{path});
   }
+}
+
+void FsOverlay::removeOverlayDir(InodeNumber inodeNumber) {
+  removeOverlayData(inodeNumber);
+}
+
+void FsOverlay::removeOverlayFile(InodeNumber inodeNumber) {
+  removeOverlayData(inodeNumber);
 }
 
 bool FsOverlay::hasOverlayData(InodeNumber inodeNumber) {

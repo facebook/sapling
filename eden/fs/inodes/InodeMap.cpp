@@ -1082,7 +1082,11 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
   auto fsCount = inode->getFsRefcount();
   if (isUnlinked && (data->isUnmounted_ || fsCount == 0)) {
     try {
-      mount_->getOverlay()->removeOverlayData(inode->getNodeId());
+      if (inode->getType() == dtype_t::Dir) {
+        mount_->getOverlay()->removeOverlayDir(inode->getNodeId());
+      } else {
+        mount_->getOverlay()->removeOverlayFile(inode->getNodeId());
+      }
     } catch (const std::exception& ex) {
       // If we fail to update the overlay log an error but do not propagate the
       // exception to our caller.  There is nothing else we can do to handle
