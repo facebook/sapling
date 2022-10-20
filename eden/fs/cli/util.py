@@ -39,6 +39,10 @@ if sys.platform != "win32":
 LOCK_FILE = "lock"
 PID_FILE = "pid"
 
+NFS_MOUNT_PROTOCOL_STRING = "nfs"
+FUSE_MOUNT_PROTOCOL_STRING = "fuse"
+PRJFS_MOUNT_PROTOCOL_STRING = "prjfs"
+
 
 class EdenStartError(Exception):
     pass
@@ -711,9 +715,9 @@ def is_apple_silicon() -> bool:
 
 def get_protocol(nfs: bool) -> str:
     if sys.platform == "win32":
-        return "prjfs"
+        return PRJFS_MOUNT_PROTOCOL_STRING
     else:
-        return "nfs" if nfs else "fuse"
+        return NFS_MOUNT_PROTOCOL_STRING if nfs else FUSE_MOUNT_PROTOCOL_STRING
 
 
 def get_tip_commit_hash(repo: Path) -> bytes:

@@ -22,7 +22,19 @@ import time
 import typing
 import uuid
 from pathlib import Path
-from typing import Any, Dict, IO, KeysView, List, Mapping, Optional, Set, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    IO,
+    KeysView,
+    List,
+    Mapping,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 import facebook.eden.ttypes as eden_ttypes
 import toml
@@ -32,7 +44,15 @@ from facebook.eden.ttypes import MountInfo as ThriftMountInfo, MountState
 from filelock import BaseFileLock, FileLock
 
 from . import configinterpolator, configutil, telemetry, util, version
-from .util import HealthStatus, print_stderr, Spinner, write_file_atomically
+from .util import (
+    FUSE_MOUNT_PROTOCOL_STRING,
+    HealthStatus,
+    NFS_MOUNT_PROTOCOL_STRING,
+    print_stderr,
+    PRJFS_MOUNT_PROTOCOL_STRING,
+    Spinner,
+    write_file_atomically,
+)
 
 try:
     from eden.thrift import client  # @manual
@@ -85,7 +105,11 @@ DEFAULT_REVISION = {  # supported repo name -> default bookmark
 
 SUPPORTED_REPOS: KeysView[str] = DEFAULT_REVISION.keys()
 
-SUPPORTED_MOUNT_PROTOCOLS = {"fuse", "nfs", "prjfs"}
+SUPPORTED_MOUNT_PROTOCOLS: Set[str] = {
+    FUSE_MOUNT_PROTOCOL_STRING,
+    NFS_MOUNT_PROTOCOL_STRING,
+    PRJFS_MOUNT_PROTOCOL_STRING,
+}
 
 # Create a readme file with this name in the mount point directory.
 # The intention is for this to contain instructions telling users what to do if their
@@ -1556,6 +1580,57 @@ class EdenCheckout:
         new_config = old_config._replace(mount_protocol=new_mount_protocol)
 
         self.save_config(new_config)
+
+
+# Fuse is still not functional on Ventura, so users will need to use NFS on
+# Ventura.
+def should_migrate_mount_protocol_to_nfs(instance: EdenInstance) -> bool:
+    if sys.platform != "darwin":
+        return False
+
+    if util.is_sandcastle():
+        return False
+
+    ventura_os_version = "22.0.0"
+
+    if tuple(os.uname().release.split(".")) >= tuple(ventura_os_version.split(".")):
+        return instance.get_config_bool("core.migrate_existing_to_nfs", default=False)
+
+    return False
+
+
+# Checks for any non NFS mounts and migrates them to NFS.
+def _do_nfs_migration(
+    instance: EdenInstance, get_migration_success_message: Callable[[str], str]
+) -> None:
+    migrate_mounts = False
+    for checkout in instance.get_checkouts():
+        if checkout.get_config().mount_protocol != util.NFS_MOUNT_PROTOCOL_STRING:
+            migrate_mounts = True
+    if not migrate_mounts:
+        # most the time this should be the case. we only need to migrate mounts
+        # once, and then we should just be able to skip this all other times.
+        return
+
+    print("migrating mounts to NFS ...")
+
+    for checkout in instance.get_checkouts():
+        if checkout.get_config().mount_protocol != util.NFS_MOUNT_PROTOCOL_STRING:
+            checkout.migrate_mount_protocol(util.NFS_MOUNT_PROTOCOL_STRING)
+
+    instance.log_sample("migrate_existing_clones_to_nfs")
+    print(get_migration_success_message(util.NFS_MOUNT_PROTOCOL_STRING))
+
+
+def _do_manual_migration(
+    instance: EdenInstance,
+    migrate_to: str,
+    get_migration_success_message: Callable[[str], str],
+) -> None:
+    for checkout in instance.get_checkouts():
+        checkout.migrate_mount_protocol(migrate_to)
+
+    print(get_migration_success_message(migrate_to))
 
 
 def detect_nested_checkout(

@@ -1699,6 +1699,8 @@ class StartCmd(Subcmd):
                 instance, daemon_binary, args.edenfs_args
             )
 
+        if config_mod.should_migrate_mount_protocol_to_nfs(instance):
+            config_mod._do_nfs_migration(instance, get_migration_success_message)
         return daemon.start_edenfs_service(instance, daemon_binary, args.edenfs_args)
 
     def start_in_foreground(
@@ -2029,7 +2031,11 @@ re-open these files after EdenFS is restarted.
 
         self._do_stop(instance, old_pid, timeout=15)
         if migrate_to is not None:
-            self._do_migration(instance, migrate_to)
+            config_mod._do_manual_migration(
+                instance, migrate_to, get_migration_success_message
+            )
+        elif config_mod.should_migrate_mount_protocol_to_nfs(instance):
+            config_mod._do_nfs_migration(instance, get_migration_success_message)
         return self._finish_restart(instance)
 
     def _force_restart(
@@ -2067,12 +2073,6 @@ re-open these files after EdenFS is restarted.
                 print("Sending SIGTERM...")
                 os.kill(pid, signal.SIGTERM)
         self._wait_for_stop(instance, pid, timeout)
-
-    def _do_migration(self, instance: EdenInstance, migrate_to: str) -> None:
-        for checkout in instance.get_checkouts():
-            checkout.migrate_mount_protocol(migrate_to)
-
-        print(get_migration_success_message(migrate_to))
 
     def _finish_restart(self, instance: EdenInstance) -> int:
         exit_code = daemon.start_edenfs_service(

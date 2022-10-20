@@ -12,14 +12,15 @@ import os
 import sys
 import unittest
 from pathlib import Path
+from typing import Dict
 
 import toml
 import toml.decoder
+from eden.fs.cli.config import EdenInstance
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 from eden.test_support.testcase import EdenTestCaseBase
 
 from .. import config as config_mod, configutil, util
-from ..config import EdenInstance
 from ..configinterpolator import EdenConfigInterpolator
 from ..configutil import EdenConfigParser, UnexpectedType
 
@@ -543,3 +544,98 @@ class EdenInstanceConstructionTest(unittest.TestCase):
         )
         self.assertEqual(instance.etc_eden_dir, Path("/etc/eden"))
         self.assertEqual(instance.home_dir, Path("/home/testuser/"))
+
+
+class NFSMigrationTest(EdenTestCaseBase):
+    def setUp(self) -> None:
+        super().setUp()
+        self._user = "bob"
+        self._state_dir = self.tmp_dir / ".eden"
+        self._etc_eden_dir = self.tmp_dir / "etc/eden"
+        self._config_d = self.tmp_dir / "etc/eden/config.d"
+        self._home_dir = self.tmp_dir / "home" / self._user
+        self._interpolate_dict = {
+            "USER": self._user,
+            "USER_ID": "42",
+            "HOME": str(self._home_dir),
+        }
+
+        self._state_dir.mkdir()
+        self._config_d.mkdir(exist_ok=True, parents=True)
+        self._home_dir.mkdir(exist_ok=True, parents=True)
+
+    def setup_config_files(self, mounts: Dict[str, str]) -> None:
+        config_json_list = ",\n".join(
+            [f'"{self.tmp_dir}/{mount}" : "{mount}"' for mount in mounts]
+        )
+        config_json = f"""{{
+{config_json_list}
+}}"""
+        (self._state_dir / "config.json").write_text(config_json)
+
+        (self._state_dir / "clients").mkdir()
+        for mount, initial_mount_protocol in mounts.items():
+            (self._state_dir / "clients" / mount).mkdir()
+            (self._state_dir / "clients" / mount / "config.toml").write_text(
+                f"""
+[repository]
+path = "{self.tmp_dir}/.eden-backing-repos/test"
+type = "hg"
+protocol = "{initial_mount_protocol}"
+"""
+            )
+
+    def check_migrate_nfs(self, mounts: Dict[str, str]) -> None:
+        self.setup_config_files(mounts)
+
+        cmdline = [
+            b"/usr/local/libexec/eden/edenfs",
+            b"--edenfs",
+            b"--edenDir",
+            str(self._state_dir).encode("utf-8"),
+            b"--etcEdenDir",
+            str(self._config_d).encode("utf-8"),
+            b"--configPath",
+            str(self._home_dir).encode("utf-8"),
+            b"--edenfsctlPath",
+            b"/usr/local/bin/edenfsctl",
+            b"--takeover",
+            b"",
+        ]
+        instance = config_mod.eden_instance_from_cmdline(cmdline)
+
+        for mount, initial_mount_protocol in mounts.items():
+            checkoutConfig = config_mod.EdenCheckout(
+                instance, self.tmp_dir / mount, self._state_dir / "clients" / mount
+            ).get_config()
+
+            self.assertEqual(checkoutConfig.mount_protocol, initial_mount_protocol)
+
+        config_mod._do_nfs_migration(instance, lambda protocol: protocol)
+
+        for mount in mounts:
+            checkoutConfig = config_mod.EdenCheckout(
+                instance, self.tmp_dir / mount, self._state_dir / "clients" / mount
+            ).get_config()
+
+            self.assertEqual(checkoutConfig.mount_protocol, "nfs")
+
+    def test_none(self) -> None:
+        mounts = {}
+        self.check_migrate_nfs(mounts)
+
+    def test_simple(self) -> None:
+        mounts = {"test": "fuse"}
+        self.check_migrate_nfs(mounts)
+
+    def test_multiple(self) -> None:
+        mounts = {"test1": "fuse", "test2": "fuse"}
+        self.check_migrate_nfs(mounts)
+
+    def test_already_nfs(self) -> None:
+        mounts = {"test": "nfs"}
+        self.check_migrate_nfs(mounts)
+
+    def test_multiple_nfs_fuse(self) -> None:
+        mounts = {"test1": "nfs", "test2": "fuse", "test3": "fuse", "test4": "nfs"}
+        self.check_migrate_nfs(mounts)
