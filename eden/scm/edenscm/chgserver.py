@@ -379,16 +379,6 @@ class chgunixservicehandler(object):
         return chgcmdserver(self.ui, repo, fin, fout, conn, self._baseaddress)
 
 
-def _disable_app_nap():
-    """disable AppNap on macOS.
-    AppNap might slow down the server to the point it's unusable.
-    """
-    if pycompat.isdarwin:
-        import appnope
-
-        appnope.nope()
-
-
 def chgunixservice(ui, repo, opts):
     # CHGINTERNALMARK is set by chg client. It is an indication of things are
     # started by chg so other code can do things accordingly, like disabling
@@ -402,5 +392,4 @@ def chgunixservice(ui, repo, opts):
         # one chgserver can serve multiple repos. drop repo information
         ui.setconfig("bundle", "mainreporoot", "", "repo")
     h = chgunixservicehandler(ui)
-    _disable_app_nap()
     return commandserver.unixforkingservice(ui, repo=None, opts=opts, handler=h)
