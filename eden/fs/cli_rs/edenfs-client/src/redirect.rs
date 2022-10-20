@@ -266,7 +266,7 @@ impl Redirection {
             return Ok(PathBuf::from(OsString::from_vec(output.stdout)));
             #[cfg(windows)]
             return Ok(PathBuf::from(
-                std::str::from_utf8(&output.stdout).from_err()?,
+                std::str::from_utf8(&output.stdout).from_err()?.trim_end(),
             ));
         } else {
             Err(EdenFsError::Other(anyhow!(
