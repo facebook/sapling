@@ -111,10 +111,13 @@ def _get_unmount_timeout_suggestions(path: str) -> str:
     * `eden doctor` -> retry `eden rm`
     * Reboot your machine -> retry `eden rm`
     """
+    # windows does not have a umount equivalent
     if sys.platform != "win32":
+        # umount on macOS does not have the --lazy option
+        flags = "-f" if sys.platform == "darwin" else "-lf"
         return (
             f"""\
-    * `sudo umount -f {path}` -> retry `eden rm`\n"""
+    * `sudo umount {flags} {path}` -> retry `eden rm`\n"""
             + UNMOUNT_TIMEOUT_SUGGESTIONS
         )
     else:
