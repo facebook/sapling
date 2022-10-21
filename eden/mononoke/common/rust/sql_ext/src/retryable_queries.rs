@@ -19,7 +19,7 @@ macro_rules! queries_with_retry {
     () => {};
 
     (
-        read $name:ident (
+        $vi:vis read $name:ident (
             $( $pname:ident: $ptype:ty ),* $(,)*
             $( >list $lname:ident: $ltype:ty )*
         ) -> ($( $rtype:ty ),* $(,)*) { $q:expr }
@@ -28,24 +28,30 @@ macro_rules! queries_with_retry {
 
         $crate::_macro_internal::paste::item! {
             $crate::_macro_internal::queries! {
-                read [<$name Impl>] (
+                pub read [<$name Impl>] (
                     $( $pname: $ptype ),*  ,
                     $( >list $lname: $ltype )*
                 ) -> ($( $rtype ),*) { $q }
             }
 
             #[allow(non_snake_case)]
-            mod $name {
+            $vi mod $name {
                 #[allow(unused_imports)]
                 use super::*;
 
+                use $crate::_macro_internal::*;
+
+                // Not possible to retry query with transaction
+                #[allow(unused_imports)]
+                pub use [<$name Impl>]::query_with_transaction;
+
                 #[allow(dead_code)]
-                pub(super) async fn query(
-                    connection: & $crate::_macro_internal::Connection,
+                pub async fn query(
+                    connection: &Connection,
                     $( $pname: & $ptype, )*
                     $( $lname: & [ $ltype ], )*
-                ) -> $crate::_macro_internal::Result<Vec<($( $rtype, )*)>> {
-                    $crate::_macro_internal::read_query_with_retry(
+                ) -> Result<Vec<($( $rtype, )*)>> {
+                    read_query_with_retry(
                         || [<$name Impl>]::query(connection, $( $pname, )* $( $lname, )*),
                     ).await
                 }
@@ -105,13 +111,23 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::*;
 
     queries_with_retry! {
         read TestQuery(param_str: String, param_uint: u64) -> (u64, Option<i32>, String, i64) {
             "SELECT 44, NULL, {param_str}, {param_uint}"
         }
-        read TestQuery2() -> (u64, Option<String>) {
+        pub(crate) read TestQuery2() -> (u64, Option<String>) {
             "SELECT 44, NULL"
         }
+    }
+
+    #[allow(dead_code, unreachable_code)]
+    async fn should_compile() -> Result<()> {
+        TestQuery::query(todo!(), todo!(), todo!()).await?;
+        TestQuery::query_with_transaction(todo!(), todo!(), todo!()).await?;
+        TestQuery2::query(todo!()).await?;
+        TestQuery2::query_with_transaction(todo!()).await?;
+        Ok(())
     }
 }
