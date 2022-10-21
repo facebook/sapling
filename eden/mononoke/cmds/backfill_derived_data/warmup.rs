@@ -11,8 +11,8 @@ use std::sync::Arc;
 use anyhow::Error;
 use blame::fetch_content_for_blame;
 use blame::BlameRoot;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use cloned::cloned;
 use context::CoreContext;
 use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data::BonsaiDerived;
@@ -30,6 +30,11 @@ use futures::TryFutureExt;
 use manifest::find_intersection_of_diffs;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
+use repo_blobstore::RepoBlobstore;
+use repo_blobstore::RepoBlobstoreArc;
+use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedData;
+use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 use unodes::find_unode_rename_sources;
 use unodes::RootUnodeManifestId;
@@ -45,7 +50,7 @@ const PREFETCH_UNODE_TYPES: &[&str] = &[
 
 pub(crate) async fn warmup(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &(impl RepoBlobstoreArc + RepoDerivedDataArc + Send + Sync),
     derived_data_type: &str,
     chunk: &Vec<ChangesetId>,
 ) -> Result<(), Error> {
@@ -54,7 +59,7 @@ pub(crate) async fn warmup(
 
     let bcs_warmup = async move {
         stream::iter(chunk)
-            .map(move |cs_id| Ok(async move { cs_id.load(ctx, repo.blobstore()).await }))
+            .map(move |cs_id| Ok(async move { cs_id.load(ctx, repo.repo_blobstore()).await }))
             .try_for_each_concurrent(100, |x| async {
                 x.await?;
                 Result::<_, Error>::Ok(())
@@ -90,7 +95,7 @@ pub(crate) async fn warmup(
 
 async fn content_warmup(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &(impl RepoBlobstoreArc + RepoDerivedDataArc + Send + Sync),
     chunk: &Vec<ChangesetId>,
 ) -> Result<(), Error> {
     stream::iter(chunk)
@@ -101,13 +106,13 @@ async fn content_warmup(
 
 async fn content_metadata_warmup(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl RepoBlobstoreRef,
     chunk: &Vec<ChangesetId>,
 ) -> Result<(), Error> {
     stream::iter(chunk)
         .map({
             |cs_id| async move {
-                let bcs = cs_id.load(ctx, repo.blobstore()).await?;
+                let bcs = cs_id.load(ctx, repo.repo_blobstore()).await?;
 
                 let mut content_ids = HashSet::new();
                 for (_, file_change) in bcs.simplified_file_changes() {
@@ -118,7 +123,7 @@ async fn content_metadata_warmup(
                         None => {}
                     }
                 }
-                prefetch_content_metadata(ctx, repo.blobstore(), content_ids).await?;
+                prefetch_content_metadata(ctx, repo.repo_blobstore(), content_ids).await?;
 
                 Result::<_, Error>::Ok(())
             }
@@ -131,14 +136,14 @@ async fn content_metadata_warmup(
 
 async fn unode_warmup(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &(impl RepoBlobstoreRef + RepoDerivedDataRef + Send + Sync),
     chunk: &Vec<ChangesetId>,
 ) -> Result<(), Error> {
     stream::iter(chunk)
         .map({
             |cs_id| {
                 async move {
-                    let bcs = cs_id.load(ctx, repo.blobstore()).await?;
+                    let bcs = cs_id.load(ctx, repo.repo_blobstore()).await?;
                     let manager = repo.repo_derived_data().manager();
 
                     let root_mf_id = manager
@@ -154,7 +159,7 @@ async fn unode_warmup(
                     let unode_mf_id = root_mf_id.manifest_unode_id().clone();
                     find_intersection_of_diffs(
                         ctx.clone(),
-                        Arc::new(repo.get_blobstore()),
+                        Arc::new(repo.repo_blobstore().clone()),
                         unode_mf_id,
                         parent_unodes,
                     )
@@ -171,60 +176,80 @@ async fn unode_warmup(
     Ok(())
 }
 
+#[facet::container]
+#[derive(Clone)]
+struct PrefetchContentRepo {
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+}
+
 // Prefetch content of changed files between parents
 async fn prefetch_content(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &(impl RepoBlobstoreArc + RepoDerivedDataArc + Send + Sync),
     csid: &ChangesetId,
 ) -> Result<(), Error> {
+    // Since we are spawning prefetch_content_unode
+    // it needs to own the repo object which impl facets
+    // This is a short lived object with the Arc of needed facets
+    // which will be dropped after prefetch is done.
+    let prefetch_content_repo = PrefetchContentRepo {
+        repo_blobstore: repo.repo_blobstore_arc(),
+        repo_derived_data: repo.repo_derived_data_arc(),
+    };
+
     async fn prefetch_content_unode(
         ctx: CoreContext,
-        repo: BlobRepo,
+        repo: PrefetchContentRepo,
         rename: Option<FileUnodeId>,
         file_unode_id: FileUnodeId,
     ) -> Result<(), Error> {
         let ctx = &ctx;
-        let repo = &repo;
-        let blobstore = repo.blobstore();
+        let blobstore = repo.repo_blobstore();
         let file_unode = file_unode_id.load(ctx, blobstore).await?;
         let parents_content: Vec<_> = file_unode
             .parents()
             .iter()
             .cloned()
             .chain(rename)
-            .map(|file_unode_id| fetch_content_for_blame(ctx, repo, file_unode_id))
+            .map(|file_unode_id| fetch_content_for_blame(ctx, &repo, file_unode_id))
             .collect();
 
         // the assignment is needed to avoid unused_must_use warnings
         let _ = future::try_join(
-            fetch_content_for_blame(ctx, repo, file_unode_id),
+            fetch_content_for_blame(ctx, &repo, file_unode_id),
             future::try_join_all(parents_content),
         )
         .await?;
         Ok(())
     }
 
-    let bonsai = csid.load(ctx, repo.blobstore()).await?;
+    let blobstore = repo.repo_blobstore();
+    let manager = repo.repo_derived_data().manager();
+    let bonsai = csid.load(ctx, &blobstore).await?;
 
-    let root_manifest_fut = RootUnodeManifestId::derive(ctx, repo, csid.clone())
+    let root_manifest_fut = manager
+        .derive::<RootUnodeManifestId>(ctx, *csid, None)
         .map_ok(|mf| mf.manifest_unode_id().clone())
         .map_err(Error::from);
     let parents_manifest_futs = bonsai.parents().collect::<Vec<_>>().into_iter().map({
         move |csid| {
-            RootUnodeManifestId::derive(ctx, repo, csid)
+            manager
+                .derive::<RootUnodeManifestId>(ctx, csid, None)
                 .map_ok(|mf| mf.manifest_unode_id().clone())
                 .map_err(Error::from)
         }
     });
-    let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
+    let derivation_ctx = manager.derivation_context(None);
     let (root_manifest, parents_manifests, renames) = try_join3(
         root_manifest_fut,
         future::try_join_all(parents_manifest_futs),
         find_unode_rename_sources(ctx, &derivation_ctx, &bonsai),
     )
     .await?;
-
-    let blobstore = repo.get_blobstore().boxed();
 
     find_intersection_of_diffs(
         ctx.clone(),
@@ -234,15 +259,23 @@ async fn prefetch_content(
     )
     .map_ok(|(path, entry)| Some((path?, entry.into_leaf()?)))
     .try_filter_map(|maybe_entry| async move { Result::<_, Error>::Ok(maybe_entry) })
-    .map(|result| async {
-        match result {
-            Ok((path, file)) => {
-                let rename_unode_id = renames.get(&path).map(|source| source.unode_id);
-                let fut = prefetch_content_unode(ctx.clone(), repo.clone(), rename_unode_id, file);
-                let join_handle = tokio::task::spawn(fut);
-                join_handle.await?
+    .map(|result| {
+        cloned!(prefetch_content_repo);
+        async {
+            match result {
+                Ok((path, file)) => {
+                    let rename_unode_id = renames.get(&path).map(|source| source.unode_id);
+                    let fut = prefetch_content_unode(
+                        ctx.clone(),
+                        prefetch_content_repo,
+                        rename_unode_id,
+                        file,
+                    );
+                    let join_handle = tokio::task::spawn(fut);
+                    join_handle.await?
+                }
+                Err(e) => Err(e),
             }
-            Err(e) => Err(e),
         }
     })
     .buffered(256)

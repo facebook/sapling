@@ -40,7 +40,7 @@ impl FetchOutcome {
 /// too large or binary data is detected then the fetch may be rejected.
 pub async fn fetch_content_for_blame(
     ctx: &CoreContext,
-    repo: impl RepoBlobstoreRef + RepoDerivedDataRef,
+    repo: &(impl RepoBlobstoreRef + RepoDerivedDataRef),
     file_unode_id: FileUnodeId,
 ) -> Result<FetchOutcome> {
     let filesize_limit = repo
