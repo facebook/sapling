@@ -303,6 +303,41 @@ pub fn encode_mount_point_as_volume_name<P: AsRef<Path>>(mount_point: P) -> Stri
     full_volume_name
 }
 
+pub fn list_stale_volumes(all_checkouts: &[String]) -> Result<Vec<ApfsVolume>> {
+    let all_checkouts = all_checkouts
+        .iter()
+        .map(|v| canonicalize_mount_point_path(v.as_ref()))
+        .collect::<Result<Vec<_>>>()?;
+    let containers = apfs_list()?;
+    let mount_table = MountTable::parse_system_mount_table()?;
+
+    let mut stale_volumes = vec![];
+    for container in containers {
+        for vol in container.volumes {
+            if !vol.is_edenfs_managed_volume()
+                || vol.get_current_mount_point(Some(&mount_table)).is_some()
+            {
+                // ignore currently mounted or volumes not managed by EdenFS
+                continue;
+            }
+
+            let is_stale = all_checkouts
+                .iter()
+                .try_fold(false, |acc, checkout| {
+                    vol.is_preferred_checkout(checkout).map(|p| acc || p)
+                })
+                .map(std::ops::Not::not)
+                .unwrap_or(false);
+
+            if is_stale {
+                stale_volumes.push(vol);
+            }
+        }
+    }
+
+    Ok(stale_volumes)
+}
+
 pub fn delete_volume(volume_name: &str) -> Result<()> {
     let containers = apfs_list()?;
     if let Some(volume) = find_existing_volume(&containers, volume_name) {

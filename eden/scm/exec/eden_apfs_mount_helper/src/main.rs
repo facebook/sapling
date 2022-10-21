@@ -21,7 +21,6 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
 use eden_apfs::*;
@@ -511,40 +510,16 @@ fn main() -> Result<()> {
                 .iter()
                 .map(|v| canonicalize_mount_point_path(v.as_ref()))
                 .collect::<Result<Vec<_>>>()?;
-            let containers = apfs_list()?;
-            let mount_table = MountTable::parse_system_mount_table()?;
 
-            let mut stale_volumes = vec![];
-            for container in containers {
-                for vol in container.volumes {
-                    if !vol.is_edenfs_managed_volume()
-                        || vol.get_current_mount_point(Some(&mount_table)).is_some()
-                    {
-                        // ignore currently mounted or volumes not managed by EdenFS
-                        continue;
-                    }
-
-                    if all_checkouts.iter().all(|checkout| {
-                        match vol.is_preferred_checkout(checkout) {
-                            Ok(is_preferred) => !is_preferred,
-                            Err(e) => {
-                                // print the error and do not consider this volume as stale
-                                eprintln!("Failed is_preferred_checkout: {}", e);
-                                false
-                            }
-                        }
-                    }) {
-                        // is an edenfs managed volume but not under any checkouts
-                        stale_volumes
-                            .push(vol.name.ok_or_else(|| format_err!("Volume has no name"))?);
-                    }
-                }
+            let mut stale_volume_names = vec![];
+            for vol in list_stale_volumes(&all_checkouts)? {
+                stale_volume_names.push(vol.name.context("Volume has no name")?);
             }
             if json {
-                println!("{}", serde_json::to_string(&stale_volumes)?);
+                println!("{}", serde_json::to_string(&stale_volume_names)?);
             } else {
-                for stale_volume in stale_volumes.iter() {
-                    println!("{}", stale_volume);
+                for name in stale_volume_names.iter() {
+                    println!("{}", name);
                 }
             }
             Ok(())
