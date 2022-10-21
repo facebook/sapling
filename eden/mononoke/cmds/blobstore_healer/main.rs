@@ -10,6 +10,7 @@
 
 mod dummy;
 mod healer;
+mod sync_healer;
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -38,17 +39,18 @@ use dummy::DummyBlobstoreSyncQueue;
 use fbinit::FacebookInit;
 use futures::future;
 use futures_03_ext::BufferedParams;
+use healer::HealResult;
 use healer::Healer;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::StorageConfig;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
-use mononoke_types::DateTime;
 use slog::info;
 use slog::o;
 use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
+use sync_healer::SyncHealer;
 use wait_for_replication::WaitForReplication;
 
 #[derive(Parser)]
@@ -60,7 +62,7 @@ struct MononokeBlobstoreHealerArgs {
     /// performs a single healing and prints what would it do without doing it
     #[clap(long)]
     dry_run: bool,
-    /// drain the queue without healing.  Use with caution.
+    /// drain the queue without healing. Use with caution.
     #[clap(long)]
     drain_only: bool,
     /// id of storage group to be healed, e.g. manifold_xdb_multiplex
@@ -176,7 +178,7 @@ async fn maybe_schedule_healer_for_storage(
 
     let wait_for_replication = WaitForReplication::new(fb, config_store, storage_config, "healer")?;
 
-    let multiplex_healer = Healer::new(
+    let multiplex_healer = Arc::new(SyncHealer::new(
         blobstore_sync_queue_limit,
         buffered_params,
         sync_queue,
@@ -184,7 +186,7 @@ async fn maybe_schedule_healer_for_storage(
         multiplex_id,
         source_blobstore_key,
         drain_only,
-    );
+    ));
 
     schedule_healing(
         ctx,
@@ -199,7 +201,7 @@ async fn maybe_schedule_healer_for_storage(
 // Pass None as iter_limit for never ending run
 async fn schedule_healing(
     ctx: &CoreContext,
-    multiplex_healer: Healer,
+    multiplex_healer: Arc<dyn Healer>,
     wait_for_replication: WaitForReplication,
     iter_limit: Option<u64>,
     heal_min_age: ChronoDuration,
@@ -222,20 +224,21 @@ async fn schedule_healing(
             .await
             .context("While waiting for replication")?;
 
-        let now = DateTime::now().into_chrono();
-        let healing_deadline = DateTime::new(now - heal_min_age);
-        let (last_batch_was_full_size, deleted_rows) = multiplex_healer
-            .heal(ctx, healing_deadline)
+        let HealResult {
+            processed_full_batch,
+            processed_rows,
+        } = multiplex_healer
+            .heal(ctx, heal_min_age)
             .await
             .context("While healing")?;
 
-        total_deleted_rows += deleted_rows;
+        total_deleted_rows += processed_rows;
         let total_elapsed = healing_start_time.elapsed().as_secs_f32();
         let iteration_elapsed = iteration_start_time.elapsed().as_secs_f32();
         info!(
             ctx.logger(),
             "Iteration rows processed: {} rows, {}s; total: {} rows, {}s",
-            deleted_rows,
+            processed_rows,
             iteration_elapsed,
             total_deleted_rows,
             total_elapsed,
@@ -243,7 +246,7 @@ async fn schedule_healing(
 
         // if last batch read was not full,  wait at least 1 second, to avoid busy looping as don't
         // want to hammer the database with thousands of reads a second.
-        if !last_batch_was_full_size {
+        if !processed_full_batch {
             info!(ctx.logger(), "The last batch was not full size, waiting...",);
             tokio::time::sleep(Duration::from_secs(1)).await;
         }

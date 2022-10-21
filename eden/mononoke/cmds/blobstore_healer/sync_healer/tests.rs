@@ -5,17 +5,32 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::Arc;
 use std::sync::Mutex;
 
 use anyhow::format_err;
+use anyhow::Result;
 use async_trait::async_trait;
+use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
+use blobstore_sync_queue::BlobstoreSyncQueue;
+use blobstore_sync_queue::BlobstoreSyncQueueEntry;
+use blobstore_sync_queue::OperationKey;
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use bytes::Bytes;
+use context::CoreContext;
 use fbinit::FacebookInit;
+use futures_03_ext::BufferedParams;
+use metaconfig_types::BlobstoreId;
+use metaconfig_types::MultiplexId;
+use mononoke_types::BlobstoreBytes;
+use mononoke_types::DateTime;
 use sql_construct::SqlConstruct;
 
 use super::*;
+use crate::sync_healer::SyncHealer;
 
 // In-memory "blob store"
 ///
@@ -649,7 +664,7 @@ async fn healer_heal_with_failing_blobstore(fb: FacebookInit) -> Result<()> {
     )];
     sync_queue.add_many(&ctx, entries).await?;
 
-    let healer = Healer::new(
+    let healer = SyncHealer::new(
         1000,
         BufferedParams {
             buffer_size: 10,
@@ -716,7 +731,7 @@ async fn healer_heal_with_default_multiplex_id(fb: FacebookInit) -> Result<()> {
 
     // We aren't healing blobs for old_mp, so expect to only have 1 blob in each
     // blobstore at the end of the test.
-    let healer = Healer::new(
+    let healer = SyncHealer::new(
         1000,
         BufferedParams {
             buffer_size: 10,
@@ -762,7 +777,7 @@ async fn healer_heal_complete_batch(fb: FacebookInit) -> Result<()> {
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
     sync_queue.add_many(&ctx, entries).await?;
 
-    let healer = Healer::new(
+    let healer = SyncHealer::new(
         2,
         BufferedParams {
             buffer_size: 10,
@@ -802,7 +817,7 @@ async fn healer_heal_incomplete_batch(fb: FacebookInit) -> Result<()> {
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
     sync_queue.add_many(&ctx, entries).await?;
 
-    let healer = Healer::new(
+    let healer = SyncHealer::new(
         20,
         BufferedParams {
             buffer_size: 10,
