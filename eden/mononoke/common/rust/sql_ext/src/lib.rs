@@ -29,8 +29,9 @@ pub mod _macro_internal {
     pub use paste;
     pub use sql::queries;
     pub use sql::Connection;
+    pub use sql::WriteResult;
 
-    pub use crate::retryable_queries::read_query_with_retry;
+    pub use crate::retryable_queries::query_with_retry;
 }
 
 pub mod facebook {

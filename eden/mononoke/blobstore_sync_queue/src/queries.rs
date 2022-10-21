@@ -7,11 +7,11 @@
 
 use metaconfig_types::MultiplexId;
 use mononoke_types::Timestamp;
-use sql::queries;
+use sql_ext::queries_with_retry;
 
 use crate::OperationKey;
 
-queries! {
+queries_with_retry! {
     pub(crate) write WalInsertEntry(values: (
         blobstore_key: String,
         multiplex_id: MultiplexId,

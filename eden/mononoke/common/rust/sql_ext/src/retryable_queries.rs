@@ -25,7 +25,6 @@ macro_rules! queries_with_retry {
         ) -> ($( $rtype:ty ),* $(,)*) { $q:expr }
         $( $rest:tt )*
     ) => {
-
         $crate::_macro_internal::paste::item! {
             $crate::_macro_internal::queries! {
                 pub read [<$name Impl>] (
@@ -51,7 +50,7 @@ macro_rules! queries_with_retry {
                     $( $pname: & $ptype, )*
                     $( $lname: & [ $ltype ], )*
                 ) -> Result<Vec<($( $rtype, )*)>> {
-                    read_query_with_retry(
+                    query_with_retry(
                         || [<$name Impl>]::query(connection, $( $pname, )* $( $lname, )*),
                     ).await
                 }
@@ -60,6 +59,49 @@ macro_rules! queries_with_retry {
             $crate::queries_with_retry! { $( $rest )* }
         }
     };
+
+    (
+        $vi:vis write $name:ident (
+            values: ($( $vname:ident: $vtype:ty ),* $(,)*)
+            $( , $pname:ident: $ptype:ty )* $(,)*
+        ) { $qtype:ident, $q:expr }
+        $( $rest:tt )*
+    ) => {
+        $crate::_macro_internal::paste::item! {
+            $crate::_macro_internal::queries! {
+                pub write [<$name Impl>] (
+                    values: ( $( $vname: $vtype ),* )
+                    $( , $pname: $ptype )*
+                ) { $qtype, $q }
+            }
+
+            #[allow(non_snake_case)]
+            $vi mod $name {
+                #[allow(unused_imports)]
+                use super::*;
+
+                use $crate::_macro_internal::*;
+
+                // Not possible to retry query with transaction
+                #[allow(unused_imports)]
+                pub use [<$name Impl>]::query_with_transaction;
+
+                #[allow(dead_code)]
+                pub async fn query(
+                    connection: &Connection,
+                    values: &[($( & $vtype, )*)],
+                    $( $pname: & $ptype ),*
+                ) -> Result<WriteResult> {
+                    query_with_retry(
+                        || [<$name Impl>]::query(connection, values $( , $pname )* ),
+                    ).await
+                }
+            }
+
+            $crate::queries_with_retry! { $( $rest )* }
+        }
+    };
+
 }
 
 #[cfg(fbcode_build)]
@@ -67,6 +109,7 @@ macro_rules! queries_with_retry {
 fn retryable_mysql_errno(errno: u32) -> bool {
     match errno {
         // Admission control errors
+        // Safe to retry on writes as well as the query didn't even start
         1914..=1916 => true,
         _ => false,
     }
@@ -88,7 +131,7 @@ fn should_retry_mysql_query(err: &anyhow::Error) -> bool {
     false
 }
 
-pub async fn read_query_with_retry<T, Fut>(mut do_query: impl FnMut() -> Fut + Send) -> Result<T>
+pub async fn query_with_retry<T, Fut>(mut do_query: impl FnMut() -> Fut + Send) -> Result<T>
 where
     T: Send + 'static,
     Fut: Future<Output = Result<T>>,
@@ -120,6 +163,12 @@ mod tests {
         pub(crate) read TestQuery2() -> (u64, Option<String>) {
             "SELECT 44, NULL"
         }
+        pub(super) write TestQuery3(values: (
+            val1: i32,
+        )) {
+            none,
+            "INSERT INTO my_table (num, str) VALUES {values}"
+        }
     }
 
     #[allow(dead_code, unreachable_code)]
@@ -128,6 +177,8 @@ mod tests {
         TestQuery::query_with_transaction(todo!(), todo!(), todo!()).await?;
         TestQuery2::query(todo!()).await?;
         TestQuery2::query_with_transaction(todo!()).await?;
+        TestQuery3::query(todo!(), &[(&12,)]).await?;
+        TestQuery3::query_with_transaction(todo!(), &[(&12,)]).await?;
         Ok(())
     }
 }
