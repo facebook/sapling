@@ -17,6 +17,12 @@ pub struct RetryAttemptsCount(pub usize);
 pub enum RetryLogic {
     /// Multiply by a factor every time
     Exponential { base: Duration, factor: f64 },
+    /// Increase every time, and randomly jitter some more
+    ExponentialWithJitter {
+        base: Duration,
+        factor: f64,
+        jitter: Duration,
+    },
 }
 
 impl RetryLogic {
@@ -24,6 +30,11 @@ impl RetryLogic {
         use RetryLogic::*;
         match self {
             Exponential { base, factor } => base.mul_f64(factor.powf(attempt as f64)),
+            ExponentialWithJitter {
+                base,
+                factor,
+                jitter,
+            } => base.mul_f64(factor.powf(attempt as f64)) + jitter.mul_f64(rand::random::<f64>()),
         }
     }
 }
@@ -114,4 +125,20 @@ fn test_exponential() {
     };
     assert_eq!(logic.delay(1), Duration::from_secs(12));
     assert_eq!(logic.delay(2), Duration::from_secs(18));
+}
+
+#[test]
+fn test_exponential_jitter() {
+    let half_sec = Duration::from_millis(500);
+    let one_sec = Duration::from_secs(1);
+    let two_sec = Duration::from_secs(2);
+    let logic = RetryLogic::ExponentialWithJitter {
+        base: one_sec.clone(),
+        factor: 2.0,
+        jitter: half_sec.clone(),
+    };
+    let d = logic.delay(0);
+    assert!(d >= one_sec && d <= one_sec + half_sec);
+    let d = logic.delay(1);
+    assert!(d >= two_sec && d <= two_sec + half_sec);
 }
