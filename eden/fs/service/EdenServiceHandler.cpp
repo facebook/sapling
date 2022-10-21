@@ -3457,10 +3457,10 @@ folly::SemiFuture<Unit>
 EdenServiceHandler::semifuture_invalidateKernelInodeCache(
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint,
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> path) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, *path);
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
+#ifndef _WIN32
   InodePtr inode =
       inodeFromUserPath(*edenMount, *path, helper->getFetchContext());
 
@@ -3538,11 +3538,19 @@ EdenServiceHandler::semifuture_invalidateKernelInodeCache(
                    }))
         .semi();
   }
+#else
+  auto toInvalidate = relpathFromUserPath(*path);
+
+  XLOG(WARN) << "Manually invalidating \"" << toInvalidate
+             << "\". This is unsupported and may lead to strange behavior.";
+  if (auto* prjfsChannel = edenMount->getPrjfsChannel()) {
+    return makeImmediateFutureWith(
+               [&] { return prjfsChannel->removeCachedFile(toInvalidate); })
+        .semi();
+  }
+#endif // !_WIN32
 
   return EDEN_BUG_FUTURE(folly::Unit) << "Unsupported Channel type.";
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServiceHandler::enableTracing() {
