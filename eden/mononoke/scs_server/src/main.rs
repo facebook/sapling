@@ -28,7 +28,6 @@ use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
-use futures::future::FutureExt;
 use megarepo_api::MegarepoApi;
 use mononoke_api::repo::Repo;
 use mononoke_api::CoreContext;
@@ -51,6 +50,7 @@ use srserver::service_framework::ServiceFramework;
 use srserver::service_framework::ThriftStatsModule;
 use srserver::ThriftServer;
 use srserver::ThriftServerBuilder;
+use tokio::sync::oneshot;
 use tokio::task;
 
 mod commit_id;
@@ -246,6 +246,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         let monitoring_ctx = CoreContext::new_with_logger(fb, logger.clone());
         monitoring::monitoring_stats_submitter(monitoring_ctx, mononoke)
     };
+    runtime.spawn(monitoring_forever);
 
     let thrift: ThriftServer = ThriftServerBuilder::new(fb)
         .with_name(SERVICE_NAME)
@@ -301,9 +302,19 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         });
     }
 
+    // The service is running in the background on the folly executor, so
+    // there is no real service to serve, however we use `serve_forever` for
+    // its shutdown handling, which requires a dummy `server` future that will
+    // exit cleanly when shutdown is signalled.
+    let (exit_tx, exit_rx) = oneshot::channel();
+    let server = async move {
+        exit_rx.await?;
+        Ok(())
+    };
+
     serve_forever(
         runtime,
-        monitoring_forever.map(Result::<(), Error>::Ok),
+        server,
         logger,
         move || will_exit.store(true, Ordering::Relaxed),
         args.shutdown_timeout_args.shutdown_grace_period,
@@ -314,6 +325,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 service_framework.stop();
             })
             .await;
+            let _ = exit_tx.send(());
         },
         args.shutdown_timeout_args.shutdown_timeout,
     )?;
