@@ -84,3 +84,9 @@ Test repo config loading
   $ mv .sl/config .sl/hgrc
   $ hg config foo.bar --debug
   [1]
+
+Test we prefer ".sl" over ".hg"
+  $ HGIDENTITY=sl newrepo
+  $ mkdir .hg
+  $ hg root --dotdir
+  $TESTTMP/repo2/.sl

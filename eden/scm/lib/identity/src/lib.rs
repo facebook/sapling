@@ -248,7 +248,7 @@ mod idents {
     use super::*;
 
     pub fn all() -> &'static [Identity] {
-        &[HG, SL]
+        &[SL, HG]
     }
 }
 
@@ -258,7 +258,7 @@ mod idents {
 
     pub fn all() -> &'static [Identity] {
         if std::env::var("TESTTMP").is_ok() {
-            &[HG, SL]
+            &[SL, HG]
         } else {
             &[SL]
         }
