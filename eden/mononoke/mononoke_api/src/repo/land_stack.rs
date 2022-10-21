@@ -15,19 +15,23 @@ use bookmarks_movement::BookmarkKindRestrictions;
 pub use bookmarks_movement::PushrebaseOutcome;
 use bytes::Bytes;
 use cloned::cloned;
+use cross_repo_sync::types::Large;
 use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::future::TryFutureExt;
 use futures::stream::TryStreamExt;
 use hooks::CrossRepoPushSource;
+use hooks::PushAuthoredBy;
 use mononoke_types::ChangesetId;
 use pushrebase_client::LocalPushrebaseClient;
 use pushrebase_client::PushrebaseClient;
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::RangeNodeStream;
+use unbundle::PushRedirector;
 
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
+use crate::Repo;
 
 impl RepoContext {
     /// Land a stack of commits to a bookmark via pushrebase.
@@ -37,8 +41,11 @@ impl RepoContext {
         head: ChangesetId,
         base: ChangesetId,
         pushvars: Option<&HashMap<String, Bytes>>,
+        // TODO: Remove
         push_source: CrossRepoPushSource,
         bookmark_restrictions: BookmarkKindRestrictions,
+        _maybe_pushredirector: Option<(PushRedirector<Repo>, Large<RepoContext>)>,
+        _push_authored_by: PushAuthoredBy,
     ) -> Result<PushrebaseOutcome, MononokeError> {
         self.start_write()?;
 

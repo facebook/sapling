@@ -94,6 +94,7 @@ test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_facto
 thiserror = "1.0.36"
 tunables = { version = "0.1.0", path = "../tunables" }
 types = { version = "0.1.0", path = "../../scm/lib/types" }
+unbundle = { version = "0.1.0", path = "../repo_client/unbundle" }
 unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 vec1 = { version = "1", features = ["serde"] }
 warm_bookmarks_cache = { version = "0.1.0", path = "../bookmarks/warm_bookmarks_cache" }

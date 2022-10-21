@@ -11,6 +11,7 @@ use bookmarks_movement::HookRejection;
 use borrowed::borrowed;
 use context::CoreContext;
 use hooks::CrossRepoPushSource;
+use hooks::PushAuthoredBy;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_api::MononokeError;
 use permission_checker::MononokeIdentity;
@@ -18,6 +19,7 @@ use pushrebase::PushrebaseConflict;
 use service::RepoLandStackExn;
 use source_control as thrift;
 use source_control::services::source_control_service as service;
+use tunables::tunables;
 
 use crate::commit_id::CommitIdExt;
 use crate::errors;
@@ -131,6 +133,11 @@ impl SourceControlServiceImpl {
         repo: thrift::RepoSpecifier,
         params: thrift::RepoLandStackParams,
     ) -> Result<thrift::RepoLandStackResponse, LandStackError> {
+        let push_authored_by = if params.service_identity.is_some() {
+            PushAuthoredBy::Service
+        } else {
+            PushAuthoredBy::User
+        };
         let repo = self
             .repo_for_service(ctx, &repo, params.service_identity)
             .await?;
@@ -164,6 +171,13 @@ impl SourceControlServiceImpl {
         let bookmark_restrictions =
             BookmarkKindRestrictions::from_request(&params.bookmark_restrictions)?;
 
+        let maybe_pushredirector = if tunables().get_disable_scs_pushredirect() {
+            None
+        } else {
+            // TODO: Create pushredirector
+            None
+        };
+
         let pushrebase_outcome = repo
             .land_stack(
                 &params.bookmark,
@@ -172,6 +186,8 @@ impl SourceControlServiceImpl {
                 pushvars.as_ref(),
                 push_source,
                 bookmark_restrictions,
+                maybe_pushredirector,
+                push_authored_by,
             )
             .await?
             .into_response_with(&(

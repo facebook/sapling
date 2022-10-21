@@ -20,6 +20,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
 use hooks::CrossRepoPushSource::NativeToThisRepo;
+use hooks::PushAuthoredBy::User;
 use maplit::hashset;
 use mononoke_types::ChangesetId;
 use tests_utils::drawdag::create_from_dag;
@@ -68,6 +69,8 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
             None,
             NativeToThisRepo,
             AnyKind,
+            None,
+            User,
         )
         .await?;
     let trunk_g = repo
@@ -88,6 +91,8 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
             None,
             NativeToThisRepo,
             AnyKind,
+            None,
+            User,
         )
         .await?;
     let trunk_e = repo
@@ -115,6 +120,8 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
             None,
             NativeToThisRepo,
             AnyKind,
+            None,
+            User,
         )
         .await?;
     let trunk_f = repo
