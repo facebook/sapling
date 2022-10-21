@@ -138,7 +138,7 @@ impl Identity {
 
     pub fn user_config_paths(&self) -> Vec<PathBuf> {
         let config_dir = match self.user.config_user_directory {
-            None => match dirs::home_dir() {
+            None => match home_dir() {
                 None => return Vec::new(),
                 Some(hd) => hd,
             },
@@ -164,6 +164,18 @@ impl Identity {
             Some(self.user.config_system_path.into())
         }
     }
+}
+
+fn home_dir() -> Option<PathBuf> {
+    if cfg!(windows) {
+        // dirs::home_dir doesn't respect USERPROFILE. Check it for
+        // compatibility with tests.
+        if let Some(user_profile) = std::env::var_os("USERPROFILE") {
+            return Some(user_profile.into());
+        }
+    }
+
+    dirs::home_dir()
 }
 
 impl std::fmt::Display for Identity {

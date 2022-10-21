@@ -291,17 +291,13 @@ config editing without an editor
   b = 4
   # b = 3
 
-#if no-windows
  user config
- (FIXME: windows implementation currently updates the real user's hgrc outside TESTTMP)
   $ hg config --edit a.b=1
-  $ tail -2 ~/.hgrc
+  $ tail -2 ~/.hgrc | dos2unix
   [a]
   b = 1
 
   $ hg config --user a.b 2
-  $ tail -2 ~/.hgrc
+  $ tail -2 ~/.hgrc | dos2unix
   [a]
   b = 2
-
-#endif

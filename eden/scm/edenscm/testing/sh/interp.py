@@ -9,6 +9,7 @@ See module-level doc for examples.
 """
 
 import functools
+import os
 import re
 import shlex
 import textwrap
@@ -170,6 +171,8 @@ def interpargs(trees, env: Env) -> List[str]:
             home = env.getenv("HOME")
             if home:
                 res.out = home + res.out[1:]
+                # emulate $HOME expansion
+                res.quoted = res.quoted or "$"
         # Expand globs.
         if res.quoted in {"$", None} and "*" in res.out:
             matched = env.fs.glob(res.out)
