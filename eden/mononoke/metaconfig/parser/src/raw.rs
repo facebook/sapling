@@ -24,7 +24,7 @@ use repos::RawStorageConfig;
 
 use crate::errors::ConfigurationError;
 
-const CONFIGERATOR_PREFIX: &str = "configerator://";
+pub(crate) const CONFIGERATOR_PREFIX: &str = "configerator://";
 
 pub(crate) fn read_raw_configs(
     config_path: &Path,

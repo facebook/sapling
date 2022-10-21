@@ -15,6 +15,7 @@ use std::str;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use cached_config::ConfigHandle;
 use cached_config::ConfigStore;
 use metaconfig_types::BackupRepoConfig;
 use metaconfig_types::BlobConfig;
@@ -59,20 +60,45 @@ pub struct RepoConfigs {
     pub common: CommonConfig,
 }
 
-/// Load configuration for repositories.
+/// Provides an instance of ConfigHandle to the underlying
+/// raw configuration if the config is backed by Configerator.
+pub fn configerator_config_handle(
+    config_path: &Path,
+    config_store: &ConfigStore,
+) -> Result<Option<ConfigHandle<RawRepoConfigs>>> {
+    if config_path.starts_with(crate::raw::CONFIGERATOR_PREFIX) {
+        let cfg_path = config_path
+            .strip_prefix(crate::raw::CONFIGERATOR_PREFIX)?
+            .to_string_lossy()
+            .into_owned();
+        let handle = config_store.get_config_handle::<RawRepoConfigs>(cfg_path)?;
+        Ok(Some(handle))
+    } else {
+        Ok(None)
+    }
+}
+
+/// Load configuration for repositories and storage.
 pub fn load_repo_configs(
     config_path: impl AsRef<Path>,
     config_store: &ConfigStore,
 ) -> Result<RepoConfigs> {
+    let raw_config = crate::raw::read_raw_configs(config_path.as_ref(), config_store)?;
+    load_configs_from_raw(raw_config).map(|(repo_configs, _)| repo_configs)
+}
+
+/// Load configuration based on the provided raw configs.
+pub fn load_configs_from_raw(
+    raw_repo_configs: RawRepoConfigs,
+) -> Result<(RepoConfigs, StorageConfigs)> {
     let RawRepoConfigs {
-        // TODO(stash): unused, can be deleted
         commit_sync: _,
         common,
         repos,
         storage,
         acl_region_configs,
         repo_definitions,
-    } = crate::raw::read_raw_configs(config_path.as_ref(), config_store)?;
+    } = raw_repo_configs;
     let repo_definitions = repo_definitions.repo_definitions;
     let repo_configs = repos;
     let storage_configs = storage;
@@ -96,11 +122,17 @@ pub fn load_repo_configs(
     }
 
     let common = parse_common_config(common, &storage_configs)?;
-
-    Ok(RepoConfigs {
-        repos: resolved_repo_configs,
-        common,
-    })
+    let storage = storage_configs
+        .into_iter()
+        .map(|(k, v)| Ok((k, v.convert()?)))
+        .collect::<Result<_>>()?;
+    Ok((
+        RepoConfigs {
+            repos: resolved_repo_configs,
+            common,
+        },
+        StorageConfigs { storage },
+    ))
 }
 
 fn parse_with_repo_definition(
@@ -361,13 +393,8 @@ pub fn load_storage_configs(
     config_path: impl AsRef<Path>,
     config_store: &ConfigStore,
 ) -> Result<StorageConfigs> {
-    let storage = crate::raw::read_raw_configs(config_path.as_ref(), config_store)?
-        .storage
-        .into_iter()
-        .map(|(k, v)| Ok((k, v.convert()?)))
-        .collect::<Result<_>>()?;
-
-    Ok(StorageConfigs { storage })
+    let raw_config = crate::raw::read_raw_configs(config_path.as_ref(), config_store)?;
+    load_configs_from_raw(raw_config).map(|(_, storage_configs)| storage_configs)
 }
 
 fn parse_common_config(

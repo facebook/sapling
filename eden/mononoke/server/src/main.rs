@@ -259,7 +259,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         );
     }
 
-    let configs = app.repo_configs().clone();
+    let configs = app.repo_configs();
 
     let acceptor = {
         let mut builder = secure_utils::SslConfig::new(
