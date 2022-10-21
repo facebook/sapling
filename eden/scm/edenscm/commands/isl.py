@@ -87,7 +87,10 @@ def launch_server(
     isl_args = get_isl_args()
     if isl_args[0] == "dotslash":
         ui.status_err(_("launching web server for Interactive Smartlog...\n"))
-        ui.status_err(_("re-run with --foreground and check VPN if slow to start.\n"))
+        if not foreground:
+            ui.status_err(
+                _("re-run with --foreground and check VPN if slow to start.\n")
+            )
     args = ["--port", str(port)]
     args.append("--command")
     args.append(util.hgcmd()[0])
