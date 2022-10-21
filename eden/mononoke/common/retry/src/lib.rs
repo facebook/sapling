@@ -27,7 +27,7 @@ where
     Fut: Future<Output = Result<V, Error>>,
     Func: FnMut(usize) -> Fut + Send,
 {
-    retry(logger, func, |_| true, base_retry_delay_ms, retry_num).await
+    retry(Some(logger), func, |_| true, base_retry_delay_ms, retry_num).await
 }
 
 /// Retry a function.
@@ -36,7 +36,7 @@ where
 /// `retry_num` is the maximum amount of times it will be retried
 /// `base_retry_delay_ms` is how much to wait between retries. It does exponential backoffs, doubling this value every time.
 pub async fn retry<V, Fut, Func, RetryFunc, Error>(
-    logger: &Logger,
+    logger: Option<&Logger>,
     // Function to be retried.
     mut func: Func,
     // Function that tells whether an error should be retried.
@@ -58,12 +58,14 @@ where
                 return Ok((res, RetryAttemptsCount(attempt)));
             }
             Err(err) if attempt < retry_num && should_retry(&err) => {
-                info!(
-                    logger,
-                    "retrying attempt {} of {}...",
-                    attempt + 1,
-                    retry_num
-                );
+                if let Some(logger) = logger {
+                    info!(
+                        logger,
+                        "retrying attempt {} of {}...",
+                        attempt + 1,
+                        retry_num
+                    );
+                }
 
                 let delay = Duration::from_millis(base_retry_delay_ms * 2u64.pow(attempt as u32));
                 tokio::time::sleep(delay).await;
