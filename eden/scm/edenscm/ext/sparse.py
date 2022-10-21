@@ -1183,7 +1183,7 @@ def computesparsematcher(
                                     repo.root,
                                     "",
                                     profile.rules,
-                                    profile.ruleorigins,
+                                    ruledetails=profile.ruleorigins,
                                 )
                             )
                         else:
@@ -1192,7 +1192,12 @@ def computesparsematcher(
 
             if matchrules:
                 matchers.append(
-                    matchmod.rulesmatch(repo.root, "", matchrules, ruleorigins)
+                    matchmod.rulesmatch(
+                        repo.root,
+                        "",
+                        matchrules,
+                        ruledetails=ruleorigins,
+                    )
                 )
 
             if not config.mainrules and not config.profiles:

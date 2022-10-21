@@ -827,10 +827,14 @@ class treematcher(basematcher):
     Have a smarter 'visitdir' implementation.
     """
 
-    def __init__(self, root, cwd, badfn=None, rules=[], ruledetails=None):
+    def __init__(
+        self, root, cwd, badfn=None, rules=[], ruledetails=None, casesensitive=True
+    ):
         super(treematcher, self).__init__(root, cwd, badfn)
         rules = list(rules)
-        self._matcher = pathmatcher.treematcher(rules, util.fscasesensitive(root))
+
+        self._matcher = pathmatcher.treematcher(rules, casesensitive)
+
         self._rules = rules
         self._ruledetails = ruledetails
 

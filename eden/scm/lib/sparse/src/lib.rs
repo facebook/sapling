@@ -214,7 +214,13 @@ impl Root {
 
 impl Profile {
     fn from_bytes(data: impl AsRef<[u8]>, source: String) -> Result<Self, io::Error> {
-        let mut prof: Profile = Default::default();
+        let mut prof = Profile {
+            // Case insensitive matcher support breaks w/ too many rules, so
+            // leave it disabled for now. This may need to be fixed if sparse
+            // profiles are supposed to support case insensitivity.
+            case_sensitive: true,
+            ..Default::default()
+        };
         let mut current_metadata_val: Option<&mut String> = None;
         let mut section_type = SectionType::Include;
         let mut dynamic_source: Option<String> = None;
