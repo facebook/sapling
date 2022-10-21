@@ -88,15 +88,17 @@ define_stats! {
 /// Struct responsible for receiving updated configurations from MononokeConfigs
 /// and refreshing repos (and related entities) based on the update.
 pub struct MononokeConfigUpdateReceiver<Repo> {
-    _repos: Arc<MononokeRepos<Repo>>,
-    _repo_factory: RepoFactory,
+    repos: Arc<MononokeRepos<Repo>>,
+    repo_factory: RepoFactory,
+    logger: Logger,
 }
 
 impl<Repo> MononokeConfigUpdateReceiver<Repo> {
-    fn new(_repos: Arc<MononokeRepos<Repo>>, _repo_factory: RepoFactory) -> Self {
+    fn new(repos: Arc<MononokeRepos<Repo>>, app: &MononokeApp) -> Self {
         Self {
-            _repos,
-            _repo_factory,
+            repos,
+            repo_factory: app.repo_factory(),
+            logger: app.logger().clone(),
         }
     }
 }
@@ -108,9 +110,48 @@ where
 {
     async fn apply_update(
         &self,
-        _repo_configs: Arc<RepoConfigs>,
-        _storage_configs: Arc<StorageConfigs>,
+        repo_configs: Arc<RepoConfigs>,
+        _: Arc<StorageConfigs>,
     ) -> Result<()> {
+        // We need to filter out the name of repos that are present in MononokeRepos (i.e.
+        // currently served by the server) but not in RepoConfigs. This situation can happen
+        // when the name of the repo changes (e.g. whatsapp/server.mirror renamed to whatsapp/server)
+        // or when a repo is added or removed. In such a case, reloading of the repo with the old name
+        // would not be possible based on the new configs.
+        let repos_input = stream::iter(self.repos.iter_names().filter_map(|repo_name| {
+            repo_configs
+                .repos
+                .get(&repo_name)
+                .cloned()
+                .map(|repo_config| (repo_name, repo_config))
+        }))
+        .map(|(repo_name, repo_config)| {
+            let repo_factory = self.repo_factory.clone();
+            let name = repo_name.clone();
+            let logger = self.logger.clone();
+            let common_config = repo_configs.common.clone();
+            async move {
+                let repo_id = repo_config.repoid.id();
+                info!(logger, "Reloading repo: {}", &repo_name);
+                let repo = repo_factory
+                    .build(name, repo_config, common_config)
+                    .await
+                    .with_context(|| format!("Failed to reload repo '{}'", &repo_name))?;
+                info!(logger, "Reloaded repo: {}", &repo_name);
+
+                Ok::<_, Error>((repo_id, repo_name, repo))
+            }
+        })
+        // Repo construction can be heavy, 30 at a time is sufficient.
+        .buffered(30)
+        .collect::<Vec<_>>();
+        // There are lots of deep FuturesUnordered here that have caused inefficient polling with
+        // Tokio coop in the past.
+        let repos_input = tokio::task::unconstrained(repos_input)
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>>>()?;
+        self.repos.populate(repos_input);
         Ok(())
     }
 }
@@ -469,8 +510,7 @@ impl MononokeApp {
         let mononoke_repos = MononokeRepos::new();
         self.populate_repos(&mononoke_repos, repo_names).await?;
         let mononoke_repos = Arc::new(mononoke_repos);
-        let update_receiver =
-            MononokeConfigUpdateReceiver::new(mononoke_repos.clone(), self.repo_factory());
+        let update_receiver = MononokeConfigUpdateReceiver::new(mononoke_repos.clone(), self);
         self.configs
             .register_for_update(Arc::new(update_receiver) as Arc<dyn ConfigUpdateReceiver>);
         Ok(mononoke_repos)
