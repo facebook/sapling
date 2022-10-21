@@ -6,8 +6,13 @@
  */
 
 use std::future::Future;
+use std::time::Duration;
 
 use anyhow::Result;
+use retry::retry;
+use retry::RetryLogic;
+
+const RETRY_ATTEMPTS: usize = 2;
 
 #[macro_export]
 macro_rules! queries_with_retry {
@@ -20,6 +25,7 @@ macro_rules! queries_with_retry {
         ) -> ($( $rtype:ty ),* $(,)*) { $q:expr }
         $( $rest:tt )*
     ) => {
+
         $crate::_macro_internal::paste::item! {
             $crate::_macro_internal::queries! {
                 read [<$name Impl>] (
@@ -50,12 +56,51 @@ macro_rules! queries_with_retry {
     };
 }
 
+#[cfg(fbcode_build)]
+/// See https://fburl.com/sv/uk8w71td for error descriptions
+fn retryable_mysql_errno(errno: u32) -> bool {
+    match errno {
+        // Admission control errors
+        1914..=1916 => true,
+        _ => false,
+    }
+}
+
+#[cfg(fbcode_build)]
+fn should_retry_mysql_query(err: &anyhow::Error) -> bool {
+    use mysql_client::MysqlError;
+    use MysqlError::*;
+    match err.downcast_ref::<MysqlError>() {
+        Some(ConnectionOperationError { mysql_errno, .. })
+        | Some(QueryResultError { mysql_errno, .. }) => retryable_mysql_errno(*mysql_errno),
+        _ => false,
+    }
+}
+
+#[cfg(not(fbcode_build))]
+fn should_retry_mysql_query(err: &anyhow::Error) -> bool {
+    false
+}
+
 pub async fn read_query_with_retry<T, Fut>(mut do_query: impl FnMut() -> Fut + Send) -> Result<T>
 where
-    T: Send,
+    T: Send + 'static,
     Fut: Future<Output = Result<T>>,
 {
-    do_query().await
+    Ok(retry(
+        None,
+        |_| do_query(),
+        should_retry_mysql_query,
+        // See https://fburl.com/7dmedu1u for backoff reasoning
+        RetryLogic::ExponentialWithJitter {
+            base: Duration::from_secs(10),
+            factor: 1.2,
+            jitter: Duration::from_secs(5),
+        },
+        RETRY_ATTEMPTS,
+    )
+    .await?
+    .0)
 }
 
 #[cfg(test)]
