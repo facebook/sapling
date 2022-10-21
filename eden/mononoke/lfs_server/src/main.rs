@@ -184,7 +184,7 @@ impl LfsRepos {
     pub(crate) fn get(&self, repo_name: &str) -> Option<(Arc<Repo>, RepoConfig)> {
         let repo = self.repos.get_by_name(repo_name);
         let config = self.app.repo_config_by_name(repo_name).ok();
-        repo.and_then(|repo| config.map(|config| (repo, config.clone())))
+        repo.and_then(|repo| config.map(|config| (repo, config)))
     }
 }
 

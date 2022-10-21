@@ -40,6 +40,7 @@ use metaconfig_types::BlobConfig;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::Redaction;
 use metaconfig_types::RepoConfig;
+use mononoke_configs::MononokeConfigs;
 use mononoke_repos::MononokeRepos;
 use mononoke_types::RepositoryId;
 use prefixblob::PrefixBlobstore;
@@ -88,8 +89,7 @@ pub struct MononokeApp {
     args: ArgMatches,
     env: Arc<MononokeEnvironment>,
     extension_args: HashMap<TypeId, Box<dyn BoxedAppExtensionArgs>>,
-    storage_configs: Arc<StorageConfigs>,
-    repo_configs: Arc<RepoConfigs>,
+    configs: MononokeConfigs,
     repo_factory: RepoFactory,
 }
 
@@ -109,16 +109,13 @@ impl MononokeApp {
     ) -> Result<Self> {
         let env = Arc::new(env);
         let config_path = ConfigArgs::from_arg_matches(&args)?.config_path();
-
         let config_store = &env.as_ref().config_store;
-        let storage_configs = Arc::new(metaconfig_parser::load_storage_configs(
-            &config_path,
+        let configs = MononokeConfigs::new(
+            config_path,
             config_store,
-        )?);
-        let repo_configs = Arc::new(metaconfig_parser::load_repo_configs(
-            &config_path,
-            config_store,
-        )?);
+            env.runtime.handle().clone(),
+            env.logger.clone(),
+        )?;
 
         let repo_factory = RepoFactory::new(env.clone());
 
@@ -128,8 +125,7 @@ impl MononokeApp {
             args,
             env,
             extension_args,
-            storage_configs,
-            repo_configs,
+            configs,
             repo_factory,
         })
     }
@@ -227,12 +223,12 @@ impl MononokeApp {
 
     /// The repo configs for this app.
     pub fn repo_configs(&self) -> Arc<RepoConfigs> {
-        self.repo_configs.clone()
+        self.configs.repo_configs()
     }
 
     /// The storage configs for this app.
     pub fn storage_configs(&self) -> Arc<StorageConfigs> {
-        self.storage_configs.clone()
+        self.configs.storage_configs()
     }
 
     /// The logger for this app.
@@ -283,10 +279,11 @@ impl MononokeApp {
         self.config_mode == ConfigMode::Production
     }
 
-    pub fn repo_config_by_name(&self, repo_name: &str) -> Result<&RepoConfig> {
-        self.repo_configs
+    pub fn repo_config_by_name(&self, repo_name: &str) -> Result<RepoConfig> {
+        self.repo_configs()
             .repos
             .get(repo_name)
+            .cloned()
             .ok_or_else(|| anyhow!("unknown reponame: {:?}", repo_name))
     }
 
@@ -294,15 +291,15 @@ impl MononokeApp {
     pub fn repo_config(&self, repo_arg: RepoArg) -> Result<(String, RepoConfig)> {
         match repo_arg {
             RepoArg::Id(repo_id) => {
-                let (repo_name, repo_config) = self
-                    .repo_configs
+                let repo_configs = self.repo_configs();
+                let (repo_name, repo_config) = repo_configs
                     .get_repo_config(repo_id)
                     .ok_or_else(|| anyhow!("unknown repoid: {:?}", repo_id))?;
                 Ok((repo_name.clone(), repo_config.clone()))
             }
             RepoArg::Name(repo_name) => {
                 let repo_config = self.repo_config_by_name(repo_name)?;
-                Ok((repo_name.to_string(), repo_config.clone()))
+                Ok((repo_name.to_string(), repo_config))
             }
         }
     }
@@ -398,7 +395,7 @@ impl MononokeApp {
                     let repo_id = repo_config.repoid.id();
                     info!(logger, "Initializing repo: {}", &repo_name);
                     let repo = repo_factory
-                        .build(name, repo_config.clone(), common_config)
+                        .build(name, repo_config, common_config)
                         .await
                         .with_context(|| format!("Failed to initialize repo '{}'", &repo_name))?;
                     info!(logger, "Initialized repo: {}", &repo_name);
@@ -454,11 +451,7 @@ impl MononokeApp {
         let common_config = &self.repo_configs().common;
         let repo = self
             .repo_factory
-            .build(
-                repo_name.to_string(),
-                repo_config.clone(),
-                common_config.clone(),
-            )
+            .build(repo_name.to_string(), repo_config, common_config.clone())
             .await?;
         repos.add(repo_name, repo_id, repo);
         Ok(())
@@ -513,11 +506,12 @@ impl MononokeApp {
         &self,
         repo_blobstore_args: &RepoBlobstoreArgs,
     ) -> Result<Arc<dyn Blobstore>> {
+        let repo_configs = self.repo_configs();
+        let storage_configs = self.storage_configs();
         let (mut repo_id, redaction, storage_config) =
             if let Some(repo_id) = repo_blobstore_args.repo_id {
                 let repo_id = RepositoryId::new(repo_id);
-                let (_repo_name, repo_config) = self
-                    .repo_configs
+                let (_repo_name, repo_config) = repo_configs
                     .get_repo_config(repo_id)
                     .ok_or_else(|| anyhow!("unknown repoid: {:?}", repo_id))?;
                 (
@@ -526,8 +520,7 @@ impl MononokeApp {
                     repo_config.storage_config.clone(),
                 )
             } else if let Some(repo_name) = &repo_blobstore_args.repo_name {
-                let repo_config = self
-                    .repo_configs
+                let repo_config = repo_configs
                     .repos
                     .get(repo_name)
                     .ok_or_else(|| anyhow!("unknown reponame: {:?}", repo_name))?;
@@ -537,8 +530,7 @@ impl MononokeApp {
                     repo_config.storage_config.clone(),
                 )
             } else if let Some(storage_name) = &repo_blobstore_args.storage_name {
-                let storage_config = self
-                    .storage_configs
+                let storage_config = storage_configs
                     .storage
                     .get(storage_name)
                     .ok_or_else(|| anyhow!("unknown storage name: {:?}", storage_name))?;
