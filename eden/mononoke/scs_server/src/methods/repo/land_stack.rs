@@ -10,16 +10,21 @@ use bookmarks_movement::BookmarkKindRestrictions;
 use bookmarks_movement::HookRejection;
 use borrowed::borrowed;
 use context::CoreContext;
+use cross_repo_sync::types::Large;
 use hooks::CrossRepoPushSource;
 use hooks::PushAuthoredBy;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_api::MononokeError;
+use mononoke_api::Repo;
+use mononoke_api::RepoContext;
 use permission_checker::MononokeIdentity;
 use pushrebase::PushrebaseConflict;
 use service::RepoLandStackExn;
 use source_control as thrift;
 use source_control::services::source_control_service as service;
 use tunables::tunables;
+use unbundle::PushRedirector;
+use unbundle::PushRedirectorArgs;
 
 use crate::commit_id::CommitIdExt;
 use crate::errors;
@@ -50,6 +55,12 @@ impl From<MononokeError> for LandStackError {
             MononokeError::PushrebaseConflicts(conflicts) => Self::PushrebaseConflicts(conflicts),
             e => Self::Service(e.into()),
         }
+    }
+}
+
+impl From<anyhow::Error> for LandStackError {
+    fn from(e: anyhow::Error) -> Self {
+        Self::Service(errors::internal_error(e).into())
     }
 }
 
@@ -127,6 +138,51 @@ impl LoggableError for LandStackError {
 }
 
 impl SourceControlServiceImpl {
+    async fn maybe_push_redirector(
+        &self,
+        repo: &RepoContext,
+    ) -> Result<Option<(PushRedirector<Repo>, Large<RepoContext>)>, LandStackError> {
+        let base = match repo.maybe_push_redirector_base() {
+            None => return Ok(None),
+            Some(base) => base,
+        };
+        let live_commit_sync_config = repo.live_commit_sync_config();
+        let enabled = live_commit_sync_config.push_redirector_enabled_for_public(repo.repoid());
+        if enabled {
+            let large_repo_id = base.common_commit_sync_config.large_repo_id;
+            let target_repo = self
+                .mononoke
+                .raw_repo_by_id(large_repo_id.id())
+                .ok_or_else(|| errors::repo_not_found(format!("Large repo {}", large_repo_id)))?;
+            let large_repo_ctx = self
+                .mononoke
+                .repo_by_id(repo.ctx().clone(), large_repo_id)
+                .await?
+                .ok_or_else(|| {
+                    errors::repo_not_found(format!("Large repo {} not found", large_repo_id))
+                })?
+                .with_authorization_context(repo.authorization_context().clone())
+                .build()
+                .await?;
+            Ok(Some((
+                PushRedirectorArgs::new(
+                    target_repo,
+                    repo.mononoke_api_repo(),
+                    base.synced_commit_mapping.clone(),
+                    base.target_repo_dbs.clone(),
+                )
+                .into_push_redirector(
+                    repo.ctx(),
+                    live_commit_sync_config,
+                    repo.inner_repo().repo_cross_repo.sync_lease().clone(),
+                )?,
+                Large(large_repo_ctx),
+            )))
+        } else {
+            Ok(None)
+        }
+    }
+
     async fn impl_repo_land_stack(
         &self,
         ctx: CoreContext,
@@ -174,8 +230,7 @@ impl SourceControlServiceImpl {
         let maybe_pushredirector = if tunables().get_disable_scs_pushredirect() {
             None
         } else {
-            // TODO: Create pushredirector
-            None
+            self.maybe_push_redirector(&repo).await?
         };
 
         let pushrebase_outcome = repo

@@ -139,6 +139,7 @@ use synced_commit_mapping::SyncedCommitMapping;
 use test_repo_factory::TestRepoFactory;
 use warm_bookmarks_cache::BookmarksCache;
 use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
+use wireproto_handler::PushRedirectorBase;
 use wireproto_handler::RepoHandlerBase;
 
 use crate::changeset::ChangesetContext;
@@ -770,6 +771,10 @@ impl RepoContext {
         &self.authz
     }
 
+    pub fn mononoke_api_repo(&self) -> Arc<Repo> {
+        self.repo.clone()
+    }
+
     /// The underlying `InnerRepo`.
     pub fn inner_repo(&self) -> &InnerRepo {
         self.repo.inner_repo()
@@ -813,6 +818,15 @@ impl RepoContext {
     /// The hook manager for the referenced repository.
     pub fn hook_manager(&self) -> Arc<HookManager> {
         self.repo.hook_manager_arc()
+    }
+
+    /// The base for push redirection logic for this repo
+    pub fn maybe_push_redirector_base(&self) -> Option<&PushRedirectorBase> {
+        self.repo
+            .repo_handler_base
+            .maybe_push_redirector_base
+            .as_ref()
+            .map(AsRef::as_ref)
     }
 
     /// The configuration for the referenced repository.
