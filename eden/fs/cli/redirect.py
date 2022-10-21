@@ -68,8 +68,6 @@ def make_scratch_dir(checkout: EdenCheckout, subdir: Path) -> Path:
     sub = Path("edenfs") / Path("redirections") / subdir
 
     mkscratch = mkscratch_bin()
-    if sys.platform == "win32" and not mkscratch:
-        return make_temp_dir(checkout.path, sub)
 
     return Path(
         subprocess.check_output(
@@ -84,14 +82,6 @@ def make_scratch_dir(checkout: EdenCheckout, subdir: Path) -> Path:
         .decode("utf-8")
         .strip()
     )
-
-
-def make_temp_dir(repo: Path, subdir: Path) -> Path:
-    """TODO(zeyi): This is a temporary measurement before we get mkscratch on Windows"""
-    escaped = os.fsdecode(repo / subdir).replace("\\", "Z").replace("/", "Z")
-    scratch = WINDOWS_SCRATCH_DIR / escaped
-    scratch.mkdir(parents=True, exist_ok=True)
-    return scratch
 
 
 class RedirectionState(enum.Enum):
