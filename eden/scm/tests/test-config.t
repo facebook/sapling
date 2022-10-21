@@ -165,11 +165,12 @@ sub-options in [paths] aren't expanded
 
 edit failure
 
-  $ HGEDITOR=false hg config --edit
+  $ HGEDITOR=false hg config --edit --quiet
   abort: edit failed: false exited with status 1
   [255]
 
   $ HGEDITOR=false hg config --user
+  opening $TESTTMP/.hgrc for editing...
   abort: edit failed: false exited with status 1
   [255]
 
@@ -249,6 +250,7 @@ config editing without an editor
  append configs
   $ hg config --local aa.bb.cc.字 "配
   > 置" ee.fff=gggg
+  updated config in $TESTTMP/repo1/.hg/hgrc
   $ tail -6 .hg/hgrc | dos2unix
   [aa]
   bb.cc.字 = 配
@@ -262,6 +264,7 @@ config editing without an editor
   > 测
   > 试
   > "
+  updated config in $TESTTMP/repo1/.hg/hgrc
   $ tail -7 .hg/hgrc | dos2unix
   [aa]
   bb.cc.字 = 新值
@@ -285,6 +288,7 @@ config editing without an editor
   > EOF
 
   $ hg config --local a.b 4
+  updated config in $TESTTMP/repo2/.hg/hgrc
   $ cat .hg/hgrc
   [a]
   # b = 1
@@ -292,12 +296,13 @@ config editing without an editor
   # b = 3
 
  user config
-  $ hg config --edit a.b=1
+  $ hg config --edit a.b=1 --quiet
   $ tail -2 ~/.hgrc | dos2unix
   [a]
   b = 1
 
   $ hg config --user a.b 2
+  updated config in $TESTTMP/.hgrc
   $ tail -2 ~/.hgrc | dos2unix
   [a]
   b = 2

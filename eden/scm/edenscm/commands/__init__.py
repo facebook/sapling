@@ -1847,6 +1847,7 @@ def editconfig(ui, repo, *values, **opts):
         fp.close()
 
     if not values:
+        ui.status(_("opening %s for editing...\n") % targetpath)
         editor = ui.geteditor()
         ui.system(
             '%s "%s"' % (editor, targetpath),
@@ -1887,6 +1888,8 @@ def editconfig(ui, repo, *values, **opts):
 
     for section, name, value in to_edit:
         rcutil.editconfig(targetpath, section, name, value)
+
+    ui.status(_("updated config in %s\n") % targetpath)
 
 
 @command("continue|cont")
