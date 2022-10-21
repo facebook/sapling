@@ -19,7 +19,7 @@ import random
 import time
 import weakref
 from contextlib import contextmanager
-from typing import Set
+from typing import Optional, Set
 
 import bindings
 from edenscm import tracing
@@ -405,14 +405,19 @@ class localrepository(object):
     # pyre-fixme[20]: Argument `expr` expected.
     _lockfreeprefix = set()
 
-    def __init__(self, baseui, path, create=False):
+    def __init__(
+        self, baseui, path, create=False, initial_config: Optional[str] = None
+    ):
+        """Instantiate local repo object, optionally creating a new repo on disk if `create` is True.
+        If specified, `initial_config` is added to the created repo's config."""
+
         # Simplify things by keepning identity cache scoped at max to
         # a single repo's lifetime. In particular this is necessary
         # wrt git submodules.
         identity.sniffdir.cache_clear()
 
         if create:
-            bindings.repo.repo.initialize(path, baseui._rcfg)
+            bindings.repo.repo.initialize(path, baseui._rcfg, initial_config)
 
         # Make sure repo dot dir exists.
         if not identity.sniffdir(path):
@@ -432,9 +437,6 @@ class localrepository(object):
 
         self._rsrepo = bindings.repo.repo(self.root, self.ui._rcfg)
 
-        # localvfs: rooted at .hg, used to access repo files outside of
-        # the store that are local to this working copy.
-        self.localvfs = None
         # sharedvfs: the local vfs of the primary shared repo for shared repos.
         # for non-shared repos this is the same as localvfs.
         self.sharedvfs = None
@@ -450,6 +452,8 @@ class localrepository(object):
         # This is only used by context.basectx.match in order to detect
         # files in forbidden paths..
         self.nofsauditor = pathutil.pathauditor(self.root, realfs=False, cached=True)
+        # localvfs: rooted at .hg, used to access repo files outside of
+        # the store that are local to this working copy.
         self.localvfs = vfsmod.vfs(self.path, cacheaudited=True)
         if self.ui.configbool("devel", "all-warnings") or self.ui.configbool(
             "devel", "check-locks"
@@ -3193,8 +3197,8 @@ def undoname(fn):
     return os.path.join(base, name.replace("journal", "undo", 1))
 
 
-def instance(ui, path, create) -> localrepository:
-    return localrepository(ui, util.urllocalpath(path), create)
+def instance(ui, path, create, initial_config) -> localrepository:
+    return localrepository(ui, util.urllocalpath(path), create, initial_config)
 
 
 def islocal(path) -> bool:

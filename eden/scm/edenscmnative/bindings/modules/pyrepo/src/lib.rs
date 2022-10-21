@@ -38,8 +38,8 @@ py_class!(pub class repo |py| {
     data inner_wc: RefCell<Option<Arc<RwLock<WorkingCopy>>>>;
 
     @staticmethod
-    def initialize(path: PyPathBuf, config: &config) -> PyResult<PyNone> {
-        Repo::init(path.as_path(), &config.get_cfg(py), None, &[]).map_pyerr(py)?;
+    def initialize(path: PyPathBuf, config: &config, repo_config: Option<String>) -> PyResult<PyNone> {
+        Repo::init(path.as_path(), &config.get_cfg(py), repo_config, &[]).map_pyerr(py)?;
         Ok(PyNone)
     }
 

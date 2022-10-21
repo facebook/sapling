@@ -563,6 +563,10 @@ class metavfs(object):
 
     metapaths = {}
 
+    def __init__(self):
+        super().__init__()
+        self._rsrepo = None
+
     @util.propertycache
     def metalog(self):
         vfs = self.vfs

@@ -3816,7 +3816,8 @@ def init(ui, dest=".", **opts):
         if util.url(destpath).scheme == "bundle":
             hg.repository(ui, destpath, create=True)
         else:
-            bindings.repo.repo.initialize(destpath, ui._rcfg)
+            initial_config = None
+            bindings.repo.repo.initialize(destpath, ui._rcfg, initial_config)
 
 
 @command(

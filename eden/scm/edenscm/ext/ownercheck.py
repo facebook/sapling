@@ -14,6 +14,7 @@ This prevents some common mistakes like using sudo to clone a repo.
 """
 
 import os
+from typing import Optional
 
 from edenscm import error, extensions, localrepo
 from edenscm.i18n import _
@@ -63,9 +64,11 @@ def _checkownedpath(path):
     )
 
 
-def _localrepoinit(orig, self, baseui, path=None, create=False):
+def _localrepoinit(
+    orig, self, baseui, path, create=False, initial_config: Optional[str] = None
+):
     _checkownedpath(path)
-    return orig(self, baseui, path, create)
+    return orig(self, baseui, path, create, initial_config)
 
 
 def uisetup(ui):

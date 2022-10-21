@@ -85,9 +85,9 @@ class ShortRepository(object):
     def __repr__(self):
         return "<ShortRepository: %s>" % self.scheme
 
-    def instance(self, ui, url, create):
+    def instance(self, ui, url, create, initial_config):
         url = self.resolve(url)
-        return hg._peerlookup(url).instance(ui, url, create)
+        return hg._peerlookup(url).instance(ui, url, create, initial_config)
 
     def resolve(self, url):
         # Should this use the urlutil.url class, or is manual parsing better?

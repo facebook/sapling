@@ -1758,7 +1758,11 @@ def debuginitgit(ui, destpath, **opts) -> None:
     gitdir = os.path.realpath(opts.get("git_dir"))
     if not os.path.exists(os.path.join(gitdir, "refs")):
         raise error.Abort(_("invalid --git-dir: %s") % gitdir)
-    repo = hg.repository(ui, ui.expandpath(destpath), create=True).local()
+    repo = git.createrepo(
+        ui,
+        None,
+        destpath,
+    ).local()
     git.initgit(repo, gitdir)
 
 

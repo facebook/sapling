@@ -177,7 +177,7 @@ def _setuprepo(ui, repo, presetupfuncs=None):
 
 
 @perftrace.tracefunc("Repo Setup")
-def repository(ui, path="", create=False, presetupfuncs=None):
+def repository(ui, path="", create=False, presetupfuncs=None, initial_config=None):
     """return a repository object for the specified path"""
     u = util.url(path)
     if u.scheme == "bundle":
@@ -185,7 +185,7 @@ def repository(ui, path="", create=False, presetupfuncs=None):
     else:
         creator = _local(path)
 
-    repo = creator.instance(ui, path, create)
+    repo = creator.instance(ui, path, create, initial_config)
     _setuprepo(ui, repo, presetupfuncs=presetupfuncs)
     repo = repo.local()
     if not repo:
@@ -197,7 +197,7 @@ def repository(ui, path="", create=False, presetupfuncs=None):
 def peer(uiorrepo, opts, path, create=False):
     """return a repository peer for the specified path"""
     rui = remoteui(uiorrepo, opts)
-    obj = _peerlookup(path).instance(rui, path, create)
+    obj = _peerlookup(path).instance(rui, path, create, initial_config=None)
     # Uncomment this once we stop using file clones in sandcastle
     # if obj.local() and not rui.configbool("experimental", "allowfilepeer"):
     #    raise error.Abort(_("cannot create peer for local file repository '%s'")

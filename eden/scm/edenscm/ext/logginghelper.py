@@ -18,6 +18,7 @@ by SCM wrappers
 """
 
 import os
+from typing import Optional
 
 from edenscm import extensions, localrepo, registrar
 
@@ -26,8 +27,10 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 
-def _localrepoinit(orig, self, baseui, path=None, create=False):
-    orig(self, baseui, path, create)
+def _localrepoinit(
+    orig, self, baseui, path, create=False, initial_config: Optional[str] = None
+):
+    orig(self, baseui, path, create, initial_config)
     reponame = self.ui.config("paths", "default")
     if reponame:
         reponame = os.path.basename(reponame).split("?")[0]

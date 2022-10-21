@@ -78,17 +78,7 @@ def isgitpeer(repo):
     return isgitstore(repo)
 
 
-def clone(ui, url, destpath=None, update=True, pullnames=None):
-    """Clone a git repo, then create a repo at dest backed by the git repo.
-    update can be False, or True, or a node to update to.
-    - False: do not update, leave an empty working copy.
-    - True: upate to git HEAD.
-    - other: update to `other` (node, or name).
-    pullnames decides what to pull.
-    - None: use default refspecs set by configs.
-    - []: do not fetch anything.
-    If url is empty, create the repo but do not add a remote.
-    """
+def createrepo(ui, url, destpath=None):
     from . import hg
 
     if destpath is None:
@@ -104,8 +94,28 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
     if os.path.lexists(destpath):
         raise error.Abort(_("destination '%s' already exists") % destpath)
 
+    repo_config = "%include builtin:git.rc\n"
+    if url:
+        repo_config += "\n[paths]\ndefault = %s\n" % url
+
+    return hg.repository(ui, destpath, create=True, initial_config=repo_config).local()
+
+
+def clone(ui, url, destpath=None, update=True, pullnames=None):
+    """Clone a git repo, then create a repo at dest backed by the git repo.
+    update can be False, or True, or a node to update to.
+    - False: do not update, leave an empty working copy.
+    - True: upate to git HEAD.
+    - other: update to `other` (node, or name).
+    pullnames decides what to pull.
+    - None: use default refspecs set by configs.
+    - []: do not fetch anything.
+    If url is empty, create the repo but do not add a remote.
+    """
+    from . import hg
+
     try:
-        repo = hg.repository(ui, destpath, create=True).local()
+        repo = createrepo(ui, url, destpath)
         ret = initgitbare(ui, repo.svfs.join("git"))
         if ret != 0:
             raise error.Abort(_("git clone was not successful"))
@@ -134,10 +144,6 @@ def initgit(repo, gitdir, giturl=None):
     """
     from . import visibility
 
-    repo_config = "%include builtin:git.rc\n"
-    if giturl:
-        repo_config += "\n[paths]\ndefault = %s\n" % giturl
-
     with repo.lock(), repo.transaction("initgit"):
         repo.svfs.writeutf8(GIT_DIR_FILE, gitdir)
         repo.storerequirements.add(GIT_FORMAT_REQUIREMENT)
@@ -145,8 +151,6 @@ def initgit(repo, gitdir, giturl=None):
         repo._writestorerequirements()
         repo.invalidatechangelog()
         visibility.add(repo, repo.changelog.dageval(lambda: heads(all())))
-        repo.sharedvfs.writeutf8(repo.ui.identity.configrepofile(), repo_config)
-        repo.ui.reloadconfigs(repo.root)
 
 
 def maybegiturl(url):

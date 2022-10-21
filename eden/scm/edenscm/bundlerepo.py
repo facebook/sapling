@@ -345,7 +345,7 @@ class bundlerepository(localrepo.localrepository):
             localrepo.localrepository.__init__(self, ui, repopath)
         except error.RepoError:
             self._tempparent = tempfile.mkdtemp()
-            localrepo.instance(ui, self._tempparent, 1)
+            localrepo.instance(ui, self._tempparent, 1, initial_config=None)
             localrepo.localrepository.__init__(self, ui, self._tempparent)
         self.ui.setconfig("phases", "publish", False, "bundlerepo")
 
@@ -543,7 +543,7 @@ class bundlerepository(localrepo.localrepository):
         return super(bundlerepository, self).setparents(p1, p2)
 
 
-def instance(ui, path, create):
+def instance(ui, path, create, initial_config):
     if create:
         raise error.Abort(_("cannot create new bundle repository"))
     # internal config: bundle.mainreporoot

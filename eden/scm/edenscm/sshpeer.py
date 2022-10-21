@@ -18,7 +18,7 @@ import re
 import subprocess
 import threading
 import weakref
-from typing import Any, Tuple
+from typing import Any, Optional, Tuple
 
 from . import error, progress, stdiopeer, util
 from .i18n import _
@@ -148,8 +148,10 @@ def cleanupall() -> None:
 
 
 class sshpeer(stdiopeer.stdiopeer):
-    def __init__(self, ui, path, create=False):
-        super(sshpeer, self).__init__(ui, path, create=create)
+    def __init__(self, ui, path, create=False, initial_config: Optional[str] = None):
+        super(sshpeer, self).__init__(
+            ui, path, create=create, initial_config=initial_config
+        )
         self._pipee = None
 
         u = util.url(path, parsequery=False, parsefragment=False)

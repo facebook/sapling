@@ -13,7 +13,7 @@
 from __future__ import absolute_import
 
 import abc
-from typing import Any
+from typing import Any, Optional
 
 from . import error, perftrace, pycompat, util, wireproto
 from .i18n import _
@@ -33,7 +33,7 @@ def _writestderror(ui: "Any", s: bytes) -> None:
 class stdiopeer(wireproto.wirepeer):
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, ui, path, create=False):
+    def __init__(self, ui, path, create=False, initial_config: Optional[str] = None):
         self._url = path
         self._ui = ui
         self._pipeo = self._pipei = None

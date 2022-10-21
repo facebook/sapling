@@ -38,6 +38,7 @@ import socket
 import ssl
 from enum import Enum
 from struct import pack, unpack
+from typing import Optional
 
 from bindings import cats, clientinfo, zstd
 
@@ -223,8 +224,10 @@ def maybestripsquarebrackets(hostname: str):
 
 
 class mononokepeer(stdiopeer.stdiopeer):
-    def __init__(self, ui, path, create=False):
-        super(mononokepeer, self).__init__(ui, path, create=create)
+    def __init__(self, ui, path, create=False, initial_config: Optional[str] = None):
+        super(mononokepeer, self).__init__(
+            ui, path, create=create, initial_config=initial_config
+        )
         self.sock = None
 
         u = util.url(path, parsequery=False, parsefragment=False)

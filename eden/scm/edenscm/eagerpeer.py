@@ -3,6 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+from typing import Optional
+
 import bindings
 from edenscm import tracing
 
@@ -29,7 +31,7 @@ class eagerpeer(repository.peer):
     missing.
     """
 
-    def __init__(self, ui, path, create=True):
+    def __init__(self, ui, path, create=True, initial_config: Optional[str] = None):
         super(eagerpeer, self).__init__()
 
         self._url = path
