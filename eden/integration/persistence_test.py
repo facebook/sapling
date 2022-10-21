@@ -5,6 +5,7 @@
 # GNU General Public License version 2.
 
 import os
+import sys
 from typing import Dict
 
 from .lib import testcase
@@ -68,11 +69,14 @@ class PersistenceTest(testcase.EdenRepoTest):
             self.assertEqual(
                 old_stat.st_mode, new_stat.st_mode, f"mode must line up for path {path}"
             )
-            self.assertEqual(
-                old_stat.st_atime,
-                new_stat.st_atime,
-                f"atime must line up for path {path}",
-            )
+            # On Windows, fsck will scan all files in the working copy, thus
+            # the atime will also change.
+            if sys.platform != "win32":
+                self.assertEqual(
+                    old_stat.st_atime,
+                    new_stat.st_atime,
+                    f"atime must line up for path {path}",
+                )
             self.assertEqual(
                 old_stat.st_mtime,
                 new_stat.st_mtime,

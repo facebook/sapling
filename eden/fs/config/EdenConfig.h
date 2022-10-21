@@ -923,7 +923,7 @@ class EdenConfig : private ConfigSettingManager {
   /**
    * True if Windows FSCK should use the new, more thorough version.
    */
-  ConfigSetting<bool> useThoroughFsck{"fsck:use-thorough-fsck", false, this};
+  ConfigSetting<bool> useThoroughFsck{"fsck:use-thorough-fsck", true, this};
 
   /**
    * When FSCK is running, how often should we log about the number of scanned
