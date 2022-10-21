@@ -177,7 +177,7 @@ impl LfsRepos {
                 }
             })
             .collect::<Vec<_>>();
-        let repos = Arc::new(app.open_mononoke_repos(repo_names).await?);
+        let repos = app.open_mononoke_repos(repo_names).await?;
         Ok(Self { app, repos })
     }
 

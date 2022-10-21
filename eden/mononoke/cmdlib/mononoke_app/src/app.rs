@@ -426,14 +426,14 @@ impl MononokeApp {
     pub async fn open_mononoke_repos<Repo, Names>(
         &self,
         repo_names: Names,
-    ) -> Result<MononokeRepos<Repo>>
+    ) -> Result<Arc<MononokeRepos<Repo>>>
     where
         Names: IntoIterator<Item = String>,
         Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
     {
         let mononoke_repos = MononokeRepos::new();
         self.populate_repos(&mononoke_repos, repo_names).await?;
-        Ok(mononoke_repos)
+        Ok(Arc::new(mononoke_repos))
     }
 
     /// Method responsible for constructing and adding a new repo to the

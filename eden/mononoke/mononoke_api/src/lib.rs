@@ -134,7 +134,7 @@ impl Mononoke {
         STATS::completion_duration_secs
             .add_value(start.elapsed().as_secs().try_into().unwrap_or(i64::MAX));
         Ok(Self {
-            repos: Arc::new(repos),
+            repos,
             repo_names_in_tier,
         })
     }
