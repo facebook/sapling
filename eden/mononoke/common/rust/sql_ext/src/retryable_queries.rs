@@ -25,12 +25,28 @@ macro_rules! queries_with_retry {
         ) -> ($( $rtype:ty ),* $(,)*) { $q:expr }
         $( $rest:tt )*
     ) => {
+        $crate::queries_with_retry! {
+            $vi read $name (
+                $( $pname: $ptype, )*
+                $( >list $lname: $ltype )*
+            ) -> ($( $rtype ),*) { mysql($q) sqlite($q) }
+            $( $rest )*
+        }
+    };
+
+    (
+        $vi:vis read $name:ident (
+            $( $pname:ident: $ptype:ty ),* $(,)*
+            $( >list $lname:ident: $ltype:ty )*
+        ) -> ($( $rtype:ty ),* $(,)*) { mysql($mysql_q:expr) sqlite($sqlite_q:expr) }
+        $( $rest:tt )*
+    ) => {
         $crate::_macro_internal::paste::item! {
             $crate::_macro_internal::queries! {
                 pub read [<$name Impl>] (
                     $( $pname: $ptype, )*
                     $( >list $lname: $ltype )*
-                ) -> ($( $rtype ),*) { $q }
+                ) -> ($( $rtype ),*) { mysql($mysql_q) sqlite($sqlite_q) }
             }
 
             #[allow(non_snake_case)]
@@ -67,12 +83,28 @@ macro_rules! queries_with_retry {
         ) { $qtype:ident, $q:expr }
         $( $rest:tt )*
     ) => {
+        $crate::queries_with_retry! {
+            $vi write $name (
+                values: ( $( $vname: $vtype ),* )
+                $( , $pname: $ptype )*
+            ) { $qtype, mysql($q) sqlite($q) }
+            $( $rest )*
+        }
+    };
+
+    (
+        $vi:vis write $name:ident (
+            values: ($( $vname:ident: $vtype:ty ),* $(,)*)
+            $( , $pname:ident: $ptype:ty )* $(,)*
+        ) { $qtype:ident, mysql($mysql_q:expr) sqlite($sqlite_q:expr) }
+        $( $rest:tt )*
+    ) => {
         $crate::_macro_internal::paste::item! {
             $crate::_macro_internal::queries! {
                 pub write [<$name Impl>] (
                     values: ( $( $vname: $vtype ),* )
                     $( , $pname: $ptype )*
-                ) { $qtype, $q }
+                ) { $qtype, mysql($mysql_q) sqlite($sqlite_q) }
             }
 
             #[allow(non_snake_case)]
@@ -109,12 +141,28 @@ macro_rules! queries_with_retry {
         ) { $qtype:ident, $q:expr }
         $( $rest:tt )*
     ) => {
+        $crate::queries_with_retry! {
+            $vi write $name (
+                $( $pname: $ptype, )*
+                $( >list $lname: $ltype )*
+            ) { $qtype, mysql($q) sqlite($q) }
+            $( $rest )*
+        }
+    };
+
+    (
+        $vi:vis write $name:ident (
+            $( $pname:ident: $ptype:ty ),* $(,)*
+            $( >list $lname:ident: $ltype:ty )*
+        ) { $qtype:ident, mysql($mysql_q:expr) sqlite($sqlite_q:expr) }
+        $( $rest:tt )*
+    ) => {
         $crate::_macro_internal::paste::item! {
             $crate::_macro_internal::queries! {
                 pub write [<$name Impl>] (
                     $( $pname: $ptype, )*
                     $( >list $lname: $ltype )*
-                ) { $qtype, mysql($q) sqlite($q) }
+                ) { $qtype, mysql($mysql_q) sqlite($sqlite_q) }
             }
 
             #[allow(non_snake_case)]
@@ -213,7 +261,8 @@ mod tests {
         }
         write TestQuery4(id: &str) {
             none,
-            "DELETE FROM my_table where id = {id}"
+            mysql("DELETE FROM my_table where id = {id}")
+            sqlite("DELETE FROM mytable2 where id = {id}")
         }
     }
 

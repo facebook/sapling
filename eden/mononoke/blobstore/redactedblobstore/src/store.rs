@@ -27,10 +27,10 @@ use mononoke_types::Timestamp;
 use redaction_set::RedactionSets;
 use reloader::Loader;
 use reloader::Reloader;
-use sql::queries;
 use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::queries_with_retry;
 use sql_ext::SqlConnections;
 
 use crate::RedactionConfigBlobstore;
@@ -41,7 +41,7 @@ pub struct SqlRedactedContentStore {
     write_connection: Connection,
 }
 
-queries! {
+queries_with_retry! {
 
     write InsertRedactedBlobs(
         values: (content_key: String, task: String, add_timestamp: Timestamp, log_only: bool)
