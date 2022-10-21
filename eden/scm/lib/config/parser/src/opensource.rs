@@ -139,7 +139,7 @@ gitrevset=!
 hgsubversion=!
 hiddenerror=
 histedit=
-infinitepush=
+infinitepush=!
 journal=
 logginghelper=
 lz4revlog=
@@ -149,7 +149,7 @@ obsshelve=
 patchrmdir=!
 progressfile=
 pullcreatemarkers=
-pushrebase=
+pushrebase=!
 rage=
 rebase=
 remotefilelog=
@@ -221,11 +221,10 @@ fastdatapack=True
 historypackv1=True
 localdatarepack=True
 useruststore=True
-reponame=fbsource
 manifestlimit=4GB
 http=True
 userustrepack=True
-cachepath=~/.hgcache
+cachepath=~/.sl_cache
 retryprefetch=True
 fetchpacks=True
 getpackversion=2
@@ -234,7 +233,7 @@ write-local-to-indexedlog=True
 
 [remotenames]
 # TODO what's the right oss value for this?
-autopullhoistpattern=re:^(?:fbandroid|fbobjc|fbcode|release|releases|xplat|fbsource|infinitepush|hack|scratch|scide|ide|conveyor)(/|-)[A-Za-z0-9._/-]+$
+autopullhoistpattern=
 autopullpattern=re:^remote/[A-Za-z0-9._/-]+$
 cachedistance=False
 disallowedbookmarks=master
@@ -540,7 +539,7 @@ amendflag=stack
 
 [hiddenerror]
 message=attempted to access hidden commit {0}
-hint=use 'hg log -r {0} --hidden' to see more details about this commit
+hint=use 'sl log -r {0} --hidden' to see more details about this commit
 
 [histedit]
 defaultrev=limit(only(.) & draft(), 50)
