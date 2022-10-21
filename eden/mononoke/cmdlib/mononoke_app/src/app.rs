@@ -17,6 +17,7 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use async_trait::async_trait;
 use base_app::BaseApp;
 use blobstore::Blobstore;
 use blobstore_factory::BlobstoreOptions;
@@ -40,6 +41,7 @@ use metaconfig_types::BlobConfig;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::Redaction;
 use metaconfig_types::RepoConfig;
+use mononoke_configs::ConfigUpdateReceiver;
 use mononoke_configs::MononokeConfigs;
 use mononoke_repos::MononokeRepos;
 use mononoke_types::RepositoryId;
@@ -81,6 +83,36 @@ define_stats! {
         (reponame: String);
         Average, Sum, Count
     ),
+}
+
+/// Struct responsible for receiving updated configurations from MononokeConfigs
+/// and refreshing repos (and related entities) based on the update.
+pub struct MononokeConfigUpdateReceiver<Repo> {
+    _repos: Arc<MononokeRepos<Repo>>,
+    _repo_factory: RepoFactory,
+}
+
+impl<Repo> MononokeConfigUpdateReceiver<Repo> {
+    fn new(_repos: Arc<MononokeRepos<Repo>>, _repo_factory: RepoFactory) -> Self {
+        Self {
+            _repos,
+            _repo_factory,
+        }
+    }
+}
+
+#[async_trait]
+impl<Repo> ConfigUpdateReceiver for MononokeConfigUpdateReceiver<Repo>
+where
+    Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>> + Send + Sync,
+{
+    async fn apply_update(
+        &self,
+        _repo_configs: Arc<RepoConfigs>,
+        _storage_configs: Arc<StorageConfigs>,
+    ) -> Result<()> {
+        Ok(())
+    }
 }
 
 pub struct MononokeApp {
@@ -429,11 +461,19 @@ impl MononokeApp {
     ) -> Result<Arc<MononokeRepos<Repo>>>
     where
         Names: IntoIterator<Item = String>,
-        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>
+            + Send
+            + Sync
+            + 'static,
     {
         let mononoke_repos = MononokeRepos::new();
         self.populate_repos(&mononoke_repos, repo_names).await?;
-        Ok(Arc::new(mononoke_repos))
+        let mononoke_repos = Arc::new(mononoke_repos);
+        let update_receiver =
+            MononokeConfigUpdateReceiver::new(mononoke_repos.clone(), self.repo_factory());
+        self.configs
+            .register_for_update(Arc::new(update_receiver) as Arc<dyn ConfigUpdateReceiver>);
+        Ok(mononoke_repos)
     }
 
     /// Method responsible for constructing and adding a new repo to the
