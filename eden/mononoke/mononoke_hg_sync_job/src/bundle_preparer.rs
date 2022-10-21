@@ -182,7 +182,7 @@ impl BundlePreparer {
             }
 
             let bookmark_change = BookmarkChange::new(batch.from_cs_id, batch.to_cs_id)?;
-            let bundle_timestamps_commits = retry::retry(
+            let bundle_timestamps_commits = retry::retry_always(
                 ctx.logger(),
                 {
                     |_| {

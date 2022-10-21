@@ -85,7 +85,7 @@ use repo_lock::MutableRepoLock;
 use repo_lock::RepoLock;
 use repo_lock::RepoLockState;
 use repo_lock::SqlRepoLock;
-use retry::retry;
+use retry::retry_always;
 use retry::RetryAttemptsCount;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
@@ -436,7 +436,7 @@ impl RepoShardedProcessExecutor for HgSyncProcessExecutor {
             "Initiating hg sync command execution for repo {}", &self.repo_name,
         );
         let base_retry_delay_ms = 1000;
-        retry(
+        retry_always(
             self.ctx.logger(),
             |attempt| async move {
                 // Once cancellation is requested, do not retry even if its
@@ -734,7 +734,7 @@ async fn sync_single_combined_entry(
             .await?
     }
 
-    let (_, attempts) = retry(
+    let (_, attempts) = retry_always(
         ctx.logger(),
         |attempt| try_sync_single_combined_entry(ctx, attempt, combined_entry, hg_repo),
         base_retry_delay_ms,
@@ -1353,7 +1353,7 @@ async fn run<'a>(
                     let entry = outcome_handler(res).watched(ctx.logger()).await?;
                     let next_id = get_id_to_search_after(&entry);
 
-                    retry(
+                    retry_always(
                         ctx.logger(),
                         |_| async {
                             let success = replayed_sync_counter

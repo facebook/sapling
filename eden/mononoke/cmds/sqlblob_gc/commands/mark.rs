@@ -17,7 +17,7 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mononoke_app::MononokeApp;
-use retry::retry;
+use retry::retry_always;
 use slog::info;
 use slog::Logger;
 use sqlblob::Sqlblob;
@@ -49,7 +49,7 @@ async fn handle_one_key(
     logger: Arc<Logger>,
     mark_generation: u64,
 ) -> Result<()> {
-    retry(
+    retry_always(
         &logger,
         |_| store.set_generation(&key, inline_small_values, mark_generation),
         BASE_RETRY_DELAY_MS,
@@ -61,7 +61,7 @@ async fn handle_one_key(
 }
 
 async fn handle_initial_generation(store: &Sqlblob, shard: usize, logger: &Logger) -> Result<()> {
-    retry(
+    retry_always(
         logger,
         |_| store.set_initial_generation(shard),
         BASE_RETRY_DELAY_MS,
