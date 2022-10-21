@@ -11,8 +11,10 @@
 mod dummy;
 mod healer;
 mod sync_healer;
+mod wal_healer;
 
 use std::collections::HashMap;
+use std::num::NonZeroU64;
 use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
@@ -27,7 +29,9 @@ use blobstore_factory::make_blobstore;
 use blobstore_factory::BlobstoreOptions;
 use blobstore_factory::ReadOnlyStorage;
 use blobstore_sync_queue::BlobstoreSyncQueue;
+use blobstore_sync_queue::BlobstoreWal;
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
+use blobstore_sync_queue::SqlBlobstoreWal;
 use borrowed::borrowed;
 use cached_config::ConfigStore;
 use chrono::Duration as ChronoDuration;
@@ -36,12 +40,16 @@ use context::CoreContext;
 use context::SessionContainer;
 use dummy::DummyBlobstore;
 use dummy::DummyBlobstoreSyncQueue;
+use dummy::DummyBlobstoreWal;
 use fbinit::FacebookInit;
 use futures::future;
 use futures_03_ext::BufferedParams;
 use healer::HealResult;
 use healer::Healer;
 use metaconfig_types::BlobConfig;
+use metaconfig_types::BlobstoreId;
+use metaconfig_types::DatabaseConfig;
+use metaconfig_types::MultiplexedStoreType;
 use metaconfig_types::StorageConfig;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
@@ -52,6 +60,7 @@ use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use sync_healer::SyncHealer;
 use wait_for_replication::WaitForReplication;
+use wal_healer::WalHealer;
 
 #[derive(Parser)]
 #[clap(about = "Monitors blobstore_sync_queue to heal blobstores with missing data")]
@@ -104,25 +113,99 @@ async fn maybe_schedule_healer_for_storage(
     heal_min_age: ChronoDuration,
     config_store: &ConfigStore,
 ) -> Result<(), Error> {
-    let (blobstore_configs, multiplex_id, queue_db, scuba_table, scuba_sample_rate) =
-        match storage_config.clone().blobstore {
-            BlobConfig::Multiplexed {
+    let multiplex_healer = match storage_config.clone().blobstore {
+        BlobConfig::Multiplexed {
+            blobstores,
+            multiplex_id,
+            queue_db,
+            scuba_table,
+            scuba_sample_rate,
+            ..
+        } => {
+            let sync_queue =
+                setup_sync_queue(fb, ctx, mysql_options, queue_db, readonly_storage, dry_run)?;
+            let blobstores = setup_blobstores(
+                fb,
+                ctx,
                 blobstores,
-                multiplex_id,
-                queue_db,
+                mysql_options,
+                blobstore_options,
+                readonly_storage,
                 scuba_table,
                 scuba_sample_rate,
-                ..
-            } => (
-                blobstores,
-                multiplex_id,
-                queue_db,
-                scuba_table,
-                scuba_sample_rate,
-            ),
-            s => bail!("Storage doesn't use Multiplexed blobstore, got {:?}", s),
-        };
+                config_store,
+                dry_run,
+            )
+            .await?;
 
+            let healer: Arc<dyn Healer> = Arc::new(SyncHealer::new(
+                blobstore_sync_queue_limit,
+                buffered_params,
+                sync_queue,
+                Arc::new(blobstores),
+                multiplex_id,
+                source_blobstore_key,
+                drain_only,
+            ));
+            Result::<_, Error>::Ok(healer)
+        }
+        BlobConfig::MultiplexedWAL {
+            blobstores,
+            multiplex_id,
+            queue_db,
+            scuba_table,
+            scuba_sample_rate,
+            ..
+        } => {
+            let wal = setup_wal(fb, mysql_options, queue_db, readonly_storage, dry_run)?;
+            let blobstores = setup_blobstores(
+                fb,
+                ctx,
+                blobstores,
+                mysql_options,
+                blobstore_options,
+                readonly_storage,
+                scuba_table,
+                scuba_sample_rate,
+                config_store,
+                dry_run,
+            )
+            .await?;
+
+            let healer: Arc<dyn Healer> = Arc::new(WalHealer::new(
+                blobstore_sync_queue_limit,
+                buffered_params,
+                wal,
+                Arc::new(blobstores),
+                multiplex_id,
+                source_blobstore_key,
+                drain_only,
+            ));
+            Result::<_, Error>::Ok(healer)
+        }
+        s => bail!("Storage doesn't use Multiplexed blobstore, got {:?}", s),
+    }?;
+
+    let wait_for_replication = WaitForReplication::new(fb, config_store, storage_config, "healer")?;
+
+    schedule_healing(
+        ctx,
+        multiplex_healer,
+        wait_for_replication,
+        iter_limit,
+        heal_min_age,
+    )
+    .await
+}
+
+fn setup_sync_queue(
+    fb: FacebookInit,
+    ctx: &CoreContext,
+    mysql_options: &MysqlOptions,
+    queue_db: DatabaseConfig,
+    readonly_storage: ReadOnlyStorage,
+    dry_run: bool,
+) -> Result<Arc<dyn BlobstoreSyncQueue>> {
     let sync_queue = SqlBlobstoreSyncQueue::with_database_config(
         fb,
         &queue_db,
@@ -138,6 +221,41 @@ async fn maybe_schedule_healer_for_storage(
         Arc::new(sync_queue)
     };
 
+    Ok(sync_queue)
+}
+
+fn setup_wal(
+    fb: FacebookInit,
+    mysql_options: &MysqlOptions,
+    queue_db: DatabaseConfig,
+    readonly_storage: ReadOnlyStorage,
+    dry_run: bool,
+) -> Result<Arc<dyn BlobstoreWal>> {
+    let wal =
+        SqlBlobstoreWal::with_database_config(fb, &queue_db, mysql_options, readonly_storage.0)
+            .context("While opening WAL")?;
+
+    let wal: Arc<dyn BlobstoreWal> = if dry_run {
+        Arc::new(DummyBlobstoreWal::new(wal))
+    } else {
+        Arc::new(wal)
+    };
+
+    Ok(wal)
+}
+
+async fn setup_blobstores(
+    fb: FacebookInit,
+    ctx: &CoreContext,
+    blobstore_configs: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
+    mysql_options: &MysqlOptions,
+    blobstore_options: &BlobstoreOptions,
+    readonly_storage: ReadOnlyStorage,
+    scuba_table: Option<String>,
+    scuba_sample_rate: NonZeroU64,
+    config_store: &ConfigStore,
+    dry_run: bool,
+) -> Result<HashMap<BlobstoreId, Arc<dyn Blobstore>>> {
     let blobstores = blobstore_configs.into_iter().map({
         borrowed!(scuba_table);
         move |(id, _, blobconfig)| async move {
@@ -175,27 +293,7 @@ async fn maybe_schedule_healer_for_storage(
         .await?
         .into_iter()
         .collect::<HashMap<_, _>>();
-
-    let wait_for_replication = WaitForReplication::new(fb, config_store, storage_config, "healer")?;
-
-    let multiplex_healer = Arc::new(SyncHealer::new(
-        blobstore_sync_queue_limit,
-        buffered_params,
-        sync_queue,
-        Arc::new(blobstores),
-        multiplex_id,
-        source_blobstore_key,
-        drain_only,
-    ));
-
-    schedule_healing(
-        ctx,
-        multiplex_healer,
-        wait_for_replication,
-        iter_limit,
-        heal_min_age,
-    )
-    .await
+    Ok(blobstores)
 }
 
 // Pass None as iter_limit for never ending run
