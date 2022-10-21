@@ -24,6 +24,7 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use eden_apfs::*;
+use once_cell::sync::Lazy;
 #[cfg(target_os = "macos")]
 use serde::*;
 use structopt::StructOpt;
@@ -33,6 +34,8 @@ mod facebook;
 
 const MOUNT_APFS: &'static str = "/sbin/mount_apfs";
 const MAX_ADDVOLUME_RETRY: u64 = 3;
+
+static MOUNT: Lazy<SystemCommandImpl> = Lazy::new(|| SystemCommandImpl(PathBuf::from(MOUNT_PATH)));
 
 #[derive(StructOpt, Debug)]
 enum Opt {
@@ -153,7 +156,7 @@ fn list_mount_points(containers: &Vec<ApfsContainer>, mounts: &MountTable) -> Re
     for container in containers {
         for vol in &container.volumes {
             if vol.is_edenfs_managed_volume() {
-                if let Some(mount_point) = vol.get_current_mount_point(Some(mounts)) {
+                if let Some(mount_point) = vol.get_current_mount_point(&*MOUNT, Some(mounts)) {
                     mount_points.push(mount_point);
                 }
             }
@@ -197,16 +200,16 @@ fn new_cmd_with_best_available_privs(path: &str) -> Command {
 /// Note that this code tries to create the subvolume multiple times to workaround a bug where the
 /// `diskutil apfs addVolume` command succeeds but the subvolume isn't created. Apple claims that
 /// this is fixed in macOS 11.5 but Sandcastle isn't on 11.5 yet.
-fn make_new_volume(name: &str, disk: &str) -> Result<ApfsVolume> {
+fn make_new_volume(apfs_util: &ApfsUtil, name: &str, disk: &str) -> Result<ApfsVolume> {
     let mut tried = 0;
     loop {
-        let output = new_cmd_unprivileged(DISKUTIL)
+        let output = new_cmd_unprivileged(DISKUTIL_PATH)
             .args(&["apfs", "addVolume", disk, "apfs", name, "-nomount"])
             .output()?;
         if !output.status.success() {
             anyhow::bail!("failed to execute diskutil addVolume: {:?}", output);
         }
-        let containers = apfs_list()?;
+        let containers = apfs_util.list_containers()?;
 
         if let Some(volume) = find_existing_volume(&containers, name) {
             return Ok(volume.clone());
@@ -222,7 +225,7 @@ fn make_new_volume(name: &str, disk: &str) -> Result<ApfsVolume> {
                 std::thread::sleep(Duration::from_secs(1));
 
                 // Maybe the volume wasn't available immediately, let's see if it appeared.
-                let containers = apfs_list()?;
+                let containers = apfs_util.list_containers()?;
                 if let Some(volume) = find_existing_volume(&containers, name) {
                     return Ok(volume.clone());
                 }
@@ -276,7 +279,7 @@ fn find_disk_for_eden_mount(mount_point: &str) -> Result<String> {
         bail!("disk at {} must be apfs", mount_point);
     }
     let partition = unsafe { std::ffi::CStr::from_ptr(stat.f_mntfromname.as_ptr()).to_str()? };
-    let output = new_cmd_unprivileged(DISKUTIL)
+    let output = new_cmd_unprivileged(DISKUTIL_PATH)
         .args(&["info", "-plist", &partition])
         .output()?;
     if !output.status.success() {
@@ -291,7 +294,7 @@ fn find_disk_for_eden_mount(_mount_point: &str) -> Result<String> {
     Err(anyhow!("only supported on macOS"))
 }
 
-fn mount_scratch_space_on(input_mount_point: &str) -> Result<()> {
+fn mount_scratch_space_on(apfs_util: &ApfsUtil, input_mount_point: &str) -> Result<()> {
     let mount_point = canonicalize_mount_point_path(input_mount_point)?;
     println!("want to mount at {:?}", mount_point);
 
@@ -313,12 +316,13 @@ fn mount_scratch_space_on(input_mount_point: &str) -> Result<()> {
         libc::geteuid()
     });
 
-    let containers = apfs_list()?;
+    let containers = apfs_util.list_containers()?;
     let name = encode_mount_point_as_volume_name(&mount_point);
     let volume = match find_existing_volume(&containers, &name) {
         Some(existing) => {
-            let mount_table = MountTable::parse_system_mount_table()?;
-            if let Some(current_mount_point) = existing.get_current_mount_point(Some(&mount_table))
+            let mount_table = MountTable::parse_system_mount_table(&*MOUNT)?;
+            if let Some(current_mount_point) =
+                existing.get_current_mount_point(&*MOUNT, Some(&mount_table))
             {
                 if !existing.is_preferred_location(&current_mount_point)? {
                     // macOS will automatically mount volumes at system boot,
@@ -328,12 +332,12 @@ fn mount_scratch_space_on(input_mount_point: &str) -> Result<()> {
                     // it here now: this should be fine because we own these volumes
                     // and where they get mounted.  No one else should have a legit
                     // reason for mounting it elsewhere.
-                    unmount_scratch(&mount_point, true, &mount_table)?;
+                    apfs_util.unmount_scratch(&mount_point, true, &mount_table)?;
                 }
             }
             existing.clone()
         }
-        None => make_new_volume(&name, &find_disk_for_eden_mount(&mount_point)?)?,
+        None => make_new_volume(apfs_util, &name, &find_disk_for_eden_mount(&mount_point)?)?,
     };
 
     // Mount the volume at the desired mount point.
@@ -440,58 +444,22 @@ fn disable_trashcan(mount_point: &str) -> Result<()> {
     Ok(())
 }
 
-fn unmount_scratch(mount_point: &str, force: bool, mount_table: &MountTable) -> Result<()> {
-    let containers = apfs_list()?;
-
-    for container in containers {
-        for volume in &container.volumes {
-            let preferred = match volume.preferred_mount_point() {
-                Some(path) => path,
-                None => continue,
-            };
-
-            if let Some(current_mount) = volume.get_current_mount_point(Some(mount_table)) {
-                if current_mount == mount_point || mount_point == preferred {
-                    let mut cmd = new_cmd_unprivileged(DISKUTIL);
-                    cmd.arg("unmount");
-
-                    if force {
-                        cmd.arg("force");
-                    }
-                    cmd.arg(&volume.device_identifier);
-                    let output = cmd.output()?;
-                    if !output.status.success() {
-                        anyhow::bail!(
-                            "failed to execute diskutil unmount {}: {:?}",
-                            volume.device_identifier,
-                            output
-                        );
-                    }
-                    return Ok(());
-                }
-            }
-        }
-    }
-    bail!("Did not find a volume mounted on {}", mount_point);
-}
-
-fn delete_scratch(mount_point: &str) -> Result<()> {
-    let volume_name = encode_mount_point_as_volume_name(mount_point);
-    delete_volume(&volume_name)
-}
-
 fn main() -> Result<()> {
     let opts = Opt::from_args();
 
+    let apfs_util = ApfsUtil::new(DISKUTIL_PATH, MOUNT_PATH);
+
     match opts {
         Opt::List { all } => {
-            let containers = apfs_list()?;
-            let mounts = MountTable::parse_system_mount_table()?;
+            let containers = apfs_util.list_containers()?;
+            let mounts = MountTable::parse_system_mount_table(&*MOUNT)?;
             for container in containers {
                 for vol in container.volumes {
                     if all || vol.is_edenfs_managed_volume() {
                         let name = vol.name.as_ref().map(String::as_str).unwrap_or("");
-                        if let Some(mount_point) = vol.get_current_mount_point(Some(&mounts)) {
+                        if let Some(mount_point) =
+                            vol.get_current_mount_point(&*MOUNT, Some(&mounts))
+                        {
                             println!("{}\t{}\t{}", vol.device_identifier, name, mount_point);
                         } else {
                             println!("{}\t{}", vol.device_identifier, name);
@@ -512,7 +480,7 @@ fn main() -> Result<()> {
                 .collect::<Result<Vec<_>>>()?;
 
             let mut stale_volume_names = vec![];
-            for vol in list_stale_volumes(&all_checkouts)? {
+            for vol in apfs_util.list_stale_volumes(&all_checkouts)? {
                 stale_volume_names.push(vol.name.context("Volume has no name")?);
             }
             if json {
@@ -525,32 +493,32 @@ fn main() -> Result<()> {
             Ok(())
         }
 
-        Opt::Mount { mount_point } => mount_scratch_space_on(&mount_point),
+        Opt::Mount { mount_point } => mount_scratch_space_on(&apfs_util, &mount_point),
 
         Opt::UnMount { mount_point, force } => {
-            unmount_scratch(
+            apfs_util.unmount_scratch(
                 &mount_point,
                 force,
-                &MountTable::parse_system_mount_table()?,
+                &MountTable::parse_system_mount_table(&*MOUNT)?,
             )?;
             Ok(())
         }
 
         Opt::Delete { mount_point } => {
-            delete_scratch(&mount_point)?;
+            apfs_util.delete_scratch(&mount_point)?;
             Ok(())
         }
 
         Opt::DeleteVolume { volume } => {
-            delete_volume(&volume)?;
+            apfs_util.delete_volume(&volume)?;
             Ok(())
         }
 
         Opt::DeleteAll {
             kill_dependent_processes,
         } => {
-            let containers = apfs_list()?;
-            let mounts = MountTable::parse_system_mount_table()?;
+            let containers = apfs_util.list_containers()?;
+            let mounts = MountTable::parse_system_mount_table(&*MOUNT)?;
 
             if kill_dependent_processes {
                 let mount_points: Vec<String> = list_mount_points(&containers, &mounts)?;
@@ -563,11 +531,15 @@ fn main() -> Result<()> {
                     if vol.is_edenfs_managed_volume() {
                         let mut try_delete = true;
 
-                        if let Some(mount_point) = vol.get_current_mount_point(Some(&mounts)) {
+                        if let Some(mount_point) =
+                            vol.get_current_mount_point(&*MOUNT, Some(&mounts))
+                        {
                             // In the context of deleting all volumes, we want to
                             // force the unmount--we know it is safe.
                             let force = true;
-                            if let Err(err) = unmount_scratch(&mount_point, force, &mounts) {
+                            if let Err(err) =
+                                apfs_util.unmount_scratch(&mount_point, force, &mounts)
+                            {
                                 eprintln!("Failed to unmount: {}", err);
                                 try_delete = false;
                                 was_failure = true;
@@ -576,7 +548,7 @@ fn main() -> Result<()> {
 
                         if try_delete {
                             let mount_point = vol.preferred_mount_point().unwrap();
-                            if let Err(err) = delete_scratch(&mount_point) {
+                            if let Err(err) = apfs_util.delete_scratch(&mount_point) {
                                 eprintln!("Failed to delete {:#?}: {}", vol, err);
                                 was_failure = true
                             } else {

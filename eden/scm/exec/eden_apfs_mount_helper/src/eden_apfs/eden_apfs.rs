@@ -9,6 +9,7 @@ use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
+use std::process::Output;
 use std::str;
 
 use anyhow::anyhow;
@@ -21,7 +22,8 @@ use sha2::Sha256;
 
 // Take care with the full path to the utility so that we are not so easily
 // tricked into running something scary if we are setuid root.
-pub const DISKUTIL: &str = "/usr/sbin/diskutil";
+pub const DISKUTIL_PATH: &str = "/usr/sbin/diskutil";
+pub const MOUNT_PATH: &str = "/sbin/mount";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[derive(Deserialize)]
@@ -47,8 +49,12 @@ impl ApfsVolume {
     /// If you are resolving more than mount point in a loop, then
     /// it is preferable to pass in the mount table so that it isn't
     /// recomputed on each call.
-    pub fn get_current_mount_point(&self, table: Option<&MountTable>) -> Option<String> {
-        let table = MountTable::parse_if_needed(table).ok()?;
+    pub fn get_current_mount_point<T: SystemCommand>(
+        &self,
+        mount: &T,
+        table: Option<&MountTable>,
+    ) -> Option<String> {
+        let table = MountTable::parse_if_needed(mount, table).ok()?;
         let dev_name = format!("/dev/{}", self.device_identifier);
         for entry in table.entries {
             if entry.device == dev_name {
@@ -147,8 +153,8 @@ impl MountTable {
         Self { entries }
     }
 
-    pub fn parse_system_mount_table() -> Result<Self> {
-        let output = new_cmd_unprivileged("/sbin/mount").output()?;
+    pub fn parse_system_mount_table<T: SystemCommand>(mount: &T) -> Result<Self> {
+        let output = mount.run_unprivileged(&[])?;
         if !output.status.success() {
             bail!("failed to execute mount: {:#?}", output);
         }
@@ -157,11 +163,11 @@ impl MountTable {
         )?))
     }
 
-    fn parse_if_needed(existing: Option<&Self>) -> Result<Self> {
+    fn parse_if_needed<T: SystemCommand>(mount: &T, existing: Option<&Self>) -> Result<Self> {
         if let Some(table) = existing {
             Ok(table.clone())
         } else {
-            Self::parse_system_mount_table()
+            Self::parse_system_mount_table(mount)
         }
     }
 }
@@ -210,15 +216,149 @@ pub fn parse_plist<T>(data: &str) -> Result<T> {
     plist::from_bytes(data.as_bytes()).context("parsing plist data")
 }
 
-/// Obtain the list of apfs containers and volumes by executing `diskutil`.
-pub fn apfs_list() -> Result<Vec<ApfsContainer>> {
-    let output = new_cmd_unprivileged(DISKUTIL)
-        .args(&["apfs", "list", "-plist"])
-        .output()?;
-    if !output.status.success() {
-        anyhow::bail!("failed to execute diskutil list: {:#?}", output);
+pub trait SystemCommand {
+    fn run_unprivileged(&self, args: &[&str]) -> Result<Output, std::io::Error>;
+}
+
+pub struct SystemCommandImpl(pub PathBuf);
+
+impl SystemCommand for SystemCommandImpl {
+    fn run_unprivileged(&self, args: &[&str]) -> Result<Output, std::io::Error> {
+        new_cmd_unprivileged(&self.0).args(args).output()
     }
-    Ok(parse_plist::<Containers>(&String::from_utf8(output.stdout)?)?.containers)
+}
+
+pub struct ApfsUtil<T: SystemCommand = SystemCommandImpl> {
+    diskutil: T,
+    mount: T,
+}
+
+impl ApfsUtil<SystemCommandImpl> {
+    pub fn new(diskutil_path: impl AsRef<Path>, mount_path: impl AsRef<Path>) -> Self {
+        Self {
+            diskutil: SystemCommandImpl(diskutil_path.as_ref().to_owned()),
+            mount: SystemCommandImpl(mount_path.as_ref().to_owned()),
+        }
+    }
+}
+
+impl<T: SystemCommand> ApfsUtil<T> {
+    /// Obtain the list of apfs containers and volumes by executing `diskutil`.
+    pub fn list_containers(&self) -> Result<Vec<ApfsContainer>> {
+        let output = self
+            .diskutil
+            .run_unprivileged(&["apfs", "list", "-plist"])?;
+        if !output.status.success() {
+            anyhow::bail!("failed to execute diskutil list: {:#?}", output);
+        }
+        Ok(parse_plist::<Containers>(&String::from_utf8(output.stdout)?)?.containers)
+    }
+
+    pub fn list_stale_volumes(&self, all_checkouts: &[String]) -> Result<Vec<ApfsVolume>> {
+        let all_checkouts = all_checkouts
+            .iter()
+            .map(|v| canonicalize_mount_point_path(v.as_ref()))
+            .collect::<Result<Vec<_>>>()?;
+        let containers = self.list_containers()?;
+        let mount_table = MountTable::parse_system_mount_table(&self.mount)?;
+
+        let mut stale_volumes = vec![];
+        for container in containers {
+            for vol in container.volumes {
+                if !vol.is_edenfs_managed_volume()
+                    || vol
+                        .get_current_mount_point(&self.mount, Some(&mount_table))
+                        .is_some()
+                {
+                    // ignore currently mounted or volumes not managed by EdenFS
+                    continue;
+                }
+
+                let is_stale = all_checkouts
+                    .iter()
+                    .try_fold(false, |acc, checkout| {
+                        vol.is_preferred_checkout(checkout).map(|p| acc || p)
+                    })
+                    .map(std::ops::Not::not)
+                    .unwrap_or(false);
+
+                if is_stale {
+                    stale_volumes.push(vol);
+                }
+            }
+        }
+
+        Ok(stale_volumes)
+    }
+
+    pub fn delete_volume(&self, volume_name: &str) -> Result<()> {
+        let containers = self.list_containers()?;
+        if let Some(volume) = find_existing_volume(&containers, volume_name) {
+            // This will implicitly unmount, so we don't need to deal
+            // with that here
+            let output = self.diskutil.run_unprivileged(&[
+                "apfs",
+                "deleteVolume",
+                &volume.device_identifier,
+            ])?;
+            if !output.status.success() {
+                anyhow::bail!(
+                    "failed to execute diskutil deleteVolume {}: {:?}",
+                    volume.device_identifier,
+                    output
+                );
+            }
+            Ok(())
+        } else {
+            bail!("Did not find a volume named {}", volume_name);
+        }
+    }
+
+    pub fn delete_scratch<P: AsRef<Path>>(&self, mount_point: P) -> Result<()> {
+        let volume_name = encode_mount_point_as_volume_name(mount_point);
+        self.delete_volume(volume_name.as_str())
+    }
+
+    pub fn unmount_scratch(
+        &self,
+        mount_point: &str,
+        force: bool,
+        mount_table: &MountTable,
+    ) -> Result<()> {
+        let containers = self.list_containers()?;
+
+        for container in containers {
+            for volume in &container.volumes {
+                let preferred = match volume.preferred_mount_point() {
+                    Some(path) => path,
+                    None => continue,
+                };
+
+                if let Some(current_mount) =
+                    volume.get_current_mount_point(&self.mount, Some(mount_table))
+                {
+                    if current_mount == mount_point || mount_point == preferred {
+                        let mut args = vec!["unmount"];
+
+                        if force {
+                            args.push("force");
+                        }
+                        args.push(&volume.device_identifier);
+                        let output = self.diskutil.run_unprivileged(&args)?;
+                        if !output.status.success() {
+                            anyhow::bail!(
+                                "failed to execute diskutil unmount {}: {:?}",
+                                volume.device_identifier,
+                                output
+                            );
+                        }
+                        return Ok(());
+                    }
+                }
+            }
+        }
+        bail!("Did not find a volume mounted on {}", mount_point);
+    }
 }
 
 pub fn find_existing_volume<'a>(
@@ -240,10 +380,9 @@ pub fn find_existing_volume<'a>(
 /// command invocation will restore the real uid/gid of the caller
 /// as part of running the command so that we avoid running too much
 /// stuff with privs.
-pub fn new_cmd_unprivileged(path: &str) -> Command {
-    let path: PathBuf = path.into();
-    assert!(path.is_absolute());
-    let mut cmd = Command::new(path);
+pub fn new_cmd_unprivileged(path: impl AsRef<Path>) -> Command {
+    assert!(path.as_ref().is_absolute());
+    let mut cmd = Command::new(path.as_ref());
 
     if geteuid() == 0 {
         // We're running with effective root privs; run this command
@@ -301,60 +440,4 @@ pub fn encode_mount_point_as_volume_name<P: AsRef<Path>>(mount_point: P) -> Stri
     }
 
     full_volume_name
-}
-
-pub fn list_stale_volumes(all_checkouts: &[String]) -> Result<Vec<ApfsVolume>> {
-    let all_checkouts = all_checkouts
-        .iter()
-        .map(|v| canonicalize_mount_point_path(v.as_ref()))
-        .collect::<Result<Vec<_>>>()?;
-    let containers = apfs_list()?;
-    let mount_table = MountTable::parse_system_mount_table()?;
-
-    let mut stale_volumes = vec![];
-    for container in containers {
-        for vol in container.volumes {
-            if !vol.is_edenfs_managed_volume()
-                || vol.get_current_mount_point(Some(&mount_table)).is_some()
-            {
-                // ignore currently mounted or volumes not managed by EdenFS
-                continue;
-            }
-
-            let is_stale = all_checkouts
-                .iter()
-                .try_fold(false, |acc, checkout| {
-                    vol.is_preferred_checkout(checkout).map(|p| acc || p)
-                })
-                .map(std::ops::Not::not)
-                .unwrap_or(false);
-
-            if is_stale {
-                stale_volumes.push(vol);
-            }
-        }
-    }
-
-    Ok(stale_volumes)
-}
-
-pub fn delete_volume(volume_name: &str) -> Result<()> {
-    let containers = apfs_list()?;
-    if let Some(volume) = find_existing_volume(&containers, volume_name) {
-        // This will implicitly unmount, so we don't need to deal
-        // with that here
-        let output = new_cmd_unprivileged(DISKUTIL)
-            .args(&["apfs", "deleteVolume", &volume.device_identifier])
-            .output()?;
-        if !output.status.success() {
-            anyhow::bail!(
-                "failed to execute diskutil deleteVolume {}: {:?}",
-                volume.device_identifier,
-                output
-            );
-        }
-        Ok(())
-    } else {
-        bail!("Did not find a volume named {}", volume_name);
-    }
 }
