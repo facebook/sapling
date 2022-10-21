@@ -480,7 +480,7 @@ fn main() -> Result<()> {
                 .collect::<Result<Vec<_>>>()?;
 
             let mut stale_volume_names = vec![];
-            for vol in apfs_util.list_stale_volumes(&all_checkouts)? {
+            for vol in apfs_util.list_stale_volumes_unsafe(&all_checkouts)? {
                 stale_volume_names.push(vol.name.context("Volume has no name")?);
             }
             if json {

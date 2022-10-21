@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::path::PathBuf;
@@ -221,11 +222,10 @@ impl<T: SystemCommand> ApfsUtil<T> {
         Ok(parse_plist::<Containers>(&String::from_utf8(output.stdout)?)?.containers)
     }
 
-    pub fn list_stale_volumes(&self, all_checkouts: &[String]) -> Result<Vec<ApfsVolume>> {
-        let all_checkouts = all_checkouts
-            .iter()
-            .map(|v| canonicalize_mount_point_path(v.as_ref()))
-            .collect::<Result<Vec<_>>>()?;
+    fn list_stale_volumes_impl(
+        &self,
+        is_stale_predicate: impl Fn(&ApfsVolume) -> bool,
+    ) -> Result<Vec<ApfsVolume>> {
         let containers = self.list_containers()?;
         let mount_table = MountTable::parse_system_mount_table(&self.mount)?;
 
@@ -241,21 +241,47 @@ impl<T: SystemCommand> ApfsUtil<T> {
                     continue;
                 }
 
-                let is_stale = all_checkouts
-                    .iter()
-                    .try_fold(false, |acc, checkout| {
-                        vol.is_preferred_checkout(checkout).map(|p| acc || p)
-                    })
-                    .map(std::ops::Not::not)
-                    .unwrap_or(false);
-
-                if is_stale {
+                if is_stale_predicate(&vol) {
                     stale_volumes.push(vol);
                 }
             }
         }
 
         Ok(stale_volumes)
+    }
+
+    // Returns stale eden APFS redirection volumes based on checkout names.
+    //
+    // Note that because this implementation only takes into account checkout
+    // names, it may incorrectly indicate that an unmounted redirection volume
+    // with a hashed name is "stale", even if it is currently configured for
+    // some checkout.
+    pub fn list_stale_volumes_unsafe(&self, all_checkouts: &[String]) -> Result<Vec<ApfsVolume>> {
+        self.list_stale_volumes_impl(|vol| {
+            all_checkouts
+                .iter()
+                .try_fold(false, |acc, checkout| {
+                    vol.is_preferred_checkout(checkout).map(|p| acc || p)
+                })
+                .map(std::ops::Not::not)
+                .unwrap_or(false)
+        })
+    }
+
+    // Returns stale eden APFS redirection volumes based on configured
+    // redirections.
+    pub fn list_stale_volumes(
+        &self,
+        configured_redirection_mount_points: &[PathBuf],
+    ) -> Result<Vec<ApfsVolume>> {
+        let mut configured_volume_names = HashSet::new();
+        for mount_point in configured_redirection_mount_points {
+            configured_volume_names.insert(encode_mount_point_as_volume_name(mount_point));
+        }
+        self.list_stale_volumes_impl(|vol| match &vol.name {
+            Some(name) => !configured_volume_names.contains(name),
+            None => false,
+        })
     }
 
     pub fn delete_volume(&self, volume_name: &str) -> Result<()> {
@@ -410,7 +436,11 @@ pub fn encode_mount_point_as_volume_name<P: AsRef<Path>>(mount_point: P) -> Stri
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
+    use std::collections::HashMap;
+    use std::os::unix::process::ExitStatusExt;
+    use std::process::ExitStatus;
+
     use pretty_assertions::assert_eq;
 
     use super::*;
@@ -458,211 +488,211 @@ map -fstab on /Network/Servers (autofs, automounted, nobrowse)
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>Containers</key>
-	<array>
-		<dict>
-			<key>APFSContainerUUID</key>
-			<string>C4AC89F6-8658-4857-972C-D485C213523A</string>
-			<key>CapacityCeiling</key>
-			<integer>499963174912</integer>
-			<key>CapacityFree</key>
-			<integer>30714478592</integer>
-			<key>ContainerReference</key>
-			<string>disk1</string>
-			<key>DesignatedPhysicalStore</key>
-			<string>disk0s2</string>
-			<key>Fusion</key>
-			<false/>
-			<key>PhysicalStores</key>
-			<array>
-				<dict>
-					<key>DeviceIdentifier</key>
-					<string>disk0s2</string>
-					<key>DiskUUID</key>
-					<string>2F978E12-5A2C-4EEB-BAE2-0E09CAEADC06</string>
-					<key>Size</key>
-					<integer>499963174912</integer>
-				</dict>
-			</array>
-			<key>Volumes</key>
-			<array>
-				<dict>
-					<key>APFSVolumeUUID</key>
-					<string>9AA7F3A4-A615-4F8D-91E3-F5C86D988D71</string>
-					<key>CapacityInUse</key>
-					<integer>461308219392</integer>
-					<key>CapacityQuota</key>
-					<integer>0</integer>
-					<key>CapacityReserve</key>
-					<integer>0</integer>
-					<key>CryptoMigrationOn</key>
-					<false/>
-					<key>DeviceIdentifier</key>
-					<string>disk1s1</string>
-					<key>Encryption</key>
-					<true/>
-					<key>FileVault</key>
-					<true/>
-					<key>Locked</key>
-					<false/>
-					<key>Name</key>
-					<string>Macintosh HD</string>
-					<key>Roles</key>
-					<array/>
-				</dict>
-				<dict>
-					<key>APFSVolumeUUID</key>
-					<string>A91FD4EA-684D-4122-9ACD-27E1465E99F6</string>
-					<key>CapacityInUse</key>
-					<integer>43061248</integer>
-					<key>CapacityQuota</key>
-					<integer>0</integer>
-					<key>CapacityReserve</key>
-					<integer>0</integer>
-					<key>CryptoMigrationOn</key>
-					<false/>
-					<key>DeviceIdentifier</key>
-					<string>disk1s2</string>
-					<key>Encryption</key>
-					<false/>
-					<key>FileVault</key>
-					<false/>
-					<key>Locked</key>
-					<false/>
-					<key>Name</key>
-					<string>Preboot</string>
-					<key>Roles</key>
-					<array>
-						<string>Preboot</string>
-					</array>
-				</dict>
-				<dict>
-					<key>APFSVolumeUUID</key>
-					<string>1C94FFC8-7649-470E-952D-16672E135C43</string>
-					<key>CapacityInUse</key>
-					<integer>510382080</integer>
-					<key>CapacityQuota</key>
-					<integer>0</integer>
-					<key>CapacityReserve</key>
-					<integer>0</integer>
-					<key>CryptoMigrationOn</key>
-					<false/>
-					<key>DeviceIdentifier</key>
-					<string>disk1s3</string>
-					<key>Encryption</key>
-					<false/>
-					<key>FileVault</key>
-					<false/>
-					<key>Locked</key>
-					<false/>
-					<key>Name</key>
-					<string>Recovery</string>
-					<key>Roles</key>
-					<array>
-						<string>Recovery</string>
-					</array>
-				</dict>
-				<dict>
-					<key>APFSVolumeUUID</key>
-					<string>6BC72964-0CA0-48AE-AAE1-7E9BFA8B2005</string>
-					<key>CapacityInUse</key>
-					<integer>6442676224</integer>
-					<key>CapacityQuota</key>
-					<integer>0</integer>
-					<key>CapacityReserve</key>
-					<integer>0</integer>
-					<key>CryptoMigrationOn</key>
-					<false/>
-					<key>DeviceIdentifier</key>
-					<string>disk1s4</string>
-					<key>Encryption</key>
-					<true/>
-					<key>FileVault</key>
-					<false/>
-					<key>Locked</key>
-					<false/>
-					<key>Name</key>
-					<string>VM</string>
-					<key>Roles</key>
-					<array>
-						<string>VM</string>
-					</array>
-				</dict>
-				<dict>
-					<key>APFSVolumeUUID</key>
-					<string>6C7EEDAD-385B-49AB-857B-AD15D98D13ED</string>
-					<key>CapacityInUse</key>
-					<integer>790528</integer>
-					<key>CapacityQuota</key>
-					<integer>0</integer>
-					<key>CapacityReserve</key>
-					<integer>0</integer>
-					<key>CryptoMigrationOn</key>
-					<false/>
-					<key>DeviceIdentifier</key>
-					<string>disk1s5</string>
-					<key>Encryption</key>
-					<true/>
-					<key>FileVault</key>
-					<false/>
-					<key>Locked</key>
-					<false/>
-					<key>Name</key>
-					<string>edenfs:/Users/wez/fbsource/buck-out</string>
-					<key>Roles</key>
-					<array/>
-				</dict>
-				<dict>
-					<key>APFSVolumeUUID</key>
-					<string>0DAB1407-0283-408E-88EE-CD41CE9E7BCA</string>
-					<key>CapacityInUse</key>
-					<integer>781156352</integer>
-					<key>CapacityQuota</key>
-					<integer>0</integer>
-					<key>CapacityReserve</key>
-					<integer>0</integer>
-					<key>CryptoMigrationOn</key>
-					<false/>
-					<key>DeviceIdentifier</key>
-					<string>disk1s6</string>
-					<key>Encryption</key>
-					<true/>
-					<key>FileVault</key>
-					<false/>
-					<key>Locked</key>
-					<false/>
-					<key>Name</key>
-					<string>edenfs:/Users/wez/fbsource/fbcode/buck-out</string>
-					<key>Roles</key>
-					<array/>
-				</dict>
-				<dict>
-					<key>APFSVolumeUUID</key>
-					<string>253A48CA-074E-496E-9A62-9F64831D7A65</string>
-					<key>CapacityInUse</key>
-					<integer>925696</integer>
-					<key>CapacityQuota</key>
-					<integer>0</integer>
-					<key>CapacityReserve</key>
-					<integer>0</integer>
-					<key>CryptoMigrationOn</key>
-					<false/>
-					<key>DeviceIdentifier</key>
-					<string>disk1s7</string>
-					<key>Encryption</key>
-					<true/>
-					<key>FileVault</key>
-					<false/>
-					<key>Locked</key>
-					<false/>
-					<key>Name</key>
-					<string>edenfs:/Users/wez/fbsource/fbobjc/buck-out</string>
-					<key>Roles</key>
-					<array/>
-				</dict>
-			</array>
-		</dict>
-	</array>
+        <key>Containers</key>
+        <array>
+                <dict>
+                        <key>APFSContainerUUID</key>
+                        <string>C4AC89F6-8658-4857-972C-D485C213523A</string>
+                        <key>CapacityCeiling</key>
+                        <integer>499963174912</integer>
+                        <key>CapacityFree</key>
+                        <integer>30714478592</integer>
+                        <key>ContainerReference</key>
+                        <string>disk1</string>
+                        <key>DesignatedPhysicalStore</key>
+                        <string>disk0s2</string>
+                        <key>Fusion</key>
+                        <false/>
+                        <key>PhysicalStores</key>
+                        <array>
+                                <dict>
+                                        <key>DeviceIdentifier</key>
+                                        <string>disk0s2</string>
+                                        <key>DiskUUID</key>
+                                        <string>2F978E12-5A2C-4EEB-BAE2-0E09CAEADC06</string>
+                                        <key>Size</key>
+                                        <integer>499963174912</integer>
+                                </dict>
+                        </array>
+                        <key>Volumes</key>
+                        <array>
+                                <dict>
+                                        <key>APFSVolumeUUID</key>
+                                        <string>9AA7F3A4-A615-4F8D-91E3-F5C86D988D71</string>
+                                        <key>CapacityInUse</key>
+                                        <integer>461308219392</integer>
+                                        <key>CapacityQuota</key>
+                                        <integer>0</integer>
+                                        <key>CapacityReserve</key>
+                                        <integer>0</integer>
+                                        <key>CryptoMigrationOn</key>
+                                        <false/>
+                                        <key>DeviceIdentifier</key>
+                                        <string>disk1s1</string>
+                                        <key>Encryption</key>
+                                        <true/>
+                                        <key>FileVault</key>
+                                        <true/>
+                                        <key>Locked</key>
+                                        <false/>
+                                        <key>Name</key>
+                                        <string>Macintosh HD</string>
+                                        <key>Roles</key>
+                                        <array/>
+                                </dict>
+                                <dict>
+                                        <key>APFSVolumeUUID</key>
+                                        <string>A91FD4EA-684D-4122-9ACD-27E1465E99F6</string>
+                                        <key>CapacityInUse</key>
+                                        <integer>43061248</integer>
+                                        <key>CapacityQuota</key>
+                                        <integer>0</integer>
+                                        <key>CapacityReserve</key>
+                                        <integer>0</integer>
+                                        <key>CryptoMigrationOn</key>
+                                        <false/>
+                                        <key>DeviceIdentifier</key>
+                                        <string>disk1s2</string>
+                                        <key>Encryption</key>
+                                        <false/>
+                                        <key>FileVault</key>
+                                        <false/>
+                                        <key>Locked</key>
+                                        <false/>
+                                        <key>Name</key>
+                                        <string>Preboot</string>
+                                        <key>Roles</key>
+                                        <array>
+                                                <string>Preboot</string>
+                                        </array>
+                                </dict>
+                                <dict>
+                                        <key>APFSVolumeUUID</key>
+                                        <string>1C94FFC8-7649-470E-952D-16672E135C43</string>
+                                        <key>CapacityInUse</key>
+                                        <integer>510382080</integer>
+                                        <key>CapacityQuota</key>
+                                        <integer>0</integer>
+                                        <key>CapacityReserve</key>
+                                        <integer>0</integer>
+                                        <key>CryptoMigrationOn</key>
+                                        <false/>
+                                        <key>DeviceIdentifier</key>
+                                        <string>disk1s3</string>
+                                        <key>Encryption</key>
+                                        <false/>
+                                        <key>FileVault</key>
+                                        <false/>
+                                        <key>Locked</key>
+                                        <false/>
+                                        <key>Name</key>
+                                        <string>Recovery</string>
+                                        <key>Roles</key>
+                                        <array>
+                                                <string>Recovery</string>
+                                        </array>
+                                </dict>
+                                <dict>
+                                        <key>APFSVolumeUUID</key>
+                                        <string>6BC72964-0CA0-48AE-AAE1-7E9BFA8B2005</string>
+                                        <key>CapacityInUse</key>
+                                        <integer>6442676224</integer>
+                                        <key>CapacityQuota</key>
+                                        <integer>0</integer>
+                                        <key>CapacityReserve</key>
+                                        <integer>0</integer>
+                                        <key>CryptoMigrationOn</key>
+                                        <false/>
+                                        <key>DeviceIdentifier</key>
+                                        <string>disk1s4</string>
+                                        <key>Encryption</key>
+                                        <true/>
+                                        <key>FileVault</key>
+                                        <false/>
+                                        <key>Locked</key>
+                                        <false/>
+                                        <key>Name</key>
+                                        <string>VM</string>
+                                        <key>Roles</key>
+                                        <array>
+                                                <string>VM</string>
+                                        </array>
+                                </dict>
+                                <dict>
+                                        <key>APFSVolumeUUID</key>
+                                        <string>6C7EEDAD-385B-49AB-857B-AD15D98D13ED</string>
+                                        <key>CapacityInUse</key>
+                                        <integer>790528</integer>
+                                        <key>CapacityQuota</key>
+                                        <integer>0</integer>
+                                        <key>CapacityReserve</key>
+                                        <integer>0</integer>
+                                        <key>CryptoMigrationOn</key>
+                                        <false/>
+                                        <key>DeviceIdentifier</key>
+                                        <string>disk1s5</string>
+                                        <key>Encryption</key>
+                                        <true/>
+                                        <key>FileVault</key>
+                                        <false/>
+                                        <key>Locked</key>
+                                        <false/>
+                                        <key>Name</key>
+                                        <string>edenfs:/Users/wez/fbsource/buck-out</string>
+                                        <key>Roles</key>
+                                        <array/>
+                                </dict>
+                                <dict>
+                                        <key>APFSVolumeUUID</key>
+                                        <string>0DAB1407-0283-408E-88EE-CD41CE9E7BCA</string>
+                                        <key>CapacityInUse</key>
+                                        <integer>781156352</integer>
+                                        <key>CapacityQuota</key>
+                                        <integer>0</integer>
+                                        <key>CapacityReserve</key>
+                                        <integer>0</integer>
+                                        <key>CryptoMigrationOn</key>
+                                        <false/>
+                                        <key>DeviceIdentifier</key>
+                                        <string>disk1s6</string>
+                                        <key>Encryption</key>
+                                        <true/>
+                                        <key>FileVault</key>
+                                        <false/>
+                                        <key>Locked</key>
+                                        <false/>
+                                        <key>Name</key>
+                                        <string>edenfs:/Users/wez/fbsource/fbcode/buck-out</string>
+                                        <key>Roles</key>
+                                        <array/>
+                                </dict>
+                                <dict>
+                                        <key>APFSVolumeUUID</key>
+                                        <string>253A48CA-074E-496E-9A62-9F64831D7A65</string>
+                                        <key>CapacityInUse</key>
+                                        <integer>925696</integer>
+                                        <key>CapacityQuota</key>
+                                        <integer>0</integer>
+                                        <key>CapacityReserve</key>
+                                        <integer>0</integer>
+                                        <key>CryptoMigrationOn</key>
+                                        <false/>
+                                        <key>DeviceIdentifier</key>
+                                        <string>disk1s7</string>
+                                        <key>Encryption</key>
+                                        <true/>
+                                        <key>FileVault</key>
+                                        <false/>
+                                        <key>Locked</key>
+                                        <false/>
+                                        <key>Name</key>
+                                        <string>edenfs:/Users/wez/fbsource/fbobjc/buck-out</string>
+                                        <key>Roles</key>
+                                        <array/>
+                                </dict>
+                        </array>
+                </dict>
+        </array>
 </dict>
 </plist>"#;
         let containers = parse_plist::<Containers>(data).unwrap().containers;
@@ -701,6 +731,338 @@ map -fstab on /Network/Servers (autofs, automounted, nobrowse)
                     },
                 ],
             },]
+        );
+    }
+
+    struct FakeSystemCommand<'a> {
+        default_output: Output,
+        output: HashMap<&'a [&'a str], Output>,
+    }
+
+    impl<'a> FakeSystemCommand<'a> {
+        fn new() -> FakeSystemCommand<'a> {
+            FakeSystemCommand {
+                default_output: Output {
+                    status: ExitStatus::from_raw(1),
+                    stdout: "".into(),
+                    stderr: "Unknown command".into(),
+                },
+                output: HashMap::new(),
+            }
+        }
+
+        fn set_output(&mut self, args: &'a [&'a str], output: Output) {
+            self.output.insert(args, output);
+        }
+
+        fn set_stdout(&mut self, args: &'a [&'a str], stdout: &str) {
+            self.set_output(
+                args,
+                Output {
+                    status: ExitStatus::from_raw(0),
+                    stdout: stdout.into(),
+                    stderr: "".into(),
+                },
+            )
+        }
+    }
+
+    impl SystemCommand for FakeSystemCommand<'_> {
+        fn run_unprivileged(&self, args: &[&str]) -> Result<Output, std::io::Error> {
+            Ok(self
+                .output
+                .get(args)
+                .unwrap_or(&self.default_output)
+                .clone())
+        }
+    }
+
+    #[test]
+    fn test_list_stale_volumes() {
+        let mut fake_diskutil = FakeSystemCommand::new();
+        let mut fake_mount = FakeSystemCommand::new();
+
+        // An example set of APFS redirection volumes associated with an
+        // ~/fbsource-dev checkout (which still exists) and an
+        // ~/fbsource-removed checkout (which has been removed).
+        fake_diskutil.set_stdout(
+            &["apfs", "list", "-plist"],
+            r#"
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Containers</key>
+	<array>
+		<dict>
+			<key>APFSContainerUUID</key>
+			<string>1FD6C975-6223-4E1A-A690-4B232BBF656B</string>
+			<key>CapacityCeiling</key>
+			<integer>494384795648</integer>
+			<key>CapacityFree</key>
+			<integer>156070223872</integer>
+			<key>ContainerReference</key>
+			<string>disk3</string>
+			<key>DesignatedPhysicalStore</key>
+			<string>disk0s2</string>
+			<key>Fusion</key>
+			<false/>
+			<key>PhysicalStores</key>
+			<array>
+				<dict>
+					<key>DeviceIdentifier</key>
+					<string>disk0s2</string>
+					<key>DiskUUID</key>
+					<string>01E230D7-335F-43DE-89AB-9D12541BBF9C</string>
+					<key>Size</key>
+					<integer>494384795648</integer>
+				</dict>
+			</array>
+			<key>Volumes</key>
+			<array>
+				<dict>
+					<key>APFSVolumeUUID</key>
+					<string>B27A32F3-A436-4035-9860-23224584D989</string>
+					<key>CapacityInUse</key>
+					<integer>24576</integer>
+					<key>CapacityQuota</key>
+					<integer>0</integer>
+					<key>CapacityReserve</key>
+					<integer>0</integer>
+					<key>CryptoMigrationOn</key>
+					<false/>
+					<key>DeviceIdentifier</key>
+					<string>disk3s20</string>
+					<key>Encryption</key>
+					<true/>
+					<key>FileVault</key>
+					<false/>
+					<key>Locked</key>
+					<false/>
+					<key>Name</key>
+					<string>edenfs:/Users/mshroyer/fbsource-dev/scripts/mshroyer/bind-mounted</string>
+					<key>Roles</key>
+					<array/>
+				</dict>
+				<dict>
+					<key>APFSVolumeUUID</key>
+					<string>9FF5842B-9F0E-4973-9B00-BF8F0D83378A</string>
+					<key>CapacityInUse</key>
+					<integer>24576</integer>
+					<key>CapacityQuota</key>
+					<integer>0</integer>
+					<key>CapacityReserve</key>
+					<integer>0</integer>
+					<key>CryptoMigrationOn</key>
+					<false/>
+					<key>DeviceIdentifier</key>
+					<string>disk3s21</string>
+					<key>Encryption</key>
+					<true/>
+					<key>FileVault</key>
+					<false/>
+					<key>Locked</key>
+					<false/>
+					<key>Name</key>
+					<string>edenfs:/Users/mshroyer/fbsource-dev/scripts/mshroyer/bind-unmounted</string>
+					<key>Roles</key>
+					<array/>
+				</dict>
+				<dict>
+					<key>APFSVolumeUUID</key>
+					<string>BF78A4AD-FCD1-4A94-937C-A56AD6501DC0</string>
+					<key>CapacityInUse</key>
+					<integer>24576</integer>
+					<key>CapacityQuota</key>
+					<integer>0</integer>
+					<key>CapacityReserve</key>
+					<integer>0</integer>
+					<key>CryptoMigrationOn</key>
+					<false/>
+					<key>DeviceIdentifier</key>
+					<string>disk3s18</string>
+					<key>Encryption</key>
+					<true/>
+					<key>FileVault</key>
+					<false/>
+					<key>Locked</key>
+					<false/>
+					<key>Name</key>
+					<string>edenfs:1787fb18a9dbaea58de431bd75a7a5f0f740247468a21c615f340e8d89b1034f</string>
+					<key>Roles</key>
+					<array/>
+				</dict>
+				<dict>
+					<key>APFSVolumeUUID</key>
+					<string>9DDD6587-75CF-4F11-B49E-49859C7B3F52</string>
+					<key>CapacityInUse</key>
+					<integer>24576</integer>
+					<key>CapacityQuota</key>
+					<integer>0</integer>
+					<key>CapacityReserve</key>
+					<integer>0</integer>
+					<key>CryptoMigrationOn</key>
+					<false/>
+					<key>DeviceIdentifier</key>
+					<string>disk3s19</string>
+					<key>Encryption</key>
+					<true/>
+					<key>FileVault</key>
+					<false/>
+					<key>Locked</key>
+					<false/>
+					<key>Name</key>
+					<string>edenfs:54aca1e62d37d4b8c3de88b8fe2edcb3ab6d20887fabc5f5bf6735c526400c95</string>
+					<key>Roles</key>
+					<array/>
+				</dict>
+				<dict>
+					<key>APFSVolumeUUID</key>
+					<string>42BCA291-C206-4BE2-BA92-30669FDF8378</string>
+					<key>CapacityInUse</key>
+					<integer>24576</integer>
+					<key>CapacityQuota</key>
+					<integer>0</integer>
+					<key>CapacityReserve</key>
+					<integer>0</integer>
+					<key>CryptoMigrationOn</key>
+					<false/>
+					<key>DeviceIdentifier</key>
+					<string>disk3s22</string>
+					<key>Encryption</key>
+					<true/>
+					<key>FileVault</key>
+					<false/>
+					<key>Locked</key>
+					<false/>
+					<key>Name</key>
+					<string>edenfs:ea3773e86afbd3ede4b97ecdb8293fbaebe198143a28aa66347d81a812cd0148</string>
+					<key>Roles</key>
+					<array/>
+				</dict>
+				<dict>
+					<key>APFSVolumeUUID</key>
+					<string>D23A1469-A207-477E-90D4-06771F9F0FB0</string>
+					<key>CapacityInUse</key>
+					<integer>24576</integer>
+					<key>CapacityQuota</key>
+					<integer>0</integer>
+					<key>CapacityReserve</key>
+					<integer>0</integer>
+					<key>CryptoMigrationOn</key>
+					<false/>
+					<key>DeviceIdentifier</key>
+					<string>disk3s23</string>
+					<key>Encryption</key>
+					<true/>
+					<key>FileVault</key>
+					<false/>
+					<key>Locked</key>
+					<false/>
+					<key>Name</key>
+					<string>edenfs:b6e8f7353dea3aef8f3c717acb1b590f1fefe7b24bcc3dd3d840458eafc0a0a4</string>
+					<key>Roles</key>
+					<array/>
+				</dict>
+				<dict>
+					<key>APFSVolumeUUID</key>
+					<string>BC860883-7623-4EAE-8677-E362997275BE</string>
+					<key>CapacityInUse</key>
+					<integer>24576</integer>
+					<key>CapacityQuota</key>
+					<integer>0</integer>
+					<key>CapacityReserve</key>
+					<integer>0</integer>
+					<key>CryptoMigrationOn</key>
+					<false/>
+					<key>DeviceIdentifier</key>
+					<string>disk3s24</string>
+					<key>Encryption</key>
+					<true/>
+					<key>FileVault</key>
+					<false/>
+					<key>Locked</key>
+					<false/>
+					<key>Name</key>
+					<string>edenfs:/Users/mshroyer/fbsource-removed/scripts/mshroyer/bind-mounted</string>
+					<key>Roles</key>
+					<array/>
+				</dict>
+				<dict>
+					<key>APFSVolumeUUID</key>
+					<string>E3C2DE84-DA6A-4523-9FCA-93AA92E00AA6</string>
+					<key>CapacityInUse</key>
+					<integer>24576</integer>
+					<key>CapacityQuota</key>
+					<integer>0</integer>
+					<key>CapacityReserve</key>
+					<integer>0</integer>
+					<key>CryptoMigrationOn</key>
+					<false/>
+					<key>DeviceIdentifier</key>
+					<string>disk3s25</string>
+					<key>Encryption</key>
+					<true/>
+					<key>FileVault</key>
+					<false/>
+					<key>Locked</key>
+					<false/>
+					<key>Name</key>
+					<string>edenfs:/Users/mshroyer/fbsource-removed/scripts/mshroyer/bind-unmounted</string>
+					<key>Roles</key>
+					<array/>
+				</dict>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
+"#);
+
+        // The *-mounted* redirections are currently mounted.
+        fake_mount.set_stdout(&[], r#"
+/dev/disk3s20 on /Users/mshroyer/fbsource-dev/scripts/mshroyer/bind-mounted (apfs, local, nodev, nosuid, journaled, nobrowse, protect)
+/dev/disk3s18 on /Users/mshroyer/fbsource-dev/scripts/mshroyer/bind-mounted-withsomeabsurdlylongpathname-LoremipsumdolorsitametconsecteturadipiscingelitseddoeiusmodtemporincididuntutlaboreetdoloremagnaaliquaUtenimadminimveniamquisnostrudexercitationullamc (apfs, local, nodev, nosuid, journaled, nobrowse, protect)
+/dev/disk3s24 on /Users/mshroyer/fbsource-removed/scripts/mshroyer/bind-mounted (apfs, local, nodev, nosuid, journaled, nobrowse, protect)
+/dev/disk3s22 on /Users/mshroyer/fbsource-removed/scripts/mshroyer/bind-mounted-withsomeabsurdlylongpathname-LoremipsumdolorsitametconsecteturadipiscingelitseddoeiusmodtemporincididuntutlaboreetdoloremagnaaliquaUtenimadminimveniamquisnostrudexercitationullamc (apfs, local, nodev, nosuid, journaled, nobrowse, protect)
+        "#);
+
+        // The ~/fbsource-removed checkout was removed, so only redirections in
+        // ~/fbsource-dev are still configured.
+        let configured_redirection_mount_points = vec![
+            PathBuf::from("/Users/mshroyer/fbsource-dev/scripts/mshroyer/bind-mounted"),
+            PathBuf::from("/Users/mshroyer/fbsource-dev/scripts/mshroyer/bind-unmounted"),
+            PathBuf::from(
+                "/Users/mshroyer/fbsource-dev/scripts/mshroyer/bind-mounted-withsomeabsurdlylongpathname-LoremipsumdolorsitametconsecteturadipiscingelitseddoeiusmodtemporincididuntutlaboreetdoloremagnaaliquaUtenimadminimveniamquisnostrudexercitationullamc",
+            ),
+            PathBuf::from(
+                "/Users/mshroyer/fbsource-dev/scripts/mshroyer/bind-unmounted-withsomeabsurdlylongpathname-LoremipsumdolorsitametconsecteturadipiscingelitseddoeiusmodtemporincididuntutlaboreetdoloremagnaaliquaUtenimadminimveniamquisnostrudexercitationullamc",
+            ),
+        ];
+
+        let apfs_util = ApfsUtil {
+            diskutil: fake_diskutil,
+            mount: fake_mount,
+        };
+
+        let stale_volumes = apfs_util.list_stale_volumes(&configured_redirection_mount_points);
+        assert!(stale_volumes.is_ok());
+
+        let mut stale_volume_names = HashSet::new();
+        for vol in stale_volumes.unwrap() {
+            stale_volume_names.insert(vol.name.unwrap_or("<unnamed volume>".to_string()));
+        }
+
+        // Only volumes created for currently unmounted and unconfigured
+        // redirections should be considered "stale".
+        assert_eq!(
+            stale_volume_names,
+            HashSet::from([
+                "edenfs:/Users/mshroyer/fbsource-removed/scripts/mshroyer/bind-unmounted"
+                    .to_string(),
+                "edenfs:b6e8f7353dea3aef8f3c717acb1b590f1fefe7b24bcc3dd3d840458eafc0a0a4"
+                    .to_string(),
+            ])
         );
     }
 }
