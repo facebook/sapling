@@ -26,6 +26,7 @@ futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
 logblob = { version = "0.1.0", path = "../logblob" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 multiplexedblob = { version = "0.1.0", path = "../multiplexedblob" }
+multiplexedblob_wal = { version = "0.1.0", path = "../multiplexedblob_wal" }
 packblob = { version = "0.1.0", path = "../packblob" }
 prefixblob = { version = "0.1.0", path = "../prefixblob" }
 rand_distr = "0.4"

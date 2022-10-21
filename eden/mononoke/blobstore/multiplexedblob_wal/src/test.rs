@@ -34,6 +34,7 @@ use futures::task::Poll;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::MultiplexId;
 use mononoke_types::BlobstoreBytes;
+use nonzero_ext::nonzero;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstruct;
 
@@ -43,7 +44,7 @@ use crate::WalMultiplexedBlobstore;
 
 #[fbinit::test]
 async fn test_quorum_is_valid(_fb: FacebookInit) -> Result<()> {
-    let scuba = Scuba::new(MononokeScubaSampleBuilder::with_discard(), 1u64)?;
+    let scuba = Scuba::new(MononokeScubaSampleBuilder::with_discard(), nonzero!(1u64))?;
     let wal = Arc::new(SqlBlobstoreWal::with_sqlite_in_memory()?);
 
     // Check the quorum cannot be zero
@@ -945,7 +946,7 @@ fn setup_multiplex(
 )> {
     let (tickable_queue, wal_queue) = setup_queue();
     let (tickable_blobstores, blobstores) = setup_blobstores(num);
-    let scuba = Scuba::new(MononokeScubaSampleBuilder::with_discard(), 1u64)?;
+    let scuba = Scuba::new(MononokeScubaSampleBuilder::with_discard(), nonzero!(1u64))?;
     let multiplex = WalMultiplexedBlobstore::new(
         MultiplexId::new(1),
         wal_queue,

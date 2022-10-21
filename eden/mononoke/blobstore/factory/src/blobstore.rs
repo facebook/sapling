@@ -22,6 +22,7 @@ use blobstore::ErrorKind;
 use blobstore::PutBehaviour;
 use blobstore::DEFAULT_PUT_BEHAVIOUR;
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
+use blobstore_sync_queue::SqlBlobstoreWal;
 use cacheblob::CachelibBlobstoreOptions;
 use cached_config::ConfigStore;
 use chaosblob::ChaosBlobstore;
@@ -48,6 +49,8 @@ use multiplexedblob::ScrubBlobstore;
 use multiplexedblob::ScrubHandler;
 use multiplexedblob::ScrubOptions;
 use multiplexedblob::ScrubWriteMostly;
+use multiplexedblob_wal::Scuba as WalScuba;
+use multiplexedblob_wal::WalMultiplexedBlobstore;
 use packblob::PackBlob;
 use packblob::PackOptions;
 use readonlyblob::ReadOnlyBlobstore;
@@ -571,6 +574,34 @@ fn make_blobstore_put_ops<'a>(
                 .watched(logger)
                 .await?
             }
+            MultiplexedWAL {
+                multiplex_id,
+                blobstores,
+                write_quorum,
+                queue_db,
+                scuba_table,
+                scuba_sample_rate,
+            } => {
+                needs_wrappers = false;
+                make_multiplexed_wal(
+                    fb,
+                    multiplex_id,
+                    queue_db,
+                    scuba_table,
+                    scuba_sample_rate,
+                    blobstores,
+                    write_quorum,
+                    mysql_options,
+                    readonly_storage,
+                    blobstore_options,
+                    logger,
+                    config_store,
+                    scrub_handler,
+                    component_sampler,
+                )
+                .watched(logger)
+                .await?
+            }
             Logging {
                 blobconfig,
                 scuba_table,
@@ -688,50 +719,16 @@ async fn make_blobstore_multiplexed<'a>(
     scrub_handler: &'a Arc<dyn ScrubHandler>,
     component_sampler: Option<&'a Arc<dyn ComponentSamplingHandler>>,
 ) -> Result<Arc<dyn BlobstorePutOps>, Error> {
-    let component_readonly = blobstore_options
-        .scrub_options
-        .as_ref()
-        .map_or(ReadOnlyStorage(false), |v| {
-            ReadOnlyStorage(v.scrub_action != ScrubAction::Repair)
-        });
-
-    let mut applied_chaos = false;
-
-    let components = future::try_join_all(inner_config.into_iter().map({
-        move |(blobstoreid, store_type, config)| {
-            let mut blobstore_options = blobstore_options.clone();
-
-            if blobstore_options.chaos_options.has_chaos() {
-                if applied_chaos {
-                    blobstore_options = BlobstoreOptions {
-                        chaos_options: ChaosOptions::new(None, None),
-                        ..blobstore_options
-                    };
-                } else {
-                    applied_chaos = true;
-                }
-            }
-
-            async move {
-                let store = make_blobstore_put_ops(
-                    fb,
-                    config,
-                    mysql_options,
-                    component_readonly,
-                    &blobstore_options,
-                    logger,
-                    config_store,
-                    scrub_handler,
-                    component_sampler,
-                    Some(blobstoreid),
-                )
-                .watched(logger)
-                .await?;
-
-                Result::<_, Error>::Ok((blobstoreid, store_type, store))
-            }
-        }
-    }))
+    let (normal_components, write_mostly_components) = setup_inner_blobstores(
+        fb,
+        inner_config,
+        mysql_options,
+        blobstore_options,
+        logger,
+        config_store,
+        scrub_handler,
+        component_sampler,
+    )
     .await?;
 
     let queue = SqlBlobstoreSyncQueue::with_database_config(
@@ -740,21 +737,6 @@ async fn make_blobstore_multiplexed<'a>(
         mysql_options,
         readonly_storage.0,
     )?;
-
-    // For now, `partition` could do this, but this will be easier to extend when we introduce more store types
-    let (normal_components, write_mostly_components) = {
-        let mut normal_components = vec![];
-        let mut write_mostly_components = vec![];
-        for (blobstore_id, store_type, store) in components.into_iter() {
-            match store_type {
-                MultiplexedStoreType::Normal => normal_components.push((blobstore_id, store)),
-                MultiplexedStoreType::WriteMostly => {
-                    write_mostly_components.push((blobstore_id, store))
-                }
-            }
-        }
-        (normal_components, write_mostly_components)
-    };
 
     let blobstore = match &blobstore_options.scrub_options {
         Some(scrub_options) => Arc::new(ScrubBlobstore::new(
@@ -794,4 +776,130 @@ async fn make_blobstore_multiplexed<'a>(
     };
 
     Ok(blobstore)
+}
+
+async fn make_multiplexed_wal<'a>(
+    fb: FacebookInit,
+    multiplex_id: MultiplexId,
+    queue_db: DatabaseConfig,
+    scuba_table: Option<String>,
+    scuba_sample_rate: NonZeroU64,
+    inner_config: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
+    write_quorum: usize,
+    mysql_options: &'a MysqlOptions,
+    readonly_storage: ReadOnlyStorage,
+    blobstore_options: &'a BlobstoreOptions,
+    logger: &'a Logger,
+    config_store: &'a ConfigStore,
+    scrub_handler: &'a Arc<dyn ScrubHandler>,
+    component_sampler: Option<&'a Arc<dyn ComponentSamplingHandler>>,
+) -> Result<Arc<dyn BlobstorePutOps>, Error> {
+    let (normal_components, write_mostly_components) = setup_inner_blobstores(
+        fb,
+        inner_config,
+        mysql_options,
+        blobstore_options,
+        logger,
+        config_store,
+        scrub_handler,
+        component_sampler,
+    )
+    .await?;
+
+    let wal_queue = Arc::new(SqlBlobstoreWal::with_database_config(
+        fb,
+        &queue_db,
+        mysql_options,
+        readonly_storage.0,
+    )?);
+    let scuba = WalScuba::new_from_raw(fb, scuba_table, scuba_sample_rate)?;
+
+    let blobstore = match &blobstore_options.scrub_options {
+        Some(_scrub_options) => {
+            // TODO(aida): Support Scrubbing multiplex
+            bail!("Scrub blobstore is not supported for the WAl multiplexed storage");
+        }
+        None => Arc::new(WalMultiplexedBlobstore::new(
+            multiplex_id,
+            wal_queue,
+            normal_components,
+            write_mostly_components,
+            write_quorum,
+            None, /* use default timeouts */
+            scuba,
+        )?) as Arc<dyn BlobstorePutOps>,
+    };
+
+    Ok(blobstore)
+}
+
+type InnerBlobstore = (BlobstoreId, Arc<dyn BlobstorePutOps>);
+
+async fn setup_inner_blobstores<'a>(
+    fb: FacebookInit,
+    inner_config: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
+    mysql_options: &'a MysqlOptions,
+    blobstore_options: &'a BlobstoreOptions,
+    logger: &'a Logger,
+    config_store: &'a ConfigStore,
+    scrub_handler: &'a Arc<dyn ScrubHandler>,
+    component_sampler: Option<&'a Arc<dyn ComponentSamplingHandler>>,
+) -> Result<(Vec<InnerBlobstore>, Vec<InnerBlobstore>), Error> {
+    let component_readonly = blobstore_options
+        .scrub_options
+        .as_ref()
+        .map_or(ReadOnlyStorage(false), |v| {
+            ReadOnlyStorage(v.scrub_action != ScrubAction::Repair)
+        });
+
+    let mut applied_chaos = false;
+    let components = future::try_join_all(inner_config.into_iter().map({
+        move |(blobstoreid, store_type, config)| {
+            let mut blobstore_options = blobstore_options.clone();
+
+            if blobstore_options.chaos_options.has_chaos() {
+                if applied_chaos {
+                    blobstore_options = BlobstoreOptions {
+                        chaos_options: ChaosOptions::new(None, None),
+                        ..blobstore_options
+                    };
+                } else {
+                    applied_chaos = true;
+                }
+            }
+
+            async move {
+                let store = make_blobstore_put_ops(
+                    fb,
+                    config,
+                    mysql_options,
+                    component_readonly,
+                    &blobstore_options,
+                    logger,
+                    config_store,
+                    scrub_handler,
+                    component_sampler,
+                    Some(blobstoreid),
+                )
+                .watched(logger)
+                .await?;
+
+                Result::<_, Error>::Ok((blobstoreid, store_type, store))
+            }
+        }
+    }))
+    .await?;
+
+    // For now, `partition` could do this, but this will be easier to extend when we introduce more store types
+    let mut normal_components = vec![];
+    let mut write_mostly_components = vec![];
+    for (blobstore_id, store_type, store) in components.into_iter() {
+        match store_type {
+            MultiplexedStoreType::Normal => normal_components.push((blobstore_id, store)),
+            MultiplexedStoreType::WriteMostly => {
+                write_mostly_components.push((blobstore_id, store))
+            }
+        }
+    }
+    Ok((normal_components, write_mostly_components))
 }

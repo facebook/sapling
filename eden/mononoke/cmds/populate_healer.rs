@@ -219,14 +219,21 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
                     primary: RemoteDatabaseConfig { db_address },
                     ..
                 }),
-            blobstore:
-                BlobConfig::Multiplexed {
-                    blobstores,
-                    multiplex_id,
-                    ..
-                },
+            blobstore,
             ..
-        } => (blobstores, multiplex_id, db_address),
+        } => match blobstore {
+            BlobConfig::Multiplexed {
+                blobstores,
+                multiplex_id,
+                ..
+            }
+            | BlobConfig::MultiplexedWAL {
+                blobstores,
+                multiplex_id,
+                ..
+            } => (blobstores, multiplex_id, db_address),
+            storage => return Err(format_err!("unsupported storage: {:?}", storage)),
+        },
         storage => return Err(format_err!("unsupported storage: {:?}", storage)),
     };
     let blobstore_args = blobstores

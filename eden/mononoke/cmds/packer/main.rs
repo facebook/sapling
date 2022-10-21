@@ -76,7 +76,8 @@ fn get_blobconfig(
     // If the outer store is a mux, find th requested inner store
     if let Some(inner_blobstore_id) = inner_blobstore_id {
         blob_config = match blob_config {
-            BlobConfig::Multiplexed { blobstores, .. } => {
+            BlobConfig::Multiplexed { blobstores, .. }
+            | BlobConfig::MultiplexedWAL { blobstores, .. } => {
                 let required_id = BlobstoreId::new(inner_blobstore_id);
                 blobstores
                     .into_iter()

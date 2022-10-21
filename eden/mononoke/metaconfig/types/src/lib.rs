@@ -860,6 +860,22 @@ pub enum BlobConfig {
         /// DB config to use for the sync queue
         queue_db: DatabaseConfig,
     },
+    /// Multiplex across multiple blobstores for redundancy based on a WAL approach
+    MultiplexedWAL {
+        /// A unique ID that identifies this multiplex configuration
+        multiplex_id: MultiplexId,
+        /// Set of blobstores being multiplexed over
+        blobstores: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
+        /// The number of writes that must succeed for the multiplex `put` to succeed
+        write_quorum: usize,
+        /// DB config to use for the WAL
+        queue_db: DatabaseConfig,
+        /// A scuba table to log stats per inner blobstore
+        scuba_table: Option<String>,
+        /// 1 in scuba_sample_rate samples will be logged for both
+        /// multiplex and per blobstore scuba tables
+        scuba_sample_rate: NonZeroU64,
+    },
     /// Store in a manifold bucket, but every object will have an expiration
     ManifoldWithTtl {
         /// Bucket of the backing Manifold blobstore to connect to
@@ -911,7 +927,7 @@ impl BlobConfig {
         match self {
             Disabled | Files { .. } | Sqlite { .. } => true,
             Manifold { .. } | Mysql { .. } | ManifoldWithTtl { .. } | S3 { .. } => false,
-            Multiplexed { blobstores, .. } => blobstores
+            Multiplexed { blobstores, .. } | MultiplexedWAL { blobstores, .. } => blobstores
                 .iter()
                 .map(|(_, _, config)| config)
                 .all(BlobConfig::is_local),
@@ -924,6 +940,10 @@ impl BlobConfig {
     pub fn apply_sampling_multiplier(&mut self, multiplier: NonZeroU64) {
         match self {
             Self::Multiplexed {
+                ref mut scuba_sample_rate,
+                ..
+            }
+            | Self::MultiplexedWAL {
                 ref mut scuba_sample_rate,
                 ..
             }

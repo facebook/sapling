@@ -173,6 +173,38 @@ impl Convert for RawBlobstoreConfig {
                         .convert()?,
                 }
             }
+            RawBlobstoreConfig::multiplexed_wal(raw) => {
+                let write_quorum: usize = raw.write_quorum.try_into()?;
+                if write_quorum > raw.components.len() {
+                    return Err(anyhow!(
+                        "Not enough blobstores for {} write quorum (have {})",
+                        write_quorum,
+                        raw.components.len()
+                    ));
+                }
+
+                BlobConfig::MultiplexedWAL {
+                    multiplex_id: MultiplexId::new(raw.multiplex_id),
+                    blobstores: raw
+                        .components
+                        .into_iter()
+                        .map(|comp| {
+                            Ok((
+                                BlobstoreId::new(comp.blobstore_id.try_into()?),
+                                comp.store_type
+                                    .convert()?
+                                    .unwrap_or(MultiplexedStoreType::Normal),
+                                comp.blobstore.convert()?,
+                            ))
+                        })
+                        .collect::<Result<Vec<_>>>()?,
+                    write_quorum,
+                    queue_db: raw.queue_db.convert()?,
+                    scuba_table: raw.scuba_table,
+                    scuba_sample_rate: parse_scuba_sample_rate(raw.scuba_sample_rate)?,
+                }
+            }
+
             RawBlobstoreConfig::manifold_with_ttl(raw) => {
                 let ttl = Duration::from_secs(raw.ttl_secs.try_into()?);
                 BlobConfig::ManifoldWithTtl {

@@ -61,6 +61,11 @@ impl WaitForReplication {
                 blobstores,
                 queue_db: DatabaseConfig::Remote(remote),
                 ..
+            }
+            | BlobConfig::MultiplexedWAL {
+                blobstores,
+                queue_db: DatabaseConfig::Remote(remote),
+                ..
             } => {
                 #[cfg(fbcode_build)]
                 {

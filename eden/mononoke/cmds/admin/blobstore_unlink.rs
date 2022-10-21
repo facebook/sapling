@@ -58,7 +58,8 @@ fn get_blobconfig(blob_config: BlobConfig, inner_blobstore_id: Option<u64>) -> R
     match inner_blobstore_id {
         None => Ok(blob_config),
         Some(inner_blobstore_id) => match blob_config {
-            BlobConfig::Multiplexed { blobstores, .. } => {
+            BlobConfig::Multiplexed { blobstores, .. }
+            | BlobConfig::MultiplexedWAL { blobstores, .. } => {
                 let seeked_id = BlobstoreId::new(inner_blobstore_id);
                 blobstores
                     .into_iter()

@@ -30,6 +30,7 @@ use cloned::cloned;
 use context::CoreContext;
 use context::PerfCounterType;
 use context::SessionClass;
+use fbinit::FacebookInit;
 use futures::stream::FuturesUnordered;
 use futures::Future;
 use futures::StreamExt;
@@ -90,11 +91,21 @@ pub struct Scuba {
 }
 
 impl Scuba {
-    pub fn new(mut scuba: MononokeScubaSampleBuilder, sample_rate: u64) -> Result<Self> {
-        scuba.add_common_server_data();
+    pub fn new_from_raw(
+        fb: FacebookInit,
+        scuba_table: Option<String>,
+        sample_rate: NonZeroU64,
+    ) -> Result<Self> {
+        let scuba = scuba_table
+            .map_or(Ok(MononokeScubaSampleBuilder::with_discard()), |table| {
+                MononokeScubaSampleBuilder::new(fb, &table)
+            })?;
 
-        let sample_rate =
-            NonZeroU64::new(sample_rate).ok_or_else(|| anyhow!("Scuba sample rate cannot be 0"))?;
+        Self::new(scuba, sample_rate)
+    }
+
+    pub fn new(mut scuba: MononokeScubaSampleBuilder, sample_rate: NonZeroU64) -> Result<Self> {
+        scuba.add_common_server_data();
         Ok(Self { scuba, sample_rate })
     }
 
