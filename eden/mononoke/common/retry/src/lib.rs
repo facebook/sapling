@@ -14,12 +14,26 @@ use slog::Logger;
 #[derive(Copy, Clone)]
 pub struct RetryAttemptsCount(pub usize);
 
+pub enum RetryLogic {
+    /// Multiply by a factor every time
+    Exponential { base: Duration, factor: f64 },
+}
+
+impl RetryLogic {
+    fn delay(&self, attempt: usize) -> Duration {
+        use RetryLogic::*;
+        match self {
+            Exponential { base, factor } => base.mul_f64(factor.powf(attempt as f64)),
+        }
+    }
+}
+
 /// Retry a function whenever it fails.
 /// See `retry` for more information.
 pub async fn retry_always<V, Fut, Func, Error>(
     logger: &Logger,
     func: Func,
-    base_retry_delay_ms: u64,
+    base_delay_ms: u64,
     retry_num: usize,
 ) -> Result<(V, RetryAttemptsCount), Error>
 where
@@ -27,7 +41,17 @@ where
     Fut: Future<Output = Result<V, Error>>,
     Func: FnMut(usize) -> Fut + Send,
 {
-    retry(Some(logger), func, |_| true, base_retry_delay_ms, retry_num).await
+    retry(
+        Some(logger),
+        func,
+        |_| true,
+        RetryLogic::Exponential {
+            base: Duration::from_millis(base_delay_ms),
+            factor: 2.0,
+        },
+        retry_num,
+    )
+    .await
 }
 
 /// Retry a function.
@@ -41,7 +65,7 @@ pub async fn retry<V, Fut, Func, RetryFunc, Error>(
     mut func: Func,
     // Function that tells whether an error should be retried.
     mut should_retry: RetryFunc,
-    base_retry_delay_ms: u64,
+    retry_logic: RetryLogic,
     retry_num: usize,
 ) -> Result<(V, RetryAttemptsCount), Error>
 where
@@ -67,11 +91,27 @@ where
                     );
                 }
 
-                let delay = Duration::from_millis(base_retry_delay_ms * 2u64.pow(attempt as u32));
-                tokio::time::sleep(delay).await;
+                tokio::time::sleep(retry_logic.delay(attempt)).await;
                 attempt += 1;
             }
             Err(err) => return Err(err),
         }
     }
+}
+
+#[test]
+fn test_exponential() {
+    let logic = RetryLogic::Exponential {
+        base: Duration::from_secs(1),
+        factor: 2.0,
+    };
+    assert_eq!(logic.delay(0), Duration::from_secs(1));
+    assert_eq!(logic.delay(1), Duration::from_secs(2));
+    assert_eq!(logic.delay(2), Duration::from_secs(4));
+    let logic = RetryLogic::Exponential {
+        base: Duration::from_secs(8),
+        factor: 1.5,
+    };
+    assert_eq!(logic.delay(1), Duration::from_secs(12));
+    assert_eq!(logic.delay(2), Duration::from_secs(18));
 }
