@@ -791,7 +791,7 @@ def clone(
 
 def _writehgrc(repo, abspath, configfiles):
     with repo.wlock(), repo.lock():
-        template = uimod.samplehgrcs["cloned"]
+        template = _(uimod.samplehgrcs["cloned"])
         with repo.localvfs(repo.ui.identity.configrepofile(), "wb") as fp:
             u = util.url(abspath)
             u.passwd = None

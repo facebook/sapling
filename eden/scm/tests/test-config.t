@@ -299,16 +299,15 @@ config editing without an editor
   $ HGIDENTITY=sl newrepo
   $ HGIDENTITY=sl hg config --local foo.bar baz
   updated config in $TESTTMP/repo3/.sl/config
-TODO: fix "hg" references in template
   $ cat .sl/config | dos2unix
-  # example repository config (see 'hg help config' for more info)
+  # example repository config (see 'sl help config' for more info)
   [paths]
   # path aliases to other clones of this repo in URLs or filesystem paths
-  # (see 'hg help config.paths' for more info)
+  # (see 'sl help config.paths' for more info)
   #
-  # default         = http://example.com/hg/example-repo
-  # default:pushurl = ssh://jdoe@example.net/hg/jdoes-fork
-  # my-fork         = ssh://jdoe@example.net/hg/jdoes-fork
+  # default         = http://example.com/sl/example-repo
+  # default:pushurl = ssh://jdoe@example.net/sl/jdoes-fork
+  # my-fork         = ssh://jdoe@example.net/sl/jdoes-fork
   # my-clone        = /home/jdoe/jdoes-clone
   
   [ui]

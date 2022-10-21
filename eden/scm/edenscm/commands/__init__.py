@@ -1849,7 +1849,7 @@ def editconfig(ui, repo, *values, **opts):
         targetpath = paths[0]
         os.makedirs(pathlib.Path(targetpath).parent.absolute(), exist_ok=True)
         fp = open(targetpath, "wb")
-        fp.write(pycompat.encodeutf8(util.tonativeeol(uimod.samplehgrcs[target])))
+        fp.write(pycompat.encodeutf8(util.tonativeeol(_(uimod.samplehgrcs[target]))))
         fp.close()
 
     if not values:

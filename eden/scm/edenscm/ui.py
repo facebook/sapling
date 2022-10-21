@@ -57,69 +57,69 @@ from .pycompat import decodeutf8, encodeutf8
 urlreq = util.urlreq
 
 samplehgrcs = {
-    "user": """# example user config (see 'hg help config' for more info)
+    "user": """# example user config (see '@prog@ help config' for more info)
 [ui]
 # name and email, e.g.
 # username = Jane Doe <jdoe@example.com>
 username =
 
 # uncomment to disable color in command output
-# (see 'hg help color' for details)
+# (see '@prog@ help color' for details)
 # color = never
 
 # uncomment to disable command output pagination
-# (see 'hg help pager' for details)
+# (see '@prog@ help pager' for details)
 # paginate = never
 
 [extensions]
 # uncomment these lines to enable some popular extensions
-# (see 'hg help extensions' for more info)
+# (see '@prog@ help extensions' for more info)
 #
 # amend =
 """,
-    "cloned": """# example repository config (see 'hg help config' for more info)
+    "cloned": """# example repository config (see '@prog@ help config' for more info)
 [paths]
 default = %s
 
 # path aliases to other clones of this repo in URLs or filesystem paths
-# (see 'hg help config.paths' for more info)
+# (see '@prog@ help config.paths' for more info)
 #
-# default:pushurl = ssh://jdoe@example.net/hg/jdoes-fork
-# my-fork         = ssh://jdoe@example.net/hg/jdoes-fork
+# default:pushurl = ssh://jdoe@example.net/@prog@/jdoes-fork
+# my-fork         = ssh://jdoe@example.net/@prog@/jdoes-fork
 # my-clone        = /home/jdoe/jdoes-clone
 
 [ui]
 # name and email (local to this repository, optional), e.g.
 # username = Jane Doe <jdoe@example.com>
 """,
-    "local": """# example repository config (see 'hg help config' for more info)
+    "local": """# example repository config (see '@prog@ help config' for more info)
 [paths]
 # path aliases to other clones of this repo in URLs or filesystem paths
-# (see 'hg help config.paths' for more info)
+# (see '@prog@ help config.paths' for more info)
 #
-# default         = http://example.com/hg/example-repo
-# default:pushurl = ssh://jdoe@example.net/hg/jdoes-fork
-# my-fork         = ssh://jdoe@example.net/hg/jdoes-fork
+# default         = http://example.com/@prog@/example-repo
+# default:pushurl = ssh://jdoe@example.net/@prog@/jdoes-fork
+# my-fork         = ssh://jdoe@example.net/@prog@/jdoes-fork
 # my-clone        = /home/jdoe/jdoes-clone
 
 [ui]
 # name and email (local to this repository, optional), e.g.
 # username = Jane Doe <jdoe@example.com>
 """,
-    "system": """# example system-wide hg config (see 'hg help config' for more info)
+    "system": """# example system-wide @prog@ config (see '@prog@ help config' for more info)
 
 [ui]
 # uncomment to disable color in command output
-# (see 'hg help color' for details)
+# (see '@prog@ help color' for details)
 # color = never
 
 # uncomment to disable command output pagination
-# (see 'hg help pager' for details)
+# (see '@prog@ help pager' for details)
 # paginate = never
 
 [extensions]
 # uncomment these lines to enable some popular extensions
-# (see 'hg help extensions' for more info)
+# (see '@prog@ help extensions' for more info)
 #
 # blackbox =
 # amend =
