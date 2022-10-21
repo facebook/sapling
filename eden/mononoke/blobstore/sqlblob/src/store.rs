@@ -18,8 +18,8 @@ use cached_config::ConfigHandle;
 use futures::future::TryFutureExt;
 use futures::stream;
 use futures::stream::Stream;
-use sql::queries;
 use sql::Connection;
+use sql_ext::queries_with_retry;
 use twox_hash::XxHash32;
 use xdb_gc_structs::XdbGc;
 
@@ -92,7 +92,7 @@ mod types {
 
 pub use self::types::ChunkingMethod;
 
-queries! {
+queries_with_retry! {
     write InsertData(values: (id: &str, ctime: i64, chunk_id: &str, chunk_count: u32, chunking_method: ChunkingMethod)) {
         insert_or_ignore,
         "{insert_or_ignore} INTO data (

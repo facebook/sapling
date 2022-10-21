@@ -28,7 +28,7 @@ macro_rules! queries_with_retry {
         $crate::_macro_internal::paste::item! {
             $crate::_macro_internal::queries! {
                 pub read [<$name Impl>] (
-                    $( $pname: $ptype ),*  ,
+                    $( $pname: $ptype, )*
                     $( >list $lname: $ltype )*
                 ) -> ($( $rtype ),*) { $q }
             }
@@ -94,6 +94,48 @@ macro_rules! queries_with_retry {
                 ) -> Result<WriteResult> {
                     query_with_retry(
                         || [<$name Impl>]::query(connection, values $( , $pname )* ),
+                    ).await
+                }
+            }
+
+            $crate::queries_with_retry! { $( $rest )* }
+        }
+    };
+
+    (
+        $vi:vis write $name:ident (
+            $( $pname:ident: $ptype:ty ),* $(,)*
+            $( >list $lname:ident: $ltype:ty )*
+        ) { $qtype:ident, $q:expr }
+        $( $rest:tt )*
+    ) => {
+        $crate::_macro_internal::paste::item! {
+            $crate::_macro_internal::queries! {
+                pub write [<$name Impl>] (
+                    $( $pname: $ptype, )*
+                    $( >list $lname: $ltype )*
+                ) { $qtype, mysql($q) sqlite($q) }
+            }
+
+            #[allow(non_snake_case)]
+            $vi mod $name {
+                #[allow(unused_imports)]
+                use super::*;
+
+                use $crate::_macro_internal::*;
+
+                // Not possible to retry query with transaction
+                #[allow(unused_imports)]
+                pub use [<$name Impl>]::query_with_transaction;
+
+                #[allow(dead_code)]
+                pub async fn query(
+                    connection: &Connection,
+                    $( $pname: & $ptype, )*
+                    $( $lname: & [ $ltype ], )*
+                ) -> Result<WriteResult> {
+                    query_with_retry(
+                        || [<$name Impl>]::query(connection, $( $pname, )* $( $lname, )*),
                     ).await
                 }
             }
@@ -169,6 +211,10 @@ mod tests {
             none,
             "INSERT INTO my_table (num, str) VALUES {values}"
         }
+        write TestQuery4(id: &str) {
+            none,
+            "DELETE FROM my_table where id = {id}"
+        }
     }
 
     #[allow(dead_code, unreachable_code)]
@@ -179,6 +225,7 @@ mod tests {
         TestQuery2::query_with_transaction(todo!()).await?;
         TestQuery3::query(todo!(), &[(&12,)]).await?;
         TestQuery3::query_with_transaction(todo!(), &[(&12,)]).await?;
+        TestQuery4::query(todo!(), &"hello").await?;
         Ok(())
     }
 }
