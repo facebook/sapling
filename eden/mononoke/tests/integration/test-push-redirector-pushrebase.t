@@ -20,8 +20,6 @@
   > EOF
 
   $ init_large_small_repo
-  Setting up hg server repos
-  Blobimporting them
   Adding synced mapping entry
   Starting Mononoke server
 
@@ -40,7 +38,7 @@ Normal pushrebase with one commit
 -- newcommit is also present in the large repo (after a pull)
   $ cd "$TESTTMP"/large-hg-client
   $ log -r master_bookmark
-  o  first post-move commit [public;rev=2;bfcfb674663c] default/master_bookmark
+  @  first post-move commit [public;rev=2;bfcfb674663c] default/master_bookmark
   │
   ~
   $ REPONAME=large-mon hgmn pull -q

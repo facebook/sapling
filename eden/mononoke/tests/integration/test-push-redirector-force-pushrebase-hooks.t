@@ -20,8 +20,6 @@
   > EOF
 
   $ create_large_small_repo
-  Setting up hg server repos
-  Blobimporting them
   Adding synced mapping entry
   $ cd "$TESTTMP/mononoke-config"
   $ cat >> repos/large-mon/server.toml << CONFIG
@@ -47,6 +45,7 @@
 
   $ start_large_small_repo
   Starting Mononoke server
+  $ init_local_large_small_clones
 
 We can't force pushrebase to a shared bookmark, so create a test bookmark that only belongs
 to the small repo

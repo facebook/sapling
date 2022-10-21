@@ -21,13 +21,13 @@
   > EOF
 
   $ PUSHREBASE_REWRITE_DATES=1 init_large_small_repo
-  Setting up hg server repos
-  Blobimporting them
   Adding synced mapping entry
   Starting Mononoke server
 
 -- enable verification hook in small-hg-srv
+  $ hg init "$TESTTMP/small-hg-srv"
   $ cd "$TESTTMP/small-hg-srv"
+  $ setup_hg_server
   $ enable_replay_verification_hook
 
 -- normal pushrebase with one commit
@@ -45,7 +45,7 @@
 -- newcommit is also present in the large repo (after a pull)
   $ cd "$TESTTMP"/large-hg-client
   $ log -r master_bookmark
-  o  first post-move commit [public;rev=2;*] default/master_bookmark (glob)
+  @  first post-move commit [public;rev=2;*] default/master_bookmark (glob)
   │
   ~
   $ REPONAME=large-mon hgmn pull -q
@@ -67,6 +67,9 @@
   * syncing bookmark master_bookmark to * (glob)
 
   $ cd "$TESTTMP"
+  $ REPOID="$REPOIDSMALL" mononoke_hg_sync small-hg-srv 0 2>&1 | grep "successful sync"
+  * successful sync of entries [1]* (glob)
+
   $ REPOID="$REPOIDSMALL" mononoke_hg_sync small-hg-srv 1 2>&1 | grep "successful sync"
   * successful sync of entries [2]* (glob)
 
@@ -78,7 +81,7 @@
   │
   o  newcommit [draft;rev=2;*] (glob)
   │
-  @  first post-move commit [draft;rev=1;*] (glob)
+  o  first post-move commit [draft;rev=1;*] (glob)
   │
   o  pre-move commit [draft;rev=0;*] (glob)
   $

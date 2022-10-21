@@ -2179,6 +2179,9 @@ function verify_integrity_service() {
 # Wrapper for drawdag that loads all the commit aliases to env variables
 # so they can be used to refer to commits instead of hashes.
 function testtool_drawdag() {
-  # shellcheck disable=SC2046
-  export $(mononoke_testtool drawdag "$@" | tee /dev/fd/2)
+  out="$(mononoke_testtool drawdag "$@" | tee /dev/fd/2)"
+  rc="${PIPESTATUS[0]}"
+  # shellcheck disable=SC2046,SC2163,SC2086
+  export $out
+  return "$rc"
 }

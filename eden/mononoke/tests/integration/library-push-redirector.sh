@@ -111,55 +111,55 @@ EOF
 }
 
 function large_small_setup() {
-  echo "Setting up hg server repos"
-
-  cd "$TESTTMP" || exit 1
-  hginit_treemanifest small-hg-srv
-  cd small-hg-srv || exit 1
-  echo 1 > file.txt
-  hg addremove -q && hg ci -q -m 'pre-move commit'
-
-  cd ..
-  cp -r small-hg-srv large-hg-srv
-  cd large-hg-srv || exit 1
-  mkdir smallrepofolder
-  hg mv file.txt smallrepofolder/file.txt
-  hg ci -m 'move commit'
-  create_first_post_move_commit smallrepofolder
-  hg book -r . master_bookmark
-  cat >> .hg/hgrc <<EOF
-[extensions]
-pushrebase =
+  quiet testtool_drawdag -R small-mon <<'EOF'
+S_B
+|
+S_A
+# message: S_A "pre-move commit"
+# author: S_A test
+# modify: S_A file.txt "1\n"
+# forget: S_A S_A
+# message: S_B "first post-move commit"
+# author: S_B test
+# modify: S_B filetoremove "1\n"
+# bookmark: S_B master_bookmark
+# forget: S_B S_B
 EOF
 
-  cd ..
-  cd small-hg-srv || exit 1
-  cat >> .hg/hgrc <<EOF
-[extensions]
-pushrebase =
+  export SMALL_MASTER_BONSAI
+  SMALL_MASTER_BONSAI=$S_B
+
+  quiet testtool_drawdag -R large-mon <<'EOF'
+L_C
+|
+L_B
+|
+L_A
+# message: L_A "pre-move commit"
+# author: L_A test
+# modify: L_A file.txt "1\n"
+# message: L_B "move commit"
+# author: L_B test
+# forget: L_A L_A
+# copy: L_B smallrepofolder/file.txt "1\n" L_A file.txt
+# delete: L_B file.txt
+# forget: L_B L_B
+# message: L_C "first post-move commit"
+# author: L_C test
+# modify: L_C smallrepofolder/filetoremove "1\n"
+# bookmark: L_C master_bookmark
+# forget: L_C L_C
 EOF
-  create_first_post_move_commit .
-  hg book -r . master_bookmark
-
-  echo "Blobimporting them"
-  cd "$TESTTMP" || exit 1
-  export REPOIDLARGE=0
-  export REPOIDSMALL=1
-  REPOID="$REPOIDLARGE" blobimport large-hg-srv/.hg large-mon
-  REPOID="$REPOIDSMALL" blobimport small-hg-srv/.hg small-mon
-
-  init_client small-hg-srv small-hg-client
-  cd "$TESTTMP" || exit 1
-  init_client large-hg-srv large-hg-client
 
   export LARGE_MASTER_BONSAI
-  LARGE_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDLARGE master_bookmark)
-  export SMALL_MASTER_BONSAI
-  SMALL_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDSMALL master_bookmark)
+  LARGE_MASTER_BONSAI=$L_C
 
   echo "Adding synced mapping entry"
+  export REPOIDLARGE=0
+  export REPOIDSMALL=1
   add_synced_commit_mapping_entry "$REPOIDSMALL" "$SMALL_MASTER_BONSAI" \
    "$REPOIDLARGE" "$LARGE_MASTER_BONSAI" "test_version"
+
 }
 
 function create_large_small_repo() {
@@ -350,6 +350,21 @@ EOF
 function init_large_small_repo() {
   create_large_small_repo
   start_large_small_repo "$@"
+  init_local_large_small_clones
+}
+
+function init_local_large_small_clones {
+  cd "$TESTTMP" || exit 1
+  REPONAME=small-mon hgmn_clone "mononoke://$(mononoke_address)/small-mon" small-hg-client --config extensions.remotenames=
+  cat >> small-hg-client/.hg/hgrc <<EOF
+[extensions]
+pushrebase =
+EOF
+  REPONAME=large-mon hgmn_clone "mononoke://$(mononoke_address)/large-mon" large-hg-client --config extensions.remotenames=
+  cat >> large-hg-client/.hg/hgrc <<EOF
+[extensions]
+pushrebase =
+EOF
 }
 
 function start_large_small_repo {

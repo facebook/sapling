@@ -20,8 +20,6 @@
 
 -- Init Mononoke thingies
   $ PUSHREBASE_REWRITE_DATES=1 init_large_small_repo
-  Setting up hg server repos
-  Blobimporting them
   Adding synced mapping entry
   Starting Mononoke server
 

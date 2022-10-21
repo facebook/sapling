@@ -19,13 +19,13 @@
   > EOF
 
   $ init_large_small_repo
-  Setting up hg server repos
-  Blobimporting them
   Adding synced mapping entry
   Starting Mononoke server
 
 Push a merge from a large repo
   $ cd "$TESTTMP/large-hg-client"
+  $ hg update null
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ mkdir smallrepofolder/
   $ echo 1 > smallrepofolder/newrepo
   $ hg addremove -q
@@ -66,7 +66,7 @@ although the second one became non-merge commit
   ├─╮
   │ o  newrepo [public;rev=2;64d197011743]
   │
-  o  first post-move commit [public;rev=1;11f848659bfc]
+  @  first post-move commit [public;rev=1;11f848659bfc]
   │
   o  pre-move commit [public;rev=0;fc7ae591de0e]
   $

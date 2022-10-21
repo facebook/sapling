@@ -11,15 +11,13 @@ Setup configuration
   $ setup_configerator_configs
 -- Init Mononoke thingies
   $ XREPOSYNC=1 init_large_small_repo
-  Setting up hg server repos
-  Blobimporting them
   Adding synced mapping entry
   Starting Mononoke server
 
 Before the change
 -- push to a small repo
-  $ mononoke_admin_source_target $REPOIDLARGE $REPOIDSMALL crossrepo \
-  > pushredirection prepare-rollout &> /dev/null
+  $ quiet mononoke_admin_source_target $REPOIDLARGE $REPOIDSMALL crossrepo \
+  > pushredirection prepare-rollout
 
   $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
   > {
@@ -35,6 +33,7 @@ Before the change
   $ force_update_configerator
 
   $ cd "$TESTTMP/small-hg-client"
+  $ REPONAME=small-mon hgmn pull -q
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ mkdir -p non_path_shifting
   $ echo a > foo
@@ -134,7 +133,7 @@ Before the change
   adding manifests
   adding file changes
   $ REPONAME=large-mon hgmn up bookprefix/new_bookmark
-  7 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ ls smallrepofolder
   file.txt

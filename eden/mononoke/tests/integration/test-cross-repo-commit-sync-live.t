@@ -22,8 +22,6 @@ Setup configuration
 
 -- Init Mononoke thingies
   $ XREPOSYNC=1 init_large_small_repo
-  Setting up hg server repos
-  Blobimporting them
   Adding synced mapping entry
   Starting Mononoke server
 
@@ -39,10 +37,13 @@ Before the change
   $ echo b > non_path_shifting/bar
   $ hg ci -Aqm "before config change"
   $ REPONAME=small-mon hgmn push -r . --to master_bookmark -q
-  $ log -r master_bookmark
+  $ log 
   @  before config change [public;rev=2;bc6a206054d0] default/master_bookmark
   │
-  ~
+  o  first post-move commit [public;rev=1;11f848659bfc]
+  │
+  o  pre-move commit [public;rev=0;fc7ae591de0e]
+  $
 
 -- wait a little to give sync job some time to catch up
   $ wait_for_xrepo_sync 2

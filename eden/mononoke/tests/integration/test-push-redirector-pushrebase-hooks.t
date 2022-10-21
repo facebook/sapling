@@ -20,8 +20,6 @@
   > EOF
 
   $ create_large_small_repo
-  Setting up hg server repos
-  Blobimporting them
   Adding synced mapping entry
   $ cd "$TESTTMP/mononoke-config"
   $ cat >> repos/large-mon/server.toml << CONFIG
@@ -38,6 +36,7 @@
   > CONFIG
   $ start_large_small_repo
   Starting Mononoke server
+  $ init_local_large_small_clones
 
 Normal pushrebase to the small repo with one commit succeeds, and does not get
 blocked by deny_files
@@ -55,7 +54,7 @@ blocked by deny_files
 -- newcommit is also present in the large repo (after a pull)
   $ cd "$TESTTMP"/large-hg-client
   $ log -r master_bookmark
-  o  first post-move commit [public;rev=2;bfcfb674663c] default/master_bookmark
+  @  first post-move commit [public;rev=2;bfcfb674663c] default/master_bookmark
   │
   ~
   $ REPONAME=large-mon hgmn pull -q
