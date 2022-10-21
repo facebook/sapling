@@ -14,9 +14,9 @@ use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use mononoke_types::RepositoryId;
 use repo_blobstore::ArcRepoBlobstore;
-use sql::queries;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::queries_with_retry;
 use sql_ext::SqlConnections;
 use thiserror::Error;
 
@@ -57,7 +57,7 @@ impl RevlogStreamingChunks {
     }
 }
 
-queries! {
+queries_with_retry! {
     read CountChunks(repo_id: RepositoryId, tag: &str) -> (u64) {
         "SELECT count(*)
          FROM streaming_changelog_chunks

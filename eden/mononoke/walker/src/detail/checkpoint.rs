@@ -16,9 +16,9 @@ use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use slog::info;
 use slog::Logger;
-use sql::queries;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::queries_with_retry;
 use sql_ext::SqlConnections;
 
 use crate::detail::log;
@@ -305,7 +305,7 @@ impl SqlCheckpoints {
 
 impl SqlConstructFromMetadataDatabaseConfig for SqlCheckpoints {}
 
-queries! {
+queries_with_retry! {
     read SelectCheckpoint(
         repo_id: RepositoryId,
         checkpoint_name: &str,

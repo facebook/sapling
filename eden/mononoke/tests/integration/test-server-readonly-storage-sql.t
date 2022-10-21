@@ -45,7 +45,7 @@ check that sql writes are blocked by readonly storage
   * using repo "repo" repoid * (glob)
   * changeset resolved as: * (glob)
   * Current position of BookmarkName { bookmark: "another_bookmark" } is None (glob)
-  * While executing InsertBookmarks query (glob)
+  * While executing InsertBookmarksImpl query (glob)
   
   Caused by:
       0: attempt to write a readonly database

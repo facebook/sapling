@@ -29,8 +29,8 @@ use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstore;
 use sorted_vector_map::SortedVectorMap;
-use sql::queries;
 use sql::Connection;
+use sql_ext::queries_with_retry;
 use sql_ext::SqlConnections;
 
 use crate::bubble::BubbleId;
@@ -52,7 +52,7 @@ pub struct EphemeralChangesets {
     persistent_changesets: Arc<dyn Changesets>,
 }
 
-queries! {
+queries_with_retry! {
     read SelectChangesets(
         repo_id: RepositoryId,
         bubble_id: BubbleId,

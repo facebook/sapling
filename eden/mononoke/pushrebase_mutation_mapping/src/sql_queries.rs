@@ -12,11 +12,11 @@ use context::PerfCounterType;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use pushrebase_hook::PushrebaseHook;
-use sql::queries;
 use sql::Connection;
 use sql::Transaction;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::queries_with_retry;
 use sql_ext::SqlConnections;
 use tunables::tunables;
 
@@ -24,7 +24,7 @@ use crate::save_mapping_pushrebase_hook::SaveMappingPushrebaseHook;
 use crate::PushrebaseMutationMapping;
 use crate::PushrebaseMutationMappingEntry;
 
-queries! {
+queries_with_retry! {
     read SelectPrepushrebaseIds(
         repo_id: RepositoryId,
         successor_bcs_id: ChangesetId,

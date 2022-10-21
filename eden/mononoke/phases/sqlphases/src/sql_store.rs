@@ -32,8 +32,8 @@ use memcache::KeyGen;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use phases::Phase;
-use sql::queries;
 use sql::Connection;
+use sql_ext::queries_with_retry;
 use stats::prelude::*;
 
 use crate::sql_phases::SqlPhase;
@@ -240,7 +240,7 @@ pub fn get_cache_key(repo_id: RepositoryId, cs_id: &ChangesetId) -> String {
     format!("{}.{}", repo_id.prefix(), cs_id)
 }
 
-queries! {
+queries_with_retry! {
     write InsertPhase(values: (repo_id: RepositoryId, cs_id: ChangesetId, phase: SqlPhase)) {
         none,
         mysql("INSERT INTO phases (repo_id, cs_id, phase) VALUES {values} ON DUPLICATE KEY UPDATE phase = VALUES(phase)")

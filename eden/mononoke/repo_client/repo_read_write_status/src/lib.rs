@@ -13,10 +13,10 @@ use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
-use sql::queries;
 use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::queries_with_retry;
 use sql_ext::SqlConnections;
 
 static DEFAULT_MSG: &str = "Defaulting to locked as the lock state isn't initialised for this repo";
@@ -66,7 +66,7 @@ impl FromValue for HgMononokeReadWrite {
     type Intermediate = HgMononokeReadWrite;
 }
 
-queries! {
+queries_with_retry! {
     read GetReadWriteStatus(repo_name: String) -> (HgMononokeReadWrite, Option<String>) {
         "SELECT state, reason FROM repo_lock
         WHERE repo = {repo_name}"
@@ -196,7 +196,7 @@ mod test {
 
     static CONFIG_MSG: &str = "Set by config option";
 
-    queries! {
+    queries_with_retry! {
         write InsertState(values: (repo: str, state: HgMononokeReadWrite)) {
             none,
             "REPLACE INTO repo_lock(repo, state)

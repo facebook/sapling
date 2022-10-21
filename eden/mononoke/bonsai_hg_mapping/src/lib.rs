@@ -24,10 +24,10 @@ use rendezvous::RendezVous;
 use rendezvous::RendezVousOptions;
 use rendezvous::RendezVousStats;
 use rendezvous::TunablesRendezVousController;
-use sql::queries;
 use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::queries_with_retry;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
 
@@ -195,7 +195,7 @@ pub struct SqlBonsaiHgMapping {
     overwrite: bool,
 }
 
-queries! {
+queries_with_retry! {
     // Sett almost identical ReplaceMapping below
     write InsertMapping(values: (
         repo_id: RepositoryId,

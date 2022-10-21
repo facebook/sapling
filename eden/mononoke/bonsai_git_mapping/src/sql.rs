@@ -8,9 +8,9 @@
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 
-use ::sql::queries;
 use ::sql::Connection;
 use ::sql::Transaction;
+use ::sql_ext::queries_with_retry;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -41,7 +41,7 @@ pub struct SqlBonsaiGitMapping {
     repo_id: RepositoryId,
 }
 
-queries! {
+queries_with_retry! {
     write InsertMapping(values: (
         repo_id: RepositoryId,
         git_sha1: GitSha1,

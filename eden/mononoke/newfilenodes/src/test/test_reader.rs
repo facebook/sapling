@@ -28,8 +28,8 @@ use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
 use mononoke_types_mocks::repo::REPO_ONE;
 use mononoke_types_mocks::repo::REPO_ZERO;
-use sql::queries;
 use sql::Connection;
+use sql_ext::queries_with_retry;
 use tunables::with_tunables;
 use tunables::MononokeTunables;
 
@@ -173,7 +173,7 @@ async fn test_repo_ids(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-queries! {
+queries_with_retry! {
     write DeleteCopyInfo() {
         none,
         "DELETE FROM fixedcopyinfo"

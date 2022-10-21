@@ -327,6 +327,9 @@ pub struct MononokeTunables {
     megarepo_override_squashing_limit: TunableI64ByRepo,
     // Override author check during squashing
     megarepo_override_author_check: TunableBoolByRepo,
+
+    // Disable SQL queries being retried after admission control errors
+    disable_sql_auto_retries: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

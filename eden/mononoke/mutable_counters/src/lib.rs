@@ -17,10 +17,10 @@ use async_trait::async_trait;
 use context::CoreContext;
 use context::PerfCounterType;
 use mononoke_types::RepositoryId;
-use sql::queries;
 use sql::Transaction as SqlTransaction;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::queries_with_retry;
 use sql_ext::SqlConnections;
 use sql_ext::TransactionResult;
 
@@ -46,7 +46,7 @@ pub trait MutableCounters {
     async fn get_all_counters(&self, ctx: &CoreContext) -> Result<Vec<(String, i64)>>;
 }
 
-queries! {
+queries_with_retry! {
     write SetCounter(
         repo_id: RepositoryId, name: &str, value: i64
     ) {

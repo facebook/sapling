@@ -26,7 +26,7 @@ use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use slog::debug;
 use slog::info;
-use sql::queries;
+use sql_ext::queries_with_retry;
 use sql_ext::SqlConnections;
 
 use crate::idmap::IdMap;
@@ -39,7 +39,7 @@ use crate::DagId;
 /// Each chunk will have exactly this many hints in it - we do not save partial chunks.
 const HINTS_PER_CHUNK: usize = 5000;
 
-queries! {
+queries_with_retry! {
     read SelectChunks(repo_id: RepositoryId, version: u64) -> (Vec<u8>) {
         "SELECT blob_name
         FROM segmented_changelog_clone_hints

@@ -32,13 +32,13 @@ use mononoke_types::FileType;
 use mononoke_types::MPath;
 use serde::Deserialize;
 use serde::Serialize;
-use sql::queries;
 use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::queries_with_retry;
 use sql_ext::SqlConnections;
 
-queries! {
+queries_with_retry! {
     read GetMappingEntry(
         target_repo_id: i64,
         target_bookmark: String,

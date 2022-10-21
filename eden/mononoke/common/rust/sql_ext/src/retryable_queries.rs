@@ -11,6 +11,7 @@ use std::time::Duration;
 use anyhow::Result;
 use retry::retry;
 use retry::RetryLogic;
+use tunables::tunables;
 
 const RETRY_ATTEMPTS: usize = 2;
 
@@ -226,6 +227,9 @@ where
     T: Send + 'static,
     Fut: Future<Output = Result<T>>,
 {
+    if tunables().get_disable_sql_auto_retries() {
+        return do_query().await;
+    }
     Ok(retry(
         None,
         |_| do_query(),

@@ -12,9 +12,9 @@ use bookmarks::BookmarkName;
 use context::CoreContext;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
-use sql::queries;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::queries_with_retry;
 use sql_ext::SqlConnections;
 
 use crate::BlobstoreKey;
@@ -26,7 +26,7 @@ use crate::RequestStatus;
 use crate::RequestType;
 use crate::RowId;
 
-queries! {
+queries_with_retry! {
     read TestGetRequest(id: RowId) -> (
         RowId,
         RequestType,

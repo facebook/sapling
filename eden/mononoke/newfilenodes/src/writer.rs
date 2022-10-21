@@ -21,8 +21,8 @@ use mononoke_types::RepositoryId;
 use path_hash::PathBytes;
 use path_hash::PathHash;
 use path_hash::PathHashBytes;
-use sql::queries;
 use sql::Connection;
+use sql_ext::queries_with_retry;
 use stats::prelude::*;
 use thiserror::Error as DeriveError;
 use tunables::tunables;
@@ -246,7 +246,7 @@ async fn insert_filenodes(
     Ok(())
 }
 
-queries! {
+queries_with_retry! {
     write InsertPaths(values: (repo_id: RepositoryId, path: PathBytes, path_hash: PathHashBytes)) {
         insert_or_ignore,
         "{insert_or_ignore} INTO paths (repo_id, path, path_hash) VALUES {values}"

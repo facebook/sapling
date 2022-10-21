@@ -1089,7 +1089,7 @@ mod tests {
     use mononoke_types::RepositoryId;
     use repo_derived_data::RepoDerivedDataArc;
     use repo_identity::RepoIdentityArc;
-    use sql::queries;
+    use sql_ext::queries_with_retry;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::bookmark;
     use tests_utils::resolve_cs_id;
@@ -1798,7 +1798,7 @@ mod tests {
         Ok(())
     }
 
-    queries! {
+    queries_with_retry! {
         write ClearBookmarkUpdateLog(repo_id: RepositoryId) {
             none,
             "DELETE FROM bookmarks_update_log WHERE repo_id = {repo_id}"

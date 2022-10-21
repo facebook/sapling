@@ -19,11 +19,11 @@ use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
-use sql::queries;
 use sql::Connection;
 use sql::Transaction;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::queries_with_retry;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
 use thiserror::Error;
@@ -248,7 +248,7 @@ pub struct SqlSyncedCommitMapping {
     read_master_connection: Connection,
 }
 
-queries! {
+queries_with_retry! {
     write InsertMapping(values: (
         large_repo_id: RepositoryId,
         large_bcs_id: ChangesetId,

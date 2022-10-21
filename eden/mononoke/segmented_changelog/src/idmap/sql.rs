@@ -16,8 +16,8 @@ use context::CoreContext;
 use context::PerfCounterType;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
-use sql::queries;
 use sql::Connection;
+use sql_ext::queries_with_retry;
 use sql_ext::replication::ReplicaLagMonitor;
 use sql_ext::replication::WaitForReplicationConfig;
 use sql_ext::SqlConnections;
@@ -45,7 +45,7 @@ pub struct SqlIdMap {
     version: IdMapVersion,
 }
 
-queries! {
+queries_with_retry! {
     write InsertIdMapEntry(
         values: (repo_id: RepositoryId, version: IdMapVersion, dag_id: u64, cs_id: ChangesetId)
     ) {

@@ -28,10 +28,10 @@ use mononoke_types::ManifestUnodeId;
 use mononoke_types::RepositoryId;
 use path_hash::PathHash;
 use path_hash::PathHashBytes;
-use sql::queries;
 use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::queries_with_retry;
 use sql_ext::SqlConnections;
 
 mod caching;
@@ -372,7 +372,7 @@ impl MutableRenames {
     }
 }
 
-queries! {
+queries_with_retry! {
     write AddRenames(values: (
         repo_id: RepositoryId,
         dst_cs_id: ChangesetId,

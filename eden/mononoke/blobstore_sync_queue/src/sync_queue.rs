@@ -29,9 +29,9 @@ use mononoke_types::DateTime;
 use mononoke_types::Timestamp;
 use shared_error::anyhow::IntoSharedError;
 use shared_error::anyhow::SharedError;
-use sql::queries;
 use sql::Connection;
 pub use sql_construct::SqlConstruct;
+use sql_ext::queries_with_retry;
 pub use sql_ext::SqlConnections;
 use stats::prelude::*;
 
@@ -138,7 +138,7 @@ pub struct SqlBlobstoreSyncQueue {
     ensure_worker_scheduled: Shared<BoxFuture<'static, ()>>,
 }
 
-queries! {
+queries_with_retry! {
     write InsertEntry(values: (
         blobstore_key: String,
         blobstore_id: BlobstoreId,
