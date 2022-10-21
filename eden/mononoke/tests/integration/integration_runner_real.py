@@ -63,6 +63,7 @@ DISABLE_ALL_NETWORK_ACCESS_SKIPLIST: Set[str] = {
     "test-scs-find-files.t",
     "test-scs-find-files-bssm.t",
     "test-scs-land-stack.t",
+    "test-scs-land-stack-cross-repo.t",
     "test-scs-list-bookmarks.t",
     "test-scs-log.t",
     "test-scs-lookup-pushrebase-history.t",

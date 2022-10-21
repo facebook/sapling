@@ -28,8 +28,8 @@ function validate_commit_sync() {
 
 function large_small_config() {
   REPOTYPE="blob_files"
-  REPOID=0 REPONAME=large-mon setup_common_config "$REPOTYPE"
-  REPOID=1 REPONAME=small-mon setup_common_config "$REPOTYPE"
+  INFINITEPUSH_ALLOW_WRITES=true REPOID=0 REPONAME=large-mon setup_common_config "$REPOTYPE"
+  INFINITEPUSH_ALLOW_WRITES=true REPOID=1 REPONAME=small-mon setup_common_config "$REPOTYPE"
 cat >> "$TESTTMP/mononoke-config/common/commitsyncmap.toml" <<EOF
 [megarepo_test]
 large_repo_id = 0

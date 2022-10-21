@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use anyhow::Context;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use bookmarks_movement::BookmarkKindRestrictions;
@@ -16,6 +17,7 @@ pub use bookmarks_movement::PushrebaseOutcome;
 use bytes::Bytes;
 use cloned::cloned;
 use cross_repo_sync::types::Large;
+use cross_repo_sync::types::Small;
 use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::future::TryFutureExt;
@@ -34,6 +36,40 @@ use crate::repo::RepoContext;
 use crate::Repo;
 
 impl RepoContext {
+    async fn convert_outcome(
+        &self,
+        redirector: PushRedirector<Repo>,
+        outcome: Large<PushrebaseOutcome>,
+    ) -> Result<Small<PushrebaseOutcome>, MononokeError> {
+        let ctx = self.ctx();
+        let PushrebaseOutcome {
+            old_bookmark_value,
+            head,
+            retry_num,
+            rebased_changesets,
+            pushrebase_distance,
+        } = outcome.0;
+        redirector.backsync_latest(ctx).await?;
+        Ok(Small(PushrebaseOutcome {
+            old_bookmark_value: match old_bookmark_value {
+                Some(val) => Some(
+                    redirector
+                        .get_large_to_small_commit_equivalent(ctx, val)
+                        .await?,
+                ),
+                None => None,
+            },
+            head: redirector
+                .get_large_to_small_commit_equivalent(ctx, head)
+                .await?,
+            retry_num,
+            rebased_changesets: redirector
+                .convert_pushrebased_changesets(ctx, rebased_changesets)
+                .await?,
+            pushrebase_distance,
+        }))
+    }
+
     /// Land a stack of commits to a bookmark via pushrebase.
     pub async fn land_stack(
         &self,
@@ -44,8 +80,8 @@ impl RepoContext {
         // TODO: Remove
         push_source: CrossRepoPushSource,
         bookmark_restrictions: BookmarkKindRestrictions,
-        _maybe_pushredirector: Option<(PushRedirector<Repo>, Large<RepoContext>)>,
-        _push_authored_by: PushAuthoredBy,
+        maybe_pushredirector: Option<(PushRedirector<Repo>, Large<RepoContext>)>,
+        push_authored_by: PushAuthoredBy,
     ) -> Result<PushrebaseOutcome, MononokeError> {
         self.start_write()?;
 
@@ -100,21 +136,68 @@ impl RepoContext {
 
         // We CANNOT do remote pushrebase here otherwise it would result in an infinite
         // loop, as this code is used for remote pushrebase. Let's use local pushrebase.
-        let outcome = LocalPushrebaseClient {
-            ctx: self.ctx(),
-            authz: self.authorization_context(),
-            repo: self.inner_repo(),
-            lca_hint: &lca_hint,
-            hook_manager: self.hook_manager().as_ref(),
-        }
-        .pushrebase(
-            &bookmark,
-            changesets,
-            pushvars,
-            push_source,
-            bookmark_restrictions,
-        )
-        .await?;
+
+        let outcome = if let Some((redirector, Large(large_repo))) = maybe_pushredirector {
+            // run hooks on small repo
+            bookmarks_movement::run_hooks(
+                ctx,
+                self.hook_manager().as_ref(),
+                &bookmark,
+                changesets.iter(),
+                pushvars,
+                CrossRepoPushSource::NativeToThisRepo,
+                push_authored_by,
+            )
+            .await?;
+            // Convert changesets to large repo
+            let large_bookmark = redirector
+                .small_to_large_commit_syncer
+                .rename_bookmark(&bookmark)
+                .await?
+                .with_context(|| {
+                    format!(
+                        "Bookmark {} unexpectedly dropped in {:?}",
+                        bookmark, redirector.small_to_large_commit_syncer
+                    )
+                })?;
+            let small_to_large = redirector
+                .sync_uploaded_changesets(ctx, changesets, Some(&large_bookmark))
+                .await?;
+            // Land the mapped changesets on the large repo
+            let outcome = LocalPushrebaseClient {
+                ctx: large_repo.ctx(),
+                authz: large_repo.authorization_context(),
+                repo: large_repo.inner_repo(),
+                lca_hint: &(large_repo.skiplist_index_arc() as Arc<dyn LeastCommonAncestorsHint>),
+                hook_manager: large_repo.hook_manager().as_ref(),
+            }
+            .pushrebase(
+                &large_bookmark,
+                small_to_large.into_values().collect(),
+                pushvars,
+                CrossRepoPushSource::PushRedirected,
+                bookmark_restrictions,
+            )
+            .await?;
+            // Convert response back, finishing the land on the small repo
+            self.convert_outcome(redirector, Large(outcome)).await?.0
+        } else {
+            LocalPushrebaseClient {
+                ctx: self.ctx(),
+                authz: self.authorization_context(),
+                repo: self.inner_repo(),
+                lca_hint: &lca_hint,
+                hook_manager: self.hook_manager().as_ref(),
+            }
+            .pushrebase(
+                &bookmark,
+                changesets,
+                pushvars,
+                push_source,
+                bookmark_restrictions,
+            )
+            .await?
+        };
 
         Ok(outcome)
     }

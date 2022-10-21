@@ -483,6 +483,18 @@ impl<R: Repo> PushRedirector<R> {
         }
     }
 
+    pub async fn backsync_latest(&self, ctx: &CoreContext) -> Result<(), Error> {
+        backsync_latest(
+            ctx.clone(),
+            self.large_to_small_commit_syncer.clone(),
+            self.target_repo_dbs.clone(),
+            BacksyncLimit::NoLimit,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await?;
+        Ok(())
+    }
+
     /// Convert `UnbundlePushRebaseResponse` struct in a large-to-small
     /// direction to be suitable for response generation in the small repo
     async fn convert_unbundle_pushrebase_response(
@@ -501,24 +513,13 @@ impl<R: Repo> PushRedirector<R> {
         // Let's make sure all the public pushes to the large repo
         // are backsynced to the small repo, by tailing the `bookmarks_update_log`
         // of the large repo
-        backsync_latest(
-            ctx.clone(),
-            self.large_to_small_commit_syncer.clone(),
-            self.target_repo_dbs.clone(),
-            BacksyncLimit::NoLimit,
-            Arc::new(AtomicBool::new(false)),
-        )
-        .await?;
+        self.backsync_latest(ctx).await?;
 
         let (pushrebased_rev, pushrebased_changesets) = try_join!(
             async {
-                self.remap_changeset_expect_rewritten_or_preserved(
-                    ctx,
-                    &self.large_to_small_commit_syncer,
-                    pushrebased_rev,
-                )
-                .await
-                .context("while remapping pushrebased rev")
+                self.get_large_to_small_commit_equivalent(ctx, pushrebased_rev)
+                    .await
+                    .context("while remapping pushrebased rev")
             },
             async {
                 self.convert_pushrebased_changesets(ctx, pushrebased_changesets)
@@ -623,6 +624,22 @@ impl<R: Repo> PushRedirector<R> {
         self.remap_changeset_expect_rewritten_or_preserved(
             ctx,
             &self.small_to_large_commit_syncer,
+            source_cs_id,
+        )
+        .await
+    }
+
+    /// Given, the `source_cs_id` in the large repo, get it's equivalent
+    /// in a small repo. See `remap_changeset_expect_rewritten_or_preserved`
+    /// for details
+    pub async fn get_large_to_small_commit_equivalent(
+        &self,
+        ctx: &CoreContext,
+        source_cs_id: ChangesetId,
+    ) -> Result<ChangesetId, Error> {
+        self.remap_changeset_expect_rewritten_or_preserved(
+            ctx,
+            &self.large_to_small_commit_syncer,
             source_cs_id,
         )
         .await
@@ -795,23 +812,15 @@ impl<R: Repo> PushRedirector<R> {
     ) -> Result<PushrebaseChangesetPair, Error> {
         let PushrebaseChangesetPair { id_old, id_new } = pushrebase_changeset_pair;
         let (id_old, id_new) = try_join!(
-            self.remap_changeset_expect_rewritten_or_preserved(
-                ctx,
-                &self.large_to_small_commit_syncer,
-                id_old
-            ),
-            self.remap_changeset_expect_rewritten_or_preserved(
-                ctx,
-                &self.large_to_small_commit_syncer,
-                id_new
-            ),
+            self.get_large_to_small_commit_equivalent(ctx, id_old),
+            self.get_large_to_small_commit_equivalent(ctx, id_new),
         )?;
         Ok(PushrebaseChangesetPair { id_old, id_new })
     }
 
     /// Convert all the produced `PushrebaseChangesetPair` structs in the
     /// large-to-small direction
-    async fn convert_pushrebased_changesets(
+    pub async fn convert_pushrebased_changesets(
         &self,
         ctx: &CoreContext,
         pushrebased_changesets: Vec<PushrebaseChangesetPair>,
@@ -827,7 +836,7 @@ impl<R: Repo> PushRedirector<R> {
     /// Take changesets uploaded during the `unbundle` resolution
     /// and sync all the changesets into a large repo, while remembering which small cs id
     /// corresponds to which large cs id
-    async fn sync_uploaded_changesets(
+    pub async fn sync_uploaded_changesets(
         &self,
         ctx: &CoreContext,
         uploaded_map: UploadedBonsais,
