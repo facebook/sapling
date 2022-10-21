@@ -8,6 +8,7 @@
 #[cfg(not(fbcode_build))]
 mod oss;
 pub mod replication;
+mod retryable_queries;
 mod sqlite;
 
 pub use sql::SqlConnections;
@@ -21,6 +22,15 @@ pub use sqlite::open_sqlite_path;
 pub enum TransactionResult {
     Succeeded(Transaction),
     Failed,
+}
+
+pub mod _macro_internal {
+    pub use anyhow::Result;
+    pub use paste;
+    pub use sql::queries;
+    pub use sql::Connection;
+
+    pub use crate::retryable_queries::read_query_with_retry;
 }
 
 pub mod facebook {
