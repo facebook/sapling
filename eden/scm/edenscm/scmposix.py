@@ -35,21 +35,6 @@ def _rcfiles(path):
     return rcs
 
 
-def systemrcpath():
-    path = []
-    if pycompat.sysplatform == "plan9":
-        root = "lib/mercurial"
-    else:
-        root = "etc/mercurial"
-    # old mod_python does not set sys.argv
-    if len(getattr(sys, "argv", [])) > 0:
-        p = os.path.dirname(os.path.dirname(pycompat.sysargv[0]))
-        if p != "/":
-            path.extend(_rcfiles(os.path.join(p, root)))
-    path.extend(_rcfiles("/" + root))
-    return path
-
-
 def termsize(ui):
     try:
         import termios

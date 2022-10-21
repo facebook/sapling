@@ -52,6 +52,13 @@ py_class!(pub class identity |py| {
         self.ident(py).user_config_paths().iter().map(|p| p.as_path().try_into()).collect::<Result<Vec<PyPathBuf>>>().map_pyerr(py)
     }
 
+    def systemconfigpath(&self) -> PyResult<Option<PyPathBuf>> {
+        match self.ident(py).system_config_path() {
+            None => Ok(None),
+            Some(p) => p.try_into().map(|p| Some(p)).map_pyerr(py),
+        }
+    }
+
     def productname(&self) -> PyResult<String> {
         Ok(self.ident(py).product_name().to_string())
     }

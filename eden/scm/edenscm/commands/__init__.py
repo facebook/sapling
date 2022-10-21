@@ -48,6 +48,7 @@ from .. import (
     hg,
     hgdemandimport,
     hintutil,
+    identity,
     lock as lockmod,
     match as matchmod,
     merge as mergemod,
@@ -1825,14 +1826,19 @@ def editconfig(ui, repo, *values, **opts):
     if target == "global":
         target = "system"
 
+    ident = ui.identity
+
     if target == "local":
         if not repo:
             raise error.Abort(_("can't use --local outside a repository"))
-        paths = [repo.localvfs.join(ui.identity.configrepofile())]
+        paths = [repo.localvfs.join(ident.configrepofile())]
     elif target == "system":
-        paths = rcutil.systemrcpath()
+        path = ident.systemconfigpath()
+        if not path:
+            raise error.Abort(_("can't determine system config path"))
+        paths = [path]
     elif target == "user":
-        paths = bindings.identity.default().userconfigpaths()
+        paths = ident.userconfigpaths()
     else:
         raise error.ProgrammingError("unexpected config target %r" % target)
 

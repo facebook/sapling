@@ -295,6 +295,30 @@ config editing without an editor
   b = 4
   # b = 3
 
+  $ cd
+  $ HGIDENTITY=sl newrepo
+  $ HGIDENTITY=sl hg config --local foo.bar baz
+  updated config in $TESTTMP/repo3/.sl/config
+TODO: fix "hg" references in template
+  $ cat .sl/config | dos2unix
+  # example repository config (see 'hg help config' for more info)
+  [paths]
+  # path aliases to other clones of this repo in URLs or filesystem paths
+  # (see 'hg help config.paths' for more info)
+  #
+  # default         = http://example.com/hg/example-repo
+  # default:pushurl = ssh://jdoe@example.net/hg/jdoes-fork
+  # my-fork         = ssh://jdoe@example.net/hg/jdoes-fork
+  # my-clone        = /home/jdoe/jdoes-clone
+  
+  [ui]
+  # name and email (local to this repository, optional), e.g.
+  # username = Jane Doe <jdoe@example.com>
+  
+  [foo]
+  bar = baz
+
+
  user config
   $ hg config --edit a.b=1 --quiet
   $ tail -2 ~/.hgrc | dos2unix
@@ -306,3 +330,9 @@ config editing without an editor
   $ tail -2 ~/.hgrc | dos2unix
   [a]
   b = 2
+
+system config (make sure it tries the right file)
+  $ HGEDITOR=false hg config --system
+  opening /etc/mercurial/system.rc for editing...
+  abort: edit failed: false exited with status 1
+  [255]

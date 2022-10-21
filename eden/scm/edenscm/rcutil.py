@@ -25,8 +25,6 @@ if pycompat.iswindows:
 else:
     from . import scmposix as scmplatform
 
-systemrcpath = scmplatform.systemrcpath
-
 
 def defaultpagerenv():
     """return a dict of default environment variables and their values,
