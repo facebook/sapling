@@ -2,7 +2,7 @@
 #chg-compatible
 
 hide outer repo
-  $ setconfig workingcopy.ruststatus=False
+  $ setconfig workingcopy.ruststatus=False config.use-rust=True
   $ hg init
 
 Invalid syntax: no value
@@ -86,32 +86,32 @@ Test case sensitive configuration
 
   $ hg showconfig Section -Tjson
   [
-   {
+  {
     "name": "Section.KeY",
     "source": "*", (glob)
     "value": "Case Sensitive"
-   },
-   {
+  },
+  {
     "name": "Section.key",
     "source": "*", (glob)
     "value": "lower case"
-   }
+  }
   ]
   $ hg showconfig Section.KeY -Tjson
   [
-   {
+  {
     "name": "Section.KeY",
     "source": "*", (glob)
     "value": "Case Sensitive"
-   }
+  }
   ]
   $ hg showconfig -Tjson | tail -7
-   },
-   {
+  },
+  {
     "name": "*", (glob)
     "source": "*", (glob)
     "value": "*" (glob)
-   }
+  }
   ]
 
 Test "%unset"
@@ -160,7 +160,7 @@ sub-options in [paths] aren't expanded
   > EOF
 
   $ hg showconfig paths
-  paths.foo=$TESTTMP/foo
+  paths.foo=~/foo
   paths.foo:suboption=~/foo
 
 edit failure
