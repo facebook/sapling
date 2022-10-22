@@ -30,5 +30,6 @@ pub fn expand_path_or_cwd(input: &str) -> Result<PathBuf> {
 
 /// Traverse up and locate the repository root
 pub fn locate_repo_root(path: &Path) -> Option<&Path> {
-    path.ancestors().find(|p| p.join(".hg").is_dir())
+    path.ancestors()
+        .find(|p| p.join(".hg").is_dir() || p.join(".git").is_dir())
 }

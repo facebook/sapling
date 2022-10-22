@@ -25,13 +25,13 @@ use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::EdenFsInstance;
 use futures::StreamExt;
+use hg_util::path::expand_path;
 use serde::Serialize;
 use thrift_types::edenfs as edenfs_thrift;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::Notify;
 use tokio::time;
 
-use crate::util::expand_path_or_cwd;
 use crate::util::jsonrpc::ResponseBuilder;
 use crate::util::locate_repo_root;
 use crate::ExitCode;
@@ -141,9 +141,9 @@ impl From<edenfs_thrift::JournalPosition> for SubscribeResponse {
 #[derive(Parser, Debug)]
 #[clap(about = "Subscribes to journal changes. Responses are in JSON format")]
 pub struct SubscribeCmd {
-    #[clap(parse(try_from_str = expand_path_or_cwd), default_value = "")]
+    #[clap(parse(from_str = expand_path))]
     /// Path to the mount point
-    mount_point: PathBuf,
+    mount_point: Option<PathBuf>,
 
     #[clap(short, long, default_value = "500")]
     /// [Unit: ms] number of milliseconds to wait between events
@@ -153,6 +153,20 @@ pub struct SubscribeCmd {
     /// [Unit: seconds] number of seconds to trigger an arbitrary check of
     /// current journal position in case of event missing.
     guard: u64,
+}
+
+impl SubscribeCmd {
+    fn get_mount_point(&self) -> Result<PathBuf> {
+        if let Some(path) = &self.mount_point {
+            Ok(path.clone())
+        } else {
+            locate_repo_root(
+                &std::env::current_dir().context("Unable to retrieve current working directory")?,
+            )
+            .map(|p| p.to_path_buf())
+            .ok_or_else(|| anyhow!("Unable to locate repository root"))
+        }
+    }
 }
 
 fn have_non_hg_changes(changes: &[edenfs_thrift::PathString]) -> bool {
@@ -259,10 +273,9 @@ impl crate::Subcommand for SubscribeCmd {
 
     #[cfg(fbcode_build)]
     async fn run(&self) -> Result<ExitCode> {
-        let mount_point_path = locate_repo_root(&self.mount_point)
-            .with_context(|| anyhow!("unable to locate repository root"))?;
+        let mount_point_path = self.get_mount_point()?;
         #[cfg(unix)]
-        let mount_point = <Path as AsRef<OsStr>>::as_ref(mount_point_path)
+        let mount_point = <Path as AsRef<OsStr>>::as_ref(&mount_point_path)
             .to_os_string()
             .into_vec();
         // SAFETY: paths on Windows are Unicode
