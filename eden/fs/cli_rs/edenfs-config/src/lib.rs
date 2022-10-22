@@ -20,7 +20,7 @@ use tracing::Level;
 #[derive(Serialize, Deserialize, StackConfig, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Core {
-    #[stack(default)]
+    #[stack(default, merge = "merge_option")]
     eden_directory: Option<String>,
 }
 
@@ -41,7 +41,6 @@ pub struct PrefetchProfiles {
 #[derive(Serialize, Deserialize, StackConfig, Debug)]
 pub struct EdenFsConfig {
     #[stack(nested)]
-    #[serde(skip_serializing_if = "skip_core_serialization")]
     pub core: Core,
 
     #[stack(nested)]
@@ -56,8 +55,10 @@ pub struct EdenFsConfig {
     pub other: toml::value::Table,
 }
 
-fn skip_core_serialization(core: &Core) -> bool {
-    core.eden_directory.is_none()
+fn merge_option<T>(lhs: &mut Option<T>, rhs: Option<T>) {
+    if let Some(rhs) = rhs {
+        lhs.replace(rhs);
+    }
 }
 
 fn merge_table(lhs: &mut toml::value::Table, rhs: toml::value::Table) {
