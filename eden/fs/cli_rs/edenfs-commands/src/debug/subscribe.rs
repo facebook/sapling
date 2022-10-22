@@ -29,6 +29,7 @@ use serde::Serialize;
 use thrift_types::edenfs as edenfs_thrift;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::Notify;
+use tokio::time;
 
 use crate::util::expand_path_or_cwd;
 use crate::util::jsonrpc::ResponseBuilder;
@@ -147,6 +148,11 @@ pub struct SubscribeCmd {
     #[clap(short, long, default_value = "500")]
     /// [Unit: ms] number of milliseconds to wait between events
     throttle: u64,
+
+    #[clap(short, long, default_value = "15")]
+    /// [Unit: seconds] number of seconds to trigger an arbitrary check of
+    /// current journal position in case of event missing.
+    guard: u64,
 }
 
 fn have_non_hg_changes(changes: &[edenfs_thrift::PathString]) -> bool {
@@ -200,6 +206,15 @@ impl SubscribeCmd {
         };
 
         let should_notify = if let Some(last_position) = last_position.replace(journal.clone()) {
+            if last_position.sequenceNumber == journal.sequenceNumber {
+                tracing::trace!(
+                    ?journal,
+                    ?last_position,
+                    "skipping this event since sequence number matches"
+                );
+                return None;
+            }
+
             let changes = client
                 .getFilesChangedSince(mount_point, &last_position)
                 .await;
@@ -263,9 +278,20 @@ impl crate::Subcommand for SubscribeCmd {
         tokio::task::spawn({
             let notify = notify.clone();
             let mount_point = mount_point.clone();
+            let mount_point_path = mount_point_path.to_path_buf();
 
             async move {
                 let mut stdout = tokio::io::stdout();
+
+                {
+                    let response = ResponseBuilder::result(serde_json::json!({
+                        "message": format!("subscribed to {}", mount_point_path.display())
+                    }))
+                    .build();
+                    let mut bytes = serde_json::to_vec(&response).unwrap();
+                    bytes.push(b'\n');
+                    stdout.write_all(&bytes).await.ok();
+                }
 
                 let mut last_position = {
                     if let Ok(client) = EdenFsInstance::global().connect(None).await {
@@ -302,16 +328,44 @@ impl crate::Subcommand for SubscribeCmd {
 
         let mut last = Instant::now();
         let throttle = Duration::from_millis(self.throttle);
-        while let Some(journal) = subscription.next().await {
-            match journal {
-                Ok(_) => {
-                    if last.elapsed() >= throttle {
-                        notify.notify_one();
-                        last = Instant::now();
+        // Since EdenFS will not be sending us event if no
+        // `getCurrentJournalPosition` is called. We have this guard timer to
+        // trigger a round of manual check every few seconds (see command line
+        // option for exactly how long).
+        let mut guard = time::interval(Duration::from_secs(self.guard));
+
+        loop {
+            tokio::select! {
+                // when we get a notification from EdenFS subscription
+                result = subscription.next() => {
+                    match result {
+                        // if the stream is ended somehow, we terminates as well
+                        None => break,
+                        // if there is any error happened during the stream, log them
+                        Some(Err(e)) => {
+                            tracing::error!(?e, "error while processing subscription");
+                            continue;
+                        },
+                        // otherwise, trigger an event if we haven't sent one in the last 500ms (or other configured throttle limit)
+                        Some(Ok(_)) => {
+                            if last.elapsed() < throttle {
+                                continue;
+                            }
+                        }
                     }
-                }
-                Err(e) => tracing::error!(?e, "error while processing subscription"),
+                },
+                // if the guard timer triggers, trigger an event if it's not under throttling
+                _ = guard.tick() => {
+                    if last.elapsed() < throttle {
+                        continue;
+                    }
+                },
+                // in all other cases, we terminate
+                else => break,
             }
+
+            notify.notify_one();
+            last = Instant::now();
         }
 
         Ok(0)
