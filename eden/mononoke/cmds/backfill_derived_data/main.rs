@@ -56,6 +56,7 @@ use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use derived_data_utils::create_derive_graph_scuba_sample;
 use derived_data_utils::derived_data_utils;
 use derived_data_utils::derived_data_utils_for_config;
+use derived_data_utils::warmup;
 use derived_data_utils::DerivedUtils;
 use derived_data_utils::ThinOut;
 use derived_data_utils::DEFAULT_BACKFILLING_CONFIG_NAME;
@@ -95,7 +96,6 @@ mod commit_discovery;
 mod regenerate;
 mod slice;
 mod validation;
-mod warmup;
 
 use commit_discovery::CommitDiscoveryOptions;
 

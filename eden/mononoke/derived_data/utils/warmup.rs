@@ -48,7 +48,7 @@ const PREFETCH_UNODE_TYPES: &[&str] = &[
     RootDeletedManifestV2Id::DERIVABLE_NAME,
 ];
 
-pub(crate) async fn warmup(
+pub async fn warmup(
     ctx: &CoreContext,
     repo: &(impl RepoBlobstoreArc + RepoDerivedDataArc + Send + Sync),
     derived_data_type: &str,

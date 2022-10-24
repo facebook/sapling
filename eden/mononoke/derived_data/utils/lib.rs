@@ -66,6 +66,8 @@ use topo_sort::sort_topological;
 use trait_alias::trait_alias;
 use unodes::RootUnodeManifestId;
 
+pub mod warmup;
+
 pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
     RootUnodeManifestId::NAME,
     RootFastlog::NAME,
