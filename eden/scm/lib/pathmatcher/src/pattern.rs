@@ -9,7 +9,7 @@ use std::str::FromStr;
 
 use crate::error::Error;
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone, Hash, Eq)]
 pub enum PatternKind {
     /// a regular expression relative to repository root, check [RegexMatcher]
     /// for supported RE syntax
@@ -94,9 +94,9 @@ impl std::str::FromStr for PatternKind {
 
 #[derive(Debug, PartialEq)]
 pub struct Pattern {
-    kind: PatternKind,
-    pattern: String,
-    source: Option<String>,
+    pub(crate) kind: PatternKind,
+    pub(crate) pattern: String,
+    pub(crate) source: Option<String>,
 }
 
 impl Pattern {
