@@ -19,6 +19,17 @@ use std::sync::Arc;
 use anyhow::Result;
 use types::RepoPath;
 
+pub use crate::error::Error;
+pub use crate::exact_matcher::ExactMatcher;
+pub use crate::gitignore_matcher::GitignoreMatcher;
+pub use crate::pattern::split_pattern;
+pub use crate::pattern::PatternKind;
+pub use crate::regex_matcher::RegexMatcher;
+pub use crate::tree_matcher::TreeMatcher;
+pub use crate::utils::expand_curly_brackets;
+pub use crate::utils::normalize_glob;
+pub use crate::utils::plain_to_glob;
+
 /// Limits the set of files to be operated on.
 pub trait Matcher {
     /// This method is intended for tree traversals of the file system.
@@ -250,17 +261,6 @@ impl Matcher for IntersectMatcher {
         Ok(matched)
     }
 }
-
-pub use error::Error;
-pub use exact_matcher::ExactMatcher;
-pub use gitignore_matcher::GitignoreMatcher;
-pub use pattern::split_pattern;
-pub use pattern::PatternKind;
-pub use regex_matcher::RegexMatcher;
-pub use tree_matcher::TreeMatcher;
-pub use utils::expand_curly_brackets;
-pub use utils::normalize_glob;
-pub use utils::plain_to_glob;
 
 #[cfg(test)]
 mod test {
