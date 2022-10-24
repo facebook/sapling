@@ -1633,6 +1633,7 @@ void FuseChannel::processSession() {
       const StringPiece namePiece{reinterpret_cast<const char*>(getxattr + 1)};
       static constexpr StringPiece kFastTracks[] = {
           "security.capability",
+          "security.selinux",
           "system.posix_acl_access",
           "system.posix_acl_default"};
 
