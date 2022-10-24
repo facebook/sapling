@@ -57,6 +57,22 @@ struct RendezVousInner<K, V, C> {
     stats: Arc<RendezVousStats>,
 }
 
+/// RendezVous is a difficultly named library which can be used to batch together and deduplicate queries to a backend.
+///
+/// It batches together queries that look like `async fn get(keys: HashSet<K>) -> HashMap<K, V>`,
+/// where the keys of the response are contained in the keys of the input.
+/// That is, querying a bunch of keys from an "async key-value" backend, which must follow these restrictions:
+/// - The order of keys in a query doesn't matter.
+/// - The set of keys in a query can be merged or split with other sets of queries.
+/// - Querying the same key twice in a row should return the same value.
+///
+/// The RendezVousController trait is used to control how the batching is done, such as number of inflight
+/// requests, size of them, etc. It has a reasonable default but can be swapped for extra control.
+///
+/// Rendezvous was created to help with our SQL query load by:
+/// - Reducing the number of queries and connections to SQL
+/// - Make it easy to do batching right
+/// See D27010317 for more context.
 pub struct RendezVous<K, V, C = TunablesRendezVousController> {
     inner: Arc<RendezVousInner<K, V, C>>,
 }
@@ -87,6 +103,9 @@ where
     V: Clone + Send + Sync + 'static,
     C: RendezVousController,
 {
+    /// This function does the necessary batching and deduplication under the hood acts like a normal
+    /// `get(k) -> k` function. You should always call this function with the same `f0` value to ensure
+    /// consistent behaviour.
     pub fn dispatch<F0, F1, Fut>(
         &self,
         fb: FacebookInit,
