@@ -125,7 +125,7 @@ def main(*,
                         to_add.append(GitCommitHash(new_id))
                         to_remove.append(p)
                 if to_add:
-                    parsed_commits = parsed_commits - set(to_remove) + set(to_add)
+                    parsed_commits = (parsed_commits - set(to_remove)).union(set(to_add))
 
             # `head` is not really used in the Eden codepath, but we maintain
             # it so the return value is consistent with the Git codepath.
