@@ -138,7 +138,13 @@ RUN rm -rf /tmp/repo
         container = self._get_ubuntu_container_name(ubuntu_version)
         gh_action_build_image = {
             "name": f"Docker Image - {image_name}",
-            "on": "workflow_dispatch",
+            "on": {
+                "workflow_dispatch": None,
+                "schedule": [
+                    # Every monday at 1am.
+                    {"cron": "0 1 * * mon"},
+                ],
+            },
             "jobs": {
                 "clone-and-build": {
                     "runs-on": "ubuntu-latest",
