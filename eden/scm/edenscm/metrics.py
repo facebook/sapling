@@ -24,7 +24,7 @@ class metrics(object):
 
 def client(ui):
     """Returns the appropriate metrics module"""
-    # @fb-only: from . import fb 
+    # @fb-only
 
-    # @fb-only: return fb.fbmetrics(ui) 
+    # @fb-only
     return metrics(ui) # @oss-only
