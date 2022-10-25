@@ -20,6 +20,7 @@ use pathmatcher::AlwaysMatcher;
 use print::PrintConfig;
 use print::PrintConfigStatusTypes;
 use repo::repo::Repo;
+use status::needs_morestatus_extension;
 use types::path::RepoPathRelativizer;
 use workingcopy::workingcopy::WorkingCopy;
 
@@ -117,6 +118,10 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
             "one or more unsupported options in Rust status".to_owned(),
         )
         .into());
+    }
+
+    if needs_morestatus_extension(repo.dot_hg_path(), wc.treestate().lock().parents().count()) {
+        return Err(errors::FallbackToPython("morestatus functionality needed".to_owned()).into());
     }
 
     let StatusOpts {

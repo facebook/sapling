@@ -33,6 +33,7 @@ use fbthrift_socket::SocketTransport;
 use serde::Deserialize;
 use sha2::Digest;
 use sha2::Sha256;
+use status::needs_morestatus_extension;
 use status::StatusBuilder;
 use thrift_types::edenfs as eden;
 use thrift_types::edenfs::client::EdenService;
@@ -40,6 +41,7 @@ use thrift_types::fb303_core::client::BaseService;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 use tokio_uds_compat::UnixStream;
+use types::HgId;
 use types::RepoPath;
 use types::RepoPathBuf;
 
@@ -184,7 +186,14 @@ async fn maybe_status_fastpath_internal(
     // the wrapper here and default to the Python implementation. D9025269 has a prototype
     // implementation of 'morestatus' in Rust, but we should gradually rewrite Mercurial in-place
     // and call out to it here rather than maintain a parallel implementation in the wrapper.
-    if needs_morestatus_extension(repo_dot_path, &dirstate_data.p2) {
+    if needs_morestatus_extension(
+        repo_dot_path,
+        if HgId::from(dirstate_data.p2).is_null() {
+            1
+        } else {
+            2
+        },
+    ) {
         return Err(OperationNotSupported.into());
     }
 
@@ -233,30 +242,6 @@ Your running Eden server is more than 45 days old.  You should run
     }
 
     Ok((status_output, copymap))
-}
-
-const NULL_COMMIT: [u8; 20] = [0; 20];
-
-fn needs_morestatus_extension(hg_dir: &Path, p2: &[u8; 20]) -> bool {
-    if p2 != &NULL_COMMIT {
-        return true;
-    }
-
-    for path in [
-        PathBuf::from("bisect.state"),
-        PathBuf::from("graftstate"),
-        PathBuf::from("histedit-state"),
-        PathBuf::from("merge/state"),
-        PathBuf::from("rebasestate"),
-        PathBuf::from("unshelverebasestate"),
-        PathBuf::from("updatestate"),
-    ] {
-        if hg_dir.join(path).is_file() {
-            return true;
-        }
-    }
-
-    false
 }
 
 fn is_unknown_method_error(error: &eden::errors::eden_service::GetScmStatusV2Error) -> bool {
@@ -792,10 +777,9 @@ mod test {
     fn do_not_use_morestatus_if_p2_is_unset() {
         let files = vec![(".hg", Fixture::Dir)];
         let repo_root = generate_fixture(files);
-        let p2 = [0_u8; 20];
         assert!(!needs_morestatus_extension(
             &repo_root.path().join(".hg"),
-            &p2
+            1
         ));
     }
 
@@ -803,11 +787,7 @@ mod test {
     fn use_morestatus_if_p2_is_set() {
         let files = vec![(".hg", Fixture::Dir)];
         let repo_root = generate_fixture(files);
-        let p2 = [1_u8; 20];
-        assert!(needs_morestatus_extension(
-            &repo_root.path().join(".hg"),
-            &p2
-        ));
+        assert!(needs_morestatus_extension(&repo_root.path().join(".hg"), 2));
     }
 
     #[test]
@@ -817,11 +797,7 @@ mod test {
             (".hg/histedit-state", Fixture::File(b"")),
         ];
         let repo_root = generate_fixture(files);
-        let p2 = [0_u8; 20];
-        assert!(needs_morestatus_extension(
-            &repo_root.path().join(".hg"),
-            &p2
-        ));
+        assert!(needs_morestatus_extension(&repo_root.path().join(".hg"), 1));
     }
 
     #[test]
@@ -832,11 +808,7 @@ mod test {
             (".hg/merge/state", Fixture::File(b"")),
         ];
         let repo_root = generate_fixture(files);
-        let p2 = [0_u8; 20];
-        assert!(needs_morestatus_extension(
-            &repo_root.path().join(".hg"),
-            &p2
-        ));
+        assert!(needs_morestatus_extension(&repo_root.path().join(".hg"), 1));
     }
 
     #[test]

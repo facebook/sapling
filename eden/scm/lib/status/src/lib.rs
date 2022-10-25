@@ -7,6 +7,8 @@
 
 use std::collections::HashMap;
 use std::fmt;
+use std::path::Path;
+use std::path::PathBuf;
 
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -160,4 +162,26 @@ impl fmt::Display for Status {
         }
         Ok(())
     }
+}
+
+pub fn needs_morestatus_extension(hg_dir: &Path, parent_count: usize) -> bool {
+    if parent_count > 1 {
+        return true;
+    }
+
+    for path in [
+        PathBuf::from("bisect.state"),
+        PathBuf::from("graftstate"),
+        PathBuf::from("histedit-state"),
+        PathBuf::from("merge/state"),
+        PathBuf::from("rebasestate"),
+        PathBuf::from("unshelverebasestate"),
+        PathBuf::from("updatestate"),
+    ] {
+        if hg_dir.join(path).is_file() {
+            return true;
+        }
+    }
+
+    false
 }
