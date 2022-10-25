@@ -38,7 +38,7 @@ impl CloudSyncTrigger {
             let now = Instant::now();
             let child = Command::new("hg")
                 .current_dir(&path)
-                .env(identity::try_env_var("PLAIN")?, "hint")
+                .env(identity::default().env_name("PLAIN").as_ref(), "hint")
                 .args(vec!["cloud", "sync"])
                 .arg("--check-autosync-enabled")
                 .arg("--use-bgssh")
