@@ -123,8 +123,8 @@ def get_isl_args() -> List[str]:
 
 
 def get_isl_args_on_windows() -> List[str]:
-    # @fb-only: isl_bin = "C:/Tools/hg/isl/isl" 
-    # @fb-only: if os.path.isfile(isl_bin): 
-        # @fb-only: return ["dotslash", isl_bin] 
+    # @fb-only
+    # @fb-only
+        # @fb-only
     # TODO(T125822314): Fix packaging issue so isl works on Windows.
     raise error.Abort(_("isl is not currently supported on Windows"))
