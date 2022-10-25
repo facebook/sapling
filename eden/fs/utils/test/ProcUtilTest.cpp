@@ -11,9 +11,9 @@
 
 #include <fstream>
 
-#include <eden/fs/utils/PathFuncs.h>
 #include <folly/Portability.h>
 #include <folly/portability/GTest.h>
+#include "eden/fs/utils/PathFuncs.h"
 
 using namespace facebook::eden;
 using namespace facebook::eden::proc_util;
