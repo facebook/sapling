@@ -97,17 +97,6 @@ queries_with_retry! {
         "SELECT MAX(id) FROM bookmarks_update_log WHERE repo_id = {repo_id}"
     }
 
-    read FindMaxBookmarkLogLockId() -> (Option<u64>) {
-        "SELECT MAX(id) FROM bookmarks_update_log_lock"
-    }
-
-    write AddBookmarkLogLock(values: (id: u64)) {
-        none,
-        "INSERT INTO bookmarks_update_log_lock
-        (id)
-        VALUES {values}"
-    }
-
     write AddBookmarkLog(
         values: (
             id: u64,
@@ -235,27 +224,10 @@ impl SqlBookmarksTransactionPayload {
         Ok((txn, next_id))
     }
 
-    async fn find_next_update_log_lock_id(txn: SqlTransaction) -> Result<(SqlTransaction, u64)> {
-        let (txn, max_id_entries) = FindMaxBookmarkLogLockId::query_with_transaction(txn).await?;
-
-        let next_id = match &max_id_entries[..] {
-            [(None,)] => 1,
-            [(Some(max_existing),)] => *max_existing + 1,
-            _ => {
-                return Err(anyhow!(
-                    "FindMaxBookmarkLogLockId returned multiple entries: {:?}",
-                    max_id_entries
-                ));
-            }
-        };
-        Ok((txn, next_id))
-    }
-
     async fn store_log<'a>(
         &'a self,
         mut txn: SqlTransaction,
         log: &'a TransactionLogUpdates<'a>,
-        mut next_lock_id: u64,
     ) -> Result<SqlTransaction> {
         let timestamp = Timestamp::now();
 
@@ -272,10 +244,6 @@ impl SqlBookmarksTransactionPayload {
             txn = AddBookmarkLog::query_with_transaction(txn, &data[..])
                 .await?
                 .0;
-            txn = AddBookmarkLogLock::query_with_transaction(txn, &[(&next_lock_id,)])
-                .await?
-                .0;
-            next_lock_id += 1;
         }
         Ok(txn)
     }
@@ -402,9 +370,7 @@ impl SqlBookmarksTransactionPayload {
         &self,
         txn: SqlTransaction,
     ) -> Result<SqlTransaction, BookmarkTransactionError> {
-        let next_id;
-        let (mut txn, next_lock_id) = Self::find_next_update_log_lock_id(txn).await?;
-        (txn, next_id) = Self::find_next_update_log_id(txn, self.repo_id).await?;
+        let (mut txn, next_id) = Self::find_next_update_log_id(txn, self.repo_id).await?;
 
         let mut log = TransactionLogUpdates::new(next_id);
 
@@ -414,7 +380,7 @@ impl SqlBookmarksTransactionPayload {
         txn = self.store_force_deletes(txn, &mut log).await?;
         txn = self.store_deletes(txn, &mut log).await?;
         txn = self
-            .store_log(txn, &log, next_lock_id)
+            .store_log(txn, &log)
             .await
             .map_err(BookmarkTransactionError::RetryableError)?;
 
