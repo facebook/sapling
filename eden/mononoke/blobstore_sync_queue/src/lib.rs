@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-mod queries;
 mod sync_queue;
 mod write_ahead_log;
 

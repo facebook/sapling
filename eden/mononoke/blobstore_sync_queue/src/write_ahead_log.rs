@@ -25,12 +25,12 @@ use metaconfig_types::MultiplexId;
 use mononoke_types::Timestamp;
 use shared_error::anyhow::IntoSharedError;
 use shared_error::anyhow::SharedError;
+use sql::queries;
 use sql::Connection;
 use sql::WriteResult;
 use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;
 
-use crate::queries;
 use crate::OperationKey;
 
 const SQL_WAL_WRITE_BUFFER_SIZE: usize = 1000;
@@ -249,7 +249,7 @@ impl BlobstoreWal for SqlBlobstoreWal {
         older_than: &Timestamp,
         limit: usize,
     ) -> Result<Vec<BlobstoreWalEntry>> {
-        let rows = queries::WalReadEntries::query(
+        let rows = WalReadEntries::query(
             &self.read_master_connection,
             multiplex_id,
             older_than,
@@ -264,9 +264,21 @@ impl BlobstoreWal for SqlBlobstoreWal {
     async fn delete<'a>(
         &'a self,
         _ctx: &'a CoreContext,
-        _entries: &'a [BlobstoreWalEntry],
+        entries: &'a [BlobstoreWalEntry],
     ) -> Result<()> {
-        unimplemented!();
+        let entry_ids: Vec<u64> = entries
+            .iter()
+            .map(|entry| {
+                entry.id.ok_or_else(|| {
+                    format_err!("BlobstoreWalEntry must contain `id` to be able to delete it")
+                })
+            })
+            .collect::<Result<_, _>>()?;
+
+        for chunk in entry_ids.chunks(10_000) {
+            WalDeleteEntries::query(&self.write_connection, chunk).await?;
+        }
+        Ok(())
     }
 }
 
@@ -308,5 +320,46 @@ async fn insert_entries(
         .map(|(a, b, c, d, e)| (a, b, c, d, e)) // &(a, b, ...) into (&a, &b, ...)
         .collect();
 
-    queries::WalInsertEntry::query(write_connection, &entries_ref).await
+    WalInsertEntry::query(write_connection, &entries_ref).await
+}
+
+queries! {
+    write WalDeleteEntries(>list ids: u64) {
+        none,
+        "DELETE FROM blobstore_write_ahead_log WHERE id in {ids}"
+    }
+
+    write WalInsertEntry(values: (
+        blobstore_key: String,
+        multiplex_id: MultiplexId,
+        timestamp: Timestamp,
+        operation_key: OperationKey,
+        blob_size: Option<u64>,
+    )) {
+        none,
+        "INSERT INTO blobstore_write_ahead_log (blobstore_key, multiplex_id, timestamp, operation_key, blob_size)
+         VALUES {values}"
+    }
+
+    // In comparison to the sync-queue, we write blobstore keys to the WAL only once
+    // during the `put` operation. This way when the healer reads entries from the WAL,
+    // it doesn't need to filter out distinct operation keys and then blobstore keys
+    // (because each blobstore key can have multiple appearances with the same and
+    // with different operation keys).
+    // The healer can just read all the entries older than the timestamp and they will
+    // represent a set of different put opertions by design.
+    read WalReadEntries(multiplex_id: MultiplexId, older_than: Timestamp, limit: usize) -> (
+        String,
+        MultiplexId,
+        Timestamp,
+        OperationKey,
+        u64,
+        Option<u64>,
+    ) {
+        "SELECT blobstore_key, multiplex_id, timestamp, operation_key, id, blob_size
+         FROM blobstore_write_ahead_log
+         WHERE multiplex_id = {multiplex_id} AND timestamp <= {older_than}
+         LIMIT {limit}
+         "
+    }
 }
