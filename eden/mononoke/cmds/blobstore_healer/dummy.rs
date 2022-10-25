@@ -163,4 +163,14 @@ impl<Q: BlobstoreWal> BlobstoreWal for DummyBlobstoreWal<Q> {
     ) -> Result<Vec<BlobstoreWalEntry>> {
         self.inner.read(ctx, multiplex_id, older_than, limit).await
     }
+
+    async fn delete<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        entries: &'a [BlobstoreWalEntry],
+    ) -> Result<()> {
+        let entries: Vec<_> = entries.iter().map(|e| format!("{:?}", e)).collect();
+        info!(ctx.logger(), "I would have deleted {}", entries.join(",\n"));
+        Ok(())
+    }
 }

@@ -198,4 +198,18 @@ impl BlobstoreWal for Tickable<OperationKey> {
     ) -> Result<Vec<BlobstoreWalEntry>> {
         unimplemented!();
     }
+
+    async fn delete<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        entries: &'a [BlobstoreWalEntry],
+    ) -> Result<()> {
+        self.on_tick().await?;
+        self.storage.with(|s| {
+            for entry in entries {
+                s.remove(&entry.blobstore_key);
+            }
+        });
+        Ok(())
+    }
 }

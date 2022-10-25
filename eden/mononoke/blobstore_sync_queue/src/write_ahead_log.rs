@@ -192,6 +192,12 @@ pub trait BlobstoreWal: Send + Sync {
         older_than: &Timestamp,
         limit: usize,
     ) -> Result<Vec<BlobstoreWalEntry>>;
+
+    async fn delete<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        entries: &'a [BlobstoreWalEntry],
+    ) -> Result<()>;
 }
 
 #[async_trait]
@@ -253,6 +259,14 @@ impl BlobstoreWal for SqlBlobstoreWal {
 
         let entries = rows.into_iter().map(BlobstoreWalEntry::from_row).collect();
         Ok(entries)
+    }
+
+    async fn delete<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        _entries: &'a [BlobstoreWalEntry],
+    ) -> Result<()> {
+        unimplemented!();
     }
 }
 
