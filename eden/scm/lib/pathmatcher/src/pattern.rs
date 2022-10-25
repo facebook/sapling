@@ -112,6 +112,27 @@ impl Pattern {
         self.source = Some(source);
         self
     }
+
+    /// Build `Pattern` from str.
+    ///
+    /// * If the str doesn't have pattern kind prefix, we will use `default_kind`.
+    /// * `source` is set to None.
+    pub(crate) fn from_str(pattern: &str, default_kind: PatternKind) -> Self {
+        let (kind, pat) = split_pattern(pattern, default_kind);
+        Self {
+            kind,
+            pattern: pat.to_string(),
+            source: None,
+        }
+    }
+}
+
+/// Build `Pattern`s from strings. It calls `Pattern::from_str` to do actual work.
+pub fn build_patterns(patterns: &[String], default_kind: PatternKind) -> Vec<Pattern> {
+    patterns
+        .iter()
+        .map(|s| Pattern::from_str(s, default_kind))
+        .collect()
 }
 
 pub fn split_pattern<'a>(pattern: &'a str, default_kind: PatternKind) -> (PatternKind, &'a str) {
@@ -265,6 +286,19 @@ mod tests {
         assert!(normalize_patterns(vec!["set:added()"], PatternKind::Glob).is_err());
         assert!(normalize_patterns(vec!["include:/a/b.txt"], PatternKind::Glob).is_err());
         assert!(normalize_patterns(vec!["subinclude:/a/b.txt"], PatternKind::Glob).is_err());
+    }
+
+    #[test]
+    fn test_build_patterns() {
+        let patterns = ["re:a.py".to_string(), "a.txt".to_string()];
+
+        assert_eq!(
+            build_patterns(&patterns, PatternKind::Glob),
+            [
+                Pattern::new(PatternKind::RE, "a.py".to_string()),
+                Pattern::new(PatternKind::Glob, "a.txt".to_string())
+            ]
+        )
     }
 
     #[test]

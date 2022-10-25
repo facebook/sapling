@@ -24,6 +24,7 @@ pub use crate::error::Error;
 pub use crate::exact_matcher::ExactMatcher;
 pub use crate::gitignore_matcher::GitignoreMatcher;
 pub use crate::matcher::build_matcher;
+pub use crate::pattern::build_patterns;
 pub use crate::pattern::split_pattern;
 pub use crate::pattern::PatternKind;
 pub use crate::regex_matcher::RegexMatcher;
