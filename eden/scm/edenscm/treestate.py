@@ -349,12 +349,16 @@ class treestatemap(object):
         # The metadata here contains (watchman) "clock" which does not exist
         # in "dirstate".
         if metadata:
-            if metadata.get("p1", node.nullhex) != node.hex(p1) or metadata.get(
-                "p2", node.nullhex
-            ) != node.hex(p2):
-                raise error.Abort(
-                    _("working directory state appears damaged (metadata mismatch)!")
-                )
+            for i, p in [(1, p1), (2, p2)]:
+                metavalue = metadata.get("p%s" % i, node.nullhex)
+                if metavalue != node.hex(p):
+                    raise error.Abort(
+                        _(
+                            "working directory state appears damaged (metadata mismatch - "
+                            "p%s %s != %s)!"
+                        )
+                        % (i, metavalue, node.hex(p))
+                    )
 
     def _gc(self):
         """Remove unreferenced treestate files"""
