@@ -331,7 +331,8 @@ config editing without an editor
   b = 2
 
 system config (make sure it tries the right file)
-  $ HGEDITOR=false hg config --system
-  opening /etc/mercurial/system.rc for editing...
+  $ PROGRAMDATA=C:\\ProgramData\\Facebook\\Mercurial\\ HGEDITOR=false hg config --system
+  opening /etc/mercurial/system.rc for editing... (no-windows !)
+  opening C:\ProgramData\Facebook\Mercurial\Facebook\Mercurial\system.rc for editing... (windows !)
   abort: edit failed: false exited with status 1
   [255]
