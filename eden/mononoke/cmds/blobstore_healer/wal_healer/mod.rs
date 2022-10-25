@@ -43,6 +43,9 @@ use crate::healer::DEFAULT_BLOB_SIZE_BYTES;
 use crate::healer::MAX_FETCH_FAILURE_DELAY;
 use crate::healer::MIN_FETCH_FAILURE_DELAY;
 
+#[cfg(test)]
+mod tests;
+
 pub struct WalHealer {
     /// The amount of entries healer processes in one go.
     batch_size: usize,
