@@ -683,8 +683,7 @@ impl Convert for RawUpdateLoggingConfig {
     fn convert(self) -> Result<Self::Output> {
         Ok(UpdateLoggingConfig {
             bookmark_logging_destination: self.bookmark_logging_destination.convert()?,
-            public_commit_logging_destination: self.public_commit_logging_destination.convert()?,
-            draft_commit_logging_destination: self.draft_commit_logging_destination.convert()?,
+            new_commit_logging_destination: self.new_commit_logging_destination.convert()?,
         })
     }
 }

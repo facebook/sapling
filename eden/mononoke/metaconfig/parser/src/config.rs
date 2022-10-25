@@ -897,7 +897,7 @@ mod test {
             darkstorm_backup_repo_id = 1001
 
             [update_logging_config]
-            public_commit_logging_destination = { scribe = { scribe_category = "cat" } }
+            new_commit_logging_destination = { scribe = { scribe_category = "cat" } }
         "#;
         let fbsource_repo_def = r#"
             repo_id=0
@@ -1264,10 +1264,9 @@ mod test {
                 }),
                 update_logging_config: UpdateLoggingConfig {
                     bookmark_logging_destination: None,
-                    public_commit_logging_destination: Some(LoggingDestination::Scribe {
+                    new_commit_logging_destination: Some(LoggingDestination::Scribe {
                         scribe_category: "cat".to_string(),
                     }),
-                    draft_commit_logging_destination: None,
                 },
             },
         );

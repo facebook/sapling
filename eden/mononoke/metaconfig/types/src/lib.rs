@@ -1718,8 +1718,6 @@ pub enum LoggingDestination {
 pub struct UpdateLoggingConfig {
     /// Destination where bookmark updates are logged to
     pub bookmark_logging_destination: Option<LoggingDestination>,
-    /// Destination where new public commits are logged to
-    pub public_commit_logging_destination: Option<LoggingDestination>,
-    /// Destination where new draft commits are logged to
-    pub draft_commit_logging_destination: Option<LoggingDestination>,
+    /// Destination where new commits are logged to
+    pub new_commit_logging_destination: Option<LoggingDestination>,
 }
