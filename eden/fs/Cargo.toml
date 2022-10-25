@@ -1,6 +1,7 @@
 [patch.crates-io]
 aes-gcm-siv = { git = "https://github.com/lei2022/AEADs", rev = "d9d03399fbc1347a1c2941801c0743e847980757" }
-bindgen-cli = { git = "https://github.com/fbsource/bindgen", rev = "357927634fffdaae37c259b6abea51670e8e0cca" }
+bindgen = { git = "https://github.com/fbsource/bindgen", rev = "9495ab5c085bebeb46be3dec10a70f7336b3b3cb" }
+bindgen-cli = { git = "https://github.com/fbsource/bindgen", rev = "9495ab5c085bebeb46be3dec10a70f7336b3b3cb" }
 bundlr-sdk = { git = "https://github.com/kaustavha/rust-sdk", rev = "4ed5b08398a9f9df284daf57888c314e4f7d4e1d" }
 curve25519-dalek = { git = "https://github.com/hariria/curve25519-dalek", rev = "1f39e7b369dc70f432370c9703229a45bfa9664e" }
 daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a70e43bb37b5f4ff4d664992edca" }
