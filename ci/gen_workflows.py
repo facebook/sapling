@@ -120,7 +120,9 @@ WORKDIR /tmp/repo
 # package.json file for each entry in the Yarn workspace.
 RUN npm install --global yarn
 RUN yarn config set yarn-offline-mirror "$HOME/npm-packages-offline-cache"
-RUN [ -f /tmp/repo/addons ] && yarn --cwd /tmp/repo/addons install || true
+# If the addons/ folder is moved or no longer contains a package.json,
+# this command will fail and should be updated to reflect the new location.
+RUN yarn --cwd addons install --prefer-offline
 
 # Verify the yarn-offline-mirror was populated.
 RUN find $(yarn config get yarn-offline-mirror)
