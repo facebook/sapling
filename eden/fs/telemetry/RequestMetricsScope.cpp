@@ -17,9 +17,11 @@
 
 namespace facebook::eden {
 
+RequestMetricsScope::RequestMetricsScope() : pendingRequestWatches_{nullptr} {}
+
 RequestMetricsScope::RequestMetricsScope(
     LockedRequestWatchList* pendingRequestWatches)
-    : pendingRequestWatches_(pendingRequestWatches) {
+    : pendingRequestWatches_{pendingRequestWatches} {
   folly::stop_watch<> watch;
   {
     auto startTimes = pendingRequestWatches_->wlock();
@@ -27,26 +29,31 @@ RequestMetricsScope::RequestMetricsScope(
   }
 }
 
-RequestMetricsScope::RequestMetricsScope() : pendingRequestWatches_(nullptr) {}
-
-RequestMetricsScope::RequestMetricsScope(RequestMetricsScope&& other) noexcept
-    : pendingRequestWatches_(std::move(other.pendingRequestWatches_)),
-      requestWatch_(std::move(other.requestWatch_)) {
-  other.pendingRequestWatches_ = nullptr;
-}
+RequestMetricsScope::RequestMetricsScope(RequestMetricsScope&& that) noexcept
+    : pendingRequestWatches_{std::exchange(
+          that.pendingRequestWatches_,
+          nullptr)},
+      requestWatch_{that.requestWatch_} {}
 
 RequestMetricsScope& RequestMetricsScope::operator=(
-    RequestMetricsScope&& other) {
-  this->pendingRequestWatches_ = std::move(other.pendingRequestWatches_);
-  this->requestWatch_ = std::move(other.requestWatch_);
-  other.pendingRequestWatches_ = nullptr;
+    RequestMetricsScope&& that) noexcept {
+  pendingRequestWatches_ = std::exchange(that.pendingRequestWatches_, nullptr);
+  requestWatch_ = that.requestWatch_;
   return *this;
 }
 
 RequestMetricsScope::~RequestMetricsScope() {
-  if (pendingRequestWatches_ != nullptr) {
+  if (pendingRequestWatches_) {
     auto startTimes = pendingRequestWatches_->wlock();
     startTimes->erase(requestWatch_);
+  }
+}
+
+void RequestMetricsScope::reset() {
+  if (pendingRequestWatches_) {
+    auto startTimes = pendingRequestWatches_->wlock();
+    startTimes->erase(requestWatch_);
+    pendingRequestWatches_ = nullptr;
   }
 }
 

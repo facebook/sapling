@@ -21,23 +21,17 @@ namespace facebook::eden {
 
 class RequestContext : public ObjectFetchContext {
  public:
-  explicit RequestContext(ProcessAccessLog& pal) : pal_(pal) {}
+  explicit RequestContext(ProcessAccessLog& pal) noexcept : pal_(pal) {}
+  ~RequestContext() noexcept;
 
   /**
    * Allocate a RequestContext.
-   *
-   * Sub-classes should call this instead of std::make_shared to make sure that
-   * finishRequest is called once the last shared_ptr holding the
-   * RequestContext is destroyed.
    */
   template <typename T, typename... Args>
   static std::
       enable_if_t<std::is_base_of_v<RequestContext, T>, std::shared_ptr<T>>
       makeSharedRequestContext(Args&&... args) {
-    return std::shared_ptr<T>{new T(std::forward<Args>(args)...), [](T* ptr) {
-                                ptr->finishRequest();
-                                delete ptr;
-                              }};
+    return std::make_shared<T>(std::forward<Args>(args)...);
   }
 
   RequestContext(const RequestContext&) = delete;
@@ -85,14 +79,14 @@ class RequestContext : public ObjectFetchContext {
   void startRequest(
       EdenStats* stats,
       StatsGroupBase::Duration T::*stat,
-      std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>&
+      std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
           requestWatches) {
     return startRequest(
         stats,
         [stat](EdenStats& stats) -> StatsGroupBase::Duration& {
           return stats.getStatsForCurrentThread<T>().*stat;
         },
-        requestWatches);
+        std::move(requestWatches));
   }
 
  private:
@@ -108,7 +102,7 @@ class RequestContext : public ObjectFetchContext {
   void startRequest(
       EdenStats* stats,
       DurationFn stat,
-      std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>&
+      std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
           requestWatches);
 
   void finishRequest() noexcept;
@@ -138,7 +132,7 @@ class RequestContext : public ObjectFetchContext {
 
   RequestMetricsScope requestMetricsScope_;
   std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
-      channelThreadLocalStats_;
+      requestWatchList_;
   ProcessAccessLog& pal_;
   EdenTopStats edenTopStats_;
 
