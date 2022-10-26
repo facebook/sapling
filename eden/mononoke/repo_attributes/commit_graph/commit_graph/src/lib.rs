@@ -78,6 +78,8 @@ impl CommitGraph {
         let mut skip_tree_parent = None;
         let mut first_parent = true;
 
+        let mut p1_linear_depth = 0;
+
         for parent in &parents {
             let parent_edge = parent_edges
                 .get(parent)
@@ -92,6 +94,8 @@ impl CommitGraph {
             if first_parent {
                 first_parent = false;
                 skip_tree_parent = Some(parent_edge.node);
+
+                p1_linear_depth = parent_edge.node.p1_linear_depth + 1;
             } else if let Some(previous_parent) = skip_tree_parent {
                 skip_tree_parent = self
                     .skip_tree_lowest_common_ancestor(
@@ -112,6 +116,7 @@ impl CommitGraph {
             cs_id,
             generation,
             skip_tree_depth,
+            p1_linear_depth,
         };
 
         let edges = ChangesetEdges {

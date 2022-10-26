@@ -32,13 +32,14 @@ fn name_cs_id(name: &str) -> ChangesetId {
 
 /// Generate a fake changeset node for graph testing purposes by using the raw
 /// bytes of the changeset name, padded with zeroes.
-fn name_cs_node(name: &str, gen: u64, skip_tree_depth: u64) -> ChangesetNode {
+fn name_cs_node(name: &str, gen: u64, skip_tree_depth: u64, p1_linear_depth: u64) -> ChangesetNode {
     let cs_id = name_cs_id(name);
     let generation = Generation::new(gen);
     ChangesetNode {
         cs_id,
         generation,
         skip_tree_depth,
+        p1_linear_depth,
     }
 }
 
@@ -255,7 +256,7 @@ async fn test_storage_store_and_fetch(fb: FacebookInit) -> Result<()> {
             .await?
             .unwrap()
             .merge_ancestor,
-        Some(name_cs_node("A", 1, 0))
+        Some(name_cs_node("A", 1, 0, 0))
     );
     assert_eq!(
         graph
@@ -264,7 +265,7 @@ async fn test_storage_store_and_fetch(fb: FacebookInit) -> Result<()> {
             .await?
             .unwrap()
             .merge_ancestor,
-        Some(name_cs_node("G", 5, 1))
+        Some(name_cs_node("G", 5, 1, 4))
     );
 
     Ok(())

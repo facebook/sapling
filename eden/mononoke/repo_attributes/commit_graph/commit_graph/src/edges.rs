@@ -26,6 +26,9 @@ pub struct ChangesetNode {
 
     /// The changeset's depth in the skip tree.
     pub skip_tree_depth: u64,
+
+    /// The changeset's depth in the p1 tree
+    pub p1_linear_depth: u64,
 }
 
 /// The parents of a changeset node.
