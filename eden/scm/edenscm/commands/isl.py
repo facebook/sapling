@@ -3,9 +3,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-"""launcher for Interactive Smartlog GUI (EXPERIMENTAL)
-"""
-
 import os
 import os.path
 import subprocess
@@ -22,16 +19,16 @@ DEFAULT_PORT = 3011
 
 
 @command(
-    "isl",
+    "web|isl",
     [
         (
             "p",
             "port",
             DEFAULT_PORT,
-            _("port for ISL web server"),
+            _("port for Sapling Web"),
         ),
         ("", "json", False, _("output machine-readable JSON")),
-        ("", "open", True, _("open ISL in a local browser")),
+        ("", "open", True, _("open Sapling Web in a local browser")),
         ("f", "foreground", False, _("keep the server process in the foreground")),
         (
             "",
@@ -48,12 +45,39 @@ DEFAULT_PORT = 3011
     ],
 )
 def isl_cmd(ui, repo, *args, **opts):
-    """launch Interactive Smartlog web server on localhost
+    """launch Sapling Web GUI on localhost
 
-    Interactive Smartlog (ISL) is a GUI that facilitates source control
-    operations, such as creating, reordering, or rebasing commits.
-    Running this command launches a web server that makes ISL available via a
-    web interface.
+    Sapling Web is a collection of web-based tools including Interactive Smartlog,
+    which is a GUI that facilitates source control operations such as creating,
+    reordering, or rebasing commits.
+    Running this command launches a web server that makes Sapling Web and
+    Interactive Smartlog available in a local web browser.
+
+    Examples:
+
+    Launch Sapling Web locally on port 8081::
+
+        $ @prog@ web --port 8081
+        Listening on http://localhost:8081/?token=bbe168b7b4af1614dd5b9ddc48e7d30e&cwd=%2Fhome%2Falice%2Fsapling
+        Server logs will be written to /dev/shm/tmp/isl-server-logrkrmxp/isl-server.log
+
+    Using the ``--json`` option to get the current status of Sapling Web::
+
+        $ @prog@ web --port 8081 --json | jq
+        {
+            "url": "http://localhost:8081/?token=bbe168b7b4af1614dd5b9ddc48e7d30e&cwd=%2Fhome%2Falice%2Fsapling",
+            "port": 8081,
+            "token": "bbe168b7b4af1614dd5b9ddc48e7d30e",
+            "pid": 1521158,
+            "wasServerReused": true,
+            "logFileLocation": "/dev/shm/tmp/isl-server-logrkrmxp/isl-server.log",
+            "cwd": "/home/alice/sapling"
+        }
+
+    Using the ``--kill`` option to shut down the server::
+
+        $ @prog@ web --port 8081 --kill
+        killed ISL server process 1521158
     """
     port = opts.get("port")
     open_isl = opts.get("open")

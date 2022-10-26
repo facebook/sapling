@@ -320,7 +320,7 @@ helphomecommands = [
         ["previous", "next", "split", "fold", "histedit", "absorb"],
     ),
     ("Undo changes", ["uncommit", "unamend", "undo", "redo"]),
-    ("Other commands", ["config", "doctor", "grep", "journal", "rage"]),
+    ("Other commands", ["config", "doctor", "grep", "journal", "rage", "web"]),
 ]
 
 helphometopics = {"revisions", "filesets", "glossary", "patterns", "templating"}
