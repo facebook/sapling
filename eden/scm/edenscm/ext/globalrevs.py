@@ -66,6 +66,7 @@ from edenscm import (
     revset,
 )
 from edenscm.i18n import _
+from edenscm.namespaces import namespace
 
 from .hgsql import CorruptionException, executewithsql, ishgsqlbypassed, issqlrepo
 from .pushrebase import isnonpushrebaseblocked
@@ -107,7 +108,7 @@ def _newreporequirementswrapper(orig, repo):
     return reqs
 
 
-def uisetup(ui):
+def uisetup(ui) -> None:
     extensions.wrapfunction(
         localrepo, "newreporequirements", _newreporequirementswrapper
     )
@@ -129,14 +130,14 @@ def uisetup(ui):
         getattr(cls, reqs).add("globalrevs")
 
 
-def reposetup(ui, repo):
+def reposetup(ui, repo) -> None:
     # Only need the extra functionality on the servers.
     if issqlrepo(repo):
         _validateextensions(["hgsql", "pushrebase"])
         _validaterepo(repo)
 
 
-def _validateextensions(extensionlist):
+def _validateextensions(extensionlist) -> None:
     for extension in extensionlist:
         try:
             extensions.find(extension)
@@ -144,7 +145,7 @@ def _validateextensions(extensionlist):
             raise error.Abort(_("%s extension is not enabled") % extension)
 
 
-def _validaterepo(repo):
+def _validaterepo(repo) -> None:
     ui = repo.ui
 
     allowonlypushrebase = ui.configbool("globalrevs", "onlypushrebase")
@@ -152,7 +153,7 @@ def _validaterepo(repo):
         raise error.Abort(_("pushrebase using incorrect configuration"))
 
 
-def _sqllocalrepowrapper(orig, repo):
+def _sqllocalrepowrapper(orig, repo) -> None:
     # This ensures that the repo is of type `sqllocalrepo` which is defined in
     # hgsql extension.
     orig(repo)
@@ -359,7 +360,7 @@ def _lookupname(repo, name):
 
 
 @namespacepredicate("globalrevs", priority=75)
-def _getnamespace(_repo):
+def _getnamespace(_repo) -> namespace:
     return namespaces.namespace(
         listnames=lambda repo: [], namemap=_lookupname, nodemap=lambda repo, node: []
     )
@@ -421,7 +422,7 @@ def _getsvnrev(commitextra):
 
 
 @command("updateglobalrevmeta", [], _("@prog@ updateglobalrevmeta"))
-def updateglobalrevmeta(ui, repo, *args, **opts):
+def updateglobalrevmeta(ui, repo, *args, **opts) -> None:
     """Reads globalrevs from the latest @prog@ commits and adds them to the
     globalrev-hg mapping."""
     with repo.wlock(), repo.lock():
@@ -457,7 +458,7 @@ def updateglobalrevmeta(ui, repo, *args, **opts):
 
 
 @command("globalrev", [], _("@prog@ globalrev"))
-def globalrev(ui, repo, *args, **opts):
+def globalrev(ui, repo, *args, **opts) -> None:
     """prints out the next global revision number for a particular repository by
     reading it from the database.
     """
@@ -483,7 +484,7 @@ def globalrev(ui, repo, *args, **opts):
     ],
     _("@prog@ initglobalrev START"),
 )
-def initglobalrev(ui, repo, start, *args, **opts):
+def initglobalrev(ui, repo, start, *args, **opts) -> None:
     """initializes the global revision number for a particular repository by
     writing it to the database.
     """
