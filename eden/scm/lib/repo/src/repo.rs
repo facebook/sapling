@@ -220,6 +220,10 @@ impl Repo {
         self.repo_name.as_ref().map(|s| s.as_ref())
     }
 
+    pub fn config_path(&self) -> PathBuf {
+        self.dot_hg_path.join(self.ident.config_repo_file())
+    }
+
     pub fn metalog(&mut self) -> Result<Arc<RwLock<MetaLog>>> {
         match &self.metalog {
             Some(metalog) => Ok(metalog.clone()),

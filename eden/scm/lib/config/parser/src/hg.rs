@@ -322,12 +322,10 @@ impl ConfigSetHgExt for ConfigSet {
                 errors.append(&mut self.load_path(expand_path(path), &opts));
             }
         } else {
-            for ident in Some(ident).into_iter().chain(identity::all()) {
-                if let Some(system_path) = ident.system_config_path() {
-                    if system_path.exists() {
-                        errors.append(&mut self.load_path(system_path, &opts));
-                        break;
-                    }
+            for system_path in all_existing_system_paths(ident) {
+                if system_path.exists() {
+                    errors.append(&mut self.load_path(system_path, &opts));
+                    break;
                 }
             }
         }
@@ -496,16 +494,13 @@ impl ConfigSetHgExt for ConfigSet {
     fn load_user(&mut self, opts: Options, ident: &Identity) -> Vec<Error> {
         // If scripting config env var is set, don't load user configs
         if identity::env_var("CONFIG").is_none() {
-            for ident in Some(ident).into_iter().chain(identity::all()) {
-                let paths = ident.user_config_paths();
-                if paths.iter().any(|p| p.exists()) {
-                    return self.load_user_internal(&paths, opts);
-                }
+            if let Some(path) = all_existing_user_paths(ident).next() {
+                return self.load_user_internal(Some(&path), opts);
             }
         }
 
         // Call with empty paths for side effects.
-        self.load_user_internal(&[], opts)
+        self.load_user_internal(None, opts)
     }
 
     fn load_repo(&mut self, repo_path: &Path, opts: Options, identity: &Identity) -> Vec<Error> {
@@ -626,7 +621,11 @@ fn read_set_repo_name(config: &mut ConfigSet, repo_path: &Path) -> crate::Result
 
 impl ConfigSet {
     // For easier testing.
-    pub(crate) fn load_user_internal(&mut self, paths: &[PathBuf], opts: Options) -> Vec<Error> {
+    pub(crate) fn load_user_internal(
+        &mut self,
+        path: Option<&PathBuf>,
+        opts: Options,
+    ) -> Vec<Error> {
         let mut errors = Vec::new();
 
         // Covert "$VISUAL", "$EDITOR" to "ui.editor".
@@ -660,7 +659,7 @@ impl ConfigSet {
 
         let opts = opts.source("user").process_hgplain();
 
-        for path in paths {
+        if let Some(path) = path {
             errors.append(&mut self.load_path(path, &opts));
         }
 
@@ -863,6 +862,20 @@ pub fn read_repo_name_from_disk(shared_dot_hg_path: &Path) -> io::Result<String>
     }
 }
 
+pub fn all_existing_system_paths<'a>(id: &'a Identity) -> impl Iterator<Item = PathBuf> + 'a {
+    Some(id)
+        .into_iter()
+        .chain(identity::all())
+        .filter_map(|id| id.system_config_path().filter(|p| p.exists()))
+}
+
+pub fn all_existing_user_paths<'a>(id: &'a Identity) -> impl Iterator<Item = PathBuf> + 'a {
+    Some(id)
+        .into_iter()
+        .chain(identity::all())
+        .flat_map(|id| id.user_config_paths().into_iter().filter(|p| p.exists()))
+}
+
 #[cfg(test)]
 mod tests {
     use once_cell::sync::Lazy;
@@ -1000,21 +1013,21 @@ mod tests {
         write_file(path.clone(), "[ui]\nmerge=x");
 
         let mut cfg = ConfigSet::new();
-        cfg.load_user_internal(&[path.clone()], Options::new());
+        cfg.load_user_internal(Some(&path), Options::new());
         assert_eq!(cfg.get("ui", "merge").unwrap(), "x");
         assert_eq!(cfg.get("ui", "merge:interactive").unwrap(), "x");
 
         let mut cfg = ConfigSet::new();
         cfg.set("ui", "merge", Some("foo"), &"system".into());
         cfg.set("ui", "merge:interactive", Some("foo"), &"system".into());
-        cfg.load_user_internal(&[path.clone()], Options::new());
+        cfg.load_user_internal(Some(&path), Options::new());
         assert_eq!(cfg.get("ui", "merge").unwrap(), "x");
         assert_eq!(cfg.get("ui", "merge:interactive").unwrap(), "x");
 
         let mut cfg = ConfigSet::new();
         cfg.set("ui", "merge:interactive", Some("foo"), &"system".into());
         write_file(path.clone(), "[ui]\nmerge=x\nmerge:interactive=y\n");
-        cfg.load_user_internal(&[path.clone()], Options::new());
+        cfg.load_user_internal(Some(&path), Options::new());
         assert_eq!(cfg.get("ui", "merge").unwrap(), "x");
         assert_eq!(cfg.get("ui", "merge:interactive").unwrap(), "y");
 
@@ -1022,11 +1035,11 @@ mod tests {
         cfg.set("ui", "merge", Some("a"), &"system".into());
         cfg.set("ui", "merge:interactive", Some("b"), &"system".into());
         write_file(path.clone(), "");
-        cfg.load_user_internal(&[path.clone()], Options::new());
+        cfg.load_user_internal(Some(&path), Options::new());
         assert_eq!(cfg.get("ui", "merge").unwrap(), "a");
         assert_eq!(cfg.get("ui", "merge:interactive").unwrap(), "b");
         write_file(path.clone(), "[ui]\nmerge:interactive=y\n");
-        cfg.load_user_internal(&[path.clone()], Options::new());
+        cfg.load_user_internal(Some(&path), Options::new());
         assert_eq!(cfg.get("ui", "merge").unwrap(), "a");
         assert_eq!(cfg.get("ui", "merge:interactive").unwrap(), "y");
 
