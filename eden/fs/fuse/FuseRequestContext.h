@@ -21,24 +21,6 @@
 
 namespace facebook::eden {
 
-class FuseObjectFetchContext : public FsObjectFetchContext {
- public:
-  FuseObjectFetchContext(pid_t pid, uint32_t opcode)
-      : pid_{pid}, opcode_{opcode} {}
-
-  std::optional<pid_t> getClientPid() const override {
-    return pid_;
-  }
-
-  std::optional<std::string_view> getCauseDetail() const override {
-    return fuseOpcodeName(opcode_);
-  }
-
- private:
-  pid_t pid_;
-  uint32_t opcode_;
-};
-
 /**
  * Each FUSE request has a corresponding FuseRequestContext object that is
  * allocated at request start and deallocated when it finishes.
@@ -48,14 +30,23 @@ class FuseObjectFetchContext : public FsObjectFetchContext {
  */
 class FuseRequestContext : public RequestContext {
  public:
-  explicit FuseRequestContext(
-      FuseChannel* channel,
-      const fuse_in_header& fuseHeader);
-
   FuseRequestContext(const FuseRequestContext&) = delete;
   FuseRequestContext& operator=(const FuseRequestContext&) = delete;
   FuseRequestContext(FuseRequestContext&&) = delete;
   FuseRequestContext& operator=(FuseRequestContext&&) = delete;
+  explicit FuseRequestContext(
+      FuseChannel* channel,
+      const fuse_in_header& fuseHeader);
+
+  // Override of `ObjectFetchContext`
+  std::optional<pid_t> getClientPid() const override {
+    return static_cast<pid_t>(fuseHeader_.pid);
+  }
+
+  // Override of `ObjectFetchContext`
+  std::optional<std::string_view> getCauseDetail() const override {
+    return fuseOpcodeName(fuseHeader_.opcode);
+  }
 
   /**
    * After sendReply or replyError, this returns the error code we returned to

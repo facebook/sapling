@@ -31,12 +31,17 @@ class NfsRequestContext : public RequestContext {
   NfsRequestContext(NfsRequestContext&&) = delete;
   NfsRequestContext& operator=(NfsRequestContext&&) = delete;
 
-  uint32_t getXid() const {
+  std::optional<std::string_view> getCauseDetail() const override {
+    return std::make_optional(causeDetail_);
+  }
+
+  inline uint32_t getXid() const {
     return xid_;
   }
 
  private:
   uint32_t xid_;
+  std::string_view causeDetail_;
 };
 
 } // namespace facebook::eden

@@ -1870,8 +1870,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseRead(
   XLOG(DBG7) << "FUSE_READ";
 
   auto ino = InodeNumber{header.nodeid};
-  return dispatcher_
-      ->read(ino, read->size, read->offset, request.getObjectFetchContext())
+  return dispatcher_->read(ino, read->size, read->offset, request)
       .thenValue([&request](BufVec&& buf) { request.sendReply(*buf); });
 }
 
@@ -1890,10 +1889,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseWrite(
   auto ino = InodeNumber{header.nodeid};
   return dispatcher_
       ->write(
-          ino,
-          folly::StringPiece{bufPtr, write->size},
-          write->offset,
-          request.getObjectFetchContext())
+          ino, folly::StringPiece{bufPtr, write->size}, write->offset, request)
       .thenValue([&request](size_t written) {
         fuse_write_out out = {};
         out.size = written;
@@ -1925,8 +1921,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseLookup(
 
   XLOG(DBG7) << "FUSE_LOOKUP parent=" << parent << " name=" << name;
 
-  return dispatcher_
-      ->lookup(header.unique, parent, name, request.getObjectFetchContext())
+  return dispatcher_->lookup(header.unique, parent, name, request)
       .thenValue([&request](fuse_entry_out entry) {
         request.sendReplyWithInode(entry.nodeid, entry);
       });
@@ -1949,8 +1944,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseGetAttr(
     const fuse_in_header& header,
     ByteRange /*arg*/) {
   XLOG(DBG7) << "FUSE_GETATTR inode=" << header.nodeid;
-  return dispatcher_
-      ->getattr(InodeNumber{header.nodeid}, request.getObjectFetchContext())
+  return dispatcher_->getattr(InodeNumber{header.nodeid}, request)
       .thenValue([&request](FuseDispatcher::Attr attr) {
         request.sendReply(attr.asFuseAttr());
       });
@@ -1962,9 +1956,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseSetAttr(
     ByteRange arg) {
   const auto setattr = reinterpret_cast<const fuse_setattr_in*>(arg.data());
   XLOG(DBG7) << "FUSE_SETATTR inode=" << header.nodeid;
-  return dispatcher_
-      ->setattr(
-          InodeNumber{header.nodeid}, *setattr, request.getObjectFetchContext())
+  return dispatcher_->setattr(InodeNumber{header.nodeid}, *setattr, request)
       .thenValue([&request](FuseDispatcher::Attr attr) {
         request.sendReply(attr.asFuseAttr());
       });
@@ -1980,8 +1972,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseReadLink(
   kernelCachesReadlink = connInfo_->flags & FUSE_CACHE_SYMLINKS;
 #endif
   InodeNumber ino{header.nodeid};
-  return dispatcher_
-      ->readlink(ino, kernelCachesReadlink, request.getObjectFetchContext())
+  return dispatcher_->readlink(ino, kernelCachesReadlink, request)
       .thenValue([&request](std::string&& str) {
         request.sendReply(folly::StringPiece(str));
       });
@@ -1997,8 +1988,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseSymlink(
   const StringPiece link{nameStr + name.stringPiece().size() + 1};
 
   InodeNumber parent{header.nodeid};
-  return dispatcher_
-      ->symlink(parent, name, link, request.getObjectFetchContext())
+  return dispatcher_->symlink(parent, name, link, request)
       .thenValue([&request](fuse_entry_out entry) {
         request.sendReplyWithInode(entry.nodeid, entry);
       });
@@ -2025,9 +2015,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseMknod(
   XLOG(DBG7) << "FUSE_MKNOD " << name;
 
   InodeNumber parent{header.nodeid};
-  return dispatcher_
-      ->mknod(
-          parent, name, nod->mode, nod->rdev, request.getObjectFetchContext())
+  return dispatcher_->mknod(parent, name, nod->mode, nod->rdev, request)
       .thenValue([&request](fuse_entry_out entry) {
         request.sendReplyWithInode(entry.nodeid, entry);
       });
@@ -2051,7 +2039,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseMkdir(
 
   InodeNumber parent{header.nodeid};
   mode_t mode = dir->mode & ~dir->umask;
-  return dispatcher_->mkdir(parent, name, mode, request.getObjectFetchContext())
+  return dispatcher_->mkdir(parent, name, mode, request)
       .thenValue([&request](fuse_entry_out entry) {
         request.sendReplyWithInode(entry.nodeid, entry);
       });
@@ -2067,7 +2055,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseUnlink(
   XLOG(DBG7) << "FUSE_UNLINK " << name;
 
   InodeNumber parent{header.nodeid};
-  return dispatcher_->unlink(parent, name, request.getObjectFetchContext())
+  return dispatcher_->unlink(parent, name, request)
       .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
@@ -2080,7 +2068,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseRmdir(
 
   XLOG(DBG7) << "FUSE_RMDIR " << name;
   InodeNumber parent{header.nodeid};
-  return dispatcher_->rmdir(parent, name, request.getObjectFetchContext())
+  return dispatcher_->rmdir(parent, name, request)
       .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
@@ -2129,7 +2117,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseRename(
           extractPathComponent(oldName, requireUtf8Path_),
           newParent,
           extractPathComponent(newName, requireUtf8Path_),
-          request.getObjectFetchContext())
+          request)
       .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
@@ -2232,7 +2220,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseGetXAttr(
   const StringPiece attrName{nameStr};
   XLOG(DBG7) << "FUSE_GETXATTR";
   InodeNumber ino{header.nodeid};
-  return dispatcher_->getxattr(ino, attrName, request.getObjectFetchContext())
+  return dispatcher_->getxattr(ino, attrName, request)
       .thenValue([&request, size = getxattr->size](const std::string& attr) {
         if (size == 0) {
           fuse_getxattr_out out = {};
@@ -2339,12 +2327,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseReadDir(
   XLOG(DBG7) << "FUSE_READDIR";
   auto ino = InodeNumber{header.nodeid};
   return dispatcher_
-      ->readdir(
-          ino,
-          FuseDirList{read->size},
-          read->offset,
-          read->fh,
-          request.getObjectFetchContext())
+      ->readdir(ino, FuseDirList{read->size}, read->offset, read->fh, request)
       .thenValue([&request](FuseDirList&& list) {
         const auto buf = list.getBuf();
         request.sendReply(StringPiece{buf});
@@ -2399,13 +2382,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseCreate(
       reinterpret_cast<const char*>(create + 1), requireUtf8Path_);
   XLOG(DBG7) << "FUSE_CREATE " << name;
   auto ino = InodeNumber{header.nodeid};
-  return dispatcher_
-      ->create(
-          ino,
-          name,
-          create->mode,
-          create->flags,
-          request.getObjectFetchContext())
+  return dispatcher_->create(ino, name, create->mode, create->flags, request)
       .thenValue([&request](fuse_entry_out entry) {
         fuse_open_out out = {};
         out.open_flags |= FOPEN_KEEP_CACHE;
@@ -2479,7 +2456,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseFallocate(
           InodeNumber{header.nodeid},
           allocate->offset,
           allocate->length,
-          request.getObjectFetchContext())
+          request)
       .thenValue([&request](auto) { request.replyError(0); });
 }
 
