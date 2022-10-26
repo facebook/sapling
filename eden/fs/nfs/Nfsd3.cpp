@@ -287,7 +287,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::getattr(
 
   auto args = XdrTrait<GETATTR3args>::deserialize(deser);
 
-  return dispatcher_->getattr(args.object.ino, context)
+  return dispatcher_->getattr(args.object.ino, context.getObjectFetchContext())
       .thenTry(
           [ser = std::move(ser)](const folly::Try<struct stat>& try_) mutable {
             if (try_.hasException()) {
@@ -355,7 +355,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::setattr(
       /*mtime*/ makeTimespec(args.new_attributes.mtime),
   };
 
-  return dispatcher_->setattr(args.object.ino, desired, context)
+  return dispatcher_
+      ->setattr(args.object.ino, desired, context.getObjectFetchContext())
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::SetattrRes>&& try_) mutable {
         if (try_.hasException()) {
@@ -387,7 +388,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::lookup(
   // be consumed in this function to avoid use-after-free. This future may also
   // need to be executed after the lookup call to conform to fill the "post-op"
   // attributes
-  auto dirAttrFut = dispatcher_->getattr(args.what.dir.ino, context);
+  auto dirAttrFut =
+      dispatcher_->getattr(args.what.dir.ino, context.getObjectFetchContext());
 
   if (args.what.name.length() > NAME_MAX) {
     // The filename is too long, let's try to get the attributes of the
@@ -413,16 +415,19 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::lookup(
 
   return makeImmediateFutureWith([this, args = std::move(args), &context]() {
            if (args.what.name == ".") {
-             return dispatcher_->getattr(args.what.dir.ino, context)
+             return dispatcher_
+                 ->getattr(args.what.dir.ino, context.getObjectFetchContext())
                  .thenValue(
                      [ino = args.what.dir.ino](struct stat && stat)
                          -> std::tuple<InodeNumber, struct stat> {
                        return {ino, std::move(stat)};
                      });
            } else if (args.what.name == "..") {
-             return dispatcher_->getParent(args.what.dir.ino, context)
+             return dispatcher_
+                 ->getParent(args.what.dir.ino, context.getObjectFetchContext())
                  .thenValue([this, &context](InodeNumber ino) {
-                   return dispatcher_->getattr(ino, context)
+                   return dispatcher_
+                       ->getattr(ino, context.getObjectFetchContext())
                        .thenValue(
                            [ino](struct stat && stat)
                                -> std::tuple<InodeNumber, struct stat> {
@@ -433,7 +438,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::lookup(
              return extractPathComponent(std::move(args.what.name))
                  .thenValue([this, ino = args.what.dir.ino, &context](
                                 PathComponent&& name) {
-                   return dispatcher_->lookup(ino, std::move(name), context);
+                   return dispatcher_->lookup(
+                       ino, std::move(name), context.getObjectFetchContext());
                  });
            }
          })
@@ -474,7 +480,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::access(
 
   auto args = XdrTrait<ACCESS3args>::deserialize(deser);
 
-  return dispatcher_->getattr(args.object.ino, context)
+  return dispatcher_->getattr(args.object.ino, context.getObjectFetchContext())
       .thenTry([ser = std::move(ser), desiredAccess = args.access](
                    folly::Try<struct stat>&& try_) mutable {
         if (try_.hasException()) {
@@ -505,8 +511,10 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::readlink(
   serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<READLINK3args>::deserialize(deser);
 
-  auto getattr = dispatcher_->getattr(args.symlink.ino, context);
-  return dispatcher_->readlink(args.symlink.ino, context)
+  auto getattr =
+      dispatcher_->getattr(args.symlink.ino, context.getObjectFetchContext());
+  return dispatcher_
+      ->readlink(args.symlink.ino, context.getObjectFetchContext())
       .thenTry([ser = std::move(ser), getattr = std::move(getattr)](
                    folly::Try<std::string> tryReadlink) mutable {
         return std::move(getattr).thenTry(
@@ -541,10 +549,15 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::read(
   serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<READ3args>::deserialize(deser);
 
-  return dispatcher_->read(args.file.ino, args.count, args.offset, context)
+  return dispatcher_
+      ->read(
+          args.file.ino,
+          args.count,
+          args.offset,
+          context.getObjectFetchContext())
       .thenTry([this, ser = std::move(ser), ino = args.file.ino, &context](
                    folly::Try<NfsDispatcher::ReadRes> tryRead) mutable {
-        return dispatcher_->getattr(ino, context)
+        return dispatcher_->getattr(ino, context.getObjectFetchContext())
             .thenTry([ser = std::move(ser), tryRead = std::move(tryRead)](
                          const folly::Try<struct stat>& tryStat) mutable {
               if (tryRead.hasException()) {
@@ -599,7 +612,11 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::write(
   auto data = queue.split(args.count);
 
   return dispatcher_
-      ->write(args.file.ino, std::move(data), args.offset, context)
+      ->write(
+          args.file.ino,
+          std::move(data),
+          args.offset,
+          context.getObjectFetchContext())
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::WriteRes> writeTry) mutable {
         if (writeTry.hasException()) {
@@ -679,7 +696,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::create(
   return extractPathComponent(std::move(args.where.name))
       .thenValue([this, ino = args.where.dir.ino, mode, &context](
                      PathComponent&& name) {
-        return dispatcher_->create(ino, std::move(name), mode, context);
+        return dispatcher_->create(
+            ino, std::move(name), mode, context.getObjectFetchContext());
       })
       .thenTry([ser = std::move(ser), createmode = args.how.tag](
                    folly::Try<NfsDispatcher::CreateRes> try_) mutable {
@@ -754,7 +772,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::mkdir(
   return extractPathComponent(std::move(args.where.name))
       .thenValue([this, ino = args.where.dir.ino, mode, &context](
                      PathComponent&& name) {
-        return dispatcher_->mkdir(ino, std::move(name), mode, context);
+        return dispatcher_->mkdir(
+            ino, std::move(name), mode, context.getObjectFetchContext());
       })
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::MkdirRes> try_) mutable {
@@ -802,7 +821,10 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::symlink(
                   symlink_data = std::move(args.symlink.symlink_data),
                   &context](PathComponent&& name) mutable {
         return dispatcher_->symlink(
-            ino, std::move(name), std::move(symlink_data), context);
+            ino,
+            std::move(name),
+            std::move(symlink_data),
+            context.getObjectFetchContext());
       })
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::SymlinkRes> try_) mutable {
@@ -877,7 +899,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::mknod(
   return extractPathComponent(std::move(args.where.name))
       .thenValue([this, ino = args.where.dir.ino, mode, rdev, &context](
                      PathComponent&& name) {
-        return dispatcher_->mknod(ino, std::move(name), mode, rdev, context);
+        return dispatcher_->mknod(
+            ino, std::move(name), mode, rdev, context.getObjectFetchContext());
       })
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::MknodRes> try_) mutable {
@@ -925,7 +948,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::remove(
   return extractPathComponent(std::move(args.object.name))
       .thenValue(
           [this, ino = args.object.dir.ino, &context](PathComponent&& name) {
-            return dispatcher_->unlink(ino, std::move(name), context);
+            return dispatcher_->unlink(
+                ino, std::move(name), context.getObjectFetchContext());
           })
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::UnlinkRes> try_) mutable {
@@ -966,7 +990,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::rmdir(
   return extractPathComponent(std::move(args.object.name))
       .thenValue(
           [this, ino = args.object.dir.ino, &context](PathComponent&& name) {
-            return dispatcher_->rmdir(ino, std::move(name), context);
+            return dispatcher_->rmdir(
+                ino, std::move(name), context.getObjectFetchContext());
           })
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::RmdirRes> try_) mutable {
@@ -1023,7 +1048,11 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::rename(
                   &context](std::tuple<PathComponent, PathComponent>&& paths) {
         auto [fromName, toName] = std::move(paths);
         return dispatcher_->rename(
-            fromIno, std::move(fromName), toIno, std::move(toName), context);
+            fromIno,
+            std::move(fromName),
+            toIno,
+            std::move(toName),
+            context.getObjectFetchContext());
       })
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::RenameRes> try_) mutable {
@@ -1059,7 +1088,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::link(
 
   // EdenFS doesn't support hardlinks, let's just collect the attributes for
   // the file and fail.
-  return dispatcher_->getattr(args.file.ino, context)
+  return dispatcher_->getattr(args.file.ino, context.getObjectFetchContext())
       .thenTry(
           [ser = std::move(ser)](const folly::Try<struct stat>& try_) mutable {
             LINK3res res{
@@ -1110,10 +1139,15 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::readdir(
     return folly::unit;
   }
 
-  return dispatcher_->readdir(args.dir.ino, args.cookie, args.count, context)
+  return dispatcher_
+      ->readdir(
+          args.dir.ino,
+          args.cookie,
+          args.count,
+          context.getObjectFetchContext())
       .thenTry([this, ino = args.dir.ino, ser = std::move(ser), &context](
                    folly::Try<NfsDispatcher::ReaddirRes> try_) mutable {
-        return dispatcher_->getattr(ino, context)
+        return dispatcher_->getattr(ino, context.getObjectFetchContext())
             .thenTry([ser = std::move(ser), try_ = std::move(try_)](
                          const folly::Try<struct stat>& tryStat) mutable {
               if (try_.hasException()) {
@@ -1158,10 +1192,14 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::readdirplus(
 
   // TODO(T107744453): Should probably acount for args.maxcount somewhere
   return dispatcher_
-      ->readdirplus(args.dir.ino, args.cookie, args.dircount, context)
+      ->readdirplus(
+          args.dir.ino,
+          args.cookie,
+          args.dircount,
+          context.getObjectFetchContext())
       .thenTry([this, ino = args.dir.ino, ser = std::move(ser), &context](
                    folly::Try<NfsDispatcher::ReaddirRes> try_) mutable {
-        return dispatcher_->getattr(ino, context)
+        return dispatcher_->getattr(ino, context.getObjectFetchContext())
             .thenTry([ser = std::move(ser), try_ = std::move(try_)](
                          const folly::Try<struct stat>& tryStat) mutable {
               if (try_.hasException()) {
@@ -1205,10 +1243,10 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::fsstat(
   serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<FSSTAT3args>::deserialize(deser);
 
-  return dispatcher_->statfs(args.fsroot.ino, context)
+  return dispatcher_->statfs(args.fsroot.ino, context.getObjectFetchContext())
       .thenTry([this, ser = std::move(ser), ino = args.fsroot.ino, &context](
                    folly::Try<struct statfs> statFsTry) mutable {
-        return dispatcher_->getattr(ino, context)
+        return dispatcher_->getattr(ino, context.getObjectFetchContext())
             .thenTry([ser = std::move(ser), statFsTry = std::move(statFsTry)](
                          const folly::Try<struct stat>& statTry) mutable {
               if (statFsTry.hasException()) {
@@ -1831,7 +1869,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
 
   // TODO: Add requestMetrics for NFS.
   std::shared_ptr<RequestMetricsScope::LockedRequestWatchList> nullRequestWatch;
-  auto context = std::make_shared<NfsRequestContext>(
+  auto context = std::make_unique<NfsRequestContext>(
       xid, handlerEntry.name, processAccessLog_);
   context->startRequest(
       dispatcher_->getStats(), handlerEntry.stat, nullRequestWatch);

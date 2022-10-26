@@ -19,51 +19,84 @@
 
 namespace facebook::eden {
 
-class RequestContext : public ObjectFetchContext {
+class FsObjectFetchContext : public ObjectFetchContext {
  public:
-  explicit RequestContext(ProcessAccessLog& pal) noexcept : pal_(pal) {}
-  ~RequestContext() noexcept;
+  struct EdenTopStats {
+   public:
+    Origin getFetchOrigin() {
+      return fetchOrigin_.load(std::memory_order_relaxed);
+    }
 
-  RequestContext(const RequestContext&) = delete;
-  RequestContext& operator=(const RequestContext&) = delete;
-  RequestContext(RequestContext&&) = delete;
-  RequestContext& operator=(RequestContext&&) = delete;
+    void setFetchOrigin(Origin origin) {
+      fetchOrigin_.store(origin, std::memory_order_relaxed);
+    }
 
-  /**
-   * Override of `ObjectFetchContext`
-   *
-   * Unlike other RequestContext function, this may be called concurrently by
-   * arbitrary threads.
-   */
+    std::chrono::nanoseconds fuseDuration{0};
+
+   private:
+    std::atomic<Origin> fetchOrigin_{Origin::NotFetched};
+  };
+
+  EdenTopStats& getEdenTopStats() {
+    return edenTopStats_;
+  }
+
+  // ObjectFetchContext overrides:
+
   void didFetch(ObjectType /*type*/, const ObjectId& /*hash*/, Origin origin)
       override {
     edenTopStats_.setFetchOrigin(origin);
   }
 
-  // Override of `getPriority`
-  ImportPriority getPriority() const override {
-    return priority_;
-  }
-
-  // Override of `deprioritize`
-  virtual void deprioritize(uint64_t delta) override {
-    ImportPriority prev = priority_.load();
-    priority_.compare_exchange_strong(prev, prev.getDeprioritized(delta));
-    if (getClientPid().has_value()) {
-      XLOG(DBG7) << "priority for " << getClientPid().value()
-                 << " has changed to: " << priority_.load().value();
-    }
-  }
-
-  // Override of `ObjectFetchContext`
   Cause getCause() const override {
-    return ObjectFetchContext::Cause::Fs;
+    return Cause::Fs;
+  }
+
+  ImportPriority getPriority() const override {
+    return priority_.load(std::memory_order_acquire);
   }
 
   const std::unordered_map<std::string, std::string>* FOLLY_NULLABLE
   getRequestInfo() const override {
     return nullptr;
   }
+
+  void deprioritize(uint64_t delta) override {
+    ImportPriority prev = priority_.load(std::memory_order_acquire);
+    priority_.compare_exchange_strong(
+        prev, prev.getDeprioritized(delta), std::memory_order_acq_rel);
+    if (getClientPid().has_value()) {
+      XLOG(DBG7) << "priority for " << getClientPid().value()
+                 << " has changed to: " << priority_.load().value();
+    }
+  }
+
+ private:
+  EdenTopStats edenTopStats_;
+
+  /**
+   * Normally, one requestData is created for only one fetch request,
+   * so priority will only be accessed by one thread, but that is
+   * not strictly guaranteed. Atomic is used here because there
+   * might be rare cases where multiple threads access priority_
+   * at the same time.
+   */
+  std::atomic<ImportPriority> priority_{
+      ImportPriority(ImportPriorityKind::High)};
+};
+
+class RequestContext {
+ public:
+  explicit RequestContext(
+      ProcessAccessLog& pal,
+      std::shared_ptr<FsObjectFetchContext> objectFetchContext) noexcept
+      : pal_{pal}, objectFetchContext_{std::move(objectFetchContext)} {}
+  ~RequestContext() noexcept;
+
+  RequestContext(const RequestContext&) = delete;
+  RequestContext& operator=(const RequestContext&) = delete;
+  RequestContext(RequestContext&&) = delete;
+  RequestContext& operator=(RequestContext&&) = delete;
 
   template <typename T>
   void startRequest(
@@ -77,6 +110,14 @@ class RequestContext : public ObjectFetchContext {
           return stats.getStatsForCurrentThread<T>().*stat;
         },
         std::move(requestWatches));
+  }
+
+  ObjectFetchContext& getObjectFetchContext() const {
+    return *objectFetchContext_;
+  }
+
+  FsObjectFetchContext& getFsObjectFetchContext() const {
+    return *objectFetchContext_;
   }
 
  private:
@@ -97,24 +138,6 @@ class RequestContext : public ObjectFetchContext {
 
   void finishRequest() noexcept;
 
-  struct EdenTopStats {
-   public:
-    Origin getFetchOrigin() {
-      return fetchOrigin_.load(std::memory_order_relaxed);
-    }
-    void setFetchOrigin(Origin origin) {
-      fetchOrigin_.store(origin, std::memory_order_relaxed);
-    }
-    std::chrono::nanoseconds fuseDuration{0};
-
-   private:
-    std::atomic<Origin> fetchOrigin_{Origin::NotFetched};
-  };
-
-  EdenTopStats& getEdenTopStats() {
-    return edenTopStats_;
-  }
-
   // Needed to track stats
   std::chrono::time_point<std::chrono::steady_clock> startTime_;
   EdenStats* stats_ = nullptr;
@@ -124,17 +147,8 @@ class RequestContext : public ObjectFetchContext {
   std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
       requestWatchList_;
   ProcessAccessLog& pal_;
-  EdenTopStats edenTopStats_;
 
-  /**
-   * Normally, one requestData is created for only one fetch request,
-   * so priority will only be accessed by one thread, but that is
-   * not strictly guaranteed. Atomic is used here because there
-   * might be rare cases where multiple threads access priority_
-   * at the same time.
-   */
-  std::atomic<ImportPriority> priority_{
-      ImportPriority(ImportPriorityKind::High)};
+  const std::shared_ptr<FsObjectFetchContext> objectFetchContext_;
 };
 
 } // namespace facebook::eden
