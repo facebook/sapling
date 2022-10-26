@@ -42,6 +42,78 @@ fn name_cs_node(name: &str, gen: u64, skip_tree_depth: u64) -> ChangesetNode {
     }
 }
 
+async fn assert_skip_tree_parent(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    u: &str,
+    u_skip_tree_parent: &str,
+) -> Result<()> {
+    assert_eq!(
+        graph
+            .storage
+            .fetch_edges(ctx, name_cs_id(u))
+            .await?
+            .unwrap()
+            .skip_tree_parent
+            .map(|node| node.cs_id),
+        Some(name_cs_id(u_skip_tree_parent))
+    );
+    Ok(())
+}
+
+async fn assert_skip_tree_skew_ancestor(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    u: &str,
+    u_skip_tree_skew_ancestor: &str,
+) -> Result<()> {
+    assert_eq!(
+        graph
+            .storage
+            .fetch_edges(ctx, name_cs_id(u))
+            .await?
+            .unwrap()
+            .skip_tree_skew_ancestor
+            .map(|node| node.cs_id),
+        Some(name_cs_id(u_skip_tree_skew_ancestor))
+    );
+    Ok(())
+}
+
+async fn assert_skip_tree_level_ancestor(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    u: &str,
+    target_depth: u64,
+    u_level_ancestor: Option<&str>,
+) -> Result<()> {
+    assert_eq!(
+        graph
+            .skip_tree_level_ancestor(ctx, name_cs_id(u), target_depth)
+            .await?
+            .map(|node| node.cs_id),
+        u_level_ancestor.map(name_cs_id)
+    );
+    Ok(())
+}
+
+async fn assert_skip_tree_lowest_common_ancestor(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    u: &str,
+    v: &str,
+    lca: Option<&str>,
+) -> Result<()> {
+    assert_eq!(
+        graph
+            .skip_tree_lowest_common_ancestor(ctx, name_cs_id(u), name_cs_id(v))
+            .await?
+            .map(|node| node.cs_id),
+        lca.map(name_cs_id)
+    );
+    Ok(())
+}
+
 /// Build a commit graph from an ASCII-art dag.
 async fn from_dag(ctx: &CoreContext, dag: &str) -> Result<CommitGraph> {
     let mut added: BTreeMap<String, ChangesetId> = BTreeMap::new();
@@ -219,176 +291,34 @@ async fn test_skip_tree(fb: FacebookInit) -> Result<()> {
             .fetch_edges(&ctx, name_cs_id("K"))
             .await?
             .unwrap()
-            .node,
-        name_cs_node("K", 9, 5)
+            .node
+            .cs_id,
+        name_cs_id("K")
     );
 
-    assert_eq!(
-        graph
-            .storage
-            .fetch_edges(&ctx, name_cs_id("G"))
-            .await?
-            .unwrap()
-            .skip_tree_parent,
-        Some(name_cs_node("B", 2, 1))
-    );
+    assert_skip_tree_parent(&graph, &ctx, "G", "B").await?;
+    assert_skip_tree_parent(&graph, &ctx, "K", "J").await?;
+    assert_skip_tree_parent(&graph, &ctx, "J", "H").await?;
+    assert_skip_tree_parent(&graph, &ctx, "H", "G").await?;
 
-    assert_eq!(
-        graph
-            .storage
-            .fetch_edges(&ctx, name_cs_id("K"))
-            .await?
-            .unwrap()
-            .skip_tree_parent,
-        Some(name_cs_node("J", 8, 4))
-    );
+    assert_skip_tree_skew_ancestor(&graph, &ctx, "H", "A").await?;
+    assert_skip_tree_skew_ancestor(&graph, &ctx, "K", "J").await?;
+    assert_skip_tree_skew_ancestor(&graph, &ctx, "U", "T").await?;
+    assert_skip_tree_skew_ancestor(&graph, &ctx, "T", "S").await?;
+    assert_skip_tree_skew_ancestor(&graph, &ctx, "S", "L").await?;
 
-    assert_eq!(
-        graph
-            .storage
-            .fetch_edges(&ctx, name_cs_id("J"))
-            .await?
-            .unwrap()
-            .skip_tree_parent,
-        Some(name_cs_node("H", 6, 3))
-    );
+    assert_skip_tree_level_ancestor(&graph, &ctx, "S", 4, Some("P")).await?;
+    assert_skip_tree_level_ancestor(&graph, &ctx, "U", 7, Some("S")).await?;
+    assert_skip_tree_level_ancestor(&graph, &ctx, "T", 7, Some("S")).await?;
+    assert_skip_tree_level_ancestor(&graph, &ctx, "O", 2, Some("N")).await?;
+    assert_skip_tree_level_ancestor(&graph, &ctx, "N", 3, None).await?;
+    assert_skip_tree_level_ancestor(&graph, &ctx, "K", 2, Some("G")).await?;
 
-    assert_eq!(
-        graph
-            .storage
-            .fetch_edges(&ctx, name_cs_id("H"))
-            .await?
-            .unwrap()
-            .skip_tree_parent,
-        Some(name_cs_node("G", 5, 2))
-    );
-
-    assert_eq!(
-        graph
-            .storage
-            .fetch_edges(&ctx, name_cs_id("H"))
-            .await?
-            .unwrap()
-            .skip_tree_skew_ancestor,
-        Some(name_cs_node("A", 1, 0))
-    );
-
-    assert_eq!(
-        graph
-            .storage
-            .fetch_edges(&ctx, name_cs_id("K"))
-            .await?
-            .unwrap()
-            .skip_tree_skew_ancestor,
-        Some(name_cs_node("J", 8, 4))
-    );
-
-    assert_eq!(
-        graph
-            .storage
-            .fetch_edges(&ctx, name_cs_id("U"))
-            .await?
-            .unwrap()
-            .skip_tree_skew_ancestor,
-        Some(name_cs_node("T", 9, 8))
-    );
-
-    assert_eq!(
-        graph
-            .storage
-            .fetch_edges(&ctx, name_cs_id("T"))
-            .await?
-            .unwrap()
-            .skip_tree_skew_ancestor,
-        Some(name_cs_node("S", 8, 7))
-    );
-
-    assert_eq!(
-        graph
-            .storage
-            .fetch_edges(&ctx, name_cs_id("S"))
-            .await?
-            .unwrap()
-            .skip_tree_skew_ancestor,
-        Some(name_cs_node("L", 1, 0))
-    );
-
-    assert_eq!(
-        graph
-            .skip_tree_level_ancestor(&ctx, name_cs_id("S"), 4)
-            .await?,
-        Some(name_cs_node("P", 5, 4))
-    );
-
-    assert_eq!(
-        graph
-            .skip_tree_level_ancestor(&ctx, name_cs_id("U"), 7)
-            .await?,
-        Some(name_cs_node("S", 8, 7))
-    );
-
-    assert_eq!(
-        graph
-            .skip_tree_level_ancestor(&ctx, name_cs_id("T"), 7)
-            .await?,
-        Some(name_cs_node("S", 8, 7))
-    );
-
-    assert_eq!(
-        graph
-            .skip_tree_level_ancestor(&ctx, name_cs_id("O"), 2)
-            .await?,
-        Some(name_cs_node("N", 3, 2))
-    );
-
-    assert_eq!(
-        graph
-            .skip_tree_level_ancestor(&ctx, name_cs_id("N"), 3)
-            .await?,
-        None
-    );
-
-    assert_eq!(
-        graph
-            .skip_tree_level_ancestor(&ctx, name_cs_id("K"), 2)
-            .await?,
-        Some(name_cs_node("G", 5, 2))
-    );
-
-    assert_eq!(
-        graph
-            .skip_tree_lowest_common_ancestor(&ctx, name_cs_id("D"), name_cs_id("F"))
-            .await?,
-        Some(name_cs_node("B", 2, 1))
-    );
-
-    assert_eq!(
-        graph
-            .skip_tree_lowest_common_ancestor(&ctx, name_cs_id("K"), name_cs_id("I"))
-            .await?,
-        Some(name_cs_node("H", 6, 3))
-    );
-
-    assert_eq!(
-        graph
-            .skip_tree_lowest_common_ancestor(&ctx, name_cs_id("D"), name_cs_id("C"))
-            .await?,
-        Some(name_cs_node("C", 3, 2))
-    );
-
-    assert_eq!(
-        graph
-            .skip_tree_lowest_common_ancestor(&ctx, name_cs_id("N"), name_cs_id("K"))
-            .await?,
-        None
-    );
-
-    assert_eq!(
-        graph
-            .skip_tree_lowest_common_ancestor(&ctx, name_cs_id("A"), name_cs_id("I"))
-            .await?,
-        Some(name_cs_node("A", 1, 0))
-    );
+    assert_skip_tree_lowest_common_ancestor(&graph, &ctx, "D", "F", Some("B")).await?;
+    assert_skip_tree_lowest_common_ancestor(&graph, &ctx, "K", "I", Some("H")).await?;
+    assert_skip_tree_lowest_common_ancestor(&graph, &ctx, "D", "C", Some("C")).await?;
+    assert_skip_tree_lowest_common_ancestor(&graph, &ctx, "N", "K", None).await?;
+    assert_skip_tree_lowest_common_ancestor(&graph, &ctx, "A", "I", Some("A")).await?;
 
     Ok(())
 }
