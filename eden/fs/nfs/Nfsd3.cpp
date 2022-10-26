@@ -1831,7 +1831,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
 
   // TODO: Add requestMetrics for NFS.
   std::shared_ptr<RequestMetricsScope::LockedRequestWatchList> nullRequestWatch;
-  auto context = RequestContext::makeSharedRequestContext<NfsRequestContext>(
+  auto context = std::make_shared<NfsRequestContext>(
       xid, handlerEntry.name, processAccessLog_);
   context->startRequest(
       dispatcher_->getStats(), handlerEntry.stat, nullRequestWatch);

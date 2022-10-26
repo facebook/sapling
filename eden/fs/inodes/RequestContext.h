@@ -24,16 +24,6 @@ class RequestContext : public ObjectFetchContext {
   explicit RequestContext(ProcessAccessLog& pal) noexcept : pal_(pal) {}
   ~RequestContext() noexcept;
 
-  /**
-   * Allocate a RequestContext.
-   */
-  template <typename T, typename... Args>
-  static std::
-      enable_if_t<std::is_base_of_v<RequestContext, T>, std::shared_ptr<T>>
-      makeSharedRequestContext(Args&&... args) {
-    return std::make_shared<T>(std::forward<Args>(args)...);
-  }
-
   RequestContext(const RequestContext&) = delete;
   RequestContext& operator=(const RequestContext&) = delete;
   RequestContext(RequestContext&&) = delete;
