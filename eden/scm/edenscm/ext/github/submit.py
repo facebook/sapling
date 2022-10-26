@@ -7,7 +7,7 @@ import asyncio
 import re
 import subprocess
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple, TypeVar
+from typing import Any, Callable, List, Optional, Tuple, TypeVar
 
 from edenscm import error, git
 from edenscm.i18n import _
@@ -134,11 +134,18 @@ async def update_commits_in_stack(ui, repo) -> int:
             refs_to_update.append(f"{hex(top.node)}:refs/heads/{branch_name}")
             pull_requests_to_create.append((top, branch_name))
 
-    if refs_to_update:
-        gitdir = git.readgitdir(repo)
-        if not gitdir:
-            raise error.Abort(_("could not find gitdir"))
+    gitdir = None
 
+    def get_gitdir() -> str:
+        nonlocal gitdir
+        if gitdir is None:
+            gitdir = git.readgitdir(repo)
+            if not gitdir:
+                raise error.Abort(_("could not find gitdir"))
+        return gitdir
+
+    if refs_to_update:
+        gitdir = get_gitdir()
         git_push_args = ["push", "--force", origin] + refs_to_update
         ui.status_err(_("pushing %d to %s\n") % (len(refs_to_update), origin))
         run_git_command(git_push_args, gitdir)
@@ -162,7 +169,11 @@ async def update_commits_in_stack(ui, repo) -> int:
     rewrite_and_archive_requests = [
         rewrite_pull_request_body(partition, index, pr_numbers_and_num_commits, ui)
         for index, partition in enumerate(partitions)
-    ] + [add_pr_head_to_archives(origin=origin, repository=repository, tip=tip)]
+    ] + [
+        add_pr_head_to_archives(
+            ui=ui, origin=origin, repository=repository, tip=tip, get_gitdir=get_gitdir
+        )
+    ]
     await asyncio.gather(*rewrite_and_archive_requests)
     return 0
 
@@ -353,7 +364,12 @@ async def get_pull_request_details_or_throw(pr_id: PullRequestId) -> PullRequest
 
 
 async def add_pr_head_to_archives(
-    *, origin: str, repository: Optional[Repository], tip: str
+    *,
+    ui,
+    origin: str,
+    repository: Optional[Repository],
+    tip: str,
+    get_gitdir: Callable[[], str],
 ):
     """Takes the specified commit (tip) and merges it into the appropriate
     archive branch for the (repo, username). GitHub will periodically garbage
@@ -405,6 +421,70 @@ async def add_pr_head_to_archives(
                 _("unexpected error when trying to create branch %s with commit %s: %s")
                 % (branch_name, tip, result.error)
             )
+    elif response and is_merge_conflict(response):
+        # Git cannot do the merge on its own, so we need to generate our own
+        # commit that merges the existing archive with the contents of `tip` to
+        # use as the new head for the archive branch.
+        gitdir = get_gitdir()
+
+        # We must fetch the archive branch because we need to have the commit
+        # object locally in order to use it with commit-tree.
+        run_git_command(["fetch", origin, branch_name], gitdir)
+        # `git fetch --verbose` does not appear to include the hash, so we must
+        # use `git ls-remote` to get it.
+        ls_remote_args = ["ls-remote", origin, branch_name]
+        ls_remote_output = (
+            run_git_command(ls_remote_args, gitdir=gitdir).decode().rstrip()
+        )
+        # oid and ref name should be separated by a tab character, but we use
+        # '\s+' just to be safe.
+        match = re.match(r"^([0-9a-f]+)\s+.*$", ls_remote_output)
+        if not match:
+            raise error.Abort(
+                _("unexpected output from `%s`: %s")
+                % (" ".join(ls_remote_args), ls_remote_output)
+            )
+
+        branch_name_oid = match[1]
+
+        # This will be the tree to use for the merge commit. We could use the
+        # tree for either `tip` or `branch_name_oid`, but since `tip` appears to
+        # be "newer," we prefer it as it seems less likely to cause a merge
+        # conflict the next time we update the archive branch.
+        tree_oid = (
+            run_git_command(["log", "--max-count=1", "--format=%T", tip], gitdir=gitdir)
+            .decode()
+            .rstrip()
+        )
+
+        # Synthetically create a new commit that has `tip` and the old branch
+        # head as parents and force-push it as the new branch head.
+        merge_commit = (
+            run_git_command(
+                [
+                    "commit-tree",
+                    "-m",
+                    "merge commit for archive created by Sapling",
+                    "-p",
+                    tip,
+                    "-p",
+                    branch_name_oid,
+                    tree_oid,
+                ],
+                gitdir,
+            )
+            .decode()
+            .rstrip()
+        )
+        refspec = f"{merge_commit}:refs/heads/{branch_name}"
+        git_push_args = [
+            "push",
+            "--force",
+            origin,
+            refspec,
+        ]
+        ui.status_err(_("force-pushing %s to %s\n") % (refspec, origin))
+        run_git_command(git_push_args, gitdir)
     else:
         raise error.Abort(
             _("unexpected error when trying to merge %s into %s: %s")
@@ -445,6 +525,43 @@ def is_already_merged_error(response) -> bool:
             continue
         message = err.get("message")
         if isinstance(message, str) and "Already merged" in message:
+            return True
+    return False
+
+
+def is_merge_conflict(response) -> bool:
+    r"""
+    >>> response = {
+    ...   "data": {
+    ...     "mergeBranch": None
+    ...   },
+    ...   "errors": [
+    ...     {
+    ...       "type": "UNPROCESSABLE",
+    ...       "path": [
+    ...         "mergeBranch"
+    ...       ],
+    ...       "locations": [
+    ...         {
+    ...           "line": 3,
+    ...           "column": 3
+    ...         }
+    ...       ],
+    ...       "message": "Failed to merge: \"Merge conflict\""
+    ...     }
+    ...   ]
+    ... }
+    >>> is_merge_conflict(response)
+    True
+    """
+    errors = response.get("errors")
+    if not errors or not isinstance(errors, list):
+        return False
+    for err in errors:
+        if err.get("type") != "UNPROCESSABLE":
+            continue
+        message = err.get("message")
+        if isinstance(message, str) and "Merge conflict" in message:
             return True
     return False
 
@@ -502,16 +619,19 @@ async def get_username() -> Optional[str]:
             return none_throws(result.ok)
 
 
-def run_git_command(args: List[str], gitdir: str):
+def run_git_command(args: List[str], gitdir: str) -> bytes:
+    """Returns stdout as a bytes if the command is successful."""
     full_args = ["git", "--git-dir", gitdir] + args
     proc = subprocess.run(full_args, capture_output=True)
-    if proc.returncode != 0:
+    if proc.returncode == 0:
+        return proc.stdout
+    else:
         raise error.Abort(
             _("`%s` failed with exit code %d: %s")
             % (
                 " ".join(full_args),
                 proc.returncode,
-                f"stdout: {proc.stdout}\nstderr: {proc.stderr}\n",
+                f"stdout: {proc.stdout.decode()}\nstderr: {proc.stderr.decode()}\n",
             )
         )
 
