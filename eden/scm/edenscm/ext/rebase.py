@@ -83,7 +83,7 @@ testedwith = "ships-with-hg-core"
 colortable = {"rebase.manual.update": "yellow"}
 
 
-def _savegraft(ctx, extra):
+def _savegraft(ctx, extra) -> None:
     s = ctx.extra().get("source", None)
     if s is not None:
         extra["source"] = s
@@ -92,7 +92,7 @@ def _savegraft(ctx, extra):
         extra["intermediate-source"] = s
 
 
-def _savebranch(ctx, extra):
+def _savebranch(ctx, extra) -> None:
     extra["branch"] = ctx.branch()
 
 
@@ -140,7 +140,7 @@ def _revsetdestrebase(repo, subset, x):
     return subset & smartset.baseset([_destrebase(repo, sourceset)], repo=repo)
 
 
-def _ctxdesc(ctx):
+def _ctxdesc(ctx) -> str:
     """short description for a context"""
     desc = '%s "%s"' % (ctx, ctx.description().split("\n", 1)[0])
     repo = ctx.repo()
@@ -1767,7 +1767,7 @@ def adjustdest(repo, rev, destmap, state, skipped):
     return result
 
 
-def _checkobsrebase(repo, ui, rebaseobsrevs, rebaseobsskipped):
+def _checkobsrebase(repo, ui, rebaseobsrevs, rebaseobsskipped) -> None:
     """
     Abort if rebase will create divergence or rebase is noop because of markers
 
@@ -1999,7 +1999,7 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
     return newps[0], newps[1], base
 
 
-def storecollapsemsg(repo, collapsemsg):
+def storecollapsemsg(repo, collapsemsg: str) -> None:
     "Store the collapse message to allow recovery"
     collapsemsg = collapsemsg or ""
     f = repo.localvfs("last-message.txt", "wb")
@@ -2007,12 +2007,12 @@ def storecollapsemsg(repo, collapsemsg):
     f.close()
 
 
-def clearcollapsemsg(repo):
+def clearcollapsemsg(repo) -> None:
     "Remove collapse message file"
     repo.localvfs.unlinkpath("last-message.txt", ignoremissing=True)
 
 
-def restorecollapsemsg(repo, isabort):
+def restorecollapsemsg(repo, isabort) -> str:
     "Restore previously stored collapse message"
     try:
         f = repo.localvfs("last-message.txt", "rb")
@@ -2029,7 +2029,7 @@ def restorecollapsemsg(repo, isabort):
     return collapsemsg
 
 
-def clearstatus(repo):
+def clearstatus(repo) -> None:
     "Remove the status files"
     # Make sure the active transaction won't write the state file
     tr = repo.currenttransaction()
@@ -2038,7 +2038,7 @@ def clearstatus(repo):
     repo.localvfs.unlinkpath("rebasestate", ignoremissing=True)
 
 
-def needupdate(repo, state):
+def needupdate(repo, state) -> bool:
     """check whether we should `update --clean` away from a merge, or if
     somehow the working dir got forcibly updated, e.g. by older hg"""
     parents = [p.rev() for p in repo[None].parents()]
@@ -2057,7 +2057,7 @@ def needupdate(repo, state):
     return False
 
 
-def abort(repo, originalwd, destmap, state, activebookmark=None):
+def abort(repo, originalwd, destmap, state, activebookmark=None) -> int:
     """Restore the repository to its original state.  Additional args:
 
     activebookmark: the name of the bookmark that should be active after the
@@ -2204,8 +2204,8 @@ def buildstate(repo, destmap, collapse):
 
 
 def clearrebased(
-    ui, repo, templ, destmap, state, skipped, collapsedas=None, keepf=False
-):
+    ui, repo, templ, destmap, state, skipped, collapsedas=None, keepf: bool = False
+) -> None:
     """dispose of rebased revision at the end of the rebase
 
     If `collapsedas` is not None, the rebase was a collapse whose result if the
@@ -2360,7 +2360,7 @@ def _computeobsoletenotrebased(repo, rebaseobsrevs, destmap):
     return obsoletenotrebased, obsoletewithoutsuccessorindestination
 
 
-def summaryhook(ui, repo):
+def summaryhook(ui, repo) -> None:
     if not repo.localvfs.exists("rebasestate"):
         return
     try:
@@ -2383,7 +2383,7 @@ def summaryhook(ui, repo):
     )
 
 
-def uisetup(ui):
+def uisetup(ui) -> None:
     # Replace pull with a decorator to provide --rebase option
     entry = extensions.wrapcommand(commands.table, "pull", pullrebase)
     entry[1].append(
