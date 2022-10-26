@@ -19,10 +19,10 @@ import ghstack
 import ghstack.action
 import ghstack.checkout
 import ghstack.config
-import ghstack.eden_shell
 import ghstack.github_real
 import ghstack.land
 import ghstack.logs
+import ghstack.sapling_shell
 import ghstack.submit
 import ghstack.unlink
 
@@ -217,7 +217,7 @@ def _create_ghstack_context(ui):
     ghstack.logs.rotate()
 
     conf = ghstack.config.read_config()
-    sh = ghstack.eden_shell.EdenShell(conf=conf, sapling_cli=cli)
+    sh = ghstack.sapling_shell.SaplingShell(conf=conf, sapling_cli=cli)
     github = ghstack.github_real.RealGitHubEndpoint(
         oauth_token=conf.github_oauth,
         proxy=conf.proxy,

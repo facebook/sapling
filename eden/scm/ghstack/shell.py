@@ -82,6 +82,14 @@ class Shell(object):
         self.testing = testing
         self.testing_time = 1112911993
 
+    def is_git(self) -> bool:
+        """Whether this shell corresponds to a Git working copy."""
+        return True
+
+    def is_sapling(self) -> bool:
+        """Whether this shell corresponds to a Sapling working copy."""
+        return False
+
     def sh(self, *args: str,  # noqa: C901
            env: Optional[Dict[str, str]] = None,
            stderr: _HANDLE = None,

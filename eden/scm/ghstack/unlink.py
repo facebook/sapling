@@ -4,7 +4,6 @@ import textwrap
 from dataclasses import dataclass
 from typing import List, Optional, Set
 
-import ghstack.eden
 import ghstack.diff
 import ghstack.git
 import ghstack.github
@@ -76,8 +75,6 @@ def main(*,
                 "current stack; these commits are not:\n{}"
                 .format("\n".join(invalid_commits)))
 
-    is_eden = ghstack.eden.is_eden_working_copy(sh)
-
     # Run the interactive rebase.  Don't start rewriting until we
     # hit the first commit that needs it.
     head = base
@@ -102,7 +99,7 @@ def main(*,
             logging.debug("-- edited commit_msg:\n{}".format(
                 textwrap.indent(commit_msg, '   ')))
 
-        if isinstance(sh, ghstack.eden_shell.EdenShell):
+        if isinstance(sh, ghstack.sapling_shell.SaplingShell):
             # After rewriting the commit message via metaedit, update the
             # hashes for the desecendant commits.
             mappings = sh.rewrite_commit_message(commit_id, commit_msg)
@@ -138,7 +135,7 @@ def main(*,
                 "-p", head,
                 input=commit_msg))
 
-    if not is_eden:
+    if sh.is_git():
         sh.git('reset', '--soft', head)
 
         logging.info("""

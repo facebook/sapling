@@ -1,16 +1,16 @@
 import json
 import re
 
-import ghstack.eden_shell
 import ghstack.github
 import ghstack.github_utils
+import ghstack.sapling_shell
 from ghstack.ghs_types import GitCommitHash
 
 
 def main(pull_request: str,
          remote_name: str,
          github: ghstack.github.GitHubEndpoint,
-         sh: ghstack.eden_shell.EdenShell,
+         sh: ghstack.sapling_shell.SaplingShell,
          github_url: str) -> None:
     """The general approach to land is:
 
@@ -47,9 +47,9 @@ def main(pull_request: str,
     )['commit']
 
     # Do a `pull` so we have the latest commit for the default branch locally.
-    sh.run_eden_command("pull")
-    default_branch_oid = sh.run_eden_command("log", "-T", "{node}", "-r", default_branch, "--limit", "1")
-    base = sh.run_eden_command("log", "-T", "{node}", "-r", f"ancestor({orig_oid}, {default_branch_oid})")
+    sh.run_sapling_command("pull")
+    default_branch_oid = sh.run_sapling_command("log", "-T", "{node}", "-r", default_branch, "--limit", "1")
+    base = sh.run_sapling_command("log", "-T", "{node}", "-r", f"ancestor({orig_oid}, {default_branch_oid})")
 
     stack = ghstack.git.parse_header(
         # pyre-ignore[6]
@@ -74,7 +74,7 @@ def main(pull_request: str,
         # Rebase each commit in the stack onto the default branch.
         rebase_base = default_branch_oid
         for s in stack:
-            stdout = sh.run_eden_command("rebase", "--keep", "-s", s.oid, "-d", rebase_base, "-q", "-T", "{nodechanges|json}")
+            stdout = sh.run_sapling_command("rebase", "--keep", "-s", s.oid, "-d", rebase_base, "-q", "-T", "{nodechanges|json}")
             # If there is no output, it appears that '""' is returned as opposed
             # to '{}', which is a little weird...
             if not stdout or stdout == '""':
@@ -107,7 +107,7 @@ def main(pull_request: str,
             ghstack.github_utils.update_ref(github=github, repo_id=repo_id, ref=base_ref, target_ref=head_ref)
 
         # All good! Push!
-        sh.run_eden_command("push", "--rev", rebase_base, "--to", default_branch)
+        sh.run_sapling_command("push", "--rev", rebase_base, "--to", default_branch)
 
         # Delete the branches
         for orig_ref in stack_orig_refs:

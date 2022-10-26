@@ -1,9 +1,9 @@
 import logging
 import re
 
-import ghstack.eden_shell
 import ghstack.github
 import ghstack.github_utils
+import ghstack.sapling_shell
 import ghstack.shell
 
 
@@ -32,14 +32,14 @@ def main(pull_request: str,
 
     # TODO: Handle remotes correctly too (so this subsumes hub)
 
-    if isinstance(sh, ghstack.eden_shell.EdenShell):
+    if isinstance(sh, ghstack.sapling_shell.SaplingShell):
         repo_id = repository["id"]
         oid = ghstack.github_utils.get_commit_and_tree_for_ref(
             github=github,
             repo_id=repo_id,
             ref=orig_ref,
         )['commit']
-        sh.run_eden_command("update", oid)
+        sh.run_sapling_command("update", oid)
     else:
         sh.git("fetch", "--prune", remote_name)
         sh.git("checkout", remote_name + "/" + orig_ref)

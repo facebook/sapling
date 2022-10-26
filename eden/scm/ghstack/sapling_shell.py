@@ -9,7 +9,7 @@ from ghstack.shell import _SHELL_RET
 
 WILDCARD_ARG = {}
 
-class EdenShell(ghstack.shell.Shell):
+class SaplingShell(ghstack.shell.Shell):
     def __init__(self,
                  conf: ghstack.config.Config,
                  quiet: bool = False,
@@ -20,12 +20,20 @@ class EdenShell(ghstack.shell.Shell):
         self.conf = conf
         self.sapling_cli = sapling_cli
 
-        self.git_dir = self._run_eden_command([
+        self.git_dir = self._run_sapling_command([
             'debugshell',
             '-c',
             'print(repo.svfs.join(repo.svfs.readutf8("gitdir")))',
         ])
         logging.debug(f"--git-dir set to: {self.git_dir}")
+
+    def is_git(self) -> bool:
+        """Whether this shell corresponds to a Git working copy."""
+        return False
+
+    def is_sapling(self) -> bool:
+        """Whether this shell corresponds to a Sapling working copy."""
+        return True
 
     def git(self, *_args: str, **kwargs: Any  # noqa: F811
             ) -> _SHELL_RET:
@@ -34,7 +42,7 @@ class EdenShell(ghstack.shell.Shell):
         if match_args(["remote", "get-url", remote_name], args):
             return self._get_origin()
         elif match_args(["fetch", "--prune"], args):
-            raise ValueError(f"unexpected use of `git fetch` in EdenShell: {' '.join(args)}")
+            raise ValueError(f"unexpected use of `git fetch` in SaplingShell: {' '.join(args)}")
         elif match_args(["merge-base", WILDCARD_ARG, "HEAD"], args):
             # remote is probably "origin/main", which we need to convert to
             # "main" to use with the `log` subcommand.
@@ -42,13 +50,13 @@ class EdenShell(ghstack.shell.Shell):
             index = remote.rfind('/')
             if index != -1:
                 remote = remote[(index+1):]
-            return self._run_eden_command(["log", "-T", "{node}", "-r", f"ancestor(., {remote})"])
+            return self._run_sapling_command(["log", "-T", "{node}", "-r", f"ancestor(., {remote})"])
         elif match_args(["push", remote_name], args):
             if len(args) == 2:
                 raise ValueError(f"expected more args: {args}")
             args[1] = self._get_origin()
         elif match_args(["reset"], args):
-            raise ValueError(f"unexpected use of `git reset` in EdenShell: {' '.join(args)}")
+            raise ValueError(f"unexpected use of `git reset` in SaplingShell: {' '.join(args)}")
 
         git_args = self._rewrite_args(args)
         full_args = ["--git-dir", self.git_dir] + git_args
@@ -61,7 +69,7 @@ class EdenShell(ghstack.shell.Shell):
         # not be able to resolve arguments like HEAD, so we must resolve those
         # to a full hash before running Git.
         if 'HEAD' in args:
-            top = self._run_eden_command(['log', '-r', 'max(descendants(.))', '-T', '{node}'])
+            top = self._run_sapling_command(['log', '-r', 'max(descendants(.))', '-T', '{node}'])
             for index, arg in enumerate(args):
                 if arg == 'HEAD':
                     args[index] = top
@@ -70,12 +78,12 @@ class EdenShell(ghstack.shell.Shell):
 
     def _get_origin(self):
         # This should be good enough, right???
-        return self._run_eden_command(["config", "paths.default"])
+        return self._run_sapling_command(["config", "paths.default"])
 
-    def run_eden_command(self, *args: str) -> str:
-        return self._run_eden_command(list(args))
+    def run_sapling_command(self, *args: str) -> str:
+        return self._run_sapling_command(list(args))
 
-    def _run_eden_command(self, args: List[str]) -> str:
+    def _run_sapling_command(self, args: List[str]) -> str:
         env = dict(os.environ)
         env["SL_AUTOMATION"] = "true"
         full_args = [self.sapling_cli] + args
@@ -85,7 +93,7 @@ class EdenShell(ghstack.shell.Shell):
         return self._maybe_rstrip(stdout)
 
     def rewrite_commit_message(self, rev: str, commit_msg: str) -> Dict[str, str]:
-        stdout = self.run_eden_command(
+        stdout = self.run_sapling_command(
             "metaedit", "-q", "-T", "{nodechanges|json}", "-r", rev, "-m", commit_msg)
         # Note that updates will look something like:
         #

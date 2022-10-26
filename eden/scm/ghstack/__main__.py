@@ -139,14 +139,19 @@ def create_shell(conf: ghstack.config.Config) -> ghstack.shell.Shell:
     import pathlib
     cwd = pathlib.Path(os.getcwd())
     candidates = [cwd] + list(pathlib.Path(os.getcwd()).parents)
+    sapling_dotdir_candidates = [
+        # @fb-only
+        '.sl',
+    ]
     for c in candidates:
         git_dir = c.joinpath('.git')
         if git_dir.is_dir():
             break
-        eden_dir = c.joinpath('.hg')
-        if eden_dir.is_dir():
-            import ghstack.eden_shell
-            return ghstack.eden_shell.EdenShell(conf=conf)
+        for dotdir in sapling_dotdir_candidates:
+            sapling_dir = c.joinpath(dotdir)
+            if sapling_dir.is_dir():
+                import ghstack.sapling_shell
+                return ghstack.sapling_shell.SaplingShell(conf=conf)
 
     import ghstack.shell
     return ghstack.shell.Shell()

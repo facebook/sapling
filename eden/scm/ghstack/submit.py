@@ -6,7 +6,6 @@ from typing import Final, List, NamedTuple, Optional, Set, Tuple
 
 import ghstack
 import ghstack.diff
-import ghstack.eden
 import ghstack.git
 import ghstack.github
 import ghstack.github_utils
@@ -158,8 +157,7 @@ def main(*,
     repo_id = repo["id"]
     default_branch = repo["default_branch"]
 
-    is_eden = ghstack.eden.is_eden_working_copy(sh)
-    if not is_eden:
+    if sh.is_git():
         sh.git("fetch", "--prune", remote_name)
     base = GitCommitHash(sh.git("merge-base", f"{remote_name}/{default_branch}", "HEAD"))
 
@@ -197,8 +195,7 @@ def main(*,
                           draft=draft,
                           stack=list(reversed(stack)),
                           github_url=github_url,
-                          remote_name=remote_name,
-                          is_eden=is_eden)
+                          remote_name=remote_name)
     submitter.prepare_updates()
     submitter.push_updates()
 
@@ -313,9 +310,6 @@ class Submitter(object):
     # Name of the upstream remote (normally origin)
     remote_name: str
 
-    # True if ghstack is operating in an Eden checkout.
-    is_eden: bool
-
     def __init__(
             self,
             github: ghstack.github.GitHubEndpoint,
@@ -336,8 +330,7 @@ class Submitter(object):
             no_skip: bool,
             draft: bool,
             github_url: str,
-            remote_name: str,
-            is_eden: bool):
+            remote_name: str):
         self.github = github
         self.sh = sh
         self.username = username
@@ -361,7 +354,6 @@ class Submitter(object):
         self.draft = draft
         self.github_url = github_url
         self.remote_name = remote_name
-        self.is_eden = is_eden
 
     def _default_title_and_body(self, commit: ghstack.diff.Diff,
                                 old_pr_body: Optional[str]
@@ -666,7 +658,7 @@ Since we cannot proceed, ghstack will abort now.
         """
         Process a diff that has an existing upload to GitHub.
         """
-        # TODO: Special-case is_eden.
+        # TODO: Special-case Sapling.
 
         commit = elab_commit.diff
         username = elab_commit.username
@@ -897,7 +889,7 @@ Since we cannot proceed, ghstack will abort now.
         ancestors are unaffected and no surgery needs to be done on `self.stack`.
         In this case, the `stack_index` argument is ignored.
         """
-        if isinstance(self.sh, ghstack.eden_shell.EdenShell):
+        if isinstance(self.sh, ghstack.sapling_shell.SaplingShell):
             commit = self.stack[stack_index]
             # In Eden, update the commit message for the user's existing commit,
             # but avoid creating a local head for the corresponding /orig
@@ -986,7 +978,7 @@ Since we cannot proceed, ghstack will abort now.
         # In Eden, updates should happen via `hg metaedit` without doing
         # `hg update`, so there should be no reason to run something like
         # `git reset --soft`.
-        if not self.is_eden:
+        if self.sh.is_git():
             # fix the HEAD pointer
             self.sh.git("reset", "--soft", self.base_orig)
 
@@ -1108,7 +1100,7 @@ Since we cannot proceed, ghstack will abort now.
 
 def run_pre_ghstack_hook(sh: ghstack.shell.Shell, base_commit: str, top_commit: str) -> None:
     """If a `pre-ghstack` git hook is configured, run it."""
-    if isinstance(sh, ghstack.eden_shell.EdenShell):
+    if isinstance(sh, ghstack.sapling_shell.SaplingShell):
         hooks_path = os.path.join(sh.git_dir, 'hooks')
     else:
         default_hooks_path = os.path.join(sh.git("rev-parse", "--show-toplevel"), ".git/hooks")

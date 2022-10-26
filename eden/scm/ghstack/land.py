@@ -1,10 +1,9 @@
 import re
 
-import ghstack.eden
-import ghstack.eden_shell
 import ghstack.git
 import ghstack.github
 import ghstack.github_utils
+import ghstack.sapling_shell
 import ghstack.shell
 from ghstack.ghs_types import GitCommitHash
 
@@ -15,9 +14,9 @@ def main(pull_request: str,
          sh: ghstack.shell.Shell,
          github_url: str) -> None:
     import ghstack
-    if isinstance(sh, ghstack.eden_shell.EdenShell):
-        import ghstack.eden_land
-        return ghstack.eden_land.main(pull_request, remote_name, github, sh, github_url)
+    if isinstance(sh, ghstack.sapling_shell.SaplingShell):
+        import ghstack.sapling_land
+        return ghstack.sapling_land.main(pull_request, remote_name, github, sh, github_url)
 
     # We land the entire stack pointed to by a URL.
     # Local state is ignored; PR is source of truth
