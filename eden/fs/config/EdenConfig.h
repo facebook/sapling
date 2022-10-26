@@ -224,6 +224,15 @@ class EdenConfig : private ConfigSettingManager {
       std::chrono::minutes(5),
       this};
 
+  /**
+   * If EdenFS should auto migrate FUSE repos to NFS on Ventura.
+   * only used in the CLI, including here to get rid of warnings.
+   */
+  ConfigSetting<bool> migrateToNFSVentura{
+      "core:migrate_existing_to_nfs",
+      false,
+      this};
+
   // [config]
 
   /**
