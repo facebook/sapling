@@ -13,61 +13,52 @@ use anyhow::Context;
 use anyhow::Result;
 use blobstore_factory::make_packblob;
 use borrowed::borrowed;
-use clap_old::Arg;
-use cmdlib::args;
-use cmdlib::args::MononokeClapApp;
+use clap::Parser;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream;
 use futures::stream::TryStreamExt;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::BlobstoreId;
+use mononoke_app::args::RepoArgs;
+use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::MononokeApp;
+use mononoke_app::MononokeAppBuilder;
 
 mod pack_utils;
 
-const ARG_ZSTD_LEVEL: &str = "zstd-level";
-const ARG_INNER_ID: &str = "inner-blobstore-id";
-const ARG_DRY_RUN: &str = "dry-run";
-const ARG_SCHEDULED_MAX: &str = "scheduled-max";
+#[derive(Parser)]
+#[clap(
+    about = "Given a set of blob names on stdin, replace them with a packed version that takes less space"
+)]
+struct MononokePackerArgs {
+    #[clap(flatten)]
+    repo_args: RepoArgs,
+
+    #[clap(
+        long,
+        help = "If main blobstore in the storage config is a multiplexed one, use inner blobstore with this id"
+    )]
+    inner_blobstore_id: Option<u64>,
+
+    #[clap(long, help = "zstd compression level to use")]
+    zstd_level: i32,
+
+    #[clap(
+        long,
+        help = "If true, do not upload the finished pack to the blobstore"
+    )]
+    dry_run: bool,
+
+    #[clap(
+        long,
+        default_value_t = 10,
+        help = "Maximum number of parallel packs to work on. Default 10"
+    )]
+    scheduled_max: usize,
+}
 
 const PACK_PREFIX: &str = "multiblob-";
-
-fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
-    args::MononokeAppBuilder::new("Packer")
-        .with_advanced_args_hidden()
-        .with_scuba_logging_args()
-        .with_repo_required(args::RepoRequirement::ExactlyOne)
-        .build()
-        .about("Given a set of blob names on stdin, replace them with a packed version that takes less space")
-        .arg(
-            Arg::with_name(ARG_INNER_ID)
-                .long(ARG_INNER_ID)
-                .takes_value(true)
-                .required(false)
-                .help("If main blobstore in the storage config is a multiplexed one, use inner blobstore with this id")
-        )
-        .arg(
-            Arg::with_name(ARG_ZSTD_LEVEL)
-                .long(ARG_ZSTD_LEVEL)
-                .takes_value(true)
-                .required(true)
-                .help("zstd compression level to use")
-        )
-        .arg(
-            Arg::with_name(ARG_DRY_RUN)
-            .long(ARG_DRY_RUN)
-            .takes_value(true)
-            .required(false)
-            .help("If true, do not upload the finished pack to the blobstore")
-        )
-        .arg(
-            Arg::with_name(ARG_SCHEDULED_MAX)
-                .long(ARG_SCHEDULED_MAX)
-                .takes_value(true)
-                .required(false)
-                .help("Maximum number of parallel packs to work on. Default 10"),
-        )
-}
 
 fn get_blobconfig(
     mut blob_config: BlobConfig,
@@ -101,49 +92,36 @@ fn get_blobconfig(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let matches = setup_app().get_matches(fb)?;
+    let app: MononokeApp = MononokeAppBuilder::new(fb)
+        .with_app_extension(Fb303AppExtension {})
+        .build::<MononokePackerArgs>()?;
 
-    let logger = matches.logger();
-    let runtime = matches.runtime();
-    let config_store = matches.config_store();
+    let args: MononokePackerArgs = app.args()?;
+    let inner_id = args.inner_blobstore_id;
+    let zstd_level = args.zstd_level;
+    let dry_run = args.dry_run;
+    let max_parallelism = args.scheduled_max;
+
+    let env = app.environment();
+    let logger = app.logger();
+    let runtime = app.runtime();
+    let config_store = app.config_store();
 
     let ctx = CoreContext::new_for_bulk_processing(fb, logger.clone());
-    let blobstore_options = matches.blobstore_options();
-    let readonly_storage = matches.readonly_storage();
-    let blobconfig = args::not_shardmanager_compatible::get_config(config_store, &matches)?
-        .1
-        .storage_config
-        .blobstore;
-    let inner_id = matches
-        .value_of(ARG_INNER_ID)
-        .map(str::parse::<u64>)
-        .transpose()?;
-    let zstd_level = matches
-        .value_of(ARG_ZSTD_LEVEL)
-        .map(str::parse::<i32>)
-        .transpose()?
-        .expect("Required argument not present");
-    let dry_run = matches
-        .value_of(ARG_DRY_RUN)
-        .map(str::parse::<bool>)
-        .transpose()?
-        .unwrap_or(false);
+    let readonly_storage = &env.readonly_storage;
+    let blobstore_options = &env.blobstore_options;
 
-    let repo_prefix = {
-        let repo_id = args::not_shardmanager_compatible::get_repo_id(config_store, &matches)?;
-        repo_id.prefix()
-    };
-
-    let max_parallelism = matches
-        .value_of(ARG_SCHEDULED_MAX)
-        .map_or(Ok(10), str::parse::<usize>)?;
+    let repo_arg = args.repo_args.id_or_name()?;
+    let (_repo_name, repo_config) = app.repo_config(repo_arg)?;
+    let blobconfig = repo_config.storage_config.blobstore;
+    let repo_prefix = repo_config.repoid.prefix();
 
     let input_lines: Vec<String> = io::stdin()
         .lock()
         .lines()
         .collect::<Result<_, io::Error>>()?;
 
-    let mut scuba = matches.scuba_sample_builder();
+    let mut scuba = env.scuba_sample_builder.clone();
     scuba.add_opt("blobstore_id", inner_id);
 
     runtime.block_on(async move {
