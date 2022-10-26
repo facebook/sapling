@@ -19,12 +19,14 @@ use cpython_ext::ExtractInnerRef;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use cpython_ext::Str;
+use pathmatcher::build_patterns;
 use pathmatcher::AlwaysMatcher;
 use pathmatcher::DifferenceMatcher;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::GitignoreMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::NeverMatcher;
+use pathmatcher::PatternKind;
 use pathmatcher::RegexMatcher;
 use pathmatcher::TreeMatcher;
 use pathmatcher::UnionMatcher;
@@ -36,6 +38,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<gitignorematcher>(py)?;
     m.add_class::<treematcher>(py)?;
     m.add_class::<regexmatcher>(py)?;
+    m.add_class::<pydynmatcher>(py)?;
     m.add(py, "normalizeglob", py_fn!(py, normalize_glob(path: &str)))?;
     m.add(py, "plaintoglob", py_fn!(py, plain_to_glob(path: &str)))?;
     m.add(
@@ -128,6 +131,54 @@ py_class!(pub class treematcher |py| {
 
 impl ExtractInnerRef for treematcher {
     type Inner = Arc<TreeMatcher>;
+
+    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
+        self.matcher(py)
+    }
+}
+
+py_class!(pub class pydynmatcher |py| {
+    data matcher: Arc<dyn 'static + Matcher + Send + Sync>;
+
+    def __new__(_cls,
+        patterns: Vec<String>,
+        include: Vec<String>,
+        exclude: Vec<String>,
+        case_sensitive: bool
+    ) -> PyResult<Self> {
+        let default_kind = PatternKind::Glob;
+        let matcher = pathmatcher::build_matcher(
+            &build_patterns(&patterns, default_kind),
+            &build_patterns(&include, default_kind),
+            &build_patterns(&exclude, default_kind),
+            case_sensitive
+        ).map_pyerr(py)?;
+        Self::create_instance(py, matcher)
+    }
+
+    def matches_file(&self, path: &PyPath) -> PyResult<bool> {
+        let repo_path = path.to_repo_path().map_pyerr(py)?;
+        self.matcher(py).matches_file(repo_path).map_pyerr(py)
+    }
+
+    def matches_directory(&self, path: &PyPath) -> PyResult<Option<bool>> {
+        if path.as_path().as_os_str().is_empty() {
+            Ok(None)
+        } else {
+            let repo_path = path.to_repo_path().map_pyerr(py)?;
+            let directory_match = self.matcher(py).matches_directory(repo_path).map_pyerr(py)?;
+            match directory_match {
+                DirectoryMatch::Everything => Ok(Some(true)),
+                DirectoryMatch::Nothing => Ok(Some(false)),
+                DirectoryMatch::ShouldTraverse => Ok(None)
+            }
+        }
+    }
+
+});
+
+impl ExtractInnerRef for pydynmatcher {
+    type Inner = Arc<dyn 'static + Matcher + Send + Sync>;
 
     fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
         self.matcher(py)
@@ -237,6 +288,9 @@ pub fn extract_matcher(py: Python, matcher: PyObject) -> PyResult<Arc<dyn Matche
     if let Ok(matcher) = regexmatcher::downcast_from(py, matcher.clone_ref(py)) {
         return Ok(matcher.extract_inner(py));
     }
+    if let Ok(matcher) = pydynmatcher::downcast_from(py, matcher.clone_ref(py)) {
+        return Ok(matcher.extract_inner(py));
+    }
     let py_type = matcher.get_type(py);
     let type_name = py_type.name(py);
     if type_name.as_ref() == "treematcher" {
@@ -246,6 +300,9 @@ pub fn extract_matcher(py: Python, matcher: PyObject) -> PyResult<Arc<dyn Matche
         return extract_matcher(py, matcher.getattr(py, "_matcher")?);
     }
     if type_name.as_ref() == "regexmatcher" {
+        return extract_matcher(py, matcher.getattr(py, "_matcher")?);
+    }
+    if type_name.as_ref() == "pydynmatcher" {
         return extract_matcher(py, matcher.getattr(py, "_matcher")?);
     }
     if type_name.as_ref() == "unionmatcher" {
