@@ -18,6 +18,7 @@ Show all commands except debug commands
   cat
   clone
   commit
+  configfile
   continue
   copy
   diff
@@ -331,6 +332,7 @@ Show aliases with -v
   cat
   clone
   commit ci
+  configfile
   continue
   copy cp
   diff
@@ -408,6 +410,7 @@ Show all commands + options
   cat: output, rev, decode, include, exclude, template
   clone: noupdate, updaterev, rev, pull, stream, shallow, git
   commit: addremove, amend, edit, interactive, reuse-message, include, exclude, message, logfile, date, user
+  configfile: user, local, system
   config: edit, user, local, system, global, template
   continue: 
   copy: after, force, include, exclude, dry-run

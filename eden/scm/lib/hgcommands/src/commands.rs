@@ -29,6 +29,7 @@ mod debug;
 commands! {
     mod clone;
     mod config;
+    mod configfile;
     mod goto;
     mod root;
     mod status;
