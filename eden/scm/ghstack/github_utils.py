@@ -1,6 +1,8 @@
 import re
 from typing import List, Optional, TypedDict
 
+from edenscm import error
+from edenscm.i18n import _
 import ghstack.github
 import ghstack.shell
 from ghstack.ghs_types import GitCommitHash, GhNumber, GitHubRepositoryId, GitTreeHash
@@ -68,6 +70,9 @@ def get_github_repo_info(
     else:
         name_with_owner: GitHubRepoNameWithOwner = {"owner": repo_owner, "name": repo_name}
 
+    owner = name_with_owner["owner"]
+    name = name_with_owner["name"]
+
     # TODO: Cache this guy
     repo = github.graphql(
         """
@@ -80,14 +85,25 @@ def get_github_repo_info(
                 }
             }
         }""",
-        owner=name_with_owner["owner"],
-        name=name_with_owner["name"])["data"]["repository"]
+        owner=owner,
+        name=name)["data"]["repository"]
+
+    # Note for a new repo without any commits, this will be null in the GraphQL
+    # response.
+    branch_ref = repo["defaultBranchRef"]
+    if branch_ref is None:
+        raise error.Abort(_("""\
+This repository has no default branch. This is likely because it is empty.
+
+Consider using %s to initialize your
+repository.
+""") % f"https://github.com/{owner}/{name}/new/main")
 
     return {
         "name_with_owner": name_with_owner,
         "id": repo["id"],
         "is_fork": repo["isFork"],
-        "default_branch": repo["defaultBranchRef"]["name"],
+        "default_branch": branch_ref["name"],
     }
 
 
