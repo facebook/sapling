@@ -12,7 +12,7 @@ Config = NamedTuple('Config', [
     # Proxy to use when making connections to GitHub
     ('proxy', Optional[str]),
     # OAuth token to authenticate to GitHub with
-    ('github_oauth', str),
+    ('github_oauth', Optional[str]),
     # GitHub username; used to namespace branches we create
     ('github_username', str),
     # Token to authenticate to CircleCI with

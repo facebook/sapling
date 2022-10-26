@@ -19,7 +19,7 @@ import ghstack
 import ghstack.action
 import ghstack.checkout
 import ghstack.config
-import ghstack.github_real
+import ghstack.github_gh_cli
 import ghstack.land
 import ghstack.logs
 import ghstack.sapling_shell
@@ -105,11 +105,11 @@ def submit_cmd(ui, repo, *args, **opts) -> None:
         username=conf.github_username,
         sh=sh,
         github=github,
-        update_fields=opts.get("update-fields"),
-        short=opts.get("short"),
-        force=opts.get("force"),
+        update_fields=opts.get("update-fields", False),
+        short=opts.get("short", False),
+        force=opts.get("force", False),
         no_skip=not opts.get("skip"),
-        draft=opts.get("draft"),
+        draft=opts.get("draft", False),
         github_url=conf.github_url,
         remote_name=conf.remote_name,
     )
@@ -216,11 +216,38 @@ def _create_ghstack_context(ui):
 
     ghstack.logs.rotate()
 
-    conf = ghstack.config.read_config()
-    sh = ghstack.sapling_shell.SaplingShell(conf=conf, sapling_cli=cli)
-    github = ghstack.github_real.RealGitHubEndpoint(
-        oauth_token=conf.github_oauth,
-        proxy=conf.proxy,
-        github_url=conf.github_url,
+    github = ghstack.github_gh_cli.GitHubCLIEndpoint()
+    config_section = "ghstack"
+    username_config_name = "github_username"
+    github_username = ui.config(config_section, username_config_name)
+    if not github_username:
+        github_username = github.graphql(
+            """
+query UsernameQuery {
+  viewer {
+    login
+  }
+}
+    """
+        )["data"]["viewer"]["login"]
+        # Write ghstack.github_username back to the user's config so we don't
+        # have to pay the cost of requesting it each time?
+
+    github_url = ui.config(config_section, "github_url", "github.com")
+    remote_name = ui.config(config_section, "remote_name", "origin")
+    conf = ghstack.config.Config(
+        proxy=None,
+        github_oauth=None,
+        github_username=github_username,
+        circle_token=None,
+        github_url=github_url,
+        remote_name=remote_name,
+        # As noted in config.py, these parameters are not used by ghstack,
+        # but other tools that use ghstack as a library, so we hardcode them to
+        # the empty string to satisfy the typechecker.
+        fbsource_path="",
+        github_path="",
+        default_project_dir="",
     )
+    sh = ghstack.sapling_shell.SaplingShell(conf=conf, sapling_cli=cli)
     return conf, sh, github

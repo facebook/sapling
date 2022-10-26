@@ -79,8 +79,13 @@ def main() -> None:
 
         conf = ghstack.config.read_config()
         sh = create_shell(conf)
+        oauth_token = conf.github_oauth
+        if not oauth_token:
+            raise RuntimeError(
+                "ghstack.config.read_config() should guarantee github_oauth is set"
+            )
         github = ghstack.github_real.RealGitHubEndpoint(
-            oauth_token=conf.github_oauth,
+            oauth_token=oauth_token,
             proxy=conf.proxy,
             github_url=conf.github_url,
         )
