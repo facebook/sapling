@@ -383,6 +383,13 @@ impl Repo {
         Ok(ts)
     }
 
+    pub fn tree_resolver(&mut self) -> Result<TreeManifestResolver> {
+        Ok(TreeManifestResolver::new(
+            self.dag_commits()?,
+            self.tree_store()?,
+        ))
+    }
+
     pub fn invalidate_stores(&mut self) -> Result<()> {
         if let Some(file_store) = &self.file_store {
             file_store.refresh()?;
@@ -458,10 +465,7 @@ impl Repo {
         let treestate = Arc::new(Mutex::new(treestate));
 
         let file_store = self.file_store()?;
-        let tree_resolver = Arc::new(TreeManifestResolver::new(
-            self.dag_commits()?,
-            self.tree_store()?,
-        ));
+        let tree_resolver = Arc::new(self.tree_resolver()?);
 
         Ok(WorkingCopy::new(
             vfs,
