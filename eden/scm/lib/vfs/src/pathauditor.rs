@@ -50,23 +50,31 @@ impl PathAuditor {
 
     /// Make sure that it is safe to write/remove `path` from the repo.
     pub fn audit(&self, path: &RepoPath) -> Result<PathBuf> {
-        for parent in path.parents() {
+        let mut needs_recording_index = std::usize::MAX;
+        for (i, parent) in path.reverse_parents().enumerate() {
             // First fast check w/ read lock
             if !self.audited.contains_key(parent) {
-                // If fast check failed, lock and do stat syscall
-                // Alternatively we can just do syscall and then call insert
-                self.audited
-                    .entry(parent.to_owned())
-                    .or_try_insert_with(|| {
-                        if let Err(e) = self
-                            .audit_fs(parent)
-                            .with_context(|| format!("Can't audit path \"{}\"", parent))
-                        {
-                            Err(e)
-                        } else {
-                            Ok(())
-                        }
-                    })?;
+                // If fast check failed, do the stat syscall.
+                self.audit_fs(parent)
+                    .with_context(|| format!("Can't audit path \"{}\"", parent))?;
+
+                // If it passes the audit, we can't record them as audited just yet, since a parent
+                // may still fail the audit. Later we'll loop through and record successful audits.
+                needs_recording_index = i;
+            } else {
+                // path.parents() yields the results in deepest-first order, so if we hit a path
+                // that has been audited, we know all the future ones have been audited and we can
+                // bail early.
+                break;
+            }
+        }
+
+        if needs_recording_index != std::usize::MAX {
+            for (i, parent) in path.reverse_parents().enumerate() {
+                self.audited.entry(parent.to_owned()).or_default();
+                if needs_recording_index == i {
+                    break;
+                }
             }
         }
 

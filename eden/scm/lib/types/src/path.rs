@@ -352,6 +352,16 @@ impl RepoPath {
         Parents::new(self)
     }
 
+    /// Returns an iterator over the parents of the current path.
+    /// The `RepoPath` itself is not returned. The root of the repository represented by the empty
+    /// `RepoPath` is always returned by this iterator except if the path is empty.
+    ///
+    /// For example for the path `"foo/bar/baz"` this iterator will return three items:
+    /// `"foo/bar"`, `"foo"`, and `""`.
+    pub fn reverse_parents(&'_ self) -> ReverseParents<'_> {
+        ReverseParents::new(self)
+    }
+
     /// Returns an iterator over the components of the path.
     pub fn components(&'_ self) -> Components<'_> {
         Components::new(self)
@@ -628,6 +638,44 @@ impl<'a> Iterator for Parents<'a> {
             } else {
                 Some(RepoPath::empty())
             }
+        }
+    }
+}
+
+pub struct ReverseParents<'a> {
+    path: &'a RepoPath,
+    position: Option<usize>,
+}
+
+impl<'a> ReverseParents<'a> {
+    pub fn new(path: &'a RepoPath) -> Self {
+        ReverseParents {
+            path,
+            // Skip the last component since we only want the parents.
+            position: if path.is_empty() {
+                None
+            } else {
+                Some(path.0[..].rfind(SEPARATOR).unwrap_or(0))
+            },
+        }
+    }
+}
+
+impl<'a> Iterator for ReverseParents<'a> {
+    type Item = &'a RepoPath;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.position {
+            Some(ref mut position) if *position != 0 => {
+                let result = RepoPath::from_str_unchecked(&self.path.0[0..*position]);
+                *position = self.path.0[..*position].rfind(SEPARATOR).unwrap_or(0);
+                Some(result)
+            }
+            Some(_) => {
+                self.position = None;
+                Some(RepoPath::empty())
+            }
+            None => None,
         }
     }
 }
@@ -1064,6 +1112,17 @@ mod tests {
         assert_eq!(iter.next(), Some(repo_path("foo")));
         assert_eq!(iter.next(), Some(repo_path("foo/bar")));
         assert_eq!(iter.next(), Some(repo_path("foo/bar/baz")));
+        assert_eq!(iter.next(), None)
+    }
+
+    #[test]
+    fn test_reverse_parents_on_regular_path() {
+        let path = repo_path("foo/bar/baz/file.txt");
+        let mut iter = path.reverse_parents();
+        assert_eq!(iter.next(), Some(repo_path("foo/bar/baz")));
+        assert_eq!(iter.next(), Some(repo_path("foo/bar")));
+        assert_eq!(iter.next(), Some(repo_path("foo")));
+        assert_eq!(iter.next(), Some(RepoPath::empty()));
         assert_eq!(iter.next(), None)
     }
 
