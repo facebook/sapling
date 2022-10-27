@@ -285,6 +285,23 @@ impl TreeState {
         Ok(metadata.0.get(key).cloned())
     }
 
+    pub fn set_metadata_by_keys(&mut self, new: &[(String, Option<String>)]) -> Result<()> {
+        let mut metadata_buf = self.get_metadata();
+        let mut metadata = Metadata::deserialize(&mut metadata_buf)?;
+
+        for (key, value) in new.iter() {
+            match value {
+                Some(value) => metadata.0.insert(key.to_string(), value.to_string()),
+                None => metadata.0.remove(key),
+            };
+        }
+
+        let mut buf = Vec::new();
+        metadata.serialize(&mut buf)?;
+        self.root.set_metadata(buf.into_boxed_slice());
+        Ok(())
+    }
+
     pub fn parents<'a>(&'a self) -> impl Iterator<Item = Result<HgId>> + 'a {
         (1..).map_while(|i| {
             self.get_metadata_by_key(&format!("p{}", i)).map_or_else(
@@ -479,6 +496,50 @@ mod tests {
         let state =
             TreeState::open(dir.path().join(new_name), block_id2.into(), true).expect("open");
         assert_eq!(state.get_metadata()[..], b"foobar"[..]);
+    }
+
+    #[test]
+    fn test_set_metadata_by_keys() {
+        let dir = TempDir::new("treestate").expect("tempdir");
+        let mut state = TreeState::new(dir.path(), true).expect("open").0;
+        state
+            .set_metadata_by_keys(&[
+                ("key1".to_string(), Some("value1".to_string())),
+                ("key2".to_string(), Some("value2".to_string())),
+            ])
+            .unwrap();
+        assert_eq!(
+            state.get_metadata_by_key("key1").unwrap(),
+            Some("value1".to_string())
+        );
+        assert_eq!(
+            state.get_metadata_by_key("key2").unwrap(),
+            Some("value2".to_string())
+        );
+
+        state
+            .set_metadata_by_keys(&[("key1".to_string(), Some("value1.b".to_string()))])
+            .unwrap();
+        assert_eq!(
+            state.get_metadata_by_key("key1").unwrap(),
+            Some("value1.b".to_string())
+        );
+        assert_eq!(
+            state.get_metadata_by_key("key2").unwrap(),
+            Some("value2".to_string())
+        );
+
+        state
+            .set_metadata_by_keys(&[
+                ("key1".to_string(), Some("value1.c".to_string())),
+                ("key2".to_string(), None),
+            ])
+            .unwrap();
+        assert_eq!(
+            state.get_metadata_by_key("key1").unwrap(),
+            Some("value1.c".to_string())
+        );
+        assert_eq!(state.get_metadata_by_key("key2").unwrap(), None);
     }
 
     // Some random paths extracted from fb-ext, plus some manually added entries, shuffled.
