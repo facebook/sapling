@@ -110,6 +110,14 @@ impl WorkingCopy {
         self.treestate.clone()
     }
 
+    pub fn parents(&self) -> Result<Vec<HgId>> {
+        self.treestate.lock().parents().collect()
+    }
+
+    pub fn set_parents(&mut self, parents: &mut dyn Iterator<Item = &HgId>) -> Result<()> {
+        self.treestate.lock().set_parents(parents)
+    }
+
     pub(crate) fn current_manifests(
         treestate: &TreeState,
         tree_resolver: &ArcReadTreeManifest,

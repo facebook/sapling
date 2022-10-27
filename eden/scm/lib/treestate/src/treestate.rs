@@ -313,6 +313,22 @@ impl TreeState {
         })
     }
 
+    pub fn set_parents(&mut self, parents: &mut dyn Iterator<Item = &HgId>) -> Result<()> {
+        let mut values: Vec<(String, Option<String>)> = Vec::with_capacity(2);
+        for (i, p) in parents.enumerate() {
+            // i+1 because parents are 1-indexed
+            values.push((format!("p{}", i + 1), Some(p.to_string())));
+        }
+        // Set p1 or p2 to None to remove it from the metadata if necessary.
+        if values.len() == 0 {
+            values.push(("p1".to_string(), None));
+        }
+        if values.len() == 1 {
+            values.push(("p2".to_string(), None));
+        }
+        self.set_metadata_by_keys(&values)
+    }
+
     pub fn has_dir<P: AsRef<[u8]>>(&mut self, path: P) -> Result<bool> {
         self.tree.has_dir(&self.store, path.as_ref())
     }
@@ -827,6 +843,45 @@ mod tests {
         assert_eq!(
             std::str::from_utf8(state.normalize(b"dir/RENAME").unwrap().as_ref()).unwrap(),
             "dir/RENAME"
+        );
+    }
+
+    #[test]
+    fn test_parents() {
+        let dir = TempDir::new("treestate").expect("tempdir");
+        let mut state = TreeState::new(dir.path(), true).expect("open").0;
+        let orig_name = state.file_name().unwrap();
+        let mut rng = ChaChaRng::from_seed([0; 32]);
+
+        let p1 = HgId::random(&mut rng);
+        let p2 = HgId::random(&mut rng);
+        let p3 = HgId::random(&mut rng);
+
+        state.set_parents(&mut [p1].iter()).unwrap();
+        assert_eq!(
+            state.parents().collect::<Result<Vec<_>>>().unwrap(),
+            [p1].to_vec()
+        );
+
+        state.set_parents(&mut [p1, p2].iter()).unwrap();
+        assert_eq!(
+            state.parents().collect::<Result<Vec<_>>>().unwrap(),
+            [p1, p2].to_vec()
+        );
+
+        state.set_parents(&mut [p1, p3].iter()).unwrap();
+        assert_eq!(
+            state.parents().collect::<Result<Vec<_>>>().unwrap(),
+            [p1, p3].to_vec()
+        );
+
+        let block_id = state.flush().expect("flush");
+
+        let state =
+            TreeState::open(dir.path().join(orig_name), block_id.into(), true).expect("open");
+        assert_eq!(
+            state.parents().collect::<Result<Vec<_>>>().unwrap(),
+            [p1, p3].to_vec()
         );
     }
 }
