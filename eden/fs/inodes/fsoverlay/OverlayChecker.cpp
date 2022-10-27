@@ -59,15 +59,18 @@ struct OverlayChecker::InodeInfo {
 
 struct OverlayChecker::Impl {
   FsOverlay* const fs;
+  FileContentStore* const fcs;
   std::optional<InodeNumber> loadedNextInodeNumber;
   LookupCallback& lookupCallback;
   std::unordered_map<InodeNumber, InodeInfo> inodes;
 
   Impl(
       FsOverlay* fs,
+      FileContentStore* fcs,
       std::optional<InodeNumber> nextInodeNumber,
       LookupCallback& lookupCallback)
       : fs{fs},
+        fcs{fcs},
         loadedNextInodeNumber{nextInodeNumber},
         lookupCallback{lookupCallback} {}
 };
@@ -76,7 +79,7 @@ class OverlayChecker::RepairState {
  public:
   explicit RepairState(OverlayChecker* checker)
       : checker_(checker),
-        dir_(createRepairDir(checker_->impl_->fs->getLocalDir())),
+        dir_(createRepairDir(checker_->impl_->fcs->getLocalDir())),
         logFile_(
             (dir_ + PathComponentPiece("fsck.log")).c_str(),
             O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC,
@@ -96,7 +99,7 @@ class OverlayChecker::RepairState {
   void warn(Arg1&& arg1, Args&&... args) {
     auto msg = folly::to<string>(
         std::forward<Arg1>(arg1), std::forward<Args>(args)...);
-    XLOG(WARN) << "fsck:" << checker_->impl_->fs->getLocalDir() << ":" << msg;
+    XLOG(WARN) << "fsck:" << checker_->impl_->fcs->getLocalDir() << ":" << msg;
     logLine(msg);
   }
 
@@ -109,6 +112,9 @@ class OverlayChecker::RepairState {
   }
   FsOverlay* fs() {
     return checker_->impl_->fs;
+  }
+  FileContentStore* fcs() {
+    return checker_->impl_->fcs;
   }
 
   AbsolutePath getLostAndFoundPath() {
@@ -160,9 +166,9 @@ class OverlayChecker::RepairState {
     } else if (S_ISLNK(mode)) {
       // symbolic links generally can't be empty in normal circumstances,
       // so put some dummy data in the link.
-      fs()->createOverlayFile(number, StringPiece("[lost]"));
+      fcs()->createOverlayFile(number, StringPiece("[lost]"));
     } else {
-      fs()->createOverlayFile(number, ByteRange());
+      fcs()->createOverlayFile(number, ByteRange());
     }
   }
 
@@ -379,7 +385,7 @@ class OverlayChecker::InodeDataError : public OverlayChecker::Error {
     auto pathInfo = repair.checker()->computePath(number_);
     auto outputPath = repair.getLostAndFoundPath(pathInfo);
     ensureDirectoryExists(outputPath.dirname());
-    auto srcPath = repair.fs()->getAbsoluteFilePath(number_);
+    auto srcPath = repair.fcs()->getAbsoluteFilePath(number_);
     auto ret = ::rename(srcPath.c_str(), outputPath.c_str());
     folly::checkUnixError(
         ret, "failed to rename inode data ", srcPath, " to ", outputPath);
@@ -577,7 +583,7 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
       AbsolutePath archivePath,
       mode_t mode) const {
     auto input =
-        repair.fs()->openFile(number, FsOverlay::kHeaderIdentifierFile);
+        repair.fcs()->openFile(number, FileContentStore::kHeaderIdentifierFile);
 
     // If the file is a symlink, try to create the file in the archive
     // directory as a symlink.
@@ -596,7 +602,7 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
           input.fd(),
           contents.data(),
           contents.size(),
-          FsOverlay::kHeaderLength);
+          FileContentStore::kHeaderLength);
       if (bytesRead < 0) {
         folly::throwSystemError(
             "read error while copying symlink data from inode ",
@@ -676,7 +682,7 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
 
   void tryRemoveFileInode(RepairState& repair, InodeNumber number) const {
     try {
-      repair.fs()->removeOverlayFile(number);
+      repair.fcs()->removeOverlayFile(number);
     } catch (const std::system_error& ex) {
       // If we fail to remove the file log an error, but proceed with the rest
       // of the fsck repairs rather than letting the exception propagate up
@@ -745,14 +751,15 @@ class OverlayChecker::BadNextInodeNumber : public OverlayChecker::Error {
 
 OverlayChecker::OverlayChecker(
     FsOverlay* fs,
+    FileContentStore* fcs,
     optional<InodeNumber> nextInodeNumber,
     LookupCallback& lookupCallback)
-    : impl_{std::make_unique<Impl>(fs, nextInodeNumber, lookupCallback)} {}
+    : impl_{std::make_unique<Impl>(fs, fcs, nextInodeNumber, lookupCallback)} {}
 
 OverlayChecker::~OverlayChecker() {}
 
 void OverlayChecker::scanForErrors(const ProgressCallback& progressCallback) {
-  XLOG(INFO) << "Starting fsck scan on overlay " << impl_->fs->getLocalDir();
+  XLOG(INFO) << "Starting fsck scan on overlay " << impl_->fcs->getLocalDir();
   if (auto callback = progressCallback) {
     callback(0);
   }
@@ -762,10 +769,10 @@ void OverlayChecker::scanForErrors(const ProgressCallback& progressCallback) {
   checkNextInodeNumber();
 
   if (errors_.empty()) {
-    XLOG(INFO) << "fsck:" << impl_->fs->getLocalDir()
+    XLOG(INFO) << "fsck:" << impl_->fcs->getLocalDir()
                << ": completed checking for errors, no problems found";
   } else {
-    XLOG(ERR) << "fsck:" << impl_->fs->getLocalDir()
+    XLOG(ERR) << "fsck:" << impl_->fcs->getLocalDir()
               << ": completed checking for errors, found " << errors_.size()
               << " problems";
   }
@@ -782,7 +789,7 @@ optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors() {
   RepairResult result;
   result.repairDir = repair.getRepairDir();
   result.totalErrors = errors_.size();
-  repair.log("Beginning fsck repair for ", impl_->fs->getLocalDir());
+  repair.log("Beginning fsck repair for ", impl_->fcs->getLocalDir());
   repair.log(errors_.size(), " problems detected");
 
   constexpr size_t maxPrintedErrors = 50;
@@ -792,7 +799,7 @@ optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors() {
     ++errnum;
     auto description = error->getMessage(this);
     if (errnum < maxPrintedErrors) {
-      XLOG(ERR) << "fsck:" << impl_->fs->getLocalDir()
+      XLOG(ERR) << "fsck:" << impl_->fcs->getLocalDir()
                 << ": error: " << description;
     }
     repair.log("error ", errnum, ": ", description);
@@ -805,7 +812,7 @@ optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors() {
         repair.log("  ! unable to repair error ", errnum);
       }
     } catch (const std::exception& ex) {
-      XLOG(ERR) << "fsck:" << impl_->fs->getLocalDir()
+      XLOG(ERR) << "fsck:" << impl_->fcs->getLocalDir()
                 << ": unexpected error occurred while attempting repair: "
                 << folly::exceptionStr(ex);
       repair.log(
@@ -830,14 +837,14 @@ optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors() {
         "successfully repaired all ", result.fixedErrors, " problems");
   }
   repair.log(finalMsg);
-  XLOG(INFO) << "fsck:" << impl_->fs->getLocalDir() << ": " << finalMsg;
+  XLOG(INFO) << "fsck:" << impl_->fcs->getLocalDir() << ": " << finalMsg;
 
   return result;
 }
 
 void OverlayChecker::logErrors() {
   for (const auto& error : errors_) {
-    XLOG(ERR) << "fsck:" << impl_->fs->getLocalDir()
+    XLOG(ERR) << "fsck:" << impl_->fcs->getLocalDir()
               << ": error: " << error->getMessage(this);
   }
 }
@@ -967,17 +974,17 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
 
   folly::Synchronized<std::vector<std::unique_ptr<Error>>> errors;
 
-  seq(0u, FsOverlay::kNumShards - 1) |
+  seq(0u, FileContentStore::kNumShards - 1) |
       pmap(
           [this, &errors](
               uint32_t shardID) -> std::vector<std::tuple<uint64_t, uint32_t>> {
             // Get entries in directory
             std::array<char, 2> subdirBuffer;
             MutableStringPiece subdir{subdirBuffer.data(), subdirBuffer.size()};
-            FsOverlay::formatSubdirShardPath(shardID, subdir);
-            auto path = impl_->fs->getLocalDir() + PathComponentPiece{subdir};
+            FileContentStore::formatSubdirShardPath(shardID, subdir);
+            auto path = impl_->fcs->getLocalDir() + PathComponentPiece{subdir};
 
-            XLOG(DBG5) << "fsck:" << impl_->fs->getLocalDir() << ": scanning "
+            XLOG(DBG5) << "fsck:" << impl_->fcs->getLocalDir() << ": scanning "
                        << path;
 
             std::vector<std::tuple<uint64_t, uint32_t>> inodes;
@@ -1030,9 +1037,9 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
         if (inodeInfoOpt.has_value()) {
           auto inodeInfo = inodeInfoOpt.value();
           ShardID shardID = static_cast<ShardID>(inodeInfo.number.get() & 0xff);
-          uint32_t progress = (10 * shardID) / FsOverlay::kNumShards;
+          uint32_t progress = (10 * shardID) / FileContentStore::kNumShards;
           if (progress > progress10pct) {
-            XLOG(INFO) << "fsck:" << impl_->fs->getLocalDir() << ": scan "
+            XLOG(INFO) << "fsck:" << impl_->fcs->getLocalDir() << ": scan "
                        << progress << "0% complete: " << impl_->inodes.size()
                        << " inodes scanned";
             if (auto callback = progressCallback) {
@@ -1044,7 +1051,7 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
           updateMaxInodeNumber(inodeInfo.number);
           impl_->inodes.emplace(inodeInfo.number, inodeInfo);
           if (impl_->inodes.size() % 10000 == 0) {
-            XLOG(DBG5) << "fsck: " << impl_->fs->getLocalDir() << ": scanned "
+            XLOG(DBG5) << "fsck: " << impl_->fcs->getLocalDir() << ": scanned "
                        << impl_->inodes.size() << " inodes";
           }
         }
@@ -1058,7 +1065,7 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
     errorsLock->pop_back();
   }
 
-  XLOG(INFO) << "fsck:" << impl_->fs->getLocalDir() << ": scanned "
+  XLOG(INFO) << "fsck:" << impl_->fcs->getLocalDir() << ": scanned "
              << impl_->inodes.size() << " inodes";
 }
 
@@ -1101,51 +1108,51 @@ std::optional<OverlayChecker::InodeInfo> OverlayChecker::loadInodeInfo(
   // Open the inode file
   folly::File file;
   try {
-    file = this->impl_->fs->openFileNoVerify(number);
+    file = this->impl_->fcs->openFileNoVerify(number);
   } catch (const std::exception& ex) {
     return inodeError("error opening file: ", folly::exceptionStr(ex));
   }
 
   // Read the file header
-  std::array<char, FsOverlay::kHeaderLength> headerContents;
+  std::array<char, FileContentStore::kHeaderLength> headerContents;
   auto readResult =
       folly::readFull(file.fd(), headerContents.data(), headerContents.size());
   if (readResult < 0) {
     int errnum = errno;
     return inodeError("error reading from file: ", folly::errnoStr(errnum));
-  } else if (readResult != FsOverlay::kHeaderLength) {
+  } else if (readResult != FileContentStore::kHeaderLength) {
     return inodeError(
         "file was too short to contain overlay header: read ",
         readResult,
         " bytes, expected ",
-        FsOverlay::kHeaderLength,
+        FileContentStore::kHeaderLength,
         " bytes");
   }
 
   // The first 4 bytes of the header are the file type identifier.
   static_assert(
-      FsOverlay::kHeaderIdentifierDir.size() ==
-          FsOverlay::kHeaderIdentifierFile.size(),
+      FileContentStore::kHeaderIdentifierDir.size() ==
+          FileContentStore::kHeaderIdentifierFile.size(),
       "both header IDs must have the same length");
   StringPiece typeID(
       headerContents.data(),
-      headerContents.data() + FsOverlay::kHeaderIdentifierDir.size());
+      headerContents.data() + FileContentStore::kHeaderIdentifierDir.size());
 
   // The next 4 bytes are the version ID.
   uint32_t versionBE;
   memcpy(
       &versionBE,
-      headerContents.data() + FsOverlay::kHeaderIdentifierDir.size(),
+      headerContents.data() + FileContentStore::kHeaderIdentifierDir.size(),
       sizeof(uint32_t));
   auto version = folly::Endian::big(versionBE);
-  if (version != FsOverlay::kHeaderVersion) {
+  if (version != FileContentStore::kHeaderVersion) {
     return inodeError("unknown overlay file format version ", version);
   }
 
   InodeType type;
-  if (typeID == FsOverlay::kHeaderIdentifierDir) {
+  if (typeID == FileContentStore::kHeaderIdentifierDir) {
     type = InodeType::Dir;
-  } else if (typeID == FsOverlay::kHeaderIdentifierFile) {
+  } else if (typeID == FileContentStore::kHeaderIdentifierFile) {
     type = InodeType::File;
   } else {
     return inodeError(
@@ -1241,7 +1248,7 @@ void OverlayChecker::addError(unique_ptr<Error> error) {
   // When addError() is called we often haven't fully computed the inode
   // relationships yet, so computePath() won't return correct results for any
   // error messages that want to include path names.
-  XLOG(DBG7) << "fsck: addError() called for " << impl_->fs->getLocalDir()
+  XLOG(DBG7) << "fsck: addError() called for " << impl_->fcs->getLocalDir()
              << ": " << error->getMessage(this);
   errors_.push_back(std::move(error));
 }

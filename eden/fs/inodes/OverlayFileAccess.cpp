@@ -98,7 +98,7 @@ off_t OverlayFileAccess::getFileSize(InodeNumber ino, InodeBase* inode) {
         "unable to fstat overlay file");
   }
   auto st = ret.value();
-  if (st.st_size < static_cast<off_t>(FsOverlay::kHeaderLength)) {
+  if (st.st_size < static_cast<off_t>(FileContentStore::kHeaderLength)) {
     // Truncated overlay files can sometimes occur after a hard reboot
     // where the overlay file data was not flushed to disk before the
     // system powered off.
@@ -110,7 +110,7 @@ off_t OverlayFileAccess::getFileSize(InodeNumber ino, InodeBase* inode) {
         "corrupt overlay file");
   }
 
-  auto size = st.st_size - static_cast<off_t>(FsOverlay::kHeaderLength);
+  auto size = st.st_size - static_cast<off_t>(FileContentStore::kHeaderLength);
 
   // Update the cache if the version still matches.
   auto info = entry->info.wlock();
@@ -137,7 +137,7 @@ Hash20 OverlayFileAccess::getSha1(FileInode& inode) {
   SHA_CTX ctx;
   SHA1_Init(&ctx);
 
-  off_t off = FsOverlay::kHeaderLength;
+  off_t off = FileContentStore::kHeaderLength;
   while (true) {
     // Using pread here so that we don't move the file position;
     // the file descriptor is shared between multiple file handles
@@ -186,7 +186,7 @@ std::string OverlayFileAccess::readAllContents(FileInode& inode) {
   // TODO: implement readFile with pread instead of lseek.
   auto info = entry->info.wlock();
 
-  auto rc = entry->file.lseek(FsOverlay::kHeaderLength, SEEK_SET);
+  auto rc = entry->file.lseek(FileContentStore::kHeaderLength, SEEK_SET);
   if (rc.hasError()) {
     throw InodeError(
         rc.error(),
@@ -209,7 +209,7 @@ BufVec OverlayFileAccess::read(FileInode& inode, size_t size, off_t off) {
 
   auto buf = folly::IOBuf::createCombined(size);
   auto res = entry->file.preadNoInt(
-      buf->writableBuffer(), size, off + FsOverlay::kHeaderLength);
+      buf->writableBuffer(), size, off + FileContentStore::kHeaderLength);
 
   if (res.hasError()) {
     throw InodeError(
@@ -229,7 +229,8 @@ size_t OverlayFileAccess::write(
     off_t off) {
   auto entry = getEntryForInode(inode.getNodeId());
 
-  auto xfer = entry->file.pwritev(iov, iovcnt, off + FsOverlay::kHeaderLength);
+  auto xfer =
+      entry->file.pwritev(iov, iovcnt, off + FileContentStore::kHeaderLength);
   if (xfer.hasError()) {
     throw InodeError(
         xfer.error(),
@@ -244,7 +245,7 @@ size_t OverlayFileAccess::write(
 
 void OverlayFileAccess::truncate(FileInode& inode, off_t size) {
   auto entry = getEntryForInode(inode.getNodeId());
-  auto result = entry->file.ftruncate(size + FsOverlay::kHeaderLength);
+  auto result = entry->file.ftruncate(size + FileContentStore::kHeaderLength);
   if (result.hasError()) {
     throw InodeError(
         result.error(),
@@ -276,7 +277,7 @@ void OverlayFileAccess::fallocate(
     uint64_t length) {
   auto entry = getEntryForInode(inode.getNodeId());
   auto result =
-      entry->file.fallocate(offset, length + FsOverlay::kHeaderLength);
+      entry->file.fallocate(offset, length + FileContentStore::kHeaderLength);
   if (result.hasError()) {
     throw InodeError(
         result.error(),

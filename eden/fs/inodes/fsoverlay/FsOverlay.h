@@ -13,6 +13,7 @@
 #include <array>
 #include <condition_variable>
 #include <optional>
+#include "eden/fs/inodes/IFileContentStore.h"
 #include "eden/fs/inodes/IOverlay.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
@@ -33,38 +34,28 @@ class OverlayDir;
 class InodePath;
 
 /**
- * FsOverlay provides interfaces to manipulate the overlay. It stores the
- * overlay's file system attributes and is responsible for obtaining and
- * releasing its locks ("initOverlay" and "close" respectively).
+ * Class to manage the on disk data.
  */
-class FsOverlay : public IOverlay {
+class FileContentStore : public IFileContentStore {
  public:
-  explicit FsOverlay(AbsolutePathPiece localDir) : localDir_{localDir} {}
-
-  bool supportsSemanticOperations() const override {
-    return false;
-  }
+  explicit FileContentStore(AbsolutePathPiece localDir) : localDir_{localDir} {}
 
   /**
-   * Initialize the overlay, acquire the "info" file lock and load the
+   * Initialize the FileContentStore, acquire the "info" file lock and load the
    * nextInodeNumber. The "close" method should be used to release these
    * resources and persist the nextInodeNumber.
    *
-   * Returns the next inode number to start at when allocating new inodes.
-   * If the overlay was not shutdown cleanly by the previous user then
-   * std::nullopt is returned.  In this case, the caller should re-scan
-   * the overlay to check for issues and compute the next inode number.
+   * Returns true if a new directory was created.
    */
-  std::optional<InodeNumber> initOverlay(bool createIfNonExisting) override;
+  bool initialize(bool createIfNonExisting) override;
 
   /**
-   *  Gracefully, shutdown the overlay, persisting the overlay's
-   * nextInodeNumber.
+   * Gracefully shutdown the file content store.
    */
-  void close(std::optional<InodeNumber> nextInodeNumber) override;
+  void close() override;
 
   /**
-   * Was FsOverlay initialized - i.e., is cleanup (close) necessary.
+   * Was FileContentStore initialized - i.e., is cleanup (close) necessary.
    */
   bool initialized() const override {
     return bool(infoFile_);
@@ -79,12 +70,57 @@ class FsOverlay : public IOverlay {
     return localDir_;
   }
 
-#ifndef _WIN32
   /**
    * call statfs(2) on the filesystem in which the overlay is located
    */
   struct statfs statFs() const override;
-#endif
+
+  /**
+   * Helper function that creates an overlay file for a new FileInode.
+   */
+  folly::File createOverlayFile(
+      InodeNumber inodeNumber,
+      folly::ByteRange contents) override;
+
+  /**
+   * Helper function to write an overlay file for a FileInode with existing
+   * contents.
+   */
+  folly::File createOverlayFile(
+      InodeNumber inodeNumber,
+      const folly::IOBuf& contents) override;
+
+  /**
+   * Remove the overlay directory data associated with the passed InodeNumber.
+   */
+  void removeOverlayFile(InodeNumber inodeNumber) override;
+
+  /**
+   * Helper function that opens an existing overlay file,
+   * checks if the file has valid header, and returns the file.
+   */
+  folly::File openFile(InodeNumber inodeNumber, folly::StringPiece headerId)
+      override;
+
+  /**
+   * Open an existing overlay file without verifying the header.
+   */
+  folly::File openFileNoVerify(InodeNumber inodeNumber) override;
+
+  bool hasOverlayFile(InodeNumber inodeNumber) override;
+
+  /**
+   * Get the absolute path to a file to the overlay file for a given inode
+   * number.
+   *
+   * Note that this method should not be needed in most normal circumstances:
+   * most internal operation is done using getFilePath(), which returns relative
+   * paths that are guaranteed to always fit in a fixed length.
+   * getAbsoluteFilePath() is primarily intended for the fsck logic, where it is
+   * sometimes useful to be able to get absolute paths to be able to move broken
+   * files out of the overlay.
+   */
+  AbsolutePath getAbsoluteFilePath(InodeNumber inodeNumber) const;
 
   /**
    *  Get the name of the subdirectory to use for the overlay data for the
@@ -116,97 +152,6 @@ class FsOverlay : public IOverlay {
       ShardID shardID,
       folly::MutableStringPiece subdirPath);
 
-  void initNewOverlay();
-
-  void saveOverlayDir(InodeNumber inodeNumber, overlay::OverlayDir&& odir)
-      override;
-
-  std::optional<overlay::OverlayDir> loadOverlayDir(
-      InodeNumber inodeNumber) override;
-
-  std::optional<overlay::OverlayDir> loadAndRemoveOverlayDir(
-      InodeNumber inodeNumber) override;
-
-  void saveNextInodeNumber(InodeNumber nextInodeNumber);
-
-  /**
-   * Return the next inode number from the kNextInodeNumberFile.  If the file
-   * exists and contains a valid InodeNumber, that value is returned. If the
-   * file does not exist, the optional will not have a value. If the file cannot
-   * be opened or does not contain a valid InodeNumber, a SystemError is thrown.
-   */
-  std::optional<InodeNumber> tryLoadNextInodeNumber();
-
-  /**
-   * Validate an existing overlay's info file exists, is valid and contains the
-   * correct version.
-   */
-  void readExistingOverlay(int infoFD);
-
-  /**
-   * Helper function that creates an overlay file for a new FileInode.
-   */
-  folly::File createOverlayFile(
-      InodeNumber inodeNumber,
-      folly::ByteRange contents) override;
-
-  /**
-   * Helper function to write an overlay file for a FileInode with existing
-   * contents.
-   */
-  folly::File createOverlayFile(
-      InodeNumber inodeNumber,
-      const folly::IOBuf& contents) override;
-
-  /**
-   * Remove the overlay directory data associated with the passed InodeNumber.
-   */
-  void removeOverlayDir(InodeNumber inodeNumber) override;
-
-  /**
-   * Remove the overlay file associated with the passed InodeNumber.
-   */
-  void removeOverlayFile(InodeNumber inodeNumber) override;
-
-  /**
-   * Validates an entry's header.
-   */
-  static void validateHeader(
-      InodeNumber inodeNumber,
-      folly::StringPiece contents,
-      folly::StringPiece headerId);
-
-  /**
-   * Helper function that opens an existing overlay file,
-   * checks if the file has valid header, and returns the file.
-   */
-  folly::File openFile(InodeNumber inodeNumber, folly::StringPiece headerId)
-      override;
-
-  /**
-   * Open an existing overlay file without verifying the header.
-   */
-  folly::File openFileNoVerify(InodeNumber inodeNumber) override;
-
-  /**
-   * Get the absolute path to a file to the overlay file for a given inode
-   * number.
-   *
-   * Note that this method should not be needed in most normal circumstances:
-   * most internal operation is done using getFilePath(), which returns relative
-   * paths that are guaranteed to always fit in a fixed length.
-   * getAbsoluteFilePath() is primarily intended for the fsck logic, where it is
-   * sometimes useful to be able to get absolute paths to be able to move broken
-   * files out of the overlay.
-   */
-  AbsolutePath getAbsoluteFilePath(InodeNumber inodeNumber) const;
-
-  bool hasOverlayDir(InodeNumber inodeNumber) override;
-
-  bool hasOverlayFile(InodeNumber inodeNumber) override;
-
-  void maintenance() override {}
-
   static constexpr folly::StringPiece kMetadataFile{"metadata.table"};
 
   /**
@@ -228,10 +173,25 @@ class FsOverlay : public IOverlay {
  private:
   FRIEND_TEST(OverlayTest, getFilePath);
   friend class RawOverlayTest;
+  friend class FsOverlay;
 
-  bool hasOverlayData(InodeNumber inodeNumber);
+  void initNewOverlay();
 
-  void removeOverlayData(InodeNumber inodeNumber);
+  /**
+   * Return the next inode number from the kNextInodeNumberFile.  If the file
+   * exists and contains a valid InodeNumber, that value is returned. If the
+   * file does not exist, the optional will not have a value. If the file cannot
+   * be opened or does not contain a valid InodeNumber, a SystemError is thrown.
+   */
+  std::optional<InodeNumber> tryLoadNextInodeNumber();
+
+  /**
+   * Validate an existing overlay's info file exists, is valid and contains the
+   * correct version.
+   */
+  void readExistingOverlay(int infoFD);
+
+  void saveNextInodeNumber(InodeNumber nextInodeNumber);
 
   /**
    * Creates header for the files stored in Overlay
@@ -239,6 +199,14 @@ class FsOverlay : public IOverlay {
   static std::array<uint8_t, kHeaderLength> createHeader(
       folly::StringPiece identifier,
       uint32_t version);
+
+  /**
+   * Validates an entry's header.
+   */
+  static void validateHeader(
+      InodeNumber inodeNumber,
+      folly::StringPiece contents,
+      folly::StringPiece headerId);
 
   /**
    * Get the path to the file for the given inode, relative to localDir.
@@ -253,7 +221,6 @@ class FsOverlay : public IOverlay {
   folly::File
   createOverlayFileImpl(InodeNumber inodeNumber, iovec* iov, size_t iovCount);
 
- private:
   /** Path to ".eden/CLIENT/local" */
   const AbsolutePath localDir_;
 
@@ -272,6 +239,60 @@ class FsOverlay : public IOverlay {
    * We maintain this so we can use openat(), unlinkat(), etc.
    */
   folly::File dirFile_;
+};
+
+/**
+ * FsOverlay provides interfaces to manipulate the overlay. It stores the
+ * overlay's file system attributes and is responsible for obtaining and
+ * releasing its locks ("initOverlay" and "close" respectively).
+ */
+class FsOverlay : public IOverlay {
+ public:
+  explicit FsOverlay(FileContentStore* core) : core_(core) {}
+
+  bool supportsSemanticOperations() const override {
+    return false;
+  }
+
+  /**
+   * Returns the next inode number to start at when allocating new inodes.
+   * If the overlay was not shutdown cleanly by the previous user then
+   * std::nullopt is returned.  In this case, the caller should re-scan
+   * the overlay to check for issues and compute the next inode number.
+   */
+  std::optional<InodeNumber> initOverlay(bool createIfNonExisting) override;
+
+  /**
+   *  Gracefully, shutdown the overlay, persisting the overlay's
+   * nextInodeNumber.
+   */
+  void close(std::optional<InodeNumber> nextInodeNumber) override;
+
+  /**
+   * Was FsOverlay initialized - i.e., is cleanup (close) necessary.
+   */
+  bool initialized() const override;
+
+  void saveOverlayDir(InodeNumber inodeNumber, overlay::OverlayDir&& odir)
+      override;
+
+  std::optional<overlay::OverlayDir> loadOverlayDir(
+      InodeNumber inodeNumber) override;
+
+  std::optional<overlay::OverlayDir> loadAndRemoveOverlayDir(
+      InodeNumber inodeNumber) override;
+
+  /**
+   * Remove the overlay directory data associated with the passed InodeNumber.
+   */
+  void removeOverlayDir(InodeNumber inodeNumber) override;
+
+  bool hasOverlayDir(InodeNumber inodeNumber) override;
+
+  void maintenance() override {}
+
+ private:
+  FileContentStore* core_;
 };
 
 } // namespace facebook::eden

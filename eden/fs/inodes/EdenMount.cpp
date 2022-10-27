@@ -289,6 +289,11 @@ Overlay::TreeOverlayType EdenMount::getTreeOverlayType(
   }
 
   if (checkoutConfig_->getEnableTreeOverlay()) {
+    if (!folly::kIsWindows) {
+      throw std::runtime_error(
+          "Tree overlay type is only supported on Windows");
+    }
+
     if (getEdenConfig()->unsafeInMemoryOverlay.getValue()) {
       if (getEdenConfig()->overlayBuffered.getValue()) {
         return Overlay::TreeOverlayType::TreeInMemoryBuffered;

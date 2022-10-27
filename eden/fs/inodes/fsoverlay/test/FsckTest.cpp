@@ -45,7 +45,11 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
   TestDir init();
 
   const AbsolutePath& overlayPath() const {
-    return fs_.getLocalDir();
+    return fcs_.getLocalDir();
+  }
+
+  FileContentStore& fcs() {
+    return fcs_;
   }
 
   FsOverlay& fs() {
@@ -67,8 +71,8 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
   }
 
   void corruptInodeHeader(InodeNumber number, StringPiece headerData) {
-    XCHECK_EQ(headerData.size(), FsOverlay::kHeaderLength);
-    auto overlayFile = fs_.openFileNoVerify(number);
+    XCHECK_EQ(headerData.size(), FileContentStore::kHeaderLength);
+    auto overlayFile = fcs_.openFileNoVerify(number);
     auto ret = folly::pwriteFull(
         overlayFile.fd(), headerData.data(), headerData.size(), 0);
     folly::checkUnixError(ret, "failed to replace file inode header");
@@ -77,6 +81,7 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
  private:
   folly::test::TemporaryDirectory tmpDir_;
   AbsolutePath tmpDirPath_;
+  FileContentStore fcs_;
   FsOverlay fs_;
   uint64_t nextInodeNumber_{0};
 };
@@ -134,7 +139,7 @@ class TestDir {
     // The file should only be created in the overlay if it is materialized
     folly::File file;
     if (!hash.has_value()) {
-      file = overlay_->fs().createOverlayFile(number, contents);
+      file = overlay_->fcs().createOverlayFile(number, contents);
     }
     return TestFile(overlay_, number, std::move(file));
   }
@@ -190,7 +195,8 @@ TestOverlay::TestOverlay()
       // fsck will write its output in a sibling directory to the overlay,
       // so make sure we put the overlay at least 1 directory deep inside our
       // temporary directory
-      fs_(tmpDirPath_ + "overlay"_pc) {}
+      fcs_(tmpDirPath_ + "overlay"_pc),
+      fs_(&fcs_) {}
 
 TestDir TestOverlay::init() {
   auto nextInodeNumber = fs_.initOverlay(/*createIfNonExisting=*/true);
@@ -325,13 +331,14 @@ TEST(Fsck, testNoErrors) {
   SimpleOverlayLayout layout(root);
   overlay->closeCleanly();
 
-  FsOverlay fs(overlay->overlayPath());
+  FileContentStore fcs(overlay->overlayPath());
+  FsOverlay fs(&fcs);
   auto nextInode = fs.initOverlay(/*createIfNonExisting=*/false);
   OverlayChecker::LookupCallback lookup = [](auto&&) {
     return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  OverlayChecker checker(&fs, nextInode, lookup);
+  OverlayChecker checker(&fs, &fcs, nextInode, lookup);
   checker.scanForErrors();
   EXPECT_EQ(0, checker.getErrors().size());
   EXPECT_THAT(errorMessages(checker), UnorderedElementsAre());
@@ -360,7 +367,8 @@ TEST(Fsck, testMissingNextInodeNumber) {
   // Close the overlay without saving the next inode number
   overlay->fs().close(std::nullopt);
 
-  FsOverlay fs(overlay->overlayPath());
+  FileContentStore fcs(overlay->overlayPath());
+  FsOverlay fs(&fcs);
   auto nextInode = fs.initOverlay(/*createIfNonExisting=*/false);
   // Confirm there is no next inode data
   EXPECT_FALSE(nextInode.has_value());
@@ -368,7 +376,7 @@ TEST(Fsck, testMissingNextInodeNumber) {
     return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  OverlayChecker checker(&fs, nextInode, lookup);
+  OverlayChecker checker(&fs, &fcs, nextInode, lookup);
   checker.scanForErrors();
   // OverlayChecker should still report 0 errors in this case.
   // We don't report a missing next inode number as an error: if this is the
@@ -388,14 +396,15 @@ TEST(Fsck, testBadNextInodeNumber) {
   ASSERT_LE(2, actualNextInodeNumber.get());
   overlay->fs().close(InodeNumber(2));
 
-  FsOverlay fs(overlay->overlayPath());
+  FileContentStore fcs(overlay->overlayPath());
+  FsOverlay fs(&fcs);
   auto nextInode = fs.initOverlay(/*createIfNonExisting=*/false);
   EXPECT_EQ(2, nextInode ? nextInode->get() : 0);
   OverlayChecker::LookupCallback lookup = [](auto&&) {
     return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  OverlayChecker checker(&fs, nextInode, lookup);
+  OverlayChecker checker(&fs, &fcs, nextInode, lookup);
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
@@ -412,14 +421,14 @@ TEST(Fsck, testBadFileData) {
   SimpleOverlayLayout layout(root);
 
   // Replace the data file for a file inode with a bogus header
-  std::string badHeader(FsOverlay::kHeaderLength, 0x55);
+  std::string badHeader(FileContentStore::kHeaderLength, 0x55);
   overlay->corruptInodeHeader(layout.src_foo_testTxt.number(), badHeader);
 
   OverlayChecker::LookupCallback lookup = [](auto&&) {
     return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  OverlayChecker checker(&overlay->fs(), std::nullopt, lookup);
+  OverlayChecker checker(&overlay->fs(), &overlay->fcs(), std::nullopt, lookup);
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
@@ -441,8 +450,8 @@ TEST(Fsck, testBadFileData) {
   EXPECT_EQ(badHeader + "just some test data\n", inodeContents);
 
   // Make sure the overlay now has a valid empty file at the same inode number.
-  auto replacementFile = overlay->fs().openFile(
-      layout.src_foo_testTxt.number(), FsOverlay::kHeaderIdentifierFile);
+  auto replacementFile = overlay->fcs().openFile(
+      layout.src_foo_testTxt.number(), FileContentStore::kHeaderIdentifierFile);
   std::array<std::byte, 128> buf;
   auto bytesRead =
       folly::readFull(replacementFile.fd(), buf.data(), buf.size());
@@ -457,14 +466,14 @@ TEST(Fsck, testTruncatedDirData) {
   SimpleOverlayLayout layout(root);
 
   // Truncate one of the directory inode files to 0 bytes
-  auto srcDataFile = overlay->fs().openFileNoVerify(layout.src.number());
+  auto srcDataFile = overlay->fcs().openFileNoVerify(layout.src.number());
   folly::checkUnixError(ftruncate(srcDataFile.fd(), 0), "truncate failed");
 
   OverlayChecker::LookupCallback lookup = [](auto&&) {
     return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  OverlayChecker checker(&overlay->fs(), std::nullopt, lookup);
+  OverlayChecker checker(&overlay->fs(), &overlay->fcs(), std::nullopt, lookup);
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
@@ -509,18 +518,18 @@ TEST(Fsck, testTruncatedDirData) {
 
   // No inodes from the orphaned subtree should be present in the
   // overlay any more.
-  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_readmeTxt.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_todoTxt.number()));
+  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_readmeTxt.number()));
+  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_todoTxt.number()));
   EXPECT_FALSE(overlay->fs().hasOverlayDir(layout.src_foo.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_foo_testTxt.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_foo_barTxt.number()));
+  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_foo_testTxt.number()));
+  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_foo_barTxt.number()));
   EXPECT_FALSE(overlay->fs().hasOverlayDir(layout.src_foo_x.number()));
   EXPECT_FALSE(overlay->fs().hasOverlayDir(layout.src_foo_x_y.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_foo_x_y_zTxt.number()));
+  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_foo_x_y_zTxt.number()));
   EXPECT_FALSE(
-      overlay->fs().hasOverlayFile(layout.src_foo_x_y_abcTxt.number()));
+      overlay->fcs().hasOverlayFile(layout.src_foo_x_y_abcTxt.number()));
   EXPECT_FALSE(
-      overlay->fs().hasOverlayFile(layout.src_foo_x_y_defTxt.number()));
+      overlay->fcs().hasOverlayFile(layout.src_foo_x_y_defTxt.number()));
 
   overlay->fs().close(checker.getNextInodeNumber());
 }
@@ -536,7 +545,7 @@ TEST(Fsck, testMissingDirData) {
   // also corrupt the file for "src/foo/test.txt", which will need to be copied
   // out as part of the orphaned src/ children subdirectories.  This makes sure
   // the orphan repair logic also handles corrupt files in the orphan subtree.
-  std::string badHeader(FsOverlay::kHeaderLength, 0x55);
+  std::string badHeader(FileContentStore::kHeaderLength, 0x55);
   overlay->corruptInodeHeader(layout.src_foo_testTxt.number(), badHeader);
   // And remove the "src/foo/x" subdirectory that is also part of the orphaned
   // subtree.
@@ -546,7 +555,7 @@ TEST(Fsck, testMissingDirData) {
     return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  OverlayChecker checker(&overlay->fs(), std::nullopt, lookup);
+  OverlayChecker checker(&overlay->fs(), &overlay->fcs(), std::nullopt, lookup);
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
@@ -599,18 +608,18 @@ TEST(Fsck, testMissingDirData) {
 
   // No inodes from the orphaned subtree should be present in the
   // overlay any more.
-  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_readmeTxt.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_todoTxt.number()));
+  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_readmeTxt.number()));
+  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_todoTxt.number()));
   EXPECT_FALSE(overlay->fs().hasOverlayDir(layout.src_foo.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_foo_testTxt.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_foo_barTxt.number()));
+  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_foo_testTxt.number()));
+  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_foo_barTxt.number()));
   EXPECT_FALSE(overlay->fs().hasOverlayDir(layout.src_foo_x.number()));
   EXPECT_FALSE(overlay->fs().hasOverlayDir(layout.src_foo_x_y.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayFile(layout.src_foo_x_y_zTxt.number()));
+  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_foo_x_y_zTxt.number()));
   EXPECT_FALSE(
-      overlay->fs().hasOverlayFile(layout.src_foo_x_y_abcTxt.number()));
+      overlay->fcs().hasOverlayFile(layout.src_foo_x_y_abcTxt.number()));
   EXPECT_FALSE(
-      overlay->fs().hasOverlayFile(layout.src_foo_x_y_defTxt.number()));
+      overlay->fcs().hasOverlayFile(layout.src_foo_x_y_defTxt.number()));
 
   overlay->fs().close(checker.getNextInodeNumber());
 }
@@ -627,7 +636,7 @@ TEST(Fsck, testHardLink) {
     return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  OverlayChecker checker(&overlay->fs(), std::nullopt, lookup);
+  OverlayChecker checker(&overlay->fs(), &overlay->fcs(), std::nullopt, lookup);
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),

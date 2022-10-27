@@ -25,7 +25,7 @@ class InodePath {
    * 20 bytes for the inode number, and 1 byte for a null terminator.
    */
   static constexpr size_t kMaxPathLength =
-      2 + 1 + FsOverlay::kMaxDecimalInodeNumberLength + 1;
+      2 + 1 + FileContentStore::kMaxDecimalInodeNumberLength + 1;
 
   const char* c_str() const noexcept;
   /* implicit */ operator RelativePathPiece() const noexcept;

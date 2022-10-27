@@ -48,42 +48,6 @@ void TreeOverlay::saveOverlayDir(
   return store_.saveTree(inodeNumber, std::move(odir));
 }
 
-#ifndef _WIN32
-bool TreeOverlay::hasOverlayFile(InodeNumber /*inodeNumber*/) {
-  EDEN_BUG() << "UNIMPLEMENTED";
-}
-
-void TreeOverlay::removeOverlayFile(InodeNumber /*inodeNumber*/) {
-  EDEN_BUG() << "UNIMPLEMENTED";
-}
-
-folly::File TreeOverlay::createOverlayFile(
-    InodeNumber /*inodeNumber*/,
-    folly::ByteRange /*contents*/) {
-  EDEN_BUG() << "UNIMPLEMENTED";
-}
-
-folly::File TreeOverlay::createOverlayFile(
-    InodeNumber /*inodeNumber*/,
-    const folly::IOBuf& /*contents*/) {
-  EDEN_BUG() << "UNIMPLEMENTED";
-}
-
-folly::File TreeOverlay::openFile(
-    InodeNumber /*inodeNumber*/,
-    folly::StringPiece /*headerId*/) {
-  EDEN_BUG() << "UNIMPLEMENTED";
-}
-
-folly::File TreeOverlay::openFileNoVerify(InodeNumber /*inodeNumber*/) {
-  EDEN_BUG() << "UNIMPLEMENTED";
-}
-
-struct statfs TreeOverlay::statFs() const {
-  EDEN_BUG() << "UNIMPLEMENTED";
-}
-#endif
-
 void TreeOverlay::removeOverlayDir(InodeNumber inodeNumber) {
   store_.removeTree(inodeNumber);
 }

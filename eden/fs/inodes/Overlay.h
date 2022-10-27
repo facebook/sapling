@@ -39,6 +39,7 @@ struct DirContents;
 class InodeMap;
 class SerializedInodeMap;
 class IOverlay;
+class IFileContentStore;
 class DirEntry;
 class EdenConfig;
 
@@ -353,7 +354,9 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    */
   std::atomic<uint64_t> nextInodeNumber_{0};
 
+  std::unique_ptr<IFileContentStore> fileContentStore_;
   std::unique_ptr<IOverlay> backingOverlay_;
+  Overlay::TreeOverlayType treeOverlayType_;
 
   /**
    * Indicates if the backing overlay supports semantic operations, see

@@ -104,51 +104,6 @@ class IOverlay {
    */
   virtual bool hasOverlayDir(InodeNumber inodeNumber) = 0;
 
-#ifndef _WIN32
-  /**
-   * Return if the overlay has a file record of given InodeNumber.
-   */
-  virtual bool hasOverlayFile(InodeNumber inodeNumber) = 0;
-
-  /**
-   * Remove the overlay file record associated with the passed InodeNumber.
-   */
-  virtual void removeOverlayFile(InodeNumber inodeNumber) = 0;
-
-  /**
-   * Helper function that creates an overlay file for a new FileInode.
-   */
-  virtual folly::File createOverlayFile(
-      InodeNumber inodeNumber,
-      folly::ByteRange contents) = 0;
-
-  /**
-   * Helper function to write an overlay file for a FileInode with existing
-   * contents.
-   */
-  virtual folly::File createOverlayFile(
-      InodeNumber inodeNumber,
-      const folly::IOBuf& contents) = 0;
-
-  /**
-   * Helper function that opens an existing overlay file,
-   * checks if the file has valid header, and returns the file.
-   */
-  virtual folly::File openFile(
-      InodeNumber inodeNumber,
-      folly::StringPiece headerId) = 0;
-
-  /**
-   * Open an existing overlay file without verifying the header.
-   */
-  virtual folly::File openFileNoVerify(InodeNumber inodeNumber) = 0;
-
-  /**
-   * call statfs(2) on the filesystem in which the overlay is located
-   */
-  virtual struct statfs statFs() const = 0;
-#endif
-
   virtual void addChild(
       InodeNumber /* parent */,
       PathComponentPiece /* name */,

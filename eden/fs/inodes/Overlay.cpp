@@ -21,6 +21,7 @@
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/DirEntry.h"
+#include "eden/fs/inodes/IFileContentStore.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/OverlayFile.h"
@@ -37,10 +38,11 @@ namespace {
 constexpr uint64_t ioCountMask = 0x7FFFFFFFFFFFFFFFull;
 constexpr uint64_t ioClosedMask = 1ull << 63;
 
-std::unique_ptr<IOverlay> makeOverlay(
+std::unique_ptr<IOverlay> makeTreeOverlay(
     AbsolutePathPiece localDir,
     Overlay::TreeOverlayType treeOverlayType,
-    const EdenConfig& config) {
+    const EdenConfig& config,
+    IFileContentStore* fileContentStore) {
   if (treeOverlayType == Overlay::TreeOverlayType::Tree) {
     return std::make_unique<TreeOverlay>(localDir);
   } else if (treeOverlayType == Overlay::TreeOverlayType::TreeInMemory) {
@@ -73,7 +75,18 @@ std::unique_ptr<IOverlay> makeOverlay(
   }
   return std::make_unique<TreeOverlay>(localDir);
 #else
-  return std::make_unique<FsOverlay>(localDir);
+  return std::make_unique<FsOverlay>(
+      static_cast<FileContentStore*>(fileContentStore));
+#endif
+}
+
+std::unique_ptr<IFileContentStore> makeFileContentStore(
+    AbsolutePathPiece localDir) {
+#ifdef _WIN32
+  (void)localDir;
+  return nullptr;
+#else
+  return std::make_unique<FileContentStore>(localDir);
 #endif
 }
 } // namespace
@@ -107,7 +120,13 @@ Overlay::Overlay(
     TreeOverlayType treeOverlayType,
     std::shared_ptr<StructuredLogger> logger,
     const EdenConfig& config)
-    : backingOverlay_{makeOverlay(localDir, treeOverlayType, config)},
+    : fileContentStore_{makeFileContentStore(localDir)},
+      backingOverlay_{makeTreeOverlay(
+          localDir,
+          treeOverlayType,
+          config,
+          fileContentStore_ ? fileContentStore_.get() : nullptr)},
+      treeOverlayType_{treeOverlayType},
       supportsSemanticOperations_{
           backingOverlay_->supportsSemanticOperations()},
       localDir_{localDir},
@@ -128,8 +147,11 @@ void Overlay::close() {
   }
 
   // Make sure everything is shut down in reverse of construction order.
-  // Cleanup is not necessary if overlay was not initialized
-  if (!backingOverlay_->initialized()) {
+  // Cleanup is not necessary if tree overlay was not initialized and either
+  // there is no file content store or the it was not initalized
+  if (!backingOverlay_->initialized() &&
+      (!fileContentStore_ ||
+       (fileContentStore_ && !fileContentStore_->initialized()))) {
     return;
   }
 
@@ -149,6 +171,9 @@ void Overlay::close() {
 #endif // !_WIN32
 
   backingOverlay_->close(optNextInodeNumber);
+  if (fileContentStore_ && treeOverlayType_ != TreeOverlayType::Legacy) {
+    fileContentStore_->close();
+  }
 }
 
 bool Overlay::isClosed() {
@@ -158,7 +183,8 @@ bool Overlay::isClosed() {
 #ifndef _WIN32
 struct statfs Overlay::statFs() {
   IORequest req{this};
-  return backingOverlay_->statFs();
+  XCHECK(fileContentStore_);
+  return fileContentStore_->statFs();
 }
 #endif // !_WIN32
 
@@ -208,6 +234,9 @@ void Overlay::initOverlay(
     FOLLY_MAYBE_UNUSED OverlayChecker::LookupCallback& lookupCallback) {
   IORequest req{this};
   auto optNextInodeNumber = backingOverlay_->initOverlay(true);
+  if (fileContentStore_ && treeOverlayType_ != TreeOverlayType::Legacy) {
+    fileContentStore_->initialize(true);
+  }
   if (!optNextInodeNumber.has_value()) {
 #ifndef _WIN32
     // If the next-inode-number data is missing it means that this overlay was
@@ -221,13 +250,14 @@ void Overlay::initOverlay(
                << " was not shut down cleanly.  Performing fsck scan.";
 
     // TODO(zeyi): `OverlayCheck` should be associated with the specific
-    // Overlay implementation. `reinterpret_cast` is a temporary workaround.
+    // Overlay implementation. `static_cast` is a temporary workaround.
     //
     // Note: lookupCallback is a reference but is stored on OverlayChecker.
     // Therefore OverlayChecker must not exist longer than this initOverlay
     // call.
     OverlayChecker checker(
-        reinterpret_cast<FsOverlay*>(backingOverlay_.get()),
+        static_cast<FsOverlay*>(backingOverlay_.get()),
+        static_cast<FileContentStore*>(fileContentStore_.get()),
         std::nullopt,
         lookupCallback);
     folly::stop_watch<> fsckRuntime;
@@ -274,7 +304,8 @@ void Overlay::initOverlay(
   // Open after infoFile_'s lock is acquired because the InodeTable acquires
   // its own lock, which should be released prior to infoFile_.
   inodeMetadataTable_ = InodeMetadataTable::open(
-      (localDir_ + PathComponentPiece{FsOverlay::kMetadataFile}).c_str());
+      (localDir_ + PathComponentPiece{FileContentStore::kMetadataFile})
+          .c_str());
 #endif // !_WIN32
 }
 
@@ -403,7 +434,7 @@ void Overlay::removeOverlayFile(InodeNumber inodeNumber) {
   IORequest req{this};
 
   freeInodeFromMetadataTable(inodeNumber);
-  backingOverlay_->removeOverlayFile(inodeNumber);
+  fileContentStore_->removeOverlayFile(inodeNumber);
 #else
   (void)inodeNumber;
 #endif
@@ -452,7 +483,8 @@ bool Overlay::hasOverlayDir(InodeNumber inodeNumber) {
 
 bool Overlay::hasOverlayFile(InodeNumber inodeNumber) {
   IORequest req{this};
-  return backingOverlay_->hasOverlayFile(inodeNumber);
+  XCHECK(fileContentStore_);
+  return fileContentStore_->hasOverlayFile(inodeNumber);
 }
 
 // Helper function to open,validate,
@@ -461,14 +493,16 @@ OverlayFile Overlay::openFile(
     InodeNumber inodeNumber,
     folly::StringPiece headerId) {
   IORequest req{this};
+  XCHECK(fileContentStore_);
   return OverlayFile(
-      backingOverlay_->openFile(inodeNumber, headerId), weak_from_this());
+      fileContentStore_->openFile(inodeNumber, headerId), weak_from_this());
 }
 
 OverlayFile Overlay::openFileNoVerify(InodeNumber inodeNumber) {
   IORequest req{this};
+  XCHECK(fileContentStore_);
   return OverlayFile(
-      backingOverlay_->openFileNoVerify(inodeNumber), weak_from_this());
+      fileContentStore_->openFileNoVerify(inodeNumber), weak_from_this());
 }
 
 OverlayFile Overlay::createOverlayFile(
@@ -477,8 +511,9 @@ OverlayFile Overlay::createOverlayFile(
   IORequest req{this};
   XCHECK_LT(inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
       << "createOverlayFile called with unallocated inode number";
+  XCHECK(fileContentStore_);
   return OverlayFile(
-      backingOverlay_->createOverlayFile(inodeNumber, contents),
+      fileContentStore_->createOverlayFile(inodeNumber, contents),
       weak_from_this());
 }
 
@@ -488,8 +523,9 @@ OverlayFile Overlay::createOverlayFile(
   IORequest req{this};
   XCHECK_LT(inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
       << "createOverlayFile called with unallocated inode number";
+  XCHECK(fileContentStore_);
   return OverlayFile(
-      backingOverlay_->createOverlayFile(inodeNumber, contents),
+      fileContentStore_->createOverlayFile(inodeNumber, contents),
       weak_from_this());
 }
 

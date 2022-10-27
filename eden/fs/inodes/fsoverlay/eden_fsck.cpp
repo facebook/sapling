@@ -34,11 +34,13 @@ int main(int argc, char** argv) {
     return EX_USAGE;
   }
 
+  std::optional<FileContentStore> fileContentStore;
   std::optional<FsOverlay> fsOverlay;
   std::optional<InodeNumber> nextInodeNumber;
   auto overlayPath = normalizeBestEffort(argv[1]);
   try {
-    fsOverlay.emplace(overlayPath);
+    fileContentStore.emplace(overlayPath);
+    fsOverlay.emplace(&fileContentStore.value());
     nextInodeNumber = fsOverlay->initOverlay(/*createIfNonExisting=*/false);
   } catch (std::exception& ex) {
     XLOG(ERR) << "unable to open overlay: " << folly::exceptionStr(ex);
@@ -53,7 +55,8 @@ int main(int argc, char** argv) {
     return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  OverlayChecker checker(&fsOverlay.value(), nextInodeNumber, lookup);
+  OverlayChecker checker(
+      &fsOverlay.value(), &fileContentStore.value(), nextInodeNumber, lookup);
   checker.scanForErrors();
   if (FLAGS_dry_run) {
     checker.logErrors();

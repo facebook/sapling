@@ -29,7 +29,6 @@
 
 namespace facebook::eden {
 
-#ifdef _WIN32
 class TreeOverlayTest
     : public ::testing::TestWithParam<Overlay::TreeOverlayType> {
  protected:
@@ -83,8 +82,6 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Values(
         Overlay::TreeOverlayType::Tree,
         Overlay::TreeOverlayType::TreeBuffered));
-
-#endif
 
 TEST(PlainTreeOverlayTest, new_overlay_is_clean) {
   folly::test::TemporaryDirectory testDir;

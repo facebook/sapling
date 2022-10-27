@@ -71,27 +71,6 @@ class TreeOverlay : public IOverlay {
   void saveOverlayDir(InodeNumber inodeNumber, overlay::OverlayDir&& odir)
       override;
 
-#ifndef _WIN32
-  bool hasOverlayFile(InodeNumber inodeNumber) override;
-
-  void removeOverlayFile(InodeNumber inodeNumber) override;
-
-  folly::File createOverlayFile(
-      InodeNumber inodeNumber,
-      folly::ByteRange contents) override;
-
-  folly::File createOverlayFile(
-      InodeNumber inodeNumber,
-      const folly::IOBuf& contents) override;
-
-  folly::File openFile(InodeNumber inodeNumber, folly::StringPiece headerId)
-      override;
-
-  folly::File openFileNoVerify(InodeNumber inodeNumber) override;
-
-  struct statfs statFs() const override;
-#endif
-
   void removeOverlayDir(InodeNumber inodeNumber) override;
 
   bool hasOverlayDir(InodeNumber inodeNumber) override;
