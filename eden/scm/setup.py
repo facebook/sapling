@@ -1008,17 +1008,17 @@ class buildembedded(Command):
         if not self.local_bins:
             # copy .exe's from ./build/lib.win-amd64/, not from ./
             bindir = pjoin(scriptdir, "build", distutils_dir_name("scripts"))
-            sourcename = "hg.exe" if iswindows else "hg.rust"
+            sourcename = f"{hgname}.exe" if iswindows else f"{hgname}.rust"
         else:
-            sourcename = "hg.exe" if iswindows else "hg"
-        targetname = "hg.exe" if iswindows else "hg"
+            sourcename = f"{hgname}.exe" if iswindows else hgname
+        targetname = f"{hgname}.exe" if iswindows else hgname
         log.debug("copying main mercurial binary from %s" % bindir)
         copy_to(pjoin(bindir, sourcename), pjoin(dirtocopy, targetname))
         # On Windows, debuginfo is not embedded, but stored as .pdb.
         # Copy it for better debugging.
         if iswindows:
-            pdbname = pjoin(bindir, "hg.pdb")
-            copy_to(pdbname, pjoin(dirtocopy, "hg.pdb"))
+            pdbname = pjoin(bindir, f"{hgname}.pdb")
+            copy_to(pdbname, pjoin(dirtocopy, f"{hgname}.pdb"))
 
     def _copy_other(self, dirtocopy):
         """Copy misc files, which aren't main hg codebase"""
