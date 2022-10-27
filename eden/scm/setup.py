@@ -963,9 +963,9 @@ class buildembedded(Command):
             for path in glob.glob(pjoin(parentdir, pattern)):
                 copy_to(path, dirforexts)
 
-    def _zip_pyc_files(self, zipname):
-        """Modify a zip archive to include edenscm .pyc files"""
-        sourcedir = pjoin(scriptdir, "edenscm")
+    def _zip_pyc_files(self, zipname, package):
+        """Modify a zip archive to include our .pyc files"""
+        sourcedir = pjoin(scriptdir, package)
         with zipfile.PyZipFile(zipname, "a") as z:
             # Write .py files for better traceback.
             for root, _dirs, files in os.walk(sourcedir):
@@ -1047,7 +1047,8 @@ class buildembedded(Command):
         # Build everything into pythonXX.zip, which is in the default sys.path.
         zippath = pjoin(embdir, f"python{PY_VERSION}.zip")
         buildpyzip(self.distribution).run(appendzippath=zippath)
-        self._zip_pyc_files(zippath)
+        self._zip_pyc_files(zippath, "edenscm")
+        self._zip_pyc_files(zippath, "ghstack")
         self._copy_hg_exe(embdir)
         self._copy_other(embdir)
 
