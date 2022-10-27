@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::io::Write;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -13,7 +12,7 @@ use anyhow::anyhow;
 use anyhow::Result;
 use configmodel::Config;
 use parking_lot::Mutex;
-use treestate::dirstate::Dirstate;
+use treestate::dirstate;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::metadata::Metadata;
@@ -116,35 +115,7 @@ impl WatchmanTreeStateWrite for WatchmanTreeState<'_> {
     }
 
     fn flush(self, config: &dyn Config) -> Result<()> {
-        let mut treestate = self.treestate.lock();
-        if treestate.dirty() {
-            tracing::debug!("flushing dirty treestate");
-            let id = identity::must_sniff_dir(self.root)?;
-            let dot_dir = self.root.join(id.dot_dir());
-            let dirstate_path = dot_dir.join("dirstate");
-
-            let _locked = repolock::lock_working_copy(config, &dot_dir)?;
-
-            let dirstate_input = util::file::read(&dirstate_path).map_err(|e| anyhow!(e))?;
-            let mut dirstate = Dirstate::deserialize(&mut dirstate_input.as_slice())?;
-            let treestate_fields = dirstate.tree_state.as_mut().ok_or_else(|| {
-                anyhow!(
-                    "Unable to flush treestate because dirstate is missing required treestate fields"
-                )
-            })?;
-
-            let root_id = treestate.flush()?;
-            treestate_fields.tree_root_id = root_id;
-
-            let mut dirstate_output: Vec<u8> = Vec::new();
-            dirstate.serialize(&mut dirstate_output).unwrap();
-            util::file::atomic_write(&dirstate_path, |file| file.write_all(&dirstate_output))
-                .map_err(|e| anyhow!(e))
-                .map(|_| ())
-        } else {
-            tracing::debug!("skipping treestate flush - it is not dirty");
-            Ok(())
-        }
+        dirstate::flush(config, &self.root, &mut self.treestate.lock())
     }
 }
 

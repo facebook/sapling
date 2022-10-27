@@ -7,9 +7,18 @@
 
 //! Directory State.
 
+use std::io::Write;
+use std::path::Path;
+
+use anyhow::anyhow;
+use anyhow::Result;
+use configmodel::Config;
+use types::hgid::NULL_ID;
 use types::HgId;
 
+use crate::serialization::Serializable;
 use crate::store::BlockId;
+use crate::treestate::TreeState;
 
 /// A dirstate object. This maintains .hg/dirstate file
 #[derive(Debug, PartialEq)]
@@ -26,6 +35,44 @@ pub struct TreeStateFields {
     pub tree_filename: String,
     pub tree_root_id: BlockId,
     pub repack_threshold: Option<u64>,
+}
+
+pub fn flush(config: &dyn Config, root: &Path, treestate: &mut TreeState) -> Result<()> {
+    if treestate.dirty() {
+        tracing::debug!("flushing dirty treestate");
+        let id = identity::must_sniff_dir(root)?;
+        let dot_dir = root.join(id.dot_dir());
+        let dirstate_path = dot_dir.join("dirstate");
+
+        let _locked = repolock::lock_working_copy(&config, &dot_dir)?;
+
+        let dirstate_input = util::file::read(&dirstate_path)?;
+        let mut dirstate = Dirstate::deserialize(&mut dirstate_input.as_slice())?;
+
+        dirstate.p1 = treestate
+            .get_metadata_by_key("p1")?
+            .map_or(Ok(NULL_ID), |p| HgId::from_hex(p.as_bytes()))?;
+        dirstate.p2 = treestate
+            .get_metadata_by_key("p2")?
+            .map_or(Ok(NULL_ID), |p| HgId::from_hex(p.as_bytes()))?;
+        let treestate_fields = dirstate.tree_state.as_mut().ok_or_else(|| {
+            anyhow!(
+                "Unable to flush treestate because dirstate is missing required treestate fields"
+            )
+        })?;
+
+        let root_id = treestate.flush()?;
+        treestate_fields.tree_root_id = root_id;
+
+        let mut dirstate_output: Vec<u8> = Vec::new();
+        dirstate.serialize(&mut dirstate_output).unwrap();
+        util::file::atomic_write(&dirstate_path, |file| file.write_all(&dirstate_output))
+            .map_err(|e| anyhow!(e))
+            .map(|_| ())
+    } else {
+        tracing::debug!("skipping treestate flush - it is not dirty");
+        Ok(())
+    }
 }
 
 #[cfg(test)]
