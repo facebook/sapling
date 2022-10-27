@@ -8,7 +8,7 @@
 
 import logging
 
-from edenscm import error, registrar, util
+from edenscm import error, rcutil, registrar, util
 from edenscm.i18n import _
 
 
@@ -99,7 +99,7 @@ subcmd = ghstack_command.subcommand(
 )
 def submit_cmd(ui, repo, *args, **opts) -> None:
     """submit stack of commits to GitHub"""
-    conf, sh, github = _create_ghstack_context(ui)
+    conf, sh, github = _create_ghstack_context(ui, repo)
     ghstack.submit.main(
         msg=opts.get("message"),
         username=conf.github_username,
@@ -122,7 +122,7 @@ def submit_cmd(ui, repo, *args, **opts) -> None:
 )
 def unlink_cmd(ui, repo, *args, **opts) -> None:
     """remove the association of a commit with a pull request"""
-    conf, sh, github = _create_ghstack_context(ui)
+    conf, sh, github = _create_ghstack_context(ui, repo)
     commits = list(args)
     ghstack.unlink.main(
         commits=commits,
@@ -140,7 +140,7 @@ def unlink_cmd(ui, repo, *args, **opts) -> None:
 )
 def land_cmd(ui, repo, *args, **opts) -> None:
     """lands the stack for the specified pull request URL"""
-    conf, sh, github = _create_ghstack_context(ui)
+    conf, sh, github = _create_ghstack_context(ui, repo)
     if len(args) != 1:
         raise error.Abort(_("must specify a URL for a pull request"))
 
@@ -161,7 +161,7 @@ def land_cmd(ui, repo, *args, **opts) -> None:
 )
 def checkout_cmd(ui, repo, *args, **opts) -> None:
     """goto the stack for the specified pull request URL"""
-    conf, sh, github = _create_ghstack_context(ui)
+    conf, sh, github = _create_ghstack_context(ui, repo)
     if len(args) != 1:
         raise error.Abort(_("must specify a URL for a pull request"))
 
@@ -188,7 +188,7 @@ def checkout_cmd(ui, repo, *args, **opts) -> None:
 )
 def action_cmd(ui, repo, *args, **opts) -> None:
     """goto the stack for the specified pull request URL"""
-    conf, sh, github = _create_ghstack_context(ui)
+    conf, sh, github = _create_ghstack_context(ui, repo)
     if len(args) != 1:
         raise error.Abort(_("must specify a URL for a pull request"))
 
@@ -200,7 +200,7 @@ def action_cmd(ui, repo, *args, **opts) -> None:
     )
 
 
-def _create_ghstack_context(ui):
+def _create_ghstack_context(ui, repo):
     stderr_level = logging.WARN
     if ui.debugflag:
         stderr_level = logging.DEBUG
@@ -231,7 +231,14 @@ query UsernameQuery {
     """
         )["data"]["viewer"]["login"]
         # Write ghstack.github_username back to the user's config so we don't
-        # have to pay the cost of requesting it each time?
+        # have to pay the cost of requesting it each time. To be conservative,
+        # we write it to the "local" config instead of the "user" config in the
+        # event that the user has both personal and GitHub Enterprise accounts
+        # authenticated with gh.
+        configfile = repo.localvfs.join(ui.identity.configrepofile())
+        rcutil.editconfig(
+            configfile, config_section, username_config_name, github_username
+        )
 
     github_url = ui.config(config_section, "github_url", "github.com")
     remote_name = ui.config(config_section, "remote_name", "origin")
