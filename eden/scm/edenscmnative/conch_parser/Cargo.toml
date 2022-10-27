@@ -10,4 +10,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 conch-parser = { version = "0.1.1", path = "../../lib/third-party/conch-parser" }
-cpython = { version = "0.7", features = ["extension-module", "python3-sys", "serde-convert"], default-features = false }
+cpython = { version = "0.7.1", features = ["extension-module", "python3-sys", "serde-convert"], default-features = false }

@@ -18,7 +18,7 @@ clone = { version = "0.1.0", path = "../clone" }
 comfy-table = "4.0.1"
 configmodel = { version = "0.1.0", path = "../config/model" }
 configparser = { version = "0.1.0", path = "../config/parser" }
-cpython = { version = "0.7", default-features = false }
+cpython = { version = "0.7.1", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../cpython-ext", default-features = false }
 dag = { version = "0.1.0", path = "../dag" }
 debugtop = { version = "0.1.0", path = "../debugtop" }
@@ -50,7 +50,7 @@ procinfo = { version = "0.1.0", path = "../procinfo" }
 progress-model = { version = "0.1.0", path = "../progress/model" }
 progress-render = { version = "0.1.0", path = "../progress/render" }
 pyconfigparser = { path = "../../edenscmnative/bindings/modules/pyconfigparser" }
-python3-sys = { version = "0.7", optional = true }
+python3-sys = { version = "0.7.1", optional = true }
 pytracing = { path = "../../edenscmnative/bindings/modules/pytracing", default-features = false }
 rand = { version = "0.8", features = ["small_rng"] }
 repo = { version = "0.1.0", path = "../repo" }
