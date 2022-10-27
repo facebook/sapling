@@ -52,6 +52,7 @@ import re
 import subprocess
 import sys
 import time
+from typing import List, Set, Tuple
 
 from edenscm import (
     bookmarks,
@@ -85,7 +86,9 @@ testedwith = "ships-with-fb-ext"
 globaldata = "globaldata"
 createmarkersoperation = "createmarkersoperation"
 
-logopts = [("", "all", None, _("shows all changesets in the repo"))]
+logopts: List[Tuple[str, str, None, str]] = [
+    ("", "all", None, _("shows all changesets in the repo"))
+]
 
 configtable = {}
 configitem = registrar.configitem(configtable)
@@ -103,7 +106,7 @@ configitem("tweakdefaults", "histeditkeepdate", default=False)
 configitem("tweakdefaults", "rebasekeepdate", default=False)
 configitem("tweakdefaults", "absorbkeepdate", default=False)
 
-rebasemsg = _(
+rebasemsg: str = _(
     "you must use a bookmark with tracking "
     "or manually specify a destination for the rebase"
 )
@@ -128,7 +131,7 @@ configitem("tweakdefaults", "nodestmsg", default=rebasemsg)
 configitem("tweakdefaults", "singlecolonmsg", default=_("use of ':' is deprecated"))
 
 
-def uisetup(ui):
+def uisetup(ui) -> None:
     tweakorder()
     # if we want to replace command's docstring (not just add stuff to it),
     # we need to do it in uisetup, not extsetup
@@ -137,7 +140,7 @@ def uisetup(ui):
     ].__doc__ = blame.__doc__
 
 
-def extsetup(ui):
+def extsetup(ui) -> None:
     wrapblame()
 
     entry = wrapcommand(commands.table, "commit", commitcmd)
@@ -243,11 +246,11 @@ def extsetup(ui):
     templatekw.defaulttempl["manifest"] = "{node}"
 
 
-def reposetup(ui, repo):
+def reposetup(ui, repo) -> None:
     _fixpager(ui)
 
 
-def tweakorder():
+def tweakorder() -> None:
     """
     Tweakdefaults generally should load first; other extensions may modify
     behavior such that tweakdefaults will be happy, so we should not prevent
@@ -369,7 +372,7 @@ def rebaseorfastforward(orig, ui, repo, dest, **args):
     return orig(ui, repo, dest=dest, **args)
 
 
-def pullrebaseffwd(orig, rebasefunc, ui, repo, source="default", **opts):
+def pullrebaseffwd(orig, rebasefunc, ui, repo, source: str = "default", **opts):
     # The remotenames module also wraps "pull --rebase", and if it is active, it
     # is the module that actually performs the rebase.  If it is rebasing, we
     # need to wrap the rebasemodule.rebase function that it calls to replace it
@@ -380,7 +383,9 @@ def pullrebaseffwd(orig, rebasefunc, ui, repo, source="default", **opts):
         if rebasemodule:
             wrapfunction(rebasemodule, "rebase", rebaseorfastforward)
     ret = orig(rebasefunc, ui, repo, source, **opts)
+    # pyre-fixme[61]: `rebasemodule` is undefined, or not always defined.
     if rebasing and rebasemodule:
+        # pyre-fixme[61]: `rebasemodule` is undefined, or not always defined.
         extensions.unwrapfunction(rebasemodule, "rebase", rebaseorfastforward)
     return ret
 
@@ -396,7 +401,7 @@ def commitcmd(orig, ui, repo, *pats, **opts):
     return orig(ui, repo, *pats, **opts)
 
 
-def wrapblame():
+def wrapblame() -> None:
     entry = wrapcommand(commands.table, "annotate", blame)
     options = entry[1]
     options.append(("p", "phabdiff", None, _("list phabricator diff id")))
@@ -552,7 +557,7 @@ def _rebase(orig, ui, repo, *pats, **opts):
 
 
 # set of commands which define their own formatter and prints the hash changes
-formattercommands = set(["fold"])
+formattercommands: Set[str] = set(["fold"])
 
 
 def cleanupnodeswrapper(orig, repo, mapping, operation, *args, **kwargs):
@@ -579,7 +584,7 @@ def cleanupnodeswrapper(orig, repo, mapping, operation, *args, **kwargs):
     return orig(repo, mapping, operation, *args, **kwargs)
 
 
-def _printupdatednode(repo, oldnode, newnodes):
+def _printupdatednode(repo, oldnode, newnodes: List) -> None:
     # oldnode was not updated if newnodes is an iterable
     if len(newnodes) == 1:
         newnode = newnodes[0]
@@ -603,13 +608,13 @@ def _computeobsoletenotrebasedwrapper(orig, repo, rebaseobsrevs, dest):
     return res
 
 
-def _checkobsrebasewrapper(orig, repo, ui, *args):
+def _checkobsrebasewrapper(orig, repo, ui, *args) -> None:
     overrides = {("experimental", "evolution.allowdivergence"): True}
     with repo.ui.configoverride(overrides, "tweakdefaults"):
         orig(repo, ui, *args)
 
 
-def currentdate():
+def currentdate() -> str:
     return "%d %d" % util.makedate(time.time())
 
 
@@ -720,7 +725,7 @@ def diffcmd(orig, ui, repo, *args, **opts):
     return res
 
 
-def _fixpager(ui):
+def _fixpager(ui) -> None:
     # users may mistakenly set PAGER=less, which will affect "pager.pager".
     # raw "less" does not support colors and is not friendly, add "-FRQX"
     # automatically.
