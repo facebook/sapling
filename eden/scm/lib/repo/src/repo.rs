@@ -438,8 +438,8 @@ impl Repo {
                         TreeState::new(&treestate_path, vfs.case_sensitive())?;
 
                     let dirstate = Dirstate {
-                        p0: *HgId::null_id(),
                         p1: *HgId::null_id(),
+                        p2: *HgId::null_id(),
                         tree_state: Some(TreeStateFields {
                             tree_filename: treestate.file_name()?,
                             tree_root_id: root_id,

@@ -14,8 +14,8 @@ use crate::store::BlockId;
 /// A dirstate object. This maintains .hg/dirstate file
 #[derive(Debug, PartialEq)]
 pub struct Dirstate {
-    pub p0: HgId,
     pub p1: HgId,
+    pub p2: HgId,
 
     pub tree_state: Option<TreeStateFields>,
 }
@@ -38,8 +38,8 @@ mod test {
     #[test]
     fn test_serialization() -> anyhow::Result<()> {
         let mut ds = Dirstate {
-            p0: HgId::from_hex(b"93a7f768ac7506e31015dfa545b7f1475a76c4cf")?,
-            p1: NULL_ID,
+            p1: HgId::from_hex(b"93a7f768ac7506e31015dfa545b7f1475a76c4cf")?,
+            p2: NULL_ID,
             tree_state: Some(TreeStateFields {
                 tree_filename: "2c715852-5e8c-45bf-b1f2-236e25dd648b".to_string(),
                 tree_root_id: BlockId(2236480),

@@ -37,9 +37,9 @@ pub fn run(ctx: ReqCtx<NoOpts>, repo: &mut Repo) -> Result<u8> {
 
     let dirstate = treestate::dirstate::Dirstate::deserialize(&mut dirstate_file)?;
 
-    write!(stdout, "{}\n", dirstate.p0.to_hex())?;
-    if !dirstate.p1.is_null() {
-        write!(stdout, "{}\n", dirstate.p1.to_hex())?;
+    write!(stdout, "{}\n", dirstate.p1.to_hex())?;
+    if !dirstate.p2.is_null() {
+        write!(stdout, "{}\n", dirstate.p2.to_hex())?;
     }
 
     Ok(0)

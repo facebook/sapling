@@ -265,8 +265,8 @@ pub fn flush_dirstate(
         }
     }
     let ds = Dirstate {
-        p0: target,
-        p1: NULL_ID,
+        p1: target,
+        p2: NULL_ID,
         tree_state: Some(TreeStateFields {
             tree_filename: tree_file.to_owned().into_string().map_err(|_| {
                 anyhow!(

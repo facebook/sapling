@@ -367,8 +367,8 @@ const DIRSTATE_TREESTATE_HEADER: &[u8] = b"\ntreestate\n\0";
 
 impl Serializable for Dirstate {
     fn serialize(&self, w: &mut dyn Write) -> Result<()> {
-        w.write_all(self.p0.as_ref())?;
         w.write_all(self.p1.as_ref())?;
+        w.write_all(self.p2.as_ref())?;
 
         let ts_fields = match &self.tree_state {
             Some(ts) => ts,
@@ -397,8 +397,8 @@ impl Serializable for Dirstate {
     /// dirstates we only parse the parents.
     fn deserialize(r: &mut dyn Read) -> Result<Self> {
         let mut ds = Self {
-            p0: r.read_hgid()?,
             p1: r.read_hgid()?,
+            p2: r.read_hgid()?,
             tree_state: None,
         };
 
