@@ -151,7 +151,7 @@ def vcvarsbat() -> str:
     )
 
     if not vcvarsall_paths:
-        raise Exception("couldn't find vcvarsall.bat")
+        raise RuntimeError("couldn't find vcvarsall.bat")
 
     return vcvarsall_paths[0]
 
