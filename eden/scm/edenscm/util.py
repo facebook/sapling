@@ -191,6 +191,7 @@ syncfile = platform.syncfile
 syncdir = platform.syncdir
 testpid = platform.testpid
 umask = platform.umask
+unixsocket = platform.unixsocket
 unlink = platform.unlink
 username = platform.username
 

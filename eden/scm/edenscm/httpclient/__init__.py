@@ -55,12 +55,8 @@ import socket
 import ssl
 import sys
 
-from .. import pycompat
+from .. import util
 from . import _readers
-
-if pycompat.iswindows:
-    # pyre-fixme[21]: Could not find a module corresponding to import `eden.thrift.windows_thrift`.
-    from eden.thrift.windows_thrift import WindowsSocketHandle
 
 try:
     # pyre-fixme[21]: Could not find `httplib`.
@@ -553,10 +549,7 @@ class HTTPConnection(object):
             )
 
             if self._unix_socket_path:
-                if pycompat.iswindows:
-                    sock = WindowsSocketHandle()
-                else:
-                    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                sock = util.unixsocket()
                 sock.settimeout(self.timeout)
                 sock.connect(self._unix_socket_path)
             else:
@@ -601,10 +594,7 @@ class HTTPConnection(object):
                 )
         else:
             if self._unix_socket_path:
-                if pycompat.iswindows:
-                    sock = WindowsSocketHandle()
-                else:
-                    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                sock = util.unixsocket()
                 sock.settimeout(self.timeout)
                 sock.connect(self._unix_socket_path)
             else:

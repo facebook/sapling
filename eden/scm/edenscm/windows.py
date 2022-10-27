@@ -685,6 +685,14 @@ def releaselock(_lockfd: "Optional[int]", pathname: str) -> None:
     os.unlink(pathname)
 
 
+def unixsocket():
+    # Defer import since this isn't present in OSS build yet.
+    # pyre-fixme[21]: Could not find a module corresponding to import `eden.thrift.windows_thrift`.
+    from eden.thrift.windows_thrift import WindowsSocketHandle
+
+    return WindowsSocketHandle()
+
+
 # Set outputencoding to UTF-8
 if not encoding.outputencoding:
     # The Rust IO requires UTF-8 output.

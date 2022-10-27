@@ -21,6 +21,7 @@ import os
 import pwd
 import re
 import resource
+import socket
 import stat
 import tempfile
 import unicodedata
@@ -1078,3 +1079,7 @@ def syncdir(dirpath):
     except (OSError, IOError):
         # do nothing since this is just best effort
         pass
+
+
+def unixsocket():
+    return socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
