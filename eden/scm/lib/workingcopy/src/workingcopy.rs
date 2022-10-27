@@ -110,6 +110,10 @@ impl WorkingCopy {
         self.treestate.clone()
     }
 
+    pub fn vfs(&self) -> &VFS {
+        &self.vfs
+    }
+
     pub fn parents(&self) -> Result<Vec<HgId>> {
         self.treestate.lock().parents().collect()
     }

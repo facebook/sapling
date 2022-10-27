@@ -19,6 +19,7 @@ metalog = { version = "0.1.0", path = "../metalog" }
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 refencode = { version = "0.1.0", path = "../refencode" }
 revisionstore = { version = "0.1.0", path = "../revisionstore" }
+revsets = { version = "0.1.0", path = "../revsets" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
 thiserror = "1.0.36"
 tracing = "0.1.35"

@@ -29,6 +29,7 @@ use revisionstore::trait_impls::ArcFileStore;
 use revisionstore::EdenApiFileStore;
 use revisionstore::EdenApiTreeStore;
 use revisionstore::MemcacheStore;
+use revsets::utils as revset_utils;
 use storemodel::ReadFileContents;
 use storemodel::RefreshableReadFileContents;
 use storemodel::RefreshableTreeStore;
@@ -388,6 +389,16 @@ impl Repo {
             self.dag_commits()?,
             self.tree_store()?,
         ))
+    }
+
+    pub fn resolve_commit(&mut self, treestate: &TreeState, change_id: &str) -> Result<HgId> {
+        revset_utils::resolve_single(
+            change_id,
+            self.dag_commits()?.read().id_map_snapshot()?.as_ref(),
+            &*self.metalog()?.read(),
+            treestate,
+        )
+        .map_err(|e| e.into())
     }
 
     pub fn invalidate_stores(&mut self) -> Result<()> {

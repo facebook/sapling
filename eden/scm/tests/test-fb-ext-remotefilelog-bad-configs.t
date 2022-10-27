@@ -29,7 +29,6 @@ Verify error message when no cachepath specified
   $ cp $HGRCPATH $HGRCPATH.bak
   $ sed -i.bak -n "/cachepath/!p" $HGRCPATH
   $ hg up tip
-  warning: failed to inspect working copy parent
   abort: working copy is missing information or corrupt: could not find config option remotefilelog.cachepath
   [255]
   $ mv $HGRCPATH.bak $HGRCPATH
