@@ -142,10 +142,18 @@ impl Identity {
                 None => return Vec::new(),
                 Some(hd) => hd,
             },
-            Some(subdir) => match dirs::config_dir() {
-                None => return Vec::new(),
-                Some(config_dir) => config_dir.join(subdir),
-            },
+            Some(subdir) => {
+                let config_dir = if cfg!(windows) {
+                    std::env::var("APPDATA")
+                        .map_or_else(|_| dirs::config_dir(), |x| Some(PathBuf::from(x)))
+                } else {
+                    dirs::config_dir()
+                };
+                match config_dir {
+                    None => return Vec::new(),
+                    Some(config_dir) => config_dir.join(subdir),
+                }
+            }
         };
 
         self.user

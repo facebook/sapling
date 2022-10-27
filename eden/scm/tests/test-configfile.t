@@ -1,11 +1,11 @@
 #debugruntest-compatible
 #chg-compatible
 
-#if no-windows
-
   $ mkdir repo
   $ cd repo
   $ hg init
+  $ export PROGRAMDATA="C:\\ProgramData\\Facebook\\Mercurial\\"
+  $ export APPDATA="$TESTTMP\\AppData\\Roaming\\"
 
 Test errors
   $ hg configfile --user --local
@@ -19,11 +19,14 @@ Test locating user config
   $ hg configfile
   User config path: $TESTTMP/.hgrc
   Repo config path: $TESTTMP/repo/.hg/hgrc
-  System config path: /etc/mercurial/system.rc
+  System config path: /etc/mercurial/system.rc (no-windows !)
+  System config path: C:\ProgramData\Facebook\Mercurial\Facebook\Mercurial\system.rc (windows !)
   $ hg configfile --user
   $TESTTMP/.hgrc
   $ HGIDENTITY=sl hg configfile --user
-  $TESTTMP/.config/sapling/sapling.conf
+  $TESTTMP/.config/sapling/sapling.conf (linux !)
+  $TESTTMP/Library/Preferences/sapling/sapling.conf (osx !)
+  $TESTTMP\AppData\Roaming\sapling\sapling.conf (windows !)
   $ touch $TESTTMP/.hgrc
   $ HGIDENTITY=sl hg configfile --user
   $TESTTMP/.hgrc
@@ -32,6 +35,5 @@ Test locating other configs
   $ hg configfile --local
   $TESTTMP/repo/.hg/hgrc
   $ hg configfile --system
-  /etc/mercurial/system.rc
-
-#endif
+  /etc/mercurial/system.rc (no-windows !)
+  C:\ProgramData\Facebook\Mercurial\Facebook\Mercurial\system.rc (windows !)

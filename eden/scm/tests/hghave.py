@@ -670,6 +670,11 @@ def has_osx():
     return sys.platform == "darwin"
 
 
+@check("linux", "Linux")
+def has_linux():
+    return sys.platform == "linux"
+
+
 @check("osxpackaging", "OS X packaging tools")
 def has_osxpackaging():
     try:
