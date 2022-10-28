@@ -54,6 +54,9 @@ def main() -> int:
         workflows.gen_build_ubuntu_image(ubuntu_version=ubuntu_version)
         workflows.gen_ubuntu_ci(ubuntu_version=ubuntu_version)
         workflows.gen_ubuntu_release(ubuntu_version=ubuntu_version)
+
+    workflows.gen_windows_release()
+
     return 0
 
 
@@ -207,41 +210,17 @@ RUN rm -rf /tmp/repo
             ubuntu_version=ubuntu_version, deb_version_expr="${{ github.ref }}"
         )
         build_job["steps"].append(
-            {
-                "name": "Upload Artifact",
-                "uses": "actions/upload-artifact@v3",
-                "with": {"name": artifact_key, "path": "./eden/scm/sapling_*.deb"},
-            }
+            upload_artifact(artifact_key, "./eden/scm/sapling_*.deb"),
         )
 
         publish_job = {
             "runs-on": "ubuntu-latest",
             "needs": BUILD,
-            "steps": [
-                {"name": "Checkout Code", "uses": "actions/checkout@v3"},
-                grant_repo_access(),
-                {
-                    "name": "Download Artifact",
-                    "uses": "actions/download-artifact@v3",
-                    "with": {"name": artifact_key},
-                },
-                {
-                    "name": "Create pre-release",
-                    "env": {"GITHUB_TOKEN": "${{ secrets.GITHUB_TOKEN }}"},
-                    "shell": "bash",
-                    "run": "bash ci/retry.sh bash ci/create-release.sh $(ci/tag-name.sh)",
-                },
-                {
-                    "name": "Upload Release",
-                    "env": {"GITHUB_TOKEN": "${{ secrets.GITHUB_TOKEN }}"},
-                    "shell": "bash",
-                    "run": "bash ci/retry.sh gh release upload --clobber $(ci/tag-name.sh) sapling_*.deb",
-                },
-            ],
+            "steps": publish_release_steps(artifact_key, "sapling_*.deb"),
         }
         gh_action = {
             "name": f"Release - Ubuntu {ubuntu_version}",
-            "on": {"push": {"tags": ["v*", "test-release-*"]}},
+            "on": release_trigger_on(),
             "jobs": {
                 BUILD: build_job,
                 "publish": publish_job,
@@ -290,6 +269,55 @@ RUN rm -rf /tmp/repo
             ],
         }
 
+    def gen_windows_release(self) -> str:
+        BUILD = "build"
+        artifact_key = "windows-amd64"
+
+        build_job = {
+            "runs-on": "windows-latest",
+            "steps": [
+                {"name": "Checkout Code", "uses": "actions/checkout@v3"},
+                grant_repo_access(),
+                {"name": "rustup", "run": "rustup default stable"},
+                # The "x64-windows-static-md" triple is what the Rust openssl
+                # crate expects on Windows when it goes looking for the vcpkg
+                # install.
+                #
+                # This step can probably be sped up with caching by using the
+                # "run-vcpkg" action paired with a checked-in vcpkg manifest
+                # file.
+                {
+                    "name": "openssl",
+                    "run": "vcpkg install openssl:x64-windows-static-md",
+                },
+                # This makes vcpkg packages available globally.
+                {"name": "integrate vcpkg", "run": "vcpkg integrate install"},
+                {
+                    "name": "build and zip",
+                    "run": "python3 ./eden/scm/packaging/windows/build_windows_zip.py",
+                },
+                upload_artifact(
+                    artifact_key, "./eden/scm/artifacts/sapling_windows_amd64.zip"
+                ),
+            ],
+        }
+
+        publish_job = {
+            "runs-on": "ubuntu-latest",
+            "needs": BUILD,
+            "steps": publish_release_steps(artifact_key, "sapling_windows_amd64.zip"),
+        }
+
+        gh_action = {
+            "name": "Release - Windows amd64",
+            "on": release_trigger_on(),
+            "jobs": {
+                BUILD: build_job,
+                "publish": publish_job,
+            },
+        }
+        self._write_file("sapling-cli-windows-amd64-release.yml", gh_action)
+
     def _get_ubuntu_container_name(self, version: str) -> str:
         """Name of container to use when doing builds on Ubuntu: will be built
         by "Docker Image" GitHub Action.
@@ -320,6 +348,48 @@ def grant_repo_access():
         "name": "Grant Access",
         "run": 'git config --global --add safe.directory "$PWD"',
     }
+
+
+def upload_artifact(name: str, path: str):
+    return {
+        "name": "Upload Artifact",
+        "uses": "actions/upload-artifact@v3",
+        "with": {
+            "name": name,
+            "path": path,
+        },
+    }
+
+
+def release_trigger_on():
+    return {
+        "workflow_dispatch": None,
+        "push": {"tags": ["v*", "test-release-*"]},
+    }
+
+
+def publish_release_steps(artifact_key: str, artifact_upload_glob: str):
+    return [
+        {"name": "Checkout Code", "uses": "actions/checkout@v3"},
+        grant_repo_access(),
+        {
+            "name": "Download Artifact",
+            "uses": "actions/download-artifact@v3",
+            "with": {"name": artifact_key},
+        },
+        {
+            "name": "Create pre-release",
+            "env": {"GITHUB_TOKEN": "${{ secrets.GITHUB_TOKEN }}"},
+            "shell": "bash",
+            "run": "bash ci/retry.sh bash ci/create-release.sh $(ci/tag-name.sh)",
+        },
+        {
+            "name": "Upload Release",
+            "env": {"GITHUB_TOKEN": "${{ secrets.GITHUB_TOKEN }}"},
+            "shell": "bash",
+            "run": f"bash ci/retry.sh gh release upload --clobber $(ci/tag-name.sh) {artifact_upload_glob}",
+        },
+    ]
 
 
 def eprint(*args, **kwargs):
