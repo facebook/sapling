@@ -104,12 +104,13 @@ LockedSqliteConnection SqliteDatabase::lock() {
       break;
     case SqliteDbStatus::NOT_YET_OPENED:
       throw std::runtime_error(
-          "the RocksDB local store has not yet been opened");
+          "the SqliteDatabase database has not yet been opened");
     case SqliteDbStatus::FAILED_TO_OPEN:
-      throw std::runtime_error("the RocksDB local store failed to be opened");
+      throw std::runtime_error(
+          "the SqliteDatabase database failed to be opened");
     case SqliteDbStatus::CLOSED:
       throw std::runtime_error(
-          "the RocksDB local store has already been closed");
+          "the SqliteDatabase database has already been closed");
   }
   return db;
 }
