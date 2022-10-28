@@ -80,6 +80,7 @@ b85encode = base85.b85encode
 # pyre-fixme[11]: Annotation `cookiejar` is not defined as a type.
 cookielib = pycompat.cookielib
 empty = pycompat.empty
+full = pycompat.queue.Full
 # pyre-fixme[11]: Annotation `client` is not defined as a type.
 httplib = pycompat.httplib
 # pyre-fixme[11]: Annotation `pickle` is not defined as a type.

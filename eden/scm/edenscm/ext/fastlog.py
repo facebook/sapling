@@ -517,12 +517,12 @@ class FastLogThread(Thread):
             except Exception as e:
                 if self.ui.config("fastlog", "debug"):
                     self.ui.traceback(force=True)
-                self.queue.put((self.id, False, str(e)))
+                self.enqueue((self.id, False, str(e)))
                 self.stop()
                 return
 
             if results is None:
-                self.queue.put((self.id, False, "Unknown error"))
+                self.enqueue((self.id, False, "Unknown error"))
                 self.stop()
                 return
 
@@ -537,7 +537,8 @@ class FastLogThread(Thread):
                 except Exception as e:
                     if self.ui.config("fastlog", "debug"):
                         self.ui.traceback(force=True)
-                    self.queue.put((self.id, False, str(e)))
+                    if not self.enqueue((self.id, False, str(e))):
+                        break
                 else:
                     yield rev
 
@@ -562,9 +563,9 @@ class FastLogThread(Thread):
 
         if revs:
             for rev in revs:
-                if self.stopped():
+                if not self.enqueue((self.id, True, rev)):
                     break
-                self.queue.put((self.id, True, rev))
+
         # The end marker (self.id, True, None) indicates that the thread
         # completed successfully. Don't send it if the thread is stopped.
         # The thread can be stopped for one of two reasons:
@@ -574,8 +575,20 @@ class FastLogThread(Thread):
         #  2. The caller is going to ignore all future results from us. In this
         #     case, it'll ignore the end marker anyway - it's discarding the
         #     entire queue.
-        if not self.stopped():
-            self.queue.put((self.id, True, None))
+        self.enqueue((self.id, True, None))
+
+    def enqueue(self, triple):
+        """Push into self.queue unless we are stopped(). Returns whether enqueue happened."""
+
+        while True:
+            if self.stopped():
+                return False
+
+            try:
+                self.queue.put(triple, timeout=0.1)
+                return True
+            except util.full:
+                pass
 
 
 if __name__ == "__main__":
