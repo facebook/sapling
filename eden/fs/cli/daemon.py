@@ -180,7 +180,8 @@ def get_edenfs_cmd(instance: EdenInstance, daemon_binary: str) -> List[str]:
 
     cmd = []
     if is_apple_silicon():
-        cmd += ["arch", "-arch", "arm64"]
+        # Prefer native arch on ARM64, fallback to x86_64 otherwise
+        cmd += ["arch", "-arch", "arm64", "-arch", "x86_64"]
 
     cmd += [
         daemon_binary,
