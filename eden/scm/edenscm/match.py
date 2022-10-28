@@ -1135,7 +1135,7 @@ def _buildpatternmatcher(
                 # possible exceptions:
                 #   * disable XXX matcher, but their coresponding pats are not empty
                 #   * treematcher: Regex("Compiled regex exceeds size limit of 10485760 bytes.")
-                #   * regexmatcher: doesn't support '^' etc.
+                #   * regexmatcher: doesn't support '\b' etc.
                 pass
             else:
                 m = union([m1, m2], root, cwd)
