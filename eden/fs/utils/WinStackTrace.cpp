@@ -218,6 +218,14 @@ LONG WINAPI windowsExceptionFilter(LPEXCEPTION_POINTERS excep) {
       "Unhandled win32 exception code=0x%1!lX!. Fatal error detected at:\n",
       excep->ExceptionRecord->ExceptionCode);
   WriteFile(err, line, length, NULL, NULL);
+  for (DWORD i = 0; i < excep->ExceptionRecord->NumberParameters; ++i) {
+    length = formatString(
+        line,
+        kMaxLineLength,
+        "  param=0x%1!lx!\n",
+        excep->ExceptionRecord->ExceptionInformation[i]);
+    WriteFile(err, line, length, NULL, NULL);
+  }
 
   backtraceSymbols(frames, size, err);
 
