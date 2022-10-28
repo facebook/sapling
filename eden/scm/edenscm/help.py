@@ -589,9 +589,9 @@ class _helpdispatch(object):
         rst = [
             _("@LongProduct@\n"),
             "\n",
-            "hg COMMAND [OPTIONS]\n",
+            "@prog@ COMMAND [OPTIONS]\n",
             "\n",
-            "These are some common Mercurial commands.  Use '@prog@ help commands' to list all "
+            "These are some common @Product@ commands.  Use '@prog@ help commands' to list all "
             "commands, and '@prog@ help COMMAND' to get help on a specific command.\n",
             "\n",
         ]
