@@ -168,10 +168,6 @@ def loadpath(path, module_name):
             import base64
 
             source = base64.b64decode(content)
-
-            # Correct imports to ease transition away from "mercurial" package.
-            source = source.replace(b"edenscm.mercurial", b"edenscm")
-
             return loadsource(source, module_name)
     if os.path.isdir(path):
         # module/__init__.py style
