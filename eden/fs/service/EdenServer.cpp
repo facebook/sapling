@@ -143,7 +143,6 @@ DEFINE_uint64(
     "The minimum number of recent blobs to keep cached. Trumps maximumBlobCacheSize");
 
 using apache::thrift::ThriftServer;
-using apache::thrift::ThriftServerAsyncProcessorFactory;
 using folly::Future;
 using folly::makeFuture;
 using folly::makeFutureWith;
@@ -1930,10 +1929,7 @@ Future<Unit> EdenServer::createThriftServer() {
   server_->leakOutstandingRequestsWhenServerStops(true);
 
   handler_ = make_shared<EdenServiceHandler>(originalCommandLine_, this);
-  auto procFactory =
-      std::make_shared<ThriftServerAsyncProcessorFactory<EdenServiceHandler>>(
-          handler_);
-  server_->setInterface(procFactory);
+  server_->setInterface(handler_);
 
   // Get the path to the thrift socket.
   auto thriftSocketPath = edenDir_.getThriftSocketPath();
