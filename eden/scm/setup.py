@@ -374,7 +374,7 @@ def localhgenv():
     return env
 
 
-hg = findhg()
+hg = None if ossbuild else findhg()
 
 
 def hgtemplate(template, cast=None):
