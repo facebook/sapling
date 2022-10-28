@@ -365,7 +365,7 @@ class EdenInstance(AbstractEdenInstance):
         return logger
 
     def _create_telemetry_logger(self) -> telemetry.TelemetryLogger:
-        if "INTEGRATION_TEST" in os.environ:
+        if "INTEGRATION_TEST" in os.environ or "EDENFS_UNITTEST" in os.environ:
             return telemetry.NullTelemetryLogger()
 
         try:
