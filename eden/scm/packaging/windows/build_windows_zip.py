@@ -65,6 +65,7 @@ def build_sapling(project_root: Path, python_dir: Path):
                 "&&",
                 pythonexe,
                 "setup.py",
+                "build_interactive_smartlog",
                 "build_py",
                 "-c",
                 "build_clib",

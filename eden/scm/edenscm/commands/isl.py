@@ -150,5 +150,11 @@ def get_isl_args_on_windows() -> List[str]:
     # @fb-only
     # @fb-only
         # @fb-only
-    # TODO(T125822314): Fix packaging issue so isl works on Windows.
-    raise error.Abort(_("isl is not currently supported on Windows"))
+
+    # Assuming __file__ looks like C:\some\place\sl\python39.zip\edenscm\commands\isl.pyc,
+    # edenscm-isl should be located in "sl" alongside the zip.
+    return [
+        os.path.join(
+            os.path.dirname(__file__), "..", "..", "..", "edenscm-isl", "run-isl.bat"
+        )
+    ]

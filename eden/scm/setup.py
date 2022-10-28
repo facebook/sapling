@@ -963,6 +963,14 @@ class buildembedded(Command):
             for path in glob.glob(pjoin(parentdir, pattern)):
                 copy_to(path, dirforexts)
 
+    def _process_isl(self, dirforisl):
+        """Copy edenscm-isl, if present, to the destination.
+
+        This is for external OSS build."""
+        isldir = pjoin(scriptdir, "build", distutils_dir_name("lib"), "edenscm-isl")
+        if os.path.isdir(isldir):
+            copy_to(isldir, pjoin(dirforisl, "edenscm-isl"))
+
     def _zip_pyc_files(self, zipname, package):
         """Modify a zip archive to include our .pyc files"""
         sourcedir = pjoin(scriptdir, package)
@@ -1038,6 +1046,7 @@ class buildembedded(Command):
         ensureempty(embdir)
         ensureexists(embdir)
         self._process_hg_exts(embdir)
+        self._process_isl(embdir)
 
         # On Windows, Python shared library has to live at the same level
         # as the main project binary, since this is the location which
