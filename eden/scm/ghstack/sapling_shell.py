@@ -11,20 +11,17 @@ WILDCARD_ARG = {}
 
 class SaplingShell(ghstack.shell.Shell):
     def __init__(self,
+                 *,
                  conf: ghstack.config.Config,
+                 git_dir: str,
                  quiet: bool = False,
                  cwd: Optional[str] = None,
                  testing: bool = False,
                  sapling_cli: str = "sl"):
         super().__init__(quiet=quiet, cwd=cwd, testing=testing)
         self.conf = conf
+        self.git_dir = git_dir
         self.sapling_cli = sapling_cli
-
-        self.git_dir = self._run_sapling_command([
-            'debugshell',
-            '-c',
-            'print(repo.svfs.join(repo.svfs.readutf8("gitdir")))',
-        ])
         logging.debug(f"--git-dir set to: {self.git_dir}")
 
     def is_git(self) -> bool:

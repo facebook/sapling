@@ -8,7 +8,7 @@
 
 import logging
 
-from edenscm import error, rcutil, registrar, util
+from edenscm import error, git, rcutil, registrar, util
 from edenscm.i18n import _
 
 
@@ -256,5 +256,6 @@ query UsernameQuery {
         github_path="",
         default_project_dir="",
     )
-    sh = ghstack.sapling_shell.SaplingShell(conf=conf, sapling_cli=cli)
+    git_dir = git.readgitdir(repo)
+    sh = ghstack.sapling_shell.SaplingShell(conf=conf, git_dir=git_dir, sapling_cli=cli)
     return conf, sh, github
