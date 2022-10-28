@@ -1,6 +1,0 @@
-#!/bin/bash
-
-THIS_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-export PYTHONPATH=$( dirname $(dirname "$THIS_DIR" ) )
-
-exec python3 -m ghstack "$@"
