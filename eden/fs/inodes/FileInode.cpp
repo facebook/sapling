@@ -489,6 +489,17 @@ FileInode::FileInode(
 ImmediateFuture<struct stat> FileInode::setattr(
     const DesiredMetadata& desired,
     ObjectFetchContext& fetchContext) {
+  if (desired.is_nop(false /* ignoreAtime */)) {
+    // Short-circuit completely nop requests as early as possible, without doing
+    // any additional work to fetch current metadata.
+    //
+    // On ARM64, macOS will send empty/nop `setattr` requests,
+    // so we need to filter those out, otherwise we will cause
+    // spurious notification changes.
+    XLOG(DBG7) << "Skipping nop setattr without ignoring `atime`";
+    return this->stat(fetchContext);
+  }
+
   // If this file is inside of .eden it cannot be reparented, so getParentRacy()
   // is okay.
   auto parent = getParentRacy();

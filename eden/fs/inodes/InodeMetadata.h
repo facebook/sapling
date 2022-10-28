@@ -28,6 +28,15 @@ struct DesiredMetadata {
   std::optional<gid_t> gid;
   std::optional<timespec> atime;
   std::optional<timespec> mtime;
+
+  bool is_nop(bool ignoreAtime) const {
+    // `ignoreAtime` exists, so that it can be ignored for scenarios
+    // where `atime` is not supported (e.g., higher-level NFS functions)
+    // but setters can still work internally.
+    return !size.has_value() && !mode.has_value() && !uid.has_value() &&
+        !gid.has_value() && !mtime.has_value() &&
+        (!atime.has_value() || ignoreAtime);
+  }
 };
 
 /**
