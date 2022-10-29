@@ -113,6 +113,7 @@ class RefPtr {
    */
   static RefPtr takeOwnership(T* ptr) {
     RefCounted* base = ptr;
+    (void)base;
     assert(
         base->isUnique() &&
         "RefPtr::takeOwnership requires a newly-allocated object with a"
