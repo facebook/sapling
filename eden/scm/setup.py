@@ -1235,14 +1235,28 @@ class BuildInteractiveSmartLog(build):
         ensureempty(isl_out)
 
         subprocess.run(
-            ["yarn", "install", "--prefer-offline"], check=True, cwd=addons_path
+            [lookup_path("yarn"), "install", "--prefer-offline"],
+            check=True,
+            cwd=addons_path,
         )
         subprocess.run(
-            ["node", "release.js", isl_out],
+            [lookup_path("node"), "release.js", isl_out],
             check=True,
             cwd=os.path.join(addons_path, "isl"),
         )
         copy_to(isl_out, pjoin(self.build_lib, "edenscm-isl"))
+
+
+def lookup_path(cmd: str) -> str:
+    r"""Use PATH to resolve `cmd` to an absolute path.
+
+    `subprocess` has trouble finding executables on Windows, such as
+    when running `yarn` when it is in your PATH as `C:\somewhere\yarn.CMD`.
+    Here we use `shutil.which` to pre-expand the executable path, which works better."""
+    found = shutil.which(cmd)
+    if not found:
+        raise RuntimeError(f"Could not find '{cmd}' in path")
+    return found
 
 
 class hginstall(install):
