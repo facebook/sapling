@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/inodes/treeoverlay/TreeOverlayStore.h"
+#include "eden/fs/inodes/treeoverlay/SqliteTreeStore.h"
 
 #include <folly/Range.h>
 #include <array>
@@ -39,7 +39,7 @@ constexpr size_t kBatchInsertSize = 8;
 
 } // namespace
 
-struct TreeOverlayStore::StatementCache {
+struct SqliteTreeStore::StatementCache {
   explicit StatementCache(LockedSqliteConnection& db)
       : selectTree{db, "SELECT name, dtype, inode, hash FROM ", kEntryTable, " WHERE parent = ? ORDER BY name"},
         countChildren{
@@ -119,9 +119,9 @@ struct TreeOverlayStore::StatementCache {
   std::array<PersistentSqliteStatement, kBatchInsertSize> batchInsert;
 };
 
-TreeOverlayStore::TreeOverlayStore(
+SqliteTreeStore::SqliteTreeStore(
     AbsolutePathPiece path,
-    TreeOverlayStore::SynchronousMode synchronous_mode) {
+    SqliteTreeStore::SynchronousMode synchronous_mode) {
   ensureDirectoryExists(path);
 
   db_ = std::make_unique<SqliteDatabase>(path + kTreeStorePath);
@@ -131,33 +131,33 @@ TreeOverlayStore::TreeOverlayStore(
   auto dbLock = db_->lock();
   SqliteStatement(dbLock, "PRAGMA journal_mode=WAL").step();
 
-  if (synchronous_mode == TreeOverlayStore::SynchronousMode::Off) {
+  if (synchronous_mode == SqliteTreeStore::SynchronousMode::Off) {
     XLOG(INFO)
         << "Synchronous mode is off. Data loss may happen when system crashes.";
     SqliteStatement(dbLock, "PRAGMA synchronous=OFF").step();
   }
 }
 
-TreeOverlayStore::TreeOverlayStore(std::unique_ptr<SqliteDatabase> db)
+SqliteTreeStore::SqliteTreeStore(std::unique_ptr<SqliteDatabase> db)
     : db_{std::move(db)} {}
 
 // We must define the destructor here because of incomplete definition of
 // `StatementCache`
-TreeOverlayStore::~TreeOverlayStore() = default;
+SqliteTreeStore::~SqliteTreeStore() = default;
 
-void TreeOverlayStore::close() {
+void SqliteTreeStore::close() {
   cache_.reset();
   if (db_) {
     db_->close();
   }
 }
 
-std::unique_ptr<SqliteDatabase> TreeOverlayStore::takeDatabase() {
+std::unique_ptr<SqliteDatabase> SqliteTreeStore::takeDatabase() {
   cache_.reset();
   return std::move(db_);
 }
 
-void TreeOverlayStore::createTableIfNonExisting() {
+void SqliteTreeStore::createTableIfNonExisting() {
   // TODO: check `user_version` and migrate schema if necessary
   db_->transaction([&](auto& txn) {
     // `name` column in this table being `STRING` data type essentially capped
@@ -223,7 +223,7 @@ void TreeOverlayStore::createTableIfNonExisting() {
   }
 }
 
-InodeNumber TreeOverlayStore::loadCounters() {
+InodeNumber SqliteTreeStore::loadCounters() {
   // load ids
   auto db = db_->lock();
 
@@ -256,11 +256,11 @@ InodeNumber TreeOverlayStore::loadCounters() {
   return InodeNumber{nextInode_.load()};
 }
 
-InodeNumber TreeOverlayStore::nextInodeNumber() {
+InodeNumber SqliteTreeStore::nextInodeNumber() {
   return InodeNumber{nextInode_.fetch_add(1, std::memory_order_acq_rel)};
 }
 
-void TreeOverlayStore::saveTree(
+void SqliteTreeStore::saveTree(
     InodeNumber inodeNumber,
     overlay::OverlayDir&& odir) {
   db_->transaction([&](auto& txn) {
@@ -311,7 +311,7 @@ void TreeOverlayStore::saveTree(
   });
 }
 
-overlay::OverlayDir TreeOverlayStore::loadTree(InodeNumber inode) {
+overlay::OverlayDir SqliteTreeStore::loadTree(InodeNumber inode) {
   overlay::OverlayDir dir;
 
   db_->transaction([&](auto& txn) {
@@ -332,7 +332,7 @@ overlay::OverlayDir TreeOverlayStore::loadTree(InodeNumber inode) {
   return dir;
 }
 
-overlay::OverlayDir TreeOverlayStore::loadAndRemoveTree(InodeNumber inode) {
+overlay::OverlayDir SqliteTreeStore::loadAndRemoveTree(InodeNumber inode) {
   overlay::OverlayDir dir;
 
   db_->transaction([&](auto& txn) {
@@ -359,13 +359,13 @@ overlay::OverlayDir TreeOverlayStore::loadAndRemoveTree(InodeNumber inode) {
   return dir;
 }
 
-void TreeOverlayStore::removeTree(InodeNumber inode) {
+void SqliteTreeStore::removeTree(InodeNumber inode) {
   db_->transaction([&](auto& txn) {
     auto children = cache_->countChildren.get(txn);
     children->bind(1, inode.get());
 
     if (!children->step() || children->columnUint64(0) != 0) {
-      throw TreeOverlayNonEmptyError("cannot delete non-empty directory");
+      throw SqliteTreeStoreNonEmptyError("cannot delete non-empty directory");
     }
 
     auto deleteInode = cache_->deleteTree.get(txn);
@@ -375,7 +375,7 @@ void TreeOverlayStore::removeTree(InodeNumber inode) {
   });
 }
 
-bool TreeOverlayStore::hasTree(InodeNumber inode) {
+bool SqliteTreeStore::hasTree(InodeNumber inode) {
   auto db = db_->lock();
   auto query = cache_->hasTree.get(db);
   query->bind(1, inode.get());
@@ -385,7 +385,7 @@ bool TreeOverlayStore::hasTree(InodeNumber inode) {
   return false;
 }
 
-void TreeOverlayStore::addChild(
+void SqliteTreeStore::addChild(
     InodeNumber parent,
     PathComponentPiece name,
     overlay::OverlayEntry entry) {
@@ -395,7 +395,7 @@ void TreeOverlayStore::addChild(
   stmt->step();
 }
 
-void TreeOverlayStore::removeChild(
+void SqliteTreeStore::removeChild(
     InodeNumber parent,
     PathComponentPiece childName) {
   auto db = db_->lock();
@@ -405,7 +405,7 @@ void TreeOverlayStore::removeChild(
   stmt->step();
 }
 
-bool TreeOverlayStore::hasChild(
+bool SqliteTreeStore::hasChild(
     InodeNumber parent,
     PathComponentPiece childName) {
   auto db = db_->lock();
@@ -416,7 +416,7 @@ bool TreeOverlayStore::hasChild(
   return stmt->columnUint64(0) == 1;
 }
 
-void TreeOverlayStore::renameChild(
+void SqliteTreeStore::renameChild(
     InodeNumber src,
     InodeNumber dst,
     PathComponentPiece srcName,
@@ -429,7 +429,8 @@ void TreeOverlayStore::renameChild(
     overwriteEmpty->bind(2, dstName.stringPiece());
 
     if (!(overwriteEmpty->step() && overwriteEmpty->columnUint64(0) == 0)) {
-      throw TreeOverlayNonEmptyError("cannot overwrite non-empty directory");
+      throw SqliteTreeStoreNonEmptyError(
+          "cannot overwrite non-empty directory");
     }
 
     // If all the check passes, we delete the child being overwritten
@@ -447,7 +448,7 @@ void TreeOverlayStore::renameChild(
   });
 }
 
-void TreeOverlayStore::insertInodeEntry(
+void SqliteTreeStore::insertInodeEntry(
     SqliteStatement& inserts,
     size_t index,
     InodeNumber parent,

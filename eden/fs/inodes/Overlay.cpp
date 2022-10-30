@@ -51,7 +51,7 @@ std::unique_ptr<IOverlay> makeTreeOverlay(
         std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory));
   } else if (treeOverlayType == Overlay::TreeOverlayType::TreeSynchronousOff) {
     return std::make_unique<TreeOverlay>(
-        localDir, TreeOverlayStore::SynchronousMode::Off);
+        localDir, SqliteTreeStore::SynchronousMode::Off);
   } else if (treeOverlayType == Overlay::TreeOverlayType::TreeBuffered) {
     XLOG(DBG4) << "Buffered tree overlay being used";
     return std::make_unique<BufferedTreeOverlay>(localDir, config);
@@ -66,7 +66,7 @@ std::unique_ptr<IOverlay> makeTreeOverlay(
     XLOG(DBG2)
         << "Buffered tree overlay being used with synchronous-mode = off";
     return std::make_unique<BufferedTreeOverlay>(
-        localDir, config, TreeOverlayStore::SynchronousMode::Off);
+        localDir, config, SqliteTreeStore::SynchronousMode::Off);
   }
 #ifdef _WIN32
   if (treeOverlayType == Overlay::TreeOverlayType::Legacy) {

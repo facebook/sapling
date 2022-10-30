@@ -28,8 +28,8 @@ class BufferedTreeOverlay : public TreeOverlay {
   explicit BufferedTreeOverlay(
       AbsolutePathPiece path,
       const EdenConfig& config,
-      TreeOverlayStore::SynchronousMode mode =
-          TreeOverlayStore::SynchronousMode::Normal);
+      SqliteTreeStore::SynchronousMode mode =
+          SqliteTreeStore::SynchronousMode::Normal);
 
   explicit BufferedTreeOverlay(
       std::unique_ptr<SqliteDatabase> store,

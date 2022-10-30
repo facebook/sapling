@@ -22,7 +22,7 @@ namespace facebook::eden {
 BufferedTreeOverlay::BufferedTreeOverlay(
     AbsolutePathPiece path,
     const EdenConfig& config,
-    TreeOverlayStore::SynchronousMode mode)
+    SqliteTreeStore::SynchronousMode mode)
     : TreeOverlay(path, mode),
       bufferSize_{config.overlayBufferSize.getValue()} {
   workerThread_ = std::thread{[this] {

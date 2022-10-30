@@ -25,9 +25,9 @@ class OverlayEntry;
 class SqliteStatement;
 struct InodeNumber;
 
-class TreeOverlayNonEmptyError : public std::exception {
+class SqliteTreeStoreNonEmptyError : public std::exception {
  public:
-  explicit TreeOverlayNonEmptyError(std::string&& str)
+  explicit SqliteTreeStoreNonEmptyError(std::string&& str)
       : message_(folly::to<std::string>(
             "Attempting to operate on non-empty directory: ",
             str)) {}
@@ -43,26 +43,26 @@ class TreeOverlayNonEmptyError : public std::exception {
 /**
  * An overlay backed by SQLite specializing in tree storage.
  */
-class TreeOverlayStore {
+class SqliteTreeStore {
  public:
   enum class SynchronousMode : uint8_t {
     Off = 0,
     Normal = 1,
   };
 
-  explicit TreeOverlayStore(
+  explicit SqliteTreeStore(
       AbsolutePathPiece dir,
-      TreeOverlayStore::SynchronousMode mode =
-          TreeOverlayStore::SynchronousMode::Normal);
+      SqliteTreeStore::SynchronousMode mode =
+          SqliteTreeStore::SynchronousMode::Normal);
 
-  explicit TreeOverlayStore(std::unique_ptr<SqliteDatabase> db);
+  explicit SqliteTreeStore(std::unique_ptr<SqliteDatabase> db);
 
-  ~TreeOverlayStore();
+  ~SqliteTreeStore();
 
-  TreeOverlayStore(const TreeOverlayStore&) = delete;
-  TreeOverlayStore& operator=(const TreeOverlayStore&) = delete;
-  TreeOverlayStore(TreeOverlayStore&& other) = delete;
-  TreeOverlayStore& operator=(TreeOverlayStore&& other) = delete;
+  SqliteTreeStore(const SqliteTreeStore&) = delete;
+  SqliteTreeStore& operator=(const SqliteTreeStore&) = delete;
+  SqliteTreeStore(SqliteTreeStore&& other) = delete;
+  SqliteTreeStore& operator=(SqliteTreeStore&& other) = delete;
 
   void close();
 
@@ -146,7 +146,7 @@ class TreeOverlayStore {
   }
 
  private:
-  FRIEND_TEST(TreeOverlayStoreTest, testRecoverInodeEntryNumber);
+  FRIEND_TEST(SqliteTreeStoreTest, testRecoverInodeEntryNumber);
 
   struct StatementCache;
 

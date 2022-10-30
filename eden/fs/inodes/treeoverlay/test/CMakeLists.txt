@@ -5,12 +5,12 @@
 
 
 add_executable(
-  eden_tree_overlay_test
-    TreeOverlayStoreTest.cpp
+  sqlite_tree_store_test
+    SqliteTreeStoreTest.cpp
 )
 
 target_link_libraries(
-  eden_tree_overlay_test
+  sqlite_tree_store_test
   PRIVATE
     eden_inodes
     eden_overlay_thrift_cpp
@@ -22,4 +22,4 @@ target_link_libraries(
     ${LIBGMOCK_LIBRARIES}
 )
 
-gtest_discover_tests(eden_tree_overlay_test)
+gtest_discover_tests(sqlite_tree_store_test)

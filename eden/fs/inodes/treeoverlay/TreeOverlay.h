@@ -11,7 +11,7 @@
 #include <optional>
 
 #include "eden/fs/inodes/IOverlay.h"
-#include "eden/fs/inodes/treeoverlay/TreeOverlayStore.h"
+#include "eden/fs/inodes/treeoverlay/SqliteTreeStore.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -32,8 +32,8 @@ class TreeOverlay : public IOverlay {
  public:
   explicit TreeOverlay(
       AbsolutePathPiece path,
-      TreeOverlayStore::SynchronousMode mode =
-          TreeOverlayStore::SynchronousMode::Normal);
+      SqliteTreeStore::SynchronousMode mode =
+          SqliteTreeStore::SynchronousMode::Normal);
 
   explicit TreeOverlay(std::unique_ptr<SqliteDatabase> store)
       : store_(std::move(store)) {}
@@ -107,7 +107,7 @@ class TreeOverlay : public IOverlay {
   }
 
  private:
-  TreeOverlayStore store_;
+  SqliteTreeStore store_;
 
   bool initialized_ = false;
 };

@@ -17,7 +17,7 @@ namespace facebook::eden {
 
 TreeOverlay::TreeOverlay(
     AbsolutePathPiece path,
-    TreeOverlayStore::SynchronousMode mode)
+    SqliteTreeStore::SynchronousMode mode)
     : store_{path, mode} {}
 
 std::optional<InodeNumber> TreeOverlay::initOverlay(bool createIfNonExisting) {
