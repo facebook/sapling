@@ -46,6 +46,7 @@ use tunables::tunables;
 use crate::conversion_helpers;
 use crate::errors;
 use crate::errors::LandChangesetsError;
+use crate::land_changeset_object::LandChangesetObject;
 use crate::scuba_response::AddScubaResponse;
 
 const FORWARDED_IDENTITIES_HEADER: &str = "scm_forwarded_identities";
@@ -399,6 +400,14 @@ impl LandService for LandServiceThriftImpl {
         let ctx: CoreContext = self.0.create_ctx("land_changesets", req_ctxt).await?;
 
         if tunables().get_batching_to_land_service() {
+            // Create an object with all required info to process a request
+            // TODO: This object will be used later when requests are send to the queue
+            let _land_changeset_object = LandChangesetObject::new(
+                self.0.mononoke.clone(),
+                self.0.identity.clone(),
+                ctx,
+                land_changesets.clone(),
+            );
             todo!()
         }
 

@@ -42,6 +42,7 @@ const SERVICE_NAME: &str = "mononoke_land_service";
 mod conversion_helpers;
 mod errors;
 mod facebook;
+mod land_changeset_object;
 mod land_service_impl;
 mod scuba_request;
 mod scuba_response;
