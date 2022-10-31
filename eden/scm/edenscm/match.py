@@ -202,6 +202,26 @@ def match(
     includekindpats = include and normalize(include, "glob", root, cwd, auditor, warn)
     excludekindpats = exclude and normalize(exclude, "glob", root, cwd, auditor, warn)
 
+    # Try to use Rust dyn matcher if possible. Currently, Rust dyn matcher is
+    # missing below features:
+    # * exact matcher
+    # * emptyalways parameter
+    # * explicit files in Matcher trait
+    # * pattern kinds other than 'glob' and 're'
+    if _usedynmatcher and not m:
+        matcher = _builddynmatcher(
+            root=root,
+            cwd=cwd,
+            patternskindpats=patternskindpats or [],
+            includekindpats=includekindpats or [],
+            excludekindpats=excludekindpats or [],
+            default=default,
+            badfn=badfn,
+        )
+        if matcher:
+            return matcher
+        # else fallback to original logic
+
     if not m:
         if _kindpatsalwaysmatch(patternskindpats):
             m = alwaysmatcher(root, cwd, badfn, relativeuipath=True)
@@ -228,6 +248,64 @@ def match(
         )
         m = differencematcher(m, em)
     return m
+
+
+def _builddynmatcher(
+    root,
+    cwd,
+    patternskindpats: List[str],
+    includekindpats: List[str],
+    excludekindpats: List[str],
+    default: str = "glob",
+    badfn=None,
+) -> Optional["dynmatcher"]:
+    def generatenormalizedpatterns(
+        kindpats, default, recursive, ispatterns
+    ) -> Optional[List[str]]:
+        if ispatterns:
+            if not kindpats:
+                # empty patterns means nevermatcher here
+                return None
+            elif _kindpatsalwaysmatch(kindpats) or any(_explicitfiles(kindpats)):
+                # * Rust AlwaysMatcher doesn't support relative ui path now
+                # * Rust Matchers doesn't support explicit files
+                return None
+
+        res = _kindpatstoglobsregexs(kindpats, recursive=recursive)
+        if not res:
+            # Rust build matcher only supports 'glob' and 're' now
+            return None
+        globs, regexs = res
+        return [f"glob:{x}" for x in globs] + [f"re:{x}" for x in regexs]
+
+    normalizedpatterns = generatenormalizedpatterns(
+        patternskindpats, default, False, True
+    )
+    if normalizedpatterns is None:
+        return None
+    normalizedinclude = generatenormalizedpatterns(includekindpats, "glob", True, False)
+    if normalizedinclude is None:
+        return None
+    normalizedexclude = generatenormalizedpatterns(excludekindpats, "glob", True, False)
+    if normalizedexclude is None:
+        return None
+
+    try:
+        m = dynmatcher(
+            root,
+            cwd,
+            normalizedpatterns,
+            normalizedinclude,
+            normalizedexclude,
+            casesensitive=True,
+            badfn=badfn,
+        )
+        return m
+    except (error.RustError, ValueError):
+        # possible exceptions:
+        #   * TreeMatcher: Regex("Compiled regex exceeds size limit of 10485760 bytes.")
+        #   * RegexMatcher: doesn't support '\b' and '\B'
+        return None
 
 
 def exact(root, cwd, files, badfn=None) -> "exactmatcher":
@@ -907,6 +985,50 @@ class regexmatcher(basematcher):
 
     def __repr__(self):
         return f"<regexmatcher pattern={self._pattern!r}>"
+
+
+class dynmatcher(basematcher):
+    """Rust dyn matcher created by the build matcher API."""
+
+    def __init__(
+        self,
+        root,
+        cwd,
+        patterns: List[str],
+        include: List[str],
+        exclude: List[str],
+        casesensitive: bool = True,
+        badfn=None,
+    ):
+        super(dynmatcher, self).__init__(root, cwd, badfn)
+        self._matcher = pathmatcher.dynmatcher(
+            patterns, include, exclude, casesensitive
+        )
+        self.patterns = patterns
+        self.include = include
+        self.exclude = exclude
+        self.casesensitive = casesensitive
+
+    def matchfn(self, f):
+        return self._matcher.matches_file(f)
+
+    def visitdir(self, dir):
+        matched = self._matcher.matches_directory(dir)
+        if matched is None:
+            return True
+        elif matched is True:
+            return "all"
+        else:
+            assert matched is False, f"expected False, but got {matched}"
+            return False
+
+    def __repr__(self):
+        return "<dynmatcher patterns=%r include=%r exclude=%r casesensitive=%r>" % (
+            self.patterns,
+            self.include,
+            self.exclude,
+            self.casesensitive,
+        )
 
 
 def normalizerootdir(dir: str, funcname) -> str:
@@ -1921,6 +2043,7 @@ def readpatternfile(filepath, warn, sourceinfo: bool = False):
 
 _usetreematcher = True
 _useregexmatcher = True
+_usedynmatcher = True
 
 
 def init(ui) -> None:
@@ -1928,3 +2051,5 @@ def init(ui) -> None:
     _usetreematcher = ui.configbool("experimental", "treematcher")
     global _useregexmatcher
     _useregexmatcher = ui.configbool("experimental", "regexmatcher")
+    global _usedynmatcher
+    _usedynmatcher = ui.configbool("experimental", "dynmatcher")
