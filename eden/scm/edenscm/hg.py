@@ -16,6 +16,7 @@ from __future__ import absolute_import
 import errno
 import os
 import shutil
+from typing import Iterable, Optional, Union
 
 from . import (
     bookmarks,
@@ -137,7 +138,7 @@ def _peerlookup(path):
         return thing
 
 
-def islocal(repo):
+def islocal(repo: str):
     """return true if repo (or path pointing to repo) is local"""
     if isinstance(repo, str):
         try:
@@ -160,7 +161,7 @@ def openpath(ui, path):
 wirepeersetupfuncs = []
 
 
-def _setuprepo(ui, repo, presetupfuncs=None):
+def _setuprepo(ui, repo, presetupfuncs=None) -> None:
     ui = getattr(repo, "ui", ui)
     for f in presetupfuncs or []:
         f(ui, repo)
@@ -177,7 +178,9 @@ def _setuprepo(ui, repo, presetupfuncs=None):
 
 
 @perftrace.tracefunc("Repo Setup")
-def repository(ui, path="", create=False, presetupfuncs=None, initial_config=None):
+def repository(
+    ui, path: str = "", create: bool = False, presetupfuncs=None, initial_config=None
+):
     """return a repository object for the specified path"""
     u = util.url(path)
     if u.scheme == "bundle":
@@ -194,7 +197,7 @@ def repository(ui, path="", create=False, presetupfuncs=None, initial_config=Non
 
 
 @perftrace.tracefunc("Peer Setup")
-def peer(uiorrepo, opts, path, create=False):
+def peer(uiorrepo, opts, path, create: bool = False):
     """return a repository peer for the specified path"""
     rui = remoteui(uiorrepo, opts)
     obj = _peerlookup(path).instance(rui, path, create, initial_config=None)
@@ -229,7 +232,13 @@ def defaultdest(source):
 
 
 def share(
-    ui, source, dest=None, update=True, bookmarks=True, defaultpath=None, relative=False
+    ui,
+    source,
+    dest=None,
+    update: bool = True,
+    bookmarks: bool = True,
+    defaultpath=None,
+    relative: bool = False,
 ):
     """create a shared repository"""
 
@@ -287,7 +296,7 @@ def share(
     return r
 
 
-def unshare(ui, repo):
+def unshare(ui, repo) -> None:
     """convert a shared repository to a normal one
 
     Copy the store data to the repo and remove the sharedpath data.
@@ -320,7 +329,7 @@ def unshare(ui, repo):
     repo.__init__(repo.baseui, repo.root)
 
 
-def postshare(sourcerepo, destrepo, bookmarks=True, defaultpath=None):
+def postshare(sourcerepo, destrepo, bookmarks: bool = True, defaultpath=None) -> None:
     """Called after a new shared repo is created.
 
     The new repo only has a requirements file and pointer to the source.
@@ -343,7 +352,7 @@ def postshare(sourcerepo, destrepo, bookmarks=True, defaultpath=None):
             fp.close()
 
 
-def _postshareupdate(repo, update, checkout=None):
+def _postshareupdate(repo, update, checkout=None) -> None:
     """Maybe perform a working directory update after a shared repo is created.
 
     ``update`` can be a boolean or a revision to update to.
@@ -362,10 +371,11 @@ def _postshareupdate(repo, update, checkout=None):
             break
         except error.RepoLookupError:
             continue
+    # pyre-fixme[61]: `uprev` is undefined, or not always defined.
     _update(repo, uprev)
 
 
-def copystore(ui, srcrepo, destpath):
+def copystore(ui, srcrepo, destpath) -> None:
     """copy files from store of srcrepo in destpath
 
     returns destlock
@@ -408,11 +418,11 @@ def clone(
     peeropts,
     source,
     dest=None,
-    pull=False,
+    pull: bool = False,
     rev=None,
-    update=True,
-    stream=False,
-    shallow=False,
+    update: Union[bool, str] = True,
+    stream: Optional[bool] = False,
+    shallow: bool = False,
 ):
     """Make a copy of an existing repository.
 
@@ -542,6 +552,7 @@ def clone(
         raise
 
     branch = (None, [])
+    # pyre-fixme[61]: `srcpeer` is undefined, or not always defined.
     rev, checkout = addbranchrevs(srcpeer, srcpeer, branch, rev)
 
     source = util.urllocalpath(source)
@@ -714,6 +725,8 @@ def clone(
                     with destrepo.ui.configoverride(overrides, "clone"):
                         exchange.pull(
                             destrepo,
+                            # pyre-fixme[61]: `srcpeer` is undefined, or not always
+                            #  defined.
                             srcpeer,
                             revs,
                             streamclonerequested=stream,
@@ -774,12 +787,14 @@ def clone(
             rev,
             update,
             stream,
+            # pyre-fixme[61]: `srcpeer` is undefined, or not always defined.
             srcpeer,
             destpeer,
             clonecodepath=clonecodepath,
         )
     finally:
         release(srclock, destlockw, destlock)
+        # pyre-fixme[61]: `srcpeer` is undefined, or not always defined.
         if srcpeer is not None:
             srcpeer.close()
         if destpeer is not None:
@@ -789,7 +804,7 @@ def clone(
     return destpeer
 
 
-def _writehgrc(repo, abspath, configfiles):
+def _writehgrc(repo, abspath, configfiles) -> None:
     with repo.wlock(), repo.lock():
         template = _(uimod.samplehgrcs["cloned"])
         with repo.localvfs(repo.ui.identity.configrepofile(), "wb") as fp:
@@ -811,10 +826,10 @@ def clonepreclose(
     peeropts,
     source,
     dest=None,
-    pull=False,
+    pull: bool = False,
     rev=None,
-    update=True,
-    stream=False,
+    update: Union[bool, str] = True,
+    stream: Optional[bool] = False,
     srcpeer=None,
     destpeer=None,
     clonecodepath=None,
@@ -832,7 +847,7 @@ def clonepreclose(
     return srcpeer, destpeer
 
 
-def _showstats(repo, stats, quietempty=False):
+def _showstats(repo, stats: Iterable[object], quietempty: bool = False):
     if edenfs.requirement in repo.requirements:
         return _eden_showstats(repo, stats, quietempty)
 
@@ -847,7 +862,7 @@ def _showstats(repo, stats, quietempty=False):
     )
 
 
-def _eden_showstats(repo, stats, quietempty=False):
+def _eden_showstats(repo, stats, quietempty: bool = False) -> None:
     # We hide the updated and removed counts, because they are not accurate
     # with eden.  One of the primary goals of eden is that the entire working
     # directory does not need to be accessed or traversed on update operations.
@@ -876,7 +891,7 @@ def updaterepo(repo, node, overwrite, updatecheck=None):
     )
 
 
-def update(repo, node, quietempty=False, updatecheck=None):
+def update(repo, node, quietempty: bool = False, updatecheck=None):
     """update the working directory to node
 
     Returns if any files were unresolved.
@@ -892,7 +907,7 @@ def update(repo, node, quietempty=False, updatecheck=None):
 _update = update
 
 
-def clean(repo, node, show_stats=True, quietempty=False):
+def clean(repo, node, show_stats: bool = True, quietempty: bool = False):
     """forcibly switch the working directory to node, clobbering changes
 
     Returns if any files were unresolved.
@@ -908,7 +923,9 @@ def clean(repo, node, show_stats=True, quietempty=False):
 _clean = clean
 
 
-def updatetotally(ui, repo, checkout, brev, clean=False, updatecheck=None):
+def updatetotally(
+    ui, repo, checkout, brev, clean: bool = False, updatecheck: Optional[str] = None
+):
     """Update the working directory with extra care for non-file components
 
     This takes care of non-file components below:
@@ -980,7 +997,9 @@ def updatetotally(ui, repo, checkout, brev, clean=False, updatecheck=None):
     return hasunresolved
 
 
-def merge(repo, node, force=None, remind=True, mergeforce=False, labels=None):
+def merge(
+    repo, node, force=None, remind: bool = True, mergeforce: bool = False, labels=None
+):
     """Branch merge with node, resolving changes. Return true if any
     unresolved conflicts."""
     stats = mergemod.update(
