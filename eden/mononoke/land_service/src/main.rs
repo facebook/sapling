@@ -42,6 +42,7 @@ const SERVICE_NAME: &str = "mononoke_land_service";
 mod conversion_helpers;
 mod errors;
 mod facebook;
+mod factory;
 mod land_changeset_object;
 mod land_service_impl;
 mod scuba_request;
@@ -89,7 +90,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         }
     };
 
-    let land_service_server = land_service_impl::LandServiceImpl::new(
+    let factory = factory::Factory::new(
         fb,
         logger.clone(),
         mononoke,
@@ -97,6 +98,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         args.scribe_logging_args.get_scribe(fb)?,
         &app.repo_configs().common,
     );
+
+    let land_service_server = land_service_impl::LandServiceImpl::new(factory);
 
     let service = {
         move |proto| {
