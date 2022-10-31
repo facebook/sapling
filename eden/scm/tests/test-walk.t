@@ -4,6 +4,7 @@
 
   $ hg init t
   $ cd t
+  $ setconfig experimental.dynmatcher=True
   $ mkdir -p beans
   $ for b in kidney navy turtle borlotti black pinto; do
   >     echo $b > beans/$b
@@ -365,7 +366,7 @@ Test absolute paths:
 Test patterns:
 
   $ hg debugwalk 'glob:*'
-  matcher: <treematcher rules=['*']>
+  matcher: <dynmatcher patterns=['glob:*'] include=[] exclude=[] casesensitive=True>
   f  fennel      fennel
   f  fenugreek   fenugreek
   f  fiddlehead  fiddlehead
@@ -375,7 +376,7 @@ Test patterns:
   adding glob:glob
   warning: filename contains ':', which is reserved on Windows: 'glob:glob'
   $ hg debugwalk 'glob:*'
-  matcher: <treematcher rules=['*']>
+  matcher: <dynmatcher patterns=['glob:*'] include=[] exclude=[] casesensitive=True>
   f  fennel      fennel
   f  fenugreek   fenugreek
   f  fiddlehead  fiddlehead
@@ -395,12 +396,12 @@ Test patterns:
 #endif
 
   $ hg debugwalk 'glob:**e'
-  matcher: <treematcher rules=['**/*e']>
+  matcher: <dynmatcher patterns=['glob:**/*e'] include=[] exclude=[] casesensitive=True>
   f  beans/turtle                    beans/turtle
   f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
 
   $ hg debugwalk 're:.*[kb]$'
-  matcher: <regexmatcher pattern='(?:.*[kb]$)'>
+  matcher: <dynmatcher patterns=['re:.*[kb]$'] include=[] exclude=[] casesensitive=True>
   f  beans/black    beans/black
   f  fenugreek      fenugreek
   f  mammals/skunk  mammals/skunk
@@ -434,7 +435,7 @@ Test patterns:
   f  beans/pinto     beans/pinto
   f  beans/turtle    beans/turtle
   $ hg debugwalk 'glob:mamm**'
-  matcher: <treematcher rules=['mamm*/**']>
+  matcher: <dynmatcher patterns=['glob:mamm*/**'] include=[] exclude=[] casesensitive=True>
   f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
   f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
   f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
@@ -447,7 +448,7 @@ Test patterns:
   f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
   f  mammals/skunk                   mammals/skunk
   $ hg debugwalk 'glob:j*'
-  matcher: <treematcher rules=['j*']>
+  matcher: <dynmatcher patterns=['glob:j*'] include=[] exclude=[] casesensitive=True>
   $ hg debugwalk NOEXIST
   matcher: <patternmatcher patterns='(?:NOEXIST(?:/|$))'>
   NOEXIST: * (glob)
