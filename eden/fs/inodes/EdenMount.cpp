@@ -226,7 +226,7 @@ std::shared_ptr<EdenMount> EdenMount::create(
     std::shared_ptr<BlobCache> blobCache,
     std::shared_ptr<ServerState> serverState,
     std::unique_ptr<Journal> journal,
-    std::optional<Overlay::TreeOverlayType> treeOverlayType) {
+    std::optional<Overlay::InodeCatalogType> inodeCatalogType) {
   return std::shared_ptr<EdenMount>{
       new EdenMount{
           std::move(config),
@@ -234,7 +234,7 @@ std::shared_ptr<EdenMount> EdenMount::create(
           std::move(blobCache),
           std::move(serverState),
           std::move(journal),
-          std::move(treeOverlayType)},
+          std::move(inodeCatalogType)},
       EdenMountDeleter{}};
 }
 
@@ -244,7 +244,7 @@ EdenMount::EdenMount(
     std::shared_ptr<BlobCache> blobCache,
     std::shared_ptr<ServerState> serverState,
     std::unique_ptr<Journal> journal,
-    std::optional<Overlay::TreeOverlayType> treeOverlayType)
+    std::optional<Overlay::InodeCatalogType> inodeCatalogType)
     : checkoutConfig_{std::move(checkoutConfig)},
       serverState_{std::move(serverState)},
 #ifdef _WIN32
@@ -263,7 +263,7 @@ EdenMount::EdenMount(
       overlay_{Overlay::create(
           checkoutConfig_->getOverlayPath(),
           checkoutConfig_->getCaseSensitive(),
-          getTreeOverlayType(treeOverlayType),
+          getInodeCatalogType(inodeCatalogType),
           serverState_->getStructuredLogger(),
           *serverState_->getEdenConfig())},
 #ifndef _WIN32
@@ -282,10 +282,10 @@ EdenMount::EdenMount(
   subscribeInodeActivityBuffer();
 }
 
-Overlay::TreeOverlayType EdenMount::getTreeOverlayType(
-    std::optional<Overlay::TreeOverlayType> treeOverlayType) {
-  if (treeOverlayType.has_value()) {
-    return treeOverlayType.value();
+Overlay::InodeCatalogType EdenMount::getInodeCatalogType(
+    std::optional<Overlay::InodeCatalogType> inodeCatalogType) {
+  if (inodeCatalogType.has_value()) {
+    return inodeCatalogType.value();
   }
 
   if (checkoutConfig_->getEnableTreeOverlay()) {
@@ -296,24 +296,24 @@ Overlay::TreeOverlayType EdenMount::getTreeOverlayType(
 
     if (getEdenConfig()->unsafeInMemoryOverlay.getValue()) {
       if (getEdenConfig()->overlayBuffered.getValue()) {
-        return Overlay::TreeOverlayType::TreeInMemoryBuffered;
+        return Overlay::InodeCatalogType::TreeInMemoryBuffered;
       } else {
-        return Overlay::TreeOverlayType::TreeInMemory;
+        return Overlay::InodeCatalogType::TreeInMemory;
       }
     }
     if (getEdenConfig()->overlaySynchronousMode.getValue() == "off") {
       if (getEdenConfig()->overlayBuffered.getValue()) {
-        return Overlay::TreeOverlayType::TreeSynchronousOffBuffered;
+        return Overlay::InodeCatalogType::TreeSynchronousOffBuffered;
       } else {
-        return Overlay::TreeOverlayType::TreeSynchronousOff;
+        return Overlay::InodeCatalogType::TreeSynchronousOff;
       }
     }
     if (getEdenConfig()->overlayBuffered.getValue()) {
-      return Overlay::TreeOverlayType::TreeBuffered;
+      return Overlay::InodeCatalogType::TreeBuffered;
     }
-    return Overlay::TreeOverlayType::Tree;
+    return Overlay::InodeCatalogType::Tree;
   } else {
-    return Overlay::TreeOverlayType::Legacy;
+    return Overlay::InodeCatalogType::Legacy;
   }
 }
 

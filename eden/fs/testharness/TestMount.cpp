@@ -215,9 +215,9 @@ void TestMount::initialize(
     const RootId& initialCommitHash,
     FakeTreeBuilder& rootBuilder,
     bool startReady,
-    Overlay::TreeOverlayType treeOverlayType) {
+    Overlay::InodeCatalogType inodeCatalogType) {
   createMountWithoutInitializing(
-      initialCommitHash, rootBuilder, startReady, treeOverlayType);
+      initialCommitHash, rootBuilder, startReady, inodeCatalogType);
   initializeEdenMount();
 }
 
@@ -229,7 +229,7 @@ void TestMount::createMountWithoutInitializing(
     const RootId& initialCommitHash,
     FakeTreeBuilder& rootBuilder,
     bool startReady,
-    Overlay::TreeOverlayType treeOverlayType) {
+    Overlay::InodeCatalogType inodeCatalogType) {
   // Finalize rootBuilder and get the root Tree
   rootBuilder.finalize(backingStore_, startReady);
   auto rootTree = rootBuilder.getRoot();
@@ -241,10 +241,10 @@ void TestMount::createMountWithoutInitializing(
   setInitialCommit(initialCommitHash, rootTree->get().getHash());
 
   // Create edenMount_
-  createMount(treeOverlayType);
+  createMount(inodeCatalogType);
 }
 
-void TestMount::createMount(Overlay::TreeOverlayType treeOverlayType) {
+void TestMount::createMount(Overlay::InodeCatalogType inodeCatalogType) {
   shared_ptr<ObjectStore> objectStore = ObjectStore::create(
       localStore_,
       backingStore_,
@@ -261,7 +261,7 @@ void TestMount::createMount(Overlay::TreeOverlayType treeOverlayType) {
       blobCache_,
       serverState_,
       std::move(journal),
-      treeOverlayType);
+      inodeCatalogType);
 #ifndef _WIN32
   dispatcher_ = EdenDispatcherFactory::makeFuseDispatcher(edenMount_.get());
 #endif
@@ -284,9 +284,9 @@ void TestMount::initialize(FakeTreeBuilder& rootBuilder, bool startReady) {
 
 void TestMount::initialize(
     FakeTreeBuilder& rootBuilder,
-    Overlay::TreeOverlayType treeOverlayType) {
+    Overlay::InodeCatalogType inodeCatalogType) {
   initialize(
-      nextCommitHash(), rootBuilder, /* startReady */ true, treeOverlayType);
+      nextCommitHash(), rootBuilder, /* startReady */ true, inodeCatalogType);
 }
 
 void TestMount::createMountWithoutInitializing(

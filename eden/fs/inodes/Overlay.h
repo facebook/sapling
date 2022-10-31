@@ -71,7 +71,7 @@ class OverlayFile;
  */
 class Overlay : public std::enable_shared_from_this<Overlay> {
  public:
-  enum class TreeOverlayType : uint8_t {
+  enum class InodeCatalogType : uint8_t {
     Legacy = 0,
     Tree = 1,
     TreeInMemory = 2,
@@ -90,7 +90,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   static std::shared_ptr<Overlay> create(
       AbsolutePathPiece localDir,
       CaseSensitivity caseSensitive,
-      TreeOverlayType treeOverlayType,
+      InodeCatalogType inodeCatalogType,
       std::shared_ptr<StructuredLogger> logger,
       const EdenConfig& config);
 
@@ -296,7 +296,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   explicit Overlay(
       AbsolutePathPiece localDir,
       CaseSensitivity caseSensitive,
-      TreeOverlayType treeOverlayType,
+      InodeCatalogType inodeCatalogType,
       std::shared_ptr<StructuredLogger> logger,
       const EdenConfig& config);
 
@@ -356,7 +356,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
   std::unique_ptr<IFileContentStore> fileContentStore_;
   std::unique_ptr<InodeCatalog> inodeCatalog_;
-  Overlay::TreeOverlayType treeOverlayType_;
+  Overlay::InodeCatalogType inodeCatalogType_;
 
   /**
    * Indicates if the backing overlay supports semantic operations, see
@@ -410,9 +410,9 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   friend class IORequest;
 };
 
-constexpr Overlay::TreeOverlayType kDefaultOverlayType = folly::kIsWindows
-    ? Overlay::TreeOverlayType::Tree
-    : Overlay::TreeOverlayType::Legacy;
+constexpr Overlay::InodeCatalogType kDefaultInodeCatalogType = folly::kIsWindows
+    ? Overlay::InodeCatalogType::Tree
+    : Overlay::InodeCatalogType::Legacy;
 
 /**
  * Used to reference count IO requests. In any place that there

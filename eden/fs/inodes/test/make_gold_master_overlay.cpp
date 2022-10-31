@@ -44,7 +44,7 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
   auto overlay = Overlay::create(
       overlayPath,
       CaseSensitivity::Sensitive,
-      Overlay::TreeOverlayType::Legacy,
+      Overlay::InodeCatalogType::Legacy,
       std::make_shared<NullStructuredLogger>(),
       *EdenConfig::createTestEdenConfig());
 

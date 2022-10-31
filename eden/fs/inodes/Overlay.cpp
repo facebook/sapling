@@ -40,36 +40,38 @@ constexpr uint64_t ioClosedMask = 1ull << 63;
 
 std::unique_ptr<InodeCatalog> makeInodeCatalog(
     AbsolutePathPiece localDir,
-    Overlay::TreeOverlayType treeOverlayType,
+    Overlay::InodeCatalogType inodeCatalogType,
     const EdenConfig& config,
     IFileContentStore* fileContentStore) {
-  if (treeOverlayType == Overlay::TreeOverlayType::Tree) {
+  if (inodeCatalogType == Overlay::InodeCatalogType::Tree) {
     return std::make_unique<TreeOverlay>(localDir);
-  } else if (treeOverlayType == Overlay::TreeOverlayType::TreeInMemory) {
+  } else if (inodeCatalogType == Overlay::InodeCatalogType::TreeInMemory) {
     XLOG(WARN) << "In-memory overlay requested. This will cause data loss.";
     return std::make_unique<TreeOverlay>(
         std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory));
-  } else if (treeOverlayType == Overlay::TreeOverlayType::TreeSynchronousOff) {
+  } else if (
+      inodeCatalogType == Overlay::InodeCatalogType::TreeSynchronousOff) {
     return std::make_unique<TreeOverlay>(
         localDir, SqliteTreeStore::SynchronousMode::Off);
-  } else if (treeOverlayType == Overlay::TreeOverlayType::TreeBuffered) {
+  } else if (inodeCatalogType == Overlay::InodeCatalogType::TreeBuffered) {
     XLOG(DBG4) << "Buffered tree overlay being used";
     return std::make_unique<BufferedTreeOverlay>(localDir, config);
   } else if (
-      treeOverlayType == Overlay::TreeOverlayType::TreeInMemoryBuffered) {
+      inodeCatalogType == Overlay::InodeCatalogType::TreeInMemoryBuffered) {
     XLOG(WARN)
         << "In-memory buffered overlay requested. This will cause data loss.";
     return std::make_unique<BufferedTreeOverlay>(
         std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory), config);
   } else if (
-      treeOverlayType == Overlay::TreeOverlayType::TreeSynchronousOffBuffered) {
+      inodeCatalogType ==
+      Overlay::InodeCatalogType::TreeSynchronousOffBuffered) {
     XLOG(DBG2)
         << "Buffered tree overlay being used with synchronous-mode = off";
     return std::make_unique<BufferedTreeOverlay>(
         localDir, config, SqliteTreeStore::SynchronousMode::Off);
   }
 #ifdef _WIN32
-  if (treeOverlayType == Overlay::TreeOverlayType::Legacy) {
+  if (inodeCatalogType == Overlay::InodeCatalogType::Legacy) {
     throw std::runtime_error(
         "Legacy overlay type is not supported. Please reclone.");
   }
@@ -97,7 +99,7 @@ using std::optional;
 std::shared_ptr<Overlay> Overlay::create(
     AbsolutePathPiece localDir,
     CaseSensitivity caseSensitive,
-    TreeOverlayType treeOverlayType,
+    InodeCatalogType inodeCatalogType,
     std::shared_ptr<StructuredLogger> logger,
     const EdenConfig& config) {
   // This allows us to access the private constructor.
@@ -105,28 +107,28 @@ std::shared_ptr<Overlay> Overlay::create(
     explicit MakeSharedEnabler(
         AbsolutePathPiece localDir,
         CaseSensitivity caseSensitive,
-        TreeOverlayType treeOverlayType,
+        InodeCatalogType inodeCatalogType,
         std::shared_ptr<StructuredLogger> logger,
         const EdenConfig& config)
-        : Overlay(localDir, caseSensitive, treeOverlayType, logger, config) {}
+        : Overlay(localDir, caseSensitive, inodeCatalogType, logger, config) {}
   };
   return std::make_shared<MakeSharedEnabler>(
-      localDir, caseSensitive, treeOverlayType, logger, config);
+      localDir, caseSensitive, inodeCatalogType, logger, config);
 }
 
 Overlay::Overlay(
     AbsolutePathPiece localDir,
     CaseSensitivity caseSensitive,
-    TreeOverlayType treeOverlayType,
+    InodeCatalogType inodeCatalogType,
     std::shared_ptr<StructuredLogger> logger,
     const EdenConfig& config)
     : fileContentStore_{makeFileContentStore(localDir)},
       inodeCatalog_{makeInodeCatalog(
           localDir,
-          treeOverlayType,
+          inodeCatalogType,
           config,
           fileContentStore_ ? fileContentStore_.get() : nullptr)},
-      treeOverlayType_{treeOverlayType},
+      inodeCatalogType_{inodeCatalogType},
       supportsSemanticOperations_{inodeCatalog_->supportsSemanticOperations()},
       localDir_{localDir},
       caseSensitive_{caseSensitive},
@@ -170,7 +172,7 @@ void Overlay::close() {
 #endif // !_WIN32
 
   inodeCatalog_->close(optNextInodeNumber);
-  if (fileContentStore_ && treeOverlayType_ != TreeOverlayType::Legacy) {
+  if (fileContentStore_ && inodeCatalogType_ != InodeCatalogType::Legacy) {
     fileContentStore_->close();
   }
 }
@@ -233,7 +235,7 @@ void Overlay::initOverlay(
     FOLLY_MAYBE_UNUSED OverlayChecker::LookupCallback& lookupCallback) {
   IORequest req{this};
   auto optNextInodeNumber = inodeCatalog_->initOverlay(true);
-  if (fileContentStore_ && treeOverlayType_ != TreeOverlayType::Legacy) {
+  if (fileContentStore_ && inodeCatalogType_ != InodeCatalogType::Legacy) {
     fileContentStore_->initialize(true);
   }
   if (!optNextInodeNumber.has_value()) {

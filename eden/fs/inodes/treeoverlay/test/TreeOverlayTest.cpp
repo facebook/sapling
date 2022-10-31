@@ -30,9 +30,9 @@
 namespace facebook::eden {
 
 class TreeOverlayTest
-    : public ::testing::TestWithParam<Overlay::TreeOverlayType> {
+    : public ::testing::TestWithParam<Overlay::InodeCatalogType> {
  protected:
-  Overlay::TreeOverlayType overlayType() const {
+  Overlay::InodeCatalogType overlayType() const {
     return GetParam();
   }
 
@@ -80,15 +80,15 @@ INSTANTIATE_TEST_SUITE_P(
     TreeOverlayTest,
     TreeOverlayTest,
     ::testing::Values(
-        Overlay::TreeOverlayType::Tree,
-        Overlay::TreeOverlayType::TreeBuffered));
+        Overlay::InodeCatalogType::Tree,
+        Overlay::InodeCatalogType::TreeBuffered));
 
 TEST(PlainTreeOverlayTest, new_overlay_is_clean) {
   folly::test::TemporaryDirectory testDir;
   auto overlay = Overlay::create(
       AbsolutePath{testDir.path().string()},
       kPathMapDefaultCaseSensitive,
-      Overlay::TreeOverlayType::Tree,
+      Overlay::InodeCatalogType::Tree,
       std::make_shared<NullStructuredLogger>(),
       *EdenConfig::createTestEdenConfig());
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
@@ -100,7 +100,7 @@ TEST(PlainTreeOverlayTest, new_overlay_is_clean_buffered) {
   auto overlay = Overlay::create(
       AbsolutePath{testDir.path().string()},
       kPathMapDefaultCaseSensitive,
-      Overlay::TreeOverlayType::TreeBuffered,
+      Overlay::InodeCatalogType::TreeBuffered,
       std::make_shared<NullStructuredLogger>(),
       *EdenConfig::createTestEdenConfig());
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
@@ -113,7 +113,7 @@ TEST(PlainTreeOverlayTest, reopened_overlay_is_clean) {
     auto overlay = Overlay::create(
         AbsolutePath{testDir.path().string()},
         kPathMapDefaultCaseSensitive,
-        Overlay::TreeOverlayType::Tree,
+        Overlay::InodeCatalogType::Tree,
         std::make_shared<NullStructuredLogger>(),
         *EdenConfig::createTestEdenConfig());
     overlay->initialize(EdenConfig::createTestEdenConfig()).get();
@@ -121,7 +121,7 @@ TEST(PlainTreeOverlayTest, reopened_overlay_is_clean) {
   auto overlay = Overlay::create(
       AbsolutePath{testDir.path().string()},
       kPathMapDefaultCaseSensitive,
-      Overlay::TreeOverlayType::Tree,
+      Overlay::InodeCatalogType::Tree,
       std::make_shared<NullStructuredLogger>(),
       *EdenConfig::createTestEdenConfig());
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
@@ -134,7 +134,7 @@ TEST(PlainTreeOverlayTest, reopened_overlay_is_clean_buffered) {
     auto overlay = Overlay::create(
         AbsolutePath{testDir.path().string()},
         kPathMapDefaultCaseSensitive,
-        Overlay::TreeOverlayType::TreeBuffered,
+        Overlay::InodeCatalogType::TreeBuffered,
         std::make_shared<NullStructuredLogger>(),
         *EdenConfig::createTestEdenConfig());
     overlay->initialize(EdenConfig::createTestEdenConfig()).get();
@@ -142,7 +142,7 @@ TEST(PlainTreeOverlayTest, reopened_overlay_is_clean_buffered) {
   auto overlay = Overlay::create(
       AbsolutePath{testDir.path().string()},
       kPathMapDefaultCaseSensitive,
-      Overlay::TreeOverlayType::TreeBuffered,
+      Overlay::InodeCatalogType::TreeBuffered,
       std::make_shared<NullStructuredLogger>(),
       *EdenConfig::createTestEdenConfig());
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
@@ -156,7 +156,7 @@ TEST(PlainTreeOverlayTest, close_overlay_with_no_capacity_buffered) {
   auto overlay = Overlay::create(
       AbsolutePath{testDir.path().string()},
       kPathMapDefaultCaseSensitive,
-      Overlay::TreeOverlayType::TreeBuffered,
+      Overlay::InodeCatalogType::TreeBuffered,
       std::make_shared<NullStructuredLogger>(),
       *config);
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
@@ -171,7 +171,7 @@ TEST(PlainTreeOverlayTest, small_capacity_write_multiple_directories_buffered) {
   auto overlay = Overlay::create(
       AbsolutePath{testDir.path().string()},
       kPathMapDefaultCaseSensitive,
-      Overlay::TreeOverlayType::TreeBuffered,
+      Overlay::InodeCatalogType::TreeBuffered,
       std::make_shared<NullStructuredLogger>(),
       *config);
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
@@ -193,13 +193,13 @@ TEST(PlainTreeOverlayTest, small_capacity_write_multiple_directories_buffered) {
 }
 
 class RawTreeOverlayTest
-    : public ::testing::TestWithParam<Overlay::TreeOverlayType> {
+    : public ::testing::TestWithParam<Overlay::InodeCatalogType> {
  public:
   RawTreeOverlayTest() : testDir_{makeTempDir("eden_raw_overlay_test_")} {
     loadOverlay();
   }
 
-  Overlay::TreeOverlayType overlayType() const {
+  Overlay::InodeCatalogType overlayType() const {
     return GetParam();
   }
 
@@ -317,13 +317,13 @@ INSTANTIATE_TEST_SUITE_P(
     RawTreeOverlayTest,
     RawTreeOverlayTest,
     ::testing::Values(
-        Overlay::TreeOverlayType::Tree,
-        Overlay::TreeOverlayType::TreeBuffered));
+        Overlay::InodeCatalogType::Tree,
+        Overlay::InodeCatalogType::TreeBuffered));
 
 class DebugDumpTreeOverlayInodesTest
-    : public ::testing::TestWithParam<Overlay::TreeOverlayType> {
+    : public ::testing::TestWithParam<Overlay::InodeCatalogType> {
  public:
-  Overlay::TreeOverlayType overlayType() const {
+  Overlay::InodeCatalogType overlayType() const {
     return GetParam();
   }
 
@@ -371,7 +371,7 @@ TEST_P(
   // The results can be different if the overlay is read from the write queue or
   // from disk since we don't store mode, the flush here makes the tests
   // deterministic
-  if (overlayType() == Overlay::TreeOverlayType::TreeBuffered) {
+  if (overlayType() == Overlay::InodeCatalogType::TreeBuffered) {
     static_cast<BufferedTreeOverlay*>(overlay->getRawInodeCatalog())->flush();
   }
 
@@ -404,7 +404,7 @@ TEST_P(
   // The results can be different if the overlay is read from the write queue or
   // from disk since we don't store mode, the flush here makes the tests
   // deterministic
-  if (overlayType() == Overlay::TreeOverlayType::TreeBuffered) {
+  if (overlayType() == Overlay::InodeCatalogType::TreeBuffered) {
     static_cast<BufferedTreeOverlay*>(overlay->getRawInodeCatalog())->flush();
   }
 
@@ -439,7 +439,7 @@ TEST_P(
   // The results can be different if the overlay is read from the write queue or
   // from disk since we don't store mode, the flush here makes the tests
   // deterministic
-  if (overlayType() == Overlay::TreeOverlayType::TreeBuffered) {
+  if (overlayType() == Overlay::InodeCatalogType::TreeBuffered) {
     static_cast<BufferedTreeOverlay*>(overlay->getRawInodeCatalog())->flush();
   }
 
@@ -457,7 +457,7 @@ INSTANTIATE_TEST_SUITE_P(
     DebugDumpTreeOverlayInodesTest,
     DebugDumpTreeOverlayInodesTest,
     ::testing::Values(
-        Overlay::TreeOverlayType::Tree,
-        Overlay::TreeOverlayType::TreeBuffered));
+        Overlay::InodeCatalogType::Tree,
+        Overlay::InodeCatalogType::TreeBuffered));
 
 } // namespace facebook::eden
