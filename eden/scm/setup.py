@@ -347,8 +347,8 @@ def findhg():
         retcode, out, err = runcmd(hgcmd + check_cmd, hgenv)
     except EnvironmentError:
         retcode = -1
-    # if retcode == 0 and not filterhgerr(err):
-    return hgcommand(hgcmd, hgenv)
+    if retcode == 0 and not filterhgerr(err):
+        return hgcommand(hgcmd, hgenv)
 
     # Neither local or system hg can be used.
     return None
