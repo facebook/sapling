@@ -16,7 +16,7 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/DirEntry.h"
-#include "eden/fs/inodes/IOverlay.h"
+#include "eden/fs/inodes/InodeCatalog.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 
@@ -36,7 +36,7 @@ constexpr uint64_t kIterations = 500000;
 
 void copyOverlayDirectory(
     std::shared_ptr<Overlay> overlay,
-    IOverlay* backingOverlay,
+    InodeCatalog* inodeCatalog,
     const DirContents& contents) {
   // Test copying the OverlayDir directly
   printf("Overlay data written. Starting benchmark for copies...\n");
@@ -49,10 +49,10 @@ void copyOverlayDirectory(
     auto inodeNumber = overlay->allocateInodeNumber();
 
     fns.emplace_back(
-        [backingOverlay,
+        [inodeCatalog,
          inodeNumber,
          odir = overlay->serializeOverlayDir(inodeNumber, contents)]() mutable {
-          backingOverlay->saveOverlayDir(inodeNumber, std::move(odir));
+          inodeCatalog->saveOverlayDir(inodeNumber, std::move(odir));
         });
   }
 
@@ -78,7 +78,7 @@ void copyOverlayDirectory(
 
 void serializeOverlayDirectory(
     std::shared_ptr<Overlay> overlay,
-    IOverlay* backingOverlay,
+    InodeCatalog* inodeCatalog,
     const DirContents& contents) {
   // Test serialize the OverlayDir into a std::string
   printf("Overlay data written. Starting benchmark for serializing...\n");
@@ -95,14 +95,14 @@ void serializeOverlayDirectory(
     auto serializedOverlayDir =
         apache::thrift::CompactSerializer::serialize<std::string>(odir);
 
-    fns.emplace_back([backingOverlay,
+    fns.emplace_back([inodeCatalog,
                       inodeNumber,
                       serializedOverlayDir =
                           std::move(serializedOverlayDir)]() mutable {
       auto deserializedOverlayDir =
           apache::thrift::CompactSerializer::deserialize<overlay::OverlayDir>(
               serializedOverlayDir);
-      backingOverlay->saveOverlayDir(
+      inodeCatalog->saveOverlayDir(
           inodeNumber, std::move(deserializedOverlayDir));
     });
   }
@@ -170,12 +170,12 @@ void benchmarkOverlayDirSerialization(AbsolutePathPiece overlayPath) {
         ObjectId{folly::ByteRange{sp}});
   }
 
-  IOverlay* backingOverlay = overlay->getRawBackingOverlay();
+  InodeCatalog* inodeCatalog = overlay->getRawInodeCatalog();
 
   if (FLAGS_copy) {
-    copyOverlayDirectory(overlay, backingOverlay, contents);
+    copyOverlayDirectory(overlay, inodeCatalog, contents);
   } else {
-    serializeOverlayDirectory(overlay, backingOverlay, contents);
+    serializeOverlayDirectory(overlay, inodeCatalog, contents);
   }
 
   folly::stop_watch<> closeTimer;

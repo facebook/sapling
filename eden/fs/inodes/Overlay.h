@@ -38,7 +38,7 @@ class OverlayDir;
 struct DirContents;
 class InodeMap;
 class SerializedInodeMap;
-class IOverlay;
+class InodeCatalog;
 class IFileContentStore;
 class DirEntry;
 class EdenConfig;
@@ -277,11 +277,11 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   void maintenance();
 
   /*
-   * Returns a raw pointer to the backing overlay. This method should only be
+   * Returns a raw pointer to the inode catalog. This method should only be
    * used for testing.
    */
-  IOverlay* getRawBackingOverlay() {
-    return backingOverlay_.get();
+  InodeCatalog* getRawInodeCatalog() {
+    return inodeCatalog_.get();
   }
 
   overlay::OverlayDir serializeOverlayDir(
@@ -355,12 +355,12 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   std::atomic<uint64_t> nextInodeNumber_{0};
 
   std::unique_ptr<IFileContentStore> fileContentStore_;
-  std::unique_ptr<IOverlay> backingOverlay_;
+  std::unique_ptr<InodeCatalog> inodeCatalog_;
   Overlay::TreeOverlayType treeOverlayType_;
 
   /**
    * Indicates if the backing overlay supports semantic operations, see
-   * `IOverlay::supportsSemanticOperations` for more information.
+   * `InodeCatalog::supportsSemanticOperations` for more information.
    */
   bool supportsSemanticOperations_;
 
@@ -369,7 +369,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 #ifndef _WIN32
   /**
    * Disk-backed mapping from inode number to InodeMetadata.
-   * Defined below backingOverlay_ because it acquires its own file lock, which
+   * Defined below inodeCatalog_ because it acquires its own file lock, which
    * should be released first during shutdown.
    */
   std::unique_ptr<InodeMetadataTable> inodeMetadataTable_;

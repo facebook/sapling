@@ -372,7 +372,7 @@ TEST_P(
   // from disk since we don't store mode, the flush here makes the tests
   // deterministic
   if (overlayType() == Overlay::TreeOverlayType::TreeBuffered) {
-    static_cast<BufferedTreeOverlay*>(overlay->getRawBackingOverlay())->flush();
+    static_cast<BufferedTreeOverlay*>(overlay->getRawInodeCatalog())->flush();
   }
 
   // At the time of writing, the TreeOverlay does not store mode, which is why
@@ -405,7 +405,7 @@ TEST_P(
   // from disk since we don't store mode, the flush here makes the tests
   // deterministic
   if (overlayType() == Overlay::TreeOverlayType::TreeBuffered) {
-    static_cast<BufferedTreeOverlay*>(overlay->getRawBackingOverlay())->flush();
+    static_cast<BufferedTreeOverlay*>(overlay->getRawInodeCatalog())->flush();
   }
 
   // At the time of writing, the TreeOverlay does not store mode, which is why
@@ -440,7 +440,7 @@ TEST_P(
   // from disk since we don't store mode, the flush here makes the tests
   // deterministic
   if (overlayType() == Overlay::TreeOverlayType::TreeBuffered) {
-    static_cast<BufferedTreeOverlay*>(overlay->getRawBackingOverlay())->flush();
+    static_cast<BufferedTreeOverlay*>(overlay->getRawInodeCatalog())->flush();
   }
 
   // At the time of writing, the TreeOverlay does not store mode, which is why

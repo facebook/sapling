@@ -10,7 +10,7 @@
 #include <folly/Range.h>
 #include <optional>
 
-#include "eden/fs/inodes/IOverlay.h"
+#include "eden/fs/inodes/InodeCatalog.h"
 #include "eden/fs/inodes/treeoverlay/SqliteTreeStore.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/utils/ImmediateFuture.h"
@@ -28,7 +28,7 @@ class OverlayDir;
 }
 struct InodeNumber;
 
-class TreeOverlay : public IOverlay {
+class TreeOverlay : public InodeCatalog {
  public:
   explicit TreeOverlay(
       AbsolutePathPiece path,

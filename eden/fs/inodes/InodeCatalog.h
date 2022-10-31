@@ -29,18 +29,18 @@ class IOBuf;
 namespace facebook::eden {
 
 /**
- * Overlay interface for different overlay implementations.
+ * Interface for tracking inode relationships.
  */
-class IOverlay {
+class InodeCatalog {
  public:
-  IOverlay() = default;
+  InodeCatalog() = default;
 
-  virtual ~IOverlay() = default;
+  virtual ~InodeCatalog() = default;
 
-  IOverlay(const IOverlay&) = delete;
-  IOverlay& operator=(const IOverlay&) = delete;
-  IOverlay(IOverlay&&) = delete;
-  IOverlay&& operator=(IOverlay&&) = delete;
+  InodeCatalog(const InodeCatalog&) = delete;
+  InodeCatalog& operator=(const InodeCatalog&) = delete;
+  InodeCatalog(InodeCatalog&&) = delete;
+  InodeCatalog&& operator=(InodeCatalog&&) = delete;
 
   // Older overlay implementation only care about data storage but has little
   // understanding of the content it stores. A set of methods are added to allow

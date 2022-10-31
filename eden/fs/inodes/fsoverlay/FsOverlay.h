@@ -14,7 +14,7 @@
 #include <condition_variable>
 #include <optional>
 #include "eden/fs/inodes/IFileContentStore.h"
-#include "eden/fs/inodes/IOverlay.h"
+#include "eden/fs/inodes/InodeCatalog.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/utils/DirType.h"
@@ -246,7 +246,7 @@ class FileContentStore : public IFileContentStore {
  * overlay's file system attributes and is responsible for obtaining and
  * releasing its locks ("initOverlay" and "close" respectively).
  */
-class FsOverlay : public IOverlay {
+class FsOverlay : public InodeCatalog {
  public:
   explicit FsOverlay(FileContentStore* core) : core_(core) {}
 

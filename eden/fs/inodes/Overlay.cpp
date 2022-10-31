@@ -38,7 +38,7 @@ namespace {
 constexpr uint64_t ioCountMask = 0x7FFFFFFFFFFFFFFFull;
 constexpr uint64_t ioClosedMask = 1ull << 63;
 
-std::unique_ptr<IOverlay> makeTreeOverlay(
+std::unique_ptr<InodeCatalog> makeInodeCatalog(
     AbsolutePathPiece localDir,
     Overlay::TreeOverlayType treeOverlayType,
     const EdenConfig& config,
@@ -121,14 +121,13 @@ Overlay::Overlay(
     std::shared_ptr<StructuredLogger> logger,
     const EdenConfig& config)
     : fileContentStore_{makeFileContentStore(localDir)},
-      backingOverlay_{makeTreeOverlay(
+      inodeCatalog_{makeInodeCatalog(
           localDir,
           treeOverlayType,
           config,
           fileContentStore_ ? fileContentStore_.get() : nullptr)},
       treeOverlayType_{treeOverlayType},
-      supportsSemanticOperations_{
-          backingOverlay_->supportsSemanticOperations()},
+      supportsSemanticOperations_{inodeCatalog_->supportsSemanticOperations()},
       localDir_{localDir},
       caseSensitive_{caseSensitive},
       structuredLogger_{logger} {}
@@ -149,7 +148,7 @@ void Overlay::close() {
   // Make sure everything is shut down in reverse of construction order.
   // Cleanup is not necessary if tree overlay was not initialized and either
   // there is no file content store or the it was not initalized
-  if (!backingOverlay_->initialized() &&
+  if (!inodeCatalog_->initialized() &&
       (!fileContentStore_ ||
        (fileContentStore_ && !fileContentStore_->initialized()))) {
     return;
@@ -170,7 +169,7 @@ void Overlay::close() {
   inodeMetadataTable_.reset();
 #endif // !_WIN32
 
-  backingOverlay_->close(optNextInodeNumber);
+  inodeCatalog_->close(optNextInodeNumber);
   if (fileContentStore_ && treeOverlayType_ != TreeOverlayType::Legacy) {
     fileContentStore_->close();
   }
@@ -233,7 +232,7 @@ void Overlay::initOverlay(
     FOLLY_MAYBE_UNUSED const OverlayChecker::ProgressCallback& progressCallback,
     FOLLY_MAYBE_UNUSED OverlayChecker::LookupCallback& lookupCallback) {
   IORequest req{this};
-  auto optNextInodeNumber = backingOverlay_->initOverlay(true);
+  auto optNextInodeNumber = inodeCatalog_->initOverlay(true);
   if (fileContentStore_ && treeOverlayType_ != TreeOverlayType::Legacy) {
     fileContentStore_->initialize(true);
   }
@@ -256,7 +255,7 @@ void Overlay::initOverlay(
     // Therefore OverlayChecker must not exist longer than this initOverlay
     // call.
     OverlayChecker checker(
-        static_cast<FsOverlay*>(backingOverlay_.get()),
+        static_cast<FsOverlay*>(inodeCatalog_.get()),
         static_cast<FileContentStore*>(fileContentStore_.get()),
         std::nullopt,
         lookupCallback);
@@ -294,7 +293,7 @@ void Overlay::initOverlay(
   // here to skip scanning in that case.
   if (folly::kIsWindows && mountPath.has_value()) {
     optNextInodeNumber =
-        dynamic_cast<TreeOverlay*>(backingOverlay_.get())
+        dynamic_cast<TreeOverlay*>(inodeCatalog_.get())
             ->scanLocalChanges(std::move(config), *mountPath, lookupCallback);
   }
 
@@ -331,7 +330,7 @@ InodeNumber Overlay::allocateInodeNumber() {
 DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
   DirContents result(caseSensitive_);
   IORequest req{this};
-  auto dirData = backingOverlay_->loadOverlayDir(inodeNumber);
+  auto dirData = inodeCatalog_->loadOverlayDir(inodeNumber);
   if (!dirData.has_value()) {
     return result;
   }
@@ -416,7 +415,7 @@ overlay::OverlayDir Overlay::serializeOverlayDir(
 }
 
 void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
-  backingOverlay_->saveOverlayDir(
+  inodeCatalog_->saveOverlayDir(
       inodeNumber, serializeOverlayDir(inodeNumber, dir));
 }
 
@@ -444,7 +443,7 @@ void Overlay::removeOverlayDir(InodeNumber inodeNumber) {
   IORequest req{this};
 
   freeInodeFromMetadataTable(inodeNumber);
-  backingOverlay_->removeOverlayDir(inodeNumber);
+  inodeCatalog_->removeOverlayDir(inodeNumber);
 }
 
 void Overlay::recursivelyRemoveOverlayDir(InodeNumber inodeNumber) {
@@ -457,7 +456,7 @@ void Overlay::recursivelyRemoveOverlayDir(InodeNumber inodeNumber) {
   // saveOverlayDir(I).  There's also no risk of violating our durability
   // guarantees if the process dies after this call but before the thread could
   // remove this data.
-  auto dirData = backingOverlay_->loadAndRemoveOverlayDir(inodeNumber);
+  auto dirData = inodeCatalog_->loadAndRemoveOverlayDir(inodeNumber);
   if (dirData) {
     gcQueue_.lock()->queue.emplace_back(std::move(*dirData));
     gcCondVar_.notify_one();
@@ -476,7 +475,7 @@ folly::Future<folly::Unit> Overlay::flushPendingAsync() {
 
 bool Overlay::hasOverlayDir(InodeNumber inodeNumber) {
   IORequest req{this};
-  return backingOverlay_->hasOverlayDir(inodeNumber);
+  return inodeCatalog_->hasOverlayDir(inodeNumber);
 }
 
 #ifndef _WIN32
@@ -615,7 +614,7 @@ void Overlay::handleGCRequest(GCRequest& request) {
 
   if (std::holds_alternative<GCRequest::MaintenanceRequest>(
           request.requestType)) {
-    backingOverlay_->maintenance();
+    inodeCatalog_->maintenance();
     return;
   }
 
@@ -671,7 +670,7 @@ void Overlay::handleGCRequest(GCRequest& request) {
     overlay::OverlayDir dir;
     try {
       freeInodeFromMetadataTable(ino);
-      auto dirData = backingOverlay_->loadAndRemoveOverlayDir(ino);
+      auto dirData = inodeCatalog_->loadAndRemoveOverlayDir(ino);
       if (!dirData.has_value()) {
         XLOG(DBG7) << "no dir data for inode " << ino;
         continue;
@@ -693,7 +692,7 @@ void Overlay::addChild(
     const std::pair<PathComponent, DirEntry>& childEntry,
     const DirContents& content) {
   if (supportsSemanticOperations_) {
-    backingOverlay_->addChild(
+    inodeCatalog_->addChild(
         parent, childEntry.first, serializeOverlayEntry(childEntry.second));
   } else {
     saveOverlayDir(parent, content);
@@ -705,7 +704,7 @@ void Overlay::removeChild(
     PathComponentPiece childName,
     const DirContents& content) {
   if (supportsSemanticOperations_) {
-    backingOverlay_->removeChild(parent, childName);
+    inodeCatalog_->removeChild(parent, childName);
   } else {
     saveOverlayDir(parent, content);
   }
@@ -723,7 +722,7 @@ void Overlay::renameChild(
     const DirContents& srcContent,
     const DirContents& dstContent) {
   if (supportsSemanticOperations_) {
-    backingOverlay_->renameChild(src, dst, srcName, dstName);
+    inodeCatalog_->renameChild(src, dst, srcName, dstName);
   } else {
     saveOverlayDir(src, srcContent);
     if (dst.get() != src.get()) {
