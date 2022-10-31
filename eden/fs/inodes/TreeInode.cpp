@@ -3769,6 +3769,14 @@ folly::Try<folly::Unit> TreeInode::invalidateChannelEntryCache(
       if (ret.hasValue()) {
         auto& inodeMap = *getInodeMap();
         if (ino && needDecFsRefcount(inodeMap, *ino)) {
+          // At this point, the file is now virtual, that is no placeholder or
+          // full file are present on disk. If at this point, the file is being
+          // looked up, EdenFS will service the lookup in
+          // PrjfsDispatcherImpl::lookup, and then try to increment the
+          // refcount. The refcount increment is guarantee to happen after the
+          // decrement below due to the increment needing to traverse the inode
+          // hierarchy and thus acquiring the content lock. The same content
+          // lock that is held in this function.
           getInodeMap()->decFsRefcount(*ino);
         }
       }

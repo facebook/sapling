@@ -164,6 +164,10 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
                     // executor to avoid deadlocks. This is guaranteed to 1) run
                     // before any other changes to this inode, and 2) before
                     // checkout starts invalidating files/directories.
+                    // This also cannot race with a decFsRefcount from
+                    // TreeInode::invalidateChannelEntryCache due to
+                    // getInodeSlow needing to acquire the content lock that
+                    // invalidateChannelEntryCache is already holding.
                     mount.getInodeSlow(path, *context)
                         .thenValue(
                             [](InodePtr inode) { inode->incFsRefcount(); })
