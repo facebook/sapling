@@ -38,7 +38,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<gitignorematcher>(py)?;
     m.add_class::<treematcher>(py)?;
     m.add_class::<regexmatcher>(py)?;
-    m.add_class::<pydynmatcher>(py)?;
+    m.add_class::<dynmatcher>(py)?;
     m.add(py, "normalizeglob", py_fn!(py, normalize_glob(path: &str)))?;
     m.add(py, "plaintoglob", py_fn!(py, plain_to_glob(path: &str)))?;
     m.add(
@@ -137,7 +137,7 @@ impl ExtractInnerRef for treematcher {
     }
 }
 
-py_class!(pub class pydynmatcher |py| {
+py_class!(pub class dynmatcher |py| {
     data matcher: Arc<dyn 'static + Matcher + Send + Sync>;
 
     def __new__(_cls,
@@ -177,7 +177,7 @@ py_class!(pub class pydynmatcher |py| {
 
 });
 
-impl ExtractInnerRef for pydynmatcher {
+impl ExtractInnerRef for dynmatcher {
     type Inner = Arc<dyn 'static + Matcher + Send + Sync>;
 
     fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
@@ -288,7 +288,7 @@ pub fn extract_matcher(py: Python, matcher: PyObject) -> PyResult<Arc<dyn Matche
     if let Ok(matcher) = regexmatcher::downcast_from(py, matcher.clone_ref(py)) {
         return Ok(matcher.extract_inner(py));
     }
-    if let Ok(matcher) = pydynmatcher::downcast_from(py, matcher.clone_ref(py)) {
+    if let Ok(matcher) = dynmatcher::downcast_from(py, matcher.clone_ref(py)) {
         return Ok(matcher.extract_inner(py));
     }
     let py_type = matcher.get_type(py);
@@ -302,7 +302,7 @@ pub fn extract_matcher(py: Python, matcher: PyObject) -> PyResult<Arc<dyn Matche
     if type_name.as_ref() == "regexmatcher" {
         return extract_matcher(py, matcher.getattr(py, "_matcher")?);
     }
-    if type_name.as_ref() == "pydynmatcher" {
+    if type_name.as_ref() == "dynmatcher" {
         return extract_matcher(py, matcher.getattr(py, "_matcher")?);
     }
     if type_name.as_ref() == "unionmatcher" {
