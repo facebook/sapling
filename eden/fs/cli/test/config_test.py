@@ -11,12 +11,15 @@ import io
 import os
 import sys
 import unittest
+from collections import namedtuple
 from pathlib import Path
 from typing import Dict
+from unittest.mock import MagicMock, patch
 
 import toml
 import toml.decoder
 from eden.fs.cli.config import EdenInstance
+from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 from eden.test_support.testcase import EdenTestCaseBase
 
@@ -584,6 +587,233 @@ type = "hg"
 protocol = "{initial_mount_protocol}"
 """
             )
+
+    @patch("eden.fs.cli.util.is_sandcastle", return_value=False)
+    @patch("os.uname")
+    def check_should_migrate(
+        self,
+        platform: str,
+        os_version: str,
+        config: Dict[str, str],
+        mock_uname: MagicMock,
+        mock_is_sandcastle: MagicMock,
+    ) -> bool:
+        FakeUname = namedtuple("FakeUname", ["release"])
+
+        with patch("sys.platform", platform):
+            mock_uname.return_value = FakeUname(release=os_version)
+            instance = FakeEdenInstance(
+                str(self.temp_mgr.make_temp_dir()), config=config
+            )
+            return config_mod.should_migrate_mount_protocol_to_nfs(instance)
+
+    def test_should_migrate_monterey_no_config(self) -> None:
+        self.assertFalse(self.check_should_migrate("darwin", "21.0.0", {}))
+
+    def test_should_migrate_monterey_with_config(self) -> None:
+        self.assertFalse(
+            self.check_should_migrate(
+                "darwin",
+                "21.0.0",
+                {
+                    "core.migrate_existing_to_nfs": "true",
+                },
+            )
+        )
+
+    def test_should_migrate_monterey_with_config_all_versions(self) -> None:
+        self.assertTrue(
+            self.check_should_migrate(
+                "darwin",
+                "21.0.0",
+                {
+                    "core.migrate_existing_to_nfs_all_macos": "true",
+                },
+            )
+        )
+        self.assertTrue(
+            self.check_should_migrate(
+                "darwin",
+                "21.0.0",
+                {
+                    "core.migrate_existing_to_nfs": "true",
+                    "core.migrate_existing_to_nfs_all_macos": "true",
+                },
+            )
+        )
+
+        # Even if the Ventura-specific config is false, the _all_versions config
+        # can still trigger the migration.
+        self.assertTrue(
+            self.check_should_migrate(
+                "darwin",
+                "21.0.0",
+                {
+                    "core.migrate_existing_to_nfs": "false",
+                    "core.migrate_existing_to_nfs_all_macos": "true",
+                },
+            )
+        )
+
+    def test_should_migrate_ventura_no_config(self) -> None:
+        self.assertFalse(self.check_should_migrate("darwin", "22.0.0", {}))
+
+    def test_should_migrate_ventura_with_config(self) -> None:
+        self.assertTrue(
+            self.check_should_migrate(
+                "darwin",
+                "22.0.0",
+                {
+                    "core.migrate_existing_to_nfs": "true",
+                },
+            )
+        )
+
+        # Even if the _all_versions config is false, the Ventura-specific config
+        # can still trigger the migration.
+        self.assertTrue(
+            self.check_should_migrate(
+                "darwin",
+                "22.0.0",
+                {
+                    "core.migrate_existing_to_nfs": "true",
+                    "core.migrate_existing_to_nfs_all_macos": "false",
+                },
+            )
+        )
+
+    def test_should_migrate_ventura_with_config_all_versions(self) -> None:
+        self.assertTrue(
+            self.check_should_migrate(
+                "darwin",
+                "22.0.0",
+                {
+                    "core.migrate_existing_to_nfs_all_macos": "true",
+                },
+            )
+        )
+        self.assertTrue(
+            self.check_should_migrate(
+                "darwin",
+                "22.0.0",
+                {
+                    "core.migrate_existing_to_nfs": "true",
+                    "core.migrate_existing_to_nfs_all_macos": "true",
+                },
+            )
+        )
+
+        # Even if the Ventura-specific config is false, the _all_versions config
+        # can still trigger the migration.
+        self.assertTrue(
+            self.check_should_migrate(
+                "darwin",
+                "22.0.0",
+                {
+                    "core.migrate_existing_to_nfs": "false",
+                    "core.migrate_existing_to_nfs_all_macos": "true",
+                },
+            )
+        )
+
+    def test_should_migrate_non_macos(self) -> None:
+        self.assertFalse(
+            self.check_should_migrate(
+                "linux",
+                "22.0.0",
+                {
+                    "core.migrate_existing_to_nfs": "true",
+                    "core.migrate_existing_to_nfs_all_macos": "true",
+                },
+            )
+        )
+
+    def check_nfs_migrations_needing_full_restart(
+        self, platform: str, config: Dict[str, str], mounts: Dict[str, str]
+    ) -> int:
+        instance = FakeEdenInstance(str(self.temp_mgr.make_temp_dir()), config=config)
+        for mount, protocol in mounts.items():
+            instance.create_test_mount(mount, mount_protocol=protocol)
+
+        with patch("sys.platform", platform):
+            return config_mod.count_nfs_migrations_needing_full_restart(instance)
+
+    def test_nfs_migrations_needing_full_restart_no_config_no_mounts(self) -> None:
+        self.assertEqual(
+            0, self.check_nfs_migrations_needing_full_restart("darwin", {}, {})
+        )
+
+    def test_nfs_migrations_needing_full_restart_no_config_no_fuse_mounts(self) -> None:
+        self.assertEqual(
+            0,
+            self.check_nfs_migrations_needing_full_restart(
+                "darwin", {}, {"foo": "nfs"}
+            ),
+        )
+
+    def test_nfs_migrations_needing_full_restart_yes_config_no_fuse_mounts(
+        self,
+    ) -> None:
+        self.assertEqual(
+            0,
+            self.check_nfs_migrations_needing_full_restart(
+                "darwin",
+                {"core.migrate_existing_to_nfs_all_macos": "true"},
+                {"foo": "nfs"},
+            ),
+        )
+
+    def test_nfs_migrations_needing_full_restart_no_config_yes_fuse_mounts(
+        self,
+    ) -> None:
+        self.assertEqual(
+            0,
+            self.check_nfs_migrations_needing_full_restart(
+                "darwin", {}, {"foo": "fuse"}
+            ),
+        )
+
+    def test_nfs_migrations_needing_full_restart_yes_config_yes_fuse_mounts(
+        self,
+    ) -> None:
+        self.assertEqual(
+            2,
+            self.check_nfs_migrations_needing_full_restart(
+                "darwin",
+                {"core.migrate_existing_to_nfs_all_macos": "true"},
+                {"foo": "fuse", "bar": "nfs", "baz": "fuse"},
+            ),
+        )
+
+    def test_nfs_migrations_needing_full_restart_ventura_config(self) -> None:
+        self.assertEqual(
+            0,
+            self.check_nfs_migrations_needing_full_restart(
+                "darwin",
+                {"core.migrate_existing_to_nfs": "true"},
+                {"foo": "fuse"},
+            ),
+        )
+
+    def test_nfs_migrations_needing_full_restart_linux(self) -> None:
+        self.assertEqual(
+            0,
+            self.check_nfs_migrations_needing_full_restart(
+                "linux",
+                {"core.migrate_existing_to_nfs_all_macos": "true"},
+                {"foo": "fuse"},
+            ),
+        )
+
+    def test_nfs_migrations_needing_full_restart_windows(self) -> None:
+        self.assertEqual(
+            0,
+            self.check_nfs_migrations_needing_full_restart(
+                "win32",
+                {"core.migrate_existing_to_nfs_all_macos": "true"},
+                {"foo": "prjfs"},
+            ),
+        )
 
     def check_migrate_nfs(self, mounts: Dict[str, str]) -> None:
         self.setup_config_files(mounts)

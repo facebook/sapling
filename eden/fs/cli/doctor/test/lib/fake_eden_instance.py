@@ -88,6 +88,7 @@ class FakeEdenInstance(AbstractEdenInstance):
         setup_path: bool = True,
         dirstate_parent: Union[str, Tuple[str, str], None] = None,
         backing_repo: Optional[Path] = None,
+        mount_protocol: Optional[str] = None,
     ) -> EdenCheckout:
         """
         Define a configured mount.
@@ -114,6 +115,12 @@ class FakeEdenInstance(AbstractEdenInstance):
             backing_repo if backing_repo is not None else self.default_backing_repo
         )
 
+        if mount_protocol is None:
+            if sys.platform == "win32":
+                mount_protocol = "prjfs"
+            else:
+                mount_protocol = "fuse"
+
         state_dir = self.clients_path / client_name
         assert full_path not in self._checkouts_by_path
         config = CheckoutConfig(
@@ -121,7 +128,7 @@ class FakeEdenInstance(AbstractEdenInstance):
             scm_type=scm_type,
             # pyre-fixme[6]: Expected `str` for 3rd param but got `UUID`.
             guid=uuid.uuid4(),
-            mount_protocol="prjfs" if sys.platform == "win32" else "fuse",
+            mount_protocol=mount_protocol,
             case_sensitive=sys.platform == "linux",
             require_utf8_path=True,
             default_revision=snapshot,
@@ -268,6 +275,11 @@ class FakeEdenInstance(AbstractEdenInstance):
 
     def get_config_value(self, key: str, default: str) -> str:
         return self._config.get(key, default)
+
+    def get_config_bool(self, key: str, default: bool) -> bool:
+        if key in self._config:
+            return self._config[key] == "true"
+        return default
 
     def get_hg_repo(self, path: Path) -> FakeHgRepo:
         if path in self._hg_repo_by_path:

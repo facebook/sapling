@@ -233,6 +233,16 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * If EdenFS should force a non-graceful restart, if necessary, to auto
+   * migrate FUSE repos to NFS on all versions of macOS.  Only used in the CLI
+   * and edenfs_restarter, including here to get rid of warnings.
+   */
+  ConfigSetting<bool> migrateToNFSAllMacOS{
+      "core:migrate_existing_to_nfs_all_macos",
+      false,
+      this};
+
   // [config]
 
   /**

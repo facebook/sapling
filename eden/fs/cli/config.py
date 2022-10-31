@@ -222,6 +222,12 @@ class AbstractEdenInstance:
     def get_config_value(self, key: str, default: str) -> str:
         ...
 
+    def get_config_bool(self, key: str, default: bool) -> bool:
+        ...
+
+    def get_checkouts(self) -> List["EdenCheckout"]:
+        ...
+
 
 class EdenInstance(AbstractEdenInstance):
     """This class contains information about a particular edenfs instance.
@@ -1586,32 +1592,53 @@ class EdenCheckout:
         self.save_config(new_config)
 
 
+_MIGRATE_EXISTING_TO_NFS = "core.migrate_existing_to_nfs"
+_MIGRATE_EXISTING_TO_NFS_ALL_MACOS = "core.migrate_existing_to_nfs_all_macos"
+
+
 # Fuse is still not functional on Ventura, so users will need to use NFS on
 # Ventura.
-def should_migrate_mount_protocol_to_nfs(instance: EdenInstance) -> bool:
+def should_migrate_mount_protocol_to_nfs(instance: AbstractEdenInstance) -> bool:
     if sys.platform != "darwin":
         return False
 
     if util.is_sandcastle():
         return False
 
+    if instance.get_config_bool(_MIGRATE_EXISTING_TO_NFS_ALL_MACOS, default=False):
+        return True
+
     ventura_os_version = "22.0.0"
 
     if tuple(os.uname().release.split(".")) >= tuple(ventura_os_version.split(".")):
-        return instance.get_config_bool("core.migrate_existing_to_nfs", default=False)
+        return instance.get_config_bool(_MIGRATE_EXISTING_TO_NFS, default=False)
 
     return False
+
+
+def count_non_nfs_mounts(instance: AbstractEdenInstance) -> int:
+    count = 0
+    for checkout in instance.get_checkouts():
+        if checkout.get_config().mount_protocol != util.NFS_MOUNT_PROTOCOL_STRING:
+            count += 1
+    return count
+
+
+def count_nfs_migrations_needing_full_restart(instance: AbstractEdenInstance) -> int:
+    if sys.platform != "darwin":
+        return 0
+
+    if not instance.get_config_bool(_MIGRATE_EXISTING_TO_NFS_ALL_MACOS, default=False):
+        return 0
+
+    return count_non_nfs_mounts(instance)
 
 
 # Checks for any non NFS mounts and migrates them to NFS.
 def _do_nfs_migration(
     instance: EdenInstance, get_migration_success_message: Callable[[str], str]
 ) -> None:
-    migrate_mounts = False
-    for checkout in instance.get_checkouts():
-        if checkout.get_config().mount_protocol != util.NFS_MOUNT_PROTOCOL_STRING:
-            migrate_mounts = True
-    if not migrate_mounts:
+    if count_non_nfs_mounts(instance) == 0:
         # most the time this should be the case. we only need to migrate mounts
         # once, and then we should just be able to skip this all other times.
         return
