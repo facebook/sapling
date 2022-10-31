@@ -129,7 +129,7 @@ impl IO {
 py_class!(class styler |py| {
     data inner: RefCell<termstyle::Styler>;
 
-    def __new__(_cls, colors: u32, pager_active: bool) -> PyResult<styler> {
+    def __new__(_cls, colors: u32) -> PyResult<styler> {
         let level = if colors >= 16777216 {
             termstyle::ColorLevel::TrueColor
         } else if colors >= 256 {
@@ -138,7 +138,7 @@ py_class!(class styler |py| {
             termstyle::ColorLevel::Sixteen
         };
 
-        Self::create_instance(py, RefCell::new(termstyle::Styler::from_level(level, pager_active).map_pyerr(py)?))
+        Self::create_instance(py, RefCell::new(termstyle::Styler::from_level(level).map_pyerr(py)?))
     }
 
     def renderbytes(&self, style: &str, text: &str)  -> PyResult<PyBytes> {

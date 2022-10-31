@@ -89,11 +89,15 @@ pub struct Styler {
     renderer: TerminfoRenderer,
 }
 
+fn enable_compat_mode() -> bool {
+    std::env::var("SL_DISABLE_TERMINFO_COMPAT").is_err()
+}
+
 impl Styler {
     /// Initialize a styler, letting termwiz sniff the supported color level.
-    pub fn new(pager_active: bool) -> termwiz::Result<Styler> {
-        let mut hints =
-            ProbeHints::new_from_env().force_terminfo_render_to_use_ansi_sgr(Some(pager_active));
+    pub fn new() -> termwiz::Result<Styler> {
+        let mut hints = ProbeHints::new_from_env()
+            .force_terminfo_render_to_use_ansi_sgr(Some(enable_compat_mode()));
         if cfg!(test) || std::env::var("TESTTMP").is_ok() {
             // Use a consistent (and non-existent) terminal to avoid differences in tests.
             hints = hints.term(Some("fake-term".to_string()));
@@ -108,10 +112,10 @@ impl Styler {
     /// Initialize a styler using specified color level. Python uses
     /// this for now to keep closer compatibility with the Python
     /// color support detection.
-    pub fn from_level(level: ColorLevel, pager_active: bool) -> termwiz::Result<Styler> {
+    pub fn from_level(level: ColorLevel) -> termwiz::Result<Styler> {
         let mut hints = ProbeHints::default()
             .color_level(Some(level))
-            .force_terminfo_render_to_use_ansi_sgr(Some(pager_active));
+            .force_terminfo_render_to_use_ansi_sgr(Some(enable_compat_mode()));
         if cfg!(test) || std::env::var("TESTTMP").is_ok() {
             // Use a consistent (and non-existent) terminal to avoid differences in tests.
             hints = hints.term(Some("fake-term".to_string()));
@@ -339,7 +343,7 @@ mod test {
 
     #[test]
     fn test_render_bytes() {
-        let mut styler = Styler::from_level(TwoFiftySix, false).unwrap();
+        let mut styler = Styler::from_level(TwoFiftySix).unwrap();
 
         assert_eq!(
             styler.render_bytes("red", "hello\nthere\n").unwrap(),
