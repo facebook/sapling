@@ -8,7 +8,6 @@
 use std::sync::Arc;
 
 use anyhow::format_err;
-use anyhow::Result;
 use async_runtime::try_block_unless_interrupted as block_on;
 use cpython::*;
 use cpython_ext::convert::BytesLike;

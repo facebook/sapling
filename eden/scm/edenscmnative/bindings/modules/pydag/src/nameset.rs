@@ -8,7 +8,6 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-use anyhow::Result;
 use async_runtime::try_block_unless_interrupted as block_on;
 use cpython::*;
 use cpython_ext::AnyhowResultExt;

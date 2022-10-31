@@ -16,7 +16,6 @@ use std::time::SystemTime;
 
 use anyhow::anyhow;
 use anyhow::Error;
-use anyhow::Result;
 use cpython::*;
 use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyPathBuf;
