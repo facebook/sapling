@@ -26,6 +26,7 @@ use slog::Logger;
 pub struct DerivedDataManagerSet {
     logger: Logger,
     configs: HashMap<String, DerivedDataManager>,
+    changesets: Arc<dyn Changesets>,
 }
 
 impl DerivedDataManagerSet {
@@ -35,6 +36,10 @@ impl DerivedDataManagerSet {
 
     pub fn logger(&self) -> &Logger {
         &self.logger
+    }
+
+    pub fn changesets(&self) -> Arc<dyn Changesets> {
+        self.changesets.clone()
     }
 }
 
@@ -61,7 +66,7 @@ impl DerivedDataManagerSet {
         let manager = DerivedDataManager::new(
             repo_id,
             repo_name,
-            changesets,
+            changesets.clone(),
             bonsai_hg_mapping,
             filenodes,
             repo_blobstore,
@@ -82,6 +87,10 @@ impl DerivedDataManagerSet {
             })
             .collect();
 
-        Ok(Self { logger, configs })
+        Ok(Self {
+            logger,
+            configs,
+            changesets,
+        })
     }
 }
