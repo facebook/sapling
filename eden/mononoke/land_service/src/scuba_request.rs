@@ -9,7 +9,7 @@ use land_service_if::LandChangesetRequest;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
 
-use crate::land_service_impl::convert_hex_to_str;
+use crate::conversion_helpers::convert_hex_to_str;
 
 pub(crate) trait AddScubaRequest: Send + Sync {
     fn add_scuba_params(&self, _scuba: &mut MononokeScubaSampleBuilder) {}

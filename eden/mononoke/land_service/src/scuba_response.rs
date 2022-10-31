@@ -8,7 +8,7 @@
 use land_service_if::LandChangesetsResponse;
 use scuba_ext::MononokeScubaSampleBuilder;
 
-use crate::land_service_impl::convert_hex_to_str;
+use crate::conversion_helpers::convert_hex_to_str;
 
 /// A trait for logging part of a thrift `Response` struct to scuba.
 pub(crate) trait AddScubaResponse: Send + Sync {
