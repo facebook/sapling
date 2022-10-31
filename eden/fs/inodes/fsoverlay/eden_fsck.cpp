@@ -14,7 +14,7 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
 
-#include "eden/fs/inodes/fsoverlay/FsOverlay.h"
+#include "eden/fs/inodes/fsoverlay/FsInodeCatalog.h"
 #include "eden/fs/inodes/fsoverlay/OverlayChecker.h"
 
 FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
@@ -35,13 +35,14 @@ int main(int argc, char** argv) {
   }
 
   std::optional<FileContentStore> fileContentStore;
-  std::optional<FsOverlay> fsOverlay;
+  std::optional<FsInodeCatalog> fsInodeCatalog;
   std::optional<InodeNumber> nextInodeNumber;
   auto overlayPath = normalizeBestEffort(argv[1]);
   try {
     fileContentStore.emplace(overlayPath);
-    fsOverlay.emplace(&fileContentStore.value());
-    nextInodeNumber = fsOverlay->initOverlay(/*createIfNonExisting=*/false);
+    fsInodeCatalog.emplace(&fileContentStore.value());
+    nextInodeNumber =
+        fsInodeCatalog->initOverlay(/*createIfNonExisting=*/false);
   } catch (std::exception& ex) {
     XLOG(ERR) << "unable to open overlay: " << folly::exceptionStr(ex);
     return 1;
@@ -56,14 +57,17 @@ int main(int argc, char** argv) {
         std::runtime_error("no lookup callback"));
   };
   OverlayChecker checker(
-      &fsOverlay.value(), &fileContentStore.value(), nextInodeNumber, lookup);
+      &fsInodeCatalog.value(),
+      &fileContentStore.value(),
+      nextInodeNumber,
+      lookup);
   checker.scanForErrors();
   if (FLAGS_dry_run) {
     checker.logErrors();
-    fsOverlay->close(nextInodeNumber);
+    fsInodeCatalog->close(nextInodeNumber);
   } else {
     checker.repairErrors();
-    fsOverlay->close(checker.getNextInodeNumber());
+    fsInodeCatalog->close(checker.getNextInodeNumber());
   }
   return 0;
 }

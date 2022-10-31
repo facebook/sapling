@@ -63,8 +63,9 @@ class FileContentStore : public IFileContentStore {
 
   /**
    * This entrypoint is used by the OverlayChecker which needs the localDir
-   * value but only has a pointer to the backing FsOverlay object. In most cases
-   * one should get the localDir by calling `Overlay::getLocalDir` instead.
+   * value but only has a pointer to the backing FsInodeCatalog object. In most
+   * cases one should get the localDir by calling `Overlay::getLocalDir`
+   * instead.
    */
   const AbsolutePath& getLocalDir() const {
     return localDir_;
@@ -173,7 +174,7 @@ class FileContentStore : public IFileContentStore {
  private:
   FRIEND_TEST(OverlayTest, getFilePath);
   friend class RawOverlayTest;
-  friend class FsOverlay;
+  friend class FsInodeCatalog;
 
   void initNewOverlay();
 
@@ -242,13 +243,13 @@ class FileContentStore : public IFileContentStore {
 };
 
 /**
- * FsOverlay provides interfaces to manipulate the overlay. It stores the
+ * FsInodeCatalog provides interfaces to manipulate the overlay. It stores the
  * overlay's file system attributes and is responsible for obtaining and
  * releasing its locks ("initOverlay" and "close" respectively).
  */
-class FsOverlay : public InodeCatalog {
+class FsInodeCatalog : public InodeCatalog {
  public:
-  explicit FsOverlay(FileContentStore* core) : core_(core) {}
+  explicit FsInodeCatalog(FileContentStore* core) : core_(core) {}
 
   bool supportsSemanticOperations() const override {
     return false;
@@ -269,7 +270,7 @@ class FsOverlay : public InodeCatalog {
   void close(std::optional<InodeNumber> nextInodeNumber) override;
 
   /**
-   * Was FsOverlay initialized - i.e., is cleanup (close) necessary.
+   * Was FsInodeCatalog initialized - i.e., is cleanup (close) necessary.
    */
   bool initialized() const override;
 

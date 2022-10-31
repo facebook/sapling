@@ -14,7 +14,7 @@
 #include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
 
-#include "eden/fs/inodes/fsoverlay/FsOverlay.h"
+#include "eden/fs/inodes/fsoverlay/FsInodeCatalog.h"
 #include "eden/fs/inodes/fsoverlay/OverlayChecker.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/testharness/TempFile.h"
@@ -52,7 +52,7 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
     return fcs_;
   }
 
-  FsOverlay& fs() {
+  FsInodeCatalog& fs() {
     return fs_;
   }
 
@@ -82,7 +82,7 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
   folly::test::TemporaryDirectory tmpDir_;
   AbsolutePath tmpDirPath_;
   FileContentStore fcs_;
-  FsOverlay fs_;
+  FsInodeCatalog fs_;
   uint64_t nextInodeNumber_{0};
 };
 
@@ -332,7 +332,7 @@ TEST(Fsck, testNoErrors) {
   overlay->closeCleanly();
 
   FileContentStore fcs(overlay->overlayPath());
-  FsOverlay fs(&fcs);
+  FsInodeCatalog fs(&fcs);
   auto nextInode = fs.initOverlay(/*createIfNonExisting=*/false);
   OverlayChecker::LookupCallback lookup = [](auto&&) {
     return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
@@ -368,7 +368,7 @@ TEST(Fsck, testMissingNextInodeNumber) {
   overlay->fs().close(std::nullopt);
 
   FileContentStore fcs(overlay->overlayPath());
-  FsOverlay fs(&fcs);
+  FsInodeCatalog fs(&fcs);
   auto nextInode = fs.initOverlay(/*createIfNonExisting=*/false);
   // Confirm there is no next inode data
   EXPECT_FALSE(nextInode.has_value());
@@ -397,7 +397,7 @@ TEST(Fsck, testBadNextInodeNumber) {
   overlay->fs().close(InodeNumber(2));
 
   FileContentStore fcs(overlay->overlayPath());
-  FsOverlay fs(&fcs);
+  FsInodeCatalog fs(&fcs);
   auto nextInode = fs.initOverlay(/*createIfNonExisting=*/false);
   EXPECT_EQ(2, nextInode ? nextInode->get() : 0);
   OverlayChecker::LookupCallback lookup = [](auto&&) {

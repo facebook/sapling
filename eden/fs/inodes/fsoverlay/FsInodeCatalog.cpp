@@ -7,7 +7,7 @@
 
 #ifndef _WIN32
 
-#include "eden/fs/inodes/fsoverlay/FsOverlay.h"
+#include "eden/fs/inodes/fsoverlay/FsInodeCatalog.h"
 
 #include <boost/filesystem.hpp>
 #include <algorithm>
@@ -81,7 +81,7 @@ static void doFormatSubdirPath(
   subdirPath[1] = hexdigit[inodeNum & 0xf];
 }
 
-bool FsOverlay::initialized() const {
+bool FsInodeCatalog::initialized() const {
   return core_->initialized();
 }
 
@@ -140,7 +140,8 @@ bool FileContentStore::initialize(bool createIfNonExisting) {
   return overlayCreated;
 }
 
-std::optional<InodeNumber> FsOverlay::initOverlay(bool createIfNonExisting) {
+std::optional<InodeNumber> FsInodeCatalog::initOverlay(
+    bool createIfNonExisting) {
   bool overlayCreated = core_->initialize(createIfNonExisting);
 
   if (overlayCreated) {
@@ -160,7 +161,7 @@ void FileContentStore::close() {
   infoFile_.close();
 }
 
-void FsOverlay::close(std::optional<InodeNumber> inodeNumber) {
+void FsInodeCatalog::close(std::optional<InodeNumber> inodeNumber) {
   if (inodeNumber) {
     core_->saveNextInodeNumber(inodeNumber.value());
   }
@@ -302,19 +303,19 @@ void FileContentStore::initNewOverlay() {
       .value();
 }
 
-optional<overlay::OverlayDir> FsOverlay::loadOverlayDir(
+optional<overlay::OverlayDir> FsInodeCatalog::loadOverlayDir(
     InodeNumber inodeNumber) {
   return core_->deserializeOverlayDir(inodeNumber);
 }
 
-std::optional<overlay::OverlayDir> FsOverlay::loadAndRemoveOverlayDir(
+std::optional<overlay::OverlayDir> FsInodeCatalog::loadAndRemoveOverlayDir(
     InodeNumber inodeNumber) {
   auto result = loadOverlayDir(inodeNumber);
   removeOverlayDir(inodeNumber);
   return result;
 }
 
-void FsOverlay::saveOverlayDir(
+void FsInodeCatalog::saveOverlayDir(
     InodeNumber inodeNumber,
     overlay::OverlayDir&& odir) {
   // Ask thrift to serialize it.
@@ -651,7 +652,7 @@ void FileContentStore::removeOverlayFile(InodeNumber inodeNumber) {
   }
 }
 
-void FsOverlay::removeOverlayDir(InodeNumber inodeNumber) {
+void FsInodeCatalog::removeOverlayDir(InodeNumber inodeNumber) {
   core_->removeOverlayFile(inodeNumber);
 }
 
@@ -668,7 +669,7 @@ bool FileContentStore::hasOverlayFile(InodeNumber inodeNumber) {
   }
 }
 
-bool FsOverlay::hasOverlayDir(InodeNumber inodeNumber) {
+bool FsInodeCatalog::hasOverlayDir(InodeNumber inodeNumber) {
   return core_->hasOverlayFile(inodeNumber);
 }
 

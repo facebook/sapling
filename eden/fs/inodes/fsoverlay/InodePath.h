@@ -8,7 +8,7 @@
 #pragma once
 
 #include <folly/Range.h>
-#include "eden/fs/inodes/fsoverlay/FsOverlay.h"
+#include "eden/fs/inodes/fsoverlay/FsInodeCatalog.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {

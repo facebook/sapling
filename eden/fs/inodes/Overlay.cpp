@@ -77,7 +77,7 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
   }
   return std::make_unique<TreeOverlay>(localDir);
 #else
-  return std::make_unique<FsOverlay>(
+  return std::make_unique<FsInodeCatalog>(
       static_cast<FileContentStore*>(fileContentStore));
 #endif
 }
@@ -257,7 +257,7 @@ void Overlay::initOverlay(
     // Therefore OverlayChecker must not exist longer than this initOverlay
     // call.
     OverlayChecker checker(
-        static_cast<FsOverlay*>(inodeCatalog_.get()),
+        static_cast<FsInodeCatalog*>(inodeCatalog_.get()),
         static_cast<FileContentStore*>(fileContentStore_.get()),
         std::nullopt,
         lookupCallback);

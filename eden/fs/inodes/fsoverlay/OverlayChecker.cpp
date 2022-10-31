@@ -25,7 +25,7 @@
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
-#include "eden/fs/inodes/fsoverlay/FsOverlay.h"
+#include "eden/fs/inodes/fsoverlay/FsInodeCatalog.h"
 #include "eden/fs/utils/EnumValue.h"
 
 using apache::thrift::CompactSerializer;
@@ -58,14 +58,14 @@ struct OverlayChecker::InodeInfo {
 };
 
 struct OverlayChecker::Impl {
-  FsOverlay* const fs;
+  FsInodeCatalog* const fs;
   FileContentStore* const fcs;
   std::optional<InodeNumber> loadedNextInodeNumber;
   LookupCallback& lookupCallback;
   std::unordered_map<InodeNumber, InodeInfo> inodes;
 
   Impl(
-      FsOverlay* fs,
+      FsInodeCatalog* fs,
       FileContentStore* fcs,
       std::optional<InodeNumber> nextInodeNumber,
       LookupCallback& lookupCallback)
@@ -110,7 +110,7 @@ class OverlayChecker::RepairState {
   OverlayChecker* checker() {
     return checker_;
   }
-  FsOverlay* fs() {
+  FsInodeCatalog* fs() {
     return checker_->impl_->fs;
   }
   FileContentStore* fcs() {
@@ -750,7 +750,7 @@ class OverlayChecker::BadNextInodeNumber : public OverlayChecker::Error {
 };
 
 OverlayChecker::OverlayChecker(
-    FsOverlay* fs,
+    FsInodeCatalog* fs,
     FileContentStore* fcs,
     optional<InodeNumber> nextInodeNumber,
     LookupCallback& lookupCallback)

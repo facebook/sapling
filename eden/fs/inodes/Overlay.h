@@ -26,7 +26,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifndef _WIN32
-#include "eden/fs/inodes/fsoverlay/FsOverlay.h"
+#include "eden/fs/inodes/fsoverlay/FsInodeCatalog.h"
 #endif
 
 namespace facebook::eden {
