@@ -285,6 +285,9 @@ pub struct MononokeTunables {
     // Percentage of wireproto unbundle pushrebase requests redirected to Land Service
     pushrebase_redirect_to_land_service_pct: AtomicI64,
 
+    // Boolean to batch requests sent to Land Service
+    batching_to_land_service: AtomicBool,
+
     // Which region writes should be done to, in order to minimise latency.
     // This should align with underlying storage (SQL/Manifold) write regions.
     // Notice writes still work from any region, and this field is not necessarily

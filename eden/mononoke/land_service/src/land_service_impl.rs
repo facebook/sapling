@@ -41,6 +41,7 @@ use slog::Logger;
 use srserver::RequestContext;
 use stats::prelude::*;
 use time_ext::DurationExt;
+use tunables::tunables;
 
 use crate::conversion_helpers;
 use crate::errors;
@@ -396,6 +397,10 @@ impl LandService for LandServiceThriftImpl {
         land_changesets: LandChangesetRequest,
     ) -> Result<LandChangesetsResponse, LandChangesetsExn> {
         let ctx: CoreContext = self.0.create_ctx("land_changesets", req_ctxt).await?;
+
+        if tunables().get_batching_to_land_service() {
+            todo!()
+        }
 
         Ok(self.0.impl_land_changesets(ctx, land_changesets).await?)
     }
