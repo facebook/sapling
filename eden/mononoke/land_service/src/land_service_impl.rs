@@ -105,11 +105,9 @@ impl LandServiceImpl {
 
     async fn impl_land_changesets(
         &self,
-        req_ctxt: &RequestContext,
+        ctx: CoreContext,
         land_changesets: LandChangesetRequest,
     ) -> Result<LandChangesetsResponse, LandChangesetsError> {
-        let ctx: CoreContext = self.create_ctx("land_changesets", req_ctxt).await?;
-
         ctx.scuba().clone().log_with_msg("Request start", None);
         STATS::total_request_start.add_value(1);
 
@@ -397,9 +395,8 @@ impl LandService for LandServiceThriftImpl {
         req_ctxt: &RequestContext,
         land_changesets: LandChangesetRequest,
     ) -> Result<LandChangesetsResponse, LandChangesetsExn> {
-        Ok(self
-            .0
-            .impl_land_changesets(req_ctxt, land_changesets)
-            .await?)
+        let ctx: CoreContext = self.0.create_ctx("land_changesets", req_ctxt).await?;
+
+        Ok(self.0.impl_land_changesets(ctx, land_changesets).await?)
     }
 }
