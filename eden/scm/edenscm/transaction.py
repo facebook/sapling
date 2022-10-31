@@ -79,9 +79,9 @@ def _playback(
     vfsmap,
     entries,
     backupentries,
-    unlink=True,
+    unlink: bool = True,
     checkambigfiles=None,
-):
+) -> None:
     for f, o, _ignore in entries:
         if o or not unlink:
             checkambig = checkambigfiles and (f, "") in checkambigfiles
@@ -717,7 +717,7 @@ class transaction(util.transactional):
             self.releasefn = None  # Help prevent cycles.
 
 
-def rollback(opener, vfsmap, file, report, checkambigfiles=None):
+def rollback(opener, vfsmap, file, report, checkambigfiles=None) -> None:
     """Rolls back the transaction contained in the given file
 
     Reads the entries in the specified file, and the corresponding
