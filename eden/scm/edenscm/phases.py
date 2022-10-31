@@ -109,8 +109,10 @@ from __future__ import absolute_import
 
 import errno
 import struct
+from typing import Dict
 
 import bindings
+from edenscm.util import sortdict
 
 from . import error, perftrace, pycompat, smartset, txnutil, util, visibility
 from .i18n import _
@@ -158,7 +160,7 @@ def _readroots(repo, phasedefaults=None):
     return roots, dirty
 
 
-def binaryencode(phasemapping):
+def binaryencode(phasemapping) -> bytes:
     """encode a 'phase -> nodes' mapping into a binary stream
 
     Since phases are integer the mapping is actually a python list:
@@ -188,7 +190,7 @@ def binarydecode(stream):
     return headsbyphase
 
 
-def _trackphasechange(data, rev, old, new):
+def _trackphasechange(data, rev, old, new) -> None:
     """add a phase move the <data> dictionnary
 
     If data is None, nothing happens.
@@ -576,7 +578,7 @@ class phasecache(object):
         self.invalidate()
 
 
-def advanceboundary(repo, tr, targetphase, nodes):
+def advanceboundary(repo, tr, targetphase, nodes) -> None:
     """Add nodes to a phase changing other nodes phases if necessary.
 
     This function move boundary *forward* this means that all nodes
@@ -588,7 +590,7 @@ def advanceboundary(repo, tr, targetphase, nodes):
     repo._phasecache.replace(phcache)
 
 
-def retractboundary(repo, tr, targetphase, nodes):
+def retractboundary(repo, tr, targetphase, nodes) -> None:
     """Set nodes back to a phase changing other nodes phases if
     necessary.
 
@@ -601,7 +603,7 @@ def retractboundary(repo, tr, targetphase, nodes):
     repo._phasecache.replace(phcache)
 
 
-def registernew(repo, tr, targetphase, nodes):
+def registernew(repo, tr, targetphase, nodes) -> None:
     """register a new revision and its phase
 
     Code adding revisions to the repository should use this function to
@@ -612,7 +614,7 @@ def registernew(repo, tr, targetphase, nodes):
     repo._phasecache.replace(phcache)
 
 
-def listphases(repo):
+def listphases(repo) -> sortdict:
     """List phases root for serialization over pushkey"""
     # Use ordered dictionary so behavior is deterministic.
     keys = util.sortdict()
@@ -644,7 +646,7 @@ def listphases(repo):
     return keys
 
 
-def pushphase(repo, nhex, oldphasestr, newphasestr):
+def pushphase(repo, nhex, oldphasestr, newphasestr) -> bool:
     """List phases root for serialization over pushkey"""
     with repo.lock():
         currentphase = repo[nhex].phase()
@@ -679,7 +681,7 @@ def subsetphaseheads(repo, subset):
 
 
 @perftrace.tracefunc("Update Phases")
-def updatephases(repo, trgetter, headsbyphase):
+def updatephases(repo, trgetter, headsbyphase) -> None:
     """Updates the repo with the given phase heads"""
     # Head-bases phases do not need update.
     if repo._phasecache._headbased:
@@ -762,7 +764,7 @@ def newheads(repo, heads, roots):
     return [c.node() for c in revset]
 
 
-def newcommitphase(ui):
+def newcommitphase(ui) -> int:
     """helper to get the target phase of new commit
 
     Handle all possible values for the phases.new-commit options.
@@ -779,16 +781,17 @@ def newcommitphase(ui):
             raise error.ConfigError(msg % v)
 
 
-def hassecret(repo):
+def hassecret(repo) -> bool:
     """utility function that check if a repo have any secret changeset."""
     if repo.ui.configbool("experimental", "narrow-heads"):
         return False
     return bool(repo._phasecache.phaseroots[2])
 
 
-def preparehookargs(node, old, new):
+def preparehookargs(node, old: str, new) -> Dict[str, str]:
     if old is None:
         old = ""
     else:
+        # pyre-fixme[6]: For 1st param expected `SupportsIndex` but got `str`.
         old = phasenames[old]
     return {"node": node, "oldphase": old, "phase": phasenames[new]}
