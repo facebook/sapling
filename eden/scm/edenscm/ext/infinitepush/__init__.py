@@ -15,61 +15,11 @@ Configs::
     # Server or client
     server = False
 
-    # Server-side option. Possible values: 'disk' or 'sql'. Fails if not set
-    indextype = disk
-
-    # Server-side option. Used only if indextype=sql.
-    # Format: 'IP:PORT:DB_NAME:USER:PASSWORD'
-    sqlhost = IP:PORT:DB_NAME:USER:PASSWORD
-
-    # Server-side option. Used only if indextype=disk.
-    # Filesystem path to the index store
-    indexpath = PATH
-
-    # Server-side option. Possible values: 'disk' or 'external'
-    # Fails if not set
-    storetype = disk
-
-    # Server-side option.
-    # Path to the binary that will save bundle to the bundlestore
-    # Formatted cmd line will be passed to it (see `put_args`)
-    put_binary = put
-
-    # Server-side option. Used only if storetype=external.
-    # Format cmd-line string for put binary. Placeholder: {filename}
-    put_args = {filename}
-
-    # Server-side option.
-    # Path to the binary that get bundle from the bundlestore.
-    # Formatted cmd line will be passed to it (see `get_args`)
-    get_binary = get
-
-    # Server-side option. Used only if storetype=external.
-    # Format cmd-line string for get binary. Placeholders: {filename} {handle}
-    get_args = {filename} {handle}
-
     # Server-side option
     logfile = FIlE
 
     # Server-side option
     loglevel = DEBUG
-
-    # Server-side option. Used only if indextype=sql.
-    # Sets mysql wait_timeout option.
-    waittimeout = 300
-
-    # Server-side option. Used only if indextype=sql.
-    # Sets mysql innodb_lock_wait_timeout option.
-    locktimeout = 120
-
-    # Server-side option. Used only if indextype=sql.
-    # limit number of days to generate warning on trying to
-    # fetch too old commit for hg up / hg pull with short hash rev
-    shorthasholdrevthreshold = 31
-
-    # Server-side option. Used only if indextype=sql.
-    # Name of the repository
-    reponame = ''
 
     # Client-side option. Used by --list-remote option. List of remote scratch
     # patterns to list if no patterns are specified.
