@@ -187,15 +187,10 @@ def match(
                 kindpats.append((kind, pats, source))
             return kindpats
 
+    m = None
     if exact:
         m = exactmatcher(root, cwd, patterns, badfn)
-    elif patterns:
-        kindpats = normalize(patterns, default, root, cwd, auditor, warn)
-        if _kindpatsalwaysmatch(kindpats):
-            m = alwaysmatcher(root, cwd, badfn, relativeuipath=True)
-        else:
-            m = _buildpatternmatcher(root, cwd, kindpats, ctx=ctx, badfn=badfn)
-    else:
+    elif not patterns:
         # It's a little strange that no patterns means to match everything.
         # Consider changing this to match nothing (probably using nevermatcher).
         if emptyalways or include:
@@ -203,16 +198,33 @@ def match(
         else:
             m = nevermatcher(root, cwd, badfn)
 
+    patternskindpats = not m and normalize(patterns, default, root, cwd, auditor, warn)
+    includekindpats = include and normalize(include, "glob", root, cwd, auditor, warn)
+    excludekindpats = exclude and normalize(exclude, "glob", root, cwd, auditor, warn)
+
+    if not m:
+        if _kindpatsalwaysmatch(patternskindpats):
+            m = alwaysmatcher(root, cwd, badfn, relativeuipath=True)
+        else:
+            m = _buildpatternmatcher(root, cwd, patternskindpats, ctx=ctx, badfn=badfn)
     if include:
-        kindpats = normalize(include, "glob", root, cwd, auditor, warn)
         im = _buildpatternmatcher(
-            root, cwd, kindpats, ctx=ctx, badfn=None, fallbackmatcher=includematcher
+            root,
+            cwd,
+            includekindpats,
+            ctx=ctx,
+            badfn=None,
+            fallbackmatcher=includematcher,
         )
         m = intersectmatchers(m, im)
     if exclude:
-        kindpats = normalize(exclude, "glob", root, cwd, auditor, warn)
         em = _buildpatternmatcher(
-            root, cwd, kindpats, ctx=ctx, badfn=None, fallbackmatcher=includematcher
+            root,
+            cwd,
+            excludekindpats,
+            ctx=ctx,
+            badfn=None,
+            fallbackmatcher=includematcher,
         )
         m = differencematcher(m, em)
     return m
