@@ -7,10 +7,10 @@
 
 use std::collections::BTreeMap;
 #[cfg(unix)]
-use std::ffi::OsString;
+use std::ffi::OsStr;
 use std::fmt;
 #[cfg(unix)]
-use std::os::unix::ffi::OsStringExt;
+use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -263,7 +263,10 @@ impl Redirection {
             })?;
         if output.status.success() {
             #[cfg(unix)]
-            return Ok(PathBuf::from(OsString::from_vec(output.stdout)));
+            {
+                let path = output.stdout.strip_suffix(b"\n").unwrap_or(&output.stdout);
+                return Ok(PathBuf::from(OsStr::from_bytes(path)));
+            }
             #[cfg(windows)]
             return Ok(PathBuf::from(
                 std::str::from_utf8(&output.stdout).from_err()?.trim_end(),
