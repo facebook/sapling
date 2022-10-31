@@ -46,6 +46,7 @@ mod land_changeset_object;
 mod land_service_impl;
 mod scuba_request;
 mod scuba_response;
+mod worker;
 
 #[derive(Debug, Parser)]
 struct LandServiceServerArgs {
