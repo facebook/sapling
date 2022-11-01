@@ -166,6 +166,17 @@ void BufferedSqliteInodeCatalog::process(
   workCV_.notify_one();
 }
 
+void BufferedSqliteInodeCatalog::pause(folly::Future<folly::Unit>&& fut) {
+  auto state = state_.lock();
+  state->work.push_back(std::make_unique<Work>(
+      [fut = std::move(fut)]() mutable {
+        std::move(fut).wait();
+        return false;
+      },
+      std::nullopt,
+      0));
+}
+
 void BufferedSqliteInodeCatalog::flush() {
   // TODO: add fast path for read only use case where the work queue is empty
   // and the worker thread is idle
@@ -223,7 +234,14 @@ BufferedSqliteInodeCatalog::loadAndRemoveOverlayDir(InodeNumber inodeNumber) {
       if (operationIter->second.operationType == OperationType::Write) {
         overlay::OverlayDir odir = operationIter->second.work->odir.value();
         state.unlock();
-        removeOverlayDir(inodeNumber);
+        process(
+            [this, inodeNumber]() {
+              SqliteInodeCatalog::loadAndRemoveOverlayDir(inodeNumber);
+              return false;
+            },
+            0,
+            inodeNumber,
+            OperationType::Remove);
         return std::move(odir);
       } else {
         return std::nullopt;
@@ -235,7 +253,14 @@ BufferedSqliteInodeCatalog::loadAndRemoveOverlayDir(InodeNumber inodeNumber) {
       if (operationIter->second.operationType == OperationType::Write) {
         overlay::OverlayDir odir = operationIter->second.work->odir.value();
         state.unlock();
-        removeOverlayDir(inodeNumber);
+        process(
+            [this, inodeNumber]() {
+              SqliteInodeCatalog::loadAndRemoveOverlayDir(inodeNumber);
+              return false;
+            },
+            0,
+            inodeNumber,
+            OperationType::Remove);
         return std::move(odir);
       } else {
         return std::nullopt;

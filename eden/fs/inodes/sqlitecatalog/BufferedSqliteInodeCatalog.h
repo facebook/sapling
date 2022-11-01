@@ -10,6 +10,7 @@
 #include <folly/Function.h>
 #include <folly/Synchronized.h>
 #include <folly/synchronization/LifoSem.h>
+#include <gtest/gtest_prod.h>
 #include <condition_variable>
 #include <memory>
 #include <optional>
@@ -70,13 +71,9 @@ class BufferedSqliteInodeCatalog : public SqliteInodeCatalog {
 
   bool hasOverlayDir(InodeNumber inodeNumber) override;
 
-  /**
-   * For testing purposes only. This function returns only once all writes prior
-   * to the calling of this function have been processed.
-   */
-  void flush();
-
  private:
+  FRIEND_TEST(RawSqliteInodeCatalogTest, manual_recursive_delete);
+  friend class DebugDumpSqliteInodeCatalogInodesTest;
   enum class OperationType {
     Write,
     Remove,
@@ -151,5 +148,20 @@ class BufferedSqliteInodeCatalog : public SqliteInodeCatalog {
   void processOnWorkerThread();
 
   void stopWorkerThread();
+
+  /**
+   * For testing purposes only. This function returns only once all writes prior
+   * to the calling of this function have been processed.
+   */
+  void flush();
+
+  /**
+   * For testing purposes only. This function inserts an unfulfilled promise in
+   * order to "pause" the worker thread so we can control data flow to test
+   * different read/write scenarios. The caller must pass in an unfilled future
+   * and is responsible for fulfilling the corresponding promise to unblock the
+   * queue.
+   */
+  void pause(folly::Future<folly::Unit>&& fut);
 };
 } // namespace facebook::eden

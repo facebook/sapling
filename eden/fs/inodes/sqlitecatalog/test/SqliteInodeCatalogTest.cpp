@@ -316,6 +316,67 @@ TEST_P(RawSqliteInodeCatalogTest, inode_numbers_after_takeover) {
   EXPECT_EQ(5_ino, overlay->getMaxInodeNumber());
 }
 
+TEST_P(RawSqliteInodeCatalogTest, manual_recursive_delete) {
+  auto rootIno = kRootNodeId;
+  EXPECT_EQ(1_ino, rootIno);
+  auto subdirIno = overlay->allocateInodeNumber();
+  EXPECT_EQ(2_ino, subdirIno);
+  auto subdirIno2 = overlay->allocateInodeNumber();
+  EXPECT_EQ(3_ino, subdirIno2);
+
+  DirContents rootContents(kPathMapDefaultCaseSensitive);
+  auto rootChildEntry =
+      rootContents.emplace("subdir"_pc, S_IFDIR | 0755, subdirIno);
+  // equivalent to overlay->saveOverlayDir(rootIno, rootContents);
+  overlay->addChild(rootIno, *rootChildEntry.first, rootContents);
+
+  DirContents subdirContents(kPathMapDefaultCaseSensitive);
+  auto subdirChildEntry =
+      subdirContents.emplace("subdir2"_pc, S_IFDIR | 0755, subdirIno2);
+  // equivalent to overlay->saveOverlayDir(subdirIno, subdirContents);
+  overlay->addChild(subdirIno, *subdirChildEntry.first, subdirContents);
+
+  DirContents subdir2Contents(kPathMapDefaultCaseSensitive);
+  overlay->saveOverlayDir(subdirIno2, subdir2Contents);
+
+  if (overlayType() == Overlay::InodeCatalogType::TreeBuffered) {
+    // Empty the write queue
+    static_cast<BufferedSqliteInodeCatalog*>(overlay->getRawInodeCatalog())
+        ->flush();
+
+    folly::Promise<folly::Unit> promise;
+    SCOPE_EXIT {
+      // Unblock the queue to allow the test to finish
+      promise.setValue(folly::unit);
+    };
+    auto fut = promise.getFuture();
+
+    // Pause the BufferedSqliteInodeCatalog worker thread so we can force
+    // loadAndRemoveOverlayDir to serve the read from the write queue
+    static_cast<BufferedSqliteInodeCatalog*>(overlay->getRawInodeCatalog())
+        ->pause(std::move(fut));
+
+    // Resave the overlayDir so the data is in the write queue
+    overlay->saveOverlayDir(subdirIno, subdirContents);
+
+    // This call will fall fail to find the data in the write queue and will
+    // fall back to calling SqliteInodeCatalog::loadAndRemoveOverlayDir
+    // synchronously
+    static_cast<BufferedSqliteInodeCatalog*>(overlay->getRawInodeCatalog())
+        ->loadAndRemoveOverlayDir(subdirIno2);
+
+    // This call will serve the load from the in-memory write queue
+    static_cast<BufferedSqliteInodeCatalog*>(overlay->getRawInodeCatalog())
+        ->loadAndRemoveOverlayDir(subdirIno);
+  } else {
+    overlay->saveOverlayDir(subdirIno, subdirContents);
+    static_cast<SqliteInodeCatalog*>(overlay->getRawInodeCatalog())
+        ->loadAndRemoveOverlayDir(subdirIno2);
+    static_cast<SqliteInodeCatalog*>(overlay->getRawInodeCatalog())
+        ->loadAndRemoveOverlayDir(subdirIno);
+  }
+}
+
 INSTANTIATE_TEST_SUITE_P(
     RawSqliteInodeCatalogTest,
     RawSqliteInodeCatalogTest,
@@ -339,6 +400,13 @@ class DebugDumpSqliteInodeCatalogInodesTest
         std::make_shared<NullStructuredLogger>(),
         *EdenConfig::createTestEdenConfig());
     overlay->initialize(EdenConfig::createTestEdenConfig()).get();
+  }
+
+  void flush() {
+    if (overlayType() == Overlay::InodeCatalogType::TreeBuffered) {
+      static_cast<BufferedSqliteInodeCatalog*>(overlay->getRawInodeCatalog())
+          ->flush();
+    }
   }
 
   folly::test::TemporaryDirectory testDir_;
@@ -374,10 +442,7 @@ TEST_P(
   // The results can be different if the overlay is read from the write queue or
   // from disk since we don't store mode, the flush here makes the tests
   // deterministic
-  if (overlayType() == Overlay::InodeCatalogType::TreeBuffered) {
-    static_cast<BufferedSqliteInodeCatalog*>(overlay->getRawInodeCatalog())
-        ->flush();
-  }
+  flush();
 
   // At the time of writing, the SqliteInodeCatalog does not store mode, which
   // is why it is zero here
@@ -408,10 +473,7 @@ TEST_P(
   // The results can be different if the overlay is read from the write queue or
   // from disk since we don't store mode, the flush here makes the tests
   // deterministic
-  if (overlayType() == Overlay::InodeCatalogType::TreeBuffered) {
-    static_cast<BufferedSqliteInodeCatalog*>(overlay->getRawInodeCatalog())
-        ->flush();
-  }
+  flush();
 
   // At the time of writing, the SqliteInodeCatalog does not store mode, which
   // is why it is zero here
@@ -444,10 +506,7 @@ TEST_P(
   // The results can be different if the overlay is read from the write queue or
   // from disk since we don't store mode, the flush here makes the tests
   // deterministic
-  if (overlayType() == Overlay::InodeCatalogType::TreeBuffered) {
-    static_cast<BufferedSqliteInodeCatalog*>(overlay->getRawInodeCatalog())
-        ->flush();
-  }
+  flush();
 
   // At the time of writing, the SqliteInodeCatalog does not store mode, which
   // is why it is zero here
