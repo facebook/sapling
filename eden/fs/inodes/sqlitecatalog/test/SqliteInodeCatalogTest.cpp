@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/inodes/treeoverlay/SqliteInodeCatalog.h"
+#include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
+#include "eden/fs/inodes/sqlitecatalog/BufferedSqliteInodeCatalog.h"
 #include "eden/fs/inodes/test/OverlayTestUtil.h"
-#include "eden/fs/inodes/treeoverlay/BufferedSqliteInodeCatalog.h"
 
 #include <iomanip>
 

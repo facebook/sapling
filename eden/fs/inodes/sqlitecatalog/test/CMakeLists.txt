@@ -14,7 +14,7 @@ target_link_libraries(
   PRIVATE
     eden_inodes
     eden_overlay_thrift_cpp
-    eden_tree_overlay
+    eden_sqlite_catalog
     eden_model
     eden_sqlite
     eden_utils

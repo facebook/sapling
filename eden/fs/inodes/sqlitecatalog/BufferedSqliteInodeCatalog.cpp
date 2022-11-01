@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/inodes/treeoverlay/BufferedSqliteInodeCatalog.h"
+#include "eden/fs/inodes/sqlitecatalog/BufferedSqliteInodeCatalog.h"
 
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
@@ -15,7 +15,7 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/InodeNumber.h"
-#include "eden/fs/inodes/treeoverlay/SqliteInodeCatalog.h"
+#include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 
 namespace facebook::eden {
 

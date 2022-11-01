@@ -9,7 +9,7 @@
 
 #ifdef _WIN32
 
-#include "eden/fs/inodes/treeoverlay/SqliteInodeCatalog.h"
+#include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {

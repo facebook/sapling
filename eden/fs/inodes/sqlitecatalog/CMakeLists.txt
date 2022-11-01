@@ -3,19 +3,19 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-file(GLOB TREE_OVERLAY_SRCS "*.cpp")
+file(GLOB SQLITE_CATALOG_SRCS "*.cpp")
 list(
-  REMOVE_ITEM TREE_OVERLAY_SRCS
+  REMOVE_ITEM SQLITE_CATALOG_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/WindowsOverlayScanner.cpp
 )
 
 add_library(
-  eden_tree_overlay STATIC
-    ${TREE_OVERLAY_SRCS}
+  eden_sqlite_catalog STATIC
+    ${SQLITE_CATALOG_SRCS}
 )
 
 target_link_libraries(
-  eden_tree_overlay
+  eden_sqlite_catalog
   PUBLIC
     eden_sqlite
 
@@ -36,7 +36,7 @@ target_link_libraries(
   eden_scanner
   PRIVATE
     cpptoml
-    eden_tree_overlay
+    eden_sqlite_catalog
     eden_utils
     Folly::folly
 )

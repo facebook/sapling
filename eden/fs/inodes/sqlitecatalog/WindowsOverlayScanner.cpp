@@ -14,7 +14,7 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/fscatalog/OverlayChecker.h"
-#include "eden/fs/inodes/treeoverlay/SqliteInodeCatalog.h"
+#include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/WinStackTrace.h"
 

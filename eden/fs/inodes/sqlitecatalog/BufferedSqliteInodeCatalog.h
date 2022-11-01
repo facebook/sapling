@@ -16,7 +16,7 @@
 #include <vector>
 
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
-#include "eden/fs/inodes/treeoverlay/SqliteInodeCatalog.h"
+#include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 
 namespace facebook::eden {
 

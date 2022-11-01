@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/inodes/treeoverlay/SqliteTreeStore.h"
+#include "eden/fs/inodes/sqlitecatalog/SqliteTreeStore.h"
 
 #include <folly/logging/xlog.h>
 #include <folly/portability/GTest.h>

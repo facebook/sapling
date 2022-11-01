@@ -58,7 +58,7 @@ target_link_libraries(
     eden_takeover_thrift
     eden_telemetry
     eden_utils
-    eden_tree_overlay
+    eden_sqlite_catalog
     Folly::folly
     edencommon::edencommon_utils
   PRIVATE
@@ -113,5 +113,5 @@ target_link_libraries(
 
 add_subdirectory(overlay)
 add_subdirectory(fscatalog)
-add_subdirectory(treeoverlay)
+add_subdirectory(sqlitecatalog)
 add_subdirectory(test)
