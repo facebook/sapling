@@ -16,7 +16,7 @@ use blobstore::Blobstore;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::FutureFailureErrorExt;
+use failure_ext::FutureErrorContext;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
 use futures::compat::Future01CompatExt;

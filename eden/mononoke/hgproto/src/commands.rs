@@ -23,7 +23,7 @@ use anyhow::Result;
 use bytes_old::Buf;
 use bytes_old::Bytes;
 use bytes_old::BytesMut;
-use failure_ext::FutureFailureErrorExt;
+use failure_ext::FutureErrorContext;
 use futures::future;
 use futures::future::err;
 use futures::future::ok;
@@ -571,8 +571,7 @@ where
 
     (
         bundle2items,
-        recv.from_err()
-            .context("While extracting bundle2 remainder")
+        recv.context("While extracting bundle2 remainder")
             .from_err()
             .boxify(),
     )

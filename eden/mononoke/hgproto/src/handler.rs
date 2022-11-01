@@ -11,7 +11,7 @@ use std::sync::Mutex;
 
 use anyhow::Error;
 use bytes_old::Bytes;
-use failure_ext::FutureFailureErrorExt;
+use failure_ext::FutureErrorContext;
 use futures::future::err;
 use futures::future::ok;
 use futures::future::Either;
@@ -207,8 +207,7 @@ where
             .into_stream();
             (
                 responses.boxify(),
-                recv.from_err()
-                    .context("While handling batch command")
+                recv.context("While handling batch command")
                     .from_err()
                     .and_then(|input| input)
                     .boxify(),
