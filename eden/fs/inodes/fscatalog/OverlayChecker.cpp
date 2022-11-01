@@ -7,7 +7,7 @@
 
 #ifndef _WIN32
 
-#include "eden/fs/inodes/fsoverlay/OverlayChecker.h"
+#include "eden/fs/inodes/fscatalog/OverlayChecker.h"
 
 #include <boost/filesystem.hpp>
 #include <fcntl.h>
@@ -25,7 +25,7 @@
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
-#include "eden/fs/inodes/fsoverlay/FsInodeCatalog.h"
+#include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
 #include "eden/fs/utils/EnumValue.h"
 
 using apache::thrift::CompactSerializer;

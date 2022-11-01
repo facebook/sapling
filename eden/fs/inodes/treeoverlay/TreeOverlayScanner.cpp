@@ -13,7 +13,7 @@
 #include <folly/portability/GFlags.h>
 
 #include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/inodes/fsoverlay/OverlayChecker.h"
+#include "eden/fs/inodes/fscatalog/OverlayChecker.h"
 #include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/WinStackTrace.h"

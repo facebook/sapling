@@ -7,7 +7,7 @@
 
 #ifndef _WIN32
 
-#include "eden/fs/inodes/fsoverlay/FsInodeCatalog.h"
+#include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
 
 #include <boost/filesystem.hpp>
 #include <algorithm>
@@ -23,7 +23,7 @@
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
-#include "eden/fs/inodes/fsoverlay/InodePath.h"
+#include "eden/fs/inodes/fscatalog/InodePath.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/utils/EdenError.h"
 #include "eden/fs/utils/FileUtils.h"

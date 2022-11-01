@@ -10,11 +10,11 @@ if (NOT WIN32)
     "${CMAKE_CURRENT_SOURCE_DIR}/eden_fsck.cpp"
   )
   add_library(
-    eden_fsoverlay STATIC
+    eden_fscatalog STATIC
       ${OVERLAY_SRCS}
   )
   target_link_libraries(
-    eden_fsoverlay
+    eden_fscatalog
     PUBLIC
       eden_overlay_thrift_cpp
       eden_fuse

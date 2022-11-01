@@ -7,7 +7,7 @@
 
 #ifndef _WIN32
 
-#include "eden/fs/inodes/fsoverlay/InodePath.h"
+#include "eden/fs/inodes/fscatalog/InodePath.h"
 
 namespace facebook::eden {
 
