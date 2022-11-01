@@ -14,7 +14,7 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/fscatalog/OverlayChecker.h"
-#include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
+#include "eden/fs/inodes/treeoverlay/SqliteInodeCatalog.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/WinStackTrace.h"
 
@@ -48,14 +48,14 @@ int main(int argc, char** argv) {
   AbsolutePath overlayPath(argv[1]);
   AbsolutePath mountPath(FLAGS_mount_path);
 
-  TreeOverlay overlay(overlayPath);
-  overlay.initOverlay(true);
+  SqliteInodeCatalog inodeCatalog(overlayPath);
+  inodeCatalog.initOverlay(true);
   XLOG(INFO) << "start scanning";
-  TreeOverlay::LookupCallback lookup = [](auto) {
-    return makeImmediateFuture<TreeOverlay::LookupCallbackValue>(
+  SqliteInodeCatalog::LookupCallback lookup = [](auto) {
+    return makeImmediateFuture<SqliteInodeCatalog::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  overlay.scanLocalChanges(
+  inodeCatalog.scanLocalChanges(
       EdenConfig::createTestEdenConfig(), mountPath, lookup);
   XLOG(INFO) << "scanning end";
 

@@ -28,23 +28,23 @@ class OverlayDir;
 }
 struct InodeNumber;
 
-class TreeOverlay : public InodeCatalog {
+class SqliteInodeCatalog : public InodeCatalog {
  public:
-  explicit TreeOverlay(
+  explicit SqliteInodeCatalog(
       AbsolutePathPiece path,
       SqliteTreeStore::SynchronousMode mode =
           SqliteTreeStore::SynchronousMode::Normal);
 
-  explicit TreeOverlay(std::unique_ptr<SqliteDatabase> store)
+  explicit SqliteInodeCatalog(std::unique_ptr<SqliteDatabase> store)
       : store_(std::move(store)) {}
 
-  ~TreeOverlay() override {}
+  ~SqliteInodeCatalog() override {}
 
-  TreeOverlay(const TreeOverlay&) = delete;
-  TreeOverlay& operator=(const TreeOverlay&) = delete;
+  SqliteInodeCatalog(const SqliteInodeCatalog&) = delete;
+  SqliteInodeCatalog& operator=(const SqliteInodeCatalog&) = delete;
 
-  TreeOverlay(TreeOverlay&&) = delete;
-  TreeOverlay& operator=(TreeOverlay&&) = delete;
+  SqliteInodeCatalog(SqliteInodeCatalog&&) = delete;
+  SqliteInodeCatalog& operator=(SqliteInodeCatalog&&) = delete;
 
   using LookupCallbackValue =
       std::variant<std::shared_ptr<const Tree>, TreeEntry>;

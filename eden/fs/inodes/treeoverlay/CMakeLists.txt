@@ -6,7 +6,7 @@
 file(GLOB TREE_OVERLAY_SRCS "*.cpp")
 list(
   REMOVE_ITEM TREE_OVERLAY_SRCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/TreeOverlayScanner.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/WindowsOverlayScanner.cpp
 )
 
 add_library(
@@ -29,7 +29,7 @@ target_link_libraries(
 
 add_executable(
   eden_scanner
-    TreeOverlayScanner.cpp
+    WindowsOverlayScanner.cpp
 )
 
 target_link_libraries(

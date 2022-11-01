@@ -16,32 +16,33 @@
 #include <vector>
 
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
-#include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
+#include "eden/fs/inodes/treeoverlay/SqliteInodeCatalog.h"
 
 namespace facebook::eden {
 
 struct InodeNumber;
 class EdenConfig;
 
-class BufferedTreeOverlay : public TreeOverlay {
+class BufferedSqliteInodeCatalog : public SqliteInodeCatalog {
  public:
-  explicit BufferedTreeOverlay(
+  explicit BufferedSqliteInodeCatalog(
       AbsolutePathPiece path,
       const EdenConfig& config,
       SqliteTreeStore::SynchronousMode mode =
           SqliteTreeStore::SynchronousMode::Normal);
 
-  explicit BufferedTreeOverlay(
+  explicit BufferedSqliteInodeCatalog(
       std::unique_ptr<SqliteDatabase> store,
       const EdenConfig& config);
 
-  ~BufferedTreeOverlay() override;
+  ~BufferedSqliteInodeCatalog() override;
 
-  BufferedTreeOverlay(const BufferedTreeOverlay&) = delete;
-  BufferedTreeOverlay& operator=(const BufferedTreeOverlay&) = delete;
+  BufferedSqliteInodeCatalog(const BufferedSqliteInodeCatalog&) = delete;
+  BufferedSqliteInodeCatalog& operator=(const BufferedSqliteInodeCatalog&) =
+      delete;
 
-  BufferedTreeOverlay(BufferedTreeOverlay&&) = delete;
-  BufferedTreeOverlay& operator=(BufferedTreeOverlay&&) = delete;
+  BufferedSqliteInodeCatalog(BufferedSqliteInodeCatalog&&) = delete;
+  BufferedSqliteInodeCatalog& operator=(BufferedSqliteInodeCatalog&&) = delete;
 
   /**
    * TODO: Implement semantic operations. Support was removed to easily allow
@@ -145,7 +146,7 @@ class BufferedTreeOverlay : public TreeOverlay {
       std::optional<overlay::OverlayDir>&& odir = std::nullopt);
 
   /**
-   * Uses the workerThread_ to process writes to the TreeOverlay
+   * Uses the workerThread_ to process writes to the SqliteInodeCatalog
    */
   void processOnWorkerThread();
 

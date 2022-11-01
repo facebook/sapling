@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/inodes/treeoverlay/BufferedTreeOverlay.h"
+#include "eden/fs/inodes/treeoverlay/BufferedSqliteInodeCatalog.h"
 
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
@@ -15,15 +15,15 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/InodeNumber.h"
-#include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
+#include "eden/fs/inodes/treeoverlay/SqliteInodeCatalog.h"
 
 namespace facebook::eden {
 
-BufferedTreeOverlay::BufferedTreeOverlay(
+BufferedSqliteInodeCatalog::BufferedSqliteInodeCatalog(
     AbsolutePathPiece path,
     const EdenConfig& config,
     SqliteTreeStore::SynchronousMode mode)
-    : TreeOverlay(path, mode),
+    : SqliteInodeCatalog(path, mode),
       bufferSize_{config.overlayBufferSize.getValue()} {
   workerThread_ = std::thread{[this] {
     folly::setThreadName("OverlayBuffer");
@@ -31,10 +31,10 @@ BufferedTreeOverlay::BufferedTreeOverlay(
   }};
 }
 
-BufferedTreeOverlay::BufferedTreeOverlay(
+BufferedSqliteInodeCatalog::BufferedSqliteInodeCatalog(
     std::unique_ptr<SqliteDatabase> store,
     const EdenConfig& config)
-    : TreeOverlay(std::move(store)),
+    : SqliteInodeCatalog(std::move(store)),
       bufferSize_{config.overlayBufferSize.getValue()} {
   workerThread_ = std::thread{[this] {
     folly::setThreadName("OverlayBuffer");
@@ -42,7 +42,7 @@ BufferedTreeOverlay::BufferedTreeOverlay(
   }};
 }
 
-void BufferedTreeOverlay::stopWorkerThread() {
+void BufferedSqliteInodeCatalog::stopWorkerThread() {
   // Check first that a stop was not already requested
   {
     auto state = state_.lock();
@@ -61,18 +61,18 @@ void BufferedTreeOverlay::stopWorkerThread() {
   workerThread_.join();
 }
 
-BufferedTreeOverlay::~BufferedTreeOverlay() {
+BufferedSqliteInodeCatalog::~BufferedSqliteInodeCatalog() {
   stopWorkerThread();
 }
 
-void BufferedTreeOverlay::close(std::optional<InodeNumber> inodeNumber) {
+void BufferedSqliteInodeCatalog::close(std::optional<InodeNumber> inodeNumber) {
   // We have to stop the thread here to flush all queued writes so they complete
   // before the overlay is closed.
   stopWorkerThread();
-  TreeOverlay::close(inodeNumber);
+  SqliteInodeCatalog::close(inodeNumber);
 }
 
-void BufferedTreeOverlay::processOnWorkerThread() {
+void BufferedSqliteInodeCatalog::processOnWorkerThread() {
   // This vector should be considered read-only outside of the state_ lock. The
   // inflightOperation map contains raw pointers to the Work objects owned by
   // this vector, and other threads can read from that map, so we should not
@@ -126,7 +126,7 @@ void BufferedTreeOverlay::processOnWorkerThread() {
   }
 }
 
-void BufferedTreeOverlay::process(
+void BufferedSqliteInodeCatalog::process(
     folly::Function<bool()> fn,
     size_t captureSize,
     InodeNumber operationKey,
@@ -166,7 +166,7 @@ void BufferedTreeOverlay::process(
   workCV_.notify_one();
 }
 
-void BufferedTreeOverlay::flush() {
+void BufferedSqliteInodeCatalog::flush() {
   // TODO: add fast path for read only use case where the work queue is empty
   // and the worker thread is idle
   folly::Promise<folly::Unit> promise;
@@ -186,7 +186,7 @@ void BufferedTreeOverlay::flush() {
   std::move(result).wait();
 }
 
-std::optional<overlay::OverlayDir> BufferedTreeOverlay::loadOverlayDir(
+std::optional<overlay::OverlayDir> BufferedSqliteInodeCatalog::loadOverlayDir(
     InodeNumber inodeNumber) {
   {
     auto state = state_.lock();
@@ -210,11 +210,11 @@ std::optional<overlay::OverlayDir> BufferedTreeOverlay::loadOverlayDir(
     }
   }
 
-  return TreeOverlay::loadOverlayDir(inodeNumber);
+  return SqliteInodeCatalog::loadOverlayDir(inodeNumber);
 }
 
-std::optional<overlay::OverlayDir> BufferedTreeOverlay::loadAndRemoveOverlayDir(
-    InodeNumber inodeNumber) {
+std::optional<overlay::OverlayDir>
+BufferedSqliteInodeCatalog::loadAndRemoveOverlayDir(InodeNumber inodeNumber) {
   {
     auto state = state_.lock();
     // check waiting work
@@ -243,10 +243,10 @@ std::optional<overlay::OverlayDir> BufferedTreeOverlay::loadAndRemoveOverlayDir(
     }
   }
 
-  return TreeOverlay::loadAndRemoveOverlayDir(inodeNumber);
+  return SqliteInodeCatalog::loadAndRemoveOverlayDir(inodeNumber);
 }
 
-void BufferedTreeOverlay::saveOverlayDir(
+void BufferedSqliteInodeCatalog::saveOverlayDir(
     InodeNumber inodeNumber,
     overlay::OverlayDir&& odir) {
   // Serializing and deserialzing the OverlayDir has similar runtime to
@@ -266,7 +266,7 @@ void BufferedTreeOverlay::saveOverlayDir(
 
   process(
       [this, inodeNumber, odir = std::move(odirTemp)]() mutable {
-        TreeOverlay::saveOverlayDir(inodeNumber, std::move(odir));
+        SqliteInodeCatalog::saveOverlayDir(inodeNumber, std::move(odir));
         return false;
       },
       captureSize,
@@ -275,10 +275,10 @@ void BufferedTreeOverlay::saveOverlayDir(
       std::move(odir));
 }
 
-void BufferedTreeOverlay::removeOverlayDir(InodeNumber inodeNumber) {
+void BufferedSqliteInodeCatalog::removeOverlayDir(InodeNumber inodeNumber) {
   process(
       [this, inodeNumber]() {
-        TreeOverlay::removeOverlayDir(inodeNumber);
+        SqliteInodeCatalog::removeOverlayDir(inodeNumber);
         return false;
       },
       0,
@@ -286,7 +286,7 @@ void BufferedTreeOverlay::removeOverlayDir(InodeNumber inodeNumber) {
       OperationType::Remove);
 }
 
-bool BufferedTreeOverlay::hasOverlayDir(InodeNumber inodeNumber) {
+bool BufferedSqliteInodeCatalog::hasOverlayDir(InodeNumber inodeNumber) {
   {
     auto state = state_.lock();
     // check waiting work
@@ -301,7 +301,7 @@ bool BufferedTreeOverlay::hasOverlayDir(InodeNumber inodeNumber) {
     }
   }
 
-  return TreeOverlay::hasOverlayDir(inodeNumber);
+  return SqliteInodeCatalog::hasOverlayDir(inodeNumber);
 }
 
 } // namespace facebook::eden

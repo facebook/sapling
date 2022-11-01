@@ -26,8 +26,8 @@
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/TreeInode.h"
-#include "eden/fs/inodes/treeoverlay/BufferedTreeOverlay.h"
-#include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
+#include "eden/fs/inodes/treeoverlay/BufferedSqliteInodeCatalog.h"
+#include "eden/fs/inodes/treeoverlay/SqliteInodeCatalog.h"
 #include "eden/fs/sqlite/SqliteDatabase.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -44,30 +44,30 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     const EdenConfig& config,
     IFileContentStore* fileContentStore) {
   if (inodeCatalogType == Overlay::InodeCatalogType::Tree) {
-    return std::make_unique<TreeOverlay>(localDir);
+    return std::make_unique<SqliteInodeCatalog>(localDir);
   } else if (inodeCatalogType == Overlay::InodeCatalogType::TreeInMemory) {
     XLOG(WARN) << "In-memory overlay requested. This will cause data loss.";
-    return std::make_unique<TreeOverlay>(
+    return std::make_unique<SqliteInodeCatalog>(
         std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory));
   } else if (
       inodeCatalogType == Overlay::InodeCatalogType::TreeSynchronousOff) {
-    return std::make_unique<TreeOverlay>(
+    return std::make_unique<SqliteInodeCatalog>(
         localDir, SqliteTreeStore::SynchronousMode::Off);
   } else if (inodeCatalogType == Overlay::InodeCatalogType::TreeBuffered) {
     XLOG(DBG4) << "Buffered tree overlay being used";
-    return std::make_unique<BufferedTreeOverlay>(localDir, config);
+    return std::make_unique<BufferedSqliteInodeCatalog>(localDir, config);
   } else if (
       inodeCatalogType == Overlay::InodeCatalogType::TreeInMemoryBuffered) {
     XLOG(WARN)
         << "In-memory buffered overlay requested. This will cause data loss.";
-    return std::make_unique<BufferedTreeOverlay>(
+    return std::make_unique<BufferedSqliteInodeCatalog>(
         std::make_unique<SqliteDatabase>(SqliteDatabase::inMemory), config);
   } else if (
       inodeCatalogType ==
       Overlay::InodeCatalogType::TreeSynchronousOffBuffered) {
     XLOG(DBG2)
         << "Buffered tree overlay being used with synchronous-mode = off";
-    return std::make_unique<BufferedTreeOverlay>(
+    return std::make_unique<BufferedSqliteInodeCatalog>(
         localDir, config, SqliteTreeStore::SynchronousMode::Off);
   }
 #ifdef _WIN32
@@ -75,7 +75,7 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     throw std::runtime_error(
         "Legacy overlay type is not supported. Please reclone.");
   }
-  return std::make_unique<TreeOverlay>(localDir);
+  return std::make_unique<SqliteInodeCatalog>(localDir);
 #else
   return std::make_unique<FsInodeCatalog>(
       static_cast<FileContentStore*>(fileContentStore));
@@ -279,8 +279,8 @@ void Overlay::initOverlay(
 
     optNextInodeNumber = checker.getNextInodeNumber();
 #else
-    // TreeOverlay will always return the value of next Inode number, if we
-    // end up here - it's a bug.
+    // SqliteInodeCatalog will always return the value of next Inode number, if
+    // we end up here - it's a bug.
     EDEN_BUG() << "Tree Overlay is null value for NextInodeNumber";
 #endif
   } else {
@@ -295,7 +295,7 @@ void Overlay::initOverlay(
   // here to skip scanning in that case.
   if (folly::kIsWindows && mountPath.has_value()) {
     optNextInodeNumber =
-        dynamic_cast<TreeOverlay*>(inodeCatalog_.get())
+        dynamic_cast<SqliteInodeCatalog*>(inodeCatalog_.get())
             ->scanLocalChanges(std::move(config), *mountPath, lookupCallback);
   }
 

@@ -9,7 +9,7 @@
 
 #ifdef _WIN32
 
-#include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
+#include "eden/fs/inodes/treeoverlay/SqliteInodeCatalog.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
@@ -48,9 +48,9 @@ class EdenConfig;
  */
 void windowsFsckScanLocalChanges(
     std::shared_ptr<const EdenConfig> config,
-    TreeOverlay& overlay,
+    SqliteInodeCatalog& overlay,
     AbsolutePathPiece mountPath,
-    TreeOverlay::LookupCallback& callback);
+    SqliteInodeCatalog::LookupCallback& callback);
 
 } // namespace facebook::eden
 

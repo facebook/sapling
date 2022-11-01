@@ -270,9 +270,9 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       const DirContents& dstContent);
 
   /*
-   * Some overlay type (TreeOverlay) requires periodic task to maintain their
-   * underlying storage. This method is called periodically by an EdenServer
-   * task in the configured interval.
+   * Some inode catalogs (SqliteInodeCatalog) requires periodic task to maintain
+   * their underlying storage. This method is called periodically by an
+   * EdenServer task in the configured interval.
    */
   void maintenance();
 

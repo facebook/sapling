@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
+#include "eden/fs/inodes/treeoverlay/SqliteInodeCatalog.h"
 #include "eden/fs/inodes/test/OverlayTestUtil.h"
-#include "eden/fs/inodes/treeoverlay/BufferedTreeOverlay.h"
+#include "eden/fs/inodes/treeoverlay/BufferedSqliteInodeCatalog.h"
 
 #include <iomanip>
 
@@ -29,7 +29,7 @@
 
 namespace facebook::eden {
 
-class TreeOverlayTest
+class SqliteInodeCatalogTest
     : public ::testing::TestWithParam<Overlay::InodeCatalogType> {
  protected:
   Overlay::InodeCatalogType overlayType() const {
@@ -49,7 +49,7 @@ class TreeOverlayTest
   TestMount mount_;
 };
 
-TEST_P(TreeOverlayTest, roundTripThroughSaveAndLoad) {
+TEST_P(SqliteInodeCatalogTest, roundTripThroughSaveAndLoad) {
   auto hash = ObjectId::fromHex("0123456789012345678901234567890123456789");
 
   auto overlay = mount_.getEdenMount()->getOverlay();
@@ -77,13 +77,13 @@ TEST_P(TreeOverlayTest, roundTripThroughSaveAndLoad) {
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    TreeOverlayTest,
-    TreeOverlayTest,
+    SqliteInodeCatalogTest,
+    SqliteInodeCatalogTest,
     ::testing::Values(
         Overlay::InodeCatalogType::Tree,
         Overlay::InodeCatalogType::TreeBuffered));
 
-TEST(PlainTreeOverlayTest, new_overlay_is_clean) {
+TEST(PlainSqliteInodeCatalogTest, new_overlay_is_clean) {
   folly::test::TemporaryDirectory testDir;
   auto overlay = Overlay::create(
       AbsolutePath{testDir.path().string()},
@@ -95,7 +95,7 @@ TEST(PlainTreeOverlayTest, new_overlay_is_clean) {
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
-TEST(PlainTreeOverlayTest, new_overlay_is_clean_buffered) {
+TEST(PlainSqliteInodeCatalogTest, new_overlay_is_clean_buffered) {
   folly::test::TemporaryDirectory testDir;
   auto overlay = Overlay::create(
       AbsolutePath{testDir.path().string()},
@@ -107,7 +107,7 @@ TEST(PlainTreeOverlayTest, new_overlay_is_clean_buffered) {
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
-TEST(PlainTreeOverlayTest, reopened_overlay_is_clean) {
+TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean) {
   folly::test::TemporaryDirectory testDir;
   {
     auto overlay = Overlay::create(
@@ -128,7 +128,7 @@ TEST(PlainTreeOverlayTest, reopened_overlay_is_clean) {
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
-TEST(PlainTreeOverlayTest, reopened_overlay_is_clean_buffered) {
+TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean_buffered) {
   folly::test::TemporaryDirectory testDir;
   {
     auto overlay = Overlay::create(
@@ -149,7 +149,7 @@ TEST(PlainTreeOverlayTest, reopened_overlay_is_clean_buffered) {
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
-TEST(PlainTreeOverlayTest, close_overlay_with_no_capacity_buffered) {
+TEST(PlainSqliteInodeCatalogTest, close_overlay_with_no_capacity_buffered) {
   auto config = EdenConfig::createTestEdenConfig();
   config->overlayBufferSize.setValue(0, ConfigSource::Default, true);
   folly::test::TemporaryDirectory testDir;
@@ -164,7 +164,9 @@ TEST(PlainTreeOverlayTest, close_overlay_with_no_capacity_buffered) {
   EXPECT_TRUE(overlay->isClosed());
 }
 
-TEST(PlainTreeOverlayTest, small_capacity_write_multiple_directories_buffered) {
+TEST(
+    PlainSqliteInodeCatalogTest,
+    small_capacity_write_multiple_directories_buffered) {
   auto config = EdenConfig::createTestEdenConfig();
   config->overlayBufferSize.setValue(1, ConfigSource::Default, true);
   folly::test::TemporaryDirectory testDir;
@@ -192,10 +194,11 @@ TEST(PlainTreeOverlayTest, small_capacity_write_multiple_directories_buffered) {
   EXPECT_EQ(ino, overlay->getMaxInodeNumber());
 }
 
-class RawTreeOverlayTest
+class RawSqliteInodeCatalogTest
     : public ::testing::TestWithParam<Overlay::InodeCatalogType> {
  public:
-  RawTreeOverlayTest() : testDir_{makeTempDir("eden_raw_overlay_test_")} {
+  RawSqliteInodeCatalogTest()
+      : testDir_{makeTempDir("eden_raw_overlay_test_")} {
     loadOverlay();
   }
 
@@ -231,7 +234,7 @@ class RawTreeOverlayTest
   std::shared_ptr<Overlay> overlay;
 };
 
-TEST_P(RawTreeOverlayTest, cannot_save_overlay_dir_when_closed) {
+TEST_P(RawSqliteInodeCatalogTest, cannot_save_overlay_dir_when_closed) {
   overlay->close();
   auto ino2 = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, ino2);
@@ -243,7 +246,7 @@ TEST_P(RawTreeOverlayTest, cannot_save_overlay_dir_when_closed) {
       "cannot access overlay after it is closed");
 }
 
-TEST_P(RawTreeOverlayTest, max_inode_number_is_1_if_overlay_is_empty) {
+TEST_P(RawSqliteInodeCatalogTest, max_inode_number_is_1_if_overlay_is_empty) {
   EXPECT_EQ(kRootNodeId, overlay->getMaxInodeNumber());
   auto ino2 = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, ino2);
@@ -262,7 +265,7 @@ TEST_P(RawTreeOverlayTest, max_inode_number_is_1_if_overlay_is_empty) {
   EXPECT_EQ(kRootNodeId, overlay->getMaxInodeNumber());
 }
 
-TEST_P(RawTreeOverlayTest, remembers_max_inode_number_of_tree_entries) {
+TEST_P(RawSqliteInodeCatalogTest, remembers_max_inode_number_of_tree_entries) {
   auto ino2 = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, ino2);
   auto ino3 = overlay->allocateInodeNumber();
@@ -279,7 +282,7 @@ TEST_P(RawTreeOverlayTest, remembers_max_inode_number_of_tree_entries) {
   EXPECT_EQ(4_ino, overlay->getMaxInodeNumber());
 }
 
-TEST_P(RawTreeOverlayTest, inode_numbers_after_takeover) {
+TEST_P(RawSqliteInodeCatalogTest, inode_numbers_after_takeover) {
   auto ino2 = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, ino2);
   auto ino3 = overlay->allocateInodeNumber();
@@ -314,21 +317,21 @@ TEST_P(RawTreeOverlayTest, inode_numbers_after_takeover) {
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    RawTreeOverlayTest,
-    RawTreeOverlayTest,
+    RawSqliteInodeCatalogTest,
+    RawSqliteInodeCatalogTest,
     ::testing::Values(
         Overlay::InodeCatalogType::Tree,
         Overlay::InodeCatalogType::TreeBuffered));
 
-class DebugDumpTreeOverlayInodesTest
+class DebugDumpSqliteInodeCatalogInodesTest
     : public ::testing::TestWithParam<Overlay::InodeCatalogType> {
  public:
   Overlay::InodeCatalogType overlayType() const {
     return GetParam();
   }
 
-  DebugDumpTreeOverlayInodesTest()
-      : testDir_{makeTempDir("eden_DebugDumpTreeOverlayInodesTest")} {
+  DebugDumpSqliteInodeCatalogInodesTest()
+      : testDir_{makeTempDir("eden_DebugDumpSqliteInodeCatalogInodesTest")} {
     overlay = Overlay::create(
         AbsolutePathPiece{testDir_.path().string()},
         kPathMapDefaultCaseSensitive,
@@ -342,7 +345,7 @@ class DebugDumpTreeOverlayInodesTest
   std::shared_ptr<Overlay> overlay;
 };
 
-TEST_P(DebugDumpTreeOverlayInodesTest, dump_empty_directory) {
+TEST_P(DebugDumpSqliteInodeCatalogInodesTest, dump_empty_directory) {
   auto ino = kRootNodeId;
   EXPECT_EQ(1_ino, ino);
 
@@ -355,7 +358,7 @@ TEST_P(DebugDumpTreeOverlayInodesTest, dump_empty_directory) {
 }
 
 TEST_P(
-    DebugDumpTreeOverlayInodesTest,
+    DebugDumpSqliteInodeCatalogInodesTest,
     dump_directory_with_an_empty_subdirectory) {
   auto rootIno = kRootNodeId;
   EXPECT_EQ(1_ino, rootIno);
@@ -372,11 +375,12 @@ TEST_P(
   // from disk since we don't store mode, the flush here makes the tests
   // deterministic
   if (overlayType() == Overlay::InodeCatalogType::TreeBuffered) {
-    static_cast<BufferedTreeOverlay*>(overlay->getRawInodeCatalog())->flush();
+    static_cast<BufferedSqliteInodeCatalog*>(overlay->getRawInodeCatalog())
+        ->flush();
   }
 
-  // At the time of writing, the TreeOverlay does not store mode, which is why
-  // it is zero here
+  // At the time of writing, the SqliteInodeCatalog does not store mode, which
+  // is why it is zero here
   EXPECT_EQ(
       "/\n"
       "  Inode number: 1\n"
@@ -389,7 +393,7 @@ TEST_P(
 }
 
 TEST_P(
-    DebugDumpTreeOverlayInodesTest,
+    DebugDumpSqliteInodeCatalogInodesTest,
     dump_directory_with_unsaved_subdirectory) {
   auto rootIno = kRootNodeId;
   EXPECT_EQ(1_ino, rootIno);
@@ -405,11 +409,12 @@ TEST_P(
   // from disk since we don't store mode, the flush here makes the tests
   // deterministic
   if (overlayType() == Overlay::InodeCatalogType::TreeBuffered) {
-    static_cast<BufferedTreeOverlay*>(overlay->getRawInodeCatalog())->flush();
+    static_cast<BufferedSqliteInodeCatalog*>(overlay->getRawInodeCatalog())
+        ->flush();
   }
 
-  // At the time of writing, the TreeOverlay does not store mode, which is why
-  // it is zero here
+  // At the time of writing, the SqliteInodeCatalog does not store mode, which
+  // is why it is zero here
   EXPECT_EQ(
       "/\n"
       "  Inode number: 1\n"
@@ -422,7 +427,7 @@ TEST_P(
 }
 
 TEST_P(
-    DebugDumpTreeOverlayInodesTest,
+    DebugDumpSqliteInodeCatalogInodesTest,
     dump_directory_with_unsaved_regular_file) {
   auto rootIno = kRootNodeId;
   EXPECT_EQ(1_ino, rootIno);
@@ -440,11 +445,12 @@ TEST_P(
   // from disk since we don't store mode, the flush here makes the tests
   // deterministic
   if (overlayType() == Overlay::InodeCatalogType::TreeBuffered) {
-    static_cast<BufferedTreeOverlay*>(overlay->getRawInodeCatalog())->flush();
+    static_cast<BufferedSqliteInodeCatalog*>(overlay->getRawInodeCatalog())
+        ->flush();
   }
 
-  // At the time of writing, the TreeOverlay does not store mode, which is why
-  // it is zero here
+  // At the time of writing, the SqliteInodeCatalog does not store mode, which
+  // is why it is zero here
   EXPECT_EQ(
       "/\n"
       "  Inode number: 1\n"
@@ -454,8 +460,8 @@ TEST_P(
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    DebugDumpTreeOverlayInodesTest,
-    DebugDumpTreeOverlayInodesTest,
+    DebugDumpSqliteInodeCatalogInodesTest,
+    DebugDumpSqliteInodeCatalogInodesTest,
     ::testing::Values(
         Overlay::InodeCatalogType::Tree,
         Overlay::InodeCatalogType::TreeBuffered));

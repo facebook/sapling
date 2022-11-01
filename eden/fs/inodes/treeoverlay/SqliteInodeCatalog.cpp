@@ -5,22 +5,23 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
+#include "eden/fs/inodes/treeoverlay/SqliteInodeCatalog.h"
 
 #include <folly/File.h>
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
-#include "eden/fs/inodes/treeoverlay/TreeOverlayWindowsFsck.h"
+#include "eden/fs/inodes/treeoverlay/WindowsFsck.h"
 #include "eden/fs/utils/Bug.h"
 
 namespace facebook::eden {
 
-TreeOverlay::TreeOverlay(
+SqliteInodeCatalog::SqliteInodeCatalog(
     AbsolutePathPiece path,
     SqliteTreeStore::SynchronousMode mode)
     : store_{path, mode} {}
 
-std::optional<InodeNumber> TreeOverlay::initOverlay(bool createIfNonExisting) {
+std::optional<InodeNumber> SqliteInodeCatalog::initOverlay(
+    bool createIfNonExisting) {
   if (createIfNonExisting) {
     store_.createTableIfNonExisting();
   }
@@ -28,52 +29,54 @@ std::optional<InodeNumber> TreeOverlay::initOverlay(bool createIfNonExisting) {
   return store_.loadCounters();
 }
 
-void TreeOverlay::close(std::optional<InodeNumber> /*nextInodeNumber*/) {
+void SqliteInodeCatalog::close(std::optional<InodeNumber> /*nextInodeNumber*/) {
   store_.close();
 }
 
-std::optional<overlay::OverlayDir> TreeOverlay::loadOverlayDir(
+std::optional<overlay::OverlayDir> SqliteInodeCatalog::loadOverlayDir(
     InodeNumber inodeNumber) {
   return store_.loadTree(inodeNumber);
 }
 
-std::optional<overlay::OverlayDir> TreeOverlay::loadAndRemoveOverlayDir(
+std::optional<overlay::OverlayDir> SqliteInodeCatalog::loadAndRemoveOverlayDir(
     InodeNumber inodeNumber) {
   return store_.loadAndRemoveTree(inodeNumber);
 }
 
-void TreeOverlay::saveOverlayDir(
+void SqliteInodeCatalog::saveOverlayDir(
     InodeNumber inodeNumber,
     overlay::OverlayDir&& odir) {
   return store_.saveTree(inodeNumber, std::move(odir));
 }
 
-void TreeOverlay::removeOverlayDir(InodeNumber inodeNumber) {
+void SqliteInodeCatalog::removeOverlayDir(InodeNumber inodeNumber) {
   store_.removeTree(inodeNumber);
 }
 
-bool TreeOverlay::hasOverlayDir(InodeNumber inodeNumber) {
+bool SqliteInodeCatalog::hasOverlayDir(InodeNumber inodeNumber) {
   return store_.hasTree(inodeNumber);
 }
 
-void TreeOverlay::addChild(
+void SqliteInodeCatalog::addChild(
     InodeNumber parent,
     PathComponentPiece name,
     overlay::OverlayEntry entry) {
   return store_.addChild(parent, name, entry);
 }
 
-void TreeOverlay::removeChild(
+void SqliteInodeCatalog::removeChild(
     InodeNumber parent,
     PathComponentPiece childName) {
   return store_.removeChild(parent, childName);
 }
 
-bool TreeOverlay::hasChild(InodeNumber parent, PathComponentPiece childName) {
+bool SqliteInodeCatalog::hasChild(
+    InodeNumber parent,
+    PathComponentPiece childName) {
   return store_.hasChild(parent, childName);
 }
 
-void TreeOverlay::renameChild(
+void SqliteInodeCatalog::renameChild(
     InodeNumber src,
     InodeNumber dst,
     PathComponentPiece srcName,
@@ -81,14 +84,14 @@ void TreeOverlay::renameChild(
   return store_.renameChild(src, dst, srcName, dstName);
 }
 
-InodeNumber TreeOverlay::nextInodeNumber() {
+InodeNumber SqliteInodeCatalog::nextInodeNumber() {
   return store_.nextInodeNumber();
 }
 
-InodeNumber TreeOverlay::scanLocalChanges(
+InodeNumber SqliteInodeCatalog::scanLocalChanges(
     std::shared_ptr<const EdenConfig> config,
     AbsolutePathPiece mountPath,
-    FOLLY_MAYBE_UNUSED TreeOverlay::LookupCallback& callback) {
+    FOLLY_MAYBE_UNUSED SqliteInodeCatalog::LookupCallback& callback) {
 #ifdef _WIN32
   windowsFsckScanLocalChanges(config, *this, mountPath, callback);
 #else

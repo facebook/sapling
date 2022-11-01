@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/inodes/treeoverlay/TreeOverlayWindowsFsck.h"
+#include "eden/fs/inodes/treeoverlay/WindowsFsck.h"
 #include <boost/filesystem/operations.hpp>
 
 #ifdef _WIN32
@@ -19,7 +19,7 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
-#include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
+#include "eden/fs/inodes/treeoverlay/SqliteInodeCatalog.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/DirType.h"
@@ -183,27 +183,29 @@ std::optional<overlay::OverlayEntry> getEntryFromOverlayDir(
   }
 }
 
-void removeChildRecursively(TreeOverlay& overlay, InodeNumber inode) {
+void removeChildRecursively(
+    SqliteInodeCatalog& inodeCatalog,
+    InodeNumber inode) {
   XLOGF(DBG9, "Removing directory inode = {} ", inode);
-  if (auto dir = overlay.loadOverlayDir(inode)) {
+  if (auto dir = inodeCatalog.loadOverlayDir(inode)) {
     const auto& entries = dir->entries_ref();
     for (auto iter = entries->cbegin(); iter != entries->cend(); iter++) {
       const auto& entry = iter->second;
       if (S_ISDIR(*entry.mode_ref())) {
         auto entryInode = InodeNumber::fromThrift(*entry.inodeNumber_ref());
-        removeChildRecursively(overlay, entryInode);
+        removeChildRecursively(inodeCatalog, entryInode);
       }
       XLOGF(DBG9, "Removing child path = {}", iter->first);
-      overlay.removeChild(inode, PathComponentPiece{iter->first});
+      inodeCatalog.removeChild(inode, PathComponentPiece{iter->first});
     }
   }
 }
 
-// Remove entry from overlay, but recursively if the entry is a directory. This
-// is different from `overlay.removeChild` as it does not remove directory
-// recursively.
+// Remove entry from inodeCatalog, but recursively if the entry is a directory.
+// This is different from `inodeCatalog.removeChild` as it does not remove
+// directory recursively.
 void removeOverlayEntry(
-    TreeOverlay& overlay,
+    SqliteInodeCatalog& inodeCatalog,
     InodeNumber parent,
     PathComponentPiece name,
     const overlay::OverlayEntry& entry) {
@@ -211,9 +213,9 @@ void removeOverlayEntry(
   auto overlayMode = static_cast<mode_t>(*entry.mode_ref());
   if (S_ISDIR(overlayMode)) {
     auto overlayInode = InodeNumber::fromThrift(*entry.inodeNumber_ref());
-    removeChildRecursively(overlay, overlayInode);
+    removeChildRecursively(inodeCatalog, overlayInode);
   }
-  overlay.removeChild(parent, name);
+  inodeCatalog.removeChild(parent, name);
 }
 
 // clang-format off
@@ -221,15 +223,15 @@ void removeOverlayEntry(
 //
 // for path in union(onDisk_paths, inOverlay_paths, inScm_paths):
 //   disk  overlay  scm   action
-//    y       n      n      add to overlay, no scm hash.   (If is_placeholder() error since there's no scm to fill it? We could call PrjDeleteFile on it.)
+//    y       n      n      add to inodeCatalog, no scm hash.   (If is_placeholder() error since there's no scm to fill it? We could call PrjDeleteFile on it.)
 //    y       y      n      fix overlay mode_t to match disk if necessary. (If is_placeholder(), error since there's no scm to fill it?)
-//    y       n      y      add to overlay, use scm hash if placeholder-file or empty-placeholder-directory.
+//    y       n      y      add to inodeCatalog, use scm hash if placeholder-file or empty-placeholder-directory.
 //    y       y      y      fix overlay mode_t to match disk if necessary
 //    T       n      *      do nothing
-//    T       y      *      drop from overlay, recursively
+//    T       y      *      drop from inodeCatalog, recursively
 //    n       y      n      remove from overlay
 //    n       y      y      fix overlay mode_t to match scm if necessary.
-//    n       n      y      add to overlay, use scm hash
+//    n       n      y      add to inodeCatalog, use scm hash
 //
 // Notes:
 // - A directory can be "placeholder" even if one of it's recursive descendants
@@ -384,15 +386,15 @@ void populateScmState(FsckFileState& state, const TreeEntry& treeEntry) {
 }
 
 InodeNumber addOrUpdateOverlay(
-    TreeOverlay& overlay,
+    SqliteInodeCatalog& inodeCatalog,
     InodeNumber parentInodeNum,
     PathComponentPiece name,
     dtype_t dtype,
     std::optional<ObjectId> hash,
     const PathMap<overlay::OverlayEntry>& parentInsensitiveOverlayDir) {
-  if (overlay.hasChild(parentInodeNum, name)) {
+  if (inodeCatalog.hasChild(parentInodeNum, name)) {
     XLOGF(DBG9, "Updating overlay: {}", name);
-    overlay.removeChild(parentInodeNum, name);
+    inodeCatalog.removeChild(parentInodeNum, name);
   } else {
     XLOGF(DBG9, "Add overlay: {}", name);
   }
@@ -404,7 +406,7 @@ InodeNumber addOrUpdateOverlay(
     overlayEntry = *overlayEntryOpt;
   } else {
     // It's a new entry, so give it a new inode number.
-    overlayEntry.inodeNumber() = overlay.nextInodeNumber().get();
+    overlayEntry.inodeNumber() = inodeCatalog.nextInodeNumber().get();
   }
   if (hash.has_value()) {
     overlayEntry.hash() = hash->asString();
@@ -412,13 +414,13 @@ InodeNumber addOrUpdateOverlay(
     overlayEntry.hash().reset();
   }
   overlayEntry.mode() = dtype_to_mode(dtype);
-  overlay.addChild(parentInodeNum, name, overlayEntry);
+  inodeCatalog.addChild(parentInodeNum, name, overlayEntry);
   return InodeNumber(*overlayEntry.inodeNumber());
 }
 
 std::optional<InodeNumber> fixup(
     FsckFileState& state,
-    TreeOverlay& overlay,
+    SqliteInodeCatalog& inodeCatalog,
     RelativePathPiece path,
     InodeNumber parentInodeNum,
     const PathMap<overlay::OverlayEntry>& insensitiveOverlayDir) {
@@ -477,11 +479,12 @@ std::optional<InodeNumber> fixup(
         // If the file/directory type doesn't match, remove the old entry
         // entirely, since we need to recursively remove a directory in order to
         // write a file, and vice versa.
-        removeOverlayEntry(overlay, parentInodeNum, name, *state.overlayEntry);
+        removeOverlayEntry(
+            inodeCatalog, parentInodeNum, name, *state.overlayEntry);
       }
 
       return addOrUpdateOverlay(
-          overlay,
+          inodeCatalog,
           parentInodeNum,
           name,
           state.desiredDtype,
@@ -493,7 +496,8 @@ std::optional<InodeNumber> fixup(
   } else {
     if (state.inOverlay) {
       XLOG(DBG9, "Out of sync: removing extra");
-      removeOverlayEntry(overlay, parentInodeNum, name, *state.overlayEntry);
+      removeOverlayEntry(
+          inodeCatalog, parentInodeNum, name, *state.overlayEntry);
     }
     return std::nullopt;
   }
@@ -501,13 +505,13 @@ std::optional<InodeNumber> fixup(
 
 // Returns true if the given path is considered materialized.
 bool processChildren(
-    TreeOverlay& overlay,
+    SqliteInodeCatalog& inodeCatalog,
     RelativePathPiece path,
     AbsolutePathPiece root,
     InodeNumber inodeNumber,
     const PathMap<overlay::OverlayEntry>& insensitiveOverlayDir,
     const std::shared_ptr<const Tree>& scmTree,
-    const TreeOverlay::LookupCallback& callback,
+    const SqliteInodeCatalog::LookupCallback& callback,
     uint64_t logFrequency,
     uint64_t& traversedDirectories) {
   XLOGF(DBG9, "processChildren - {}", path);
@@ -588,7 +592,11 @@ bool processChildren(
     XLOGF(DBG9, "process child - {}", childPath);
 
     std::optional<InodeNumber> childInodeNumberOpt = fixup(
-        childState, overlay, childPath, inodeNumber, insensitiveOverlayDir);
+        childState,
+        inodeCatalog,
+        childPath,
+        inodeNumber,
+        insensitiveOverlayDir);
 
     anyChildMaterialized |= childState.diskMaterialized;
 
@@ -607,11 +615,11 @@ bool processChildren(
       }
 
       auto childInodeNumber = *childInodeNumberOpt;
-      auto childOverlayDir = *overlay.loadOverlayDir(childInodeNumber);
+      auto childOverlayDir = *inodeCatalog.loadOverlayDir(childInodeNumber);
       auto childInsensitiveOverlayDir = toPathMap(childOverlayDir);
       bool childMaterialized = childState.diskMaterialized;
       childMaterialized |= processChildren(
-          overlay,
+          inodeCatalog,
           childPath,
           root,
           childInodeNumber,
@@ -631,11 +639,11 @@ bool processChildren(
         childState.desiredHash = std::nullopt;
         // Refresh the parent state so we see and update the current overlay
         // entry.
-        auto updatedOverlayDir = *overlay.loadOverlayDir(inodeNumber);
+        auto updatedOverlayDir = *inodeCatalog.loadOverlayDir(inodeNumber);
         auto updatedInsensitiveOverlayDir = toPathMap(updatedOverlayDir);
         // Update the overlay entry to remove the scmHash.
         addOrUpdateOverlay(
-            overlay,
+            inodeCatalog,
             inodeNumber,
             childName,
             childState.desiredDtype,
@@ -649,13 +657,13 @@ bool processChildren(
 }
 
 void scanCurrentDir(
-    TreeOverlay& overlay,
+    SqliteInodeCatalog& inodeCatalog,
     AbsolutePathPiece dir,
     InodeNumber inode,
     const overlay::OverlayDir& parentOverlayDir,
     const PathMap<overlay::OverlayEntry>& parentInsensitiveOverlayDir,
     bool recordDeletion,
-    TreeOverlay::LookupCallback& callback) {
+    SqliteInodeCatalog::LookupCallback& callback) {
   auto boostPath = boost::filesystem::path(dir.stringPiece());
   if (!boost::filesystem::is_directory(boostPath)) {
     XLOGF(WARN, "Attempting to scan '{}' which is not a directory", dir);
@@ -683,8 +691,9 @@ void scanCurrentDir(
          ++iter) {
       if (name.stringPiece().equals(
               iter->stringPiece(), folly::AsciiCaseInsensitive())) {
-        // Once we found the entry in overlay, we remove it from the overlay,
-        // so we know if there are entries missing from disk at the end.
+        // Once we found the entry in inodeCatalog, we remove it from the
+        // inodeCatalog, so we know if there are entries missing from disk at
+        // the end.
         overlayEntries.erase(iter);
         presentInOverlay = true;
         break;
@@ -707,7 +716,7 @@ void scanCurrentDir(
             "Mismatch file type, expected: {} overlay: {}",
             dtype,
             overlayDtype);
-        removeOverlayEntry(overlay, inode, name, *overlayEntry);
+        removeOverlayEntry(inodeCatalog, inode, name, *overlayEntry);
         presentInOverlay = false;
       }
     }
@@ -723,8 +732,8 @@ void scanCurrentDir(
       XLOGF(DBG3, "Adding missing entry to overlay {}", name);
       overlay::OverlayEntry overlayEntry;
       overlayEntry.set_mode(dtype_to_mode(dtype));
-      overlayEntry.set_inodeNumber(overlay.nextInodeNumber().get());
-      overlay.addChild(inode, name, overlayEntry);
+      overlayEntry.set_inodeNumber(inodeCatalog.nextInodeNumber().get());
+      inodeCatalog.addChild(inode, name, overlayEntry);
     }
   }
 
@@ -739,13 +748,13 @@ void scanCurrentDir(
       XLOGF(DBG3, "Removing missing entry from overlay: {}", *removed);
       auto overlayEntry =
           getEntryFromOverlayDir(parentInsensitiveOverlayDir, *removed);
-      removeOverlayEntry(overlay, inode, *removed, *overlayEntry);
+      removeOverlayEntry(inodeCatalog, inode, *removed, *overlayEntry);
     }
   }
 
-  XLOGF(DBG9, "Reloading {} from overlay.", inode);
+  XLOGF(DBG9, "Reloading {} from inodeCatalog.", inode);
   // Reload the updated overlay as we have fixed the inconsistency.
-  auto updated = *overlay.loadOverlayDir(inode);
+  auto updated = *inodeCatalog.loadOverlayDir(inode);
   auto updatedInsensitiveOverlayDir = toPathMap(updated);
 
   // Now that this overlay directory is consistent with the on-disk state,
@@ -773,10 +782,10 @@ void scanCurrentDir(
           getEntryFromOverlayDir(updatedInsensitiveOverlayDir, path.basename());
       auto entryInode =
           InodeNumber::fromThrift(*overlayEntry->inodeNumber_ref());
-      auto entryDir = *overlay.loadOverlayDir(entryInode);
+      auto entryDir = *inodeCatalog.loadOverlayDir(entryInode);
       auto entryInsensitiveOverlayDir = toPathMap(entryDir);
       scanCurrentDir(
-          overlay,
+          inodeCatalog,
           path,
           entryInode,
           entryDir,
@@ -790,11 +799,11 @@ void scanCurrentDir(
 
 void windowsFsckScanLocalChanges(
     std::shared_ptr<const EdenConfig> config,
-    TreeOverlay& overlay,
+    SqliteInodeCatalog& inodeCatalog,
     AbsolutePathPiece mountPath,
-    TreeOverlay::LookupCallback& callback) {
+    SqliteInodeCatalog::LookupCallback& callback) {
   XLOGF(INFO, "Start scanning {}", mountPath);
-  if (auto view = overlay.loadOverlayDir(kRootNodeId)) {
+  if (auto view = inodeCatalog.loadOverlayDir(kRootNodeId)) {
     auto insensitiveOverlayDir = toPathMap(*view);
     if (config->useThoroughFsck.getValue()) {
       // TODO: Handler errors or no trees
@@ -806,7 +815,7 @@ void windowsFsckScanLocalChanges(
           std::get<std::shared_ptr<const Tree>>(scmEntry);
       uint64_t traversedDirectories = 1;
       processChildren(
-          overlay,
+          inodeCatalog,
           ""_relpath,
           mountPath,
           kRootNodeId,
@@ -817,7 +826,7 @@ void windowsFsckScanLocalChanges(
           traversedDirectories);
     } else {
       scanCurrentDir(
-          overlay,
+          inodeCatalog,
           mountPath,
           kRootNodeId,
           *view,
