@@ -5,7 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
+use anyhow::Result;
 use async_trait::async_trait;
+use futures::channel::oneshot;
+use futures::future::BoxFuture;
+use futures::future::Shared;
 use land_service_if::server::LandService;
 use land_service_if::services::land_service::LandChangesetsExn;
 use land_service_if::types::*;
@@ -13,20 +19,31 @@ use mononoke_api::CoreContext;
 use srserver::RequestContext;
 use tunables::tunables;
 
+use crate::errors;
 use crate::factory::Factory;
 use crate::land_changeset_object::LandChangesetObject;
 use crate::worker;
+use crate::worker::EnqueueSender;
 
 #[derive(Clone)]
 pub(crate) struct LandServiceImpl {
     factory: Factory,
+    #[allow(dead_code)]
+    enqueue_entry_sender: Arc<EnqueueSender>,
+    #[allow(dead_code)]
+    ensure_worker_scheduled: Shared<BoxFuture<'static, ()>>,
 }
 
 pub(crate) struct LandServiceThriftImpl(LandServiceImpl);
 
 impl LandServiceImpl {
     pub fn new(factory: Factory) -> Self {
-        Self { factory }
+        let (sender, ensure_worker_scheduled) = worker::setup_worker();
+        Self {
+            factory,
+            enqueue_entry_sender: Arc::new(sender),
+            ensure_worker_scheduled,
+        }
     }
 
     pub(crate) fn thrift_server(&self) -> LandServiceThriftImpl {
@@ -48,8 +65,8 @@ impl LandService for LandServiceThriftImpl {
             .factory
             .create_ctx("land_changesets", req_ctxt)
             .await?;
+
         // Create an object with all required info to process a request
-        // TODO: This object will be used later when requests are send to the queue
         let land_changeset_object = LandChangesetObject::new(
             self.0.factory.mononoke.clone(),
             self.0.factory.identity.clone(),
@@ -58,7 +75,17 @@ impl LandService for LandServiceThriftImpl {
         );
 
         if tunables().get_batching_to_land_service() {
-            todo!()
+            self.0.ensure_worker_scheduled.clone().await;
+
+            let (sender, receiver) = oneshot::channel();
+
+            // Enqueue new entry
+            self.0
+                .enqueue_entry_sender
+                .unbounded_send((sender, land_changeset_object))
+                .map_err(|e| errors::internal_error(&e))?;
+
+            return Ok(receiver.await.map_err(|e| errors::internal_error(&e))??);
         }
 
         Ok(worker::impl_land_changesets(

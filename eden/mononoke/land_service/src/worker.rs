@@ -11,6 +11,12 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Result;
 use bookmarks::BookmarkName;
+use futures::channel::mpsc;
+use futures::channel::oneshot;
+use futures::future::BoxFuture;
+use futures::future::Shared;
+use futures::stream::StreamExt;
+use futures::FutureExt;
 use futures_ext::future::FbFutureExt;
 use futures_stats::FutureStats;
 use futures_stats::TimedFutureExt;
@@ -31,7 +37,10 @@ use time_ext::DurationExt;
 use crate::conversion_helpers;
 use crate::errors;
 use crate::errors::LandChangesetsError;
+use crate::land_changeset_object::LandChangesetObject;
 use crate::scuba_response::AddScubaResponse;
+
+const LAND_CHANSET_BUFFER_SIZE: usize = 64;
 
 define_stats! {
     prefix = "mononoke.land_service";
@@ -44,6 +53,61 @@ define_stats! {
     method_completion_time_ms: dynamic_histogram("method.{}.completion_time_ms", (method: String); 10, 0, 1_000, Average, Sum, Count; P 5; P 50 ; P 90),
 }
 
+pub type EnqueueSender = mpsc::UnboundedSender<(
+    oneshot::Sender<Result<LandChangesetsResponse, LandChangesetsError>>,
+    LandChangesetObject,
+)>;
+pub fn setup_worker() -> (EnqueueSender, Shared<BoxFuture<'static, ()>>) {
+    // The mpsc channel needed as a way to enqueue new requests while there is an
+    // in-flight request.
+    // - queue_sender will be used to add new requests to the queue (channel),
+    // - receiver - to read a new batch of requests and land them.
+    //
+    // To notify the clients back that the request was successfully landed,
+    // a oneshot channel is used. When the enqueued requests are processed, the clients
+    // receive result of the operation:
+    // error if something went wrong and nothing if it's ok.
+    let (queue_sender, receiver) = mpsc::unbounded::<(
+        oneshot::Sender<Result<LandChangesetsResponse, LandChangesetsError>>,
+        LandChangesetObject,
+    )>();
+    let worker = async move {
+        let enqueued_landed_changesets = receiver.ready_chunks(LAND_CHANSET_BUFFER_SIZE).for_each(
+            move |batch /* (Sender, LandChangesetObject) */| async move {
+                process_requests(batch).await;
+            },
+        );
+        tokio::spawn(enqueued_landed_changesets);
+    }
+    .boxed()
+    .shared();
+    (queue_sender, worker)
+}
+async fn process_requests(
+    requests: Vec<(
+        oneshot::Sender<Result<LandChangesetsResponse, LandChangesetsError>>,
+        LandChangesetObject,
+    )>,
+) {
+    // TODO: Right now we are processing each request for the batch.
+    // Next, we will process batches of the ones that fit together
+    for (sender, request) in requests.into_iter() {
+        match sender.send(
+            impl_land_changesets(
+                request.mononoke,
+                request.identity,
+                request.ctx,
+                request.request,
+            )
+            .await,
+        ) {
+            Ok(_) => (),
+            Err(_) => (),
+        };
+    }
+}
+
+//TODO: Once the batching is done, this method does not need to be public
 pub async fn impl_land_changesets(
     mononoke: Arc<Mononoke>,
     identity: Identity,
