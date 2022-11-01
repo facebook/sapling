@@ -68,7 +68,7 @@ pushrebase_client = { version = "0.1.0", path = "../pushrebase/client" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../pushrebase_mutation_mapping" }
 rand = { version = "0.8", features = ["small_rng"] }
 reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
-regex = "1.5.4"
+regex = "1.6.0"
 repo_authorization = { version = "0.1.0", path = "../repo_authorization" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_bookmark_attrs = { version = "0.1.0", path = "../repo_attributes/repo_bookmark_attrs" }

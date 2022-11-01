@@ -45,7 +45,7 @@ movers = { version = "0.1.0", path = "../movers" }
 phases = { version = "0.1.0", path = "../../phases" }
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
-regex = "1.5.4"
+regex = "1.6.0"
 revset = { version = "0.1.0", path = "../../revset" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

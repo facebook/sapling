@@ -45,7 +45,7 @@ pin-project = "0.4.30"
 rand = { version = "0.8", features = ["small_rng"] }
 rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
 redactedblobstore = { version = "0.1.0", path = "../blobstore/redactedblobstore" }
-regex = "1.5.4"
+regex = "1.6.0"
 repo_authorization = { version = "0.1.0", path = "../repo_authorization" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }

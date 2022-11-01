@@ -38,7 +38,7 @@ progress-model = { version = "0.1.0", path = "../progress/model" }
 quickcheck = "1.0"
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 rand = { version = "0.8", features = ["small_rng"] }
-regex = "1.5.4"
+regex = "1.6.0"
 revisionstore_types = { version = "0.1.0", path = "types" }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_derive = "1.0"

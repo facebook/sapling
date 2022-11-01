@@ -12,4 +12,4 @@ parking_lot = { version = "0.11.2", features = ["send_guard"] }
 tracing = "0.1.35"
 
 [dev-dependencies]
-regex = "1.5.4"
+regex = "1.6.0"

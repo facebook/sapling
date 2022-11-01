@@ -47,7 +47,7 @@ phases = { version = "0.1.0", path = "../phases" }
 rand = { version = "0.8", features = ["small_rng"] }
 rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
 reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
-regex = "1.5.4"
+regex = "1.6.0"
 remotefilelog = { version = "0.1.0", path = "remotefilelog" }
 repo_authorization = { version = "0.1.0", path = "../repo_authorization" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
