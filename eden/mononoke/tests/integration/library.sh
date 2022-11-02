@@ -2155,6 +2155,10 @@ function derived_data_client() {
   "$@"
 }
 
+function derivation_worker() {
+  GLOG_minloglevel=5 "$DERIVED_DATA_WORKER" "${COMMON_ARGS[@]}" --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
+}
+
 function verify_integrity_service_health() {
   $THRIFTDBG sendRequest getStatus "{}" --host "localhost" --port "$VI_SERVICE_PORT"
 }

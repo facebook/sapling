@@ -10,6 +10,7 @@ MONONOKE_BINS = {
     "COPY_BLOBSTORE_KEYS": "copy_blobstore_keys",
     "DERIVED_DATA_SERVICE": "derived_data_service",
     "DERIVED_DATA_CLIENT": "2ds_client",
+    "DERIVED_DATA_WORKER": "derivation_worker",
     "LFS_SERVER": "lfs_server",
     "MEGAREPO_TOOL": "megarepotool",
     "MONONOKE_ADMIN": "admin",
