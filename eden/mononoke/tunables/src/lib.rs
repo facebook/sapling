@@ -203,6 +203,9 @@ pub struct MononokeTunables {
     // Disable derivation via direved data service.
     derived_data_disable_remote_derivation: AtomicBool,
 
+    // Stops deriving on derivation workers. Will not drain Derivation Queue
+    derived_data_disable_derivation_workers: AtomicBool,
+
     // Disable the parallel derivation for DM and default to serial
     deleted_manifest_disable_new_parallel_derivation: AtomicBool,
 
