@@ -149,6 +149,28 @@ class WorkingCopy:
     def join(self, path: PathLike) -> Path:
         return os.path.join(self.root, str(path))
 
+    def ls(self, path: Optional[PathLike] = None, recurse: bool = False) -> List[Path]:
+        if path is None:
+            path = ""
+        path = os.path.join(self.root, path)
+
+        results = []
+        for dirpath, dirnames, filenames in os.walk(path, topdown=True):
+            if ".hg" in dirnames:
+                dirnames.remove(".hg")
+            if ".sl" in dirnames:
+                dirnames.remove(".sl")
+            for name in dirnames:
+                results.append(
+                    os.path.relpath(os.path.join(dirpath, name), self.root) + "/"
+                )
+            for name in filenames:
+                results.append(os.path.relpath(os.path.join(dirpath, name), self.root))
+            if not recurse:
+                break
+
+        return results
+
     def files(self) -> List[str]:
         return sorted(self.hg.files().stdout.rstrip().split("\n"))
 

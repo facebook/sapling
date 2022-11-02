@@ -66,6 +66,18 @@ class File:
     def remove(self) -> None:
         os.remove(self._abspath)
 
+    def rename(self, new_path: Union[Path, str]) -> None:
+        # Create the directories if they don't already exist.
+        new_path = str(new_path)
+        create_dirs(self.root, new_path)
+
+        old_abspath = self._abspath
+
+        self.path = new_path
+        self._abspath = os.path.abspath(os.path.join(self.root, new_path))
+
+        os.rename(old_abspath, self._abspath)
+
     def write(self, content: Union[bytes, str]) -> None:
         if isinstance(content, bytes):
             mode = "wb+"
