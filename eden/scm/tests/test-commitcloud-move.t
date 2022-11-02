@@ -883,7 +883,7 @@ Try move with specified raw source and raw destination
       fb4a94a976cf  A
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
-  finished in 0.00 sec
+  finished in * (glob)
 
   $ showgraph
   o  A: draft
@@ -927,6 +927,46 @@ Test `hg cloud archive` command
   @  Z: public
 
   $ showgraphother archive
+  o  A: draft
+  │
+  o  W: public  remote/master
+  │
+  o  X: public
+  │
+  @  Z: public
+
+Test copying commits and bookmarks between workspaces
+  $ hg pull -r $B -q
+  $ hg bookmark -r $B "new"
+  $ hg cloud sync
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in * (glob)
+  $ gensmartlogdata
+  $ hg cloud copy -r $B -d copytest --create
+  commitcloud: copying requested commits and bookmarks from 'user/test/default' to 'user/test/copytest' workspace for the 'server' repo
+  copying heads:
+      9272e7e427bf  B
+  copying bookmarks:
+      new: 9272e7e427bf
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in * (glob)
+
+  $ showgraph
+  o  B: draft new
+  │
+  o  A: draft
+  │
+  o  W: public  remote/master
+  │
+  o  X: public
+  │
+  @  Z: public
+
+  $ showgraph copytest
+  o  B: draft new
+  │
   o  A: draft
   │
   o  W: public  remote/master

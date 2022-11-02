@@ -10,6 +10,26 @@ from edenscm.i18n import _
 
 from . import service, util as ccutil
 
+
+srcdstworkspaceopts = [
+    ("s", "source", "", _("short name for the source user workspace")),
+    ("d", "destination", "", _("short name for the destination user workspace")),
+    (
+        "",
+        "raw-source",
+        "",
+        _("raw source workspace name (e.g. 'user/<username>/<workspace>') (ADVANCED)"),
+    ),
+    (
+        "",
+        "raw-destination",
+        "",
+        _(
+            "raw destination workspace name (e.g. 'user/<username>/<workspace>') (ADVANCED)"
+        ),
+    ),
+]
+
 moveopts = [
     ("r", "rev", [], _("revisions to hide (hash or prefix only)")),
     ("B", "bookmark", [], _("bookmarks to remove")),
@@ -25,6 +45,7 @@ def moveorhide(
     remotebookmarks,
     destination=None,
     dry_run=False,
+    keep=False,
 ):
     reponame = ccutil.getreponame(repo)
     ui = repo.ui
@@ -107,7 +128,9 @@ def moveorhide(
         dag.parents(removenodes) - allremovenodes - dag.ancestors(remainingheads)
     ) & drafts
 
-    operation = "moving" if destination else "removing"
+    operation = (
+        "copying" if keep and destination else ("moving" if destination else "removing")
+    )
 
     if removeheads:
         ui.status(_("%s heads:\n") % operation)
@@ -128,7 +151,7 @@ def moveorhide(
         for remote in sorted(removeremotes):
             ui.status("    %s: %s\n" % (remote, cloudrefs.remotebookmarks[remote][:12]))
 
-    if addheads:
+    if addheads and not keep:
         ui.status(_("adding heads:\n"))
         for head in sorted(addheads):
             hexhead = nodemod.hex(head)
@@ -207,24 +230,25 @@ def moveorhide(
                         % destination
                     )
 
-        with progress.spinner(ui, _("updating commit cloud workspace")):
-            res, _refs = serv.updatereferences(
-                reponame,
-                workspacename,
-                cloudrefs.version,
-                oldheads=list(removeheads),
-                newheads=list(addheads),
-                oldbookmarks=list(removebookmarks),
-                oldremotebookmarks=list(removeremotes),
-            )
-            if not res:
-                raise error.Abort(
-                    _(
-                        "conflict: the workspace '%s' has been modified during this operation by another participant\n"
-                        "please, retry!"
-                    )
-                    % destination
+        if not keep:
+            with progress.spinner(ui, _("updating commit cloud workspace")):
+                res, _refs = serv.updatereferences(
+                    reponame,
+                    workspacename,
+                    cloudrefs.version,
+                    oldheads=list(removeheads),
+                    newheads=list(addheads),
+                    oldbookmarks=list(removebookmarks),
+                    oldremotebookmarks=list(removeremotes),
                 )
+                if not res:
+                    raise error.Abort(
+                        _(
+                            "conflict: the workspace '%s' has been modified during this operation by another participant\n"
+                            "please, retry!"
+                        )
+                        % destination
+                    )
         return 1
     else:
         ui.status(_("nothing to change\n"))

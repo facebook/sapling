@@ -128,7 +128,10 @@ subcmd = cloud.subcommand(
         ),
         ("Manage automatic backup or sync", ["disable", "enable"]),
         ("Enable sharing for a cloud workspace", ["share"]),
-        ("Manage commits and bookmarks in workspaces", ["move", "hide", "archive"]),
+        (
+            "Manage commits and bookmarks in workspaces",
+            ["move", "copy", "hide", "archive"],
+        ),
     ]
 )
 
@@ -614,29 +617,22 @@ def cloudarchive(ui, repo, *revs, **opts):
 
 
 @subcmd(
+    "copy",
+    move.srcdstworkspaceopts + move.moveopts + createopts,
+)
+def cloudcopy(ui, repo, *revs, **opts):
+    """copy commits or bookmarks to another commit cloud workspace"""
+    opts.update(
+        {
+            "keep": True,
+        }
+    )
+    return cloudmove(ui, repo, *revs, **opts)
+
+
+@subcmd(
     "move",
-    [
-        ("s", "source", "", _("short name for the source user workspace")),
-        ("d", "destination", "", _("short name for the destination user workspace")),
-        (
-            "",
-            "raw-source",
-            "",
-            _(
-                "raw source workspace name (e.g. 'user/<username>/<workspace>') (ADVANCED)"
-            ),
-        ),
-        (
-            "",
-            "raw-destination",
-            "",
-            _(
-                "raw destination workspace name (e.g. 'user/<username>/<workspace>') (ADVANCED)"
-            ),
-        ),
-    ]
-    + move.moveopts
-    + createopts,
+    move.srcdstworkspaceopts + move.moveopts + createopts,
 )
 def cloudmove(ui, repo, *revs, **opts):
     """move commits or bookmarks to another commit cloud workspace"""
@@ -736,11 +732,15 @@ def cloudmove(ui, repo, *revs, **opts):
                 newremotebookmarks=addremotes,
             )
 
+    keep = opts.get("keep")
+
+    operation = "copying" if keep else "moving"
+
     ui.status(
         _(
-            "moving requested commits and bookmarks from '%s' to '%s' workspace for the '%s' repo\n"
+            "%s requested commits and bookmarks from '%s' to '%s' workspace for the '%s' repo\n"
         )
-        % (sourceworkspace, destinationworkspace, reponame),
+        % (operation, sourceworkspace, destinationworkspace, reponame),
         component="commitcloud",
     )
 
@@ -755,6 +755,7 @@ def cloudmove(ui, repo, *revs, **opts):
         bookmarks,
         remotebookmarks,
         destination=destinationworkspace,
+        keep=keep,
     ):
         if (
             sourceworkspace == currentworkspace
