@@ -43,9 +43,8 @@ pub async fn range(
                 from
             )
         })?;
-    let wanted = vec![to];
     let known = [(from, from_csid)].into();
-    GitimportTarget::new(wanted, known)
+    GitimportTarget::new(to, known)
 }
 
 /// Import commit and all its history that's not yet been imported
@@ -86,8 +85,7 @@ pub async fn missing_for_commit(
         tb.duration_since(ta)
     );
 
-    let wanted = vec![commit];
-    GitimportTarget::new(wanted, known)
+    GitimportTarget::new(commit, known)
 }
 
 async fn commit_in_mononoke(

@@ -179,14 +179,11 @@ impl GitimportTarget {
         }
     }
 
-    pub fn new(
-        wanted: Vec<ObjectId>,
-        known: HashMap<ObjectId, ChangesetId>,
-    ) -> Result<Self, Error> {
-        if wanted.is_empty() {
-            bail!("Nothing to import");
-        }
-        Ok(Self { wanted, known })
+    pub fn new(wanted: ObjectId, known: HashMap<ObjectId, ChangesetId>) -> Result<Self, Error> {
+        Ok(Self {
+            wanted: vec![wanted],
+            known,
+        })
     }
 
     /// Roots are the Oid -> ChangesetId mappings that already are
