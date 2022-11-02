@@ -116,7 +116,8 @@ Persistent State Management
 
 EdenFS stores its own state on local disk, in the EdenFS state directory.  The
 default location for this directory depends on your system configuration, but
-is often `~/.eden` or `~/local/.eden`.
+is often `~/.eden` or `~/local/.eden`. On Windows, this is commonly located at
+`C:\Users\<user>\.eden`.
 
 It is possible for a user to run multiple EdenFS daemons if you specify a
 different state directory for each daemon.  The state directory path can be
