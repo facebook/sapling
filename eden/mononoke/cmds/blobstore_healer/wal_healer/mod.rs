@@ -67,9 +67,7 @@ pub struct WalHealer {
     #[allow(dead_code)]
     /// Optional pattern for fetching specific keys in SQL LIKE format.
     blobstore_key_like: Option<String>,
-    #[allow(dead_code)]
     /// Drain the queue without healing. Use with caution.
-    // TODO: support this mode
     drain_only: bool,
 }
 
@@ -169,6 +167,20 @@ impl WalHealer {
             return Ok(HealResult {
                 processed_full_batch: false,
                 processed_rows: 0,
+            });
+        }
+
+        if self.drain_only {
+            info!(
+                ctx.logger(),
+                "Draining all entries without healing. [drain-only mode]"
+            );
+            let deleted_entries =
+                cleanup_after_healing(ctx, self.wal.as_ref(), queue_entries).await?;
+
+            return Ok(HealResult {
+                processed_full_batch: true,
+                processed_rows: deleted_entries,
             });
         }
 
