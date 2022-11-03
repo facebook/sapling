@@ -103,8 +103,8 @@ impl BlobstoreWalEntry {
     }
 }
 
-type EnqueueSender =
-    mpsc::UnboundedSender<(oneshot::Sender<Result<(), SharedError>>, BlobstoreWalEntry)>;
+type QueueResult = Result<(), SharedError>;
+type EnqueueSender = mpsc::UnboundedSender<(oneshot::Sender<QueueResult>, BlobstoreWalEntry)>;
 
 #[derive(Clone)]
 pub struct SqlBlobstoreWal {
@@ -136,7 +136,7 @@ impl SqlBlobstoreWal {
         // receive result of the operation:
         // error if something went wrong and nothing if it's ok.
         let (queue_sender, receiver) =
-            mpsc::unbounded::<(oneshot::Sender<Result<(), SharedError>>, BlobstoreWalEntry)>();
+            mpsc::unbounded::<(oneshot::Sender<QueueResult>, BlobstoreWalEntry)>();
 
         let worker = async move {
             let enqueued_writes = receiver.ready_chunks(SQL_WAL_WRITE_BUFFER_SIZE).for_each(
@@ -148,7 +148,7 @@ impl SqlBlobstoreWal {
                         let result = insert_entries(&write_connection, entries).await;
                         let result = result
                             .map_err(|err| err.context("Failed to insert to WAL").shared_error());
-                        // We dont't really need WriteResult data as we write in batches
+                        // We don't really need WriteResult data as we write in batches
                         let result = result.map(|_write_result| ());
 
                         // Update the clients
@@ -209,14 +209,15 @@ impl BlobstoreWal for SqlBlobstoreWal {
     ) -> Result<()> {
         self.ensure_worker_scheduled.clone().await;
 
-        let mut write_futs = Vec::with_capacity(entries.len());
-        entries.into_iter().try_for_each(|entry| {
-            let (sender, receiver) = oneshot::channel();
-            write_futs.push(receiver);
-
-            // Enqueue new entry
-            self.enqueue_entry_sender.unbounded_send((sender, entry))
-        })?;
+        // If we want to optimize, we can avoid creating a oneshot for each entry by batching together.
+        let write_futs = entries
+            .into_iter()
+            .map(|entry| {
+                let (sender, receiver) = oneshot::channel();
+                self.enqueue_entry_sender.unbounded_send((sender, entry))?;
+                Ok(receiver)
+            })
+            .collect::<Result<Vec<oneshot::Receiver<QueueResult>>>>()?;
 
         let write_results = future::try_join_all(write_futs)
             .map_err(|err| {
@@ -229,13 +230,18 @@ impl BlobstoreWal for SqlBlobstoreWal {
             })
             .await?;
 
-        let errs: Vec<_> = write_results.into_iter().filter_map(|r| r.err()).collect();
+        let errs: Vec<_> = write_results
+            .into_iter()
+            .filter_map(|r| r.err())
+            // Let's not print too many errors
+            .take(3)
+            .collect();
         if !errs.is_empty() {
-            // Actual errors that occurred while tryint to insert new entries to
+            // Actual errors that occurred while trying to insert new entries to
             // the Mysql table.
             return Err(format_err!(
                 "Failed to write to the SqlBlobstoreWal: {:?}",
-                errs
+                errs,
             ));
         }
 
