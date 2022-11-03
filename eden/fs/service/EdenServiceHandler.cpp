@@ -72,6 +72,7 @@
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/ProcUtil.h"
+#include "eden/fs/utils/SourceLocation.h"
 #include "eden/fs/utils/StatTimes.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
@@ -238,25 +239,21 @@ class ThriftLogHelper {
       std::shared_ptr<TraceBus<ThriftRequestTraceEvent>> traceBus,
       const folly::Logger& logger,
       folly::LogLevel level,
-      folly::StringPiece itcFunctionName,
-      folly::StringPiece itcFileName,
-      uint32_t itcLineNumber,
+      SourceLocation sourceLocation,
       std::shared_ptr<EdenStats> edenStats,
       ThriftStats::DurationPtr statPtr,
       std::optional<pid_t> pid)
       : traceBus_{std::move(traceBus)},
         requestId_(generateUniqueID()),
-        itcFunctionName_(itcFunctionName),
-        itcFileName_(itcFileName),
-        itcLineNumber_(itcLineNumber),
+        sourceLocation_{sourceLocation},
         edenStats_{std::move(edenStats)},
         statPtr_{std::move(statPtr)},
         level_(level),
         itcLogger_(logger),
-        fetchContext_{pid, itcFunctionName},
-        prefetchFetchContext_{pid, itcFunctionName} {
-    traceBus_->publish(
-        ThriftRequestTraceEvent::start(requestId_, itcFunctionName_, pid));
+        fetchContext_{pid, sourceLocation_.function_name()},
+        prefetchFetchContext_{pid, sourceLocation_.function_name()} {
+    traceBus_->publish(ThriftRequestTraceEvent::start(
+        requestId_, sourceLocation_.function_name(), pid));
   }
 
   ~ThriftLogHelper() {
@@ -269,13 +266,19 @@ class ThriftLogHelper {
       // attention to it
       level += 1;
     }
-    TLOG(itcLogger_, level, itcFileName_, itcLineNumber_) << fmt::format(
-        "{}() took {} {}", itcFunctionName_, elapsed.count(), EDEN_MICRO);
+    TLOG(itcLogger_, level, sourceLocation_.file_name(), sourceLocation_.line())
+        << fmt::format(
+               "{}() took {} {}",
+               sourceLocation_.function_name(),
+               elapsed.count(),
+               EDEN_MICRO);
     if (edenStats_) {
       edenStats_->addDuration(statPtr_, elapsed);
     }
     traceBus_->publish(ThriftRequestTraceEvent::finish(
-        requestId_, itcFunctionName_, fetchContext_.getClientPid()));
+        requestId_,
+        sourceLocation_.function_name(),
+        fetchContext_.getClientPid()));
   }
 
   PrefetchFetchContext& getPrefetchFetchContext() {
@@ -287,15 +290,13 @@ class ThriftLogHelper {
   }
 
   folly::StringPiece getFunctionName() {
-    return itcFunctionName_;
+    return sourceLocation_.function_name();
   }
 
  private:
   std::shared_ptr<TraceBus<ThriftRequestTraceEvent>> traceBus_;
   uint64_t requestId_;
-  folly::StringPiece itcFunctionName_;
-  folly::StringPiece itcFileName_;
-  uint32_t itcLineNumber_;
+  SourceLocation sourceLocation_;
   std::shared_ptr<EdenStats> edenStats_;
   ThriftStats::DurationPtr statPtr_;
   folly::LogLevel level_;
@@ -346,43 +347,37 @@ facebook::eden::InodePtr inodeFromUserPath(
 
 // When not attached to Future it will log the completion of the operation and
 // time taken to complete it.
-#define INSTRUMENT_THRIFT_CALL(level, ...)                            \
-  ([&](folly::StringPiece functionName,                               \
-       folly::StringPiece fileName,                                   \
-       uint32_t lineNumber) {                                         \
-    static folly::Logger logger("eden.thrift." + functionName.str()); \
-    TLOG(logger, folly::LogLevel::level, fileName, lineNumber)        \
-        << functionName << "(" << toDelimWrapper(__VA_ARGS__) << ")"; \
-    return std::make_unique<ThriftLogHelper>(                         \
-        this->thriftRequestTraceBus_,                                 \
-        logger,                                                       \
-        folly::LogLevel::level,                                       \
-        functionName,                                                 \
-        fileName,                                                     \
-        lineNumber,                                                   \
-        nullptr,                                                      \
-        nullptr,                                                      \
-        getAndRegisterClientPid());                                   \
-  }(__func__, __FILE__, __LINE__))
+#define INSTRUMENT_THRIFT_CALL(level, ...)                                   \
+  ([&](SourceLocation loc) {                                                 \
+    static folly::Logger logger(                                             \
+        fmt::format("eden.thrift.{}", loc.function_name()));                 \
+    TLOG(logger, folly::LogLevel::level, loc.file_name(), loc.line())        \
+        << loc.function_name() << "(" << toDelimWrapper(__VA_ARGS__) << ")"; \
+    return std::make_unique<ThriftLogHelper>(                                \
+        this->thriftRequestTraceBus_,                                        \
+        logger,                                                              \
+        folly::LogLevel::level,                                              \
+        loc,                                                                 \
+        nullptr,                                                             \
+        nullptr,                                                             \
+        getAndRegisterClientPid());                                          \
+  }(EDEN_CURRENT_SOURCE_LOCATION))
 
-#define INSTRUMENT_THRIFT_CALL_WITH_STAT(level, stat, ...)            \
-  ([&](folly::StringPiece functionName,                               \
-       folly::StringPiece fileName,                                   \
-       uint32_t lineNumber) {                                         \
-    static folly::Logger logger("eden.thrift." + functionName.str()); \
-    TLOG(logger, folly::LogLevel::level, fileName, lineNumber)        \
-        << functionName << "(" << toDelimWrapper(__VA_ARGS__) << ")"; \
-    return std::make_unique<ThriftLogHelper>(                         \
-        this->thriftRequestTraceBus_,                                 \
-        logger,                                                       \
-        folly::LogLevel::level,                                       \
-        functionName,                                                 \
-        fileName,                                                     \
-        lineNumber,                                                   \
-        server_->getSharedStats(),                                    \
-        stat,                                                         \
-        getAndRegisterClientPid());                                   \
-  }(__func__, __FILE__, __LINE__))
+#define INSTRUMENT_THRIFT_CALL_WITH_STAT(level, stat, ...)                   \
+  ([&](SourceLocation loc) {                                                 \
+    static folly::Logger logger(                                             \
+        fmt::format("eden.thrift.{}", loc.function_name()));                 \
+    TLOG(logger, folly::LogLevel::level, loc.file_name(), loc.line())        \
+        << loc.function_name() << "(" << toDelimWrapper(__VA_ARGS__) << ")"; \
+    return std::make_unique<ThriftLogHelper>(                                \
+        this->thriftRequestTraceBus_,                                        \
+        logger,                                                              \
+        folly::LogLevel::level,                                              \
+        loc,                                                                 \
+        server_->getSharedStats(),                                           \
+        stat,                                                                \
+        getAndRegisterClientPid());                                          \
+  }(EDEN_CURRENT_SOURCE_LOCATION))
 
 ThriftRequestTraceEvent ThriftRequestTraceEvent::start(
     uint64_t requestId,
