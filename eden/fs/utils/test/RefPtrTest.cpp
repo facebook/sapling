@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/utils/RefCounted.h"
+#include "eden/fs/utils/RefPtr.h"
 
 #include <folly/portability/GTest.h>
 
@@ -113,6 +113,51 @@ TEST(RefCounted, convert_to_base_singleton) {
   auto derived = RefPtr<Derived>::singleton(singleton);
   RefPtr<Base> base = std::move(derived);
   EXPECT_EQ('d', base->get());
+}
+
+TEST(RefCounted, RefPtr_of_Derived_cast_to_RefPtr_of_Base) {
+  auto derived = makeRefPtr<Derived>();
+  const RefPtr<Base>& base = derived.as<Base>();
+  EXPECT_EQ('d', base->get());
+  EXPECT_EQ(base.get(), derived.get());
+}
+
+struct Base2 {
+  virtual ~Base2() {}
+  // Some member that provides an offset before Base.
+  int dummy;
+};
+
+struct Derived2 : Base2, Base {
+  char get() override {
+    return 'e';
+  }
+};
+
+TEST(RefCounted, Derived_as_to_second_Base_with_offset) {
+  auto derived = makeRefPtr<Derived2>();
+  const RefPtr<Base>& base = derived.as<Base>();
+  EXPECT_EQ('e', base->get());
+  EXPECT_EQ(base.get(), derived.get());
+}
+
+TEST(RefCounted, bumping_reference_count_through_as_affects_parent) {
+  auto derived = makeRefPtr<Derived2>();
+  const RefPtr<Base>& base = derived.as<Base>();
+  auto base_copy = base.copy();
+  derived.reset(); // This also invalidates `base`
+  EXPECT_FALSE(derived);
+  EXPECT_EQ('e', base_copy->get());
+}
+
+TEST(RefCounted, no_reference_bumping_when_as_on_singleton) {
+  Derived2 d2;
+  auto derived = RefPtr<Derived2>::singleton(d2);
+  const RefPtr<Base>& base = derived.as<Base>();
+  auto base_copy = base.copy();
+  derived.reset(); // This also invalidates `base`
+  EXPECT_FALSE(derived);
+  EXPECT_EQ('e', base_copy->get());
 }
 
 } // namespace
