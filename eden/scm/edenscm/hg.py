@@ -233,7 +233,7 @@ def defaultdest(source):
 
 def share(
     ui,
-    source,
+    source: str,
     dest=None,
     update: bool = True,
     bookmarks: bool = True,
@@ -847,7 +847,7 @@ def clonepreclose(
     return srcpeer, destpeer
 
 
-def _showstats(repo, stats: Iterable[object], quietempty: bool = False):
+def _showstats(repo, stats: Iterable[object], quietempty: bool = False) -> None:
     if edenfs.requirement in repo.requirements:
         return _eden_showstats(repo, stats, quietempty)
 
