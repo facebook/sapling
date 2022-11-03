@@ -844,7 +844,7 @@ Please see 'hg add'.
 md format:
 ----------------------------------------------------------------------
 
-Please see 'hg add'.
+Please see `hg add`.
 ----------------------------------------------------------------------
 
 == sections ==
@@ -895,7 +895,7 @@ md format:
 
 ### Subsection
 
-## Markup: "foo" and 'hg help'
+## Markup: `foo` and `hg help`
 ----------------------------------------------------------------------
 
 == admonitions ==

@@ -401,23 +401,48 @@ def findsections(blocks):
     return blocks
 
 
-def inlineliterals(blocks):
-    substs = [("``", '"')]
+def inlineliterals(blocks, style="plain"):
+    if style == "md":
+        substs = [("``", "`")]
+    else:
+        substs = [("``", '"')]
     for b in blocks:
         if b["type"] in ("paragraph", "section"):
             b["lines"] = [replace(l, substs) for l in b["lines"]]
     return blocks
 
 
-def hgrole(blocks):
+def hgrole(blocks, style="plain"):
     unisubst = list(identity.templatemap().items())
+    cliname = identity.default().cliname()
     substs = [
-        (":hg:`", "'%s " % identity.default().cliname()),
-        (":prog:`", "'%s " % identity.default().cliname()),
+        (":hg:`", "'%s " % cliname),
+        (":prog:`", "'%s " % cliname),
         ("`", "'"),
     ] + unisubst
     for b in blocks:
-        stype = substs if b["type"] in ("paragraph", "section") else unisubst
+        apply_all_substitutions = b["type"] in ("paragraph", "section")
+        if apply_all_substitutions and style == "md":
+            # In Markdown, it is not correct to assume backtick has been
+            # rewritten as double-quote, so use a special multiline regex
+            # instead of
+            pattern = re.compile(r":(hg|prog):`([^\`]+)`", re.MULTILINE)
+            body = "\n".join(b["lines"])
+            startindex = 0
+            while True:
+                match = pattern.search(body, startindex)
+                if not match:
+                    break
+
+                span = match.span()
+                replacement = f"`{cliname} {match[2]}`"
+                body = body[: span[0]] + replacement + body[span[1] :]
+                startindex += len(replacement)
+            b["lines"] = body.split("\n")
+            b["lines"] = [replace(l, unisubst) for l in b["lines"]]
+            continue
+
+        stype = substs if apply_all_substitutions else unisubst
         # Turn :hg:`command` into "hg command". This also works
         # when there is a line break in the command and relies on
         # the fact that we have no stray back-quotes in the input
@@ -799,7 +824,7 @@ def formathtml(blocks):
     return "".join(out)
 
 
-def parse(text, indent=0, keep=None, admonitions=None):
+def parse(text, indent=0, keep=None, admonitions=None, style="plain"):
     """Parse text into a list of blocks"""
     pruned = []
     blocks = findblocks(text)
@@ -809,8 +834,8 @@ def parse(text, indent=0, keep=None, admonitions=None):
     blocks = findtables(blocks)
     blocks, pruned = prunecontainers(blocks, keep or [])
     blocks = findsections(blocks)
-    blocks = inlineliterals(blocks)
-    blocks = hgrole(blocks)
+    blocks = inlineliterals(blocks, style=style)
+    blocks = hgrole(blocks, style=style)
     blocks = splitparagraphs(blocks)
     blocks = updatefieldlists(blocks)
     blocks = updateoptionlists(blocks)
@@ -827,7 +852,7 @@ def formatblocks(blocks, width):
 
 def format(text, width=80, indent=0, keep=None, style="plain", section=None):
     """Parse and format the text according to width."""
-    blocks, pruned = parse(text, indent, keep or [])
+    blocks, pruned = parse(text, indent, keep or [], style=style)
     parents = []
     if section:
         sections = getsections(blocks)
