@@ -62,6 +62,8 @@ class RocksDbLocalStore final : public LocalStore {
   struct RockDBState {
     std::unique_ptr<RocksHandles> handles;
     RockDbHandleStatus status{RockDbHandleStatus::NOT_YET_OPENED};
+
+    RockDBState();
   };
 
  private:
@@ -74,8 +76,12 @@ class RocksDbLocalStore final : public LocalStore {
    * closed while the I/O operation is in progress.
    */
   folly::Synchronized<RockDBState>::ConstRLockedPtr getHandles() const;
-  [[noreturn]] void throwStoreClosedError() const;
-  [[noreturn]] void throwStoreNotYetOpenedError() const;
+  [[noreturn]] void throwStoreClosedError(
+      folly::Synchronized<RocksDbLocalStore::RockDBState>::ConstRLockedPtr&
+          lockedState) const;
+  [[noreturn]] void throwStoreNotYetOpenedError(
+      folly::Synchronized<RocksDbLocalStore::RockDBState>::ConstRLockedPtr&
+          lockedState) const;
   std::shared_ptr<RocksDbLocalStore> getSharedFromThis() {
     return std::static_pointer_cast<RocksDbLocalStore>(shared_from_this());
   }

@@ -30,6 +30,7 @@
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/FaultInjector.h"
+#include "eden/fs/utils/Throw.h"
 
 using folly::ByteRange;
 using folly::Synchronized;
@@ -274,6 +275,11 @@ RocksHandles openDB(AbsolutePathPiece path, RocksDBOpenMode mode) {
 
 namespace facebook::eden {
 
+RocksDbLocalStore::RockDBState::RockDBState() {
+  XLOG(DBG2) << "Making a new RockDB localstore ( " << this
+             << " ). debug information for T136469251.";
+}
+
 RocksDbLocalStore::RocksDbLocalStore(
     AbsolutePathPiece pathToRocksDb,
     std::shared_ptr<StructuredLogger> structuredLogger,
@@ -283,9 +289,14 @@ RocksDbLocalStore::RocksDbLocalStore(
       faultInjector_(*faultInjector),
       ioPool_(12, "RocksLocalStore"),
       pathToDb_{pathToRocksDb.copy()},
-      mode_{mode} {}
+      mode_{mode} {
+  XLOG(DBG2) << "Making a new RockDB localstore ( " << this
+             << " ) . debug information for T136469251.";
+}
 
 void RocksDbLocalStore::open() {
+  XLOG(DBG2) << "Opening Rocksdb localstore ( " << this
+             << " ) . debug information for T136469251.";
   {
     auto handles = dbHandles_.wlock();
     switch (handles->status) {
@@ -308,7 +319,8 @@ void RocksDbLocalStore::open() {
   computeStats(/*publish=*/true, /*config=*/nullptr);
   XLOG(DBG2) << "RocksDB opened, clearing out old data ...";
   clearDeprecatedKeySpaces();
-  XLOG(DBG2) << "RocksDB setup complete";
+  XLOG(DBG2) << "RocksDB setup complete. ( " << this
+             << " ) . debug information for T136469251.";
 }
 
 RocksDbLocalStore::~RocksDbLocalStore() {
@@ -325,6 +337,8 @@ void RocksDbLocalStore::close() {
     handles->handles = nullptr;
   }
   handles->status = RockDbHandleStatus::CLOSED;
+  XLOG(DBG2) << "Closing Rocksdb localstore ( " << this
+             << " ) . debug information for T136469251.";
 }
 
 folly::Synchronized<RocksDbLocalStore::RockDBState>::ConstRLockedPtr
@@ -332,7 +346,7 @@ RocksDbLocalStore::getHandles() const {
   auto handles = dbHandles_.rlock();
   switch (handles->status) {
     case RockDbHandleStatus::NOT_YET_OPENED:
-      throwStoreNotYetOpenedError();
+      throwStoreNotYetOpenedError(handles);
     case RockDbHandleStatus::OPEN:
       if (!handles->handles->db) {
         EDEN_BUG()
@@ -340,7 +354,7 @@ RocksDbLocalStore::getHandles() const {
       }
       break;
     case RockDbHandleStatus::CLOSED:
-      throwStoreClosedError();
+      throwStoreClosedError(handles);
   }
 
   return handles;
@@ -763,17 +777,27 @@ void RocksDbLocalStore::autoGCFinished(
   }
 }
 
-void RocksDbLocalStore::throwStoreClosedError() const {
+void RocksDbLocalStore::throwStoreClosedError(
+    folly::Synchronized<RocksDbLocalStore::RockDBState>::ConstRLockedPtr&
+        lockedState) const {
   // It might be nicer to throw an EdenError exception here.
   // At the moment we don't simply due to library dependency ordering in the
   // CMake-based build.  We should ideally restructure the CMake-based build to
   // more closely match our Buck-based library configuration.
-  throw std::runtime_error("the RocksDB local store is already closed");
+  throwf<std::runtime_error>(
+      "the RocksDB local store is already closed. Localstore: {}, state: {}",
+      fmt::ptr(this),
+      fmt::ptr(&*lockedState));
 }
 
-void RocksDbLocalStore::throwStoreNotYetOpenedError() const {
+void RocksDbLocalStore::throwStoreNotYetOpenedError(
+    folly::Synchronized<RocksDbLocalStore::RockDBState>::ConstRLockedPtr&
+        lockedState) const {
   // see comment about EdenError in throwStoreClosedError
-  throw std::runtime_error("the RocksDB local store has not yet been opened");
+  throwf<std::runtime_error>(
+      "the RocksDB local store has not yet been opened. Localstore: {}, state: {}",
+      fmt::ptr(this),
+      fmt::ptr(&*lockedState));
 }
 
 } // namespace facebook::eden
