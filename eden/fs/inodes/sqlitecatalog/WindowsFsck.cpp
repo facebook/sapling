@@ -473,8 +473,8 @@ std::optional<InodeNumber> fixup(
           "overlayDtype={} vs desiredDtype={}, overlayHash={} vs desiredHash={}",
           state.overlayDtype,
           state.desiredDtype,
-          state.overlayHash->toLogString(),
-          state.desiredHash->toLogString());
+          state.overlayHash ? state.overlayHash->toLogString() : "<null>",
+          state.desiredHash ? state.desiredHash->toLogString() : "<null>");
       if (state.inOverlay && state.overlayDtype != state.desiredDtype) {
         // If the file/directory type doesn't match, remove the old entry
         // entirely, since we need to recursively remove a directory in order to
@@ -525,7 +525,7 @@ bool processChildren(
   }
 
   // Handle children
-  folly::F14NodeMap<std::string, FsckFileState> children;
+  PathMap<FsckFileState> children{CaseSensitivity::Insensitive};
 
   // Populate children disk information
   auto absPath = root + path;
@@ -551,7 +551,7 @@ bool processChildren(
       continue;
     }
     PathComponent name{findFileData.cFileName};
-    auto& childState = children[name.stringPiece()];
+    auto& childState = children[name];
     populateDiskState(root, path + name, childState, findFileData);
   } while (FindNextFileW(h, &findFileData) != 0);
 
@@ -563,9 +563,8 @@ bool processChildren(
 
   FindClose(h);
 
-  // Populate children overlay information
   for (const auto& [name, overlayEntry] : insensitiveOverlayDir) {
-    auto& childState = children[name.stringPiece()];
+    auto& childState = children[name];
     populateOverlayState(childState, overlayEntry);
   }
 
@@ -579,15 +578,14 @@ bool processChildren(
   if (scmTree) {
     for (const auto& [name, treeEntry] : *scmTree) {
       PathComponentPiece pathName{name};
-      auto& childState = children[pathName.stringPiece()];
+      auto& childState = children[pathName];
       populateScmState(childState, treeEntry);
     }
   }
 
   // Recurse for any children.
   bool anyChildMaterialized = false;
-  for (auto& [name, childState] : children) {
-    auto childName = PathComponentPiece{name};
+  for (auto& [childName, childState] : children) {
     auto childPath = path + childName;
     XLOGF(DBG9, "process child - {}", childPath);
 

@@ -293,8 +293,8 @@ class EdenTestCase(EdenTestCaseBase):
         """Create or overwrite a file with the given contents."""
         fullpath = self.get_path(path)
         self.make_parent_dir(fullpath)
-        with open(fullpath, "w") as f:
-            f.write(contents)
+        with open(fullpath, "wb") as f:
+            f.write(contents.encode())
         os.chmod(fullpath, mode)
 
     def rename(self, from_path: str, to_path: str) -> None:

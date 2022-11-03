@@ -11,7 +11,14 @@ import sys
 import unittest
 from typing import Dict, List, Optional, Set, Tuple, Union
 
-from facebook.eden.ttypes import GetScmStatusParams, SyncBehavior, TreeInodeDebugInfo
+from facebook.eden.ttypes import (
+    CheckoutConflict,
+    CheckoutMode,
+    CheckOutRevisionParams,
+    GetScmStatusParams,
+    SyncBehavior,
+    TreeInodeDebugInfo,
+)
 
 from .lib import testcase
 
@@ -185,6 +192,60 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.eden.start()
 
         self.assertEqual(self._eden_status(), {b"bdir": 0})
+
+    def test_fsck_casing(self) -> None:
+        afile = self.mount_path / "adir" / "file"
+        afile.rename(self.mount_path / "adir" / "File")
+
+        self.eden.shutdown()
+        self.eden.start()
+
+        self.assertEqual(self._eden_status(), {})
+
+    def test_fsck_rename_with_different_case_while_stopped(self) -> None:
+        # Materialize the file and its parent by removing and re-creating them.
+        self.rm("adir/file")
+        self.rmdir("adir")
+        self.write_file("adir/file", "foo!\n")
+
+        self.assertEqual(self._eden_status(), {})
+
+        afile = self.mount_path / "adir" / "file"
+
+        self.eden.shutdown()
+        afile.rename(self.mount_path / "adir" / "File")
+        self.eden.start()
+
+        self.assertEqual(self._eden_status(), {})
+
+    def _update_clean(self) -> List[CheckoutConflict]:
+        with self.eden.get_thrift_client_legacy() as client:
+            conflicts = client.checkOutRevision(
+                mountPoint=self.mount.encode(),
+                snapshotHash=self.initial_commit.encode(),
+                checkoutMode=CheckoutMode.FORCE,
+                params=CheckOutRevisionParams(),
+            )
+        return conflicts
+
+    def test_fsck_rename_with_different_case_and_modify_while_stopped(self) -> None:
+        # Materialize the file and its parent by removing and re-creating them.
+        self.rm("adir/file")
+        self.rmdir("adir")
+        self.write_file("adir/file", "foo!\n")
+
+        afile = self.mount_path / "adir" / "file"
+
+        self.eden.shutdown()
+        afile.rename(self.mount_path / "adir" / "File")
+        self.write_file("adir/File", "Bar\n")
+        self.eden.start()
+
+        self.assertEqual(self._eden_status(), {b"adir/file": 1})
+
+        # Make sure we can revert the change:
+        self._update_clean()
+        self.assertEqual(self._eden_status(), {})
 
 
 MATERIALIZED = True
