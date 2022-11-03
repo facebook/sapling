@@ -861,7 +861,7 @@ pub enum BlobConfig {
         queue_db: DatabaseConfig,
     },
     /// Multiplex across multiple blobstores for redundancy based on a WAL approach
-    MultiplexedWAL {
+    MultiplexedWal {
         /// A unique ID that identifies this multiplex configuration
         multiplex_id: MultiplexId,
         /// Set of blobstores being multiplexed over
@@ -869,7 +869,7 @@ pub enum BlobConfig {
         /// The number of writes that must succeed for the multiplex `put` to succeed
         write_quorum: usize,
         /// DB config to use for the WAL
-        queue_db: DatabaseConfig,
+        queue_db: ShardedDatabaseConfig,
         /// A scuba table to log stats per inner blobstore
         scuba_table: Option<String>,
         /// 1 in scuba_sample_rate samples will be logged for both
@@ -927,7 +927,7 @@ impl BlobConfig {
         match self {
             Disabled | Files { .. } | Sqlite { .. } => true,
             Manifold { .. } | Mysql { .. } | ManifoldWithTtl { .. } | S3 { .. } => false,
-            Multiplexed { blobstores, .. } | MultiplexedWAL { blobstores, .. } => blobstores
+            Multiplexed { blobstores, .. } | MultiplexedWal { blobstores, .. } => blobstores
                 .iter()
                 .map(|(_, _, config)| config)
                 .all(BlobConfig::is_local),
@@ -943,7 +943,7 @@ impl BlobConfig {
                 ref mut scuba_sample_rate,
                 ..
             }
-            | Self::MultiplexedWAL {
+            | Self::MultiplexedWal {
                 ref mut scuba_sample_rate,
                 ..
             }
@@ -1015,6 +1015,15 @@ impl DatabaseConfig {
             Self::Local(_) => None,
         }
     }
+}
+
+/// Configuration for a sharded database
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum ShardedDatabaseConfig {
+    /// Local SQLite database
+    Local(LocalDatabaseConfig),
+    /// Remote MySQL sharded database
+    Remote(ShardedRemoteDatabaseConfig),
 }
 
 /// Configuration for the Metadata database when it is remote.

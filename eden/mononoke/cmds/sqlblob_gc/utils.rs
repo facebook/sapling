@@ -47,7 +47,7 @@ fn get_blobconfig(
     if let Some(inner_blobstore_id) = inner_blobstore_id {
         blob_config = match blob_config {
             BlobConfig::Multiplexed { blobstores, .. }
-            | BlobConfig::MultiplexedWAL { blobstores, .. } => {
+            | BlobConfig::MultiplexedWal { blobstores, .. } => {
                 let required_id = BlobstoreId::new(inner_blobstore_id);
                 blobstores
                     .into_iter()

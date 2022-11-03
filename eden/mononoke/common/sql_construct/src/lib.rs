@@ -34,6 +34,7 @@ mod oss;
 
 pub use config::SqlConstructFromDatabaseConfig;
 pub use config::SqlConstructFromMetadataDatabaseConfig;
+pub use config::SqlConstructFromShardedDatabaseConfig;
 pub use config::SqlShardableConstructFromMetadataDatabaseConfig;
 pub use construct::SqlConstruct;
 pub use construct::SqlShardedConstruct;

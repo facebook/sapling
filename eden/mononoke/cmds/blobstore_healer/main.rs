@@ -51,6 +51,7 @@ use metaconfig_types::BlobConfig;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::DatabaseConfig;
 use metaconfig_types::MultiplexedStoreType;
+use metaconfig_types::ShardedDatabaseConfig;
 use metaconfig_types::StorageConfig;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
@@ -58,6 +59,7 @@ use mononoke_app::MononokeAppBuilder;
 use slog::info;
 use slog::o;
 use sql_construct::SqlConstructFromDatabaseConfig;
+use sql_construct::SqlConstructFromShardedDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use sync_healer::SyncHealer;
 use wait_for_replication::WaitForReplication;
@@ -196,7 +198,7 @@ async fn maybe_schedule_healer_for_storage(
             ));
             Result::<_, Error>::Ok(healer)
         }
-        BlobConfig::MultiplexedWAL {
+        BlobConfig::MultiplexedWal {
             blobstores,
             multiplex_id,
             queue_db,
@@ -281,14 +283,18 @@ fn setup_sync_queue(
 fn setup_wal(
     fb: FacebookInit,
     mysql_options: &MysqlOptions,
-    queue_db: DatabaseConfig,
+    queue_db: ShardedDatabaseConfig,
     readonly_storage: ReadOnlyStorage,
     dry_run: bool,
     shard_range: ShardRange,
 ) -> Result<Arc<dyn BlobstoreWal>> {
-    let wal =
-        SqlBlobstoreWal::with_database_config(fb, &queue_db, mysql_options, readonly_storage.0)
-            .context("While opening WAL")?;
+    let wal = SqlBlobstoreWal::with_sharded_database_config(
+        fb,
+        &queue_db,
+        mysql_options,
+        readonly_storage.0,
+    )
+    .context("While opening WAL")?;
 
     let wal: Arc<dyn BlobstoreWal> = if dry_run {
         Arc::new(DummyBlobstoreWal::new(wal))

@@ -29,6 +29,7 @@ use metaconfig_types::PackFormat;
 use metaconfig_types::RemoteDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use metaconfig_types::ShardableRemoteDatabaseConfig;
+use metaconfig_types::ShardedDatabaseConfig;
 use metaconfig_types::ShardedRemoteDatabaseConfig;
 use metaconfig_types::StorageConfig;
 use nonzero_ext::nonzero;
@@ -45,6 +46,7 @@ use repos::RawEphemeralBlobstoreConfig;
 use repos::RawFilestoreParams;
 use repos::RawMetadataConfig;
 use repos::RawMultiplexedStoreType;
+use repos::RawShardedDbConfig;
 use repos::RawStorageConfig;
 
 use crate::convert::Convert;
@@ -183,7 +185,7 @@ impl Convert for RawBlobstoreConfig {
                     ));
                 }
 
-                BlobConfig::MultiplexedWAL {
+                BlobConfig::MultiplexedWal {
                     multiplex_id: MultiplexId::new(raw.multiplex_id),
                     blobstores: raw
                         .components
@@ -337,6 +339,20 @@ impl Convert for RawDbConfig {
             RawDbConfig::local(raw) => Ok(DatabaseConfig::Local(raw.convert()?)),
             RawDbConfig::remote(raw) => Ok(DatabaseConfig::Remote(raw.convert()?)),
             RawDbConfig::UnknownField(f) => {
+                Err(anyhow!("unsupported database configuration ({})", f))
+            }
+        }
+    }
+}
+
+impl Convert for RawShardedDbConfig {
+    type Output = ShardedDatabaseConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        match self {
+            RawShardedDbConfig::local(raw) => Ok(ShardedDatabaseConfig::Local(raw.convert()?)),
+            RawShardedDbConfig::remote(raw) => Ok(ShardedDatabaseConfig::Remote(raw.convert()?)),
+            RawShardedDbConfig::UnknownField(f) => {
                 Err(anyhow!("unsupported database configuration ({})", f))
             }
         }

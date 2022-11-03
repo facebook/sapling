@@ -43,6 +43,7 @@ use metaconfig_types::MultiplexId;
 use metaconfig_types::MultiplexedStoreType;
 use metaconfig_types::PackConfig;
 use metaconfig_types::ShardableRemoteDatabaseConfig;
+use metaconfig_types::ShardedDatabaseConfig;
 use multiplexedblob::MultiplexedBlobstore;
 use multiplexedblob::ScrubAction;
 use multiplexedblob::ScrubBlobstore;
@@ -59,6 +60,7 @@ use samplingblob::SamplingBlobstorePutOps;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use sql_construct::SqlConstructFromDatabaseConfig;
+use sql_construct::SqlConstructFromShardedDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use sqlblob::CountedSqlblob;
 use sqlblob::Sqlblob;
@@ -574,7 +576,7 @@ fn make_blobstore_put_ops<'a>(
                 .watched(logger)
                 .await?
             }
-            MultiplexedWAL {
+            MultiplexedWal {
                 multiplex_id,
                 blobstores,
                 write_quorum,
@@ -781,7 +783,7 @@ async fn make_blobstore_multiplexed<'a>(
 async fn make_multiplexed_wal<'a>(
     fb: FacebookInit,
     multiplex_id: MultiplexId,
-    queue_db: DatabaseConfig,
+    queue_db: ShardedDatabaseConfig,
     scuba_table: Option<String>,
     scuba_sample_rate: NonZeroU64,
     inner_config: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
@@ -806,7 +808,7 @@ async fn make_multiplexed_wal<'a>(
     )
     .await?;
 
-    let wal_queue = Arc::new(SqlBlobstoreWal::with_database_config(
+    let wal_queue = Arc::new(SqlBlobstoreWal::with_sharded_database_config(
         fb,
         &queue_db,
         mysql_options,

@@ -16,9 +16,12 @@ use cached_config::ConfigStore;
 use fbinit::FacebookInit;
 use futures::try_join;
 use metaconfig_types::BlobConfig;
+use metaconfig_types::BlobstoreId;
 use metaconfig_types::DatabaseConfig;
+use metaconfig_types::MultiplexedStoreType;
 #[cfg(fbcode_build)]
 use metaconfig_types::ShardableRemoteDatabaseConfig;
+use metaconfig_types::ShardedDatabaseConfig;
 use metaconfig_types::StorageConfig;
 use replication_lag_config::ReplicationLagBlobstoreConfig;
 use replication_lag_config::ReplicationLagTableConfig;
@@ -47,6 +50,28 @@ pub struct WaitForReplication {
 
 const CONFIGS_PATH: &str = "scm/mononoke/mysql/replication_lag/config";
 
+#[cfg(fbcode_build)]
+fn blobstore_monitor(
+    my_admin: &MyAdmin,
+    blobstores: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
+) -> Arc<dyn ReplicaLagMonitor> {
+    blobstores
+        .into_iter()
+        .find_map(|(_, _, config)| match config {
+            BlobConfig::Mysql {
+                remote: ShardableRemoteDatabaseConfig::Unsharded(remote),
+            } => Some(
+                Arc::new(my_admin.single_shard_lag_monitor(remote.db_address))
+                    as Arc<dyn ReplicaLagMonitor>,
+            ),
+            BlobConfig::Mysql {
+                remote: ShardableRemoteDatabaseConfig::Sharded(remote),
+            } => Some(Arc::new(my_admin.shardmap_lag_monitor(remote.shard_map))),
+            _ => None,
+        })
+        .unwrap_or_else(|| Arc::new(NoReplicaLagMonitor()))
+}
+
 impl WaitForReplication {
     pub fn new(
         fb: FacebookInit,
@@ -61,32 +86,32 @@ impl WaitForReplication {
                 blobstores,
                 queue_db: DatabaseConfig::Remote(remote),
                 ..
-            }
-            | BlobConfig::MultiplexedWAL {
-                blobstores,
-                queue_db: DatabaseConfig::Remote(remote),
-                ..
             } => {
                 #[cfg(fbcode_build)]
                 {
                     let my_admin = MyAdmin::new(fb)?;
                     let sync_queue = Arc::new(my_admin.single_shard_lag_monitor(remote.db_address))
                         as Arc<dyn ReplicaLagMonitor>;
-                    let xdb_blobstore = blobstores
-                        .into_iter()
-                        .find_map(|(_, _, config)| match config {
-                            BlobConfig::Mysql {
-                                remote: ShardableRemoteDatabaseConfig::Unsharded(remote),
-                            } => Some(
-                                Arc::new(my_admin.single_shard_lag_monitor(remote.db_address))
-                                    as Arc<dyn ReplicaLagMonitor>,
-                            ),
-                            BlobConfig::Mysql {
-                                remote: ShardableRemoteDatabaseConfig::Sharded(remote),
-                            } => Some(Arc::new(my_admin.shardmap_lag_monitor(remote.shard_map))),
-                            _ => None,
-                        })
-                        .unwrap_or_else(|| Arc::new(NoReplicaLagMonitor()));
+                    let xdb_blobstore = blobstore_monitor(&my_admin, blobstores);
+                    (sync_queue, xdb_blobstore)
+                }
+                #[cfg(not(fbcode_build))]
+                {
+                    let _ = (fb, remote, blobstores);
+                    unimplemented!()
+                }
+            }
+            BlobConfig::MultiplexedWal {
+                blobstores,
+                queue_db: ShardedDatabaseConfig::Remote(remote),
+                ..
+            } => {
+                #[cfg(fbcode_build)]
+                {
+                    let my_admin = MyAdmin::new(fb)?;
+                    let sync_queue = Arc::new(my_admin.shardmap_lag_monitor(remote.shard_map))
+                        as Arc<dyn ReplicaLagMonitor>;
+                    let xdb_blobstore = blobstore_monitor(&my_admin, blobstores);
                     (sync_queue, xdb_blobstore)
                 }
                 #[cfg(not(fbcode_build))]

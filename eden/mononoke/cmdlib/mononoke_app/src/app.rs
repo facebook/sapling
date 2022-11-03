@@ -623,7 +623,7 @@ impl MononokeApp {
             None => storage_config.blobstore,
             Some(id) => match storage_config.blobstore {
                 BlobConfig::Multiplexed { blobstores, .. }
-                | BlobConfig::MultiplexedWAL { blobstores, .. } => {
+                | BlobConfig::MultiplexedWal { blobstores, .. } => {
                     let sought_id = BlobstoreId::new(id);
                     blobstores
                         .into_iter()

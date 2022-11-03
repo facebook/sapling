@@ -262,7 +262,7 @@ async fn open_repo<'a>(
 fn override_blobconfig(blob_config: &mut BlobConfig, inner_blobstore_id: u64) -> Result<(), Error> {
     match blob_config {
         BlobConfig::Multiplexed { ref blobstores, .. }
-        | BlobConfig::MultiplexedWAL { ref blobstores, .. } => {
+        | BlobConfig::MultiplexedWal { ref blobstores, .. } => {
             let sought_id = BlobstoreId::new(inner_blobstore_id);
             let inner_blob_config = blobstores
                 .iter()

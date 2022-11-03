@@ -15,6 +15,7 @@ use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::RemoteDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use metaconfig_types::ShardableRemoteDatabaseConfig;
+use metaconfig_types::ShardedDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 
 use crate::construct::SqlConstruct;
@@ -47,6 +48,37 @@ pub trait SqlConstructFromDatabaseConfig: FbSqlConstruct + SqlConstruct {
 }
 
 impl<T: SqlConstruct + FbSqlConstruct> SqlConstructFromDatabaseConfig for T {}
+
+/// Trait that allows construction from sharded database config.
+pub trait SqlConstructFromShardedDatabaseConfig: FbSqlShardedConstruct {
+    fn with_sharded_database_config(
+        fb: FacebookInit,
+        database_config: &ShardedDatabaseConfig,
+        mysql_options: &MysqlOptions,
+        readonly: bool,
+    ) -> Result<Self> {
+        match database_config {
+            ShardedDatabaseConfig::Local(LocalDatabaseConfig { path }) => {
+                Self::with_sqlite_path(path.join("sqlite_dbs"), readonly)
+            }
+            ShardedDatabaseConfig::Remote(config) => Self::with_sharded_mysql(
+                fb,
+                config.shard_map.clone(),
+                config.shard_num.get(),
+                mysql_options,
+                readonly,
+            ),
+        }
+        .with_context(|| {
+            format!(
+                "While connecting to {:?} (with options {:?})",
+                database_config, mysql_options
+            )
+        })
+    }
+}
+
+impl<T: FbSqlShardedConstruct> SqlConstructFromShardedDatabaseConfig for T {}
 
 /// Trait that allows construction from the metadata database config.
 pub trait SqlConstructFromMetadataDatabaseConfig: FbSqlConstruct + SqlConstruct {

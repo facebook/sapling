@@ -227,7 +227,7 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
                 multiplex_id,
                 ..
             }
-            | BlobConfig::MultiplexedWAL {
+            | BlobConfig::MultiplexedWal {
                 blobstores,
                 multiplex_id,
                 ..
