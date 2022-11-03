@@ -160,6 +160,7 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator, Uploader: GitUploader>(
 
     let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
     let roots = target.get_roots();
+    // TODO - remove this
     let nb_commits_to_import = target.get_nb_commits(&prefs.git_command_path, path).await?;
     if 0 == nb_commits_to_import {
         info!(ctx.logger(), "Nothing to import for repo {}.", repo_name);

@@ -194,6 +194,15 @@ impl GitimportTarget {
         &self.known
     }
 
+    /// Returns true if wanted commit is already imported
+    pub fn is_already_imported(&self) -> bool {
+        if let Some(wanted) = self.wanted.as_ref() {
+            self.known.contains_key(wanted)
+        } else {
+            false
+        }
+    }
+
     /// Returns the number of commits to import
     pub async fn get_nb_commits(
         &self,
