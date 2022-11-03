@@ -26,9 +26,10 @@ use winapi::um::winnt::HANDLE;
 fn std_handle(handle: DWORD) -> Result<HANDLE, Error> {
     let res = unsafe { GetStdHandle(handle) };
     if res == INVALID_HANDLE_VALUE {
-        return Err(format_err!("failed to call GetStdHandle: {:?}", unsafe {
-            GetLastError()
-        }));
+        return Err(format_err!(
+            "invalid stdin/stdout/stderr handle (GetStdHandle error code {:?})",
+            unsafe { GetLastError() }
+        ));
     }
     Ok(res)
 }
