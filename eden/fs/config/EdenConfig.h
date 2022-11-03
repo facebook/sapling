@@ -701,6 +701,14 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Controls the capacity of the internal buffer for NFS Tracebus.
+   */
+  ConfigSetting<size_t> nfsTraceBusCapacity{
+      "telemetry:nfs-tracebus-capacity",
+      25000,
+      this};
+
+  /**
    * Controls whether EdenFS logs inode state changes to Tracebus or not.
    */
   ConfigSetting<bool> enableInodeTraceBus{

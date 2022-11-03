@@ -79,7 +79,8 @@ class NfsServer {
       folly::Duration requestTimeout,
       std::shared_ptr<Notifier> notifier,
       CaseSensitivity caseSensitive,
-      uint32_t iosize);
+      uint32_t iosize,
+      size_t traceBusCapacity);
 
   /**
    * Unregister the mount point matching the path.

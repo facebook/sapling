@@ -48,7 +48,8 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
     folly::Duration requestTimeout,
     std::shared_ptr<Notifier> notifier,
     CaseSensitivity caseSensitive,
-    uint32_t iosize) {
+    uint32_t iosize,
+    size_t traceBusCapacity) {
   auto nfsd = std::make_unique<Nfsd3>(
       evb_,
       threadPool_,
@@ -60,7 +61,8 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
       requestTimeout,
       std::move(notifier),
       caseSensitive,
-      iosize);
+      iosize,
+      traceBusCapacity);
   mountd_.registerMount(path, rootIno);
 
   return {std::move(nfsd), mountd_.getAddr()};

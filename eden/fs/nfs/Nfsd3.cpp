@@ -39,9 +39,7 @@ class Executor;
 namespace facebook::eden {
 
 namespace {
-constexpr size_t kTraceBusCapacity = 25000;
 static_assert(CheckSize<NfsTraceEvent, 40>());
-static_assert(CheckEqual<1000000, kTraceBusCapacity * sizeof(NfsTraceEvent)>());
 
 class Nfsd3ServerProcessor final : public RpcServerProcessor {
  public:
@@ -1891,7 +1889,8 @@ Nfsd3::Nfsd3(
     folly::Duration /*requestTimeout*/,
     std::shared_ptr<Notifier> /*notifier*/,
     CaseSensitivity caseSensitive,
-    uint32_t iosize)
+    uint32_t iosize,
+    size_t traceBusCapacity)
     : server_(RpcServer::create(
           std::make_shared<Nfsd3ServerProcessor>(
               std::move(dispatcher),
@@ -1910,8 +1909,7 @@ Nfsd3::Nfsd3(
       invalidationExecutor_{
           folly::SerialExecutor::create(folly::getGlobalCPUExecutor())},
       traceDetailedArguments_{0},
-      traceBus_{
-          TraceBus<NfsTraceEvent>::create("NfsTrace", kTraceBusCapacity)} {
+      traceBus_{TraceBus<NfsTraceEvent>::create("NfsTrace", traceBusCapacity)} {
   traceSubscriptionHandles_.push_back(traceBus_->subscribeFunction(
       "NFS request tracking",
       [this,

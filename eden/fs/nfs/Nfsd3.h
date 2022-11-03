@@ -137,7 +137,8 @@ class Nfsd3 {
       folly::Duration requestTimeout,
       std::shared_ptr<Notifier> notifications,
       CaseSensitivity caseSensitive,
-      uint32_t iosize);
+      uint32_t iosize,
+      size_t traceBusCapacity);
 
   /**
    * This is triggered when the kernel closes the socket. The socket is closed

@@ -1956,7 +1956,8 @@ folly::Future<NfsServer::NfsMountInfo> makeNfsChannel(
                        edenConfig->nfsRequestTimeout.getValue()),
                    mount->getServerState()->getNotifier(),
                    mount->getCheckoutConfig()->getCaseSensitive(),
-                   iosize);
+                   iosize,
+                   edenConfig->nfsTraceBusCapacity.getValue());
              })
       .thenValue([mount, connectedSocket = std::move(connectedSocket)](
                      NfsServer::NfsMountInfo mountInfo) mutable {
