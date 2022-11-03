@@ -127,15 +127,7 @@ async fn test_all_blobstores_failing(fb: FacebookInit) -> Result<()> {
         weight_limit: 1000,
         buffer_size: 100,
     };
-    let healer = WalHealer::new(
-        10,
-        buf_params,
-        wal.clone(),
-        blobstores,
-        multiplex_id,
-        None,
-        false,
-    );
+    let healer = WalHealer::new(10, buf_params, wal.clone(), blobstores, multiplex_id, false);
 
     let age = ChronoDuration::seconds(0);
     healer.heal(&ctx, age).await?;
@@ -190,15 +182,7 @@ async fn test_healthy_blob(fb: FacebookInit) -> Result<()> {
         weight_limit: 1000,
         buffer_size: 100,
     };
-    let healer = WalHealer::new(
-        10,
-        buf_params,
-        wal.clone(),
-        blobstores,
-        multiplex_id,
-        None,
-        false,
-    );
+    let healer = WalHealer::new(10, buf_params, wal.clone(), blobstores, multiplex_id, false);
 
     let age = ChronoDuration::seconds(0);
     healer.heal(&ctx, age).await?;
@@ -248,15 +232,7 @@ async fn test_missing_blob_healed(fb: FacebookInit) -> Result<()> {
         weight_limit: 1000,
         buffer_size: 100,
     };
-    let healer = WalHealer::new(
-        10,
-        buf_params,
-        wal.clone(),
-        blobstores,
-        multiplex_id,
-        None,
-        false,
-    );
+    let healer = WalHealer::new(10, buf_params, wal.clone(), blobstores, multiplex_id, false);
 
     let age = ChronoDuration::seconds(0);
     healer.heal(&ctx, age).await?;
@@ -306,15 +282,7 @@ async fn test_missing_blob_not_healed(fb: FacebookInit) -> Result<()> {
         weight_limit: 1000,
         buffer_size: 100,
     };
-    let healer = WalHealer::new(
-        10,
-        buf_params,
-        wal.clone(),
-        blobstores,
-        multiplex_id,
-        None,
-        false,
-    );
+    let healer = WalHealer::new(10, buf_params, wal.clone(), blobstores, multiplex_id, false);
 
     let age = ChronoDuration::seconds(0);
     healer.heal(&ctx, age).await?;
@@ -364,15 +332,7 @@ async fn test_blob_cannot_be_fetched(fb: FacebookInit) -> Result<()> {
         weight_limit: 1000,
         buffer_size: 100,
     };
-    let healer = WalHealer::new(
-        10,
-        buf_params,
-        wal.clone(),
-        blobstores,
-        multiplex_id,
-        None,
-        false,
-    );
+    let healer = WalHealer::new(10, buf_params, wal.clone(), blobstores, multiplex_id, false);
 
     let age = ChronoDuration::seconds(0);
     healer.heal(&ctx, age).await?;
@@ -439,7 +399,7 @@ async fn test_different_blobs_wal_entries(fb: FacebookInit) -> Result<()> {
         weight_limit: 1000,
         buffer_size: 100,
     };
-    let healer = WalHealer::new(10, buf_params, wal.clone(), blobstores, mid1, None, false);
+    let healer = WalHealer::new(10, buf_params, wal.clone(), blobstores, mid1, false);
 
     let age = ChronoDuration::seconds(0);
     healer.heal(&ctx, age).await?;
@@ -492,15 +452,7 @@ async fn test_blob_missing_completely(fb: FacebookInit) -> Result<()> {
         weight_limit: 1000,
         buffer_size: 100,
     };
-    let healer = WalHealer::new(
-        10,
-        buf_params,
-        wal.clone(),
-        blobstores,
-        multiplex_id,
-        None,
-        false,
-    );
+    let healer = WalHealer::new(10, buf_params, wal.clone(), blobstores, multiplex_id, false);
 
     let age = ChronoDuration::seconds(0);
     healer.heal(&ctx, age).await?;
@@ -554,15 +506,7 @@ async fn test_entry_timestamp_updated(fb: FacebookInit) -> Result<()> {
         weight_limit: 1000,
         buffer_size: 100,
     };
-    let healer = WalHealer::new(
-        10,
-        buf_params,
-        wal.clone(),
-        blobstores,
-        multiplex_id,
-        None,
-        false,
-    );
+    let healer = WalHealer::new(10, buf_params, wal.clone(), blobstores, multiplex_id, false);
 
     let age = ChronoDuration::seconds(0);
     healer.heal(&ctx, age).await?;

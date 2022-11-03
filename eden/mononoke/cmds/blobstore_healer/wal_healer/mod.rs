@@ -64,9 +64,6 @@ pub struct WalHealer {
     blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
     /// Multiplex configuration id.
     multiplex_id: MultiplexId,
-    #[allow(dead_code)]
-    /// Optional pattern for fetching specific keys in SQL LIKE format.
-    blobstore_key_like: Option<String>,
     /// Drain the queue without healing. Use with caution.
     drain_only: bool,
 }
@@ -78,7 +75,6 @@ impl WalHealer {
         wal: Arc<dyn BlobstoreWal>,
         blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
         multiplex_id: MultiplexId,
-        blobstore_key_like: Option<String>,
         drain_only: bool,
     ) -> Self {
         Self {
@@ -88,7 +84,6 @@ impl WalHealer {
             wal,
             blobstores,
             multiplex_id,
-            blobstore_key_like,
             drain_only,
         }
     }

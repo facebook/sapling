@@ -234,7 +234,6 @@ async fn maybe_schedule_healer_for_storage(
                 wal,
                 Arc::new(blobstores),
                 multiplex_id,
-                source_blobstore_key,
                 drain_only,
             ));
             Result::<_, Error>::Ok(healer)
