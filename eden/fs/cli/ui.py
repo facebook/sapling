@@ -55,6 +55,13 @@ class Output(abc.ABC):
 class PlainOutput(Output):
     def __init__(self, io: TextIO) -> None:
         self.io = io
+        # In the case where the text cannot be encoded with the output
+        # encoding, let's not raise an error. In particular, this can happen
+        # on Windows when redirecting the CLI output and thus where the output
+        # encoding is cp1252.
+        reconfigure = getattr(io, "reconfigure", None)
+        if reconfigure:
+            reconfigure(errors="replace")
 
     def write(
         self,
