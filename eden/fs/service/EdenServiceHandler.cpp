@@ -113,14 +113,12 @@ std::string logHash(StringPiece thriftArg) {
 std::string toLogArg(const std::vector<std::string>& args) {
   constexpr size_t limit = 5;
   if (args.size() <= limit) {
-    return "[" + folly::join(", ", args) + "]";
+    return fmt::format("[{}]", fmt::join(args, ", "));
   } else {
-    return folly::to<string>(
-        "[",
-        folly::join(", ", args.begin(), args.begin() + limit),
-        ", and ",
-        args.size() - limit,
-        " more]");
+    return fmt::format(
+        "[{}, and {} more]",
+        fmt::join(args.begin(), args.begin() + limit, ", "),
+        args.size() - limit);
   }
 }
 } // namespace
@@ -2293,8 +2291,8 @@ EdenServiceHandler::semifuture_setPathObjectId(
     objects.emplace_back(std::move(objectAndPath));
   }
 
-  auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG1, mountPoint, folly::join(",", object_strings));
+  auto helper =
+      INSTRUMENT_THRIFT_CALL(DBG1, mountPoint, toLogArg(object_strings));
 
   auto& fetchContext = helper->getFetchContext();
   if (auto requestInfo = params->requestInfo_ref()) {
@@ -2452,8 +2450,8 @@ EdenServiceHandler::semifuture_ensureMaterialized(
     std::unique_ptr<EnsureMaterializedParams> params) {
 #ifndef _WIN32
   auto mountPoint = *params->mountPoint();
-  auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG4, mountPoint, folly::join(",", (*params->paths())));
+  auto helper =
+      INSTRUMENT_THRIFT_CALL(DBG4, mountPoint, toLogArg(*params->paths()));
 
   auto edenMount = server_->getMount(AbsolutePathPiece{mountPoint});
   // The background mode is not fully running on background, instead, it will
