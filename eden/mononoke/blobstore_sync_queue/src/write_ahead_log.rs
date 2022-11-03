@@ -5,13 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use anyhow::format_err;
+use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use cloned::cloned;
 use context::CoreContext;
 use futures::channel::mpsc;
 use futures::channel::oneshot;
@@ -20,7 +22,9 @@ use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::future::Shared;
 use futures::future::TryFutureExt;
+use futures::stream;
 use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use metaconfig_types::MultiplexId;
 use mononoke_types::Timestamp;
 use shared_error::anyhow::IntoSharedError;
@@ -28,19 +32,28 @@ use shared_error::anyhow::SharedError;
 use sql::queries;
 use sql::Connection;
 use sql::WriteResult;
-use sql_construct::SqlConstruct;
-use sql_ext::SqlConnections;
+use sql_construct::SqlShardedConstruct;
+use sql_ext::SqlShardedConnections;
+use vec1::Vec1;
 
 use crate::OperationKey;
 
 const SQL_WAL_WRITE_BUFFER_SIZE: usize = 1000;
+
+/// Row id of the entry, and which SQL shard it belongs to.
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct ReadInfo {
+    id: u64,
+    shard_id: usize,
+}
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct BlobstoreWalEntry {
     pub blobstore_key: String,
     pub multiplex_id: MultiplexId,
     pub timestamp: Timestamp,
-    pub id: Option<u64>,
+    /// Present if this entry was obtained from reading from SQL
+    pub read_info: Option<ReadInfo>,
     pub operation_key: OperationKey,
     pub blob_size: Option<u64>,
 }
@@ -59,7 +72,7 @@ impl BlobstoreWalEntry {
             timestamp,
             operation_key,
             blob_size,
-            id: None,
+            read_info: None,
         }
     }
 
@@ -82,6 +95,7 @@ impl BlobstoreWalEntry {
     }
 
     fn from_row(
+        shard_id: usize,
         row: (
             String,
             MultiplexId,
@@ -97,7 +111,7 @@ impl BlobstoreWalEntry {
             multiplex_id,
             timestamp,
             operation_key,
-            id: Some(id),
+            read_info: Some(ReadInfo { id, shard_id }),
             blob_size,
         }
     }
@@ -108,23 +122,21 @@ type EnqueueSender = mpsc::UnboundedSender<(oneshot::Sender<QueueResult>, Blobst
 
 #[derive(Clone)]
 pub struct SqlBlobstoreWal {
-    #[allow(dead_code)]
-    read_connection: Connection,
-    read_master_connection: Connection,
-    #[allow(dead_code)]
-    write_connection: Connection,
+    read_master_connections: Vec1<Connection>,
+    write_connections: Vec1<Connection>,
     /// Sending entry over the channel allows it to be queued till
     /// the worker is free and able to write new entries to Mysql.
-    enqueue_entry_sender: Arc<EnqueueSender>,
+    enqueue_entry_sender: EnqueueSender,
     /// Worker allows to enqueue new entries while there is already
     /// a write query to Mysql in-fight.
-    #[allow(dead_code)]
     ensure_worker_scheduled: Shared<BoxFuture<'static, ()>>,
+    /// Used to cycle through shards when reading
+    shards_read: Arc<AtomicUsize>,
 }
 
 impl SqlBlobstoreWal {
     fn setup_worker(
-        write_connection: Connection,
+        write_connections: Vec1<Connection>,
     ) -> (EnqueueSender, Shared<BoxFuture<'static, ()>>) {
         // The mpsc channel needed as a way to enqueue new entries while there is an
         // in-flight write query to Mysql.
@@ -139,9 +151,12 @@ impl SqlBlobstoreWal {
             mpsc::unbounded::<(oneshot::Sender<QueueResult>, BlobstoreWalEntry)>();
 
         let worker = async move {
+            let mut batch_count = 0usize;
             let enqueued_writes = receiver.ready_chunks(SQL_WAL_WRITE_BUFFER_SIZE).for_each(
                 move |batch /* (Sender, BlobstoreWalEntry) */| {
-                    cloned!(write_connection);
+                    batch_count += 1;
+                    let write_connection =
+                        write_connections[batch_count % write_connections.len()].clone();
                     async move {
                         let (senders, entries): (Vec<_>, Vec<_>) = batch.into_iter().unzip();
 
@@ -253,17 +268,30 @@ impl BlobstoreWal for SqlBlobstoreWal {
         _ctx: &'a CoreContext,
         multiplex_id: &MultiplexId,
         older_than: &Timestamp,
-        limit: usize,
+        mut limit: usize,
     ) -> Result<Vec<BlobstoreWalEntry>> {
-        let rows = WalReadEntries::query(
-            &self.read_master_connection,
-            multiplex_id,
-            older_than,
-            &limit,
-        )
-        .await?;
-
-        let entries = rows.into_iter().map(BlobstoreWalEntry::from_row).collect();
+        let mut entries = Vec::new();
+        // Traverse shards in order fetching from them.
+        // To optimise this you can start multiple jobs, one for each shard.
+        let shards = self.read_master_connections.len();
+        for _ in 0..shards {
+            let cur_shard = self.shards_read.fetch_add(1, Ordering::Relaxed) % shards;
+            let rows = WalReadEntries::query(
+                &self.read_master_connections[cur_shard],
+                multiplex_id,
+                older_than,
+                &limit,
+            )
+            .await?;
+            limit = limit.saturating_sub(rows.len());
+            entries.extend(
+                rows.into_iter()
+                    .map(|r| BlobstoreWalEntry::from_row(cur_shard, r)),
+            );
+            if limit == 0 {
+                break;
+            }
+        }
         Ok(entries)
     }
 
@@ -272,43 +300,58 @@ impl BlobstoreWal for SqlBlobstoreWal {
         _ctx: &'a CoreContext,
         entries: &'a [BlobstoreWalEntry],
     ) -> Result<()> {
-        let entry_ids: Vec<u64> = entries
+        let mut entry_info: Vec<ReadInfo> = entries
             .iter()
             .map(|entry| {
-                entry.id.ok_or_else(|| {
-                    format_err!("BlobstoreWalEntry must contain `id` to be able to delete it")
-                })
+                entry
+                    .read_info
+                    .clone()
+                    .context("BlobstoreWalEntry must contain `read_info` to be able to delete it")
             })
             .collect::<Result<_, _>>()?;
+        entry_info.sort_unstable_by_key(|info| info.shard_id);
+        stream::iter(
+            entry_info
+                .group_by(|info1, info2| info1.shard_id == info2.shard_id)
+                .map(|batch| async move {
+                    let shard_id: usize = batch[0].shard_id;
+                    let ids: Vec<u64> = batch.iter().map(|info| info.id).collect();
+                    for chunk in ids.chunks(10_000) {
+                        WalDeleteEntries::query(&self.write_connections[shard_id], chunk).await?;
+                    }
+                    anyhow::Ok(())
+                })
+                .collect::<Vec<_>>(), // prevents compiler bug
+        )
+        .buffered(10)
+        .try_collect::<()>()
+        .await?;
 
-        for chunk in entry_ids.chunks(10_000) {
-            WalDeleteEntries::query(&self.write_connection, chunk).await?;
-        }
         Ok(())
     }
 }
 
-impl SqlConstruct for SqlBlobstoreWal {
+impl SqlShardedConstruct for SqlBlobstoreWal {
     const LABEL: &'static str = "blobstore_wal";
 
     const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-blobstore-wal.sql");
 
-    fn from_sql_connections(connections: SqlConnections) -> Self {
-        let SqlConnections {
-            read_connection,
-            read_master_connection,
-            write_connection,
+    fn from_sql_shard_connections(connections: SqlShardedConnections) -> Self {
+        let SqlShardedConnections {
+            read_connections: _,
+            read_master_connections,
+            write_connections,
         } = connections;
 
         let (sender, ensure_worker_scheduled) =
-            SqlBlobstoreWal::setup_worker(write_connection.clone());
+            SqlBlobstoreWal::setup_worker(write_connections.clone());
 
         Self {
-            read_connection,
-            read_master_connection,
-            write_connection,
-            enqueue_entry_sender: Arc::new(sender),
+            write_connections,
+            read_master_connections,
+            enqueue_entry_sender: sender,
             ensure_worker_scheduled,
+            shards_read: Arc::new(AtomicUsize::new(0)),
         }
     }
 }

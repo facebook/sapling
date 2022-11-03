@@ -27,6 +27,7 @@ sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 uuid = { version = "0.8.1", features = ["serde", "v4", "v5"] }
+vec1 = { version = "1", features = ["serde"] }
 
 [dev-dependencies]
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
