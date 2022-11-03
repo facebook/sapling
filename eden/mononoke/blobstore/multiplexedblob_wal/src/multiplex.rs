@@ -25,7 +25,6 @@ use blobstore::PutBehaviour;
 use blobstore_stats::OperationType;
 use blobstore_sync_queue::BlobstoreWal;
 use blobstore_sync_queue::BlobstoreWalEntry;
-use blobstore_sync_queue::OperationKey;
 use cloned::cloned;
 use context::CoreContext;
 use context::PerfCounterType;
@@ -192,19 +191,11 @@ impl WalMultiplexedBlobstore {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobPuts);
 
-        // Unique id associated with the put operation for this multiplexed blobstore.
-        let operation_key = OperationKey::gen();
         let blob_size = value.len() as u64;
 
         // Log the blobstore key and wait till it succeeds
         let ts = Timestamp::now();
-        let log_entry = BlobstoreWalEntry::new(
-            key.clone(),
-            self.multiplex_id,
-            ts,
-            operation_key,
-            Some(blob_size),
-        );
+        let log_entry = BlobstoreWalEntry::new(key.clone(), self.multiplex_id, ts, blob_size);
         self.wal_queue.log(ctx, log_entry).await.with_context(|| {
             format!(
                 "WAL Multiplexed Blobstore: Failed writing to the WAL: key {}",

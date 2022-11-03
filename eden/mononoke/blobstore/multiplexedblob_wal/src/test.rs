@@ -19,7 +19,6 @@ use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstorePutOps;
 use blobstore_sync_queue::BlobstoreWal;
-use blobstore_sync_queue::OperationKey;
 use blobstore_sync_queue::SqlBlobstoreWal;
 use blobstore_test_utils::Tickable;
 use bytes::Bytes;
@@ -940,7 +939,7 @@ fn setup_multiplex(
     quorum: usize,
     timeout: Option<MultiplexTimeout>,
 ) -> Result<(
-    Arc<Tickable<OperationKey>>,
+    Arc<Tickable<()>>,
     Vec<(BlobstoreId, Arc<Tickable<(BlobstoreBytes, u64)>>)>,
     WalMultiplexedBlobstore,
 )> {
@@ -979,7 +978,7 @@ fn setup_blobstores(
     (tickable_blobstores, blobstores)
 }
 
-fn setup_queue() -> (Arc<Tickable<OperationKey>>, Arc<dyn BlobstoreWal>) {
+fn setup_queue() -> (Arc<Tickable<()>>, Arc<dyn BlobstoreWal>) {
     let tickable_queue = Arc::new(Tickable::new());
     let wal_queue = tickable_queue.clone() as Arc<dyn BlobstoreWal>;
     (tickable_queue, wal_queue)

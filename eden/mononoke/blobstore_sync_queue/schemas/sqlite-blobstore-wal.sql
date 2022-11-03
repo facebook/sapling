@@ -10,8 +10,6 @@ CREATE TABLE IF NOT EXISTS `blobstore_write_ahead_log` (
   `blobstore_key` varchar NOT NULL,
   `timestamp` BIGINT NOT NULL, /* time the blob was added to the queue */
   `multiplex_id` INTEGER NOT NULL,
-  /* different per different put operations, see D20557702 */
-  `operation_key` BINARY(16) NOT NULL DEFAULT X'00000000000000000000000000000000',
-  `blob_size` BIGINT,
-  `retry_count` INTEGER NOT NULL DEFAULT 0
+  `blob_size` BIGINT NOT NULL,
+  `retry_count` INTEGER NOT NULL
 );

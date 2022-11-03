@@ -24,7 +24,6 @@ use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use blobstore_sync_queue::BlobstoreWal;
 use blobstore_sync_queue::BlobstoreWalEntry;
-use blobstore_sync_queue::OperationKey;
 use context::CoreContext;
 use futures::channel::oneshot;
 use lock_ext::LockExt;
@@ -169,11 +168,11 @@ impl BlobstorePutOps for Tickable<(BlobstoreBytes, u64)> {
 }
 
 #[async_trait]
-impl BlobstoreWal for Tickable<OperationKey> {
+impl BlobstoreWal for Tickable<()> {
     async fn log<'a>(&'a self, _ctx: &'a CoreContext, entry: BlobstoreWalEntry) -> Result<()> {
         self.on_tick().await?;
         self.storage.with(|s| {
-            s.insert(entry.blobstore_key, entry.operation_key);
+            s.insert(entry.blobstore_key, ());
         });
         Ok(())
     }

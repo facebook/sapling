@@ -186,9 +186,9 @@ impl WalHealer {
             .map(|(key, entries)| {
                 let entries: Vec<_> = entries.into_iter().collect();
                 let healing_weight = entries
-                    .iter()
-                    .find_map(|entry| entry.blob_size)
-                    .unwrap_or(DEFAULT_BLOB_SIZE_BYTES);
+                    .first()
+                    // The "or" never happens. Can be fixed with vec1.
+                    .map_or(DEFAULT_BLOB_SIZE_BYTES, |entry| entry.blob_size);
 
                 let fut =
                     heal_blob(ctx, self.blobstores.clone(), key).map(|outcome| (outcome, entries));
@@ -434,18 +434,11 @@ async fn enqueue_entries(
             let BlobstoreWalEntry {
                 blobstore_key,
                 multiplex_id,
-                operation_key,
                 blob_size,
                 ..
             } = entry;
 
-            BlobstoreWalEntry::new(
-                blobstore_key,
-                multiplex_id,
-                Timestamp::now(),
-                operation_key,
-                blob_size,
-            )
+            BlobstoreWalEntry::new(blobstore_key, multiplex_id, Timestamp::now(), blob_size)
         })
         .collect();
 

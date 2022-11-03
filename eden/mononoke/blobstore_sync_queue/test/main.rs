@@ -119,37 +119,26 @@ async fn test_write_ahead_log(fb: FacebookInit) -> Result<(), Error> {
     let t1 = DateTime::from_rfc3339("2018-11-29T12:01:00.00Z")?.into();
     let t2 = DateTime::from_rfc3339("2018-11-29T12:02:00.00Z")?.into();
 
-    let node_id = [1, 2, 2, 4, 5, 6, 7, 8];
-    // All operation keys are different because using WAL instead of a sync-queue
-    // allows to write a key to the WAL only once.
-    // If the key has multiple appearances in the WAL, it means it was written
-    // in different sessions with different operation keys.
-    let op0 = OperationKey(Uuid::from_fields(0, 0, 1, &node_id)?); // for key0
-    let op1 = OperationKey(Uuid::from_fields(0, 0, 2, &node_id)?); // for second put of key0
-    let op2 = OperationKey(Uuid::from_fields(0, 0, 3, &node_id)?); // for key1
-    let op3 = OperationKey(Uuid::from_fields(0, 0, 4, &node_id)?); // for second put of key1
-
-    let entry0 = BlobstoreWalEntry::new(key0.clone(), mp, t0, op0.clone(), None);
-    let entry1 = BlobstoreWalEntry::new(key0, mp, t1, op1, None);
-    let entry2 = BlobstoreWalEntry::new(key1.clone(), mp, t1, op2, None);
-    let entry3 = BlobstoreWalEntry::new(key1, mp, t2, op3, None);
+    let entry0 = BlobstoreWalEntry::new(key0.clone(), mp, t0, 12);
+    let entry1 = BlobstoreWalEntry::new(key0, mp, t1, 13);
+    let entry2 = BlobstoreWalEntry::new(key1.clone(), mp, t1, 14);
+    let entry3 = BlobstoreWalEntry::new(key1, mp, t2, 15);
 
     // add
-    assert!(wal.log(&ctx, entry0.clone()).await.is_ok());
-    assert!(
-        wal.log_many(&ctx, vec![entry1, entry2.clone()])
-            .await
-            .is_ok()
-    );
-    assert!(wal.log(&ctx, entry3.clone()).await.is_ok());
+    wal.log(&ctx, entry0.clone()).await.unwrap();
+    wal.log_many(&ctx, vec![entry1, entry2.clone()])
+        .await
+        .unwrap();
+    wal.log(&ctx, entry3.clone()).await.unwrap();
 
     // read different ranges of entries
     let validate = |entry: &BlobstoreWalEntry, expected: &BlobstoreWalEntry| {
         assert_eq!(entry.blobstore_key, expected.blobstore_key);
         assert_eq!(entry.multiplex_id, expected.multiplex_id);
-        assert_eq!(entry.timestamp, expected.timestamp);
-        assert_eq!(entry.operation_key, expected.operation_key);
         assert_eq!(entry.blob_size, expected.blob_size);
+        assert_eq!(entry.retry_count, expected.retry_count);
+        assert!(entry.read_info.is_some());
+        // read_info is not compared
     };
 
     let some_entries = wal

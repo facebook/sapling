@@ -39,8 +39,6 @@ use sql_construct::SqlShardedConstruct;
 use sql_ext::SqlShardedConnections;
 use vec1::Vec1;
 
-use crate::OperationKey;
-
 const SQL_WAL_WRITE_BUFFER_SIZE: usize = 1000;
 
 /// Row id of the entry, and which SQL shard it belongs to.
@@ -57,8 +55,7 @@ pub struct BlobstoreWalEntry {
     pub timestamp: Timestamp,
     /// Present if this entry was obtained from reading from SQL
     pub read_info: Option<ReadInfo>,
-    pub operation_key: OperationKey,
-    pub blob_size: Option<u64>,
+    pub blob_size: u64,
     pub retry_count: u32,
 }
 
@@ -67,14 +64,12 @@ impl BlobstoreWalEntry {
         blobstore_key: String,
         multiplex_id: MultiplexId,
         timestamp: Timestamp,
-        operation_key: OperationKey,
-        blob_size: Option<u64>,
+        blob_size: u64,
     ) -> Self {
         Self {
             blobstore_key,
             multiplex_id,
             timestamp,
-            operation_key,
             blob_size,
             read_info: None,
             retry_count: 0,
@@ -85,21 +80,11 @@ impl BlobstoreWalEntry {
         self.retry_count += 1;
     }
 
-    fn into_sql_tuple(
-        self,
-    ) -> (
-        String,
-        MultiplexId,
-        Timestamp,
-        OperationKey,
-        Option<u64>,
-        u32,
-    ) {
+    fn into_sql_tuple(self) -> (String, MultiplexId, Timestamp, u64, u32) {
         let Self {
             blobstore_key,
             multiplex_id,
             timestamp,
-            operation_key,
             blob_size,
             retry_count,
             ..
@@ -108,31 +93,17 @@ impl BlobstoreWalEntry {
             blobstore_key,
             multiplex_id,
             timestamp,
-            operation_key,
             blob_size,
             retry_count,
         )
     }
 
-    fn from_row(
-        shard_id: usize,
-        row: (
-            String,
-            MultiplexId,
-            Timestamp,
-            OperationKey,
-            u64,
-            Option<u64>,
-            u32,
-        ),
-    ) -> Self {
-        let (blobstore_key, multiplex_id, timestamp, operation_key, id, blob_size, retry_count) =
-            row;
+    fn from_row(shard_id: usize, row: (String, MultiplexId, Timestamp, u64, u64, u32)) -> Self {
+        let (blobstore_key, multiplex_id, timestamp, id, blob_size, retry_count) = row;
         Self {
             blobstore_key,
             multiplex_id,
             timestamp,
-            operation_key,
             read_info: Some(ReadInfo { id, shard_id }),
             blob_size,
             retry_count,
@@ -403,7 +374,7 @@ async fn insert_entries(
         .collect();
     let entries_ref: Vec<_> = entries
         .iter()
-        .map(|(a, b, c, d, e, f)| (a, b, c, d, e, f)) // &(a, b, ...) into (&a, &b, ...)
+        .map(|(a, b, c, d, e)| (a, b, c, d, e)) // &(a, b, ...) into (&a, &b, ...)
         .collect();
 
     WalInsertEntry::query(write_connection, &entries_ref).await
@@ -419,12 +390,11 @@ queries! {
         blobstore_key: String,
         multiplex_id: MultiplexId,
         timestamp: Timestamp,
-        operation_key: OperationKey,
-        blob_size: Option<u64>,
+        blob_size: u64,
         retry_count: u32,
     )) {
         none,
-        "INSERT INTO blobstore_write_ahead_log (blobstore_key, multiplex_id, timestamp, operation_key, blob_size, retry_count)
+        "INSERT INTO blobstore_write_ahead_log (blobstore_key, multiplex_id, timestamp, blob_size, retry_count)
          VALUES {values}"
     }
 
@@ -439,15 +409,13 @@ queries! {
         String,
         MultiplexId,
         Timestamp,
-        OperationKey,
         u64,
-        Option<u64>,
+        u64,
         u32,
     ) {
-        "SELECT blobstore_key, multiplex_id, timestamp, operation_key, id, blob_size, retry_count
+        "SELECT blobstore_key, multiplex_id, timestamp, id, blob_size, retry_count
          FROM blobstore_write_ahead_log
          WHERE multiplex_id = {multiplex_id} AND timestamp <= {older_than}
-         LIMIT {limit}
-         "
+         LIMIT {limit}"
     }
 }
