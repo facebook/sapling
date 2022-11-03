@@ -18,6 +18,7 @@ use sql_construct::SqlShardableConstructFromMetadataDatabaseConfig;
 use sql_construct::SqlShardedConstruct;
 use sql_ext::SqlConnections;
 use sql_ext::SqlShardedConnections;
+use vec1::vec1;
 
 use crate::local_cache::CachelibCache;
 use crate::local_cache::LocalCache;
@@ -51,11 +52,13 @@ impl SqlConstruct for NewFilenodesBuilder {
             Connection::Mysql(_) => MYSQL_INSERT_CHUNK_SIZE,
         };
 
-        let reader =
-            FilenodesReader::new(vec![read_connection.clone()], vec![read_master_connection]);
+        let reader = FilenodesReader::new(
+            vec1![read_connection.clone()],
+            vec1![read_master_connection],
+        );
 
         let writer =
-            FilenodesWriter::new(chunk_size, vec![write_connection], vec![read_connection]);
+            FilenodesWriter::new(chunk_size, vec1![write_connection], vec1![read_connection]);
 
         Self { reader, writer }
     }
@@ -67,12 +70,6 @@ impl SqlShardedConstruct for NewFilenodesBuilder {
     const CREATION_QUERY: &'static str = <NewFilenodesBuilder as SqlConstruct>::CREATION_QUERY;
 
     fn from_sql_shard_connections(shard_connections: SqlShardedConnections) -> Self {
-        if shard_connections.is_empty() {
-            // It should be impossible for shard_connections to be empty, as the configured
-            // number of shards was required to be non-zero.
-            panic!("sharded database constructed with no shards");
-        }
-
         let SqlShardedConnections {
             read_connections,
             read_master_connections,

@@ -26,6 +26,7 @@ use sql_ext::queries_with_retry;
 use stats::prelude::*;
 use thiserror::Error as DeriveError;
 use tunables::tunables;
+use vec1::Vec1;
 
 define_stats! {
     prefix = "mononoke.filenodes";
@@ -41,15 +42,15 @@ pub enum ErrorKind {
 
 pub struct FilenodesWriter {
     chunk_size: usize,
-    write_connections: Vec<Connection>,
-    read_connections: Vec<Connection>,
+    write_connections: Vec1<Connection>,
+    read_connections: Vec1<Connection>,
 }
 
 impl FilenodesWriter {
     pub fn new(
         chunk_size: usize,
-        write_connections: Vec<Connection>,
-        read_connections: Vec<Connection>,
+        write_connections: Vec1<Connection>,
+        read_connections: Vec1<Connection>,
     ) -> Self {
         Self {
             chunk_size,

@@ -37,6 +37,7 @@ use stats::prelude::*;
 use thiserror::Error as DeriveError;
 use tokio::time::timeout;
 use tunables::tunables;
+use vec1::Vec1;
 
 use crate::connections::AcquireReason;
 use crate::connections::Connections;
@@ -165,8 +166,8 @@ pub struct FilenodesReader {
 
 impl FilenodesReader {
     pub fn new(
-        read_connections: Vec<Connection>,
-        read_master_connections: Vec<Connection>,
+        read_connections: Vec1<Connection>,
+        read_master_connections: Vec1<Connection>,
     ) -> Self {
         Self {
             shards: Arc::new(Shards::new(1000, 1000)),

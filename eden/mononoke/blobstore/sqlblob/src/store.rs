@@ -21,6 +21,7 @@ use futures::stream::Stream;
 use sql::Connection;
 use sql_ext::queries_with_retry;
 use twox_hash::XxHash32;
+use vec1::Vec1;
 use xdb_gc_structs::XdbGc;
 
 use crate::delay::BlobDelay;
@@ -210,18 +211,18 @@ pub struct Chunked {
 #[derive(Clone)]
 pub(crate) struct DataSqlStore {
     shard_count: NonZeroUsize,
-    write_connection: Arc<Vec<Connection>>,
-    read_connection: Arc<Vec<Connection>>,
-    read_master_connection: Arc<Vec<Connection>>,
+    write_connection: Arc<Vec1<Connection>>,
+    read_connection: Arc<Vec1<Connection>>,
+    read_master_connection: Arc<Vec1<Connection>>,
     delay: BlobDelay,
 }
 
 impl DataSqlStore {
     pub(crate) fn new(
         shard_count: NonZeroUsize,
-        write_connection: Arc<Vec<Connection>>,
-        read_connection: Arc<Vec<Connection>>,
-        read_master_connection: Arc<Vec<Connection>>,
+        write_connection: Arc<Vec1<Connection>>,
+        read_connection: Arc<Vec1<Connection>>,
+        read_master_connection: Arc<Vec1<Connection>>,
         delay: BlobDelay,
     ) -> Self {
         Self {
@@ -375,9 +376,9 @@ pub(crate) enum ChunkGenerationState {
 #[derive(Clone)]
 pub(crate) struct ChunkSqlStore {
     shard_count: NonZeroUsize,
-    write_connection: Arc<Vec<Connection>>,
-    read_connection: Arc<Vec<Connection>>,
-    read_master_connection: Arc<Vec<Connection>>,
+    write_connection: Arc<Vec1<Connection>>,
+    read_connection: Arc<Vec1<Connection>>,
+    read_master_connection: Arc<Vec1<Connection>>,
     delay: BlobDelay,
     gc_generations: ConfigHandle<XdbGc>,
 }
@@ -385,9 +386,9 @@ pub(crate) struct ChunkSqlStore {
 impl ChunkSqlStore {
     pub(crate) fn new(
         shard_count: NonZeroUsize,
-        write_connection: Arc<Vec<Connection>>,
-        read_connection: Arc<Vec<Connection>>,
-        read_master_connection: Arc<Vec<Connection>>,
+        write_connection: Arc<Vec1<Connection>>,
+        read_connection: Arc<Vec1<Connection>>,
+        read_master_connection: Arc<Vec1<Connection>>,
         delay: BlobDelay,
         gc_generations: ConfigHandle<XdbGc>,
     ) -> Self {

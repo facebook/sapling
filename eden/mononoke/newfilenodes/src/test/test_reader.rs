@@ -32,6 +32,8 @@ use sql::Connection;
 use sql_ext::queries_with_retry;
 use tunables::with_tunables;
 use tunables::MononokeTunables;
+use vec1::vec1;
+use vec1::Vec1;
 
 use super::util::build_reader_writer;
 use super::util::build_shard;
@@ -84,7 +86,7 @@ async fn test_basic(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
     let shard = build_shard()?;
-    let (reader, writer) = build_reader_writer(vec![shard]);
+    let (reader, writer) = build_reader_writer(vec1![shard]);
     let reader = Arc::new(reader);
 
     let payload = PreparedFilenode {
@@ -108,7 +110,7 @@ async fn read_copy_info(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
     let shard = build_shard()?;
-    let (reader, writer) = build_reader_writer(vec![shard]);
+    let (reader, writer) = build_reader_writer(vec1![shard]);
     let reader = Arc::new(reader);
 
     let from = PreparedFilenode {
@@ -148,7 +150,7 @@ async fn test_repo_ids(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
     let shard = build_shard()?;
-    let (reader, writer) = build_reader_writer(vec![shard]);
+    let (reader, writer) = build_reader_writer(vec1![shard]);
     let reader = Arc::new(reader);
 
     let payload = root_first_filenode();
@@ -195,8 +197,8 @@ async fn test_fallback_on_missing_copy_info(fb: FacebookInit) -> Result<(), Erro
     // Populate both master and replica with the same filenodes (to simulate replication).
     FilenodesWriter::new(
         SQLITE_INSERT_CHUNK_SIZE,
-        vec![master.clone()],
-        vec![master.clone()],
+        vec1![master.clone()],
+        vec1![master.clone()],
     )
     .insert_filenodes(
         &ctx,
@@ -209,8 +211,8 @@ async fn test_fallback_on_missing_copy_info(fb: FacebookInit) -> Result<(), Erro
 
     FilenodesWriter::new(
         SQLITE_INSERT_CHUNK_SIZE,
-        vec![replica.clone()],
-        vec![replica.clone()],
+        vec1![replica.clone()],
+        vec1![replica.clone()],
     )
     .insert_filenodes(
         &ctx,
@@ -224,7 +226,7 @@ async fn test_fallback_on_missing_copy_info(fb: FacebookInit) -> Result<(), Erro
     // Now, delete the copy info from the replica.
     DeleteCopyInfo::query(&replica).await?;
 
-    let reader = Arc::new(FilenodesReader::new(vec![replica], vec![master]));
+    let reader = Arc::new(FilenodesReader::new(vec1![replica], vec1![master]));
     let prepared = copied_filenode();
     assert_filenode(
         &ctx,
@@ -249,8 +251,8 @@ async fn test_fallback_on_missing_paths(fb: FacebookInit) -> Result<(), Error> {
     // Populate both master and replica with the same filenodes (to simulate replication).
     FilenodesWriter::new(
         SQLITE_INSERT_CHUNK_SIZE,
-        vec![master.clone()],
-        vec![master.clone()],
+        vec1![master.clone()],
+        vec1![master.clone()],
     )
     .insert_filenodes(
         &ctx,
@@ -263,8 +265,8 @@ async fn test_fallback_on_missing_paths(fb: FacebookInit) -> Result<(), Error> {
 
     FilenodesWriter::new(
         SQLITE_INSERT_CHUNK_SIZE,
-        vec![replica.clone()],
-        vec![replica.clone()],
+        vec1![replica.clone()],
+        vec1![replica.clone()],
     )
     .insert_filenodes(
         &ctx,
@@ -278,7 +280,7 @@ async fn test_fallback_on_missing_paths(fb: FacebookInit) -> Result<(), Error> {
     // Now, delete the copy info from the replica.
     DeletePaths::query(&replica).await?;
 
-    let reader = Arc::new(FilenodesReader::new(vec![replica], vec![master]));
+    let reader = Arc::new(FilenodesReader::new(vec1![replica], vec1![master]));
     let prepared = copied_filenode();
     assert_filenode(
         &ctx,
@@ -971,12 +973,16 @@ macro_rules! filenodes_tests {
     };
 }
 
-fn create_unsharded() -> Result<Vec<Connection>, Error> {
-    Ok(vec![build_shard()?])
+fn create_unsharded() -> Result<Vec1<Connection>, Error> {
+    Ok(vec1![build_shard()?])
 }
 
-fn create_sharded() -> Result<Vec<Connection>, Error> {
-    (0..16).into_iter().map(|_| build_shard()).collect()
+fn create_sharded() -> Result<Vec1<Connection>, Error> {
+    Ok((0..16)
+        .into_iter()
+        .map(|_| build_shard())
+        .collect::<Result<Vec<_>, Error>>()?
+        .try_into()?)
 }
 
 fn no_caching(_reader: &mut FilenodesReader) {}

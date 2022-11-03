@@ -28,6 +28,7 @@ stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.4", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 twox-hash = "1.6.1"
+vec1 = { version = "1", features = ["serde"] }
 xdb_gc_structs = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/xdb_gc" }
 
 [dev-dependencies]

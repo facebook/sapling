@@ -65,6 +65,7 @@ use sql_ext::open_sqlite_path;
 use sql_ext::SqlConnections;
 use sql_ext::SqlShardedConnections;
 use tokio::task::spawn_blocking;
+use vec1::Vec1;
 use xdb_gc_structs::XdbGc;
 
 use crate::delay::BlobDelay;
@@ -258,9 +259,10 @@ impl Sqlblob {
             read_master_connections.push(connections.read_master_connection);
         }
 
-        let write_connections = Arc::new(write_connections);
-        let read_connections = Arc::new(read_connections);
-        let read_master_connections = Arc::new(read_master_connections);
+        let write_connections: Arc<Vec1<Connection>> = Arc::new(write_connections.try_into()?);
+        let read_connections: Arc<Vec1<Connection>> = Arc::new(read_connections.try_into()?);
+        let read_master_connections: Arc<Vec1<Connection>> =
+            Arc::new(read_master_connections.try_into()?);
 
         Ok(Self::counted(
             Self {
@@ -339,13 +341,13 @@ impl Sqlblob {
     where
         F: FnMut(usize) -> Result<SqliteConnection>,
     {
-        let mut cons = Vec::new();
+        let mut cons = Vec::with_capacity(SQLITE_SHARD_NUM.get());
 
         for i in 0..SQLITE_SHARD_NUM.get() {
             cons.push(Connection::with_sqlite(constructor(i)?));
         }
 
-        let cons = Arc::new(cons);
+        let cons: Arc<Vec1<Connection>> = Arc::new(cons.try_into()?);
 
         // SQLite is predominately intended for tests, and has less concurrency
         // issues relating to GC, so cope with missing configerator

@@ -9,6 +9,7 @@ use path_hash::PathHashBytes;
 use path_hash::PathWithHash;
 use sql::Connection;
 use stats::prelude::*;
+use vec1::Vec1;
 
 define_stats! {
     prefix = "mononoke.filenodes";
@@ -30,11 +31,11 @@ pub struct ShardId {
 }
 
 pub struct Connections {
-    connections: Vec<Connection>,
+    connections: Vec1<Connection>,
 }
 
 impl Connections {
-    pub fn new(connections: Vec<Connection>) -> Self {
+    pub fn new(connections: Vec1<Connection>) -> Self {
         Self { connections }
     }
 }

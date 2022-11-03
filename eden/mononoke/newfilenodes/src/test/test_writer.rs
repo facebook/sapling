@@ -15,13 +15,14 @@ use mercurial_types_mocks::nodehash::ONES_CSID;
 use mercurial_types_mocks::nodehash::ONES_FNID;
 use mononoke_types::RepoPath;
 use mononoke_types_mocks::repo::REPO_ZERO;
+use vec1::vec1;
 
 use super::util::build_reader_writer;
 use super::util::build_shard;
 
 #[fbinit::test]
 async fn test_batching(fb: FacebookInit) -> Result<(), Error> {
-    let (_, writer) = build_reader_writer(vec![build_shard()?, build_shard()?]);
+    let (_, writer) = build_reader_writer(vec1![build_shard()?, build_shard()?]);
 
     let ctx = CoreContext::test_mock(fb);
 
@@ -55,7 +56,7 @@ async fn test_batching(fb: FacebookInit) -> Result<(), Error> {
 
 #[fbinit::test]
 async fn test_no_empty_queries(fb: FacebookInit) -> Result<(), Error> {
-    let (_, writer) = build_reader_writer(vec![build_shard()?, build_shard()?]);
+    let (_, writer) = build_reader_writer(vec1![build_shard()?, build_shard()?]);
 
     let ctx = CoreContext::test_mock(fb);
 

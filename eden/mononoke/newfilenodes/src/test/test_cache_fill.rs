@@ -20,6 +20,7 @@ use mercurial_types_mocks::nodehash::TWOS_FNID;
 use mononoke_types::RepoPath;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use path_hash::PathWithHash;
+use vec1::vec1;
 
 use super::util::build_reader_writer;
 use super::util::build_shard;
@@ -54,7 +55,7 @@ fn second_filenode() -> FilenodeInfo {
 #[fbinit::test]
 async fn test_filenode_fill(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (mut reader, writer) = build_reader_writer(vec![build_shard()?]);
+    let (mut reader, writer) = build_reader_writer(vec1![build_shard()?]);
 
     reader.local_cache = LocalCache::Test(HashMapCache::new());
     reader.remote_cache = make_test_cache();
@@ -106,7 +107,7 @@ async fn test_filenode_fill(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_history_fill(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (mut reader, writer) = build_reader_writer(vec![build_shard()?]);
+    let (mut reader, writer) = build_reader_writer(vec1![build_shard()?]);
 
     reader.local_cache = LocalCache::Test(HashMapCache::new());
     reader.remote_cache = make_test_cache();
@@ -155,7 +156,7 @@ async fn test_history_fill(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_too_big_caching(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (mut reader, writer) = build_reader_writer(vec![build_shard()?]);
+    let (mut reader, writer) = build_reader_writer(vec1![build_shard()?]);
 
     reader.local_cache = LocalCache::Test(HashMapCache::new());
     reader.remote_cache = make_test_cache();
