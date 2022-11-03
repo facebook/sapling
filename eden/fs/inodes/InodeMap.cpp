@@ -962,6 +962,12 @@ bool InodeMap::isInodeRemembered(InodeNumber ino) const {
   return data_.rlock()->unloadedInodes_.count(ino) > 0;
 }
 
+bool InodeMap::isInodeLoadedOrRemembered(InodeNumber ino) const {
+  auto members = data_.rlock();
+  return members->unloadedInodes_.count(ino) > 0 ||
+      members->loadedInodes_.count(ino) > 0;
+}
+
 void InodeMap::onInodeUnreferenced(
     InodeBase* inode,
     ParentInodeInfo&& parentInfo) {

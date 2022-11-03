@@ -3742,7 +3742,7 @@ namespace {
  * Test if the passed in InodeNumber is known by the the InodeMap.
  */
 bool needDecFsRefcount(InodeMap& inodeMap, InodeNumber ino) {
-  return inodeMap.lookupLoadedInode(ino) || inodeMap.isInodeRemembered(ino);
+  return inodeMap.isInodeLoadedOrRemembered(ino);
 }
 } // namespace
 #endif

@@ -280,6 +280,12 @@ class InodeMap {
   bool isInodeRemembered(InodeNumber ino) const;
 
   /**
+   * Returns if the inode is either loaded, unloaded or in the process of being
+   * loaded.
+   */
+  bool isInodeLoadedOrRemembered(InodeNumber ino) const;
+
+  /**
    * onInodeUnreferenced() will be called when an Inode's InodePtr reference
    * count drops to zero.
    *
