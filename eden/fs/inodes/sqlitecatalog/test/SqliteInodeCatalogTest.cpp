@@ -406,6 +406,12 @@ class DebugDumpSqliteInodeCatalogInodesTest
     if (overlayType() == Overlay::InodeCatalogType::TreeBuffered) {
       static_cast<BufferedSqliteInodeCatalog*>(overlay->getRawInodeCatalog())
           ->flush();
+      // A second flush is needed here to ensure the worker thread has a chance
+      // to acquire the state_ lock and clear the inflightOperation map in the
+      // case that the first flush was was processed during the same iteration
+      // as outstanding writes
+      static_cast<BufferedSqliteInodeCatalog*>(overlay->getRawInodeCatalog())
+          ->flush();
     }
   }
 
