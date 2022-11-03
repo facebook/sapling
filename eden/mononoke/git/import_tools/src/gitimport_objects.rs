@@ -166,7 +166,9 @@ pub fn oid_to_sha1(oid: &git_hash::oid) -> Result<hash::GitSha1, Error> {
 /// Determines which commits to import
 pub struct GitimportTarget {
     // If both are empty, we'll grab all commits
-    wanted: Vec<ObjectId>,
+    // TODO: The None case is only used by Mononoke - see if we can get the Mononoke team
+    // to let us remove this and just store the ObjectId directly
+    wanted: Option<ObjectId>,
     known: HashMap<ObjectId, ChangesetId>,
 }
 
@@ -174,14 +176,14 @@ impl GitimportTarget {
     /// Import the full repo
     pub fn full() -> Self {
         Self {
-            wanted: Vec::new(),
+            wanted: None,
             known: HashMap::new(),
         }
     }
 
     pub fn new(wanted: ObjectId, known: HashMap<ObjectId, ChangesetId>) -> Result<Self, Error> {
         Ok(Self {
-            wanted: vec![wanted],
+            wanted: Some(wanted),
             known,
         })
     }
@@ -239,11 +241,9 @@ impl GitimportTarget {
     }
 
     async fn write_filter_list(&self, rev_list: &mut Child) -> Result<(), Error> {
-        if !self.wanted.is_empty() {
+        if let Some(wanted) = self.wanted.as_ref() {
             let mut stdin = rev_list.stdin.take().context("stdin not set up properly")?;
-            for commit in &self.wanted {
-                stdin.write_all(format!("{}\n", commit).as_bytes()).await?;
-            }
+            stdin.write_all(format!("{}\n", wanted).as_bytes()).await?;
             for commit in self.known.keys() {
                 stdin.write_all(format!("^{}\n", commit).as_bytes()).await?;
             }
@@ -261,7 +261,7 @@ impl GitimportTarget {
             .stdout(Stdio::piped())
             .arg("rev-list");
 
-        if self.wanted.is_empty() {
+        if self.wanted.is_none() {
             command.arg("--all").stdin(Stdio::null());
         } else {
             command.arg("--stdin").stdin(Stdio::piped());
