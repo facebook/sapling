@@ -39,11 +39,14 @@ class RefCounted {
     refcnt_.fetch_add(1, std::memory_order_relaxed);
   }
 
+  template <typename T>
   void decRef() noexcept {
     // Avoid the expensive atomic decrement if we're the last reference.
     if (1 == refcnt_.load(std::memory_order_acquire) ||
         1 == refcnt_.fetch_sub(1, std::memory_order_acq_rel)) {
-      delete this;
+      // The caller asserts that `this` is `T*`, so we cast before deleting to
+      // avoid a virtual destructor call in the case that T is final.
+      delete static_cast<T*>(this);
     }
   }
 
@@ -96,6 +99,8 @@ struct RefPtrBase {
  */
 template <typename T>
 class RefPtr : private RefPtrBase {
+  static_assert(std::is_base_of_v<RefCounted, T>);
+
  public:
   RefPtr() noexcept = default;
 
@@ -243,7 +248,7 @@ class RefPtr : private RefPtrBase {
 
   void decRef() const noexcept {
     if (ptr_ & kOwnedBit) {
-      get()->decRef();
+      get()->template decRef<T>();
     }
   }
 };
