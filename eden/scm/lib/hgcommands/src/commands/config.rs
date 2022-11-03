@@ -278,20 +278,20 @@ pub fn doc() -> &'static str {
 
     With no arguments, print names and values of all config items.
 
-    With one argument of the form section.name, print just the value
+    With one argument of the form ``section.name``, print just the value
     of that config item.
 
     With multiple arguments, print names and values of all config
     items with matching section names.
 
-    With --user, edit the user-level config file. With --system,
-    edit the system-wide config file. With --local, edit the
+    With ``--user``, edit the user-level config file. With ``--system``,
+    edit the system-wide config file. With ``--local``, edit the
     repository-level config file. If there are no arguments, spawn
     an editor to edit the config file. If there are arguments in
-    `section.name=value` or `section.name value` format, the appropriate
+    ``section.name=value`` or ``section.name value`` format, the appropriate
     config file will be updated directly without spawning an editor.
 
-    With --debug, the source (filename and line number) is printed
+    With ``--debug``, the source (filename and line number) is printed
     for each config item.
 
     See :hg:`help config` for more information about config files.
