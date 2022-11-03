@@ -175,6 +175,7 @@ void BufferedSqliteInodeCatalog::pause(folly::Future<folly::Unit>&& fut) {
       },
       std::nullopt,
       0));
+  workCV_.notify_one();
 }
 
 void BufferedSqliteInodeCatalog::flush() {
@@ -192,6 +193,7 @@ void BufferedSqliteInodeCatalog::flush() {
         },
         std::nullopt,
         0));
+    workCV_.notify_one();
   }
 
   std::move(result).wait();
