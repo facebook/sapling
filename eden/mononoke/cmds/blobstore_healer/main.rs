@@ -15,6 +15,7 @@ mod wal_healer;
 
 use std::collections::HashMap;
 use std::num::NonZeroU64;
+use std::ops::Bound;
 use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
@@ -95,6 +96,51 @@ struct MononokeBlobstoreHealerArgs {
     /// max combined size of concurrently healed blobs (approximate, will still let individual larger blobs through)
     #[clap(long, default_value_t = 10_000_000_000)]
     heal_max_bytes: u64,
+    /// which shards to read from, useful for spawning multiple independent healers
+    #[clap(long, default_value = "..")]
+    shard_range: ShardRange,
+}
+
+struct ShardRange {
+    left: Bound<usize>,
+    right: Bound<usize>,
+}
+
+fn parse_opt(s: &str) -> Result<Option<usize>> {
+    if s.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(s.parse()?))
+    }
+}
+
+impl std::str::FromStr for ShardRange {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        Ok(if let Some((left, right)) = s.split_once("..=") {
+            let right = Bound::Included(right.parse()?);
+            let left = parse_opt(left)?.map_or(Bound::Unbounded, Bound::Included);
+            Self { left, right }
+        } else if let Some((left, right)) = s.split_once("..") {
+            let left = parse_opt(left)?.map_or(Bound::Unbounded, Bound::Included);
+            let right = parse_opt(right)?.map_or(Bound::Unbounded, Bound::Excluded);
+            Self { left, right }
+        } else {
+            let num = s.parse()?;
+            Self {
+                left: Bound::Included(num),
+                right: Bound::Included(num),
+            }
+        })
+    }
+}
+
+impl ShardRange {
+    // We could also implement SliceIndex, but that's unsafe.
+    fn into_slice_index(self) -> (Bound<usize>, Bound<usize>) {
+        (self.left, self.right)
+    }
 }
 
 async fn maybe_schedule_healer_for_storage(
@@ -112,6 +158,7 @@ async fn maybe_schedule_healer_for_storage(
     iter_limit: Option<u64>,
     heal_min_age: ChronoDuration,
     config_store: &ConfigStore,
+    shard_range: ShardRange,
 ) -> Result<(), Error> {
     let multiplex_healer = match storage_config.clone().blobstore {
         BlobConfig::Multiplexed {
@@ -157,7 +204,14 @@ async fn maybe_schedule_healer_for_storage(
             scuba_sample_rate,
             ..
         } => {
-            let wal = setup_wal(fb, mysql_options, queue_db, readonly_storage, dry_run)?;
+            let wal = setup_wal(
+                fb,
+                mysql_options,
+                queue_db,
+                readonly_storage,
+                dry_run,
+                shard_range,
+            )?;
             let blobstores = setup_blobstores(
                 fb,
                 ctx,
@@ -230,6 +284,7 @@ fn setup_wal(
     queue_db: DatabaseConfig,
     readonly_storage: ReadOnlyStorage,
     dry_run: bool,
+    shard_range: ShardRange,
 ) -> Result<Arc<dyn BlobstoreWal>> {
     let wal =
         SqlBlobstoreWal::with_database_config(fb, &queue_db, mysql_options, readonly_storage.0)
@@ -238,7 +293,7 @@ fn setup_wal(
     let wal: Arc<dyn BlobstoreWal> = if dry_run {
         Arc::new(DummyBlobstoreWal::new(wal))
     } else {
-        Arc::new(wal)
+        Arc::new(wal.with_read_range(shard_range.into_slice_index())?)
     };
 
     Ok(wal)
@@ -403,6 +458,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         weight_limit: heal_max_bytes,
         buffer_size: heal_concurrency,
     };
+    let shard_range = args.shard_range;
 
     maybe_schedule_healer_for_storage(
         app.fb,
@@ -419,6 +475,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         iter_limit,
         healing_min_age,
         config_store,
+        shard_range,
     )
     .await
 }

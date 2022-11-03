@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::ops::Index;
+use std::slice::SliceIndex;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -27,6 +29,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use metaconfig_types::MultiplexId;
 use mononoke_types::Timestamp;
+use rand::Rng;
 use shared_error::anyhow::IntoSharedError;
 use shared_error::anyhow::SharedError;
 use sql::queries;
@@ -131,7 +134,7 @@ pub struct SqlBlobstoreWal {
     /// a write query to Mysql in-fight.
     ensure_worker_scheduled: Shared<BoxFuture<'static, ()>>,
     /// Used to cycle through shards when reading
-    shards_read: Arc<AtomicUsize>,
+    conn_idx: Arc<AtomicUsize>,
 }
 
 impl SqlBlobstoreWal {
@@ -151,12 +154,12 @@ impl SqlBlobstoreWal {
             mpsc::unbounded::<(oneshot::Sender<QueueResult>, BlobstoreWalEntry)>();
 
         let worker = async move {
-            let mut batch_count = 0usize;
+            let mut conn_idx = rand::thread_rng().gen_range(0..write_connections.len());
             let enqueued_writes = receiver.ready_chunks(SQL_WAL_WRITE_BUFFER_SIZE).for_each(
                 move |batch /* (Sender, BlobstoreWalEntry) */| {
-                    batch_count += 1;
+                    conn_idx += 1;
                     let write_connection =
-                        write_connections[batch_count % write_connections.len()].clone();
+                        write_connections[conn_idx % write_connections.len()].clone();
                     async move {
                         let (senders, entries): (Vec<_>, Vec<_>) = batch.into_iter().unzip();
 
@@ -183,6 +186,19 @@ impl SqlBlobstoreWal {
         .shared();
 
         (queue_sender, worker)
+    }
+
+    /// Only read from a certain range of shards. Notice that writes still go to all shards.
+    /// Fails if range is empty. Panics if range is out of bounds.
+    pub fn with_read_range(
+        self,
+        range: impl SliceIndex<[Connection], Output = [Connection]>,
+    ) -> Result<Self> {
+        let read = self.read_master_connections.index(range);
+        Ok(Self {
+            read_master_connections: read.to_vec().try_into()?,
+            ..self
+        })
     }
 }
 
@@ -275,7 +291,7 @@ impl BlobstoreWal for SqlBlobstoreWal {
         // To optimise this you can start multiple jobs, one for each shard.
         let shards = self.read_master_connections.len();
         for _ in 0..shards {
-            let cur_shard = self.shards_read.fetch_add(1, Ordering::Relaxed) % shards;
+            let cur_shard = self.conn_idx.fetch_add(1, Ordering::Relaxed) % shards;
             let rows = WalReadEntries::query(
                 &self.read_master_connections[cur_shard],
                 multiplex_id,
@@ -345,13 +361,14 @@ impl SqlShardedConstruct for SqlBlobstoreWal {
 
         let (sender, ensure_worker_scheduled) =
             SqlBlobstoreWal::setup_worker(write_connections.clone());
+        let conn_idx = rand::thread_rng().gen_range(0..read_master_connections.len());
 
         Self {
             write_connections,
             read_master_connections,
             enqueue_entry_sender: sender,
             ensure_worker_scheduled,
-            shards_read: Arc::new(AtomicUsize::new(0)),
+            conn_idx: Arc::new(AtomicUsize::new(conn_idx)),
         }
     }
 }
