@@ -15,6 +15,7 @@ use sql::SqlShardedConnections;
 use sql_ext::open_existing_sqlite_path;
 use sql_ext::open_sqlite_in_memory;
 use sql_ext::open_sqlite_path;
+use vec1::vec1;
 
 /// Construct a SQL data manager backed by a database
 ///
@@ -81,4 +82,20 @@ pub trait SqlShardedConstruct: Sized + Send + Sync + 'static {
     ///
     /// This function may be called in an async context and must not block.
     fn from_sql_shard_connections(shard_connections: SqlShardedConnections) -> Self;
+}
+
+impl<T> SqlConstruct for T
+where
+    T: SqlShardedConstruct,
+{
+    const LABEL: &'static str = <T as SqlShardedConstruct>::LABEL;
+    const CREATION_QUERY: &'static str = <T as SqlShardedConstruct>::CREATION_QUERY;
+
+    fn from_sql_connections(conns: SqlConnections) -> Self {
+        Self::from_sql_shard_connections(SqlShardedConnections {
+            write_connections: vec1![conns.write_connection],
+            read_connections: vec1![conns.read_connection],
+            read_master_connections: vec1![conns.read_master_connection],
+        })
+    }
 }

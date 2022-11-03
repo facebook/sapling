@@ -13,3 +13,4 @@ fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rus
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_ext = { version = "0.1.0", path = "../rust/sql_ext" }
+vec1 = { version = "1", features = ["serde"] }

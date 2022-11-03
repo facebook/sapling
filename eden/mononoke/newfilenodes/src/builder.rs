@@ -13,12 +13,9 @@ use metaconfig_types::RemoteMetadataDatabaseConfig;
 use metaconfig_types::ShardableRemoteDatabaseConfig;
 use mononoke_types::RepositoryId;
 use sql::Connection;
-use sql_construct::SqlConstruct;
 use sql_construct::SqlShardableConstructFromMetadataDatabaseConfig;
 use sql_construct::SqlShardedConstruct;
-use sql_ext::SqlConnections;
 use sql_ext::SqlShardedConnections;
-use vec1::vec1;
 
 use crate::local_cache::CachelibCache;
 use crate::local_cache::LocalCache;
@@ -36,38 +33,10 @@ pub struct NewFilenodesBuilder {
     writer: FilenodesWriter,
 }
 
-impl SqlConstruct for NewFilenodesBuilder {
-    const LABEL: &'static str = "filenodes";
-
-    const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-filenodes.sql");
-
-    fn from_sql_connections(connections: SqlConnections) -> Self {
-        let SqlConnections {
-            write_connection,
-            read_connection,
-            read_master_connection,
-        } = connections;
-        let chunk_size = match read_connection {
-            Connection::Sqlite(_) => SQLITE_INSERT_CHUNK_SIZE,
-            Connection::Mysql(_) => MYSQL_INSERT_CHUNK_SIZE,
-        };
-
-        let reader = FilenodesReader::new(
-            vec1![read_connection.clone()],
-            vec1![read_master_connection],
-        );
-
-        let writer =
-            FilenodesWriter::new(chunk_size, vec1![write_connection], vec1![read_connection]);
-
-        Self { reader, writer }
-    }
-}
-
 impl SqlShardedConstruct for NewFilenodesBuilder {
     const LABEL: &'static str = "shardedfilenodes";
 
-    const CREATION_QUERY: &'static str = <NewFilenodesBuilder as SqlConstruct>::CREATION_QUERY;
+    const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-filenodes.sql");
 
     fn from_sql_shard_connections(shard_connections: SqlShardedConnections) -> Self {
         let SqlShardedConnections {
