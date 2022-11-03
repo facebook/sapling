@@ -59,6 +59,7 @@ pub struct BlobstoreWalEntry {
     pub read_info: Option<ReadInfo>,
     pub operation_key: OperationKey,
     pub blob_size: Option<u64>,
+    pub retry_count: u32,
 }
 
 impl BlobstoreWalEntry {
@@ -76,16 +77,31 @@ impl BlobstoreWalEntry {
             operation_key,
             blob_size,
             read_info: None,
+            retry_count: 0,
         }
     }
 
-    fn into_sql_tuple(self) -> (String, MultiplexId, Timestamp, OperationKey, Option<u64>) {
+    pub fn increment_retry(&mut self) {
+        self.retry_count += 1;
+    }
+
+    fn into_sql_tuple(
+        self,
+    ) -> (
+        String,
+        MultiplexId,
+        Timestamp,
+        OperationKey,
+        Option<u64>,
+        u32,
+    ) {
         let Self {
             blobstore_key,
             multiplex_id,
             timestamp,
             operation_key,
             blob_size,
+            retry_count,
             ..
         } = self;
         (
@@ -94,6 +110,7 @@ impl BlobstoreWalEntry {
             timestamp,
             operation_key,
             blob_size,
+            retry_count,
         )
     }
 
@@ -106,9 +123,11 @@ impl BlobstoreWalEntry {
             OperationKey,
             u64,
             Option<u64>,
+            u32,
         ),
     ) -> Self {
-        let (blobstore_key, multiplex_id, timestamp, operation_key, id, blob_size) = row;
+        let (blobstore_key, multiplex_id, timestamp, operation_key, id, blob_size, retry_count) =
+            row;
         Self {
             blobstore_key,
             multiplex_id,
@@ -116,6 +135,7 @@ impl BlobstoreWalEntry {
             operation_key,
             read_info: Some(ReadInfo { id, shard_id }),
             blob_size,
+            retry_count,
         }
     }
 }
@@ -383,7 +403,7 @@ async fn insert_entries(
         .collect();
     let entries_ref: Vec<_> = entries
         .iter()
-        .map(|(a, b, c, d, e)| (a, b, c, d, e)) // &(a, b, ...) into (&a, &b, ...)
+        .map(|(a, b, c, d, e, f)| (a, b, c, d, e, f)) // &(a, b, ...) into (&a, &b, ...)
         .collect();
 
     WalInsertEntry::query(write_connection, &entries_ref).await
@@ -401,9 +421,10 @@ queries! {
         timestamp: Timestamp,
         operation_key: OperationKey,
         blob_size: Option<u64>,
+        retry_count: u32,
     )) {
         none,
-        "INSERT INTO blobstore_write_ahead_log (blobstore_key, multiplex_id, timestamp, operation_key, blob_size)
+        "INSERT INTO blobstore_write_ahead_log (blobstore_key, multiplex_id, timestamp, operation_key, blob_size, retry_count)
          VALUES {values}"
     }
 
@@ -421,8 +442,9 @@ queries! {
         OperationKey,
         u64,
         Option<u64>,
+        u32,
     ) {
-        "SELECT blobstore_key, multiplex_id, timestamp, operation_key, id, blob_size
+        "SELECT blobstore_key, multiplex_id, timestamp, operation_key, id, blob_size, retry_count
          FROM blobstore_write_ahead_log
          WHERE multiplex_id = {multiplex_id} AND timestamp <= {older_than}
          LIMIT {limit}

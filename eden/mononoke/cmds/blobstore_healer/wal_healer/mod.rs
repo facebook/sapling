@@ -46,6 +46,10 @@ use crate::healer::MIN_FETCH_FAILURE_DELAY;
 #[cfg(test)]
 mod tests;
 
+/// How many times to put a blob back in the queue
+/// if it couldn't be found.
+const MAX_WAL_RETRIES: u32 = 20;
+
 pub struct WalHealer {
     /// The amount of entries healer processes in one go.
     batch_size: usize,
@@ -223,11 +227,19 @@ impl WalHealer {
                         // was not propagated yet to the blobstores
                         //
                         // TODO: log missing blobs to scuba
-                        //
-                        // TODO: set up retry limit on the WAL entries (will require updating
-                        // the WAL table schema).
-                        warn!(ctx.logger(), "Missing blob detected: key {}", key);
-                        to_enqueue.push(entries.clone());
+                        let retries = entries.first().map_or(0, |e| e.retry_count);
+                        warn!(
+                            ctx.logger(),
+                            "Missing blob detected: key {} ({} retries so far)", key, retries
+                        );
+                        to_enqueue.push(
+                            entries
+                                .iter()
+                                .filter(|e| e.retry_count < MAX_WAL_RETRIES)
+                                .cloned()
+                                .update(BlobstoreWalEntry::increment_retry)
+                                .collect(),
+                        );
                         missing_blobs.push(key);
                     }
                     HealBlobOutcome::MissingBlobstores(key, blobstores) => {
