@@ -752,13 +752,6 @@ ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
   }
 }
 
-void EdenServiceHandler::getBindMounts(
-    std::vector<std::string>&,
-    std::unique_ptr<std::string>) {
-  // This deprecated method is only here until buck has swung through a
-  // migration
-}
-
 void EdenServiceHandler::addBindMount(
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint,
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> repoPath,
