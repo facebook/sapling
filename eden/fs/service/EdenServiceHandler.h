@@ -34,11 +34,12 @@ class TreeInode;
 class ObjectFetchContext;
 class EntryAttributes;
 struct EntryAttributeFlags;
+template <typename T>
+class ImmediateFuture;
+
 #ifdef EDEN_HAVE_USAGE_SERVICE
 class EdenFSSmartPlatformServiceEndpoint;
 #endif
-template <typename T>
-class ImmediateFuture;
 
 extern const char* const kServiceName;
 

@@ -145,10 +145,6 @@ std::string toLogArg(const std::vector<std::string>& args) {
 }
 } // namespace
 
-#define TLOG(logger, level, file, line)     \
-  FB_LOG_RAW(logger, level, file, line, "") \
-      << "[" << folly::RequestContext::get() << "] "
-
 namespace /* anonymous namespace for helper functions */ {
 
 #define EDEN_MICRO reinterpret_cast<const char*>(u8"\u00B5s")
@@ -228,21 +224,25 @@ class PrefetchFetchContext : public ObjectFetchContext {
 
 constexpr size_t kTraceBusCapacity = 25000;
 
-// Helper class to log where the request completes in Future
-class ThriftLogHelper {
+/**
+ * Lives as long as a Thrift request and primarily exists to record logging and
+ * telemetry.
+ */
+class ThriftRequestScope {
  public:
-  ThriftLogHelper(ThriftLogHelper&&) = delete;
-  ThriftLogHelper& operator=(ThriftLogHelper&&) = delete;
+  ThriftRequestScope(ThriftRequestScope&&) = delete;
+  ThriftRequestScope& operator=(ThriftRequestScope&&) = delete;
 
-  template <typename... Args>
-  ThriftLogHelper(
+  template <typename JoinFn>
+  ThriftRequestScope(
       std::shared_ptr<TraceBus<ThriftRequestTraceEvent>> traceBus,
       const folly::Logger& logger,
       folly::LogLevel level,
       SourceLocation sourceLocation,
       std::shared_ptr<EdenStats> edenStats,
       ThriftStats::DurationPtr statPtr,
-      std::optional<pid_t> pid)
+      std::optional<pid_t> pid,
+      JoinFn&& join)
       : traceBus_{std::move(traceBus)},
         requestId_(generateUniqueID()),
         sourceLocation_{sourceLocation},
@@ -252,11 +252,20 @@ class ThriftLogHelper {
         itcLogger_(logger),
         fetchContext_{pid, sourceLocation_.function_name()},
         prefetchFetchContext_{pid, sourceLocation_.function_name()} {
+    FB_LOG_RAW(
+        itcLogger_,
+        level,
+        sourceLocation.file_name(),
+        sourceLocation.line(),
+        "")
+        << "[" << requestId_ << "] " << sourceLocation.function_name() << "("
+        << join() << ")";
+
     traceBus_->publish(ThriftRequestTraceEvent::start(
         requestId_, sourceLocation_.function_name(), pid));
   }
 
-  ~ThriftLogHelper() {
+  ~ThriftRequestScope() {
     // Logging completion time for the request
     // The line number points to where the object was originally created
     auto elapsed = itcTimer_.elapsed();
@@ -266,7 +275,13 @@ class ThriftLogHelper {
       // attention to it
       level += 1;
     }
-    TLOG(itcLogger_, level, sourceLocation_.file_name(), sourceLocation_.line())
+    FB_LOG_RAW(
+        itcLogger_,
+        level,
+        sourceLocation_.file_name(),
+        sourceLocation_.line(),
+        "")
+        << "[" << requestId_ << "] "
         << fmt::format(
                "{}() took {} {}",
                sourceLocation_.function_name(),
@@ -308,14 +323,14 @@ class ThriftLogHelper {
 
 template <typename ReturnType>
 Future<ReturnType> wrapFuture(
-    std::unique_ptr<ThriftLogHelper> logHelper,
+    std::unique_ptr<ThriftRequestScope> logHelper,
     folly::Future<ReturnType>&& f) {
   return std::move(f).ensure([logHelper = std::move(logHelper)]() {});
 }
 
 template <typename ReturnType>
 ImmediateFuture<ReturnType> wrapImmediateFuture(
-    std::unique_ptr<ThriftLogHelper> logHelper,
+    std::unique_ptr<ThriftRequestScope> logHelper,
     ImmediateFuture<ReturnType>&& f) {
   return std::move(f).ensure([logHelper = std::move(logHelper)]() {});
 }
@@ -337,46 +352,45 @@ facebook::eden::InodePtr inodeFromUserPath(
   auto relPath = relpathFromUserPath(rootRelativePath);
   return mount.getInodeSlow(relPath, context).get();
 }
+
 } // namespace
 
 // INSTRUMENT_THRIFT_CALL returns a unique pointer to
-// ThriftLogHelper object. The returned pointer can be used to call wrapFuture()
-// to attach a log message on the completion of the Future. This must be
-// called in a Thrift worker thread because the calling pid of
+// ThriftRequestScope object. The returned pointer can be used to call
+// wrapFuture() to attach a log message on the completion of the Future. This
+// must be called in a Thrift worker thread because the calling pid of
 // getAndRegisterClientPid is stored in a thread local variable.
 
 // When not attached to Future it will log the completion of the operation and
 // time taken to complete it.
-#define INSTRUMENT_THRIFT_CALL(level, ...)                                   \
-  ([&](SourceLocation loc) {                                                 \
-    static folly::Logger logger(                                             \
-        fmt::format("eden.thrift.{}", loc.function_name()));                 \
-    TLOG(logger, folly::LogLevel::level, loc.file_name(), loc.line())        \
-        << loc.function_name() << "(" << toDelimWrapper(__VA_ARGS__) << ")"; \
-    return std::make_unique<ThriftLogHelper>(                                \
-        this->thriftRequestTraceBus_,                                        \
-        logger,                                                              \
-        folly::LogLevel::level,                                              \
-        loc,                                                                 \
-        nullptr,                                                             \
-        nullptr,                                                             \
-        getAndRegisterClientPid());                                          \
+#define INSTRUMENT_THRIFT_CALL(level, ...)                   \
+  ([&](SourceLocation loc) {                                 \
+    static folly::Logger logger(                             \
+        fmt::format("eden.thrift.{}", loc.function_name())); \
+    return std::make_unique<ThriftRequestScope>(             \
+        this->thriftRequestTraceBus_,                        \
+        logger,                                              \
+        folly::LogLevel::level,                              \
+        loc,                                                 \
+        nullptr,                                             \
+        nullptr,                                             \
+        getAndRegisterClientPid(),                           \
+        [&] { return toDelimWrapper(__VA_ARGS__); });        \
   }(EDEN_CURRENT_SOURCE_LOCATION))
 
-#define INSTRUMENT_THRIFT_CALL_WITH_STAT(level, stat, ...)                   \
-  ([&](SourceLocation loc) {                                                 \
-    static folly::Logger logger(                                             \
-        fmt::format("eden.thrift.{}", loc.function_name()));                 \
-    TLOG(logger, folly::LogLevel::level, loc.file_name(), loc.line())        \
-        << loc.function_name() << "(" << toDelimWrapper(__VA_ARGS__) << ")"; \
-    return std::make_unique<ThriftLogHelper>(                                \
-        this->thriftRequestTraceBus_,                                        \
-        logger,                                                              \
-        folly::LogLevel::level,                                              \
-        loc,                                                                 \
-        server_->getSharedStats(),                                           \
-        stat,                                                                \
-        getAndRegisterClientPid());                                          \
+#define INSTRUMENT_THRIFT_CALL_WITH_STAT(level, stat, ...)   \
+  ([&](SourceLocation loc) {                                 \
+    static folly::Logger logger(                             \
+        fmt::format("eden.thrift.{}", loc.function_name())); \
+    return std::make_unique<ThriftRequestScope>(             \
+        this->thriftRequestTraceBus_,                        \
+        logger,                                              \
+        folly::LogLevel::level,                              \
+        loc,                                                 \
+        server_->getSharedStats(),                           \
+        stat,                                                \
+        getAndRegisterClientPid(),                           \
+        [&] { return toDelimWrapper(__VA_ARGS__); });        \
   }(EDEN_CURRENT_SOURCE_LOCATION))
 
 ThriftRequestTraceEvent ThriftRequestTraceEvent::start(
@@ -2420,7 +2434,7 @@ namespace {
 ImmediateFuture<folly::Unit> ensureMaterializedImpl(
     std::shared_ptr<EdenMount> edenMount,
     const std::vector<std::string>& repoPaths,
-    std::unique_ptr<ThriftLogHelper> helper,
+    std::unique_ptr<ThriftRequestScope> helper,
     bool followSymlink) {
   std::vector<ImmediateFuture<folly::Unit>> futures;
   futures.reserve(repoPaths.size());
