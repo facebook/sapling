@@ -27,7 +27,7 @@ struct DateTime {
 struct RepoSpecifier {
   /// The name of the repository.
   1: string name;
-}
+} (rust.ord)
 
 /// The schemes by which commits can be identified.
 enum CommitIdentityScheme {
@@ -97,7 +97,7 @@ struct CommitSpecifier {
   1: RepoSpecifier repo;
 
   2: CommitId id;
-}
+} (rust.ord)
 
 /// The UTF-8 path of the file or directory.
 typedef string Path
