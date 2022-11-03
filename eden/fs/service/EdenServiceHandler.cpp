@@ -539,8 +539,8 @@ void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
   }
 }
 
-void EdenServiceHandler::checkOutRevision(
-    std::vector<CheckoutConflict>& results,
+folly::SemiFuture<std::unique_ptr<std::vector<CheckoutConflict>>>
+EdenServiceHandler::semifuture_checkOutRevision(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::string> hash,
     CheckoutMode checkoutMode,
@@ -555,17 +555,28 @@ void EdenServiceHandler::checkOutRevision(
           : "(unspecified hg root manifest)");
 
   auto mountPath = AbsolutePathPiece{*mountPoint};
-  auto checkoutFuture = server_->checkOutRevision(
-      mountPath,
-      *hash,
-      params->hgRootManifest_ref().to_optional(),
-      helper->getFetchContext().getClientPid(),
-      helper->getFunctionName(),
-      checkoutMode);
-  results = std::move(std::move(checkoutFuture).get().conflicts);
+  auto checkoutFuture =
+      ImmediateFuture{server_
+                          ->checkOutRevision(
+                              mountPath,
+                              *hash,
+                              params->hgRootManifest_ref().to_optional(),
+                              helper->getFetchContext().getClientPid(),
+                              helper->getFunctionName(),
+                              checkoutMode)
+                          .semi()};
+
+  return wrapImmediateFuture(
+             std::move(helper),
+             std::move(checkoutFuture).thenValue([](CheckoutResult&& result) {
+               return std::make_unique<std::vector<CheckoutConflict>>(
+                   std::move(result.conflicts));
+             }))
+      .semi();
 }
 
-void EdenServiceHandler::resetParentCommits(
+folly::SemiFuture<folly::Unit>
+EdenServiceHandler::semifuture_resetParentCommits(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<WorkingDirectoryParents> parents,
     std::unique_ptr<ResetParentCommitsParams> params) {
@@ -581,6 +592,8 @@ void EdenServiceHandler::resetParentCommits(
   auto edenMount = server_->getMount(mountPath);
   auto parent1 =
       edenMount->getObjectStore()->parseRootId(*parents->parent1_ref());
+
+  auto fut = folly::SemiFuture<folly::Unit>::makeEmpty();
   if (params->hgRootManifest_ref().has_value()) {
     // The hg client has told us what the root manifest is.
     //
@@ -589,12 +602,13 @@ void EdenServiceHandler::resetParentCommits(
     // won't know about the new commit until it reopens the repo.  Instead,
     // import the manifest for this commit directly.
     auto rootManifest = hash20FromThrift(*params->hgRootManifest_ref());
-    edenMount->getObjectStore()
-        ->getBackingStore()
-        ->importManifestForRoot(parent1, rootManifest)
-        .get();
+    fut = edenMount->getObjectStore()->getBackingStore()->importManifestForRoot(
+        parent1, rootManifest);
+  } else {
+    fut = folly::makeSemiFuture();
   }
-  edenMount->resetParent(parent1);
+  return std::move(fut).deferValue(
+      [parent1, edenMount](folly::Unit) { edenMount->resetParent(parent1); });
 }
 
 namespace {

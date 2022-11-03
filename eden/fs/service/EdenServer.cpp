@@ -1790,7 +1790,7 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
       enumerateInProgressCheckouts() + 1);
   return edenMount->checkout(rootId, clientPid, callerName, checkoutMode)
       .via(mainEventBase_)
-      .thenValue([this, checkoutMode, edenMount, mountPath](
+      .thenValue([this, checkoutMode, edenMount, mountPath = mountPath.copy()](
                      CheckoutResult&& result) {
         getServerState()->getNotifier()->signalCheckout(
             enumerateInProgressCheckouts());

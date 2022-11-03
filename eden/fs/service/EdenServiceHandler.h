@@ -107,14 +107,14 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   void listMounts(std::vector<MountInfo>& results) override;
 
-  void checkOutRevision(
-      std::vector<CheckoutConflict>& results,
+  folly::SemiFuture<std::unique_ptr<std::vector<CheckoutConflict>>>
+  semifuture_checkOutRevision(
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::string> hash,
       CheckoutMode checkoutMode,
       std::unique_ptr<CheckOutRevisionParams> params) override;
 
-  void resetParentCommits(
+  folly::SemiFuture<folly::Unit> semifuture_resetParentCommits(
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<WorkingDirectoryParents> parents,
       std::unique_ptr<ResetParentCommitsParams> params) override;
