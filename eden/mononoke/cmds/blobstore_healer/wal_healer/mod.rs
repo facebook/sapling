@@ -420,9 +420,12 @@ async fn enqueue_entries(
     wal: &dyn BlobstoreWal,
     entries: Vec<BlobstoreWalEntry>,
 ) -> Result<()> {
+    if entries.is_empty() {
+        return Ok(());
+    }
     info!(
         ctx.logger(),
-        "Requeueing {} some queue entries for another healing attempt",
+        "Requeueing {} queue entries for another healing attempt",
         entries.len()
     );
     let new_entries = entries
