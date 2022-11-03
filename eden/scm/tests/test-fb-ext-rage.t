@@ -24,13 +24,13 @@ Test with shared repo
   updating working directory
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-Create fake infinitepush backup state to be collected by rage
+Create fake backedupheads state to be collected by rage
 
-  $ mkdir repo/.hg/infinitepushbackups
-  $ echo '{ "fakestate": "something" }' > repo/.hg/infinitepushbackups/infinitepushbackupstate_somestate
+  $ mkdir repo/.hg/commitcloud
+  $ echo '"fakestate": "something"' > repo/.hg/commitcloud/backedupheads.abc
   $ cd repo2
   $ hg rage --preview | grep [f]akestate
-      "fakestate": "something"
+  "fakestate": "something"
 
   $ cd ..
 

@@ -203,19 +203,19 @@ def scmdaemonlog(ui, repo):
     return _tail(os.path.dirname(logpath), logfiles, 150)
 
 
-def readinfinitepushbackupstate(repo) -> str:
-    dirname = "infinitepushbackups"
+def readbackedupheads(repo) -> str:
+    dirname = "commitcloud"
     if repo.sharedvfs.exists(dirname):
         result = []
         dir = repo.sharedvfs.join(dirname)
         for filename in os.listdir(dir):
-            if "infinitepushbackupstate" in filename:
+            if filename.startswith("backedupheads"):
                 with open(os.path.join(dir, filename), "r") as f:
-                    result.append("reading infinitepush state file: %s" % filename)
-                    result.append(json.dumps(json.load(f), indent=4))
+                    result.append("reading backedupheads file: %s" % filename)
+                    result.append(f.read())
         return "\n".join(result)
     else:
-        return "no any infinitepushbackupstate file in the repo\n"
+        return "no any backedupheads file in the repo\n"
 
 
 def readcommitcloudstate(repo) -> str:
@@ -397,10 +397,13 @@ def _makerage(ui, repo, **opts) -> str:
         ),
         ("hg debugnetwork", lambda: hgcmd("debugnetwork")),
         ("hg debugnetworkdoctor", lambda: hgcmd("debugnetworkdoctor")),
-        ("infinitepush backup state", lambda: readinfinitepushbackupstate(repo)),
+        (
+            "backedupheads: it is a local cache of what has been backed up",
+            lambda: readbackedupheads(repo),
+        ),
         ("commit cloud workspace sync state", lambda: readcommitcloudstate(repo)),
         (
-            "infinitepush / commitcloud backup logs",
+            "commitcloud backup logs",
             lambda: infinitepushbackuplogs(ui, repo),
         ),
         ("scm daemon logs", lambda: scmdaemonlog(ui, repo)),
