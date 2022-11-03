@@ -13,6 +13,7 @@
 #include <typeinfo>
 
 #include <fb303/ServiceData.h>
+#include <fmt/core.h>
 #include <folly/Conv.h>
 #include <folly/FileUtil.h>
 #include <folly/Portability.h>
@@ -92,27 +93,6 @@ using namespace std::literals::string_view_literals;
 
 namespace {
 using namespace facebook::eden;
-
-/*
- * We need a version of folly::toDelim() that accepts zero, one, or many
- * arguments so it can be used with __VA_ARGS__ in the INSTRUMENT_THRIFT_CALL()
- * macro, so we create an overloaded method, toDelimWrapper(), to achieve that
- * effect.
- */
-constexpr StringPiece toDelimWrapper() {
-  return "";
-}
-
-std::string toDelimWrapper(StringPiece value) {
-  return value.str();
-}
-
-template <class... Args>
-std::string toDelimWrapper(StringPiece arg1, const Args&... rest) {
-  std::string result;
-  folly::toAppendDelimFit(", ", arg1, rest..., &result);
-  return result;
-}
 
 std::string logHash(StringPiece thriftArg) {
   if (thriftArg.size() == Hash20::RAW_SIZE) {
@@ -363,34 +343,40 @@ facebook::eden::InodePtr inodeFromUserPath(
 
 // When not attached to Future it will log the completion of the operation and
 // time taken to complete it.
-#define INSTRUMENT_THRIFT_CALL(level, ...)                   \
-  ([&](SourceLocation loc) {                                 \
-    static folly::Logger logger(                             \
-        fmt::format("eden.thrift.{}", loc.function_name())); \
-    return std::make_unique<ThriftRequestScope>(             \
-        this->thriftRequestTraceBus_,                        \
-        logger,                                              \
-        folly::LogLevel::level,                              \
-        loc,                                                 \
-        nullptr,                                             \
-        nullptr,                                             \
-        getAndRegisterClientPid(),                           \
-        [&] { return toDelimWrapper(__VA_ARGS__); });        \
+#define INSTRUMENT_THRIFT_CALL(level, ...)                    \
+  ([&](SourceLocation loc) {                                  \
+    static folly::Logger logger(                              \
+        fmt::format("eden.thrift.{}", loc.function_name()));  \
+    return std::make_unique<ThriftRequestScope>(              \
+        this->thriftRequestTraceBus_,                         \
+        logger,                                               \
+        folly::LogLevel::level,                               \
+        loc,                                                  \
+        nullptr,                                              \
+        nullptr,                                              \
+        getAndRegisterClientPid(),                            \
+        [&] {                                                 \
+          return fmt::to_string(                              \
+              fmt::join(std::make_tuple(__VA_ARGS__), ", ")); \
+        });                                                   \
   }(EDEN_CURRENT_SOURCE_LOCATION))
 
-#define INSTRUMENT_THRIFT_CALL_WITH_STAT(level, stat, ...)   \
-  ([&](SourceLocation loc) {                                 \
-    static folly::Logger logger(                             \
-        fmt::format("eden.thrift.{}", loc.function_name())); \
-    return std::make_unique<ThriftRequestScope>(             \
-        this->thriftRequestTraceBus_,                        \
-        logger,                                              \
-        folly::LogLevel::level,                              \
-        loc,                                                 \
-        server_->getSharedStats(),                           \
-        stat,                                                \
-        getAndRegisterClientPid(),                           \
-        [&] { return toDelimWrapper(__VA_ARGS__); });        \
+#define INSTRUMENT_THRIFT_CALL_WITH_STAT(level, stat, ...)    \
+  ([&](SourceLocation loc) {                                  \
+    static folly::Logger logger(                              \
+        fmt::format("eden.thrift.{}", loc.function_name()));  \
+    return std::make_unique<ThriftRequestScope>(              \
+        this->thriftRequestTraceBus_,                         \
+        logger,                                               \
+        folly::LogLevel::level,                               \
+        loc,                                                  \
+        server_->getSharedStats(),                            \
+        stat,                                                 \
+        getAndRegisterClientPid(),                            \
+        [&] {                                                 \
+          return fmt::to_string(                              \
+              fmt::join(std::make_tuple(__VA_ARGS__), ", ")); \
+        });                                                   \
   }(EDEN_CURRENT_SOURCE_LOCATION))
 
 ThriftRequestTraceEvent ThriftRequestTraceEvent::start(
