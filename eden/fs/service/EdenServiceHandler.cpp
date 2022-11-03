@@ -2340,16 +2340,16 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeRecursively(
   auto relativePath = RelativePath{repoPath};
   auto& fetchContext = helper->getFetchContext();
 
-  TreeInodePtr inode = edenMount->getInodeSlow(relativePath, fetchContext)
-                           .get()
-                           ->getParentRacy();
   return wrapImmediateFuture(
              std::move(helper),
              waitForPendingNotifications(*edenMount, *params->sync())
-                 .thenValue([inode = std::move(inode),
-                             relativePath = std::move(relativePath),
-                             &fetchContext](auto&&) {
-                   return inode->removeRecursively(
+                 .thenValue([edenMount, relativePath, &fetchContext](
+                                folly::Unit) {
+                   return edenMount->getInodeSlow(relativePath, fetchContext);
+                 })
+                 .thenValue([relativePath = std::move(relativePath),
+                             &fetchContext](InodePtr inode) {
+                   return inode->getParentRacy()->removeRecursively(
                        relativePath.basename(),
                        InvalidationRequired::Yes,
                        fetchContext);
