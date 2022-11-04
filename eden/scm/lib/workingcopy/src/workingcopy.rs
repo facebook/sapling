@@ -21,7 +21,6 @@ use parking_lot::Mutex;
 use parking_lot::RwLock;
 use pathmatcher::AlwaysMatcher;
 use pathmatcher::DifferenceMatcher;
-use pathmatcher::ExactMatcher;
 use pathmatcher::GitignoreMatcher;
 use pathmatcher::IntersectMatcher;
 use pathmatcher::Matcher;
@@ -37,6 +36,7 @@ use vfs::VFS;
 
 #[cfg(feature = "eden")]
 use crate::edenfs::EdenFileSystem;
+use crate::filesystem::ChangeType;
 use crate::filesystem::FileSystemType;
 use crate::filesystem::PendingChangeResult;
 use crate::filesystem::PendingChanges;
@@ -271,10 +271,6 @@ impl WorkingCopy {
                 case_sensitive,
             )));
         }
-        non_ignore_matchers.push(Arc::new(ExactMatcher::new(
-            added_files.iter(),
-            case_sensitive,
-        )));
 
         let matcher = Arc::new(IntersectMatcher::new(vec![
             matcher,
@@ -303,7 +299,20 @@ impl WorkingCopy {
                 }
                 Err(e) => Some(Err(e)),
                 _ => None,
-            });
+            })
+            // fs.pending_changes() won't return ignored files, but we want added ignored files to
+            // show up in the results, so let's inject them here.
+            .chain(added_files.into_iter().filter_map(|path| {
+                match self.ignore_matcher.matches_file(&path) {
+                    Ok(result) if result => match self.vfs.metadata(&path) {
+                        Ok(ref attr) if attr.is_dir() => None,
+                        Ok(_) => Some(Ok(ChangeType::Changed(path))),
+                        Err(_) => None,
+                    },
+                    Ok(_) => None,
+                    Err(e) => Some(Err(e)),
+                }
+            }));
 
         let p1_manifest = &*manifests[0].read();
         compute_status(
