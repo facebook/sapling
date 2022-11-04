@@ -39,6 +39,8 @@ UBUNTU_DEPS = [
     "dpkg-dev",
 ]
 
+SAPLING_VERSION = "SAPLING_VERSION"
+
 
 def main() -> int:
     """Takes sys.argv[1] and uses it as the folder where all of the GitHub
@@ -232,7 +234,7 @@ RUN rm -rf /tmp/repo
         container = self._get_ubuntu_container_name(ubuntu_version)
         # https://www.debian.org/doc/debian-policy/ch-controlfields.html#version
         # documents the constraints on this segment of the version number.
-        DEB_UPSTREAM_VERISION = "DEB_UPSTREAM_VERISION"
+        DEB_UPSTREAM_VERSION = "DEB_UPSTREAM_VERSION"
         return {
             "runs-on": "ubuntu-latest",
             "container": {"image": container},
@@ -254,17 +256,18 @@ RUN rm -rf /tmp/repo
                     "run": "rustup default stable",
                 },
                 create_set_env_step(
-                    DEB_UPSTREAM_VERISION, "$(ci/tag-name.sh | tr \\- .)"
+                    DEB_UPSTREAM_VERSION, "$(ci/tag-name.sh | tr \\- .)"
                 ),
+                create_set_env_step(SAPLING_VERSION, "$(ci/tag-name.sh | tr \\- .)"),
                 {
                     "name": "Create .deb",
                     "working-directory": "./eden/scm",
-                    "run": f"${{{{ format('VERSION=0.0-{{0}} make deb', env.{DEB_UPSTREAM_VERISION}) }}}}",
+                    "run": f"${{{{ format('VERSION=0.0-{{0}} make deb', env.{DEB_UPSTREAM_VERSION}) }}}}",
                 },
                 {
                     "name": "Rename .deb",
                     "working-directory": "./eden/scm",
-                    "run": f"${{{{ format('mv sapling_0.0-{{0}}_amd64.deb sapling_0.0-{{0}}_amd64.Ubuntu{ubuntu_version}.deb', env.{DEB_UPSTREAM_VERISION}, env.{DEB_UPSTREAM_VERISION}) }}}}",
+                    "run": f"${{{{ format('mv sapling_0.0-{{0}}_amd64.deb sapling_0.0-{{0}}_amd64.Ubuntu{ubuntu_version}.deb', env.{DEB_UPSTREAM_VERSION}, env.{DEB_UPSTREAM_VERSION}) }}}}",
                 },
             ],
         }
