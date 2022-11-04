@@ -78,7 +78,6 @@ use futures_old::Stream;
 use futures_stats::TimedFutureExt;
 use futures_stats::TimedStreamExt;
 use getbundle_response::create_getbundle_response;
-use getbundle_response::DraftsInBundlesPolicy;
 use getbundle_response::PhasesPart;
 use getbundle_response::SessionLfsParams;
 use hgproto::GetbundleArgs;
@@ -465,7 +464,6 @@ pub struct RepoClient {
     session_bookmarks_cache: Arc<SessionBookmarkCache>,
     maybe_push_redirector_args: Option<PushRedirectorArgs<Repo>>,
     force_lfs: Arc<AtomicBool>,
-    unhydrated_commits: Arc<AtomicBool>,
     knobs: RepoClientKnobs,
     request_perf_counters: Arc<PerfCounters>,
     // In case `repo` is a backup of another repository `maybe_backup_repo_source` points to
@@ -491,7 +489,6 @@ impl RepoClient {
             session_bookmarks_cache,
             maybe_push_redirector_args,
             force_lfs: Arc::new(AtomicBool::new(false)),
-            unhydrated_commits: Arc::new(AtomicBool::new(false)),
             knobs,
             request_perf_counters: Arc::new(PerfCounters::default()),
             maybe_backup_repo_source,
@@ -590,7 +587,6 @@ impl RepoClient {
     fn create_bundle(&self, ctx: CoreContext, args: GetbundleArgs) -> BoxStream<BytesOld, Error> {
         let lfs_params = self.lfs_params();
         let blobrepo = self.repo.blob_repo().clone();
-        let reponame = self.repo.inner_repo().repo_identity().name().to_string();
         let mut bundle2_parts = vec![];
 
         let GetbundleArgs {
@@ -619,24 +615,10 @@ impl RepoClient {
         let lca_hint: Arc<dyn LeastCommonAncestorsHint> =
             self.repo.inner_repo().skiplist_index_arc();
 
-        let drafts_in_bundles_policy = if self
-            .repo
-            .inner_repo()
-            .repo_config()
-            .infinitepush
-            .hydrate_getbundle_response
-            && !self.unhydrated_commits_requested()
-        {
-            DraftsInBundlesPolicy::WithTreesAndFiles
-        } else {
-            DraftsInBundlesPolicy::CommitsOnly
-        };
-
         async move {
             create_getbundle_response(
                 &ctx,
                 &blobrepo,
-                &reponame,
                 common,
                 &heads,
                 &lca_hint,
@@ -646,7 +628,6 @@ impl RepoClient {
                     PhasesPart::No
                 },
                 &lfs_params,
-                drafts_in_bundles_policy,
             )
             .await
         }
@@ -1012,10 +993,6 @@ impl RepoClient {
         }
     }
 
-    fn unhydrated_commits_requested(&self) -> bool {
-        self.unhydrated_commits.load(Ordering::Relaxed)
-    }
-
     fn maybe_get_pushredirector_for_action(
         &self,
         ctx: &CoreContext,
@@ -1283,12 +1260,6 @@ impl HgCommands for RepoClient {
                 if let Some(val) = args.get(b"wantslfspointers" as &[u8]) {
                     if val == b"True" {
                         self.force_lfs.store(true, Ordering::Relaxed);
-                    }
-                }
-
-                if let Some(val) = args.get(b"wantsunhydratedcommits" as &[u8]) {
-                    if val == b"True" {
-                        self.unhydrated_commits.store(true, Ordering::Relaxed);
                     }
                 }
 
@@ -1734,7 +1705,6 @@ impl HgCommands for RepoClient {
                     let infinitepush_writes_allowed = repo.repo_config().infinitepush.allow_writes;
                     let pushrebase_params = repo.repo_config().pushrebase.clone();
                     let pure_push_allowed = repo.repo_config().push.pure_push_allowed;
-                    let reponame = repo.repo_identity().name().to_string();
                     let maybe_backup_repo_source = client.maybe_backup_repo_source.clone();
 
                     let pushrebase_flags = pushrebase_params.flags.clone();
@@ -1801,7 +1771,6 @@ impl HgCommands for RepoClient {
                         .generate_bytes(
                             &ctx,
                             repo.as_blob_repo(),
-                            &reponame,
                             pushrebase_params,
                             &lca_hint,
                             &lfs_params,

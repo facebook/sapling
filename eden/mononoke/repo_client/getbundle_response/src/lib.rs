@@ -110,17 +110,6 @@ pub enum PhasesPart {
     No,
 }
 
-/// An enum to identify the fullness of the information we
-/// want to include into the `getbundle` response for draft
-/// commits
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum DraftsInBundlesPolicy {
-    /// Only include commit information (like for public changesets)
-    CommitsOnly,
-    /// Also include trees and files information
-    WithTreesAndFiles,
-}
-
 #[derive(Clone)]
 pub struct SessionLfsParams {
     pub threshold: Option<u64>,
@@ -129,13 +118,11 @@ pub struct SessionLfsParams {
 pub async fn create_getbundle_response(
     ctx: &CoreContext,
     blobrepo: &BlobRepo,
-    reponame: &str,
     common: Vec<HgChangesetId>,
     heads: &[HgChangesetId],
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     return_phases: PhasesPart,
     lfs_params: &SessionLfsParams,
-    drafts_in_bundles_policy: DraftsInBundlesPolicy,
 ) -> Result<Vec<PartEncodeBuilder>, Error> {
     let return_phases = return_phases == PhasesPart::Yes;
     debug!(ctx.logger(), "Return phases is: {:?}", return_phases);
@@ -157,41 +144,9 @@ pub async fn create_getbundle_response(
     if heads_len != 0 {
         // no heads means bookmark-only pushrebase, and the client
         // does not expect a changegroup part in this case
-        let should_include_trees_and_files =
-            drafts_in_bundles_policy == DraftsInBundlesPolicy::WithTreesAndFiles;
-        let (maybe_manifests, maybe_filenodes): (Option<_>, Option<_>) =
-            if should_include_trees_and_files {
-                let (manifests, filenodes) =
-                    get_manifests_and_filenodes(ctx, blobrepo, draft_commits.clone(), lfs_params)
-                        .await?;
-                report_manifests_and_filenodes(ctx, reponame, manifests.len(), filenodes.iter());
-                (Some(manifests), Some(filenodes))
-            } else {
-                (None, None)
-            };
-
-        let cg_part = create_hg_changeset_part(
-            ctx,
-            blobrepo,
-            commits_to_send.clone(),
-            maybe_filenodes,
-            lfs_params,
-        )
-        .await?;
+        let cg_part =
+            create_hg_changeset_part(ctx, blobrepo, commits_to_send.clone(), lfs_params).await?;
         parts.push(cg_part);
-
-        if let Some(manifests) = maybe_manifests {
-            let manifests_stream =
-                create_manifest_entries_stream(ctx.clone(), blobrepo.get_blobstore(), manifests);
-            let hg_cache_policy = if tunables().get_disable_hydrating_manifests_in_dot_hg() {
-                parts::StoreInHgCache::Yes
-            } else {
-                parts::StoreInHgCache::No
-            };
-            let tp_part = parts::treepack_part(manifests_stream, hg_cache_policy)?;
-
-            parts.push(tp_part);
-        }
 
         if !draft_commits.is_empty() && tunables().get_mutation_generate_for_draft() {
             let mutations_fut = {
@@ -232,50 +187,6 @@ fn report_draft_commits(ctx: &CoreContext, draft_commits: &HashSet<HgChangesetId
         PerfCounterType::GetbundleNumDrafts,
         draft_commits.len() as i64,
     );
-}
-
-fn report_manifests_and_filenodes<
-    'a,
-    FIter: IntoIterator<Item = (&'a MPath, &'a Vec<PreparedFilenodeEntry>)>,
->(
-    ctx: &CoreContext,
-    reponame: &str,
-    num_manifests: usize,
-    filenodes: FIter,
-) {
-    let mut num_filenodes: i64 = 0;
-    let mut total_filenodes_weight: i64 = 0;
-    for filenode in filenodes {
-        num_filenodes += filenode.1.len() as i64;
-        let total_weight_for_mpath = filenode
-            .1
-            .iter()
-            .fold(0, |acc, item| acc + item.entry_weight_hint);
-        total_filenodes_weight += total_weight_for_mpath as i64;
-    }
-
-    debug!(
-        ctx.logger(),
-        "Getbundle returning {} manifests", num_manifests
-    );
-    ctx.perf_counters()
-        .add_to_counter(PerfCounterType::GetbundleNumManifests, num_manifests as i64);
-    STATS::manifests_returned.add_value(num_manifests as i64, (reponame.to_owned(),));
-
-    debug!(
-        ctx.logger(),
-        "Getbundle returning {} filenodes with total size {} bytes",
-        num_filenodes,
-        total_filenodes_weight
-    );
-    ctx.perf_counters()
-        .add_to_counter(PerfCounterType::GetbundleNumFilenodes, num_filenodes);
-    ctx.perf_counters().add_to_counter(
-        PerfCounterType::GetbundleFilenodesTotalWeight,
-        total_filenodes_weight,
-    );
-    STATS::filenodes_returned.add_value(num_filenodes, (reponame.to_owned(),));
-    STATS::filenodes_weight.add_value(total_filenodes_weight, (reponame.to_owned(),));
 }
 
 /// return ancestors of heads with hint to exclude ancestors of common
@@ -535,7 +446,6 @@ async fn create_hg_changeset_part(
     ctx: &CoreContext,
     blobrepo: &BlobRepo,
     nodes_to_send: Vec<ChangesetId>,
-    maybe_prepared_filenode_entries: Option<HashMap<MPath, Vec<PreparedFilenodeEntry>>>,
     lfs_params: &SessionLfsParams,
 ) -> Result<PartEncodeBuilder> {
     let map_chunk_size = 100;
@@ -613,17 +523,13 @@ async fn create_hg_changeset_part(
         .boxed()
         .compat();
 
-    let maybe_filenode_entries = maybe_prepared_filenode_entries.map(|prepared_filenode_entries| {
-        create_filenodes(ctx.clone(), blobrepo.clone(), prepared_filenode_entries).boxify()
-    });
-
     let cg_version = if lfs_params.threshold.is_some() {
         CgVersion::Cg3Version
     } else {
         CgVersion::Cg2Version
     };
 
-    parts::changegroup_part(changelogentries, maybe_filenode_entries, cg_version)
+    parts::changegroup_part(changelogentries, None, cg_version)
 }
 
 async fn hg_to_bonsai_stream(

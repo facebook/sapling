@@ -22,7 +22,6 @@ use futures::future::try_join;
 use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
 use getbundle_response::create_getbundle_response;
-use getbundle_response::DraftsInBundlesPolicy;
 use getbundle_response::PhasesPart;
 use getbundle_response::SessionLfsParams;
 use mercurial_bundles::create_bundle_stream;
@@ -124,7 +123,6 @@ impl UnbundleResponse {
         ctx: &CoreContext,
         data: UnbundlePushRebaseResponse,
         repo: &BlobRepo,
-        reponame: &str,
         pushrebase_params: PushrebaseParams,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
         lfs_params: &SessionLfsParams,
@@ -172,16 +170,11 @@ impl UnbundleResponse {
             let mut cg_part_builder = create_getbundle_response(
                 ctx,
                 repo,
-                reponame,
                 common,
                 &heads,
                 lca_hint,
                 PhasesPart::Yes,
                 lfs_params,
-                // Note: pushrebase response can only ever respond
-                // with public commits atm, so the value we are passing
-                // here is inconsequential.
-                DraftsInBundlesPolicy::CommitsOnly,
             )
             .await?;
 
@@ -239,7 +232,6 @@ impl UnbundleResponse {
         self,
         ctx: &CoreContext,
         repo: &BlobRepo,
-        reponame: &str,
         pushrebase_params: PushrebaseParams,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
         lfs_params: &SessionLfsParams,
@@ -260,7 +252,6 @@ impl UnbundleResponse {
                     ctx,
                     data,
                     repo,
-                    reponame,
                     pushrebase_params,
                     lca_hint,
                     lfs_params,
