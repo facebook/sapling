@@ -14,9 +14,11 @@ class Sapling < Formula
   license ""
 
   depends_on "python@3.8"
+  depends_on "node"
   depends_on "cmake" => :build
   depends_on "openssl@1.1" => :build
   depends_on "rust" => :build
+  depends_on "yarn" => :build
 
   def install
     ENV["OPENSSL_DIR"] = Formula["openssl@1.1"].opt_prefix
