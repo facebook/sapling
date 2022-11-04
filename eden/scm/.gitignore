@@ -87,9 +87,10 @@ wheelhouse/
 hg-python
 hg.py
 
-# mercurial binary
+# scm binary
 hg
 hg3
+sl
 
 # make-local Windows artifacts
 hgrc.d

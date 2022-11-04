@@ -67,8 +67,8 @@ help:
 all: build
 
 oss:
-	export HGNAME=sl
-	SAPLING_OSS_BUILD=true \
+	$(eval HGNAME = sl)
+	SAPLING_OSS_BUILD=true HGNAME=$(HGNAME) \
 	  $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup_with_version.py $(PURE) \
 	  build_interactive_smartlog \
 	  build_py -c -d . \
