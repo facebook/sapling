@@ -105,47 +105,41 @@ where
         .await
 }
 
-pub trait GitimportAccumulator: Sized {
-    fn new() -> Self;
-    fn len(&self) -> usize;
-    fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-    fn insert(&mut self, oid: ObjectId, cs_id: ChangesetId);
-    fn get(&self, oid: &git_hash::oid) -> Option<ChangesetId>;
-}
-
-struct BufferingGitimportAccumulator {
+pub struct GitimportAccumulator {
     inner: LinkedHashMap<ObjectId, ChangesetId>,
 }
 
-impl GitimportAccumulator for BufferingGitimportAccumulator {
-    fn new() -> Self {
+impl GitimportAccumulator {
+    pub fn new() -> Self {
         Self {
             inner: LinkedHashMap::new(),
         }
     }
 
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.inner.len()
     }
 
-    fn insert(&mut self, oid: ObjectId, cs_id: ChangesetId) {
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
+    pub fn insert(&mut self, oid: ObjectId, cs_id: ChangesetId) {
         self.inner.insert(oid, cs_id);
     }
 
-    fn get(&self, oid: &git_hash::oid) -> Option<ChangesetId> {
+    pub fn get(&self, oid: &git_hash::oid) -> Option<ChangesetId> {
         self.inner.get(oid).copied()
     }
 }
 
-pub async fn gitimport_acc<Acc: GitimportAccumulator, Uploader: GitUploader>(
+pub async fn gitimport_acc<Uploader: GitUploader>(
     ctx: &CoreContext,
     path: &Path,
     uploader: Uploader,
     target: &GitimportTarget,
     prefs: &GitimportPreferences,
-) -> Result<Acc, Error> {
+) -> Result<GitimportAccumulator, Error> {
     let repo_name = if let Some(name) = &prefs.gitrepo_name {
         String::from(name)
     } else {
@@ -164,10 +158,10 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator, Uploader: GitUploader>(
     let nb_commits_to_import = target.get_nb_commits(&prefs.git_command_path, path).await?;
     if 0 == nb_commits_to_import {
         info!(ctx.logger(), "Nothing to import for repo {}.", repo_name);
-        return Ok(Acc::new());
+        return Ok(GitimportAccumulator::new());
     }
 
-    let acc = RwLock::new(Acc::new());
+    let acc = RwLock::new(GitimportAccumulator::new());
 
     // Kick off a stream that consumes the walk and prepared commits. Then, produce the Bonsais.
     target
@@ -277,12 +271,9 @@ pub async fn gitimport(
     target: &GitimportTarget,
     prefs: &GitimportPreferences,
 ) -> Result<LinkedHashMap<ObjectId, ChangesetId>, Error> {
-    let import_map =
-        gitimport_acc::<BufferingGitimportAccumulator, _>(ctx, path, uploader, target, prefs)
-            .await?
-            .inner;
-
-    Ok(import_map)
+    Ok(gitimport_acc(ctx, path, uploader, target, prefs)
+        .await?
+        .inner)
 }
 
 pub async fn read_git_refs(
