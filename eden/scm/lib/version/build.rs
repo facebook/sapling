@@ -5,5 +5,6 @@
  * GNU General Public License version 2.
  */
 
-pub static VERSION: &'static str = "dev";
-pub static VERSION_HASH: u64 = 0;
+fn main() {
+    println!("cargo:rerun-if-env-changed=SAPLING_VERSION");
+}

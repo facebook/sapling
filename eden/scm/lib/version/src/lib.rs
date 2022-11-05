@@ -5,14 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#[cfg(feature = "generated")]
-mod version;
-#[cfg(feature = "generated")]
-use self::version as imp;
-
-#[cfg(not(feature = "generated"))]
-mod fallback;
-pub use imp::*;
-
-#[cfg(not(feature = "generated"))]
-use self::fallback as imp;
+pub static VERSION: &'static str = match option_env!("SAPLING_VERSION") {
+    Some(s) => s,
+    None => "dev",
+};
