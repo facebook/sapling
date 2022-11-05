@@ -12,8 +12,9 @@ use super::NoOpts;
 use super::Result;
 
 pub fn run(ctx: ReqCtx<NoOpts>, _config: &mut ConfigSet) -> Result<u8> {
+    let id = identity::default();
     ctx.io()
-        .write(format!("EdenSCM {}\n", ::version::VERSION))?;
+        .write(format!("{} {}\n", id.product_name(), ::version::VERSION))?;
     Ok(0)
 }
 
