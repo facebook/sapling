@@ -275,6 +275,7 @@ RUN rm -rf /tmp/repo
     def gen_windows_release(self) -> str:
         BUILD = "build"
         artifact_key = "windows-amd64"
+        artifact_glob = "sapling_windows_*.zip"
 
         build_job = {
             "runs-on": "windows-latest",
@@ -295,20 +296,24 @@ RUN rm -rf /tmp/repo
                 },
                 # This makes vcpkg packages available globally.
                 {"name": "integrate vcpkg", "run": "vcpkg integrate install"},
+                create_set_env_step(SAPLING_VERSION, "$(ci/tag-name.sh | tr \\- .)"),
                 {
                     "name": "build and zip",
                     "run": "python3 ./eden/scm/packaging/windows/build_windows_zip.py",
                 },
-                upload_artifact(
-                    artifact_key, "./eden/scm/artifacts/sapling_windows_amd64.zip"
-                ),
+                {
+                    "name": "rename .zip",
+                    "working-directory": "./eden/scm/artifacts",
+                    "run": "${{{{ format('Rename-Item sapling_windows_amd64.zip -NewName sapling_windows_{{0}}_amd64.zip', env.SAPLING_VERSION) }}}}",
+                },
+                upload_artifact(artifact_key, f"./eden/scm/artifacts/{artifact_glob}"),
             ],
         }
 
         publish_job = {
             "runs-on": "ubuntu-latest",
             "needs": BUILD,
-            "steps": publish_release_steps(artifact_key, "sapling_windows_amd64.zip"),
+            "steps": publish_release_steps(artifact_key, artifact_glob),
         }
 
         gh_action = {
@@ -338,10 +343,12 @@ def gen_container_name(*, name: str, tag: Optional[str] = "latest") -> str:
     return f"${{{{ format('ghcr.io/{{0}}/{name}:{tag}', github.repository) }}}}"
 
 
-def create_set_env_step(env_var: str, env_expr):
+def create_set_env_step(env_var: str, env_expr: str):
     """See https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-environment-variable"""
     return {
         "name": f"set-env {env_var}",
+        # Note setting to shell to Bash is important when running on Windows.
+        "shell": "bash",
         "run": f'echo "{env_var}={env_expr}" >> $GITHUB_ENV',
     }
 
