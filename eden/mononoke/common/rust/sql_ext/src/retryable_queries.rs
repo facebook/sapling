@@ -15,10 +15,13 @@ use tunables::tunables;
 
 const RETRY_ATTEMPTS: usize = 2;
 
+// This wraps around rust/shed/sql::queries, check that macro: https://fburl.com/code/semq9xm3
+/// Define SQL queries that automatically retry on certain errors.
 #[macro_export]
 macro_rules! queries_with_retry {
     () => {};
 
+    // Read query with a single expression. Redirect to read query with same expression for mysql and sqlite.
     (
         $vi:vis read $name:ident (
             $( $pname:ident: $ptype:ty ),* $(,)*
@@ -35,6 +38,7 @@ macro_rules! queries_with_retry {
         }
     };
 
+    // Full read query. Call `sql::queries!` and re-export stuff, wrapped in retries, on a new module.
     (
         $vi:vis read $name:ident (
             $( $pname:ident: $ptype:ty ),* $(,)*
@@ -77,6 +81,7 @@ macro_rules! queries_with_retry {
         }
     };
 
+    // Write query with a single expression. Redirect to write query with same expression for mysql and sqlite.
     (
         $vi:vis write $name:ident (
             values: ($( $vname:ident: $vtype:ty ),* $(,)*)
@@ -93,6 +98,7 @@ macro_rules! queries_with_retry {
         }
     };
 
+    // Full write query with a list of values. Call `sql::queries!` and re-export stuff, wrapped in retries, on a new module.
     (
         $vi:vis write $name:ident (
             values: ($( $vname:ident: $vtype:ty ),* $(,)*)
@@ -135,6 +141,7 @@ macro_rules! queries_with_retry {
         }
     };
 
+    // Write query with a single expression. Redirect to write query with same expression for mysql and sqlite.
     (
         $vi:vis write $name:ident (
             $( $pname:ident: $ptype:ty ),* $(,)*
@@ -151,6 +158,7 @@ macro_rules! queries_with_retry {
         }
     };
 
+    // Full write query without a list of values. Call `sql::queries!` and re-export stuff, wrapped in retries, on a new module.
     (
         $vi:vis write $name:ident (
             $( $pname:ident: $ptype:ty ),* $(,)*
