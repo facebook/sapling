@@ -34,6 +34,7 @@ TESTFLAGS ?= $(shell echo $$HGTESTFLAGS)
 OSXVERSIONFLAGS ?= $(shell echo $$OSXVERSIONFLAGS)
 
 HGNAME ?= hg
+SL_NAME = sl
 
 # Set this to e.g. "mingw32" to use a non-default compiler.
 COMPILER=
@@ -67,8 +68,7 @@ help:
 all: build
 
 oss:
-	$(eval HGNAME = sl)
-	SAPLING_OSS_BUILD=true HGNAME=$(HGNAME) \
+	SAPLING_OSS_BUILD=true HGNAME=$(SL_NAME) \
 	  $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup_with_version.py $(PURE) \
 	  build_interactive_smartlog \
 	  build_py -c -d . \
@@ -78,14 +78,14 @@ oss:
 	  build_pyzip -i \
 	  build_mo
 ifeq ($(OS),Windows_NT)
-	cp build/scripts-3*/$(HGNAME).exe $(HGNAME).exe
+	cp build/scripts-3*/$(SL_NAME).exe $(SL_NAME).exe
 else
-	$(RM) $(HGNAME)
-	cp build/scripts-3*/$(HGNAME) $(HGNAME)
+	$(RM) $(SL_NAME)
+	cp build/scripts-3*/$(SL_NAME) $(SL_NAME)
 endif
 
 install-oss: oss
-	SAPLING_OSS_BUILD=true HGNAME=sl \
+	SAPLING_OSS_BUILD=true HGNAME=$(SL_NAME) \
 	  $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup_with_version.py $(PURE) \
 	  install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --force
 
