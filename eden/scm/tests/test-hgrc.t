@@ -69,7 +69,7 @@ issue1829: wrong indentation
   $ export FAKEPATH
   $ echo '%include $FAKEPATH/no-such-file' >> $HGRC
   $ hg version
-  EdenSCM * (glob)
+  Mercurial * (glob)
   $ unset FAKEPATH
 
 make sure global options given on the cmdline take precedence

@@ -57,7 +57,7 @@ Test running hg without any arguments and various configs
 
 Make sure passing either --help or --version, or using HGPLAIN does not trigger the default command
   $ hg --version
-  EdenSCM * (glob)
+  Mercurial * (glob)
   $ hg --help | grep "These are some common Mercurial commands"
   These are some common Mercurial commands.  Use 'hg help commands' to list all
   $ HGPLAIN=true hg | grep "These are some common Mercurial commands"

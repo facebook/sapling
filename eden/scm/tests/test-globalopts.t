@@ -253,7 +253,7 @@ Testing --time:
 Testing --version:
 
   $ hg --version -q
-  EdenSCM * (glob)
+  Mercurial * (glob)
 
 hide outer repo
   $ hg init

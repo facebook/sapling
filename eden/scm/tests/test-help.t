@@ -539,7 +539,7 @@ Test help on a self-referencing alias that is a rust command
 Test help option with version option
 
   $ hg add -h --version
-  EdenSCM * (glob)
+  Mercurial * (glob)
 
   $ hg add --skjdfks
   hg add: option --skjdfks not recognized
