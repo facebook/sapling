@@ -42,14 +42,8 @@ class PullRequestId:
 
 class GraphQLPullRequest:
     """This object represents the information we have about a pull request that
-    we got via GitHub's GraphQL API.
-
-    When crossing the Python/Rust boundary to make a GraphQL call, we get the
-    result back as a Dict on the Python side, which should be passed to the
-    constructor of this class. We use the class to wrap the Dict so that we can
-    provide typesafe methods on top of it.
-
-    See pull_request_query.rs for details on the stucture of the Dict.
+    we got via GitHub's GraphQL API. See the query used by get_pull_request_data()
+    in ./graphql.py for the structure of the data.
     """
 
     def __init__(self, graphql_data_as_dict):
@@ -68,7 +62,7 @@ class GraphQLPullRequest:
         return self.graphql_data["url"]
 
     def get_head_oid(self) -> str:
-        return self.graphql_data["head"]["ref_oid"]
+        return self.graphql_data["headRefOid"]
 
     def get_head_branch_name(self) -> str:
-        return self.graphql_data["head"]["ref_name"]
+        return self.graphql_data["headRefName"]

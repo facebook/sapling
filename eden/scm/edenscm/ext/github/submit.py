@@ -602,21 +602,12 @@ def is_branch_does_not_exist_error(response) -> bool:
 
 
 async def get_username() -> Optional[str]:
-    """Returns the username associated with the GitHub personal access token."""
-    # First we try to parse the hosts.yml file directly, as that is faster,
-    # but we fall back to GraphQL, as it is more reliable, if parsing hosts.yml
-    # fails for some reason.
-    from .graphql import try_parse_oauth_token_from_gh_config
-
-    username_and_token = try_parse_oauth_token_from_gh_config()
-    if username_and_token:
-        return username_and_token[0]
+    """Returns the username for the user authenticated with the GitHub CLI."""
+    result = await gh_submit.get_username()
+    if result.is_error():
+        return None
     else:
-        result = await gh_submit.get_username()
-        if result.is_error():
-            return None
-        else:
-            return none_throws(result.ok)
+        return none_throws(result.ok)
 
 
 def run_git_command(args: List[str], gitdir: str) -> bytes:

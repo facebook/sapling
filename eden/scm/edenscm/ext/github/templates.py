@@ -85,24 +85,10 @@ def get_pull_request_data_for_rev(repo, ctx, **args) -> GraphQLPullRequest:
     # If there is a cache miss, we need both (1) an OAuth token and (2) a pull
     # request URL in the commit message to fetch pull request data.
     if pull_request_data is _NO_ENTRY:
-        pull_request_data = None
-        token = get_github_oauth_token(**args)
-        if token:
-            pull_request = get_pull_request_url_for_rev(repo, ctx, **args)
-            if pull_request:
-                pull_request_data = graphql.get_pull_request_data(token, pull_request)
-        revcache[_GITHUB_PULL_REQUEST_DATA_REVCACHE_KEY] = pull_request_data
-
+        pull_request = get_pull_request_url_for_rev(repo, ctx, **args)
+        if pull_request:
+            pull_request_data = graphql.get_pull_request_data(pull_request)
     return pull_request_data
-
-
-def get_github_oauth_token(**args) -> Optional[str]:
-    cache = args["cache"]
-    token = cache.get(_GITHUB_OAUTH_TOKEN_CACHE_KEY, _NO_ENTRY)
-    if token is _NO_ENTRY:
-        token = graphql.get_github_oauth_token()
-        cache[_GITHUB_OAUTH_TOKEN_CACHE_KEY] = token
-    return token
 
 
 def get_pull_request_store(repo, cache) -> PullRequestStore:

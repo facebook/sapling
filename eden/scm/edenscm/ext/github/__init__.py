@@ -133,12 +133,12 @@ def github_pull_request_merged(repo, ctx, templ, **args) -> Optional[bool]:
 
 @templatekeyword("github_pull_request_review_decision")
 def github_pull_request_review_decision(repo, ctx, templ, **args) -> Optional[str]:
-    return _get_pull_request_field("review_decision", repo, ctx, **args)
+    return _get_pull_request_field("reviewDecision", repo, ctx, **args)
 
 
 @templatekeyword("github_pull_request_is_draft")
 def github_pull_request_is_draft(repo, ctx, templ, **args) -> Optional[bool]:
-    return _get_pull_request_field("is_draft", repo, ctx, **args)
+    return _get_pull_request_field("isDraft", repo, ctx, **args)
 
 
 @templatekeyword("github_pull_request_title")

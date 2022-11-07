@@ -299,28 +299,38 @@ sl_diffsignal="{if(github_repo, github_sl_diffsignal, phab_sl_diffsignal)}"
 sl_diffsignallabel="{if(github_repo, github_sl_diffsignallabel, phab_sl_diffsignallabel)}"
 sl_diffstatus="{if(github_repo, github_sl_diffstatus, phab_sl_diffstatus)}"
 sl_difflabel="{if(github_repo, github_sl_difflabel, phab_sl_difflabel)}"
+
+# When presenting the PR state to the user, if it is Closed/Merged, we use
+# that as the state; otherwise (if it is Open/Unknown), we consider the review
+# decision to be the PR state.
 github_pr_state="{case(github_pull_request_state,
- 'Closed', 'Closed',
- 'Merged', 'Merged',
- if(github_pull_request_review_decision, github_pull_request_review_decision, 'NoDecision')
- )}"
+    'CLOSED', 'CLOSED',
+    'MERGED', 'MERGED',
+    if(github_pull_request_review_decision, github_pull_request_review_decision, 'NO_DECISION')
+    )}"
 github_sl_diffstatus="{case(github_pr_state,
- 'Closed', 'Closed',
- 'Merged', 'Merged',
- 'Approved', 'Approved',
- 'ChangesRequested', 'Changes Requested',
- 'ReviewRequired', 'Review Required',
- 'NoDecision', 'Unreviewed'
- )}"
+    'CLOSED', 'Closed',
+    'MERGED', 'Merged',
+    'APPROVED', 'Approved',
+    'CHANGES_REQUESTED', 'Changes Requested',
+    'REVIEW_REQUIRED', 'Review Required',
+    'NO_DECISION', 'Unreviewed'
+    )}"
+# At least for ghstack, PRs are never merged directly because of the branch
+# tricks it does, so Merged often means Closed, so we use the same style for
+# both. We could consider checking for the "Merged" tag to distinguish between
+# "closed but merged" and ordinary "closed", which is more like Abandoned in
+# Phabricator.
 github_sl_difflabel="{case(github_pr_state,
- 'Closed', 'ssl.committed',
- 'Merged', 'ssl.committed',
- 'Approved', 'ssl.accepted',
- 'ChangesRequested', 'ssl.revision',
- 'ReviewRequired', 'ssl.review',
- 'NoDecision', 'ssl.unpublished',
- 'sl.diff'
- )}"
+    'CLOSED', 'ssl.committed',
+    'MERGED', 'ssl.committed',
+    'APPROVED', 'ssl.accepted',
+    'CHANGES_REQUESTED', 'ssl.revision',
+    'REVIEW_REQUIRED', 'ssl.review',
+    'NO_DECISION', 'ssl.unpublished',
+    'sl.diff'
+    )}"
+
 phab_sl_diffstatus="{phabstatus}{case(phabstatus, 'Waiting For Author', '*', 'Needs Revision', '*')}"
 phab_sl_difflabel="{case(phabstatus,
  'Landing', 'ssl.landing',
