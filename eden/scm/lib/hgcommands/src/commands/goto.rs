@@ -80,7 +80,6 @@ define_flags! {
 
 pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Result<u8> {
     // Missing features (in roughly priority order):
-    // - Checking if unclean pending changes interfere with the checkout
     // - Filtering actions by sparse profile
     // - Adding/removing actions when the sparse profile changes
     // - edenfs checkout support
@@ -118,15 +117,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
         .into());
     }
 
-    // 1. Check if status is dirty
     let matcher = Arc::new(AlwaysMatcher::new());
-    let _status = wc.status(
-        matcher.clone(),
-        SystemTime::UNIX_EPOCH,
-        repo.config(),
-        ctx.io(),
-    )?;
-    // TODO: Abort if status is not clean
 
     let current_commit = wc.parents()?.into_iter().next().unwrap_or(NULL_ID);
     let target_commit = repo.resolve_commit(&wc.treestate().lock(), &dest)?;
@@ -137,7 +128,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
     let sparse_change = None; // TODO: handle sparse profile change
     // TODO: Integrate sparse matcher
 
-    // 2. Create the plan
+    // 1. Create the plan
     let plan = create_plan(
         wc.vfs(),
         repo.config(),
@@ -146,6 +137,28 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
         &matcher,
         sparse_change,
     )?;
+
+    // 2. Check if status is dirty
+    let status = wc.status(
+        matcher.clone(),
+        SystemTime::UNIX_EPOCH,
+        repo.config(),
+        ctx.io(),
+    )?;
+
+    let conflicts = plan.check_conflicts(&status);
+    if !conflicts.is_empty() {
+        bail!(
+            "{:?} conflicting file changes:\n {}",
+            conflicts.len(),
+            conflicts
+                .iter()
+                .take(5)
+                .map(|p| p.as_str())
+                .collect::<Vec<_>>()
+                .join("\n "),
+        );
+    }
 
     // 3. Execute the plan
     try_block_unless_interrupted(plan.apply_store(&repo.file_store()?))?;
