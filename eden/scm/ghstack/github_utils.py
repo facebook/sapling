@@ -297,14 +297,13 @@ def update_ref(
         ref=target_ref,
     )['commit']
 
-    input = {
-        "refId": ref_id,
-        "oid": target_oid,
-    }
     data = github.graphql(
         """
-        mutation ($input: UpdateRefInput!) {
-            updateRef(input: $input) {
+        mutation ($refId: ID!, $oid: GitObjectID!) {
+            updateRef(input: {
+                refId: $refId,
+                oid: $oid
+            }) {
                 ref {
                     id
                     name
@@ -315,7 +314,8 @@ def update_ref(
             }
         }
         """,
-        input=input,
+        refId=ref_id,
+        oid=target_oid,
     )["data"]
     return data["updateRef"]["ref"]["target"]["oid"]
 
