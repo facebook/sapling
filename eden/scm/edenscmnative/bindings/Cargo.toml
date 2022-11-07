@@ -45,7 +45,6 @@ pyerror = { path = "modules/pyerror" }
 pyexchange = { path = "modules/pyexchange" }
 pyfail = { path = "modules/pyfail" }
 pyfs = { path = "modules/pyfs" }
-pygithub = { path = "modules/pygithub" }
 pygitstore = { path = "modules/pygitstore" }
 pyhgmetrics = { path = "modules/pyhgmetrics" }
 pyhgtime = { path = "modules/pyhgtime" }

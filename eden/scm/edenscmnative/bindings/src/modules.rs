@@ -56,7 +56,6 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
             exchange,
             fail,
             fs,
-            github,
             gitstore,
             hgmetrics,
             hgtime,
