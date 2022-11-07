@@ -83,6 +83,7 @@ query ($owner: String!, $name: String!) {
       id
       owner {
         id
+        login
       }
       name
       isFork
