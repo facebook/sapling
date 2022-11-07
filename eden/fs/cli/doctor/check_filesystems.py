@@ -435,6 +435,7 @@ def check_materialized_are_accessible(
             tracker.add_problem(DebugInodeStatusFailure(str(ex)))
             return
 
+    case_sensitive = checkout.get_config().case_sensitive
     for materialized_dir in materialized:
         materialized_name = os.fsdecode(materialized_dir.path)
         path = Path(materialized_name)
@@ -455,11 +456,15 @@ def check_materialized_are_accessible(
         missing_path_names = None
         # We will ignore special '.eden' checkout path
         if materialized_name != ".eden":
-            missing_path_names = set(os.listdir(osPath))
+            missing_path_names = set()
+            for filename in os.listdir(osPath):
+                missing_path_names.add(filename if case_sensitive else filename.lower())
         visited_path_names = set()
 
         for dirent in materialized_dir.entries:
             name = os.fsdecode(dirent.name)
+            if not case_sensitive:
+                name = name.lower()
             dirent_path = path / Path(name)
             if name in visited_path_names:
                 duplicate_inodes.append(dirent_path)
@@ -598,6 +603,8 @@ def check_loaded_content(
         not_found: List[Path] = []
         # List of files where SHA1 couldn't be computed on
         sha1_errors: List[Path] = []
+
+        case_sensitive = checkout.get_config().case_sensitive
         for loaded_dir in loaded:
             path = Path(os.fsdecode(loaded_dir.path))
 
@@ -605,10 +612,16 @@ def check_loaded_content(
             missing_path_names = set()
             refcount = loaded_dir.refcount or 0
             if not loaded_dir.materialized and refcount > 0:
-                missing_path_names = set(os.listdir(osPath))
+                missing_path_names = set()
+                for filename in os.listdir(osPath):
+                    missing_path_names.add(
+                        filename if case_sensitive else filename.lower()
+                    )
 
             for dirent in loaded_dir.entries:
                 name = os.fsdecode(dirent.name)
+                if not case_sensitive:
+                    name = name.lower()
                 if name in missing_path_names:
                     missing_path_names.remove(name)
                 if not stat.S_ISREG(dirent.mode) or dirent.materialized:

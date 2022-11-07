@@ -1175,6 +1175,44 @@ Fixing files known to EdenFS but not present on disk in {Path(mount)}...<green>f
     if sys.platform == "win32":
 
         @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
+        def test_materialized_different_case(self, mock_debugInodeStatus) -> None:
+            instance = FakeEdenInstance(self.make_temporary_directory())
+            checkout = instance.create_test_mount("path1")
+            mount = checkout.path
+
+            os.makedirs(mount / "a")
+            with open(mount / "a" / "B", "wb") as f:
+                f.write(b"foobar")
+
+            mock_debugInodeStatus.return_value = [
+                TreeInodeDebugInfo(
+                    1,
+                    b"a",
+                    True,
+                    b"abcd",
+                    [
+                        TreeInodeEntryDebugInfo(
+                            b"b", 2, stat.S_IFREG, False, True, b"dcba"
+                        )
+                    ],
+                    1,
+                ),
+            ]
+
+            tracker = ProblemCollector()
+            check_materialized_are_accessible(
+                tracker,
+                typing.cast(EdenInstance, instance),
+                checkout,
+                lambda p: os.lstat(p).st_mode,
+            )
+
+            problemDescriptions = {
+                problem.description() for problem in tracker.problems
+            }
+            self.assertEqual(problemDescriptions, set())
+
+        @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
         def test_materialized_junction(self, mock_debugInodeStatus) -> None:
             instance = FakeEdenInstance(self.make_temporary_directory())
             checkout = instance.create_test_mount("path1")
