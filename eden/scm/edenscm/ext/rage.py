@@ -71,7 +71,9 @@ def which(name) -> Optional[str]:
     return None
 
 
-def _tail(userlogdir, userlogfiles, nlines: int = 100) -> str:
+def _tail(
+    userlogdir, userlogfiles, nlines: int = 100, compactpattern: Optional[str] = None
+) -> str:
     """
     Returns the last `nlines` from logfiles
     """
@@ -87,6 +89,23 @@ def _tail(userlogdir, userlogfiles, nlines: int = 100) -> str:
     for logfile in logfiles:
         with open(logfile) as f:
             loglines = f.readlines()
+        if compactpattern:
+            loglinescompact = []
+            compactpatterncounter = False
+            for line in loglines:
+                if compactpattern not in line:
+                    if compactpatterncounter:
+                        loglinescompact.append(
+                            "......................................... and %d similar lines\n"
+                            % compactpatterncounter
+                        )
+                    loglinescompact.append(line)
+                    compactpatterncounter = 0
+                else:
+                    if compactpatterncounter == 0:
+                        loglinescompact.append(line)
+                    compactpatterncounter = compactpatterncounter + 1
+            loglines = loglinescompact
         linecount = len(loglines)
         if linecount > linelimit:
             logcontent = "  ".join(loglines[-linelimit:])
@@ -200,7 +219,12 @@ def scmdaemonlog(ui, repo):
         for f in os.listdir(os.path.dirname(logpath))
         if os.path.basename(logpath) in f
     ]
-    return _tail(os.path.dirname(logpath), logfiles, 150)
+    return _tail(
+        os.path.dirname(logpath),
+        logfiles,
+        nlines=150,
+        compactpattern="Subscription is alive",
+    )
 
 
 def readbackedupheads(repo) -> str:
