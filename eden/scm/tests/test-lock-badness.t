@@ -4,6 +4,9 @@
 
   $ configure modernclient
 
+workingcopy.ruststatus deadlocks when calling into rust status
+  $ setconfig devel.lockmode=rust_only workingcopy.ruststatus=false
+
 Prepare
 
   $ newclientrepo a
@@ -129,7 +132,6 @@ On processs waiting on another, warning after a long time (debug output on)
   calling hook pre-update: hghook_pre-update.sleephalf
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat preup-stderr
-  locker is still running (full unique id: '*') (glob)
   waiting for lock on working directory of b held by process '*' on host * (glob)
   (hint: run * to see related processes) (glob)
   got lock after * seconds (glob) (?)
@@ -148,7 +150,6 @@ On processs waiting on another, warning disabled, (debug output on)
   calling hook pre-update: hghook_pre-update.sleephalf
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat preup-stderr
-  locker is still running (full unique id: '*') (glob)
   waiting for lock on working directory of b held by process '*' on host * (glob)
   (hint: run * to see related processes) (glob)
   got lock after * seconds (glob) (?)

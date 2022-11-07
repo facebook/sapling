@@ -8,7 +8,6 @@
 use std::error;
 use std::fmt;
 use std::fs::File;
-use std::fs::OpenOptions;
 use std::fs::Permissions;
 use std::io::Write;
 use std::ops::Add;
@@ -137,38 +136,15 @@ pub fn try_lock(dir: &Path, name: &str, contents: &[u8]) -> anyhow::Result<LockH
         }
     };
 
-    let mut legacy_already_locked = false;
-    if legacy_path.exists() {
-        if cfg!(windows) {
-            // If file exists, lock is active. Windows uses the
-            // can't-rename-into-existing-file property to implement
-            // locking.
-            legacy_already_locked = true
-        } else if let Ok(f) = OpenOptions::new().write(true).open(&legacy_path) {
-            legacy_already_locked = f.try_lock_exclusive().is_err();
-        }
-    }
-
     // Create the legacy lock file to maintain compatibility for
     // external code that checks directly for .hg/wlock as an
     // indication of "is an hg operation in progress".
-    let mut legacy_lock = None;
-    if !legacy_already_locked {
-        if let Ok(mut legacy_file) = File::create(&legacy_path) {
-            // Also write lock contents for compatibility with Python readers.
-            let _ = legacy_file.write_all(contents.as_ref());
+    if let Ok(mut legacy_file) = File::create(&legacy_path) {
+        // Also write lock contents for compatibility with Python readers.
+        let _ = legacy_file.write_all(contents.as_ref());
 
-            #[cfg(unix)]
-            {
-                let _ = legacy_file.set_permissions(Permissions::from_mode(0o644));
-
-                // Take the lock so Python doesn't delete file
-                // when attempting to take lock. We also need to
-                // hold on to the file to keep the lock.
-                let _ = legacy_file.try_lock_exclusive();
-                legacy_lock = Some(legacy_file);
-            }
-        }
+        #[cfg(unix)]
+        let _ = legacy_file.set_permissions(Permissions::from_mode(0o644));
     }
 
     let mut contents_file = util::file::open(&path, "wct")?;
@@ -181,20 +157,14 @@ pub fn try_lock(dir: &Path, name: &str, contents: &[u8]) -> anyhow::Result<LockH
     Ok(LockHandle {
         path: lock_file_path,
         lock: lock_file,
-        legacy_path: if !legacy_already_locked {
-            Some(legacy_path)
-        } else {
-            None
-        },
-        legacy_lock,
+        legacy_path,
     })
 }
 
 pub struct LockHandle {
     path: PathBuf,
     lock: File,
-    legacy_path: Option<PathBuf>,
-    legacy_lock: Option<File>,
+    legacy_path: PathBuf,
 }
 
 impl LockHandle {
@@ -206,12 +176,7 @@ impl LockHandle {
     }
 
     fn unlink_legacy(&mut self) {
-        if let Some(path) = self.legacy_path.take() {
-            // Close legacy_lock file, if present.
-            self.legacy_lock.take();
-
-            let _ = util::path::remove_file(&path);
-        }
+        let _ = util::path::remove_file(&self.legacy_path);
     }
 }
 
@@ -257,7 +222,6 @@ impl fmt::Display for LockContendedError {
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
-    use std::fs;
     use std::thread;
     use std::thread::spawn;
 
@@ -421,9 +385,7 @@ mod tests {
             assert!(!legacy_path.exists());
         }
 
-        // Legacy path does exist but isn't locked. Doesn't apply to
-        // Windows because mere presence of file means "locked".
-        #[cfg(unix)]
+        // Legacy path already exists - clean it up.
         {
             File::create(&legacy_path)?;
 
@@ -434,24 +396,6 @@ mod tests {
 
             // clean up legacy file
             assert!(!legacy_path.exists());
-        }
-
-        // legacy path exists and _is_ locked (this indicates python locking is also active)
-        {
-            let mut opts = fs::OpenOptions::new();
-
-            opts.create(true).write(true).truncate(true);
-
-            let legacy_file = opts.open(&legacy_path)?;
-            legacy_file.lock_exclusive()?;
-
-            {
-                let _foo_lock = try_lock(tmp.path(), "foo", "some contents".as_bytes())?;
-                assert!(legacy_path.exists());
-            }
-
-            // do not clean up legacy file
-            assert!(legacy_path.exists());
         }
 
         Ok(())
