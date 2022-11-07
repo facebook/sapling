@@ -10,24 +10,14 @@ the API calls directly so we can (1) avoid spawning so many processes, and
 (2) do more work in parallel.
 """
 
-import asyncio
-import itertools
-import json
 from dataclasses import dataclass
-from typing import Dict, Generic, Optional, Tuple, TypeVar, Union
+from typing import Dict, Optional, Tuple, Union
+
+from ghstack.github_gh_cli import make_request, Result
 
 from .pullrequest import PullRequestId
 
-T = TypeVar("T")
-
-
-@dataclass
-class Result(Generic[T]):
-    ok: Optional[T] = None
-    error: Optional[str] = None
-
-    def is_error(self) -> bool:
-        return self.error is not None
+_Params = Union[str, int, bool]
 
 
 @dataclass
@@ -94,7 +84,7 @@ query ($owner: String!, $name: String!) {
   }
 }
 """
-    params: Dict[str, Union[str, int]] = {"query": query, "owner": owner, "name": name}
+    params: Dict[str, _Params] = {"query": query, "owner": owner, "name": name}
     result = await make_request(params)
     if result.is_error():
         return result
@@ -209,7 +199,7 @@ query ($owner: String!, $name: String!) {
   }
 }
 """
-    params: Dict[str, Union[str, int]] = {"query": query, "owner": owner, "name": name}
+    params: Dict[str, _Params] = {"query": query, "owner": owner, "name": name}
     result = await make_request(params)
     if result.is_error():
         return result
@@ -231,7 +221,7 @@ async def create_pull_request(
     owner: str, name: str, base: str, head: str, title: str, body: str
 ) -> Result:
     endpoint = f"repos/{owner}/{name}/pulls"
-    params: Dict[str, Union[str, int]] = {
+    params: Dict[str, _Params] = {
         "base": base,
         "head": head,
         "title": title,
@@ -255,7 +245,7 @@ mutation ($pullRequestId: ID!, $title: String!, $body: String!) {
   }
 }
 """
-    params: Dict[str, Union[str, int]] = {
+    params: Dict[str, _Params] = {
         "query": query,
         "pullRequestId": node_id,
         "title": title,
@@ -281,7 +271,7 @@ mutation ($repositoryId: ID!, $name: String!, $oid: GitObjectID!) {
   }
 }
 """
-    params: Dict[str, Union[str, int]] = {
+    params: Dict[str, _Params] = {
         "query": query,
         "repositoryId": repo_id,
         "name": f"refs/heads/{branch_name}",
@@ -307,7 +297,7 @@ mutation ($repositoryId: ID!, $base: String!, $head: String!) {
   }
 }
 """
-    params: Dict[str, Union[str, int]] = {
+    params: Dict[str, _Params] = {
         "query": query,
         "repositoryId": repo_id,
         "base": branch_name,
@@ -332,7 +322,7 @@ query {
   }
 }
 """
-    params: Dict[str, Union[str, int]] = {
+    params: Dict[str, _Params] = {
         "query": query,
     }
     result = await make_request(params)
@@ -340,41 +330,3 @@ query {
         return result
     else:
         return Result(ok=result.ok["data"]["viewer"]["login"])
-
-
-async def make_request(
-    params: Dict[str, Union[str, int]], endpoint="graphql"
-) -> Result:
-    """If successful, returns a Result whose value is parsed JSON returned by
-    the request.
-    """
-    args = ["gh", "api", endpoint] + list(
-        itertools.chain(
-            *[
-                ["-f" if k != "number" else "-F", f"{k}={v}"]
-                for (k, v) in params.items()
-            ]
-        )
-    )
-    proc = await asyncio.create_subprocess_exec(
-        *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-    )
-    stdout, stderr = await proc.communicate()
-
-    # If proc exits with a non-zero exit code, the stdout may still
-    # be valid JSON, but we expect it to have an "errors" property defined.
-    try:
-        response = json.loads(stdout)
-    except json.JSONDecodeError:
-        response = None
-
-    if proc.returncode == 0:
-        assert response is not None
-        assert "errors" not in response
-        return Result(ok=response)
-    elif response is None:
-        return Result(
-            error=f"exit({proc.returncode}) Failure running {' '.join(args)}\nstdout: {stdout}\nstderr: {stderr}\n"
-        )
-    else:
-        return Result(error=json.dumps(response, indent=1))

@@ -19,7 +19,7 @@ import ghstack
 import ghstack.action
 import ghstack.checkout
 import ghstack.config
-import ghstack.github_gh_cli
+import ghstack.github_cli_endpoint
 import ghstack.land
 import ghstack.logs
 import ghstack.sapling_shell
@@ -216,7 +216,7 @@ def _create_ghstack_context(ui, repo):
 
     ghstack.logs.rotate()
 
-    github = ghstack.github_gh_cli.GitHubCLIEndpoint()
+    github = ghstack.github_cli_endpoint.GitHubCLIEndpoint()
     config_section = "ghstack"
     username_config_name = "github_username"
     github_username = ui.config(config_section, username_config_name)
