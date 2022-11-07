@@ -1555,6 +1555,8 @@ class ui(object):
             # instead default to E to plumb commit messages to
             # avoid confusion.
             defaulteditor = "E"
+        elif pycompat.sysplatform == "win32":
+            defaulteditor = "notepad.exe"
         else:
 
             defaulteditor = "vi"
