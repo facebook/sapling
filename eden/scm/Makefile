@@ -23,6 +23,10 @@ PYTHON := python2
 endif
 PYTHON3 := python3
 
+ifeq ($(RUST_DEBUG),1)
+RUST_FLAG = --debug
+endif
+
 $(eval HGROOT := $(shell pwd))
 HGPYTHONS ?= $(HGROOT)/build/pythons
 PURE=
@@ -74,7 +78,7 @@ oss:
 	  build_py -c -d . \
 	  build_clib $(COMPILERFLAG) \
 	  build_ext $(COMPILERFLAG) -i \
-	  build_rust_ext -i -l $(RFLAG)\
+	  build_rust_ext -i -l $(RUST_FLAG) \
 	  build_pyzip -i \
 	  build_mo
 ifeq ($(OS),Windows_NT)
@@ -94,7 +98,7 @@ local:
 	  build_py -c -d . \
 	  build_clib $(COMPILERFLAG) \
 	  build_ext $(COMPILERFLAG) -i \
-	  build_rust_ext -i -l $(RFLAG)\
+	  build_rust_ext -i -l $(RUST_FLAG) \
 	  build_pyzip -i \
 	  build_mo
 ifeq ($(OS),Windows_NT)
