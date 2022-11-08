@@ -100,7 +100,15 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
         .into());
     }
 
-    let target = repo.resolve_commit(&wc.treestate().lock(), &dest)?;
+    let target = match repo.resolve_commit(&wc.treestate().lock(), &dest) {
+        Ok(target) => target,
+        Err(_) => {
+            return Err(errors::FallbackToPython(
+                "unable to resolve checkout destination".to_owned(),
+            )
+            .into());
+        }
+    };
 
     checkout::checkout(ctx.io(), repo, wc, target)?;
 

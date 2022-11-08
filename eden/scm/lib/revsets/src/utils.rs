@@ -62,10 +62,14 @@ fn resolve_special(args: &LookupArgs) -> Result<Option<HgId>, RevsetLookupError>
     args.metalog
         .get(args.change_id)?
         .map(|tip| {
-            HgId::from_slice(&tip).map_err(|err| {
-                let tip = String::from_utf8_lossy(&tip).to_string();
-                RevsetLookupError::CommitHexParseError(tip, err.into())
-            })
+            if tip.is_empty() {
+                Ok(HgId::null_id().clone())
+            } else {
+                HgId::from_slice(&tip).map_err(|err| {
+                    let tip = String::from_utf8_lossy(&tip).to_string();
+                    RevsetLookupError::CommitHexParseError(tip, err.into())
+                })
+            }
         })
         .transpose()
 }
