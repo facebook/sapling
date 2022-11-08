@@ -49,20 +49,15 @@ use crate::Subcommand;
 pub enum RedirectCmd {
     #[clap(about = "List redirections")]
     List {
-        #[clap(
-            long,
-            parse(try_from_str = expand_path_or_cwd),
-            default_value = "",
-            help = "The EdenFS mount point path."
-        )]
-        mount: PathBuf,
+        #[clap(long, help = "The EdenFS mount point path.")]
+        mount: Option<PathBuf>,
         #[clap(long, help = "output in json rather than human readable text")]
         json: bool,
     },
     #[clap(about = "Add or change a redirection")]
     Add {
-        #[clap(long, parse(try_from_str = expand_path_or_cwd), default_value = "", help = "The EdenFS mount point path.")]
-        mount: PathBuf,
+        #[clap(long, parse(from_str = expand_path), help = "The EdenFS mount point path.")]
+        mount: Option<PathBuf>,
         #[clap(parse(from_str = expand_path), index = 1, help = "The path in the repo which should be redirected")]
         repo_path: PathBuf,
         #[clap(index = 2, help = "The type of the redirection", possible_values = ["bind", "symlink"])]
@@ -85,13 +80,13 @@ pub enum RedirectCmd {
         so that a subsequent fixup will restore it"
     )]
     Unmount {
-        #[clap(long, parse(try_from_str = expand_path_or_cwd), default_value = "", help = "The EdenFS mount point path.")]
-        mount: PathBuf,
+        #[clap(long, parse(from_str = expand_path), help = "The EdenFS mount point path.")]
+        mount: Option<PathBuf>,
     },
     #[clap(about = "Delete a redirection")]
     Del {
-        #[clap(long, parse(try_from_str = expand_path_or_cwd), default_value = "", help = "The EdenFS mount point path.")]
-        mount: PathBuf,
+        #[clap(long, parse(from_str = expand_path), help = "The EdenFS mount point path.")]
+        mount: Option<PathBuf>,
         #[clap(parse(from_str = expand_path), index = 1, help = "The path in the repo which should no longer be redirected")]
         repo_path: PathBuf,
     },
@@ -100,8 +95,8 @@ pub enum RedirectCmd {
         remove things that should not be redirected"
     )]
     Fixup {
-        #[clap(long, parse(try_from_str = expand_path_or_cwd), default_value = "", help = "The EdenFS mount point path.")]
-        mount: PathBuf,
+        #[clap(long, parse(from_str = expand_path), help = "The EdenFS mount point path.")]
+        mount: Option<PathBuf>,
         #[clap(
             long,
             help = "Unmount and re-bind mount any bind mount redirections to ensure that they are \
@@ -153,9 +148,15 @@ impl RedirectCmd {
         Ok(0)
     }
 
-    async fn list(&self, mount: &Path, json: bool) -> Result<ExitCode> {
+    async fn list(&self, mount: Option<PathBuf>, json: bool) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let checkout = find_checkout(instance, mount)?;
+        let mount = match mount {
+            Some(provided) => provided,
+            None => expand_path_or_cwd("").with_context(|| {
+                anyhow!("could not infer mount: could not determine current working directory")
+            })?,
+        };
+        let checkout = find_checkout(instance, &mount)?;
         let mut redirections = get_effective_redirections(&checkout).with_context(|| {
             anyhow!(
                 "Unable to retrieve redirections for checkout '{}'",
@@ -178,7 +179,7 @@ impl RedirectCmd {
 
     async fn add(
         &self,
-        mount: &Path,
+        mount: Option<PathBuf>,
         repo_path: &Path,
         redir_type: &str,
         force_remount_bind_mounts: bool,
@@ -186,9 +187,15 @@ impl RedirectCmd {
     ) -> Result<ExitCode> {
         let redir_type = RedirectionType::from_str(redir_type)?;
         let instance = EdenFsInstance::global();
+        let mount = match mount {
+            Some(provided) => provided,
+            None => expand_path_or_cwd("").with_context(|| {
+                anyhow!("could not infer mount: could not determine current working directory")
+            })?,
+        };
         let client_name = instance.client_name(&mount)?;
         let config_dir = instance.config_directory(&client_name);
-        let checkout = find_checkout(instance, mount)?;
+        let checkout = find_checkout(instance, &mount)?;
         try_add_redirection(
             &checkout,
             &config_dir,
@@ -208,9 +215,15 @@ impl RedirectCmd {
         Ok(0)
     }
 
-    async fn unmount(&self, mount: &Path) -> Result<ExitCode> {
+    async fn unmount(&self, mount: Option<PathBuf>) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let checkout = find_checkout(instance, mount)?;
+        let mount = match mount {
+            Some(provided) => provided,
+            None => expand_path_or_cwd("").with_context(|| {
+                anyhow!("could not infer mount: could not determine current working directory")
+            })?,
+        };
+        let checkout = find_checkout(instance, &mount)?;
         let redirs = get_effective_redirections(&checkout).with_context(|| {
             anyhow!(
                 "Could not get effective redirections for checkout {}",
@@ -250,9 +263,15 @@ impl RedirectCmd {
         Ok(0)
     }
 
-    async fn del(&self, mount: &Path, repo_path: &Path) -> Result<ExitCode> {
+    async fn del(&self, mount: Option<PathBuf>, repo_path: &Path) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let checkout = find_checkout(instance, mount)?;
+        let mount = match mount {
+            Some(provided) => provided,
+            None => expand_path_or_cwd("").with_context(|| {
+                anyhow!("could not infer mount: could not determine current working directory")
+            })?,
+        };
+        let checkout = find_checkout(instance, &mount)?;
         let client_name = instance.client_name(&mount)?;
         let config_dir = instance.config_directory(&client_name);
         let mut redirs = get_configured_redirections(&checkout).with_context(|| {
@@ -318,12 +337,18 @@ impl RedirectCmd {
 
     async fn fixup(
         &self,
-        mount: &Path,
+        mount: Option<PathBuf>,
         force_remount_bind_mounts: bool,
         all_sources: bool,
     ) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let checkout = find_checkout(instance, mount)?;
+        let mount = match mount {
+            Some(provided) => provided,
+            None => expand_path_or_cwd("").with_context(|| {
+                anyhow!("could not infer mount: could not determine current working directory")
+            })?,
+        };
+        let checkout = find_checkout(instance, &mount)?;
         let redirs = get_effective_redirections(&checkout).with_context(|| {
             anyhow!(
                 "Could not get configured redirections for checkout {}",
@@ -501,7 +526,7 @@ impl RedirectCmd {
 impl Subcommand for RedirectCmd {
     async fn run(&self) -> Result<ExitCode> {
         match self {
-            Self::List { mount, json } => self.list(mount, *json).await,
+            Self::List { mount, json } => self.list(mount.to_owned(), *json).await,
             Self::Add {
                 mount,
                 repo_path,
@@ -510,7 +535,7 @@ impl Subcommand for RedirectCmd {
                 strict,
             } => {
                 self.add(
-                    mount,
+                    mount.to_owned(),
                     repo_path,
                     redir_type,
                     *force_remount_bind_mounts,
@@ -518,17 +543,28 @@ impl Subcommand for RedirectCmd {
                 )
                 .await
             }
-            Self::Unmount { mount } => self.unmount(mount).await,
-            Self::Del { mount, repo_path } => self.del(mount, repo_path).await,
+            Self::Unmount { mount } => self.unmount(mount.to_owned()).await,
+            Self::Del { mount, repo_path } => self.del(mount.to_owned(), repo_path).await,
             Self::Fixup {
                 mount,
                 force_remount_bind_mounts,
                 all_sources,
             } => {
-                self.fixup(mount, *force_remount_bind_mounts, *all_sources)
+                self.fixup(mount.to_owned(), *force_remount_bind_mounts, *all_sources)
                     .await
             }
             Self::CleanupApfs {} => self.cleanup_apfs().await,
+        }
+    }
+
+    fn get_mount_path_override(&self) -> Option<PathBuf> {
+        match self {
+            Self::List { mount, .. }
+            | Self::Add { mount, .. }
+            | Self::Unmount { mount }
+            | Self::Del { mount, .. }
+            | Self::Fixup { mount, .. } => mount.to_owned(),
+            Self::CleanupApfs {} => None,
         }
     }
 }

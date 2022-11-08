@@ -11,6 +11,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -84,6 +85,10 @@ pub struct MainCommand {
 #[async_trait]
 pub trait Subcommand: Send + Sync {
     async fn run(&self) -> Result<ExitCode>;
+
+    fn get_mount_path_override(&self) -> Option<PathBuf> {
+        None
+    }
 }
 
 /**
@@ -108,11 +113,11 @@ pub enum TopLevelSubcommand {
     Redirect(crate::redirect::RedirectCmd),
 }
 
-#[async_trait]
-impl Subcommand for TopLevelSubcommand {
-    async fn run(&self) -> Result<ExitCode> {
+impl TopLevelSubcommand {
+    fn subcommand(&self) -> &dyn Subcommand {
         use TopLevelSubcommand::*;
-        let sc: &(dyn Subcommand) = match self {
+
+        match self {
             Status(cmd) => cmd,
             Pid(cmd) => cmd,
             Uptime(cmd) => cmd,
@@ -125,8 +130,18 @@ impl Subcommand for TopLevelSubcommand {
             List(cmd) => cmd,
             PrefetchProfile(cmd) => cmd,
             Redirect(cmd) => cmd,
-        };
-        sc.run().await
+        }
+    }
+}
+
+#[async_trait]
+impl Subcommand for TopLevelSubcommand {
+    async fn run(&self) -> Result<ExitCode> {
+        self.subcommand().run().await
+    }
+
+    fn get_mount_path_override(&self) -> Option<PathBuf> {
+        self.subcommand().get_mount_path_override()
     }
 }
 
@@ -163,26 +178,28 @@ impl MainCommand {
     }
 
     fn get_config_dir(&self) -> PathBuf {
+        // A config dir might be provided as a top-level argument. Top-level arguments take
+        // precedent over sub-command args.
         if let Some(config_dir) = &self.config_dir {
             config_dir.clone()
+        // Then check if the optional mount path provided by some subcommands is an EdenFS mount.
+        // If it's provided and is a valid EdenFS mount, use the mounts config dir.
+        } else if let Some(config_dir) = self
+            .subcommand
+            .get_mount_path_override()
+            .and_then(|x| util::locate_eden_config_dir(&x))
+        {
+            config_dir
+        // Then check if the current working directory is an EdenFS mount. If not, we should
+        // default to the default config-dir location which varies by platform.
         } else {
-            // Check whether we're in an Eden mount. If we are, some parent directory will contain
-            // a .eden dir that contains a socket file. This socket file is symlinked to the
-            // socket file contained in the config dir we should use for this mount.
-            if let Ok(expanded_path) = env::current_dir().and_then(|cwd| cwd.canonicalize()) {
-                for ancestor in expanded_path.ancestors() {
-                    let socket = ancestor.join(".eden").join("socket");
-                    if socket.exists() {
-                        if let Ok(resolved_socket) = socket.canonicalize() {
-                            if let Some(parent) = resolved_socket.parent() {
-                                return parent.to_path_buf();
-                            }
-                        }
-                    }
-                }
-            }
-            // If we aren't in an eden mount, simply use the default config dir
-            expand_path(DEFAULT_CONFIG_DIR)
+            env::current_dir()
+                .map_err(From::from)
+                .and_then(|cwd| {
+                    util::locate_eden_config_dir(&cwd)
+                        .ok_or_else(|| anyhow!("cwd is not in an eden mount"))
+                })
+                .unwrap_or(expand_path(DEFAULT_CONFIG_DIR))
         }
     }
 
