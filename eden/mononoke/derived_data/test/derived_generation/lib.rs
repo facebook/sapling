@@ -18,6 +18,7 @@ use bytes::Bytes;
 use context::CoreContext;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
 use derived_data_service_if::types as thrift;
 use fbinit::FacebookInit;
@@ -58,6 +59,8 @@ impl TryFrom<BlobstoreGetData> for DerivedGeneration {
 #[async_trait]
 impl BonsaiDerivable for DerivedGeneration {
     const NAME: &'static str = "test_generation";
+    // Using existing variant for unodes to avoid adding new for test only
+    const VARIANT: DerivableType = DerivableType::Unodes;
 
     type Dependencies = dependencies![];
 

@@ -18,6 +18,7 @@ use context::CoreContext;
 use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
 use derived_data_service_if::types as thrift;
 use filenodes::FilenodeInfo;
@@ -108,7 +109,7 @@ pub enum FilenodesOnlyPublic {
 
 #[async_trait]
 impl BonsaiDerivable for FilenodesOnlyPublic {
-    const NAME: &'static str = "filenodes";
+    const VARIANT: DerivableType = DerivableType::FileNodes;
 
     type Dependencies = dependencies![MappedHgChangesetId];
 

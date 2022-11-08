@@ -17,6 +17,7 @@ use context::CoreContext;
 use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
 use derived_data_service_if::types as thrift;
 use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
@@ -73,7 +74,7 @@ impl From<RootDeletedManifestV2Id> for BlobstoreBytes {
 
 #[async_trait]
 impl BonsaiDerivable for RootDeletedManifestV2Id {
-    const NAME: &'static str = "deleted_manifest";
+    const VARIANT: DerivableType = DerivableType::DeletedManifests;
 
     type Dependencies = dependencies![RootUnodeManifestId];
 

@@ -14,6 +14,7 @@ use context::CoreContext;
 use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
 use derived_data_service_if::types as thrift;
 use mononoke_types::basename_suffix_skeleton_manifest::BssmDirectory;
@@ -62,7 +63,7 @@ impl RootBasenameSuffixSkeletonManifest {
 
 #[async_trait]
 impl BonsaiDerivable for RootBasenameSuffixSkeletonManifest {
-    const NAME: &'static str = "bssm";
+    const VARIANT: DerivableType = DerivableType::Bssm;
 
     type Dependencies = dependencies![];
 

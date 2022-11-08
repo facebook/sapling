@@ -20,8 +20,53 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use strum_macros::AsRefStr;
+use strum_macros::Display;
+use strum_macros::EnumString;
 
 use crate::context::DerivationContext;
+
+/// Enum which consolidates all available derived data types
+/// It provides access to `const &'static str` representation to
+/// use as Name of the derived data type, which is used to
+/// identify or name data (for example lease keys) associated with this
+/// particular derived data type.
+/// It also provides `as_ref()` method for serialization.
+/// and implements FromStr trait for deserialization.
+#[derive(AsRefStr, EnumString, Display)]
+pub enum DerivableType {
+    BlameV1,
+    BlameV2,
+    Bssm,
+    ChangesetInfo,
+    DeletedManifests,
+    Fastlog,
+    FileNodes,
+    Fsnodes,
+    HgChangesets,
+    GitTree,
+    SkeletonManifests,
+    Unodes,
+}
+
+impl DerivableType {
+    const fn name(&self) -> &'static str {
+        match self {
+            DerivableType::BlameV2 => "blame",
+            DerivableType::BlameV1 => "blame",
+            DerivableType::Bssm => "bssm",
+            DerivableType::ChangesetInfo => "changeset_info",
+            DerivableType::DeletedManifests => "deleted_manifest",
+            DerivableType::Fastlog => "fastlog",
+            DerivableType::FileNodes => "filenodes",
+            DerivableType::Fsnodes => "fsnodes",
+            DerivableType::HgChangesets => "hgchangesets",
+            DerivableType::GitTree => "git_trees",
+            DerivableType::SkeletonManifests => "skeleton_manifests",
+            DerivableType::Unodes => "unodes",
+        }
+    }
+}
 
 /// Defines how derivation occurs.  Each derived data type must implement
 /// `BonsaiDerivable` to describe how to derive a new value from its inputs
@@ -38,12 +83,8 @@ use crate::context::DerivationContext;
 /// default implementation fetches in separate requests.
 #[async_trait]
 pub trait BonsaiDerivable: Sized + Send + Sync + Clone + Debug + 'static {
-    /// Name of the derived data type.
-    ///
-    /// Should be a unique string (among derived data types), which is used to
-    /// identify or name data (for example lease keys) associated with this
-    /// particular derived data type.
-    const NAME: &'static str;
+    const VARIANT: DerivableType;
+    const NAME: &'static str = Self::VARIANT.name();
 
     /// Types of derived data types on which this derived data type
     /// depends.

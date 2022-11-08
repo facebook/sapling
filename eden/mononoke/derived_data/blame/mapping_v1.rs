@@ -15,6 +15,7 @@ use context::CoreContext;
 use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
 use derived_data_service_if::types as thrift;
 use metaconfig_types::BlameVersion;
@@ -47,7 +48,7 @@ fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> 
 
 #[async_trait]
 impl BonsaiDerivable for BlameRoot {
-    const NAME: &'static str = "blame";
+    const VARIANT: DerivableType = DerivableType::BlameV1;
 
     type Dependencies = dependencies![RootUnodeManifestId];
 

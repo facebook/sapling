@@ -22,6 +22,7 @@ use derived_data::batch::DEFAULT_STACK_FILE_CHANGES_LIMIT;
 use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
 use futures::future::try_join_all;
 use mercurial_types::HgChangesetId;
@@ -57,7 +58,7 @@ pub struct HgChangesetDeriveOptions {
 
 #[async_trait]
 impl BonsaiDerivable for MappedHgChangesetId {
-    const NAME: &'static str = "hgchangesets";
+    const VARIANT: DerivableType = DerivableType::HgChangesets;
 
     type Dependencies = dependencies![];
 

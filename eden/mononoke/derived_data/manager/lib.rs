@@ -13,6 +13,7 @@ pub mod manager;
 
 pub use self::context::DerivationContext;
 pub use self::derivable::BonsaiDerivable;
+pub use self::derivable::DerivableType;
 pub use self::error::DerivationError;
 pub use self::lease::DerivedDataLease;
 pub use self::manager::derive::BatchDeriveOptions;

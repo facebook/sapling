@@ -22,6 +22,7 @@ use derived_data::batch::FileConflicts;
 use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
 use derived_data_service_if::types as thrift;
 use futures::future::try_join_all;
@@ -87,7 +88,7 @@ fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> 
 
 #[async_trait]
 impl BonsaiDerivable for RootUnodeManifestId {
-    const NAME: &'static str = "unodes";
+    const VARIANT: DerivableType = DerivableType::Unodes;
 
     type Dependencies = dependencies![];
 
