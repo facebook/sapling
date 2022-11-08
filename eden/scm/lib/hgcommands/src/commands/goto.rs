@@ -87,7 +87,12 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
     }
     let dest: String = dest[0].clone();
 
-    if ctx.opts.clean {
+    if ctx.opts.clean
+        || ctx.opts.check
+        || ctx.opts.merge
+        || !ctx.opts.date.is_empty()
+        || ctx.opts.r#continue
+    {
         tracing::debug!(target: "checkout_info", status_detail="unsupported_args");
         return Err(errors::FallbackToPython(
             "one or more unsupported options in Rust checkout".to_owned(),
