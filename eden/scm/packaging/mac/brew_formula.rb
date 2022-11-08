@@ -8,10 +8,11 @@
 class Sapling < Formula
   desc "The Sapling source control client"
   homepage ""
-  url "file:///Users/$USER/sapling.tar.gz"
-  version "0.1"
-  sha256 ""
   license ""
+  # These fields are intended to be populated by a Github action
+  url "%URL%"
+  version "%VERSION%"
+  sha256 "%SHA256%"
 
   depends_on "python@3.8"
   depends_on "node"
@@ -27,12 +28,14 @@ class Sapling < Formula
     ENV["PYTHON3"] = Formula["python@3.8"].opt_prefix/"bin/python3.8"
 
     cd "eden/scm" do
-      system "make PREFIX=#{prefix} install-oss"
+      # Since above we make openssl a build-time dependency, we need to
+      # statically link the OpenSSL library. In the openssl Rust crate, which
+      # we use, this is done via setting the OPENSSL_STATIC environment variable
+      #
+      # The VERSION environment variable sets the version, and this is expected
+      # to be filled by a Github action
+      system "OPENSSL_STATIC=1 SAPLING_VERSION=%VERSION% " \
+             "make PREFIX=#{prefix} install-oss"
     end
-  end
-
-  test do
-    # TODO
-    system "true"
   end
 end
