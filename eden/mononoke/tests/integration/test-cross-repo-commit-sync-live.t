@@ -62,7 +62,6 @@ Before the change
   smallrepofolder/foo
 
 Make a config change
-  $ killandwait "$XREPOSYNC_PID"
   $ update_commit_sync_map_first_option
 -- try to create mapping commit with incorrect file - this should fail
   $ mononoke_admin_source_target $REPOIDLARGE $REPOIDSMALL crossrepo pushredirection change-mapping-version \
@@ -78,8 +77,6 @@ Make a config change
   > --version-name new_version \
   > --dump-mapping-large-repo-path smallrepofolder_after/mapping.json &> /dev/null
   $ flush_mononoke_bookmarks
-
-  $ mononoke_x_repo_sync_forever $REPOIDSMALL $REPOIDLARGE
 
 After the change
 -- push to a small repo
