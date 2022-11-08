@@ -518,10 +518,9 @@ folly::Try<ssize_t> FileDescriptor::doVecOp(
 }
 #endif
 
-FileDescriptor FileDescriptor::open(
-    AbsolutePathPiece path,
-    OpenFileHandleOptions opts) {
+namespace {
 #ifndef _WIN32
+FileDescriptor openImpl(folly::StringPiece path, OpenFileHandleOptions opts) {
   int flags = (!opts.followSymlinks ? O_NOFOLLOW : 0) |
       (opts.closeOnExec ? O_CLOEXEC : 0) |
 #ifdef O_PATH
@@ -535,23 +534,19 @@ FileDescriptor FileDescriptor::open(
       (opts.create ? O_CREAT : 0) | (opts.exclusiveCreate ? O_EXCL : 0) |
       (opts.truncate ? O_TRUNC : 0);
 
-  auto fd = ::open(path.copy().c_str(), flags, opts.createMode);
+  auto fd = ::open(path.str().c_str(), flags, opts.createMode);
   if (fd == -1) {
     int err = errno;
     throw std::system_error(
         err, std::generic_category(), folly::to<std::string>("open: ", path));
   }
   return FileDescriptor(fd, FileDescriptor::FDType::Unknown);
-#else // _WIN32
+}
+#else
+FileDescriptor openImpl(folly::StringPiece path, OpenFileHandleOptions opts) {
   DWORD access = 0, share = 0, create = 0, attrs = 0;
   DWORD err;
   auto sec = SECURITY_ATTRIBUTES();
-
-  if (path == "/dev/null"_abspath) {
-    path = "NUL:"_abspath;
-  }
-
-  auto wpath = path.wide();
 
   if (opts.metaDataOnly) {
     access = 0;
@@ -590,6 +585,8 @@ FileDescriptor FileDescriptor::open(
     attrs |= FILE_FLAG_OPEN_REPARSE_POINT;
   }
 
+  auto wpath = multibyteToWideString(path);
+
   FileDescriptor file(
       reinterpret_cast<intptr_t>(CreateFileW(
           wpath.c_str(), access, share, &sec, create, attrs, nullptr)),
@@ -603,6 +600,21 @@ FileDescriptor FileDescriptor::open(
   }
 
   return file;
+}
+#endif
+} // namespace
+
+FileDescriptor FileDescriptor::open(
+    AbsolutePathPiece path,
+    OpenFileHandleOptions opts) {
+  return openImpl(path.stringPiece(), opts);
+}
+
+FileDescriptor FileDescriptor::openNullDevice(OpenFileHandleOptions opts) {
+#ifndef _WIN32
+  return openImpl("/dev/null", opts);
+#else // _WIN32
+  return openImpl("NUL", opts);
 #endif
 }
 

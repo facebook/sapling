@@ -56,14 +56,15 @@ TEST_F(ConfigSettingTest, configSetStringValue) {
 
   std::map<std::string, std::string> attrMap;
   auto rslt = testDir.setStringValue(
-      systemConfigDirSp_, attrMap, ConfigSource::UserConfig);
+      systemConfigDir_.stringPiece(), attrMap, ConfigSource::UserConfig);
+  rslt.value();
   EXPECT_EQ(rslt.hasError(), false);
   EXPECT_EQ(testDir.getSource(), ConfigSource::UserConfig);
   EXPECT_EQ(testDir.getValue(), systemConfigDir_);
   EXPECT_EQ(systemConfigDir_, testDir.getStringValue());
 
   rslt = testDir.setStringValue(
-      userConfigDirSp_, attrMap, ConfigSource::UserConfig);
+      userConfigDir_.stringPiece(), attrMap, ConfigSource::UserConfig);
   EXPECT_EQ(rslt.hasError(), false);
   EXPECT_EQ(testDir.getSource(), ConfigSource::UserConfig);
   EXPECT_EQ(testDir.getValue(), userConfigDir_);
@@ -87,7 +88,7 @@ TEST_F(ConfigSettingTest, configSetAssign) {
 
     std::map<std::string, std::string> attrMap;
     auto rslt = testDir.setStringValue(
-        systemConfigDirSp_, attrMap, ConfigSource::UserConfig);
+        systemConfigDir_.stringPiece(), attrMap, ConfigSource::UserConfig);
     EXPECT_EQ(rslt.hasError(), false);
 
     EXPECT_EQ(testDir.getConfigKey(), dirKey);
@@ -112,7 +113,7 @@ TEST_F(ConfigSettingTest, configSetInvalidStringValue) {
 
   std::map<std::string, std::string> attrMap;
   auto rslt = testDir.setStringValue(
-      systemConfigDirSp_, attrMap, ConfigSource::SystemConfig);
+      systemConfigDir_.stringPiece(), attrMap, ConfigSource::SystemConfig);
   EXPECT_EQ(rslt.hasError(), false);
   EXPECT_EQ(testDir.getSource(), ConfigSource::SystemConfig);
   EXPECT_EQ(testDir.getValue(), systemConfigDir_);
@@ -129,25 +130,25 @@ TEST_F(ConfigSettingTest, configSetInvalidStringValue) {
 }
 
 TEST_F(ConfigSettingTest, configSetEnvSubTest) {
-  AbsolutePath defaultDir{"/home/bob"};
+  AbsolutePath defaultDir = canonicalPath("/home/bob");
   auto dirKey = "dirKey"_sp;
   ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir, nullptr};
 
   folly::StringPiece userConfigDir{"${HOME}/test_dir"};
   std::map<std::string, std::string> attrMap;
-  attrMap["HOME"] = "/home/bob";
+  attrMap["HOME"] = canonicalPath("/home/bob").stringPiece().str();
   attrMap["USER"] = "bob";
   auto rslt =
       testDir.setStringValue(userConfigDir, attrMap, ConfigSource::UserConfig);
   EXPECT_EQ(rslt.hasError(), false);
   EXPECT_EQ(testDir.getSource(), ConfigSource::UserConfig);
-  AbsolutePath bobTestDir = normalizeBestEffort("/home/bob/test_dir");
+  AbsolutePath bobTestDir = canonicalPath("/home/bob/test_dir");
   EXPECT_EQ(testDir.getValue(), bobTestDir);
   EXPECT_EQ(bobTestDir, testDir.getStringValue());
 
-  folly::StringPiece homeUserConfigDir{"/home/${USER}/test_dir"};
+  AbsolutePath homeUserConfigDir = canonicalPath("/home/${USER}/test_dir");
   rslt = testDir.setStringValue(
-      homeUserConfigDir, attrMap, ConfigSource::UserConfig);
+      homeUserConfigDir.stringPiece(), attrMap, ConfigSource::UserConfig);
   EXPECT_EQ(rslt.hasError(), false);
   EXPECT_EQ(testDir.getSource(), ConfigSource::UserConfig);
   EXPECT_EQ(testDir.getValue(), bobTestDir);
@@ -162,7 +163,7 @@ TEST_F(ConfigSettingTest, configSettingIgnoreDefault) {
   EXPECT_EQ(testDir.getSource(), ConfigSource::Default);
 
   // Setting default value should be ignored
-  AbsolutePath notDefaultDir{"/NOT_THE_DEFAULT_DIR"};
+  AbsolutePath notDefaultDir = canonicalPath("/NOT_THE_DEFAULT_DIR");
   testDir.setValue(notDefaultDir, ConfigSource::Default);
   EXPECT_EQ(testDir.getSource(), ConfigSource::Default);
   EXPECT_EQ(testDir.getValue(), defaultDir_);
@@ -194,7 +195,7 @@ TEST_F(ConfigSettingTest, configSettingSetAndClearTest) {
   auto dirKey = "dirKey"_sp;
   ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir_, nullptr};
 
-  AbsolutePath systemEdenDir{"/SYSTEM_DIR"};
+  AbsolutePath systemEdenDir = canonicalPath("/SYSTEM_DIR");
 
   // Initially, it should be default value
   EXPECT_EQ(testDir.getSource(), ConfigSource::Default);
@@ -215,8 +216,8 @@ TEST_F(ConfigSettingTest, configSetOverRiddenSource) {
   auto dirKey = "dirKey"_sp;
   ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir_, nullptr};
 
-  AbsolutePath cliEdenDir{"/CLI_DIR"};
-  AbsolutePath systemEdenDir{"/SYSTEM_DIR"};
+  AbsolutePath cliEdenDir = canonicalPath("/CLI_DIR");
+  AbsolutePath systemEdenDir = canonicalPath("/SYSTEM_DIR");
 
   // Initially, it should be default value
   EXPECT_EQ(testDir.getSource(), ConfigSource::Default);
@@ -241,9 +242,9 @@ TEST_F(ConfigSettingTest, configClearOverRiddenSource) {
   auto dirKey = "dirKey"_sp;
   ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir_, nullptr};
 
-  AbsolutePath cliEdenDir{"/CLI_DIR"};
-  AbsolutePath userEdenDir{"/USER_DIR"};
-  AbsolutePath systemEdenDir{"/SYSTEM_DIR"};
+  AbsolutePath cliEdenDir = canonicalPath("/CLI_DIR");
+  AbsolutePath userEdenDir = canonicalPath("/USER_DIR");
+  AbsolutePath systemEdenDir = canonicalPath("/SYSTEM_DIR");
 
   // Initially, it should be default value
   EXPECT_EQ(testDir.getSource(), ConfigSource::Default);

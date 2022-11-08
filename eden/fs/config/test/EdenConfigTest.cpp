@@ -26,17 +26,6 @@ using namespace facebook::eden::path_literals;
 
 namespace {
 
-// This doesn't really escape backslashes, it rewrites them to forward slashes
-// so that we can side-step properly quoting the path for embedding in TOML
-// on Windows systems.  It's a bit of a quick and dirty solution, but it works!
-// Note: this returns a string so that the user can decide wheather they want to
-// normalize the path or just take it as an absolute path as is.
-std::string escapeBackslashesForWindows(AbsolutePathPiece path) {
-  auto rawPath = folly::to<std::string>(path);
-  boost::replace_all(rawPath, "\\", "/");
-  return rawPath;
-}
-
 class EdenConfigTest : public ::testing::Test {
  protected:
   // Top level directory to hold test artifacts
@@ -45,14 +34,14 @@ class EdenConfigTest : public ::testing::Test {
 
   // Default paths for when the path does not have to exist
   std::string testUser_{"bob"};
-  AbsolutePath testHomeDir_{"/home/bob"};
-  AbsolutePath defaultUserConfigPath_{"/home/bob/.edenrc"};
-  AbsolutePath defaultSystemConfigPath_{"/etc/eden/edenfs.rc"};
+  AbsolutePath testHomeDir_;
+  AbsolutePath defaultUserConfigPath_;
+  AbsolutePath defaultSystemConfigPath_;
 
   // Used by various tests to verify default values is set
-  AbsolutePath defaultUserIgnoreFilePath_{"/home/bob/.edenignore"};
-  AbsolutePath defaultSystemIgnoreFilePath_{"/etc/eden/ignore"};
-  AbsolutePath defaultEdenDirPath_{"/home/bob/.eden"};
+  AbsolutePath defaultUserIgnoreFilePath_;
+  AbsolutePath defaultSystemIgnoreFilePath_;
+  AbsolutePath defaultEdenDirPath_;
   RelativePath clientCertificatePath_{"home/bob/client.pem"};
   optional<AbsolutePath> defaultClientCertificatePath_;
   bool defaultUseMononoke_ = false;
@@ -62,9 +51,17 @@ class EdenConfigTest : public ::testing::Test {
   std::string simpleOverRideTest_{"simpleOverRideTest"};
 
   void SetUp() override {
+    testHomeDir_ = canonicalPath("/home") + PathComponentPiece{testUser_};
+    defaultUserConfigPath_ = testHomeDir_ + ".edenrc"_pc;
+    defaultSystemConfigPath_ = canonicalPath("/etc/eden/edenfs.rc");
+
+    defaultUserIgnoreFilePath_ = testHomeDir_ + ".edenignore"_pc;
+    defaultSystemIgnoreFilePath_ = canonicalPath("/etc/eden/ignore");
+    defaultEdenDirPath_ = testHomeDir_ + ".eden"_pc;
+
     rootTestTempDir_ =
         std::make_unique<TemporaryDirectory>("eden_sys_user_config_test_");
-    rootTestDir_ = AbsolutePath{rootTestTempDir_->path().native()};
+    rootTestDir_ = canonicalPath(rootTestTempDir_->path().string());
     setupSimpleOverRideTest();
   }
 
@@ -80,8 +77,7 @@ class EdenConfigTest : public ::testing::Test {
     auto userPath = homePath + "bob"_pc;
     ensureDirectoryExists(userPath);
 
-    auto clientConfigPath = AbsolutePath(
-        escapeBackslashesForWindows(rootTestDir_ + clientCertificatePath_));
+    auto clientConfigPath = AbsolutePath(rootTestDir_ + clientCertificatePath_);
     writeFile(clientConfigPath, folly::StringPiece{"test"}).value();
 
     auto testCaseDir = rootTestDir_ + PathComponent(simpleOverRideTest_);
@@ -104,14 +100,20 @@ class EdenConfigTest : public ::testing::Test {
     auto systemConfigPath = systemConfigDir + "edenfs.rc"_pc;
     auto systemConfigFileData = folly::to<std::string>(
         "[core]\n"
-        "ignoreFile=\"/should_be_over_ridden\"\n"
-        "systemIgnoreFile=\"/etc/eden/systemCustomIgnore\"\n"
+        "ignoreFile='",
+        folly::kIsWindows ? "\\\\?\\should_be_over_ridden"
+                          : "/should_be_over_ridden",
+        "'\n"
+        "systemIgnoreFile='",
+        folly::kIsWindows ? "\\\\?\\etc\\eden\\systemCustomIgnore"
+                          : "/etc/eden/systemCustomIgnore",
+        "'\n"
         "[mononoke]\n"
         "use-mononoke=true\n"
         "[ssl]\n"
-        "client-certificate-locations=[\"",
+        "client-certificate-locations=['",
         clientConfigPath,
-        "\"]\n");
+        "']\n");
     writeFile(systemConfigPath, folly::StringPiece{systemConfigFileData})
         .value();
 
@@ -122,21 +124,19 @@ class EdenConfigTest : public ::testing::Test {
 } // namespace
 
 TEST_F(EdenConfigTest, defaultTest) {
-  AbsolutePath userConfigPath{"/home/bob/.edenrc"};
-  AbsolutePath systemConfigPath{"/etc/eden/edenfs.rc"};
-  AbsolutePath systemConfigDir{"/etc/eden"};
+  AbsolutePath systemConfigDir = canonicalPath("/etc/eden");
 
   auto edenConfig = std::make_shared<EdenConfig>(
       testUser_,
       uid_t{},
       testHomeDir_,
-      userConfigPath,
+      defaultUserConfigPath_,
       systemConfigDir,
-      systemConfigPath);
+      defaultSystemConfigPath_);
 
   // Config path
-  EXPECT_EQ(edenConfig->getUserConfigPath(), userConfigPath);
-  EXPECT_EQ(edenConfig->getSystemConfigPath(), systemConfigPath);
+  EXPECT_EQ(edenConfig->getUserConfigPath(), defaultUserConfigPath_);
+  EXPECT_EQ(edenConfig->getSystemConfigPath(), defaultSystemConfigPath_);
   EXPECT_EQ(edenConfig->getSystemConfigDir(), systemConfigDir);
 
   // Configuration
@@ -149,28 +149,30 @@ TEST_F(EdenConfigTest, defaultTest) {
 }
 
 TEST_F(EdenConfigTest, simpleSetGetTest) {
-  AbsolutePath userConfigPath{"/home/bob/differentConfigPath/.edenrc"};
-  AbsolutePath systemConfigPath{"/etc/eden/fix/edenfs.rc"};
-  AbsolutePath systemConfigDir{"/etc/eden/fix"};
+  AbsolutePath userConfigPath =
+      testHomeDir_ + "differentConfigPath/.edenrc"_relpath;
+  AbsolutePath systemConfigPath = canonicalPath("/etc/eden/fix/edenfs.rc");
+  AbsolutePath systemConfigDir = canonicalPath("/etc/eden/fix");
 
   auto edenConfig = std::make_shared<EdenConfig>(
       testUser_,
       uid_t{},
       testHomeDir_,
       userConfigPath,
-      systemConfigPath,
-      systemConfigDir);
+      systemConfigDir,
+      systemConfigPath);
 
-  AbsolutePath ignoreFile{"/home/bob/alternativeIgnore"};
-  AbsolutePath systemIgnoreFile{"/etc/eden/fix/systemIgnore"};
-  AbsolutePath edenDir{"/home/bob/alt/.eden"};
+  AbsolutePath ignoreFile = canonicalPath("/home/bob/alternativeIgnore");
+  AbsolutePath systemIgnoreFile = canonicalPath("/etc/eden/fix/systemIgnore");
+  AbsolutePath edenDir = canonicalPath("/home/bob/alt/.eden");
   AbsolutePath clientCertificate = rootTestDir_ + clientCertificatePath_;
   bool useMononoke = true;
 
-  AbsolutePath updatedUserConfigPath{
-      "/home/bob/differentConfigPath/.edenrcUPDATED"};
-  AbsolutePath updatedSystemConfigPath{"/etc/eden/fix/edenfs.rcUPDATED"};
-  AbsolutePath updatedSystemConfigDir{"/etc/eden/fixUPDATED"};
+  AbsolutePath updatedUserConfigPath =
+      canonicalPath("/home/bob/differentConfigPath/.edenrcUPDATED");
+  AbsolutePath updatedSystemConfigPath =
+      canonicalPath("/etc/eden/fix/edenfs.rcUPDATED");
+  AbsolutePath updatedSystemConfigDir = canonicalPath("/etc/eden/fixUPDATED");
 
   // Config path
   edenConfig->setUserConfigPath(updatedUserConfigPath);
@@ -201,13 +203,12 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
 
 TEST_F(EdenConfigTest, cloneTest) {
   uid_t userID{};
-  AbsolutePath userConfigPath{"/home/bob/.edenrc"};
-  AbsolutePath systemConfigPath{"/etc/eden/edenfs.rc"};
-  AbsolutePath systemConfigDir{"/etc/eden"};
+  AbsolutePath systemConfigDir = canonicalPath("/etc/eden");
 
-  AbsolutePath ignoreFile{"/NON_DEFAULT_IGNORE_FILE"};
-  AbsolutePath systemIgnoreFile{"/NON_DEFAULT_SYSTEM_IGNORE_FILE"};
-  AbsolutePath edenDir{"/NON_DEFAULT_EDEN_DIR"};
+  AbsolutePath ignoreFile = canonicalPath("/NON_DEFAULT_IGNORE_FILE");
+  AbsolutePath systemIgnoreFile =
+      canonicalPath("/NON_DEFAULT_SYSTEM_IGNORE_FILE");
+  AbsolutePath edenDir = canonicalPath("/NON_DEFAULT_EDEN_DIR");
   AbsolutePath clientCertificate =
       rootTestDir_ + PathComponent{"NON_DEFAULT_CLIENT_CERTIFICATE"};
   writeFile(clientCertificate, folly::StringPiece{"test"}).value();
@@ -219,9 +220,9 @@ TEST_F(EdenConfigTest, cloneTest) {
         testUser_,
         userID,
         testHomeDir_,
-        userConfigPath,
+        defaultUserConfigPath_,
         systemConfigDir,
-        systemConfigPath);
+        defaultSystemConfigPath_);
 
     // Configuration
     edenConfig->userIgnoreFile.setValue(ignoreFile, ConfigSource::CommandLine);
@@ -234,8 +235,8 @@ TEST_F(EdenConfigTest, cloneTest) {
 
     EXPECT_EQ(edenConfig->getUserName(), testUser_);
     EXPECT_EQ(edenConfig->getUserID(), userID);
-    EXPECT_EQ(edenConfig->getUserConfigPath(), userConfigPath);
-    EXPECT_EQ(edenConfig->getSystemConfigPath(), systemConfigPath);
+    EXPECT_EQ(edenConfig->getUserConfigPath(), defaultUserConfigPath_);
+    EXPECT_EQ(edenConfig->getSystemConfigPath(), defaultSystemConfigPath_);
     EXPECT_EQ(edenConfig->getSystemConfigDir(), systemConfigDir);
 
     EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), ignoreFile);
@@ -249,8 +250,8 @@ TEST_F(EdenConfigTest, cloneTest) {
 
   EXPECT_EQ(configCopy->getUserName(), testUser_);
   EXPECT_EQ(configCopy->getUserID(), userID);
-  EXPECT_EQ(configCopy->getUserConfigPath(), userConfigPath);
-  EXPECT_EQ(configCopy->getSystemConfigPath(), systemConfigPath);
+  EXPECT_EQ(configCopy->getUserConfigPath(), defaultUserConfigPath_);
+  EXPECT_EQ(configCopy->getSystemConfigPath(), defaultSystemConfigPath_);
   EXPECT_EQ(configCopy->getSystemConfigDir(), systemConfigDir);
 
   EXPECT_EQ(configCopy->userIgnoreFile.getValue(), ignoreFile);
@@ -272,21 +273,21 @@ TEST_F(EdenConfigTest, cloneTest) {
 }
 
 TEST_F(EdenConfigTest, clearAllTest) {
-  AbsolutePath userConfigPath{"/home/bob/.edenrc"};
-  AbsolutePath systemConfigPath{"/etc/eden/edenfs.rc"};
-  AbsolutePath systemConfigDir{"/etc/eden"};
+  AbsolutePath systemConfigDir = canonicalPath("/etc/eden");
 
   auto edenConfig = std::make_shared<EdenConfig>(
       testUser_,
       uid_t{},
       testHomeDir_,
-      userConfigPath,
+      defaultUserConfigPath_,
       systemConfigDir,
-      systemConfigPath);
+      defaultSystemConfigPath_);
 
-  AbsolutePath fromUserConfigPath{"/home/bob/FROM_USER_CONFIG"};
-  AbsolutePath fromSystemConfigPath{"/etc/eden/FROM_SYSTEM_CONFIG"};
-  AbsolutePath fromCommandLine{"/home/bob/alt/FROM_COMMAND_LINE"};
+  AbsolutePath fromUserConfigPath =
+      defaultUserConfigPath_ + "FROM_USER_CONFIG"_pc;
+  AbsolutePath fromSystemConfigPath = systemConfigDir + "FROM_SYSTEM_CONFIG"_pc;
+  AbsolutePath fromCommandLine =
+      defaultUserConfigPath_ + "alt/FROM_COMMAND_LINE"_relpath;
 
   // We will set the config on 3 properties, each with different sources
   // We will then run for each source to check results
@@ -326,25 +327,25 @@ TEST_F(EdenConfigTest, clearAllTest) {
 }
 
 TEST_F(EdenConfigTest, overRideNotAllowedTest) {
-  AbsolutePath userConfigPath{"/home/bob/.edenrc"};
-  AbsolutePath systemConfigPath{"/etc/eden/edenfs.rc"};
-  AbsolutePath systemConfigDir{"/etc/eden"};
+  AbsolutePath systemConfigDir = canonicalPath("/etc/eden");
 
   auto edenConfig = std::make_shared<EdenConfig>(
       testUser_,
       uid_t{},
       testHomeDir_,
-      userConfigPath,
+      defaultUserConfigPath_,
       systemConfigDir,
-      systemConfigPath);
+      defaultSystemConfigPath_);
 
   // Check default (starting point)
-  EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), "/home/bob/.edenignore");
+  EXPECT_EQ(
+      edenConfig->userIgnoreFile.getValue(),
+      canonicalPath("/home/bob/.edenignore"));
 
   // Set from cli and verify that cannot over-ride
-  AbsolutePath cliIgnoreFile{"/CLI_IGNORE_FILE"};
-  AbsolutePath ignoreFile{"/USER_IGNORE_FILE"};
-  AbsolutePath systemIgnoreFile{"/SYSTEM_IGNORE_FILE"};
+  AbsolutePath cliIgnoreFile = canonicalPath("/CLI_IGNORE_FILE");
+  AbsolutePath ignoreFile = canonicalPath("/USER_IGNORE_FILE");
+  AbsolutePath systemIgnoreFile = canonicalPath("/SYSTEM_IGNORE_FILE");
 
   edenConfig->userIgnoreFile.setValue(cliIgnoreFile, ConfigSource::CommandLine);
   EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), cliIgnoreFile);
@@ -369,19 +370,18 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
 
   edenConfig->loadSystemConfig();
 
-  auto rawClientConfigPath =
-      escapeBackslashesForWindows(rootTestDir_ + clientCertificatePath_);
-  auto clientConfigPath = normalizeBestEffort(rawClientConfigPath);
+  auto clientConfigPath = rootTestDir_ + clientCertificatePath_;
 
   EXPECT_EQ(edenConfig->edenDir.getValue(), defaultEdenDirPath_);
   EXPECT_EQ(
       edenConfig->userIgnoreFile.getValue(),
-      normalizeBestEffort("/should_be_over_ridden"));
+      canonicalPath("/should_be_over_ridden"));
   EXPECT_EQ(
       edenConfig->systemIgnoreFile.getValue(),
-      normalizeBestEffort("/etc/eden/systemCustomIgnore"));
+      canonicalPath("/etc/eden/systemCustomIgnore"));
   EXPECT_EQ(
-      edenConfig->getClientCertificate()->stringPiece(), clientConfigPath);
+      edenConfig->getClientCertificate(),
+      normalizeBestEffort(clientConfigPath.stringPiece()));
   EXPECT_EQ(edenConfig->useMononoke.getValue(), true);
 
   edenConfig->loadUserConfig();
@@ -389,19 +389,20 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
   EXPECT_EQ(edenConfig->edenDir.getValue(), defaultEdenDirPath_);
   EXPECT_EQ(
       edenConfig->userIgnoreFile.getValue(),
-      normalizeBestEffort("/home/bob/bob/userCustomIgnore"));
+      canonicalPath("/home/bob/bob/userCustomIgnore"));
   EXPECT_EQ(
       edenConfig->systemIgnoreFile.getValue(),
-      normalizeBestEffort("/etc/eden/systemCustomIgnore"));
+      canonicalPath("/etc/eden/systemCustomIgnore"));
   EXPECT_EQ(
-      edenConfig->getClientCertificate()->stringPiece(), clientConfigPath);
+      edenConfig->getClientCertificate(),
+      normalizeBestEffort(clientConfigPath.stringPiece()));
   EXPECT_EQ(edenConfig->useMononoke.getValue(), false);
 }
 
 TEST_F(EdenConfigTest, nonExistingConfigFiles) {
-  auto userConfigPath = AbsolutePath{"/home/bob/.FILE_DOES_NOT_EXIST"};
-  auto systemConfigDir = AbsolutePath{"/etc/eden"};
-  auto systemConfigPath = AbsolutePath{"/etc/eden/FILE_DOES_NOT_EXIST.rc"};
+  auto userConfigPath = testHomeDir_ + ".FILE_DOES_NOT_EXIST"_pc;
+  auto systemConfigDir = canonicalPath("/etc/eden");
+  auto systemConfigPath = systemConfigDir + "FILE_DOES_NOT_EXIST.rc"_pc;
 
   auto edenConfig = std::make_shared<EdenConfig>(
       testUser_,
@@ -432,7 +433,7 @@ TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
     auto config = EdenConfig{
         "testusername"_sp,
         uid_t{42},
-        AbsolutePath("/testhomedir"),
+        canonicalPath("/testhomedir"),
         userConfigPath,
         systemConfigDir,
         systemConfigDir + "system-edenrc"_pc};
@@ -442,30 +443,38 @@ TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
 
   writeFile(
       userConfigPath,
-      "[core]\n"
-      "ignoreFile=\"${HOME}/myignore\"\n"_sp)
+      folly::ByteRange{fmt::format(
+          "[core]\n"
+          "ignoreFile=\"{}\"\n",
+          "${HOME}/myignore")})
       .value();
   EXPECT_EQ(
       getConfig().userIgnoreFile.getValue(),
-      normalizeBestEffort("/testhomedir/myignore"));
+      canonicalPath("/testhomedir/myignore"));
 
   writeFile(
       userConfigPath,
-      "[core]\n"
-      "ignoreFile=\"/home/${USER}/myignore\"\n"_sp)
+      folly::ByteRange{fmt::format(
+          "[core]\n"
+          "ignoreFile='{}'\n",
+          folly::kIsWindows ? "\\\\?\\home\\${USER}\\myignore"
+                            : "/home/${USER}/myignore")})
       .value();
   EXPECT_EQ(
       getConfig().userIgnoreFile.getValue(),
-      normalizeBestEffort("/home/testusername/myignore"));
+      canonicalPath("/home/testusername/myignore"));
 
   writeFile(
       userConfigPath,
-      "[core]\n"
-      "ignoreFile=\"/var/user/${USER_ID}/myignore\"\n"_sp)
+      folly::ByteRange{fmt::format(
+          "[core]\n"
+          "ignoreFile='{}'\n",
+          folly::kIsWindows ? "\\\\?\\var\\user\\${USER_ID}\\myignore"
+                            : "/var/user/${USER_ID}/myignore")})
       .throwUnlessValue();
   EXPECT_EQ(
       getConfig().userIgnoreFile.getValue(),
-      normalizeBestEffort("/var/user/42/myignore"));
+      canonicalPath("/var/user/42/myignore"));
 
 #ifndef _WIN32
   setenv("THRIFT_TLS_CL_CERT_PATH", "edenTest", 1);
@@ -474,12 +483,16 @@ TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
 #endif
   writeFile(
       userConfigPath,
-      "[core]\n"
-      "ignoreFile=\"/var/user/${THRIFT_TLS_CL_CERT_PATH}/myignore\"\n"_sp)
+      folly::ByteRange{fmt::format(
+          "[core]\n"
+          "ignoreFile='{}'\n",
+          folly::kIsWindows
+              ? "\\\\?\\var\\user\\${THRIFT_TLS_CL_CERT_PATH}\\myignore"
+              : "/var/user/${THRIFT_TLS_CL_CERT_PATH}/myignore")})
       .throwUnlessValue();
   EXPECT_EQ(
       getConfig().userIgnoreFile.getValue(),
-      normalizeBestEffort("/var/user/edenTest/myignore"));
+      canonicalPath("/var/user/edenTest/myignore"));
 }
 
 TEST_F(EdenConfigTest, missing_config_files_never_change) {
@@ -503,9 +516,7 @@ TEST_F(EdenConfigTest, missing_config_files_never_change) {
 
 TEST_F(EdenConfigTest, clientCertIsFirstAvailable) {
   uid_t userID{};
-  AbsolutePath userConfigPath{"/home/bob/.edenrc"};
-  AbsolutePath systemConfigPath{"/etc/eden/edenfs.rc"};
-  AbsolutePath systemConfigDir{"/etc/eden"};
+  AbsolutePath systemConfigDir = canonicalPath("/etc/eden");
 
   // cert1 and cert2 are both be avialable, so they could be returned from
   // getConfig. However, cert3 is not available, so it can not be.
@@ -519,9 +530,9 @@ TEST_F(EdenConfigTest, clientCertIsFirstAvailable) {
       testUser_,
       userID,
       testHomeDir_,
-      userConfigPath,
+      defaultUserConfigPath_,
       systemConfigDir,
-      systemConfigPath);
+      defaultSystemConfigPath_);
 
   edenConfig->clientCertificateLocations.setValue(
       {clientCertificate1, clientCertificate2}, ConfigSource::UserConfig);
@@ -542,9 +553,7 @@ TEST_F(EdenConfigTest, clientCertIsFirstAvailable) {
 
 TEST_F(EdenConfigTest, fallbackToOldSingleCertConfig) {
   uid_t userID{};
-  AbsolutePath userConfigPath{"/home/bob/.edenrc"};
-  AbsolutePath systemConfigPath{"/etc/eden/edenfs.rc"};
-  AbsolutePath systemConfigDir{"/etc/eden"};
+  AbsolutePath systemConfigDir = canonicalPath("/etc/eden");
 
   // used in list cert
   AbsolutePath clientCertificate1 = rootTestDir_ + "cert1"_pc;
@@ -560,9 +569,9 @@ TEST_F(EdenConfigTest, fallbackToOldSingleCertConfig) {
       testUser_,
       userID,
       testHomeDir_,
-      userConfigPath,
+      defaultUserConfigPath_,
       systemConfigDir,
-      systemConfigPath);
+      defaultSystemConfigPath_);
 
   // Without clientCertificateLocations set clientCertificate should be used.
   edenConfig->clientCertificate.setValue(
@@ -587,7 +596,7 @@ TEST_F(EdenConfigTest, getValueByFullKey) {
       uid_t{},
       testHomeDir_,
       defaultUserConfigPath_,
-      AbsolutePath{"/etc/eden"},
+      canonicalPath("/etc/eden"),
       defaultSystemConfigPath_);
 
   EXPECT_EQ(edenConfig->getValueByFullKey("mononoke:use-mononoke"), "false");

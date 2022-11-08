@@ -22,7 +22,7 @@ class FileUtilsTest : public ::testing::Test {
  protected:
   void SetUp() override {
     tempDir_ = makeTempDir();
-    testLocation_ = AbsolutePath(tempDir_.path().native());
+    testLocation_ = AbsolutePath(canonicalPath(tempDir_.path().string()));
   }
 
   const AbsolutePathPiece getTestPath() {

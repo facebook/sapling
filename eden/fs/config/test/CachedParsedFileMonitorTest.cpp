@@ -24,6 +24,7 @@ using facebook::eden::writeFile;
 using facebook::eden::writeFileAtomic;
 using folly::test::TemporaryDirectory;
 using namespace std::chrono_literals;
+using namespace facebook::eden;
 
 namespace {
 static constexpr folly::StringPiece kErrorFileContents{"THROW ERROR:"};
@@ -75,6 +76,7 @@ class CachedParsedFileMonitorTest : public ::testing::Test {
   // Top level directory to hold test artifacts
   static constexpr folly::StringPiece fcTestName_{"FileChangeTest"};
   std::unique_ptr<TemporaryDirectory> rootTestDir_;
+  AbsolutePath rootPath_;
 
   static constexpr folly::StringPiece dataOne_{"this is file one"};
   static constexpr folly::StringPiece dataTwo_{"this is file two"};
@@ -97,24 +99,22 @@ class CachedParsedFileMonitorTest : public ::testing::Test {
   AbsolutePath bogusPathTwo_;
   void SetUp() override {
     rootTestDir_ = std::make_unique<TemporaryDirectory>(fcTestName_);
+    rootPath_ = canonicalPath(rootTestDir_->path().string());
 
-    pathOne_ = AbsolutePath{(rootTestDir_->path() / "file.one").string()};
+    pathOne_ = rootPath_ + "file.one"_pc;
     writeFile(pathOne_, dataOne_).throwUnlessValue();
 
-    pathTwo_ = AbsolutePath{(rootTestDir_->path() / "file.two").string()};
+    pathTwo_ = rootPath_ + "file.two"_pc;
     writeFile(pathTwo_, dataTwo_).throwUnlessValue();
 
-    invalidParsePathOne_ =
-        AbsolutePath{(rootTestDir_->path() / "invalidParse.one").string()};
+    invalidParsePathOne_ = rootPath_ + "invalidParse.one"_pc;
     writeFile(invalidParsePathOne_, folly::StringPiece(invalidParseDataOne_))
         .throwUnlessValue();
 
-    gitIgnorePathOne_ =
-        AbsolutePath{(rootTestDir_->path() / "gitignore.one").string()};
+    gitIgnorePathOne_ = rootPath_ + "gitignore.one"_pc;
     writeFile(gitIgnorePathOne_, gitIgnoreDataOne_).throwUnlessValue();
 
-    bogusPathOne_ =
-        AbsolutePath{(rootTestDir_->path() / "THIS_IS_BOGUS").string()};
+    bogusPathOne_ = rootPath_ + "THIS_IS_BOGUS"_pc;
   }
   void TearDown() override {
     rootTestDir_.reset();
@@ -209,8 +209,7 @@ TEST_F(CachedParsedFileMonitorTest, updateNameFileExistToNonExist) {
 }
 
 TEST_F(CachedParsedFileMonitorTest, updateFileNonExistToExist) {
-  auto path = AbsolutePath{
-      (rootTestDir_->path() / "NonExistToExist.txt").string().c_str()};
+  auto path = rootPath_ + "NonExistToExist.txt"_pc;
   auto fcm =
       std::make_shared<CachedParsedFileMonitor<TestFileParser>>(path, 0s);
   auto rslt = fcm->getFileContents();
@@ -232,8 +231,7 @@ TEST_F(CachedParsedFileMonitorTest, updateFileNonExistToExist) {
 }
 
 TEST_F(CachedParsedFileMonitorTest, updateFileExistToNonExist) {
-  auto path = AbsolutePath{
-      (rootTestDir_->path() / "ExistToNonExist.txt").string().c_str()};
+  auto path = rootPath_ + "ExistToNonExist.txt"_pc;
 
   // Create a test file that we will subsequently delete
   writeFileAtomic(path, dataOne_).throwUnlessValue();
@@ -296,8 +294,7 @@ TEST_F(CachedParsedFileMonitorTest, updateFileParseErrorToNoError) {
 }
 
 TEST_F(CachedParsedFileMonitorTest, updateNoErrorToFileParseError) {
-  auto path = AbsolutePath{
-      (rootTestDir_->path() / "UpdateNoErrorToError.txt").string().c_str()};
+  auto path = rootPath_ + "UpdateNoErrorToError.txt"_pc;
 
   // Create file with valid data
   writeFileAtomic(path, dataOne_).throwUnlessValue();
@@ -324,8 +321,7 @@ TEST_F(CachedParsedFileMonitorTest, updateNoErrorToFileParseError) {
 
 #ifndef _WIN32
 TEST_F(CachedParsedFileMonitorTest, modifyThrottleTest) {
-  auto path = AbsolutePath{
-      (rootTestDir_->path() / "modifyThrottleTest.txt").string().c_str()};
+  auto path = rootPath_ + "modifyThrottleTest.txt"_pc;
 
   // Create file with valid data
   writeFileAtomic(path, dataOne_).throwUnlessValue();
@@ -360,8 +356,7 @@ TEST_F(CachedParsedFileMonitorTest, modifyThrottleTest) {
 }
 
 TEST_F(CachedParsedFileMonitorTest, modifyTest) {
-  auto path =
-      AbsolutePath{(rootTestDir_->path() / "modifyTest.txt").string().c_str()};
+  auto path = rootPath_ + "modifyTest.txt"_pc;
 
   // Create file with valid data
   writeFileAtomic(path, dataOne_).throwUnlessValue();
@@ -386,8 +381,7 @@ TEST_F(CachedParsedFileMonitorTest, modifyTest) {
 }
 
 TEST_F(CachedParsedFileMonitorTest, moveTest) {
-  auto path =
-      AbsolutePath{(rootTestDir_->path() / "moveTest.txt").string().c_str()};
+  auto path = rootPath_ + "moveTest.txt"_pc;
 
   // Create file with valid data
   writeFileAtomic(path, dataOne_).throwUnlessValue();

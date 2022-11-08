@@ -14,6 +14,8 @@
 using folly::Expected;
 using std::string;
 
+namespace facebook::eden {
+
 namespace {
 constexpr std::array<folly::StringPiece, 4> kEnvVars = {
     folly::StringPiece{"HOME"},
@@ -30,16 +32,9 @@ bool isValidAbsolutePath(folly::StringPiece path) {
   // normalizeBestEffort() isn't going to treat the path as relatively.  We
   // probably should just add an option to normalizeBestEffort() to make it
   // reject relative paths.
-  try {
-    facebook::eden::detail::AbsolutePathSanityCheck()(path);
-    return true;
-  } catch (std::domain_error&) {
-    return false;
-  }
+  return path.startsWith(detail::kRootStr);
 }
 } // namespace
-
-namespace facebook::eden {
 
 Expected<AbsolutePath, string> FieldConverter<AbsolutePath>::fromString(
     folly::StringPiece value,
@@ -61,7 +56,7 @@ Expected<AbsolutePath, string> FieldConverter<AbsolutePath>::fromString(
     }
   }
 
-  if (!::isValidAbsolutePath(sString)) {
+  if (!isValidAbsolutePath(sString)) {
     return folly::makeUnexpected<string>(folly::to<string>(
         "Cannot convert value '", value, "' to an absolute path"));
   }

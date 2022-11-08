@@ -15,10 +15,8 @@
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-using facebook::eden::AbsolutePath;
-using facebook::eden::AbsolutePathPiece;
-using facebook::eden::writeFileAtomic;
 using namespace std::chrono_literals;
+using namespace facebook::eden;
 
 namespace {
 
@@ -94,16 +92,16 @@ class FileChangeMonitorTest : public ::testing::Test {
   static constexpr folly::StringPiece dataTwo_{"this is file two"};
 
   std::unique_ptr<TemporaryDirectory> rootTestDir_;
+  AbsolutePath rootPath_;
   AbsolutePath pathOne_;
   AbsolutePath pathTwo_;
   void SetUp() override {
     rootTestDir_ = std::make_unique<TemporaryDirectory>(fcTestName_);
-    auto fsPathOne = rootTestDir_->path() / "file.one";
-    pathOne_ = AbsolutePath{fsPathOne.string()};
+    rootPath_ = canonicalPath(rootTestDir_->path().string());
+    pathOne_ = rootPath_ + "file.one"_pc;
     writeFileAtomic(pathOne_, dataOne_).throwUnlessValue();
 
-    auto fsPathTwo = rootTestDir_->path() / "file.two";
-    pathTwo_ = AbsolutePath{fsPathTwo.string()};
+    pathTwo_ = rootPath_ + "file.two"_pc;
     writeFileAtomic(pathTwo_, dataTwo_).throwUnlessValue();
   }
   void TearDown() override {
@@ -173,8 +171,7 @@ TEST_F(FileChangeMonitorTest, noOpNameChangeTest) {
 #ifndef _WIN32
 TEST_F(FileChangeMonitorTest, modifyExistFileTest) {
   MockFileChangeProcessor fcp;
-  auto path =
-      AbsolutePath{(rootTestDir_->path() / "ModifyExistFile.txt").string()};
+  auto path = rootPath_ + "ModifyExistFile.txt"_pc;
   writeFileAtomic(path, dataOne_).throwUnlessValue();
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 0s);
@@ -196,7 +193,7 @@ TEST_F(FileChangeMonitorTest, modifyExistFileTest) {
 
 TEST_F(FileChangeMonitorTest, fcpMoveTest) {
   MockFileChangeProcessor fcp;
-  auto path = AbsolutePath{(rootTestDir_->path() / "FcpMoveTest.txt").string()};
+  auto path = rootPath_ + "FcpMoveTest.txt"_pc;
   writeFileAtomic(path, dataOne_).throwUnlessValue();
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 0s);
@@ -221,8 +218,7 @@ TEST_F(FileChangeMonitorTest, fcpMoveTest) {
 
 TEST_F(FileChangeMonitorTest, modifyExistFileThrottleExpiresTest) {
   MockFileChangeProcessor fcp;
-  auto path = AbsolutePath{
-      (rootTestDir_->path() / "ModifyExistThrottleExpiresTest.txt").string()};
+  auto path = rootPath_ + "ModifyExistThrottleExpiresTest.txt"_pc;
   writeFileAtomic(path, dataOne_).throwUnlessValue();
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 10ms);
@@ -254,8 +250,7 @@ TEST_F(FileChangeMonitorTest, modifyExistFileThrottleExpiresTest) {
 
 TEST_F(FileChangeMonitorTest, modifyExistFileThrottleActiveTest) {
   MockFileChangeProcessor fcp;
-  auto path = AbsolutePath{
-      (rootTestDir_->path() / "ModifyExistFileThrottleActive.txt").string()};
+  auto path = rootPath_ + "ModifyExistFileThrottleActive.txt"_pc;
   writeFileAtomic(path, dataOne_).throwUnlessValue();
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 10s);
@@ -278,7 +273,7 @@ TEST_F(FileChangeMonitorTest, modifyExistFileThrottleActiveTest) {
 
 TEST_F(FileChangeMonitorTest, nonExistFileTest) {
   MockFileChangeProcessor fcp;
-  auto path = AbsolutePath{(rootTestDir_->path() / "NonExist.txt").string()};
+  auto path = rootPath_ + "NonExist.txt"_pc;
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 0s);
 
@@ -293,7 +288,7 @@ TEST_F(FileChangeMonitorTest, readFailTest) {
   MockFileChangeProcessor fcp;
 
   // Note: we are using directory as our path
-  auto path = AbsolutePath{rootTestDir_->path().string()};
+  auto path = rootPath_;
   auto fcm = std::make_shared<FileChangeMonitor>(path, 0s);
 
   EXPECT_EQ(fcm->getFilePath(), path.value());
@@ -312,8 +307,7 @@ TEST_F(FileChangeMonitorTest, readFailTest) {
 
 TEST_F(FileChangeMonitorTest, rmFileTest) {
   MockFileChangeProcessor fcp;
-  auto path =
-      AbsolutePath{(rootTestDir_->path() / "ExistToNonExist.txt").string()};
+  auto path = rootPath_ + "ExistToNonExist.txt"_pc;
   writeFileAtomic(path, dataOne_).throwUnlessValue();
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 0s);
@@ -352,8 +346,7 @@ TEST_F(FileChangeMonitorTest, processExceptionTest) {
 
 TEST_F(FileChangeMonitorTest, createFileTest) {
   MockFileChangeProcessor fcp;
-  auto path =
-      AbsolutePath{(rootTestDir_->path() / "NonExistToExist.txt").string()};
+  auto path = rootPath_ + "NonExistToExist.txt"_pc;
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 0s);
 
@@ -379,8 +372,7 @@ TEST_F(FileChangeMonitorTest, openFailTest) {
     return;
   }
   MockFileChangeProcessor fcp;
-  auto path =
-      AbsolutePath{(rootTestDir_->path() / "OpenFailTest.txt").string()};
+  auto path = rootPath_ + "OpenFailTest.txt"_pc;
 
   // Create the file
   writeFileAtomic(path, dataOne_).throwUnlessValue();
@@ -414,8 +406,7 @@ TEST_F(FileChangeMonitorTest, openFailFixTest) {
   }
 
   MockFileChangeProcessor fcp;
-  auto path =
-      AbsolutePath{(rootTestDir_->path() / "OpenFailFixTest.txt").string()};
+  auto path = rootPath_ + "OpenFailFixTest.txt"_pc;
 
   // Create the file
   writeFileAtomic(path, dataOne_).throwUnlessValue();

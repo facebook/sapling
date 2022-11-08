@@ -34,10 +34,12 @@ folly::StringPiece basename(folly::StringPiece path);
 /** Given a path like "foo/bar/baz" returns "foo/bar" */
 folly::StringPiece dirname(folly::StringPiece path);
 
-/** Path directory separator.
+/**
+ * Path directory separator.
  *
- * We always use a forward slash.  On Windows systems we will normalize
- * path names to alway use forward slash separators instead of backslashes.
+ * We always use a forward slash. On Windows systems, AbsolutePath only use
+ * backward slashes, while RelativePath can use a mix of forward and backward
+ * slashes.
  *
  * (This is defined as an enum value since we just want a symbolic constant,
  * and don't want an actual symbol emitted by the compiler.)
@@ -45,14 +47,24 @@ folly::StringPiece dirname(folly::StringPiece path);
 
 enum : char { kDirSeparator = '/', kWinDirSeparator = '\\' };
 constexpr folly::StringPiece kDirSeparatorStr{"/"};
+constexpr char kAbsDirSeparator =
+    folly::kIsWindows ? kWinDirSeparator : kDirSeparator;
 
 namespace detail {
+constexpr folly::StringPiece kUNCPrefix{"\\\\?\\"};
+constexpr folly::StringPiece kRootStr =
+    folly::kIsWindows ? kUNCPrefix : kDirSeparatorStr;
+
 inline constexpr bool isDirSeparator(char c) {
   return c == kDirSeparator || (folly::kIsWindows && c == kWinDirSeparator);
 }
 
 inline constexpr bool isDirSeparator(folly::StringPiece str) {
   return str.size() == 1 && isDirSeparator(str[0]);
+}
+
+inline bool isAbsoluteRoot(folly::StringPiece path) {
+  return path == kRootStr;
 }
 
 inline size_t findPathSeparator(folly::StringPiece str, size_t start = 0) {
@@ -152,10 +164,10 @@ enum : size_t { kMaxPathComponentLength = 255 };
  * for a RelativePath to begin or be composed with an AbsolutePath(Piece)?.
  * A RelativePath may be empty.
  *
- * AbsolutePath, AbsolutePathPiece: represent an absolute
- * path.  An absolute path must begin with a '/' character, and may be
- * composed with PathComponents and RelativePaths, but not with other
- * AbsolutePaths.
+ * AbsolutePath, AbsolutePathPiece: represent an absolute path.  An absolute
+ * path must begin with a '/' character on POSIX systems and "\\?\" (properly
+ * escaped) on Windows, and may be composed with PathComponents and
+ * RelativePaths, but not with other AbsolutePaths.
  *
  * Values of each of these types are immutable.
  *
@@ -646,7 +658,12 @@ class PathBase :
 #ifdef _WIN32
   std::wstring wide() const {
     auto str = multibyteToWideString(stringPiece());
-    std::replace(str.begin(), str.end(), L'/', L'\\');
+    if (std::is_same_v<Piece, RelativePathPiece>) {
+      // TODO(xavierd): Not sure if this replace is still necessary, for
+      // relative paths, Windows should normalize them and thus not care about
+      // forward vs backward slashes.
+      std::replace(str.begin(), str.end(), L'/', L'\\');
+    }
     return str;
   }
 #endif
@@ -726,7 +743,7 @@ class PathComponentBase
  * For example, iterating the path "foo/bar/baz" will yield
  * this series of Piece elements:
  *
- * 1. "/" but only for AbsolutePath
+ * 1. kRootStr but only for AbsolutePath
  * 2. "foo"
  * 3. "foo/bar"
  * 4. "foo/bar/baz"
@@ -815,7 +832,8 @@ class ComposedPathIterator {
   Piece piece() const {
     XCHECK_NE(pos_, nullptr);
     // Return everything preceding the slash to which pos_ points.
-    return Piece(folly::StringPiece(path_.begin(), pos_));
+    return Piece(
+        folly::StringPiece(path_.begin(), pos_), SkipPathSanityCheck{});
   }
 
   /*
@@ -844,10 +862,11 @@ class ComposedPathIterator {
 
  protected:
   const char* pathBegin() {
-    if (std::is_same<Piece, AbsolutePathPiece>::value) {
+    if (std::is_same_v<Piece, AbsolutePathPiece>) {
       // Always start iterators at the initial "/" character, so
       // that begin() yields "/" instead of the empty string.
-      return path_.begin() + 1;
+      XDCHECK_GE(path_.size(), kRootStr.size());
+      return path_.begin() + kRootStr.size();
     } else {
       return path_.begin();
     }
@@ -928,23 +947,27 @@ class PathComponentIterator {
   // Construct a PathComponentIterator from a composed path
   template <typename ComposedPathType>
   explicit PathComponentIterator(const ComposedPathType& path)
-      : path_{path.stringPiece()} {
+      : pathBegin_{path.stringPiece().begin() + (std::is_same_v<ComposedPathType, AbsolutePathPiece> ? kRootStr.size() : 0)},
+        pathEnd_{path.stringPiece().end()} {
+    static_assert(
+        std::is_same_v<ComposedPathType, AbsolutePathPiece> ||
+            std::is_same_v<ComposedPathType, RelativePathPiece>,
+        "PathComponentIterator should only be constructed from a non-stored path");
+
     if (IsReverse) {
-      start_ = path_.end();
-      end_ = path_.end();
+      start_ = pathEnd_;
+      end_ = pathEnd_;
       // Back start_ up to just after the last kDirSeparator
-      while (start_ != path_.begin() && !isDirSeparator(*(start_ - 1))) {
+      while (start_ != pathBegin_ && !isDirSeparator(*(start_ - 1))) {
         --start_;
       }
     } else {
       // Skip over any leading slash, to handle absolute paths
-      start_ = path_.begin();
-      while (start_ != path_.end() && isDirSeparator(*start_)) {
-        ++start_;
-      }
+      start_ = pathBegin_;
+
       // Advance end_ until the next slash or the end of the path
       end_ = start_;
-      while (end_ != path_.end() && !isDirSeparator(*end_)) {
+      while (end_ != pathEnd_ && !isDirSeparator(*end_)) {
         ++end_;
       }
     }
@@ -952,18 +975,25 @@ class PathComponentIterator {
 
   template <typename ComposedPathType>
   explicit PathComponentIterator(const ComposedPathType& path, EndEnum)
-      : path_{path.stringPiece()} {
+      : pathBegin_{path.stringPiece().begin() + (std::is_same_v<ComposedPathType, AbsolutePathPiece> ? kRootStr.size() : 0)},
+        pathEnd_{path.stringPiece().end()} {
+    static_assert(
+        std::is_same_v<ComposedPathType, AbsolutePathPiece> ||
+            std::is_same_v<ComposedPathType, RelativePathPiece>,
+        "PathComponentIterator should only be constructed from a non-stored path");
+
     if (IsReverse) {
-      start_ = path_.begin();
-      end_ = path_.begin();
+      start_ = pathBegin_;
+      end_ = start_;
     } else {
-      start_ = path_.end();
-      end_ = path_.end();
+      start_ = pathEnd_;
+      end_ = pathEnd_;
     }
   }
 
   bool operator==(const PathComponentIterator& other) const {
-    XDCHECK_EQ(path_, other.path_);
+    XDCHECK_EQ(pathBegin_, other.pathBegin_);
+    XDCHECK_EQ(pathEnd_, other.pathEnd_);
     // We have to check both start_ and end_ here.
     // In most cases start_ will equal other.start_ if and only if end_ equals
     // other.end_.  However, this is not always true because of end() and
@@ -973,7 +1003,8 @@ class PathComponentIterator {
   }
 
   bool operator!=(const PathComponentIterator& other) const {
-    XDCHECK_EQ(path_, other.path_);
+    XDCHECK_EQ(pathBegin_, other.pathBegin_);
+    XDCHECK_EQ(pathEnd_, other.pathEnd_);
     return (start_ != other.start_) || (end_ != other.end_);
   }
 
@@ -1037,35 +1068,36 @@ class PathComponentIterator {
  private:
   // Move the iterator forwards in the path.
   void advance() {
-    XDCHECK_NE(start_, path_.end());
-    if (end_ == path_.end()) {
+    XDCHECK_NE(start_, pathEnd_);
+    if (end_ == pathEnd_) {
       start_ = end_;
       return;
     }
     ++end_;
     start_ = end_;
-    while (end_ != path_.end() && !isDirSeparator(*end_)) {
+    while (end_ != pathEnd_ && !isDirSeparator(*end_)) {
       ++end_;
     }
   }
 
   // Move the iterator backwards in the path.
   void retreat() {
-    XDCHECK_NE(end_, path_.begin());
-    if (start_ == path_.begin()) {
-      end_ = path_.begin();
+    XDCHECK_NE(end_, pathBegin_);
+    if (start_ == pathBegin_) {
+      end_ = pathBegin_;
       return;
     }
 
     --start_;
     end_ = start_;
-    while (start_ != path_.begin() && !isDirSeparator(*(start_ - 1))) {
+    while (start_ != pathBegin_ && !isDirSeparator(*(start_ - 1))) {
       --start_;
     }
   }
 
   /// the path we're iterating over.
-  folly::StringPiece path_;
+  position_type pathBegin_;
+  position_type pathEnd_;
   /// our current position within that path.
   position_type start_{nullptr};
   position_type end_{nullptr};
@@ -1166,11 +1198,18 @@ class ComposedPathBase : public PathBase<Storage, SanityChecker, Stored, Piece>,
 
 /// Asserts that val is formed of multiple well formed PathComponents.
 struct ComposedPathSanityCheck {
-  constexpr size_t nextSeparator(folly::StringPiece val, size_t start) const {
+  constexpr size_t nextSeparator(
+      folly::StringPiece val,
+      size_t start,
+      std::optional<char> pathSeparator) const {
     const char* data = val.data();
 
     for (size_t i = start; i < val.size(); i++) {
-      if (isDirSeparator(data[i])) {
+      if (pathSeparator) {
+        if (data[i] == *pathSeparator) {
+          return i;
+        }
+      } else if (isDirSeparator(data[i])) {
         return i;
       }
     }
@@ -1178,10 +1217,12 @@ struct ComposedPathSanityCheck {
     return folly::StringPiece::npos;
   }
 
-  constexpr void operator()(folly::StringPiece val) const {
+  constexpr void operator()(
+      folly::StringPiece val,
+      std::optional<char> pathSeparator = std::nullopt) const {
     size_t start = 0;
     while (true) {
-      auto next = nextSeparator(val, start);
+      auto next = nextSeparator(val, start, pathSeparator);
       if (next == folly::StringPiece::npos) {
         break;
       }
@@ -1440,24 +1481,26 @@ class RelativePathBase : public ComposedPathBase<
 /// Asserts that val is well formed absolute path
 struct AbsolutePathSanityCheck {
   void operator()(folly::StringPiece val) const {
-#ifndef _WIN32
-    // This won't work on Windows. The usermode Windows path can start with
-    // a drive letter in front: c:\folder\file.txt
-    if (!val.startsWith(kDirSeparator)) {
+    if (!val.startsWith(detail::kRootStr)) {
       throw_<std::domain_error>(
           "attempt to construct an AbsolutePath from a non-absolute string: \"",
           val,
           "\"");
     }
-#endif
+    size_t offset = detail::kRootStr.size();
+
     if (val.size() > 1 && val.endsWith(kDirSeparator)) {
       // We do allow "/" though
       throw_<std::domain_error>(
           "AbsolutePath must not end with a slash: ", val);
     }
 
-    if (val.size() > 1) {
-      ComposedPathSanityCheck()(folly::StringPiece{val.begin() + 1, val.end()});
+    if (val.size() > offset) {
+      // Ensures that components are separated by / on posix systems and \ on
+      // Windows.
+      ComposedPathSanityCheck()(
+          folly::StringPiece{val.begin() + offset, val.end()},
+          kAbsDirSeparator);
     }
   }
 };
@@ -1484,7 +1527,7 @@ class AbsolutePathBase : public ComposedPathBase<
   using base_type::base_type;
 
   // Default construct to the root of the VFS
-  AbsolutePathBase() : base_type(kDirSeparatorStr, SkipPathSanityCheck()) {}
+  AbsolutePathBase() : base_type(kRootStr, SkipPathSanityCheck()) {}
 
   // For iteration
   using iterator = ComposedPathIterator<AbsolutePathPiece, false>;
@@ -1572,6 +1615,22 @@ class AbsolutePathBase : public ComposedPathBase<
     return childIter.remainder();
   }
 
+  /**
+   * Strip the UNC prefix and return a device-absolute path.
+   *
+   * Only use this to avoid leaking UNC paths out of EdenFS. In all other
+   * cases, prefer the stringPiece method.
+   *
+   * This does nothing more than what stringPiece does on non-Windows.
+   */
+  folly::StringPiece stringPieceWithoutUNC() const {
+    if (folly::kIsWindows) {
+      return this->stringPiece().subpiece(detail::kUNCPrefix.size());
+    } else {
+      return this->stringPiece();
+    }
+  }
+
   /** Compose an AbsolutePath with a RelativePath */
   template <typename B>
   AbsolutePath operator+(const detail::RelativePathBase<B>& b) const {
@@ -1580,15 +1639,18 @@ class AbsolutePathBase : public ComposedPathBase<
     if (b.stringPiece().empty()) {
       return this->copy();
     }
-    if (isDirSeparator(this->stringPiece())) {
+    if (isAbsoluteRoot(this->stringPiece())) {
       // Special case to avoid building a string like "//foo"
       return AbsolutePath(
           folly::to<std::string>(this->stringPiece(), b.stringPiece()),
           detail::SkipPathSanityCheck());
     }
     return AbsolutePath(
-        folly::to<std::string>(
-            this->stringPiece(), kDirSeparatorStr, b.stringPiece()),
+        fmt::format(
+            "{}{}{}",
+            this->stringPiece(),
+            kAbsDirSeparator,
+            fmt::join(b.components(), std::string_view{&kAbsDirSeparator, 1})),
         detail::SkipPathSanityCheck());
   }
 
@@ -1810,7 +1872,8 @@ AbsolutePathBase<Storage>::suffixes() const {
   // The PathSuffixIterator code assumes that the StringPiece it is given is
   // relative, so for absolute paths just strip off the leading directory
   // separator.
-  return suffix_iterator::createRange(this->stringPiece().subpiece(1));
+  return suffix_iterator::createRange(
+      this->stringPiece().subpiece(kRootStr.size()));
 }
 
 template <typename Storage>
@@ -1819,7 +1882,8 @@ AbsolutePathBase<Storage>::rsuffixes() const {
   // The PathSuffixIterator code assumes that the StringPiece it is given is
   // relative, so for absolute paths just strip off the leading directory
   // separator.
-  return reverse_suffix_iterator::createRange(this->stringPiece().subpiece(1));
+  return reverse_suffix_iterator::createRange(
+      this->stringPiece().subpiece(kRootStr.size()));
 }
 
 // Allow boost to compute hash values

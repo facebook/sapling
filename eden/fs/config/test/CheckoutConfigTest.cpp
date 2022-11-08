@@ -34,8 +34,8 @@ class CheckoutConfigTest : public ::testing::Test {
     edenDir_ = std::make_unique<TemporaryDirectory>("eden_config_test_");
     auto clientDir = edenDir_->path() / "client";
     folly::fs::create_directory(clientDir);
-    clientDir_ = AbsolutePath(clientDir.string());
-    mountPoint_ = AbsolutePath("/tmp/someplace");
+    clientDir_ = canonicalPath(clientDir.string());
+    mountPoint_ = canonicalPath("/tmp/someplace");
 
     auto snapshotPath = clientDir_ + "SNAPSHOT"_pc;
     auto snapshotContents = folly::StringPiece{
@@ -72,7 +72,11 @@ TEST_F(CheckoutConfigTest, testLoadFromClientDirectory) {
       ParentCommit(
           ParentCommit::WorkingCopyParentAndCheckedOutRevision{rootId, rootId}),
       parent);
-  EXPECT_EQ("/tmp/someplace", config->getMountPath());
+  if (folly::kIsWindows) {
+    EXPECT_EQ("\\\\?\\tmp\\someplace", config->getMountPath());
+  } else {
+    EXPECT_EQ("/tmp/someplace", config->getMountPath());
+  }
 }
 
 TEST_F(CheckoutConfigTest, testLoadWithIgnoredSettings) {
@@ -95,7 +99,11 @@ TEST_F(CheckoutConfigTest, testLoadWithIgnoredSettings) {
       ParentCommit(
           ParentCommit::WorkingCopyParentAndCheckedOutRevision{rootId, rootId}),
       parent);
-  EXPECT_EQ("/tmp/someplace", config->getMountPath());
+  if (folly::kIsWindows) {
+    EXPECT_EQ("\\\\?\\tmp\\someplace", config->getMountPath());
+  } else {
+    EXPECT_EQ("/tmp/someplace", config->getMountPath());
+  }
 }
 
 namespace {
@@ -106,8 +114,8 @@ class CheckoutConfigProtocolTest
     edenDir_ = std::make_unique<TemporaryDirectory>("eden_config_test_");
     auto clientDir = edenDir_->path() / "client";
     folly::fs::create_directory(clientDir);
-    clientDir_ = AbsolutePath(clientDir.string());
-    mountPoint_ = AbsolutePath("/tmp/someplace");
+    clientDir_ = canonicalPath(clientDir.string());
+    mountPoint_ = canonicalPath("/tmp/someplace");
 
     auto snapshotPath = clientDir_ + "SNAPSHOT"_pc;
     auto snapshotContents = folly::StringPiece{

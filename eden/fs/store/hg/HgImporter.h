@@ -256,7 +256,6 @@ class HgImporter : public Importer {
       folly::StringPiece context);
 
   SpawnedProcess helper_;
-  const AbsolutePath repoPath_;
   std::shared_ptr<EdenStats> const stats_;
   ImporterOptions options_;
   uint32_t nextRequestID_{0};

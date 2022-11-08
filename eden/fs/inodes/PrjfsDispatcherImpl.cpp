@@ -43,15 +43,17 @@ const std::string kConfigClientPath{"client"};
 const std::string kConfigTable{"Config"};
 
 std::string makeDotEdenConfig(EdenMount& mount) {
-  auto repoPath = mount.getPath();
-  auto socketPath = mount.getServerState()->getSocketPath();
-  auto clientPath = mount.getCheckoutConfig()->getClientDirectory();
+  auto repoPath = mount.getPath().stringPieceWithoutUNC();
+  auto socketPath =
+      mount.getServerState()->getSocketPath().stringPieceWithoutUNC();
+  auto clientPath =
+      mount.getCheckoutConfig()->getClientDirectory().stringPieceWithoutUNC();
 
   auto rootTable = cpptoml::make_table();
   auto configTable = cpptoml::make_table();
-  configTable->insert(kConfigRootPath, repoPath.c_str());
-  configTable->insert(kConfigSocketPath, socketPath.c_str());
-  configTable->insert(kConfigClientPath, clientPath.c_str());
+  configTable->insert(kConfigRootPath, repoPath.str());
+  configTable->insert(kConfigSocketPath, socketPath.str());
+  configTable->insert(kConfigClientPath, clientPath.str());
   rootTable->insert(kConfigTable, configTable);
 
   std::ostringstream stream;

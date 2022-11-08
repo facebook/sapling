@@ -86,7 +86,7 @@ INSTANTIATE_TEST_SUITE_P(
 TEST(PlainSqliteInodeCatalogTest, new_overlay_is_clean) {
   folly::test::TemporaryDirectory testDir;
   auto overlay = Overlay::create(
-      AbsolutePath{testDir.path().string()},
+      canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
       Overlay::InodeCatalogType::Tree,
       std::make_shared<NullStructuredLogger>(),
@@ -98,7 +98,7 @@ TEST(PlainSqliteInodeCatalogTest, new_overlay_is_clean) {
 TEST(PlainSqliteInodeCatalogTest, new_overlay_is_clean_buffered) {
   folly::test::TemporaryDirectory testDir;
   auto overlay = Overlay::create(
-      AbsolutePath{testDir.path().string()},
+      canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
       Overlay::InodeCatalogType::TreeBuffered,
       std::make_shared<NullStructuredLogger>(),
@@ -111,7 +111,7 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean) {
   folly::test::TemporaryDirectory testDir;
   {
     auto overlay = Overlay::create(
-        AbsolutePath{testDir.path().string()},
+        canonicalPath(testDir.path().string()),
         kPathMapDefaultCaseSensitive,
         Overlay::InodeCatalogType::Tree,
         std::make_shared<NullStructuredLogger>(),
@@ -119,7 +119,7 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean) {
     overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   }
   auto overlay = Overlay::create(
-      AbsolutePath{testDir.path().string()},
+      canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
       Overlay::InodeCatalogType::Tree,
       std::make_shared<NullStructuredLogger>(),
@@ -132,7 +132,7 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean_buffered) {
   folly::test::TemporaryDirectory testDir;
   {
     auto overlay = Overlay::create(
-        AbsolutePath{testDir.path().string()},
+        canonicalPath(testDir.path().string()),
         kPathMapDefaultCaseSensitive,
         Overlay::InodeCatalogType::TreeBuffered,
         std::make_shared<NullStructuredLogger>(),
@@ -140,7 +140,7 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean_buffered) {
     overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   }
   auto overlay = Overlay::create(
-      AbsolutePath{testDir.path().string()},
+      canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
       Overlay::InodeCatalogType::TreeBuffered,
       std::make_shared<NullStructuredLogger>(),
@@ -154,7 +154,7 @@ TEST(PlainSqliteInodeCatalogTest, close_overlay_with_no_capacity_buffered) {
   config->overlayBufferSize.setValue(0, ConfigSource::Default, true);
   folly::test::TemporaryDirectory testDir;
   auto overlay = Overlay::create(
-      AbsolutePath{testDir.path().string()},
+      canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
       Overlay::InodeCatalogType::TreeBuffered,
       std::make_shared<NullStructuredLogger>(),
@@ -171,7 +171,7 @@ TEST(
   config->overlayBufferSize.setValue(1, ConfigSource::Default, true);
   folly::test::TemporaryDirectory testDir;
   auto overlay = Overlay::create(
-      AbsolutePath{testDir.path().string()},
+      canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
       Overlay::InodeCatalogType::TreeBuffered,
       std::make_shared<NullStructuredLogger>(),
@@ -227,7 +227,7 @@ class RawSqliteInodeCatalogTest
   }
 
   AbsolutePath getLocalDir() {
-    return AbsolutePath{testDir_.path().string()};
+    return canonicalPath(testDir_.path().string());
   }
 
   folly::test::TemporaryDirectory testDir_;
@@ -394,7 +394,7 @@ class DebugDumpSqliteInodeCatalogInodesTest
   DebugDumpSqliteInodeCatalogInodesTest()
       : testDir_{makeTempDir("eden_DebugDumpSqliteInodeCatalogInodesTest")} {
     overlay = Overlay::create(
-        AbsolutePathPiece{testDir_.path().string()},
+        canonicalPath(testDir_.path().string()),
         kPathMapDefaultCaseSensitive,
         overlayType(),
         std::make_shared<NullStructuredLogger>(),

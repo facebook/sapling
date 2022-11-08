@@ -1120,14 +1120,11 @@ std::vector<Future<Unit>> EdenServer::prepareMounts(
 
   for (const auto& client : dirs.items()) {
     auto mountFuture = makeFutureWith([&] {
-      MountInfo mountInfo;
-      *mountInfo.mountPoint_ref() = client.first.c_str();
+      auto mountPath = canonicalPath(client.first.stringPiece());
       auto edenClientPath =
-          edenDir_.getCheckoutStateDir(client.second.asString());
-      *mountInfo.edenClientPath_ref() = edenClientPath.stringPiece().str();
-      auto initialConfig = CheckoutConfig::loadFromClientDirectory(
-          AbsolutePathPiece{*mountInfo.mountPoint_ref()},
-          AbsolutePathPiece{*mountInfo.edenClientPath_ref()});
+          edenDir_.getCheckoutStateDir(client.second.stringPiece());
+      auto initialConfig =
+          CheckoutConfig::loadFromClientDirectory(mountPath, edenClientPath);
       auto progressIndex = progressManager_->wlock()->registerEntry(
           client.first.asString(), initialConfig->getOverlayPath().c_str());
 
@@ -1138,26 +1135,23 @@ std::vector<Future<Unit>> EdenServer::prepareMounts(
                    progressManager_->wlock()->manageProgress(
                        logger, progressIndex, percent);
                  })
-          .thenTry(
-              [this,
-               logger,
-               mountPath = client.first.asString(),
-               progressIndex](folly::Try<std::shared_ptr<EdenMount>>&& result) {
-                if (result.hasValue()) {
-                  auto wl = progressManager_->wlock();
-                  wl->finishProgress(progressIndex);
-                  wl->printProgresses(logger);
-                  return makeFuture();
-                } else {
-                  incrementStartupMountFailures();
-                  logger->warn(
-                      "Failed to remount ",
-                      mountPath,
-                      ": ",
-                      result.exception().what());
-                  return makeFuture<Unit>(std::move(result).exception());
-                }
-              });
+          .thenTry([this, logger, mountPath, progressIndex](
+                       folly::Try<std::shared_ptr<EdenMount>>&& result) {
+            if (result.hasValue()) {
+              auto wl = progressManager_->wlock();
+              wl->finishProgress(progressIndex);
+              wl->printProgresses(logger);
+              return makeFuture();
+            } else {
+              incrementStartupMountFailures();
+              logger->warn(
+                  "Failed to remount ",
+                  mountPath,
+                  ": ",
+                  result.exception().what());
+              return makeFuture<Unit>(std::move(result).exception());
+            }
+          });
     });
 
     mountFutures.push_back(std::move(mountFuture));

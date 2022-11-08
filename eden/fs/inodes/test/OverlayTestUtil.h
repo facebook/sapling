@@ -20,14 +20,14 @@ namespace facebook::eden {
 void debugDumpOverlayInodes(
     Overlay& overlay,
     InodeNumber rootInode,
-    AbsolutePathPiece path,
+    folly::StringPiece path,
     std::ostringstream& out);
 
 inline std::string debugDumpOverlayInodes(
     Overlay& overlay,
     InodeNumber rootInode) {
   std::ostringstream out;
-  debugDumpOverlayInodes(overlay, rootInode, AbsolutePathPiece{}, out);
+  debugDumpOverlayInodes(overlay, rootInode, "/", out);
   return out.str();
 }
 

@@ -77,14 +77,14 @@ HgImporter::HgImporter(
     AbsolutePathPiece repoPath,
     std::shared_ptr<EdenStats> stats,
     std::optional<AbsolutePath> importHelperScript)
-    : repoPath_{repoPath}, stats_{std::move(stats)} {
+    : stats_{std::move(stats)} {
   std::vector<string> cmd;
 
   // importHelperScript takes precedence if it was specified; this is used
   // primarily in our integration tests.
   if (importHelperScript.has_value()) {
     cmd.push_back(importHelperScript.value().value());
-    cmd.push_back(std::string{repoPath.value()});
+    cmd.push_back(repoPath.stringPieceWithoutUNC().str());
   } else {
     cmd.push_back(FLAGS_hgPath);
     cmd.push_back("debugedenimporthelper");
@@ -113,7 +113,7 @@ HgImporter::HgImporter(
   // correct configuration in the currently available versions of
   // that subcommand.  In particular, without this, the tests may
   // fail when run in our CI environment.
-  opts.chdir(AbsolutePathPiece{repoPath.value()});
+  opts.chdir(repoPath);
 
   if (!FLAGS_hgPythonPath.empty()) {
     opts.environment().set("PYTHONPATH", FLAGS_hgPythonPath);
@@ -154,7 +154,7 @@ HgImporter::HgImporter(
   };
 
   options_ = waitForHelperStart();
-  XLOG(DBG1) << "hg_import_helper started for repository " << repoPath_;
+  XLOG(DBG1) << "hg_import_helper started for repository " << repoPath;
 }
 
 ImporterOptions HgImporter::waitForHelperStart() {

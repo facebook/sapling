@@ -358,7 +358,7 @@ void SpawnedProcess::Options::pipeStderr() {
 void SpawnedProcess::Options::nullStdin() {
   OpenFileHandleOptions opts;
   opts.readContents = 1;
-  open(STDIN_FILENO, "/dev/null"_abspath, opts);
+  dup2(FileDescriptor::openNullDevice(opts), STDIN_FILENO);
 }
 
 #ifdef _WIN32
@@ -638,7 +638,7 @@ SpawnedProcess::SpawnedProcess(
     execPath = multibyteToWideString(options.execPath_->stringPiece());
   }
   if (options.cwd_) {
-    cwd = multibyteToWideString(options.cwd_->stringPiece());
+    cwd = multibyteToWideString(options.cwd_->stringPieceWithoutUNC());
   }
   PROCESS_INFORMATION procInfo{};
   auto status = CreateProcessW(
@@ -1049,7 +1049,7 @@ std::pair<std::string, std::string> SpawnedProcess::pollingCommunicate(
         pfd.fd = it.second.fd();
         pfd.events = POLLIN;
       }
-      pfds.emplace_back(std::move(pfd));
+      pfds.emplace_back(pfd);
       revmap[pfd.fd] = it.first;
     }
 

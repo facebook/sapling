@@ -307,7 +307,7 @@ void populateDiskState(
     FsckFileState& state,
     const WIN32_FIND_DATAW& findFileData) {
   auto absPath = root + path;
-  auto wPath = std::wstring{L"\\\\?\\"} + absPath.wide();
+  auto wPath = absPath.wide();
   dtype_t dtype = dtypeFromAttrs(wPath.c_str(), findFileData.dwFileAttributes);
   if (dtype != dtype_t::Dir && dtype != dtype_t::Regular) {
     state.onDisk = true;
@@ -528,12 +528,11 @@ bool processChildren(
   PathMap<FsckFileState> children{CaseSensitivity::Insensitive};
 
   // Populate children disk information
-  auto absPath = root + path;
+  auto absPath = (root + path + "*"_relpath).wide();
+
   WIN32_FIND_DATAW findFileData;
-  std::wstring longPath{L"\\\\?\\"};
-  longPath += (absPath + "*"_relpath).wide();
   HANDLE h = FindFirstFileExW(
-      longPath.c_str(),
+      absPath.c_str(),
       FindExInfoBasic,
       &findFileData,
       FindExSearchNameMatch,

@@ -29,7 +29,7 @@
 
 namespace facebook::eden {
 
-extern const facebook::eden::AbsolutePath kUnspecifiedDefault;
+extern const AbsolutePath kUnspecifiedDefault;
 
 /**
  * EdenConfig holds the Eden configuration settings. It is constructed from

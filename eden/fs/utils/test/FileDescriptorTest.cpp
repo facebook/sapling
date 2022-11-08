@@ -87,7 +87,8 @@ TEST(FileDescriptor, socketPairReadvWritev) {
 TEST(FileDescriptor, fileReadvWritev) {
   auto dir = makeTempDir();
 
-  AbsolutePath fileName((dir.path() / "file.txt").generic_string());
+  AbsolutePath fileName =
+      canonicalPath((dir.path() / "file.txt").generic_string());
 
   {
     auto f = FileDescriptor::open(fileName, OpenFileHandleOptions::writeFile());
@@ -109,7 +110,8 @@ TEST(FileDescriptor, readFullFile) {
   }
 
   auto dir = makeTempDir();
-  AbsolutePath fileName((dir.path() / "file.txt").generic_string());
+  AbsolutePath fileName =
+      canonicalPath((dir.path() / "file.txt").generic_string());
 
   {
     auto f = FileDescriptor::open(fileName, OpenFileHandleOptions::writeFile());

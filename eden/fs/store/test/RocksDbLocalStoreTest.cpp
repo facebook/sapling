@@ -16,7 +16,7 @@ using namespace facebook::eden;
 LocalStoreImplResult makeRocksDbLocalStore(FaultInjector* faultInjector) {
   auto tempDir = makeTempDir();
   auto store = std::make_unique<RocksDbLocalStore>(
-      AbsolutePathPiece{tempDir.path().string()},
+      canonicalPath(tempDir.path().string()),
       std::make_shared<NullStructuredLogger>(),
       faultInjector);
   return {std::move(tempDir), std::move(store)};

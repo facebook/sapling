@@ -12,7 +12,7 @@ namespace facebook::eden {
 void debugDumpOverlayInodes(
     Overlay& overlay,
     InodeNumber rootInode,
-    AbsolutePathPiece path,
+    folly::StringPiece path,
     std::ostringstream& out) {
   out << path << "\n";
   out << "  Inode number: " << rootInode << "\n";
@@ -40,7 +40,10 @@ void debugDumpOverlayInodes(
   for (const auto& [entryPath, entry] : dir) {
     if (entry.getDtype() == dtype_t::Dir) {
       debugDumpOverlayInodes(
-          overlay, entry.getInodeNumber(), path + entryPath, out);
+          overlay,
+          entry.getInodeNumber(),
+          fmt::format("{}{}{}", path, path == "/" ? "" : "/", entryPath),
+          out);
     }
   }
 }

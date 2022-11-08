@@ -35,18 +35,17 @@ namespace facebook::eden {
 
 namespace {
 
-constexpr facebook::eden::PathComponentPiece kDefaultUserIgnoreFile{
-    ".edenignore"};
-constexpr facebook::eden::PathComponentPiece kDefaultSystemIgnoreFile{"ignore"};
-constexpr facebook::eden::PathComponentPiece kDefaultEdenDirectory{".eden"};
+constexpr PathComponentPiece kDefaultUserIgnoreFile{".edenignore"};
+constexpr PathComponentPiece kDefaultSystemIgnoreFile{"ignore"};
+constexpr PathComponentPiece kDefaultEdenDirectory{".eden"};
 
 template <typename String>
-void toAppend(facebook::eden::EdenConfig& ec, String* result) {
+void toAppend(EdenConfig& ec, String* result) {
   folly::toAppend(ec.toString(), result);
 }
 
 void getConfigStat(
-    facebook::eden::AbsolutePathPiece configPath,
+    AbsolutePathPiece configPath,
     int configFd,
     struct stat& configStat) {
   int statRslt{-1};
@@ -91,19 +90,19 @@ std::pair<StringPiece, StringPiece> parseKey(StringPiece fullKey) {
 
 } // namespace
 
-const facebook::eden::AbsolutePath kUnspecifiedDefault{"/"};
+const AbsolutePath kUnspecifiedDefault{detail::kRootStr};
 
 std::shared_ptr<EdenConfig> EdenConfig::createTestEdenConfig() {
   return std::make_unique<EdenConfig>(
       /* userName=*/"testuser",
       /* userID=*/uid_t{},
-      /* userHomePath=*/AbsolutePath{"/tmp"},
-      /* userConfigPath=*/AbsolutePath{"/tmp"},
-      /* systemConfigDir=*/AbsolutePath{"/tmp"},
-      /* setSystemConfigPath=*/AbsolutePath{"/tmp"});
+      /* userHomePath=*/canonicalPath("/tmp"),
+      /* userConfigPath=*/canonicalPath("/tmp"),
+      /* systemConfigDir=*/canonicalPath("/tmp"),
+      /* setSystemConfigPath=*/canonicalPath("/tmp"));
 }
 
-std::string EdenConfig::toString(facebook::eden::ConfigSource cs) const {
+std::string EdenConfig::toString(ConfigSource cs) const {
   switch (cs) {
     case ConfigSource::Default:
       return "default";

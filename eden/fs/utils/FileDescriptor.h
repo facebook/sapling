@@ -213,6 +213,11 @@ class FileDescriptor {
       AbsolutePathPiece path,
       OpenFileHandleOptions options);
 
+  /**
+   * Open the null device.
+   */
+  static FileDescriptor openNullDevice(OpenFileHandleOptions options);
+
  private:
   system_handle_type fd_{kInvalid};
   FDType fdType_{FDType::Unknown};

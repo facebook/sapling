@@ -96,14 +96,12 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
   edenConfig_ = make_shared<EdenConfig>(
       /*userName=*/folly::StringPiece{"bob"},
       /*userID=*/uid_t{},
-      /*userHomePath=*/AbsolutePath{testDir_->path().string()},
+      /*userHomePath=*/canonicalPath(testDir_->path().string()),
       /*userConfigPath=*/
-      AbsolutePath{testDir_->path().string() + ".edenrc"},
-      /*systemConfigDir=*/AbsolutePath{testDir_->path().string()},
+      canonicalPath(testDir_->path().string() + ".edenrc"),
+      /*systemConfigDir=*/canonicalPath(testDir_->path().string()),
       /*systemConfigPath=*/
-      AbsolutePath{
-          testDir_->path().string() + "edenfs.rc",
-      });
+      canonicalPath(testDir_->path().string() + "edenfs.rc"));
 
   edenConfig_->enableActivityBuffer.setValue(
       enableActivityBuffer, ConfigSource::Default, true);
@@ -302,7 +300,7 @@ void TestMount::initTestDirectory(CaseSensitivity caseSensitivity) {
   // Make the mount point and the eden client storage directories
   // inside the test directory.
   auto tmpPath = testDir_->path().string();
-  auto testDirPath = AbsolutePath{tmpPath};
+  auto testDirPath = canonicalPath(tmpPath);
   auto clientDirectory = testDirPath + "eden"_pc;
   ensureDirectoryExists(clientDirectory + "local"_pc);
   auto mountPath = testDirPath + "mount"_pc;

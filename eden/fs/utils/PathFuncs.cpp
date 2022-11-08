@@ -50,7 +50,7 @@ AbsolutePath getcwd() {
   if (!::getcwd(cwd, sizeof(cwd))) {
     folly::throwSystemError("getcwd() failed");
   }
-  return AbsolutePath{cwd};
+  return canonicalPath(cwd);
 }
 
 namespace {
@@ -58,6 +58,10 @@ struct CanonicalData {
   std::vector<StringPiece> components;
   bool isAbsolute{false};
 };
+
+bool startsWithUNC(StringPiece path) {
+  return folly::kIsWindows && path.startsWith(detail::kUNCPrefix);
+}
 
 /**
  * Parse path into a collection of path components such that:
@@ -68,6 +72,12 @@ struct CanonicalData {
  */
 CanonicalData canonicalPathData(StringPiece path) {
   CanonicalData data;
+
+  if (startsWithUNC(path)) {
+    path = path.subpiece(detail::kUNCPrefix.size());
+    data.isAbsolute = true;
+  }
+
   const char* componentStart = path.begin();
   auto processSlash = [&](const char* end) {
     auto component = StringPiece{componentStart, end};
@@ -95,6 +105,13 @@ CanonicalData canonicalPathData(StringPiece path) {
         data.components.pop_back();
       }
     } else {
+      if (folly::kIsWindows && component.begin() == path.begin()) {
+        // Drive letter paths are absolute.
+        if (component.size() == 2 && std::isalpha(component[0]) &&
+            component[1] == ':') {
+          data.isAbsolute = true;
+        }
+      }
       data.components.push_back(component);
     }
   };
@@ -121,15 +138,19 @@ AbsolutePath canonicalPathImpl(
 
     size_t length = 1; // reserve 1 byte for terminating '\0'
     for (const auto& part : parts) {
-      length += part.size();
+      length += part.size() + 1; // +1 for the path separator
     }
+
+    length += detail::kRootStr.size();
 
     std::string value;
     value.reserve(length);
-    for (const auto& part : parts) {
-      value.push_back('/');
-      value.append(part.begin(), part.end());
-    }
+
+    value.append(detail::kRootStr.begin(), detail::kRootStr.end());
+    fmt::format_to(
+        std::back_inserter(value),
+        "{}",
+        fmt::join(parts, std::string_view{&kAbsDirSeparator, 1}));
 
     return AbsolutePath{std::move(value)};
   };
@@ -211,7 +232,7 @@ Expected<AbsolutePath, int> realpathExpected(const char* path) {
     free(pathBuffer);
   };
 
-  return folly::makeExpected<int>(AbsolutePath{pathBuffer});
+  return folly::makeExpected<int>(canonicalPath(pathBuffer));
 }
 
 Expected<AbsolutePath, int> realpathExpected(StringPiece path) {
@@ -375,7 +396,9 @@ AbsolutePath executablePath() {
     auto err = GetLastError();
     throw std::system_error(err, std::system_category(), "GetModuleFileNameW");
   }
-  return AbsolutePath(std::wstring_view(buf.data(), static_cast<size_t>(res)));
+  auto execPath = wideToMultibyteString<std::string>(
+      std::wstring_view(buf.data(), static_cast<size_t>(res)));
+  return normalizeBestEffort(execPath);
 #else
 #error executablePath not implemented
 #endif

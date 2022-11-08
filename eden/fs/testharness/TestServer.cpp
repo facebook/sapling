@@ -57,7 +57,7 @@ TestServer::TestServer()
 TestServer::~TestServer() {}
 
 AbsolutePath TestServer::getTmpDir() const {
-  return AbsolutePath{tmpDir_.path().string()};
+  return canonicalPath(tmpDir_.path().string());
 }
 
 unique_ptr<EdenServer> TestServer::createServer(AbsolutePathPiece tmpDir) {

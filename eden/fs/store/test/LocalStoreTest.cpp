@@ -22,7 +22,7 @@ LocalStoreImplResult makeMemoryLocalStore(FaultInjector*) {
 LocalStoreImplResult makeSqliteLocalStore(FaultInjector*) {
   auto tempDir = makeTempDir();
   auto store = std::make_shared<SqliteLocalStore>(
-      AbsolutePathPiece{tempDir.path().string()} + "sqlite"_pc);
+      canonicalPath(tempDir.path().string()) + "sqlite"_pc);
   return {std::move(tempDir), std::move(store)};
 }
 

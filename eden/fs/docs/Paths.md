@@ -17,7 +17,7 @@ is stored or non-stored (`Piece`).
 
 * Represents a name within a directory
 * Illegal to
-    * Contain directory separator ("/")
+    * Contain directory separator ("/" or "\" on Windows)
     * Be empty
     * Be a relative component (".." or "..")
 
@@ -29,7 +29,8 @@ is stored or non-stored (`Piece`).
 
 ### `AbsolutePath`/`AbsolutePathPiece`
 
-* Must begin with a "/"
+* Must begin with a "/" or "\\?\" on Windows
+* On Windows, the path separator is always a "\"
 * May be composed with `PathComponent`s and `RelativePath`s
 * May not be composed with other `AbsolutePath`s
 
@@ -55,7 +56,7 @@ is stored or non-stored (`Piece`).
   `findParents()`). An iterator over prefixes of a composed path. Iterating
   yields a series of composed path elements. For example, iterating the path
   "foo/bar/baz" will yield this series of Piece elements:
-    1. "/" but only for `AbsolutePath`
+    1. "/" but only for `AbsolutePath` ("\\?\" on Windows)
     2. "foo"
     3. "foo/bar"
     4. "foo/bar/baz"
