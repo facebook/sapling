@@ -129,21 +129,22 @@ impl CheckoutState {
 
         let vfs = VFS::new(wc_path.to_path_buf())?;
 
-        let matcher: Arc<dyn Matcher> = match util::file::exists(dot_path.join("sparse"))? {
-            Some(_) => {
-                let overrides = sparse::config_overrides(config);
-                sparse_overrides = Some(overrides.clone());
-                sparse::repo_matcher_with_overrides(
-                    &vfs,
-                    dot_path,
-                    target_mf.clone(),
-                    file_store.clone(),
-                    overrides,
-                )?
+        let (matcher, _hash): (Arc<dyn Matcher + Sync + Send>, u64) =
+            match util::file::exists(dot_path.join("sparse"))? {
+                Some(_) => {
+                    let overrides = sparse::config_overrides(config);
+                    sparse_overrides = Some(overrides.clone());
+                    sparse::repo_matcher_with_overrides(
+                        &vfs,
+                        dot_path,
+                        target_mf.clone(),
+                        file_store.clone(),
+                        &overrides,
+                    )?
+                }
+                None => None,
             }
-            None => None,
-        }
-        .unwrap_or_else(|| Arc::new(pathmatcher::AlwaysMatcher::new()));
+            .unwrap_or_else(|| (Arc::new(pathmatcher::AlwaysMatcher::new()), 0));
 
         let diff =
             Diff::new(source_mf, target_mf, &matcher).context("error creating checkout diff")?;

@@ -8,6 +8,8 @@
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::collections::VecDeque;
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
@@ -42,7 +44,7 @@ pub struct Profile {
 }
 
 /// Root represents the root sparse profile (usually .hg/sparse).
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct Root(Profile);
 
 #[derive(Debug, Clone, PartialEq)]
@@ -381,6 +383,24 @@ impl Profile {
         let mut rules = Vec::new();
         rules_inner(self, &mut fetch, &mut rules, None, &mut HashMap::new()).await?;
         Ok(rules)
+    }
+}
+
+impl Hash for Profile {
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        for entry in self.entries.iter() {
+            if let ProfileEntry::Pattern(pat, _) = entry {
+                match pat {
+                    Pattern::Include(_) => "include",
+                    Pattern::Exclude(_) => "exclude",
+                }
+                .hash(state);
+                pat.as_str().hash(state);
+            }
+        }
     }
 }
 

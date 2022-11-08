@@ -5,7 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::ops::DerefMut;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -17,6 +21,7 @@ use configmodel::ConfigExt;
 use manifest::FileMetadata;
 use manifest::FsNodeMetadata;
 use manifest::Manifest;
+use parking_lot::Mutex;
 use pathmatcher::ExactMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::UnionMatcher;
@@ -35,18 +40,18 @@ pub fn repo_matcher(
     vfs: &VFS,
     dot_path: &Path,
     manifest: impl Manifest + Send + Sync + 'static,
-    store: impl ReadFileContents<Error = anyhow::Error> + Send + Sync,
-) -> anyhow::Result<Option<Arc<dyn Matcher + Send + Sync + 'static>>> {
-    repo_matcher_with_overrides(vfs, dot_path, manifest, store, disk_overrides(dot_path)?)
+    store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+) -> anyhow::Result<Option<(Arc<dyn Matcher + Send + Sync + 'static>, u64)>> {
+    repo_matcher_with_overrides(vfs, dot_path, manifest, store, &disk_overrides(dot_path)?)
 }
 
 pub fn repo_matcher_with_overrides(
     vfs: &VFS,
     dot_path: &Path,
     manifest: impl Manifest + Send + Sync + 'static,
-    store: impl ReadFileContents<Error = anyhow::Error> + Send + Sync,
-    overrides: HashMap<String, String>,
-) -> anyhow::Result<Option<Arc<dyn Matcher + Send + Sync + 'static>>> {
+    store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+    overrides: &HashMap<String, String>,
+) -> anyhow::Result<Option<(Arc<dyn Matcher + Send + Sync + 'static>, u64)>> {
     let prof = match util::file::read(dot_path.join("sparse")) {
         Ok(contents) => sparse::Root::from_bytes(contents, ".hg/sparse".to_string())?,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
@@ -56,20 +61,29 @@ pub fn repo_matcher_with_overrides(
             return Err(e.into());
         }
     };
+
     Ok(Some(build_matcher(
-        vfs, dot_path, prof, manifest, store, overrides,
+        vfs,
+        dot_path,
+        &prof,
+        manifest,
+        store.clone(),
+        overrides,
     )?))
 }
 
 fn build_matcher(
     vfs: &VFS,
     dot_path: &Path,
-    prof: sparse::Root,
+    prof: &sparse::Root,
     manifest: impl Manifest + Send + Sync + 'static,
-    store: impl ReadFileContents<Error = anyhow::Error> + Send + Sync,
-    overrides: HashMap<String, String>,
-) -> anyhow::Result<Arc<dyn Matcher + Send + Sync + 'static>> {
+    store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+    overrides: &HashMap<String, String>,
+) -> anyhow::Result<(Arc<dyn Matcher + Send + Sync + 'static>, u64)> {
     let manifest = Arc::new(manifest);
+
+    let hasher = Mutex::new(DefaultHasher::new());
+    prof.hash(hasher.lock().deref_mut());
 
     let matcher = try_block_unless_interrupted(prof.matcher(|path| async {
         let path = path;
@@ -111,6 +125,7 @@ fn build_matcher(
                 if let Some(extra) = overrides.get(&path) {
                     bytes.append(&mut extra.to_string().into_bytes());
                 }
+                bytes.hash(hasher.lock().deref_mut());
                 Ok(Some(bytes))
             }
             Some(Err(err)) => Err(err),
@@ -122,6 +137,7 @@ fn build_matcher(
 
     match util::file::read_to_string(dot_path.join(MERGE_FILE_OVERRIDES)) {
         Ok(temp) => {
+            temp.hash(hasher.lock().deref_mut());
             let exact = ExactMatcher::new(
                 temp.split('\n')
                     .map(|p| p.try_into())
@@ -135,7 +151,8 @@ fn build_matcher(
         Err(err) => return Err(err.into()),
     }
 
-    Ok(matcher)
+    let hash = hasher.lock().finish();
+    Ok((matcher, hash))
 }
 
 pub fn config_overrides(config: impl Config) -> HashMap<String, String> {
@@ -278,13 +295,13 @@ inc
 exc",
         );
 
-        let matcher = build_matcher(
+        let (matcher, _hash) = build_matcher(
             &vfs,
             root_dir.path(),
-            sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
+            &sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
             commit.clone(),
-            commit.clone(),
-            config_overrides(&config),
+            Arc::new(commit.clone()),
+            &config_overrides(&config),
         )?;
 
         assert!(matcher.matches_file("inc/banana".try_into()?)?);
@@ -299,18 +316,110 @@ exc",
             "merge/a\nmerge/b",
         )?;
 
-        let matcher = build_matcher(
+        let (matcher, _hash) = build_matcher(
             &vfs,
             root_dir.path(),
-            sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
+            &sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
             commit.clone(),
-            commit.clone(),
-            config_overrides(&config),
+            Arc::new(commit.clone()),
+            &config_overrides(&config),
         )?;
 
         assert!(matcher.matches_file("merge/a".try_into()?)?);
         assert!(matcher.matches_file("merge/b".try_into()?)?);
         assert!(!matcher.matches_file("merge/abc".try_into()?)?);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_matcher_hashes() -> anyhow::Result<()> {
+        let root_dir = tempfile::tempdir()?;
+        let vfs = VFS::new(root_dir.path().to_path_buf())?;
+
+        let config: BTreeMap<String, String> = BTreeMap::new();
+
+        let mut commit = StubCommit::new();
+        commit.insert(
+            "tools/sparse/base",
+            "[include]
+inc
+
+[exclude]
+exc",
+        );
+
+        let (_matcher, hash) = build_matcher(
+            &vfs,
+            root_dir.path(),
+            &sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
+            commit.clone(),
+            Arc::new(commit.clone()),
+            &config_overrides(&config),
+        )?;
+
+        let mut commit = StubCommit::new();
+        commit.insert(
+            "tools/sparse/base",
+            "[include]
+inc
+
+[exclude]
+exc",
+        );
+
+        let (_matcher, same_hash) = build_matcher(
+            &vfs,
+            root_dir.path(),
+            &sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
+            commit.clone(),
+            Arc::new(commit.clone()),
+            &config_overrides(&config),
+        )?;
+
+        assert!(hash == same_hash, "hashes should match if contents matches");
+
+        let (_matcher, different_hash_config_change) = build_matcher(
+            &vfs,
+            root_dir.path(),
+            &sparse::Root::from_bytes(
+                b"%include tools/sparse/base
+[include]
+config_inc
+",
+                "root".to_string(),
+            )?,
+            commit.clone(),
+            Arc::new(commit.clone()),
+            &config_overrides(&config),
+        )?;
+
+        assert_ne!(
+            hash, different_hash_config_change,
+            "hashes should not match if contents do not match"
+        );
+
+        let mut commit = StubCommit::new();
+        commit.insert(
+            "tools/sparse/base",
+            "[include]
+inc
+",
+        );
+
+        let (_matcher, different_hash_profile_change) = build_matcher(
+            &vfs,
+            root_dir.path(),
+            &sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
+            commit.clone(),
+            Arc::new(commit.clone()),
+            &config_overrides(&config),
+        )?;
+
+        assert_ne!(
+            hash, different_hash_profile_change,
+            "hashes should not match if contents do not match"
+        );
 
         Ok(())
     }

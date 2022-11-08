@@ -236,7 +236,7 @@ impl WorkingCopy {
                     manifest.read().clone(),
                     fs.file_store.clone(),
                 )? {
-                    Some(matcher) => {
+                    Some((matcher, _hash)) => {
                         sparse_matchers.push(matcher);
                     }
                     None => {
