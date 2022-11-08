@@ -1182,7 +1182,20 @@ fn resolve_repo_relative_path(checkout: &EdenFsCheckout, repo_rel_path: &Path) -
         // to correctly relativize for that case, so we'll allow an absolute
         // path to be specified.
         if repo_rel_path.starts_with(&checkout_path) {
-            return Ok(repo_rel_path.into());
+            let canonical_path = absolute(&repo_rel_path).from_err().with_context(|| {
+                format!(
+                    "Failed to find absolute and normalized path: {}",
+                    repo_rel_path.display()
+                )
+            })?;
+            let rel_path = diff_paths(&canonical_path, &checkout_path).with_context(|| {
+                format!(
+                    "{} starts with {}, but we failed to compute the relative repo path.",
+                    &canonical_path.display(),
+                    &checkout_path.display(),
+                )
+            })?;
+            return Ok(rel_path);
         } else {
             return Err(EdenFsError::Other(anyhow!(
                 "The path `{}` doesn't resolve to a path inside the repo `{}`",

@@ -367,3 +367,46 @@ via-profile = "bind"
                 }
             ],
         )
+
+    def test_add_absolute_target(self) -> None:
+        profile_path = scratch_path(
+            self.mount, os.path.join("edenfs", "redirections", "via-profile")
+        )
+
+        # providing an absolute path should behave in the exact same way as providing a rel path
+        repo_path = os.path.join("a", "new-one")
+        abs_path = os.path.join(self.mount, repo_path)
+        output = self.eden.run_cmd(
+            "redirect", "add", "--mount", self.mount, abs_path, "bind"
+        )
+        self.assertEqual(output, "", msg="we believe we set up a new bind mount")
+
+        target_path = scratch_path(
+            self.mount, os.path.join("edenfs", "redirections", "a", "new-one")
+        )
+        output = self.eden.run_cmd(
+            "redirect",
+            "list",
+            "--json",
+            "--mount",
+            self.mount,
+        )
+        self.assertEqual(
+            json.loads(output),
+            [
+                {
+                    "repo_path": repo_path,
+                    "type": "bind",
+                    "target": target_path,
+                    "source": ".eden/client/config.toml:redirections",
+                    "state": "ok",
+                },
+                {
+                    "repo_path": "via-profile",
+                    "type": "bind",
+                    "target": profile_path,
+                    "source": ".eden-redirections",
+                    "state": "ok",
+                },
+            ],
+        )
