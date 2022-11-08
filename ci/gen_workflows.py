@@ -304,7 +304,7 @@ RUN rm -rf /tmp/repo
                 {
                     "name": "rename .zip",
                     "working-directory": "./eden/scm/artifacts",
-                    "run": "${{{{ format('Rename-Item sapling_windows_amd64.zip -NewName sapling_windows_{{0}}_amd64.zip', env.SAPLING_VERSION) }}}}",
+                    "run": "${{ format('Rename-Item sapling_windows_amd64.zip -NewName sapling_windows_{0}_amd64.zip', env.SAPLING_VERSION) }}",
                 },
                 upload_artifact(artifact_key, f"./eden/scm/artifacts/{artifact_glob}"),
             ],
