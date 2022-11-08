@@ -345,13 +345,7 @@ impl Redirection {
             // might raise.
             _remove_bind_mount_thrift_call(checkout_path, &self.repo_path)
                 .await
-                .with_context(|| {
-                    format!(
-                        "remove_bind_mount thrift call failed for '{}' in checkout '{}'",
-                        &self.repo_path.display(),
-                        checkout_path.display()
-                    )
-                })?;
+                .ok();
         }
         // Ensure that the client directory exists before we try to mount over it
         std::fs::create_dir_all(&abs_mount_path_in_repo)
@@ -910,7 +904,7 @@ async fn _add_bind_mount_thrift_call(
     let client = EdenFsInstance::global()
         .connect(None)
         .await
-        .with_context(|| "Failed to get global EdenFsInstance for add_bind_mount thrift call")?;
+        .with_context(|| "Unable to connect to EdenFS for add_bind_mount thrift call")?;
     let co_path = mount_path
         .to_str()
         .with_context(|| {
@@ -943,7 +937,7 @@ async fn _remove_bind_mount_thrift_call(mount_path: &Path, repo_path: &Path) -> 
     let client = EdenFsInstance::global()
         .connect(None)
         .await
-        .with_context(|| "Failed to get global EdenFsInstance for add_bind_mount thrift call")?;
+        .with_context(|| "Unable to connect to EdenFS for remove_bind_mount thrift call")?;
     let co_path = mount_path
         .to_str()
         .with_context(|| {
