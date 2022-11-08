@@ -22,4 +22,10 @@ CREATE TABLE IF NOT EXISTS `ephemeral_bubble_changeset_mapping` (
     `bubble_id` BIGINT UNSIGNED NOT NULL,
     `gen` BIGINT NOT NULL,
     PRIMARY KEY (`repo_id`, `bubble_id`, `cs_id`)
-)
+);
+
+CREATE TABLE IF NOT EXISTS 'ephemeral_bubble_labels' (
+    `bubble_id` BIGINT UNSIGNED NOT NULL,
+    `label` VARCHAR(255),
+    PRIMARY KEY (`bubble_id`, `label`)
+);
