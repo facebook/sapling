@@ -336,7 +336,7 @@ impl Redirection {
 
     #[cfg(target_os = "linux")]
     async fn _bind_mount_linux(&self, checkout_path: &Path, target: &Path) -> Result<()> {
-        let abs_mount_path_in_repo = checkout_path.join(target);
+        let abs_mount_path_in_repo = checkout_path.join(&self.repo_path);
         if abs_mount_path_in_repo.exists() {
             // To deal with the case where someone has manually unmounted
             // a bind mount and left the privhelper confused about the
@@ -348,6 +348,9 @@ impl Redirection {
                 .ok();
         }
         // Ensure that the client directory exists before we try to mount over it
+        std::fs::create_dir_all(target)
+            .from_err()
+            .with_context(|| format!("Failed to create directory {}", target.display()))?;
         std::fs::create_dir_all(&abs_mount_path_in_repo)
             .from_err()
             .with_context(|| {
@@ -356,9 +359,6 @@ impl Redirection {
                     abs_mount_path_in_repo.display()
                 )
             })?;
-        std::fs::create_dir_all(target)
-            .from_err()
-            .with_context(|| format!("Failed to create directory {}", target.display()))?;
         _add_bind_mount_thrift_call(checkout_path, &self.repo_path, target)
             .await
             .with_context(|| {
