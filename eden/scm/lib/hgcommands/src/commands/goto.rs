@@ -24,12 +24,14 @@ use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use pathmatcher::AlwaysMatcher;
 use pathmatcher::Matcher;
+use pathmatcher::UnionMatcher;
 use progress_model::ProgressBar;
 use repo::repo::Repo;
 use treestate::dirstate;
 use treestate::treestate::TreeState;
 use types::hgid::NULL_ID;
 use vfs::VFS;
+use workingcopy::sparse;
 use workingcopy::workingcopy::WorkingCopy;
 
 use super::MergeToolOpts;
@@ -80,8 +82,6 @@ define_flags! {
 
 pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Result<u8> {
     // Missing features (in roughly priority order):
-    // - Filtering actions by sparse profile
-    // - Adding/removing actions when the sparse profile changes
     // - edenfs checkout support
     // - --clean support
     // - progressfile and --continue
@@ -117,16 +117,15 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
         .into());
     }
 
-    let matcher = Arc::new(AlwaysMatcher::new());
-
     let current_commit = wc.parents()?.into_iter().next().unwrap_or(NULL_ID);
     let target_commit = repo.resolve_commit(&wc.treestate().lock(), &dest)?;
 
     let tree_resolver = repo.tree_resolver()?;
     let current_mf = tree_resolver.get(&current_commit)?;
     let target_mf = tree_resolver.get(&target_commit)?;
-    let sparse_change = None; // TODO: handle sparse profile change
-    // TODO: Integrate sparse matcher
+
+    let (sparse_matcher, sparse_change) =
+        create_sparse_matchers(repo, wc.vfs(), &current_mf.read(), &target_mf.read())?;
 
     // 1. Create the plan
     let plan = create_plan(
@@ -134,13 +133,13 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
         repo.config(),
         &*current_mf.read(),
         &*target_mf.read(),
-        &matcher,
+        &sparse_matcher,
         sparse_change,
     )?;
 
     // 2. Check if status is dirty
     let status = wc.status(
-        matcher.clone(),
+        sparse_matcher.clone(),
         SystemTime::UNIX_EPOCH,
         repo.config(),
         ctx.io(),
@@ -169,6 +168,56 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
     dirstate::flush(&repo.config(), wc.vfs().root(), &mut wc.treestate().lock())?;
 
     Ok(0)
+}
+
+fn create_sparse_matchers(
+    repo: &mut Repo,
+    vfs: &VFS,
+    current_mf: &TreeManifest,
+    target_mf: &TreeManifest,
+) -> Result<(ArcMatcher, Option<(ArcMatcher, ArcMatcher)>)> {
+    let dot_path = repo.dot_hg_path().to_owned();
+    if util::file::exists(dot_path.join("sparse"))?.is_none() {
+        return Ok((Arc::new(AlwaysMatcher::new()), None));
+    }
+
+    let overrides = sparse::config_overrides(repo.config());
+
+    let (current_sparse, current_hash) = sparse::repo_matcher_with_overrides(
+        vfs,
+        &dot_path,
+        current_mf.clone(),
+        repo.file_store()?,
+        &overrides,
+    )?
+    .unwrap_or_else(|| {
+        let matcher: Arc<dyn Matcher + Sync + Send> = Arc::new(AlwaysMatcher::new());
+        (matcher, 0)
+    });
+
+    let (target_sparse, target_hash) = sparse::repo_matcher_with_overrides(
+        vfs,
+        &dot_path,
+        target_mf.clone(),
+        repo.file_store()?,
+        &overrides,
+    )?
+    .unwrap_or_else(|| {
+        let matcher: Arc<dyn Matcher + Sync + Send> = Arc::new(AlwaysMatcher::new());
+        (matcher, 0)
+    });
+
+    let sparse_matcher: ArcMatcher = Arc::new(UnionMatcher::new(vec![
+        current_sparse.clone(),
+        target_sparse.clone(),
+    ]));
+    let sparse_change = if current_hash != target_hash {
+        Some((current_sparse, target_sparse))
+    } else {
+        None
+    };
+
+    Ok((sparse_matcher, sparse_change))
 }
 
 fn create_plan(
