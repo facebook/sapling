@@ -21,11 +21,11 @@ templatekeyword = registrar.templatekeyword()
 @command(
     "pr",
     [],
-    _("SUBCOMMAND ..."),
+    _("SUBCOMMAND (default: submit)"),
 )
-def pull_request_command(ui, repo, *pats, **opts) -> None:
+def pull_request_command(ui, repo, *args, **opts):
     """exchange local commit data with GitHub pull requests"""
-    pass
+    return submit.submit(ui, repo, *args, **opts)
 
 
 subcmd = pull_request_command.subcommand(
