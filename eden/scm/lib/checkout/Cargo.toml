@@ -11,12 +11,14 @@ async-runtime = { version = "0.1.0", path = "../async-runtime" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 fail = { version = "0.4", features = ["failpoints"] }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
+io = { version = "0.1.0", path = "../io" }
 manifest = { version = "0.1.0", path = "../manifest", features = ["for-tests"] }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 minibytes = { version = "0.1.0", path = "../minibytes" }
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 progress-model = { version = "0.1.0", path = "../progress/model" }
+repo = { version = "0.1.0", path = "../repo" }
 repolock = { version = "0.1.0", path = "../repolock" }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 status = { version = "0.1.0", path = "../status" }

@@ -5,38 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::Arc;
-use std::time::SystemTime;
-
 use anyhow::bail;
 use anyhow::Result;
-use async_runtime::try_block_unless_interrupted;
-use checkout::ActionMap;
-use checkout::Checkout;
-use checkout::CheckoutPlan;
 use clidispatch::errors;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
-use configmodel::Config;
 use configmodel::ConfigExt;
-use manifest_tree::Diff;
-use manifest_tree::ReadTreeManifest;
-use manifest_tree::TreeManifest;
-use pathmatcher::AlwaysMatcher;
-use pathmatcher::Matcher;
-use pathmatcher::UnionMatcher;
-use progress_model::ProgressBar;
 use repo::repo::Repo;
-use treestate::dirstate;
-use treestate::treestate::TreeState;
-use types::hgid::NULL_ID;
-use vfs::VFS;
-use workingcopy::sparse;
 use workingcopy::workingcopy::WorkingCopy;
 
 use super::MergeToolOpts;
-
-type ArcMatcher = Arc<dyn Matcher + Sync + Send>;
 
 define_flags! {
     pub struct GotoOpts {
@@ -117,151 +95,11 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
         .into());
     }
 
-    let current_commit = wc.parents()?.into_iter().next().unwrap_or(NULL_ID);
-    let target_commit = repo.resolve_commit(&wc.treestate().lock(), &dest)?;
+    let target = repo.resolve_commit(&wc.treestate().lock(), &dest)?;
 
-    let tree_resolver = repo.tree_resolver()?;
-    let current_mf = tree_resolver.get(&current_commit)?;
-    let target_mf = tree_resolver.get(&target_commit)?;
-
-    let (sparse_matcher, sparse_change) =
-        create_sparse_matchers(repo, wc.vfs(), &current_mf.read(), &target_mf.read())?;
-
-    // 1. Create the plan
-    let plan = create_plan(
-        wc.vfs(),
-        repo.config(),
-        &*current_mf.read(),
-        &*target_mf.read(),
-        &sparse_matcher,
-        sparse_change,
-    )?;
-
-    // 2. Check if status is dirty
-    let status = wc.status(
-        sparse_matcher.clone(),
-        SystemTime::UNIX_EPOCH,
-        repo.config(),
-        ctx.io(),
-    )?;
-
-    let conflicts = plan.check_conflicts(&status);
-    if !conflicts.is_empty() {
-        bail!(
-            "{:?} conflicting file changes:\n {}",
-            conflicts.len(),
-            conflicts
-                .iter()
-                .take(5)
-                .map(|p| p.as_str())
-                .collect::<Vec<_>>()
-                .join("\n "),
-        );
-    }
-
-    // 3. Execute the plan
-    try_block_unless_interrupted(plan.apply_store(&repo.file_store()?))?;
-
-    // 4. Update the treestate parents, dirstate
-    wc.set_parents(&mut [target_commit].iter())?;
-    record_updates(&plan, &wc.vfs(), &mut wc.treestate().lock())?;
-    dirstate::flush(&repo.config(), wc.vfs().root(), &mut wc.treestate().lock())?;
+    checkout::checkout(ctx.io(), repo, wc, target)?;
 
     Ok(0)
-}
-
-fn create_sparse_matchers(
-    repo: &mut Repo,
-    vfs: &VFS,
-    current_mf: &TreeManifest,
-    target_mf: &TreeManifest,
-) -> Result<(ArcMatcher, Option<(ArcMatcher, ArcMatcher)>)> {
-    let dot_path = repo.dot_hg_path().to_owned();
-    if util::file::exists(dot_path.join("sparse"))?.is_none() {
-        return Ok((Arc::new(AlwaysMatcher::new()), None));
-    }
-
-    let overrides = sparse::config_overrides(repo.config());
-
-    let (current_sparse, current_hash) = sparse::repo_matcher_with_overrides(
-        vfs,
-        &dot_path,
-        current_mf.clone(),
-        repo.file_store()?,
-        &overrides,
-    )?
-    .unwrap_or_else(|| {
-        let matcher: Arc<dyn Matcher + Sync + Send> = Arc::new(AlwaysMatcher::new());
-        (matcher, 0)
-    });
-
-    let (target_sparse, target_hash) = sparse::repo_matcher_with_overrides(
-        vfs,
-        &dot_path,
-        target_mf.clone(),
-        repo.file_store()?,
-        &overrides,
-    )?
-    .unwrap_or_else(|| {
-        let matcher: Arc<dyn Matcher + Sync + Send> = Arc::new(AlwaysMatcher::new());
-        (matcher, 0)
-    });
-
-    let sparse_matcher: ArcMatcher = Arc::new(UnionMatcher::new(vec![
-        current_sparse.clone(),
-        target_sparse.clone(),
-    ]));
-    let sparse_change = if current_hash != target_hash {
-        Some((current_sparse, target_sparse))
-    } else {
-        None
-    };
-
-    Ok((sparse_matcher, sparse_change))
-}
-
-fn create_plan(
-    vfs: &VFS,
-    config: &dyn Config,
-    current_mf: &TreeManifest,
-    target_mf: &TreeManifest,
-    matcher: &dyn Matcher,
-    sparse_change: Option<(ArcMatcher, ArcMatcher)>,
-) -> Result<CheckoutPlan> {
-    let diff = Diff::new(current_mf, target_mf, &matcher)?;
-    let mut actions = ActionMap::from_diff(diff)?;
-
-    if let Some((old_sparse, new_sparse)) = sparse_change {
-        actions =
-            actions.with_sparse_profile_change(old_sparse, new_sparse, current_mf, target_mf)?;
-    }
-    let checkout = Checkout::from_config(vfs.clone(), &config)?;
-    let plan = checkout.plan_action_map(actions);
-    // if let Some(progress_path) = progress_path {
-    //     plan.add_progress(progress_path.as_path()).map_pyerr(py)?;
-    // }
-
-    Ok(plan)
-}
-
-fn record_updates(plan: &CheckoutPlan, vfs: &VFS, treestate: &mut TreeState) -> Result<()> {
-    let bar = ProgressBar::register_new("recording", plan.all_files().count() as u64, "files");
-
-    for removed in plan.removed_files() {
-        treestate.remove(removed)?;
-        bar.increase_position(1);
-    }
-
-    for updated in plan
-        .updated_content_files()
-        .chain(plan.updated_meta_files())
-    {
-        let fstate = checkout::file_state(vfs, updated)?;
-        treestate.insert(updated, &fstate)?;
-        bar.increase_position(1);
-    }
-
-    Ok(())
 }
 
 pub fn aliases() -> &'static str {
