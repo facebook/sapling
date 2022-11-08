@@ -79,7 +79,10 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
         dest.push(&ctx.opts.rev);
     }
 
-    if dest.len() != 1 {
+    if dest.len() == 0 {
+        bail!("You must specify a destination to update to, for example \"hg checkout master\".",);
+    }
+    if dest.len() > 1 {
         bail!(
             "checkout requires exactly one destination commit: {:?}",
             dest

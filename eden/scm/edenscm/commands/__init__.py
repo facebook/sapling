@@ -6279,7 +6279,7 @@ def update(
         if node is None and rev is None and not date:
             raise error.Abort(
                 "You must specify a destination to update to,"
-                + ' for example "hg update master".',
+                + ' for example "hg checkout master".',
                 hint="If you're trying to move a bookmark forward, try "
                 + '"hg rebase -d <destination>".',
             )
