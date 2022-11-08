@@ -1110,7 +1110,12 @@ fn truncate_u64(f: &str, path: &RepoPath, v: u64) -> i32 {
     truncated as i32
 }
 
-pub fn checkout(io: &IO, repo: &mut Repo, wc: &mut WorkingCopy, target_commit: HgId) -> Result<()> {
+pub fn checkout(
+    io: &IO,
+    repo: &mut Repo,
+    wc: &mut WorkingCopy,
+    target_commit: HgId,
+) -> Result<(usize, usize)> {
     let current_commit = wc.parents()?.into_iter().next().unwrap_or(NULL_ID);
 
     let tree_resolver = repo.tree_resolver()?;
@@ -1160,7 +1165,7 @@ pub fn checkout(io: &IO, repo: &mut Repo, wc: &mut WorkingCopy, target_commit: H
     record_updates(&plan, &wc.vfs(), &mut wc.treestate().lock())?;
     dirstate::flush(&repo.config(), wc.vfs().root(), &mut wc.treestate().lock())?;
 
-    Ok(())
+    Ok(plan.stats())
 }
 
 fn create_sparse_matchers(

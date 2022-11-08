@@ -113,7 +113,14 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
         }
     };
 
-    checkout::checkout(ctx.io(), repo, wc, target)?;
+    let (updated, removed) = checkout::checkout(ctx.io(), repo, wc, target)?;
+
+    if !ctx.global_opts().quiet {
+        ctx.io().write(format!(
+            "{} files updated, 0 files merged, {} files removed, 0 files unresolved\n",
+            updated, removed
+        ))?;
+    }
 
     Ok(0)
 }
