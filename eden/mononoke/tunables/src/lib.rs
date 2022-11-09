@@ -285,9 +285,6 @@ pub struct MononokeTunables {
     // Control whether the BYPASS_READONLY pushvar is restricted by an ACL
     enforce_bypass_readonly_acl: AtomicBool,
 
-    // Percentage of wireproto unbundle pushrebase requests redirected to Land Service
-    pushrebase_redirect_to_land_service_pct: AtomicI64,
-
     // Boolean to batch requests sent to Land Service
     batching_to_land_service: AtomicBool,
 

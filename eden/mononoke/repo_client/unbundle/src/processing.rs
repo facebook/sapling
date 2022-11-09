@@ -539,14 +539,6 @@ fn address_from_land_service<'a>(
     }
 }
 
-fn should_use_land_service() -> bool {
-    rand::random::<f64>()
-        < tunables()
-            .get_pushrebase_redirect_to_land_service_pct()
-            .clamp(0, 100) as f64
-            / 100.0
-}
-
 async fn normal_pushrebase<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
@@ -561,17 +553,6 @@ async fn normal_pushrebase<'a>(
     let bookmark_restriction = BookmarkKindRestrictions::OnlyPublishing;
     let remote_mode = if tunables().get_force_local_pushrebase() {
         PushrebaseRemoteMode::Local
-    } else if should_use_land_service() {
-        #[cfg(fbcode_build)]
-        {
-            PushrebaseRemoteMode::RemoteLandServiceWithLocalFallback(Address::Tier(
-                "mononoke-land-service".to_string(),
-            ))
-        }
-        #[cfg(not(fbcode_build))]
-        {
-            panic!("land service not implemented outside fbcode")
-        }
     } else {
         repo.repo_config().pushrebase.remote_mode.clone()
     };
