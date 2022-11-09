@@ -1145,7 +1145,7 @@ mod tests {
     #[test]
     fn test_node_size() {
         // Node size is important as we have lots of them, add a test to check for accidental changes
-        assert_eq!(48, size_of::<Node>());
+        assert_eq!(40, size_of::<Node>());
     }
 
     #[test]

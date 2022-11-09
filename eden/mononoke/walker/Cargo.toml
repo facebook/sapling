@@ -48,7 +48,7 @@ fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 hash_memo = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hex = "0.4.3"
-internment = { version = "0.4.2", features = ["serde"] }
+internment = { version = "0.7", features = ["arc", "serde"] }
 itertools = "0.10.3"
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
