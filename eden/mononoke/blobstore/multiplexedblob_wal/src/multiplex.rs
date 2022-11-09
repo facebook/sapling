@@ -38,6 +38,7 @@ use metaconfig_types::BlobstoreId;
 use metaconfig_types::MultiplexId;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::Timestamp;
+use multiplexedblob::scuba;
 use scuba_ext::MononokeScubaSampleBuilder;
 use thiserror::Error;
 use time_ext::DurationExt;
@@ -203,6 +204,7 @@ impl WalMultiplexedBlobstore {
         key: String,
         value: BlobstoreBytes,
         put_behaviour: Option<PutBehaviour>,
+        scuba: &Scuba,
     ) -> Result<OverwriteStatus> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobPuts);
@@ -212,10 +214,22 @@ impl WalMultiplexedBlobstore {
         // Log the blobstore key and wait till it succeeds
         let ts = Timestamp::now();
         let log_entry = BlobstoreWalEntry::new(key.clone(), self.multiplex_id, ts, blob_size);
-        self.wal_queue.log(ctx, log_entry).await.with_context(|| {
+        let (stats, result) = self.wal_queue.log(ctx, log_entry).timed().await;
+
+        scuba::record_queue_stats(
+            ctx,
+            &mut scuba.multiplex_scuba.clone(),
+            &key,
+            stats,
+            None,
+            self.to_string(),
+            &result,
+        );
+
+        result.with_context(|| {
             format!(
                 "WAL Multiplexed Blobstore: Failed writing to the WAL: key {}",
-                &key
+                key
             )
         })?;
 
@@ -226,7 +240,7 @@ impl WalMultiplexedBlobstore {
             key.clone(),
             value.clone(),
             put_behaviour,
-            &self.scuba,
+            scuba,
         );
 
         // Wait for the quorum successful writes
@@ -249,7 +263,7 @@ impl WalMultiplexedBlobstore {
                                 key,
                                 value,
                                 put_behaviour,
-                                &self.scuba,
+                                scuba,
                             );
                             spawn_stream_completion(write_mostly_puts);
 
@@ -290,13 +304,10 @@ impl WalMultiplexedBlobstore {
         &'a self,
         ctx: &'a CoreContext,
         key: &'a str,
+        scuba: &Scuba,
     ) -> Result<Option<BlobstoreGetData>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobGets);
-
-        let mut scuba = self.scuba.clone();
-        // the read requests are sampled unless they fail
-        scuba.sampled();
 
         let mut get_futs =
             inner_multi_get(ctx, self.blobstores.clone(), key, OperationType::Get, scuba);
@@ -365,16 +376,13 @@ impl WalMultiplexedBlobstore {
         &'a self,
         ctx: &'a CoreContext,
         key: &'a str,
+        scuba: &Scuba,
     ) -> Result<BlobstoreIsPresent> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobPresenceChecks);
 
         // Comprehensive lookup requires blob presence in all of the blobstores.
         let comprehensive_lookup = is_comprehensive_lookup(ctx);
-
-        let mut scuba = self.scuba.clone();
-        // the read requests are sampled unless they fail
-        scuba.sampled();
 
         let mut futs = inner_multi_is_present(ctx, self.blobstores.clone(), key, scuba);
 
@@ -450,7 +458,18 @@ impl Blobstore for WalMultiplexedBlobstore {
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
-        self.get_impl(ctx, key).await
+        let mut scuba = self.scuba.clone();
+        scuba.sampled();
+        let (stats, result) = self.get_impl(ctx, key, &scuba).timed().await;
+        scuba::record_get(
+            ctx,
+            &mut scuba.multiplex_scuba,
+            &self.multiplex_id,
+            key,
+            stats,
+            &result,
+        );
+        result
     }
 
     async fn is_present<'a>(
@@ -458,7 +477,18 @@ impl Blobstore for WalMultiplexedBlobstore {
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<BlobstoreIsPresent> {
-        self.is_present_impl(ctx, key).await
+        let mut scuba = self.scuba.clone();
+        scuba.sampled();
+        let (stats, result) = self.is_present_impl(ctx, key, &scuba).timed().await;
+        scuba::record_is_present(
+            ctx,
+            &mut scuba.multiplex_scuba,
+            &self.multiplex_id,
+            key,
+            stats,
+            &result,
+        );
+        result
     }
 
     async fn put<'a>(
@@ -481,7 +511,21 @@ impl BlobstorePutOps for WalMultiplexedBlobstore {
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
     ) -> Result<OverwriteStatus> {
-        self.put_impl(ctx, key, value, Some(put_behaviour)).await
+        let size = value.len();
+        let (stats, result) = self
+            .put_impl(ctx, key.clone(), value, Some(put_behaviour), &self.scuba)
+            .timed()
+            .await;
+        scuba::record_put(
+            ctx,
+            &mut self.scuba.multiplex_scuba.clone(),
+            &self.multiplex_id,
+            &key,
+            size,
+            stats,
+            &result,
+        );
+        result
     }
 
     async fn put_with_status<'a>(
@@ -490,7 +534,21 @@ impl BlobstorePutOps for WalMultiplexedBlobstore {
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
-        self.put_impl(ctx, key, value, None).await
+        let size = value.len();
+        let (stats, result) = self
+            .put_impl(ctx, key.clone(), value, None, &self.scuba)
+            .timed()
+            .await;
+        scuba::record_put(
+            ctx,
+            &mut self.scuba.multiplex_scuba.clone(),
+            &self.multiplex_id,
+            &key,
+            size,
+            stats,
+            &result,
+        );
+        result
     }
 }
 
@@ -531,7 +589,7 @@ fn inner_multi_get<'a>(
     blobstores: Arc<[TimedStore]>,
     key: &'a str,
     operation: OperationType,
-    scuba: Scuba,
+    scuba: &Scuba,
 ) -> FuturesUnordered<
     impl Future<Output = Result<Option<BlobstoreGetData>, (BlobstoreId, Error)>> + 'a,
 > {
@@ -549,7 +607,7 @@ fn inner_multi_is_present<'a>(
     ctx: &'a CoreContext,
     blobstores: Arc<[TimedStore]>,
     key: &'a str,
-    scuba: Scuba,
+    scuba: &Scuba,
 ) -> FuturesUnordered<impl Future<Output = (BlobstoreId, Result<BlobstoreIsPresent, Error>)> + 'a> {
     let futs: FuturesUnordered<_> = blobstores
         .iter()

@@ -720,13 +720,26 @@ function setup_mononoke_storage_config {
   fi
 
   if [[ -n "${MULTIPLEXED:-}" ]]; then
+    local quorum
+    local btype
+    local scuba
+    if [[ "$WAL" != "" ]]; then
+      quorum="write_quorum"
+      btype="multiplexed_wal"
+      scuba="multiplex_scuba_table = \"file://$TESTTMP/blobstore_trace_scuba.json\""
+    else
+      quorum="minimum_successful_writes"
+      btype="multiplexed"
+      scuba=""
+    fi
     cat >> common/storage.toml <<CONFIG
 $(db_config "$blobstorename")
 
-[$blobstorename.blobstore.multiplexed]
+[$blobstorename.blobstore.${btype}]
 multiplex_id = 1
 $(blobstore_db_config)
-minimum_successful_writes = ${MULTIPLEXED}
+${quorum} = ${MULTIPLEXED}
+${scuba}
 components = [
 CONFIG
 
@@ -1838,6 +1851,26 @@ function read_blobstore_sync_queue_size() {
     attempts="$((timeout * 10))"
     for _ in $(seq 1 $attempts); do
       ret="$(sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "select count(*) from blobstore_sync_queue" 2>/dev/null)"
+      if [[ -n "$ret" ]]; then
+        echo "$ret"
+        return 0
+      fi
+      sleep 0.1
+    done
+    return 1
+  fi
+
+}
+
+function read_blobstore_wal_queue_size() {
+  if [[ -n "$DB_SHARD_NAME" ]]; then
+    echo "SELECT COUNT(*) FROM blobstore_write_ahead_log;" | db "$DB_SHARD_NAME" 2> /dev/null | grep -v COUNT
+  else
+    local attempts timeout ret
+    timeout="100"
+    attempts="$((timeout * 10))"
+    for _ in $(seq 1 $attempts); do
+      ret="$(sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "select count(*) from blobstore_write_ahead_log" 2>/dev/null)"
       if [[ -n "$ret" ]]; then
         echo "$ret"
         return 0
