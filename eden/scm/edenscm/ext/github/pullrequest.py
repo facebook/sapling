@@ -4,7 +4,9 @@
 # GNU General Public License version 2.
 
 from dataclasses import dataclass
-from typing import TypedDict
+from typing import Any, Dict, TypedDict
+
+from ghstack.github_cli_endpoint import GitHubCLIEndpoint
 
 
 class PullRequestIdDict(TypedDict):
@@ -66,3 +68,24 @@ class GraphQLPullRequest:
 
     def get_head_branch_name(self) -> str:
         return self.graphql_data["headRefName"]
+
+
+def get_pr_state(github: GitHubCLIEndpoint, pr: PullRequestId) -> Dict[str, Any]:
+    query = """
+query PullRequestQuery($owner: String!, $name: String!, $number: Int!) {
+  repository(name: $name, owner: $owner) {
+    pullRequest(number: $number) {
+      merged,
+      mergeCommit {
+        oid
+      }
+    }
+  }
+}
+"""
+    response = github.graphql(query, owner=pr.owner, name=pr.name, number=pr.number)
+    pr = response["data"]["repository"]["pullRequest"]
+    return {
+        "merged": pr["merged"],
+        "merge_commit": pr["mergeCommit"]["oid"] if pr["merged"] else None,
+    }
