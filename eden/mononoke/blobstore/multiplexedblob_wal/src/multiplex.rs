@@ -223,7 +223,7 @@ impl WalMultiplexedBlobstore {
             stats,
             None,
             self.to_string(),
-            &result,
+            result.as_ref().map(|_| &()),
         );
 
         result.with_context(|| {

@@ -137,7 +137,8 @@ async fn test_write_ahead_log(fb: FacebookInit) -> Result<(), Error> {
         assert_eq!(entry.multiplex_id, expected.multiplex_id);
         assert_eq!(entry.blob_size, expected.blob_size);
         assert_eq!(entry.retry_count, expected.retry_count);
-        assert!(entry.read_info.is_some());
+        assert!(entry.read_info.id.is_some());
+        assert!(entry.read_info.shard_id.is_some());
         // read_info is not compared
     };
 

@@ -148,10 +148,14 @@ impl<Q: BlobstoreWal> BlobstoreWal for DummyBlobstoreWal<Q> {
         &'a self,
         ctx: &'a CoreContext,
         entries: Vec<BlobstoreWalEntry>,
-    ) -> Result<()> {
-        let entries: Vec<_> = entries.into_iter().map(|e| format!("{:?}", e)).collect();
-        info!(ctx.logger(), "I would have written {}", entries.join(",\n"));
-        Ok(())
+    ) -> Result<Vec<BlobstoreWalEntry>> {
+        let entries_str: Vec<_> = entries.iter().map(|e| format!("{:?}", e)).collect();
+        info!(
+            ctx.logger(),
+            "I would have written {}",
+            entries_str.join(",\n")
+        );
+        Ok(entries)
     }
 
     async fn read<'a>(

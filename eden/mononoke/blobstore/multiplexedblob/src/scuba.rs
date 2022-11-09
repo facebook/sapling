@@ -136,14 +136,14 @@ pub fn record_queue_stats(
     stats: FutureStats,
     blobstore_id: Option<BlobstoreId>,
     blobstore_type: String,
-    result: &Result<()>,
+    result: Result<&(), &anyhow::Error>,
 ) {
     let pc = ctx.clone().fork_perf_counters();
     blobstore_stats::record_queue_stats(
         scuba,
         &pc,
         stats,
-        result.as_ref(),
+        result,
         key,
         ctx.metadata().session_id().as_str(),
         OperationType::Put,

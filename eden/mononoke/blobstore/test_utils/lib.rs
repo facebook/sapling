@@ -26,6 +26,9 @@ use blobstore_sync_queue::BlobstoreWal;
 use blobstore_sync_queue::BlobstoreWalEntry;
 use context::CoreContext;
 use futures::channel::oneshot;
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use lock_ext::LockExt;
 use metaconfig_types::MultiplexId;
 use mononoke_types::BlobstoreBytes;
@@ -169,23 +172,27 @@ impl BlobstorePutOps for Tickable<(BlobstoreBytes, u64)> {
 
 #[async_trait]
 impl BlobstoreWal for Tickable<BlobstoreWalEntry> {
-    async fn log<'a>(&'a self, _ctx: &'a CoreContext, entry: BlobstoreWalEntry) -> Result<()> {
+    async fn log<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        entry: BlobstoreWalEntry,
+    ) -> Result<BlobstoreWalEntry> {
         self.on_tick().await?;
         self.storage.with(|s| {
-            s.insert(entry.blobstore_key.clone(), entry);
+            s.insert(entry.blobstore_key.clone(), entry.clone());
         });
-        Ok(())
+        Ok(entry)
     }
 
     async fn log_many<'a>(
         &'a self,
         ctx: &'a CoreContext,
         entries: Vec<BlobstoreWalEntry>,
-    ) -> Result<()> {
-        for entry in entries {
-            self.log(ctx, entry).await?;
-        }
-        Ok(())
+    ) -> Result<Vec<BlobstoreWalEntry>> {
+        stream::iter(entries)
+            .then(|entry| self.log(ctx, entry))
+            .try_collect()
+            .await
     }
 
     async fn read<'a>(

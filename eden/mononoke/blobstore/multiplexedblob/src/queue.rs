@@ -138,7 +138,7 @@ impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
             stats,
             Some(blobstore_id),
             blobstore_type,
-            &result,
+            result.as_ref(),
         );
         result
     }

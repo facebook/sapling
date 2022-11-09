@@ -449,7 +449,8 @@ async fn enqueue_entries(
         })
         .collect();
 
-    wal.log_many(ctx, new_entries).await
+    wal.log_many(ctx, new_entries).await?;
+    Ok(())
 }
 
 /// Removed healed entries from the queue.

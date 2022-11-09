@@ -44,8 +44,16 @@ const SQL_WAL_WRITE_BUFFER_SIZE: usize = 1000;
 /// Row id of the entry, and which SQL shard it belongs to.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct ReadInfo {
-    id: u64,
-    shard_id: usize,
+    /// Present if this entry was obtained from reading from SQL
+    pub id: Option<u64>,
+    /// Present on reads and also updated on writes
+    pub shard_id: Option<usize>,
+}
+
+impl ReadInfo {
+    fn into_present_tuple(self) -> Option<(u64, usize)> {
+        self.id.zip(self.shard_id)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -53,8 +61,7 @@ pub struct BlobstoreWalEntry {
     pub blobstore_key: String,
     pub multiplex_id: MultiplexId,
     pub timestamp: Timestamp,
-    /// Present if this entry was obtained from reading from SQL
-    pub read_info: Option<ReadInfo>,
+    pub read_info: ReadInfo,
     pub blob_size: u64,
     pub retry_count: u32,
 }
@@ -71,7 +78,10 @@ impl BlobstoreWalEntry {
             multiplex_id,
             timestamp,
             blob_size,
-            read_info: None,
+            read_info: ReadInfo {
+                id: None,
+                shard_id: None,
+            },
             retry_count: 0,
         }
     }
@@ -104,14 +114,17 @@ impl BlobstoreWalEntry {
             blobstore_key,
             multiplex_id,
             timestamp,
-            read_info: Some(ReadInfo { id, shard_id }),
+            read_info: ReadInfo {
+                id: Some(id),
+                shard_id: Some(shard_id),
+            },
             blob_size,
             retry_count,
         }
     }
 }
 
-type QueueResult = Result<(), SharedError>;
+type QueueResult = Result<BlobstoreWalEntry, SharedError>;
 type EnqueueSender = mpsc::UnboundedSender<(oneshot::Sender<QueueResult>, BlobstoreWalEntry)>;
 
 #[derive(Clone)]
@@ -149,24 +162,22 @@ impl SqlBlobstoreWal {
             let enqueued_writes = receiver.ready_chunks(SQL_WAL_WRITE_BUFFER_SIZE).for_each(
                 move |batch /* (Sender, BlobstoreWalEntry) */| {
                     conn_idx += 1;
-                    let write_connection =
-                        write_connections[conn_idx % write_connections.len()].clone();
+                    let shard_id = conn_idx % write_connections.len();
+                    let write_connection = write_connections[shard_id].clone();
                     async move {
                         let (senders, entries): (Vec<_>, Vec<_>) = batch.into_iter().unzip();
 
-                        let result = insert_entries(&write_connection, entries).await;
+                        let result = insert_entries(&write_connection, &entries).await;
                         let result = result
                             .map_err(|err| err.context("Failed to insert to WAL").shared_error());
                         // We don't really need WriteResult data as we write in batches
                         let result = result.map(|_write_result| ());
 
                         // Update the clients
-                        senders.into_iter().for_each(|s| {
-                            match s.send(result.clone()) {
-                                Ok(_) => (),
-                                Err(_) => { /* ignore the error, because receiver might have gone */
-                                }
-                            };
+                        senders.into_iter().zip(entries).for_each(|(s, mut entry)| {
+                            entry.read_info.shard_id = Some(shard_id);
+                            // ignore the error, because receiver might have gone
+                            let _ = s.send(result.clone().map(|()| entry));
                         });
                     }
                 },
@@ -196,16 +207,23 @@ impl SqlBlobstoreWal {
 #[async_trait]
 #[auto_impl(Arc, Box)]
 pub trait BlobstoreWal: Send + Sync {
-    async fn log<'a>(&'a self, ctx: &'a CoreContext, entry: BlobstoreWalEntry) -> Result<()> {
-        let _result = self.log_many(ctx, vec![entry]).await?;
-        Ok(())
+    async fn log<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        entry: BlobstoreWalEntry,
+    ) -> Result<BlobstoreWalEntry> {
+        self.log_many(ctx, vec![entry])
+            .await?
+            .into_iter()
+            .next()
+            .context("Missing entry")
     }
 
     async fn log_many<'a>(
         &'a self,
         ctx: &'a CoreContext,
         entry: Vec<BlobstoreWalEntry>,
-    ) -> Result<()>;
+    ) -> Result<Vec<BlobstoreWalEntry>>;
 
     async fn read<'a>(
         &'a self,
@@ -228,12 +246,13 @@ impl BlobstoreWal for SqlBlobstoreWal {
         &'a self,
         _ctx: &'a CoreContext,
         entries: Vec<BlobstoreWalEntry>,
-    ) -> Result<()> {
+    ) -> Result<Vec<BlobstoreWalEntry>> {
         self.ensure_worker_scheduled.clone().await;
 
         // If we want to optimize, we can avoid creating a oneshot for each entry by batching together.
         let write_futs = entries
-            .into_iter()
+            .iter()
+            .cloned()
             .map(|entry| {
                 let (sender, receiver) = oneshot::channel();
                 self.enqueue_entry_sender.unbounded_send((sender, entry))?;
@@ -252,22 +271,10 @@ impl BlobstoreWal for SqlBlobstoreWal {
             })
             .await?;
 
-        let errs: Vec<_> = write_results
+        write_results
             .into_iter()
-            .filter_map(|r| r.err())
-            // Let's not print too many errors
-            .take(3)
-            .collect();
-        if !errs.is_empty() {
-            // Actual errors that occurred while trying to insert new entries to
-            // the Mysql table.
-            return Err(format_err!(
-                "Failed to write to the SqlBlobstoreWal: {:?}",
-                errs,
-            ));
-        }
-
-        Ok(())
+            .collect::<Result<_, _>>()
+            .context("Failed to write to the SqlBlobstoreWal")
     }
 
     async fn read<'a>(
@@ -307,22 +314,22 @@ impl BlobstoreWal for SqlBlobstoreWal {
         _ctx: &'a CoreContext,
         entries: &'a [BlobstoreWalEntry],
     ) -> Result<()> {
-        let mut entry_info: Vec<ReadInfo> = entries
-            .iter()
-            .map(|entry| {
-                entry
-                    .read_info
-                    .clone()
-                    .context("BlobstoreWalEntry must contain `read_info` to be able to delete it")
-            })
-            .collect::<Result<_, _>>()?;
-        entry_info.sort_unstable_by_key(|info| info.shard_id);
+        let mut entry_info: Vec<(u64, usize)> =
+            entries
+                .iter()
+                .map(|entry| {
+                    entry.read_info.clone().into_present_tuple().context(
+                        "BlobstoreWalEntry must contain `read_info` to be able to delete it",
+                    )
+                })
+                .collect::<Result<_, _>>()?;
+        entry_info.sort_unstable_by_key(|(_, shard_id)| *shard_id);
         stream::iter(
             entry_info
-                .group_by(|info1, info2| info1.shard_id == info2.shard_id)
+                .group_by(|(_, shard_id1), (_, shard_id2)| shard_id1 == shard_id2)
                 .map(|batch| async move {
-                    let shard_id: usize = batch[0].shard_id;
-                    let ids: Vec<u64> = batch.iter().map(|info| info.id).collect();
+                    let shard_id: usize = batch[0].1;
+                    let ids: Vec<u64> = batch.iter().map(|(id, _)| *id).collect();
                     for chunk in ids.chunks(10_000) {
                         WalDeleteEntries::query(&self.write_connections[shard_id], chunk).await?;
                     }
@@ -366,10 +373,11 @@ impl SqlShardedConstruct for SqlBlobstoreWal {
 
 async fn insert_entries(
     write_connection: &Connection,
-    entries: Vec<BlobstoreWalEntry>,
+    entries: &[BlobstoreWalEntry],
 ) -> Result<WriteResult> {
     let entries: Vec<_> = entries
-        .into_iter()
+        .iter()
+        .cloned()
         .map(|entry| entry.into_sql_tuple())
         .collect();
     let entries_ref: Vec<_> = entries
