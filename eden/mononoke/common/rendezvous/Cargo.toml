@@ -11,7 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.65"
 async-trait = "0.1.58"
 clap = { version = "3.2.17", features = ["derive", "env", "regex", "unicode", "wrap_help"] }
-dashmap = { version = "4.0.2", features = ["rayon", "serde"] }
+dashmap = { version = "5", features = ["rayon", "serde"] }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
