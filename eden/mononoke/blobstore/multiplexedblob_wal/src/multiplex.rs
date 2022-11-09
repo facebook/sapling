@@ -86,7 +86,7 @@ impl MultiplexQuorum {
 
 #[derive(Clone)]
 pub struct Scuba {
-    inner_blobstores_scuba: MononokeScubaSampleBuilder,
+    pub(crate) inner_blobstores_scuba: MononokeScubaSampleBuilder,
     multiplex_scuba: MononokeScubaSampleBuilder,
     sample_rate: NonZeroU64,
 }
