@@ -108,12 +108,6 @@ impl LandService for LandServiceThriftImpl {
             return Ok(receiver.await.map_err(|e| errors::internal_error(&e))??);
         }
 
-        Ok(worker::impl_land_changesets(
-            land_changeset_object.mononoke,
-            land_changeset_object.identity,
-            land_changeset_object.ctx,
-            land_changeset_object.request,
-        )
-        .await?)
+        Ok(worker::impl_land_changesets(land_changeset_object).await?)
     }
 }

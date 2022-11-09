@@ -91,16 +91,8 @@ async fn process_requests(
 ) {
     // TODO: Right now we are processing each request for the batch.
     // Next, we will process batches of the ones that fit together
-    for (sender, request) in requests.into_iter() {
-        match sender.send(
-            impl_land_changesets(
-                request.mononoke,
-                request.identity,
-                request.ctx,
-                request.request,
-            )
-            .await,
-        ) {
+    for (sender, land_changeset_object) in requests.into_iter() {
+        match sender.send(impl_land_changesets(land_changeset_object).await) {
             Ok(_) => (),
             Err(_) => (),
         };
@@ -109,19 +101,20 @@ async fn process_requests(
 
 //TODO: Once the batching is done, this method does not need to be public
 pub async fn impl_land_changesets(
-    mononoke: Arc<Mononoke>,
-    identity: Identity,
-    ctx: CoreContext,
-    land_changesets: LandChangesetRequest,
+    land_changeset_object: LandChangesetObject,
 ) -> Result<LandChangesetsResponse, LandChangesetsError> {
-    ctx.scuba().clone().log_with_msg("Request start", None);
+    land_changeset_object
+        .ctx
+        .scuba()
+        .clone()
+        .log_with_msg("Request start", None);
     STATS::total_request_start.add_value(1);
 
-    let (stats, res) = process_land_changesets_request(mononoke, identity, &ctx, land_changesets)
+    let (stats, res) = process_land_changesets_request(land_changeset_object.clone())
         .timed()
-        .on_cancel_with_data(|stats| log_canceled(&ctx, &stats))
+        .on_cancel_with_data(|stats| log_canceled(&land_changeset_object.ctx, &stats))
         .await;
-    log_result(ctx, &stats, &res);
+    log_result(land_changeset_object.ctx, &stats, &res);
     STATS::method_completion_time_ms.add_value(
         stats.completion_time.as_millis_unchecked() as i64,
         ("impl_land_changesets".to_string(),),
@@ -168,40 +161,38 @@ fn assert_internal_identity(
 }
 
 async fn process_land_changesets_request(
-    mononoke: Arc<Mononoke>,
-    identity: Identity,
-    ctx: &CoreContext,
-    land_changesets: LandChangesetRequest,
+    land_changeset_object: LandChangesetObject,
 ) -> Result<LandChangesetsResponse, LandChangesetsError> {
-    let authz = AuthorizationContext::new(ctx);
-    //TODO: Avoid using RepoContext, build a leaner Repo type if possible (T132600441)
-    let repo: RepoContext = get_repo_context(
+    let LandChangesetObject {
         mononoke,
-        land_changesets.repo_name,
-        ctx.clone(),
-        authz.clone(),
-    )
-    .await?;
+        identity,
+        ctx,
+        request,
+    } = land_changeset_object;
+
+    let authz = AuthorizationContext::new(&ctx);
+    //TODO: Avoid using RepoContext, build a leaner Repo type if possible (T132600441)
+    let repo: RepoContext =
+        get_repo_context(mononoke, request.repo_name, ctx.clone(), authz.clone()).await?;
 
     assert_internal_identity(identity, &repo)?;
 
     let lca_hint: Arc<dyn LeastCommonAncestorsHint> = repo.skiplist_index_arc();
 
-    let bookmark = BookmarkName::new(land_changesets.bookmark)?;
+    let bookmark = BookmarkName::new(request.bookmark)?;
     let changesets: HashSet<BonsaiChangeset> =
-        conversion_helpers::convert_bonsai_changesets(land_changesets.changesets, ctx, &repo)
-            .await?;
-    let pushvars =
-        conversion_helpers::convert_pushvars(land_changesets.pushvars.unwrap_or_default());
+        conversion_helpers::convert_bonsai_changesets(request.changesets, &ctx, &repo).await?;
+
+    let pushvars = conversion_helpers::convert_pushvars(request.pushvars.unwrap_or_default());
 
     let cross_repo_push_source =
-        conversion_helpers::convert_cross_repo_push_source(land_changesets.cross_repo_push_source)?;
+        conversion_helpers::convert_cross_repo_push_source(request.cross_repo_push_source)?;
 
     let bookmark_restrictions =
-        conversion_helpers::convert_bookmark_restrictions(land_changesets.bookmark_restrictions)?;
+        conversion_helpers::convert_bookmark_restrictions(request.bookmark_restrictions)?;
 
     let outcome = LocalPushrebaseClient {
-        ctx,
+        ctx: &ctx,
         authz: &authz,
         repo: &repo.inner_repo().clone(),
         lca_hint: &lca_hint,
