@@ -160,9 +160,11 @@ impl Blobstore for MultiplexedBlobstore {
             match result {
                 Ok(value) => Ok(value),
                 Err(error) => {
-                    if let Some(ErrorKind::SomeFailedOthersNone(er)) = error.downcast_ref() {
+                    if let Some(ErrorKind::SomeFailedOthersNone { main_errors, .. }) =
+                        error.downcast_ref()
+                    {
                         scuba.unsampled();
-                        scuba.add(SOME_FAILED_OTHERS_NONE, format!("{:?}", er));
+                        scuba.add(SOME_FAILED_OTHERS_NONE, format!("{:?}", main_errors));
 
                         if !tunables().get_multiplex_blobstore_get_do_queue_lookup() {
                             // trust the first lookup, don't check the sync-queue and return None

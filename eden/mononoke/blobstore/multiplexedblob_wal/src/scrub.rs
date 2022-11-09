@@ -136,7 +136,7 @@ impl Blobstore for WalScrubBlobstore {
         let write_mostly = self.scrub_options.scrub_action_on_missing_write_mostly;
         match self.inner.scrub_get(ctx, key, write_mostly).await {
             Ok(value) => Ok(value),
-            err @ Err(ErrorKind::SomeFailedOthersNone(_)) => {
+            err @ Err(ErrorKind::SomeFailedOthersNone { .. }) => {
                 // There's no way to tell if this value is actually in the blobstore, just
                 // not healed. So we always fail. This differs from non-WAL blobstore, where
                 // we look at the queue.

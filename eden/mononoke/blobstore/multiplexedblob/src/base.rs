@@ -68,10 +68,16 @@ type BlobstoresReturnedError = HashMap<BlobstoreId, Error>;
 
 #[derive(Error, Debug, Clone)]
 pub enum ErrorKind {
-    #[error("Some blobstores failed, and other returned None: {0:?}")]
-    SomeFailedOthersNone(Arc<BlobstoresReturnedError>),
-    #[error("All blobstores failed: {0:?}")]
-    AllFailed(Arc<BlobstoresReturnedError>),
+    #[error("Some blobstores failed, and other returned None: {main_errors:?}")]
+    SomeFailedOthersNone {
+        main_errors: Arc<BlobstoresReturnedError>,
+        write_mostly_errors: Arc<BlobstoresReturnedError>,
+    },
+    #[error("All blobstores failed: {main_errors:?}")]
+    AllFailed {
+        main_errors: Arc<BlobstoresReturnedError>,
+        write_mostly_errors: Arc<BlobstoresReturnedError>,
+    },
     // Errors below this point are from ScrubBlobstore only. If they include an
     // Option<BlobstoreBytes>, this implies that this error is recoverable
     #[error(
@@ -155,16 +161,24 @@ impl std::fmt::Display for MultiplexedBlobstoreBase {
     }
 }
 
-fn write_mostly_error(
-    mut main_blobstore_ids: impl Iterator<Item = BlobstoreId>,
-    errors: HashMap<BlobstoreId, Error>,
+fn blobstores_failed_error(
+    main_blobstore_ids: impl Iterator<Item = BlobstoreId>,
+    main_errors: HashMap<BlobstoreId, Error>,
+    write_mostly_errors: HashMap<BlobstoreId, Error>,
 ) -> ErrorKind {
-    let errored_blobstore_ids: HashSet<BlobstoreId> = errors.keys().copied().collect();
-    if main_blobstore_ids.all(|id| errored_blobstore_ids.contains(&id)) {
+    let main_errored_ids: HashSet<BlobstoreId> = main_errors.keys().copied().collect();
+    let all_main_ids: HashSet<BlobstoreId> = main_blobstore_ids.collect();
+    if main_errored_ids == all_main_ids {
         // The write mostly stores that returned None might not have been fully populated
-        ErrorKind::AllFailed(Arc::new(errors))
+        ErrorKind::AllFailed {
+            main_errors: Arc::new(main_errors),
+            write_mostly_errors: Arc::new(write_mostly_errors),
+        }
     } else {
-        ErrorKind::SomeFailedOthersNone(Arc::new(errors))
+        ErrorKind::SomeFailedOthersNone {
+            main_errors: Arc::new(main_errors),
+            write_mostly_errors: Arc::new(write_mostly_errors),
+        }
     }
 }
 
@@ -225,7 +239,8 @@ pub fn scrub_parse_results(
     let mut missing_main = HashSet::new();
     let mut missing_write_mostly = HashSet::new();
     let mut last_get_data = None;
-    let mut errors = HashMap::new();
+    let mut main_errors = HashMap::new();
+    let mut write_mostly_errors = HashMap::new();
 
     for (is_write_mostly, (blobstore_id, result)) in results {
         match result {
@@ -247,16 +262,24 @@ pub fn scrub_parse_results(
                 last_get_data = Some(value);
             }
             Err(err) => {
-                errors.insert(blobstore_id, err);
+                if is_write_mostly {
+                    write_mostly_errors.insert(blobstore_id, err);
+                } else {
+                    main_errors.insert(blobstore_id, err);
+                }
             }
         }
     }
     match all_values.len() {
         0 => {
-            if errors.is_empty() {
+            if main_errors.is_empty() && write_mostly_errors.is_empty() {
                 Ok(None)
             } else {
-                Err(write_mostly_error(all_main, errors))
+                Err(blobstores_failed_error(
+                    all_main,
+                    main_errors,
+                    write_mostly_errors,
+                ))
             }
         }
         1 => {
@@ -420,7 +443,8 @@ async fn blobstore_get<'a>(
 
     let (stats, result) = {
         async move {
-            let mut errors = HashMap::new();
+            let mut main_errors = HashMap::new();
+            let mut write_mostly_errors = HashMap::new();
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::BlobGets);
 
@@ -443,8 +467,10 @@ async fn blobstore_get<'a>(
 
             // `chain` here guarantees that `main_requests` is empty before it starts
             // polling anything in `write_mostly_requests`
-            let mut requests = main_requests.chain(write_mostly_requests);
-            while let Some(result) = requests.next().await {
+            let mut requests = main_requests
+                .map(|r| (false, r))
+                .chain(write_mostly_requests.map(|r| (true, r)));
+            while let Some((is_write_mostly, result)) = requests.next().await {
                 match result {
                     (_, Ok(Some(mut value))) => {
                         if is_logged {
@@ -458,7 +484,11 @@ async fn blobstore_get<'a>(
                         return Ok(Some(value));
                     }
                     (blobstore_id, Err(error)) => {
-                        errors.insert(blobstore_id, error);
+                        if is_write_mostly {
+                            write_mostly_errors.insert(blobstore_id, error);
+                        } else {
+                            main_errors.insert(blobstore_id, error);
+                        }
                     }
                     (_, Ok(None)) => {
                         needed_not_present = needed_not_present.saturating_sub(1);
@@ -472,15 +502,20 @@ async fn blobstore_get<'a>(
                 }
             }
 
-            if errors.is_empty() {
+            let error_count = main_errors.len() + write_mostly_errors.len();
+            if error_count == 0 {
                 // All blobstores must have returned None, as Some would have triggered a return,
                 Ok(None)
-            } else if errors.len() == blobstores_count {
-                Err(ErrorKind::AllFailed(Arc::new(errors)))
+            } else if error_count == blobstores_count {
+                Err(ErrorKind::AllFailed {
+                    main_errors: Arc::new(main_errors),
+                    write_mostly_errors: Arc::new(write_mostly_errors),
+                })
             } else {
-                Err(write_mostly_error(
+                Err(blobstores_failed_error(
                     blobstores.iter().map(|(id, _)| *id),
-                    errors,
+                    main_errors,
+                    write_mostly_errors,
                 ))
             }
         }
@@ -638,15 +673,18 @@ impl Blobstore for MultiplexedBlobstoreBase {
 
         // `chain` here guarantees that `main_requests` is empty before it starts
         // polling anything in `write_mostly_requests`
-        let mut requests = main_requests.chain(write_mostly_requests);
+        let mut requests = main_requests
+            .map(|r| (false, r))
+            .chain(write_mostly_requests.map(|r| (true, r)));
         let (stats, result) = {
             let blobstores = &self.blobstores;
             async move {
-                let mut errors = HashMap::new();
+                let mut main_errors = HashMap::new();
+                let mut write_mostly_errors = HashMap::new();
                 let mut present_counter = 0;
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::BlobPresenceChecks);
-                while let Some(result) = requests.next().await {
+                while let Some((is_write_mostly, result)) = requests.next().await {
                     match result {
                         (_, Ok(BlobstoreIsPresent::Present)) => {
                             if !comprehensive_lookup {
@@ -671,47 +709,67 @@ impl Blobstore for MultiplexedBlobstoreBase {
                         }
                         // is_present failed for the underlying blobstore
                         (blobstore_id, Err(error)) => {
-                            errors.insert(blobstore_id, error);
+                            if is_write_mostly {
+                                write_mostly_errors.insert(blobstore_id, error);
+                            } else {
+                                main_errors.insert(blobstore_id, error);
+                            }
                         }
                         (blobstore_id, Ok(BlobstoreIsPresent::ProbablyNotPresent(err))) => {
                             let err = err.context(
                                 "Received 'ProbablyNotPresent' from the underlying blobstore"
                                     .to_string(),
                             );
-                            errors.insert(blobstore_id, err);
+                            if is_write_mostly {
+                                write_mostly_errors.insert(blobstore_id, err);
+                            } else {
+                                main_errors.insert(blobstore_id, err);
+                            }
                         }
                     }
                 }
 
                 if comprehensive_lookup {
                     // all blobstores reported the blob is present
-                    if errors.is_empty() {
+                    if main_errors.is_empty() && write_mostly_errors.is_empty() {
                         Ok(BlobstoreIsPresent::Present)
                     }
                     // some blobstores reported the blob is present, others failed
                     else if present_counter > 0 {
-                        let err = Error::from(ErrorKind::SomeFailedOthersNone(Arc::new(errors)));
+                        let err = Error::from(ErrorKind::SomeFailedOthersNone {
+                            main_errors: Arc::new(main_errors),
+                            write_mostly_errors: Arc::new(write_mostly_errors),
+                        });
                         Ok(BlobstoreIsPresent::ProbablyNotPresent(err))
                     }
                     // all blobstores failed
                     else {
-                        Err(ErrorKind::AllFailed(Arc::new(errors)))
+                        Err(ErrorKind::AllFailed {
+                            main_errors: Arc::new(main_errors),
+                            write_mostly_errors: Arc::new(write_mostly_errors),
+                        })
                     }
                 } else {
                     // all blobstores reported the blob is missing
-                    if errors.is_empty() {
+                    if main_errors.is_empty() && write_mostly_errors.is_empty() {
                         Ok(BlobstoreIsPresent::Absent)
                     }
                     // all blobstores failed
-                    else if errors.len() == blobstores_count {
-                        Err(ErrorKind::AllFailed(Arc::new(errors)))
+                    else if main_errors.len() + write_mostly_errors.len() == blobstores_count {
+                        Err(ErrorKind::AllFailed {
+                            main_errors: Arc::new(main_errors),
+                            write_mostly_errors: Arc::new(write_mostly_errors),
+                        })
                     }
                     // some blobstores reported the blob is missing, others failed
                     else {
-                        let write_mostly_err =
-                            write_mostly_error(blobstores.iter().map(|(id, _)| *id), errors);
-                        if let ErrorKind::SomeFailedOthersNone(errors) = write_mostly_err {
-                            let err = Error::from(ErrorKind::SomeFailedOthersNone(errors));
+                        let write_mostly_err = blobstores_failed_error(
+                            blobstores.iter().map(|(id, _)| *id),
+                            main_errors,
+                            write_mostly_errors,
+                        );
+                        if matches!(write_mostly_err, ErrorKind::SomeFailedOthersNone { .. }) {
+                            let err = Error::from(write_mostly_err);
                             Ok(BlobstoreIsPresent::ProbablyNotPresent(err))
                         } else {
                             Err(write_mostly_err)

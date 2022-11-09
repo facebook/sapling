@@ -376,7 +376,7 @@ async fn blobstore_get(
     {
         Ok(value) => Ok(value),
         Err(error) => match error {
-            ErrorKind::SomeFailedOthersNone(_) => {
+            ErrorKind::SomeFailedOthersNone { .. } => {
                 // MultiplexedBlobstore returns Ok(None) here if queue is empty for the key
                 // and Error otherwise. Scrub does likewise.
                 let entries = queue.get(ctx, key).await?;
