@@ -63,8 +63,8 @@ pub enum ErrorKind {
 
 #[derive(Clone, Debug)]
 pub struct MultiplexQuorum {
-    read: NonZeroUsize,
-    write: NonZeroUsize,
+    pub(crate) read: NonZeroUsize,
+    pub(crate) write: NonZeroUsize,
 }
 
 impl MultiplexQuorum {
@@ -137,7 +137,7 @@ pub struct WalMultiplexedBlobstore {
     /// Write-ahead log used to keep data consistent across blobstores.
     wal_queue: Arc<dyn BlobstoreWal>,
 
-    quorum: MultiplexQuorum,
+    pub(crate) quorum: MultiplexQuorum,
     /// These are the "normal" blobstores, which are read from on `get`, and written to on `put`
     /// as part of normal operation.
     pub(crate) blobstores: Arc<[TimedStore]>,

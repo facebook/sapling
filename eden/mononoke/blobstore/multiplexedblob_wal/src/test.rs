@@ -1099,7 +1099,9 @@ async fn scrub_scenarios(
             }
             _ => {
                 bs2.tick(Some("bs2 failed"));
-                assert!(get_fut.await.is_err(), "SomeNone + Err expected Err");
+                // Write mostly blobstore failed but we still have quorum to say
+                // the get succeeded
+                assert_eq!(get_fut.await.unwrap(), None, "SomeNone + Err expected None");
             }
         }
     }
@@ -1284,7 +1286,8 @@ async fn scrub_scenarios(
             bs2.tick(None);
         }
         assert_eq!(get_fut.await.unwrap().map(|v| v.into()), Some(v2.clone()));
-        // bs1 still doesn't have the value. Is this a bug or expected?
+        // bs1 still doesn't have the value. This is expected because we don't
+        // want a single failing blobstore blocking the scrub.
         assert_eq!(bs1.get_bytes(k2), None);
         if scrub_action_on_missing_write_mostly != ScrubWriteMostly::SkipMissing {
             // bs2 got repaired successfully

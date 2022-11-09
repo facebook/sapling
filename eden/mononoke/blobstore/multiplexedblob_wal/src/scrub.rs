@@ -136,13 +136,20 @@ impl Blobstore for WalScrubBlobstore {
         let write_mostly = self.scrub_options.scrub_action_on_missing_write_mostly;
         match self.inner.scrub_get(ctx, key, write_mostly).await {
             Ok(value) => Ok(value),
-            err @ Err(ErrorKind::SomeFailedOthersNone { .. }) => {
-                // There's no way to tell if this value is actually in the blobstore, just
-                // not healed. So we always fail. This differs from non-WAL blobstore, where
-                // we look at the queue.
-                // Should we use the read_quorum here? Depends on our intentions with the
-                // scrub blobstore.
-                err.context("Can't tell if blob exists or not due to failing blobstores")
+            Err(ErrorKind::SomeFailedOthersNone {
+                main_errors,
+                write_mostly_errors,
+            }) => {
+                if self.inner.blobstores.len() - main_errors.len() < self.inner.quorum.read.get() {
+                    Err(ErrorKind::SomeFailedOthersNone {
+                        main_errors,
+                        write_mostly_errors,
+                    })
+                    .context("Can't tell if blob exists or not due to failing blobstores")
+                } else {
+                    // We have a quorum of blobstores saying the key doesn't exist. That's enough.
+                    Ok(None)
+                }
             }
             Err(ErrorKind::SomeMissingItem {
                 missing_main,
