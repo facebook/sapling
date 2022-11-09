@@ -241,6 +241,18 @@ async fn test_put_fails(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
+async fn queue_keys(ctx: &CoreContext, multiplex: &WalMultiplexedBlobstore) -> Result<Vec<String>> {
+    let mut entries: Vec<_> = multiplex
+        .wal_queue
+        .read(ctx, &multiplex.multiplex_id, &Timestamp::now(), 100)
+        .await?
+        .into_iter()
+        .map(|e| e.blobstore_key)
+        .collect();
+    entries.sort_unstable();
+    Ok(entries)
+}
+
 #[fbinit::test]
 async fn test_put_succeeds(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
@@ -260,6 +272,7 @@ async fn test_put_succeeds(fb: FacebookInit) -> Result<()> {
         // wal queue write succeeds
         tickable_queue.tick(None);
         assert_pending(&mut put_fut).await;
+        assert_eq!(&queue_keys(&ctx, &multiplex).await?, &["k2"]);
 
         // first blobstore succeeds
         tickable_blobstores[0].1.tick(None);
@@ -337,6 +350,22 @@ async fn test_put_succeeds(fb: FacebookInit) -> Result<()> {
                 store.tick(None);
             }
             validate_blob(get_fut.await, Ok(Some(&v)));
+        }
+        // check the optimisation to delete the item from the queue
+        {
+            tokio::task::yield_now().await;
+            // 2 item in the queue (k2 is from the previous test)
+            assert_eq!(&queue_keys(&ctx, &multiplex).await?, &["k2", "k3"]);
+            // Tick the rest of the blobstores
+            for (_id, store) in &tickable_blobstores[quorum..] {
+                store.tick(None);
+            }
+            tokio::task::yield_now().await;
+            // Tick deletion
+            tickable_queue.tick(None);
+            tokio::task::yield_now().await;
+            // k2 correctly doesn't leave the key because we didn't succeed all writes
+            assert_eq!(&queue_keys(&ctx, &multiplex).await?, &["k2"]);
         }
     }
 

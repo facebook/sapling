@@ -177,4 +177,14 @@ impl<Q: BlobstoreWal> BlobstoreWal for DummyBlobstoreWal<Q> {
         info!(ctx.logger(), "I would have deleted {}", entries.join(",\n"));
         Ok(())
     }
+
+    async fn delete_by_key(&self, ctx: &CoreContext, entries: &[BlobstoreWalEntry]) -> Result<()> {
+        let entries: Vec<_> = entries.iter().map(|e| format!("{:?}", e)).collect();
+        info!(
+            ctx.logger(),
+            "I would have deleted by key {}",
+            entries.join(",\n")
+        );
+        Ok(())
+    }
 }

@@ -30,9 +30,12 @@ use context::CoreContext;
 use context::PerfCounterType;
 use context::SessionClass;
 use fbinit::FacebookInit;
+use futures::future;
 use futures::stream::FuturesUnordered;
 use futures::Future;
+use futures::Stream;
 use futures::StreamExt;
+use futures::TryStreamExt;
 use futures_stats::TimedFutureExt;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::MultiplexId;
@@ -42,11 +45,11 @@ use multiplexedblob::scuba;
 use scuba_ext::MononokeScubaSampleBuilder;
 use thiserror::Error;
 use time_ext::DurationExt;
+use tokio::task::JoinHandle;
 
 use crate::timed::with_timed_stores;
 use crate::timed::MultiplexTimeout;
 use crate::timed::TimedStore;
-
 type BlobstoresReturnedError = HashMap<BlobstoreId, Error>;
 
 #[derive(Error, Debug, Clone)]
@@ -133,9 +136,9 @@ impl Scuba {
 #[derive(Clone)]
 pub struct WalMultiplexedBlobstore {
     /// Multiplexed blobstore configuration.
-    multiplex_id: MultiplexId,
+    pub(crate) multiplex_id: MultiplexId,
     /// Write-ahead log used to keep data consistent across blobstores.
-    wal_queue: Arc<dyn BlobstoreWal>,
+    pub(crate) wal_queue: Arc<dyn BlobstoreWal>,
 
     pub(crate) quorum: MultiplexQuorum,
     /// These are the "normal" blobstores, which are read from on `get`, and written to on `put`
@@ -226,7 +229,7 @@ impl WalMultiplexedBlobstore {
             result.as_ref().map(|_| &()),
         );
 
-        result.with_context(|| {
+        let entry = result.with_context(|| {
             format!(
                 "WAL Multiplexed Blobstore: Failed writing to the WAL: key {}",
                 key
@@ -254,7 +257,8 @@ impl WalMultiplexedBlobstore {
                         if quorum == 0 {
                             // Quorum blobstore writes succeeded, we can spawn the rest
                             // of the writes and not wait for them.
-                            spawn_stream_completion(put_futs);
+                            let main_puts =
+                                spawn_stream_completion(put_futs.map_err(|(_id, err)| err));
 
                             // Spawn the write-mostly blobstore writes, we don't want to wait for them
                             let write_mostly_puts = inner_multi_put(
@@ -265,7 +269,23 @@ impl WalMultiplexedBlobstore {
                                 put_behaviour,
                                 scuba,
                             );
-                            spawn_stream_completion(write_mostly_puts);
+                            let write_mostly_puts = spawn_stream_completion(
+                                write_mostly_puts.map_err(|(_id, err)| err),
+                            );
+
+                            cloned!(ctx, self.wal_queue);
+                            if put_errors.is_empty() {
+                                // Optimisation: It put fully succeeded on all blobstores, we can remove
+                                // it from queue and healer doesn't need to deal with it.
+                                tokio::spawn(async move {
+                                    let (r1, r2) = futures::join!(main_puts, write_mostly_puts);
+                                    r1??;
+                                    r2??;
+                                    // TODO(yancouto): Batch deletes together.
+                                    wal_queue.delete_by_key(&ctx, &[entry]).await?;
+                                    anyhow::Ok(())
+                                });
+                            }
 
                             return Ok(OverwriteStatus::NotChecked);
                         }
@@ -552,8 +572,10 @@ impl BlobstorePutOps for WalMultiplexedBlobstore {
     }
 }
 
-fn spawn_stream_completion(s: impl StreamExt + Send + 'static) {
-    tokio::spawn(s.for_each(|_| async {}));
+fn spawn_stream_completion<T>(
+    s: impl Stream<Item = Result<T>> + Send + 'static,
+) -> JoinHandle<Result<()>> {
+    tokio::spawn(s.try_for_each(|_| future::ok(())))
 }
 
 pub(crate) fn inner_multi_put(

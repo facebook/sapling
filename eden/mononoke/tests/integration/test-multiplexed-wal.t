@@ -31,7 +31,7 @@ clone
 Push
   $ echo 1 > 1 && quiet hgedenapi commit -A -m 1
   $ echo "$(read_blobstore_wal_queue_size)"
-  20
+  0
   $ hgedenapi push -r . --to main
   pushing rev 523cda1e6192 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark main
   searching for changes
@@ -39,6 +39,6 @@ Push
 
 Count number of entries the blobstore sync queue
   $ echo "$(read_blobstore_wal_queue_size)"
-  36
+  0
   $ cat "$TESTTMP/blobstore_trace_scuba.json" | jq 'select(.normal.operation=="put" and (.normal.key | contains(".changeset."))) | 1' | wc -l
   6

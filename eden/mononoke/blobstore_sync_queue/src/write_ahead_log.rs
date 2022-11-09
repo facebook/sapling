@@ -233,11 +233,16 @@ pub trait BlobstoreWal: Send + Sync {
         limit: usize,
     ) -> Result<Vec<BlobstoreWalEntry>>;
 
+    /// Entries must have `id` and `shard_id` set (automatic when they are obtained from `read`)
     async fn delete<'a>(
         &'a self,
         ctx: &'a CoreContext,
         entries: &'a [BlobstoreWalEntry],
     ) -> Result<()>;
+
+    /// Entries must have `shard_id` set (automatic when obtained from `log` or `log_many`)
+    /// Will delete ALL entries with the same multiplex and key, independent of other fields.
+    async fn delete_by_key(&self, ctx: &CoreContext, entries: &[BlobstoreWalEntry]) -> Result<()>;
 }
 
 #[async_trait]
@@ -339,9 +344,45 @@ impl BlobstoreWal for SqlBlobstoreWal {
         )
         .buffered(10)
         .try_collect::<()>()
-        .await?;
+        .await
+    }
 
-        Ok(())
+    async fn delete_by_key(&self, _ctx: &CoreContext, entries: &[BlobstoreWalEntry]) -> Result<()> {
+        // We're grouping by shard id AND multiplex id
+        type GroupBy = (usize, MultiplexId);
+        let mut del_info: Vec<(GroupBy, &String)> = entries
+            .iter()
+            .map(|entry| {
+                let shard_id = entry
+                    .read_info
+                    .shard_id
+                    .context("BlobstoreWalEntry must have `shard_id` to delete by key")?;
+                Ok(((shard_id, entry.multiplex_id), &entry.blobstore_key))
+            })
+            .collect::<Result<_>>()?;
+        del_info.sort_unstable_by_key(|(group, _)| *group);
+        stream::iter(
+            del_info
+                .group_by(|(group1, _), (group2, _)| group1 == group2)
+                .map(|batch| async move {
+                    let (shard_id, multiplex_id) = batch[0].0;
+                    let del_entries: Vec<String> =
+                        batch.iter().map(|(_, key)| (*key).clone()).collect();
+                    for chunk in del_entries.chunks(10_000) {
+                        WalDeleteKeys::query(
+                            &self.write_connections[shard_id],
+                            &multiplex_id,
+                            chunk,
+                        )
+                        .await?;
+                    }
+                    anyhow::Ok(())
+                })
+                .collect::<Vec<_>>(), // prevents compiler bug
+        )
+        .buffered(10)
+        .try_collect::<()>()
+        .await
     }
 }
 
@@ -392,6 +433,16 @@ queries! {
     write WalDeleteEntries(>list ids: u64) {
         none,
         "DELETE FROM blobstore_write_ahead_log WHERE id in {ids}"
+    }
+
+    // This will delete ALL entries for given key. Used for the optimisation where we
+    // remove keys from the queue if the write fully succeeded.
+    // Ideally we wanted to use `(multiplex_id, blobstore_key) in {entries}` but that's not
+    // possible using our SQL libraries, because everything must be a column value, and there are
+    // no tuple/array column values (though you could write that query in raw SQL)
+    write WalDeleteKeys(multiplex_id: MultiplexId, >list entries: String) {
+        none,
+        "DELETE FROM blobstore_write_ahead_log WHERE multiplex_id = {multiplex_id} AND blobstore_key in {entries}"
     }
 
     write WalInsertEntry(values: (

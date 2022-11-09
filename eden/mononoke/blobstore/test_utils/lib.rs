@@ -33,7 +33,6 @@ use lock_ext::LockExt;
 use metaconfig_types::MultiplexId;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::Timestamp;
-
 pub struct Tickable<T> {
     pub storage: Arc<Mutex<HashMap<String, T>>>,
     // queue of pending operations
@@ -217,5 +216,9 @@ impl BlobstoreWal for Tickable<BlobstoreWalEntry> {
             }
         });
         Ok(())
+    }
+
+    async fn delete_by_key(&self, ctx: &CoreContext, entries: &[BlobstoreWalEntry]) -> Result<()> {
+        self.delete(ctx, entries).await
     }
 }
