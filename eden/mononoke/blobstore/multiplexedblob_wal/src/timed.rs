@@ -129,7 +129,7 @@ impl TimedStore {
         key: &str,
         operation: OperationType,
         mut scuba: MononokeScubaSampleBuilder,
-    ) -> Result<Option<BlobstoreGetData>, (BlobstoreId, Error)> {
+    ) -> Result<Option<BlobstoreGetData>, Error> {
         let pc = ctx.clone().fork_perf_counters();
         let (stats, result) = with_timeout(self.inner.get(ctx, key), self.timeout.read)
             .timed()
@@ -147,7 +147,7 @@ impl TimedStore {
             self.inner.clone(),
         );
 
-        result.map_err(|er| (self.id.clone(), er))
+        result
     }
 
     pub(crate) async fn is_present(

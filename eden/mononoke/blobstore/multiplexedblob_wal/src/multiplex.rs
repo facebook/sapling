@@ -140,13 +140,13 @@ pub struct WalMultiplexedBlobstore {
     quorum: MultiplexQuorum,
     /// These are the "normal" blobstores, which are read from on `get`, and written to on `put`
     /// as part of normal operation.
-    blobstores: Arc<[TimedStore]>,
+    pub(crate) blobstores: Arc<[TimedStore]>,
     /// Write-mostly blobstores are not normally read from on `get`, but take part in writes
     /// like a normal blobstore.
-    write_mostly_blobstores: Arc<[TimedStore]>,
+    pub(crate) write_mostly_blobstores: Arc<[TimedStore]>,
 
     /// Scuba table to log status of the underlying single blobstore queries.
-    scuba: Scuba,
+    pub(crate) scuba: Scuba,
 }
 
 impl std::fmt::Display for WalMultiplexedBlobstore {
@@ -317,7 +317,7 @@ impl WalMultiplexedBlobstore {
         let mut quorum: usize = self.quorum.read.get();
         let mut get_errors = HashMap::with_capacity(get_futs.len());
         let (stats, result) = async move {
-            while let Some(result) = get_futs.next().await {
+            while let Some((bs_id, result)) = get_futs.next().await {
                 match result {
                     Ok(Some(get_data)) => {
                         return Ok(Some(get_data));
@@ -330,7 +330,7 @@ impl WalMultiplexedBlobstore {
                             return Ok(None);
                         }
                     }
-                    Err((bs_id, err)) => {
+                    Err(err) => {
                         get_errors.insert(bs_id, err);
                     }
                 }
@@ -556,7 +556,7 @@ fn spawn_stream_completion(s: impl StreamExt + Send + 'static) {
     tokio::spawn(s.for_each(|_| async {}));
 }
 
-fn inner_multi_put(
+pub(crate) fn inner_multi_put(
     ctx: &CoreContext,
     blobstores: Arc<[TimedStore]>,
     key: String,
@@ -584,20 +584,25 @@ fn inner_multi_put(
     put_futs
 }
 
-fn inner_multi_get<'a>(
+pub(crate) type GetResult = (BlobstoreId, Result<Option<BlobstoreGetData>, Error>);
+
+pub(crate) fn inner_multi_get<'a>(
     ctx: &'a CoreContext,
     blobstores: Arc<[TimedStore]>,
     key: &'a str,
     operation: OperationType,
     scuba: &Scuba,
-) -> FuturesUnordered<
-    impl Future<Output = Result<Option<BlobstoreGetData>, (BlobstoreId, Error)>> + 'a,
-> {
+) -> FuturesUnordered<impl Future<Output = GetResult> + 'a> {
     let get_futs: FuturesUnordered<_> = blobstores
         .iter()
         .map(|bs| {
             cloned!(bs, scuba.inner_blobstores_scuba);
-            async move { bs.get(ctx, key, operation, inner_blobstores_scuba).await }
+            async move {
+                (
+                    *bs.id(),
+                    bs.get(ctx, key, operation, inner_blobstores_scuba).await,
+                )
+            }
         })
         .collect();
     get_futs

@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-mod multiplex;
+pub(crate) mod multiplex;
+mod scrub;
 #[cfg(test)]
 mod test;
 mod timed;
