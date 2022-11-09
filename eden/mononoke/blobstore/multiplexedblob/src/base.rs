@@ -263,6 +263,7 @@ pub fn scrub_parse_results(
             if missing_main.is_empty() && missing_write_mostly.is_empty() {
                 Ok(last_get_data)
             } else {
+                // This silently ignores failed blobstores if at least one has a value
                 Err(ErrorKind::SomeMissingItem {
                     missing_main: Arc::new(missing_main),
                     missing_write_mostly: Arc::new(missing_write_mostly),

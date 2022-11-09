@@ -82,7 +82,7 @@ impl<T> Tickable<T> {
         let mut queue = self.queue.lock().unwrap();
         queue.push_back(send);
         async move {
-            let error = recv.await?;
+            let error = tokio::time::timeout(std::time::Duration::from_secs(10), recv).await??;
             match error {
                 None => Ok(()),
                 Some(error) => bail!(error),
@@ -168,11 +168,11 @@ impl BlobstorePutOps for Tickable<(BlobstoreBytes, u64)> {
 }
 
 #[async_trait]
-impl BlobstoreWal for Tickable<()> {
+impl BlobstoreWal for Tickable<BlobstoreWalEntry> {
     async fn log<'a>(&'a self, _ctx: &'a CoreContext, entry: BlobstoreWalEntry) -> Result<()> {
         self.on_tick().await?;
         self.storage.with(|s| {
-            s.insert(entry.blobstore_key, ());
+            s.insert(entry.blobstore_key.clone(), entry);
         });
         Ok(())
     }
@@ -195,7 +195,7 @@ impl BlobstoreWal for Tickable<()> {
         _o: &Timestamp,
         _l: usize,
     ) -> Result<Vec<BlobstoreWalEntry>> {
-        unimplemented!();
+        Ok(self.storage.with(|s| s.values().cloned().collect()))
     }
 
     async fn delete<'a>(

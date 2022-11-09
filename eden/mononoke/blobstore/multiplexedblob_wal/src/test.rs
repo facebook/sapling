@@ -8,7 +8,6 @@
 use std::fmt::Debug;
 use std::future::Future;
 use std::panic;
-use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -19,24 +18,32 @@ use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstorePutOps;
 use blobstore_sync_queue::BlobstoreWal;
+use blobstore_sync_queue::BlobstoreWalEntry;
 use blobstore_sync_queue::SqlBlobstoreWal;
 use blobstore_test_utils::Tickable;
+use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
 use context::SessionClass;
 use context::SessionContainer;
 use fbinit::FacebookInit;
 use futures::future::FutureExt;
-use futures::future::TryFutureExt;
-use futures::task::Context;
 use futures::task::Poll;
+use lock_ext::LockExt;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::MultiplexId;
 use mononoke_types::BlobstoreBytes;
+use mononoke_types::Timestamp;
+use multiplexedblob::LoggingScrubHandler;
+use multiplexedblob::ScrubAction;
+use multiplexedblob::ScrubHandler;
+use multiplexedblob::ScrubOptions;
+use multiplexedblob::ScrubWriteMostly;
 use nonzero_ext::nonzero;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstruct;
 
+use crate::scrub::WalScrubBlobstore;
 use crate::MultiplexTimeout;
 use crate::Scuba;
 use crate::WalMultiplexedBlobstore;
@@ -97,28 +104,6 @@ async fn test_quorum_is_valid(_fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-struct PollOnce<'a, F> {
-    future: Pin<&'a mut F>,
-}
-
-impl<'a, F: Future + Unpin> PollOnce<'a, F> {
-    pub fn new(future: &'a mut F) -> Self {
-        Self {
-            future: Pin::new(future),
-        }
-    }
-}
-
-impl<'a, F: Future + Unpin> Future for PollOnce<'a, F> {
-    type Output = Poll<<F as Future>::Output>;
-
-    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        // This is pin-projection; I uphold the Pin guarantees, so it's fine.
-        let this = unsafe { self.get_unchecked_mut() };
-        Poll::Ready(this.future.poll_unpin(cx))
-    }
-}
-
 #[fbinit::test]
 async fn test_put_wal_fails(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
@@ -127,7 +112,7 @@ async fn test_put_wal_fails(fb: FacebookInit) -> Result<()> {
     let v = make_value("v");
     let k = "k";
 
-    let mut put_fut = multiplex.put(&ctx, k.to_owned(), v).map_err(|_| ()).boxed();
+    let mut put_fut = multiplex.put(&ctx, k.to_owned(), v).boxed();
     assert_pending(&mut put_fut).await;
 
     // wal queue write fails
@@ -138,7 +123,7 @@ async fn test_put_wal_fails(fb: FacebookInit) -> Result<()> {
 
     // check there is no blob in the storage
     {
-        let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        let mut get_fut = multiplex.get(&ctx, k).boxed();
         assert_pending(&mut get_fut).await;
 
         // blobstore gets succeed
@@ -161,7 +146,7 @@ async fn test_put_fails(fb: FacebookInit) -> Result<()> {
         let v = make_value("v0");
         let k = "k0";
 
-        let mut put_fut = multiplex.put(&ctx, k.to_owned(), v).map_err(|_| ()).boxed();
+        let mut put_fut = multiplex.put(&ctx, k.to_owned(), v).boxed();
         assert_pending(&mut put_fut).await;
 
         // wal queue write succeeds
@@ -177,7 +162,7 @@ async fn test_put_fails(fb: FacebookInit) -> Result<()> {
 
         // No `put` succeeded, there is no blob in the storage
         {
-            let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+            let mut get_fut = multiplex.get(&ctx, k).boxed();
             assert_pending(&mut get_fut).await;
 
             // blobstore gets succeed
@@ -193,10 +178,7 @@ async fn test_put_fails(fb: FacebookInit) -> Result<()> {
         let v = make_value("v1");
         let k = "k1";
 
-        let mut put_fut = multiplex
-            .put(&ctx, k.to_owned(), v.clone())
-            .map_err(|_| ())
-            .boxed();
+        let mut put_fut = multiplex.put(&ctx, k.to_owned(), v.clone()).boxed();
         assert_pending(&mut put_fut).await;
 
         // wal queue write succeeds
@@ -227,7 +209,7 @@ async fn test_put_fails(fb: FacebookInit) -> Result<()> {
         // 1st and 3rd blobstore returned `None`, before 2nd blobstore returned anything
         // there is a read quorum on `None`, so multiplex `get` should also return `None`
         {
-            let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+            let mut get_fut = multiplex.get(&ctx, k).boxed();
             assert_pending(&mut get_fut).await;
 
             // first and third blobstores don't have the blob
@@ -242,7 +224,7 @@ async fn test_put_fails(fb: FacebookInit) -> Result<()> {
         // 2nd blobstore returned before the read quorum on `None` was achieved, so
         // multiplex `get` should also return `Some`
         {
-            let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+            let mut get_fut = multiplex.get(&ctx, k).boxed();
             assert_pending(&mut get_fut).await;
 
             // first blobstore doesn't have the blob
@@ -272,10 +254,7 @@ async fn test_put_succeeds(fb: FacebookInit) -> Result<()> {
         let v = make_value("v2");
         let k = "k2";
 
-        let mut put_fut = multiplex
-            .put(&ctx, k.to_owned(), v.clone())
-            .map_err(|_| ())
-            .boxed();
+        let mut put_fut = multiplex.put(&ctx, k.to_owned(), v.clone()).boxed();
         assert_pending(&mut put_fut).await;
 
         // wal queue write succeeds
@@ -295,7 +274,7 @@ async fn test_put_succeeds(fb: FacebookInit) -> Result<()> {
 
         // check we can read the blob from the 1st store
         {
-            let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+            let mut get_fut = multiplex.get(&ctx, k).boxed();
             assert_pending(&mut get_fut).await;
 
             // first blobstore returns the blob
@@ -310,7 +289,7 @@ async fn test_put_succeeds(fb: FacebookInit) -> Result<()> {
 
         // check we can read the blob from the 3rd store
         {
-            let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+            let mut get_fut = multiplex.get(&ctx, k).boxed();
             assert_pending(&mut get_fut).await;
 
             // first blobstore fails
@@ -333,10 +312,7 @@ async fn test_put_succeeds(fb: FacebookInit) -> Result<()> {
         let v = make_value("v3");
         let k = "k3";
 
-        let mut put_fut = multiplex
-            .put(&ctx, k.to_owned(), v.clone())
-            .map_err(|_| ())
-            .boxed();
+        let mut put_fut = multiplex.put(&ctx, k.to_owned(), v.clone()).boxed();
         assert_pending(&mut put_fut).await;
 
         // wal queue write succeeds
@@ -353,7 +329,7 @@ async fn test_put_succeeds(fb: FacebookInit) -> Result<()> {
 
         // check we can read the blob
         {
-            let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+            let mut get_fut = multiplex.get(&ctx, k).boxed();
             assert_pending(&mut get_fut).await;
 
             // blobstore gets succeed
@@ -377,7 +353,7 @@ async fn test_get_on_missing(fb: FacebookInit) -> Result<()> {
 
     // all gets succeed, but multiplexed returns `None`
     {
-        let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        let mut get_fut = multiplex.get(&ctx, k).boxed();
         assert_pending(&mut get_fut).await;
 
         tickable_blobstores[0].1.tick(None);
@@ -391,7 +367,7 @@ async fn test_get_on_missing(fb: FacebookInit) -> Result<()> {
 
     // two gets succeed, but multiplexed returns `None`
     {
-        let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        let mut get_fut = multiplex.get(&ctx, k).boxed();
         assert_pending(&mut get_fut).await;
 
         tickable_blobstores[0].1.tick(None);
@@ -406,7 +382,7 @@ async fn test_get_on_missing(fb: FacebookInit) -> Result<()> {
 
     // two gets fail, multiplexed get fails, because no read quorum
     {
-        let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        let mut get_fut = multiplex.get(&ctx, k).boxed();
         assert_pending(&mut get_fut).await;
 
         tickable_blobstores[0].1.tick(Some("bs0 failed"));
@@ -416,7 +392,7 @@ async fn test_get_on_missing(fb: FacebookInit) -> Result<()> {
         tickable_blobstores[2].1.tick(None);
 
         // no read-quorum, multiplexed get fails
-        validate_blob(get_fut.await, Err(()));
+        validate_blob(get_fut.await, Err(anyhow::anyhow!("error")));
     }
 
     Ok(())
@@ -432,10 +408,7 @@ async fn test_get_on_existing(fb: FacebookInit) -> Result<()> {
     let v = make_value("v1");
     let k = "k1";
 
-    let mut put_fut = multiplex
-        .put(&ctx, k.to_owned(), v.clone())
-        .map_err(|_| ())
-        .boxed();
+    let mut put_fut = multiplex.put(&ctx, k.to_owned(), v.clone()).boxed();
     assert_pending(&mut put_fut).await;
 
     // wal queue write succeeds
@@ -451,7 +424,7 @@ async fn test_get_on_existing(fb: FacebookInit) -> Result<()> {
 
     // all gets succeed, but multiplexed returns on the first successful `Some`
     {
-        let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        let mut get_fut = multiplex.get(&ctx, k).boxed();
         assert_pending(&mut get_fut).await;
 
         // first blobstore returns the blob
@@ -466,7 +439,7 @@ async fn test_get_on_existing(fb: FacebookInit) -> Result<()> {
 
     // first get fails, but multiplexed returns on the third get
     {
-        let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        let mut get_fut = multiplex.get(&ctx, k).boxed();
         assert_pending(&mut get_fut).await;
 
         // first blobstore get fails
@@ -484,7 +457,7 @@ async fn test_get_on_existing(fb: FacebookInit) -> Result<()> {
 
     // 2 first gets fail, but multiplexed returns `Some` on the third get
     {
-        let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        let mut get_fut = multiplex.get(&ctx, k).boxed();
         assert_pending(&mut get_fut).await;
 
         // first blobstore get fails
@@ -503,7 +476,7 @@ async fn test_get_on_existing(fb: FacebookInit) -> Result<()> {
     // all blobstores that have the blob fail, multiplexed get fail:
     // no read quorum on `None` was achieved
     {
-        let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        let mut get_fut = multiplex.get(&ctx, k).boxed();
         assert_pending(&mut get_fut).await;
 
         // first and third blobstore gets fail
@@ -513,19 +486,19 @@ async fn test_get_on_existing(fb: FacebookInit) -> Result<()> {
 
         // second blobstore get returns None
         tickable_blobstores[1].1.tick(None);
-        validate_blob(get_fut.await, Err(()));
+        validate_blob(get_fut.await, Err(anyhow::anyhow!("error")));
     }
 
     // all blobstores gets fail, multiplexed get fail
     {
-        let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        let mut get_fut = multiplex.get(&ctx, k).boxed();
         assert_pending(&mut get_fut).await;
 
         for (id, store) in tickable_blobstores {
             store.tick(Some(format!("bs{} failed!", id).as_str()));
         }
 
-        validate_blob(get_fut.await, Err(()));
+        validate_blob(get_fut.await, Err(anyhow::anyhow!("error")));
     }
 
     Ok(())
@@ -541,7 +514,7 @@ async fn test_is_present_missing(fb: FacebookInit) -> Result<()> {
 
     // all `is_present` succeed, multiplexed returns `Absent`
     {
-        let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+        let mut fut = multiplex.is_present(&ctx, k).boxed();
         assert_pending(&mut fut).await;
 
         tickable_blobstores[0].1.tick(None);
@@ -555,7 +528,7 @@ async fn test_is_present_missing(fb: FacebookInit) -> Result<()> {
 
     // two `is_present`s succeed, multiplexed returns `Absent`
     {
-        let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+        let mut fut = multiplex.is_present(&ctx, k).boxed();
         assert_pending(&mut fut).await;
 
         tickable_blobstores[0].1.tick(None);
@@ -570,7 +543,7 @@ async fn test_is_present_missing(fb: FacebookInit) -> Result<()> {
 
     // two `is_present`s fail, multiplexed returns `ProbablyNotPresent`
     {
-        let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+        let mut fut = multiplex.is_present(&ctx, k).boxed();
         assert_pending(&mut fut).await;
 
         tickable_blobstores[0].1.tick(Some("bs0 failed"));
@@ -587,7 +560,7 @@ async fn test_is_present_missing(fb: FacebookInit) -> Result<()> {
 
     // all `is_present`s fail, multiplexed fails
     {
-        let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+        let mut fut = multiplex.is_present(&ctx, k).boxed();
         assert_pending(&mut fut).await;
 
         for (id, store) in tickable_blobstores {
@@ -609,10 +582,7 @@ async fn test_is_present_existing(fb: FacebookInit) -> Result<()> {
         let v = make_value("v1");
         let k = "k1";
 
-        let mut put_fut = multiplex
-            .put(&ctx, k.to_owned(), v.clone())
-            .map_err(|_| ())
-            .boxed();
+        let mut put_fut = multiplex.put(&ctx, k.to_owned(), v.clone()).boxed();
         assert_pending(&mut put_fut).await;
 
         // wal queue write succeeds
@@ -628,7 +598,7 @@ async fn test_is_present_existing(fb: FacebookInit) -> Result<()> {
 
         // first `is_present` succeed with `Present`, multiplexed returns `Present`
         {
-            let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+            let mut fut = multiplex.is_present(&ctx, k).boxed();
             assert_pending(&mut fut).await;
 
             tickable_blobstores[0].1.tick(None);
@@ -642,7 +612,7 @@ async fn test_is_present_existing(fb: FacebookInit) -> Result<()> {
         // first `is_present` fails, second succeed with `Absent`, third returns `Present`
         // multiplexed returns `Present`
         {
-            let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+            let mut fut = multiplex.is_present(&ctx, k).boxed();
             assert_pending(&mut fut).await;
 
             tickable_blobstores[0].1.tick(Some("bs0 failed"));
@@ -659,10 +629,7 @@ async fn test_is_present_existing(fb: FacebookInit) -> Result<()> {
         let v = make_value("v2");
         let k = "k2";
 
-        let mut put_fut = multiplex
-            .put(&ctx, k.to_owned(), v.clone())
-            .map_err(|_| ())
-            .boxed();
+        let mut put_fut = multiplex.put(&ctx, k.to_owned(), v.clone()).boxed();
         assert_pending(&mut put_fut).await;
 
         // wal queue write succeeds
@@ -678,7 +645,7 @@ async fn test_is_present_existing(fb: FacebookInit) -> Result<()> {
 
         // the first `is_present` to succeed returns `Present`, multiplexed returns `Present`
         {
-            let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+            let mut fut = multiplex.is_present(&ctx, k).boxed();
             assert_pending(&mut fut).await;
 
             tickable_blobstores[1].1.tick(None);
@@ -690,7 +657,7 @@ async fn test_is_present_existing(fb: FacebookInit) -> Result<()> {
 
         // if the first two `is_present` calls return `Absent`, multiplexed returns `Absent`
         {
-            let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+            let mut fut = multiplex.is_present(&ctx, k).boxed();
             assert_pending(&mut fut).await;
 
             tickable_blobstores[0].1.tick(None);
@@ -702,7 +669,7 @@ async fn test_is_present_existing(fb: FacebookInit) -> Result<()> {
 
         // if one `is_present` returns `Absent`, another 2 fail, multiplexed is unsure
         {
-            let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+            let mut fut = multiplex.is_present(&ctx, k).boxed();
             assert_pending(&mut fut).await;
 
             tickable_blobstores[0].1.tick(None);
@@ -733,7 +700,7 @@ async fn test_is_present_comprehensive(fb: FacebookInit) -> Result<()> {
     // o - missing, * - existing, x - failed
     // All blobstores failed: [x] [x] [x]
     {
-        let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+        let mut fut = multiplex.is_present(&ctx, k).boxed();
         assert_pending(&mut fut).await;
 
         for (id, store) in &tickable_blobstores {
@@ -746,7 +713,7 @@ async fn test_is_present_comprehensive(fb: FacebookInit) -> Result<()> {
 
     // None of the blobstores has the blob: [o] [o] [o]
     {
-        let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+        let mut fut = multiplex.is_present(&ctx, k).boxed();
         assert_pending(&mut fut).await;
 
         for (_id, store) in &tickable_blobstores {
@@ -761,7 +728,7 @@ async fn test_is_present_comprehensive(fb: FacebookInit) -> Result<()> {
         let v = make_value("value");
         let k = "key";
 
-        let mut put_fut = multiplex.put(&ctx, k.to_owned(), v).map_err(|_| ()).boxed();
+        let mut put_fut = multiplex.put(&ctx, k.to_owned(), v).boxed();
         assert_pending(&mut put_fut).await;
 
         // wal queue write succeeds
@@ -775,7 +742,7 @@ async fn test_is_present_comprehensive(fb: FacebookInit) -> Result<()> {
         // multiplexed put succeeds: write quorum achieved
         assert!(put_fut.await.is_ok());
 
-        let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+        let mut fut = multiplex.is_present(&ctx, k).boxed();
         assert_pending(&mut fut).await;
 
         tickable_blobstores[0].1.tick(None);
@@ -791,10 +758,7 @@ async fn test_is_present_comprehensive(fb: FacebookInit) -> Result<()> {
     let v = make_value("exists in 0 and 1");
     let k01 = "k01";
 
-    let mut put_fut = multiplex
-        .put(&ctx, k01.to_owned(), v)
-        .map_err(|_| ())
-        .boxed();
+    let mut put_fut = multiplex.put(&ctx, k01.to_owned(), v).boxed();
     assert_pending(&mut put_fut).await;
 
     // wal queue write succeeds
@@ -810,7 +774,7 @@ async fn test_is_present_comprehensive(fb: FacebookInit) -> Result<()> {
 
     // Some blobstores have the blob, others don't: [*] [*] [o]
     {
-        let mut fut = multiplex.is_present(&ctx, k01).map_err(|_| ()).boxed();
+        let mut fut = multiplex.is_present(&ctx, k01).boxed();
         assert_pending(&mut fut).await;
 
         for (_id, store) in &tickable_blobstores {
@@ -823,7 +787,7 @@ async fn test_is_present_comprehensive(fb: FacebookInit) -> Result<()> {
 
     // Some of the blobstores have the blob, others failed: [*] [*] [x]
     {
-        let mut fut = multiplex.is_present(&ctx, k01).map_err(|_| ()).boxed();
+        let mut fut = multiplex.is_present(&ctx, k01).boxed();
         assert_pending(&mut fut).await;
 
         tickable_blobstores[0].1.tick(None);
@@ -859,10 +823,7 @@ async fn test_timeout_on_request(fb: FacebookInit) -> Result<()> {
         let v = make_value("v1");
         let k = "k1";
 
-        let mut put_fut = multiplex
-            .put(&ctx, k.to_owned(), v.clone())
-            .map_err(|_| ())
-            .boxed();
+        let mut put_fut = multiplex.put(&ctx, k.to_owned(), v.clone()).boxed();
         assert_pending(&mut put_fut).await;
 
         // wal queue write succeeds
@@ -883,7 +844,7 @@ async fn test_timeout_on_request(fb: FacebookInit) -> Result<()> {
 
         // We'll try to read with a delayed response from the blobstores.
         // Get should fail.
-        let mut fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        let mut fut = multiplex.get(&ctx, k).boxed();
         assert_pending(&mut fut).await;
         tokio::time::sleep(Duration::from_millis(25)).await;
         assert!(fut.await.is_err());
@@ -903,10 +864,7 @@ async fn test_timeout_on_request(fb: FacebookInit) -> Result<()> {
         let v = make_value("v2");
         let k = "k2";
 
-        let mut put_fut = multiplex
-            .put(&ctx, k.to_owned(), v.clone())
-            .map_err(|_| ())
-            .boxed();
+        let mut put_fut = multiplex.put(&ctx, k.to_owned(), v.clone()).boxed();
         assert_pending(&mut put_fut).await;
 
         // wal queue write succeeds
@@ -930,7 +888,7 @@ async fn test_timeout_on_request(fb: FacebookInit) -> Result<()> {
 }
 
 async fn assert_pending<T: Debug>(fut: &mut (impl Future<Output = T> + Unpin)) {
-    match PollOnce::new(fut).await {
+    match futures::poll!(fut) {
         Poll::Pending => {}
         state => {
             panic!("future must be pending, received: {:?}", state);
@@ -943,7 +901,7 @@ fn setup_multiplex(
     quorum: usize,
     timeout: Option<MultiplexTimeout>,
 ) -> Result<(
-    Arc<Tickable<()>>,
+    Arc<Tickable<BlobstoreWalEntry>>,
     Vec<(BlobstoreId, Arc<Tickable<(BlobstoreBytes, u64)>>)>,
     WalMultiplexedBlobstore,
 )> {
@@ -986,7 +944,7 @@ fn setup_blobstores(
     (tickable_blobstores, blobstores)
 }
 
-fn setup_queue() -> (Arc<Tickable<()>>, Arc<dyn BlobstoreWal>) {
+fn setup_queue() -> (Arc<Tickable<BlobstoreWalEntry>>, Arc<dyn BlobstoreWal>) {
     let tickable_queue = Arc::new(Tickable::new());
     let wal_queue = tickable_queue.clone() as Arc<dyn BlobstoreWal>;
     (tickable_queue, wal_queue)
@@ -997,8 +955,8 @@ fn make_value(value: &str) -> BlobstoreBytes {
 }
 
 fn validate_blob(
-    get_data: Result<Option<BlobstoreGetData>, ()>,
-    expected: Result<Option<&BlobstoreBytes>, ()>,
+    get_data: Result<Option<BlobstoreGetData>>,
+    expected: Result<Option<&BlobstoreBytes>>,
 ) {
     assert_eq!(get_data.is_ok(), expected.is_ok());
     if let Ok(expected) = expected {
@@ -1007,7 +965,7 @@ fn validate_blob(
     }
 }
 
-fn assert_is_present_ok(result: Result<BlobstoreIsPresent, ()>, expected: BlobstoreIsPresent) {
+fn assert_is_present_ok(result: Result<BlobstoreIsPresent>, expected: BlobstoreIsPresent) {
     assert!(result.is_ok());
     match (result.unwrap(), expected) {
         (BlobstoreIsPresent::Absent, BlobstoreIsPresent::Absent)
@@ -1021,4 +979,330 @@ fn assert_is_present_ok(result: Result<BlobstoreIsPresent, ()>, expected: Blobst
             );
         }
     }
+}
+
+async fn scrub_none(
+    fb: FacebookInit,
+    scrub_action_on_missing_write_mostly: ScrubWriteMostly,
+) -> Result<()> {
+    let bid0 = BlobstoreId::new(0);
+    let bs0 = Arc::new(Tickable::new());
+    let bid1 = BlobstoreId::new(1);
+    let bs1 = Arc::new(Tickable::new());
+    let bid2 = BlobstoreId::new(2);
+    let bs2 = Arc::new(Tickable::new());
+
+    let (_, queue) = setup_queue();
+    let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
+    let bs = WalScrubBlobstore::new(
+        MultiplexId::new(1),
+        queue,
+        vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
+        vec![(bid2, bs2.clone())],
+        1,
+        None,
+        Scuba::new_from_raw(fb, None, None, nonzero!(1u64))?,
+        ScrubOptions {
+            scrub_action_on_missing_write_mostly,
+            ..ScrubOptions::default()
+        },
+        Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
+    )?;
+
+    let mut fut = bs.get(ctx, "key");
+    assert!(futures::poll!(&mut fut).is_pending());
+
+    // No entry for "key" - blobstores return None...
+    bs0.tick(None);
+    bs1.tick(None);
+    // Expect a read from writemostly stores regardless
+    bs2.tick(None);
+
+    fut.await?;
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
+    scrub_none(fb, ScrubWriteMostly::Scrub).await?;
+    scrub_none(fb, ScrubWriteMostly::SkipMissing).await?;
+    scrub_none(fb, ScrubWriteMostly::PopulateIfAbsent).await
+}
+async fn scrub_scenarios(
+    fb: FacebookInit,
+    scrub_action_on_missing_write_mostly: ScrubWriteMostly,
+) -> Result<()> {
+    use ScrubWriteMostly::*;
+    println!("{:?}", scrub_action_on_missing_write_mostly);
+    let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
+    let (tick_queue, queue) = setup_queue();
+    let scrub_handler = Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>;
+    let bid0 = BlobstoreId::new(0);
+    let bs0 = Arc::new(Tickable::new());
+    let bid1 = BlobstoreId::new(1);
+    let bs1 = Arc::new(Tickable::new());
+    let bid2 = BlobstoreId::new(2);
+    let bs2 = Arc::new(Tickable::new());
+    let scuba = Scuba::new_from_raw(fb, None, None, nonzero!(1u64))?;
+    let bs = WalScrubBlobstore::new(
+        MultiplexId::new(1),
+        queue.clone(),
+        vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
+        vec![(bid2, bs2.clone())],
+        1,
+        None,
+        scuba.clone(),
+        ScrubOptions {
+            scrub_action: ScrubAction::ReportOnly,
+            scrub_action_on_missing_write_mostly,
+            ..ScrubOptions::default()
+        },
+        scrub_handler.clone(),
+    )?;
+
+    // non-existing key when one main blobstore failing
+    {
+        let k0 = "k0";
+
+        let mut get_fut = bs.get(ctx, k0).boxed();
+        assert_pending(&mut get_fut).await;
+
+        bs0.tick(None);
+        assert_pending(&mut get_fut).await;
+
+        bs1.tick(Some("bs1 failed"));
+
+        bs2.tick(None);
+        assert!(get_fut.await.is_err(), "SomeNone + Err expected Err");
+    }
+
+    // non-existing key when one write mostly blobstore failing
+    {
+        let k0 = "k0";
+
+        let mut get_fut = bs.get(ctx, k0).boxed();
+        assert_pending(&mut get_fut).await;
+
+        bs0.tick(None);
+        assert_pending(&mut get_fut).await;
+
+        bs1.tick(None);
+
+        match scrub_action_on_missing_write_mostly {
+            PopulateIfAbsent | ScrubIfAbsent => {
+                // bs2 is ignored because it's write_mostly and the result of the normal
+                // blobstores is failing
+                assert_eq!(get_fut.await.unwrap(), None, "SomeNone + Err expected None");
+            }
+            _ => {
+                bs2.tick(Some("bs2 failed"));
+                assert!(get_fut.await.is_err(), "SomeNone + Err expected Err");
+            }
+        }
+    }
+
+    // fail all but one store on put to make sure only one has the data
+    // only replica containing key fails on read.
+    {
+        let v1 = make_value("v1");
+        let k1 = "k1";
+
+        let mut put_fut = bs.put(ctx, k1.to_owned(), v1.clone()).boxed();
+        assert_pending(&mut put_fut).await;
+        tick_queue.tick(None);
+        assert_pending(&mut put_fut).await;
+        bs0.tick(None);
+        bs1.tick(Some("bs1 failed"));
+        bs2.tick(Some("bs2 failed"));
+        put_fut.await.unwrap();
+
+        assert_eq!(
+            queue
+                .read(ctx, &MultiplexId::new(1), &Timestamp::now(), 2)
+                .await
+                .unwrap()
+                .len(),
+            1
+        );
+
+        let mut get_fut = bs.get(ctx, k1).boxed();
+        assert_pending(&mut get_fut).await;
+
+        bs0.tick(Some("bs0 failed"));
+        assert_pending(&mut get_fut).await;
+
+        bs1.tick(None);
+        bs2.tick(None);
+        assert!(get_fut.await.is_err(), "None/Err while replicating");
+    }
+
+    // all replicas fail
+    {
+        let k2 = "k2";
+
+        let mut get_fut = bs.get(ctx, k2).boxed();
+        assert_pending(&mut get_fut).await;
+        bs0.tick(Some("bs0 failed"));
+        bs1.tick(Some("bs1 failed"));
+        bs2.tick(Some("bs1 failed"));
+        assert!(get_fut.await.is_err(), "Err/Err");
+    }
+
+    // Now replace bs1 & bs2 with an empty blobstore, and see the scrub work
+    let bid1 = BlobstoreId::new(1);
+    let bs1 = Arc::new(Tickable::new());
+    let bid2 = BlobstoreId::new(2);
+    let bs2 = Arc::new(Tickable::new());
+    let bs = WalScrubBlobstore::new(
+        MultiplexId::new(1),
+        queue.clone(),
+        vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
+        vec![(bid2, bs2.clone())],
+        1,
+        None,
+        scuba.clone(),
+        ScrubOptions {
+            scrub_action: ScrubAction::Repair,
+            scrub_action_on_missing_write_mostly,
+            ..ScrubOptions::default()
+        },
+        scrub_handler.clone(),
+    )?;
+
+    // Non-existing key in all blobstores, new blobstore failing
+    {
+        let k0 = "k0";
+
+        let mut get_fut = bs.get(ctx, k0).boxed();
+        assert_pending(&mut get_fut).await;
+
+        bs0.tick(None);
+        assert_pending(&mut get_fut).await;
+
+        bs1.tick(Some("bs1 failed"));
+
+        bs2.tick(None);
+        assert!(get_fut.await.is_err(), "None/Err after replacement");
+    }
+
+    // only replica containing key replaced after failure - DATA LOST
+    {
+        let k1 = "k1";
+
+        let mut get_fut = bs.get(ctx, k1).boxed();
+        assert_pending(&mut get_fut).await;
+        bs0.tick(Some("bs0 failed"));
+        bs1.tick(None);
+        bs2.tick(None);
+        assert!(get_fut.await.is_err(), "Empty replacement against error");
+    }
+
+    // One working replica after failure.
+    {
+        let v1 = make_value("v1");
+        let k1 = "k1";
+
+        match queue
+            .read(ctx, &MultiplexId::new(1), &Timestamp::now(), 2)
+            .await
+            .unwrap()
+            .as_slice()
+        {
+            [entry] => {
+                let to_del = [entry.clone()];
+                let mut fut = queue.delete(ctx, &to_del).boxed();
+                assert!(futures::poll!(&mut fut).is_pending());
+                tick_queue.tick(None);
+                fut.await.unwrap()
+            }
+            _ => panic!("only one entry expected"),
+        }
+
+        // bs1 and bs2 empty at this point
+        assert_eq!(bs0.get_bytes(k1), Some(v1.clone()));
+        assert!(bs1.storage.with(|s| s.is_empty()));
+        assert!(bs2.storage.with(|s| s.is_empty()));
+
+        let mut get_fut = bs.get(ctx, k1).boxed();
+        assert_pending(&mut get_fut).await;
+        // tick the gets
+        bs0.tick(None);
+        assert_pending(&mut get_fut).await;
+        bs1.tick(None);
+        if scrub_action_on_missing_write_mostly != ScrubWriteMostly::PopulateIfAbsent {
+            // this read doesn't happen in this mode
+            bs2.tick(None);
+        }
+        assert_pending(&mut get_fut).await;
+        // Tick the repairs
+        bs1.tick(None);
+        bs2.tick(None);
+
+        // Succeeds
+        assert_eq!(get_fut.await.unwrap().map(|v| v.into()), Some(v1.clone()));
+        // Now all populated.
+        assert_eq!(bs0.get_bytes(k1), Some(v1.clone()));
+        assert_eq!(bs1.get_bytes(k1), Some(v1.clone()));
+        match scrub_action_on_missing_write_mostly {
+            ScrubWriteMostly::Scrub
+            | ScrubWriteMostly::PopulateIfAbsent
+            | ScrubWriteMostly::ScrubIfAbsent => {
+                assert_eq!(bs2.get_bytes(k1), Some(v1.clone()))
+            }
+            ScrubWriteMostly::SkipMissing => {
+                assert_eq!(bs2.get_bytes(k1), None)
+            }
+        }
+    }
+
+    // Main blobstore gets ignored on failure
+    {
+        let v2 = make_value("v2");
+        let k2 = "k2";
+
+        bs0.add_bytes(k2.to_string(), v2.clone());
+        // bs1 and bs2 don't have k2
+        assert_eq!(bs0.get_bytes(k2), Some(v2.clone()));
+        assert_eq!(bs1.get_bytes(k2), None);
+        assert_eq!(bs2.get_bytes(k2), None);
+
+        let mut get_fut = bs.get(ctx, k2).boxed();
+        assert_pending(&mut get_fut).await;
+        // gets
+        bs0.tick(None);
+        bs1.tick(Some("bs1 get failed"));
+        if scrub_action_on_missing_write_mostly != ScrubWriteMostly::PopulateIfAbsent {
+            // this read doesn't happen in this mode
+            bs2.tick(None);
+        }
+        if scrub_action_on_missing_write_mostly != ScrubWriteMostly::SkipMissing {
+            assert_pending(&mut get_fut).await;
+            // repair bs2
+            bs2.tick(None);
+        }
+        assert_eq!(get_fut.await.unwrap().map(|v| v.into()), Some(v2.clone()));
+        // bs1 still doesn't have the value. Is this a bug or expected?
+        assert_eq!(bs1.get_bytes(k2), None);
+        if scrub_action_on_missing_write_mostly != ScrubWriteMostly::SkipMissing {
+            // bs2 got repaired successfully
+            assert_eq!(bs2.get_bytes(k2), Some(v2.clone()));
+        } else {
+            assert_eq!(bs2.get_bytes(k2), None);
+        }
+    }
+    Ok(())
+}
+
+#[fbinit::test]
+async fn scrubbed(fb: FacebookInit) {
+    scrub_scenarios(fb, ScrubWriteMostly::Scrub).await.unwrap();
+    scrub_scenarios(fb, ScrubWriteMostly::SkipMissing)
+        .await
+        .unwrap();
+    scrub_scenarios(fb, ScrubWriteMostly::PopulateIfAbsent)
+        .await
+        .unwrap();
 }
