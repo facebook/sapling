@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::num::NonZeroUsize;
+
 use anyhow::Result;
 use fbinit::FacebookInit;
 use sql_ext::facebook::MysqlOptions;
@@ -32,7 +34,7 @@ pub trait FbSqlShardedConstruct: SqlShardedConstruct + Sized + Send + Sync + 'st
     fn with_sharded_mysql(
         _: FacebookInit,
         _: String,
-        _: usize,
+        _: NonZeroUsize,
         _: &MysqlOptions,
         _: bool,
     ) -> Result<Self> {

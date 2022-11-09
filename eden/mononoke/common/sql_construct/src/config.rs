@@ -64,7 +64,7 @@ pub trait SqlConstructFromShardedDatabaseConfig: FbSqlShardedConstruct {
             ShardedDatabaseConfig::Remote(config) => Self::with_sharded_mysql(
                 fb,
                 config.shard_map.clone(),
-                config.shard_num.get(),
+                config.shard_num,
                 mysql_options,
                 readonly,
             ),
@@ -133,7 +133,7 @@ pub trait SqlShardableConstructFromMetadataDatabaseConfig:
                     ShardableRemoteDatabaseConfig::Sharded(config) => Self::with_sharded_mysql(
                         fb,
                         config.shard_map.clone(),
-                        config.shard_num.get(),
+                        config.shard_num,
                         mysql_options,
                         readonly,
                     ),
