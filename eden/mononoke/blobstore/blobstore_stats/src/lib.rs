@@ -26,18 +26,18 @@ use tunables::tunables;
 
 const SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(5);
 
-const BLOBSTORE_ID: &str = "blobstore_id";
-const BLOBSTORE_TYPE: &str = "blobstore_type";
-const COMPLETION_TIME: &str = "completion_time";
-const ERROR: &str = "error";
-const KEY: &str = "key";
-const OPERATION: &str = "operation";
-const QUEUE: &str = "queue";
-const SESSION: &str = "session";
-const SIZE: &str = "size";
-const WRITE_ORDER: &str = "write_order";
+pub const BLOBSTORE_ID: &str = "blobstore_id";
+pub const BLOBSTORE_TYPE: &str = "blobstore_type";
+pub const COMPLETION_TIME: &str = "completion_time";
+pub const ERROR: &str = "error";
+pub const KEY: &str = "key";
+pub const OPERATION: &str = "operation";
+pub const QUEUE: &str = "queue";
+pub const SESSION: &str = "session";
+pub const SIZE: &str = "size";
+pub const WRITE_ORDER: &str = "write_order";
 /// Was the blob found during the get/is_present operations?
-const BLOB_PRESENT: &str = "blob_present";
+pub const BLOB_PRESENT: &str = "blob_present";
 
 const OVERWRITE_STATUS: &str = "overwrite_status";
 

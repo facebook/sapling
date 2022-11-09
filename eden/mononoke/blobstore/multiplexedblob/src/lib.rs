@@ -8,6 +8,7 @@
 pub mod base;
 pub mod queue;
 pub mod scrub;
+pub mod scuba;
 
 pub use crate::queue::MultiplexedBlobstore;
 pub use crate::scrub::LoggingScrubHandler;

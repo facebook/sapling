@@ -18,14 +18,11 @@ use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstorePutOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
-use blobstore_stats::add_completion_time;
-use blobstore_stats::record_queue_stats;
 use blobstore_stats::OperationType;
 use blobstore_sync_queue::BlobstoreSyncQueue;
 use blobstore_sync_queue::BlobstoreSyncQueueEntry;
 use blobstore_sync_queue::OperationKey;
 use context::CoreContext;
-use futures_stats::FutureStats;
 use futures_stats::TimedFutureExt;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::MultiplexId;
@@ -37,22 +34,15 @@ use tunables::tunables;
 use crate::base::ErrorKind;
 use crate::base::MultiplexedBlobstoreBase;
 use crate::base::MultiplexedBlobstorePutHandler;
+use crate::scuba;
 
-const SYNC_QUEUE: &str = "mysql_sync_queue";
 /// Special error for cases where some blobstores failed during get/is_present
 /// call and some returned None/Absent.
 const SOME_FAILED_OTHERS_NONE: &str = "some_failed_others_none";
 /// Number of entries we've fetched from the queue trying to resolve
 /// SOME_FAILED_OTHERS_NONE case.
 const QUEUE_ENTRIES: &str = "queue_entries_count";
-const MULTIPLEX_ID: &str = "multiplex_id";
-const KEY: &str = "key";
-const OPERATION: &str = "operation";
-const BLOB_SIZE: &str = "blob_size";
-const SUCCESS: &str = "success";
-const ERROR: &str = "error";
-/// Was the blob found during the get/is_present operations?
-const BLOB_PRESENT: &str = "blob_present";
+const SYNC_QUEUE: &str = "mysql_sync_queue";
 
 #[derive(Clone)]
 pub struct MultiplexedBlobstore {
@@ -145,7 +135,7 @@ impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
 
         let mut ctx = ctx.clone();
         let pc = ctx.fork_perf_counters();
-        record_queue_stats(
+        scuba::record_queue_stats(
             &mut scuba,
             &pc,
             stats,
@@ -212,7 +202,7 @@ impl Blobstore for MultiplexedBlobstore {
         .await;
 
         let multiplex_id = self.blobstore.multiplex_id();
-        record_scuba_get(ctx, &mut scuba, multiplex_id, key, stats, &result);
+        scuba::record_get(ctx, &mut scuba, multiplex_id, key, stats, &result);
 
         result
     }
@@ -228,7 +218,7 @@ impl Blobstore for MultiplexedBlobstore {
 
         let mut scuba = self.multiplex_scuba.clone();
         let multiplex_id = self.blobstore.multiplex_id();
-        record_scuba_put(ctx, &mut scuba, multiplex_id, &key, size, stats, &result);
+        scuba::record_put(ctx, &mut scuba, multiplex_id, &key, size, stats, &result);
 
         result
     }
@@ -276,7 +266,7 @@ impl Blobstore for MultiplexedBlobstore {
         .await;
 
         let multiplex_id = self.blobstore.multiplex_id();
-        record_scuba_is_present(ctx, &mut scuba, multiplex_id, key, stats, &result);
+        scuba::record_is_present(ctx, &mut scuba, multiplex_id, key, stats, &result);
 
         result
     }
@@ -304,105 +294,4 @@ impl BlobstorePutOps for MultiplexedBlobstore {
     ) -> Result<OverwriteStatus> {
         self.blobstore.put_with_status(ctx, key, value).await
     }
-}
-
-fn record_scuba_common(
-    mut ctx: CoreContext,
-    scuba: &mut MononokeScubaSampleBuilder,
-    multiplex_id: &MultiplexId,
-    key: &str,
-    stats: FutureStats,
-    operation: OperationType,
-) {
-    let pc = ctx.fork_perf_counters();
-    pc.insert_nonzero_perf_counters(scuba);
-
-    add_completion_time(scuba, ctx.metadata().session_id().as_str(), stats);
-
-    scuba.add(KEY, key);
-    scuba.add(OPERATION, operation);
-    scuba.add(MULTIPLEX_ID, multiplex_id.clone());
-}
-
-fn record_scuba_put(
-    ctx: &CoreContext,
-    scuba: &mut MononokeScubaSampleBuilder,
-    multiplex_id: &MultiplexId,
-    key: &str,
-    blob_size: usize,
-    stats: FutureStats,
-    result: &Result<()>,
-) {
-    let op = OperationType::Put;
-    record_scuba_common(ctx.clone(), scuba, multiplex_id, key, stats, op);
-
-    scuba.add(BLOB_SIZE, blob_size);
-
-    if let Err(error) = result.as_ref() {
-        scuba.unsampled();
-        scuba.add(ERROR, format!("{:#}", error)).add(SUCCESS, false);
-    } else {
-        scuba.add(SUCCESS, true);
-    }
-    scuba.log();
-}
-
-fn record_scuba_get(
-    ctx: &CoreContext,
-    scuba: &mut MononokeScubaSampleBuilder,
-    multiplex_id: &MultiplexId,
-    key: &str,
-    stats: FutureStats,
-    result: &Result<Option<BlobstoreGetData>>,
-) {
-    let op = OperationType::Get;
-    record_scuba_common(ctx.clone(), scuba, multiplex_id, key, stats, op);
-
-    match result.as_ref() {
-        Err(error) => {
-            scuba.unsampled();
-            scuba.add(ERROR, format!("{:#}", error)).add(SUCCESS, false);
-        }
-        Ok(mb_blob) => {
-            let blob_present = mb_blob.is_some();
-            scuba.add(BLOB_PRESENT, blob_present).add(SUCCESS, true);
-
-            if let Some(blob) = mb_blob.as_ref() {
-                let size = blob.as_bytes().len();
-                scuba.add(BLOB_SIZE, size);
-            }
-        }
-    }
-    scuba.log();
-}
-
-fn record_scuba_is_present(
-    ctx: &CoreContext,
-    scuba: &mut MononokeScubaSampleBuilder,
-    multiplex_id: &MultiplexId,
-    key: &str,
-    stats: FutureStats,
-    result: &Result<BlobstoreIsPresent>,
-) {
-    let op = OperationType::IsPresent;
-    record_scuba_common(ctx.clone(), scuba, multiplex_id, key, stats, op);
-
-    let outcome = result.as_ref().map(|is_present| match is_present {
-        BlobstoreIsPresent::Present => Some(true),
-        BlobstoreIsPresent::Absent => Some(false),
-        BlobstoreIsPresent::ProbablyNotPresent(_) => None,
-    });
-
-    match outcome {
-        Err(error) => {
-            scuba.unsampled();
-            scuba.add(ERROR, format!("{:#}", error)).add(SUCCESS, false);
-        }
-        Ok(is_present) => {
-            if let Some(is_present) = is_present {
-                scuba.add(BLOB_PRESENT, is_present).add(SUCCESS, true);
-            }
-        }
-    }
-    scuba.log();
 }
